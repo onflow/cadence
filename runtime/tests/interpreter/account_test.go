@@ -22,11 +22,13 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/onflow/atree"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	. "github.com/onflow/cadence/runtime/tests/utils"
+
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
@@ -40,36 +42,19 @@ func testAccount(
 	code string,
 ) (
 	*interpreter.Interpreter,
-	map[string]interpreter.OptionalValue,
+	map[interpreter.StorageKey]atree.Storable,
 ) {
 
 	var valueDeclarations stdlib.StandardLibraryValues
-
-	panicFunction := interpreter.NewHostFunctionValue(
-		func(invocation interpreter.Invocation) interpreter.Value {
-			panic(errors.NewUnreachableError())
-		},
-		nil,
-	)
 
 	// `authAccount`
 
 	authAccountValueDeclaration := stdlib.StandardLibraryValue{
 		Name: "authAccount",
 		Type: sema.AuthAccountType,
-		Value: interpreter.NewAuthAccountValue(
-			address,
-			returnZeroUFix64,
-			returnZeroUFix64,
-			func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
-				return 0
-			},
-			returnZeroUInt64,
-			panicFunction,
-			panicFunction,
-			&interpreter.CompositeValue{},
-			&interpreter.CompositeValue{},
-		),
+		ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
+			return newTestAuthAccountValue(address)
+		},
 		Kind: common.DeclarationKindConstant,
 	}
 	valueDeclarations = append(valueDeclarations, authAccountValueDeclaration)
@@ -79,23 +64,9 @@ func testAccount(
 	pubAccountValueDeclaration := stdlib.StandardLibraryValue{
 		Name: "pubAccount",
 		Type: sema.PublicAccountType,
-		Value: interpreter.NewPublicAccountValue(
-			address,
-			returnZeroUFix64,
-			returnZeroUFix64,
-			func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
-				return 0
-			},
-			returnZeroUInt64,
-			interpreter.NewPublicAccountKeysValue(
-				nil,
-			),
-			interpreter.NewPublicAccountContractsValue(
-				address,
-				nil,
-				nil,
-			),
-		),
+		ValueFactory: func(_ *interpreter.Interpreter) interpreter.Value {
+			return newTestPublicAccountValue(address)
+		},
 		Kind: common.DeclarationKindConstant,
 	}
 	valueDeclarations = append(valueDeclarations, pubAccountValueDeclaration)
@@ -112,32 +83,6 @@ func testAccount(
 	accountValueDeclaration.Name = "account"
 	valueDeclarations = append(valueDeclarations, accountValueDeclaration)
 
-	storedValues := map[string]interpreter.OptionalValue{}
-
-	// NOTE: checker, getter and setter are very naive for testing purposes and don't remove nil values
-	//
-
-	storageChecker := func(_ *interpreter.Interpreter, _ common.Address, key string) bool {
-		_, ok := storedValues[key]
-		return ok
-	}
-
-	storageSetter := func(_ *interpreter.Interpreter, _ common.Address, key string, value interpreter.OptionalValue) {
-		if _, ok := value.(interpreter.NilValue); ok {
-			delete(storedValues, key)
-		} else {
-			storedValues[key] = value
-		}
-	}
-
-	storageGetter := func(_ *interpreter.Interpreter, _ common.Address, key string, _ bool) interpreter.OptionalValue {
-		value := storedValues[key]
-		if value == nil {
-			return interpreter.NilValue{}
-		}
-		return value
-	}
-
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		code,
 		ParseCheckAndInterpretOptions{
@@ -146,15 +91,12 @@ func testAccount(
 			},
 			Options: []interpreter.Option{
 				interpreter.WithPredeclaredValues(valueDeclarations.ToInterpreterValueDeclarations()),
-				interpreter.WithStorageExistenceHandler(storageChecker),
-				interpreter.WithStorageReadHandler(storageGetter),
-				interpreter.WithStorageWriteHandler(storageSetter),
 			},
 		},
 	)
 	require.NoError(t, err)
 
-	return inter, storedValues
+	return inter, inter.Storage.(interpreter.InMemoryStorage).AccountStorage
 }
 
 func returnZeroUInt64() interpreter.UInt64Value {
@@ -175,7 +117,7 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 
 		address := interpreter.NewAddressValueFromBytes([]byte{42})
 
-		inter, storedValues := testAccount(
+		inter, accountStorables := testAccount(
 			t,
 			address,
 			true,
@@ -196,16 +138,11 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 			_, err := inter.Invoke("test")
 			require.NoError(t, err)
 
-			require.Len(t, storedValues, 1)
-			for _, value := range storedValues {
-
-				require.IsType(t, &interpreter.SomeValue{}, value)
-
-				innerValue := value.(*interpreter.SomeValue).Value
-
-				assert.IsType(t, &interpreter.CompositeValue{}, innerValue)
+			require.Len(t, accountStorables, 1)
+			for _, storable := range accountStorables {
+				value := interpreter.StoredValue(storable, inter.Storage)
+				assert.IsType(t, &interpreter.CompositeValue{}, value)
 			}
-
 		})
 
 		// Attempt to save again, overwriting should fail
@@ -226,7 +163,7 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 
 		address := interpreter.NewAddressValueFromBytes([]byte{42})
 
-		inter, storedValues := testAccount(
+		inter, accountStorables := testAccount(
 			t,
 			address,
 			true,
@@ -247,14 +184,10 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 			_, err := inter.Invoke("test")
 			require.NoError(t, err)
 
-			require.Len(t, storedValues, 1)
-			for _, value := range storedValues {
-
-				require.IsType(t, &interpreter.SomeValue{}, value)
-
-				innerValue := value.(*interpreter.SomeValue).Value
-
-				assert.IsType(t, &interpreter.CompositeValue{}, innerValue)
+			require.Len(t, accountStorables, 1)
+			for _, storable := range accountStorables {
+				value := interpreter.StoredValue(storable, inter.Storage)
+				assert.IsType(t, &interpreter.CompositeValue{}, value)
 			}
 
 		})
@@ -282,7 +215,7 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 
 		address := interpreter.NewAddressValueFromBytes([]byte{42})
 
-		inter, storedValues := testAccount(
+		inter, accountStorables := testAccount(
 			t,
 			address,
 			true,
@@ -313,7 +246,7 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 			_, err := inter.Invoke("save")
 			require.NoError(t, err)
 
-			require.Len(t, storedValues, 1)
+			require.Len(t, accountStorables, 1)
 
 			// first load
 
@@ -327,7 +260,7 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 			assert.IsType(t, &interpreter.CompositeValue{}, innerValue)
 
 			// NOTE: check loaded value was removed from storage
-			require.Len(t, storedValues, 0)
+			require.Len(t, accountStorables, 0)
 
 			// second load
 
@@ -344,7 +277,7 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 			_, err := inter.Invoke("save")
 			require.NoError(t, err)
 
-			require.Len(t, storedValues, 1)
+			require.Len(t, accountStorables, 1)
 
 			// load
 
@@ -354,7 +287,7 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 			require.IsType(t, interpreter.NilValue{}, value)
 
 			// NOTE: check loaded value was *not* removed from storage
-			require.Len(t, storedValues, 1)
+			require.Len(t, accountStorables, 1)
 		})
 	})
 
@@ -364,7 +297,7 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 
 		address := interpreter.NewAddressValueFromBytes([]byte{42})
 
-		inter, storedValues := testAccount(
+		inter, accountStorables := testAccount(
 			t,
 			address,
 			true,
@@ -395,7 +328,7 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 			_, err := inter.Invoke("save")
 			require.NoError(t, err)
 
-			require.Len(t, storedValues, 1)
+			require.Len(t, accountStorables, 1)
 
 			// first load
 
@@ -409,7 +342,7 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 			assert.IsType(t, &interpreter.CompositeValue{}, innerValue)
 
 			// NOTE: check loaded value was removed from storage
-			require.Len(t, storedValues, 0)
+			require.Len(t, accountStorables, 0)
 
 			// second load
 
@@ -426,7 +359,7 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 			_, err := inter.Invoke("save")
 			require.NoError(t, err)
 
-			require.Len(t, storedValues, 1)
+			require.Len(t, accountStorables, 1)
 
 			// load
 
@@ -436,7 +369,7 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 			require.IsType(t, interpreter.NilValue{}, value)
 
 			// NOTE: check loaded value was *not* removed from storage
-			require.Len(t, storedValues, 1)
+			require.Len(t, accountStorables, 1)
 		})
 	})
 }
@@ -470,7 +403,7 @@ func TestInterpretAuthAccount_copy(t *testing.T) {
 
 		address := interpreter.NewAddressValueFromBytes([]byte{42})
 
-		inter, storedValues := testAccount(
+		inter, accountStorables := testAccount(
 			t,
 			address,
 			true,
@@ -482,7 +415,7 @@ func TestInterpretAuthAccount_copy(t *testing.T) {
 		_, err := inter.Invoke("save")
 		require.NoError(t, err)
 
-		require.Len(t, storedValues, 1)
+		require.Len(t, accountStorables, 1)
 
 		testCopyS := func() {
 
@@ -496,7 +429,7 @@ func TestInterpretAuthAccount_copy(t *testing.T) {
 			assert.IsType(t, &interpreter.CompositeValue{}, innerValue)
 
 			// NOTE: check loaded value was *not* removed from storage
-			require.Len(t, storedValues, 1)
+			require.Len(t, accountStorables, 1)
 		}
 
 		testCopyS()
@@ -510,7 +443,7 @@ func TestInterpretAuthAccount_copy(t *testing.T) {
 
 		address := interpreter.NewAddressValueFromBytes([]byte{42})
 
-		inter, storedValues := testAccount(
+		inter, accountStorables := testAccount(
 			t,
 			address,
 			true,
@@ -522,7 +455,7 @@ func TestInterpretAuthAccount_copy(t *testing.T) {
 		_, err := inter.Invoke("save")
 		require.NoError(t, err)
 
-		require.Len(t, storedValues, 1)
+		require.Len(t, accountStorables, 1)
 
 		// load
 
@@ -532,7 +465,7 @@ func TestInterpretAuthAccount_copy(t *testing.T) {
 		require.IsType(t, interpreter.NilValue{}, value)
 
 		// NOTE: check loaded value was *not* removed from storage
-		require.Len(t, storedValues, 1)
+		require.Len(t, accountStorables, 1)
 	})
 }
 
@@ -546,7 +479,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 
 		address := interpreter.NewAddressValueFromBytes([]byte{42})
 
-		inter, storedValues := testAccount(
+		inter, accountStorables := testAccount(
 			t,
 			address,
 			true,
@@ -603,7 +536,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 		_, err := inter.Invoke("save")
 		require.NoError(t, err)
 
-		require.Len(t, storedValues, 1)
+		require.Len(t, accountStorables, 1)
 
 		t.Run("borrow R ", func(t *testing.T) {
 
@@ -619,17 +552,22 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 			assert.IsType(t, &interpreter.StorageReferenceValue{}, innerValue)
 
 			// NOTE: check loaded value was *not* removed from storage
-			require.Len(t, storedValues, 1)
+			require.Len(t, accountStorables, 1)
 
 			// foo
 
 			value, err = inter.Invoke("foo")
 			require.NoError(t, err)
 
-			require.Equal(t, interpreter.NewIntValueFromInt64(42), value)
+			RequireValuesEqual(
+				t,
+				inter,
+				interpreter.NewIntValueFromInt64(42),
+				value,
+			)
 
 			// NOTE: check loaded value was *not* removed from storage
-			require.Len(t, storedValues, 1)
+			require.Len(t, accountStorables, 1)
 
 			// TODO: should fail, i.e. return nil
 
@@ -645,7 +583,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 			assert.IsType(t, &interpreter.StorageReferenceValue{}, innerValue)
 
 			// NOTE: check loaded value was *not* removed from storage
-			require.Len(t, storedValues, 1)
+			require.Len(t, accountStorables, 1)
 		})
 
 		t.Run("borrow R2", func(t *testing.T) {
@@ -656,7 +594,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 			require.IsType(t, interpreter.NilValue{}, value)
 
 			// NOTE: check loaded value was *not* removed from storage
-			require.Len(t, storedValues, 1)
+			require.Len(t, accountStorables, 1)
 		})
 
 		t.Run("change after borrow", func(t *testing.T) {
@@ -673,7 +611,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 
 		address := interpreter.NewAddressValueFromBytes([]byte{42})
 
-		inter, storedValues := testAccount(
+		inter, accountStorables := testAccount(
 			t,
 			address,
 			true,
@@ -730,7 +668,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 		_, err := inter.Invoke("save")
 		require.NoError(t, err)
 
-		require.Len(t, storedValues, 1)
+		require.Len(t, accountStorables, 1)
 
 		t.Run("borrow S", func(t *testing.T) {
 
@@ -746,17 +684,22 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 			assert.IsType(t, &interpreter.StorageReferenceValue{}, innerValue)
 
 			// NOTE: check loaded value was *not* removed from storage
-			require.Len(t, storedValues, 1)
+			require.Len(t, accountStorables, 1)
 
 			// foo
 
 			value, err = inter.Invoke("foo")
 			require.NoError(t, err)
 
-			require.Equal(t, interpreter.NewIntValueFromInt64(42), value)
+			RequireValuesEqual(
+				t,
+				inter,
+				interpreter.NewIntValueFromInt64(42),
+				value,
+			)
 
 			// NOTE: check loaded value was *not* removed from storage
-			require.Len(t, storedValues, 1)
+			require.Len(t, accountStorables, 1)
 
 			// TODO: should fail, i.e. return nil
 
@@ -772,7 +715,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 			assert.IsType(t, &interpreter.StorageReferenceValue{}, innerValue)
 
 			// NOTE: check loaded value was *not* removed from storage
-			require.Len(t, storedValues, 1)
+			require.Len(t, accountStorables, 1)
 		})
 
 		t.Run("borrow S2", func(t *testing.T) {
@@ -783,7 +726,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 			require.IsType(t, interpreter.NilValue{}, value)
 
 			// NOTE: check loaded value was *not* removed from storage
-			require.Len(t, storedValues, 1)
+			require.Len(t, accountStorables, 1)
 		})
 
 		t.Run("change after borrow", func(t *testing.T) {
@@ -809,7 +752,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 
 				address := interpreter.NewAddressValueFromBytes([]byte{42})
 
-				inter, storedValues := testAccount(
+				inter, accountStorables := testAccount(
 					t,
 					address,
 					true,
@@ -841,7 +784,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 				_, err := inter.Invoke("save")
 				require.NoError(t, err)
 
-				require.Len(t, storedValues, 1)
+				require.Len(t, accountStorables, 1)
 
 				t.Run("link R", func(t *testing.T) {
 
@@ -863,8 +806,10 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 						},
 					)
 
-					require.Equal(t,
-						interpreter.CapabilityValue{
+					RequireValuesEqual(
+						t,
+						inter,
+						&interpreter.CapabilityValue{
 							Address: address,
 							Path: interpreter.PathValue{
 								Domain:     capabilityDomain,
@@ -876,7 +821,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					)
 
 					// stored value + link
-					require.Len(t, storedValues, 2)
+					require.Len(t, accountStorables, 2)
 
 					// second link
 
@@ -886,7 +831,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					require.IsType(t, interpreter.NilValue{}, value)
 
 					// NOTE: check loaded value was *not* removed from storage
-					require.Len(t, storedValues, 2)
+					require.Len(t, accountStorables, 2)
 				})
 
 				t.Run("link R2", func(t *testing.T) {
@@ -909,8 +854,10 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 						},
 					)
 
-					require.Equal(t,
-						interpreter.CapabilityValue{
+					RequireValuesEqual(
+						t,
+						inter,
+						&interpreter.CapabilityValue{
 							Address: address,
 							Path: interpreter.PathValue{
 								Domain:     capabilityDomain,
@@ -922,7 +869,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					)
 
 					// stored value + link
-					require.Len(t, storedValues, 3)
+					require.Len(t, accountStorables, 3)
 
 					// second link
 
@@ -932,7 +879,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					require.IsType(t, interpreter.NilValue{}, value)
 
 					// NOTE: check loaded value was *not* removed from storage
-					require.Len(t, storedValues, 3)
+					require.Len(t, accountStorables, 3)
 				})
 			})
 		}
@@ -955,7 +902,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 
 				address := interpreter.NewAddressValueFromBytes([]byte{42})
 
-				inter, storedValues := testAccount(
+				inter, accountStorables := testAccount(
 					t,
 					address,
 					true,
@@ -987,7 +934,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 				_, err := inter.Invoke("save")
 				require.NoError(t, err)
 
-				require.Len(t, storedValues, 1)
+				require.Len(t, accountStorables, 1)
 
 				t.Run("link S", func(t *testing.T) {
 
@@ -1009,8 +956,10 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 						},
 					)
 
-					require.Equal(t,
-						interpreter.CapabilityValue{
+					RequireValuesEqual(
+						t,
+						inter,
+						&interpreter.CapabilityValue{
 							Address: address,
 							Path: interpreter.PathValue{
 								Domain:     capabilityDomain,
@@ -1022,7 +971,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					)
 
 					// stored value + link
-					require.Len(t, storedValues, 2)
+					require.Len(t, accountStorables, 2)
 
 					// second link
 
@@ -1032,7 +981,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					require.IsType(t, interpreter.NilValue{}, value)
 
 					// NOTE: check loaded value was *not* removed from storage
-					require.Len(t, storedValues, 2)
+					require.Len(t, accountStorables, 2)
 				})
 
 				t.Run("link S2", func(t *testing.T) {
@@ -1045,7 +994,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					require.IsType(t, &interpreter.SomeValue{}, value)
 
 					capability := value.(*interpreter.SomeValue).Value
-					require.IsType(t, interpreter.CapabilityValue{}, capability)
+					require.IsType(t, &interpreter.CapabilityValue{}, capability)
 
 					s2Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "S2")
 
@@ -1056,8 +1005,10 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 						},
 					)
 
-					require.Equal(t,
-						interpreter.CapabilityValue{
+					RequireValuesEqual(
+						t,
+						inter,
+						&interpreter.CapabilityValue{
 							Address: address,
 							Path: interpreter.PathValue{
 								Domain:     capabilityDomain,
@@ -1069,7 +1020,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					)
 
 					// stored value + link
-					require.Len(t, storedValues, 3)
+					require.Len(t, accountStorables, 3)
 
 					// second link
 
@@ -1079,7 +1030,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					require.IsType(t, interpreter.NilValue{}, value)
 
 					// NOTE: check loaded value was *not* removed from storage
-					require.Len(t, storedValues, 3)
+					require.Len(t, accountStorables, 3)
 				})
 			})
 		}
@@ -1108,7 +1059,7 @@ func TestInterpretAuthAccount_unlink(t *testing.T) {
 
 				address := interpreter.NewAddressValueFromBytes([]byte{42})
 
-				inter, storedValues := testAccount(
+				inter, accountStorables := testAccount(
 					t,
 					address,
 					true,
@@ -1141,13 +1092,13 @@ func TestInterpretAuthAccount_unlink(t *testing.T) {
 				_, err := inter.Invoke("saveAndLinkR")
 				require.NoError(t, err)
 
-				require.Len(t, storedValues, 2)
+				require.Len(t, accountStorables, 2)
 
 				t.Run("unlink R", func(t *testing.T) {
 					_, err := inter.Invoke("unlinkR")
 					require.NoError(t, err)
 
-					require.Len(t, storedValues, 1)
+					require.Len(t, accountStorables, 1)
 				})
 
 				t.Run("unlink R2", func(t *testing.T) {
@@ -1155,7 +1106,7 @@ func TestInterpretAuthAccount_unlink(t *testing.T) {
 					_, err := inter.Invoke("unlinkR2")
 					require.NoError(t, err)
 
-					require.Len(t, storedValues, 1)
+					require.Len(t, accountStorables, 1)
 				})
 			})
 		}
@@ -1179,7 +1130,7 @@ func TestInterpretAuthAccount_unlink(t *testing.T) {
 
 				address := interpreter.NewAddressValueFromBytes([]byte{42})
 
-				inter, storedValues := testAccount(
+				inter, accountStorables := testAccount(
 					t,
 					address,
 					true,
@@ -1212,13 +1163,13 @@ func TestInterpretAuthAccount_unlink(t *testing.T) {
 				_, err := inter.Invoke("saveAndLinkS")
 				require.NoError(t, err)
 
-				require.Len(t, storedValues, 2)
+				require.Len(t, accountStorables, 2)
 
 				t.Run("unlink S", func(t *testing.T) {
 					_, err := inter.Invoke("unlinkS")
 					require.NoError(t, err)
 
-					require.Len(t, storedValues, 1)
+					require.Len(t, accountStorables, 1)
 				})
 
 				t.Run("unlink S2", func(t *testing.T) {
@@ -1226,7 +1177,7 @@ func TestInterpretAuthAccount_unlink(t *testing.T) {
 					_, err := inter.Invoke("unlinkS2")
 					require.NoError(t, err)
 
-					require.Len(t, storedValues, 1)
+					require.Len(t, accountStorables, 1)
 				})
 			})
 		}
@@ -1253,7 +1204,7 @@ func TestInterpretAccount_getLinkTarget(t *testing.T) {
 
 			address := interpreter.NewAddressValueFromBytes([]byte{42})
 
-			inter, storedValues := testAccount(
+			inter, accountStorables := testAccount(
 				t,
 				address,
 				auth,
@@ -1282,7 +1233,7 @@ func TestInterpretAccount_getLinkTarget(t *testing.T) {
 			_, err := inter.Invoke("link")
 			require.NoError(t, err)
 
-			require.Len(t, storedValues, 1)
+			require.Len(t, accountStorables, 1)
 
 			t.Run("existing", func(t *testing.T) {
 
@@ -1293,7 +1244,9 @@ func TestInterpretAccount_getLinkTarget(t *testing.T) {
 
 				innerValue := value.(*interpreter.SomeValue).Value
 
-				assert.Equal(t,
+				AssertValuesEqual(
+					t,
+					inter,
 					interpreter.PathValue{
 						Domain:     common.PathDomainStorage,
 						Identifier: "r",
@@ -1301,7 +1254,7 @@ func TestInterpretAccount_getLinkTarget(t *testing.T) {
 					innerValue,
 				)
 
-				require.Len(t, storedValues, 1)
+				require.Len(t, accountStorables, 1)
 			})
 
 			t.Run("nonExisting", func(t *testing.T) {
@@ -1309,9 +1262,14 @@ func TestInterpretAccount_getLinkTarget(t *testing.T) {
 				value, err := inter.Invoke("nonExisting")
 				require.NoError(t, err)
 
-				require.Equal(t, interpreter.NilValue{}, value)
+				RequireValuesEqual(
+					t,
+					inter,
+					interpreter.NilValue{},
+					value,
+				)
 
-				require.Len(t, storedValues, 1)
+				require.Len(t, accountStorables, 1)
 			})
 		})
 	}
@@ -1324,7 +1282,7 @@ func TestInterpretAccount_getLinkTarget(t *testing.T) {
 
 			address := interpreter.NewAddressValueFromBytes([]byte{42})
 
-			inter, storedValues := testAccount(
+			inter, accountStorables := testAccount(
 				t,
 				address,
 				auth,
@@ -1353,7 +1311,7 @@ func TestInterpretAccount_getLinkTarget(t *testing.T) {
 			_, err := inter.Invoke("link")
 			require.NoError(t, err)
 
-			require.Len(t, storedValues, 1)
+			require.Len(t, accountStorables, 1)
 
 			t.Run("existing", func(t *testing.T) {
 
@@ -1364,7 +1322,9 @@ func TestInterpretAccount_getLinkTarget(t *testing.T) {
 
 				innerValue := value.(*interpreter.SomeValue).Value
 
-				assert.Equal(t,
+				AssertValuesEqual(
+					t,
+					inter,
 					interpreter.PathValue{
 						Domain:     common.PathDomainStorage,
 						Identifier: "s",
@@ -1372,7 +1332,7 @@ func TestInterpretAccount_getLinkTarget(t *testing.T) {
 					innerValue,
 				)
 
-				require.Len(t, storedValues, 1)
+				require.Len(t, accountStorables, 1)
 			})
 
 			t.Run("nonExisting", func(t *testing.T) {
@@ -1380,9 +1340,14 @@ func TestInterpretAccount_getLinkTarget(t *testing.T) {
 				value, err := inter.Invoke("nonExisting")
 				require.NoError(t, err)
 
-				require.Equal(t, interpreter.NilValue{}, value)
+				RequireValuesEqual(
+					t,
+					inter,
+					interpreter.NilValue{},
+					value,
+				)
 
-				require.Len(t, storedValues, 1)
+				require.Len(t, accountStorables, 1)
 			})
 		})
 	}
@@ -1471,9 +1436,9 @@ func TestInterpretAccount_getCapability(t *testing.T) {
 
 					require.NoError(t, err)
 
-					require.IsType(t, interpreter.CapabilityValue{}, value)
+					require.IsType(t, &interpreter.CapabilityValue{}, value)
 
-					actualBorrowType := value.(interpreter.CapabilityValue).BorrowType
+					actualBorrowType := value.(*interpreter.CapabilityValue).BorrowType
 
 					if typed {
 						expectedBorrowType := interpreter.ConvertSemaToStaticType(
@@ -1537,7 +1502,12 @@ func TestInterpretAccount_BalanceFields(t *testing.T) {
 				value, err := inter.Invoke("test")
 				require.NoError(t, err)
 
-				assert.Equal(t, interpreter.UFix64Value(0), value)
+				AssertValuesEqual(
+					t,
+					inter,
+					interpreter.UFix64Value(0),
+					value,
+				)
 			})
 		}
 	}
@@ -1585,7 +1555,12 @@ func TestInterpretAccount_StorageFields(t *testing.T) {
 				value, err := inter.Invoke("test")
 				require.NoError(t, err)
 
-				assert.Equal(t, interpreter.UInt64Value(0), value)
+				AssertValuesEqual(
+					t,
+					inter,
+					interpreter.UInt64Value(0),
+					value,
+				)
 			})
 		}
 	}

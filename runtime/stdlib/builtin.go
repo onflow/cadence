@@ -167,12 +167,14 @@ var CreatePublicKeyFunction = NewStandardLibraryFunction(
 		publicKey := invocation.Arguments[0].(*interpreter.ArrayValue)
 		signAlgo := invocation.Arguments[1].(*interpreter.CompositeValue)
 
-		validationFunc := invocation.Interpreter.PublicKeyValidationHandler
+		inter := invocation.Interpreter
 
 		return interpreter.NewPublicKeyValue(
+			inter,
+			invocation.GetLocationRange,
 			publicKey,
 			signAlgo,
-			validationFunc,
+			inter.PublicKeyValidationHandler,
 		)
 	},
 )
@@ -186,11 +188,15 @@ func BuiltinValues() StandardLibraryValues {
 			sema.SignatureAlgorithmType,
 			sema.SignatureAlgorithms,
 		),
-		Value: cryptoAlgorithmEnumValue(
-			sema.SignatureAlgorithmType,
-			sema.SignatureAlgorithms,
-			NewSignatureAlgorithmCase,
-		),
+		ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
+			return cryptoAlgorithmEnumValue(
+				inter,
+				interpreter.ReturnEmptyLocationRange,
+				sema.SignatureAlgorithmType,
+				sema.SignatureAlgorithms,
+				NewSignatureAlgorithmCase,
+			)
+		},
 		Kind: common.DeclarationKindEnum,
 	}
 
@@ -200,11 +206,15 @@ func BuiltinValues() StandardLibraryValues {
 			sema.HashAlgorithmType,
 			sema.HashAlgorithms,
 		),
-		Value: cryptoAlgorithmEnumValue(
-			sema.HashAlgorithmType,
-			sema.HashAlgorithms,
-			NewHashAlgorithmCase,
-		),
+		ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
+			return cryptoAlgorithmEnumValue(
+				inter,
+				interpreter.ReturnEmptyLocationRange,
+				sema.HashAlgorithmType,
+				sema.HashAlgorithms,
+				NewHashAlgorithmCase,
+			)
+		},
 		Kind: common.DeclarationKindEnum,
 	}
 
@@ -214,8 +224,9 @@ func BuiltinValues() StandardLibraryValues {
 	}
 }
 
-func NewSignatureAlgorithmCase(rawValue uint8) *interpreter.CompositeValue {
+func NewSignatureAlgorithmCase(inter *interpreter.Interpreter, rawValue uint8) *interpreter.CompositeValue {
 	return interpreter.NewEnumCaseValue(
+		inter,
 		sema.SignatureAlgorithmType,
 		interpreter.UInt8Value(rawValue),
 		nil,
@@ -227,8 +238,9 @@ var hashAlgorithmFunctions = map[string]interpreter.FunctionValue{
 	sema.HashAlgorithmTypeHashWithTagFunctionName: hashAlgorithmHashWithTagFunction,
 }
 
-func NewHashAlgorithmCase(rawValue uint8) *interpreter.CompositeValue {
+func NewHashAlgorithmCase(inter *interpreter.Interpreter, rawValue uint8) *interpreter.CompositeValue {
 	return interpreter.NewEnumCaseValue(
+		inter,
 		sema.HashAlgorithmType,
 		interpreter.UInt8Value(rawValue),
 		hashAlgorithmFunctions,
@@ -240,13 +252,23 @@ var hashAlgorithmHashFunction = interpreter.NewHostFunctionValue(
 		dataValue := invocation.Arguments[0].(*interpreter.ArrayValue)
 		hashAlgoValue := invocation.Self
 
-		invocation.Interpreter.ExpectType(
+		inter := invocation.Interpreter
+
+		getLocationRange := invocation.GetLocationRange
+
+		inter.ExpectType(
 			hashAlgoValue,
 			sema.HashAlgorithmType,
-			invocation.GetLocationRange,
+			getLocationRange,
 		)
 
-		return invocation.Interpreter.HashHandler(dataValue, nil, hashAlgoValue)
+		return inter.HashHandler(
+			inter,
+			getLocationRange,
+			dataValue,
+			nil,
+			hashAlgoValue,
+		)
 	},
 	sema.HashAlgorithmTypeHashFunctionType,
 )
@@ -257,13 +279,19 @@ var hashAlgorithmHashWithTagFunction = interpreter.NewHostFunctionValue(
 		tagValue := invocation.Arguments[1].(*interpreter.StringValue)
 		hashAlgoValue := invocation.Self
 
-		invocation.Interpreter.ExpectType(
+		inter := invocation.Interpreter
+
+		getLocationRange := invocation.GetLocationRange
+
+		inter.ExpectType(
 			hashAlgoValue,
 			sema.HashAlgorithmType,
-			invocation.GetLocationRange,
+			getLocationRange,
 		)
 
-		return invocation.Interpreter.HashHandler(
+		return inter.HashHandler(
+			inter,
+			getLocationRange,
 			dataValue,
 			tagValue,
 			hashAlgoValue,
@@ -307,24 +335,30 @@ func cryptoAlgorithmEnumConstructorType(
 }
 
 func cryptoAlgorithmEnumValue(
+	inter *interpreter.Interpreter,
+	getLocationRange func() interpreter.LocationRange,
 	enumType *sema.CompositeType,
 	enumCases []sema.CryptoAlgorithm,
-	caseConstructor func(rawValue uint8) *interpreter.CompositeValue,
+	caseConstructor func(inter *interpreter.Interpreter, rawValue uint8) *interpreter.CompositeValue,
 ) interpreter.Value {
 
 	caseCount := len(enumCases)
 	caseValues := make([]*interpreter.CompositeValue, caseCount)
-	constructorNestedVariables := interpreter.NewStringVariableOrderedMap()
+	constructorNestedVariables := map[string]*interpreter.Variable{}
 
 	for i, enumCase := range enumCases {
 		rawValue := enumCase.RawValue()
-		caseValue := caseConstructor(rawValue)
+		caseValue := caseConstructor(inter, rawValue)
 		caseValues[i] = caseValue
-		constructorNestedVariables.Set(
-			enumCase.Name(),
-			interpreter.NewVariableWithValue(caseValue),
-		)
+		constructorNestedVariables[enumCase.Name()] =
+			interpreter.NewVariableWithValue(caseValue)
 	}
 
-	return interpreter.EnumConstructorFunction(enumType, caseValues, constructorNestedVariables)
+	return interpreter.EnumConstructorFunction(
+		inter,
+		getLocationRange,
+		enumType,
+		caseValues,
+		constructorNestedVariables,
+	)
 }

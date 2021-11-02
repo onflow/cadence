@@ -22,6 +22,6 @@ import "github.com/onflow/cadence/runtime/common"
 
 type ValueDeclaration interface {
 	ValueDeclarationName() string
-	ValueDeclarationValue() Value
+	ValueDeclarationValue(interpreter *Interpreter) Value
 	ValueDeclarationAvailable(common.Location) bool
 }
