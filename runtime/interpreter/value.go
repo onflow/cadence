@@ -13741,6 +13741,40 @@ func (PathValue) IsStorable() bool {
 	return true
 }
 
+func convertPath(domain common.PathDomain, value Value) Value {
+	stringValue, ok := value.(*StringValue)
+	if !ok {
+		return NilValue{}
+	}
+
+	_, err := sema.CheckPathLiteral(
+		"public",
+		stringValue.Str,
+		ReturnEmptyLocationRange().Range,
+		ReturnEmptyLocationRange().Range,
+	)
+	if err != nil {
+		return NilValue{}
+	}
+
+	return NewSomeValueNonCopying(PathValue{
+		Domain:     domain,
+		Identifier: stringValue.Str,
+	})
+}
+
+func ConvertPublicPath(value Value) Value {
+	return convertPath(common.PathDomainPublic, value)
+}
+
+func ConvertPrivatePath(value Value) Value {
+	return convertPath(common.PathDomainPrivate, value)
+}
+
+func ConvertStoragePath(value Value) Value {
+	return convertPath(common.PathDomainStorage, value)
+}
+
 func (v PathValue) Storable(
 	storage atree.SlabStorage,
 	address atree.Address,
@@ -13789,78 +13823,6 @@ func (v PathValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 
 func (PathValue) ChildStorables() []atree.Storable {
 	return nil
-}
-
-func ConvertPublicPath(value Value) Value {
-	stringValue, ok := value.(*StringValue)
-	if !ok {
-		return NilValue{}
-	}
-
-	ok = true
-	_ = sema.CheckPathLiteral(
-		"public",
-		stringValue.Str,
-		func(func(*ast.PathExpression) error) {
-			ok = false
-		},
-	)
-	if !ok {
-		return NilValue{}
-	}
-
-	return NewSomeValueNonCopying(PathValue{
-		Domain:     common.PathDomainPublic,
-		Identifier: stringValue.Str,
-	})
-}
-
-func ConvertPrivatePath(value Value) Value {
-	stringValue, ok := value.(*StringValue)
-	if !ok {
-		return NilValue{}
-	}
-
-	ok = true
-	_ = sema.CheckPathLiteral(
-		"private",
-		stringValue.Str,
-		func(func(*ast.PathExpression) error) {
-			ok = false
-		},
-	)
-	if !ok {
-		return NilValue{}
-	}
-
-	return NewSomeValueNonCopying(PathValue{
-		Domain:     common.PathDomainPrivate,
-		Identifier: stringValue.Str,
-	})
-}
-
-func ConvertStoragePath(value Value) Value {
-	stringValue, ok := value.(*StringValue)
-	if !ok {
-		return NilValue{}
-	}
-
-	ok = true
-	_ = sema.CheckPathLiteral(
-		"storage",
-		stringValue.Str,
-		func(func(*ast.PathExpression) error) {
-			ok = false
-		},
-	)
-	if !ok {
-		return NilValue{}
-	}
-
-	return NewSomeValueNonCopying(PathValue{
-		Domain:     common.PathDomainStorage,
-		Identifier: stringValue.Str,
-	})
 }
 
 // CapabilityValue

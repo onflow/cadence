@@ -107,15 +107,14 @@ func pathLiteralValue(expression ast.Expression, ty sema.Type) (result cadence.V
 		return nil, LiteralExpressionTypeError
 	}
 
-	pathType := sema.CheckPathLiteral(
+	pathType, err := sema.CheckPathLiteral(
 		pathExpression.Domain.Identifier,
 		pathExpression.Identifier.Identifier,
-		func(makeError func(*ast.PathExpression) error) {
-			errResult = InvalidLiteralError
-		},
+		ast.NewRangeFromPositioned(pathExpression.Domain),
+		ast.NewRangeFromPositioned(pathExpression.Identifier),
 	)
-	if errResult != nil {
-		return nil, errResult
+	if err != nil {
+		return nil, InvalidLiteralError
 	}
 
 	if !sema.IsSubType(pathType, ty) {
