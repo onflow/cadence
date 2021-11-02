@@ -24,7 +24,7 @@ import (
 
 //go:generate go run golang.org/x/tools/cmd/stringer -type=PathDomain
 
-type PathDomain uint
+type PathDomain uint8
 
 const (
 	PathDomainUnknown PathDomain = iota

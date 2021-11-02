@@ -66,6 +66,7 @@ func TestInterpretOptionalType(t *testing.T) {
 				Type: interpreter.CompositeStaticType{
 					Location:            utils.TestLocation,
 					QualifiedIdentifier: "R",
+					TypeID:              "S.test.R",
 				},
 			},
 		},
@@ -128,6 +129,7 @@ func TestInterpretVariableSizedArrayType(t *testing.T) {
 				Type: interpreter.CompositeStaticType{
 					Location:            utils.TestLocation,
 					QualifiedIdentifier: "R",
+					TypeID:              "S.test.R",
 				},
 			},
 		},
@@ -191,6 +193,7 @@ func TestInterpretConstantSizedArrayType(t *testing.T) {
 				Type: interpreter.CompositeStaticType{
 					Location:            utils.TestLocation,
 					QualifiedIdentifier: "R",
+					TypeID:              "S.test.R",
 				},
 				Size: int64(400),
 			},
@@ -260,6 +263,7 @@ func TestInterpretDictionaryType(t *testing.T) {
 				ValueType: interpreter.CompositeStaticType{
 					Location:            utils.TestLocation,
 					QualifiedIdentifier: "R",
+					TypeID:              "S.test.R",
 				},
 				KeyType: interpreter.PrimitiveStaticTypeInt,
 			},
@@ -316,6 +320,7 @@ func TestInterpretCompositeType(t *testing.T) {
 			Type: interpreter.CompositeStaticType{
 				QualifiedIdentifier: "R",
 				Location:            utils.TestLocation,
+				TypeID:              "S.test.R",
 			},
 		},
 		inter.Globals["a"].GetValue(),
@@ -326,6 +331,7 @@ func TestInterpretCompositeType(t *testing.T) {
 			Type: interpreter.CompositeStaticType{
 				QualifiedIdentifier: "S",
 				Location:            utils.TestLocation,
+				TypeID:              "S.test.S",
 			},
 		},
 		inter.Globals["b"].GetValue(),
@@ -351,6 +357,7 @@ func TestInterpretCompositeType(t *testing.T) {
 			Type: interpreter.CompositeStaticType{
 				QualifiedIdentifier: "F",
 				Location:            utils.TestLocation,
+				TypeID:              "S.test.F",
 			},
 		},
 		inter.Globals["f"].GetValue(),
@@ -480,6 +487,7 @@ func TestInterpretReferenceType(t *testing.T) {
 				Type: interpreter.CompositeStaticType{
 					QualifiedIdentifier: "R",
 					Location:            utils.TestLocation,
+					TypeID:              "S.test.R",
 				},
 				Authorized: true,
 			},
@@ -503,6 +511,7 @@ func TestInterpretReferenceType(t *testing.T) {
 				Type: interpreter.CompositeStaticType{
 					QualifiedIdentifier: "S",
 					Location:            utils.TestLocation,
+					TypeID:              "S.test.S",
 				},
 				Authorized: true,
 			},
@@ -553,6 +562,7 @@ func TestInterpretRestrictedType(t *testing.T) {
 				Type: interpreter.CompositeStaticType{
 					QualifiedIdentifier: "A",
 					Location:            utils.TestLocation,
+					TypeID:              "S.test.A",
 				},
 				Restrictions: []interpreter.InterfaceStaticType{
 					{
@@ -571,6 +581,7 @@ func TestInterpretRestrictedType(t *testing.T) {
 				Type: interpreter.CompositeStaticType{
 					QualifiedIdentifier: "B",
 					Location:            utils.TestLocation,
+					TypeID:              "S.test.B",
 				},
 				Restrictions: []interpreter.InterfaceStaticType{
 					{
@@ -695,6 +706,7 @@ func TestInterpretCapabilityType(t *testing.T) {
 					Type: interpreter.CompositeStaticType{
 						QualifiedIdentifier: "R",
 						Location:            utils.TestLocation,
+						TypeID:              "S.test.R",
 					},
 					Authorized: false,
 				},
