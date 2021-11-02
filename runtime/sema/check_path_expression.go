@@ -27,52 +27,47 @@ import (
 
 func (checker *Checker) VisitPathExpression(expression *ast.PathExpression) ast.Repr {
 
-	ty := CheckPathLiteral(
+	ty, err := CheckPathLiteral(
 		expression.Domain.Identifier,
 		expression.Identifier.Identifier,
-		func(errFunc func(err *ast.PathExpression) error) {
-			checker.report(errFunc(expression))
-		},
+		ast.NewRangeFromPositioned(expression.Domain),
+		ast.NewRangeFromPositioned(expression.Identifier),
 	)
+
+	checker.report(err)
 
 	return ty
 }
 
 var isValidIdentifier = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`).MatchString
 
-func CheckPathLiteral(domainString, identifier string, report func(func(err *ast.PathExpression) error)) Type {
+func CheckPathLiteral(domainString, identifier string, domainRange, idRange ast.Range) (Type, error) {
 
 	// Check that the domain is valid
 	domain, ok := common.AllPathDomainsByIdentifier[domainString]
 	if !ok {
-		report(func(expression *ast.PathExpression) error {
-			return &InvalidPathDomainError{
-				ActualDomain: domainString,
-				Range:        ast.NewRangeFromPositioned(expression.Domain),
-			}
-		})
-		return PathType
+		return PathType, &InvalidPathDomainError{
+			ActualDomain: domainString,
+			Range:        ast.NewRangeFromPositioned(domainRange),
+		}
 	}
 
 	// Check that the identifier is valid
 	if !isValidIdentifier(identifier) {
-		report(func(expression *ast.PathExpression) error {
-			return &InvalidPathIdentifierError{
-				ActualIdentifier: identifier,
-				Range:            ast.NewRangeFromPositioned(expression.Identifier),
-			}
-		})
-		return PathType
+		return PathType, &InvalidPathIdentifierError{
+			ActualIdentifier: identifier,
+			Range:            ast.NewRangeFromPositioned(idRange),
+		}
 	}
 
 	switch domain {
 	case common.PathDomainStorage:
-		return StoragePathType
+		return StoragePathType, nil
 	case common.PathDomainPublic:
-		return PublicPathType
+		return PublicPathType, nil
 	case common.PathDomainPrivate:
-		return PrivatePathType
+		return PrivatePathType, nil
 	default:
-		return PathType
+		return PathType, nil
 	}
 }
