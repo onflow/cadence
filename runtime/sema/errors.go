@@ -2957,3 +2957,17 @@ func (e *InvalidEntryPointTypeError) Error() string {
 		e.Type.QualifiedString(),
 	)
 }
+
+// InternalError
+
+type InternalError struct {
+	Message string
+	ast.Range
+}
+
+func (e *InternalError) Error() string {
+	return fmt.Sprintf(
+		"internal error: %s",
+		e.Message,
+	)
+}
