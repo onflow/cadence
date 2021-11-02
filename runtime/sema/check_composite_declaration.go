@@ -19,6 +19,8 @@
 package sema
 
 import (
+	"fmt"
+
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -1235,7 +1237,14 @@ func (checker *Checker) checkTypeRequirement(
 	}
 
 	if compositeDeclaration == nil {
-		panic(errors.NewUnreachableError())
+		checker.report(&InternalError{
+			Message: fmt.Sprintf(
+				"expected composite declaration with identifier '%s'",
+				declaredCompositeType.Identifier,
+			),
+			Range: ast.NewRangeFromPositioned(containerDeclaration),
+		})
+		return
 	}
 
 	// Check that the composite declaration declares at least the conformances
