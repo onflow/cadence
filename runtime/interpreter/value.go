@@ -185,11 +185,6 @@ func (TypeValue) Walk(_ func(Value)) {
 	// NO-OP
 }
 
-func (v TypeValue) KeyString() string {
-	// When used as keys, TypeValues should only match if their underlying StaticType is the same
-	return v.Type.String()
-}
-
 var metaTypeDynamicType DynamicType = MetaTypeDynamicType{}
 
 func (TypeValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
@@ -335,6 +330,15 @@ func (v TypeValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 
 func (TypeValue) ChildStorables() []atree.Storable {
 	return nil
+}
+
+func (v TypeValue) HashInput(interpreter *Interpreter, _ func() LocationRange, scratch []byte) []byte {
+	typeID := interpreter.ConvertStaticToSemaType(v.Type).ID()
+
+	return append(
+		[]byte{byte(HashInputTypeType)},
+		typeID...,
+	)
 }
 
 // VoidValue

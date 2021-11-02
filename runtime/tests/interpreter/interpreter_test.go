@@ -4095,21 +4095,21 @@ func TestInterpretDictionaryIndexingType(t *testing.T) {
     `)
 
 	assert.Equal(t,
-		interpreter.NewSomeValueOwningNonCopying(
+		interpreter.NewSomeValueNonCopying(
 			interpreter.NewStringValue("a"),
 		),
 		inter.Globals["a"].GetValue(),
 	)
 
 	assert.Equal(t,
-		interpreter.NewSomeValueOwningNonCopying(
+		interpreter.NewSomeValueNonCopying(
 			interpreter.NewStringValue("b"),
 		),
 		inter.Globals["b"].GetValue(),
 	)
 
 	assert.Equal(t,
-		interpreter.NewSomeValueOwningNonCopying(
+		interpreter.NewSomeValueNonCopying(
 			interpreter.NewStringValue("c"),
 		),
 		inter.Globals["c"].GetValue(),
@@ -4127,7 +4127,7 @@ func TestInterpretDictionaryIndexingType(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		interpreter.NewSomeValueOwningNonCopying(
+		interpreter.NewSomeValueNonCopying(
 			interpreter.NewStringValue("f"),
 		),
 		inter.Globals["f"].GetValue(),
