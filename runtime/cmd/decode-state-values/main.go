@@ -30,6 +30,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/onflow/atree"
@@ -143,7 +144,10 @@ func (s *slabStorage) SlabIterator() (atree.SlabIterator, error) {
 		storageKey
 	}
 
-	for key := range storage {
+	// NOTE: iteration over map is safe,
+	// as result is sorted below
+
+	for key := range storage { //nolint:maprangecheck
 
 		var address atree.Address
 		copy(address[:], key[0])
@@ -160,6 +164,12 @@ func (s *slabStorage) SlabIterator() (atree.SlabIterator, error) {
 			storageKey: key,
 		})
 	}
+
+	sort.Slice(slabs, func(i, j int) bool {
+		a := slabs[i]
+		b := slabs[j]
+		return a.StorageID.Compare(b.StorageID) < 0
+	})
 
 	var i int
 
