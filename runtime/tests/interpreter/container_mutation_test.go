@@ -24,6 +24,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/tests/utils"
+
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
@@ -50,10 +53,20 @@ func TestArrayMutation(t *testing.T) {
 		require.IsType(t, &interpreter.ArrayValue{}, value)
 		array := value.(*interpreter.ArrayValue)
 
-		elements := array.Elements()
-		require.Len(t, elements, 2)
-		assert.Equal(t, interpreter.NewStringValue("baz"), elements[0])
-		assert.Equal(t, interpreter.NewStringValue("bar"), elements[1])
+		utils.RequireValuesEqual(
+			t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeString,
+				},
+				common.Address{},
+				interpreter.NewStringValue("baz"),
+				interpreter.NewStringValue("bar"),
+			),
+			array,
+		)
 	})
 
 	t.Run("simple array invalid", func(t *testing.T) {
@@ -111,11 +124,21 @@ func TestArrayMutation(t *testing.T) {
 		require.IsType(t, &interpreter.ArrayValue{}, value)
 		array := value.(*interpreter.ArrayValue)
 
-		elements := array.Elements()
-		require.Len(t, elements, 3)
-		assert.Equal(t, interpreter.NewStringValue("foo"), elements[0])
-		assert.Equal(t, interpreter.NewStringValue("bar"), elements[1])
-		assert.Equal(t, interpreter.NewStringValue("baz"), elements[2])
+		utils.RequireValuesEqual(
+			t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeString,
+				},
+				common.Address{},
+				interpreter.NewStringValue("foo"),
+				interpreter.NewStringValue("bar"),
+				interpreter.NewStringValue("baz"),
+			),
+			array,
+		)
 	})
 
 	t.Run("array append invalid", func(t *testing.T) {
@@ -173,11 +196,21 @@ func TestArrayMutation(t *testing.T) {
 		require.IsType(t, &interpreter.ArrayValue{}, value)
 		array := value.(*interpreter.ArrayValue)
 
-		elements := array.Elements()
-		require.Len(t, elements, 3)
-		assert.Equal(t, interpreter.NewStringValue("foo"), elements[0])
-		assert.Equal(t, interpreter.NewStringValue("baz"), elements[1])
-		assert.Equal(t, interpreter.NewStringValue("bar"), elements[2])
+		utils.RequireValuesEqual(
+			t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeString,
+				},
+				common.Address{},
+				interpreter.NewStringValue("foo"),
+				interpreter.NewStringValue("baz"),
+				interpreter.NewStringValue("bar"),
+			),
+			array,
+		)
 	})
 
 	t.Run("array insert invalid", func(t *testing.T) {
@@ -200,6 +233,7 @@ func TestArrayMutation(t *testing.T) {
 	})
 
 	t.Run("array concat mismatching values", func(t *testing.T) {
+
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
@@ -210,23 +244,10 @@ func TestArrayMutation(t *testing.T) {
             }
         `)
 
-		value, err := inter.Invoke("test")
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
 
-		// This should not give errors, since resulting array is a new array.
-		// It doesn't mutate the existing array.
-		require.NoError(t, err)
-
-		// check resulting array
-
-		require.IsType(t, &interpreter.ArrayValue{}, value)
-		array := value.(*interpreter.ArrayValue)
-
-		elements := array.Elements()
-		require.Len(t, elements, 4)
-		assert.Equal(t, interpreter.NewStringValue("foo"), elements[0])
-		assert.Equal(t, interpreter.NewStringValue("bar"), elements[1])
-		assert.Equal(t, interpreter.NewStringValue("baz"), elements[2])
-		assert.Equal(t, interpreter.NewIntValueFromInt64(5), elements[3])
+		require.ErrorAs(t, err, &interpreter.ContainerMutationError{})
 
 		// Check original array
 
@@ -234,10 +255,20 @@ func TestArrayMutation(t *testing.T) {
 		require.IsType(t, &interpreter.ArrayValue{}, namesVal)
 		namesValArray := namesVal.(*interpreter.ArrayValue)
 
-		names := namesValArray.Elements()
-		require.Len(t, names, 2)
-		assert.Equal(t, interpreter.NewStringValue("foo"), names[0])
-		assert.Equal(t, interpreter.NewStringValue("bar"), names[1])
+		utils.RequireValuesEqual(
+			t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeString,
+				},
+				common.Address{},
+				interpreter.NewStringValue("foo"),
+				interpreter.NewStringValue("bar"),
+			),
+			namesValArray,
+		)
 	})
 
 	t.Run("invalid update through reference", func(t *testing.T) {
@@ -340,10 +371,17 @@ func TestArrayMutation(t *testing.T) {
 		require.IsType(t, &interpreter.ArrayValue{}, value)
 		array := value.(*interpreter.ArrayValue)
 
-		elements := array.Elements()
-		require.Len(t, elements, 2)
-		assert.Equal(t, interpreter.NewStringValue("hello from foo"), elements[0])
-		assert.Equal(t, interpreter.NewStringValue("hello from bar"), elements[1])
+		require.Equal(t, 2, array.Count())
+		assert.Equal(
+			t,
+			interpreter.NewStringValue("hello from foo"),
+			array.Get(inter, interpreter.ReturnEmptyLocationRange, 0),
+		)
+		assert.Equal(
+			t,
+			interpreter.NewStringValue("hello from bar"),
+			array.Get(inter, interpreter.ReturnEmptyLocationRange, 1),
+		)
 	})
 
 	t.Run("bound function array mutation", func(t *testing.T) {
@@ -384,10 +422,17 @@ func TestArrayMutation(t *testing.T) {
 		require.IsType(t, &interpreter.ArrayValue{}, value)
 		array := value.(*interpreter.ArrayValue)
 
-		elements := array.Elements()
-		require.Len(t, elements, 2)
-		assert.Equal(t, interpreter.NewStringValue("hello from foo"), elements[0])
-		assert.Equal(t, interpreter.NewStringValue("hello from bar"), elements[1])
+		require.Equal(t, 2, array.Count())
+		assert.Equal(
+			t,
+			interpreter.NewStringValue("hello from foo"),
+			array.Get(inter, interpreter.ReturnEmptyLocationRange, 0),
+		)
+		assert.Equal(
+			t,
+			interpreter.NewStringValue("hello from bar"),
+			array.Get(inter, interpreter.ReturnEmptyLocationRange, 1),
+		)
 	})
 
 	t.Run("invalid function array mutation", func(t *testing.T) {
@@ -434,6 +479,7 @@ func TestArrayMutation(t *testing.T) {
 		funcType := optionalType.Type.(*sema.FunctionType)
 
 		assert.Equal(t, sema.VoidType, funcType.ReturnTypeAnnotation.Type)
+		assert.Nil(t, funcType.ReceiverType)
 		assert.Empty(t, funcType.Parameters)
 	})
 }
@@ -457,12 +503,15 @@ func TestDictionaryMutation(t *testing.T) {
 		require.NoError(t, err)
 
 		require.IsType(t, &interpreter.DictionaryValue{}, value)
-		array := value.(*interpreter.DictionaryValue)
+		dictionary := value.(*interpreter.DictionaryValue)
 
-		entries := array.Entries()
-		require.Equal(t, 1, entries.Len())
+		require.Equal(t, 1, dictionary.Count())
 
-		val, present := entries.Get("foo")
+		val, present := dictionary.Get(
+			inter,
+			interpreter.ReturnEmptyLocationRange,
+			interpreter.NewStringValue("foo"),
+		)
 		assert.True(t, present)
 		assert.Equal(t, interpreter.NewStringValue("baz"), val)
 	})
@@ -506,10 +555,9 @@ func TestDictionaryMutation(t *testing.T) {
 		require.NoError(t, err)
 
 		require.IsType(t, &interpreter.DictionaryValue{}, value)
-		array := value.(*interpreter.DictionaryValue)
+		dictionary := value.(*interpreter.DictionaryValue)
 
-		entries := array.Entries()
-		require.Equal(t, 0, entries.Len())
+		require.Equal(t, 0, dictionary.Count())
 	})
 
 	t.Run("dictionary insert valid", func(t *testing.T) {
@@ -527,12 +575,15 @@ func TestDictionaryMutation(t *testing.T) {
 		require.NoError(t, err)
 
 		require.IsType(t, &interpreter.DictionaryValue{}, value)
-		array := value.(*interpreter.DictionaryValue)
+		dictionary := value.(*interpreter.DictionaryValue)
 
-		entries := array.Entries()
-		require.Equal(t, 1, entries.Len())
+		require.Equal(t, 1, dictionary.Count())
 
-		val, present := entries.Get("foo")
+		val, present := dictionary.Get(
+			inter,
+			interpreter.ReturnEmptyLocationRange,
+			interpreter.NewStringValue("foo"),
+		)
 		assert.True(t, present)
 		assert.Equal(t, interpreter.NewStringValue("baz"), val)
 	})
@@ -617,9 +668,10 @@ func TestInterpretContainerMutationAfterNilCoalescing(t *testing.T) {
 	result, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	require.Equal(
+	utils.RequireValuesEqual(
 		t,
-		interpreter.NewSomeValueOwningNonCopying(
+		inter,
+		interpreter.NewSomeValueNonCopying(
 			interpreter.NewStringValue("test"),
 		),
 		result,

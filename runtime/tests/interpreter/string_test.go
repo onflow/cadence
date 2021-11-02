@@ -21,8 +21,11 @@ package interpreter_test
 import (
 	"testing"
 
-	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/interpreter"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestInterpretRecursiveValueString(t *testing.T) {
@@ -42,15 +45,15 @@ func TestInterpretRecursiveValueString(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t,
-		`{"mapRef": {"mapRef": {"mapRef": ...}}}`,
+		`{"mapRef": {"mapRef": ...}}`,
 		mapValue.String(),
 	)
 
 	require.IsType(t, &interpreter.DictionaryValue{}, mapValue)
 	require.Equal(t,
-		`{"mapRef": {"mapRef": ...}}`,
+		`{"mapRef": ...}`,
 		mapValue.(*interpreter.DictionaryValue).
-			Get(inter, nil, interpreter.NewStringValue("mapRef")).
+			GetKey(inter, interpreter.ReturnEmptyLocationRange, interpreter.NewStringValue("mapRef")).
 			String(),
 	)
 }
@@ -68,7 +71,9 @@ func TestInterpretStringFunction(t *testing.T) {
 	result, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	require.Equal(t,
+	RequireValuesEqual(
+		t,
+		inter,
 		interpreter.NewStringValue(""),
 		result,
 	)
@@ -87,11 +92,15 @@ func TestInterpretStringDecodeHex(t *testing.T) {
 	result, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	require.Equal(t,
-		interpreter.NewArrayValueUnownedNonCopying(
+	RequireValuesEqual(
+		t,
+		inter,
+		interpreter.NewArrayValue(
+			inter,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeUInt8,
 			},
+			common.Address{},
 			interpreter.UInt8Value(1),
 			interpreter.UInt8Value(0xCA),
 			interpreter.UInt8Value(0xDE),
@@ -113,7 +122,9 @@ func TestInterpretStringEncodeHex(t *testing.T) {
 	result, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	require.Equal(t,
+	RequireValuesEqual(
+		t,
+		inter,
 		interpreter.NewStringValue("010203cade"),
 		result,
 	)
@@ -132,11 +143,15 @@ func TestInterpretStringUtf8Field(t *testing.T) {
 	result, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	require.Equal(t,
-		interpreter.NewArrayValueUnownedNonCopying(
+	RequireValuesEqual(
+		t,
+		inter,
+		interpreter.NewArrayValue(
+			inter,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeUInt8,
 			},
+			common.Address{},
 			// Flowers
 			interpreter.UInt8Value(70),
 			interpreter.UInt8Value(108),

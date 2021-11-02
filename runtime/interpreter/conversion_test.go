@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package interpreter
+package interpreter_test
 
 import (
 	"math"
@@ -24,6 +24,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/cadence/runtime/common"
+	. "github.com/onflow/cadence/runtime/interpreter"
 )
 
 func TestByteArrayValueToByteSlice(t *testing.T) {
@@ -35,17 +38,23 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 		largeBigInt, ok := new(big.Int).SetString("1000000000000000000000000000000000000000000000", 10)
 		require.True(t, ok)
 
+		inter := newTestInterpreter(t)
+
 		invalid := []Value{
-			NewArrayValueUnownedNonCopying(
+			NewArrayValue(
+				inter,
 				VariableSizedStaticType{
-					Type: PrimitiveStaticTypeInt64,
+					Type: PrimitiveStaticTypeUInt64,
 				},
+				common.Address{},
 				UInt64Value(500),
 			),
-			NewArrayValueUnownedNonCopying(
+			NewArrayValue(
+				inter,
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInt256,
 				},
+				common.Address{},
 				NewInt256ValueFromBigInt(largeBigInt),
 			),
 			UInt64Value(500),
@@ -61,23 +70,31 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 
 	t.Run("valid", func(t *testing.T) {
 
+		inter := newTestInterpreter(t)
+
 		invalid := map[Value][]byte{
-			NewArrayValueUnownedNonCopying(
+			NewArrayValue(
+				inter,
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInteger,
 				},
+				common.Address{},
 			): {},
-			NewArrayValueUnownedNonCopying(
+			NewArrayValue(
+				inter,
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInteger,
 				},
+				common.Address{},
 				UInt64Value(2),
 				NewUInt128ValueFromUint64(3),
 			): {2, 3},
-			NewArrayValueUnownedNonCopying(
+			NewArrayValue(
+				inter,
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInteger,
 				},
+				common.Address{},
 				UInt8Value(4),
 				NewIntValueFromInt64(5),
 			): {4, 5},

@@ -264,9 +264,11 @@ func TestFunctionSubtyping(t *testing.T) {
 		assert.True(t,
 			IsSubType(
 				&FunctionType{
+					ReceiverType:         AuthAccountType,
 					ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
 				},
 				&FunctionType{
+					ReceiverType:         PublicAccountType,
 					ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
 				},
 			),
