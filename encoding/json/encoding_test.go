@@ -28,9 +28,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime"
+	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/tests/checker"
+
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
-	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -670,6 +673,41 @@ func TestEncodeDictionary(t *testing.T) {
 	)
 }
 
+func exportFromScript(t *testing.T, code string) cadence.Value {
+	checker, err := checker.ParseAndCheck(t, code)
+	require.NoError(t, err)
+
+	var uuid uint64 = 0
+
+	inter, err := interpreter.NewInterpreter(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+		interpreter.WithUUIDHandler(
+			func() (uint64, error) {
+				uuid++
+				return uuid, nil
+			},
+		),
+		interpreter.WithAtreeStorageValidationEnabled(true),
+		interpreter.WithAtreeValueValidationEnabled(true),
+		interpreter.WithStorage(
+			interpreter.NewInMemoryStorage(),
+		),
+	)
+	require.NoError(t, err)
+
+	err = inter.Interpret()
+	require.NoError(t, err)
+
+	result, err := inter.Invoke("main")
+	require.NoError(t, err)
+
+	exported, err := runtime.ExportValue(result, inter)
+	require.NoError(t, err)
+
+	return exported
+}
+
 func TestEncodeResource(t *testing.T) {
 
 	t.Parallel()
@@ -678,36 +716,34 @@ func TestEncodeResource(t *testing.T) {
 
 		t.Parallel()
 
-		script := `
-			pub resource Foo {
-				pub let bar: Int
+		actual := exportFromScript(t, `
+			resource Foo {
+				let bar: Int
 	
 				init(bar: Int) {
 					self.bar = bar
 				}
 			}
 	
-			pub fun main(): @Foo {
+			fun main(): @Foo {
 				return <- create Foo(bar: 42)
 			}
-		`
+		`)
 
-		expectedJSON := `{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"uuid","value":{"type":"UInt64","value":"0"}},{"name":"bar","value":{"type":"Int","value":"42"}}]}}`
+		expectedJSON := `{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"uuid","value":{"type":"UInt64","value":"1"}},{"name":"bar","value":{"type":"Int","value":"42"}}]}}`
 
-		v := convertValueFromScript(t, script)
-
-		testEncodeAndDecode(t, v, expectedJSON)
+		testEncodeAndDecode(t, actual, expectedJSON)
 	})
 
 	t.Run("With function member", func(t *testing.T) {
 
 		t.Parallel()
 
-		script := `
-			pub resource Foo {
-				pub let bar: Int
+		actual := exportFromScript(t, `
+			resource Foo {
+				let bar: Int
 	
-				pub fun foo(): String {
+				fun foo(): String {
 					return "foo"
 				}
 	
@@ -716,37 +752,32 @@ func TestEncodeResource(t *testing.T) {
 				}
 			}
 	
-			pub fun main(): @Foo {
+			fun main(): @Foo {
 				return <- create Foo(bar: 42)
 			}
-		`
+		`)
 
 		// function "foo" should be omitted from resulting JSON
-		expectedJSON := `{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"uuid","value":{"type":"UInt64","value":"0"}},{"name":"bar","value":{"type":"Int","value":"42"}}]}}`
+		expectedJSON := `{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"uuid","value":{"type":"UInt64","value":"1"}},{"name":"bar","value":{"type":"Int","value":"42"}}]}}`
 
-		v := convertValueFromScript(t, script)
-
-		actualJSON, err := json.Encode(v)
-		require.NoError(t, err)
-
-		assert.JSONEq(t, expectedJSON, string(actualJSON))
+		testEncodeAndDecode(t, actual, expectedJSON)
 	})
 
 	t.Run("Nested resource", func(t *testing.T) {
 
 		t.Parallel()
 
-		script := `
-			pub resource Bar {
-				pub let x: Int
+		actual := exportFromScript(t, `
+			resource Bar {
+				let x: Int
 	
 				init(x: Int) {
 					self.x = x
 				}
 			}
 	
-			pub resource Foo {
-				pub let bar: @Bar
+			resource Foo {
+				let bar: @Bar
 	
 				init(bar: @Bar) {
 					self.bar <- bar
@@ -757,16 +788,14 @@ func TestEncodeResource(t *testing.T) {
 				}
 			}
 	
-			pub fun main(): @Foo {
+			fun main(): @Foo {
 				return <- create Foo(bar: <- create Bar(x: 42))
 			}
-		`
+		`)
 
-		expectedJSON := `{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"uuid","value":{"type":"UInt64","value":"0"}},{"name":"bar","value":{"type":"Resource","value":{"id":"S.test.Bar","fields":[{"name":"uuid","value":{"type":"UInt64","value":"0"}},{"name":"x","value":{"type":"Int","value":"42"}}]}}}]}}`
+		expectedJSON := `{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"uuid","value":{"type":"UInt64","value":"2"}},{"name":"bar","value":{"type":"Resource","value":{"id":"S.test.Bar","fields":[{"name":"uuid","value":{"type":"UInt64","value":"1"}},{"name":"x","value":{"type":"Int","value":"42"}}]}}}]}}`
 
-		v := convertValueFromScript(t, script)
-
-		testEncodeAndDecode(t, v, expectedJSON)
+		testEncodeAndDecode(t, actual, expectedJSON)
 	})
 }
 
@@ -1277,25 +1306,6 @@ func TestEncodePath(t *testing.T) {
 		cadence.Path{Domain: "storage", Identifier: "foo"},
 		`{"type":"Path","value":{"domain":"storage","identifier":"foo"}}`,
 	)
-}
-
-func convertValueFromScript(t *testing.T, script string) cadence.Value {
-	rt := runtime.NewInterpreterRuntime()
-
-	value, err := rt.ExecuteScript(
-		runtime.Script{
-			Source:    []byte(script),
-			Arguments: nil,
-		},
-		runtime.Context{
-			Interface: runtime.NewEmptyRuntimeInterface(),
-			Location:  utils.TestLocation,
-		},
-	)
-
-	require.NoError(t, err)
-
-	return value
 }
 
 func testAllEncodeAndDecode(t *testing.T, tests ...encodeTest) {

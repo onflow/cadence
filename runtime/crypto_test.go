@@ -22,9 +22,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/onflow/cadence/encoding/json"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/cadence/encoding/json"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/sema"
@@ -35,7 +36,7 @@ func TestRuntimeCrypto_verify(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewInterpreterRuntime()
+	runtime := newTestInterpreterRuntime()
 
 	script := []byte(`
       import Crypto
@@ -69,7 +70,10 @@ func TestRuntimeCrypto_verify(t *testing.T) {
 
 	called := false
 
+	storage := newTestLedger(nil, nil)
+
 	runtimeInterface := &testRuntimeInterface{
+		storage: storage,
 		verifySignature: func(
 			signature []byte,
 			tag string,
@@ -112,7 +116,7 @@ func TestRuntimeHashAlgorithm_hash(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewInterpreterRuntime()
+	runtime := newTestInterpreterRuntime()
 
 	executeScript := func(code string, inter Interface) (cadence.Value, error) {
 		return runtime.ExecuteScript(
@@ -137,7 +141,10 @@ func TestRuntimeHashAlgorithm_hash(t *testing.T) {
 
 		var loggedMessages []string
 
+		storage := newTestLedger(nil, nil)
+
 		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
 			hash: func(
 				data []byte,
 				tag string,
@@ -176,7 +183,10 @@ func TestRuntimeHashAlgorithm_hash(t *testing.T) {
 		called := false
 		hashTag := "non-empty-string"
 
+		storage := newTestLedger(nil, nil)
+
 		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
 			hash: func(data []byte, tag string, hashAlgorithm HashAlgorithm) ([]byte, error) {
 				called = true
 				hashTag = tag
@@ -204,7 +214,10 @@ func TestRuntimeHashAlgorithm_hash(t *testing.T) {
 		called := false
 		hashTag := ""
 
+		storage := newTestLedger(nil, nil)
+
 		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
 			hash: func(data []byte, tag string, hashAlgorithm HashAlgorithm) ([]byte, error) {
 				called = true
 				hashTag = tag
@@ -224,7 +237,7 @@ func TestRuntimeHashingAlgorithmExport(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewInterpreterRuntime()
+	runtime := newTestInterpreterRuntime()
 	runtimeInterface := &testRuntimeInterface{}
 
 	testHashAlgorithm := func(algo sema.CryptoAlgorithm) {
@@ -264,7 +277,7 @@ func TestRuntimeSignatureAlgorithmExport(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewInterpreterRuntime()
+	runtime := newTestInterpreterRuntime()
 	runtimeInterface := &testRuntimeInterface{}
 
 	testSignatureAlgorithm := func(algo sema.CryptoAlgorithm) {
@@ -304,7 +317,7 @@ func TestRuntimeSignatureAlgorithmImport(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewInterpreterRuntime()
+	runtime := newTestInterpreterRuntime()
 	runtimeInterface := &testRuntimeInterface{
 		decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 			return json.Decode(b)
@@ -375,8 +388,11 @@ func TestRuntimeHashAlgorithmImport(t *testing.T) {
 		var logs []string
 		var hashCalls int
 
-		runtime := NewInterpreterRuntime()
+		storage := newTestLedger(nil, nil)
+
+		runtime := newTestInterpreterRuntime()
 		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
 			hash: func(data []byte, tag string, hashAlgorithm HashAlgorithm) ([]byte, error) {
 				hashCalls++
 				switch hashCalls {

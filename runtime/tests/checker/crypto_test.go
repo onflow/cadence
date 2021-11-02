@@ -22,9 +22,10 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
-	"github.com/stretchr/testify/require"
 )
 
 func TestCheckHashAlgorithmCases(t *testing.T) {

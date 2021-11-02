@@ -70,7 +70,9 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
 		codeHashValue := event.Fields[codeHashParameterIndex]
 
-		codeHash, err := importValue(nil, codeHashValue, sema.ByteArrayType)
+		inter := newTestInterpreter(t)
+
+		codeHash, err := importValue(inter, codeHashValue, sema.ByteArrayType)
 		require.NoError(t, err)
 
 		actualCodeHash, err := interpreter.ByteArrayValueToByteSlice(codeHash)
@@ -139,13 +141,13 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			argumentCode,
 		))
 
-		runtime := NewInterpreterRuntime()
+		runtime := newTestInterpreterRuntime()
 
 		var accountCode []byte
 		var events []cadence.Event
 
 		runtimeInterface := &testRuntimeInterface{
-			storage: newTestStorage(nil, nil),
+			storage: newTestLedger(nil, nil),
 			getSigningAccounts: func() ([]Address, error) {
 				return []Address{{42}}, nil
 			},

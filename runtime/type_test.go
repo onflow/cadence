@@ -32,7 +32,7 @@ func TestRuntimeTypeStorage(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewInterpreterRuntime()
+	runtime := newTestInterpreterRuntime()
 
 	tx1 := []byte(`
       transaction {
@@ -54,7 +54,7 @@ func TestRuntimeTypeStorage(t *testing.T) {
 	var loggedMessage string
 
 	runtimeInterface := &testRuntimeInterface{
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{
 				common.BytesToAddress([]byte{42}),
@@ -92,7 +92,7 @@ func TestRuntimeTypeStorage(t *testing.T) {
 	assert.Equal(t, `"Int"`, loggedMessage)
 }
 
-func TestBlock(t *testing.T) {
+func TestRuntimeBlockFieldTypes(t *testing.T) {
 
 	t.Parallel()
 
@@ -100,7 +100,7 @@ func TestBlock(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewInterpreterRuntime()
+		runtime := newTestInterpreterRuntime()
 
 		script := []byte(`
             transaction {
@@ -122,7 +122,10 @@ func TestBlock(t *testing.T) {
 
 		var loggedMessages []string
 
+		storage := newTestLedger(nil, nil)
+
 		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
 			getSigningAccounts: func() ([]Address, error) {
 				return nil, nil
 			},
@@ -157,7 +160,7 @@ func TestBlock(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewInterpreterRuntime()
+		runtime := newTestInterpreterRuntime()
 
 		script := []byte(`
             pub fun main(): [UFix64] {
@@ -178,19 +181,23 @@ func TestBlock(t *testing.T) {
             }
         `)
 
+		storage := newTestLedger(nil, nil)
+
 		var loggedMessages []string
 
-		runtimeInterface := testRuntimeInterface{
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
 			log: func(message string) {
 				loggedMessages = append(loggedMessages, message)
 			},
 		}
+
 		value, err := runtime.ExecuteScript(
 			Script{
 				Source: script,
 			},
 			Context{
-				Interface: &runtimeInterface,
+				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
 			},
 		)

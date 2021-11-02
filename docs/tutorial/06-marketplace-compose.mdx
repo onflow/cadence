@@ -91,7 +91,7 @@ pub fun main() {
   log(acct2ReceiverRef.balance)
 
   // verify that the balances are correct
-  if acct1ReceiverRef.balance != 40.0 || acct2ReceiverRef.balance != 40.0 {
+  if acct1ReceiverRef.balance != 40.0 || acct2ReceiverRef.balance != 20.0 {
       panic("Wrong balances!")
   }
 

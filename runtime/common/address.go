@@ -57,19 +57,19 @@ func (a *Address) SetBytes(b []byte) {
 	copy(a[AddressLength-len(b):], b)
 }
 
-// BytesWithoutLeadingZeros returns address without leading zeros.
+// Bytes returns address without leading zeros.
 // The fast path is inlined and handles the most common
 // scenario of address having no leading zeros.
-// Otherwise, bytesWithoutLeadingZeros() is called to trim leading zeros.
-func (a Address) BytesWithoutLeadingZeros() []byte {
+// Otherwise, bytes() is called to trim leading zeros.
+func (a Address) Bytes() []byte {
 	if a[0] != 0 {
 		return a[:]
 	}
-	return a.bytesWithoutLeadingZeros()
+	return a.bytes()
 }
 
 // bytes returns address bytes after trimming leading zeros.
-func (a *Address) bytesWithoutLeadingZeros() []byte {
+func (a *Address) bytes() []byte {
 	// Trim leading zeros
 	leadingZeros := 0
 	for _, b := range a {

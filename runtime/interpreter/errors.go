@@ -207,15 +207,14 @@ func (e DivisionByZeroError) Error() string {
 	return "division by zero"
 }
 
-// DestroyedCompositeError
+// InvalidatedResourceError
 
-type DestroyedCompositeError struct {
-	CompositeKind common.CompositeKind
+type InvalidatedResourceError struct {
 	LocationRange
 }
 
-func (e DestroyedCompositeError) Error() string {
-	return fmt.Sprintf("%s is destroyed and cannot be accessed anymore", e.CompositeKind.Name())
+func (e InvalidatedResourceError) Error() string {
+	return "resource is invalidated and cannot be used anymore"
 }
 
 // ForceAssignmentToNonNilResourceError
@@ -494,5 +493,31 @@ func (e ContainerMutationError) Error() string {
 	return fmt.Sprintf(
 		"invalid container update: expected a subtype of '%s'",
 		e.ExpectedType.QualifiedString(),
+	)
+}
+
+// NonStorableValueError
+//
+type NonStorableValueError struct {
+	Value Value
+}
+
+func (e NonStorableValueError) Error() string {
+	return fmt.Sprintf(
+		"cannot store non-storable value: %s",
+		e.Value,
+	)
+}
+
+// NonStorableStaticTypeError
+//
+type NonStorableStaticTypeError struct {
+	Type StaticType
+}
+
+func (e NonStorableStaticTypeError) Error() string {
+	return fmt.Sprintf(
+		"cannot store non-storable static type: %s",
+		e.Type,
 	)
 }
