@@ -88,9 +88,9 @@ let type: Type = something.getType()
 Run-time types can also be constructed from type identifier strings using built-in constructor functions. 
 
 ```cadence
-fun CompositeType(typeID: String): Type?
-fun InterfaceType(typeID: String): Type?
-fun RestrictedType(typeID: String?, restrictions: [String]) : Type?
+fun CompositeType(_ identifier: String): Type?
+fun InterfaceType(_ identifier: String): Type?
+fun RestrictedType(identifier: String?, restrictions: [String]): Type?
 ```
 
 Given a type identifer (as well as a list of identifiers for restricting interfaces
@@ -105,22 +105,25 @@ struct interface I {}
 let type: Type = CompositeType("A.0000000000000001.Test")
 // `type` is `Type<Test>`
 
-let type2: Type = RestrictedType(type.identifier, ["A.0000000000000001.I"])
+let type2: Type = RestrictedType(
+    identifier: type.identifier, 
+    restrictions: ["A.0000000000000001.I"]
+)
 // `type2` is `Type<Test{I}>`
 ```
 
 Other built-in functions will construct compound types from other run-types.
 
 ```cadence
-fun OptionalType(type: Type): Type
-fun VariableSizedArrayType(type: Type): Type
+fun OptionalType(_ type: Type): Type
+fun VariableSizedArrayType(_ type: Type): Type
 fun ConstantSizedArrayType(type: Type, size: Int): Type
-fun FunctionType(params: [Type], return: Type) : Type
+fun FunctionType(parameters: [Type], return: Type): Type
 // returns `nil` if `key` is not valid dictionary key type
 fun DictionaryType(key: Type, value: Type): Type?
 // returns `nil` if `type` is not a reference type
-fun CapabilityType(type: Type) : Type?
-fun ReferenceType(authorized: bool, type: Type) : Type
+fun CapabilityType(_ type: Type): Type?
+fun ReferenceType(authorized: bool, type: Type): Type
 ```
 
 ### Asserting the Type of a Value
