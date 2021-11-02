@@ -21,8 +21,9 @@ package interpreter_test
 import (
 	"testing"
 
-	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/cadence/runtime/interpreter"
 )
 
 func TestInterpretContractUseBeforeInitializationComplete(t *testing.T) {

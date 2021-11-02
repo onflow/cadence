@@ -22,11 +22,11 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
+	. "github.com/onflow/cadence/runtime/tests/utils"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestInterpretPath(t *testing.T) {
@@ -46,7 +46,9 @@ func TestInterpretPath(t *testing.T) {
 				),
 			)
 
-			assert.Equal(t,
+			AssertValuesEqual(
+				t,
+				inter,
 				interpreter.PathValue{
 					Domain:     domain,
 					Identifier: "random",
@@ -57,7 +59,7 @@ func TestInterpretPath(t *testing.T) {
 	}
 }
 
-func TestConvertStringToPath(t *testing.T) {
+func TestInterpretConvertStringToPath(t *testing.T) {
 	t.Parallel()
 
 	domainTypes := map[common.PathDomain]sema.Type{
@@ -77,7 +79,7 @@ func TestConvertStringToPath(t *testing.T) {
 			inter := parseCheckAndInterpret(t,
 				fmt.Sprintf(
 					`
-                      let x = %[1]s("foo")!
+                      let x = %[1]s(identifier: "foo")!
                     `,
 					domainType.String(),
 				),
@@ -101,7 +103,7 @@ func TestConvertStringToPath(t *testing.T) {
 			inter := parseCheckAndInterpret(t,
 				fmt.Sprintf(
 					`
-                      let x = %[1]s("2")
+                      let x = %[1]s(identifier: "2")
                     `,
 					domainType.String(),
 				),
@@ -122,7 +124,7 @@ func TestConvertStringToPath(t *testing.T) {
 			inter := parseCheckAndInterpret(t,
 				fmt.Sprintf(
 					`
-                      let x = %[1]s("fo-o")
+                      let x = %[1]s(identifier: "fo-o")
                     `,
 					domainType.String(),
 				),

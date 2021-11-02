@@ -37,7 +37,7 @@ var BlockType = &SimpleType{
 	Importable:           false,
 	Members: func(t *SimpleType) map[string]MemberResolver {
 		return map[string]MemberResolver{
-			"height": {
+			BlockTypeHeightFieldName: {
 				Kind: common.DeclarationKindField,
 				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicConstantFieldMember(
@@ -48,7 +48,7 @@ var BlockType = &SimpleType{
 					)
 				},
 			},
-			"view": {
+			BlockTypeViewFieldName: {
 				Kind: common.DeclarationKindField,
 				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicConstantFieldMember(
@@ -59,7 +59,7 @@ var BlockType = &SimpleType{
 					)
 				},
 			},
-			"timestamp": {
+			BlockTypeTimestampFieldName: {
 				Kind: common.DeclarationKindField,
 				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicConstantFieldMember(
@@ -70,14 +70,14 @@ var BlockType = &SimpleType{
 					)
 				},
 			},
-			"id": {
+			BlockTypeIDFieldName: {
 				Kind: common.DeclarationKindField,
 				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicConstantFieldMember(
 						t,
 						identifier,
 						blockIDFieldType,
-						blockTypeIdFieldDocString,
+						blockTypeIDFieldDocString,
 					)
 				},
 			},
@@ -92,11 +92,15 @@ var blockIDFieldType = &ConstantSizedType{
 	Size: BlockIDSize,
 }
 
+const BlockTypeHeightFieldName = "height"
+
 const blockTypeHeightFieldDocString = `
 The height of the block.
 
 If the blockchain is viewed as a tree with the genesis block at the root, the height of a node is the number of edges between the node and the genesis block
 `
+
+const BlockTypeViewFieldName = "view"
 
 const blockTypeViewFieldDocString = `
 The view of the block.
@@ -104,13 +108,17 @@ The view of the block.
 It is a detail of the consensus algorithm. It is a monotonically increasing integer and counts rounds in the consensus algorithm. Since not all rounds result in a finalized block, the view number is strictly greater than or equal to the block height
 `
 
+const BlockTypeTimestampFieldName = "timestamp"
+
 const blockTypeTimestampFieldDocString = `
 The ID of the block.
 
 It is essentially the hash of the block
 `
 
-const blockTypeIdFieldDocString = `
+const BlockTypeIDFieldName = "id"
+
+const blockTypeIDFieldDocString = `
 The timestamp of the block.
 
 Unix timestamp of when the proposer claims it constructed the block.

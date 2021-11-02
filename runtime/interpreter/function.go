@@ -21,8 +21,9 @@ package interpreter
 import (
 	"fmt"
 
+	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -30,7 +31,8 @@ import (
 // Invocation
 //
 type Invocation struct {
-	Self               *CompositeValue
+	Self               MemberAccessibleValue
+	ReceiverType       sema.Type
 	Arguments          []Value
 	ArgumentTypes      []sema.Type
 	TypeParameterTypes *sema.TypeParameterTypeOrderedMap
@@ -62,6 +64,10 @@ type InterpretedFunctionValue struct {
 	PostConditions   ast.Conditions
 }
 
+var _ Value = &InterpretedFunctionValue{}
+
+func (*InterpretedFunctionValue) IsValue() {}
+
 func (f *InterpretedFunctionValue) String() string {
 	return fmt.Sprintf("Function%s", f.Type.String())
 }
@@ -69,8 +75,6 @@ func (f *InterpretedFunctionValue) String() string {
 func (f *InterpretedFunctionValue) RecursiveString(_ SeenReferences) string {
 	return f.String()
 }
-
-func (*InterpretedFunctionValue) IsValue() {}
 
 func (f *InterpretedFunctionValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInterpretedFunctionValue(interpreter, f)
@@ -90,27 +94,6 @@ func (f *InterpretedFunctionValue) StaticType() StaticType {
 	return ConvertSemaToStaticType(f.Type)
 }
 
-func (f *InterpretedFunctionValue) Copy() Value {
-	return f
-}
-
-func (*InterpretedFunctionValue) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (*InterpretedFunctionValue) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
-}
-
-func (*InterpretedFunctionValue) IsModified() bool {
-	return false
-}
-
-func (*InterpretedFunctionValue) SetModified(_ bool) {
-	// NO-OP
-}
-
 func (*InterpretedFunctionValue) isFunctionValue() {}
 
 func (f *InterpretedFunctionValue) invoke(invocation Invocation) Value {
@@ -123,6 +106,7 @@ func (f *InterpretedFunctionValue) invoke(invocation Invocation) Value {
 
 func (f *InterpretedFunctionValue) ConformsToDynamicType(
 	_ *Interpreter,
+	_ func() LocationRange,
 	dynamicType DynamicType,
 	_ TypeConformanceResults,
 ) bool {
@@ -134,8 +118,34 @@ func (f *InterpretedFunctionValue) ConformsToDynamicType(
 	return f.Type.Equal(targetType.FuncType)
 }
 
-func (*InterpretedFunctionValue) IsStorable() bool {
+func (f *InterpretedFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+	return NonStorable{Value: f}, nil
+}
+
+func (*InterpretedFunctionValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
+}
+
+func (*InterpretedFunctionValue) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (f *InterpretedFunctionValue) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	// TODO: actually not needed, value is not storable
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
+	return f
+}
+
+func (*InterpretedFunctionValue) DeepRemove(_ *Interpreter) {
+	// NO-OP
 }
 
 // HostFunctionValue
@@ -144,7 +154,7 @@ type HostFunction func(invocation Invocation) Value
 
 type HostFunctionValue struct {
 	Function        HostFunction
-	NestedVariables *StringVariableOrderedMap
+	NestedVariables map[string]*Variable
 	Type            *sema.FunctionType
 }
 
@@ -167,6 +177,9 @@ func NewHostFunctionValue(
 	}
 }
 
+var _ Value = &HostFunctionValue{}
+var _ MemberAccessibleValue = &HostFunctionValue{}
+
 func (*HostFunctionValue) IsValue() {}
 
 func (f *HostFunctionValue) Accept(interpreter *Interpreter, visitor Visitor) {
@@ -187,27 +200,6 @@ func (f *HostFunctionValue) StaticType() StaticType {
 	return ConvertSemaToStaticType(f.Type)
 }
 
-func (f *HostFunctionValue) Copy() Value {
-	return f
-}
-
-func (*HostFunctionValue) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (*HostFunctionValue) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
-}
-
-func (*HostFunctionValue) IsModified() bool {
-	return false
-}
-
-func (*HostFunctionValue) SetModified(_ bool) {
-	// NO-OP
-}
-
 func (*HostFunctionValue) isFunctionValue() {}
 
 func (f *HostFunctionValue) invoke(invocation Invocation) Value {
@@ -220,19 +212,26 @@ func (f *HostFunctionValue) invoke(invocation Invocation) Value {
 
 func (f *HostFunctionValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	if f.NestedVariables != nil {
-		if variable, ok := f.NestedVariables.Get(name); ok {
+		if variable, ok := f.NestedVariables[name]; ok {
 			return variable.GetValue()
 		}
 	}
 	return nil
 }
 
+func (*HostFunctionValue) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
+	// Host functions have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
 func (*HostFunctionValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+	// Host functions have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
 func (f *HostFunctionValue) ConformsToDynamicType(
 	_ *Interpreter,
+	_ func() LocationRange,
 	dynamicType DynamicType,
 	_ TypeConformanceResults,
 ) bool {
@@ -244,8 +243,34 @@ func (f *HostFunctionValue) ConformsToDynamicType(
 	return f.Type.Equal(targetType.FuncType)
 }
 
-func (*HostFunctionValue) IsStorable() bool {
+func (f *HostFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+	return NonStorable{Value: f}, nil
+}
+
+func (*HostFunctionValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
+}
+
+func (*HostFunctionValue) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (f *HostFunctionValue) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	// TODO: actually not needed, value is not storable
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
+	return f
+}
+
+func (*HostFunctionValue) DeepRemove(_ *Interpreter) {
+	// NO-OP
 }
 
 // BoundFunctionValue
@@ -255,6 +280,10 @@ type BoundFunctionValue struct {
 	Self     *CompositeValue
 }
 
+var _ Value = BoundFunctionValue{}
+
+func (BoundFunctionValue) IsValue() {}
+
 func (f BoundFunctionValue) String() string {
 	return f.RecursiveString(SeenReferences{})
 }
@@ -262,8 +291,6 @@ func (f BoundFunctionValue) String() string {
 func (f BoundFunctionValue) RecursiveString(seenReferences SeenReferences) string {
 	return f.Function.RecursiveString(seenReferences)
 }
-
-func (BoundFunctionValue) IsValue() {}
 
 func (f BoundFunctionValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitBoundFunctionValue(interpreter, f)
@@ -288,42 +315,76 @@ func (f BoundFunctionValue) StaticType() StaticType {
 	return f.Function.StaticType()
 }
 
-func (f BoundFunctionValue) Copy() Value {
-	return f
-}
-
-func (BoundFunctionValue) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (BoundFunctionValue) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
-}
-
-func (BoundFunctionValue) IsModified() bool {
-	return false
-}
-
-func (BoundFunctionValue) SetModified(_ bool) {
-	// NO-OP
-}
-
 func (BoundFunctionValue) isFunctionValue() {}
 
 func (f BoundFunctionValue) invoke(invocation Invocation) Value {
-	invocation.Self = f.Self
+	self := f.Self
+	receiverType := invocation.ReceiverType
+
+	if receiverType != nil {
+		selfType := invocation.Interpreter.ConvertStaticToSemaType(self.StaticType())
+
+		if _, ok := receiverType.(*sema.ReferenceType); ok {
+			if _, ok := selfType.(*sema.ReferenceType); !ok {
+				selfType = &sema.ReferenceType{
+					Type: selfType,
+				}
+			}
+		}
+
+		if !sema.IsSubType(selfType, receiverType) {
+			panic(InvocationReceiverTypeError{
+				SelfType:      selfType,
+				ReceiverType:  receiverType,
+				LocationRange: invocation.GetLocationRange(),
+			})
+		}
+	}
+
+	invocation.Self = self
 	return f.Function.invoke(invocation)
 }
 
 func (f BoundFunctionValue) ConformsToDynamicType(
 	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
 	dynamicType DynamicType,
 	results TypeConformanceResults,
 ) bool {
-	return f.Function.ConformsToDynamicType(interpreter, dynamicType, results)
+	return f.Function.ConformsToDynamicType(
+		interpreter,
+		getLocationRange,
+		dynamicType,
+		results,
+	)
 }
 
-func (BoundFunctionValue) IsStorable() bool {
+func (f BoundFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+	return NonStorable{Value: f}, nil
+}
+
+func (BoundFunctionValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
+}
+
+func (BoundFunctionValue) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (f BoundFunctionValue) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	// TODO: actually not needed, value is not storable
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
+	return f
+}
+
+func (BoundFunctionValue) DeepRemove(_ *Interpreter) {
+	// NO-OP
 }

@@ -106,7 +106,7 @@ func TestCheckPath(t *testing.T) {
 	})
 }
 
-func TestConvertStringToPath(t *testing.T) {
+func TestCheckConvertStringToPath(t *testing.T) {
 	t.Parallel()
 
 	domainTypes := map[common.PathDomain]sema.Type{
@@ -126,10 +126,9 @@ func TestConvertStringToPath(t *testing.T) {
 			checker, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      let x: %[1]s? = %[1]s("/%[2]s/foo")
+                      let x = %[1]s("foo")
                     `,
 					domainType.String(),
-					domain.Identifier(),
 				),
 			)
 

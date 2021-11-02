@@ -34,7 +34,7 @@ func TestRuntimeCoverage(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewInterpreterRuntime()
+	runtime := newTestInterpreterRuntime()
 
 	importedScript := []byte(`
       pub fun answer(): Int {

@@ -2700,7 +2700,7 @@ type InvalidPathDomainError struct {
 }
 
 func (e *InvalidPathDomainError) Error() string {
-	return "invalid path domain"
+	return fmt.Sprintf("invalid path domain %s", e.ActualDomain)
 }
 
 type InvalidPathIdentifierError struct {

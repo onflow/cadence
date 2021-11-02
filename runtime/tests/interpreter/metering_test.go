@@ -97,9 +97,11 @@ func TestInterpretStatementHandler(t *testing.T) {
 	var nextInterpreterID int
 	interpreterIDs := map[*interpreter.Interpreter]int{}
 
+	storage := interpreter.NewInMemoryStorage()
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),
 		importingChecker.Location,
+		interpreter.WithStorage(storage),
 		interpreter.WithOnStatementHandler(
 			func(interpreter *interpreter.Interpreter, statement ast.Statement) {
 				id, ok := interpreterIDs[interpreter]
@@ -223,9 +225,12 @@ func TestInterpretLoopIterationHandler(t *testing.T) {
 	var nextInterpreterID int
 	interpreterIDs := map[*interpreter.Interpreter]int{}
 
+	storage := interpreter.NewInMemoryStorage()
+
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),
 		importingChecker.Location,
+		interpreter.WithStorage(storage),
 		interpreter.WithOnLoopIterationHandler(
 			func(inter *interpreter.Interpreter, line int) {
 
@@ -360,9 +365,11 @@ func TestInterpretFunctionInvocationHandler(t *testing.T) {
 	var nextInterpreterID int
 	interpreterIDs := map[*interpreter.Interpreter]int{}
 
+	storage := interpreter.NewInMemoryStorage()
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),
 		importingChecker.Location,
+		interpreter.WithStorage(storage),
 		interpreter.WithOnFunctionInvocationHandler(
 			func(inter *interpreter.Interpreter, line int) {
 
