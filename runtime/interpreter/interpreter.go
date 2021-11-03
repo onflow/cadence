@@ -2593,7 +2593,7 @@ func lookupComposite(interpreter *Interpreter, typeID string) (*sema.CompositeTy
 		return nil, false
 	}
 
-	typ, err := interpreter.getCompositeType(location, qualifiedIdentifier, (common.TypeID)(typeID))
+	typ, err := interpreter.getCompositeType(location, qualifiedIdentifier, common.TypeID(typeID))
 	if err != nil {
 		return nil, false
 	}
@@ -3789,9 +3789,9 @@ func (interpreter *Interpreter) getUserCompositeType(location common.Location, t
 func (interpreter *Interpreter) getNativeCompositeType(qualifiedIdentifier string) (*sema.CompositeType, error) {
 	ty := sema.NativeCompositeTypes[qualifiedIdentifier]
 	if ty == nil {
-		return ty, (TypeLoadingError{
+		return ty, TypeLoadingError{
 			TypeID: common.TypeID(qualifiedIdentifier),
-		})
+		}
 	}
 
 	return ty, nil

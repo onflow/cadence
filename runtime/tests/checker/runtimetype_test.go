@@ -556,7 +556,7 @@ func TestCheckReferenceTypeConstructor(t *testing.T) {
 		{
 			name: "&String",
 			code: `
-				let result = ReferenceType(false, Type<String>())
+              let result = ReferenceType(false, Type<String>())
             `,
 			valid: true,
 		},
@@ -633,16 +633,16 @@ func TestCheckRestrictedTypeConstructor(t *testing.T) {
 		{
 			name: "S{}",
 			code: `
-				struct S {}
-				let result = RestrictedType("S", [])
+              struct S {}
+              let result = RestrictedType("S", [])
             `,
 			valid: true,
 		},
 		{
 			name: "{S}",
 			code: `
-				struct S {}
-				let result = RestrictedType(nil, ["S"])
+              struct S {}
+              let result = RestrictedType(nil, ["S"])
             `,
 			valid: true,
 		},
@@ -719,7 +719,7 @@ func TestCheckCapabilityTypeConstructor(t *testing.T) {
 		{
 			name: "&Int",
 			code: `
-				let result = CapabilityType(Type<&Int>())
+              let result = CapabilityType(Type<&Int>())
             `,
 			valid: true,
 		},
