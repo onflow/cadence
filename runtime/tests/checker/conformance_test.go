@@ -414,3 +414,35 @@ func TestCheckConformanceWithFunctionSubtype(t *testing.T) {
 		require.IsType(t, &sema.ConformanceError{}, errs[0])
 	})
 }
+
+func TestCheckTypeRequirementDuplicateDeclaration(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+	  contract interface CI {
+          // Checking if CI_TR1 conforms to CI here,
+          // requires checking the type requirement CI_TR2 of CI.
+          //
+          // Note that CI_TR1 here declares 2 (!)
+          // nested composite declarations named CI_TR2.
+          //
+          // Checking should not just use the first declaration named CI_TR2,
+          // but detect the second / duplicate, error,
+          // and stop further conformance checking
+          //
+	      contract CI_TR1: CI {
+	          contract CI_TR2 {}
+	          contract CI_TR2: CI {
+	              contract CI_TR2_TR {}
+	          }
+	      }
+
+	      contract CI_TR2: CI {
+	          contract CI_TR2_TR {}
+	      }
+	  }
+	`)
+
+	require.Error(t, err)
+}
