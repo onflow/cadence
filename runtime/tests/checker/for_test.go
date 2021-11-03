@@ -150,7 +150,7 @@ func TestCheckForIndexBinding(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestCheckForIndexBindingErr(t *testing.T) {
+func TestCheckForIndexBindingTypeErr(t *testing.T) {
 
 	t.Parallel()
 
@@ -159,6 +159,22 @@ func TestCheckForIndexBindingErr(t *testing.T) {
            for index, x in ["", "", ""] {
                 let y: String = index
            }
+       }
+    `)
+
+	assert.Error(t, err)
+}
+
+func TestCheckForIndexBindingReferenceErr(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+       fun test() {
+           for index, x in ["", "", ""] {
+                
+           }
+           let y = index
        }
     `)
 
