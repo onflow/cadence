@@ -53,6 +53,31 @@ func TestInterpretForStatement(t *testing.T) {
 	)
 }
 
+func TestInterpretForStatementWithIndex(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+       fun test(): Int {
+           var sum = 0
+           for x, y in [1, 2, 3, 4] {
+               sum = sum + x
+           }
+           return sum
+       }
+    `)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewIntValueFromInt64(6),
+		value,
+	)
+}
+
 func TestInterpretForStatementWithReturn(t *testing.T) {
 
 	t.Parallel()
