@@ -66,13 +66,17 @@ jobs:
 
         # Where the previous data file is stored
         external-data-json-path: ./cache/benchmark-data.json
-        comment-always: true
+
         alert-threshold: '120%'
         github-token: ${{ secrets.GITHUB_TOKEN }}
 
-        # Enable below to create a PR comment with a warning,
-        # if performance degrades more than the given threshold.
-        # comment-on-alert: true
+        # Create comment with a warning, if performance degrades more than the given threshold.
+        comment-on-alert: true
 
-        # Enable below to fail the PR if performance degrades more than the given threshold.
+        # Fail the PR if performance degrades more than the given threshold.
         # fail-on-alert: true
+
+        # Add a comment with performance comparison for all benchmarks.
+        # Currently disabled, since it creates comments for each new commit
+        # on the PR, which adds noise to the PR.
+        # comment-always: true
