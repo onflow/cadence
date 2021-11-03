@@ -344,9 +344,22 @@ func parseForStatement(p *parser) *ast.ForStatement {
 
 	p.skipSpaceAndComments(true)
 
-	identifier := mustIdentifier(p)
+	firstValue := mustIdentifier(p)
 
 	p.skipSpaceAndComments(true)
+
+	var index *ast.Identifier
+	var identifier ast.Identifier
+
+	if p.current.Is(lexer.TokenComma) {
+		p.mustOne(lexer.TokenComma)
+		p.skipSpaceAndComments(true)
+		index = &firstValue
+		identifier = mustIdentifier(p)
+		p.skipSpaceAndComments(true)
+	} else {
+		identifier = firstValue
+	}
 
 	if !p.current.IsString(lexer.TokenIdentifier, keywordIn) {
 		p.report(fmt.Errorf(
@@ -364,6 +377,7 @@ func parseForStatement(p *parser) *ast.ForStatement {
 
 	return &ast.ForStatement{
 		Identifier: identifier,
+		Index:      index,
 		Block:      block,
 		Value:      expression,
 		StartPos:   startPos,

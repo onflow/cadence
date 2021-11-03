@@ -807,6 +807,49 @@ func TestParseForStatement(t *testing.T) {
 	})
 }
 
+func TestParseForStatementIndexBinding(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("empty block", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseStatements("for i, x in y { }")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.ForStatement{
+					Identifier: ast.Identifier{
+						Identifier: "x",
+						Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+					},
+					Index: &ast.Identifier{
+						Identifier: "i",
+						Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
+					},
+					Value: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "y",
+							Pos:        ast.Position{Line: 1, Column: 12, Offset: 12},
+						},
+					},
+					Block: &ast.Block{
+						Statements: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 14, Offset: 14},
+							EndPos:   ast.Position{Line: 1, Column: 16, Offset: 16},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+}
+
 func TestParseEmit(t *testing.T) {
 
 	t.Parallel()
