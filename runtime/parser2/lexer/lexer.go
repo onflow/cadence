@@ -50,15 +50,15 @@ type lexer struct {
 	// the offset in the token stream
 	cursor int
 	// the tokens of the stream
-	tokens []Token
+	tokens     []Token
+	tokenCount int
 }
 
 var _ TokenStream = &lexer{}
 
 func (l *lexer) Next() Token {
-	tokenCount := len(l.tokens)
-	if l.cursor >= tokenCount {
-		return l.tokens[tokenCount-1]
+	if l.cursor >= l.tokenCount {
+		return l.tokens[l.tokenCount-1]
 	}
 	token := l.tokens[l.cursor]
 	l.cursor++
@@ -197,6 +197,7 @@ func (l *lexer) emit(ty TokenType, val interface{}, rangeStart ast.Position, con
 	}
 
 	l.tokens = append(l.tokens, token)
+	l.tokenCount = len(l.tokens)
 
 	if consume {
 		l.startOffset = l.endOffset
