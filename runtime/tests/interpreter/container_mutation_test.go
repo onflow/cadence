@@ -703,25 +703,25 @@ func TestDictionaryMutation(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-	       fun test(): [String] {
-	           let dict: {String: AnyStruct} = {}
+           fun test(): [String] {
+               let dict: {String: AnyStruct} = {}
 
-	           dict["foo"] = foo
-	           dict["bar"] = bar
+               dict["foo"] = foo
+               dict["bar"] = bar
 
-	           let callFoo = dict["foo"]! as! (():String)
-	           let callBar = dict["bar"]! as! (():String)
-	           return [callFoo(), callBar()]
-	       }
+               let callFoo = dict["foo"]! as! (():String)
+               let callBar = dict["bar"]! as! (():String)
+               return [callFoo(), callBar()]
+           }
 
-	       fun foo(): String {
-	           return "hello from foo"
-	       }
+           fun foo(): String {
+               return "hello from foo"
+           }
 
-	       fun bar(): String {
-	           return "hello from bar"
-	       }
-	   `)
+           fun bar(): String {
+               return "hello from bar"
+           }
+       `)
 
 		value, err := inter.Invoke("test")
 		require.NoError(t, err)
@@ -746,33 +746,33 @@ func TestDictionaryMutation(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-	       struct Foo {
-	           fun foo(): String {
-	               return "hello from foo"
-	           }
-	       }
+           struct Foo {
+               fun foo(): String {
+                   return "hello from foo"
+               }
+           }
 
-	       struct Bar {
-	           fun bar(): String {
-	               return "hello from bar"
-	           }
-	       }
+           struct Bar {
+               fun bar(): String {
+                   return "hello from bar"
+               }
+           }
 
-	       fun test(): [String] {
-	           let dict: {String: AnyStruct} = {}
+           fun test(): [String] {
+               let dict: {String: AnyStruct} = {}
 
-	           let a = Foo()
-	           let b = Bar()
+               let a = Foo()
+               let b = Bar()
 
-	           dict["foo"] = a.foo
-	           dict["bar"] = b.bar
+               dict["foo"] = a.foo
+               dict["bar"] = b.bar
 
-	           let callFoo = dict["foo"]! as! (():String)
-	           let callBar = dict["bar"]! as! (():String)
+               let callFoo = dict["foo"]! as! (():String)
+               let callBar = dict["bar"]! as! (():String)
 
-	           return [callFoo(), callBar()]
-	       }
-	   `)
+               return [callFoo(), callBar()]
+           }
+       `)
 
 		value, err := inter.Invoke("test")
 		require.NoError(t, err)
@@ -805,12 +805,12 @@ func TestDictionaryMutation(t *testing.T) {
 		values := standardLibraryFunctions.ToInterpreterValueDeclarations()
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
-	           fun test() {
-	               let dict: {String: AnyStruct} = {} as {String: (():Void)}
+               fun test() {
+                   let dict: {String: AnyStruct} = {} as {String: (():Void)}
 
-	               dict["log"] = log
-	           }
-	       `,
+                   dict["log"] = log
+               }
+           `,
 			ParseCheckAndInterpretOptions{
 				CheckerOptions: []sema.Option{
 					sema.WithPredeclaredValues(valueDeclarations),
@@ -846,14 +846,14 @@ func TestDictionaryMutation(t *testing.T) {
 		inter := parseCheckAndInterpret(t, `
             struct S {}
 
-	        fun test(owner: PublicAccount) {
-	            let funcs: {String: ((PublicAccount, [UInt64]): [S])} = {}
+            fun test(owner: PublicAccount) {
+                let funcs: {String: ((PublicAccount, [UInt64]): [S])} = {}
 
                 funcs["test"] = fun (owner: PublicAccount, ids: [UInt64]): [S] { return [] }
 
-	            funcs["test"]!(owner: owner, ids: [1])
-	        }
-	    `)
+                funcs["test"]!(owner: owner, ids: [1])
+            }
+        `)
 
 		owner := newTestPublicAccountValue(
 			interpreter.NewAddressValue(common.Address{0x1}),
