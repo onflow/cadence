@@ -39,7 +39,13 @@ jobs:
 
     # Run benchmark with `go test -bench` and stores the output to a file
     - name: Run benchmark
-      run: make benchmark | tee benchmark_results.txt
+      run: make benchmark | tee benchmark_results_raw.txt
+
+    # A temp-workaround for https://github.com/benchmark-action/github-action-benchmark/issues/31
+    - name: Fix benchmark names
+      run: >-
+        perl -pe 's/^(Benchmark.+?)\/(\S+)(-\d+)(\s+)/\1__\2\4/' benchmark_results_raw.txt |
+        tr '=-' '_' | tee benchmark_results.txt
 
     # Download previous benchmark result from cache (if exists)
     - name: Download previous benchmark data
