@@ -809,7 +809,7 @@ func TestRuntimeTransactionWithAccount(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	assert.Equal(t, "0x2a", loggedMessage)
+	assert.Equal(t, "0x000000000000002a", loggedMessage)
 }
 
 func TestRuntimeTransactionWithArguments(t *testing.T) {
@@ -857,7 +857,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 				jsoncdc.MustEncode(cadence.NewInt(42)),
 			},
 			authorizers:  []Address{common.BytesToAddress([]byte{42})},
-			expectedLogs: []string{"0x2a", "42"},
+			expectedLogs: []string{"0x000000000000002a", "42"},
 		},
 		{
 			label: "Multiple arguments",
@@ -926,7 +926,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 					),
 				),
 			},
-			expectedLogs: []string{"0x1"},
+			expectedLogs: []string{"0x0000000000000001"},
 		},
 		{
 			label: "Array",
@@ -1222,7 +1222,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 					),
 				),
 			},
-			expectedLogs: []string{"0x1"},
+			expectedLogs: []string{"0x0000000000000001"},
 		},
 		{
 			name: "Array",
@@ -2751,7 +2751,7 @@ func TestRuntimeAccountAddress(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	assert.Equal(t, []string{"0x2a"}, loggedMessages)
+	assert.Equal(t, []string{"0x000000000000002a"}, loggedMessages)
 }
 
 func TestRuntimePublicAccountAddress(t *testing.T) {
@@ -3226,7 +3226,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 		)
 		require.NoError(tt, err)
 
-		assert.Equal(tt, `"Hello number 42 from 0x1"`, loggedMessage)
+		assert.Equal(tt, `"Hello number 42 from 0x0000000000000001"`, loggedMessage)
 	})
 
 	t.Run("function with not enough arguments panics", func(tt *testing.T) {
@@ -3294,7 +3294,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 		)
 		require.NoError(tt, err)
 
-		assert.Equal(tt, `"Hello 0x1"`, loggedMessage)
+		assert.Equal(tt, `"Hello 0x0000000000000001"`, loggedMessage)
 	})
 	t.Run("function with public account works", func(tt *testing.T) {
 		_, err = runtime.InvokeContractFunction(
@@ -3316,7 +3316,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 		)
 		require.NoError(tt, err)
 
-		assert.Equal(tt, `"Hello pub 0x1"`, loggedMessage)
+		assert.Equal(tt, `"Hello pub 0x0000000000000001"`, loggedMessage)
 	})
 }
 
@@ -4716,8 +4716,8 @@ func TestRuntimeResourceOwnerFieldUseComposite(t *testing.T) {
 	assert.Equal(t,
 		[]string{
 			"nil", "nil",
-			"0x1", "0x1",
-			"0x1", "0x1",
+			"0x0000000000000001", "0x0000000000000001",
+			"0x0000000000000001", "0x0000000000000001",
 		},
 		loggedMessages,
 	)
@@ -4736,21 +4736,21 @@ func TestRuntimeResourceOwnerFieldUseComposite(t *testing.T) {
 
 	assert.Equal(t,
 		[]string{
-			"0x1",           // ref1.owner?.address
-			"123.00000000",  // ref2.owner?.balance
-			"1523.00000000", // ref2.owner?.availableBalance
-			"120",           // ref1.owner?.storageUsed
-			"1245",          // ref1.owner?.storageCapacity
+			"0x0000000000000001", // ref1.owner?.address
+			"123.00000000",       // ref2.owner?.balance
+			"1523.00000000",      // ref2.owner?.availableBalance
+			"120",                // ref1.owner?.storageUsed
+			"1245",               // ref1.owner?.storageCapacity
 
-			"0x1",
+			"0x0000000000000001",
 
-			"0x1",           // ref2.owner?.address
-			"123.00000000",  // ref2.owner?.balance
-			"1523.00000000", // ref2.owner?.availableBalance
-			"120",           // ref2.owner?.storageUsed
-			"1245",          // ref2.owner?.storageCapacity
+			"0x0000000000000001", // ref2.owner?.address
+			"123.00000000",       // ref2.owner?.balance
+			"1523.00000000",      // ref2.owner?.availableBalance
+			"120",                // ref2.owner?.storageUsed
+			"1245",               // ref2.owner?.storageCapacity
 
-			"0x1",
+			"0x0000000000000001",
 		},
 		loggedMessages,
 	)
@@ -4906,10 +4906,10 @@ func TestRuntimeResourceOwnerFieldUseArray(t *testing.T) {
 		[]string{
 			"nil", "nil",
 			"nil", "nil",
-			"0x1", "0x1",
-			"0x1", "0x1",
-			"0x1", "0x1",
-			"0x1", "0x1",
+			"0x0000000000000001", "0x0000000000000001",
+			"0x0000000000000001", "0x0000000000000001",
+			"0x0000000000000001", "0x0000000000000001",
+			"0x0000000000000001", "0x0000000000000001",
 		},
 		loggedMessages,
 	)
@@ -4928,10 +4928,10 @@ func TestRuntimeResourceOwnerFieldUseArray(t *testing.T) {
 
 	assert.Equal(t,
 		[]string{
-			"0x1", "0x1",
-			"0x1", "0x1",
-			"0x1", "0x1",
-			"0x1", "0x1",
+			"0x0000000000000001", "0x0000000000000001",
+			"0x0000000000000001", "0x0000000000000001",
+			"0x0000000000000001", "0x0000000000000001",
+			"0x0000000000000001", "0x0000000000000001",
 		},
 		loggedMessages,
 	)
@@ -5087,10 +5087,10 @@ func TestRuntimeResourceOwnerFieldUseDictionary(t *testing.T) {
 		[]string{
 			"nil", "nil",
 			"nil", "nil",
-			"0x1", "0x1",
-			"0x1", "0x1",
-			"0x1", "0x1",
-			"0x1", "0x1",
+			"0x0000000000000001", "0x0000000000000001",
+			"0x0000000000000001", "0x0000000000000001",
+			"0x0000000000000001", "0x0000000000000001",
+			"0x0000000000000001", "0x0000000000000001",
 		},
 		loggedMessages,
 	)
@@ -5109,10 +5109,10 @@ func TestRuntimeResourceOwnerFieldUseDictionary(t *testing.T) {
 
 	assert.Equal(t,
 		[]string{
-			"0x1", "0x1",
-			"0x1", "0x1",
-			"0x1", "0x1",
-			"0x1", "0x1",
+			"0x0000000000000001", "0x0000000000000001",
+			"0x0000000000000001", "0x0000000000000001",
+			"0x0000000000000001", "0x0000000000000001",
+			"0x0000000000000001", "0x0000000000000001",
 		},
 		loggedMessages,
 	)
