@@ -62,9 +62,11 @@ jobs:
         external-data-json-path: ./cache/benchmark-data.json
         comment-always: true
         alert-threshold: '120%'
-        fail-on-alert: true
         github-token: ${{ secrets.GITHUB_TOKEN }}
 
         # Enable below to create a PR comment with a warning,
-        # if performance degrades over the given threshold
+        # if performance degrades more than the given threshold.
         # comment-on-alert: true
+
+        # Enable below to fail the PR if performance degrades more than the given threshold.
+        # fail-on-alert: true
