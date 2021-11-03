@@ -314,6 +314,8 @@ func TestInterpretCompositeType(t *testing.T) {
 
       enum F: UInt8 {}
       let f = CompositeType("S.test.F")!
+	  let g = CompositeType("PublicKey")!
+	  let h = CompositeType("HashAlgorithm")!
     `)
 
 	assert.Equal(t,
@@ -362,6 +364,28 @@ func TestInterpretCompositeType(t *testing.T) {
 			},
 		},
 		inter.Globals["f"].GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.TypeValue{
+			Type: interpreter.CompositeStaticType{
+				QualifiedIdentifier: "PublicKey",
+				Location:            nil,
+				TypeID:              "PublicKey",
+			},
+		},
+		inter.Globals["g"].GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.TypeValue{
+			Type: interpreter.CompositeStaticType{
+				QualifiedIdentifier: "HashAlgorithm",
+				Location:            nil,
+				TypeID:              "HashAlgorithm",
+			},
+		},
+		inter.Globals["h"].GetValue(),
 	)
 }
 
