@@ -971,8 +971,8 @@ func CheckRestrictedType(restrictedType Type, restrictions []*InterfaceType, rep
 
 		} else {
 			restrictionRanges[restrictionInterfaceType] =
-				func(t *ast.RestrictedType) ast.Range { 
-					return ast.NewRangeFromPositioned(t.Restrictions[i]) 
+				func(t *ast.RestrictedType) ast.Range {
+					return ast.NewRangeFromPositioned(t.Restrictions[i])
 				}
 		}
 
