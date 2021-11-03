@@ -135,6 +135,25 @@ func TestCheckForBreakStatement(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+/*func TestCheckForIndexBinding(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+       fun test() {
+           for index, x in [1, 2, 3] {
+
+           }
+       }
+    `)
+
+	assert.NoError(t, err)
+	assert.Equal(t,
+		sema.IntType,
+		RequireGlobalValue(t, checker.Elaboration, "index"),
+	)
+}*/
+
 func TestCheckInvalidForBreakStatement(t *testing.T) {
 
 	t.Parallel()
