@@ -332,6 +332,15 @@ func (TypeValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
+func (v TypeValue) HashInput(interpreter *Interpreter, _ func() LocationRange, scratch []byte) []byte {
+	typeID := interpreter.ConvertStaticToSemaType(v.Type).ID()
+
+	return append(
+		[]byte{byte(HashInputTypeType)},
+		typeID...,
+	)
+}
+
 // VoidValue
 
 type VoidValue struct{}
@@ -1717,7 +1726,6 @@ func ConvertInt(value Value) IntValue {
 		return NewIntValueFromBigInt(value.ToBigInt())
 
 	case NumberValue:
-		// NOTE: safe, UInt64Value is handled by BigNumberValue above
 		return NewIntValueFromInt64(int64(value.ToInt()))
 
 	default:
@@ -1754,7 +1762,9 @@ func (IntValue) StaticType() StaticType {
 }
 
 func (v IntValue) ToInt() int {
-	// TODO: handle overflow
+	if !v.BigInt.IsInt64() {
+		panic(OverflowError{})
+	}
 	return int(v.BigInt.Int64())
 }
 
@@ -3410,7 +3420,9 @@ func (Int128Value) StaticType() StaticType {
 }
 
 func (v Int128Value) ToInt() int {
-	// TODO: handle overflow
+	if !v.BigInt.IsInt64() {
+		panic(OverflowError{})
+	}
 	return int(v.BigInt.Int64())
 }
 
@@ -3828,7 +3840,9 @@ func (Int256Value) StaticType() StaticType {
 }
 
 func (v Int256Value) ToInt() int {
-	// TODO: handle overflow
+	if !v.BigInt.IsInt64() {
+		panic(OverflowError{})
+	}
 	return int(v.BigInt.Int64())
 }
 
@@ -4267,7 +4281,9 @@ func (UIntValue) StaticType() StaticType {
 }
 
 func (v UIntValue) ToInt() int {
-	// TODO: handle overflow
+	if v.BigInt.IsInt64() {
+		panic(OverflowError{})
+	}
 	return int(v.BigInt.Int64())
 }
 
@@ -5358,6 +5374,13 @@ var _ EquatableValue = UInt64Value(0)
 var _ HashableValue = UInt64Value(0)
 var _ MemberAccessibleValue = UInt64Value(0)
 
+// NOTE: important, do *NOT* remove:
+// UInt64 values > math.MaxInt64 overflow int.
+// Implementing BigNumberValue ensures conversion functions
+// call ToBigInt instead of ToInt.
+//
+var _ BigNumberValue = UInt64Value(0)
+
 func (UInt64Value) IsValue() {}
 
 func (v UInt64Value) Accept(interpreter *Interpreter, visitor Visitor) {
@@ -5387,7 +5410,21 @@ func (v UInt64Value) RecursiveString(_ SeenReferences) string {
 }
 
 func (v UInt64Value) ToInt() int {
+	if v > math.MaxInt64 {
+		panic(OverflowError{})
+	}
 	return int(v)
+}
+
+// ToBigInt
+//
+// NOTE: important, do *NOT* remove:
+// UInt64 values > math.MaxInt64 overflow int.
+// Implementing BigNumberValue ensures conversion functions
+// call ToBigInt instead of ToInt.
+//
+func (v UInt64Value) ToBigInt() *big.Int {
+	return new(big.Int).SetUint64(uint64(v))
 }
 
 func (v UInt64Value) Negate() NumberValue {
@@ -5672,7 +5709,9 @@ func (UInt128Value) StaticType() StaticType {
 }
 
 func (v UInt128Value) ToInt() int {
-	// TODO: handle overflow
+	if !v.BigInt.IsInt64() {
+		panic(OverflowError{})
+	}
 	return int(v.BigInt.Int64())
 }
 
@@ -6036,7 +6075,10 @@ func (UInt256Value) StaticType() StaticType {
 }
 
 func (v UInt256Value) ToInt() int {
-	// TODO: handle overflow
+	if !v.BigInt.IsInt64() {
+		panic(OverflowError{})
+	}
+
 	return int(v.BigInt.Int64())
 }
 
@@ -7043,6 +7085,13 @@ var _ EquatableValue = Word64Value(0)
 var _ HashableValue = Word64Value(0)
 var _ MemberAccessibleValue = Word64Value(0)
 
+// NOTE: important, do *NOT* remove:
+// Word64 values > math.MaxInt64 overflow int.
+// Implementing BigNumberValue ensures conversion functions
+// call ToBigInt instead of ToInt.
+//
+var _ BigNumberValue = Word64Value(0)
+
 func (Word64Value) IsValue() {}
 
 func (v Word64Value) Accept(interpreter *Interpreter, visitor Visitor) {
@@ -7072,7 +7121,21 @@ func (v Word64Value) RecursiveString(_ SeenReferences) string {
 }
 
 func (v Word64Value) ToInt() int {
+	if v > math.MaxInt64 {
+		panic(OverflowError{})
+	}
 	return int(v)
+}
+
+// ToBigInt
+//
+// NOTE: important, do *NOT* remove:
+// Word64 values > math.MaxInt64 overflow int.
+// Implementing BigNumberValue ensures conversion functions
+// call ToBigInt instead of ToInt.
+//
+func (v Word64Value) ToBigInt() *big.Int {
+	return new(big.Int).SetUint64(uint64(v))
 }
 
 func (v Word64Value) Negate() NumberValue {
