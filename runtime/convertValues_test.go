@@ -3522,7 +3522,7 @@ func TestCapabilityValueImport(t *testing.T) {
 			BorrowType: cadence.IntType{},
 			Address:    cadence.Address{0x1},
 			Path: cadence.Path{
-				Domain:     common.PathDomainStorage.Identifier(),
+				Domain:     common.PathDomainPublic.Identifier(),
 				Identifier: "foo",
 			},
 		}
@@ -3543,7 +3543,98 @@ func TestCapabilityValueImport(t *testing.T) {
 				return json.Decode(b)
 			},
 			log: func(s string) {
+			},
+		}
 
+		_, err = rt.ExecuteScript(
+			Script{
+				Source:    []byte(script),
+				Arguments: [][]byte{encodedArg},
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  TestLocation,
+			},
+		)
+
+		require.Error(t, err)
+	})
+
+	t.Run("private Capability<&Int>", func(t *testing.T) {
+
+		t.Parallel()
+
+		capabilityValue := cadence.Capability{
+			BorrowType: cadence.ReferenceType{Type: cadence.IntType{}},
+			Address:    cadence.Address{0x1},
+			Path: cadence.Path{
+				Domain:     common.PathDomainPrivate.Identifier(),
+				Identifier: "foo",
+			},
+		}
+
+		script := `
+            pub fun main(s: Capability<&Int>) {
+                log(s)
+            }
+        `
+
+		encodedArg, err := json.Encode(capabilityValue)
+		require.NoError(t, err)
+
+		rt := NewInterpreterRuntime()
+
+		runtimeInterface := &testRuntimeInterface{
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(b)
+			},
+			log: func(s string) {
+			},
+		}
+
+		_, err = rt.ExecuteScript(
+			Script{
+				Source:    []byte(script),
+				Arguments: [][]byte{encodedArg},
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  TestLocation,
+			},
+		)
+
+		require.Error(t, err)
+	})
+
+	t.Run("storage Capability<&Int>", func(t *testing.T) {
+
+		t.Parallel()
+
+		capabilityValue := cadence.Capability{
+			BorrowType: cadence.ReferenceType{Type: cadence.IntType{}},
+			Address:    cadence.Address{0x1},
+			Path: cadence.Path{
+				Domain:     common.PathDomainStorage.Identifier(),
+				Identifier: "foo",
+			},
+		}
+
+		script := `
+            pub fun main(s: Capability<&Int>) {
+                log(s)
+            }
+        `
+
+		encodedArg, err := json.Encode(capabilityValue)
+		require.NoError(t, err)
+
+		rt := NewInterpreterRuntime()
+
+		runtimeInterface := &testRuntimeInterface{
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(b)
+			},
+			log: func(s string) {
 			},
 		}
 

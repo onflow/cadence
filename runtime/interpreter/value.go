@@ -10910,6 +10910,7 @@ func (v *CapabilityValue) DynamicType(interpreter *Interpreter, _ SeenReferences
 
 	return CapabilityDynamicType{
 		BorrowType: borrowType,
+		Domain:     v.Path.Domain,
 	}
 }
 
@@ -10974,8 +10975,8 @@ func (v *CapabilityValue) ConformsToDynamicType(
 	dynamicType DynamicType,
 	_ TypeConformanceResults,
 ) bool {
-	_, ok := dynamicType.(CapabilityDynamicType)
-	return ok
+	capabilityType, ok := dynamicType.(CapabilityDynamicType)
+	return ok && v.Path.Domain == capabilityType.Domain
 }
 
 func (v *CapabilityValue) Equal(interpreter *Interpreter, getLocationRange func() LocationRange, other Value) bool {
