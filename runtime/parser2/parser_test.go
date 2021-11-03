@@ -234,24 +234,23 @@ func TestParseBuffering(t *testing.T) {
 
 		t.Parallel()
 
-		src := `
-        transaction { }
-        pub fun main() {
-            assert(isneg(x:-1.0))
-            assert(!isneg(x:-0.0/0.0))
-        }
-        pub fun isneg(x:SignedFixedPoint):Bool { /* I kinda forget what this is all about */
-            return x                             /* but we probably need to figure it out */
-                   <                             /* ************/((TODO?{/*))************ *//
-                  -x                             /* maybe it says NaNs are not negative?  */
-        }`
+		_, err := ParseProgram(`
+          fun main() {
+              assert(isneg(x:-1.0))
+              assert(!isneg(x:-0.0/0.0))
+          }
 
-		_, err := ParseProgram(src)
+          fun isneg(x: SignedFixedPoint): Bool {   /* I kinda forget what this is all about */
+              return x                             /* but we probably need to figure it out */
+                     <                             /* ************/((TODO?{/*))************ *//
+                    -x                             /* maybe it says NaNs are not negative?  */
+          }
+        `)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "expected token identifier",
-					Pos:     ast.Position{Offset: 371, Line: 10, Column: 12},
+					Pos:     ast.Position{Offset: 420, Line: 10, Column: 20},
 				},
 			},
 			err.(Error).Errors,
@@ -262,21 +261,20 @@ func TestParseBuffering(t *testing.T) {
 
 		t.Parallel()
 
-		src := `
-        transaction { }
-        pub fun main() {
-            fun abs(_:Int):Int { return _ > 0 ? _ : -_ }
-            let sanity = 0 <          /*****/((TODO?{/*****//
-                             abs(-1)
-            assert(sanity)
-        }`
+		_, err := ParseProgram(`
+          fun main() {
+              fun abs(_:Int):Int { return _ > 0 ? _ : -_ }
+              let sanity = 0 <          /*****/((TODO?{/*****//
+                               abs(-1)
+              assert(sanity)
+          }
+        `)
 
-		_, err := ParseProgram(src)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "expected token '/'",
-					Pos:     ast.Position{Offset: 159, Line: 6, Column: 20},
+					Pos:     ast.Position{Offset: 181, Line: 5, Column: 34},
 				},
 			},
 			err.(Error).Errors,
