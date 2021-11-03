@@ -31,6 +31,11 @@ test:
 	sed -i -e 's/^.* 0 0$$//' coverage.txt
 	cd ./languageserver && make test
 
+.PHONY: benchmark
+benchmark:
+	# benchmark all packages
+	GO111MODULE=on go test -bench=. ./...
+
 .PHONY: build
 build:
 	go build -o ./runtime/cmd/parse/parse ./runtime/cmd/parse
