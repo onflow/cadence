@@ -471,7 +471,7 @@ func TestInterpretIntegerConversion(t *testing.T) {
 		inter := parseCheckAndInterpret(t,
 			fmt.Sprintf(
 				`
-				  fun test(value: %[1]s): %[2]s {
+                  fun test(value: %[1]s): %[2]s {
                       return %[2]s(value)
                   }
 				`,
