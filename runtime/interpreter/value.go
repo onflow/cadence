@@ -332,6 +332,15 @@ func (TypeValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
+func (v TypeValue) HashInput(interpreter *Interpreter, _ func() LocationRange, scratch []byte) []byte {
+	typeID := interpreter.ConvertStaticToSemaType(v.Type).ID()
+
+	return append(
+		[]byte{byte(HashInputTypeType)},
+		typeID...,
+	)
+}
+
 // VoidValue
 
 type VoidValue struct{}

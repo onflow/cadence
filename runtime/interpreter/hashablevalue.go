@@ -60,7 +60,7 @@ const (
 	HashInputTypeEnum
 	HashInputTypeAddress
 	HashInputTypePath
-	_
+	HashInputTypeType
 	_
 	_
 	_
