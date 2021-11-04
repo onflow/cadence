@@ -162,7 +162,8 @@ func TestCheckForIndexBindingTypeErr(t *testing.T) {
        }
     `)
 
-	assert.Error(t, err)
+	errs := ExpectCheckerErrors(t, err, 1)
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
 
 func TestCheckForIndexBindingReferenceErr(t *testing.T) {
@@ -177,8 +178,8 @@ func TestCheckForIndexBindingReferenceErr(t *testing.T) {
            let y = index
        }
     `)
-
-	assert.Error(t, err)
+	errs := ExpectCheckerErrors(t, err, 1)
+	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 }
 
 func TestCheckInvalidForBreakStatement(t *testing.T) {

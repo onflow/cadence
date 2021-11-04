@@ -848,6 +848,46 @@ func TestParseForStatementIndexBinding(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("no comma", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseStatements("for i x in y { }")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected keyword \"in\", got identifier",
+					Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
+				},
+				&SyntaxError{
+					Message: "expected token '{'",
+					Pos:     ast.Position{Offset: 11, Line: 1, Column: 11},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("no identifiers", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseStatements("for in y { }")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected identifier, got keyword \"in\"",
+					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+				},
+				&SyntaxError{
+					Message: "expected token identifier",
+					Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParseEmit(t *testing.T) {

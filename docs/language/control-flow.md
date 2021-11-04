@@ -306,9 +306,11 @@ for element in array {
 // "Bar"
 ```
 
-Optionally, developers may include an additional variable preceding the 
-element name, separated by a comma. When present, this variable contains the current
-index of the array being iterated through during each repeated execution (starting from 0).
+Optionally, developers may include an additional variable preceding the element name, 
+separated by a comma. 
+When present, this variable contains the current
+index of the array being iterated through 
+during each repeated execution (starting from 0).
 
 ```cadence
 let array = ["Hello", "World", "Foo", "Bar"]
