@@ -569,6 +569,10 @@ func importTypeValue(
 	error,
 ) {
 	typ := ImportType(v)
+	/* creating a static type performs no validation, so
+	   in order to be sure the type we have created is legal,
+	   we convert it to a sema type. If this fails, the
+	   import is invalid */
 	_, err := inter.ConvertStaticToSemaType(typ)
 	if err != nil {
 		return interpreter.TypeValue{}, err
