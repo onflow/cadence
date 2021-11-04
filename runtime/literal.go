@@ -110,8 +110,12 @@ func pathLiteralValue(expression ast.Expression, ty sema.Type) (result cadence.V
 	pathType, err := sema.CheckPathLiteral(
 		pathExpression.Domain.Identifier,
 		pathExpression.Identifier.Identifier,
-		ast.NewRangeFromPositioned(pathExpression.Domain),
-		ast.NewRangeFromPositioned(pathExpression.Identifier),
+		func() ast.Range {
+			return ast.NewRangeFromPositioned(pathExpression.Domain)
+		},
+		func() ast.Range {
+			return ast.NewRangeFromPositioned(pathExpression.Identifier)
+		},
 	)
 	if err != nil {
 		return nil, InvalidLiteralError

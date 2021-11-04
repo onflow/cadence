@@ -13750,8 +13750,12 @@ func convertPath(domain common.PathDomain, value Value) Value {
 	_, err := sema.CheckPathLiteral(
 		"public",
 		stringValue.Str,
-		ReturnEmptyLocationRange().Range,
-		ReturnEmptyLocationRange().Range,
+		func() ast.Range {
+			return ReturnEmptyLocationRange().Range
+		},
+		func() ast.Range {
+			return ReturnEmptyLocationRange().Range
+		},
 	)
 	if err != nil {
 		return NilValue{}

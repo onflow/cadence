@@ -126,7 +126,7 @@ func TestConvertStringToPath(t *testing.T) {
 			checker, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      let x: %[1]s? = %[1]s("/%[2]s/foo")
+                      let x: %[1]s? = %[1]s(path: "/%[2]s/foo")
                     `,
 					domainType.String(),
 					domain.Identifier(),
@@ -139,6 +139,24 @@ func TestConvertStringToPath(t *testing.T) {
 				&sema.OptionalType{Type: domainTypes[domain]},
 				RequireGlobalValue(t, checker.Elaboration, "x"),
 			)
+		})
+
+		t.Run(fmt.Sprintf("missing argument label: %s", domain.Identifier()), func(t *testing.T) {
+
+			t.Parallel()
+
+			domainType := domainTypes[domain]
+
+			_, err := ParseAndCheck(t,
+				fmt.Sprintf(
+					`
+                      let x = %[1]s("foo")
+                    `,
+					domainType.String(),
+				),
+			)
+
+			require.IsType(t, &sema.MissingArgumentLabelError{}, ExpectCheckerErrors(t, err, 1)[0])
 		})
 	}
 

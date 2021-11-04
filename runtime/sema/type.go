@@ -2994,6 +2994,7 @@ func baseFunctionVariable(name string, ty *FunctionType, docString string) *Vari
 	return &Variable{
 		Identifier:      name,
 		DeclarationKind: common.DeclarationKindFunction,
+		ArgumentLabels:  ty.ArgumentLabels(),
 		IsConstant:      true,
 		IsBaseValue:     true,
 		Type:            ty,
