@@ -42,7 +42,7 @@ import (
 
 // TODO: make these program args?
 const containerMaxDepth = 3
-const containerMaxSize = 1_00
+const containerMaxSize = 100
 const innerContainerMaxSize = 300
 const compositeMaxFields = 10
 
@@ -425,6 +425,64 @@ func TestRandomMapOperations(t *testing.T) {
 		assert.Equal(t, startingStorageSize, storageSize)
 		assert.Equal(t, startingSlabCounts, slabCounts)
 	})
+
+	t.Run("move", func(t *testing.T) {
+		newOwner := atree.Address{'B'}
+
+		entries := newValueMap(numberOfValues)
+
+		keyValues := make([]interpreter.Value, numberOfValues*2)
+		for i := 0; i < numberOfValues; i++ {
+			key := randomHashableValue(inter)
+			value := randomStorableValue(inter, 0)
+
+			entries.put(inter, key, value)
+
+			keyValues[i*2] = key
+			keyValues[i*2+1] = value
+		}
+
+		dictionary := interpreter.NewDictionaryValueWithAddress(
+			inter,
+			interpreter.DictionaryStaticType{
+				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
+				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
+			},
+			orgOwner,
+			keyValues...,
+		)
+
+		require.Equal(t, entries.size(), dictionary.Count())
+
+		movedDictionary := dictionary.Transfer(
+			inter,
+			interpreter.ReturnEmptyLocationRange,
+			newOwner,
+			true,
+			nil,
+		).(*interpreter.DictionaryValue)
+
+		require.Equal(t, entries.size(), movedDictionary.Count())
+
+		// Cleanup the slab of original dictionary.
+		err := storage.Remove(dictionary.StorageID())
+		require.NoError(t, err)
+
+		// Check the values
+		entries.foreach(func(orgKey, orgValue interpreter.Value) (exit bool) {
+			exists := movedDictionary.ContainsKey(inter, interpreter.ReturnEmptyLocationRange, orgKey)
+			require.True(t, bool(exists))
+
+			value, found := movedDictionary.Get(inter, interpreter.ReturnEmptyLocationRange, orgKey)
+			require.True(t, found)
+			utils.AssertValuesEqual(t, inter, orgValue, value)
+
+			return false
+		})
+
+		owner := movedDictionary.GetOwner()
+		assert.Equal(t, newOwner[:], owner[:])
+	})
 }
 
 func TestRandomArrayOperations(t *testing.T) {
@@ -734,6 +792,55 @@ func TestRandomArrayOperations(t *testing.T) {
 		assert.Equal(t, startingStorageSize, storageSize)
 		assert.Equal(t, startingSlabCounts, slabCounts)
 	})
+
+	t.Run("move", func(t *testing.T) {
+		values := make([]interpreter.Value, numberOfValues)
+		elements := make([]interpreter.Value, numberOfValues)
+
+		for i := 0; i < numberOfValues; i++ {
+			value := randomStorableValue(inter, 0)
+			elements[i] = value
+			values[i] = deepCopyValue(inter, value)
+		}
+
+		array := interpreter.NewArrayValue(
+			inter,
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeAnyStruct,
+			},
+			orgOwner,
+			values...,
+		)
+
+		require.Equal(t, len(elements), array.Count())
+
+		owner := array.GetOwner()
+		assert.Equal(t, orgOwner, owner)
+
+		newOwner := atree.Address{'B'}
+		movedArray := array.Transfer(
+			inter,
+			interpreter.ReturnEmptyLocationRange,
+			newOwner,
+			true,
+			nil,
+		).(*interpreter.ArrayValue)
+
+		require.Equal(t, len(elements), movedArray.Count())
+
+		// Cleanup the slab of original array.
+		err := storage.Remove(array.StorageID())
+		require.NoError(t, err)
+
+		// Check the elements
+		for index, orgElement := range elements {
+			element := movedArray.Get(inter, interpreter.ReturnEmptyLocationRange, index)
+			utils.AssertValuesEqual(t, inter, orgElement, element)
+		}
+
+		owner = movedArray.GetOwner()
+		assert.Equal(t, newOwner[:], owner[:])
+	})
 }
 
 func TestRandomCompositeValueOperations(t *testing.T) {
@@ -765,76 +872,13 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 
 	var testComposite, copyOfTestComposite *interpreter.CompositeValue
 	var storageSize, slabCounts int
+	var orgFields map[string]interpreter.Value
 
 	fieldsCount := randomInt(compositeMaxFields)
-	orgFields := make(map[string]interpreter.Value, fieldsCount)
-
 	orgOwner := common.Address{'A'}
 
 	t.Run("construction", func(t *testing.T) {
-		identifier := randomUTF8String()
-
-		location := common.AddressLocation{
-			Address: orgOwner,
-			Name:    identifier,
-		}
-
-		fields := make([]interpreter.CompositeField, fieldsCount)
-
-		fieldNames := make(map[string]interface{}, fieldsCount)
-
-		for i := 0; i < fieldsCount; {
-			fieldName := randomUTF8String()
-
-			// avoid duplicate field names
-			if _, ok := fieldNames[fieldName]; ok {
-				continue
-			}
-			fieldNames[fieldName] = struct{}{}
-
-			field := interpreter.CompositeField{
-				Name:  fieldName,
-				Value: randomStorableValue(inter, 0),
-			}
-
-			fields[i] = field
-			orgFields[field.Name] = deepCopyValue(inter, field.Value)
-
-			i++
-		}
-
-		kind := common.CompositeKindStructure
-
-		compositeType := &sema.CompositeType{
-			Location:   location,
-			Identifier: identifier,
-			Kind:       kind,
-		}
-
-		compositeType.Members = sema.NewStringMemberOrderedMap()
-		for _, field := range fields {
-			compositeType.Members.Set(
-				field.Name,
-				sema.NewPublicConstantFieldMember(
-					compositeType,
-					field.Name,
-					sema.AnyStructType,
-					"",
-				),
-			)
-		}
-
-		// Add the type to the elaboration, to short-circuit the type-lookup
-		inter.Program.Elaboration.CompositeTypes[compositeType.ID()] = compositeType
-
-		testComposite = interpreter.NewCompositeValue(
-			inter,
-			location,
-			identifier,
-			kind,
-			fields,
-			orgOwner,
-		)
+		testComposite, orgFields = newCompositeValue(orgOwner, fieldsCount, inter)
 
 		storageSize, slabCounts = getSlabStorageSize(t, storage)
 
@@ -918,6 +962,109 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 			assert.Nil(t, value)
 		}
 	})
+
+	t.Run("move", func(t *testing.T) {
+		composite, fields := newCompositeValue(orgOwner, fieldsCount, inter)
+
+		owner := composite.GetOwner()
+		assert.Equal(t, orgOwner, owner)
+
+		newOwner := atree.Address{'B'}
+		movedComposite := composite.Transfer(
+			inter,
+			interpreter.ReturnEmptyLocationRange,
+			newOwner,
+			true,
+			nil,
+		).(*interpreter.CompositeValue)
+
+		// Cleanup the slab of original composite.
+		err := storage.Remove(composite.StorageID())
+		require.NoError(t, err)
+
+		// Check the elements
+		for fieldName, orgFieldValue := range fields {
+			fieldValue := movedComposite.GetField(inter, interpreter.ReturnEmptyLocationRange, fieldName)
+			utils.AssertValuesEqual(t, inter, orgFieldValue, fieldValue)
+		}
+
+		owner = composite.GetOwner()
+		assert.Equal(t, orgOwner, owner)
+	})
+}
+
+func newCompositeValue(
+	orgOwner common.Address,
+	fieldsCount int,
+	inter *interpreter.Interpreter,
+) (*interpreter.CompositeValue, map[string]interpreter.Value) {
+
+	orgFields := make(map[string]interpreter.Value, fieldsCount)
+
+	identifier := randomUTF8String()
+
+	location := common.AddressLocation{
+		Address: orgOwner,
+		Name:    identifier,
+	}
+
+	fields := make([]interpreter.CompositeField, fieldsCount)
+
+	fieldNames := make(map[string]interface{}, fieldsCount)
+
+	for i := 0; i < fieldsCount; {
+		fieldName := randomUTF8String()
+
+		// avoid duplicate field names
+		if _, ok := fieldNames[fieldName]; ok {
+			continue
+		}
+		fieldNames[fieldName] = struct{}{}
+
+		field := interpreter.CompositeField{
+			Name:  fieldName,
+			Value: randomStorableValue(inter, 0),
+		}
+
+		fields[i] = field
+		orgFields[field.Name] = deepCopyValue(inter, field.Value)
+
+		i++
+	}
+
+	kind := common.CompositeKindStructure
+
+	compositeType := &sema.CompositeType{
+		Location:   location,
+		Identifier: identifier,
+		Kind:       kind,
+	}
+
+	compositeType.Members = sema.NewStringMemberOrderedMap()
+	for _, field := range fields {
+		compositeType.Members.Set(
+			field.Name,
+			sema.NewPublicConstantFieldMember(
+				compositeType,
+				field.Name,
+				sema.AnyStructType,
+				"",
+			),
+		)
+	}
+
+	// Add the type to the elaboration, to short-circuit the type-lookup
+	inter.Program.Elaboration.CompositeTypes[compositeType.ID()] = compositeType
+
+	testComposite := interpreter.NewCompositeValue(
+		inter,
+		location,
+		identifier,
+		kind,
+		fields,
+		orgOwner,
+	)
+	return testComposite, orgFields
 }
 
 func getSlabStorageSize(t *testing.T, storage interpreter.InMemoryStorage) (totalSize int, slabCounts int) {
