@@ -30,8 +30,12 @@ func (checker *Checker) VisitPathExpression(expression *ast.PathExpression) ast.
 	ty, err := CheckPathLiteral(
 		expression.Domain.Identifier,
 		expression.Identifier.Identifier,
-		ast.NewRangeFromPositioned(expression.Domain),
-		ast.NewRangeFromPositioned(expression.Identifier),
+		func() ast.Range {
+			return ast.NewRangeFromPositioned(expression.Domain)
+		},
+		func() ast.Range {
+			return ast.NewRangeFromPositioned(expression.Identifier)
+		},
 	)
 
 	checker.report(err)
@@ -41,14 +45,14 @@ func (checker *Checker) VisitPathExpression(expression *ast.PathExpression) ast.
 
 var isValidIdentifier = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`).MatchString
 
-func CheckPathLiteral(domainString, identifier string, domainRange, idRange ast.Range) (Type, error) {
+func CheckPathLiteral(domainString, identifier string, domainRangeThunk, idRangeThunk func() ast.Range) (Type, error) {
 
 	// Check that the domain is valid
 	domain, ok := common.AllPathDomainsByIdentifier[domainString]
 	if !ok {
 		return PathType, &InvalidPathDomainError{
 			ActualDomain: domainString,
-			Range:        ast.NewRangeFromPositioned(domainRange),
+			Range:        domainRangeThunk(),
 		}
 	}
 
@@ -56,7 +60,7 @@ func CheckPathLiteral(domainString, identifier string, domainRange, idRange ast.
 	if !isValidIdentifier(identifier) {
 		return PathType, &InvalidPathIdentifierError{
 			ActualIdentifier: identifier,
-			Range:            ast.NewRangeFromPositioned(idRange),
+			Range:            idRangeThunk(),
 		}
 	}
 
