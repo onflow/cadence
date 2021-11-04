@@ -1651,7 +1651,11 @@ func TestExportTypeValue(t *testing.T) {
 
 		actual := exportValueFromScript(t, script)
 		expected := cadence.TypeValue{
-			StaticType: &cadence.StructType{QualifiedIdentifier: "S", Location: TestLocation, Fields: []cadence.Field{}},
+			StaticType: &cadence.StructType{
+				QualifiedIdentifier: "S",
+				Location:            TestLocation,
+				Fields:              []cadence.Field{},
+			},
 		}
 
 		assert.Equal(t, expected, actual)
@@ -1713,9 +1717,17 @@ func TestExportTypeValue(t *testing.T) {
 		assert.Equal(t,
 			cadence.TypeValue{
 				StaticType: cadence.RestrictedType{
-					Type: &cadence.StructType{QualifiedIdentifier: "S", Location: TestLocation, Fields: []cadence.Field{}},
+					Type: &cadence.StructType{
+						QualifiedIdentifier: "S",
+						Location:            TestLocation,
+						Fields:              []cadence.Field{},
+					},
 					Restrictions: []cadence.Type{
-						&cadence.StructInterfaceType{QualifiedIdentifier: "SI", Location: TestLocation, Fields: []cadence.Field{}},
+						&cadence.StructInterfaceType{
+							QualifiedIdentifier: "SI",
+							Location:            TestLocation,
+							Fields:              []cadence.Field{},
+						},
 					},
 				}.WithID("S.test.S{S.test.SI}"),
 			},
@@ -1787,8 +1799,12 @@ func TestExportCapabilityValue(t *testing.T) {
 				Domain:     "storage",
 				Identifier: "foo",
 			},
-			Address:    cadence.Address{0x1},
-			BorrowType: &cadence.StructType{QualifiedIdentifier: "S", Location: TestLocation, Fields: []cadence.Field{}},
+			Address: cadence.Address{0x1},
+			BorrowType: &cadence.StructType{
+				QualifiedIdentifier: "S",
+				Location:            TestLocation,
+				Fields:              []cadence.Field{},
+			},
 		}
 
 		assert.Equal(t, expected, actual)
@@ -2249,31 +2265,6 @@ func TestRuntimeArgumentPassing(t *testing.T) {
 			typeSignature: "Address",
 			exportedValue: cadence.NewAddress([8]byte{0, 0, 0, 0, 0, 1, 0, 2}),
 		},
-
-		// TODO: Enable below once https://github.com/onflow/cadence/issues/712 is fixed.
-		// TODO: Add a malformed argument test for capabilities
-		//{
-		//    name:         "Capability",
-		//    typeSignature: "Capability<&Foo>",
-		//    exportedValue: cadence.Capability{
-		//        Path: cadence.Path{
-		//            Domain:     "public",
-		//            Identifier: "bar",
-		//        },
-		//        Address:    cadence.NewAddress([8]byte{0, 0, 0, 0, 0, 1, 0, 2}),
-		//        BorrowType: "Foo",
-		//    },
-		//},
-
-		// TODO: enable once https://github.com/onflow/cadence/issues/491 is fixed.
-		//{
-		//    name:         "Type",
-		//    typeSignature: "Type",
-		//    exportedValue: cadence.TypeValue{
-		//        StaticType: "Foo",
-		//    },
-		//},
-
 	}
 
 	testArgumentPassing := func(test argumentPassingTest) {
@@ -3395,12 +3386,15 @@ func TestTypeValueImport(t *testing.T) {
 
 		rt := NewInterpreterRuntime()
 
+		var ok bool
+
 		runtimeInterface := &testRuntimeInterface{
 			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return json.Decode(b)
 			},
 			log: func(s string) {
 				assert.Equal(t, s, "\"Int\"")
+				ok = true
 			},
 		}
 
@@ -3416,9 +3410,10 @@ func TestTypeValueImport(t *testing.T) {
 		)
 
 		require.NoError(t, err)
+		require.True(t, ok)
 	})
 
-	t.Run("missing", func(t *testing.T) {
+	t.Run("missing struct", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3431,7 +3426,6 @@ func TestTypeValueImport(t *testing.T) {
 
 		script := `
             pub fun main(s: Type) {
-                log(s.identifier)
             }
         `
 
@@ -3443,8 +3437,6 @@ func TestTypeValueImport(t *testing.T) {
 		runtimeInterface := &testRuntimeInterface{
 			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return json.Decode(b)
-			},
-			log: func(s string) {
 			},
 		}
 
@@ -3459,7 +3451,7 @@ func TestTypeValueImport(t *testing.T) {
 			},
 		)
 
-		require.Error(t, err)
+		require.IsType(t, MalformedValueError{}, err)
 	})
 }
 
@@ -3491,12 +3483,15 @@ func TestCapabilityValueImport(t *testing.T) {
 
 		rt := NewInterpreterRuntime()
 
+		var ok bool
+
 		runtimeInterface := &testRuntimeInterface{
 			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return json.Decode(b)
 			},
 			log: func(s string) {
 				assert.Equal(t, s, "Capability<&Int>(address: 0x100000000000000, path: /public/foo)")
+				ok = true
 			},
 		}
 
@@ -3512,6 +3507,7 @@ func TestCapabilityValueImport(t *testing.T) {
 		)
 
 		require.NoError(t, err)
+		require.True(t, ok)
 	})
 
 	t.Run("Capability<Int>", func(t *testing.T) {
@@ -3529,7 +3525,6 @@ func TestCapabilityValueImport(t *testing.T) {
 
 		script := `
             pub fun main(s: Capability<Int>) {
-                log(s)
             }
         `
 
@@ -3541,8 +3536,6 @@ func TestCapabilityValueImport(t *testing.T) {
 		runtimeInterface := &testRuntimeInterface{
 			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return json.Decode(b)
-			},
-			log: func(s string) {
 			},
 		}
 
@@ -3575,7 +3568,6 @@ func TestCapabilityValueImport(t *testing.T) {
 
 		script := `
             pub fun main(s: Capability<&Int>) {
-                log(s)
             }
         `
 
@@ -3587,8 +3579,6 @@ func TestCapabilityValueImport(t *testing.T) {
 		runtimeInterface := &testRuntimeInterface{
 			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return json.Decode(b)
-			},
-			log: func(s string) {
 			},
 		}
 
@@ -3621,7 +3611,6 @@ func TestCapabilityValueImport(t *testing.T) {
 
 		script := `
             pub fun main(s: Capability<&Int>) {
-                log(s)
             }
         `
 
@@ -3652,7 +3641,7 @@ func TestCapabilityValueImport(t *testing.T) {
 		require.Error(t, err)
 	})
 
-	t.Run("missing", func(t *testing.T) {
+	t.Run("missing struct", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3667,14 +3656,13 @@ func TestCapabilityValueImport(t *testing.T) {
 			BorrowType: borrowType,
 			Address:    cadence.Address{0x1},
 			Path: cadence.Path{
-				Domain:     common.PathDomainStorage.Identifier(),
+				Domain:     common.PathDomainPublic.Identifier(),
 				Identifier: "foo",
 			},
 		}
 
 		script := `
             pub fun main(s: Capability<S>) {
-                log(s)
             }
         `
 
@@ -3688,7 +3676,6 @@ func TestCapabilityValueImport(t *testing.T) {
 				return json.Decode(b)
 			},
 			log: func(s string) {
-
 			},
 		}
 

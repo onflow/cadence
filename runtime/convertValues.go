@@ -562,14 +562,20 @@ func importPathValue(v cadence.Path) interpreter.PathValue {
 }
 
 func importTypeValue(
-	_ *interpreter.Interpreter,
+	inter *interpreter.Interpreter,
 	v cadence.Type,
 ) (
 	interpreter.TypeValue,
 	error,
 ) {
+	typ := ImportType(v)
+	_, err := inter.ConvertStaticToSemaType(typ)
+	if err != nil {
+		return interpreter.TypeValue{}, err
+	}
+
 	return interpreter.TypeValue{
-		Type: ImportType(v),
+		Type: typ,
 	}, nil
 }
 
