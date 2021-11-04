@@ -89,6 +89,9 @@ type Runtime interface {
 	// SetAtreeValidationEnabled configures if atree validation is enabled.
 	SetAtreeValidationEnabled(enabled bool)
 
+	// SetTracingEnabled configures if tracing is enabled.
+	SetTracingEnabled(enabled bool)
+
 	// ReadStored reads the value stored at the given path
 	//
 	ReadStored(address common.Address, path cadence.Path, context Context) (cadence.Value, error)
@@ -152,6 +155,7 @@ type interpreterRuntime struct {
 	coverageReport                  *CoverageReport
 	contractUpdateValidationEnabled bool
 	atreeValidationEnabled          bool
+	tracingEnabled                  bool
 }
 
 type Option func(Runtime)
@@ -174,6 +178,15 @@ func WithAtreeValidationEnabled(enabled bool) Option {
 	}
 }
 
+// WithTracingEnabled returns a runtime option
+// that configures if tracing is enabled.
+//
+func WithTracingEnabled(enabled bool) Option {
+	return func(runtime Runtime) {
+		runtime.SetTracingEnabled(enabled)
+	}
+}
+
 // NewInterpreterRuntime returns a interpreter-based version of the Flow runtime.
 func NewInterpreterRuntime(options ...Option) Runtime {
 	runtime := &interpreterRuntime{}
@@ -193,6 +206,10 @@ func (r *interpreterRuntime) SetContractUpdateValidationEnabled(enabled bool) {
 
 func (r *interpreterRuntime) SetAtreeValidationEnabled(enabled bool) {
 	r.atreeValidationEnabled = enabled
+}
+
+func (r *interpreterRuntime) SetTracingEnabled(enabled bool) {
+	r.tracingEnabled = enabled
 }
 
 func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cadence.Value, error) {
@@ -1162,6 +1179,12 @@ func (r *interpreterRuntime) newInterpreter(
 			},
 		),
 		interpreter.WithAtreeValidationEnabled(r.atreeValidationEnabled),
+		interpreter.WithOnRecordTraceHandler(
+			func(intr *interpreter.Interpreter, functionName string, duration time.Duration, logs []opentracing.LogRecord) {
+				context.Interface.RecordTrace(functionName, intr.Location, duration, logs)
+			},
+		),
+		interpreter.WithTracingEnabled(r.tracingEnabled),
 	}
 
 	defaultOptions = append(defaultOptions,
@@ -1385,12 +1408,6 @@ func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interfa
 				callStackDepth--
 			},
 		),
-		interpreter.WithOnRecordTraceHandler(
-			func(intr *interpreter.Interpreter, functionName string, duration time.Duration, logs []opentracing.LogRecord) {
-				runtimeInterface.RecordTrace(functionName, intr.Location, duration, logs)
-			},
-		),
-
 		interpreter.WithExitHandler(
 			func() error {
 				return runtimeInterface.SetComputationUsed(computationUsed)
