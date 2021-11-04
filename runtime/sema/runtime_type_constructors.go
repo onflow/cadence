@@ -171,19 +171,22 @@ var runtimeTypeConstructors = []*RuntimeTypeConstructor{
 	{
 		"DictionaryType",
 		DictionaryTypeFunctionType,
-		"Creates a run-time type representing a dictionary type of the given run-time key and value types. Returns nil if the key type is not a valid dictionary key.",
+		`Creates a run-time type representing a dictionary type of the given run-time key and value types. 
+		Returns nil if the key type is not a valid dictionary key.`,
 	},
 
 	{
 		"CompositeType",
 		CompositeTypeFunctionType,
-		"Creates a run-time type representing the composite type associated with the given type identifier. Returns nil if the identifier does not correspond to any composite type.",
+		`Creates a run-time type representing the composite type associated with the given type identifier. 
+		Returns nil if the identifier does not correspond to any composite type.`,
 	},
 
 	{
 		"InterfaceType",
 		InterfaceTypeFunctionType,
-		"Creates a run-time type representing the interface type associated with the given type identifier. Returns nil if the identifier does not correspond to any interface type.",
+		`Creates a run-time type representing the interface type associated with the given type identifier. 
+		Returns nil if the identifier does not correspond to any interface type.`,
 	},
 
 	{
@@ -201,7 +204,8 @@ var runtimeTypeConstructors = []*RuntimeTypeConstructor{
 	{
 		"RestrictedType",
 		RestrictedTypeFunctionType,
-		"Creates a run-time type representing a restricted type of the first argument, restricted by the interface identifiers in the second argument. Returns nil if the restriction is not valid.",
+		`Creates a run-time type representing a restricted type of the first argument, restricted by the interface identifiers in the second argument. 
+		Returns nil if the restriction is not valid.`,
 	},
 
 	{

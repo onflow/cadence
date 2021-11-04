@@ -158,12 +158,12 @@ func TestInterpretConstantSizedArrayType(t *testing.T) {
 	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
-      let a = ConstantSizedArrayType(Type<String>(), 10)
-      let b = ConstantSizedArrayType(Type<Int>(), 5) 
+      let a = ConstantSizedArrayType(type: Type<String>(), size: 10)
+      let b = ConstantSizedArrayType(type: Type<Int>(), size: 5) 
 
       resource R {}
-      let c = ConstantSizedArrayType(Type<@R>(), 400)
-      let d = ConstantSizedArrayType(a, 6)
+      let c = ConstantSizedArrayType(type: Type<@R>(), size: 400)
+      let d = ConstantSizedArrayType(type: a, size: 6)
 
       let e = Type<[String; 10]>()
     `)
@@ -226,16 +226,16 @@ func TestInterpretDictionaryType(t *testing.T) {
 	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
-      let a = DictionaryType(Type<String>(), Type<Int>())!
-      let b = DictionaryType(Type<Int>(), Type<String>())!
+      let a = DictionaryType(key: Type<String>(), value: Type<Int>())!
+      let b = DictionaryType(key: Type<Int>(), value: Type<String>())!
 
       resource R {}
-      let c = DictionaryType(Type<Int>(), Type<@R>())!
-      let d = DictionaryType(Type<Bool>(), a)!
+      let c = DictionaryType(key: Type<Int>(), value: Type<@R>())!
+      let d = DictionaryType(key: Type<Bool>(), value: a)!
 
       let e = Type<{String: Int}>()!
       
-      let f = DictionaryType(Type<[Bool]>(), Type<Int>())
+      let f = DictionaryType(key: Type<[Bool]>(), value: Type<Int>())
     `)
 
 	assert.Equal(t,
@@ -440,9 +440,9 @@ func TestInterpretFunctionType(t *testing.T) {
 	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
-      let a = FunctionType([Type<String>()], Type<Int>())
-      let b = FunctionType([Type<String>(), Type<Int>()], Type<Bool>())
-      let c = FunctionType([], Type<String>())
+      let a = FunctionType(parameters: [Type<String>()], return: Type<Int>())
+      let b = FunctionType(parameters: [Type<String>(), Type<Int>()], return: Type<Bool>())
+      let c = FunctionType(parameters: [], return: Type<String>())
 
       let d = Type<((String): Int)>();
     `)
@@ -500,9 +500,9 @@ func TestInterpretReferenceType(t *testing.T) {
       resource R {}
       struct S {}
 
-      let a = ReferenceType(true, Type<@R>())
-      let b = ReferenceType(false, Type<String>())
-      let c = ReferenceType(true, Type<S>()) 
+      let a = ReferenceType(authorized: true, type: Type<@R>())
+      let b = ReferenceType(authorized: false, type: Type<String>())
+      let c = ReferenceType(authorized: true, type: Type<S>()) 
       let d = Type<auth &R>()
     `)
 
@@ -564,21 +564,21 @@ func TestInterpretRestrictedType(t *testing.T) {
         pub let foo : Int
       }
 
-      let a = RestrictedType("S.test.A",["S.test.R"])!
-      let b = RestrictedType("S.test.B",["S.test.S"])!
+      let a = RestrictedType(identifier: "S.test.A", restrictions: ["S.test.R"])!
+      let b = RestrictedType(identifier: "S.test.B", restrictions: ["S.test.S"])!
 
-      let c = RestrictedType("S.test.B",["S.test.R"])
-      let d = RestrictedType("S.test.A",["S.test.S"])
-      let e = RestrictedType("S.test.B",["S.test.S2"])
+      let c = RestrictedType(identifier: "S.test.B", restrictions: ["S.test.R"])
+      let d = RestrictedType(identifier: "S.test.A", restrictions: ["S.test.S"])
+      let e = RestrictedType(identifier: "S.test.B", restrictions: ["S.test.S2"])
 
-      let f = RestrictedType("S.test.B",["X"])
-      let g = RestrictedType("S.test.N",["S.test.S2"])
+      let f = RestrictedType(identifier: "S.test.B", restrictions: ["X"])
+      let g = RestrictedType(identifier: "S.test.N", restrictions: ["S.test.S2"])
 
       let h = Type<@A{R}>()
       let i = Type<B{S}>()
 
-      let j = RestrictedType(nil,["S.test.R"])!
-      let k = RestrictedType(nil,["S.test.S"])!
+      let j = RestrictedType(identifier: nil, restrictions: ["S.test.R"])!
+      let k = RestrictedType(identifier: nil, restrictions: ["S.test.S"])!
     `)
 
 	assert.Equal(t,

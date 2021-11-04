@@ -2571,34 +2571,37 @@ var converterDeclarations = []valueConverterDeclaration{
 	},
 }
 
-func lookupInterface(interpreter *Interpreter, typeID string) (*sema.InterfaceType, bool) {
+func lookupInterface(interpreter *Interpreter, typeID string) (*sema.InterfaceType, error) {
 	location, qualifiedIdentifier, err := common.DecodeTypeID(typeID)
 	// if the typeID is invalid, return nil
-	if err != nil || location == nil {
-		return nil, false
+	if err != nil {
+		return nil, err
+	}
+	if location == nil {
+		return nil, &InterfaceMissingLocation{QualifiedIdentifier: qualifiedIdentifier}
 	}
 
 	typ, err := interpreter.getInterfaceType(location, qualifiedIdentifier)
 	if err != nil {
-		return nil, false
+		return nil, err
 	}
 
-	return typ, true
+	return typ, nil
 }
 
-func lookupComposite(interpreter *Interpreter, typeID string) (*sema.CompositeType, bool) {
+func lookupComposite(interpreter *Interpreter, typeID string) (*sema.CompositeType, error) {
 	location, qualifiedIdentifier, err := common.DecodeTypeID(typeID)
 	// if the typeID is invalid, return nil
 	if err != nil {
-		return nil, false
+		return nil, err
 	}
 
 	typ, err := interpreter.getCompositeType(location, qualifiedIdentifier, common.TypeID(typeID))
 	if err != nil {
-		return nil, false
+		return nil, err
 	}
 
-	return typ, true
+	return typ, nil
 }
 
 func init() {
@@ -2657,8 +2660,8 @@ func init() {
 			func(invocation Invocation) Value {
 				typeID := invocation.Arguments[0].(*StringValue).Str
 
-				composite, ok := lookupComposite(invocation.Interpreter, typeID)
-				if !ok {
+				composite, err := lookupComposite(invocation.Interpreter, typeID)
+				if err != nil {
 					return NilValue{}
 				}
 
@@ -2677,8 +2680,8 @@ func init() {
 			func(invocation Invocation) Value {
 				typeID := invocation.Arguments[0].(*StringValue).Str
 
-				interfaceType, ok := lookupInterface(invocation.Interpreter, typeID)
-				if !ok {
+				interfaceType, err := lookupInterface(invocation.Interpreter, typeID)
+				if err != nil {
 					return NilValue{}
 				}
 
@@ -2738,7 +2741,7 @@ func RestrictedTypeFunction(invocation Invocation) Value {
 
 	restrictedIDs.Iterate(func(typeID Value) bool {
 		restrictionInterface, err := lookupInterface(invocation.Interpreter, typeID.(*StringValue).Str)
-		if !err {
+		if err != nil {
 			ok = false
 			return true
 		}
@@ -2753,13 +2756,14 @@ func RestrictedTypeFunction(invocation Invocation) Value {
 	}
 
 	var semaType sema.Type
+	var err error
 
 	switch typeID := invocation.Arguments[0].(type) {
 	case NilValue:
 		semaType = nil
 	case *SomeValue:
-		semaType, ok = lookupComposite(invocation.Interpreter, typeID.Value.(*StringValue).Str)
-		if !ok {
+		semaType, err = lookupComposite(invocation.Interpreter, typeID.Value.(*StringValue).Str)
+		if err != nil {
 			return NilValue{}
 		}
 	default:
