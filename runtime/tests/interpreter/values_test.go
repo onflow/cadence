@@ -42,11 +42,12 @@ import (
 
 // TODO: make these program args?
 const containerMaxDepth = 3
-const containerMaxSize = 1_000
+const containerMaxSize = 1_00
 const innerContainerMaxSize = 300
 const compositeMaxFields = 10
 
 var runSmokeTests = flag.Bool("runSmokeTests", false, "Run smoke tests on values")
+var validateAtree = flag.Bool("validateAtree", true, "Enable atree validation")
 
 func TestRandomMapOperations(t *testing.T) {
 	if !*runSmokeTests {
@@ -72,6 +73,8 @@ func TestRandomMapOperations(t *testing.T) {
 				}
 			},
 		),
+		interpreter.WithAtreeStorageValidationEnabled(*validateAtree),
+		interpreter.WithAtreeValueValidationEnabled(*validateAtree),
 	)
 	require.NoError(t, err)
 
