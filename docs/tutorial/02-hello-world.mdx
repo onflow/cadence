@@ -87,7 +87,7 @@ of them conflicting with other projects' identifiers.
 - The `private` domain is like a private API. You can optionally store [capabilities](/cadence/language/capability-based-access-control/) to any of your stored assets here.
   Only the owner and anyone they give access to can use these interfaces to call functions that are defined in your private assets.
   Users will commonly store private capabilities here that refer to other accounts private objects.
-- The `public` domain is kind of like your account's public API. The owner can link capabilities here that that anyone else in the network can access
+- The `public` domain is kind of like your account's public API. The owner can link capabilities here that anyone else in the network can access
   to interact with the private assets that are stored in the account.
 
 <Img src="https://storage.googleapis.com/flow-resources/documentation-assets/cadence-tuts/accounts-diagram.png" />
@@ -711,7 +711,7 @@ The first argument to the `link` function is the path where you want to store th
 and the `target` argument is the path to the object in storage that is to be linked to.
 We always store links for capabilities in the `/private/` or `/public/` domains:
 - We choose `/private/` if we only want to allow one or a small number of users to access it
-- We choose `/public/` if we want any user in the network to be able to access it
+- We choose `/public/` if we want any user in the network to be able to access it.
 Capabilities always link to objects in the `/storage/` domain.
 
 To borrow a reference to an object from the capability, we use the capability's `borrow` method.
@@ -859,7 +859,7 @@ The contract corresponding to that account will be displayed in the editor where
 
 <Img src="https://storage.googleapis.com/flow-resources/documentation-assets/cadence-tuts/playground-accounts.png" />
 
-Upgrading contrats that are already deployed is very risky, so be careful!
+Upgrading contracts that are already deployed is very risky, so be careful!
 
 ## Transactions
 

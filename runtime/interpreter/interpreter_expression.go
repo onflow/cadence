@@ -77,18 +77,18 @@ func (interpreter *Interpreter) indexExpressionGetterSetter(indexExpression *ast
 	target := interpreter.evalExpression(indexExpression.TargetExpression).(ValueIndexableValue)
 	indexingValue := interpreter.evalExpression(indexExpression.IndexingExpression)
 	getLocationRange := locationRangeGetter(interpreter.Location, indexExpression)
-	isResourceMoveIndexExpression := interpreter.Program.Elaboration.IsResourceMoveIndexExpression[indexExpression]
+	_, isNestedResourceMove := interpreter.Program.Elaboration.IsNestedResourceMoveExpression[indexExpression]
 	return getterSetter{
 		target: target,
 		get: func(_ bool) Value {
-			if isResourceMoveIndexExpression {
+			if isNestedResourceMove {
 				return target.RemoveKey(interpreter, getLocationRange, indexingValue)
 			} else {
 				return target.GetKey(interpreter, getLocationRange, indexingValue)
 			}
 		},
 		set: func(value Value) {
-			if isResourceMoveIndexExpression {
+			if isNestedResourceMove {
 				target.InsertKey(interpreter, getLocationRange, indexingValue, value)
 			} else {
 				target.SetKey(interpreter, getLocationRange, indexingValue, value)
@@ -104,25 +104,31 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 	target := interpreter.evalExpression(memberExpression.Expression)
 	identifier := memberExpression.Identifier.Identifier
 	getLocationRange := locationRangeGetter(interpreter.Location, memberExpression)
+	_, isNestedResourceMove := interpreter.Program.Elaboration.IsNestedResourceMoveExpression[memberExpression]
 	return getterSetter{
 		target: target,
 		get: func(allowMissing bool) Value {
 			isOptional := memberExpression.Optional
 
 			if isOptional {
-				switch typeSelf := target.(type) {
+				switch typedTarget := target.(type) {
 				case NilValue:
-					return typeSelf
+					return typedTarget
 
 				case *SomeValue:
-					target = typeSelf.Value
+					target = typedTarget.Value
 
 				default:
 					panic(errors.NewUnreachableError())
 				}
 			}
 
-			resultValue := interpreter.getMember(target, getLocationRange, identifier)
+			var resultValue Value
+			if isNestedResourceMove {
+				resultValue = target.(MemberAccessibleValue).RemoveMember(interpreter, getLocationRange, identifier)
+			} else {
+				resultValue = interpreter.getMember(target, getLocationRange, identifier)
+			}
 			if resultValue == nil && !allowMissing {
 				panic(MissingMemberValueError{
 					Name:          identifier,
@@ -445,7 +451,7 @@ func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpres
 		argumentType := argumentTypes[i]
 		argumentExpression := expression.Values[i]
 		getLocationRange := locationRangeGetter(interpreter.Location, argumentExpression)
-		copies[i] = interpreter.copyAndConvert(argument, argumentType, elementType, getLocationRange)
+		copies[i] = interpreter.transferAndConvert(argument, argumentType, elementType, getLocationRange)
 	}
 
 	// TODO: cache
@@ -471,14 +477,14 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 		entryType := entryTypes[i]
 		entry := expression.Entries[i]
 
-		key := interpreter.copyAndConvert(
+		key := interpreter.transferAndConvert(
 			dictionaryEntryValues.Key,
 			entryType.KeyType,
 			dictionaryType.KeyType,
 			locationRangeGetter(interpreter.Location, entry.Key),
 		)
 
-		value := interpreter.copyAndConvert(
+		value := interpreter.transferAndConvert(
 			dictionaryEntryValues.Value,
 			entryType.ValueType,
 			dictionaryType.ValueType,
@@ -567,8 +573,6 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 
 	arguments := interpreter.visitExpressionsNonCopying(argumentExpressions)
 
-	receiverType :=
-		interpreter.Program.Elaboration.InvocationExpressionReceiverTypes[invocationExpression]
 	typeParameterTypes :=
 		interpreter.Program.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
 	argumentTypes :=
@@ -582,7 +586,6 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 
 	resultValue := interpreter.invokeFunctionValue(
 		function,
-		receiverType,
 		arguments,
 		argumentExpressions,
 		argumentTypes,

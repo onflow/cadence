@@ -170,11 +170,9 @@ func TestCheckOptionalChainingFunctionRead(t *testing.T) {
 	require.NoError(t, err)
 
 	xType := RequireGlobalValue(t, checker.Elaboration, "x")
-	testType := RequireGlobalType(t, checker.Elaboration, "Test")
 
 	expectedType := &sema.OptionalType{
 		Type: &sema.FunctionType{
-			ReceiverType: testType,
 			ReturnTypeAnnotation: &sema.TypeAnnotation{
 				Type: sema.IntType,
 			},
@@ -272,12 +270,9 @@ func TestCheckFunctionTypeReceiverType(t *testing.T) {
 
 		require.NoError(t, err)
 
-		sType := RequireGlobalType(t, checker.Elaboration, "S")
-
 		assert.Equal(t,
 			&sema.FunctionType{
-				ReceiverType: sType,
-				Parameters:   []*sema.Parameter{},
+				Parameters: []*sema.Parameter{},
 				ReturnTypeAnnotation: sema.NewTypeAnnotation(
 					sema.VoidType,
 				),
@@ -286,7 +281,7 @@ func TestCheckFunctionTypeReceiverType(t *testing.T) {
 		)
 	})
 
-	t.Run("invalid cast of bound function type", func(t *testing.T) {
+	t.Run("cast bound function type", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -299,8 +294,6 @@ func TestCheckFunctionTypeReceiverType(t *testing.T) {
           let f = s.f as ((): Void)
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		require.NoError(t, err)
 	})
 }

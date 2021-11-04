@@ -233,7 +233,9 @@ func (AddressDynamicType) IsImportable() bool {
 
 // FunctionDynamicType
 
-type FunctionDynamicType struct{}
+type FunctionDynamicType struct {
+	FuncType *sema.FunctionType
+}
 
 func (FunctionDynamicType) IsDynamicType() {}
 

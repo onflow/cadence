@@ -70,7 +70,7 @@ func (interpreter *Interpreter) VisitReturnStatement(statement *ast.ReturnStatem
 		getLocationRange := locationRangeGetter(interpreter.Location, statement.Expression)
 
 		// NOTE: copy on return
-		value = interpreter.copyAndConvert(value, valueType, returnType, getLocationRange)
+		value = interpreter.transferAndConvert(value, valueType, returnType, getLocationRange)
 	}
 
 	return functionReturn{value}
@@ -119,7 +119,23 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 	thenBlock, elseBlock *ast.Block,
 ) controlReturn {
 
-	value := interpreter.evalExpression(declaration.Value)
+	// NOTE: It is *REQUIRED* that the getter for the value is used
+	// instead of just evaluating value expression,
+	// as the value may be an access expression (member access, index access),
+	// which implicitly removes a resource.
+	//
+	// Performing the removal from the container is essential
+	// (and just evaluating the expression does not perform the removal),
+	// because if there is a second value,
+	// the assignment to the value will cause an overwrite of the value.
+	// If the resource was not moved ou of the container,
+	// its contents get deleted.
+
+	const allowMissing = false
+	value := interpreter.assignmentGetterSetter(declaration.Value).get(allowMissing)
+	if value == nil {
+		panic(errors.NewUnreachableError())
+	}
 
 	valueType := interpreter.Program.Elaboration.VariableDeclarationValueTypes[declaration]
 
@@ -141,14 +157,19 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 
 		targetType := interpreter.Program.Elaboration.VariableDeclarationTargetTypes[declaration]
 		getLocationRange := locationRangeGetter(interpreter.Location, declaration.Value)
-		unwrappedValueCopy := interpreter.copyAndConvert(someValue.Value, valueType, targetType, getLocationRange)
+		transferredUnwrappedValue := interpreter.transferAndConvert(
+			someValue.Value,
+			valueType,
+			targetType,
+			getLocationRange,
+		)
 
 		interpreter.activations.PushNewWithCurrent()
 		defer interpreter.activations.Pop()
 
 		interpreter.declareVariable(
 			declaration.Identifier.Identifier,
-			unwrappedValueCopy,
+			transferredUnwrappedValue,
 		)
 
 		result = thenBlock.Accept(interpreter)
@@ -253,9 +274,15 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) a
 	getLocationRange := locationRangeGetter(interpreter.Location, statement)
 
 	value := interpreter.evalExpression(statement.Value)
-	valueCopy := interpreter.CopyValue(getLocationRange, value, atree.Address{})
+	transferredValue := value.Transfer(
+		interpreter,
+		getLocationRange,
+		atree.Address{},
+		false,
+		nil,
+	)
 
-	iterator, err := valueCopy.(*ArrayValue).array.Iterator()
+	iterator, err := transferredValue.(*ArrayValue).array.Iterator()
 	if err != nil {
 		panic(ExternalError{err})
 	}
@@ -349,6 +376,18 @@ func (interpreter *Interpreter) visitVariableDeclaration(
 	valueType := interpreter.Program.Elaboration.VariableDeclarationValueTypes[declaration]
 	secondValueType := interpreter.Program.Elaboration.VariableDeclarationSecondValueTypes[declaration]
 
+	// NOTE: It is *REQUIRED* that the getter for the value is used
+	// instead of just evaluating value expression,
+	// as the value may be an access expression (member access, index access),
+	// which implicitly removes a resource.
+	//
+	// Performing the removal from the container is essential
+	// (and just evaluating the expression does not perform the removal),
+	// because if there is a second value,
+	// the assignment to the value will cause an overwrite of the value.
+	// If the resource was not moved ou of the container,
+	// its contents get deleted.
+
 	const allowMissing = false
 	result := interpreter.assignmentGetterSetter(declaration.Value).get(allowMissing)
 	if result == nil {
@@ -357,11 +396,11 @@ func (interpreter *Interpreter) visitVariableDeclaration(
 
 	getLocationRange := locationRangeGetter(interpreter.Location, declaration.Value)
 
-	valueCopy := interpreter.copyAndConvert(result, valueType, targetType, getLocationRange)
+	transferredValue := interpreter.transferAndConvert(result, valueType, targetType, getLocationRange)
 
 	valueCallback(
 		declaration.Identifier.Identifier,
-		valueCopy,
+		transferredValue,
 	)
 
 	if declaration.SecondValue == nil {
@@ -416,13 +455,13 @@ func (interpreter *Interpreter) VisitSwapStatement(swap *ast.SwapStatement) ast.
 	// and left value to right target
 
 	getLocationRange := locationRangeGetter(interpreter.Location, swap.Right)
-	rightValueCopy := interpreter.copyAndConvert(rightValue, rightType, leftType, getLocationRange)
+	transferredRightValue := interpreter.transferAndConvert(rightValue, rightType, leftType, getLocationRange)
 
 	getLocationRange = locationRangeGetter(interpreter.Location, swap.Left)
-	leftValueCopy := interpreter.copyAndConvert(leftValue, leftType, rightType, getLocationRange)
+	transferredLeftValue := interpreter.transferAndConvert(leftValue, leftType, rightType, getLocationRange)
 
-	leftGetterSetter.set(rightValueCopy)
-	rightGetterSetter.set(leftValueCopy)
+	leftGetterSetter.set(transferredRightValue)
+	rightGetterSetter.set(transferredLeftValue)
 
 	return nil
 }

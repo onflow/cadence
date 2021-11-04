@@ -1818,6 +1818,8 @@ func TestRuntimeStorageMultipleTransactionsResourceFunction(t *testing.T) {
 
 	var loggedMessages []string
 
+	ledger := newTestLedger(nil, nil)
+
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
 			switch location {
@@ -1827,7 +1829,7 @@ func TestRuntimeStorageMultipleTransactionsResourceFunction(t *testing.T) {
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
 		},
-		storage: newTestLedger(nil, nil),
+		storage: ledger,
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{{42}}, nil
 		},
@@ -3034,35 +3036,35 @@ func TestRuntimeContractAccount(t *testing.T) {
 
 	assert.NotNil(t, accountCode)
 
-	t.Run("", func(t *testing.T) {
-		value, err := runtime.ExecuteScript(
-			Script{
-				Source: script1,
-			},
-			Context{
-				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
-			},
-		)
-		require.NoError(t, err)
+	// Run script 1
 
-		assert.Equal(t, addressValue, value)
-	})
+	value, err := runtime.ExecuteScript(
+		Script{
+			Source: script1,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
 
-	t.Run("", func(t *testing.T) {
-		value, err := runtime.ExecuteScript(
-			Script{
-				Source: script2,
-			},
-			Context{
-				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
-			},
-		)
-		require.NoError(t, err)
+	assert.Equal(t, addressValue, value)
 
-		assert.Equal(t, addressValue, value)
-	})
+	// Run script 2
+
+	value, err = runtime.ExecuteScript(
+		Script{
+			Source: script2,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t, addressValue, value)
 }
 
 func TestRuntimeInvokeContractFunction(t *testing.T) {
@@ -3658,11 +3660,13 @@ func TestRuntimeStorageLoadedDestructionAfterRemoval(t *testing.T) {
 
 	var accountCode []byte
 
+	ledger := newTestLedger(nil, nil)
+
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		storage: newTestLedger(nil, nil),
+		storage: ledger,
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{addressValue}, nil
 		},
@@ -6735,6 +6739,10 @@ func TestRuntimeGetCapability(t *testing.T) {
 }
 
 func TestRuntimeStackOverflow(t *testing.T) {
+
+	if testing.Short() {
+		t.Skip()
+	}
 
 	t.Parallel()
 

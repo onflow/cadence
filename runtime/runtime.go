@@ -291,18 +291,35 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cade
 	if err != nil {
 		return nil, newError(err, context)
 	}
+
 	// Write back all stored values, which were actually just cached, back into storage.
 
 	// Even though this function is `ExecuteScript`, that doesn't imply the changes
 	// to storage will be actually persisted
 
-	const commitContractUpdates = true
-	err = storage.Commit(inter, commitContractUpdates)
+	err = r.commitStorage(storage, inter)
 	if err != nil {
 		return nil, newError(err, context)
 	}
 
 	return result, nil
+}
+
+func (r *interpreterRuntime) commitStorage(storage *Storage, inter *interpreter.Interpreter) error {
+	const commitContractUpdates = true
+	err := storage.Commit(inter, commitContractUpdates)
+	if err != nil {
+		return err
+	}
+
+	if r.atreeValidationEnabled {
+		err = storage.CheckHealth()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 type interpretFunc func(inter *interpreter.Interpreter) (interpreter.Value, error)
@@ -512,8 +529,7 @@ func (r *interpreterRuntime) InvokeContractFunction(
 	}
 
 	// Write back all stored values, which were actually just cached, back into storage
-	const commitContractUpdates = true
-	err = storage.Commit(inter, commitContractUpdates)
+	err = r.commitStorage(storage, inter)
 	if err != nil {
 		return nil, newError(err, context)
 	}
@@ -668,8 +684,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 	}
 
 	// Write back all stored values, which were actually just cached, back into storage
-	const commitContractUpdates = true
-	err = storage.Commit(inter, commitContractUpdates)
+	err = r.commitStorage(storage, inter)
 	if err != nil {
 		return newError(err, context)
 	}
@@ -1178,13 +1193,17 @@ func (r *interpreterRuntime) newInterpreter(
 				)
 			},
 		),
-		interpreter.WithAtreeValidationEnabled(r.atreeValidationEnabled),
 		interpreter.WithOnRecordTraceHandler(
 			func(intr *interpreter.Interpreter, functionName string, duration time.Duration, logs []opentracing.LogRecord) {
 				context.Interface.RecordTrace(functionName, intr.Location, duration, logs)
 			},
 		),
 		interpreter.WithTracingEnabled(r.tracingEnabled),
+		interpreter.WithAtreeValueValidationEnabled(r.atreeValidationEnabled),
+		// NOTE: ignore r.atreeValidationEnabled here,
+		// and disable storage validation after each value modification.
+		// Instead, storage is validated after commits (if validation is enabled).
+		interpreter.WithAtreeStorageValidationEnabled(false),
 	}
 
 	defaultOptions = append(defaultOptions,
