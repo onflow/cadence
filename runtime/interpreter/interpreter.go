@@ -3719,7 +3719,7 @@ func (interpreter *Interpreter) RemoveReferencedSlab(storable atree.Storable) {
 
 func (interpreter *Interpreter) maybeValidateAtreeValue(v atree.Value) {
 	if interpreter.atreeValueValidationEnabled {
-		interpreter.validateAtreeValue(v)
+		interpreter.ValidateAtreeValue(v)
 	}
 	if interpreter.atreeStorageValidationEnabled {
 		err := interpreter.Storage.CheckHealth()
@@ -3729,7 +3729,7 @@ func (interpreter *Interpreter) maybeValidateAtreeValue(v atree.Value) {
 	}
 }
 
-func (interpreter *Interpreter) validateAtreeValue(v atree.Value) {
+func (interpreter *Interpreter) ValidateAtreeValue(v atree.Value) {
 	tic := func(info atree.TypeInfo, other atree.TypeInfo) bool {
 		switch info := info.(type) {
 		case ConstantSizedStaticType:

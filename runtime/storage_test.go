@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"math"
 	"strconv"
 	"testing"
 	"time"
@@ -76,7 +77,7 @@ func withWritesToStorage(
 		storable, err := array.Storable(
 			inter.Storage,
 			atree.Address(address),
-			atree.MaxInlineElementSize,
+			math.MaxUint64,
 		)
 		require.NoError(tb, err)
 

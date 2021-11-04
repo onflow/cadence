@@ -38,16 +38,17 @@ import (
 )
 
 type encodeDecodeTest struct {
-	value         Value
-	storable      atree.Storable
-	encoded       []byte
-	invalid       bool
-	decodedValue  Value
-	decodeOnly    bool
-	deepEquality  bool
-	storage       Storage
-	slabStorageID atree.StorageID
-	check         func(actual Value)
+	value                Value
+	storable             atree.Storable
+	encoded              []byte
+	invalid              bool
+	decodedValue         Value
+	decodeOnly           bool
+	deepEquality         bool
+	storage              Storage
+	slabStorageID        atree.StorageID
+	check                func(actual Value)
+	maxInlineElementSize uint64
 }
 
 var testOwner = common.BytesToAddress([]byte{0x42})
@@ -63,10 +64,14 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 
 		if test.value != nil {
 			if test.storable == nil {
+				maxInlineElementSize := test.maxInlineElementSize
+				if maxInlineElementSize == 0 {
+					maxInlineElementSize = math.MaxUint64
+				}
 				storable, err := test.value.Storable(
 					test.storage,
 					atree.Address(testOwner),
-					atree.MaxInlineElementSize,
+					maxInlineElementSize,
 				)
 				require.NoError(t, err)
 				test.storable = storable
@@ -229,11 +234,13 @@ func TestEncodeDecodeString(t *testing.T) {
 
 		t.Parallel()
 
-		expected := NewStringValue(strings.Repeat("x", int(atree.MaxInlineElementSize+1)))
+		maxInlineElementSize := atree.MaxInlineArrayElementSize
+		expected := NewStringValue(strings.Repeat("x", int(maxInlineElementSize+1)))
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: expected,
+				value:                expected,
+				maxInlineElementSize: maxInlineElementSize,
 				encoded: []byte{
 					// tag
 					0xd8, atree.CBORTagStorageID,
@@ -513,13 +520,15 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 
 		expected := NewIntValueFromInt64(1_000_000_000)
 
-		for len(expected.BigInt.Bytes()) < int(atree.MaxInlineElementSize+1) {
+		maxInlineElementSize := atree.MaxInlineArrayElementSize
+		for len(expected.BigInt.Bytes()) < int(maxInlineElementSize+1) {
 			expected = expected.Mul(expected).(IntValue)
 		}
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: expected,
+				value:                expected,
+				maxInlineElementSize: maxInlineElementSize,
 				encoded: []byte{
 					// tag
 					0xd8, atree.CBORTagStorageID,
@@ -1466,13 +1475,15 @@ func TestEncodeDecodeUIntValue(t *testing.T) {
 
 		expected := NewUIntValueFromUint64(1_000_000_000)
 
-		for len(expected.BigInt.Bytes()) < int(atree.MaxInlineElementSize+1) {
+		maxInlineElementSize := atree.MaxInlineArrayElementSize
+		for len(expected.BigInt.Bytes()) < int(maxInlineElementSize+1) {
 			expected = expected.Mul(expected).(UIntValue)
 		}
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: expected,
+				value:                expected,
+				maxInlineElementSize: maxInlineElementSize,
 				encoded: []byte{
 					// tag
 					0xd8, atree.CBORTagStorageID,
@@ -2408,11 +2419,12 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 		// It will not get inlined, but the outer value will
 
 		var str *StringValue
-		for i := uint64(0); i < atree.MaxInlineElementSize; i++ {
-			str = NewStringValue(strings.Repeat("x", int(atree.MaxInlineElementSize-i)))
+		maxInlineElementSize := atree.MaxInlineArrayElementSize
+		for i := uint64(0); i < maxInlineElementSize; i++ {
+			str = NewStringValue(strings.Repeat("x", int(maxInlineElementSize-i)))
 			size, err := StorableSize(str)
 			require.NoError(t, err)
-			if uint64(size) == atree.MaxInlineElementSize-1 {
+			if uint64(size) == maxInlineElementSize-1 {
 				break
 			}
 		}
@@ -2421,7 +2433,8 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: expected,
+				value:                expected,
+				maxInlineElementSize: maxInlineElementSize,
 				encoded: []byte{
 					// tag
 					0xd8, atree.CBORTagStorageID,
@@ -2440,11 +2453,12 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 		// Generate a string that has an encoding size just above the max inline element size
 
 		var str *StringValue
-		for i := uint64(0); i < atree.MaxInlineElementSize; i++ {
-			str = NewStringValue(strings.Repeat("x", int(atree.MaxInlineElementSize-i)))
+		maxInlineElementSize := atree.MaxInlineArrayElementSize
+		for i := uint64(0); i < maxInlineElementSize; i++ {
+			str = NewStringValue(strings.Repeat("x", int(maxInlineElementSize-i)))
 			size, err := StorableSize(str)
 			require.NoError(t, err)
-			if uint64(size) == atree.MaxInlineElementSize+1 {
+			if uint64(size) == maxInlineElementSize+1 {
 				break
 			}
 		}
@@ -2453,7 +2467,8 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: expected,
+				value:                expected,
+				maxInlineElementSize: maxInlineElementSize,
 				encoded: []byte{
 					// tag
 					0xd8, CBORTagSomeValue,
@@ -2826,7 +2841,8 @@ func TestEncodeDecodePathValue(t *testing.T) {
 
 		t.Parallel()
 
-		identifier := strings.Repeat("x", int(atree.MaxInlineElementSize+1))
+		maxInlineElementSize := atree.MaxInlineArrayElementSize
+		identifier := strings.Repeat("x", int(maxInlineElementSize+1))
 
 		expected := PathValue{
 			Domain:     common.PathDomainStorage,
@@ -2835,7 +2851,8 @@ func TestEncodeDecodePathValue(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: expected,
+				value:                expected,
+				maxInlineElementSize: maxInlineElementSize,
 				encoded: []byte{
 					// tag
 					0xd8, atree.CBORTagStorageID,
@@ -3083,8 +3100,9 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 		// It will not get inlined, but the outer capability will
 
 		var path PathValue
-		for i := uint64(0); i < atree.MaxInlineElementSize; i++ {
-			identifier := strings.Repeat("x", int(atree.MaxInlineElementSize-i))
+		maxInlineElementSize := atree.MaxInlineArrayElementSize
+		for i := uint64(0); i < maxInlineElementSize; i++ {
+			identifier := strings.Repeat("x", int(maxInlineElementSize-i))
 
 			path = PathValue{
 				Domain:     common.PathDomainStorage,
@@ -3094,7 +3112,7 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 			size, err := StorableSize(path)
 			require.NoError(t, err)
 
-			if uint64(size) == atree.MaxInlineElementSize-1 {
+			if uint64(size) == maxInlineElementSize-1 {
 				break
 			}
 		}
@@ -3105,7 +3123,8 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: expected,
+				value:                expected,
+				maxInlineElementSize: maxInlineElementSize,
 				encoded: []byte{
 					// tag
 					0xd8, atree.CBORTagStorageID,
@@ -3123,9 +3142,11 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 
 		// Generate a path that has an encoding size just above the max inline element size
 
+		maxInlineElementSize := atree.MaxInlineArrayElementSize
+
 		var path PathValue
-		for i := uint64(0); i < atree.MaxInlineElementSize; i++ {
-			identifier := strings.Repeat("x", int(atree.MaxInlineElementSize-i))
+		for i := uint64(0); i < maxInlineElementSize; i++ {
+			identifier := strings.Repeat("x", int(maxInlineElementSize-i))
 
 			path = PathValue{
 				Domain:     common.PathDomainStorage,
@@ -3135,7 +3156,7 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 			size, err := StorableSize(path)
 			require.NoError(t, err)
 
-			if uint64(size) == atree.MaxInlineElementSize+1 {
+			if uint64(size) == maxInlineElementSize+1 {
 				break
 			}
 		}
@@ -3146,7 +3167,8 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: expected,
+				value:                expected,
+				maxInlineElementSize: maxInlineElementSize,
 				encoded: []byte{
 					0xd8, atree.CBORTagStorageID,
 					// storage ID
@@ -3623,7 +3645,8 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 
 		t.Parallel()
 
-		identifier := strings.Repeat("x", int(atree.MaxInlineElementSize+1))
+		maxInlineElementSize := atree.MaxInlineArrayElementSize
+		identifier := strings.Repeat("x", int(maxInlineElementSize+1))
 
 		path := PathValue{
 			Domain:     common.PathDomainStorage,
@@ -3637,7 +3660,8 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: expected,
+				value:                expected,
+				maxInlineElementSize: maxInlineElementSize,
 				encoded: []byte{
 					// tag
 					0xd8, atree.CBORTagStorageID,
@@ -3740,7 +3764,8 @@ func TestEncodeDecodeTypeValue(t *testing.T) {
 
 		t.Parallel()
 
-		identifier := strings.Repeat("x", int(atree.MaxInlineElementSize+1))
+		maxInlineElementSize := atree.MaxInlineArrayElementSize
+		identifier := strings.Repeat("x", int(maxInlineElementSize+1))
 
 		expected := TypeValue{
 			Type: NewCompositeStaticType(
@@ -3751,7 +3776,8 @@ func TestEncodeDecodeTypeValue(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: expected,
+				value:                expected,
+				maxInlineElementSize: maxInlineElementSize,
 				encoded: []byte{
 					// tag
 					0xd8, atree.CBORTagStorageID,
