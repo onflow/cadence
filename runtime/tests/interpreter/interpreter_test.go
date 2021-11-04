@@ -4071,6 +4071,69 @@ func TestInterpretDictionaryIndexingInt(t *testing.T) {
 	)
 }
 
+func TestInterpretDictionaryIndexingType(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      struct TestStruct {}
+      resource TestResource {}
+
+      let x: {Type: String} = {
+        Type<Int16>(): "a", 
+        Type<String>(): "b", 
+        Type<AnyStruct>(): "c",
+        Type<@TestResource>(): "f"
+      }
+
+      let a = x[Type<Int16>()]
+      let b = x[Type<String>()]
+      let c = x[Type<AnyStruct>()]
+      let d = x[Type<Int>()]
+      let e = x[Type<TestStruct>()]
+      let f = x[Type<@TestResource>()]
+    `)
+
+	assert.Equal(t,
+		interpreter.NewSomeValueNonCopying(
+			interpreter.NewStringValue("a"),
+		),
+		inter.Globals["a"].GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.NewSomeValueNonCopying(
+			interpreter.NewStringValue("b"),
+		),
+		inter.Globals["b"].GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.NewSomeValueNonCopying(
+			interpreter.NewStringValue("c"),
+		),
+		inter.Globals["c"].GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.NilValue{},
+		inter.Globals["d"].GetValue(),
+	)
+
+	// types need to match exactly, subtypes won't cut it
+	assert.Equal(t,
+		interpreter.NilValue{},
+		inter.Globals["e"].GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.NewSomeValueNonCopying(
+			interpreter.NewStringValue("f"),
+		),
+		inter.Globals["f"].GetValue(),
+	)
+}
+
 func TestInterpretDictionaryIndexingAssignmentExisting(t *testing.T) {
 
 	t.Parallel()
