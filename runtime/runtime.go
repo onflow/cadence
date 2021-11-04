@@ -25,6 +25,7 @@ import (
 	goRuntime "runtime"
 	"time"
 
+	opentracing "github.com/opentracing/opentracing-go"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/onflow/cadence"
@@ -35,7 +36,6 @@ import (
 	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
-	opentracing "github.com/opentracing/opentracing-go"
 )
 
 type Script struct {

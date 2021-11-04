@@ -27,12 +27,12 @@ import (
 	"time"
 
 	"github.com/onflow/atree"
+	"github.com/opentracing/opentracing-go"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/opentracing/opentracing-go"
 )
 
 type controlReturn interface {
