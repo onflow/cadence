@@ -3451,7 +3451,7 @@ func TestTypeValueImport(t *testing.T) {
 			},
 		)
 
-		require.IsType(t, MalformedValueError{}, err)
+		require.Error(t, err)
 	})
 }
 
@@ -3490,7 +3490,7 @@ func TestCapabilityValueImport(t *testing.T) {
 				return json.Decode(b)
 			},
 			log: func(s string) {
-				assert.Equal(t, s, "Capability<&Int>(address: 0x100000000000000, path: /public/foo)")
+				assert.Equal(t, s, "Capability<&Int>(address: 0x0100000000000000, path: /public/foo)")
 				ok = true
 			},
 		}

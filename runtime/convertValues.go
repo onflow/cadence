@@ -573,7 +573,7 @@ func importTypeValue(
 	   in order to be sure the type we have created is legal,
 	   we convert it to a sema type. If this fails, the
 	   import is invalid */
-	_, err := inter.ConvertStaticToSemaType(typ)
+	_, err := inter.OptionallyConvertStaticToSemaType(typ)
 	if err != nil {
 		return interpreter.TypeValue{}, err
 	}
@@ -596,7 +596,7 @@ func importCapability(
 	_, ok := borrowType.(cadence.ReferenceType)
 
 	if !ok {
-		return &interpreter.CapabilityValue{}, fmt.Errorf(
+		return nil, fmt.Errorf(
 			"cannot import capability: expected reference, got '%s'",
 			borrowType.ID(),
 		)

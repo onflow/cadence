@@ -3746,24 +3746,24 @@ func (interpreter *Interpreter) GetCapabilityFinalTargetStorageKey(
 	}
 }
 
-func (interpreter *Interpreter) ConvertStaticToSemaType(staticType StaticType) sema.Type {
+func (interpreter *Interpreter) OptionallyConvertStaticToSemaType(staticType StaticType) (sema.Type, error) {
 	return ConvertStaticToSemaType(
 		staticType,
-		func(location common.Location, qualifiedIdentifier string) *sema.InterfaceType {
-			interfaceType, err := interpreter.getInterfaceType(location, qualifiedIdentifier)
-			if err != nil {
-				panic(err)
-			}
-			return interfaceType
+		func(location common.Location, qualifiedIdentifier string) (*sema.InterfaceType, error) {
+			return interpreter.getInterfaceType(location, qualifiedIdentifier)
 		},
-		func(location common.Location, qualifiedIdentifier string, typeID common.TypeID) *sema.CompositeType {
-			compositeType, err := interpreter.getCompositeType(location, qualifiedIdentifier, typeID)
-			if err != nil {
-				panic(err)
-			}
-			return compositeType
+		func(location common.Location, qualifiedIdentifier string, typeID common.TypeID) (*sema.CompositeType, error) {
+			return interpreter.getCompositeType(location, qualifiedIdentifier, typeID)
 		},
 	)
+}
+
+func (interpreter *Interpreter) ConvertStaticToSemaType(staticType StaticType) sema.Type {
+	semaType, err := interpreter.OptionallyConvertStaticToSemaType(staticType)
+	if err != nil {
+		panic(err)
+	}
+	return semaType
 }
 
 func (interpreter *Interpreter) getElaboration(location common.Location) *sema.Elaboration {
