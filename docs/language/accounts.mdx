@@ -329,9 +329,9 @@ Both `StoragePath` and `CapabilityPath` are subtypes of `Path`.
 There are also utilities to produce paths from strings:
 
 ```cadence
-fun PublicPath(_ identifier: string): PublicPath?
-fun PrivatePath(_ identifier: string): PrivatePath?
-fun StoragePath(_ identifier: string): StoragePath?
+fun PublicPath(identifier: string): PublicPath?
+fun PrivatePath(identifier: string): PrivatePath?
+fun StoragePath(identifier: string): StoragePath?
 ```
 
 Each of these functions take an identifier and produce a path of the appropriate domain:

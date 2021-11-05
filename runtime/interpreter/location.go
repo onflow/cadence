@@ -46,3 +46,7 @@ func (r LocationRange) ImportLocation() common.Location {
 func ReturnEmptyLocationRange() LocationRange {
 	return LocationRange{}
 }
+
+func ReturnEmptyRange() ast.Range {
+	return ast.Range{}
+}
