@@ -1419,7 +1419,7 @@ func TestEncodeType(t *testing.T) {
 		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{
-				StaticType: cadence.Function{
+				StaticType: cadence.FunctionType{
 					Parameters: []cadence.Parameter{
 						{Label: "qux", Identifier: "baz", Type: cadence.StringType{}},
 					},

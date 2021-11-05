@@ -695,7 +695,7 @@ func decodeFunctionType(returnValue, parametersValue, id interface{}) cadence.Ty
 	parameters := decodeParamTypes(toSlice(parametersValue))
 	returnType := decodeType(returnValue)
 
-	return cadence.Function{
+	return cadence.FunctionType{
 		Parameters: parameters,
 		ReturnType: returnType,
 	}.WithID(toString(id))

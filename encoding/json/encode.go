@@ -654,7 +654,6 @@ func prepareType(typ cadence.Type) jsonValue {
 	case cadence.AnyType,
 		cadence.AnyStructType,
 		cadence.AnyResourceType,
-		cadence.Variable,
 		cadence.MetaType,
 		cadence.VoidType,
 		cadence.NeverType,
@@ -775,7 +774,7 @@ func prepareType(typ cadence.Type) jsonValue {
 			Fields:       prepareFields(typ.Fields),
 			Initializers: prepareInitializers(typ.Initializers),
 		}
-	case cadence.Function:
+	case cadence.FunctionType:
 		return jsonFunctionType{
 			Kind:       "Function",
 			TypeID:     typ.ID(),
