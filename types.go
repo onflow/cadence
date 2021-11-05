@@ -71,19 +71,6 @@ func (t OptionalType) ID() string {
 	return fmt.Sprintf("%s?", t.Type.ID())
 }
 
-// Variable
-
-type Variable struct {
-	Type Type
-}
-
-func (Variable) isType() {}
-
-// TODO:
-func (Variable) ID() string {
-	panic("not implemented")
-}
-
 // MetaType
 
 type MetaType struct{}
@@ -441,8 +428,8 @@ func (t VariableSizedArrayType) ID() string {
 	return fmt.Sprintf("[%s]", t.ElementType.ID())
 }
 
-func (v VariableSizedArrayType) Element() Type {
-	return v.ElementType
+func (t VariableSizedArrayType) Element() Type {
+	return t.ElementType
 }
 
 // ConstantSizedArrayType
@@ -458,8 +445,8 @@ func (t ConstantSizedArrayType) ID() string {
 	return fmt.Sprintf("[%s;%d]", t.ElementType.ID(), t.Size)
 }
 
-func (v ConstantSizedArrayType) Element() Type {
-	return v.ElementType
+func (t ConstantSizedArrayType) Element() Type {
+	return t.ElementType
 }
 
 // DictionaryType
@@ -777,33 +764,21 @@ func (t *ContractInterfaceType) InterfaceInitializers() [][]Parameter {
 
 // Function
 
-type Function struct {
+type FunctionType struct {
 	typeID     string
 	Parameters []Parameter
 	ReturnType Type
 }
 
-func (t Function) isType() {}
+func (FunctionType) isType() {}
 
-func (t Function) ID() string {
+func (t FunctionType) ID() string {
 	return t.typeID
 }
 
-func (t Function) WithID(id string) Function {
+func (t FunctionType) WithID(id string) FunctionType {
 	t.typeID = id
 	return t
-}
-
-// ResourcePointer
-
-type ResourcePointer struct {
-	TypeName string
-}
-
-func (ResourcePointer) isType() {}
-
-func (t ResourcePointer) ID() string {
-	return t.TypeName
 }
 
 // ReferenceType
@@ -926,7 +901,7 @@ type EnumType struct {
 	Initializers        [][]Parameter
 }
 
-func (t *EnumType) isType() {}
+func (*EnumType) isType() {}
 
 func (t *EnumType) ID() string {
 	if t.Location == nil {

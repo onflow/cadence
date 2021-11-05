@@ -556,7 +556,7 @@ func prepareComposite(kind, id string, fieldTypes []cadence.Field, fields []cade
 	nonFunctionFieldTypes := make([]cadence.Field, 0)
 
 	for _, field := range fieldTypes {
-		if _, ok := field.Type.(cadence.Function); !ok {
+		if _, ok := field.Type.(cadence.FunctionType); !ok {
 			nonFunctionFieldTypes = append(nonFunctionFieldTypes, field)
 		}
 	}
@@ -654,7 +654,6 @@ func prepareType(typ cadence.Type) jsonValue {
 	case cadence.AnyType,
 		cadence.AnyStructType,
 		cadence.AnyResourceType,
-		cadence.Variable,
 		cadence.MetaType,
 		cadence.VoidType,
 		cadence.NeverType,
@@ -775,7 +774,7 @@ func prepareType(typ cadence.Type) jsonValue {
 			Fields:       prepareFields(typ.Fields),
 			Initializers: prepareInitializers(typ.Initializers),
 		}
-	case cadence.Function:
+	case cadence.FunctionType:
 		return jsonFunctionType{
 			Kind:       "Function",
 			TypeID:     typ.ID(),
