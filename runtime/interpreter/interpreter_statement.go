@@ -288,13 +288,11 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) a
 	}
 
 	var indexVariable *Variable
-	var index int64
-	var indexValue IntValue
+	var one = NewIntValueFromInt64(1)
 	if statement.Index != nil {
-		indexValue = NewIntValueFromInt64(0)
 		indexVariable = interpreter.declareVariable(
 			statement.Index.Identifier,
-			indexValue,
+			NewIntValueFromInt64(0),
 		)
 	}
 
@@ -331,8 +329,7 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) a
 		}
 
 		if indexVariable != nil {
-			index++
-			indexValue.BigInt.SetInt64(index)
+			indexVariable.SetValue(indexVariable.GetValue().(IntValue).Plus(one))
 		}
 	}
 }
