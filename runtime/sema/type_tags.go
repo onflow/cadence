@@ -20,15 +20,12 @@ package sema
 
 import (
 	"fmt"
-
-	"github.com/onflow/cadence/runtime/errors"
 )
 
 // TypeTag is a bitmask representation for types.
 // Each type has a unique dedicated bit/bit-pattern in the bitmask.
-// The mask consist of two sections: lowerMask and the upperMask.
-// Each section can represent 64-types. Currently only the lower mask is used.
-// Upper mask is reserved for future use.
+// The mask consist of two sections: `lowerMask` and the `upperMask`.
+// Each section can represent 64-types.
 //
 type TypeTag struct {
 	lowerMask uint64
@@ -41,6 +38,21 @@ func newTypeTagFromLowerMask(mask uint64) TypeTag {
 	typeTag := TypeTag{
 		lowerMask: mask,
 		upperMask: 0,
+	}
+
+	if _, ok := allTypeTags[typeTag]; ok {
+		panic(fmt.Errorf("duplicate type tag: %v", typeTag))
+	}
+
+	allTypeTags[typeTag] = true
+
+	return typeTag
+}
+
+func newTypeTagFromUpperMask(mask uint64) TypeTag {
+	typeTag := TypeTag{
+		lowerMask: 0,
+		upperMask: mask,
 	}
 
 	if _, ok := allTypeTags[typeTag]; ok {
@@ -94,6 +106,7 @@ func (t TypeTag) BelongsTo(typeTag TypeTag) bool {
 
 const noTypeMask = 0
 
+// Lower mask types
 const (
 	numberTypeMask uint64 = 1 << iota
 	signedNumberTypeMask
@@ -124,8 +137,19 @@ const (
 	word32TypeMask
 	word64TypeMask
 
+	_ // future: Fix8
+	_ // future: Fix16
+	_ // future: Fix32
 	fix64TypeMask
+	_ // future: Fix128
+	_ // future: Fix256
+
+	_ // future: UFix8
+	_ // future: UFix16
+	_ // future: UFix32
 	ufix64TypeMask
+	_ // future: UFix128
+	_ // future: UFix256
 
 	stringTypeMask
 	characterTypeMask
@@ -156,13 +180,19 @@ const (
 	interfaceTypeMask
 	transactionTypeMask
 	restrictedTypeMask
-	capabilityTypeMask
+
+	// ~~ NOTE: End of limit for lower mask type. Any new type should go to upper mask. ~~
+)
+
+// Upper mask types
+const (
+	capabilityTypeMask uint64 = 1 << iota
 
 	invalidTypeMask
 )
 
 var (
-	// special tag to represent mask with no types included
+	// NoTypeTag is a special tag to represent mask with no types included
 	NoTypeTag = newTypeTagFromLowerMask(noTypeMask)
 
 	SignedIntegerTypeTag = newTypeTagFromLowerMask(signedIntegerTypeMask).
@@ -238,7 +268,7 @@ var (
 	AddressTypeTag          = newTypeTagFromLowerMask(addressTypeMask)
 	MetaTypeTag             = newTypeTagFromLowerMask(metaTypeMask)
 	NeverTypeTag            = newTypeTagFromLowerMask(neverTypeMask)
-	InvalidTypeTag          = newTypeTagFromLowerMask(invalidTypeMask)
+	InvalidTypeTag          = newTypeTagFromUpperMask(invalidTypeMask)
 	BlockTypeTag            = newTypeTagFromLowerMask(blockTypeMask)
 	DeployedContractTypeTag = newTypeTagFromLowerMask(deployedContractMask)
 
@@ -263,7 +293,7 @@ var (
 	InterfaceTypeTag   = newTypeTagFromLowerMask(interfaceTypeMask)
 	TransactionTypeTag = newTypeTagFromLowerMask(transactionTypeMask)
 	RestrictedTypeTag  = newTypeTagFromLowerMask(restrictedTypeMask)
-	CapabilityTypeTag  = newTypeTagFromLowerMask(capabilityTypeMask)
+	CapabilityTypeTag  = newTypeTagFromUpperMask(capabilityTypeMask)
 
 	AnyStructTypeTag = newTypeTagFromLowerMask(anyStructTypeMask).
 				Or(NeverTypeTag).
@@ -297,12 +327,66 @@ func LeastCommonSuperType(types ...Type) Type {
 }
 
 func findCommonSupperType(joinedTypeTag TypeTag, types ...Type) Type {
+	var superType Type
 	if joinedTypeTag.upperMask != 0 {
-		// All existing types can be represented using 64-bits.
 		// Hence upperMask is unused for now.
-		panic(errors.NewUnreachableError())
+		superType = findSuperTypeFromUpperMask(joinedTypeTag, types)
+	} else {
+		superType = findSuperTypeFromLowerMask(joinedTypeTag, types)
 	}
 
+	if superType != nil {
+		return superType
+	}
+
+	// Optional types.
+	if joinedTypeTag.ContainsAny(NilTypeTag) {
+		// Get the type without the optional flag
+		innerTypeTag := joinedTypeTag.And(NilTypeTag.Not())
+		supperType := findCommonSupperType(innerTypeTag, types...)
+
+		// If the common supertype of the rest of types contain nil,
+		// then do not wrap with optional again.
+		if supperType.Tag().ContainsAny(NilTypeTag) {
+			return supperType
+		}
+
+		return &OptionalType{
+			Type: supperType,
+		}
+	}
+
+	// NOTE: Below order is important!
+
+	switch {
+	case joinedTypeTag.BelongsTo(SignedIntegerTypeTag):
+		return SignedIntegerType
+	case joinedTypeTag.BelongsTo(IntegerTypeTag):
+		return IntegerType
+	case joinedTypeTag.BelongsTo(SignedFixedPointTypeTag):
+		return SignedFixedPointType
+	case joinedTypeTag.BelongsTo(FixedPointTypeTag):
+		return FixedPointType
+	case joinedTypeTag.BelongsTo(SignedNumberTypeTag):
+		return SignedNumberType
+	case joinedTypeTag.BelongsTo(NumberTypeTag):
+		return NumberType
+	case joinedTypeTag.BelongsTo(CapabilityPathTypeTag):
+		return CapabilityPathType
+	case joinedTypeTag.BelongsTo(PathTypeTag):
+		return PathType
+	}
+
+	// At this point, all the types are heterogeneous.
+	// So the common supertype could only be one of:
+	//    - AnyStruct
+	//    - AnyResource
+	//    - None (if there are both structs and resources)
+
+	return commonSuperTypeOfHeterogeneousTypes(types)
+}
+
+func findSuperTypeFromLowerMask(joinedTypeTag TypeTag, types []Type) Type {
 	switch joinedTypeTag.lowerMask {
 
 	case intTypeMask:
@@ -382,7 +466,7 @@ func findCommonSupperType(joinedTypeTag TypeTag, types ...Type) Type {
 
 	case compositeTypeMask:
 		// We reach here if all are composite types.
-		// Therefore check for member types, and decide the
+		// Therefore, check for member types, and decide the
 		// common supertype based on the member types.
 		var prevType Type
 		for _, typ := range types {
@@ -406,73 +490,43 @@ func findCommonSupperType(joinedTypeTag TypeTag, types ...Type) Type {
 		functionTypeMask,
 		interfaceTypeMask,
 		transactionTypeMask,
-		restrictedTypeMask,
-		capabilityTypeMask:
+		restrictedTypeMask:
 
-		// We reach here if all types belongs to same kind.
-		// e.g: All are arrays, all are dictionaries, etc.
-		// Therefore check for member types, and decide the
-		// common supertype based on the member types.
-		var prevType Type
-		for _, typ := range types {
-			if prevType == nil {
-				prevType = typ
-				continue
-			}
-
-			if !typ.Equal(prevType) {
-				return commonSuperTypeOfHeterogeneousTypes(types)
-			}
-		}
-
-		return prevType
+		return getSuperTypeOfDerivedTypes(types)
+	default:
+		return nil
 	}
+}
 
-	// Optional types.
-	if joinedTypeTag.ContainsAny(NilTypeTag) {
-		// Get the type without the optional flag
-		innerTypeTag := joinedTypeTag.And(NilTypeTag.Not())
-		supperType := findCommonSupperType(innerTypeTag, types...)
+func findSuperTypeFromUpperMask(joinedTypeTag TypeTag, types []Type) Type {
+	switch joinedTypeTag.upperMask {
 
-		// If the common supertype of the rest of types contain nil,
-		// then do not wrap with optional again.
-		if supperType.Tag().ContainsAny(NilTypeTag) {
-			return supperType
+	// All derived types goes here.
+	case capabilityTypeMask:
+		return getSuperTypeOfDerivedTypes(types)
+	default:
+		return nil
+	}
+}
+
+func getSuperTypeOfDerivedTypes(types []Type) Type {
+	// We reach here if all types belongs to same kind.
+	// e.g: All are arrays, all are dictionaries, etc.
+	// Therefore, check for member types, and decide the
+	// common supertype based on the member types.
+	var prevType Type
+	for _, typ := range types {
+		if prevType == nil {
+			prevType = typ
+			continue
 		}
 
-		return &OptionalType{
-			Type: supperType,
+		if !typ.Equal(prevType) {
+			return commonSuperTypeOfHeterogeneousTypes(types)
 		}
 	}
 
-	// NOTE: Below order is important!
-
-	switch {
-	case joinedTypeTag.BelongsTo(SignedIntegerTypeTag):
-		return SignedIntegerType
-	case joinedTypeTag.BelongsTo(IntegerTypeTag):
-		return IntegerType
-	case joinedTypeTag.BelongsTo(SignedFixedPointTypeTag):
-		return SignedFixedPointType
-	case joinedTypeTag.BelongsTo(FixedPointTypeTag):
-		return FixedPointType
-	case joinedTypeTag.BelongsTo(SignedNumberTypeTag):
-		return SignedNumberType
-	case joinedTypeTag.BelongsTo(NumberTypeTag):
-		return NumberType
-	case joinedTypeTag.BelongsTo(CapabilityPathTypeTag):
-		return CapabilityPathType
-	case joinedTypeTag.BelongsTo(PathTypeTag):
-		return PathType
-	}
-
-	// At this point, all the types are heterogeneous.
-	// So the common supertype could only be one of:
-	//    - AnyStruct
-	//    - AnyResource
-	//    - None (if there are both structs and resources)
-
-	return commonSuperTypeOfHeterogeneousTypes(types)
+	return prevType
 }
 
 func commonSuperTypeOfHeterogeneousTypes(types []Type) Type {
