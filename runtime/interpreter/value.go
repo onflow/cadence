@@ -31,7 +31,6 @@ import (
 	"github.com/rivo/uniseg"
 	"golang.org/x/text/unicode/norm"
 
-	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/format"
@@ -10857,12 +10856,8 @@ func convertPath(domain common.PathDomain, value Value) Value {
 	_, err := sema.CheckPathLiteral(
 		domain.Identifier(),
 		stringValue.Str,
-		func() ast.Range {
-			return ReturnEmptyRange()
-		},
-		func() ast.Range {
-			return ReturnEmptyRange()
-		},
+		ReturnEmptyRange,
+		ReturnEmptyRange,
 	)
 	if err != nil {
 		return NilValue{}
