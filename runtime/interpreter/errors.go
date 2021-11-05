@@ -524,11 +524,11 @@ func (e NonStorableStaticTypeError) Error() string {
 
 // InterfaceMissingLocation is reported during interface lookup,
 // if an interface is looked up without a location
-type InterfaceMissingLocation struct {
+type InterfaceMissingLocationError struct {
 	QualifiedIdentifier string
 }
 
-func (e *InterfaceMissingLocation) Error() string {
+func (e *InterfaceMissingLocationError) Error() string {
 	return fmt.Sprintf(
 		"tried to look up interface %s without a location",
 		e.QualifiedIdentifier,

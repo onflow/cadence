@@ -2621,9 +2621,6 @@ func lookupInterface(interpreter *Interpreter, typeID string) (*sema.InterfaceTy
 	if err != nil {
 		return nil, err
 	}
-	if location == nil {
-		return nil, &InterfaceMissingLocation{QualifiedIdentifier: qualifiedIdentifier}
-	}
 
 	typ, err := interpreter.getInterfaceType(location, qualifiedIdentifier)
 	if err != nil {
@@ -3846,6 +3843,10 @@ func (interpreter *Interpreter) getNativeCompositeType(qualifiedIdentifier strin
 }
 
 func (interpreter *Interpreter) getInterfaceType(location common.Location, qualifiedIdentifier string) (*sema.InterfaceType, error) {
+	if location == nil {
+		return nil, &InterfaceMissingLocationError{QualifiedIdentifier: qualifiedIdentifier}
+	}
+
 	typeID := location.TypeID(qualifiedIdentifier)
 
 	elaboration := interpreter.getElaboration(location)
