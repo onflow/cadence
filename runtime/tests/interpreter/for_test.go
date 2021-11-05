@@ -78,6 +78,35 @@ func TestInterpretForStatementWithIndex(t *testing.T) {
 	)
 }
 
+func TestInterpretForStatementWithStoredIndex(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+       fun test(): Int {
+           let arr: [Int] = []
+           for x, y in [1, 2, 3, 4] {
+               arr.append(x)
+           }
+           var sum = 0
+           for z in arr {
+              sum = sum + z
+           }
+           return sum
+       }
+    `)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewIntValueFromInt64(6),
+		value,
+	)
+}
+
 func TestInterpretForStatementWithReturn(t *testing.T) {
 
 	t.Parallel()
