@@ -209,6 +209,7 @@ func (s *WhileStatement) MarshalJSON() ([]byte, error) {
 
 type ForStatement struct {
 	Identifier Identifier
+	Index      *Identifier
 	Value      Expression
 	Block      *Block
 	StartPos   Position `json:"-"`
