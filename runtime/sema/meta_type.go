@@ -23,8 +23,12 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
-const typeIdentifierDocString = `
+const metaTypeIdentifierDocString = `
 The fully-qualified identifier of the type
+`
+
+const metaTypeSubtypeDocString = `
+Returns true if this type is a subtype of the given type at run-time
 `
 
 // MetaType represents the type of a type.
@@ -40,7 +44,23 @@ var MetaType = &SimpleType{
 	Equatable:            true,
 	ExternallyReturnable: true,
 	Importable:           true,
-	Members: func(t *SimpleType) map[string]MemberResolver {
+}
+
+var MetaTypeIsSubtypeFunctionType = &FunctionType{
+	Parameters: []*Parameter{
+		{
+			Label:          "of",
+			Identifier:     "otherType",
+			TypeAnnotation: NewTypeAnnotation(MetaType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		BoolType,
+	),
+}
+
+func init() {
+	MetaType.Members = func(t *SimpleType) map[string]MemberResolver {
 		return map[string]MemberResolver{
 			"identifier": {
 				Kind: common.DeclarationKindField,
@@ -49,10 +69,21 @@ var MetaType = &SimpleType{
 						t,
 						identifier,
 						StringType,
-						typeIdentifierDocString,
+						metaTypeIdentifierDocString,
+					)
+				},
+			},
+			"isSubtype": {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicFunctionMember(
+						t,
+						identifier,
+						MetaTypeIsSubtypeFunctionType,
+						metaTypeSubtypeDocString,
 					)
 				},
 			},
 		}
-	},
+	}
 }

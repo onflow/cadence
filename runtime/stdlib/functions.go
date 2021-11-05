@@ -31,9 +31,9 @@ import (
 
 type StandardLibraryFunction struct {
 	Name           string
-	Type           sema.InvokableType
+	Type           *sema.FunctionType
 	DocString      string
-	Function       interpreter.HostFunctionValue
+	Function       *interpreter.HostFunctionValue
 	ArgumentLabels []string
 	Available      func(common.Location) bool
 }
@@ -42,7 +42,7 @@ func (f StandardLibraryFunction) ValueDeclarationName() string {
 	return f.Name
 }
 
-func (f StandardLibraryFunction) ValueDeclarationValue() interpreter.Value {
+func (f StandardLibraryFunction) ValueDeclarationValue(_ *interpreter.Interpreter) interpreter.Value {
 	return f.Function
 }
 
@@ -79,12 +79,12 @@ func (f StandardLibraryFunction) ValueDeclarationArgumentLabels() []string {
 
 func NewStandardLibraryFunction(
 	name string,
-	functionType sema.InvokableType,
+	functionType *sema.FunctionType,
 	docString string,
 	function interpreter.HostFunction,
 ) StandardLibraryFunction {
 
-	parameters := functionType.InvocationFunctionType().Parameters
+	parameters := functionType.Parameters
 
 	argumentLabels := make([]string, len(parameters))
 
@@ -92,7 +92,8 @@ func NewStandardLibraryFunction(
 		argumentLabels[i] = parameter.EffectiveArgumentLabel()
 	}
 
-	functionValue := interpreter.NewHostFunctionValue(function)
+	functionValue := interpreter.NewHostFunctionValue(function, functionType)
+
 	return StandardLibraryFunction{
 		Name:           name,
 		Type:           functionType,

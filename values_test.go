@@ -20,6 +20,7 @@ package cadence
 
 import (
 	"fmt"
+	"math/big"
 	"testing"
 	"unicode/utf8"
 
@@ -144,21 +145,21 @@ func TestStringer(t *testing.T) {
 			expected: "nil",
 		},
 		"String": {
-			value:    NewString("Flow ridah!"),
+			value:    String("Flow ridah!"),
 			expected: "\"Flow ridah!\"",
 		},
 		"Array": {
 			value: NewArray([]Value{
 				NewInt(10),
-				NewString("TEST"),
+				String("TEST"),
 			}),
 			expected: "[10, \"TEST\"]",
 		},
 		"Dictionary": {
 			value: NewDictionary([]KeyValuePair{
 				{
-					Key:   NewString("key"),
-					Value: NewString("value"),
+					Key:   String("key"),
+					Value: String("value"),
 				},
 			}),
 			expected: "{\"key\": \"value\"}",
@@ -169,10 +170,10 @@ func TestStringer(t *testing.T) {
 		},
 		"Address": {
 			value:    NewAddress([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
-			expected: "0x1",
+			expected: "0x0000000000000001",
 		},
 		"struct": {
-			value: NewStruct([]Value{NewString("bar")}).WithType(&StructType{
+			value: NewStruct([]Value{String("bar")}).WithType(&StructType{
 				Location:            utils.TestLocation,
 				QualifiedIdentifier: "FooStruct",
 				Fields: []Field{
@@ -201,7 +202,7 @@ func TestStringer(t *testing.T) {
 			value: NewEvent(
 				[]Value{
 					NewInt(1),
-					NewString("foo"),
+					String("foo"),
 				},
 			).WithType(&EventType{
 				Location:            utils.TestLocation,
@@ -220,7 +221,7 @@ func TestStringer(t *testing.T) {
 			expected: "S.test.FooEvent(a: 1, b: \"foo\")",
 		},
 		"contract": {
-			value: NewContract([]Value{NewString("bar")}).WithType(&ContractType{
+			value: NewContract([]Value{String("bar")}).WithType(&ContractType{
 				Location:            utils.TestLocation,
 				QualifiedIdentifier: "FooContract",
 				Fields: []Field{
@@ -250,16 +251,16 @@ func TestStringer(t *testing.T) {
 			expected: "/storage/foo",
 		},
 		"Type": {
-			value:    TypeValue{StaticType: "Int"},
+			value:    TypeValue{StaticType: IntType{}},
 			expected: "Type<Int>()",
 		},
 		"Capability": {
 			value: Capability{
 				Path:       Path{Domain: "storage", Identifier: "foo"},
 				Address:    BytesToAddress([]byte{1, 2, 3, 4, 5}),
-				BorrowType: "Int",
+				BorrowType: IntType{},
 			},
-			expected: "Capability<Int>(address: 0x102030405, path: /storage/foo)",
+			expected: "Capability<Int>(address: 0x0000000102030405, path: /storage/foo)",
 		},
 	}
 
@@ -502,15 +503,99 @@ func TestNonUTF8String(t *testing.T) {
 	// Make sure it is an invalid utf8 string
 	assert.False(t, utf8.ValidString(nonUTF8String))
 
-	defer func() {
-		r := recover()
-		require.NotNil(t, r)
+	_, err := NewString(nonUTF8String)
+	require.Error(t, err)
 
-		err, isError := r.(error)
-		require.True(t, isError)
+	assert.Contains(t, err.Error(), "invalid UTF-8 in string")
+}
 
-		assert.Contains(t, err.Error(), "invalid UTF-8 in string")
-	}()
+func TestNewInt128FromBig(t *testing.T) {
 
-	_ = NewString(nonUTF8String)
+	_, err := NewInt128FromBig(big.NewInt(1))
+	require.NoError(t, err)
+
+	belowMin := new(big.Int).Sub(
+		sema.Int128TypeMinIntBig,
+		big.NewInt(1),
+	)
+	_, err = NewInt128FromBig(belowMin)
+	require.Error(t, err)
+
+	aboveMax := new(big.Int).Add(
+		sema.Int128TypeMaxIntBig,
+		big.NewInt(1),
+	)
+	_, err = NewInt128FromBig(aboveMax)
+	require.Error(t, err)
+}
+
+func TestNewInt256FromBig(t *testing.T) {
+
+	_, err := NewInt256FromBig(big.NewInt(1))
+	require.NoError(t, err)
+
+	belowMin := new(big.Int).Sub(
+		sema.Int256TypeMinIntBig,
+		big.NewInt(1),
+	)
+	_, err = NewInt256FromBig(belowMin)
+	require.Error(t, err)
+
+	aboveMax := new(big.Int).Add(
+		sema.Int256TypeMaxIntBig,
+		big.NewInt(1),
+	)
+	_, err = NewInt256FromBig(aboveMax)
+	require.Error(t, err)
+}
+
+func TestNewUIntFromBig(t *testing.T) {
+
+	_, err := NewUIntFromBig(big.NewInt(1))
+	require.NoError(t, err)
+
+	belowMin := big.NewInt(-1)
+	_, err = NewUIntFromBig(belowMin)
+	require.Error(t, err)
+
+	large := new(big.Int).Add(
+		sema.UInt256TypeMaxIntBig,
+		big.NewInt(1),
+	)
+	_, err = NewUIntFromBig(large)
+	require.NoError(t, err)
+}
+
+func TestNewUInt128FromBig(t *testing.T) {
+
+	_, err := NewUInt128FromBig(big.NewInt(1))
+	require.NoError(t, err)
+
+	belowMin := big.NewInt(-1)
+	_, err = NewUInt128FromBig(belowMin)
+	require.Error(t, err)
+
+	aboveMax := new(big.Int).Add(
+		sema.UInt128TypeMaxIntBig,
+		big.NewInt(1),
+	)
+	_, err = NewUInt128FromBig(aboveMax)
+	require.Error(t, err)
+}
+
+func TestNewUInt256FromBig(t *testing.T) {
+
+	_, err := NewUInt256FromBig(big.NewInt(1))
+	require.NoError(t, err)
+
+	belowMin := big.NewInt(-1)
+	_, err = NewUInt256FromBig(belowMin)
+	require.Error(t, err)
+
+	aboveMax := new(big.Int).Add(
+		sema.UInt256TypeMaxIntBig,
+		big.NewInt(1),
+	)
+	_, err = NewUInt256FromBig(aboveMax)
+	require.Error(t, err)
 }

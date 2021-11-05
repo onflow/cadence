@@ -98,7 +98,7 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 	  }
 	`)
 
-	runtime := NewInterpreterRuntime()
+	runtime := newTestInterpreterRuntime()
 
 	runtimeInterface := &testRuntimeInterface{
 		getAccountContractCode: func(address Address, name string) (bytes []byte, err error) {

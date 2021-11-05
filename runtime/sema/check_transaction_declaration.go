@@ -180,7 +180,7 @@ func (checker *Checker) visitTransactionPrepareFunction(
 
 	initializationInfo := NewInitializationInfo(transactionType, fieldMembers)
 
-	prepareFunctionType := transactionType.PrepareFunctionType().InvocationFunctionType()
+	prepareFunctionType := transactionType.PrepareFunctionType()
 
 	checker.checkFunction(
 		prepareFunction.FunctionDeclaration.ParameterList,
@@ -230,7 +230,7 @@ func (checker *Checker) visitTransactionExecuteFunction(
 		return
 	}
 
-	executeFunctionType := transactionType.ExecuteFunctionType().InvocationFunctionType()
+	executeFunctionType := transactionType.ExecuteFunctionType()
 
 	checker.checkFunction(
 		&ast.ParameterList{},

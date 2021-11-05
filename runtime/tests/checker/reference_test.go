@@ -265,7 +265,7 @@ func TestCheckReferenceExpressionWithInterfaceResultType(t *testing.T) {
 
 		errs := ExpectCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.InvalidInterfaceTypeError{}, errs[0])
 	})
 
 	t.Run("struct", func(t *testing.T) {
@@ -282,7 +282,7 @@ func TestCheckReferenceExpressionWithInterfaceResultType(t *testing.T) {
 
 		errs := ExpectCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.InvalidInterfaceTypeError{}, errs[0])
 	})
 }
 
@@ -1077,4 +1077,55 @@ func TestCheckInvalidDictionaryAccessReference(t *testing.T) {
 	typeMismatchError := errs[0].(*sema.TypeMismatchError)
 	assert.Equal(t, 17, typeMismatchError.StartPos.Column)
 	assert.Equal(t, 21, typeMismatchError.EndPos.Column)
+}
+
+func TestCheckReferenceTypeImplicitConformance(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("valid", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+
+          contract interface CI {
+              struct S {}
+          }
+
+          contract C: CI {
+              struct S {}
+          }
+
+          let s = C.S()
+
+          let refS: &CI.S = &s as &C.S
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("invalid", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+
+          contract interface CI {
+              struct S {}
+          }
+
+          contract C {
+              struct S {}
+          }
+
+          let s = C.S()
+
+          let refS: &CI.S = &s as &C.S
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
 }

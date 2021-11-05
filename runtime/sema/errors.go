@@ -2700,7 +2700,16 @@ type InvalidPathDomainError struct {
 }
 
 func (e *InvalidPathDomainError) Error() string {
-	return "invalid path domain"
+	return fmt.Sprintf("invalid path domain %s", e.ActualDomain)
+}
+
+type InvalidPathIdentifierError struct {
+	ActualIdentifier string
+	ast.Range
+}
+
+func (e *InvalidPathIdentifierError) Error() string {
+	return fmt.Sprintf("invalid path identifier %s", e.ActualIdentifier)
 }
 
 func (*InvalidPathDomainError) isSemanticError() {}
