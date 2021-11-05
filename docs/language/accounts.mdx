@@ -2,10 +2,12 @@
 title: Accounts
 ---
 
-Every account can be accessed through two types:
+Every account can be accessed through two types, `PublicAccount` and `AuthAccount`.
 
-- As a **Public Account** with the type `PublicAccount`,
-  which represents the publicly available portion of an account.
+## `PublicAccount`
+
+**Public Account** objects have the type `PublicAccount`,
+which represents the publicly available portion of an account.
 
   ```cadence
   struct PublicAccount {
@@ -15,16 +17,28 @@ Every account can be accessed through two types:
       let balance: UFix64
       // The FLOW balance of the default vault of this account that is available to be moved
       let availableBalance: UFix64
+      // Amount of storage used by the account, in bytes
       let storageUsed: UInt64
+      // storage capacity of the account, in bytes
       let storageCapacity: UInt64
 
-      // Keys
+      // Contracts deployed to the account
+      let contracts: PublicAccount.Contracts
+
+      // Keys assigned to the account
       let keys: PublicAccount.Keys
 
       // Storage operations
 
       fun getCapability<T>(_ path: PublicPath): Capability<T>
       fun getLinkTarget(_ path: CapabilityPath): Path?
+
+      struct Contracts {
+
+          let names: [String]
+
+          fun get(name: String): DeployedContract?
+      }
 
       struct Keys {
           // Returns the key at the given index, if it exists.
@@ -41,15 +55,17 @@ Every account can be accessed through two types:
   fun getAccount(_ address: Address): PublicAccount
   ```
 
-- As an **Authorized Account** with type `AuthAccount`,
-  which represents the authorized portion of an account.
+## `AuthAccount`
 
-  Access to an `AuthAccount` means having full access to its [storage](#account-storage),
-  public keys, and code.
+**Authorized Account** object have the type `AuthAccount`,
+which represents the authorized portion of an account.
 
-  Only [signed transactions](transactions) can get the `AuthAccount` for an account.
-  For each script signer of the transaction, the corresponding `AuthAccount` is passed
-  to the `prepare` phase of the transaction.
+Access to an `AuthAccount` means having full access to its [storage](#account-storage),
+public keys, and code.
+
+Only [signed transactions](../transactions) can get the `AuthAccount` for an account.
+For each signer of the transaction that signs as an authorizer, the corresponding `AuthAccount` object is passed
+to the `prepare` phase of the transaction.
 
   ```cadence
   struct AuthAccount {
@@ -59,14 +75,16 @@ Every account can be accessed through two types:
       let balance: UFix64
       // The FLOW balance of the default vault of this account that is available to be moved
       let availableBalance: UFix64
+      // Amount of storage used by the account, in bytes
       let storageUsed: UInt64
+      // storage capacity of the account, in bytes
       let storageCapacity: UInt64
 
-      // Contracts
+      // Contracts deployed to the account
 
       let contracts: AuthAccount.Contracts
 
-      // Keys
+      // Keys assigned to the account
 
       let keys: AuthAccount.Keys
 
@@ -83,7 +101,7 @@ Every account can be accessed through two types:
       // `keys.revoke` method can be use instead.
       fun removePublicKey(_ index: Int)
 
-      // Storage operations
+      // Account storage API (see the section below for documentation)
 
       fun save<T>(_ value: T, to: StoragePath)
       fun load<T>(from: StoragePath): T?
@@ -97,6 +115,10 @@ Every account can be accessed through two types:
       fun unlink(_ path: CapabilityPath)
 
       struct Contracts {
+
+          // The names of each contract deployed to the account
+          let names: [String]
+
           fun add(
               name: String,
               code: [UInt8],
@@ -152,7 +174,7 @@ transaction() {
 
 ## Account Keys
 
-An account (both `PublicAccount` and `AuthAccount`) have keys associated with it.
+An account (both `PublicAccount` and `AuthAccount`) has keys associated with it.
 An account key has the following structure.
 
 ```cadence
@@ -164,7 +186,7 @@ struct AccountKey {
     let isRevoked: Bool
 }
 ```
-Refer the [PublicKey](./crypto.md#publickey) section for more details on the creation and validity of public keys.
+Refer the [PublicKey](../crypto/#publickey) section for more details on the creation and validity of public keys.
 
 ### Account Key API
 Account key API provides a set of functions to manage account keys.
@@ -291,6 +313,33 @@ Both `StoragePath` and `CapabilityPath` are subtypes of `Path`.
     <td>PublicPath</td>
   </tr>
 </table>
+
+#### Path Functions
+
+- `cadence•fun toString(): String`
+
+  Returns the string representation of the path.
+
+  ```cadence
+  let storagePath = /storage/path
+
+  storagePath.toString()  // is "/storage/path"
+  ```
+
+There are also utilities to produce paths from strings:
+
+```cadence
+fun PublicPath(identifier: string): PublicPath?
+fun PrivatePath(identifier: string): PrivatePath?
+fun StoragePath(identifier: string): StoragePath?
+```
+
+Each of these functions take an identifier and produce a path of the appropriate domain:
+
+```cadence
+let pathID = "foo"
+let path = PublicPath(identifier: pathID) // is /public/foo
+```
 
 ### Account Storage API
 
@@ -518,10 +567,14 @@ let nonExistentRef = authAccount.borrow<&{HasCount}>(from: /storage/nonExistent)
 
 ## Storage limit
 
-Accounts storage is limited by its storage capacity.
+An account's storage is limited by its storage capacity.
 
-At the end of every transaction all accounts storage used is compared to their storage capacity.
-If for any account its storage used is greater than its storage capacity the transaction fails.
+An account's storage used is the sum of the size of all the data that is stored in an account (in MB).
+An account's storage capacity is a value that is calculated from the amount of FLOW
+that is stored in the account's main FLOW token vault. 
+
+At the end of every transaction, the storage used is compared to the storage capacity.
+For all accounts involved in the transaction, if the account's storage used is greater than its storage capacity, the transaction will fail.
 
 An account's storage used and storage capacity can be checked using the `storageUsed` and `storageCapacity` fields.
 The fields represent current values of storage which means this would be true:

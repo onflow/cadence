@@ -135,6 +135,53 @@ func TestCheckForBreakStatement(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestCheckForIndexBinding(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+       fun test() {
+           for index, x in ["", "", ""] {
+                let y: Int = index
+           }
+       }
+    `)
+
+	assert.NoError(t, err)
+}
+
+func TestCheckForIndexBindingTypeErr(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+       fun test() {
+           for index, x in ["", "", ""] {
+                let y: String = index
+           }
+       }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+}
+
+func TestCheckForIndexBindingReferenceErr(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+       fun test() {
+           for index, x in ["", "", ""] {
+                
+           }
+           let y = index
+       }
+    `)
+	errs := ExpectCheckerErrors(t, err, 1)
+	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+}
+
 func TestCheckInvalidForBreakStatement(t *testing.T) {
 
 	t.Parallel()

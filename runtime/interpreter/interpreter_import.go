@@ -20,6 +20,7 @@ package interpreter
 
 import (
 	"sort"
+	"time"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/sema"
@@ -37,6 +38,14 @@ func (interpreter *Interpreter) VisitImportDeclaration(declaration *ast.ImportDe
 }
 
 func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.ResolvedLocation) {
+
+	// tracing
+	if interpreter.tracingEnabled {
+		startTime := time.Now()
+		defer func() {
+			interpreter.reportImportTrace(resolvedLocation.Location.String(), time.Since(startTime))
+		}()
+	}
 
 	subInterpreter := interpreter.EnsureLoaded(resolvedLocation.Location)
 
@@ -78,12 +87,8 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 			}
 		}
 
-		// don't import base values
-		if sema.BaseValueActivation.Find(name) != nil {
-			continue
-		}
-
 		interpreter.setVariable(name, variable)
 		interpreter.Globals.Set(name, variable)
 	}
+
 }

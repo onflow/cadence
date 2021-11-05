@@ -323,32 +323,91 @@ func TestCheckFunctionArgumentTypeInference(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
-      let x = foo(a: [1, 2, 3])
+	t.Run("required args", func(t *testing.T) {
+		t.Parallel()
 
-      fun foo(a: [Int8]) {}
-    `)
+		_, err := ParseAndCheck(t, `
+            let x = foo(a: [1, 2, 3])
 
-	// Type inferring for function arguments is not supported yet.
-	errs := ExpectCheckerErrors(t, err, 1)
+            fun foo(a: [Int8]) {}
+        `)
 
-	require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		require.NoError(t, err)
+	})
 
-	typeMismatchErr := errs[0].(*sema.TypeMismatchError)
+	t.Run("with generics", func(t *testing.T) {
 
-	assert.Equal(t,
-		&sema.VariableSizedType{
-			Type: sema.Int8Type,
-		},
-		typeMismatchErr.ExpectedType,
-	)
+		t.Parallel()
 
-	assert.Equal(t,
-		&sema.VariableSizedType{
-			Type: sema.IntType,
-		},
-		typeMismatchErr.ActualType,
-	)
+		typeParameter := &sema.TypeParameter{
+			Name:      "T",
+			TypeBound: nil,
+		}
+
+		_, err := parseAndCheckWithTestValue(t,
+			`
+              let res = test<[Int8]>([1, 2, 3])
+            `,
+			&sema.FunctionType{
+				TypeParameters: []*sema.TypeParameter{
+					typeParameter,
+				},
+				Parameters: []*sema.Parameter{
+					{
+						Label:      sema.ArgumentLabelNotRequired,
+						Identifier: "value",
+						TypeAnnotation: sema.NewTypeAnnotation(
+							&sema.GenericType{
+								TypeParameter: typeParameter,
+							},
+						),
+					},
+				},
+				ReturnTypeAnnotation:  sema.NewTypeAnnotation(sema.VoidType),
+				RequiredArgumentCount: nil,
+			},
+		)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		require.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
+		typeParamMismatchErr := errs[0].(*sema.TypeParameterTypeMismatchError)
+		assert.Equal(
+			t,
+			&sema.VariableSizedType{
+				Type: sema.Int8Type,
+			},
+			typeParamMismatchErr.ExpectedType,
+		)
+
+		assert.Equal(
+			t,
+			&sema.VariableSizedType{
+				Type: sema.IntType,
+			},
+			typeParamMismatchErr.ActualType,
+		)
+
+		require.IsType(t, &sema.TypeMismatchError{}, errs[1])
+		typeMismatchErr := errs[1].(*sema.TypeMismatchError)
+
+		assert.Equal(
+			t,
+			&sema.VariableSizedType{
+				Type: sema.Int8Type,
+			},
+			typeMismatchErr.ExpectedType,
+		)
+
+		assert.Equal(
+			t,
+			&sema.VariableSizedType{
+				Type: sema.IntType,
+			},
+			typeMismatchErr.ActualType,
+		)
+
+	})
 }
 
 func TestCheckBinaryExpressionTypeInference(t *testing.T) {

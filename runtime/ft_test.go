@@ -503,7 +503,7 @@ pub fun main(account: Address): UFix64 {
 
 func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
-	runtime := NewInterpreterRuntime()
+	runtime := newTestInterpreterRuntime()
 
 	contractsAddress := common.BytesToAddress([]byte{0x1})
 	senderAddress := common.BytesToAddress([]byte{0x2})
@@ -519,7 +519,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 		getCode: func(location Location) (bytes []byte, err error) {
 			return accountCodes[location.ID()], nil
 		},
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{signerAccount}, nil
 		},
@@ -636,7 +636,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 	// Benchmark sending tokens from sender to receiver
 
-	semdAmount, err := cadence.NewUFix64("0.00000001")
+	sendAmount, err := cadence.NewUFix64("0.00000001")
 	require.NoError(b, err)
 
 	signerAccount = senderAddress
@@ -650,7 +650,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 			Script{
 				Source: []byte(realFlowTokenTransferTransaction),
 				Arguments: encodeArgs([]cadence.Value{
-					semdAmount,
+					sendAmount,
 					cadence.Address(receiverAddress),
 				}),
 			},
@@ -694,5 +694,5 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 		sum = sum.Plus(value).(interpreter.UFix64Value)
 	}
 
-	require.True(b, mintAmountValue.Equal(sum, nil, true))
+	utils.RequireValuesEqual(b, nil, mintAmountValue, sum)
 }

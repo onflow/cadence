@@ -18,6 +18,10 @@
 
 package interpreter
 
+import (
+	"github.com/onflow/cadence/runtime/sema"
+)
+
 // Import
 
 type Import interface {
@@ -31,7 +35,8 @@ type VirtualImport struct {
 		Name  string
 		Value Value
 	}
-	TypeCodes TypeCodes
+	TypeCodes   TypeCodes
+	Elaboration *sema.Elaboration
 }
 
 func (VirtualImport) isImport() {}

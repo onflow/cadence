@@ -27,6 +27,8 @@ import (
 	"github.com/go-test/deep"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/onflow/cadence/runtime/interpreter"
+
 	"github.com/onflow/cadence/runtime/common"
 )
 
@@ -121,4 +123,72 @@ func UpdateTransaction(name string, contract []byte) []byte {
 		name,
 		hex.EncodeToString(contract),
 	))
+}
+
+func ValuesAreEqual(inter *interpreter.Interpreter, expected, actual interpreter.Value) bool {
+	if expected == nil {
+		return actual == nil
+	}
+
+	if expected, ok := expected.(interpreter.EquatableValue); ok {
+		return expected.Equal(inter, interpreter.ReturnEmptyLocationRange, actual)
+	}
+
+	return assert.ObjectsAreEqual(expected, actual)
+}
+
+func AssertValuesEqual(t testing.TB, interpreter *interpreter.Interpreter, expected, actual interpreter.Value) bool {
+	if !ValuesAreEqual(interpreter, expected, actual) {
+		diff := deep.Equal(expected, actual)
+
+		var message string
+
+		if len(diff) != 0 {
+			s := strings.Builder{}
+			_, _ = fmt.Fprintf(&s,
+				"Not equal: \n"+
+					"expected: %s\n"+
+					"actual  : %s\n\n",
+				expected,
+				actual,
+			)
+
+			for i, d := range diff {
+				if i == 0 {
+					s.WriteString("diff    : ")
+				} else {
+					s.WriteString("          ")
+				}
+
+				s.WriteString(d)
+				s.WriteString("\n")
+			}
+
+			message = s.String()
+		}
+
+		return assert.Fail(t, message)
+	}
+
+	return true
+}
+
+func RequireValuesEqual(t testing.TB, inter *interpreter.Interpreter, expected, actual interpreter.Value) {
+	if !AssertValuesEqual(t, inter, expected, actual) {
+		t.FailNow()
+	}
+}
+
+func AssertValueSlicesEqual(t testing.TB, inter *interpreter.Interpreter, expected, actual []interpreter.Value) bool {
+	if !assert.Equal(t, len(expected), len(actual)) {
+		return false
+	}
+
+	for i, value := range expected {
+		if !AssertValuesEqual(t, inter, value, actual[i]) {
+			return false
+		}
+	}
+
+	return true
 }

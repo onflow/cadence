@@ -19,6 +19,8 @@
 package interpreter
 
 import (
+	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -41,6 +43,7 @@ func (interpreter *Interpreter) InvokeFunctionValue(
 
 	return interpreter.invokeFunctionValue(
 		function,
+		nil,
 		arguments,
 		nil,
 		argumentTypes,
@@ -52,6 +55,7 @@ func (interpreter *Interpreter) InvokeFunctionValue(
 
 func (interpreter *Interpreter) invokeFunctionValue(
 	function FunctionValue,
+	receiverType sema.Type,
 	arguments []Value,
 	expressions []ast.Expression,
 	argumentTypes []sema.Type,
@@ -61,42 +65,55 @@ func (interpreter *Interpreter) invokeFunctionValue(
 ) Value {
 
 	parameterTypeCount := len(parameterTypes)
-	argumentCopies := make([]Value, len(arguments))
+	transferredArguments := make([]Value, len(arguments))
 
 	for i, argument := range arguments {
 		argumentType := argumentTypes[i]
+
+		var locationPos ast.HasPosition
+		if i < len(expressions) {
+			locationPos = expressions[i]
+		} else {
+			locationPos = invocationPosition
+		}
+
+		getLocationRange := locationRangeGetter(interpreter.Location, locationPos)
+
 		if i < parameterTypeCount {
 			parameterType := parameterTypes[i]
-
-			var locationPos ast.HasPosition
-			if i < len(expressions) {
-				locationPos = expressions[i]
-			} else {
-				locationPos = invocationPosition
-			}
-
-			getLocationRange := locationRangeGetter(interpreter.Location, locationPos)
-			argumentCopies[i] = interpreter.copyAndConvert(argument, argumentType, parameterType, getLocationRange)
+			transferredArguments[i] = interpreter.transferAndConvert(
+				argument,
+				argumentType,
+				parameterType,
+				getLocationRange,
+			)
 		} else {
-			argumentCopies[i] = argument.Copy()
+			transferredArguments[i] = argument.Transfer(
+				interpreter,
+				getLocationRange,
+				atree.Address{},
+				false,
+				nil,
+			)
 		}
 	}
 
 	getLocationRange := locationRangeGetter(interpreter.Location, invocationPosition)
 
 	invocation := Invocation{
-		Arguments:          argumentCopies,
+		ReceiverType:       receiverType,
+		Arguments:          transferredArguments,
 		ArgumentTypes:      argumentTypes,
 		TypeParameterTypes: typeParameterTypes,
 		GetLocationRange:   getLocationRange,
 		Interpreter:        interpreter,
 	}
 
-	return function.Invoke(invocation)
+	return function.invoke(invocation)
 }
 
 func (interpreter *Interpreter) invokeInterpretedFunction(
-	function InterpretedFunctionValue,
+	function *InterpretedFunctionValue,
 	invocation Invocation,
 ) Value {
 
@@ -116,7 +133,7 @@ func (interpreter *Interpreter) invokeInterpretedFunction(
 // NOTE: assumes the function's activation (or an extension of it) is pushed!
 //
 func (interpreter *Interpreter) invokeInterpretedFunctionActivated(
-	function InterpretedFunctionValue,
+	function *InterpretedFunctionValue,
 	arguments []Value,
 ) Value {
 	defer interpreter.activations.Pop()

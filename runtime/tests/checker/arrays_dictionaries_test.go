@@ -1090,3 +1090,34 @@ func TestCheckDictionaryKeyTypesExpressions(t *testing.T) {
 		})
 	}
 }
+
+func TestNilAssignmentToDictionary(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("non-nillable value space", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            let x: {String: Int} = {"def": 42, "abc": 23}
+            fun test() {
+                x["def"] = nil
+            }
+	    `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("nillable value space", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            let x: {String: Int?} = {"def": 42, "abc": 23}
+            fun test() {
+                x["def"] = nil
+            }
+	    `)
+
+		require.NoError(t, err)
+	})
+}

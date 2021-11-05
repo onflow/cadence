@@ -108,9 +108,12 @@ func NewREPL(
 
 	var uuid uint64
 
+	storage := interpreter.NewInMemoryStorage()
+
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
 		checker.Location,
+		interpreter.WithStorage(storage),
 		interpreter.WithPredeclaredValues(values),
 		interpreter.WithUUIDHandler(func() (uint64, error) {
 			defer func() { uuid++ }()

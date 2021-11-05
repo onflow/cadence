@@ -31,6 +31,7 @@ const PublicAccountStorageCapacityField = "storageCapacity"
 const PublicAccountGetCapabilityField = "getCapability"
 const PublicAccountGetTargetLinkField = "getLinkTarget"
 const PublicAccountKeysField = "keys"
+const PublicAccountContractsField = "contracts"
 
 // PublicAccountType represents the publicly accessible portion of an account.
 //
@@ -45,6 +46,7 @@ var PublicAccountType = func() *CompositeType {
 		nestedTypes: func() *StringTypeOrderedMap {
 			nestedTypes := NewStringTypeOrderedMap()
 			nestedTypes.Set(AccountKeysTypeName, PublicAccountKeysType)
+			nestedTypes.Set(PublicAccountContractsTypeName, PublicAccountContractsType)
 			return nestedTypes
 		}(),
 	}
@@ -83,13 +85,13 @@ var PublicAccountType = func() *CompositeType {
 		NewPublicFunctionMember(
 			publicAccountType,
 			PublicAccountGetCapabilityField,
-			publicAccountTypeGetCapabilityFunctionType,
+			PublicAccountTypeGetCapabilityFunctionType,
 			publicAccountTypeGetLinkTargetFunctionDocString,
 		),
 		NewPublicFunctionMember(
 			publicAccountType,
 			PublicAccountGetTargetLinkField,
-			accountTypeGetLinkTargetFunctionType,
+			AccountTypeGetLinkTargetFunctionType,
 			accountTypeGetLinkTargetFunctionDocString,
 		),
 		NewPublicConstantFieldMember(
@@ -97,6 +99,12 @@ var PublicAccountType = func() *CompositeType {
 			PublicAccountKeysField,
 			PublicAccountKeysType,
 			accountTypeKeysFieldDocString,
+		),
+		NewPublicConstantFieldMember(
+			publicAccountType,
+			PublicAccountContractsField,
+			PublicAccountContractsType,
+			accountTypeContractsFieldDocString,
 		),
 	}
 
@@ -118,7 +126,7 @@ var PublicAccountKeysType = func() *CompositeType {
 		NewPublicFunctionMember(
 			accountKeys,
 			AccountKeysGetFunctionName,
-			accountKeysTypeGetFunctionType,
+			AccountKeysTypeGetFunctionType,
 			accountKeysTypeGetFunctionDocString,
 		),
 	}
@@ -132,6 +140,37 @@ func init() {
 	// Set the container type after initializing the AccountKeysTypes, to avoid initializing loop.
 	PublicAccountKeysType.SetContainerType(PublicAccountType)
 }
+
+var PublicAccountTypeGetCapabilityFunctionType = func() *FunctionType {
+
+	typeParameter := &TypeParameter{
+		TypeBound: &ReferenceType{
+			Type: AnyType,
+		},
+		Name:     "T",
+		Optional: true,
+	}
+
+	return &FunctionType{
+		TypeParameters: []*TypeParameter{
+			typeParameter,
+		},
+		Parameters: []*Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "capabilityPath",
+				TypeAnnotation: NewTypeAnnotation(PublicPathType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&CapabilityType{
+				BorrowType: &GenericType{
+					TypeParameter: typeParameter,
+				},
+			},
+		),
+	}
+}()
 
 const publicAccountTypeGetLinkTargetFunctionDocString = `
 Returns the capability at the given public path, or nil if it does not exist

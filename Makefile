@@ -47,6 +47,11 @@ lint-github-actions: build-linter
 lint: build-linter
 	tools/golangci-lint/golangci-lint run -v ./...
 
+
+.PHONY: fix-lint
+fix-lint: build-linter
+	tools/golangci-lint/golangci-lint run -v --fix ./...
+
 .PHONY: build-linter
 build-linter: tools/golangci-lint/golangci-lint tools/maprangecheck/maprangecheck.so
 

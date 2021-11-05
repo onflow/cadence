@@ -18,32 +18,40 @@ Cadence introduces new features to smart contract programming that help develope
 - The utilization of capability-based security, which enforces access control by requiring that access to objects
   is restricted to only the owner and those who have a valid reference to the object
 
-Please see the [Cadence introduction](/cadence/index) for more information about the high level design of the language.
+Please see the [Cadence introduction](/cadence/) for more information about the high level design of the language.
 
 ## What is the Flow Developer Playground?
 
 ---
 
-The [Flow Playground](https://play.onflow.org) includes an in-browser editor and emulator to experiment with Flow.
-Using the Flow Playground, you can write Cadence smart contracts, deploy them to a local Flow emulated blockchain, and submit transactions.
+The [Flow Playground](https://play.onflow.org) includes
+an in-browser editor and emulator to experiment with Flow.
+Using the Flow Playground, you can write Cadence smart contracts,
+deploy them to a local Flow emulated blockchain, and submit transactions.
 
-The Flow Playground should be compatible with any standard web browser, but we recommend that you use Google Chrome with it,
+The Flow Playground should be compatible with any standard web browser,
+but we recommend that you use Google Chrome with it,
 because it has been tested and optimized for only the Chrome browser so far.
 
 <!-- If you encounter issues using the Flow Developer Playground, see the [Playground Manual](doc:playground-manual) or [Debugging](doc:debugging) for help. -->
 
 ## Getting to know the Playground
 
-The Playground contains everything you need to get familiar with deploying Cadence smart contracts and interacting with transaction and scripts.
+The Playground contains everything you need to get familiar
+with deploying Cadence smart contracts and interacting with transaction and scripts.
 
-The Playground comes pre-loaded with contract and transaction templates that correspond to each of the tutorials in the docs site.
-To load the contracts from a specific tutorial, click the "Examples" link at the top of the Playground. This opens up a menu with each tutorial.
+The Playground comes pre-loaded with contract and transaction templates
+that correspond to each of the tutorials in the docs site.
+To load the contracts from a specific tutorial, click the "Examples" link at the top of the Playground.
+This opens up a menu with each tutorial.
 
-When you click on one of these links, the tutorial will open in a new tab and the contracts, transactions, and scripts will be loaded into the templates in the Playground for you to use.
+When you click on one of these links, the tutorial will open in a new tab
+and the contracts, transactions, and scripts will be loaded into the templates in the Playground for you to use.
 
 ## Accounts and Contracts
 
 The Accounts section on the left side of the screen is where the active accounts are listed and selected.
+An account can have a smart contract deployed to it, which will be covered later.
 You can click on an account tab to view the contract that is associated with that account in the main editor.
 
 <Img src="https://storage.googleapis.com/flow-resources/documentation-assets/cadence-tuts/playground-accounts.png" />
@@ -51,7 +59,7 @@ You can click on an account tab to view the contract that is associated with tha
 When you have Cadence code open in the account editor that contains a contract,
 you can click the deploy button in the top-right of the screen to deploy that contract to the currently selected account.
 
-<Img src="https://storage.googleapis.com/flow-resources/documentation-assets/cadence-tuts/playground-deploy.png" />
+![Deploy Contract](deploybox.png)
 
 After a few seconds, you should see a message in the console confirming that the contract was deployed.
 You should also see the name of the contract show up in the tab for that account, indicating the account now has that contract deployed to it.

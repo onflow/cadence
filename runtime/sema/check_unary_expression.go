@@ -25,7 +25,12 @@ import (
 
 func (checker *Checker) VisitUnaryExpression(expression *ast.UnaryExpression) ast.Repr {
 
-	valueType := checker.VisitExpression(expression.Expression, nil)
+	var expectedType Type
+	if expression.Operation == ast.OperationMove {
+		expectedType = checker.expectedType
+	}
+
+	valueType := checker.VisitExpressionWithForceType(expression.Expression, expectedType, false)
 
 	reportInvalidUnaryOperator := func(expectedType Type) {
 		checker.report(

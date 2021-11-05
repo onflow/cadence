@@ -19,6 +19,7 @@
 package interpreter
 
 import (
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -79,11 +80,12 @@ func (BoolDynamicType) IsImportable() bool {
 
 type ArrayDynamicType struct {
 	ElementTypes []DynamicType
+	StaticType   ArrayStaticType
 }
 
-func (ArrayDynamicType) IsDynamicType() {}
+func (*ArrayDynamicType) IsDynamicType() {}
 
-func (t ArrayDynamicType) IsImportable() bool {
+func (t *ArrayDynamicType) IsImportable() bool {
 	for _, elementType := range t.ElementTypes {
 		if !elementType.IsImportable() {
 			return false
@@ -119,13 +121,19 @@ func (t CompositeDynamicType) IsImportable() bool {
 
 // DictionaryDynamicType
 
-type DictionaryDynamicType struct {
-	EntryTypes []struct{ KeyType, ValueType DynamicType }
+type DictionaryStaticTypeEntry struct {
+	KeyType   DynamicType
+	ValueType DynamicType
 }
 
-func (DictionaryDynamicType) IsDynamicType() {}
+type DictionaryDynamicType struct {
+	EntryTypes []DictionaryStaticTypeEntry
+	StaticType DictionaryStaticType
+}
 
-func (t DictionaryDynamicType) IsImportable() bool {
+func (*DictionaryDynamicType) IsDynamicType() {}
+
+func (t *DictionaryDynamicType) IsImportable() bool {
 	for _, entryType := range t.EntryTypes {
 		if !entryType.KeyType.IsImportable() ||
 			!entryType.ValueType.IsImportable() {
@@ -226,7 +234,9 @@ func (AddressDynamicType) IsImportable() bool {
 
 // FunctionDynamicType
 
-type FunctionDynamicType struct{}
+type FunctionDynamicType struct {
+	FuncType *sema.FunctionType
+}
 
 func (FunctionDynamicType) IsDynamicType() {}
 
@@ -268,13 +278,14 @@ func (StoragePathDynamicType) IsImportable() bool {
 // CapabilityDynamicType
 
 type CapabilityDynamicType struct {
+	Domain     common.PathDomain
 	BorrowType *sema.ReferenceType
 }
 
 func (CapabilityDynamicType) IsDynamicType() {}
 
-func (CapabilityDynamicType) IsImportable() bool {
-	return false
+func (t CapabilityDynamicType) IsImportable() bool {
+	return t.Domain == common.PathDomainPublic
 }
 
 // DeployedContractDynamicType
