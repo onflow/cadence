@@ -386,7 +386,7 @@ func exportDictionaryValue(
 
 func exportLinkValue(v interpreter.LinkValue, inter *interpreter.Interpreter) cadence.Link {
 	path := exportPathValue(v.TargetPath)
-	ty := string(inter.ConvertStaticToSemaType(v.Type).ID())
+	ty := string(inter.MustConvertStaticToSemaType(v.Type).ID())
 	return cadence.NewLink(path, ty)
 }
 
@@ -400,7 +400,7 @@ func exportPathValue(v interpreter.PathValue) cadence.Path {
 func exportTypeValue(v interpreter.TypeValue, inter *interpreter.Interpreter) cadence.TypeValue {
 	var typ sema.Type
 	if v.Type != nil {
-		typ = inter.ConvertStaticToSemaType(v.Type)
+		typ = inter.MustConvertStaticToSemaType(v.Type)
 	}
 	return cadence.TypeValue{
 		StaticType: ExportType(typ, map[sema.TypeID]cadence.Type{}),
@@ -410,7 +410,7 @@ func exportTypeValue(v interpreter.TypeValue, inter *interpreter.Interpreter) ca
 func exportCapabilityValue(v *interpreter.CapabilityValue, inter *interpreter.Interpreter) cadence.Capability {
 	var borrowType sema.Type
 	if v.BorrowType != nil {
-		borrowType = inter.ConvertStaticToSemaType(v.BorrowType)
+		borrowType = inter.MustConvertStaticToSemaType(v.BorrowType)
 	}
 
 	return cadence.Capability{
@@ -573,7 +573,7 @@ func importTypeValue(
 	   in order to be sure the type we have created is legal,
 	   we convert it to a sema type. If this fails, the
 	   import is invalid */
-	_, err := inter.OptionallyConvertStaticToSemaType(typ)
+	_, err := inter.ConvertStaticToSemaType(typ)
 	if err != nil {
 		return interpreter.TypeValue{}, err
 	}
@@ -723,7 +723,7 @@ func importDictionaryValue(
 
 			key := keysAndValues[0]
 			keyStaticType = key.StaticType()
-			keySemaType := inter.ConvertStaticToSemaType(keyStaticType)
+			keySemaType := inter.MustConvertStaticToSemaType(keyStaticType)
 
 			// Dictionary Keys could be a mix of numeric sub-types or path sub-types, and can be still valid.
 			// So always go for the safest option, by inferring the most generic type for numbers/paths.
@@ -744,10 +744,10 @@ func importDictionaryValue(
 
 			// Make sure all keys are subtype of the inferred key-type
 
-			inferredKeySemaType := inter.ConvertStaticToSemaType(keyStaticType)
+			inferredKeySemaType := inter.MustConvertStaticToSemaType(keyStaticType)
 
 			for i := 1; i < len(v.Pairs); i++ {
-				keySemaType := inter.ConvertStaticToSemaType(keysAndValues[i*2].StaticType())
+				keySemaType := inter.MustConvertStaticToSemaType(keysAndValues[i*2].StaticType())
 				if !sema.IsSubType(keySemaType, inferredKeySemaType) {
 					return nil, fmt.Errorf(
 						"cannot import dictionary: keys does not belong to the same type",
