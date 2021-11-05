@@ -2990,6 +2990,7 @@ func baseFunctionVariable(name string, ty *FunctionType, docString string) *Vari
 	return &Variable{
 		Identifier:      name,
 		DeclarationKind: common.DeclarationKindFunction,
+		ArgumentLabels:  ty.ArgumentLabels(),
 		IsConstant:      true,
 		IsBaseValue:     true,
 		Type:            ty,
@@ -3259,6 +3260,61 @@ func init() {
 			"Creates a run-time type representing the given static type as a value",
 		),
 	)
+
+	BaseValueActivation.Set(
+		PublicPathType.String(),
+		baseFunctionVariable(
+			PublicPathType.String(),
+			&FunctionType{
+				Parameters: []*Parameter{{
+					Identifier:     "identifier",
+					TypeAnnotation: NewTypeAnnotation(StringType),
+				}},
+				ReturnTypeAnnotation: NewTypeAnnotation(&OptionalType{Type: PublicPathType}),
+			},
+			"Converts the given string into a public path. Returns nil if the string does not specify a public path",
+		),
+	)
+
+	BaseValueActivation.Set(
+		PrivatePathType.String(),
+		baseFunctionVariable(
+			PrivatePathType.String(),
+			&FunctionType{
+				Parameters: []*Parameter{{
+					Identifier:     "identifier",
+					TypeAnnotation: NewTypeAnnotation(StringType),
+				}},
+				ReturnTypeAnnotation: NewTypeAnnotation(&OptionalType{Type: PrivatePathType}),
+			},
+			"Converts the given string into a private path. Returns nil if the string does not specify a private path",
+		),
+	)
+
+	BaseValueActivation.Set(
+		StoragePathType.String(),
+		baseFunctionVariable(
+			StoragePathType.String(),
+			&FunctionType{
+				Parameters: []*Parameter{{
+					Identifier:     "identifier",
+					TypeAnnotation: NewTypeAnnotation(StringType),
+				}},
+				ReturnTypeAnnotation: NewTypeAnnotation(&OptionalType{Type: StoragePathType}),
+			},
+			"Converts the given string into a storage path. Returns nil if the string does not specify a storage path",
+		),
+	)
+
+	for _, v := range runtimeTypeConstructors {
+		BaseValueActivation.Set(
+			v.Name,
+			baseFunctionVariable(
+				v.Name,
+				v.Value,
+				v.DocString,
+			))
+	}
 }
 
 // CompositeType

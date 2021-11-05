@@ -326,6 +326,21 @@ Both `StoragePath` and `CapabilityPath` are subtypes of `Path`.
   storagePath.toString()  // is "/storage/path"
   ```
 
+There are also utilities to produce paths from strings:
+
+```cadence
+fun PublicPath(identifier: string): PublicPath?
+fun PrivatePath(identifier: string): PrivatePath?
+fun StoragePath(identifier: string): StoragePath?
+```
+
+Each of these functions take an identifier and produce a path of the appropriate domain:
+
+```cadence
+let pathID = "foo"
+let path = PublicPath(identifier: pathID) // is /public/foo
+```
+
 ### Account Storage API
 
 Account storage is accessed through the following functions of `AuthAccount`.

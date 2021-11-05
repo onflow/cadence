@@ -32,6 +32,7 @@ import (
 	"time"
 
 	"github.com/onflow/atree"
+	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -175,6 +176,7 @@ type testRuntimeInterface struct {
 	implementationDebugLog     func(message string) error
 	validatePublicKey          func(publicKey *PublicKey) (bool, error)
 	getAccountContractNames    func(address Address) ([]string, error)
+	recordTrace                func(operation string, location common.Location, duration time.Duration, logs []opentracing.LogRecord)
 }
 
 // testRuntimeInterface should implement Interface
@@ -445,6 +447,13 @@ func (i *testRuntimeInterface) GetAccountContractNames(address Address) ([]strin
 	}
 
 	return i.getAccountContractNames(address)
+}
+
+func (i *testRuntimeInterface) RecordTrace(operation string, location common.Location, duration time.Duration, logs []opentracing.LogRecord) {
+	if i.recordTrace == nil {
+		return
+	}
+	i.recordTrace(operation, location, duration, logs)
 }
 
 func TestRuntimeImport(t *testing.T) {

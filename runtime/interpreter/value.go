@@ -25,6 +25,7 @@ import (
 	"math"
 	"math/big"
 	"strings"
+	"time"
 
 	"github.com/onflow/atree"
 	"github.com/rivo/uniseg"
@@ -1478,6 +1479,13 @@ func (v *ArrayValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 ) Value {
+
+	if interpreter.tracingEnabled {
+		startTime := time.Now()
+		defer func() {
+			interpreter.reportArrayValueTransferTrace(v.Type.String(), v.Count(), time.Since(startTime))
+		}()
+	}
 
 	array := v.array
 
@@ -8039,10 +8047,14 @@ func (v *CompositeValue) Walk(walkChild func(Value)) {
 func (v *CompositeValue) DynamicType(interpreter *Interpreter, _ SeenReferences) DynamicType {
 	if v.dynamicType == nil {
 		var staticType sema.Type
+		var err error
 		if v.Location == nil {
-			staticType = interpreter.getNativeCompositeType(v.QualifiedIdentifier)
+			staticType, err = interpreter.getNativeCompositeType(v.QualifiedIdentifier)
 		} else {
-			staticType = interpreter.getUserCompositeType(v.Location, v.TypeID())
+			staticType, err = interpreter.getUserCompositeType(v.Location, v.TypeID())
+		}
+		if err != nil {
+			panic(err)
 		}
 		v.dynamicType = CompositeDynamicType{
 			StaticType: staticType,
@@ -9347,6 +9359,13 @@ func (v *DictionaryValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 ) Value {
+
+	if interpreter.tracingEnabled {
+		startTime := time.Now()
+		defer func() {
+			interpreter.reportDictionaryValueTransferTrace(v.Type.String(), v.Count(), time.Since(startTime))
+		}()
+	}
 
 	dictionary := v.dictionary
 
@@ -10826,6 +10845,40 @@ func (v PathValue) HashInput(_ *Interpreter, _ func() LocationRange, scratch []b
 
 func (PathValue) IsStorable() bool {
 	return true
+}
+
+func convertPath(domain common.PathDomain, value Value) Value {
+	stringValue, ok := value.(*StringValue)
+	if !ok {
+		return NilValue{}
+	}
+
+	_, err := sema.CheckPathLiteral(
+		domain.Identifier(),
+		stringValue.Str,
+		ReturnEmptyRange,
+		ReturnEmptyRange,
+	)
+	if err != nil {
+		return NilValue{}
+	}
+
+	return NewSomeValueNonCopying(PathValue{
+		Domain:     domain,
+		Identifier: stringValue.Str,
+	})
+}
+
+func ConvertPublicPath(value Value) Value {
+	return convertPath(common.PathDomainPublic, value)
+}
+
+func ConvertPrivatePath(value Value) Value {
+	return convertPath(common.PathDomainPrivate, value)
+}
+
+func ConvertStoragePath(value Value) Value {
+	return convertPath(common.PathDomainStorage, value)
 }
 
 func (v PathValue) Storable(
