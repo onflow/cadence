@@ -3305,6 +3305,16 @@ func init() {
 			"Converts the given string into a storage path. Returns nil if the string does not specify a storage path",
 		),
 	)
+
+	for _, v := range runtimeTypeConstructors {
+		BaseValueActivation.Set(
+			v.Name,
+			baseFunctionVariable(
+				v.Name,
+				v.Value,
+				v.DocString,
+			))
+	}
 }
 
 // CompositeType

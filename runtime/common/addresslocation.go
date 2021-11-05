@@ -88,7 +88,7 @@ func (l AddressLocation) MarshalJSON() ([]byte, error) {
 		Name    string
 	}{
 		Type:    "AddressLocation",
-		Address: l.Address.ShortHexWithPrefix(),
+		Address: l.Address.HexWithPrefix(),
 		Name:    l.Name,
 	})
 }

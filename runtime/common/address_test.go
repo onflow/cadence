@@ -144,6 +144,26 @@ func TestAddress_ShortHexWithPrefix(t *testing.T) {
 	)
 }
 
+func TestAddress_HexWithPrefix(t *testing.T) {
+
+	t.Parallel()
+
+	assert.Equal(t,
+		"0x1234567890abcdef",
+		Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef}.HexWithPrefix(),
+	)
+
+	assert.Equal(t,
+		"0x0100000000000000",
+		Address{0x1}.HexWithPrefix(),
+	)
+
+	assert.Equal(t,
+		"0x0000000000000001",
+		Address{0, 0, 0, 0, 0, 0, 0, 0x1}.HexWithPrefix(),
+	)
+}
+
 func TestAddress_HexToAddress(t *testing.T) {
 
 	t.Parallel()
