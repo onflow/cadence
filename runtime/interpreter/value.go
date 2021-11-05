@@ -10847,6 +10847,40 @@ func (PathValue) IsStorable() bool {
 	return true
 }
 
+func convertPath(domain common.PathDomain, value Value) Value {
+	stringValue, ok := value.(*StringValue)
+	if !ok {
+		return NilValue{}
+	}
+
+	_, err := sema.CheckPathLiteral(
+		domain.Identifier(),
+		stringValue.Str,
+		ReturnEmptyRange,
+		ReturnEmptyRange,
+	)
+	if err != nil {
+		return NilValue{}
+	}
+
+	return NewSomeValueNonCopying(PathValue{
+		Domain:     domain,
+		Identifier: stringValue.Str,
+	})
+}
+
+func ConvertPublicPath(value Value) Value {
+	return convertPath(common.PathDomainPublic, value)
+}
+
+func ConvertPrivatePath(value Value) Value {
+	return convertPath(common.PathDomainPrivate, value)
+}
+
+func ConvertStoragePath(value Value) Value {
+	return convertPath(common.PathDomainStorage, value)
+}
+
 func (v PathValue) Storable(
 	storage atree.SlabStorage,
 	address atree.Address,

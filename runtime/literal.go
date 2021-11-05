@@ -101,13 +101,22 @@ func arrayLiteralValue(elements []ast.Expression, elementType sema.Type) (cadenc
 	return cadence.NewArray(values), nil
 }
 
-func pathLiteralValue(expression ast.Expression, ty sema.Type) (cadence.Value, error) {
+func pathLiteralValue(expression ast.Expression, ty sema.Type) (result cadence.Value, errResult error) {
 	pathExpression, ok := expression.(*ast.PathExpression)
 	if !ok {
 		return nil, LiteralExpressionTypeError
 	}
 
-	pathType, err := sema.CheckPathLiteral(pathExpression)
+	pathType, err := sema.CheckPathLiteral(
+		pathExpression.Domain.Identifier,
+		pathExpression.Identifier.Identifier,
+		func() ast.Range {
+			return ast.NewRangeFromPositioned(pathExpression.Domain)
+		},
+		func() ast.Range {
+			return ast.NewRangeFromPositioned(pathExpression.Identifier)
+		},
+	)
 	if err != nil {
 		return nil, InvalidLiteralError
 	}

@@ -2613,6 +2613,18 @@ var converterDeclarations = []valueConverterDeclaration{
 			return ConvertAddress(value)
 		},
 	},
+	{
+		name:    sema.PublicPathType.Name,
+		convert: ConvertPublicPath,
+	},
+	{
+		name:    sema.PrivatePathType.Name,
+		convert: ConvertPrivatePath,
+	},
+	{
+		name:    sema.StoragePathType.Name,
+		convert: ConvertStoragePath,
+	},
 }
 
 func lookupInterface(interpreter *Interpreter, typeID string) (*sema.InterfaceType, error) {
