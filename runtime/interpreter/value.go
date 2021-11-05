@@ -234,7 +234,7 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ func() LocationRange, n
 		var typeID string
 		staticType := v.Type
 		if staticType != nil {
-			typeID = string(interpreter.ConvertStaticToSemaType(staticType).ID())
+			typeID = string(interpreter.MustConvertStaticToSemaType(staticType).ID())
 		}
 		return NewStringValue(typeID)
 	case "isSubtype":
@@ -251,8 +251,8 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ func() LocationRange, n
 				inter := invocation.Interpreter
 
 				result := sema.IsSubType(
-					inter.ConvertStaticToSemaType(staticType),
-					inter.ConvertStaticToSemaType(otherStaticType),
+					inter.MustConvertStaticToSemaType(staticType),
+					inter.MustConvertStaticToSemaType(otherStaticType),
 				)
 				return BoolValue(result)
 			},
@@ -334,7 +334,7 @@ func (TypeValue) ChildStorables() []atree.Storable {
 }
 
 func (v TypeValue) HashInput(interpreter *Interpreter, _ func() LocationRange, scratch []byte) []byte {
-	typeID := interpreter.ConvertStaticToSemaType(v.Type).ID()
+	typeID := interpreter.MustConvertStaticToSemaType(v.Type).ID()
 
 	return append(
 		[]byte{byte(HashInputTypeType)},
@@ -1576,7 +1576,7 @@ func (v *ArrayValue) GetOwner() common.Address {
 
 func (v *ArrayValue) SemaType(interpreter *Interpreter) sema.ArrayType {
 	if v.semaType == nil {
-		v.semaType = interpreter.ConvertStaticToSemaType(v.Type).(sema.ArrayType)
+		v.semaType = interpreter.MustConvertStaticToSemaType(v.Type).(sema.ArrayType)
 	}
 	return v.semaType
 }
@@ -9473,7 +9473,7 @@ func (v *DictionaryValue) StorageID() atree.StorageID {
 
 func (v *DictionaryValue) SemaType(interpreter *Interpreter) *sema.DictionaryType {
 	if v.semaType == nil {
-		v.semaType = interpreter.ConvertStaticToSemaType(v.Type).(*sema.DictionaryType)
+		v.semaType = interpreter.MustConvertStaticToSemaType(v.Type).(*sema.DictionaryType)
 	}
 	return v.semaType
 }
@@ -9724,7 +9724,7 @@ func (v *SomeValue) GetMember(inter *Interpreter, _ func() LocationRange, name s
 
 				return NewSomeValueNonCopying(newValue)
 			},
-			sema.OptionalTypeMapFunctionType(inter.ConvertStaticToSemaType(v.Value.StaticType())),
+			sema.OptionalTypeMapFunctionType(inter.MustConvertStaticToSemaType(v.Value.StaticType())),
 		)
 	}
 
@@ -10958,11 +10958,12 @@ func (v *CapabilityValue) Walk(walkChild func(Value)) {
 func (v *CapabilityValue) DynamicType(interpreter *Interpreter, _ SeenReferences) DynamicType {
 	var borrowType *sema.ReferenceType
 	if v.BorrowType != nil {
-		borrowType = interpreter.ConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
+		borrowType = interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
 	}
 
 	return CapabilityDynamicType{
 		BorrowType: borrowType,
+		Domain:     v.Path.Domain,
 	}
 }
 
@@ -10993,14 +10994,14 @@ func (v *CapabilityValue) GetMember(interpreter *Interpreter, _ func() LocationR
 	case "borrow":
 		var borrowType *sema.ReferenceType
 		if v.BorrowType != nil {
-			borrowType = interpreter.ConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
+			borrowType = interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
 		}
 		return interpreter.capabilityBorrowFunction(v.Address, v.Path, borrowType)
 
 	case "check":
 		var borrowType *sema.ReferenceType
 		if v.BorrowType != nil {
-			borrowType = interpreter.ConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
+			borrowType = interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
 		}
 		return interpreter.capabilityCheckFunction(v.Address, v.Path, borrowType)
 
@@ -11027,8 +11028,8 @@ func (v *CapabilityValue) ConformsToDynamicType(
 	dynamicType DynamicType,
 	_ TypeConformanceResults,
 ) bool {
-	_, ok := dynamicType.(CapabilityDynamicType)
-	return ok
+	capabilityType, ok := dynamicType.(CapabilityDynamicType)
+	return ok && v.Path.Domain == capabilityType.Domain
 }
 
 func (v *CapabilityValue) Equal(interpreter *Interpreter, getLocationRange func() LocationRange, other Value) bool {

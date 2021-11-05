@@ -1483,9 +1483,9 @@ func TestRuntimeStorageSaveCapability(t *testing.T) {
 		common.PathDomainPublic,
 	} {
 
-		for typeDescription, ty := range map[string]string{
-			"Untyped": "",
-			"Typed":   "&Int",
+		for typeDescription, ty := range map[string]cadence.Type{
+			"Untyped": nil,
+			"Typed":   cadence.ReferenceType{Authorized: false, Type: cadence.IntType{}},
 		} {
 
 			t.Run(fmt.Sprintf("%s %s", domain.Identifier(), typeDescription), func(t *testing.T) {
@@ -1505,8 +1505,8 @@ func TestRuntimeStorageSaveCapability(t *testing.T) {
 				}
 
 				var typeArgument string
-				if len(ty) > 0 {
-					typeArgument = fmt.Sprintf("<%s>", ty)
+				if ty != nil {
+					typeArgument = fmt.Sprintf("<%s>", ty.ID())
 				}
 
 				err := runtime.ExecuteTransaction(

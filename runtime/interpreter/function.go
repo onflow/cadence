@@ -322,7 +322,7 @@ func (f BoundFunctionValue) invoke(invocation Invocation) Value {
 	receiverType := invocation.ReceiverType
 
 	if receiverType != nil {
-		selfType := invocation.Interpreter.ConvertStaticToSemaType(self.StaticType())
+		selfType := invocation.Interpreter.MustConvertStaticToSemaType(self.StaticType())
 
 		if _, ok := receiverType.(*sema.ReferenceType); ok {
 			if _, ok := selfType.(*sema.ReferenceType); !ok {

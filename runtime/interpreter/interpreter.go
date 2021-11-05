@@ -2693,7 +2693,7 @@ func init() {
 
 				// if the given key is not a valid dictionary key, it wouldn't make sense to create this type
 				if keyType == nil ||
-					!sema.IsValidDictionaryKeyType(invocation.Interpreter.ConvertStaticToSemaType(keyType)) {
+					!sema.IsValidDictionaryKeyType(invocation.Interpreter.MustConvertStaticToSemaType(keyType)) {
 					return NilValue{}
 				}
 
@@ -2752,13 +2752,13 @@ func init() {
 		NewHostFunctionValue(
 			func(invocation Invocation) Value {
 				parameters := invocation.Arguments[0].(*ArrayValue)
-				returnType := invocation.Interpreter.ConvertStaticToSemaType(invocation.Arguments[1].(TypeValue).Type)
+				returnType := invocation.Interpreter.MustConvertStaticToSemaType(invocation.Arguments[1].(TypeValue).Type)
 				parameterTypes := make([]*sema.Parameter, 0, parameters.Count())
 				parameters.Iterate(func(param Value) bool {
 					parameterTypes = append(
 						parameterTypes,
 						&sema.Parameter{
-							TypeAnnotation: sema.NewTypeAnnotation(invocation.Interpreter.ConvertStaticToSemaType(param.(TypeValue).Type)),
+							TypeAnnotation: sema.NewTypeAnnotation(invocation.Interpreter.MustConvertStaticToSemaType(param.(TypeValue).Type)),
 						},
 					)
 					return true
@@ -3129,7 +3129,7 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 		case *sema.VariableSizedType:
 			superTypeElementType = typedSuperType.Type
 
-			subTypeStaticType := interpreter.ConvertStaticToSemaType(typedSubType.StaticType)
+			subTypeStaticType := interpreter.MustConvertStaticToSemaType(typedSubType.StaticType)
 			if !sema.IsSubType(subTypeStaticType, typedSuperType) {
 				return false
 			}
@@ -3137,7 +3137,7 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 		case *sema.ConstantSizedType:
 			superTypeElementType = typedSuperType.Type
 
-			subTypeStaticType := interpreter.ConvertStaticToSemaType(typedSubType.StaticType)
+			subTypeStaticType := interpreter.MustConvertStaticToSemaType(typedSubType.StaticType)
 			if !sema.IsSubType(subTypeStaticType, typedSuperType) {
 				return false
 			}
@@ -3167,7 +3167,7 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 
 		if typedSuperType, ok := superType.(*sema.DictionaryType); ok {
 
-			subTypeStaticType := interpreter.ConvertStaticToSemaType(typedSubType.StaticType)
+			subTypeStaticType := interpreter.MustConvertStaticToSemaType(typedSubType.StaticType)
 			if !sema.IsSubType(subTypeStaticType, typedSuperType) {
 				return false
 			}
@@ -3738,7 +3738,7 @@ func (interpreter *Interpreter) GetCapabilityFinalTargetStorageKey(
 
 			if link, ok := value.Value.(LinkValue); ok {
 
-				allowedType := interpreter.ConvertStaticToSemaType(link.Type)
+				allowedType := interpreter.MustConvertStaticToSemaType(link.Type)
 
 				if !sema.IsSubType(allowedType, wantedBorrowType) {
 					return "", false, nil
@@ -3758,24 +3758,24 @@ func (interpreter *Interpreter) GetCapabilityFinalTargetStorageKey(
 	}
 }
 
-func (interpreter *Interpreter) ConvertStaticToSemaType(staticType StaticType) sema.Type {
+func (interpreter *Interpreter) ConvertStaticToSemaType(staticType StaticType) (sema.Type, error) {
 	return ConvertStaticToSemaType(
 		staticType,
-		func(location common.Location, qualifiedIdentifier string) *sema.InterfaceType {
-			interfaceType, err := interpreter.getInterfaceType(location, qualifiedIdentifier)
-			if err != nil {
-				panic(err)
-			}
-			return interfaceType
+		func(location common.Location, qualifiedIdentifier string) (*sema.InterfaceType, error) {
+			return interpreter.getInterfaceType(location, qualifiedIdentifier)
 		},
-		func(location common.Location, qualifiedIdentifier string, typeID common.TypeID) *sema.CompositeType {
-			compositeType, err := interpreter.getCompositeType(location, qualifiedIdentifier, typeID)
-			if err != nil {
-				panic(err)
-			}
-			return compositeType
+		func(location common.Location, qualifiedIdentifier string, typeID common.TypeID) (*sema.CompositeType, error) {
+			return interpreter.getCompositeType(location, qualifiedIdentifier, typeID)
 		},
 	)
+}
+
+func (interpreter *Interpreter) MustConvertStaticToSemaType(staticType StaticType) sema.Type {
+	semaType, err := interpreter.ConvertStaticToSemaType(staticType)
+	if err != nil {
+		panic(err)
+	}
+	return semaType
 }
 
 func (interpreter *Interpreter) getElaboration(location common.Location) *sema.Elaboration {
@@ -3942,7 +3942,7 @@ func (interpreter *Interpreter) isInstanceFunction(self Value) *HostFunctionValu
 				return BoolValue(false)
 			}
 
-			semaType := interpreter.ConvertStaticToSemaType(staticType)
+			semaType := interpreter.MustConvertStaticToSemaType(staticType)
 			// NOTE: not invocation.Self, as that is only set for composite values
 			dynamicType := self.DynamicType(interpreter, SeenReferences{})
 			result := interpreter.IsSubType(dynamicType, semaType)
@@ -3990,7 +3990,7 @@ func (interpreter *Interpreter) checkContainerMutation(
 	element Value,
 	getLocationRange func() LocationRange,
 ) {
-	expectedType := interpreter.ConvertStaticToSemaType(elementType)
+	expectedType := interpreter.MustConvertStaticToSemaType(elementType)
 	actualType := element.DynamicType(interpreter, SeenReferences{})
 
 	if !interpreter.IsSubType(actualType, expectedType) {

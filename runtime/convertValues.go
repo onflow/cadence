@@ -386,7 +386,7 @@ func exportDictionaryValue(
 
 func exportLinkValue(v interpreter.LinkValue, inter *interpreter.Interpreter) cadence.Link {
 	path := exportPathValue(v.TargetPath)
-	ty := string(inter.ConvertStaticToSemaType(v.Type).ID())
+	ty := string(inter.MustConvertStaticToSemaType(v.Type).ID())
 	return cadence.NewLink(path, ty)
 }
 
@@ -398,26 +398,25 @@ func exportPathValue(v interpreter.PathValue) cadence.Path {
 }
 
 func exportTypeValue(v interpreter.TypeValue, inter *interpreter.Interpreter) cadence.TypeValue {
-	var typeID string
-	staticType := v.Type
-	if staticType != nil {
-		typeID = string(inter.ConvertStaticToSemaType(staticType).ID())
+	var typ sema.Type
+	if v.Type != nil {
+		typ = inter.MustConvertStaticToSemaType(v.Type)
 	}
 	return cadence.TypeValue{
-		StaticType: typeID,
+		StaticType: ExportType(typ, map[sema.TypeID]cadence.Type{}),
 	}
 }
 
 func exportCapabilityValue(v *interpreter.CapabilityValue, inter *interpreter.Interpreter) cadence.Capability {
-	var borrowType string
+	var borrowType sema.Type
 	if v.BorrowType != nil {
-		borrowType = string(inter.ConvertStaticToSemaType(v.BorrowType).ID())
+		borrowType = inter.MustConvertStaticToSemaType(v.BorrowType)
 	}
 
 	return cadence.Capability{
 		Path:       exportPathValue(v.Path),
 		Address:    cadence.NewAddress(v.Address),
-		BorrowType: borrowType,
+		BorrowType: ExportType(borrowType, map[sema.TypeID]cadence.Type{}),
 	}
 }
 
@@ -538,6 +537,18 @@ func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedTy
 			v.Fields,
 			expectedType,
 		)
+	case cadence.TypeValue:
+		return importTypeValue(
+			inter,
+			v.StaticType,
+		)
+	case cadence.Capability:
+		return importCapability(
+			inter,
+			v.Path,
+			v.Address,
+			v.BorrowType,
+		)
 	}
 
 	return nil, fmt.Errorf("cannot import value of type %T", value)
@@ -548,6 +559,55 @@ func importPathValue(v cadence.Path) interpreter.PathValue {
 		Domain:     common.PathDomainFromIdentifier(v.Domain),
 		Identifier: v.Identifier,
 	}
+}
+
+func importTypeValue(
+	inter *interpreter.Interpreter,
+	v cadence.Type,
+) (
+	interpreter.TypeValue,
+	error,
+) {
+	typ := ImportType(v)
+	/* creating a static type performs no validation, so
+	   in order to be sure the type we have created is legal,
+	   we convert it to a sema type. If this fails, the
+	   import is invalid */
+	_, err := inter.ConvertStaticToSemaType(typ)
+	if err != nil {
+		return interpreter.TypeValue{}, err
+	}
+
+	return interpreter.TypeValue{
+		Type: typ,
+	}, nil
+}
+
+func importCapability(
+	_ *interpreter.Interpreter,
+	path cadence.Path,
+	address cadence.Address,
+	borrowType cadence.Type,
+) (
+	*interpreter.CapabilityValue,
+	error,
+) {
+
+	_, ok := borrowType.(cadence.ReferenceType)
+
+	if !ok {
+		return nil, fmt.Errorf(
+			"cannot import capability: expected reference, got '%s'",
+			borrowType.ID(),
+		)
+	}
+
+	return &interpreter.CapabilityValue{
+		Path:       importPathValue(path),
+		Address:    interpreter.NewAddressValueFromBytes(address.Bytes()),
+		BorrowType: ImportType(borrowType),
+	}, nil
+
 }
 
 func importOptionalValue(
@@ -663,7 +723,7 @@ func importDictionaryValue(
 
 			key := keysAndValues[0]
 			keyStaticType = key.StaticType()
-			keySemaType := inter.ConvertStaticToSemaType(keyStaticType)
+			keySemaType := inter.MustConvertStaticToSemaType(keyStaticType)
 
 			// Dictionary Keys could be a mix of numeric sub-types or path sub-types, and can be still valid.
 			// So always go for the safest option, by inferring the most generic type for numbers/paths.
@@ -684,10 +744,10 @@ func importDictionaryValue(
 
 			// Make sure all keys are subtype of the inferred key-type
 
-			inferredKeySemaType := inter.ConvertStaticToSemaType(keyStaticType)
+			inferredKeySemaType := inter.MustConvertStaticToSemaType(keyStaticType)
 
 			for i := 1; i < len(v.Pairs); i++ {
-				keySemaType := inter.ConvertStaticToSemaType(keysAndValues[i*2].StaticType())
+				keySemaType := inter.MustConvertStaticToSemaType(keysAndValues[i*2].StaticType())
 				if !sema.IsSubType(keySemaType, inferredKeySemaType) {
 					return nil, fmt.Errorf(
 						"cannot import dictionary: keys does not belong to the same type",

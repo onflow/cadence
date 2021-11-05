@@ -1002,23 +1002,484 @@ func TestEncodeLink(t *testing.T) {
 	)
 }
 
+func TestEncodeSimpleTypes(t *testing.T) {
+	t.Parallel()
+
+	tests := []cadence.Type{
+		cadence.AnyType{},
+		cadence.AnyResourceType{},
+		cadence.AnyResourceType{},
+		cadence.MetaType{},
+		cadence.VoidType{},
+		cadence.NeverType{},
+		cadence.BoolType{},
+		cadence.StringType{},
+		cadence.CharacterType{},
+		cadence.BytesType{},
+		cadence.AddressType{},
+		cadence.SignedNumberType{},
+		cadence.IntegerType{},
+		cadence.SignedIntegerType{},
+		cadence.FixedPointType{},
+		cadence.IntType{},
+		cadence.Int8Type{},
+		cadence.Int16Type{},
+		cadence.Int32Type{},
+		cadence.Int64Type{},
+		cadence.Int128Type{},
+		cadence.Int256Type{},
+		cadence.UIntType{},
+		cadence.UInt8Type{},
+		cadence.UInt16Type{},
+		cadence.UInt32Type{},
+		cadence.UInt64Type{},
+		cadence.UInt128Type{},
+		cadence.UInt256Type{},
+		cadence.Word8Type{},
+		cadence.Word16Type{},
+		cadence.Word32Type{},
+		cadence.Word64Type{},
+		cadence.Fix64Type{},
+		cadence.UFix64Type{},
+		cadence.BlockType{},
+		cadence.PathType{},
+		cadence.CapabilityPathType{},
+		cadence.StoragePathType{},
+		cadence.PublicPathType{},
+		cadence.PrivatePathType{},
+	}
+
+	for _, test := range tests {
+		t.Run(fmt.Sprintf("with static %s", test.ID()), func(t *testing.T) {
+
+			t.Parallel()
+
+			testEncodeAndDecode(
+				t,
+				cadence.TypeValue{
+					StaticType: test,
+				},
+				fmt.Sprintf(`{"type":"Type","value":{"staticType":{"kind":"%s"}}}`, test.ID()),
+			)
+
+		})
+	}
+}
+
 func TestEncodeType(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("with static type", func(t *testing.T) {
-
-		t.Parallel()
+	t.Run("with static int?", func(t *testing.T) {
 
 		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{
-				StaticType: "Int",
+				StaticType: cadence.OptionalType{Type: cadence.IntType{}},
 			},
-			`{"type":"Type","value":{"staticType":"Int"}}`,
+			`{"type":"Type","value":{"staticType":{"kind":"Optional", "type" : {"kind" : "Int"}}}}`,
 		)
 
 	})
+
+	t.Run("with static [int]", func(t *testing.T) {
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{
+				StaticType: cadence.VariableSizedArrayType{ElementType: cadence.IntType{}},
+			},
+			`{"type":"Type","value":{"staticType":{"kind":"VariableSizedArray", "type" : {"kind" : "Int"}}}}`,
+		)
+
+	})
+
+	t.Run("with static [int; 3]", func(t *testing.T) {
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{
+				StaticType: cadence.ConstantSizedArrayType{
+					ElementType: cadence.IntType{},
+					Size:        3,
+				},
+			},
+			`{"type":"Type","value":{"staticType":{"kind":"ConstantSizedArray", 
+			"type" : {"kind" : "Int"}, "size" : 3}}}`,
+		)
+
+	})
+
+	t.Run("with static {int:string}", func(t *testing.T) {
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{
+				StaticType: cadence.DictionaryType{
+					ElementType: cadence.StringType{},
+					KeyType:     cadence.IntType{},
+				},
+			},
+			`{"type":"Type","value":{"staticType":{"kind":"Dictionary", 
+			"key" : {"kind" : "Int"}, "value" : {"kind" : "String"}}}}`,
+		)
+
+	})
+
+	t.Run("with static struct", func(t *testing.T) {
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{
+				StaticType: &cadence.StructType{
+					Location:            utils.TestLocation,
+					QualifiedIdentifier: "S",
+					Fields: []cadence.Field{
+						{Identifier: "foo", Type: cadence.IntType{}},
+					},
+					Initializers: [][]cadence.Parameter{
+						{{Label: "foo", Identifier: "bar", Type: cadence.IntType{}}},
+						{{Label: "qux", Identifier: "baz", Type: cadence.StringType{}}},
+					},
+				},
+			},
+			`{"type":"Type", "value": {"staticType":
+					{"kind": "Struct", 
+					 "type" : "",
+					 "typeID" : "S.test.S", 
+					 "fields" : [
+						  {"id" : "foo", "type": {"kind" : "Int"} }
+					    ],
+					 "initializers" : [
+						  [{"label" : "foo", "id" : "bar", "type": {"kind" : "Int"}}],
+						  [{"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}]
+						]
+					}
+				}
+			}`,
+		)
+	})
+
+	t.Run("with static resource", func(t *testing.T) {
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{
+				StaticType: &cadence.ResourceType{
+					Location:            utils.TestLocation,
+					QualifiedIdentifier: "R",
+					Fields: []cadence.Field{
+						{Identifier: "foo", Type: cadence.IntType{}},
+					},
+					Initializers: [][]cadence.Parameter{
+						{{Label: "foo", Identifier: "bar", Type: cadence.IntType{}}},
+						{{Label: "qux", Identifier: "baz", Type: cadence.StringType{}}},
+					},
+				},
+			},
+			`{"type":"Type", "value": {"staticType":
+					{"kind": "Resource", 
+					 "type" : "",
+					 "typeID" : "S.test.R", 
+					 "fields" : [
+						  {"id" : "foo", "type": {"kind" : "Int"} }
+					    ],
+					 "initializers" : [
+						  [{"label" : "foo", "id" : "bar", "type": {"kind" : "Int"}}],
+						  [{"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}]
+						]
+					}
+				}
+			}`,
+		)
+	})
+
+	t.Run("with static contract", func(t *testing.T) {
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{
+				StaticType: &cadence.ContractType{
+					Location:            utils.TestLocation,
+					QualifiedIdentifier: "C",
+					Fields: []cadence.Field{
+						{Identifier: "foo", Type: cadence.IntType{}},
+					},
+					Initializers: [][]cadence.Parameter{
+						{{Label: "foo", Identifier: "bar", Type: cadence.IntType{}}},
+						{{Label: "qux", Identifier: "baz", Type: cadence.StringType{}}},
+					},
+				},
+			},
+			`{"type":"Type", "value": {"staticType":
+					{"kind": "Contract", 
+					 "type" : "",
+					 "typeID" : "S.test.C", 
+					 "fields" : [
+						  {"id" : "foo", "type": {"kind" : "Int"} }
+					    ],
+					 "initializers" : [
+						  [{"label" : "foo", "id" : "bar", "type": {"kind" : "Int"}}],
+						  [{"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}]
+						]
+					}
+				}
+			}`,
+		)
+	})
+
+	t.Run("with static struct interface", func(t *testing.T) {
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{
+				StaticType: &cadence.StructInterfaceType{
+					Location:            utils.TestLocation,
+					QualifiedIdentifier: "S",
+					Fields: []cadence.Field{
+						{Identifier: "foo", Type: cadence.IntType{}},
+					},
+					Initializers: [][]cadence.Parameter{
+						{{Label: "foo", Identifier: "bar", Type: cadence.IntType{}}},
+						{{Label: "qux", Identifier: "baz", Type: cadence.StringType{}}},
+					},
+				},
+			},
+			`{"type":"Type", "value": {"staticType":
+					{"kind": "StructInterface", 
+					 "type" : "",
+					 "typeID" : "S.test.S", 
+					 "fields" : [
+						  {"id" : "foo", "type": {"kind" : "Int"} }
+					    ],
+					 "initializers" : [
+						  [{"label" : "foo", "id" : "bar", "type": {"kind" : "Int"}}],
+						  [{"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}]
+						]
+					}
+				}
+			}`,
+		)
+	})
+
+	t.Run("with static resource interface", func(t *testing.T) {
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{
+				StaticType: &cadence.ResourceInterfaceType{
+					Location:            utils.TestLocation,
+					QualifiedIdentifier: "R",
+					Fields: []cadence.Field{
+						{Identifier: "foo", Type: cadence.IntType{}},
+					},
+					Initializers: [][]cadence.Parameter{
+						{{Label: "foo", Identifier: "bar", Type: cadence.IntType{}}},
+						{{Label: "qux", Identifier: "baz", Type: cadence.StringType{}}},
+					},
+				},
+			},
+			`{"type":"Type", "value": {"staticType":
+					{"kind": "ResourceInterface", 
+					 "type" : "",
+					 "typeID" : "S.test.R", 
+					 "fields" : [
+						  {"id" : "foo", "type": {"kind" : "Int"} }
+					    ],
+					 "initializers" : [
+						  [{"label" : "foo", "id" : "bar", "type": {"kind" : "Int"}}],
+						  [{"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}]
+						]
+					}
+				}
+			}`,
+		)
+	})
+
+	t.Run("with static contract interface", func(t *testing.T) {
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{
+				StaticType: &cadence.ContractInterfaceType{
+					Location:            utils.TestLocation,
+					QualifiedIdentifier: "C",
+					Fields: []cadence.Field{
+						{Identifier: "foo", Type: cadence.IntType{}},
+					},
+					Initializers: [][]cadence.Parameter{
+						{{Label: "foo", Identifier: "bar", Type: cadence.IntType{}}},
+						{{Label: "qux", Identifier: "baz", Type: cadence.StringType{}}},
+					},
+				},
+			},
+			`{"type":"Type", "value": {"staticType":
+					{"kind": "ContractInterface", 
+					 "type" : "",
+					 "typeID" : "S.test.C", 
+					 "fields" : [
+						  {"id" : "foo", "type": {"kind" : "Int"} }
+					    ],
+					 "initializers" : [
+						  [{"label" : "foo", "id" : "bar", "type": {"kind" : "Int"}}],
+						  [{"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}]
+						]
+					}
+				}
+			}`,
+		)
+	})
+
+	t.Run("with static event", func(t *testing.T) {
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{
+				StaticType: &cadence.EventType{
+					Location:            utils.TestLocation,
+					QualifiedIdentifier: "E",
+					Fields: []cadence.Field{
+						{Identifier: "foo", Type: cadence.IntType{}},
+					},
+					Initializer: []cadence.Parameter{
+						{Label: "foo", Identifier: "bar", Type: cadence.IntType{}},
+						{Label: "qux", Identifier: "baz", Type: cadence.StringType{}},
+					},
+				},
+			},
+			`{"type":"Type", "value": {"staticType":
+					{"kind": "Event", 
+					 "type" : "",
+					 "typeID" : "S.test.E", 
+					 "fields" : [
+						  {"id" : "foo", "type": {"kind" : "Int"} }
+					    ],
+					 "initializers" : 
+						  [[{"label" : "foo", "id" : "bar", "type": {"kind" : "Int"}},
+						  {"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}]]
+					}
+				}
+			}`,
+		)
+	})
+
+	t.Run("with static enum", func(t *testing.T) {
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{
+				StaticType: &cadence.EnumType{
+					Location:            utils.TestLocation,
+					QualifiedIdentifier: "E",
+					RawType:             cadence.StringType{},
+					Fields: []cadence.Field{
+						{Identifier: "foo", Type: cadence.IntType{}},
+					},
+					Initializers: [][]cadence.Parameter{
+						{{Label: "foo", Identifier: "bar", Type: cadence.IntType{}}},
+						{{Label: "qux", Identifier: "baz", Type: cadence.StringType{}}},
+					},
+				},
+			},
+			`{"type":"Type", "value": {"staticType":
+					{"kind": "Enum", 
+					 "type" : {"kind" : "String"},
+					 "typeID" : "S.test.E", 
+					 "fields" : [
+						  {"id" : "foo", "type": {"kind" : "Int"} }
+					    ],
+					 "initializers" : [
+						  [{"label" : "foo", "id" : "bar", "type": {"kind" : "Int"}}],
+						  [{"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}]
+						]
+					}
+				}
+			}`,
+		)
+	})
+
+	t.Run("with static &int", func(t *testing.T) {
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{
+				StaticType: cadence.ReferenceType{
+					Authorized: false,
+					Type:       cadence.IntType{},
+				},
+			},
+			`{"type":"Type","value":{"staticType":{"kind":"Reference", 
+			"type" : {"kind" : "Int"}, "authorized" : false}}}`,
+		)
+
+	})
+
+	t.Run("with static function", func(t *testing.T) {
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{
+				StaticType: cadence.Function{
+					Parameters: []cadence.Parameter{
+						{Label: "qux", Identifier: "baz", Type: cadence.StringType{}},
+					},
+					ReturnType: cadence.IntType{},
+				}.WithID("Foo"),
+			},
+			`{"type":"Type","value":{"staticType":
+				{	
+					"kind" : "Function",
+					"typeID":"Foo", 
+					"return" : {"kind" : "Int"}, 
+					"parameters" : [
+						{"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}
+					]}
+				}
+			}`,
+		)
+
+	})
+
+	t.Run("with static Capability<Int>", func(t *testing.T) {
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{
+				StaticType: cadence.CapabilityType{
+					BorrowType: cadence.IntType{},
+				},
+			},
+			`{"type":"Type","value":{"staticType":{"kind":"Capability", "type" : {"kind" : "Int"}}}}`,
+		)
+
+	})
+
+	t.Run("with static restricted type", func(t *testing.T) {
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{
+				StaticType: cadence.RestrictedType{
+					Restrictions: []cadence.Type{
+						cadence.StringType{},
+					},
+					Type: cadence.IntType{},
+				}.WithID("Int{String}"),
+			},
+			`{"type":"Type","value":{"staticType":
+				{	
+					"kind": "Restriction",
+					"typeID":"Int{String}", 
+					"type" : {"kind" : "Int"}, 
+					"restrictions" : [
+						{"kind" : "String"}
+					]}
+				}
+			}`,
+		)
+
+	})
+
 	t.Run("without static type", func(t *testing.T) {
 
 		t.Parallel()
@@ -1040,9 +1501,9 @@ func TestEncodeCapability(t *testing.T) {
 		cadence.Capability{
 			Path:       cadence.Path{Domain: "storage", Identifier: "foo"},
 			Address:    cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
-			BorrowType: "Int",
+			BorrowType: cadence.IntType{},
 		},
-		`{"type":"Capability","value":{"path":{"type":"Path","value":{"domain":"storage","identifier":"foo"}},"borrowType":"Int","address":"0x0000000102030405"}}`,
+		`{"type":"Capability","value":{"path":{"type":"Path","value":{"domain":"storage","identifier":"foo"}},"borrowType":{"kind":"Int"},"address":"0x0000000102030405"}}`,
 	)
 }
 

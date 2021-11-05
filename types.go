@@ -809,7 +809,6 @@ func (t ResourcePointer) ID() string {
 // ReferenceType
 
 type ReferenceType struct {
-	typeID     string
 	Authorized bool
 	Type       Type
 }
@@ -817,12 +816,11 @@ type ReferenceType struct {
 func (ReferenceType) isType() {}
 
 func (t ReferenceType) ID() string {
-	return t.typeID
-}
-
-func (t ReferenceType) WithID(id string) ReferenceType {
-	t.typeID = id
-	return t
+	id := fmt.Sprintf("&%s", t.Type.ID())
+	if t.Authorized {
+		id = "auth" + id
+	}
+	return id
 }
 
 // RestrictedType
@@ -907,19 +905,16 @@ func (PrivatePathType) ID() string {
 // CapabilityType
 
 type CapabilityType struct {
-	typeID     string
 	BorrowType Type
 }
 
 func (CapabilityType) isType() {}
 
 func (t CapabilityType) ID() string {
-	return t.typeID
-}
-
-func (t CapabilityType) WithID(id string) CapabilityType {
-	t.typeID = id
-	return t
+	if t.BorrowType != nil {
+		return fmt.Sprintf("Capability<%s>", t.BorrowType.ID())
+	}
+	return "Capability"
 }
 
 // EnumType
