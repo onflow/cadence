@@ -3452,6 +3452,7 @@ func TestTypeValueImport(t *testing.T) {
 		)
 
 		require.Error(t, err)
+		require.IsType(t, interpreter.TypeLoadingError{}, err.(Error).Err.(*InvalidEntryPointArgumentError).Err)
 	})
 }
 
