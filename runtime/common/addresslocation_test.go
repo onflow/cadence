@@ -42,7 +42,7 @@ func TestAddressLocation_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "AddressLocation",
-            "Address": "0x1",
+            "Address": "0x0000000000000001",
             "Name": "A"
         }
         `,

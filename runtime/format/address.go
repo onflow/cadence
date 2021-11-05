@@ -23,5 +23,5 @@ import (
 )
 
 func Address(address common.Address) string {
-	return address.ShortHexWithPrefix()
+	return address.HexWithPrefix()
 }

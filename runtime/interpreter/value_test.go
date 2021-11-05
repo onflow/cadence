@@ -913,7 +913,7 @@ func TestStringer(t *testing.T) {
 		},
 		"Address": {
 			value:    NewAddressValue(common.Address{0, 0, 0, 0, 0, 0, 0, 1}),
-			expected: "0x1",
+			expected: "0x0000000000000001",
 		},
 		"composite": {
 			value: func() Value {
@@ -995,7 +995,7 @@ func TestStringer(t *testing.T) {
 				Address:    NewAddressValueFromBytes([]byte{1, 2, 3, 4, 5}),
 				BorrowType: PrimitiveStaticTypeInt,
 			},
-			expected: "Capability<Int>(address: 0x102030405, path: /storage/foo)",
+			expected: "Capability<Int>(address: 0x0000000102030405, path: /storage/foo)",
 		},
 		"Capability without borrow type": {
 			value: &CapabilityValue{
@@ -1005,7 +1005,7 @@ func TestStringer(t *testing.T) {
 				},
 				Address: NewAddressValueFromBytes([]byte{1, 2, 3, 4, 5}),
 			},
-			expected: "Capability(address: 0x102030405, path: /storage/foo)",
+			expected: "Capability(address: 0x0000000102030405, path: /storage/foo)",
 		},
 		"Recursive ephemeral reference (array)": {
 			value: func() Value {

@@ -87,6 +87,10 @@ func (a Address) ShortHexWithPrefix() string {
 	return fmt.Sprintf("0x%s", strings.TrimLeft(hexString, "0"))
 }
 
+func (a Address) HexWithPrefix() string {
+	return fmt.Sprintf("0x%x", [AddressLength]byte(a))
+}
+
 // HexToAddress converts a hex string to an Address.
 func HexToAddress(h string) (Address, error) {
 	trimmed := strings.TrimPrefix(h, "0x")
