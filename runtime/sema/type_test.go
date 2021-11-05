@@ -746,7 +746,7 @@ func TestCommonSuperType(t *testing.T) {
 	t.Run("All types", func(t *testing.T) {
 		// super type of similar types should be the type itself.
 		// i.e: super type of collection of T's should be T.
-		// Make sure its true for all known types.
+		// Make sure it's true for all known types.
 
 		tests := make([]testCase, 0)
 
@@ -1292,5 +1292,103 @@ func TestCommonSuperType(t *testing.T) {
 
 		testLeastCommonSuperType(t, tests)
 	})
+}
 
+func TestTypeInclusions(t *testing.T) {
+
+	// Test whether Number type-tag includes all numeric types.
+	t.Run("Number", func(t *testing.T) {
+		for _, typ := range AllNumberTypes {
+			t.Run(typ.String(), func(t *testing.T) {
+				assert.True(t, NumberTypeTag.ContainsAny(typ.Tag()))
+			})
+		}
+	})
+
+	t.Run("Integer", func(t *testing.T) {
+		for _, typ := range AllIntegerTypes {
+			t.Run(typ.String(), func(t *testing.T) {
+				assert.True(t, IntegerTypeTag.ContainsAny(typ.Tag()))
+			})
+		}
+	})
+
+	t.Run("SignedInteger", func(t *testing.T) {
+		for _, typ := range AllSignedIntegerTypes {
+			t.Run(typ.String(), func(t *testing.T) {
+				assert.True(t, SignedIntegerTypeTag.ContainsAny(typ.Tag()))
+			})
+		}
+	})
+
+	t.Run("UnsignedInteger", func(t *testing.T) {
+		for _, typ := range AllUnsignedIntegerTypes {
+			t.Run(typ.String(), func(t *testing.T) {
+				assert.True(t, UnsignedIntegerTypeTag.ContainsAny(typ.Tag()))
+			})
+		}
+	})
+
+	t.Run("FixedPoint", func(t *testing.T) {
+		for _, typ := range AllFixedPointTypes {
+			t.Run(typ.String(), func(t *testing.T) {
+				assert.True(t, FixedPointTypeTag.ContainsAny(typ.Tag()))
+			})
+		}
+	})
+
+	t.Run("SignedFixedPoint", func(t *testing.T) {
+		for _, typ := range AllSignedFixedPointTypes {
+			t.Run(typ.String(), func(t *testing.T) {
+				assert.True(t, SignedFixedPointTypeTag.ContainsAny(typ.Tag()))
+			})
+		}
+	})
+
+	t.Run("UnsignedFixedPoint", func(t *testing.T) {
+		for _, typ := range AllUnsignedFixedPointTypes {
+			t.Run(typ.String(), func(t *testing.T) {
+				assert.True(t, UnsignedFixedPointTypeTag.ContainsAny(typ.Tag()))
+			})
+		}
+	})
+
+	// Test whether Any type-tag includes all the types.
+	t.Run("Any", func(t *testing.T) {
+		err := BaseTypeActivation.ForEach(func(name string, variable *Variable) error {
+			t.Run(name, func(t *testing.T) {
+				typ := variable.Type
+				if _, ok := typ.(*CompositeType); ok {
+					return
+				}
+
+				assert.True(t, AnyTypeTag.ContainsAny(typ.Tag()))
+			})
+			return nil
+		})
+
+		require.NoError(t, err)
+	})
+
+	// Test whether AnyStruct type-tag includes all the pre-known AnyStruct types.
+	t.Run("AnyStruct", func(t *testing.T) {
+		err := BaseTypeActivation.ForEach(func(name string, variable *Variable) error {
+			t.Run(name, func(t *testing.T) {
+				typ := variable.Type
+
+				if _, ok := typ.(*CompositeType); ok {
+					return
+				}
+
+				if typ.IsResourceType() {
+					return
+				}
+
+				assert.True(t, AnyStructTypeTag.ContainsAny(typ.Tag()))
+			})
+			return nil
+		})
+
+		require.NoError(t, err)
+	})
 }
