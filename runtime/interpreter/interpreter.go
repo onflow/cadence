@@ -24,8 +24,10 @@ import (
 	"fmt"
 	"math"
 	goRuntime "runtime"
+	"time"
 
 	"github.com/onflow/atree"
+	"github.com/opentracing/opentracing-go"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -112,6 +114,14 @@ type OnFunctionInvocationFunc func(
 type OnInvokedFunctionReturnFunc func(
 	inter *Interpreter,
 	line int,
+)
+
+// OnRecordTraceFunc is a function thats records a trace.
+type OnRecordTraceFunc func(
+	inter *Interpreter,
+	operationName string,
+	duration time.Duration,
+	logs []opentracing.LogRecord,
 )
 
 // InjectedCompositeFieldsHandlerFunc is a function that handles storage reads.
@@ -257,6 +267,7 @@ type Interpreter struct {
 	onLoopIteration                OnLoopIterationFunc
 	onFunctionInvocation           OnFunctionInvocationFunc
 	onInvokedFunctionReturn        OnInvokedFunctionReturnFunc
+	onRecordTrace                  OnRecordTraceFunc
 	injectedCompositeFieldsHandler InjectedCompositeFieldsHandlerFunc
 	contractValueHandler           ContractValueHandlerFunc
 	importLocationHandler          ImportLocationHandlerFunc
@@ -270,6 +281,7 @@ type Interpreter struct {
 	statement                      ast.Statement
 	atreeValueValidationEnabled    bool
 	atreeStorageValidationEnabled  bool
+	tracingEnabled                 bool
 }
 
 type Option func(*Interpreter) error
@@ -320,6 +332,16 @@ func WithOnFunctionInvocationHandler(handler OnFunctionInvocationFunc) Option {
 func WithOnInvokedFunctionReturnHandler(handler OnInvokedFunctionReturnFunc) Option {
 	return func(interpreter *Interpreter) error {
 		interpreter.SetOnInvokedFunctionReturnHandler(handler)
+		return nil
+	}
+}
+
+// WithOnRecordTraceHandler returns an interpreter option which sets
+// the given function as the on record trace function handler.
+//
+func WithOnRecordTraceHandler(handler OnRecordTraceFunc) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetOnRecordTraceHandler(handler)
 		return nil
 	}
 }
@@ -475,6 +497,16 @@ func WithAtreeStorageValidationEnabled(enabled bool) Option {
 	}
 }
 
+// WithTracingEnabled returns an interpreter option which sets
+// the tracing option.
+//
+func WithTracingEnabled(enabled bool) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetTracingEnabled(enabled)
+		return nil
+	}
+}
+
 // withTypeCodes returns an interpreter option which sets the type codes.
 //
 func withTypeCodes(typeCodes TypeCodes) Option {
@@ -562,6 +594,12 @@ func (interpreter *Interpreter) SetOnInvokedFunctionReturnHandler(function OnInv
 	interpreter.onInvokedFunctionReturn = function
 }
 
+// SetOnRecordTraceHandler sets the function that is triggered when an record trace is called.
+//
+func (interpreter *Interpreter) SetOnRecordTraceHandler(function OnRecordTraceFunc) {
+	interpreter.onRecordTrace = function
+}
+
 // SetStorage sets the value that is used for storage operations.
 func (interpreter *Interpreter) SetStorage(storage Storage) {
 	interpreter.Storage = storage
@@ -644,6 +682,12 @@ func (interpreter *Interpreter) SetAtreeValueValidationEnabled(enabled bool) {
 //
 func (interpreter *Interpreter) SetAtreeStorageValidationEnabled(enabled bool) {
 	interpreter.atreeStorageValidationEnabled = enabled
+}
+
+// SetTracingEnabled sets the tracing option.
+//
+func (interpreter *Interpreter) SetTracingEnabled(enabled bool) {
+	interpreter.tracingEnabled = enabled
 }
 
 // setTypeCodes sets the type codes.
