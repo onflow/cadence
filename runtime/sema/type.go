@@ -2990,6 +2990,7 @@ func baseFunctionVariable(name string, ty *FunctionType, docString string) *Vari
 	return &Variable{
 		Identifier:      name,
 		DeclarationKind: common.DeclarationKindFunction,
+		ArgumentLabels:  ty.ArgumentLabels(),
 		IsConstant:      true,
 		IsBaseValue:     true,
 		Type:            ty,
@@ -3259,6 +3260,16 @@ func init() {
 			"Creates a run-time type representing the given static type as a value",
 		),
 	)
+
+	for _, v := range runtimeTypeConstructors {
+		BaseValueActivation.Set(
+			v.Name,
+			baseFunctionVariable(
+				v.Name,
+				v.Value,
+				v.DocString,
+			))
+	}
 }
 
 // CompositeType

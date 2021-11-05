@@ -8047,10 +8047,14 @@ func (v *CompositeValue) Walk(walkChild func(Value)) {
 func (v *CompositeValue) DynamicType(interpreter *Interpreter, _ SeenReferences) DynamicType {
 	if v.dynamicType == nil {
 		var staticType sema.Type
+		var err error
 		if v.Location == nil {
-			staticType = interpreter.getNativeCompositeType(v.QualifiedIdentifier)
+			staticType, err = interpreter.getNativeCompositeType(v.QualifiedIdentifier)
 		} else {
-			staticType = interpreter.getUserCompositeType(v.Location, v.TypeID())
+			staticType, err = interpreter.getUserCompositeType(v.Location, v.TypeID())
+		}
+		if err != nil {
+			panic(err)
 		}
 		v.dynamicType = CompositeDynamicType{
 			StaticType: staticType,
