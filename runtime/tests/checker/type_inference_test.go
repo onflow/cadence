@@ -908,6 +908,18 @@ func TestCheckArraySupertypeInference(t *testing.T) {
 
 		require.IsType(t, &sema.TypeAnnotationRequiredError{}, checkerErr[0])
 	})
+
+	t.Run("empty array", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            let x = [].getType()
+        `
+		_, err := ParseAndCheck(t, code)
+		checkerErr := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.TypeAnnotationRequiredError{}, checkerErr[0])
+	})
 }
 
 func TestCheckDictionarySupertypeInference(t *testing.T) {
@@ -1075,5 +1087,17 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
 		invalidKeyError := checkerErr[0].(*sema.InvalidDictionaryKeyTypeError)
 
 		assert.Equal(t, sema.AnyStructType, invalidKeyError.Type)
+	})
+
+	t.Run("empty dictionary", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            let x = {}.getType()
+        `
+		_, err := ParseAndCheck(t, code)
+		checkerErr := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.TypeAnnotationRequiredError{}, checkerErr[0])
 	})
 }

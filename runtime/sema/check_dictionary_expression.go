@@ -63,16 +63,22 @@ func (checker *Checker) VisitDictionaryExpression(expression *ast.DictionaryExpr
 		valueTypes[i] = entryValueType
 	}
 
-	if keyType == nil {
+	if keyType == nil && valueType == nil {
 		// Contextually expected type is not available.
-		// Therefore, find the least common supertype of the keys.
+		// Therefore, find the least common supertype of the keys and values.
 		keyType = LeastCommonSuperType(keyTypes...)
-	}
-
-	if valueType == nil {
-		// Contextually expected type is not available.
-		// Therefore, find the least common supertype of the values.
 		valueType = LeastCommonSuperType(valueTypes...)
+
+		if keyType == InvalidType || valueType == InvalidType {
+			checker.report(
+				&TypeAnnotationRequiredError{
+					Cause: "cannot infer type from dictionary literal: ",
+					Pos:   expression.StartPos,
+				},
+			)
+
+			return InvalidType
+		}
 	}
 
 	if !IsValidDictionaryKeyType(keyType) {

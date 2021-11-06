@@ -2392,12 +2392,6 @@ func (checker *Checker) visitExpressionWithForceType(
 	// as the new contextually expected type.
 	prevExpectedType := checker.expectedType
 
-	// If the expected type is invalid, treat it in the same manner as
-	// expected type is unknown.
-	if expectedType != nil && expectedType.IsInvalidType() {
-		expectedType = nil
-	}
-
 	checker.expectedType = expectedType
 	defer func() {
 		// Restore the prev contextually expected type
@@ -2408,6 +2402,7 @@ func (checker *Checker) visitExpressionWithForceType(
 
 	if forceType &&
 		expectedType != nil &&
+		!expectedType.IsInvalidType() &&
 		actualType != InvalidType &&
 		!IsSubType(actualType, expectedType) {
 

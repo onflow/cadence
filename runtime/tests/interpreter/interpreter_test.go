@@ -9435,3 +9435,58 @@ func TestHostFunctionStaticType(t *testing.T) {
 		assert.Equal(t, xValue.StaticType(), yValue.StaticType())
 	})
 }
+
+func TestInterpretArrayTypeInference(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("anystruct with empty array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun test(): Type {
+                let x: AnyStruct = []
+                return x.getType()
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TypeValue{
+				Type: interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeAnyStruct,
+				},
+			},
+			value,
+		)
+	})
+
+	t.Run("anystruct with numeric array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun test(): Type {
+                let x: AnyStruct = [1, 2, 3]
+                return x.getType()
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TypeValue{
+				Type: interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeAnyStruct,
+				},
+			},
+			value,
+		)
+	})
+}

@@ -85,8 +85,6 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 
 	checker.Elaboration.VariableDeclarationTargetTypes[declaration] = declarationType
 
-	checker.checkVariableDeclarationUsability(declaration, valueType)
-
 	checker.checkTransfer(declaration.Transfer, declarationType)
 
 	// The variable declaration might have a second transfer and second expression.
@@ -231,40 +229,6 @@ func (checker *Checker) recordVariableDeclarationRange(
 			)
 		},
 	)
-}
-
-func (checker *Checker) checkVariableDeclarationUsability(declaration *ast.VariableDeclaration, valueType Type) {
-
-	// If the variable declaration has no type annotation and,
-	// the value is an empty array/dictionary literal or,
-	// has no common supertype for the elements,
-	// then the type is inferred to `[InvalidType]`, which is not a usable type.
-	//
-	// Require an explicit type annotation
-
-	if declaration.TypeAnnotation == nil {
-		switch typ := valueType.(type) {
-		case *VariableSizedType:
-			if typ.Type == InvalidType {
-				checker.report(
-					&TypeAnnotationRequiredError{
-						Cause: "cannot infer type from array literal: ",
-						Pos:   declaration.Identifier.EndPosition().Shifted(1),
-					},
-				)
-			}
-
-		case *DictionaryType:
-			if typ.ValueType == InvalidType {
-				checker.report(
-					&TypeAnnotationRequiredError{
-						Cause: "cannot infer type from dictionary literal: ",
-						Pos:   declaration.Identifier.EndPosition().Shifted(1),
-					},
-				)
-			}
-		}
-	}
 }
 
 func (checker *Checker) elaborateNestedResourceMoveExpression(expression ast.Expression) {

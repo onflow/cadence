@@ -202,7 +202,7 @@ func TestInterpretForStatementEmpty(t *testing.T) {
 	inter := parseCheckAndInterpret(t, `
        fun test(): Bool {
            var x = false
-           for y in [] {
+           for y in [] as [Int] {
                x = true
            }
            return x

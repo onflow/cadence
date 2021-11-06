@@ -348,9 +348,9 @@ func LeastCommonSuperType(types ...Type) Type {
 
 	supertype := findCommonSupperType(join, types...)
 
-	// 'Any' is a valid type, since its the supertype of all types.
+	// 'Any' is a valid type, since it's the supertype of all types.
 	// However, in the context of checker, 'Any' is not a possible
-	// type for expressions. Hence return 'InvalidType'.
+	// type for expressions. Hence, return 'InvalidType'.
 	if supertype == AnyType {
 		return InvalidType
 	}
@@ -391,6 +391,8 @@ func findCommonSupperType(joinedTypeTag TypeTag, types ...Type) Type {
 	// NOTE: Below order is important!
 
 	switch {
+	case joinedTypeTag.ContainsAny(InvalidTypeTag):
+		return InvalidType
 	case joinedTypeTag.BelongsTo(SignedIntegerTypeTag):
 		return SignedIntegerType
 	case joinedTypeTag.BelongsTo(IntegerTypeTag):
@@ -495,6 +497,8 @@ func findSuperTypeFromLowerMask(joinedTypeTag TypeTag, types []Type) Type {
 		return StoragePathType
 	case anyTypeMask:
 		return AnyType
+	case noTypeMask:
+		return InvalidType
 
 	case compositeTypeMask:
 		// We reach here if all are composite types.

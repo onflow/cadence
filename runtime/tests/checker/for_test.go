@@ -68,7 +68,9 @@ func TestCheckForEmpty(t *testing.T) {
       }
     `)
 
-	assert.NoError(t, err)
+	assert.Error(t, err)
+	errs := ExpectCheckerErrors(t, err, 1)
+	assert.IsType(t, &sema.TypeAnnotationRequiredError{}, errs[0])
 }
 
 func TestCheckInvalidForValueNonArray(t *testing.T) {

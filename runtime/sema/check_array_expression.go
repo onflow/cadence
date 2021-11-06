@@ -26,24 +26,20 @@ func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) as
 
 	expectedType := UnwrapOptionalType(checker.expectedType)
 
-	inferType := true
-
 	var elementType Type
 	var resultType ArrayType
 
-	switch expectedType := expectedType.(type) {
+	switch typ := expectedType.(type) {
 
 	case *ConstantSizedType:
-		inferType = false
-
-		elementType = expectedType.ElementType(false)
-		resultType = expectedType
+		elementType = typ.ElementType(false)
+		resultType = typ
 
 		literalCount := int64(len(expression.Values))
-		if expectedType.Size != literalCount {
+		if typ.Size != literalCount {
 			checker.report(
 				&ConstantSizedArrayLiteralSizeError{
-					ExpectedSize: expectedType.Size,
+					ExpectedSize: typ.Size,
 					ActualSize:   literalCount,
 					Range:        expression.Range,
 				},
@@ -51,14 +47,22 @@ func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) as
 		}
 
 	case *VariableSizedType:
-		inferType = false
-		elementType = expectedType.ElementType(false)
-		resultType = expectedType
+		elementType = typ.ElementType(false)
+		resultType = typ
 
 	default:
-		// If there is no expected, or the expected type is not an array type,
-		// then it could either be an invalid type, or it is a super type (e.g. AnyStruct).
-		// In either case, infer the type from the expression.
+		switch expectedType {
+		case AnyStructType, AnyResourceType:
+			// If the expected type is AnyStruct or AnyResource, then
+			// expect the elements to also be of the same type.
+			elementType = expectedType
+			resultType = &VariableSizedType{
+				Type: elementType,
+			}
+		default:
+			// If there is no expected type, or the expected type is not an array/AnyStruct/AnyResource type,
+			// then it could be an invalid type. Therefore, infer the type from the expression.
+		}
 	}
 
 	argumentTypes := make([]Type, len(expression.Values))
@@ -78,9 +82,18 @@ func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) as
 		// Contextually expected type is not available.
 		// Therefore, find the least common supertype of the elements.
 		elementType = LeastCommonSuperType(argumentTypes...)
-	}
 
-	if inferType {
+		if elementType == InvalidType {
+			checker.report(
+				&TypeAnnotationRequiredError{
+					Cause: "cannot infer type from array literal: ",
+					Pos:   expression.StartPos,
+				},
+			)
+
+			return InvalidType
+		}
+
 		resultType = &VariableSizedType{
 			Type: elementType,
 		}
