@@ -706,6 +706,8 @@ func TestIdentifierCacheUpdate(t *testing.T) {
 func TestCommonSuperType(t *testing.T) {
 
 	t.Run("Duplicate Mask", func(t *testing.T) {
+		t.Parallel()
+
 		defer func() {
 			if r := recover(); r != nil {
 				err, _ := r.(error)
@@ -734,6 +736,8 @@ func TestCommonSuperType(t *testing.T) {
 	testLeastCommonSuperType := func(t *testing.T, tests []testCase) {
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
+				t.Parallel()
+
 				assert.Equal(
 					t,
 					test.expectedSuperType,
@@ -744,6 +748,8 @@ func TestCommonSuperType(t *testing.T) {
 	}
 
 	t.Run("All types", func(t *testing.T) {
+		t.Parallel()
+
 		// super type of similar types should be the type itself.
 		// i.e: super type of collection of T's should be T.
 		// Make sure it's true for all known types.
@@ -769,6 +775,8 @@ func TestCommonSuperType(t *testing.T) {
 	})
 
 	t.Run("Simple types", func(t *testing.T) {
+		t.Parallel()
+
 		tests := []testCase{
 			{
 				name: "homogenous integer types",
@@ -888,6 +896,7 @@ func TestCommonSuperType(t *testing.T) {
 	})
 
 	t.Run("Structs & Resources", func(t *testing.T) {
+		t.Parallel()
 
 		testLocation := common.StringLocation("test")
 
@@ -1003,6 +1012,7 @@ func TestCommonSuperType(t *testing.T) {
 	})
 
 	t.Run("Arrays", func(t *testing.T) {
+		t.Parallel()
 
 		stringArray := &VariableSizedType{
 			Type: StringType,
@@ -1095,6 +1105,7 @@ func TestCommonSuperType(t *testing.T) {
 	})
 
 	t.Run("Dictionaries", func(t *testing.T) {
+		t.Parallel()
 
 		stringStringDictionary := &DictionaryType{
 			KeyType:   StringType,
@@ -1194,6 +1205,8 @@ func TestCommonSuperType(t *testing.T) {
 	})
 
 	t.Run("References types", func(t *testing.T) {
+		t.Parallel()
+
 		tests := []testCase{
 			{
 				name: "homogenous references",
@@ -1252,6 +1265,8 @@ func TestCommonSuperType(t *testing.T) {
 	})
 
 	t.Run("Path types", func(t *testing.T) {
+		t.Parallel()
+
 		tests := []testCase{
 			{
 				name: "homogenous paths",
@@ -1296,50 +1311,70 @@ func TestCommonSuperType(t *testing.T) {
 
 func TestTypeInclusions(t *testing.T) {
 
+	t.Parallel()
+
 	// Test whether Number type-tag includes all numeric types.
 	t.Run("Number", func(t *testing.T) {
+		t.Parallel()
+
 		for _, typ := range AllNumberTypes {
 			t.Run(typ.String(), func(t *testing.T) {
+				t.Parallel()
 				assert.True(t, NumberTypeTag.ContainsAny(typ.Tag()))
 			})
 		}
 	})
 
 	t.Run("Integer", func(t *testing.T) {
+		t.Parallel()
+
 		for _, typ := range AllIntegerTypes {
 			t.Run(typ.String(), func(t *testing.T) {
+				t.Parallel()
 				assert.True(t, IntegerTypeTag.ContainsAny(typ.Tag()))
 			})
 		}
 	})
 
 	t.Run("SignedInteger", func(t *testing.T) {
+		t.Parallel()
+
 		for _, typ := range AllSignedIntegerTypes {
 			t.Run(typ.String(), func(t *testing.T) {
+				t.Parallel()
 				assert.True(t, SignedIntegerTypeTag.ContainsAny(typ.Tag()))
 			})
 		}
 	})
 
 	t.Run("UnsignedInteger", func(t *testing.T) {
+		t.Parallel()
+
 		for _, typ := range AllUnsignedIntegerTypes {
 			t.Run(typ.String(), func(t *testing.T) {
+				t.Parallel()
 				assert.True(t, UnsignedIntegerTypeTag.ContainsAny(typ.Tag()))
 			})
 		}
 	})
 
 	t.Run("FixedPoint", func(t *testing.T) {
+		t.Parallel()
+
 		for _, typ := range AllFixedPointTypes {
 			t.Run(typ.String(), func(t *testing.T) {
+				t.Parallel()
 				assert.True(t, FixedPointTypeTag.ContainsAny(typ.Tag()))
 			})
 		}
 	})
 
 	t.Run("SignedFixedPoint", func(t *testing.T) {
+		t.Parallel()
+
 		for _, typ := range AllSignedFixedPointTypes {
 			t.Run(typ.String(), func(t *testing.T) {
+				t.Parallel()
 				assert.True(t, SignedFixedPointTypeTag.ContainsAny(typ.Tag()))
 			})
 		}
@@ -1348,6 +1383,7 @@ func TestTypeInclusions(t *testing.T) {
 	t.Run("UnsignedFixedPoint", func(t *testing.T) {
 		for _, typ := range AllUnsignedFixedPointTypes {
 			t.Run(typ.String(), func(t *testing.T) {
+				t.Parallel()
 				assert.True(t, UnsignedFixedPointTypeTag.ContainsAny(typ.Tag()))
 			})
 		}
@@ -1355,8 +1391,12 @@ func TestTypeInclusions(t *testing.T) {
 
 	// Test whether Any type-tag includes all the types.
 	t.Run("Any", func(t *testing.T) {
+		t.Parallel()
+
 		err := BaseTypeActivation.ForEach(func(name string, variable *Variable) error {
 			t.Run(name, func(t *testing.T) {
+				t.Parallel()
+
 				typ := variable.Type
 				if _, ok := typ.(*CompositeType); ok {
 					return
@@ -1372,8 +1412,12 @@ func TestTypeInclusions(t *testing.T) {
 
 	// Test whether AnyStruct type-tag includes all the pre-known AnyStruct types.
 	t.Run("AnyStruct", func(t *testing.T) {
+		t.Parallel()
+
 		err := BaseTypeActivation.ForEach(func(name string, variable *Variable) error {
 			t.Run(name, func(t *testing.T) {
+				t.Parallel()
+
 				typ := variable.Type
 
 				if _, ok := typ.(*CompositeType); ok {
