@@ -829,10 +829,15 @@ func TestCheckArraySupertypeInference(t *testing.T) {
 
                     pub struct Baz: I1, I2, I3 {}
                 `,
-				expectedElementType: &sema.InterfaceType{
-					Location:      common.StringLocation("test"),
-					Identifier:    "I2",
-					CompositeKind: common.CompositeKindStructure,
+				expectedElementType: &sema.RestrictedType{
+					Type: sema.AnyStructType,
+					Restrictions: []*sema.InterfaceType{
+						&sema.InterfaceType{
+							Location:      common.StringLocation("test"),
+							Identifier:    "I2",
+							CompositeKind: common.CompositeKindStructure,
+						},
+					},
 				},
 			},
 			{
@@ -878,8 +883,6 @@ func TestCheckArraySupertypeInference(t *testing.T) {
 
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
-				t.Parallel()
-
 				checker, err := ParseAndCheck(t, test.code)
 				require.NoError(t, err)
 
@@ -991,10 +994,15 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
                     pub struct Baz: I1, I2, I3 {}
                 `,
 				expectedKeyType: sema.IntType,
-				expectedValueType: &sema.InterfaceType{
-					Location:      common.StringLocation("test"),
-					Identifier:    "I2",
-					CompositeKind: common.CompositeKindStructure,
+				expectedValueType: &sema.RestrictedType{
+					Type: sema.AnyStructType,
+					Restrictions: []*sema.InterfaceType{
+						{
+							Location:      common.StringLocation("test"),
+							Identifier:    "I2",
+							CompositeKind: common.CompositeKindStructure,
+						},
+					},
 				},
 			},
 			{
@@ -1042,8 +1050,6 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
 
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
-				t.Parallel()
-
 				checker, err := ParseAndCheck(t, test.code)
 				require.NoError(t, err)
 
@@ -1058,7 +1064,7 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
 		}
 	})
 
-	t.Run("no supertype", func(t *testing.T) {
+	t.Run("no supertype for values", func(t *testing.T) {
 		t.Parallel()
 
 		code := `
@@ -1067,6 +1073,18 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
             pub resource Foo {}
 
             pub struct Bar {}
+        `
+		_, err := ParseAndCheck(t, code)
+		checkerErr := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeAnnotationRequiredError{}, checkerErr[0])
+	})
+
+	t.Run("no supertype for keys", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            let x = {1: 1, "two": 2}
         `
 		_, err := ParseAndCheck(t, code)
 		checkerErr := ExpectCheckerErrors(t, err, 1)
