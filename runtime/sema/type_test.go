@@ -1099,6 +1099,19 @@ func TestCommonSuperType(t *testing.T) {
 				},
 				expectedSuperType: AnyType,
 			},
+			{
+				name: "fixed vs variable sized",
+				types: []Type{
+					&ConstantSizedType{
+						Type: StringType,
+						Size: 0,
+					},
+					&VariableSizedType{
+						Type: StringType,
+					},
+				},
+				expectedSuperType: AnyStructType,
+			},
 		}
 
 		testLeastCommonSuperType(t, tests)
