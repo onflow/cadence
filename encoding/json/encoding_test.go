@@ -1047,6 +1047,14 @@ func TestEncodeSimpleTypes(t *testing.T) {
 		cadence.StoragePathType{},
 		cadence.PublicPathType{},
 		cadence.PrivatePathType{},
+		cadence.AccountKeyType{},
+		cadence.AuthAccountContractsType{},
+		cadence.AuthAccountKeysType{},
+		cadence.AuthAccountType{},
+		cadence.PublicAccountContractsType{},
+		cadence.PublicAccountKeysType{},
+		cadence.PublicAccountType{},
+		cadence.DeployedContractType{},
 	}
 
 	for _, test := range tests {

@@ -692,7 +692,15 @@ func prepareType(typ cadence.Type) jsonValue {
 		cadence.CapabilityPathType,
 		cadence.StoragePathType,
 		cadence.PublicPathType,
-		cadence.PrivatePathType:
+		cadence.PrivatePathType,
+		cadence.AccountKeyType,
+		cadence.AuthAccountContractsType,
+		cadence.AuthAccountKeysType,
+		cadence.AuthAccountType,
+		cadence.PublicAccountContractsType,
+		cadence.PublicAccountKeysType,
+		cadence.PublicAccountType,
+		cadence.DeployedContractType:
 		return jsonSimpleType{
 			Kind: typ.ID(),
 		}
