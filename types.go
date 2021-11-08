@@ -928,3 +928,75 @@ func (t *EnumType) CompositeFields() []Field {
 func (t *EnumType) CompositeInitializers() [][]Parameter {
 	return t.Initializers
 }
+
+// AuthAccountType
+type AuthAccountType struct{}
+
+func (AuthAccountType) isType() {}
+
+func (AuthAccountType) ID() string {
+	return "AuthAccount"
+}
+
+// PublicAccountType
+type PublicAccountType struct{}
+
+func (PublicAccountType) isType() {}
+
+func (PublicAccountType) ID() string {
+	return "PublicAccount"
+}
+
+// DeployedContractType
+type DeployedContractType struct{}
+
+func (DeployedContractType) isType() {}
+
+func (DeployedContractType) ID() string {
+	return "DeployedContract"
+}
+
+// AuthAccountContractsType
+type AuthAccountContractsType struct{}
+
+func (AuthAccountContractsType) isType() {}
+
+func (AuthAccountContractsType) ID() string {
+	return "AuthAccountContracts"
+}
+
+// PublicAccountContractsType
+type PublicAccountContractsType struct{}
+
+func (PublicAccountContractsType) isType() {}
+
+func (PublicAccountContractsType) ID() string {
+	return "PublicAccountContracts"
+}
+
+// AuthAccountKeysType
+type AuthAccountKeysType struct{}
+
+func (AuthAccountKeysType) isType() {}
+
+func (AuthAccountKeysType) ID() string {
+	return "AuthAccountKeys"
+}
+
+// PublicAccountContractsType
+type PublicAccountKeysType struct{}
+
+func (PublicAccountKeysType) isType() {}
+
+func (PublicAccountKeysType) ID() string {
+	return "PublicAccountKeys"
+}
+
+// AccountKeyType
+type AccountKeyType struct{}
+
+func (AccountKeyType) isType() {}
+
+func (AccountKeyType) ID() string {
+	return "AccountKey"
+}

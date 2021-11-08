@@ -777,7 +777,7 @@ func decodeNominalType(obj jsonObject, kind, typeID string, fs, initializers []i
 	panic(ErrInvalidJSONCadence)
 }
 
-func decodeRestricedType(
+func decodeRestrictedType(
 	typeValue interface{},
 	restrictionsValue []interface{},
 	typeIDValue string,
@@ -811,7 +811,7 @@ func decodeType(valueJSON interface{}) cadence.Type {
 		restrictionsValue := obj.Get(restrictionsKey)
 		typeIDValue := toString(obj.Get(typeIDKey))
 		typeValue := obj.Get(typeKey)
-		return decodeRestricedType(typeValue, toSlice(restrictionsValue), typeIDValue)
+		return decodeRestrictedType(typeValue, toSlice(restrictionsValue), typeIDValue)
 	case "Optional":
 		return cadence.OptionalType{
 			Type: decodeType(obj.Get(typeKey)),
@@ -925,6 +925,22 @@ func decodeType(valueJSON interface{}) cadence.Type {
 		return cadence.PublicPathType{}
 	case "PrivatePath":
 		return cadence.PrivatePathType{}
+	case "AuthAccount":
+		return cadence.AuthAccountType{}
+	case "PublicAccount":
+		return cadence.PublicAccountType{}
+	case "AuthAccountKeys":
+		return cadence.AuthAccountKeysType{}
+	case "PublicAccountKeys":
+		return cadence.PublicAccountKeysType{}
+	case "AuthAccountContracts":
+		return cadence.AuthAccountContractsType{}
+	case "PublicAccountContracts":
+		return cadence.PublicAccountContractsType{}
+	case "DeployedContract":
+		return cadence.DeployedContractType{}
+	case "AccountKey":
+		return cadence.AccountKeyType{}
 	default:
 		fieldsValue := obj.Get(fieldsKey)
 		typeIDValue := toString(obj.Get(typeIDKey))
