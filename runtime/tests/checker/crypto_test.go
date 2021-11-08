@@ -239,3 +239,44 @@ func TestCheckAggregateBLSSignaturesError(t *testing.T) {
 	require.IsType(t, mismatch, errs[0])
 	require.IsType(t, mismatch, errs[1])
 }
+
+func TestCheckAggregateBLSPublicKeys(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheckWithOptions(t,
+		`
+           let r : PublicKey = AggregateBLSPublicKeys([PublicKey(publicKey: [], signatureAlgorithm: SignatureAlgorithm.BLS_BLS12_381)])  
+        `,
+		ParseAndCheckOptions{
+			Options: []sema.Option{
+				sema.WithPredeclaredValues(stdlib.BuiltinFunctions.ToSemaValueDeclarations()),
+				sema.WithPredeclaredValues(stdlib.BuiltinValues().ToSemaValueDeclarations()),
+			},
+		},
+	)
+
+	require.NoError(t, err)
+}
+
+func TestCheckAggregateBLSPublicKeysError(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheckWithOptions(t,
+		`
+           let r : [PublicKey] = AggregateBLSPublicKeys([1])  
+        `,
+		ParseAndCheckOptions{
+			Options: []sema.Option{
+				sema.WithPredeclaredValues(stdlib.BuiltinFunctions.ToSemaValueDeclarations()),
+				sema.WithPredeclaredValues(stdlib.BuiltinValues().ToSemaValueDeclarations()),
+			},
+		},
+	)
+
+	errs := ExpectCheckerErrors(t, err, 2)
+	var mismatch *sema.TypeMismatchError
+	require.IsType(t, mismatch, errs[0])
+	require.IsType(t, mismatch, errs[1])
+}
