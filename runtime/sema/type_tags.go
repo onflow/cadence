@@ -172,14 +172,14 @@ const (
 	publicPathTypeMask
 	privatePathTypeMask
 
-	arrayTypeMask
+	constantSizedTypeMask
+	variableSizedTypeMask
 	dictionaryTypeMask
 	compositeTypeMask
 	referenceTypeMask
 	genericTypeMask
 	functionTypeMask
 	interfaceTypeMask
-	transactionTypeMask
 
 	// ~~ NOTE: End of limit for lower mask type. Any new type should go to upper mask. ~~
 )
@@ -188,6 +188,7 @@ const (
 const (
 	capabilityTypeMask uint64 = 1 << iota
 	restrictedTypeMask
+	transactionTypeMask
 
 	invalidTypeMask
 )
@@ -288,18 +289,19 @@ var (
 			Or(CapabilityPathTypeTag).
 			Or(StoragePathTypeTag)
 
-	ArrayTypeTag       = newTypeTagFromLowerMask(arrayTypeMask)
-	DictionaryTypeTag  = newTypeTagFromLowerMask(dictionaryTypeMask)
-	CompositeTypeTag   = newTypeTagFromLowerMask(compositeTypeMask)
-	ReferenceTypeTag   = newTypeTagFromLowerMask(referenceTypeMask)
-	GenericTypeTag     = newTypeTagFromLowerMask(genericTypeMask)
-	FunctionTypeTag    = newTypeTagFromLowerMask(functionTypeMask)
-	InterfaceTypeTag   = newTypeTagFromLowerMask(interfaceTypeMask)
-	TransactionTypeTag = newTypeTagFromLowerMask(transactionTypeMask)
+	ConstantSizedTypeTag = newTypeTagFromLowerMask(constantSizedTypeMask)
+	VariableSizedTypeTag = newTypeTagFromLowerMask(variableSizedTypeMask)
+	DictionaryTypeTag    = newTypeTagFromLowerMask(dictionaryTypeMask)
+	CompositeTypeTag     = newTypeTagFromLowerMask(compositeTypeMask)
+	ReferenceTypeTag     = newTypeTagFromLowerMask(referenceTypeMask)
+	GenericTypeTag       = newTypeTagFromLowerMask(genericTypeMask)
+	FunctionTypeTag      = newTypeTagFromLowerMask(functionTypeMask)
+	InterfaceTypeTag     = newTypeTagFromLowerMask(interfaceTypeMask)
 
-	RestrictedTypeTag = newTypeTagFromUpperMask(restrictedTypeMask)
-	CapabilityTypeTag = newTypeTagFromUpperMask(capabilityTypeMask)
-	InvalidTypeTag    = newTypeTagFromUpperMask(invalidTypeMask)
+	RestrictedTypeTag  = newTypeTagFromUpperMask(restrictedTypeMask)
+	CapabilityTypeTag  = newTypeTagFromUpperMask(capabilityTypeMask)
+	InvalidTypeTag     = newTypeTagFromUpperMask(invalidTypeMask)
+	TransactionTypeTag = newTypeTagFromUpperMask(transactionTypeMask)
 
 	// AnyStructTypeTag only includes the types that are pre-known
 	// to belong to AnyStruct type. This is more of an optimization.
@@ -328,13 +330,13 @@ var (
 	AnyTypeTag = newTypeTagFromLowerMask(anyTypeMask).
 			Or(AnyStructTypeTag).
 			Or(AnyResourceTypeTag).
-			Or(ArrayTypeTag).
+			Or(ConstantSizedTypeTag).
+			Or(VariableSizedTypeTag).
 			Or(DictionaryTypeTag).
 			Or(GenericTypeTag).
 			Or(InterfaceTypeTag).
 			Or(TransactionTypeTag).
-			Or(RestrictedTypeTag).
-			Or(ArrayTypeTag)
+			Or(RestrictedTypeTag)
 )
 
 // Methods
@@ -505,13 +507,13 @@ func findSuperTypeFromLowerMask(joinedTypeTag TypeTag, types []Type) Type {
 		return prevType
 
 	// All derived types goes here.
-	case arrayTypeMask,
+	case constantSizedTypeMask,
+		variableSizedTypeMask,
 		dictionaryTypeMask,
 		referenceTypeMask,
 		genericTypeMask,
 		functionTypeMask,
-		interfaceTypeMask,
-		transactionTypeMask:
+		interfaceTypeMask:
 
 		return getSuperTypeOfDerivedTypes(types)
 	default:
@@ -524,7 +526,8 @@ func findSuperTypeFromUpperMask(joinedTypeTag TypeTag, types []Type) Type {
 
 	// All derived types goes here.
 	case capabilityTypeMask,
-		restrictedTypeMask:
+		restrictedTypeMask,
+		transactionTypeMask:
 		return getSuperTypeOfDerivedTypes(types)
 	default:
 		return nil
