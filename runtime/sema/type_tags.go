@@ -346,10 +346,10 @@ func LeastCommonSuperType(types ...Type) Type {
 		join = join.Or(typ.Tag())
 	}
 
-	return findCommonSupperType(join, types...)
+	return findCommonSuperType(join, types...)
 }
 
-func findCommonSupperType(joinedTypeTag TypeTag, types ...Type) Type {
+func findCommonSuperType(joinedTypeTag TypeTag, types ...Type) Type {
 	var superType Type
 	if joinedTypeTag.upperMask != 0 {
 		superType = findSuperTypeFromUpperMask(joinedTypeTag, types)
@@ -365,16 +365,16 @@ func findCommonSupperType(joinedTypeTag TypeTag, types ...Type) Type {
 	if joinedTypeTag.ContainsAny(NilTypeTag) {
 		// Get the type without the optional flag
 		innerTypeTag := joinedTypeTag.And(NilTypeTag.Not())
-		supperType := findCommonSupperType(innerTypeTag, types...)
+		superType := findCommonSuperType(innerTypeTag, types...)
 
 		// If the common supertype of the rest of types contain nil,
 		// then do not wrap with optional again.
-		if supperType.Tag().ContainsAny(NilTypeTag) {
-			return supperType
+		if superType.Tag().ContainsAny(NilTypeTag) {
+			return superType
 		}
 
 		return &OptionalType{
-			Type: supperType,
+			Type: superType,
 		}
 	}
 
