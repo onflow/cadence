@@ -592,41 +592,49 @@ func commonSuperTypeOfComposites(types []Type) Type {
 			return AnyType
 		}
 
-		if hasCommonInterface {
-			compositeType := typ.(*CompositeType)
+		if !hasCommonInterface {
+			break
+		}
 
-			if i == 0 {
-				for _, interfaceType := range compositeType.ExplicitInterfaceConformances {
-					commonInterfaces[interfaceType.QualifiedIdentifier()] = true
+		compositeType := typ.(*CompositeType)
+
+		if i == 0 {
+			for _, interfaceType := range compositeType.ExplicitInterfaceConformances {
+				commonInterfaces[interfaceType.QualifiedIdentifier()] = true
+				commonInterfacesList = append(commonInterfacesList, interfaceType)
+			}
+		} else {
+			intersection := map[string]bool{}
+			commonInterfacesList = make([]*InterfaceType, 0)
+
+			for _, interfaceType := range compositeType.ExplicitInterfaceConformances {
+				if _, ok := commonInterfaces[interfaceType.QualifiedIdentifier()]; ok {
+					intersection[interfaceType.QualifiedIdentifier()] = true
 					commonInterfacesList = append(commonInterfacesList, interfaceType)
 				}
-			} else {
-				intersection := map[string]bool{}
-				commonInterfacesList = make([]*InterfaceType, 0)
-
-				for _, interfaceType := range compositeType.ExplicitInterfaceConformances {
-					if _, ok := commonInterfaces[interfaceType.QualifiedIdentifier()]; ok {
-						intersection[interfaceType.QualifiedIdentifier()] = true
-						commonInterfacesList = append(commonInterfacesList, interfaceType)
-					}
-				}
-
-				commonInterfaces = intersection
 			}
 
-			if len(commonInterfaces) == 0 {
-				hasCommonInterface = false
-			}
+			commonInterfaces = intersection
+		}
+
+		if len(commonInterfaces) == 0 {
+			hasCommonInterface = false
 		}
 	}
 
-	if hasCommonInterface {
-		return commonInterfacesList[0]
-	}
-
+	var superType Type
 	if hasResources {
-		return AnyResourceType
+		superType = AnyResourceType
+	} else {
+		superType = AnyStructType
 	}
 
-	return AnyStructType
+	if hasCommonInterface {
+		return &RestrictedType{
+			Type:         superType,
+			Restrictions: commonInterfacesList,
+		}
+	}
+
+	return superType
 }

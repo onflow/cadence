@@ -736,8 +736,6 @@ func TestCommonSuperType(t *testing.T) {
 	testLeastCommonSuperType := func(t *testing.T, tests []testCase) {
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
-				t.Parallel()
-
 				assert.Equal(
 					t,
 					test.expectedSuperType,
@@ -987,7 +985,10 @@ func TestCommonSuperType(t *testing.T) {
 					newCompositeWithInterfaces("Bar", interfaceType2, interfaceType3),
 					newCompositeWithInterfaces("Baz", interfaceType1, interfaceType2, interfaceType3),
 				},
-				expectedSuperType: interfaceType2,
+				expectedSuperType: &RestrictedType{
+					Type:         AnyStructType,
+					Restrictions: []*InterfaceType{interfaceType2},
+				},
 			},
 			{
 				name: "multiple common interfaces",
@@ -995,7 +996,10 @@ func TestCommonSuperType(t *testing.T) {
 					newCompositeWithInterfaces("Foo", interfaceType1, interfaceType2),
 					newCompositeWithInterfaces("Baz", interfaceType1, interfaceType2, interfaceType3),
 				},
-				expectedSuperType: interfaceType1,
+				expectedSuperType: &RestrictedType{
+					Type:         AnyStructType,
+					Restrictions: []*InterfaceType{interfaceType1, interfaceType2},
+				},
 			},
 			{
 				name: "no common interfaces",
