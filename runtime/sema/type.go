@@ -1867,7 +1867,7 @@ func (*VariableSizedType) IsType() {}
 func (*VariableSizedType) isArrayType() {}
 
 func (t *VariableSizedType) Tag() TypeTag {
-	return ArrayTypeTag
+	return VariableSizedTypeTag
 }
 
 func (t *VariableSizedType) String() string {
@@ -1997,7 +1997,7 @@ func (*ConstantSizedType) IsType() {}
 func (*ConstantSizedType) isArrayType() {}
 
 func (t *ConstantSizedType) Tag() TypeTag {
-	return ArrayTypeTag
+	return ConstantSizedTypeTag
 }
 
 func (t *ConstantSizedType) String() string {

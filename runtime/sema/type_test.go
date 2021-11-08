@@ -988,7 +988,10 @@ func TestCommonSuperType(t *testing.T) {
 					newCompositeWithInterfaces("Bar", interfaceType2, interfaceType3),
 					newCompositeWithInterfaces("Baz", interfaceType1, interfaceType2, interfaceType3),
 				},
-				expectedSuperType: interfaceType2,
+				expectedSuperType: &RestrictedType{
+					Type:         AnyStructType,
+					Restrictions: []*InterfaceType{interfaceType2},
+				},
 			},
 			{
 				name: "multiple common interfaces",
@@ -996,7 +999,10 @@ func TestCommonSuperType(t *testing.T) {
 					newCompositeWithInterfaces("Foo", interfaceType1, interfaceType2),
 					newCompositeWithInterfaces("Baz", interfaceType1, interfaceType2, interfaceType3),
 				},
-				expectedSuperType: interfaceType1,
+				expectedSuperType: &RestrictedType{
+					Type:         AnyStructType,
+					Restrictions: []*InterfaceType{interfaceType1, interfaceType2},
+				},
 			},
 			{
 				name: "no common interfaces",
@@ -1099,6 +1105,19 @@ func TestCommonSuperType(t *testing.T) {
 					&VariableSizedType{Type: stringArray},
 				},
 				expectedSuperType: InvalidType,
+			},
+			{
+				name: "fixed vs variable sized",
+				types: []Type{
+					&ConstantSizedType{
+						Type: StringType,
+						Size: 0,
+					},
+					&VariableSizedType{
+						Type: StringType,
+					},
+				},
+				expectedSuperType: AnyStructType,
 			},
 		}
 
@@ -1308,54 +1327,162 @@ func TestCommonSuperType(t *testing.T) {
 
 		testLeastCommonSuperType(t, tests)
 	})
+
+	t.Run("Restricted types", func(t *testing.T) {
+		t.Parallel()
+
+		testLocation := common.StringLocation("test")
+
+		interfaceType1 := &InterfaceType{
+			Location:      testLocation,
+			Identifier:    "I1",
+			CompositeKind: common.CompositeKindStructure,
+			Members:       NewStringMemberOrderedMap(),
+		}
+
+		restrictedType1 := &RestrictedType{
+			Type:         AnyStructType,
+			Restrictions: []*InterfaceType{interfaceType1},
+		}
+
+		restrictedType2 := &RestrictedType{
+			Type:         AnyResourceType,
+			Restrictions: []*InterfaceType{interfaceType1},
+		}
+
+		tests := []testCase{
+			{
+				name: "homogenous",
+				types: []Type{
+					restrictedType1,
+					restrictedType1,
+				},
+				expectedSuperType: restrictedType1,
+			},
+			{
+				name: "heterogeneous",
+				types: []Type{
+					restrictedType1,
+					restrictedType2,
+				},
+				expectedSuperType: AnyType,
+			},
+		}
+
+		testLeastCommonSuperType(t, tests)
+	})
+
+	t.Run("Capability types", func(t *testing.T) {
+		t.Parallel()
+
+		testLocation := common.StringLocation("test")
+
+		interfaceType1 := &InterfaceType{
+			Location:      testLocation,
+			Identifier:    "I1",
+			CompositeKind: common.CompositeKindStructure,
+			Members:       NewStringMemberOrderedMap(),
+		}
+
+		restrictedType1 := &RestrictedType{
+			Type:         AnyStructType,
+			Restrictions: []*InterfaceType{interfaceType1},
+		}
+
+		restrictedType2 := &RestrictedType{
+			Type:         AnyResourceType,
+			Restrictions: []*InterfaceType{interfaceType1},
+		}
+
+		tests := []testCase{
+			{
+				name: "homogenous",
+				types: []Type{
+					restrictedType1,
+					restrictedType1,
+				},
+				expectedSuperType: restrictedType1,
+			},
+			{
+				name: "heterogeneous",
+				types: []Type{
+					restrictedType1,
+					restrictedType2,
+				},
+				expectedSuperType: AnyType,
+			},
+		}
+
+		testLeastCommonSuperType(t, tests)
+	})
 }
 
 func TestTypeInclusions(t *testing.T) {
 
+	t.Parallel()
+
 	// Test whether Number type-tag includes all numeric types.
 	t.Run("Number", func(t *testing.T) {
+		t.Parallel()
+
 		for _, typ := range AllNumberTypes {
 			t.Run(typ.String(), func(t *testing.T) {
+				t.Parallel()
 				assert.True(t, NumberTypeTag.ContainsAny(typ.Tag()))
 			})
 		}
 	})
 
 	t.Run("Integer", func(t *testing.T) {
+		t.Parallel()
+
 		for _, typ := range AllIntegerTypes {
 			t.Run(typ.String(), func(t *testing.T) {
+				t.Parallel()
 				assert.True(t, IntegerTypeTag.ContainsAny(typ.Tag()))
 			})
 		}
 	})
 
 	t.Run("SignedInteger", func(t *testing.T) {
+		t.Parallel()
+
 		for _, typ := range AllSignedIntegerTypes {
 			t.Run(typ.String(), func(t *testing.T) {
+				t.Parallel()
 				assert.True(t, SignedIntegerTypeTag.ContainsAny(typ.Tag()))
 			})
 		}
 	})
 
 	t.Run("UnsignedInteger", func(t *testing.T) {
+		t.Parallel()
+
 		for _, typ := range AllUnsignedIntegerTypes {
 			t.Run(typ.String(), func(t *testing.T) {
+				t.Parallel()
 				assert.True(t, UnsignedIntegerTypeTag.ContainsAny(typ.Tag()))
 			})
 		}
 	})
 
 	t.Run("FixedPoint", func(t *testing.T) {
+		t.Parallel()
+
 		for _, typ := range AllFixedPointTypes {
 			t.Run(typ.String(), func(t *testing.T) {
+				t.Parallel()
 				assert.True(t, FixedPointTypeTag.ContainsAny(typ.Tag()))
 			})
 		}
 	})
 
 	t.Run("SignedFixedPoint", func(t *testing.T) {
+		t.Parallel()
+
 		for _, typ := range AllSignedFixedPointTypes {
 			t.Run(typ.String(), func(t *testing.T) {
+				t.Parallel()
 				assert.True(t, SignedFixedPointTypeTag.ContainsAny(typ.Tag()))
 			})
 		}
@@ -1364,6 +1491,7 @@ func TestTypeInclusions(t *testing.T) {
 	t.Run("UnsignedFixedPoint", func(t *testing.T) {
 		for _, typ := range AllUnsignedFixedPointTypes {
 			t.Run(typ.String(), func(t *testing.T) {
+				t.Parallel()
 				assert.True(t, UnsignedFixedPointTypeTag.ContainsAny(typ.Tag()))
 			})
 		}
@@ -1371,8 +1499,12 @@ func TestTypeInclusions(t *testing.T) {
 
 	// Test whether Any type-tag includes all the types.
 	t.Run("Any", func(t *testing.T) {
+		t.Parallel()
+
 		err := BaseTypeActivation.ForEach(func(name string, variable *Variable) error {
 			t.Run(name, func(t *testing.T) {
+				t.Parallel()
+
 				typ := variable.Type
 				if _, ok := typ.(*CompositeType); ok {
 					return
@@ -1388,8 +1520,12 @@ func TestTypeInclusions(t *testing.T) {
 
 	// Test whether AnyStruct type-tag includes all the pre-known AnyStruct types.
 	t.Run("AnyStruct", func(t *testing.T) {
+		t.Parallel()
+
 		err := BaseTypeActivation.ForEach(func(name string, variable *Variable) error {
 			t.Run(name, func(t *testing.T) {
+				t.Parallel()
+
 				typ := variable.Type
 
 				if _, ok := typ.(*CompositeType); ok {

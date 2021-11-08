@@ -172,14 +172,14 @@ const (
 	publicPathTypeMask
 	privatePathTypeMask
 
-	arrayTypeMask
+	constantSizedTypeMask
+	variableSizedTypeMask
 	dictionaryTypeMask
 	compositeTypeMask
 	referenceTypeMask
 	genericTypeMask
 	functionTypeMask
 	interfaceTypeMask
-	transactionTypeMask
 
 	// ~~ NOTE: End of limit for lower mask type. Any new type should go to upper mask. ~~
 )
@@ -188,6 +188,7 @@ const (
 const (
 	capabilityTypeMask uint64 = 1 << iota
 	restrictedTypeMask
+	transactionTypeMask
 
 	invalidTypeMask
 )
@@ -288,18 +289,19 @@ var (
 			Or(CapabilityPathTypeTag).
 			Or(StoragePathTypeTag)
 
-	ArrayTypeTag       = newTypeTagFromLowerMask(arrayTypeMask)
-	DictionaryTypeTag  = newTypeTagFromLowerMask(dictionaryTypeMask)
-	CompositeTypeTag   = newTypeTagFromLowerMask(compositeTypeMask)
-	ReferenceTypeTag   = newTypeTagFromLowerMask(referenceTypeMask)
-	GenericTypeTag     = newTypeTagFromLowerMask(genericTypeMask)
-	FunctionTypeTag    = newTypeTagFromLowerMask(functionTypeMask)
-	InterfaceTypeTag   = newTypeTagFromLowerMask(interfaceTypeMask)
-	TransactionTypeTag = newTypeTagFromLowerMask(transactionTypeMask)
+	ConstantSizedTypeTag = newTypeTagFromLowerMask(constantSizedTypeMask)
+	VariableSizedTypeTag = newTypeTagFromLowerMask(variableSizedTypeMask)
+	DictionaryTypeTag    = newTypeTagFromLowerMask(dictionaryTypeMask)
+	CompositeTypeTag     = newTypeTagFromLowerMask(compositeTypeMask)
+	ReferenceTypeTag     = newTypeTagFromLowerMask(referenceTypeMask)
+	GenericTypeTag       = newTypeTagFromLowerMask(genericTypeMask)
+	FunctionTypeTag      = newTypeTagFromLowerMask(functionTypeMask)
+	InterfaceTypeTag     = newTypeTagFromLowerMask(interfaceTypeMask)
 
-	RestrictedTypeTag = newTypeTagFromUpperMask(restrictedTypeMask)
-	CapabilityTypeTag = newTypeTagFromUpperMask(capabilityTypeMask)
-	InvalidTypeTag    = newTypeTagFromUpperMask(invalidTypeMask)
+	RestrictedTypeTag  = newTypeTagFromUpperMask(restrictedTypeMask)
+	CapabilityTypeTag  = newTypeTagFromUpperMask(capabilityTypeMask)
+	InvalidTypeTag     = newTypeTagFromUpperMask(invalidTypeMask)
+	TransactionTypeTag = newTypeTagFromUpperMask(transactionTypeMask)
 
 	// AnyStructTypeTag only includes the types that are pre-known
 	// to belong to AnyStruct type. This is more of an optimization.
@@ -328,13 +330,13 @@ var (
 	AnyTypeTag = newTypeTagFromLowerMask(anyTypeMask).
 			Or(AnyStructTypeTag).
 			Or(AnyResourceTypeTag).
-			Or(ArrayTypeTag).
+			Or(ConstantSizedTypeTag).
+			Or(VariableSizedTypeTag).
 			Or(DictionaryTypeTag).
 			Or(GenericTypeTag).
 			Or(InterfaceTypeTag).
 			Or(TransactionTypeTag).
-			Or(RestrictedTypeTag).
-			Or(ArrayTypeTag)
+			Or(RestrictedTypeTag)
 )
 
 // Methods
@@ -346,7 +348,7 @@ func LeastCommonSuperType(types ...Type) Type {
 		join = join.Or(typ.Tag())
 	}
 
-	supertype := findCommonSupperType(join, types...)
+	supertype := findCommonSuperType(join, types...)
 
 	// 'Any' is a valid type, since it's the supertype of all types.
 	// However, in the context of checker, 'Any' is not a possible
@@ -358,10 +360,9 @@ func LeastCommonSuperType(types ...Type) Type {
 	return supertype
 }
 
-func findCommonSupperType(joinedTypeTag TypeTag, types ...Type) Type {
+func findCommonSuperType(joinedTypeTag TypeTag, types ...Type) Type {
 	var superType Type
 	if joinedTypeTag.upperMask != 0 {
-		// Hence upperMask is unused for now.
 		superType = findSuperTypeFromUpperMask(joinedTypeTag, types)
 	} else {
 		superType = findSuperTypeFromLowerMask(joinedTypeTag, types)
@@ -375,16 +376,16 @@ func findCommonSupperType(joinedTypeTag TypeTag, types ...Type) Type {
 	if joinedTypeTag.ContainsAny(NilTypeTag) {
 		// Get the type without the optional flag
 		innerTypeTag := joinedTypeTag.And(NilTypeTag.Not())
-		supperType := findCommonSupperType(innerTypeTag, types...)
+		superType := findCommonSuperType(innerTypeTag, types...)
 
 		// If the common supertype of the rest of types contain nil,
 		// then do not wrap with optional again.
-		if supperType.Tag().ContainsAny(NilTypeTag) {
-			return supperType
+		if superType.Tag().ContainsAny(NilTypeTag) {
+			return superType
 		}
 
 		return &OptionalType{
-			Type: supperType,
+			Type: superType,
 		}
 	}
 
@@ -519,14 +520,13 @@ func findSuperTypeFromLowerMask(joinedTypeTag TypeTag, types []Type) Type {
 		return prevType
 
 	// All derived types goes here.
-	case arrayTypeMask,
+	case constantSizedTypeMask,
+		variableSizedTypeMask,
 		dictionaryTypeMask,
 		referenceTypeMask,
 		genericTypeMask,
 		functionTypeMask,
-		interfaceTypeMask,
-		transactionTypeMask,
-		restrictedTypeMask:
+		interfaceTypeMask:
 
 		return getSuperTypeOfDerivedTypes(types)
 	default:
@@ -538,7 +538,9 @@ func findSuperTypeFromUpperMask(joinedTypeTag TypeTag, types []Type) Type {
 	switch joinedTypeTag.upperMask {
 
 	// All derived types goes here.
-	case capabilityTypeMask:
+	case capabilityTypeMask,
+		restrictedTypeMask,
+		transactionTypeMask:
 		return getSuperTypeOfDerivedTypes(types)
 	default:
 		return nil
@@ -603,41 +605,49 @@ func commonSuperTypeOfComposites(types []Type) Type {
 			return AnyType
 		}
 
-		if hasCommonInterface {
-			compositeType := typ.(*CompositeType)
+		if !hasCommonInterface {
+			break
+		}
 
-			if i == 0 {
-				for _, interfaceType := range compositeType.ExplicitInterfaceConformances {
-					commonInterfaces[interfaceType.QualifiedIdentifier()] = true
+		compositeType := typ.(*CompositeType)
+
+		if i == 0 {
+			for _, interfaceType := range compositeType.ExplicitInterfaceConformances {
+				commonInterfaces[interfaceType.QualifiedIdentifier()] = true
+				commonInterfacesList = append(commonInterfacesList, interfaceType)
+			}
+		} else {
+			intersection := map[string]bool{}
+			commonInterfacesList = make([]*InterfaceType, 0)
+
+			for _, interfaceType := range compositeType.ExplicitInterfaceConformances {
+				if _, ok := commonInterfaces[interfaceType.QualifiedIdentifier()]; ok {
+					intersection[interfaceType.QualifiedIdentifier()] = true
 					commonInterfacesList = append(commonInterfacesList, interfaceType)
 				}
-			} else {
-				intersection := map[string]bool{}
-				commonInterfacesList = make([]*InterfaceType, 0)
-
-				for _, interfaceType := range compositeType.ExplicitInterfaceConformances {
-					if _, ok := commonInterfaces[interfaceType.QualifiedIdentifier()]; ok {
-						intersection[interfaceType.QualifiedIdentifier()] = true
-						commonInterfacesList = append(commonInterfacesList, interfaceType)
-					}
-				}
-
-				commonInterfaces = intersection
 			}
 
-			if len(commonInterfaces) == 0 {
-				hasCommonInterface = false
-			}
+			commonInterfaces = intersection
+		}
+
+		if len(commonInterfaces) == 0 {
+			hasCommonInterface = false
 		}
 	}
 
-	if hasCommonInterface {
-		return commonInterfacesList[0]
-	}
-
+	var superType Type
 	if hasResources {
-		return AnyResourceType
+		superType = AnyResourceType
+	} else {
+		superType = AnyStructType
 	}
 
-	return AnyStructType
+	if hasCommonInterface {
+		return &RestrictedType{
+			Type:         superType,
+			Restrictions: commonInterfacesList,
+		}
+	}
+
+	return superType
 }
