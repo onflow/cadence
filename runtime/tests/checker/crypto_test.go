@@ -149,3 +149,59 @@ func TestCheckSignatureAlgorithmConstructor(t *testing.T) {
 
 	require.NoError(t, err)
 }
+
+func TestCheckVerifyPoP(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheckWithOptions(t,
+		`
+           let key = PublicKey(
+              publicKey: "".decodeHex(), 
+              signatureAlgorithm: SignatureAlgorithm.BLS_BLS12_381)
+
+           let x = key.verifyPoP([1 as UInt8, 2, 3])  
+        `,
+		ParseAndCheckOptions{
+			Options: []sema.Option{
+				sema.WithPredeclaredValues(
+					append(
+						stdlib.BuiltinFunctions.ToSemaValueDeclarations(),
+						stdlib.BuiltinValues().ToSemaValueDeclarations()...,
+					),
+				),
+			},
+		},
+	)
+
+	require.NoError(t, err)
+}
+
+func TestCheckVerifyPoPInvalidArgument(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheckWithOptions(t,
+		`
+           let key = PublicKey(
+              publicKey: "".decodeHex(), 
+              signatureAlgorithm: SignatureAlgorithm.BLS_BLS12_381)
+
+           let x = key.verifyPoP([1 as Int32, 2, 3])  
+        `,
+		ParseAndCheckOptions{
+			Options: []sema.Option{
+				sema.WithPredeclaredValues(
+					append(
+						stdlib.BuiltinFunctions.ToSemaValueDeclarations(),
+						stdlib.BuiltinValues().ToSemaValueDeclarations()...,
+					),
+				),
+			},
+		},
+	)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+	var mismatch *sema.TypeMismatchError
+	require.IsType(t, mismatch, errs[0])
+}
