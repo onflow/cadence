@@ -990,22 +990,22 @@ func TestImportRuntimeType(t *testing.T) {
 			expected: interpreter.PrimitiveStaticTypeDeployedContract,
 		},
 		{
-			label:    "AuthAccountKeys",
+			label:    "AuthAccount.Keys",
 			actual:   cadence.AuthAccountKeysType{},
 			expected: interpreter.PrimitiveStaticTypeAuthAccountKeys,
 		},
 		{
-			label:    "PublicAccountKeys",
+			label:    "PublicAccount.Keys",
 			actual:   cadence.PublicAccountKeysType{},
 			expected: interpreter.PrimitiveStaticTypePublicAccountKeys,
 		},
 		{
-			label:    "AuthAccountContracts",
+			label:    "AuthAccount.Contracts",
 			actual:   cadence.AuthAccountContractsType{},
 			expected: interpreter.PrimitiveStaticTypeAuthAccountContracts,
 		},
 		{
-			label:    "PublicAccountContracts",
+			label:    "PublicAccount.Contracts",
 			actual:   cadence.PublicAccountContractsType{},
 			expected: interpreter.PrimitiveStaticTypePublicAccountContracts,
 		},

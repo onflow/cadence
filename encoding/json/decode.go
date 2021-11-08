@@ -929,13 +929,13 @@ func decodeType(valueJSON interface{}) cadence.Type {
 		return cadence.AuthAccountType{}
 	case "PublicAccount":
 		return cadence.PublicAccountType{}
-	case "AuthAccountKeys":
+	case "AuthAccount.Keys":
 		return cadence.AuthAccountKeysType{}
-	case "PublicAccountKeys":
+	case "PublicAccount.Keys":
 		return cadence.PublicAccountKeysType{}
-	case "AuthAccountContracts":
+	case "AuthAccount.Contracts":
 		return cadence.AuthAccountContractsType{}
-	case "PublicAccountContracts":
+	case "PublicAccount.Contracts":
 		return cadence.PublicAccountContractsType{}
 	case "DeployedContract":
 		return cadence.DeployedContractType{}

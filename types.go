@@ -962,7 +962,7 @@ type AuthAccountContractsType struct{}
 func (AuthAccountContractsType) isType() {}
 
 func (AuthAccountContractsType) ID() string {
-	return "AuthAccountContracts"
+	return "AuthAccount.Contracts"
 }
 
 // PublicAccountContractsType
@@ -971,7 +971,7 @@ type PublicAccountContractsType struct{}
 func (PublicAccountContractsType) isType() {}
 
 func (PublicAccountContractsType) ID() string {
-	return "PublicAccountContracts"
+	return "PublicAccount.Contracts"
 }
 
 // AuthAccountKeysType
@@ -980,7 +980,7 @@ type AuthAccountKeysType struct{}
 func (AuthAccountKeysType) isType() {}
 
 func (AuthAccountKeysType) ID() string {
-	return "AuthAccountKeys"
+	return "AuthAccount.Keys"
 }
 
 // PublicAccountContractsType
@@ -989,7 +989,7 @@ type PublicAccountKeysType struct{}
 func (PublicAccountKeysType) isType() {}
 
 func (PublicAccountKeysType) ID() string {
-	return "PublicAccountKeys"
+	return "PublicAccount.Keys"
 }
 
 // AccountKeyType
