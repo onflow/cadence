@@ -92,7 +92,7 @@ func IsValidEventParameterType(t Type, results map[*Member]bool) bool {
 
 	default:
 		switch t {
-		case MetaType, BoolType, CharacterType, StringType, NeverType:
+		case MetaType, BoolType, CharacterType, StringType:
 			return true
 		}
 
