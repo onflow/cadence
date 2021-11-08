@@ -1307,6 +1307,94 @@ func TestCommonSuperType(t *testing.T) {
 
 		testLeastCommonSuperType(t, tests)
 	})
+
+	t.Run("Restricted types", func(t *testing.T) {
+		t.Parallel()
+
+		testLocation := common.StringLocation("test")
+
+		interfaceType1 := &InterfaceType{
+			Location:      testLocation,
+			Identifier:    "I1",
+			CompositeKind: common.CompositeKindStructure,
+			Members:       NewStringMemberOrderedMap(),
+		}
+
+		restrictedType1 := &RestrictedType{
+			Type:         AnyStructType,
+			Restrictions: []*InterfaceType{interfaceType1},
+		}
+
+		restrictedType2 := &RestrictedType{
+			Type:         AnyResourceType,
+			Restrictions: []*InterfaceType{interfaceType1},
+		}
+
+		tests := []testCase{
+			{
+				name: "homogenous",
+				types: []Type{
+					restrictedType1,
+					restrictedType1,
+				},
+				expectedSuperType: restrictedType1,
+			},
+			{
+				name: "heterogeneous",
+				types: []Type{
+					restrictedType1,
+					restrictedType2,
+				},
+				expectedSuperType: AnyType,
+			},
+		}
+
+		testLeastCommonSuperType(t, tests)
+	})
+
+	t.Run("Capability types", func(t *testing.T) {
+		t.Parallel()
+
+		testLocation := common.StringLocation("test")
+
+		interfaceType1 := &InterfaceType{
+			Location:      testLocation,
+			Identifier:    "I1",
+			CompositeKind: common.CompositeKindStructure,
+			Members:       NewStringMemberOrderedMap(),
+		}
+
+		restrictedType1 := &RestrictedType{
+			Type:         AnyStructType,
+			Restrictions: []*InterfaceType{interfaceType1},
+		}
+
+		restrictedType2 := &RestrictedType{
+			Type:         AnyResourceType,
+			Restrictions: []*InterfaceType{interfaceType1},
+		}
+
+		tests := []testCase{
+			{
+				name: "homogenous",
+				types: []Type{
+					restrictedType1,
+					restrictedType1,
+				},
+				expectedSuperType: restrictedType1,
+			},
+			{
+				name: "heterogeneous",
+				types: []Type{
+					restrictedType1,
+					restrictedType2,
+				},
+				expectedSuperType: AnyType,
+			},
+		}
+
+		testLeastCommonSuperType(t, tests)
+	})
 }
 
 func TestTypeInclusions(t *testing.T) {
