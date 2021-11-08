@@ -352,7 +352,6 @@ func LeastCommonSuperType(types ...Type) Type {
 func findCommonSupperType(joinedTypeTag TypeTag, types ...Type) Type {
 	var superType Type
 	if joinedTypeTag.upperMask != 0 {
-		// Hence upperMask is unused for now.
 		superType = findSuperTypeFromUpperMask(joinedTypeTag, types)
 	} else {
 		superType = findSuperTypeFromLowerMask(joinedTypeTag, types)
@@ -512,8 +511,7 @@ func findSuperTypeFromLowerMask(joinedTypeTag TypeTag, types []Type) Type {
 		genericTypeMask,
 		functionTypeMask,
 		interfaceTypeMask,
-		transactionTypeMask,
-		restrictedTypeMask:
+		transactionTypeMask:
 
 		return getSuperTypeOfDerivedTypes(types)
 	default:
@@ -525,7 +523,8 @@ func findSuperTypeFromUpperMask(joinedTypeTag TypeTag, types []Type) Type {
 	switch joinedTypeTag.upperMask {
 
 	// All derived types goes here.
-	case capabilityTypeMask:
+	case capabilityTypeMask,
+		restrictedTypeMask:
 		return getSuperTypeOfDerivedTypes(types)
 	default:
 		return nil
