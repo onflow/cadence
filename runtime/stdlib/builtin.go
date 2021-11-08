@@ -120,6 +120,7 @@ var BuiltinFunctions = StandardLibraryFunctions{
 	PanicFunction,
 	CreatePublicKeyFunction,
 	AggregateBLSSignaturesFunction,
+	AggregateBLSPublicKeysFunction,
 }
 
 // LogFunction
@@ -205,6 +206,33 @@ var AggregateBLSSignaturesFunction = NewStandardLibraryFunction(
 		ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.ByteArrayType),
 	},
 	aggregateBLSSignaturesFunctionDocString,
+	func(invocation interpreter.Invocation) interpreter.Value {
+		panic("unimplemented")
+	},
+)
+
+const aggregateBLSPublicKeysFunctionDocString = `
+This is a specific function for the BLS signature scheme. 
+It aggregates multiple BLS public keys into one.
+
+The order of the public keys in the slice does not matter since the aggregation is commutative. 
+No subgroup membership check is performed on the input keys.
+The function errors if the array is empty or any of the input keys is not a BLS key.
+`
+
+var AggregateBLSPublicKeysFunction = NewStandardLibraryFunction(
+	"AggregateBLSPublicKeys",
+	&sema.FunctionType{
+		Parameters: []*sema.Parameter{
+			{
+				Label:          sema.ArgumentLabelNotRequired,
+				Identifier:     "keys",
+				TypeAnnotation: sema.NewTypeAnnotation(&sema.VariableSizedType{Type: sema.PublicKeyType}),
+			},
+		},
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.PublicKeyType),
+	},
+	aggregateBLSPublicKeysFunctionDocString,
 	func(invocation interpreter.Invocation) interpreter.Value {
 		panic("unimplemented")
 	},
