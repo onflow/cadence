@@ -119,6 +119,7 @@ var BuiltinFunctions = StandardLibraryFunctions{
 	AssertFunction,
 	PanicFunction,
 	CreatePublicKeyFunction,
+	AggregateBLSSignaturesFunction,
 }
 
 // LogFunction
@@ -176,6 +177,36 @@ var CreatePublicKeyFunction = NewStandardLibraryFunction(
 			signAlgo,
 			inter.PublicKeyValidationHandler,
 		)
+	},
+)
+
+const aggregateBLSSignaturesFunctionDocString = `
+This is a specific function for the BLS signature scheme. 
+It aggregates multiple BLS signatures into one, 
+considering the proof of possession as a defense against rogue attacks.
+
+Signatures could be generated from the same or distinct messages, 
+they could also be the aggregation of other signatures.
+The order of the signatures in the slice does not matter since the aggregation is commutative. 
+No subgroup membership check is performed on the input signatures.
+The function errors if the array is empty or if decoding one of the signature fails. 
+`
+
+var AggregateBLSSignaturesFunction = NewStandardLibraryFunction(
+	"AggregateBLSSignatures",
+	&sema.FunctionType{
+		Parameters: []*sema.Parameter{
+			{
+				Label:          sema.ArgumentLabelNotRequired,
+				Identifier:     "signatures",
+				TypeAnnotation: sema.NewTypeAnnotation(&sema.VariableSizedType{Type: sema.ByteArrayType}),
+			},
+		},
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.ByteArrayType),
+	},
+	aggregateBLSSignaturesFunctionDocString,
+	func(invocation interpreter.Invocation) interpreter.Value {
+		panic("unimplemented")
 	},
 )
 
