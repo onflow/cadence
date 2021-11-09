@@ -33,6 +33,8 @@ type TypeTag struct {
 }
 
 var allTypeTags = map[TypeTag]bool{}
+var allLowerMaskedTypeTags []TypeTag
+var allUpperMaskedTypeTags []TypeTag
 
 func newTypeTagFromLowerMask(mask uint64) TypeTag {
 	typeTag := TypeTag{
@@ -45,6 +47,8 @@ func newTypeTagFromLowerMask(mask uint64) TypeTag {
 	}
 
 	allTypeTags[typeTag] = true
+
+	allLowerMaskedTypeTags = append(allLowerMaskedTypeTags, typeTag)
 
 	return typeTag
 }
@@ -60,6 +64,8 @@ func newTypeTagFromUpperMask(mask uint64) TypeTag {
 	}
 
 	allTypeTags[typeTag] = true
+
+	allUpperMaskedTypeTags = append(allUpperMaskedTypeTags, typeTag)
 
 	return typeTag
 }
@@ -353,6 +359,16 @@ func LeastCommonSuperType(types ...Type) Type {
 
 func findCommonSuperType(joinedTypeTag TypeTag, types ...Type) Type {
 	var superType Type
+
+	if joinedTypeTag == NeverTypeTag {
+		return NeverType
+	}
+
+	// Remove 'Never' type out of the way.
+	// Because 'Never' is a subtype of any other type. So
+	// finding super type for the rest of the types is sufficient.
+	joinedTypeTag = joinedTypeTag.And(NeverTypeTag.Not())
+
 	if joinedTypeTag.upperMask != 0 {
 		superType = findSuperTypeFromUpperMask(joinedTypeTag, types)
 	} else {
@@ -412,6 +428,19 @@ func findCommonSuperType(joinedTypeTag TypeTag, types ...Type) Type {
 
 func findSuperTypeFromLowerMask(joinedTypeTag TypeTag, types []Type) Type {
 	switch joinedTypeTag.lowerMask {
+
+	case numberTypeMask:
+		return NumberType
+	case signedNumberTypeMask:
+		return SignedNumberType
+	case integerTypeMask:
+		return IntegerType
+	case signedIntegerTypeMask:
+		return SignedIntegerType
+	case fixedPointTypeMask:
+		return FixedPointType
+	case signedFixedPointTypeMask:
+		return SignedFixedPointType
 
 	case intTypeMask:
 		return IntType
@@ -479,14 +508,24 @@ func findSuperTypeFromLowerMask(joinedTypeTag TypeTag, types []Type) Type {
 		return BlockType
 	case deployedContractMask:
 		return DeployedContractType
+	case pathTypeMask:
+		return PathType
 	case privatePathTypeMask:
 		return PrivatePathType
 	case publicPathTypeMask:
 		return PublicPathType
 	case storagePathTypeMask:
 		return StoragePathType
+	case capabilityPathTypeMask:
+		return CapabilityPathType
+	case anyStructTypeMask:
+		return AnyStructType
+	case anyResourceTypeMask:
+		return AnyResourceType
 	case anyTypeMask:
 		return AnyType
+	case noTypeMask:
+		return InvalidType
 
 	case compositeTypeMask:
 		// We reach here if all are composite types.
@@ -494,6 +533,11 @@ func findSuperTypeFromLowerMask(joinedTypeTag TypeTag, types []Type) Type {
 		// common supertype based on the member types.
 		var prevType Type
 		for _, typ := range types {
+			// Ignore 'Never' type as it doesn't affect the supertype.
+			if typ == NeverType {
+				continue
+			}
+
 			if prevType == nil {
 				prevType = typ
 				continue
@@ -517,12 +561,16 @@ func findSuperTypeFromLowerMask(joinedTypeTag TypeTag, types []Type) Type {
 
 		return getSuperTypeOfDerivedTypes(types)
 	default:
+		// not homogenous. Return nil and continue on advanced checks.
 		return nil
 	}
 }
 
 func findSuperTypeFromUpperMask(joinedTypeTag TypeTag, types []Type) Type {
 	switch joinedTypeTag.upperMask {
+
+	case invalidTypeMask:
+		return InvalidType
 
 	// All derived types goes here.
 	case capabilityTypeMask,
@@ -541,6 +589,12 @@ func getSuperTypeOfDerivedTypes(types []Type) Type {
 	// common supertype based on the member types.
 	var prevType Type
 	for _, typ := range types {
+		// 'Never' type doesn't affect the supertype.
+		// Hence, ignore them
+		if typ == NeverType {
+			continue
+		}
+
 		if prevType == nil {
 			prevType = typ
 			continue
@@ -549,6 +603,10 @@ func getSuperTypeOfDerivedTypes(types []Type) Type {
 		if !typ.Equal(prevType) {
 			return commonSuperTypeOfHeterogeneousTypes(types)
 		}
+	}
+
+	if prevType == nil {
+		return InvalidType
 	}
 
 	return prevType
@@ -581,7 +639,15 @@ func commonSuperTypeOfComposites(types []Type) Type {
 
 	hasCommonInterface := true
 
-	for i, typ := range types {
+	firstType := true
+
+	for _, typ := range types {
+
+		// Ignore 'Never' type as it doesn't affect the supertype.
+		if typ == NeverType {
+			continue
+		}
+
 		isResource := typ.IsResourceType()
 		hasResources = hasResources || isResource
 		hasStructs = hasStructs || !isResource
@@ -598,11 +664,13 @@ func commonSuperTypeOfComposites(types []Type) Type {
 
 		compositeType := typ.(*CompositeType)
 
-		if i == 0 {
+		// NOTE: index 0 may not always be the first type, since there can be 'Never' types.
+		if firstType {
 			for _, interfaceType := range compositeType.ExplicitInterfaceConformances {
 				commonInterfaces[interfaceType.QualifiedIdentifier()] = true
 				commonInterfacesList = append(commonInterfacesList, interfaceType)
 			}
+			firstType = false
 		} else {
 			intersection := map[string]bool{}
 			commonInterfacesList = make([]*InterfaceType, 0)
