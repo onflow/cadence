@@ -1874,8 +1874,7 @@ func (interpreter *Interpreter) checkValueTransferTargetType(value Value, target
 		return true
 	}
 
-	valueDynamicType := value.DynamicType(interpreter, SeenReferences{})
-	if interpreter.IsSubType(valueDynamicType, targetType) {
+	if interpreter.IsSubType(value.StaticType(), targetType) {
 		return true
 	}
 
@@ -1888,18 +1887,19 @@ func (interpreter *Interpreter) checkValueTransferTargetType(value Value, target
 	//
 	// For now, make this check more lenient and accept any function type (or Any/AnyStruct)
 
-	unwrappedValueDynamicType := UnwrapOptionalDynamicType(valueDynamicType)
-	if _, ok := unwrappedValueDynamicType.(FunctionDynamicType); ok {
-		unwrappedTargetType := sema.UnwrapOptionalType(targetType)
-		if _, ok := unwrappedTargetType.(*sema.FunctionType); ok {
-			return true
-		}
-
-		switch unwrappedTargetType {
-		case sema.AnyStructType, sema.AnyType:
-			return true
-		}
-	}
+	//valueDynamicType := value.DynamicType(interpreter, SeenReferences{})
+	//unwrappedValueDynamicType := UnwrapOptionalDynamicType(valueDynamicType)
+	//if _, ok := unwrappedValueDynamicType.(FunctionDynamicType); ok {
+	//	unwrappedTargetType := sema.UnwrapOptionalType(targetType)
+	//	if _, ok := unwrappedTargetType.(*sema.FunctionType); ok {
+	//		return true
+	//	}
+	//
+	//	switch unwrappedTargetType {
+	//	case sema.AnyStructType, sema.AnyType:
+	//		return true
+	//	}
+	//}
 
 	return false
 }
@@ -3072,7 +3072,7 @@ func defineStringFunction(activation *VariableActivation) {
 // - Character
 // - Block
 
-func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Type) bool {
+func (interpreter *Interpreter) IsSubType_Old(subType DynamicType, superType sema.Type) bool {
 	if superType == sema.AnyType {
 		return true
 	}
@@ -3156,7 +3156,7 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 		}
 
 		for _, elementType := range typedSubType.ElementTypes {
-			if !interpreter.IsSubType(elementType, superTypeElementType) {
+			if !interpreter.IsSubType_Old(elementType, superTypeElementType) {
 				return false
 			}
 		}
@@ -3173,8 +3173,8 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 			}
 
 			for _, entryTypes := range typedSubType.EntryTypes {
-				if !interpreter.IsSubType(entryTypes.KeyType, typedSuperType.KeyType) ||
-					!interpreter.IsSubType(entryTypes.ValueType, typedSuperType.ValueType) {
+				if !interpreter.IsSubType_Old(entryTypes.KeyType, typedSuperType.KeyType) ||
+					!interpreter.IsSubType_Old(entryTypes.ValueType, typedSuperType.ValueType) {
 
 					return false
 				}
@@ -3200,7 +3200,7 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 
 	case SomeDynamicType:
 		if typedSuperType, ok := superType.(*sema.OptionalType); ok {
-			return interpreter.IsSubType(typedSubType.InnerType, typedSuperType.Type)
+			return interpreter.IsSubType_Old(typedSubType.InnerType, typedSuperType.Type)
 		}
 
 		switch superType {
@@ -3214,7 +3214,7 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 			// First, check that the dynamic type of the referenced value
 			// is a subtype of the super type
 
-			if !interpreter.IsSubType(typedSubType.InnerType(), typedSuperType.Type) {
+			if !interpreter.IsSubType_Old(typedSubType.InnerType(), typedSuperType.Type) {
 				return false
 			}
 
@@ -3302,6 +3302,11 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 	}
 
 	return false
+}
+
+func (interpreter *Interpreter) IsSubType(subType StaticType, superType sema.Type) bool {
+	subTypeSemaType := interpreter.MustConvertStaticToSemaType(subType)
+	return sema.IsSubType(subTypeSemaType, superType)
 }
 
 // PathToStorageKey returns the storage identifier with the proper prefix
@@ -3395,8 +3400,7 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 
 				ty := typeParameterPair.Value
 
-				dynamicType := value.Value.DynamicType(interpreter, SeenReferences{})
-				if !interpreter.IsSubType(dynamicType, ty) {
+				if !interpreter.IsSubType(value.Value.StaticType(), ty) {
 					return NilValue{}
 				}
 
@@ -3944,8 +3948,7 @@ func (interpreter *Interpreter) isInstanceFunction(self Value) *HostFunctionValu
 
 			semaType := interpreter.MustConvertStaticToSemaType(staticType)
 			// NOTE: not invocation.Self, as that is only set for composite values
-			dynamicType := self.DynamicType(interpreter, SeenReferences{})
-			result := interpreter.IsSubType(dynamicType, semaType)
+			result := interpreter.IsSubType(self.StaticType(), semaType)
 			return BoolValue(result)
 		},
 		sema.IsInstanceFunctionType,
@@ -3972,8 +3975,7 @@ func (interpreter *Interpreter) ExpectType(
 	expectedType sema.Type,
 	getLocationRange func() LocationRange,
 ) {
-	dynamicType := value.DynamicType(interpreter, SeenReferences{})
-	if !interpreter.IsSubType(dynamicType, expectedType) {
+	if !interpreter.IsSubType(value.StaticType(), expectedType) {
 		var locationRange LocationRange
 		if getLocationRange != nil {
 			locationRange = getLocationRange()
@@ -3991,9 +3993,8 @@ func (interpreter *Interpreter) checkContainerMutation(
 	getLocationRange func() LocationRange,
 ) {
 	expectedType := interpreter.MustConvertStaticToSemaType(elementType)
-	actualType := element.DynamicType(interpreter, SeenReferences{})
 
-	if !interpreter.IsSubType(actualType, expectedType) {
+	if !interpreter.IsSubType(element.StaticType(), expectedType) {
 		panic(ContainerMutationError{
 			ExpectedType:  expectedType,
 			LocationRange: getLocationRange(),

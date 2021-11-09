@@ -8473,11 +8473,11 @@ func (v *CompositeValue) ConformsToDynamicType(
 			return false
 		}
 
-		fieldDynamicType := value.DynamicType(interpreter, SeenReferences{})
-
-		if !interpreter.IsSubType(fieldDynamicType, member.TypeAnnotation.Type) {
+		if !interpreter.IsSubType(value.StaticType(), member.TypeAnnotation.Type) {
 			return false
 		}
+
+		fieldDynamicType := value.DynamicType(interpreter, SeenReferences{})
 
 		if !value.ConformsToDynamicType(
 			interpreter,
@@ -9936,9 +9936,9 @@ func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter) *Value
 		value := referenced.Value
 
 		if v.BorrowedType != nil {
-			dynamicType := value.DynamicType(interpreter, SeenReferences{})
-			if !interpreter.IsSubType(dynamicType, v.BorrowedType) {
-				interpreter.IsSubType(dynamicType, v.BorrowedType)
+			staticType := value.StaticType()
+			if !interpreter.IsSubType(staticType, v.BorrowedType) {
+				interpreter.IsSubType(staticType, v.BorrowedType)
 				return nil
 			}
 		}
@@ -10688,8 +10688,7 @@ func accountGetCapabilityFunction(
 		func(invocation Invocation) Value {
 
 			path := invocation.Arguments[0].(PathValue)
-			pathDynamicType := path.DynamicType(invocation.Interpreter, SeenReferences{})
-			if !invocation.Interpreter.IsSubType(pathDynamicType, pathType) {
+			if !invocation.Interpreter.IsSubType(path.StaticType(), pathType) {
 				panic(TypeMismatchError{
 					ExpectedType:  pathType,
 					LocationRange: invocation.GetLocationRange(),
