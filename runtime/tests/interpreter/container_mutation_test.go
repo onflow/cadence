@@ -555,7 +555,8 @@ func TestDictionaryMutation(t *testing.T) {
 		assert.Equal(t,
 			&sema.OptionalType{
 				Type: sema.IntType,
-			}, mutationError.ActualType,
+			},
+			mutationError.ActualType,
 		)
 	})
 
@@ -873,7 +874,7 @@ func TestDictionaryMutation(t *testing.T) {
 		require.IsType(t, &sema.OptionalType{}, mutationError.ActualType)
 		actualOptionalType := mutationError.ActualType.(*sema.OptionalType)
 
-		assert.IsType(t, &sema.FunctionType{}, actualOptionalType.Type)
+		require.IsType(t, &sema.FunctionType{}, actualOptionalType.Type)
 		actualFuncType := actualOptionalType.Type.(*sema.FunctionType)
 
 		assert.Equal(t, sema.VoidType, actualFuncType.ReturnTypeAnnotation.Type)
