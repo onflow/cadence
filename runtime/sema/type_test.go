@@ -19,6 +19,7 @@
 package sema
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -706,6 +707,8 @@ func TestIdentifierCacheUpdate(t *testing.T) {
 func TestCommonSuperType(t *testing.T) {
 
 	t.Run("Duplicate Mask", func(t *testing.T) {
+		t.Parallel()
+
 		defer func() {
 			if r := recover(); r != nil {
 				err, _ := r.(error)
@@ -744,9 +747,11 @@ func TestCommonSuperType(t *testing.T) {
 	}
 
 	t.Run("All types", func(t *testing.T) {
+		t.Parallel()
+
 		// super type of similar types should be the type itself.
 		// i.e: super type of collection of T's should be T.
-		// Make sure its true for all known types.
+		// Make sure it's true for all known types.
 
 		tests := make([]testCase, 0)
 
@@ -769,6 +774,8 @@ func TestCommonSuperType(t *testing.T) {
 	})
 
 	t.Run("Simple types", func(t *testing.T) {
+		t.Parallel()
+
 		tests := []testCase{
 			{
 				name: "homogenous integer types",
@@ -882,12 +889,30 @@ func TestCommonSuperType(t *testing.T) {
 				},
 				expectedSuperType: AnyStructType,
 			},
+			{
+				name: "never type",
+				types: []Type{
+					NeverType,
+					NeverType,
+				},
+				expectedSuperType: NeverType,
+			},
+			{
+				name: "never with numerics",
+				types: []Type{
+					IntType,
+					Int8Type,
+					NeverType,
+				},
+				expectedSuperType: SignedIntegerType,
+			},
 		}
 
 		testLeastCommonSuperType(t, tests)
 	})
 
 	t.Run("Structs & Resources", func(t *testing.T) {
+		t.Parallel()
 
 		testLocation := common.StringLocation("test")
 
@@ -978,7 +1003,10 @@ func TestCommonSuperType(t *testing.T) {
 					newCompositeWithInterfaces("Bar", interfaceType2, interfaceType3),
 					newCompositeWithInterfaces("Baz", interfaceType1, interfaceType2, interfaceType3),
 				},
-				expectedSuperType: interfaceType2,
+				expectedSuperType: &RestrictedType{
+					Type:         AnyStructType,
+					Restrictions: []*InterfaceType{interfaceType2},
+				},
 			},
 			{
 				name: "multiple common interfaces",
@@ -986,7 +1014,10 @@ func TestCommonSuperType(t *testing.T) {
 					newCompositeWithInterfaces("Foo", interfaceType1, interfaceType2),
 					newCompositeWithInterfaces("Baz", interfaceType1, interfaceType2, interfaceType3),
 				},
-				expectedSuperType: interfaceType1,
+				expectedSuperType: &RestrictedType{
+					Type:         AnyStructType,
+					Restrictions: []*InterfaceType{interfaceType1, interfaceType2},
+				},
 			},
 			{
 				name: "no common interfaces",
@@ -997,12 +1028,24 @@ func TestCommonSuperType(t *testing.T) {
 				},
 				expectedSuperType: AnyStructType,
 			},
+			{
+				name: "structs with never",
+				types: []Type{
+					NeverType,
+					PublicKeyType,
+					PublicKeyType,
+					NeverType,
+					PublicKeyType,
+				},
+				expectedSuperType: PublicKeyType,
+			},
 		}
 
 		testLeastCommonSuperType(t, tests)
 	})
 
 	t.Run("Arrays", func(t *testing.T) {
+		t.Parallel()
 
 		stringArray := &VariableSizedType{
 			Type: StringType,
@@ -1089,12 +1132,35 @@ func TestCommonSuperType(t *testing.T) {
 				},
 				expectedSuperType: AnyType,
 			},
+			{
+				name: "covariant arrays",
+				types: []Type{
+					&VariableSizedType{
+						Type: IntType,
+					},
+					&VariableSizedType{
+						Type: Int8Type,
+					},
+				},
+				expectedSuperType: AnyStructType,
+			},
+			{
+				name: "arrays with never",
+				types: []Type{
+					NeverType,
+					stringArray,
+					NeverType,
+					stringArray,
+				},
+				expectedSuperType: stringArray,
+			},
 		}
 
 		testLeastCommonSuperType(t, tests)
 	})
 
 	t.Run("Dictionaries", func(t *testing.T) {
+		t.Parallel()
 
 		stringStringDictionary := &DictionaryType{
 			KeyType:   StringType,
@@ -1188,12 +1254,24 @@ func TestCommonSuperType(t *testing.T) {
 				},
 				expectedSuperType: AnyType,
 			},
+			{
+				name: "dictionaries with never",
+				types: []Type{
+					NeverType,
+					stringStringDictionary,
+					NeverType,
+					stringStringDictionary,
+				},
+				expectedSuperType: stringStringDictionary,
+			},
 		}
 
 		testLeastCommonSuperType(t, tests)
 	})
 
 	t.Run("References types", func(t *testing.T) {
+		t.Parallel()
+
 		tests := []testCase{
 			{
 				name: "homogenous references",
@@ -1252,6 +1330,8 @@ func TestCommonSuperType(t *testing.T) {
 	})
 
 	t.Run("Path types", func(t *testing.T) {
+		t.Parallel()
+
 		tests := []testCase{
 			{
 				name: "homogenous paths",
@@ -1293,4 +1373,300 @@ func TestCommonSuperType(t *testing.T) {
 		testLeastCommonSuperType(t, tests)
 	})
 
+	t.Run("Restricted types", func(t *testing.T) {
+		t.Parallel()
+
+		testLocation := common.StringLocation("test")
+
+		interfaceType1 := &InterfaceType{
+			Location:      testLocation,
+			Identifier:    "I1",
+			CompositeKind: common.CompositeKindStructure,
+			Members:       NewStringMemberOrderedMap(),
+		}
+
+		restrictedType1 := &RestrictedType{
+			Type:         AnyStructType,
+			Restrictions: []*InterfaceType{interfaceType1},
+		}
+
+		restrictedType2 := &RestrictedType{
+			Type:         AnyResourceType,
+			Restrictions: []*InterfaceType{interfaceType1},
+		}
+
+		tests := []testCase{
+			{
+				name: "homogenous",
+				types: []Type{
+					restrictedType1,
+					restrictedType1,
+				},
+				expectedSuperType: restrictedType1,
+			},
+			{
+				name: "heterogeneous",
+				types: []Type{
+					restrictedType1,
+					restrictedType2,
+				},
+				expectedSuperType: AnyType,
+			},
+		}
+
+		testLeastCommonSuperType(t, tests)
+	})
+
+	t.Run("Capability types", func(t *testing.T) {
+		t.Parallel()
+
+		testLocation := common.StringLocation("test")
+
+		interfaceType1 := &InterfaceType{
+			Location:      testLocation,
+			Identifier:    "I1",
+			CompositeKind: common.CompositeKindStructure,
+			Members:       NewStringMemberOrderedMap(),
+		}
+
+		restrictedType1 := &RestrictedType{
+			Type:         AnyStructType,
+			Restrictions: []*InterfaceType{interfaceType1},
+		}
+
+		restrictedType2 := &RestrictedType{
+			Type:         AnyResourceType,
+			Restrictions: []*InterfaceType{interfaceType1},
+		}
+
+		tests := []testCase{
+			{
+				name: "homogenous",
+				types: []Type{
+					restrictedType1,
+					restrictedType1,
+				},
+				expectedSuperType: restrictedType1,
+			},
+			{
+				name: "heterogeneous",
+				types: []Type{
+					restrictedType1,
+					restrictedType2,
+				},
+				expectedSuperType: AnyType,
+			},
+		}
+
+		testLeastCommonSuperType(t, tests)
+	})
+
+	t.Run("Function types", func(t *testing.T) {
+		t.Parallel()
+
+		funcType1 := &FunctionType{
+			Parameters: []*Parameter{
+				{
+					TypeAnnotation: NewTypeAnnotation(StringType),
+				},
+			},
+			ReturnTypeAnnotation: NewTypeAnnotation(Int8Type),
+			Members:              NewStringMemberOrderedMap(),
+		}
+
+		funcType2 := &FunctionType{
+			Parameters: []*Parameter{
+				{
+					TypeAnnotation: NewTypeAnnotation(IntType),
+				},
+			},
+			ReturnTypeAnnotation: NewTypeAnnotation(Int8Type),
+			Members:              NewStringMemberOrderedMap(),
+		}
+
+		tests := []testCase{
+			{
+				name: "homogenous",
+				types: []Type{
+					funcType1,
+					funcType1,
+				},
+				expectedSuperType: funcType1,
+			},
+			{
+				name: "heterogeneous",
+				types: []Type{
+					funcType1,
+					funcType2,
+				},
+				expectedSuperType: AnyStructType,
+			},
+		}
+
+		testLeastCommonSuperType(t, tests)
+	})
+
+	t.Run("Lower mask types", func(t *testing.T) {
+		for _, typeTag := range allLowerMaskedTypeTags {
+			// Upper mask must be zero
+			assert.Equal(t, uint64(0), typeTag.upperMask)
+
+			switch typeTag.lowerMask {
+			case
+				// No such types available
+				unsignedIntegerTypeMask,
+				unsignedFixedPointTypeMask,
+
+				compositeTypeMask:
+				continue
+			}
+
+			// findSuperTypeFromLowerMask must implement all lower-masked types
+			t.Run(fmt.Sprintf("mask_%d", typeTag.lowerMask), func(t *testing.T) {
+				typ := findSuperTypeFromLowerMask(typeTag, nil)
+				assert.NotNil(t, typ, fmt.Sprintf("not implemented %v", typeTag))
+			})
+		}
+	})
+
+	t.Run("Upper mask types", func(t *testing.T) {
+		for _, typeTag := range allUpperMaskedTypeTags {
+			// Lower mask must be zero
+			assert.Equal(t, uint64(0), typeTag.lowerMask)
+
+			// findSuperTypeFromUpperMask must implement all upper-masked types
+			t.Run(fmt.Sprintf("mask_%d", typeTag.upperMask), func(t *testing.T) {
+				typ := findSuperTypeFromUpperMask(typeTag, nil)
+				assert.NotNil(t, typ, fmt.Sprintf("not implemented %v", typeTag))
+			})
+		}
+	})
+}
+
+func TestTypeInclusions(t *testing.T) {
+
+	t.Parallel()
+
+	// Test whether Number type-tag includes all numeric types.
+	t.Run("Number", func(t *testing.T) {
+		t.Parallel()
+
+		for _, typ := range AllNumberTypes {
+			t.Run(typ.String(), func(t *testing.T) {
+				t.Parallel()
+				assert.True(t, NumberTypeTag.ContainsAny(typ.Tag()))
+			})
+		}
+	})
+
+	t.Run("Integer", func(t *testing.T) {
+		t.Parallel()
+
+		for _, typ := range AllIntegerTypes {
+			t.Run(typ.String(), func(t *testing.T) {
+				t.Parallel()
+				assert.True(t, IntegerTypeTag.ContainsAny(typ.Tag()))
+			})
+		}
+	})
+
+	t.Run("SignedInteger", func(t *testing.T) {
+		t.Parallel()
+
+		for _, typ := range AllSignedIntegerTypes {
+			t.Run(typ.String(), func(t *testing.T) {
+				t.Parallel()
+				assert.True(t, SignedIntegerTypeTag.ContainsAny(typ.Tag()))
+			})
+		}
+	})
+
+	t.Run("UnsignedInteger", func(t *testing.T) {
+		t.Parallel()
+
+		for _, typ := range AllUnsignedIntegerTypes {
+			t.Run(typ.String(), func(t *testing.T) {
+				t.Parallel()
+				assert.True(t, UnsignedIntegerTypeTag.ContainsAny(typ.Tag()))
+			})
+		}
+	})
+
+	t.Run("FixedPoint", func(t *testing.T) {
+		t.Parallel()
+
+		for _, typ := range AllFixedPointTypes {
+			t.Run(typ.String(), func(t *testing.T) {
+				t.Parallel()
+				assert.True(t, FixedPointTypeTag.ContainsAny(typ.Tag()))
+			})
+		}
+	})
+
+	t.Run("SignedFixedPoint", func(t *testing.T) {
+		t.Parallel()
+
+		for _, typ := range AllSignedFixedPointTypes {
+			t.Run(typ.String(), func(t *testing.T) {
+				t.Parallel()
+				assert.True(t, SignedFixedPointTypeTag.ContainsAny(typ.Tag()))
+			})
+		}
+	})
+
+	t.Run("UnsignedFixedPoint", func(t *testing.T) {
+		for _, typ := range AllUnsignedFixedPointTypes {
+			t.Run(typ.String(), func(t *testing.T) {
+				t.Parallel()
+				assert.True(t, UnsignedFixedPointTypeTag.ContainsAny(typ.Tag()))
+			})
+		}
+	})
+
+	// Test whether Any type-tag includes all the types.
+	t.Run("Any", func(t *testing.T) {
+		t.Parallel()
+
+		err := BaseTypeActivation.ForEach(func(name string, variable *Variable) error {
+			t.Run(name, func(t *testing.T) {
+				t.Parallel()
+
+				typ := variable.Type
+				if _, ok := typ.(*CompositeType); ok {
+					return
+				}
+
+				assert.True(t, AnyTypeTag.ContainsAny(typ.Tag()))
+			})
+			return nil
+		})
+
+		require.NoError(t, err)
+	})
+
+	// Test whether AnyStruct type-tag includes all the pre-known AnyStruct types.
+	t.Run("AnyStruct", func(t *testing.T) {
+		t.Parallel()
+
+		err := BaseTypeActivation.ForEach(func(name string, variable *Variable) error {
+			t.Run(name, func(t *testing.T) {
+				t.Parallel()
+
+				typ := variable.Type
+
+				if _, ok := typ.(*CompositeType); ok {
+					return
+				}
+
+				if typ.IsResourceType() {
+					return
+				}
+
+				assert.True(t, AnyStructTypeTag.ContainsAny(typ.Tag()))
+			})
+			return nil
+		})
+
+		require.NoError(t, err)
+	})
 }

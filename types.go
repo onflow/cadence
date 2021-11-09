@@ -71,19 +71,6 @@ func (t OptionalType) ID() string {
 	return fmt.Sprintf("%s?", t.Type.ID())
 }
 
-// Variable
-
-type Variable struct {
-	Type Type
-}
-
-func (Variable) isType() {}
-
-// TODO:
-func (Variable) ID() string {
-	panic("not implemented")
-}
-
 // MetaType
 
 type MetaType struct{}
@@ -441,8 +428,8 @@ func (t VariableSizedArrayType) ID() string {
 	return fmt.Sprintf("[%s]", t.ElementType.ID())
 }
 
-func (v VariableSizedArrayType) Element() Type {
-	return v.ElementType
+func (t VariableSizedArrayType) Element() Type {
+	return t.ElementType
 }
 
 // ConstantSizedArrayType
@@ -458,8 +445,8 @@ func (t ConstantSizedArrayType) ID() string {
 	return fmt.Sprintf("[%s;%d]", t.ElementType.ID(), t.Size)
 }
 
-func (v ConstantSizedArrayType) Element() Type {
-	return v.ElementType
+func (t ConstantSizedArrayType) Element() Type {
+	return t.ElementType
 }
 
 // DictionaryType
@@ -777,39 +764,26 @@ func (t *ContractInterfaceType) InterfaceInitializers() [][]Parameter {
 
 // Function
 
-type Function struct {
+type FunctionType struct {
 	typeID     string
 	Parameters []Parameter
 	ReturnType Type
 }
 
-func (t Function) isType() {}
+func (FunctionType) isType() {}
 
-func (t Function) ID() string {
+func (t FunctionType) ID() string {
 	return t.typeID
 }
 
-func (t Function) WithID(id string) Function {
+func (t FunctionType) WithID(id string) FunctionType {
 	t.typeID = id
 	return t
-}
-
-// ResourcePointer
-
-type ResourcePointer struct {
-	TypeName string
-}
-
-func (ResourcePointer) isType() {}
-
-func (t ResourcePointer) ID() string {
-	return t.TypeName
 }
 
 // ReferenceType
 
 type ReferenceType struct {
-	typeID     string
 	Authorized bool
 	Type       Type
 }
@@ -817,12 +791,11 @@ type ReferenceType struct {
 func (ReferenceType) isType() {}
 
 func (t ReferenceType) ID() string {
-	return t.typeID
-}
-
-func (t ReferenceType) WithID(id string) ReferenceType {
-	t.typeID = id
-	return t
+	id := fmt.Sprintf("&%s", t.Type.ID())
+	if t.Authorized {
+		id = "auth" + id
+	}
+	return id
 }
 
 // RestrictedType
@@ -907,19 +880,16 @@ func (PrivatePathType) ID() string {
 // CapabilityType
 
 type CapabilityType struct {
-	typeID     string
 	BorrowType Type
 }
 
 func (CapabilityType) isType() {}
 
 func (t CapabilityType) ID() string {
-	return t.typeID
-}
-
-func (t CapabilityType) WithID(id string) CapabilityType {
-	t.typeID = id
-	return t
+	if t.BorrowType != nil {
+		return fmt.Sprintf("Capability<%s>", t.BorrowType.ID())
+	}
+	return "Capability"
 }
 
 // EnumType
@@ -931,7 +901,7 @@ type EnumType struct {
 	Initializers        [][]Parameter
 }
 
-func (t *EnumType) isType() {}
+func (*EnumType) isType() {}
 
 func (t *EnumType) ID() string {
 	if t.Location == nil {

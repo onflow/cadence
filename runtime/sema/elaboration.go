@@ -42,11 +42,13 @@ type Elaboration struct {
 	CompositeTypeDeclarations           map[*CompositeType]*ast.CompositeDeclaration
 	InterfaceDeclarationTypes           map[*ast.InterfaceDeclaration]*InterfaceType
 	InterfaceTypeDeclarations           map[*InterfaceType]*ast.InterfaceDeclaration
-	ConstructorFunctionTypes            map[*ast.SpecialFunctionDeclaration]*ConstructorFunctionType
+	ConstructorFunctionTypes            map[*ast.SpecialFunctionDeclaration]*FunctionType
 	FunctionExpressionFunctionType      map[*ast.FunctionExpression]*FunctionType
+	InvocationExpressionReceiverTypes   map[*ast.InvocationExpression]Type
 	InvocationExpressionArgumentTypes   map[*ast.InvocationExpression][]Type
 	InvocationExpressionParameterTypes  map[*ast.InvocationExpression][]Type
 	InvocationExpressionReturnTypes     map[*ast.InvocationExpression]Type
+	InvocationExpressionTypeArguments   map[*ast.InvocationExpression]*TypeParameterTypeOrderedMap
 	CastingStaticValueTypes             map[*ast.CastingExpression]Type
 	CastingTargetTypes                  map[*ast.CastingExpression]Type
 	ReturnStatementValueTypes           map[*ast.ReturnStatement]Type
@@ -64,15 +66,15 @@ type Elaboration struct {
 	TransactionDeclarationTypes         map[*ast.TransactionDeclaration]*TransactionType
 	SwapStatementLeftTypes              map[*ast.SwapStatement]Type
 	SwapStatementRightTypes             map[*ast.SwapStatement]Type
-	IsResourceMoveIndexExpression       map[*ast.IndexExpression]bool
+	// IsNestedResourceMoveExpression indicates if the access the index or member expression
+	// is implicitly moving a resource out of the container, e.g. in a shift or swap statement.
+	IsNestedResourceMoveExpression      map[ast.Expression]struct{}
 	CompositeNestedDeclarations         map[*ast.CompositeDeclaration]map[string]ast.Declaration
 	InterfaceNestedDeclarations         map[*ast.InterfaceDeclaration]map[string]ast.Declaration
 	PostConditionsRewrite               map[*ast.Conditions]PostConditionsRewrite
 	EmitStatementEventTypes             map[*ast.EmitStatement]*CompositeType
-	// Keyed by qualified identifier
 	CompositeTypes                      map[TypeID]*CompositeType
 	InterfaceTypes                      map[TypeID]*InterfaceType
-	InvocationExpressionTypeArguments   map[*ast.InvocationExpression]*TypeParameterTypeOrderedMap
 	IdentifierInInvocationTypes         map[*ast.IdentifierExpression]Type
 	ImportDeclarationsResolvedLocations map[*ast.ImportDeclaration][]ResolvedLocation
 	GlobalValues                        *StringVariableOrderedMap
@@ -82,6 +84,10 @@ type Elaboration struct {
 	EffectivePredeclaredTypes           map[string]TypeDeclaration
 	isChecking                          bool
 	ReferenceExpressionBorrowTypes      map[*ast.ReferenceExpression]*ReferenceType
+
+	// Only to make the go-compiler happy with semver compatibility.
+	// TODO: Remove
+	IsResourceMoveIndexExpression map[*ast.IndexExpression]bool
 }
 
 func NewElaboration() *Elaboration {
@@ -97,11 +103,13 @@ func NewElaboration() *Elaboration {
 		CompositeTypeDeclarations:           map[*CompositeType]*ast.CompositeDeclaration{},
 		InterfaceDeclarationTypes:           map[*ast.InterfaceDeclaration]*InterfaceType{},
 		InterfaceTypeDeclarations:           map[*InterfaceType]*ast.InterfaceDeclaration{},
-		ConstructorFunctionTypes:            map[*ast.SpecialFunctionDeclaration]*ConstructorFunctionType{},
+		ConstructorFunctionTypes:            map[*ast.SpecialFunctionDeclaration]*FunctionType{},
 		FunctionExpressionFunctionType:      map[*ast.FunctionExpression]*FunctionType{},
+		InvocationExpressionReceiverTypes:   map[*ast.InvocationExpression]Type{},
 		InvocationExpressionArgumentTypes:   map[*ast.InvocationExpression][]Type{},
 		InvocationExpressionParameterTypes:  map[*ast.InvocationExpression][]Type{},
 		InvocationExpressionReturnTypes:     map[*ast.InvocationExpression]Type{},
+		InvocationExpressionTypeArguments:   map[*ast.InvocationExpression]*TypeParameterTypeOrderedMap{},
 		CastingStaticValueTypes:             map[*ast.CastingExpression]Type{},
 		CastingTargetTypes:                  map[*ast.CastingExpression]Type{},
 		ReturnStatementValueTypes:           map[*ast.ReturnStatement]Type{},
@@ -119,14 +127,13 @@ func NewElaboration() *Elaboration {
 		TransactionDeclarationTypes:         map[*ast.TransactionDeclaration]*TransactionType{},
 		SwapStatementLeftTypes:              map[*ast.SwapStatement]Type{},
 		SwapStatementRightTypes:             map[*ast.SwapStatement]Type{},
-		IsResourceMoveIndexExpression:       map[*ast.IndexExpression]bool{},
+		IsNestedResourceMoveExpression:      map[ast.Expression]struct{}{},
 		CompositeNestedDeclarations:         map[*ast.CompositeDeclaration]map[string]ast.Declaration{},
 		InterfaceNestedDeclarations:         map[*ast.InterfaceDeclaration]map[string]ast.Declaration{},
 		PostConditionsRewrite:               map[*ast.Conditions]PostConditionsRewrite{},
 		EmitStatementEventTypes:             map[*ast.EmitStatement]*CompositeType{},
 		CompositeTypes:                      map[TypeID]*CompositeType{},
 		InterfaceTypes:                      map[TypeID]*InterfaceType{},
-		InvocationExpressionTypeArguments:   map[*ast.InvocationExpression]*TypeParameterTypeOrderedMap{},
 		IdentifierInInvocationTypes:         map[*ast.IdentifierExpression]Type{},
 		ImportDeclarationsResolvedLocations: map[*ast.ImportDeclaration][]ResolvedLocation{},
 		GlobalValues:                        NewStringVariableOrderedMap(),
@@ -162,13 +169,12 @@ func (e *Elaboration) FunctionEntryPointType() (*FunctionType, error) {
 		}
 	}
 
-	invokableType, ok := entryPointValue.Type.(InvokableType)
+	functionType, ok := entryPointValue.Type.(*FunctionType)
 	if !ok {
 		return nil, &InvalidEntryPointTypeError{
 			Type: entryPointValue.Type,
 		}
 	}
 
-	functionType := invokableType.InvocationFunctionType()
 	return functionType, nil
 }

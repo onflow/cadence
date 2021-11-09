@@ -59,8 +59,8 @@ func (a *Address) SetBytes(b []byte) {
 
 // Bytes returns address without leading zeros.
 // The fast path is inlined and handles the most common
-// scenario of address having no leading zeros.  Otherwise,
-// bytes() is called to trim leading zeros.
+// scenario of address having no leading zeros.
+// Otherwise, bytes() is called to trim leading zeros.
 func (a Address) Bytes() []byte {
 	if a[0] != 0 {
 		return a[:]
@@ -85,6 +85,10 @@ func (a *Address) bytes() []byte {
 func (a Address) ShortHexWithPrefix() string {
 	hexString := fmt.Sprintf("%x", [AddressLength]byte(a))
 	return fmt.Sprintf("0x%s", strings.TrimLeft(hexString, "0"))
+}
+
+func (a Address) HexWithPrefix() string {
+	return fmt.Sprintf("0x%x", [AddressLength]byte(a))
 }
 
 // HexToAddress converts a hex string to an Address.

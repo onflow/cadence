@@ -173,6 +173,9 @@ func TestFunctionSubtyping(t *testing.T) {
 							TypeAnnotation: NewTypeAnnotation(IntType),
 						},
 					},
+					ReturnTypeAnnotation: NewTypeAnnotation(
+						VoidType,
+					),
 				},
 				&FunctionType{
 					Parameters: []*Parameter{
@@ -180,6 +183,9 @@ func TestFunctionSubtyping(t *testing.T) {
 							TypeAnnotation: NewTypeAnnotation(AnyStructType),
 						},
 					},
+					ReturnTypeAnnotation: NewTypeAnnotation(
+						VoidType,
+					),
 				},
 			),
 		)
@@ -194,6 +200,9 @@ func TestFunctionSubtyping(t *testing.T) {
 							TypeAnnotation: NewTypeAnnotation(AnyStructType),
 						},
 					},
+					ReturnTypeAnnotation: NewTypeAnnotation(
+						VoidType,
+					),
 				},
 				&FunctionType{
 					Parameters: []*Parameter{
@@ -201,6 +210,9 @@ func TestFunctionSubtyping(t *testing.T) {
 							TypeAnnotation: NewTypeAnnotation(IntType),
 						},
 					},
+					ReturnTypeAnnotation: NewTypeAnnotation(
+						VoidType,
+					),
 				},
 			),
 		)
@@ -227,6 +239,37 @@ func TestFunctionSubtyping(t *testing.T) {
 				},
 				&FunctionType{
 					ReturnTypeAnnotation: NewTypeAnnotation(IntType),
+				},
+			),
+		)
+	})
+
+	t.Run("constructor != non-constructor", func(t *testing.T) {
+		assert.False(t,
+			IsSubType(
+				&FunctionType{
+					IsConstructor:        false,
+					ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
+				},
+				&FunctionType{
+					IsConstructor:        true,
+					ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
+				},
+			),
+		)
+	})
+
+	t.Run("different receiver types", func(t *testing.T) {
+		// Receiver shouldn't matter
+		assert.True(t,
+			IsSubType(
+				&FunctionType{
+					ReceiverType:         AuthAccountType,
+					ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
+				},
+				&FunctionType{
+					ReceiverType:         PublicAccountType,
+					ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
 				},
 			),
 		)

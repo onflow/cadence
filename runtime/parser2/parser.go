@@ -19,7 +19,6 @@
 package parser2
 
 import (
-	"context"
 	"fmt"
 	"io/ioutil"
 	"strings"
@@ -36,7 +35,7 @@ const lowestBindingPower = 0
 
 type parser struct {
 	// tokens is a stream of tokens from the lexer
-	tokens chan lexer.Token
+	tokens lexer.TokenStream
 	// current is the current token being parsed.
 	current lexer.Token
 	// errors are the parsing errors encountered during parsing
@@ -59,13 +58,15 @@ type parser struct {
 // See "ParseExpression", "ParseStatements" as examples.
 //
 func Parse(input string, parse func(*parser) interface{}) (result interface{}, errors []error) {
-	ctx, cancelLexer := context.WithCancel(context.Background())
-
-	defer cancelLexer()
-
 	// create a lexer, which turns the input string into tokens
-	tokens := lexer.Lex(ctx, input)
+	tokens := lexer.Lex(input)
+	return ParseTokenStream(tokens, parse)
+}
+
+func ParseTokenStream(tokens lexer.TokenStream, parse func(*parser) interface{}) (result interface{}, errors []error) {
 	p := &parser{tokens: tokens}
+
+	defer tokens.Close()
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -149,19 +150,7 @@ func (p *parser) maybeTrimBuffer() {
 func (p *parser) next() {
 	// nextFromLexer reads the next token from the lexer.
 	nextFromLexer := func() lexer.Token {
-		var ok bool
-		token, ok := <-p.tokens
-		if !ok {
-			// Channel closed, return EOF token.
-			token = lexer.Token{
-				Type: lexer.TokenEOF,
-				Range: ast.Range{
-					StartPos: p.current.EndPos,
-					EndPos:   p.current.EndPos,
-				},
-			}
-		}
-		return token
+		return p.tokens.Next()
 	}
 
 	// nextFromLexer reads the next token from the buffer tokens, assuming there are buffered tokens.
@@ -424,14 +413,18 @@ func ParseArgumentList(input string) (arguments ast.Arguments, errors []error) {
 }
 
 func ParseProgram(input string) (program *ast.Program, err error) {
+	return ParseProgramFromTokenStream(lexer.Lex(input))
+}
+
+func ParseProgramFromTokenStream(input lexer.TokenStream) (program *ast.Program, err error) {
 	var res interface{}
 	var errs []error
-	res, errs = Parse(input, func(p *parser) interface{} {
+	res, errs = ParseTokenStream(input, func(p *parser) interface{} {
 		return parseDeclarations(p, lexer.TokenEOF)
 	})
 	if len(errs) > 0 {
 		err = Error{
-			Code:   input,
+			Code:   input.Input(),
 			Errors: errs,
 		}
 	}

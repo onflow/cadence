@@ -38,24 +38,31 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 	var prepareFunctionType *sema.FunctionType
 	if declaration.Prepare != nil {
 		prepareFunction = declaration.Prepare.FunctionDeclaration
-		prepareFunctionType = transactionType.PrepareFunctionType().InvocationFunctionType()
+		prepareFunctionType = transactionType.PrepareFunctionType()
 	}
 
 	var executeFunction *ast.FunctionDeclaration
 	var executeFunctionType *sema.FunctionType
 	if declaration.Execute != nil {
 		executeFunction = declaration.Execute.FunctionDeclaration
-		executeFunctionType = transactionType.ExecuteFunctionType().InvocationFunctionType()
+		executeFunctionType = transactionType.ExecuteFunctionType()
 	}
 
 	postConditionsRewrite :=
 		interpreter.Program.Elaboration.PostConditionsRewrite[declaration.PostConditions]
 
-	self := &CompositeValue{
-		location: interpreter.Location,
-		fields:   NewStringValueOrderedMap(),
-		modified: true,
-	}
+	staticType := NewCompositeStaticType(interpreter.Location, "")
+
+	self := NewSimpleCompositeValue(
+		staticType.TypeID,
+		staticType,
+		nil,
+		nil,
+		map[string]Value{},
+		nil,
+		nil,
+		nil,
+	)
 
 	transactionFunction := NewHostFunctionValue(
 		func(invocation Invocation) Value {
@@ -89,7 +96,7 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 					transactionScope,
 				)
 
-				prepare.Invoke(invocation)
+				prepare.invoke(invocation)
 			}
 
 			var body func() controlReturn
@@ -104,7 +111,7 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 				invocationWithoutArguments.Arguments = nil
 
 				body = func() controlReturn {
-					value := execute.Invoke(invocationWithoutArguments)
+					value := execute.invoke(invocationWithoutArguments)
 					return functionReturn{
 						Value: value,
 					}
@@ -123,7 +130,15 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 				postConditionsRewrite.RewrittenPostConditions,
 				sema.VoidType,
 			)
-		})
+		},
 
-	interpreter.Transactions = append(interpreter.Transactions, &transactionFunction)
+		// This is an internally used function.
+		// So ideally wouldn't need to perform type checks.
+		nil,
+	)
+
+	interpreter.Transactions = append(
+		interpreter.Transactions,
+		transactionFunction,
+	)
 }

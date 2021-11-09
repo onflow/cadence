@@ -19,7 +19,6 @@
 package lexer
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -33,15 +32,15 @@ func TestMain(m *testing.M) {
 	goleak.VerifyTestMain(m)
 }
 
-func withTokens(tokenChan chan Token, fn func([]Token)) {
+func withTokens(tokenChan TokenStream, fn func([]Token)) {
 	tokens := make([]Token, 0)
 	for {
-		token, ok := <-tokenChan
-		if !ok {
+		token := tokenChan.Next()
+		tokens = append(tokens, token)
+		if token.Is(TokenEOF) {
 			fn(tokens)
 			return
 		}
-		tokens = append(tokens, token)
 	}
 }
 
@@ -49,9 +48,7 @@ func testLex(t *testing.T, input string, expected []Token) {
 
 	t.Parallel()
 
-	ctx := context.Background()
-
-	withTokens(Lex(ctx, input), func(tokens []Token) {
+	withTokens(Lex(input), func(tokens []Token) {
 		utils.AssertEqualWithDiff(t, expected, tokens)
 	})
 }

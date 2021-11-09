@@ -32,7 +32,6 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
-	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
@@ -71,12 +70,12 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
 		codeHashValue := event.Fields[codeHashParameterIndex]
 
-		inter, err := interpreter.NewInterpreter(nil, utils.TestLocation)
+		inter := newTestInterpreter(t)
+
+		codeHash, err := importValue(inter, codeHashValue, sema.ByteArrayType)
 		require.NoError(t, err)
 
-		importedValue := importValue(inter, codeHashValue, sema.ByteArrayType)
-
-		actualCodeHash, err := interpreter.ByteArrayValueToByteSlice(importedValue)
+		actualCodeHash, err := interpreter.ByteArrayValueToByteSlice(codeHash)
 		require.NoError(t, err)
 
 		require.Equal(t, expectedCodeHash[:], actualCodeHash)
@@ -142,13 +141,13 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			argumentCode,
 		))
 
-		runtime := NewInterpreterRuntime()
+		runtime := newTestInterpreterRuntime()
 
 		var accountCode []byte
 		var events []cadence.Event
 
 		runtimeInterface := &testRuntimeInterface{
-			storage: newTestStorage(nil, nil),
+			storage: newTestLedger(nil, nil),
 			getSigningAccounts: func() ([]Address, error) {
 				return []Address{{42}}, nil
 			},

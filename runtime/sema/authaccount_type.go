@@ -95,61 +95,61 @@ var AuthAccountType = func() *CompositeType {
 		NewPublicFunctionMember(
 			authAccountType,
 			AuthAccountAddPublicKeyField,
-			authAccountTypeAddPublicKeyFunctionType,
+			AuthAccountTypeAddPublicKeyFunctionType,
 			authAccountTypeAddPublicKeyFunctionDocString,
 		),
 		NewPublicFunctionMember(
 			authAccountType,
 			AuthAccountRemovePublicKeyField,
-			authAccountTypeRemovePublicKeyFunctionType,
+			AuthAccountTypeRemovePublicKeyFunctionType,
 			authAccountTypeRemovePublicKeyFunctionDocString,
 		),
 		NewPublicFunctionMember(
 			authAccountType,
 			AuthAccountSaveField,
-			authAccountTypeSaveFunctionType,
+			AuthAccountTypeSaveFunctionType,
 			authAccountTypeSaveFunctionDocString,
 		),
 		NewPublicFunctionMember(
 			authAccountType,
 			AuthAccountLoadField,
-			authAccountTypeLoadFunctionType,
+			AuthAccountTypeLoadFunctionType,
 			authAccountTypeLoadFunctionDocString,
 		),
 		NewPublicFunctionMember(
 			authAccountType,
 			AuthAccountCopyField,
-			authAccountTypeCopyFunctionType,
+			AuthAccountTypeCopyFunctionType,
 			authAccountTypeCopyFunctionDocString,
 		),
 		NewPublicFunctionMember(
 			authAccountType,
 			AuthAccountBorrowField,
-			authAccountTypeBorrowFunctionType,
+			AuthAccountTypeBorrowFunctionType,
 			authAccountTypeBorrowFunctionDocString,
 		),
 		NewPublicFunctionMember(
 			authAccountType,
 			AuthAccountLinkField,
-			authAccountTypeLinkFunctionType,
+			AuthAccountTypeLinkFunctionType,
 			authAccountTypeLinkFunctionDocString,
 		),
 		NewPublicFunctionMember(
 			authAccountType,
 			AuthAccountUnlinkField,
-			authAccountTypeUnlinkFunctionType,
+			AuthAccountTypeUnlinkFunctionType,
 			authAccountTypeUnlinkFunctionDocString,
 		),
 		NewPublicFunctionMember(
 			authAccountType,
 			AuthAccountGetCapabilityField,
-			authAccountTypeGetCapabilityFunctionType,
+			AuthAccountTypeGetCapabilityFunctionType,
 			authAccountTypeGetCapabilityFunctionDocString,
 		),
 		NewPublicFunctionMember(
 			authAccountType,
 			AuthAccountGetLinkTargetField,
-			accountTypeGetLinkTargetFunctionType,
+			AccountTypeGetLinkTargetFunctionType,
 			accountTypeGetLinkTargetFunctionDocString,
 		),
 		NewPublicConstantFieldMember(
@@ -171,7 +171,7 @@ var AuthAccountType = func() *CompositeType {
 	return authAccountType
 }()
 
-var authAccountTypeAddPublicKeyFunctionType = &FunctionType{
+var AuthAccountTypeAddPublicKeyFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
 			Label:      ArgumentLabelNotRequired,
@@ -190,7 +190,7 @@ const authAccountTypeAddPublicKeyFunctionDocString = `
 Adds the given byte representation of a public key to the account's keys
 `
 
-var authAccountTypeRemovePublicKeyFunctionType = &FunctionType{
+var AuthAccountTypeRemovePublicKeyFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
 			Label:      ArgumentLabelNotRequired,
@@ -209,7 +209,7 @@ const authAccountTypeRemovePublicKeyFunctionDocString = `
 Removes the public key at the given index from the account's keys
 `
 
-var authAccountTypeSaveFunctionType = func() *FunctionType {
+var AuthAccountTypeSaveFunctionType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{
 		Name:      "T",
@@ -249,7 +249,7 @@ If there is already an object stored under the given path, the program aborts.
 The path must be a storage path, i.e., only the domain ` + "`storage`" + ` is allowed
 `
 
-var authAccountTypeLoadFunctionType = func() *FunctionType {
+var AuthAccountTypeLoadFunctionType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{
 		Name:      "T",
@@ -291,7 +291,7 @@ The given type must not necessarily be exactly the same as the type of the loade
 The path must be a storage path, i.e., only the domain ` + "`storage`" + ` is allowed
 `
 
-var authAccountTypeCopyFunctionType = func() *FunctionType {
+var AuthAccountTypeCopyFunctionType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{
 		Name:      "T",
@@ -332,7 +332,7 @@ The given type must not necessarily be exactly the same as the type of the copie
 The path must be a storage path, i.e., only the domain ` + "`storage`" + ` is allowed
 `
 
-var authAccountTypeBorrowFunctionType = func() *FunctionType {
+var AuthAccountTypeBorrowFunctionType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{
 		TypeBound: &ReferenceType{
@@ -377,7 +377,7 @@ The given type must not necessarily be exactly the same as the type of the borro
 The path must be a storage path, i.e., only the domain ` + "`storage`" + ` is allowed
 `
 
-var authAccountTypeLinkFunctionType = func() *FunctionType {
+var AuthAccountTypeLinkFunctionType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{
 		TypeBound: &ReferenceType{
@@ -426,7 +426,7 @@ The link function does **not** check if the target path is valid/exists at the t
 The link is latent. The target value might be stored after the link is created, and the target value might be moved out after the link has been created.
 `
 
-var authAccountTypeUnlinkFunctionType = &FunctionType{
+var AuthAccountTypeUnlinkFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
@@ -441,7 +441,7 @@ const authAccountTypeUnlinkFunctionDocString = `
 Removes the capability at the given public or private path
 `
 
-var authAccountTypeGetCapabilityFunctionType = func() *FunctionType {
+var AuthAccountTypeGetCapabilityFunctionType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{
 		TypeBound: &ReferenceType{
@@ -472,42 +472,11 @@ var authAccountTypeGetCapabilityFunctionType = func() *FunctionType {
 	}
 }()
 
-var publicAccountTypeGetCapabilityFunctionType = func() *FunctionType {
-
-	typeParameter := &TypeParameter{
-		TypeBound: &ReferenceType{
-			Type: AnyType,
-		},
-		Name:     "T",
-		Optional: true,
-	}
-
-	return &FunctionType{
-		TypeParameters: []*TypeParameter{
-			typeParameter,
-		},
-		Parameters: []*Parameter{
-			{
-				Label:          ArgumentLabelNotRequired,
-				Identifier:     "capabilityPath",
-				TypeAnnotation: NewTypeAnnotation(PublicPathType),
-			},
-		},
-		ReturnTypeAnnotation: NewTypeAnnotation(
-			&CapabilityType{
-				BorrowType: &GenericType{
-					TypeParameter: typeParameter,
-				},
-			},
-		),
-	}
-}()
-
 const authAccountTypeGetCapabilityFunctionDocString = `
 Returns the capability at the given private or public path, or nil if it does not exist
 `
 
-var accountTypeGetLinkTargetFunctionType = &FunctionType{
+var AccountTypeGetLinkTargetFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
@@ -535,19 +504,19 @@ var AuthAccountKeysType = func() *CompositeType {
 		NewPublicFunctionMember(
 			accountKeys,
 			AccountKeysAddFunctionName,
-			authAccountKeysTypeAddFunctionType,
+			AuthAccountKeysTypeAddFunctionType,
 			authAccountKeysTypeAddFunctionDocString,
 		),
 		NewPublicFunctionMember(
 			accountKeys,
 			AccountKeysGetFunctionName,
-			accountKeysTypeGetFunctionType,
+			AccountKeysTypeGetFunctionType,
 			accountKeysTypeGetFunctionDocString,
 		),
 		NewPublicFunctionMember(
 			accountKeys,
 			AccountKeysRevokeFunctionName,
-			authAccountKeysTypeRevokeFunctionType,
+			AuthAccountKeysTypeRevokeFunctionType,
 			authAccountKeysTypeRevokeFunctionDocString,
 		),
 	}
@@ -557,7 +526,7 @@ var AuthAccountKeysType = func() *CompositeType {
 	return accountKeys
 }()
 
-var authAccountKeysTypeAddFunctionType = &FunctionType{
+var AuthAccountKeysTypeAddFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
 			Identifier:     AccountKeyPublicKeyField,
@@ -576,7 +545,7 @@ var authAccountKeysTypeAddFunctionType = &FunctionType{
 	RequiredArgumentCount: RequiredArgumentCount(3),
 }
 
-var accountKeysTypeGetFunctionType = &FunctionType{
+var AccountKeysTypeGetFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
 			Identifier:     AccountKeyKeyIndexField,
@@ -587,7 +556,7 @@ var accountKeysTypeGetFunctionType = &FunctionType{
 	RequiredArgumentCount: RequiredArgumentCount(1),
 }
 
-var authAccountKeysTypeRevokeFunctionType = &FunctionType{
+var AuthAccountKeysTypeRevokeFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
 			Identifier:     AccountKeyKeyIndexField,

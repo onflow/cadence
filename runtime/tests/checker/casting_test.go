@@ -5896,3 +5896,151 @@ func TestCheckCastAuthorizedNonCompositeReferenceType(t *testing.T) {
 
 	require.NoError(t, err)
 }
+
+func TestCheckResourceConstructorCast(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t,
+		`
+          resource R {}
+
+          let c = R as ((): @R)
+        `,
+	)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+}
+
+func TestCheckResourceConstructorReturn(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t,
+		`
+          resource R {}
+
+          fun test(): ((): @R) {
+              return R
+          }
+        `,
+	)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+}
+
+func TestCheckUnnecessaryCasts(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("var decl", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheckWithAny(t, `
+            let x: Int8 = 1 as Int8
+        `)
+
+		require.NoError(t, err)
+
+		hints := checker.Hints()
+		require.Len(t, hints, 1)
+
+		require.IsType(t, &sema.UnnecessaryCastHint{}, hints[0])
+		castHint := hints[0].(*sema.UnnecessaryCastHint)
+
+		assert.Equal(t, sema.Int8Type, castHint.TargetType)
+	})
+
+	t.Run("binary exp", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheckWithAny(t, `
+            let x: Int8 = (1 as Int8) + (1 as Int8)
+        `)
+
+		require.NoError(t, err)
+
+		hints := checker.Hints()
+		require.Len(t, hints, 2)
+
+		require.IsType(t, &sema.UnnecessaryCastHint{}, hints[0])
+		castHint := hints[0].(*sema.UnnecessaryCastHint)
+		assert.Equal(t, sema.Int8Type, castHint.TargetType)
+
+		require.IsType(t, &sema.UnnecessaryCastHint{}, hints[1])
+		castHint = hints[1].(*sema.UnnecessaryCastHint)
+		assert.Equal(t, sema.Int8Type, castHint.TargetType)
+	})
+
+	t.Run("nested casts", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheckWithAny(t, `
+            let x = (1 as Int8) as Int8
+        `)
+
+		require.NoError(t, err)
+
+		hints := checker.Hints()
+		require.Len(t, hints, 1)
+
+		require.IsType(t, &sema.UnnecessaryCastHint{}, hints[0])
+		castHint := hints[0].(*sema.UnnecessaryCastHint)
+		assert.Equal(t, sema.Int8Type, castHint.TargetType)
+	})
+
+	t.Run("arrays", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheckWithAny(t, `
+            let x: [String] = ["foo" as String]
+        `)
+
+		require.NoError(t, err)
+
+		hints := checker.Hints()
+		require.Len(t, hints, 1)
+
+		require.IsType(t, &sema.UnnecessaryCastHint{}, hints[0])
+		castHint := hints[0].(*sema.UnnecessaryCastHint)
+		assert.Equal(t, sema.StringType, castHint.TargetType)
+	})
+
+	t.Run("dictionaries", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheckWithAny(t, `
+            let x: {String: UInt8} = {"foo": 4 as UInt8}
+        `)
+
+		require.NoError(t, err)
+
+		hints := checker.Hints()
+		require.Len(t, hints, 1)
+
+		require.IsType(t, &sema.UnnecessaryCastHint{}, hints[0])
+		castHint := hints[0].(*sema.UnnecessaryCastHint)
+		assert.Equal(t, sema.UInt8Type, castHint.TargetType)
+	})
+
+	t.Run("undefined types", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheckWithAny(t, `
+            let x: T = 5 as R
+        `)
+
+		require.Error(t, err)
+
+		errors := ExpectCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.NotDeclaredError{}, errors[0])
+		assert.IsType(t, &sema.NotDeclaredError{}, errors[1])
+
+		// Shouldn't log hints for undeclared types
+		require.Len(t, checker.Hints(), 0)
+	})
+}

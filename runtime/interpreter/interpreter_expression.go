@@ -20,6 +20,7 @@ package interpreter
 
 import (
 	"math/big"
+	"time"
 
 	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/ast"
@@ -31,19 +32,27 @@ import (
 // assignmentGetterSetter returns a getter/setter function pair
 // for the target expression
 //
-func (interpreter *Interpreter) assignmentGetterSetter(target ast.Expression) getterSetter {
-	switch target := target.(type) {
+func (interpreter *Interpreter) assignmentGetterSetter(expression ast.Expression) getterSetter {
+	switch expression := expression.(type) {
 	case *ast.IdentifierExpression:
-		return interpreter.identifierExpressionGetterSetter(target)
+		return interpreter.identifierExpressionGetterSetter(expression)
 
 	case *ast.IndexExpression:
-		return interpreter.indexExpressionGetterSetter(target)
+		return interpreter.indexExpressionGetterSetter(expression)
 
 	case *ast.MemberExpression:
-		return interpreter.memberExpressionGetterSetter(target)
-	}
+		return interpreter.memberExpressionGetterSetter(expression)
 
-	panic(errors.NewUnreachableError())
+	default:
+		return getterSetter{
+			get: func(_ bool) Value {
+				return interpreter.evalExpression(expression)
+			},
+			set: func(_ Value) {
+				panic(errors.NewUnreachableError())
+			},
+		}
+	}
 }
 
 // identifierExpressionGetterSetter returns a getter/setter function pair
@@ -52,7 +61,7 @@ func (interpreter *Interpreter) assignmentGetterSetter(target ast.Expression) ge
 func (interpreter *Interpreter) identifierExpressionGetterSetter(identifierExpression *ast.IdentifierExpression) getterSetter {
 	variable := interpreter.findVariable(identifierExpression.Identifier.Identifier)
 	return getterSetter{
-		get: func() Value {
+		get: func(_ bool) Value {
 			return variable.GetValue()
 		},
 		set: func(value Value) {
@@ -65,15 +74,25 @@ func (interpreter *Interpreter) identifierExpressionGetterSetter(identifierExpre
 // for the target index expression
 //
 func (interpreter *Interpreter) indexExpressionGetterSetter(indexExpression *ast.IndexExpression) getterSetter {
-	typedResult := interpreter.evalExpression(indexExpression.TargetExpression).(ValueIndexableValue)
+	target := interpreter.evalExpression(indexExpression.TargetExpression).(ValueIndexableValue)
 	indexingValue := interpreter.evalExpression(indexExpression.IndexingExpression)
 	getLocationRange := locationRangeGetter(interpreter.Location, indexExpression)
+	_, isNestedResourceMove := interpreter.Program.Elaboration.IsNestedResourceMoveExpression[indexExpression]
 	return getterSetter{
-		get: func() Value {
-			return typedResult.Get(interpreter, getLocationRange, indexingValue)
+		target: target,
+		get: func(_ bool) Value {
+			if isNestedResourceMove {
+				return target.RemoveKey(interpreter, getLocationRange, indexingValue)
+			} else {
+				return target.GetKey(interpreter, getLocationRange, indexingValue)
+			}
 		},
 		set: func(value Value) {
-			typedResult.Set(interpreter, getLocationRange, indexingValue, value)
+			if isNestedResourceMove {
+				target.InsertKey(interpreter, getLocationRange, indexingValue, value)
+			} else {
+				target.SetKey(interpreter, getLocationRange, indexingValue, value)
+			}
 		},
 	}
 }
@@ -83,11 +102,50 @@ func (interpreter *Interpreter) indexExpressionGetterSetter(indexExpression *ast
 //
 func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *ast.MemberExpression) getterSetter {
 	target := interpreter.evalExpression(memberExpression.Expression)
-	getLocationRange := locationRangeGetter(interpreter.Location, memberExpression)
 	identifier := memberExpression.Identifier.Identifier
+	getLocationRange := locationRangeGetter(interpreter.Location, memberExpression)
+	_, isNestedResourceMove := interpreter.Program.Elaboration.IsNestedResourceMoveExpression[memberExpression]
 	return getterSetter{
-		get: func() Value {
-			return interpreter.getMember(target, getLocationRange, identifier)
+		target: target,
+		get: func(allowMissing bool) Value {
+			isOptional := memberExpression.Optional
+
+			if isOptional {
+				switch typedTarget := target.(type) {
+				case NilValue:
+					return typedTarget
+
+				case *SomeValue:
+					target = typedTarget.Value
+
+				default:
+					panic(errors.NewUnreachableError())
+				}
+			}
+
+			var resultValue Value
+			if isNestedResourceMove {
+				resultValue = target.(MemberAccessibleValue).RemoveMember(interpreter, getLocationRange, identifier)
+			} else {
+				resultValue = interpreter.getMember(target, getLocationRange, identifier)
+			}
+			if resultValue == nil && !allowMissing {
+				panic(MissingMemberValueError{
+					Name:          identifier,
+					LocationRange: getLocationRange(),
+				})
+			}
+
+			// If the member access is optional chaining, only wrap the result value
+			// in an optional, if it is not already an optional value
+
+			if isOptional {
+				if _, ok := resultValue.(OptionalValue); !ok {
+					resultValue = NewSomeValueNonCopying(resultValue)
+				}
+			}
+
+			return resultValue
 		},
 		set: func(value Value) {
 			interpreter.setMember(target, getLocationRange, identifier, value)
@@ -180,12 +238,12 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 	case ast.OperationEqual:
 		left := interpreter.evalExpression(expression.Left)
 		right := interpreter.evalExpression(expression.Right)
-		return interpreter.testEqual(left, right)
+		return interpreter.testEqual(left, right, expression)
 
 	case ast.OperationNotEqual:
 		left := interpreter.evalExpression(expression.Left)
 		right := interpreter.evalExpression(expression.Right)
-		return !interpreter.testEqual(left, right)
+		return !interpreter.testEqual(left, right, expression)
 
 	case ast.OperationOr:
 		// interpret the left-hand side
@@ -226,7 +284,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		resultType := interpreter.Program.Elaboration.BinaryExpressionResultTypes[expression]
 
 		// NOTE: important to convert both any and optional
-		return interpreter.convertAndBox(value, rightType, resultType)
+		return interpreter.ConvertAndBox(value, rightType, resultType)
 	}
 
 	panic(&unsupportedOperation{
@@ -236,7 +294,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 	})
 }
 
-func (interpreter *Interpreter) testEqual(left, right Value) BoolValue {
+func (interpreter *Interpreter) testEqual(left, right Value, hasPosition ast.HasPosition) BoolValue {
 	left = interpreter.unbox(left)
 	right = interpreter.unbox(right)
 
@@ -245,7 +303,9 @@ func (interpreter *Interpreter) testEqual(left, right Value) BoolValue {
 		return false
 	}
 
-	return BoolValue(leftEquatable.Equal(right, interpreter, true))
+	getLocationRange := locationRangeGetter(interpreter.Location, hasPosition)
+
+	return BoolValue(leftEquatable.Equal(interpreter, getLocationRange, right))
 }
 
 func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpression) ast.Repr {
@@ -391,12 +451,18 @@ func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpres
 		argumentType := argumentTypes[i]
 		argumentExpression := expression.Values[i]
 		getLocationRange := locationRangeGetter(interpreter.Location, argumentExpression)
-		copies[i] = interpreter.copyAndConvert(argument, argumentType, elementType, getLocationRange)
+		copies[i] = interpreter.transferAndConvert(argument, argumentType, elementType, getLocationRange)
 	}
 
+	// TODO: cache
 	arrayStaticType := ConvertSemaArrayTypeToStaticArrayType(arrayType)
 
-	return NewArrayValueUnownedNonCopying(arrayStaticType, copies...)
+	return NewArrayValue(
+		interpreter,
+		arrayStaticType,
+		common.Address{},
+		copies...,
+	)
 }
 
 func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.DictionaryExpression) ast.Repr {
@@ -405,22 +471,20 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 	entryTypes := interpreter.Program.Elaboration.DictionaryExpressionEntryTypes[expression]
 	dictionaryType := interpreter.Program.Elaboration.DictionaryExpressionType[expression]
 
-	dictionaryStaticType := ConvertSemaDictionaryTypeToStaticDictionaryType(dictionaryType)
-
-	dictionary := NewDictionaryValueUnownedNonCopying(dictionaryStaticType)
+	var keyValuePairs []Value
 
 	for i, dictionaryEntryValues := range values {
 		entryType := entryTypes[i]
 		entry := expression.Entries[i]
 
-		key := interpreter.copyAndConvert(
+		key := interpreter.transferAndConvert(
 			dictionaryEntryValues.Key,
 			entryType.KeyType,
 			dictionaryType.KeyType,
 			locationRangeGetter(interpreter.Location, entry.Key),
 		)
 
-		value := interpreter.copyAndConvert(
+		value := interpreter.transferAndConvert(
 			dictionaryEntryValues.Value,
 			entryType.ValueType,
 			dictionaryType.ValueType,
@@ -429,59 +493,28 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 
 		// TODO: panic for duplicate keys?
 
-		// NOTE: important to convert in optional, as assignment to dictionary
-		// is always considered as an optional
-
-		getLocationRange := locationRangeGetter(interpreter.Location, expression)
-
-		_ = dictionary.Insert(interpreter, getLocationRange, key, value)
+		keyValuePairs = append(
+			keyValuePairs,
+			key,
+			value,
+		)
 	}
 
-	return dictionary
+	dictionaryStaticType := ConvertSemaDictionaryTypeToStaticDictionaryType(dictionaryType)
+
+	return NewDictionaryValue(interpreter, dictionaryStaticType, keyValuePairs...)
 }
 
 func (interpreter *Interpreter) VisitMemberExpression(expression *ast.MemberExpression) ast.Repr {
-	result := interpreter.evalExpression(expression.Expression)
-	if expression.Optional {
-		switch typedResult := result.(type) {
-		case NilValue:
-			return typedResult
-
-		case *SomeValue:
-			result = typedResult.Value
-
-		default:
-			panic(errors.NewUnreachableError())
-		}
-	}
-
-	getLocationRange := locationRangeGetter(interpreter.Location, expression)
-	identifier := expression.Identifier.Identifier
-	resultValue := interpreter.getMember(result, getLocationRange, identifier)
-	if resultValue == nil {
-		panic(MissingMemberValueError{
-			Name:          identifier,
-			LocationRange: getLocationRange(),
-		})
-	}
-
-	// If the member access is optional chaining, only wrap the result value
-	// in an optional, if it is not already an optional value
-
-	if expression.Optional {
-		if _, ok := resultValue.(OptionalValue); !ok {
-			resultValue = NewSomeValueOwningNonCopying(resultValue)
-		}
-	}
-
-	return resultValue
+	const allowMissing = false
+	return interpreter.memberExpressionGetterSetter(expression).get(allowMissing)
 }
 
 func (interpreter *Interpreter) VisitIndexExpression(expression *ast.IndexExpression) ast.Repr {
 	typedResult := interpreter.evalExpression(expression.TargetExpression).(ValueIndexableValue)
 	indexingValue := interpreter.evalExpression(expression.IndexingExpression)
 	getLocationRange := locationRangeGetter(interpreter.Location, expression)
-	return typedResult.Get(interpreter, getLocationRange, indexingValue)
+	return typedResult.GetKey(interpreter, getLocationRange, indexingValue)
 }
 
 func (interpreter *Interpreter) VisitConditionalExpression(expression *ast.ConditionalExpression) ast.Repr {
@@ -494,6 +527,15 @@ func (interpreter *Interpreter) VisitConditionalExpression(expression *ast.Condi
 }
 
 func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *ast.InvocationExpression) ast.Repr {
+
+	// tracing
+	if interpreter.tracingEnabled {
+		startTime := time.Now()
+		defer func() {
+			interpreter.reportFunctionTrace(invocationExpression.InvokedExpression.String(), time.Since(startTime))
+		}()
+	}
+
 	// interpret the invoked expression
 	result := interpreter.evalExpression(invocationExpression.InvokedExpression)
 
@@ -531,6 +573,8 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 
 	arguments := interpreter.visitExpressionsNonCopying(argumentExpressions)
 
+	receiverType :=
+		interpreter.Program.Elaboration.InvocationExpressionReceiverTypes[invocationExpression]
 	typeParameterTypes :=
 		interpreter.Program.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
 	argumentTypes :=
@@ -538,10 +582,13 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 	parameterTypes :=
 		interpreter.Program.Elaboration.InvocationExpressionParameterTypes[invocationExpression]
 
-	interpreter.reportFunctionInvocation(invocationExpression)
+	line := invocationExpression.StartPosition().Line
+
+	interpreter.reportFunctionInvocation(line)
 
 	resultValue := interpreter.invokeFunctionValue(
 		function,
+		receiverType,
 		arguments,
 		argumentExpressions,
 		argumentTypes,
@@ -550,11 +597,12 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 		invocationExpression,
 	)
 
+	interpreter.reportInvokedFunctionReturn(line)
+
 	// If this is invocation is optional chaining, wrap the result
 	// as an optional, as the result is expected to be an optional
-
 	if isOptionalChaining {
-		resultValue = NewSomeValueOwningNonCopying(resultValue)
+		resultValue = NewSomeValueNonCopying(resultValue)
 	}
 
 	return resultValue
@@ -615,7 +663,7 @@ func (interpreter *Interpreter) VisitFunctionExpression(expression *ast.Function
 
 	statements := expression.FunctionBlock.Block.Statements
 
-	return InterpretedFunctionValue{
+	return &InterpretedFunctionValue{
 		Interpreter:      interpreter,
 		ParameterList:    expression.ParameterList,
 		Type:             functionType,
@@ -634,8 +682,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 
 	switch expression.Operation {
 	case ast.OperationFailableCast, ast.OperationForceCast:
-		dynamicTypeResults := DynamicTypeResults{}
-		dynamicType := value.DynamicType(interpreter, dynamicTypeResults)
+		dynamicType := value.DynamicType(interpreter, SeenReferences{})
 		isSubType := interpreter.IsSubType(dynamicType, expectedType)
 
 		switch expression.Operation {
@@ -644,17 +691,15 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 				return NilValue{}
 			}
 
-			return NewSomeValueOwningNonCopying(value)
+			return NewSomeValueNonCopying(value)
 
 		case ast.OperationForceCast:
 			if !isSubType {
 				getLocationRange := locationRangeGetter(interpreter.Location, expression.Expression)
-				panic(
-					TypeMismatchError{
-						ExpectedType:  expectedType,
-						LocationRange: getLocationRange(),
-					},
-				)
+				panic(ForceCastTypeMismatchError{
+					ExpectedType:  expectedType,
+					LocationRange: getLocationRange(),
+				})
 			}
 
 			return value
@@ -665,7 +710,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 
 	case ast.OperationCast:
 		staticValueType := interpreter.Program.Elaboration.CastingStaticValueTypes[expression]
-		return interpreter.convertAndBox(value, staticValueType, expectedType)
+		return interpreter.ConvertAndBox(value, staticValueType, expectedType)
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -681,7 +726,7 @@ func (interpreter *Interpreter) VisitDestroyExpression(expression *ast.DestroyEx
 
 	getLocationRange := locationRangeGetter(interpreter.Location, expression)
 
-	value.(DestroyableValue).Destroy(interpreter, getLocationRange)
+	value.(ResourceKindedValue).Destroy(interpreter, getLocationRange)
 
 	return VoidValue{}
 }
@@ -731,25 +776,4 @@ func (interpreter *Interpreter) VisitPathExpression(expression *ast.PathExpressi
 		Domain:     domain,
 		Identifier: expression.Identifier.Identifier,
 	}
-}
-
-func (interpreter *Interpreter) evalPotentialResourceMoveIndexExpression(expression ast.Expression) Value {
-	resourceMoveIndexExpression := interpreter.resourceMoveIndexExpression(expression)
-	if resourceMoveIndexExpression == nil {
-		return interpreter.evalExpression(expression)
-	}
-
-	getterSetter := interpreter.indexExpressionGetterSetter(resourceMoveIndexExpression)
-	value := getterSetter.get()
-	getterSetter.set(NilValue{})
-	return value
-}
-
-func (interpreter *Interpreter) resourceMoveIndexExpression(expression ast.Expression) *ast.IndexExpression {
-	indexExpression, ok := expression.(*ast.IndexExpression)
-	if !ok || !interpreter.Program.Elaboration.IsResourceMoveIndexExpression[indexExpression] {
-		return nil
-	}
-
-	return indexExpression
 }

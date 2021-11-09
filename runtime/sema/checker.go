@@ -337,6 +337,14 @@ func (checker *Checker) declareTypeDeclaration(declaration TypeDeclaration) {
 		},
 	)
 	checker.report(err)
+
+	switch ty := ty.(type) {
+	case *CompositeType:
+		checker.Elaboration.CompositeTypes[ty.ID()] = ty
+	case *InterfaceType:
+		checker.Elaboration.InterfaceTypes[ty.ID()] = ty
+	}
+
 	if checker.positionInfoEnabled {
 		checker.recordVariableDeclarationOccurrence(identifier.Identifier, variable)
 	}
@@ -930,76 +938,42 @@ func (checker *Checker) ConvertType(t ast.Type) Type {
 	panic(&astTypeConversionError{invalidASTType: t})
 }
 
-func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
-	var restrictedType Type
-
-	// Convert the restricted type, if any
-
-	if t.Type != nil {
-		restrictedType = checker.ConvertType(t.Type)
-	}
-
-	// Convert the restrictions
-
-	var restrictions []*InterfaceType
-	restrictionRanges := make(map[*InterfaceType]ast.Range, len(t.Restrictions))
-
+func CheckRestrictedType(restrictedType Type, restrictions []*InterfaceType, report func(func(*ast.RestrictedType) error)) Type {
+	restrictionRanges := make(map[*InterfaceType]func(*ast.RestrictedType) ast.Range, len(restrictions))
+	restrictionsCompositeKind := common.CompositeKindUnknown
 	memberSet := map[string]*InterfaceType{}
 
-	restrictionsCompositeKind := common.CompositeKindUnknown
-
-	for _, restriction := range t.Restrictions {
-		restrictionResult := checker.ConvertType(restriction)
-
-		// The restriction must be a resource or structure interface type
-
-		restrictionInterfaceType, ok := restrictionResult.(*InterfaceType)
-		restrictionCompositeKind := common.CompositeKindUnknown
-		if ok {
-			restrictionCompositeKind = restrictionInterfaceType.CompositeKind
-		}
-		if !ok || (restrictionCompositeKind != common.CompositeKindResource &&
-			restrictionCompositeKind != common.CompositeKindStructure) {
-
-			if !restrictionResult.IsInvalidType() {
-				checker.report(
-					&InvalidRestrictionTypeError{
-						Type:  restrictionResult,
-						Range: ast.NewRangeFromPositioned(restriction),
-					},
-				)
-			}
-			continue
-		}
+	for i, restrictionInterfaceType := range restrictions {
+		restrictionCompositeKind := restrictionInterfaceType.CompositeKind
 
 		if restrictionsCompositeKind == common.CompositeKindUnknown {
 			restrictionsCompositeKind = restrictionCompositeKind
 
 		} else if restrictionCompositeKind != restrictionsCompositeKind {
-
-			checker.report(
-				&RestrictionCompositeKindMismatchError{
+			report(func(t *ast.RestrictedType) error {
+				return &RestrictionCompositeKindMismatchError{
 					CompositeKind:         restrictionCompositeKind,
 					PreviousCompositeKind: restrictionsCompositeKind,
-					Range:                 ast.NewRangeFromPositioned(restriction),
-				},
-			)
+					Range:                 ast.NewRangeFromPositioned(t.Restrictions[i]),
+				}
+			})
 		}
-
-		restrictions = append(restrictions, restrictionInterfaceType)
 
 		// The restriction must not be duplicated
 
 		if _, exists := restrictionRanges[restrictionInterfaceType]; exists {
-			checker.report(
-				&InvalidRestrictionTypeDuplicateError{
+			report(func(t *ast.RestrictedType) error {
+				return &InvalidRestrictionTypeDuplicateError{
 					Type:  restrictionInterfaceType,
-					Range: ast.NewRangeFromPositioned(restriction),
-				},
-			)
+					Range: ast.NewRangeFromPositioned(t.Restrictions[i]),
+				}
+			})
+
 		} else {
 			restrictionRanges[restrictionInterfaceType] =
-				ast.NewRangeFromPositioned(restriction)
+				func(t *ast.RestrictedType) ast.Range {
+					return ast.NewRangeFromPositioned(t.Restrictions[i])
+				}
 		}
 
 		// The restrictions may not have clashing members
@@ -1025,14 +999,14 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 					!previousMemberType.IsInvalidType() &&
 					!memberType.Equal(previousMemberType) {
 
-					checker.report(
-						&RestrictionMemberClashError{
+					report(func(t *ast.RestrictedType) error {
+						return &RestrictionMemberClashError{
 							Name:                  name,
 							RedeclaringType:       restrictionInterfaceType,
 							OriginalDeclaringType: previousDeclaringInterfaceType,
-							Range:                 ast.NewRangeFromPositioned(restriction),
-						},
-					)
+							Range:                 ast.NewRangeFromPositioned(t.Restrictions[i]),
+						}
+					})
 				}
 			} else {
 				memberSet[name] = restrictionInterfaceType
@@ -1040,7 +1014,9 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 		})
 	}
 
-	if restrictedType == nil {
+	var hadExplicitType = restrictedType != nil
+
+	if !hadExplicitType {
 		// If no restricted type is given, infer `AnyResource`/`AnyStruct`
 		// based on the composite kind of the restrictions.
 
@@ -1051,11 +1027,9 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 
 			restrictedType = InvalidType
 
-			checker.report(
-				&AmbiguousRestrictedTypeError{
-					Range: ast.NewRangeFromPositioned(t),
-				},
-			)
+			report(func(t *ast.RestrictedType) error {
+				return &AmbiguousRestrictedTypeError{Range: ast.NewRangeFromPositioned(t)}
+			})
 
 		case common.CompositeKindResource:
 			restrictedType = AnyResourceType
@@ -1072,12 +1046,12 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 	// or `AnyResource`/`AnyStruct`
 
 	reportInvalidRestrictedType := func() {
-		checker.report(
-			&InvalidRestrictedTypeError{
+		report(func(t *ast.RestrictedType) error {
+			return &InvalidRestrictedTypeError{
 				Type:  restrictedType,
 				Range: ast.NewRangeFromPositioned(t.Type),
-			},
-		)
+			}
+		})
 	}
 
 	var compositeType *CompositeType
@@ -1102,7 +1076,7 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 				break
 
 			default:
-				if t.Type != nil {
+				if hadExplicitType {
 					reportInvalidRestrictedType()
 				}
 			}
@@ -1123,15 +1097,62 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 			// of the composite (restricted type)
 
 			if !conformances.Includes(restriction) {
-				checker.report(
-					&InvalidNonConformanceRestrictionError{
+				report(func(t *ast.RestrictedType) error {
+					return &InvalidNonConformanceRestrictionError{
 						Type:  restriction,
-						Range: restrictionRanges[restriction],
-					},
-				)
+						Range: restrictionRanges[restriction](t),
+					}
+				})
 			}
 		}
 	}
+	return restrictedType
+}
+
+func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
+	var restrictedType Type
+
+	// Convert the restricted type, if any
+
+	if t.Type != nil {
+		restrictedType = checker.ConvertType(t.Type)
+	}
+
+	// Convert the restrictions
+
+	var restrictions []*InterfaceType
+
+	for _, restriction := range t.Restrictions {
+		restrictionResult := checker.ConvertType(restriction)
+
+		// The restriction must be a resource or structure interface type
+
+		restrictionInterfaceType, ok := restrictionResult.(*InterfaceType)
+		restrictionCompositeKind := common.CompositeKindUnknown
+		if ok {
+			restrictionCompositeKind = restrictionInterfaceType.CompositeKind
+		}
+		if !ok || (restrictionCompositeKind != common.CompositeKindResource &&
+			restrictionCompositeKind != common.CompositeKindStructure) {
+
+			if !restrictionResult.IsInvalidType() {
+				checker.report(&InvalidRestrictionTypeError{
+					Type:  restrictionResult,
+					Range: ast.NewRangeFromPositioned(restriction),
+				})
+			}
+		}
+
+		restrictions = append(restrictions, restrictionInterfaceType)
+	}
+
+	restrictedType = CheckRestrictedType(
+		restrictedType,
+		restrictions,
+		func(getError func(*ast.RestrictedType) error) {
+			checker.report(getError(t))
+		},
+	)
 
 	return &RestrictedType{
 		Type:         restrictedType,
@@ -2007,7 +2028,7 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 
 	addPredeclaredMember(
 		IsInstanceFunctionName,
-		isInstanceFunctionType,
+		IsInstanceFunctionType,
 		common.DeclarationKindFunction,
 		ast.AccessPublic,
 		true,
@@ -2018,7 +2039,7 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 
 	addPredeclaredMember(
 		GetTypeFunctionName,
-		getTypeFunctionType,
+		GetTypeFunctionType,
 		common.DeclarationKindFunction,
 		ast.AccessPublic,
 		true,
@@ -2184,11 +2205,15 @@ func (checker *Checker) checkTypeAnnotation(typeAnnotation *TypeAnnotation, pos 
 		)
 	}
 
-	rewrittenType, rewritten := typeAnnotation.Type.RewriteWithRestrictedTypes()
+	checker.checkInvalidInterfaceAsType(typeAnnotation.Type, pos)
+}
+
+func (checker *Checker) checkInvalidInterfaceAsType(ty Type, pos ast.HasPosition) {
+	rewrittenType, rewritten := ty.RewriteWithRestrictedTypes()
 	if rewritten {
 		checker.report(
 			&InvalidInterfaceTypeError{
-				ActualType:   typeAnnotation.Type,
+				ActualType:   ty,
 				ExpectedType: rewrittenType,
 				Range: ast.Range{
 					StartPos: pos.StartPosition(),
