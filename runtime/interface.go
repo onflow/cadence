@@ -125,6 +125,12 @@ type Interface interface {
 	GetAccountContractNames(address Address) ([]string, error)
 	// RecordTrace records a opentracing trace
 	RecordTrace(operation string, location common.Location, duration time.Duration, logs []opentracing.LogRecord)
+	// BLSVerifyPOP verifies a proof of possession (PoP) for the receiver public key.
+	BLSVerifyPOP(pk PublicKey, s []byte) (bool, error)
+	// AggregateBLSSignatures aggregate multiple BLS signatures into one.
+	AggregateBLSSignatures(sigs [][]byte) ([]byte, error)
+	// AggregateBLSPublicKeys aggregate multiple BLS public keys into one.
+	AggregateBLSPublicKeys(keys []PublicKey) (PublicKey, error)
 }
 
 type Metrics interface {
