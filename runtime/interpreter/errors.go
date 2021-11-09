@@ -486,13 +486,15 @@ func (e ResourceConstructionError) Error() string {
 //
 type ContainerMutationError struct {
 	ExpectedType sema.Type
+	ActualType   sema.Type
 	LocationRange
 }
 
 func (e ContainerMutationError) Error() string {
 	return fmt.Sprintf(
-		"invalid container update: expected a subtype of '%s'",
+		"invalid container update: expected a subtype of '%s', found '%s'",
 		e.ExpectedType.QualifiedString(),
+		e.ActualType.QualifiedString(),
 	)
 }
 

@@ -86,6 +86,7 @@ func TestArrayMutation(t *testing.T) {
 		require.ErrorAs(t, err, mutationError)
 
 		assert.Equal(t, sema.StringType, mutationError.ExpectedType)
+		assert.Equal(t, sema.IntType, mutationError.ActualType)
 	})
 
 	t.Run("nested array invalid", func(t *testing.T) {
@@ -105,6 +106,7 @@ func TestArrayMutation(t *testing.T) {
 		require.ErrorAs(t, err, mutationError)
 
 		assert.Equal(t, sema.StringType, mutationError.ExpectedType)
+		assert.Equal(t, sema.IntType, mutationError.ActualType)
 	})
 
 	t.Run("array append valid", func(t *testing.T) {
@@ -158,6 +160,7 @@ func TestArrayMutation(t *testing.T) {
 		require.ErrorAs(t, err, mutationError)
 
 		assert.Equal(t, sema.StringType, mutationError.ExpectedType)
+		assert.Equal(t, sema.IntType, mutationError.ActualType)
 	})
 
 	t.Run("array appendAll invalid", func(t *testing.T) {
@@ -177,6 +180,7 @@ func TestArrayMutation(t *testing.T) {
 		require.ErrorAs(t, err, mutationError)
 
 		assert.Equal(t, sema.StringType, mutationError.ExpectedType)
+		assert.Equal(t, sema.IntType, mutationError.ActualType)
 	})
 
 	t.Run("array insert valid", func(t *testing.T) {
@@ -230,6 +234,7 @@ func TestArrayMutation(t *testing.T) {
 		require.ErrorAs(t, err, mutationError)
 
 		assert.Equal(t, sema.StringType, mutationError.ExpectedType)
+		assert.Equal(t, sema.IntType, mutationError.ActualType)
 	})
 
 	t.Run("array concat mismatching values", func(t *testing.T) {
@@ -289,6 +294,7 @@ func TestArrayMutation(t *testing.T) {
 		require.ErrorAs(t, err, mutationError)
 
 		assert.Equal(t, sema.StringType, mutationError.ExpectedType)
+		assert.Equal(t, sema.IntType, mutationError.ActualType)
 	})
 
 	t.Run("host function mutation", func(t *testing.T) {
@@ -470,6 +476,7 @@ func TestArrayMutation(t *testing.T) {
 		mutationError := &interpreter.ContainerMutationError{}
 		require.ErrorAs(t, err, mutationError)
 
+		// Expected type
 		require.IsType(t, &sema.OptionalType{}, mutationError.ExpectedType)
 		optionalType := mutationError.ExpectedType.(*sema.OptionalType)
 
@@ -479,6 +486,14 @@ func TestArrayMutation(t *testing.T) {
 		assert.Equal(t, sema.VoidType, funcType.ReturnTypeAnnotation.Type)
 		assert.Nil(t, funcType.ReceiverType)
 		assert.Empty(t, funcType.Parameters)
+
+		// Actual type
+		assert.IsType(t, &sema.FunctionType{}, mutationError.ActualType)
+		actualFuncType := mutationError.ActualType.(*sema.FunctionType)
+
+		assert.Equal(t, sema.VoidType, actualFuncType.ReturnTypeAnnotation.Type)
+		assert.Nil(t, actualFuncType.ReceiverType)
+		assert.Len(t, actualFuncType.Parameters, 1)
 	})
 }
 
@@ -535,6 +550,12 @@ func TestDictionaryMutation(t *testing.T) {
 				Type: sema.StringType,
 			},
 			mutationError.ExpectedType,
+		)
+
+		assert.Equal(t,
+			&sema.OptionalType{
+				Type: sema.IntType,
+			}, mutationError.ActualType,
 		)
 	})
 
@@ -603,6 +624,7 @@ func TestDictionaryMutation(t *testing.T) {
 		require.ErrorAs(t, err, mutationError)
 
 		assert.Equal(t, sema.StringType, mutationError.ExpectedType)
+		assert.Equal(t, sema.IntType, mutationError.ActualType)
 	})
 
 	t.Run("dictionary insert invalid key", func(t *testing.T) {
@@ -622,6 +644,7 @@ func TestDictionaryMutation(t *testing.T) {
 		require.ErrorAs(t, err, mutationError)
 
 		assert.Equal(t, sema.PublicPathType, mutationError.ExpectedType)
+		assert.Equal(t, sema.PrivatePathType, mutationError.ActualType)
 	})
 
 	t.Run("invalid update through reference", func(t *testing.T) {
@@ -646,6 +669,12 @@ func TestDictionaryMutation(t *testing.T) {
 				Type: sema.StringType,
 			},
 			mutationError.ExpectedType,
+		)
+		assert.Equal(t,
+			&sema.OptionalType{
+				Type: sema.IntType,
+			},
+			mutationError.ActualType,
 		)
 	})
 
@@ -829,6 +858,7 @@ func TestDictionaryMutation(t *testing.T) {
 		mutationError := &interpreter.ContainerMutationError{}
 		require.ErrorAs(t, err, mutationError)
 
+		// Expected type
 		require.IsType(t, &sema.OptionalType{}, mutationError.ExpectedType)
 		optionalType := mutationError.ExpectedType.(*sema.OptionalType)
 
@@ -838,6 +868,17 @@ func TestDictionaryMutation(t *testing.T) {
 		assert.Equal(t, sema.VoidType, funcType.ReturnTypeAnnotation.Type)
 		assert.Nil(t, funcType.ReceiverType)
 		assert.Empty(t, funcType.Parameters)
+
+		// Actual type
+		require.IsType(t, &sema.OptionalType{}, mutationError.ActualType)
+		actualOptionalType := mutationError.ActualType.(*sema.OptionalType)
+
+		assert.IsType(t, &sema.FunctionType{}, actualOptionalType.Type)
+		actualFuncType := actualOptionalType.Type.(*sema.FunctionType)
+
+		assert.Equal(t, sema.VoidType, actualFuncType.ReturnTypeAnnotation.Type)
+		assert.Nil(t, actualFuncType.ReceiverType)
+		assert.Len(t, actualFuncType.Parameters, 1)
 	})
 
 	t.Run("valid function mutation", func(t *testing.T) {
