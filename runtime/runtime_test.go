@@ -174,6 +174,9 @@ type testRuntimeInterface struct {
 	programs                   map[common.LocationID]*interpreter.Program
 	implementationDebugLog     func(message string) error
 	validatePublicKey          func(publicKey *PublicKey) (bool, error)
+	bLSVerifyPOP               func(pk *PublicKey, s []byte) (bool, error)
+	aggregateBLSSignatures     func(sigs [][]byte) ([]byte, error)
+	aggregateBLSPublicKeys     func(keys []*PublicKey) (*PublicKey, error)
 	getAccountContractNames    func(address Address) ([]string, error)
 }
 
@@ -437,6 +440,30 @@ func (i *testRuntimeInterface) ValidatePublicKey(key *PublicKey) (bool, error) {
 	}
 
 	return i.validatePublicKey(key)
+}
+
+func (i *testRuntimeInterface) BLSVerifyPOP(key *PublicKey, s []byte) (bool, error) {
+	if i.validatePublicKey == nil {
+		return false, nil
+	}
+
+	return i.bLSVerifyPOP(key, s)
+}
+
+func (i *testRuntimeInterface) AggregateBLSSignatures(sigs [][]byte) ([]byte, error) {
+	if i.aggregateBLSSignatures == nil {
+		return []byte{}, nil
+	}
+
+	return i.aggregateBLSSignatures(sigs)
+}
+
+func (i *testRuntimeInterface) AggregateBLSPublicKeys(keys []*PublicKey) (*PublicKey, error) {
+	if i.aggregateBLSSignatures == nil {
+		return nil, nil
+	}
+
+	return i.aggregateBLSPublicKeys(keys)
 }
 
 func (i *testRuntimeInterface) GetAccountContractNames(address Address) ([]string, error) {
