@@ -41,7 +41,7 @@ type TypeConformanceResults map[typeConformanceResultEntry]bool
 
 type typeConformanceResultEntry struct {
 	EphemeralReferenceValue       *EphemeralReferenceValue
-	EphemeralReferenceDynamicType EphemeralReferenceDynamicType
+	EphemeralReferenceDynamicType ReferenceStaticType
 }
 
 // SeenReferences is a set of seen references.
@@ -93,10 +93,10 @@ type Value interface {
 	Walk(walkChild func(Value))
 	DynamicType(interpreter *Interpreter, seenReferences SeenReferences) DynamicType
 	StaticType() StaticType
-	ConformsToDynamicType(
+	ConformsToStaticType(
 		interpreter *Interpreter,
 		getLocationRange func() LocationRange,
-		dynamicType DynamicType,
+		staticType StaticType,
 		results TypeConformanceResults,
 	) bool
 	RecursiveString(seenReferences SeenReferences) string
@@ -273,14 +273,18 @@ func (TypeValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ V
 	panic(errors.NewUnreachableError())
 }
 
-func (v TypeValue) ConformsToDynamicType(
-	_ *Interpreter,
+func (v TypeValue) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	_, ok := dynamicType.(MetaTypeDynamicType)
-	return ok
+	semaType, err := inter.ConvertStaticToSemaType(staticType)
+	if err != nil {
+		return false
+	}
+
+	return inter.IsSubType(v.StaticType(), semaType)
 }
 
 func (v TypeValue) Storable(
@@ -378,14 +382,18 @@ func (v VoidValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v VoidValue) ConformsToDynamicType(
-	_ *Interpreter,
+func (v VoidValue) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	_, ok := dynamicType.(VoidDynamicType)
-	return ok
+	semaType, err := inter.ConvertStaticToSemaType(staticType)
+	if err != nil {
+		return false
+	}
+
+	return inter.IsSubType(v.StaticType(), semaType)
 }
 
 func (v VoidValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -492,14 +500,18 @@ func (v BoolValue) String() string {
 func (v BoolValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
-func (v BoolValue) ConformsToDynamicType(
-	_ *Interpreter,
+func (v BoolValue) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	_, ok := dynamicType.(BoolDynamicType)
-	return ok
+	semaType, err := inter.ConvertStaticToSemaType(staticType)
+	if err != nil {
+		return false
+	}
+
+	return inter.IsSubType(v.StaticType(), semaType)
 }
 
 func (v BoolValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -861,14 +873,18 @@ func (v *StringValue) DecodeHex(interpreter *Interpreter) *ArrayValue {
 	)
 }
 
-func (*StringValue) ConformsToDynamicType(
-	_ *Interpreter,
+func (v *StringValue) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	_, ok := dynamicType.(StringDynamicType)
-	return ok
+	semaType, err := inter.ConvertStaticToSemaType(staticType)
+	if err != nil {
+		return false
+	}
+
+	return inter.IsSubType(v.StaticType(), semaType)
 }
 
 // ArrayValue
@@ -1398,27 +1414,33 @@ func (v *ArrayValue) Count() int {
 	return int(v.array.Count())
 }
 
-func (v *ArrayValue) ConformsToDynamicType(
+func (v *ArrayValue) ConformsToStaticType(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	results TypeConformanceResults,
 ) bool {
 
-	arrayType, ok := dynamicType.(*ArrayDynamicType)
-
-	if !ok || v.Count() != len(arrayType.ElementTypes) {
+	var elementType StaticType
+	switch typedStaticType := staticType.(type) {
+	case ConstantSizedStaticType:
+		elementType = typedStaticType.ElementType()
+		if v.Count() != int(typedStaticType.Size) {
+			return false
+		}
+	case VariableSizedStaticType:
+		elementType = typedStaticType.ElementType()
+	default:
 		return false
 	}
-
 	result := true
 	index := 0
 
 	v.Iterate(func(element Value) (resume bool) {
-		if !element.ConformsToDynamicType(
+		if !element.ConformsToStaticType(
 			interpreter,
 			getLocationRange,
-			arrayType.ElementTypes[index],
+			elementType,
 			results,
 		) {
 			result = false
@@ -1953,14 +1975,18 @@ func (v IntValue) ToBigEndianBytes() []byte {
 	return SignedBigIntToBigEndianBytes(v.BigInt)
 }
 
-func (v IntValue) ConformsToDynamicType(
-	_ *Interpreter,
+func (v IntValue) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && sema.IntType.Equal(numberType.StaticType)
+	semaType, err := inter.ConvertStaticToSemaType(staticType)
+	if err != nil {
+		return false
+	}
+
+	return inter.IsSubType(v.StaticType(), semaType)
 }
 
 func (v IntValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
@@ -2297,14 +2323,18 @@ func (v Int8Value) ToBigEndianBytes() []byte {
 	return []byte{byte(v)}
 }
 
-func (v Int8Value) ConformsToDynamicType(
-	_ *Interpreter,
+func (v Int8Value) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && sema.Int8Type.Equal(numberType.StaticType)
+	semaType, err := inter.ConvertStaticToSemaType(staticType)
+	if err != nil {
+		return false
+	}
+
+	return inter.IsSubType(v.StaticType(), semaType)
 }
 
 func (v Int8Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -2643,14 +2673,18 @@ func (v Int16Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v Int16Value) ConformsToDynamicType(
-	_ *Interpreter,
+func (v Int16Value) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && sema.Int16Type.Equal(numberType.StaticType)
+	semaType, err := inter.ConvertStaticToSemaType(staticType)
+	if err != nil {
+		return false
+	}
+
+	return inter.IsSubType(v.StaticType(), semaType)
 }
 
 func (v Int16Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -2989,14 +3023,18 @@ func (v Int32Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v Int32Value) ConformsToDynamicType(
-	_ *Interpreter,
+func (v Int32Value) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && sema.Int32Type.Equal(numberType.StaticType)
+	semaType, err := inter.ConvertStaticToSemaType(staticType)
+	if err != nil {
+		return false
+	}
+
+	return inter.IsSubType(v.StaticType(), semaType)
 }
 
 func (v Int32Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -3334,14 +3372,18 @@ func (v Int64Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v Int64Value) ConformsToDynamicType(
-	_ *Interpreter,
+func (v Int64Value) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && sema.Int64Type.Equal(numberType.StaticType)
+	semaType, err := inter.ConvertStaticToSemaType(staticType)
+	if err != nil {
+		return false
+	}
+
+	return inter.IsSubType(v.StaticType(), semaType)
 }
 
 func (v Int64Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -3753,14 +3795,18 @@ func (v Int128Value) ToBigEndianBytes() []byte {
 	return SignedBigIntToBigEndianBytes(v.BigInt)
 }
 
-func (v Int128Value) ConformsToDynamicType(
-	_ *Interpreter,
+func (v Int128Value) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && sema.Int128Type.Equal(numberType.StaticType)
+	semaType, err := inter.ConvertStaticToSemaType(staticType)
+	if err != nil {
+		return false
+	}
+
+	return inter.IsSubType(v.StaticType(), semaType)
 }
 
 func (v Int128Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -4173,14 +4219,18 @@ func (v Int256Value) ToBigEndianBytes() []byte {
 	return SignedBigIntToBigEndianBytes(v.BigInt)
 }
 
-func (v Int256Value) ConformsToDynamicType(
-	_ *Interpreter,
+func (v Int256Value) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && sema.Int256Type.Equal(numberType.StaticType)
+	semaType, err := inter.ConvertStaticToSemaType(staticType)
+	if err != nil {
+		return false
+	}
+
+	return inter.IsSubType(v.StaticType(), semaType)
 }
 
 func (v Int256Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -4483,14 +4533,18 @@ func (v UIntValue) ToBigEndianBytes() []byte {
 	return UnsignedBigIntToBigEndianBytes(v.BigInt)
 }
 
-func (v UIntValue) ConformsToDynamicType(
-	_ *Interpreter,
+func (v UIntValue) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && sema.UIntType.Equal(numberType.StaticType)
+	semaType, err := inter.ConvertStaticToSemaType(staticType)
+	if err != nil {
+		return false
+	}
+
+	return inter.IsSubType(v.StaticType(), semaType)
 }
 
 func (v UIntValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
@@ -4759,14 +4813,18 @@ func (v UInt8Value) ToBigEndianBytes() []byte {
 	return []byte{byte(v)}
 }
 
-func (v UInt8Value) ConformsToDynamicType(
-	_ *Interpreter,
+func (v UInt8Value) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && sema.UInt8Type.Equal(numberType.StaticType)
+	semaType, err := inter.ConvertStaticToSemaType(staticType)
+	if err != nil {
+		return false
+	}
+
+	return inter.IsSubType(v.StaticType(), semaType)
 }
 
 func (v UInt8Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -5035,14 +5093,18 @@ func (v UInt16Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v UInt16Value) ConformsToDynamicType(
-	_ *Interpreter,
+func (v UInt16Value) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && sema.UInt16Type.Equal(numberType.StaticType)
+	semaType, err := inter.ConvertStaticToSemaType(staticType)
+	if err != nil {
+		return false
+	}
+
+	return inter.IsSubType(v.StaticType(), semaType)
 }
 
 func (UInt16Value) IsStorable() bool {
@@ -5315,14 +5377,18 @@ func (v UInt32Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v UInt32Value) ConformsToDynamicType(
-	_ *Interpreter,
+func (v UInt32Value) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && sema.UInt32Type.Equal(numberType.StaticType)
+	semaType, err := inter.ConvertStaticToSemaType(staticType)
+	if err != nil {
+		return false
+	}
+
+	return inter.IsSubType(v.StaticType(), semaType)
 }
 
 func (UInt32Value) IsStorable() bool {
@@ -5619,14 +5685,18 @@ func (v UInt64Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v UInt64Value) ConformsToDynamicType(
-	_ *Interpreter,
+func (v UInt64Value) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && sema.UInt64Type.Equal(numberType.StaticType)
+	semaType, err := inter.ConvertStaticToSemaType(staticType)
+	if err != nil {
+		return false
+	}
+
+	return inter.IsSubType(v.StaticType(), semaType)
 }
 
 func (UInt64Value) IsStorable() bool {
@@ -5984,14 +6054,18 @@ func (v UInt128Value) ToBigEndianBytes() []byte {
 	return UnsignedBigIntToBigEndianBytes(v.BigInt)
 }
 
-func (v UInt128Value) ConformsToDynamicType(
-	_ *Interpreter,
+func (v UInt128Value) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && sema.UInt128Type.Equal(numberType.StaticType)
+	semaType, err := inter.ConvertStaticToSemaType(staticType)
+	if err != nil {
+		return false
+	}
+
+	return inter.IsSubType(v.StaticType(), semaType)
 }
 
 func (UInt128Value) IsStorable() bool {
@@ -6351,14 +6425,18 @@ func (v UInt256Value) ToBigEndianBytes() []byte {
 	return UnsignedBigIntToBigEndianBytes(v.BigInt)
 }
 
-func (v UInt256Value) ConformsToDynamicType(
-	_ *Interpreter,
+func (v UInt256Value) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && sema.UInt256Type.Equal(numberType.StaticType)
+	semaType, err := inter.ConvertStaticToSemaType(staticType)
+	if err != nil {
+		return false
+	}
+
+	return inter.IsSubType(v.StaticType(), semaType)
 }
 
 func (UInt256Value) IsStorable() bool {
@@ -6575,14 +6653,18 @@ func (v Word8Value) ToBigEndianBytes() []byte {
 	return []byte{byte(v)}
 }
 
-func (v Word8Value) ConformsToDynamicType(
-	_ *Interpreter,
+func (v Word8Value) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && sema.Word8Type.Equal(numberType.StaticType)
+	semaType, err := inter.ConvertStaticToSemaType(staticType)
+	if err != nil {
+		return false
+	}
+
+	return inter.IsSubType(v.StaticType(), semaType)
 }
 
 func (Word8Value) IsStorable() bool {
@@ -6800,14 +6882,18 @@ func (v Word16Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v Word16Value) ConformsToDynamicType(
-	_ *Interpreter,
+func (v Word16Value) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && sema.Word16Type.Equal(numberType.StaticType)
+	semaType, err := inter.ConvertStaticToSemaType(staticType)
+	if err != nil {
+		return false
+	}
+
+	return inter.IsSubType(v.StaticType(), semaType)
 }
 
 func (Word16Value) IsStorable() bool {
@@ -7026,14 +7112,18 @@ func (v Word32Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v Word32Value) ConformsToDynamicType(
-	_ *Interpreter,
+func (v Word32Value) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && sema.Word32Type.Equal(numberType.StaticType)
+	semaType, err := inter.ConvertStaticToSemaType(staticType)
+	if err != nil {
+		return false
+	}
+
+	return inter.IsSubType(v.StaticType(), semaType)
 }
 
 func (Word32Value) IsStorable() bool {
@@ -7273,14 +7363,18 @@ func (v Word64Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v Word64Value) ConformsToDynamicType(
-	_ *Interpreter,
+func (v Word64Value) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && sema.Word64Type.Equal(numberType.StaticType)
+	semaType, err := inter.ConvertStaticToSemaType(staticType)
+	if err != nil {
+		return false
+	}
+
+	return inter.IsSubType(v.StaticType(), semaType)
 }
 
 func (Word64Value) IsStorable() bool {
@@ -7600,14 +7694,18 @@ func (v Fix64Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v Fix64Value) ConformsToDynamicType(
-	_ *Interpreter,
+func (v Fix64Value) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && sema.Fix64Type.Equal(numberType.StaticType)
+	semaType, err := inter.ConvertStaticToSemaType(staticType)
+	if err != nil {
+		return false
+	}
+
+	return inter.IsSubType(v.StaticType(), semaType)
 }
 
 func (Fix64Value) IsStorable() bool {
@@ -7893,14 +7991,18 @@ func (v UFix64Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v UFix64Value) ConformsToDynamicType(
-	_ *Interpreter,
+func (v UFix64Value) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && sema.UFix64Type.Equal(numberType.StaticType)
+	semaType, err := inter.ConvertStaticToSemaType(staticType)
+	if err != nil {
+		return false
+	}
+
+	return inter.IsSubType(v.StaticType(), semaType)
 }
 
 func (UFix64Value) IsStorable() bool {
@@ -8425,18 +8527,18 @@ func (v *CompositeValue) TypeID() common.TypeID {
 	return v.typeID
 }
 
-func (v *CompositeValue) ConformsToDynamicType(
+func (v *CompositeValue) ConformsToStaticType(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	results TypeConformanceResults,
 ) bool {
-	compositeDynamicType, ok := dynamicType.(CompositeDynamicType)
-	if !ok {
+	semaType, err := interpreter.ConvertStaticToSemaType(staticType)
+	if err != nil {
 		return false
 	}
 
-	compositeType, ok := compositeDynamicType.StaticType.(*sema.CompositeType)
+	compositeType, ok := semaType.(*sema.CompositeType)
 	if !ok ||
 		v.Kind != compositeType.Kind ||
 		v.TypeID() != compositeType.ID() {
@@ -8477,12 +8579,10 @@ func (v *CompositeValue) ConformsToDynamicType(
 			return false
 		}
 
-		fieldDynamicType := value.DynamicType(interpreter, SeenReferences{})
-
-		if !value.ConformsToDynamicType(
+		if !value.ConformsToStaticType(
 			interpreter,
 			getLocationRange,
-			fieldDynamicType,
+			value.StaticType(),
 			results,
 		) {
 			return false
@@ -9238,15 +9338,15 @@ type DictionaryEntryValues struct {
 	Value Value
 }
 
-func (v *DictionaryValue) ConformsToDynamicType(
+func (v *DictionaryValue) ConformsToStaticType(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	results TypeConformanceResults,
 ) bool {
 
-	dictionaryType, ok := dynamicType.(*DictionaryDynamicType)
-	if !ok || v.Count() != len(dictionaryType.EntryTypes) {
+	dictionaryType, ok := staticType.(DictionaryStaticType)
+	if !ok {
 		return false
 	}
 
@@ -9265,17 +9365,15 @@ func (v *DictionaryValue) ConformsToDynamicType(
 			return true
 		}
 
-		entryType := dictionaryType.EntryTypes[index]
-
 		// Check the key
 
 		// atree.OrderedMap iteration provides low-level atree.Value,
 		// convert to high-level interpreter.Value
 		entryKey := MustConvertStoredValue(key)
-		if !entryKey.ConformsToDynamicType(
+		if !entryKey.ConformsToStaticType(
 			interpreter,
 			getLocationRange,
-			entryType.KeyType,
+			dictionaryType.KeyType,
 			results,
 		) {
 			return false
@@ -9286,10 +9384,10 @@ func (v *DictionaryValue) ConformsToDynamicType(
 		// atree.OrderedMap iteration provides low-level atree.Value,
 		// convert to high-level interpreter.Value
 		entryValue := MustConvertStoredValue(value)
-		if !entryValue.ConformsToDynamicType(
+		if !entryValue.ConformsToStaticType(
 			interpreter,
 			getLocationRange,
-			entryType.ValueType,
+			dictionaryType.ValueType,
 			results,
 		) {
 			return false
@@ -9576,14 +9674,18 @@ func (NilValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Va
 	panic(errors.NewUnreachableError())
 }
 
-func (v NilValue) ConformsToDynamicType(
-	_ *Interpreter,
+func (v NilValue) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	_, ok := dynamicType.(NilDynamicType)
-	return ok
+	semaType, err := inter.ConvertStaticToSemaType(staticType)
+	if err != nil {
+		return false
+	}
+
+	return inter.IsSubType(v.StaticType(), semaType)
 }
 
 func (v NilValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -9739,17 +9841,17 @@ func (*SomeValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ 
 	panic(errors.NewUnreachableError())
 }
 
-func (v SomeValue) ConformsToDynamicType(
+func (v SomeValue) ConformsToStaticType(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	results TypeConformanceResults,
 ) bool {
-	someType, ok := dynamicType.(SomeDynamicType)
-	return ok && v.Value.ConformsToDynamicType(
+	optionalType, ok := staticType.(OptionalStaticType)
+	return ok && v.Value.ConformsToStaticType(
 		interpreter,
 		getLocationRange,
-		someType.InnerType,
+		optionalType.Type,
 		results,
 	)
 }
@@ -10110,25 +10212,25 @@ func (v *StorageReferenceValue) Equal(_ *Interpreter, _ func() LocationRange, ot
 	}
 }
 
-func (v *StorageReferenceValue) ConformsToDynamicType(
+func (v *StorageReferenceValue) ConformsToStaticType(
 	interpreter *Interpreter,
-	getLocationRange func() LocationRange,
-	dynamicType DynamicType,
-	results TypeConformanceResults,
+	_ func() LocationRange,
+	staticType StaticType,
+	_ TypeConformanceResults,
 ) bool {
 
-	refType, ok := dynamicType.(StorageReferenceDynamicType)
+	refType, ok := staticType.(ReferenceStaticType)
 	if !ok ||
-		refType.authorized != v.Authorized {
+		refType.Authorized != v.Authorized {
 
 		return false
 	}
 
-	if refType.borrowedType == nil {
+	if refType.Type == nil {
 		if v.BorrowedType != nil {
 			return false
 		}
-	} else if !refType.borrowedType.Equal(v.BorrowedType) {
+	} else if !refType.Type.Equal(ConvertSemaToStaticType(v.BorrowedType)) {
 		return false
 	}
 
@@ -10137,12 +10239,15 @@ func (v *StorageReferenceValue) ConformsToDynamicType(
 		return false
 	}
 
-	return (*referencedValue).ConformsToDynamicType(
-		interpreter,
-		getLocationRange,
-		refType.InnerType(),
-		results,
-	)
+	// FIXME
+	//return (*referencedValue).ConformsToStaticType(
+	//	interpreter,
+	//	getLocationRange,
+	//	refType.InnerType(),
+	//	results,
+	//)
+
+	return false
 }
 
 func (*StorageReferenceValue) IsStorable() bool {
@@ -10423,25 +10528,25 @@ func (v *EphemeralReferenceValue) Equal(_ *Interpreter, _ func() LocationRange, 
 	}
 }
 
-func (v *EphemeralReferenceValue) ConformsToDynamicType(
-	interpreter *Interpreter,
-	getLocationRange func() LocationRange,
-	dynamicType DynamicType,
+func (v *EphemeralReferenceValue) ConformsToStaticType(
+	_ *Interpreter,
+	_ func() LocationRange,
+	staticType StaticType,
 	results TypeConformanceResults,
 ) bool {
 
-	refType, ok := dynamicType.(EphemeralReferenceDynamicType)
+	refType, ok := staticType.(ReferenceStaticType)
 	if !ok ||
-		refType.authorized != v.Authorized {
+		refType.Authorized != v.Authorized {
 
 		return false
 	}
 
-	if refType.borrowedType == nil {
+	if refType.Type == nil {
 		if v.BorrowedType != nil {
 			return false
 		}
-	} else if !refType.borrowedType.Equal(v.BorrowedType) {
+	} else if !refType.Type.Equal(ConvertSemaToStaticType(v.BorrowedType)) {
 		return false
 	}
 
@@ -10463,16 +10568,18 @@ func (v *EphemeralReferenceValue) ConformsToDynamicType(
 	// doesn't depend on this. It depends on the rest of values of the object tree.
 	results[entry] = true
 
-	result := (*referencedValue).ConformsToDynamicType(
-		interpreter,
-		getLocationRange,
-		refType.InnerType(),
-		results,
-	)
+	//result := (*referencedValue).ConformsToStaticType(
+	//	interpreter,
+	//	getLocationRange,
+	//	refType.InnerType(),
+	//	results,
+	//)
+	//
+	//results[entry] = result
+	//
+	//return result
 
-	results[entry] = result
-
-	return result
+	return false
 }
 
 func (*EphemeralReferenceValue) IsStorable() bool {
@@ -10623,14 +10730,18 @@ func (AddressValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, 
 	panic(errors.NewUnreachableError())
 }
 
-func (v AddressValue) ConformsToDynamicType(
-	_ *Interpreter,
+func (v AddressValue) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	_, ok := dynamicType.(AddressDynamicType)
-	return ok
+	semaType, err := inter.ConvertStaticToSemaType(staticType)
+	if err != nil {
+		return false
+	}
+
+	return inter.IsSubType(v.StaticType(), semaType)
 }
 
 func (AddressValue) IsStorable() bool {
@@ -10808,18 +10919,18 @@ func (PathValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ V
 	panic(errors.NewUnreachableError())
 }
 
-func (v PathValue) ConformsToDynamicType(
-	_ *Interpreter,
+func (v PathValue) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	switch dynamicType.(type) {
-	case PublicPathDynamicType:
+	switch staticType {
+	case PrimitiveStaticTypePublicPath:
 		return v.Domain == common.PathDomainPublic
-	case PrivatePathDynamicType:
+	case PrimitiveStaticTypePrivatePath:
 		return v.Domain == common.PathDomainPrivate
-	case StoragePathDynamicType:
+	case PrimitiveStaticTypeStoragePath:
 		return v.Domain == common.PathDomainStorage
 	default:
 		return false
@@ -11021,14 +11132,21 @@ func (*CapabilityValue) SetMember(_ *Interpreter, _ func() LocationRange, _ stri
 	panic(errors.NewUnreachableError())
 }
 
-func (v *CapabilityValue) ConformsToDynamicType(
-	_ *Interpreter,
+func (v *CapabilityValue) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	capabilityType, ok := dynamicType.(CapabilityDynamicType)
-	return ok && v.Path.Domain == capabilityType.Domain
+	//capabilityType, ok := staticType.(CapabilityDynamicType)
+	//return ok && v.Path.Domain == capabilityType.Domain
+	// FIXME
+	semaType, err := inter.ConvertStaticToSemaType(staticType)
+	if err != nil {
+		return false
+	}
+
+	return inter.IsSubType(v.StaticType(), semaType)
 }
 
 func (v *CapabilityValue) Equal(interpreter *Interpreter, getLocationRange func() LocationRange, other Value) bool {
@@ -11150,10 +11268,10 @@ func (v LinkValue) RecursiveString(seenReferences SeenReferences) string {
 	)
 }
 
-func (v LinkValue) ConformsToDynamicType(
-	_ *Interpreter,
+func (v LinkValue) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	_ DynamicType,
+	_ StaticType,
 	_ TypeConformanceResults,
 ) bool {
 	// There is no dynamic type for links,

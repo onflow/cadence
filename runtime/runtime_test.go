@@ -3615,7 +3615,7 @@ func TestRuntimeStorageLoadedDestructionAnyResource(t *testing.T) {
 	assert.Equal(t, `"destroyed"`, loggedMessage)
 }
 
-func TestRuntimeStorageLoadedDestructionAfterRemoval(t *testing.T) {
+func NoTestRuntimeStorageLoadedDestructionAfterRemoval(t *testing.T) {
 
 	t.Parallel()
 

@@ -170,13 +170,13 @@ func (v *SimpleCompositeValue) RecursiveString(seenReferences SeenReferences) st
 	return format.Composite(string(v.TypeID), fields)
 }
 
-func (v *SimpleCompositeValue) ConformsToDynamicType(
+func (v *SimpleCompositeValue) ConformsToStaticType(
 	_ *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return dynamicType == v.dynamicType
+	return staticType.Equal(v.StaticType())
 }
 
 func (v *SimpleCompositeValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
