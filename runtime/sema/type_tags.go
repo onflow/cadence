@@ -357,6 +357,9 @@ func LeastCommonSuperType(types ...Type) Type {
 	return findCommonSuperType(join, types...)
 }
 
+var notNeverType = NeverTypeTag.Not()
+var notNilType = NilTypeTag.Not()
+
 func findCommonSuperType(joinedTypeTag TypeTag, types ...Type) Type {
 	var superType Type
 
@@ -367,7 +370,7 @@ func findCommonSuperType(joinedTypeTag TypeTag, types ...Type) Type {
 	// Remove 'Never' type out of the way.
 	// Because 'Never' is a subtype of any other type. So
 	// finding super type for the rest of the types is sufficient.
-	joinedTypeTag = joinedTypeTag.And(NeverTypeTag.Not())
+	joinedTypeTag = joinedTypeTag.And(notNeverType)
 
 	if joinedTypeTag.upperMask != 0 {
 		superType = findSuperTypeFromUpperMask(joinedTypeTag, types)
@@ -382,7 +385,7 @@ func findCommonSuperType(joinedTypeTag TypeTag, types ...Type) Type {
 	// Optional types.
 	if joinedTypeTag.ContainsAny(NilTypeTag) {
 		// Get the type without the optional flag
-		innerTypeTag := joinedTypeTag.And(NilTypeTag.Not())
+		innerTypeTag := joinedTypeTag.And(notNilType)
 		superType := findCommonSuperType(innerTypeTag, types...)
 
 		// If the common supertype of the rest of types contain nil,
