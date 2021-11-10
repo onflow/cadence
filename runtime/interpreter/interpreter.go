@@ -3305,8 +3305,226 @@ func (interpreter *Interpreter) IsSubType_Old(subType DynamicType, superType sem
 }
 
 func (interpreter *Interpreter) IsSubType(subType StaticType, superType sema.Type) bool {
-	subTypeSemaType := interpreter.MustConvertStaticToSemaType(subType)
-	return sema.IsSubType(subTypeSemaType, superType)
+	//subTypeSemaType := interpreter.MustConvertStaticToSemaType(subType)
+	//return sema.IsSubType(subTypeSemaType, superType)
+
+	if superType == sema.AnyType {
+		return true
+	}
+
+	switch subType {
+	case PrimitiveStaticTypeMetaType:
+		switch superType {
+		case sema.AnyStructType, sema.MetaType:
+			return true
+		}
+
+	case PrimitiveStaticTypeVoid:
+		switch superType {
+		case sema.AnyStructType, sema.VoidType:
+			return true
+		}
+
+	case PrimitiveStaticTypeString:
+		switch superType {
+		case sema.AnyStructType, sema.StringType, sema.CharacterType:
+			return true
+		}
+
+	case PrimitiveStaticTypeBool:
+		switch superType {
+		case sema.AnyStructType, sema.BoolType:
+			return true
+		}
+
+	case PrimitiveStaticTypeAddress:
+		if _, ok := superType.(*sema.AddressType); ok {
+			return true
+		}
+
+		return superType == sema.AnyStructType
+
+	case PrimitiveStaticTypeNumber,
+		PrimitiveStaticTypeSignedNumber,
+		PrimitiveStaticTypeInteger,
+		PrimitiveStaticTypeSignedInteger,
+		PrimitiveStaticTypeFixedPoint,
+		PrimitiveStaticTypeSignedFixedPoint,
+		PrimitiveStaticTypeInt,
+		PrimitiveStaticTypeInt8,
+		PrimitiveStaticTypeInt16,
+		PrimitiveStaticTypeInt32,
+		PrimitiveStaticTypeInt64,
+		PrimitiveStaticTypeInt128,
+		PrimitiveStaticTypeInt256,
+		PrimitiveStaticTypeUInt,
+		PrimitiveStaticTypeUInt8,
+		PrimitiveStaticTypeUInt16,
+		PrimitiveStaticTypeUInt32,
+		PrimitiveStaticTypeUInt64,
+		PrimitiveStaticTypeUInt128,
+		PrimitiveStaticTypeUInt256,
+		PrimitiveStaticTypeWord8,
+		PrimitiveStaticTypeWord16,
+		PrimitiveStaticTypeWord32,
+		PrimitiveStaticTypeWord64,
+		PrimitiveStaticTypeFix64,
+		PrimitiveStaticTypeUFix64:
+			semaType, err := interpreter.ConvertStaticToSemaType(subType)
+			if err != nil {
+				return false
+			}
+		return sema.IsSubType(semaType, superType)
+
+	case PrimitiveStaticTypePublicPath:
+		switch superType {
+		case sema.PublicPathType, sema.CapabilityPathType, sema.PathType, sema.AnyStructType:
+			return true
+		}
+
+	case PrimitiveStaticTypePrivatePath:
+		switch superType {
+		case sema.PrivatePathType, sema.CapabilityPathType, sema.PathType, sema.AnyStructType:
+			return true
+		}
+
+	case PrimitiveStaticTypePath:
+		switch superType {
+		case sema.StoragePathType, sema.PathType, sema.AnyStructType:
+			return true
+		}
+
+	case PrimitiveStaticTypeDeployedContract:
+		switch superType {
+		case sema.AnyStructType, sema.DeployedContractType:
+			return true
+		}
+
+	case PrimitiveStaticTypeBlock:
+		switch superType {
+		case sema.AnyStructType, sema.BlockType:
+			return true
+		}
+
+	default:
+		switch staticType := subType.(type) {
+		case FunctionStaticType:
+			if superType == sema.AnyStructType {
+				return true
+			}
+
+			return sema.IsSubType(staticType.Type, superType)
+
+		case CompositeStaticType:
+			semaType, err := interpreter.ConvertStaticToSemaType(staticType)
+			if err != nil {
+				return false
+			}
+			return sema.IsSubType(semaType, superType)
+
+		case ConstantSizedStaticType, VariableSizedStaticType:
+			subTypeStaticType := interpreter.MustConvertStaticToSemaType(staticType)
+			return sema.IsSubType(subTypeStaticType, superType)
+
+		case DictionaryStaticType:
+
+			subTypeStaticType := interpreter.MustConvertStaticToSemaType(staticType)
+			return sema.IsSubType(subTypeStaticType, superType)
+
+		//case NilDynamicType:
+		//	if _, ok := superType.(*sema.OptionalType); ok {
+		//		return true
+		//	}
+		//
+		//	switch superType {
+		//	case sema.AnyStructType, sema.AnyResourceType:
+		//		return true
+		//	}
+
+		case OptionalStaticType:
+			if typedSuperType, ok := superType.(*sema.OptionalType); ok {
+				return interpreter.IsSubType(staticType.Type, typedSuperType.Type)
+			}
+
+			switch superType {
+			case sema.AnyStructType, sema.AnyResourceType:
+				return true
+			}
+
+		case ReferenceStaticType:
+			semaType := interpreter.MustConvertStaticToSemaType(staticType).(*sema.ReferenceType)
+
+			if typedSuperType, ok := superType.(*sema.ReferenceType); ok {
+
+				// First, check that the dynamic type of the referenced value
+				// is a subtype of the super type
+
+				if !interpreter.IsSubType(staticType.Type, typedSuperType.Type) {
+					return false
+				}
+
+				// If the reference value is authorized it may be downcasted
+
+				authorized := staticType.Authorized
+
+				if authorized {
+					return true
+				}
+
+				// If the reference value is not authorized,
+				// it may not be downcasted
+
+				return sema.IsSubType(
+					&sema.ReferenceType{
+						Authorized: authorized,
+						Type:       semaType.Type,
+					},
+					typedSuperType,
+				)
+			}
+
+			return superType == sema.AnyStructType
+
+		case CapabilityStaticType:
+			subTypeStaticType := interpreter.MustConvertStaticToSemaType(staticType)
+			return sema.IsSubType(subTypeStaticType, superType)
+
+			//if typedSuperType, ok := superType.(*sema.CapabilityType); ok {
+			//
+			//	if typedSuperType.BorrowType != nil {
+			//
+			//		// Capability <: Capability<T>:
+			//		// never
+			//
+			//		if typedSubType.BorrowType == nil {
+			//			return false
+			//		}
+			//
+			//		// Capability<T> <: Capability<U>:
+			//		// if T <: U
+			//
+			//		return sema.IsSubType(
+			//			typedSubType.BorrowType,
+			//			typedSuperType.BorrowType,
+			//		)
+			//	}
+			//
+			//	// Capability<T> <: Capability || Capability <: Capability:
+			//	// always
+			//
+			//	return true
+			//
+			//}
+			//
+			//return superType == sema.AnyStructType
+		}
+	}
+
+	semaType, err := interpreter.ConvertStaticToSemaType(subType)
+	if err != nil {
+		return false
+	}
+	return sema.IsSubType(semaType, superType)
 }
 
 // PathToStorageKey returns the storage identifier with the proper prefix
