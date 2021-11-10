@@ -3996,6 +3996,7 @@ func (interpreter *Interpreter) checkContainerMutation(
 	if !interpreter.IsSubType(actualType, expectedType) {
 		panic(ContainerMutationError{
 			ExpectedType:  expectedType,
+			ActualType:    interpreter.MustConvertStaticToSemaType(element.StaticType()),
 			LocationRange: getLocationRange(),
 		})
 	}
