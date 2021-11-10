@@ -207,7 +207,8 @@ var AggregateBLSSignaturesFunction = NewStandardLibraryFunction(
 	},
 	aggregateBLSSignaturesFunctionDocString,
 	func(invocation interpreter.Invocation) interpreter.Value {
-		panic("unimplemented")
+		signatures := invocation.Arguments[0].(*interpreter.ArrayValue)
+		return AggregateBLSSignatures(invocation.Interpreter, signatures)
 	},
 )
 
@@ -237,6 +238,40 @@ var AggregateBLSPublicKeysFunction = NewStandardLibraryFunction(
 		panic("unimplemented")
 	},
 )
+
+func AggregateBLSSignatures(inter *interpreter.Interpreter, signatures *interpreter.ArrayValue) interpreter.Value {
+	bytesArray := make([][]byte, 0, signatures.Count())
+	signatures.Iterate(func(element interpreter.Value) (resume bool) {
+		sig := element.(*interpreter.ArrayValue)
+		bytes := make([]byte, 0, sig.Count())
+		sig.Iterate(func(element interpreter.Value) (resume bool) {
+			i := element.(interpreter.UInt8Value)
+			bytes = append(bytes, byte(i))
+			return true
+		})
+		bytesArray = append(bytesArray, bytes)
+		return true
+	})
+
+	aggregatedBytes, err := inter.AggregateBLSSignaturesHandler(
+		bytesArray,
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	aggregatedSignature := make([]interpreter.Value, 0, len(aggregatedBytes))
+	for _, b := range aggregatedBytes {
+		aggregatedSignature = append(aggregatedSignature, interpreter.UInt8Value(b))
+	}
+
+	return interpreter.NewArrayValue(
+		inter,
+		interpreter.VariableSizedStaticType{Type: interpreter.PrimitiveStaticTypeUInt8},
+		signatures.GetOwner(),
+		aggregatedSignature...,
+	)
+}
 
 // BuiltinValues
 
