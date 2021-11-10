@@ -167,6 +167,28 @@ type PublicKeyValidationHandlerFunc func(
 	publicKey *CompositeValue,
 ) BoolValue
 
+// VerifyBLSPoPHandlerFunc is a function that verifies a BLS proof of posession
+type VerifyBLSPoPHandlerFunc func(
+	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
+	publicKey *CompositeValue,
+	signature []byte,
+) (BoolValue, error)
+
+// AggregateBLSSignaturesHandlerFunc is a function that joins a list of
+// BLS signatures
+type AggregateBLSSignaturesHandlerFunc func(
+	signatures [][]byte,
+) ([]byte, error)
+
+// AggregateBLSPublicKeysHandlerFunc is a function that joins a list of
+// BLS public keys
+type AggregateBLSPublicKeysHandlerFunc func(
+	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
+	publicKeys []*CompositeValue,
+) (*CompositeValue, error)
+
 // SignatureVerificationHandlerFunc is a function that validates a signature.
 type SignatureVerificationHandlerFunc func(
 	interpreter *Interpreter,
@@ -275,6 +297,9 @@ type Interpreter struct {
 	uuidHandler                    UUIDHandlerFunc
 	PublicKeyValidationHandler     PublicKeyValidationHandlerFunc
 	SignatureVerificationHandler   SignatureVerificationHandlerFunc
+	BLSVerifyPoPHandler            VerifyBLSPoPHandlerFunc
+	AggregateBLSSignaturesHandler  AggregateBLSSignaturesHandlerFunc
+	AggregateBLSPublicKeysHandler  AggregateBLSPublicKeysHandlerFunc
 	HashHandler                    HashHandlerFunc
 	ExitHandler                    ExitHandlerFunc
 	interpreted                    bool
@@ -433,6 +458,24 @@ func WithUUIDHandler(handler UUIDHandlerFunc) Option {
 func WithPublicKeyValidationHandler(handler PublicKeyValidationHandlerFunc) Option {
 	return func(interpreter *Interpreter) error {
 		interpreter.SetPublicKeyValidationHandler(handler)
+		return nil
+	}
+}
+
+// WithBLSCryptoFunctions returns an interpreter option which sets the given
+// functions as the functions used to handle certain BLS-specific crypto functions.
+//
+func WithBLSCryptoFunctions(
+	verifyPoP VerifyBLSPoPHandlerFunc,
+	aggregateSignatures AggregateBLSSignaturesHandlerFunc,
+	aggregatePublicKeys AggregateBLSPublicKeysHandlerFunc,
+) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetBLSCryptoFunctions(
+			verifyPoP,
+			aggregateSignatures,
+			aggregatePublicKeys,
+		)
 		return nil
 	}
 }
@@ -640,6 +683,18 @@ func (interpreter *Interpreter) SetUUIDHandler(function UUIDHandlerFunc) {
 //
 func (interpreter *Interpreter) SetPublicKeyValidationHandler(function PublicKeyValidationHandlerFunc) {
 	interpreter.PublicKeyValidationHandler = function
+}
+
+// SetBLSCryptoFunctions sets the functions that are used to handle certain BLS specific crypt functions.
+//
+func (interpreter *Interpreter) SetBLSCryptoFunctions(
+	verifyPoP VerifyBLSPoPHandlerFunc,
+	aggregateSignatures AggregateBLSSignaturesHandlerFunc,
+	aggregatePublicKeys AggregateBLSPublicKeysHandlerFunc,
+) {
+	interpreter.BLSVerifyPoPHandler = verifyPoP
+	interpreter.AggregateBLSSignaturesHandler = aggregateSignatures
+	interpreter.AggregateBLSPublicKeysHandler = aggregatePublicKeys
 }
 
 // SetSignatureVerificationHandler sets the function that is used to handle signature validation.

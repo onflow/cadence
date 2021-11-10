@@ -1079,6 +1079,19 @@ func (r *interpreterRuntime) newInterpreter(
 		preDeclaredValues = append(preDeclaredValues, predeclaredValue)
 	}
 
+	publicKeyValidator := func(
+		inter *interpreter.Interpreter,
+		getLocationRange func() interpreter.LocationRange,
+		publicKey *interpreter.CompositeValue,
+	) interpreter.BoolValue {
+		return validatePublicKey(
+			inter,
+			getLocationRange,
+			publicKey,
+			context.Interface,
+		)
+	}
+
 	defaultOptions := []interpreter.Option{
 		interpreter.WithStorage(storage),
 		interpreter.WithPredeclaredValues(preDeclaredValues),
@@ -1139,17 +1152,38 @@ func (r *interpreterRuntime) newInterpreter(
 				)
 			},
 		),
-		interpreter.WithPublicKeyValidationHandler(
+		interpreter.WithPublicKeyValidationHandler(publicKeyValidator),
+		interpreter.WithBLSCryptoFunctions(
 			func(
 				inter *interpreter.Interpreter,
 				getLocationRange func() interpreter.LocationRange,
-				publicKey *interpreter.CompositeValue,
-			) interpreter.BoolValue {
-				return validatePublicKey(
+				publicKeyValue *interpreter.CompositeValue,
+				signature []byte,
+			) (interpreter.BoolValue, error) {
+				return verifyBLSPOP(
 					inter,
 					getLocationRange,
-					publicKey,
+					publicKeyValue,
+					signature,
 					context.Interface,
+				)
+			},
+			func(
+				signatures [][]byte,
+			) ([]byte, error) {
+				return context.Interface.AggregateBLSSignatures(signatures)
+			},
+			func(
+				inter *interpreter.Interpreter,
+				getLocationRange func() interpreter.LocationRange,
+				publicKeys []*interpreter.CompositeValue,
+			) (*interpreter.CompositeValue, error) {
+				return aggregateBLSPublicKeys(
+					inter,
+					getLocationRange,
+					publicKeys,
+					context.Interface,
+					publicKeyValidator,
 				)
 			},
 		),
@@ -3156,6 +3190,64 @@ func validatePublicKey(
 	}
 
 	return interpreter.BoolValue(valid)
+}
+
+func verifyBLSPOP(
+	inter *interpreter.Interpreter,
+	getLocationRange func() interpreter.LocationRange,
+	publicKeyValue *interpreter.CompositeValue,
+	signature []byte,
+	runtimeInterface Interface,
+) (interpreter.BoolValue, error) {
+	publicKey, err := NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
+	if err != nil {
+		return false, err
+	}
+
+	var valid bool
+	wrapPanic(func() {
+		valid, err = runtimeInterface.BLSVerifyPOP(publicKey, signature)
+	})
+
+	if err != nil {
+		return false, err
+	}
+
+	return interpreter.BoolValue(valid), nil
+}
+
+func aggregateBLSPublicKeys(
+	inter *interpreter.Interpreter,
+	getLocationRange func() interpreter.LocationRange,
+	publicKeyValues []*interpreter.CompositeValue,
+	runtimeInterface Interface,
+	validator interpreter.PublicKeyValidationHandlerFunc,
+) (*interpreter.CompositeValue, error) {
+	publicKeys := make([]*PublicKey, 0, len(publicKeyValues))
+	for _, value := range publicKeyValues {
+		publicKey, err := NewPublicKeyFromValue(inter, getLocationRange, value)
+		if err != nil {
+			return nil, err
+		}
+		publicKeys = append(publicKeys, publicKey)
+	}
+
+	var err error
+	var key *PublicKey
+	wrapPanic(func() {
+		key, err = runtimeInterface.AggregateBLSPublicKeys(publicKeys)
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return NewPublicKeyValue(
+		inter,
+		getLocationRange,
+		key,
+		validator,
+	), nil
 }
 
 func verifySignature(
