@@ -110,6 +110,28 @@ func (t TypeTag) BelongsTo(typeTag TypeTag) bool {
 	return t.And(typeTag).Equals(t)
 }
 
+/*
+ * Following defines the masks used to represent known types in Cadence.
+ * Each of the numeric/simple type has a unique dedicated mask. All the derived
+ * types (e.g: composites, dictionaries, etc.) have a common bitmask for each
+ * category (e.g: one for composites, one for dictionaries, etc.), because
+ * tag itself is not sufficient to represent those types, and need more complex
+ * analysis. So the bitmask is only used to represent their 'kind'.
+ *
+ * For simple/numeric types, it is required to have a unique mask. For others, it's
+ * optional to have a unique tag (but requires a one for their 'category'). Having
+ * a unique mask for a derived type `T` would only give some performance optimization
+ * when finding the supertype of a collection of all `T`s. Because it will exit early
+ * by checking the corresponding bit of the bitmask, and don't need to fall back on
+ * checking type's deep-equality.
+ *
+ * NOTE: Builtin composite types don't have dedicated masks even though they are
+ * pre-known. This is because, though they are pre-known, we might want to treat those
+ * as any other composite type (e.g: finding common conformance, etc.) and let them
+ * also go on the same execution path as other composites, by NOT optimizing with a
+ * dedicated tag.
+ */
+
 const noTypeMask = 0
 
 // Lower mask types
