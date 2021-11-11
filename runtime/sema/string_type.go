@@ -34,6 +34,7 @@ var StringType = &SimpleType{
 	Name:                 "String",
 	QualifiedName:        "String",
 	TypeID:               "String",
+	tag:                  StringTypeTag,
 	IsInvalid:            false,
 	IsResource:           false,
 	Storable:             true,
