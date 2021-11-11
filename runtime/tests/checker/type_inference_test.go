@@ -832,7 +832,7 @@ func TestCheckArraySupertypeInference(t *testing.T) {
 				expectedElementType: &sema.RestrictedType{
 					Type: sema.AnyStructType,
 					Restrictions: []*sema.InterfaceType{
-						&sema.InterfaceType{
+						{
 							Location:      common.StringLocation("test"),
 							Identifier:    "I2",
 							CompositeKind: common.CompositeKindStructure,
