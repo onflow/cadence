@@ -19,6 +19,7 @@
 package sema
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -891,6 +892,23 @@ func TestCommonSuperType(t *testing.T) {
 				},
 				expectedSuperType: AnyStructType,
 			},
+			{
+				name: "never type",
+				types: []Type{
+					NeverType,
+					NeverType,
+				},
+				expectedSuperType: NeverType,
+			},
+			{
+				name: "never with numerics",
+				types: []Type{
+					IntType,
+					Int8Type,
+					NeverType,
+				},
+				expectedSuperType: SignedIntegerType,
+			},
 		}
 
 		testLeastCommonSuperType(t, tests)
@@ -1013,6 +1031,17 @@ func TestCommonSuperType(t *testing.T) {
 				},
 				expectedSuperType: AnyStructType,
 			},
+			{
+				name: "structs with never",
+				types: []Type{
+					NeverType,
+					PublicKeyType,
+					PublicKeyType,
+					NeverType,
+					PublicKeyType,
+				},
+				expectedSuperType: PublicKeyType,
+			},
 		}
 
 		testLeastCommonSuperType(t, tests)
@@ -1107,17 +1136,26 @@ func TestCommonSuperType(t *testing.T) {
 				expectedSuperType: InvalidType,
 			},
 			{
-				name: "fixed vs variable sized",
+				name: "covariant arrays",
 				types: []Type{
-					&ConstantSizedType{
-						Type: StringType,
-						Size: 0,
+					&VariableSizedType{
+						Type: IntType,
 					},
 					&VariableSizedType{
-						Type: StringType,
+						Type: Int8Type,
 					},
 				},
 				expectedSuperType: AnyStructType,
+			},
+			{
+				name: "arrays with never",
+				types: []Type{
+					NeverType,
+					stringArray,
+					NeverType,
+					stringArray,
+				},
+				expectedSuperType: stringArray,
 			},
 		}
 
@@ -1218,6 +1256,16 @@ func TestCommonSuperType(t *testing.T) {
 					nestedStringDictionary,
 				},
 				expectedSuperType: InvalidType,
+			},
+			{
+				name: "dictionaries with never",
+				types: []Type{
+					NeverType,
+					stringStringDictionary,
+					NeverType,
+					stringStringDictionary,
+				},
+				expectedSuperType: stringStringDictionary,
 			},
 		}
 
@@ -1414,6 +1462,87 @@ func TestCommonSuperType(t *testing.T) {
 		}
 
 		testLeastCommonSuperType(t, tests)
+	})
+
+	t.Run("Function types", func(t *testing.T) {
+		t.Parallel()
+
+		funcType1 := &FunctionType{
+			Parameters: []*Parameter{
+				{
+					TypeAnnotation: NewTypeAnnotation(StringType),
+				},
+			},
+			ReturnTypeAnnotation: NewTypeAnnotation(Int8Type),
+			Members:              NewStringMemberOrderedMap(),
+		}
+
+		funcType2 := &FunctionType{
+			Parameters: []*Parameter{
+				{
+					TypeAnnotation: NewTypeAnnotation(IntType),
+				},
+			},
+			ReturnTypeAnnotation: NewTypeAnnotation(Int8Type),
+			Members:              NewStringMemberOrderedMap(),
+		}
+
+		tests := []testCase{
+			{
+				name: "homogenous",
+				types: []Type{
+					funcType1,
+					funcType1,
+				},
+				expectedSuperType: funcType1,
+			},
+			{
+				name: "heterogeneous",
+				types: []Type{
+					funcType1,
+					funcType2,
+				},
+				expectedSuperType: AnyStructType,
+			},
+		}
+
+		testLeastCommonSuperType(t, tests)
+	})
+
+	t.Run("Lower mask types", func(t *testing.T) {
+		for _, typeTag := range allLowerMaskedTypeTags {
+			// Upper mask must be zero
+			assert.Equal(t, uint64(0), typeTag.upperMask)
+
+			switch typeTag.lowerMask {
+			case
+				// No such types available
+				unsignedIntegerTypeMask,
+				unsignedFixedPointTypeMask,
+
+				compositeTypeMask:
+				continue
+			}
+
+			// findSuperTypeFromLowerMask must implement all lower-masked types
+			t.Run(fmt.Sprintf("mask_%d", typeTag.lowerMask), func(t *testing.T) {
+				typ := findSuperTypeFromLowerMask(typeTag, nil)
+				assert.NotNil(t, typ, fmt.Sprintf("not implemented %v", typeTag))
+			})
+		}
+	})
+
+	t.Run("Upper mask types", func(t *testing.T) {
+		for _, typeTag := range allUpperMaskedTypeTags {
+			// Lower mask must be zero
+			assert.Equal(t, uint64(0), typeTag.lowerMask)
+
+			// findSuperTypeFromUpperMask must implement all upper-masked types
+			t.Run(fmt.Sprintf("mask_%d", typeTag.upperMask), func(t *testing.T) {
+				typ := findSuperTypeFromUpperMask(typeTag, nil)
+				assert.NotNil(t, typ, fmt.Sprintf("not implemented %v", typeTag))
+			})
+		}
 	})
 }
 

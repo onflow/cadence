@@ -150,6 +150,22 @@ func ExportType(t sema.Type, results map[sema.TypeID]cadence.Type) cadence.Type 
 			return cadence.BlockType{}
 		case sema.StringType:
 			return cadence.StringType{}
+		case sema.AccountKeyType:
+			return cadence.AccountKeyType{}
+		case sema.PublicAccountContractsType:
+			return cadence.PublicAccountContractsType{}
+		case sema.AuthAccountContractsType:
+			return cadence.AuthAccountContractsType{}
+		case sema.PublicAccountKeysType:
+			return cadence.PublicAccountKeysType{}
+		case sema.AuthAccountKeysType:
+			return cadence.AuthAccountKeysType{}
+		case sema.PublicAccountType:
+			return cadence.PublicAccountType{}
+		case sema.AuthAccountType:
+			return cadence.AuthAccountType{}
+		case sema.DeployedContractType:
+			return cadence.DeployedContractType{}
 		}
 
 		panic(fmt.Sprintf("cannot export type of type %T", t))
@@ -541,6 +557,23 @@ func ImportType(t cadence.Type) interpreter.StaticType {
 		return interpreter.CapabilityStaticType{
 			BorrowType: ImportType(t.BorrowType),
 		}
+	case cadence.AccountKeyType:
+		return interpreter.PrimitiveStaticTypeAccountKey
+	case cadence.AuthAccountContractsType:
+		return interpreter.PrimitiveStaticTypeAuthAccountContracts
+	case cadence.AuthAccountKeysType:
+		return interpreter.PrimitiveStaticTypeAuthAccountKeys
+	case cadence.AuthAccountType:
+		return interpreter.PrimitiveStaticTypeAuthAccount
+	case cadence.PublicAccountContractsType:
+		return interpreter.PrimitiveStaticTypePublicAccountContracts
+	case cadence.PublicAccountKeysType:
+		return interpreter.PrimitiveStaticTypePublicAccountKeys
+	case cadence.PublicAccountType:
+		return interpreter.PrimitiveStaticTypePublicAccount
+	case cadence.DeployedContractType:
+		return interpreter.PrimitiveStaticTypeDeployedContract
+	default:
+		panic(fmt.Sprintf("cannot export type of type %T", t))
 	}
-	panic(fmt.Sprintf("cannot export type of type %T", t))
 }
