@@ -1210,8 +1210,8 @@ func (r *interpreterRuntime) newInterpreter(
 			func(
 				inter *interpreter.Interpreter,
 				getLocationRange func() interpreter.LocationRange,
-				publicKeys []*interpreter.CompositeValue,
-			) (*interpreter.CompositeValue, error) {
+				publicKeys []interpreter.MemberAccessibleValue,
+			) (interpreter.MemberAccessibleValue, error) {
 				return aggregateBLSPublicKeys(
 					inter,
 					getLocationRange,
@@ -3306,12 +3306,13 @@ func verifyBLSPOP(
 func aggregateBLSPublicKeys(
 	inter *interpreter.Interpreter,
 	getLocationRange func() interpreter.LocationRange,
-	publicKeyValues []*interpreter.CompositeValue,
+	publicKeyValues []interpreter.MemberAccessibleValue,
 	runtimeInterface Interface,
 	validator interpreter.PublicKeyValidationHandlerFunc,
-) (*interpreter.CompositeValue, error) {
+) (interpreter.MemberAccessibleValue, error) {
 	publicKeys := make([]*PublicKey, 0, len(publicKeyValues))
 	for _, value := range publicKeyValues {
+		fmt.Printf("at runtime: %T\n", value)
 		publicKey, err := NewPublicKeyFromValue(inter, getLocationRange, value)
 		if err != nil {
 			return nil, err

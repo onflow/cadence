@@ -176,8 +176,8 @@ type AggregateBLSSignaturesHandlerFunc func(
 type AggregateBLSPublicKeysHandlerFunc func(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
-	publicKeys []*CompositeValue,
-) (*CompositeValue, error)
+	publicKeys []MemberAccessibleValue,
+) (MemberAccessibleValue, error)
 
 // SignatureVerificationHandlerFunc is a function that validates a signature.
 type SignatureVerificationHandlerFunc func(
