@@ -235,11 +235,22 @@ var AggregateBLSPublicKeysFunction = NewStandardLibraryFunction(
 	},
 	aggregateBLSPublicKeysFunctionDocString,
 	func(invocation interpreter.Invocation) interpreter.Value {
-		panic("unimplemented")
+		publicKeys := invocation.Arguments[0].(*interpreter.ArrayValue)
+		return AggregateBLSPublicKeys(invocation.Interpreter, publicKeys)
 	},
 )
 
-func AggregateBLSSignatures(inter *interpreter.Interpreter, signatures *interpreter.ArrayValue) interpreter.Value {
+func AggregateBLSPublicKeys(
+	inter *interpreter.Interpreter,
+	publicKeys *interpreter.ArrayValue,
+) interpreter.Value {
+	panic("unimplemented")
+}
+
+func AggregateBLSSignatures(
+	inter *interpreter.Interpreter,
+	signatures *interpreter.ArrayValue,
+) interpreter.Value {
 	bytesArray := make([][]byte, 0, signatures.Count())
 	signatures.Iterate(func(element interpreter.Value) (resume bool) {
 		sig := element.(*interpreter.ArrayValue)

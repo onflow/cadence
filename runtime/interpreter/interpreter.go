@@ -171,7 +171,7 @@ type PublicKeyValidationHandlerFunc func(
 type VerifyBLSPoPHandlerFunc func(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
-	publicKey *CompositeValue,
+	publicKey MemberAccessibleValue,
 	signature []byte,
 ) (BoolValue, error)
 
