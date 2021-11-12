@@ -157,7 +157,7 @@ type PublicKeyValidationHandlerFunc func(
 	publicKey *CompositeValue,
 ) BoolValue
 
-// VerifyBLSPoPHandlerFunc is a function that verifies a BLS proof of posession
+// VerifyBLSPoPHandlerFunc is a function that verifies a BLS proof of possession
 type VerifyBLSPoPHandlerFunc func(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
