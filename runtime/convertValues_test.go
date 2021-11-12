@@ -975,6 +975,46 @@ func TestImportRuntimeType(t *testing.T) {
 			expected: interpreter.PrimitiveStaticTypePrivatePath,
 		},
 		{
+			label:    "AuthAccount",
+			actual:   cadence.AuthAccountType{},
+			expected: interpreter.PrimitiveStaticTypeAuthAccount,
+		},
+		{
+			label:    "PublicAccount",
+			actual:   cadence.PublicAccountType{},
+			expected: interpreter.PrimitiveStaticTypePublicAccount,
+		},
+		{
+			label:    "DeployedContract",
+			actual:   cadence.DeployedContractType{},
+			expected: interpreter.PrimitiveStaticTypeDeployedContract,
+		},
+		{
+			label:    "AuthAccount.Keys",
+			actual:   cadence.AuthAccountKeysType{},
+			expected: interpreter.PrimitiveStaticTypeAuthAccountKeys,
+		},
+		{
+			label:    "PublicAccount.Keys",
+			actual:   cadence.PublicAccountKeysType{},
+			expected: interpreter.PrimitiveStaticTypePublicAccountKeys,
+		},
+		{
+			label:    "AuthAccount.Contracts",
+			actual:   cadence.AuthAccountContractsType{},
+			expected: interpreter.PrimitiveStaticTypeAuthAccountContracts,
+		},
+		{
+			label:    "PublicAccount.Contracts",
+			actual:   cadence.PublicAccountContractsType{},
+			expected: interpreter.PrimitiveStaticTypePublicAccountContracts,
+		},
+		{
+			label:    "AccountKey",
+			actual:   cadence.AccountKeyType{},
+			expected: interpreter.PrimitiveStaticTypeAccountKey,
+		},
+		{
 			label: "Optional",
 			actual: cadence.OptionalType{
 				Type: cadence.IntType{},
