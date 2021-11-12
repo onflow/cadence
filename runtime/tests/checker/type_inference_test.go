@@ -1089,7 +1089,7 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
 		_, err := ParseAndCheck(t, code)
 		checkerErr := ExpectCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.TypeAnnotationRequiredError{}, checkerErr[0])
+		assert.IsType(t, &sema.InvalidDictionaryKeyTypeError{}, checkerErr[0])
 	})
 
 	t.Run("unsupported supertype for keys", func(t *testing.T) {

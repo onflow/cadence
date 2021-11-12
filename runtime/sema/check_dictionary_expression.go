@@ -70,8 +70,7 @@ func (checker *Checker) VisitDictionaryExpression(expression *ast.DictionaryExpr
 		valueType = LeastCommonSuperType(valueTypes...)
 
 		if keyType == InvalidType ||
-			valueType == InvalidType ||
-			!IsValidDictionaryKeyType(keyType) {
+			valueType == InvalidType {
 			checker.report(
 				&TypeAnnotationRequiredError{
 					Cause: "cannot infer type from dictionary literal: ",

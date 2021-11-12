@@ -738,8 +738,6 @@ func TestCommonSuperType(t *testing.T) {
 	testLeastCommonSuperType := func(t *testing.T, tests []testCase) {
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
-				t.Parallel()
-
 				assert.Equal(
 					t,
 					test.expectedSuperType,
@@ -1413,7 +1411,7 @@ func TestCommonSuperType(t *testing.T) {
 					restrictedType1,
 					restrictedType2,
 				},
-				expectedSuperType: AnyType,
+				expectedSuperType: InvalidType,
 			},
 		}
 
@@ -1457,7 +1455,7 @@ func TestCommonSuperType(t *testing.T) {
 					restrictedType1,
 					restrictedType2,
 				},
-				expectedSuperType: AnyType,
+				expectedSuperType: InvalidType,
 			},
 		}
 
