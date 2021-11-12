@@ -1191,7 +1191,7 @@ func (r *interpreterRuntime) newInterpreter(
 			func(
 				inter *interpreter.Interpreter,
 				getLocationRange func() interpreter.LocationRange,
-				publicKeyValue *interpreter.CompositeValue,
+				publicKeyValue interpreter.MemberAccessibleValue,
 				signature []byte,
 			) (interpreter.BoolValue, error) {
 				return verifyBLSPOP(
@@ -3251,7 +3251,7 @@ func validatePublicKey(
 func verifyBLSPOP(
 	inter *interpreter.Interpreter,
 	getLocationRange func() interpreter.LocationRange,
-	publicKeyValue *interpreter.CompositeValue,
+	publicKeyValue interpreter.MemberAccessibleValue,
 	signature []byte,
 	runtimeInterface Interface,
 ) (interpreter.BoolValue, error) {

@@ -14100,7 +14100,8 @@ func NewPublicKeyValue(
 		},
 	}
 	publicKeyValue.Functions = map[string]FunctionValue{
-		sema.PublicKeyVerifyFunction: publicKeyVerifyFunction,
+		sema.PublicKeyVerifyFunction:    publicKeyVerifyFunction,
+		sema.PublicKeyVerifyPoPFunction: publicKeyVerifyPoPFunction,
 	}
 
 	// Validate the public key, and initialize 'isValid' field.
@@ -14170,4 +14171,40 @@ var publicKeyVerifyFunction = NewHostFunctionValue(
 		)
 	},
 	sema.PublicKeyVerifyFunctionType,
+)
+
+var publicKeyVerifyPoPFunction = NewHostFunctionValue(
+	func(invocation Invocation) (v Value) {
+		signatureValue := invocation.Arguments[0].(*ArrayValue)
+		publicKey := invocation.Self
+
+		interpreter := invocation.Interpreter
+
+		getLocationRange := invocation.GetLocationRange
+
+		interpreter.ExpectType(
+			publicKey,
+			sema.PublicKeyType,
+			getLocationRange,
+		)
+
+		bytesArray := make([]byte, 0, signatureValue.Count())
+		signatureValue.Iterate(func(element Value) (resume bool) {
+			b := element.(UInt8Value)
+			bytesArray = append(bytesArray, byte(b))
+			return true
+		})
+
+		v, err := interpreter.BLSVerifyPoPHandler(
+			interpreter,
+			getLocationRange,
+			publicKey,
+			bytesArray,
+		)
+		if err != nil {
+			panic(err)
+		}
+		return
+	},
+	sema.PublicKeyVerifyPoPFunctionType,
 )
