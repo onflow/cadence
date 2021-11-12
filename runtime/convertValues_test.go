@@ -4559,66 +4559,132 @@ func newTestInterpreter(tb testing.TB) *interpreter.Interpreter {
 }
 
 func TestInnerBytesArrayArgPassing(t *testing.T) {
-	script := `
-        pub fun main(v: AnyStruct): UInt8 {
-            return (v as! Foo).bytes[0]
-        }
+	t.Run("valid", func(t *testing.T) {
 
-        pub struct Foo {
-            pub let bytes: [UInt8]
-            init(_ bytes: [UInt8]) {
-                self.bytes = bytes
+		script := `
+            pub fun main(v: AnyStruct): UInt8 {
+                return (v as! Foo).bytes[0]
             }
-        }
-    `
 
-	jsonCdc := `
-      {
-        "value": {
-          "id": "S.test.Foo",
-          "fields": [
-            {
-              "name": "bytes",
-              "value": {
-                "value": [
-                  {
-                    "value": "32",
-                    "type": "UInt8"
+            pub struct Foo {
+                pub let bytes: [UInt8]
+
+                init(_ bytes: [UInt8]) {
+                    self.bytes = bytes
+               }
+            }
+        `
+
+		jsonCdc := `
+          {
+            "value": {
+              "id": "S.test.Foo",
+              "fields": [
+                {
+                  "name": "bytes",
+                  "value": {
+                    "value": [
+                      {
+                        "value": "32",
+                        "type": "UInt8"
+                      }
+                    ],
+                    "type": "Array"
                   }
-                ],
-                "type": "Array"
-              }
-            }
-          ]
-        },
-        "type": "Struct"
-      }
-    `
+                }
+              ]
+            },
+            "type": "Struct"
+          }
+        `
 
-	rt := newTestInterpreterRuntime()
+		rt := newTestInterpreterRuntime()
 
-	storage := newTestLedger(nil, nil)
+		storage := newTestLedger(nil, nil)
 
-	runtimeInterface := &testRuntimeInterface{
-		storage: storage,
-		decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-			return json.Decode(b)
-		},
-	}
-
-	value, err := rt.ExecuteScript(
-		Script{
-			Source: []byte(script),
-			Arguments: [][]byte{
-				[]byte(jsonCdc),
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(b)
 			},
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  TestLocation,
-		},
-	)
+		}
 
-	require.NoError(t, err)
-	assert.Equal(t, value, cadence.NewUInt8(32))
+		value, err := rt.ExecuteScript(
+			Script{
+				Source: []byte(script),
+				Arguments: [][]byte{
+					[]byte(jsonCdc),
+				},
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  TestLocation,
+			},
+		)
+
+		require.NoError(t, err)
+		assert.Equal(t, value, cadence.NewUInt8(32))
+	})
+
+	t.Run("valid interface", func(t *testing.T) {
+
+		script := `
+            pub fun main(v: AnyStruct) {
+            }
+
+            pub struct interface Foo {
+            }
+        `
+
+		jsonCdc := `
+          {
+            "value": {
+              "id": "S.test.Foo",
+              "fields": [
+                {
+                  "name": "bytes",
+                  "value": {
+                    "value": [
+                      {
+                        "value": "32",
+                        "type": "UInt8"
+                      }
+                    ],
+                    "type": "Array"
+                  }
+                }
+              ]
+            },
+            "type": "Struct"
+          }
+        `
+
+		rt := newTestInterpreterRuntime()
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(b)
+			},
+		}
+
+		_, err := rt.ExecuteScript(
+			Script{
+				Source: []byte(script),
+				Arguments: [][]byte{
+					[]byte(jsonCdc),
+				},
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  TestLocation,
+			},
+		)
+
+		require.Error(t, err)
+		var argErr *InvalidEntryPointArgumentError
+		require.ErrorAs(t, err, &argErr)
+	})
 }

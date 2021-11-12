@@ -2649,7 +2649,7 @@ func lookupComposite(interpreter *Interpreter, typeID string) (*sema.CompositeTy
 		return nil, err
 	}
 
-	typ, err := interpreter.getCompositeType(location, qualifiedIdentifier, common.TypeID(typeID))
+	typ, err := interpreter.GetCompositeType(location, qualifiedIdentifier, common.TypeID(typeID))
 	if err != nil {
 		return nil, err
 	}
@@ -3765,7 +3765,7 @@ func (interpreter *Interpreter) ConvertStaticToSemaType(staticType StaticType) (
 			return interpreter.getInterfaceType(location, qualifiedIdentifier)
 		},
 		func(location common.Location, qualifiedIdentifier string, typeID common.TypeID) (*sema.CompositeType, error) {
-			return interpreter.getCompositeType(location, qualifiedIdentifier, typeID)
+			return interpreter.GetCompositeType(location, qualifiedIdentifier, typeID)
 		},
 	)
 }
@@ -3817,7 +3817,11 @@ func (interpreter *Interpreter) GetContractComposite(contractLocation common.Add
 	return contractValue, nil
 }
 
-func (interpreter *Interpreter) getCompositeType(location common.Location, qualifiedIdentifier string, typeID common.TypeID) (*sema.CompositeType, error) {
+func (interpreter *Interpreter) GetCompositeType(
+	location common.Location,
+	qualifiedIdentifier string,
+	typeID common.TypeID,
+) (*sema.CompositeType, error) {
 	if location == nil {
 		return interpreter.getNativeCompositeType(qualifiedIdentifier)
 	}
