@@ -236,15 +236,36 @@ var AggregateBLSPublicKeysFunction = NewStandardLibraryFunction(
 	aggregateBLSPublicKeysFunctionDocString,
 	func(invocation interpreter.Invocation) interpreter.Value {
 		publicKeys := invocation.Arguments[0].(*interpreter.ArrayValue)
-		return AggregateBLSPublicKeys(invocation.Interpreter, publicKeys)
+		return AggregateBLSPublicKeys(
+			invocation.Interpreter,
+			invocation.GetLocationRange,
+			publicKeys,
+		)
 	},
 )
 
 func AggregateBLSPublicKeys(
 	inter *interpreter.Interpreter,
+	getLocationRange func() interpreter.LocationRange,
 	publicKeys *interpreter.ArrayValue,
 ) interpreter.Value {
-	panic("unimplemented")
+	publicKeyArray := make([]interpreter.MemberAccessibleValue, 0, publicKeys.Count())
+	publicKeys.Iterate(func(element interpreter.Value) (resume bool) {
+		publicKey := element.(*interpreter.CompositeValue)
+		publicKeyArray = append(publicKeyArray, publicKey)
+		return true
+	})
+
+	aggregatedKey, err := inter.AggregateBLSPublicKeysHandler(
+		inter,
+		getLocationRange,
+		publicKeyArray,
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	return aggregatedKey
 }
 
 func AggregateBLSSignatures(
