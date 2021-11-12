@@ -674,6 +674,10 @@ func importArrayValue(
 		}
 
 		elementSuperType := sema.LeastCommonSuperType(types...)
+		if elementSuperType == sema.InvalidType {
+			return nil, fmt.Errorf("cannot import array: elements does not belong to the same type")
+		}
+
 		staticArrayType = interpreter.VariableSizedStaticType{
 			Type: interpreter.ConvertSemaToStaticType(elementSuperType),
 		}
@@ -749,6 +753,10 @@ func importDictionaryValue(
 			return nil, fmt.Errorf(
 				"cannot import dictionary: keys does not belong to the same type",
 			)
+		}
+
+		if valueSuperType == sema.InvalidType {
+			return nil, fmt.Errorf("cannot import dictionary: values does not belong to the same type")
 		}
 
 		dictionaryStaticType = interpreter.DictionaryStaticType{
