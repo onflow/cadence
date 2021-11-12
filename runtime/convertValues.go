@@ -792,11 +792,9 @@ func importCompositeValue(
 
 		var expectedFieldType sema.Type
 
-		if compositeType != nil {
-			member, ok := compositeType.Members.Get(fieldType.Identifier)
-			if ok {
-				expectedFieldType = member.TypeAnnotation.Type
-			}
+		member, ok := compositeType.Members.Get(fieldType.Identifier)
+		if ok {
+			expectedFieldType = member.TypeAnnotation.Type
 		}
 
 		importedFieldValue, err := importValue(inter, fieldValue, expectedFieldType)

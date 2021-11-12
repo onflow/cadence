@@ -4558,7 +4558,7 @@ func newTestInterpreter(tb testing.TB) *interpreter.Interpreter {
 	return inter
 }
 
-func TestInnerBytesArrayArgPassing(t *testing.T) {
+func TestNestedStructArgPassing(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
 
 		script := `
@@ -4626,7 +4626,7 @@ func TestInnerBytesArrayArgPassing(t *testing.T) {
 		assert.Equal(t, value, cadence.NewUInt8(32))
 	})
 
-	t.Run("valid interface", func(t *testing.T) {
+	t.Run("invalid interface", func(t *testing.T) {
 
 		script := `
             pub fun main(v: AnyStruct) {
