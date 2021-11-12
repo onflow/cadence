@@ -1868,7 +1868,7 @@ func (interpreter *Interpreter) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclarat
 	panic(errors.NewUnreachableError())
 }
 
-func (interpreter *Interpreter) checkValueTransferTargetType(value Value, targetType sema.Type) bool {
+func (interpreter *Interpreter) CheckValueTransferTargetType(value Value, targetType sema.Type) bool {
 
 	if targetType == nil {
 		return true
@@ -1924,7 +1924,7 @@ func (interpreter *Interpreter) transferAndConvert(
 		targetType,
 	)
 
-	if !interpreter.checkValueTransferTargetType(result, targetType) {
+	if !interpreter.CheckValueTransferTargetType(result, targetType) {
 		panic(ValueTransferTypeError{
 			TargetType:    targetType,
 			LocationRange: getLocationRange(),
