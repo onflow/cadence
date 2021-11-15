@@ -251,7 +251,7 @@ func AggregateBLSPublicKeys(
 ) interpreter.Value {
 	publicKeyArray := make([]interpreter.MemberAccessibleValue, 0, publicKeys.Count())
 	publicKeys.Iterate(func(element interpreter.Value) (resume bool) {
-		publicKey := element.(*interpreter.CompositeValue)
+		publicKey := element.(interpreter.MemberAccessibleValue)
 		publicKeyArray = append(publicKeyArray, publicKey)
 		return true
 	})
@@ -299,7 +299,7 @@ func AggregateBLSSignatures(
 
 	return interpreter.NewArrayValue(
 		inter,
-		interpreter.VariableSizedStaticType{Type: interpreter.PrimitiveStaticTypeUInt8},
+		interpreter.ByteArrayStaticType,
 		signatures.GetOwner(),
 		aggregatedSignature...,
 	)
