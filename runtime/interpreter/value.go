@@ -10348,9 +10348,16 @@ func (v *EphemeralReferenceValue) StaticType() StaticType {
 	if v.BorrowedType != nil {
 		borrowedType = ConvertSemaToStaticType(v.BorrowedType)
 	}
+
+	referencedValue := v.ReferencedValue()
+	if referencedValue == nil {
+		panic(DereferenceError{})
+	}
+
 	return ReferenceStaticType{
 		Authorized: v.Authorized,
 		Type:       borrowedType,
+		InnerType:  (*referencedValue).StaticType(),
 	}
 }
 
@@ -10529,8 +10536,8 @@ func (v *EphemeralReferenceValue) Equal(_ *Interpreter, _ func() LocationRange, 
 }
 
 func (v *EphemeralReferenceValue) ConformsToStaticType(
-	_ *Interpreter,
-	_ func() LocationRange,
+	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
 	staticType StaticType,
 	results TypeConformanceResults,
 ) bool {
@@ -10568,18 +10575,16 @@ func (v *EphemeralReferenceValue) ConformsToStaticType(
 	// doesn't depend on this. It depends on the rest of values of the object tree.
 	results[entry] = true
 
-	//result := (*referencedValue).ConformsToStaticType(
-	//	interpreter,
-	//	getLocationRange,
-	//	refType.InnerType(),
-	//	results,
-	//)
-	//
-	//results[entry] = result
-	//
-	//return result
+	result := (*referencedValue).ConformsToStaticType(
+		interpreter,
+		getLocationRange,
+		refType.InnerType,
+		results,
+	)
 
-	return false
+	results[entry] = result
+
+	return result
 }
 
 func (*EphemeralReferenceValue) IsStorable() bool {

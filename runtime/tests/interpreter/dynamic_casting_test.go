@@ -2323,7 +2323,7 @@ func testReferenceCastInvalid(t *testing.T, types, fromType, targetType string, 
 	}
 }
 
-func NoTestInterpretDynamicCastingAuthorizedResourceReferenceType(t *testing.T) {
+func TestInterpretDynamicCastingAuthorizedResourceReferenceType(t *testing.T) {
 
 	t.Parallel()
 
@@ -2732,7 +2732,7 @@ func NoTestInterpretDynamicCastingAuthorizedResourceReferenceType(t *testing.T) 
 	}
 }
 
-func NoTestInterpretDynamicCastingAuthorizedStructReferenceType(t *testing.T) {
+func TestInterpretDynamicCastingAuthorizedStructReferenceType(t *testing.T) {
 
 	t.Parallel()
 
@@ -3141,7 +3141,7 @@ func NoTestInterpretDynamicCastingAuthorizedStructReferenceType(t *testing.T) {
 	}
 }
 
-func NoTestInterpretDynamicCastingUnauthorizedResourceReferenceType(t *testing.T) {
+func TestInterpretDynamicCastingUnauthorizedResourceReferenceType(t *testing.T) {
 
 	t.Parallel()
 

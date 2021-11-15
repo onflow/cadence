@@ -3370,10 +3370,10 @@ func (interpreter *Interpreter) IsSubType(subType StaticType, superType sema.Typ
 		PrimitiveStaticTypeWord64,
 		PrimitiveStaticTypeFix64,
 		PrimitiveStaticTypeUFix64:
-			semaType, err := interpreter.ConvertStaticToSemaType(subType)
-			if err != nil {
-				return false
-			}
+		semaType, err := interpreter.ConvertStaticToSemaType(subType)
+		if err != nil {
+			return false
+		}
 		return sema.IsSubType(semaType, superType)
 
 	case PrimitiveStaticTypePublicPath:
@@ -3459,7 +3459,7 @@ func (interpreter *Interpreter) IsSubType(subType StaticType, superType sema.Typ
 				// First, check that the dynamic type of the referenced value
 				// is a subtype of the super type
 
-				if !interpreter.IsSubType(staticType.Type, typedSuperType.Type) {
+				if staticType.InnerType != nil && !interpreter.IsSubType(staticType.InnerType, typedSuperType.Type) {
 					return false
 				}
 

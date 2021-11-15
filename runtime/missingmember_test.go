@@ -32,7 +32,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
-func NoTestRuntimeMissingMemberFabricant(t *testing.T) {
+func TestRuntimeMissingMemberFabricant(t *testing.T) {
 
 	runtime := newTestInterpreterRuntime()
 

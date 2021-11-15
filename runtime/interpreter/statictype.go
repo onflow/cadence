@@ -286,6 +286,7 @@ outer:
 type ReferenceStaticType struct {
 	Authorized bool
 	Type       StaticType
+	InnerType  StaticType
 }
 
 var _ StaticType = ReferenceStaticType{}
