@@ -14205,7 +14205,8 @@ var publicKeyVerifyPoPFunction = NewHostFunctionValue(
 			return true
 		})
 
-		v, err := interpreter.BLSVerifyPoPHandler(
+		var err error
+		v, err = interpreter.BLSVerifyPoPHandler(
 			interpreter,
 			getLocationRange,
 			publicKey,
