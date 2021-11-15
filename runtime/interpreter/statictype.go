@@ -56,12 +56,7 @@ var _ StaticType = CompositeStaticType{}
 
 func NewCompositeStaticType(location common.Location, qualifiedIdentifier string) CompositeStaticType {
 
-	var typeID common.TypeID
-	if location == nil {
-		typeID = common.TypeID(qualifiedIdentifier)
-	} else {
-		typeID = location.TypeID(qualifiedIdentifier)
-	}
+	var typeID = common.NewTypeIDFromQualifiedName(location, qualifiedIdentifier)
 
 	return CompositeStaticType{
 		Location:            location,

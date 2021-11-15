@@ -505,7 +505,6 @@ func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedTy
 			v.StructType.QualifiedIdentifier,
 			v.StructType.Fields,
 			v.Fields,
-			expectedType,
 		)
 	case cadence.Resource:
 		return importCompositeValue(
@@ -515,7 +514,6 @@ func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedTy
 			v.ResourceType.QualifiedIdentifier,
 			v.ResourceType.Fields,
 			v.Fields,
-			expectedType,
 		)
 	case cadence.Event:
 		return importCompositeValue(
@@ -525,7 +523,6 @@ func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedTy
 			v.EventType.QualifiedIdentifier,
 			v.EventType.Fields,
 			v.Fields,
-			expectedType,
 		)
 	case cadence.Enum:
 		return importCompositeValue(
@@ -535,7 +532,6 @@ func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedTy
 			v.EnumType.QualifiedIdentifier,
 			v.EnumType.Fields,
 			v.Fields,
-			expectedType,
 		)
 	case cadence.TypeValue:
 		return importTypeValue(
@@ -778,14 +774,17 @@ func importCompositeValue(
 	qualifiedIdentifier string,
 	fieldTypes []cadence.Field,
 	fieldValues []cadence.Value,
-	expectedType sema.Type,
 ) (
 	*interpreter.CompositeValue,
 	error,
 ) {
 	var fields []interpreter.CompositeField
 
-	expectedCompositeType, ok := expectedType.(*sema.CompositeType)
+	typeID := common.NewTypeIDFromQualifiedName(location, qualifiedIdentifier)
+	compositeType, typeErr := inter.GetCompositeType(location, qualifiedIdentifier, typeID)
+	if typeErr != nil {
+		return nil, typeErr
+	}
 
 	for i := 0; i < len(fieldTypes) && i < len(fieldValues); i++ {
 		fieldType := fieldTypes[i]
@@ -793,11 +792,9 @@ func importCompositeValue(
 
 		var expectedFieldType sema.Type
 
+		member, ok := compositeType.Members.Get(fieldType.Identifier)
 		if ok {
-			member, ok := expectedCompositeType.Members.Get(fieldType.Identifier)
-			if ok {
-				expectedFieldType = member.TypeAnnotation.Type
-			}
+			expectedFieldType = member.TypeAnnotation.Type
 		}
 
 		importedFieldValue, err := importValue(inter, fieldValue, expectedFieldType)
