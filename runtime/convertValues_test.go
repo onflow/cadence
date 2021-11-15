@@ -4559,7 +4559,11 @@ func newTestInterpreter(tb testing.TB) *interpreter.Interpreter {
 }
 
 func TestNestedStructArgPassing(t *testing.T) {
+	t.Parallel()
+
 	t.Run("valid", func(t *testing.T) {
+
+		t.Parallel()
 
 		script := `
             pub fun main(v: AnyStruct): UInt8 {
@@ -4627,6 +4631,8 @@ func TestNestedStructArgPassing(t *testing.T) {
 	})
 
 	t.Run("invalid interface", func(t *testing.T) {
+
+		t.Parallel()
 
 		script := `
             pub fun main(v: AnyStruct) {
