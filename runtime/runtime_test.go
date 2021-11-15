@@ -443,7 +443,7 @@ func (i *testRuntimeInterface) ValidatePublicKey(key *PublicKey) (bool, error) {
 }
 
 func (i *testRuntimeInterface) BLSVerifyPOP(key *PublicKey, s []byte) (bool, error) {
-	if i.validatePublicKey == nil {
+	if i.bLSVerifyPOP == nil {
 		return false, nil
 	}
 
@@ -459,7 +459,7 @@ func (i *testRuntimeInterface) AggregateBLSSignatures(sigs [][]byte) ([]byte, er
 }
 
 func (i *testRuntimeInterface) AggregateBLSPublicKeys(keys []*PublicKey) (*PublicKey, error) {
-	if i.aggregateBLSSignatures == nil {
+	if i.aggregateBLSPublicKeys == nil {
 		return nil, nil
 	}
 
