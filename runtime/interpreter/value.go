@@ -10214,9 +10214,9 @@ func (v *StorageReferenceValue) Equal(_ *Interpreter, _ func() LocationRange, ot
 
 func (v *StorageReferenceValue) ConformsToStaticType(
 	interpreter *Interpreter,
-	_ func() LocationRange,
+	getLocationRange func() LocationRange,
 	staticType StaticType,
-	_ TypeConformanceResults,
+	results TypeConformanceResults,
 ) bool {
 
 	refType, ok := staticType.(ReferenceStaticType)
@@ -10239,15 +10239,12 @@ func (v *StorageReferenceValue) ConformsToStaticType(
 		return false
 	}
 
-	// FIXME
-	//return (*referencedValue).ConformsToStaticType(
-	//	interpreter,
-	//	getLocationRange,
-	//	refType.InnerType(),
-	//	results,
-	//)
-
-	return false
+	return (*referencedValue).ConformsToStaticType(
+		interpreter,
+		getLocationRange,
+		refType.InnerType,
+		results,
+	)
 }
 
 func (*StorageReferenceValue) IsStorable() bool {
@@ -11143,9 +11140,6 @@ func (v *CapabilityValue) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	//capabilityType, ok := staticType.(CapabilityDynamicType)
-	//return ok && v.Path.Domain == capabilityType.Domain
-	// FIXME
 	semaType, err := inter.ConvertStaticToSemaType(staticType)
 	if err != nil {
 		return false
