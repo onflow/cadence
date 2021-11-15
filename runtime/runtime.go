@@ -3312,7 +3312,6 @@ func aggregateBLSPublicKeys(
 ) (interpreter.MemberAccessibleValue, error) {
 	publicKeys := make([]*PublicKey, 0, len(publicKeyValues))
 	for _, value := range publicKeyValues {
-		fmt.Printf("at runtime: %T\n", value)
 		publicKey, err := NewPublicKeyFromValue(inter, getLocationRange, value)
 		if err != nil {
 			return nil, err
