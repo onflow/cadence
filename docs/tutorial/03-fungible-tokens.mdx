@@ -604,7 +604,8 @@ it is required to have their fields and functions, and their pre and post-condit
 be evaluated every time their respective functions are called.
 We can also use these interfaces to create restricted capabilities, described in the next section.
 
-Additionally, `ExampleToken` defines the `VaultMinter` resource which is used as the sole method to mint new tokens.
+Additionally, `ExampleToken` changes `createVault()` to `createEmptyVault()`
+so that token minting is restricted to the newly added `VaultMinter` resource.
 This illustrates another powerful feature of Cadence resources.
 Instead of the contract maintaining a list of minter addresses,
 accounts that the owner wants to be minters can be giving a special resource
