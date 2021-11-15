@@ -109,9 +109,7 @@ struct PublicKey {
 
     /// Verifies the proof of possession of the private key.
     /// This function is only implemented if the signature algorithm of the public key is BLS, it errors if called with any other signature algorithm. 
-    pub fun verifyPoP(
-        proof: [UInt8],
-    ): Bool
+    pub fun verifyPoP(_ proof: [UInt8]): Bool
 }
 ```
 
@@ -206,18 +204,14 @@ The BLS signature scheme also supports two additional operations on keys and sig
 /// The order of the signatures in the slice does not matter since the aggregation is commutative. 
 /// No subgroup membership check is performed on the input signatures.
 /// The function errors if the array is empty or if decoding one of the signature fails. 
-BLSAggregateSignatures(
-     signatures: [[UInt8]],
-    ): [UInt8]
+AggregateBLSSignatures(_ signatures: [[UInt8]]): [UInt8]
 
 /// This is a specific function for the BLS signature scheme. It aggregates multiple BLS public keys into one.
 ///
 /// The order of the public keys in the slice does not matter since the aggregation is commutative. 
 /// No subgroup membership check is performed on the input keys.
 /// The function errors if the array is empty or any of the input keys is not a BLS key.
-BLSAggregatePublicKeys(
-     signatures: [PublicKey],
-    ): PublicKey
+AggregateBLSPublicKeys(_ signatures: [PublicKey]): PublicKey
 ```
 
 ## Crypto Contract
