@@ -286,7 +286,7 @@ func TestCheckFunctionTypeReceiverType(t *testing.T) {
 		)
 	})
 
-	t.Run("invalid cast of bound function type", func(t *testing.T) {
+	t.Run("cast bound function type", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -299,8 +299,6 @@ func TestCheckFunctionTypeReceiverType(t *testing.T) {
           let f = s.f as ((): Void)
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		require.NoError(t, err)
 	})
 }

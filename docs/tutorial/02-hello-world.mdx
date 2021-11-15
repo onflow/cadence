@@ -77,7 +77,7 @@ For example, the path `/storage/test` has the domain `storage` and the identifie
 There are only three valid domains which represent the three areas in the account storage: `storage`, `private`, and `public`.
 
 Identifiers are custom and can be any name you want them to be to indicate what is stored in that path.
-It is recommend to make your identifiers very specific so that there is a smaller chance 
+It is recommended you make your identifiers very specific so that there is a smaller chance 
 of them conflicting with other projects' identifiers.
 
 ### Account Filesystem Domain Structure (Where can I store my stuff?)
@@ -722,7 +722,7 @@ The first argument to the `link` function is the path where you want to store th
 and the `target` argument is the path to the object in storage that is to be linked to.
 We always store links for capabilities in the `/private/` or `/public/` domains:
 - We choose `/private/` if we only want to allow one or a small number of users to access it
-- We choose `/public/` if we want any user in the network to be able to access it
+- We choose `/public/` if we want any user in the network to be able to access it.
 Capabilities always link to objects in the `/storage/` domain.
 
 To borrow a reference to an object from the capability, we use the capability's `borrow` method.
@@ -871,7 +871,7 @@ The contract corresponding to that account will be displayed in the editor where
 
 <Img src="https://storage.googleapis.com/flow-resources/documentation-assets/cadence-tuts/playground-accounts.png" />
 
-Upgrading contrats that are already deployed is very risky, so be careful!
+Upgrading contracts that are already deployed is very risky, so be careful!
 
 ## Transactions
 

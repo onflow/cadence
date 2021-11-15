@@ -168,7 +168,7 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 			checker.Elaboration.VariableDeclarationSecondValueTypes[declaration] = secondValueType
 
 			if valueIsResource {
-				checker.elaborateIndexExpressionResourceMove(declaration.Value)
+				checker.elaborateNestedResourceMoveExpression(declaration.Value)
 			}
 		}
 	}
@@ -268,11 +268,9 @@ func (checker *Checker) checkVariableDeclarationUsability(declaration *ast.Varia
 	}
 }
 
-func (checker *Checker) elaborateIndexExpressionResourceMove(expression ast.Expression) {
-	indexExpression, ok := expression.(*ast.IndexExpression)
-	if !ok {
-		return
+func (checker *Checker) elaborateNestedResourceMoveExpression(expression ast.Expression) {
+	switch expression.(type) {
+	case *ast.IndexExpression, *ast.MemberExpression:
+		checker.Elaboration.IsNestedResourceMoveExpression[expression] = struct{}{}
 	}
-
-	checker.Elaboration.IsResourceMoveIndexExpression[indexExpression] = true
 }

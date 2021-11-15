@@ -66,7 +66,9 @@ type Elaboration struct {
 	TransactionDeclarationTypes         map[*ast.TransactionDeclaration]*TransactionType
 	SwapStatementLeftTypes              map[*ast.SwapStatement]Type
 	SwapStatementRightTypes             map[*ast.SwapStatement]Type
-	IsResourceMoveIndexExpression       map[*ast.IndexExpression]bool
+	// IsNestedResourceMoveExpression indicates if the access the index or member expression
+	// is implicitly moving a resource out of the container, e.g. in a shift or swap statement.
+	IsNestedResourceMoveExpression      map[ast.Expression]struct{}
 	CompositeNestedDeclarations         map[*ast.CompositeDeclaration]map[string]ast.Declaration
 	InterfaceNestedDeclarations         map[*ast.InterfaceDeclaration]map[string]ast.Declaration
 	PostConditionsRewrite               map[*ast.Conditions]PostConditionsRewrite
@@ -82,6 +84,10 @@ type Elaboration struct {
 	EffectivePredeclaredTypes           map[string]TypeDeclaration
 	isChecking                          bool
 	ReferenceExpressionBorrowTypes      map[*ast.ReferenceExpression]*ReferenceType
+
+	// Only to make the go-compiler happy with semver compatibility.
+	// TODO: Remove
+	IsResourceMoveIndexExpression map[*ast.IndexExpression]bool
 }
 
 func NewElaboration() *Elaboration {
@@ -121,7 +127,7 @@ func NewElaboration() *Elaboration {
 		TransactionDeclarationTypes:         map[*ast.TransactionDeclaration]*TransactionType{},
 		SwapStatementLeftTypes:              map[*ast.SwapStatement]Type{},
 		SwapStatementRightTypes:             map[*ast.SwapStatement]Type{},
-		IsResourceMoveIndexExpression:       map[*ast.IndexExpression]bool{},
+		IsNestedResourceMoveExpression:      map[ast.Expression]struct{}{},
 		CompositeNestedDeclarations:         map[*ast.CompositeDeclaration]map[string]ast.Declaration{},
 		InterfaceNestedDeclarations:         map[*ast.InterfaceDeclaration]map[string]ast.Declaration{},
 		PostConditionsRewrite:               map[*ast.Conditions]PostConditionsRewrite{},

@@ -115,12 +115,12 @@ func TestAddress_Bytes(t *testing.T) {
 
 	assert.Equal(t,
 		[]byte{0x1},
-		Address{0, 0, 0, 0, 0, 0, 0, 0x1}.BytesWithoutLeadingZeros(),
+		Address{0, 0, 0, 0, 0, 0, 0, 0x1}.Bytes(),
 	)
 
 	assert.Equal(t,
 		[]byte{0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8},
-		Address{0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8}.BytesWithoutLeadingZeros(),
+		Address{0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8}.Bytes(),
 	)
 }
 
@@ -141,6 +141,26 @@ func TestAddress_ShortHexWithPrefix(t *testing.T) {
 	assert.Equal(t,
 		"0x1",
 		Address{0, 0, 0, 0, 0, 0, 0, 0x1}.ShortHexWithPrefix(),
+	)
+}
+
+func TestAddress_HexWithPrefix(t *testing.T) {
+
+	t.Parallel()
+
+	assert.Equal(t,
+		"0x1234567890abcdef",
+		Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef}.HexWithPrefix(),
+	)
+
+	assert.Equal(t,
+		"0x0100000000000000",
+		Address{0x1}.HexWithPrefix(),
+	)
+
+	assert.Equal(t,
+		"0x0000000000000001",
+		Address{0, 0, 0, 0, 0, 0, 0, 0x1}.HexWithPrefix(),
 	)
 }
 

@@ -45,8 +45,10 @@ func TestInterpretTransferCheck(t *testing.T) {
 			Name: "fruit",
 			Type: ty,
 			// NOTE: not an instance of the type
-			Value: interpreter.NewStringValue("fruit"),
-			Kind:  common.DeclarationKindConstant,
+			ValueFactory: func(_ *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewStringValue("fruit")
+			},
+			Kind: common.DeclarationKindConstant,
 		},
 	}
 

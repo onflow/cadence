@@ -22,6 +22,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/fxamacker/cbor/v2"
+	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
@@ -38,6 +41,7 @@ type StaticType interface {
 	fmt.Stringer
 	isStaticType()
 	Equal(other StaticType) bool
+	Encode(e *cbor.StreamEncoder) error
 }
 
 // CompositeStaticType
@@ -45,6 +49,25 @@ type StaticType interface {
 type CompositeStaticType struct {
 	Location            common.Location
 	QualifiedIdentifier string
+	TypeID              common.TypeID
+}
+
+var _ StaticType = CompositeStaticType{}
+
+func NewCompositeStaticType(location common.Location, qualifiedIdentifier string) CompositeStaticType {
+
+	var typeID common.TypeID
+	if location == nil {
+		typeID = common.TypeID(qualifiedIdentifier)
+	} else {
+		typeID = location.TypeID(qualifiedIdentifier)
+	}
+
+	return CompositeStaticType{
+		Location:            location,
+		QualifiedIdentifier: qualifiedIdentifier,
+		TypeID:              typeID,
+	}
 }
 
 func (CompositeStaticType) isStaticType() {}
@@ -53,7 +76,7 @@ func (t CompositeStaticType) String() string {
 	if t.Location == nil {
 		return t.QualifiedIdentifier
 	}
-	return string(t.Location.TypeID(t.QualifiedIdentifier))
+	return string(t.TypeID)
 }
 
 func (t CompositeStaticType) Equal(other StaticType) bool {
@@ -62,8 +85,7 @@ func (t CompositeStaticType) Equal(other StaticType) bool {
 		return false
 	}
 
-	return common.LocationsMatch(otherCompositeType.Location, t.Location) &&
-		otherCompositeType.QualifiedIdentifier == t.QualifiedIdentifier
+	return otherCompositeType.TypeID == t.TypeID
 }
 
 // InterfaceStaticType
@@ -72,6 +94,8 @@ type InterfaceStaticType struct {
 	Location            common.Location
 	QualifiedIdentifier string
 }
+
+var _ StaticType = InterfaceStaticType{}
 
 func (InterfaceStaticType) isStaticType() {}
 
@@ -106,6 +130,9 @@ type VariableSizedStaticType struct {
 	Type StaticType
 }
 
+var _ ArrayStaticType = VariableSizedStaticType{}
+var _ atree.TypeInfo = VariableSizedStaticType{}
+
 func (VariableSizedStaticType) isStaticType() {}
 
 func (VariableSizedStaticType) isArrayStaticType() {}
@@ -133,6 +160,9 @@ type ConstantSizedStaticType struct {
 	Type StaticType
 	Size int64
 }
+
+var _ ArrayStaticType = ConstantSizedStaticType{}
+var _ atree.TypeInfo = ConstantSizedStaticType{}
 
 func (ConstantSizedStaticType) isStaticType() {}
 
@@ -163,6 +193,9 @@ type DictionaryStaticType struct {
 	ValueType StaticType
 }
 
+var _ StaticType = DictionaryStaticType{}
+var _ atree.TypeInfo = DictionaryStaticType{}
+
 func (DictionaryStaticType) isStaticType() {}
 
 func (t DictionaryStaticType) String() string {
@@ -185,6 +218,8 @@ type OptionalStaticType struct {
 	Type StaticType
 }
 
+var _ StaticType = OptionalStaticType{}
+
 func (OptionalStaticType) isStaticType() {}
 
 func (t OptionalStaticType) String() string {
@@ -206,6 +241,8 @@ type RestrictedStaticType struct {
 	Type         StaticType
 	Restrictions []InterfaceStaticType
 }
+
+var _ StaticType = &RestrictedStaticType{}
 
 // NOTE: must be pointer receiver, as static types get used in type values,
 // which are used as keys in maps when exporting.
@@ -251,6 +288,8 @@ type ReferenceStaticType struct {
 	Type       StaticType
 }
 
+var _ StaticType = ReferenceStaticType{}
+
 func (ReferenceStaticType) isStaticType() {}
 
 func (t ReferenceStaticType) String() string {
@@ -277,6 +316,8 @@ func (t ReferenceStaticType) Equal(other StaticType) bool {
 type CapabilityStaticType struct {
 	BorrowType StaticType
 }
+
+var _ StaticType = CapabilityStaticType{}
 
 func (CapabilityStaticType) isStaticType() {}
 
@@ -311,6 +352,7 @@ func ConvertSemaToStaticType(t sema.Type) StaticType {
 		return CompositeStaticType{
 			Location:            t.Location,
 			QualifiedIdentifier: t.QualifiedIdentifier(),
+			TypeID:              t.ID(),
 		}
 
 	case *sema.InterfaceType:
@@ -403,71 +445,87 @@ func ConvertSemaInterfaceTypeToStaticInterfaceType(t *sema.InterfaceType) Interf
 
 func ConvertStaticToSemaType(
 	typ StaticType,
-	getInterface func(location common.Location, qualifiedIdentifier string) *sema.InterfaceType,
-	getComposite func(location common.Location, qualifiedIdentifier string) *sema.CompositeType,
-) sema.Type {
+	getInterface func(location common.Location, qualifiedIdentifier string) (*sema.InterfaceType, error),
+	getComposite func(location common.Location, qualifiedIdentifier string, typeID common.TypeID) (*sema.CompositeType, error),
+) (_ sema.Type, err error) {
 	switch t := typ.(type) {
 	case CompositeStaticType:
-		return getComposite(t.Location, t.QualifiedIdentifier)
+		return getComposite(t.Location, t.QualifiedIdentifier, t.TypeID)
 
 	case InterfaceStaticType:
 		return getInterface(t.Location, t.QualifiedIdentifier)
 
 	case VariableSizedStaticType:
+		ty, err := ConvertStaticToSemaType(t.Type, getInterface, getComposite)
 		return &sema.VariableSizedType{
-			Type: ConvertStaticToSemaType(t.Type, getInterface, getComposite),
-		}
+			Type: ty,
+		}, err
 
 	case ConstantSizedStaticType:
+		ty, err := ConvertStaticToSemaType(t.Type, getInterface, getComposite)
 		return &sema.ConstantSizedType{
-			Type: ConvertStaticToSemaType(t.Type, getInterface, getComposite),
+			Type: ty,
 			Size: t.Size,
-		}
+		}, err
 
 	case DictionaryStaticType:
-		return &sema.DictionaryType{
-			KeyType:   ConvertStaticToSemaType(t.KeyType, getInterface, getComposite),
-			ValueType: ConvertStaticToSemaType(t.ValueType, getInterface, getComposite),
+		keyType, err := ConvertStaticToSemaType(t.KeyType, getInterface, getComposite)
+		if err != nil {
+			return nil, err
 		}
+		valueType, err := ConvertStaticToSemaType(t.ValueType, getInterface, getComposite)
+		return &sema.DictionaryType{
+			KeyType:   keyType,
+			ValueType: valueType,
+		}, err
 
 	case OptionalStaticType:
+		ty, err := ConvertStaticToSemaType(t.Type, getInterface, getComposite)
 		return &sema.OptionalType{
-			Type: ConvertStaticToSemaType(t.Type, getInterface, getComposite),
-		}
+			Type: ty,
+		}, err
 
 	case *RestrictedStaticType:
 		restrictions := make([]*sema.InterfaceType, len(t.Restrictions))
 
 		for i, restriction := range t.Restrictions {
-			restrictions[i] = getInterface(restriction.Location, restriction.QualifiedIdentifier)
+			restrictions[i], err = getInterface(restriction.Location, restriction.QualifiedIdentifier)
+			if err != nil {
+				return nil, err
+			}
 		}
 
+		ty, err := ConvertStaticToSemaType(t.Type, getInterface, getComposite)
 		return &sema.RestrictedType{
-			Type:         ConvertStaticToSemaType(t.Type, getInterface, getComposite),
+			Type:         ty,
 			Restrictions: restrictions,
-		}
+		}, err
 
 	case ReferenceStaticType:
+		ty, err := ConvertStaticToSemaType(t.Type, getInterface, getComposite)
 		return &sema.ReferenceType{
 			Authorized: t.Authorized,
-			Type:       ConvertStaticToSemaType(t.Type, getInterface, getComposite),
-		}
+			Type:       ty,
+		}, err
 
 	case CapabilityStaticType:
 		var borrowType sema.Type
 		if t.BorrowType != nil {
-			borrowType = ConvertStaticToSemaType(t.BorrowType, getInterface, getComposite)
+			borrowType, err = ConvertStaticToSemaType(t.BorrowType, getInterface, getComposite)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		return &sema.CapabilityType{
 			BorrowType: borrowType,
-		}
+		}, nil
 
 	case FunctionStaticType:
-		return t.Type
+		return t.Type, nil
 
 	case PrimitiveStaticType:
-		return t.SemaType()
+		return t.SemaType(), nil
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -479,6 +537,8 @@ func ConvertStaticToSemaType(
 type FunctionStaticType struct {
 	Type *sema.FunctionType
 }
+
+var _ StaticType = FunctionStaticType{}
 
 func (t FunctionStaticType) ReceiverType() StaticType {
 	var receiverType StaticType
@@ -526,7 +586,7 @@ func (t FunctionStaticType) String() string {
 }
 
 func (t FunctionStaticType) Equal(other StaticType) bool {
-	otherFunction, ok := other.(*FunctionStaticType)
+	otherFunction, ok := other.(FunctionStaticType)
 	if !ok {
 		return false
 	}

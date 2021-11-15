@@ -17,9 +17,9 @@ which represents the publicly available portion of an account.
       let balance: UFix64
       // The FLOW balance of the default vault of this account that is available to be moved
       let availableBalance: UFix64
-      // Amount of storage used by the account, in MB
+      // Amount of storage used by the account, in bytes
       let storageUsed: UInt64
-      // storage capacity of the account, in MB
+      // storage capacity of the account, in bytes
       let storageCapacity: UInt64
 
       // Contracts deployed to the account
@@ -75,9 +75,9 @@ to the `prepare` phase of the transaction.
       let balance: UFix64
       // The FLOW balance of the default vault of this account that is available to be moved
       let availableBalance: UFix64
-      // Amount of storage used by the account, in MB
+      // Amount of storage used by the account, in bytes
       let storageUsed: UInt64
-      // storage capacity of the account, in MB
+      // storage capacity of the account, in bytes
       let storageCapacity: UInt64
 
       // Contracts deployed to the account
@@ -325,6 +325,21 @@ Both `StoragePath` and `CapabilityPath` are subtypes of `Path`.
 
   storagePath.toString()  // is "/storage/path"
   ```
+
+There are also utilities to produce paths from strings:
+
+```cadence
+fun PublicPath(identifier: string): PublicPath?
+fun PrivatePath(identifier: string): PrivatePath?
+fun StoragePath(identifier: string): StoragePath?
+```
+
+Each of these functions take an identifier and produce a path of the appropriate domain:
+
+```cadence
+let pathID = "foo"
+let path = PublicPath(identifier: pathID) // is /public/foo
+```
 
 ### Account Storage API
 

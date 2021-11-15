@@ -27,7 +27,7 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
-	"github.com/onflow/cadence/runtime/tests/utils"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestInterpretCompositeValue(t *testing.T) {
@@ -49,12 +49,16 @@ func TestInterpretCompositeValue(t *testing.T) {
             `,
 		)
 
-		require.Equal(t,
+		RequireValuesEqual(
+			t,
+			inter,
 			interpreter.NewStringValue("Apple"),
 			inter.Globals["name"].GetValue(),
 		)
 
-		require.Equal(t,
+		RequireValuesEqual(
+			t,
+			inter,
 			interpreter.NewStringValue("Red"),
 			inter.Globals["color"].GetValue(),
 		)
@@ -64,9 +68,11 @@ func TestInterpretCompositeValue(t *testing.T) {
 // Utility methods
 func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 
+	storage := interpreter.NewInMemoryStorage()
+
 	// 'fruit' composite type
 	fruitType := &sema.CompositeType{
-		Location:   utils.TestLocation,
+		Location:   TestLocation,
 		Identifier: "Fruit",
 		Kind:       common.CompositeKindStructure,
 	}
@@ -87,28 +93,36 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 		"This is the color",
 	))
 
-	fields := interpreter.NewStringValueOrderedMap()
-	fields.Set("name", interpreter.NewStringValue("Apple"))
-
-	value := interpreter.NewCompositeValue(
-		utils.TestLocation,
-		fruitType.Identifier,
-		common.CompositeKindStructure,
-		fields,
-		nil,
-	)
-
-	value.ComputedFields = interpreter.NewStringComputedFieldOrderedMap()
-	value.ComputedFields.Set("color", func(*interpreter.Interpreter) interpreter.Value {
-		return interpreter.NewStringValue("Red")
-	})
-
 	valueDeclarations := stdlib.StandardLibraryValues{
 		{
-			Name:  "fruit",
-			Type:  fruitType,
-			Value: value,
-			Kind:  common.DeclarationKindConstant,
+			Name: "fruit",
+			Type: fruitType,
+			ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
+				fields := []interpreter.CompositeField{
+					{
+						Name:  "name",
+						Value: interpreter.NewStringValue("Apple"),
+					},
+				}
+
+				value := interpreter.NewCompositeValue(
+					inter,
+					TestLocation,
+					fruitType.Identifier,
+					common.CompositeKindStructure,
+					fields,
+					common.Address{},
+				)
+
+				value.ComputedFields = map[string]interpreter.ComputedField{
+					"color": func(_ *interpreter.Interpreter, _ func() interpreter.LocationRange) interpreter.Value {
+						return interpreter.NewStringValue("Red")
+					},
+				}
+
+				return value
+			},
+			Kind: common.DeclarationKindConstant,
 		},
 	}
 
@@ -128,6 +142,7 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 				sema.WithPredeclaredTypes(typeDeclarations),
 			},
 			Options: []interpreter.Option{
+				interpreter.WithStorage(storage),
 				interpreter.WithPredeclaredValues(valueDeclarations.ToInterpreterValueDeclarations()),
 			},
 		},

@@ -51,11 +51,18 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 	postConditionsRewrite :=
 		interpreter.Program.Elaboration.PostConditionsRewrite[declaration.PostConditions]
 
-	self := &CompositeValue{
-		location: interpreter.Location,
-		fields:   NewStringValueOrderedMap(),
-		modified: true,
-	}
+	staticType := NewCompositeStaticType(interpreter.Location, "")
+
+	self := NewSimpleCompositeValue(
+		staticType.TypeID,
+		staticType,
+		nil,
+		nil,
+		map[string]Value{},
+		nil,
+		nil,
+		nil,
+	)
 
 	transactionFunction := NewHostFunctionValue(
 		func(invocation Invocation) Value {

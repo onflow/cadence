@@ -483,16 +483,3 @@ func (e *MissingCompositeDeclarationError) Error() string {
 		e.Name,
 	)
 }
-
-// NonStorableValueWriteError
-//
-type NonStorableValueWriteError struct {
-	Value interpreter.Value
-}
-
-func (e NonStorableValueWriteError) Error() string {
-	return fmt.Sprintf(
-		"cannot write non-storable value: %s",
-		e.Value,
-	)
-}

@@ -260,7 +260,8 @@ func TestFunctionSubtyping(t *testing.T) {
 	})
 
 	t.Run("different receiver types", func(t *testing.T) {
-		assert.False(t,
+		// Receiver shouldn't matter
+		assert.True(t,
 			IsSubType(
 				&FunctionType{
 					ReceiverType:         AuthAccountType,

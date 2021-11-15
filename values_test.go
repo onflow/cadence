@@ -170,7 +170,7 @@ func TestStringer(t *testing.T) {
 		},
 		"Address": {
 			value:    NewAddress([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
-			expected: "0x1",
+			expected: "0x0000000000000001",
 		},
 		"struct": {
 			value: NewStruct([]Value{String("bar")}).WithType(&StructType{
@@ -251,16 +251,16 @@ func TestStringer(t *testing.T) {
 			expected: "/storage/foo",
 		},
 		"Type": {
-			value:    TypeValue{StaticType: "Int"},
+			value:    TypeValue{StaticType: IntType{}},
 			expected: "Type<Int>()",
 		},
 		"Capability": {
 			value: Capability{
 				Path:       Path{Domain: "storage", Identifier: "foo"},
 				Address:    BytesToAddress([]byte{1, 2, 3, 4, 5}),
-				BorrowType: "Int",
+				BorrowType: IntType{},
 			},
-			expected: "Capability<Int>(address: 0x102030405, path: /storage/foo)",
+			expected: "Capability<Int>(address: 0x0000000102030405, path: /storage/foo)",
 		},
 	}
 
