@@ -463,7 +463,6 @@ func TestBLSVerifyPoP(t *testing.T) {
 	runtime := newTestInterpreterRuntime()
 
 	script := []byte(`
-      import Crypto
 
       pub fun main(): Bool {
           let publicKey = PublicKey(
@@ -517,7 +516,6 @@ func TestBLSAggregateSignatures(t *testing.T) {
 	runtime := newTestInterpreterRuntime()
 
 	script := []byte(`
-      import Crypto
 
       pub fun main(): [UInt8] {
 		return AggregateBLSSignatures([
@@ -581,7 +579,6 @@ func TestAggregateBLSPublicKeys(t *testing.T) {
 	runtime := newTestInterpreterRuntime()
 
 	script := []byte(`
-      import Crypto
 
       pub fun main(): PublicKey {
 		let k1 = PublicKey(
