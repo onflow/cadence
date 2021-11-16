@@ -167,6 +167,28 @@ type PublicKeyValidationHandlerFunc func(
 	publicKey *CompositeValue,
 ) BoolValue
 
+// VerifyBLSPoPHandlerFunc is a function that verifies a BLS proof of possession
+type VerifyBLSPoPHandlerFunc func(
+	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
+	publicKey MemberAccessibleValue,
+	signature []byte,
+) (BoolValue, error)
+
+// AggregateBLSSignaturesHandlerFunc is a function that joins a list of
+// BLS signatures
+type AggregateBLSSignaturesHandlerFunc func(
+	signatures [][]byte,
+) ([]byte, error)
+
+// AggregateBLSPublicKeysHandlerFunc is a function that joins a list of
+// BLS public keys
+type AggregateBLSPublicKeysHandlerFunc func(
+	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
+	publicKeys []MemberAccessibleValue,
+) (MemberAccessibleValue, error)
+
 // SignatureVerificationHandlerFunc is a function that validates a signature.
 type SignatureVerificationHandlerFunc func(
 	interpreter *Interpreter,
@@ -275,6 +297,9 @@ type Interpreter struct {
 	uuidHandler                    UUIDHandlerFunc
 	PublicKeyValidationHandler     PublicKeyValidationHandlerFunc
 	SignatureVerificationHandler   SignatureVerificationHandlerFunc
+	BLSVerifyPoPHandler            VerifyBLSPoPHandlerFunc
+	AggregateBLSSignaturesHandler  AggregateBLSSignaturesHandlerFunc
+	AggregateBLSPublicKeysHandler  AggregateBLSPublicKeysHandlerFunc
 	HashHandler                    HashHandlerFunc
 	ExitHandler                    ExitHandlerFunc
 	interpreted                    bool
@@ -433,6 +458,24 @@ func WithUUIDHandler(handler UUIDHandlerFunc) Option {
 func WithPublicKeyValidationHandler(handler PublicKeyValidationHandlerFunc) Option {
 	return func(interpreter *Interpreter) error {
 		interpreter.SetPublicKeyValidationHandler(handler)
+		return nil
+	}
+}
+
+// WithBLSCryptoFunctions returns an interpreter option which sets the given
+// functions as the functions used to handle certain BLS-specific crypto functions.
+//
+func WithBLSCryptoFunctions(
+	verifyPoP VerifyBLSPoPHandlerFunc,
+	aggregateSignatures AggregateBLSSignaturesHandlerFunc,
+	aggregatePublicKeys AggregateBLSPublicKeysHandlerFunc,
+) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetBLSCryptoFunctions(
+			verifyPoP,
+			aggregateSignatures,
+			aggregatePublicKeys,
+		)
 		return nil
 	}
 }
@@ -640,6 +683,18 @@ func (interpreter *Interpreter) SetUUIDHandler(function UUIDHandlerFunc) {
 //
 func (interpreter *Interpreter) SetPublicKeyValidationHandler(function PublicKeyValidationHandlerFunc) {
 	interpreter.PublicKeyValidationHandler = function
+}
+
+// SetBLSCryptoFunctions sets the functions that are used to handle certain BLS specific crypt functions.
+//
+func (interpreter *Interpreter) SetBLSCryptoFunctions(
+	verifyPoP VerifyBLSPoPHandlerFunc,
+	aggregateSignatures AggregateBLSSignaturesHandlerFunc,
+	aggregatePublicKeys AggregateBLSPublicKeysHandlerFunc,
+) {
+	interpreter.BLSVerifyPoPHandler = verifyPoP
+	interpreter.AggregateBLSSignaturesHandler = aggregateSignatures
+	interpreter.AggregateBLSPublicKeysHandler = aggregatePublicKeys
 }
 
 // SetSignatureVerificationHandler sets the function that is used to handle signature validation.
@@ -2416,6 +2471,7 @@ func (interpreter *Interpreter) NewSubInterpreter(
 		WithPublicKeyValidationHandler(interpreter.PublicKeyValidationHandler),
 		WithSignatureVerificationHandler(interpreter.SignatureVerificationHandler),
 		WithHashHandler(interpreter.HashHandler),
+		WithBLSCryptoFunctions(interpreter.BLSVerifyPoPHandler, interpreter.AggregateBLSSignaturesHandler, interpreter.AggregateBLSPublicKeysHandler),
 	}
 
 	return NewInterpreter(
@@ -2649,7 +2705,7 @@ func lookupComposite(interpreter *Interpreter, typeID string) (*sema.CompositeTy
 		return nil, err
 	}
 
-	typ, err := interpreter.getCompositeType(location, qualifiedIdentifier, common.TypeID(typeID))
+	typ, err := interpreter.GetCompositeType(location, qualifiedIdentifier, common.TypeID(typeID))
 	if err != nil {
 		return nil, err
 	}
@@ -3765,7 +3821,7 @@ func (interpreter *Interpreter) ConvertStaticToSemaType(staticType StaticType) (
 			return interpreter.getInterfaceType(location, qualifiedIdentifier)
 		},
 		func(location common.Location, qualifiedIdentifier string, typeID common.TypeID) (*sema.CompositeType, error) {
-			return interpreter.getCompositeType(location, qualifiedIdentifier, typeID)
+			return interpreter.GetCompositeType(location, qualifiedIdentifier, typeID)
 		},
 	)
 }
@@ -3817,7 +3873,11 @@ func (interpreter *Interpreter) GetContractComposite(contractLocation common.Add
 	return contractValue, nil
 }
 
-func (interpreter *Interpreter) getCompositeType(location common.Location, qualifiedIdentifier string, typeID common.TypeID) (*sema.CompositeType, error) {
+func (interpreter *Interpreter) GetCompositeType(
+	location common.Location,
+	qualifiedIdentifier string,
+	typeID common.TypeID,
+) (*sema.CompositeType, error) {
 	if location == nil {
 		return interpreter.getNativeCompositeType(qualifiedIdentifier)
 	}
