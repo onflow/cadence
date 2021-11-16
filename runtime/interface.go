@@ -127,6 +127,4 @@ type Metrics interface {
 	ProgramParsed(location common.Location, duration time.Duration)
 	ProgramChecked(location common.Location, duration time.Duration)
 	ProgramInterpreted(location common.Location, duration time.Duration)
-	ValueEncoded(duration time.Duration)
-	ValueDecoded(duration time.Duration)
 }

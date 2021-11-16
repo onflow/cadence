@@ -222,7 +222,7 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val 
 
 	context.InitializeCodesAndPrograms()
 
-	storage := r.newStorage(context.Interface)
+	storage := NewStorage(context.Interface)
 
 	var checkerOptions []sema.Option
 	var interpreterOptions []interpreter.Option
@@ -466,7 +466,7 @@ func (r *interpreterRuntime) InvokeContractFunction(
 
 	context.InitializeCodesAndPrograms()
 
-	storage := r.newStorage(context.Interface)
+	storage := NewStorage(context.Interface)
 
 	var interpreterOptions []interpreter.Option
 	var checkerOptions []sema.Option
@@ -600,7 +600,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 
 	context.InitializeCodesAndPrograms()
 
-	storage := r.newStorage(context.Interface)
+	storage := NewStorage(context.Interface)
 
 	var interpreterOptions []interpreter.Option
 	var checkerOptions []sema.Option
@@ -902,7 +902,7 @@ func (r *interpreterRuntime) ParseAndCheckProgram(
 
 	context.InitializeCodesAndPrograms()
 
-	storage := r.newStorage(context.Interface)
+	storage := NewStorage(context.Interface)
 
 	var interpreterOptions []interpreter.Option
 	var checkerOptions []sema.Option
@@ -1797,16 +1797,9 @@ func (r *interpreterRuntime) recordContractValue(
 	storage.recordContractUpdate(
 		inter,
 		addressValue.ToAddress(),
-		formatContractKey(name),
+		name,
 		contractValue,
 	)
-}
-
-func formatContractKey(name string) string {
-	const contractKey = "contract"
-
-	// \x1F = Information Separator One
-	return fmt.Sprintf("%s\x1F%s", contractKey, name)
 }
 
 func (r *interpreterRuntime) loadContract(
@@ -1836,11 +1829,11 @@ func (r *interpreterRuntime) loadContract(
 		switch location := compositeType.Location.(type) {
 
 		case common.AddressLocation:
-			storedValue = storage.ReadValue(
-				inter,
+			storageMap := storage.GetStorageMap(
 				location.Address,
-				formatContractKey(location.Name),
+				StorageDomainContract,
 			)
+			storedValue = storageMap.ReadValue(location.Name)
 		}
 
 		switch typedValue := storedValue.(type) {
@@ -2397,8 +2390,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				context.SetCode(context.Location, string(code))
 
 				panic(fmt.Errorf(
-					"invalid %s: the name argument must match the name of the declaration"+
-						"name argument: %q, declaration name: %q",
+					"invalid %s: the name argument must match the name of the declaration: got %q, expected %q",
 					declarationKind.Name(),
 					nameArgument,
 					declaredName,
@@ -2761,7 +2753,7 @@ func (r *interpreterRuntime) executeNonProgram(interpret interpretFunc, context 
 
 	var program *interpreter.Program
 
-	storage := r.newStorage(context.Interface)
+	storage := NewStorage(context.Interface)
 
 	var functions stdlib.StandardLibraryFunctions
 	var values stdlib.StandardLibraryValues
@@ -2802,8 +2794,13 @@ func (r *interpreterRuntime) ReadStored(
 
 	return r.executeNonProgram(
 		func(inter *interpreter.Interpreter) (interpreter.Value, error) {
-			key := interpreter.PathToStorageKey(importPathValue(path))
-			value := inter.ReadStored(address, key)
+			pathValue := importPathValue(path)
+
+			domain := pathValue.Domain.Identifier()
+			identifier := pathValue.Identifier
+
+			value := inter.ReadStored(address, domain, identifier)
+
 			return value, nil
 		},
 		context,
@@ -2827,7 +2824,7 @@ func (r *interpreterRuntime) ReadLinked(
 
 	return r.executeNonProgram(
 		func(inter *interpreter.Interpreter) (interpreter.Value, error) {
-			key, _, err := inter.GetCapabilityFinalTargetStorageKey(
+			targetPath, _, err := inter.GetCapabilityFinalTargetPath(
 				address,
 				importPathValue(path),
 				&sema.ReferenceType{
@@ -2838,7 +2835,16 @@ func (r *interpreterRuntime) ReadLinked(
 			if err != nil {
 				return nil, err
 			}
-			value := inter.ReadStored(address, key)
+
+			if targetPath == (interpreter.PathValue{}) {
+				return interpreter.NilValue{}, nil
+			}
+
+			value := inter.ReadStored(
+				address,
+				targetPath.Domain.Identifier(),
+				targetPath.Identifier,
+			)
 			return value, nil
 		},
 		context,
@@ -3049,15 +3055,6 @@ func (r *interpreterRuntime) newPublicAccountContracts(
 			addressValue,
 			runtimeInterface,
 		),
-	)
-}
-
-func (r *interpreterRuntime) newStorage(runtimeInterface Interface) *Storage {
-	return NewStorage(
-		runtimeInterface,
-		func(f func(), report func(metrics Metrics, duration time.Duration)) {
-			reportMetric(f, runtimeInterface, report)
-		},
 	)
 }
 

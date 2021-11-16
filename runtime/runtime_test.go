@@ -154,8 +154,6 @@ type testRuntimeInterface struct {
 	programParsed             func(location common.Location, duration time.Duration)
 	programChecked            func(location common.Location, duration time.Duration)
 	programInterpreted        func(location common.Location, duration time.Duration)
-	valueEncoded              func(duration time.Duration)
-	valueDecoded              func(duration time.Duration)
 	unsafeRandom              func() (uint64, error)
 	verifySignature           func(
 		signature []byte,
@@ -328,20 +326,6 @@ func (i *testRuntimeInterface) ProgramInterpreted(location common.Location, dura
 		return
 	}
 	i.programInterpreted(location, duration)
-}
-
-func (i *testRuntimeInterface) ValueEncoded(duration time.Duration) {
-	if i.valueEncoded == nil {
-		return
-	}
-	i.valueEncoded(duration)
-}
-
-func (i *testRuntimeInterface) ValueDecoded(duration time.Duration) {
-	if i.valueDecoded == nil {
-		return
-	}
-	i.valueDecoded(duration)
 }
 
 func (i *testRuntimeInterface) GetCurrentBlockHeight() (uint64, error) {
@@ -2996,7 +2980,7 @@ func TestRuntimeContractAccount(t *testing.T) {
 		},
 		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
-			return []Address{common.MustBytesToAddress(addressValue.Bytes())}, nil
+			return []Address{Address(addressValue)}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
 		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
@@ -5272,8 +5256,6 @@ func TestRuntimeMetrics(t *testing.T) {
 		programParsed      map[common.LocationID]int
 		programChecked     map[common.LocationID]int
 		programInterpreted map[common.LocationID]int
-		valueEncoded       int
-		valueDecoded       int
 	}
 
 	newRuntimeInterface := func() (runtimeInterface Interface, r *reports) {
@@ -5307,12 +5289,6 @@ func TestRuntimeMetrics(t *testing.T) {
 			},
 			programInterpreted: func(location common.Location, duration time.Duration) {
 				r.programInterpreted[location.ID()]++
-			},
-			valueEncoded: func(duration time.Duration) {
-				r.valueEncoded++
-			},
-			valueDecoded: func(duration time.Duration) {
-				r.valueDecoded++
 			},
 		}
 
@@ -5355,8 +5331,6 @@ func TestRuntimeMetrics(t *testing.T) {
 		},
 		r1.programInterpreted,
 	)
-	assert.Equal(t, 1, r1.valueEncoded)
-	assert.Equal(t, 0, r1.valueDecoded)
 
 	i2, r2 := newRuntimeInterface()
 
@@ -5393,12 +5367,10 @@ func TestRuntimeMetrics(t *testing.T) {
 		},
 		r2.programInterpreted,
 	)
-	assert.Equal(t, 0, r2.valueEncoded)
-	assert.Equal(t, 1, r2.valueDecoded)
 }
 
 type testWrite struct {
-	owner, key, value []byte
+	owner, key []byte
 }
 
 func (w testWrite) String() string {
@@ -5457,7 +5429,6 @@ func TestRuntimeContractWriteback(t *testing.T) {
 		writes = append(writes, testWrite{
 			owner,
 			key,
-			value,
 		})
 	}
 
@@ -5467,7 +5438,7 @@ func TestRuntimeContractWriteback(t *testing.T) {
 		},
 		storage: newTestLedger(nil, onWrite),
 		getSigningAccounts: func() ([]Address, error) {
-			return []Address{common.MustBytesToAddress(addressValue.Bytes())}, nil
+			return []Address{Address(addressValue)}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
 		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
@@ -5501,7 +5472,26 @@ func TestRuntimeContractWriteback(t *testing.T) {
 
 	assert.NotNil(t, accountCode)
 
-	assert.Len(t, writes, 2)
+	assert.Equal(t,
+		[]testWrite{
+			// storage index to contract domain storage map
+			{
+				addressValue[:],
+				[]byte("contract"),
+			},
+			// contract value
+			{
+				addressValue[:],
+				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
+			},
+			// contract domain storage map
+			{
+				addressValue[:],
+				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
+			},
+		},
+		writes,
+	)
 
 	writes = nil
 
@@ -5516,7 +5506,7 @@ func TestRuntimeContractWriteback(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	assert.Len(t, writes, 0)
+	assert.Empty(t, writes)
 
 	writes = nil
 
@@ -5531,7 +5521,16 @@ func TestRuntimeContractWriteback(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	assert.Len(t, writes, 1)
+	assert.Equal(t,
+		[]testWrite{
+			// contract value
+			{
+				addressValue[:],
+				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
+			},
+		},
+		writes,
+	)
 }
 
 func TestRuntimeStorageWriteback(t *testing.T) {
@@ -5579,11 +5578,10 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 	var loggedMessages []string
 	var writes []testWrite
 
-	onWrite := func(owner, key, value []byte) {
+	onWrite := func(owner, key, _ []byte) {
 		writes = append(writes, testWrite{
 			owner,
 			key,
-			value,
 		})
 	}
 
@@ -5593,7 +5591,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 		},
 		storage: newTestLedger(nil, onWrite),
 		getSigningAccounts: func() ([]Address, error) {
-			return []Address{common.MustBytesToAddress(addressValue.Bytes())}, nil
+			return []Address{Address(addressValue)}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
 		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
@@ -5627,7 +5625,26 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 
 	assert.NotNil(t, accountCode)
 
-	assert.Len(t, writes, 2)
+	assert.Equal(t,
+		[]testWrite{
+			// storage index to contract domain storage map
+			{
+				addressValue[:],
+				[]byte("contract"),
+			},
+			// contract value
+			{
+				addressValue[:],
+				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
+			},
+			// contract domain storage map
+			{
+				addressValue[:],
+				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
+			},
+		},
+		writes,
+	)
 
 	writes = nil
 
@@ -5642,7 +5659,26 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	assert.Len(t, writes, 2)
+	assert.Equal(t,
+		[]testWrite{
+			// storage index to storage domain storage map
+			{
+				addressValue[:],
+				[]byte("storage"),
+			},
+			// storage domain storage map
+			{
+				addressValue[:],
+				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x3},
+			},
+			// resource value
+			{
+				addressValue[:],
+				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4},
+			},
+		},
+		writes,
+	)
 
 	readTx := []byte(`
      import Test from 0xCADE
@@ -5668,7 +5704,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	assert.Len(t, writes, 0)
+	assert.Empty(t, writes)
 
 	writeTx := []byte(`
      import Test from 0xCADE
@@ -5695,7 +5731,16 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	assert.Len(t, writes, 1)
+	assert.Equal(t,
+		[]testWrite{
+			// resource value
+			{
+				addressValue[:],
+				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4},
+			},
+		},
+		writes,
+	)
 }
 
 func TestRuntimeExternalError(t *testing.T) {
@@ -6755,17 +6800,10 @@ func TestRuntimeStackOverflow(t *testing.T) {
 	var events []cadence.Event
 	var loggedMessages []string
 	var signerAddress common.Address
-	var contractValueReads = 0
 	accountCodes := map[common.LocationID]string{}
 
-	onRead := func(owner, key, value []byte) {
-		if bytes.Equal(key, []byte(formatContractKey("FooEvents"))) {
-			contractValueReads++
-		}
-	}
-
 	runtimeInterface := &testRuntimeInterface{
-		storage: newTestLedger(onRead, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{signerAddress}, nil
 		},

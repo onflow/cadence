@@ -23,15 +23,15 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 func TestRuntimeContract(t *testing.T) {
@@ -171,11 +171,15 @@ func TestRuntimeContract(t *testing.T) {
 
 		nextTransactionLocation := newTransactionLocationGenerator()
 
-		contractKey := []byte(formatContractKey("Test"))
-
 		inter := newTestInterpreter(t)
 		codeArrayString := interpreter.ByteSliceToByteArrayValue(inter, []byte(tc.code)).String()
 		code2ArrayString := interpreter.ByteSliceToByteArrayValue(inter, []byte(tc.code2)).String()
+
+		getContractValueExists := func() bool {
+			return NewStorage(storage).
+				GetStorageMap(signerAddress, StorageDomainContract).
+				ValueExists("Test")
+		}
 
 		t.Run("add", func(t *testing.T) {
 
@@ -194,8 +198,7 @@ func TestRuntimeContract(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, []byte(tc.code), deployedCode)
 
-				contractValueExists, err := storage.valueExists(signerAddress[:], contractKey)
-				require.NoError(t, err)
+				contractValueExists := getContractValueExists()
 
 				if tc.isInterface {
 					require.False(t, contractValueExists)
@@ -223,9 +226,7 @@ func TestRuntimeContract(t *testing.T) {
 				require.Empty(t, events)
 				require.Empty(t, loggedMessages)
 
-				contractValueExists, err := storage.valueExists(signerAddress[:], contractKey)
-				require.NoError(t, err)
-
+				contractValueExists := getContractValueExists()
 				require.False(t, contractValueExists)
 			}
 		})
@@ -281,8 +282,7 @@ func TestRuntimeContract(t *testing.T) {
 
 			require.Equal(t, []byte(tc.code2), deployedCode)
 
-			contractValueExists, err := storage.valueExists(signerAddress[:], contractKey)
-			require.NoError(t, err)
+			contractValueExists := getContractValueExists()
 
 			if tc.isInterface {
 				require.False(t, contractValueExists)
@@ -340,9 +340,7 @@ func TestRuntimeContract(t *testing.T) {
 			require.Len(t, events, 1)
 			assert.EqualValues(t, stdlib.AccountContractRemovedEventType.ID(), events[0].Type().ID())
 
-			contractValueExists, err := storage.valueExists(signerAddress[:], contractKey)
-			require.NoError(t, err)
-
+			contractValueExists := getContractValueExists()
 			require.False(t, contractValueExists)
 
 		})

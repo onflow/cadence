@@ -19,14 +19,12 @@
 package interpreter
 
 import (
-	"bytes"
 	"fmt"
+	"io"
 	"math"
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
-
-	"github.com/onflow/cadence/runtime/errors"
 
 	"github.com/onflow/cadence/runtime/common"
 )
@@ -85,27 +83,55 @@ func ConvertStoredValue(value atree.Value) (Value, error) {
 	}
 }
 
-type StorageKey struct {
-	Address common.Address
-	Key     string
-}
+func DecodeTypeInfo(dec *cbor.StreamDecoder) (atree.TypeInfo, error) {
+	ty, err := dec.NextType()
+	if err != nil {
+		return nil, err
+	}
 
-func (k StorageKey) IsLess(o StorageKey) bool {
-	switch bytes.Compare(k.Address[:], o.Address[:]) {
-	case -1:
-		return true
-	case 0:
-		return k.Key < o.Key
-	case 1:
-		return false
+	switch ty {
+	case cbor.TagType:
+
+		tag, err := dec.DecodeTagNumber()
+		if err != nil {
+			return nil, err
+		}
+
+		switch tag {
+		case CBORTagConstantSizedStaticType:
+			return decodeConstantSizedStaticType(dec)
+		case CBORTagVariableSizedStaticType:
+			return decodeVariableSizedStaticType(dec)
+		case CBORTagDictionaryStaticType:
+			return decodeDictionaryStaticType(dec)
+		case CBORTagCompositeValue:
+			return decodeCompositeTypeInfo(dec)
+		default:
+			return nil, fmt.Errorf("invalid type info CBOR tag: %d", tag)
+		}
+
+	case cbor.NilType:
+		err = dec.DecodeNil()
+		if err != nil {
+			return nil, err
+		}
+		return emptyTypeInfo, nil
+
 	default:
-		panic(errors.NewUnreachableError())
+		return nil, fmt.Errorf("invalid type info CBOR type: %d", ty)
 	}
 }
 
+type StorageMapKey struct {
+	Address common.Address
+	Domain  string
+}
+
+// InMemoryStorage
+//
 type InMemoryStorage struct {
 	*atree.BasicSlabStorage
-	AccountStorage map[StorageKey]atree.Storable
+	StorageMaps map[StorageMapKey]*StorageMap
 }
 
 var _ Storage = InMemoryStorage{}
@@ -120,96 +146,18 @@ func NewInMemoryStorage() InMemoryStorage {
 
 	return InMemoryStorage{
 		BasicSlabStorage: slabStorage,
-		AccountStorage:   make(map[StorageKey]atree.Storable),
+		StorageMaps:      make(map[StorageMapKey]*StorageMap),
 	}
 }
 
-func DecodeTypeInfo(dec *cbor.StreamDecoder) (atree.TypeInfo, error) {
-	tag, err := dec.DecodeTagNumber()
-	if err != nil {
-		return nil, err
+func (i InMemoryStorage) GetStorageMap(address common.Address, domain string) (storageMap *StorageMap) {
+	key := StorageMapKey{address, domain}
+	storageMap = i.StorageMaps[key]
+	if storageMap == nil {
+		storageMap = NewStorageMap(i, atree.Address(address))
+		i.StorageMaps[key] = storageMap
 	}
-
-	switch tag {
-	case CBORTagConstantSizedStaticType:
-		return decodeConstantSizedStaticType(dec)
-	case CBORTagVariableSizedStaticType:
-		return decodeVariableSizedStaticType(dec)
-	case CBORTagDictionaryStaticType:
-		return decodeDictionaryStaticType(dec)
-	case CBORTagCompositeValue:
-		return decodeCompositeTypeInfo(dec)
-	default:
-		return nil, fmt.Errorf("invalid type info tag: %d", tag)
-	}
-}
-
-func (i InMemoryStorage) ValueExists(_ *Interpreter, address common.Address, key string) bool {
-	storageKey := StorageKey{
-		Address: address,
-		Key:     key,
-	}
-	_, ok := i.AccountStorage[storageKey]
-	return ok
-}
-
-func (i InMemoryStorage) ReadValue(_ *Interpreter, address common.Address, key string) OptionalValue {
-	storageKey := StorageKey{
-		Address: address,
-		Key:     key,
-	}
-
-	storable, ok := i.AccountStorage[storageKey]
-	if !ok {
-		return NilValue{}
-	}
-
-	storedValue := StoredValue(storable, i)
-	return NewSomeValueNonCopying(storedValue)
-}
-
-func (i InMemoryStorage) WriteValue(
-	interpreter *Interpreter,
-	address common.Address,
-	key string,
-	value OptionalValue,
-) {
-	storageKey := StorageKey{
-		Address: address,
-		Key:     key,
-	}
-
-	// Remove existing, if any
-
-	if existingStorable, ok := i.AccountStorage[storageKey]; ok {
-		StoredValue(existingStorable, i).DeepRemove(interpreter)
-		interpreter.RemoveReferencedSlab(existingStorable)
-	}
-
-	switch value := value.(type) {
-	case *SomeValue:
-		// Store new value (as storable)
-		storable, err := value.Value.Storable(
-			i,
-			atree.Address(address),
-			// NOTE: we already allocate a register for the account storage value,
-			// so we might as well store all data of the value in it, if possible,
-			// e.g. for a large immutable value.
-			//
-			// Using a smaller number would only result in an additional register
-			// (account storage register would have storage ID storable,
-			// and extra slab / register would contain the actual data of the value).
-			math.MaxUint64,
-		)
-		if err != nil {
-			panic(err)
-		}
-		i.AccountStorage[storageKey] = storable
-
-	case NilValue:
-		// Remove entry
-		delete(i.AccountStorage, storageKey)
-	}
+	return storageMap
 }
 
 func (i InMemoryStorage) CheckHealth() error {
@@ -217,9 +165,13 @@ func (i InMemoryStorage) CheckHealth() error {
 	return err
 }
 
+// writeCounter is an io.Writer which counts the amount of written data.
+//
 type writeCounter struct {
 	length uint64
 }
+
+var _ io.Writer = &writeCounter{}
 
 func (w *writeCounter) Write(p []byte) (n int, err error) {
 	n = len(p)
@@ -227,6 +179,8 @@ func (w *writeCounter) Write(p []byte) (n int, err error) {
 	return n, nil
 }
 
+// mustStorableSize returns the result of StorableSize, and panics if it fails.
+//
 func mustStorableSize(storable atree.Storable) uint32 {
 	size, err := StorableSize(storable)
 	if err != nil {
@@ -235,6 +189,8 @@ func mustStorableSize(storable atree.Storable) uint32 {
 	return size
 }
 
+// StorableSize returns the size of the storable in bytes.
+//
 func StorableSize(storable atree.Storable) (uint32, error) {
 	var writer writeCounter
 	enc := atree.NewEncoder(&writer, CBOREncMode)
@@ -257,9 +213,9 @@ func StorableSize(storable atree.Storable) (uint32, error) {
 	return uint32(size), nil
 }
 
-// maybeStoreExternally either returns the given immutable storable
-// if it it can be inlined, or else stores it in a separate slab
-// and returns a StorageIDStorable.
+// maybeLargeImmutableStorable either returns the given immutable atree.Storable
+// if it can be stored inline inside its parent container,
+// or else stores it in a separate slab and returns an atree.StorageIDStorable.
 //
 func maybeLargeImmutableStorable(
 	storable atree.Storable,
