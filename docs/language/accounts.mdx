@@ -162,7 +162,7 @@ to the `prepare` phase of the transaction.
   fun getAuthAccount(_ address: Address): AuthAccount
   ```
 
-  This `AuthAccount` object can perform all operations associated with authorized acccounts, 
+  This `AuthAccount` object can perform all operations associated with authorized accounts, 
   and as such this function is only available in scripts, 
   which discard their changes upon completion. 
   Attempting to use this function outside of a script will cause a type error. 
