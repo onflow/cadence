@@ -23,10 +23,11 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/stdlib"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/ast"
