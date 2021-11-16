@@ -660,6 +660,13 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 
                  return ref.foo
               }
+
+              fun invalidBorrowS(): &S2? {
+                  let s = S()
+                  account.save(s, to: /storage/another_s)
+                  let borrowedS = account.borrow<auth &AnyStruct>(from: /storage/another_s)
+                  return borrowedS as! auth &S2?
+              }
             `,
 		)
 
@@ -734,6 +741,12 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 			_, err := inter.Invoke("changeAfterBorrow")
 
 			require.ErrorAs(t, err, &interpreter.DereferenceError{})
+		})
+
+		t.Run("borrow as invalid type", func(t *testing.T) {
+			_, err = inter.Invoke("invalidBorrowS")
+			require.Error(t, err)
+			require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 		})
 	})
 }
