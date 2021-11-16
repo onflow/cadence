@@ -156,16 +156,16 @@ to the `prepare` phase of the transaction.
   }
   ```
 
-  A script can get the `AuthAccount` for an account address
-  using the built-in `getAuthAccount` function:
+  A script can get the `AuthAccount` for an account address using the built-in `getAuthAccount` function:
 
   ```cadence
   fun getAuthAccount(_ address: Address): AuthAccount
   ```
 
-  This function is only available in scripts; as they discard 
-  their changes upon completion. Attempting to use this function
-  outside of a script will cause a type error. 
+  This `AuthAccount` object can perform all operations associated with authorized acccounts, 
+  and as such this function is only available in scripts, 
+  which discard their changes upon completion. 
+  Attempting to use this function outside of a script will cause a type error. 
 
 ## Account Creation
 
