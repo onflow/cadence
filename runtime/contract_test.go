@@ -175,6 +175,12 @@ func TestRuntimeContract(t *testing.T) {
 		codeArrayString := interpreter.ByteSliceToByteArrayValue(inter, []byte(tc.code)).String()
 		code2ArrayString := interpreter.ByteSliceToByteArrayValue(inter, []byte(tc.code2)).String()
 
+		// For each check, we always need to create a new runtime storage instance
+		// and get the storage map (which is backed by an atree ordered map),
+		// because we want to get the latest view / updates of the map –
+		// the runtime creates storage maps internally and modifies them,
+		// so getting the storage map here once upfront would result in outdated data
+
 		getContractValueExists := func() bool {
 			return NewStorage(storage).
 				GetStorageMap(signerAddress, StorageDomainContract).
