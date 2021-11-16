@@ -4511,7 +4511,10 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		// - `auth &R{RI}` (authorized, if argument for parameter `authorized` == true)
 
 		storageAddress := common.BytesToAddress([]byte{0x42})
-		const storageKey = "test storage key"
+		storagePath := interpreter.PathValue{
+			Domain:     common.PathDomainStorage,
+			Identifier: "test",
+		}
 
 		standardLibraryFunctions :=
 			stdlib.StandardLibraryFunctions{
@@ -4542,7 +4545,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 							return &interpreter.StorageReferenceValue{
 								Authorized:           authorized,
 								TargetStorageAddress: storageAddress,
-								TargetKey:            storageKey,
+								TargetPath:           storagePath,
 								BorrowedType: &sema.RestrictedType{
 									Type: rType,
 									Restrictions: []*sema.InterfaceType{
@@ -4602,10 +4605,18 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		r, err := inter.Invoke("createR")
 		require.NoError(t, err)
 
-		storage.WriteValue(
+		r = r.Transfer(
+			inter,
+			interpreter.ReturnEmptyLocationRange,
+			atree.Address(storageAddress),
+			true,
 			nil,
-			storageAddress,
-			storageKey,
+		)
+
+		storageMap := storage.GetStorageMap(storageAddress, storagePath.Domain.Identifier())
+		storageMap.WriteValue(
+			inter,
+			storagePath.Identifier,
 			interpreter.NewSomeValueNonCopying(r),
 		)
 

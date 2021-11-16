@@ -9876,7 +9876,7 @@ func (s SomeStorable) ChildStorables() []atree.Storable {
 type StorageReferenceValue struct {
 	Authorized           bool
 	TargetStorageAddress common.Address
-	TargetKey            string
+	TargetPath           PathValue
 	BorrowedType         sema.Type
 }
 
@@ -9931,7 +9931,12 @@ func (v *StorageReferenceValue) StaticType() StaticType {
 }
 
 func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter) *Value {
-	switch referenced := interpreter.ReadStored(v.TargetStorageAddress, v.TargetKey).(type) {
+
+	address := v.TargetStorageAddress
+	domain := v.TargetPath.Domain.Identifier()
+	identifier := v.TargetPath.Identifier
+
+	switch referenced := interpreter.ReadStored(address, domain, identifier).(type) {
 	case *SomeValue:
 		value := referenced.Value
 
@@ -10097,7 +10102,7 @@ func (v *StorageReferenceValue) Equal(_ *Interpreter, _ func() LocationRange, ot
 	otherReference, ok := other.(*StorageReferenceValue)
 	if !ok ||
 		v.TargetStorageAddress != otherReference.TargetStorageAddress ||
-		v.TargetKey != otherReference.TargetKey ||
+		v.TargetPath != otherReference.TargetPath ||
 		v.Authorized != otherReference.Authorized {
 
 		return false

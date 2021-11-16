@@ -24,32 +24,47 @@ import (
 	"math"
 	"runtime"
 	"sort"
-	"time"
+	"strings"
 
 	"github.com/onflow/atree"
-
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 )
 
+const StorageDomainContract = "contract"
+
+type StorageKey struct {
+	Address common.Address
+	Key     string
+}
+
+func (k StorageKey) IsLess(o StorageKey) bool {
+	switch bytes.Compare(k.Address[:], o.Address[:]) {
+	case -1:
+		return true
+	case 0:
+		return strings.Compare(k.Key, o.Key) < 0
+	case 1:
+		return false
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
 type Storage struct {
 	*atree.PersistentSlabStorage
-	// NOTE: temporary, will be refactored to dictionary
-	writes          map[interpreter.StorageKey]atree.Storable
-	readCache       map[interpreter.StorageKey]atree.Storable
-	contractUpdates map[interpreter.StorageKey]atree.Storable
+	writes          map[StorageKey][]byte
+	readCache       map[StorageKey][]byte
+	storageMaps     map[interpreter.StorageMapKey]*interpreter.StorageMap
+	contractUpdates map[StorageKey]atree.Storable
 	Ledger          atree.Ledger
-	reportMetric    func(f func(), report func(metrics Metrics, duration time.Duration))
 }
 
 var _ atree.SlabStorage = &Storage{}
 var _ interpreter.Storage = &Storage{}
 
-func NewStorage(
-	ledger atree.Ledger,
-	reportMetric func(f func(), report func(metrics Metrics, duration time.Duration)),
-) *Storage {
+func NewStorage(ledger atree.Ledger) *Storage {
 	ledgerStorage := atree.NewLedgerBaseStorage(ledger)
 	persistentSlabStorage := atree.NewPersistentSlabStorage(
 		ledgerStorage,
@@ -61,88 +76,29 @@ func NewStorage(
 	return &Storage{
 		Ledger:                ledger,
 		PersistentSlabStorage: persistentSlabStorage,
-		writes:                map[interpreter.StorageKey]atree.Storable{},
-		readCache:             map[interpreter.StorageKey]atree.Storable{},
-		contractUpdates:       map[interpreter.StorageKey]atree.Storable{},
-		reportMetric:          reportMetric,
+		writes:                map[StorageKey][]byte{},
+		readCache:             map[StorageKey][]byte{},
+		storageMaps:           map[interpreter.StorageMapKey]*interpreter.StorageMap{},
+		contractUpdates:       map[StorageKey]atree.Storable{},
 	}
 }
 
-// ValueExists returns true if a value exists in account storage.
-//
-func (s *Storage) ValueExists(
-	_ *interpreter.Interpreter,
-	address common.Address,
-	key string,
-) bool {
+func (s *Storage) read(address common.Address, domain string) []byte {
 
-	storageKey := interpreter.StorageKey{
+	storageKey := StorageKey{
 		Address: address,
-		Key:     key,
+		Key:     domain,
 	}
 
 	// Check locally
 
-	storable, ok := s.writes[storageKey]
+	localData, ok := s.writes[storageKey]
 	if !ok {
 		// Fall back to read cache
-		storable, ok = s.readCache[storageKey]
+		localData, ok = s.readCache[storageKey]
 	}
 	if ok {
-		return storable != nil
-	}
-
-	// Ask interface
-
-	var exists bool
-	var err error
-	wrapPanic(func() {
-		exists, err = s.Ledger.ValueExists(address[:], []byte(key))
-	})
-	if err != nil {
-		panic(err)
-	}
-
-	if !exists {
-		s.readCache[storageKey] = nil
-	}
-
-	return exists
-}
-
-// ReadValue returns a value from account storage.
-//
-func (s *Storage) ReadValue(
-	_ *interpreter.Interpreter,
-	address common.Address,
-	key string,
-) interpreter.OptionalValue {
-
-	storageKey := interpreter.StorageKey{
-		Address: address,
-		Key:     key,
-	}
-
-	storable := s.readStorable(storageKey)
-	if storable == nil {
-		return interpreter.NilValue{}
-	} else {
-		storedValue := interpreter.StoredValue(storable, s)
-		return interpreter.NewSomeValueNonCopying(storedValue)
-	}
-}
-
-func (s *Storage) readStorable(storageKey interpreter.StorageKey) atree.Storable {
-
-	// Check locally
-
-	localStorable, ok := s.writes[storageKey]
-	if !ok {
-		// Fall back to read cache
-		localStorable, ok = s.readCache[storageKey]
-	}
-	if ok {
-		return localStorable
+		return localData
 	}
 
 	// Load data through the runtime interface
@@ -165,97 +121,89 @@ func (s *Storage) readStorable(storageKey interpreter.StorageKey) atree.Storable
 
 	// Existing data, decode and keep in cache
 
-	var readStorable atree.Storable
+	s.readCache[storageKey] = storedData
 
-	decoder := interpreter.CBORDecMode.NewByteStreamDecoder(storedData)
-
-	s.reportMetric(
-		func() {
-			readStorable, err = interpreter.DecodeStorable(decoder, atree.StorageIDUndefined)
-		},
-		func(metrics Metrics, duration time.Duration) {
-			metrics.ValueDecoded(duration)
-		},
-	)
-	if err != nil {
-		panic(err)
-	}
-
-	s.readCache[storageKey] = readStorable
-
-	return readStorable
+	return storedData
 }
 
-func (s *Storage) WriteValue(
-	inter *interpreter.Interpreter,
-	address common.Address,
-	key string,
-	value interpreter.OptionalValue,
-) {
-	storageKey := interpreter.StorageKey{
+const storageIndexLength = 8
+
+func (s *Storage) GetStorageMap(address common.Address, domain string) (storageMap *interpreter.StorageMap) {
+	key := interpreter.StorageMapKey{
 		Address: address,
-		Key:     key,
+		Domain:  domain,
 	}
 
-	// Remove existing value, if any
+	storageMap = s.storageMaps[key]
+	if storageMap == nil {
 
-	existingStorable := s.readStorable(storageKey)
-	if existingStorable != nil {
-		interpreter.StoredValue(existingStorable, s).
-			DeepRemove(inter)
-		inter.RemoveReferencedSlab(existingStorable)
-	}
+		data := s.read(address, domain)
 
-	// Get storable representation for new value
+		// Load existing storage or create and store new one
 
-	var newStorable atree.Storable
+		atreeAddress := atree.Address(address)
 
-	switch typedValue := value.(type) {
-	case *interpreter.SomeValue:
-		var err error
-		newStorable, err = typedValue.Value.Storable(
-			s,
-			atree.Address(address),
-			// NOTE: we already allocate a register for the account storage value,
-			// so we might as well store all data of the value in it, if possible,
-			// e.g. for a large immutable value.
-			//
-			// Using a smaller number would only result in an additional register
-			// (account storage register would have storage ID storable,
-			// and extra slab / register would contain the actual data of the value).
-			math.MaxUint64,
-		)
-		if err != nil {
-			panic(err)
+		if len(data) > 0 {
+			storageMap = s.loadExistingStorageMap(atreeAddress, domain, data)
+		} else {
+			storageMap = s.storeNewStorageMap(atreeAddress, domain)
 		}
 
-	case interpreter.NilValue:
-		break
-
-	default:
-		panic(errors.NewUnreachableError())
+		s.storageMaps[key] = storageMap
 	}
 
-	// Only write locally.
-	// The value is eventually written back through the runtime interface in `Commit`.
+	return storageMap
+}
 
-	s.writes[storageKey] = newStorable
+func (s *Storage) loadExistingStorageMap(address atree.Address, domain string, data []byte) *interpreter.StorageMap {
+	if len(data) != storageIndexLength {
+		// TODO: add dedicated error type?
+		panic(fmt.Errorf(
+			"invalid storage index for storage map with domain '%s': expected length %d, got %d",
+			domain, storageIndexLength, len(data),
+		))
+	}
+
+	var storageIndex atree.StorageIndex
+	copy(storageIndex[:], data)
+
+	storageID := atree.StorageID{
+		Address: address,
+		Index:   storageIndex,
+	}
+
+	return interpreter.NewStorageMapWithRootID(s, storageID)
+}
+
+func (s *Storage) storeNewStorageMap(address atree.Address, domain string) *interpreter.StorageMap {
+	storageMap := interpreter.NewStorageMap(s, address)
+
+	storageIndex := storageMap.StorageID().Index
+
+	storageKey := StorageKey{
+		Address: common.Address(address),
+		Key:     domain,
+	}
+
+	s.writes[storageKey] = storageIndex[:]
+
+	return storageMap
 }
 
 func (s *Storage) recordContractUpdate(
 	inter *interpreter.Interpreter,
 	address common.Address,
-	key string,
+	name string,
 	contract interpreter.Value,
 ) {
-	storageKey := interpreter.StorageKey{
+	key := StorageKey{
 		Address: address,
-		Key:     key,
+		Key:     name,
 	}
 
 	// Remove existing, if any
 
-	existingStorable, ok := s.contractUpdates[storageKey]
+	existingStorable, ok := s.contractUpdates[key]
 	if ok {
 		interpreter.StoredValue(existingStorable, s).
 			DeepRemove(inter)
@@ -265,7 +213,7 @@ func (s *Storage) recordContractUpdate(
 	if contract == nil {
 		// NOTE: do NOT delete the map entry,
 		// otherwise the write is lost
-		s.contractUpdates[storageKey] = nil
+		s.contractUpdates[key] = nil
 	} else {
 		storable, err := contract.Storable(
 			s,
@@ -283,117 +231,117 @@ func (s *Storage) recordContractUpdate(
 			panic(err)
 		}
 
-		s.contractUpdates[storageKey] = storable
+		s.contractUpdates[key] = storable
 	}
 }
 
-type AccountStorageEntry struct {
-	StorageKey       interpreter.StorageKey
-	Storable         atree.Storable
-	IsContractUpdate bool
+type ContractUpdate struct {
+	Key      StorageKey
+	Storable atree.Storable
 }
 
-// TODO: bring back concurrent encoding
-// Commit serializes/saves all values in the readCache in storage (through the runtime interface).
-//
-func (s *Storage) Commit(inter *interpreter.Interpreter, commitContractUpdates bool) error {
+func SortContractUpdates(updates []ContractUpdate) {
+	sort.Slice(updates, func(i, j int) bool {
+		a := updates[i].Key
+		b := updates[j].Key
+		return a.IsLess(b)
+	})
+}
 
-	var accountStorageEntries []AccountStorageEntry
+func (s *Storage) commitContractUpdates(inter *interpreter.Interpreter) {
+
+	var contractUpdates []ContractUpdate
 
 	// NOTE: ranging over maps is safe (deterministic),
-	// if it is side-effect free and the keys are sorted afterwards
+	// if it is side effect free and the keys are sorted afterwards
 
-	// First, write all values in the account storage
+	// Collect contract updates (delayed and not observable during execution)
 
-	for storageKey, storable := range s.writes { //nolint:maprangecheck
-		accountStorageEntries = append(
-			accountStorageEntries,
-			AccountStorageEntry{
-				StorageKey: storageKey,
-				Storable:   storable,
+	for key, storable := range s.contractUpdates { //nolint:maprangecheck
+		contractUpdates = append(
+			contractUpdates,
+			ContractUpdate{
+				Key:      key,
+				Storable: storable,
 			},
 		)
 	}
 
-	// Second, if enabled,
-	// write all contract updates (which were delayed and not observable)
+	// Sort the contract updates by key in lexicographic order
+
+	SortContractUpdates(contractUpdates)
+
+	// Perform contract updates in order
+
+	for _, contractUpdate := range contractUpdates {
+
+		key := contractUpdate.Key
+
+		storageMap := s.GetStorageMap(key.Address, StorageDomainContract)
+
+		var value interpreter.OptionalValue
+
+		if contractUpdate.Storable == nil {
+			value = interpreter.NilValue{}
+		} else {
+			contractValue := interpreter.StoredValue(contractUpdate.Storable, s)
+			value = interpreter.NewSomeValueNonCopying(contractValue)
+		}
+
+		storageMap.WriteValue(inter, key.Key, value)
+	}
+}
+
+type write struct {
+	storageKey StorageKey
+	data       []byte
+}
+
+func sortWrites(writes []write) {
+	sort.Slice(writes, func(i, j int) bool {
+		a := writes[i].storageKey
+		b := writes[j].storageKey
+		return a.IsLess(b)
+	})
+}
+
+// Commit serializes/saves all values in the readCache in storage (through the runtime interface).
+//
+func (s *Storage) Commit(inter *interpreter.Interpreter, commitContractUpdates bool) error {
 
 	if commitContractUpdates {
-		for storageKey, storable := range s.contractUpdates { //nolint:maprangecheck
-			accountStorageEntries = append(
-				accountStorageEntries,
-				AccountStorageEntry{
-					StorageKey:       storageKey,
-					Storable:         storable,
-					IsContractUpdate: true,
-				},
-			)
-		}
+		s.commitContractUpdates(inter)
 	}
 
-	// Sort the account storage entries by storage key in lexicographic order
+	var writes []write
 
-	SortAccountStorageEntries(accountStorageEntries)
+	// NOTE: ranging over maps is safe (deterministic),
+	// if it is side effect free and the keys are sorted afterwards
+
+	for storageKey, data := range s.writes { //nolint:maprangecheck
+		writes = append(
+			writes,
+			write{
+				storageKey: storageKey,
+				data:       data,
+			},
+		)
+	}
+
+	// Sort the writes by storage key in lexicographic order
+
+	sortWrites(writes)
 
 	// Write account storage entries in order
 
-	// TODO: bring back concurrent encoding
-	for _, entry := range accountStorageEntries {
-
-		storageKey := entry.StorageKey
-		storable := entry.Storable
-
-		address := storageKey.Address
-
-		// If the account storage change is a contract update,
-		// and it is overwriting an existing contract value,
-		// it must be properly removed first:
-		// The removal did not occur during execution,
-		// because contract updates are deferred to the commit
-
-		if entry.IsContractUpdate {
-			existingStorable := s.readStorable(storageKey)
-			if existingStorable != nil {
-				interpreter.StoredValue(existingStorable, s).
-					DeepRemove(inter)
-				inter.RemoveReferencedSlab(existingStorable)
-			}
-		}
-
-		var encoded []byte
-
-		if storable != nil {
-			var err error
-
-			var buf bytes.Buffer
-			encoder := atree.NewEncoder(&buf, interpreter.CBOREncMode)
-
-			s.reportMetric(
-				func() {
-					err = storable.Encode(encoder)
-				},
-				func(metrics Metrics, duration time.Duration) {
-					metrics.ValueEncoded(duration)
-				},
-			)
-			if err != nil {
-				return err
-			}
-
-			err = encoder.CBOR.Flush()
-			if err != nil {
-				return err
-			}
-
-			encoded = buf.Bytes()
-		}
+	for _, write := range writes {
 
 		var err error
 		wrapPanic(func() {
 			err = s.Ledger.SetValue(
-				address[:],
-				[]byte(storageKey.Key),
-				encoded,
+				write.storageKey.Address[:],
+				[]byte(write.storageKey.Key),
+				write.data,
 			)
 		})
 		if err != nil {
@@ -405,14 +353,6 @@ func (s *Storage) Commit(inter *interpreter.Interpreter, commitContractUpdates b
 
 	// TODO: report encoding metric for all encoded slabs
 	return s.PersistentSlabStorage.FastCommit(runtime.NumCPU())
-}
-
-func SortAccountStorageEntries(entries []AccountStorageEntry) {
-	sort.Slice(entries, func(i, j int) bool {
-		a := entries[i].StorageKey
-		b := entries[j].StorageKey
-		return a.IsLess(b)
-	})
 }
 
 func (s *Storage) CheckHealth() error {
@@ -435,111 +375,31 @@ func (s *Storage) CheckHealth() error {
 		accountRootSlabIDs[rootSlabID] = struct{}{}
 	}
 
-	// Gather all top-level storables in account storage
-
-	var accountStorables []struct {
-		interpreter.StorageKey
-		atree.Storable
-	}
-
-	addAccountStorable := func(key interpreter.StorageKey, storable atree.Storable) {
-		accountStorables = append(
-			accountStorables,
-			struct {
-				interpreter.StorageKey
-				atree.Storable
-			}{
-				StorageKey: key,
-				Storable:   storable,
-			},
-		)
-	}
-
-	// NOTE: map range is safe, as account storables will get sorted
-	for key, storable := range s.contractUpdates { //nolint:maprangecheck
-		if storable == nil {
-			continue
-		}
-		addAccountStorable(key, storable)
-	}
-
-	// NOTE: map range is safe, as account storables will get sorted
-	for key, storable := range s.writes { //nolint:maprangecheck
-		if storable == nil {
-			continue
-		}
-
-		if _, ok := s.contractUpdates[key]; ok {
-			continue
-		}
-
-		addAccountStorable(key, storable)
-	}
-
-	// NOTE: map range is safe, as account storables will get sorted
-	for key, storable := range s.readCache { //nolint:maprangecheck
-		if storable == nil {
-			continue
-		}
-
-		if _, ok := s.contractUpdates[key]; ok {
-			continue
-		}
-
-		if _, ok := s.writes[key]; ok {
-			continue
-		}
-
-		addAccountStorable(key, storable)
-	}
-
-	sort.Slice(accountStorables, func(i, j int) bool {
-		a := accountStorables[i]
-		b := accountStorables[j]
-		return a.StorageKey.IsLess(b.StorageKey)
-	})
-
-	// Check that each storage ID storable in account storage
-	// (top-level or nested) refers to an existing slab.
+	// Check that each storage map refers to an existing slab.
 
 	found := map[atree.StorageID]struct{}{}
 
-	for len(accountStorables) > 0 {
+	var storageMapStorageIDs []atree.StorageID
 
-		var next []struct {
-			interpreter.StorageKey
-			atree.Storable
+	for _, storageMap := range s.storageMaps { //nolint:maprangecheck
+		storageMapStorageIDs = append(
+			storageMapStorageIDs,
+			storageMap.StorageID(),
+		)
+	}
+
+	sort.Slice(storageMapStorageIDs, func(i, j int) bool {
+		a := storageMapStorageIDs[i]
+		b := storageMapStorageIDs[j]
+		return a.Compare(b) < 0
+	})
+
+	for _, storageMapStorageID := range storageMapStorageIDs {
+		if _, ok := accountRootSlabIDs[storageMapStorageID]; !ok {
+			return fmt.Errorf("account storage map points to non-existing slab %s", storageMapStorageID)
 		}
 
-		for _, accountStorableEntry := range accountStorables {
-			storable := accountStorableEntry.Storable
-
-			storageIDStorable, ok := storable.(atree.StorageIDStorable)
-			if !ok {
-				for _, childStorable := range storable.ChildStorables() {
-					next = append(next, struct {
-						interpreter.StorageKey
-						atree.Storable
-					}{
-						// storage key is not necessary unused:
-						// it was only used for sorting the initial set of storables,
-						// the child storables do not have a storage key and are already sorted.
-						Storable: childStorable,
-					})
-				}
-				continue
-			}
-
-			storageID := atree.StorageID(storageIDStorable)
-
-			if _, ok := accountRootSlabIDs[storageID]; !ok {
-				return fmt.Errorf("account storage points to non-existing slab %s", storageID)
-			}
-
-			found[storageID] = struct{}{}
-		}
-
-		accountStorables = next
+		found[storageMapStorageID] = struct{}{}
 	}
 
 	// Check that all slabs in slab storage
