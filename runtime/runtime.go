@@ -1475,15 +1475,37 @@ func (r *interpreterRuntime) standardLibraryFunctions(
 	interpreterOptions []interpreter.Option,
 	checkerOptions []sema.Option,
 ) stdlib.StandardLibraryFunctions {
+	builtins := stdlib.FlowBuiltInFunctions(stdlib.FlowBuiltinImpls{
+		CreateAccount:   r.newCreateAccountFunction(context, storage, interpreterOptions, checkerOptions),
+		GetAccount:      r.newGetAccountFunction(context.Interface, storage),
+		Log:             r.newLogFunction(context.Interface),
+		GetCurrentBlock: r.newGetCurrentBlockFunction(context.Interface),
+		GetBlock:        r.newGetBlockFunction(context.Interface),
+		UnsafeRandom:    r.newUnsafeRandomFunction(context.Interface),
+	})
+
+	switch context.Location.(type) {
+	case common.ScriptLocation:
+		// Scripts are read-only, so we can give them access to auth accounts
+		builtins = append(builtins,
+			stdlib.NewStandardLibraryFunction(
+				"getAuthAccount",
+				&sema.FunctionType{
+					Parameters: []*sema.Parameter{{
+						Label:          sema.ArgumentLabelNotRequired,
+						Identifier:     "address",
+						TypeAnnotation: sema.NewTypeAnnotation(&sema.AddressType{}),
+					}},
+					ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.AuthAccountType),
+				},
+				"Returns the AuthAccount associated with the given address. Only available in scripts",
+				r.newGetAuthAccountFunction(context, storage, interpreterOptions, checkerOptions),
+			),
+		)
+	}
+
 	return append(
-		stdlib.FlowBuiltInFunctions(stdlib.FlowBuiltinImpls{
-			CreateAccount:   r.newCreateAccountFunction(context, storage, interpreterOptions, checkerOptions),
-			GetAccount:      r.newGetAccountFunction(context.Interface, storage),
-			Log:             r.newLogFunction(context.Interface),
-			GetCurrentBlock: r.newGetCurrentBlockFunction(context.Interface),
-			GetBlock:        r.newGetBlockFunction(context.Interface),
-			UnsafeRandom:    r.newUnsafeRandomFunction(context.Interface),
-		}),
+		builtins,
 		stdlib.BuiltinFunctions...,
 	)
 }
@@ -2000,6 +2022,24 @@ func (r *interpreterRuntime) instantiateContract(
 	contract = variable.GetValue().(*interpreter.CompositeValue)
 
 	return contract, err
+}
+
+func (r *interpreterRuntime) newGetAuthAccountFunction(
+	context Context,
+	storage *Storage,
+	interpreterOptions []interpreter.Option,
+	checkerOptions []sema.Option,
+) interpreter.HostFunction {
+	return func(invocation interpreter.Invocation) interpreter.Value {
+		accountAddress := invocation.Arguments[0].(interpreter.AddressValue)
+		return r.newAuthAccountValue(
+			accountAddress,
+			context,
+			storage,
+			interpreterOptions,
+			checkerOptions,
+		)
+	}
 }
 
 func (r *interpreterRuntime) newGetAccountFunction(runtimeInterface Interface, storage *Storage) interpreter.HostFunction {

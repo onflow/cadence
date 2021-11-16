@@ -235,52 +235,13 @@ func WithPositionInfoEnabled(enabled bool) Option {
 	}
 }
 
-/* Adds value activations for values that should only exist in scripts */
-func addScriptValueActivations() (activation *VariableActivation) {
-
-	activation = NewVariableActivation(BaseValueActivation)
-
-	// Scripts are read-only, so we can give them access to auth accounts
-	activation.Set(
-		"getAuthAccount",
-		baseFunctionVariable(
-			"getAuthAccount",
-			&FunctionType{
-				Parameters: []*Parameter{{
-					Label:          ArgumentLabelNotRequired,
-					Identifier:     "address",
-					TypeAnnotation: NewTypeAnnotation(&AddressType{}),
-				}},
-				ReturnTypeAnnotation: NewTypeAnnotation(AuthAccountType),
-			},
-			"Returns the AuthAccount associated with the given address. Only available in scripts",
-		),
-	)
-
-	return activation
-}
-
-/* conditionally adds additional variable activations based on the location
-   of the new checker */
-func addConditionalActivations(location common.Location) (activation *VariableActivation) {
-	switch location.(type) {
-	case common.ScriptLocation:
-		activation = addScriptValueActivations()
-	default:
-		activation = BaseValueActivation
-	}
-	return
-}
-
 func NewChecker(program *ast.Program, location common.Location, options ...Option) (*Checker, error) {
 
 	if location == nil {
 		return nil, &MissingLocationError{}
 	}
 
-	checkerValueActivation := addConditionalActivations(location)
-
-	valueActivations := NewVariableActivations(checkerValueActivation)
+	valueActivations := NewVariableActivations(BaseValueActivation)
 	typeActivations := NewVariableActivations(BaseTypeActivation)
 	functionActivations := &FunctionActivations{}
 	functionActivations.EnterFunction(&FunctionType{

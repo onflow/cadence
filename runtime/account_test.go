@@ -1591,3 +1591,177 @@ func TestPublicAccountContracts(t *testing.T) {
 		assert.Equal(t, cadence.String("bar"), array.Values[1])
 	})
 }
+
+func TestGetAuthAccount(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("script location", func(t *testing.T) {
+		t.Parallel()
+
+		rt := newTestInterpreterRuntime()
+
+		script := []byte(`
+            pub fun main(): UInt64 {
+                let acc = getAuthAccount(0x02)
+                return acc.storageUsed
+            }
+        `)
+
+		runtimeInterface := &testRuntimeInterface{
+			getStorageUsed: func(_ Address) (uint64, error) {
+				return 1, nil
+			},
+		}
+
+		result, err := rt.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{0x1},
+			},
+		)
+
+		require.NoError(t, err)
+		assert.Equal(t, cadence.UInt64(0x1), result)
+	})
+
+	t.Run("incorrect arg type", func(t *testing.T) {
+		t.Parallel()
+
+		rt := newTestInterpreterRuntime()
+
+		script := []byte(`
+            pub fun main() {
+                let acc = getAuthAccount("")
+            }
+        `)
+
+		runtimeInterface := &testRuntimeInterface{}
+
+		_, err := rt.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{0x1},
+			},
+		)
+
+		require.Error(t, err)
+
+		var checkerErr *sema.CheckerError
+		require.ErrorAs(t, err, &checkerErr)
+		errs := checkerErr.Errors
+		require.Len(t, errs, 1)
+
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("no args", func(t *testing.T) {
+		t.Parallel()
+
+		rt := newTestInterpreterRuntime()
+
+		script := []byte(`
+            pub fun main() {
+                let acc = getAuthAccount()
+            }
+        `)
+
+		runtimeInterface := &testRuntimeInterface{}
+
+		_, err := rt.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{0x1},
+			},
+		)
+
+		require.Error(t, err)
+
+		var checkerErr *sema.CheckerError
+		require.ErrorAs(t, err, &checkerErr)
+		errs := checkerErr.Errors
+		require.Len(t, errs, 1)
+
+		assert.IsType(t, &sema.ArgumentCountError{}, errs[0])
+	})
+
+	t.Run("too many args", func(t *testing.T) {
+		t.Parallel()
+
+		rt := newTestInterpreterRuntime()
+
+		script := []byte(`
+            pub fun main() {
+                let acc = getAuthAccount(0x1, 0x2)
+            }
+        `)
+
+		runtimeInterface := &testRuntimeInterface{}
+
+		_, err := rt.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{0x1},
+			},
+		)
+
+		require.Error(t, err)
+
+		var checkerErr *sema.CheckerError
+		require.ErrorAs(t, err, &checkerErr)
+		errs := checkerErr.Errors
+		require.Len(t, errs, 1)
+
+		assert.IsType(t, &sema.ArgumentCountError{}, errs[0])
+	})
+
+	t.Run("transaction location", func(t *testing.T) {
+		t.Parallel()
+
+		rt := newTestInterpreterRuntime()
+
+		script := []byte(`
+            pub fun main(): UInt64 {
+                let acc = getAuthAccount(0x02)
+                return acc.storageUsed
+            }
+        `)
+
+		runtimeInterface := &testRuntimeInterface{
+			getStorageUsed: func(_ Address) (uint64, error) {
+				return 1, nil
+			},
+		}
+
+		_, err := rt.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.TransactionLocation{0x1},
+			},
+		)
+
+		require.Error(t, err)
+
+		var checkerErr *sema.CheckerError
+		require.ErrorAs(t, err, &checkerErr)
+		errs := checkerErr.Errors
+		require.Len(t, errs, 1)
+
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+	})
+}
