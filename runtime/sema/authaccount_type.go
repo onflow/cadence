@@ -31,6 +31,7 @@ const AuthAccountStorageCapacityField = "storageCapacity"
 const AuthAccountAddPublicKeyField = "addPublicKey"
 const AuthAccountRemovePublicKeyField = "removePublicKey"
 const AuthAccountSaveField = "save"
+const AuthAccountForceSaveField = "forceSave"
 const AuthAccountLoadField = "load"
 const AuthAccountCopyField = "copy"
 const AuthAccountBorrowField = "borrow"
@@ -109,6 +110,12 @@ var AuthAccountType = func() *CompositeType {
 			AuthAccountSaveField,
 			AuthAccountTypeSaveFunctionType,
 			authAccountTypeSaveFunctionDocString,
+		),
+		NewPublicFunctionMember(
+			authAccountType,
+			AuthAccountForceSaveField,
+			AuthAccountTypeForceSaveFunctionType,
+			authAccountTypeForceSaveFunctionDocString,
 		),
 		NewPublicFunctionMember(
 			authAccountType,
@@ -247,6 +254,51 @@ Resources are moved into storage, and structures are copied.
 If there is already an object stored under the given path, the program aborts.
 
 The path must be a storage path, i.e., only the domain ` + "`storage`" + ` is allowed
+`
+
+var AuthAccountTypeForceSaveFunctionType = func() *FunctionType {
+
+	typeParameter := &TypeParameter{
+		Name:      "T",
+		TypeBound: StorableType,
+	}
+
+	return &FunctionType{
+		TypeParameters: []*TypeParameter{
+			typeParameter,
+		},
+		Parameters: []*Parameter{
+			{
+				Label:      ArgumentLabelNotRequired,
+				Identifier: "value",
+				TypeAnnotation: NewTypeAnnotation(
+					&GenericType{
+						TypeParameter: typeParameter,
+					},
+				),
+			},
+			{
+				Label:          "to",
+				Identifier:     "path",
+				TypeAnnotation: NewTypeAnnotation(StoragePathType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(BoolType),
+	}
+}()
+
+const authAccountTypeForceSaveFunctionDocString = `
+Saves the given object into the account's storage at the given path.
+Resources are moved into storage, and structures are copied.
+
+If there is already an object stored under the given path, the stored
+object will be overwritten. If the stored object was a resource, it will
+be destroyed.  
+
+The path must be a storage path, i.e., only the domain ` + "`storage`" + ` is allowed.
+
+This function returns true if a previously stored object was overwritten, and
+false if the given path had no stored object. 
 `
 
 var AuthAccountTypeLoadFunctionType = func() *FunctionType {

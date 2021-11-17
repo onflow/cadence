@@ -57,7 +57,7 @@ func TestCheckAccount_save(t *testing.T) {
 
 	t.Parallel()
 
-	testImplicitTypeArgument := func(domain common.PathDomain) {
+	testImplicitTypeArgument := func(domain common.PathDomain, funcName string) {
 
 		domainName := domain.Identifier()
 		domainIdentifier := domain.Identifier()
@@ -81,9 +81,10 @@ func TestCheckAccount_save(t *testing.T) {
 
                       fun test() {
                           let r <- create R()
-                          authAccount.save(<-r, to: /%s/r)
+                          authAccount.%s(<-r, to: /%s/r)
                       }
                     `,
+					funcName,
 					domainIdentifier,
 				),
 			)
@@ -108,9 +109,10 @@ func TestCheckAccount_save(t *testing.T) {
 
                       fun test() {
                           let s = S()
-                          authAccount.save(s, to: /%s/s)
+                          authAccount.%s(s, to: /%s/s)
                       }
                     `,
+					funcName,
 					domainIdentifier,
 				),
 			)
@@ -125,7 +127,7 @@ func TestCheckAccount_save(t *testing.T) {
 		})
 	}
 
-	testExplicitTypeArgumentCorrect := func(domain common.PathDomain) {
+	testExplicitTypeArgumentCorrect := func(domain common.PathDomain, funcName string) {
 
 		domainName := domain.Identifier()
 		domainIdentifier := domain.Identifier()
@@ -149,9 +151,10 @@ func TestCheckAccount_save(t *testing.T) {
 
                       fun test() {
                           let r <- create R()
-                          authAccount.save<@R>(<-r, to: /%s/r)
+                          authAccount.%s<@R>(<-r, to: /%s/r)
                       }
                     `,
+					funcName,
 					domainIdentifier,
 				),
 			)
@@ -176,9 +179,10 @@ func TestCheckAccount_save(t *testing.T) {
 
                       fun test() {
                           let s = S()
-                          authAccount.save<S>(s, to: /%s/s)
+                          authAccount.%s<S>(s, to: /%s/s)
                       }
                     `,
+					funcName,
 					domainIdentifier,
 				),
 			)
@@ -193,7 +197,7 @@ func TestCheckAccount_save(t *testing.T) {
 		})
 	}
 
-	testExplicitTypeArgumentIncorrect := func(domain common.PathDomain) {
+	testExplicitTypeArgumentIncorrect := func(domain common.PathDomain, funcName string) {
 
 		domainName := domain.Identifier()
 		domainIdentifier := domain.Identifier()
@@ -219,9 +223,10 @@ func TestCheckAccount_save(t *testing.T) {
 
                       fun test() {
                           let r <- create R()
-                          authAccount.save<@T>(<-r, to: /%s/r)
+                          authAccount.%s<@T>(<-r, to: /%s/r)
                       }
                     `,
+					funcName,
 					domainIdentifier,
 				),
 			)
@@ -254,9 +259,10 @@ func TestCheckAccount_save(t *testing.T) {
 
                       fun test() {
                           let s = S()
-                          authAccount.save<T>(s, to: /%s/s)
+                          authAccount.%s<T>(s, to: /%s/s)
                       }
                     `,
+					funcName,
 					domainIdentifier,
 				),
 			)
@@ -277,7 +283,7 @@ func TestCheckAccount_save(t *testing.T) {
 		})
 	}
 
-	testInvalidNonStorable := func(domain common.PathDomain) {
+	testInvalidNonStorable := func(domain common.PathDomain, funcName string) {
 
 		domainName := domain.Identifier()
 		domainIdentifier := domain.Identifier()
@@ -302,9 +308,10 @@ func TestCheckAccount_save(t *testing.T) {
                       }
 
                       fun test() {
-                          authAccount.save<((): Int)>(one, to: /%s/one)
+                          authAccount.%s<((): Int)>(one, to: /%s/one)
                       }
                     `,
+					funcName,
 					domainIdentifier,
 				),
 			)
@@ -333,9 +340,10 @@ func TestCheckAccount_save(t *testing.T) {
                       }
 
                       fun test() {
-                          authAccount.save(one, to: /%s/one)
+                          authAccount.%s(one, to: /%s/one)
                       }
                     `,
+					funcName,
 					domainIdentifier,
 				),
 			)
@@ -353,11 +361,31 @@ func TestCheckAccount_save(t *testing.T) {
 		})
 	}
 
-	for _, domain := range common.AllPathDomainsByIdentifier {
-		testImplicitTypeArgument(domain)
-		testExplicitTypeArgumentCorrect(domain)
-		testExplicitTypeArgumentIncorrect(domain)
-		testInvalidNonStorable(domain)
+	t.Run("forceSave returns Bool", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t,
+			`
+				  struct S {}
+
+				  fun test(): Bool {
+					  let s = S()
+					  return authAccount.forceSave(s, to: /storage/s)
+				  }
+				`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	for _, funcName := range []string{"save", "forceSave"} {
+		for _, domain := range common.AllPathDomainsByIdentifier {
+			testImplicitTypeArgument(domain, funcName)
+			testExplicitTypeArgumentCorrect(domain, funcName)
+			testExplicitTypeArgumentIncorrect(domain, funcName)
+			testInvalidNonStorable(domain, funcName)
+		}
 	}
 }
 
