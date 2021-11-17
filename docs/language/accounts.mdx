@@ -377,6 +377,20 @@ to all its stored objects.
 
   The path must be a storage path, i.e., only the domain `storage` is allowed.
 
+- `cadence•fun clear(_ path: StoragePath): Bool`
+
+  Clears an object from the account's storage which is stored under the given path
+
+  If there is an object stored, the stored resource or structure is removed from storage, and 
+  destroyed if it is a resource.
+
+  When the function returns, the storage no longer contains an object under the given path.
+
+  The path must be a storage path, i.e., only the domain ` + "`storage`" + ` is allowed.
+
+  The function returns true if a stored object was cleared, and false if no object
+  was stored under the given path.
+
 - `cadence•fun copy<T: AnyStruct>(from: StoragePath): T?`
 
   Returns a copy of a structure stored in account storage, without removing it from storage.
