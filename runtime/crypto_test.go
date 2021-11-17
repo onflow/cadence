@@ -526,7 +526,7 @@ func TestBLSAggregateSignatures(t *testing.T) {
 			  [3, 3, 3, 3, 3],
 			  [4, 4, 4, 4, 4],
 			  [5, 5, 5, 5, 5]
-			])
+			])!
       }
     `)
 
@@ -591,7 +591,7 @@ func TestAggregateBLSPublicKeys(t *testing.T) {
 			publicKey: "0102".decodeHex(),
 			signatureAlgorithm: SignatureAlgorithm.BLS_BLS12_381
 		)
-		return AggregateBLSPublicKeys([k1, k2])
+		return AggregateBLSPublicKeys([k1, k2])!
       }
     `)
 

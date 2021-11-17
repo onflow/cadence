@@ -3287,8 +3287,9 @@ func verifyBLSPOP(
 		valid, err = runtimeInterface.BLSVerifyPOP(publicKey, signature)
 	})
 
+	// if the crypto layer produces an error, we have invalid input, return false
 	if err != nil {
-		return false, err
+		return interpreter.BoolValue(false), nil //nolint
 	}
 
 	return interpreter.BoolValue(valid), nil
@@ -3316,15 +3317,18 @@ func aggregateBLSPublicKeys(
 		key, err = runtimeInterface.AggregateBLSPublicKeys(publicKeys)
 	})
 
+	// if the crypto layer produces an error, we have invalid input, return nil
 	if err != nil {
-		return nil, err
+		return interpreter.NilValue{}, nil //nolint
 	}
 
-	return NewPublicKeyValue(
-		inter,
-		getLocationRange,
-		key,
-		validator,
+	return interpreter.NewSomeValueNonCopying(
+		NewPublicKeyValue(
+			inter,
+			getLocationRange,
+			key,
+			validator,
+		),
 	), nil
 }
 
