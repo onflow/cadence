@@ -489,6 +489,46 @@ func TestCheckAccount_load(t *testing.T) {
 	}
 }
 
+func TestCheckAccount_clear(t *testing.T) {
+
+	t.Parallel()
+
+	testClear := func(domain common.PathDomain) {
+
+		testName := fmt.Sprintf(
+			"clear, %s",
+			domain.Identifier(),
+		)
+
+		t.Run(testName, func(t *testing.T) {
+
+			t.Parallel()
+
+			checker, err := ParseAndCheckAccount(t,
+				fmt.Sprintf(
+					`
+						let r = authAccount.clear(/%s/r)
+					`,
+					domain.Identifier(),
+				),
+			)
+
+			if domain == common.PathDomainStorage {
+				require.NoError(t, err)
+				rValueType := RequireGlobalValue(t, checker.Elaboration, "r")
+				require.Equal(t, sema.BoolType, rValueType)
+			} else {
+				errs := ExpectCheckerErrors(t, err, 1)
+				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			}
+		})
+	}
+
+	for _, domain := range common.AllPathDomainsByIdentifier {
+		testClear(domain)
+	}
+}
+
 func TestCheckAccount_copy(t *testing.T) {
 
 	t.Parallel()

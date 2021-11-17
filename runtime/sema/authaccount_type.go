@@ -32,6 +32,7 @@ const AuthAccountAddPublicKeyField = "addPublicKey"
 const AuthAccountRemovePublicKeyField = "removePublicKey"
 const AuthAccountSaveField = "save"
 const AuthAccountLoadField = "load"
+const AuthAccountClearField = "clear"
 const AuthAccountCopyField = "copy"
 const AuthAccountBorrowField = "borrow"
 const AuthAccountLinkField = "link"
@@ -115,6 +116,12 @@ var AuthAccountType = func() *CompositeType {
 			AuthAccountLoadField,
 			AuthAccountTypeLoadFunctionType,
 			authAccountTypeLoadFunctionDocString,
+		),
+		NewPublicFunctionMember(
+			authAccountType,
+			AuthAccountClearField,
+			AuthAccountTypeClearFunctionType,
+			authAccountTypeClearFunctionDocString,
 		),
 		NewPublicFunctionMember(
 			authAccountType,
@@ -289,6 +296,33 @@ If it is not, the function returns nil.
 The given type must not necessarily be exactly the same as the type of the loaded object.
 
 The path must be a storage path, i.e., only the domain ` + "`storage`" + ` is allowed
+`
+
+var AuthAccountTypeClearFunctionType = func() *FunctionType {
+	return &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "path",
+				TypeAnnotation: NewTypeAnnotation(StoragePathType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(BoolType),
+	}
+}()
+
+const authAccountTypeClearFunctionDocString = `
+Clears an object from the account's storage which is stored under the given path
+
+If there is an object stored, the stored resource or structure is removed from storage, and 
+destroyed if it is a resource.
+
+When the function returns, the storage no longer contains an object under the given path.
+
+The path must be a storage path, i.e., only the domain ` + "`storage`" + ` is allowed.
+
+The function returns true if a stored object was cleared, and false if no object
+was stored under the given path.
 `
 
 var AuthAccountTypeCopyFunctionType = func() *FunctionType {
