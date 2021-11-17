@@ -123,10 +123,10 @@ type Interface interface {
 	GetAccountContractNames(address Address) ([]string, error)
 	// BLSVerifyPOP verifies a proof of possession (PoP) for the receiver public key.
 	BLSVerifyPOP(pk *PublicKey, s []byte) (bool, error)
-	// AggregateBLSSignatures aggregate multiple BLS signatures into one.
-	AggregateBLSSignatures(sigs [][]byte) ([]byte, error)
-	// AggregateBLSPublicKeys aggregate multiple BLS public keys into one.
-	AggregateBLSPublicKeys(keys []*PublicKey) (*PublicKey, error)
+	// BLSAggregateSignatures aggregate multiple BLS signatures into one.
+	BLSAggregateSignatures(sigs [][]byte) ([]byte, error)
+	// BLSAggregatePublicKeys aggregate multiple BLS public keys into one.
+	BLSAggregatePublicKeys(keys []*PublicKey) (*PublicKey, error)
 }
 
 type Metrics interface {

@@ -450,7 +450,7 @@ func (i *testRuntimeInterface) BLSVerifyPOP(key *PublicKey, s []byte) (bool, err
 	return i.bLSVerifyPOP(key, s)
 }
 
-func (i *testRuntimeInterface) AggregateBLSSignatures(sigs [][]byte) ([]byte, error) {
+func (i *testRuntimeInterface) BLSAggregateSignatures(sigs [][]byte) ([]byte, error) {
 	if i.aggregateBLSSignatures == nil {
 		return []byte{}, nil
 	}
@@ -458,7 +458,7 @@ func (i *testRuntimeInterface) AggregateBLSSignatures(sigs [][]byte) ([]byte, er
 	return i.aggregateBLSSignatures(sigs)
 }
 
-func (i *testRuntimeInterface) AggregateBLSPublicKeys(keys []*PublicKey) (*PublicKey, error) {
+func (i *testRuntimeInterface) BLSAggregatePublicKeys(keys []*PublicKey) (*PublicKey, error) {
 	if i.aggregateBLSPublicKeys == nil {
 		return nil, nil
 	}
