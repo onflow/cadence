@@ -104,6 +104,7 @@ to the `prepare` phase of the transaction.
       // Account storage API (see the section below for documentation)
 
       fun save<T>(_ value: T, to: StoragePath)
+      fun forceSave<T>(_ value: T, to: StoragePath): Bool
       fun load<T>(from: StoragePath): T?
       fun copy<T: AnyStruct>(from: StoragePath): T?
 
@@ -358,6 +359,20 @@ to all its stored objects.
   If there is already an object stored under the given path, the program aborts.
 
   The path must be a storage path, i.e., only the domain `storage` is allowed.
+
+- `cadence•fun forceSave<T>(_ value: T, to: StoragePath): Bool`
+  
+  Saves the given object into the account's storage at the given path.
+  Resources are moved into storage, and structures are copied.
+
+  If there is already an object stored under the given path, the stored
+  object will be overwritten. If the stored object was a resource, it will
+  be destroyed.  
+
+  The path must be a storage path, i.e., only the domain ` + "`storage`" + ` is allowed.
+
+  This function returns true if a previously stored object was overwritten, and
+  false if the given path had no stored object. 
 
 - `cadence•fun load<T>(from: StoragePath): T?`
 
