@@ -92,6 +92,9 @@ func NewAuthAccountValue(
 		sema.AuthAccountLoadField: func(inter *Interpreter, _ func() LocationRange) Value {
 			return inter.authAccountLoadFunction(address)
 		},
+		sema.AuthAccountClearField: func(inter *Interpreter, _ func() LocationRange) Value {
+			return inter.authAccountClearFunction(address)
+		},
 		sema.AuthAccountCopyField: func(inter *Interpreter, _ func() LocationRange) Value {
 			return inter.authAccountCopyFunction(address)
 		},

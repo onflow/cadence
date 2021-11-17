@@ -3415,15 +3415,36 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 	)
 }
 
+func (interpreter *Interpreter) authAccountClearFunction(addressValue AddressValue) *HostFunctionValue {
+	// A clear operation is the same as a read that immediately discards its result
+	return NewHostFunctionValue(
+		func(invocation Invocation) Value {
+			storedValue := interpreter.authAccountReadFunction(addressValue, true, false).invoke(invocation)
+			switch storedValue.(type) {
+			case NilValue:
+				return BoolValue(false)
+			default:
+				maybeDestroy(interpreter, invocation.GetLocationRange, storedValue)
+				return BoolValue(true)
+			}
+		},
+		sema.AuthAccountTypeClearFunctionType,
+	)
+}
+
 func (interpreter *Interpreter) authAccountLoadFunction(addressValue AddressValue) *HostFunctionValue {
-	return interpreter.authAccountReadFunction(addressValue, true)
+	return interpreter.authAccountReadFunction(addressValue, true, true)
 }
 
 func (interpreter *Interpreter) authAccountCopyFunction(addressValue AddressValue) *HostFunctionValue {
-	return interpreter.authAccountReadFunction(addressValue, false)
+	return interpreter.authAccountReadFunction(addressValue, false, true)
 }
 
-func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValue, clear bool) *HostFunctionValue {
+func (interpreter *Interpreter) authAccountReadFunction(
+	addressValue AddressValue,
+	clear bool,
+	enforceType bool,
+) *HostFunctionValue {
 
 	return NewHostFunctionValue(
 		func(invocation Invocation) Value {
@@ -3443,17 +3464,18 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 
 				// If there is value stored for the given path,
 				// check that it satisfies the type given as the type argument.
+				if enforceType {
+					typeParameterPair := invocation.TypeParameterTypes.Oldest()
+					if typeParameterPair == nil {
+						panic(errors.NewUnreachableError())
+					}
 
-				typeParameterPair := invocation.TypeParameterTypes.Oldest()
-				if typeParameterPair == nil {
-					panic(errors.NewUnreachableError())
-				}
+					ty := typeParameterPair.Value
 
-				ty := typeParameterPair.Value
-
-				dynamicType := value.Value.DynamicType(interpreter, SeenReferences{})
-				if !interpreter.IsSubType(dynamicType, ty) {
-					return NilValue{}
+					dynamicType := value.Value.DynamicType(interpreter, SeenReferences{})
+					if !interpreter.IsSubType(dynamicType, ty) {
+						return NilValue{}
+					}
 				}
 
 				inter := invocation.Interpreter

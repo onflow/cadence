@@ -374,6 +374,77 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 	})
 }
 
+func TestInterpretAuthAccount_clear(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewAddressValueFromBytes([]byte{42})
+
+		inter, accountStorables := testAccount(
+			t,
+			address,
+			true,
+			`
+              resource R {}
+
+              fun save() {
+                  let r <- create R()
+                  account.save(<-r, to: /storage/r)
+              }
+
+              fun clear(): Bool {
+                  return account.clear(/storage/r)
+              }
+
+			  fun clearEmpty(): Bool {
+				return account.clear(/storage/e)
+			}
+            `,
+		)
+
+		// empty clear
+
+		value, err := inter.Invoke("clear")
+		require.NoError(t, err)
+
+		require.Equal(t, interpreter.BoolValue(false), value)
+
+		// NOTE: check loaded value was removed from storage
+		require.Len(t, accountStorables, 0)
+
+		// save
+
+		_, err = inter.Invoke("save")
+		require.NoError(t, err)
+
+		require.Len(t, accountStorables, 1)
+
+		// first clear
+
+		value, err = inter.Invoke("clear")
+		require.NoError(t, err)
+
+		require.Equal(t, interpreter.BoolValue(true), value)
+
+		// NOTE: check loaded value was removed from storage
+		require.Len(t, accountStorables, 0)
+
+		// second clear
+
+		value, err = inter.Invoke("clear")
+		require.NoError(t, err)
+
+		require.Equal(t, interpreter.BoolValue(false), value)
+
+		// NOTE: check loaded value was removed from storage
+		require.Len(t, accountStorables, 0)
+	})
+}
+
 func TestInterpretAuthAccount_copy(t *testing.T) {
 
 	t.Parallel()
