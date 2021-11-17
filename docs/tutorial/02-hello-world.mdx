@@ -88,7 +88,7 @@ of them conflicting with other projects' identifiers.
   to any of your stored assets here.
   Only the owner and anyone they give access to can use these interfaces to call functions that are defined in their stored assets.
 - The `public` domain is your account's public API. It is exactly like the `private` domain in that
-  the owner can link capabilities here that point to stored assets. 
+  the owner can link capabilities here that point to stored assets.
   Anyone in the network can access the `public` domain's functionality.
 
 <Img src="https://storage.googleapis.com/flow-resources/documentation-assets/cadence-tuts/accounts-diagram.png" />
@@ -506,7 +506,7 @@ transaction {
 This transaction imports the `HelloWorld` definitions from the account we just deployed them to, removes the `HelloAsset` object from storage,
 and calls the `hello()` function of the stored `HelloAsset` resource.
 
-This transaction also is our first to use the `prepare` phase! 
+This transaction also is our first to use the `prepare` phase!
 The `prepare` phase is the only place that has access to the signing accounts' [private `AuthAccount` object](/cadence/language/accounts/#authaccount).
 `AuthAccount` has special methods that allow saving to and loading from `/storage/`,
 and creating `/private/` and `/public/` links to the objects in `/storage/`,
