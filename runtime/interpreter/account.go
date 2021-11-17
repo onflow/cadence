@@ -98,6 +98,9 @@ func NewAuthAccountValue(
 		sema.AuthAccountSaveField: func(inter *Interpreter, _ func() LocationRange) Value {
 			return inter.authAccountSaveFunction(address)
 		},
+		sema.AuthAccountForceSaveField: func(inter *Interpreter, _ func() LocationRange) Value {
+			return inter.authAccountForceSaveFunction(address)
+		},
 		sema.AuthAccountBorrowField: func(inter *Interpreter, _ func() LocationRange) Value {
 			return inter.authAccountBorrowFunction(address)
 		},

@@ -142,6 +142,7 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 			for _, storable := range accountStorables {
 				value := interpreter.StoredValue(storable, inter.Storage)
 				assert.IsType(t, &interpreter.CompositeValue{}, value)
+				assert.Equal(t, "R", value.(*interpreter.CompositeValue).QualifiedIdentifier)
 			}
 		})
 
@@ -154,6 +155,13 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 			require.Error(t, err)
 
 			require.ErrorAs(t, err, &interpreter.OverwriteError{})
+
+			require.Len(t, accountStorables, 1)
+			for _, storable := range accountStorables {
+				value := interpreter.StoredValue(storable, inter.Storage)
+				assert.IsType(t, &interpreter.CompositeValue{}, value)
+				assert.Equal(t, "R", value.(*interpreter.CompositeValue).QualifiedIdentifier)
+			}
 		})
 	})
 
@@ -188,6 +196,7 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 			for _, storable := range accountStorables {
 				value := interpreter.StoredValue(storable, inter.Storage)
 				assert.IsType(t, &interpreter.CompositeValue{}, value)
+				assert.Equal(t, "S", value.(*interpreter.CompositeValue).QualifiedIdentifier)
 			}
 
 		})
@@ -201,6 +210,137 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 			require.Error(t, err)
 
 			require.ErrorAs(t, err, &interpreter.OverwriteError{})
+
+			require.Len(t, accountStorables, 1)
+			for _, storable := range accountStorables {
+				value := interpreter.StoredValue(storable, inter.Storage)
+				assert.IsType(t, &interpreter.CompositeValue{}, value)
+				assert.Equal(t, "S", value.(*interpreter.CompositeValue).QualifiedIdentifier)
+			}
+		})
+	})
+}
+
+func TestInterpretAuthAccount_forceSave(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewAddressValueFromBytes([]byte{42})
+
+		inter, accountStorables := testAccount(
+			t,
+			address,
+			true,
+			`
+              resource R {}
+			  resource S {}
+
+              fun test(): Bool {
+                  let r <- create R()
+                  return account.forceSave(<-r, to: /storage/r)
+              }
+
+			  fun overwrite(): Bool {
+				let s <- create S()
+				return account.forceSave(<-s, to: /storage/r)
+			}
+            `,
+		)
+
+		// Save first value
+
+		t.Run("initial save", func(t *testing.T) {
+
+			v, err := inter.Invoke("test")
+			require.NoError(t, err)
+			require.Equal(t, v, interpreter.BoolValue(false))
+
+			require.Len(t, accountStorables, 1)
+			for _, storable := range accountStorables {
+				value := interpreter.StoredValue(storable, inter.Storage)
+				assert.IsType(t, &interpreter.CompositeValue{}, value)
+				assert.Equal(t, "R", value.(*interpreter.CompositeValue).QualifiedIdentifier)
+			}
+		})
+
+		// Attempt to save again, should overwrite original value
+
+		t.Run("second save", func(t *testing.T) {
+
+			v, err := inter.Invoke("overwrite")
+			require.NoError(t, err)
+			require.Equal(t, v, interpreter.BoolValue(true))
+
+			require.Len(t, accountStorables, 1)
+			for _, storable := range accountStorables {
+				value := interpreter.StoredValue(storable, inter.Storage)
+				assert.IsType(t, &interpreter.CompositeValue{}, value)
+				assert.Equal(t, "S", value.(*interpreter.CompositeValue).QualifiedIdentifier)
+			}
+		})
+	})
+
+	t.Run("struct", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewAddressValueFromBytes([]byte{42})
+
+		inter, accountStorables := testAccount(
+			t,
+			address,
+			true,
+			`
+              struct R {}
+			  struct S {}
+
+              fun test(): Bool {
+                  let r = R()
+                  return account.forceSave(r, to: /storage/s)
+              }
+
+			  fun overwrite(): Bool {
+				let s = S()
+				return account.forceSave(s, to: /storage/s)
+			  }
+            `,
+		)
+
+		// Save first value
+
+		t.Run("initial save", func(t *testing.T) {
+
+			v, err := inter.Invoke("test")
+			require.NoError(t, err)
+			require.Equal(t, v, interpreter.BoolValue(false))
+
+			require.Len(t, accountStorables, 1)
+			for _, storable := range accountStorables {
+				value := interpreter.StoredValue(storable, inter.Storage)
+				assert.IsType(t, &interpreter.CompositeValue{}, value)
+				assert.Equal(t, "R", value.(*interpreter.CompositeValue).QualifiedIdentifier)
+			}
+
+		})
+
+		// Attempt to save again, should overwrite value
+
+		t.Run("second save", func(t *testing.T) {
+
+			v, err := inter.Invoke("overwrite")
+			require.NoError(t, err)
+			require.Equal(t, v, interpreter.BoolValue(true))
+
+			require.Len(t, accountStorables, 1)
+			for _, storable := range accountStorables {
+				value := interpreter.StoredValue(storable, inter.Storage)
+				assert.IsType(t, &interpreter.CompositeValue{}, value)
+				assert.Equal(t, "S", value.(*interpreter.CompositeValue).QualifiedIdentifier)
+			}
 		})
 	})
 }

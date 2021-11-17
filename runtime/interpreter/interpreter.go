@@ -3369,21 +3369,51 @@ func PathToStorageKey(path PathValue) string {
 	return fmt.Sprintf("%s\x1F%s", path.Domain.Identifier(), path.Identifier)
 }
 
+func (interpreter *Interpreter) authAccountWriteFunction(
+	addressValue AddressValue,
+	onOverwrite func(path PathValue, getLocationRange func() LocationRange),
+	returnValue func(overwitten bool) Value,
+) func(Invocation) Value {
+	return func(invocation Invocation) Value {
+		value := invocation.Arguments[0]
+		path := invocation.Arguments[1].(PathValue)
+
+		address := addressValue.ToAddress()
+		key := PathToStorageKey(path)
+
+		getLocationRange := invocation.GetLocationRange
+
+		overwritten := interpreter.storedValueExists(address, key)
+		if overwritten {
+			onOverwrite(path, getLocationRange)
+		}
+
+		value = value.Transfer(
+			interpreter,
+			getLocationRange,
+			atree.Address(address),
+			true,
+			nil,
+		)
+
+		// Write new value
+
+		interpreter.writeStored(
+			address,
+			key,
+			NewSomeValueNonCopying(value),
+		)
+
+		return returnValue(overwritten)
+	}
+}
+
 func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValue) *HostFunctionValue {
 	return NewHostFunctionValue(
-		func(invocation Invocation) Value {
-
-			value := invocation.Arguments[0]
-			path := invocation.Arguments[1].(PathValue)
-
-			address := addressValue.ToAddress()
-			key := PathToStorageKey(path)
-
-			// Prevent an overwrite
-
-			getLocationRange := invocation.GetLocationRange
-
-			if interpreter.storedValueExists(address, key) {
+		interpreter.authAccountWriteFunction(
+			addressValue,
+			func(path PathValue, getLocationRange func() LocationRange) {
+				// prevent overwriting
 				panic(
 					OverwriteError{
 						Address:       addressValue,
@@ -3391,27 +3421,28 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 						LocationRange: getLocationRange(),
 					},
 				)
-			}
-
-			value = value.Transfer(
-				interpreter,
-				getLocationRange,
-				atree.Address(address),
-				true,
-				nil,
-			)
-
-			// Write new value
-
-			interpreter.writeStored(
-				address,
-				key,
-				NewSomeValueNonCopying(value),
-			)
-
-			return VoidValue{}
-		},
+			},
+			func(_ bool) Value {
+				return VoidValue{}
+			},
+		),
 		sema.AuthAccountTypeSaveFunctionType,
+	)
+}
+
+func (interpreter *Interpreter) authAccountForceSaveFunction(addressValue AddressValue) *HostFunctionValue {
+	return NewHostFunctionValue(
+		interpreter.authAccountWriteFunction(
+			addressValue,
+			func(path PathValue, getLocationRange func() LocationRange) {
+				storedValue := interpreter.ReadStored(addressValue.ToAddress(), PathToStorageKey(path))
+				maybeDestroy(interpreter, getLocationRange, storedValue)
+			},
+			func(overwrite bool) Value {
+				return BoolValue(overwrite)
+			},
+		),
+		sema.AuthAccountTypeForceSaveFunctionType,
 	)
 }
 
