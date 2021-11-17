@@ -1317,7 +1317,7 @@ func (checker *Checker) convertNominalType(t *ast.NominalType) Type {
 	var resolvedIdentifiers []ast.Identifier
 
 	for _, identifier := range t.NestedIdentifiers {
-		if containerType, ok := ty.(ContainerType); ok && containerType.isContainerType() {
+		if containerType, ok := ty.(ContainerType); ok && containerType.IsContainerType() {
 			ty, _ = containerType.GetNestedTypes().Get(identifier.Identifier)
 		} else {
 			if !ty.IsInvalidType() {

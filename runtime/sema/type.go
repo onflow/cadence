@@ -198,7 +198,7 @@ type ContainedType interface {
 //
 type ContainerType interface {
 	Type
-	isContainerType() bool
+	IsContainerType() bool
 	GetNestedTypes() *StringTypeOrderedMap
 }
 
@@ -206,7 +206,7 @@ func VisitThisAndNested(t Type, visit func(ty Type)) {
 	visit(t)
 
 	containerType, ok := t.(ContainerType)
-	if !ok || !containerType.isContainerType() {
+	if !ok || !containerType.IsContainerType() {
 		return
 	}
 
@@ -3664,8 +3664,8 @@ func (t *CompositeType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
-func (*CompositeType) isContainerType() bool {
-	return true
+func (t *CompositeType) IsContainerType() bool {
+	return t.nestedTypes != nil
 }
 
 func (t *CompositeType) GetNestedTypes() *StringTypeOrderedMap {
@@ -4061,8 +4061,8 @@ func (t *InterfaceType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
-func (*InterfaceType) isContainerType() bool {
-	return true
+func (t *InterfaceType) IsContainerType() bool {
+	return t.nestedTypes != nil
 }
 
 func (t *InterfaceType) GetNestedTypes() *StringTypeOrderedMap {
