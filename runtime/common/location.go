@@ -96,6 +96,14 @@ func NewTypeID(parts ...string) TypeID {
 	return TypeID(strings.Join(parts, "."))
 }
 
+func NewTypeIDFromQualifiedName(location Location, qualifiedIdentifier string) TypeID {
+	if location == nil {
+		return TypeID(qualifiedIdentifier)
+	}
+
+	return location.TypeID(qualifiedIdentifier)
+}
+
 type TypeIDDecoder func(typeID string) (location Location, qualifiedIdentifier string, err error)
 
 var typeIDDecoders = map[string]TypeIDDecoder{}
