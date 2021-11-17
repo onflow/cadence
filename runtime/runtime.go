@@ -1205,7 +1205,7 @@ func (r *interpreterRuntime) newInterpreter(
 			func(
 				signatures [][]byte,
 			) ([]byte, error) {
-				return context.Interface.AggregateBLSSignatures(signatures)
+				return context.Interface.BLSAggregateSignatures(signatures)
 			},
 			func(
 				inter *interpreter.Interpreter,
@@ -3323,7 +3323,7 @@ func aggregateBLSPublicKeys(
 	var err error
 	var key *PublicKey
 	wrapPanic(func() {
-		key, err = runtimeInterface.AggregateBLSPublicKeys(publicKeys)
+		key, err = runtimeInterface.BLSAggregatePublicKeys(publicKeys)
 	})
 
 	// if the crypto layer produces an error, we have invalid input, return nil
