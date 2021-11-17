@@ -124,7 +124,7 @@ func (t *SimpleType) initializeMembers() {
 	})
 }
 
-func (t *SimpleType) isContainerType() bool {
+func (t *SimpleType) IsContainerType() bool {
 	return t.NestedTypes != nil
 }
 
