@@ -199,15 +199,15 @@ The BLS signature scheme also supports two additional operations on keys and sig
 /// could also be the aggregation of other signatures.
 /// The order of the signatures in the slice does not matter since the aggregation is commutative. 
 /// No subgroup membership check is performed on the input signatures.
-/// The function errors if the array is empty or if decoding one of the signature fails. 
-AggregateBLSSignatures(_ signatures: [[UInt8]]): [UInt8]
+/// The function returns nil if the array is empty or if decoding one of the signature fails. 
+AggregateBLSSignatures(_ signatures: [[UInt8]]): [UInt8]?
 
 /// This is a specific function for the BLS signature scheme. It aggregates multiple BLS public keys into one.
 ///
 /// The order of the public keys in the slice does not matter since the aggregation is commutative. 
 /// No subgroup membership check is performed on the input keys.
-/// The function errors if the array is empty or any of the input keys is not a BLS key.
-AggregateBLSPublicKeys(_ signatures: [PublicKey]): PublicKey
+/// The function returns nil if the array is empty or any of the input keys is not a BLS key.
+AggregateBLSPublicKeys(_ signatures: [PublicKey]): PublicKey?
 ```
 
 ## Crypto Contract
