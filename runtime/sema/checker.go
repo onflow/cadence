@@ -1141,6 +1141,10 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 					Range: ast.NewRangeFromPositioned(restriction),
 				})
 			}
+
+			// NOTE: ignore this invalid type
+			// and do not add it to the restrictions result
+			continue
 		}
 
 		restrictions = append(restrictions, restrictionInterfaceType)
