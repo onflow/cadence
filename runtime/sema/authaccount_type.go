@@ -32,6 +32,7 @@ const AuthAccountAddPublicKeyField = "addPublicKey"
 const AuthAccountRemovePublicKeyField = "removePublicKey"
 const AuthAccountSaveField = "save"
 const AuthAccountLoadField = "load"
+const AuthAccountTypeAtField = "typeAt"
 const AuthAccountCopyField = "copy"
 const AuthAccountBorrowField = "borrow"
 const AuthAccountLinkField = "link"
@@ -109,6 +110,12 @@ var AuthAccountType = func() *CompositeType {
 			AuthAccountSaveField,
 			AuthAccountTypeSaveFunctionType,
 			authAccountTypeSaveFunctionDocString,
+		),
+		NewPublicFunctionMember(
+			authAccountType,
+			AuthAccountTypeAtField,
+			AuthAccountTypeTypeAtFunctionType,
+			authAccountTypeTypeAtFunctionDocString,
 		),
 		NewPublicFunctionMember(
 			authAccountType,
@@ -272,6 +279,32 @@ var AuthAccountTypeLoadFunctionType = func() *FunctionType {
 				Type: &GenericType{
 					TypeParameter: typeParameter,
 				},
+			},
+		),
+	}
+}()
+
+const authAccountTypeTypeAtFunctionDocString = `
+Reads the type of an object from the account's storage which is stored under the given path, or nil if no object is stored under the given path.
+
+If there is an object stored, the type of the object is returned without modifying the stored object. 
+
+The path must be a storage path, i.e., only the domain ` + "`storage`" + ` is allowed
+`
+
+var AuthAccountTypeTypeAtFunctionType = func() *FunctionType {
+
+	return &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "path",
+				TypeAnnotation: NewTypeAnnotation(StoragePathType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{
+				Type: MetaType,
 			},
 		),
 	}
