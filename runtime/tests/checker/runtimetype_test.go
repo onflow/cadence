@@ -729,7 +729,7 @@ func TestCheckRestrictedTypeConstructor(t *testing.T) {
 		{
 			name: "too many args",
 			code: `
-              let result = RestrictedType(identifier: "A", restrictions: ["I1"], [])
+              let result = RestrictedType(identifier: "A", restrictions: ["I1"], ["I2"])
             `,
 			expectedError: &sema.ArgumentCountError{},
 		},

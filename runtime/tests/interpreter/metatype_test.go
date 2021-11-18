@@ -657,11 +657,11 @@ func TestInterpretGetType(t *testing.T) {
 		{
 			name: "array",
 			code: `
-              let result = [].getType()
+              let result = [1, 3].getType()
             `,
 			result: interpreter.TypeValue{
 				Type: interpreter.VariableSizedStaticType{
-					Type: interpreter.PrimitiveStaticTypeNever,
+					Type: interpreter.PrimitiveStaticTypeInt,
 				},
 			},
 		},

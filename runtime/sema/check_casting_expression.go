@@ -154,7 +154,9 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 		return rightHandType
 
 	case ast.OperationCast:
-		if checker.expectedType != nil && checker.expectedType.Equal(rightHandType) {
+		if checker.expectedType != nil &&
+			!checker.expectedType.IsInvalidType() &&
+			checker.expectedType.Equal(rightHandType) {
 			checker.hint(
 				&UnnecessaryCastHint{
 					TargetType: rightHandType,
