@@ -378,9 +378,11 @@ func LeastCommonSuperType(types ...Type) Type {
 
 	supertype := findCommonSuperType(join, types...)
 
-	// 'Any' is a valid type, since it's the supertype of all types.
-	// However, in the context of checker, 'Any' is not a possible
-	// type for expressions. Hence, return 'InvalidType'.
+	// NOTE: Important:
+	// 'Any' is a valid inferred type, since it's the supertype of all types.
+	// However, in the context of checker, 'Any' is not a possible type for expressions,
+	// as it mixes value-kinded and resource-kinded types, leading to undefined behaviour.
+	// Hence, return 'InvalidType'.
 	if supertype == AnyType {
 		return InvalidType
 	}
