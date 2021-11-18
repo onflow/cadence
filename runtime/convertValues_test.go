@@ -3032,13 +3032,15 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 			interpreter.NewArrayValue(
 				inter,
 				interpreter.VariableSizedStaticType{
-					Type: interpreter.PrimitiveStaticTypeAnyStruct,
+					Type: interpreter.VariableSizedStaticType{
+						Type: interpreter.PrimitiveStaticTypeInt8,
+					},
 				},
 				common.Address{},
 				interpreter.NewArrayValue(
 					inter,
 					interpreter.VariableSizedStaticType{
-						Type: interpreter.PrimitiveStaticTypeAnyStruct,
+						Type: interpreter.PrimitiveStaticTypeInt8,
 					},
 					common.Address{},
 					interpreter.Int8Value(4),
@@ -3047,7 +3049,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 				interpreter.NewArrayValue(
 					inter,
 					interpreter.VariableSizedStaticType{
-						Type: interpreter.PrimitiveStaticTypeAnyStruct,
+						Type: interpreter.PrimitiveStaticTypeInt8,
 					},
 					common.Address{},
 					interpreter.Int8Value(42),
@@ -3247,7 +3249,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 				interpreter.NewDictionaryValue(
 					inter,
 					interpreter.DictionaryStaticType{
-						KeyType:   interpreter.PrimitiveStaticTypeNumber,
+						KeyType:   interpreter.PrimitiveStaticTypeInt8,
 						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
 					interpreter.Int8Value(1), interpreter.NewIntValueFromInt64(100),
@@ -3258,7 +3260,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 				interpreter.NewDictionaryValue(
 					inter,
 					interpreter.DictionaryStaticType{
-						KeyType:   interpreter.PrimitiveStaticTypeNumber,
+						KeyType:   interpreter.PrimitiveStaticTypeSignedInteger,
 						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
 					interpreter.Int8Value(1), interpreter.NewStringValue("foo"),
