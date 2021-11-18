@@ -2966,3 +2966,15 @@ func (e *InvalidEntryPointTypeError) Error() string {
 		e.Type.QualifiedString(),
 	)
 }
+
+// DuplicateSwitchCaseError
+
+type DuplicateSwitchCaseError struct {
+	ast.Range
+}
+
+func (e *DuplicateSwitchCaseError) Error() string {
+	return "duplicate switch case"
+}
+
+func (*DuplicateSwitchCaseError) isSemanticError() {}

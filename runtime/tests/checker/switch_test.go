@@ -19,6 +19,7 @@
 package checker
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -355,4 +356,93 @@ func TestCheckInvalidSwitchStatementMissingStatements(t *testing.T) {
 	errs := ExpectCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.MissingSwitchCaseStatementsError{}, errs[0])
+}
+
+func TestCheckSwitchStatementDuplicateCases(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("multiple duplicates", func(t *testing.T) {
+		_, err := ParseAndCheck(t, `
+          fun test(): Int {
+              let s: String? = nil
+
+              switch s {
+                  case "foo":
+                      return 1
+                  case "bar":
+                      return 2
+                  case "bar":
+                      return 3
+                  case "bar":
+                      return 4
+              }
+
+              return -1
+          }
+        `)
+
+		// Should only report two errors. i.e: second and the third
+		// duplicate cases must not be compared with each other.
+		errs := ExpectCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.DuplicateSwitchCaseError{}, errs[0])
+		assert.IsType(t, &sema.DuplicateSwitchCaseError{}, errs[1])
+	})
+
+	t.Run("all literals", func(t *testing.T) {
+		type test struct {
+			name string
+			expr string
+		}
+
+		expressions := []test{
+			{
+				name: "string",
+				expr: "\"hello\"",
+			},
+			{
+				name: "integer",
+				expr: "5",
+			},
+			{
+				name: "fixedpoint",
+				expr: "4.7",
+			},
+			{
+				name: "identifier",
+				expr: "a",
+			},
+			{
+				name: "boolean",
+				expr: "true",
+			},
+			{
+				name: "boolean",
+				expr: "true",
+			},
+		}
+
+		for _, testCase := range expressions {
+
+			t.Run(testCase.name, func(t *testing.T) {
+				_, err := ParseAndCheck(t, fmt.Sprintf(`
+                    fun test(): Int {
+
+                        let x = %[1]s
+                        switch x {
+                            case %[1]s:
+                                return 1
+                            case %[1]s:
+                                return 2
+                        }
+                        return -1
+                    }`,
+					testCase.expr),
+				)
+
+				errs := ExpectCheckerErrors(t, err, 1)
+				assert.IsType(t, &sema.DuplicateSwitchCaseError{}, errs[0])
+			})
+		}
+	})
 }
