@@ -3415,6 +3415,35 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 	)
 }
 
+func (interpreter *Interpreter) authAccountTypeAtFunction(addressValue AddressValue) *HostFunctionValue {
+	return NewHostFunctionValue(
+		func(invocation Invocation) Value {
+
+			address := addressValue.ToAddress()
+
+			path := invocation.Arguments[0].(PathValue)
+			key := PathToStorageKey(path)
+
+			value := interpreter.ReadStored(address, key)
+
+			switch value := value.(type) {
+			case NilValue:
+				return value
+
+			case *SomeValue:
+				return TypeValue{
+					Type: value.Value.StaticType(),
+				}
+			default:
+				panic(errors.NewUnreachableError())
+			}
+		},
+
+		// same as sema.AuthAccountTypeCopyFunctionType
+		sema.AuthAccountTypeLoadFunctionType,
+	)
+}
+
 func (interpreter *Interpreter) authAccountLoadFunction(addressValue AddressValue) *HostFunctionValue {
 	return interpreter.authAccountReadFunction(addressValue, true)
 }

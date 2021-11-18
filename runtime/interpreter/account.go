@@ -89,6 +89,9 @@ func NewAuthAccountValue(
 		sema.AuthAccountStorageCapacityField: func(_ *Interpreter, _ func() LocationRange) Value {
 			return storageCapacityGet()
 		},
+		sema.AuthAccountTypeAtField: func(inter *Interpreter, _ func() LocationRange) Value {
+			return inter.authAccountTypeAtFunction(address)
+		},
 		sema.AuthAccountLoadField: func(inter *Interpreter, _ func() LocationRange) Value {
 			return inter.authAccountLoadFunction(address)
 		},
