@@ -9483,7 +9483,7 @@ func TestInterpretArrayTypeInference(t *testing.T) {
 			inter,
 			interpreter.TypeValue{
 				Type: interpreter.VariableSizedStaticType{
-					Type: interpreter.PrimitiveStaticTypeAnyStruct,
+					Type: interpreter.PrimitiveStaticTypeInt,
 				},
 			},
 			value,

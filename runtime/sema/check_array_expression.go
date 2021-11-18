@@ -51,17 +51,15 @@ func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) as
 		resultType = typ
 
 	default:
-		switch expectedType {
-		case AnyStructType, AnyResourceType:
-			// If the expected type is AnyStruct or AnyResource, then
-			// expect the elements to also be of the same type.
+		if len(expression.Values) == 0 {
+			// If the expected type is AnyStruct or AnyResource, and the array is empty,
+			// then expect the elements to also be of the same type.
 			elementType = expectedType
 			resultType = &VariableSizedType{
 				Type: elementType,
 			}
-		default:
-			// If there is no expected type, or the expected type is not an array/AnyStruct/AnyResource type,
-			// then it could be an invalid type. Therefore, infer the type from the expression.
+		} else {
+			// Otherwise, infer the type from the expression.
 		}
 	}
 

@@ -111,7 +111,7 @@ func IsValidDictionaryKeyType(keyType Type) bool {
 		return keyType.Kind == common.CompositeKindEnum
 	default:
 		switch keyType {
-		case NeverType, BoolType, CharacterType, StringType, MetaType, InvalidType:
+		case NeverType, BoolType, CharacterType, StringType, MetaType:
 			return true
 		default:
 			return IsSubType(keyType, NumberType) ||
