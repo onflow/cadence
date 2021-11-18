@@ -30,9 +30,10 @@ These contracts create homogeneous tokens that can be transferred to other users
 
 In traditional software and smart contracts, balances for each user are tracked by a central ledger, such as a dictionary:
 ```cadence
+// DO NOT USE THIS CODE FOR YOUR PROJECT
 contract LedgerToken {
     // Tracks every user's balance
-    pub let balances: {Address: UFix64}
+    access(contract) let balances: {Address: UFix64}
 
     // Transfer tokens from one user to the other
     // by updating their balances in the central ledger
@@ -97,7 +98,7 @@ in your account and transfer to and accept tokens from other users.
 
 </Callout>
 
-The concepts involved in implementing a fungible token in Cadence can be hard to grasp at first.
+The concepts involved in implementing a fungible token in Cadence can be unfamiliar at first.
 For an in-depth explanation of this functionality and code, continue reading the next section.
 
 Or, if you'd like to go immediately into deploying it and using it in the playground,
@@ -185,7 +186,7 @@ pub resource Vault: Provider, Receiver {
 
     // Balance of a user's Vault
     // we use unsigned fixed point numbers for balances 
-    // because they can represent decimals and do not require the concept of a negative number
+    // because they can represent decimals and do not allow negative values
     pub var balance: UFix64
 
     init(balance: UFix64) {
@@ -246,7 +247,8 @@ adds it to their balance, and then destroys the used resource.
 The resource needs to be destroyed because Cadence enforces strict rules around resource interactions.
 A resource can never be left hanging in a piece of code. It either needs to be explicitly destroyed or stored in an account's storage.
 
-When interacting with resources, you use the `@` symbol to specify the type and a special “move operator” `<-` in assignments.
+When interacting with resources, you use the `@` symbol to specify the type, and a special “move operator” `<-`
+when moving the resource, such as assigning the resource, when passing it as an argument to a function, or when returning it from a function.
 
 ```cadence
 pub fun withdraw(amount: UInt64): @Vault {
@@ -271,7 +273,7 @@ self.balance = self.balance - amount
 ```
 
 In Solidity, this could be a risk for integer overflow or underflow, but Cadence has built-in overflow and underflow protection, so it is not a risk.
-We are also using unsigned numbers in this example, so the vault`s balance cannot go below 0.
+We are also using unsigned numbers in this example, so as mentioned earlier, the vault`s balance cannot go below 0.
 
 Additionally, the requirement that an account contains a copy of the token’s resource type in its storage
 ensures that funds cannot be lost by being sent to the wrong address.
@@ -503,7 +505,7 @@ let vaultRef = acct.borrow<&BasicToken.Vault>(from: /storage/CadenceFungibleToke
 This allows you to efficiently access objects in storage without having to load them,
 which is a much more costly interaction.
 
-In the real world, you'll likely be transferring tokens to other accounts.
+In production code, you'll likely be transferring tokens to other accounts.
 Capabilities allow us to accomplish this safely.
 
 ## Ensuring Security in Public: Capability Security
@@ -511,7 +513,7 @@ Capabilities allow us to accomplish this safely.
 ---
 
 Another important feature in Cadence is its utilization of **Capability Security.**
-This feature ensures that, while the withdraw function is public,
+This feature ensures that, while the withdraw function is declared public on the resource,
 no one except the intended user and those they approve of can withdraw tokens from their vault.
 
 Cadence's security model ensures that objects stored in an account's storage can only be accessed by the account that owns them.
@@ -526,8 +528,8 @@ that exposes the deposit function and the balance field.
 
 The withdraw function can remain hidden as a function that only the owner can call.
 
-As you can hopefully see, this removes the need to check `msg.sender` for access control purposes,
-because this functionality is handled by the protocol and type checker.
+This removes the need to check the address of the account that made the function call 
+(`msg.sender` in Ethereum) for access control purposes, because this functionality is handled by the protocol and type checker.
 If you aren't the owner of an object or don't have a valid reference to it that was created by the owner, you cannot access the object at all!
 
 ### Using Interfaces to Secure Implementations
@@ -574,7 +576,7 @@ pub resource interface Balance {
 
 In our example, the `Vault` resource will implement all three of these interfaces.
 The interfaces ensure that specific fields and functions are present in the resource implementation
-and that those functions meet certain conditions before and/or after execution.
+and that the function arguments, fields of the resource, and any return value are in a valid state before and/or after execution.
 These interfaces can be stored on-chain and imported into other contracts or resources
 so that these requirements are enforced by an immutable source of truth that is not susceptible to human error.
 
@@ -587,9 +589,13 @@ This does bring up an important security consideration though.
 While we have made all our fields and functions public here, it is actually recommended to default to making
 fields private unless it is explicitly needed to be public.
 
-This is especially important for array and dictionary types, which can have their fields maliciously assigned to
-if they are made public. See the cadence best practices document for more info: 
+<Callout type="warning">
+This is especially important for array and dictionary types, which can have their contents maliciously mutated
+if they are made public. This is one of THE MOST COMMON security mistake that Cadence developers make,
+so it is vitally important to be aware of this.
+See the cadence best practices document for more info: 
 https://docs.onflow.org/cadence/anti-patterns/#array-or-dictionary-fields-should-be-private
+</Callout>
 
 ## Adding Interfaces to Our Fungible Token
 
@@ -621,7 +627,7 @@ self.account.save(<-create VaultMinter(), to: /storage/CadenceFungibleTokenTutor
 ```
 
 Now is an important time to remind you that account storage not namespaced by contract,
-meaning that path names could potentially conflict. This is why it is important
+meaning that path names could potentially conflict. This is why it is important to
 choose unique names for your paths like we have done here so there is a very low chance
 of them conflicting with other projects paths.
 
@@ -656,7 +662,7 @@ pub fun mintTokens(amount: UFix64, recipient: Capability<&AnyResource{Receiver}>
 ```
 
 The function takes a capability as an argument. 
-This syntax might be confusing to you:
+This syntax might be unclear to you:
 ```cadence
 recipient: Capability<&AnyResource{Receiver}>
 ```
