@@ -675,7 +675,7 @@ func importArrayValue(
 
 		elementSuperType := sema.LeastCommonSuperType(types...)
 		if elementSuperType == sema.InvalidType {
-			return nil, fmt.Errorf("cannot import array: elements does not belong to the same type")
+			return nil, fmt.Errorf("cannot import array: elements do not belong to the same type")
 		}
 
 		staticArrayType = interpreter.VariableSizedStaticType{
