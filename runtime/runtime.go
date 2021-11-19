@@ -1469,6 +1469,15 @@ func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interfa
 	}
 }
 
+var getAuthAccountFunctionType = &sema.FunctionType{
+	Parameters: []*sema.Parameter{{
+		Label:          sema.ArgumentLabelNotRequired,
+		Identifier:     "address",
+		TypeAnnotation: sema.NewTypeAnnotation(&sema.AddressType{}),
+	}},
+	ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.AuthAccountType),
+}
+
 func (r *interpreterRuntime) standardLibraryFunctions(
 	context Context,
 	storage *Storage,
@@ -1490,14 +1499,7 @@ func (r *interpreterRuntime) standardLibraryFunctions(
 		builtins = append(builtins,
 			stdlib.NewStandardLibraryFunction(
 				"getAuthAccount",
-				&sema.FunctionType{
-					Parameters: []*sema.Parameter{{
-						Label:          sema.ArgumentLabelNotRequired,
-						Identifier:     "address",
-						TypeAnnotation: sema.NewTypeAnnotation(&sema.AddressType{}),
-					}},
-					ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.AuthAccountType),
-				},
+				getAuthAccountFunctionType,
 				"Returns the AuthAccount associated with the given address. Only available in scripts",
 				r.newGetAuthAccountFunction(context, storage, interpreterOptions, checkerOptions),
 			),
