@@ -417,8 +417,16 @@ func TestCheckSwitchStatementDuplicateCases(t *testing.T) {
 				expr: "true",
 			},
 			{
-				name: "boolean",
-				expr: "true",
+				name: "nil",
+				expr: "nil",
+			},
+			{
+				name: "array",
+				expr: "[1, 2, 3]",
+			},
+			{
+				name: "dictionary",
+				expr: "{1: \"foo\", 2: \"bar\"}",
 			},
 		}
 
@@ -427,7 +435,6 @@ func TestCheckSwitchStatementDuplicateCases(t *testing.T) {
 			t.Run(testCase.name, func(t *testing.T) {
 				_, err := ParseAndCheck(t, fmt.Sprintf(`
                     fun test(): Int {
-
                         let x = %[1]s
                         switch x {
                             case %[1]s:
@@ -444,5 +451,149 @@ func TestCheckSwitchStatementDuplicateCases(t *testing.T) {
 				assert.IsType(t, &sema.DuplicateSwitchCaseError{}, errs[0])
 			})
 		}
+	})
+
+	t.Run("member access", func(t *testing.T) {
+		_, err := ParseAndCheck(t, `
+          fun test(): Int {
+              let x = Foo()
+
+              switch x.a {
+                  case x.a:
+                      return 1
+                  case x.a:
+                      return 2
+                  case x.b:
+                      return 3
+              }
+              return -1
+          }
+
+          struct Foo {
+              pub var a: String
+              pub var b: String
+              init() {
+                  self.a = "foo"
+                  self.b = "bar"
+              }
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.DuplicateSwitchCaseError{}, errs[0])
+	})
+
+	t.Run("index access", func(t *testing.T) {
+		_, err := ParseAndCheck(t, `
+          fun test(): Int {
+              let x: [Int] = [1, 2, 3]
+              let y: [Int] = [5, 6, 7]
+
+              switch x[0] {
+                  case x[1]:
+                      return 1
+                  case x[1]:
+                      return 2
+                  case x[2]:
+                      return 3
+                  case y[1]:
+                      return 4
+              }
+              return -1
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.DuplicateSwitchCaseError{}, errs[0])
+	})
+
+	t.Run("conditional", func(t *testing.T) {
+		_, err := ParseAndCheck(t, `
+          fun test(): Int {
+              switch "foo" {
+                  case true ? "foo" : "bar":
+                      return 1
+                  case true ? "foo" : "bar":
+                      return 2
+                  case true ? "baz" : "bar":  // different then expr
+                      return 3
+                  case true ? "foo" : "baz":  // different else expr
+                      return 4
+                  case false ? "foo" : "bar":  // different condition expr
+                      return 5
+              }
+              return -1
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.DuplicateSwitchCaseError{}, errs[0])
+	})
+
+	t.Run("unary", func(t *testing.T) {
+		_, err := ParseAndCheck(t, `
+          fun test(): Int {
+              let x = 5
+              let y = x
+              switch x {
+                  case -x:
+                      return 1
+                  case -x:
+                      return 2
+                  case -y:  // different rhs expr
+                      return 3
+              }
+              return -1
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.DuplicateSwitchCaseError{}, errs[0])
+	})
+
+	t.Run("binary", func(t *testing.T) {
+		_, err := ParseAndCheck(t, `
+          fun test(): Int {
+              switch 4 {
+                  case 3+5:
+                      return 1
+                  case 3+5:
+                      return 2
+                  case 3+7:  // different rhs expr
+                      return 3
+                  case 7+5:  // different lhs expr
+                      return 4
+                  case 3-5:  // different operator
+                      return 5
+              }
+              return -1
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.DuplicateSwitchCaseError{}, errs[0])
+	})
+
+	t.Run("cast", func(t *testing.T) {
+		_, err := ParseAndCheck(t, `
+          fun test(): Int {
+              let x = 5
+              let y = x as Integer
+              switch y {
+                  case x as Integer:
+                      return 1
+                  case x as Integer:
+                      return 2
+                  case x as! Integer:  // different operator
+                      return 3
+                  case y as Integer:  // different expr
+                      return 4
+              }
+              return -1
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.DuplicateSwitchCaseError{}, errs[0])
 	})
 }

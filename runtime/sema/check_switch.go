@@ -188,7 +188,7 @@ func (checker *Checker) checkSwitchCaseStatements(switchCase *ast.SwitchCase) {
 func (checker *Checker) checkDuplicateCases(cases []*ast.SwitchCase) {
 	duplicates := make(map[*ast.SwitchCase]bool)
 
-	duplicateChecker := &duplicateCaseChecker{}
+	duplicateChecker := newDuplicateCaseChecker(checker)
 
 	for i, switchCase := range cases {
 
@@ -216,7 +216,14 @@ func (checker *Checker) checkDuplicateCases(cases []*ast.SwitchCase) {
 var _ ast.ExpressionVisitor = &duplicateCaseChecker{}
 
 type duplicateCaseChecker struct {
-	expr ast.Expression
+	expr    ast.Expression
+	checker *Checker
+}
+
+func newDuplicateCaseChecker(checker *Checker) *duplicateCaseChecker {
+	return &duplicateCaseChecker{
+		checker: checker,
+	}
 }
 
 func (d *duplicateCaseChecker) isDuplicate(this ast.Expression, other ast.Expression) bool {
@@ -303,7 +310,7 @@ func (d *duplicateCaseChecker) VisitIdentifierExpression(otherExpr *ast.Identifi
 		return false
 	}
 
-	return expr.Identifier == otherExpr.Identifier
+	return expr.Identifier.Identifier == otherExpr.Identifier.Identifier
 }
 
 func (d *duplicateCaseChecker) VisitInvocationExpression(otherExpr *ast.InvocationExpression) ast.Repr {
@@ -313,23 +320,56 @@ func (d *duplicateCaseChecker) VisitInvocationExpression(otherExpr *ast.Invocati
 }
 
 func (d *duplicateCaseChecker) VisitMemberExpression(otherExpr *ast.MemberExpression) ast.Repr {
-	panic("implement me")
+	expr, ok := d.expr.(*ast.MemberExpression)
+	if !ok {
+		return false
+	}
+
+	return d.isDuplicate(expr.Expression, otherExpr.Expression) &&
+		expr.Optional == otherExpr.Optional &&
+		expr.Identifier.Identifier == otherExpr.Identifier.Identifier
 }
 
 func (d *duplicateCaseChecker) VisitIndexExpression(otherExpr *ast.IndexExpression) ast.Repr {
-	panic("implement me")
+	expr, ok := d.expr.(*ast.IndexExpression)
+	if !ok {
+		return false
+	}
+
+	return d.isDuplicate(expr.TargetExpression, otherExpr.TargetExpression) &&
+		d.isDuplicate(expr.IndexingExpression, otherExpr.IndexingExpression)
 }
 
 func (d *duplicateCaseChecker) VisitConditionalExpression(otherExpr *ast.ConditionalExpression) ast.Repr {
-	panic("implement me")
+	expr, ok := d.expr.(*ast.ConditionalExpression)
+	if !ok {
+		return false
+	}
+
+	return d.isDuplicate(expr.Test, otherExpr.Test) &&
+		d.isDuplicate(expr.Then, otherExpr.Then) &&
+		d.isDuplicate(expr.Else, otherExpr.Else)
 }
 
 func (d *duplicateCaseChecker) VisitUnaryExpression(otherExpr *ast.UnaryExpression) ast.Repr {
-	panic("implement me")
+	expr, ok := d.expr.(*ast.UnaryExpression)
+	if !ok {
+		return false
+	}
+
+	return d.isDuplicate(expr.Expression, otherExpr.Expression) &&
+		expr.Operation == otherExpr.Operation
 }
 
 func (d *duplicateCaseChecker) VisitBinaryExpression(otherExpr *ast.BinaryExpression) ast.Repr {
-	panic("implement me")
+	expr, ok := d.expr.(*ast.BinaryExpression)
+	if !ok {
+		return false
+	}
+
+	return d.isDuplicate(expr.Left, otherExpr.Left) &&
+		d.isDuplicate(expr.Right, otherExpr.Right) &&
+		expr.Operation == otherExpr.Operation
 }
 
 func (d *duplicateCaseChecker) VisitFunctionExpression(otherExpr *ast.FunctionExpression) ast.Repr {
@@ -346,7 +386,19 @@ func (d *duplicateCaseChecker) VisitStringExpression(otherExpr *ast.StringExpres
 }
 
 func (d *duplicateCaseChecker) VisitCastingExpression(otherExpr *ast.CastingExpression) ast.Repr {
-	panic("implement me")
+	expr, ok := d.expr.(*ast.CastingExpression)
+	if !ok {
+		return false
+	}
+
+	if !d.isDuplicate(expr.Expression, otherExpr.Expression) ||
+		expr.Operation != otherExpr.Operation {
+		return false
+	}
+
+	typeAnnot := d.checker.ConvertTypeAnnotation(expr.TypeAnnotation)
+	otherTypeAnnot := d.checker.ConvertTypeAnnotation(expr.TypeAnnotation)
+	return typeAnnot.Equal(otherTypeAnnot)
 }
 
 func (d *duplicateCaseChecker) VisitCreateExpression(otherExpr *ast.CreateExpression) ast.Repr {
