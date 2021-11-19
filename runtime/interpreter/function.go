@@ -144,6 +144,10 @@ func (f *InterpretedFunctionValue) Transfer(
 	return f
 }
 
+func (f *InterpretedFunctionValue) Clone(_ *Interpreter) Value {
+	return f
+}
+
 func (*InterpretedFunctionValue) DeepRemove(_ *Interpreter) {
 	// NO-OP
 }
@@ -269,6 +273,10 @@ func (f *HostFunctionValue) Transfer(
 	return f
 }
 
+func (f *HostFunctionValue) Clone(_ *Interpreter) Value {
+	return f
+}
+
 func (*HostFunctionValue) DeepRemove(_ *Interpreter) {
 	// NO-OP
 }
@@ -382,6 +390,10 @@ func (f BoundFunctionValue) Transfer(
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
 	}
+	return f
+}
+
+func (f BoundFunctionValue) Clone(_ *Interpreter) Value {
 	return f
 }
 

@@ -73,7 +73,6 @@ func (checker *Checker) VisitUnaryExpression(expression *ast.UnaryExpression) as
 					},
 				},
 			)
-			return InvalidType
 		}
 
 		return valueType

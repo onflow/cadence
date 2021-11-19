@@ -705,6 +705,7 @@ func TestIdentifierCacheUpdate(t *testing.T) {
 }
 
 func TestCommonSuperType(t *testing.T) {
+	t.Parallel()
 
 	t.Run("Duplicate Mask", func(t *testing.T) {
 		t.Parallel()
@@ -970,7 +971,7 @@ func TestCommonSuperType(t *testing.T) {
 					AnyResourceType,
 					AnyStructType,
 				},
-				expectedSuperType: AnyType,
+				expectedSuperType: InvalidType,
 			},
 			{
 				name: "all structs",
@@ -1090,7 +1091,7 @@ func TestCommonSuperType(t *testing.T) {
 					stringArray,
 					resourceArray,
 				},
-				expectedSuperType: AnyType,
+				expectedSuperType: InvalidType,
 			},
 			{
 				name: "array & non-array",
@@ -1130,7 +1131,7 @@ func TestCommonSuperType(t *testing.T) {
 					nestedResourceArray,
 					&VariableSizedType{Type: stringArray},
 				},
-				expectedSuperType: AnyType,
+				expectedSuperType: InvalidType,
 			},
 			{
 				name: "covariant arrays",
@@ -1219,7 +1220,7 @@ func TestCommonSuperType(t *testing.T) {
 					stringStringDictionary,
 					stringResourceDictionary,
 				},
-				expectedSuperType: AnyType,
+				expectedSuperType: InvalidType,
 			},
 
 			{
@@ -1252,7 +1253,7 @@ func TestCommonSuperType(t *testing.T) {
 					nestedResourceDictionary,
 					nestedStringDictionary,
 				},
-				expectedSuperType: AnyType,
+				expectedSuperType: InvalidType,
 			},
 			{
 				name: "dictionaries with never",
@@ -1410,7 +1411,7 @@ func TestCommonSuperType(t *testing.T) {
 					restrictedType1,
 					restrictedType2,
 				},
-				expectedSuperType: AnyType,
+				expectedSuperType: InvalidType,
 			},
 		}
 
@@ -1454,7 +1455,7 @@ func TestCommonSuperType(t *testing.T) {
 					restrictedType1,
 					restrictedType2,
 				},
-				expectedSuperType: AnyType,
+				expectedSuperType: InvalidType,
 			},
 		}
 

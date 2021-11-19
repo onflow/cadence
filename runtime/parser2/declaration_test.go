@@ -449,6 +449,22 @@ func TestParseParameterList(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("two, with and without argument label, missing comma", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse("( a b : Int   c : Int )")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "parser: expected comma, got start of parameter",
+					Pos:     ast.Position{Offset: 14, Line: 1, Column: 14},
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParseFunctionDeclaration(t *testing.T) {

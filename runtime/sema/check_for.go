@@ -29,7 +29,19 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) ast.Repr 
 	defer checker.leaveValueScope(statement.EndPosition, true)
 
 	valueExpression := statement.Value
-	valueType := checker.VisitExpression(valueExpression, nil)
+
+	// iterations are only supported for non-resource arrays.
+	// Hence, if the array is empty and no context type is available,
+	// then default it to [AnyStruct].
+	var expectedType Type
+	arrayExpression, ok := valueExpression.(*ast.ArrayExpression)
+	if ok && len(arrayExpression.Values) == 0 {
+		expectedType = &VariableSizedType{
+			Type: AnyStructType,
+		}
+	}
+
+	valueType := checker.VisitExpression(valueExpression, expectedType)
 
 	var elementType Type = InvalidType
 

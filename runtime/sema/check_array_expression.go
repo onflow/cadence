@@ -26,24 +26,20 @@ func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) as
 
 	expectedType := UnwrapOptionalType(checker.expectedType)
 
-	inferType := true
-
 	var elementType Type
 	var resultType ArrayType
 
-	switch expectedType := expectedType.(type) {
+	switch typ := expectedType.(type) {
 
 	case *ConstantSizedType:
-		inferType = false
-
-		elementType = expectedType.ElementType(false)
-		resultType = expectedType
+		elementType = typ.ElementType(false)
+		resultType = typ
 
 		literalCount := int64(len(expression.Values))
-		if expectedType.Size != literalCount {
+		if typ.Size != literalCount {
 			checker.report(
 				&ConstantSizedArrayLiteralSizeError{
-					ExpectedSize: expectedType.Size,
+					ExpectedSize: typ.Size,
 					ActualSize:   literalCount,
 					Range:        expression.Range,
 				},
@@ -51,14 +47,19 @@ func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) as
 		}
 
 	case *VariableSizedType:
-		inferType = false
-		elementType = expectedType.ElementType(false)
-		resultType = expectedType
+		elementType = typ.ElementType(false)
+		resultType = typ
 
 	default:
-		// If there is no expected, or the expected type is not an array type,
-		// then it could either be an invalid type, or it is a super type (e.g. AnyStruct).
-		// In either case, infer the type from the expression.
+		// If the expected type is AnyStruct or AnyResource, and the array is empty,
+		// then expect the elements to also be of the same type.
+		// Otherwise, infer the type from the expression.
+		if len(expression.Values) == 0 {
+			elementType = expectedType
+			resultType = &VariableSizedType{
+				Type: elementType,
+			}
+		}
 	}
 
 	argumentTypes := make([]Type, len(expression.Values))
@@ -70,22 +71,26 @@ func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) as
 
 		checker.checkVariableMove(value)
 		checker.checkResourceMoveOperation(value, valueType)
-
-		// infer element type from first element
-		// TODO: find common super type?
-		if elementType == nil {
-			elementType = valueType
-		}
 	}
 
 	checker.Elaboration.ArrayExpressionArgumentTypes[expression] = argumentTypes
 
 	if elementType == nil {
-		// i.e: contextually expected type is not available and array has zero elements.
-		elementType = NeverType
-	}
+		// Contextually expected type is not available.
+		// Therefore, find the least common supertype of the elements.
+		elementType = LeastCommonSuperType(argumentTypes...)
 
-	if inferType {
+		if elementType == InvalidType {
+			checker.report(
+				&TypeAnnotationRequiredError{
+					Cause: "cannot infer type from array literal: ",
+					Pos:   expression.StartPos,
+				},
+			)
+
+			return InvalidType
+		}
+
 		resultType = &VariableSizedType{
 			Type: elementType,
 		}
