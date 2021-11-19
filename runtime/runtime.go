@@ -3204,6 +3204,11 @@ func verifyBLSPOP(
 		return false, err
 	}
 
+	// if public key is invalid, verify returns false
+	if !publicKey.IsValid {
+		return interpreter.BoolValue(false), nil
+	}
+
 	var valid bool
 	wrapPanic(func() {
 		valid, err = runtimeInterface.BLSVerifyPOP(publicKey, signature)
@@ -3227,6 +3232,10 @@ func aggregateBLSPublicKeys(
 	publicKeys := make([]*PublicKey, 0, len(publicKeyValues))
 	for _, value := range publicKeyValues {
 		publicKey, err := NewPublicKeyFromValue(inter, getLocationRange, value)
+		// if any of the public keys are invalid, return nil
+		if !publicKey.IsValid {
+			return interpreter.NilValue{}, nil
+		}
 		if err != nil {
 			return nil, err
 		}
