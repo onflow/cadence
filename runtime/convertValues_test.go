@@ -3032,13 +3032,15 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 			interpreter.NewArrayValue(
 				inter,
 				interpreter.VariableSizedStaticType{
-					Type: interpreter.PrimitiveStaticTypeAnyStruct,
+					Type: interpreter.VariableSizedStaticType{
+						Type: interpreter.PrimitiveStaticTypeInt8,
+					},
 				},
 				common.Address{},
 				interpreter.NewArrayValue(
 					inter,
 					interpreter.VariableSizedStaticType{
-						Type: interpreter.PrimitiveStaticTypeAnyStruct,
+						Type: interpreter.PrimitiveStaticTypeInt8,
 					},
 					common.Address{},
 					interpreter.Int8Value(4),
@@ -3047,7 +3049,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 				interpreter.NewArrayValue(
 					inter,
 					interpreter.VariableSizedStaticType{
-						Type: interpreter.PrimitiveStaticTypeAnyStruct,
+						Type: interpreter.PrimitiveStaticTypeInt8,
 					},
 					common.Address{},
 					interpreter.Int8Value(42),
@@ -3247,7 +3249,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 				interpreter.NewDictionaryValue(
 					inter,
 					interpreter.DictionaryStaticType{
-						KeyType:   interpreter.PrimitiveStaticTypeNumber,
+						KeyType:   interpreter.PrimitiveStaticTypeInt8,
 						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
 					interpreter.Int8Value(1), interpreter.NewIntValueFromInt64(100),
@@ -3258,7 +3260,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 				interpreter.NewDictionaryValue(
 					inter,
 					interpreter.DictionaryStaticType{
-						KeyType:   interpreter.PrimitiveStaticTypeNumber,
+						KeyType:   interpreter.PrimitiveStaticTypeSignedInteger,
 						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
 					interpreter.Int8Value(1), interpreter.NewStringValue("foo"),
@@ -4556,4 +4558,141 @@ func newTestInterpreter(tb testing.TB) *interpreter.Interpreter {
 	require.NoError(tb, err)
 
 	return inter
+}
+
+func TestNestedStructArgPassing(t *testing.T) {
+	t.Parallel()
+
+	t.Run("valid", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            pub fun main(v: AnyStruct): UInt8 {
+                return (v as! Foo).bytes[0]
+            }
+
+            pub struct Foo {
+                pub let bytes: [UInt8]
+
+                init(_ bytes: [UInt8]) {
+                    self.bytes = bytes
+               }
+            }
+        `
+
+		jsonCdc := `
+          {
+            "value": {
+              "id": "S.test.Foo",
+              "fields": [
+                {
+                  "name": "bytes",
+                  "value": {
+                    "value": [
+                      {
+                        "value": "32",
+                        "type": "UInt8"
+                      }
+                    ],
+                    "type": "Array"
+                  }
+                }
+              ]
+            },
+            "type": "Struct"
+          }
+        `
+
+		rt := newTestInterpreterRuntime()
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(b)
+			},
+		}
+
+		value, err := rt.ExecuteScript(
+			Script{
+				Source: []byte(script),
+				Arguments: [][]byte{
+					[]byte(jsonCdc),
+				},
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  TestLocation,
+			},
+		)
+
+		require.NoError(t, err)
+		assert.Equal(t, value, cadence.NewUInt8(32))
+	})
+
+	t.Run("invalid interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            pub fun main(v: AnyStruct) {
+            }
+
+            pub struct interface Foo {
+            }
+        `
+
+		jsonCdc := `
+          {
+            "value": {
+              "id": "S.test.Foo",
+              "fields": [
+                {
+                  "name": "bytes",
+                  "value": {
+                    "value": [
+                      {
+                        "value": "32",
+                        "type": "UInt8"
+                      }
+                    ],
+                    "type": "Array"
+                  }
+                }
+              ]
+            },
+            "type": "Struct"
+          }
+        `
+
+		rt := newTestInterpreterRuntime()
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(b)
+			},
+		}
+
+		_, err := rt.ExecuteScript(
+			Script{
+				Source: []byte(script),
+				Arguments: [][]byte{
+					[]byte(jsonCdc),
+				},
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  TestLocation,
+			},
+		)
+
+		require.Error(t, err)
+		var argErr *InvalidEntryPointArgumentError
+		require.ErrorAs(t, err, &argErr)
+	})
 }

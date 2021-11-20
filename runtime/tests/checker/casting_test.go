@@ -6443,24 +6443,51 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 			require.Len(t, hints, 0)
 		})
 
-		// TODO: enable once https://github.com/onflow/cadence/pull/1027 is merged.
+		t.Run("Conditional expr valid", func(t *testing.T) {
+			t.Parallel()
 
-		//t.Run("Conditional expr", func(t *testing.T) {
-		//	t.Parallel()
-		//
-		//	checker, err := ParseAndCheckWithAny(t, `
-		//        let x = (true ? 5.4 : nil) as UFix64?
-		//    `)
-		//
-		//	require.NoError(t, err)
-		//
-		//	hints := checker.Hints()
-		//	require.Len(t, hints, 1)
-		//
-		//	require.IsType(t, &sema.UnnecessaryCastHint{}, hints[0])
-		//	castHint := hints[0].(*sema.UnnecessaryCastHint)
-		//	assert.Equal(t, sema.Int8Type, castHint.TargetType)
-		//})
+			checker, err := ParseAndCheckWithAny(t, `
+		       let x = (true ? 5.4 : nil) as UFix64?
+		   `)
+
+			require.NoError(t, err)
+
+			hints := checker.Hints()
+			require.Len(t, hints, 0)
+		})
+
+		t.Run("Conditional expr invalid", func(t *testing.T) {
+			t.Parallel()
+
+			checker, err := ParseAndCheckWithAny(t, `
+		       let x = (true ? 5.4 : nil) as Fix64?
+		   `)
+
+			require.NoError(t, err)
+
+			// Ideally this should give hints. But the current impl
+			// is not capable if detecting redundant casts, when the
+			// join of types is involved.
+			hints := checker.Hints()
+			require.Len(t, hints, 0)
+		})
+
+		t.Run("Conditional expr", func(t *testing.T) {
+			t.Parallel()
+
+			checker, err := ParseAndCheckWithAny(t, `
+		       let x = (true ? 5.4 : 3.4) as UFix64
+		   `)
+
+			require.NoError(t, err)
+
+			hints := checker.Hints()
+			require.Len(t, hints, 1)
+
+			require.IsType(t, &sema.UnnecessaryCastHint{}, hints[0])
+			castHint := hints[0].(*sema.UnnecessaryCastHint)
+			assert.Equal(t, sema.UFix64Type, castHint.TargetType)
+		})
 
 		t.Run("Invocation", func(t *testing.T) {
 			t.Parallel()

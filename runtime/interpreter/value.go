@@ -69,7 +69,7 @@ func (s NonStorable) Encode(_ *atree.Encoder) error {
 func (s NonStorable) ByteSize() uint32 {
 	// Return 1 so that atree split and merge operations don't have to handle special cases.
 	// Any value larger than 0 and smaller than half of the max slab size works,
-	// but 1 results in less number of slabs which is ideal for non-storable values.
+	// but 1 results in fewer number of slabs which is ideal for non-storable values.
 	return 1
 }
 
@@ -110,6 +110,7 @@ type Value interface {
 		storable atree.Storable,
 	) Value
 	DeepRemove(interpreter *Interpreter)
+	Clone(interpreter *Interpreter) Value
 }
 
 // ValueIndexableValue
@@ -317,6 +318,10 @@ func (v TypeValue) Transfer(
 	return v
 }
 
+func (v TypeValue) Clone(_ *Interpreter) Value {
+	return v
+}
+
 func (TypeValue) DeepRemove(_ *Interpreter) {
 	// NO-OP
 }
@@ -415,6 +420,10 @@ func (v VoidValue) Transfer(
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
 	}
+	return v
+}
+
+func (v VoidValue) Clone(_ *Interpreter) Value {
 	return v
 }
 
@@ -524,6 +533,10 @@ func (v BoolValue) Transfer(
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
 	}
+	return v
+}
+
+func (v BoolValue) Clone(_ *Interpreter) Value {
 	return v
 }
 
@@ -813,6 +826,10 @@ func (v *StringValue) Transfer(
 		interpreter.RemoveReferencedSlab(storable)
 	}
 	return v
+}
+
+func (v *StringValue) Clone(_ *Interpreter) Value {
+	return NewStringValue(v.Str)
 }
 
 func (*StringValue) DeepRemove(_ *Interpreter) {
@@ -1549,6 +1566,43 @@ func (v *ArrayValue) Transfer(
 	}
 }
 
+func (v *ArrayValue) Clone(interpreter *Interpreter) Value {
+	iterator, err := v.array.Iterator()
+	if err != nil {
+		panic(ExternalError{err})
+	}
+
+	array, err := atree.NewArrayFromBatchData(
+		interpreter.Storage,
+		v.StorageID().Address,
+		v.array.Type(),
+		func() (atree.Value, error) {
+			value, err := iterator.Next()
+			if err != nil {
+				return nil, err
+			}
+			if value == nil {
+				return nil, nil
+			}
+
+			element := MustConvertStoredValue(value).
+				Clone(interpreter)
+
+			return element, nil
+		},
+	)
+	if err != nil {
+		panic(ExternalError{err})
+	}
+	return &ArrayValue{
+		Type:             v.Type,
+		semaType:         v.semaType,
+		isResourceKinded: v.isResourceKinded,
+		array:            array,
+		isDestroyed:      v.isDestroyed,
+	}
+}
+
 func (v *ArrayValue) DeepRemove(interpreter *Interpreter) {
 
 	// Remove nested values and storables
@@ -1988,6 +2042,10 @@ func (v IntValue) Transfer(
 	return v
 }
 
+func (v IntValue) Clone(_ *Interpreter) Value {
+	return NewIntValueFromBigInt(v.BigInt)
+}
+
 func (IntValue) DeepRemove(_ *Interpreter) {
 	// NO-OP
 }
@@ -2329,6 +2387,10 @@ func (v Int8Value) Transfer(
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
 	}
+	return v
+}
+
+func (v Int8Value) Clone(_ *Interpreter) Value {
 	return v
 }
 
@@ -2678,6 +2740,10 @@ func (v Int16Value) Transfer(
 	return v
 }
 
+func (v Int16Value) Clone(_ *Interpreter) Value {
+	return v
+}
+
 func (Int16Value) DeepRemove(_ *Interpreter) {
 	// NO-OP
 }
@@ -3024,6 +3090,10 @@ func (v Int32Value) Transfer(
 	return v
 }
 
+func (v Int32Value) Clone(_ *Interpreter) Value {
+	return v
+}
+
 func (Int32Value) DeepRemove(_ *Interpreter) {
 	// NO-OP
 }
@@ -3366,6 +3436,10 @@ func (v Int64Value) Transfer(
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
 	}
+	return v
+}
+
+func (v Int64Value) Clone(_ *Interpreter) Value {
 	return v
 }
 
@@ -3788,6 +3862,10 @@ func (v Int128Value) Transfer(
 	return v
 }
 
+func (v Int128Value) Clone(_ *Interpreter) Value {
+	return NewInt128ValueFromBigInt(v.BigInt)
+}
+
 func (Int128Value) DeepRemove(_ *Interpreter) {
 	// NO-OP
 }
@@ -4208,6 +4286,10 @@ func (v Int256Value) Transfer(
 	return v
 }
 
+func (v Int256Value) Clone(_ *Interpreter) Value {
+	return NewInt256ValueFromBigInt(v.BigInt)
+}
+
 func (Int256Value) DeepRemove(_ *Interpreter) {
 	// NO-OP
 }
@@ -4518,6 +4600,10 @@ func (v UIntValue) Transfer(
 	return v
 }
 
+func (v UIntValue) Clone(_ *Interpreter) Value {
+	return NewUIntValueFromBigInt(v.BigInt)
+}
+
 func (UIntValue) DeepRemove(_ *Interpreter) {
 	// NO-OP
 }
@@ -4791,6 +4877,10 @@ func (v UInt8Value) Transfer(
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
 	}
+	return v
+}
+
+func (v UInt8Value) Clone(_ *Interpreter) Value {
 	return v
 }
 
@@ -5074,6 +5164,10 @@ func (v UInt16Value) Transfer(
 	return v
 }
 
+func (v UInt16Value) Clone(_ *Interpreter) Value {
+	return v
+}
+
 func (UInt16Value) DeepRemove(_ *Interpreter) {
 	// NO-OP
 }
@@ -5351,6 +5445,10 @@ func (v UInt32Value) Transfer(
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
 	}
+	return v
+}
+
+func (v UInt32Value) Clone(_ *Interpreter) Value {
 	return v
 }
 
@@ -5655,6 +5753,10 @@ func (v UInt64Value) Transfer(
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
 	}
+	return v
+}
+
+func (v UInt64Value) Clone(_ *Interpreter) Value {
 	return v
 }
 
@@ -6023,6 +6125,10 @@ func (v UInt128Value) Transfer(
 	return v
 }
 
+func (v UInt128Value) Clone(_ *Interpreter) Value {
+	return NewUInt128ValueFromBigInt(v.BigInt)
+}
+
 func (UInt128Value) DeepRemove(_ *Interpreter) {
 	// NO-OP
 }
@@ -6389,6 +6495,10 @@ func (v UInt256Value) Transfer(
 	return v
 }
 
+func (v UInt256Value) Clone(_ *Interpreter) Value {
+	return NewUInt256ValueFromBigInt(v.BigInt)
+}
+
 func (UInt256Value) DeepRemove(_ *Interpreter) {
 	// NO-OP
 }
@@ -6611,6 +6721,10 @@ func (v Word8Value) Transfer(
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
 	}
+	return v
+}
+
+func (v Word8Value) Clone(_ *Interpreter) Value {
 	return v
 }
 
@@ -6839,6 +6953,10 @@ func (v Word16Value) Transfer(
 	return v
 }
 
+func (v Word16Value) Clone(_ *Interpreter) Value {
+	return v
+}
+
 func (Word16Value) DeepRemove(_ *Interpreter) {
 	// NO-OP
 }
@@ -7062,6 +7180,10 @@ func (v Word32Value) Transfer(
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
 	}
+	return v
+}
+
+func (v Word32Value) Clone(_ *Interpreter) Value {
 	return v
 }
 
@@ -7309,6 +7431,10 @@ func (v Word64Value) Transfer(
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
 	}
+	return v
+}
+
+func (v Word64Value) Clone(_ *Interpreter) Value {
 	return v
 }
 
@@ -7639,6 +7765,10 @@ func (v Fix64Value) Transfer(
 	return v
 }
 
+func (v Fix64Value) Clone(_ *Interpreter) Value {
+	return v
+}
+
 func (Fix64Value) DeepRemove(_ *Interpreter) {
 	// NO-OP
 }
@@ -7929,6 +8059,10 @@ func (v UFix64Value) Transfer(
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
 	}
+	return v
+}
+
+func (v UFix64Value) Clone(_ *Interpreter) Value {
 	return v
 }
 
@@ -8612,6 +8746,59 @@ func (v *CompositeValue) Transfer(
 			staticType:          v.staticType,
 			dynamicType:         v.dynamicType,
 		}
+	}
+}
+
+func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
+
+	iterator, err := v.dictionary.Iterator()
+	if err != nil {
+		panic(ExternalError{err})
+	}
+
+	dictionary, err := atree.NewMapFromBatchData(
+		interpreter.Storage,
+		v.StorageID().Address,
+		atree.NewDefaultDigesterBuilder(),
+		v.dictionary.Type(),
+		stringAtreeComparator,
+		stringAtreeHashInput,
+		v.dictionary.Seed(),
+		func() (atree.Value, atree.Value, error) {
+
+			atreeKey, atreeValue, err := iterator.Next()
+			if err != nil {
+				return nil, nil, err
+			}
+			if atreeKey == nil || atreeValue == nil {
+				return nil, nil, nil
+			}
+
+			key := MustConvertStoredValue(atreeKey).Clone(interpreter)
+			value := MustConvertStoredValue(atreeValue).Clone(interpreter)
+
+			return key, value, nil
+		},
+	)
+	if err != nil {
+		panic(ExternalError{err})
+	}
+
+	return &CompositeValue{
+		dictionary:          dictionary,
+		Location:            v.Location,
+		QualifiedIdentifier: v.QualifiedIdentifier,
+		Kind:                v.Kind,
+		InjectedFields:      v.InjectedFields,
+		ComputedFields:      v.ComputedFields,
+		NestedVariables:     v.NestedVariables,
+		Functions:           v.Functions,
+		Destructor:          v.Destructor,
+		Stringer:            v.Stringer,
+		isDestroyed:         v.isDestroyed,
+		typeID:              v.typeID,
+		staticType:          v.staticType,
+		dynamicType:         v.dynamicType,
 	}
 }
 
@@ -9441,6 +9628,56 @@ func (v *DictionaryValue) Transfer(
 	}
 }
 
+func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
+
+	valueComparator := newValueComparator(interpreter, ReturnEmptyLocationRange)
+	hashInputProvider := newHashInputProvider(interpreter, ReturnEmptyLocationRange)
+
+	iterator, err := v.dictionary.Iterator()
+	if err != nil {
+		panic(ExternalError{err})
+	}
+
+	dictionary, err := atree.NewMapFromBatchData(
+		interpreter.Storage,
+		v.StorageID().Address,
+		atree.NewDefaultDigesterBuilder(),
+		v.dictionary.Type(),
+		valueComparator,
+		hashInputProvider,
+		v.dictionary.Seed(),
+		func() (atree.Value, atree.Value, error) {
+
+			atreeKey, atreeValue, err := iterator.Next()
+			if err != nil {
+				return nil, nil, err
+			}
+			if atreeKey == nil || atreeValue == nil {
+				return nil, nil, nil
+			}
+
+			key := MustConvertStoredValue(atreeKey).
+				Clone(interpreter)
+
+			value := MustConvertStoredValue(atreeValue).
+				Clone(interpreter)
+
+			return key, value, nil
+		},
+	)
+	if err != nil {
+		panic(ExternalError{err})
+	}
+
+	return &DictionaryValue{
+		Type:             v.Type,
+		semaType:         v.semaType,
+		isResourceKinded: v.isResourceKinded,
+		dictionary:       dictionary,
+		isDestroyed:      v.isDestroyed,
+	}
+}
+
 func (v *DictionaryValue) DeepRemove(interpreter *Interpreter) {
 
 	// Remove nested values and storables
@@ -9617,6 +9854,10 @@ func (v NilValue) Transfer(
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
 	}
+	return v
+}
+
+func (v NilValue) Clone(_ *Interpreter) Value {
 	return v
 }
 
@@ -9837,6 +10078,11 @@ func (v *SomeValue) Transfer(
 		result.isDestroyed = v.isDestroyed
 		return result
 	}
+}
+
+func (v *SomeValue) Clone(interpreter *Interpreter) Value {
+	innerValue := v.Value.Clone(interpreter)
+	return NewSomeValueNonCopying(innerValue)
 }
 
 func (v *SomeValue) DeepRemove(interpreter *Interpreter) {
@@ -10174,6 +10420,15 @@ func (v *StorageReferenceValue) Transfer(
 	return v
 }
 
+func (v *StorageReferenceValue) Clone(_ *Interpreter) Value {
+	return &StorageReferenceValue{
+		Authorized:           v.Authorized,
+		TargetStorageAddress: v.TargetStorageAddress,
+		TargetKey:            v.TargetKey,
+		BorrowedType:         v.BorrowedType,
+	}
+}
+
 func (*StorageReferenceValue) DeepRemove(_ *Interpreter) {
 	// NO-OP
 }
@@ -10504,6 +10759,14 @@ func (v *EphemeralReferenceValue) Transfer(
 	return v
 }
 
+func (v *EphemeralReferenceValue) Clone(_ *Interpreter) Value {
+	return &EphemeralReferenceValue{
+		Authorized:   v.Authorized,
+		BorrowedType: v.BorrowedType,
+		Value:        v.Value,
+	}
+}
+
 func (*EphemeralReferenceValue) DeepRemove(_ *Interpreter) {
 	// NO-OP
 }
@@ -10659,6 +10922,10 @@ func (v AddressValue) Transfer(
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
 	}
+	return v
+}
+
+func (v AddressValue) Clone(_ *Interpreter) Value {
 	return v
 }
 
@@ -10915,6 +11182,10 @@ func (v PathValue) Transfer(
 	return v
 }
 
+func (v PathValue) Clone(_ *Interpreter) Value {
+	return v
+}
+
 func (PathValue) DeepRemove(_ *Interpreter) {
 	// NO-OP
 }
@@ -11091,6 +11362,14 @@ func (v *CapabilityValue) Transfer(
 	return v
 }
 
+func (v *CapabilityValue) Clone(interpreter *Interpreter) Value {
+	return &CapabilityValue{
+		Address:    v.Address.Clone(interpreter).(AddressValue),
+		Path:       v.Path.Clone(interpreter).(PathValue),
+		BorrowType: v.BorrowType,
+	}
+}
+
 func (v *CapabilityValue) DeepRemove(interpreter *Interpreter) {
 	v.Address.DeepRemove(interpreter)
 	v.Path.DeepRemove(interpreter)
@@ -11202,6 +11481,13 @@ func (v LinkValue) Transfer(
 	return v
 }
 
+func (v LinkValue) Clone(interpreter *Interpreter) Value {
+	return LinkValue{
+		TargetPath: v.TargetPath.Clone(interpreter).(PathValue),
+		Type:       v.Type,
+	}
+}
+
 func (LinkValue) DeepRemove(_ *Interpreter) {
 	// NO-OP
 }
@@ -11251,7 +11537,8 @@ func NewPublicKeyValue(
 		},
 	}
 	publicKeyValue.Functions = map[string]FunctionValue{
-		sema.PublicKeyVerifyFunction: publicKeyVerifyFunction,
+		sema.PublicKeyVerifyFunction:    publicKeyVerifyFunction,
+		sema.PublicKeyVerifyPoPFunction: publicKeyVerifyPoPFunction,
 	}
 
 	// Validate the public key, and initialize 'isValid' field.
@@ -11321,4 +11608,41 @@ var publicKeyVerifyFunction = NewHostFunctionValue(
 		)
 	},
 	sema.PublicKeyVerifyFunctionType,
+)
+
+var publicKeyVerifyPoPFunction = NewHostFunctionValue(
+	func(invocation Invocation) (v Value) {
+		signatureValue := invocation.Arguments[0].(*ArrayValue)
+		publicKey := invocation.Self
+
+		interpreter := invocation.Interpreter
+
+		getLocationRange := invocation.GetLocationRange
+
+		interpreter.ExpectType(
+			publicKey,
+			sema.PublicKeyType,
+			getLocationRange,
+		)
+
+		bytesArray := make([]byte, 0, signatureValue.Count())
+		signatureValue.Iterate(func(element Value) (resume bool) {
+			b := element.(UInt8Value)
+			bytesArray = append(bytesArray, byte(b))
+			return true
+		})
+
+		var err error
+		v, err = interpreter.BLSVerifyPoPHandler(
+			interpreter,
+			getLocationRange,
+			publicKey,
+			bytesArray,
+		)
+		if err != nil {
+			panic(err)
+		}
+		return
+	},
+	sema.PublicKeyVerifyPoPFunctionType,
 )

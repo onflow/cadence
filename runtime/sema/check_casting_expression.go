@@ -164,7 +164,7 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 		// Therefore, don't check for redundant casts, if there are errors.
 		if checker.lintEnabled &&
 			!hasErrors &&
-			IsRedundantCast(leftHandExpression, exprActualType, rightHandType, checker.expectedType) {
+			isRedundantCast(leftHandExpression, exprActualType, rightHandType, checker.expectedType) {
 			checker.hint(
 				&UnnecessaryCastHint{
 					TargetType: rightHandType,
@@ -423,12 +423,14 @@ func FailableCastCanSucceed(subType, superType Type) bool {
 	return true
 }
 
-// IsRedundantCast checks whether a simple cast is redundant.
+// isRedundantCast checks whether a simple cast is redundant.
 // Checks for two cases:
 //    - Case I: Contextually expected type is same as the casted type (target type).
 //    - Case II: Expression is self typed, and is same as the casted type (target type).
-func IsRedundantCast(expr ast.Expression, exprInferredType, targetType, expectedType Type) bool {
-	if expectedType != nil && expectedType.Equal(targetType) {
+func isRedundantCast(expr ast.Expression, exprInferredType, targetType, expectedType Type) bool {
+	if expectedType != nil &&
+		!expectedType.IsInvalidType() &&
+		expectedType.Equal(targetType) {
 		return true
 	}
 

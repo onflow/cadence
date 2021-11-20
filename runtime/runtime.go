@@ -1079,6 +1079,19 @@ func (r *interpreterRuntime) newInterpreter(
 		preDeclaredValues = append(preDeclaredValues, predeclaredValue)
 	}
 
+	publicKeyValidator := func(
+		inter *interpreter.Interpreter,
+		getLocationRange func() interpreter.LocationRange,
+		publicKey *interpreter.CompositeValue,
+	) interpreter.BoolValue {
+		return validatePublicKey(
+			inter,
+			getLocationRange,
+			publicKey,
+			context.Interface,
+		)
+	}
+
 	defaultOptions := []interpreter.Option{
 		interpreter.WithStorage(storage),
 		interpreter.WithPredeclaredValues(preDeclaredValues),
@@ -1139,17 +1152,38 @@ func (r *interpreterRuntime) newInterpreter(
 				)
 			},
 		),
-		interpreter.WithPublicKeyValidationHandler(
+		interpreter.WithPublicKeyValidationHandler(publicKeyValidator),
+		interpreter.WithBLSCryptoFunctions(
 			func(
 				inter *interpreter.Interpreter,
 				getLocationRange func() interpreter.LocationRange,
-				publicKey *interpreter.CompositeValue,
-			) interpreter.BoolValue {
-				return validatePublicKey(
+				publicKeyValue interpreter.MemberAccessibleValue,
+				signature []byte,
+			) (interpreter.BoolValue, error) {
+				return verifyBLSPOP(
 					inter,
 					getLocationRange,
-					publicKey,
+					publicKeyValue,
+					signature,
 					context.Interface,
+				)
+			},
+			func(
+				signatures [][]byte,
+			) ([]byte, error) {
+				return context.Interface.AggregateBLSSignatures(signatures)
+			},
+			func(
+				inter *interpreter.Interpreter,
+				getLocationRange func() interpreter.LocationRange,
+				publicKeys []interpreter.MemberAccessibleValue,
+			) (interpreter.MemberAccessibleValue, error) {
+				return aggregateBLSPublicKeys(
+					inter,
+					getLocationRange,
+					publicKeys,
+					context.Interface,
+					publicKeyValidator,
 				)
 			},
 		),
@@ -1435,21 +1469,45 @@ func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interfa
 	}
 }
 
+var getAuthAccountFunctionType = &sema.FunctionType{
+	Parameters: []*sema.Parameter{{
+		Label:          sema.ArgumentLabelNotRequired,
+		Identifier:     "address",
+		TypeAnnotation: sema.NewTypeAnnotation(&sema.AddressType{}),
+	}},
+	ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.AuthAccountType),
+}
+
 func (r *interpreterRuntime) standardLibraryFunctions(
 	context Context,
 	storage *Storage,
 	interpreterOptions []interpreter.Option,
 	checkerOptions []sema.Option,
 ) stdlib.StandardLibraryFunctions {
+	builtins := stdlib.FlowBuiltInFunctions(stdlib.FlowBuiltinImpls{
+		CreateAccount:   r.newCreateAccountFunction(context, storage, interpreterOptions, checkerOptions),
+		GetAccount:      r.newGetAccountFunction(context.Interface, storage),
+		Log:             r.newLogFunction(context.Interface),
+		GetCurrentBlock: r.newGetCurrentBlockFunction(context.Interface),
+		GetBlock:        r.newGetBlockFunction(context.Interface),
+		UnsafeRandom:    r.newUnsafeRandomFunction(context.Interface),
+	})
+
+	switch context.Location.(type) {
+	case common.ScriptLocation:
+		// Scripts are read-only, so we can give them access to auth accounts
+		builtins = append(builtins,
+			stdlib.NewStandardLibraryFunction(
+				"getAuthAccount",
+				getAuthAccountFunctionType,
+				"Returns the AuthAccount associated with the given address. Only available in scripts",
+				r.newGetAuthAccountFunction(context, storage, interpreterOptions, checkerOptions),
+			),
+		)
+	}
+
 	return append(
-		stdlib.FlowBuiltInFunctions(stdlib.FlowBuiltinImpls{
-			CreateAccount:   r.newCreateAccountFunction(context, storage, interpreterOptions, checkerOptions),
-			GetAccount:      r.newGetAccountFunction(context.Interface, storage),
-			Log:             r.newLogFunction(context.Interface),
-			GetCurrentBlock: r.newGetCurrentBlockFunction(context.Interface),
-			GetBlock:        r.newGetBlockFunction(context.Interface),
-			UnsafeRandom:    r.newUnsafeRandomFunction(context.Interface),
-		}),
+		builtins,
 		stdlib.BuiltinFunctions...,
 	)
 }
@@ -1966,6 +2024,24 @@ func (r *interpreterRuntime) instantiateContract(
 	contract = variable.GetValue().(*interpreter.CompositeValue)
 
 	return contract, err
+}
+
+func (r *interpreterRuntime) newGetAuthAccountFunction(
+	context Context,
+	storage *Storage,
+	interpreterOptions []interpreter.Option,
+	checkerOptions []sema.Option,
+) interpreter.HostFunction {
+	return func(invocation interpreter.Invocation) interpreter.Value {
+		accountAddress := invocation.Arguments[0].(interpreter.AddressValue)
+		return r.newAuthAccountValue(
+			accountAddress,
+			context,
+			storage,
+			interpreterOptions,
+			checkerOptions,
+		)
+	}
 }
 
 func (r *interpreterRuntime) newGetAccountFunction(runtimeInterface Interface, storage *Storage) interpreter.HostFunction {
@@ -3156,6 +3232,64 @@ func validatePublicKey(
 	}
 
 	return interpreter.BoolValue(valid)
+}
+
+func verifyBLSPOP(
+	inter *interpreter.Interpreter,
+	getLocationRange func() interpreter.LocationRange,
+	publicKeyValue interpreter.MemberAccessibleValue,
+	signature []byte,
+	runtimeInterface Interface,
+) (interpreter.BoolValue, error) {
+	publicKey, err := NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
+	if err != nil {
+		return false, err
+	}
+
+	var valid bool
+	wrapPanic(func() {
+		valid, err = runtimeInterface.BLSVerifyPOP(publicKey, signature)
+	})
+
+	if err != nil {
+		return false, err
+	}
+
+	return interpreter.BoolValue(valid), nil
+}
+
+func aggregateBLSPublicKeys(
+	inter *interpreter.Interpreter,
+	getLocationRange func() interpreter.LocationRange,
+	publicKeyValues []interpreter.MemberAccessibleValue,
+	runtimeInterface Interface,
+	validator interpreter.PublicKeyValidationHandlerFunc,
+) (interpreter.MemberAccessibleValue, error) {
+	publicKeys := make([]*PublicKey, 0, len(publicKeyValues))
+	for _, value := range publicKeyValues {
+		publicKey, err := NewPublicKeyFromValue(inter, getLocationRange, value)
+		if err != nil {
+			return nil, err
+		}
+		publicKeys = append(publicKeys, publicKey)
+	}
+
+	var err error
+	var key *PublicKey
+	wrapPanic(func() {
+		key, err = runtimeInterface.AggregateBLSPublicKeys(publicKeys)
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return NewPublicKeyValue(
+		inter,
+		getLocationRange,
+		key,
+		validator,
+	), nil
 }
 
 func verifySignature(

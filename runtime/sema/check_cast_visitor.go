@@ -128,8 +128,9 @@ func (d *CheckCastVisitor) VisitIndexExpression(_ *ast.IndexExpression) ast.Repr
 	return d.isTypeRedundant(d.exprInferredType, d.targetType)
 }
 
-func (d *CheckCastVisitor) VisitConditionalExpression(_ *ast.ConditionalExpression) ast.Repr {
-	return d.isTypeRedundant(d.exprInferredType, d.targetType)
+func (d *CheckCastVisitor) VisitConditionalExpression(conditionalExpr *ast.ConditionalExpression) ast.Repr {
+	return d.IsRedundantCast(conditionalExpr.Then, d.exprInferredType, d.targetType) &&
+		d.IsRedundantCast(conditionalExpr.Else, d.exprInferredType, d.targetType)
 }
 
 func (d *CheckCastVisitor) VisitUnaryExpression(_ *ast.UnaryExpression) ast.Repr {
