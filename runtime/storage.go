@@ -249,48 +249,64 @@ func SortContractUpdates(updates []ContractUpdate) {
 	})
 }
 
+// commitContractUpdates writes the contract updates to storage.
+// The contract updates were delayed so they are not observable during execution.
+//
 func (s *Storage) commitContractUpdates(inter *interpreter.Interpreter) {
 
-	var contractUpdates []ContractUpdate
+	contractUpdateCount := len(s.contractUpdates)
 
-	// NOTE: ranging over maps is safe (deterministic),
-	// if it is side effect free and the keys are sorted afterwards
+	if contractUpdateCount <= 1 {
+		// NOTE: ranging over maps is safe (deterministic),
+		// if the loop breaks after the first element (if any)
 
-	// Collect contract updates (delayed and not observable during execution)
+		for key, storable := range s.contractUpdates { //nolint:maprangecheck
+			s.writeContractUpdate(inter, key, storable)
+			break
+		}
+	} else {
 
-	for key, storable := range s.contractUpdates { //nolint:maprangecheck
-		contractUpdates = append(
-			contractUpdates,
-			ContractUpdate{
-				Key:      key,
-				Storable: storable,
-			},
-		)
-	}
+		contractUpdates := make([]ContractUpdate, 0, contractUpdateCount)
 
-	// Sort the contract updates by key in lexicographic order
+		// NOTE: ranging over maps is safe (deterministic),
+		// if it is side effect free and the keys are sorted afterwards
 
-	SortContractUpdates(contractUpdates)
-
-	// Perform contract updates in order
-
-	for _, contractUpdate := range contractUpdates {
-
-		key := contractUpdate.Key
-
-		storageMap := s.GetStorageMap(key.Address, StorageDomainContract)
-
-		var value interpreter.OptionalValue
-
-		if contractUpdate.Storable == nil {
-			value = interpreter.NilValue{}
-		} else {
-			contractValue := interpreter.StoredValue(contractUpdate.Storable, s)
-			value = interpreter.NewSomeValueNonCopying(contractValue)
+		for key, storable := range s.contractUpdates { //nolint:maprangecheck
+			contractUpdates = append(
+				contractUpdates,
+				ContractUpdate{
+					Key:      key,
+					Storable: storable,
+				},
+			)
 		}
 
-		storageMap.WriteValue(inter, key.Key, value)
+		// Sort the contract updates by key in lexicographic order
+
+		SortContractUpdates(contractUpdates)
+
+		// Perform contract updates in order
+
+		for _, contractUpdate := range contractUpdates {
+			s.writeContractUpdate(inter, contractUpdate.Key, contractUpdate.Storable)
+		}
 	}
+}
+
+func (s *Storage) writeContractUpdate(inter *interpreter.Interpreter, key StorageKey, storable atree.Storable) {
+
+	storageMap := s.GetStorageMap(key.Address, StorageDomainContract)
+
+	var value interpreter.OptionalValue
+
+	if storable == nil {
+		value = interpreter.NilValue{}
+	} else {
+		contractValue := interpreter.StoredValue(storable, s)
+		value = interpreter.NewSomeValueNonCopying(contractValue)
+	}
+
+	storageMap.WriteValue(inter, key.Key, value)
 }
 
 type write struct {
