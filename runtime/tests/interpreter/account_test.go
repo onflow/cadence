@@ -113,7 +113,7 @@ func testAccount(
 				}
 				storageKey := storageKey{
 					address: storageMapKey.Address,
-					domain:  storageMapKey.Domain,
+					domain:  storageMapKey.Key,
 					key:     key,
 				}
 				accountValues[storageKey] = value
