@@ -155,12 +155,12 @@ func (checker *Checker) VisitBoolExpression(_ *ast.BoolExpression) ast.Repr {
 	return BoolType
 }
 
-var TypeOfNil = &OptionalType{
+var NilType = &OptionalType{
 	Type: NeverType,
 }
 
 func (checker *Checker) VisitNilExpression(_ *ast.NilExpression) ast.Repr {
-	return TypeOfNil
+	return NilType
 }
 
 func (checker *Checker) VisitIntegerExpression(expression *ast.IntegerExpression) ast.Repr {

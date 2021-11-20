@@ -30,7 +30,7 @@ func (d *CheckCastVisitor) VisitBoolExpression(_ *ast.BoolExpression) ast.Repr {
 }
 
 func (d *CheckCastVisitor) VisitNilExpression(_ *ast.NilExpression) ast.Repr {
-	return d.isTypeRedundant(TypeOfNil, d.targetType)
+	return d.isTypeRedundant(NilType, d.targetType)
 }
 
 func (d *CheckCastVisitor) VisitIntegerExpression(_ *ast.IntegerExpression) ast.Repr {
