@@ -56,7 +56,6 @@ func (k StorageKey) IsLess(o StorageKey) bool {
 type Storage struct {
 	*atree.PersistentSlabStorage
 	writes          map[StorageKey][]byte
-	readCache       map[StorageKey][]byte
 	storageMaps     map[interpreter.StorageMapKey]*interpreter.StorageMap
 	contractUpdates map[StorageKey]atree.Storable
 	Ledger          atree.Ledger
@@ -78,53 +77,9 @@ func NewStorage(ledger atree.Ledger) *Storage {
 		Ledger:                ledger,
 		PersistentSlabStorage: persistentSlabStorage,
 		writes:                map[StorageKey][]byte{},
-		readCache:             map[StorageKey][]byte{},
 		storageMaps:           map[interpreter.StorageMapKey]*interpreter.StorageMap{},
 		contractUpdates:       map[StorageKey]atree.Storable{},
 	}
-}
-
-func (s *Storage) read(address common.Address, domain string) []byte {
-
-	storageKey := StorageKey{
-		Address: address,
-		Key:     domain,
-	}
-
-	// Check locally
-
-	localData, ok := s.writes[storageKey]
-	if !ok {
-		// Fall back to read cache
-		localData, ok = s.readCache[storageKey]
-	}
-	if ok {
-		return localData
-	}
-
-	// Load data through the runtime interface
-
-	var storedData []byte
-	var err error
-	wrapPanic(func() {
-		storedData, err = s.Ledger.GetValue(storageKey.Address[:], []byte(storageKey.Key))
-	})
-	if err != nil {
-		panic(err)
-	}
-
-	// No data, keep fact in cache
-
-	if len(storedData) == 0 {
-		s.readCache[storageKey] = nil
-		return nil
-	}
-
-	// Existing data, decode and keep in cache
-
-	s.readCache[storageKey] = storedData
-
-	return storedData
 }
 
 const storageIndexLength = 8
@@ -138,7 +93,29 @@ func (s *Storage) GetStorageMap(address common.Address, domain string) (storageM
 	storageMap = s.storageMaps[key]
 	if storageMap == nil {
 
-		data := s.read(address, domain)
+		storageKey := StorageKey{
+			Address: address,
+			Key:     domain,
+		}
+
+		// Check locally
+
+		data, ok := s.writes[storageKey]
+		if !ok {
+
+			// Load data through the runtime interface
+
+			var err error
+			wrapPanic(func() {
+				data, err = s.Ledger.GetValue(storageKey.Address[:], []byte(storageKey.Key))
+			})
+			if err != nil {
+				panic(err)
+			}
+
+			// No need for a read cache of the data loaded through the runtime interface,
+			// as it is implicitly cached as a storage map in storageMaps
+		}
 
 		// Load existing storage or create and store new one
 
