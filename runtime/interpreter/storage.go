@@ -19,12 +19,15 @@
 package interpreter
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"math"
+	"strings"
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
+	"github.com/onflow/cadence/runtime/errors"
 
 	"github.com/onflow/cadence/runtime/common"
 )
@@ -122,16 +125,29 @@ func DecodeTypeInfo(dec *cbor.StreamDecoder) (atree.TypeInfo, error) {
 	}
 }
 
-type StorageMapKey struct {
+type StorageKey struct {
 	Address common.Address
-	Domain  string
+	Key     string
+}
+
+func (k StorageKey) IsLess(o StorageKey) bool {
+	switch bytes.Compare(k.Address[:], o.Address[:]) {
+	case -1:
+		return true
+	case 0:
+		return strings.Compare(k.Key, o.Key) < 0
+	case 1:
+		return false
+	default:
+		panic(errors.NewUnreachableError())
+	}
 }
 
 // InMemoryStorage
 //
 type InMemoryStorage struct {
 	*atree.BasicSlabStorage
-	StorageMaps map[StorageMapKey]*StorageMap
+	StorageMaps map[StorageKey]*StorageMap
 }
 
 var _ Storage = InMemoryStorage{}
@@ -146,12 +162,12 @@ func NewInMemoryStorage() InMemoryStorage {
 
 	return InMemoryStorage{
 		BasicSlabStorage: slabStorage,
-		StorageMaps:      make(map[StorageMapKey]*StorageMap),
+		StorageMaps:      make(map[StorageKey]*StorageMap),
 	}
 }
 
 func (i InMemoryStorage) GetStorageMap(address common.Address, domain string) (storageMap *StorageMap) {
-	key := StorageMapKey{address, domain}
+	key := StorageKey{address, domain}
 	storageMap = i.StorageMaps[key]
 	if storageMap == nil {
 		storageMap = NewStorageMap(i, atree.Address(address))

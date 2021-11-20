@@ -19,45 +19,24 @@
 package runtime
 
 import (
-	"bytes"
 	"fmt"
 	"math"
 	"runtime"
 	"sort"
-	"strings"
 
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 )
 
 const StorageDomainContract = "contract"
 
-type StorageKey struct {
-	Address common.Address
-	Key     string
-}
-
-func (k StorageKey) IsLess(o StorageKey) bool {
-	switch bytes.Compare(k.Address[:], o.Address[:]) {
-	case -1:
-		return true
-	case 0:
-		return strings.Compare(k.Key, o.Key) < 0
-	case 1:
-		return false
-	default:
-		panic(errors.NewUnreachableError())
-	}
-}
-
 type Storage struct {
 	*atree.PersistentSlabStorage
-	writes          map[StorageKey][]byte
-	storageMaps     map[interpreter.StorageMapKey]*interpreter.StorageMap
-	contractUpdates map[StorageKey]atree.Storable
+	writes          map[interpreter.StorageKey][]byte
+	storageMaps     map[interpreter.StorageKey]*interpreter.StorageMap
+	contractUpdates map[interpreter.StorageKey]atree.Storable
 	Ledger          atree.Ledger
 }
 
@@ -76,24 +55,24 @@ func NewStorage(ledger atree.Ledger) *Storage {
 	return &Storage{
 		Ledger:                ledger,
 		PersistentSlabStorage: persistentSlabStorage,
-		writes:                map[StorageKey][]byte{},
-		storageMaps:           map[interpreter.StorageMapKey]*interpreter.StorageMap{},
-		contractUpdates:       map[StorageKey]atree.Storable{},
+		writes:                map[interpreter.StorageKey][]byte{},
+		storageMaps:           map[interpreter.StorageKey]*interpreter.StorageMap{},
+		contractUpdates:       map[interpreter.StorageKey]atree.Storable{},
 	}
 }
 
 const storageIndexLength = 8
 
 func (s *Storage) GetStorageMap(address common.Address, domain string) (storageMap *interpreter.StorageMap) {
-	key := interpreter.StorageMapKey{
+	key := interpreter.StorageKey{
 		Address: address,
-		Domain:  domain,
+		Key:     domain,
 	}
 
 	storageMap = s.storageMaps[key]
 	if storageMap == nil {
 
-		storageKey := StorageKey{
+		storageKey := interpreter.StorageKey{
 			Address: address,
 			Key:     domain,
 		}
@@ -158,7 +137,7 @@ func (s *Storage) storeNewStorageMap(address atree.Address, domain string) *inte
 
 	storageIndex := storageMap.StorageID().Index
 
-	storageKey := StorageKey{
+	storageKey := interpreter.StorageKey{
 		Address: common.Address(address),
 		Key:     domain,
 	}
@@ -174,7 +153,7 @@ func (s *Storage) recordContractUpdate(
 	name string,
 	contract interpreter.Value,
 ) {
-	key := StorageKey{
+	key := interpreter.StorageKey{
 		Address: address,
 		Key:     name,
 	}
@@ -214,7 +193,7 @@ func (s *Storage) recordContractUpdate(
 }
 
 type ContractUpdate struct {
-	Key      StorageKey
+	Key      interpreter.StorageKey
 	Storable atree.Storable
 }
 
@@ -270,7 +249,7 @@ func (s *Storage) commitContractUpdates(inter *interpreter.Interpreter) {
 	}
 }
 
-func (s *Storage) writeContractUpdate(inter *interpreter.Interpreter, key StorageKey, storable atree.Storable) {
+func (s *Storage) writeContractUpdate(inter *interpreter.Interpreter, key interpreter.StorageKey, storable atree.Storable) {
 
 	storageMap := s.GetStorageMap(key.Address, StorageDomainContract)
 
@@ -287,7 +266,7 @@ func (s *Storage) writeContractUpdate(inter *interpreter.Interpreter, key Storag
 }
 
 type write struct {
-	storageKey StorageKey
+	storageKey interpreter.StorageKey
 	data       []byte
 }
 

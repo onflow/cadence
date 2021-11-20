@@ -55,7 +55,7 @@ func withWritesToStorage(
 
 		r := rand.Uint32()
 
-		storageKey := StorageKey{
+		storageKey := interpreter.StorageKey{
 			Address: address,
 			Key:     fmt.Sprintf("%d", r),
 		}
@@ -1829,25 +1829,25 @@ func TestSortContractUpdates(t *testing.T) {
 
 	updates := []ContractUpdate{
 		{
-			Key: StorageKey{
+			Key: interpreter.StorageKey{
 				Address: common.Address{2},
 				Key:     "a",
 			},
 		},
 		{
-			Key: StorageKey{
+			Key: interpreter.StorageKey{
 				Address: common.Address{1},
 				Key:     "b",
 			},
 		},
 		{
-			Key: StorageKey{
+			Key: interpreter.StorageKey{
 				Address: common.Address{1},
 				Key:     "a",
 			},
 		},
 		{
-			Key: StorageKey{
+			Key: interpreter.StorageKey{
 				Address: common.Address{0},
 				Key:     "x",
 			},
@@ -1859,25 +1859,25 @@ func TestSortContractUpdates(t *testing.T) {
 	require.Equal(t,
 		[]ContractUpdate{
 			{
-				Key: StorageKey{
+				Key: interpreter.StorageKey{
 					Address: common.Address{0},
 					Key:     "x",
 				},
 			},
 			{
-				Key: StorageKey{
+				Key: interpreter.StorageKey{
 					Address: common.Address{1},
 					Key:     "a",
 				},
 			},
 			{
-				Key: StorageKey{
+				Key: interpreter.StorageKey{
 					Address: common.Address{1},
 					Key:     "b",
 				},
 			},
 			{
-				Key: StorageKey{
+				Key: interpreter.StorageKey{
 					Address: common.Address{2},
 					Key:     "a",
 				},
