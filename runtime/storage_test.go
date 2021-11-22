@@ -24,8 +24,8 @@ import (
 	"fmt"
 	"math/rand"
 	"testing"
-	"unsafe"
 
+	"github.com/onflow/atree"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -60,10 +60,10 @@ func withWritesToStorage(
 			Key:     fmt.Sprintf("%d", r),
 		}
 
-		data := make([]byte, unsafe.Sizeof(uint32(0)))
-		binary.BigEndian.PutUint32(data, r)
+		var storageIndex atree.StorageIndex
+		binary.BigEndian.PutUint32(storageIndex[:], r)
 
-		storage.writes[storageKey] = data
+		storage.writes[storageKey] = storageIndex
 	}
 
 	handler(storage, inter)

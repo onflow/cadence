@@ -1846,7 +1846,7 @@ func (r *interpreterRuntime) loadContract(
 		case *interpreter.SomeValue:
 			return typedValue.Value.(*interpreter.CompositeValue)
 		case interpreter.NilValue:
-			panic("failed to load contract")
+			panic(fmt.Errorf("failed to load contract: %s", compositeType.Location))
 		default:
 			panic(runtimeErrors.NewUnreachableError())
 		}

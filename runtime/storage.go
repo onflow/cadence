@@ -34,7 +34,7 @@ const StorageDomainContract = "contract"
 
 type Storage struct {
 	*atree.PersistentSlabStorage
-	writes          map[interpreter.StorageKey][]byte
+	writes          map[interpreter.StorageKey]atree.StorageIndex
 	storageMaps     map[interpreter.StorageKey]*interpreter.StorageMap
 	contractUpdates map[interpreter.StorageKey]atree.Storable
 	Ledger          atree.Ledger
@@ -55,7 +55,7 @@ func NewStorage(ledger atree.Ledger) *Storage {
 	return &Storage{
 		Ledger:                ledger,
 		PersistentSlabStorage: persistentSlabStorage,
-		writes:                map[interpreter.StorageKey][]byte{},
+		writes:                map[interpreter.StorageKey]atree.StorageIndex{},
 		storageMaps:           map[interpreter.StorageKey]*interpreter.StorageMap{},
 		contractUpdates:       map[interpreter.StorageKey]atree.Storable{},
 	}
@@ -72,25 +72,32 @@ func (s *Storage) GetStorageMap(address common.Address, domain string) (storageM
 	storageMap = s.storageMaps[key]
 	if storageMap == nil {
 
-		storageKey := interpreter.StorageKey{
-			Address: address,
-			Key:     domain,
-		}
-
 		// Check locally
 
-		data, ok := s.writes[storageKey]
+		storageIndex, ok := s.writes[key]
 		if !ok {
 
 			// Load data through the runtime interface
 
+			var data []byte
 			var err error
 			wrapPanic(func() {
-				data, err = s.Ledger.GetValue(storageKey.Address[:], []byte(storageKey.Key))
+				data, err = s.Ledger.GetValue(key.Address[:], []byte(key.Key))
 			})
 			if err != nil {
 				panic(err)
 			}
+
+			dataLength := len(data)
+			if dataLength > 0 && dataLength != storageIndexLength {
+				// TODO: add dedicated error type?
+				panic(fmt.Errorf(
+					"invalid storage index for storage map with domain '%s': expected length %d, got %d",
+					domain, storageIndexLength, dataLength,
+				))
+			}
+
+			copy(storageIndex[:], data)
 
 			// No need for a read cache of the data loaded through the runtime interface,
 			// as it is implicitly cached as a storage map in storageMaps
@@ -100,8 +107,8 @@ func (s *Storage) GetStorageMap(address common.Address, domain string) (storageM
 
 		atreeAddress := atree.Address(address)
 
-		if len(data) > 0 {
-			storageMap = s.loadExistingStorageMap(atreeAddress, domain, data)
+		if storageIndex != atree.StorageIndexUndefined {
+			storageMap = s.loadExistingStorageMap(atreeAddress, storageIndex)
 		} else {
 			storageMap = s.storeNewStorageMap(atreeAddress, domain)
 		}
@@ -112,17 +119,7 @@ func (s *Storage) GetStorageMap(address common.Address, domain string) (storageM
 	return storageMap
 }
 
-func (s *Storage) loadExistingStorageMap(address atree.Address, domain string, data []byte) *interpreter.StorageMap {
-	if len(data) != storageIndexLength {
-		// TODO: add dedicated error type?
-		panic(fmt.Errorf(
-			"invalid storage index for storage map with domain '%s': expected length %d, got %d",
-			domain, storageIndexLength, len(data),
-		))
-	}
-
-	var storageIndex atree.StorageIndex
-	copy(storageIndex[:], data)
+func (s *Storage) loadExistingStorageMap(address atree.Address, storageIndex atree.StorageIndex) *interpreter.StorageMap {
 
 	storageID := atree.StorageID{
 		Address: address,
@@ -142,7 +139,7 @@ func (s *Storage) storeNewStorageMap(address atree.Address, domain string) *inte
 		Key:     domain,
 	}
 
-	s.writes[storageKey] = storageIndex[:]
+	s.writes[storageKey] = storageIndex
 
 	return storageMap
 }
@@ -266,8 +263,8 @@ func (s *Storage) writeContractUpdate(inter *interpreter.Interpreter, key interp
 }
 
 type write struct {
-	storageKey interpreter.StorageKey
-	data       []byte
+	storageKey   interpreter.StorageKey
+	storageIndex atree.StorageIndex
 }
 
 func sortWrites(writes []write) {
@@ -291,12 +288,12 @@ func (s *Storage) Commit(inter *interpreter.Interpreter, commitContractUpdates b
 	// NOTE: ranging over maps is safe (deterministic),
 	// if it is side effect free and the keys are sorted afterwards
 
-	for storageKey, data := range s.writes { //nolint:maprangecheck
+	for storageKey, storageIndex := range s.writes { //nolint:maprangecheck
 		writes = append(
 			writes,
 			write{
-				storageKey: storageKey,
-				data:       data,
+				storageKey:   storageKey,
+				storageIndex: storageIndex,
 			},
 		)
 	}
@@ -314,7 +311,7 @@ func (s *Storage) Commit(inter *interpreter.Interpreter, commitContractUpdates b
 			err = s.Ledger.SetValue(
 				write.storageKey.Address[:],
 				[]byte(write.storageKey.Key),
-				write.data,
+				write.storageIndex[:],
 			)
 		})
 		if err != nil {
