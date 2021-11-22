@@ -329,6 +329,13 @@ func (checker *Checker) isWriteableMember(member *Member) bool {
 		checker.containerTypes[member.ContainerType]
 }
 
+// isMutatableMember returns true if the given member can be mutated
+// in the current location of the checker
+//
+func (checker *Checker) isMutatableMember(member *Member) bool {
+	return checker.containerTypes[member.ContainerType]
+}
+
 // containingContractKindedType returns the containing contract-kinded type
 // of the given type, if any.
 //
