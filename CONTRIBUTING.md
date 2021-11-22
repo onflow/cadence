@@ -89,6 +89,13 @@ You can start by looking through these "Good first issue" and "Help wanted" issu
 Both issue lists are sorted by total number of comments.
 While not perfect, number of comments is a reasonable proxy for impact a given change will have.
 
+#### Dependencies
+
+You need some software installed to build and test Cadence:
+
+- [Go](https://golang.org/doc/install)
+- [wasm2wat](https://github.com/WebAssembly/wabt)
+
 ### Pull Requests
 
 The process described here has several goals:
