@@ -1,4 +1,3 @@
-//go:build !wasm
 // +build !wasm
 
 /*
