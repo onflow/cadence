@@ -3294,7 +3294,7 @@ func verifyBLSPOP(
 
 	// if the crypto layer produces an error, we have invalid input, return false
 	if err != nil {
-		return interpreter.BoolValue(false), nil //nolint
+		return interpreter.BoolValue(false), nil //nolint:nilerr
 	}
 
 	return interpreter.BoolValue(valid), nil
@@ -3328,7 +3328,7 @@ func aggregateBLSPublicKeys(
 
 	// if the crypto layer produces an error, we have invalid input, return nil
 	if err != nil {
-		return interpreter.NilValue{}, nil //nolint
+		return interpreter.NilValue{}, nil //nolint:nilerr
 	}
 
 	return interpreter.NewSomeValueNonCopying(
