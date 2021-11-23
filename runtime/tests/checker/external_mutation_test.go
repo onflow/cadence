@@ -453,3 +453,94 @@ func TestContractStructInitIndexAccess(t *testing.T) {
 		}
 	}
 }
+
+func TestArrayUpdateMethodCall(t *testing.T) {
+
+	t.Parallel()
+
+	accessModifiers := []string{
+		"pub",
+		"access(account)",
+		"access(contract)",
+	}
+
+	declarationKinds := []string{
+		"let",
+		"var",
+	}
+
+	valueKinds := []string{
+		"struct",
+		"resource",
+	}
+
+	type MethodCall = struct {
+		Mutating bool
+		Code     string
+		Name     string
+	}
+
+	memberExpressions := []MethodCall{
+		{Mutating: true, Code: ".append(3)", Name: "append"},
+		{Mutating: false, Code: ".length", Name: "length"},
+		{Mutating: false, Code: ".concat([3])", Name: "concat"},
+		{Mutating: false, Code: ".contains(3)", Name: "contains"},
+		{Mutating: true, Code: ".appendAll([3])", Name: "appendAll"},
+		{Mutating: true, Code: ".insert(at: 0, 3)", Name: "insert"},
+		{Mutating: true, Code: ".remove(at: 0)", Name: "remove"},
+		{Mutating: true, Code: ".removeFirst()", Name: "removeFirst"},
+		{Mutating: true, Code: ".removeLast()", Name: "removeLast"},
+	}
+
+	runTest := func(access string, declaration string, valueKind string, member MethodCall) {
+		testName := fmt.Sprintf("%s %s %s %s", access, valueKind, declaration, member.Name)
+
+		assignmentOp := "="
+		var destroyStatement string
+		if valueKind == "resource" {
+			assignmentOp = "<- create"
+			destroyStatement = "destroy foo"
+		}
+
+		t.Run(testName, func(t *testing.T) {
+			_, err := ParseAndCheckWithOptions(t,
+				fmt.Sprintf(`
+				pub contract C {
+					pub %s Foo {
+						%s %s x : [Int]
+				
+						init() {
+						self.x = [3];
+						}
+					}
+
+					pub fun bar() {
+						let foo %s Foo()
+						foo.x%s
+						%s
+					}
+				}
+			`, valueKind, access, declaration, assignmentOp, member.Code, destroyStatement),
+				ParseAndCheckOptions{},
+			)
+
+			if member.Mutating {
+				errs := ExpectCheckerErrors(t, err, 1)
+				var externalMutationError *sema.ExternalMutationError
+				require.ErrorAs(t, errs[0], &externalMutationError)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+
+	for _, access := range accessModifiers {
+		for _, kind := range declarationKinds {
+			for _, value := range valueKinds {
+				for _, member := range memberExpressions {
+					runTest(access, kind, value, member)
+				}
+			}
+		}
+	}
+}

@@ -180,6 +180,20 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 		}
 		targetRange := ast.NewRangeFromPositioned(expression.Expression)
 		member = resolver.Resolve(identifier, targetRange, checker.report)
+		switch targetExpression := accessedExpression.(type) {
+		case *ast.MemberExpression:
+			_, m, _ := checker.visitMember(targetExpression)
+			if !checker.isMutatableMember(m) && resolver.Mutating {
+				checker.report(
+					&ExternalMutationError{
+						Name:            m.Identifier.Identifier,
+						DeclarationKind: m.DeclarationKind,
+						Range:           ast.NewRangeFromPositioned(targetRange),
+						EnclosingType:   m.ContainerType,
+					},
+				)
+			}
+		}
 	}
 
 	// Get the member from the accessed value based
