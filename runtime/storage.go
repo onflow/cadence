@@ -72,42 +72,34 @@ func (s *Storage) GetStorageMap(address common.Address, domain string) (storageM
 	storageMap = s.storageMaps[key]
 	if storageMap == nil {
 
-		// Check locally
+		// Load data through the runtime interface
 
-		storageIndex, ok := s.writes[key]
-		if !ok {
+		var data []byte
+		var err error
+		wrapPanic(func() {
+			data, err = s.Ledger.GetValue(key.Address[:], []byte(key.Key))
+		})
+		if err != nil {
+			panic(err)
+		}
 
-			// Load data through the runtime interface
-
-			var data []byte
-			var err error
-			wrapPanic(func() {
-				data, err = s.Ledger.GetValue(key.Address[:], []byte(key.Key))
-			})
-			if err != nil {
-				panic(err)
-			}
-
-			dataLength := len(data)
-			if dataLength > 0 && dataLength != storageIndexLength {
-				// TODO: add dedicated error type?
-				panic(fmt.Errorf(
-					"invalid storage index for storage map with domain '%s': expected length %d, got %d",
-					domain, storageIndexLength, dataLength,
-				))
-			}
-
-			copy(storageIndex[:], data)
-
-			// No need for a read cache of the data loaded through the runtime interface,
-			// as it is implicitly cached as a storage map in storageMaps
+		dataLength := len(data)
+		isStorageIndex := dataLength == storageIndexLength
+		if dataLength > 0 && !isStorageIndex {
+			// TODO: add dedicated error type?
+			panic(fmt.Errorf(
+				"invalid storage index for storage map with domain '%s': expected length %d, got %d",
+				domain, storageIndexLength, dataLength,
+			))
 		}
 
 		// Load existing storage or create and store new one
 
 		atreeAddress := atree.Address(address)
 
-		if storageIndex != atree.StorageIndexUndefined {
+		if isStorageIndex {
+			var storageIndex atree.StorageIndex
+			copy(storageIndex[:], data[:])
 			storageMap = s.loadExistingStorageMap(atreeAddress, storageIndex)
 		} else {
 			storageMap = s.storeNewStorageMap(atreeAddress, domain)
