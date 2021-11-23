@@ -3208,12 +3208,12 @@ func suggestIntegerLiteralConversionReplacement(
 ) {
 	negative := argument.Value.Sign() < 0
 
-	if IsSubType(targetType, FixedPointType) {
+	if IsSameTypeKind(targetType, FixedPointType) {
 
 		// If the integer literal is converted to a fixed-point type,
 		// suggest replacing it with a fixed-point literal
 
-		signed := IsSubType(targetType, SignedFixedPointType)
+		signed := IsSameTypeKind(targetType, SignedFixedPointType)
 
 		var hintExpression ast.Expression = &ast.FixedPointExpression{
 			Negative:        negative,
@@ -3248,7 +3248,7 @@ func suggestIntegerLiteralConversionReplacement(
 			},
 		)
 
-	} else if IsSubType(targetType, IntegerType) {
+	} else if IsSameTypeKind(targetType, IntegerType) {
 
 		// If the integer literal is converted to an integer type,
 		// suggest replacing it with a fixed-point literal
@@ -3260,7 +3260,7 @@ func suggestIntegerLiteralConversionReplacement(
 		// as all integer literals (positive and negative)
 		// are inferred to be of type `Int`
 
-		if !IsSubType(targetType, IntType) {
+		if !IsSameTypeKind(targetType, IntType) {
 			hintExpression = &ast.CastingExpression{
 				Expression: hintExpression,
 				Operation:  ast.OperationCast,
@@ -3293,12 +3293,12 @@ func suggestFixedPointLiteralConversionReplacement(
 	// If the fixed-point literal is converted to a fixed-point type,
 	// suggest replacing it with a fixed-point literal
 
-	if !IsSubType(targetType, FixedPointType) {
+	if !IsSameTypeKind(targetType, FixedPointType) {
 		return
 	}
 
 	negative := argument.Negative
-	signed := IsSubType(targetType, SignedFixedPointType)
+	signed := IsSameTypeKind(targetType, SignedFixedPointType)
 
 	if (!negative && !signed) || (negative && signed) {
 		checker.hint(
