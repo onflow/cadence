@@ -13063,6 +13063,15 @@ func (v *StorageReferenceValue) Transfer(
 	return v
 }
 
+func (v *StorageReferenceValue) Clone(_ *Interpreter) Value {
+	return &StorageReferenceValue{
+		Authorized:           v.Authorized,
+		TargetStorageAddress: v.TargetStorageAddress,
+		TargetPath:           v.TargetPath,
+		BorrowedType:         v.BorrowedType,
+	}
+}
+
 func (*StorageReferenceValue) DeepRemove(_ *Interpreter) {
 	// NO-OP
 }
