@@ -33,6 +33,7 @@ func TestArrayUpdate(t *testing.T) {
 	accessModifiers := []string{
 		"pub",
 		"access(account)",
+		"access(contract)",
 	}
 
 	declarationKinds := []string{
@@ -58,18 +59,20 @@ func TestArrayUpdate(t *testing.T) {
 		t.Run(testName, func(t *testing.T) {
 			_, err := ParseAndCheckWithOptions(t,
 				fmt.Sprintf(`
-				pub %s Foo {
-					%s %s x : [Int]
-			
-					init() {
-					self.x = [3];
+				pub contract C {
+					pub %s Foo {
+						%s %s x : [Int]
+				
+						init() {
+						self.x = [3];
+						}
 					}
-				}
 
-				pub fun bar() {
-					let foo %s Foo()
-					foo.x[0] = 3
-					%s
+					pub fun bar() {
+						let foo %s Foo()
+						foo.x[0] = 3
+						%s
+					}
 				}
 			`, valueKind, access, declaration, assignmentOp, destroyStatement),
 				ParseAndCheckOptions{},
@@ -98,6 +101,7 @@ func TestDictionaryUpdate(t *testing.T) {
 	accessModifiers := []string{
 		"pub",
 		"access(account)",
+		"access(contract)",
 	}
 
 	declarationKinds := []string{
@@ -123,18 +127,20 @@ func TestDictionaryUpdate(t *testing.T) {
 		t.Run(testName, func(t *testing.T) {
 			_, err := ParseAndCheckWithOptions(t,
 				fmt.Sprintf(`
-				pub %s Foo {
-					%s %s x : {Int: Int}
-			
-					init() {
-					self.x = {0:3};
+				pub contract C {
+					pub %s Foo {
+						%s %s x : {Int: Int}
+				
+						init() {
+						self.x = {0:3};
+						}
 					}
-				}
 
-				pub fun bar() {
-					let foo %s Foo()
-					foo.x[0] = 3
-					%s
+					pub fun bar() {
+						let foo %s Foo()
+						foo.x[0] = 3
+						%s
+					}
 				}
 			`, valueKind, access, declaration, assignmentOp, destroyStatement),
 				ParseAndCheckOptions{},
@@ -163,6 +169,7 @@ func TestNestedArrayUpdate(t *testing.T) {
 	accessModifiers := []string{
 		"pub",
 		"access(account)",
+		"access(contract)",
 	}
 
 	declarationKinds := []string{
@@ -176,24 +183,26 @@ func TestNestedArrayUpdate(t *testing.T) {
 		t.Run(testName, func(t *testing.T) {
 			_, err := ParseAndCheckWithOptions(t,
 				fmt.Sprintf(`
-				pub struct Bar {
-					pub let foo: Foo
-					init() {
-						self.foo = Foo()
+				pub contract C {
+					pub struct Bar {
+						pub let foo: Foo
+						init() {
+							self.foo = Foo()
+						}
 					}
-				}
 
-				pub struct Foo {
-					%s %s x : [Int]
-			
-					init() {
-						self.x = [3]
+					pub struct Foo {
+						%s %s x : [Int]
+				
+						init() {
+							self.x = [3]
+						}
 					}
-				}
 
-				pub fun bar() {
-					let bar = Bar()
-					bar.foo.x[0] = 3
+					pub fun bar() {
+						let bar = Bar()
+						bar.foo.x[0] = 3
+					}
 				}
 			`, access, declaration),
 				ParseAndCheckOptions{},
@@ -219,6 +228,7 @@ func TestNestedDictionaryUpdate(t *testing.T) {
 	accessModifiers := []string{
 		"pub",
 		"access(account)",
+		"access(contract)",
 	}
 
 	declarationKinds := []string{
@@ -232,24 +242,26 @@ func TestNestedDictionaryUpdate(t *testing.T) {
 		t.Run(testName, func(t *testing.T) {
 			_, err := ParseAndCheckWithOptions(t,
 				fmt.Sprintf(`
-				pub struct Bar {
-					pub let foo: Foo
-					init() {
-						self.foo = Foo()
+				pub contract C {
+					pub struct Bar {
+						pub let foo: Foo
+						init() {
+							self.foo = Foo()
+						}
 					}
-				}
 
-				pub struct Foo {
-					%s %s x : {Int: Int}
-			
-					init() {
-						self.x = {3:3}
+					pub struct Foo {
+						%s %s x : {Int: Int}
+				
+						init() {
+							self.x = {3:3}
+						}
 					}
-				}
 
-				pub fun bar() {
-					let bar = Bar()
-					bar.foo.x[0] = 3
+					pub fun bar() {
+						let bar = Bar()
+						bar.foo.x[0] = 3
+					}
 				}
 			`, access, declaration),
 				ParseAndCheckOptions{},
