@@ -313,9 +313,9 @@ func (d *duplicateCaseChecker) VisitIdentifierExpression(otherExpr *ast.Identifi
 	return expr.Identifier.Identifier == otherExpr.Identifier.Identifier
 }
 
-func (d *duplicateCaseChecker) VisitInvocationExpression(otherExpr *ast.InvocationExpression) ast.Repr {
+func (d *duplicateCaseChecker) VisitInvocationExpression(_ *ast.InvocationExpression) ast.Repr {
 	// Invocations can be stateful. Thus, it's not possible to determine if
-	// calling the same function in two cases would produce the same results.
+	// invoking the same function in two cases would produce the same results.
 	return false
 }
 
@@ -372,8 +372,9 @@ func (d *duplicateCaseChecker) VisitBinaryExpression(otherExpr *ast.BinaryExpres
 		expr.Operation == otherExpr.Operation
 }
 
-func (d *duplicateCaseChecker) VisitFunctionExpression(otherExpr *ast.FunctionExpression) ast.Repr {
-	panic("implement me")
+func (d *duplicateCaseChecker) VisitFunctionExpression(_ *ast.FunctionExpression) ast.Repr {
+	// Not a valid expression for switch-case. Hence, skip.
+	return false
 }
 
 func (d *duplicateCaseChecker) VisitStringExpression(otherExpr *ast.StringExpression) ast.Repr {
@@ -401,22 +402,47 @@ func (d *duplicateCaseChecker) VisitCastingExpression(otherExpr *ast.CastingExpr
 	return typeAnnot.Equal(otherTypeAnnot)
 }
 
-func (d *duplicateCaseChecker) VisitCreateExpression(otherExpr *ast.CreateExpression) ast.Repr {
-	panic("implement me")
+func (d *duplicateCaseChecker) VisitCreateExpression(_ *ast.CreateExpression) ast.Repr {
+	// Not a valid expression for switch-case. Hence, skip.
+	return false
 }
 
-func (d *duplicateCaseChecker) VisitDestroyExpression(otherExpr *ast.DestroyExpression) ast.Repr {
-	panic("implement me")
+func (d *duplicateCaseChecker) VisitDestroyExpression(_ *ast.DestroyExpression) ast.Repr {
+	// Not a valid expression for switch-case. Hence, skip.
+	return false
 }
 
 func (d *duplicateCaseChecker) VisitReferenceExpression(otherExpr *ast.ReferenceExpression) ast.Repr {
-	panic("implement me")
+	expr, ok := d.expr.(*ast.ReferenceExpression)
+	if !ok {
+		return false
+	}
+
+	if !d.isDuplicate(expr.Expression, otherExpr.Expression) {
+		return false
+	}
+
+	targetType := d.checker.ConvertType(expr.Type)
+	otherTargetType := d.checker.ConvertType(otherExpr.Type)
+
+	return targetType.Equal(otherTargetType)
 }
 
 func (d *duplicateCaseChecker) VisitForceExpression(otherExpr *ast.ForceExpression) ast.Repr {
-	panic("implement me")
+	expr, ok := d.expr.(*ast.ForceExpression)
+	if !ok {
+		return false
+	}
+
+	return d.isDuplicate(expr.Expression, otherExpr.Expression)
 }
 
 func (d *duplicateCaseChecker) VisitPathExpression(otherExpr *ast.PathExpression) ast.Repr {
-	panic("implement me")
+	expr, ok := d.expr.(*ast.PathExpression)
+	if !ok {
+		return false
+	}
+
+	return expr.Domain == otherExpr.Domain &&
+		expr.Identifier.Identifier == otherExpr.Identifier.Identifier
 }

@@ -389,7 +389,7 @@ func TestCheckSwitchStatementDuplicateCases(t *testing.T) {
 		assert.IsType(t, &sema.DuplicateSwitchCaseError{}, errs[1])
 	})
 
-	t.Run("all literals", func(t *testing.T) {
+	t.Run("simple literals", func(t *testing.T) {
 		type test struct {
 			name string
 			expr string
@@ -409,24 +409,8 @@ func TestCheckSwitchStatementDuplicateCases(t *testing.T) {
 				expr: "4.7",
 			},
 			{
-				name: "identifier",
-				expr: "a",
-			},
-			{
 				name: "boolean",
 				expr: "true",
-			},
-			{
-				name: "nil",
-				expr: "nil",
-			},
-			{
-				name: "array",
-				expr: "[1, 2, 3]",
-			},
-			{
-				name: "dictionary",
-				expr: "{1: \"foo\", 2: \"bar\"}",
 			},
 		}
 
@@ -451,6 +435,27 @@ func TestCheckSwitchStatementDuplicateCases(t *testing.T) {
 				assert.IsType(t, &sema.DuplicateSwitchCaseError{}, errs[0])
 			})
 		}
+	})
+
+	t.Run("identifier", func(t *testing.T) {
+		_, err := ParseAndCheck(t, `
+          fun test(): Int {
+              let x = 5
+              let y = 5
+              switch 4 {
+                  case x:
+                      return 1
+                  case x:
+                      return 2
+                  case y:  // different identifier
+                      return 3
+              }
+              return -1
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.DuplicateSwitchCaseError{}, errs[0])
 	})
 
 	t.Run("member access", func(t *testing.T) {
@@ -595,5 +600,110 @@ func TestCheckSwitchStatementDuplicateCases(t *testing.T) {
 
 		errs := ExpectCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.DuplicateSwitchCaseError{}, errs[0])
+	})
+
+	t.Run("create", func(t *testing.T) {
+		_, err := ParseAndCheck(t, `
+          fun test() {
+              let x <- create Foo()
+              switch x {
+              }
+              destroy x
+          }
+
+          resource Foo {}
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.NotEquatableTypeError{}, errs[0])
+	})
+
+	t.Run("destroy", func(t *testing.T) {
+		_, err := ParseAndCheck(t, `
+          fun test() {
+              let x <- create Foo()
+              switch destroy x {
+              }
+          }
+
+          resource Foo {}
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.NotEquatableTypeError{}, errs[0])
+	})
+
+	t.Run("reference", func(t *testing.T) {
+		_, err := ParseAndCheck(t, `
+          fun test(): Int {
+              let x: Int = 5
+              let y: Int = 7
+              switch (&x as &Int) {
+                  case &x as &Int:
+                      return 1
+                  case &x as &Int:
+                      return 2
+                  case &y as &Int:  // different expr
+                      return 2
+              }
+              return -1
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.DuplicateSwitchCaseError{}, errs[0])
+	})
+
+	t.Run("force", func(t *testing.T) {
+		_, err := ParseAndCheck(t, `
+          fun test(): Int {
+              let x: Int? = 5
+              let y: Int? = 5
+              switch 4 {
+                  case x!:
+                      return 1
+                  case x!:
+                      return 2
+                  case y!:    // different expr
+                      return 3
+              }
+              return -1
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.DuplicateSwitchCaseError{}, errs[0])
+	})
+
+	t.Run("path", func(t *testing.T) {
+		_, err := ParseAndCheck(t, `
+          fun test() {
+              switch /public/somepath {
+              }
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.NotEquatableTypeError{}, errs[0])
+	})
+
+	t.Run("invocation", func(t *testing.T) {
+		_, err := ParseAndCheck(t, `
+          fun test(): Int {
+              switch "hello" {
+                  case foo():
+                      return 1
+                  case foo():
+                      return 2
+              }
+              return -1
+          }
+
+          fun foo(): String {
+              return "hello"
+          }
+        `)
+
+		assert.NoError(t, err)
 	})
 }
