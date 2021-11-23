@@ -1686,7 +1686,7 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
 
 	container := []byte(`
       pub resource Container {
-        pub let values: [Int]
+        pub(set) var values: [Int]
 
         init() {
           self.values = []

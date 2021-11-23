@@ -395,7 +395,7 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
             }
 
             resource R1 {
-                var r2s: @{Int: R2}
+                pub(set) var r2s: @{Int: R2}
 
                 init() {
                     self.r2s <- {}

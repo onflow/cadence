@@ -58,7 +58,7 @@ const resourceDictionaryContract = `
 
      pub resource C {
 
-         pub let rs: @{String: R}
+         pub(set) var rs: @{String: R}
 
          init() {
              self.rs <- {}
@@ -410,7 +410,7 @@ func TestRuntimeResourceDictionaryValues_Nested(t *testing.T) {
 
          pub resource C2 {
 
-             pub let rs: @{String: R}
+             pub(set) var rs: @{String: R}
 
              init() {
                  self.rs <- {}
@@ -431,7 +431,7 @@ func TestRuntimeResourceDictionaryValues_Nested(t *testing.T) {
 
          pub resource C {
 
-             pub let c2s: @{String: C2}
+             pub(set) var c2s: @{String: C2}
 
              init() {
                  self.c2s <- {}
@@ -602,7 +602,7 @@ func TestRuntimeResourceDictionaryValues_DictionaryTransfer(t *testing.T) {
 
          pub resource C {
 
-             pub let rs: @{String: R}
+             pub(set) var rs: @{String: R}
 
              init() {
                  self.rs <- {}

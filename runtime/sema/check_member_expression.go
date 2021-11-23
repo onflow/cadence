@@ -347,7 +347,8 @@ func (checker *Checker) isWriteableMember(member *Member) bool {
 // in the current location of the checker
 //
 func (checker *Checker) isMutatableMember(member *Member) bool {
-	return checker.containerTypes[member.ContainerType]
+	return checker.isWriteableAccess(member.Access) ||
+		checker.containerTypes[member.ContainerType]
 }
 
 // containingContractKindedType returns the containing contract-kinded type

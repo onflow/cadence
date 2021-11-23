@@ -22,8 +22,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/onflow/cadence/runtime/sema"
 	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 func TestArrayUpdateIndexAccess(t *testing.T) {
@@ -543,4 +544,151 @@ func TestArrayUpdateMethodCall(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestDictionaryUpdateMethodCall(t *testing.T) {
+
+	t.Parallel()
+
+	accessModifiers := []string{
+		"pub",
+		"access(account)",
+		"access(contract)",
+	}
+
+	declarationKinds := []string{
+		"let",
+		"var",
+	}
+
+	valueKinds := []string{
+		"struct",
+		"resource",
+	}
+
+	type MethodCall = struct {
+		Mutating bool
+		Code     string
+		Name     string
+	}
+
+	memberExpressions := []MethodCall{
+		{Mutating: true, Code: ".insert(key:3, 3)", Name: "insert"},
+		{Mutating: false, Code: ".length", Name: "length"},
+		{Mutating: false, Code: ".keys", Name: "keys"},
+		{Mutating: false, Code: ".values", Name: "values"},
+		{Mutating: false, Code: ".containsKey(3)", Name: "containsKey"},
+		{Mutating: true, Code: ".remove(key: 0)", Name: "remove"},
+	}
+
+	runTest := func(access string, declaration string, valueKind string, member MethodCall) {
+		testName := fmt.Sprintf("%s %s %s %s", access, valueKind, declaration, member.Name)
+
+		assignmentOp := "="
+		var destroyStatement string
+		if valueKind == "resource" {
+			assignmentOp = "<- create"
+			destroyStatement = "destroy foo"
+		}
+
+		t.Run(testName, func(t *testing.T) {
+			_, err := ParseAndCheckWithOptions(t,
+				fmt.Sprintf(`
+				pub contract C {
+					pub %s Foo {
+						%s %s x : {Int: Int}
+				
+						init() {
+						self.x = {3:3};
+						}
+					}
+
+					pub fun bar() {
+						let foo %s Foo()
+						foo.x%s
+						%s
+					}
+				}
+			`, valueKind, access, declaration, assignmentOp, member.Code, destroyStatement),
+				ParseAndCheckOptions{},
+			)
+
+			if member.Mutating {
+				errs := ExpectCheckerErrors(t, err, 1)
+				var externalMutationError *sema.ExternalMutationError
+				require.ErrorAs(t, errs[0], &externalMutationError)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+
+	for _, access := range accessModifiers {
+		for _, kind := range declarationKinds {
+			for _, value := range valueKinds {
+				for _, member := range memberExpressions {
+					runTest(access, kind, value, member)
+				}
+			}
+		}
+	}
+}
+
+func TestPubSetAccessModifier(t *testing.T) {
+	t.Run("pub set dict", func(t *testing.T) {
+		_, err := ParseAndCheckWithOptions(t,
+			`
+			pub contract C {
+				pub struct Foo {
+					pub(set) var x: {Int: Int}
+			
+					init() {
+						self.x = {3:3};
+					}
+				}
+
+				pub fun bar() {
+					let foo = Foo()
+					foo.x[0] = 3
+				}
+			}
+		`,
+			ParseAndCheckOptions{},
+		)
+		require.NoError(t, err)
+
+	})
+}
+
+func TestPubSetNestedAccessModifier(t *testing.T) {
+	t.Run("pub set nested", func(t *testing.T) {
+		_, err := ParseAndCheckWithOptions(t,
+			`
+			pub contract C {
+				pub struct Bar {
+					pub let foo: Foo
+					init() { 
+					   self.foo = Foo()
+					}
+				}
+				
+				pub struct Foo {
+					pub(set) var x : [Int]
+				
+					init() {
+					   self.x = [3]
+					}
+				}
+				
+				pub fun bar() {
+					let bar = Bar()
+					bar.foo.x[0] = 3
+				}
+			}
+		`,
+			ParseAndCheckOptions{},
+		)
+		require.NoError(t, err)
+
+	})
 }

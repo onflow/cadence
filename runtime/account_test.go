@@ -1289,24 +1289,16 @@ func TestRuntimePublicKey(t *testing.T) {
 			storage: storage,
 		}
 
-		value, err := executeScript(script, runtimeInterface)
-		require.NoError(t, err)
+		_, err := executeScript(script, runtimeInterface)
 
-		expected := cadence.Struct{
-			StructType: PublicKeyType,
-			Fields: []cadence.Value{
-				// Public key (bytes)
-				newBytesValue([]byte{1, 2}),
+		require.Error(t, err)
 
-				// Signature Algo
-				newSignAlgoValue(sema.SignatureAlgorithmECDSA_P256),
+		var checkerErr *sema.CheckerError
+		require.ErrorAs(t, err, &checkerErr)
+		errs := checkerErr.Errors
+		require.Len(t, errs, 1)
 
-				// valid
-				cadence.Bool(false),
-			},
-		}
-
-		assert.Equal(t, expected, value)
+		assert.IsType(t, &sema.ExternalMutationError{}, errs[0])
 	})
 
 }
@@ -1368,7 +1360,6 @@ func TestAuthAccountContracts(t *testing.T) {
             transaction {
                 prepare(signer: AuthAccount) {
                     signer.contracts.names[0] = "baz"
-                    assert(signer.contracts.names[0] == "foo")
                 }
             }
         `)
@@ -1393,8 +1384,14 @@ func TestAuthAccountContracts(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
+		require.Error(t, err)
 
-		require.NoError(t, err)
+		var checkerErr *sema.CheckerError
+		require.ErrorAs(t, err, &checkerErr)
+		errs := checkerErr.Errors
+		require.Len(t, errs, 1)
+
+		assert.IsType(t, &sema.ExternalMutationError{}, errs[0])
 	})
 }
 
@@ -1571,7 +1568,7 @@ func TestPublicAccountContracts(t *testing.T) {
 
 		nextTransactionLocation := newTransactionLocationGenerator()
 
-		result, err := rt.ExecuteScript(
+		_, err := rt.ExecuteScript(
 			Script{
 				Source: script,
 			},
@@ -1581,14 +1578,58 @@ func TestPublicAccountContracts(t *testing.T) {
 			},
 		)
 
-		require.NoError(t, err)
+		require.Error(t, err)
 
-		require.IsType(t, cadence.Array{}, result)
-		array := result.(cadence.Array)
+		var checkerErr *sema.CheckerError
+		require.ErrorAs(t, err, &checkerErr)
+		errs := checkerErr.Errors
+		require.Len(t, errs, 1)
 
-		require.Len(t, array.Values, 2)
-		assert.Equal(t, cadence.String("foo"), array.Values[0])
-		assert.Equal(t, cadence.String("bar"), array.Values[1])
+		assert.IsType(t, &sema.ExternalMutationError{}, errs[0])
+	})
+
+	t.Run("append names", func(t *testing.T) {
+		t.Parallel()
+
+		rt := newTestInterpreterRuntime()
+
+		script := []byte(`
+            pub fun main(): [String] {
+                let acc = getAccount(0x02)
+                acc.contracts.names.append("baz")
+                return acc.contracts.names
+            }
+        `)
+
+		runtimeInterface := &testRuntimeInterface{
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{{42}}, nil
+			},
+			getAccountContractNames: func(_ Address) ([]string, error) {
+				return []string{"foo", "bar"}, nil
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		_, err := rt.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.Error(t, err)
+
+		var checkerErr *sema.CheckerError
+		require.ErrorAs(t, err, &checkerErr)
+		errs := checkerErr.Errors
+		require.Len(t, errs, 1)
+
+		assert.IsType(t, &sema.ExternalMutationError{}, errs[0])
 	})
 }
 
