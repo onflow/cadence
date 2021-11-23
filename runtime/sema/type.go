@@ -4707,6 +4707,11 @@ func (t *AddressType) GetMembers() map[string]MemberResolver {
 //
 // Types are subtypes of themselves.
 //
+// NOTE: This method can be used to check the assignability of `subType` to `superType`.
+// However, to check if a type *strictly* belongs to a certain category, then
+// consider using `IsSameTypeKind` method. e.g: "Is type `T` an Integer type?". Using
+// this method for the later use-case may produce incorrect results.
+//
 func IsSubType(subType Type, superType Type) bool {
 
 	if subType == nil {
@@ -4724,8 +4729,8 @@ func IsSubType(subType Type, superType Type) bool {
 // same kind as the supertype.
 //
 // e.g: 'Never' type is a subtype of 'Integer', but not of the
-// same kind as 'Int'. Whereas, 'Int8' is both a subtype
-// as well as of same kind as 'Integer'.
+// same kind as 'Integer'. Whereas, 'Int8' is both a subtype
+// and also of same kind as 'Integer'.
 //
 func IsSameTypeKind(subType Type, superType Type) bool {
 
