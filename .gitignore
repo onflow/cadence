@@ -43,3 +43,5 @@ runtime/cmd/parse/parse
 runtime/cmd/parse/parse.wasm
 languageserver/cmd/languageserver/languageserver
 languageserver/cmd/languageserver/languageserver.wasm
+tools/golangci-lint/golangci-lint
+tools/maprangecheck/maprangecheck.so

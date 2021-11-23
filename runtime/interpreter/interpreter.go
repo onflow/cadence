@@ -173,7 +173,7 @@ type PublicKeyValidationHandlerFunc func(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
 	publicKey *CompositeValue,
-) BoolValue
+) (BoolValue, error)
 
 // VerifyBLSPoPHandlerFunc is a function that verifies a BLS proof of possession
 type VerifyBLSPoPHandlerFunc func(
@@ -4092,7 +4092,7 @@ func (interpreter *Interpreter) getNativeCompositeType(qualifiedIdentifier strin
 
 func (interpreter *Interpreter) getInterfaceType(location common.Location, qualifiedIdentifier string) (*sema.InterfaceType, error) {
 	if location == nil {
-		return nil, &InterfaceMissingLocationError{QualifiedIdentifier: qualifiedIdentifier}
+		return nil, InterfaceMissingLocationError{QualifiedIdentifier: qualifiedIdentifier}
 	}
 
 	typeID := location.TypeID(qualifiedIdentifier)

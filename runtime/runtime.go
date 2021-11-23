@@ -766,6 +766,39 @@ func wrapPanic(f func()) {
 	f()
 }
 
+// Executes `f`. On panic, the panic is returned as an error.
+// Wraps any non-`error` panics so panic is never propagated.
+func panicToError(f func()) (returnedError error) {
+	defer func() {
+		if r := recover(); r != nil {
+			var ok bool
+			err, ok := r.(error)
+			if ok {
+				returnedError = err
+			} else {
+				returnedError = fmt.Errorf("%s", r)
+			}
+		}
+	}()
+	f()
+	return nil
+}
+
+// Executes `f`. On panic, the panic is returned as an error.
+// Exception: panics when error is `goRuntime.Error` or `ExternalError`.
+func userPanicToError(f func()) (returnedError error) {
+	err := panicToError(f)
+
+	switch err := err.(type) {
+	case goRuntime.Error, interpreter.ExternalError:
+		panic(err)
+	default:
+		returnedError = err
+	}
+
+	return err
+}
+
 func (r *interpreterRuntime) transactionExecutionFunction(
 	parameters []*sema.Parameter,
 	arguments [][]byte,
@@ -842,7 +875,19 @@ func validateArgumentParams(
 			}
 		}
 
-		arg, err := importValue(inter, value, parameterType)
+		var arg interpreter.Value
+		panicError := userPanicToError(func() {
+			// if importing an invalid public key, this call panics
+			arg, err = importValue(inter, value, parameterType)
+		})
+
+		if panicError != nil {
+			return nil, &InvalidEntryPointArgumentError{
+				Index: i,
+				Err:   panicError,
+			}
+		}
+
 		if err != nil {
 			return nil, &InvalidEntryPointArgumentError{
 				Index: i,
@@ -1152,7 +1197,7 @@ func (r *interpreterRuntime) newInterpreter(
 		inter *interpreter.Interpreter,
 		getLocationRange func() interpreter.LocationRange,
 		publicKey *interpreter.CompositeValue,
-	) interpreter.BoolValue {
+	) (interpreter.BoolValue, error) {
 		return validatePublicKey(
 			inter,
 			getLocationRange,
@@ -3119,7 +3164,7 @@ func (r *interpreterRuntime) newAccountKeysGetFunction(
 					inter,
 					invocation.GetLocationRange,
 					accountKey,
-					inter.PublicKeyValidationHandler,
+					alwaysValidates, // key from FVM has already been validated
 				),
 			)
 		},
@@ -3172,7 +3217,7 @@ func (r *interpreterRuntime) newAccountKeysRevokeFunction(
 					inter,
 					invocation.GetLocationRange,
 					accountKey,
-					inter.PublicKeyValidationHandler,
+					alwaysValidates, // key from FVM has already been validated
 				),
 			)
 		},
@@ -3274,19 +3319,9 @@ func NewPublicKeyFromValue(
 		)
 	}
 
-	// `valid` and `validated` fields
-	var valid, validated bool
-	validField := publicKey.GetMember(inter, getLocationRange, sema.PublicKeyIsValidField)
-	validated = validField != nil
-	if validated {
-		valid = bool(validField.(interpreter.BoolValue))
-	}
-
 	return &PublicKey{
 		PublicKey: byteArray,
 		SignAlgo:  SignatureAlgorithm(signAlgoRawValue.ToInt()),
-		IsValid:   valid,
-		Validated: validated,
 	}, nil
 }
 
@@ -3311,12 +3346,7 @@ func NewPublicKeyValue(
 			inter *interpreter.Interpreter,
 			getLocationRange func() interpreter.LocationRange,
 			publicKeyValue *interpreter.CompositeValue,
-		) interpreter.BoolValue {
-			// If the public key is already validated, avoid re-validating, and return the cached result.
-			if publicKey.Validated {
-				return interpreter.BoolValue(publicKey.IsValid)
-			}
-
+		) (interpreter.BoolValue, error) {
 			return validatePublicKey(inter, getLocationRange, publicKeyValue)
 		},
 	)
@@ -3364,11 +3394,10 @@ func validatePublicKey(
 	getLocationRange func() interpreter.LocationRange,
 	publicKeyValue *interpreter.CompositeValue,
 	runtimeInterface Interface,
-) interpreter.BoolValue {
-
+) (interpreter.BoolValue, error) {
 	publicKey, err := NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
 	if err != nil {
-		return false
+		return false, err
 	}
 
 	var valid bool
@@ -3376,11 +3405,12 @@ func validatePublicKey(
 		valid, err = runtimeInterface.ValidatePublicKey(publicKey)
 	})
 
+	// if there is an error here then it is NOT a user error, so panic
 	if err != nil {
 		panic(err)
 	}
 
-	return interpreter.BoolValue(valid)
+	return interpreter.BoolValue(valid), nil
 }
 
 func verifyBLSPOP(
@@ -3520,4 +3550,12 @@ func hash(
 	}
 
 	return interpreter.ByteSliceToByteArrayValue(inter, result)
+}
+
+func alwaysValidates(
+	_ *interpreter.Interpreter,
+	_ func() interpreter.LocationRange,
+	_ *interpreter.CompositeValue,
+) (interpreter.BoolValue, error) {
+	return true, nil
 }

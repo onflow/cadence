@@ -437,7 +437,7 @@ func (i *testRuntimeInterface) ImplementationDebugLog(message string) error {
 
 func (i *testRuntimeInterface) ValidatePublicKey(key *PublicKey) (bool, error) {
 	if i.validatePublicKey == nil {
-		return false, nil
+		return true, nil
 	}
 
 	return i.validatePublicKey(key)

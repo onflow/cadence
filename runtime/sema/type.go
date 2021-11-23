@@ -6117,7 +6117,6 @@ var AccountKeyType = func() *CompositeType {
 const PublicKeyTypeName = "PublicKey"
 const PublicKeyPublicKeyField = "publicKey"
 const PublicKeySignAlgoField = "signatureAlgorithm"
-const PublicKeyIsValidField = "isValid"
 const PublicKeyVerifyFunction = "verify"
 const PublicKeyVerifyPoPFunction = "verifyPoP"
 
@@ -6127,10 +6126,6 @@ The public key
 
 const publicKeySignAlgoFieldDocString = `
 The signature algorithm to be used with the key
-`
-
-const publicKeyIsValidFieldDocString = `
-Flag indicating whether the key is valid
 `
 
 const publicKeyVerifyFunctionDocString = `
@@ -6166,12 +6161,6 @@ var PublicKeyType = func() *CompositeType {
 			PublicKeySignAlgoField,
 			SignatureAlgorithmType,
 			publicKeySignAlgoFieldDocString,
-		),
-		NewPublicConstantFieldMember(
-			publicKeyType,
-			PublicKeyIsValidField,
-			BoolType,
-			publicKeyIsValidFieldDocString,
 		),
 		NewPublicFunctionMember(
 			publicKeyType,

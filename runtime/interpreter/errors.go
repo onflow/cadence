@@ -559,7 +559,7 @@ type InterfaceMissingLocationError struct {
 	QualifiedIdentifier string
 }
 
-func (e *InterfaceMissingLocationError) Error() string {
+func (e InterfaceMissingLocationError) Error() string {
 	return fmt.Sprintf(
 		"tried to look up interface %s without a location",
 		e.QualifiedIdentifier,
@@ -590,4 +590,19 @@ func (e InvalidOperandsError) Error() string {
 		e.LeftType.String(),
 		e.RightType.String(),
 	)
+}
+
+// InvalidPublicKeyError is reported during PublicKey creation, if the PublicKey is invalid.
+type InvalidPublicKeyError struct {
+	PublicKey *ArrayValue
+	Err       error
+	LocationRange
+}
+
+func (e InvalidPublicKeyError) Error() string {
+	if e.Err == nil {
+		return fmt.Sprintf("invalid public key %s", e.PublicKey)
+	} else {
+		return fmt.Sprintf("invalid public key %s with error %s", e.PublicKey, e.Err)
+	}
 }
