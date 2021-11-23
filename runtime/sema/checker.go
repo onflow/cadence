@@ -601,9 +601,8 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 	case *ast.FixedPointExpression:
 		unwrappedTargetType := UnwrapOptionalType(targetType)
 
-		valueTypeOK := CheckFixedPointLiteral(typedExpression, valueType, checker.report)
-
 		if IsSameTypeKind(unwrappedTargetType, FixedPointType) {
+			valueTypeOK := CheckFixedPointLiteral(typedExpression, valueType, checker.report)
 			if valueTypeOK {
 				CheckFixedPointLiteral(typedExpression, unwrappedTargetType, checker.report)
 			}
