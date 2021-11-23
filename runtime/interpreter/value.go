@@ -10429,7 +10429,7 @@ func (v *StorageReferenceValue) Clone(_ *Interpreter) Value {
 	return &StorageReferenceValue{
 		Authorized:           v.Authorized,
 		TargetStorageAddress: v.TargetStorageAddress,
-		TargetKey:            v.TargetKey,
+		TargetPath:           v.TargetPath,
 		BorrowedType:         v.BorrowedType,
 	}
 }
