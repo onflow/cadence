@@ -92,6 +92,7 @@ func TestRuntimeCrypto_verify(t *testing.T) {
 			return true, nil
 		},
 	}
+	addPublicKeyValidation(runtimeInterface, nil)
 
 	result, err := runtime.ExecuteScript(
 		Script{
@@ -494,6 +495,7 @@ func TestBLSVerifyPoP(t *testing.T) {
 			return true, nil
 		},
 	}
+	addPublicKeyValidation(runtimeInterface, nil)
 
 	result, err := runtime.ExecuteScript(
 		Script{
@@ -680,6 +682,7 @@ func TestAggregateBLSPublicKeys(t *testing.T) {
 			return &PublicKey{PublicKey: ret, SignAlgo: SignatureAlgorithmBLS_BLS12_381}, nil
 		},
 	}
+	addPublicKeyValidation(runtimeInterface, nil)
 
 	result, err := runtime.ExecuteScript(
 		Script{

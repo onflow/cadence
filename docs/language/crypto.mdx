@@ -96,7 +96,6 @@ pub enum SignatureAlgorithm: UInt8 {
 struct PublicKey {
     let publicKey: [UInt8]
     let signatureAlgorithm: SignatureAlgorithm
-    let isValid: Bool
 
     /// Verifies a signature under the given tag, data and public key.
     /// It uses the given hash algorithm to hash the tag and data.
@@ -146,8 +145,7 @@ publicKey.publicKey = []                                            // Not allow
 publicKey.publicKey[2] = 4      // No effect
 ```
 
-The validity of a public key can be checked using the `isValid` field.
-Verifications performed with an invalid public key (using `verify()` method) will always fail.
+Invalid public keys cannot be constructed so public keys are always valid.
 
 ### Signature verification
 

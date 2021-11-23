@@ -171,7 +171,7 @@ type testRuntimeInterface struct {
 	getStorageCapacity         func(_ Address) (uint64, error)
 	programs                   map[common.LocationID]*interpreter.Program
 	implementationDebugLog     func(message string) error
-	validatePublicKey          func(publicKey *PublicKey) (bool, error)
+	validatePublicKey          func(publicKey *PublicKey) error
 	bLSVerifyPOP               func(pk *PublicKey, s []byte) (bool, error)
 	aggregateBLSSignatures     func(sigs [][]byte) ([]byte, error)
 	aggregateBLSPublicKeys     func(keys []*PublicKey) (*PublicKey, error)
@@ -418,9 +418,9 @@ func (i *testRuntimeInterface) ImplementationDebugLog(message string) error {
 	return i.implementationDebugLog(message)
 }
 
-func (i *testRuntimeInterface) ValidatePublicKey(key *PublicKey) (bool, error) {
+func (i *testRuntimeInterface) ValidatePublicKey(key *PublicKey) error {
 	if i.validatePublicKey == nil {
-		return false, nil
+		return errors.New("mock defaults to public key validation failure")
 	}
 
 	return i.validatePublicKey(key)
