@@ -226,19 +226,19 @@ func (i *testRuntimeInterface) SetProgram(location Location, program *interprete
 }
 
 func (i *testRuntimeInterface) ValueExists(owner, key []byte) (exists bool, err error) {
-	return i.storage.valueExists(owner, key)
+	return i.storage.ValueExists(owner, key)
 }
 
 func (i *testRuntimeInterface) GetValue(owner, key []byte) (value []byte, err error) {
-	return i.storage.getValue(owner, key)
+	return i.storage.GetValue(owner, key)
 }
 
 func (i *testRuntimeInterface) SetValue(owner, key, value []byte) (err error) {
-	return i.storage.setValue(owner, key, value)
+	return i.storage.SetValue(owner, key, value)
 }
 
 func (i *testRuntimeInterface) AllocateStorageIndex(owner []byte) (atree.StorageIndex, error) {
-	return i.storage.allocateStorageIndex(owner)
+	return i.storage.AllocateStorageIndex(owner)
 }
 
 func (i *testRuntimeInterface) CreateAccount(payer Address) (address Address, err error) {
