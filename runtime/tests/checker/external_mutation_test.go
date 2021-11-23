@@ -26,7 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestArrayUpdate(t *testing.T) {
+func TestArrayUpdateIndexAccess(t *testing.T) {
 
 	t.Parallel()
 
@@ -91,10 +91,9 @@ func TestArrayUpdate(t *testing.T) {
 			}
 		}
 	}
-
 }
 
-func TestDictionaryUpdate(t *testing.T) {
+func TestDictionaryUpdateIndexAccess(t *testing.T) {
 
 	t.Parallel()
 
@@ -159,10 +158,9 @@ func TestDictionaryUpdate(t *testing.T) {
 			}
 		}
 	}
-
 }
 
-func TestNestedArrayUpdate(t *testing.T) {
+func TestNestedArrayUpdateIndexAccess(t *testing.T) {
 
 	t.Parallel()
 
@@ -221,7 +219,7 @@ func TestNestedArrayUpdate(t *testing.T) {
 	}
 }
 
-func TestNestedDictionaryUpdate(t *testing.T) {
+func TestNestedDictionaryUpdateIndexAccess(t *testing.T) {
 
 	t.Parallel()
 
@@ -280,7 +278,7 @@ func TestNestedDictionaryUpdate(t *testing.T) {
 	}
 }
 
-func TestMutateContract(t *testing.T) {
+func TestMutateContractIndexAccess(t *testing.T) {
 
 	t.Parallel()
 
@@ -338,7 +336,7 @@ func TestMutateContract(t *testing.T) {
 	}
 }
 
-func TestContractNestedStruct(t *testing.T) {
+func TestContractNestedStructIndexAccess(t *testing.T) {
 
 	t.Parallel()
 
@@ -403,7 +401,7 @@ func TestContractNestedStruct(t *testing.T) {
 	}
 }
 
-func TestContractStructInit(t *testing.T) {
+func TestContractStructInitIndexAccess(t *testing.T) {
 
 	t.Parallel()
 
