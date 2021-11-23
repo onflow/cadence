@@ -304,7 +304,11 @@ func (s *Storage) Commit(inter *interpreter.Interpreter, commitContractUpdates b
 
 	// Write account storage entries in order
 
-	for _, write := range writes {
+	// NOTE: Important: do not use a for-range loop,
+	// as the introduced variable will be overridden on each loop iteration,
+	// leading to the slices created in the loop body being backed by the same data
+	for i := 0; i < len(writes); i++ {
+		write := writes[i]
 
 		var err error
 		wrapPanic(func() {
