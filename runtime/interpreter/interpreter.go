@@ -3431,16 +3431,17 @@ func (interpreter *Interpreter) authAccountTypeAtFunction(addressValue AddressVa
 				return value
 
 			case *SomeValue:
-				return TypeValue{
-					Type: value.Value.StaticType(),
-				}
+				return NewSomeValueNonCopying(
+					TypeValue{
+						Type: value.Value.StaticType(),
+					},
+				)
 			default:
 				panic(errors.NewUnreachableError())
 			}
 		},
 
-		// same as sema.AuthAccountTypeCopyFunctionType
-		sema.AuthAccountTypeLoadFunctionType,
+		sema.AuthAccountTypeTypeAtFunctionType,
 	)
 }
 
