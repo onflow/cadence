@@ -731,6 +731,37 @@ func wrapPanic(f func()) {
 	f()
 }
 
+// Executes `f`. On panic, the panic is returned as an error.
+// Wraps any non-`error` panics so panic is never propagated.
+func panicToError(f func()) (returnedError error) {
+	defer func() {
+		if r := recover(); r != nil {
+			var ok bool
+			err, ok := r.(error)
+			if ok {
+				returnedError = err
+			} else {
+				returnedError = fmt.Errorf("%s", r)
+			}
+		}
+	}()
+	f()
+	return nil
+}
+
+// Executes `f`. On panic, the panic is returned as an error.
+// Exception: panics when error is `goRuntime.Error` or `ExternalError`.
+func userPanicToError(f func()) error {
+	err := panicToError(f)
+
+	switch err := err.(type) {
+	case goRuntime.Error, interpreter.ExternalError:
+		panic(err)
+	default:
+		return err
+	}
+}
+
 func (r *interpreterRuntime) transactionExecutionFunction(
 	parameters []*sema.Parameter,
 	arguments [][]byte,
@@ -807,7 +838,19 @@ func validateArgumentParams(
 			}
 		}
 
-		arg, err := importValue(inter, value, parameterType)
+		var arg interpreter.Value
+		panicError := userPanicToError(func() {
+			// if importing an invalid public key, this call panics
+			arg, err = importValue(inter, value, parameterType)
+		})
+
+		if panicError != nil {
+			return nil, &InvalidEntryPointArgumentError{
+				Index: i,
+				Err:   panicError,
+			}
+		}
+
 		if err != nil {
 			return nil, &InvalidEntryPointArgumentError{
 				Index: i,
@@ -1117,7 +1160,7 @@ func (r *interpreterRuntime) newInterpreter(
 		inter *interpreter.Interpreter,
 		getLocationRange func() interpreter.LocationRange,
 		publicKey *interpreter.CompositeValue,
-	) interpreter.BoolValue {
+	) error {
 		return validatePublicKey(
 			inter,
 			getLocationRange,
@@ -2998,7 +3041,7 @@ func (r *interpreterRuntime) newAccountKeysGetFunction(
 					inter,
 					invocation.GetLocationRange,
 					accountKey,
-					inter.PublicKeyValidationHandler,
+					DoNotValidatePublicKey, // key from FVM has already been validated
 				),
 			)
 		},
@@ -3048,7 +3091,7 @@ func (r *interpreterRuntime) newAccountKeysRevokeFunction(
 					inter,
 					invocation.GetLocationRange,
 					accountKey,
-					inter.PublicKeyValidationHandler,
+					DoNotValidatePublicKey, // key from FVM has already been validated
 				),
 			)
 		},
@@ -3139,19 +3182,9 @@ func NewPublicKeyFromValue(
 		)
 	}
 
-	// `valid` and `validated` fields
-	var valid, validated bool
-	validField := publicKey.GetMember(inter, getLocationRange, sema.PublicKeyIsValidField)
-	validated = validField != nil
-	if validated {
-		valid = bool(validField.(interpreter.BoolValue))
-	}
-
 	return &PublicKey{
 		PublicKey: byteArray,
 		SignAlgo:  SignatureAlgorithm(signAlgoRawValue.ToInt()),
-		IsValid:   valid,
-		Validated: validated,
 	}, nil
 }
 
@@ -3176,12 +3209,7 @@ func NewPublicKeyValue(
 			inter *interpreter.Interpreter,
 			getLocationRange func() interpreter.LocationRange,
 			publicKeyValue *interpreter.CompositeValue,
-		) interpreter.BoolValue {
-			// If the public key is already validated, avoid re-validating, and return the cached result.
-			if publicKey.Validated {
-				return interpreter.BoolValue(publicKey.IsValid)
-			}
-
+		) error {
 			return validatePublicKey(inter, getLocationRange, publicKeyValue)
 		},
 	)
@@ -3229,23 +3257,17 @@ func validatePublicKey(
 	getLocationRange func() interpreter.LocationRange,
 	publicKeyValue *interpreter.CompositeValue,
 	runtimeInterface Interface,
-) interpreter.BoolValue {
-
+) error {
 	publicKey, err := NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
 	if err != nil {
-		return false
+		return err
 	}
 
-	var valid bool
 	wrapPanic(func() {
-		valid, err = runtimeInterface.ValidatePublicKey(publicKey)
+		err = runtimeInterface.ValidatePublicKey(publicKey)
 	})
 
-	if err != nil {
-		panic(err)
-	}
-
-	return interpreter.BoolValue(valid)
+	return err
 }
 
 func verifyBLSPOP(
@@ -3385,4 +3407,15 @@ func hash(
 	}
 
 	return interpreter.ByteSliceToByteArrayValue(inter, result)
+}
+
+// DoNotValidatePublicKey conforms to the method signature for PublicKeyValidationHandlerFunc.
+// It disregards its input and returns `nil` indicating that the public key is valid.
+// It's used when handling public keys from the FVM, where they're already validated.
+func DoNotValidatePublicKey(
+	_ *interpreter.Interpreter,
+	_ func() interpreter.LocationRange,
+	_ *interpreter.CompositeValue,
+) error {
+	return nil
 }

@@ -29,9 +29,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	. "github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 	checkerUtils "github.com/onflow/cadence/runtime/tests/checker"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -2923,11 +2925,7 @@ func TestPublicKeyValue(t *testing.T) {
 			nil,
 			utils.TestLocation,
 			WithStorage(storage),
-			WithPublicKeyValidationHandler(
-				func(_ *Interpreter, _ func() LocationRange, _ *CompositeValue) BoolValue {
-					return true
-				},
-			),
+			WithPublicKeyValidationHandler(runtime.DoNotValidatePublicKey),
 		)
 		require.NoError(t, err)
 
@@ -2942,18 +2940,9 @@ func TestPublicKeyValue(t *testing.T) {
 			NewIntValueFromInt64(3),
 		)
 
-		sigAlgo := NewCompositeValue(
+		sigAlgo := stdlib.NewSignatureAlgorithmCase(
 			inter,
-			nil,
-			sema.SignatureAlgorithmType.QualifiedIdentifier(),
-			sema.SignatureAlgorithmType.Kind,
-			[]CompositeField{
-				{
-					Name:  sema.EnumRawValueFieldName,
-					Value: UInt8Value(sema.SignatureAlgorithmECDSA_secp256k1.RawValue()),
-				},
-			},
-			common.Address{},
+			sema.SignatureAlgorithmECDSA_secp256k1.RawValue(),
 		)
 
 		key := NewPublicKeyValue(
@@ -2965,9 +2954,60 @@ func TestPublicKeyValue(t *testing.T) {
 		)
 
 		require.Equal(t,
-			"PublicKey(publicKey: [1, 7, 3], signatureAlgorithm: SignatureAlgorithm(rawValue: 2), isValid: true)",
+			"PublicKey(publicKey: [1, 7, 3], signatureAlgorithm: SignatureAlgorithm(rawValue: 2))",
 			key.String(),
 		)
+	})
+
+	t.Run("Panics when PublicKey is invalid", func(t *testing.T) {
+
+		t.Parallel()
+
+		storage := NewInMemoryStorage()
+
+		fakeError := fakeError{}
+
+		inter, err := NewInterpreter(
+			nil,
+			utils.TestLocation,
+			WithStorage(storage),
+			WithPublicKeyValidationHandler(
+				func(_ *Interpreter, _ func() LocationRange, _ *CompositeValue) error {
+					return fakeError
+				},
+			),
+		)
+		require.NoError(t, err)
+
+		publicKeyBytes := []byte{1, 7, 3}
+
+		publicKey := NewArrayValue(
+			inter,
+			VariableSizedStaticType{
+				Type: PrimitiveStaticTypeInt,
+			},
+			common.Address{},
+			NewIntValueFromInt64(int64(publicKeyBytes[0])),
+			NewIntValueFromInt64(int64(publicKeyBytes[1])),
+			NewIntValueFromInt64(int64(publicKeyBytes[2])),
+		)
+
+		sigAlgo := stdlib.NewSignatureAlgorithmCase(
+			inter,
+			sema.SignatureAlgorithmECDSA_secp256k1.RawValue(),
+		)
+
+		assert.PanicsWithError(t,
+			(InvalidPublicKeyError{PublicKey: publicKey, Err: fakeError}).Error(),
+			func() {
+				_ = NewPublicKeyValue(
+					inter,
+					ReturnEmptyLocationRange,
+					publicKey,
+					sigAlgo,
+					inter.PublicKeyValidationHandler,
+				)
+			})
 	})
 }
 
@@ -3136,4 +3176,10 @@ func TestNonStorable(t *testing.T) {
 	_, err = inter.Invoke("foo")
 	require.NoError(t, err)
 
+}
+
+type fakeError struct{}
+
+func (fakeError) Error() string {
+	return "fake error for testing"
 }

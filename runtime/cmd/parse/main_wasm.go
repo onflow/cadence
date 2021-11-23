@@ -1,3 +1,4 @@
+//go:build wasm
 // +build wasm
 
 /*
@@ -52,8 +53,8 @@ func main() {
 }
 
 type result struct {
-	Program  *ast.Program `json:"program"`
-	Error    error        `json:"error,omitempty"`
+	Program *ast.Program `json:"program"`
+	Error   error        `json:"error,omitempty"`
 }
 
 func parse(code string) string {

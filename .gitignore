@@ -37,3 +37,7 @@ suppressions
 
 languageserver/test/languageserver
 coverage.txt
+
+languageserver/cmd/languageserver/languageserver.wasm
+tools/golangci-lint/golangci-lint
+tools/maprangecheck/maprangecheck.so
