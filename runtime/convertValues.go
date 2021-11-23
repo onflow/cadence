@@ -891,10 +891,6 @@ func importPublicKey(
 
 			signAlgoValue = compositeValue
 
-		case sema.PublicKeyIsValidField:
-			// 'isValid' field set by the user must be ignored.
-			// This is calculated when creating the public key.
-
 		default:
 			return nil, fmt.Errorf(
 				"cannot import value of type '%s'. invalid field '%s'",
