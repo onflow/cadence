@@ -337,3 +337,121 @@ func TestMutateContract(t *testing.T) {
 		}
 	}
 }
+
+func TestContractNestedStruct(t *testing.T) {
+
+	t.Parallel()
+
+	accessModifiers := []string{
+		"pub",
+		"access(account)",
+		"access(contract)",
+	}
+
+	declarationKinds := []string{
+		"let",
+		"var",
+	}
+
+	runTest := func(access string, declaration string) {
+		testName := fmt.Sprintf("%s struct %s", access, declaration)
+
+		t.Run(testName, func(t *testing.T) {
+			_, err := ParseAndCheckWithOptions(t,
+				fmt.Sprintf(`
+				pub contract Foo {
+					pub let x : S
+					
+					pub struct S {
+						%s %s y : [Int]
+						init() {
+							self.y = [3]
+						}
+					}
+				
+					init() {
+						self.x = S()
+					}
+				}
+				
+				pub fun bar() {
+					Foo.x.y[0] = 1
+				}				
+			`, access, declaration),
+				ParseAndCheckOptions{},
+			)
+
+			expectedErrors := 1
+			if access == "access(contract)" {
+				expectedErrors++
+			}
+
+			errs := ExpectCheckerErrors(t, err, expectedErrors)
+			if expectedErrors > 1 {
+				var accessError *sema.InvalidAccessError
+				require.ErrorAs(t, errs[expectedErrors-2], &accessError)
+			}
+			var externalMutationError *sema.ExternalMutationError
+			require.ErrorAs(t, errs[expectedErrors-1], &externalMutationError)
+		})
+	}
+
+	for _, access := range accessModifiers {
+		for _, kind := range declarationKinds {
+			runTest(access, kind)
+		}
+	}
+}
+
+func TestContractStructInit(t *testing.T) {
+
+	t.Parallel()
+
+	accessModifiers := []string{
+		"pub",
+		"access(account)",
+		"access(contract)",
+	}
+
+	declarationKinds := []string{
+		"let",
+		"var",
+	}
+
+	runTest := func(access string, declaration string) {
+		testName := fmt.Sprintf("%s struct %s", access, declaration)
+
+		t.Run(testName, func(t *testing.T) {
+			_, err := ParseAndCheckWithOptions(t,
+				fmt.Sprintf(`
+				pub contract Foo {
+					pub let x : S
+					
+					pub struct S {
+						%s %s y : [Int]
+						init() {
+							self.y = [3]
+						}
+					}
+				
+					init() {
+						self.x = S()
+						self.x.y[1] = 2
+					}
+				}			
+			`, access, declaration),
+				ParseAndCheckOptions{},
+			)
+
+			errs := ExpectCheckerErrors(t, err, 1)
+			var externalMutationError *sema.ExternalMutationError
+			require.ErrorAs(t, errs[0], &externalMutationError)
+		})
+	}
+
+	for _, access := range accessModifiers {
+		for _, kind := range declarationKinds {
+			runTest(access, kind)
+		}
+	}
+}
