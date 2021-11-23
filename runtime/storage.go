@@ -285,6 +285,11 @@ func (s *Storage) Commit(inter *interpreter.Interpreter, commitContractUpdates b
 
 	var writes []write
 
+	writeCount := len(s.writes)
+	if writeCount > 0 {
+		writes = make([]write, 0, writeCount)
+	}
+
 	// NOTE: ranging over maps is safe (deterministic),
 	// if it is side effect free and the keys are sorted afterwards
 
@@ -299,8 +304,9 @@ func (s *Storage) Commit(inter *interpreter.Interpreter, commitContractUpdates b
 	}
 
 	// Sort the writes by storage key in lexicographic order
-
-	sortWrites(writes)
+	if writeCount > 1 {
+		sortWrites(writes)
+	}
 
 	// Write account storage entries in order
 
