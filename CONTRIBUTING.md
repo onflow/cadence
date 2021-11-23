@@ -13,6 +13,7 @@ Use your best judgment, and feel free to propose changes to this document in a p
 - [Reporting Bugs](#reporting-bugs)
 - [Suggesting Enhancements](#suggesting-enhancements)
 - [Your First Code Contribution](#your-first-code-contribution)
+  - [Dependencies](#dependencies)
 - [Pull Requests](#pull-requests)
 
 [Styleguides](#styleguides)
@@ -88,6 +89,13 @@ You can start by looking through these "Good first issue" and "Help wanted" issu
 
 Both issue lists are sorted by total number of comments.
 While not perfect, number of comments is a reasonable proxy for impact a given change will have.
+
+#### Dependencies
+
+You need some software installed to build and test Cadence:
+
+- [Go](https://golang.org/doc/install)
+- [wasm2wat](https://github.com/WebAssembly/wabt)
 
 ### Pull Requests
 
