@@ -281,7 +281,7 @@ func TestCheckStringEncodeHex(t *testing.T) {
 	t.Parallel()
 
 	checker, err := ParseAndCheck(t, `
-        let x = String.encodeHex([1 as UInt8, 2, 3, 0xCA, 0xDE])
+        let x = String.encodeHex([1, 2, 3, 0xCA, 0xDE])
 	`)
 
 	require.NoError(t, err)
