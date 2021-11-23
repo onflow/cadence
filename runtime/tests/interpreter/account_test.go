@@ -236,7 +236,7 @@ func TestInterpretAuthAccount_typeAt(t *testing.T) {
 			 	account.save(s, to: /storage/x)
 			  }
 
-              fun typeAt(): Type? {
+              fun typeAt(): AnyStruct {
 				return account.typeAt(/storage/x)
               }
             `,
