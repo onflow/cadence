@@ -3415,7 +3415,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 	)
 }
 
-func (interpreter *Interpreter) authAccountTypeAtFunction(addressValue AddressValue) *HostFunctionValue {
+func (interpreter *Interpreter) authAccountTypeFunction(addressValue AddressValue) *HostFunctionValue {
 	return NewHostFunctionValue(
 		func(invocation Invocation) Value {
 
@@ -3441,7 +3441,7 @@ func (interpreter *Interpreter) authAccountTypeAtFunction(addressValue AddressVa
 			}
 		},
 
-		sema.AuthAccountTypeTypeAtFunctionType,
+		sema.AuthAccountTypeTypeFunctionType,
 	)
 }
 

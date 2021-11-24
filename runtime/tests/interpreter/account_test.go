@@ -206,11 +206,11 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 	})
 }
 
-func TestInterpretAuthAccount_typeAt(t *testing.T) {
+func TestInterpretAuthAccount_type(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("typeAt", func(t *testing.T) {
+	t.Run("type", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -237,12 +237,12 @@ func TestInterpretAuthAccount_typeAt(t *testing.T) {
 			  }
 
               fun typeAt(): AnyStruct {
-				return account.typeAt(/storage/x)
+				return account.type(at: /storage/x)
               }
             `,
 		)
 
-		// typeAt empty path is nil
+		// type empty path is nil
 
 		value, err := inter.Invoke("typeAt")
 		require.NoError(t, err)

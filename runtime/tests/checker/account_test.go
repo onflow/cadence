@@ -366,14 +366,14 @@ func TestCheckAccount_typeAt(t *testing.T) {
 	t.Parallel()
 
 	test := func(domain common.PathDomain) {
-		t.Run(fmt.Sprintf("typeAt %s", domain.Identifier()), func(t *testing.T) {
+		t.Run(fmt.Sprintf("type %s", domain.Identifier()), func(t *testing.T) {
 
 			t.Parallel()
 
 			checker, err := ParseAndCheckAccount(t,
 				fmt.Sprintf(
 					`
-						let t: Type? = authAccount.typeAt(/%s/r)
+						let t: Type? = authAccount.type(at: /%s/r)
 					`,
 					domain.Identifier(),
 				),
