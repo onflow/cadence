@@ -942,7 +942,7 @@ func (checker *Checker) enumRawType(declaration *ast.CompositeDeclaration) Type 
 	rawType := checker.ConvertType(conformance)
 
 	if !rawType.IsInvalidType() &&
-		!IsSubType(rawType, IntegerType) {
+		!IsSameTypeKind(rawType, IntegerType) {
 
 		checker.report(
 			&InvalidEnumRawTypeError{
