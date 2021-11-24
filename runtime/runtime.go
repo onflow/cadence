@@ -1788,14 +1788,12 @@ func (r *interpreterRuntime) newRemovePublicKeyFunction(
 // It is only recorded and only written at the end of the execution
 //
 func (r *interpreterRuntime) recordContractValue(
-	inter *interpreter.Interpreter,
 	storage *Storage,
 	addressValue interpreter.AddressValue,
 	name string,
-	contractValue interpreter.Value,
+	contractValue *interpreter.CompositeValue,
 ) {
 	storage.recordContractUpdate(
-		inter,
 		addressValue.ToAddress(),
 		name,
 		contractValue,
@@ -1860,7 +1858,7 @@ func (r *interpreterRuntime) instantiateContract(
 	interpreterOptions []interpreter.Option,
 	checkerOptions []sema.Option,
 ) (
-	interpreter.Value,
+	*interpreter.CompositeValue,
 	error,
 ) {
 	parameterTypes := make([]sema.Type, len(contractType.ConstructorParameters))
@@ -2512,7 +2510,7 @@ func (r *interpreterRuntime) updateAccountContractCode(
 	// If the Cadence `update__experimental` function is used,
 	// the new contract will NOT be deployed (options.createContract is false).
 
-	var contractValue interpreter.Value
+	var contractValue *interpreter.CompositeValue
 
 	createContract := contractType != nil && options.createContract
 
@@ -2557,7 +2555,6 @@ func (r *interpreterRuntime) updateAccountContractCode(
 		// until the end of the execution of the program
 
 		r.recordContractValue(
-			inter,
 			storage,
 			addressValue,
 			name,
@@ -2667,7 +2664,6 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 				// until the end of the execution of the program
 
 				r.recordContractValue(
-					inter,
 					storage,
 					addressValue,
 					nameArgument,
