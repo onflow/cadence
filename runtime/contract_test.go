@@ -133,6 +133,37 @@ func TestRuntimeContract(t *testing.T) {
 			),
 		)
 
+		removeAndAddTx := []byte(
+			fmt.Sprintf(
+				`
+                  transaction {
+                      prepare(signer: AuthAccount) {
+                          let contract1 = signer.contracts.get(name: %[1]q)
+                          log(contract1?.name)
+                          log(contract1?.code)
+
+                          let contract2 = signer.contracts.remove(name: %[1]q)
+                          log(contract2?.name)
+                          log(contract2?.code)
+
+                          let contract3 = signer.contracts.get(name: %[1]q)
+                          log(contract3)
+
+                          let contract4 = signer.contracts.add(name: %[1]q, code: "%[2]s".decodeHex())
+                          log(contract4.name)
+                          log(contract4.code)
+
+                          let contract5 = signer.contracts.get(name: %[1]q)
+                          log(contract5?.name)
+                          log(contract5?.code)
+                      }
+                   }
+                `,
+				tc.name,
+				hex.EncodeToString([]byte(tc.code2)),
+			),
+		)
+
 		var events []cadence.Event
 
 		storage := newTestLedger(nil, nil)
@@ -419,6 +450,55 @@ func TestRuntimeContract(t *testing.T) {
 				require.False(t, contractValueExists)
 			}
 		})
+
+		t.Run("remove and add in same transaction", func(t *testing.T) {
+
+			// Run the remove-and-add transaction
+
+			loggedMessages = nil
+			events = nil
+
+			err := runtime.ExecuteTransaction(
+				Script{
+					Source: removeAndAddTx,
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  nextTransactionLocation(),
+				},
+			)
+			require.NoError(t, err)
+
+			require.Equal(t, []byte(tc.code2), deployedCode)
+
+			require.Equal(t,
+				[]string{
+					`"Test"`,
+					codeArrayString,
+					`"Test"`,
+					codeArrayString,
+					`nil`,
+					`"Test"`,
+					code2ArrayString,
+					`"Test"`,
+					code2ArrayString,
+				},
+				loggedMessages,
+			)
+
+			require.Len(t, events, 2)
+			assert.EqualValues(t, stdlib.AccountContractRemovedEventType.ID(), events[0].Type().ID())
+			assert.EqualValues(t, stdlib.AccountContractAddedEventType.ID(), events[1].Type().ID())
+
+			contractValueExists := getContractValueExists()
+
+			if tc.isInterface {
+				require.False(t, contractValueExists)
+			} else {
+				require.True(t, contractValueExists)
+			}
+		})
+
 	}
 
 	t.Run("valid contract, correct name", func(t *testing.T) {
