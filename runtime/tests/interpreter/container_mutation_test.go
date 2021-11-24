@@ -484,7 +484,6 @@ func TestArrayMutation(t *testing.T) {
 		funcType := optionalType.Type.(*sema.FunctionType)
 
 		assert.Equal(t, sema.VoidType, funcType.ReturnTypeAnnotation.Type)
-		assert.Nil(t, funcType.ReceiverType)
 		assert.Empty(t, funcType.Parameters)
 
 		// Actual type
@@ -492,7 +491,6 @@ func TestArrayMutation(t *testing.T) {
 		actualFuncType := mutationError.ActualType.(*sema.FunctionType)
 
 		assert.Equal(t, sema.VoidType, actualFuncType.ReturnTypeAnnotation.Type)
-		assert.Nil(t, actualFuncType.ReceiverType)
 		assert.Len(t, actualFuncType.Parameters, 1)
 	})
 }
@@ -867,7 +865,6 @@ func TestDictionaryMutation(t *testing.T) {
 		funcType := optionalType.Type.(*sema.FunctionType)
 
 		assert.Equal(t, sema.VoidType, funcType.ReturnTypeAnnotation.Type)
-		assert.Nil(t, funcType.ReceiverType)
 		assert.Empty(t, funcType.Parameters)
 
 		// Actual type
@@ -878,7 +875,6 @@ func TestDictionaryMutation(t *testing.T) {
 		actualFuncType := actualOptionalType.Type.(*sema.FunctionType)
 
 		assert.Equal(t, sema.VoidType, actualFuncType.ReturnTypeAnnotation.Type)
-		assert.Nil(t, actualFuncType.ReceiverType)
 		assert.Len(t, actualFuncType.Parameters, 1)
 	})
 

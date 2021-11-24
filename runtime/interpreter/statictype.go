@@ -535,14 +535,6 @@ type FunctionStaticType struct {
 
 var _ StaticType = FunctionStaticType{}
 
-func (t FunctionStaticType) ReceiverType() StaticType {
-	var receiverType StaticType
-	if t.Type.ReceiverType != nil {
-		receiverType = ConvertSemaToStaticType(t.Type.ReceiverType)
-	}
-	return receiverType
-}
-
 func (t FunctionStaticType) TypeParameters() []*TypeParameter {
 	typeParameters := make([]*TypeParameter, len(t.Type.TypeParameters))
 	for i, typeParameter := range t.Type.TypeParameters {
