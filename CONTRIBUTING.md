@@ -110,6 +110,20 @@ Please follow the [styleguides](#styleguides) to have your contribution consider
 Reviewer(s) may ask you to complete additional design work, tests,
 or other changes before your pull request can be ultimately accepted.
 
+When opening a PR as a maintainer:
+
+- Use a branch name in the format `<github-username>/<issue-number>-<short-title>`
+- Assign yourself to the PR. You are responsible to merge the PR once it has been approved.
+- Request reviews from engineers who can review the components you modified
+- Link to the GitHub issue, e.g. as `Closes #123`, or `Work towards #123`. 
+  If there is no issue yet, create one.
+- Fill out the check list in the PR description (prefilled by the template)
+- Add (an) appropriate label(s)
+- Review the PR yourself
+  - Make sure TODOs have been addressed
+  - Make sure debug print statements are removed
+  - Make sure the relevant documentation was updated or added
+
 ## Styleguides
 
 Before contributing, make sure to examine the project to get familiar with the patterns and style already being used.
