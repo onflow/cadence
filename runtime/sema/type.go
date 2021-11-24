@@ -3168,12 +3168,12 @@ func suggestIntegerLiteralConversionReplacement(
 ) {
 	negative := argument.Value.Sign() < 0
 
-	if IsSubType(targetType, FixedPointType) {
+	if IsSameTypeKind(targetType, FixedPointType) {
 
 		// If the integer literal is converted to a fixed-point type,
 		// suggest replacing it with a fixed-point literal
 
-		signed := IsSubType(targetType, SignedFixedPointType)
+		signed := IsSameTypeKind(targetType, SignedFixedPointType)
 
 		var hintExpression ast.Expression = &ast.FixedPointExpression{
 			Negative:        negative,
@@ -3208,7 +3208,7 @@ func suggestIntegerLiteralConversionReplacement(
 			},
 		)
 
-	} else if IsSubType(targetType, IntegerType) {
+	} else if IsSameTypeKind(targetType, IntegerType) {
 
 		// If the integer literal is converted to an integer type,
 		// suggest replacing it with a fixed-point literal
@@ -3220,7 +3220,7 @@ func suggestIntegerLiteralConversionReplacement(
 		// as all integer literals (positive and negative)
 		// are inferred to be of type `Int`
 
-		if !IsSubType(targetType, IntType) {
+		if !IsSameTypeKind(targetType, IntType) {
 			hintExpression = &ast.CastingExpression{
 				Expression: hintExpression,
 				Operation:  ast.OperationCast,
@@ -3253,12 +3253,12 @@ func suggestFixedPointLiteralConversionReplacement(
 	// If the fixed-point literal is converted to a fixed-point type,
 	// suggest replacing it with a fixed-point literal
 
-	if !IsSubType(targetType, FixedPointType) {
+	if !IsSameTypeKind(targetType, FixedPointType) {
 		return
 	}
 
 	negative := argument.Negative
-	signed := IsSubType(targetType, SignedFixedPointType)
+	signed := IsSameTypeKind(targetType, SignedFixedPointType)
 
 	if (!negative && !signed) || (negative && signed) {
 		checker.hint(
@@ -4667,13 +4667,46 @@ func (t *AddressType) GetMembers() map[string]MemberResolver {
 //
 // Types are subtypes of themselves.
 //
+// NOTE: This method can be used to check the assignability of `subType` to `superType`.
+// However, to check if a type *strictly* belongs to a certain category, then consider
+// using `IsSameTypeKind` method. e.g: "Is type `T` an Integer type?". Using this method
+// for the later use-case may produce incorrect results.
+//   * IsSubType()      - To check the assignability. e.g: Is argument type T is a sub-type
+//                        of parameter type R. This is the more frequent use-case.
+//   * IsSameTypeKind() - To check if a type strictly belongs to a certain category. e.g: Is the
+//                        expression type T is any of the integer types, but nothing else.
+//                        Another way to check is, asking the question of "if the subType is Never,
+//                        should the check still pass?". A common code-smell for potential incorrect
+//                        usage is, using IsSubType() method with a constant/pre-defined superType.
+//                        e.g: IsSubType(<<someType>>, FixedPointType)
+//
 func IsSubType(subType Type, superType Type) bool {
+
+	if subType == nil {
+		return false
+	}
 
 	if subType.Equal(superType) {
 		return true
 	}
 
 	return checkSubTypeWithoutEquality(subType, superType)
+}
+
+// IsSameTypeKind determines if the given subtype belongs to the
+// same kind as the supertype.
+//
+// e.g: 'Never' type is a subtype of 'Integer', but not of the
+// same kind as 'Integer'. Whereas, 'Int8' is both a subtype
+// and also of same kind as 'Integer'.
+//
+func IsSameTypeKind(subType Type, superType Type) bool {
+
+	if subType == NeverType {
+		return false
+	}
+
+	return IsSubType(subType, superType)
 }
 
 // IsProperSubType is similar to IsSubType,
