@@ -64,16 +64,20 @@ func TestRuntimeContract(t *testing.T) {
 				`
                   transaction {
                       prepare(signer: AuthAccount) {
-                          let contract1 = signer.contracts.add(name: %[1]q, code: "%[2]s".decodeHex())
-                          log(contract1.name)
-                          log(contract1.code)
+                          let contract1 = signer.contracts.get(name: %[1]q)
+                          log(contract1?.name)
+                          log(contract1?.code)
 
-                          let contract2 = signer.contracts.get(name: %[1]q)
-                          log(contract2?.name)
-                          log(contract2?.code)
+                          let contract2 = signer.contracts.add(name: %[1]q, code: "%[2]s".decodeHex())
+                          log(contract2.name)
+                          log(contract2.code)
 
-                          let contract3 = signer.contracts.get(name: "Unknown")
-                          log(contract3)
+                          let contract3 = signer.contracts.get(name: %[1]q)
+                          log(contract3?.name)
+                          log(contract3?.code)
+
+                          let contract4 = signer.contracts.get(name: "Unknown")
+                          log(contract4)
                       }
                    }
                 `,
@@ -215,6 +219,8 @@ func TestRuntimeContract(t *testing.T) {
 
 				require.Equal(t,
 					[]string{
+						`nil`,
+						`nil`,
 						`"Test"`,
 						codeArrayString,
 						`"Test"`,
@@ -231,8 +237,13 @@ func TestRuntimeContract(t *testing.T) {
 				require.Error(t, err)
 				require.Empty(t, deployedCode)
 				require.Empty(t, events)
-				require.Empty(t, loggedMessages)
-
+				require.Equal(t,
+					[]string{
+						`nil`,
+						`nil`,
+					},
+					loggedMessages,
+				)
 				contractValueExists := getContractValueExists()
 				require.False(t, contractValueExists)
 			}
@@ -350,6 +361,63 @@ func TestRuntimeContract(t *testing.T) {
 			contractValueExists := getContractValueExists()
 			require.False(t, contractValueExists)
 
+		})
+
+		t.Run("add again", func(t *testing.T) {
+
+			// Run the add transaction again
+
+			loggedMessages = nil
+			events = nil
+
+			err := runtime.ExecuteTransaction(
+				Script{
+					Source:    addTx,
+					Arguments: nil,
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  nextTransactionLocation(),
+				},
+			)
+
+			if tc.valid {
+				require.NoError(t, err)
+				require.Equal(t, []byte(tc.code), deployedCode)
+
+				contractValueExists := getContractValueExists()
+
+				if tc.isInterface {
+					require.False(t, contractValueExists)
+				} else {
+					require.True(t, contractValueExists)
+				}
+
+				require.Equal(t,
+					[]string{
+						`nil`,
+						`nil`,
+						`"Test"`,
+						codeArrayString,
+						`"Test"`,
+						codeArrayString,
+						`nil`,
+					},
+					loggedMessages,
+				)
+
+				require.Len(t, events, 1)
+				assert.EqualValues(t, stdlib.AccountContractAddedEventType.ID(), events[0].Type().ID())
+
+			} else {
+				require.Error(t, err)
+				require.Empty(t, deployedCode)
+				require.Empty(t, events)
+				require.Empty(t, loggedMessages)
+
+				contractValueExists := getContractValueExists()
+				require.False(t, contractValueExists)
+			}
 		})
 	}
 
