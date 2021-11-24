@@ -20,7 +20,6 @@ package runtime
 
 import (
 	"fmt"
-	"math"
 	"runtime"
 	"sort"
 
@@ -36,7 +35,7 @@ type Storage struct {
 	*atree.PersistentSlabStorage
 	writes          map[interpreter.StorageKey]atree.StorageIndex
 	storageMaps     map[interpreter.StorageKey]*interpreter.StorageMap
-	contractUpdates map[interpreter.StorageKey]atree.Storable
+	contractUpdates map[interpreter.StorageKey]*interpreter.CompositeValue
 	Ledger          atree.Ledger
 }
 
@@ -57,7 +56,7 @@ func NewStorage(ledger atree.Ledger) *Storage {
 		PersistentSlabStorage: persistentSlabStorage,
 		writes:                map[interpreter.StorageKey]atree.StorageIndex{},
 		storageMaps:           map[interpreter.StorageKey]*interpreter.StorageMap{},
-		contractUpdates:       map[interpreter.StorageKey]atree.Storable{},
+		contractUpdates:       map[interpreter.StorageKey]*interpreter.CompositeValue{},
 	}
 }
 
@@ -137,53 +136,24 @@ func (s *Storage) storeNewStorageMap(address atree.Address, domain string) *inte
 }
 
 func (s *Storage) recordContractUpdate(
-	inter *interpreter.Interpreter,
 	address common.Address,
 	name string,
-	contract interpreter.Value,
+	contractValue *interpreter.CompositeValue,
 ) {
 	key := interpreter.StorageKey{
 		Address: address,
 		Key:     name,
 	}
 
-	// Remove existing, if any
+	// NOTE: do NOT delete the map entry,
+	// otherwise the removal write is lost
 
-	existingStorable, ok := s.contractUpdates[key]
-	if ok && existingStorable != nil {
-		interpreter.StoredValue(existingStorable, s).
-			DeepRemove(inter)
-		inter.RemoveReferencedSlab(existingStorable)
-	}
-
-	if contract == nil {
-		// NOTE: do NOT delete the map entry,
-		// otherwise the write is lost
-		s.contractUpdates[key] = nil
-	} else {
-		storable, err := contract.Storable(
-			s,
-			atree.Address(address),
-			// NOTE: we already allocate a register for the account storage value,
-			// so we might as well store all data of the value in it, if possible,
-			// e.g. for a large immutable value.
-			//
-			// Using a smaller number would only result in an additional register
-			// (account storage register would have storage ID storable,
-			// and extra slab / register would contain the actual data of the value).
-			math.MaxUint64,
-		)
-		if err != nil {
-			panic(err)
-		}
-
-		s.contractUpdates[key] = storable
-	}
+	s.contractUpdates[key] = contractValue
 }
 
 type ContractUpdate struct {
-	Key      interpreter.StorageKey
-	Storable atree.Storable
+	Key           interpreter.StorageKey
+	ContractValue *interpreter.CompositeValue
 }
 
 func SortContractUpdates(updates []ContractUpdate) {
@@ -205,8 +175,8 @@ func (s *Storage) commitContractUpdates(inter *interpreter.Interpreter) {
 		// NOTE: ranging over maps is safe (deterministic),
 		// if the loop breaks after the first element (if any)
 
-		for key, storable := range s.contractUpdates { //nolint:maprangecheck
-			s.writeContractUpdate(inter, key, storable)
+		for key, contractValue := range s.contractUpdates { //nolint:maprangecheck
+			s.writeContractUpdate(inter, key, contractValue)
 			break
 		}
 	} else {
@@ -216,12 +186,12 @@ func (s *Storage) commitContractUpdates(inter *interpreter.Interpreter) {
 		// NOTE: ranging over maps is safe (deterministic),
 		// if it is side effect free and the keys are sorted afterwards
 
-		for key, storable := range s.contractUpdates { //nolint:maprangecheck
+		for key, contractValue := range s.contractUpdates { //nolint:maprangecheck
 			contractUpdates = append(
 				contractUpdates,
 				ContractUpdate{
-					Key:      key,
-					Storable: storable,
+					Key:           key,
+					ContractValue: contractValue,
 				},
 			)
 		}
@@ -233,21 +203,24 @@ func (s *Storage) commitContractUpdates(inter *interpreter.Interpreter) {
 		// Perform contract updates in order
 
 		for _, contractUpdate := range contractUpdates {
-			s.writeContractUpdate(inter, contractUpdate.Key, contractUpdate.Storable)
+			s.writeContractUpdate(inter, contractUpdate.Key, contractUpdate.ContractValue)
 		}
 	}
 }
 
-func (s *Storage) writeContractUpdate(inter *interpreter.Interpreter, key interpreter.StorageKey, storable atree.Storable) {
+func (s *Storage) writeContractUpdate(
+	inter *interpreter.Interpreter,
+	key interpreter.StorageKey,
+	contractValue *interpreter.CompositeValue,
+) {
 
 	storageMap := s.GetStorageMap(key.Address, StorageDomainContract)
 
 	var value interpreter.OptionalValue
 
-	if storable == nil {
+	if contractValue == nil {
 		value = interpreter.NilValue{}
 	} else {
-		contractValue := interpreter.StoredValue(storable, s)
 		value = interpreter.NewSomeValueNonCopying(contractValue)
 	}
 
