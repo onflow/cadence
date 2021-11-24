@@ -150,7 +150,7 @@ func (s *Storage) recordContractUpdate(
 	// Remove existing, if any
 
 	existingStorable, ok := s.contractUpdates[key]
-	if ok {
+	if ok && existingStorable != nil {
 		interpreter.StoredValue(existingStorable, s).
 			DeepRemove(inter)
 		inter.RemoveReferencedSlab(existingStorable)
