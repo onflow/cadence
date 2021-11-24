@@ -692,3 +692,29 @@ func TestPubSetNestedAccessModifier(t *testing.T) {
 
 	})
 }
+
+func TestSelfContainingStruct(t *testing.T) {
+	t.Run("pub set dict", func(t *testing.T) {
+		_, err := ParseAndCheckWithOptions(t,
+			`
+			pub contract C {
+				pub struct Foo {
+					pub let x: {Int: Int}
+			
+					init() {
+						self.x = {3:3};
+					}
+
+					pub fun bar() {
+						let foo = Foo()
+						foo.x[0] = 3
+					}
+				}
+			}
+		`,
+			ParseAndCheckOptions{},
+		)
+		require.NoError(t, err)
+
+	})
+}
