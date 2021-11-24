@@ -694,7 +694,7 @@ func TestPubSetNestedAccessModifier(t *testing.T) {
 }
 
 func TestSelfContainingStruct(t *testing.T) {
-	t.Run("pub set dict", func(t *testing.T) {
+	t.Run("pub let", func(t *testing.T) {
 		_, err := ParseAndCheckWithOptions(t,
 			`
 			pub contract C {
@@ -716,5 +716,36 @@ func TestSelfContainingStruct(t *testing.T) {
 		)
 		require.NoError(t, err)
 
+	})
+}
+
+func TestMutationThroughReference(t *testing.T) {
+	t.Run("pub let", func(t *testing.T) {
+		_, err := ParseAndCheckWithOptions(t,
+			`
+			pub fun main() {
+				let foo = Foo()
+				foo.ref.arr.append("y")
+			  }
+			  
+			  pub struct Foo {
+				pub let ref: &Bar
+				init() {
+				  self.ref = &Bar() as &Bar
+				}
+			  }
+			  
+			  pub struct Bar {
+				pub let arr: [String]
+				init() {
+				  self.arr = ["x"]
+				}
+			  }
+		`,
+			ParseAndCheckOptions{},
+		)
+		errs := ExpectCheckerErrors(t, err, 1)
+		var externalMutationError *sema.ExternalMutationError
+		require.ErrorAs(t, errs[0], &externalMutationError)
 	})
 }
