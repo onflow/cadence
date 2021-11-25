@@ -8333,13 +8333,13 @@ func TestInterpretInterfaceDefaultImplementationWhenOverriden(t *testing.T) {
 	inter := parseCheckAndInterpret(t, `
 
 	struct interface InterfaceA {
-		fun test(): Int{
+		fun test(): Int {
 			return 41
 		}
 	}
 	
-	struct Test: InterfaceA   {
-		fun test(): Int{
+	struct Test: InterfaceA {
+		fun test(): Int {
 			return 42
 		}
 	}
