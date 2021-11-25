@@ -184,8 +184,8 @@ func (checker *Checker) checkInterfaceFunctions(
 				if len(function.FunctionBlock.Block.Statements) > 0 {
 					mustExit = true
 					checkResourceLoss = true
-				} else if (function.FunctionBlock.PreConditions == nil || len(*function.FunctionBlock.PreConditions) == 0) &&
-					(function.FunctionBlock.PostConditions == nil || len(*function.FunctionBlock.PostConditions) == 0) {
+				} else if function.FunctionBlock.PreConditions.IsEmpty() &&
+					function.FunctionBlock.PostConditions.IsEmpty() {
 
 					checker.report(
 						&InvalidImplementationError{

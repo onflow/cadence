@@ -1679,9 +1679,15 @@ func (interpreter *Interpreter) interfaceFunctions(
 	lexicalScope *VariableActivation,
 ) map[string]FunctionValue {
 
-	functions := map[string]FunctionValue{}
+	functionDeclarations := interfaceDeclaration.Members.Functions()
+	functionCount := len(functionDeclarations)
 
-	for _, functionDeclaration := range interfaceDeclaration.Members.Functions() {
+	var functions map[string]FunctionValue
+	if functionCount > 0 {
+		functions = make(map[string]FunctionValue, functionCount)
+	}
+
+	for _, functionDeclaration := range functionDeclarations {
 		name := functionDeclaration.Identifier.Identifier
 		if functionDeclaration.FunctionBlock != nil {
 			if len(functionDeclaration.FunctionBlock.Block.Statements) > 0 {

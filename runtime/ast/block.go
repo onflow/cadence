@@ -85,6 +85,10 @@ func (b *FunctionBlock) EndPosition() Position {
 	return b.Block.EndPos
 }
 
+func (b *FunctionBlock) HasStatements() bool {
+	return b != nil && len(b.Block.Statements) > 0
+}
+
 // Condition
 
 type Condition struct {
@@ -96,3 +100,7 @@ type Condition struct {
 // Conditions
 
 type Conditions []*Condition
+
+func (c *Conditions) IsEmpty() bool {
+	return c == nil || len(*c) == 0
+}

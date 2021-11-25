@@ -1030,6 +1030,14 @@ func (e *MultipleInterfaceDefaultImplementationsError) Error() string {
 	)
 }
 
+func (e *MultipleInterfaceDefaultImplementationsError) StartPosition() ast.Position {
+	return e.Member.Identifier.StartPosition()
+}
+
+func (e *MultipleInterfaceDefaultImplementationsError) EndPosition() ast.Position {
+	return e.Member.Identifier.EndPosition()
+}
+
 func (*MultipleInterfaceDefaultImplementationsError) isSemanticError() {}
 
 // MissingConformanceError

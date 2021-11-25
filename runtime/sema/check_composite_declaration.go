@@ -158,7 +158,7 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 
 	checkMissingMembers := kind != ContainerKindInterface
 
-	overridden := map[string]bool{}
+	overridden := map[string]struct{}{}
 
 	for i, interfaceType := range compositeType.ExplicitInterfaceConformances {
 		interfaceNominalType := declaration.Conformances[i]
@@ -172,7 +172,7 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 				checkMissingMembers:            checkMissingMembers,
 				interfaceTypeIsTypeRequirement: false,
 			},
-			&overridden,
+			overridden,
 		)
 	}
 
@@ -967,7 +967,7 @@ func (checker *Checker) checkCompositeConformance(
 	interfaceType *InterfaceType,
 	compositeKindMismatchIdentifier ast.Identifier,
 	options compositeConformanceCheckOptions,
-	overridden *map[string]bool,
+	overridden map[string]struct{},
 ) {
 
 	var missingMembers []*Member
@@ -1025,9 +1025,9 @@ func (checker *Checker) checkCompositeConformance(
 		compositeMember, ok := compositeType.Members.Get(name)
 		if !ok {
 			if options.checkMissingMembers {
-				if interfaceMember.DeclarationKind != common.DeclarationKindFunction {
-					missingMembers = append(missingMembers, interfaceMember)
-				} else {
+
+				if interfaceMember.DeclarationKind == common.DeclarationKindFunction {
+
 					if !interfaceMember.HasImplementation {
 						missingMembers = append(missingMembers, interfaceMember)
 					} else {
@@ -1039,9 +1039,11 @@ func (checker *Checker) checkCompositeConformance(
 								},
 							)
 						}
-						overridden[name] = struct{}
+						overridden[name] = struct{}{}
 					}
 
+				} else {
+					missingMembers = append(missingMembers, interfaceMember)
 				}
 			}
 		}
@@ -1285,7 +1287,7 @@ func (checker *Checker) checkTypeRequirement(
 	// like a top-level composite declaration to an interface type
 
 	requiredInterfaceType := requiredCompositeType.InterfaceType()
-	overridden := map[string]bool{}
+	overridden := map[string]struct{}{}
 
 	checker.checkCompositeConformance(
 		compositeDeclaration,
@@ -1296,7 +1298,7 @@ func (checker *Checker) checkTypeRequirement(
 			checkMissingMembers:            true,
 			interfaceTypeIsTypeRequirement: true,
 		},
-		&overridden,
+		overridden,
 	)
 }
 
@@ -1502,7 +1504,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 
 		hasImplementation := false
 
-		if function.FunctionBlock != nil && len(function.FunctionBlock.Block.Statements) > 0 {
+		if function.FunctionBlock.HasStatements() {
 			hasImplementation = true
 		}
 
