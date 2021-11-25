@@ -2041,13 +2041,13 @@ func TestCheckMultipleInterfaceDefaultImplementationWhenOverriden(t *testing.T) 
 	}
 
 	struct interface InterfaceB {
-		fun test(): Int{
+		fun test(): Int {
 			return 41
 		}
 	}
 	
-	struct Test:  InterfaceA, InterfaceB   {
-		fun test(): Int{
+	struct Test:  InterfaceA, InterfaceB {
+		fun test(): Int {
 			return 42
 		}
 	}
