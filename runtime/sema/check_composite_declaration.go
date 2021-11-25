@@ -1039,7 +1039,7 @@ func (checker *Checker) checkCompositeConformance(
 								},
 							)
 						}
-						(*overridden)[name] = true
+						overridden[name] = struct{}
 					}
 
 				}
