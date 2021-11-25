@@ -2065,7 +2065,7 @@ func TestCheckMultipleInterfaceSingleInterfaceDefaultImplementation(t *testing.T
 
 	_, err := ParseAndCheck(t, `
 	struct interface InterfaceA {
-		fun test(): Int{
+		fun test(): Int {
 			return 41
 		}
 	}
@@ -2074,7 +2074,7 @@ func TestCheckMultipleInterfaceSingleInterfaceDefaultImplementation(t *testing.T
 		fun test(): Int
 	}
 	
-	struct Test:  InterfaceA, InterfaceB  {
+	struct Test:  InterfaceA, InterfaceB {
 
 	}
 
