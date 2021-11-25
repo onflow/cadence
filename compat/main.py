@@ -175,9 +175,9 @@ class Result:
 
 
 def load_index(path: Path) -> List[str]:
+    logger.info(f"Loading suite index from {path} ...")
     with path.open(mode="r") as f:
         return yaml.safe_load(f)
-
 
 @dataclass
 class Description:
@@ -812,7 +812,7 @@ def run(
 
     all_succeeded = True
 
-    if not len(names):
+    if not names:
         names = load_index(SUITE_PATH / "index.yaml")
 
     all_results: List[Result] = []

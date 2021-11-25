@@ -180,7 +180,7 @@ func (checker *Checker) visitTransactionPrepareFunction(
 
 	initializationInfo := NewInitializationInfo(transactionType, fieldMembers)
 
-	prepareFunctionType := transactionType.PrepareFunctionType().InvocationFunctionType()
+	prepareFunctionType := transactionType.PrepareFunctionType()
 
 	checker.checkFunction(
 		prepareFunction.FunctionDeclaration.ParameterList,
@@ -208,7 +208,7 @@ func (checker *Checker) checkTransactionPrepareFunctionParameters(
 		parameterType := parameters[i].TypeAnnotation.Type
 
 		if !parameterType.IsInvalidType() &&
-			!IsSubType(parameterType, AuthAccountType) {
+			!IsSameTypeKind(parameterType, AuthAccountType) {
 
 			checker.report(
 				&InvalidTransactionPrepareParameterTypeError{
@@ -230,7 +230,7 @@ func (checker *Checker) visitTransactionExecuteFunction(
 		return
 	}
 
-	executeFunctionType := transactionType.ExecuteFunctionType().InvocationFunctionType()
+	executeFunctionType := transactionType.ExecuteFunctionType()
 
 	checker.checkFunction(
 		&ast.ParameterList{},

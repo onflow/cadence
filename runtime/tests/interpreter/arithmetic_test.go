@@ -24,8 +24,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	. "github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -88,7 +89,9 @@ func TestInterpretPlusOperator(t *testing.T) {
 				),
 			)
 
-			assert.Equal(t,
+			AssertValuesEqual(
+				t,
+				inter,
 				value,
 				inter.Globals["c"].GetValue(),
 			)
@@ -115,7 +118,9 @@ func TestInterpretMinusOperator(t *testing.T) {
 				),
 			)
 
-			assert.Equal(t,
+			AssertValuesEqual(
+				t,
+				inter,
 				value,
 				inter.Globals["c"].GetValue(),
 			)
@@ -142,7 +147,9 @@ func TestInterpretMulOperator(t *testing.T) {
 				),
 			)
 
-			assert.Equal(t,
+			AssertValuesEqual(
+				t,
+				inter,
 				value,
 				inter.Globals["c"].GetValue(),
 			)
@@ -169,7 +176,9 @@ func TestInterpretDivOperator(t *testing.T) {
 				),
 			)
 
-			assert.Equal(t,
+			AssertValuesEqual(
+				t,
+				inter,
 				value,
 				inter.Globals["c"].GetValue(),
 			)
@@ -196,7 +205,9 @@ func TestInterpretModOperator(t *testing.T) {
 				),
 			)
 
-			assert.Equal(t,
+			AssertValuesEqual(
+				t,
+				inter,
 				value,
 				inter.Globals["c"].GetValue(),
 			)
@@ -808,7 +819,7 @@ func TestInterpretSaturatedArithmeticFunctions(t *testing.T) {
 				require.NoError(t, err)
 
 				require.True(t,
-					call.expected.Equal(result, inter, false),
+					call.expected.Equal(inter, interpreter.ReturnEmptyLocationRange, result),
 					fmt.Sprintf(
 						"%s(%s, %s) = %s != %s",
 						method, call.left, call.right, result, call.expected,

@@ -22,9 +22,10 @@ import (
 	"testing"
 	"testing/quick"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/parser2"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestQuoteString(t *testing.T) {

@@ -147,7 +147,13 @@ func (checker *Checker) VisitBinaryExpression(expression *ast.BinaryExpression) 
 		// are not definite, but only potential.
 
 		rightType := checker.checkPotentiallyUnevaluated(func() Type {
-			return checker.VisitExpression(expression.Right, nil)
+			var expectedType Type
+			if !leftIsInvalid {
+				if optionalLeftType, ok := leftType.(*OptionalType); ok {
+					expectedType = optionalLeftType.Type
+				}
+			}
+			return checker.VisitExpressionWithForceType(expression.Right, expectedType, false)
 		})
 
 		rightIsInvalid := rightType.IsInvalidType()
@@ -206,8 +212,8 @@ func (checker *Checker) checkBinaryExpressionArithmeticOrNonEqualityComparisonOr
 		panic(errors.NewUnreachableError())
 	}
 
-	leftIsNumber := IsSubType(leftType, expectedSuperType)
-	rightIsNumber := IsSubType(rightType, expectedSuperType)
+	leftIsNumber := IsSameTypeKind(leftType, expectedSuperType)
+	rightIsNumber := IsSameTypeKind(rightType, expectedSuperType)
 
 	reportedInvalidOperands := false
 
@@ -319,8 +325,8 @@ func (checker *Checker) checkBinaryExpressionBooleanLogic(
 ) Type {
 	// check both types are boolean subtypes
 
-	leftIsBool := IsSubType(leftType, BoolType)
-	rightIsBool := IsSubType(rightType, BoolType)
+	leftIsBool := IsSameTypeKind(leftType, BoolType)
+	rightIsBool := IsSameTypeKind(rightType, BoolType)
 
 	if !leftIsBool && !rightIsBool {
 		if !anyInvalid {

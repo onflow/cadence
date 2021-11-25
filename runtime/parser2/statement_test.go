@@ -825,6 +825,89 @@ func TestParseForStatement(t *testing.T) {
 	})
 }
 
+func TestParseForStatementIndexBinding(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("empty block", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseStatements("for i, x in y { }")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.ForStatement{
+					Identifier: ast.Identifier{
+						Identifier: "x",
+						Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+					},
+					Index: &ast.Identifier{
+						Identifier: "i",
+						Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
+					},
+					Value: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "y",
+							Pos:        ast.Position{Line: 1, Column: 12, Offset: 12},
+						},
+					},
+					Block: &ast.Block{
+						Statements: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 14, Offset: 14},
+							EndPos:   ast.Position{Line: 1, Column: 16, Offset: 16},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("no comma", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseStatements("for i x in y { }")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected keyword \"in\", got identifier",
+					Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
+				},
+				&SyntaxError{
+					Message: "expected token '{'",
+					Pos:     ast.Position{Offset: 11, Line: 1, Column: 11},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("no identifiers", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseStatements("for in y { }")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected identifier, got keyword \"in\"",
+					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+				},
+				&SyntaxError{
+					Message: "expected token identifier",
+					Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
+				},
+			},
+			errs,
+		)
+	})
+}
+
 func TestParseEmit(t *testing.T) {
 
 	t.Parallel()

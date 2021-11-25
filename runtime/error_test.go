@@ -38,7 +38,7 @@ func TestRuntimeError(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewInterpreterRuntime()
+		runtime := newTestInterpreterRuntime()
 
 		script := []byte(`X`)
 
@@ -70,7 +70,7 @@ func TestRuntimeError(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewInterpreterRuntime()
+		runtime := newTestInterpreterRuntime()
 
 		script := []byte(`fun test() {}`)
 
@@ -103,7 +103,7 @@ func TestRuntimeError(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewInterpreterRuntime()
+		runtime := newTestInterpreterRuntime()
 
 		script := []byte(`
             pub fun main() {
@@ -141,7 +141,7 @@ func TestRuntimeError(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewInterpreterRuntime()
+		runtime := newTestInterpreterRuntime()
 
 		importedScript := []byte(`X`)
 
@@ -184,7 +184,7 @@ func TestRuntimeError(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewInterpreterRuntime()
+		runtime := newTestInterpreterRuntime()
 
 		importedScript := []byte(`fun test() {}`)
 
@@ -228,7 +228,7 @@ func TestRuntimeError(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewInterpreterRuntime()
+		runtime := newTestInterpreterRuntime()
 
 		importedScript := []byte(`
             pub fun add() {
@@ -348,7 +348,7 @@ func TestRuntimeError(t *testing.T) {
 			},
 		}
 
-		rt := NewInterpreterRuntime()
+		rt := newTestInterpreterRuntime()
 		err = rt.ExecuteTransaction(
 			Script{
 				Source: []byte(codes[location.ID()]),

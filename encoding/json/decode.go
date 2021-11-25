@@ -90,19 +90,28 @@ func (d *Decoder) Decode() (value cadence.Value, err error) {
 }
 
 const (
-	typeKey       = "type"
-	valueKey      = "value"
-	keyKey        = "key"
-	nameKey       = "name"
-	fieldsKey     = "fields"
-	idKey         = "id"
-	targetPathKey = "targetPath"
-	borrowTypeKey = "borrowType"
-	domainKey     = "domain"
-	identifierKey = "identifier"
-	staticTypeKey = "staticType"
-	addressKey    = "address"
-	pathKey       = "path"
+	typeKey         = "type"
+	kindKey         = "kind"
+	valueKey        = "value"
+	keyKey          = "key"
+	nameKey         = "name"
+	fieldsKey       = "fields"
+	initializersKey = "initializers"
+	idKey           = "id"
+	targetPathKey   = "targetPath"
+	borrowTypeKey   = "borrowType"
+	domainKey       = "domain"
+	identifierKey   = "identifier"
+	staticTypeKey   = "staticType"
+	addressKey      = "address"
+	pathKey         = "path"
+	authorizedKey   = "authorized"
+	sizeKey         = "size"
+	typeIDKey       = "typeID"
+	restrictionsKey = "restrictions"
+	labelKey        = "label"
+	parametersKey   = "parameters"
+	returnKey       = "return"
 )
 
 var ErrInvalidJSONCadence = errors.New("invalid JSON Cadence structure")
@@ -223,7 +232,11 @@ func decodeBool(valueJSON interface{}) cadence.Bool {
 }
 
 func decodeString(valueJSON interface{}) cadence.String {
-	return cadence.NewString(toString(valueJSON))
+	str, err := cadence.NewString(toString(valueJSON))
+	if err != nil {
+		panic(err)
+	}
+	return str
 }
 
 func decodeAddress(valueJSON interface{}) cadence.Address {
@@ -310,15 +323,33 @@ func decodeInt64(valueJSON interface{}) cadence.Int64 {
 }
 
 func decodeInt128(valueJSON interface{}) cadence.Int128 {
-	return cadence.NewInt128FromBig(decodeBigInt(valueJSON))
+	bigInt := decodeBigInt(valueJSON)
+	value, err := cadence.NewInt128FromBig(bigInt)
+	if err != nil {
+		// TODO: improve error message
+		panic(ErrInvalidJSONCadence)
+	}
+	return value
 }
 
 func decodeInt256(valueJSON interface{}) cadence.Int256 {
-	return cadence.NewInt256FromBig(decodeBigInt(valueJSON))
+	bigInt := decodeBigInt(valueJSON)
+	value, err := cadence.NewInt256FromBig(bigInt)
+	if err != nil {
+		// TODO: improve error message
+		panic(ErrInvalidJSONCadence)
+	}
+	return value
 }
 
 func decodeUInt(valueJSON interface{}) cadence.UInt {
-	return cadence.NewUIntFromBig(decodeBigInt(valueJSON))
+	bigInt := decodeBigInt(valueJSON)
+	value, err := cadence.NewUIntFromBig(bigInt)
+	if err != nil {
+		// TODO: improve error message
+		panic(ErrInvalidJSONCadence)
+	}
+	return value
 }
 
 func decodeUInt8(valueJSON interface{}) cadence.UInt8 {
@@ -370,11 +401,23 @@ func decodeUInt64(valueJSON interface{}) cadence.UInt64 {
 }
 
 func decodeUInt128(valueJSON interface{}) cadence.UInt128 {
-	return cadence.NewUInt128FromBig(decodeBigInt(valueJSON))
+	bigInt := decodeBigInt(valueJSON)
+	value, err := cadence.NewUInt128FromBig(bigInt)
+	if err != nil {
+		// TODO: improve error message
+		panic(ErrInvalidJSONCadence)
+	}
+	return value
 }
 
 func decodeUInt256(valueJSON interface{}) cadence.UInt256 {
-	return cadence.NewUInt256FromBig(decodeBigInt(valueJSON))
+	bigInt := decodeBigInt(valueJSON)
+	value, err := cadence.NewUInt256FromBig(bigInt)
+	if err != nil {
+		// TODO: improve error message
+		panic(ErrInvalidJSONCadence)
+	}
+	return value
 }
 
 func decodeWord8(valueJSON interface{}) cadence.Word8 {
@@ -611,18 +654,306 @@ func decodePath(valueJSON interface{}) cadence.Path {
 	}
 }
 
+func decodeParamType(valueJSON interface{}) cadence.Parameter {
+	obj := toObject(valueJSON)
+	return cadence.Parameter{
+		Label:      toString(obj.Get(labelKey)),
+		Identifier: toString(obj.Get(idKey)),
+		Type:       decodeType(obj.Get(typeKey)),
+	}
+}
+
+func decodeParamTypes(params []interface{}) []cadence.Parameter {
+	parameters := make([]cadence.Parameter, 0, len(params))
+
+	for _, param := range params {
+		parameters = append(parameters, decodeParamType(param))
+	}
+
+	return parameters
+}
+
+func decodeFieldTypes(fs []interface{}) []cadence.Field {
+	fields := make([]cadence.Field, 0, len(fs))
+
+	for _, field := range fs {
+		fields = append(fields, decodeFieldType(field))
+	}
+
+	return fields
+}
+
+func decodeFieldType(valueJSON interface{}) cadence.Field {
+	obj := toObject(valueJSON)
+	return cadence.Field{
+		Identifier: toString(obj.Get(idKey)),
+		Type:       decodeType(obj.Get(typeKey)),
+	}
+}
+
+func decodeFunctionType(returnValue, parametersValue, id interface{}) cadence.Type {
+	parameters := decodeParamTypes(toSlice(parametersValue))
+	returnType := decodeType(returnValue)
+
+	return cadence.FunctionType{
+		Parameters: parameters,
+		ReturnType: returnType,
+	}.WithID(toString(id))
+}
+
+func decodeNominalType(obj jsonObject, kind, typeID string, fs, initializers []interface{}) cadence.Type {
+	fields := decodeFieldTypes(fs)
+	inits := make([][]cadence.Parameter, 0, len(initializers))
+
+	for _, params := range initializers {
+		inits = append(inits, decodeParamTypes(toSlice(params)))
+	}
+
+	location, id, err := common.DecodeTypeID(typeID)
+	if err != nil {
+		panic(ErrInvalidJSONCadence)
+	}
+
+	switch kind {
+	case "Struct":
+		return &cadence.StructType{
+			Location:            location,
+			QualifiedIdentifier: id,
+			Fields:              fields,
+			Initializers:        inits,
+		}
+	case "Resource":
+		return &cadence.ResourceType{
+			Location:            location,
+			QualifiedIdentifier: id,
+			Fields:              fields,
+			Initializers:        inits,
+		}
+	case "Event":
+		return &cadence.EventType{
+			Location:            location,
+			QualifiedIdentifier: id,
+			Fields:              fields,
+			Initializer:         inits[0],
+		}
+	case "Contract":
+		return &cadence.ContractType{
+			Location:            location,
+			QualifiedIdentifier: id,
+			Fields:              fields,
+			Initializers:        inits,
+		}
+	case "StructInterface":
+		return &cadence.StructInterfaceType{
+			Location:            location,
+			QualifiedIdentifier: id,
+			Fields:              fields,
+			Initializers:        inits,
+		}
+	case "ResourceInterface":
+		return &cadence.ResourceInterfaceType{
+			Location:            location,
+			QualifiedIdentifier: id,
+			Fields:              fields,
+			Initializers:        inits,
+		}
+	case "ContractInterface":
+		return &cadence.ContractInterfaceType{
+			Location:            location,
+			QualifiedIdentifier: id,
+			Fields:              fields,
+			Initializers:        inits,
+		}
+	case "Enum":
+		return &cadence.EnumType{
+			Location:            location,
+			QualifiedIdentifier: id,
+			RawType:             decodeType(obj.Get(typeKey)),
+			Fields:              fields,
+			Initializers:        inits,
+		}
+	}
+
+	panic(ErrInvalidJSONCadence)
+}
+
+func decodeRestrictedType(
+	typeValue interface{},
+	restrictionsValue []interface{},
+	typeIDValue string,
+) cadence.Type {
+	typ := decodeType(typeValue)
+	restrictions := make([]cadence.Type, 0, len(restrictionsValue))
+	for _, restriction := range restrictionsValue {
+		restrictions = append(restrictions, decodeType(restriction))
+	}
+
+	return cadence.RestrictedType{
+		Type:         typ,
+		Restrictions: restrictions,
+	}.WithID(typeIDValue)
+}
+
+func decodeType(valueJSON interface{}) cadence.Type {
+	if valueJSON == "" {
+		return nil
+	}
+	obj := toObject(valueJSON)
+	kindValue := toString(obj.Get(kindKey))
+
+	switch kindValue {
+	case "Function":
+		returnValue := obj.Get(returnKey)
+		parametersValue := obj.Get(parametersKey)
+		idValue := obj.Get(typeIDKey)
+		return decodeFunctionType(returnValue, parametersValue, idValue)
+	case "Restriction":
+		restrictionsValue := obj.Get(restrictionsKey)
+		typeIDValue := toString(obj.Get(typeIDKey))
+		typeValue := obj.Get(typeKey)
+		return decodeRestrictedType(typeValue, toSlice(restrictionsValue), typeIDValue)
+	case "Optional":
+		return cadence.OptionalType{
+			Type: decodeType(obj.Get(typeKey)),
+		}
+	case "VariableSizedArray":
+		return cadence.VariableSizedArrayType{
+			ElementType: decodeType(obj.Get(typeKey)),
+		}
+	case "Capability":
+		return cadence.CapabilityType{
+			BorrowType: decodeType(obj.Get(typeKey)),
+		}
+	case "Dictionary":
+		return cadence.DictionaryType{
+			KeyType:     decodeType(obj.Get(keyKey)),
+			ElementType: decodeType(obj.Get(valueKey)),
+		}
+	case "ConstantSizedArray":
+		size := toUInt(obj.Get(sizeKey))
+		return cadence.ConstantSizedArrayType{
+			ElementType: decodeType(obj.Get(typeKey)),
+			Size:        size,
+		}
+	case "Reference":
+		auth := toBool(obj.Get(authorizedKey))
+		return cadence.ReferenceType{
+			Type:       decodeType(obj.Get(typeKey)),
+			Authorized: auth,
+		}
+	case "Any":
+		return cadence.AnyType{}
+	case "AnyStruct":
+		return cadence.AnyStructType{}
+	case "AnyResource":
+		return cadence.AnyResourceType{}
+	case "Type":
+		return cadence.MetaType{}
+	case "Void":
+		return cadence.VoidType{}
+	case "Never":
+		return cadence.NeverType{}
+	case "Bool":
+		return cadence.BoolType{}
+	case "String":
+		return cadence.StringType{}
+	case "Character":
+		return cadence.CharacterType{}
+	case "Bytes":
+		return cadence.BytesType{}
+	case "Address":
+		return cadence.AddressType{}
+	case "Number":
+		return cadence.NumberType{}
+	case "SignedNumber":
+		return cadence.SignedNumberType{}
+	case "Integer":
+		return cadence.IntegerType{}
+	case "SignedInteger":
+		return cadence.SignedIntegerType{}
+	case "FixedPoint":
+		return cadence.FixedPointType{}
+	case "SignedFixedPoint":
+		return cadence.SignedFixedPointType{}
+	case "Int":
+		return cadence.IntType{}
+	case "Int8":
+		return cadence.Int8Type{}
+	case "Int16":
+		return cadence.Int16Type{}
+	case "Int32":
+		return cadence.Int32Type{}
+	case "Int64":
+		return cadence.Int64Type{}
+	case "Int128":
+		return cadence.Int128Type{}
+	case "Int256":
+		return cadence.Int256Type{}
+	case "UInt":
+		return cadence.UIntType{}
+	case "UInt8":
+		return cadence.UInt8Type{}
+	case "UInt16":
+		return cadence.UInt16Type{}
+	case "UInt32":
+		return cadence.UInt32Type{}
+	case "UInt64":
+		return cadence.UInt64Type{}
+	case "UInt128":
+		return cadence.UInt128Type{}
+	case "UInt256":
+		return cadence.UInt256Type{}
+	case "Word8":
+		return cadence.Word8Type{}
+	case "Word16":
+		return cadence.Word16Type{}
+	case "Word32":
+		return cadence.Word32Type{}
+	case "Word64":
+		return cadence.Word64Type{}
+	case "Fix64":
+		return cadence.Fix64Type{}
+	case "UFix64":
+		return cadence.UFix64Type{}
+	case "Path":
+		return cadence.PathType{}
+	case "CapabilityPath":
+		return cadence.CapabilityPathType{}
+	case "StoragePath":
+		return cadence.StoragePathType{}
+	case "PublicPath":
+		return cadence.PublicPathType{}
+	case "PrivatePath":
+		return cadence.PrivatePathType{}
+	case "AuthAccount":
+		return cadence.AuthAccountType{}
+	case "PublicAccount":
+		return cadence.PublicAccountType{}
+	case "AuthAccount.Keys":
+		return cadence.AuthAccountKeysType{}
+	case "PublicAccount.Keys":
+		return cadence.PublicAccountKeysType{}
+	case "AuthAccount.Contracts":
+		return cadence.AuthAccountContractsType{}
+	case "PublicAccount.Contracts":
+		return cadence.PublicAccountContractsType{}
+	case "DeployedContract":
+		return cadence.DeployedContractType{}
+	case "AccountKey":
+		return cadence.AccountKeyType{}
+	default:
+		fieldsValue := obj.Get(fieldsKey)
+		typeIDValue := toString(obj.Get(typeIDKey))
+		initValue := obj.Get(initializersKey)
+		return decodeNominalType(obj, kindValue, typeIDValue, toSlice(fieldsValue), toSlice(initValue))
+	}
+}
+
 func decodeTypeValue(valueJSON interface{}) cadence.TypeValue {
 	obj := toObject(valueJSON)
 
-	var staticType string
-
-	staticTypeProperty, ok := obj[staticTypeKey]
-	if ok && staticTypeProperty != nil {
-		staticType = toString(staticTypeProperty)
-	}
-
 	return cadence.TypeValue{
-		StaticType: staticType,
+		StaticType: decodeType(obj.Get(staticTypeKey)),
 	}
 }
 
@@ -638,7 +969,7 @@ func decodeCapability(valueJSON interface{}) cadence.Capability {
 	return cadence.Capability{
 		Path:       path,
 		Address:    decodeAddress(obj.Get(addressKey)),
-		BorrowType: obj.GetString(borrowTypeKey),
+		BorrowType: decodeType(obj.Get(borrowTypeKey)),
 	}
 }
 
@@ -686,6 +1017,16 @@ func toBool(valueJSON interface{}) bool {
 	}
 
 	return v
+}
+
+func toUInt(valueJSON interface{}) uint {
+	v, isNum := valueJSON.(float64)
+	if !isNum {
+		// TODO: improve error message
+		panic(ErrInvalidJSONCadence)
+	}
+
+	return uint(v)
 }
 
 func toString(valueJSON interface{}) string {

@@ -337,6 +337,7 @@ func TestForStatement_MarshalJSON(t *testing.T) {
                 "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
                 "EndPos": {"Offset": 6, "Line": 2, "Column": 8}
             },
+			"Index": null,
             "Value": {
                 "Type": "BoolExpression",
                 "Value": false,

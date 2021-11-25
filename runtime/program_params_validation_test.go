@@ -22,15 +22,16 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
-func TestScriptParameterTypeValidation(t *testing.T) {
+func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 
 	t.Parallel()
 
@@ -74,20 +75,16 @@ func TestScriptParameterTypeValidation(t *testing.T) {
 		encodedArg, err = json.Encode(arg)
 		require.NoError(t, err)
 
-		rt := NewInterpreterRuntime()
+		rt := newTestInterpreterRuntime()
+
+		storage := newTestLedger(nil, nil)
 
 		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
 			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return json.Decode(b)
 			},
 		}
-
-		// TODO: remove once importValue returns an error
-		defer func() {
-			if r := recover(); r != nil {
-				err, _ = r.(error)
-			}
-		}()
 
 		_, err = rt.ExecuteScript(
 			Script{
@@ -288,7 +285,7 @@ func TestScriptParameterTypeValidation(t *testing.T) {
         `
 
 		err := executeScript(t, script, cadence.NewOptional(nil))
-		expectNonImportableError(t, err)
+		assert.NoError(t, err)
 	})
 
 	t.Run("Non-Importable Dictionary", func(t *testing.T) {
@@ -493,7 +490,7 @@ func TestScriptParameterTypeValidation(t *testing.T) {
 	})
 }
 
-func TestTransactionParameterTypeValidation(t *testing.T) {
+func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 
 	t.Parallel()
 
@@ -545,20 +542,16 @@ func TestTransactionParameterTypeValidation(t *testing.T) {
 		encodedArg, err = json.Encode(arg)
 		require.NoError(t, err)
 
-		rt := NewInterpreterRuntime()
+		rt := newTestInterpreterRuntime()
+
+		storage := newTestLedger(nil, nil)
 
 		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
 			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return json.Decode(b)
 			},
 		}
-
-		// TODO: remove once importValue returns an error
-		defer func() {
-			if r := recover(); r != nil {
-				err, _ = r.(error)
-			}
-		}()
 
 		return rt.ExecuteTransaction(
 			Script{
@@ -771,12 +764,7 @@ func TestTransactionParameterTypeValidation(t *testing.T) {
         `
 
 		err := executeTransaction(t, script, cadence.NewOptional(nil))
-
-		expectCheckerErrors(
-			t,
-			err,
-			&sema.InvalidNonImportableTransactionParameterTypeError{},
-		)
+		assert.NoError(t, err)
 	})
 
 	t.Run("Non-Importable Dictionary", func(t *testing.T) {

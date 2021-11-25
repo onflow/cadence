@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2021 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,25 +18,16 @@
 
 package interpreter
 
-import (
-	"testing"
+type valueInspector func(Value) bool
 
-	"github.com/stretchr/testify/assert"
-)
+func (f valueInspector) WalkValue(value Value) ValueWalker {
+	if f(value) {
+		return f
+	}
 
-func TestPrependMagic(t *testing.T) {
+	return nil
+}
 
-	t.Run("empty", func(t *testing.T) {
-		assert.Equal(t,
-			[]byte{0x0, 0xCA, 0xDE, 0x0, 0x1},
-			PrependMagic([]byte{}, 1),
-		)
-	})
-
-	t.Run("1, 2, 3", func(t *testing.T) {
-		assert.Equal(t,
-			[]byte{0x0, 0xCA, 0xDE, 0x0, 0x4, 1, 2, 3},
-			PrependMagic([]byte{1, 2, 3}, 4),
-		)
-	})
+func InspectValue(value Value, f func(Value) bool) {
+	WalkValue(valueInspector(f), value)
 }

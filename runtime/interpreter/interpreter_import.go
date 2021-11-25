@@ -20,6 +20,7 @@ package interpreter
 
 import (
 	"sort"
+	"time"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/sema"
@@ -38,6 +39,14 @@ func (interpreter *Interpreter) VisitImportDeclaration(declaration *ast.ImportDe
 
 func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.ResolvedLocation) {
 
+	// tracing
+	if interpreter.tracingEnabled {
+		startTime := time.Now()
+		defer func() {
+			interpreter.reportImportTrace(resolvedLocation.Location.String(), time.Since(startTime))
+		}()
+	}
+
 	subInterpreter := interpreter.EnsureLoaded(resolvedLocation.Location)
 
 	// determine which identifiers are imported /
@@ -48,10 +57,11 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 	if identifierLength > 0 {
 		variables = make(map[string]*Variable, identifierLength)
 		for _, identifier := range resolvedLocation.Identifiers {
-			variables[identifier.Identifier] =
-				subInterpreter.Globals[identifier.Identifier]
+			variable, _ := subInterpreter.Globals.Get(identifier.Identifier)
+			variables[identifier.Identifier] = variable
 		}
 	} else {
+		// Only take the global values defined in the program.
 		variables = subInterpreter.Globals
 	}
 
@@ -77,12 +87,8 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 			}
 		}
 
-		// don't import base values
-		if sema.BaseValueActivation.Find(name) != nil {
-			continue
-		}
-
 		interpreter.setVariable(name, variable)
-		interpreter.Globals[name] = variable
+		interpreter.Globals.Set(name, variable)
 	}
+
 }

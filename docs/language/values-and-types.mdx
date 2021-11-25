@@ -101,7 +101,7 @@ and can represent values in the following ranges:
 
 The types are independent types, i.e. not subtypes of each other.
 
-See the section about [arithmetic operators](operators#arithmetic) for further
+See the section about [arithmetic operators](../operators#arithmetic) for further
 information about the behavior of the different integer types.
 
 ```cadence
@@ -121,7 +121,7 @@ In addition, the arbitrary precision integer type `Int` is provided.
 let veryLargeNumber: Int = 10000000000000000000000000000000
 ```
 
-Integer literals are [inferred](type-inference) to have type `Int`,
+Integer literals are [inferred](../type-inference) to have type `Int`,
 or if the literal occurs in a position that expects an explicit type,
 e.g. in a variable declaration with an explicit type annotation.
 
@@ -440,7 +440,7 @@ let maybeInt: Int? = 1
 let anything: AnyStruct = maybeInt
 ```
 
-[Conditional downcasting](operators#conditional-downcasting-operator) allows coercing
+[Conditional downcasting](../operators#conditional-downcasting-operator) allows coercing
 a value which has the type `AnyStruct` or `AnyResource` back to its original type.
 
 ## Optionals
@@ -635,7 +635,7 @@ If the variable being assigned to is non-nil,
 the execution of the program aborts.
 
 The force-assignment operator is only used for
-[resource types](composite-types#resources) and the move operator (`<-`),
+[resource types](../composite-types#resources) and the move operator (`<-`),
 which are covered in the resources section of this document.
 
 ### Conditional Downcasting Operator
@@ -670,7 +670,7 @@ let boolean = something as? Bool
 ```
 
 Downcasting works for nested types (e.g. arrays),
-interfaces (if a [resource](composite-types#resources) interface not to a concrete resource),
+interfaces (if a [resource](../composite-types#resources) interface not to a concrete resource),
 and optionals.
 
 ```cadence
@@ -691,7 +691,7 @@ let second = values[1] as? Bool
 `Never` is the bottom type, i.e., it is a subtype of all types.
 There is no value that has type `Never`.
 `Never` can be used as the return type for functions that never return normally.
-For example, it is the return type of the function [`panic`](built-in-functions#panic).
+For example, it is the return type of the function [`panic`](../built-in-functions#panic).
 
 ```cadence
 // Declare a function named `crashAndBurn` which will never return,
@@ -862,6 +862,14 @@ Strings have multiple built-in functions you can use:
 
   example.decodeHex()  // is `[67, 97, 100, 101, 110, 99, 101, 33]`
   ```
+- `cadence•fun toLower(): String`
+  Returns a string where all upper case letters are replaced with lowercase characters
+
+  ```cadence
+  let example = "Flowers"
+
+  example.toLower()  // is `flowers`
+  ```
 
 The `String` type also provides the following functions:
 
@@ -878,7 +886,6 @@ The `String` type also provides the following functions:
 ## Arrays
 
 Arrays are mutable, ordered collections of values.
-All values in an array must have the same type.
 Arrays may contain a value multiple times.
 Array literals start with an opening square bracket `[` and end with a closing square bracket `]`.
 
@@ -890,23 +897,21 @@ Array literals start with an opening square bracket `[` and end with a closing s
 // An array with integers
 //
 [1, 2, 3]
-
-// Invalid: mixed types
-//
-[1, true, 2, false]
 ```
 
 ### Array Types
 
 Arrays either have a fixed size or are variably sized, i.e., elements can be added and removed.
 
-Fixed-size arrays have the form `[T; N]`, where `T` is the element type,
+Fixed-size array types have the form `[T; N]`, where `T` is the element type,
 and `N` is the size of the array.  `N` has to be statically known, meaning
 that it needs to be an integer literal.
 For example, a fixed-size array of 3 `Int8` elements has the type `[Int8; 3]`.
 
-Variable-size arrays have the form `[T]`, where `T` is the element type.
+Variable-size array types have the form `[T]`, where `T` is the element type.
 For example, the type `[Int16]` specifies a variable-size array of elements that have type `Int16`.
+
+All values in an array must have a type which is a subtype of the array's element type (`T`).
 
 It is important to understand that arrays are value types and are only ever copied
 when used as an initial value for a constant or variable,
@@ -935,6 +940,12 @@ let arrays: [[Int16; 3]; 2] = [
 
 // Declare a variable length array of integers
 var variableLengthArray: [Int] = []
+
+// Mixing values with different types is possible
+// by declaring the expected array type
+// with the common supertype of all values.
+//
+let mixedValues: [AnyStruct] = ["some string", 42]
 ```
 
 Array types are covariant in their element types.
@@ -1207,10 +1218,8 @@ It is invalid to use one of these functions on a fixed-sized array.
 ## Dictionaries
 
 Dictionaries are mutable, unordered collections of key-value associations.
-In a dictionary, all keys must have the same type,
-and all values must have the same type.
-Dictionaries may contain a key only once and
-may contain a value multiple times.
+Dictionaries may contain a key only once
+and may contain a value multiple times.
 
 Dictionary literals start with an opening brace `{`
 and end with a closing brace `}`.
@@ -1228,22 +1237,18 @@ and key-value associations are separated by commas.
     1: true,
     2: false
 }
-
-// Invalid: mixed types
-//
-{
-    1: true,
-    false: 2
-}
 ```
 
 ### Dictionary Types
 
-Dictionaries have the form `{K: V}`,
+Dictionary types have the form `{K: V}`,
 where `K` is the type of the key,
 and `V` is the type of the value.
 For example, a dictionary with `Int` keys and `Bool`
 values has type `{Int: Bool}`.
+
+In a dictionary, all keys must have a type that is a subtype of the dictionary's key type (`K`)
+and all values must have a type that is a subtype of the dictionary's value type (`V`).
 
 ```cadence
 // Declare a constant that has type `{Int: Bool}`,
@@ -1260,6 +1265,15 @@ let booleans = {
 let integers = {
     true: 1,
     false: 0
+}
+
+// Mixing keys with different types, and mixing values with different types,
+// is possible by declaring the expected dictionary type with the common supertype
+// of all keys, and the common supertype of all values.
+//
+let mixedValues: {String: AnyStruct} = {
+    "a": 1,
+    "b": true
 }
 ```
 
@@ -1434,7 +1448,7 @@ booleans[0] = true
 
   // `values` has type [Int] and is `[42, 23]`
   ```
-  
+
 - `cadence•fun containsKey(key: K): Bool`
 
   Returns true if the given key of type `K` is in the dictionary.
@@ -1465,3 +1479,4 @@ and [`Equatable`](../interfaces#equatable-interface) [interfaces](../interfaces)
 
 Most of the built-in types, like booleans and integers,
 are hashable and equatable, so can be used as keys in dictionaries.
+

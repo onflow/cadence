@@ -159,7 +159,7 @@ Imagine that the next example is from a different account as before.
 
 // Get the public account for the address that stores the counter
 //
-let publicAccount = getAccount(0x42)
+let publicAccount = getAccount(0x1)
 
 // Get a capability for the counter that is made publicly accessible
 // through the path `/public/hasCount`.
@@ -188,7 +188,7 @@ let countCap = publicAccount.getCapability<&{HasCount}>(/public/hasCount)
 //
 let countRef = countCap.borrow()!
 
-countRef.count  // is `43`
+countRef.count  // is `42`
 
 // Invalid: The `increment` function is not accessible for the reference,
 // because it has the type `&{HasCount}`
@@ -225,4 +225,3 @@ The address of a capability can be obtained from the `address` field of the capa
 - `cadence•let address: Address`
 
   The address of the capability.
-

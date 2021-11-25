@@ -34,7 +34,7 @@ func TestRuntimeCyclicImport(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewInterpreterRuntime()
+	runtime := newTestInterpreterRuntime()
 
 	imported1 := []byte(`
       import p2
@@ -112,4 +112,37 @@ func TestRuntimeCyclicImport(t *testing.T) {
 	errs = checker.ExpectCheckerErrors(t, checkerErr3, 1)
 
 	require.IsType(t, &sema.CyclicImportsError{}, errs[0])
+}
+
+func TestRuntimeExport(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("interpreted function (invalid)", func(t *testing.T) {
+
+		t.Parallel()
+
+		runtime := newTestInterpreterRuntime()
+
+		script := []byte(`
+            pub fun f() {}
+
+            pub fun main(): AnyStruct {
+                return f
+            }
+        `)
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: &testRuntimeInterface{},
+				Location:  common.ScriptLocation{},
+			},
+		)
+
+		require.Error(t, err)
+		require.IsType(t, Error{}, err)
+	})
 }

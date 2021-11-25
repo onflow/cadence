@@ -7,12 +7,6 @@ title: Crypto
 The built-in enum `HashAlgorithm` provides the set of hashing algorithms that
 are supported by the language natively.
 
-<Callout type="info">
-
-🚧 Status: `KMAC128_BLS_BLS12_381` is not supported yet.
-
-</Callout>
-
 ```cadence
 pub enum HashAlgorithm: UInt8 {
     /// SHA2_256 is Secure Hashing Algorithm 2 (SHA-2) with a 256-bit digest.
@@ -41,24 +35,12 @@ pub enum HashAlgorithm: UInt8 {
 }
 ```
 
-<Callout type="info">
-
-🚧 Status: `KMAC128_BLS_BLS12_381` is not supported yet.
-
-</Callout>
-
 - `hash` hashes the input data using the input hashing algorithm.
   If `KMAC128_BLS_BLS12_381` is used, data is hashed using the standard MAC `KMAC128(customizer, key, data, length)` with the following inputs:
     - `customizer` is the UTF-8 encoding of `"H2C"`
     - `key` is the UTF-8 encoding of `"APP_BLS_SIG_BLS12381G1_XOF:KMAC128_SSWU_RO_POP_"`
     - `data` is the input data to hash
     - `length` is 1024 bytes
-
-<Callout type="info">
-
-🚧 Status: `hashWithTag` is not supported yet.
-
-</Callout>
 
 - `hashWithTag` hashes data along with a tag.
   This allows instanciating independent hashing functions customized with a domain separation tag.
@@ -86,12 +68,6 @@ let digest = HashAlgorithm.SHA3_256.hash(data)
 
 The built-in enum `SignatureAlgorithm` provides the set of signing algorithms that
 are supported by the language natively.
-
-<Callout type="info">
-
-🚧 Status: `BLS_BLS12_381` is not supported yet.
-
-</Callout>
 
 ```cadence
 pub enum SignatureAlgorithm: UInt8 {
@@ -126,6 +102,10 @@ struct PublicKey {
         domainSeparationTag: String,
         hashAlgorithm: HashAlgorithm
     ): Bool
+
+    /// Verifies the proof of possession of the private key.
+    /// This function is only implemented if the signature algorithm of the public key is BLS, it errors if called with any other signature algorithm. 
+    pub fun verifyPoP(_ proof: [UInt8]): Bool
 }
 ```
 
@@ -139,12 +119,6 @@ let publicKey = PublicKey(
 ```
 
 The raw key value depends on the supported signature scheme:
-
-<Callout type="info">
-
-🚧 Status: `BLS_BLS12_381` is not supported yet.
-
-</Callout>
 
 - `ECDSA_P256` and `ECDSA_secp256k1`:
   The public key is a curve point `(X,Y)` where `X` and `Y` are two prime field elements.
@@ -195,19 +169,13 @@ let isValid = pk.verify(
 
 The inputs to `verify()` depend on the signature scheme used:
 
-<Callout type="info">
-
-🚧 Status: `BLS_BLS12_381` is not supported yet.
-
-</Callout>
-
 - ECDSA (`ECDSA_P256` and `ECDSA_secp256k1`):
    - `signature` is the couple `(r,s)`. It is represented as `bytes(r) || bytes(s)`, where `||` is the concatenation operation,
      and `bytes()` is the bytes big-endian encoding of the input integer padded by zeros to the byte-length of the curve order.
      The signature is 64 bytes-long for both curves.
    - `signedData` is the arbitrary message to verify the signature against.
    - `domainSeparationTag` is the domain tag used for signing. The interface only accepts the the user tag `"FLOW-V0.0-user"`.
-   - `hashAlgorithm` is the algorithm used to hash the message along with the given tag (check `hashWithTag` [function](./crypto.mdx#hashing) for more details).
+   - `hashAlgorithm` is the algorithm used to hash the message along with the given tag (check the [`hashWithTag` function](#hashing) for more details).
      Only `SHA2_256` or `SHA3_256` are accepted.
 
 - BLS (`BLS_BLS_12_381`):
@@ -220,6 +188,27 @@ The inputs to `verify()` depend on the signature scheme used:
      Only `KMAC128_BLS_BLS12_381` is accepted.
 
 BLS verification performs the necessary membership check of the signature while the membership check of the public key is performed at the creation of the `PublicKey` object.
+
+The BLS signature scheme also supports two additional operations on keys and signatures:
+
+```cadence
+/// This is a specific function for the BLS signature scheme. It aggregate multiple BLS signatures into one, 
+/// considering the proof of possession as a defence against the rogue attacks.
+///
+/// Signatures could be generated from the same or distinct messages, they
+/// could also be the aggregation of other signatures.
+/// The order of the signatures in the slice does not matter since the aggregation is commutative. 
+/// No subgroup membership check is performed on the input signatures.
+/// The function errors if the array is empty or if decoding one of the signature fails. 
+AggregateBLSSignatures(_ signatures: [[UInt8]]): [UInt8]
+
+/// This is a specific function for the BLS signature scheme. It aggregates multiple BLS public keys into one.
+///
+/// The order of the public keys in the slice does not matter since the aggregation is commutative. 
+/// No subgroup membership check is performed on the input keys.
+/// The function errors if the array is empty or any of the input keys is not a BLS key.
+AggregateBLSPublicKeys(_ signatures: [PublicKey]): PublicKey
+```
 
 ## Crypto Contract
 

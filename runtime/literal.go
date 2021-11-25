@@ -101,13 +101,22 @@ func arrayLiteralValue(elements []ast.Expression, elementType sema.Type) (cadenc
 	return cadence.NewArray(values), nil
 }
 
-func pathLiteralValue(expression ast.Expression, ty sema.Type) (cadence.Value, error) {
+func pathLiteralValue(expression ast.Expression, ty sema.Type) (result cadence.Value, errResult error) {
 	pathExpression, ok := expression.(*ast.PathExpression)
 	if !ok {
 		return nil, LiteralExpressionTypeError
 	}
 
-	pathType, err := sema.CheckPathLiteral(pathExpression)
+	pathType, err := sema.CheckPathLiteral(
+		pathExpression.Domain.Identifier,
+		pathExpression.Identifier.Identifier,
+		func() ast.Range {
+			return ast.NewRangeFromPositioned(pathExpression.Domain)
+		},
+		func() ast.Range {
+			return ast.NewRangeFromPositioned(pathExpression.Identifier)
+		},
+	)
 	if err != nil {
 		return nil, InvalidLiteralError
 	}
@@ -142,9 +151,7 @@ func integerLiteralValue(expression ast.Expression, ty sema.Type) (cadence.Value
 		return nil, err
 	}
 
-	result := ExportValue(convertedValue, nil)
-
-	return result, nil
+	return ExportValue(convertedValue, nil)
 }
 
 func convertIntValue(intValue interpreter.IntValue, ty sema.Type) (interpreter.Value, error) {
@@ -307,17 +314,17 @@ func LiteralValue(expression ast.Expression, ty sema.Type) (cadence.Value, error
 			return nil, LiteralExpressionTypeError
 		}
 
-		return cadence.NewString(expression.Value), nil
+		return cadence.NewString(expression.Value)
 	}
 
 	switch {
-	case sema.IsSubType(ty, sema.IntegerType):
+	case sema.IsSameTypeKind(ty, sema.IntegerType):
 		return integerLiteralValue(expression, ty)
 
-	case sema.IsSubType(ty, sema.FixedPointType):
+	case sema.IsSameTypeKind(ty, sema.FixedPointType):
 		return fixedPointLiteralValue(expression, ty)
 
-	case sema.IsSubType(ty, sema.PathType):
+	case sema.IsSameTypeKind(ty, sema.PathType):
 		return pathLiteralValue(expression, ty)
 	}
 
