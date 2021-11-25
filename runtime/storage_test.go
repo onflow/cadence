@@ -40,10 +40,10 @@ import (
 func withWritesToStorage(
 	tb testing.TB,
 	count int,
+	random *rand.Rand,
 	onWrite func(owner, key, value []byte),
 	handler func(*Storage, *interpreter.Interpreter),
 ) {
-
 	ledger := newTestLedger(nil, onWrite)
 	storage := NewStorage(ledger)
 
@@ -53,15 +53,15 @@ func withWritesToStorage(
 
 	for i := 0; i < count; i++ {
 
-		r := rand.Uint32()
+		randomIndex := random.Uint32()
 
 		storageKey := interpreter.StorageKey{
 			Address: address,
-			Key:     fmt.Sprintf("%d", r),
+			Key:     fmt.Sprintf("%d", randomIndex),
 		}
 
 		var storageIndex atree.StorageIndex
-		binary.BigEndian.PutUint32(storageIndex[:], r)
+		binary.BigEndian.PutUint32(storageIndex[:], randomIndex)
 
 		storage.writes[storageKey] = storageIndex
 	}
@@ -72,6 +72,8 @@ func withWritesToStorage(
 func TestRuntimeStorageWriteCached(t *testing.T) {
 
 	t.Parallel()
+
+	random := rand.New(rand.NewSource(42))
 
 	var writes int
 
@@ -84,6 +86,7 @@ func TestRuntimeStorageWriteCached(t *testing.T) {
 	withWritesToStorage(
 		t,
 		count,
+		random,
 		onWrite,
 		func(storage *Storage, inter *interpreter.Interpreter) {
 			const commitContractUpdates = true
@@ -99,45 +102,45 @@ func TestRuntimeStorageWriteCachedIsDeterministic(t *testing.T) {
 
 	t.Parallel()
 
-	var writes []testWrite
+	var previousWrites []testWrite
 
-	onWrite := func(owner, key, _ []byte) {
-		writes = append(writes, testWrite{
-			owner: owner,
-			key:   key,
-		})
-	}
+	// verify for 10 times and check the writes are always deterministic
+	for i := 0; i < 10; i++ {
 
-	const count = 100
-	withWritesToStorage(
-		t,
-		count,
-		onWrite,
-		func(storage *Storage, inter *interpreter.Interpreter) {
-			const commitContractUpdates = true
-			err := storage.Commit(inter, commitContractUpdates)
-			require.NoError(t, err)
+		var writes []testWrite
 
-			previousWrites := make([]testWrite, len(writes))
-			copy(previousWrites, writes)
+		onWrite := func(owner, key, _ []byte) {
+			writes = append(writes, testWrite{
+				owner: owner,
+				key:   key,
+			})
+		}
 
-			// verify for 10 times and check the writes are always deterministic
-			for i := 0; i < 10; i++ {
-				// test that writing again should produce the same result
-				writes = nil
+		const count = 100
+		withWritesToStorage(
+			t,
+			count,
+			rand.New(rand.NewSource(42)),
+			onWrite,
+			func(storage *Storage, inter *interpreter.Interpreter) {
+				const commitContractUpdates = true
 				err := storage.Commit(inter, commitContractUpdates)
 				require.NoError(t, err)
+			},
+		)
 
-				for i, previousWrite := range previousWrites {
-					// compare the new write with the old write
-					require.Equal(t, previousWrite, writes[i])
-				}
+		if previousWrites != nil {
+			// no additional items
+			require.Len(t, writes, len(previousWrites))
 
-				// no additional items
-				require.Len(t, writes, len(previousWrites))
+			for i, previousWrite := range previousWrites {
+				// compare the new write with the old write
+				require.Equal(t, previousWrite, writes[i])
 			}
-		},
-	)
+		}
+
+		previousWrites = writes
+	}
 }
 
 func TestRuntimeStorageWrite(t *testing.T) {
