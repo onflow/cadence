@@ -159,7 +159,7 @@ func TestCheckInterfaceWithFunctionImplementation(t *testing.T) {
 
 					  }
                     `,
-					kind.Keyword(), kind.Keyword(),
+					kind.Keyword(),
 				),
 			)
 
