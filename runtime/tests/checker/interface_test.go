@@ -145,19 +145,13 @@ func TestCheckInterfaceWithFunctionImplementation(t *testing.T) {
 					`
                       %[1]s interface Test {
                           fun test(): Int {
-							  pre{
-
-							  }
-							  post{
-
-							  }
                              return 1
                           }
                       }
-					  
-					  %[1]s TestUser: Test{
+                      
+                      %[1]s TestUser: Test{
 
-					  }
+                      }
                     `,
 					kind.Keyword(),
 				),
@@ -2005,21 +1999,21 @@ func TestCheckInvalidMultipleInterfaceDefaultImplementation(t *testing.T) {
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-	struct interface InterfaceA {
-		fun test(): Int {
-			return 41
-		}
-	}
+    struct interface InterfaceA {
+        fun test(): Int {
+            return 41
+        }
+    }
 
-	struct interface InterfaceB {
-		fun test(): Int {
-			return 41
-		}
-	}
-	
-	struct Test:  InterfaceA, InterfaceB   {
+    struct interface InterfaceB {
+        fun test(): Int {
+            return 41
+        }
+    }
+    
+    struct Test:  InterfaceA, InterfaceB   {
 
-	}
+    }
 
     `)
 
@@ -2034,23 +2028,23 @@ func TestCheckMultipleInterfaceDefaultImplementationWhenOverriden(t *testing.T) 
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-	struct interface InterfaceA {
-		fun test(): Int{
-			return 41
-		}
-	}
+    struct interface InterfaceA {
+        fun test(): Int{
+            return 41
+        }
+    }
 
-	struct interface InterfaceB {
-		fun test(): Int {
-			return 41
-		}
-	}
-	
-	struct Test:  InterfaceA, InterfaceB {
-		fun test(): Int {
-			return 42
-		}
-	}
+    struct interface InterfaceB {
+        fun test(): Int {
+            return 41
+        }
+    }
+    
+    struct Test:  InterfaceA, InterfaceB {
+        fun test(): Int {
+            return 42
+        }
+    }
 
 
     `)
@@ -2064,19 +2058,19 @@ func TestCheckMultipleInterfaceSingleInterfaceDefaultImplementation(t *testing.T
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-	struct interface InterfaceA {
-		fun test(): Int {
-			return 41
-		}
-	}
+    struct interface InterfaceA {
+        fun test(): Int {
+            return 41
+        }
+    }
 
-	struct interface InterfaceB {
-		fun test(): Int
-	}
-	
-	struct Test:  InterfaceA, InterfaceB {
+    struct interface InterfaceB {
+        fun test(): Int
+    }
+    
+    struct Test:  InterfaceA, InterfaceB {
 
-	}
+    }
 
     `)
 
@@ -2091,21 +2085,21 @@ func TestCheckMultipleInterfaceSingleInterfaceDefaultImplementationWhenOverridde
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-	struct interface InterfaceA {
-		fun test(): Int {
-			return 41
-		}
-	}
+    struct interface InterfaceA {
+        fun test(): Int {
+            return 41
+        }
+    }
 
-	struct interface InterfaceB {
-		fun test(): Int
-	}
-	
-	struct Test:  InterfaceA, InterfaceB {
-		fun test(): Int {
-			return 42
-		}
-	}
+    struct interface InterfaceB {
+        fun test(): Int
+    }
+    
+    struct Test:  InterfaceA, InterfaceB {
+        fun test(): Int {
+            return 42
+        }
+    }
 
 
     `)
