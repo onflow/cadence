@@ -155,7 +155,7 @@ func TestCheckInterfaceWithFunctionImplementation(t *testing.T) {
                           }
                       }
 					  
-					  %s TestUser: Test{
+					  %[1]s TestUser: Test{
 
 					  }
                     `,
