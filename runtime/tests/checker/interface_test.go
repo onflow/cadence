@@ -2006,13 +2006,13 @@ func TestCheckInvalidMultipleInterfaceDefaultImplementation(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
 	struct interface InterfaceA {
-		fun test(): Int{
+		fun test(): Int {
 			return 41
 		}
 	}
 
 	struct interface InterfaceB {
-		fun test(): Int{
+		fun test(): Int {
 			return 41
 		}
 	}
