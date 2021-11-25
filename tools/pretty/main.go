@@ -27,8 +27,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/turbolent/prettier"
+
+	"github.com/onflow/cadence/runtime/parser2"
 )
 
 func pretty(code string, maxLineWidth int) string {
