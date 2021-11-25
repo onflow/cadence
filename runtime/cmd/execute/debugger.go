@@ -25,6 +25,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/c-bata/go-prompt"
+
 	"github.com/onflow/cadence/runtime/interpreter"
 )
 

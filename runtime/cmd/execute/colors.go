@@ -20,6 +20,7 @@ package execute
 
 import (
 	"github.com/logrusorgru/aurora"
+
 	"github.com/onflow/cadence/runtime/interpreter"
 )
 
