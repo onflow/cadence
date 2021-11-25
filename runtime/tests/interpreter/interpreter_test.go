@@ -8303,12 +8303,12 @@ func TestInterpretInterfaceDefaultImplementation(t *testing.T) {
 	inter := parseCheckAndInterpret(t, `
 
 	struct interface InterfaceA {
-		fun test(): Int{
+		fun test(): Int {
 			return 42
 		}
 	}
 	
-	struct Test: InterfaceA   {
+	struct Test: InterfaceA {
 	
 	}
 
