@@ -1031,7 +1031,7 @@ func (checker *Checker) checkCompositeConformance(
 					if !interfaceMember.HasImplementation {
 						missingMembers = append(missingMembers, interfaceMember)
 					} else {
-						if (*overridden)[name] {
+						if _, isOverridden := overridden[name]; isOverridden {
 							checker.report(
 								&MultipleInterfaceDefaultImplementationsError{
 									CompositeType: compositeType,
