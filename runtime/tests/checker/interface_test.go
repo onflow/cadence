@@ -2092,7 +2092,7 @@ func TestCheckMultipleInterfaceSingleInterfaceDefaultImplementationWhenOverridde
 
 	_, err := ParseAndCheck(t, `
 	struct interface InterfaceA {
-		fun test(): Int{
+		fun test(): Int {
 			return 41
 		}
 	}
@@ -2101,8 +2101,8 @@ func TestCheckMultipleInterfaceSingleInterfaceDefaultImplementationWhenOverridde
 		fun test(): Int
 	}
 	
-	struct Test:  InterfaceA, InterfaceB   {
-		fun test(): Int{
+	struct Test:  InterfaceA, InterfaceB {
+		fun test(): Int {
 			return 42
 		}
 	}
