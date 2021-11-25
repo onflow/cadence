@@ -92,6 +92,7 @@ func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) 
 			return &OptionalType{Type: memberType}
 		}
 	}
+
 	return memberType
 }
 

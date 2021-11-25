@@ -24,6 +24,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	. "github.com/onflow/cadence/runtime/tests/utils"
+
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -32,6 +34,8 @@ import (
 )
 
 func TestInterpretVirtualImport(t *testing.T) {
+
+	t.Parallel()
 
 	fooType := &sema.CompositeType{
 		Location:   common.IdentifierLocation("Foo"),
@@ -80,11 +84,12 @@ func TestInterpretVirtualImport(t *testing.T) {
 						)
 
 						value := interpreter.NewCompositeValue(
+							inter,
 							location,
 							"Foo",
 							common.CompositeKindContract,
-							interpreter.NewStringValueOrderedMap(),
 							nil,
+							common.Address{},
 						)
 
 						value.Functions = map[string]interpreter.FunctionValue{
@@ -92,8 +97,12 @@ func TestInterpretVirtualImport(t *testing.T) {
 								func(invocation interpreter.Invocation) interpreter.Value {
 									return interpreter.UInt64Value(42)
 								},
+								nil,
 							),
 						}
+
+						elaboration := sema.NewElaboration()
+						elaboration.CompositeTypes[fooType.ID()] = fooType
 
 						return interpreter.VirtualImport{
 							Globals: []struct {
@@ -105,6 +114,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 									Value: value,
 								},
 							},
+							Elaboration: elaboration,
 						}
 					},
 				),
@@ -126,7 +136,9 @@ func TestInterpretVirtualImport(t *testing.T) {
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	assert.Equal(t,
+	AssertValuesEqual(
+		t,
+		inter,
 		interpreter.UInt64Value(42),
 		value,
 	)
@@ -251,9 +263,12 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 	)
 	require.NoError(t, err)
 
+	storage := interpreter.NewInMemoryStorage()
+
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),
 		importingChecker.Location,
+		interpreter.WithStorage(storage),
 		interpreter.WithImportLocationHandler(
 			func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 				require.IsType(t, common.AddressLocation{}, location)
@@ -292,7 +307,9 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	assert.Equal(t,
+	AssertValuesEqual(
+		t,
+		inter,
 		interpreter.NewIntValueFromInt64(3),
 		value,
 	)

@@ -109,8 +109,11 @@ func NewREPL(
 
 	var uuid uint64
 
+	storage := interpreter.NewInMemoryStorage()
+
 	interpreterOptions = append(
 		[]interpreter.Option{
+			interpreter.WithStorage(storage),
 			interpreter.WithPredeclaredValues(values),
 			interpreter.WithUUIDHandler(func() (uint64, error) {
 				defer func() { uuid++ }()

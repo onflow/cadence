@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package interpreter
+package interpreter_test
 
 import (
 	"math"
@@ -24,6 +24,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/cadence/runtime/common"
+	. "github.com/onflow/cadence/runtime/interpreter"
 )
 
 func TestByteArrayValueToByteSlice(t *testing.T) {
@@ -35,9 +38,25 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 		largeBigInt, ok := new(big.Int).SetString("1000000000000000000000000000000000000000000000", 10)
 		require.True(t, ok)
 
+		inter := newTestInterpreter(t)
+
 		invalid := []Value{
-			NewArrayValueUnownedNonCopying(UInt64Value(500)),
-			NewArrayValueUnownedNonCopying(NewInt256ValueFromBigInt(largeBigInt)),
+			NewArrayValue(
+				inter,
+				VariableSizedStaticType{
+					Type: PrimitiveStaticTypeUInt64,
+				},
+				common.Address{},
+				UInt64Value(500),
+			),
+			NewArrayValue(
+				inter,
+				VariableSizedStaticType{
+					Type: PrimitiveStaticTypeInt256,
+				},
+				common.Address{},
+				NewInt256ValueFromBigInt(largeBigInt),
+			),
 			UInt64Value(500),
 			BoolValue(true),
 			NewStringValue("test"),
@@ -51,10 +70,34 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 
 	t.Run("valid", func(t *testing.T) {
 
+		inter := newTestInterpreter(t)
+
 		invalid := map[Value][]byte{
-			NewArrayValueUnownedNonCopying():                                             {},
-			NewArrayValueUnownedNonCopying(UInt64Value(2), NewUInt128ValueFromUint64(3)): {2, 3},
-			NewArrayValueUnownedNonCopying(UInt8Value(4), NewIntValueFromInt64(5)):       {4, 5},
+			NewArrayValue(
+				inter,
+				VariableSizedStaticType{
+					Type: PrimitiveStaticTypeInteger,
+				},
+				common.Address{},
+			): {},
+			NewArrayValue(
+				inter,
+				VariableSizedStaticType{
+					Type: PrimitiveStaticTypeInteger,
+				},
+				common.Address{},
+				UInt64Value(2),
+				NewUInt128ValueFromUint64(3),
+			): {2, 3},
+			NewArrayValue(
+				inter,
+				VariableSizedStaticType{
+					Type: PrimitiveStaticTypeInteger,
+				},
+				common.Address{},
+				UInt8Value(4),
+				NewIntValueFromInt64(5),
+			): {4, 5},
 		}
 
 		for value, expected := range invalid {

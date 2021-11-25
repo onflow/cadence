@@ -26,20 +26,20 @@ import (
 )
 
 type StandardLibraryValue struct {
-	Name      string
-	Type      sema.Type
-	DocString string
-	Value     interpreter.Value
-	Kind      common.DeclarationKind
-	Available func(common.Location) bool
+	Name         string
+	Type         sema.Type
+	DocString    string
+	ValueFactory func(*interpreter.Interpreter) interpreter.Value
+	Kind         common.DeclarationKind
+	Available    func(common.Location) bool
 }
 
 func (v StandardLibraryValue) ValueDeclarationName() string {
 	return v.Name
 }
 
-func (v StandardLibraryValue) ValueDeclarationValue() interpreter.Value {
-	return v.Value
+func (v StandardLibraryValue) ValueDeclarationValue(interpreter *interpreter.Interpreter) interpreter.Value {
+	return v.ValueFactory(interpreter)
 }
 
 func (v StandardLibraryValue) ValueDeclarationType() sema.Type {
@@ -87,8 +87,8 @@ func (values StandardLibraryValues) ToSemaValueDeclarations() []sema.ValueDeclar
 
 func (values StandardLibraryValues) ToInterpreterValueDeclarations() []interpreter.ValueDeclaration {
 	valueDeclarations := make([]interpreter.ValueDeclaration, len(values))
-	for i, function := range values {
-		valueDeclarations[i] = function
+	for i, value := range values {
+		valueDeclarations[i] = value
 	}
 	return valueDeclarations
 }

@@ -16,27 +16,31 @@
  * limitations under the License.
  */
 
-package interpreter
+package interpreter_test
 
 import (
-	"testing"
-
-	"github.com/stretchr/testify/assert"
+	"github.com/onflow/cadence/runtime/interpreter"
 )
 
-func TestPrependMagic(t *testing.T) {
+func arrayElements(inter *interpreter.Interpreter, array *interpreter.ArrayValue) []interpreter.Value {
+	count := array.Count()
+	result := make([]interpreter.Value, count)
+	for i := 0; i < count; i++ {
+		result[i] = array.Get(inter, interpreter.ReturnEmptyLocationRange, i)
+	}
+	return result
+}
 
-	t.Run("empty", func(t *testing.T) {
-		assert.Equal(t,
-			[]byte{0x0, 0xCA, 0xDE, 0x0, 0x1},
-			PrependMagic([]byte{}, 1),
-		)
-	})
+func dictionaryKeyValues(dict *interpreter.DictionaryValue) []interpreter.Value {
+	count := dict.Count() * 2
+	result := make([]interpreter.Value, count)
+	i := 0
+	dict.Iterate(func(key, value interpreter.Value) (resume bool) {
+		result[i*2] = key
+		result[i*2+1] = value
+		i++
 
-	t.Run("1, 2, 3", func(t *testing.T) {
-		assert.Equal(t,
-			[]byte{0x0, 0xCA, 0xDE, 0x0, 0x4, 1, 2, 3},
-			PrependMagic([]byte{1, 2, 3}, 4),
-		)
+		return true
 	})
+	return result
 }

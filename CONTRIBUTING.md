@@ -13,6 +13,7 @@ Use your best judgment, and feel free to propose changes to this document in a p
 - [Reporting Bugs](#reporting-bugs)
 - [Suggesting Enhancements](#suggesting-enhancements)
 - [Your First Code Contribution](#your-first-code-contribution)
+  - [Dependencies](#dependencies)
 - [Pull Requests](#pull-requests)
 
 [Styleguides](#styleguides)
@@ -89,6 +90,13 @@ You can start by looking through these "Good first issue" and "Help wanted" issu
 Both issue lists are sorted by total number of comments.
 While not perfect, number of comments is a reasonable proxy for impact a given change will have.
 
+#### Dependencies
+
+You need some software installed to build and test Cadence:
+
+- [Go](https://golang.org/doc/install)
+- [wasm2wat](https://github.com/WebAssembly/wabt)
+
 ### Pull Requests
 
 The process described here has several goals:
@@ -101,6 +109,20 @@ The process described here has several goals:
 Please follow the [styleguides](#styleguides) to have your contribution considered by the maintainers.
 Reviewer(s) may ask you to complete additional design work, tests,
 or other changes before your pull request can be ultimately accepted.
+
+When opening a PR as a maintainer:
+
+- Use a branch name in the format `<github-username>/<issue-number>-<short-title>`
+- Assign yourself to the PR. You are responsible to merge the PR once it has been approved.
+- Request reviews from engineers who can review the components you modified
+- Link to the GitHub issue, e.g. as `Closes #123`, or `Work towards #123`. 
+  If there is no issue yet, create one.
+- Fill out the check list in the PR description (prefilled by the template)
+- Add (an) appropriate label(s)
+- Review the PR yourself
+  - Make sure TODOs have been addressed
+  - Make sure debug print statements are removed
+  - Make sure the relevant documentation was updated or added
 
 ## Styleguides
 

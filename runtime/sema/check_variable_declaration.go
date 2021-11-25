@@ -85,8 +85,6 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 
 	checker.Elaboration.VariableDeclarationTargetTypes[declaration] = declarationType
 
-	checker.checkVariableDeclarationUsability(declaration)
-
 	checker.checkTransfer(declaration.Transfer, declarationType)
 
 	// The variable declaration might have a second transfer and second expression.
@@ -168,7 +166,7 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 			checker.Elaboration.VariableDeclarationSecondValueTypes[declaration] = secondValueType
 
 			if valueIsResource {
-				checker.elaborateIndexExpressionResourceMove(declaration.Value)
+				checker.elaborateNestedResourceMoveExpression(declaration.Value)
 			}
 		}
 	}
@@ -233,46 +231,9 @@ func (checker *Checker) recordVariableDeclarationRange(
 	)
 }
 
-func (checker *Checker) checkVariableDeclarationUsability(declaration *ast.VariableDeclaration) {
-
-	// If the variable declaration has no type annotation
-	// and the value is an empty array literal,
-	// then the type is inferred to `[Never]`,
-	// which is effectively useless
-	// (it is an empty array to which no values can be added).
-	//
-	// Require an explicit type annotation
-
-	if declaration.TypeAnnotation == nil {
-		switch value := declaration.Value.(type) {
-		case *ast.ArrayExpression:
-			if len(value.Values) == 0 {
-				checker.report(
-					&TypeAnnotationRequiredError{
-						Cause: "empty array literal",
-						Pos:   declaration.Identifier.EndPosition().Shifted(1),
-					},
-				)
-			}
-
-		case *ast.DictionaryExpression:
-			if len(value.Entries) == 0 {
-				checker.report(
-					&TypeAnnotationRequiredError{
-						Cause: "empty dictionary literal",
-						Pos:   declaration.Identifier.EndPosition().Shifted(1),
-					},
-				)
-			}
-		}
+func (checker *Checker) elaborateNestedResourceMoveExpression(expression ast.Expression) {
+	switch expression.(type) {
+	case *ast.IndexExpression, *ast.MemberExpression:
+		checker.Elaboration.IsNestedResourceMoveExpression[expression] = struct{}{}
 	}
-}
-
-func (checker *Checker) elaborateIndexExpressionResourceMove(expression ast.Expression) {
-	indexExpression, ok := expression.(*ast.IndexExpression)
-	if !ok {
-		return
-	}
-
-	checker.Elaboration.IsResourceMoveIndexExpression[indexExpression] = true
 }

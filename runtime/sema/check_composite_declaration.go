@@ -679,7 +679,7 @@ func (checker *Checker) declareCompositeMembersAndValue(
 
 func (checker *Checker) declareCompositeConstructor(
 	declaration *ast.CompositeDeclaration,
-	constructorType *ConstructorFunctionType,
+	constructorType *FunctionType,
 	constructorArgumentLabels []string,
 ) {
 	// Resource and event constructors are effectively always private,
@@ -740,39 +740,23 @@ func (checker *Checker) declareEnumConstructor(
 
 	enumCases := declaration.Members.EnumCases()
 
-	constructorMembers := NewStringMemberOrderedMap()
-
 	var constructorOrigins map[string]*Origin
 	if checker.positionInfoEnabled {
 		constructorOrigins = make(map[string]*Origin, len(enumCases))
 	}
 
-	constructorType := &ConstructorFunctionType{
-		FunctionType: &FunctionType{
-			Parameters: []*Parameter{
-				{
-					Identifier:     EnumRawValueFieldName,
-					TypeAnnotation: NewTypeAnnotation(compositeType.EnumRawType),
-				},
-			},
-			ReturnTypeAnnotation: NewTypeAnnotation(
-				&OptionalType{
-					Type: compositeType,
-				},
-			),
-			Members: constructorMembers,
-		},
-	}
+	constructorType := EnumConstructorType(compositeType)
 
 	memberCaseTypeAnnotation := NewTypeAnnotation(compositeType)
 
 	for _, enumCase := range enumCases {
 		caseName := enumCase.Identifier.Identifier
 
-		if _, ok := constructorMembers.Get(caseName); ok {
+		if _, ok := constructorType.Members.Get(caseName); ok {
 			continue
 		}
-		constructorMembers.Set(
+
+		constructorType.Members.Set(
 			caseName,
 			&Member{
 				ContainerType: constructorType,
@@ -811,6 +795,24 @@ func (checker *Checker) declareEnumConstructor(
 		argumentLabels: []string{EnumRawValueFieldName},
 	})
 	checker.report(err)
+}
+
+func EnumConstructorType(compositeType *CompositeType) *FunctionType {
+	return &FunctionType{
+		IsConstructor: true,
+		Parameters: []*Parameter{
+			{
+				Identifier:     EnumRawValueFieldName,
+				TypeAnnotation: NewTypeAnnotation(compositeType.EnumRawType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{
+				Type: compositeType,
+			},
+		),
+		Members: NewStringMemberOrderedMap(),
+	}
 }
 
 // checkMemberStorability check that all fields have a type that is storable.
@@ -940,7 +942,7 @@ func (checker *Checker) enumRawType(declaration *ast.CompositeDeclaration) Type 
 	rawType := checker.ConvertType(conformance)
 
 	if !rawType.IsInvalidType() &&
-		!IsSubType(rawType, IntegerType) {
+		!IsSameTypeKind(rawType, IntegerType) {
 
 		checker.report(
 			&InvalidEnumRawTypeError{
@@ -1279,14 +1281,13 @@ func (checker *Checker) compositeConstructorType(
 	compositeDeclaration *ast.CompositeDeclaration,
 	compositeType *CompositeType,
 ) (
-	constructorFunctionType *ConstructorFunctionType,
+	constructorFunctionType *FunctionType,
 	argumentLabels []string,
 ) {
 
-	constructorFunctionType = &ConstructorFunctionType{
-		FunctionType: &FunctionType{
-			ReturnTypeAnnotation: NewTypeAnnotation(compositeType),
-		},
+	constructorFunctionType = &FunctionType{
+		IsConstructor:        true,
+		ReturnTypeAnnotation: NewTypeAnnotation(compositeType),
 	}
 
 	// TODO: support multiple overloaded initializers
@@ -1306,11 +1307,10 @@ func (checker *Checker) compositeConstructorType(
 		//   The initializer itself has a `Void` return type.
 
 		checker.Elaboration.ConstructorFunctionTypes[firstInitializer] =
-			&ConstructorFunctionType{
-				FunctionType: &FunctionType{
-					Parameters:           constructorFunctionType.Parameters,
-					ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
-				},
+			&FunctionType{
+				IsConstructor:        true,
+				Parameters:           constructorFunctionType.Parameters,
+				ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
 			}
 	}
 

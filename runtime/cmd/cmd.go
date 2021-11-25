@@ -156,9 +156,12 @@ func PrepareInterpreter(filename string, debugger *interpreter.Debugger) (*inter
 
 	var uuid uint64
 
+	storage := interpreter.NewInMemoryStorage()
+
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
 		checker.Location,
+		interpreter.WithStorage(storage),
 		interpreter.WithPredeclaredValues(valueDeclarations.ToInterpreterValueDeclarations()),
 		interpreter.WithUUIDHandler(func() (uint64, error) {
 			defer func() { uuid++ }()

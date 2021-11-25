@@ -36,6 +36,8 @@ linters-settings:
       - unslice            # false positives
       - commentFormatting  # does not detect commented out code
       - exitAfterDefer
+  goimports:
+    local-prefixes: github.com/onflow/cadence
   custom:
     maprangecheck:
       path: tools/maprangecheck/maprangecheck.so

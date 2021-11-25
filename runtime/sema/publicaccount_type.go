@@ -85,13 +85,13 @@ var PublicAccountType = func() *CompositeType {
 		NewPublicFunctionMember(
 			publicAccountType,
 			PublicAccountGetCapabilityField,
-			publicAccountTypeGetCapabilityFunctionType,
+			PublicAccountTypeGetCapabilityFunctionType,
 			publicAccountTypeGetLinkTargetFunctionDocString,
 		),
 		NewPublicFunctionMember(
 			publicAccountType,
 			PublicAccountGetTargetLinkField,
-			accountTypeGetLinkTargetFunctionType,
+			AccountTypeGetLinkTargetFunctionType,
 			accountTypeGetLinkTargetFunctionDocString,
 		),
 		NewPublicConstantFieldMember(
@@ -126,7 +126,7 @@ var PublicAccountKeysType = func() *CompositeType {
 		NewPublicFunctionMember(
 			accountKeys,
 			AccountKeysGetFunctionName,
-			accountKeysTypeGetFunctionType,
+			AccountKeysTypeGetFunctionType,
 			accountKeysTypeGetFunctionDocString,
 		),
 	}
@@ -141,7 +141,7 @@ func init() {
 	PublicAccountKeysType.SetContainerType(PublicAccountType)
 }
 
-var publicAccountTypeGetCapabilityFunctionType = func() *FunctionType {
+var PublicAccountTypeGetCapabilityFunctionType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{
 		TypeBound: &ReferenceType{

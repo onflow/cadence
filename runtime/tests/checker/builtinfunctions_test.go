@@ -79,9 +79,7 @@ func TestCheckToBytes(t *testing.T) {
 		resType := RequireGlobalValue(t, checker.Elaboration, "res")
 
 		assert.Equal(t,
-			&sema.VariableSizedType{
-				Type: sema.UInt8Type,
-			},
+			sema.ByteArrayType,
 			resType,
 		)
 	})
@@ -105,9 +103,7 @@ func TestCheckToBigEndianBytes(t *testing.T) {
 			resType := RequireGlobalValue(t, checker.Elaboration, "res")
 
 			assert.Equal(t,
-				&sema.VariableSizedType{
-					Type: sema.UInt8Type,
-				},
+				sema.ByteArrayType,
 				resType,
 			)
 		})
