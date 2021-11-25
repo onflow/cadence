@@ -143,7 +143,7 @@ func TestCheckInterfaceWithFunctionImplementation(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %s interface Test {
+                      %[1]s interface Test {
                           fun test(): Int {
 							  pre{
 
