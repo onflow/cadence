@@ -292,6 +292,8 @@ func (s *Storage) Commit(inter *interpreter.Interpreter, commitContractUpdates b
 		if err != nil {
 			return err
 		}
+
+		delete(s.writes, write.storageKey)
 	}
 
 	// Commit the underlying slab storage's writes
