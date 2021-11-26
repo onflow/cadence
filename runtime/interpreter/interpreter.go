@@ -142,7 +142,7 @@ type ContractValueHandlerFunc func(
 	invocationRange ast.Range,
 ) *CompositeValue
 
-// ImportLocationFunc is a function that handles imports of locations.
+// ImportLocationHandlerFunc is a function that handles imports of locations.
 //
 type ImportLocationHandlerFunc func(
 	inter *Interpreter,
@@ -304,6 +304,7 @@ type Interpreter struct {
 	ExitHandler                    ExitHandlerFunc
 	interpreted                    bool
 	statement                      ast.Statement
+	debugger                       *Debugger
 	atreeValueValidationEnabled    bool
 	atreeStorageValidationEnabled  bool
 	tracingEnabled                 bool
@@ -559,6 +560,15 @@ func withTypeCodes(typeCodes TypeCodes) Option {
 	}
 }
 
+// WithDebugger returns an interpreter option which sets the given debugger
+//
+func WithDebugger(debugger *Debugger) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetDebugger(debugger)
+		return nil
+	}
+}
+
 // Create a base-activation so that it can be reused across all interpreters.
 //
 var baseActivation = func() *VariableActivation {
@@ -749,6 +759,12 @@ func (interpreter *Interpreter) SetTracingEnabled(enabled bool) {
 //
 func (interpreter *Interpreter) setTypeCodes(typeCodes TypeCodes) {
 	interpreter.typeCodes = typeCodes
+}
+
+// SetDebugger sets the debugger.
+//
+func (interpreter *Interpreter) SetDebugger(debugger *Debugger) {
+	interpreter.debugger = debugger
 }
 
 // locationRangeGetter returns a function that returns the location range
@@ -2472,6 +2488,7 @@ func (interpreter *Interpreter) NewSubInterpreter(
 		WithSignatureVerificationHandler(interpreter.SignatureVerificationHandler),
 		WithHashHandler(interpreter.HashHandler),
 		WithBLSCryptoFunctions(interpreter.BLSVerifyPoPHandler, interpreter.AggregateBLSSignaturesHandler, interpreter.AggregateBLSPublicKeysHandler),
+		WithDebugger(interpreter.debugger),
 	}
 
 	return NewInterpreter(
