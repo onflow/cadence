@@ -749,3 +749,39 @@ func TestMutationThroughReference(t *testing.T) {
 		require.ErrorAs(t, errs[0], &externalMutationError)
 	})
 }
+
+func TestMutationThroughAccess(t *testing.T) {
+	t.Run("pub let", func(t *testing.T) {
+		_, err := ParseAndCheckWithOptions(t,
+			`
+			pub contract C {
+				pub struct Foo {
+					pub let arr : [Int]
+					init() {
+						self.arr = [3]
+					}
+				}
+				
+				priv let foo : Foo
+			
+				init() {
+					self.foo = Foo()
+				}
+			
+				pub fun getFoo(): Foo {
+					return self.foo
+				}
+			}
+			
+			pub fun main() {
+				let a = C.getFoo()
+				a.arr.append(0) // a.arr is now [3, 0]
+			}
+		`,
+			ParseAndCheckOptions{},
+		)
+		errs := ExpectCheckerErrors(t, err, 1)
+		var externalMutationError *sema.ExternalMutationError
+		require.ErrorAs(t, errs[0], &externalMutationError)
+	})
+}

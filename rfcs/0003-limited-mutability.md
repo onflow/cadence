@@ -53,8 +53,7 @@ Of note is that the `let` kind does not allow fields to be written to in any sco
 to be written in the "Current and Inner" scopes; that is, the scope in which the field was declared, and any scopes
 contained within that scope. 
 
-However, simply writing to a field directly is not the only way in which one can modify a value. Consider the following
-example:
+However, simply writing to a field directly is not the only way in which one can modify a value. Consider the following example:
 
 ```
 pub struct Foo {
@@ -115,7 +114,114 @@ If you wish to allow other code to update or modify a field in your contract, yo
 to do so, like in the example above with `addToX`, or you may use the `pub(set)` access mode, which 
 allows any code to mutate or write to the field it applies to. 
 
+Some examples of code that produces a type error as a result of this restriction:
 
+```
+pub resource Foo {
+    pub let x : {Int: Int}
+
+    init() {
+        self.x = {0:3};
+    }
+}
+
+pub fun bar() {
+    let foo <- create Foo()
+    foo.x[0] = 3 // cannot mutate `x`, field was defined in `Foo`
+    destroy foo
+}
+```
+
+```
+pub struct Bar {
+    pub let foo: Foo
+    init() {
+        self.foo = Foo()
+    }
+}
+
+pub struct Foo {
+    pub let x : [Int]
+
+    init() {
+        self.x = [3]
+    }
+}
+
+pub fun bar() {
+    let bar = Bar()
+    bar.foo.x[0] = 3 // cannot mutate `x`, field was defined in `Foo`
+}
+```
+
+```
+pub contract Foo {
+    pub let x : S
+    
+    pub struct S {
+        pub let y : [Int]
+        init() {
+            self.y = [3]
+        }
+    }
+
+    init() {
+        self.x = S()
+    }
+}
+
+pub fun bar() {
+    Foo.x.y.remove(at: 0) // cannot mutate `y`, field was defined in `S`
+}
+```
+```
+pub contract Foo {
+    pub let x : S
+    
+    pub struct S {
+        pub let y : [Int]
+        init() {
+            self.y = [3]
+        }
+    }
+
+    init() {
+        self.x = S()
+        self.x.y.append(2) // cannot mutate `y`, field was defined in `S`
+    }
+}	
+```
+
+while the following are allowed:
+
+```
+pub struct Foo {
+    pub let x: {Int: Int}
+
+    init() {
+        self.x = {3:3};
+    }
+
+    pub fun bar() {
+        let foo = Foo()
+        foo.x[0] = 3 // ok, mutation occurs inside defining struct Foo
+    }
+}
+```
+```
+pub struct Foo {
+    pub(set) var x: {Int: Int}
+
+    init() {
+        self.x = {3:3};
+    }
+}
+
+pub fun bar() {
+    let foo = Foo()
+    foo.x.insert(key: 0, 3) // ok, pub(set) access modifier allows mutation
+}
+```
 ## Detailed design
 
 [detailed-design]: #detailed-design
@@ -150,13 +256,76 @@ design principles.
 
 [drawbacks]: #drawbacks
 
-Why should we *not* do this?
+This has the potential to break a number of existing contracts by restricting 
+code that was previously legal. This change would require a migration path for 
+these contracts in order for developers to update their contracts to satisfy
+Cadence's new restrictions.
+
+This also removes a small amount of expressivity from the language. Previously, 
+the `pub let` declaration was a way to create a field that could be read and
+mutated in all contexts, but not written, while `pub(set) var` created
+a field that could be read, written and mutated in all contexts. After this change,
+it would not be possible to describe a field that can be read and mutated but not set, 
+as `pub let` would only allow reads in arbitrary contexts. 
 
 ## Alternatives
 
 [alternatives]: #alternatives
 
-What other designs have been considered and what is the rationale for not choosing them?
+One possible approach would be to add mutability modifiers to field or variable declarations,
+like the `readonly` or `mut` tags found in languages like Rust, C# and TypeScript. This would make
+all fields either mutable or immutable by default, requiring users to supply the appropriate tag
+to make their behavior be whichever is not the default. 
+
+This approach has the unfortunate side effect of increasing the surface area of the language, while
+not also adding immediate benefit; the `readonly` and `mut` distinction may be redundant when
+`let` and `var` already exist in the language. To justify this addition, we would need to identify
+a use case for allowing field to be written to but not mutated (`readonly var`), or for restricting 
+the mutation of fields even within their enclosing type. 
+
+Another approach would be to make `let` a true constant declaration, and forbid writing or mutating it in any context,
+while allowing `var` to be mutated in all the contexts it can be written. This, however, is likely too restrictive;
+a complex initialization for a dictionary or array value may benefit from the ability to iteratively mutate its contents,
+up to the point at which its value is finalized, and can thus be exported. As such we would like to still allow users
+to perform mutations in an limited context.
+
+A third approach would be to ban contract-level public field, with the idea that users cannot accidentally shoot 
+themselves in the foot by exporting a `pub let` field from their contract and having it be externally mutated 
+if `pub let` fields cannot exist on contracts in the first place. However, this has a number of downsides. The
+obvious one is that all data that one might wish to expose to be read from a contract would need an explicit getter
+method. The second, less obvious but also more concerning downside, is that it would be necessary to 
+ban `pub let` fields on structs and resources as well. Consider the case where a user exports a getter method
+to read a struct or resource used by their contract. Any `pub let` fields on this struct or resource 
+would also be mutable, and thus are subject to the same risks they would be if they were exported
+directly from the contract. 
+
+Consider:
+
+```
+pub contract C {
+    pub struct Foo {
+        pub let arr : [Int]
+        init() {
+            self.arr = [3]
+        }
+    }
+    
+    priv let foo : Foo
+
+    init() {
+        self.foo = Foo()
+    }
+
+    pub fun getFoo(): Foo {
+        return self.foo
+    }
+}
+
+pub fun main() {
+    let a = C.getFoo()
+    a.arr.append(0) // a.arr is now [3, 0]
+}
+```
 
 ## Prior art
 
@@ -172,7 +341,44 @@ If there is no prior art, that is fine - your ideas are interesting to us whethe
 
 [unresolved-questions]: #unresolved-questions
 
-What parts of the design are or do you expect to be still resolved?
+Do we wish to handle aliased references? Consider the following example (courtesy of @SupunS):
+```
+pub fun main() {
+  let foo <- create Foo()
+
+  log(foo.immutable)
+
+  foo.mutable.content = "updated" // mutating the 'immutable' via 'mutable'
+
+  log(foo.immutable)
+
+  destroy foo
+}
+
+pub resource Foo {
+  pub(set) var mutable: &Bar
+
+  pub let immutable: &Bar
+
+  init() {
+    self.mutable = &Bar() as &Bar
+
+    self.immutable = self.mutable.   // immutable holds a direct/indirect reference to a mutable
+  }
+}
+
+
+pub struct Bar {
+  pub(set) var content: String
+  init() {
+    self.content = "original"
+  }
+}
+```
+
+This is one potential way to get around mutability restrictions on `pub let` fields, by aliasing such
+a field with a `pub(set) var`. Is preventing this kind of issue within the scope of this change? How
+would we begin to approach such a restriction?
 
 ## Related
 
