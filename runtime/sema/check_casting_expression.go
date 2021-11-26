@@ -124,7 +124,7 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 						Range:        ast.NewRangeFromPositioned(leftHandExpression),
 					},
 				)
-			} else if IsSubType(leftHandType, rightHandType) {
+			} else if checker.lintEnabled && IsSubType(leftHandType, rightHandType) {
 
 				switch expression.Operation {
 				case ast.OperationFailableCast:
