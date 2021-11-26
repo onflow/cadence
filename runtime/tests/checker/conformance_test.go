@@ -444,5 +444,19 @@ func TestCheckTypeRequirementDuplicateDeclaration(t *testing.T) {
 	  }
 	`)
 
-	require.Error(t, err)
+	errs := ExpectCheckerErrors(t, err, 13)
+
+	require.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
+	require.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[1])
+	require.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[2])
+	require.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[3])
+	require.IsType(t, &sema.RedeclarationError{}, errs[4])
+	require.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[5])
+	require.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[6])
+	require.IsType(t, &sema.RedeclarationError{}, errs[7])
+	require.IsType(t, &sema.RedeclarationError{}, errs[8])
+	require.IsType(t, &sema.RedeclarationError{}, errs[9])
+	require.IsType(t, &sema.ConformanceError{}, errs[10])
+	require.IsType(t, &sema.ConformanceError{}, errs[11])
+	require.IsType(t, &sema.ConformanceError{}, errs[12])
 }
