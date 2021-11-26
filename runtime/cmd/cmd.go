@@ -177,6 +177,6 @@ func PrepareInterpreter(filename string, debugger *interpreter.Debugger) (*inter
 }
 
 func ExitWithError(message string) {
-	println(pretty.FormatErrorMessage(message, true))
+	fmt.Println(pretty.FormatErrorMessage(message, true))
 	os.Exit(1)
 }

@@ -49,7 +49,7 @@ func RunREPL() {
 			}
 		},
 		func(value interpreter.Value) {
-			println(formatValue(value))
+			fmt.Println(formatValue(value))
 		},
 		nil,
 		nil,
@@ -138,9 +138,9 @@ func handleCommand(command string) {
 	case ".exit":
 		os.Exit(0)
 	case ".help":
-		println(replHelpMessage)
+		fmt.Println(replHelpMessage)
 	default:
-		println(colorizeError(fmt.Sprintf("Unknown command. %s", replAssistanceMessage)))
+		fmt.Println(colorizeError(fmt.Sprintf("Unknown command. %s", replAssistanceMessage)))
 	}
 }
 

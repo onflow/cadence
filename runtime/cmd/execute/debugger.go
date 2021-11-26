@@ -78,18 +78,18 @@ func (d *InteractiveDebugger) Show(names []string) {
 	switch len(names) {
 	case 0:
 		for name := range current.FunctionValues() { //nolint:maprangecheck
-			println(name)
+			fmt.Println(name)
 		}
 
 	case 1:
 		name := names[0]
 		variable := current.Find(name)
 		if variable == nil {
-			println(colorizeError(fmt.Sprintf("error: variable '%s' is not in scope", name)))
+			fmt.Println(colorizeError(fmt.Sprintf("error: variable '%s' is not in scope", name)))
 			return
 		}
 
-		println(formatValue(variable.GetValue()))
+		fmt.Println(formatValue(variable.GetValue()))
 
 	default:
 		for _, name := range names {
@@ -133,7 +133,7 @@ func (d *InteractiveDebugger) Run() {
 			os.Exit(0)
 		default:
 			message := fmt.Sprintf("error: '%s' is not a valid command.\n", in)
-			println(colorizeError(message))
+			fmt.Println(colorizeError(message))
 		}
 	}
 
@@ -154,7 +154,7 @@ func (d *InteractiveDebugger) Run() {
 		return false
 	}
 
-	println()
+	fmt.Println()
 
 	prompt.New(
 		executor,
