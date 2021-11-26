@@ -327,15 +327,21 @@ pub fun main() {
 }
 ```
 
+Another approach would be to have fields use a different type depending on the scope in which they are 
+viewed. Within a struct, a `pub let` array field would have the type `[Int]`, permitting all array 
+operations on it, including mutating ones. Outside the struct, the same field might have the type 
+`[Int]{ReadonlyArray<Int>}`, in effect a restricted type that only permits the non-mutating 
+operations to be performed on that array. This, however, is overly complex, and introduces
+a new type to accomplish the same purpose as what this FLIP proposes. 
+
 ## Prior art
 
 [prior-art]: #prior-art
 
-Does this feature exist in other programming languages and what experience have their community had?
-
-This section is intended to encourage you as an author to think about the lessons from other languages, provide readers of your RFC with a fuller picture.
-
-If there is no prior art, that is fine - your ideas are interesting to us whether they are brand new or if it is an adaptation from other languages.
+In Swift (where Cadence's access modifiers already draw inspiration from), one can define a field
+with a `public private(set) var` access modifier. A field defined this way can be read in a public context,
+but can only be set privately. In effect, the change described in this FLIP is changing the default behavior
+of fields to have what Swift would consider a private setter. 
 
 ## Unresolved questions
 
