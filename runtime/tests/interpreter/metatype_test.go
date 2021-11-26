@@ -729,9 +729,7 @@ func TestInterpretGetType(t *testing.T) {
 			storageMap.WriteValue(
 				inter,
 				storagePath.Identifier,
-				interpreter.NewSomeValueNonCopying(
-					interpreter.NewIntValueFromInt64(2),
-				),
+				interpreter.NewIntValueFromInt64(2),
 			)
 
 			result, err := inter.Invoke("test")

@@ -4614,11 +4614,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		)
 
 		storageMap := storage.GetStorageMap(storageAddress, storagePath.Domain.Identifier())
-		storageMap.WriteValue(
-			inter,
-			storagePath.Identifier,
-			interpreter.NewSomeValueNonCopying(r),
-		)
+		storageMap.WriteValue(inter, storagePath.Identifier, r)
 
 		result, err := inter.Invoke("testInvalidUnauthorized")
 		require.NoError(t, err)

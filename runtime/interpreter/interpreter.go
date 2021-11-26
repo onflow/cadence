@@ -2495,7 +2495,7 @@ func (interpreter *Interpreter) ReadStored(
 	storageAddress common.Address,
 	domain string,
 	identifier string,
-) OptionalValue {
+) Value {
 	accountStorage := interpreter.Storage.GetStorageMap(storageAddress, domain)
 	return accountStorage.ReadValue(identifier)
 }
@@ -2504,7 +2504,7 @@ func (interpreter *Interpreter) writeStored(
 	storageAddress common.Address,
 	domain string,
 	identifier string,
-	value OptionalValue,
+	value Value,
 ) {
 	accountStorage := interpreter.Storage.GetStorageMap(storageAddress, domain)
 	accountStorage.WriteValue(interpreter, identifier, value)
@@ -3415,12 +3415,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 
 			// Write new value
 
-			interpreter.writeStored(
-				address,
-				domain,
-				identifier,
-				NewSomeValueNonCopying(value),
-			)
+			interpreter.writeStored(address, domain, identifier, value)
 
 			return VoidValue{}
 		},
@@ -3450,52 +3445,46 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 
 			value := interpreter.ReadStored(address, domain, identifier)
 
-			switch value := value.(type) {
-			case NilValue:
-				return value
+			if value == nil {
+				return NilValue{}
+			}
 
-			case *SomeValue:
+			// If there is value stored for the given path,
+			// check that it satisfies the type given as the type argument.
 
-				// If there is value stored for the given path,
-				// check that it satisfies the type given as the type argument.
-
-				typeParameterPair := invocation.TypeParameterTypes.Oldest()
-				if typeParameterPair == nil {
-					panic(errors.NewUnreachableError())
-				}
-
-				ty := typeParameterPair.Value
-
-				dynamicType := value.Value.DynamicType(interpreter, SeenReferences{})
-				if !interpreter.IsSubType(dynamicType, ty) {
-					return NilValue{}
-				}
-
-				inter := invocation.Interpreter
-				getLocationRange := invocation.GetLocationRange
-
-				// We could also pass remove=true and the storable stored in storage,
-				// but passing remove=false here and writing nil below has the same effect
-				// TODO: potentially refactor and get storable in storage, pass it and remove=true
-				transferredValue := value.Transfer(
-					inter,
-					getLocationRange,
-					atree.Address{},
-					false,
-					nil,
-				)
-
-				// Remove the value from storage,
-				// but only if the type check succeeded.
-				if clear {
-					interpreter.writeStored(address, domain, identifier, NilValue{})
-				}
-
-				return transferredValue
-
-			default:
+			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			if typeParameterPair == nil {
 				panic(errors.NewUnreachableError())
 			}
+
+			ty := typeParameterPair.Value
+
+			dynamicType := value.DynamicType(interpreter, SeenReferences{})
+			if !interpreter.IsSubType(dynamicType, ty) {
+				return NilValue{}
+			}
+
+			inter := invocation.Interpreter
+			getLocationRange := invocation.GetLocationRange
+
+			// We could also pass remove=true and the storable stored in storage,
+			// but passing remove=false here and writing nil below has the same effect
+			// TODO: potentially refactor and get storable in storage, pass it and remove=true
+			transferredValue := value.Transfer(
+				inter,
+				getLocationRange,
+				atree.Address{},
+				false,
+				nil,
+			)
+
+			// Remove the value from storage,
+			// but only if the type check succeeded.
+			if clear {
+				interpreter.writeStored(address, domain, identifier, nil)
+			}
+
+			return NewSomeValueNonCopying(transferredValue)
 		},
 
 		// same as sema.AuthAccountTypeCopyFunctionType
@@ -3574,18 +3563,16 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 
 			borrowStaticType := ConvertSemaToStaticType(borrowType)
 
-			storedValue := NewSomeValueNonCopying(
-				LinkValue{
-					TargetPath: targetPath,
-					Type:       borrowStaticType,
-				},
-			)
+			linkValue := LinkValue{
+				TargetPath: targetPath,
+				Type:       borrowStaticType,
+			}
 
 			interpreter.writeStored(
 				address,
 				newCapabilityDomain,
 				newCapabilityIdentifier,
-				storedValue,
+				linkValue,
 			)
 
 			return NewSomeValueNonCopying(
@@ -3615,22 +3602,16 @@ func (interpreter *Interpreter) accountGetLinkTargetFunction(addressValue Addres
 
 			value := interpreter.ReadStored(address, domain, identifier)
 
-			switch value := value.(type) {
-			case NilValue:
-				return value
-
-			case *SomeValue:
-
-				link, ok := value.Value.(LinkValue)
-				if !ok {
-					return NilValue{}
-				}
-
-				return NewSomeValueNonCopying(link.TargetPath)
-
-			default:
-				panic(errors.NewUnreachableError())
+			if value == nil {
+				return NilValue{}
 			}
+
+			link, ok := value.(LinkValue)
+			if !ok {
+				return NilValue{}
+			}
+
+			return NewSomeValueNonCopying(link.TargetPath)
 		},
 		sema.AccountTypeGetLinkTargetFunctionType,
 	)
@@ -3649,12 +3630,7 @@ func (interpreter *Interpreter) authAccountUnlinkFunction(addressValue AddressVa
 
 			// Write new value
 
-			interpreter.writeStored(
-				address,
-				domain,
-				identifier,
-				NilValue{},
-			)
+			interpreter.writeStored(address, domain, identifier, nil)
 
 			return VoidValue{}
 		},
@@ -3815,30 +3791,24 @@ func (interpreter *Interpreter) GetCapabilityFinalTargetPath(
 			path.Identifier,
 		)
 
-		switch value := value.(type) {
-		case NilValue:
+		if value == nil {
 			return PathValue{}, false, nil
+		}
 
-		case *SomeValue:
+		if link, ok := value.(LinkValue); ok {
 
-			if link, ok := value.Value.(LinkValue); ok {
+			allowedType := interpreter.MustConvertStaticToSemaType(link.Type)
 
-				allowedType := interpreter.MustConvertStaticToSemaType(link.Type)
-
-				if !sema.IsSubType(allowedType, wantedBorrowType) {
-					return PathValue{}, false, nil
-				}
-
-				targetPath := link.TargetPath
-				paths = append(paths, targetPath)
-				path = targetPath
-
-			} else {
-				return path, wantedReferenceType.Authorized, nil
+			if !sema.IsSubType(allowedType, wantedBorrowType) {
+				return PathValue{}, false, nil
 			}
 
-		default:
-			panic(errors.NewUnreachableError())
+			targetPath := link.TargetPath
+			paths = append(paths, targetPath)
+			path = targetPath
+
+		} else {
+			return path, wantedReferenceType.Authorized, nil
 		}
 	}
 }

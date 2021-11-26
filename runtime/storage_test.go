@@ -676,7 +676,7 @@ func TestRuntimeStorageReadAndBorrow(t *testing.T) {
 			},
 		)
 		require.NoError(t, err)
-		require.Equal(t, cadence.NewOptional(cadence.NewInt(42)), value)
+		require.Equal(t, cadence.NewInt(42), value)
 	})
 
 	t.Run("read stored, non-existing", func(t *testing.T) {
@@ -693,7 +693,7 @@ func TestRuntimeStorageReadAndBorrow(t *testing.T) {
 			},
 		)
 		require.NoError(t, err)
-		require.Equal(t, cadence.NewOptional(nil), value)
+		require.Equal(t, nil, value)
 	})
 
 	t.Run("read linked, existing", func(t *testing.T) {
@@ -710,7 +710,7 @@ func TestRuntimeStorageReadAndBorrow(t *testing.T) {
 			},
 		)
 		require.NoError(t, err)
-		require.Equal(t, cadence.NewOptional(cadence.NewInt(42)), value)
+		require.Equal(t, cadence.NewInt(42), value)
 	})
 
 	t.Run("read linked, non-existing", func(t *testing.T) {
@@ -727,7 +727,7 @@ func TestRuntimeStorageReadAndBorrow(t *testing.T) {
 			},
 		)
 		require.NoError(t, err)
-		require.Equal(t, cadence.NewOptional(nil), value)
+		require.Equal(t, nil, value)
 	})
 }
 
@@ -1450,15 +1450,13 @@ func TestRuntimeStorageSaveCapability(t *testing.T) {
 				require.NoError(t, err)
 
 				require.Equal(t,
-					cadence.Optional{
-						Value: cadence.Capability{
-							Path: cadence.Path{
-								Domain:     domain.Identifier(),
-								Identifier: "test",
-							},
-							Address:    cadence.Address(signer),
-							BorrowType: ty,
+					cadence.Capability{
+						Path: cadence.Path{
+							Domain:     domain.Identifier(),
+							Identifier: "test",
 						},
+						Address:    cadence.Address(signer),
+						BorrowType: ty,
 					},
 					value,
 				)

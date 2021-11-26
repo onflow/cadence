@@ -10182,26 +10182,20 @@ func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter) *Value
 	domain := v.TargetPath.Domain.Identifier()
 	identifier := v.TargetPath.Identifier
 
-	switch referenced := interpreter.ReadStored(address, domain, identifier).(type) {
-	case *SomeValue:
-		value := referenced.Value
-
-		if v.BorrowedType != nil {
-			dynamicType := value.DynamicType(interpreter, SeenReferences{})
-			if !interpreter.IsSubType(dynamicType, v.BorrowedType) {
-				interpreter.IsSubType(dynamicType, v.BorrowedType)
-				return nil
-			}
-		}
-
-		return &value
-
-	case NilValue:
+	referenced := interpreter.ReadStored(address, domain, identifier)
+	if referenced == nil {
 		return nil
-
-	default:
-		panic(errors.NewUnreachableError())
 	}
+
+	if v.BorrowedType != nil {
+		dynamicType := referenced.DynamicType(interpreter, SeenReferences{})
+		if !interpreter.IsSubType(dynamicType, v.BorrowedType) {
+			interpreter.IsSubType(dynamicType, v.BorrowedType)
+			return nil
+		}
+	}
+
+	return &referenced
 }
 
 func (v *StorageReferenceValue) GetMember(

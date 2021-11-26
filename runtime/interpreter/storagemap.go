@@ -80,7 +80,7 @@ func (s StorageMap) ValueExists(key string) bool {
 // ReadValue returns the value for the given key as an OptionalValue,
 // i.e. SomeValue if it exists, and NilValue if the key does not exist.
 //
-func (s StorageMap) ReadValue(key string) OptionalValue {
+func (s StorageMap) ReadValue(key string) Value {
 	storable, err := s.orderedMap.Get(
 		stringAtreeComparator,
 		stringAtreeHashInput,
@@ -88,27 +88,23 @@ func (s StorageMap) ReadValue(key string) OptionalValue {
 	)
 	if err != nil {
 		if _, ok := err.(*atree.KeyNotFoundError); ok {
-			return NilValue{}
+			return nil
 		}
 		panic(ExternalError{err})
 	}
 
-	value := StoredValue(storable, s.orderedMap.Storage)
-	return NewSomeValueNonCopying(value)
+	return StoredValue(storable, s.orderedMap.Storage)
 }
 
 // WriteValue sets or removes a value in the storage map.
 // If the given value is a SomeValue, the key is updated.
 // If the given value is NilValue, the key is removed.
 //
-func (s StorageMap) WriteValue(interpreter *Interpreter, key string, value OptionalValue) {
-	switch value := value.(type) {
-	case *SomeValue:
-		s.setValue(interpreter, key, value.Value)
-	case NilValue:
+func (s StorageMap) WriteValue(interpreter *Interpreter, key string, value Value) {
+	if value == nil {
 		s.removeValue(interpreter, key)
-	default:
-		panic(atree.NewUnreachableError())
+	} else {
+		s.setValue(interpreter, key, value)
 	}
 }
 

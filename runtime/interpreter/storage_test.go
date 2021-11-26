@@ -450,11 +450,7 @@ func TestStorageOverwriteAndRemove(t *testing.T) {
 
 	storageMap := storage.GetStorageMap(address, "storage")
 
-	storageMap.WriteValue(
-		inter,
-		identifier,
-		NewSomeValueNonCopying(array1),
-	)
+	storageMap.WriteValue(inter, identifier, array1)
 
 	// Overwriting delete any existing child slabs
 
@@ -467,11 +463,7 @@ func TestStorageOverwriteAndRemove(t *testing.T) {
 		NewStringValue("second"),
 	)
 
-	storageMap.WriteValue(
-		inter,
-		identifier,
-		NewSomeValueNonCopying(array2),
-	)
+	storageMap.WriteValue(inter, identifier, array2)
 
 	// 2:
 	// - storage map (atree ordered map)
@@ -480,11 +472,7 @@ func TestStorageOverwriteAndRemove(t *testing.T) {
 
 	// Writing nil is deletion and should delete any child slabs
 
-	storageMap.WriteValue(
-		inter,
-		identifier,
-		NilValue{},
-	)
+	storageMap.WriteValue(inter, identifier, nil)
 
 	// 1:
 	// - storage map (atree ordered map)

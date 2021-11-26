@@ -1852,7 +1852,7 @@ func (r *interpreterRuntime) loadContract(
 
 	default:
 
-		var storedValue interpreter.OptionalValue = interpreter.NilValue{}
+		var storedValue interpreter.Value
 
 		switch location := compositeType.Location.(type) {
 
@@ -1864,14 +1864,11 @@ func (r *interpreterRuntime) loadContract(
 			storedValue = storageMap.ReadValue(location.Name)
 		}
 
-		switch typedValue := storedValue.(type) {
-		case *interpreter.SomeValue:
-			return typedValue.Value.(*interpreter.CompositeValue)
-		case interpreter.NilValue:
+		if storedValue == nil {
 			panic(fmt.Errorf("failed to load contract: %s", compositeType.Location))
-		default:
-			panic(runtimeErrors.NewUnreachableError())
 		}
+
+		return storedValue.(*interpreter.CompositeValue)
 	}
 }
 
@@ -2853,7 +2850,7 @@ func (r *interpreterRuntime) ReadLinked(address common.Address, path cadence.Pat
 			}
 
 			if targetPath == (interpreter.PathValue{}) {
-				return interpreter.NilValue{}, nil
+				return nil, nil
 			}
 
 			value := inter.ReadStored(
