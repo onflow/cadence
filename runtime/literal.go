@@ -318,13 +318,13 @@ func LiteralValue(expression ast.Expression, ty sema.Type) (cadence.Value, error
 	}
 
 	switch {
-	case sema.IsSubType(ty, sema.IntegerType):
+	case sema.IsSameTypeKind(ty, sema.IntegerType):
 		return integerLiteralValue(expression, ty)
 
-	case sema.IsSubType(ty, sema.FixedPointType):
+	case sema.IsSameTypeKind(ty, sema.FixedPointType):
 		return fixedPointLiteralValue(expression, ty)
 
-	case sema.IsSubType(ty, sema.PathType):
+	case sema.IsSameTypeKind(ty, sema.PathType):
 		return pathLiteralValue(expression, ty)
 	}
 

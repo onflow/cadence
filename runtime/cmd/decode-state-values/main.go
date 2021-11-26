@@ -429,7 +429,7 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
-			println(encoded)
+			log.Println(encoded)
 		}
 	}
 }
