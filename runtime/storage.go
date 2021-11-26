@@ -213,18 +213,13 @@ func (s *Storage) writeContractUpdate(
 	key interpreter.StorageKey,
 	contractValue *interpreter.CompositeValue,
 ) {
-
 	storageMap := s.GetStorageMap(key.Address, StorageDomainContract)
-
-	var value interpreter.OptionalValue
-
+	// NOTE: pass nil instead of allocating a Value-typed  interface that points to nil
 	if contractValue == nil {
-		value = interpreter.NilValue{}
+		storageMap.WriteValue(inter, key.Key, nil)
 	} else {
-		value = interpreter.NewSomeValueNonCopying(contractValue)
+		storageMap.WriteValue(inter, key.Key, contractValue)
 	}
-
-	storageMap.WriteValue(inter, key.Key, value)
 }
 
 type write struct {
