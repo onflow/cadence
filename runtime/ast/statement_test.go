@@ -304,6 +304,127 @@ func TestIfStatement_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestIfStatement_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("empty if-else", func(t *testing.T) {
+
+		t.Parallel()
+
+		stmt := &IfStatement{
+			Test: &BoolExpression{
+				Value: false,
+				Range: Range{
+					StartPos: Position{Offset: 1, Line: 2, Column: 3},
+					EndPos:   Position{Offset: 4, Line: 5, Column: 6},
+				},
+			},
+			Then: &Block{
+				Statements: []Statement{},
+				Range: Range{
+					StartPos: Position{Offset: 7, Line: 8, Column: 9},
+					EndPos:   Position{Offset: 10, Line: 11, Column: 12},
+				},
+			},
+			Else: &Block{
+				Statements: []Statement{},
+				Range: Range{
+					StartPos: Position{Offset: 13, Line: 14, Column: 15},
+					EndPos:   Position{Offset: 16, Line: 17, Column: 18},
+				},
+			},
+			StartPos: Position{Offset: 19, Line: 20, Column: 21},
+		}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("if "),
+					prettier.Text("false"),
+					prettier.Text(" "),
+					prettier.Text("{}"),
+					prettier.Text(" else "),
+					prettier.Group{
+						Doc: prettier.Text("{}"),
+					},
+				},
+			},
+			stmt.Doc(),
+		)
+	})
+
+	t.Run("if-else if", func(t *testing.T) {
+
+		t.Parallel()
+
+		stmt := &IfStatement{
+			Test: &BoolExpression{
+				Value: false,
+				Range: Range{
+					StartPos: Position{Offset: 1, Line: 2, Column: 3},
+					EndPos:   Position{Offset: 4, Line: 5, Column: 6},
+				},
+			},
+			Then: &Block{
+				Statements: []Statement{},
+				Range: Range{
+					StartPos: Position{Offset: 7, Line: 8, Column: 9},
+					EndPos:   Position{Offset: 10, Line: 11, Column: 12},
+				},
+			},
+			Else: &Block{
+				Statements: []Statement{
+					&IfStatement{
+						Test: &BoolExpression{
+							Value: true,
+							Range: Range{
+								StartPos: Position{Offset: 22, Line: 23, Column: 24},
+								EndPos:   Position{Offset: 25, Line: 26, Column: 27},
+							},
+						},
+						Then: &Block{
+							Statements: []Statement{},
+							Range: Range{
+								StartPos: Position{Offset: 28, Line: 29, Column: 30},
+								EndPos:   Position{Offset: 31, Line: 32, Column: 33},
+							},
+						},
+					},
+				},
+				Range: Range{
+					StartPos: Position{Offset: 13, Line: 14, Column: 15},
+					EndPos:   Position{Offset: 16, Line: 17, Column: 18},
+				},
+			},
+			StartPos: Position{Offset: 19, Line: 20, Column: 21},
+		}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("if "),
+					prettier.Text("false"),
+					prettier.Text(" "),
+					prettier.Text("{}"),
+					prettier.Text(" else "),
+					prettier.Group{
+						Doc: prettier.Group{
+							Doc: prettier.Concat{
+								prettier.Text("if "),
+								prettier.Text("true"),
+								prettier.Text(" "),
+								prettier.Text("{}"),
+							},
+						},
+					},
+				},
+			},
+			stmt.Doc(),
+		)
+	})
+}
+
 func TestWhileStatement_MarshalJSON(t *testing.T) {
 
 	t.Parallel()

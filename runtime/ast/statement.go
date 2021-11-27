@@ -160,6 +160,10 @@ type IfStatement struct {
 	StartPos Position `json:"-"`
 }
 
+var _ Statement = &IfStatement{}
+
+func (*IfStatement) isStatement() {}
+
 func (s *IfStatement) StartPosition() Position {
 	return s.StartPos
 }
@@ -171,8 +175,6 @@ func (s *IfStatement) EndPosition() Position {
 	return s.Then.EndPosition()
 }
 
-func (*IfStatement) isStatement() {}
-
 func (s *IfStatement) Accept(visitor Visitor) Repr {
 	return visitor.VisitIfStatement(s)
 }
@@ -182,6 +184,49 @@ func (s *IfStatement) Walk(walkChild func(Element)) {
 	walkChild(s.Then)
 	if s.Else != nil {
 		walkChild(s.Else)
+	}
+}
+
+const ifStatementIfKeywordSpaceDoc = prettier.Text("if ")
+const ifStatementSpaceElseKeywordSpaceDoc = prettier.Text(" else ")
+
+func (s *IfStatement) Doc() prettier.Doc {
+	var testDoc prettier.Doc
+	// TODO: replace once IfStatementTest implements Doc
+	testWithDoc, ok := s.Test.(interface{ Doc() prettier.Doc })
+	if ok {
+		testDoc = testWithDoc.Doc()
+	}
+
+	doc := prettier.Concat{
+		ifStatementIfKeywordSpaceDoc,
+		testDoc,
+		prettier.Space,
+		s.Then.Doc(),
+	}
+
+	if s.Else != nil {
+		var elseDoc prettier.Doc
+		if len(s.Else.Statements) == 1 {
+			if elseIfStatement, ok := s.Else.Statements[0].(*IfStatement); ok {
+				elseDoc = elseIfStatement.Doc()
+			}
+		}
+		if elseDoc == nil {
+			elseDoc = s.Else.Doc()
+		}
+
+		doc = append(
+			doc,
+			ifStatementSpaceElseKeywordSpaceDoc,
+			prettier.Group{
+				Doc: elseDoc,
+			},
+		)
+	}
+
+	return prettier.Group{
+		Doc: doc,
 	}
 }
 
