@@ -120,6 +120,7 @@ func TestReturnStatement_MarshalJSON(t *testing.T) {
 		string(actual),
 	)
 }
+
 func TestReturnStatement_Doc(t *testing.T) {
 
 	t.Parallel()
@@ -471,6 +472,41 @@ func TestWhileStatement_MarshalJSON(t *testing.T) {
         }
         `,
 		string(actual),
+	)
+}
+
+func TestWhileStatement_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	stmt := &WhileStatement{
+		Test: &BoolExpression{
+			Value: false,
+			Range: Range{
+				StartPos: Position{Offset: 1, Line: 2, Column: 3},
+				EndPos:   Position{Offset: 4, Line: 5, Column: 6},
+			},
+		},
+		Block: &Block{
+			Statements: []Statement{},
+			Range: Range{
+				StartPos: Position{Offset: 7, Line: 8, Column: 9},
+				EndPos:   Position{Offset: 10, Line: 11, Column: 12},
+			},
+		},
+		StartPos: Position{Offset: 13, Line: 14, Column: 15},
+	}
+
+	assert.Equal(t,
+		prettier.Group{
+			Doc: prettier.Concat{
+				prettier.Text("while "),
+				prettier.Text("false"),
+				prettier.Text(" "),
+				prettier.Text("{}"),
+			},
+		},
+		stmt.Doc(),
 	)
 }
 

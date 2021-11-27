@@ -251,6 +251,8 @@ type WhileStatement struct {
 	StartPos Position `json:"-"`
 }
 
+var _ Statement = &WhileStatement{}
+
 func (*WhileStatement) isStatement() {}
 
 func (s *WhileStatement) Accept(visitor Visitor) Repr {
@@ -268,6 +270,19 @@ func (s *WhileStatement) StartPosition() Position {
 
 func (s *WhileStatement) EndPosition() Position {
 	return s.Block.EndPosition()
+}
+
+const whileStatementKeywordSpaceDoc = prettier.Text("while ")
+
+func (s *WhileStatement) Doc() prettier.Doc {
+	return prettier.Group{
+		Doc: prettier.Concat{
+			whileStatementKeywordSpaceDoc,
+			s.Test.Doc(),
+			prettier.Space,
+			s.Block.Doc(),
+		},
+	}
 }
 
 func (s *WhileStatement) MarshalJSON() ([]byte, error) {
