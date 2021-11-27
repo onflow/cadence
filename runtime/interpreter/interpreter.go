@@ -3441,29 +3441,28 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 }
 
 func (interpreter *Interpreter) authAccountTypeFunction(addressValue AddressValue) *HostFunctionValue {
+
+	address := addressValue.ToAddress()
+
 	return NewHostFunctionValue(
 		func(invocation Invocation) Value {
 
-			address := addressValue.ToAddress()
-
 			path := invocation.Arguments[0].(PathValue)
-			key := PathToStorageKey(path)
 
-			value := interpreter.ReadStored(address, key)
+			domain := path.Domain.Identifier()
+			identifier := path.Identifier
 
-			switch value := value.(type) {
-			case NilValue:
-				return value
+			value := interpreter.ReadStored(address, domain, identifier)
 
-			case *SomeValue:
-				return NewSomeValueNonCopying(
-					TypeValue{
-						Type: value.Value.StaticType(),
-					},
-				)
-			default:
-				panic(errors.NewUnreachableError())
+			if value == nil {
+				return NilValue{}
 			}
+
+			return NewSomeValueNonCopying(
+				TypeValue{
+					Type: value.StaticType(),
+				},
+			)
 		},
 
 		sema.AuthAccountTypeTypeFunctionType,

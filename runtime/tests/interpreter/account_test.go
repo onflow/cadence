@@ -242,7 +242,7 @@ func TestInterpretAuthAccount_type(t *testing.T) {
 
 		address := interpreter.NewAddressValueFromBytes([]byte{42})
 
-		inter, accountStorables := testAccount(
+		inter, getAccountStorables := testAccount(
 			t,
 			address,
 			true,
@@ -272,14 +272,14 @@ func TestInterpretAuthAccount_type(t *testing.T) {
 
 		value, err := inter.Invoke("typeAt")
 		require.NoError(t, err)
-		require.Len(t, accountStorables, 0)
+		require.Len(t, getAccountStorables(), 0)
 		require.Equal(t, interpreter.NilValue{}, value)
 
 		// save R
 
 		_, err = inter.Invoke("saveR")
 		require.NoError(t, err)
-		require.Len(t, accountStorables, 1)
+		require.Len(t, getAccountStorables(), 1)
 
 		// type is now type of R
 
@@ -299,7 +299,7 @@ func TestInterpretAuthAccount_type(t *testing.T) {
 
 		_, err = inter.Invoke("saveS")
 		require.NoError(t, err)
-		require.Len(t, accountStorables, 1)
+		require.Len(t, getAccountStorables(), 1)
 
 		// type is now type of S
 
