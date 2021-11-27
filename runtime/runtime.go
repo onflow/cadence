@@ -2815,6 +2815,10 @@ func (r *interpreterRuntime) executeNonProgram(interpret interpretFunc, context 
 		return nil, newError(err, context)
 	}
 
+	if value.Value == nil {
+		return nil, nil
+	}
+
 	return exportValue(value)
 }
 
