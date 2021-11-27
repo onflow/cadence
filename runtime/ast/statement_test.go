@@ -205,6 +205,23 @@ func TestContinueStatement_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestContinueStatement_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	stmt := &ContinueStatement{
+		Range: Range{
+			StartPos: Position{Offset: 1, Line: 2, Column: 3},
+			EndPos:   Position{Offset: 4, Line: 5, Column: 6},
+		},
+	}
+
+	assert.Equal(t,
+		prettier.Text("continue"),
+		stmt.Doc(),
+	)
+}
+
 func TestIfStatement_MarshalJSON(t *testing.T) {
 
 	t.Parallel()

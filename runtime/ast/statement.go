@@ -115,6 +115,8 @@ type ContinueStatement struct {
 	Range
 }
 
+var _ Statement = &ContinueStatement{}
+
 func (*ContinueStatement) isStatement() {}
 
 func (s *ContinueStatement) Accept(visitor Visitor) Repr {
@@ -123,6 +125,12 @@ func (s *ContinueStatement) Accept(visitor Visitor) Repr {
 
 func (*ContinueStatement) Walk(_ func(Element)) {
 	// NO-OP
+}
+
+const continueStatementKeywordDoc = prettier.Text("continue")
+
+func (*ContinueStatement) Doc() prettier.Doc {
+	return continueStatementKeywordDoc
 }
 
 func (s *ContinueStatement) MarshalJSON() ([]byte, error) {
