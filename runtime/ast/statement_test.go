@@ -62,6 +62,26 @@ func TestExpressionStatement_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestExpressionStatement_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	stmt := &ExpressionStatement{
+		Expression: &BoolExpression{
+			Value: false,
+			Range: Range{
+				StartPos: Position{Offset: 1, Line: 2, Column: 3},
+				EndPos:   Position{Offset: 4, Line: 5, Column: 6},
+			},
+		},
+	}
+
+	assert.Equal(t,
+		prettier.Text("false"),
+		stmt.Doc(),
+	)
+}
+
 func TestReturnStatement_MarshalJSON(t *testing.T) {
 
 	t.Parallel()

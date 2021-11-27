@@ -403,6 +403,10 @@ type ExpressionStatement struct {
 	Expression Expression
 }
 
+var _ Statement = &ExpressionStatement{}
+
+func (*ExpressionStatement) isStatement() {}
+
 func (s *ExpressionStatement) StartPosition() Position {
 	return s.Expression.StartPosition()
 }
@@ -411,14 +415,16 @@ func (s *ExpressionStatement) EndPosition() Position {
 	return s.Expression.EndPosition()
 }
 
-func (*ExpressionStatement) isStatement() {}
-
 func (s *ExpressionStatement) Accept(visitor Visitor) Repr {
 	return visitor.VisitExpressionStatement(s)
 }
 
 func (s *ExpressionStatement) Walk(walkChild func(Element)) {
 	walkChild(s.Expression)
+}
+
+func (s *ExpressionStatement) Doc() prettier.Doc {
+	return s.Expression.Doc()
 }
 
 func (s *ExpressionStatement) MarshalJSON() ([]byte, error) {
