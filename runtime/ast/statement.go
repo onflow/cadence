@@ -308,6 +308,8 @@ type ForStatement struct {
 	StartPos   Position `json:"-"`
 }
 
+var _ Statement = &ForStatement{}
+
 func (*ForStatement) isStatement() {}
 
 func (s *ForStatement) Accept(visitor Visitor) Repr {
@@ -325,6 +327,36 @@ func (s *ForStatement) StartPosition() Position {
 
 func (s *ForStatement) EndPosition() Position {
 	return s.Block.EndPosition()
+}
+
+const forStatementForKeywordSpaceDoc = prettier.Text("for ")
+const forStatementSpaceInKeywordSpaceDoc = prettier.Text(" in ")
+
+func (s *ForStatement) Doc() prettier.Doc {
+	doc := prettier.Concat{
+		forStatementForKeywordSpaceDoc,
+	}
+
+	if s.Index != nil {
+		doc = append(
+			doc,
+			prettier.Text(s.Index.Identifier),
+			prettier.Text(", "),
+		)
+	}
+
+	doc = append(
+		doc,
+		prettier.Text(s.Identifier.Identifier),
+		forStatementSpaceInKeywordSpaceDoc,
+		s.Value.Doc(),
+		prettier.Space,
+		s.Block.Doc(),
+	)
+
+	return prettier.Group{
+		Doc: doc,
+	}
 }
 
 func (s *ForStatement) MarshalJSON() ([]byte, error) {

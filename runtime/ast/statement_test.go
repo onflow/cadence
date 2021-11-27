@@ -514,59 +514,225 @@ func TestForStatement_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
 
-	stmt := &ForStatement{
-		Identifier: Identifier{
-			Identifier: "foobar",
-			Pos:        Position{Offset: 1, Line: 2, Column: 3},
-		},
-		Value: &BoolExpression{
-			Value: false,
-			Range: Range{
-				StartPos: Position{Offset: 4, Line: 5, Column: 6},
-				EndPos:   Position{Offset: 7, Line: 8, Column: 9},
-			},
-		},
-		Block: &Block{
-			Statements: []Statement{},
-			Range: Range{
-				StartPos: Position{Offset: 10, Line: 11, Column: 12},
-				EndPos:   Position{Offset: 13, Line: 14, Column: 15},
-			},
-		},
-		StartPos: Position{Offset: 16, Line: 17, Column: 18},
-	}
+	t.Run("without index", func(t *testing.T) {
 
-	actual, err := json.Marshal(stmt)
-	require.NoError(t, err)
+		t.Parallel()
 
-	assert.JSONEq(t,
-		`
-        {
-            "Type": "ForStatement",
-            "Identifier": {
-                "Identifier": "foobar",
-                "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
-                "EndPos": {"Offset": 6, "Line": 2, "Column": 8}
-            },
-			"Index": null,
-            "Value": {
-                "Type": "BoolExpression",
-                "Value": false,
-                "StartPos": {"Offset": 4, "Line": 5, "Column": 6},
-                "EndPos": {"Offset": 7, "Line": 8, "Column": 9}
-            },
-            "Block": {
-                "Type": "Block",
-                "Statements": [],
-                "StartPos": {"Offset": 10, "Line": 11, "Column": 12},
-                "EndPos": {"Offset": 13, "Line": 14, "Column": 15}
-            },
-            "StartPos": {"Offset": 16, "Line": 17, "Column": 18},
-            "EndPos":  {"Offset": 13, "Line": 14, "Column": 15}
-        }
-        `,
-		string(actual),
-	)
+		stmt := &ForStatement{
+			Identifier: Identifier{
+				Identifier: "foobar",
+				Pos:        Position{Offset: 1, Line: 2, Column: 3},
+			},
+			Value: &BoolExpression{
+				Value: false,
+				Range: Range{
+					StartPos: Position{Offset: 4, Line: 5, Column: 6},
+					EndPos:   Position{Offset: 7, Line: 8, Column: 9},
+				},
+			},
+			Block: &Block{
+				Statements: []Statement{},
+				Range: Range{
+					StartPos: Position{Offset: 10, Line: 11, Column: 12},
+					EndPos:   Position{Offset: 13, Line: 14, Column: 15},
+				},
+			},
+			StartPos: Position{Offset: 16, Line: 17, Column: 18},
+		}
+
+		actual, err := json.Marshal(stmt)
+		require.NoError(t, err)
+
+		assert.JSONEq(t,
+			`
+            {
+                "Type": "ForStatement",
+                "Identifier": {
+                    "Identifier": "foobar",
+                    "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                    "EndPos": {"Offset": 6, "Line": 2, "Column": 8}
+                },
+		    	"Index": null,
+                "Value": {
+                    "Type": "BoolExpression",
+                    "Value": false,
+                    "StartPos": {"Offset": 4, "Line": 5, "Column": 6},
+                    "EndPos": {"Offset": 7, "Line": 8, "Column": 9}
+                },
+                "Block": {
+                    "Type": "Block",
+                    "Statements": [],
+                    "StartPos": {"Offset": 10, "Line": 11, "Column": 12},
+                    "EndPos": {"Offset": 13, "Line": 14, "Column": 15}
+                },
+                "StartPos": {"Offset": 16, "Line": 17, "Column": 18},
+                "EndPos":  {"Offset": 13, "Line": 14, "Column": 15}
+            }
+            `,
+			string(actual),
+		)
+	})
+
+	t.Run("with index", func(t *testing.T) {
+
+		t.Parallel()
+
+		stmt := &ForStatement{
+			Index: &Identifier{
+				Identifier: "i",
+				Pos:        Position{Offset: 1, Line: 2, Column: 3},
+			},
+			Identifier: Identifier{
+				Identifier: "foobar",
+				Pos:        Position{Offset: 4, Line: 5, Column: 6},
+			},
+			Value: &BoolExpression{
+				Value: false,
+				Range: Range{
+					StartPos: Position{Offset: 7, Line: 8, Column: 9},
+					EndPos:   Position{Offset: 10, Line: 11, Column: 12},
+				},
+			},
+			Block: &Block{
+				Statements: []Statement{},
+				Range: Range{
+					StartPos: Position{Offset: 13, Line: 14, Column: 15},
+					EndPos:   Position{Offset: 16, Line: 17, Column: 18},
+				},
+			},
+			StartPos: Position{Offset: 19, Line: 20, Column: 21},
+		}
+
+		actual, err := json.Marshal(stmt)
+		require.NoError(t, err)
+
+		assert.JSONEq(t,
+			`
+            {
+                "Type": "ForStatement",
+                "Index": {
+                    "Identifier": "i",
+                    "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                    "EndPos": {"Offset": 1, "Line": 2, "Column": 3}
+                },
+		    	"Identifier": {
+                    "Identifier": "foobar",
+                    "StartPos": {"Offset": 4, "Line": 5, "Column": 6},
+                    "EndPos": {"Offset": 9, "Line": 5, "Column": 11}
+                },
+                "Value": {
+                    "Type": "BoolExpression",
+                    "Value": false,
+                    "StartPos": {"Offset": 7, "Line": 8, "Column": 9},
+                    "EndPos": {"Offset": 10, "Line": 11, "Column": 12}
+                },
+                "Block": {
+                    "Type": "Block",
+                    "Statements": [],
+                    "StartPos":{"Offset": 13, "Line": 14, "Column": 15},
+                    "EndPos": {"Offset": 16, "Line": 17, "Column": 18}
+                },
+                "StartPos": {"Offset": 19, "Line": 20, "Column": 21},
+                "EndPos": {"Offset": 16, "Line": 17, "Column": 18}
+            }
+            `,
+			string(actual),
+		)
+	})
+
+}
+
+func TestForStatement_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("without index", func(t *testing.T) {
+
+		t.Parallel()
+
+		stmt := &ForStatement{
+			Identifier: Identifier{
+				Identifier: "foobar",
+				Pos:        Position{Offset: 1, Line: 2, Column: 3},
+			},
+			Value: &BoolExpression{
+				Value: false,
+				Range: Range{
+					StartPos: Position{Offset: 4, Line: 5, Column: 6},
+					EndPos:   Position{Offset: 7, Line: 8, Column: 9},
+				},
+			},
+			Block: &Block{
+				Statements: []Statement{},
+				Range: Range{
+					StartPos: Position{Offset: 10, Line: 11, Column: 12},
+					EndPos:   Position{Offset: 13, Line: 14, Column: 15},
+				},
+			},
+			StartPos: Position{Offset: 16, Line: 17, Column: 18},
+		}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("for "),
+					prettier.Text("foobar"),
+					prettier.Text(" in "),
+					prettier.Text("false"),
+					prettier.Text(" "),
+					prettier.Text("{}"),
+				},
+			},
+			stmt.Doc(),
+		)
+	})
+
+	t.Run("with index", func(t *testing.T) {
+
+		t.Parallel()
+
+		stmt := &ForStatement{
+			Index: &Identifier{
+				Identifier: "i",
+				Pos:        Position{Offset: 1, Line: 2, Column: 3},
+			},
+			Identifier: Identifier{
+				Identifier: "foobar",
+				Pos:        Position{Offset: 4, Line: 5, Column: 6},
+			},
+			Value: &BoolExpression{
+				Value: false,
+				Range: Range{
+					StartPos: Position{Offset: 7, Line: 8, Column: 9},
+					EndPos:   Position{Offset: 10, Line: 11, Column: 12},
+				},
+			},
+			Block: &Block{
+				Statements: []Statement{},
+				Range: Range{
+					StartPos: Position{Offset: 13, Line: 14, Column: 15},
+					EndPos:   Position{Offset: 16, Line: 17, Column: 18},
+				},
+			},
+			StartPos: Position{Offset: 19, Line: 20, Column: 21},
+		}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("for "),
+					prettier.Text("i"),
+					prettier.Text(", "),
+					prettier.Text("foobar"),
+					prettier.Text(" in "),
+					prettier.Text("false"),
+					prettier.Text(" "),
+					prettier.Text("{}"),
+				},
+			},
+			stmt.Doc(),
+		)
+	})
 }
 
 func TestAssignmentStatement_MarshalJSON(t *testing.T) {
