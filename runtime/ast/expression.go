@@ -1101,8 +1101,6 @@ var functionExpressionParameterSeparatorDoc prettier.Doc = prettier.Concat{
 }
 
 var typeSeparatorDoc prettier.Doc = prettier.Text(": ")
-var functionExpressionBlockStartDoc prettier.Doc = prettier.Text(" {")
-var functionExpressionBlockEndDoc prettier.Doc = prettier.Text("}")
 var functionExpressionEmptyBlockDoc prettier.Doc = prettier.Text(" {}")
 
 func (e *FunctionExpression) Doc() prettier.Doc {
@@ -1128,21 +1126,18 @@ func (e *FunctionExpression) Doc() prettier.Doc {
 
 	if e.FunctionBlock.IsEmpty() {
 		return append(doc, functionExpressionEmptyBlockDoc)
+	} else {
+		// TODO: pre-conditions
+		// TODO: post-conditions
+
+		blockDoc := e.FunctionBlock.Block.Doc()
+
+		return append(
+			doc,
+			prettier.Space,
+			blockDoc,
+		)
 	}
-
-	// TODO: pre-conditions
-	// TODO: post-conditions
-
-	statementsDoc := e.statementsDoc()
-
-	return append(doc,
-		functionExpressionBlockStartDoc,
-		prettier.Indent{
-			Doc: statementsDoc,
-		},
-		prettier.HardLine{},
-		functionExpressionBlockEndDoc,
-	)
 }
 
 func (e *FunctionExpression) parametersDoc() prettier.Doc {
@@ -1182,27 +1177,6 @@ func (e *FunctionExpression) parametersDoc() prettier.Doc {
 		),
 		prettier.SoftLine{},
 	)
-}
-
-func (e *FunctionExpression) statementsDoc() prettier.Doc {
-	var statementsDoc prettier.Concat
-
-	statements := e.FunctionBlock.Block.Statements
-
-	for _, statement := range statements {
-		// TODO: replace once Statement implements Doc
-		hasDoc, ok := statement.(interface{ Doc() prettier.Doc })
-		if !ok {
-			continue
-		}
-
-		statementsDoc = append(statementsDoc,
-			prettier.HardLine{},
-			hasDoc.Doc(),
-		)
-	}
-
-	return statementsDoc
 }
 
 func (e *FunctionExpression) StartPosition() Position {
