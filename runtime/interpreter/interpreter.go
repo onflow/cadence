@@ -142,7 +142,7 @@ type ContractValueHandlerFunc func(
 	invocationRange ast.Range,
 ) *CompositeValue
 
-// ImportLocationFunc is a function that handles imports of locations.
+// ImportLocationHandlerFunc is a function that handles imports of locations.
 //
 type ImportLocationHandlerFunc func(
 	inter *Interpreter,
@@ -302,6 +302,7 @@ type Interpreter struct {
 	ExitHandler                    ExitHandlerFunc
 	interpreted                    bool
 	statement                      ast.Statement
+	debugger                       *Debugger
 	atreeValueValidationEnabled    bool
 	atreeStorageValidationEnabled  bool
 	tracingEnabled                 bool
@@ -557,6 +558,15 @@ func withTypeCodes(typeCodes TypeCodes) Option {
 	}
 }
 
+// WithDebugger returns an interpreter option which sets the given debugger
+//
+func WithDebugger(debugger *Debugger) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetDebugger(debugger)
+		return nil
+	}
+}
+
 // Create a base-activation so that it can be reused across all interpreters.
 //
 var baseActivation = func() *VariableActivation {
@@ -747,6 +757,12 @@ func (interpreter *Interpreter) SetTracingEnabled(enabled bool) {
 //
 func (interpreter *Interpreter) setTypeCodes(typeCodes TypeCodes) {
 	interpreter.typeCodes = typeCodes
+}
+
+// SetDebugger sets the debugger.
+//
+func (interpreter *Interpreter) SetDebugger(debugger *Debugger) {
+	interpreter.debugger = debugger
 }
 
 // locationRangeGetter returns a function that returns the location range
@@ -2470,6 +2486,7 @@ func (interpreter *Interpreter) NewSubInterpreter(
 		WithSignatureVerificationHandler(interpreter.SignatureVerificationHandler),
 		WithHashHandler(interpreter.HashHandler),
 		WithBLSCryptoFunctions(interpreter.BLSVerifyPoPHandler, interpreter.AggregateBLSSignaturesHandler, interpreter.AggregateBLSPublicKeysHandler),
+		WithDebugger(interpreter.debugger),
 	}
 
 	return NewInterpreter(
@@ -3420,6 +3437,36 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 			return VoidValue{}
 		},
 		sema.AuthAccountTypeSaveFunctionType,
+	)
+}
+
+func (interpreter *Interpreter) authAccountTypeFunction(addressValue AddressValue) *HostFunctionValue {
+	return NewHostFunctionValue(
+		func(invocation Invocation) Value {
+
+			address := addressValue.ToAddress()
+
+			path := invocation.Arguments[0].(PathValue)
+			key := PathToStorageKey(path)
+
+			value := interpreter.ReadStored(address, key)
+
+			switch value := value.(type) {
+			case NilValue:
+				return value
+
+			case *SomeValue:
+				return NewSomeValueNonCopying(
+					TypeValue{
+						Type: value.Value.StaticType(),
+					},
+				)
+			default:
+				panic(errors.NewUnreachableError())
+			}
+		},
+
+		sema.AuthAccountTypeTypeFunctionType,
 	)
 }
 

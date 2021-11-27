@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/tests/utils"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -228,6 +229,91 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 
 			require.ErrorAs(t, err, &interpreter.OverwriteError{})
 		})
+	})
+}
+
+func TestInterpretAuthAccount_type(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("type", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewAddressValueFromBytes([]byte{42})
+
+		inter, accountStorables := testAccount(
+			t,
+			address,
+			true,
+			`
+              struct S {}
+
+              resource R {}
+
+              fun saveR() {
+				let r <- create R()
+				account.save(<-r, to: /storage/x)
+              }
+
+			  fun saveS() {
+				let s = S()
+				destroy account.load<@R>(from: /storage/x)
+			 	account.save(s, to: /storage/x)
+			  }
+
+              fun typeAt(): AnyStruct {
+				return account.type(at: /storage/x)
+              }
+            `,
+		)
+
+		// type empty path is nil
+
+		value, err := inter.Invoke("typeAt")
+		require.NoError(t, err)
+		require.Len(t, accountStorables, 0)
+		require.Equal(t, interpreter.NilValue{}, value)
+
+		// save R
+
+		_, err = inter.Invoke("saveR")
+		require.NoError(t, err)
+		require.Len(t, accountStorables, 1)
+
+		// type is now type of R
+
+		value, err = inter.Invoke("typeAt")
+		require.NoError(t, err)
+		require.Equal(t, &interpreter.SomeValue{
+			Value: interpreter.TypeValue{
+				Type: interpreter.CompositeStaticType{
+					Location:            utils.TestLocation,
+					QualifiedIdentifier: "R",
+					TypeID:              "S.test.R",
+				},
+			},
+		}, value)
+
+		// save S
+
+		_, err = inter.Invoke("saveS")
+		require.NoError(t, err)
+		require.Len(t, accountStorables, 1)
+
+		// type is now type of S
+
+		value, err = inter.Invoke("typeAt")
+		require.NoError(t, err)
+		require.Equal(t, &interpreter.SomeValue{
+			Value: interpreter.TypeValue{
+				Type: interpreter.CompositeStaticType{
+					Location:            utils.TestLocation,
+					QualifiedIdentifier: "S",
+					TypeID:              "S.test.S",
+				},
+			},
+		}, value)
 	})
 }
 
