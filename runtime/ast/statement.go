@@ -80,6 +80,8 @@ type BreakStatement struct {
 	Range
 }
 
+var _ Statement = &BreakStatement{}
+
 func (*BreakStatement) isStatement() {}
 
 func (s *BreakStatement) Accept(visitor Visitor) Repr {
@@ -88,6 +90,12 @@ func (s *BreakStatement) Accept(visitor Visitor) Repr {
 
 func (*BreakStatement) Walk(_ func(Element)) {
 	// NO-OP
+}
+
+const breakStatementKeywordDoc = prettier.Text("break")
+
+func (*BreakStatement) Doc() prettier.Doc {
+	return breakStatementKeywordDoc
 }
 
 func (s *BreakStatement) MarshalJSON() ([]byte, error) {

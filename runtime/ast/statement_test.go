@@ -162,6 +162,23 @@ func TestBreakStatement_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestBreakStatement_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	stmt := &BreakStatement{
+		Range: Range{
+			StartPos: Position{Offset: 1, Line: 2, Column: 3},
+			EndPos:   Position{Offset: 4, Line: 5, Column: 6},
+		},
+	}
+
+	assert.Equal(t,
+		prettier.Text("break"),
+		stmt.Doc(),
+	)
+}
+
 func TestContinueStatement_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
