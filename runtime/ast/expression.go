@@ -468,7 +468,7 @@ func (e DictionaryEntry) MarshalJSON() ([]byte, error) {
 	})
 }
 
-var dictionaryEntrySeparatorDoc prettier.Doc = prettier.Concat{
+var dictionaryKeyValueSeparatorDoc prettier.Doc = prettier.Concat{
 	prettier.Text(":"),
 	prettier.Line{},
 }
@@ -480,7 +480,7 @@ func (e DictionaryEntry) Doc() prettier.Doc {
 	return prettier.Group{
 		Doc: prettier.Concat{
 			keyDoc,
-			dictionaryEntrySeparatorDoc,
+			dictionaryKeyValueSeparatorDoc,
 			valueDoc,
 		},
 	}
