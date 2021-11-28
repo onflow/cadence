@@ -379,6 +379,10 @@ type EmitStatement struct {
 	StartPos             Position `json:"-"`
 }
 
+var _ Statement = &EmitStatement{}
+
+func (*EmitStatement) isStatement() {}
+
 func (s *EmitStatement) StartPosition() Position {
 	return s.StartPos
 }
@@ -387,14 +391,22 @@ func (s *EmitStatement) EndPosition() Position {
 	return s.InvocationExpression.EndPosition()
 }
 
-func (*EmitStatement) isStatement() {}
-
 func (s *EmitStatement) Accept(visitor Visitor) Repr {
 	return visitor.VisitEmitStatement(s)
 }
 
 func (s *EmitStatement) Walk(walkChild func(Element)) {
 	walkChild(s.InvocationExpression)
+}
+
+const emitStatementKeywordSpaceDoc = prettier.Text("emit ")
+
+func (s *EmitStatement) Doc() prettier.Doc {
+	return prettier.Concat{
+		emitStatementKeywordSpaceDoc,
+		// TODO: potentially parenthesize
+		s.InvocationExpression.Doc(),
+	}
 }
 
 func (s *EmitStatement) MarshalJSON() ([]byte, error) {

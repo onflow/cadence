@@ -955,3 +955,29 @@ func TestEmitStatement_MarshalJSON(t *testing.T) {
 		string(actual),
 	)
 }
+
+func TestEmitStatement_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	stmt := &EmitStatement{
+		InvocationExpression: &InvocationExpression{
+			InvokedExpression: &IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "foobar",
+				},
+			},
+		},
+	}
+
+	require.Equal(t,
+		prettier.Concat{
+			prettier.Text("emit "),
+			prettier.Concat{
+				prettier.Text("foobar"),
+				prettier.Text("()"),
+			},
+		},
+		stmt.Doc(),
+	)
+}
