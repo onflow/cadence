@@ -796,6 +796,48 @@ func TestAssignmentStatement_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestAssignmentStatement_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	stmt := &AssignmentStatement{
+		Target: &IdentifierExpression{
+			Identifier: Identifier{
+				Identifier: "foobar",
+				Pos:        Position{Offset: 1, Line: 2, Column: 3},
+			},
+		},
+		Transfer: &Transfer{
+			Operation: TransferOperationCopy,
+			Pos:       Position{Offset: 4, Line: 5, Column: 6},
+		},
+		Value: &BoolExpression{
+			Value: false,
+			Range: Range{
+				StartPos: Position{Offset: 7, Line: 8, Column: 9},
+				EndPos:   Position{Offset: 10, Line: 11, Column: 12},
+			},
+		},
+	}
+
+	require.Equal(t,
+		prettier.Group{
+			Doc: prettier.Concat{
+				prettier.Text("foobar"),
+				prettier.Text(" "),
+				prettier.Text("="),
+				prettier.Text(" "),
+				prettier.Group{
+					Doc: prettier.Indent{
+						Doc: prettier.Text("false"),
+					},
+				},
+			},
+		},
+		stmt.Doc(),
+	)
+}
+
 func TestSwapStatement_MarshalJSON(t *testing.T) {
 
 	t.Parallel()

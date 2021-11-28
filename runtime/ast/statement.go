@@ -430,6 +430,14 @@ type AssignmentStatement struct {
 	Value    Expression
 }
 
+var _ Statement = &AssignmentStatement{}
+
+func (*AssignmentStatement) isStatement() {}
+
+func (s *AssignmentStatement) Accept(visitor Visitor) Repr {
+	return visitor.VisitAssignmentStatement(s)
+}
+
 func (s *AssignmentStatement) StartPosition() Position {
 	return s.Target.StartPosition()
 }
@@ -438,15 +446,25 @@ func (s *AssignmentStatement) EndPosition() Position {
 	return s.Value.EndPosition()
 }
 
-func (*AssignmentStatement) isStatement() {}
-
-func (s *AssignmentStatement) Accept(visitor Visitor) Repr {
-	return visitor.VisitAssignmentStatement(s)
-}
-
 func (s *AssignmentStatement) Walk(walkChild func(Element)) {
 	walkChild(s.Target)
 	walkChild(s.Value)
+}
+
+func (s *AssignmentStatement) Doc() prettier.Doc {
+	return prettier.Group{
+		Doc: prettier.Concat{
+			s.Target.Doc(),
+			prettier.Space,
+			s.Transfer.Doc(),
+			prettier.Space,
+			prettier.Group{
+				Doc: prettier.Indent{
+					Doc: s.Value.Doc(),
+				},
+			},
+		},
+	}
 }
 
 func (s *AssignmentStatement) MarshalJSON() ([]byte, error) {
