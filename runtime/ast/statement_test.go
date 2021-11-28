@@ -69,10 +69,6 @@ func TestExpressionStatement_Doc(t *testing.T) {
 	stmt := &ExpressionStatement{
 		Expression: &BoolExpression{
 			Value: false,
-			Range: Range{
-				StartPos: Position{Offset: 1, Line: 2, Column: 3},
-				EndPos:   Position{Offset: 4, Line: 5, Column: 6},
-			},
 		},
 	}
 
@@ -187,16 +183,9 @@ func TestBreakStatement_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	stmt := &BreakStatement{
-		Range: Range{
-			StartPos: Position{Offset: 1, Line: 2, Column: 3},
-			EndPos:   Position{Offset: 4, Line: 5, Column: 6},
-		},
-	}
-
 	assert.Equal(t,
 		prettier.Text("break"),
-		stmt.Doc(),
+		(&BreakStatement{}).Doc(),
 	)
 }
 
@@ -230,16 +219,9 @@ func TestContinueStatement_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	stmt := &ContinueStatement{
-		Range: Range{
-			StartPos: Position{Offset: 1, Line: 2, Column: 3},
-			EndPos:   Position{Offset: 4, Line: 5, Column: 6},
-		},
-	}
-
 	assert.Equal(t,
 		prettier.Text("continue"),
-		stmt.Doc(),
+		(&ContinueStatement{}).Doc(),
 	)
 }
 
@@ -316,26 +298,13 @@ func TestIfStatement_Doc(t *testing.T) {
 		stmt := &IfStatement{
 			Test: &BoolExpression{
 				Value: false,
-				Range: Range{
-					StartPos: Position{Offset: 1, Line: 2, Column: 3},
-					EndPos:   Position{Offset: 4, Line: 5, Column: 6},
-				},
 			},
 			Then: &Block{
 				Statements: []Statement{},
-				Range: Range{
-					StartPos: Position{Offset: 7, Line: 8, Column: 9},
-					EndPos:   Position{Offset: 10, Line: 11, Column: 12},
-				},
 			},
 			Else: &Block{
 				Statements: []Statement{},
-				Range: Range{
-					StartPos: Position{Offset: 13, Line: 14, Column: 15},
-					EndPos:   Position{Offset: 16, Line: 17, Column: 18},
-				},
 			},
-			StartPos: Position{Offset: 19, Line: 20, Column: 21},
 		}
 
 		assert.Equal(t,
@@ -362,43 +331,22 @@ func TestIfStatement_Doc(t *testing.T) {
 		stmt := &IfStatement{
 			Test: &BoolExpression{
 				Value: false,
-				Range: Range{
-					StartPos: Position{Offset: 1, Line: 2, Column: 3},
-					EndPos:   Position{Offset: 4, Line: 5, Column: 6},
-				},
 			},
 			Then: &Block{
 				Statements: []Statement{},
-				Range: Range{
-					StartPos: Position{Offset: 7, Line: 8, Column: 9},
-					EndPos:   Position{Offset: 10, Line: 11, Column: 12},
-				},
 			},
 			Else: &Block{
 				Statements: []Statement{
 					&IfStatement{
 						Test: &BoolExpression{
 							Value: true,
-							Range: Range{
-								StartPos: Position{Offset: 22, Line: 23, Column: 24},
-								EndPos:   Position{Offset: 25, Line: 26, Column: 27},
-							},
 						},
 						Then: &Block{
 							Statements: []Statement{},
-							Range: Range{
-								StartPos: Position{Offset: 28, Line: 29, Column: 30},
-								EndPos:   Position{Offset: 31, Line: 32, Column: 33},
-							},
 						},
 					},
 				},
-				Range: Range{
-					StartPos: Position{Offset: 13, Line: 14, Column: 15},
-					EndPos:   Position{Offset: 16, Line: 17, Column: 18},
-				},
 			},
-			StartPos: Position{Offset: 19, Line: 20, Column: 21},
 		}
 
 		assert.Equal(t,
@@ -482,19 +430,10 @@ func TestWhileStatement_Doc(t *testing.T) {
 	stmt := &WhileStatement{
 		Test: &BoolExpression{
 			Value: false,
-			Range: Range{
-				StartPos: Position{Offset: 1, Line: 2, Column: 3},
-				EndPos:   Position{Offset: 4, Line: 5, Column: 6},
-			},
 		},
 		Block: &Block{
 			Statements: []Statement{},
-			Range: Range{
-				StartPos: Position{Offset: 7, Line: 8, Column: 9},
-				EndPos:   Position{Offset: 10, Line: 11, Column: 12},
-			},
 		},
-		StartPos: Position{Offset: 13, Line: 14, Column: 15},
 	}
 
 	assert.Equal(t,
@@ -653,23 +592,13 @@ func TestForStatement_Doc(t *testing.T) {
 		stmt := &ForStatement{
 			Identifier: Identifier{
 				Identifier: "foobar",
-				Pos:        Position{Offset: 1, Line: 2, Column: 3},
 			},
 			Value: &BoolExpression{
 				Value: false,
-				Range: Range{
-					StartPos: Position{Offset: 4, Line: 5, Column: 6},
-					EndPos:   Position{Offset: 7, Line: 8, Column: 9},
-				},
 			},
 			Block: &Block{
 				Statements: []Statement{},
-				Range: Range{
-					StartPos: Position{Offset: 10, Line: 11, Column: 12},
-					EndPos:   Position{Offset: 13, Line: 14, Column: 15},
-				},
 			},
-			StartPos: Position{Offset: 16, Line: 17, Column: 18},
 		}
 
 		assert.Equal(t,
@@ -804,19 +733,13 @@ func TestAssignmentStatement_Doc(t *testing.T) {
 		Target: &IdentifierExpression{
 			Identifier: Identifier{
 				Identifier: "foobar",
-				Pos:        Position{Offset: 1, Line: 2, Column: 3},
 			},
 		},
 		Transfer: &Transfer{
 			Operation: TransferOperationCopy,
-			Pos:       Position{Offset: 4, Line: 5, Column: 6},
 		},
 		Value: &BoolExpression{
 			Value: false,
-			Range: Range{
-				StartPos: Position{Offset: 7, Line: 8, Column: 9},
-				EndPos:   Position{Offset: 10, Line: 11, Column: 12},
-			},
 		},
 	}
 
@@ -897,15 +820,10 @@ func TestSwapStatement_Doc(t *testing.T) {
 		Left: &IdentifierExpression{
 			Identifier: Identifier{
 				Identifier: "foobar",
-				Pos:        Position{Offset: 1, Line: 2, Column: 3},
 			},
 		},
 		Right: &BoolExpression{
 			Value: false,
-			Range: Range{
-				StartPos: Position{Offset: 4, Line: 5, Column: 6},
-				EndPos:   Position{Offset: 7, Line: 8, Column: 9},
-			},
 		},
 	}
 
@@ -1056,7 +974,7 @@ func TestEmitStatement_Doc(t *testing.T) {
 	)
 }
 
-func TestSwitchStatement_Doc(t *testing.T) {
+func TestSwitchStatement_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
 
@@ -1192,7 +1110,7 @@ func TestSwitchStatement_Doc(t *testing.T) {
 	)
 }
 
-func TestSwitchStatement_MarshalJSON(t *testing.T) {
+func TestSwitchStatement_Doc(t *testing.T) {
 
 	t.Parallel()
 
@@ -1200,31 +1118,21 @@ func TestSwitchStatement_MarshalJSON(t *testing.T) {
 		Expression: &IdentifierExpression{
 			Identifier: Identifier{
 				Identifier: "foo",
-				Pos:        Position{Offset: 1, Line: 2, Column: 3},
 			},
 		},
 		Cases: []*SwitchCase{
 			{
 				Expression: &BoolExpression{
 					Value: false,
-					Range: Range{
-						StartPos: Position{Offset: 4, Line: 5, Column: 6},
-						EndPos:   Position{Offset: 7, Line: 8, Column: 9},
-					},
 				},
 				Statements: []Statement{
 					&ExpressionStatement{
 						Expression: &IdentifierExpression{
 							Identifier: Identifier{
 								Identifier: "bar",
-								Pos:        Position{Offset: 10, Line: 11, Column: 12},
 							},
 						},
 					},
-				},
-				Range: Range{
-					StartPos: Position{Offset: 13, Line: 14, Column: 15},
-					EndPos:   Position{Offset: 16, Line: 17, Column: 18},
 				},
 			},
 			{
@@ -1233,20 +1141,11 @@ func TestSwitchStatement_MarshalJSON(t *testing.T) {
 						Expression: &IdentifierExpression{
 							Identifier: Identifier{
 								Identifier: "baz",
-								Pos:        Position{Offset: 19, Line: 20, Column: 21},
 							},
 						},
 					},
 				},
-				Range: Range{
-					StartPos: Position{Offset: 22, Line: 23, Column: 24},
-					EndPos:   Position{Offset: 25, Line: 26, Column: 27},
-				},
 			},
-		},
-		Range: Range{
-			StartPos: Position{Offset: 28, Line: 29, Column: 30},
-			EndPos:   Position{Offset: 31, Line: 32, Column: 33},
 		},
 	}
 
