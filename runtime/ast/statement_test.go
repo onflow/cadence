@@ -1055,3 +1055,245 @@ func TestEmitStatement_Doc(t *testing.T) {
 		stmt.Doc(),
 	)
 }
+
+func TestSwitchStatement_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	stmt := &SwitchStatement{
+		Expression: &IdentifierExpression{
+			Identifier: Identifier{
+				Identifier: "foo",
+				Pos:        Position{Offset: 1, Line: 2, Column: 3},
+			},
+		},
+		Cases: []*SwitchCase{
+			{
+				Expression: &BoolExpression{
+					Value: false,
+					Range: Range{
+						StartPos: Position{Offset: 4, Line: 5, Column: 6},
+						EndPos:   Position{Offset: 7, Line: 8, Column: 9},
+					},
+				},
+				Statements: []Statement{
+					&ExpressionStatement{
+						Expression: &IdentifierExpression{
+							Identifier: Identifier{
+								Identifier: "bar",
+								Pos:        Position{Offset: 10, Line: 11, Column: 12},
+							},
+						},
+					},
+				},
+				Range: Range{
+					StartPos: Position{Offset: 13, Line: 14, Column: 15},
+					EndPos:   Position{Offset: 16, Line: 17, Column: 18},
+				},
+			},
+			{
+				Statements: []Statement{
+					&ExpressionStatement{
+						Expression: &IdentifierExpression{
+							Identifier: Identifier{
+								Identifier: "baz",
+								Pos:        Position{Offset: 19, Line: 20, Column: 21},
+							},
+						},
+					},
+				},
+				Range: Range{
+					StartPos: Position{Offset: 22, Line: 23, Column: 24},
+					EndPos:   Position{Offset: 25, Line: 26, Column: 27},
+				},
+			},
+		},
+		Range: Range{
+			StartPos: Position{Offset: 28, Line: 29, Column: 30},
+			EndPos:   Position{Offset: 31, Line: 32, Column: 33},
+		},
+	}
+
+	actual, err := json.Marshal(stmt)
+	require.NoError(t, err)
+
+	assert.JSONEq(t,
+		`
+        {
+            "Type": "SwitchStatement",
+            "Expression": {
+                "Type": "IdentifierExpression",
+                "Identifier": {
+                    "Identifier": "foo",
+                    "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                    "EndPos": {"Offset": 3, "Line": 2, "Column": 5}
+                },
+                "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                "EndPos": {"Offset": 3, "Line": 2, "Column": 5}
+            },
+            "Cases": [
+                {
+                    "Type": "SwitchCase",
+                    "Expression": {
+                        "Type": "BoolExpression",
+                        "Value": false,
+                        "StartPos": {"Offset": 4, "Line": 5, "Column": 6},
+                        "EndPos": {"Offset": 7, "Line": 8, "Column": 9}
+                    },
+                    "Statements": [
+                        {
+                            "Type": "ExpressionStatement",
+                            "StartPos": {"Offset": 10, "Line": 11, "Column": 12},
+                            "EndPos": {"Offset": 12, "Line": 11, "Column": 14},
+                            "Expression": {
+                                "Type": "IdentifierExpression",
+                                "Identifier": {
+                                    "Identifier": "bar",
+                                    "StartPos": {"Offset": 10, "Line": 11, "Column": 12},
+                                    "EndPos": {"Offset": 12, "Line": 11, "Column": 14}
+                                },
+                                "StartPos": {"Offset": 10, "Line": 11, "Column": 12},
+                                "EndPos": {"Offset": 12, "Line": 11, "Column": 14}
+                            }
+                        }
+                    ],
+                    "StartPos": {"Offset": 13, "Line": 14, "Column": 15},
+                    "EndPos": {"Offset": 16, "Line": 17, "Column": 18}
+                },
+                {
+                    "Type": "SwitchCase",
+                    "Expression": null,
+                    "Statements": [
+                        {
+                            "Type": "ExpressionStatement",
+                            "StartPos": {"Offset": 19, "Line": 20, "Column": 21},
+                            "EndPos": {"Offset": 21, "Line": 20, "Column": 23},
+                            "Expression": {
+                                "Type": "IdentifierExpression",
+                                "Identifier": {
+                                    "Identifier": "baz",
+                                    "StartPos": {"Offset": 19, "Line": 20, "Column": 21},
+                                    "EndPos": {"Offset": 21, "Line": 20, "Column": 23}
+                                },
+                                "StartPos": {"Offset": 19, "Line": 20, "Column": 21},
+                                "EndPos": {"Offset": 21, "Line": 20, "Column": 23}
+                            }
+                        }
+                    ],
+                    "StartPos": {"Offset": 22, "Line": 23, "Column": 24},
+                    "EndPos": {"Offset": 25, "Line": 26, "Column": 27}
+                }
+            ],
+            "StartPos": {"Offset": 28, "Line": 29, "Column": 30},
+            "EndPos": {"Offset": 31, "Line": 32, "Column": 33}
+        }
+        `,
+		string(actual),
+	)
+}
+
+func TestSwitchStatement_MarshalJSON(t *testing.T) {
+
+	t.Parallel()
+
+	stmt := &SwitchStatement{
+		Expression: &IdentifierExpression{
+			Identifier: Identifier{
+				Identifier: "foo",
+				Pos:        Position{Offset: 1, Line: 2, Column: 3},
+			},
+		},
+		Cases: []*SwitchCase{
+			{
+				Expression: &BoolExpression{
+					Value: false,
+					Range: Range{
+						StartPos: Position{Offset: 4, Line: 5, Column: 6},
+						EndPos:   Position{Offset: 7, Line: 8, Column: 9},
+					},
+				},
+				Statements: []Statement{
+					&ExpressionStatement{
+						Expression: &IdentifierExpression{
+							Identifier: Identifier{
+								Identifier: "bar",
+								Pos:        Position{Offset: 10, Line: 11, Column: 12},
+							},
+						},
+					},
+				},
+				Range: Range{
+					StartPos: Position{Offset: 13, Line: 14, Column: 15},
+					EndPos:   Position{Offset: 16, Line: 17, Column: 18},
+				},
+			},
+			{
+				Statements: []Statement{
+					&ExpressionStatement{
+						Expression: &IdentifierExpression{
+							Identifier: Identifier{
+								Identifier: "baz",
+								Pos:        Position{Offset: 19, Line: 20, Column: 21},
+							},
+						},
+					},
+				},
+				Range: Range{
+					StartPos: Position{Offset: 22, Line: 23, Column: 24},
+					EndPos:   Position{Offset: 25, Line: 26, Column: 27},
+				},
+			},
+		},
+		Range: Range{
+			StartPos: Position{Offset: 28, Line: 29, Column: 30},
+			EndPos:   Position{Offset: 31, Line: 32, Column: 33},
+		},
+	}
+
+	assert.Equal(t,
+		prettier.Concat{
+			prettier.Group{
+				Doc: prettier.Concat{
+					switchStatementKeywordSpaceDoc,
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Text("foo"),
+						},
+					},
+					prettier.Line{},
+				},
+			},
+			prettier.Text("{"),
+			prettier.Indent{
+				Doc: prettier.Concat{
+					prettier.HardLine{},
+					prettier.Concat{
+						switchCaseKeywordSpaceDoc,
+						prettier.Text("false"),
+						switchCaseColonSymbolDoc,
+						prettier.Indent{
+							Doc: prettier.Concat{
+								prettier.HardLine{},
+								prettier.Text("bar"),
+							},
+						},
+					},
+					prettier.HardLine{},
+					prettier.Concat{
+						switchCaseDefaultKeywordSpaceDoc,
+						prettier.Indent{
+							Doc: prettier.Concat{
+								prettier.HardLine{},
+								prettier.Text("baz"),
+							},
+						},
+					},
+				},
+			},
+			prettier.HardLine{},
+			prettier.Text("}"),
+		},
+		stmt.Doc(),
+	)
+}

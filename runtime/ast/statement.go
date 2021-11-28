@@ -36,6 +36,8 @@ type ReturnStatement struct {
 	Range
 }
 
+var _ Statement = &ReturnStatement{}
+
 func (*ReturnStatement) isStatement() {}
 
 func (s *ReturnStatement) Accept(visitor Visitor) Repr {
@@ -584,6 +586,8 @@ type SwitchStatement struct {
 	Range
 }
 
+var _ Statement = &SwitchStatement{}
+
 func (*SwitchStatement) isStatement() {}
 
 func (s *SwitchStatement) Accept(visitor Visitor) Repr {
@@ -595,6 +599,42 @@ func (s *SwitchStatement) Walk(walkChild func(Element)) {
 	for _, switchCase := range s.Cases {
 		walkChild(switchCase.Expression)
 		walkStatements(walkChild, switchCase.Statements)
+	}
+}
+
+const switchStatementKeywordSpaceDoc = prettier.Text("switch ")
+
+func (s *SwitchStatement) Doc() prettier.Doc {
+
+	bodyDoc := make(prettier.Concat, 0, len(s.Cases))
+
+	for _, switchCase := range s.Cases {
+		bodyDoc = append(
+			bodyDoc,
+			prettier.HardLine{},
+			switchCase.Doc(),
+		)
+	}
+
+	return prettier.Concat{
+		prettier.Group{
+			Doc: prettier.Concat{
+				switchStatementKeywordSpaceDoc,
+				prettier.Indent{
+					Doc: prettier.Concat{
+						prettier.SoftLine{},
+						s.Expression.Doc(),
+					},
+				},
+				prettier.Line{},
+			},
+		},
+		blockStartDoc,
+		prettier.Indent{
+			Doc: bodyDoc,
+		},
+		prettier.HardLine{},
+		blockEndDoc,
 	}
 }
 
@@ -626,4 +666,28 @@ func (s *SwitchCase) MarshalJSON() ([]byte, error) {
 		Type:  "SwitchCase",
 		Alias: (*Alias)(s),
 	})
+}
+
+const switchCaseKeywordSpaceDoc = prettier.Text("case ")
+const switchCaseColonSymbolDoc = prettier.Text(":")
+const switchCaseDefaultKeywordSpaceDoc = prettier.Text("default:")
+
+func (s *SwitchCase) Doc() prettier.Doc {
+	statementsDoc := prettier.Indent{
+		Doc: StatementsDoc(s.Statements),
+	}
+
+	if s.Expression == nil {
+		return prettier.Concat{
+			switchCaseDefaultKeywordSpaceDoc,
+			statementsDoc,
+		}
+	}
+
+	return prettier.Concat{
+		switchCaseKeywordSpaceDoc,
+		s.Expression.Doc(),
+		switchCaseColonSymbolDoc,
+		statementsDoc,
+	}
 }

@@ -53,17 +53,17 @@ func (b *Block) Doc() prettier.Doc {
 	return prettier.Concat{
 		blockStartDoc,
 		prettier.Indent{
-			Doc: b.statementsDoc(),
+			Doc: StatementsDoc(b.Statements),
 		},
 		prettier.HardLine{},
 		blockEndDoc,
 	}
 }
 
-func (b *Block) statementsDoc() prettier.Doc {
+func StatementsDoc(statements []Statement) prettier.Doc {
 	var statementsDoc prettier.Concat
 
-	for _, statement := range b.Statements {
+	for _, statement := range statements {
 		// TODO: replace once Statement implements Doc
 		hasDoc, ok := statement.(interface{ Doc() prettier.Doc })
 		if !ok {
