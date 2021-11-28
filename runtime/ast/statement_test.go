@@ -889,6 +889,38 @@ func TestSwapStatement_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestSwapStatement_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	stmt := &SwapStatement{
+		Left: &IdentifierExpression{
+			Identifier: Identifier{
+				Identifier: "foobar",
+				Pos:        Position{Offset: 1, Line: 2, Column: 3},
+			},
+		},
+		Right: &BoolExpression{
+			Value: false,
+			Range: Range{
+				StartPos: Position{Offset: 4, Line: 5, Column: 6},
+				EndPos:   Position{Offset: 7, Line: 8, Column: 9},
+			},
+		},
+	}
+
+	assert.Equal(t,
+		prettier.Group{
+			Doc: prettier.Concat{
+				prettier.Text("foobar"),
+				swapStatementSpaceSymbolSpaceDoc,
+				prettier.Text("false"),
+			},
+		},
+		stmt.Doc(),
+	)
+}
+
 func TestEmitStatement_MarshalJSON(t *testing.T) {
 
 	t.Parallel()

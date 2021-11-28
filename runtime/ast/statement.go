@@ -487,6 +487,10 @@ type SwapStatement struct {
 	Right Expression
 }
 
+var _ Statement = &SwapStatement{}
+
+func (*SwapStatement) isStatement() {}
+
 func (s *SwapStatement) StartPosition() Position {
 	return s.Left.StartPosition()
 }
@@ -495,8 +499,6 @@ func (s *SwapStatement) EndPosition() Position {
 	return s.Right.EndPosition()
 }
 
-func (*SwapStatement) isStatement() {}
-
 func (s *SwapStatement) Accept(visitor Visitor) Repr {
 	return visitor.VisitSwapStatement(s)
 }
@@ -504,6 +506,18 @@ func (s *SwapStatement) Accept(visitor Visitor) Repr {
 func (s *SwapStatement) Walk(walkChild func(Element)) {
 	walkChild(s.Left)
 	walkChild(s.Right)
+}
+
+const swapStatementSpaceSymbolSpaceDoc = prettier.Text(" <-> ")
+
+func (s *SwapStatement) Doc() prettier.Doc {
+	return prettier.Group{
+		Doc: prettier.Concat{
+			s.Left.Doc(),
+			swapStatementSpaceSymbolSpaceDoc,
+			s.Right.Doc(),
+		},
+	}
 }
 
 func (s *SwapStatement) MarshalJSON() ([]byte, error) {
