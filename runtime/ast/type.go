@@ -22,6 +22,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/turbolent/prettier"
 )
 
 // TypeAnnotation
@@ -79,6 +81,8 @@ type NominalType struct {
 	NestedIdentifiers []Identifier `json:",omitempty"`
 }
 
+var _ Type = &NominalType{}
+
 func (*NominalType) isType() {}
 
 func (t *NominalType) String() string {
@@ -102,6 +106,10 @@ func (t *NominalType) EndPosition() Position {
 	}
 	lastIdentifier := t.NestedIdentifiers[nestedCount-1]
 	return lastIdentifier.EndPosition()
+}
+
+func (t *NominalType) Doc() prettier.Doc {
+	return prettier.Text(t.String())
 }
 
 func (t *NominalType) MarshalJSON() ([]byte, error) {

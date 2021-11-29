@@ -25,6 +25,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/turbolent/prettier"
 )
 
 func TestTypeAnnotation_MarshalJSON(t *testing.T) {
@@ -64,6 +65,22 @@ func TestTypeAnnotation_MarshalJSON(t *testing.T) {
         }
         `,
 		string(actual),
+	)
+}
+
+func TestNominalType_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	ty := &NominalType{
+		Identifier: Identifier{
+			Identifier: "R",
+		},
+	}
+
+	assert.Equal(t,
+		prettier.Text("R"),
+		ty.Doc(),
 	)
 }
 
