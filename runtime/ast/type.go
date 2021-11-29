@@ -229,7 +229,7 @@ func (t *VariableSizedType) CheckEqual(other Type, checker TypeEqualityChecker) 
 	return checker.CheckVariableSizedTypeEquality(t, other)
 }
 
-// ConstantSizedType is a constant sized array type
+// ConstantSizedType is a constant-sized array type
 
 type ConstantSizedType struct {
 	Type Type `json:"ElementType"`
@@ -237,10 +237,30 @@ type ConstantSizedType struct {
 	Range
 }
 
+var _ Type = &ConstantSizedType{}
+
 func (*ConstantSizedType) isType() {}
 
 func (t *ConstantSizedType) String() string {
 	return fmt.Sprintf("[%s; %s]", t.Type, t.Size)
+}
+
+const constantSizedTypeSeparatorSpaceDoc = prettier.Text("; ")
+
+func (t *ConstantSizedType) Doc() prettier.Doc {
+	return prettier.Concat{
+		arrayTypeStartDoc,
+		prettier.Indent{
+			Doc: prettier.Concat{
+				prettier.SoftLine{},
+				t.Type.Doc(),
+				constantSizedTypeSeparatorSpaceDoc,
+				t.Size.Doc(),
+			},
+		},
+		prettier.SoftLine{},
+		arrayTypeEndDoc,
+	}
 }
 
 func (t *ConstantSizedType) MarshalJSON() ([]byte, error) {

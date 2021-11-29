@@ -258,6 +258,41 @@ func TestVariableSizedType_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestConstantSizedType_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	ty := &ConstantSizedType{
+		Type: &NominalType{
+			Identifier: Identifier{
+				Identifier: "T",
+			},
+		},
+		Size: &IntegerExpression{
+			PositiveLiteral: "42",
+			Value:           big.NewInt(42),
+			Base:            10,
+		},
+	}
+
+	assert.Equal(t,
+		prettier.Concat{
+			prettier.Text("["),
+			prettier.Indent{
+				Doc: prettier.Concat{
+					prettier.SoftLine{},
+					prettier.Text("T"),
+					prettier.Text("; "),
+					prettier.Text("42"),
+				},
+			},
+			prettier.SoftLine{},
+			prettier.Text("]"),
+		},
+		ty.Doc(),
+	)
+}
+
 func TestConstantSizedType_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
