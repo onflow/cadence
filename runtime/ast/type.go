@@ -481,6 +481,8 @@ type RestrictedType struct {
 	Range
 }
 
+var _ Type = &RestrictedType{}
+
 func (*RestrictedType) isType() {}
 
 func (t *RestrictedType) String() string {
@@ -497,6 +499,49 @@ func (t *RestrictedType) String() string {
 	}
 	builder.WriteRune('}')
 	return builder.String()
+}
+
+const restrictedTypeStartDoc = prettier.Text("{")
+const restrictedTypeEndDoc = prettier.Text("}")
+const restrictedTypeSeparatorDoc = prettier.Text(",")
+
+func (t *RestrictedType) Doc() prettier.Doc {
+	restrictionsDoc := prettier.Concat{
+		prettier.SoftLine{},
+	}
+
+	for i, restriction := range t.Restrictions {
+		if i > 0 {
+			restrictionsDoc = append(
+				restrictionsDoc,
+				restrictedTypeSeparatorDoc,
+				prettier.Line{},
+			)
+		}
+		restrictionsDoc = append(
+			restrictionsDoc,
+			restriction.Doc(),
+		)
+	}
+
+	var doc prettier.Concat
+	if t.Type != nil {
+		doc = append(doc, t.Type.Doc())
+	}
+
+	return append(doc,
+		prettier.Group{
+			Doc: prettier.Concat{
+				restrictedTypeStartDoc,
+				prettier.Indent{
+					Doc: restrictionsDoc,
+				},
+				prettier.SoftLine{},
+				restrictedTypeEndDoc,
+			},
+		},
+	)
+
 }
 
 func (t *RestrictedType) MarshalJSON() ([]byte, error) {

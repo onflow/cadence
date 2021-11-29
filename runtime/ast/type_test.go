@@ -681,6 +681,54 @@ func TestReferenceType_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestRestrictedType_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	ty := &RestrictedType{
+		Type: &NominalType{
+			Identifier: Identifier{
+				Identifier: "AB",
+			},
+		},
+		Restrictions: []*NominalType{
+			{
+				Identifier: Identifier{
+					Identifier: "CD",
+				},
+			},
+			{
+				Identifier: Identifier{
+					Identifier: "EF",
+				},
+			},
+		},
+	}
+
+	assert.Equal(t,
+		prettier.Concat{
+			prettier.Text("AB"),
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("{"),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Text("CD"),
+							prettier.Text(","),
+							prettier.Line{},
+							prettier.Text("EF"),
+						},
+					},
+					prettier.SoftLine{},
+					prettier.Text("}"),
+				},
+			},
+		},
+		ty.Doc(),
+	)
+}
+
 func TestRestrictedType_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
