@@ -418,6 +418,8 @@ type ReferenceType struct {
 	StartPos   Position `json:"-"`
 }
 
+var _ Type = &ReferenceType{}
+
 func (*ReferenceType) isType() {}
 
 func (t *ReferenceType) String() string {
@@ -436,6 +438,22 @@ func (t *ReferenceType) StartPosition() Position {
 
 func (t *ReferenceType) EndPosition() Position {
 	return t.Type.EndPosition()
+}
+
+const referenceTypeAuthKeywordSpaceDoc = prettier.Text("auth ")
+const referenceTypeSymbolDoc = prettier.Text("&")
+
+func (t *ReferenceType) Doc() prettier.Doc {
+	var doc prettier.Concat
+	if t.Authorized {
+		doc = append(doc, referenceTypeAuthKeywordSpaceDoc)
+	}
+
+	return append(
+		doc,
+		referenceTypeSymbolDoc,
+		t.Type.Doc(),
+	)
 }
 
 func (t *ReferenceType) MarshalJSON() ([]byte, error) {

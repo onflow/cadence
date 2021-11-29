@@ -590,6 +590,56 @@ func TestFunctionType_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestReferenceType_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("auth", func(t *testing.T) {
+
+		t.Parallel()
+
+		ty := &ReferenceType{
+			Authorized: true,
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "T",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("auth "),
+				prettier.Text("&"),
+				prettier.Text("T"),
+			},
+			ty.Doc(),
+		)
+	})
+
+	t.Run("un-auth", func(t *testing.T) {
+
+		t.Parallel()
+
+		ty := &ReferenceType{
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "T",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("&"),
+				prettier.Text("T"),
+			},
+			ty.Doc(),
+		)
+	})
+
+}
+
 func TestReferenceType_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
