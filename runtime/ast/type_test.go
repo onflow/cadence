@@ -352,6 +352,41 @@ func TestConstantSizedType_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestDictionaryType_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	ty := &DictionaryType{
+		KeyType: &NominalType{
+			Identifier: Identifier{
+				Identifier: "AB",
+			},
+		},
+		ValueType: &NominalType{
+			Identifier: Identifier{
+				Identifier: "CD",
+			},
+		},
+	}
+
+	assert.Equal(t,
+		prettier.Concat{
+			prettier.Text("{"),
+			prettier.Indent{
+				Doc: prettier.Concat{
+					prettier.SoftLine{},
+					prettier.Text("AB"),
+					prettier.Text(": "),
+					prettier.Text("CD"),
+				},
+			},
+			prettier.SoftLine{},
+			prettier.Text("}"),
+		},
+		ty.Doc(),
+	)
+}
+
 func TestDictionaryType_MarshalJSON(t *testing.T) {
 
 	t.Parallel()

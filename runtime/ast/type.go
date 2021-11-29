@@ -286,10 +286,32 @@ type DictionaryType struct {
 	Range
 }
 
+var _ Type = &DictionaryType{}
+
 func (*DictionaryType) isType() {}
 
 func (t *DictionaryType) String() string {
 	return fmt.Sprintf("{%s: %s}", t.KeyType, t.ValueType)
+}
+
+const dictionaryTypeStartDoc = prettier.Text("{")
+const dictionaryTypeEndDoc = prettier.Text("}")
+const dictionaryTypeSeparatorSpaceDoc = prettier.Text(": ")
+
+func (t *DictionaryType) Doc() prettier.Doc {
+	return prettier.Concat{
+		dictionaryTypeStartDoc,
+		prettier.Indent{
+			Doc: prettier.Concat{
+				prettier.SoftLine{},
+				t.KeyType.Doc(),
+				dictionaryTypeSeparatorSpaceDoc,
+				t.ValueType.Doc(),
+			},
+		},
+		prettier.SoftLine{},
+		dictionaryTypeEndDoc,
+	}
 }
 
 func (t *DictionaryType) MarshalJSON() ([]byte, error) {
