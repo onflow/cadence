@@ -445,6 +445,71 @@ func TestDictionaryType_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestFunctionType_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	ty := &FunctionType{
+		ParameterTypeAnnotations: []*TypeAnnotation{
+			{
+				IsResource: true,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "AB",
+					},
+				},
+			},
+			{
+				IsResource: true,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "CD",
+					},
+				},
+			},
+		},
+		ReturnTypeAnnotation: &TypeAnnotation{
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "EF",
+				},
+			},
+		},
+	}
+
+	assert.Equal(t,
+		prettier.Concat{
+			prettier.Text("("),
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("("),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Concat{
+								prettier.Text("@"),
+								prettier.Text("AB"),
+							},
+							prettier.Text(","),
+							prettier.Line{},
+							prettier.Concat{
+								prettier.Text("@"),
+								prettier.Text("CD"),
+							},
+						},
+					},
+					prettier.SoftLine{},
+					prettier.Text(")"),
+				},
+			},
+			prettier.Text(": "),
+			prettier.Text("EF"),
+			prettier.Text(")"),
+		},
+		ty.Doc(),
+	)
+}
+
 func TestFunctionType_MarshalJSON(t *testing.T) {
 
 	t.Parallel()

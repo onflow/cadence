@@ -337,6 +337,8 @@ type FunctionType struct {
 	Range
 }
 
+var _ Type = &FunctionType{}
+
 func (*FunctionType) isType() {}
 
 func (t *FunctionType) String() string {
@@ -349,6 +351,48 @@ func (t *FunctionType) String() string {
 	}
 
 	return fmt.Sprintf("((%s): %s)", parameters.String(), t.ReturnTypeAnnotation.String())
+}
+
+const functionTypeStartDoc = prettier.Text("(")
+const functionTypeEndDoc = prettier.Text(")")
+const functionTypeTypeSeparatorSpaceDoc = prettier.Text(": ")
+const functionTypeParameterSeparatorDoc = prettier.Text(",")
+
+func (t *FunctionType) Doc() prettier.Doc {
+	parametersDoc := prettier.Concat{
+		prettier.SoftLine{},
+	}
+
+	for i, parameterTypeAnnotation := range t.ParameterTypeAnnotations {
+		if i > 0 {
+			parametersDoc = append(
+				parametersDoc,
+				functionTypeParameterSeparatorDoc,
+				prettier.Line{},
+			)
+		}
+		parametersDoc = append(
+			parametersDoc,
+			parameterTypeAnnotation.Doc(),
+		)
+	}
+
+	return prettier.Concat{
+		functionTypeStartDoc,
+		prettier.Group{
+			Doc: prettier.Concat{
+				functionTypeStartDoc,
+				prettier.Indent{
+					Doc: parametersDoc,
+				},
+				prettier.SoftLine{},
+				functionTypeEndDoc,
+			},
+		},
+		functionTypeTypeSeparatorSpaceDoc,
+		t.ReturnTypeAnnotation.Doc(),
+		functionTypeEndDoc,
+	}
 }
 
 func (t *FunctionType) MarshalJSON() ([]byte, error) {
