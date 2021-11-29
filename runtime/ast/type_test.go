@@ -188,6 +188,34 @@ func TestOptionalType_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestVariableSizedType_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	ty := &VariableSizedType{
+		Type: &NominalType{
+			Identifier: Identifier{
+				Identifier: "T",
+			},
+		},
+	}
+
+	assert.Equal(t,
+		prettier.Concat{
+			prettier.Text("["),
+			prettier.Indent{
+				Doc: prettier.Concat{
+					prettier.SoftLine{},
+					prettier.Text("T"),
+				},
+			},
+			prettier.SoftLine{},
+			prettier.Text("]"),
+		},
+		ty.Doc(),
+	)
+}
+
 func TestVariableSizedType_MarshalJSON(t *testing.T) {
 
 	t.Parallel()

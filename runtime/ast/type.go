@@ -189,10 +189,29 @@ type VariableSizedType struct {
 	Range
 }
 
+var _ Type = &VariableSizedType{}
+
 func (*VariableSizedType) isType() {}
 
 func (t *VariableSizedType) String() string {
 	return fmt.Sprintf("[%s]", t.Type)
+}
+
+const arrayTypeStartDoc = prettier.Text("[")
+const arrayTypeEndDoc = prettier.Text("]")
+
+func (t *VariableSizedType) Doc() prettier.Doc {
+	return prettier.Concat{
+		arrayTypeStartDoc,
+		prettier.Indent{
+			Doc: prettier.Concat{
+				prettier.SoftLine{},
+				t.Type.Doc(),
+			},
+		},
+		prettier.SoftLine{},
+		arrayTypeEndDoc,
+	}
 }
 
 func (t *VariableSizedType) MarshalJSON() ([]byte, error) {
