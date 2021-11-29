@@ -49,6 +49,19 @@ func (t *TypeAnnotation) EndPosition() Position {
 	return t.Type.EndPosition()
 }
 
+const typeAnnotationResourceSymbolDoc = prettier.Text("@")
+
+func (t *TypeAnnotation) Doc() prettier.Doc {
+	if !t.IsResource {
+		return t.Type.Doc()
+	}
+
+	return prettier.Concat{
+		typeAnnotationResourceSymbolDoc,
+		t.Type.Doc(),
+	}
+}
+
 func (t *TypeAnnotation) MarshalJSON() ([]byte, error) {
 	type Alias TypeAnnotation
 	return json.Marshal(&struct {
@@ -66,6 +79,7 @@ type Type interface {
 	HasPosition
 	fmt.Stringer
 	isType()
+	Doc() prettier.Doc
 	CheckEqual(other Type, checker TypeEqualityChecker) error
 }
 

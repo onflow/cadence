@@ -28,6 +28,28 @@ import (
 	"github.com/turbolent/prettier"
 )
 
+func TestTypeAnnotation_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	ty := &TypeAnnotation{
+		IsResource: true,
+		Type: &NominalType{
+			Identifier: Identifier{
+				Identifier: "R",
+			},
+		},
+	}
+
+	assert.Equal(t,
+		prettier.Concat{
+			prettier.Text("@"),
+			prettier.Text("R"),
+		},
+		ty.Doc(),
+	)
+}
+
 func TestTypeAnnotation_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
