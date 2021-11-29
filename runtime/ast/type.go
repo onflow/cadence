@@ -568,6 +568,8 @@ type InstantiationType struct {
 	EndPos                Position `json:"-"`
 }
 
+var _ Type = &InstantiationType{}
+
 func (*InstantiationType) isType() {}
 
 func (t *InstantiationType) String() string {
@@ -590,6 +592,44 @@ func (t *InstantiationType) StartPosition() Position {
 
 func (t *InstantiationType) EndPosition() Position {
 	return t.EndPos
+}
+
+const instantiationTypeStartDoc = prettier.Text("<")
+const instantiationTypeEndDoc = prettier.Text(">")
+const instantiationTypeSeparatorDoc = prettier.Text(",")
+
+func (t *InstantiationType) Doc() prettier.Doc {
+	typeArgumentsDoc := prettier.Concat{
+		prettier.SoftLine{},
+	}
+
+	for i, typeArgument := range t.TypeArguments {
+		if i > 0 {
+			typeArgumentsDoc = append(
+				typeArgumentsDoc,
+				instantiationTypeSeparatorDoc,
+				prettier.Line{},
+			)
+		}
+		typeArgumentsDoc = append(
+			typeArgumentsDoc,
+			typeArgument.Doc(),
+		)
+	}
+
+	return prettier.Concat{
+		t.Type.Doc(),
+		prettier.Group{
+			Doc: prettier.Concat{
+				instantiationTypeStartDoc,
+				prettier.Indent{
+					Doc: typeArgumentsDoc,
+				},
+				prettier.SoftLine{},
+				instantiationTypeEndDoc,
+			},
+		},
+	}
 }
 
 func (t *InstantiationType) MarshalJSON() ([]byte, error) {

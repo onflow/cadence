@@ -807,6 +807,63 @@ func TestRestrictedType_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestInstantiationType_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	ty := &InstantiationType{
+		Type: &NominalType{
+			Identifier: Identifier{
+				Identifier: "AB",
+			},
+		},
+		TypeArguments: []*TypeAnnotation{
+			{
+				IsResource: true,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "CD",
+					},
+				},
+			},
+			{
+				IsResource: false,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "EF",
+					},
+				},
+			},
+		},
+	}
+
+	assert.Equal(t,
+		prettier.Concat{
+			prettier.Text("AB"),
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("<"),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Concat{
+								prettier.Text("@"),
+								prettier.Text("CD"),
+							},
+							prettier.Text(","),
+							prettier.Line{},
+							prettier.Text("EF"),
+						},
+					},
+					prettier.SoftLine{},
+					prettier.Text(">"),
+				},
+			},
+		},
+		ty.Doc(),
+	)
+}
+
 func TestInstantiationType_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
