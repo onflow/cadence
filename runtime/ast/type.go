@@ -140,6 +140,8 @@ type OptionalType struct {
 	EndPos Position `json:"-"`
 }
 
+var _ Type = &OptionalType{}
+
 func (*OptionalType) isType() {}
 
 func (t *OptionalType) String() string {
@@ -152,6 +154,15 @@ func (t *OptionalType) StartPosition() Position {
 
 func (t *OptionalType) EndPosition() Position {
 	return t.EndPos
+}
+
+const optionalTypeSymbolDoc = prettier.Text("?")
+
+func (t *OptionalType) Doc() prettier.Doc {
+	return prettier.Concat{
+		t.Type.Doc(),
+		optionalTypeSymbolDoc,
+	}
 }
 
 func (t *OptionalType) MarshalJSON() ([]byte, error) {

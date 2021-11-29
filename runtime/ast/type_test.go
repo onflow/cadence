@@ -128,6 +128,27 @@ func TestNominalType_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestOptionalType_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	ty := &OptionalType{
+		Type: &NominalType{
+			Identifier: Identifier{
+				Identifier: "R",
+			},
+		},
+	}
+
+	assert.Equal(t,
+		prettier.Concat{
+			prettier.Text("R"),
+			prettier.Text("?"),
+		},
+		ty.Doc(),
+	)
+}
+
 func TestOptionalType_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
