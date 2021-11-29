@@ -627,10 +627,9 @@ func (e *InvocationExpression) Doc() prettier.Doc {
 
 	if len(e.TypeArguments) > 0 {
 		typeArgumentDocs := make([]prettier.Doc, len(e.TypeArguments))
-		// TODO: type arguments
-		//for i, typeArgument := range e.TypeArguments {
-		//	typeArgumentDocs[i] = typeArgument.Doc()
-		//}
+		for i, typeArgument := range e.TypeArguments {
+			typeArgumentDocs[i] = typeArgument.Doc()
+		}
 
 		result = append(result,
 			prettier.Wrap(
@@ -1143,7 +1142,7 @@ func (e *FunctionExpression) Doc() prettier.Doc {
 		signatureDoc = prettier.Concat{
 			signatureDoc,
 			typeSeparatorDoc,
-			// TODO: type
+			e.ReturnTypeAnnotation.Doc(),
 		}
 	}
 
@@ -1194,9 +1193,8 @@ func (e *FunctionExpression) parametersDoc() prettier.Doc {
 			parameterDoc,
 			prettier.Text(parameter.Identifier.Identifier),
 			typeSeparatorDoc,
+			parameter.TypeAnnotation.Doc(),
 		)
-
-		// TODO: type
 
 		parameterDocs = append(parameterDocs, parameterDoc)
 	}
@@ -1276,8 +1274,8 @@ func (e *CastingExpression) Doc() prettier.Doc {
 			},
 			prettier.Line{},
 			prettier.Text(e.Operation.Symbol()),
-			prettier.Space,
-			// TODO: type
+			prettier.Line{},
+			e.TypeAnnotation.Doc(),
 		},
 	}
 }
@@ -1477,8 +1475,8 @@ func (e *ReferenceExpression) Doc() prettier.Doc {
 			},
 			prettier.Line{},
 			referenceExpressionAsOperatorDoc,
-			prettier.Space,
-			// TODO: type
+			prettier.Line{},
+			e.Type.Doc(),
 		},
 	}
 }
