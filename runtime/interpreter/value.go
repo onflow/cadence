@@ -10176,7 +10176,7 @@ func (v *StorageReferenceValue) StaticType() StaticType {
 	}
 }
 
-func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter) *Value {
+func (v *StorageReferenceValue) dereference(interpreter *Interpreter) (*Value, func(LocationRange) error) {
 	switch referenced := interpreter.ReadStored(v.TargetStorageAddress, v.TargetKey).(type) {
 	case *SomeValue:
 		value := referenced.Value
@@ -10184,19 +10184,31 @@ func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter) *Value
 		if v.BorrowedType != nil {
 			dynamicType := value.DynamicType(interpreter, SeenReferences{})
 			if !interpreter.IsSubType(dynamicType, v.BorrowedType) {
-				interpreter.IsSubType(dynamicType, v.BorrowedType)
-				return nil
+				return nil, func(lr LocationRange) error {
+					return ForceCastTypeMismatchError{
+						ExpectedType:  v.BorrowedType,
+						LocationRange: lr,
+					}
+				}
 			}
 		}
 
-		return &value
+		return &value, nil
 
 	case NilValue:
-		return nil
+		return nil, nil
 
 	default:
 		panic(errors.NewUnreachableError())
 	}
+}
+
+func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter) *Value {
+	value, err := v.dereference(interpreter)
+	if err != nil {
+		return nil
+	}
+	return value
 }
 
 func (v *StorageReferenceValue) GetMember(

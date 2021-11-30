@@ -367,10 +367,9 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 
 			// load
 
-			value, err := inter.Invoke("loadR2")
-			require.NoError(t, err)
+			_, err = inter.Invoke("loadR2")
 
-			require.IsType(t, interpreter.NilValue{}, value)
+			require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 
 			// NOTE: check loaded value was *not* removed from storage
 			require.Len(t, accountStorables, 1)
@@ -449,10 +448,8 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 
 			// load
 
-			value, err := inter.Invoke("loadS2")
-			require.NoError(t, err)
-
-			require.IsType(t, interpreter.NilValue{}, value)
+			_, err = inter.Invoke("loadS2")
+			require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 
 			// NOTE: check loaded value was *not* removed from storage
 			require.Len(t, accountStorables, 1)
@@ -545,10 +542,8 @@ func TestInterpretAuthAccount_copy(t *testing.T) {
 
 		// load
 
-		value, err := inter.Invoke("copyS2")
-		require.NoError(t, err)
-
-		require.IsType(t, interpreter.NilValue{}, value)
+		_, err = inter.Invoke("copyS2")
+		require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 
 		// NOTE: check loaded value was *not* removed from storage
 		require.Len(t, accountStorables, 1)
@@ -674,10 +669,8 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 
 		t.Run("borrow R2", func(t *testing.T) {
 
-			value, err := inter.Invoke("borrowR2")
-			require.NoError(t, err)
-
-			require.IsType(t, interpreter.NilValue{}, value)
+			_, err := inter.Invoke("borrowR2")
+			require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 
 			// NOTE: check loaded value was *not* removed from storage
 			require.Len(t, accountStorables, 1)
@@ -813,10 +806,8 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 
 		t.Run("borrow S2", func(t *testing.T) {
 
-			value, err := inter.Invoke("borrowS2")
-			require.NoError(t, err)
-
-			require.IsType(t, interpreter.NilValue{}, value)
+			_, err = inter.Invoke("borrowS2")
+			require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 
 			// NOTE: check loaded value was *not* removed from storage
 			require.Len(t, accountStorables, 1)
