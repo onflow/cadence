@@ -3086,14 +3086,16 @@ func numberFunctionArgumentExpressionsChecker(targetType Type) ArgumentExpressio
 		switch argument := argument.(type) {
 		case *ast.IntegerExpression:
 			if CheckIntegerLiteral(argument, targetType, checker.report) {
-
-				suggestIntegerLiteralConversionReplacement(checker, argument, targetType, invocationRange)
+				if checker.lintEnabled {
+					suggestIntegerLiteralConversionReplacement(checker, argument, targetType, invocationRange)
+				}
 			}
 
 		case *ast.FixedPointExpression:
 			if CheckFixedPointLiteral(argument, targetType, checker.report) {
-
-				suggestFixedPointLiteralConversionReplacement(checker, targetType, argument, invocationRange)
+				if checker.lintEnabled {
+					suggestFixedPointLiteralConversionReplacement(checker, targetType, argument, invocationRange)
+				}
 			}
 		}
 	}
