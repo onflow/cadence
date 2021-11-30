@@ -2999,6 +2999,7 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 
 func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValue) *HostFunctionValue {
 
+	// Converted addresses can be cached and don't have to be recomputed on each function invocation
 	address := addressValue.ToAddress()
 
 	return NewHostFunctionValue(
@@ -3056,6 +3057,7 @@ func (interpreter *Interpreter) authAccountCopyFunction(addressValue AddressValu
 
 func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValue, clear bool) *HostFunctionValue {
 
+	// Converted addresses can be cached and don't have to be recomputed on each function invocation
 	address := addressValue.ToAddress()
 
 	return NewHostFunctionValue(
@@ -3117,6 +3119,7 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 
 func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressValue) *HostFunctionValue {
 
+	// Converted addresses can be cached and don't have to be recomputed on each function invocation
 	address := addressValue.ToAddress()
 
 	return NewHostFunctionValue(
@@ -3156,6 +3159,7 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 
 func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValue) *HostFunctionValue {
 
+	// Converted addresses can be cached and don't have to be recomputed on each function invocation
 	address := addressValue.ToAddress()
 
 	return NewHostFunctionValue(
@@ -3213,6 +3217,7 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 
 func (interpreter *Interpreter) accountGetLinkTargetFunction(addressValue AddressValue) *HostFunctionValue {
 
+	// Converted addresses can be cached and don't have to be recomputed on each function invocation
 	address := addressValue.ToAddress()
 
 	return NewHostFunctionValue(
@@ -3241,10 +3246,12 @@ func (interpreter *Interpreter) accountGetLinkTargetFunction(addressValue Addres
 }
 
 func (interpreter *Interpreter) authAccountUnlinkFunction(addressValue AddressValue) *HostFunctionValue {
+
+	// Converted addresses can be cached and don't have to be recomputed on each function invocation
+	address := addressValue.ToAddress()
+
 	return NewHostFunctionValue(
 		func(invocation Invocation) Value {
-
-			address := addressValue.ToAddress()
 
 			capabilityPath := invocation.Arguments[0].(PathValue)
 
@@ -3267,6 +3274,9 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 	borrowType *sema.ReferenceType,
 ) *HostFunctionValue {
 
+	// Converted addresses can be cached and don't have to be recomputed on each function invocation
+	address := addressValue.ToAddress()
+
 	return NewHostFunctionValue(
 		func(invocation Invocation) Value {
 
@@ -3281,8 +3291,6 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 			if borrowType == nil {
 				panic(errors.NewUnreachableError())
 			}
-
-			address := addressValue.ToAddress()
 
 			targetPath, authorized, err :=
 				interpreter.GetCapabilityFinalTargetPath(
@@ -3326,6 +3334,9 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 	borrowType *sema.ReferenceType,
 ) *HostFunctionValue {
 
+	// Converted addresses can be cached and don't have to be recomputed on each function invocation
+	address := addressValue.ToAddress()
+
 	return NewHostFunctionValue(
 		func(invocation Invocation) Value {
 
@@ -3341,8 +3352,6 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 			if borrowType == nil {
 				panic(errors.NewUnreachableError())
 			}
-
-			address := addressValue.ToAddress()
 
 			targetPath, authorized, err :=
 				interpreter.GetCapabilityFinalTargetPath(
