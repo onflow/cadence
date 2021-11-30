@@ -6909,3 +6909,111 @@ func TestRuntimeStackOverflow(t *testing.T) {
 	var callStackLimitExceededErr CallStackLimitExceededError
 	require.ErrorAs(t, err, &callStackLimitExceededErr)
 }
+
+func TestRuntimeInternalErrors(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := newTestInterpreterRuntime()
+
+	t.Run("script go error", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := []byte(`
+          pub fun main() {
+              log("hello")
+          }
+        `)
+
+		runtimeInterface := &testRuntimeInterface{
+			log: func(message string) {
+				// panic due to go-error in cadence implementation
+				var val interface{} = message
+				_ = val.(int)
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.ErrorAs(t, err, &Error{})
+	})
+
+	t.Run("script cadence error", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := []byte(`
+          pub fun main() {
+              log("hello")
+          }
+        `)
+
+		runtimeInterface := &testRuntimeInterface{
+			log: func(message string) {
+				// intentionally panic
+				panic(fmt.Errorf("panic trying to log %s", message))
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.ErrorAs(t, err, &Error{})
+	})
+
+	t.Run("transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := []byte(`
+          transaction {
+              prepare() {}
+              execute {
+                  log("hello")
+              }
+          }
+        `)
+
+		runtimeInterface := &testRuntimeInterface{
+			log: func(message string) {
+				// panic due to Cadence implementation error
+				var val interface{} = message
+				_ = val.(int)
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.ErrorAs(t, err, &Error{})
+	})
+}
