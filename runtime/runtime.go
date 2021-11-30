@@ -2881,7 +2881,7 @@ func (r *interpreterRuntime) ReadLinked(address common.Address, path cadence.Pat
 				return nil, err
 			}
 
-			if targetPath == (interpreter.PathValue{}) {
+			if targetPath == interpreter.EmptyPathValue {
 				return nil, nil
 			}
 
