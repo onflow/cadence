@@ -2861,7 +2861,7 @@ func (r *interpreterRuntime) ReadLinked(
 				return nil, err
 			}
 
-			if targetPath == (interpreter.PathValue{}) {
+			if targetPath == interpreter.EmptyPathValue {
 				return nil, nil
 			}
 

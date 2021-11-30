@@ -13619,6 +13619,8 @@ type PathValue struct {
 	Identifier string
 }
 
+var EmptyPathValue = PathValue{}
+
 var _ Value = PathValue{}
 var _ atree.Storable = PathValue{}
 var _ EquatableValue = PathValue{}

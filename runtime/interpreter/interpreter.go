@@ -3303,7 +3303,7 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 				panic(err)
 			}
 
-			if targetPath == (PathValue{}) {
+			if targetPath == EmptyPathValue {
 				return NilValue{}
 			}
 
@@ -3364,7 +3364,7 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 				panic(err)
 			}
 
-			if targetPath == (PathValue{}) {
+			if targetPath == EmptyPathValue {
 				return BoolValue(false)
 			}
 
@@ -3408,7 +3408,7 @@ func (interpreter *Interpreter) GetCapabilityFinalTargetPath(
 		// Detect cyclic links
 
 		if _, ok := seenPaths[path]; ok {
-			return PathValue{}, false, CyclicLinkError{
+			return EmptyPathValue, false, CyclicLinkError{
 				Address:       address,
 				Paths:         paths,
 				LocationRange: getLocationRange(),
@@ -3424,7 +3424,7 @@ func (interpreter *Interpreter) GetCapabilityFinalTargetPath(
 		)
 
 		if value == nil {
-			return PathValue{}, false, nil
+			return EmptyPathValue, false, nil
 		}
 
 		if link, ok := value.(LinkValue); ok {
@@ -3432,7 +3432,7 @@ func (interpreter *Interpreter) GetCapabilityFinalTargetPath(
 			allowedType := interpreter.ConvertStaticToSemaType(link.Type)
 
 			if !sema.IsSubType(allowedType, wantedBorrowType) {
-				return PathValue{}, false, nil
+				return EmptyPathValue, false, nil
 			}
 
 			targetPath := link.TargetPath
