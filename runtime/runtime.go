@@ -194,7 +194,13 @@ func (r *interpreterRuntime) SetAtreeValidationEnabled(enabled bool) {
 	r.atreeValidationEnabled = enabled
 }
 
-func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cadence.Value, error) {
+func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val cadence.Value, err error) {
+	defer func() {
+		if recovered, ok := recover().(error); ok {
+			err = newError(recovered, context)
+		}
+	}()
+
 	context.InitializeCodesAndPrograms()
 
 	storage := r.newStorage(context.Interface)
@@ -558,7 +564,13 @@ func (r *interpreterRuntime) convertArgument(
 	return argument
 }
 
-func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) error {
+func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) (err error) {
+	defer func() {
+		if recovered, ok := recover().(error); ok {
+			err = newError(recovered, context)
+		}
+	}()
+
 	context.InitializeCodesAndPrograms()
 
 	storage := r.newStorage(context.Interface)
