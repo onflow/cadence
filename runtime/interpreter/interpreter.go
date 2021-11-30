@@ -3500,7 +3500,10 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 
 				dynamicType := value.Value.DynamicType(interpreter, SeenReferences{})
 				if !interpreter.IsSubType(dynamicType, ty) {
-					return NilValue{}
+					panic(ForceCastTypeMismatchError{
+						ExpectedType:  ty,
+						LocationRange: invocation.GetLocationRange(),
+					})
 				}
 
 				inter := invocation.Interpreter
