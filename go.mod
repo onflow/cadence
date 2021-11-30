@@ -14,11 +14,12 @@ require (
 	github.com/rivo/uniseg v0.2.0
 	github.com/schollz/progressbar/v3 v3.8.3
 	github.com/stretchr/testify v1.7.0
+	github.com/turbolent/prettier v0.0.0-20210613180524-3a3f5a5b49ba
 	go.uber.org/goleak v1.1.10
 	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
 	golang.org/x/text v0.3.6
 	golang.org/x/tools v0.0.0-20200828161849-5deb26317202
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
-
+	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 )
