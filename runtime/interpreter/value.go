@@ -10190,7 +10190,6 @@ func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter) *Value
 	if v.BorrowedType != nil {
 		dynamicType := referenced.DynamicType(interpreter, SeenReferences{})
 		if !interpreter.IsSubType(dynamicType, v.BorrowedType) {
-			interpreter.IsSubType(dynamicType, v.BorrowedType)
 			return nil
 		}
 	}
