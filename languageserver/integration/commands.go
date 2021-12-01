@@ -59,6 +59,8 @@ const (
 	ErrorMessageArguments         = "arguments error"
 )
 
+const MaxGasLimit uint64 = 9999
+
 func (i *FlowIntegration) commands() []server.Command {
 	return []server.Command{
 		{
