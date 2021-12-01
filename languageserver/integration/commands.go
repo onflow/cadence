@@ -232,7 +232,6 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{
 
 	payer := serviceAccount.Address()
 	keyIndex := serviceAccount.Key().Index()
-	proposer := i.sharedServices.Accounts.Get(payer)
 
 	tx, err := i.sharedServices.Transactions.Build(
 		payer,
@@ -246,6 +245,7 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{
 		"",
 	)
 
+	tx, err = tx.MultiSign(signerAccounts)
 
 	/*
 		_, txResult, err := i.sharedServices.Transactions.Send(&signer, code, "", MaxGasLimit, txArgs, "")
