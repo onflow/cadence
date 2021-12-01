@@ -210,17 +210,50 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{
 		return nil, fmt.Errorf("failed to parse JSON arguments")
 	}
 
-	signer, err := i.state.EmulatorServiceAccount()
+	serviceAccount, err := i.state.EmulatorServiceAccount()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get service account, err: %w", err)
 	}
-	signer.SetAddress(flow.HexToAddress(signers[0]))
 
-	const gasLimit uint64 = 1000
-	_, txResult, err := i.sharedServices.Transactions.Send(signer, code, "", gasLimit, txArgs, "")
-	if err != nil {
-		return nil, errorWithMessage(conn, ErrorMessageTransactionError, err)
+	// TODO: sign transaction by multiple parties
+	// build -> sign for multiple signers
+	signerAccounts := make([]flowkit.Account, len(signers))
+	authorizers := make([]flow.Address, len(signers))
+	for i, v := range signers {
+		address := flow.HexToAddress(v)
+
+		// Clone service account
+		account := *serviceAccount
+		account.SetAddress(address)
+
+		signerAccounts[i] = account
+		authorizers[i] = address
 	}
+
+	payer := serviceAccount.Address()
+	keyIndex := serviceAccount.Key().Index()
+	proposer := i.sharedServices.Accounts.Get(payer)
+
+	tx, err := i.sharedServices.Transactions.Build(
+		payer,
+		authorizers,
+		payer,
+		keyIndex,
+		code,
+		"",
+		MaxGasLimit,
+		txArgs,
+		"",
+	)
+
+
+	/*
+		_, txResult, err := i.sharedServices.Transactions.Send(&signer, code, "", MaxGasLimit, txArgs, "")
+		if err != nil {
+			return nil, errorWithMessage(conn, ErrorMessageTransactionError, err)
+		}
+	*/
+
 
 	showMessage(conn, fmt.Sprintf("Transaction status: %s", txResult.Status.String()))
 	return nil, err
