@@ -51,7 +51,7 @@ func TestCapabilityStaticType_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		require.True(t, CapabilityStaticType{}.Equal(CapabilityStaticType{}))
+		require.True(t, CapabilityStaticType{}.Equal((CapabilityStaticType{})))
 	})
 
 	t.Run("unequal, self no borrow type", func(t *testing.T) {
@@ -582,7 +582,7 @@ func TestPrimitiveStaticType_Equal(t *testing.T) {
 
 		require.True(t,
 			PrimitiveStaticTypeString.
-				Equal(PrimitiveStaticTypeString),
+				Equal((PrimitiveStaticTypeString)),
 		)
 	})
 
