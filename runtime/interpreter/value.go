@@ -338,7 +338,7 @@ func (TypeValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func (v TypeValue) HashInput(interpreter *Interpreter, _ func() LocationRange, scratch []byte) []byte {
+func (v TypeValue) HashInput(interpreter *Interpreter, _ func() LocationRange, _ []byte) []byte {
 	typeID := interpreter.MustConvertStaticToSemaType(v.Type).ID()
 
 	return append(
@@ -8470,7 +8470,7 @@ func formatComposite(typeId string, fields []CompositeField, seenReferences Seen
 	return format.Composite(typeId, preparedFields)
 }
 
-func (v *CompositeValue) GetField(_ *Interpreter, _ func() LocationRange, name string) Value {
+func (v *CompositeValue) GetField(name string) Value {
 
 	storable, err := v.dictionary.Get(
 		stringAtreeComparator,
@@ -8518,7 +8518,7 @@ func (v *CompositeValue) Equal(interpreter *Interpreter, getLocationRange func()
 
 		// NOTE: Do NOT use an iterator, iteration order of fields may be different
 		// (if stored in different account, as storage ID is used as hash seed)
-		otherValue := otherComposite.GetField(interpreter, getLocationRange, fieldName)
+		otherValue := otherComposite.GetField(fieldName)
 
 		equatableValue, ok := MustConvertStoredValue(value).(EquatableValue)
 		if !ok || !equatableValue.Equal(interpreter, getLocationRange, otherValue) {
@@ -8534,7 +8534,7 @@ func (v *CompositeValue) HashInput(interpreter *Interpreter, getLocationRange fu
 			v.TypeID()...,
 		)
 
-		rawValue := v.GetField(interpreter, getLocationRange, sema.EnumRawValueFieldName)
+		rawValue := v.GetField(sema.EnumRawValueFieldName)
 		rawValueHashInput := rawValue.(HashableValue).
 			HashInput(interpreter, getLocationRange, scratch)
 
@@ -8588,7 +8588,7 @@ func (v *CompositeValue) ConformsToDynamicType(
 	}
 
 	for _, fieldName := range compositeType.Fields {
-		value := v.GetField(interpreter, getLocationRange, fieldName)
+		value := v.GetField(fieldName)
 		if value == nil {
 			if v.ComputedFields == nil {
 				return false
@@ -11560,12 +11560,12 @@ func NewPublicKeyValue(
 			{
 				Name: sema.PublicKeySignAlgoField,
 				// TODO: provide proper location range
-				Value: publicKeyValue.GetField(interpreter, ReturnEmptyLocationRange, sema.PublicKeySignAlgoField),
+				Value: publicKeyValue.GetField(sema.PublicKeySignAlgoField),
 			},
 			{
 				Name: sema.PublicKeyIsValidField,
 				// TODO: provide proper location range
-				Value: publicKeyValue.GetField(interpreter, ReturnEmptyLocationRange, sema.PublicKeyIsValidField),
+				Value: publicKeyValue.GetField(sema.PublicKeyIsValidField),
 			},
 		}
 

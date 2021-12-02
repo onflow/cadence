@@ -81,7 +81,7 @@ func TestCompositeStorage(t *testing.T) {
 		t,
 		inter,
 		BoolValue(true),
-		storedComposite.GetField(inter, ReturnEmptyLocationRange, fieldName),
+		storedComposite.GetField(fieldName),
 	)
 }
 

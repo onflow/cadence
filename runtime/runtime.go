@@ -1543,7 +1543,7 @@ func (r *interpreterRuntime) emitEvent(
 	fields := make([]exportableValue, len(eventType.ConstructorParameters))
 
 	for i, parameter := range eventType.ConstructorParameters {
-		value := event.GetField(inter, getLocationRange, parameter.Identifier)
+		value := event.GetField(parameter.Identifier)
 		fields[i] = newExportableValue(value, inter)
 	}
 
@@ -3143,7 +3143,7 @@ func NewPublicKeyFromValue(
 		)
 	}
 
-	rawValue := signAlgoValue.GetField(inter, getLocationRange, sema.EnumRawValueFieldName)
+	rawValue := signAlgoValue.GetField(sema.EnumRawValueFieldName)
 	if rawValue == nil {
 		return nil, errors.New("sign algorithm raw value is not set")
 	}
@@ -3231,7 +3231,7 @@ func NewHashAlgorithmFromValue(
 ) HashAlgorithm {
 	hashAlgoValue := value.(*interpreter.CompositeValue)
 
-	rawValue := hashAlgoValue.GetField(inter, getLocationRange, sema.EnumRawValueFieldName)
+	rawValue := hashAlgoValue.GetField(sema.EnumRawValueFieldName)
 	if rawValue == nil {
 		panic("cannot find hash algorithm raw value")
 	}
