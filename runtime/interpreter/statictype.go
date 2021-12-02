@@ -56,12 +56,7 @@ var _ StaticType = CompositeStaticType{}
 
 func NewCompositeStaticType(location common.Location, qualifiedIdentifier string) CompositeStaticType {
 
-	var typeID common.TypeID
-	if location == nil {
-		typeID = common.TypeID(qualifiedIdentifier)
-	} else {
-		typeID = location.TypeID(qualifiedIdentifier)
-	}
+	var typeID = common.NewTypeIDFromQualifiedName(location, qualifiedIdentifier)
 
 	return CompositeStaticType{
 		Location:            location,
@@ -539,14 +534,6 @@ type FunctionStaticType struct {
 }
 
 var _ StaticType = FunctionStaticType{}
-
-func (t FunctionStaticType) ReceiverType() StaticType {
-	var receiverType StaticType
-	if t.Type.ReceiverType != nil {
-		receiverType = ConvertSemaToStaticType(t.Type.ReceiverType)
-	}
-	return receiverType
-}
 
 func (t FunctionStaticType) TypeParameters() []*TypeParameter {
 	typeParameters := make([]*TypeParameter, len(t.Type.TypeParameters))

@@ -369,8 +369,9 @@ func TestParseArgumentList(t *testing.T) {
 					LabelStartPos: nil,
 					LabelEndPos:   nil,
 					Expression: &ast.IntegerExpression{
-						Value: big.NewInt(1),
-						Base:  10,
+						PositiveLiteral: "1",
+						Value:           big.NewInt(1),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{
 								Offset: 1,

@@ -96,7 +96,7 @@ func IsValidEventParameterType(t Type, results map[*Member]bool) bool {
 			return true
 		}
 
-		return IsSubType(t, NumberType) ||
-			IsSubType(t, PathType)
+		return IsSameTypeKind(t, NumberType) ||
+			IsSameTypeKind(t, PathType)
 	}
 }

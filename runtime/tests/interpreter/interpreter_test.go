@@ -4511,7 +4511,10 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		// - `auth &R{RI}` (authorized, if argument for parameter `authorized` == true)
 
 		storageAddress := common.BytesToAddress([]byte{0x42})
-		const storageKey = "test storage key"
+		storagePath := interpreter.PathValue{
+			Domain:     common.PathDomainStorage,
+			Identifier: "test",
+		}
 
 		standardLibraryFunctions :=
 			stdlib.StandardLibraryFunctions{
@@ -4542,7 +4545,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 							return &interpreter.StorageReferenceValue{
 								Authorized:           authorized,
 								TargetStorageAddress: storageAddress,
-								TargetKey:            storageKey,
+								TargetPath:           storagePath,
 								BorrowedType: &sema.RestrictedType{
 									Type: rType,
 									Restrictions: []*sema.InterfaceType{
@@ -4602,12 +4605,16 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		r, err := inter.Invoke("createR")
 		require.NoError(t, err)
 
-		storage.WriteValue(
+		r = r.Transfer(
+			inter,
+			interpreter.ReturnEmptyLocationRange,
+			atree.Address(storageAddress),
+			true,
 			nil,
-			storageAddress,
-			storageKey,
-			interpreter.NewSomeValueNonCopying(r),
 		)
+
+		storageMap := storage.GetStorageMap(storageAddress, storagePath.Domain.Identifier())
+		storageMap.WriteValue(inter, storagePath.Identifier, r)
 
 		result, err := inter.Invoke("testInvalidUnauthorized")
 		require.NoError(t, err)
@@ -9433,5 +9440,60 @@ func TestHostFunctionStaticType(t *testing.T) {
 		)
 
 		assert.Equal(t, xValue.StaticType(), yValue.StaticType())
+	})
+}
+
+func TestInterpretArrayTypeInference(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("anystruct with empty array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun test(): Type {
+                let x: AnyStruct = []
+                return x.getType()
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TypeValue{
+				Type: interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeAnyStruct,
+				},
+			},
+			value,
+		)
+	})
+
+	t.Run("anystruct with numeric array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun test(): Type {
+                let x: AnyStruct = [1, 2, 3]
+                return x.getType()
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TypeValue{
+				Type: interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeInt,
+				},
+			},
+			value,
+		)
 	})
 }

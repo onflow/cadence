@@ -115,6 +115,7 @@ type Checker struct {
 	checkHandler                       CheckHandlerFunc
 	expectedType                       Type
 	memberAccountAccessHandler         MemberAccountAccessHandlerFunc
+	lintEnabled                        bool
 }
 
 type Option func(*Checker) error
@@ -231,6 +232,16 @@ func WithPositionInfoEnabled(enabled bool) Option {
 			checker.FunctionInvocations = NewFunctionInvocations()
 		}
 
+		return nil
+	}
+}
+
+// WithLintingEnabled returns a checker option which enables/disables
+// advanced linting.
+//
+func WithLintingEnabled(enabled bool) Option {
+	return func(checker *Checker) error {
+		checker.lintEnabled = enabled
 		return nil
 	}
 }
@@ -587,19 +598,12 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 	case *ast.IntegerExpression:
 		unwrappedTargetType := UnwrapOptionalType(targetType)
 
-		// If the target type is `Never`, the checks below will be performed
-		// (as `Never` is the subtype of all types), but the checks are not valid
-
-		if IsSubType(unwrappedTargetType, NeverType) {
-			break
-		}
-
-		if IsSubType(unwrappedTargetType, IntegerType) {
+		if IsSameTypeKind(unwrappedTargetType, IntegerType) {
 			CheckIntegerLiteral(typedExpression, unwrappedTargetType, checker.report)
 
 			return true
 
-		} else if IsSubType(unwrappedTargetType, &AddressType{}) {
+		} else if IsSameTypeKind(unwrappedTargetType, &AddressType{}) {
 			CheckAddressLiteral(typedExpression, checker.report)
 
 			return true
@@ -608,16 +612,8 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 	case *ast.FixedPointExpression:
 		unwrappedTargetType := UnwrapOptionalType(targetType)
 
-		// If the target type is `Never`, the checks below will be performed
-		// (as `Never` is the subtype of all types), but the checks are not valid
-
-		if IsSubType(unwrappedTargetType, NeverType) {
-			break
-		}
-
-		valueTypeOK := CheckFixedPointLiteral(typedExpression, valueType, checker.report)
-
-		if IsSubType(unwrappedTargetType, FixedPointType) {
+		if IsSameTypeKind(unwrappedTargetType, FixedPointType) {
+			valueTypeOK := CheckFixedPointLiteral(typedExpression, valueType, checker.report)
 			if valueTypeOK {
 				CheckFixedPointLiteral(typedExpression, unwrappedTargetType, checker.report)
 			}
@@ -662,7 +658,7 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 	case *ast.StringExpression:
 		unwrappedTargetType := UnwrapOptionalType(targetType)
 
-		if IsSubType(unwrappedTargetType, CharacterType) {
+		if IsSameTypeKind(unwrappedTargetType, CharacterType) {
 			checker.checkCharacterLiteral(typedExpression)
 
 			return true
@@ -1141,6 +1137,10 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 					Range: ast.NewRangeFromPositioned(restriction),
 				})
 			}
+
+			// NOTE: ignore this invalid type
+			// and do not add it to the restrictions result
+			continue
 		}
 
 		restrictions = append(restrictions, restrictionInterfaceType)
@@ -2392,12 +2392,6 @@ func (checker *Checker) visitExpressionWithForceType(
 	// as the new contextually expected type.
 	prevExpectedType := checker.expectedType
 
-	// If the expected type is invalid, treat it in the same manner as
-	// expected type is unknown.
-	if expectedType != nil && expectedType.IsInvalidType() {
-		expectedType = nil
-	}
-
 	checker.expectedType = expectedType
 	defer func() {
 		// Restore the prev contextually expected type
@@ -2408,6 +2402,7 @@ func (checker *Checker) visitExpressionWithForceType(
 
 	if forceType &&
 		expectedType != nil &&
+		!expectedType.IsInvalidType() &&
 		actualType != InvalidType &&
 		!IsSubType(actualType, expectedType) {
 

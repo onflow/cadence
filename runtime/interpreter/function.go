@@ -32,7 +32,6 @@ import (
 //
 type Invocation struct {
 	Self               MemberAccessibleValue
-	ReceiverType       sema.Type
 	Arguments          []Value
 	ArgumentTypes      []sema.Type
 	TypeParameterTypes *sema.TypeParameterTypeOrderedMap
@@ -141,6 +140,10 @@ func (f *InterpretedFunctionValue) Transfer(
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
 	}
+	return f
+}
+
+func (f *InterpretedFunctionValue) Clone(_ *Interpreter) Value {
 	return f
 }
 
@@ -269,6 +272,10 @@ func (f *HostFunctionValue) Transfer(
 	return f
 }
 
+func (f *HostFunctionValue) Clone(_ *Interpreter) Value {
+	return f
+}
+
 func (*HostFunctionValue) DeepRemove(_ *Interpreter) {
 	// NO-OP
 }
@@ -318,30 +325,7 @@ func (f BoundFunctionValue) StaticType() StaticType {
 func (BoundFunctionValue) isFunctionValue() {}
 
 func (f BoundFunctionValue) invoke(invocation Invocation) Value {
-	self := f.Self
-	receiverType := invocation.ReceiverType
-
-	if receiverType != nil {
-		selfType := invocation.Interpreter.MustConvertStaticToSemaType(self.StaticType())
-
-		if _, ok := receiverType.(*sema.ReferenceType); ok {
-			if _, ok := selfType.(*sema.ReferenceType); !ok {
-				selfType = &sema.ReferenceType{
-					Type: selfType,
-				}
-			}
-		}
-
-		if !sema.IsSubType(selfType, receiverType) {
-			panic(InvocationReceiverTypeError{
-				SelfType:      selfType,
-				ReceiverType:  receiverType,
-				LocationRange: invocation.GetLocationRange(),
-			})
-		}
-	}
-
-	invocation.Self = self
+	invocation.Self = f.Self
 	return f.Function.invoke(invocation)
 }
 
@@ -382,6 +366,10 @@ func (f BoundFunctionValue) Transfer(
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
 	}
+	return f
+}
+
+func (f BoundFunctionValue) Clone(_ *Interpreter) Value {
 	return f
 }
 
