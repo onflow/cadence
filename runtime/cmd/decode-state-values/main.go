@@ -336,8 +336,7 @@ func load() {
 						if composite, ok := v.(*interpreter.CompositeValue); ok &&
 							composite.Kind == common.CompositeKindResource {
 
-							uuid := composite.GetField(inter, interpreter.ReturnEmptyLocationRange, "uuid")
-							if _, ok := uuid.(interpreter.UInt64Value); !ok {
+							if composite.ResourceUUID() == nil {
 								log.Printf(
 									"Failed to get UUID for resource @ 0x%x %s",
 									address, key,

@@ -8747,6 +8747,14 @@ func (v *CompositeValue) Transfer(
 			dynamicType:         v.dynamicType,
 		}
 	}
+
+func (v *CompositeValue) ResourceUUID() *UInt64Value {
+	fieldValue := v.GetField(sema.ResourceUUIDFieldName)
+	uuid, ok := fieldValue.(UInt64Value)
+	if !ok {
+		return nil
+	}
+	return &uuid
 }
 
 func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
