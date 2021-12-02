@@ -131,6 +131,8 @@ type Interface interface {
 	AggregateBLSSignatures(sigs [][]byte) ([]byte, error)
 	// AggregateBLSPublicKeys aggregates multiple BLS public keys into one.
 	AggregateBLSPublicKeys(keys []*PublicKey) (*PublicKey, error)
+	// ResourceOwnerChanged gets called when a resource's owner changed (if enabled)
+	ResourceOwnerChanged(resource *interpreter.CompositeValue, oldOwner common.Address, newOwner common.Address)
 }
 
 type Metrics interface {

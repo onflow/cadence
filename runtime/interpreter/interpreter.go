@@ -124,6 +124,14 @@ type OnRecordTraceFunc func(
 	logs []opentracing.LogRecord,
 )
 
+// OnResourceOwnerChangeFunc is a function that is triggered when a resource's owner changes.
+type OnResourceOwnerChangeFunc func(
+	inter *Interpreter,
+	resource *CompositeValue,
+	oldOwner common.Address,
+	newOwner common.Address,
+)
+
 // InjectedCompositeFieldsHandlerFunc is a function that handles storage reads.
 //
 type InjectedCompositeFieldsHandlerFunc func(
@@ -288,6 +296,7 @@ type Interpreter struct {
 	onFunctionInvocation           OnFunctionInvocationFunc
 	onInvokedFunctionReturn        OnInvokedFunctionReturnFunc
 	onRecordTrace                  OnRecordTraceFunc
+	onResourceOwnerChange          OnResourceOwnerChangeFunc
 	injectedCompositeFieldsHandler InjectedCompositeFieldsHandlerFunc
 	contractValueHandler           ContractValueHandlerFunc
 	importLocationHandler          ImportLocationHandlerFunc
@@ -366,6 +375,16 @@ func WithOnInvokedFunctionReturnHandler(handler OnInvokedFunctionReturnFunc) Opt
 func WithOnRecordTraceHandler(handler OnRecordTraceFunc) Option {
 	return func(interpreter *Interpreter) error {
 		interpreter.SetOnRecordTraceHandler(handler)
+		return nil
+	}
+}
+
+// WithOnResourceOwnerChangeHandler returns an interpreter option which sets
+// the given function as the resource owner change handler.
+//
+func WithOnResourceOwnerChangeHandler(handler OnResourceOwnerChangeFunc) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetOnResourceOwnerChangeHandler(handler)
 		return nil
 	}
 }
@@ -649,6 +668,12 @@ func (interpreter *Interpreter) SetOnInvokedFunctionReturnHandler(function OnInv
 //
 func (interpreter *Interpreter) SetOnRecordTraceHandler(function OnRecordTraceFunc) {
 	interpreter.onRecordTrace = function
+}
+
+// SetOnResourceOwnerChangeHandler sets the function that is triggered when the owner of a resource changes.
+//
+func (interpreter *Interpreter) SetOnResourceOwnerChangeHandler(function OnResourceOwnerChangeFunc) {
+	interpreter.onResourceOwnerChange = function
 }
 
 // SetStorage sets the value that is used for storage operations.
@@ -2494,6 +2519,7 @@ func (interpreter *Interpreter) NewSubInterpreter(
 		WithExitHandler(interpreter.ExitHandler),
 		WithTracingEnabled(interpreter.tracingEnabled),
 		WithOnRecordTraceHandler(interpreter.onRecordTrace),
+		WithOnResourceOwnerChangeHandler(interpreter.onResourceOwnerChange),
 	}
 
 	return NewInterpreter(

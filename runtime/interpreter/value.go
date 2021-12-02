@@ -8672,7 +8672,9 @@ func (v *CompositeValue) Transfer(
 
 	dictionary := v.dictionary
 
-	needsStoreTo := v.NeedsStoreTo(address)
+	currentAddress := v.StorageID().Address
+
+	needsStoreTo := address != currentAddress
 	isResourceKinded := v.IsResourceKinded(interpreter)
 
 	if needsStoreTo || !isResourceKinded {
@@ -8726,11 +8728,12 @@ func (v *CompositeValue) Transfer(
 		}
 	}
 
+	var res *CompositeValue
 	if isResourceKinded {
 		v.dictionary = dictionary
-		return v
+		res = v
 	} else {
-		return &CompositeValue{
+		res = &CompositeValue{
 			dictionary:          dictionary,
 			Location:            v.Location,
 			QualifiedIdentifier: v.QualifiedIdentifier,
@@ -8747,6 +8750,21 @@ func (v *CompositeValue) Transfer(
 			dynamicType:         v.dynamicType,
 		}
 	}
+
+	if address != currentAddress &&
+		res.Kind == common.CompositeKindResource &&
+		interpreter.onResourceOwnerChange != nil {
+
+		interpreter.onResourceOwnerChange(
+			interpreter,
+			res,
+			common.Address(currentAddress),
+			common.Address(address),
+		)
+	}
+
+	return res
+}
 
 func (v *CompositeValue) ResourceUUID() *UInt64Value {
 	fieldValue := v.GetField(sema.ResourceUUIDFieldName)
