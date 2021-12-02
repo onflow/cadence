@@ -900,7 +900,19 @@ func hasValidStaticType(value interpreter.Value) bool {
 // ParseAndCheckProgram parses the given code and checks it.
 // Returns a program that can be interpreted (AST + elaboration).
 //
-func (r *interpreterRuntime) ParseAndCheckProgram(code []byte, context Context) (*interpreter.Program, error) {
+func (r *interpreterRuntime) ParseAndCheckProgram(
+	code []byte,
+	context Context,
+) (
+	program *interpreter.Program,
+	err error,
+) {
+	defer func() {
+		if recovered, ok := recover().(error); ok {
+			err = newError(recovered, context)
+		}
+	}()
+
 	context.InitializeCodesAndPrograms()
 
 	storage := NewStorage(context.Interface)
@@ -915,7 +927,7 @@ func (r *interpreterRuntime) ParseAndCheckProgram(code []byte, context Context) 
 		checkerOptions,
 	)
 
-	program, err := r.parseAndCheckProgram(
+	program, err = r.parseAndCheckProgram(
 		code,
 		context,
 		functions,

@@ -6946,6 +6946,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 			},
 		)
 
+		require.Error(t, err)
 		require.ErrorAs(t, err, &Error{})
 	})
 
@@ -6978,6 +6979,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 			},
 		)
 
+		require.Error(t, err)
 		require.ErrorAs(t, err, &Error{})
 	})
 
@@ -7014,13 +7016,13 @@ func TestRuntimeInternalErrors(t *testing.T) {
 			},
 		)
 
+		require.Error(t, err)
 		require.ErrorAs(t, err, &Error{})
 	})
 
 	t.Run("contract function", func(t *testing.T) {
-		t.Parallel()
 
-		runtime := newTestInterpreterRuntime()
+		t.Parallel()
 
 		addressValue := Address{
 			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
@@ -7052,7 +7054,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 				return nil
 			},
 			emitEvent: func(_ cadence.Event) error {
-				return nil;
+				return nil
 			},
 			log: func(message string) {
 				// panic due to Cadence implementation error
@@ -7091,6 +7093,32 @@ func TestRuntimeInternalErrors(t *testing.T) {
 			},
 		)
 
+		require.Error(t, err)
+		require.ErrorAs(t, err, &Error{})
+	})
+
+	t.Run("parse and check", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := []byte("pub fun test() {}")
+		runtimeInterface := &testRuntimeInterface{
+			setProgram: func(location Location, program *interpreter.Program) error {
+				panic(errors.New("crash while setting program"))
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		_, err := runtime.ParseAndCheckProgram(
+			script,
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.Error(t, err)
 		require.ErrorAs(t, err, &Error{})
 	})
 }
