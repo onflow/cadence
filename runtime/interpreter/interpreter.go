@@ -361,7 +361,7 @@ func WithOnInvokedFunctionReturnHandler(handler OnInvokedFunctionReturnFunc) Opt
 }
 
 // WithOnRecordTraceHandler returns an interpreter option which sets
-// the given function as the on record trace function handler.
+// the given function as the record trace handler.
 //
 func WithOnRecordTraceHandler(handler OnRecordTraceFunc) Option {
 	return func(interpreter *Interpreter) error {
@@ -431,10 +431,10 @@ func WithImportLocationHandler(handler ImportLocationHandlerFunc) Option {
 	}
 }
 
-// WithPublicAccountHandlerFunc returns an interpreter option which sets the given function
+// WithPublicAccountHandler returns an interpreter option which sets the given function
 // as the function that is used to handle public accounts.
 //
-func WithPublicAccountHandlerFunc(handler PublicAccountHandlerFunc) Option {
+func WithPublicAccountHandler(handler PublicAccountHandlerFunc) Option {
 	return func(interpreter *Interpreter) error {
 		interpreter.SetPublicAccountHandler(handler)
 		return nil
@@ -645,7 +645,7 @@ func (interpreter *Interpreter) SetOnInvokedFunctionReturnHandler(function OnInv
 	interpreter.onInvokedFunctionReturn = function
 }
 
-// SetOnRecordTraceHandler sets the function that is triggered when an record trace is called.
+// SetOnRecordTraceHandler sets the function that is triggered when a trace is recorded.
 //
 func (interpreter *Interpreter) SetOnRecordTraceHandler(function OnRecordTraceFunc) {
 	interpreter.onRecordTrace = function
@@ -2481,12 +2481,19 @@ func (interpreter *Interpreter) NewSubInterpreter(
 		WithAtreeValueValidationEnabled(interpreter.atreeValueValidationEnabled),
 		WithAtreeStorageValidationEnabled(interpreter.atreeStorageValidationEnabled),
 		withTypeCodes(interpreter.typeCodes),
-		WithPublicAccountHandlerFunc(interpreter.publicAccountHandler),
+		WithPublicAccountHandler(interpreter.publicAccountHandler),
 		WithPublicKeyValidationHandler(interpreter.PublicKeyValidationHandler),
 		WithSignatureVerificationHandler(interpreter.SignatureVerificationHandler),
 		WithHashHandler(interpreter.HashHandler),
-		WithBLSCryptoFunctions(interpreter.BLSVerifyPoPHandler, interpreter.AggregateBLSSignaturesHandler, interpreter.AggregateBLSPublicKeysHandler),
+		WithBLSCryptoFunctions(
+			interpreter.BLSVerifyPoPHandler,
+			interpreter.AggregateBLSSignaturesHandler,
+			interpreter.AggregateBLSPublicKeysHandler,
+		),
 		WithDebugger(interpreter.debugger),
+		WithExitHandler(interpreter.ExitHandler),
+		WithTracingEnabled(interpreter.tracingEnabled),
+		WithOnRecordTraceHandler(interpreter.onRecordTrace),
 	}
 
 	return NewInterpreter(

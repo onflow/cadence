@@ -8540,7 +8540,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 				interpreter.WithPredeclaredValues([]interpreter.ValueDeclaration{
 					valueDeclaration,
 				}),
-				interpreter.WithPublicAccountHandlerFunc(
+				interpreter.WithPublicAccountHandler(
 					func(_ *interpreter.Interpreter, address interpreter.AddressValue) interpreter.Value {
 						return newTestPublicAccountValue(address)
 					},
