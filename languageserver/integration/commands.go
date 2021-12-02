@@ -230,29 +230,18 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{
 		authorizers[i] = address
 	}
 
-	payer := serviceAccount.Address()
-	keyIndex := serviceAccount.Key().Index()
-
-	tx, err := i.sharedServices.Transactions.Build(
-		payer,
-		authorizers,
-		payer,
-		keyIndex,
-		code,
-		"",
+	_, txResult, err := i.sharedServices.Transactions.SendMultiSig(
+		serviceAccount,
+		signerAccounts,
+		code, "",
 		MaxGasLimit,
 		txArgs,
 		"",
-	)
+		)
+	if err != nil {
+		return nil, errorWithMessage(conn, ErrorMessageTransactionError, err)
+	}
 
-	tx, err = tx.MultiSign(signerAccounts)
-
-	/*
-		_, txResult, err := i.sharedServices.Transactions.Send(&signer, code, "", MaxGasLimit, txArgs, "")
-		if err != nil {
-			return nil, errorWithMessage(conn, ErrorMessageTransactionError, err)
-		}
-	*/
 
 
 	showMessage(conn, fmt.Sprintf("Transaction status: %s", txResult.Status.String()))
