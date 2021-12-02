@@ -54,12 +54,8 @@ fix-lint: build-linter
 
 .PHONY: build-linter
 build-linter: tools/golangci-lint/golangci-lint tools/maprangecheck/maprangecheck.so
-
-tools/maprangecheck/maprangecheck.so:
-	(cd tools/maprangecheck && $(MAKE) plugin)
-
-tools/golangci-lint/golangci-lint:
-	(cd tools/golangci-lint && $(MAKE))
+include tools/maprangecheck/Makefile
+include tools/golangci-lint/Makefile
 
 .PHONY: check-headers
 check-headers:
