@@ -472,7 +472,13 @@ func (r *interpreterRuntime) InvokeContractFunction(
 	arguments []interpreter.Value,
 	argumentTypes []sema.Type,
 	context Context,
-) (cadence.Value, error) {
+) (val cadence.Value, err error) {
+	defer func() {
+		if recovered, ok := recover().(error); ok {
+			err = newError(recovered, context)
+		}
+	}()
+
 	context.InitializeCodesAndPrograms()
 
 	storage := NewStorage(context.Interface)

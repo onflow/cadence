@@ -3146,7 +3146,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
 			return accountCode, nil
 		},
-		updateAccountContractCode: func(addess Address, _ string, code []byte) error {
+		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
 			accountCode = code
 			return nil
 		},
@@ -3410,7 +3410,7 @@ func TestRuntimeContractNestedResource(t *testing.T) {
 		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
 			return accountCode, nil
 		},
-		updateAccountContractCode: func(addess Address, _ string, code []byte) error {
+		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
 			accountCode = code
 			return nil
 		},
@@ -6916,7 +6916,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 
 	runtime := newTestInterpreterRuntime()
 
-	t.Run("script go error", func(t *testing.T) {
+	t.Run("script with go error", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -6949,7 +6949,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 		require.ErrorAs(t, err, &Error{})
 	})
 
-	t.Run("script cadence error", func(t *testing.T) {
+	t.Run("script with cadence error", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -7008,6 +7008,83 @@ func TestRuntimeInternalErrors(t *testing.T) {
 			Script{
 				Source: script,
 			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.ErrorAs(t, err, &Error{})
+	})
+
+	t.Run("contract function", func(t *testing.T) {
+		t.Parallel()
+
+		runtime := newTestInterpreterRuntime()
+
+		addressValue := Address{
+			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+		}
+
+		contract := []byte(`
+          pub contract Test {
+              pub fun hello() {
+                  log("Hello World!")
+              }
+          }
+       `)
+
+		var accountCode []byte
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{addressValue}, nil
+			},
+			resolveLocation: singleIdentifierLocationResolver(t),
+			getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+				return accountCode, nil
+			},
+			updateAccountContractCode: func(_ Address, _ string, code []byte) error {
+				accountCode = code
+				return nil
+			},
+			emitEvent: func(_ cadence.Event) error {
+				return nil;
+			},
+			log: func(message string) {
+				// panic due to Cadence implementation error
+				var val interface{} = message
+				_ = val.(int)
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		deploy := utils.DeploymentTransaction("Test", contract)
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: deploy,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		assert.NotNil(t, accountCode)
+
+		_, err = runtime.InvokeContractFunction(
+			common.AddressLocation{
+				Address: addressValue,
+				Name:    "Test",
+			},
+			"hello",
+			nil,
+			nil,
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
