@@ -339,7 +339,7 @@ func loadStorageKey(
 			storable, err := interpreter.DecodeStorable(decoder, atree.StorageIDUndefined)
 			if err != nil {
 				log.Printf(
-					"Failed to decode storable @ 0x%x %s: %s (data: %x)",
+					"Failed to decode storable @ 0x%x %s: %s (data: %x)\n",
 					address, key, err, data,
 				)
 				return err
