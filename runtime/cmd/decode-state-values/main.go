@@ -30,6 +30,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/onflow/atree"
@@ -143,7 +144,10 @@ func (s *slabStorage) SlabIterator() (atree.SlabIterator, error) {
 		storageKey
 	}
 
-	for key := range storage {
+	// NOTE: iteration over map is safe,
+	// as result is sorted below
+
+	for key := range storage { //nolint:maprangecheck
 
 		var address atree.Address
 		copy(address[:], key[0])
@@ -160,6 +164,12 @@ func (s *slabStorage) SlabIterator() (atree.SlabIterator, error) {
 			storageKey: key,
 		})
 	}
+
+	sort.Slice(slabs, func(i, j int) bool {
+		a := slabs[i]
+		b := slabs[j]
+		return a.StorageID.Compare(b.StorageID) < 0
+	})
 
 	var i int
 
@@ -200,16 +210,8 @@ type interpreterStorage struct {
 
 var _ interpreter.Storage = &interpreterStorage{}
 
-func (i interpreterStorage) ValueExists(_ *interpreter.Interpreter, _ common.Address, key string) bool {
-	panic("unexpected ValueExists call")
-}
-
-func (i interpreterStorage) ReadValue(_ *interpreter.Interpreter, _ common.Address, _ string) interpreter.OptionalValue {
-	panic("unexpected ReadValue call")
-}
-
-func (i interpreterStorage) WriteValue(_ *interpreter.Interpreter, _ common.Address, _ string, _ interpreter.OptionalValue) {
-	panic("unexpected WriteValue call")
+func (i interpreterStorage) GetStorageMap(_ common.Address, _ string) *interpreter.StorageMap {
+	panic("unexpected GetStorageMap call")
 }
 
 func (i interpreterStorage) CheckHealth() error {
@@ -419,7 +421,7 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
-			println(encoded)
+			log.Println(encoded)
 		}
 	}
 }

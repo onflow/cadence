@@ -205,6 +205,28 @@ func (v *SimpleCompositeValue) Transfer(
 	return v
 }
 
+func (v *SimpleCompositeValue) Clone(interpreter *Interpreter) Value {
+
+	clonedFields := make(map[string]Value, len(v.Fields))
+
+	for _, fieldName := range v.FieldNames {
+		fieldValue := v.Fields[fieldName]
+
+		clonedFields[fieldName] = fieldValue.Clone(interpreter)
+	}
+
+	return &SimpleCompositeValue{
+		TypeID:          v.TypeID,
+		staticType:      v.staticType,
+		dynamicType:     v.dynamicType,
+		FieldNames:      v.FieldNames,
+		Fields:          clonedFields,
+		ComputedFields:  v.ComputedFields,
+		fieldFormatters: v.fieldFormatters,
+		stringer:        v.stringer,
+	}
+}
+
 func (v *SimpleCompositeValue) DeepRemove(_ *Interpreter) {
 	// NO-OP
 }

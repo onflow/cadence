@@ -736,9 +736,457 @@ func TestImportValue(t *testing.T) {
 					Domain:     "public",
 					Identifier: "test",
 				},
-				BorrowType: "Int",
+				BorrowType: cadence.IntType{},
 			},
 			expected: nil,
+		},
+		{
+			label:    "Type<Int>()",
+			value:    cadence.NewTypeValue(cadence.IntType{}),
+			expected: interpreter.TypeValue{Type: interpreter.PrimitiveStaticTypeInt},
+		},
+	} {
+		test(tt)
+	}
+}
+
+func TestImportRuntimeType(t *testing.T) {
+	t.Parallel()
+
+	type importTest struct {
+		label    string
+		expected interpreter.StaticType
+		actual   cadence.Type
+	}
+
+	test := func(tt importTest) {
+		t.Run(tt.label, func(t *testing.T) {
+			t.Parallel()
+			actual := ImportType(tt.actual)
+			assert.Equal(t, tt.expected, actual)
+
+		})
+	}
+
+	for _, tt := range []importTest{
+		{
+			label:    "Any",
+			actual:   cadence.AnyType{},
+			expected: interpreter.PrimitiveStaticTypeAny,
+		},
+		{
+			label:    "AnyStruct",
+			actual:   cadence.AnyStructType{},
+			expected: interpreter.PrimitiveStaticTypeAnyStruct,
+		},
+		{
+			label:    "AnyResource",
+			actual:   cadence.AnyResourceType{},
+			expected: interpreter.PrimitiveStaticTypeAnyResource,
+		},
+		{
+			label:    "MetaType",
+			actual:   cadence.MetaType{},
+			expected: interpreter.PrimitiveStaticTypeMetaType,
+		},
+		{
+			label:    "Void",
+			actual:   cadence.VoidType{},
+			expected: interpreter.PrimitiveStaticTypeVoid,
+		},
+		{
+			label:    "Never",
+			actual:   cadence.NeverType{},
+			expected: interpreter.PrimitiveStaticTypeNever,
+		},
+		{
+			label:    "Bool",
+			actual:   cadence.BoolType{},
+			expected: interpreter.PrimitiveStaticTypeBool,
+		},
+		{
+			label:    "String",
+			actual:   cadence.StringType{},
+			expected: interpreter.PrimitiveStaticTypeString,
+		},
+		{
+			label:    "Character",
+			actual:   cadence.CharacterType{},
+			expected: interpreter.PrimitiveStaticTypeCharacter,
+		},
+		{
+			label:    "Addresss",
+			actual:   cadence.AddressType{},
+			expected: interpreter.PrimitiveStaticTypeAddress,
+		},
+		{
+			label:    "Number",
+			actual:   cadence.NumberType{},
+			expected: interpreter.PrimitiveStaticTypeNumber,
+		},
+		{
+			label:    "SignedNumber",
+			actual:   cadence.SignedNumberType{},
+			expected: interpreter.PrimitiveStaticTypeSignedNumber,
+		},
+		{
+			label:    "Integer",
+			actual:   cadence.IntegerType{},
+			expected: interpreter.PrimitiveStaticTypeInteger,
+		},
+		{
+			label:    "SignedInteger",
+			actual:   cadence.SignedIntegerType{},
+			expected: interpreter.PrimitiveStaticTypeSignedInteger,
+		},
+		{
+			label:    "FixedPoint",
+			actual:   cadence.FixedPointType{},
+			expected: interpreter.PrimitiveStaticTypeFixedPoint,
+		},
+		{
+			label:    "SignedFixedPoint",
+			actual:   cadence.SignedFixedPointType{},
+			expected: interpreter.PrimitiveStaticTypeSignedFixedPoint,
+		},
+		{
+			label:    "Int",
+			actual:   cadence.IntType{},
+			expected: interpreter.PrimitiveStaticTypeInt,
+		},
+		{
+			label:    "Int8",
+			actual:   cadence.Int8Type{},
+			expected: interpreter.PrimitiveStaticTypeInt8,
+		},
+		{
+			label:    "Int16",
+			actual:   cadence.Int16Type{},
+			expected: interpreter.PrimitiveStaticTypeInt16,
+		},
+		{
+			label:    "Int32",
+			actual:   cadence.Int32Type{},
+			expected: interpreter.PrimitiveStaticTypeInt32,
+		},
+		{
+			label:    "Int64",
+			actual:   cadence.Int64Type{},
+			expected: interpreter.PrimitiveStaticTypeInt64,
+		},
+		{
+			label:    "Int128",
+			actual:   cadence.Int128Type{},
+			expected: interpreter.PrimitiveStaticTypeInt128,
+		},
+		{
+			label:    "Int256",
+			actual:   cadence.Int256Type{},
+			expected: interpreter.PrimitiveStaticTypeInt256,
+		},
+		{
+			label:    "UInt",
+			actual:   cadence.UIntType{},
+			expected: interpreter.PrimitiveStaticTypeUInt,
+		},
+		{
+			label:    "UInt8",
+			actual:   cadence.UInt8Type{},
+			expected: interpreter.PrimitiveStaticTypeUInt8,
+		},
+		{
+			label:    "UInt16",
+			actual:   cadence.UInt16Type{},
+			expected: interpreter.PrimitiveStaticTypeUInt16,
+		},
+		{
+			label:    "UInt32",
+			actual:   cadence.UInt32Type{},
+			expected: interpreter.PrimitiveStaticTypeUInt32,
+		},
+		{
+			label:    "UInt64",
+			actual:   cadence.UInt64Type{},
+			expected: interpreter.PrimitiveStaticTypeUInt64,
+		},
+		{
+			label:    "UInt128",
+			actual:   cadence.UInt128Type{},
+			expected: interpreter.PrimitiveStaticTypeUInt128,
+		},
+		{
+			label:    "UInt256",
+			actual:   cadence.UInt256Type{},
+			expected: interpreter.PrimitiveStaticTypeUInt256,
+		},
+		{
+			label:    "Word8",
+			actual:   cadence.Word8Type{},
+			expected: interpreter.PrimitiveStaticTypeWord8,
+		},
+		{
+			label:    "Word16",
+			actual:   cadence.Word16Type{},
+			expected: interpreter.PrimitiveStaticTypeWord16,
+		},
+		{
+			label:    "Word32",
+			actual:   cadence.Word32Type{},
+			expected: interpreter.PrimitiveStaticTypeWord32,
+		},
+		{
+			label:    "Word64",
+			actual:   cadence.Word64Type{},
+			expected: interpreter.PrimitiveStaticTypeWord64,
+		},
+		{
+			label:    "Fix64",
+			actual:   cadence.Fix64Type{},
+			expected: interpreter.PrimitiveStaticTypeFix64,
+		},
+		{
+			label:    "UFix64",
+			actual:   cadence.UFix64Type{},
+			expected: interpreter.PrimitiveStaticTypeUFix64,
+		},
+		{
+			label:    "Block",
+			actual:   cadence.BlockType{},
+			expected: interpreter.PrimitiveStaticTypeBlock,
+		},
+		{
+			label:    "CapabilityPath",
+			actual:   cadence.CapabilityPathType{},
+			expected: interpreter.PrimitiveStaticTypeCapabilityPath,
+		},
+		{
+			label:    "StoragePath",
+			actual:   cadence.StoragePathType{},
+			expected: interpreter.PrimitiveStaticTypeStoragePath,
+		},
+		{
+			label:    "PublicPath",
+			actual:   cadence.PublicPathType{},
+			expected: interpreter.PrimitiveStaticTypePublicPath,
+		},
+		{
+			label:    "PrivatePath",
+			actual:   cadence.PrivatePathType{},
+			expected: interpreter.PrimitiveStaticTypePrivatePath,
+		},
+		{
+			label:    "AuthAccount",
+			actual:   cadence.AuthAccountType{},
+			expected: interpreter.PrimitiveStaticTypeAuthAccount,
+		},
+		{
+			label:    "PublicAccount",
+			actual:   cadence.PublicAccountType{},
+			expected: interpreter.PrimitiveStaticTypePublicAccount,
+		},
+		{
+			label:    "DeployedContract",
+			actual:   cadence.DeployedContractType{},
+			expected: interpreter.PrimitiveStaticTypeDeployedContract,
+		},
+		{
+			label:    "AuthAccount.Keys",
+			actual:   cadence.AuthAccountKeysType{},
+			expected: interpreter.PrimitiveStaticTypeAuthAccountKeys,
+		},
+		{
+			label:    "PublicAccount.Keys",
+			actual:   cadence.PublicAccountKeysType{},
+			expected: interpreter.PrimitiveStaticTypePublicAccountKeys,
+		},
+		{
+			label:    "AuthAccount.Contracts",
+			actual:   cadence.AuthAccountContractsType{},
+			expected: interpreter.PrimitiveStaticTypeAuthAccountContracts,
+		},
+		{
+			label:    "PublicAccount.Contracts",
+			actual:   cadence.PublicAccountContractsType{},
+			expected: interpreter.PrimitiveStaticTypePublicAccountContracts,
+		},
+		{
+			label:    "AccountKey",
+			actual:   cadence.AccountKeyType{},
+			expected: interpreter.PrimitiveStaticTypeAccountKey,
+		},
+		{
+			label: "Optional",
+			actual: cadence.OptionalType{
+				Type: cadence.IntType{},
+			},
+			expected: interpreter.OptionalStaticType{
+				Type: interpreter.PrimitiveStaticTypeInt,
+			},
+		},
+		{
+			label: "VariableSizedArray",
+			actual: cadence.VariableSizedArrayType{
+				ElementType: cadence.IntType{},
+			},
+			expected: interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeInt,
+			},
+		},
+		{
+			label: "ConstantSizedArray",
+			actual: cadence.ConstantSizedArrayType{
+				ElementType: cadence.IntType{},
+				Size:        3,
+			},
+			expected: interpreter.ConstantSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeInt,
+				Size: 3,
+			},
+		},
+		{
+			label: "Dictionary",
+			actual: cadence.DictionaryType{
+				ElementType: cadence.IntType{},
+				KeyType:     cadence.StringType{},
+			},
+			expected: interpreter.DictionaryStaticType{
+				KeyType:   interpreter.PrimitiveStaticTypeString,
+				ValueType: interpreter.PrimitiveStaticTypeInt,
+			},
+		},
+		{
+			label: "Reference",
+			actual: cadence.ReferenceType{
+				Authorized: false,
+				Type:       cadence.IntType{},
+			},
+			expected: interpreter.ReferenceStaticType{
+				Authorized: false,
+				Type:       interpreter.PrimitiveStaticTypeInt,
+			},
+		},
+		{
+			label: "Capability",
+			actual: cadence.CapabilityType{
+				BorrowType: cadence.IntType{},
+			},
+			expected: interpreter.CapabilityStaticType{
+				BorrowType: interpreter.PrimitiveStaticTypeInt,
+			},
+		},
+		{
+			label: "Struct",
+			actual: &cadence.StructType{
+				Location:            TestLocation,
+				QualifiedIdentifier: "S",
+			},
+			expected: interpreter.CompositeStaticType{
+				Location:            TestLocation,
+				QualifiedIdentifier: "S",
+			},
+		},
+		{
+			label: "Resource",
+			actual: &cadence.ResourceType{
+				Location:            TestLocation,
+				QualifiedIdentifier: "S",
+			},
+			expected: interpreter.CompositeStaticType{
+				Location:            TestLocation,
+				QualifiedIdentifier: "S",
+			},
+		},
+		{
+			label: "Contract",
+			actual: &cadence.ContractType{
+				Location:            TestLocation,
+				QualifiedIdentifier: "S",
+			},
+			expected: interpreter.CompositeStaticType{
+				Location:            TestLocation,
+				QualifiedIdentifier: "S",
+			},
+		},
+		{
+			label: "Event",
+			actual: &cadence.EventType{
+				Location:            TestLocation,
+				QualifiedIdentifier: "S",
+			},
+			expected: interpreter.CompositeStaticType{
+				Location:            TestLocation,
+				QualifiedIdentifier: "S",
+			},
+		},
+		{
+			label: "Enum",
+			actual: &cadence.EnumType{
+				Location:            TestLocation,
+				QualifiedIdentifier: "S",
+			},
+			expected: interpreter.CompositeStaticType{
+				Location:            TestLocation,
+				QualifiedIdentifier: "S",
+			},
+		},
+		{
+			label: "StructInterface",
+			actual: &cadence.StructInterfaceType{
+				Location:            TestLocation,
+				QualifiedIdentifier: "S",
+			},
+			expected: interpreter.InterfaceStaticType{
+				Location:            TestLocation,
+				QualifiedIdentifier: "S",
+			},
+		},
+		{
+			label: "ResourceInterface",
+			actual: &cadence.ResourceInterfaceType{
+				Location:            TestLocation,
+				QualifiedIdentifier: "S",
+			},
+			expected: interpreter.InterfaceStaticType{
+				Location:            TestLocation,
+				QualifiedIdentifier: "S",
+			},
+		},
+		{
+			label: "ContractInterface",
+			actual: &cadence.ContractInterfaceType{
+				Location:            TestLocation,
+				QualifiedIdentifier: "S",
+			},
+			expected: interpreter.InterfaceStaticType{
+				Location:            TestLocation,
+				QualifiedIdentifier: "S",
+			},
+		},
+		{
+			label: "RestrictedType",
+			actual: cadence.RestrictedType{
+				Type: &cadence.StructType{
+					Location:            TestLocation,
+					QualifiedIdentifier: "S",
+				},
+				Restrictions: []cadence.Type{
+					&cadence.StructInterfaceType{
+						Location:            TestLocation,
+						QualifiedIdentifier: "T",
+					}},
+			},
+			expected: &interpreter.RestrictedStaticType{
+				Type: interpreter.CompositeStaticType{
+					Location:            TestLocation,
+					QualifiedIdentifier: "S",
+				},
+				Restrictions: []interpreter.InterfaceStaticType{
+					{
+						Location:            TestLocation,
+						QualifiedIdentifier: "T",
+					},
+				},
+			},
 		},
 	} {
 		test(tt)
@@ -1223,7 +1671,7 @@ func TestExportTypeValue(t *testing.T) {
 
 		actual := exportValueFromScript(t, script)
 		expected := cadence.TypeValue{
-			StaticType: "Int",
+			StaticType: cadence.IntType{},
 		}
 
 		assert.Equal(t, expected, actual)
@@ -1243,7 +1691,11 @@ func TestExportTypeValue(t *testing.T) {
 
 		actual := exportValueFromScript(t, script)
 		expected := cadence.TypeValue{
-			StaticType: "S.test.S",
+			StaticType: &cadence.StructType{
+				QualifiedIdentifier: "S",
+				Location:            TestLocation,
+				Fields:              []cadence.Field{},
+			},
 		}
 
 		assert.Equal(t, expected, actual)
@@ -1260,7 +1712,7 @@ func TestExportTypeValue(t *testing.T) {
 		require.NoError(t, err)
 
 		expected := cadence.TypeValue{
-			StaticType: "",
+			StaticType: nil,
 		}
 
 		assert.Equal(t, expected, actual)
@@ -1304,7 +1756,20 @@ func TestExportTypeValue(t *testing.T) {
 
 		assert.Equal(t,
 			cadence.TypeValue{
-				StaticType: "S.test.S{S.test.SI}",
+				StaticType: cadence.RestrictedType{
+					Type: &cadence.StructType{
+						QualifiedIdentifier: "S",
+						Location:            TestLocation,
+						Fields:              []cadence.Field{},
+					},
+					Restrictions: []cadence.Type{
+						&cadence.StructInterfaceType{
+							QualifiedIdentifier: "SI",
+							Location:            TestLocation,
+							Fields:              []cadence.Field{},
+						},
+					},
+				}.WithID("S.test.S{S.test.SI}"),
 			},
 			actual,
 		)
@@ -1336,7 +1801,7 @@ func TestExportCapabilityValue(t *testing.T) {
 				Identifier: "foo",
 			},
 			Address:    cadence.Address{0x1},
-			BorrowType: "Int",
+			BorrowType: cadence.IntType{},
 		}
 
 		assert.Equal(t, expected, actual)
@@ -1374,8 +1839,12 @@ func TestExportCapabilityValue(t *testing.T) {
 				Domain:     "storage",
 				Identifier: "foo",
 			},
-			Address:    cadence.Address{0x1},
-			BorrowType: "S.test.S",
+			Address: cadence.Address{0x1},
+			BorrowType: &cadence.StructType{
+				QualifiedIdentifier: "S",
+				Location:            TestLocation,
+				Fields:              []cadence.Field{},
+			},
 		}
 
 		assert.Equal(t, expected, actual)
@@ -1836,31 +2305,6 @@ func TestRuntimeArgumentPassing(t *testing.T) {
 			typeSignature: "Address",
 			exportedValue: cadence.NewAddress([8]byte{0, 0, 0, 0, 0, 1, 0, 2}),
 		},
-
-		// TODO: Enable below once https://github.com/onflow/cadence/issues/712 is fixed.
-		// TODO: Add a malformed argument test for capabilities
-		//{
-		//    name:         "Capability",
-		//    typeSignature: "Capability<&Foo>",
-		//    exportedValue: cadence.Capability{
-		//        Path: cadence.Path{
-		//            Domain:     "public",
-		//            Identifier: "bar",
-		//        },
-		//        Address:    cadence.NewAddress([8]byte{0, 0, 0, 0, 0, 1, 0, 2}),
-		//        BorrowType: "Foo",
-		//    },
-		//},
-
-		// TODO: enable once https://github.com/onflow/cadence/issues/491 is fixed.
-		//{
-		//    name:         "Type",
-		//    typeSignature: "Type",
-		//    exportedValue: cadence.TypeValue{
-		//        StaticType: "Foo",
-		//    },
-		//},
-
 	}
 
 	testArgumentPassing := func(test argumentPassingTest) {
@@ -2588,13 +3032,15 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 			interpreter.NewArrayValue(
 				inter,
 				interpreter.VariableSizedStaticType{
-					Type: interpreter.PrimitiveStaticTypeAnyStruct,
+					Type: interpreter.VariableSizedStaticType{
+						Type: interpreter.PrimitiveStaticTypeInt8,
+					},
 				},
 				common.Address{},
 				interpreter.NewArrayValue(
 					inter,
 					interpreter.VariableSizedStaticType{
-						Type: interpreter.PrimitiveStaticTypeAnyStruct,
+						Type: interpreter.PrimitiveStaticTypeInt8,
 					},
 					common.Address{},
 					interpreter.Int8Value(4),
@@ -2603,7 +3049,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 				interpreter.NewArrayValue(
 					inter,
 					interpreter.VariableSizedStaticType{
-						Type: interpreter.PrimitiveStaticTypeAnyStruct,
+						Type: interpreter.PrimitiveStaticTypeInt8,
 					},
 					common.Address{},
 					interpreter.Int8Value(42),
@@ -2803,7 +3249,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 				interpreter.NewDictionaryValue(
 					inter,
 					interpreter.DictionaryStaticType{
-						KeyType:   interpreter.PrimitiveStaticTypeNumber,
+						KeyType:   interpreter.PrimitiveStaticTypeInt8,
 						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
 					interpreter.Int8Value(1), interpreter.NewIntValueFromInt64(100),
@@ -2814,7 +3260,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 				interpreter.NewDictionaryValue(
 					inter,
 					interpreter.DictionaryStaticType{
-						KeyType:   interpreter.PrimitiveStaticTypeNumber,
+						KeyType:   interpreter.PrimitiveStaticTypeSignedInteger,
 						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
 					interpreter.Int8Value(1), interpreter.NewStringValue("foo"),
@@ -2958,6 +3404,336 @@ func TestRuntimeStringValueImport(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.True(t, validated)
+	})
+}
+
+func TestTypeValueImport(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("Type<Int>", func(t *testing.T) {
+
+		t.Parallel()
+
+		typeValue := cadence.NewTypeValue(cadence.IntType{})
+
+		script := `
+            pub fun main(s: Type) {
+                log(s.identifier)
+            }
+        `
+
+		encodedArg, err := json.Encode(typeValue)
+		require.NoError(t, err)
+
+		rt := NewInterpreterRuntime()
+
+		var ok bool
+
+		runtimeInterface := &testRuntimeInterface{
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(b)
+			},
+			log: func(s string) {
+				assert.Equal(t, s, "\"Int\"")
+				ok = true
+			},
+		}
+
+		_, err = rt.ExecuteScript(
+			Script{
+				Source:    []byte(script),
+				Arguments: [][]byte{encodedArg},
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  TestLocation,
+			},
+		)
+
+		require.NoError(t, err)
+		require.True(t, ok)
+	})
+
+	t.Run("missing struct", func(t *testing.T) {
+
+		t.Parallel()
+
+		typeValue := cadence.NewTypeValue(&cadence.StructType{
+			QualifiedIdentifier: "S",
+			Location:            TestLocation,
+			Fields:              []cadence.Field{},
+			Initializers:        [][]cadence.Parameter{},
+		})
+
+		script := `
+            pub fun main(s: Type) {
+            }
+        `
+
+		encodedArg, err := json.Encode(typeValue)
+		require.NoError(t, err)
+
+		rt := NewInterpreterRuntime()
+
+		runtimeInterface := &testRuntimeInterface{
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(b)
+			},
+		}
+
+		_, err = rt.ExecuteScript(
+			Script{
+				Source:    []byte(script),
+				Arguments: [][]byte{encodedArg},
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  TestLocation,
+			},
+		)
+
+		require.Error(t, err)
+		require.IsType(t, interpreter.TypeLoadingError{}, err.(Error).Err.(*InvalidEntryPointArgumentError).Err)
+	})
+}
+
+func TestCapabilityValueImport(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("public Capability<&Int>", func(t *testing.T) {
+
+		t.Parallel()
+
+		capabilityValue := cadence.Capability{
+			BorrowType: cadence.ReferenceType{Type: cadence.IntType{}},
+			Address:    cadence.Address{0x1},
+			Path: cadence.Path{
+				Domain:     common.PathDomainPublic.Identifier(),
+				Identifier: "foo",
+			},
+		}
+
+		script := `
+            pub fun main(s: Capability<&Int>) {
+                log(s)
+            }
+        `
+
+		encodedArg, err := json.Encode(capabilityValue)
+		require.NoError(t, err)
+
+		rt := NewInterpreterRuntime()
+
+		var ok bool
+
+		runtimeInterface := &testRuntimeInterface{
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(b)
+			},
+			log: func(s string) {
+				assert.Equal(t, s, "Capability<&Int>(address: 0x0100000000000000, path: /public/foo)")
+				ok = true
+			},
+		}
+
+		_, err = rt.ExecuteScript(
+			Script{
+				Source:    []byte(script),
+				Arguments: [][]byte{encodedArg},
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  TestLocation,
+			},
+		)
+
+		require.NoError(t, err)
+		require.True(t, ok)
+	})
+
+	t.Run("Capability<Int>", func(t *testing.T) {
+
+		t.Parallel()
+
+		capabilityValue := cadence.Capability{
+			BorrowType: cadence.IntType{},
+			Address:    cadence.Address{0x1},
+			Path: cadence.Path{
+				Domain:     common.PathDomainPublic.Identifier(),
+				Identifier: "foo",
+			},
+		}
+
+		script := `
+            pub fun main(s: Capability<Int>) {
+            }
+        `
+
+		encodedArg, err := json.Encode(capabilityValue)
+		require.NoError(t, err)
+
+		rt := NewInterpreterRuntime()
+
+		runtimeInterface := &testRuntimeInterface{
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(b)
+			},
+		}
+
+		_, err = rt.ExecuteScript(
+			Script{
+				Source:    []byte(script),
+				Arguments: [][]byte{encodedArg},
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  TestLocation,
+			},
+		)
+
+		require.Error(t, err)
+	})
+
+	t.Run("private Capability<&Int>", func(t *testing.T) {
+
+		t.Parallel()
+
+		capabilityValue := cadence.Capability{
+			BorrowType: cadence.ReferenceType{Type: cadence.IntType{}},
+			Address:    cadence.Address{0x1},
+			Path: cadence.Path{
+				Domain:     common.PathDomainPrivate.Identifier(),
+				Identifier: "foo",
+			},
+		}
+
+		script := `
+            pub fun main(s: Capability<&Int>) {
+            }
+        `
+
+		encodedArg, err := json.Encode(capabilityValue)
+		require.NoError(t, err)
+
+		rt := NewInterpreterRuntime()
+
+		runtimeInterface := &testRuntimeInterface{
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(b)
+			},
+		}
+
+		_, err = rt.ExecuteScript(
+			Script{
+				Source:    []byte(script),
+				Arguments: [][]byte{encodedArg},
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  TestLocation,
+			},
+		)
+
+		require.Error(t, err)
+	})
+
+	t.Run("storage Capability<&Int>", func(t *testing.T) {
+
+		t.Parallel()
+
+		capabilityValue := cadence.Capability{
+			BorrowType: cadence.ReferenceType{Type: cadence.IntType{}},
+			Address:    cadence.Address{0x1},
+			Path: cadence.Path{
+				Domain:     common.PathDomainStorage.Identifier(),
+				Identifier: "foo",
+			},
+		}
+
+		script := `
+            pub fun main(s: Capability<&Int>) {
+            }
+        `
+
+		encodedArg, err := json.Encode(capabilityValue)
+		require.NoError(t, err)
+
+		rt := NewInterpreterRuntime()
+
+		runtimeInterface := &testRuntimeInterface{
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(b)
+			},
+			log: func(s string) {
+			},
+		}
+
+		_, err = rt.ExecuteScript(
+			Script{
+				Source:    []byte(script),
+				Arguments: [][]byte{encodedArg},
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  TestLocation,
+			},
+		)
+
+		require.Error(t, err)
+	})
+
+	t.Run("missing struct", func(t *testing.T) {
+
+		t.Parallel()
+
+		borrowType := &cadence.StructType{
+			QualifiedIdentifier: "S",
+			Location:            TestLocation,
+			Fields:              []cadence.Field{},
+			Initializers:        [][]cadence.Parameter{},
+		}
+
+		capabilityValue := cadence.Capability{
+			BorrowType: borrowType,
+			Address:    cadence.Address{0x1},
+			Path: cadence.Path{
+				Domain:     common.PathDomainPublic.Identifier(),
+				Identifier: "foo",
+			},
+		}
+
+		script := `
+            pub fun main(s: Capability<S>) {
+            }
+        `
+
+		encodedArg, err := json.Encode(capabilityValue)
+		require.NoError(t, err)
+
+		rt := NewInterpreterRuntime()
+
+		runtimeInterface := &testRuntimeInterface{
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(b)
+			},
+			log: func(s string) {
+			},
+		}
+
+		_, err = rt.ExecuteScript(
+			Script{
+				Source:    []byte(script),
+				Arguments: [][]byte{encodedArg},
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  TestLocation,
+			},
+		)
+
+		require.Error(t, err)
 	})
 }
 
@@ -3782,4 +4558,141 @@ func newTestInterpreter(tb testing.TB) *interpreter.Interpreter {
 	require.NoError(tb, err)
 
 	return inter
+}
+
+func TestNestedStructArgPassing(t *testing.T) {
+	t.Parallel()
+
+	t.Run("valid", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            pub fun main(v: AnyStruct): UInt8 {
+                return (v as! Foo).bytes[0]
+            }
+
+            pub struct Foo {
+                pub let bytes: [UInt8]
+
+                init(_ bytes: [UInt8]) {
+                    self.bytes = bytes
+               }
+            }
+        `
+
+		jsonCdc := `
+          {
+            "value": {
+              "id": "S.test.Foo",
+              "fields": [
+                {
+                  "name": "bytes",
+                  "value": {
+                    "value": [
+                      {
+                        "value": "32",
+                        "type": "UInt8"
+                      }
+                    ],
+                    "type": "Array"
+                  }
+                }
+              ]
+            },
+            "type": "Struct"
+          }
+        `
+
+		rt := newTestInterpreterRuntime()
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(b)
+			},
+		}
+
+		value, err := rt.ExecuteScript(
+			Script{
+				Source: []byte(script),
+				Arguments: [][]byte{
+					[]byte(jsonCdc),
+				},
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  TestLocation,
+			},
+		)
+
+		require.NoError(t, err)
+		assert.Equal(t, value, cadence.NewUInt8(32))
+	})
+
+	t.Run("invalid interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            pub fun main(v: AnyStruct) {
+            }
+
+            pub struct interface Foo {
+            }
+        `
+
+		jsonCdc := `
+          {
+            "value": {
+              "id": "S.test.Foo",
+              "fields": [
+                {
+                  "name": "bytes",
+                  "value": {
+                    "value": [
+                      {
+                        "value": "32",
+                        "type": "UInt8"
+                      }
+                    ],
+                    "type": "Array"
+                  }
+                }
+              ]
+            },
+            "type": "Struct"
+          }
+        `
+
+		rt := newTestInterpreterRuntime()
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(b)
+			},
+		}
+
+		_, err := rt.ExecuteScript(
+			Script{
+				Source: []byte(script),
+				Arguments: [][]byte{
+					[]byte(jsonCdc),
+				},
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  TestLocation,
+			},
+		)
+
+		require.Error(t, err)
+		var argErr *InvalidEntryPointArgumentError
+		require.ErrorAs(t, err, &argErr)
+	})
 }

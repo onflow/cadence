@@ -24,6 +24,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/turbolent/prettier"
 )
 
 func TestExpressionStatement_MarshalJSON(t *testing.T) {
@@ -98,6 +99,41 @@ func TestReturnStatement_MarshalJSON(t *testing.T) {
         `,
 		string(actual),
 	)
+}
+func TestReturnStatement_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("value", func(t *testing.T) {
+
+		t.Parallel()
+
+		stmt := &ReturnStatement{
+			Expression: &BoolExpression{
+				Value: false,
+			},
+		}
+
+		require.Equal(t,
+			prettier.Concat{
+				prettier.Text("return "),
+				prettier.Text("false"),
+			},
+			stmt.Doc(),
+		)
+	})
+
+	t.Run("no value", func(t *testing.T) {
+
+		t.Parallel()
+
+		stmt := &ReturnStatement{}
+
+		require.Equal(t,
+			prettier.Text("return"),
+			stmt.Doc(),
+		)
+	})
 }
 
 func TestBreakStatement_MarshalJSON(t *testing.T) {
@@ -301,6 +337,7 @@ func TestForStatement_MarshalJSON(t *testing.T) {
                 "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
                 "EndPos": {"Offset": 6, "Line": 2, "Column": 8}
             },
+			"Index": null,
             "Value": {
                 "Type": "BoolExpression",
                 "Value": false,

@@ -91,7 +91,7 @@ pub fun main() {
   log(acct2ReceiverRef.balance)
 
   // verify that the balances are correct
-  if acct1ReceiverRef.balance != 40.0 || acct2ReceiverRef.balance != 40.0 {
+  if acct1ReceiverRef.balance != 40.0 || acct2ReceiverRef.balance != 20.0 {
       panic("Wrong balances!")
   }
 
@@ -200,7 +200,7 @@ pub contract Marketplace {
     // The fungible token vault of the owner of this sale.
     // When someone buys a token, this resource can deposit
     // tokens into their account.
-    access(account) let ownerVault: Capability<&AnyResource{FungibleToken.Receiver}>
+    pub let ownerVault: Capability<&AnyResource{FungibleToken.Receiver}>
 
     init (vault: Capability<&AnyResource{FungibleToken.Receiver}>) {
         self.forSale <- {}
@@ -244,7 +244,7 @@ pub contract Marketplace {
             self.forSale[tokenID] != nil && self.prices[tokenID] != nil:
                 "No token matching this ID for sale!"
             buyTokens.balance >= (self.prices[tokenID] ?? 0.0):
-                "Not enough tokens to by the NFT!"
+                "Not enough tokens to buy the NFT!"
         }
 
         // get the value out of the optional
@@ -435,7 +435,7 @@ transaction {
   let collectionRef: &AnyResource{NonFungibleToken.NFTReceiver}
 
   // Vault that will hold the tokens that will be used to
-  // but the NFT
+  // buy the NFT
   let temporaryVault: @FungibleToken.Vault
 
   prepare(acct: AuthAccount) {

@@ -67,7 +67,7 @@ func TestInterpretToString(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewStringValue("0x42"),
+			interpreter.NewStringValue("0x0000000000000042"),
 			inter.Globals["y"].GetValue(),
 		)
 	})

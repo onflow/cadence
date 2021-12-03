@@ -32,6 +32,7 @@ import (
 	"time"
 
 	"github.com/onflow/atree"
+	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -154,8 +155,6 @@ type testRuntimeInterface struct {
 	programParsed             func(location common.Location, duration time.Duration)
 	programChecked            func(location common.Location, duration time.Duration)
 	programInterpreted        func(location common.Location, duration time.Duration)
-	valueEncoded              func(duration time.Duration)
-	valueDecoded              func(duration time.Duration)
 	unsafeRandom              func() (uint64, error)
 	verifySignature           func(
 		signature []byte,
@@ -174,7 +173,11 @@ type testRuntimeInterface struct {
 	programs                   map[common.LocationID]*interpreter.Program
 	implementationDebugLog     func(message string) error
 	validatePublicKey          func(publicKey *PublicKey) (bool, error)
+	bLSVerifyPOP               func(pk *PublicKey, s []byte) (bool, error)
+	aggregateBLSSignatures     func(sigs [][]byte) ([]byte, error)
+	aggregateBLSPublicKeys     func(keys []*PublicKey) (*PublicKey, error)
 	getAccountContractNames    func(address Address) ([]string, error)
+	recordTrace                func(operation string, location common.Location, duration time.Duration, logs []opentracing.LogRecord)
 }
 
 // testRuntimeInterface should implement Interface
@@ -223,19 +226,19 @@ func (i *testRuntimeInterface) SetProgram(location Location, program *interprete
 }
 
 func (i *testRuntimeInterface) ValueExists(owner, key []byte) (exists bool, err error) {
-	return i.storage.valueExists(owner, key)
+	return i.storage.ValueExists(owner, key)
 }
 
 func (i *testRuntimeInterface) GetValue(owner, key []byte) (value []byte, err error) {
-	return i.storage.getValue(owner, key)
+	return i.storage.GetValue(owner, key)
 }
 
 func (i *testRuntimeInterface) SetValue(owner, key, value []byte) (err error) {
-	return i.storage.setValue(owner, key, value)
+	return i.storage.SetValue(owner, key, value)
 }
 
 func (i *testRuntimeInterface) AllocateStorageIndex(owner []byte) (atree.StorageIndex, error) {
-	return i.storage.allocateStorageIndex(owner)
+	return i.storage.AllocateStorageIndex(owner)
 }
 
 func (i *testRuntimeInterface) CreateAccount(payer Address) (address Address, err error) {
@@ -328,20 +331,6 @@ func (i *testRuntimeInterface) ProgramInterpreted(location common.Location, dura
 		return
 	}
 	i.programInterpreted(location, duration)
-}
-
-func (i *testRuntimeInterface) ValueEncoded(duration time.Duration) {
-	if i.valueEncoded == nil {
-		return
-	}
-	i.valueEncoded(duration)
-}
-
-func (i *testRuntimeInterface) ValueDecoded(duration time.Duration) {
-	if i.valueDecoded == nil {
-		return
-	}
-	i.valueDecoded(duration)
 }
 
 func (i *testRuntimeInterface) GetCurrentBlockHeight() (uint64, error) {
@@ -439,12 +428,43 @@ func (i *testRuntimeInterface) ValidatePublicKey(key *PublicKey) (bool, error) {
 	return i.validatePublicKey(key)
 }
 
+func (i *testRuntimeInterface) BLSVerifyPOP(key *PublicKey, s []byte) (bool, error) {
+	if i.bLSVerifyPOP == nil {
+		return false, nil
+	}
+
+	return i.bLSVerifyPOP(key, s)
+}
+
+func (i *testRuntimeInterface) AggregateBLSSignatures(sigs [][]byte) ([]byte, error) {
+	if i.aggregateBLSSignatures == nil {
+		return []byte{}, nil
+	}
+
+	return i.aggregateBLSSignatures(sigs)
+}
+
+func (i *testRuntimeInterface) AggregateBLSPublicKeys(keys []*PublicKey) (*PublicKey, error) {
+	if i.aggregateBLSPublicKeys == nil {
+		return nil, nil
+	}
+
+	return i.aggregateBLSPublicKeys(keys)
+}
+
 func (i *testRuntimeInterface) GetAccountContractNames(address Address) ([]string, error) {
 	if i.getAccountContractNames == nil {
 		return []string{}, nil
 	}
 
 	return i.getAccountContractNames(address)
+}
+
+func (i *testRuntimeInterface) RecordTrace(operation string, location common.Location, duration time.Duration, logs []opentracing.LogRecord) {
+	if i.recordTrace == nil {
+		return
+	}
+	i.recordTrace(operation, location, duration, logs)
 }
 
 func TestRuntimeImport(t *testing.T) {
@@ -809,7 +829,7 @@ func TestRuntimeTransactionWithAccount(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	assert.Equal(t, "0x2a", loggedMessage)
+	assert.Equal(t, "0x000000000000002a", loggedMessage)
 }
 
 func TestRuntimeTransactionWithArguments(t *testing.T) {
@@ -857,7 +877,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 				jsoncdc.MustEncode(cadence.NewInt(42)),
 			},
 			authorizers:  []Address{common.BytesToAddress([]byte{42})},
-			expectedLogs: []string{"0x2a", "42"},
+			expectedLogs: []string{"0x000000000000002a", "42"},
 		},
 		{
 			label: "Multiple arguments",
@@ -926,7 +946,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 					),
 				),
 			},
-			expectedLogs: []string{"0x1"},
+			expectedLogs: []string{"0x0000000000000001"},
 		},
 		{
 			label: "Array",
@@ -1222,7 +1242,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 					),
 				),
 			},
-			expectedLogs: []string{"0x1"},
+			expectedLogs: []string{"0x0000000000000001"},
 		},
 		{
 			name: "Array",
@@ -2751,7 +2771,7 @@ func TestRuntimeAccountAddress(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	assert.Equal(t, []string{"0x2a"}, loggedMessages)
+	assert.Equal(t, []string{"0x000000000000002a"}, loggedMessages)
 }
 
 func TestRuntimePublicAccountAddress(t *testing.T) {
@@ -2996,7 +3016,7 @@ func TestRuntimeContractAccount(t *testing.T) {
 		},
 		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
-			return []Address{common.BytesToAddress(addressValue.Bytes())}, nil
+			return []Address{Address(addressValue)}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
 		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
@@ -3226,7 +3246,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 		)
 		require.NoError(tt, err)
 
-		assert.Equal(tt, `"Hello number 42 from 0x1"`, loggedMessage)
+		assert.Equal(tt, `"Hello number 42 from 0x0000000000000001"`, loggedMessage)
 	})
 
 	t.Run("function with not enough arguments panics", func(tt *testing.T) {
@@ -3294,7 +3314,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 		)
 		require.NoError(tt, err)
 
-		assert.Equal(tt, `"Hello 0x1"`, loggedMessage)
+		assert.Equal(tt, `"Hello 0x0000000000000001"`, loggedMessage)
 	})
 	t.Run("function with public account works", func(tt *testing.T) {
 		_, err = runtime.InvokeContractFunction(
@@ -3316,7 +3336,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 		)
 		require.NoError(tt, err)
 
-		assert.Equal(tt, `"Hello pub 0x1"`, loggedMessage)
+		assert.Equal(tt, `"Hello pub 0x0000000000000001"`, loggedMessage)
 	})
 }
 
@@ -4716,8 +4736,8 @@ func TestRuntimeResourceOwnerFieldUseComposite(t *testing.T) {
 	assert.Equal(t,
 		[]string{
 			"nil", "nil",
-			"0x1", "0x1",
-			"0x1", "0x1",
+			"0x0000000000000001", "0x0000000000000001",
+			"0x0000000000000001", "0x0000000000000001",
 		},
 		loggedMessages,
 	)
@@ -4736,21 +4756,21 @@ func TestRuntimeResourceOwnerFieldUseComposite(t *testing.T) {
 
 	assert.Equal(t,
 		[]string{
-			"0x1",           // ref1.owner?.address
-			"123.00000000",  // ref2.owner?.balance
-			"1523.00000000", // ref2.owner?.availableBalance
-			"120",           // ref1.owner?.storageUsed
-			"1245",          // ref1.owner?.storageCapacity
+			"0x0000000000000001", // ref1.owner?.address
+			"123.00000000",       // ref2.owner?.balance
+			"1523.00000000",      // ref2.owner?.availableBalance
+			"120",                // ref1.owner?.storageUsed
+			"1245",               // ref1.owner?.storageCapacity
 
-			"0x1",
+			"0x0000000000000001",
 
-			"0x1",           // ref2.owner?.address
-			"123.00000000",  // ref2.owner?.balance
-			"1523.00000000", // ref2.owner?.availableBalance
-			"120",           // ref2.owner?.storageUsed
-			"1245",          // ref2.owner?.storageCapacity
+			"0x0000000000000001", // ref2.owner?.address
+			"123.00000000",       // ref2.owner?.balance
+			"1523.00000000",      // ref2.owner?.availableBalance
+			"120",                // ref2.owner?.storageUsed
+			"1245",               // ref2.owner?.storageCapacity
 
-			"0x1",
+			"0x0000000000000001",
 		},
 		loggedMessages,
 	)
@@ -4906,10 +4926,10 @@ func TestRuntimeResourceOwnerFieldUseArray(t *testing.T) {
 		[]string{
 			"nil", "nil",
 			"nil", "nil",
-			"0x1", "0x1",
-			"0x1", "0x1",
-			"0x1", "0x1",
-			"0x1", "0x1",
+			"0x0000000000000001", "0x0000000000000001",
+			"0x0000000000000001", "0x0000000000000001",
+			"0x0000000000000001", "0x0000000000000001",
+			"0x0000000000000001", "0x0000000000000001",
 		},
 		loggedMessages,
 	)
@@ -4928,10 +4948,10 @@ func TestRuntimeResourceOwnerFieldUseArray(t *testing.T) {
 
 	assert.Equal(t,
 		[]string{
-			"0x1", "0x1",
-			"0x1", "0x1",
-			"0x1", "0x1",
-			"0x1", "0x1",
+			"0x0000000000000001", "0x0000000000000001",
+			"0x0000000000000001", "0x0000000000000001",
+			"0x0000000000000001", "0x0000000000000001",
+			"0x0000000000000001", "0x0000000000000001",
 		},
 		loggedMessages,
 	)
@@ -5087,10 +5107,10 @@ func TestRuntimeResourceOwnerFieldUseDictionary(t *testing.T) {
 		[]string{
 			"nil", "nil",
 			"nil", "nil",
-			"0x1", "0x1",
-			"0x1", "0x1",
-			"0x1", "0x1",
-			"0x1", "0x1",
+			"0x0000000000000001", "0x0000000000000001",
+			"0x0000000000000001", "0x0000000000000001",
+			"0x0000000000000001", "0x0000000000000001",
+			"0x0000000000000001", "0x0000000000000001",
 		},
 		loggedMessages,
 	)
@@ -5109,10 +5129,10 @@ func TestRuntimeResourceOwnerFieldUseDictionary(t *testing.T) {
 
 	assert.Equal(t,
 		[]string{
-			"0x1", "0x1",
-			"0x1", "0x1",
-			"0x1", "0x1",
-			"0x1", "0x1",
+			"0x0000000000000001", "0x0000000000000001",
+			"0x0000000000000001", "0x0000000000000001",
+			"0x0000000000000001", "0x0000000000000001",
+			"0x0000000000000001", "0x0000000000000001",
 		},
 		loggedMessages,
 	)
@@ -5271,8 +5291,6 @@ func TestRuntimeMetrics(t *testing.T) {
 		programParsed      map[common.LocationID]int
 		programChecked     map[common.LocationID]int
 		programInterpreted map[common.LocationID]int
-		valueEncoded       int
-		valueDecoded       int
 	}
 
 	newRuntimeInterface := func() (runtimeInterface Interface, r *reports) {
@@ -5306,12 +5324,6 @@ func TestRuntimeMetrics(t *testing.T) {
 			},
 			programInterpreted: func(location common.Location, duration time.Duration) {
 				r.programInterpreted[location.ID()]++
-			},
-			valueEncoded: func(duration time.Duration) {
-				r.valueEncoded++
-			},
-			valueDecoded: func(duration time.Duration) {
-				r.valueDecoded++
 			},
 		}
 
@@ -5354,8 +5366,6 @@ func TestRuntimeMetrics(t *testing.T) {
 		},
 		r1.programInterpreted,
 	)
-	assert.Equal(t, 1, r1.valueEncoded)
-	assert.Equal(t, 0, r1.valueDecoded)
 
 	i2, r2 := newRuntimeInterface()
 
@@ -5392,12 +5402,10 @@ func TestRuntimeMetrics(t *testing.T) {
 		},
 		r2.programInterpreted,
 	)
-	assert.Equal(t, 0, r2.valueEncoded)
-	assert.Equal(t, 1, r2.valueDecoded)
 }
 
 type testWrite struct {
-	owner, key, value []byte
+	owner, key []byte
 }
 
 func (w testWrite) String() string {
@@ -5456,7 +5464,6 @@ func TestRuntimeContractWriteback(t *testing.T) {
 		writes = append(writes, testWrite{
 			owner,
 			key,
-			value,
 		})
 	}
 
@@ -5466,7 +5473,7 @@ func TestRuntimeContractWriteback(t *testing.T) {
 		},
 		storage: newTestLedger(nil, onWrite),
 		getSigningAccounts: func() ([]Address, error) {
-			return []Address{common.BytesToAddress(addressValue.Bytes())}, nil
+			return []Address{Address(addressValue)}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
 		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
@@ -5500,7 +5507,26 @@ func TestRuntimeContractWriteback(t *testing.T) {
 
 	assert.NotNil(t, accountCode)
 
-	assert.Len(t, writes, 2)
+	assert.Equal(t,
+		[]testWrite{
+			// storage index to contract domain storage map
+			{
+				addressValue[:],
+				[]byte("contract"),
+			},
+			// contract value
+			{
+				addressValue[:],
+				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
+			},
+			// contract domain storage map
+			{
+				addressValue[:],
+				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
+			},
+		},
+		writes,
+	)
 
 	writes = nil
 
@@ -5515,7 +5541,7 @@ func TestRuntimeContractWriteback(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	assert.Len(t, writes, 0)
+	assert.Empty(t, writes)
 
 	writes = nil
 
@@ -5530,7 +5556,16 @@ func TestRuntimeContractWriteback(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	assert.Len(t, writes, 1)
+	assert.Equal(t,
+		[]testWrite{
+			// contract value
+			{
+				addressValue[:],
+				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
+			},
+		},
+		writes,
+	)
 }
 
 func TestRuntimeStorageWriteback(t *testing.T) {
@@ -5578,11 +5613,10 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 	var loggedMessages []string
 	var writes []testWrite
 
-	onWrite := func(owner, key, value []byte) {
+	onWrite := func(owner, key, _ []byte) {
 		writes = append(writes, testWrite{
 			owner,
 			key,
-			value,
 		})
 	}
 
@@ -5592,7 +5626,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 		},
 		storage: newTestLedger(nil, onWrite),
 		getSigningAccounts: func() ([]Address, error) {
-			return []Address{common.BytesToAddress(addressValue.Bytes())}, nil
+			return []Address{Address(addressValue)}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
 		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
@@ -5626,7 +5660,26 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 
 	assert.NotNil(t, accountCode)
 
-	assert.Len(t, writes, 2)
+	assert.Equal(t,
+		[]testWrite{
+			// storage index to contract domain storage map
+			{
+				addressValue[:],
+				[]byte("contract"),
+			},
+			// contract value
+			{
+				addressValue[:],
+				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
+			},
+			// contract domain storage map
+			{
+				addressValue[:],
+				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
+			},
+		},
+		writes,
+	)
 
 	writes = nil
 
@@ -5641,7 +5694,26 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	assert.Len(t, writes, 2)
+	assert.Equal(t,
+		[]testWrite{
+			// storage index to storage domain storage map
+			{
+				addressValue[:],
+				[]byte("storage"),
+			},
+			// storage domain storage map
+			{
+				addressValue[:],
+				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x3},
+			},
+			// resource value
+			{
+				addressValue[:],
+				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4},
+			},
+		},
+		writes,
+	)
 
 	readTx := []byte(`
      import Test from 0xCADE
@@ -5667,7 +5739,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	assert.Len(t, writes, 0)
+	assert.Empty(t, writes)
 
 	writeTx := []byte(`
      import Test from 0xCADE
@@ -5694,7 +5766,16 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	assert.Len(t, writes, 1)
+	assert.Equal(t,
+		[]testWrite{
+			// resource value
+			{
+				addressValue[:],
+				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4},
+			},
+		},
+		writes,
+	)
 }
 
 func TestRuntimeExternalError(t *testing.T) {
@@ -6758,17 +6839,10 @@ func TestRuntimeStackOverflow(t *testing.T) {
 	var events []cadence.Event
 	var loggedMessages []string
 	var signerAddress common.Address
-	var contractValueReads = 0
 	accountCodes := map[common.LocationID]string{}
 
-	onRead := func(owner, key, value []byte) {
-		if bytes.Equal(key, []byte(formatContractKey("FooEvents"))) {
-			contractValueReads++
-		}
-	}
-
 	runtimeInterface := &testRuntimeInterface{
-		storage: newTestLedger(onRead, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{signerAddress}, nil
 		},

@@ -22,8 +22,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
-	"strconv"
 	"strings"
+
+	"github.com/turbolent/prettier"
 )
 
 const NilConstant = "nil"
@@ -34,6 +35,7 @@ type Expression interface {
 	IfStatementTest
 	isExpression()
 	AcceptExp(ExpressionVisitor) Repr
+	Doc() prettier.Doc
 }
 
 // BoolExpression
@@ -64,6 +66,17 @@ func (e *BoolExpression) String() string {
 		return "true"
 	}
 	return "false"
+}
+
+var boolExpressionTrueDoc prettier.Doc = prettier.Text("true")
+var boolExpressionFalseDoc prettier.Doc = prettier.Text("false")
+
+func (e *BoolExpression) Doc() prettier.Doc {
+	if e.Value {
+		return boolExpressionTrueDoc
+	} else {
+		return boolExpressionFalseDoc
+	}
 }
 
 func (e *BoolExpression) MarshalJSON() ([]byte, error) {
@@ -101,6 +114,12 @@ func (e *NilExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 
 func (e *NilExpression) String() string {
 	return NilConstant
+}
+
+var nilExpressionDoc prettier.Doc = prettier.Text("nil")
+
+func (*NilExpression) Doc() prettier.Doc {
+	return nilExpressionDoc
 }
 
 func (e *NilExpression) StartPosition() Position {
@@ -148,7 +167,11 @@ func (e *StringExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 }
 
 func (e *StringExpression) String() string {
-	return strconv.Quote(e.Value)
+	return QuoteString(e.Value)
+}
+
+func (e *StringExpression) Doc() prettier.Doc {
+	return prettier.Text(QuoteString(e.Value))
 }
 
 func (e *StringExpression) MarshalJSON() ([]byte, error) {
@@ -165,8 +188,9 @@ func (e *StringExpression) MarshalJSON() ([]byte, error) {
 // IntegerExpression
 
 type IntegerExpression struct {
-	Value *big.Int `json:"-"`
-	Base  int
+	PositiveLiteral string
+	Value           *big.Int `json:"-"`
+	Base            int
 	Range
 }
 
@@ -187,7 +211,19 @@ func (e *IntegerExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 }
 
 func (e *IntegerExpression) String() string {
-	return e.Value.String()
+	literal := e.PositiveLiteral
+	if e.Value.Sign() < 0 {
+		literal = "-" + literal
+	}
+	return literal
+}
+
+func (e *IntegerExpression) Doc() prettier.Doc {
+	literal := e.PositiveLiteral
+	if e.Value.Sign() < 0 {
+		literal = "-" + literal
+	}
+	return prettier.Text(literal)
 }
 
 func (e *IntegerExpression) MarshalJSON() ([]byte, error) {
@@ -206,6 +242,7 @@ func (e *IntegerExpression) MarshalJSON() ([]byte, error) {
 // FixedPointExpression
 
 type FixedPointExpression struct {
+	PositiveLiteral string
 	Negative        bool
 	UnsignedInteger *big.Int `json:"-"`
 	Fractional      *big.Int `json:"-"`
@@ -230,6 +267,14 @@ func (e *FixedPointExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 }
 
 func (e *FixedPointExpression) String() string {
+	literal := e.PositiveLiteral
+	if literal != "" {
+		if e.Negative {
+			literal = "-" + literal
+		}
+		return literal
+	}
+
 	var builder strings.Builder
 	if e.Negative {
 		builder.WriteRune('-')
@@ -242,6 +287,14 @@ func (e *FixedPointExpression) String() string {
 	}
 	builder.WriteString(fractional)
 	return builder.String()
+}
+
+func (e *FixedPointExpression) Doc() prettier.Doc {
+	literal := e.PositiveLiteral
+	if e.Negative {
+		literal = "-" + literal
+	}
+	return prettier.Text(literal)
 }
 
 func (e *FixedPointExpression) MarshalJSON() ([]byte, error) {
@@ -293,6 +346,26 @@ func (e *ArrayExpression) String() string {
 	}
 	builder.WriteString("]")
 	return builder.String()
+}
+
+var arrayExpressionSeparatorDoc prettier.Doc = prettier.Concat{
+	prettier.Text(","),
+	prettier.Line{},
+}
+
+func (e *ArrayExpression) Doc() prettier.Doc {
+	if len(e.Values) == 0 {
+		return prettier.Text("[]")
+	}
+
+	elementDocs := make([]prettier.Doc, len(e.Values))
+	for i, value := range e.Values {
+		elementDocs[i] = value.Doc()
+	}
+	return prettier.WrapBrackets(
+		prettier.Join(arrayExpressionSeparatorDoc, elementDocs...),
+		prettier.SoftLine{},
+	)
 }
 
 func (e *ArrayExpression) MarshalJSON() ([]byte, error) {
@@ -347,6 +420,27 @@ func (e *DictionaryExpression) String() string {
 	return builder.String()
 }
 
+var dictionaryExpressionSeparatorDoc prettier.Doc = prettier.Concat{
+	prettier.Text(","),
+	prettier.Line{},
+}
+
+func (e *DictionaryExpression) Doc() prettier.Doc {
+	if len(e.Entries) == 0 {
+		return prettier.Text("{}")
+	}
+
+	entryDocs := make([]prettier.Doc, len(e.Entries))
+	for i, entry := range e.Entries {
+		entryDocs[i] = entry.Doc()
+	}
+
+	return prettier.WrapBraces(
+		prettier.Join(dictionaryExpressionSeparatorDoc, entryDocs...),
+		prettier.SoftLine{},
+	)
+}
+
 func (e *DictionaryExpression) MarshalJSON() ([]byte, error) {
 	type Alias DictionaryExpression
 	return json.Marshal(&struct {
@@ -374,6 +468,24 @@ func (e DictionaryEntry) MarshalJSON() ([]byte, error) {
 	})
 }
 
+var dictionaryKeyValueSeparatorDoc prettier.Doc = prettier.Concat{
+	prettier.Text(":"),
+	prettier.Line{},
+}
+
+func (e DictionaryEntry) Doc() prettier.Doc {
+	keyDoc := e.Key.Doc()
+	valueDoc := e.Value.Doc()
+
+	return prettier.Group{
+		Doc: prettier.Concat{
+			keyDoc,
+			dictionaryKeyValueSeparatorDoc,
+			valueDoc,
+		},
+	}
+}
+
 // IdentifierExpression
 
 type IdentifierExpression struct {
@@ -398,6 +510,10 @@ func (e *IdentifierExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 
 func (e *IdentifierExpression) String() string {
 	return e.Identifier.Identifier
+}
+
+func (e *IdentifierExpression) Doc() prettier.Doc {
+	return prettier.Text(e.Identifier.Identifier)
 }
 
 func (e *IdentifierExpression) MarshalJSON() ([]byte, error) {
@@ -484,6 +600,56 @@ func (e *InvocationExpression) String() string {
 	return builder.String()
 }
 
+func (e *InvocationExpression) Doc() prettier.Doc {
+
+	result := prettier.Concat{
+		// TODO: potentially parenthesize
+		e.InvokedExpression.Doc(),
+	}
+
+	if len(e.TypeArguments) > 0 {
+		typeArgumentDocs := make([]prettier.Doc, len(e.TypeArguments))
+		// TODO: type arguments
+		//for i, typeArgument := range e.TypeArguments {
+		//	typeArgumentDocs[i] = typeArgument.Doc()
+		//}
+
+		result = append(result,
+			prettier.Wrap(
+				prettier.Text("<"),
+				prettier.Join(arrayExpressionSeparatorDoc, typeArgumentDocs...),
+				prettier.Text(">"),
+				prettier.SoftLine{},
+			),
+		)
+	}
+
+	var argumentsDoc prettier.Doc
+	if len(e.Arguments) == 0 {
+		argumentsDoc = prettier.Text("()")
+	} else {
+		argumentDocs := make([]prettier.Doc, len(e.Arguments))
+		for i, argument := range e.Arguments {
+			argumentDoc := argument.Expression.Doc()
+			if argument.Label != "" {
+				argumentDoc = prettier.Concat{
+					prettier.Text(argument.Label + ": "),
+					argumentDoc,
+				}
+			}
+			argumentDocs[i] = argumentDoc
+		}
+		argumentsDoc = prettier.WrapParentheses(
+			prettier.Join(arrayExpressionSeparatorDoc, argumentDocs...),
+			prettier.SoftLine{},
+		)
+	}
+
+	result = append(result, argumentsDoc)
+
+	return result
+}
+
 func (e *InvocationExpression) StartPosition() Position {
 	return e.InvokedExpression.StartPosition()
 }
@@ -557,6 +723,31 @@ func (e *MemberExpression) String() string {
 	)
 }
 
+var memberExpressionSeparatorDoc prettier.Doc = prettier.Text(".")
+var memberExpressionOptionalSeparatorDoc prettier.Doc = prettier.Text("?.")
+
+func (e *MemberExpression) Doc() prettier.Doc {
+	var separatorDoc prettier.Doc
+	if e.Optional {
+		separatorDoc = memberExpressionOptionalSeparatorDoc
+	} else {
+		separatorDoc = memberExpressionSeparatorDoc
+	}
+	return prettier.Concat{
+		// TODO: potentially parenthesize
+		e.Expression.Doc(),
+		prettier.Group{
+			Doc: prettier.Indent{
+				Doc: prettier.Concat{
+					prettier.SoftLine{},
+					separatorDoc,
+					prettier.Text(e.Identifier.Identifier),
+				},
+			},
+		},
+	}
+}
+
 func (e *MemberExpression) StartPosition() Position {
 	return e.Expression.StartPosition()
 }
@@ -615,8 +806,20 @@ func (e *IndexExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 func (e *IndexExpression) String() string {
 	return fmt.Sprintf(
 		"%s[%s]",
-		e.TargetExpression, e.IndexingExpression,
+		e.TargetExpression,
+		e.IndexingExpression,
 	)
+}
+
+func (e *IndexExpression) Doc() prettier.Doc {
+	return prettier.Concat{
+		// TODO: potentially parenthesize
+		e.TargetExpression.Doc(),
+		prettier.WrapBrackets(
+			e.IndexingExpression.Doc(),
+			prettier.SoftLine{},
+		),
+	}
 }
 
 func (e *IndexExpression) MarshalJSON() ([]byte, error) {
@@ -662,6 +865,44 @@ func (e *ConditionalExpression) String() string {
 		"(%s ? %s : %s)",
 		e.Test, e.Then, e.Else,
 	)
+}
+
+var conditionalExpressionTestSeparatorDoc prettier.Doc = prettier.Concat{
+	prettier.Line{},
+	prettier.Text("? "),
+}
+var conditionalExpressionBranchSeparatorDoc prettier.Doc = prettier.Concat{
+	prettier.Line{},
+	prettier.Text(": "),
+}
+
+func (e *ConditionalExpression) Doc() prettier.Doc {
+	// TODO: potentially parenthesize
+	testDoc := e.Test.Doc()
+
+	// TODO: potentially parenthesize
+	thenDoc := e.Then.Doc()
+
+	// TODO: potentially parenthesize
+	elseDoc := e.Else.Doc()
+
+	return prettier.Group{
+		Doc: prettier.Concat{
+			testDoc,
+			prettier.Indent{
+				Doc: prettier.Concat{
+					conditionalExpressionTestSeparatorDoc,
+					prettier.Indent{
+						Doc: thenDoc,
+					},
+					conditionalExpressionBranchSeparatorDoc,
+					prettier.Indent{
+						Doc: elseDoc,
+					},
+				},
+			},
+		},
+	}
 }
 
 func (e *ConditionalExpression) StartPosition() Position {
@@ -712,8 +953,17 @@ func (e *UnaryExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 func (e *UnaryExpression) String() string {
 	return fmt.Sprintf(
 		"%s%s",
-		e.Operation.Symbol(), e.Expression,
+		e.Operation.Symbol(),
+		e.Expression,
 	)
+}
+
+func (e *UnaryExpression) Doc() prettier.Doc {
+	return prettier.Concat{
+		prettier.Text(e.Operation.Symbol()),
+		// TODO: potentially parenthesize
+		e.Expression.Doc(),
+	}
 }
 
 func (e *UnaryExpression) StartPosition() Position {
@@ -769,6 +1019,28 @@ func (e *BinaryExpression) String() string {
 	)
 }
 
+func (e *BinaryExpression) Doc() prettier.Doc {
+	// TODO: potentially parenthesize
+	leftDoc := e.Left.Doc()
+
+	// TODO: potentially parenthesize
+	rightDoc := e.Right.Doc()
+
+	return prettier.Group{
+		Doc: prettier.Concat{
+			prettier.Group{
+				Doc: leftDoc,
+			},
+			prettier.Line{},
+			prettier.Text(e.Operation.Symbol()),
+			prettier.Space,
+			prettier.Group{
+				Doc: rightDoc,
+			},
+		},
+	}
+}
+
 func (e *BinaryExpression) StartPosition() Position {
 	return e.Left.StartPosition()
 }
@@ -820,6 +1092,117 @@ func (e *FunctionExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 func (e *FunctionExpression) String() string {
 	// TODO:
 	return "func ..."
+}
+
+var functionExpressionFunKeywordDoc prettier.Doc = prettier.Text("fun ")
+var functionExpressionParameterSeparatorDoc prettier.Doc = prettier.Concat{
+	prettier.Text(","),
+	prettier.Line{},
+}
+
+var typeSeparatorDoc prettier.Doc = prettier.Text(": ")
+var functionExpressionBlockStartDoc prettier.Doc = prettier.Text(" {")
+var functionExpressionBlockEndDoc prettier.Doc = prettier.Text("}")
+var functionExpressionEmptyBlockDoc prettier.Doc = prettier.Text(" {}")
+
+func (e *FunctionExpression) Doc() prettier.Doc {
+
+	signatureDoc := e.parametersDoc()
+
+	if e.ReturnTypeAnnotation != nil &&
+		!IsEmptyType(e.ReturnTypeAnnotation.Type) {
+
+		signatureDoc = prettier.Concat{
+			signatureDoc,
+			typeSeparatorDoc,
+			// TODO: type
+		}
+	}
+
+	doc := prettier.Concat{
+		functionExpressionFunKeywordDoc,
+		prettier.Group{
+			Doc: signatureDoc,
+		},
+	}
+
+	if e.FunctionBlock.IsEmpty() {
+		return append(doc, functionExpressionEmptyBlockDoc)
+	}
+
+	// TODO: pre-conditions
+	// TODO: post-conditions
+
+	statementsDoc := e.statementsDoc()
+
+	return append(doc,
+		functionExpressionBlockStartDoc,
+		prettier.Indent{
+			Doc: statementsDoc,
+		},
+		prettier.HardLine{},
+		functionExpressionBlockEndDoc,
+	)
+}
+
+func (e *FunctionExpression) parametersDoc() prettier.Doc {
+
+	if e.ParameterList == nil ||
+		len(e.ParameterList.Parameters) == 0 {
+
+		return prettier.Text("()")
+	}
+
+	parameterDocs := make([]prettier.Doc, 0, len(e.ParameterList.Parameters))
+
+	for _, parameter := range e.ParameterList.Parameters {
+		var parameterDoc prettier.Concat
+
+		if parameter.Label != "" {
+			parameterDoc = append(parameterDoc,
+				prettier.Text(parameter.Label),
+				prettier.Space,
+			)
+		}
+
+		parameterDoc = append(parameterDoc,
+			prettier.Text(parameter.Identifier.Identifier),
+			typeSeparatorDoc,
+		)
+
+		// TODO: type
+
+		parameterDocs = append(parameterDocs, parameterDoc)
+	}
+
+	return prettier.WrapParentheses(
+		prettier.Join(
+			functionExpressionParameterSeparatorDoc,
+			parameterDocs...,
+		),
+		prettier.SoftLine{},
+	)
+}
+
+func (e *FunctionExpression) statementsDoc() prettier.Doc {
+	var statementsDoc prettier.Concat
+
+	statements := e.FunctionBlock.Block.Statements
+
+	for _, statement := range statements {
+		// TODO: replace once Statement implements Doc
+		hasDoc, ok := statement.(interface{ Doc() prettier.Doc })
+		if !ok {
+			continue
+		}
+
+		statementsDoc = append(statementsDoc,
+			prettier.HardLine{},
+			hasDoc.Doc(),
+		)
+	}
+
+	return statementsDoc
 }
 
 func (e *FunctionExpression) StartPosition() Position {
@@ -875,6 +1258,23 @@ func (e *CastingExpression) String() string {
 	)
 }
 
+func (e *CastingExpression) Doc() prettier.Doc {
+	// TODO: potentially parenthesize
+	doc := e.Expression.Doc()
+
+	return prettier.Group{
+		Doc: prettier.Concat{
+			prettier.Group{
+				Doc: doc,
+			},
+			prettier.Line{},
+			prettier.Text(e.Operation.Symbol()),
+			prettier.Space,
+			// TODO: type
+		},
+	}
+}
+
 func (e *CastingExpression) StartPosition() Position {
 	return e.Expression.StartPosition()
 }
@@ -926,6 +1326,14 @@ func (e *CreateExpression) String() string {
 	)
 }
 
+func (e *CreateExpression) Doc() prettier.Doc {
+	return prettier.Concat{
+		prettier.Text("create "),
+		// TODO: potentially parenthesize
+		e.InvocationExpression.Doc(),
+	}
+}
+
 func (e *CreateExpression) StartPosition() Position {
 	return e.StartPos
 }
@@ -975,6 +1383,16 @@ func (e *DestroyExpression) String() string {
 		"(destroy %s)",
 		e.Expression,
 	)
+}
+
+const destroyExpressionKeywordDoc = prettier.Text("destroy ")
+
+func (e *DestroyExpression) Doc() prettier.Doc {
+	return prettier.Concat{
+		destroyExpressionKeywordDoc,
+		// TODO: potentially parenthesize
+		e.Expression.Doc(),
+	}
 }
 
 func (e *DestroyExpression) StartPosition() Position {
@@ -1031,6 +1449,27 @@ func (e *ReferenceExpression) String() string {
 	)
 }
 
+var referenceExpressionRefOperatorDoc prettier.Doc = prettier.Text("&")
+var referenceExpressionAsOperatorDoc prettier.Doc = prettier.Text("as")
+
+func (e *ReferenceExpression) Doc() prettier.Doc {
+	// TODO: potentially parenthesize
+	doc := e.Expression.Doc()
+
+	return prettier.Group{
+		Doc: prettier.Concat{
+			referenceExpressionRefOperatorDoc,
+			prettier.Group{
+				Doc: doc,
+			},
+			prettier.Line{},
+			referenceExpressionAsOperatorDoc,
+			prettier.Space,
+			// TODO: type
+		},
+	}
+}
+
 func (e *ReferenceExpression) StartPosition() Position {
 	return e.StartPos
 }
@@ -1077,6 +1516,16 @@ func (e *ForceExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 
 func (e *ForceExpression) String() string {
 	return fmt.Sprintf("%s!", e.Expression)
+}
+
+const forceExpressionOperatorDoc = prettier.Text("!")
+
+func (e *ForceExpression) Doc() prettier.Doc {
+	return prettier.Concat{
+		// TODO: potentially parenthesize
+		e.Expression.Doc(),
+		forceExpressionOperatorDoc,
+	}
 }
 
 func (e *ForceExpression) StartPosition() Position {
@@ -1126,6 +1575,10 @@ func (e *PathExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 
 func (e *PathExpression) String() string {
 	return fmt.Sprintf("/%s/%s", e.Domain, e.Identifier)
+}
+
+func (e *PathExpression) Doc() prettier.Doc {
+	return prettier.Text(e.String())
 }
 
 func (e *PathExpression) StartPosition() Position {

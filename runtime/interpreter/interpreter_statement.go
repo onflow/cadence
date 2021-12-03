@@ -36,6 +36,10 @@ func (interpreter *Interpreter) evalStatement(statement ast.Statement) interface
 
 	interpreter.statement = statement
 
+	if interpreter.debugger != nil {
+		interpreter.debugger.onStatement(interpreter, statement)
+	}
+
 	if interpreter.onStatement != nil {
 		interpreter.onStatement(interpreter, statement)
 	}
@@ -287,6 +291,15 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) a
 		panic(ExternalError{err})
 	}
 
+	var indexVariable *Variable
+	var one = NewIntValueFromInt64(1)
+	if statement.Index != nil {
+		indexVariable = interpreter.declareVariable(
+			statement.Index.Identifier,
+			NewIntValueFromInt64(0),
+		)
+	}
+
 	for {
 		var atreeValue atree.Value
 		atreeValue, err = iterator.Next()
@@ -317,6 +330,10 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) a
 
 		case functionReturn:
 			return result
+		}
+
+		if indexVariable != nil {
+			indexVariable.SetValue(indexVariable.GetValue().(IntValue).Plus(one))
 		}
 	}
 }

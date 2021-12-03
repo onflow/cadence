@@ -19,6 +19,7 @@
 package interpreter
 
 import (
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -277,13 +278,14 @@ func (StoragePathDynamicType) IsImportable() bool {
 // CapabilityDynamicType
 
 type CapabilityDynamicType struct {
+	Domain     common.PathDomain
 	BorrowType *sema.ReferenceType
 }
 
 func (CapabilityDynamicType) IsDynamicType() {}
 
-func (CapabilityDynamicType) IsImportable() bool {
-	return false
+func (t CapabilityDynamicType) IsImportable() bool {
+	return t.Domain == common.PathDomainPublic
 }
 
 // DeployedContractDynamicType
