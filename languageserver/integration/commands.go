@@ -234,7 +234,7 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{
 		signerAccounts[i] = account
 		authorizers[i] = address
 
-		if address == payer{
+		if address == payer {
 			hasServiceAccount = true
 		}
 	}
