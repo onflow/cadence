@@ -27,7 +27,7 @@ import (
 	"strings"
 	"time"
 
-	flowkit "github.com/onflow/flow-cli/pkg/flowkit"
+	"github.com/onflow/flow-cli/pkg/flowkit"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/crypto"
 
@@ -254,6 +254,10 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{
 		txArgs,
 		"",
 	)
+
+	if err != nil {
+		return nil, errorWithMessage(conn, ErrorMessageTransactionError, err)
+	}
 
 	for _, signer := range signerAccounts {
 		err = tx.SetSigner(&signer)
