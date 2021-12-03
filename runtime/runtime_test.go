@@ -7032,4 +7032,58 @@ func TestRuntimeInternalErrors(t *testing.T) {
 		require.Error(t, err)
 		require.ErrorAs(t, err, &Error{})
 	})
+
+	t.Run("read stored", func(t *testing.T) {
+
+		t.Parallel()
+
+		runtimeInterface := &testRuntimeInterface{
+			storage:testLedger{
+				getValue: func(owner, key []byte) (value []byte, err error) {
+					panic(errors.New("crasher"))
+				},
+			},
+		}
+
+		_, err := runtime.ReadStored(
+			common.BytesToAddress([]byte{0x42}),
+			cadence.Path{
+				Domain:     "storage",
+				Identifier: "test",
+			},
+			Context{
+				Interface: runtimeInterface,
+			},
+		)
+
+		require.Error(t, err)
+		require.ErrorAs(t, err, &Error{})
+	})
+
+	t.Run("read linked", func(t *testing.T) {
+
+		t.Parallel()
+
+		runtimeInterface := &testRuntimeInterface{
+			storage:testLedger{
+				getValue: func(owner, key []byte) (value []byte, err error) {
+					panic(errors.New("crasher"))
+				},
+			},
+		}
+
+		_, err := runtime.ReadLinked(
+			common.BytesToAddress([]byte{0x42}),
+			cadence.Path{
+				Domain:     "storage",
+				Identifier: "test",
+			},
+			Context{
+				Interface: runtimeInterface,
+			},
+		)
+
+		require.Error(t, err)
+		require.ErrorAs(t, err, &Error{})
+	})
 }

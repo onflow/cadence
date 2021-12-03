@@ -2763,7 +2763,20 @@ func (r *interpreterRuntime) executeNonProgram(interpret interpretFunc, context 
 	return exportValue(value)
 }
 
-func (r *interpreterRuntime) ReadStored(address common.Address, path cadence.Path, context Context) (cadence.Value, error) {
+func (r *interpreterRuntime) ReadStored(
+	address common.Address,
+	path cadence.Path,
+	context Context,
+) (
+	val cadence.Value,
+	err error,
+) {
+	defer func() {
+		if recovered, ok := recover().(error); ok {
+			err = newError(recovered, context)
+		}
+	}()
+
 	return r.executeNonProgram(
 		func(inter *interpreter.Interpreter) (interpreter.Value, error) {
 			key := interpreter.PathToStorageKey(importPathValue(path))
@@ -2774,7 +2787,20 @@ func (r *interpreterRuntime) ReadStored(address common.Address, path cadence.Pat
 	)
 }
 
-func (r *interpreterRuntime) ReadLinked(address common.Address, path cadence.Path, context Context) (cadence.Value, error) {
+func (r *interpreterRuntime) ReadLinked(
+	address common.Address,
+	path cadence.Path,
+	context Context,
+) (
+	val cadence.Value,
+	err error,
+) {
+	defer func() {
+		if recovered, ok := recover().(error); ok {
+			err = newError(recovered, context)
+		}
+	}()
+
 	return r.executeNonProgram(
 		func(inter *interpreter.Interpreter) (interpreter.Value, error) {
 			key, _, err := inter.GetCapabilityFinalTargetStorageKey(
