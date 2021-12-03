@@ -215,10 +215,15 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{
 		return nil, fmt.Errorf("failed to get service account, err: %w", err)
 	}
 
+	payer := serviceAccount.Address()
+	keyIndex := serviceAccount.Key().Index()
+
 	// TODO: sign transaction by multiple parties
 	// build -> sign for multiple signers
 	signerAccounts := make([]flowkit.Account, len(signers))
 	authorizers := make([]flow.Address, len(signers))
+
+	hasServiceAccount := false
 	for i, v := range signers {
 		address := flow.HexToAddress(v)
 
@@ -228,21 +233,48 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{
 
 		signerAccounts[i] = account
 		authorizers[i] = address
+
+		if address == payer{
+			hasServiceAccount = true
+		}
 	}
 
-	_, txResult, err := i.sharedServices.Transactions.SendMultiSig(
-		serviceAccount,
-		signerAccounts,
-		code, "",
+	// Add signer account to a list of signers
+
+	if !hasServiceAccount {
+		signerAccounts = append(signerAccounts, *serviceAccount)
+	}
+
+	tx, err := i.sharedServices.Transactions.Build(
+		payer,
+		authorizers,
+		payer,
+		keyIndex,
+		code,
+		"",
 		MaxGasLimit,
 		txArgs,
 		"",
-		)
+	)
+
+	for _, signer := range signerAccounts {
+		err = tx.SetSigner(&signer)
+		if err != nil {
+			return nil, err
+		}
+
+		tx, err = tx.Sign()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	txBytes := []byte(fmt.Sprintf("%x", tx.FlowTransaction().Encode()))
+	_, txResult, err := i.sharedServices.Transactions.SendSigned(txBytes)
+
 	if err != nil {
 		return nil, errorWithMessage(conn, ErrorMessageTransactionError, err)
 	}
-
-
 
 	showMessage(conn, fmt.Sprintf("Transaction status: %s", txResult.Status.String()))
 	return nil, err
