@@ -218,12 +218,11 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{
 	payer := serviceAccount.Address()
 	keyIndex := serviceAccount.Key().Index()
 
-	// TODO: sign transaction by multiple parties
-	// build -> sign for multiple signers
+	// We need to check if service account among authorizers
+	hasServiceAccount := false
+
 	signerAccounts := make([]flowkit.Account, len(signers))
 	authorizers := make([]flow.Address, len(signers))
-
-	hasServiceAccount := false
 	for i, v := range signers {
 		address := flow.HexToAddress(v)
 
@@ -239,8 +238,7 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{
 		}
 	}
 
-	// Add signer account to a list of signers
-
+	// If serviceAccount is not in signers list, we will add it to handle payer role properly
 	if !hasServiceAccount {
 		signerAccounts = append(signerAccounts, *serviceAccount)
 	}
