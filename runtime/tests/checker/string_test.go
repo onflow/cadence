@@ -281,7 +281,7 @@ func TestCheckStringEncodeHex(t *testing.T) {
 	t.Parallel()
 
 	checker, err := ParseAndCheck(t, `
-        let x = String.encodeHex([1 as UInt8, 2, 3, 0xCA, 0xDE])
+        let x = String.encodeHex([1, 2, 3, 0xCA, 0xDE])
 	`)
 
 	require.NoError(t, err)
@@ -305,6 +305,22 @@ func TestCheckStringUtf8Field(t *testing.T) {
 
 	assert.Equal(t,
 		sema.ByteArrayType,
+		RequireGlobalValue(t, checker.Elaboration, "x"),
+	)
+}
+
+func TestCheckStringToLower(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+        let x = "Abc".toLower()
+	`)
+
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		sema.StringType,
 		RequireGlobalValue(t, checker.Elaboration, "x"),
 	)
 }

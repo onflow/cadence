@@ -34,6 +34,7 @@ var StringType = &SimpleType{
 	Name:                 "String",
 	QualifiedName:        "String",
 	TypeID:               "String",
+	tag:                  StringTypeTag,
 	IsInvalid:            false,
 	IsResource:           false,
 	Storable:             true,
@@ -108,6 +109,17 @@ func init() {
 					)
 				},
 			},
+			"toLower": {
+				Kind: common.DeclarationKindField,
+				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicConstantFieldMember(
+						t,
+						identifier,
+						StringTypeToLowerFunctionType,
+						stringTypeToLowerFunctionDocString,
+					)
+				},
+			},
 		}
 	}
 }
@@ -174,4 +186,12 @@ The number of characters in the string
 
 const stringTypeUtf8FieldDocString = `
 The byte array of the UTF-8 encoding
+`
+
+var StringTypeToLowerFunctionType = &FunctionType{
+	ReturnTypeAnnotation: NewTypeAnnotation(StringType),
+}
+
+const stringTypeToLowerFunctionDocString = `
+Returns the string with upper case letters replaced with lowercase
 `

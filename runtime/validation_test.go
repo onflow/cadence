@@ -21,11 +21,12 @@ package runtime
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/stretchr/testify/require"
 )
 
 // TestRuntimeArgumentImportMissingType tests if errors produced while validating
@@ -41,7 +42,7 @@ func TestRuntimeArgumentImportMissingType(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewInterpreterRuntime()
+		runtime := newTestInterpreterRuntime()
 
 		script := []byte(`
           transaction(value: AnyStruct) {}
@@ -88,7 +89,7 @@ func TestRuntimeArgumentImportMissingType(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewInterpreterRuntime()
+		runtime := newTestInterpreterRuntime()
 
 		script := []byte(`
           pub fun main(value: AnyStruct) {}

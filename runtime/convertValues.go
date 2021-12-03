@@ -112,6 +112,8 @@ func exportValueWithInterpreter(
 		return cadence.UFix64(v), nil
 	case *interpreter.CompositeValue:
 		return exportCompositeValue(v, inter, seenReferences)
+	case *interpreter.SimpleCompositeValue:
+		return exportSimpleCompositeValue(v, inter, seenReferences)
 	case *interpreter.DictionaryValue:
 		return exportDictionaryValue(v, inter, seenReferences)
 	case interpreter.AddressValue:
@@ -122,7 +124,7 @@ func exportValueWithInterpreter(
 		return exportPathValue(v), nil
 	case interpreter.TypeValue:
 		return exportTypeValue(v, inter), nil
-	case interpreter.CapabilityValue:
+	case *interpreter.CapabilityValue:
 		return exportCapabilityValue(v, inter), nil
 	case *interpreter.EphemeralReferenceValue:
 		// Break recursion through ephemeral references
@@ -172,15 +174,23 @@ func exportArrayValue(
 	cadence.Array,
 	error,
 ) {
-	elements := v.Elements()
-	values := make([]cadence.Value, len(elements))
+	values := make([]cadence.Value, 0, v.Count())
 
-	for i, value := range elements {
-		exportedValue, err := exportValueWithInterpreter(value, inter, seenReferences)
+	var err error
+	v.Iterate(func(value interpreter.Value) (resume bool) {
+		var exportedValue cadence.Value
+		exportedValue, err = exportValueWithInterpreter(value, inter, seenReferences)
 		if err != nil {
-			return cadence.Array{}, err
+			return false
 		}
-		values[i] = exportedValue
+		values = append(
+			values,
+			exportedValue,
+		)
+		return true
+	})
+	if err != nil {
+		return cadence.Array{}, err
 	}
 
 	return cadence.NewArray(values), nil
@@ -206,14 +216,89 @@ func exportCompositeValue(
 	fieldNames := t.CompositeFields()
 	fields := make([]cadence.Value, len(fieldNames))
 
-	fieldsMap := v.Fields()
 	for i, field := range fieldNames {
 		fieldName := field.Identifier
-		fieldValue, ok := fieldsMap.Get(fieldName)
 
-		if !ok && v.ComputedFields != nil {
-			if computedField, ok := v.ComputedFields.Get(fieldName); ok {
-				fieldValue = computedField(inter)
+		// TODO: provide proper location range
+		fieldValue := v.GetField(inter, interpreter.ReturnEmptyLocationRange, fieldName)
+		if fieldValue == nil && v.ComputedFields != nil {
+			if computedField, ok := v.ComputedFields[fieldName]; ok {
+				// TODO: provide proper location range
+				fieldValue = computedField(inter, interpreter.ReturnEmptyLocationRange)
+			}
+		}
+
+		exportedFieldValue, err := exportValueWithInterpreter(fieldValue, inter, seenReferences)
+		if err != nil {
+			return nil, err
+		}
+		fields[i] = exportedFieldValue
+	}
+
+	// NOTE: when modifying the cases below,
+	// also update the error message below!
+
+	switch staticType.Kind {
+	case common.CompositeKindStructure:
+		return cadence.NewStruct(fields).WithType(t.(*cadence.StructType)), nil
+	case common.CompositeKindResource:
+		return cadence.NewResource(fields).WithType(t.(*cadence.ResourceType)), nil
+	case common.CompositeKindEvent:
+		return cadence.NewEvent(fields).WithType(t.(*cadence.EventType)), nil
+	case common.CompositeKindContract:
+		return cadence.NewContract(fields).WithType(t.(*cadence.ContractType)), nil
+	case common.CompositeKindEnum:
+		return cadence.NewEnum(fields).WithType(t.(*cadence.EnumType)), nil
+	}
+
+	return nil, fmt.Errorf(
+		"invalid composite kind `%s`, must be %s",
+		staticType.Kind,
+		common.EnumerateWords(
+			[]string{
+				common.CompositeKindStructure.Name(),
+				common.CompositeKindResource.Name(),
+				common.CompositeKindEvent.Name(),
+				common.CompositeKindContract.Name(),
+				common.CompositeKindEnum.Name(),
+			},
+			"or",
+		),
+	)
+}
+
+func exportSimpleCompositeValue(
+	v *interpreter.SimpleCompositeValue,
+	inter *interpreter.Interpreter,
+	seenReferences seenReferences,
+) (
+	cadence.Value,
+	error,
+) {
+	dynamicType, ok := v.DynamicType(inter, interpreter.SeenReferences{}).(interpreter.CompositeDynamicType)
+	if !ok {
+		return nil, fmt.Errorf(
+			"unexportable composite value: %s", dynamicType.StaticType,
+		)
+	}
+	staticType := dynamicType.StaticType.(*sema.CompositeType)
+	// TODO: consider making the results map "global", by moving it up to exportValueWithInterpreter
+	t := exportCompositeType(staticType, map[sema.TypeID]cadence.Type{})
+
+	// NOTE: use the exported type's fields to ensure fields in type
+	// and value are in sync
+
+	fieldNames := t.CompositeFields()
+	fields := make([]cadence.Value, len(fieldNames))
+
+	for i, field := range fieldNames {
+		fieldName := field.Identifier
+
+		fieldValue := v.Fields[fieldName]
+		if fieldValue == nil && v.ComputedFields != nil {
+			if computedField, ok := v.ComputedFields[fieldName]; ok {
+				// TODO: provide proper location range
+				fieldValue = computedField(inter, interpreter.ReturnEmptyLocationRange)
 			}
 		}
 
@@ -264,28 +349,36 @@ func exportDictionaryValue(
 	cadence.Dictionary,
 	error,
 ) {
-	pairs := make([]cadence.KeyValuePair, v.Count())
+	pairs := make([]cadence.KeyValuePair, 0, v.Count())
 
-	for i, keyValue := range v.Keys().Elements() {
+	var err error
+	v.Iterate(func(key, value interpreter.Value) (resume bool) {
 
-		// NOTE: use `Get` instead of accessing `Entries`,
-		// so that the potentially deferred values are loaded from storage
-
-		value := v.Get(inter, interpreter.ReturnEmptyLocationRange, keyValue).(*interpreter.SomeValue).Value
-
-		convertedKey, err := exportValueWithInterpreter(keyValue, inter, seenReferences)
+		var convertedKey cadence.Value
+		convertedKey, err = exportValueWithInterpreter(key, inter, seenReferences)
 		if err != nil {
-			return cadence.Dictionary{}, err
-		}
-		convertedValue, err := exportValueWithInterpreter(value, inter, seenReferences)
-		if err != nil {
-			return cadence.Dictionary{}, err
+			return false
 		}
 
-		pairs[i] = cadence.KeyValuePair{
-			Key:   convertedKey,
-			Value: convertedValue,
+		var convertedValue cadence.Value
+		convertedValue, err = exportValueWithInterpreter(value, inter, seenReferences)
+		if err != nil {
+			return false
 		}
+
+		pairs = append(
+			pairs,
+			cadence.KeyValuePair{
+				Key:   convertedKey,
+				Value: convertedValue,
+			},
+		)
+
+		return true
+	})
+
+	if err != nil {
+		return cadence.Dictionary{}, err
 	}
 
 	return cadence.NewDictionary(pairs), nil
@@ -293,7 +386,7 @@ func exportDictionaryValue(
 
 func exportLinkValue(v interpreter.LinkValue, inter *interpreter.Interpreter) cadence.Link {
 	path := exportPathValue(v.TargetPath)
-	ty := string(inter.ConvertStaticToSemaType(v.Type).ID())
+	ty := string(inter.MustConvertStaticToSemaType(v.Type).ID())
 	return cadence.NewLink(path, ty)
 }
 
@@ -305,26 +398,25 @@ func exportPathValue(v interpreter.PathValue) cadence.Path {
 }
 
 func exportTypeValue(v interpreter.TypeValue, inter *interpreter.Interpreter) cadence.TypeValue {
-	var typeID string
-	staticType := v.Type
-	if staticType != nil {
-		typeID = string(inter.ConvertStaticToSemaType(staticType).ID())
+	var typ sema.Type
+	if v.Type != nil {
+		typ = inter.MustConvertStaticToSemaType(v.Type)
 	}
 	return cadence.TypeValue{
-		StaticType: typeID,
+		StaticType: ExportType(typ, map[sema.TypeID]cadence.Type{}),
 	}
 }
 
-func exportCapabilityValue(v interpreter.CapabilityValue, inter *interpreter.Interpreter) cadence.Capability {
-	var borrowType string
+func exportCapabilityValue(v *interpreter.CapabilityValue, inter *interpreter.Interpreter) cadence.Capability {
+	var borrowType sema.Type
 	if v.BorrowType != nil {
-		borrowType = string(inter.ConvertStaticToSemaType(v.BorrowType).ID())
+		borrowType = inter.MustConvertStaticToSemaType(v.BorrowType)
 	}
 
 	return cadence.Capability{
 		Path:       exportPathValue(v.Path),
 		Address:    cadence.NewAddress(v.Address),
-		BorrowType: borrowType,
+		BorrowType: ExportType(borrowType, map[sema.TypeID]cadence.Type{}),
 	}
 }
 
@@ -356,7 +448,7 @@ func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedTy
 	case cadence.String:
 		return interpreter.NewStringValue(string(v)), nil
 	case cadence.Bytes:
-		return interpreter.ByteSliceToByteArrayValue(v), nil
+		return interpreter.ByteSliceToByteArrayValue(inter, v), nil
 	case cadence.Address:
 		return interpreter.NewAddressValue(common.Address(v)), nil
 	case cadence.Int:
@@ -413,7 +505,6 @@ func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedTy
 			v.StructType.QualifiedIdentifier,
 			v.StructType.Fields,
 			v.Fields,
-			expectedType,
 		)
 	case cadence.Resource:
 		return importCompositeValue(
@@ -423,7 +514,6 @@ func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedTy
 			v.ResourceType.QualifiedIdentifier,
 			v.ResourceType.Fields,
 			v.Fields,
-			expectedType,
 		)
 	case cadence.Event:
 		return importCompositeValue(
@@ -433,7 +523,6 @@ func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedTy
 			v.EventType.QualifiedIdentifier,
 			v.EventType.Fields,
 			v.Fields,
-			expectedType,
 		)
 	case cadence.Enum:
 		return importCompositeValue(
@@ -443,7 +532,18 @@ func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedTy
 			v.EnumType.QualifiedIdentifier,
 			v.EnumType.Fields,
 			v.Fields,
-			expectedType,
+		)
+	case cadence.TypeValue:
+		return importTypeValue(
+			inter,
+			v.StaticType,
+		)
+	case cadence.Capability:
+		return importCapability(
+			inter,
+			v.Path,
+			v.Address,
+			v.BorrowType,
 		)
 	}
 
@@ -455,6 +555,55 @@ func importPathValue(v cadence.Path) interpreter.PathValue {
 		Domain:     common.PathDomainFromIdentifier(v.Domain),
 		Identifier: v.Identifier,
 	}
+}
+
+func importTypeValue(
+	inter *interpreter.Interpreter,
+	v cadence.Type,
+) (
+	interpreter.TypeValue,
+	error,
+) {
+	typ := ImportType(v)
+	/* creating a static type performs no validation, so
+	   in order to be sure the type we have created is legal,
+	   we convert it to a sema type. If this fails, the
+	   import is invalid */
+	_, err := inter.ConvertStaticToSemaType(typ)
+	if err != nil {
+		return interpreter.TypeValue{}, err
+	}
+
+	return interpreter.TypeValue{
+		Type: typ,
+	}, nil
+}
+
+func importCapability(
+	_ *interpreter.Interpreter,
+	path cadence.Path,
+	address cadence.Address,
+	borrowType cadence.Type,
+) (
+	*interpreter.CapabilityValue,
+	error,
+) {
+
+	_, ok := borrowType.(cadence.ReferenceType)
+
+	if !ok {
+		return nil, fmt.Errorf(
+			"cannot import capability: expected reference, got '%s'",
+			borrowType.ID(),
+		)
+	}
+
+	return &interpreter.CapabilityValue{
+		Path:       importPathValue(path),
+		Address:    interpreter.NewAddressValueFromBytes(address.Bytes()),
+		BorrowType: ImportType(borrowType),
+	}, nil
+
 }
 
 func importOptionalValue(
@@ -479,7 +628,7 @@ func importOptionalValue(
 		return nil, err
 	}
 
-	return interpreter.NewSomeValueOwningNonCopying(innerValue), nil
+	return interpreter.NewSomeValueNonCopying(innerValue), nil
 }
 
 func importArrayValue(
@@ -510,12 +659,32 @@ func importArrayValue(
 	if arrayType != nil {
 		staticArrayType = interpreter.ConvertSemaArrayTypeToStaticArrayType(arrayType)
 	} else {
+		types := make([]sema.Type, len(v.Values))
+
+		for i, value := range values {
+			typ, err := inter.ConvertStaticToSemaType(value.StaticType())
+			if err != nil {
+				return nil, err
+			}
+			types[i] = typ
+		}
+
+		elementSuperType := sema.LeastCommonSuperType(types...)
+		if elementSuperType == sema.InvalidType {
+			return nil, fmt.Errorf("cannot import array: elements do not belong to the same type")
+		}
+
 		staticArrayType = interpreter.VariableSizedStaticType{
-			Type: interpreter.PrimitiveStaticTypeAnyStruct,
+			Type: interpreter.ConvertSemaToStaticType(elementSuperType),
 		}
 	}
 
-	return interpreter.NewArrayValueUnownedNonCopying(staticArrayType, values...), nil
+	return interpreter.NewArrayValue(
+		inter,
+		staticArrayType,
+		common.Address{},
+		values...,
+	), nil
 }
 
 func importDictionaryValue(
@@ -555,58 +724,44 @@ func importDictionaryValue(
 	if dictionaryType != nil {
 		dictionaryStaticType = interpreter.ConvertSemaDictionaryTypeToStaticDictionaryType(dictionaryType)
 	} else {
-		var keyStaticType, valueStaticType interpreter.StaticType
+		size := len(v.Pairs)
+		keyTypes := make([]sema.Type, size)
+		valueTypes := make([]sema.Type, size)
 
-		if len(keysAndValues) == 0 {
-			keyStaticType = interpreter.PrimitiveStaticTypeNever
-			valueStaticType = interpreter.PrimitiveStaticTypeNever
-		} else {
-			// Infer the keys type from the first entry
-
-			key := keysAndValues[0]
-			keyStaticType = key.StaticType()
-			keySemaType := inter.ConvertStaticToSemaType(keyStaticType)
-
-			// Dictionary Keys could be a mix of numeric sub-types or path sub-types, and can be still valid.
-			// So always go for the safest option, by inferring the most generic type for numbers/paths.
-			// e.g: sending a value similar to: `var map: {Number:String} = {1: "int", 2.3: "fixed-point"}`
-
-			if sema.IsSubType(keySemaType, sema.NumberType) {
-				keyStaticType = interpreter.PrimitiveStaticTypeNumber
-			} else if sema.IsSubType(keySemaType, sema.PathType) {
-				keyStaticType = interpreter.PrimitiveStaticTypePath
-			} else if sema.IsValidDictionaryKeyType(keySemaType) {
-				// NO-OP. Use 'keyStaticType' as static type for keys
-			} else {
-				return nil, fmt.Errorf(
-					"cannot import dictionary: unsupported key: %v",
-					key,
-				)
+		for i := 0; i < size; i++ {
+			keyType, err := inter.ConvertStaticToSemaType(keysAndValues[i*2].StaticType())
+			if err != nil {
+				return nil, err
 			}
+			keyTypes[i] = keyType
 
-			// Make sure all keys are subtype of the inferred key-type
-
-			inferredKeySemaType := inter.ConvertStaticToSemaType(keyStaticType)
-
-			for i := 1; i < len(v.Pairs); i++ {
-				keySemaType := inter.ConvertStaticToSemaType(keysAndValues[i*2].StaticType())
-				if !sema.IsSubType(keySemaType, inferredKeySemaType) {
-					return nil, fmt.Errorf(
-						"cannot import dictionary: keys does not belong to the same type",
-					)
-				}
+			valueType, err := inter.ConvertStaticToSemaType(keysAndValues[i*2+1].StaticType())
+			if err != nil {
+				return nil, err
 			}
+			valueTypes[i] = valueType
+		}
 
-			valueStaticType = interpreter.PrimitiveStaticTypeAnyStruct
+		keySuperType := sema.LeastCommonSuperType(keyTypes...)
+		valueSuperType := sema.LeastCommonSuperType(valueTypes...)
+
+		if !sema.IsValidDictionaryKeyType(keySuperType) {
+			return nil, fmt.Errorf(
+				"cannot import dictionary: keys does not belong to the same type",
+			)
+		}
+
+		if valueSuperType == sema.InvalidType {
+			return nil, fmt.Errorf("cannot import dictionary: values does not belong to the same type")
 		}
 
 		dictionaryStaticType = interpreter.DictionaryStaticType{
-			KeyType:   keyStaticType,
-			ValueType: valueStaticType,
+			KeyType:   interpreter.ConvertSemaToStaticType(keySuperType),
+			ValueType: interpreter.ConvertSemaToStaticType(valueSuperType),
 		}
 	}
 
-	return interpreter.NewDictionaryValueUnownedNonCopying(
+	return interpreter.NewDictionaryValue(
 		inter,
 		dictionaryStaticType,
 		keysAndValues...,
@@ -620,14 +775,17 @@ func importCompositeValue(
 	qualifiedIdentifier string,
 	fieldTypes []cadence.Field,
 	fieldValues []cadence.Value,
-	expectedType sema.Type,
 ) (
 	*interpreter.CompositeValue,
 	error,
 ) {
-	fields := interpreter.NewStringValueOrderedMap()
+	var fields []interpreter.CompositeField
 
-	expectedCompositeType, ok := expectedType.(*sema.CompositeType)
+	typeID := common.NewTypeIDFromQualifiedName(location, qualifiedIdentifier)
+	compositeType, typeErr := inter.GetCompositeType(location, qualifiedIdentifier, typeID)
+	if typeErr != nil {
+		return nil, typeErr
+	}
 
 	for i := 0; i < len(fieldTypes) && i < len(fieldValues); i++ {
 		fieldType := fieldTypes[i]
@@ -635,11 +793,9 @@ func importCompositeValue(
 
 		var expectedFieldType sema.Type
 
+		member, ok := compositeType.Members.Get(fieldType.Identifier)
 		if ok {
-			member, ok := expectedCompositeType.Members.Get(fieldType.Identifier)
-			if ok {
-				expectedFieldType = member.TypeAnnotation.Type
-			}
+			expectedFieldType = member.TypeAnnotation.Type
 		}
 
 		importedFieldValue, err := importValue(inter, fieldValue, expectedFieldType)
@@ -647,9 +803,11 @@ func importCompositeValue(
 			return nil, err
 		}
 
-		fields.Set(
-			fieldType.Identifier,
-			importedFieldValue,
+		fields = append(fields,
+			interpreter.CompositeField{
+				Name:  fieldType.Identifier,
+				Value: importedFieldValue,
+			},
 		)
 	}
 
@@ -663,10 +821,12 @@ func importCompositeValue(
 		case sema.HashAlgorithmType:
 			// HashAlgorithmType has a dedicated constructor
 			// (e.g. it has host functions)
-			return importHashAlgorithm(fields)
+			return importHashAlgorithm(inter, fields)
 
 		case sema.SignatureAlgorithmType:
-			// continue in the normal path
+			// SignatureAlgorithmType has a dedicated constructor
+			// (e.g. it has host functions)
+			return importSignatureAlgorithm(inter, fields)
 
 		default:
 			return nil, fmt.Errorf(
@@ -677,17 +837,18 @@ func importCompositeValue(
 	}
 
 	return interpreter.NewCompositeValue(
+		inter,
 		location,
 		qualifiedIdentifier,
 		kind,
 		fields,
-		nil,
+		common.Address{},
 	), nil
 }
 
 func importPublicKey(
 	inter *interpreter.Interpreter,
-	fields *interpreter.StringValueOrderedMap,
+	fields []interpreter.CompositeField,
 ) (
 	*interpreter.CompositeValue,
 	error,
@@ -698,29 +859,29 @@ func importPublicKey(
 
 	ty := sema.PublicKeyType
 
-	err := fields.ForeachWithError(func(fieldName string, value interpreter.Value) error {
-		switch fieldName {
+	for _, field := range fields {
+		switch field.Name {
 		case sema.PublicKeyPublicKeyField:
-			arrayValue, ok := value.(*interpreter.ArrayValue)
+			arrayValue, ok := field.Value.(*interpreter.ArrayValue)
 			if !ok {
-				return fmt.Errorf(
+				return nil, fmt.Errorf(
 					"cannot import value of type '%s'. invalid value for field '%s': %v",
 					ty,
-					fieldName,
-					value,
+					field.Name,
+					field.Value,
 				)
 			}
 
 			publicKeyValue = arrayValue
 
 		case sema.PublicKeySignAlgoField:
-			compositeValue, ok := value.(*interpreter.CompositeValue)
+			compositeValue, ok := field.Value.(*interpreter.CompositeValue)
 			if !ok {
-				return fmt.Errorf(
+				return nil, fmt.Errorf(
 					"cannot import value of type '%s'. invalid value for field '%s': %v",
 					ty,
-					fieldName,
-					value,
+					field.Name,
+					field.Value,
 				)
 			}
 
@@ -731,17 +892,13 @@ func importPublicKey(
 			// This is calculated when creating the public key.
 
 		default:
-			return fmt.Errorf(
+			return nil, fmt.Errorf(
 				"cannot import value of type '%s'. invalid field '%s'",
 				ty,
-				fieldName,
+				field.Name,
 			)
 		}
 
-		return nil
-	})
-	if err != nil {
-		return nil, err
 	}
 
 	if publicKeyValue == nil {
@@ -760,7 +917,10 @@ func importPublicKey(
 		)
 	}
 
+	// TODO: provide proper location range
 	return interpreter.NewPublicKeyValue(
+		inter,
+		interpreter.ReturnEmptyLocationRange,
 		publicKeyValue,
 		signAlgoValue,
 		inter.PublicKeyValidationHandler,
@@ -768,7 +928,8 @@ func importPublicKey(
 }
 
 func importHashAlgorithm(
-	fields *interpreter.StringValueOrderedMap,
+	inter *interpreter.Interpreter,
+	fields []interpreter.CompositeField,
 ) (
 	*interpreter.CompositeValue,
 	error,
@@ -779,31 +940,26 @@ func importHashAlgorithm(
 
 	ty := sema.HashAlgorithmType
 
-	err := fields.ForeachWithError(func(fieldName string, value interpreter.Value) error {
-		switch fieldName {
+	for _, field := range fields {
+		switch field.Name {
 		case sema.EnumRawValueFieldName:
-			rawValue, foundRawValue = value.(interpreter.UInt8Value)
+			rawValue, foundRawValue = field.Value.(interpreter.UInt8Value)
 			if !foundRawValue {
-				return fmt.Errorf(
+				return nil, fmt.Errorf(
 					"cannot import value of type '%s'. invalid value for field '%s': %v",
 					ty,
-					fieldName,
-					value,
+					field.Name,
+					field.Value,
 				)
 			}
 
 		default:
-			return fmt.Errorf(
+			return nil, fmt.Errorf(
 				"cannot import value of type '%s'. invalid field '%s'",
 				ty,
-				fieldName,
+				field.Name,
 			)
 		}
-
-		return nil
-	})
-	if err != nil {
-		return nil, err
 	}
 
 	if !foundRawValue {
@@ -814,5 +970,51 @@ func importHashAlgorithm(
 		)
 	}
 
-	return stdlib.NewHashAlgorithmCase(uint8(rawValue)), nil
+	return stdlib.NewHashAlgorithmCase(inter, uint8(rawValue)), nil
+}
+
+func importSignatureAlgorithm(
+	inter *interpreter.Interpreter,
+	fields []interpreter.CompositeField,
+) (
+	*interpreter.CompositeValue,
+	error,
+) {
+
+	var foundRawValue bool
+	var rawValue interpreter.UInt8Value
+
+	ty := sema.SignatureAlgorithmType
+
+	for _, field := range fields {
+		switch field.Name {
+		case sema.EnumRawValueFieldName:
+			rawValue, foundRawValue = field.Value.(interpreter.UInt8Value)
+			if !foundRawValue {
+				return nil, fmt.Errorf(
+					"cannot import value of type '%s'. invalid value for field '%s': %v",
+					ty,
+					field.Name,
+					field.Value,
+				)
+			}
+
+		default:
+			return nil, fmt.Errorf(
+				"cannot import value of type '%s'. invalid field '%s'",
+				ty,
+				field.Name,
+			)
+		}
+	}
+
+	if !foundRawValue {
+		return nil, fmt.Errorf(
+			"cannot import value of type '%s'. missing field '%s'",
+			ty,
+			sema.EnumRawValueFieldName,
+		)
+	}
+
+	return stdlib.NewSignatureAlgorithmCase(inter, uint8(rawValue)), nil
 }

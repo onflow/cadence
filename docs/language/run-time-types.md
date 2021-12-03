@@ -32,6 +32,16 @@ Type<Int>() == Type<Int>()
 Type<Int>() != Type<String>()
 ```
 
+The method `fun isSubtype(of otherType: Type): Bool` can be used to compare the run-time types of values.
+
+```cadence
+Type<Int>().isSubtype(of: Type<Int>()) // true
+
+Type<Int>().isSubtype(of: Type<String>()) // false
+
+Type<Int>().isSubtype(of: Type<Int?>()) // true
+```
+
 To get the run-time type's fully qualified type identifier, use the `let identifier: String` field:
 
 ```cadence
@@ -71,6 +81,49 @@ let something: @AnyResource <- create Collectible()
 //
 let type: Type = something.getType()
 // `type` is `Type<@Collectible>()`
+```
+
+### Constructing a Run-time Type
+
+Run-time types can also be constructed from type identifier strings using built-in constructor functions. 
+
+```cadence
+fun CompositeType(_ identifier: String): Type?
+fun InterfaceType(_ identifier: String): Type?
+fun RestrictedType(identifier: String?, restrictions: [String]): Type?
+```
+
+Given a type identifer (as well as a list of identifiers for restricting interfaces
+in the case of `RestrictedType`), these functions will look up nominal types and
+produce their run-time equivalents. If the provided identifiers do not correspond
+to any types, or (in the case of `RestrictedType`) the provided combination of 
+identifiers would not type-check statically, these functions will produce `nil`.
+
+```cadence
+struct Test {}
+struct interface I {}
+let type: Type = CompositeType("A.0000000000000001.Test")
+// `type` is `Type<Test>`
+
+let type2: Type = RestrictedType(
+    identifier: type.identifier, 
+    restrictions: ["A.0000000000000001.I"]
+)
+// `type2` is `Type<Test{I}>`
+```
+
+Other built-in functions will construct compound types from other run-types.
+
+```cadence
+fun OptionalType(_ type: Type): Type
+fun VariableSizedArrayType(_ type: Type): Type
+fun ConstantSizedArrayType(type: Type, size: Int): Type
+fun FunctionType(parameters: [Type], return: Type): Type
+// returns `nil` if `key` is not valid dictionary key type
+fun DictionaryType(key: Type, value: Type): Type?
+// returns `nil` if `type` is not a reference type
+fun CapabilityType(_ type: Type): Type?
+fun ReferenceType(authorized: bool, type: Type): Type
 ```
 
 ### Asserting the Type of a Value

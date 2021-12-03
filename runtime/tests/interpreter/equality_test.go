@@ -21,8 +21,9 @@ package interpreter_test
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	. "github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -38,19 +39,19 @@ func TestInterpretEquality(t *testing.T) {
 
 		t.Parallel()
 
-		capabilityValue := interpreter.CapabilityValue{
-			Address: interpreter.NewAddressValue(common.BytesToAddress([]byte{0x1})),
-			Path: interpreter.PathValue{
-				Domain:     common.PathDomainStorage,
-				Identifier: "something",
-			},
-		}
-
 		capabilityValueDeclaration := stdlib.StandardLibraryValue{
-			Name:  "cap",
-			Type:  &sema.CapabilityType{},
-			Value: capabilityValue,
-			Kind:  common.DeclarationKindConstant,
+			Name: "cap",
+			Type: &sema.CapabilityType{},
+			ValueFactory: func(_ *interpreter.Interpreter) interpreter.Value {
+				return &interpreter.CapabilityValue{
+					Address: interpreter.NewAddressValue(common.BytesToAddress([]byte{0x1})),
+					Path: interpreter.PathValue{
+						Domain:     common.PathDomainStorage,
+						Identifier: "something",
+					},
+				}
+			},
+			Kind: common.DeclarationKindConstant,
 		}
 
 		inter, err := parseCheckAndInterpretWithOptions(t,
@@ -75,12 +76,16 @@ func TestInterpretEquality(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.BoolValue(true),
 			inter.Globals["res1"].GetValue(),
 		)
 
-		assert.Equal(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.BoolValue(true),
 			inter.Globals["res2"].GetValue(),
 		)
@@ -99,12 +104,16 @@ func TestInterpretEquality(t *testing.T) {
           let res2 = maybeFuncNil == nil
 		`)
 
-		assert.Equal(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.BoolValue(true),
 			inter.Globals["res1"].GetValue(),
 		)
 
-		assert.Equal(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.BoolValue(true),
 			inter.Globals["res2"].GetValue(),
 		)
@@ -119,7 +128,9 @@ func TestInterpretEquality(t *testing.T) {
           let res = nil == n
 		`)
 
-		assert.Equal(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.BoolValue(false),
 			inter.Globals["res"].GetValue(),
 		)

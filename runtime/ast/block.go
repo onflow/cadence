@@ -27,6 +27,10 @@ type Block struct {
 	Range
 }
 
+func (b *Block) IsEmpty() bool {
+	return len(b.Statements) == 0
+}
+
 func (b *Block) Accept(visitor Visitor) Repr {
 	return visitor.VisitBlock(b)
 }
@@ -52,6 +56,13 @@ type FunctionBlock struct {
 	Block          *Block
 	PreConditions  *Conditions `json:",omitempty"`
 	PostConditions *Conditions `json:",omitempty"`
+}
+
+func (b *FunctionBlock) IsEmpty() bool {
+	return b == nil ||
+		(b.Block.IsEmpty() &&
+			b.PreConditions.IsEmpty() &&
+			b.PostConditions.IsEmpty())
 }
 
 func (b *FunctionBlock) Accept(visitor Visitor) Repr {
@@ -96,3 +107,7 @@ type Condition struct {
 // Conditions
 
 type Conditions []*Condition
+
+func (c *Conditions) IsEmpty() bool {
+	return c == nil || len(*c) == 0
+}

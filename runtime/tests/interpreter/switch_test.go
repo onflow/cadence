@@ -24,6 +24,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	. "github.com/onflow/cadence/runtime/tests/utils"
+
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/checker"
@@ -67,7 +69,7 @@ func TestInterpretSwitchStatement(t *testing.T) {
 			actual, err := inter.Invoke("test", argument)
 			require.NoError(t, err)
 
-			assert.Equal(t, expected, actual)
+			AssertValuesEqual(t, inter, expected, actual)
 		}
 	})
 
@@ -107,7 +109,7 @@ func TestInterpretSwitchStatement(t *testing.T) {
 			actual, err := inter.Invoke("test", argument)
 			require.NoError(t, err)
 
-			assert.Equal(t, expected, actual)
+			AssertValuesEqual(t, inter, expected, actual)
 		}
 	})
 
@@ -148,7 +150,7 @@ func TestInterpretSwitchStatement(t *testing.T) {
 			actual, err := inter.Invoke("test", argument)
 			require.NoError(t, err)
 
-			assert.Equal(t, expected, actual)
+			AssertValuesEqual(t, inter, expected, actual)
 		}
 	})
 
@@ -190,9 +192,11 @@ func TestInterpretSwitchStatement(t *testing.T) {
 			require.IsType(t, actual, &interpreter.ArrayValue{})
 			arrayValue := actual.(*interpreter.ArrayValue)
 
-			assert.Equal(t,
+			AssertValueSlicesEqual(
+				t,
+				inter,
 				expectedValues,
-				arrayValue.Elements(),
+				arrayElements(inter, arrayValue),
 			)
 		}
 	})
@@ -231,10 +235,10 @@ func TestInterpretSwitchStatement(t *testing.T) {
 		for _, testCase := range []testCase{
 			{
 				[]interpreter.Value{
-					interpreter.NewSomeValueOwningNonCopying(
+					interpreter.NewSomeValueNonCopying(
 						interpreter.NewIntValueFromInt64(1),
 					),
-					interpreter.NewSomeValueOwningNonCopying(
+					interpreter.NewSomeValueNonCopying(
 						interpreter.NewIntValueFromInt64(1),
 					),
 				},
@@ -243,7 +247,7 @@ func TestInterpretSwitchStatement(t *testing.T) {
 			{
 				[]interpreter.Value{
 					interpreter.NilValue{},
-					interpreter.NewSomeValueOwningNonCopying(
+					interpreter.NewSomeValueNonCopying(
 						interpreter.NewIntValueFromInt64(1),
 					),
 				},
@@ -251,10 +255,10 @@ func TestInterpretSwitchStatement(t *testing.T) {
 			},
 			{
 				[]interpreter.Value{
-					interpreter.NewSomeValueOwningNonCopying(
+					interpreter.NewSomeValueNonCopying(
 						interpreter.NewIntValueFromInt64(1),
 					),
-					interpreter.NewSomeValueOwningNonCopying(
+					interpreter.NewSomeValueNonCopying(
 						interpreter.NewIntValueFromInt64(2),
 					),
 				},
@@ -264,7 +268,7 @@ func TestInterpretSwitchStatement(t *testing.T) {
 			actual, err := inter.Invoke("test", testCase.arguments...)
 			require.NoError(t, err)
 
-			assert.Equal(t, testCase.expected, actual)
+			AssertValuesEqual(t, inter, testCase.expected, actual)
 		}
 	})
 }

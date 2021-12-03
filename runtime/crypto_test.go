@@ -22,9 +22,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/onflow/cadence/encoding/json"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/cadence/encoding/json"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/sema"
@@ -35,7 +36,7 @@ func TestRuntimeCrypto_verify(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewInterpreterRuntime()
+	runtime := newTestInterpreterRuntime()
 
 	script := []byte(`
       import Crypto
@@ -69,7 +70,10 @@ func TestRuntimeCrypto_verify(t *testing.T) {
 
 	called := false
 
+	storage := newTestLedger(nil, nil)
+
 	runtimeInterface := &testRuntimeInterface{
+		storage: storage,
 		verifySignature: func(
 			signature []byte,
 			tag string,
@@ -112,7 +116,7 @@ func TestRuntimeHashAlgorithm_hash(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewInterpreterRuntime()
+	runtime := newTestInterpreterRuntime()
 
 	executeScript := func(code string, inter Interface) (cadence.Value, error) {
 		return runtime.ExecuteScript(
@@ -137,7 +141,10 @@ func TestRuntimeHashAlgorithm_hash(t *testing.T) {
 
 		var loggedMessages []string
 
+		storage := newTestLedger(nil, nil)
+
 		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
 			hash: func(
 				data []byte,
 				tag string,
@@ -176,7 +183,10 @@ func TestRuntimeHashAlgorithm_hash(t *testing.T) {
 		called := false
 		hashTag := "non-empty-string"
 
+		storage := newTestLedger(nil, nil)
+
 		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
 			hash: func(data []byte, tag string, hashAlgorithm HashAlgorithm) ([]byte, error) {
 				called = true
 				hashTag = tag
@@ -204,7 +214,10 @@ func TestRuntimeHashAlgorithm_hash(t *testing.T) {
 		called := false
 		hashTag := ""
 
+		storage := newTestLedger(nil, nil)
+
 		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
 			hash: func(data []byte, tag string, hashAlgorithm HashAlgorithm) ([]byte, error) {
 				called = true
 				hashTag = tag
@@ -224,7 +237,7 @@ func TestRuntimeHashingAlgorithmExport(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewInterpreterRuntime()
+	runtime := newTestInterpreterRuntime()
 	runtimeInterface := &testRuntimeInterface{}
 
 	testHashAlgorithm := func(algo sema.CryptoAlgorithm) {
@@ -264,7 +277,7 @@ func TestRuntimeSignatureAlgorithmExport(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewInterpreterRuntime()
+	runtime := newTestInterpreterRuntime()
 	runtimeInterface := &testRuntimeInterface{}
 
 	testSignatureAlgorithm := func(algo sema.CryptoAlgorithm) {
@@ -304,7 +317,7 @@ func TestRuntimeSignatureAlgorithmImport(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewInterpreterRuntime()
+	runtime := newTestInterpreterRuntime()
 	runtimeInterface := &testRuntimeInterface{
 		decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 			return json.Decode(b)
@@ -375,8 +388,11 @@ func TestRuntimeHashAlgorithmImport(t *testing.T) {
 		var logs []string
 		var hashCalls int
 
-		runtime := NewInterpreterRuntime()
+		storage := newTestLedger(nil, nil)
+
+		runtime := newTestInterpreterRuntime()
 		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
 			hash: func(data []byte, tag string, hashAlgorithm HashAlgorithm) ([]byte, error) {
 				hashCalls++
 				switch hashCalls {
@@ -438,4 +454,184 @@ func TestRuntimeHashAlgorithmImport(t *testing.T) {
 	for _, algo := range sema.SignatureAlgorithms {
 		testHashAlgorithm(algo)
 	}
+}
+
+func TestBLSVerifyPoP(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := newTestInterpreterRuntime()
+
+	script := []byte(`
+
+      pub fun main(): Bool {
+          let publicKey = PublicKey(
+              publicKey: "0102".decodeHex(),
+              signatureAlgorithm: SignatureAlgorithm.BLS_BLS12_381
+          )
+
+          return publicKey.verifyPoP([1, 2, 3, 4, 5])
+      }
+    `)
+
+	called := false
+
+	storage := newTestLedger(nil, nil)
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: storage,
+		bLSVerifyPOP: func(
+			pk *PublicKey,
+			proof []byte,
+		) (bool, error) {
+			assert.Equal(t, pk.PublicKey, []byte{1, 2})
+			called = true
+			return true, nil
+		},
+	}
+
+	result, err := runtime.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  utils.TestLocation,
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		cadence.NewBool(true),
+		result,
+	)
+
+	assert.True(t, called)
+}
+
+func TestBLSAggregateSignatures(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := newTestInterpreterRuntime()
+
+	script := []byte(`
+
+      pub fun main(): [UInt8] {
+		return AggregateBLSSignatures([
+			  [1, 1, 1, 1, 1], 
+			  [2, 2, 2, 2, 2],
+			  [3, 3, 3, 3, 3],
+			  [4, 4, 4, 4, 4],
+			  [5, 5, 5, 5, 5]
+			])
+      }
+    `)
+
+	called := false
+
+	storage := newTestLedger(nil, nil)
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: storage,
+		aggregateBLSSignatures: func(
+			sigs [][]byte,
+		) ([]byte, error) {
+			assert.Equal(t, len(sigs), 5)
+			ret := make([]byte, 0, len(sigs[0]))
+			for i, sig := range sigs {
+				ret = append(ret, sig[i])
+			}
+			called = true
+			return ret, nil
+		},
+	}
+
+	result, err := runtime.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  utils.TestLocation,
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		cadence.NewArray([]cadence.Value{
+			cadence.UInt8(1),
+			cadence.UInt8(2),
+			cadence.UInt8(3),
+			cadence.UInt8(4),
+			cadence.UInt8(5),
+		}),
+		result,
+	)
+
+	assert.True(t, called)
+}
+
+func TestAggregateBLSPublicKeys(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := newTestInterpreterRuntime()
+
+	script := []byte(`
+
+      pub fun main(): PublicKey {
+		let k1 = PublicKey(
+			publicKey: "0102".decodeHex(),
+			signatureAlgorithm: SignatureAlgorithm.BLS_BLS12_381
+		)
+		let k2 = PublicKey(
+			publicKey: "0102".decodeHex(),
+			signatureAlgorithm: SignatureAlgorithm.BLS_BLS12_381
+		)
+		return AggregateBLSPublicKeys([k1, k2])
+      }
+    `)
+
+	called := false
+
+	storage := newTestLedger(nil, nil)
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: storage,
+		aggregateBLSPublicKeys: func(
+			keys []*PublicKey,
+		) (*PublicKey, error) {
+			assert.Equal(t, len(keys), 2)
+			ret := make([]byte, 0, len(keys))
+			for _, key := range keys {
+				ret = append(ret, key.PublicKey...)
+			}
+			called = true
+			return &PublicKey{PublicKey: ret, SignAlgo: SignatureAlgorithmBLS_BLS12_381}, nil
+		},
+	}
+
+	result, err := runtime.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  utils.TestLocation,
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		cadence.NewArray([]cadence.Value{
+			cadence.UInt8(1),
+			cadence.UInt8(2),
+			cadence.UInt8(1),
+			cadence.UInt8(2),
+		}),
+		result.(cadence.Struct).Fields[0],
+	)
+
+	assert.True(t, called)
 }

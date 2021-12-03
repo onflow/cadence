@@ -207,15 +207,14 @@ func (e DivisionByZeroError) Error() string {
 	return "division by zero"
 }
 
-// DestroyedCompositeError
+// InvalidatedResourceError
 
-type DestroyedCompositeError struct {
-	CompositeKind common.CompositeKind
+type InvalidatedResourceError struct {
 	LocationRange
 }
 
-func (e DestroyedCompositeError) Error() string {
-	return fmt.Sprintf("%s is destroyed and cannot be accessed anymore", e.CompositeKind.Name())
+func (e InvalidatedResourceError) Error() string {
+	return "resource is invalidated and cannot be used anymore"
 }
 
 // ForceAssignmentToNonNilResourceError
@@ -396,21 +395,6 @@ func (e TypeLoadingError) Error() string {
 	return fmt.Sprintf("failed to load type: %s", e.TypeID)
 }
 
-// EncodingUnsupportedValueError
-//
-type EncodingUnsupportedValueError struct {
-	Value Value
-	Path  []string
-}
-
-func (e EncodingUnsupportedValueError) Error() string {
-	return fmt.Sprintf(
-		"encoding unsupported value to path [%s]: %[2]T, %[2]v",
-		strings.Join(e.Path, ","),
-		e.Value,
-	)
-}
-
 // MissingMemberValueError
 
 type MissingMemberValueError struct {
@@ -487,12 +471,53 @@ func (e ResourceConstructionError) Error() string {
 //
 type ContainerMutationError struct {
 	ExpectedType sema.Type
+	ActualType   sema.Type
 	LocationRange
 }
 
 func (e ContainerMutationError) Error() string {
 	return fmt.Sprintf(
-		"invalid container update: expected a subtype of '%s'",
+		"invalid container update: expected a subtype of '%s', found '%s'",
 		e.ExpectedType.QualifiedString(),
+		e.ActualType.QualifiedString(),
+	)
+}
+
+// NonStorableValueError
+//
+type NonStorableValueError struct {
+	Value Value
+}
+
+func (e NonStorableValueError) Error() string {
+	return fmt.Sprintf(
+		"cannot store non-storable value: %s",
+		e.Value,
+	)
+}
+
+// NonStorableStaticTypeError
+//
+type NonStorableStaticTypeError struct {
+	Type StaticType
+}
+
+func (e NonStorableStaticTypeError) Error() string {
+	return fmt.Sprintf(
+		"cannot store non-storable static type: %s",
+		e.Type,
+	)
+}
+
+// InterfaceMissingLocation is reported during interface lookup,
+// if an interface is looked up without a location
+type InterfaceMissingLocationError struct {
+	QualifiedIdentifier string
+}
+
+func (e *InterfaceMissingLocationError) Error() string {
+	return fmt.Sprintf(
+		"tried to look up interface %s without a location",
+		e.QualifiedIdentifier,
 	)
 }
