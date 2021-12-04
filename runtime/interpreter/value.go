@@ -654,7 +654,7 @@ func (v *StringValue) HashInput(_ *Interpreter, _ func() LocationRange, scratch 
 	}
 
 	buffer[0] = byte(HashInputTypeString)
-	copy(buffer[1:], []byte(v.Str))
+	copy(buffer[1:], v.Str)
 	return buffer
 }
 
