@@ -3749,7 +3749,11 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 			// which reads the stored value
 			// and performs a dynamic type check
 
-			if reference.ReferencedValue(interpreter) == nil {
+			value, errFunc := reference.dereference(interpreter)
+			if errFunc != nil {
+				panic(errFunc(invocation.GetLocationRange()))
+			}
+			if value == nil {
 				return NilValue{}
 			}
 
