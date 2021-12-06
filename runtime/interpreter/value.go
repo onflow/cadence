@@ -10122,7 +10122,7 @@ func (s SomeStorable) ChildStorables() []atree.Storable {
 type StorageReferenceValue struct {
 	Authorized           bool
 	TargetStorageAddress common.Address
-	TargetKey            string
+	TargetPath           PathValue
 	BorrowedType         sema.Type
 }
 
@@ -10177,30 +10177,28 @@ func (v *StorageReferenceValue) StaticType() StaticType {
 }
 
 func (v *StorageReferenceValue) dereference(interpreter *Interpreter) (*Value, func(LocationRange) error) {
-	switch referenced := interpreter.ReadStored(v.TargetStorageAddress, v.TargetKey).(type) {
-	case *SomeValue:
-		value := referenced.Value
+	address := v.TargetStorageAddress
+	domain := v.TargetPath.Domain.Identifier()
+	identifier := v.TargetPath.Identifier
 
-		if v.BorrowedType != nil {
-			dynamicType := value.DynamicType(interpreter, SeenReferences{})
-			if !interpreter.IsSubType(dynamicType, v.BorrowedType) {
-				return nil, func(lr LocationRange) error {
-					return ForceCastTypeMismatchError{
-						ExpectedType:  v.BorrowedType,
-						LocationRange: lr,
-					}
+	referenced := interpreter.ReadStored(address, domain, identifier)
+	if referenced == nil {
+		return nil, nil
+	}
+
+	if v.BorrowedType != nil {
+		dynamicType := referenced.DynamicType(interpreter, SeenReferences{})
+		if !interpreter.IsSubType(dynamicType, v.BorrowedType) {
+			return nil, func(lr LocationRange) error {
+				return ForceCastTypeMismatchError{
+					ExpectedType:  v.BorrowedType,
+					LocationRange: lr,
 				}
 			}
 		}
-
-		return &value, nil
-
-	case NilValue:
-		return nil, nil
-
-	default:
-		panic(errors.NewUnreachableError())
 	}
+
+	return &referenced, nil
 }
 
 func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter) *Value {
@@ -10355,7 +10353,7 @@ func (v *StorageReferenceValue) Equal(_ *Interpreter, _ func() LocationRange, ot
 	otherReference, ok := other.(*StorageReferenceValue)
 	if !ok ||
 		v.TargetStorageAddress != otherReference.TargetStorageAddress ||
-		v.TargetKey != otherReference.TargetKey ||
+		v.TargetPath != otherReference.TargetPath ||
 		v.Authorized != otherReference.Authorized {
 
 		return false
@@ -10436,7 +10434,7 @@ func (v *StorageReferenceValue) Clone(_ *Interpreter) Value {
 	return &StorageReferenceValue{
 		Authorized:           v.Authorized,
 		TargetStorageAddress: v.TargetStorageAddress,
-		TargetKey:            v.TargetKey,
+		TargetPath:           v.TargetPath,
 		BorrowedType:         v.BorrowedType,
 	}
 }
@@ -11005,6 +11003,8 @@ type PathValue struct {
 	Domain     common.PathDomain
 	Identifier string
 }
+
+var EmptyPathValue = PathValue{}
 
 var _ Value = PathValue{}
 var _ atree.Storable = PathValue{}

@@ -45,7 +45,7 @@ jobs:
 
       - name: Run benchmark on current branch
         run: |
-          go test ./... -run=XXX -bench=. -shuffle=on -count ${{ steps.settings.outputs.benchmark_repetitions }} | sed 's/pkg:.*/pkg: github.com\/onflow\/cadence\/runtime/' | tee new.txt
+          ( for i in {1..${{ steps.settings.outputs.benchmark_repetitions }}}; do go test ./... -run=XXX -bench=. -shuffle=on; done | sed 's/pkg:.*/pkg: github.com\/onflow\/cadence\/runtime/' ) | tee new.txt
       # the package replace line above is to make the results table more readable, since it is not fragmented by package
       
 
@@ -54,7 +54,7 @@ jobs:
 
       - name: Run benchmark on base branch
         run: |
-          go test ./... -run=XXX -bench=. -shuffle=on -count ${{ steps.settings.outputs.benchmark_repetitions }} | sed 's/pkg:.*/pkg: github.com\/onflow\/cadence\/runtime/' | tee old.txt
+          ( for i in {1..${{ steps.settings.outputs.benchmark_repetitions }}}; do go test ./... -run=XXX -bench=. -shuffle=on; done | sed 's/pkg:.*/pkg: github.com\/onflow\/cadence\/runtime/' ) | tee old.txt
 
       # see https://trstringer.com/github-actions-multiline-strings/ to see why this part is complex
       - name: Use benchstat for comparison
@@ -80,7 +80,7 @@ jobs:
           body: |
             ## Cadence [Benchstat](https://pkg.go.dev/golang.org/x/perf/cmd/benchstat) comparison
             This branch with compared with the base branch ${{  github.event.pull_request.base.label }} commit ${{ github.event.pull_request.base.sha }}
-            The command `go test ./... -run=XXX -bench=. -shuffle=on -count N` was used.
+            The command `for i in {1..N}; do go test ./... -run=XXX -bench=. -shuffle=on; done` was used.
             Bench tests were run a total of ${{ steps.settings.outputs.benchmark_repetitions }} times on each branch.
             ## Results
             ${{ env.BENCHSTAT }}
