@@ -1070,9 +1070,10 @@ func TestCheckInvalidDictionaryAccessReference(t *testing.T) {
       let ref = &xs[1] as &String
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := ExpectCheckerErrors(t, err, 2)
 
 	require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	require.IsType(t, &sema.OptionalTypeReferenceError{}, errs[1])
 
 	typeMismatchError := errs[0].(*sema.TypeMismatchError)
 	assert.Equal(t, 17, typeMismatchError.StartPos.Column)
@@ -1087,18 +1088,17 @@ func TestCheckInvalidDictionaryAccessOptionalReference(t *testing.T) {
 		pub struct S {
 			pub let foo : Number
 			init() {
-			self.foo = 0
+				self.foo = 0
 			}
 		}
 		let dict: {String : S} = {}
-		let key: String = ""
-		let s = &dict[key] as? &S
+		let s = &dict[""] as? &S
 		let n: Number = s.foo
     `)
 
 	errs := ExpectCheckerErrors(t, err, 1)
 
-	require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	require.IsType(t, &sema.OptionalTypeReferenceError{}, errs[0])
 }
 
 func TestCheckReferenceTypeImplicitConformance(t *testing.T) {

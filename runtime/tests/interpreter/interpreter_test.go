@@ -8010,7 +8010,7 @@ func TestInterpretNonStorageReferenceToOptional(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t,
+	_, err := parseCheckAndInterpretWithOptions(t,
 		`
           resource Foo {
               let name: String
@@ -8020,7 +8020,6 @@ func TestInterpretNonStorageReferenceToOptional(t *testing.T) {
               }
           }
 
-
           fun testSome(): String {
               let xs: @{String: Foo} <- {"yes": <-create Foo(name: "YES")}
               let ref = &xs["yes"] as &Foo
@@ -8028,32 +8027,19 @@ func TestInterpretNonStorageReferenceToOptional(t *testing.T) {
               destroy xs
               return name
           }
-
-          fun testNil(): String {
-              let xs: @{String: Foo} <- {}
-              let ref = &xs["no"] as &Foo
-              let name = ref.name
-              destroy xs
-              return name
-          }
         `,
+		ParseCheckAndInterpretOptions{
+			Options: []interpreter.Option{
+				makeContractValueHandler(nil, nil, nil),
+			},
+			HandleCheckerError: func(err error) {
+				errs := checker.ExpectCheckerErrors(t, err, 1)
+
+				assert.IsType(t, &sema.OptionalTypeReferenceError{}, errs[0])
+			},
+		},
 	)
-
-	t.Run("some", func(t *testing.T) {
-		value, err := inter.Invoke("testSome")
-		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter, interpreter.NewStringValue("YES"), value)
-	})
-
-	t.Run("nil", func(t *testing.T) {
-		_, err := inter.Invoke("testNil")
-		require.Error(t, err)
-
-		require.ErrorAs(t, err, &interpreter.DereferenceError{})
-	})
+	require.NoError(t, err)
 }
 
 func TestInterpretFix64(t *testing.T) {
@@ -8860,6 +8846,11 @@ func TestInterpretEphemeralReferenceToOptional(t *testing.T) {
 		ParseCheckAndInterpretOptions{
 			Options: []interpreter.Option{
 				makeContractValueHandler(nil, nil, nil),
+			},
+			HandleCheckerError: func(err error) {
+				errs := checker.ExpectCheckerErrors(t, err, 1)
+
+				assert.IsType(t, &sema.OptionalTypeReferenceError{}, errs[0])
 			},
 		},
 	)

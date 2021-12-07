@@ -67,12 +67,6 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 
 		_, referencedType = checker.visitExpression(indexExpression, expectedType)
 
-		// Unwrap the optional one level, but not infinitely
-
-		if optionalReferencedType, ok := referencedType.(*OptionalType); ok {
-			referencedType = optionalReferencedType.Type
-		}
-
 	} else {
 		// If the referenced expression is not an index expression, check it normally
 		_, referencedType = checker.visitExpression(referencedExpression, targetType)
