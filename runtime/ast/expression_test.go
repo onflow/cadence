@@ -2045,18 +2045,21 @@ func TestFunctionExpression_Doc(t *testing.T) {
 					// TODO: type
 				},
 			},
-			prettier.Text(" {"),
-			prettier.Indent{
-				Doc: prettier.Concat{
-					prettier.HardLine{},
-					prettier.Concat{
-						prettier.Text("return "),
-						prettier.Text("1"),
+			prettier.Text(" "),
+			prettier.Concat{
+				prettier.Text("{"),
+				prettier.Indent{
+					Doc: prettier.Concat{
+						prettier.HardLine{},
+						prettier.Concat{
+							prettier.Text("return "),
+							prettier.Text("1"),
+						},
 					},
 				},
+				prettier.HardLine{},
+				prettier.Text("}"),
 			},
-			prettier.HardLine{},
-			prettier.Text("}"),
 		}
 
 		assert.Equal(t, expected, expr.Doc())

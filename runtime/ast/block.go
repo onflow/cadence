@@ -20,6 +20,8 @@ package ast
 
 import (
 	"encoding/json"
+
+	"github.com/turbolent/prettier"
 )
 
 type Block struct {
@@ -37,6 +39,45 @@ func (b *Block) Accept(visitor Visitor) Repr {
 
 func (b *Block) Walk(walkChild func(Element)) {
 	walkStatements(walkChild, b.Statements)
+}
+
+var blockStartDoc prettier.Doc = prettier.Text("{")
+var blockEndDoc prettier.Doc = prettier.Text("}")
+var blockEmptyDoc prettier.Doc = prettier.Text("{}")
+
+func (b *Block) Doc() prettier.Doc {
+	if b.IsEmpty() {
+		return blockEmptyDoc
+	}
+
+	return prettier.Concat{
+		blockStartDoc,
+		prettier.Indent{
+			Doc: StatementsDoc(b.Statements),
+		},
+		prettier.HardLine{},
+		blockEndDoc,
+	}
+}
+
+func StatementsDoc(statements []Statement) prettier.Doc {
+	var statementsDoc prettier.Concat
+
+	for _, statement := range statements {
+		// TODO: replace once Statement implements Doc
+		hasDoc, ok := statement.(interface{ Doc() prettier.Doc })
+		if !ok {
+			continue
+		}
+
+		statementsDoc = append(
+			statementsDoc,
+			prettier.HardLine{},
+			hasDoc.Doc(),
+		)
+	}
+
+	return statementsDoc
 }
 
 func (b *Block) MarshalJSON() ([]byte, error) {
