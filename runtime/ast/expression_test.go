@@ -1440,7 +1440,10 @@ func TestInvocationExpression_Doc(t *testing.T) {
 						prettier.Indent{
 							Doc: prettier.Concat{
 								prettier.SoftLine{},
-								nil,
+								prettier.Concat{
+									prettier.Text("@"),
+									prettier.Text("AB"),
+								},
 							},
 						},
 						prettier.SoftLine{},
@@ -1549,7 +1552,7 @@ func TestCastingExpression_Doc(t *testing.T) {
 			IsResource: true,
 			Type: &NominalType{
 				Identifier: Identifier{
-					Identifier: "Int",
+					Identifier: "R",
 				},
 			},
 		},
@@ -1563,8 +1566,11 @@ func TestCastingExpression_Doc(t *testing.T) {
 				},
 				prettier.Line{},
 				prettier.Text("as?"),
-				prettier.Space,
-				// TODO: type
+				prettier.Line{},
+				prettier.Concat{
+					prettier.Text("@"),
+					prettier.Text("R"),
+				},
 			},
 		},
 		expr.Doc(),
@@ -1788,8 +1794,12 @@ func TestReferenceExpression_Doc(t *testing.T) {
 				},
 				prettier.Line{},
 				prettier.Text("as"),
-				prettier.Space,
-				// TODO: type
+				prettier.Line{},
+				prettier.Concat{
+					prettier.Text("auth "),
+					prettier.Text("&"),
+					prettier.Text("Int"),
+				},
 			},
 		},
 		expr.Doc(),
@@ -1990,7 +2000,7 @@ func TestFunctionExpression_Doc(t *testing.T) {
 				IsResource: true,
 				Type: &NominalType{
 					Identifier: Identifier{
-						Identifier: "Int",
+						Identifier: "R",
 					},
 				},
 			},
@@ -2025,6 +2035,7 @@ func TestFunctionExpression_Doc(t *testing.T) {
 											prettier.Space,
 											prettier.Text("b"),
 											prettier.Text(": "),
+											prettier.Text("C"),
 										},
 										prettier.Concat{
 											prettier.Text(","),
@@ -2033,6 +2044,7 @@ func TestFunctionExpression_Doc(t *testing.T) {
 										prettier.Concat{
 											prettier.Text("d"),
 											prettier.Text(": "),
+											prettier.Text("E"),
 										},
 									},
 								},
@@ -2042,7 +2054,10 @@ func TestFunctionExpression_Doc(t *testing.T) {
 						},
 					},
 					prettier.Text(": "),
-					// TODO: type
+					prettier.Concat{
+						prettier.Text("@"),
+						prettier.Text("R"),
+					},
 				},
 			},
 			prettier.Text(" "),
