@@ -1079,6 +1079,28 @@ func TestCheckInvalidDictionaryAccessReference(t *testing.T) {
 	assert.Equal(t, 21, typeMismatchError.EndPos.Column)
 }
 
+func TestCheckInvalidDictionaryAccessOptionalReference(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		pub struct S {
+			pub let foo : Number
+			init() {
+			self.foo = 0
+			}
+		}
+		let dict: {String : S} = {}
+		let key: String = ""
+		let s = &dict[key] as? &S
+		let n: Number = s.foo
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+}
+
 func TestCheckReferenceTypeImplicitConformance(t *testing.T) {
 
 	t.Parallel()
