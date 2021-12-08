@@ -1272,7 +1272,7 @@ func (t FunctionStaticType) Encode(_ *cbor.StreamEncoder) error {
 }
 
 // compositeTypeInfo
-
+//
 type compositeTypeInfo struct {
 	location            common.Location
 	qualifiedIdentifier string
@@ -1319,3 +1319,13 @@ func (c compositeTypeInfo) Equal(o atree.TypeInfo) bool {
 		c.qualifiedIdentifier == other.qualifiedIdentifier &&
 		c.kind == other.kind
 }
+
+// EmptyTypeInfo
+//
+type EmptyTypeInfo struct{}
+
+func (e EmptyTypeInfo) Encode(encoder *cbor.StreamEncoder) error {
+	return encoder.EncodeNil()
+}
+
+var emptyTypeInfo atree.TypeInfo = EmptyTypeInfo{}

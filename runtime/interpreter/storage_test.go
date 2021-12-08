@@ -435,21 +435,22 @@ func TestStorageOverwriteAndRemove(t *testing.T) {
 	)
 	require.NoError(t, err)
 
+	address := common.Address{}
+
 	array1 := NewArrayValue(
 		inter,
 		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
-		common.Address{},
+		address,
 		NewStringValue("first"),
 	)
 
-	storage.WriteValue(
-		inter,
-		common.Address{},
-		"test",
-		NewSomeValueNonCopying(array1),
-	)
+	const identifier = "test"
+
+	storageMap := storage.GetStorageMap(address, "storage")
+
+	storageMap.WriteValue(inter, identifier, array1)
 
 	// Overwriting delete any existing child slabs
 
@@ -458,22 +459,22 @@ func TestStorageOverwriteAndRemove(t *testing.T) {
 		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
-		common.Address{},
+		address,
 		NewStringValue("second"),
 	)
 
-	storage.WriteValue(
-		inter,
-		common.Address{},
-		"test",
-		NewSomeValueNonCopying(array2),
-	)
+	storageMap.WriteValue(inter, identifier, array2)
 
-	assert.Len(t, storage.Slabs, 1)
+	// 2:
+	// - storage map (atree ordered map)
+	// - array (atree array)
+	assert.Len(t, storage.Slabs, 2)
 
 	// Writing nil is deletion and should delete any child slabs
 
-	storage.WriteValue(inter, common.Address{}, "test", NilValue{})
+	storageMap.WriteValue(inter, identifier, nil)
 
-	assert.Len(t, storage.Slabs, 0)
+	// 1:
+	// - storage map (atree ordered map)
+	assert.Len(t, storage.Slabs, 1)
 }

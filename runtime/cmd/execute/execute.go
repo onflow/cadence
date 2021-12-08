@@ -20,19 +20,20 @@ package execute
 
 import (
 	"github.com/onflow/cadence/runtime/cmd"
+	"github.com/onflow/cadence/runtime/interpreter"
 )
 
 // Execute parses the given filename and prints any syntax errors.
 // If there are no syntax errors, the program is interpreted.
 // If after the interpretation a global function `main` is defined, it will be called.
 // The program may call the function `log` to print a value.
-func Execute(args []string) {
+func Execute(args []string, debugger *interpreter.Debugger) {
 
 	if len(args) < 1 {
 		cmd.ExitWithError("no input file")
 	}
 
-	inter, _, must := cmd.PrepareInterpreter(args[0])
+	inter, _, must := cmd.PrepareInterpreter(args[0], debugger)
 
 	if !inter.Globals.Contains("main") {
 		return

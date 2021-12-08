@@ -118,6 +118,7 @@ func (interpreter *Interpreter) invokeInterpretedFunction(
 	// Lexical scope: use the function declaration's activation record,
 	// not the current one (which would be dynamic scope)
 	interpreter.activations.PushNewWithParent(function.Activation)
+	interpreter.activations.Current().isFunction = true
 
 	// Make `self` available, if any
 	if invocation.Self != nil {

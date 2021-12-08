@@ -86,11 +86,13 @@ func (i *FlowIntegration) getAccountAddress(name string) (flow.Address, error) {
 		return flow.Address{}, err
 	}
 
-	code := makeManagerCode(scriptGetAddress, serviceAccount.Address().String())
-	args := []cadence.Value{
-		cadence.NewString(name),
+	cadenceName, err := cadence.NewString(name)
+	if err != nil {
+		return flow.Address{}, err
 	}
+	args := []cadence.Value{cadenceName}
 
+	code := makeManagerCode(scriptGetAddress, serviceAccount.Address().String())
 	result, err := i.sharedServices.Scripts.Execute(code, args, "", "")
 	if err != nil {
 		return flow.Address{}, err
