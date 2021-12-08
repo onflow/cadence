@@ -59,7 +59,7 @@ const (
 	ErrorMessageArguments         = "arguments error"
 )
 
-const MaxGasLimit uint64 = 9999
+const maxGasLimit uint64 = 9999
 
 func (i *FlowIntegration) commands() []server.Command {
 	return []server.Command{
@@ -194,9 +194,9 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{
 	}
 
 	signerList := args[2].([]interface{})
-	signers := make([]string, len(signerList))
+	signers := make([]flow.Address, len(signerList))
 	for i, v := range signerList {
-		signers[i] = v.(string)
+		signers[i] = flow.HexToAddress(v.(string))
 	}
 
 	// Send transaction via shared library
@@ -215,7 +215,7 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{
 		return nil, fmt.Errorf("failed to get service account, err: %w", err)
 	}
 
-	payer := serviceAccount.Address()
+	serviceAddress := serviceAccount.Address()
 	keyIndex := serviceAccount.Key().Index()
 
 	// We need to check if service account among authorizers
@@ -223,17 +223,16 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{
 
 	signerAccounts := make([]flowkit.Account, len(signers))
 	authorizers := make([]flow.Address, len(signers))
-	for i, v := range signers {
-		address := flow.HexToAddress(v)
+	for i, address := range signers {
 
-		// Clone service account
-		account := *serviceAccount
-		account.SetAddress(address)
+		signer := flowkit.Account{}
+		signer.SetAddress(address)
+		signer.SetKey(serviceAccount.Key())
 
-		signerAccounts[i] = account
+		signerAccounts[i] = signer
 		authorizers[i] = address
 
-		if address == payer {
+		if address == serviceAddress {
 			hasServiceAccount = true
 		}
 	}
@@ -244,13 +243,13 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{
 	}
 
 	tx, err := i.sharedServices.Transactions.Build(
-		payer,
+		serviceAddress,
 		authorizers,
-		payer,
+		serviceAddress,
 		keyIndex,
 		code,
 		"",
-		MaxGasLimit,
+		maxGasLimit,
 		txArgs,
 		"",
 	)
@@ -271,6 +270,9 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{
 		}
 	}
 
+	// even though .Encode returns []byte, without this conversion there is an error:
+	// transaction error: &errors.errorString{s:"failed to decode partial transaction...
+	// ...encoding/hex: invalid byte: U+00F9 'ù'"
 	txBytes := []byte(fmt.Sprintf("%x", tx.FlowTransaction().Encode()))
 	_, txResult, err := i.sharedServices.Transactions.SendSigned(txBytes)
 
