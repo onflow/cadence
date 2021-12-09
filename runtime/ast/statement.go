@@ -20,6 +20,8 @@ package ast
 
 import (
 	"encoding/json"
+
+	"github.com/turbolent/prettier"
 )
 
 type Statement interface {
@@ -34,6 +36,8 @@ type ReturnStatement struct {
 	Range
 }
 
+var _ Statement = &ReturnStatement{}
+
 func (*ReturnStatement) isStatement() {}
 
 func (s *ReturnStatement) Accept(visitor Visitor) Repr {
@@ -43,6 +47,21 @@ func (s *ReturnStatement) Accept(visitor Visitor) Repr {
 func (s *ReturnStatement) Walk(walkChild func(Element)) {
 	if s.Expression != nil {
 		walkChild(s.Expression)
+	}
+}
+
+const returnStatementKeywordDoc = prettier.Text("return")
+const returnStatementKeywordSpaceDoc = prettier.Text("return ")
+
+func (s *ReturnStatement) Doc() prettier.Doc {
+	if s.Expression == nil {
+		return returnStatementKeywordDoc
+	}
+
+	return prettier.Concat{
+		returnStatementKeywordSpaceDoc,
+		// TODO: potentially parenthesize
+		s.Expression.Doc(),
 	}
 }
 
@@ -63,6 +82,8 @@ type BreakStatement struct {
 	Range
 }
 
+var _ Statement = &BreakStatement{}
+
 func (*BreakStatement) isStatement() {}
 
 func (s *BreakStatement) Accept(visitor Visitor) Repr {
@@ -71,6 +92,12 @@ func (s *BreakStatement) Accept(visitor Visitor) Repr {
 
 func (*BreakStatement) Walk(_ func(Element)) {
 	// NO-OP
+}
+
+const breakStatementKeywordDoc = prettier.Text("break")
+
+func (*BreakStatement) Doc() prettier.Doc {
+	return breakStatementKeywordDoc
 }
 
 func (s *BreakStatement) MarshalJSON() ([]byte, error) {
@@ -90,6 +117,8 @@ type ContinueStatement struct {
 	Range
 }
 
+var _ Statement = &ContinueStatement{}
+
 func (*ContinueStatement) isStatement() {}
 
 func (s *ContinueStatement) Accept(visitor Visitor) Repr {
@@ -98,6 +127,12 @@ func (s *ContinueStatement) Accept(visitor Visitor) Repr {
 
 func (*ContinueStatement) Walk(_ func(Element)) {
 	// NO-OP
+}
+
+const continueStatementKeywordDoc = prettier.Text("continue")
+
+func (*ContinueStatement) Doc() prettier.Doc {
+	return continueStatementKeywordDoc
 }
 
 func (s *ContinueStatement) MarshalJSON() ([]byte, error) {
@@ -127,6 +162,10 @@ type IfStatement struct {
 	StartPos Position `json:"-"`
 }
 
+var _ Statement = &IfStatement{}
+
+func (*IfStatement) isStatement() {}
+
 func (s *IfStatement) StartPosition() Position {
 	return s.StartPos
 }
@@ -138,8 +177,6 @@ func (s *IfStatement) EndPosition() Position {
 	return s.Then.EndPosition()
 }
 
-func (*IfStatement) isStatement() {}
-
 func (s *IfStatement) Accept(visitor Visitor) Repr {
 	return visitor.VisitIfStatement(s)
 }
@@ -149,6 +186,49 @@ func (s *IfStatement) Walk(walkChild func(Element)) {
 	walkChild(s.Then)
 	if s.Else != nil {
 		walkChild(s.Else)
+	}
+}
+
+const ifStatementIfKeywordSpaceDoc = prettier.Text("if ")
+const ifStatementSpaceElseKeywordSpaceDoc = prettier.Text(" else ")
+
+func (s *IfStatement) Doc() prettier.Doc {
+	var testDoc prettier.Doc
+	// TODO: replace once IfStatementTest implements Doc
+	testWithDoc, ok := s.Test.(interface{ Doc() prettier.Doc })
+	if ok {
+		testDoc = testWithDoc.Doc()
+	}
+
+	doc := prettier.Concat{
+		ifStatementIfKeywordSpaceDoc,
+		testDoc,
+		prettier.Space,
+		s.Then.Doc(),
+	}
+
+	if s.Else != nil {
+		var elseDoc prettier.Doc
+		if len(s.Else.Statements) == 1 {
+			if elseIfStatement, ok := s.Else.Statements[0].(*IfStatement); ok {
+				elseDoc = elseIfStatement.Doc()
+			}
+		}
+		if elseDoc == nil {
+			elseDoc = s.Else.Doc()
+		}
+
+		doc = append(
+			doc,
+			ifStatementSpaceElseKeywordSpaceDoc,
+			prettier.Group{
+				Doc: elseDoc,
+			},
+		)
+	}
+
+	return prettier.Group{
+		Doc: doc,
 	}
 }
 
@@ -173,6 +253,8 @@ type WhileStatement struct {
 	StartPos Position `json:"-"`
 }
 
+var _ Statement = &WhileStatement{}
+
 func (*WhileStatement) isStatement() {}
 
 func (s *WhileStatement) Accept(visitor Visitor) Repr {
@@ -190,6 +272,19 @@ func (s *WhileStatement) StartPosition() Position {
 
 func (s *WhileStatement) EndPosition() Position {
 	return s.Block.EndPosition()
+}
+
+const whileStatementKeywordSpaceDoc = prettier.Text("while ")
+
+func (s *WhileStatement) Doc() prettier.Doc {
+	return prettier.Group{
+		Doc: prettier.Concat{
+			whileStatementKeywordSpaceDoc,
+			s.Test.Doc(),
+			prettier.Space,
+			s.Block.Doc(),
+		},
+	}
 }
 
 func (s *WhileStatement) MarshalJSON() ([]byte, error) {
@@ -215,6 +310,8 @@ type ForStatement struct {
 	StartPos   Position `json:"-"`
 }
 
+var _ Statement = &ForStatement{}
+
 func (*ForStatement) isStatement() {}
 
 func (s *ForStatement) Accept(visitor Visitor) Repr {
@@ -232,6 +329,36 @@ func (s *ForStatement) StartPosition() Position {
 
 func (s *ForStatement) EndPosition() Position {
 	return s.Block.EndPosition()
+}
+
+const forStatementForKeywordSpaceDoc = prettier.Text("for ")
+const forStatementSpaceInKeywordSpaceDoc = prettier.Text(" in ")
+
+func (s *ForStatement) Doc() prettier.Doc {
+	doc := prettier.Concat{
+		forStatementForKeywordSpaceDoc,
+	}
+
+	if s.Index != nil {
+		doc = append(
+			doc,
+			prettier.Text(s.Index.Identifier),
+			prettier.Text(", "),
+		)
+	}
+
+	doc = append(
+		doc,
+		prettier.Text(s.Identifier.Identifier),
+		forStatementSpaceInKeywordSpaceDoc,
+		s.Value.Doc(),
+		prettier.Space,
+		s.Block.Doc(),
+	)
+
+	return prettier.Group{
+		Doc: doc,
+	}
 }
 
 func (s *ForStatement) MarshalJSON() ([]byte, error) {
@@ -254,6 +381,10 @@ type EmitStatement struct {
 	StartPos             Position `json:"-"`
 }
 
+var _ Statement = &EmitStatement{}
+
+func (*EmitStatement) isStatement() {}
+
 func (s *EmitStatement) StartPosition() Position {
 	return s.StartPos
 }
@@ -262,14 +393,22 @@ func (s *EmitStatement) EndPosition() Position {
 	return s.InvocationExpression.EndPosition()
 }
 
-func (*EmitStatement) isStatement() {}
-
 func (s *EmitStatement) Accept(visitor Visitor) Repr {
 	return visitor.VisitEmitStatement(s)
 }
 
 func (s *EmitStatement) Walk(walkChild func(Element)) {
 	walkChild(s.InvocationExpression)
+}
+
+const emitStatementKeywordSpaceDoc = prettier.Text("emit ")
+
+func (s *EmitStatement) Doc() prettier.Doc {
+	return prettier.Concat{
+		emitStatementKeywordSpaceDoc,
+		// TODO: potentially parenthesize
+		s.InvocationExpression.Doc(),
+	}
 }
 
 func (s *EmitStatement) MarshalJSON() ([]byte, error) {
@@ -293,6 +432,14 @@ type AssignmentStatement struct {
 	Value    Expression
 }
 
+var _ Statement = &AssignmentStatement{}
+
+func (*AssignmentStatement) isStatement() {}
+
+func (s *AssignmentStatement) Accept(visitor Visitor) Repr {
+	return visitor.VisitAssignmentStatement(s)
+}
+
 func (s *AssignmentStatement) StartPosition() Position {
 	return s.Target.StartPosition()
 }
@@ -301,15 +448,25 @@ func (s *AssignmentStatement) EndPosition() Position {
 	return s.Value.EndPosition()
 }
 
-func (*AssignmentStatement) isStatement() {}
-
-func (s *AssignmentStatement) Accept(visitor Visitor) Repr {
-	return visitor.VisitAssignmentStatement(s)
-}
-
 func (s *AssignmentStatement) Walk(walkChild func(Element)) {
 	walkChild(s.Target)
 	walkChild(s.Value)
+}
+
+func (s *AssignmentStatement) Doc() prettier.Doc {
+	return prettier.Group{
+		Doc: prettier.Concat{
+			s.Target.Doc(),
+			prettier.Space,
+			s.Transfer.Doc(),
+			prettier.Space,
+			prettier.Group{
+				Doc: prettier.Indent{
+					Doc: s.Value.Doc(),
+				},
+			},
+		},
+	}
 }
 
 func (s *AssignmentStatement) MarshalJSON() ([]byte, error) {
@@ -332,6 +489,10 @@ type SwapStatement struct {
 	Right Expression
 }
 
+var _ Statement = &SwapStatement{}
+
+func (*SwapStatement) isStatement() {}
+
 func (s *SwapStatement) StartPosition() Position {
 	return s.Left.StartPosition()
 }
@@ -340,8 +501,6 @@ func (s *SwapStatement) EndPosition() Position {
 	return s.Right.EndPosition()
 }
 
-func (*SwapStatement) isStatement() {}
-
 func (s *SwapStatement) Accept(visitor Visitor) Repr {
 	return visitor.VisitSwapStatement(s)
 }
@@ -349,6 +508,18 @@ func (s *SwapStatement) Accept(visitor Visitor) Repr {
 func (s *SwapStatement) Walk(walkChild func(Element)) {
 	walkChild(s.Left)
 	walkChild(s.Right)
+}
+
+const swapStatementSpaceSymbolSpaceDoc = prettier.Text(" <-> ")
+
+func (s *SwapStatement) Doc() prettier.Doc {
+	return prettier.Group{
+		Doc: prettier.Concat{
+			s.Left.Doc(),
+			swapStatementSpaceSymbolSpaceDoc,
+			s.Right.Doc(),
+		},
+	}
 }
 
 func (s *SwapStatement) MarshalJSON() ([]byte, error) {
@@ -370,6 +541,10 @@ type ExpressionStatement struct {
 	Expression Expression
 }
 
+var _ Statement = &ExpressionStatement{}
+
+func (*ExpressionStatement) isStatement() {}
+
 func (s *ExpressionStatement) StartPosition() Position {
 	return s.Expression.StartPosition()
 }
@@ -378,14 +553,16 @@ func (s *ExpressionStatement) EndPosition() Position {
 	return s.Expression.EndPosition()
 }
 
-func (*ExpressionStatement) isStatement() {}
-
 func (s *ExpressionStatement) Accept(visitor Visitor) Repr {
 	return visitor.VisitExpressionStatement(s)
 }
 
 func (s *ExpressionStatement) Walk(walkChild func(Element)) {
 	walkChild(s.Expression)
+}
+
+func (s *ExpressionStatement) Doc() prettier.Doc {
+	return s.Expression.Doc()
 }
 
 func (s *ExpressionStatement) MarshalJSON() ([]byte, error) {
@@ -409,6 +586,8 @@ type SwitchStatement struct {
 	Range
 }
 
+var _ Statement = &SwitchStatement{}
+
 func (*SwitchStatement) isStatement() {}
 
 func (s *SwitchStatement) Accept(visitor Visitor) Repr {
@@ -420,6 +599,42 @@ func (s *SwitchStatement) Walk(walkChild func(Element)) {
 	for _, switchCase := range s.Cases {
 		walkChild(switchCase.Expression)
 		walkStatements(walkChild, switchCase.Statements)
+	}
+}
+
+const switchStatementKeywordSpaceDoc = prettier.Text("switch ")
+
+func (s *SwitchStatement) Doc() prettier.Doc {
+
+	bodyDoc := make(prettier.Concat, 0, len(s.Cases))
+
+	for _, switchCase := range s.Cases {
+		bodyDoc = append(
+			bodyDoc,
+			prettier.HardLine{},
+			switchCase.Doc(),
+		)
+	}
+
+	return prettier.Concat{
+		prettier.Group{
+			Doc: prettier.Concat{
+				switchStatementKeywordSpaceDoc,
+				prettier.Indent{
+					Doc: prettier.Concat{
+						prettier.SoftLine{},
+						s.Expression.Doc(),
+					},
+				},
+				prettier.Line{},
+			},
+		},
+		blockStartDoc,
+		prettier.Indent{
+			Doc: bodyDoc,
+		},
+		prettier.HardLine{},
+		blockEndDoc,
 	}
 }
 
@@ -451,4 +666,28 @@ func (s *SwitchCase) MarshalJSON() ([]byte, error) {
 		Type:  "SwitchCase",
 		Alias: (*Alias)(s),
 	})
+}
+
+const switchCaseKeywordSpaceDoc = prettier.Text("case ")
+const switchCaseColonSymbolDoc = prettier.Text(":")
+const switchCaseDefaultKeywordSpaceDoc = prettier.Text("default:")
+
+func (s *SwitchCase) Doc() prettier.Doc {
+	statementsDoc := prettier.Indent{
+		Doc: StatementsDoc(s.Statements),
+	}
+
+	if s.Expression == nil {
+		return prettier.Concat{
+			switchCaseDefaultKeywordSpaceDoc,
+			statementsDoc,
+		}
+	}
+
+	return prettier.Concat{
+		switchCaseKeywordSpaceDoc,
+		s.Expression.Doc(),
+		switchCaseColonSymbolDoc,
+		statementsDoc,
+	}
 }

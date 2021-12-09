@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package format
+package ast_test
 
 import (
 	"testing"
@@ -28,55 +28,55 @@ import (
 	"github.com/onflow/cadence/runtime/parser2"
 )
 
-func TestString(t *testing.T) {
+func TestQuoteString(t *testing.T) {
 
 	t.Parallel()
 
 	assert.Equal(t,
 		`"test xyz \u{1f496}"`,
-		String("test xyz \U0001f496"),
+		ast.QuoteString("test xyz \U0001f496"),
 	)
 
 	assert.Equal(t,
 		`"Foo \u{a9} bar \u{1d306} baz \u{2603} qux"`,
 		// "Foo © bar 𝌆 baz ☃ qux"
-		String("\x46\x6F\x6F\x20\xC2\xA9\x20\x62\x61\x72\x20\xF0\x9D\x8C\x86\x20\x62\x61\x7A\x20\xE2\x98\x83\x20\x71\x75\x78"),
+		ast.QuoteString("\x46\x6F\x6F\x20\xC2\xA9\x20\x62\x61\x72\x20\xF0\x9D\x8C\x86\x20\x62\x61\x7A\x20\xE2\x98\x83\x20\x71\x75\x78"),
 	)
 
 	assert.Equal(t,
 		`"\0"`,
-		String("\x00"),
+		ast.QuoteString("\x00"),
 	)
 
 	assert.Equal(t,
 		`"\n"`,
-		String("\n"),
+		ast.QuoteString("\n"),
 	)
 
 	assert.Equal(t,
 		`"\r"`,
-		String("\r"),
+		ast.QuoteString("\r"),
 	)
 
 	assert.Equal(t,
 		`"\t"`,
-		String("\t"),
+		ast.QuoteString("\t"),
 	)
 
 	assert.Equal(t,
 		`"\\"`,
-		String("\\"),
+		ast.QuoteString("\\"),
 	)
 
 	assert.Equal(t,
 		`"\""`,
-		String(`"`),
+		ast.QuoteString(`"`),
 	)
 }
 
 func TestStringQuick(t *testing.T) {
 	f := func(text string) bool {
-		res, errs := parser2.ParseExpression(String(text))
+		res, errs := parser2.ParseExpression(ast.QuoteString(text))
 		if len(errs) > 0 {
 			return false
 		}

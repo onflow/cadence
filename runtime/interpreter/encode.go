@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"fmt"
 	"math"
+	"math/big"
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
@@ -30,6 +31,19 @@ import (
 )
 
 const cborTagSize = 2
+
+var bigOne = big.NewInt(1)
+
+func getBigIntCBORSize(v *big.Int) uint32 {
+	sign := v.Sign()
+	if sign < 0 {
+		v = new(big.Int).Abs(v)
+		v.Sub(v, bigOne)
+	}
+
+	// tag number + bytes
+	return 1 + getBytesCBORSize(v.Bytes())
+}
 
 func getIntCBORSize(v int64) uint32 {
 	if v < 0 {
@@ -1272,7 +1286,7 @@ func (t FunctionStaticType) Encode(_ *cbor.StreamEncoder) error {
 }
 
 // compositeTypeInfo
-
+//
 type compositeTypeInfo struct {
 	location            common.Location
 	qualifiedIdentifier string
@@ -1319,3 +1333,13 @@ func (c compositeTypeInfo) Equal(o atree.TypeInfo) bool {
 		c.qualifiedIdentifier == other.qualifiedIdentifier &&
 		c.kind == other.kind
 }
+
+// EmptyTypeInfo
+//
+type EmptyTypeInfo struct{}
+
+func (e EmptyTypeInfo) Encode(encoder *cbor.StreamEncoder) error {
+	return encoder.EncodeNil()
+}
+
+var emptyTypeInfo atree.TypeInfo = EmptyTypeInfo{}

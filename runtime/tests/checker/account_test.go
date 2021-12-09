@@ -361,6 +361,50 @@ func TestCheckAccount_save(t *testing.T) {
 	}
 }
 
+func TestCheckAccount_typeAt(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(domain common.PathDomain) {
+		t.Run(fmt.Sprintf("type %s", domain.Identifier()), func(t *testing.T) {
+
+			t.Parallel()
+
+			checker, err := ParseAndCheckAccount(t,
+				fmt.Sprintf(
+					`
+						let t: Type? = authAccount.type(at: /%s/r)
+					`,
+					domain.Identifier(),
+				),
+			)
+
+			if domain == common.PathDomainStorage {
+
+				require.NoError(t, err)
+
+				typ := RequireGlobalValue(t, checker.Elaboration, "t")
+
+				require.Equal(t,
+					&sema.OptionalType{
+						Type: sema.MetaType,
+					},
+					typ,
+				)
+
+			} else {
+				errs := ExpectCheckerErrors(t, err, 1)
+
+				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			}
+		})
+	}
+
+	for _, domain := range common.AllPathDomainsByIdentifier {
+		test(domain)
+	}
+}
+
 func TestCheckAccount_load(t *testing.T) {
 
 	t.Parallel()
