@@ -7038,7 +7038,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 		t.Parallel()
 
 		runtimeInterface := &testRuntimeInterface{
-			storage:testLedger{
+			storage: testLedger{
 				getValue: func(owner, key []byte) (value []byte, err error) {
 					panic(errors.New("crasher"))
 				},
@@ -7065,7 +7065,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 		t.Parallel()
 
 		runtimeInterface := &testRuntimeInterface{
-			storage:testLedger{
+			storage: testLedger{
 				getValue: func(owner, key []byte) (value []byte, err error) {
 					panic(errors.New("crasher"))
 				},
