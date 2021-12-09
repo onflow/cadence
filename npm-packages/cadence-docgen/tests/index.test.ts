@@ -13,7 +13,7 @@ test("docgen simple", async () => {
 
   expect(res).toEqual({
     "docs": {
-      "Foo.md": "# Contract `Foo`\n\n```cadence\ncontract Foo\n}\n```\n\nThis is a 'Foo' contract.\n"
+      "Foo.md": "# Contract `Foo`\n\n```cadence\ncontract Foo {\n}\n```\n\nThis is a 'Foo' contract.\n"
     }
   })
 })
