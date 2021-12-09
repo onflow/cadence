@@ -2085,8 +2085,7 @@ func (IntValue) DeepRemove(_ *Interpreter) {
 }
 
 func (v IntValue) ByteSize() uint32 {
-	// TODO: optimize
-	return mustStorableSize(v)
+	return cborTagSize + getBigIntCBORSize(v.BigInt)
 }
 
 func (v IntValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -3928,8 +3927,7 @@ func (Int128Value) DeepRemove(_ *Interpreter) {
 }
 
 func (v Int128Value) ByteSize() uint32 {
-	// TODO: optimize
-	return mustStorableSize(v)
+	return cborTagSize + getBigIntCBORSize(v.BigInt)
 }
 
 func (v Int128Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -4363,8 +4361,7 @@ func (Int256Value) DeepRemove(_ *Interpreter) {
 }
 
 func (v Int256Value) ByteSize() uint32 {
-	// TODO: optimize
-	return mustStorableSize(v)
+	return cborTagSize + getBigIntCBORSize(v.BigInt)
 }
 
 func (v Int256Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -4688,8 +4685,7 @@ func (UIntValue) DeepRemove(_ *Interpreter) {
 }
 
 func (v UIntValue) ByteSize() uint32 {
-	// TODO: optimize
-	return mustStorableSize(v)
+	return cborTagSize + getBigIntCBORSize(v.BigInt)
 }
 
 func (v UIntValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -6236,8 +6232,7 @@ func (UInt128Value) DeepRemove(_ *Interpreter) {
 }
 
 func (v UInt128Value) ByteSize() uint32 {
-	// TODO: optimize
-	return mustStorableSize(v)
+	return cborTagSize + getBigIntCBORSize(v.BigInt)
 }
 
 func (v UInt128Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -6617,8 +6612,7 @@ func (UInt256Value) DeepRemove(_ *Interpreter) {
 }
 
 func (v UInt256Value) ByteSize() uint32 {
-	// TODO: optimize
-	return mustStorableSize(v)
+	return cborTagSize + getBigIntCBORSize(v.BigInt)
 }
 
 func (v UInt256Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -11361,7 +11355,8 @@ func (PathValue) DeepRemove(_ *Interpreter) {
 }
 
 func (v PathValue) ByteSize() uint32 {
-	return mustStorableSize(v)
+	// tag number (2 bytes) + array head (1 byte) + domain (CBOR uint) + identifier (CBOR string)
+	return cborTagSize + 1 + getUintCBORSize(uint64(v.Domain)) + getBytesCBORSize([]byte(v.Identifier))
 }
 
 func (v PathValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
