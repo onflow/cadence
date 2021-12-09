@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"fmt"
 	"math"
+	"math/big"
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
@@ -30,6 +31,19 @@ import (
 )
 
 const cborTagSize = 2
+
+var bigOne = big.NewInt(1)
+
+func getBigIntCBORSize(v *big.Int) uint32 {
+	sign := v.Sign()
+	if sign < 0 {
+		v = new(big.Int).Abs(v)
+		v.Sub(v, bigOne)
+	}
+
+	// tag number + bytes
+	return 1 + getBytesCBORSize(v.Bytes())
+}
 
 func getIntCBORSize(v int64) uint32 {
 	if v < 0 {
