@@ -1148,7 +1148,7 @@ func TestGetHashInput(t *testing.T) {
 		},
 		"UInt16 max": {
 			value:    UInt16Value(math.MaxUint16),
-			expected: []byte{byte(HashInputTypeUInt16), 0xff, 0xf},
+			expected: []byte{byte(HashInputTypeUInt16), 0xff, 0xff},
 		},
 		"UInt32": {
 			value:    UInt32Value(32),
