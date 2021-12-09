@@ -119,7 +119,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 		},
 		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
-			return []Address{common.BytesToAddress(addressValue.Bytes())}, nil
+			return []Address{Address(addressValue)}, nil
 		},
 		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
 			accountCode = code
@@ -475,7 +475,7 @@ func TestRuntimeResourceDictionaryValues_Nested(t *testing.T) {
 		},
 		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
-			return []Address{common.BytesToAddress(addressValue.Bytes())}, nil
+			return []Address{Address(addressValue)}, nil
 		},
 		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
 			accountCode = code
@@ -1345,7 +1345,7 @@ func BenchmarkRuntimeResourceDictionaryValues(b *testing.B) {
 		},
 		storage: storage,
 		getSigningAccounts: func() ([]Address, error) {
-			return []Address{common.BytesToAddress(addressValue.Bytes())}, nil
+			return []Address{Address(addressValue)}, nil
 		},
 		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
 			accountCode = code

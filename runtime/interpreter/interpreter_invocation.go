@@ -43,7 +43,6 @@ func (interpreter *Interpreter) InvokeFunctionValue(
 
 	return interpreter.invokeFunctionValue(
 		function,
-		nil,
 		arguments,
 		nil,
 		argumentTypes,
@@ -55,7 +54,6 @@ func (interpreter *Interpreter) InvokeFunctionValue(
 
 func (interpreter *Interpreter) invokeFunctionValue(
 	function FunctionValue,
-	receiverType sema.Type,
 	arguments []Value,
 	expressions []ast.Expression,
 	argumentTypes []sema.Type,
@@ -101,7 +99,6 @@ func (interpreter *Interpreter) invokeFunctionValue(
 	getLocationRange := locationRangeGetter(interpreter.Location, invocationPosition)
 
 	invocation := Invocation{
-		ReceiverType:       receiverType,
 		Arguments:          transferredArguments,
 		ArgumentTypes:      argumentTypes,
 		TypeParameterTypes: typeParameterTypes,
@@ -121,6 +118,7 @@ func (interpreter *Interpreter) invokeInterpretedFunction(
 	// Lexical scope: use the function declaration's activation record,
 	// not the current one (which would be dynamic scope)
 	interpreter.activations.PushNewWithParent(function.Activation)
+	interpreter.activations.Current().isFunction = true
 
 	// Make `self` available, if any
 	if invocation.Self != nil {

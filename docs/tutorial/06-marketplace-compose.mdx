@@ -244,7 +244,7 @@ pub contract Marketplace {
             self.forSale[tokenID] != nil && self.prices[tokenID] != nil:
                 "No token matching this ID for sale!"
             buyTokens.balance >= (self.prices[tokenID] ?? 0.0):
-                "Not enough tokens to by the NFT!"
+                "Not enough tokens to buy the NFT!"
         }
 
         // get the value out of the optional
@@ -435,7 +435,7 @@ transaction {
   let collectionRef: &AnyResource{NonFungibleToken.NFTReceiver}
 
   // Vault that will hold the tokens that will be used to
-  // but the NFT
+  // buy the NFT
   let temporaryVault: @FungibleToken.Vault
 
   prepare(acct: AuthAccount) {

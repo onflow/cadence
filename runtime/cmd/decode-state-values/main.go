@@ -26,6 +26,7 @@ import (
 	"compress/gzip"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"flag"
 	"io"
 	"log"
@@ -210,16 +211,8 @@ type interpreterStorage struct {
 
 var _ interpreter.Storage = &interpreterStorage{}
 
-func (i interpreterStorage) ValueExists(_ *interpreter.Interpreter, _ common.Address, key string) bool {
-	panic("unexpected ValueExists call")
-}
-
-func (i interpreterStorage) ReadValue(_ *interpreter.Interpreter, _ common.Address, _ string) interpreter.OptionalValue {
-	panic("unexpected ReadValue call")
-}
-
-func (i interpreterStorage) WriteValue(_ *interpreter.Interpreter, _ common.Address, _ string, _ interpreter.OptionalValue) {
-	panic("unexpected WriteValue call")
+func (i interpreterStorage) GetStorageMap(_ common.Address, _ string) *interpreter.StorageMap {
+	panic("unexpected GetStorageMap call")
 }
 
 func (i interpreterStorage) CheckHealth() error {
@@ -258,10 +251,10 @@ func load() {
 
 	bar := progressbar.Default(int64(len(storage)))
 
+	var slabNotFoundErrCount int
+
 	for storageKey, data := range storage { //nolint:maprangecheck
 		_ = bar.Add(1)
-
-		var isStoragePath bool
 
 		// Check the key is a non-root slab or a storage path
 		key := storageKey[2]
@@ -269,100 +262,126 @@ func load() {
 		var address atree.Address
 		copy(address[:], storageKey[0])
 
-		// If the key is for a slab (format '$' + storage index),
-		// then attempt to decode the slab
+		err := loadStorageKey(key, address, data, inter, slabStorage)
+		var slabNotFoundErr *atree.SlabNotFoundError
+		if errors.As(err, &slabNotFoundErr) {
+			slabNotFoundErrCount++
+		}
+	}
 
-		if isSlabStorageKey(key) {
+	log.Printf("Loaded all values. %d failed due to missing slabs", slabNotFoundErrCount)
+}
 
-			// Only decode each slab if it was not already decoded
-			// for the slab health check
+func loadStorageKey(
+	key string,
+	address atree.Address,
+	data []byte,
+	inter *interpreter.Interpreter,
+	slabStorage *slabStorage,
+) (err error) {
 
-			if !*checkSlabsFlag {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("failed to load storage key @ 0x%x %s: %v", address, key, r)
+			err, _ = r.(error)
+		}
+	}()
 
-				var storageIndex atree.StorageIndex
-				// Skip '$' prefix
-				copy(storageIndex[:], key[1:])
+	// If the key is for a slab (format '$' + storage index),
+	// then attempt to decode the slab
 
-				storageID := atree.StorageID{
-					Address: address,
-					Index:   storageIndex,
-				}
+	if isSlabStorageKey(key) {
 
-				_, err := decodeSlab(storageID, data)
-				if err != nil {
-					log.Printf(
-						"Failed to decode slab @ %s: %s (size: %d)",
-						storageID, err, len(data),
-					)
-					continue
-				}
+		// Only decode each slab if it was not already decoded
+		// for the slab health check
+
+		if !*checkSlabsFlag {
+
+			var storageIndex atree.StorageIndex
+			// Skip '$' prefix
+			copy(storageIndex[:], key[1:])
+
+			storageID := atree.StorageID{
+				Address: address,
+				Index:   storageIndex,
 			}
-		} else {
-			// If the key is an account path,
-			// decode the storable, and load the value
 
-			keyParts := strings.SplitN(key, storagePathSeparator, 2)
-
-			isStoragePath = len(keyParts) == 2 &&
-				common.PathDomainFromIdentifier(keyParts[0]) != common.PathDomainUnknown
-
-			if isStoragePath {
-
-				reader := bytes.NewReader(data)
-				decoder := interpreter.CBORDecMode.NewStreamDecoder(reader)
-				storable, err := interpreter.DecodeStorable(decoder, atree.StorageIDUndefined)
-				if err != nil {
-					log.Printf(
-						"Failed to decode storable @ 0x%x %s: %s (data: %x)",
-						address, key, err, data,
-					)
-					continue
-				}
-
-				atreeValue, err := storable.StoredValue(slabStorage)
-				if err != nil {
-					log.Printf(
-						"Failed to load stored value @ 0x%x %s: %s",
-						address, key, err,
-					)
-					continue
-				}
-
-				value, err := interpreter.ConvertStoredValue(atreeValue)
-				if err != nil {
-					log.Printf(
-						"Failed to convert stored value @ 0x%x %s: %s",
-						address, key, err,
-					)
-					continue
-				}
-
-				interpreter.InspectValue(
-					value,
-					func(v interpreter.Value) bool {
-
-						if composite, ok := v.(*interpreter.CompositeValue); ok &&
-							composite.Kind == common.CompositeKindResource {
-
-							uuid := composite.GetField(inter, interpreter.ReturnEmptyLocationRange, "uuid")
-							if _, ok := uuid.(interpreter.UInt64Value); !ok {
-								log.Printf(
-									"Failed to get UUID for resource @ 0x%x %s",
-									address, key,
-								)
-							}
-						}
-
-						return true
-					},
+			_, err := decodeSlab(storageID, data)
+			if err != nil {
+				log.Printf(
+					"Failed to decode slab @ %s: %s (size: %d)",
+					storageID, err, len(data),
 				)
+				return err
+			}
+		}
+	} else {
+		// If the key is an account path,
+		// decode the storable, and load the value
 
-				if *checkValuesFlag {
-					inter.ValidateAtreeValue(value)
-				}
+		keyParts := strings.SplitN(key, storagePathSeparator, 2)
+
+		isStoragePath := len(keyParts) == 2 &&
+			common.PathDomainFromIdentifier(keyParts[0]) != common.PathDomainUnknown
+
+		if isStoragePath {
+
+			reader := bytes.NewReader(data)
+			decoder := interpreter.CBORDecMode.NewStreamDecoder(reader)
+			storable, err := interpreter.DecodeStorable(decoder, atree.StorageIDUndefined)
+			if err != nil {
+				log.Printf(
+					"Failed to decode storable @ 0x%x %s: %s (data: %x)\n",
+					address, key, err, data,
+				)
+				return err
+			}
+
+			atreeValue, err := storable.StoredValue(slabStorage)
+			if err != nil {
+				log.Printf(
+					"Failed to load stored value @ 0x%x %s: %s",
+					address, key, err,
+				)
+				return err
+			}
+
+			value, err := interpreter.ConvertStoredValue(atreeValue)
+			if err != nil {
+				log.Printf(
+					"Failed to convert stored value @ 0x%x %s: %s",
+					address, key, err,
+				)
+				return err
+			}
+
+			interpreter.InspectValue(
+				value,
+				func(v interpreter.Value) bool {
+
+					if composite, ok := v.(*interpreter.CompositeValue); ok &&
+						composite.Kind == common.CompositeKindResource {
+
+						uuid := composite.GetField(inter, interpreter.ReturnEmptyLocationRange, "uuid")
+						if _, ok := uuid.(interpreter.UInt64Value); !ok {
+							log.Printf(
+								"Failed to get UUID for resource @ 0x%x %s",
+								address, key,
+							)
+						}
+					}
+
+					return true
+				},
+			)
+
+			if *checkValuesFlag {
+				inter.ValidateAtreeValue(value)
 			}
 		}
 	}
+
+	return nil
 }
 
 type encodedKeyPart struct {
@@ -429,7 +448,7 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
-			println(encoded)
+			log.Println(encoded)
 		}
 	}
 }
@@ -466,8 +485,11 @@ func read(file *os.File, addresses []common.Address) {
 
 	decoder := json.NewDecoder(reader)
 
+	var emptyLines int
+	var line int
+
 payloadLoop:
-	for {
+	for ; true; line++ {
 		var e encodedEntry
 
 		err = decoder.Decode(&e)
@@ -478,8 +500,13 @@ payloadLoop:
 			log.Fatal(err)
 		}
 
-		if len(e.Key.KeyParts) < keyPartCount {
-			log.Fatalf("Invalid storage key parts: %#+v\n", e.Key)
+		currentKeyPartCount := len(e.Key.KeyParts)
+		if currentKeyPartCount < keyPartCount {
+			if currentKeyPartCount > 0 {
+				log.Fatalf("Invalid storage key parts on line %d: %#+v", line, e.Key)
+			}
+			emptyLines++
+			continue
 		}
 
 		var storageKey [keyPartCount]string
@@ -521,4 +548,9 @@ payloadLoop:
 			storage[storageKey] = data
 		}
 	}
+
+	log.Printf(
+		"read %d lines (%d empty, %f%%)",
+		line, emptyLines, float32(emptyLines*100)/float32(line),
+	)
 }

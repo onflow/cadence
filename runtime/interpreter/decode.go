@@ -792,17 +792,17 @@ func (d Decoder) decodePath() (PathValue, error) {
 	size, err := d.decoder.DecodeArrayHead()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return PathValue{}, fmt.Errorf(
+			return EmptyPathValue, fmt.Errorf(
 				"invalid path encoding: expected [%d]interface{}, got %s",
 				expectedLength,
 				e.ActualType.String(),
 			)
 		}
-		return PathValue{}, err
+		return EmptyPathValue, err
 	}
 
 	if size != expectedLength {
-		return PathValue{}, fmt.Errorf(
+		return EmptyPathValue, fmt.Errorf(
 			"invalid path encoding: expected [%d]interface{}, got [%d]interface{}",
 			expectedLength,
 			size,
@@ -813,24 +813,24 @@ func (d Decoder) decodePath() (PathValue, error) {
 	domain, err := d.decoder.DecodeUint64()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return PathValue{}, fmt.Errorf(
+			return EmptyPathValue, fmt.Errorf(
 				"invalid path domain encoding: %s",
 				e.ActualType.String(),
 			)
 		}
-		return PathValue{}, err
+		return EmptyPathValue, err
 	}
 
 	// Decode identifier at array index encodedPathValueIdentifierFieldKey
 	identifier, err := d.decoder.DecodeString()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return PathValue{}, fmt.Errorf(
+			return EmptyPathValue, fmt.Errorf(
 				"invalid path identifier encoding: %s",
 				e.ActualType.String(),
 			)
 		}
-		return PathValue{}, err
+		return EmptyPathValue, err
 	}
 
 	return PathValue{

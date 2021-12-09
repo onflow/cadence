@@ -2051,8 +2051,7 @@ func (IntValue) DeepRemove(_ *Interpreter) {
 }
 
 func (v IntValue) ByteSize() uint32 {
-	// TODO: optimize
-	return mustStorableSize(v)
+	return cborTagSize + getBigIntCBORSize(v.BigInt)
 }
 
 func (v IntValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -3871,8 +3870,7 @@ func (Int128Value) DeepRemove(_ *Interpreter) {
 }
 
 func (v Int128Value) ByteSize() uint32 {
-	// TODO: optimize
-	return mustStorableSize(v)
+	return cborTagSize + getBigIntCBORSize(v.BigInt)
 }
 
 func (v Int128Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -4295,8 +4293,7 @@ func (Int256Value) DeepRemove(_ *Interpreter) {
 }
 
 func (v Int256Value) ByteSize() uint32 {
-	// TODO: optimize
-	return mustStorableSize(v)
+	return cborTagSize + getBigIntCBORSize(v.BigInt)
 }
 
 func (v Int256Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -4609,8 +4606,7 @@ func (UIntValue) DeepRemove(_ *Interpreter) {
 }
 
 func (v UIntValue) ByteSize() uint32 {
-	// TODO: optimize
-	return mustStorableSize(v)
+	return cborTagSize + getBigIntCBORSize(v.BigInt)
 }
 
 func (v UIntValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -6134,8 +6130,7 @@ func (UInt128Value) DeepRemove(_ *Interpreter) {
 }
 
 func (v UInt128Value) ByteSize() uint32 {
-	// TODO: optimize
-	return mustStorableSize(v)
+	return cborTagSize + getBigIntCBORSize(v.BigInt)
 }
 
 func (v UInt128Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -6504,8 +6499,7 @@ func (UInt256Value) DeepRemove(_ *Interpreter) {
 }
 
 func (v UInt256Value) ByteSize() uint32 {
-	// TODO: optimize
-	return mustStorableSize(v)
+	return cborTagSize + getBigIntCBORSize(v.BigInt)
 }
 
 func (v UInt256Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -10122,7 +10116,7 @@ func (s SomeStorable) ChildStorables() []atree.Storable {
 type StorageReferenceValue struct {
 	Authorized           bool
 	TargetStorageAddress common.Address
-	TargetKey            string
+	TargetPath           PathValue
 	BorrowedType         sema.Type
 }
 
@@ -10177,26 +10171,24 @@ func (v *StorageReferenceValue) StaticType() StaticType {
 }
 
 func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter) *Value {
-	switch referenced := interpreter.ReadStored(v.TargetStorageAddress, v.TargetKey).(type) {
-	case *SomeValue:
-		value := referenced.Value
 
-		if v.BorrowedType != nil {
-			dynamicType := value.DynamicType(interpreter, SeenReferences{})
-			if !interpreter.IsSubType(dynamicType, v.BorrowedType) {
-				interpreter.IsSubType(dynamicType, v.BorrowedType)
-				return nil
-			}
-		}
+	address := v.TargetStorageAddress
+	domain := v.TargetPath.Domain.Identifier()
+	identifier := v.TargetPath.Identifier
 
-		return &value
-
-	case NilValue:
+	referenced := interpreter.ReadStored(address, domain, identifier)
+	if referenced == nil {
 		return nil
-
-	default:
-		panic(errors.NewUnreachableError())
 	}
+
+	if v.BorrowedType != nil {
+		dynamicType := referenced.DynamicType(interpreter, SeenReferences{})
+		if !interpreter.IsSubType(dynamicType, v.BorrowedType) {
+			return nil
+		}
+	}
+
+	return &referenced
 }
 
 func (v *StorageReferenceValue) GetMember(
@@ -10343,7 +10335,7 @@ func (v *StorageReferenceValue) Equal(_ *Interpreter, _ func() LocationRange, ot
 	otherReference, ok := other.(*StorageReferenceValue)
 	if !ok ||
 		v.TargetStorageAddress != otherReference.TargetStorageAddress ||
-		v.TargetKey != otherReference.TargetKey ||
+		v.TargetPath != otherReference.TargetPath ||
 		v.Authorized != otherReference.Authorized {
 
 		return false
@@ -10424,7 +10416,7 @@ func (v *StorageReferenceValue) Clone(_ *Interpreter) Value {
 	return &StorageReferenceValue{
 		Authorized:           v.Authorized,
 		TargetStorageAddress: v.TargetStorageAddress,
-		TargetKey:            v.TargetKey,
+		TargetPath:           v.TargetPath,
 		BorrowedType:         v.BorrowedType,
 	}
 }
@@ -10994,6 +10986,8 @@ type PathValue struct {
 	Identifier string
 }
 
+var EmptyPathValue = PathValue{}
+
 var _ Value = PathValue{}
 var _ atree.Storable = PathValue{}
 var _ EquatableValue = PathValue{}
@@ -11191,7 +11185,8 @@ func (PathValue) DeepRemove(_ *Interpreter) {
 }
 
 func (v PathValue) ByteSize() uint32 {
-	return mustStorableSize(v)
+	// tag number (2 bytes) + array head (1 byte) + domain (CBOR uint) + identifier (CBOR string)
+	return cborTagSize + 1 + getUintCBORSize(uint64(v.Domain)) + getBytesCBORSize([]byte(v.Identifier))
 }
 
 func (v PathValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
