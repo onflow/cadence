@@ -209,6 +209,19 @@ func NewInterpreterRuntime(options ...Option) Runtime {
 	return runtime
 }
 
+func (r *interpreterRuntime) Recover(onError func(error), context Context) {
+	var err error
+	switch recovered := recover().(type) {
+	case Error:
+		// avoid redundant wrapping
+		err = recovered
+	case error:
+		err = newError(recovered, context)
+	}
+
+	onError(err)
+}
+
 func (r *interpreterRuntime) SetCoverageReport(coverageReport *CoverageReport) {
 	r.coverageReport = coverageReport
 }
@@ -230,11 +243,12 @@ func (r *interpreterRuntime) SetResourceOwnerChangeHandlerEnabled(enabled bool) 
 }
 
 func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val cadence.Value, err error) {
-	defer func() {
-		if recovered, ok := recover().(error); ok {
-			err = newError(recovered, context)
-		}
-	}()
+	defer r.Recover(
+		func(internalErr error) {
+			err = internalErr
+		},
+		context,
+	)
 
 	context.InitializeCodesAndPrograms()
 
@@ -473,11 +487,12 @@ func (r *interpreterRuntime) InvokeContractFunction(
 	argumentTypes []sema.Type,
 	context Context,
 ) (val cadence.Value, err error) {
-	defer func() {
-		if recovered, ok := recover().(error); ok {
-			err = newError(recovered, context)
-		}
-	}()
+	defer r.Recover(
+		func(internalErr error) {
+			err = internalErr
+		},
+		context,
+	)
 
 	context.InitializeCodesAndPrograms()
 
@@ -606,11 +621,12 @@ func (r *interpreterRuntime) convertArgument(
 }
 
 func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) (err error) {
-	defer func() {
-		if recovered, ok := recover().(error); ok {
-			err = newError(recovered, context)
-		}
-	}()
+	defer r.Recover(
+		func(internalErr error) {
+			err = internalErr
+		},
+		context,
+	)
 
 	context.InitializeCodesAndPrograms()
 
@@ -907,11 +923,12 @@ func (r *interpreterRuntime) ParseAndCheckProgram(
 	program *interpreter.Program,
 	err error,
 ) {
-	defer func() {
-		if recovered, ok := recover().(error); ok {
-			err = newError(recovered, context)
-		}
-	}()
+	defer r.Recover(
+		func(internalErr error) {
+			err = internalErr
+		},
+		context,
+	)
 
 	context.InitializeCodesAndPrograms()
 
@@ -2906,11 +2923,12 @@ func (r *interpreterRuntime) ReadStored(
 	val cadence.Value,
 	err error,
 ) {
-	defer func() {
-		if recovered, ok := recover().(error); ok {
-			err = newError(recovered, context)
-		}
-	}()
+	defer r.Recover(
+		func(internalErr error) {
+			err = internalErr
+		},
+		context,
+	)
 
 	return r.executeNonProgram(
 		func(inter *interpreter.Interpreter) (interpreter.Value, error) {
@@ -2935,11 +2953,12 @@ func (r *interpreterRuntime) ReadLinked(
 	val cadence.Value,
 	err error,
 ) {
-	defer func() {
-		if recovered, ok := recover().(error); ok {
-			err = newError(recovered, context)
-		}
-	}()
+	defer r.Recover(
+		func(internalErr error) {
+			err = internalErr
+		},
+		context,
+	)
 
 	return r.executeNonProgram(
 		func(inter *interpreter.Interpreter) (interpreter.Value, error) {
