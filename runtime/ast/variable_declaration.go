@@ -114,6 +114,7 @@ func (d *VariableDeclaration) Doc() prettier.Doc {
 				Doc: prettier.Concat{
 					prettier.Text(d.Identifier.Identifier),
 					prettier.Space,
+					// TODO: type annotation, if any
 					d.Transfer.Doc(),
 					prettier.Space,
 					prettier.Group{

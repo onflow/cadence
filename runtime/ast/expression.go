@@ -45,6 +45,8 @@ type BoolExpression struct {
 	Range
 }
 
+var _ Expression = &BoolExpression{}
+
 func (*BoolExpression) isExpression() {}
 
 func (*BoolExpression) isIfStatementTest() {}
@@ -95,6 +97,8 @@ func (e *BoolExpression) MarshalJSON() ([]byte, error) {
 type NilExpression struct {
 	Pos Position `json:"-"`
 }
+
+var _ Expression = &NilExpression{}
 
 func (*NilExpression) isExpression() {}
 
@@ -150,6 +154,8 @@ type StringExpression struct {
 	Range
 }
 
+var _ Expression = &StringExpression{}
+
 func (*StringExpression) isExpression() {}
 
 func (*StringExpression) isIfStatementTest() {}
@@ -193,6 +199,8 @@ type IntegerExpression struct {
 	Base            int
 	Range
 }
+
+var _ Expression = &IntegerExpression{}
 
 func (*IntegerExpression) isExpression() {}
 
@@ -249,6 +257,8 @@ type FixedPointExpression struct {
 	Scale           uint
 	Range
 }
+
+var _ Expression = &FixedPointExpression{}
 
 func (*FixedPointExpression) isExpression() {}
 
@@ -319,6 +329,8 @@ type ArrayExpression struct {
 	Range
 }
 
+var _ Expression = &ArrayExpression{}
+
 func (*ArrayExpression) isExpression() {}
 
 func (*ArrayExpression) isIfStatementTest() {}
@@ -385,6 +397,8 @@ type DictionaryExpression struct {
 	Entries []DictionaryEntry
 	Range
 }
+
+var _ Expression = &DictionaryExpression{}
 
 func (*DictionaryExpression) isExpression() {}
 
@@ -492,6 +506,8 @@ type IdentifierExpression struct {
 	Identifier Identifier
 }
 
+var _ Expression = &IdentifierExpression{}
+
 func (*IdentifierExpression) isExpression() {}
 
 func (*IdentifierExpression) isIfStatementTest() {}
@@ -564,6 +580,8 @@ type InvocationExpression struct {
 	EndPos            Position `json:"-"`
 }
 
+var _ Expression = &InvocationExpression{}
+
 func (*InvocationExpression) isExpression() {}
 
 func (*InvocationExpression) isIfStatementTest() {}
@@ -609,10 +627,9 @@ func (e *InvocationExpression) Doc() prettier.Doc {
 
 	if len(e.TypeArguments) > 0 {
 		typeArgumentDocs := make([]prettier.Doc, len(e.TypeArguments))
-		// TODO: type arguments
-		//for i, typeArgument := range e.TypeArguments {
-		//	typeArgumentDocs[i] = typeArgument.Doc()
-		//}
+		for i, typeArgument := range e.TypeArguments {
+			typeArgumentDocs[i] = typeArgument.Doc()
+		}
 
 		result = append(result,
 			prettier.Wrap(
@@ -689,6 +706,8 @@ type MemberExpression struct {
 	AccessPos  Position
 	Identifier Identifier
 }
+
+var _ Expression = &MemberExpression{}
 
 func (*MemberExpression) isExpression() {}
 
@@ -781,6 +800,8 @@ type IndexExpression struct {
 	Range
 }
 
+var _ Expression = &IndexExpression{}
+
 func (*IndexExpression) isExpression() {}
 
 func (*IndexExpression) isIfStatementTest() {}
@@ -840,6 +861,8 @@ type ConditionalExpression struct {
 	Then Expression
 	Else Expression
 }
+
+var _ Expression = &ConditionalExpression{}
 
 func (*ConditionalExpression) isExpression() {}
 
@@ -934,6 +957,8 @@ type UnaryExpression struct {
 	StartPos   Position `json:"-"`
 }
 
+var _ Expression = &UnaryExpression{}
+
 func (*UnaryExpression) isExpression() {}
 
 func (*UnaryExpression) isIfStatementTest() {}
@@ -994,6 +1019,8 @@ type BinaryExpression struct {
 	Left      Expression
 	Right     Expression
 }
+
+var _ Expression = &BinaryExpression{}
 
 func (*BinaryExpression) isExpression() {}
 
@@ -1071,6 +1098,8 @@ type FunctionExpression struct {
 	StartPos             Position `json:"-"`
 }
 
+var _ Expression = &FunctionExpression{}
+
 func (*FunctionExpression) isExpression() {}
 
 func (*FunctionExpression) isIfStatementTest() {}
@@ -1101,8 +1130,6 @@ var functionExpressionParameterSeparatorDoc prettier.Doc = prettier.Concat{
 }
 
 var typeSeparatorDoc prettier.Doc = prettier.Text(": ")
-var functionExpressionBlockStartDoc prettier.Doc = prettier.Text(" {")
-var functionExpressionBlockEndDoc prettier.Doc = prettier.Text("}")
 var functionExpressionEmptyBlockDoc prettier.Doc = prettier.Text(" {}")
 
 func (e *FunctionExpression) Doc() prettier.Doc {
@@ -1115,7 +1142,7 @@ func (e *FunctionExpression) Doc() prettier.Doc {
 		signatureDoc = prettier.Concat{
 			signatureDoc,
 			typeSeparatorDoc,
-			// TODO: type
+			e.ReturnTypeAnnotation.Doc(),
 		}
 	}
 
@@ -1128,21 +1155,18 @@ func (e *FunctionExpression) Doc() prettier.Doc {
 
 	if e.FunctionBlock.IsEmpty() {
 		return append(doc, functionExpressionEmptyBlockDoc)
+	} else {
+		// TODO: pre-conditions
+		// TODO: post-conditions
+
+		blockDoc := e.FunctionBlock.Block.Doc()
+
+		return append(
+			doc,
+			prettier.Space,
+			blockDoc,
+		)
 	}
-
-	// TODO: pre-conditions
-	// TODO: post-conditions
-
-	statementsDoc := e.statementsDoc()
-
-	return append(doc,
-		functionExpressionBlockStartDoc,
-		prettier.Indent{
-			Doc: statementsDoc,
-		},
-		prettier.HardLine{},
-		functionExpressionBlockEndDoc,
-	)
 }
 
 func (e *FunctionExpression) parametersDoc() prettier.Doc {
@@ -1165,12 +1189,12 @@ func (e *FunctionExpression) parametersDoc() prettier.Doc {
 			)
 		}
 
-		parameterDoc = append(parameterDoc,
+		parameterDoc = append(
+			parameterDoc,
 			prettier.Text(parameter.Identifier.Identifier),
 			typeSeparatorDoc,
+			parameter.TypeAnnotation.Doc(),
 		)
-
-		// TODO: type
 
 		parameterDocs = append(parameterDocs, parameterDoc)
 	}
@@ -1182,27 +1206,6 @@ func (e *FunctionExpression) parametersDoc() prettier.Doc {
 		),
 		prettier.SoftLine{},
 	)
-}
-
-func (e *FunctionExpression) statementsDoc() prettier.Doc {
-	var statementsDoc prettier.Concat
-
-	statements := e.FunctionBlock.Block.Statements
-
-	for _, statement := range statements {
-		// TODO: replace once Statement implements Doc
-		hasDoc, ok := statement.(interface{ Doc() prettier.Doc })
-		if !ok {
-			continue
-		}
-
-		statementsDoc = append(statementsDoc,
-			prettier.HardLine{},
-			hasDoc.Doc(),
-		)
-	}
-
-	return statementsDoc
 }
 
 func (e *FunctionExpression) StartPosition() Position {
@@ -1234,6 +1237,8 @@ type CastingExpression struct {
 	TypeAnnotation            *TypeAnnotation
 	ParentVariableDeclaration *VariableDeclaration `json:"-"`
 }
+
+var _ Expression = &CastingExpression{}
 
 func (*CastingExpression) isExpression() {}
 
@@ -1269,8 +1274,8 @@ func (e *CastingExpression) Doc() prettier.Doc {
 			},
 			prettier.Line{},
 			prettier.Text(e.Operation.Symbol()),
-			prettier.Space,
-			// TODO: type
+			prettier.Line{},
+			e.TypeAnnotation.Doc(),
 		},
 	}
 }
@@ -1302,6 +1307,8 @@ type CreateExpression struct {
 	InvocationExpression *InvocationExpression
 	StartPos             Position `json:"-"`
 }
+
+var _ Expression = &CreateExpression{}
 
 func (*CreateExpression) isExpression() {}
 
@@ -1361,6 +1368,8 @@ type DestroyExpression struct {
 	Expression Expression
 	StartPos   Position `json:"-"`
 }
+
+var _ Expression = &DestroyExpression{}
 
 func (*DestroyExpression) isExpression() {}
 
@@ -1424,6 +1433,8 @@ type ReferenceExpression struct {
 	StartPos   Position `json:"-"`
 }
 
+var _ Expression = &ReferenceExpression{}
+
 func (*ReferenceExpression) isExpression() {}
 
 func (*ReferenceExpression) isIfStatementTest() {}
@@ -1464,8 +1475,8 @@ func (e *ReferenceExpression) Doc() prettier.Doc {
 			},
 			prettier.Line{},
 			referenceExpressionAsOperatorDoc,
-			prettier.Space,
-			// TODO: type
+			prettier.Line{},
+			e.Type.Doc(),
 		},
 	}
 }
@@ -1497,6 +1508,8 @@ type ForceExpression struct {
 	Expression Expression
 	EndPos     Position `json:"-"`
 }
+
+var _ Expression = &ForceExpression{}
 
 func (*ForceExpression) isExpression() {}
 
@@ -1556,6 +1569,8 @@ type PathExpression struct {
 	Domain     Identifier
 	Identifier Identifier
 }
+
+var _ Expression = &PathExpression{}
 
 func (*PathExpression) isExpression() {}
 

@@ -110,7 +110,7 @@ const page = `
     </style>
 </head>
 <body id="panels">
-<textarea id="editor"></textarea>
+<textarea id="editor" onkeydown="if(event.keyCode===9){var v=this.value,s=this.selectionStart,e=this.selectionEnd;this.value=v.substring(0, s)+'    '+v.substring(e);this.selectionStart=this.selectionEnd=s+4;return false;}"></textarea>
 <div id="pretty">
     <input id="stepper" type="number" min="1" step="1">
     <div id="output"></div>
