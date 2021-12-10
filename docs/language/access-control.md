@@ -30,7 +30,8 @@ will be covered in a later section.
 Top-level declarations
 (variables, constants, functions, structures, resources, interfaces)
 and fields (in structures, and resources) are always only able to be written
-to and mutated in the scope where it is defined (self).
+to and mutated (modified, such as by indexed assignment or methods like `append`) 
+in the scope where it is defined (self).
 
 There are four levels of access control defined in the code that specify where
 a declaration can be accessed or called.
