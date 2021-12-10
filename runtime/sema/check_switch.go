@@ -186,6 +186,8 @@ func (checker *Checker) checkSwitchCaseStatements(switchCase *ast.SwitchCase) {
 }
 
 func (checker *Checker) checkDuplicateCases(cases []*ast.SwitchCase) {
+	// This check is expensive, and catching duplicates is a 'nice to have'
+	// feature. Therefore, only enabled it during development time.
 	if !checker.devModeEnabled {
 		return
 	}
@@ -204,15 +206,17 @@ func (checker *Checker) checkDuplicateCases(cases []*ast.SwitchCase) {
 
 		for j := i + 1; j < len(cases); j++ {
 			otherCase := cases[j]
-			if duplicateChecker.isDuplicate(switchCase.Expression, otherCase.Expression) {
-				duplicates[otherCase] = true
-
-				checker.report(
-					&DuplicateSwitchCaseError{
-						Range: ast.NewRangeFromPositioned(otherCase.Expression),
-					},
-				)
+			if !duplicateChecker.isDuplicate(switchCase.Expression, otherCase.Expression) {
+				continue
 			}
+
+			duplicates[otherCase] = true
+
+			checker.report(
+				&DuplicateSwitchCaseError{
+					Range: ast.NewRangeFromPositioned(otherCase.Expression),
+				},
+			)
 		}
 	}
 }
