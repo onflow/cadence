@@ -54,7 +54,7 @@ func TestCheckForce(t *testing.T) {
 
 	t.Run("non-optional", func(t *testing.T) {
 
-		checker, err := ParseAndCheckWithLinting(t, `
+		checker, err := ParseAndCheck(t, `
           let x: Int = 1
           let y = x!
         `)

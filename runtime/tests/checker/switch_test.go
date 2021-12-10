@@ -706,4 +706,17 @@ func TestCheckSwitchStatementDuplicateCases(t *testing.T) {
 
 		assert.NoError(t, err)
 	})
+
+	t.Run("default", func(t *testing.T) {
+		_, err := ParseAndCheck(t, `
+          fun test(): Int {
+              switch "hello" {
+                  default:
+                      return -1
+              }
+          }
+        `)
+
+		assert.NoError(t, err)
+	})
 }

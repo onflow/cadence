@@ -235,6 +235,10 @@ func newDuplicateCaseChecker(checker *Checker) *duplicateCaseChecker {
 }
 
 func (d *duplicateCaseChecker) isDuplicate(this ast.Expression, other ast.Expression) bool {
+	if this == nil || other == nil {
+		return false
+	}
+
 	tempExpr := d.expr
 	d.expr = this
 	defer func() {

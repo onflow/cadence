@@ -83,6 +83,9 @@ func ParseAndCheckWithOptions(
 		checkerOptions := append(
 			[]sema.Option{
 				sema.WithAccessCheckMode(sema.AccessCheckModeNotSpecifiedUnrestricted),
+
+				// Run all tests with dev-mode enabled.
+				sema.WithDevModeEnabled(true),
 			},
 			options.Options...,
 		)
