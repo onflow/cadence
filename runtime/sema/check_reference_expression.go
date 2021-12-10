@@ -34,6 +34,7 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 
 	var referenceType *ReferenceType
 	var targetType, referencedType Type
+	var returnType Type
 
 	if !resultType.IsInvalidType() {
 		var ok bool
@@ -49,6 +50,7 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 			targetType = referenceType.Type
 		}
 	}
+	returnType = referenceType
 
 	// Type-check the referenced expression
 
@@ -66,6 +68,14 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 		expectedType := wrapWithOptionalIfNotNil(targetType)
 
 		_, referencedType = checker.visitExpression(indexExpression, expectedType)
+
+		// Unwrap the optional one level, but not infinitely
+
+		if optionalReferencedType, ok := referencedType.(*OptionalType); ok {
+			referencedType = optionalReferencedType.Type
+		}
+
+		returnType = &OptionalType{Type: referenceType}
 
 	} else {
 		// If the referenced expression is not an index expression, check it normally
@@ -87,5 +97,5 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 
 	checker.Elaboration.ReferenceExpressionBorrowTypes[referenceExpression] = referenceType
 
-	return referenceType
+	return returnType
 }

@@ -1070,14 +1070,31 @@ func TestCheckInvalidDictionaryAccessReference(t *testing.T) {
       let ref = &xs[1] as &String
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := ExpectCheckerErrors(t, err, 1)
 
 	require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-	require.IsType(t, &sema.OptionalTypeReferenceError{}, errs[1])
 
 	typeMismatchError := errs[0].(*sema.TypeMismatchError)
 	assert.Equal(t, 17, typeMismatchError.StartPos.Column)
 	assert.Equal(t, 21, typeMismatchError.EndPos.Column)
+}
+
+func TestCheckDictionaryAccessReferenceIsOptional(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      let xs: {Int: Int} = {}
+      let ref: Int = &xs[1] as &Int
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+
+	typeMismatchError := errs[0].(*sema.TypeMismatchError)
+	assert.Equal(t, 21, typeMismatchError.StartPos.Column)
+	assert.Equal(t, 34, typeMismatchError.EndPos.Column)
 }
 
 func TestCheckInvalidDictionaryAccessOptionalReference(t *testing.T) {
@@ -1093,12 +1110,12 @@ func TestCheckInvalidDictionaryAccessOptionalReference(t *testing.T) {
 		}
 		let dict: {String : S} = {}
 		let s = &dict[""] as? &S
-		let n: Number = s.foo
+		let n = s.foo
     `)
 
 	errs := ExpectCheckerErrors(t, err, 1)
 
-	require.IsType(t, &sema.OptionalTypeReferenceError{}, errs[0])
+	require.IsType(t, &sema.NotDeclaredMemberError{}, errs[0]) // nil has no member foo
 }
 
 func TestCheckReferenceTypeImplicitConformance(t *testing.T) {

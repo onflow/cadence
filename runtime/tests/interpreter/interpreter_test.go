@@ -7955,7 +7955,7 @@ func TestInterpretNonStorageReference(t *testing.T) {
                   <-create NFT(id: 2)
               ]
 
-              let nftRef = &resources[1] as &NFT
+              let nftRef = (&resources[1] as &NFT)!
               let nftRef2 = nftRef
               nftRef2.id = 3
 
@@ -8010,7 +8010,7 @@ func TestInterpretNonStorageReferenceToOptional(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := parseCheckAndInterpretWithOptions(t,
+	inter := parseCheckAndInterpret(t,
 		`
           resource Foo {
               let name: String
@@ -8022,24 +8022,35 @@ func TestInterpretNonStorageReferenceToOptional(t *testing.T) {
 
           fun testSome(): String {
               let xs: @{String: Foo} <- {"yes": <-create Foo(name: "YES")}
-              let ref = &xs["yes"] as &Foo
+              let ref = (&xs["yes"] as &Foo)!
               let name = ref.name
               destroy xs
               return name
           }
-        `,
-		ParseCheckAndInterpretOptions{
-			Options: []interpreter.Option{
-				makeContractValueHandler(nil, nil, nil),
-			},
-			HandleCheckerError: func(err error) {
-				errs := checker.ExpectCheckerErrors(t, err, 1)
 
-				assert.IsType(t, &sema.OptionalTypeReferenceError{}, errs[0])
-			},
-		},
+		  fun testNil(): String {
+			let xs: @{String: Foo} <- {}
+			let ref = (&xs["no"] as &Foo)!
+			let name = ref.name
+			destroy xs
+			return name
+		  }
+        `,
 	)
-	require.NoError(t, err)
+	t.Run("some", func(t *testing.T) {
+		value, err := inter.Invoke("testSome")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter, interpreter.NewStringValue("YES"), value)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		_, err := inter.Invoke("testNil")
+		require.Error(t, err)
+		require.ErrorAs(t, err, &interpreter.DereferenceError{})
+	})
 }
 
 func TestInterpretFix64(t *testing.T) {
@@ -8831,14 +8842,14 @@ func TestInterpretEphemeralReferenceToOptional(t *testing.T) {
                   }
               }
 
-              fun borrow(id: Int): &R {
+              fun borrow(id: Int): &R? {
                   return &C.rs[id] as &R
               }
 
               init() {
                   self.rs <- {}
                   self.rs[1] <-! create R(id: 1)
-                  let ref = self.borrow(id: 1)
+                  let ref = self.borrow(id: 1)!
                   ref.id
               }
           }
@@ -8846,11 +8857,6 @@ func TestInterpretEphemeralReferenceToOptional(t *testing.T) {
 		ParseCheckAndInterpretOptions{
 			Options: []interpreter.Option{
 				makeContractValueHandler(nil, nil, nil),
-			},
-			HandleCheckerError: func(err error) {
-				errs := checker.ExpectCheckerErrors(t, err, 1)
-
-				assert.IsType(t, &sema.OptionalTypeReferenceError{}, errs[0])
 			},
 		},
 	)
