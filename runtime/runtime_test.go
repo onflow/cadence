@@ -185,16 +185,6 @@ type testRuntimeInterface struct {
 	recordTrace                func(operation string, location common.Location, duration time.Duration, logs []opentracing.LogRecord)
 }
 
-func (i *testRuntimeInterface) ResourceOwnerChanged(
-	resource *interpreter.CompositeValue,
-	oldOwner common.Address,
-	newOwner common.Address,
-) {
-	if i.resourceOwnerChanged != nil {
-		i.resourceOwnerChanged(resource, oldOwner, newOwner)
-	}
-}
-
 // testRuntimeInterface should implement Interface
 var _ Interface = &testRuntimeInterface{}
 
@@ -306,6 +296,16 @@ func (i *testRuntimeInterface) ProgramLog(message string) error {
 
 func (i *testRuntimeInterface) EmitEvent(event cadence.Event) error {
 	return i.emitEvent(event)
+}
+
+func (i *testRuntimeInterface) ResourceOwnerChanged(
+	resource *interpreter.CompositeValue,
+	oldOwner common.Address,
+	newOwner common.Address,
+) {
+	if i.resourceOwnerChanged != nil {
+		i.resourceOwnerChanged(resource, oldOwner, newOwner)
+	}
 }
 
 func (i *testRuntimeInterface) GenerateUUID() (uint64, error) {
