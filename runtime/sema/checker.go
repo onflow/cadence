@@ -115,7 +115,7 @@ type Checker struct {
 	checkHandler                       CheckHandlerFunc
 	expectedType                       Type
 	memberAccountAccessHandler         MemberAccountAccessHandlerFunc
-	lintEnabled                        bool
+	devModeEnabled                     bool
 }
 
 type Option func(*Checker) error
@@ -236,12 +236,13 @@ func WithPositionInfoEnabled(enabled bool) Option {
 	}
 }
 
-// WithLintingEnabled returns a checker option which enables/disables
-// advanced linting.
+// WithDevModeEnabled returns a checker option which enables/disables
+// advanced semantic checks that are not mandatory.
+// e.g: advanced linting, duplicate switch-cases
 //
-func WithLintingEnabled(enabled bool) Option {
+func WithDevModeEnabled(enabled bool) Option {
 	return func(checker *Checker) error {
-		checker.lintEnabled = enabled
+		checker.devModeEnabled = enabled
 		return nil
 	}
 }

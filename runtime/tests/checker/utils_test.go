@@ -53,7 +53,7 @@ func ParseAndCheckWithAny(t *testing.T, code string) (*sema.Checker, error) {
 						Kind: common.DeclarationKindType,
 					},
 				}),
-				sema.WithLintingEnabled(true),
+				sema.WithDevModeEnabled(true),
 			},
 		},
 	)
@@ -64,7 +64,7 @@ func ParseAndCheckWithLinting(t *testing.T, code string) (*sema.Checker, error) 
 		code,
 		ParseAndCheckOptions{
 			Options: []sema.Option{
-				sema.WithLintingEnabled(true),
+				sema.WithDevModeEnabled(true),
 			},
 		},
 	)

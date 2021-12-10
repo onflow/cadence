@@ -124,7 +124,7 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 						Range:        ast.NewRangeFromPositioned(leftHandExpression),
 					},
 				)
-			} else if checker.lintEnabled && IsSubType(leftHandType, rightHandType) {
+			} else if checker.devModeEnabled && IsSubType(leftHandType, rightHandType) {
 
 				switch expression.Operation {
 				case ast.OperationFailableCast:
@@ -162,7 +162,7 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 		// the inferred-type of the expression. i.e: exprActualType == rightHandType
 		// Then, it is not possible to determine whether the target type is redundant.
 		// Therefore, don't check for redundant casts, if there are errors.
-		if checker.lintEnabled &&
+		if checker.devModeEnabled &&
 			!hasErrors &&
 			isRedundantCast(leftHandExpression, exprActualType, rightHandType, checker.expectedType) {
 			checker.hint(

@@ -186,6 +186,10 @@ func (checker *Checker) checkSwitchCaseStatements(switchCase *ast.SwitchCase) {
 }
 
 func (checker *Checker) checkDuplicateCases(cases []*ast.SwitchCase) {
+	if !checker.devModeEnabled {
+		return
+	}
+
 	duplicates := make(map[*ast.SwitchCase]bool)
 
 	duplicateChecker := newDuplicateCaseChecker(checker)
@@ -193,7 +197,7 @@ func (checker *Checker) checkDuplicateCases(cases []*ast.SwitchCase) {
 	for i, switchCase := range cases {
 
 		// If the current case is already identified as a duplicate,
-		// the no need to check it again. Can simply skip.
+		// then no need to check it again. Can simply skip.
 		if _, isDuplicate := duplicates[switchCase]; isDuplicate {
 			continue
 		}
