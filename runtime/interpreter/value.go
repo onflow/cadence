@@ -8889,7 +8889,7 @@ func (v *CompositeValue) Transfer(
 		}
 	}
 
-	if address != currentAddress &&
+	if needsStoreTo &&
 		res.Kind == common.CompositeKindResource &&
 		interpreter.onResourceOwnerChange != nil {
 
