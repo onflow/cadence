@@ -8595,7 +8595,7 @@ func formatComposite(typeId string, fields []CompositeField, seenReferences Seen
 	return format.Composite(typeId, preparedFields)
 }
 
-func (v *CompositeValue) GetField(_ *Interpreter, _ func() LocationRange, name string) Value {
+func (v *CompositeValue) GetField(name string) Value {
 
 	storable, err := v.dictionary.Get(
 		stringAtreeComparator,
@@ -8643,7 +8643,7 @@ func (v *CompositeValue) Equal(interpreter *Interpreter, getLocationRange func()
 
 		// NOTE: Do NOT use an iterator, iteration order of fields may be different
 		// (if stored in different account, as storage ID is used as hash seed)
-		otherValue := otherComposite.GetField(interpreter, getLocationRange, fieldName)
+		otherValue := otherComposite.GetField(fieldName)
 
 		equatableValue, ok := MustConvertStoredValue(value).(EquatableValue)
 		if !ok || !equatableValue.Equal(interpreter, getLocationRange, otherValue) {
@@ -8660,7 +8660,7 @@ func (v *CompositeValue) HashInput(interpreter *Interpreter, getLocationRange fu
 	if v.Kind == common.CompositeKindEnum {
 		typeID := v.TypeID()
 
-		rawValue := v.GetField(interpreter, getLocationRange, sema.EnumRawValueFieldName)
+		rawValue := v.GetField(sema.EnumRawValueFieldName)
 		rawValueHashInput := rawValue.(HashableValue).
 			HashInput(interpreter, getLocationRange, scratch)
 
@@ -8726,7 +8726,7 @@ func (v *CompositeValue) ConformsToDynamicType(
 	}
 
 	for _, fieldName := range compositeType.Fields {
-		value := v.GetField(interpreter, getLocationRange, fieldName)
+		value := v.GetField(fieldName)
 		if value == nil {
 			if v.ComputedFields == nil {
 				return false
@@ -8810,7 +8810,9 @@ func (v *CompositeValue) Transfer(
 
 	dictionary := v.dictionary
 
-	needsStoreTo := v.NeedsStoreTo(address)
+	currentAddress := v.StorageID().Address
+
+	needsStoreTo := address != currentAddress
 	isResourceKinded := v.IsResourceKinded(interpreter)
 
 	if needsStoreTo || !isResourceKinded {
@@ -8864,11 +8866,12 @@ func (v *CompositeValue) Transfer(
 		}
 	}
 
+	var res *CompositeValue
 	if isResourceKinded {
 		v.dictionary = dictionary
-		return v
+		res = v
 	} else {
-		return &CompositeValue{
+		res = &CompositeValue{
 			dictionary:          dictionary,
 			Location:            v.Location,
 			QualifiedIdentifier: v.QualifiedIdentifier,
@@ -8885,6 +8888,29 @@ func (v *CompositeValue) Transfer(
 			dynamicType:         v.dynamicType,
 		}
 	}
+
+	if needsStoreTo &&
+		res.Kind == common.CompositeKindResource &&
+		interpreter.onResourceOwnerChange != nil {
+
+		interpreter.onResourceOwnerChange(
+			interpreter,
+			res,
+			common.Address(currentAddress),
+			common.Address(address),
+		)
+	}
+
+	return res
+}
+
+func (v *CompositeValue) ResourceUUID() *UInt64Value {
+	fieldValue := v.GetField(sema.ResourceUUIDFieldName)
+	uuid, ok := fieldValue.(UInt64Value)
+	if !ok {
+		return nil
+	}
+	return &uuid
 }
 
 func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
@@ -11725,12 +11751,12 @@ func NewPublicKeyValue(
 			{
 				Name: sema.PublicKeySignAlgoField,
 				// TODO: provide proper location range
-				Value: publicKeyValue.GetField(interpreter, ReturnEmptyLocationRange, sema.PublicKeySignAlgoField),
+				Value: publicKeyValue.GetField(sema.PublicKeySignAlgoField),
 			},
 			{
 				Name: sema.PublicKeyIsValidField,
 				// TODO: provide proper location range
-				Value: publicKeyValue.GetField(interpreter, ReturnEmptyLocationRange, sema.PublicKeyIsValidField),
+				Value: publicKeyValue.GetField(sema.PublicKeyIsValidField),
 			},
 		}
 

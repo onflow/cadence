@@ -360,15 +360,13 @@ func loadStorageKey(
 				func(v interpreter.Value) bool {
 
 					if composite, ok := v.(*interpreter.CompositeValue); ok &&
-						composite.Kind == common.CompositeKindResource {
+						composite.Kind == common.CompositeKindResource &&
+						composite.ResourceUUID() == nil {
 
-						uuid := composite.GetField(inter, interpreter.ReturnEmptyLocationRange, "uuid")
-						if _, ok := uuid.(interpreter.UInt64Value); !ok {
-							log.Printf(
-								"Failed to get UUID for resource @ 0x%x %s",
-								address, key,
-							)
-						}
+						log.Printf(
+							"Failed to get UUID for resource @ 0x%x %s",
+							address, key,
+						)
 					}
 
 					return true
