@@ -1109,13 +1109,32 @@ func TestCheckInvalidDictionaryAccessOptionalReference(t *testing.T) {
 			}
 		}
 		let dict: {String : S} = {}
-		let s = &dict[""] as? &S
+		let s = &dict[""] as &S
 		let n = s.foo
     `)
 
 	errs := ExpectCheckerErrors(t, err, 1)
 
 	require.IsType(t, &sema.NotDeclaredMemberError{}, errs[0]) // nil has no member foo
+}
+
+func TestCheckArrayAccessReference(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		pub struct S {
+			pub let foo : Number
+			init() {
+				self.foo = 0
+			}
+		}
+		let dict: [S] = []
+		let s = &dict[0] as &S
+		let n = s.foo
+    `)
+
+	require.NoError(t, err)
 }
 
 func TestCheckReferenceTypeImplicitConformance(t *testing.T) {
