@@ -10340,7 +10340,7 @@ func (v *StorageReferenceValue) StaticType() StaticType {
 	}
 }
 
-func (v *StorageReferenceValue) dereference(interpreter *Interpreter) (*Value, func(LocationRange) error) {
+func (v *StorageReferenceValue) dereference(interpreter *Interpreter, getLocationRange func() LocationRange) (*Value, error) {
 	address := v.TargetStorageAddress
 	domain := v.TargetPath.Domain.Identifier()
 	identifier := v.TargetPath.Identifier
@@ -10353,11 +10353,9 @@ func (v *StorageReferenceValue) dereference(interpreter *Interpreter) (*Value, f
 	if v.BorrowedType != nil {
 		dynamicType := referenced.DynamicType(interpreter, SeenReferences{})
 		if !interpreter.IsSubType(dynamicType, v.BorrowedType) {
-			return nil, func(lr LocationRange) error {
-				return ForceCastTypeMismatchError{
-					ExpectedType:  v.BorrowedType,
-					LocationRange: lr,
-				}
+			return nil, ForceCastTypeMismatchError{
+				ExpectedType:  v.BorrowedType,
+				LocationRange: getLocationRange(),
 			}
 		}
 	}
@@ -10366,7 +10364,7 @@ func (v *StorageReferenceValue) dereference(interpreter *Interpreter) (*Value, f
 }
 
 func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter) *Value {
-	value, err := v.dereference(interpreter)
+	value, err := v.dereference(interpreter, ReturnEmptyLocationRange)
 	if err != nil {
 		return nil
 	}

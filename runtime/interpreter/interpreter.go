@@ -3607,9 +3607,9 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 			// which reads the stored value
 			// and performs a dynamic type check
 
-			value, errFunc := reference.dereference(interpreter)
-			if errFunc != nil {
-				panic(errFunc(invocation.GetLocationRange()))
+			value, err := reference.dereference(interpreter, invocation.GetLocationRange)
+			if err != nil {
+				panic(err)
 			}
 			if value == nil {
 				return NilValue{}
@@ -3782,9 +3782,9 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 			// which reads the stored value
 			// and performs a dynamic type check
 
-			value, errFunc := reference.dereference(interpreter)
-			if errFunc != nil {
-				panic(errFunc(invocation.GetLocationRange()))
+			value, err := reference.dereference(interpreter, invocation.GetLocationRange)
+			if err != nil {
+				panic(err)
 			}
 			if value == nil {
 				return NilValue{}
