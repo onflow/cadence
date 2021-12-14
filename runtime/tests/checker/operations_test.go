@@ -466,3 +466,33 @@ func TestCheckInvalidCompositeEquality(t *testing.T) {
 		test(compositeKind)
 	}
 }
+
+func TestCheckNumericSuperTypeBinaryOperations(t *testing.T) {
+
+	t.Parallel()
+
+	operations := []ast.Operation{
+		ast.OperationPlus,
+		ast.OperationMinus,
+		ast.OperationMod,
+		ast.OperationMul,
+		ast.OperationDiv,
+	}
+
+	for _, op := range operations {
+		typ := sema.IntegerType
+
+		code := fmt.Sprintf(
+			`
+                      fun test(a: %[1]s, b: %[1]s): %[1]s {
+                          return a %[2]s b
+                      }
+                    `,
+			typ.String(),
+			op.Symbol(),
+		)
+
+		_, err := ParseAndCheck(t, code)
+		assert.Error(t, err)
+	}
+}
