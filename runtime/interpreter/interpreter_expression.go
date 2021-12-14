@@ -734,10 +734,23 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 
 	result := interpreter.evalExpression(referenceExpression.Expression)
 
-	return &EphemeralReferenceValue{
-		Authorized:   borrowType.Authorized,
-		Value:        result,
-		BorrowedType: borrowType.Type,
+	switch result := result.(type) {
+	// references to optionals are transformed into optional references, so move
+	// the *SomeValue out to the reference itself
+	case *SomeValue:
+		return NewSomeValueNonCopying(&EphemeralReferenceValue{
+			Authorized:   borrowType.Authorized,
+			Value:        result.Value,
+			BorrowedType: borrowType.Type,
+		})
+	case NilValue:
+		return NilValue{}
+	default:
+		return &EphemeralReferenceValue{
+			Authorized:   borrowType.Authorized,
+			Value:        result,
+			BorrowedType: borrowType.Type,
+		}
 	}
 }
 

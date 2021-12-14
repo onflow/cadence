@@ -8049,7 +8049,7 @@ func TestInterpretNonStorageReferenceToOptional(t *testing.T) {
 	t.Run("nil", func(t *testing.T) {
 		_, err := inter.Invoke("testNil")
 		require.Error(t, err)
-		require.ErrorAs(t, err, &interpreter.DereferenceError{})
+		require.ErrorAs(t, err, &interpreter.ForceNilError{})
 	})
 }
 
@@ -9493,4 +9493,40 @@ func TestInterpretArrayTypeInference(t *testing.T) {
 			value,
 		)
 	})
+}
+
+func TestInterpretOptionalReference(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t,
+		`
+          fun present(): &Int {
+              let x: Int? = 1
+			  let y = &x as &Int?
+			  return y!
+          }
+
+		  fun absent(): &Int {
+			let x: Int? = nil
+			let y = &x as &Int?
+			return y!
+		}
+        `,
+	)
+
+	value, err := inter.Invoke("present")
+	require.NoError(t, err)
+	require.Equal(
+		t,
+		&interpreter.EphemeralReferenceValue{
+			Value:        interpreter.NewIntValueFromInt64(1),
+			BorrowedType: sema.IntType,
+		},
+		value,
+	)
+
+	_, err = inter.Invoke("absent")
+	var forceNilError interpreter.ForceNilError
+	require.ErrorAs(t, err, &forceNilError)
 }
