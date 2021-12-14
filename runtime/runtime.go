@@ -92,6 +92,9 @@ type Runtime interface {
 	// SetTracingEnabled configures if tracing is enabled.
 	SetTracingEnabled(enabled bool)
 
+	// SetResourceOwnerChangeCallbackEnabled configures if the resource owner change callback is enabled.
+	SetResourceOwnerChangeHandlerEnabled(enabled bool)
+
 	// ReadStored reads the value stored at the given path
 	//
 	ReadStored(address common.Address, path cadence.Path, context Context) (cadence.Value, error)
@@ -152,10 +155,11 @@ func reportMetric(
 
 // interpreterRuntime is a interpreter-based version of the Flow runtime.
 type interpreterRuntime struct {
-	coverageReport                  *CoverageReport
-	contractUpdateValidationEnabled bool
-	atreeValidationEnabled          bool
-	tracingEnabled                  bool
+	coverageReport                    *CoverageReport
+	contractUpdateValidationEnabled   bool
+	atreeValidationEnabled            bool
+	tracingEnabled                    bool
+	resourceOwnerChangeHandlerEnabled bool
 }
 
 type Option func(Runtime)
@@ -187,6 +191,15 @@ func WithTracingEnabled(enabled bool) Option {
 	}
 }
 
+// WithResourceOwnerChangeCallbackEnabled returns a runtime option
+// that configures if the resource owner change callback is enabled.
+//
+func WithResourceOwnerChangeCallbackEnabled(enabled bool) Option {
+	return func(runtime Runtime) {
+		runtime.SetResourceOwnerChangeHandlerEnabled(enabled)
+	}
+}
+
 // NewInterpreterRuntime returns a interpreter-based version of the Flow runtime.
 func NewInterpreterRuntime(options ...Option) Runtime {
 	runtime := &interpreterRuntime{}
@@ -210,6 +223,10 @@ func (r *interpreterRuntime) SetAtreeValidationEnabled(enabled bool) {
 
 func (r *interpreterRuntime) SetTracingEnabled(enabled bool) {
 	r.tracingEnabled = enabled
+}
+
+func (r *interpreterRuntime) SetResourceOwnerChangeHandlerEnabled(enabled bool) {
+	r.resourceOwnerChangeHandlerEnabled = enabled
 }
 
 func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cadence.Value, error) {
@@ -1143,7 +1160,7 @@ func (r *interpreterRuntime) newInterpreter(
 		interpreter.WithOnStatementHandler(
 			r.onStatementHandler(),
 		),
-		interpreter.WithPublicAccountHandlerFunc(
+		interpreter.WithPublicAccountHandler(
 			func(_ *interpreter.Interpreter, address interpreter.AddressValue) interpreter.Value {
 				return r.getPublicAccount(
 					address,
@@ -1238,6 +1255,7 @@ func (r *interpreterRuntime) newInterpreter(
 		// and disable storage validation after each value modification.
 		// Instead, storage is validated after commits (if validation is enabled).
 		interpreter.WithAtreeStorageValidationEnabled(false),
+		interpreter.WithOnResourceOwnerChangeHandler(r.resourceOwnerChangedHandler(context.Interface)),
 	}
 
 	defaultOptions = append(defaultOptions,
@@ -1543,7 +1561,7 @@ func (r *interpreterRuntime) emitEvent(
 	fields := make([]exportableValue, len(eventType.ConstructorParameters))
 
 	for i, parameter := range eventType.ConstructorParameters {
-		value := event.GetField(inter, getLocationRange, parameter.Identifier)
+		value := event.GetField(parameter.Identifier)
 		fields[i] = newExportableValue(value, inter)
 	}
 
@@ -3112,6 +3130,26 @@ func (r *interpreterRuntime) newPublicAccountContracts(
 	)
 }
 
+func (r *interpreterRuntime) resourceOwnerChangedHandler(
+	runtimeInterface Interface,
+) interpreter.OnResourceOwnerChangeFunc {
+	if !r.resourceOwnerChangeHandlerEnabled {
+		return nil
+	}
+	return func(
+		_ *interpreter.Interpreter,
+		resource *interpreter.CompositeValue,
+		oldOwner common.Address,
+		newOwner common.Address,
+	) {
+		runtimeInterface.ResourceOwnerChanged(
+			resource,
+			oldOwner,
+			newOwner,
+		)
+	}
+}
+
 func NewPublicKeyFromValue(
 	inter *interpreter.Interpreter,
 	getLocationRange func() interpreter.LocationRange,
@@ -3143,7 +3181,7 @@ func NewPublicKeyFromValue(
 		)
 	}
 
-	rawValue := signAlgoValue.GetField(inter, getLocationRange, sema.EnumRawValueFieldName)
+	rawValue := signAlgoValue.GetField(sema.EnumRawValueFieldName)
 	if rawValue == nil {
 		return nil, errors.New("sign algorithm raw value is not set")
 	}
@@ -3231,7 +3269,7 @@ func NewHashAlgorithmFromValue(
 ) HashAlgorithm {
 	hashAlgoValue := value.(*interpreter.CompositeValue)
 
-	rawValue := hashAlgoValue.GetField(inter, getLocationRange, sema.EnumRawValueFieldName)
+	rawValue := hashAlgoValue.GetField(sema.EnumRawValueFieldName)
 	if rawValue == nil {
 		panic("cannot find hash algorithm raw value")
 	}

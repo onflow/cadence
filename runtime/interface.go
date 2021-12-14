@@ -127,10 +127,12 @@ type Interface interface {
 	RecordTrace(operation string, location common.Location, duration time.Duration, logs []opentracing.LogRecord)
 	// BLSVerifyPOP verifies a proof of possession (PoP) for the receiver public key.
 	BLSVerifyPOP(pk *PublicKey, s []byte) (bool, error)
-	// AggregateBLSSignatures aggregate multiple BLS signatures into one.
+	// AggregateBLSSignatures aggregates multiple BLS signatures into one.
 	AggregateBLSSignatures(sigs [][]byte) ([]byte, error)
-	// AggregateBLSPublicKeys aggregate multiple BLS public keys into one.
+	// AggregateBLSPublicKeys aggregates multiple BLS public keys into one.
 	AggregateBLSPublicKeys(keys []*PublicKey) (*PublicKey, error)
+	// ResourceOwnerChanged gets called when a resource's owner changed (if enabled)
+	ResourceOwnerChanged(resource *interpreter.CompositeValue, oldOwner common.Address, newOwner common.Address)
 }
 
 type Metrics interface {
