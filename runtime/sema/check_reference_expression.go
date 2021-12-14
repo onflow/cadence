@@ -38,6 +38,12 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 
 	if !resultType.IsInvalidType() {
 		var ok bool
+		// indexed access to dictionaries require an optional reference as their
+		// target type, so allow one level of optionals
+		optType, optOk := resultType.(*OptionalType)
+		if optOk {
+			resultType = optType.Type
+		}
 		referenceType, ok = resultType.(*ReferenceType)
 		if !ok {
 			checker.report(
@@ -48,6 +54,9 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 			)
 		} else {
 			targetType = referenceType.Type
+			if optOk {
+				targetType = &OptionalType{Type: targetType}
+			}
 		}
 	}
 	returnType = referenceType
@@ -56,28 +65,13 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 
 	referencedExpression := referenceExpression.Expression
 
-	// If the referenced expression is an index expression, it might be into storage
+	_, referencedType = checker.visitExpression(referencedExpression, targetType)
 
-	indexExpression, isIndexExpression := referencedExpression.(*ast.IndexExpression)
-	if isIndexExpression {
-		// The referenced expression will evaluate to an optional type if it is indexing:
-		// the result of the access is an optional.
-		//
-		// Hence expect an optional.
-
-		expectedType := wrapWithOptionalIfNotNil(targetType)
-
-		_, referencedType = checker.visitExpression(indexExpression, expectedType)
-
-		// Unwrap the optional one level, but not infinitely
-		if optionalReferencedType, ok := referencedType.(*OptionalType); ok {
-			referencedType = optionalReferencedType.Type
-			returnType = &OptionalType{Type: referenceType}
-		}
-
-	} else {
-		// If the referenced expression is not an index expression, check it normally
-		_, referencedType = checker.visitExpression(referencedExpression, targetType)
+	// Unwrap the optional one level, but not infinitely
+	if optionalReferencedType, ok := referencedType.(*OptionalType); ok {
+		// if referenced type is optional, require that target type is also optional
+		referencedType = optionalReferencedType.Type
+		returnType = &OptionalType{Type: referenceType}
 	}
 
 	if _, ok := referencedType.(*OptionalType); ok {

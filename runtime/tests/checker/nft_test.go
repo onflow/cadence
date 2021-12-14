@@ -586,7 +586,7 @@ pub contract TopShot: NonFungibleToken {
 
             // Get a reference to the Set and return it
             // use & to indicate the reference to the object and type
-            return (&TopShot.sets[setID] as &Set)!
+            return (&TopShot.sets[setID] as &Set?)!
         }
 
         // startNewSeries ends the current series by incrementing
@@ -739,7 +739,7 @@ pub contract TopShot: NonFungibleToken {
         // read Moment data.
         //
         pub fun borrowNFT(id: UInt64): &NonFungibleToken.NFT {
-            return (&self.ownedNFTs[id] as &NonFungibleToken.NFT)!
+            return (&self.ownedNFTs[id] as &NonFungibleToken.NFT?)!
         }
 
         // borrowMoment returns a borrowed reference to a Moment
@@ -754,7 +754,7 @@ pub contract TopShot: NonFungibleToken {
         // Returns: A reference to the NFT
         pub fun borrowMoment(id: UInt64): &TopShot.NFT? {
             if self.ownedNFTs[id] != nil {
-                let ref = (&self.ownedNFTs[id] as auth &NonFungibleToken.NFT)!
+                let ref = (&self.ownedNFTs[id] as auth &NonFungibleToken.NFT?)!
                 return ref as! &TopShot.NFT
             } else {
                 return nil

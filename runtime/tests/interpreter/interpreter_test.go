@@ -7955,7 +7955,7 @@ func TestInterpretNonStorageReference(t *testing.T) {
                   <-create NFT(id: 2)
               ]
 
-              let nftRef = (&resources[1] as &NFT)!
+              let nftRef = (&resources[1] as &NFT?)!
               let nftRef2 = nftRef
               nftRef2.id = 3
 
@@ -8022,7 +8022,7 @@ func TestInterpretNonStorageReferenceToOptional(t *testing.T) {
 
           fun testSome(): String {
               let xs: @{String: Foo} <- {"yes": <-create Foo(name: "YES")}
-              let ref = (&xs["yes"] as &Foo)!
+              let ref = (&xs["yes"] as &Foo?)!
               let name = ref.name
               destroy xs
               return name
@@ -8030,7 +8030,7 @@ func TestInterpretNonStorageReferenceToOptional(t *testing.T) {
 
 		  fun testNil(): String {
 			let xs: @{String: Foo} <- {}
-			let ref = (&xs["no"] as &Foo)!
+			let ref = (&xs["no"] as &Foo?)!
 			let name = ref.name
 			destroy xs
 			return name
@@ -8843,7 +8843,7 @@ func TestInterpretEphemeralReferenceToOptional(t *testing.T) {
               }
 
               fun borrow(id: Int): &R? {
-                  return &C.rs[id] as &R
+                  return &C.rs[id] as &R?
               }
 
               init() {
