@@ -311,7 +311,10 @@ let another_one = false
 let b = 100_000_000 // used to split up a number (supports all number types, e.g. 0b10_11_01)
 ```
 
-It can also be used to omit the function argument label. Usually argument labels precede the parameter name. The special argument label _ indicates that a function call can omit the argument label. [More info](https://docs.onflow.org/cadence/language/functions/#function-declarations) 
+It can also be used to omit the function argument label. 
+Usually argument labels precede the parameter name. 
+The special argument label `_` indicates that a function call can omit the argument label. 
+[More info](https://docs.onflow.org/cadence/language/functions/#function-declarations) 
 
 ```cadence
 // The special argument label _ is specified for the parameter,
