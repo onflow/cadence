@@ -20,14 +20,14 @@ package interpreter_test
 
 import (
 	"fmt"
-	"github.com/onflow/cadence/runtime/ast"
-	"github.com/stretchr/testify/assert"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	. "github.com/onflow/cadence/runtime/tests/utils"
 
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -185,7 +185,6 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 
 			for _, op := range operations {
 				t.Run(fmt.Sprintf("%s,%s", op.String(), subtype.String()), func(t *testing.T) {
-					t.Parallel()
 
 					code := fmt.Sprintf(`
                         fun test(): Bool {
