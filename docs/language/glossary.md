@@ -101,6 +101,10 @@ let a = 1 > 2 ? 3 : 4
 ```cadence
 let a = 1 // declares a variable `a` with value `1` 
 
+### Assignment
+
+```cadence
+a = 1  // assigns the value `1` to variable `a `
 ## ! (exclamation mark)
 
 The exclamation mark has a different effect whether it precedes or succeeds a variable.
