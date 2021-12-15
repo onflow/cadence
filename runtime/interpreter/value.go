@@ -5687,7 +5687,7 @@ func (v UIntValue) LessEqual(other NumberValue) BoolValue {
 }
 
 func (v UIntValue) Greater(other NumberValue) BoolValue {
-	o, ok := other.(IntValue)
+	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreater,
