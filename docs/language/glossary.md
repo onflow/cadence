@@ -204,7 +204,7 @@ a <-! create R()
 let a = 1;  
 let b = 2;
 
-a <-> b;
+a <-> b
 // a = 2
 // b = 1
 ```
