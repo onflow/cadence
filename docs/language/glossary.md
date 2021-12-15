@@ -201,8 +201,8 @@ a <-! create R()
 `<->` is referred to as the Swap operator. It swaps values between the variables to the left and right of it. [More info](https://docs.onflow.org/cadence/language/operators/#swapping)
 
 ```cadence
-let a = 1;  
-let b = 2;
+let a = 1
+let b = 2
 
 a <-> b
 // a = 2
