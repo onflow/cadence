@@ -149,8 +149,8 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 		ast.OperationGreaterEqual,
 		ast.OperationLess,
 		ast.OperationLessEqual,
-		//ast.OperationEqual,
-		//ast.OperationNotEqual,
+		ast.OperationEqual,
+		ast.OperationNotEqual,
 	}
 
 	t.Run("Integer subtypes", func(t *testing.T) {
@@ -188,11 +188,11 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 					t.Parallel()
 
 					code := fmt.Sprintf(`
-                            fun test() {
-                                let x: Integer = 5 as %s
-                                let y: Integer = 2 as %s
-                                let z = x %s y
-                            }`,
+                        fun test(): Bool {
+                            let x: Integer = 5 as %s
+                            let y: Integer = 2 as %s
+                            return x %s y
+                        }`,
 						subtype.String(),
 						rhsType.String(),
 						op.Symbol(),
@@ -200,15 +200,24 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 
 					inter := parseCheckAndInterpret(t, code)
 
-					_, err := inter.Invoke("test")
-					require.Error(t, err)
+					result, err := inter.Invoke("test")
 
-					operandError := &interpreter.InvalidOperandsError{}
-					require.ErrorAs(t, err, operandError)
+					switch op {
+					case ast.OperationEqual:
+						require.NoError(t, err)
+						assert.Equal(t, interpreter.BoolValue(false), result)
+					case ast.OperationNotEqual:
+						assert.Equal(t, interpreter.BoolValue(true), result)
+					default:
+						require.Error(t, err)
 
-					assert.Equal(t, op, operandError.Operation)
-					assert.Equal(t, subtype, operandError.LeftType)
-					assert.Equal(t, rhsType, operandError.RightType)
+						operandError := &interpreter.InvalidOperandsError{}
+						require.ErrorAs(t, err, operandError)
+
+						assert.Equal(t, op, operandError.Operation)
+						assert.Equal(t, subtype, operandError.LeftType)
+						assert.Equal(t, rhsType, operandError.RightType)
+					}
 				})
 			}
 		}
@@ -228,11 +237,11 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 				t.Run(fmt.Sprintf("%s,%s", op.String(), subtype.String()), func(t *testing.T) {
 
 					code := fmt.Sprintf(`
-                            fun test() {
-                                let x: FixedPoint = 5.2 as %s
-                                let y: FixedPoint = 2.3 as %s
-                                let z = x %s y
-                            }`,
+                        fun test(): Bool {
+                            let x: FixedPoint = 5.2 as %s
+                            let y: FixedPoint = 2.3 as %s
+                            return x %s y
+                        }`,
 						subtype.String(),
 						rhsType.String(),
 						op.Symbol(),
@@ -240,15 +249,24 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 
 					inter := parseCheckAndInterpret(t, code)
 
-					_, err := inter.Invoke("test")
-					require.Error(t, err)
+					result, err := inter.Invoke("test")
 
-					operandError := &interpreter.InvalidOperandsError{}
-					require.ErrorAs(t, err, operandError)
+					switch op {
+					case ast.OperationEqual:
+						require.NoError(t, err)
+						assert.Equal(t, interpreter.BoolValue(false), result)
+					case ast.OperationNotEqual:
+						assert.Equal(t, interpreter.BoolValue(true), result)
+					default:
+						require.Error(t, err)
 
-					assert.Equal(t, op, operandError.Operation)
-					assert.Equal(t, subtype, operandError.LeftType)
-					assert.Equal(t, rhsType, operandError.RightType)
+						operandError := &interpreter.InvalidOperandsError{}
+						require.ErrorAs(t, err, operandError)
+
+						assert.Equal(t, op, operandError.Operation)
+						assert.Equal(t, subtype, operandError.LeftType)
+						assert.Equal(t, rhsType, operandError.RightType)
+					}
 				})
 			}
 		}
@@ -268,11 +286,11 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 				t.Run(fmt.Sprintf("%s,%s", op.String(), subtype.String()), func(t *testing.T) {
 
 					code := fmt.Sprintf(`
-                            fun test() {
-                                let x: FixedPoint = 5.2 as %s
-                                let y: FixedPoint = 2.3 as %s
-                                let z = x %s y
-                            }`,
+                        fun test(): Bool {
+                            let x: FixedPoint = 5.2 as %s
+                            let y: FixedPoint = 2.3 as %s
+                            return x %s y
+                        }`,
 						subtype.String(),
 						rhsType.String(),
 						op.Symbol(),
@@ -280,15 +298,24 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 
 					inter := parseCheckAndInterpret(t, code)
 
-					_, err := inter.Invoke("test")
-					require.Error(t, err)
+					result, err := inter.Invoke("test")
 
-					operandError := &interpreter.InvalidOperandsError{}
-					require.ErrorAs(t, err, operandError)
+					switch op {
+					case ast.OperationEqual:
+						require.NoError(t, err)
+						assert.Equal(t, interpreter.BoolValue(false), result)
+					case ast.OperationNotEqual:
+						assert.Equal(t, interpreter.BoolValue(true), result)
+					default:
+						require.Error(t, err)
 
-					assert.Equal(t, op, operandError.Operation)
-					assert.Equal(t, subtype, operandError.LeftType)
-					assert.Equal(t, rhsType, operandError.RightType)
+						operandError := &interpreter.InvalidOperandsError{}
+						require.ErrorAs(t, err, operandError)
+
+						assert.Equal(t, op, operandError.Operation)
+						assert.Equal(t, subtype, operandError.LeftType)
+						assert.Equal(t, rhsType, operandError.RightType)
+					}
 				})
 			}
 		}
