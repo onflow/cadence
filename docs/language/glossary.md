@@ -95,11 +95,11 @@ let a = 1 > 2 ? 3 : 4
 
 ## = (equals)
 
-A simple assignment
+
+### Variable Declaration
 
 ```cadence
-let a = 1; // assigns a value to a 
-```
+let a = 1 // declares a variable `a` with value `1` 
 
 ## ! (exclamation mark)
 
