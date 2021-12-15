@@ -72,7 +72,7 @@ pub fun use(resource: @SomeResource) {
 If a colon follows a variable/constant/function declaration, it is used to declare its type.
 
 ```cadence
-let a: Bool = true; // assigns a value to a 
+let a: Bool = true // declares variable `a` with type `Bool`
 
 // or
 
