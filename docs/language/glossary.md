@@ -121,8 +121,8 @@ let b: Bool = !a
 When it immediately **succeeds** an *optional* variable, it force-unwraps it. Force-unwrapping returns the value inside an optional if it contains a value, or panics and aborts the execution if the optional has no value, i.e., the optional value is nil. [More info](https://docs.onflow.org/cadence/language/values-and-types/#force-unwrap-)
 
 ```cadence
-let a: Int? = nil;
-let b: Int? = 3; 
+let a: Int? = nil
+let b: Int? = 3
 
 let c: Int = a! // panics, because = nil
 let d: Int = b! // initialized correctly as 3
