@@ -157,10 +157,10 @@ storagePath.toString()  // is "/storage/path"
 
 The move operator `<-` replaces the assignment operator `=` in assignments that involve resources. To make assignment of resources explicit, the move operator `<-` must be used when:
 
-- the resource is the initial value of a constant or variable,
-- the resource is moved to a different variable in an assignment,
-- the resource is moved to a function as an argument
-- the resource is returned from a function.
+- The resource is the initial value of a constant or variable,
+- The resource is moved to a different variable in an assignment,
+- The resource is moved to a function as an argument
+- The resource is returned from a function.
 
 This is because resources in Cadence are linear types meaning they can only exist in a single place at a time. So the move operator figuratively helps underline that that resource is being moved and will no longer be available in its previous location/state once it is moved.
 
