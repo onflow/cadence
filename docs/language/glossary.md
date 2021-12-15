@@ -43,7 +43,9 @@ let c = a && b // false
 
 ## @ (at) 
 
-The `@` symbol before a Type declaration is used to annotate whether a specific type is a [resource](https://docs.onflow.org/cadence/language/resources/). Resources must therefore adhere to the resource-specific lifecycle in Cadence (create, destroy, move). [More info](https://docs.onflow.org/cadence/language/resources/)
+The `@` symbol before a type is used to annotate whether the type is a [resource](https://docs.onflow.org/cadence/language/resources/). Resources must therefore adhere to the resource-specific lifecycle in Cadence (create, destroy, move). [More info](https://docs.onflow.org/cadence/language/resources/).
+
+The `@` symbol must appear at the beginning of the type, not inside. For example, an array of `NFTs` is `@[NFT]` and not `[@NFT]`. This emphasizes the whole type acts like a resource.
 
 ```cadence
 // Declare a resource named `SomeResource`
