@@ -108,8 +108,8 @@ The exclamation mark has a different effect whether it precedes or succeeds a va
 When it immediately **precedes** a boolean-type variable, it negates it.
 
 ```cadence
-let a: Bool = true;
-let b: Bool = !a;
+let a: Bool = true
+let b: Bool = !a
 
 // b is false
 ```
