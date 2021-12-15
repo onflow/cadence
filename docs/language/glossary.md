@@ -270,7 +270,11 @@ let a = 1 > 2 ? 3 : 4
 //   "if NO, then set a = 4.
 ```
 
-It can also be used as a nil-coalescing operator. The nil-coalescing operator `??` returns the value inside an optional if it contains a value, or returns an alternative value if the optional has no value, i.e., the optional value is nil. The nil-coalescing operator can only be applied to values which have an optional type. [More info](https://docs.onflow.org/cadence/language/values-and-types/#nil-coalescing-operator)
+It can also be used as a nil-coalescing operator. 
+The nil-coalescing operator `??` returns the value inside an optional if it contains a value, 
+or returns an alternative value if the optional has no value, i.e., the optional value is nil. 
+The nil-coalescing operator can only be applied to values which have an optional type. 
+[More info](https://docs.onflow.org/cadence/language/values-and-types/#nil-coalescing-operator)
 
 ```cadence
 // Declare a constant which has an optional integer type
