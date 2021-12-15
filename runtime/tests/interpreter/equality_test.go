@@ -145,12 +145,12 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 	t.Parallel()
 
 	operations := []ast.Operation{
-		ast.OperationGreater,
-		ast.OperationGreaterEqual,
+		//ast.OperationGreater,
+		//ast.OperationGreaterEqual,
 		ast.OperationLess,
 		ast.OperationLessEqual,
-		ast.OperationEqual,
-		ast.OperationNotEqual,
+		//ast.OperationEqual,
+		//ast.OperationNotEqual,
 	}
 
 	t.Run("Integer subtypes", func(t *testing.T) {
@@ -185,6 +185,7 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 
 			for _, op := range operations {
 				t.Run(fmt.Sprintf("%s,%s", op.String(), subtype.String()), func(t *testing.T) {
+					t.Parallel()
 
 					code := fmt.Sprintf(`
                             fun test() {
