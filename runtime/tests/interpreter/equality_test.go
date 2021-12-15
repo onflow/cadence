@@ -145,8 +145,8 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 	t.Parallel()
 
 	operations := []ast.Operation{
-		//ast.OperationGreater,
-		//ast.OperationGreaterEqual,
+		ast.OperationGreater,
+		ast.OperationGreaterEqual,
 		ast.OperationLess,
 		ast.OperationLessEqual,
 		//ast.OperationEqual,
