@@ -303,7 +303,8 @@ It can be used in variable names, or to split up numerical components.
 Examples:
 
 ```cadence
-let _a = true; // used as a variable name 
+let _a = true // used as a variable name 
+let another_one = false
 
 // or
 
