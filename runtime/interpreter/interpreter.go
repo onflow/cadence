@@ -3543,7 +3543,10 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 
 			dynamicType := value.DynamicType(interpreter, SeenReferences{})
 			if !interpreter.IsSubType(dynamicType, ty) {
-				return NilValue{}
+				panic(ForceCastTypeMismatchError{
+					ExpectedType:  ty,
+					LocationRange: invocation.GetLocationRange(),
+				})
 			}
 
 			inter := invocation.Interpreter
@@ -3604,7 +3607,11 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 			// which reads the stored value
 			// and performs a dynamic type check
 
-			if reference.ReferencedValue(interpreter) == nil {
+			value, err := reference.dereference(interpreter, invocation.GetLocationRange)
+			if err != nil {
+				panic(err)
+			}
+			if value == nil {
 				return NilValue{}
 			}
 
@@ -3775,7 +3782,11 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 			// which reads the stored value
 			// and performs a dynamic type check
 
-			if reference.ReferencedValue(interpreter) == nil {
+			value, err := reference.dereference(interpreter, invocation.GetLocationRange)
+			if err != nil {
+				panic(err)
+			}
+			if value == nil {
 				return NilValue{}
 			}
 

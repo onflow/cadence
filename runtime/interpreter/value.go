@@ -10340,25 +10340,35 @@ func (v *StorageReferenceValue) StaticType() StaticType {
 	}
 }
 
-func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter) *Value {
-
+func (v *StorageReferenceValue) dereference(interpreter *Interpreter, getLocationRange func() LocationRange) (*Value, error) {
 	address := v.TargetStorageAddress
 	domain := v.TargetPath.Domain.Identifier()
 	identifier := v.TargetPath.Identifier
 
 	referenced := interpreter.ReadStored(address, domain, identifier)
 	if referenced == nil {
-		return nil
+		return nil, nil
 	}
 
 	if v.BorrowedType != nil {
 		dynamicType := referenced.DynamicType(interpreter, SeenReferences{})
 		if !interpreter.IsSubType(dynamicType, v.BorrowedType) {
-			return nil
+			return nil, ForceCastTypeMismatchError{
+				ExpectedType:  v.BorrowedType,
+				LocationRange: getLocationRange(),
+			}
 		}
 	}
 
-	return &referenced
+	return &referenced, nil
+}
+
+func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter) *Value {
+	value, err := v.dereference(interpreter, ReturnEmptyLocationRange)
+	if err != nil {
+		return nil
+	}
+	return value
 }
 
 func (v *StorageReferenceValue) GetMember(

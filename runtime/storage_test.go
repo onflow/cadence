@@ -618,7 +618,7 @@ transaction {
 
 	require.Error(t, err)
 
-	require.Contains(t, err.Error(), "failed to borrow resource converter")
+	require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 }
 
 func TestRuntimeStorageReadAndBorrow(t *testing.T) {
