@@ -1834,12 +1834,30 @@ func (v IntValue) SaturatingDiv(other NumberValue) NumberValue {
 }
 
 func (v IntValue) Less(other NumberValue) BoolValue {
-	cmp := v.BigInt.Cmp(other.(IntValue).BigInt)
+	o, ok := other.(IntValue)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLess,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	cmp := v.BigInt.Cmp(o.BigInt)
 	return cmp == -1
 }
 
 func (v IntValue) LessEqual(other NumberValue) BoolValue {
-	cmp := v.BigInt.Cmp(other.(IntValue).BigInt)
+	o, ok := other.(IntValue)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLessEqual,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	cmp := v.BigInt.Cmp(o.BigInt)
 	return cmp <= 0
 }
 
@@ -2178,11 +2196,29 @@ func (v Int8Value) SaturatingDiv(other NumberValue) NumberValue {
 }
 
 func (v Int8Value) Less(other NumberValue) BoolValue {
-	return v < other.(Int8Value)
+	o, ok := other.(Int8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLess,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	return v < o
 }
 
 func (v Int8Value) LessEqual(other NumberValue) BoolValue {
-	return v <= other.(Int8Value)
+	o, ok := other.(Int8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLessEqual,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	return v <= o
 }
 
 func (v Int8Value) Greater(other NumberValue) BoolValue {
@@ -2522,11 +2558,29 @@ func (v Int16Value) SaturatingDiv(other NumberValue) NumberValue {
 }
 
 func (v Int16Value) Less(other NumberValue) BoolValue {
-	return v < other.(Int16Value)
+	o, ok := other.(Int16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLess,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	return v < o
 }
 
 func (v Int16Value) LessEqual(other NumberValue) BoolValue {
-	return v <= other.(Int16Value)
+	o, ok := other.(Int16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLessEqual,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	return v <= o
 }
 
 func (v Int16Value) Greater(other NumberValue) BoolValue {
@@ -2868,11 +2922,29 @@ func (v Int32Value) SaturatingDiv(other NumberValue) NumberValue {
 }
 
 func (v Int32Value) Less(other NumberValue) BoolValue {
-	return v < other.(Int32Value)
+	o, ok := other.(Int32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLess,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	return v < o
 }
 
 func (v Int32Value) LessEqual(other NumberValue) BoolValue {
-	return v <= other.(Int32Value)
+	o, ok := other.(Int32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLessEqual,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	return v <= o
 }
 
 func (v Int32Value) Greater(other NumberValue) BoolValue {
@@ -3218,11 +3290,29 @@ func (v Int64Value) SaturatingDiv(other NumberValue) NumberValue {
 }
 
 func (v Int64Value) Less(other NumberValue) BoolValue {
-	return v < other.(Int64Value)
+	o, ok := other.(Int64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLess,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	return v < o
 }
 
 func (v Int64Value) LessEqual(other NumberValue) BoolValue {
-	return v <= other.(Int64Value)
+	o, ok := other.(Int64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLessEqual,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	return v <= o
 }
 
 func (v Int64Value) Greater(other NumberValue) BoolValue {
@@ -3609,12 +3699,30 @@ func (v Int128Value) SaturatingDiv(other NumberValue) NumberValue {
 }
 
 func (v Int128Value) Less(other NumberValue) BoolValue {
-	cmp := v.BigInt.Cmp(other.(Int128Value).BigInt)
+	o, ok := other.(Int128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLess,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	cmp := v.BigInt.Cmp(o.BigInt)
 	return cmp == -1
 }
 
 func (v Int128Value) LessEqual(other NumberValue) BoolValue {
-	cmp := v.BigInt.Cmp(other.(Int128Value).BigInt)
+	o, ok := other.(Int128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLessEqual,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	cmp := v.BigInt.Cmp(o.BigInt)
 	return cmp <= 0
 }
 
@@ -4027,12 +4135,30 @@ func (v Int256Value) SaturatingDiv(other NumberValue) NumberValue {
 }
 
 func (v Int256Value) Less(other NumberValue) BoolValue {
-	cmp := v.BigInt.Cmp(other.(Int256Value).BigInt)
+	o, ok := other.(Int256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLess,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	cmp := v.BigInt.Cmp(o.BigInt)
 	return cmp == -1
 }
 
 func (v Int256Value) LessEqual(other NumberValue) BoolValue {
-	cmp := v.BigInt.Cmp(other.(Int256Value).BigInt)
+	o, ok := other.(Int256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLessEqual,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	cmp := v.BigInt.Cmp(o.BigInt)
 	return cmp <= 0
 }
 
@@ -4358,12 +4484,30 @@ func (v UIntValue) SaturatingDiv(other NumberValue) NumberValue {
 }
 
 func (v UIntValue) Less(other NumberValue) BoolValue {
-	cmp := v.BigInt.Cmp(other.(UIntValue).BigInt)
+	o, ok := other.(UIntValue)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLess,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	cmp := v.BigInt.Cmp(o.BigInt)
 	return cmp == -1
 }
 
 func (v UIntValue) LessEqual(other NumberValue) BoolValue {
-	cmp := v.BigInt.Cmp(other.(UIntValue).BigInt)
+	o, ok := other.(UIntValue)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLessEqual,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	cmp := v.BigInt.Cmp(o.BigInt)
 	return cmp <= 0
 }
 
@@ -4634,11 +4778,29 @@ func (v UInt8Value) SaturatingDiv(other NumberValue) NumberValue {
 }
 
 func (v UInt8Value) Less(other NumberValue) BoolValue {
-	return v < other.(UInt8Value)
+	o, ok := other.(UInt8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLess,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	return v < o
 }
 
 func (v UInt8Value) LessEqual(other NumberValue) BoolValue {
-	return v <= other.(UInt8Value)
+	o, ok := other.(UInt8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLessEqual,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	return v <= o
 }
 
 func (v UInt8Value) Greater(other NumberValue) BoolValue {
@@ -4908,11 +5070,29 @@ func (v UInt16Value) SaturatingDiv(other NumberValue) NumberValue {
 }
 
 func (v UInt16Value) Less(other NumberValue) BoolValue {
-	return v < other.(UInt16Value)
+	o, ok := other.(UInt16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLess,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	return v < o
 }
 
 func (v UInt16Value) LessEqual(other NumberValue) BoolValue {
-	return v <= other.(UInt16Value)
+	o, ok := other.(UInt16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLessEqual,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	return v <= o
 }
 
 func (v UInt16Value) Greater(other NumberValue) BoolValue {
@@ -5188,11 +5368,29 @@ func (v UInt32Value) SaturatingDiv(other NumberValue) NumberValue {
 }
 
 func (v UInt32Value) Less(other NumberValue) BoolValue {
-	return v < other.(UInt32Value)
+	o, ok := other.(UInt32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLess,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	return v < o
 }
 
 func (v UInt32Value) LessEqual(other NumberValue) BoolValue {
-	return v <= other.(UInt32Value)
+	o, ok := other.(UInt32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLessEqual,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	return v <= o
 }
 
 func (v UInt32Value) Greater(other NumberValue) BoolValue {
@@ -5473,11 +5671,29 @@ func (v UInt64Value) SaturatingDiv(other NumberValue) NumberValue {
 }
 
 func (v UInt64Value) Less(other NumberValue) BoolValue {
-	return v < other.(UInt64Value)
+	o, ok := other.(UInt64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLess,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	return v < o
 }
 
 func (v UInt64Value) LessEqual(other NumberValue) BoolValue {
-	return v <= other.(UInt64Value)
+	o, ok := other.(UInt64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLessEqual,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	return v <= o
 }
 
 func (v UInt64Value) Greater(other NumberValue) BoolValue {
@@ -5813,12 +6029,30 @@ func (v UInt128Value) SaturatingDiv(other NumberValue) NumberValue {
 }
 
 func (v UInt128Value) Less(other NumberValue) BoolValue {
-	cmp := v.BigInt.Cmp(other.(UInt128Value).BigInt)
+	o, ok := other.(UInt128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLess,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	cmp := v.BigInt.Cmp(o.BigInt)
 	return cmp == -1
 }
 
 func (v UInt128Value) LessEqual(other NumberValue) BoolValue {
-	cmp := v.BigInt.Cmp(other.(UInt128Value).BigInt)
+	o, ok := other.(UInt128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLessEqual,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	cmp := v.BigInt.Cmp(o.BigInt)
 	return cmp <= 0
 }
 
@@ -6177,12 +6411,30 @@ func (v UInt256Value) SaturatingDiv(other NumberValue) NumberValue {
 }
 
 func (v UInt256Value) Less(other NumberValue) BoolValue {
-	cmp := v.BigInt.Cmp(other.(UInt256Value).BigInt)
+	o, ok := other.(UInt256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLess,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	cmp := v.BigInt.Cmp(o.BigInt)
 	return cmp == -1
 }
 
 func (v UInt256Value) LessEqual(other NumberValue) BoolValue {
-	cmp := v.BigInt.Cmp(other.(UInt256Value).BigInt)
+	o, ok := other.(UInt256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLessEqual,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	cmp := v.BigInt.Cmp(o.BigInt)
 	return cmp <= 0
 }
 
@@ -6449,11 +6701,29 @@ func (v Word8Value) SaturatingDiv(_ NumberValue) NumberValue {
 }
 
 func (v Word8Value) Less(other NumberValue) BoolValue {
-	return v < other.(Word8Value)
+	o, ok := other.(Word8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLess,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	return v < o
 }
 
 func (v Word8Value) LessEqual(other NumberValue) BoolValue {
-	return v <= other.(Word8Value)
+	o, ok := other.(Word8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLessEqual,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	return v <= o
 }
 
 func (v Word8Value) Greater(other NumberValue) BoolValue {
@@ -6672,11 +6942,29 @@ func (v Word16Value) SaturatingDiv(_ NumberValue) NumberValue {
 }
 
 func (v Word16Value) Less(other NumberValue) BoolValue {
-	return v < other.(Word16Value)
+	o, ok := other.(Word16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLess,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	return v < o
 }
 
 func (v Word16Value) LessEqual(other NumberValue) BoolValue {
-	return v <= other.(Word16Value)
+	o, ok := other.(Word16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLessEqual,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	return v <= o
 }
 
 func (v Word16Value) Greater(other NumberValue) BoolValue {
@@ -6898,11 +7186,29 @@ func (v Word32Value) SaturatingDiv(_ NumberValue) NumberValue {
 }
 
 func (v Word32Value) Less(other NumberValue) BoolValue {
-	return v < other.(Word32Value)
+	o, ok := other.(Word32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLess,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	return v < o
 }
 
 func (v Word32Value) LessEqual(other NumberValue) BoolValue {
-	return v <= other.(Word32Value)
+	o, ok := other.(Word32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLessEqual,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	return v <= o
 }
 
 func (v Word32Value) Greater(other NumberValue) BoolValue {
@@ -7124,11 +7430,29 @@ func (v Word64Value) SaturatingDiv(_ NumberValue) NumberValue {
 }
 
 func (v Word64Value) Less(other NumberValue) BoolValue {
-	return v < other.(Word64Value)
+	o, ok := other.(Word64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLess,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	return v < o
 }
 
 func (v Word64Value) LessEqual(other NumberValue) BoolValue {
-	return v <= other.(Word64Value)
+	o, ok := other.(Word64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLessEqual,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	return v <= o
 }
 
 func (v Word64Value) Greater(other NumberValue) BoolValue {
@@ -7445,11 +7769,29 @@ func (v Fix64Value) Mod(other NumberValue) NumberValue {
 }
 
 func (v Fix64Value) Less(other NumberValue) BoolValue {
-	return v < other.(Fix64Value)
+	o, ok := other.(Fix64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLess,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	return v < o
 }
 
 func (v Fix64Value) LessEqual(other NumberValue) BoolValue {
-	return v <= other.(Fix64Value)
+	o, ok := other.(Fix64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLessEqual,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	return v <= o
 }
 
 func (v Fix64Value) Greater(other NumberValue) BoolValue {
@@ -7731,11 +8073,29 @@ func (v UFix64Value) Mod(other NumberValue) NumberValue {
 }
 
 func (v UFix64Value) Less(other NumberValue) BoolValue {
-	return v < other.(UFix64Value)
+	o, ok := other.(UFix64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLess,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	return v < o
 }
 
 func (v UFix64Value) LessEqual(other NumberValue) BoolValue {
-	return v <= other.(UFix64Value)
+	o, ok := other.(UFix64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLessEqual,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	return v <= o
 }
 
 func (v UFix64Value) Greater(other NumberValue) BoolValue {
