@@ -675,10 +675,27 @@ func (v *StringValue) Concat(other *StringValue) Value {
 
 func (v *StringValue) Slice(from IntValue, to IntValue, getLocationRange func() LocationRange) Value {
 	fromIndex := from.ToInt()
-	v.checkBoundsInclusiveLength(fromIndex, getLocationRange)
 
 	toIndex := to.ToInt()
-	v.checkBoundsInclusiveLength(toIndex, getLocationRange)
+
+	length := v.Length()
+
+	if fromIndex < 0 || fromIndex > length || toIndex < 0 || toIndex > length {
+		panic(StringSliceIndicesError{
+			FromIndex:     fromIndex,
+			UpToIndex:     toIndex,
+			Length:        length,
+			LocationRange: getLocationRange(),
+		})
+	}
+
+	if fromIndex > toIndex {
+		panic(InvalidSliceIndexError{
+			FromIndex:     fromIndex,
+			UpToIndex:     toIndex,
+			LocationRange: getLocationRange(),
+		})
+	}
 
 	if fromIndex == toIndex {
 		return NewStringValue("")
@@ -705,18 +722,6 @@ func (v *StringValue) checkBounds(index int, getLocationRange func() LocationRan
 	length := v.Length()
 
 	if index < 0 || index >= length {
-		panic(StringIndexOutOfBoundsError{
-			Index:         index,
-			Length:        length,
-			LocationRange: getLocationRange(),
-		})
-	}
-}
-
-func (v *StringValue) checkBoundsInclusiveLength(index int, getLocationRange func() LocationRange) {
-	length := v.Length()
-
-	if index < 0 || index > length {
 		panic(StringIndexOutOfBoundsError{
 			Index:         index,
 			Length:        length,

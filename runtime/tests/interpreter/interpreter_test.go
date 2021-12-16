@@ -800,19 +800,19 @@ func TestInterpretStringIndexingUnicode(t *testing.T) {
 	)
 }
 
-type stringSliceTest struct {
-	str           string
-	from          int
-	to            int
-	result        string
-	expectedError error
-}
-
 func TestInterpretStringSlicing(t *testing.T) {
 
 	t.Parallel()
 
-	locationRange := interpreter.LocationRange{
+	locationRange1 := interpreter.LocationRange{
+		Location: TestLocation,
+		Range: ast.Range{
+			StartPos: ast.Position{Offset: 116, Line: 4, Column: 31},
+			EndPos:   ast.Position{Offset: 140, Line: 4, Column: 55},
+		},
+	}
+
+	locationRange2 := interpreter.LocationRange{
 		Location: TestLocation,
 		Range: ast.Range{
 			StartPos: ast.Position{Offset: 116, Line: 4, Column: 31},
@@ -820,7 +820,15 @@ func TestInterpretStringSlicing(t *testing.T) {
 		},
 	}
 
-	tests := []stringSliceTest{
+	type test struct {
+		str           string
+		from          int
+		to            int
+		result        string
+		expectedError error
+	}
+
+	tests := []test{
 		{"abcdef", 0, 6, "abcdef", nil},
 		{"abcdef", 0, 0, "", nil},
 		{"abcdef", 0, 1, "a", nil},
@@ -830,20 +838,28 @@ func TestInterpretStringSlicing(t *testing.T) {
 		{"abcdef", 5, 6, "f", nil},
 		{"abcdef", 1, 6, "bcdef", nil},
 		// Invalid indices
-		{"abcdef", -1, 0, "", interpreter.StringIndexOutOfBoundsError{
-			Index:         -1,
+		{"abcdef", -1, 0, "", interpreter.StringSliceIndicesError{
+			FromIndex:     -1,
+			UpToIndex:     0,
 			Length:        6,
-			LocationRange: locationRange,
+			LocationRange: locationRange2,
 		}},
-		{"abcdef", 0, -1, "", interpreter.StringIndexOutOfBoundsError{
-			Index:         -1,
+		{"abcdef", 0, -1, "", interpreter.StringSliceIndicesError{
+			FromIndex:     0,
+			UpToIndex:     -1,
 			Length:        6,
-			LocationRange: locationRange,
+			LocationRange: locationRange2,
 		}},
-		{"abcdef", 0, 10, "", interpreter.StringIndexOutOfBoundsError{
-			Index:         10,
+		{"abcdef", 0, 10, "", interpreter.StringSliceIndicesError{
+			FromIndex:     0,
+			UpToIndex:     10,
 			Length:        6,
-			LocationRange: locationRange,
+			LocationRange: locationRange2,
+		}},
+		{"abcdef", 2, 1, "", interpreter.InvalidSliceIndexError{
+			FromIndex:     2,
+			UpToIndex:     1,
+			LocationRange: locationRange1,
 		}},
 		// Unicode: indices are based on characters = grapheme clusters
 		{"cafe\\u{301}b", 0, 5, "cafe\u0301b", nil},
