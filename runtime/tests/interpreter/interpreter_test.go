@@ -5302,6 +5302,108 @@ func TestInterpretInvalidArrayRemoveLast(t *testing.T) {
 	)
 }
 
+func TestInterpretArraySlicing(t *testing.T) {
+
+	t.Parallel()
+
+	locationRange1 := interpreter.LocationRange{
+		Location: TestLocation,
+		Range: ast.Range{
+			StartPos: ast.Position{Offset: 125, Line: 4, Column: 31},
+			EndPos:   ast.Position{Offset: 149, Line: 4, Column: 55},
+		},
+	}
+
+	locationRange2 := interpreter.LocationRange{
+		Location: TestLocation,
+		Range: ast.Range{
+			StartPos: ast.Position{Offset: 125, Line: 4, Column: 31},
+			EndPos:   ast.Position{Offset: 150, Line: 4, Column: 56},
+		},
+	}
+
+	type test struct {
+		literal       string
+		from          int
+		to            int
+		result        string
+		expectedError error
+	}
+
+	tests := []test{
+		{"[1, 2, 3, 4, 5, 6]", 0, 6, "[1, 2, 3, 4, 5, 6]", nil},
+		{"[1, 2, 3, 4, 5, 6]", 0, 0, "[]", nil},
+		{"[1, 2, 3, 4, 5, 6]", 0, 1, "[1]", nil},
+		{"[1, 2, 3, 4, 5, 6]", 0, 2, "[1, 2]", nil},
+		{"[1, 2, 3, 4, 5, 6]", 1, 2, "[2]", nil},
+		{"[1, 2, 3, 4, 5, 6]", 2, 3, "[3]", nil},
+		{"[1, 2, 3, 4, 5, 6]", 5, 6, "[6]", nil},
+		{"[1, 2, 3, 4, 5, 6]", 1, 6, "[2, 3, 4, 5, 6]", nil},
+		// Invalid indices
+		{"[1, 2, 3, 4, 5, 6]", -1, 0, "", interpreter.ArraySliceIndicesError{
+			FromIndex:     -1,
+			UpToIndex:     0,
+			Size:          6,
+			LocationRange: locationRange2,
+		}},
+		{"[1, 2, 3, 4, 5, 6]", 0, -1, "", interpreter.ArraySliceIndicesError{
+			FromIndex:     0,
+			UpToIndex:     -1,
+			Size:          6,
+			LocationRange: locationRange2,
+		}},
+		{"[1, 2, 3, 4, 5, 6]", 0, 10, "", interpreter.ArraySliceIndicesError{
+			FromIndex:     0,
+			UpToIndex:     10,
+			Size:          6,
+			LocationRange: locationRange2,
+		}},
+		{"[1, 2, 3, 4, 5, 6]", 2, 1, "", interpreter.InvalidSliceIndexError{
+			FromIndex:     2,
+			UpToIndex:     1,
+			LocationRange: locationRange1,
+		}},
+	}
+
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+
+			inter := parseCheckAndInterpret(t,
+				fmt.Sprintf(
+					`
+                      fun test(): [Int] {
+                        let s = %s
+                        return s.slice(from: %d, upTo: %d)
+                      }
+                    `,
+					test.literal,
+					test.from,
+					test.to,
+				),
+			)
+
+			value, err := inter.Invoke("test")
+			if test.expectedError == nil {
+				require.NoError(t, err)
+
+				assert.Equal(
+					t,
+					test.result,
+					fmt.Sprint(value),
+				)
+			} else {
+				require.IsType(t,
+					interpreter.Error{},
+					err,
+				)
+				err = err.(interpreter.Error).Unwrap()
+
+				assert.Equal(t, test.expectedError, err)
+			}
+		})
+	}
+}
+
 func TestInterpretArrayContains(t *testing.T) {
 
 	t.Parallel()

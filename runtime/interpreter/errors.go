@@ -349,6 +349,21 @@ func (e ArrayIndexOutOfBoundsError) Error() string {
 	)
 }
 
+// ArraySliceIndicesError
+//
+type ArraySliceIndicesError struct {
+	FromIndex int
+	UpToIndex int
+	Size      int
+	LocationRange
+}
+
+func (e ArraySliceIndicesError) Error() string {
+	return fmt.Sprintf(
+		"slice indices [%d:%d] are out of bounds (size %d)",
+		e.FromIndex, e.UpToIndex, e.Size,
+	)
+}
 
 // InvalidSliceIndexError is returned when a slice index is invalid, such as fromIndex > upToIndex
 // This error can be returned even when fromIndex and upToIndex are both within bounds.

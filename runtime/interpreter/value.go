@@ -1426,6 +1426,23 @@ func (v *ArrayValue) GetMember(inter *Interpreter, _ func() LocationRange, name 
 				v.SemaType(inter).ElementType(false),
 			),
 		)
+
+	case "slice":
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				from := invocation.Arguments[0].(IntValue)
+				to := invocation.Arguments[1].(IntValue)
+				return v.Slice(
+					invocation.Interpreter,
+					from,
+					to,
+					invocation.GetLocationRange,
+				)
+			},
+			sema.ArraySliceFunctionType(
+				v.SemaType(inter).ElementType(false),
+			),
+		)
 	}
 
 	return nil
@@ -1675,6 +1692,81 @@ func (v *ArrayValue) IsResourceKinded(interpreter *Interpreter) bool {
 		v.isResourceKinded = &isResourceKinded
 	}
 	return *v.isResourceKinded
+}
+
+func (v *ArrayValue) Slice(
+	interpreter *Interpreter,
+	from IntValue,
+	to IntValue,
+	getLocationRange func() LocationRange,
+) Value {
+	fromIndex := from.ToInt()
+	toIndex := to.ToInt()
+
+	if fromIndex < 0 || toIndex < 0 {
+		panic(ArraySliceIndicesError{
+			FromIndex:     fromIndex,
+			UpToIndex:     toIndex,
+			Size:          v.Count(),
+			LocationRange: getLocationRange(),
+		})
+	}
+
+	iterator, err := v.array.RangeIterator(uint64(fromIndex), uint64(toIndex))
+	if err != nil {
+
+		switch err.(type) {
+		case *atree.SliceOutOfBoundsError:
+			panic(ArraySliceIndicesError{
+				FromIndex:     fromIndex,
+				UpToIndex:     toIndex,
+				Size:          v.Count(),
+				LocationRange: getLocationRange(),
+			})
+
+		case *atree.InvalidSliceIndexError:
+			panic(InvalidSliceIndexError{
+				FromIndex:     fromIndex,
+				UpToIndex:     toIndex,
+				LocationRange: getLocationRange(),
+			})
+		}
+
+		panic(ExternalError{err})
+	}
+
+	return NewArrayValueWithIterator(
+		interpreter,
+		VariableSizedStaticType{
+			Type: v.Type.ElementType(),
+		},
+		common.Address{},
+		func() Value {
+
+			var value Value
+
+			atreeValue, err := iterator.Next()
+			if err != nil {
+				panic(ExternalError{err})
+			}
+
+			if atreeValue != nil {
+				value = MustConvertStoredValue(atreeValue)
+			}
+
+			if value == nil {
+				return nil
+			}
+
+			return value.Transfer(
+				interpreter,
+				getLocationRange,
+				atree.Address{},
+				false,
+				nil,
+			)
+		},
+	)
 }
 
 // NumberValue
