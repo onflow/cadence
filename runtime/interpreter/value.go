@@ -110,6 +110,8 @@ type Value interface {
 		storable atree.Storable,
 	) Value
 	DeepRemove(interpreter *Interpreter)
+	// Clone returns a new value that is equal to this value.
+	// NOTE: not used by interpreter, but used externally (e.g. state migration)
 	Clone(interpreter *Interpreter) Value
 }
 
