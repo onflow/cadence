@@ -130,9 +130,9 @@ func (checker *Checker) VisitBinaryExpression(expression *ast.BinaryExpression) 
 
 		case BinaryOperationKindEquality:
 			return checker.checkBinaryExpressionEquality(
-				expression, operation, operationKind,
+				expression, operation,
 				leftType, rightType,
-				leftIsInvalid, rightIsInvalid, anyInvalid,
+				anyInvalid,
 			)
 
 		default:
@@ -163,16 +163,16 @@ func (checker *Checker) VisitBinaryExpression(expression *ast.BinaryExpression) 
 		switch operationKind {
 		case BinaryOperationKindBooleanLogic:
 			return checker.checkBinaryExpressionBooleanLogic(
-				expression, operation, operationKind,
+				expression, operation,
 				leftType, rightType,
 				leftIsInvalid, rightIsInvalid, anyInvalid,
 			)
 
 		case BinaryOperationKindNilCoalescing:
 			resultType := checker.checkBinaryExpressionNilCoalescing(
-				expression, operation, operationKind,
+				expression, operation,
 				leftType, rightType,
-				leftIsInvalid, rightIsInvalid, anyInvalid,
+				leftIsInvalid, rightIsInvalid,
 			)
 
 			checker.Elaboration.BinaryExpressionResultTypes[expression] = resultType
@@ -299,9 +299,8 @@ func (checker *Checker) checkBinaryExpressionArithmeticOrNonEqualityComparisonOr
 func (checker *Checker) checkBinaryExpressionEquality(
 	expression *ast.BinaryExpression,
 	operation ast.Operation,
-	operationKind BinaryOperationKind,
 	leftType, rightType Type,
-	leftIsInvalid, rightIsInvalid, anyInvalid bool,
+	anyInvalid bool,
 ) (resultType Type) {
 
 	resultType = BoolType
@@ -330,7 +329,6 @@ func (checker *Checker) checkBinaryExpressionEquality(
 func (checker *Checker) checkBinaryExpressionBooleanLogic(
 	expression *ast.BinaryExpression,
 	operation ast.Operation,
-	operationKind BinaryOperationKind,
 	leftType, rightType Type,
 	leftIsInvalid, rightIsInvalid, anyInvalid bool,
 ) Type {
@@ -382,9 +380,8 @@ func (checker *Checker) checkBinaryExpressionBooleanLogic(
 func (checker *Checker) checkBinaryExpressionNilCoalescing(
 	expression *ast.BinaryExpression,
 	operation ast.Operation,
-	operationKind BinaryOperationKind,
 	leftType, rightType Type,
-	leftIsInvalid, rightIsInvalid, anyInvalid bool,
+	leftIsInvalid, rightIsInvalid bool,
 ) Type {
 	leftOptional, leftIsOptional := leftType.(*OptionalType)
 
