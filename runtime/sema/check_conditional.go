@@ -106,18 +106,26 @@ func (checker *Checker) visitConditional(
 
 	return checker.checkConditionalBranches(
 		func() Type {
-			thenResult := thenElement.Accept(checker)
+			thenResult, ok := thenElement.Accept(checker).(Type)
+			if !ok {
+				// visiter must always return a Type
+				panic(errors.NewUnreachableError())
+			}
 			if thenResult == nil {
 				return nil
 			}
-			return thenResult.(Type)
+			return thenResult
 		},
 		func() Type {
-			elseResult := elseElement.Accept(checker)
+			elseResult, ok := elseElement.Accept(checker).(Type)
+			if !ok {
+				// visiter must always return a Type
+				panic(errors.NewUnreachableError())
+			}
 			if elseResult == nil {
 				return nil
 			}
-			return elseResult.(Type)
+			return elseResult
 		},
 	)
 }
