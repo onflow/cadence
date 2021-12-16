@@ -1076,6 +1076,27 @@ are available for both variable-sized and fixed-sized or variable-sized arrays.
   let containsKitty = numbers.contains("Kitty")
   ```
 
+- `cadence•fun slice(from: Int, upTo: Int): [T]`
+
+  Returns an array slice of the elements
+  in the given array from start index `from` up to,
+  but not including, the end index `upTo`.
+  This function creates a new array whose length is `upTo - from`.
+  It does not modify the original array.
+  If either of the parameters are out of
+  the bounds of the array, the function will fail.
+
+  ```cadence
+  let example = [1, 2, 3, 4]
+
+  // Create a new slice of part of the original array.
+  let slice = example.slice(from: 1, upTo: 3)
+  // `slice` is now `[2, 3]`
+
+  // Run-time error: Out of bounds index, the program aborts.
+  let outOfBounds = example.slice(from: 2, upTo: 10)
+  ```
+
 #### Variable-size Array Functions
 
 The following functions can only be used on variable-sized arrays.
