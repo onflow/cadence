@@ -1143,6 +1143,14 @@ func (v *ArrayValue) handleIndexOutOfBoundsError(err error, index int, getLocati
 }
 
 func (v *ArrayValue) Get(interpreter *Interpreter, getLocationRange func() LocationRange, index int) Value {
+	if index < 0 {
+		panic(ArrayIndexOutOfBoundsError{
+			Index:         index,
+			Size:          v.Count(),
+			LocationRange: getLocationRange(),
+		})
+	}
+
 	storable, err := v.array.Get(uint64(index))
 	if err != nil {
 		v.handleIndexOutOfBoundsError(err, index, getLocationRange)
@@ -1159,6 +1167,13 @@ func (v *ArrayValue) SetKey(interpreter *Interpreter, getLocationRange func() Lo
 }
 
 func (v *ArrayValue) Set(interpreter *Interpreter, getLocationRange func() LocationRange, index int, element Value) {
+	if index < 0 {
+		panic(ArrayIndexOutOfBoundsError{
+			Index:         index,
+			Size:          v.Count(),
+			LocationRange: getLocationRange(),
+		})
+	}
 
 	interpreter.checkContainerMutation(v.Type.ElementType(), element, getLocationRange)
 
@@ -1232,6 +1247,13 @@ func (v *ArrayValue) InsertKey(interpreter *Interpreter, getLocationRange func()
 }
 
 func (v *ArrayValue) Insert(interpreter *Interpreter, getLocationRange func() LocationRange, index int, element Value) {
+	if index < 0 {
+		panic(ArrayIndexOutOfBoundsError{
+			Index:         index,
+			Size:          v.Count(),
+			LocationRange: getLocationRange(),
+		})
+	}
 
 	interpreter.checkContainerMutation(v.Type.ElementType(), element, getLocationRange)
 
@@ -1258,6 +1280,14 @@ func (v *ArrayValue) RemoveKey(interpreter *Interpreter, getLocationRange func()
 }
 
 func (v *ArrayValue) Remove(interpreter *Interpreter, getLocationRange func() LocationRange, index int) Value {
+	if index < 0 {
+		panic(ArrayIndexOutOfBoundsError{
+			Index:         index,
+			Size:          v.Count(),
+			LocationRange: getLocationRange(),
+		})
+	}
+
 	storable, err := v.array.Remove(uint64(index))
 	if err != nil {
 		v.handleIndexOutOfBoundsError(err, index, getLocationRange)
