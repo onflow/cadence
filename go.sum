@@ -39,6 +39,10 @@ github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db h1:62I3jR2Em
 github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db/go.mod h1:l0dey0ia/Uv7NcFFVbCLtqEBQbrT4OCwCSKTEv6enCw=
 github.com/onflow/atree v0.1.1 h1:KTJt70E3FEhDDLf6ViyKypqI3iVMlR6gsieOsN4Ewu4=
 github.com/onflow/atree v0.1.1/go.mod h1:95SqSEPgfijF1ZkLKbVgYVrfQzvP0fhayh555v1oLbs=
+github.com/onflow/atree v0.1.2-0.20211216003550-4d375651aa3d h1:gbtXJDaoL7rwpQeV1cpz8RnQ9kuVhq9Bu7tACAiwGc4=
+github.com/onflow/atree v0.1.2-0.20211216003550-4d375651aa3d/go.mod h1:95SqSEPgfijF1ZkLKbVgYVrfQzvP0fhayh555v1oLbs=
+github.com/onflow/atree v0.1.2-0.20211216135231-f8f0a14c7272 h1:nmvgX38C09zvAI2inqXXOx4h8WMGdwvYNsLhWfnx2jI=
+github.com/onflow/atree v0.1.2-0.20211216135231-f8f0a14c7272/go.mod h1:95SqSEPgfijF1ZkLKbVgYVrfQzvP0fhayh555v1oLbs=
 github.com/opentracing/opentracing-go v1.2.0 h1:uEJPy/1a5RIPAJ0Ov+OIO8OxWu77jEv+1B0VhjKrZUs=
 github.com/opentracing/opentracing-go v1.2.0/go.mod h1:GxEUsuufX4nBwe+T+Wl9TAgYrxe9dPLANfrWvHYVTgc=
 github.com/pkg/term v1.1.0 h1:xIAAdCMh3QIAy+5FrE8Ad8XoDhEU4ufwbaSozViP9kk=
