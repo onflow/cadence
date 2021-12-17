@@ -1566,7 +1566,7 @@ Returns a new variable-sized array containing the slice of the elements in the g
 
 This function creates a new array whose length is ` + "`upTo - from`" + `.
 It does not modify the original array.
-If either of the parameters are out of the bounds of the array, the function will fail
+If either of the parameters are out of the bounds of the array, or the indices are invalid (` + "`from > upTo`" + `), then the function will fail.
 `
 
 func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
