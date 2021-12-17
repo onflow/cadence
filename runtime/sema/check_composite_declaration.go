@@ -252,7 +252,11 @@ func (checker *Checker) declareCompositeNestedTypes(
 			if nestedCompositeDeclaration, isCompositeDeclaration :=
 				nestedDeclaration.(*ast.CompositeDeclaration); isCompositeDeclaration {
 
-				nestedCompositeType := nestedType.(*CompositeType)
+				nestedCompositeType, ok := nestedType.(*CompositeType)
+				if !ok {
+					// we just checked that this was a composite declaration
+					panic(errors.NewUnreachableError())
+				}
 
 				// Always determine composite constructor type
 
@@ -1743,7 +1747,11 @@ func (checker *Checker) checkSpecialFunction(
 	case ContainerKindComposite:
 		// Event declarations have an empty initializer as it is synthesized
 
-		compositeType := containerType.(*CompositeType)
+		compositeType, ok := containerType.(*CompositeType)
+		if !ok {
+			// we just checked that the container was a composite
+			panic(errors.NewUnreachableError())
+		}
 		if compositeType.Kind != common.CompositeKindEvent &&
 			specialFunction.FunctionDeclaration.FunctionBlock == nil {
 

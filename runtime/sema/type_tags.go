@@ -20,6 +20,8 @@ package sema
 
 import (
 	"fmt"
+
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 // TypeTag is a bitmask representation for types.
@@ -700,7 +702,11 @@ func commonSuperTypeOfComposites(types []Type) Type {
 			break
 		}
 
-		compositeType := typ.(*CompositeType)
+		compositeType, ok := typ.(*CompositeType)
+		// this function is only called when all types are composites, so this cannot fail
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
 
 		// NOTE: index 0 may not always be the first type, since there can be 'Never' types.
 		if firstType {
