@@ -23,6 +23,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 // An VariableActivation is a map of strings to variables.
@@ -132,7 +133,10 @@ var variableActivationPool = sync.Pool{
 }
 
 func getVariableActivation() *VariableActivation {
-	activation := variableActivationPool.Get().(*VariableActivation)
+	activation, ok := variableActivationPool.Get().(*VariableActivation)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
 	activation.Clear()
 	return activation
 }

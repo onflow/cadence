@@ -753,12 +753,18 @@ func (s *Server) DocumentHighlight(
 
 	position := conversion.ProtocolToSemaPosition(params.Position)
 	occurrences := checker.Occurrences.FindAll(position)
+	if occurrences == nil {
+		return nil, nil
+	}
 	// If there are no occurrences,
 	// then try the preceding position
 	if len(occurrences) == 0 && position.Column > 0 {
 		previousPosition := position
 		previousPosition.Column -= 1
 		occurrences = checker.Occurrences.FindAll(previousPosition)
+		if occurrences == nil {
+			return nil, nil
+		}
 	}
 
 	documentHighlights := make([]*protocol.DocumentHighlight, 0)
@@ -800,12 +806,18 @@ func (s *Server) Rename(
 
 	position := conversion.ProtocolToSemaPosition(params.Position)
 	occurrences := checker.Occurrences.FindAll(position)
+	if occurrences == nil {
+		return nil, nil
+	}
 	// If there are no occurrences,
 	// then try the preceding position
 	if len(occurrences) == 0 && position.Column > 0 {
 		previousPosition := position
 		previousPosition.Column -= 1
 		occurrences = checker.Occurrences.FindAll(previousPosition)
+		if occurrences == nil {
+			return nil, nil
+		}
 	}
 
 	textEdits := make([]protocol.TextEdit, 0)
