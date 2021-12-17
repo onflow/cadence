@@ -1118,8 +1118,12 @@ func (checker *Checker) memberSatisfied(compositeMember, interfaceMember *Member
 			// where argument labels are not considered,
 			// and parameters are contravariant.
 
-			interfaceMemberFunctionType := interfaceMemberType.(*FunctionType)
-			compositeMemberFunctionType := compositeMemberType.(*FunctionType)
+			interfaceMemberFunctionType, isInterfaceMemberFunctionType := interfaceMemberType.(*FunctionType)
+			compositeMemberFunctionType, isCompositeMemberFunctionType := compositeMemberType.(*FunctionType)
+
+			if !isInterfaceMemberFunctionType || !isCompositeMemberFunctionType {
+				return false
+			}
 
 			if !interfaceMemberFunctionType.HasSameArgumentLabels(compositeMemberFunctionType) {
 				return false
