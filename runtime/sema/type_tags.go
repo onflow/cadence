@@ -590,11 +590,11 @@ func findSuperTypeFromLowerMask(joinedTypeTag TypeTag, types []Type) Type {
 
 	// All derived types goes here.
 	case constantSizedTypeMask:
-		return getConstantSizedArraySuperType(types)
+		return commonSuperTypeOfConstantSizedArrays(types)
 	case variableSizedTypeMask:
-		return getVariableSizedSuperType(types)
+		return commonSuperTypeOfVariableSizedArrays(types)
 	case dictionaryTypeMask:
-		return getDictionarySuperType(types)
+		return commonSuperTypeOfDictionaries(types)
 	case referenceTypeMask,
 		genericTypeMask,
 		functionTypeMask,
@@ -653,10 +653,10 @@ func getSuperTypeOfDerivedTypes(types []Type) Type {
 	return prevType
 }
 
-func getVariableSizedSuperType(types []Type) Type {
+func commonSuperTypeOfVariableSizedArrays(types []Type) Type {
 	// We reach here if all types are variable-sized arrays.
-	// Therefore, check for member types, and decide the
-	// common supertype based on the element types.
+	// Therefore, decide the common supertype based on the element types.
+
 	elementTypes := make([]Type, 0)
 
 	for _, typ := range types {
@@ -668,7 +668,7 @@ func getVariableSizedSuperType(types []Type) Type {
 
 		arrayType, ok := typ.(*VariableSizedType)
 		if !ok {
-			panic(fmt.Errorf("expected variabled-sized array type, found %t", typ))
+			panic(fmt.Errorf("expected variabled-sized array type, found %s", typ))
 		}
 
 		elementTypes = append(elementTypes, arrayType.ElementType(false))
@@ -685,10 +685,10 @@ func getVariableSizedSuperType(types []Type) Type {
 	}
 }
 
-func getConstantSizedArraySuperType(types []Type) Type {
+func commonSuperTypeOfConstantSizedArrays(types []Type) Type {
 	// We reach here if all types are constant-sized arrays.
-	// Therefore, check for member types, and decide the
-	// common supertype based on the element types.
+	// Therefore, decide the common supertype based on the element types.
+
 	elementTypes := make([]Type, 0)
 	var prevType *ConstantSizedType
 
@@ -701,7 +701,7 @@ func getConstantSizedArraySuperType(types []Type) Type {
 
 		arrayType, ok := typ.(*ConstantSizedType)
 		if !ok {
-			panic(fmt.Errorf("expected constnant-sized array type, found %t", typ))
+			panic(fmt.Errorf("expected constnant-sized array type, found %s", typ))
 		}
 
 		elementTypes = append(elementTypes, arrayType.ElementType(false))
@@ -729,10 +729,9 @@ func getConstantSizedArraySuperType(types []Type) Type {
 	}
 }
 
-func getDictionarySuperType(types []Type) Type {
-	// We reach here if all types are constant-sized arrays.
-	// Therefore, check for member types, and decide the
-	// common supertype based on the element types.
+func commonSuperTypeOfDictionaries(types []Type) Type {
+	// We reach here if all types are dictionary types.
+	// Therefore, decide the common supertype based on the key types and value types.
 
 	keyTypes := make([]Type, 0)
 	valueTypes := make([]Type, 0)
@@ -746,7 +745,7 @@ func getDictionarySuperType(types []Type) Type {
 
 		dictionaryType, ok := typ.(*DictionaryType)
 		if !ok {
-			panic(fmt.Errorf("expected dictionary type, found %t", typ))
+			panic(fmt.Errorf("expected dictionary type, found %s", typ))
 		}
 
 		valueTypes = append(valueTypes, dictionaryType.ValueType)
