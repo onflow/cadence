@@ -593,8 +593,9 @@ func findSuperTypeFromLowerMask(joinedTypeTag TypeTag, types []Type) Type {
 		return getConstantSizedArraySuperType(types)
 	case variableSizedTypeMask:
 		return getVariableSizedSuperType(types)
-	case dictionaryTypeMask,
-		referenceTypeMask,
+	case dictionaryTypeMask:
+		return getDictionarySuperType(types)
+	case referenceTypeMask,
 		genericTypeMask,
 		functionTypeMask,
 		interfaceTypeMask:
@@ -656,7 +657,7 @@ func getVariableSizedSuperType(types []Type) Type {
 	// We reach here if all types are variable-sized arrays.
 	// Therefore, check for member types, and decide the
 	// common supertype based on the element types.
-	elementTypes := make([]Type, 0, len(types))
+	elementTypes := make([]Type, 0)
 
 	for _, typ := range types {
 		// 'Never' type doesn't affect the supertype.
@@ -688,7 +689,7 @@ func getConstantSizedArraySuperType(types []Type) Type {
 	// We reach here if all types are constant-sized arrays.
 	// Therefore, check for member types, and decide the
 	// common supertype based on the element types.
-	elementTypes := make([]Type, 0, len(types))
+	elementTypes := make([]Type, 0)
 	var prevType *ConstantSizedType
 
 	for _, typ := range types {
@@ -725,6 +726,45 @@ func getConstantSizedArraySuperType(types []Type) Type {
 	return &ConstantSizedType{
 		Type: elementSuperType,
 		Size: prevType.Size,
+	}
+}
+
+func getDictionarySuperType(types []Type) Type {
+	// We reach here if all types are constant-sized arrays.
+	// Therefore, check for member types, and decide the
+	// common supertype based on the element types.
+
+	keyTypes := make([]Type, 0)
+	valueTypes := make([]Type, 0)
+
+	for _, typ := range types {
+		// 'Never' type doesn't affect the supertype.
+		// Hence, ignore them
+		if typ == NeverType {
+			continue
+		}
+
+		dictionaryType, ok := typ.(*DictionaryType)
+		if !ok {
+			panic(fmt.Errorf("expected dictionary type, found %t", typ))
+		}
+
+		valueTypes = append(valueTypes, dictionaryType.ValueType)
+		keyTypes = append(keyTypes, dictionaryType.KeyType)
+	}
+
+	keySuperType := LeastCommonSuperType(keyTypes...)
+	valueSuperType := LeastCommonSuperType(valueTypes...)
+
+	if keySuperType == InvalidType ||
+		valueSuperType == InvalidType ||
+		!IsValidDictionaryKeyType(keySuperType) {
+		return InvalidType
+	}
+
+	return &DictionaryType{
+		KeyType:   keySuperType,
+		ValueType: valueSuperType,
 	}
 }
 

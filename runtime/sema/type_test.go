@@ -1205,7 +1205,10 @@ func TestCommonSuperType(t *testing.T) {
 					stringStringDictionary,
 					stringBoolDictionary,
 				},
-				expectedSuperType: AnyStructType,
+				expectedSuperType: &DictionaryType{
+					KeyType:   StringType,
+					ValueType: AnyStructType,
+				},
 			},
 			{
 				name: "dictionary & non-dictionary",

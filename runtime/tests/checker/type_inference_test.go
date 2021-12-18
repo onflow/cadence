@@ -1037,7 +1037,7 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
 			{
 				name: "implicit covariant values",
 				code: `
-                    let x = {0: [Bar()], 1: [Baz()]}
+                    let x = { 0: {100: Bar()}, 1: {200: Baz()} }
 
                     pub struct interface Foo {}
 
@@ -1046,8 +1046,9 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
                     pub struct Baz: Foo {}
                 `,
 				expectedKeyType: sema.IntType,
-				expectedValueType: &sema.VariableSizedType{
-					Type: &sema.RestrictedType{
+				expectedValueType: &sema.DictionaryType{
+					KeyType: sema.IntType,
+					ValueType: &sema.RestrictedType{
 						Type: sema.AnyStructType,
 						Restrictions: []*sema.InterfaceType{
 							{
@@ -1063,7 +1064,7 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
 				name: "explicit covariant values",
 				code: `
                     // Covariance is supported with explicit type annotation.
-                    let x = {0: [Bar()], 1: [Baz()]} as {Int: [{Foo}]}
+                    let x = { 0: {100: Bar()}, 1: {200: Baz()} } as {Int: {Int: {Foo}}}
 
                     pub struct interface Foo {}
 
@@ -1072,8 +1073,9 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
                     pub struct Baz: Foo {}
                 `,
 				expectedKeyType: sema.IntType,
-				expectedValueType: &sema.VariableSizedType{
-					Type: &sema.RestrictedType{
+				expectedValueType: &sema.DictionaryType{
+					KeyType: sema.IntType,
+					ValueType: &sema.RestrictedType{
 						Type: sema.AnyStructType,
 						Restrictions: []*sema.InterfaceType{
 							{
@@ -1129,6 +1131,18 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
 		checkerErr := ExpectCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidDictionaryKeyTypeError{}, checkerErr[0])
+	})
+
+	t.Run("no supertype for keys of inner dict", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            let x = {0: {10: 1, 20: 2}, 1: {"one": 1, "two": 2}}
+        `
+		_, err := ParseAndCheck(t, code)
+		checkerErr := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeAnnotationRequiredError{}, checkerErr[0])
 	})
 
 	t.Run("unsupported supertype for keys", func(t *testing.T) {
