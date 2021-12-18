@@ -589,9 +589,11 @@ func findSuperTypeFromLowerMask(joinedTypeTag TypeTag, types []Type) Type {
 		return prevType
 
 	// All derived types goes here.
-	case constantSizedTypeMask,
-		variableSizedTypeMask,
-		dictionaryTypeMask,
+	case constantSizedTypeMask:
+		return getConstantSizedArraySuperType(types)
+	case variableSizedTypeMask:
+		return getVariableSizedSuperType(types)
+	case dictionaryTypeMask,
 		referenceTypeMask,
 		genericTypeMask,
 		functionTypeMask,
@@ -648,6 +650,82 @@ func getSuperTypeOfDerivedTypes(types []Type) Type {
 	}
 
 	return prevType
+}
+
+func getVariableSizedSuperType(types []Type) Type {
+	// We reach here if all types are variable-sized arrays.
+	// Therefore, check for member types, and decide the
+	// common supertype based on the element types.
+	elementTypes := make([]Type, 0, len(types))
+
+	for _, typ := range types {
+		// 'Never' type doesn't affect the supertype.
+		// Hence, ignore them
+		if typ == NeverType {
+			continue
+		}
+
+		arrayType, ok := typ.(*VariableSizedType)
+		if !ok {
+			panic(fmt.Errorf("expected variabled-sized array type, found %t", typ))
+		}
+
+		elementTypes = append(elementTypes, arrayType.ElementType(false))
+	}
+
+	elementSuperType := LeastCommonSuperType(elementTypes...)
+
+	if elementSuperType == InvalidType {
+		return InvalidType
+	}
+
+	return &VariableSizedType{
+		Type: elementSuperType,
+	}
+}
+
+func getConstantSizedArraySuperType(types []Type) Type {
+	// We reach here if all types are constant-sized arrays.
+	// Therefore, check for member types, and decide the
+	// common supertype based on the element types.
+	elementTypes := make([]Type, 0, len(types))
+	var prevType *ConstantSizedType
+
+	for _, typ := range types {
+		// 'Never' type doesn't affect the supertype.
+		// Hence, ignore them
+		if typ == NeverType {
+			continue
+		}
+
+		arrayType, ok := typ.(*ConstantSizedType)
+		if !ok {
+			panic(fmt.Errorf("expected constnant-sized array type, found %t", typ))
+		}
+
+		elementTypes = append(elementTypes, arrayType.ElementType(false))
+
+		if prevType == nil {
+			prevType = arrayType
+			continue
+		}
+
+		// Arrays with different sizes are not covariant
+		if arrayType.Size != prevType.Size {
+			return commonSuperTypeOfHeterogeneousTypes(types)
+		}
+	}
+
+	elementSuperType := LeastCommonSuperType(elementTypes...)
+
+	if elementSuperType == InvalidType {
+		return InvalidType
+	}
+
+	return &ConstantSizedType{
+		Type: elementSuperType,
+		Size: prevType.Size,
+	}
 }
 
 func commonSuperTypeOfHeterogeneousTypes(types []Type) Type {
