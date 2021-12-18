@@ -3242,7 +3242,10 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 				inter,
 				interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeString,
-					ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
+					ValueType: interpreter.DictionaryStaticType{
+						KeyType:   interpreter.PrimitiveStaticTypeSignedInteger,
+						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
+					},
 				},
 
 				interpreter.NewStringValue("a"),
