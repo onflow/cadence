@@ -70,7 +70,7 @@ func (m *MemberAccesses) All() []MemberAccess {
 	for i, value := range values {
 		access, ok := value.(MemberAccess)
 		if !ok {
-			return nil
+			continue
 		}
 		accesses[i] = access
 	}
