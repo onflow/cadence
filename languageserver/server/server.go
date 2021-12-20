@@ -753,7 +753,6 @@ func (s *Server) DocumentHighlight(
 
 	position := conversion.ProtocolToSemaPosition(params.Position)
 	occurrences := checker.Occurrences.FindAll(position)
-
 	// If there are no occurrences,
 	// then try the preceding position
 	if len(occurrences) == 0 && position.Column > 0 {
@@ -801,7 +800,6 @@ func (s *Server) Rename(
 
 	position := conversion.ProtocolToSemaPosition(params.Position)
 	occurrences := checker.Occurrences.FindAll(position)
-
 	// If there are no occurrences,
 	// then try the preceding position
 	if len(occurrences) == 0 && position.Column > 0 {
