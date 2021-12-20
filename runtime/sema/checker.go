@@ -672,7 +672,16 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 // fits into range of the target integer type
 //
 func CheckIntegerLiteral(expression *ast.IntegerExpression, targetType Type, report func(error)) bool {
-	ranged := targetType.(IntegerRangedType)
+	ranged, ok := targetType.(IntegerRangedType)
+
+	// if this isn't an integer ranged type, report a mismatch
+	if !ok {
+		report(&TypeMismatchWithDescriptionError{
+			ActualType:              targetType,
+			ExpectedTypeDescription: "an integer type",
+			Range:                   ast.NewRangeFromPositioned(expression),
+		})
+	}
 	minInt := ranged.MinInt()
 	maxInt := ranged.MaxInt()
 
@@ -2398,7 +2407,11 @@ func (checker *Checker) visitExpressionWithForceType(
 		checker.expectedType = prevExpectedType
 	}()
 
-	actualType = expr.Accept(checker).(Type)
+	actualType, ok := expr.Accept(checker).(Type)
+	if !ok {
+		// visiter must always return a Type
+		panic(errors.NewUnreachableError())
+	}
 
 	if forceType &&
 		expectedType != nil &&
