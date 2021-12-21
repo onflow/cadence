@@ -908,6 +908,13 @@ func TestCheckArraySupertypeInference(t *testing.T) {
 					},
 				},
 			},
+			{
+				name: "nested non-covariant constant sized",
+				code: `let x = [[[1, 2] as [Int; 2]], [["foo", "bar", "baz"] as [String; 3]], [[5.3, 6.4] as [Fix64; 2]]]`,
+				expectedElementType: &sema.VariableSizedType{
+					Type: sema.AnyStructType,
+				},
+			},
 		}
 
 		for _, test := range tests {
