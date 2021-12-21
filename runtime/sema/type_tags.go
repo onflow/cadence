@@ -668,7 +668,7 @@ func commonSuperTypeOfVariableSizedArrays(types []Type) Type {
 
 		arrayType, ok := typ.(*VariableSizedType)
 		if !ok {
-			panic(fmt.Errorf("expected variabled-sized array type, found %s", typ))
+			panic(fmt.Errorf("expected variable-sized array type, found %s", typ))
 		}
 
 		elementTypes = append(elementTypes, arrayType.ElementType(false))
@@ -701,7 +701,7 @@ func commonSuperTypeOfConstantSizedArrays(types []Type) Type {
 
 		arrayType, ok := typ.(*ConstantSizedType)
 		if !ok {
-			panic(fmt.Errorf("expected constnant-sized array type, found %s", typ))
+			panic(fmt.Errorf("expected constant-sized array type, found %s", typ))
 		}
 
 		elementTypes = append(elementTypes, arrayType.ElementType(false))
