@@ -1100,6 +1100,16 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
 				expectedKeyType:   sema.IntType,
 				expectedValueType: sema.AnyStructType,
 			},
+			{
+				name: "no supertype for inner keys with resource values",
+				code: `
+                    let x <- {0: <- {10: <- create Foo()}, 1: <- {"one": <- create Foo()}}
+
+                    pub resource Foo {}
+                `,
+				expectedKeyType:   sema.IntType,
+				expectedValueType: sema.AnyResourceType,
+			},
 		}
 
 		for _, test := range tests {
