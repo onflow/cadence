@@ -1087,6 +1087,12 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
 					},
 				},
 			},
+			{
+				name:              "no supertype for inner keys",
+				code:              `let x = {0: {10: 1, 20: 2}, 1: {"one": 1, "two": 2}}`,
+				expectedKeyType:   sema.IntType,
+				expectedValueType: sema.AnyStructType,
+			},
 		}
 
 		for _, test := range tests {
@@ -1131,18 +1137,6 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
 		checkerErr := ExpectCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidDictionaryKeyTypeError{}, checkerErr[0])
-	})
-
-	t.Run("no supertype for keys of inner dict", func(t *testing.T) {
-		t.Parallel()
-
-		code := `
-            let x = {0: {10: 1, 20: 2}, 1: {"one": 1, "two": 2}}
-        `
-		_, err := ParseAndCheck(t, code)
-		checkerErr := ExpectCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.TypeAnnotationRequiredError{}, checkerErr[0])
 	})
 
 	t.Run("unsupported supertype for keys", func(t *testing.T) {

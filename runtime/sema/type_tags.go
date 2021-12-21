@@ -756,9 +756,12 @@ func commonSuperTypeOfDictionaries(types []Type) Type {
 	valueSuperType := LeastCommonSuperType(valueTypes...)
 
 	if keySuperType == InvalidType ||
-		valueSuperType == InvalidType ||
-		!IsValidDictionaryKeyType(keySuperType) {
+		valueSuperType == InvalidType {
 		return InvalidType
+	}
+
+	if !IsValidDictionaryKeyType(keySuperType) {
+		return commonSuperTypeOfHeterogeneousTypes(types)
 	}
 
 	return &DictionaryType{
