@@ -212,6 +212,29 @@ var AggregateBLSSignaturesFunction = NewStandardLibraryFunction(
 	},
 )
 
+const keccak256FunctionDocString = `
+This is a specific function for calculating the Keccak256 hash of arbitrary data.
+`
+
+var Keccak256Function = NewStandardLibraryFunction(
+	"Keccak256",
+	&sema.FunctionType{
+		Parameters: []*sema.Parameter{
+			{
+				Label:          sema.ArgumentLabelNotRequired,
+				Identifier:     "data",
+				TypeAnnotation: sema.NewTypeAnnotation(sema.ByteArrayType),
+			},
+		},
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.ByteArrayType),
+	},
+	keccak256FunctionDocString,
+	func(invocation interpreter.Invocation) interpreter.Value {
+		data := invocation.Arguments[0].(*interpreter.ArrayValue)
+		return Keccak256(invocation.Interpreter, data)
+	},
+)
+
 const aggregateBLSPublicKeysFunctionDocString = `
 This is a specific function for the BLS signature scheme. 
 It aggregates multiple BLS public keys into one.
@@ -302,6 +325,32 @@ func AggregateBLSSignatures(
 		interpreter.ByteArrayStaticType,
 		signatures.GetOwner(),
 		aggregatedSignature...,
+	)
+}
+
+func Keccak256(
+	inter *interpreter.Interpreter,
+	data *interpreter.ArrayValue,
+) interpreter.Value {
+	bytesArray := make([]byte, 0, data.Count())
+	data.Iterate(func(element interpreter.Value) (resume bool) {
+		ele := element.(interpreter.UInt8Value)
+		bytesArray = append(bytesArray, byte(ele))
+		return true
+	})
+	resultBytes := inter.Keccak256Handler(
+		bytesArray,
+	)
+	resultValue := make([]interpreter.Value, 0, len(resultBytes))
+	for _, b := range resultBytes {
+		resultValue = append(resultValue, interpreter.UInt8Value(b))
+	}
+
+	return interpreter.NewArrayValue(
+		inter,
+		interpreter.ByteArrayStaticType,
+		data.GetOwner(),
+		resultValue...,
 	)
 }
 

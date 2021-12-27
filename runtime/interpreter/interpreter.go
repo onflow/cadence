@@ -189,6 +189,11 @@ type AggregateBLSSignaturesHandlerFunc func(
 	signatures [][]byte,
 ) ([]byte, error)
 
+// Keccak256HandlerFunc is a function that calculates and returns the Keccak256 hash of the input data
+type Keccak256HandlerFunc func(
+	data []byte,
+) []byte
+
 // AggregateBLSPublicKeysHandlerFunc is a function that joins a list of
 // BLS public keys
 type AggregateBLSPublicKeysHandlerFunc func(
@@ -307,6 +312,7 @@ type Interpreter struct {
 	BLSVerifyPoPHandler            VerifyBLSPoPHandlerFunc
 	AggregateBLSSignaturesHandler  AggregateBLSSignaturesHandlerFunc
 	AggregateBLSPublicKeysHandler  AggregateBLSPublicKeysHandlerFunc
+	Keccak256Handler               Keccak256HandlerFunc
 	HashHandler                    HashHandlerFunc
 	ExitHandler                    ExitHandlerFunc
 	interpreted                    bool
@@ -493,6 +499,15 @@ func WithBLSCryptoFunctions(
 			verifyPoP,
 			aggregateSignatures,
 			aggregatePublicKeys,
+		)
+		return nil
+	}
+}
+
+func WithEvmFunctions(keccak256 Keccak256HandlerFunc) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetEVMFunctions(
+			keccak256,
 		)
 		return nil
 	}
@@ -728,6 +743,12 @@ func (interpreter *Interpreter) SetBLSCryptoFunctions(
 	interpreter.BLSVerifyPoPHandler = verifyPoP
 	interpreter.AggregateBLSSignaturesHandler = aggregateSignatures
 	interpreter.AggregateBLSPublicKeysHandler = aggregatePublicKeys
+}
+
+// SetEVMFunctions sets the functions that are used to handle evm specific crypt functions.
+//
+func (interpreter *Interpreter) SetEVMFunctions(keccak256 Keccak256HandlerFunc) {
+	interpreter.Keccak256Handler = keccak256
 }
 
 // SetSignatureVerificationHandler sets the function that is used to handle signature validation.

@@ -25,6 +25,8 @@ import (
 	goRuntime "runtime"
 	"time"
 
+	stdHash "hash"
+
 	opentracing "github.com/opentracing/opentracing-go"
 	"golang.org/x/crypto/sha3"
 
@@ -1109,6 +1111,12 @@ func (r *interpreterRuntime) newInterpreter(
 		)
 	}
 
+	// a little copy to avoid dependancy on go-ethereum
+	type KeccakState interface {
+		stdHash.Hash
+		Read([]byte) (int, error)
+	}
+
 	defaultOptions := []interpreter.Option{
 		interpreter.WithStorage(storage),
 		interpreter.WithPredeclaredValues(preDeclaredValues),
@@ -1204,6 +1212,16 @@ func (r *interpreterRuntime) newInterpreter(
 				)
 			},
 		),
+		interpreter.WithEvmFunctions(func(
+			data []byte,
+		) []byte {
+
+			d := sha3.NewLegacyKeccak256().(KeccakState)
+			b := make([]byte, 32)
+			d.Write(data)
+			d.Read(b)
+			return b
+		}),
 		interpreter.WithSignatureVerificationHandler(
 			func(
 				inter *interpreter.Interpreter,
