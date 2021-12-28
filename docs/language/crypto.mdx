@@ -27,8 +27,8 @@ pub enum HashAlgorithm: UInt8 {
     /// used in BLS signatures.
     pub case KMAC128_BLS_BLS12_381 = 5
 
-    /// Keccak256 is ethereum-compatible Keccak-256 hash
-    pub case Keccak256 = 6
+    /// KECCAK_256 is ethereum-compatible Keccak-256 hash
+    pub case KECCAK_256 = 6
 
     /// Returns the hash of the given data
     pub fun hash(_ data: [UInt8]): [UInt8]

@@ -38,7 +38,7 @@ var HashAlgorithms = []CryptoAlgorithm{
 	HashAlgorithmSHA3_256,
 	HashAlgorithmSHA3_384,
 	HashAlgorithmKMAC128_BLS_BLS12_381,
-	HashAlgorithmKeccak256,
+	HashAlgorithmKECCAK_256,
 }
 
 var SignatureAlgorithmType = newNativeEnumType(
@@ -183,7 +183,7 @@ const (
 	HashAlgorithmSHA3_256
 	HashAlgorithmSHA3_384
 	HashAlgorithmKMAC128_BLS_BLS12_381
-	HashAlgorithmKeccak256
+	HashAlgorithmKECCAK_256
 )
 
 func (algo HashAlgorithm) Name() string {
@@ -200,8 +200,8 @@ func (algo HashAlgorithm) Name() string {
 		return "SHA3_384"
 	case HashAlgorithmKMAC128_BLS_BLS12_381:
 		return "KMAC128_BLS_BLS12_381"
-	case HashAlgorithmKeccak256:
-		return "Keccak256"
+	case HashAlgorithmKECCAK_256:
+		return "KECCAK_256"
 	}
 
 	panic(errors.NewUnreachableError())
@@ -226,7 +226,7 @@ func (algo HashAlgorithm) RawValue() uint8 {
 		return 4
 	case HashAlgorithmKMAC128_BLS_BLS12_381:
 		return 5
-	case HashAlgorithmKeccak256:
+	case HashAlgorithmKECCAK_256:
 		return 6
 	}
 
@@ -247,8 +247,8 @@ func (algo HashAlgorithm) DocString() string {
 		return HashAlgorithmDocStringSHA3_384
 	case HashAlgorithmKMAC128_BLS_BLS12_381:
 		return HashAlgorithmDocStringKMAC128_BLS_BLS12_381
-	case HashAlgorithmKeccak256:
-		return Keccak256FunctionDocString
+	case HashAlgorithmKECCAK_256:
+		return HashAlgorithmDocStringKECCAK_256
 	}
 
 	panic(errors.NewUnreachableError())
@@ -330,6 +330,6 @@ that can be used as the hashing algorithm for BLS signature scheme on the curve 
 This is a customized version of KMAC128 that is compatible with the hashing to curve 
 used in BLS signatures.
 `
-const Keccak256FunctionDocString = `
+const HashAlgorithmDocStringKECCAK_256 = `
 This is a specific function for calculating the Keccak256 hash of arbitrary data.
 `
