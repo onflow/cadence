@@ -201,7 +201,7 @@ func (algo HashAlgorithm) Name() string {
 	case HashAlgorithmKMAC128_BLS_BLS12_381:
 		return "KMAC128_BLS_BLS12_381"
 	case HashAlgorithmKeccak256:
-		return "HashAlgorithmKeccak256"
+		return "Keccak256"
 	}
 
 	panic(errors.NewUnreachableError())
