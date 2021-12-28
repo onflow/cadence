@@ -38,6 +38,7 @@ var HashAlgorithms = []CryptoAlgorithm{
 	HashAlgorithmSHA3_256,
 	HashAlgorithmSHA3_384,
 	HashAlgorithmKMAC128_BLS_BLS12_381,
+	HashAlgorithmKeccak256,
 }
 
 var SignatureAlgorithmType = newNativeEnumType(
@@ -182,6 +183,7 @@ const (
 	HashAlgorithmSHA3_256
 	HashAlgorithmSHA3_384
 	HashAlgorithmKMAC128_BLS_BLS12_381
+	HashAlgorithmKeccak256
 )
 
 func (algo HashAlgorithm) Name() string {
@@ -198,6 +200,8 @@ func (algo HashAlgorithm) Name() string {
 		return "SHA3_384"
 	case HashAlgorithmKMAC128_BLS_BLS12_381:
 		return "KMAC128_BLS_BLS12_381"
+	case HashAlgorithmKeccak256:
+		return "HashAlgorithmKeccak256"
 	}
 
 	panic(errors.NewUnreachableError())
@@ -222,6 +226,8 @@ func (algo HashAlgorithm) RawValue() uint8 {
 		return 4
 	case HashAlgorithmKMAC128_BLS_BLS12_381:
 		return 5
+	case HashAlgorithmKeccak256:
+		return 6
 	}
 
 	panic(errors.NewUnreachableError())
@@ -241,6 +247,8 @@ func (algo HashAlgorithm) DocString() string {
 		return HashAlgorithmDocStringSHA3_384
 	case HashAlgorithmKMAC128_BLS_BLS12_381:
 		return HashAlgorithmDocStringKMAC128_BLS_BLS12_381
+	case HashAlgorithmKeccak256:
+		return Keccak256FunctionDocString
 	}
 
 	panic(errors.NewUnreachableError())
@@ -321,4 +329,7 @@ KMAC128_BLS_BLS12_381 is an instance of KECCAK Message Authentication Code (KMAC
 that can be used as the hashing algorithm for BLS signature scheme on the curve BLS12-381.
 This is a customized version of KMAC128 that is compatible with the hashing to curve 
 used in BLS signatures.
+`
+const Keccak256FunctionDocString = `
+This is a specific function for calculating the Keccak256 hash of arbitrary data.
 `
