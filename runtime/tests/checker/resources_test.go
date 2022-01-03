@@ -5148,6 +5148,53 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
 
+	t.Run("switch-case loss of some resources", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test(_ r1: @R, _ r2: @R) {
+                switch 1 {
+                    case 1:
+                        destroy r1
+                        destroy r2
+                    case 2:
+                        destroy r1
+                        destroy r2
+                    default:
+                        destroy r1
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("switch-case loss of all resources", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test(_ r1: @R, _ r2: @R) {
+                switch 1 {
+                    case 1:
+                        destroy r1
+                        destroy r2
+                    case 2:
+                        destroy r1
+                        destroy r2
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+	})
+
 	t.Run("switch-case with break", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
