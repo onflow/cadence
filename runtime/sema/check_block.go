@@ -41,7 +41,8 @@ func (checker *Checker) visitStatements(statements []ast.Statement) {
 
 		definitelyReturnedOrHalted :=
 			functionActivation.ReturnInfo.DefinitelyReturned ||
-				functionActivation.ReturnInfo.DefinitelyHalted
+				functionActivation.ReturnInfo.DefinitelyHalted ||
+				functionActivation.ReturnInfo.DefinitelyJumped
 
 		if definitelyReturnedOrHalted && !functionActivation.ReportedDeadCode {
 

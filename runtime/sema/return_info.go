@@ -22,6 +22,7 @@ type ReturnInfo struct {
 	MaybeReturned      bool
 	DefinitelyReturned bool
 	DefinitelyHalted   bool
+	DefinitelyJumped   bool
 }
 
 func (ri *ReturnInfo) MergeBranches(thenReturnInfo *ReturnInfo, elseReturnInfo *ReturnInfo) {

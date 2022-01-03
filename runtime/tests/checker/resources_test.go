@@ -5084,7 +5084,7 @@ func TestCheckEmptyResourceCollectionMove(t *testing.T) {
 	})
 }
 
-func TestCheckResourceInvalidationInBranches(t *testing.T) {
+func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
 
 	t.Parallel()
 
@@ -5105,7 +5105,7 @@ func TestCheckResourceInvalidationInBranches(t *testing.T) {
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
 
-	t.Run("switch-case empty case", func(t *testing.T) {
+	t.Run("switch-case TestCheckSwitchStatementWithUnreachableReturn case", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -5146,5 +5146,64 @@ func TestCheckResourceInvalidationInBranches(t *testing.T) {
 
 		errs := ExpectCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("switch-case with break", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test(_ r: @R) {
+                switch 1 {
+                    case 1:
+                        break
+                        destroy r    // unreachable
+                    default:
+                        destroy r
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[1])
+	})
+
+	t.Run("while loop with break", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test(_ r: @R) {
+                while true {
+                    break
+                    destroy r    // unreachable
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 3)
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[1])
+		assert.IsType(t, &sema.ResourceLossError{}, errs[2])
+	})
+
+	t.Run("while loop with continue", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test(_ r: @R) {
+                while true {
+                    continue
+                    destroy r  // unreachable
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 3)
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[1])
+		assert.IsType(t, &sema.ResourceLossError{}, errs[2])
 	})
 }

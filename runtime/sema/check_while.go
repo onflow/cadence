@@ -110,7 +110,16 @@ func (checker *Checker) VisitBreakStatement(statement *ast.BreakStatement) ast.R
 				Range:            ast.NewRangeFromPositioned(statement),
 			},
 		)
+		return nil
 	}
+
+	if checker.inSwitch() {
+		checker.checkResourceLossForFunction()
+		checker.resources.Returns = true
+	}
+
+	functionActivation := checker.functionActivations.Current()
+	functionActivation.ReturnInfo.DefinitelyJumped = true
 
 	return nil
 }
@@ -126,7 +135,11 @@ func (checker *Checker) VisitContinueStatement(statement *ast.ContinueStatement)
 				Range:            ast.NewRangeFromPositioned(statement),
 			},
 		)
+		return nil
 	}
+
+	functionActivation := checker.functionActivations.Current()
+	functionActivation.ReturnInfo.DefinitelyJumped = true
 
 	return nil
 }
