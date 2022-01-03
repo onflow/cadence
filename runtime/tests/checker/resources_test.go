@@ -2244,26 +2244,60 @@ func TestCheckResourceUseInNestedIfStatement(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
-      resource X {}
+	t.Run("resource loss", func(t *testing.T) {
+		t.Parallel()
 
-      fun test() {
-          let x <- create X()
-          if 1 > 2 {
-              if 2 > 1 {
+		_, err := ParseAndCheck(t, `
+          resource X {}
+
+          fun test() {
+              let x <- create X()
+              if 1 > 2 {
+                  if 2 > 1 {
+                      absorb(<-x)
+                  }
+                  // resource is not destroyed in the else path
+              } else {
                   absorb(<-x)
               }
-          } else {
-              absorb(<-x)
           }
-      }
 
-      fun absorb(_ x: @X) {
-          destroy x
-      }
-    `)
+          fun absorb(_ x: @X) {
+              destroy x
+          }
+        `)
 
-	require.NoError(t, err)
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("no resource loss", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          resource X {}
+
+          fun test() {
+              let x <- create X()
+              if 1 > 2 {
+                  if 2 > 1 {
+                      absorb(<-x)
+                  } else {
+                      absorb(<-x)
+                  }
+              } else {
+                  absorb(<-x)
+              }
+          }
+
+          fun absorb(_ x: @X) {
+              destroy x
+          }
+        `)
+
+		require.NoError(t, err)
+	})
 }
 
 ////
@@ -5047,5 +5081,70 @@ func TestCheckEmptyResourceCollectionMove(t *testing.T) {
         `)
 
 		require.NoError(t, err)
+	})
+}
+
+func TestCheckResourceInvalidationInBranches(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("if-else", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test(_ r: @R) {
+                if true {
+                    destroy r
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("switch-case empty case", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test(_ r: @R) {
+                switch 1 {
+                    case 1:
+                        destroy r
+                    case 2:
+                        // Some random statement that has no effect
+                        let a = "do nothing"
+                    default:
+                        destroy r
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("switch-case no default", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test(_ r: @R) {
+                switch 1 {
+                    case 1:
+                        destroy r
+                    case 2:
+                        destroy r
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
 }

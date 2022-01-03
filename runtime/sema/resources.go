@@ -225,8 +225,8 @@ func (ris *Resources) MergeBranches(thenResources *Resources, elseResources *Res
 		// was invalidated.
 
 		definitelyInvalidatedInBranches :=
-			(!thenInfo.Invalidations.IsEmpty() || thenResources.Returns) &&
-				(!elseInfo.Invalidations.IsEmpty() || elseReturns)
+			(thenInfo.DefinitivelyInvalidated || thenResources.Returns) &&
+				(elseInfo.DefinitivelyInvalidated || elseReturns)
 
 		// The resource can be considered definitively invalidated if it was already invalidated,
 		// or the resource was invalidated in both branches
@@ -235,7 +235,7 @@ func (ris *Resources) MergeBranches(thenResources *Resources, elseResources *Res
 			info.DefinitivelyInvalidated ||
 				definitelyInvalidatedInBranches
 
-		// If the a branch returns, the invalidations and uses won't have occurred in the outer scope,
+		// If the branch returns, the invalidations and uses won't have occurred in the outer scope,
 		// so only merge invalidations and uses if the branch did not return
 
 		if !thenResources.Returns {
