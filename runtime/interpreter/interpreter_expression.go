@@ -74,7 +74,10 @@ func (interpreter *Interpreter) identifierExpressionGetterSetter(identifierExpre
 // for the target index expression
 //
 func (interpreter *Interpreter) indexExpressionGetterSetter(indexExpression *ast.IndexExpression) getterSetter {
-	target := interpreter.evalExpression(indexExpression.TargetExpression).(ValueIndexableValue)
+	target, ok := interpreter.evalExpression(indexExpression.TargetExpression).(ValueIndexableValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
 	indexingValue := interpreter.evalExpression(indexExpression.IndexingExpression)
 	getLocationRange := locationRangeGetter(interpreter.Location, indexExpression)
 	_, isNestedResourceMove := interpreter.Program.Elaboration.IsNestedResourceMoveExpression[indexExpression]
@@ -164,90 +167,144 @@ func (interpreter *Interpreter) evalExpression(expression ast.Expression) Value 
 }
 
 func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpression) ast.Repr {
+
+	leftValue := interpreter.evalExpression(expression.Left)
+
+	/* we make this a thunk so that we can skip computing it for certain short-circuiting
+	   operations */
+	rightValue := func() Value { return interpreter.evalExpression(expression.Right) }
+
+	error := func() {
+		panic(InvalidOperandsError{
+			Operation:     expression.Operation,
+			LeftType:      leftValue.StaticType(),
+			RightType:     rightValue().StaticType(),
+			LocationRange: locationRangeGetter(interpreter.Location, expression)(),
+		})
+	}
+
 	switch expression.Operation {
 	case ast.OperationPlus:
-		left := interpreter.evalExpression(expression.Left).(NumberValue)
-		right := interpreter.evalExpression(expression.Right).(NumberValue)
+		left, leftOk := leftValue.(NumberValue)
+		right, rightOk := rightValue().(NumberValue)
+		if !leftOk || !rightOk {
+			error()
+		}
 		return left.Plus(right)
 
 	case ast.OperationMinus:
-		left := interpreter.evalExpression(expression.Left).(NumberValue)
-		right := interpreter.evalExpression(expression.Right).(NumberValue)
+		left, leftOk := leftValue.(NumberValue)
+		right, rightOk := rightValue().(NumberValue)
+		if !leftOk || !rightOk {
+			error()
+		}
 		return left.Minus(right)
 
 	case ast.OperationMod:
-		left := interpreter.evalExpression(expression.Left).(NumberValue)
-		right := interpreter.evalExpression(expression.Right).(NumberValue)
+		left, leftOk := leftValue.(NumberValue)
+		right, rightOk := rightValue().(NumberValue)
+		if !leftOk || !rightOk {
+			error()
+		}
 		return left.Mod(right)
 
 	case ast.OperationMul:
-		left := interpreter.evalExpression(expression.Left).(NumberValue)
-		right := interpreter.evalExpression(expression.Right).(NumberValue)
+		left, leftOk := leftValue.(NumberValue)
+		right, rightOk := rightValue().(NumberValue)
+		if !leftOk || !rightOk {
+			error()
+		}
 		return left.Mul(right)
 
 	case ast.OperationDiv:
-		left := interpreter.evalExpression(expression.Left).(NumberValue)
-		right := interpreter.evalExpression(expression.Right).(NumberValue)
+		left, leftOk := leftValue.(NumberValue)
+		right, rightOk := rightValue().(NumberValue)
+		if !leftOk || !rightOk {
+			error()
+		}
 		return left.Div(right)
 
 	case ast.OperationBitwiseOr:
-		left := interpreter.evalExpression(expression.Left).(IntegerValue)
-		right := interpreter.evalExpression(expression.Right).(IntegerValue)
+		left, leftOk := leftValue.(IntegerValue)
+		right, rightOk := rightValue().(IntegerValue)
+		if !leftOk || !rightOk {
+			error()
+		}
 		return left.BitwiseOr(right)
 
 	case ast.OperationBitwiseXor:
-		left := interpreter.evalExpression(expression.Left).(IntegerValue)
-		right := interpreter.evalExpression(expression.Right).(IntegerValue)
+		left, leftOk := leftValue.(IntegerValue)
+		right, rightOk := rightValue().(IntegerValue)
+		if !leftOk || !rightOk {
+			error()
+		}
 		return left.BitwiseXor(right)
 
 	case ast.OperationBitwiseAnd:
-		left := interpreter.evalExpression(expression.Left).(IntegerValue)
-		right := interpreter.evalExpression(expression.Right).(IntegerValue)
+		left, leftOk := leftValue.(IntegerValue)
+		right, rightOk := rightValue().(IntegerValue)
+		if !leftOk || !rightOk {
+			error()
+		}
 		return left.BitwiseAnd(right)
 
 	case ast.OperationBitwiseLeftShift:
-		left := interpreter.evalExpression(expression.Left).(IntegerValue)
-		right := interpreter.evalExpression(expression.Right).(IntegerValue)
+		left, leftOk := leftValue.(IntegerValue)
+		right, rightOk := rightValue().(IntegerValue)
+		if !leftOk || !rightOk {
+			error()
+		}
 		return left.BitwiseLeftShift(right)
 
 	case ast.OperationBitwiseRightShift:
-		left := interpreter.evalExpression(expression.Left).(IntegerValue)
-		right := interpreter.evalExpression(expression.Right).(IntegerValue)
+		left, leftOk := leftValue.(IntegerValue)
+		right, rightOk := rightValue().(IntegerValue)
+		if !leftOk || !rightOk {
+			error()
+		}
 		return left.BitwiseRightShift(right)
 
 	case ast.OperationLess:
-		left := interpreter.evalExpression(expression.Left).(NumberValue)
-		right := interpreter.evalExpression(expression.Right).(NumberValue)
+		left, leftOk := leftValue.(NumberValue)
+		right, rightOk := rightValue().(NumberValue)
+		if !leftOk || !rightOk {
+			error()
+		}
 		return left.Less(right)
 
 	case ast.OperationLessEqual:
-		left := interpreter.evalExpression(expression.Left).(NumberValue)
-		right := interpreter.evalExpression(expression.Right).(NumberValue)
+		left, leftOk := leftValue.(NumberValue)
+		right, rightOk := rightValue().(NumberValue)
+		if !leftOk || !rightOk {
+			error()
+		}
 		return left.LessEqual(right)
 
 	case ast.OperationGreater:
-		left := interpreter.evalExpression(expression.Left).(NumberValue)
-		right := interpreter.evalExpression(expression.Right).(NumberValue)
+		left, leftOk := leftValue.(NumberValue)
+		right, rightOk := rightValue().(NumberValue)
+		if !leftOk || !rightOk {
+			error()
+		}
 		return left.Greater(right)
 
 	case ast.OperationGreaterEqual:
-		left := interpreter.evalExpression(expression.Left).(NumberValue)
-		right := interpreter.evalExpression(expression.Right).(NumberValue)
+		left, leftOk := leftValue.(NumberValue)
+		right, rightOk := rightValue().(NumberValue)
+		if !leftOk || !rightOk {
+			error()
+		}
 		return left.GreaterEqual(right)
 
 	case ast.OperationEqual:
-		left := interpreter.evalExpression(expression.Left)
-		right := interpreter.evalExpression(expression.Right)
-		return interpreter.testEqual(left, right, expression)
+		return interpreter.testEqual(leftValue, rightValue(), expression)
 
 	case ast.OperationNotEqual:
-		left := interpreter.evalExpression(expression.Left)
-		right := interpreter.evalExpression(expression.Right)
-		return !interpreter.testEqual(left, right, expression)
+		return !interpreter.testEqual(leftValue, rightValue(), expression)
 
 	case ast.OperationOr:
 		// interpret the left-hand side
-		left := interpreter.evalExpression(expression.Left).(BoolValue)
+		left, leftOk := leftValue.(BoolValue)
 		// only interpret right-hand side if left-hand side is false
 		if left {
 			return left
@@ -255,11 +312,15 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 
 		// after interpreting the left-hand side,
 		// interpret the right-hand side
-		return interpreter.evalExpression(expression.Right).(BoolValue)
+		right, rightOk := rightValue().(BoolValue)
+		if !leftOk || !rightOk {
+			error()
+		}
+		return right
 
 	case ast.OperationAnd:
 		// interpret the left-hand side
-		left := interpreter.evalExpression(expression.Left).(BoolValue)
+		left, leftOk := leftValue.(BoolValue)
 		// only interpret right-hand side if left-hand side is true
 		if !left {
 			return left
@@ -267,18 +328,19 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 
 		// after interpreting the left-hand side,
 		// interpret the right-hand side
-		return interpreter.evalExpression(expression.Right).(BoolValue)
+		right, rightOk := rightValue().(BoolValue)
+		if !leftOk || !rightOk {
+			error()
+		}
+		return right
 
 	case ast.OperationNilCoalesce:
-		// interpret the left-hand side
-		left := interpreter.evalExpression(expression.Left)
-
 		// only evaluate right-hand side if left-hand side is nil
-		if some, ok := left.(*SomeValue); ok {
+		if some, ok := leftValue.(*SomeValue); ok {
 			return some.Value
 		}
 
-		value := interpreter.evalExpression(expression.Right)
+		value := rightValue()
 
 		rightType := interpreter.Program.Elaboration.BinaryExpressionRightTypes[expression]
 		resultType := interpreter.Program.Elaboration.BinaryExpressionResultTypes[expression]
