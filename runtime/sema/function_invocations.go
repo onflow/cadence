@@ -63,6 +63,9 @@ func (f *FunctionInvocations) Find(pos Position) *FunctionInvocation {
 	if interval == nil {
 		return nil
 	}
-	invocation := value.(FunctionInvocation)
+	invocation, ok := value.(FunctionInvocation)
+	if !ok {
+		return nil
+	}
 	return &invocation
 }

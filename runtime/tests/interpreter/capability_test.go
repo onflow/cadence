@@ -245,7 +245,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 		t.Run("r2", func(t *testing.T) {
 
 			_, err := inter.Invoke("r2")
-			require.ErrorAs(t, err, &interpreter.ForceNilError{})
+			require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 		})
 
 		t.Run("single change after borrow", func(t *testing.T) {
@@ -470,7 +470,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 		t.Run("s2", func(t *testing.T) {
 
 			_, err := inter.Invoke("s2")
-			require.ErrorAs(t, err, &interpreter.ForceNilError{})
+			require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 		})
 
 		t.Run("single change after borrow", func(t *testing.T) {

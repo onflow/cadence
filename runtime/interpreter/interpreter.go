@@ -124,6 +124,14 @@ type OnRecordTraceFunc func(
 	logs []opentracing.LogRecord,
 )
 
+// OnResourceOwnerChangeFunc is a function that is triggered when a resource's owner changes.
+type OnResourceOwnerChangeFunc func(
+	inter *Interpreter,
+	resource *CompositeValue,
+	oldOwner common.Address,
+	newOwner common.Address,
+)
+
 // InjectedCompositeFieldsHandlerFunc is a function that handles storage reads.
 //
 type InjectedCompositeFieldsHandlerFunc func(
@@ -288,6 +296,7 @@ type Interpreter struct {
 	onFunctionInvocation           OnFunctionInvocationFunc
 	onInvokedFunctionReturn        OnInvokedFunctionReturnFunc
 	onRecordTrace                  OnRecordTraceFunc
+	onResourceOwnerChange          OnResourceOwnerChangeFunc
 	injectedCompositeFieldsHandler InjectedCompositeFieldsHandlerFunc
 	contractValueHandler           ContractValueHandlerFunc
 	importLocationHandler          ImportLocationHandlerFunc
@@ -361,11 +370,21 @@ func WithOnInvokedFunctionReturnHandler(handler OnInvokedFunctionReturnFunc) Opt
 }
 
 // WithOnRecordTraceHandler returns an interpreter option which sets
-// the given function as the on record trace function handler.
+// the given function as the record trace handler.
 //
 func WithOnRecordTraceHandler(handler OnRecordTraceFunc) Option {
 	return func(interpreter *Interpreter) error {
 		interpreter.SetOnRecordTraceHandler(handler)
+		return nil
+	}
+}
+
+// WithOnResourceOwnerChangeHandler returns an interpreter option which sets
+// the given function as the resource owner change handler.
+//
+func WithOnResourceOwnerChangeHandler(handler OnResourceOwnerChangeFunc) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetOnResourceOwnerChangeHandler(handler)
 		return nil
 	}
 }
@@ -431,10 +450,10 @@ func WithImportLocationHandler(handler ImportLocationHandlerFunc) Option {
 	}
 }
 
-// WithPublicAccountHandlerFunc returns an interpreter option which sets the given function
+// WithPublicAccountHandler returns an interpreter option which sets the given function
 // as the function that is used to handle public accounts.
 //
-func WithPublicAccountHandlerFunc(handler PublicAccountHandlerFunc) Option {
+func WithPublicAccountHandler(handler PublicAccountHandlerFunc) Option {
 	return func(interpreter *Interpreter) error {
 		interpreter.SetPublicAccountHandler(handler)
 		return nil
@@ -645,10 +664,16 @@ func (interpreter *Interpreter) SetOnInvokedFunctionReturnHandler(function OnInv
 	interpreter.onInvokedFunctionReturn = function
 }
 
-// SetOnRecordTraceHandler sets the function that is triggered when an record trace is called.
+// SetOnRecordTraceHandler sets the function that is triggered when a trace is recorded.
 //
 func (interpreter *Interpreter) SetOnRecordTraceHandler(function OnRecordTraceFunc) {
 	interpreter.onRecordTrace = function
+}
+
+// SetOnResourceOwnerChangeHandler sets the function that is triggered when the owner of a resource changes.
+//
+func (interpreter *Interpreter) SetOnResourceOwnerChangeHandler(function OnResourceOwnerChangeFunc) {
+	interpreter.onResourceOwnerChange = function
 }
 
 // SetStorage sets the value that is used for storage operations.
@@ -1724,7 +1749,7 @@ func EnumConstructorFunction(
 	lookupTable := make(map[string]*CompositeValue)
 
 	for _, caseValue := range caseValues {
-		rawValue := caseValue.GetField(inter, getLocationRange, sema.EnumRawValueFieldName)
+		rawValue := caseValue.GetField(sema.EnumRawValueFieldName)
 		rawValueBigEndianBytes := rawValue.(IntegerValue).ToBigEndianBytes()
 		lookupTable[string(rawValueBigEndianBytes)] = caseValue
 	}
@@ -2481,12 +2506,20 @@ func (interpreter *Interpreter) NewSubInterpreter(
 		WithAtreeValueValidationEnabled(interpreter.atreeValueValidationEnabled),
 		WithAtreeStorageValidationEnabled(interpreter.atreeStorageValidationEnabled),
 		withTypeCodes(interpreter.typeCodes),
-		WithPublicAccountHandlerFunc(interpreter.publicAccountHandler),
+		WithPublicAccountHandler(interpreter.publicAccountHandler),
 		WithPublicKeyValidationHandler(interpreter.PublicKeyValidationHandler),
 		WithSignatureVerificationHandler(interpreter.SignatureVerificationHandler),
 		WithHashHandler(interpreter.HashHandler),
-		WithBLSCryptoFunctions(interpreter.BLSVerifyPoPHandler, interpreter.AggregateBLSSignaturesHandler, interpreter.AggregateBLSPublicKeysHandler),
+		WithBLSCryptoFunctions(
+			interpreter.BLSVerifyPoPHandler,
+			interpreter.AggregateBLSSignaturesHandler,
+			interpreter.AggregateBLSPublicKeysHandler,
+		),
 		WithDebugger(interpreter.debugger),
+		WithExitHandler(interpreter.ExitHandler),
+		WithTracingEnabled(interpreter.tracingEnabled),
+		WithOnRecordTraceHandler(interpreter.onRecordTrace),
+		WithOnResourceOwnerChangeHandler(interpreter.onResourceOwnerChange),
 	}
 
 	return NewInterpreter(
@@ -3510,7 +3543,10 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 
 			dynamicType := value.DynamicType(interpreter, SeenReferences{})
 			if !interpreter.IsSubType(dynamicType, ty) {
-				return NilValue{}
+				panic(ForceCastTypeMismatchError{
+					ExpectedType:  ty,
+					LocationRange: invocation.GetLocationRange(),
+				})
 			}
 
 			inter := invocation.Interpreter
@@ -3571,7 +3607,11 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 			// which reads the stored value
 			// and performs a dynamic type check
 
-			if reference.ReferencedValue(interpreter) == nil {
+			value, err := reference.dereference(interpreter, invocation.GetLocationRange)
+			if err != nil {
+				panic(err)
+			}
+			if value == nil {
 				return NilValue{}
 			}
 
@@ -3742,7 +3782,11 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 			// which reads the stored value
 			// and performs a dynamic type check
 
-			if reference.ReferencedValue(interpreter) == nil {
+			value, err := reference.dereference(interpreter, invocation.GetLocationRange)
+			if err != nil {
+				panic(err)
+			}
+			if value == nil {
 				return NilValue{}
 			}
 

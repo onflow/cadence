@@ -106,18 +106,18 @@ func (checker *Checker) visitConditional(
 
 	return checker.checkConditionalBranches(
 		func() Type {
-			thenResult := thenElement.Accept(checker)
-			if thenResult == nil {
+			thenResult, ok := thenElement.Accept(checker).(Type)
+			if !ok || thenResult == nil {
 				return nil
 			}
-			return thenResult.(Type)
+			return thenResult
 		},
 		func() Type {
-			elseResult := elseElement.Accept(checker)
-			if elseResult == nil {
+			elseResult, ok := elseElement.Accept(checker).(Type)
+			if !ok || elseResult == nil {
 				return nil
 			}
-			return elseResult.(Type)
+			return elseResult
 		},
 	)
 }

@@ -521,3 +521,29 @@ func (e *InterfaceMissingLocationError) Error() string {
 		e.QualifiedIdentifier,
 	)
 }
+
+// InvalidOperandsError
+//
+type InvalidOperandsError struct {
+	Operation    ast.Operation
+	FunctionName string
+	LeftType     StaticType
+	RightType    StaticType
+	LocationRange
+}
+
+func (e InvalidOperandsError) Error() string {
+	var op string
+	if e.Operation == ast.OperationUnknown {
+		op = e.FunctionName
+	} else {
+		op = e.Operation.Symbol()
+	}
+
+	return fmt.Sprintf(
+		"cannot apply operation %s to types: `%s`, `%s`",
+		op,
+		e.LeftType.String(),
+		e.RightType.String(),
+	)
+}

@@ -57,7 +57,10 @@ func (m *MemberAccesses) Find(pos Position) *MemberAccess {
 	if interval == nil {
 		return nil
 	}
-	access := value.(MemberAccess)
+	access, ok := value.(MemberAccess)
+	if !ok {
+		return nil
+	}
 	return &access
 }
 
@@ -65,7 +68,11 @@ func (m *MemberAccesses) All() []MemberAccess {
 	values := m.tree.Values()
 	accesses := make([]MemberAccess, len(values))
 	for i, value := range values {
-		accesses[i] = value.(MemberAccess)
+		access, ok := value.(MemberAccess)
+		if !ok {
+			continue
+		}
+		accesses[i] = access
 	}
 	return accesses
 }

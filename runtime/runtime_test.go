@@ -149,14 +149,19 @@ type testRuntimeInterface struct {
 	getSigningAccounts        func() ([]Address, error)
 	log                       func(string)
 	emitEvent                 func(cadence.Event) error
-	generateUUID              func() (uint64, error)
-	computationLimit          uint64
-	decodeArgument            func(b []byte, t cadence.Type) (cadence.Value, error)
-	programParsed             func(location common.Location, duration time.Duration)
-	programChecked            func(location common.Location, duration time.Duration)
-	programInterpreted        func(location common.Location, duration time.Duration)
-	unsafeRandom              func() (uint64, error)
-	verifySignature           func(
+	resourceOwnerChanged      func(
+		resource *interpreter.CompositeValue,
+		oldAddress common.Address,
+		newAddress common.Address,
+	)
+	generateUUID       func() (uint64, error)
+	computationLimit   uint64
+	decodeArgument     func(b []byte, t cadence.Type) (cadence.Value, error)
+	programParsed      func(location common.Location, duration time.Duration)
+	programChecked     func(location common.Location, duration time.Duration)
+	programInterpreted func(location common.Location, duration time.Duration)
+	unsafeRandom       func() (uint64, error)
+	verifySignature    func(
 		signature []byte,
 		tag string,
 		signedData []byte,
@@ -291,6 +296,16 @@ func (i *testRuntimeInterface) ProgramLog(message string) error {
 
 func (i *testRuntimeInterface) EmitEvent(event cadence.Event) error {
 	return i.emitEvent(event)
+}
+
+func (i *testRuntimeInterface) ResourceOwnerChanged(
+	resource *interpreter.CompositeValue,
+	oldOwner common.Address,
+	newOwner common.Address,
+) {
+	if i.resourceOwnerChanged != nil {
+		i.resourceOwnerChanged(resource, oldOwner, newOwner)
+	}
 }
 
 func (i *testRuntimeInterface) GenerateUUID() (uint64, error) {
