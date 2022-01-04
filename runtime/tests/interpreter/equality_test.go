@@ -206,6 +206,7 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 						require.NoError(t, err)
 						assert.Equal(t, interpreter.BoolValue(false), result)
 					case ast.OperationNotEqual:
+						require.NoError(t, err)
 						assert.Equal(t, interpreter.BoolValue(true), result)
 					default:
 						require.Error(t, err)
@@ -255,6 +256,7 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 						require.NoError(t, err)
 						assert.Equal(t, interpreter.BoolValue(false), result)
 					case ast.OperationNotEqual:
+						require.NoError(t, err)
 						assert.Equal(t, interpreter.BoolValue(true), result)
 					default:
 						require.Error(t, err)
@@ -304,6 +306,7 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 						require.NoError(t, err)
 						assert.Equal(t, interpreter.BoolValue(false), result)
 					case ast.OperationNotEqual:
+						require.NoError(t, err)
 						assert.Equal(t, interpreter.BoolValue(true), result)
 					default:
 						require.Error(t, err)
