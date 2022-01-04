@@ -5105,7 +5105,7 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
 
-	t.Run("switch-case TestCheckSwitchStatementWithUnreachableReturn case", func(t *testing.T) {
+	t.Run("switch-case resource leak in case", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
