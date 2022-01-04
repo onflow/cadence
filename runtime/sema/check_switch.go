@@ -138,11 +138,9 @@ func (checker *Checker) checkSwitchCasesStatements(cases []*ast.SwitchCase) {
 
 	switchCase := cases[0]
 
-	if caseCount == 1 {
-		if switchCase.Expression == nil {
-			checker.checkSwitchCaseStatements(switchCase)
-			return
-		}
+	if caseCount == 1 && switchCase.Expression == nil {
+		checker.checkSwitchCaseStatements(switchCase)
+		return
 	}
 
 	_, _ = checker.checkConditionalBranches(
