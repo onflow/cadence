@@ -375,11 +375,17 @@ func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpres
 
 	switch expression.Operation {
 	case ast.OperationNegate:
-		boolValue := value.(BoolValue)
+		boolValue, ok := value.(BoolValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
 		return boolValue.Negate()
 
 	case ast.OperationMinus:
-		integerValue := value.(NumberValue)
+		integerValue, ok := value.(NumberValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
 		return integerValue.Negate()
 
 	case ast.OperationMove:
@@ -573,14 +579,20 @@ func (interpreter *Interpreter) VisitMemberExpression(expression *ast.MemberExpr
 }
 
 func (interpreter *Interpreter) VisitIndexExpression(expression *ast.IndexExpression) ast.Repr {
-	typedResult := interpreter.evalExpression(expression.TargetExpression).(ValueIndexableValue)
+	typedResult, ok := interpreter.evalExpression(expression.TargetExpression).(ValueIndexableValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
 	indexingValue := interpreter.evalExpression(expression.IndexingExpression)
 	getLocationRange := locationRangeGetter(interpreter.Location, expression)
 	return typedResult.GetKey(interpreter, getLocationRange, indexingValue)
 }
 
 func (interpreter *Interpreter) VisitConditionalExpression(expression *ast.ConditionalExpression) ast.Repr {
-	value := interpreter.evalExpression(expression.Test).(BoolValue)
+	value, ok := interpreter.evalExpression(expression.Test).(BoolValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
 	if value {
 		return interpreter.evalExpression(expression.Then)
 	} else {
@@ -625,8 +637,10 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 		}
 	}
 
-	function := result.(FunctionValue)
-
+	function, ok := result.(FunctionValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
 	// NOTE: evaluate all argument expressions in call-site scope, not in function body
 	argumentExpressions := make([]ast.Expression, len(invocationExpression.Arguments))
 	for i, argument := range invocationExpression.Arguments {
