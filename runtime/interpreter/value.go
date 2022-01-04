@@ -1287,7 +1287,10 @@ func (v *ArrayValue) RemoveLast(interpreter *Interpreter, getLocationRange func(
 
 func (v *ArrayValue) Contains(interpreter *Interpreter, getLocationRange func() LocationRange, needleValue Value) BoolValue {
 
-	needleEquatable := needleValue.(EquatableValue)
+	needleEquatable, ok := needleValue.(EquatableValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
 
 	var result bool
 	v.Iterate(func(element Value) (resume bool) {
@@ -1666,7 +1669,8 @@ func (v *ArrayValue) GetOwner() common.Address {
 
 func (v *ArrayValue) SemaType(interpreter *Interpreter) sema.ArrayType {
 	if v.semaType == nil {
-		v.semaType = interpreter.MustConvertStaticToSemaType(v.Type).(sema.ArrayType)
+		// this function will panic already if this conversion fails
+		v.semaType, _ = interpreter.MustConvertStaticToSemaType(v.Type).(sema.ArrayType)
 	}
 	return v.semaType
 }
@@ -9813,7 +9817,14 @@ func (v Fix64Value) Mod(other NumberValue) NumberValue {
 	}
 
 	// v - int(v/o) * o
-	quotient := v.Div(o).(Fix64Value)
+	quotient, ok := v.Div(o).(Fix64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMod,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
 	truncatedQuotient := (int64(quotient) / sema.Fix64Factor) * sema.Fix64Factor
 	return v.Minus(Fix64Value(truncatedQuotient).Mul(o))
 }
@@ -10182,7 +10193,14 @@ func (v UFix64Value) Mod(other NumberValue) NumberValue {
 	}
 
 	// v - int(v/o) * o
-	quotient := v.Div(o).(UFix64Value)
+	quotient, ok := v.Div(o).(UFix64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMod,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
 	truncatedQuotient := (uint64(quotient) / sema.Fix64Factor) * sema.Fix64Factor
 	return v.Minus(UFix64Value(truncatedQuotient).Mul(o))
 }
@@ -12008,7 +12026,8 @@ func (v *DictionaryValue) StorageID() atree.StorageID {
 
 func (v *DictionaryValue) SemaType(interpreter *Interpreter) *sema.DictionaryType {
 	if v.semaType == nil {
-		v.semaType = interpreter.MustConvertStaticToSemaType(v.Type).(*sema.DictionaryType)
+		// this function will panic already if this conversion fails
+		v.semaType, _ = interpreter.MustConvertStaticToSemaType(v.Type).(*sema.DictionaryType)
 	}
 	return v.semaType
 }
@@ -13297,7 +13316,8 @@ func accountGetCapabilityFunction(
 			typeParameterPair := invocation.TypeParameterTypes.Oldest()
 			if typeParameterPair != nil {
 				ty := typeParameterPair.Value
-				borrowType = ty.(*sema.ReferenceType)
+				// we handle the nil case for this below
+				borrowType, _ = ty.(*sema.ReferenceType)
 			}
 
 			var borrowStaticType StaticType
@@ -13573,7 +13593,8 @@ func (v *CapabilityValue) Walk(walkChild func(Value)) {
 func (v *CapabilityValue) DynamicType(interpreter *Interpreter, _ SeenReferences) DynamicType {
 	var borrowType *sema.ReferenceType
 	if v.BorrowType != nil {
-		borrowType = interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
+		// this function will panic already if this conversion fails
+		borrowType, _ = interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
 	}
 
 	return CapabilityDynamicType{
@@ -13609,14 +13630,16 @@ func (v *CapabilityValue) GetMember(interpreter *Interpreter, _ func() LocationR
 	case "borrow":
 		var borrowType *sema.ReferenceType
 		if v.BorrowType != nil {
-			borrowType = interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
+			// this function will panic already if this conversion fails
+			borrowType, _ = interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
 		}
 		return interpreter.capabilityBorrowFunction(v.Address, v.Path, borrowType)
 
 	case "check":
 		var borrowType *sema.ReferenceType
 		if v.BorrowType != nil {
-			borrowType = interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
+			// this function will panic already if this conversion fails
+			borrowType, _ = interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
 		}
 		return interpreter.capabilityCheckFunction(v.Address, v.Path, borrowType)
 
@@ -13978,7 +14001,10 @@ var publicKeyVerifyPoPFunction = NewHostFunctionValue(
 
 		bytesArray := make([]byte, 0, signatureValue.Count())
 		signatureValue.Iterate(func(element Value) (resume bool) {
-			b := element.(UInt8Value)
+			b, ok := element.(UInt8Value)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
 			bytesArray = append(bytesArray, byte(b))
 			return true
 		})
