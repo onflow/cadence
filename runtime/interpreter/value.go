@@ -31,6 +31,7 @@ import (
 	"github.com/rivo/uniseg"
 	"golang.org/x/text/unicode/norm"
 
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/format"
@@ -338,13 +339,23 @@ func (TypeValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
+// HashInput returns a byte slice containing:
+// - HashInputTypeType (1 byte)
+// - type id (n bytes)
 func (v TypeValue) HashInput(interpreter *Interpreter, _ func() LocationRange, scratch []byte) []byte {
 	typeID := interpreter.MustConvertStaticToSemaType(v.Type).ID()
 
-	return append(
-		[]byte{byte(HashInputTypeType)},
-		typeID...,
-	)
+	length := 1 + len(typeID)
+	var buf []byte
+	if length <= len(scratch) {
+		buf = scratch[:length]
+	} else {
+		buf = make([]byte, length)
+	}
+
+	buf[0] = byte(HashInputTypeType)
+	copy(buf[1:], []byte(typeID))
+	return buf
 }
 
 // VoidValue
@@ -484,6 +495,9 @@ func (v BoolValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bo
 	return bool(v) == bool(otherBool)
 }
 
+// HashInput returns a byte slice containing:
+// - HashInputTypeBool (1 byte)
+// - 1/0 (1 byte)
 func (v BoolValue) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeBool)
 	if v {
@@ -628,11 +642,21 @@ func (v *StringValue) Equal(_ *Interpreter, _ func() LocationRange, other Value)
 	return v.NormalForm() == otherString.NormalForm()
 }
 
-func (v *StringValue) HashInput(_ *Interpreter, _ func() LocationRange, _ []byte) []byte {
-	return append(
-		[]byte{byte(HashInputTypeString)},
-		v.Str...,
-	)
+// HashInput returns a byte slice containing:
+// - HashInputTypeString (1 byte)
+// - string value (n bytes)
+func (v *StringValue) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
+	length := 1 + len(v.Str)
+	var buffer []byte
+	if length <= len(scratch) {
+		buffer = scratch[:length]
+	} else {
+		buffer = make([]byte, length)
+	}
+
+	buffer[0] = byte(HashInputTypeString)
+	copy(buffer[1:], v.Str)
+	return buffer
 }
 
 func (v *StringValue) NormalForm() string {
@@ -1847,29 +1871,75 @@ func (v IntValue) Negate() NumberValue {
 }
 
 func (v IntValue) Plus(other NumberValue) NumberValue {
-	o := other.(IntValue)
+	o, ok := other.(IntValue)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationPlus,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	res.Add(v.BigInt, o.BigInt)
 	return IntValue{res}
 }
 
 func (v IntValue) SaturatingPlus(other NumberValue) NumberValue {
+	defer func() {
+		r := recover()
+		if _, ok := r.(InvalidOperandsError); ok {
+			panic(InvalidOperandsError{
+				FunctionName: sema.NumericTypeSaturatingAddFunctionName,
+				LeftType:     v.StaticType(),
+				RightType:    other.StaticType(),
+			})
+		}
+	}()
+
 	return v.Plus(other)
 }
 
 func (v IntValue) Minus(other NumberValue) NumberValue {
-	o := other.(IntValue)
+	o, ok := other.(IntValue)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMinus,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	res.Sub(v.BigInt, o.BigInt)
 	return IntValue{res}
 }
 
 func (v IntValue) SaturatingMinus(other NumberValue) NumberValue {
+	defer func() {
+		r := recover()
+		if _, ok := r.(InvalidOperandsError); ok {
+			panic(InvalidOperandsError{
+				FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
+				LeftType:     v.StaticType(),
+				RightType:    other.StaticType(),
+			})
+		}
+	}()
+
 	return v.Minus(other)
 }
 
 func (v IntValue) Mod(other NumberValue) NumberValue {
-	o := other.(IntValue)
+	o, ok := other.(IntValue)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMod,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	// INT33-C
 	if o.BigInt.Cmp(res) == 0 {
@@ -1880,18 +1950,45 @@ func (v IntValue) Mod(other NumberValue) NumberValue {
 }
 
 func (v IntValue) Mul(other NumberValue) NumberValue {
-	o := other.(IntValue)
+	o, ok := other.(IntValue)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMul,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	res.Mul(v.BigInt, o.BigInt)
 	return IntValue{res}
 }
 
 func (v IntValue) SaturatingMul(other NumberValue) NumberValue {
+	defer func() {
+		r := recover()
+		if _, ok := r.(InvalidOperandsError); ok {
+			panic(InvalidOperandsError{
+				FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
+				LeftType:     v.StaticType(),
+				RightType:    other.StaticType(),
+			})
+		}
+	}()
+
 	return v.Mul(other)
 }
 
 func (v IntValue) Div(other NumberValue) NumberValue {
-	o := other.(IntValue)
+	o, ok := other.(IntValue)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationDiv,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	// INT33-C
 	if o.BigInt.Cmp(res) == 0 {
@@ -1902,6 +1999,17 @@ func (v IntValue) Div(other NumberValue) NumberValue {
 }
 
 func (v IntValue) SaturatingDiv(other NumberValue) NumberValue {
+	defer func() {
+		r := recover()
+		if _, ok := r.(InvalidOperandsError); ok {
+			panic(InvalidOperandsError{
+				FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
+				LeftType:     v.StaticType(),
+				RightType:    other.StaticType(),
+			})
+		}
+	}()
+
 	return v.Div(other)
 }
 
@@ -1934,37 +2042,80 @@ func (v IntValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) boo
 	return cmp == 0
 }
 
-func (v IntValue) HashInput(_ *Interpreter, _ func() LocationRange, _ []byte) []byte {
-	// TODO: optimize?
-	return append(
-		[]byte{byte(HashInputTypeInt)},
-		SignedBigIntToBigEndianBytes(v.BigInt)...,
-	)
+// HashInput returns a byte slice containing:
+// - HashInputTypeInt (1 byte)
+// - big int encoded in big-endian (n bytes)
+func (v IntValue) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
+	b := SignedBigIntToBigEndianBytes(v.BigInt)
+
+	length := 1 + len(b)
+	var buffer []byte
+	if length <= len(scratch) {
+		buffer = scratch[:length]
+	} else {
+		buffer = make([]byte, length)
+	}
+
+	buffer[0] = byte(HashInputTypeInt)
+	copy(buffer[1:], b)
+	return buffer
 }
 
 func (v IntValue) BitwiseOr(other IntegerValue) IntegerValue {
-	o := other.(IntValue)
+	o, ok := other.(IntValue)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseOr,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	res.Or(v.BigInt, o.BigInt)
 	return IntValue{res}
 }
 
 func (v IntValue) BitwiseXor(other IntegerValue) IntegerValue {
-	o := other.(IntValue)
+	o, ok := other.(IntValue)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseXor,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	res.Xor(v.BigInt, o.BigInt)
 	return IntValue{res}
 }
 
 func (v IntValue) BitwiseAnd(other IntegerValue) IntegerValue {
-	o := other.(IntValue)
+	o, ok := other.(IntValue)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseAnd,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	res.And(v.BigInt, o.BigInt)
 	return IntValue{res}
 }
 
 func (v IntValue) BitwiseLeftShift(other IntegerValue) IntegerValue {
-	o := other.(IntValue)
+	o, ok := other.(IntValue)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseLeftShift,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	if o.BigInt.Sign() < 0 {
 		panic(UnderflowError{})
@@ -1977,7 +2128,15 @@ func (v IntValue) BitwiseLeftShift(other IntegerValue) IntegerValue {
 }
 
 func (v IntValue) BitwiseRightShift(other IntegerValue) IntegerValue {
-	o := other.(IntValue)
+	o, ok := other.(IntValue)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseRightShift,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	if o.BigInt.Sign() < 0 {
 		panic(UnderflowError{})
@@ -2051,8 +2210,7 @@ func (IntValue) DeepRemove(_ *Interpreter) {
 }
 
 func (v IntValue) ByteSize() uint32 {
-	// TODO: optimize
-	return mustStorableSize(v)
+	return cborTagSize + getBigIntCBORSize(v.BigInt)
 }
 
 func (v IntValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -2115,7 +2273,15 @@ func (v Int8Value) Negate() NumberValue {
 }
 
 func (v Int8Value) Plus(other NumberValue) NumberValue {
-	o := other.(Int8Value)
+	o, ok := other.(Int8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationPlus,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	// INT32-C
 	if (o > 0) && (v > (math.MaxInt8 - o)) {
 		panic(OverflowError{})
@@ -2126,7 +2292,15 @@ func (v Int8Value) Plus(other NumberValue) NumberValue {
 }
 
 func (v Int8Value) SaturatingPlus(other NumberValue) NumberValue {
-	o := other.(Int8Value)
+	o, ok := other.(Int8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
 	// INT32-C
 	if (o > 0) && (v > (math.MaxInt8 - o)) {
 		return Int8Value(math.MaxInt8)
@@ -2137,7 +2311,15 @@ func (v Int8Value) SaturatingPlus(other NumberValue) NumberValue {
 }
 
 func (v Int8Value) Minus(other NumberValue) NumberValue {
-	o := other.(Int8Value)
+	o, ok := other.(Int8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMinus,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	// INT32-C
 	if (o > 0) && (v < (math.MinInt8 + o)) {
 		panic(OverflowError{})
@@ -2148,7 +2330,15 @@ func (v Int8Value) Minus(other NumberValue) NumberValue {
 }
 
 func (v Int8Value) SaturatingMinus(other NumberValue) NumberValue {
-	o := other.(Int8Value)
+	o, ok := other.(Int8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
 	// INT32-C
 	if (o > 0) && (v < (math.MinInt8 + o)) {
 		return Int8Value(math.MinInt8)
@@ -2159,7 +2349,15 @@ func (v Int8Value) SaturatingMinus(other NumberValue) NumberValue {
 }
 
 func (v Int8Value) Mod(other NumberValue) NumberValue {
-	o := other.(Int8Value)
+	o, ok := other.(Int8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMod,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	// INT33-C
 	if o == 0 {
 		panic(DivisionByZeroError{})
@@ -2168,7 +2366,15 @@ func (v Int8Value) Mod(other NumberValue) NumberValue {
 }
 
 func (v Int8Value) Mul(other NumberValue) NumberValue {
-	o := other.(Int8Value)
+	o, ok := other.(Int8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMul,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	// INT32-C
 	if v > 0 {
 		if o > 0 {
@@ -2199,7 +2405,15 @@ func (v Int8Value) Mul(other NumberValue) NumberValue {
 }
 
 func (v Int8Value) SaturatingMul(other NumberValue) NumberValue {
-	o := other.(Int8Value)
+	o, ok := other.(Int8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
 	// INT32-C
 	if v > 0 {
 		if o > 0 {
@@ -2230,7 +2444,15 @@ func (v Int8Value) SaturatingMul(other NumberValue) NumberValue {
 }
 
 func (v Int8Value) Div(other NumberValue) NumberValue {
-	o := other.(Int8Value)
+	o, ok := other.(Int8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationDiv,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	// INT33-C
 	// https://golang.org/ref/spec#Integer_operators
 	if o == 0 {
@@ -2242,7 +2464,15 @@ func (v Int8Value) Div(other NumberValue) NumberValue {
 }
 
 func (v Int8Value) SaturatingDiv(other NumberValue) NumberValue {
-	o := other.(Int8Value)
+	o, ok := other.(Int8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
 	// INT33-C
 	// https://golang.org/ref/spec#Integer_operators
 	if o == 0 {
@@ -2277,6 +2507,9 @@ func (v Int8Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bo
 	return v == otherInt8
 }
 
+// HashInput returns a byte slice containing:
+// - HashInputTypeInt8 (1 byte)
+// - int8 value (1 byte)
 func (v Int8Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeInt8)
 	scratch[1] = byte(v)
@@ -2313,27 +2546,67 @@ func ConvertInt8(value Value) Int8Value {
 }
 
 func (v Int8Value) BitwiseOr(other IntegerValue) IntegerValue {
-	o := other.(Int8Value)
+	o, ok := other.(Int8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseOr,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v | o
 }
 
 func (v Int8Value) BitwiseXor(other IntegerValue) IntegerValue {
-	o := other.(Int8Value)
+	o, ok := other.(Int8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseXor,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v ^ o
 }
 
 func (v Int8Value) BitwiseAnd(other IntegerValue) IntegerValue {
-	o := other.(Int8Value)
+	o, ok := other.(Int8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseAnd,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v & o
 }
 
 func (v Int8Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
-	o := other.(Int8Value)
+	o, ok := other.(Int8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseLeftShift,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v << o
 }
 
 func (v Int8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
-	o := other.(Int8Value)
+	o, ok := other.(Int8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseRightShift,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v >> o
 }
 
@@ -2463,7 +2736,15 @@ func (v Int16Value) Negate() NumberValue {
 }
 
 func (v Int16Value) Plus(other NumberValue) NumberValue {
-	o := other.(Int16Value)
+	o, ok := other.(Int16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationPlus,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	// INT32-C
 	if (o > 0) && (v > (math.MaxInt16 - o)) {
 		panic(OverflowError{})
@@ -2474,7 +2755,15 @@ func (v Int16Value) Plus(other NumberValue) NumberValue {
 }
 
 func (v Int16Value) SaturatingPlus(other NumberValue) NumberValue {
-	o := other.(Int16Value)
+	o, ok := other.(Int16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
 	// INT32-C
 	if (o > 0) && (v > (math.MaxInt16 - o)) {
 		return Int16Value(math.MaxInt16)
@@ -2485,7 +2774,15 @@ func (v Int16Value) SaturatingPlus(other NumberValue) NumberValue {
 }
 
 func (v Int16Value) Minus(other NumberValue) NumberValue {
-	o := other.(Int16Value)
+	o, ok := other.(Int16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMinus,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	// INT32-C
 	if (o > 0) && (v < (math.MinInt16 + o)) {
 		panic(OverflowError{})
@@ -2496,7 +2793,15 @@ func (v Int16Value) Minus(other NumberValue) NumberValue {
 }
 
 func (v Int16Value) SaturatingMinus(other NumberValue) NumberValue {
-	o := other.(Int16Value)
+	o, ok := other.(Int16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
 	// INT32-C
 	if (o > 0) && (v < (math.MinInt16 + o)) {
 		return Int16Value(math.MinInt16)
@@ -2507,7 +2812,15 @@ func (v Int16Value) SaturatingMinus(other NumberValue) NumberValue {
 }
 
 func (v Int16Value) Mod(other NumberValue) NumberValue {
-	o := other.(Int16Value)
+	o, ok := other.(Int16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMod,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	// INT33-C
 	if o == 0 {
 		panic(DivisionByZeroError{})
@@ -2516,7 +2829,15 @@ func (v Int16Value) Mod(other NumberValue) NumberValue {
 }
 
 func (v Int16Value) Mul(other NumberValue) NumberValue {
-	o := other.(Int16Value)
+	o, ok := other.(Int16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMul,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	// INT32-C
 	if v > 0 {
 		if o > 0 {
@@ -2547,7 +2868,15 @@ func (v Int16Value) Mul(other NumberValue) NumberValue {
 }
 
 func (v Int16Value) SaturatingMul(other NumberValue) NumberValue {
-	o := other.(Int16Value)
+	o, ok := other.(Int16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
 	// INT32-C
 	if v > 0 {
 		if o > 0 {
@@ -2578,7 +2907,15 @@ func (v Int16Value) SaturatingMul(other NumberValue) NumberValue {
 }
 
 func (v Int16Value) Div(other NumberValue) NumberValue {
-	o := other.(Int16Value)
+	o, ok := other.(Int16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationDiv,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	// INT33-C
 	// https://golang.org/ref/spec#Integer_operators
 	if o == 0 {
@@ -2590,7 +2927,15 @@ func (v Int16Value) Div(other NumberValue) NumberValue {
 }
 
 func (v Int16Value) SaturatingDiv(other NumberValue) NumberValue {
-	o := other.(Int16Value)
+	o, ok := other.(Int16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
 	// INT33-C
 	// https://golang.org/ref/spec#Integer_operators
 	if o == 0 {
@@ -2625,6 +2970,9 @@ func (v Int16Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) b
 	return v == otherInt16
 }
 
+// HashInput returns a byte slice containing:
+// - HashInputTypeInt16 (1 byte)
+// - int16 value encoded in big-endian (2 bytes)
 func (v Int16Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeInt16)
 	binary.BigEndian.PutUint16(scratch[1:], uint16(v))
@@ -2661,27 +3009,67 @@ func ConvertInt16(value Value) Int16Value {
 }
 
 func (v Int16Value) BitwiseOr(other IntegerValue) IntegerValue {
-	o := other.(Int16Value)
+	o, ok := other.(Int16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseOr,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v | o
 }
 
 func (v Int16Value) BitwiseXor(other IntegerValue) IntegerValue {
-	o := other.(Int16Value)
+	o, ok := other.(Int16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseXor,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v ^ o
 }
 
 func (v Int16Value) BitwiseAnd(other IntegerValue) IntegerValue {
-	o := other.(Int16Value)
+	o, ok := other.(Int16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseAnd,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v & o
 }
 
 func (v Int16Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
-	o := other.(Int16Value)
+	o, ok := other.(Int16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseLeftShift,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v << o
 }
 
 func (v Int16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
-	o := other.(Int16Value)
+	o, ok := other.(Int16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseRightShift,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v >> o
 }
 
@@ -2813,7 +3201,15 @@ func (v Int32Value) Negate() NumberValue {
 }
 
 func (v Int32Value) Plus(other NumberValue) NumberValue {
-	o := other.(Int32Value)
+	o, ok := other.(Int32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationPlus,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	// INT32-C
 	if (o > 0) && (v > (math.MaxInt32 - o)) {
 		panic(OverflowError{})
@@ -2824,7 +3220,15 @@ func (v Int32Value) Plus(other NumberValue) NumberValue {
 }
 
 func (v Int32Value) SaturatingPlus(other NumberValue) NumberValue {
-	o := other.(Int32Value)
+	o, ok := other.(Int32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
 	// INT32-C
 	if (o > 0) && (v > (math.MaxInt32 - o)) {
 		return Int32Value(math.MaxInt32)
@@ -2835,7 +3239,15 @@ func (v Int32Value) SaturatingPlus(other NumberValue) NumberValue {
 }
 
 func (v Int32Value) Minus(other NumberValue) NumberValue {
-	o := other.(Int32Value)
+	o, ok := other.(Int32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMinus,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	// INT32-C
 	if (o > 0) && (v < (math.MinInt32 + o)) {
 		panic(OverflowError{})
@@ -2846,7 +3258,15 @@ func (v Int32Value) Minus(other NumberValue) NumberValue {
 }
 
 func (v Int32Value) SaturatingMinus(other NumberValue) NumberValue {
-	o := other.(Int32Value)
+	o, ok := other.(Int32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
 	// INT32-C
 	if (o > 0) && (v < (math.MinInt32 + o)) {
 		return Int32Value(math.MinInt32)
@@ -2857,7 +3277,15 @@ func (v Int32Value) SaturatingMinus(other NumberValue) NumberValue {
 }
 
 func (v Int32Value) Mod(other NumberValue) NumberValue {
-	o := other.(Int32Value)
+	o, ok := other.(Int32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMod,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	// INT33-C
 	if o == 0 {
 		panic(DivisionByZeroError{})
@@ -2866,7 +3294,15 @@ func (v Int32Value) Mod(other NumberValue) NumberValue {
 }
 
 func (v Int32Value) Mul(other NumberValue) NumberValue {
-	o := other.(Int32Value)
+	o, ok := other.(Int32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMul,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	// INT32-C
 	if v > 0 {
 		if o > 0 {
@@ -2897,7 +3333,15 @@ func (v Int32Value) Mul(other NumberValue) NumberValue {
 }
 
 func (v Int32Value) SaturatingMul(other NumberValue) NumberValue {
-	o := other.(Int32Value)
+	o, ok := other.(Int32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
 	// INT32-C
 	if v > 0 {
 		if o > 0 {
@@ -2928,7 +3372,15 @@ func (v Int32Value) SaturatingMul(other NumberValue) NumberValue {
 }
 
 func (v Int32Value) Div(other NumberValue) NumberValue {
-	o := other.(Int32Value)
+	o, ok := other.(Int32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationDiv,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	// INT33-C
 	// https://golang.org/ref/spec#Integer_operators
 	if o == 0 {
@@ -2940,7 +3392,15 @@ func (v Int32Value) Div(other NumberValue) NumberValue {
 }
 
 func (v Int32Value) SaturatingDiv(other NumberValue) NumberValue {
-	o := other.(Int32Value)
+	o, ok := other.(Int32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
 	// INT33-C
 	// https://golang.org/ref/spec#Integer_operators
 	if o == 0 {
@@ -2975,6 +3435,9 @@ func (v Int32Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) b
 	return v == otherInt32
 }
 
+// HashInput returns a byte slice containing:
+// - HashInputTypeInt32 (1 byte)
+// - int32 value encoded in big-endian (4 bytes)
 func (v Int32Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeInt32)
 	binary.BigEndian.PutUint32(scratch[1:], uint32(v))
@@ -3011,27 +3474,67 @@ func ConvertInt32(value Value) Int32Value {
 }
 
 func (v Int32Value) BitwiseOr(other IntegerValue) IntegerValue {
-	o := other.(Int32Value)
+	o, ok := other.(Int32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseOr,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v | o
 }
 
 func (v Int32Value) BitwiseXor(other IntegerValue) IntegerValue {
-	o := other.(Int32Value)
+	o, ok := other.(Int32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseXor,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v ^ o
 }
 
 func (v Int32Value) BitwiseAnd(other IntegerValue) IntegerValue {
-	o := other.(Int32Value)
+	o, ok := other.(Int32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseAnd,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v & o
 }
 
 func (v Int32Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
-	o := other.(Int32Value)
+	o, ok := other.(Int32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseLeftShift,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v << o
 }
 
 func (v Int32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
-	o := other.(Int32Value)
+	o, ok := other.(Int32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseRightShift,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v >> o
 }
 
@@ -3173,12 +3676,28 @@ func safeAddInt64(a, b int64) int64 {
 }
 
 func (v Int64Value) Plus(other NumberValue) NumberValue {
-	o := other.(Int64Value)
+	o, ok := other.(Int64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationPlus,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return Int64Value(safeAddInt64(int64(v), int64(o)))
 }
 
 func (v Int64Value) SaturatingPlus(other NumberValue) NumberValue {
-	o := other.(Int64Value)
+	o, ok := other.(Int64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
 	// INT32-C
 	if (o > 0) && (v > (math.MaxInt64 - o)) {
 		return Int64Value(math.MaxInt64)
@@ -3189,7 +3708,15 @@ func (v Int64Value) SaturatingPlus(other NumberValue) NumberValue {
 }
 
 func (v Int64Value) Minus(other NumberValue) NumberValue {
-	o := other.(Int64Value)
+	o, ok := other.(Int64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMinus,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	// INT32-C
 	if (o > 0) && (v < (math.MinInt64 + o)) {
 		panic(OverflowError{})
@@ -3200,7 +3727,15 @@ func (v Int64Value) Minus(other NumberValue) NumberValue {
 }
 
 func (v Int64Value) SaturatingMinus(other NumberValue) NumberValue {
-	o := other.(Int64Value)
+	o, ok := other.(Int64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
 	// INT32-C
 	if (o > 0) && (v < (math.MinInt64 + o)) {
 		return Int64Value(math.MinInt64)
@@ -3211,7 +3746,15 @@ func (v Int64Value) SaturatingMinus(other NumberValue) NumberValue {
 }
 
 func (v Int64Value) Mod(other NumberValue) NumberValue {
-	o := other.(Int64Value)
+	o, ok := other.(Int64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMod,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	// INT33-C
 	if o == 0 {
 		panic(DivisionByZeroError{})
@@ -3220,7 +3763,15 @@ func (v Int64Value) Mod(other NumberValue) NumberValue {
 }
 
 func (v Int64Value) Mul(other NumberValue) NumberValue {
-	o := other.(Int64Value)
+	o, ok := other.(Int64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMul,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	// INT32-C
 	if v > 0 {
 		if o > 0 {
@@ -3251,7 +3802,15 @@ func (v Int64Value) Mul(other NumberValue) NumberValue {
 }
 
 func (v Int64Value) SaturatingMul(other NumberValue) NumberValue {
-	o := other.(Int64Value)
+	o, ok := other.(Int64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
 	// INT32-C
 	if v > 0 {
 		if o > 0 {
@@ -3282,7 +3841,15 @@ func (v Int64Value) SaturatingMul(other NumberValue) NumberValue {
 }
 
 func (v Int64Value) Div(other NumberValue) NumberValue {
-	o := other.(Int64Value)
+	o, ok := other.(Int64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationDiv,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	// INT33-C
 	// https://golang.org/ref/spec#Integer_operators
 	if o == 0 {
@@ -3294,7 +3861,15 @@ func (v Int64Value) Div(other NumberValue) NumberValue {
 }
 
 func (v Int64Value) SaturatingDiv(other NumberValue) NumberValue {
-	o := other.(Int64Value)
+	o, ok := other.(Int64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
 	// INT33-C
 	// https://golang.org/ref/spec#Integer_operators
 	if o == 0 {
@@ -3329,6 +3904,9 @@ func (v Int64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) b
 	return v == otherInt64
 }
 
+// HashInput returns a byte slice containing:
+// - HashInputTypeInt64 (1 byte)
+// - int64 value encoded in big-endian (8 bytes)
 func (v Int64Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeInt64)
 	binary.BigEndian.PutUint64(scratch[1:], uint64(v))
@@ -3360,27 +3938,67 @@ func ConvertInt64(value Value) Int64Value {
 }
 
 func (v Int64Value) BitwiseOr(other IntegerValue) IntegerValue {
-	o := other.(Int64Value)
+	o, ok := other.(Int64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseOr,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v | o
 }
 
 func (v Int64Value) BitwiseXor(other IntegerValue) IntegerValue {
-	o := other.(Int64Value)
+	o, ok := other.(Int64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseXor,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v ^ o
 }
 
 func (v Int64Value) BitwiseAnd(other IntegerValue) IntegerValue {
-	o := other.(Int64Value)
+	o, ok := other.(Int64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseAnd,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v & o
 }
 
 func (v Int64Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
-	o := other.(Int64Value)
+	o, ok := other.(Int64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseLeftShift,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v << o
 }
 
 func (v Int64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
-	o := other.(Int64Value)
+	o, ok := other.(Int64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseRightShift,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v >> o
 }
 
@@ -3532,7 +4150,15 @@ func (v Int128Value) Negate() NumberValue {
 }
 
 func (v Int128Value) Plus(other NumberValue) NumberValue {
-	o := other.(Int128Value)
+	o, ok := other.(Int128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationPlus,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	// Given that this value is backed by an arbitrary size integer,
 	// we can just add and check the range of the result.
 	//
@@ -3556,7 +4182,15 @@ func (v Int128Value) Plus(other NumberValue) NumberValue {
 }
 
 func (v Int128Value) SaturatingPlus(other NumberValue) NumberValue {
-	o := other.(Int128Value)
+	o, ok := other.(Int128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
 	// Given that this value is backed by an arbitrary size integer,
 	// we can just add and check the range of the result.
 	//
@@ -3580,7 +4214,15 @@ func (v Int128Value) SaturatingPlus(other NumberValue) NumberValue {
 }
 
 func (v Int128Value) Minus(other NumberValue) NumberValue {
-	o := other.(Int128Value)
+	o, ok := other.(Int128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMinus,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	// Given that this value is backed by an arbitrary size integer,
 	// we can just subtract and check the range of the result.
 	//
@@ -3604,7 +4246,15 @@ func (v Int128Value) Minus(other NumberValue) NumberValue {
 }
 
 func (v Int128Value) SaturatingMinus(other NumberValue) NumberValue {
-	o := other.(Int128Value)
+	o, ok := other.(Int128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
 	// Given that this value is backed by an arbitrary size integer,
 	// we can just subtract and check the range of the result.
 	//
@@ -3628,7 +4278,15 @@ func (v Int128Value) SaturatingMinus(other NumberValue) NumberValue {
 }
 
 func (v Int128Value) Mod(other NumberValue) NumberValue {
-	o := other.(Int128Value)
+	o, ok := other.(Int128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMod,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	// INT33-C
 	if o.BigInt.Cmp(res) == 0 {
@@ -3639,7 +4297,15 @@ func (v Int128Value) Mod(other NumberValue) NumberValue {
 }
 
 func (v Int128Value) Mul(other NumberValue) NumberValue {
-	o := other.(Int128Value)
+	o, ok := other.(Int128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMul,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	res.Mul(v.BigInt, o.BigInt)
 	if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
@@ -3651,7 +4317,15 @@ func (v Int128Value) Mul(other NumberValue) NumberValue {
 }
 
 func (v Int128Value) SaturatingMul(other NumberValue) NumberValue {
-	o := other.(Int128Value)
+	o, ok := other.(Int128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	res.Mul(v.BigInt, o.BigInt)
 	if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
@@ -3663,7 +4337,15 @@ func (v Int128Value) SaturatingMul(other NumberValue) NumberValue {
 }
 
 func (v Int128Value) Div(other NumberValue) NumberValue {
-	o := other.(Int128Value)
+	o, ok := other.(Int128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationDiv,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	// INT33-C:
 	//   if o == 0 {
@@ -3683,7 +4365,15 @@ func (v Int128Value) Div(other NumberValue) NumberValue {
 }
 
 func (v Int128Value) SaturatingDiv(other NumberValue) NumberValue {
-	o := other.(Int128Value)
+	o, ok := other.(Int128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	// INT33-C:
 	//   if o == 0 {
@@ -3731,12 +4421,23 @@ func (v Int128Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 	return cmp == 0
 }
 
-func (v Int128Value) HashInput(_ *Interpreter, _ func() LocationRange, _ []byte) []byte {
-	// TODO: optimize?
-	return append(
-		[]byte{byte(HashInputTypeInt128)},
-		SignedBigIntToBigEndianBytes(v.BigInt)...,
-	)
+// HashInput returns a byte slice containing:
+// - HashInputTypeInt128 (1 byte)
+// - big int value encoded in big-endian (n bytes)
+func (v Int128Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
+	b := SignedBigIntToBigEndianBytes(v.BigInt)
+
+	length := 1 + len(b)
+	var buffer []byte
+	if length <= len(scratch) {
+		buffer = scratch[:length]
+	} else {
+		buffer = make([]byte, length)
+	}
+
+	buffer[0] = byte(HashInputTypeInt128)
+	copy(buffer[1:], b)
+	return buffer
 }
 
 func ConvertInt128(value Value) Int128Value {
@@ -3763,28 +4464,60 @@ func ConvertInt128(value Value) Int128Value {
 }
 
 func (v Int128Value) BitwiseOr(other IntegerValue) IntegerValue {
-	o := other.(Int128Value)
+	o, ok := other.(Int128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseOr,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	res.Or(v.BigInt, o.BigInt)
 	return Int128Value{res}
 }
 
 func (v Int128Value) BitwiseXor(other IntegerValue) IntegerValue {
-	o := other.(Int128Value)
+	o, ok := other.(Int128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseXor,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	res.Xor(v.BigInt, o.BigInt)
 	return Int128Value{res}
 }
 
 func (v Int128Value) BitwiseAnd(other IntegerValue) IntegerValue {
-	o := other.(Int128Value)
+	o, ok := other.(Int128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseAnd,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	res.And(v.BigInt, o.BigInt)
 	return Int128Value{res}
 }
 
 func (v Int128Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
-	o := other.(Int128Value)
+	o, ok := other.(Int128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseLeftShift,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	if o.BigInt.Sign() < 0 {
 		panic(UnderflowError{})
@@ -3797,7 +4530,15 @@ func (v Int128Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 }
 
 func (v Int128Value) BitwiseRightShift(other IntegerValue) IntegerValue {
-	o := other.(Int128Value)
+	o, ok := other.(Int128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseRightShift,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	if o.BigInt.Sign() < 0 {
 		panic(UnderflowError{})
@@ -3871,8 +4612,7 @@ func (Int128Value) DeepRemove(_ *Interpreter) {
 }
 
 func (v Int128Value) ByteSize() uint32 {
-	// TODO: optimize
-	return mustStorableSize(v)
+	return cborTagSize + getBigIntCBORSize(v.BigInt)
 }
 
 func (v Int128Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -3956,7 +4696,15 @@ func (v Int256Value) Negate() NumberValue {
 }
 
 func (v Int256Value) Plus(other NumberValue) NumberValue {
-	o := other.(Int256Value)
+	o, ok := other.(Int256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationPlus,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	// Given that this value is backed by an arbitrary size integer,
 	// we can just add and check the range of the result.
 	//
@@ -3980,7 +4728,15 @@ func (v Int256Value) Plus(other NumberValue) NumberValue {
 }
 
 func (v Int256Value) SaturatingPlus(other NumberValue) NumberValue {
-	o := other.(Int256Value)
+	o, ok := other.(Int256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
 	// Given that this value is backed by an arbitrary size integer,
 	// we can just add and check the range of the result.
 	//
@@ -4004,7 +4760,15 @@ func (v Int256Value) SaturatingPlus(other NumberValue) NumberValue {
 }
 
 func (v Int256Value) Minus(other NumberValue) NumberValue {
-	o := other.(Int256Value)
+	o, ok := other.(Int256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMinus,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	// Given that this value is backed by an arbitrary size integer,
 	// we can just subtract and check the range of the result.
 	//
@@ -4028,7 +4792,15 @@ func (v Int256Value) Minus(other NumberValue) NumberValue {
 }
 
 func (v Int256Value) SaturatingMinus(other NumberValue) NumberValue {
-	o := other.(Int256Value)
+	o, ok := other.(Int256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
 	// Given that this value is backed by an arbitrary size integer,
 	// we can just subtract and check the range of the result.
 	//
@@ -4052,7 +4824,15 @@ func (v Int256Value) SaturatingMinus(other NumberValue) NumberValue {
 }
 
 func (v Int256Value) Mod(other NumberValue) NumberValue {
-	o := other.(Int256Value)
+	o, ok := other.(Int256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMod,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	// INT33-C
 	if o.BigInt.Cmp(res) == 0 {
@@ -4063,7 +4843,15 @@ func (v Int256Value) Mod(other NumberValue) NumberValue {
 }
 
 func (v Int256Value) Mul(other NumberValue) NumberValue {
-	o := other.(Int256Value)
+	o, ok := other.(Int256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMul,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	res.Mul(v.BigInt, o.BigInt)
 	if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
@@ -4075,7 +4863,15 @@ func (v Int256Value) Mul(other NumberValue) NumberValue {
 }
 
 func (v Int256Value) SaturatingMul(other NumberValue) NumberValue {
-	o := other.(Int256Value)
+	o, ok := other.(Int256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	res.Mul(v.BigInt, o.BigInt)
 	if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
@@ -4087,7 +4883,15 @@ func (v Int256Value) SaturatingMul(other NumberValue) NumberValue {
 }
 
 func (v Int256Value) Div(other NumberValue) NumberValue {
-	o := other.(Int256Value)
+	o, ok := other.(Int256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationDiv,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	// INT33-C:
 	//   if o == 0 {
@@ -4107,7 +4911,15 @@ func (v Int256Value) Div(other NumberValue) NumberValue {
 }
 
 func (v Int256Value) SaturatingDiv(other NumberValue) NumberValue {
-	o := other.(Int256Value)
+	o, ok := other.(Int256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	// INT33-C:
 	//   if o == 0 {
@@ -4155,12 +4967,23 @@ func (v Int256Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 	return cmp == 0
 }
 
-func (v Int256Value) HashInput(_ *Interpreter, _ func() LocationRange, _ []byte) []byte {
-	// TODO: optimize?
-	return append(
-		[]byte{byte(HashInputTypeInt256)},
-		SignedBigIntToBigEndianBytes(v.BigInt)...,
-	)
+// HashInput returns a byte slice containing:
+// - HashInputTypeInt256 (1 byte)
+// - big int value encoded in big-endian (n bytes)
+func (v Int256Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
+	b := SignedBigIntToBigEndianBytes(v.BigInt)
+
+	length := 1 + len(b)
+	var buffer []byte
+	if length <= len(scratch) {
+		buffer = scratch[:length]
+	} else {
+		buffer = make([]byte, length)
+	}
+
+	buffer[0] = byte(HashInputTypeInt256)
+	copy(buffer[1:], b)
+	return buffer
 }
 
 func ConvertInt256(value Value) Int256Value {
@@ -4187,28 +5010,60 @@ func ConvertInt256(value Value) Int256Value {
 }
 
 func (v Int256Value) BitwiseOr(other IntegerValue) IntegerValue {
-	o := other.(Int256Value)
+	o, ok := other.(Int256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseOr,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	res.Or(v.BigInt, o.BigInt)
 	return Int256Value{res}
 }
 
 func (v Int256Value) BitwiseXor(other IntegerValue) IntegerValue {
-	o := other.(Int256Value)
+	o, ok := other.(Int256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseXor,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	res.Xor(v.BigInt, o.BigInt)
 	return Int256Value{res}
 }
 
 func (v Int256Value) BitwiseAnd(other IntegerValue) IntegerValue {
-	o := other.(Int256Value)
+	o, ok := other.(Int256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseAnd,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	res.And(v.BigInt, o.BigInt)
 	return Int256Value{res}
 }
 
 func (v Int256Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
-	o := other.(Int256Value)
+	o, ok := other.(Int256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseLeftShift,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	if o.BigInt.Sign() < 0 {
 		panic(UnderflowError{})
@@ -4221,7 +5076,15 @@ func (v Int256Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 }
 
 func (v Int256Value) BitwiseRightShift(other IntegerValue) IntegerValue {
-	o := other.(Int256Value)
+	o, ok := other.(Int256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseRightShift,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	if o.BigInt.Sign() < 0 {
 		panic(UnderflowError{})
@@ -4295,8 +5158,7 @@ func (Int256Value) DeepRemove(_ *Interpreter) {
 }
 
 func (v Int256Value) ByteSize() uint32 {
-	// TODO: optimize
-	return mustStorableSize(v)
+	return cborTagSize + getBigIntCBORSize(v.BigInt)
 }
 
 func (v Int256Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -4394,18 +5256,45 @@ func (v UIntValue) Negate() NumberValue {
 }
 
 func (v UIntValue) Plus(other NumberValue) NumberValue {
-	o := other.(UIntValue)
+	o, ok := other.(UIntValue)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationPlus,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	res.Add(v.BigInt, o.BigInt)
 	return UIntValue{res}
 }
 
 func (v UIntValue) SaturatingPlus(other NumberValue) NumberValue {
+	defer func() {
+		r := recover()
+		if _, ok := r.(InvalidOperandsError); ok {
+			panic(InvalidOperandsError{
+				FunctionName: sema.NumericTypeSaturatingAddFunctionName,
+				LeftType:     v.StaticType(),
+				RightType:    other.StaticType(),
+			})
+		}
+	}()
+
 	return v.Plus(other)
 }
 
 func (v UIntValue) Minus(other NumberValue) NumberValue {
-	o := other.(UIntValue)
+	o, ok := other.(UIntValue)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMinus,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	res.Sub(v.BigInt, o.BigInt)
 	// INT30-C
@@ -4416,7 +5305,15 @@ func (v UIntValue) Minus(other NumberValue) NumberValue {
 }
 
 func (v UIntValue) SaturatingMinus(other NumberValue) NumberValue {
-	o := other.(UIntValue)
+	o, ok := other.(UIntValue)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	res.Sub(v.BigInt, o.BigInt)
 	// INT30-C
@@ -4427,7 +5324,15 @@ func (v UIntValue) SaturatingMinus(other NumberValue) NumberValue {
 }
 
 func (v UIntValue) Mod(other NumberValue) NumberValue {
-	o := other.(UIntValue)
+	o, ok := other.(UIntValue)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMod,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	// INT33-C
 	if o.BigInt.Cmp(res) == 0 {
@@ -4438,18 +5343,45 @@ func (v UIntValue) Mod(other NumberValue) NumberValue {
 }
 
 func (v UIntValue) Mul(other NumberValue) NumberValue {
-	o := other.(UIntValue)
+	o, ok := other.(UIntValue)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMul,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	res.Mul(v.BigInt, o.BigInt)
 	return UIntValue{res}
 }
 
 func (v UIntValue) SaturatingMul(other NumberValue) NumberValue {
+	defer func() {
+		r := recover()
+		if _, ok := r.(InvalidOperandsError); ok {
+			panic(InvalidOperandsError{
+				FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
+				LeftType:     v.StaticType(),
+				RightType:    other.StaticType(),
+			})
+		}
+	}()
+
 	return v.Mul(other)
 }
 
 func (v UIntValue) Div(other NumberValue) NumberValue {
-	o := other.(UIntValue)
+	o, ok := other.(UIntValue)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	// INT33-C
 	if o.BigInt.Cmp(res) == 0 {
@@ -4460,6 +5392,17 @@ func (v UIntValue) Div(other NumberValue) NumberValue {
 }
 
 func (v UIntValue) SaturatingDiv(other NumberValue) NumberValue {
+	defer func() {
+		r := recover()
+		if _, ok := r.(InvalidOperandsError); ok {
+			panic(InvalidOperandsError{
+				FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
+				LeftType:     v.StaticType(),
+				RightType:    other.StaticType(),
+			})
+		}
+	}()
+
 	return v.Div(other)
 }
 
@@ -4492,37 +5435,80 @@ func (v UIntValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bo
 	return cmp == 0
 }
 
-func (v UIntValue) HashInput(_ *Interpreter, _ func() LocationRange, _ []byte) []byte {
-	// TODO: optimize?
-	return append(
-		[]byte{byte(HashInputTypeUInt)},
-		UnsignedBigIntToBigEndianBytes(v.BigInt)...,
-	)
+// HashInput returns a byte slice containing:
+// - HashInputTypeUInt (1 byte)
+// - big int value encoded in big-endian (n bytes)
+func (v UIntValue) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
+	b := UnsignedBigIntToBigEndianBytes(v.BigInt)
+
+	length := 1 + len(b)
+	var buffer []byte
+	if length <= len(scratch) {
+		buffer = scratch[:length]
+	} else {
+		buffer = make([]byte, length)
+	}
+
+	buffer[0] = byte(HashInputTypeUInt)
+	copy(buffer[1:], b)
+	return buffer
 }
 
 func (v UIntValue) BitwiseOr(other IntegerValue) IntegerValue {
-	o := other.(UIntValue)
+	o, ok := other.(UIntValue)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseOr,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	res.Or(v.BigInt, o.BigInt)
 	return UIntValue{res}
 }
 
 func (v UIntValue) BitwiseXor(other IntegerValue) IntegerValue {
-	o := other.(UIntValue)
+	o, ok := other.(UIntValue)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseXor,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	res.Xor(v.BigInt, o.BigInt)
 	return UIntValue{res}
 }
 
 func (v UIntValue) BitwiseAnd(other IntegerValue) IntegerValue {
-	o := other.(UIntValue)
+	o, ok := other.(UIntValue)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseAnd,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	res.And(v.BigInt, o.BigInt)
 	return UIntValue{res}
 }
 
 func (v UIntValue) BitwiseLeftShift(other IntegerValue) IntegerValue {
-	o := other.(UIntValue)
+	o, ok := other.(UIntValue)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseLeftShift,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	if o.BigInt.Sign() < 0 {
 		panic(UnderflowError{})
@@ -4535,7 +5521,15 @@ func (v UIntValue) BitwiseLeftShift(other IntegerValue) IntegerValue {
 }
 
 func (v UIntValue) BitwiseRightShift(other IntegerValue) IntegerValue {
-	o := other.(UIntValue)
+	o, ok := other.(UIntValue)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseRightShift,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	if o.BigInt.Sign() < 0 {
 		panic(UnderflowError{})
@@ -4609,8 +5603,7 @@ func (UIntValue) DeepRemove(_ *Interpreter) {
 }
 
 func (v UIntValue) ByteSize() uint32 {
-	// TODO: optimize
-	return mustStorableSize(v)
+	return cborTagSize + getBigIntCBORSize(v.BigInt)
 }
 
 func (v UIntValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -4670,7 +5663,16 @@ func (v UInt8Value) Negate() NumberValue {
 }
 
 func (v UInt8Value) Plus(other NumberValue) NumberValue {
-	sum := v + other.(UInt8Value)
+	o, ok := other.(UInt8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationPlus,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	sum := v + o
 	// INT30-C
 	if sum < v {
 		panic(OverflowError{})
@@ -4679,7 +5681,16 @@ func (v UInt8Value) Plus(other NumberValue) NumberValue {
 }
 
 func (v UInt8Value) SaturatingPlus(other NumberValue) NumberValue {
-	sum := v + other.(UInt8Value)
+	o, ok := other.(UInt8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
+	sum := v + o
 	// INT30-C
 	if sum < v {
 		return UInt8Value(math.MaxUint8)
@@ -4688,7 +5699,17 @@ func (v UInt8Value) SaturatingPlus(other NumberValue) NumberValue {
 }
 
 func (v UInt8Value) Minus(other NumberValue) NumberValue {
-	diff := v - other.(UInt8Value)
+	o, ok := other.(UInt8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMinus,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	diff := v - o
+
 	// INT30-C
 	if diff > v {
 		panic(UnderflowError{})
@@ -4697,7 +5718,17 @@ func (v UInt8Value) Minus(other NumberValue) NumberValue {
 }
 
 func (v UInt8Value) SaturatingMinus(other NumberValue) NumberValue {
-	diff := v - other.(UInt8Value)
+	o, ok := other.(UInt8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
+	diff := v - o
+
 	// INT30-C
 	if diff > v {
 		return UInt8Value(0)
@@ -4706,7 +5737,15 @@ func (v UInt8Value) SaturatingMinus(other NumberValue) NumberValue {
 }
 
 func (v UInt8Value) Mod(other NumberValue) NumberValue {
-	o := other.(UInt8Value)
+	o, ok := other.(UInt8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMod,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
@@ -4714,7 +5753,15 @@ func (v UInt8Value) Mod(other NumberValue) NumberValue {
 }
 
 func (v UInt8Value) Mul(other NumberValue) NumberValue {
-	o := other.(UInt8Value)
+	o, ok := other.(UInt8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMul,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	// INT30-C
 	if (v > 0) && (o > 0) && (v > (math.MaxUint8 / o)) {
 		panic(OverflowError{})
@@ -4723,7 +5770,15 @@ func (v UInt8Value) Mul(other NumberValue) NumberValue {
 }
 
 func (v UInt8Value) SaturatingMul(other NumberValue) NumberValue {
-	o := other.(UInt8Value)
+	o, ok := other.(UInt8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
 	// INT30-C
 	if (v > 0) && (o > 0) && (v > (math.MaxUint8 / o)) {
 		return UInt8Value(math.MaxUint8)
@@ -4732,7 +5787,15 @@ func (v UInt8Value) SaturatingMul(other NumberValue) NumberValue {
 }
 
 func (v UInt8Value) Div(other NumberValue) NumberValue {
-	o := other.(UInt8Value)
+	o, ok := other.(UInt8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationDiv,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
@@ -4740,6 +5803,17 @@ func (v UInt8Value) Div(other NumberValue) NumberValue {
 }
 
 func (v UInt8Value) SaturatingDiv(other NumberValue) NumberValue {
+	defer func() {
+		r := recover()
+		if _, ok := r.(InvalidOperandsError); ok {
+			panic(InvalidOperandsError{
+				FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
+				LeftType:     v.StaticType(),
+				RightType:    other.StaticType(),
+			})
+		}
+	}()
+
 	return v.Div(other)
 }
 
@@ -4767,6 +5841,9 @@ func (v UInt8Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) b
 	return v == otherUInt8
 }
 
+// HashInput returns a byte slice containing:
+// - HashInputTypeUInt8 (1 byte)
+// - uint8 value (1 byte)
 func (v UInt8Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeUInt8)
 	scratch[1] = byte(v)
@@ -4803,27 +5880,67 @@ func ConvertUInt8(value Value) UInt8Value {
 }
 
 func (v UInt8Value) BitwiseOr(other IntegerValue) IntegerValue {
-	o := other.(UInt8Value)
+	o, ok := other.(UInt8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseOr,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v | o
 }
 
 func (v UInt8Value) BitwiseXor(other IntegerValue) IntegerValue {
-	o := other.(UInt8Value)
+	o, ok := other.(UInt8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseXor,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v ^ o
 }
 
 func (v UInt8Value) BitwiseAnd(other IntegerValue) IntegerValue {
-	o := other.(UInt8Value)
+	o, ok := other.(UInt8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseAnd,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v & o
 }
 
 func (v UInt8Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
-	o := other.(UInt8Value)
+	o, ok := other.(UInt8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseLeftShift,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v << o
 }
 
 func (v UInt8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
-	o := other.(UInt8Value)
+	o, ok := other.(UInt8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseRightShift,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v >> o
 }
 
@@ -4948,7 +6065,16 @@ func (v UInt16Value) Negate() NumberValue {
 }
 
 func (v UInt16Value) Plus(other NumberValue) NumberValue {
-	sum := v + other.(UInt16Value)
+	o, ok := other.(UInt16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationPlus,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	sum := v + o
 	// INT30-C
 	if sum < v {
 		panic(OverflowError{})
@@ -4957,7 +6083,16 @@ func (v UInt16Value) Plus(other NumberValue) NumberValue {
 }
 
 func (v UInt16Value) SaturatingPlus(other NumberValue) NumberValue {
-	sum := v + other.(UInt16Value)
+	o, ok := other.(UInt16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
+	sum := v + o
 	// INT30-C
 	if sum < v {
 		return UInt16Value(math.MaxUint16)
@@ -4966,7 +6101,17 @@ func (v UInt16Value) SaturatingPlus(other NumberValue) NumberValue {
 }
 
 func (v UInt16Value) Minus(other NumberValue) NumberValue {
-	diff := v - other.(UInt16Value)
+	o, ok := other.(UInt16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMinus,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	diff := v - o
+
 	// INT30-C
 	if diff > v {
 		panic(UnderflowError{})
@@ -4975,7 +6120,17 @@ func (v UInt16Value) Minus(other NumberValue) NumberValue {
 }
 
 func (v UInt16Value) SaturatingMinus(other NumberValue) NumberValue {
-	diff := v - other.(UInt16Value)
+	o, ok := other.(UInt16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
+	diff := v - o
+
 	// INT30-C
 	if diff > v {
 		return UInt16Value(0)
@@ -4984,7 +6139,15 @@ func (v UInt16Value) SaturatingMinus(other NumberValue) NumberValue {
 }
 
 func (v UInt16Value) Mod(other NumberValue) NumberValue {
-	o := other.(UInt16Value)
+	o, ok := other.(UInt16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMod,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
@@ -4992,7 +6155,15 @@ func (v UInt16Value) Mod(other NumberValue) NumberValue {
 }
 
 func (v UInt16Value) Mul(other NumberValue) NumberValue {
-	o := other.(UInt16Value)
+	o, ok := other.(UInt16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMul,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	// INT30-C
 	if (v > 0) && (o > 0) && (v > (math.MaxUint16 / o)) {
 		panic(OverflowError{})
@@ -5001,7 +6172,15 @@ func (v UInt16Value) Mul(other NumberValue) NumberValue {
 }
 
 func (v UInt16Value) SaturatingMul(other NumberValue) NumberValue {
-	o := other.(UInt16Value)
+	o, ok := other.(UInt16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
 	// INT30-C
 	if (v > 0) && (o > 0) && (v > (math.MaxUint16 / o)) {
 		return UInt16Value(math.MaxUint16)
@@ -5010,7 +6189,15 @@ func (v UInt16Value) SaturatingMul(other NumberValue) NumberValue {
 }
 
 func (v UInt16Value) Div(other NumberValue) NumberValue {
-	o := other.(UInt16Value)
+	o, ok := other.(UInt16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationDiv,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
@@ -5018,6 +6205,17 @@ func (v UInt16Value) Div(other NumberValue) NumberValue {
 }
 
 func (v UInt16Value) SaturatingDiv(other NumberValue) NumberValue {
+	defer func() {
+		r := recover()
+		if _, ok := r.(InvalidOperandsError); ok {
+			panic(InvalidOperandsError{
+				FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
+				LeftType:     v.StaticType(),
+				RightType:    other.StaticType(),
+			})
+		}
+	}()
+
 	return v.Div(other)
 }
 
@@ -5045,6 +6243,9 @@ func (v UInt16Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 	return v == otherUInt16
 }
 
+// HashInput returns a byte slice containing:
+// - HashInputTypeUInt16 (1 byte)
+// - uint16 value encoded in big-endian (2 bytes)
 func (v UInt16Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeUInt16)
 	binary.BigEndian.PutUint16(scratch[1:], uint16(v))
@@ -5081,27 +6282,66 @@ func ConvertUInt16(value Value) UInt16Value {
 }
 
 func (v UInt16Value) BitwiseOr(other IntegerValue) IntegerValue {
-	o := other.(UInt16Value)
+	o, ok := other.(UInt16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseOr,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v | o
 }
 
 func (v UInt16Value) BitwiseXor(other IntegerValue) IntegerValue {
-	o := other.(UInt16Value)
+	o, ok := other.(UInt16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseXor,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
 	return v ^ o
 }
 
 func (v UInt16Value) BitwiseAnd(other IntegerValue) IntegerValue {
-	o := other.(UInt16Value)
+	o, ok := other.(UInt16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseAnd,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v & o
 }
 
 func (v UInt16Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
-	o := other.(UInt16Value)
+	o, ok := other.(UInt16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseLeftShift,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v << o
 }
 
 func (v UInt16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
-	o := other.(UInt16Value)
+	o, ok := other.(UInt16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseRightShift,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v >> o
 }
 
@@ -5233,7 +6473,17 @@ func (v UInt32Value) Negate() NumberValue {
 }
 
 func (v UInt32Value) Plus(other NumberValue) NumberValue {
-	sum := v + other.(UInt32Value)
+	o, ok := other.(UInt32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationPlus,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	sum := v + o
+
 	// INT30-C
 	if sum < v {
 		panic(OverflowError{})
@@ -5242,7 +6492,16 @@ func (v UInt32Value) Plus(other NumberValue) NumberValue {
 }
 
 func (v UInt32Value) SaturatingPlus(other NumberValue) NumberValue {
-	sum := v + other.(UInt32Value)
+	o, ok := other.(UInt32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
+	sum := v + o
 	// INT30-C
 	if sum < v {
 		return UInt32Value(math.MaxUint32)
@@ -5251,7 +6510,17 @@ func (v UInt32Value) SaturatingPlus(other NumberValue) NumberValue {
 }
 
 func (v UInt32Value) Minus(other NumberValue) NumberValue {
-	diff := v - other.(UInt32Value)
+	o, ok := other.(UInt32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMinus,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	diff := v - o
+
 	// INT30-C
 	if diff > v {
 		panic(UnderflowError{})
@@ -5260,7 +6529,17 @@ func (v UInt32Value) Minus(other NumberValue) NumberValue {
 }
 
 func (v UInt32Value) SaturatingMinus(other NumberValue) NumberValue {
-	diff := v - other.(UInt32Value)
+	o, ok := other.(UInt32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
+	diff := v - o
+
 	// INT30-C
 	if diff > v {
 		return UInt32Value(0)
@@ -5269,7 +6548,15 @@ func (v UInt32Value) SaturatingMinus(other NumberValue) NumberValue {
 }
 
 func (v UInt32Value) Mod(other NumberValue) NumberValue {
-	o := other.(UInt32Value)
+	o, ok := other.(UInt32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMod,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
@@ -5277,7 +6564,15 @@ func (v UInt32Value) Mod(other NumberValue) NumberValue {
 }
 
 func (v UInt32Value) Mul(other NumberValue) NumberValue {
-	o := other.(UInt32Value)
+	o, ok := other.(UInt32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMul,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	if (v > 0) && (o > 0) && (v > (math.MaxUint32 / o)) {
 		panic(OverflowError{})
 	}
@@ -5285,7 +6580,15 @@ func (v UInt32Value) Mul(other NumberValue) NumberValue {
 }
 
 func (v UInt32Value) SaturatingMul(other NumberValue) NumberValue {
-	o := other.(UInt32Value)
+	o, ok := other.(UInt32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
 	// INT30-C
 	if (v > 0) && (o > 0) && (v > (math.MaxUint32 / o)) {
 		return UInt32Value(math.MaxUint32)
@@ -5294,7 +6597,15 @@ func (v UInt32Value) SaturatingMul(other NumberValue) NumberValue {
 }
 
 func (v UInt32Value) Div(other NumberValue) NumberValue {
-	o := other.(UInt32Value)
+	o, ok := other.(UInt32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationDiv,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
@@ -5302,6 +6613,17 @@ func (v UInt32Value) Div(other NumberValue) NumberValue {
 }
 
 func (v UInt32Value) SaturatingDiv(other NumberValue) NumberValue {
+	defer func() {
+		r := recover()
+		if _, ok := r.(InvalidOperandsError); ok {
+			panic(InvalidOperandsError{
+				FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
+				LeftType:     v.StaticType(),
+				RightType:    other.StaticType(),
+			})
+		}
+	}()
+
 	return v.Div(other)
 }
 
@@ -5329,6 +6651,9 @@ func (v UInt32Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 	return v == otherUInt32
 }
 
+// HashInput returns a byte slice containing:
+// - HashInputTypeUInt32 (1 byte)
+// - uint32 value encoded in big-endian (4 bytes)
 func (v UInt32Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeUInt32)
 	binary.BigEndian.PutUint32(scratch[1:], uint32(v))
@@ -5365,27 +6690,66 @@ func ConvertUInt32(value Value) UInt32Value {
 }
 
 func (v UInt32Value) BitwiseOr(other IntegerValue) IntegerValue {
-	o := other.(UInt32Value)
+	o, ok := other.(UInt32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseOr,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v | o
 }
 
 func (v UInt32Value) BitwiseXor(other IntegerValue) IntegerValue {
-	o := other.(UInt32Value)
+	o, ok := other.(UInt32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseXor,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
 	return v ^ o
 }
 
 func (v UInt32Value) BitwiseAnd(other IntegerValue) IntegerValue {
-	o := other.(UInt32Value)
+	o, ok := other.(UInt32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseAnd,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v & o
 }
 
 func (v UInt32Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
-	o := other.(UInt32Value)
+	o, ok := other.(UInt32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseLeftShift,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v << o
 }
 
 func (v UInt32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
-	o := other.(UInt32Value)
+	o, ok := other.(UInt32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseRightShift,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v >> o
 }
 
@@ -5547,12 +6911,30 @@ func safeAddUint64(a, b uint64) uint64 {
 }
 
 func (v UInt64Value) Plus(other NumberValue) NumberValue {
-	o := other.(UInt64Value)
+	o, ok := other.(UInt64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationPlus,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return UInt64Value(safeAddUint64(uint64(v), uint64(o)))
 }
 
 func (v UInt64Value) SaturatingPlus(other NumberValue) NumberValue {
-	sum := v + other.(UInt64Value)
+	o, ok := other.(UInt64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
+	sum := v + o
+
 	// INT30-C
 	if sum < v {
 		return UInt64Value(math.MaxUint64)
@@ -5561,7 +6943,17 @@ func (v UInt64Value) SaturatingPlus(other NumberValue) NumberValue {
 }
 
 func (v UInt64Value) Minus(other NumberValue) NumberValue {
-	diff := v - other.(UInt64Value)
+	o, ok := other.(UInt64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMinus,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	diff := v - o
+
 	// INT30-C
 	if diff > v {
 		panic(UnderflowError{})
@@ -5570,7 +6962,17 @@ func (v UInt64Value) Minus(other NumberValue) NumberValue {
 }
 
 func (v UInt64Value) SaturatingMinus(other NumberValue) NumberValue {
-	diff := v - other.(UInt64Value)
+	o, ok := other.(UInt64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
+	diff := v - o
+
 	// INT30-C
 	if diff > v {
 		return UInt64Value(0)
@@ -5579,7 +6981,15 @@ func (v UInt64Value) SaturatingMinus(other NumberValue) NumberValue {
 }
 
 func (v UInt64Value) Mod(other NumberValue) NumberValue {
-	o := other.(UInt64Value)
+	o, ok := other.(UInt64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMod,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
@@ -5587,7 +6997,15 @@ func (v UInt64Value) Mod(other NumberValue) NumberValue {
 }
 
 func (v UInt64Value) Mul(other NumberValue) NumberValue {
-	o := other.(UInt64Value)
+	o, ok := other.(UInt64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMul,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	if (v > 0) && (o > 0) && (v > (math.MaxUint64 / o)) {
 		panic(OverflowError{})
 	}
@@ -5595,7 +7013,15 @@ func (v UInt64Value) Mul(other NumberValue) NumberValue {
 }
 
 func (v UInt64Value) SaturatingMul(other NumberValue) NumberValue {
-	o := other.(UInt64Value)
+	o, ok := other.(UInt64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
 	// INT30-C
 	if (v > 0) && (o > 0) && (v > (math.MaxUint64 / o)) {
 		return UInt64Value(math.MaxUint64)
@@ -5604,7 +7030,15 @@ func (v UInt64Value) SaturatingMul(other NumberValue) NumberValue {
 }
 
 func (v UInt64Value) Div(other NumberValue) NumberValue {
-	o := other.(UInt64Value)
+	o, ok := other.(UInt64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationDiv,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
@@ -5612,6 +7046,17 @@ func (v UInt64Value) Div(other NumberValue) NumberValue {
 }
 
 func (v UInt64Value) SaturatingDiv(other NumberValue) NumberValue {
+	defer func() {
+		r := recover()
+		if _, ok := r.(InvalidOperandsError); ok {
+			panic(InvalidOperandsError{
+				FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
+				LeftType:     v.StaticType(),
+				RightType:    other.StaticType(),
+			})
+		}
+	}()
+
 	return v.Div(other)
 }
 
@@ -5639,6 +7084,9 @@ func (v UInt64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 	return v == otherUInt64
 }
 
+// HashInput returns a byte slice containing:
+// - HashInputTypeUInt64 (1 byte)
+// - uint64 value encoded in big-endian (8 bytes)
 func (v UInt64Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeUInt64)
 	binary.BigEndian.PutUint64(scratch[1:], uint64(v))
@@ -5673,27 +7121,66 @@ func ConvertUInt64(value Value) UInt64Value {
 }
 
 func (v UInt64Value) BitwiseOr(other IntegerValue) IntegerValue {
-	o := other.(UInt64Value)
+	o, ok := other.(UInt64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseOr,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v | o
 }
 
 func (v UInt64Value) BitwiseXor(other IntegerValue) IntegerValue {
-	o := other.(UInt64Value)
+	o, ok := other.(UInt64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseXor,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
 	return v ^ o
 }
 
 func (v UInt64Value) BitwiseAnd(other IntegerValue) IntegerValue {
-	o := other.(UInt64Value)
+	o, ok := other.(UInt64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseAnd,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v & o
 }
 
 func (v UInt64Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
-	o := other.(UInt64Value)
+	o, ok := other.(UInt64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseLeftShift,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v << o
 }
 
 func (v UInt64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
-	o := other.(UInt64Value)
+	o, ok := other.(UInt64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseRightShift,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v >> o
 }
 
@@ -5842,8 +7329,17 @@ func (v UInt128Value) Negate() NumberValue {
 }
 
 func (v UInt128Value) Plus(other NumberValue) NumberValue {
+	o, ok := other.(UInt128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationPlus,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	sum := new(big.Int)
-	sum.Add(v.BigInt, other.(UInt128Value).BigInt)
+	sum.Add(v.BigInt, o.BigInt)
 	// Given that this value is backed by an arbitrary size integer,
 	// we can just add and check the range of the result.
 	//
@@ -5861,8 +7357,17 @@ func (v UInt128Value) Plus(other NumberValue) NumberValue {
 }
 
 func (v UInt128Value) SaturatingPlus(other NumberValue) NumberValue {
+	o, ok := other.(UInt128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
 	sum := new(big.Int)
-	sum.Add(v.BigInt, other.(UInt128Value).BigInt)
+	sum.Add(v.BigInt, o.BigInt)
 	// Given that this value is backed by an arbitrary size integer,
 	// we can just add and check the range of the result.
 	//
@@ -5880,8 +7385,17 @@ func (v UInt128Value) SaturatingPlus(other NumberValue) NumberValue {
 }
 
 func (v UInt128Value) Minus(other NumberValue) NumberValue {
+	o, ok := other.(UInt128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMinus,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	diff := new(big.Int)
-	diff.Sub(v.BigInt, other.(UInt128Value).BigInt)
+	diff.Sub(v.BigInt, o.BigInt)
 	// Given that this value is backed by an arbitrary size integer,
 	// we can just subtract and check the range of the result.
 	//
@@ -5899,8 +7413,17 @@ func (v UInt128Value) Minus(other NumberValue) NumberValue {
 }
 
 func (v UInt128Value) SaturatingMinus(other NumberValue) NumberValue {
+	o, ok := other.(UInt128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
 	diff := new(big.Int)
-	diff.Sub(v.BigInt, other.(UInt128Value).BigInt)
+	diff.Sub(v.BigInt, o.BigInt)
 	// Given that this value is backed by an arbitrary size integer,
 	// we can just subtract and check the range of the result.
 	//
@@ -5918,7 +7441,15 @@ func (v UInt128Value) SaturatingMinus(other NumberValue) NumberValue {
 }
 
 func (v UInt128Value) Mod(other NumberValue) NumberValue {
-	o := other.(UInt128Value)
+	o, ok := other.(UInt128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMod,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	if o.BigInt.Cmp(res) == 0 {
 		panic(DivisionByZeroError{})
@@ -5928,7 +7459,15 @@ func (v UInt128Value) Mod(other NumberValue) NumberValue {
 }
 
 func (v UInt128Value) Mul(other NumberValue) NumberValue {
-	o := other.(UInt128Value)
+	o, ok := other.(UInt128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMul,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	res.Mul(v.BigInt, o.BigInt)
 	if res.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
@@ -5938,7 +7477,15 @@ func (v UInt128Value) Mul(other NumberValue) NumberValue {
 }
 
 func (v UInt128Value) SaturatingMul(other NumberValue) NumberValue {
-	o := other.(UInt128Value)
+	o, ok := other.(UInt128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	res.Mul(v.BigInt, o.BigInt)
 	if res.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
@@ -5948,7 +7495,15 @@ func (v UInt128Value) SaturatingMul(other NumberValue) NumberValue {
 }
 
 func (v UInt128Value) Div(other NumberValue) NumberValue {
-	o := other.(UInt128Value)
+	o, ok := other.(UInt128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationDiv,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	if o.BigInt.Cmp(res) == 0 {
 		panic(DivisionByZeroError{})
@@ -5958,6 +7513,17 @@ func (v UInt128Value) Div(other NumberValue) NumberValue {
 }
 
 func (v UInt128Value) SaturatingDiv(other NumberValue) NumberValue {
+	defer func() {
+		r := recover()
+		if _, ok := r.(InvalidOperandsError); ok {
+			panic(InvalidOperandsError{
+				FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
+				LeftType:     v.StaticType(),
+				RightType:    other.StaticType(),
+			})
+		}
+	}()
+
 	return v.Div(other)
 }
 
@@ -5990,12 +7556,23 @@ func (v UInt128Value) Equal(_ *Interpreter, _ func() LocationRange, other Value)
 	return cmp == 0
 }
 
-func (v UInt128Value) HashInput(_ *Interpreter, _ func() LocationRange, _ []byte) []byte {
-	// TODO: optimize?
-	return append(
-		[]byte{byte(HashInputTypeUInt128)},
-		UnsignedBigIntToBigEndianBytes(v.BigInt)...,
-	)
+// HashInput returns a byte slice containing:
+// - HashInputTypeUInt128 (1 byte)
+// - big int encoded in big endian (n bytes)
+func (v UInt128Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
+	b := UnsignedBigIntToBigEndianBytes(v.BigInt)
+
+	length := 1 + len(b)
+	var buffer []byte
+	if length <= len(scratch) {
+		buffer = scratch[:length]
+	} else {
+		buffer = make([]byte, length)
+	}
+
+	buffer[0] = byte(HashInputTypeUInt128)
+	copy(buffer[1:], b)
+	return buffer
 }
 
 func ConvertUInt128(value Value) UInt128Value {
@@ -6022,28 +7599,60 @@ func ConvertUInt128(value Value) UInt128Value {
 }
 
 func (v UInt128Value) BitwiseOr(other IntegerValue) IntegerValue {
-	o := other.(UInt128Value)
+	o, ok := other.(UInt128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseOr,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	res.Or(v.BigInt, o.BigInt)
 	return UInt128Value{res}
 }
 
 func (v UInt128Value) BitwiseXor(other IntegerValue) IntegerValue {
-	o := other.(UInt128Value)
+	o, ok := other.(UInt128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseXor,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	res.Xor(v.BigInt, o.BigInt)
 	return UInt128Value{res}
 }
 
 func (v UInt128Value) BitwiseAnd(other IntegerValue) IntegerValue {
-	o := other.(UInt128Value)
+	o, ok := other.(UInt128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseAnd,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	res.And(v.BigInt, o.BigInt)
 	return UInt128Value{res}
 }
 
 func (v UInt128Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
-	o := other.(UInt128Value)
+	o, ok := other.(UInt128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseLeftShift,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	if o.BigInt.Sign() < 0 {
 		panic(UnderflowError{})
@@ -6056,7 +7665,15 @@ func (v UInt128Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 }
 
 func (v UInt128Value) BitwiseRightShift(other IntegerValue) IntegerValue {
-	o := other.(UInt128Value)
+	o, ok := other.(UInt128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseRightShift,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	if o.BigInt.Sign() < 0 {
 		panic(UnderflowError{})
@@ -6134,8 +7751,7 @@ func (UInt128Value) DeepRemove(_ *Interpreter) {
 }
 
 func (v UInt128Value) ByteSize() uint32 {
-	// TODO: optimize
-	return mustStorableSize(v)
+	return cborTagSize + getBigIntCBORSize(v.BigInt)
 }
 
 func (v UInt128Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -6213,8 +7829,17 @@ func (v UInt256Value) Negate() NumberValue {
 }
 
 func (v UInt256Value) Plus(other NumberValue) NumberValue {
+	o, ok := other.(UInt256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationPlus,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	sum := new(big.Int)
-	sum.Add(v.BigInt, other.(UInt256Value).BigInt)
+	sum.Add(v.BigInt, o.BigInt)
 	// Given that this value is backed by an arbitrary size integer,
 	// we can just add and check the range of the result.
 	//
@@ -6232,8 +7857,17 @@ func (v UInt256Value) Plus(other NumberValue) NumberValue {
 }
 
 func (v UInt256Value) SaturatingPlus(other NumberValue) NumberValue {
+	o, ok := other.(UInt256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
 	sum := new(big.Int)
-	sum.Add(v.BigInt, other.(UInt256Value).BigInt)
+	sum.Add(v.BigInt, o.BigInt)
 	// Given that this value is backed by an arbitrary size integer,
 	// we can just add and check the range of the result.
 	//
@@ -6251,8 +7885,17 @@ func (v UInt256Value) SaturatingPlus(other NumberValue) NumberValue {
 }
 
 func (v UInt256Value) Minus(other NumberValue) NumberValue {
+	o, ok := other.(UInt256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMinus,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	diff := new(big.Int)
-	diff.Sub(v.BigInt, other.(UInt256Value).BigInt)
+	diff.Sub(v.BigInt, o.BigInt)
 	// Given that this value is backed by an arbitrary size integer,
 	// we can just subtract and check the range of the result.
 	//
@@ -6270,8 +7913,17 @@ func (v UInt256Value) Minus(other NumberValue) NumberValue {
 }
 
 func (v UInt256Value) SaturatingMinus(other NumberValue) NumberValue {
+	o, ok := other.(UInt256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
 	diff := new(big.Int)
-	diff.Sub(v.BigInt, other.(UInt256Value).BigInt)
+	diff.Sub(v.BigInt, o.BigInt)
 	// Given that this value is backed by an arbitrary size integer,
 	// we can just subtract and check the range of the result.
 	//
@@ -6289,7 +7941,15 @@ func (v UInt256Value) SaturatingMinus(other NumberValue) NumberValue {
 }
 
 func (v UInt256Value) Mod(other NumberValue) NumberValue {
-	o := other.(UInt256Value)
+	o, ok := other.(UInt256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMod,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	if o.BigInt.Cmp(res) == 0 {
 		panic(DivisionByZeroError{})
@@ -6299,7 +7959,15 @@ func (v UInt256Value) Mod(other NumberValue) NumberValue {
 }
 
 func (v UInt256Value) Mul(other NumberValue) NumberValue {
-	o := other.(UInt256Value)
+	o, ok := other.(UInt256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMul,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	res.Mul(v.BigInt, o.BigInt)
 	if res.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
@@ -6309,7 +7977,15 @@ func (v UInt256Value) Mul(other NumberValue) NumberValue {
 }
 
 func (v UInt256Value) SaturatingMul(other NumberValue) NumberValue {
-	o := other.(UInt256Value)
+	o, ok := other.(UInt256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	res.Mul(v.BigInt, o.BigInt)
 	if res.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
@@ -6319,7 +7995,15 @@ func (v UInt256Value) SaturatingMul(other NumberValue) NumberValue {
 }
 
 func (v UInt256Value) Div(other NumberValue) NumberValue {
-	o := other.(UInt256Value)
+	o, ok := other.(UInt256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationDiv,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	if o.BigInt.Cmp(res) == 0 {
 		panic(DivisionByZeroError{})
@@ -6329,6 +8013,17 @@ func (v UInt256Value) Div(other NumberValue) NumberValue {
 }
 
 func (v UInt256Value) SaturatingDiv(other NumberValue) NumberValue {
+	defer func() {
+		r := recover()
+		if _, ok := r.(InvalidOperandsError); ok {
+			panic(InvalidOperandsError{
+				FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
+				LeftType:     v.StaticType(),
+				RightType:    other.StaticType(),
+			})
+		}
+	}()
+
 	return v.Div(other)
 }
 
@@ -6361,12 +8056,23 @@ func (v UInt256Value) Equal(_ *Interpreter, _ func() LocationRange, other Value)
 	return cmp == 0
 }
 
-func (v UInt256Value) HashInput(_ *Interpreter, _ func() LocationRange, _ []byte) []byte {
-	// TODO: optimize?
-	return append(
-		[]byte{byte(HashInputTypeUInt256)},
-		UnsignedBigIntToBigEndianBytes(v.BigInt)...,
-	)
+// HashInput returns a byte slice containing:
+// - HashInputTypeUInt256 (1 byte)
+// - big int encoded in big endian (n bytes)
+func (v UInt256Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
+	b := UnsignedBigIntToBigEndianBytes(v.BigInt)
+
+	length := 1 + len(b)
+	var buffer []byte
+	if length <= len(scratch) {
+		buffer = scratch[:length]
+	} else {
+		buffer = make([]byte, length)
+	}
+
+	buffer[0] = byte(HashInputTypeUInt256)
+	copy(buffer[1:], b)
+	return buffer
 }
 
 func ConvertUInt256(value Value) UInt256Value {
@@ -6393,28 +8099,60 @@ func ConvertUInt256(value Value) UInt256Value {
 }
 
 func (v UInt256Value) BitwiseOr(other IntegerValue) IntegerValue {
-	o := other.(UInt256Value)
+	o, ok := other.(UInt256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseOr,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	res.Or(v.BigInt, o.BigInt)
 	return UInt256Value{res}
 }
 
 func (v UInt256Value) BitwiseXor(other IntegerValue) IntegerValue {
-	o := other.(UInt256Value)
+	o, ok := other.(UInt256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseXor,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	res.Xor(v.BigInt, o.BigInt)
 	return UInt256Value{res}
 }
 
 func (v UInt256Value) BitwiseAnd(other IntegerValue) IntegerValue {
-	o := other.(UInt256Value)
+	o, ok := other.(UInt256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseAnd,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	res.And(v.BigInt, o.BigInt)
 	return UInt256Value{res}
 }
 
 func (v UInt256Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
-	o := other.(UInt256Value)
+	o, ok := other.(UInt256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseLeftShift,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	if o.BigInt.Sign() < 0 {
 		panic(UnderflowError{})
@@ -6427,7 +8165,15 @@ func (v UInt256Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 }
 
 func (v UInt256Value) BitwiseRightShift(other IntegerValue) IntegerValue {
-	o := other.(UInt256Value)
+	o, ok := other.(UInt256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseRightShift,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	res := new(big.Int)
 	if o.BigInt.Sign() < 0 {
 		panic(UnderflowError{})
@@ -6504,8 +8250,7 @@ func (UInt256Value) DeepRemove(_ *Interpreter) {
 }
 
 func (v UInt256Value) ByteSize() uint32 {
-	// TODO: optimize
-	return mustStorableSize(v)
+	return cborTagSize + getBigIntCBORSize(v.BigInt)
 }
 
 func (v UInt256Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -6565,7 +8310,16 @@ func (v Word8Value) Negate() NumberValue {
 }
 
 func (v Word8Value) Plus(other NumberValue) NumberValue {
-	return v + other.(Word8Value)
+	o, ok := other.(Word8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationPlus,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	return v + o
 }
 
 func (v Word8Value) SaturatingPlus(_ NumberValue) NumberValue {
@@ -6573,7 +8327,16 @@ func (v Word8Value) SaturatingPlus(_ NumberValue) NumberValue {
 }
 
 func (v Word8Value) Minus(other NumberValue) NumberValue {
-	return v - other.(Word8Value)
+	o, ok := other.(Word8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMinus,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	return v - o
 }
 
 func (v Word8Value) SaturatingMinus(_ NumberValue) NumberValue {
@@ -6581,7 +8344,15 @@ func (v Word8Value) SaturatingMinus(_ NumberValue) NumberValue {
 }
 
 func (v Word8Value) Mod(other NumberValue) NumberValue {
-	o := other.(Word8Value)
+	o, ok := other.(Word8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMod,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
@@ -6589,7 +8360,16 @@ func (v Word8Value) Mod(other NumberValue) NumberValue {
 }
 
 func (v Word8Value) Mul(other NumberValue) NumberValue {
-	return v * other.(Word8Value)
+	o, ok := other.(Word8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMul,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	return v * o
 }
 
 func (v Word8Value) SaturatingMul(_ NumberValue) NumberValue {
@@ -6597,7 +8377,15 @@ func (v Word8Value) SaturatingMul(_ NumberValue) NumberValue {
 }
 
 func (v Word8Value) Div(other NumberValue) NumberValue {
-	o := other.(Word8Value)
+	o, ok := other.(Word8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationDiv,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
@@ -6632,6 +8420,9 @@ func (v Word8Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) b
 	return v == otherWord8
 }
 
+// HashInput returns a byte slice containing:
+// - HashInputTypeWord8 (1 byte)
+// - uint8 value (1 byte)
 func (v Word8Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeWord8)
 	scratch[1] = byte(v)
@@ -6643,27 +8434,66 @@ func ConvertWord8(value Value) Word8Value {
 }
 
 func (v Word8Value) BitwiseOr(other IntegerValue) IntegerValue {
-	o := other.(Word8Value)
+	o, ok := other.(Word8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseOr,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v | o
 }
 
 func (v Word8Value) BitwiseXor(other IntegerValue) IntegerValue {
-	o := other.(Word8Value)
+	o, ok := other.(Word8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseXor,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
 	return v ^ o
 }
 
 func (v Word8Value) BitwiseAnd(other IntegerValue) IntegerValue {
-	o := other.(Word8Value)
+	o, ok := other.(Word8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseAnd,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v & o
 }
 
 func (v Word8Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
-	o := other.(Word8Value)
+	o, ok := other.(Word8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseLeftShift,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v << o
 }
 
 func (v Word8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
-	o := other.(Word8Value)
+	o, ok := other.(Word8Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseRightShift,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v >> o
 }
 
@@ -6792,7 +8622,16 @@ func (v Word16Value) Negate() NumberValue {
 }
 
 func (v Word16Value) Plus(other NumberValue) NumberValue {
-	return v + other.(Word16Value)
+	o, ok := other.(Word16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationPlus,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	return v + o
 }
 
 func (v Word16Value) SaturatingPlus(_ NumberValue) NumberValue {
@@ -6800,7 +8639,16 @@ func (v Word16Value) SaturatingPlus(_ NumberValue) NumberValue {
 }
 
 func (v Word16Value) Minus(other NumberValue) NumberValue {
-	return v - other.(Word16Value)
+	o, ok := other.(Word16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMinus,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	return v - o
 }
 
 func (v Word16Value) SaturatingMinus(_ NumberValue) NumberValue {
@@ -6808,7 +8656,15 @@ func (v Word16Value) SaturatingMinus(_ NumberValue) NumberValue {
 }
 
 func (v Word16Value) Mod(other NumberValue) NumberValue {
-	o := other.(Word16Value)
+	o, ok := other.(Word16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMod,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
@@ -6816,7 +8672,16 @@ func (v Word16Value) Mod(other NumberValue) NumberValue {
 }
 
 func (v Word16Value) Mul(other NumberValue) NumberValue {
-	return v * other.(Word16Value)
+	o, ok := other.(Word16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMul,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	return v * o
 }
 
 func (v Word16Value) SaturatingMul(_ NumberValue) NumberValue {
@@ -6824,7 +8689,15 @@ func (v Word16Value) SaturatingMul(_ NumberValue) NumberValue {
 }
 
 func (v Word16Value) Div(other NumberValue) NumberValue {
-	o := other.(Word16Value)
+	o, ok := other.(Word16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationDiv,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
@@ -6859,6 +8732,9 @@ func (v Word16Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 	return v == otherWord16
 }
 
+// HashInput returns a byte slice containing:
+// - HashInputTypeWord16 (1 byte)
+// - uint16 value encoded in big-endian (2 bytes)
 func (v Word16Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeWord16)
 	binary.BigEndian.PutUint16(scratch[1:], uint16(v))
@@ -6870,27 +8746,66 @@ func ConvertWord16(value Value) Word16Value {
 }
 
 func (v Word16Value) BitwiseOr(other IntegerValue) IntegerValue {
-	o := other.(Word16Value)
+	o, ok := other.(Word16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseOr,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v | o
 }
 
 func (v Word16Value) BitwiseXor(other IntegerValue) IntegerValue {
-	o := other.(Word16Value)
+	o, ok := other.(Word16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseXor,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
 	return v ^ o
 }
 
 func (v Word16Value) BitwiseAnd(other IntegerValue) IntegerValue {
-	o := other.(Word16Value)
+	o, ok := other.(Word16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseAnd,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v & o
 }
 
 func (v Word16Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
-	o := other.(Word16Value)
+	o, ok := other.(Word16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseLeftShift,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v << o
 }
 
 func (v Word16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
-	o := other.(Word16Value)
+	o, ok := other.(Word16Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseRightShift,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v >> o
 }
 
@@ -7022,7 +8937,16 @@ func (v Word32Value) Negate() NumberValue {
 }
 
 func (v Word32Value) Plus(other NumberValue) NumberValue {
-	return v + other.(Word32Value)
+	o, ok := other.(Word32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationPlus,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	return v + o
 }
 
 func (v Word32Value) SaturatingPlus(_ NumberValue) NumberValue {
@@ -7030,7 +8954,16 @@ func (v Word32Value) SaturatingPlus(_ NumberValue) NumberValue {
 }
 
 func (v Word32Value) Minus(other NumberValue) NumberValue {
-	return v - other.(Word32Value)
+	o, ok := other.(Word32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMinus,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	return v - o
 }
 
 func (v Word32Value) SaturatingMinus(_ NumberValue) NumberValue {
@@ -7038,7 +8971,15 @@ func (v Word32Value) SaturatingMinus(_ NumberValue) NumberValue {
 }
 
 func (v Word32Value) Mod(other NumberValue) NumberValue {
-	o := other.(Word32Value)
+	o, ok := other.(Word32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMod,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
@@ -7046,7 +8987,16 @@ func (v Word32Value) Mod(other NumberValue) NumberValue {
 }
 
 func (v Word32Value) Mul(other NumberValue) NumberValue {
-	return v * other.(Word32Value)
+	o, ok := other.(Word32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMul,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	return v * o
 }
 
 func (v Word32Value) SaturatingMul(_ NumberValue) NumberValue {
@@ -7054,7 +9004,15 @@ func (v Word32Value) SaturatingMul(_ NumberValue) NumberValue {
 }
 
 func (v Word32Value) Div(other NumberValue) NumberValue {
-	o := other.(Word32Value)
+	o, ok := other.(Word32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationDiv,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
@@ -7089,6 +9047,9 @@ func (v Word32Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 	return v == otherWord32
 }
 
+// HashInput returns a byte slice containing:
+// - HashInputTypeWord32 (1 byte)
+// - uint32 value encoded in big-endian (4 bytes)
 func (v Word32Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeWord32)
 	binary.BigEndian.PutUint32(scratch[1:], uint32(v))
@@ -7100,27 +9061,66 @@ func ConvertWord32(value Value) Word32Value {
 }
 
 func (v Word32Value) BitwiseOr(other IntegerValue) IntegerValue {
-	o := other.(Word32Value)
+	o, ok := other.(Word32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseOr,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v | o
 }
 
 func (v Word32Value) BitwiseXor(other IntegerValue) IntegerValue {
-	o := other.(Word32Value)
+	o, ok := other.(Word32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseXor,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
 	return v ^ o
 }
 
 func (v Word32Value) BitwiseAnd(other IntegerValue) IntegerValue {
-	o := other.(Word32Value)
+	o, ok := other.(Word32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseAnd,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v & o
 }
 
 func (v Word32Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
-	o := other.(Word32Value)
+	o, ok := other.(Word32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseLeftShift,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v << o
 }
 
 func (v Word32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
-	o := other.(Word32Value)
+	o, ok := other.(Word32Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseRightShift,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v >> o
 }
 
@@ -7273,7 +9273,16 @@ func (v Word64Value) Negate() NumberValue {
 }
 
 func (v Word64Value) Plus(other NumberValue) NumberValue {
-	return v + other.(Word64Value)
+	o, ok := other.(Word64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationPlus,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	return v + o
 }
 
 func (v Word64Value) SaturatingPlus(_ NumberValue) NumberValue {
@@ -7281,7 +9290,16 @@ func (v Word64Value) SaturatingPlus(_ NumberValue) NumberValue {
 }
 
 func (v Word64Value) Minus(other NumberValue) NumberValue {
-	return v - other.(Word64Value)
+	o, ok := other.(Word64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMinus,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	return v - o
 }
 
 func (v Word64Value) SaturatingMinus(_ NumberValue) NumberValue {
@@ -7289,7 +9307,15 @@ func (v Word64Value) SaturatingMinus(_ NumberValue) NumberValue {
 }
 
 func (v Word64Value) Mod(other NumberValue) NumberValue {
-	o := other.(Word64Value)
+	o, ok := other.(Word64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMod,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
@@ -7297,7 +9323,16 @@ func (v Word64Value) Mod(other NumberValue) NumberValue {
 }
 
 func (v Word64Value) Mul(other NumberValue) NumberValue {
-	return v * other.(Word64Value)
+	o, ok := other.(Word64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMul,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	return v * o
 }
 
 func (v Word64Value) SaturatingMul(_ NumberValue) NumberValue {
@@ -7305,7 +9340,15 @@ func (v Word64Value) SaturatingMul(_ NumberValue) NumberValue {
 }
 
 func (v Word64Value) Div(other NumberValue) NumberValue {
-	o := other.(Word64Value)
+	o, ok := other.(Word64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationDiv,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
@@ -7340,6 +9383,9 @@ func (v Word64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 	return v == otherWord64
 }
 
+// HashInput returns a byte slice containing:
+// - HashInputTypeWord64 (1 byte)
+// - uint64 value encoded in big-endian (8 bytes)
 func (v Word64Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeWord64)
 	binary.BigEndian.PutUint64(scratch[1:], uint64(v))
@@ -7351,27 +9397,66 @@ func ConvertWord64(value Value) Word64Value {
 }
 
 func (v Word64Value) BitwiseOr(other IntegerValue) IntegerValue {
-	o := other.(Word64Value)
+	o, ok := other.(Word64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseOr,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v | o
 }
 
 func (v Word64Value) BitwiseXor(other IntegerValue) IntegerValue {
-	o := other.(Word64Value)
+	o, ok := other.(Word64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseXor,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
 	return v ^ o
 }
 
 func (v Word64Value) BitwiseAnd(other IntegerValue) IntegerValue {
-	o := other.(Word64Value)
+	o, ok := other.(Word64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseAnd,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v & o
 }
 
 func (v Word64Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
-	o := other.(Word64Value)
+	o, ok := other.(Word64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseLeftShift,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v << o
 }
 
 func (v Word64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
-	o := other.(Word64Value)
+	o, ok := other.(Word64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseRightShift,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return v >> o
 }
 
@@ -7521,12 +9606,28 @@ func (v Fix64Value) Negate() NumberValue {
 }
 
 func (v Fix64Value) Plus(other NumberValue) NumberValue {
-	o := other.(Fix64Value)
+	o, ok := other.(Fix64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationPlus,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return Fix64Value(safeAddInt64(int64(v), int64(o)))
 }
 
 func (v Fix64Value) SaturatingPlus(other NumberValue) NumberValue {
-	o := other.(Fix64Value)
+	o, ok := other.(Fix64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
 	// INT32-C
 	if (o > 0) && (v > (math.MaxInt64 - o)) {
 		return Fix64Value(math.MaxInt64)
@@ -7537,7 +9638,15 @@ func (v Fix64Value) SaturatingPlus(other NumberValue) NumberValue {
 }
 
 func (v Fix64Value) Minus(other NumberValue) NumberValue {
-	o := other.(Fix64Value)
+	o, ok := other.(Fix64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMinus,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	// INT32-C
 	if (o > 0) && (v < (math.MinInt64 + o)) {
 		panic(OverflowError{})
@@ -7548,7 +9657,15 @@ func (v Fix64Value) Minus(other NumberValue) NumberValue {
 }
 
 func (v Fix64Value) SaturatingMinus(other NumberValue) NumberValue {
-	o := other.(Fix64Value)
+	o, ok := other.(Fix64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
 	// INT32-C
 	if (o > 0) && (v < (math.MinInt64 + o)) {
 		return Fix64Value(math.MinInt64)
@@ -7562,7 +9679,14 @@ var minInt64Big = big.NewInt(math.MinInt64)
 var maxInt64Big = big.NewInt(math.MaxInt64)
 
 func (v Fix64Value) Mul(other NumberValue) NumberValue {
-	o := other.(Fix64Value)
+	o, ok := other.(Fix64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMul,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
 
 	a := new(big.Int).SetInt64(int64(v))
 	b := new(big.Int).SetInt64(int64(o))
@@ -7580,7 +9704,14 @@ func (v Fix64Value) Mul(other NumberValue) NumberValue {
 }
 
 func (v Fix64Value) SaturatingMul(other NumberValue) NumberValue {
-	o := other.(Fix64Value)
+	o, ok := other.(Fix64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
 
 	a := new(big.Int).SetInt64(int64(v))
 	b := new(big.Int).SetInt64(int64(o))
@@ -7598,7 +9729,14 @@ func (v Fix64Value) SaturatingMul(other NumberValue) NumberValue {
 }
 
 func (v Fix64Value) Div(other NumberValue) NumberValue {
-	o := other.(Fix64Value)
+	o, ok := other.(Fix64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationDiv,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
 
 	a := new(big.Int).SetInt64(int64(v))
 	b := new(big.Int).SetInt64(int64(o))
@@ -7616,7 +9754,14 @@ func (v Fix64Value) Div(other NumberValue) NumberValue {
 }
 
 func (v Fix64Value) SaturatingDiv(other NumberValue) NumberValue {
-	o := other.(Fix64Value)
+	o, ok := other.(Fix64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
 
 	a := new(big.Int).SetInt64(int64(v))
 	b := new(big.Int).SetInt64(int64(o))
@@ -7634,7 +9779,15 @@ func (v Fix64Value) SaturatingDiv(other NumberValue) NumberValue {
 }
 
 func (v Fix64Value) Mod(other NumberValue) NumberValue {
-	o := other.(Fix64Value)
+	o, ok := other.(Fix64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMod,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	// v - int(v/o) * o
 	quotient := v.Div(o).(Fix64Value)
 	truncatedQuotient := (int64(quotient) / sema.Fix64Factor) * sema.Fix64Factor
@@ -7665,6 +9818,9 @@ func (v Fix64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) b
 	return v == otherFix64
 }
 
+// HashInput returns a byte slice containing:
+// - HashInputTypeFix64 (1 byte)
+// - int64 value encoded in big-endian (8 bytes)
 func (v Fix64Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeFix64)
 	binary.BigEndian.PutUint64(scratch[1:], uint64(v))
@@ -7843,12 +9999,28 @@ func (v UFix64Value) Negate() NumberValue {
 }
 
 func (v UFix64Value) Plus(other NumberValue) NumberValue {
-	o := other.(UFix64Value)
+	o, ok := other.(UFix64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationPlus,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	return UFix64Value(safeAddUint64(uint64(v), uint64(o)))
 }
 
 func (v UFix64Value) SaturatingPlus(other NumberValue) NumberValue {
-	o := other.(UFix64Value)
+	o, ok := other.(UFix64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
 	sum := v + o
 	// INT30-C
 	if sum < v {
@@ -7858,7 +10030,17 @@ func (v UFix64Value) SaturatingPlus(other NumberValue) NumberValue {
 }
 
 func (v UFix64Value) Minus(other NumberValue) NumberValue {
-	diff := v - other.(UFix64Value)
+	o, ok := other.(UFix64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMinus,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
+	diff := v - o
+
 	// INT30-C
 	if diff > v {
 		panic(UnderflowError{})
@@ -7867,7 +10049,17 @@ func (v UFix64Value) Minus(other NumberValue) NumberValue {
 }
 
 func (v UFix64Value) SaturatingMinus(other NumberValue) NumberValue {
-	diff := v - other.(UFix64Value)
+	o, ok := other.(UFix64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
+
+	diff := v - o
+
 	// INT30-C
 	if diff > v {
 		return UFix64Value(0)
@@ -7876,7 +10068,14 @@ func (v UFix64Value) SaturatingMinus(other NumberValue) NumberValue {
 }
 
 func (v UFix64Value) Mul(other NumberValue) NumberValue {
-	o := other.(UFix64Value)
+	o, ok := other.(UFix64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMul,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
 
 	a := new(big.Int).SetUint64(uint64(v))
 	b := new(big.Int).SetUint64(uint64(o))
@@ -7892,7 +10091,14 @@ func (v UFix64Value) Mul(other NumberValue) NumberValue {
 }
 
 func (v UFix64Value) SaturatingMul(other NumberValue) NumberValue {
-	o := other.(UFix64Value)
+	o, ok := other.(UFix64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
+			LeftType:     v.StaticType(),
+			RightType:    other.StaticType(),
+		})
+	}
 
 	a := new(big.Int).SetUint64(uint64(v))
 	b := new(big.Int).SetUint64(uint64(o))
@@ -7908,7 +10114,14 @@ func (v UFix64Value) SaturatingMul(other NumberValue) NumberValue {
 }
 
 func (v UFix64Value) Div(other NumberValue) NumberValue {
-	o := other.(UFix64Value)
+	o, ok := other.(UFix64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationDiv,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
 
 	a := new(big.Int).SetUint64(uint64(v))
 	b := new(big.Int).SetUint64(uint64(o))
@@ -7920,11 +10133,30 @@ func (v UFix64Value) Div(other NumberValue) NumberValue {
 }
 
 func (v UFix64Value) SaturatingDiv(other NumberValue) NumberValue {
+	defer func() {
+		r := recover()
+		if _, ok := r.(InvalidOperandsError); ok {
+			panic(InvalidOperandsError{
+				FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
+				LeftType:     v.StaticType(),
+				RightType:    other.StaticType(),
+			})
+		}
+	}()
+
 	return v.Div(other)
 }
 
 func (v UFix64Value) Mod(other NumberValue) NumberValue {
-	o := other.(UFix64Value)
+	o, ok := other.(UFix64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMod,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
+
 	// v - int(v/o) * o
 	quotient := v.Div(o).(UFix64Value)
 	truncatedQuotient := (uint64(quotient) / sema.Fix64Factor) * sema.Fix64Factor
@@ -7955,6 +10187,9 @@ func (v UFix64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 	return v == otherUFix64
 }
 
+// HashInput returns a byte slice containing:
+// - HashInputTypeUFix64 (1 byte)
+// - uint64 value encoded in big-endian (8 bytes)
 func (v UFix64Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeUFix64)
 	binary.BigEndian.PutUint64(scratch[1:], uint64(v))
@@ -8470,7 +10705,7 @@ func formatComposite(typeId string, fields []CompositeField, seenReferences Seen
 	return format.Composite(typeId, preparedFields)
 }
 
-func (v *CompositeValue) GetField(_ *Interpreter, _ func() LocationRange, name string) Value {
+func (v *CompositeValue) GetField(name string) Value {
 
 	storable, err := v.dictionary.Get(
 		stringAtreeComparator,
@@ -8518,7 +10753,7 @@ func (v *CompositeValue) Equal(interpreter *Interpreter, getLocationRange func()
 
 		// NOTE: Do NOT use an iterator, iteration order of fields may be different
 		// (if stored in different account, as storage ID is used as hash seed)
-		otherValue := otherComposite.GetField(interpreter, getLocationRange, fieldName)
+		otherValue := otherComposite.GetField(fieldName)
 
 		equatableValue, ok := MustConvertStoredValue(value).(EquatableValue)
 		if !ok || !equatableValue.Equal(interpreter, getLocationRange, otherValue) {
@@ -8527,21 +10762,34 @@ func (v *CompositeValue) Equal(interpreter *Interpreter, getLocationRange func()
 	}
 }
 
+// HashInput returns a byte slice containing:
+// - HashInputTypeEnum (1 byte)
+// - type id (n bytes)
+// - hash input of raw value field name (n bytes)
 func (v *CompositeValue) HashInput(interpreter *Interpreter, getLocationRange func() LocationRange, scratch []byte) []byte {
 	if v.Kind == common.CompositeKindEnum {
-		enumHashInput := append(
-			[]byte{byte(HashInputTypeEnum)},
-			v.TypeID()...,
-		)
+		typeID := v.TypeID()
 
-		rawValue := v.GetField(interpreter, getLocationRange, sema.EnumRawValueFieldName)
+		rawValue := v.GetField(sema.EnumRawValueFieldName)
 		rawValueHashInput := rawValue.(HashableValue).
 			HashInput(interpreter, getLocationRange, scratch)
 
-		return append(
-			enumHashInput,
-			rawValueHashInput...,
-		)
+		length := 1 + len(typeID) + len(rawValueHashInput)
+		if length <= len(scratch) {
+			// Copy rawValueHashInput first because
+			// rawValueHashInput and scratch can point to the same underlying scratch buffer
+			copy(scratch[1+len(typeID):], rawValueHashInput)
+
+			scratch[0] = byte(HashInputTypeEnum)
+			copy(scratch[1:], typeID)
+			return scratch[:length]
+		}
+
+		buffer := make([]byte, length)
+		buffer[0] = byte(HashInputTypeEnum)
+		copy(buffer[1:], typeID)
+		copy(buffer[1+len(typeID):], rawValueHashInput)
+		return buffer
 	}
 
 	panic(errors.NewUnreachableError())
@@ -8588,7 +10836,7 @@ func (v *CompositeValue) ConformsToDynamicType(
 	}
 
 	for _, fieldName := range compositeType.Fields {
-		value := v.GetField(interpreter, getLocationRange, fieldName)
+		value := v.GetField(fieldName)
 		if value == nil {
 			if v.ComputedFields == nil {
 				return false
@@ -8672,7 +10920,9 @@ func (v *CompositeValue) Transfer(
 
 	dictionary := v.dictionary
 
-	needsStoreTo := v.NeedsStoreTo(address)
+	currentAddress := v.StorageID().Address
+
+	needsStoreTo := address != currentAddress
 	isResourceKinded := v.IsResourceKinded(interpreter)
 
 	if needsStoreTo || !isResourceKinded {
@@ -8726,11 +10976,12 @@ func (v *CompositeValue) Transfer(
 		}
 	}
 
+	var res *CompositeValue
 	if isResourceKinded {
 		v.dictionary = dictionary
-		return v
+		res = v
 	} else {
-		return &CompositeValue{
+		res = &CompositeValue{
 			dictionary:          dictionary,
 			Location:            v.Location,
 			QualifiedIdentifier: v.QualifiedIdentifier,
@@ -8747,6 +10998,29 @@ func (v *CompositeValue) Transfer(
 			dynamicType:         v.dynamicType,
 		}
 	}
+
+	if needsStoreTo &&
+		res.Kind == common.CompositeKindResource &&
+		interpreter.onResourceOwnerChange != nil {
+
+		interpreter.onResourceOwnerChange(
+			interpreter,
+			res,
+			common.Address(currentAddress),
+			common.Address(address),
+		)
+	}
+
+	return res
+}
+
+func (v *CompositeValue) ResourceUUID() *UInt64Value {
+	fieldValue := v.GetField(sema.ResourceUUIDFieldName)
+	uuid, ok := fieldValue.(UInt64Value)
+	if !ok {
+		return nil
+	}
+	return &uuid
 }
 
 func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
@@ -10176,25 +12450,35 @@ func (v *StorageReferenceValue) StaticType() StaticType {
 	}
 }
 
-func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter) *Value {
-
+func (v *StorageReferenceValue) dereference(interpreter *Interpreter, getLocationRange func() LocationRange) (*Value, error) {
 	address := v.TargetStorageAddress
 	domain := v.TargetPath.Domain.Identifier()
 	identifier := v.TargetPath.Identifier
 
 	referenced := interpreter.ReadStored(address, domain, identifier)
 	if referenced == nil {
-		return nil
+		return nil, nil
 	}
 
 	if v.BorrowedType != nil {
 		dynamicType := referenced.DynamicType(interpreter, SeenReferences{})
 		if !interpreter.IsSubType(dynamicType, v.BorrowedType) {
-			return nil
+			return nil, ForceCastTypeMismatchError{
+				ExpectedType:  v.BorrowedType,
+				LocationRange: getLocationRange(),
+			}
 		}
 	}
 
-	return &referenced
+	return &referenced, nil
+}
+
+func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter) *Value {
+	value, err := v.dereference(interpreter, ReturnEmptyLocationRange)
+	if err != nil {
+		return nil
+	}
+	return value
 }
 
 func (v *StorageReferenceValue) GetMember(
@@ -10838,8 +13122,21 @@ func (v AddressValue) Equal(_ *Interpreter, _ func() LocationRange, other Value)
 	return v == otherAddress
 }
 
-func (v AddressValue) HashInput(_ *Interpreter, _ func() LocationRange, _ []byte) []byte {
-	return append([]byte{byte(HashInputTypeAddress)}, v[:]...)
+// HashInput returns a byte slice containing:
+// - HashInputTypeAddress (1 byte)
+// - address (8 bytes)
+func (v AddressValue) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
+	length := 1 + len(v)
+	var buffer []byte
+	if length <= len(scratch) {
+		buffer = scratch[:length]
+	} else {
+		buffer = make([]byte, length)
+	}
+
+	buffer[0] = byte(HashInputTypeAddress)
+	copy(buffer[1:], v[:])
+	return buffer
 }
 
 func (v AddressValue) Hex() string {
@@ -11104,10 +13401,23 @@ func (v PathValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bo
 		otherPath.Domain == v.Domain
 }
 
+// HashInput returns a byte slice containing:
+// - HashInputTypePath (1 byte)
+// - domain (1 byte)
+// - identifier (n bytes)
 func (v PathValue) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
-	scratch[0] = byte(HashInputTypePath)
-	scratch[1] = byte(v.Domain)
-	return append(scratch[:2], []byte(v.Identifier)...)
+	length := 1 + 1 + len(v.Identifier)
+	var buffer []byte
+	if length <= len(scratch) {
+		buffer = scratch[:length]
+	} else {
+		buffer = make([]byte, length)
+	}
+
+	buffer[0] = byte(HashInputTypePath)
+	buffer[1] = byte(v.Domain)
+	copy(buffer[2:], v.Identifier)
+	return buffer
 }
 
 func (PathValue) IsStorable() bool {
@@ -11191,7 +13501,8 @@ func (PathValue) DeepRemove(_ *Interpreter) {
 }
 
 func (v PathValue) ByteSize() uint32 {
-	return mustStorableSize(v)
+	// tag number (2 bytes) + array head (1 byte) + domain (CBOR uint) + identifier (CBOR string)
+	return cborTagSize + 1 + getUintCBORSize(uint64(v.Domain)) + getBytesCBORSize([]byte(v.Identifier))
 }
 
 func (v PathValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -11560,12 +13871,12 @@ func NewPublicKeyValue(
 			{
 				Name: sema.PublicKeySignAlgoField,
 				// TODO: provide proper location range
-				Value: publicKeyValue.GetField(interpreter, ReturnEmptyLocationRange, sema.PublicKeySignAlgoField),
+				Value: publicKeyValue.GetField(sema.PublicKeySignAlgoField),
 			},
 			{
 				Name: sema.PublicKeyIsValidField,
 				// TODO: provide proper location range
-				Value: publicKeyValue.GetField(interpreter, ReturnEmptyLocationRange, sema.PublicKeyIsValidField),
+				Value: publicKeyValue.GetField(sema.PublicKeyIsValidField),
 			},
 		}
 
