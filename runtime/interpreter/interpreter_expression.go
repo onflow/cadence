@@ -170,9 +170,10 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 
 	leftValue := interpreter.evalExpression(expression.Left)
 
-	/* we make this a thunk so that we can skip computing it for certain short-circuiting
-	   operations */
-	rightValue := func() Value { return interpreter.evalExpression(expression.Right) }
+	// We make this a thunk so that we can skip computing it for certain short-circuiting operations
+	rightValue := func() Value {
+		return interpreter.evalExpression(expression.Right)
+	}
 
 	error := func(right Value) {
 		panic(InvalidOperandsError{
