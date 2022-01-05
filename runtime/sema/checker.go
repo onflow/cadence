@@ -1787,6 +1787,10 @@ func (checker *Checker) checkPotentiallyUnevaluated(check TypeCheckFunc) Type {
 		functionActivation.ReturnInfo.MaybeReturned ||
 			temporaryReturnInfo.MaybeReturned
 
+	functionActivation.ReturnInfo.MaybeJumped =
+		functionActivation.ReturnInfo.MaybeJumped ||
+			temporaryReturnInfo.MaybeJumped
+
 	// NOTE: the definitive return state does not change
 
 	checker.resources.MergeBranches(temporaryResources, nil)

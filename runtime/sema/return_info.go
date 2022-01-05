@@ -21,6 +21,7 @@ package sema
 type ReturnInfo struct {
 	MaybeReturned      bool
 	DefinitelyReturned bool
+	MaybeJumped        bool
 	DefinitelyHalted   bool
 	DefinitelyJumped   bool
 }
@@ -33,6 +34,10 @@ func (ri *ReturnInfo) MergeBranches(thenReturnInfo *ReturnInfo, elseReturnInfo *
 	ri.DefinitelyReturned = ri.DefinitelyReturned ||
 		(thenReturnInfo.DefinitelyReturned &&
 			elseReturnInfo.DefinitelyReturned)
+
+	ri.MaybeJumped = ri.MaybeJumped ||
+		thenReturnInfo.MaybeJumped ||
+		elseReturnInfo.MaybeJumped
 
 	ri.DefinitelyJumped = ri.DefinitelyJumped ||
 		(thenReturnInfo.DefinitelyJumped &&

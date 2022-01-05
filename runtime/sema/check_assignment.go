@@ -270,13 +270,13 @@ func (checker *Checker) visitMemberExpressionAssignment(
 
 		if functionActivation.InitializationInfo != nil {
 
-			// If the function has already returned, the initialization
-			// is not definitive, and it must be ignored
+			// If the function potentially returned or jumped before,
+			// then the initialization is not definitive, and it must be ignored
 
-			// NOTE: assignment can still be considered definitive
-			//  if the function maybe halted
+			// NOTE: assignment can still be considered definitive if the function maybe halted
 
-			if !functionActivation.ReturnInfo.MaybeReturned {
+			if !functionActivation.ReturnInfo.MaybeReturned &&
+				!functionActivation.ReturnInfo.MaybeJumped {
 
 				// If the field is constant and it has already previously been
 				// initialized, report an error for the repeated assignment
