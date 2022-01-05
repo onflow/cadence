@@ -229,14 +229,15 @@ func (interpreter *Interpreter) VisitSwitchStatement(switchStatement *ast.Switch
 
 		caseValue, ok := result.(EquatableValue)
 
+		if !ok {
+			continue
+		}
+
 		// If the test value and case values are equal,
 		// evaluate the case's statements
 
 		getLocationRange := locationRangeGetter(interpreter.Location, switchCase.Expression)
 
-		if !ok {
-			continue
-		}
 		if testValue.Equal(interpreter, getLocationRange, caseValue) {
 			return runStatements()
 		}
