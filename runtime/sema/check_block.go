@@ -39,11 +39,8 @@ func (checker *Checker) visitStatements(statements []ast.Statement) {
 		// Is this statement unreachable? Report it once for this statement,
 		// but avoid noise and don't report it for all remaining unreachable statements
 
-		definitelyReturnedOrHalted :=
-			functionActivation.ReturnInfo.DefinitelyReturned ||
-				functionActivation.ReturnInfo.DefinitelyHalted
-
-		if definitelyReturnedOrHalted && !functionActivation.ReportedDeadCode {
+		if functionActivation.ReturnInfo.IsUnreachable() &&
+			!functionActivation.ReportedDeadCode {
 
 			lastStatement := statements[len(statements)-1]
 

@@ -88,7 +88,9 @@ func (ri ResourceInfo) Clone() ResourceInfo {
 //
 type Resources struct {
 	resources *InterfaceResourceInfoOrderedMap
-	Returns   bool
+	// JumpsOrReturns indicates that the (branch of) the function
+	// contains a definite return, break, or continue statement
+	JumpsOrReturns bool
 }
 
 func NewResources() *Resources {
@@ -161,7 +163,7 @@ func (ris *Resources) IsUseAfterInvalidationReported(resource interface{}, pos a
 
 func (ris *Resources) Clone() *Resources {
 	result := NewResources()
-	result.Returns = ris.Returns
+	result.JumpsOrReturns = ris.JumpsOrReturns
 	for pair := ris.resources.Oldest(); pair != nil; pair = pair.Next() {
 		resource := pair.Key
 		info := pair.Value
@@ -186,9 +188,9 @@ func (ris *Resources) ForEach(f func(resource interface{}, info ResourceInfo)) {
 //
 func (ris *Resources) MergeBranches(thenResources *Resources, elseResources *Resources) {
 
-	elseReturns := false
+	elseJumpsOrReturns := false
 	if elseResources != nil {
-		elseReturns = elseResources.Returns
+		elseJumpsOrReturns = elseResources.JumpsOrReturns
 	}
 
 	merged := make(map[interface{}]struct{})
@@ -217,33 +219,26 @@ func (ris *Resources) MergeBranches(thenResources *Resources, elseResources *Res
 			elseInfo = elseResources.Get(resource)
 		}
 
-		// The resource can be considered definitely invalidated in both branches
-		// if in both branches, there were invalidations or the branch returned.
-		//
-		// The assumption that a returning branch results in a definitive invalidation
-		// can be made, because we check at the point of the return if the resource
-		// was invalidated.
+		// The resource can be considered definitively invalidated
+		// if it was already invalidated, or it was invalidated in both branches
 
 		definitelyInvalidatedInBranches :=
-			(!thenInfo.Invalidations.IsEmpty() || thenResources.Returns) &&
-				(!elseInfo.Invalidations.IsEmpty() || elseReturns)
-
-		// The resource can be considered definitively invalidated if it was already invalidated,
-		// or the resource was invalidated in both branches
+			thenInfo.DefinitivelyInvalidated &&
+				elseInfo.DefinitivelyInvalidated
 
 		info.DefinitivelyInvalidated =
 			info.DefinitivelyInvalidated ||
 				definitelyInvalidatedInBranches
 
-		// If the a branch returns, the invalidations and uses won't have occurred in the outer scope,
-		// so only merge invalidations and uses if the branch did not return
+		// If a branch returns or jumps, the invalidations and uses won't have occurred in the outer scope,
+		// so only merge invalidations and uses if the branch did not return or jump
 
-		if !thenResources.Returns {
+		if !thenResources.JumpsOrReturns {
 			info.Invalidations.Merge(thenInfo.Invalidations)
 			info.UsePositions.Merge(thenInfo.UsePositions)
 		}
 
-		if !elseReturns {
+		if !elseJumpsOrReturns {
 			info.Invalidations.Merge(elseInfo.Invalidations)
 			info.UsePositions.Merge(elseInfo.UsePositions)
 		}
@@ -266,6 +261,6 @@ func (ris *Resources) MergeBranches(thenResources *Resources, elseResources *Res
 		})
 	}
 
-	ris.Returns = ris.Returns ||
-		(thenResources.Returns && elseReturns)
+	ris.JumpsOrReturns = ris.JumpsOrReturns ||
+		(thenResources.JumpsOrReturns && elseJumpsOrReturns)
 }
