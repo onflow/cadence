@@ -1584,7 +1584,7 @@ func (checker *Checker) recordResourceInvalidation(
 	}
 
 	if checker.allowSelfResourceFieldInvalidation && accessedSelfMember != nil {
-		checker.resources.AddInvalidation(accessedSelfMember, invalidation)
+		checker.maybeAddResourceInvalidation(accessedSelfMember, invalidation)
 
 		return &recordedResourceInvalidation{
 			resource:     accessedSelfMember,
@@ -1614,7 +1614,7 @@ func (checker *Checker) recordResourceInvalidation(
 		)
 	}
 
-	checker.resources.AddInvalidation(variable, invalidation)
+	checker.maybeAddResourceInvalidation(variable, invalidation)
 
 	return &recordedResourceInvalidation{
 		resource:     variable,
@@ -2478,6 +2478,16 @@ func (checker *Checker) declareGlobalRanges() {
 	checker.Elaboration.GlobalTypes.Foreach(addRange)
 
 	checker.Elaboration.GlobalValues.Foreach(addRange)
+}
+
+func (checker *Checker) maybeAddResourceInvalidation(resource interface{}, invalidation ResourceInvalidation) {
+	functionActivation := checker.functionActivations.Current()
+
+	if functionActivation.ReturnInfo.IsUnreachable() {
+		return
+	}
+
+	checker.resources.AddInvalidation(resource, invalidation)
 }
 
 func wrapWithOptionalIfNotNil(typ Type) Type {

@@ -110,7 +110,12 @@ func (checker *Checker) VisitBreakStatement(statement *ast.BreakStatement) ast.R
 				Range:            ast.NewRangeFromPositioned(statement),
 			},
 		)
+		return nil
 	}
+
+	functionActivation := checker.functionActivations.Current()
+	checker.resources.JumpsOrReturns = true
+	functionActivation.ReturnInfo.DefinitelyJumped = true
 
 	return nil
 }
@@ -126,7 +131,12 @@ func (checker *Checker) VisitContinueStatement(statement *ast.ContinueStatement)
 				Range:            ast.NewRangeFromPositioned(statement),
 			},
 		)
+		return nil
 	}
+
+	functionActivation := checker.functionActivations.Current()
+	checker.resources.JumpsOrReturns = true
+	functionActivation.ReturnInfo.DefinitelyJumped = true
 
 	return nil
 }
