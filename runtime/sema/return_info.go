@@ -19,25 +19,22 @@
 package sema
 
 type ReturnInfo struct {
-	MaybeReturned      bool
-	DefinitelyReturned bool
-	MaybeJumped        bool
-	DefinitelyHalted   bool
-	DefinitelyJumped   bool
+	// MaybeJumpedOrReturned indicates that the (branch of) the function
+	// contains a potentially taken return, break, or continue statement
+	MaybeJumpedOrReturned bool
+	DefinitelyReturned    bool
+	DefinitelyHalted      bool
+	DefinitelyJumped      bool
 }
 
 func (ri *ReturnInfo) MergeBranches(thenReturnInfo *ReturnInfo, elseReturnInfo *ReturnInfo) {
-	ri.MaybeReturned = ri.MaybeReturned ||
-		thenReturnInfo.MaybeReturned ||
-		elseReturnInfo.MaybeReturned
+	ri.MaybeJumpedOrReturned = ri.MaybeJumpedOrReturned ||
+		thenReturnInfo.MaybeJumpedOrReturned ||
+		elseReturnInfo.MaybeJumpedOrReturned
 
 	ri.DefinitelyReturned = ri.DefinitelyReturned ||
 		(thenReturnInfo.DefinitelyReturned &&
 			elseReturnInfo.DefinitelyReturned)
-
-	ri.MaybeJumped = ri.MaybeJumped ||
-		thenReturnInfo.MaybeJumped ||
-		elseReturnInfo.MaybeJumped
 
 	ri.DefinitelyJumped = ri.DefinitelyJumped ||
 		(thenReturnInfo.DefinitelyJumped &&
