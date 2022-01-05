@@ -5402,7 +5402,7 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("switch-case: break in one case", func(t *testing.T) {
+	t.Run("switch-case: destroy missing in default case", func(t *testing.T) {
 
 		t.Parallel()
 
