@@ -22,6 +22,7 @@ type ReturnInfo struct {
 	MaybeReturned      bool
 	DefinitelyReturned bool
 	DefinitelyHalted   bool
+	DefinitelyJumped   bool
 }
 
 func (ri *ReturnInfo) MergeBranches(thenReturnInfo *ReturnInfo, elseReturnInfo *ReturnInfo) {
@@ -33,6 +34,10 @@ func (ri *ReturnInfo) MergeBranches(thenReturnInfo *ReturnInfo, elseReturnInfo *
 		(thenReturnInfo.DefinitelyReturned &&
 			elseReturnInfo.DefinitelyReturned)
 
+	ri.DefinitelyJumped = ri.DefinitelyJumped ||
+		(thenReturnInfo.DefinitelyJumped &&
+			elseReturnInfo.DefinitelyJumped)
+
 	ri.DefinitelyHalted = ri.DefinitelyHalted ||
 		(thenReturnInfo.DefinitelyHalted &&
 			elseReturnInfo.DefinitelyHalted)
@@ -42,4 +47,10 @@ func (ri *ReturnInfo) Clone() *ReturnInfo {
 	result := &ReturnInfo{}
 	*result = *ri
 	return result
+}
+
+func (ri *ReturnInfo) IsUnreachable() bool {
+	return ri.DefinitelyReturned ||
+		ri.DefinitelyHalted ||
+		ri.DefinitelyJumped
 }
