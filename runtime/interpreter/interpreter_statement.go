@@ -234,7 +234,10 @@ func (interpreter *Interpreter) VisitSwitchStatement(switchStatement *ast.Switch
 
 		getLocationRange := locationRangeGetter(interpreter.Location, switchCase.Expression)
 
-		if ok && testValue.Equal(interpreter, getLocationRange, caseValue) {
+		if !ok {
+			continue
+		}
+		if testValue.Equal(interpreter, getLocationRange, caseValue) {
 			return runStatements()
 		}
 
