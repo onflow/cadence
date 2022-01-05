@@ -275,8 +275,7 @@ func (checker *Checker) visitMemberExpressionAssignment(
 
 			// NOTE: assignment can still be considered definitive if the function maybe halted
 
-			if !functionActivation.ReturnInfo.MaybeReturned &&
-				!functionActivation.ReturnInfo.MaybeJumped {
+			if !functionActivation.ReturnInfo.MaybeJumpedOrReturned {
 
 				// If the field is constant and it has already previously been
 				// initialized, report an error for the repeated assignment
