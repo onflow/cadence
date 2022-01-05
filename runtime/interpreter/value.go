@@ -763,7 +763,10 @@ func (v *StringValue) GetMember(interpreter *Interpreter, _ func() LocationRange
 	case "concat":
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				otherArray := invocation.Arguments[0].(*StringValue)
+				otherArray, ok := invocation.Arguments[0].(*StringValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
 				return v.Concat(otherArray)
 			},
 			sema.StringTypeConcatFunctionType,
@@ -772,8 +775,11 @@ func (v *StringValue) GetMember(interpreter *Interpreter, _ func() LocationRange
 	case "slice":
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				from := invocation.Arguments[0].(IntValue)
-				to := invocation.Arguments[1].(IntValue)
+				from, fromOk := invocation.Arguments[0].(IntValue)
+				to, toOk := invocation.Arguments[1].(IntValue)
+				if !fromOk || !toOk {
+					panic(errors.NewUnreachableError())
+				}
 				return v.Slice(from, to, invocation.GetLocationRange)
 			},
 			sema.StringTypeSliceFunctionType,
@@ -1281,7 +1287,10 @@ func (v *ArrayValue) RemoveLast(interpreter *Interpreter, getLocationRange func(
 
 func (v *ArrayValue) Contains(interpreter *Interpreter, getLocationRange func() LocationRange, needleValue Value) BoolValue {
 
-	needleEquatable := needleValue.(EquatableValue)
+	needleEquatable, ok := needleValue.(EquatableValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
 
 	var result bool
 	v.Iterate(func(element Value) (resume bool) {
@@ -1320,7 +1329,10 @@ func (v *ArrayValue) GetMember(inter *Interpreter, _ func() LocationRange, name 
 	case "appendAll":
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				otherArray := invocation.Arguments[0].(*ArrayValue)
+				otherArray, ok := invocation.Arguments[0].(*ArrayValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
 				v.AppendAll(
 					invocation.Interpreter,
 					invocation.GetLocationRange,
@@ -1336,7 +1348,10 @@ func (v *ArrayValue) GetMember(inter *Interpreter, _ func() LocationRange, name 
 	case "concat":
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				otherArray := invocation.Arguments[0].(*ArrayValue)
+				otherArray, ok := invocation.Arguments[0].(*ArrayValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
 				return v.Concat(
 					invocation.Interpreter,
 					invocation.GetLocationRange,
@@ -1654,7 +1669,8 @@ func (v *ArrayValue) GetOwner() common.Address {
 
 func (v *ArrayValue) SemaType(interpreter *Interpreter) sema.ArrayType {
 	if v.semaType == nil {
-		v.semaType = interpreter.MustConvertStaticToSemaType(v.Type).(sema.ArrayType)
+		// this function will panic already if this conversion fails
+		v.semaType, _ = interpreter.MustConvertStaticToSemaType(v.Type).(sema.ArrayType)
 	}
 	return v.semaType
 }
@@ -1722,7 +1738,10 @@ func getNumberValueMember(v NumberValue, name string, typ sema.Type) Value {
 	case sema.NumericTypeSaturatingAddFunctionName:
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
+				other, ok := invocation.Arguments[0].(NumberValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
 				return v.SaturatingPlus(other)
 			},
 			&sema.FunctionType{
@@ -1735,7 +1754,10 @@ func getNumberValueMember(v NumberValue, name string, typ sema.Type) Value {
 	case sema.NumericTypeSaturatingSubtractFunctionName:
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
+				other, ok := invocation.Arguments[0].(NumberValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
 				return v.SaturatingMinus(other)
 			},
 			&sema.FunctionType{
@@ -1748,7 +1770,10 @@ func getNumberValueMember(v NumberValue, name string, typ sema.Type) Value {
 	case sema.NumericTypeSaturatingMultiplyFunctionName:
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
+				other, ok := invocation.Arguments[0].(NumberValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
 				return v.SaturatingMul(other)
 			},
 			&sema.FunctionType{
@@ -1761,7 +1786,10 @@ func getNumberValueMember(v NumberValue, name string, typ sema.Type) Value {
 	case sema.NumericTypeSaturatingDivideFunctionName:
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
+				other, ok := invocation.Arguments[0].(NumberValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
 				return v.SaturatingDiv(other)
 			},
 			&sema.FunctionType{
@@ -10437,7 +10465,14 @@ func (v Fix64Value) Mod(other NumberValue) NumberValue {
 	}
 
 	// v - int(v/o) * o
-	quotient := v.Div(o).(Fix64Value)
+	quotient, ok := v.Div(o).(Fix64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMod,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
 	truncatedQuotient := (int64(quotient) / sema.Fix64Factor) * sema.Fix64Factor
 	return v.Minus(Fix64Value(truncatedQuotient).Mul(o))
 }
@@ -10842,7 +10877,14 @@ func (v UFix64Value) Mod(other NumberValue) NumberValue {
 	}
 
 	// v - int(v/o) * o
-	quotient := v.Div(o).(UFix64Value)
+	quotient, ok := v.Div(o).(UFix64Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMod,
+			LeftType:  v.StaticType(),
+			RightType: other.StaticType(),
+		})
+	}
 	truncatedQuotient := (uint64(quotient) / sema.Fix64Factor) * sema.Fix64Factor
 	return v.Minus(UFix64Value(truncatedQuotient).Mul(o))
 }
@@ -12704,7 +12746,8 @@ func (v *DictionaryValue) StorageID() atree.StorageID {
 
 func (v *DictionaryValue) SemaType(interpreter *Interpreter) *sema.DictionaryType {
 	if v.semaType == nil {
-		v.semaType = interpreter.MustConvertStaticToSemaType(v.Type).(*sema.DictionaryType)
+		// this function will panic already if this conversion fails
+		v.semaType, _ = interpreter.MustConvertStaticToSemaType(v.Type).(*sema.DictionaryType)
 	}
 	return v.semaType
 }
@@ -12944,8 +12987,14 @@ func (v *SomeValue) GetMember(inter *Interpreter, _ func() LocationRange, name s
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
 
-				transformFunction := invocation.Arguments[0].(FunctionValue)
-				transformFunctionType := invocation.ArgumentTypes[0].(*sema.FunctionType)
+				transformFunction, ok := invocation.Arguments[0].(FunctionValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+				transformFunctionType, typeOk := invocation.ArgumentTypes[0].(*sema.FunctionType)
+				if !typeOk {
+					panic(errors.NewUnreachableError())
+				}
 				valueType := transformFunctionType.Parameters[0].TypeAnnotation.Type
 
 				transformInvocation := Invocation{
@@ -13969,7 +14018,10 @@ func accountGetCapabilityFunction(
 	return NewHostFunctionValue(
 		func(invocation Invocation) Value {
 
-			path := invocation.Arguments[0].(PathValue)
+			path, pathOk := invocation.Arguments[0].(PathValue)
+			if !pathOk {
+				panic(errors.NewUnreachableError())
+			}
 			pathDynamicType := path.DynamicType(invocation.Interpreter, SeenReferences{})
 			if !invocation.Interpreter.IsSubType(pathDynamicType, pathType) {
 				panic(TypeMismatchError{
@@ -13984,7 +14036,8 @@ func accountGetCapabilityFunction(
 			typeParameterPair := invocation.TypeParameterTypes.Oldest()
 			if typeParameterPair != nil {
 				ty := typeParameterPair.Value
-				borrowType = ty.(*sema.ReferenceType)
+				// we handle the nil case for this below
+				borrowType, _ = ty.(*sema.ReferenceType)
 			}
 
 			var borrowStaticType StaticType
@@ -14260,7 +14313,8 @@ func (v *CapabilityValue) Walk(walkChild func(Value)) {
 func (v *CapabilityValue) DynamicType(interpreter *Interpreter, _ SeenReferences) DynamicType {
 	var borrowType *sema.ReferenceType
 	if v.BorrowType != nil {
-		borrowType = interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
+		// this function will panic already if this conversion fails
+		borrowType, _ = interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
 	}
 
 	return CapabilityDynamicType{
@@ -14296,14 +14350,16 @@ func (v *CapabilityValue) GetMember(interpreter *Interpreter, _ func() LocationR
 	case "borrow":
 		var borrowType *sema.ReferenceType
 		if v.BorrowType != nil {
-			borrowType = interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
+			// this function will panic already if this conversion fails
+			borrowType, _ = interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
 		}
 		return interpreter.capabilityBorrowFunction(v.Address, v.Path, borrowType)
 
 	case "check":
 		var borrowType *sema.ReferenceType
 		if v.BorrowType != nil {
-			borrowType = interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
+			// this function will panic already if this conversion fails
+			borrowType, _ = interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
 		}
 		return interpreter.capabilityCheckFunction(v.Address, v.Path, borrowType)
 
@@ -14612,10 +14668,14 @@ func NewPublicKeyValue(
 
 var publicKeyVerifyFunction = NewHostFunctionValue(
 	func(invocation Invocation) Value {
-		signatureValue := invocation.Arguments[0].(*ArrayValue)
-		signedDataValue := invocation.Arguments[1].(*ArrayValue)
-		domainSeparationTag := invocation.Arguments[2].(*StringValue)
-		hashAlgo := invocation.Arguments[3].(*CompositeValue)
+		signatureValue, signatureValueOk := invocation.Arguments[0].(*ArrayValue)
+		signedDataValue, signedDataValueOk := invocation.Arguments[1].(*ArrayValue)
+		domainSeparationTag, tagOk := invocation.Arguments[2].(*StringValue)
+		hashAlgo, algoOk := invocation.Arguments[3].(*CompositeValue)
+
+		if !signatureValueOk || !signedDataValueOk || !tagOk || !algoOk {
+			panic(errors.NewUnreachableError())
+		}
 		publicKey := invocation.Self
 
 		interpreter := invocation.Interpreter
@@ -14643,7 +14703,10 @@ var publicKeyVerifyFunction = NewHostFunctionValue(
 
 var publicKeyVerifyPoPFunction = NewHostFunctionValue(
 	func(invocation Invocation) (v Value) {
-		signatureValue := invocation.Arguments[0].(*ArrayValue)
+		signatureValue, ok := invocation.Arguments[0].(*ArrayValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
 		publicKey := invocation.Self
 
 		interpreter := invocation.Interpreter
@@ -14658,7 +14721,10 @@ var publicKeyVerifyPoPFunction = NewHostFunctionValue(
 
 		bytesArray := make([]byte, 0, signatureValue.Count())
 		signatureValue.Iterate(func(element Value) (resume bool) {
-			b := element.(UInt8Value)
+			b, ok := element.(UInt8Value)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
 			bytesArray = append(bytesArray, byte(b))
 			return true
 		})
