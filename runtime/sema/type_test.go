@@ -1083,7 +1083,7 @@ func TestCommonSuperType(t *testing.T) {
 					stringArray,
 					&VariableSizedType{Type: BoolType},
 				},
-				expectedSuperType: AnyStructType,
+				expectedSuperType: &VariableSizedType{Type: AnyStructType},
 			},
 			{
 				name: "simple-typed array & resource array",
@@ -1143,7 +1143,9 @@ func TestCommonSuperType(t *testing.T) {
 						Type: Int8Type,
 					},
 				},
-				expectedSuperType: AnyStructType,
+				expectedSuperType: &VariableSizedType{
+					Type: SignedIntegerType,
+				},
 			},
 			{
 				name: "arrays with never",
@@ -1203,7 +1205,10 @@ func TestCommonSuperType(t *testing.T) {
 					stringStringDictionary,
 					stringBoolDictionary,
 				},
-				expectedSuperType: AnyStructType,
+				expectedSuperType: &DictionaryType{
+					KeyType:   StringType,
+					ValueType: AnyStructType,
+				},
 			},
 			{
 				name: "dictionary & non-dictionary",
@@ -1518,7 +1523,8 @@ func TestCommonSuperType(t *testing.T) {
 				unsignedIntegerTypeMask,
 				unsignedFixedPointTypeMask,
 
-				compositeTypeMask:
+				compositeTypeMask,
+				constantSizedTypeMask:
 				continue
 			}
 
