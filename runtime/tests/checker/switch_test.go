@@ -356,3 +356,23 @@ func TestCheckInvalidSwitchStatementMissingStatements(t *testing.T) {
 
 	assert.IsType(t, &sema.MissingSwitchCaseStatementsError{}, errs[0])
 }
+
+func TestCheckSwitchStatementWithUnreachableReturn(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test(_ x: Int): Int {
+          switch x {
+          case 1:
+              break
+              return 1
+          default:
+              return 2
+          }
+      }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+	assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+}
