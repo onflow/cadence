@@ -341,7 +341,13 @@ func init() {
 	defineExpr(literalExpr{
 		tokenType: lexer.TokenBinaryIntegerLiteral,
 		nullDenotation: func(p *parser, token lexer.Token) ast.Expression {
-			literal := token.Value.(string)
+			literal, ok := token.Value.(string)
+			if !ok {
+				panic(fmt.Errorf(
+					"value for token %s was not a string",
+					lexer.TokenBinaryIntegerLiteral,
+				))
+			}
 			return parseIntegerLiteral(
 				p,
 				literal,
@@ -355,7 +361,13 @@ func init() {
 	defineExpr(literalExpr{
 		tokenType: lexer.TokenOctalIntegerLiteral,
 		nullDenotation: func(p *parser, token lexer.Token) ast.Expression {
-			literal := token.Value.(string)
+			literal, ok := token.Value.(string)
+			if !ok {
+				panic(fmt.Errorf(
+					"value for token %s was not a string",
+					lexer.TokenOctalIntegerLiteral,
+				))
+			}
 			return parseIntegerLiteral(
 				p,
 				literal,
@@ -369,7 +381,13 @@ func init() {
 	defineExpr(literalExpr{
 		tokenType: lexer.TokenDecimalIntegerLiteral,
 		nullDenotation: func(p *parser, token lexer.Token) ast.Expression {
-			literal := token.Value.(string)
+			literal, ok := token.Value.(string)
+			if !ok {
+				panic(fmt.Errorf(
+					"value for token %s was not a string",
+					lexer.TokenDecimalIntegerLiteral,
+				))
+			}
 			return parseIntegerLiteral(
 				p,
 				literal,
@@ -383,7 +401,13 @@ func init() {
 	defineExpr(literalExpr{
 		tokenType: lexer.TokenHexadecimalIntegerLiteral,
 		nullDenotation: func(p *parser, token lexer.Token) ast.Expression {
-			literal := token.Value.(string)
+			literal, ok := token.Value.(string)
+			if !ok {
+				panic(fmt.Errorf(
+					"value for token %s was not a string",
+					lexer.TokenHexadecimalIntegerLiteral,
+				))
+			}
 			return parseIntegerLiteral(
 				p,
 				literal,
@@ -397,7 +421,13 @@ func init() {
 	defineExpr(literalExpr{
 		tokenType: lexer.TokenUnknownBaseIntegerLiteral,
 		nullDenotation: func(p *parser, token lexer.Token) ast.Expression {
-			literal := token.Value.(string)
+			literal, ok := token.Value.(string)
+			if !ok {
+				panic(fmt.Errorf(
+					"value for token %s was not a string",
+					lexer.TokenUnknownBaseIntegerLiteral,
+				))
+			}
 			return parseIntegerLiteral(
 				p,
 				literal,
@@ -1281,7 +1311,13 @@ func defaultExprMetaLeftDenotation(
 func exprLeftBindingPower(token lexer.Token) int {
 	tokenType := token.Type
 	if tokenType == lexer.TokenIdentifier {
-		identifier := token.Value.(string)
+		identifier, ok := token.Value.(string)
+		if !ok {
+			panic(fmt.Errorf(
+				"value for token %s was not a string",
+				tokenType,
+			))
+		}
 		return exprIdentifierLeftBindingPowers[identifier]
 	}
 	return exprLeftBindingPowers[tokenType]
