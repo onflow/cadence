@@ -591,10 +591,13 @@ func findSuperTypeFromLowerMask(joinedTypeTag TypeTag, types []Type) Type {
 		return prevType
 
 	// All derived types goes here.
-	case constantSizedTypeMask,
-		variableSizedTypeMask,
-		dictionaryTypeMask,
-		referenceTypeMask,
+	case constantSizedTypeMask:
+		return commonSuperTypeOfConstantSizedArrays(types)
+	case variableSizedTypeMask:
+		return commonSuperTypeOfVariableSizedArrays(types)
+	case dictionaryTypeMask:
+		return commonSuperTypeOfDictionaries(types)
+	case referenceTypeMask,
 		genericTypeMask,
 		functionTypeMask,
 		interfaceTypeMask:
@@ -650,6 +653,123 @@ func getSuperTypeOfDerivedTypes(types []Type) Type {
 	}
 
 	return prevType
+}
+
+func commonSuperTypeOfVariableSizedArrays(types []Type) Type {
+	// We reach here if all types are variable-sized arrays.
+	// Therefore, decide the common supertype based on the element types.
+
+	elementTypes := make([]Type, 0)
+
+	for _, typ := range types {
+		// 'Never' type doesn't affect the supertype.
+		// Hence, ignore them
+		if typ == NeverType {
+			continue
+		}
+
+		arrayType, ok := typ.(*VariableSizedType)
+		if !ok {
+			panic(fmt.Errorf("expected variable-sized array type, found %s", typ))
+		}
+
+		elementTypes = append(elementTypes, arrayType.ElementType(false))
+	}
+
+	elementSuperType := LeastCommonSuperType(elementTypes...)
+
+	if elementSuperType == InvalidType {
+		return InvalidType
+	}
+
+	return &VariableSizedType{
+		Type: elementSuperType,
+	}
+}
+
+func commonSuperTypeOfConstantSizedArrays(types []Type) Type {
+	// We reach here if all types are constant-sized arrays.
+	// Therefore, decide the common supertype based on the element types.
+
+	elementTypes := make([]Type, 0)
+	var prevType *ConstantSizedType
+
+	for _, typ := range types {
+		// 'Never' type doesn't affect the supertype.
+		// Hence, ignore them
+		if typ == NeverType {
+			continue
+		}
+
+		arrayType, ok := typ.(*ConstantSizedType)
+		if !ok {
+			panic(fmt.Errorf("expected constant-sized array type, found %s", typ))
+		}
+
+		elementTypes = append(elementTypes, arrayType.ElementType(false))
+
+		if prevType == nil {
+			prevType = arrayType
+			continue
+		}
+
+		// Arrays with different sizes are not covariant
+		if arrayType.Size != prevType.Size {
+			return commonSuperTypeOfHeterogeneousTypes(types)
+		}
+	}
+
+	elementSuperType := LeastCommonSuperType(elementTypes...)
+
+	if elementSuperType == InvalidType {
+		return InvalidType
+	}
+
+	return &ConstantSizedType{
+		Type: elementSuperType,
+		Size: prevType.Size,
+	}
+}
+
+func commonSuperTypeOfDictionaries(types []Type) Type {
+	// We reach here if all types are dictionary types.
+	// Therefore, decide the common supertype based on the key types and value types.
+
+	keyTypes := make([]Type, 0)
+	valueTypes := make([]Type, 0)
+
+	for _, typ := range types {
+		// 'Never' type doesn't affect the supertype.
+		// Hence, ignore them
+		if typ == NeverType {
+			continue
+		}
+
+		dictionaryType, ok := typ.(*DictionaryType)
+		if !ok {
+			panic(fmt.Errorf("expected dictionary type, found %s", typ))
+		}
+
+		valueTypes = append(valueTypes, dictionaryType.ValueType)
+		keyTypes = append(keyTypes, dictionaryType.KeyType)
+	}
+
+	keySuperType := LeastCommonSuperType(keyTypes...)
+	valueSuperType := LeastCommonSuperType(valueTypes...)
+
+	if keySuperType == InvalidType ||
+		valueSuperType == InvalidType {
+		return InvalidType
+	}
+
+	if !IsValidDictionaryKeyType(keySuperType) {
+		return commonSuperTypeOfHeterogeneousTypes(types)
+	}
+
+	return &DictionaryType{
+		KeyType:   keySuperType,
+		ValueType: valueSuperType,
+	}
 }
 
 func commonSuperTypeOfHeterogeneousTypes(types []Type) Type {
