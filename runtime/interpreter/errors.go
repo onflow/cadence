@@ -509,7 +509,6 @@ func (e NonStorableValueError) Error() string {
 	)
 }
 
-// InvalidOperandsError
 // NonStorableStaticTypeError
 //
 type NonStorableStaticTypeError struct {
