@@ -22,6 +22,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/goleak"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -32,10 +33,10 @@ func TestMain(m *testing.M) {
 	goleak.VerifyTestMain(m)
 }
 
-func withTokens(tokenChan TokenStream, fn func([]Token)) {
+func withTokens(tokenStream TokenStream, fn func([]Token)) {
 	tokens := make([]Token, 0)
 	for {
-		token := tokenChan.Next()
+		token := tokenStream.Next()
 		tokens = append(tokens, token)
 		if token.Is(TokenEOF) {
 			fn(tokens)
@@ -1842,4 +1843,168 @@ func TestLexLineComment(t *testing.T) {
 			},
 		)
 	})
+}
+
+func TestRevert(t *testing.T) {
+
+	t.Parallel()
+
+	tokenStream := Lex("1 2 3")
+
+	// Assert all tokens
+
+	assert.Equal(t,
+		Token{
+			Type:  TokenDecimalIntegerLiteral,
+			Value: "1",
+			Range: ast.Range{
+				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+			},
+		},
+		tokenStream.Next(),
+	)
+
+	assert.Equal(t,
+		Token{
+			Type:  TokenSpace,
+			Value: Space{String: " "},
+			Range: ast.Range{
+				StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+				EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+			},
+		},
+		tokenStream.Next(),
+	)
+
+	twoCursor := tokenStream.Cursor()
+
+	assert.Equal(t,
+		Token{
+			Type:  TokenDecimalIntegerLiteral,
+			Value: "2",
+			Range: ast.Range{
+				StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+				EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+			},
+		},
+		tokenStream.Next(),
+	)
+
+	assert.Equal(t,
+		Token{
+			Type:  TokenSpace,
+			Value: Space{String: " "},
+			Range: ast.Range{
+				StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+				EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+			},
+		},
+		tokenStream.Next(),
+	)
+
+	assert.Equal(t,
+		Token{
+			Type:  TokenDecimalIntegerLiteral,
+			Value: "3",
+			Range: ast.Range{
+				StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+				EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+			},
+		},
+		tokenStream.Next(),
+	)
+
+	// Assert EOF keeps on being returned for Next()
+	// at the end of the stream
+
+	assert.Equal(t,
+		Token{
+			Type: TokenEOF,
+			Range: ast.Range{
+				StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+				EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+			},
+		},
+		tokenStream.Next(),
+	)
+
+	assert.Equal(t,
+		Token{
+			Type: TokenEOF,
+			Range: ast.Range{
+				StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+				EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+			},
+		},
+		tokenStream.Next(),
+	)
+
+	// Revert back to token '2'
+
+	tokenStream.Revert(twoCursor)
+
+	// Re-assert tokens
+
+	assert.Equal(t,
+		Token{
+			Type:  TokenDecimalIntegerLiteral,
+			Value: "2",
+			Range: ast.Range{
+				StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+				EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+			},
+		},
+		tokenStream.Next(),
+	)
+
+	assert.Equal(t,
+		Token{
+			Type:  TokenSpace,
+			Value: Space{String: " "},
+			Range: ast.Range{
+				StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+				EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+			},
+		},
+		tokenStream.Next(),
+	)
+
+	assert.Equal(t,
+		Token{
+			Type:  TokenDecimalIntegerLiteral,
+			Value: "3",
+			Range: ast.Range{
+				StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+				EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+			},
+		},
+		tokenStream.Next(),
+	)
+
+	// Re-assert EOF keeps on being returned for Next()
+	// at the end of the stream
+
+	assert.Equal(t,
+		Token{
+			Type: TokenEOF,
+			Range: ast.Range{
+				StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+				EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+			},
+		},
+		tokenStream.Next(),
+	)
+
+	assert.Equal(t,
+		Token{
+			Type: TokenEOF,
+			Range: ast.Range{
+				StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+				EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+			},
+		},
+		tokenStream.Next(),
+	)
+
 }
