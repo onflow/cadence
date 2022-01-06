@@ -241,6 +241,8 @@ type Storage interface {
 	CheckHealth() error
 }
 
+type ReferencedValues map[atree.StorageID]map[ReferenceTrackedValue]struct{}
+
 type Interpreter struct {
 	Program                        *Program
 	Location                       common.Location
@@ -270,6 +272,8 @@ type Interpreter struct {
 	statement                      ast.Statement
 	atreeValueValidationEnabled    bool
 	atreeStorageValidationEnabled  bool
+	// TODO: ideally this would be a weak map, but Go has no weak references
+	referencedValues ReferencedValues
 }
 
 type Option func(*Interpreter) error
@@ -484,6 +488,15 @@ func withTypeCodes(typeCodes TypeCodes) Option {
 	}
 }
 
+// withReferencedValues returns an interpreter option which sets the referenced values.
+//
+func withReferencedValues(referencedValues ReferencedValues) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.referencedValues = referencedValues
+		return nil
+	}
+}
+
 // Create a base-activation so that it can be reused across all interpreters.
 //
 var baseActivation = func() *VariableActivation {
@@ -513,6 +526,7 @@ func NewInterpreter(program *Program, location common.Location, options ...Optio
 			InterfaceCodes:       map[sema.TypeID]WrapperCode{},
 			TypeRequirementCodes: map[sema.TypeID]WrapperCode{},
 		}),
+		withReferencedValues(map[atree.StorageID]map[ReferenceTrackedValue]struct{}{}),
 	}
 
 	for _, option := range defaultOptions {
@@ -1092,7 +1106,7 @@ func (interpreter *Interpreter) visitFunctionBody(
 	}
 
 	// If there is a return type, declare the constant `result`.
-	// If it is a resource type, the constant has the same type as a referecne to the return type.
+	// If it is a resource type, the constant has the same type as a reference to the return type.
 	// If it is not a resource type, the constant has the same type as the return type.
 
 	if returnType != sema.VoidType {
@@ -2368,6 +2382,7 @@ func (interpreter *Interpreter) NewSubInterpreter(
 		WithAtreeValueValidationEnabled(interpreter.atreeValueValidationEnabled),
 		WithAtreeStorageValidationEnabled(interpreter.atreeStorageValidationEnabled),
 		withTypeCodes(interpreter.typeCodes),
+		withReferencedValues(interpreter.referencedValues),
 		WithPublicAccountHandlerFunc(interpreter.publicAccountHandler),
 		WithPublicKeyValidationHandler(interpreter.PublicKeyValidationHandler),
 		WithSignatureVerificationHandler(interpreter.SignatureVerificationHandler),
@@ -3773,5 +3788,29 @@ func (interpreter *Interpreter) ValidateAtreeValue(v atree.Value) {
 			}
 		}
 	}
+}
 
+func (interpreter *Interpreter) trackReferencedValue(id atree.StorageID, value ReferenceTrackedValue) {
+	values := interpreter.referencedValues[id]
+	if values == nil {
+		values = map[ReferenceTrackedValue]struct{}{}
+		interpreter.referencedValues[id] = values
+	}
+	values[value] = struct{}{}
+}
+
+func (interpreter *Interpreter) updateReferencedValues(
+	currentStorageID atree.StorageID,
+	newStorageID atree.StorageID,
+	updateFunc func(value Value),
+) {
+	values := interpreter.referencedValues[currentStorageID]
+	if values == nil {
+		return
+	}
+	for value := range values {
+		updateFunc(value)
+	}
+	interpreter.referencedValues[newStorageID] = values
+	interpreter.referencedValues[currentStorageID] = nil
 }

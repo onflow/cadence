@@ -728,6 +728,10 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 
 	result := interpreter.evalExpression(referenceExpression.Expression)
 
+	if result, ok := result.(ReferenceTrackedValue); ok {
+		interpreter.trackReferencedValue(result.StorageID(), result)
+	}
+
 	return &EphemeralReferenceValue{
 		Authorized:   borrowType.Authorized,
 		Value:        result,
