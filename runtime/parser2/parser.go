@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/parser2/lexer"
 )
 
@@ -142,7 +143,11 @@ func (p *parser) next() {
 
 		if token.Is(lexer.TokenError) {
 			// Report error token as error, skip.
-			err := token.Value.(error)
+			err, ok := token.Value.(error)
+			// we just checked that this is an error token
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
 			parseError, ok := err.(ParseError)
 			if !ok {
 				parseError = &SyntaxError{
@@ -260,7 +265,11 @@ func (p *parser) parseTrivia(options triviaOptions) (containsNewline bool, docSt
 	for !atEnd {
 		switch p.current.Type {
 		case lexer.TokenSpace:
-			space := p.current.Value.(lexer.Space)
+			space, ok := p.current.Value.(lexer.Space)
+			// we just checked that this is a space
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
 
 			if space.ContainsNewline {
 				containsNewline = true
@@ -285,7 +294,11 @@ func (p *parser) parseTrivia(options triviaOptions) (containsNewline bool, docSt
 
 		case lexer.TokenLineComment:
 			if options.parseDocStrings {
-				comment := p.current.Value.(string)
+				comment, ok := p.current.Value.(string)
+				if !ok {
+					// we just checked that this is a comment
+					panic(errors.NewUnreachableError())
+				}
 				if strings.HasPrefix(comment, "///") {
 					if inLineDocString {
 						docStringBuilder.WriteRune('\n')
@@ -331,7 +344,8 @@ func ParseExpression(input string) (expression ast.Expression, errors []error) {
 		expression = nil
 		return
 	}
-	expression = res.(ast.Expression)
+	// it's ok for expression to be nil here
+	expression, _ = res.(ast.Expression)
 	return
 }
 
@@ -344,7 +358,8 @@ func ParseStatements(input string) (statements []ast.Statement, errors []error) 
 		statements = nil
 		return
 	}
-	statements = res.([]ast.Statement)
+	// it's ok for statement to be nil here
+	statements, _ = res.([]ast.Statement)
 	return
 }
 
@@ -357,7 +372,8 @@ func ParseType(input string) (ty ast.Type, errors []error) {
 		ty = nil
 		return
 	}
-	ty = res.(ast.Type)
+	// it's ok for ty to be nil here
+	ty, _ = res.(ast.Type)
 	return
 }
 
@@ -370,7 +386,8 @@ func ParseDeclarations(input string) (declarations []ast.Declaration, errors []e
 		declarations = nil
 		return
 	}
-	declarations = res.([]ast.Declaration)
+	// it's ok for declarations to be nil here
+	declarations, _ = res.([]ast.Declaration)
 	return
 }
 
@@ -386,7 +403,8 @@ func ParseArgumentList(input string) (arguments ast.Arguments, errors []error) {
 		arguments = nil
 		return
 	}
-	arguments = res.([]*ast.Argument)
+	// it's ok for arguments to be nil here
+	arguments, _ = res.([]*ast.Argument)
 	return
 }
 
@@ -411,7 +429,11 @@ func ParseProgramFromTokenStream(input lexer.TokenStream) (program *ast.Program,
 		return
 	}
 
-	declarations := res.([]ast.Declaration)
+	declarations, ok := res.([]ast.Declaration)
+	if !ok {
+		program = nil
+		return
+	}
 
 	program = ast.NewProgram(declarations)
 
