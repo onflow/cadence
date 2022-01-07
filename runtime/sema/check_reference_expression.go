@@ -33,19 +33,18 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 	checker.checkInvalidInterfaceAsType(resultType, referenceExpression.Type)
 
 	var referenceType *ReferenceType
-	var targetType, referencedType Type
-	var returnType Type
+	var targetType, returnType Type
 
 	if !resultType.IsInvalidType() {
 		var ok bool
-   	// Reference expressions may reference a value which has an optional type.
-   	// For example, the result of indexing into a dictionary is an optional:
-   	//
-   	// let ints: {Int: String} = {0: "zero"}
-   	// let ref: &T? = &ints[0] as &T?   // read as (&T)?
-   	//
-   	// In this case the reference expression's type is an optional type.
-   	// Unwrap it one level to get the actual reference type
+		// Reference expressions may reference a value which has an optional type.
+		// For example, the result of indexing into a dictionary is an optional:
+		//
+		// let ints: {Int: String} = {0: "zero"}
+		// let ref: &T? = &ints[0] as &T?   // read as (&T)?
+		//
+		// In this case the reference expression's type is an optional type.
+		// Unwrap it one level to get the actual reference type
 		optType, optOk := resultType.(*OptionalType)
 		if optOk {
 			resultType = optType.Type
@@ -61,40 +60,25 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 			)
 		} else {
 			targetType = referenceType.Type
+			returnType = referenceType
 			if optOk {
 				targetType = &OptionalType{Type: targetType}
+				returnType = &OptionalType{Type: returnType}
 			}
 		}
 	}
-	returnType = referenceType
 
 	// Type-check the referenced expression
 
 	referencedExpression := referenceExpression.Expression
 
-	_, referencedType = checker.visitExpression(referencedExpression, targetType)
-
-	// Unwrap the optional one level, but not infinitely
-	if optionalReferencedType, ok := referencedType.(*OptionalType); ok {
-		// If the referenced type is optional, then the return type is optional
-		referencedType = optionalReferencedType.Type
-		returnType = &OptionalType{Type: referenceType}
-	}
-
-	if _, ok := referencedType.(*OptionalType); ok {
-		checker.report(
-			&OptionalTypeReferenceError{
-				ActualType: referencedType,
-				Range:      expressionRange(referencedExpression),
-			},
-		)
-	}
+	_, _ = checker.visitExpression(referencedExpression, targetType)
 
 	if referenceType == nil {
 		return InvalidType
 	}
 
-	checker.Elaboration.ReferenceExpressionBorrowTypes[referenceExpression] = referenceType
+	checker.Elaboration.ReferenceExpressionBorrowTypes[referenceExpression] = returnType
 
 	return returnType
 }

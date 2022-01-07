@@ -8146,13 +8146,13 @@ func TestInterpretNonStorageReferenceToOptional(t *testing.T) {
               return name
           }
 
-		  fun testNil(): String {
-			let xs: @{String: Foo} <- {}
-			let ref = (&xs["no"] as &Foo?)!
-			let name = ref.name
-			destroy xs
-			return name
-		  }
+          fun testNil(): String {
+              let xs: @{String: Foo} <- {}
+              let ref = (&xs["no"] as &Foo?)!
+              let name = ref.name
+              destroy xs
+              return name
+          }
         `,
 	)
 	t.Run("some", func(t *testing.T) {

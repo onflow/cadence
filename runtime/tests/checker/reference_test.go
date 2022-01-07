@@ -1004,12 +1004,22 @@ func TestCheckReferenceExpressionOfOptional(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheck(t, `
+		checker, err := ParseAndCheck(t, `
           let i: Int? = 1
           let ref = &i as &Int?
         `)
 
 		require.NoError(t, err)
+		refValueType := RequireGlobalValue(t, checker.Elaboration, "ref")
+
+		assert.Equal(t,
+			&sema.OptionalType{
+				Type: &sema.ReferenceType{
+					Type: sema.IntType,
+				},
+			},
+			refValueType,
+		)
 	})
 
 	t.Run("double optional", func(t *testing.T) {
@@ -1042,12 +1052,22 @@ func TestCheckReferenceExpressionOfOptional(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheck(t, `
+		checker, err := ParseAndCheck(t, `
           let i: Int = 1
           let ref = &i as &Int?
         `)
 
 		require.NoError(t, err)
+		refValueType := RequireGlobalValue(t, checker.Elaboration, "ref")
+
+		assert.Equal(t,
+			&sema.OptionalType{
+				Type: &sema.ReferenceType{
+					Type: sema.IntType,
+				},
+			},
+			refValueType,
+		)
 	})
 }
 
