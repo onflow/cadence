@@ -279,7 +279,7 @@ type Storage interface {
 	CheckHealth() error
 }
 
-type ReferencedValues map[atree.StorageID]map[ReferenceTrackedValue]struct{}
+type ReferencedResourceKindedValues map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}
 
 type Interpreter struct {
 	Program                        *Program
@@ -318,7 +318,7 @@ type Interpreter struct {
 	atreeStorageValidationEnabled  bool
 	tracingEnabled                 bool
 	// TODO: ideally this would be a weak map, but Go has no weak references
-	referencedValues ReferencedValues
+	referencedResourceKindedValues ReferencedResourceKindedValues
 }
 
 type Option func(*Interpreter) error
@@ -581,11 +581,11 @@ func withTypeCodes(typeCodes TypeCodes) Option {
 	}
 }
 
-// withReferencedValues returns an interpreter option which sets the referenced values.
+// withReferencedResourceKindedValues returns an interpreter option which sets the referenced values.
 //
-func withReferencedValues(referencedValues ReferencedValues) Option {
+func withReferencedResourceKindedValues(referencedResourceKindedValues ReferencedResourceKindedValues) Option {
 	return func(interpreter *Interpreter) error {
-		interpreter.referencedValues = referencedValues
+		interpreter.referencedResourceKindedValues = referencedResourceKindedValues
 		return nil
 	}
 }
@@ -628,7 +628,7 @@ func NewInterpreter(program *Program, location common.Location, options ...Optio
 			InterfaceCodes:       map[sema.TypeID]WrapperCode{},
 			TypeRequirementCodes: map[sema.TypeID]WrapperCode{},
 		}),
-		withReferencedValues(map[atree.StorageID]map[ReferenceTrackedValue]struct{}{}),
+		withReferencedResourceKindedValues(map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}{}),
 	}
 
 	for _, option := range defaultOptions {
@@ -2520,7 +2520,7 @@ func (interpreter *Interpreter) NewSubInterpreter(
 		WithAtreeValueValidationEnabled(interpreter.atreeValueValidationEnabled),
 		WithAtreeStorageValidationEnabled(interpreter.atreeStorageValidationEnabled),
 		withTypeCodes(interpreter.typeCodes),
-		withReferencedValues(interpreter.referencedValues),
+		withReferencedResourceKindedValues(interpreter.referencedResourceKindedValues),
 		WithPublicAccountHandler(interpreter.publicAccountHandler),
 		WithPublicKeyValidationHandler(interpreter.PublicKeyValidationHandler),
 		WithSignatureVerificationHandler(interpreter.SignatureVerificationHandler),
@@ -4371,27 +4371,30 @@ func (interpreter *Interpreter) ValidateAtreeValue(v atree.Value) {
 	}
 }
 
-func (interpreter *Interpreter) trackReferencedValue(id atree.StorageID, value ReferenceTrackedValue) {
-	values := interpreter.referencedValues[id]
+func (interpreter *Interpreter) trackReferencedResourceKindedValue(
+	id atree.StorageID,
+	value ReferenceTrackedResourceKindedValue,
+) {
+	values := interpreter.referencedResourceKindedValues[id]
 	if values == nil {
-		values = map[ReferenceTrackedValue]struct{}{}
-		interpreter.referencedValues[id] = values
+		values = map[ReferenceTrackedResourceKindedValue]struct{}{}
+		interpreter.referencedResourceKindedValues[id] = values
 	}
 	values[value] = struct{}{}
 }
 
-func (interpreter *Interpreter) updateReferencedValues(
+func (interpreter *Interpreter) updateReferencedResource(
 	currentStorageID atree.StorageID,
 	newStorageID atree.StorageID,
-	updateFunc func(value Value),
+	updateFunc func(value ReferenceTrackedResourceKindedValue),
 ) {
-	values := interpreter.referencedValues[currentStorageID]
+	values := interpreter.referencedResourceKindedValues[currentStorageID]
 	if values == nil {
 		return
 	}
-	for value := range values {
+	for value := range values { //nolint:maprangecheck
 		updateFunc(value)
 	}
-	interpreter.referencedValues[newStorageID] = values
-	interpreter.referencedValues[currentStorageID] = nil
+	interpreter.referencedResourceKindedValues[newStorageID] = values
+	interpreter.referencedResourceKindedValues[currentStorageID] = nil
 }

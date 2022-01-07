@@ -819,8 +819,8 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 
 	result := interpreter.evalExpression(referenceExpression.Expression)
 
-	if result, ok := result.(ReferenceTrackedValue); ok {
-		interpreter.trackReferencedValue(result.StorageID(), result)
+	if result, ok := result.(ReferenceTrackedResourceKindedValue); ok {
+		interpreter.trackReferencedResourceKindedValue(result.StorageID(), result)
 	}
 
 	return &EphemeralReferenceValue{
