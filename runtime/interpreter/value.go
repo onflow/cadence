@@ -111,6 +111,8 @@ type Value interface {
 		storable atree.Storable,
 	) Value
 	DeepRemove(interpreter *Interpreter)
+	// Clone returns a new value that is equal to this value.
+	// NOTE: not used by interpreter, but used externally (e.g. state migration)
 	Clone(interpreter *Interpreter) Value
 }
 
@@ -674,10 +676,27 @@ func (v *StringValue) Concat(other *StringValue) Value {
 
 func (v *StringValue) Slice(from IntValue, to IntValue, getLocationRange func() LocationRange) Value {
 	fromIndex := from.ToInt()
-	v.checkBoundsInclusiveLength(fromIndex, getLocationRange)
 
 	toIndex := to.ToInt()
-	v.checkBoundsInclusiveLength(toIndex, getLocationRange)
+
+	length := v.Length()
+
+	if fromIndex < 0 || fromIndex > length || toIndex < 0 || toIndex > length {
+		panic(StringSliceIndicesError{
+			FromIndex:     fromIndex,
+			UpToIndex:     toIndex,
+			Length:        length,
+			LocationRange: getLocationRange(),
+		})
+	}
+
+	if fromIndex > toIndex {
+		panic(InvalidSliceIndexError{
+			FromIndex:     fromIndex,
+			UpToIndex:     toIndex,
+			LocationRange: getLocationRange(),
+		})
+	}
 
 	if fromIndex == toIndex {
 		return NewStringValue("")
@@ -704,18 +723,6 @@ func (v *StringValue) checkBounds(index int, getLocationRange func() LocationRan
 	length := v.Length()
 
 	if index < 0 || index >= length {
-		panic(StringIndexOutOfBoundsError{
-			Index:         index,
-			Length:        length,
-			LocationRange: getLocationRange(),
-		})
-	}
-}
-
-func (v *StringValue) checkBoundsInclusiveLength(index int, getLocationRange func() LocationRange) {
-	length := v.Length()
-
-	if index < 0 || index > length {
 		panic(StringIndexOutOfBoundsError{
 			Index:         index,
 			Length:        length,
@@ -1143,6 +1150,18 @@ func (v *ArrayValue) handleIndexOutOfBoundsError(err error, index int, getLocati
 }
 
 func (v *ArrayValue) Get(interpreter *Interpreter, getLocationRange func() LocationRange, index int) Value {
+
+	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
+	// atree's Array.Get function will check the upper bound and report an atree.IndexOutOfBoundsError
+
+	if index < 0 {
+		panic(ArrayIndexOutOfBoundsError{
+			Index:         index,
+			Size:          v.Count(),
+			LocationRange: getLocationRange(),
+		})
+	}
+
 	storable, err := v.array.Get(uint64(index))
 	if err != nil {
 		v.handleIndexOutOfBoundsError(err, index, getLocationRange)
@@ -1159,6 +1178,17 @@ func (v *ArrayValue) SetKey(interpreter *Interpreter, getLocationRange func() Lo
 }
 
 func (v *ArrayValue) Set(interpreter *Interpreter, getLocationRange func() LocationRange, index int, element Value) {
+
+	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
+	// atree's Array.Set function will check the upper bound and report an atree.IndexOutOfBoundsError
+
+	if index < 0 {
+		panic(ArrayIndexOutOfBoundsError{
+			Index:         index,
+			Size:          v.Count(),
+			LocationRange: getLocationRange(),
+		})
+	}
 
 	interpreter.checkContainerMutation(v.Type.ElementType(), element, getLocationRange)
 
@@ -1233,6 +1263,17 @@ func (v *ArrayValue) InsertKey(interpreter *Interpreter, getLocationRange func()
 
 func (v *ArrayValue) Insert(interpreter *Interpreter, getLocationRange func() LocationRange, index int, element Value) {
 
+	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
+	// atree's Array.Insert function will check the upper bound and report an atree.IndexOutOfBoundsError
+
+	if index < 0 {
+		panic(ArrayIndexOutOfBoundsError{
+			Index:         index,
+			Size:          v.Count(),
+			LocationRange: getLocationRange(),
+		})
+	}
+
 	interpreter.checkContainerMutation(v.Type.ElementType(), element, getLocationRange)
 
 	element = element.Transfer(
@@ -1258,6 +1299,18 @@ func (v *ArrayValue) RemoveKey(interpreter *Interpreter, getLocationRange func()
 }
 
 func (v *ArrayValue) Remove(interpreter *Interpreter, getLocationRange func() LocationRange, index int) Value {
+
+	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
+	// atree's Array.Remove function will check the upper bound and report an atree.IndexOutOfBoundsError
+
+	if index < 0 {
+		panic(ArrayIndexOutOfBoundsError{
+			Index:         index,
+			Size:          v.Count(),
+			LocationRange: getLocationRange(),
+		})
+	}
+
 	storable, err := v.array.Remove(uint64(index))
 	if err != nil {
 		v.handleIndexOutOfBoundsError(err, index, getLocationRange)
@@ -1432,6 +1485,23 @@ func (v *ArrayValue) GetMember(inter *Interpreter, _ func() LocationRange, name 
 				)
 			},
 			sema.ArrayContainsFunctionType(
+				v.SemaType(inter).ElementType(false),
+			),
+		)
+
+	case "slice":
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				from := invocation.Arguments[0].(IntValue)
+				to := invocation.Arguments[1].(IntValue)
+				return v.Slice(
+					invocation.Interpreter,
+					from,
+					to,
+					invocation.GetLocationRange,
+				)
+			},
+			sema.ArraySliceFunctionType(
 				v.SemaType(inter).ElementType(false),
 			),
 		)
@@ -1685,6 +1755,84 @@ func (v *ArrayValue) IsResourceKinded(interpreter *Interpreter) bool {
 		v.isResourceKinded = &isResourceKinded
 	}
 	return *v.isResourceKinded
+}
+
+func (v *ArrayValue) Slice(
+	interpreter *Interpreter,
+	from IntValue,
+	to IntValue,
+	getLocationRange func() LocationRange,
+) Value {
+	fromIndex := from.ToInt()
+	toIndex := to.ToInt()
+
+	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
+	// atree's Array.RangeIterator function will check the upper bound and report an atree.SliceOutOfBoundsError
+
+	if fromIndex < 0 || toIndex < 0 {
+		panic(ArraySliceIndicesError{
+			FromIndex:     fromIndex,
+			UpToIndex:     toIndex,
+			Size:          v.Count(),
+			LocationRange: getLocationRange(),
+		})
+	}
+
+	iterator, err := v.array.RangeIterator(uint64(fromIndex), uint64(toIndex))
+	if err != nil {
+
+		switch err.(type) {
+		case *atree.SliceOutOfBoundsError:
+			panic(ArraySliceIndicesError{
+				FromIndex:     fromIndex,
+				UpToIndex:     toIndex,
+				Size:          v.Count(),
+				LocationRange: getLocationRange(),
+			})
+
+		case *atree.InvalidSliceIndexError:
+			panic(InvalidSliceIndexError{
+				FromIndex:     fromIndex,
+				UpToIndex:     toIndex,
+				LocationRange: getLocationRange(),
+			})
+		}
+
+		panic(ExternalError{err})
+	}
+
+	return NewArrayValueWithIterator(
+		interpreter,
+		VariableSizedStaticType{
+			Type: v.Type.ElementType(),
+		},
+		common.Address{},
+		func() Value {
+
+			var value Value
+
+			atreeValue, err := iterator.Next()
+			if err != nil {
+				panic(ExternalError{err})
+			}
+
+			if atreeValue != nil {
+				value = MustConvertStoredValue(atreeValue)
+			}
+
+			if value == nil {
+				return nil
+			}
+
+			return value.Transfer(
+				interpreter,
+				getLocationRange,
+				atree.Address{},
+				false,
+				nil,
+			)
+		},
+	)
 }
 
 // NumberValue
