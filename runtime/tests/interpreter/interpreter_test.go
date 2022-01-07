@@ -9621,15 +9621,15 @@ func TestInterpretOptionalReference(t *testing.T) {
 		`
           fun present(): &Int {
               let x: Int? = 1
-			  let y = &x as &Int?
-			  return y!
+              let y = &x as &Int?
+              return y!
           }
 
-		  fun absent(): &Int {
-			let x: Int? = nil
-			let y = &x as &Int?
-			return y!
-		}
+          fun absent(): &Int {
+              let x: Int? = nil
+              let y = &x as &Int?
+              return y!
+          }
         `,
 	)
 
