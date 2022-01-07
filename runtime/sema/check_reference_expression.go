@@ -38,12 +38,19 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 
 	if !resultType.IsInvalidType() {
 		var ok bool
-		// indexed access to dictionaries require an optional reference as their
-		// target type, so allow one level of optionals
+   	// Reference expressions may reference a value which has an optional type.
+   	// For example, the result of indexing into a dictionary is an optional:
+   	//
+   	// let ints: {Int: String} = {0: "zero"}
+   	// let ref: &T? = &ints[0] as &T?   // read as (&T)?
+   	//
+   	// In this case the reference expression's type is an optional type.
+   	// Unwrap it one level to get the actual reference type
 		optType, optOk := resultType.(*OptionalType)
 		if optOk {
 			resultType = optType.Type
 		}
+
 		referenceType, ok = resultType.(*ReferenceType)
 		if !ok {
 			checker.report(
@@ -69,7 +76,7 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 
 	// Unwrap the optional one level, but not infinitely
 	if optionalReferencedType, ok := referencedType.(*OptionalType); ok {
-		// if referenced type is optional, require that target type is also optional
+		// If the referenced type is optional, then the return type is optional
 		referencedType = optionalReferencedType.Type
 		returnType = &OptionalType{Type: referenceType}
 	}
