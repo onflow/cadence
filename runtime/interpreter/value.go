@@ -1143,6 +1143,10 @@ func (v *ArrayValue) handleIndexOutOfBoundsError(err error, index int, getLocati
 }
 
 func (v *ArrayValue) Get(interpreter *Interpreter, getLocationRange func() LocationRange, index int) Value {
+
+	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
+	// atree's Array.Get function will check the upper bound and report an atree.IndexOutOfBoundsError
+
 	if index < 0 {
 		panic(ArrayIndexOutOfBoundsError{
 			Index:         index,
@@ -1167,6 +1171,10 @@ func (v *ArrayValue) SetKey(interpreter *Interpreter, getLocationRange func() Lo
 }
 
 func (v *ArrayValue) Set(interpreter *Interpreter, getLocationRange func() LocationRange, index int, element Value) {
+
+	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
+	// atree's Array.Set function will check the upper bound and report an atree.IndexOutOfBoundsError
+
 	if index < 0 {
 		panic(ArrayIndexOutOfBoundsError{
 			Index:         index,
@@ -1247,6 +1255,10 @@ func (v *ArrayValue) InsertKey(interpreter *Interpreter, getLocationRange func()
 }
 
 func (v *ArrayValue) Insert(interpreter *Interpreter, getLocationRange func() LocationRange, index int, element Value) {
+
+	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
+	// atree's Array.Insert function will check the upper bound and report an atree.IndexOutOfBoundsError
+
 	if index < 0 {
 		panic(ArrayIndexOutOfBoundsError{
 			Index:         index,
@@ -1280,6 +1292,10 @@ func (v *ArrayValue) RemoveKey(interpreter *Interpreter, getLocationRange func()
 }
 
 func (v *ArrayValue) Remove(interpreter *Interpreter, getLocationRange func() LocationRange, index int) Value {
+
+	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
+	// atree's Array.Remove function will check the upper bound and report an atree.IndexOutOfBoundsError
+
 	if index < 0 {
 		panic(ArrayIndexOutOfBoundsError{
 			Index:         index,
@@ -1732,6 +1748,9 @@ func (v *ArrayValue) Slice(
 ) Value {
 	fromIndex := from.ToInt()
 	toIndex := to.ToInt()
+
+	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
+	// atree's Array.RangeIterator function will check the upper bound and report an atree.SliceOutOfBoundsError
 
 	if fromIndex < 0 || toIndex < 0 {
 		panic(ArraySliceIndicesError{
