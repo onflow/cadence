@@ -27,7 +27,8 @@ pub enum HashAlgorithm: UInt8 {
     /// used in BLS signatures.
     pub case KMAC128_BLS_BLS12_381 = 5
 
-    /// KECCAK_256 is ethereum-compatible Keccak-256 hash
+    /// KECCAK_256 is the legacy Keccak algorithm with a 256-bits digest, as per the original submission to the NIST SHA3 competition.
+    /// KECCAK_256 is different than SHA3 and is used by Ethereum.  
     pub case KECCAK_256 = 6
 
     /// Returns the hash of the given data
