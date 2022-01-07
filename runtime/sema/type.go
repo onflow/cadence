@@ -1561,6 +1561,14 @@ Removes the last element from the array and returns it.
 The array must not be empty. If the array is empty, the program aborts
 `
 
+const arrayTypeSliceFunctionDocString = `
+Returns a new variable-sized array containing the slice of the elements in the given array from start index ` + "`from`" + ` up to, but not including, the end index ` + "`upTo`" + `.
+
+This function creates a new array whose length is ` + "`upTo - from`" + `.
+It does not modify the original array.
+If either of the parameters are out of the bounds of the array, or the indices are invalid (` + "`from > upTo`" + `), then the function will fail.
+`
+
 func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 
 	members := map[string]MemberResolver{
@@ -1680,6 +1688,31 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 					identifier,
 					ArrayConcatFunctionType(arrayType),
 					arrayTypeConcatFunctionDocString,
+				)
+			},
+		}
+
+		members["slice"] = MemberResolver{
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
+
+				elementType := arrayType.ElementType(false)
+
+				if elementType.IsResourceType() {
+					report(
+						&InvalidResourceArrayMemberError{
+							Name:            identifier,
+							DeclarationKind: common.DeclarationKindFunction,
+							Range:           targetRange,
+						},
+					)
+				}
+
+				return NewPublicFunctionMember(
+					arrayType,
+					identifier,
+					ArraySliceFunctionType(elementType),
+					arrayTypeSliceFunctionDocString,
 				)
 			},
 		}
@@ -1852,6 +1885,24 @@ func ArrayAppendFunctionType(elementType Type) *FunctionType {
 		ReturnTypeAnnotation: NewTypeAnnotation(
 			VoidType,
 		),
+	}
+}
+
+func ArraySliceFunctionType(elementType Type) *FunctionType {
+	return &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Identifier:     "from",
+				TypeAnnotation: NewTypeAnnotation(IntType),
+			},
+			{
+				Identifier:     "upTo",
+				TypeAnnotation: NewTypeAnnotation(IntType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(&VariableSizedType{
+			Type: elementType,
+		}),
 	}
 }
 
