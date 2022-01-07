@@ -331,5 +331,6 @@ This is a customized version of KMAC128 that is compatible with the hashing to c
 used in BLS signatures.
 `
 const HashAlgorithmDocStringKECCAK_256 = `
-This is a specific function for calculating the Keccak256 hash of arbitrary data.
+KECCAK_256 is the legacy Keccak algorithm with a 256-bits digest, as per the original submission to the NIST SHA3 competition.
+KECCAK_256 is different than SHA3 and is used by Ethereum.
 `
