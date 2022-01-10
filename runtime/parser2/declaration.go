@@ -67,6 +67,9 @@ func parseDeclaration(p *parser, docString string) ast.Declaration {
 
 		switch p.current.Type {
 		case lexer.TokenPragma:
+			if access != ast.AccessNotSpecified {
+				panic(fmt.Errorf("invalid access modifier for pragma"))
+			}
 			return parsePragmaDeclaration(p)
 		case lexer.TokenIdentifier:
 			switch p.current.Value {
@@ -93,7 +96,7 @@ func parseDeclaration(p *parser, docString string) ast.Declaration {
 
 			case keywordPriv, keywordPub, keywordAccess:
 				if access != ast.AccessNotSpecified {
-					panic(fmt.Errorf("unexpected access modifier"))
+					panic(fmt.Errorf("invalid second access modifier"))
 				}
 				pos := p.current.StartPos
 				accessPos = &pos

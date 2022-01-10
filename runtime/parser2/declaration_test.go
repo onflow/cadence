@@ -4898,3 +4898,56 @@ func TestParsePreconditionWithUnaryNegation(t *testing.T) {
 		result.Declarations(),
 	)
 }
+
+func TestParseInvalidAccessModifiers(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("pragma", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations("pub #test")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid access modifier for pragma",
+					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations("pub transaction {}")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid access modifier for transaction",
+					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations("pub priv let x = 1")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid second access modifier",
+					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+				},
+			},
+			errs,
+		)
+	})
+}
