@@ -4395,6 +4395,8 @@ func (interpreter *Interpreter) updateReferencedResource(
 	for value := range values { //nolint:maprangecheck
 		updateFunc(value)
 	}
-	interpreter.referencedResourceKindedValues[newStorageID] = values
-	interpreter.referencedResourceKindedValues[currentStorageID] = nil
+	if newStorageID != currentStorageID {
+		interpreter.referencedResourceKindedValues[newStorageID] = values
+		interpreter.referencedResourceKindedValues[currentStorageID] = nil
+	}
 }
