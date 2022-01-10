@@ -1618,7 +1618,11 @@ func (v *ArrayValue) Transfer(
 			currentStorageID,
 			newStorageID,
 			func(value ReferenceTrackedResourceKindedValue) {
-				value.(*ArrayValue).array = array
+				arrayValue, ok := value.(*ArrayValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+				arrayValue.array = array
 			},
 		)
 
@@ -11785,7 +11789,11 @@ func (v *CompositeValue) Transfer(
 			currentStorageID,
 			newStorageID,
 			func(value ReferenceTrackedResourceKindedValue) {
-				value.(*CompositeValue).dictionary = dictionary
+				compositeValue, ok := value.(*CompositeValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+				compositeValue.dictionary = dictionary
 			},
 		)
 
@@ -12717,7 +12725,11 @@ func (v *DictionaryValue) Transfer(
 			currentStorageID,
 			newStorageID,
 			func(value ReferenceTrackedResourceKindedValue) {
-				value.(*DictionaryValue).dictionary = dictionary
+				dictionaryValue, ok := value.(*DictionaryValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+				dictionaryValue.dictionary = dictionary
 			},
 		)
 
