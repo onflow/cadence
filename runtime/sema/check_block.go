@@ -39,8 +39,7 @@ func (checker *Checker) visitStatements(statements []ast.Statement) {
 		// Is this statement unreachable? Report it once for this statement,
 		// but avoid noise and don't report it for all remaining unreachable statements
 
-		if functionActivation.ReturnInfo.IsUnreachable() &&
-			!functionActivation.ReportedDeadCode {
+		if functionActivation.ReturnInfo.IsUnreachable() {
 
 			lastStatement := statements[len(statements)-1]
 
@@ -53,7 +52,7 @@ func (checker *Checker) visitStatements(statements []ast.Statement) {
 				},
 			)
 
-			functionActivation.ReportedDeadCode = true
+			break
 		}
 
 		if !checker.checkValidStatement(statement) {

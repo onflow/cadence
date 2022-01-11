@@ -24,7 +24,6 @@ type FunctionActivation struct {
 	Switches             int
 	ValueActivationDepth int
 	ReturnInfo           *ReturnInfo
-	ReportedDeadCode     bool
 	InitializationInfo   *InitializationInfo
 }
 

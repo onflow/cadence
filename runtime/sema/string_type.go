@@ -162,7 +162,7 @@ Returns a new string containing the slice of the characters in the given string 
 
 This function creates a new string whose length is ` + "`upTo - from`" + `.
 It does not modify the original string.
-If either of the parameters are out of the bounds of the string, the function will fail
+If either of the parameters are out of the bounds of the string, or the indices are invalid (` + "`from > upTo`" + `), then the function will fail
 `
 
 var ByteArrayType = &VariableSizedType{

@@ -111,6 +111,8 @@ type Value interface {
 		storable atree.Storable,
 	) Value
 	DeepRemove(interpreter *Interpreter)
+	// Clone returns a new value that is equal to this value.
+	// NOTE: not used by interpreter, but used externally (e.g. state migration)
 	Clone(interpreter *Interpreter) Value
 }
 
@@ -165,6 +167,15 @@ func maybeDestroy(interpreter *Interpreter, getLocationRange func() LocationRang
 	}
 
 	resourceKindedValue.Destroy(interpreter, getLocationRange)
+}
+
+// ReferenceTrackedResourceKindedValue is a resource-kinded value
+// that must be tracked when a reference of it is taken.
+//
+type ReferenceTrackedResourceKindedValue interface {
+	ResourceKindedValue
+	IsReferenceTrackedResourceKindedValue()
+	StorageID() atree.StorageID
 }
 
 // TypeValue
@@ -674,10 +685,27 @@ func (v *StringValue) Concat(other *StringValue) Value {
 
 func (v *StringValue) Slice(from IntValue, to IntValue, getLocationRange func() LocationRange) Value {
 	fromIndex := from.ToInt()
-	v.checkBoundsInclusiveLength(fromIndex, getLocationRange)
 
 	toIndex := to.ToInt()
-	v.checkBoundsInclusiveLength(toIndex, getLocationRange)
+
+	length := v.Length()
+
+	if fromIndex < 0 || fromIndex > length || toIndex < 0 || toIndex > length {
+		panic(StringSliceIndicesError{
+			FromIndex:     fromIndex,
+			UpToIndex:     toIndex,
+			Length:        length,
+			LocationRange: getLocationRange(),
+		})
+	}
+
+	if fromIndex > toIndex {
+		panic(InvalidSliceIndexError{
+			FromIndex:     fromIndex,
+			UpToIndex:     toIndex,
+			LocationRange: getLocationRange(),
+		})
+	}
 
 	if fromIndex == toIndex {
 		return NewStringValue("")
@@ -704,18 +732,6 @@ func (v *StringValue) checkBounds(index int, getLocationRange func() LocationRan
 	length := v.Length()
 
 	if index < 0 || index >= length {
-		panic(StringIndexOutOfBoundsError{
-			Index:         index,
-			Length:        length,
-			LocationRange: getLocationRange(),
-		})
-	}
-}
-
-func (v *StringValue) checkBoundsInclusiveLength(index int, getLocationRange func() LocationRange) {
-	length := v.Length()
-
-	if index < 0 || index > length {
 		panic(StringIndexOutOfBoundsError{
 			Index:         index,
 			Length:        length,
@@ -995,6 +1011,7 @@ var _ atree.Value = &ArrayValue{}
 var _ EquatableValue = &ArrayValue{}
 var _ ValueIndexableValue = &ArrayValue{}
 var _ MemberAccessibleValue = &ArrayValue{}
+var _ ReferenceTrackedResourceKindedValue = &ArrayValue{}
 
 func (*ArrayValue) IsValue() {}
 
@@ -1143,6 +1160,18 @@ func (v *ArrayValue) handleIndexOutOfBoundsError(err error, index int, getLocati
 }
 
 func (v *ArrayValue) Get(interpreter *Interpreter, getLocationRange func() LocationRange, index int) Value {
+
+	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
+	// atree's Array.Get function will check the upper bound and report an atree.IndexOutOfBoundsError
+
+	if index < 0 {
+		panic(ArrayIndexOutOfBoundsError{
+			Index:         index,
+			Size:          v.Count(),
+			LocationRange: getLocationRange(),
+		})
+	}
+
 	storable, err := v.array.Get(uint64(index))
 	if err != nil {
 		v.handleIndexOutOfBoundsError(err, index, getLocationRange)
@@ -1159,6 +1188,17 @@ func (v *ArrayValue) SetKey(interpreter *Interpreter, getLocationRange func() Lo
 }
 
 func (v *ArrayValue) Set(interpreter *Interpreter, getLocationRange func() LocationRange, index int, element Value) {
+
+	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
+	// atree's Array.Set function will check the upper bound and report an atree.IndexOutOfBoundsError
+
+	if index < 0 {
+		panic(ArrayIndexOutOfBoundsError{
+			Index:         index,
+			Size:          v.Count(),
+			LocationRange: getLocationRange(),
+		})
+	}
 
 	interpreter.checkContainerMutation(v.Type.ElementType(), element, getLocationRange)
 
@@ -1233,6 +1273,17 @@ func (v *ArrayValue) InsertKey(interpreter *Interpreter, getLocationRange func()
 
 func (v *ArrayValue) Insert(interpreter *Interpreter, getLocationRange func() LocationRange, index int, element Value) {
 
+	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
+	// atree's Array.Insert function will check the upper bound and report an atree.IndexOutOfBoundsError
+
+	if index < 0 {
+		panic(ArrayIndexOutOfBoundsError{
+			Index:         index,
+			Size:          v.Count(),
+			LocationRange: getLocationRange(),
+		})
+	}
+
 	interpreter.checkContainerMutation(v.Type.ElementType(), element, getLocationRange)
 
 	element = element.Transfer(
@@ -1258,6 +1309,18 @@ func (v *ArrayValue) RemoveKey(interpreter *Interpreter, getLocationRange func()
 }
 
 func (v *ArrayValue) Remove(interpreter *Interpreter, getLocationRange func() LocationRange, index int) Value {
+
+	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
+	// atree's Array.Remove function will check the upper bound and report an atree.IndexOutOfBoundsError
+
+	if index < 0 {
+		panic(ArrayIndexOutOfBoundsError{
+			Index:         index,
+			Size:          v.Count(),
+			LocationRange: getLocationRange(),
+		})
+	}
+
 	storable, err := v.array.Remove(uint64(index))
 	if err != nil {
 		v.handleIndexOutOfBoundsError(err, index, getLocationRange)
@@ -1435,6 +1498,23 @@ func (v *ArrayValue) GetMember(inter *Interpreter, _ func() LocationRange, name 
 				v.SemaType(inter).ElementType(false),
 			),
 		)
+
+	case "slice":
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				from := invocation.Arguments[0].(IntValue)
+				to := invocation.Arguments[1].(IntValue)
+				return v.Slice(
+					invocation.Interpreter,
+					from,
+					to,
+					invocation.GetLocationRange,
+				)
+			},
+			sema.ArraySliceFunctionType(
+				v.SemaType(inter).ElementType(false),
+			),
+		)
 	}
 
 	return nil
@@ -1528,6 +1608,8 @@ func (v *ArrayValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (a
 	return atree.StorageIDStorable(v.StorageID()), nil
 }
 
+func (v *ArrayValue) IsReferenceTrackedResourceKindedValue() {}
+
 func (v *ArrayValue) Transfer(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
@@ -1543,9 +1625,12 @@ func (v *ArrayValue) Transfer(
 		}()
 	}
 
+	currentStorageID := v.StorageID()
+	currentAddress := currentStorageID.Address
+
 	array := v.array
 
-	needsStoreTo := v.NeedsStoreTo(address)
+	needsStoreTo := address != currentAddress
 	isResourceKinded := v.IsResourceKinded(interpreter)
 
 	if needsStoreTo || !isResourceKinded {
@@ -1592,7 +1677,25 @@ func (v *ArrayValue) Transfer(
 	}
 
 	if isResourceKinded {
+		// Update the resource in-place,
+		// and also update all values that are referencing the same value
+		// (but currently point to an outdated Go instance of the value)
+
 		v.array = array
+
+		newStorageID := array.StorageID()
+		interpreter.updateReferencedResource(
+			currentStorageID,
+			newStorageID,
+			func(value ReferenceTrackedResourceKindedValue) {
+				arrayValue, ok := value.(*ArrayValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+				arrayValue.array = array
+			},
+		)
+
 		return v
 	} else {
 		return &ArrayValue{
@@ -1685,6 +1788,84 @@ func (v *ArrayValue) IsResourceKinded(interpreter *Interpreter) bool {
 		v.isResourceKinded = &isResourceKinded
 	}
 	return *v.isResourceKinded
+}
+
+func (v *ArrayValue) Slice(
+	interpreter *Interpreter,
+	from IntValue,
+	to IntValue,
+	getLocationRange func() LocationRange,
+) Value {
+	fromIndex := from.ToInt()
+	toIndex := to.ToInt()
+
+	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
+	// atree's Array.RangeIterator function will check the upper bound and report an atree.SliceOutOfBoundsError
+
+	if fromIndex < 0 || toIndex < 0 {
+		panic(ArraySliceIndicesError{
+			FromIndex:     fromIndex,
+			UpToIndex:     toIndex,
+			Size:          v.Count(),
+			LocationRange: getLocationRange(),
+		})
+	}
+
+	iterator, err := v.array.RangeIterator(uint64(fromIndex), uint64(toIndex))
+	if err != nil {
+
+		switch err.(type) {
+		case *atree.SliceOutOfBoundsError:
+			panic(ArraySliceIndicesError{
+				FromIndex:     fromIndex,
+				UpToIndex:     toIndex,
+				Size:          v.Count(),
+				LocationRange: getLocationRange(),
+			})
+
+		case *atree.InvalidSliceIndexError:
+			panic(InvalidSliceIndexError{
+				FromIndex:     fromIndex,
+				UpToIndex:     toIndex,
+				LocationRange: getLocationRange(),
+			})
+		}
+
+		panic(ExternalError{err})
+	}
+
+	return NewArrayValueWithIterator(
+		interpreter,
+		VariableSizedStaticType{
+			Type: v.Type.ElementType(),
+		},
+		common.Address{},
+		func() Value {
+
+			var value Value
+
+			atreeValue, err := iterator.Next()
+			if err != nil {
+				panic(ExternalError{err})
+			}
+
+			if atreeValue != nil {
+				value = MustConvertStoredValue(atreeValue)
+			}
+
+			if value == nil {
+				return nil
+			}
+
+			return value.Transfer(
+				interpreter,
+				getLocationRange,
+				atree.Address{},
+				false,
+				nil,
+			)
+		},
+	)
 }
 
 // NumberValue
@@ -11152,6 +11333,7 @@ var _ Value = &CompositeValue{}
 var _ EquatableValue = &CompositeValue{}
 var _ HashableValue = &CompositeValue{}
 var _ MemberAccessibleValue = &CompositeValue{}
+var _ ReferenceTrackedResourceKindedValue = &CompositeValue{}
 
 func (*CompositeValue) IsValue() {}
 
@@ -11672,6 +11854,8 @@ func (v *CompositeValue) IsResourceKinded(_ *Interpreter) bool {
 	return v.Kind == common.CompositeKindResource
 }
 
+func (v *CompositeValue) IsReferenceTrackedResourceKindedValue() {}
+
 func (v *CompositeValue) Transfer(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
@@ -11680,9 +11864,10 @@ func (v *CompositeValue) Transfer(
 	storable atree.Storable,
 ) Value {
 
-	dictionary := v.dictionary
+	currentStorageID := v.StorageID()
+	currentAddress := currentStorageID.Address
 
-	currentAddress := v.StorageID().Address
+	dictionary := v.dictionary
 
 	needsStoreTo := address != currentAddress
 	isResourceKinded := v.IsResourceKinded(interpreter)
@@ -11740,7 +11925,26 @@ func (v *CompositeValue) Transfer(
 
 	var res *CompositeValue
 	if isResourceKinded {
+		// Update the resource in-place,
+		// and also update all values that are referencing the same value
+		// (but currently point to an outdated Go instance of the value)
+
 		v.dictionary = dictionary
+
+		newStorageID := dictionary.StorageID()
+
+		interpreter.updateReferencedResource(
+			currentStorageID,
+			newStorageID,
+			func(value ReferenceTrackedResourceKindedValue) {
+				compositeValue, ok := value.(*CompositeValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+				compositeValue.dictionary = dictionary
+			},
+		)
+
 		res = v
 	} else {
 		res = &CompositeValue{
@@ -12011,6 +12215,7 @@ var _ atree.Value = &DictionaryValue{}
 var _ EquatableValue = &DictionaryValue{}
 var _ ValueIndexableValue = &DictionaryValue{}
 var _ MemberAccessibleValue = &DictionaryValue{}
+var _ ReferenceTrackedResourceKindedValue = &DictionaryValue{}
 
 func (*DictionaryValue) IsValue() {}
 
@@ -12575,6 +12780,8 @@ func (v *DictionaryValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint6
 	return atree.StorageIDStorable(v.StorageID()), nil
 }
 
+func (v *DictionaryValue) IsReferenceTrackedResourceKindedValue() {}
+
 func (v *DictionaryValue) Transfer(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
@@ -12590,9 +12797,12 @@ func (v *DictionaryValue) Transfer(
 		}()
 	}
 
+	currentStorageID := v.StorageID()
+	currentAddress := currentStorageID.Address
+
 	dictionary := v.dictionary
 
-	needsStoreTo := v.NeedsStoreTo(address)
+	needsStoreTo := address != currentAddress
 	isResourceKinded := v.IsResourceKinded(interpreter)
 
 	if needsStoreTo || !isResourceKinded {
@@ -12651,7 +12861,26 @@ func (v *DictionaryValue) Transfer(
 	}
 
 	if isResourceKinded {
+		// Update the resource in-place,
+		// and also update all values that are referencing the same value
+		// (but currently point to an outdated Go instance of the value)
+
 		v.dictionary = dictionary
+
+		newStorageID := dictionary.StorageID()
+
+		interpreter.updateReferencedResource(
+			currentStorageID,
+			newStorageID,
+			func(value ReferenceTrackedResourceKindedValue) {
+				dictionaryValue, ok := value.(*DictionaryValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+				dictionaryValue.dictionary = dictionary
+			},
+		)
+
 		return v
 	} else {
 		return &DictionaryValue{

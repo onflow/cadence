@@ -193,6 +193,29 @@ func TestCheckSwitchStatementDefaultDefinitiveReturn(t *testing.T) {
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 	})
+
+	t.Run("break before return", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+
+          fun test(x: Int): String {
+              switch x {
+              case 1:
+                  return "one"
+              default:
+                  break
+                  return "two"
+              }
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+		assert.IsType(t, &sema.MissingReturnStatementError{}, errs[1])
+	})
 }
 
 func TestCheckInvalidSwitchStatementCaseStatement(t *testing.T) {
@@ -373,6 +396,8 @@ func TestCheckSwitchStatementWithUnreachableReturn(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := ExpectCheckerErrors(t, err, 2)
+
 	assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+	assert.IsType(t, &sema.MissingReturnStatementError{}, errs[1])
 }
