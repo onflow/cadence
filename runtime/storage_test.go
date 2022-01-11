@@ -50,7 +50,7 @@ func withWritesToStorage(
 
 	inter := newTestInterpreter(tb)
 
-	address := common.BytesToAddress([]byte{0x1})
+	address := common.MustBytesToAddress([]byte{0x1})
 
 	for i := 0; i < count; i++ {
 
@@ -150,7 +150,7 @@ func TestRuntimeStorageWrite(t *testing.T) {
 
 	runtime := newTestInterpreterRuntime()
 
-	address := common.BytesToAddress([]byte{0x1})
+	address := common.MustBytesToAddress([]byte{0x1})
 
 	tx := []byte(`
       transaction {
@@ -274,7 +274,7 @@ func TestRuntimePublicCapabilityBorrowTypeConfusion(t *testing.T) {
 	addressString, err := hex.DecodeString("aad3e26e406987c2")
 	require.NoError(t, err)
 
-	signingAddress := common.BytesToAddress(addressString)
+	signingAddress := common.MustBytesToAddress(addressString)
 
 	deployFTContractTx := utils.DeploymentTransaction("FungibleToken", []byte(realFungibleTokenContractInterface))
 
@@ -629,7 +629,7 @@ func TestRuntimeStorageReadAndBorrow(t *testing.T) {
 
 	storage := newTestLedger(nil, nil)
 
-	signer := common.BytesToAddress([]byte{0x42})
+	signer := common.MustBytesToAddress([]byte{0x42})
 
 	runtimeInterface := &testRuntimeInterface{
 		storage: storage,
@@ -948,7 +948,7 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
       }
     `
 
-	signerAddress = common.BytesToAddress([]byte{0x42})
+	signerAddress = common.MustBytesToAddress([]byte{0x42})
 
 	err = runtime.ExecuteTransaction(
 		Script{
@@ -1113,7 +1113,7 @@ func TestRuntimeBatchMintAndTransfer(t *testing.T) {
 
 	deployTx := utils.DeploymentTransaction("Test", []byte(contract))
 
-	contractAddress := common.BytesToAddress([]byte{0x1})
+	contractAddress := common.MustBytesToAddress([]byte{0x1})
 
 	var events []cadence.Event
 	var loggedMessages []string
@@ -1226,7 +1226,7 @@ func TestRuntimeBatchMintAndTransfer(t *testing.T) {
       }
     `
 
-	signerAddress = common.BytesToAddress([]byte{0x2})
+	signerAddress = common.MustBytesToAddress([]byte{0x2})
 
 	err = runtime.ExecuteTransaction(
 		Script{
@@ -1297,7 +1297,7 @@ func TestRuntimeStorageUnlink(t *testing.T) {
 
 	storage := newTestLedger(nil, nil)
 
-	signer := common.BytesToAddress([]byte{0x42})
+	signer := common.MustBytesToAddress([]byte{0x42})
 
 	runtimeInterface := &testRuntimeInterface{
 		storage: storage,
@@ -1383,7 +1383,7 @@ func TestRuntimeStorageSaveCapability(t *testing.T) {
 
 	storage := newTestLedger(nil, nil)
 
-	signer := common.BytesToAddress([]byte{0x42})
+	signer := common.MustBytesToAddress([]byte{0x42})
 
 	runtimeInterface := &testRuntimeInterface{
 		storage: storage,
@@ -1472,7 +1472,7 @@ func TestRuntimeStorageReferenceCast(t *testing.T) {
 
 	runtime := newTestInterpreterRuntime()
 
-	signerAddress := common.BytesToAddress([]byte{0x42})
+	signerAddress := common.MustBytesToAddress([]byte{0x42})
 
 	deployTx := utils.DeploymentTransaction("Test", []byte(`
       pub contract Test {
@@ -1579,7 +1579,7 @@ func TestRuntimeStorageNonStorable(t *testing.T) {
 
 	runtime := newTestInterpreterRuntime()
 
-	address := common.BytesToAddress([]byte{0x1})
+	address := common.MustBytesToAddress([]byte{0x1})
 
 	for name, code := range map[string]string{
 		"ephemeral reference": `
@@ -1641,7 +1641,7 @@ func TestRuntimeStorageRecursiveReference(t *testing.T) {
 
 	runtime := newTestInterpreterRuntime()
 
-	address := common.BytesToAddress([]byte{0x1})
+	address := common.MustBytesToAddress([]byte{0x1})
 
 	const code = `
       transaction {
@@ -1682,8 +1682,8 @@ func TestRuntimeStorageTransfer(t *testing.T) {
 
 	runtime := newTestInterpreterRuntime()
 
-	address1 := common.BytesToAddress([]byte{0x1})
-	address2 := common.BytesToAddress([]byte{0x2})
+	address1 := common.MustBytesToAddress([]byte{0x1})
+	address2 := common.MustBytesToAddress([]byte{0x2})
 
 	ledger := newTestLedger(nil, nil)
 
@@ -1765,8 +1765,8 @@ func TestRuntimeResourceOwnerChange(t *testing.T) {
 	runtime := newTestInterpreterRuntime()
 	runtime.SetResourceOwnerChangeHandlerEnabled(true)
 
-	address1 := common.BytesToAddress([]byte{0x1})
-	address2 := common.BytesToAddress([]byte{0x2})
+	address1 := common.MustBytesToAddress([]byte{0x1})
+	address2 := common.MustBytesToAddress([]byte{0x2})
 
 	ledger := newTestLedger(nil, nil)
 
@@ -2196,7 +2196,7 @@ transaction {
 
 	runtime := newTestInterpreterRuntime()
 
-	testAddress := common.BytesToAddress([]byte{0x1})
+	testAddress := common.MustBytesToAddress([]byte{0x1})
 
 	accountCodes := map[common.LocationID][]byte{}
 

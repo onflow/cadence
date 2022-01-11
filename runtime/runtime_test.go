@@ -823,7 +823,7 @@ func TestRuntimeTransactionWithAccount(t *testing.T) {
 	runtimeInterface := &testRuntimeInterface{
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{
-				common.BytesToAddress([]byte{42}),
+				common.MustBytesToAddress([]byte{42}),
 			}, nil
 		},
 		log: func(message string) {
@@ -891,7 +891,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 			args: [][]byte{
 				jsoncdc.MustEncode(cadence.NewInt(42)),
 			},
-			authorizers:  []Address{common.BytesToAddress([]byte{42})},
+			authorizers:  []Address{common.MustBytesToAddress([]byte{42})},
 			expectedLogs: []string{"0x000000000000002a", "42"},
 		},
 		{
@@ -2762,7 +2762,7 @@ func TestRuntimeAccountAddress(t *testing.T) {
 
 	var loggedMessages []string
 
-	address := common.BytesToAddress([]byte{42})
+	address := common.MustBytesToAddress([]byte{42})
 
 	runtimeInterface := &testRuntimeInterface{
 		getSigningAccounts: func() ([]Address, error) {
@@ -2866,7 +2866,7 @@ func TestRuntimeAccountPublishAndAccess(t *testing.T) {
       }
     `)
 
-	address := common.BytesToAddress([]byte{42})
+	address := common.MustBytesToAddress([]byte{42})
 
 	script2 := []byte(
 		fmt.Sprintf(
@@ -6402,7 +6402,7 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 
 	var codeChanged bool
 
-	signerAddress := common.BytesToAddress([]byte{0x42})
+	signerAddress := common.MustBytesToAddress([]byte{0x42})
 
 	runtimeInterface := &testRuntimeInterface{
 		storage: newTestLedger(nil, nil),

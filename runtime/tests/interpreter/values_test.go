@@ -1353,7 +1353,7 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 		rand.Read(address)
 
 		location := common.AddressLocation{
-			Address: common.BytesToAddress(address),
+			Address: common.MustBytesToAddress(address),
 			Name:    identifier,
 		}
 
@@ -1476,7 +1476,7 @@ func randomCompositeValue(
 	rand.Read(address)
 
 	location := common.AddressLocation{
-		Address: common.BytesToAddress(address),
+		Address: common.MustBytesToAddress(address),
 		Name:    identifier,
 	}
 

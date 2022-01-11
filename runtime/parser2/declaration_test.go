@@ -1251,7 +1251,7 @@ func TestParseImportDeclaration(t *testing.T) {
 				&ast.ImportDeclaration{
 					Identifiers: nil,
 					Location: common.AddressLocation{
-						Address: common.BytesToAddress([]byte{0x42}),
+						Address: common.MustBytesToAddress([]byte{0x42}),
 					},
 					LocationPos: ast.Position{Line: 1, Column: 8, Offset: 8},
 					Range: ast.Range{
@@ -1260,6 +1260,29 @@ func TestParseImportDeclaration(t *testing.T) {
 					},
 				},
 			},
+			result,
+		)
+	})
+
+	t.Run("no identifiers, address location, address too long", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations(` import 0x10000000000000001`)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "address too large",
+					Pos:     ast.Position{Offset: 8, Line: 1, Column: 8},
+				},
+			},
+			errs,
+		)
+
+		var expected []ast.Declaration
+
+		utils.AssertEqualWithDiff(t,
+			expected,
 			result,
 		)
 	})
@@ -1366,7 +1389,7 @@ func TestParseImportDeclaration(t *testing.T) {
 						},
 					},
 					Location: common.AddressLocation{
-						Address: common.BytesToAddress([]byte{0x42}),
+						Address: common.MustBytesToAddress([]byte{0x42}),
 					},
 					LocationPos: ast.Position{Line: 1, Column: 29, Offset: 29},
 					Range: ast.Range{
@@ -1449,7 +1472,7 @@ func TestParseImportDeclaration(t *testing.T) {
 						},
 					},
 					Location: common.AddressLocation{
-						Address: common.BytesToAddress([]byte{0x42}),
+						Address: common.MustBytesToAddress([]byte{0x42}),
 					},
 					LocationPos: ast.Position{Line: 2, Column: 25, Offset: 26},
 					Range: ast.Range{
@@ -1473,7 +1496,7 @@ func TestParseImportDeclaration(t *testing.T) {
 						},
 					},
 					Location: common.AddressLocation{
-						Address: common.BytesToAddress([]byte{0x42}),
+						Address: common.MustBytesToAddress([]byte{0x42}),
 					},
 					LocationPos: ast.Position{Line: 3, Column: 30, Offset: 61},
 					Range: ast.Range{
@@ -3933,7 +3956,7 @@ func TestParseImportWithAddress(t *testing.T) {
 			&ast.ImportDeclaration{
 				Identifiers: nil,
 				Location: common.AddressLocation{
-					Address: common.BytesToAddress([]byte{0x12, 0x34}),
+					Address: common.MustBytesToAddress([]byte{0x12, 0x34}),
 				},
 				Range: ast.Range{
 					StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
@@ -3969,7 +3992,7 @@ func TestParseImportWithIdentifiers(t *testing.T) {
 					},
 				},
 				Location: common.AddressLocation{
-					Address: common.BytesToAddress([]byte{0x1}),
+					Address: common.MustBytesToAddress([]byte{0x1}),
 				},
 				Range: ast.Range{
 					StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
@@ -4066,7 +4089,7 @@ func TestParseImportWithFromIdentifier(t *testing.T) {
 					},
 				},
 				Location: common.AddressLocation{
-					Address: common.BytesToAddress([]byte{0x1}),
+					Address: common.MustBytesToAddress([]byte{0x1}),
 				},
 				Range: ast.Range{
 					StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},

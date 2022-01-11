@@ -2290,19 +2290,19 @@ func TestCheckAccountAccess(t *testing.T) {
 	t.Parallel()
 
 	location1A := common.AddressLocation{
-		Address: common.BytesToAddress([]byte{0x1}),
+		Address: common.MustBytesToAddress([]byte{0x1}),
 		Name:    "A",
 	}
 
 	location1B := common.AddressLocation{
 		// NOTE: same address as A
-		Address: common.BytesToAddress([]byte{0x1}),
+		Address: common.MustBytesToAddress([]byte{0x1}),
 		Name:    "B",
 	}
 
 	location2B := common.AddressLocation{
 		// NOTE: different address from A
-		Address: common.BytesToAddress([]byte{0x2}),
+		Address: common.MustBytesToAddress([]byte{0x2}),
 		Name:    "B",
 	}
 
