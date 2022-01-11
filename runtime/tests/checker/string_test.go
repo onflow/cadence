@@ -324,3 +324,18 @@ func TestCheckStringToLower(t *testing.T) {
 		RequireGlobalValue(t, checker.Elaboration, "x"),
 	)
 }
+func TestCheckStringReplace(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+       let x = "foobar".replace(from:"foo", to:"baz")
+	`)
+
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		sema.StringType,
+		RequireGlobalValue(t, checker.Elaboration, "x"),
+	)
+}

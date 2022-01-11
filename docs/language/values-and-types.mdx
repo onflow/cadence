@@ -874,6 +874,15 @@ Strings have multiple built-in functions you can use:
   example.toLower()  // is `flowers`
   ```
 
+- `cadence•fun replace(from: String, to:String): String`
+  Returns a string where all hits of `from` is replaced with `to`  
+
+	```cadence
+  let example = "Flowers"
+
+  example.replace(from: "wers", to: "vatar")  // is `Flovatar`
+	```
+
 The `String` type also provides the following functions:
 
 - `cadence•fun String.encodeHex(_ data: [UInt8]): String`

@@ -674,6 +674,10 @@ func (v *StringValue) NormalForm() string {
 	return norm.NFC.String(v.Str)
 }
 
+func (v *StringValue) Replace(from *StringValue, to *StringValue) Value {
+	return NewStringValue(strings.ReplaceAll(v.Str, from.Str, to.Str))
+}
+
 func (v *StringValue) Concat(other *StringValue) Value {
 	var sb strings.Builder
 
@@ -815,6 +819,16 @@ func (v *StringValue) GetMember(interpreter *Interpreter, _ func() LocationRange
 				return v.ToLower()
 			},
 			sema.StringTypeToLowerFunctionType,
+		)
+
+	case "replace":
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				from := invocation.Arguments[0].(*StringValue)
+				to := invocation.Arguments[1].(*StringValue)
+				return v.Replace(from, to)
+			},
+			sema.StringTypeReplaceFunctionType,
 		)
 	}
 

@@ -120,6 +120,17 @@ func init() {
 					)
 				},
 			},
+			"replace": {
+				Kind: common.DeclarationKindField,
+				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicConstantFieldMember(
+						t,
+						identifier,
+						StringTypeReplaceFunctionType,
+						stringTypeReplaceFunctionDocString,
+					)
+				},
+			},
 		}
 	}
 }
@@ -194,4 +205,24 @@ var StringTypeToLowerFunctionType = &FunctionType{
 
 const stringTypeToLowerFunctionDocString = `
 Returns the string with upper case letters replaced with lowercase
+`
+
+var StringTypeReplaceFunctionType = &FunctionType{
+	Parameters: []*Parameter{
+		{
+			Identifier:     "from",
+			TypeAnnotation: NewTypeAnnotation(StringType),
+		},
+		{
+			Identifier:     "upTo",
+			TypeAnnotation: NewTypeAnnotation(StringType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		StringType,
+	),
+}
+
+const stringTypeReplaceFunctionDocString = `
+Returns the string with all values of from replaced with to
 `

@@ -205,3 +205,22 @@ func TestInterpretStringToLower(t *testing.T) {
 		result,
 	)
 }
+
+func TestInterpretStringReplace(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      fun test(): String {
+					return "Test #10".replace(from:" #", to:"-")
+      }
+	`)
+
+	result, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	require.Equal(t,
+		interpreter.NewStringValue("Test-10"),
+		result,
+	)
+}
