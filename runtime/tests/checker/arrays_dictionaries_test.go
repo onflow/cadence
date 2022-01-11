@@ -766,6 +766,7 @@ func TestCheckArrayIndexOf(t *testing.T) {
 
 	require.NoError(t, err)
 }
+
 func TestCheckArrayContains(t *testing.T) {
 
 	t.Parallel()
