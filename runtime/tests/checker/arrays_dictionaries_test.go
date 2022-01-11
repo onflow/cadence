@@ -753,6 +753,19 @@ func TestCheckInvalidArrayRemoveLastFromConstantSized(t *testing.T) {
 	assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
 }
 
+func TestCheckArrayIndexOf(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test(): Int? {
+          let x = [1, 2, 3]
+          return x.indexOf(2)
+      }
+    `)
+
+	require.NoError(t, err)
+}
 func TestCheckArrayContains(t *testing.T) {
 
 	t.Parallel()

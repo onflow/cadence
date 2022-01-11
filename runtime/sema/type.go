@@ -1511,6 +1511,9 @@ type ArrayType interface {
 	isArrayType()
 }
 
+const arrayTypeIndexOfFunctionDocString = `
+Returns the index of the first element matching the given object in the array, nil if no match`
+
 const arrayTypeContainsFunctionDocString = `
 Returns true if the given object is in the array
 `
@@ -1618,6 +1621,44 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 					identifier,
 					IntType,
 					arrayTypeLengthFieldDocString,
+				)
+			},
+		},
+		"indexOf": {
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
+
+				elementType := arrayType.ElementType(false)
+
+				// It is impossible for an array of resources to have a `contains` function:
+				// if the resource is passed as an argument, it cannot be inside the array
+
+				if elementType.IsResourceType() {
+					report(
+						&InvalidResourceArrayMemberError{
+							Name:            identifier,
+							DeclarationKind: common.DeclarationKindFunction,
+							Range:           targetRange,
+						},
+					)
+				}
+
+				// TODO: implement Equatable interface: https://github.com/dapperlabs/bamboo-node/issues/78
+
+				if !elementType.IsEquatable() {
+					report(
+						&NotEquatableTypeError{
+							Type:  elementType,
+							Range: targetRange,
+						},
+					)
+				}
+
+				return NewPublicFunctionMember(
+					arrayType,
+					identifier,
+					ArrayIndexOfFunctionType(elementType),
+					arrayTypeIndexOfFunctionDocString,
 				)
 			},
 		},
@@ -1845,6 +1886,20 @@ func ArrayConcatFunctionType(arrayType Type) *FunctionType {
 	}
 }
 
+func ArrayIndexOfFunctionType(elementType Type) *FunctionType {
+	return &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "element",
+				TypeAnnotation: NewTypeAnnotation(elementType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{Type: IntType},
+		),
+	}
+}
 func ArrayContainsFunctionType(elementType Type) *FunctionType {
 	return &FunctionType{
 		Parameters: []*Parameter{
