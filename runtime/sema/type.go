@@ -1511,8 +1511,9 @@ type ArrayType interface {
 	isArrayType()
 }
 
-const arrayTypeIndexOfFunctionDocString = `
-Returns the index of the first element matching the given object in the array, nil if no match`
+const arrayTypeFirstIndexFunctionDocString = `
+Returns the index of the first element matching the given object in the array, nil if no match
+`
 
 const arrayTypeContainsFunctionDocString = `
 Returns true if the given object is in the array
@@ -1624,13 +1625,13 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 				)
 			},
 		},
-		"indexOf": {
+		"firstIndex": {
 			Kind: common.DeclarationKindFunction,
 			Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
 
 				elementType := arrayType.ElementType(false)
 
-				// It is impossible for an array of resources to have a `indexOf` function:
+				// It is impossible for an array of resources to have a `firstIndex` function:
 				// if the resource is passed as an argument, it cannot be inside the array
 
 				if elementType.IsResourceType() {
@@ -1657,8 +1658,8 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 				return NewPublicFunctionMember(
 					arrayType,
 					identifier,
-					ArrayIndexOfFunctionType(elementType),
-					arrayTypeIndexOfFunctionDocString,
+					ArrayFirstIndexFunctionType(elementType),
+					arrayTypeFirstIndexFunctionDocString,
 				)
 			},
 		},
@@ -1886,12 +1887,11 @@ func ArrayConcatFunctionType(arrayType Type) *FunctionType {
 	}
 }
 
-func ArrayIndexOfFunctionType(elementType Type) *FunctionType {
+func ArrayFirstIndexFunctionType(elementType Type) *FunctionType {
 	return &FunctionType{
 		Parameters: []*Parameter{
 			{
-				Label:          ArgumentLabelNotRequired,
-				Identifier:     "element",
+				Identifier:     "of",
 				TypeAnnotation: NewTypeAnnotation(elementType),
 			},
 		},

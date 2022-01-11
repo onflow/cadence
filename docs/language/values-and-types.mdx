@@ -1079,7 +1079,7 @@ are available for both variable-sized and fixed-sized or variable-sized arrays.
   let containsKitty = numbers.contains("Kitty")
   ```
 
-- `cadence•fun indexOf(_ element: T): Int?`
+- `cadence•fun firstIndex(of:: T): Int?`
  Returns the index of the first matching elmement of type `T`, or nil if no match
 
  ```cadence
@@ -1087,11 +1087,12 @@ are available for both variable-sized and fixed-sized or variable-sized arrays.
   let numbers = [42, 23, 31, 12]
 
   //Check if the array contains 31
-  let index = numbers.indexOf(31)
+
+  let index= numbers.firstIndex(of:31)
   // `index` is 2
 
   //Check if the array contains 22
-  let index = numbers.indexOf(31)
+  let index= numbers.firstIndex(of:22)
   // `index` is nil
   ```
 

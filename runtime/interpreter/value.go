@@ -1348,7 +1348,7 @@ func (v *ArrayValue) RemoveLast(interpreter *Interpreter, getLocationRange func(
 	return v.Remove(interpreter, getLocationRange, v.Count()-1)
 }
 
-func (v *ArrayValue) IndexOf(interpreter *Interpreter, getLocationRange func() LocationRange, needleValue Value) OptionalValue {
+func (v *ArrayValue) FirstIndex(interpreter *Interpreter, getLocationRange func() LocationRange, needleValue Value) OptionalValue {
 
 	needleEquatable, ok := needleValue.(EquatableValue)
 	if !ok {
@@ -1512,16 +1512,16 @@ func (v *ArrayValue) GetMember(inter *Interpreter, _ func() LocationRange, name 
 			),
 		)
 
-	case "indexOf":
+	case "firstIndex":
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				return v.IndexOf(
+				return v.FirstIndex(
 					invocation.Interpreter,
 					invocation.GetLocationRange,
 					invocation.Arguments[0],
 				)
 			},
-			sema.ArrayIndexOfFunctionType(
+			sema.ArrayFirstIndexFunctionType(
 				v.SemaType(inter).ElementType(false),
 			),
 		)

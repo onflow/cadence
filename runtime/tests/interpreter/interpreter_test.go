@@ -9616,7 +9616,7 @@ func TestInterpretArrayTypeInference(t *testing.T) {
 	})
 }
 
-func TestInterpretArrayIndexOf(t *testing.T) {
+func TestInterpretArrayFirstIndex(t *testing.T) {
 
 	t.Parallel()
 
@@ -9624,7 +9624,7 @@ func TestInterpretArrayIndexOf(t *testing.T) {
       let xs = [1, 2, 3]
 
 			fun test() :Int? {
-          return xs.indexOf(2)
+				return xs.firstIndex(of:2)
       }
     `)
 
@@ -9637,6 +9637,29 @@ func TestInterpretArrayIndexOf(t *testing.T) {
 		interpreter.NewSomeValueNonCopying(
 			interpreter.NewIntValueFromInt64(1),
 		),
+		value,
+	)
+}
+
+func TestInterpretArrayFirstIndexDoesNotExist(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      let xs = [1, 2, 3]
+
+			fun test() :Int? {
+				return xs.firstIndex(of:5)
+      }
+    `)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NilValue{},
 		value,
 	)
 }

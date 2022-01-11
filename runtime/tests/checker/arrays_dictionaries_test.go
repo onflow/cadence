@@ -760,11 +760,63 @@ func TestCheckArrayIndexOf(t *testing.T) {
 	_, err := ParseAndCheck(t, `
       fun test(): Int? {
           let x = [1, 2, 3]
-          return x.indexOf(2)
+					return x.firstIndex(of:2)
       }
     `)
 
 	require.NoError(t, err)
+}
+
+func TestCheckArrayFirstIndexDoesNotExist(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test(): Int? {
+          let x = [1, 2, 3]
+					return x.firstIndex(of:5)
+      }
+    `)
+
+	require.NoError(t, err)
+}
+
+func TestCheckArrayFirstIndexWrongType(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test(): Int? {
+          let x = [1, 2, 3]
+					return x.firstIndex(of:"foo")
+      }
+    `)
+	errs := ExpectCheckerErrors(t, err, 1)
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+}
+
+func TestCheckInvalidResourceFirstIndex(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      resource X {}
+
+      fun test(): Int? {
+          let xs <- [<-create X()]
+					return <-xs.firstIndex(of: "foo")
+      }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 7)
+
+	assert.IsType(t, &sema.InvalidResourceArrayMemberError{}, errs[0])
+	assert.IsType(t, &sema.NotEquatableTypeError{}, errs[1])
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
+	assert.IsType(t, &sema.MissingMoveOperationError{}, errs[3])
+	assert.IsType(t, &sema.InvalidMoveOperationError{}, errs[4])
+	assert.IsType(t, &sema.ResourceLossError{}, errs[5])
+	assert.IsType(t, &sema.ResourceLossError{}, errs[6])
 }
 
 func TestCheckArrayContains(t *testing.T) {
