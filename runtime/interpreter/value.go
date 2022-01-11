@@ -1363,7 +1363,7 @@ func (v *ArrayValue) IndexOf(interpreter *Interpreter, getLocationRange func() L
 			// stop iteration
 			return false
 		}
-		counter = counter + 1
+		counter++
 		// continue iteration
 		return true
 	})
