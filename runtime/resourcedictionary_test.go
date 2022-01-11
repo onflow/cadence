@@ -119,7 +119,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 		},
 		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
-			return []Address{common.BytesToAddress(addressValue.Bytes())}, nil
+			return []Address{common.MustBytesToAddress(addressValue.Bytes())}, nil
 		},
 		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
 			accountCode = code
@@ -475,7 +475,7 @@ func TestRuntimeResourceDictionaryValues_Nested(t *testing.T) {
 		},
 		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
-			return []Address{common.BytesToAddress(addressValue.Bytes())}, nil
+			return []Address{common.MustBytesToAddress(addressValue.Bytes())}, nil
 		},
 		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
 			accountCode = code
@@ -575,8 +575,8 @@ func TestRuntimeResourceDictionaryValues_DictionaryTransfer(t *testing.T) {
 
 	t.Parallel()
 
-	signer1 := common.BytesToAddress([]byte{0x1})
-	signer2 := common.BytesToAddress([]byte{0x2})
+	signer1 := common.MustBytesToAddress([]byte{0x1})
+	signer2 := common.MustBytesToAddress([]byte{0x2})
 
 	runtime := newTestInterpreterRuntime()
 
@@ -787,7 +787,7 @@ func TestRuntimeResourceDictionaryValues_Removal(t *testing.T) {
 	var events []cadence.Event
 	var loggedMessages []string
 
-	signer := common.BytesToAddress([]byte{0x1})
+	signer := common.MustBytesToAddress([]byte{0x1})
 
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(_ Location) (bytes []byte, err error) {
@@ -901,7 +901,7 @@ func TestRuntimeSResourceDictionaryValues_Destruction(t *testing.T) {
 	var events []cadence.Event
 	var loggedMessages []string
 
-	signer := common.BytesToAddress([]byte{0x1})
+	signer := common.MustBytesToAddress([]byte{0x1})
 
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(_ Location) (bytes []byte, err error) {
@@ -1042,7 +1042,7 @@ func TestRuntimeResourceDictionaryValues_Insertion(t *testing.T) {
 	var events []cadence.Event
 	var loggedMessages []string
 
-	signer := common.BytesToAddress([]byte{0x1})
+	signer := common.MustBytesToAddress([]byte{0x1})
 
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(_ Location) (bytes []byte, err error) {
@@ -1189,9 +1189,9 @@ func TestRuntimeResourceDictionaryValues_ValueTransferAndDestroy(t *testing.T) {
 	var events []cadence.Event
 	var loggedMessages []string
 
-	signer1 := common.BytesToAddress([]byte{0x1})
-	signer2 := common.BytesToAddress([]byte{0x2})
-	signer3 := common.BytesToAddress([]byte{0x3})
+	signer1 := common.MustBytesToAddress([]byte{0x1})
+	signer2 := common.MustBytesToAddress([]byte{0x2})
+	signer3 := common.MustBytesToAddress([]byte{0x3})
 
 	var signers []Address
 
@@ -1345,7 +1345,7 @@ func BenchmarkRuntimeResourceDictionaryValues(b *testing.B) {
 		},
 		storage: storage,
 		getSigningAccounts: func() ([]Address, error) {
-			return []Address{common.BytesToAddress(addressValue.Bytes())}, nil
+			return []Address{common.MustBytesToAddress(addressValue.Bytes())}, nil
 		},
 		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
 			accountCode = code

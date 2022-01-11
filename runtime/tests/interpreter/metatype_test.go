@@ -568,7 +568,7 @@ func TestInterpretGetType(t *testing.T) {
 
 	storage := interpreter.NewInMemoryStorage()
 
-	storageAddress := common.BytesToAddress([]byte{0x42})
+	storageAddress := common.MustBytesToAddress([]byte{0x42})
 	const storageKey = "test storage key"
 
 	storage.WriteValue(

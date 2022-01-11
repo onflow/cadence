@@ -4447,7 +4447,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		// - `&R{RI}` (unauthorized, if argument for parameter `authorized` == false)
 		// - `auth &R{RI}` (authorized, if argument for parameter `authorized` == true)
 
-		storageAddress := common.BytesToAddress([]byte{0x42})
+		storageAddress := common.MustBytesToAddress([]byte{0x42})
 		const storageKey = "test storage key"
 
 		standardLibraryFunctions :=

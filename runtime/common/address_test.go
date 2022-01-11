@@ -22,26 +22,89 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestMustBytesToAddress(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("short", func(t *testing.T) {
+
+		t.Parallel()
+
+		assert.NotPanics(t, func() {
+			assert.Equal(t,
+				Address{0, 0, 0, 0, 0, 0, 0, 0x1},
+				MustBytesToAddress([]byte{0x1}),
+			)
+		})
+	})
+
+	t.Run("full", func(t *testing.T) {
+
+		t.Parallel()
+
+		assert.NotPanics(t, func() {
+			assert.Equal(t,
+				Address{0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8},
+				MustBytesToAddress([]byte{0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8}),
+			)
+		})
+	})
+
+	t.Run("too long", func(t *testing.T) {
+
+		t.Parallel()
+
+		assert.Panics(t, func() {
+			MustBytesToAddress([]byte{0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9})
+		})
+	})
+}
 
 func TestBytesToAddress(t *testing.T) {
 
 	t.Parallel()
 
-	assert.Equal(t,
-		Address{0, 0, 0, 0, 0, 0, 0, 0x1},
-		BytesToAddress([]byte{0x1}),
-	)
+	t.Run("short", func(t *testing.T) {
 
-	assert.Equal(t,
-		Address{0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8},
-		BytesToAddress([]byte{0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8}),
-	)
+		t.Parallel()
 
-	assert.Equal(t,
-		Address{0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9},
-		BytesToAddress([]byte{0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9}),
-	)
+		address, err := BytesToAddress([]byte{0x1})
+
+		require.NoError(t, err)
+		assert.Equal(t,
+			Address{0, 0, 0, 0, 0, 0, 0, 0x1},
+			address,
+		)
+	})
+
+	t.Run("full", func(t *testing.T) {
+
+		t.Parallel()
+
+		address, err := BytesToAddress([]byte{0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8})
+
+		require.NoError(t, err)
+		assert.Equal(t,
+			Address{0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8},
+			address,
+		)
+	})
+
+	t.Run("too long", func(t *testing.T) {
+
+		t.Parallel()
+
+		address, err := BytesToAddress([]byte{0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9})
+
+		require.Error(t, err)
+		assert.Equal(t,
+			Address{},
+			address,
+		)
+	})
 }
 
 func TestAddress_Hex(t *testing.T) {
@@ -160,7 +223,7 @@ func TestAddress_HexToAddress(t *testing.T) {
 		{"01", []byte{0x1}},
 	} {
 
-		expected := BytesToAddress(test.value)
+		expected := MustBytesToAddress(test.value)
 
 		address, err := HexToAddress(test.literal)
 		assert.NoError(t, err)
