@@ -4450,24 +4450,26 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		storageAddress := common.MustBytesToAddress([]byte{0x42})
 		const storageKey = "test storage key"
 
+		getStorageReferenceFunctionType := &sema.FunctionType{
+			Parameters: []*sema.Parameter{
+				{
+					Label:      "authorized",
+					Identifier: "authorized",
+					TypeAnnotation: sema.NewTypeAnnotation(
+						sema.BoolType,
+					),
+				},
+			},
+			ReturnTypeAnnotation: sema.NewTypeAnnotation(
+				sema.AnyStructType,
+			),
+		}
+
 		standardLibraryFunctions :=
 			stdlib.StandardLibraryFunctions{
 				{
 					Name: "getStorageReference",
-					Type: &sema.FunctionType{
-						Parameters: []*sema.Parameter{
-							{
-								Label:      "authorized",
-								Identifier: "authorized",
-								TypeAnnotation: sema.NewTypeAnnotation(
-									sema.BoolType,
-								),
-							},
-						},
-						ReturnTypeAnnotation: sema.NewTypeAnnotation(
-							sema.AnyStructType,
-						),
-					},
+					Type: getStorageReferenceFunctionType,
 					Function: interpreter.NewHostFunctionValue(
 						func(invocation interpreter.Invocation) interpreter.Value {
 
@@ -4488,7 +4490,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 								},
 							}
 						},
-						nil,
+						getStorageReferenceFunctionType,
 					),
 				},
 			}

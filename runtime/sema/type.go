@@ -2890,17 +2890,7 @@ func init() {
 				panic(errors.NewUnreachableError())
 			}
 
-			functionType := &FunctionType{
-				Parameters: []*Parameter{
-					{
-						Label:          ArgumentLabelNotRequired,
-						Identifier:     "value",
-						TypeAnnotation: NewTypeAnnotation(NumberType),
-					},
-				},
-				ReturnTypeAnnotation:     NewTypeAnnotation(numberType),
-				ArgumentExpressionsCheck: numberFunctionArgumentExpressionsChecker(numberType),
-			}
+			functionType := NumberConversionFunctionType(numberType)
 
 			addMember := func(member *Member) {
 				if functionType.Members == nil {
@@ -2978,6 +2968,20 @@ func init() {
 	}
 }
 
+func NumberConversionFunctionType(numberType Type) *FunctionType {
+	return &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "value",
+				TypeAnnotation: NewTypeAnnotation(NumberType),
+			},
+		},
+		ReturnTypeAnnotation:     NewTypeAnnotation(numberType),
+		ArgumentExpressionsCheck: numberFunctionArgumentExpressionsChecker(numberType),
+	}
+}
+
 func numberConversionDocString(targetDescription string) string {
 	return fmt.Sprintf(
 		"Converts the given number to %s. %s",
@@ -2998,46 +3002,45 @@ func baseFunctionVariable(name string, ty *FunctionType, docString string) *Vari
 	}
 }
 
-func init() {
+var AddressConversionFunctionType = &FunctionType{
+	Parameters: []*Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "value",
+			TypeAnnotation: NewTypeAnnotation(IntegerType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(&AddressType{}),
+	ArgumentExpressionsCheck: func(checker *Checker, argumentExpressions []ast.Expression, _ ast.Range) {
+		if len(argumentExpressions) < 1 {
+			return
+		}
 
+		intExpression, ok := argumentExpressions[0].(*ast.IntegerExpression)
+		if !ok {
+			return
+		}
+
+		CheckAddressLiteral(intExpression, checker.report)
+	},
+}
+
+func init() {
 	// Declare a conversion function for the address type
 
-	addressType := &AddressType{}
-	typeName := addressType.String()
-
 	// Check that the function is not accidentally redeclared
+
+	typeName := AddressTypeName
 
 	if BaseValueActivation.Find(typeName) != nil {
 		panic(errors.NewUnreachableError())
 	}
 
-	functionType := &FunctionType{
-		Parameters: []*Parameter{
-			{
-				Label:          ArgumentLabelNotRequired,
-				Identifier:     "value",
-				TypeAnnotation: NewTypeAnnotation(IntegerType),
-			},
-		},
-		ReturnTypeAnnotation: NewTypeAnnotation(addressType),
-		ArgumentExpressionsCheck: func(checker *Checker, argumentExpressions []ast.Expression, _ ast.Range) {
-			if len(argumentExpressions) < 1 {
-				return
-			}
-
-			intExpression, ok := argumentExpressions[0].(*ast.IntegerExpression)
-			if !ok {
-				return
-			}
-
-			CheckAddressLiteral(intExpression, checker.report)
-		},
-	}
 	BaseValueActivation.Set(
 		typeName,
 		baseFunctionVariable(
 			typeName,
-			functionType,
+			AddressConversionFunctionType,
 			numberConversionDocString("an address"),
 		),
 	)
@@ -3240,7 +3243,9 @@ func suggestFixedPointLiteralConversionReplacement(
 
 func init() {
 
-	typeName := MetaType.String()
+	// Declare the run-time type construction function
+
+	typeName := MetaTypeName
 
 	// Check that the function is not accidentally redeclared
 
@@ -4455,21 +4460,23 @@ func (t *ReferenceType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
+const AddressTypeName = "Address"
+
 // AddressType represents the address type
 type AddressType struct{}
 
 func (*AddressType) IsType() {}
 
 func (*AddressType) String() string {
-	return "Address"
+	return AddressTypeName
 }
 
 func (*AddressType) QualifiedString() string {
-	return "Address"
+	return AddressTypeName
 }
 
 func (*AddressType) ID() TypeID {
-	return "Address"
+	return AddressTypeName
 }
 
 func (*AddressType) Equal(other Type) bool {
