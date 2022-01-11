@@ -1630,7 +1630,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 
 				elementType := arrayType.ElementType(false)
 
-				// It is impossible for an array of resources to have a `contains` function:
+				// It is impossible for an array of resources to have a `indexOf` function:
 				// if the resource is passed as an argument, it cannot be inside the array
 
 				if elementType.IsResourceType() {
