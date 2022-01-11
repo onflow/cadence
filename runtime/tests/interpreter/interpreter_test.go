@@ -9615,3 +9615,28 @@ func TestInterpretArrayTypeInference(t *testing.T) {
 		)
 	})
 }
+
+func TestInterpretArrayIndexOf(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      let xs = [1, 2, 3]
+
+			fun test() :Int? {
+          return xs.indexOf(2)
+      }
+    `)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewSomeValueNonCopying(
+			interpreter.NewIntValueFromInt64(1),
+		),
+		value,
+	)
+}
