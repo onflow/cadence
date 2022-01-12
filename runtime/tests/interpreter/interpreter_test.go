@@ -9372,3 +9372,74 @@ func TestHostFunctionStaticType(t *testing.T) {
 		assert.Equal(t, xValue.StaticType(), yValue.StaticType())
 	})
 }
+
+func TestInterpretCastingBoxing(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("failable cast", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          let a = (1 as? Int?!)?.getType()
+        `)
+
+		variable, ok := inter.Globals.Get("a")
+		require.True(t, ok)
+
+		require.Equal(
+			t,
+			interpreter.NewSomeValueNonCopying(
+				interpreter.TypeValue{
+					Type: interpreter.PrimitiveStaticTypeInt,
+				},
+			),
+			variable.GetValue(),
+		)
+	})
+
+	t.Run("force cast", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          let a = (1 as! Int?)?.getType()
+        `)
+
+		variable, ok := inter.Globals.Get("a")
+		require.True(t, ok)
+
+		require.Equal(
+			t,
+			interpreter.NewSomeValueNonCopying(
+				interpreter.TypeValue{
+					Type: interpreter.PrimitiveStaticTypeInt,
+				},
+			),
+			variable.GetValue(),
+		)
+	})
+
+	t.Run("cast", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          let a = (1 as Int?)?.getType()
+        `)
+
+		variable, ok := inter.Globals.Get("a")
+		require.True(t, ok)
+
+		require.Equal(
+			t,
+			interpreter.NewSomeValueNonCopying(
+				interpreter.TypeValue{
+					Type: interpreter.PrimitiveStaticTypeInt,
+				},
+			),
+			variable.GetValue(),
+		)
+	})
+}
