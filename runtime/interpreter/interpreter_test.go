@@ -22,9 +22,10 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	. "github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestInterpreterOptionalBoxing(t *testing.T) {
