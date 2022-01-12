@@ -21,11 +21,12 @@ package integration
 import (
 	"errors"
 	"fmt"
-	"github.com/onflow/cadence"
 	"io/ioutil"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/onflow/cadence"
 
 	"github.com/onflow/flow-cli/pkg/flowkit"
 	"github.com/onflow/flow-go-sdk"
@@ -571,8 +572,8 @@ func (i *FlowIntegration) createAccountHelper(conn protocol.Conn) (address flow.
 		signer,
 		keys,
 		weights,
-		crypto.ECDSA_P256,
-		crypto.SHA3_256,
+		[]crypto.SignatureAlgorithm{crypto.ECDSA_P256},
+		[]crypto.HashAlgorithm{crypto.SHA3_256},
 		nil,
 	)
 	if err != nil {
