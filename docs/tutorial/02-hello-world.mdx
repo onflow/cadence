@@ -306,7 +306,7 @@ pub contract HelloWorld {
     // in the private account storage
     // by specifying a custom path to the resource
     // Make sure the path is specific to avoid path collision!
-    self.account.save(<-newHello, to: /storage/HelloAssetTutorial)
+    self.account.save(<-newHello, to: /storage/Hello)
 
     log("HelloAsset created and stored")
   }
@@ -422,7 +422,7 @@ Back to our `init` function, after creating the `HelloAsset` resource,
 it uses the `AuthAccount.save` function to store the resource in the account storage.
 
 ```cadence
-self.account.save(<-newHello, to: /storage/HelloAssetTutorial)
+self.account.save(<-newHello, to: /storage/Hello)
 ```
 
 A contract can refer to its member functions and fields with the keyword `self`.
@@ -457,7 +457,7 @@ that is not being explicitly stored or destroyed, meaning the program is invalid
 Add the line back to make the contract check properly.
 
 In this case, this is the first transaction we have run with the selected account,
-so we know that the storage spot at `/storage/HelloAssetTutorial` is empty.
+so we know that the storage spot at `/storage/Hello` is empty.
 In real applications, we would likely perform necessary checks and actions with the location we are storing to
 to make sure we don't abort the transaction because of an accidental overwrite.
 
@@ -491,7 +491,7 @@ transaction {
 
         // load the resource from storage, specifying the type to load it as
         // and the path where it is stored
-        let helloResource <- acct.load<@HelloWorld.HelloAsset>(from: /storage/HelloAssetTutorial)
+        let helloResource <- acct.load<@HelloWorld.HelloAsset>(from: /storage/Hello)
 
         // We use optional chaining (?) because the value in storage
         // may or may not exist, and thus is considered optional.
@@ -500,7 +500,7 @@ transaction {
         // Put the resource back in storage at the same spot
         // We use the force-unwrap operator `!` to get the value
         // out of the optional. It aborts if the optional is nil
-        acct.save(<-helloResource!, to: /storage/HelloAssetTutorial)
+        acct.save(<-helloResource!, to: /storage/Hello)
     }
 }
 ```
@@ -530,14 +530,14 @@ NEEDS to be the same as the number of signers. If not, this will cause an error.
 To remove an object from storage, we use the `load` method.
 
 ```cadence
-let helloResource <- acct.load<@HelloWorld.HelloAsset>(from: /storage/HelloAssetTutorial)
+let helloResource <- acct.load<@HelloWorld.HelloAsset>(from: /storage/Hello)
 ```
 
 If no object of the specified type is stored under the given path, the function returns `nil`. (This is an [Optional](/cadence/language/values-and-types/#optionals),
 a special type of data that we will cover later)
 
 If there is an object of the specified type at the path, the function returns that object
-and the storage will longer contain an object under the given path.
+and the storage will no longer contain an object under the given path.
 
 The type parameter for the object type to load is contained in `<>`.
 A type argument for the parameter must be provided explicitly, which is `@HelloWorld.HelloAsset` here.
@@ -575,7 +575,7 @@ However, if the stored value was `nil`, the function call would not occur and th
 Next, we use `save` again to put the object back in storage in the same spot:
 
 ```cadence
-acct.save(<-helloResource!, to: /storage/HelloAssetTutorial)
+acct.save(<-helloResource!, to: /storage/Hello)
 ```
 
 Remember, `helloResource` is still an optional, so we have to handle the possibility that it is `nil`.
@@ -638,7 +638,7 @@ transaction {
     // It just creates the capability.
     // The capability is created and stored at /public/Hello, and is
     // also returned from the function.
-    let capability = account.link<&HelloWorld.HelloAsset>(/public/HelloAssetTutorial, target: /storage/HelloAssetTutorial)
+    let capability = account.link<&HelloWorld.HelloAsset>(/public/Hello, target: /storage/Hello)
 
     // Use the capability's borrow method to create a new reference
     // to the object that the capability links to
@@ -707,8 +707,8 @@ First, we create a capability that is linked to the private `HelloAsset` object 
 let capability = account.link<&HelloWorld.HelloAsset>(/public/Hello, target: /storage/Hello)
 ```
 
-The `HelloAsset` object is stored in `/storage/HelloAssetTutorial`, which only the account owner can access.
-They want any user in the network to be able to call the `hello` method. So they make a public capability in `/public/HelloAssetTutorial`.
+The `HelloAsset` object is stored in `/storage/Hello`, which only the account owner can access.
+They want any user in the network to be able to call the `hello` method. So they make a public capability in `/public/Hello`.
 
 To create a capability, we use the `AuthAccount.link` method to link a new capability to an object in storage.
 The type contained in `<>` is the restricted reference type that the capability represents.
@@ -730,7 +730,7 @@ Capabilities always link to objects in the `/storage/` domain.
 To borrow a reference to an object from the capability, we use the capability's `borrow` method.
 
 ```cadence
-let helloReference = capability.borrow()
+let helloReference = capability!.borrow()
     ?? panic("Could not borrow a reference to the hello capability")
 ```
 
@@ -794,7 +794,7 @@ pub fun main() {
     let helloAccount = getAccount(0x02)
 
     // Get the public capability from the public path of the owner's account
-    let helloCapability = helloAccount.getCapability<&HelloWorld.HelloAsset>(/public/HelloAssetTutorial)
+    let helloCapability = helloAccount.getCapability<&HelloWorld.HelloAsset>(/public/Hello)
 
     // borrow a reference for the capability
     let helloReference = helloCapability.borrow()
@@ -823,7 +823,7 @@ Then, it gets the capability that was created in `Create Link`.
 
 ```cadence
 // Get the public capability from the public path of the owner's account
-let helloCapability = helloAccount.getCapability(/public/HelloAssetTutorial)
+let helloCapability = helloAccount.getCapability(/public/Hello)
 ```
 
 To get a capability that is stored in an account, we use the `account.getCapability` function.
