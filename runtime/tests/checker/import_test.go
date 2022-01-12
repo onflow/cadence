@@ -85,7 +85,7 @@ func TestCheckRepeatedImportResolution(t *testing.T) {
 
 	t.Parallel()
 
-	importedAddress := common.BytesToAddress([]byte{0x1})
+	importedAddress := common.MustBytesToAddress([]byte{0x1})
 
 	importedCheckerX, err := ParseAndCheckWithOptions(t,
 		`
@@ -208,7 +208,7 @@ func TestCheckImportResolutionSplit(t *testing.T) {
 
 	t.Parallel()
 
-	importedAddress := common.BytesToAddress([]byte{0x1})
+	importedAddress := common.MustBytesToAddress([]byte{0x1})
 
 	importedCheckerX, err := ParseAndCheckWithOptions(t,
 		`

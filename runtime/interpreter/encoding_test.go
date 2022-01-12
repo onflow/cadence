@@ -51,7 +51,7 @@ type encodeDecodeTest struct {
 	maxInlineElementSize uint64
 }
 
-var testOwner = common.BytesToAddress([]byte{0x42})
+var testOwner = common.MustBytesToAddress([]byte{0x42})
 
 func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 
@@ -2703,7 +2703,7 @@ func TestEncodeDecodeAddressValue(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: AddressValue(common.BytesToAddress([]byte{0x42})),
+				value: AddressValue(common.MustBytesToAddress([]byte{0x42})),
 				encoded: []byte{
 					// tag
 					0xd8, CBORTagAddressValue,
@@ -2721,7 +2721,7 @@ func TestEncodeDecodeAddressValue(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: AddressValue(common.BytesToAddress([]byte{0x0, 0x42})),
+				value: AddressValue(common.MustBytesToAddress([]byte{0x0, 0x42})),
 				encoded: []byte{
 					// tag
 					0xd8, CBORTagAddressValue,
@@ -2739,7 +2739,7 @@ func TestEncodeDecodeAddressValue(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: AddressValue(common.BytesToAddress([]byte{0x0, 0x42, 0x0, 0x43, 0x0})),
+				value: AddressValue(common.MustBytesToAddress([]byte{0x0, 0x42, 0x0, 0x43, 0x0})),
 				encoded: []byte{
 					// tag
 					0xd8, CBORTagAddressValue,

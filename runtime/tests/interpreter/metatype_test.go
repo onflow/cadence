@@ -566,7 +566,7 @@ func TestInterpretGetType(t *testing.T) {
 
 	t.Parallel()
 
-	storageAddress := common.BytesToAddress([]byte{0x42})
+	storageAddress := common.MustBytesToAddress([]byte{0x42})
 	storagePath := interpreter.PathValue{
 		Domain:     common.PathDomainStorage,
 		Identifier: "test",

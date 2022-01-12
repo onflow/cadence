@@ -73,19 +73,19 @@ func TestCheckPredeclaredValues(t *testing.T) {
 		// Both functions have the same name, but different types.
 
 		location1 := common.AddressLocation{
-			Address: common.BytesToAddress([]byte{0x1}),
+			Address: common.MustBytesToAddress([]byte{0x1}),
 		}
 
 		location2 := common.AddressLocation{
-			Address: common.BytesToAddress([]byte{0x2}),
+			Address: common.MustBytesToAddress([]byte{0x2}),
 		}
 
 		location3 := common.AddressLocation{
-			Address: common.BytesToAddress([]byte{0x3}),
+			Address: common.MustBytesToAddress([]byte{0x3}),
 		}
 
 		location4 := common.AddressLocation{
-			Address: common.BytesToAddress([]byte{0x4}),
+			Address: common.MustBytesToAddress([]byte{0x4}),
 		}
 
 		valueDeclaration1 := stdlib.StandardLibraryFunction{

@@ -599,15 +599,20 @@ func parseHexadecimalLocation(literal string) common.AddressLocation {
 		length++
 	}
 
-	address := make([]byte, hex.DecodedLen(length))
-	_, err := hex.Decode(address, bytes)
+	rawAddress := make([]byte, hex.DecodedLen(length))
+	_, err := hex.Decode(rawAddress, bytes)
 	if err != nil {
 		// unreachable, hex literal should always be valid
 		panic(err)
 	}
 
+	address, err := common.BytesToAddress(rawAddress)
+	if err != nil {
+		panic(err)
+	}
+
 	return common.AddressLocation{
-		Address: common.BytesToAddress(address),
+		Address: address,
 	}
 }
 
