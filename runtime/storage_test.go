@@ -2268,3 +2268,663 @@ transaction {
 	)
 	require.NoError(t, err)
 }
+
+func TestRuntimeReferenceOwnerAccess(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		const contract = `
+          pub contract TestContract {
+              pub resource TestResource {}
+
+              pub fun makeTestResource(): @TestResource {
+                  return <- create TestResource()
+              }
+          }
+        `
+
+		const tx = `
+          import TestContract from 0x1
+
+          transaction {
+
+              prepare(accountA: AuthAccount, accountB: AuthAccount) {
+
+                  let testResource <- TestContract.makeTestResource()
+                  let ref = &testResource as &TestContract.TestResource
+
+                  // At this point the resource is not in storage
+                  log(ref.owner?.address)
+
+                  accountA.save(<-testResource, to: /storage/test)
+
+                  // At this point the resource is in storage A
+                  log(ref.owner?.address)
+
+                  let testResource2 <- accountA.load<@TestContract.TestResource>(from: /storage/test)!
+
+                  let ref2 = &testResource2 as &TestContract.TestResource
+
+                   // At this point the resource is not in storage
+                  log(ref.owner?.address)
+                  log(ref2.owner?.address)
+
+                  accountB.save(<-testResource2, to: /storage/test)
+
+                  // At this point the resource is in storage B
+                  log(ref.owner?.address)
+                  log(ref2.owner?.address)
+              }
+          }
+        `
+
+		runtime := newTestInterpreterRuntime()
+
+		accountCodes := map[common.LocationID][]byte{}
+
+		var events []cadence.Event
+
+		var loggedMessages []string
+
+		signers := []Address{
+			common.BytesToAddress([]byte{0x1}),
+		}
+
+		runtimeInterface := &testRuntimeInterface{
+			getCode: func(location Location) (bytes []byte, err error) {
+				return accountCodes[location.ID()], nil
+			},
+			storage: newTestLedger(nil, nil),
+			getSigningAccounts: func() ([]Address, error) {
+				return signers, nil
+			},
+			resolveLocation: singleIdentifierLocationResolver(t),
+			getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+				location := common.AddressLocation{
+					Address: address,
+					Name:    name,
+				}
+				return accountCodes[location.ID()], nil
+			},
+			updateAccountContractCode: func(address Address, name string, code []byte) error {
+				location := common.AddressLocation{
+					Address: address,
+					Name:    name,
+				}
+				accountCodes[location.ID()] = code
+				return nil
+			},
+			emitEvent: func(event cadence.Event) error {
+				events = append(events, event)
+				return nil
+			},
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(b)
+			},
+			log: func(message string) {
+				loggedMessages = append(loggedMessages, message)
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		// Deploy contract
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: utils.DeploymentTransaction(
+					"TestContract",
+					[]byte(contract),
+				),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		// Run transaction
+
+		signers = []Address{
+			common.BytesToAddress([]byte{0x1}),
+			common.BytesToAddress([]byte{0x2}),
+		}
+
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: []byte(tx),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		require.Equal(t,
+			[]string{
+				"nil",
+				"0x0000000000000001",
+				"nil",
+				"nil",
+				"0x0000000000000002",
+				"0x0000000000000002",
+			},
+			loggedMessages,
+		)
+	})
+
+	t.Run("resource (array element)", func(t *testing.T) {
+
+		t.Parallel()
+
+		const contract = `
+          pub contract TestContract {
+              pub resource TestResource {}
+
+              pub fun makeTestResource(): @TestResource {
+                  return <- create TestResource()
+              }
+          }
+        `
+
+		const tx = `
+          import TestContract from 0x1
+
+          transaction {
+
+              prepare(account: AuthAccount) {
+
+                  let testResources <- [<-TestContract.makeTestResource()]
+                  let ref = &testResources[0] as &TestContract.TestResource
+
+                  // At this point the resource is not in storage
+                  log(ref.owner?.address)
+
+                  account.save(<-testResources, to: /storage/test)
+
+                  // At this point the resource is in storage
+                  log(ref.owner?.address)
+              }
+          }
+        `
+
+		runtime := newTestInterpreterRuntime()
+
+		testAddress := common.BytesToAddress([]byte{0x1})
+
+		accountCodes := map[common.LocationID][]byte{}
+
+		var events []cadence.Event
+
+		signerAccount := testAddress
+
+		var loggedMessages []string
+
+		runtimeInterface := &testRuntimeInterface{
+			getCode: func(location Location) (bytes []byte, err error) {
+				return accountCodes[location.ID()], nil
+			},
+			storage: newTestLedger(nil, nil),
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{signerAccount}, nil
+			},
+			resolveLocation: singleIdentifierLocationResolver(t),
+			getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+				location := common.AddressLocation{
+					Address: address,
+					Name:    name,
+				}
+				return accountCodes[location.ID()], nil
+			},
+			updateAccountContractCode: func(address Address, name string, code []byte) error {
+				location := common.AddressLocation{
+					Address: address,
+					Name:    name,
+				}
+				accountCodes[location.ID()] = code
+				return nil
+			},
+			emitEvent: func(event cadence.Event) error {
+				events = append(events, event)
+				return nil
+			},
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(b)
+			},
+			log: func(message string) {
+				loggedMessages = append(loggedMessages, message)
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		// Deploy contract
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: utils.DeploymentTransaction(
+					"TestContract",
+					[]byte(contract),
+				),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		// Run transaction
+
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: []byte(tx),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		require.Equal(t,
+			[]string{
+				"nil",
+				"0x0000000000000001",
+			},
+			loggedMessages,
+		)
+	})
+
+	t.Run("resource (nested field, array element)", func(t *testing.T) {
+
+		t.Parallel()
+
+		const contract = `
+          pub contract TestContract {
+              pub resource TestNestedResource {}
+
+              pub resource TestNestingResource {
+                  pub let nestedResources: @[TestNestedResource]
+
+                  init () {
+                      self.nestedResources <- [<- create TestNestedResource()]
+                  }
+
+                  destroy () {
+                      destroy self.nestedResources
+                  }
+              }
+
+              pub fun makeTestNestingResource(): @TestNestingResource {
+                  return <- create TestNestingResource()
+              }
+          }
+        `
+
+		const tx = `
+          import TestContract from 0x1
+
+          transaction {
+
+              prepare(account: AuthAccount) {
+
+                  let nestingResource <- TestContract.makeTestNestingResource()
+                  let nestingResourceRef = &nestingResource as &TestContract.TestNestingResource
+                  let nestedElementResourceRef = &nestingResource.nestedResources[0] as &TestContract.TestNestedResource
+
+                  // At this point the nesting and nested resources are not in storage
+                  log(nestingResourceRef.owner?.address)
+                  log(nestedElementResourceRef.owner?.address)
+
+                  account.save(<-nestingResource, to: /storage/test)
+
+                  // At this point the nesting and nested resources are both in storage
+                  log(nestingResourceRef.owner?.address)
+                  log(nestedElementResourceRef.owner?.address)
+              }
+          }
+        `
+
+		runtime := newTestInterpreterRuntime()
+
+		testAddress := common.BytesToAddress([]byte{0x1})
+
+		accountCodes := map[common.LocationID][]byte{}
+
+		var events []cadence.Event
+
+		signerAccount := testAddress
+
+		var loggedMessages []string
+
+		runtimeInterface := &testRuntimeInterface{
+			getCode: func(location Location) (bytes []byte, err error) {
+				return accountCodes[location.ID()], nil
+			},
+			storage: newTestLedger(nil, nil),
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{signerAccount}, nil
+			},
+			resolveLocation: singleIdentifierLocationResolver(t),
+			getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+				location := common.AddressLocation{
+					Address: address,
+					Name:    name,
+				}
+				return accountCodes[location.ID()], nil
+			},
+			updateAccountContractCode: func(address Address, name string, code []byte) error {
+				location := common.AddressLocation{
+					Address: address,
+					Name:    name,
+				}
+				accountCodes[location.ID()] = code
+				return nil
+			},
+			emitEvent: func(event cadence.Event) error {
+				events = append(events, event)
+				return nil
+			},
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(b)
+			},
+			log: func(message string) {
+				loggedMessages = append(loggedMessages, message)
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		// Deploy contract
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: utils.DeploymentTransaction(
+					"TestContract",
+					[]byte(contract),
+				),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		// Run transaction
+
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: []byte(tx),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		require.Equal(t,
+			[]string{
+				"nil",
+				"nil",
+				"0x0000000000000001",
+				"0x0000000000000001",
+			},
+			loggedMessages,
+		)
+	})
+
+	t.Run("array", func(t *testing.T) {
+
+		t.Parallel()
+
+		const contract = `
+          pub contract TestContract {
+              pub resource TestResource {}
+
+              pub fun makeTestResource(): @TestResource {
+                  return <- create TestResource()
+              }
+          }
+        `
+
+		const tx = `
+          import TestContract from 0x1
+
+          transaction {
+
+              prepare(account: AuthAccount) {
+
+                  let testResources <- [<-[<-TestContract.makeTestResource()]]
+                  let ref = &testResources[0] as &[TestContract.TestResource]
+
+                  // At this point the resource is not in storage
+                  log(ref[0].owner?.address)
+
+                  account.save(<-testResources, to: /storage/test)
+
+                  // At this point the resource is in storage
+                  log(ref[0].owner?.address)
+              }
+          }
+        `
+
+		runtime := newTestInterpreterRuntime()
+
+		testAddress := common.BytesToAddress([]byte{0x1})
+
+		accountCodes := map[common.LocationID][]byte{}
+
+		var events []cadence.Event
+
+		signerAccount := testAddress
+
+		var loggedMessages []string
+
+		runtimeInterface := &testRuntimeInterface{
+			getCode: func(location Location) (bytes []byte, err error) {
+				return accountCodes[location.ID()], nil
+			},
+			storage: newTestLedger(nil, nil),
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{signerAccount}, nil
+			},
+			resolveLocation: singleIdentifierLocationResolver(t),
+			getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+				location := common.AddressLocation{
+					Address: address,
+					Name:    name,
+				}
+				return accountCodes[location.ID()], nil
+			},
+			updateAccountContractCode: func(address Address, name string, code []byte) error {
+				location := common.AddressLocation{
+					Address: address,
+					Name:    name,
+				}
+				accountCodes[location.ID()] = code
+				return nil
+			},
+			emitEvent: func(event cadence.Event) error {
+				events = append(events, event)
+				return nil
+			},
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(b)
+			},
+			log: func(message string) {
+				loggedMessages = append(loggedMessages, message)
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		// Deploy contract
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: utils.DeploymentTransaction(
+					"TestContract",
+					[]byte(contract),
+				),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		// Run transaction
+
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: []byte(tx),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		require.Equal(t,
+			[]string{
+				"nil",
+				"0x0000000000000001",
+			},
+			loggedMessages,
+		)
+	})
+
+	t.Run("dictionary", func(t *testing.T) {
+
+		t.Parallel()
+
+		const contract = `
+          pub contract TestContract {
+              pub resource TestResource {}
+
+              pub fun makeTestResource(): @TestResource {
+                  return <- create TestResource()
+              }
+          }
+        `
+
+		const tx = `
+          import TestContract from 0x1
+
+          transaction {
+
+              prepare(account: AuthAccount) {
+
+                  let testResources <- [<-{0: <-TestContract.makeTestResource()}]
+                  let ref = &testResources[0] as &{Int: TestContract.TestResource}
+
+                  // At this point the resource is not in storage
+                  log(ref[0]?.owner?.address)
+
+                  account.save(<-testResources, to: /storage/test)
+
+                  // At this point the resource is in storage
+                  log(ref[0]?.owner?.address)
+              }
+          }
+        `
+
+		runtime := newTestInterpreterRuntime()
+
+		testAddress := common.BytesToAddress([]byte{0x1})
+
+		accountCodes := map[common.LocationID][]byte{}
+
+		var events []cadence.Event
+
+		signerAccount := testAddress
+
+		var loggedMessages []string
+
+		runtimeInterface := &testRuntimeInterface{
+			getCode: func(location Location) (bytes []byte, err error) {
+				return accountCodes[location.ID()], nil
+			},
+			storage: newTestLedger(nil, nil),
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{signerAccount}, nil
+			},
+			resolveLocation: singleIdentifierLocationResolver(t),
+			getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+				location := common.AddressLocation{
+					Address: address,
+					Name:    name,
+				}
+				return accountCodes[location.ID()], nil
+			},
+			updateAccountContractCode: func(address Address, name string, code []byte) error {
+				location := common.AddressLocation{
+					Address: address,
+					Name:    name,
+				}
+				accountCodes[location.ID()] = code
+				return nil
+			},
+			emitEvent: func(event cadence.Event) error {
+				events = append(events, event)
+				return nil
+			},
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(b)
+			},
+			log: func(message string) {
+				loggedMessages = append(loggedMessages, message)
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		// Deploy contract
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: utils.DeploymentTransaction(
+					"TestContract",
+					[]byte(contract),
+				),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		// Run transaction
+
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: []byte(tx),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		require.Equal(t,
+			[]string{
+				"nil",
+				"0x0000000000000001",
+			},
+			loggedMessages,
+		)
+	})
+}
