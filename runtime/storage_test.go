@@ -2331,7 +2331,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 		var loggedMessages []string
 
 		signers := []Address{
-			common.BytesToAddress([]byte{0x1}),
+			common.MustBytesToAddress([]byte{0x1}),
 		}
 
 		runtimeInterface := &testRuntimeInterface{
@@ -2391,8 +2391,8 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 		// Run transaction
 
 		signers = []Address{
-			common.BytesToAddress([]byte{0x1}),
-			common.BytesToAddress([]byte{0x2}),
+			common.MustBytesToAddress([]byte{0x1}),
+			common.MustBytesToAddress([]byte{0x2}),
 		}
 
 		err = runtime.ExecuteTransaction(
@@ -2456,7 +2456,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		runtime := newTestInterpreterRuntime()
 
-		testAddress := common.BytesToAddress([]byte{0x1})
+		testAddress := common.MustBytesToAddress([]byte{0x1})
 
 		accountCodes := map[common.LocationID][]byte{}
 
@@ -2594,7 +2594,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		runtime := newTestInterpreterRuntime()
 
-		testAddress := common.BytesToAddress([]byte{0x1})
+		testAddress := common.MustBytesToAddress([]byte{0x1})
 
 		accountCodes := map[common.LocationID][]byte{}
 
@@ -2719,7 +2719,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		runtime := newTestInterpreterRuntime()
 
-		testAddress := common.BytesToAddress([]byte{0x1})
+		testAddress := common.MustBytesToAddress([]byte{0x1})
 
 		accountCodes := map[common.LocationID][]byte{}
 
@@ -2842,7 +2842,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		runtime := newTestInterpreterRuntime()
 
-		testAddress := common.BytesToAddress([]byte{0x1})
+		testAddress := common.MustBytesToAddress([]byte{0x1})
 
 		accountCodes := map[common.LocationID][]byte{}
 
