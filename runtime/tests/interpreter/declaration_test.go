@@ -22,9 +22,10 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/stretchr/testify/require"
 )
 
 func TestInterpretForwardReferenceCall(t *testing.T) {
