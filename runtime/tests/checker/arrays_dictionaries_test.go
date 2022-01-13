@@ -790,7 +790,7 @@ func TestCheckInvalidResourceFirstIndex(t *testing.T) {
 
       fun test(): Int? {
           let xs <- [<-create X()]
-					return <-xs.firstIndex(of: "foo")
+          return xs.firstIndex(of: <-create X())
       }
     `)
 
