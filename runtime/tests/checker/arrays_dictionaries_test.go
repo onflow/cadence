@@ -760,7 +760,7 @@ func TestCheckArrayIndexOf(t *testing.T) {
 	_, err := ParseAndCheck(t, `
       fun test(): Int? {
           let x = [1, 2, 3]
-					return x.firstIndex(of:2)
+          return x.firstIndex(of: 2)
       }
     `)
 
