@@ -2,7 +2,8 @@
 title: Built-in Functions
 ---
 
-- `cadence•fun panic(_ message: String): Never`
+## panic
+`cadence•fun panic(_ message: String): Never`
 
   Terminates the program unconditionally
   and reports a message which explains why the unrecoverable error occurred.
@@ -12,7 +13,8 @@ title: Built-in Functions
   let account = optionalAccount ?? panic("missing account")
   ```
 
-- `cadence•fun assert(_ condition: Bool, message: String)`
+## assert
+`cadence•fun assert(_ condition: Bool, message: String)`
 
   Terminates the program if the given condition is false,
   and reports a message which explains how the condition is false.
@@ -20,7 +22,8 @@ title: Built-in Functions
 
   The message argument is optional.
 
-- `cadence•fun unsafeRandom(): UInt64`
+## unsafeRandom
+`cadence•fun unsafeRandom(): UInt64`
 
   Returns a pseudo-random number.
 
