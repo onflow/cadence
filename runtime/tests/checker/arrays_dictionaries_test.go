@@ -767,6 +767,21 @@ func TestCheckArrayIndexOf(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestCheckArrayIndexOfNonEquatableValueArray(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test(): Int? {
+          let x = [[1, 2], [3]]
+          return x.firstIndex(of: [3])
+      }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+	assert.IsType(t, &sema.NotEquatableTypeError{}, errs[0])
+}
+
 func TestCheckArrayFirstIndexWrongType(t *testing.T) {
 
 	t.Parallel()
@@ -794,15 +809,13 @@ func TestCheckInvalidResourceFirstIndex(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 7)
+	errs := ExpectCheckerErrors(t, err, 4)
 
 	assert.IsType(t, &sema.InvalidResourceArrayMemberError{}, errs[0])
 	assert.IsType(t, &sema.NotEquatableTypeError{}, errs[1])
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
-	assert.IsType(t, &sema.MissingMoveOperationError{}, errs[3])
-	assert.IsType(t, &sema.InvalidMoveOperationError{}, errs[4])
-	assert.IsType(t, &sema.ResourceLossError{}, errs[5])
-	assert.IsType(t, &sema.ResourceLossError{}, errs[6])
+	assert.IsType(t, &sema.ResourceLossError{}, errs[2])
+	assert.IsType(t, &sema.ResourceLossError{}, errs[3])
+
 }
 
 func TestCheckArrayContains(t *testing.T) {
