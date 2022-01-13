@@ -1355,7 +1355,7 @@ func (v *ArrayValue) FirstIndex(interpreter *Interpreter, getLocationRange func(
 		panic(errors.NewUnreachableError())
 	}
 
-	counter := 0
+	var counter int64
 	var result bool
 	v.Iterate(func(element Value) (resume bool) {
 		if needleEquatable.Equal(interpreter, getLocationRange, element) {
@@ -1369,7 +1369,7 @@ func (v *ArrayValue) FirstIndex(interpreter *Interpreter, getLocationRange func(
 	})
 
 	if result {
-		value := NewIntValueFromInt64(int64(counter))
+		value := NewIntValueFromInt64(counter)
 		return NewSomeValueNonCopying(value)
 	}
 	return NilValue{}
