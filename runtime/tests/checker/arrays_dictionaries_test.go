@@ -767,20 +767,6 @@ func TestCheckArrayIndexOf(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestCheckArrayFirstIndexDoesNotExist(t *testing.T) {
-
-	t.Parallel()
-
-	_, err := ParseAndCheck(t, `
-      fun test(): Int? {
-          let x = [1, 2, 3]
-					return x.firstIndex(of:5)
-      }
-    `)
-
-	require.NoError(t, err)
-}
-
 func TestCheckArrayFirstIndexWrongType(t *testing.T) {
 
 	t.Parallel()
