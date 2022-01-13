@@ -774,7 +774,7 @@ func TestCheckArrayFirstIndexWrongType(t *testing.T) {
 	_, err := ParseAndCheck(t, `
       fun test(): Int? {
           let x = [1, 2, 3]
-					return x.firstIndex(of:"foo")
+          return x.firstIndex(of: "foo")
       }
     `)
 	errs := ExpectCheckerErrors(t, err, 1)
