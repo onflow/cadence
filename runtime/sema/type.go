@@ -1512,7 +1512,8 @@ type ArrayType interface {
 }
 
 const arrayTypeFirstIndexFunctionDocString = `
-Returns the index of the first element matching the given object in the array, nil if no match
+Returns the index of the first element matching the given object in the array, nil if no match.
+Available if the array element type is not resource-kinded and equatable.
 `
 
 const arrayTypeContainsFunctionDocString = `
