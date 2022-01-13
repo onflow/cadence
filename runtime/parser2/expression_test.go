@@ -3076,6 +3076,26 @@ func TestParseIntegerLiterals(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("leading underscore", func(t *testing.T) {
+
+		t.Parallel()
+
+		// NOTE: a leading underscore introduces an identifier
+
+		result, errs := ParseExpression(`_100`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.IdentifierExpression{
+				Identifier: ast.Identifier{
+					Identifier: "_100",
+					Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			result,
+		)
+	})
 }
 
 func TestParseFixedPoint(t *testing.T) {
