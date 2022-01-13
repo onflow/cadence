@@ -1079,8 +1079,9 @@ are available for both variable-sized and fixed-sized or variable-sized arrays.
   let containsKitty = numbers.contains("Kitty")
   ```
 
-- `cadence•fun firstIndex(of:: T): Int?`
- Returns the index of the first matching elmement of type `T`, or nil if no match
+- `cadence•fun firstIndex(of: T): Int?`
+  Returns the index of the first element matching the given object in the array, nil if no match.
+  Available if `T` is not resource-kinded and equatable.
 
  ```cadence
   // Declare an array of integers.
