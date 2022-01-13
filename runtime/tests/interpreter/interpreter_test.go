@@ -9648,8 +9648,8 @@ func TestInterpretArrayFirstIndexDoesNotExist(t *testing.T) {
 	inter := parseCheckAndInterpret(t, `
       let xs = [1, 2, 3]
 
-			fun test() :Int? {
-				return xs.firstIndex(of:5)
+      fun test(): Int? {
+      return xs.firstIndex(of: 5)
       }
     `)
 
