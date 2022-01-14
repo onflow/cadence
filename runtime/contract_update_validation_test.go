@@ -1874,7 +1874,7 @@ func getMockedRuntimeInterfaceForTxUpdate(
 		},
 		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
-			return []Address{common.BytesToAddress([]byte{0x42})}, nil
+			return []Address{common.MustBytesToAddress([]byte{0x42})}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
 		getAccountContractCode: func(address Address, name string) (code []byte, err error) {

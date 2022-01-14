@@ -525,6 +525,55 @@ func TestCheckArrayConcatBound(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestCheckArraySlice(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+	  fun test(): [Int] {
+	 	  let a = [1, 2, 3, 4]
+		  return a.slice(from: 1, upTo: 2)
+      }
+    `)
+
+	require.NoError(t, err)
+}
+
+func TestCheckArraySliceBound(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+	  fun test(): [Int] {
+	 	  let a = [1, 2, 3, 4]
+          let s = a.slice
+		  return s(from: 1, upTo: 2)
+      }
+    `)
+
+	require.NoError(t, err)
+}
+
+func TestCheckInvalidResourceArraySlice(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      resource X {}
+
+      fun test(): @[X] {
+          let xs <- [<-create X()]
+          return <-xs.slice(from: 0, upTo: 1)
+      }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 3)
+
+	assert.IsType(t, &sema.InvalidResourceArrayMemberError{}, errs[0])
+	assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+	assert.IsType(t, &sema.ResourceLossError{}, errs[2])
+}
+
 func TestCheckArrayInsert(t *testing.T) {
 
 	t.Parallel()

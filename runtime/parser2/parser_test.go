@@ -229,6 +229,100 @@ func TestParseBuffering(t *testing.T) {
 			errs,
 		)
 	})
+
+	t.Run("nested buffering, invalid", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseProgram(`
+          fun main() {
+              assert(isneg(x:-1.0))
+              assert(!isneg(x:-0.0/0.0))
+          }
+
+          fun isneg(x: SignedFixedPoint): Bool {   /* I kinda forget what this is all about */
+              return x                             /* but we probably need to figure it out */
+                     <                             /* ************/((TODO?{/*))************ *//
+                    -x                             /* maybe it says NaNs are not negative?  */
+          }
+        `)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected token identifier",
+					Pos:     ast.Position{Offset: 420, Line: 10, Column: 20},
+				},
+			},
+			err.(Error).Errors,
+		)
+	})
+
+	t.Run("nested buffering, invalid; apparent invocation elision", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseProgram(`
+          fun main() {
+              fun abs(_:Int):Int { return _ > 0 ? _ : -_ }
+              let sanity = 0 <          /*****/((TODO?{/*****//
+                               abs(-1)
+              assert(sanity)
+          }
+        `)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected token '/'",
+					Pos:     ast.Position{Offset: 181, Line: 5, Column: 34},
+				},
+			},
+			err.(Error).Errors,
+		)
+	})
+
+	t.Run("nested buffering, valid; accept,accept,replay", func(t *testing.T) {
+
+		t.Parallel()
+
+		src := `
+            pub struct interface Y {}
+            pub struct X : Y {}
+            pub fun main():String {
+                fun f(a:Bool, _:String):String { return _; }
+                let S = 1
+                if false {
+                    let Type_X_Y__qp_identifier =
+                                    Type<X{Y}>().identifier; // parses fine
+                    return f(a:S<S, Type_X_Y__qp_identifier)
+                } else {
+                    return f(a:S<S, Type<X{Y}>().identifier) // should also parse fine
+                }
+            }`
+
+		_, err := ParseProgram(src)
+		assert.NoError(t, err)
+	})
+
+	t.Run("nested buffering, valid; overlapped", func(t *testing.T) {
+
+		t.Parallel()
+
+		src := `
+            transaction { }
+            pub fun main():String {
+                let A = 1
+                let B = 2
+                let C = 3
+                let D = 4
+                fun g(a:Bool, _:Bool):String { return _ ? "y" : "n" }
+                return g(a:A<B, C<(D>>(5)))
+            }`
+
+		_, err := ParseProgram(src)
+		assert.NoError(t, err)
+	})
+
 }
 
 func TestParseEOF(t *testing.T) {

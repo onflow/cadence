@@ -800,19 +800,19 @@ func TestInterpretStringIndexingUnicode(t *testing.T) {
 	)
 }
 
-type stringSliceTest struct {
-	str           string
-	from          int
-	to            int
-	result        string
-	expectedError error
-}
-
 func TestInterpretStringSlicing(t *testing.T) {
 
 	t.Parallel()
 
-	locationRange := interpreter.LocationRange{
+	locationRange1 := interpreter.LocationRange{
+		Location: TestLocation,
+		Range: ast.Range{
+			StartPos: ast.Position{Offset: 116, Line: 4, Column: 31},
+			EndPos:   ast.Position{Offset: 140, Line: 4, Column: 55},
+		},
+	}
+
+	locationRange2 := interpreter.LocationRange{
 		Location: TestLocation,
 		Range: ast.Range{
 			StartPos: ast.Position{Offset: 116, Line: 4, Column: 31},
@@ -820,7 +820,15 @@ func TestInterpretStringSlicing(t *testing.T) {
 		},
 	}
 
-	tests := []stringSliceTest{
+	type test struct {
+		str           string
+		from          int
+		to            int
+		result        string
+		expectedError error
+	}
+
+	tests := []test{
 		{"abcdef", 0, 6, "abcdef", nil},
 		{"abcdef", 0, 0, "", nil},
 		{"abcdef", 0, 1, "a", nil},
@@ -830,20 +838,28 @@ func TestInterpretStringSlicing(t *testing.T) {
 		{"abcdef", 5, 6, "f", nil},
 		{"abcdef", 1, 6, "bcdef", nil},
 		// Invalid indices
-		{"abcdef", -1, 0, "", interpreter.StringIndexOutOfBoundsError{
-			Index:         -1,
+		{"abcdef", -1, 0, "", interpreter.StringSliceIndicesError{
+			FromIndex:     -1,
+			UpToIndex:     0,
 			Length:        6,
-			LocationRange: locationRange,
+			LocationRange: locationRange2,
 		}},
-		{"abcdef", 0, -1, "", interpreter.StringIndexOutOfBoundsError{
-			Index:         -1,
+		{"abcdef", 0, -1, "", interpreter.StringSliceIndicesError{
+			FromIndex:     0,
+			UpToIndex:     -1,
 			Length:        6,
-			LocationRange: locationRange,
+			LocationRange: locationRange2,
 		}},
-		{"abcdef", 0, 10, "", interpreter.StringIndexOutOfBoundsError{
-			Index:         10,
+		{"abcdef", 0, 10, "", interpreter.StringSliceIndicesError{
+			FromIndex:     0,
+			UpToIndex:     10,
 			Length:        6,
-			LocationRange: locationRange,
+			LocationRange: locationRange2,
+		}},
+		{"abcdef", 2, 1, "", interpreter.InvalidSliceIndexError{
+			FromIndex:     2,
+			UpToIndex:     1,
+			LocationRange: locationRange1,
 		}},
 		// Unicode: indices are based on characters = grapheme clusters
 		{"cafe\\u{301}b", 0, 5, "cafe\u0301b", nil},
@@ -4510,7 +4526,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		// - `&R{RI}` (unauthorized, if argument for parameter `authorized` == false)
 		// - `auth &R{RI}` (authorized, if argument for parameter `authorized` == true)
 
-		storageAddress := common.BytesToAddress([]byte{0x42})
+		storageAddress := common.MustBytesToAddress([]byte{0x42})
 		storagePath := interpreter.PathValue{
 			Domain:     common.PathDomainStorage,
 			Identifier: "test",
@@ -5284,6 +5300,108 @@ func TestInterpretInvalidArrayRemoveLast(t *testing.T) {
 		},
 		indexErr,
 	)
+}
+
+func TestInterpretArraySlicing(t *testing.T) {
+
+	t.Parallel()
+
+	locationRange1 := interpreter.LocationRange{
+		Location: TestLocation,
+		Range: ast.Range{
+			StartPos: ast.Position{Offset: 125, Line: 4, Column: 31},
+			EndPos:   ast.Position{Offset: 149, Line: 4, Column: 55},
+		},
+	}
+
+	locationRange2 := interpreter.LocationRange{
+		Location: TestLocation,
+		Range: ast.Range{
+			StartPos: ast.Position{Offset: 125, Line: 4, Column: 31},
+			EndPos:   ast.Position{Offset: 150, Line: 4, Column: 56},
+		},
+	}
+
+	type test struct {
+		literal       string
+		from          int
+		to            int
+		result        string
+		expectedError error
+	}
+
+	tests := []test{
+		{"[1, 2, 3, 4, 5, 6]", 0, 6, "[1, 2, 3, 4, 5, 6]", nil},
+		{"[1, 2, 3, 4, 5, 6]", 0, 0, "[]", nil},
+		{"[1, 2, 3, 4, 5, 6]", 0, 1, "[1]", nil},
+		{"[1, 2, 3, 4, 5, 6]", 0, 2, "[1, 2]", nil},
+		{"[1, 2, 3, 4, 5, 6]", 1, 2, "[2]", nil},
+		{"[1, 2, 3, 4, 5, 6]", 2, 3, "[3]", nil},
+		{"[1, 2, 3, 4, 5, 6]", 5, 6, "[6]", nil},
+		{"[1, 2, 3, 4, 5, 6]", 1, 6, "[2, 3, 4, 5, 6]", nil},
+		// Invalid indices
+		{"[1, 2, 3, 4, 5, 6]", -1, 0, "", interpreter.ArraySliceIndicesError{
+			FromIndex:     -1,
+			UpToIndex:     0,
+			Size:          6,
+			LocationRange: locationRange2,
+		}},
+		{"[1, 2, 3, 4, 5, 6]", 0, -1, "", interpreter.ArraySliceIndicesError{
+			FromIndex:     0,
+			UpToIndex:     -1,
+			Size:          6,
+			LocationRange: locationRange2,
+		}},
+		{"[1, 2, 3, 4, 5, 6]", 0, 10, "", interpreter.ArraySliceIndicesError{
+			FromIndex:     0,
+			UpToIndex:     10,
+			Size:          6,
+			LocationRange: locationRange2,
+		}},
+		{"[1, 2, 3, 4, 5, 6]", 2, 1, "", interpreter.InvalidSliceIndexError{
+			FromIndex:     2,
+			UpToIndex:     1,
+			LocationRange: locationRange1,
+		}},
+	}
+
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+
+			inter := parseCheckAndInterpret(t,
+				fmt.Sprintf(
+					`
+                      fun test(): [Int] {
+                        let s = %s
+                        return s.slice(from: %d, upTo: %d)
+                      }
+                    `,
+					test.literal,
+					test.from,
+					test.to,
+				),
+			)
+
+			value, err := inter.Invoke("test")
+			if test.expectedError == nil {
+				require.NoError(t, err)
+
+				assert.Equal(
+					t,
+					test.result,
+					fmt.Sprint(value),
+				)
+			} else {
+				require.IsType(t,
+					interpreter.Error{},
+					err,
+				)
+				err = err.(interpreter.Error).Unwrap()
+
+				assert.Equal(t, test.expectedError, err)
+			}
+		})
+	}
 }
 
 func TestInterpretArrayContains(t *testing.T) {

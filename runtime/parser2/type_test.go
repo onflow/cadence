@@ -2760,18 +2760,22 @@ func TestParseConstantSizedSizedArrayWithTrailingUnderscoreSize(t *testing.T) {
 
 	t.Parallel()
 
-	actual, err := ParseProgram(`
+	_, errs := ParseDeclarations(`
 	  let T:[d;0_]=0
 	`)
 
-	assert.Nil(t, actual)
-
-	require.Error(t, err)
-
-	require.IsType(t, Error{}, err)
-
-	errors := err.(Error).Errors
-	assert.Len(t, errors, 1)
-
-	require.IsType(t, &SyntaxError{}, errors[0])
+	utils.AssertEqualWithDiff(t,
+		[]error{
+			&InvalidIntegerLiteralError{
+				Literal:                   "0_",
+				IntegerLiteralKind:        IntegerLiteralKindDecimal,
+				InvalidIntegerLiteralKind: InvalidNumberLiteralKindTrailingUnderscore,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 2, Column: 12, Offset: 13},
+					EndPos:   ast.Position{Line: 2, Column: 13, Offset: 14},
+				},
+			},
+		},
+		errs,
+	)
 }

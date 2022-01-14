@@ -279,6 +279,8 @@ type Storage interface {
 	CheckHealth() error
 }
 
+type ReferencedResourceKindedValues map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}
+
 type Interpreter struct {
 	Program                        *Program
 	Location                       common.Location
@@ -315,6 +317,8 @@ type Interpreter struct {
 	atreeValueValidationEnabled    bool
 	atreeStorageValidationEnabled  bool
 	tracingEnabled                 bool
+	// TODO: ideally this would be a weak map, but Go has no weak references
+	referencedResourceKindedValues ReferencedResourceKindedValues
 }
 
 type Option func(*Interpreter) error
@@ -577,6 +581,15 @@ func withTypeCodes(typeCodes TypeCodes) Option {
 	}
 }
 
+// withReferencedResourceKindedValues returns an interpreter option which sets the referenced values.
+//
+func withReferencedResourceKindedValues(referencedResourceKindedValues ReferencedResourceKindedValues) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.referencedResourceKindedValues = referencedResourceKindedValues
+		return nil
+	}
+}
+
 // WithDebugger returns an interpreter option which sets the given debugger
 //
 func WithDebugger(debugger *Debugger) Option {
@@ -615,6 +628,7 @@ func NewInterpreter(program *Program, location common.Location, options ...Optio
 			InterfaceCodes:       map[sema.TypeID]WrapperCode{},
 			TypeRequirementCodes: map[sema.TypeID]WrapperCode{},
 		}),
+		withReferencedResourceKindedValues(map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}{}),
 	}
 
 	for _, option := range defaultOptions {
@@ -1230,7 +1244,7 @@ func (interpreter *Interpreter) visitFunctionBody(
 	}
 
 	// If there is a return type, declare the constant `result`.
-	// If it is a resource type, the constant has the same type as a referecne to the return type.
+	// If it is a resource type, the constant has the same type as a reference to the return type.
 	// If it is not a resource type, the constant has the same type as the return type.
 
 	if returnType != sema.VoidType {
@@ -1268,11 +1282,11 @@ func (interpreter *Interpreter) visitCondition(condition *ast.Condition) {
 		Expression: condition.Test,
 	}
 
-	result := interpreter.evalStatement(statement).(ExpressionStatementResult)
+	result, ok := interpreter.evalStatement(statement).(ExpressionStatementResult)
 
-	value := result.Value.(BoolValue)
+	value, valueOk := result.Value.(BoolValue)
 
-	if value {
+	if ok && valueOk && bool(value) {
 		return
 	}
 
@@ -2506,6 +2520,7 @@ func (interpreter *Interpreter) NewSubInterpreter(
 		WithAtreeValueValidationEnabled(interpreter.atreeValueValidationEnabled),
 		WithAtreeStorageValidationEnabled(interpreter.atreeStorageValidationEnabled),
 		withTypeCodes(interpreter.typeCodes),
+		withReferencedResourceKindedValues(interpreter.referencedResourceKindedValues),
 		WithPublicAccountHandler(interpreter.publicAccountHandler),
 		WithPublicKeyValidationHandler(interpreter.PublicKeyValidationHandler),
 		WithSignatureVerificationHandler(interpreter.SignatureVerificationHandler),
@@ -2871,7 +2886,10 @@ func init() {
 		"FunctionType",
 		NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				parameters := invocation.Arguments[0].(*ArrayValue)
+				parameters, paramsOk := invocation.Arguments[0].(*ArrayValue)
+				if !paramsOk {
+					panic(errors.NewUnreachableError())
+				}
 				returnType := invocation.Interpreter.MustConvertStaticToSemaType(invocation.Arguments[1].(TypeValue).Type)
 				parameterTypes := make([]*sema.Parameter, 0, parameters.Count())
 				parameters.Iterate(func(param Value) bool {
@@ -2906,7 +2924,11 @@ func init() {
 }
 
 func RestrictedTypeFunction(invocation Invocation) Value {
-	restrictedIDs := invocation.Arguments[1].(*ArrayValue)
+	restrictedIDs, restrictedIDsOk := invocation.Arguments[1].(*ArrayValue)
+
+	if !restrictedIDsOk {
+		panic(errors.NewUnreachableError())
+	}
 
 	staticRestrictions := make([]InterfaceStaticType, 0, restrictedIDs.Count())
 	semaRestrictions := make([]*sema.InterfaceType, 0, restrictedIDs.Count())
@@ -3171,7 +3193,12 @@ var stringFunction = func() Value {
 		sema.StringTypeEncodeHexFunctionName,
 		NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				argument := invocation.Arguments[0].(*ArrayValue)
+				argument, ok := invocation.Arguments[0].(*ArrayValue)
+
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
 				bytes, _ := ByteArrayValueToByteSlice(argument)
 				return NewStringValue(hex.EncodeToString(bytes))
 			},
@@ -3433,7 +3460,11 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 		func(invocation Invocation) Value {
 
 			value := invocation.Arguments[0]
-			path := invocation.Arguments[1].(PathValue)
+			path, pathOk := invocation.Arguments[1].(PathValue)
+
+			if !pathOk {
+				panic(errors.NewUnreachableError())
+			}
 
 			domain := path.Domain.Identifier()
 			identifier := path.Identifier
@@ -3482,7 +3513,11 @@ func (interpreter *Interpreter) authAccountTypeFunction(addressValue AddressValu
 	return NewHostFunctionValue(
 		func(invocation Invocation) Value {
 
-			path := invocation.Arguments[0].(PathValue)
+			path, pathOk := invocation.Arguments[0].(PathValue)
+
+			if !pathOk {
+				panic(errors.NewUnreachableError())
+			}
 
 			domain := path.Domain.Identifier()
 			identifier := path.Identifier
@@ -3520,7 +3555,11 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 	return NewHostFunctionValue(
 		func(invocation Invocation) Value {
 
-			path := invocation.Arguments[0].(PathValue)
+			path, pathOk := invocation.Arguments[0].(PathValue)
+
+			if !pathOk {
+				panic(errors.NewUnreachableError())
+			}
 
 			domain := path.Domain.Identifier()
 			identifier := path.Identifier
@@ -3585,7 +3624,11 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 	return NewHostFunctionValue(
 		func(invocation Invocation) Value {
 
-			path := invocation.Arguments[0].(PathValue)
+			path, pathOk := invocation.Arguments[0].(PathValue)
+
+			if !pathOk {
+				panic(errors.NewUnreachableError())
+			}
 
 			typeParameterPair := invocation.TypeParameterTypes.Oldest()
 			if typeParameterPair == nil {
@@ -3594,7 +3637,10 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 
 			ty := typeParameterPair.Value
 
-			referenceType := ty.(*sema.ReferenceType)
+			referenceType, ok := ty.(*sema.ReferenceType)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
 
 			reference := &StorageReferenceValue{
 				Authorized:           referenceType.Authorized,
@@ -3634,10 +3680,23 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 				panic(errors.NewUnreachableError())
 			}
 
-			borrowType := typeParameterPair.Value.(*sema.ReferenceType)
+			borrowType, ok := typeParameterPair.Value.(*sema.ReferenceType)
 
-			newCapabilityPath := invocation.Arguments[0].(PathValue)
-			targetPath := invocation.Arguments[1].(PathValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			newCapabilityPath, capabilityPathOk := invocation.Arguments[0].(PathValue)
+
+			if !capabilityPathOk {
+				panic(errors.NewUnreachableError())
+			}
+
+			targetPath, pathOk := invocation.Arguments[1].(PathValue)
+
+			if !pathOk {
+				panic(errors.NewUnreachableError())
+			}
 
 			newCapabilityDomain := newCapabilityPath.Domain.Identifier()
 			newCapabilityIdentifier := newCapabilityPath.Identifier
@@ -3687,7 +3746,11 @@ func (interpreter *Interpreter) accountGetLinkTargetFunction(addressValue Addres
 	return NewHostFunctionValue(
 		func(invocation Invocation) Value {
 
-			capabilityPath := invocation.Arguments[0].(PathValue)
+			capabilityPath, pathOk := invocation.Arguments[0].(PathValue)
+
+			if !pathOk {
+				panic(errors.NewUnreachableError())
+			}
 
 			domain := capabilityPath.Domain.Identifier()
 			identifier := capabilityPath.Identifier
@@ -3717,7 +3780,11 @@ func (interpreter *Interpreter) authAccountUnlinkFunction(addressValue AddressVa
 	return NewHostFunctionValue(
 		func(invocation Invocation) Value {
 
-			capabilityPath := invocation.Arguments[0].(PathValue)
+			capabilityPath, pathOk := invocation.Arguments[0].(PathValue)
+
+			if !pathOk {
+				panic(errors.NewUnreachableError())
+			}
 
 			domain := capabilityPath.Domain.Identifier()
 			identifier := capabilityPath.Identifier
@@ -3748,7 +3815,12 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 				typeParameterPair := invocation.TypeParameterTypes.Oldest()
 				if typeParameterPair != nil {
 					ty := typeParameterPair.Value
-					borrowType = ty.(*sema.ReferenceType)
+					var ok bool
+					borrowType, ok = ty.(*sema.ReferenceType)
+					if !ok {
+						panic(errors.NewUnreachableError())
+					}
+
 				}
 			}
 
@@ -3813,7 +3885,12 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 				typeParameterPair := invocation.TypeParameterTypes.Oldest()
 				if typeParameterPair != nil {
 					ty := typeParameterPair.Value
-					borrowType = ty.(*sema.ReferenceType)
+					var ok bool
+					borrowType, ok = ty.(*sema.ReferenceType)
+					if !ok {
+						panic(errors.NewUnreachableError())
+					}
+
 				}
 			}
 
@@ -4092,7 +4169,11 @@ func (interpreter *Interpreter) isInstanceFunction(self Value) *HostFunctionValu
 	return NewHostFunctionValue(
 		func(invocation Invocation) Value {
 			firstArgument := invocation.Arguments[0]
-			typeValue := firstArgument.(TypeValue)
+			typeValue, ok := firstArgument.(TypeValue)
+
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
 
 			staticType := typeValue.Type
 
@@ -4288,5 +4369,34 @@ func (interpreter *Interpreter) ValidateAtreeValue(v atree.Value) {
 			}
 		}
 	}
+}
 
+func (interpreter *Interpreter) trackReferencedResourceKindedValue(
+	id atree.StorageID,
+	value ReferenceTrackedResourceKindedValue,
+) {
+	values := interpreter.referencedResourceKindedValues[id]
+	if values == nil {
+		values = map[ReferenceTrackedResourceKindedValue]struct{}{}
+		interpreter.referencedResourceKindedValues[id] = values
+	}
+	values[value] = struct{}{}
+}
+
+func (interpreter *Interpreter) updateReferencedResource(
+	currentStorageID atree.StorageID,
+	newStorageID atree.StorageID,
+	updateFunc func(value ReferenceTrackedResourceKindedValue),
+) {
+	values := interpreter.referencedResourceKindedValues[currentStorageID]
+	if values == nil {
+		return
+	}
+	for value := range values { //nolint:maprangecheck
+		updateFunc(value)
+	}
+	if newStorageID != currentStorageID {
+		interpreter.referencedResourceKindedValues[newStorageID] = values
+		interpreter.referencedResourceKindedValues[currentStorageID] = nil
+	}
 }
