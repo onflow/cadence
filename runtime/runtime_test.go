@@ -3230,27 +3230,28 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 	})
 
 	t.Run("function with not enough arguments panics", func(tt *testing.T) {
-		assert.Panics(tt, func() {
-			_, _ = runtime.InvokeContractFunction(
-				common.AddressLocation{
-					Address: addressValue,
-					Name:    "Test",
-				},
-				"helloMultiArg",
-				[]interpreter.Value{
-					interpreter.NewStringValue("number"),
-					interpreter.NewIntValueFromInt64(42),
-				},
-				[]sema.Type{
-					sema.StringType,
-					sema.IntType,
-				},
-				Context{
-					Interface: runtimeInterface,
-					Location:  nextTransactionLocation(),
-				},
-			)
-		})
+		_, err = runtime.InvokeContractFunction(
+			common.AddressLocation{
+				Address: addressValue,
+				Name:    "Test",
+			},
+			"helloMultiArg",
+			[]interpreter.Value{
+				interpreter.NewStringValue("number"),
+				interpreter.NewIntValueFromInt64(42),
+			},
+			[]sema.Type{
+				sema.StringType,
+				sema.IntType,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.Error(tt, err)
+		assert.ErrorAs(tt, err, &Error{})
 	})
 
 	t.Run("function with incorrect argument type errors", func(tt *testing.T) {
@@ -5701,7 +5702,7 @@ func TestRuntimeExternalError(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	interpreterRuntime := newTestInterpreterRuntime()
 
 	script := []byte(`
       transaction {
@@ -5724,22 +5725,18 @@ func TestRuntimeExternalError(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	assert.PanicsWithValue(t,
-		interpreter.ExternalError{
-			Recovered: logPanic{},
+	err := interpreterRuntime.ExecuteTransaction(
+		Script{
+			Source: script,
 		},
-		func() {
-			_ = runtime.ExecuteTransaction(
-				Script{
-					Source: script,
-				},
-				Context{
-					Interface: runtimeInterface,
-					Location:  nextTransactionLocation(),
-				},
-			)
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
 		},
 	)
+
+	require.Error(t, err)
+	assert.ErrorAs(t, err, &interpreter.ExternalError{})
 }
 
 func TestRuntimeDeployCodeCaching(t *testing.T) {
