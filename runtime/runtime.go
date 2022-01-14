@@ -210,8 +210,13 @@ func NewInterpreterRuntime(options ...Option) Runtime {
 }
 
 func (r *interpreterRuntime) Recover(onError func(error), context Context) {
+	recovered := recover()
+	if recovered == nil {
+		return
+	}
+
 	var err error
-	switch recovered := recover().(type) {
+	switch recovered := recovered.(type) {
 	case Error:
 		// avoid redundant wrapping
 		err = recovered
