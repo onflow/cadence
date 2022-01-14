@@ -255,12 +255,23 @@ func (checker *Checker) checkBinaryExpressionArithmeticOrNonEqualityComparisonOr
 		}
 	}
 
-	// check both types are equal
+	shouldReportInvalidOperands := func(leftType, rightType Type) bool {
+		// If errors are already reported, then avoid reporting them again.
+		if reportedInvalidOperands || anyInvalid {
+			return false
+		}
 
-	if !reportedInvalidOperands &&
-		!anyInvalid &&
-		!checker.validNumericTypesForOperator(operationKind, leftType, rightType) {
+		// Both types should be equal.
+		if !leftType.Equal(rightType) {
+			return true
+		}
 
+		// Arithmetic, bitwise and non-equality comparison operators
+		// are not supported for numeric supertypes.
+		return isNumericSuperType(leftType)
+	}
+
+	if shouldReportInvalidOperands(leftType, rightType) {
 		checker.report(
 			&InvalidBinaryOperandsError{
 				Operation: operation,
@@ -282,43 +293,6 @@ func (checker *Checker) checkBinaryExpressionArithmeticOrNonEqualityComparisonOr
 
 	default:
 		panic(errors.NewUnreachableError())
-	}
-}
-
-// validNumericTypesForOperator checks whether the operand types are valid for the given operator.
-// This method assumes that the two types: `leftType` and `rightType` are always numeric types.
-func (checker *Checker) validNumericTypesForOperator(operationKind BinaryOperationKind, leftType, rightType Type) bool {
-	switch operationKind {
-	case BinaryOperationKindArithmetic,
-		BinaryOperationKindBitwise:
-		if !leftType.Equal(rightType) {
-			return false
-		}
-
-		// So if it is not a super-type, then it's a valid numeric type for
-		// arithmetic and bitwise operations.
-		return !checker.isNumericSuperType(leftType)
-
-	case BinaryOperationKindNonEqualityComparison:
-		return leftType.Equal(rightType)
-
-	default:
-		// Ideally unreachable. However, return `false` instead of panicking to gracefully handle.
-		return false
-	}
-}
-
-func (*Checker) isNumericSuperType(numberType Type) bool {
-	switch numberType {
-	case NumberType,
-		SignedNumberType,
-		IntegerType,
-		SignedIntegerType,
-		FixedPointType,
-		SignedFixedPointType:
-		return true
-	default:
-		return false
 	}
 }
 

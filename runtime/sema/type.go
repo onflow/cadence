@@ -6264,3 +6264,18 @@ func getFieldNames(members []*Member) []string {
 
 	return fields
 }
+
+
+func isNumericSuperType(numberType Type) bool {
+	switch numberType {
+	case NumberType,
+		SignedNumberType,
+		IntegerType,
+		SignedIntegerType,
+		FixedPointType,
+		SignedFixedPointType:
+		return true
+	default:
+		return false
+	}
+}

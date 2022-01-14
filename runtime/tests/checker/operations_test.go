@@ -471,28 +471,80 @@ func TestCheckNumericSuperTypeBinaryOperations(t *testing.T) {
 
 	t.Parallel()
 
-	operations := []ast.Operation{
-		ast.OperationPlus,
-		ast.OperationMinus,
-		ast.OperationMod,
-		ast.OperationMul,
-		ast.OperationDiv,
+	supertypes := []sema.Type{
+		sema.NumberType,
+		sema.SignedNumberType,
+		sema.IntegerType,
+		sema.SignedIntegerType,
+		sema.FixedPointType,
+		sema.SignedFixedPointType,
 	}
 
-	for _, op := range operations {
-		typ := sema.IntegerType
+	t.Run("non saturating operations", func(t *testing.T) {
 
-		code := fmt.Sprintf(
-			`
-                      fun test(a: %[1]s, b: %[1]s): %[1]s {
-                          return a %[2]s b
-                      }
-                    `,
-			typ.String(),
-			op.Symbol(),
-		)
+		operations := []ast.Operation{
+			ast.OperationPlus,
+			ast.OperationMinus,
+			ast.OperationMul,
+			ast.OperationDiv,
+			ast.OperationMod,
+			ast.OperationBitwiseAnd,
+			ast.OperationBitwiseOr,
+			ast.OperationBitwiseXor,
+			ast.OperationBitwiseRightShift,
+			ast.OperationBitwiseLeftShift,
+			ast.OperationLess,
+			ast.OperationLessEqual,
+			ast.OperationGreater,
+			ast.OperationGreaterEqual,
+		}
 
-		_, err := ParseAndCheck(t, code)
-		assert.Error(t, err)
-	}
+		for _, supertype := range supertypes {
+			for _, op := range operations {
+				t.Run(fmt.Sprintf("%s,%s", supertype.String(), op.String()), func(t *testing.T) {
+					code := fmt.Sprintf(`
+                        fun test(a: %[1]s, b: %[1]s): AnyStruct {
+                            return a %[2]s b
+                        }`,
+						supertype.String(),
+						op.Symbol(),
+					)
+
+					_, err := ParseAndCheck(t, code)
+					errs := ExpectCheckerErrors(t, err, 1)
+					assert.IsType(t, &sema.InvalidBinaryOperandsError{}, errs[0])
+				})
+			}
+		}
+	})
+
+	t.Run("saturating operations", func(t *testing.T) {
+		t.Parallel()
+
+		saturatingFunctions := []string{
+			sema.NumericTypeSaturatingAddFunctionName,
+			sema.NumericTypeSaturatingSubtractFunctionName,
+			sema.NumericTypeSaturatingMultiplyFunctionName,
+			sema.NumericTypeSaturatingMultiplyFunctionName,
+			sema.NumericTypeSaturatingDivideFunctionName,
+		}
+
+		for _, supertype := range supertypes {
+			for _, saturatingFunc := range saturatingFunctions {
+				t.Run(fmt.Sprintf("%s,%s", supertype.String(), saturatingFunc), func(t *testing.T) {
+					code := fmt.Sprintf(`
+                        fun test(a: %[1]s, b: %[1]s): AnyStruct {
+                            return a.%[2]s(b)
+                        }`,
+						supertype.String(),
+						saturatingFunc,
+					)
+
+					_, err := ParseAndCheck(t, code)
+					errs := ExpectCheckerErrors(t, err, 1)
+					assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+				})
+			}
+		}
+	})
 }
