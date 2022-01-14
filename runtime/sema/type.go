@@ -6265,7 +6265,6 @@ func getFieldNames(members []*Member) []string {
 	return fields
 }
 
-
 func isNumericSuperType(numberType Type) bool {
 	switch numberType {
 	case NumberType,
