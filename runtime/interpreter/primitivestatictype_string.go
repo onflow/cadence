@@ -118,7 +118,7 @@ var _PrimitiveStaticType_map = map[PrimitiveStaticType]string{
 	95: _PrimitiveStaticType_name[393:408],
 	96: _PrimitiveStaticType_name[408:425],
 	97: _PrimitiveStaticType_name[425:435],
-	98: _PrimitiveStaticType_name[435:441],
+	98: _PrimitiveStaticType_name[435:443],
 }
 
 func (i PrimitiveStaticType) String() string {
