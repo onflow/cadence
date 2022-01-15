@@ -178,8 +178,9 @@ The main use case for Identity is to send it from a transaction into a contract 
 
 ```cadence
 
-fun someMethod(identity: &Identity) {
-   log("I was called by".concat(identity.address))
+// example fun 
+pub fun someMethod(identity: &Identity) {
+   log("I was called by ".concat(identity.address))
 }
 
 transaction() {
