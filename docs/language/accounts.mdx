@@ -88,6 +88,10 @@ to the `prepare` phase of the transaction.
 
       let keys: AuthAccount.Keys
 
+
+      // Identity of account
+			let idenitty: &Identity
+
       // Key management
 
       // Adds a public key to the account.
@@ -167,6 +171,24 @@ to the `prepare` phase of the transaction.
   which discard their changes upon completion. 
   Attempting to use this function outside of a script will cause a type error. 
 
+## Identity
+Identity can only be obtained as a reference from an AuthAccount and has a single `address` field. 
+
+The main use case for Identity is to send it from a transaction into a contract method to know the address of who called it. 
+
+```cadence
+
+fun someMethod(identity: &Identity) {
+   log("I was called by".concat(identity.address))
+}
+
+transaction() {
+    prepare(signer: AuthAccount) {
+				someMethod(signer.identity)
+    }
+}
+  
+```
 ## Account Creation
 
 Accounts can be created by calling the `AuthAccount` constructor

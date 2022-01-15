@@ -43,7 +43,7 @@ var IdentityType = func() *CompositeType {
 			identityType,
 			IdentityAddressField,
 			&AddressType{},
-			accountTypeAddressFieldDocString,
+			identityTypeAddressFieldDocString,
 		),
 	}
 
@@ -56,6 +56,6 @@ func init() {
 	// Set the container type after initializing the AccountKeysTypes, to avoid initializing loop.
 }
 
-const identitytTypeAddressFieldDocString = `
+const identityTypeAddressFieldDocString = `
 The address of the identity
 `
