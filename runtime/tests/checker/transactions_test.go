@@ -348,6 +348,18 @@ func TestCheckTransactions(t *testing.T) {
 			},
 		)
 	})
+
+	t.Run("CheckAccessIdenitty", func(t *testing.T) {
+		test(t,
+			` 
+			    transaction {
+            prepare(x: AuthAccount) {
+
+						  var identity: &Identity = x.identity
+						}
+          }
+	`, nil)
+	})
 }
 
 func TestCheckTransactionExecuteScope(t *testing.T) {
