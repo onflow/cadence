@@ -60,7 +60,7 @@ func _() {
 	_ = x[PrimitiveStaticTypeAuthAccountKeys-95]
 	_ = x[PrimitiveStaticTypePublicAccountKeys-96]
 	_ = x[PrimitiveStaticTypeAccountKey-97]
-	_ = x[PrimitiveIdentityStaticType-98]
+	_ = x[PrimitiveStaticTypeIdentity-98]
 }
 
 const _PrimitiveStaticType_name = "UnknownVoidAnyNeverAnyStructAnyResourceBoolAddressStringCharacterMetaTypeBlockNumberSignedNumberIntegerSignedIntegerFixedPointSignedFixedPointIntInt8Int16Int32Int64Int128Int256UIntUInt8UInt16UInt32UInt64UInt128UInt256Word8Word16Word32Word64Fix64UFix64PathCapabilityStoragePathCapabilityPathPublicPathPrivatePathAuthAccountPublicAccountDeployedContractAuthAccountContractsPublicAccountContractsAuthAccountKeysPublicAccountKeysAccountKeyIdentity"

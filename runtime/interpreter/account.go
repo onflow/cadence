@@ -224,7 +224,7 @@ func NewPublicAccountValue(
 }
 
 var identityTypeID = sema.IdentityType.ID()
-var identityStaticType StaticType = PrimitiveIdentityStaticType
+var identityStaticType StaticType = PrimitiveStaticTypeIdentity
 var identityDynamicType DynamicType = CompositeDynamicType{
 	StaticType: sema.IdentityType,
 }
