@@ -284,4 +284,33 @@ func TestInterpretTransactions(t *testing.T) {
 		)
 	})
 
+	t.Run("Access identity of AuthAccount", func(t *testing.T) {
+		inter := parseCheckAndInterpret(t, `
+
+					var caller: String = ""
+          transaction {
+            prepare(signer: AuthAccount) {
+
+						  caller = signer.identity.address.toString()
+						}
+          }
+        `)
+
+		signer1 := newTestAuthAccountValue(
+			interpreter.AddressValue{2, 5, 2, 7, 8, 3, 5},
+		)
+
+		err := inter.InvokeTransaction(0, signer1)
+		require.NoError(t, err)
+
+		value := inter.Globals["caller"].GetValue()
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewStringValue("0x0205020708030500"),
+			value,
+		)
+
+	})
+
 }
