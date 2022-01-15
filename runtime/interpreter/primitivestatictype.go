@@ -168,6 +168,7 @@ const (
 	PrimitiveStaticTypeAuthAccountKeys
 	PrimitiveStaticTypePublicAccountKeys
 	PrimitiveStaticTypeAccountKey
+	PrimitiveIdentityStaticType
 )
 
 func (PrimitiveStaticType) isStaticType() {}
@@ -307,6 +308,8 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 		return sema.PublicAccountKeysType
 	case PrimitiveStaticTypeAccountKey:
 		return sema.AccountKeyType
+	case PrimitiveIdentityStaticType:
+		return sema.IdentityType
 	default:
 		panic(errors.NewUnreachableError())
 	}
@@ -434,6 +437,8 @@ func ConvertSemaToPrimitiveStaticType(t sema.Type) PrimitiveStaticType {
 		return PrimitiveStaticTypeAccountKey
 	case sema.StringType:
 		return PrimitiveStaticTypeString
+	case sema.IdentityType:
+		return PrimitiveIdentityStaticType
 	}
 
 	switch t.(type) {

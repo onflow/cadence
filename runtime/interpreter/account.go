@@ -35,6 +35,7 @@ var authAccountFieldNames = []string{
 	sema.AuthAccountAddressField,
 	sema.AuthAccountContractsField,
 	sema.AuthAccountKeysField,
+	sema.AuthAccountIdentityField,
 }
 
 // NewAuthAccountValue constructs an auth account value.
@@ -51,6 +52,7 @@ func NewAuthAccountValue(
 ) Value {
 
 	fields := map[string]Value{
+		sema.AuthAccountIdentityField:        NewIdentityValue(address),
 		sema.AuthAccountAddressField:         address,
 		sema.AuthAccountAddPublicKeyField:    addPublicKeyFunction,
 		sema.AuthAccountRemovePublicKeyField: removePublicKeyFunction,
@@ -216,6 +218,44 @@ func NewPublicAccountValue(
 		publicAccountFieldNames,
 		fields,
 		computedFields,
+		nil,
+		stringer,
+	)
+}
+
+var identityTypeID = sema.IdentityType.ID()
+var identityStaticType StaticType = PrimitiveIdentityStaticType
+var identityDynamicType DynamicType = CompositeDynamicType{
+	StaticType: sema.IdentityType,
+}
+var identityFieldNames = []string{
+	sema.IdentityAddressField,
+}
+
+// NewIdentity  constructs an identity
+func NewIdentityValue(
+	address AddressValue,
+) Value {
+
+	fields := map[string]Value{
+		sema.IdentityAddressField: address,
+	}
+
+	var str string
+	stringer := func(_ SeenReferences) string {
+		if str == "" {
+			str = fmt.Sprintf("Identity(%s)", address)
+		}
+		return str
+	}
+
+	return NewSimpleCompositeValue(
+		identityTypeID,
+		identityStaticType,
+		identityDynamicType,
+		identityFieldNames,
+		fields,
+		nil,
 		nil,
 		stringer,
 	)

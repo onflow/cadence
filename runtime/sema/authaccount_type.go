@@ -41,6 +41,7 @@ const AuthAccountGetCapabilityField = "getCapability"
 const AuthAccountGetLinkTargetField = "getLinkTarget"
 const AuthAccountContractsField = "contracts"
 const AuthAccountKeysField = "keys"
+const AuthAccountIdentityField = "identity"
 
 // AuthAccountType represents the authorized access to an account.
 // Access to an AuthAccount means having full access to its storage, public keys, and code.
@@ -170,6 +171,15 @@ var AuthAccountType = func() *CompositeType {
 			AuthAccountKeysField,
 			AuthAccountKeysType,
 			accountTypeKeysFieldDocString,
+		),
+		NewPublicConstantFieldMember(
+			authAccountType,
+			AuthAccountIdentityField,
+			&ReferenceType{
+				Authorized: false,
+				Type:       IdentityType,
+			},
+			authAccountIdentityFieldDocString,
 		),
 	}
 
@@ -649,4 +659,8 @@ Retrieves the key at the given index of the account.
 
 const authAccountKeysTypeRevokeFunctionDocString = `
 Revokes the key at the given index of the account.
+`
+
+const authAccountIdentityFieldDocString = `
+Retrieve an reference to the identity for this AuthAccount
 `
