@@ -158,7 +158,7 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 
 	checkMissingMembers := kind != ContainerKindInterface
 
-	overridden := map[string]struct{}{}
+	inherited := map[string]struct{}{}
 
 	for i, interfaceType := range compositeType.ExplicitInterfaceConformances {
 		interfaceNominalType := declaration.Conformances[i]
@@ -172,7 +172,7 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 				checkMissingMembers:            checkMissingMembers,
 				interfaceTypeIsTypeRequirement: false,
 			},
-			overridden,
+			inherited,
 		)
 	}
 
@@ -961,13 +961,19 @@ type compositeConformanceCheckOptions struct {
 	interfaceTypeIsTypeRequirement bool
 }
 
+// checkCompositeConformance checks if the given composite declaration with the given composite type
+// conforms to the specified interface type.
+//
+// inherited is an "input/output parameter": It tracks which member were inherited from the interface.
+// It allows tracking this across conformance checks of multiple interfaces.
+//
 func (checker *Checker) checkCompositeConformance(
 	compositeDeclaration *ast.CompositeDeclaration,
 	compositeType *CompositeType,
 	interfaceType *InterfaceType,
 	compositeKindMismatchIdentifier ast.Identifier,
 	options compositeConformanceCheckOptions,
-	overridden map[string]struct{},
+	inherited map[string]struct{},
 ) {
 
 	var missingMembers []*Member
@@ -1022,39 +1028,43 @@ func (checker *Checker) checkCompositeConformance(
 		if interfaceMember.Predeclared {
 			return
 		}
+
 		compositeMember, ok := compositeType.Members.Get(name)
-		if !ok {
-			if options.checkMissingMembers {
+		if ok {
 
-				if interfaceMember.DeclarationKind == common.DeclarationKindFunction {
+			// If the composite member exists, check if it satisfies the mem
 
-					if !interfaceMember.HasImplementation {
-						missingMembers = append(missingMembers, interfaceMember)
-					} else {
-						if _, isOverridden := overridden[name]; isOverridden {
-							checker.report(
-								&MultipleInterfaceDefaultImplementationsError{
-									CompositeType: compositeType,
-									Member:        interfaceMember,
-								},
-							)
-						}
-						overridden[name] = struct{}{}
-					}
-
-				} else {
-					missingMembers = append(missingMembers, interfaceMember)
-				}
+			if compositeMember != nil && !checker.memberSatisfied(compositeMember, interfaceMember) {
+				memberMismatches = append(memberMismatches,
+					MemberMismatch{
+						CompositeMember: compositeMember,
+						InterfaceMember: interfaceMember,
+					},
+				)
 			}
-		}
 
-		if compositeMember != nil && !checker.memberSatisfied(compositeMember, interfaceMember) {
-			memberMismatches = append(memberMismatches,
-				MemberMismatch{
-					CompositeMember: compositeMember,
-					InterfaceMember: interfaceMember,
-				},
-			)
+		} else if options.checkMissingMembers {
+
+			// If the composite member does not exist, the interface may provide a default function.
+			// However, only one of the composite's conformances (interfaces)
+			// may provide a default function.
+
+			if interfaceMember.DeclarationKind == common.DeclarationKindFunction &&
+				interfaceMember.HasImplementation {
+
+				if _, ok := inherited[name]; ok {
+					checker.report(
+						&MultipleInterfaceDefaultImplementationsError{
+							CompositeType: compositeType,
+							Member:        interfaceMember,
+						},
+					)
+				}
+				inherited[name] = struct{}{}
+
+			} else {
+				missingMembers = append(missingMembers, interfaceMember)
+			}
 		}
 
 	})
@@ -1287,7 +1297,7 @@ func (checker *Checker) checkTypeRequirement(
 	// like a top-level composite declaration to an interface type
 
 	requiredInterfaceType := requiredCompositeType.InterfaceType()
-	overridden := map[string]struct{}{}
+	inherited := map[string]struct{}{}
 
 	checker.checkCompositeConformance(
 		compositeDeclaration,
@@ -1298,7 +1308,7 @@ func (checker *Checker) checkTypeRequirement(
 			checkMissingMembers:            true,
 			interfaceTypeIsTypeRequirement: true,
 		},
-		overridden,
+		inherited,
 	)
 }
 
