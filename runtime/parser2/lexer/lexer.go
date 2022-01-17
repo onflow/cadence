@@ -58,7 +58,33 @@ var _ TokenStream = &lexer{}
 
 func (l *lexer) Next() Token {
 	if l.cursor >= l.tokenCount {
-		return l.tokens[l.tokenCount-1]
+
+		// At the end of the token stream,
+		// emit a synthetic EOF token
+		//
+		// Use the end position of the last token (if available)
+
+		var tokenRange ast.Range
+		if l.tokenCount > 0 {
+			lastToken := l.tokens[l.tokenCount-1]
+			endPos := lastToken.EndPos.Shifted(1)
+
+			tokenRange = ast.Range{
+				StartPos: endPos,
+				EndPos:   endPos,
+			}
+		} else {
+			tokenRange = ast.Range{
+				StartPos: ast.Position{Line: 1},
+				EndPos:   ast.Position{Line: 1},
+			}
+		}
+
+		return Token{
+			Type:  TokenEOF,
+			Range: tokenRange,
+		}
+
 	}
 	token := l.tokens[l.cursor]
 	l.cursor++
@@ -120,8 +146,6 @@ func (l *lexer) run(state stateFn) {
 	for state != nil {
 		state = state(l)
 	}
-
-	l.emitEOF()
 }
 
 // next decodes the next rune (UTF8 character) from the input string.
@@ -373,25 +397,6 @@ func (l *lexer) scanFixedPointRemainder() {
 		return
 	}
 	l.acceptWhile(isDecimalDigitOrUnderscore)
-}
-
-func (l *lexer) emitEOF() {
-	endPos := l.endPos()
-	pos := ast.Position{
-		Offset: l.endOffset - 1,
-		Line:   endPos.line,
-		Column: endPos.column - 1,
-	}
-
-	token := Token{
-		Type: TokenEOF,
-		Range: ast.Range{
-			StartPos: pos,
-			EndPos:   pos,
-		},
-	}
-
-	l.tokens = append(l.tokens, token)
 }
 
 func isDecimalDigitOrUnderscore(r rune) bool {

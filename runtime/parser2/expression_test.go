@@ -777,7 +777,7 @@ func TestParseString(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message: "invalid end of string literal: missing '\"'",
-					Pos:     ast.Position{Offset: 2, Line: 2, Column: 0},
+					Pos:     ast.Position{Line: 1, Column: 2, Offset: 2},
 				},
 			},
 			errs,
@@ -830,7 +830,7 @@ func TestParseString(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message: "invalid end of string literal: missing '\"'",
-					Pos:     ast.Position{Offset: 3, Line: 2, Column: 0},
+					Pos:     ast.Position{Line: 1, Column: 3, Offset: 3},
 				},
 			},
 			errs,
