@@ -1512,11 +1512,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 			)
 		}
 
-		hasImplementation := false
-
-		if function.FunctionBlock.HasStatements() {
-			hasImplementation = true
-		}
+		hasImplementation := function.FunctionBlock.HasStatements()
 
 		members.Set(
 			identifier,
