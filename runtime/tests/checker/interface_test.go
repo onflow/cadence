@@ -2094,5 +2094,53 @@ func TestCheckMultipleInterfaceSingleInterfaceDefaultImplementationWhenOverridde
       }
     `)
 	require.NoError(t, err)
+}
 
+func TestCheckInvalidInterfaceDefaultImplementationConcreteTypeUsage(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      struct interface IA {
+          fun test(): Int {
+              return self.x
+          }
+      }
+
+      struct Test: IA {
+          let x: Int
+
+          init(x: Int) {
+              self.x = x
+          }
+      }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	require.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+}
+
+func TestCheckInterfaceDefaultImplementationConcreteTypeUsage(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      struct interface IA {
+          let x: Int
+
+          fun test(): Int {
+              return self.x
+          }
+      }
+
+      struct Test: IA {
+          let x: Int
+
+          init(x: Int) {
+              self.x = x
+          }
+      }
+    `)
+	require.NoError(t, err)
 }
