@@ -1348,6 +1348,22 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 			destructorFunction = destructorFunctionWrapper(destructorFunction)
 		}
 
+		// Apply default functions, if conforming type does not provide the function
+
+		// Iterating over the map in a non-deterministic way is OK,
+		// we only apply the function wrapper to each function,
+		// the order does not matter.
+
+		for name, function := range code.Functions { //nolint:maprangecheck
+			if functions[name] != nil {
+				continue
+			}
+			if functions == nil {
+				functions = map[string]FunctionValue{}
+			}
+			functions[name] = function
+		}
+
 		// Wrap functions
 
 		// Iterating over the map in a non-deterministic way is OK,
@@ -1355,13 +1371,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 		// the order does not matter.
 
 		for name, functionWrapper := range code.FunctionWrappers { //nolint:maprangecheck
-
-			if functions[name] == nil {
-				functions[name] = code.Functions[name]
-			}
-
 			functions[name] = functionWrapper(functions[name])
-
 		}
 	}
 
