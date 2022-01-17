@@ -382,8 +382,8 @@ func TestLexBasic(t *testing.T) {
 				{
 					Type: TokenEOF,
 					Range: ast.Range{
-						StartPos: ast.Position{Line: 2, Column: 4, Offset: 7},
-						EndPos:   ast.Position{Line: 2, Column: 4, Offset: 7},
+						StartPos: ast.Position{Line: 3, Column: 0, Offset: 7},
+						EndPos:   ast.Position{Line: 3, Column: 0, Offset: 7},
 					},
 				},
 			},
@@ -785,8 +785,8 @@ func TestLexString(t *testing.T) {
 				{
 					Type: TokenEOF,
 					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-						EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						StartPos: ast.Position{Line: 2, Column: 0, Offset: 2},
+						EndPos:   ast.Position{Line: 2, Column: 0, Offset: 2},
 					},
 				},
 			},
@@ -816,8 +816,8 @@ func TestLexString(t *testing.T) {
 				{
 					Type: TokenEOF,
 					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
-						EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+						StartPos: ast.Position{Line: 2, Column: 0, Offset: 4},
+						EndPos:   ast.Position{Line: 2, Column: 0, Offset: 4},
 					},
 				},
 			},
@@ -893,8 +893,8 @@ func TestLexString(t *testing.T) {
 				{
 					Type: TokenEOF,
 					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
-						EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+						StartPos: ast.Position{Line: 2, Column: 0, Offset: 3},
+						EndPos:   ast.Position{Line: 2, Column: 0, Offset: 3},
 					},
 				},
 			},
@@ -1568,8 +1568,8 @@ func TestLexIntegerLiterals(t *testing.T) {
 				{
 					Type: TokenEOF,
 					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-						EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						StartPos: ast.Position{Line: 2, Column: 0, Offset: 2},
+						EndPos:   ast.Position{Line: 2, Column: 0, Offset: 2},
 					},
 				},
 			},
@@ -2063,8 +2063,8 @@ func TestEOFsAfterError(t *testing.T) {
 			Token{
 				Type: TokenEOF,
 				Range: ast.Range{
-					StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
-					EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+					StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+					EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
 				},
 			},
 			tokenStream.Next(),
