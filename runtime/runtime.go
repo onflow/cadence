@@ -209,6 +209,24 @@ func NewInterpreterRuntime(options ...Option) Runtime {
 	return runtime
 }
 
+func (r *interpreterRuntime) Recover(onError func(error), context Context) {
+	recovered := recover()
+	if recovered == nil {
+		return
+	}
+
+	var err error
+	switch recovered := recovered.(type) {
+	case Error:
+		// avoid redundant wrapping
+		err = recovered
+	case error:
+		err = newError(recovered, context)
+	}
+
+	onError(err)
+}
+
 func (r *interpreterRuntime) SetCoverageReport(coverageReport *CoverageReport) {
 	r.coverageReport = coverageReport
 }
@@ -229,7 +247,14 @@ func (r *interpreterRuntime) SetResourceOwnerChangeHandlerEnabled(enabled bool) 
 	r.resourceOwnerChangeHandlerEnabled = enabled
 }
 
-func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cadence.Value, error) {
+func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val cadence.Value, err error) {
+	defer r.Recover(
+		func(internalErr error) {
+			err = internalErr
+		},
+		context,
+	)
+
 	context.InitializeCodesAndPrograms()
 
 	storage := NewStorage(context.Interface)
@@ -466,7 +491,14 @@ func (r *interpreterRuntime) InvokeContractFunction(
 	arguments []interpreter.Value,
 	argumentTypes []sema.Type,
 	context Context,
-) (cadence.Value, error) {
+) (val cadence.Value, err error) {
+	defer r.Recover(
+		func(internalErr error) {
+			err = internalErr
+		},
+		context,
+	)
+
 	context.InitializeCodesAndPrograms()
 
 	storage := NewStorage(context.Interface)
@@ -593,7 +625,14 @@ func (r *interpreterRuntime) convertArgument(
 	return argument
 }
 
-func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) error {
+func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) (err error) {
+	defer r.Recover(
+		func(internalErr error) {
+			err = internalErr
+		},
+		context,
+	)
+
 	context.InitializeCodesAndPrograms()
 
 	storage := NewStorage(context.Interface)
@@ -882,7 +921,20 @@ func hasValidStaticType(value interpreter.Value) bool {
 // ParseAndCheckProgram parses the given code and checks it.
 // Returns a program that can be interpreted (AST + elaboration).
 //
-func (r *interpreterRuntime) ParseAndCheckProgram(code []byte, context Context) (*interpreter.Program, error) {
+func (r *interpreterRuntime) ParseAndCheckProgram(
+	code []byte,
+	context Context,
+) (
+	program *interpreter.Program,
+	err error,
+) {
+	defer r.Recover(
+		func(internalErr error) {
+			err = internalErr
+		},
+		context,
+	)
+
 	context.InitializeCodesAndPrograms()
 
 	storage := NewStorage(context.Interface)
@@ -897,7 +949,7 @@ func (r *interpreterRuntime) ParseAndCheckProgram(code []byte, context Context) 
 		checkerOptions,
 	)
 
-	program, err := r.parseAndCheckProgram(
+	program, err = r.parseAndCheckProgram(
 		code,
 		context,
 		functions,
@@ -2868,7 +2920,21 @@ func (r *interpreterRuntime) executeNonProgram(interpret interpretFunc, context 
 	return exportValue(value)
 }
 
-func (r *interpreterRuntime) ReadStored(address common.Address, path cadence.Path, context Context) (cadence.Value, error) {
+func (r *interpreterRuntime) ReadStored(
+	address common.Address,
+	path cadence.Path,
+	context Context,
+) (
+	val cadence.Value,
+	err error,
+) {
+	defer r.Recover(
+		func(internalErr error) {
+			err = internalErr
+		},
+		context,
+	)
+
 	return r.executeNonProgram(
 		func(inter *interpreter.Interpreter) (interpreter.Value, error) {
 			pathValue := importPathValue(path)
@@ -2884,7 +2950,21 @@ func (r *interpreterRuntime) ReadStored(address common.Address, path cadence.Pat
 	)
 }
 
-func (r *interpreterRuntime) ReadLinked(address common.Address, path cadence.Path, context Context) (cadence.Value, error) {
+func (r *interpreterRuntime) ReadLinked(
+	address common.Address,
+	path cadence.Path,
+	context Context,
+) (
+	val cadence.Value,
+	err error,
+) {
+	defer r.Recover(
+		func(internalErr error) {
+			err = internalErr
+		},
+		context,
+	)
+
 	return r.executeNonProgram(
 		func(inter *interpreter.Interpreter) (interpreter.Value, error) {
 			targetPath, _, err := inter.GetCapabilityFinalTargetPath(
