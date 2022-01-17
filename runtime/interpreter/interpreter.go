@@ -1699,14 +1699,12 @@ func (interpreter *Interpreter) interfaceFunctions(
 
 	for _, functionDeclaration := range functionDeclarations {
 		name := functionDeclaration.Identifier.Identifier
-		if functionDeclaration.FunctionBlock != nil {
-			if len(functionDeclaration.FunctionBlock.Block.Statements) > 0 {
-				functions[name] =
-					interpreter.compositeFunction(
-						functionDeclaration,
-						lexicalScope,
-					)
-			}
+		if functionDeclaration.FunctionBlock.HasStatements() {
+			functions[name] =
+				interpreter.compositeFunction(
+					functionDeclaration,
+					lexicalScope,
+				)
 		}
 	}
 
