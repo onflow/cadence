@@ -148,7 +148,7 @@ func TestCheckInterfaceWithFunctionImplementation(t *testing.T) {
                              return 1
                           }
                       }
-                      
+
                       %[1]s TestUser: Test{
 
                       }
@@ -1998,28 +1998,26 @@ func TestCheckInvalidMultipleInterfaceDefaultImplementation(t *testing.T) {
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-    struct interface InterfaceA {
-        fun test(): Int {
-            return 41
-        }
-    }
+      struct interface IA {
+          fun test(): Int {
+              return 41
+          }
+      }
 
-    struct interface InterfaceB {
-        fun test(): Int {
-            return 41
-        }
-    }
-    
-    struct Test:  InterfaceA, InterfaceB   {
+      struct interface IB {
+          fun test(): Int {
+              return 41
+          }
+      }
 
-    }
+      struct Test: IA, IB {
 
+      }
     `)
 
 	errs := ExpectCheckerErrors(t, err, 1)
 
 	require.IsType(t, &sema.MultipleInterfaceDefaultImplementationsError{}, errs[0])
-
 }
 
 func TestCheckMultipleInterfaceDefaultImplementationWhenOverriden(t *testing.T) {
@@ -2027,29 +2025,26 @@ func TestCheckMultipleInterfaceDefaultImplementationWhenOverriden(t *testing.T) 
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-    struct interface InterfaceA {
-        fun test(): Int{
-            return 41
-        }
-    }
+      struct interface IA {
+          fun test(): Int{
+              return 41
+          }
+      }
 
-    struct interface InterfaceB {
-        fun test(): Int {
-            return 41
-        }
-    }
-    
-    struct Test:  InterfaceA, InterfaceB {
-        fun test(): Int {
-            return 42
-        }
-    }
+      struct interface IB {
+          fun test(): Int {
+              return 41
+          }
+      }
 
-
+      struct Test: IA, IB {
+          fun test(): Int {
+              return 42
+          }
+      }
     `)
 
 	require.NoError(t, err)
-
 }
 
 func TestCheckMultipleInterfaceSingleInterfaceDefaultImplementation(t *testing.T) {
@@ -2057,26 +2052,24 @@ func TestCheckMultipleInterfaceSingleInterfaceDefaultImplementation(t *testing.T
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-    struct interface InterfaceA {
-        fun test(): Int {
-            return 41
-        }
-    }
+      struct interface IA {
+          fun test(): Int {
+              return 41
+          }
+      }
 
-    struct interface InterfaceB {
-        fun test(): Int
-    }
-    
-    struct Test:  InterfaceA, InterfaceB {
+      struct interface IB {
+          fun test(): Int
+      }
 
-    }
+      struct Test: IA, IB {
 
+      }
     `)
 
 	errs := ExpectCheckerErrors(t, err, 1)
 
 	require.IsType(t, &sema.ConformanceError{}, errs[0])
-
 }
 
 func TestCheckMultipleInterfaceSingleInterfaceDefaultImplementationWhenOverridden(t *testing.T) {
@@ -2084,23 +2077,21 @@ func TestCheckMultipleInterfaceSingleInterfaceDefaultImplementationWhenOverridde
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-    struct interface InterfaceA {
-        fun test(): Int {
-            return 41
-        }
-    }
+      struct interface IA {
+          fun test(): Int {
+              return 41
+          }
+      }
 
-    struct interface InterfaceB {
-        fun test(): Int
-    }
-    
-    struct Test:  InterfaceA, InterfaceB {
-        fun test(): Int {
-            return 42
-        }
-    }
+      struct interface IB {
+          fun test(): Int
+      }
 
-
+      struct Test: IA, IB {
+          fun test(): Int {
+              return 42
+          }
+      }
     `)
 	require.NoError(t, err)
 
