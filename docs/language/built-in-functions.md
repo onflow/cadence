@@ -8,7 +8,7 @@ title: Built-in Functions
   and reports a message which explains why the unrecoverable error occurred.
 
   ```cadence
-  let optionalAccount: Account? = // ...
+  let optionalAccount: AuthAccount? = // ...
   let account = optionalAccount ?? panic("missing account")
   ```
 

@@ -19,7 +19,7 @@
 package interpreter
 
 type Visitor interface {
-	VisitValue(interpreter *Interpreter, value Value)
+	VisitSimpleCompositeValue(interpreter *Interpreter, value *SimpleCompositeValue)
 	VisitTypeValue(interpreter *Interpreter, value TypeValue)
 	VisitVoidValue(interpreter *Interpreter, value VoidValue)
 	VisitBoolValue(interpreter *Interpreter, value BoolValue)
@@ -53,16 +53,15 @@ type Visitor interface {
 	VisitEphemeralReferenceValue(interpreter *Interpreter, value *EphemeralReferenceValue)
 	VisitAddressValue(interpreter *Interpreter, value AddressValue)
 	VisitPathValue(interpreter *Interpreter, value PathValue)
-	VisitCapabilityValue(interpreter *Interpreter, value CapabilityValue)
+	VisitCapabilityValue(interpreter *Interpreter, value *CapabilityValue)
 	VisitLinkValue(interpreter *Interpreter, value LinkValue)
 	VisitInterpretedFunctionValue(interpreter *Interpreter, value *InterpretedFunctionValue)
 	VisitHostFunctionValue(interpreter *Interpreter, value *HostFunctionValue)
 	VisitBoundFunctionValue(interpreter *Interpreter, value BoundFunctionValue)
-	VisitDeployedContractValue(interpreter *Interpreter, value DeployedContractValue)
 }
 
 type EmptyVisitor struct {
-	ValueVisitor                    func(interpreter *Interpreter, value Value)
+	SimpleCompositeValueVisitor     func(interpreter *Interpreter, value *SimpleCompositeValue)
 	TypeValueVisitor                func(interpreter *Interpreter, value TypeValue)
 	VoidValueVisitor                func(interpreter *Interpreter, value VoidValue)
 	BoolValueVisitor                func(interpreter *Interpreter, value BoolValue)
@@ -96,21 +95,20 @@ type EmptyVisitor struct {
 	EphemeralReferenceValueVisitor  func(interpreter *Interpreter, value *EphemeralReferenceValue)
 	AddressValueVisitor             func(interpreter *Interpreter, value AddressValue)
 	PathValueVisitor                func(interpreter *Interpreter, value PathValue)
-	CapabilityValueVisitor          func(interpreter *Interpreter, value CapabilityValue)
+	CapabilityValueVisitor          func(interpreter *Interpreter, value *CapabilityValue)
 	LinkValueVisitor                func(interpreter *Interpreter, value LinkValue)
 	InterpretedFunctionValueVisitor func(interpreter *Interpreter, value *InterpretedFunctionValue)
 	HostFunctionValueVisitor        func(interpreter *Interpreter, value *HostFunctionValue)
 	BoundFunctionValueVisitor       func(interpreter *Interpreter, value BoundFunctionValue)
-	DeployedContractValueVisitor    func(interpreter *Interpreter, value DeployedContractValue)
 }
 
 var _ Visitor = &EmptyVisitor{}
 
-func (v EmptyVisitor) VisitValue(interpreter *Interpreter, value Value) {
-	if v.ValueVisitor == nil {
+func (v EmptyVisitor) VisitSimpleCompositeValue(interpreter *Interpreter, value *SimpleCompositeValue) {
+	if v.SimpleCompositeValueVisitor == nil {
 		return
 	}
-	v.ValueVisitor(interpreter, value)
+	v.SimpleCompositeValueVisitor(interpreter, value)
 }
 
 func (v EmptyVisitor) VisitTypeValue(interpreter *Interpreter, value TypeValue) {
@@ -344,7 +342,7 @@ func (v EmptyVisitor) VisitPathValue(interpreter *Interpreter, value PathValue) 
 	v.PathValueVisitor(interpreter, value)
 }
 
-func (v EmptyVisitor) VisitCapabilityValue(interpreter *Interpreter, value CapabilityValue) {
+func (v EmptyVisitor) VisitCapabilityValue(interpreter *Interpreter, value *CapabilityValue) {
 	if v.CapabilityValueVisitor == nil {
 		return
 	}
@@ -377,11 +375,4 @@ func (v EmptyVisitor) VisitBoundFunctionValue(interpreter *Interpreter, value Bo
 		return
 	}
 	v.BoundFunctionValueVisitor(interpreter, value)
-}
-
-func (v EmptyVisitor) VisitDeployedContractValue(interpreter *Interpreter, value DeployedContractValue) {
-	if v.DeployedContractValueVisitor == nil {
-		return
-	}
-	v.DeployedContractValueVisitor(interpreter, value)
 }

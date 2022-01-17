@@ -27,6 +27,10 @@ pub enum HashAlgorithm: UInt8 {
     /// used in BLS signatures.
     pub case KMAC128_BLS_BLS12_381 = 5
 
+    /// KECCAK_256 is the legacy Keccak algorithm with a 256-bits digest, as per the original submission to the NIST SHA3 competition.
+    /// KECCAK_256 is different than SHA3 and is used by Ethereum.  
+    pub case KECCAK_256 = 6
+
     /// Returns the hash of the given data
     pub fun hash(_ data: [UInt8]): [UInt8]
 
@@ -102,6 +106,10 @@ struct PublicKey {
         domainSeparationTag: String,
         hashAlgorithm: HashAlgorithm
     ): Bool
+
+    /// Verifies the proof of possession of the private key.
+    /// This function is only implemented if the signature algorithm of the public key is BLS, it errors if called with any other signature algorithm. 
+    pub fun verifyPoP(_ proof: [UInt8]): Bool
 }
 ```
 
@@ -184,6 +192,27 @@ The inputs to `verify()` depend on the signature scheme used:
      Only `KMAC128_BLS_BLS12_381` is accepted.
 
 BLS verification performs the necessary membership check of the signature while the membership check of the public key is performed at the creation of the `PublicKey` object.
+
+The BLS signature scheme also supports two additional operations on keys and signatures:
+
+```cadence
+/// This is a specific function for the BLS signature scheme. It aggregate multiple BLS signatures into one, 
+/// considering the proof of possession as a defence against the rogue attacks.
+///
+/// Signatures could be generated from the same or distinct messages, they
+/// could also be the aggregation of other signatures.
+/// The order of the signatures in the slice does not matter since the aggregation is commutative. 
+/// No subgroup membership check is performed on the input signatures.
+/// The function errors if the array is empty or if decoding one of the signature fails. 
+AggregateBLSSignatures(_ signatures: [[UInt8]]): [UInt8]
+
+/// This is a specific function for the BLS signature scheme. It aggregates multiple BLS public keys into one.
+///
+/// The order of the public keys in the slice does not matter since the aggregation is commutative. 
+/// No subgroup membership check is performed on the input keys.
+/// The function errors if the array is empty or any of the input keys is not a BLS key.
+AggregateBLSPublicKeys(_ signatures: [PublicKey]): PublicKey
+```
 
 ## Crypto Contract
 

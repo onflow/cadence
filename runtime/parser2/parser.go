@@ -19,7 +19,6 @@
 package parser2
 
 import (
-	"context"
 	"fmt"
 	"io/ioutil"
 	"strings"
@@ -36,20 +35,15 @@ const lowestBindingPower = 0
 
 type parser struct {
 	// tokens is a stream of tokens from the lexer
-	tokens chan lexer.Token
+	tokens lexer.TokenStream
 	// current is the current token being parsed.
 	current lexer.Token
 	// errors are the parsing errors encountered during parsing
 	errors []error
-	// buffering is a flag that indicates whether the next token
-	// will be read from buffered tokens or lexer
-	buffering bool
-	// bufferedTokens are the buffered tokens read from the lexer
-	bufferedTokens []lexer.Token
-	// bufferPos is the index of the next buffered token to read from (`bufferedTokens`)
-	bufferPos int
+	// backtrackingCursors
+	backtrackingCursors []int
 	// bufferedErrors are the parsing errors encountered during buffering
-	bufferedErrors []error
+	bufferedErrors [][]error
 }
 
 // Parse creates a lexer to scan the given input string,
@@ -59,12 +53,12 @@ type parser struct {
 // See "ParseExpression", "ParseStatements" as examples.
 //
 func Parse(input string, parse func(*parser) interface{}) (result interface{}, errors []error) {
-	ctx, cancelLexer := context.WithCancel(context.Background())
-
-	defer cancelLexer()
-
 	// create a lexer, which turns the input string into tokens
-	tokens := lexer.Lex(ctx, input)
+	tokens := lexer.Lex(input)
+	return ParseTokenStream(tokens, parse)
+}
+
+func ParseTokenStream(tokens lexer.TokenStream, parse func(*parser) interface{}) (result interface{}, errors []error) {
 	p := &parser{tokens: tokens}
 
 	defer func() {
@@ -80,8 +74,8 @@ func Parse(input string, parse func(*parser) interface{}) (result interface{}, e
 			errors = p.errors
 		}
 
-		if p.buffering {
-			errors = append(errors, p.bufferedErrors...)
+		for _, bufferedErrors := range p.bufferedErrors {
+			errors = append(errors, bufferedErrors...)
 		}
 	}()
 
@@ -121,25 +115,20 @@ func (p *parser) report(errs ...error) {
 			}
 		}
 
-		if p.buffering {
-			p.bufferedErrors = append(p.bufferedErrors, parseError)
+		// Add the errors to the buffered errors if buffering,
+		// or the final errors if not
+
+		bufferedErrorsDepth := len(p.bufferedErrors)
+		if bufferedErrorsDepth > 0 {
+			bufferedErrorsIndex := bufferedErrorsDepth - 1
+			p.bufferedErrors[bufferedErrorsIndex] = append(
+				p.bufferedErrors[bufferedErrorsIndex],
+				parseError,
+			)
 		} else {
 			p.errors = append(p.errors, parseError)
 		}
 	}
-}
-
-const bufferPosTrimThreshold = 128
-
-// maybeTrimBuffer checks whether the index of token we've read from buffered tokens
-// has reached a threshold, in which case the buffered tokens will be trimmed and bufferPos
-// will be reset.
-func (p *parser) maybeTrimBuffer() {
-	if p.bufferPos < bufferPosTrimThreshold {
-		return
-	}
-	p.bufferedTokens = p.bufferedTokens[p.bufferPos:]
-	p.bufferPos = 0
 }
 
 // next reads the next token and marks it as the "current" token.
@@ -147,62 +136,9 @@ func (p *parser) maybeTrimBuffer() {
 // the buffer.
 // Tokens are buffered when syntax ambiguity is involved.
 func (p *parser) next() {
-	// nextFromLexer reads the next token from the lexer.
-	nextFromLexer := func() lexer.Token {
-		var ok bool
-		token, ok := <-p.tokens
-		if !ok {
-			// Channel closed, return EOF token.
-			token = lexer.Token{
-				Type: lexer.TokenEOF,
-				Range: ast.Range{
-					StartPos: p.current.EndPos,
-					EndPos:   p.current.EndPos,
-				},
-			}
-		}
-		return token
-	}
-
-	// nextFromLexer reads the next token from the buffer tokens, assuming there are buffered tokens.
-	nextFromBuffer := func() lexer.Token {
-		token := p.bufferedTokens[p.bufferPos]
-		p.bufferPos++
-		p.maybeTrimBuffer()
-		return token
-	}
 
 	for {
-		var token lexer.Token
-
-		// When the syntax has ambiguity, we need to process a series of tokens
-		// multiple times. However, a token can only be consumed once from the lexer's
-		// tokens channel. Therefore, in some circumstances, we need to buffer the tokens
-		// from the lexer.
-		//
-		// Buffering tokens allows us to potentially "replay" the buffered tokens later,
-		// for example to deal with syntax ambiguity
-
-		if p.buffering {
-
-			// If we need to buffer the next token
-			// then read the token from the lexer and buffer it.
-
-			token = nextFromLexer()
-			p.bufferedTokens = append(p.bufferedTokens, token)
-
-		} else if p.bufferPos < len(p.bufferedTokens) {
-
-			// If we don't need to buffer the next token and there are tokens buffered before,
-			// then read the token from the buffer.
-
-			token = nextFromBuffer()
-
-		} else {
-			// Otherwise no need to buffer, and there is no buffered token,
-			// then read the next token from the lexer.
-			token = nextFromLexer()
-		}
+		token := p.tokens.Next()
 
 		if token.Is(lexer.TokenError) {
 			// Report error token as error, skip.
@@ -242,17 +178,60 @@ func (p *parser) mustOneString(tokenType lexer.TokenType, string string) lexer.T
 	return t
 }
 
+func (p *parser) startBuffering() {
+	// Push the lexer's previous cursor to the stack.
+	// When start buffering is called, the lexer has already advanced to the next token
+	p.backtrackingCursors = append(p.backtrackingCursors, p.tokens.Cursor()-1)
+
+	// Push an empty slice of errors to the stack
+	p.bufferedErrors = append(p.bufferedErrors, nil)
+}
+
 func (p *parser) acceptBuffered() {
-	p.buffering = false
-	p.bufferPos = len(p.bufferedTokens)
-	p.report(p.bufferedErrors...)
-	p.maybeTrimBuffer()
+	// Pop the last backtracking cursor from the stack
+	// and ignore it
+
+	lastIndex := len(p.backtrackingCursors) - 1
+	p.backtrackingCursors = p.backtrackingCursors[:lastIndex]
+
+	// Pop the last buffered errors from the stack
+	// and apply them to the previous errors on the buffered errors stack,
+	// or the final errors, if we reached the bottom of the stack
+	// (i.e. this acceptance disables buffering)
+
+	lastIndex = len(p.bufferedErrors) - 1
+	bufferedErrors := p.bufferedErrors[lastIndex]
+	p.bufferedErrors[lastIndex] = nil
+	p.bufferedErrors = p.bufferedErrors[:lastIndex]
+	if len(bufferedErrors) > 0 {
+		p.bufferedErrors[lastIndex-1] = append(
+			p.bufferedErrors[lastIndex-1],
+			bufferedErrors...,
+		)
+	} else {
+		p.errors = append(
+			p.errors,
+			bufferedErrors...,
+		)
+	}
 }
 
 func (p *parser) replayBuffered() {
-	p.buffering = false
-	p.bufferedErrors = nil
+	// Pop the last backtracking cursor from the stack
+	// and revert the lexer back to it
+
+	lastIndex := len(p.backtrackingCursors) - 1
+	cursor := p.backtrackingCursors[lastIndex]
+	p.tokens.Revert(cursor)
 	p.next()
+	p.backtrackingCursors = p.backtrackingCursors[:lastIndex]
+
+	// Pop the last buffered errors from the stack
+	// and ignore them
+
+	lastIndex = len(p.bufferedErrors) - 1
+	p.bufferedErrors[lastIndex] = nil
+	p.bufferedErrors = p.bufferedErrors[:lastIndex]
 }
 
 type triviaOptions struct {
@@ -329,18 +308,6 @@ func (p *parser) parseTrivia(options triviaOptions) (containsNewline bool, docSt
 		}
 	}
 	return
-}
-
-func (p *parser) startBuffering() {
-	p.buffering = true
-
-	// Starting buffering should only buffer the current token
-	// if there's nothing to be read from the buffer.
-	// Otherwise, the current token would be buffered twice
-
-	if p.bufferPos >= len(p.bufferedTokens) {
-		p.bufferedTokens = append(p.bufferedTokens, p.current)
-	}
 }
 
 func mustIdentifier(p *parser) ast.Identifier {
@@ -424,14 +391,18 @@ func ParseArgumentList(input string) (arguments ast.Arguments, errors []error) {
 }
 
 func ParseProgram(input string) (program *ast.Program, err error) {
+	return ParseProgramFromTokenStream(lexer.Lex(input))
+}
+
+func ParseProgramFromTokenStream(input lexer.TokenStream) (program *ast.Program, err error) {
 	var res interface{}
 	var errs []error
-	res, errs = Parse(input, func(p *parser) interface{} {
+	res, errs = ParseTokenStream(input, func(p *parser) interface{} {
 		return parseDeclarations(p, lexer.TokenEOF)
 	})
 	if len(errs) > 0 {
 		err = Error{
-			Code:   input,
+			Code:   input.Input(),
 			Errors: errs,
 		}
 	}

@@ -30,6 +30,7 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 	// Check the result type and ensure it is a reference type
 
 	resultType := checker.ConvertType(referenceExpression.Type)
+	checker.checkInvalidInterfaceAsType(resultType, referenceExpression.Type)
 
 	var referenceType *ReferenceType
 	var targetType, referencedType Type

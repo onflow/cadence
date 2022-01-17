@@ -37,6 +37,7 @@ type SimpleType struct {
 	Name                 string
 	QualifiedName        string
 	TypeID               TypeID
+	tag                  TypeTag
 	IsInvalid            bool
 	IsResource           bool
 	Storable             bool
@@ -52,6 +53,10 @@ type SimpleType struct {
 }
 
 func (*SimpleType) IsType() {}
+
+func (t *SimpleType) Tag() TypeTag {
+	return t.tag
+}
 
 func (t *SimpleType) String() string {
 	return t.Name
@@ -124,7 +129,7 @@ func (t *SimpleType) initializeMembers() {
 	})
 }
 
-func (t *SimpleType) isContainerType() bool {
+func (t *SimpleType) IsContainerType() bool {
 	return t.NestedTypes != nil
 }
 

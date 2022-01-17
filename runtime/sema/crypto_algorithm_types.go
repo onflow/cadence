@@ -38,6 +38,7 @@ var HashAlgorithms = []CryptoAlgorithm{
 	HashAlgorithmSHA3_256,
 	HashAlgorithmSHA3_384,
 	HashAlgorithmKMAC128_BLS_BLS12_381,
+	HashAlgorithmKECCAK_256,
 }
 
 var SignatureAlgorithmType = newNativeEnumType(
@@ -112,19 +113,13 @@ const HashAlgorithmTypeHashFunctionName = "hash"
 var HashAlgorithmTypeHashFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
-			Label:      ArgumentLabelNotRequired,
-			Identifier: "data",
-			TypeAnnotation: NewTypeAnnotation(
-				&VariableSizedType{
-					Type: UInt8Type,
-				},
-			),
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "data",
+			TypeAnnotation: NewTypeAnnotation(ByteArrayType),
 		},
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(
-		&VariableSizedType{
-			Type: UInt8Type,
-		},
+		ByteArrayType,
 	),
 }
 
@@ -140,9 +135,7 @@ var HashAlgorithmTypeHashWithTagFunctionType = &FunctionType{
 			Label:      ArgumentLabelNotRequired,
 			Identifier: "data",
 			TypeAnnotation: NewTypeAnnotation(
-				&VariableSizedType{
-					Type: UInt8Type,
-				},
+				ByteArrayType,
 			),
 		},
 		{
@@ -151,9 +144,7 @@ var HashAlgorithmTypeHashWithTagFunctionType = &FunctionType{
 		},
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(
-		&VariableSizedType{
-			Type: UInt8Type,
-		},
+		ByteArrayType,
 	),
 }
 
@@ -192,6 +183,7 @@ const (
 	HashAlgorithmSHA3_256
 	HashAlgorithmSHA3_384
 	HashAlgorithmKMAC128_BLS_BLS12_381
+	HashAlgorithmKECCAK_256
 )
 
 func (algo HashAlgorithm) Name() string {
@@ -208,6 +200,8 @@ func (algo HashAlgorithm) Name() string {
 		return "SHA3_384"
 	case HashAlgorithmKMAC128_BLS_BLS12_381:
 		return "KMAC128_BLS_BLS12_381"
+	case HashAlgorithmKECCAK_256:
+		return "KECCAK_256"
 	}
 
 	panic(errors.NewUnreachableError())
@@ -232,6 +226,8 @@ func (algo HashAlgorithm) RawValue() uint8 {
 		return 4
 	case HashAlgorithmKMAC128_BLS_BLS12_381:
 		return 5
+	case HashAlgorithmKECCAK_256:
+		return 6
 	}
 
 	panic(errors.NewUnreachableError())
@@ -251,6 +247,8 @@ func (algo HashAlgorithm) DocString() string {
 		return HashAlgorithmDocStringSHA3_384
 	case HashAlgorithmKMAC128_BLS_BLS12_381:
 		return HashAlgorithmDocStringKMAC128_BLS_BLS12_381
+	case HashAlgorithmKECCAK_256:
+		return HashAlgorithmDocStringKECCAK_256
 	}
 
 	panic(errors.NewUnreachableError())
@@ -331,4 +329,8 @@ KMAC128_BLS_BLS12_381 is an instance of KECCAK Message Authentication Code (KMAC
 that can be used as the hashing algorithm for BLS signature scheme on the curve BLS12-381.
 This is a customized version of KMAC128 that is compatible with the hashing to curve 
 used in BLS signatures.
+`
+const HashAlgorithmDocStringKECCAK_256 = `
+KECCAK_256 is the legacy Keccak algorithm with a 256-bits digest, as per the original submission to the NIST SHA3 competition.
+KECCAK_256 is different than SHA3 and is used by Ethereum.
 `

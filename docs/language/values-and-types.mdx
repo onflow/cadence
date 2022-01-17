@@ -836,8 +836,8 @@ Strings have multiple built-in functions you can use:
   but not including, the end index `upTo`.
   This function creates a new string whose length is `upTo - from`.
   It does not modify the original string.
-  If either of the parameters are out of
-  the bounds of the string, the function will fail.
+  If either of the parameters are out of the bounds of the string,
+  or the indices are invalid (`from > upTo`), then the function will fail.
 
   ```cadence
   let example = "helloworld"
@@ -848,6 +848,9 @@ Strings have multiple built-in functions you can use:
 
   // Run-time error: Out of bounds index, the program aborts.
   let outOfBounds = example.slice(from: 2, upTo: 10)
+
+  // Run-time error: Invalid indices, the program aborts.
+  let invalidIndices = example.slice(from: 2, upTo: 1)
   ```
 
 - `cadence•fun decodeHex(): [UInt8]`
@@ -861,6 +864,14 @@ Strings have multiple built-in functions you can use:
   let example = "436164656e636521"
 
   example.decodeHex()  // is `[67, 97, 100, 101, 110, 99, 101, 33]`
+  ```
+- `cadence•fun toLower(): String`
+  Returns a string where all upper case letters are replaced with lowercase characters
+
+  ```cadence
+  let example = "Flowers"
+
+  example.toLower()  // is `flowers`
   ```
 
 The `String` type also provides the following functions:
@@ -1066,6 +1077,30 @@ are available for both variable-sized and fixed-sized or variable-sized arrays.
   // This results in a type error, as the array only contains integers.
   //
   let containsKitty = numbers.contains("Kitty")
+  ```
+
+- `cadence•fun slice(from: Int, upTo: Int): [T]`
+
+  Returns an array slice of the elements
+  in the given array from start index `from` up to,
+  but not including, the end index `upTo`.
+  This function creates a new array whose length is `upTo - from`.
+  It does not modify the original array.
+  If either of the parameters are out of the bounds of the array,
+  or the indices are invalid (`from > upTo`), then the function will fail.
+
+  ```cadence
+  let example = [1, 2, 3, 4]
+
+  // Create a new slice of part of the original array.
+  let slice = example.slice(from: 1, upTo: 3)
+  // `slice` is now `[2, 3]`
+
+  // Run-time error: Out of bounds index, the program aborts.
+  let outOfBounds = example.slice(from: 2, upTo: 10)
+
+  // Run-time error: Invalid indices, the program aborts.
+  let invalidIndices = example.slice(from: 2, upTo: 1)
   ```
 
 #### Variable-size Array Functions
@@ -1471,3 +1506,4 @@ and [`Equatable`](../interfaces#equatable-interface) [interfaces](../interfaces)
 
 Most of the built-in types, like booleans and integers,
 are hashable and equatable, so can be used as keys in dictionaries.
+

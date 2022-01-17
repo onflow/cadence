@@ -388,6 +388,21 @@ func TestCheckInvalidAddressDecimal(t *testing.T) {
 	assert.IsType(t, &sema.InvalidAddressLiteralError{}, errs[1])
 }
 
+func TestCheckInvalidTooLongAddress(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+        let a: Address = 0x10000000000000001
+        let b = Address(0x10000000000000001)
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 2)
+
+	assert.IsType(t, &sema.InvalidAddressLiteralError{}, errs[0])
+	assert.IsType(t, &sema.InvalidAddressLiteralError{}, errs[1])
+}
+
 func TestCheckSignedIntegerNegate(t *testing.T) {
 
 	t.Parallel()

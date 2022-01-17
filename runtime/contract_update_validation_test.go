@@ -32,11 +32,11 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-func TestContractUpdateValidation(t *testing.T) {
+func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewInterpreterRuntime(
+	runtime := newTestInterpreterRuntime(
 		WithContractUpdateValidationEnabled(true),
 	)
 
@@ -70,7 +70,7 @@ func TestContractUpdateValidation(t *testing.T) {
 	runtimeInterface := getMockedRuntimeInterfaceForTxUpdate(t, accountCode, events)
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	deployAndUpdate := func(name string, oldCode string, newCode string) error {
+	deployAndUpdate := func(t *testing.T, name string, oldCode string, newCode string) error {
 		deployTx1 := newDeployTransaction(sema.AuthAccountContractsTypeAddFunctionName, name, oldCode)
 		err := runtime.ExecuteTransaction(
 			Script{
@@ -113,7 +113,7 @@ func TestContractUpdateValidation(t *testing.T) {
 				}
 			}`
 
-		err := deployAndUpdate("Test1", oldCode, newCode)
+		err := deployAndUpdate(t, "Test1", oldCode, newCode)
 		require.Error(t, err)
 
 		cause := getErrorCause(t, err, "Test1")
@@ -139,7 +139,7 @@ func TestContractUpdateValidation(t *testing.T) {
 				}
 			}`
 
-		err := deployAndUpdate("Test2", oldCode, newCode)
+		err := deployAndUpdate(t, "Test2", oldCode, newCode)
 		require.Error(t, err)
 
 		cause := getErrorCause(t, err, "Test2")
@@ -166,7 +166,7 @@ func TestContractUpdateValidation(t *testing.T) {
 				}
 			}`
 
-		err := deployAndUpdate("Test3", oldCode, newCode)
+		err := deployAndUpdate(t, "Test3", oldCode, newCode)
 		require.NoError(t, err)
 	})
 
@@ -209,7 +209,7 @@ func TestContractUpdateValidation(t *testing.T) {
 				}
 			}`
 
-		err := deployAndUpdate("Test4", oldCode, newCode)
+		err := deployAndUpdate(t, "Test4", oldCode, newCode)
 		require.Error(t, err)
 
 		cause := getErrorCause(t, err, "Test4")
@@ -257,7 +257,7 @@ func TestContractUpdateValidation(t *testing.T) {
 				}
 			}`
 
-		err := deployAndUpdate("Test5", oldCode, newCode)
+		err := deployAndUpdate(t, "Test5", oldCode, newCode)
 		require.Error(t, err)
 
 		cause := getErrorCause(t, err, "Test5")
@@ -305,7 +305,7 @@ func TestContractUpdateValidation(t *testing.T) {
 				}
 			}`
 
-		err := deployAndUpdate("Test6", oldCode, newCode)
+		err := deployAndUpdate(t, "Test6", oldCode, newCode)
 		require.Error(t, err)
 
 		cause := getErrorCause(t, err, "Test6")
@@ -377,7 +377,7 @@ func TestContractUpdateValidation(t *testing.T) {
 				}
 			}`
 
-		err := deployAndUpdate("Test7", oldCode, newCode)
+		err := deployAndUpdate(t, "Test7", oldCode, newCode)
 		require.Error(t, err)
 
 		cause := getErrorCause(t, err, "Test7")
@@ -425,7 +425,7 @@ func TestContractUpdateValidation(t *testing.T) {
 				}
 			}`
 
-		err := deployAndUpdate("Test8", oldCode, newCode)
+		err := deployAndUpdate(t, "Test8", oldCode, newCode)
 		require.NoError(t, err)
 	})
 
@@ -492,7 +492,7 @@ func TestContractUpdateValidation(t *testing.T) {
 				}
 			}`
 
-		err = deployAndUpdate("Test9", oldCode, newCode)
+		err = deployAndUpdate(t, "Test9", oldCode, newCode)
 		require.Error(t, err)
 
 		cause := getErrorCause(t, err, "Test9")
@@ -512,7 +512,7 @@ func TestContractUpdateValidation(t *testing.T) {
 				pub fun getA() : Int
 			}`
 
-		err := deployAndUpdate("Test10", oldCode, newCode)
+		err := deployAndUpdate(t, "Test10", oldCode, newCode)
 		require.Error(t, err)
 
 		cause := getErrorCause(t, err, "Test10")
@@ -540,7 +540,7 @@ func TestContractUpdateValidation(t *testing.T) {
 				}
 			}`
 
-		err := deployAndUpdate("Test11", oldCode, newCode)
+		err := deployAndUpdate(t, "Test11", oldCode, newCode)
 		require.Error(t, err)
 
 		cause := getErrorCause(t, err, "Test11")
@@ -574,7 +574,7 @@ func TestContractUpdateValidation(t *testing.T) {
 				pub fun getA() : String
 			}`
 
-		err := deployAndUpdate("Test12", oldCode, newCode)
+		err := deployAndUpdate(t, "Test12", oldCode, newCode)
 		require.Error(t, err)
 
 		cause := getErrorCause(t, err, "Test12")
@@ -660,7 +660,7 @@ func TestContractUpdateValidation(t *testing.T) {
 				}
 			}`
 
-		err := deployAndUpdate("Test13", oldCode, newCode)
+		err := deployAndUpdate(t, "Test13", oldCode, newCode)
 
 		// Changing unused public composite types should also fail, since those could be
 		// referred by anyone in the chain, and may cause data inconsistency.
@@ -701,7 +701,7 @@ func TestContractUpdateValidation(t *testing.T) {
 				}
 			}`
 
-		err := deployAndUpdate("Test14", oldCode, newCode)
+		err := deployAndUpdate(t, "Test14", oldCode, newCode)
 		require.Error(t, err)
 
 		cause := getErrorCause(t, err, "Test14")
@@ -739,7 +739,7 @@ func TestContractUpdateValidation(t *testing.T) {
 				}
 			}`
 
-		err := deployAndUpdate("Test15", oldCode, newCode)
+		err := deployAndUpdate(t, "Test15", oldCode, newCode)
 		require.Error(t, err)
 
 		cause := getErrorCause(t, err, "Test15")
@@ -765,7 +765,7 @@ func TestContractUpdateValidation(t *testing.T) {
 				}
 			}`
 
-		err := deployAndUpdate("Test16", oldCode, newCode)
+		err := deployAndUpdate(t, "Test16", oldCode, newCode)
 		require.Error(t, err)
 
 		cause := getErrorCause(t, err, "Test16")
@@ -794,7 +794,7 @@ func TestContractUpdateValidation(t *testing.T) {
 				}
 			}`
 
-		err := deployAndUpdate("Test17", oldCode, newCode)
+		err := deployAndUpdate(t, "Test17", oldCode, newCode)
 		require.NoError(t, err)
 	})
 
@@ -814,7 +814,7 @@ func TestContractUpdateValidation(t *testing.T) {
 			pub contract Test18 {
 			}`
 
-		err := deployAndUpdate("Test18", oldCode, newCode)
+		err := deployAndUpdate(t, "Test18", oldCode, newCode)
 		require.Error(t, err)
 
 		cause := getErrorCause(t, err, "Test18")
@@ -838,7 +838,7 @@ func TestContractUpdateValidation(t *testing.T) {
 				}
 			}`
 
-		err := deployAndUpdate("Test19", oldCode, newCode)
+		err := deployAndUpdate(t, "Test19", oldCode, newCode)
 		require.Error(t, err)
 
 		cause := getErrorCause(t, err, "Test19")
@@ -878,7 +878,7 @@ func TestContractUpdateValidation(t *testing.T) {
 				}
 			}`
 
-		err := deployAndUpdate("Test20", oldCode, newCode)
+		err := deployAndUpdate(t, "Test20", oldCode, newCode)
 		require.Error(t, err)
 
 		updateErr := getContractUpdateError(t, err)
@@ -934,7 +934,7 @@ func TestContractUpdateValidation(t *testing.T) {
                 }
             }`
 
-		err := deployAndUpdate("Test21", oldCode, newCode)
+		err := deployAndUpdate(t, "Test21", oldCode, newCode)
 		require.Error(t, err)
 
 		const expectedError = "error: mismatching field `a` in `Test21`\n" +
@@ -995,7 +995,7 @@ func TestContractUpdateValidation(t *testing.T) {
 				}
 			}`
 
-		err := deployAndUpdate("Test22", oldCode, newCode)
+		err := deployAndUpdate(t, "Test22", oldCode, newCode)
 		require.NoError(t, err)
 	})
 
@@ -1032,7 +1032,7 @@ func TestContractUpdateValidation(t *testing.T) {
 				}
 			}`
 
-		err := deployAndUpdate("Test23", oldCode, newCode)
+		err := deployAndUpdate(t, "Test23", oldCode, newCode)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "error: field add has non-storable type: ((Int, Int): Int)")
 	})
@@ -1098,7 +1098,7 @@ func TestContractUpdateValidation(t *testing.T) {
 				}
 			}`
 
-		err = deployAndUpdate("Test24", oldCode, newCode)
+		err = deployAndUpdate(t, "Test24", oldCode, newCode)
 		require.NoError(t, err)
 	})
 
@@ -1214,7 +1214,7 @@ func TestContractUpdateValidation(t *testing.T) {
 				}
 			}`
 
-		err := deployAndUpdate("Test25", oldCode, newCode)
+		err := deployAndUpdate(t, "Test25", oldCode, newCode)
 		require.NoError(t, err)
 	})
 
@@ -1276,7 +1276,7 @@ func TestContractUpdateValidation(t *testing.T) {
 				}
 			}`
 
-		err := deployAndUpdate("Test26", oldCode, newCode)
+		err := deployAndUpdate(t, "Test26", oldCode, newCode)
 		require.NoError(t, err)
 	})
 
@@ -1330,7 +1330,7 @@ func TestContractUpdateValidation(t *testing.T) {
 				}
 			}`
 
-		err := deployAndUpdate("Test27", oldCode, newCode)
+		err := deployAndUpdate(t, "Test27", oldCode, newCode)
 		require.Error(t, err)
 
 		assert.Contains(t, err.Error(), "pub var a: {TestInterface}"+
@@ -1359,7 +1359,7 @@ func TestContractUpdateValidation(t *testing.T) {
 				}
 			}`
 
-		err := deployAndUpdate("Test28", oldCode, newCode)
+		err := deployAndUpdate(t, "Test28", oldCode, newCode)
 		require.NoError(t, err)
 	})
 
@@ -1379,7 +1379,7 @@ func TestContractUpdateValidation(t *testing.T) {
 				}
 			}`
 
-		err := deployAndUpdate("Test29", oldCode, newCode)
+		err := deployAndUpdate(t, "Test29", oldCode, newCode)
 		require.Error(t, err)
 
 		cause := getErrorCause(t, err, "Test29")
@@ -1404,7 +1404,7 @@ func TestContractUpdateValidation(t *testing.T) {
 				}
 			}`
 
-		err := deployAndUpdate("Test30", oldCode, newCode)
+		err := deployAndUpdate(t, "Test30", oldCode, newCode)
 		require.NoError(t, err)
 	})
 
@@ -1427,7 +1427,7 @@ func TestContractUpdateValidation(t *testing.T) {
 				}
 			}`
 
-		err := deployAndUpdate("Test31", oldCode, newCode)
+		err := deployAndUpdate(t, "Test31", oldCode, newCode)
 		require.Error(t, err)
 
 		updateErr := getContractUpdateError(t, err)
@@ -1461,7 +1461,7 @@ func TestContractUpdateValidation(t *testing.T) {
 			pub contract Test32 {
 			}`
 
-		err := deployAndUpdate("Test32", oldCode, updateCode1)
+		err := deployAndUpdate(t, "Test32", oldCode, updateCode1)
 		require.Error(t, err)
 
 		cause := getErrorCause(t, err, "Test32")
@@ -1872,9 +1872,9 @@ func getMockedRuntimeInterfaceForTxUpdate(
 		getCode: func(location Location) (bytes []byte, err error) {
 			return accountCodes[location.ID()], nil
 		},
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
-			return []Address{common.BytesToAddress([]byte{0x42})}, nil
+			return []Address{common.MustBytesToAddress([]byte{0x42})}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
 		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
@@ -1911,7 +1911,7 @@ func TestContractUpdateValidationDisabled(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewInterpreterRuntime(
+	runtime := newTestInterpreterRuntime(
 		WithContractUpdateValidationEnabled(false),
 	)
 
@@ -1933,7 +1933,7 @@ func TestContractUpdateValidationDisabled(t *testing.T) {
 	runtimeInterface := getMockedRuntimeInterfaceForTxUpdate(t, accountCode, events)
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	deployAndUpdate := func(name string, oldCode string, newCode string) error {
+	deployAndUpdate := func(t *testing.T, name string, oldCode string, newCode string) error {
 		deployTx1 := newDeployTransaction(sema.AuthAccountContractsTypeAddFunctionName, name, oldCode)
 		err := runtime.ExecuteTransaction(
 			Script{
@@ -1976,7 +1976,7 @@ func TestContractUpdateValidationDisabled(t *testing.T) {
 				}
 			}`
 
-		err := deployAndUpdate("Test1", oldCode, newCode)
+		err := deployAndUpdate(t, "Test1", oldCode, newCode)
 		require.NoError(t, err)
 	})
 }

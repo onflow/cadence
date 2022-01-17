@@ -119,6 +119,8 @@ var BuiltinFunctions = StandardLibraryFunctions{
 	AssertFunction,
 	PanicFunction,
 	CreatePublicKeyFunction,
+	AggregateBLSSignaturesFunction,
+	AggregateBLSPublicKeysFunction,
 }
 
 // LogFunction
@@ -129,10 +131,10 @@ Logs a string representation of the given value
 
 var LogFunction = NewStandardLibraryFunction(
 	"log",
-	logFunctionType,
+	LogFunctionType,
 	logFunctionDocString,
 	func(invocation interpreter.Invocation) interpreter.Value {
-		println(invocation.Arguments[0].String())
+		fmt.Println(invocation.Arguments[0].String())
 		return interpreter.VoidValue{}
 	},
 )
@@ -167,38 +169,190 @@ var CreatePublicKeyFunction = NewStandardLibraryFunction(
 		publicKey := invocation.Arguments[0].(*interpreter.ArrayValue)
 		signAlgo := invocation.Arguments[1].(*interpreter.CompositeValue)
 
-		validationFunc := invocation.Interpreter.PublicKeyValidationHandler
+		inter := invocation.Interpreter
 
 		return interpreter.NewPublicKeyValue(
+			inter,
+			invocation.GetLocationRange,
 			publicKey,
 			signAlgo,
-			validationFunc,
+			inter.PublicKeyValidationHandler,
 		)
 	},
 )
 
+const aggregateBLSSignaturesFunctionDocString = `
+This is a specific function for the BLS signature scheme. 
+It aggregates multiple BLS signatures into one, 
+considering the proof of possession as a defense against rogue attacks.
+
+Signatures could be generated from the same or distinct messages, 
+they could also be the aggregation of other signatures.
+The order of the signatures in the slice does not matter since the aggregation is commutative. 
+No subgroup membership check is performed on the input signatures.
+The function errors if the array is empty or if decoding one of the signature fails. 
+`
+
+var AggregateBLSSignaturesFunction = NewStandardLibraryFunction(
+	"AggregateBLSSignatures",
+	&sema.FunctionType{
+		Parameters: []*sema.Parameter{
+			{
+				Label:          sema.ArgumentLabelNotRequired,
+				Identifier:     "signatures",
+				TypeAnnotation: sema.NewTypeAnnotation(&sema.VariableSizedType{Type: sema.ByteArrayType}),
+			},
+		},
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.ByteArrayType),
+	},
+	aggregateBLSSignaturesFunctionDocString,
+	func(invocation interpreter.Invocation) interpreter.Value {
+		signatures := invocation.Arguments[0].(*interpreter.ArrayValue)
+		return AggregateBLSSignatures(invocation.Interpreter, signatures)
+	},
+)
+
+const aggregateBLSPublicKeysFunctionDocString = `
+This is a specific function for the BLS signature scheme. 
+It aggregates multiple BLS public keys into one.
+
+The order of the public keys in the slice does not matter since the aggregation is commutative. 
+No subgroup membership check is performed on the input keys.
+The function errors if the array is empty or any of the input keys is not a BLS key.
+`
+
+var AggregateBLSPublicKeysFunction = NewStandardLibraryFunction(
+	"AggregateBLSPublicKeys",
+	&sema.FunctionType{
+		Parameters: []*sema.Parameter{
+			{
+				Label:          sema.ArgumentLabelNotRequired,
+				Identifier:     "keys",
+				TypeAnnotation: sema.NewTypeAnnotation(&sema.VariableSizedType{Type: sema.PublicKeyType}),
+			},
+		},
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.PublicKeyType),
+	},
+	aggregateBLSPublicKeysFunctionDocString,
+	func(invocation interpreter.Invocation) interpreter.Value {
+		publicKeys := invocation.Arguments[0].(*interpreter.ArrayValue)
+		return AggregateBLSPublicKeys(
+			invocation.Interpreter,
+			invocation.GetLocationRange,
+			publicKeys,
+		)
+	},
+)
+
+func AggregateBLSPublicKeys(
+	inter *interpreter.Interpreter,
+	getLocationRange func() interpreter.LocationRange,
+	publicKeys *interpreter.ArrayValue,
+) interpreter.Value {
+	publicKeyArray := make([]interpreter.MemberAccessibleValue, 0, publicKeys.Count())
+	publicKeys.Iterate(func(element interpreter.Value) (resume bool) {
+		publicKey := element.(interpreter.MemberAccessibleValue)
+		publicKeyArray = append(publicKeyArray, publicKey)
+		return true
+	})
+
+	aggregatedKey, err := inter.AggregateBLSPublicKeysHandler(
+		inter,
+		getLocationRange,
+		publicKeyArray,
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	return aggregatedKey
+}
+
+func AggregateBLSSignatures(
+	inter *interpreter.Interpreter,
+	signatures *interpreter.ArrayValue,
+) interpreter.Value {
+	bytesArray := make([][]byte, 0, signatures.Count())
+	signatures.Iterate(func(element interpreter.Value) (resume bool) {
+		sig := element.(*interpreter.ArrayValue)
+		bytes := make([]byte, 0, sig.Count())
+		sig.Iterate(func(element interpreter.Value) (resume bool) {
+			i := element.(interpreter.UInt8Value)
+			bytes = append(bytes, byte(i))
+			return true
+		})
+		bytesArray = append(bytesArray, bytes)
+		return true
+	})
+
+	aggregatedBytes, err := inter.AggregateBLSSignaturesHandler(
+		bytesArray,
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	aggregatedSignature := make([]interpreter.Value, 0, len(aggregatedBytes))
+	for _, b := range aggregatedBytes {
+		aggregatedSignature = append(aggregatedSignature, interpreter.UInt8Value(b))
+	}
+
+	return interpreter.NewArrayValue(
+		inter,
+		interpreter.ByteArrayStaticType,
+		signatures.GetOwner(),
+		aggregatedSignature...,
+	)
+}
+
 // BuiltinValues
 
-var BuiltinValues = StandardLibraryValues{
-	SignatureAlgorithmValue,
-	HashAlgorithmValue,
+func BuiltinValues() StandardLibraryValues {
+	signatureAlgorithmValue := StandardLibraryValue{
+		Name: sema.SignatureAlgorithmTypeName,
+		Type: cryptoAlgorithmEnumConstructorType(
+			sema.SignatureAlgorithmType,
+			sema.SignatureAlgorithms,
+		),
+		ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
+			return cryptoAlgorithmEnumValue(
+				inter,
+				interpreter.ReturnEmptyLocationRange,
+				sema.SignatureAlgorithmType,
+				sema.SignatureAlgorithms,
+				NewSignatureAlgorithmCase,
+			)
+		},
+		Kind: common.DeclarationKindEnum,
+	}
+
+	hashAlgorithmValue := StandardLibraryValue{
+		Name: sema.HashAlgorithmTypeName,
+		Type: cryptoAlgorithmEnumConstructorType(
+			sema.HashAlgorithmType,
+			sema.HashAlgorithms,
+		),
+		ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
+			return cryptoAlgorithmEnumValue(
+				inter,
+				interpreter.ReturnEmptyLocationRange,
+				sema.HashAlgorithmType,
+				sema.HashAlgorithms,
+				NewHashAlgorithmCase,
+			)
+		},
+		Kind: common.DeclarationKindEnum,
+	}
+
+	return StandardLibraryValues{
+		signatureAlgorithmValue,
+		hashAlgorithmValue,
+	}
 }
 
-var SignatureAlgorithmValue = StandardLibraryValue{
-	Name: sema.SignatureAlgorithmTypeName,
-	Type: cryptoAlgorithmEnumType(
-		sema.SignatureAlgorithmType,
-		sema.SignatureAlgorithms,
-	),
-	Value: cryptoAlgorithmEnumValue(
-		sema.SignatureAlgorithms,
-		NewSignatureAlgorithmCase,
-	),
-	Kind: common.DeclarationKindEnum,
-}
-
-func NewSignatureAlgorithmCase(rawValue uint8) *interpreter.CompositeValue {
+func NewSignatureAlgorithmCase(inter *interpreter.Interpreter, rawValue uint8) *interpreter.CompositeValue {
 	return interpreter.NewEnumCaseValue(
+		inter,
 		sema.SignatureAlgorithmType,
 		interpreter.UInt8Value(rawValue),
 		nil,
@@ -210,25 +364,13 @@ var hashAlgorithmFunctions = map[string]interpreter.FunctionValue{
 	sema.HashAlgorithmTypeHashWithTagFunctionName: hashAlgorithmHashWithTagFunction,
 }
 
-func NewHashAlgorithmCase(rawValue uint8) *interpreter.CompositeValue {
+func NewHashAlgorithmCase(inter *interpreter.Interpreter, rawValue uint8) *interpreter.CompositeValue {
 	return interpreter.NewEnumCaseValue(
+		inter,
 		sema.HashAlgorithmType,
 		interpreter.UInt8Value(rawValue),
 		hashAlgorithmFunctions,
 	)
-}
-
-var HashAlgorithmValue = StandardLibraryValue{
-	Name: sema.HashAlgorithmTypeName,
-	Type: cryptoAlgorithmEnumType(
-		sema.HashAlgorithmType,
-		sema.HashAlgorithms,
-	),
-	Value: cryptoAlgorithmEnumValue(
-		sema.HashAlgorithms,
-		NewHashAlgorithmCase,
-	),
-	Kind: common.DeclarationKindEnum,
 }
 
 var hashAlgorithmHashFunction = interpreter.NewHostFunctionValue(
@@ -236,8 +378,25 @@ var hashAlgorithmHashFunction = interpreter.NewHostFunctionValue(
 		dataValue := invocation.Arguments[0].(*interpreter.ArrayValue)
 		hashAlgoValue := invocation.Self
 
-		return invocation.Interpreter.HashHandler(dataValue, nil, hashAlgoValue)
+		inter := invocation.Interpreter
+
+		getLocationRange := invocation.GetLocationRange
+
+		inter.ExpectType(
+			hashAlgoValue,
+			sema.HashAlgorithmType,
+			getLocationRange,
+		)
+
+		return inter.HashHandler(
+			inter,
+			getLocationRange,
+			dataValue,
+			nil,
+			hashAlgoValue,
+		)
 	},
+	sema.HashAlgorithmTypeHashFunctionType,
 )
 
 var hashAlgorithmHashWithTagFunction = interpreter.NewHostFunctionValue(
@@ -246,15 +405,32 @@ var hashAlgorithmHashWithTagFunction = interpreter.NewHostFunctionValue(
 		tagValue := invocation.Arguments[1].(*interpreter.StringValue)
 		hashAlgoValue := invocation.Self
 
-		return invocation.Interpreter.HashHandler(
+		inter := invocation.Interpreter
+
+		getLocationRange := invocation.GetLocationRange
+
+		inter.ExpectType(
+			hashAlgoValue,
+			sema.HashAlgorithmType,
+			getLocationRange,
+		)
+
+		return inter.HashHandler(
+			inter,
+			getLocationRange,
 			dataValue,
 			tagValue,
 			hashAlgoValue,
 		)
 	},
+	sema.HashAlgorithmTypeHashWithTagFunctionType,
 )
 
-func cryptoAlgorithmEnumType(enumType *sema.CompositeType, enumCases []sema.CryptoAlgorithm) *sema.ConstructorFunctionType {
+func cryptoAlgorithmEnumConstructorType(
+	enumType *sema.CompositeType,
+	enumCases []sema.CryptoAlgorithm,
+) *sema.FunctionType {
+
 	members := make([]*sema.Member, len(enumCases))
 	for i, algo := range enumCases {
 		members[i] = sema.NewPublicConstantFieldMember(
@@ -265,44 +441,50 @@ func cryptoAlgorithmEnumType(enumType *sema.CompositeType, enumCases []sema.Cryp
 		)
 	}
 
-	constructorType := &sema.ConstructorFunctionType{
-		FunctionType: &sema.FunctionType{
-			Parameters: []*sema.Parameter{
-				{
-					Identifier:     sema.EnumRawValueFieldName,
-					TypeAnnotation: sema.NewTypeAnnotation(enumType.EnumRawType),
-				},
+	constructorType := &sema.FunctionType{
+		IsConstructor: true,
+		Parameters: []*sema.Parameter{
+			{
+				Identifier:     sema.EnumRawValueFieldName,
+				TypeAnnotation: sema.NewTypeAnnotation(enumType.EnumRawType),
 			},
-			ReturnTypeAnnotation: sema.NewTypeAnnotation(
-				&sema.OptionalType{
-					Type: enumType,
-				},
-			),
-			Members: sema.GetMembersAsMap(members),
 		},
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(
+			&sema.OptionalType{
+				Type: enumType,
+			},
+		),
+		Members: sema.GetMembersAsMap(members),
 	}
 
 	return constructorType
 }
 
 func cryptoAlgorithmEnumValue(
+	inter *interpreter.Interpreter,
+	getLocationRange func() interpreter.LocationRange,
+	enumType *sema.CompositeType,
 	enumCases []sema.CryptoAlgorithm,
-	caseConstructor func(rawValue uint8) *interpreter.CompositeValue,
+	caseConstructor func(inter *interpreter.Interpreter, rawValue uint8) *interpreter.CompositeValue,
 ) interpreter.Value {
 
 	caseCount := len(enumCases)
 	caseValues := make([]*interpreter.CompositeValue, caseCount)
-	constructorNestedVariables := interpreter.NewStringVariableOrderedMap()
+	constructorNestedVariables := map[string]*interpreter.Variable{}
 
 	for i, enumCase := range enumCases {
 		rawValue := enumCase.RawValue()
-		caseValue := caseConstructor(rawValue)
+		caseValue := caseConstructor(inter, rawValue)
 		caseValues[i] = caseValue
-		constructorNestedVariables.Set(
-			enumCase.Name(),
-			interpreter.NewVariableWithValue(caseValue),
-		)
+		constructorNestedVariables[enumCase.Name()] =
+			interpreter.NewVariableWithValue(caseValue)
 	}
 
-	return interpreter.EnumConstructorFunction(caseValues, constructorNestedVariables)
+	return interpreter.EnumConstructorFunction(
+		inter,
+		getLocationRange,
+		enumType,
+		caseValues,
+		constructorNestedVariables,
+	)
 }

@@ -74,6 +74,19 @@ func (e ComputationLimitExceededError) Error() string {
 	)
 }
 
+// CallStackLimitExceededError
+
+type CallStackLimitExceededError struct {
+	Limit uint64
+}
+
+func (e CallStackLimitExceededError) Error() string {
+	return fmt.Sprintf(
+		"call stack limit exceeded: %d",
+		e.Limit,
+	)
+}
+
 // InvalidTransactionCountError
 
 type InvalidTransactionCountError struct {
@@ -468,18 +481,5 @@ func (e *MissingCompositeDeclarationError) Error() string {
 	return fmt.Sprintf(
 		"missing composite declaration `%s`",
 		e.Name,
-	)
-}
-
-// NonStorableValueWriteError
-//
-type NonStorableValueWriteError struct {
-	Value interpreter.Value
-}
-
-func (e NonStorableValueWriteError) Error() string {
-	return fmt.Sprintf(
-		"cannot write non-storable value: %s",
-		e.Value,
 	)
 }

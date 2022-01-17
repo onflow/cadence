@@ -21,8 +21,9 @@ package cadence
 import (
 	"testing"
 
-	"github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestType_ID(t *testing.T) {
@@ -79,14 +80,13 @@ func TestType_ID(t *testing.T) {
 		{BlockType{}, "Block"},
 		{MetaType{}, "Type"},
 		{
-			CapabilityType{}.
-				WithID("Capability"),
+			CapabilityType{},
 			"Capability",
 		},
 		{
 			CapabilityType{
 				BorrowType: IntType{},
-			}.WithID("Capability<Int>"),
+			},
 			"Capability<Int>",
 		},
 		{

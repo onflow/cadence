@@ -1295,6 +1295,8 @@ func TestCheckDynamicCastingCapability(t *testing.T) {
 
 func TestCheckAlwaysSucceedingDynamicCast(t *testing.T) {
 
+	t.Parallel()
+
 	const types = `
           struct interface I {}
 
@@ -1305,6 +1307,8 @@ func TestCheckAlwaysSucceedingDynamicCast(t *testing.T) {
 
 	test := func(t *testing.T, operation ast.Operation, hintType sema.Hint) {
 
+		t.Parallel()
+
 		usage := fmt.Sprintf(
 			`
               let s1 = S1()
@@ -1314,7 +1318,8 @@ func TestCheckAlwaysSucceedingDynamicCast(t *testing.T) {
             `,
 			operation.Symbol(),
 		)
-		checker, err := ParseAndCheck(t, types+usage)
+
+		checker, err := ParseAndCheckWithLinting(t, types+usage)
 
 		errs := ExpectCheckerErrors(t, err, 1)
 

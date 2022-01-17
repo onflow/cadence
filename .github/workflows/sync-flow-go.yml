@@ -8,6 +8,13 @@ on:
     branches:
       - master
     types: [closed]
+    paths-ignore:
+      - '.github/**'
+      - 'compat/**'
+      - 'docs/**'
+      - 'npm-packages/**'
+      - 'rfcs/**'
+      - 'tools/**'
 
 jobs:
   sync-flow-go:
@@ -28,9 +35,15 @@ jobs:
       - name: Get onflow/flow-go base branch name
         run: |
           git fetch
-          BRANCH=$(git branch -r -l "*auto-cadence-upgrade/*" --format "%(refname:lstrip=3)" --sort=-committerdate | head -n 1)
+          BRANCH=$(git branch -r -l "*auto-cadence-upgrade/*" --format "%(refname:lstrip=3)" | sort -r | head -n 1)
           [ -z $BRANCH ] && BRANCH=master
           echo "BASE_BRANCH=$BRANCH" >> $GITHUB_ENV
+
+      # create new branch name
+      - name: Create new branch name
+        run: |
+          NEW_BRANCH=auto-cadence-upgrade/$( date +%s )/${{ github.event.pull_request.head.ref }}
+          echo "NEW_BRANCH=$NEW_BRANCH" >> $GITHUB_ENV
 
       # checkout the correct branch of the remote repo
       - name: Checkout onflow/flow-go branch
@@ -43,7 +56,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v2
         with:
-          go-version: '1.15'
+          go-version: '1.16.x'
 
       - name: Update Cadence
         run: |
@@ -70,11 +83,11 @@ jobs:
               Auto generated PR to update Cadence version.
 
               References: ${{ github.event.pull_request.html_url }}
-          branch: auto-cadence-upgrade/${{ github.event.pull_request.head.ref }}
+          branch: ${{ env.NEW_BRANCH }}
           delete-branch: true
 
           # we can tweak the following:
           # labels: A comma or newline-separated list of labels.
           # assignees: A comma or newline-separated list of assignees (GitHub usernames).
           # reviewers: A comma or newline-separated list of reviewers (GitHub usernames) to request a review from.
-          assignees: janezpodhostnik
+          assignees: janezpodhostnik,ramtinms,turbolent,SupunS

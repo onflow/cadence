@@ -39,9 +39,9 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 	// Only predeclare a function 'foo' for 0x2 and 0x4.
 	// Both functions have the same name, but different types.
 
-	address2 := common.BytesToAddress([]byte{0x2})
-	address3 := common.BytesToAddress([]byte{0x3})
-	address4 := common.BytesToAddress([]byte{0x4})
+	address2 := common.MustBytesToAddress([]byte{0x2})
+	address3 := common.MustBytesToAddress([]byte{0x3})
+	address4 := common.MustBytesToAddress([]byte{0x4})
 
 	valueDeclaration1 := ValueDeclaration{
 		Name: "foo",
@@ -98,7 +98,7 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 	  }
 	`)
 
-	runtime := NewInterpreterRuntime()
+	runtime := newTestInterpreterRuntime()
 
 	runtimeInterface := &testRuntimeInterface{
 		getAccountContractCode: func(address Address, name string) (bytes []byte, err error) {

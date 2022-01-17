@@ -16,27 +16,13 @@
  * limitations under the License.
  */
 
-package interpreter
+package lexer
 
-import (
-	"testing"
-
-	"github.com/stretchr/testify/assert"
-)
-
-func TestPrependMagic(t *testing.T) {
-
-	t.Run("empty", func(t *testing.T) {
-		assert.Equal(t,
-			[]byte{0x0, 0xCA, 0xDE, 0x0, 0x1},
-			PrependMagic([]byte{}, 1),
-		)
-	})
-
-	t.Run("1, 2, 3", func(t *testing.T) {
-		assert.Equal(t,
-			[]byte{0x0, 0xCA, 0xDE, 0x0, 0x4, 1, 2, 3},
-			PrependMagic([]byte{1, 2, 3}, 4),
-		)
-	})
+type TokenStream interface {
+	// Next consumes and returns one Token. If there are no tokens remaining, it returns Token{TokenEOF}
+	Next() Token
+	Cursor() int
+	Revert(cursor int)
+	// Input returns the whole input as source code
+	Input() string
 }

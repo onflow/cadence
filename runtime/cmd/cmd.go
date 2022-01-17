@@ -142,7 +142,7 @@ func PrepareChecker(
 	return checker, must
 }
 
-func PrepareInterpreter(filename string) (*interpreter.Interpreter, *sema.Checker, func(error)) {
+func PrepareInterpreter(filename string, debugger *interpreter.Debugger) (*interpreter.Interpreter, *sema.Checker, func(error)) {
 
 	codes := map[common.LocationID]string{}
 
@@ -156,14 +156,18 @@ func PrepareInterpreter(filename string) (*interpreter.Interpreter, *sema.Checke
 
 	var uuid uint64
 
+	storage := interpreter.NewInMemoryStorage()
+
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
 		checker.Location,
+		interpreter.WithStorage(storage),
 		interpreter.WithPredeclaredValues(valueDeclarations.ToInterpreterValueDeclarations()),
 		interpreter.WithUUIDHandler(func() (uint64, error) {
 			defer func() { uuid++ }()
 			return uuid, nil
 		}),
+		interpreter.WithDebugger(debugger),
 	)
 	must(err)
 
@@ -173,6 +177,6 @@ func PrepareInterpreter(filename string) (*interpreter.Interpreter, *sema.Checke
 }
 
 func ExitWithError(message string) {
-	println(pretty.FormatErrorMessage(message, true))
+	fmt.Println(pretty.FormatErrorMessage(message, true))
 	os.Exit(1)
 }
