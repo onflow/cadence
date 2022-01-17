@@ -181,7 +181,7 @@ func (checker *Checker) checkInterfaceFunctions(
 			checkResourceLoss := false
 
 			if function.FunctionBlock != nil {
-				if len(function.FunctionBlock.Block.Statements) > 0 {
+				if function.FunctionBlock.HasStatements() {
 					mustExit = true
 					checkResourceLoss = true
 				} else if function.FunctionBlock.PreConditions.IsEmpty() &&
