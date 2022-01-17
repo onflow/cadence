@@ -1993,7 +1993,6 @@ func TestCheckInvalidInterfaceUseAsTypeSuggestion(t *testing.T) {
 	)
 }
 
-//MultipleInterfaceDefaultImplementation
 func TestCheckInvalidMultipleInterfaceDefaultImplementation(t *testing.T) {
 
 	t.Parallel()

@@ -1013,9 +1013,7 @@ func (e *DuplicateConformanceError) Error() string {
 func (*DuplicateConformanceError) isSemanticError() {}
 
 // MultipleInterfaceDefaultImplementationsError
-
-// TODO: just make this a warning?
-
+//
 type MultipleInterfaceDefaultImplementationsError struct {
 	CompositeType *CompositeType
 	Member        *Member

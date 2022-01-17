@@ -8295,7 +8295,6 @@ func BenchmarkNewInterpreter(b *testing.B) {
 	})
 }
 
-//InterfaceDefaultImplementation
 func TestInterpretInterfaceDefaultImplementation(t *testing.T) {
 
 	t.Parallel()
