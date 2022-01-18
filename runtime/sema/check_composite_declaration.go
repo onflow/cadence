@@ -582,10 +582,13 @@ func (checker *Checker) declareCompositeMembersAndValue(
 		// and this nested composite type implicitly conforms to it.
 
 		compositeType.GetNestedTypes().Foreach(func(nestedTypeIdentifier string, nestedType Type) {
+
 			nestedCompositeType, ok := nestedType.(*CompositeType)
 			if !ok {
 				return
 			}
+
+			inheritedMembers := map[string]*Member{}
 
 			for _, compositeTypeConformance := range compositeType.ExplicitInterfaceConformances {
 				conformanceNestedTypes := compositeTypeConformance.GetNestedTypes()
@@ -601,6 +604,52 @@ func (checker *Checker) declareCompositeMembersAndValue(
 				}
 
 				nestedCompositeType.addImplicitTypeRequirementConformance(typeRequirement)
+
+				// Add default functions
+
+				typeRequirement.Members.Foreach(func(memberName string, member *Member) {
+
+					if member.Predeclared ||
+						member.DeclarationKind != common.DeclarationKindFunction {
+
+						return
+					}
+
+					_, existing := nestedCompositeType.Members.Get(memberName)
+					if existing {
+						return
+					}
+
+					if _, ok := inheritedMembers[memberName]; ok {
+						if member.HasImplementation {
+							checker.report(
+								&MultipleInterfaceDefaultImplementationsError{
+									CompositeType: nestedCompositeType,
+									Member:        member,
+								},
+							)
+						} else {
+							checker.report(
+								&DefaultFunctionConflictError{
+									CompositeType: nestedCompositeType,
+									Member:        member,
+								},
+							)
+						}
+
+						return
+					}
+
+					if member.HasImplementation {
+						inheritedMembers[memberName] = member
+					}
+				})
+			}
+
+			for memberName, member := range inheritedMembers {
+				inheritedMember := *member
+				inheritedMember.ContainerType = nestedCompositeType
+				nestedCompositeType.Members.Set(memberName, &inheritedMember)
 			}
 		})
 
@@ -1065,22 +1114,34 @@ func (checker *Checker) checkCompositeConformance(
 			// However, only one of the composite's conformances (interfaces)
 			// may provide a default function.
 
-			if interfaceMember.DeclarationKind == common.DeclarationKindFunction &&
-				interfaceMember.HasImplementation {
+			if interfaceMember.DeclarationKind == common.DeclarationKindFunction {
 
 				if _, ok := inheritedMembers[name]; ok {
-					checker.report(
-						&MultipleInterfaceDefaultImplementationsError{
-							CompositeType: compositeType,
-							Member:        interfaceMember,
-						},
-					)
+					if interfaceMember.HasImplementation {
+						checker.report(
+							&MultipleInterfaceDefaultImplementationsError{
+								CompositeType: compositeType,
+								Member:        interfaceMember,
+							},
+						)
+					} else {
+						checker.report(
+							&DefaultFunctionConflictError{
+								CompositeType: compositeType,
+								Member:        interfaceMember,
+							},
+						)
+					}
+					return
 				}
-				inheritedMembers[name] = struct{}{}
 
-			} else {
-				missingMembers = append(missingMembers, interfaceMember)
+				if interfaceMember.HasImplementation {
+					inheritedMembers[name] = struct{}{}
+					return
+				}
 			}
+
+			missingMembers = append(missingMembers, interfaceMember)
 		}
 
 	})

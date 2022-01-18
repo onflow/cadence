@@ -2173,7 +2173,7 @@ func TestCheckMultipleInterfaceSingleInterfaceDefaultImplementation(t *testing.T
 
 		errs := ExpectCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.ConformanceError{}, errs[0])
+		require.IsType(t, &sema.DefaultFunctionConflictError{}, errs[0])
 	})
 
 	t.Run("type requirement", func(t *testing.T) {
@@ -2207,7 +2207,7 @@ func TestCheckMultipleInterfaceSingleInterfaceDefaultImplementation(t *testing.T
 
 		errs := ExpectCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.ConformanceError{}, errs[0])
+		require.IsType(t, &sema.DefaultFunctionConflictError{}, errs[0])
 	})
 }
 

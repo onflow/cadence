@@ -3462,27 +3462,6 @@ func (t *CompositeType) initializeExplicitInterfaceConformanceSet() {
 func (t *CompositeType) addImplicitTypeRequirementConformance(typeRequirement *CompositeType) {
 	t.ImplicitTypeRequirementConformances =
 		append(t.ImplicitTypeRequirementConformances, typeRequirement)
-
-	// Add default functions
-
-	typeRequirement.Members.Foreach(func(memberName string, member *Member) {
-		if member.Predeclared ||
-			member.DeclarationKind != common.DeclarationKindFunction ||
-			!member.HasImplementation {
-
-			return
-		}
-
-		_, existing := t.Members.Get(memberName)
-		if existing {
-			return
-		}
-
-		inheritedMember := *member
-		inheritedMember.ContainerType = t
-
-		t.Members.Set(memberName, &inheritedMember)
-	})
 }
 
 func (*CompositeType) IsType() {}
