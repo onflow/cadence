@@ -65,26 +65,32 @@ func TestInterpretInterfaceDefaultImplementation(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter, err := parseCheckAndInterpretWithOptions(t, `
 
-          contract interface IA {
+              contract interface IA {
 
-              struct X {
-                  fun test(): Int {
-                      return 42
+                  struct X {
+                      fun test(): Int {
+                          return 42
+                      }
                   }
               }
-          }
 
-          contract Test: IA {
-              struct X {
+              contract Test: IA {
+                  struct X {
+                  }
               }
-          }
 
-          fun main(): Int {
-              return Test.X().test()
-          }
-        `)
+              fun main(): Int {
+                  return Test.X().test()
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				Options: []interpreter.Option{
+					makeContractValueHandler(nil, nil, nil),
+				},
+			},
+		)
 
 		value, err := inter.Invoke("main")
 		require.NoError(t, err)
