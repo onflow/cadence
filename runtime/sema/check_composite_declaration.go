@@ -1225,13 +1225,31 @@ func (checker *Checker) checkTypeRequirement(
 	// Find the composite declaration of the composite type
 
 	var compositeDeclaration *ast.CompositeDeclaration
+	var foundRedeclaration bool
 
 	for _, nestedCompositeDeclaration := range containerDeclaration.Members.Composites() {
 		nestedCompositeIdentifier := nestedCompositeDeclaration.Identifier.Identifier
 		if nestedCompositeIdentifier == declaredCompositeType.Identifier {
+			// If we detected a second nested composite declaration with the same identifier,
+			// report an error and stop further type requirement checking
+			if compositeDeclaration != nil {
+				foundRedeclaration = true
+				checker.report(&RedeclarationError{
+					Kind:        nestedCompositeDeclaration.DeclarationKind(),
+					Name:        nestedCompositeDeclaration.Identifier.Identifier,
+					Pos:         nestedCompositeDeclaration.Identifier.Pos,
+					PreviousPos: &compositeDeclaration.Identifier.Pos,
+				})
+			}
 			compositeDeclaration = nestedCompositeDeclaration
-			break
+			// NOTE: Do not break / stop iteration, but keep looking for
+			// another (invalid) nested composite declaration with the same identifier,
+			// as the first found declaration is not necessarily the correct one
 		}
+	}
+
+	if foundRedeclaration {
+		return
 	}
 
 	if compositeDeclaration == nil {
