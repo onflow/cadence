@@ -9,9 +9,11 @@ import (
 const (
 	expectedArgsCount = 1
 
-	RunScriptFuncName = "runScript"
+	RunScriptFuncName     = "runScript"
+	StackOverflowFuncName = "stackOverflow"
 )
 
+//go:generate go build ./main.go
 func main() {
 
 	programArgsCount := len(os.Args) - 1
@@ -28,13 +30,18 @@ func main() {
 	switch funcName {
 	case RunScriptFuncName:
 		RunScript()
+	case StackOverflowFuncName:
+		StackOverflow()
 	default:
-		fmt.Println(fmt.Errorf("unsopported operation '%s'", funcName))
-		panic("boom!")
+		log.Fatalf("unsupported operation '%s'", funcName)
+		//panic("boom!")
 	}
 }
 
 func RunScript() {
-	//fmt.Println("Hello, world!")
-	RunScript()
+	fmt.Println("Hello, world!")
+}
+
+func StackOverflow() {
+	StackOverflow()
 }

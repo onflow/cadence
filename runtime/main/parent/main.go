@@ -1,13 +1,16 @@
 package main
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"os/exec"
+
+	"github.com/onflow/cadence/runtime"
 )
 
-const bufSize = 1024
 
 //func main() {
 //	pathToBin := "/Users/supun/work/cadence/runtime/main/main"
@@ -30,63 +33,63 @@ func main() {
 	pathToBin := "/Users/supun/work/cadence/runtime/main/main"
 	cmd := exec.Command(pathToBin, "runScript")
 
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer closeIO(stdin)
-
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer closeIO(stdout)
 
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer closeIO(stderr)
 
 	if err = cmd.Start(); err != nil {
 		log.Fatal(err)
 	}
 
 	// Read std-out
-	fmt.Print(readStdIO(stdout))
+	stdoutString := readStdIO(stdout)
 
 	// Read std-err
-	fmt.Print(readStdIO(stderr))
+	stderrString := readStdIO(stderr)
+
+	// 'Wait()' would close stdin, stdout and stderr pipes.
+	// Therefore, no need to close them explicitly.
+	err = cmd.Wait()
+
+	// Program completed successfully.
+	if err == nil {
+		fmt.Print(stdoutString)
+		// TODO: ideally shouldn't have anything on stderr
+		return
+	}
+
+	// Program terminated with an error.
+	exitError, ok := err.(*exec.ExitError)
+	if ok && exitError.Exited() && exitError.ExitCode() == 1 {
+		// These are the gracefully handled errors.
+		// They exit with an exit-code 1 and the error content is serialized to stderr.
+		// TODO: deserialize errors?
+		err = runtime.Error{
+			Err: errors.New(stderrString),
+		}
+	} else {
+		// Unhandled errors.Could be
+		//   - Fatal panics (e.g: stack-overflow)
+		//   - Signal interrupts
+		//   - etc.
+
+		// TODO: get context?
+		err = runtime.Error{
+			Err: errors.New(stderrString),
+		}
+	}
+
+	fmt.Print(err)
 }
 
 func readStdIO(ioReader io.ReadCloser) string {
-	var bytes = make([]byte, 0)
-
-	for {
-		buf := make([]byte, bufSize)
-		n, err := ioReader.Read(buf)
-
-		if err == io.EOF {
-			break
-		}
-
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		bytes = append(bytes, buf...)
-
-		if n < bufSize {
-			break
-		}
-	}
-
-	return string(bytes)
-}
-
-func closeIO(stdin io.Closer) {
-	err := stdin.Close()
-	if err != nil {
-		panic(err)
-	}
+	var buf bytes.Buffer
+	buf.ReadFrom(ioReader)
+	return buf.String()
 }
