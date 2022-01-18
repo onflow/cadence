@@ -100,7 +100,7 @@ func (d Decoder) decodeStorable() (atree.Storable, error) {
 		if err != nil {
 			return nil, err
 		}
-		storable = stringAtreeValue(v)
+		storable = StringAtreeValue(v)
 
 	case cbor.TagType:
 		var num uint64
