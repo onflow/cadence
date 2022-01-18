@@ -158,7 +158,8 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 
 	checkMissingMembers := kind != ContainerKindInterface
 
-	inherited := map[string]struct{}{}
+	inheritedMembers := map[string]struct{}{}
+	typeRequirementsInheritedMembers := map[string]map[string]struct{}{}
 
 	for i, interfaceType := range compositeType.ExplicitInterfaceConformances {
 		interfaceNominalType := declaration.Conformances[i]
@@ -172,7 +173,8 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 				checkMissingMembers:            checkMissingMembers,
 				interfaceTypeIsTypeRequirement: false,
 			},
-			inherited,
+			inheritedMembers,
+			typeRequirementsInheritedMembers,
 		)
 	}
 
@@ -970,8 +972,13 @@ type compositeConformanceCheckOptions struct {
 // checkCompositeConformance checks if the given composite declaration with the given composite type
 // conforms to the specified interface type.
 //
-// inherited is an "input/output parameter": It tracks which member were inherited from the interface.
+// inheritedMembers is an "input/output parameter":
+// It tracks which members were inherited from the interface.
 // It allows tracking this across conformance checks of multiple interfaces.
+//
+// typeRequirementsInheritedMembers is an "input/output parameter":
+// It tracks which members were inherited in each nested type, which may be a conformance to a type requirement.
+// It allows tracking this across conformance checks of multiple interfaces' type requirements.
 //
 func (checker *Checker) checkCompositeConformance(
 	compositeDeclaration *ast.CompositeDeclaration,
@@ -979,7 +986,9 @@ func (checker *Checker) checkCompositeConformance(
 	interfaceType *InterfaceType,
 	compositeKindMismatchIdentifier ast.Identifier,
 	options compositeConformanceCheckOptions,
-	inherited map[string]struct{},
+	inheritedMembers map[string]struct{},
+	// type requirement name -> inherited members
+	typeRequirementsInheritedMembers map[string]map[string]struct{},
 ) {
 
 	var missingMembers []*Member
@@ -1041,7 +1050,8 @@ func (checker *Checker) checkCompositeConformance(
 			// If the composite member exists, check if it satisfies the mem
 
 			if compositeMember != nil && !checker.memberSatisfied(compositeMember, interfaceMember) {
-				memberMismatches = append(memberMismatches,
+				memberMismatches = append(
+					memberMismatches,
 					MemberMismatch{
 						CompositeMember: compositeMember,
 						InterfaceMember: interfaceMember,
@@ -1058,7 +1068,7 @@ func (checker *Checker) checkCompositeConformance(
 			if interfaceMember.DeclarationKind == common.DeclarationKindFunction &&
 				interfaceMember.HasImplementation {
 
-				if _, ok := inherited[name]; ok {
+				if _, ok := inheritedMembers[name]; ok {
 					checker.report(
 						&MultipleInterfaceDefaultImplementationsError{
 							CompositeType: compositeType,
@@ -1066,7 +1076,7 @@ func (checker *Checker) checkCompositeConformance(
 						},
 					)
 				}
-				inherited[name] = struct{}{}
+				inheritedMembers[name] = struct{}{}
 
 			} else {
 				missingMembers = append(missingMembers, interfaceMember)
@@ -1093,7 +1103,13 @@ func (checker *Checker) checkCompositeConformance(
 			return
 		}
 
-		checker.checkTypeRequirement(nestedCompositeType, compositeDeclaration, requiredCompositeType)
+		inherited, ok := typeRequirementsInheritedMembers[name]
+		if inherited == nil {
+			inherited = map[string]struct{}{}
+			typeRequirementsInheritedMembers[name] = inherited
+		}
+
+		checker.checkTypeRequirement(nestedCompositeType, compositeDeclaration, requiredCompositeType, inherited)
 	})
 
 	if len(missingMembers) > 0 ||
@@ -1221,6 +1237,7 @@ func (checker *Checker) checkTypeRequirement(
 	declaredType Type,
 	containerDeclaration *ast.CompositeDeclaration,
 	requiredCompositeType *CompositeType,
+	inherited map[string]struct{},
 ) {
 
 	// A nested interface doesn't satisfy the type requirement,
@@ -1325,7 +1342,6 @@ func (checker *Checker) checkTypeRequirement(
 	// like a top-level composite declaration to an interface type
 
 	requiredInterfaceType := requiredCompositeType.InterfaceType()
-	inherited := map[string]struct{}{}
 
 	checker.checkCompositeConformance(
 		compositeDeclaration,
@@ -1337,6 +1353,7 @@ func (checker *Checker) checkTypeRequirement(
 			interfaceTypeIsTypeRequirement: true,
 		},
 		inherited,
+		nil,
 	)
 }
 
