@@ -31,60 +31,151 @@ func TestInterpretInterfaceDefaultImplementation(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	t.Run("interface", func(t *testing.T) {
 
-      struct interface InterfaceA {
-          fun test(): Int {
-              return 42
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+
+          struct interface IA {
+              fun test(): Int {
+                  return 42
+              }
           }
-      }
 
-      struct Test: InterfaceA {
+          struct Test: IA {
 
-      }
+          }
 
-      fun main(): Int {
-          return Test().test()
-      }
-    `)
+          fun main(): Int {
+              return Test().test()
+          }
+        `)
 
-	value, err := inter.Invoke("main")
-	require.NoError(t, err)
+		value, err := inter.Invoke("main")
+		require.NoError(t, err)
 
-	assert.Equal(t,
-		interpreter.NewIntValueFromInt64(42),
-		value,
-	)
+		assert.Equal(t,
+			interpreter.NewIntValueFromInt64(42),
+			value,
+		)
+	})
+
+	t.Run("type requirement", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+
+          contract interface IA {
+
+              struct X {
+                  fun test(): Int {
+                      return 42
+                  }
+              }
+          }
+
+          contract Test: IA {
+              struct X {
+              }
+          }
+
+          fun main(): Int {
+              return Test.X().test()
+          }
+        `)
+
+		value, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			interpreter.NewIntValueFromInt64(42),
+			value,
+		)
+	})
 }
 
 func TestInterpretInterfaceDefaultImplementationWhenOverriden(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	t.Run("interface", func(t *testing.T) {
 
-      struct interface InterfaceA {
-          fun test(): Int {
-              return 41
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+
+          struct interface IA {
+              fun test(): Int {
+                  return 41
+              }
           }
-      }
 
-      struct Test: InterfaceA {
-          fun test(): Int {
-              return 42
+          struct Test: IA {
+              fun test(): Int {
+                  return 42
+              }
           }
-      }
 
-      fun main(): Int {
-          return Test().test()
-      }
-    `)
+          fun main(): Int {
+              return Test().test()
+          }
+        `)
 
-	value, err := inter.Invoke("main")
-	require.NoError(t, err)
+		value, err := inter.Invoke("main")
+		require.NoError(t, err)
 
-	assert.Equal(t,
-		interpreter.NewIntValueFromInt64(42),
-		value,
-	)
+		assert.Equal(t,
+			interpreter.NewIntValueFromInt64(42),
+			value,
+		)
+	})
+
+	t.Run("type requirement", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+              contract interface IA {
+
+                  struct X {
+                      fun test(): Int {
+                          return 41
+                     }
+                  }
+              }
+
+              contract Test: IA {
+
+                  struct X {
+                      fun test(): Int {
+                          return 42
+                      }
+                  }
+              }
+
+              fun main(): Int {
+                  return Test.X().test()
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				Options: []interpreter.Option{
+					makeContractValueHandler(nil, nil, nil),
+				},
+			},
+		)
+
+		require.NoError(t, err)
+
+		value, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			interpreter.NewIntValueFromInt64(42),
+			value,
+		)
+	})
+
 }

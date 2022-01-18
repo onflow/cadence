@@ -460,3 +460,40 @@ func TestCheckTypeRequirementDuplicateDeclaration(t *testing.T) {
 	require.IsType(t, &sema.ConformanceError{}, errs[11])
 	require.IsType(t, &sema.ConformanceError{}, errs[12])
 }
+
+func TestCheckMultipleTypeRequirements(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      contract interface IA {
+
+          struct X {
+              let a: Int
+          }
+      }
+
+      contract interface IB {
+
+          struct X {
+              let b: Int
+          }
+      }
+
+      contract Test: IA, IB {
+
+          struct X {
+              let a: Int
+              // missing b
+
+              init() {
+                  self.a = 0
+              }
+          }
+      }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	require.IsType(t, &sema.ConformanceError{}, errs[0])
+}
