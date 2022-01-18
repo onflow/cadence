@@ -1099,7 +1099,9 @@ For `AuthAccount`:
   - `monaco-languageclient-cadence`: Language Server Protocol client for the the Monaco editor
   - `cadence-parser`: The Cadence parser
 
-  In addition, there are also examples for the [language server](https://github.com/onflow/cadence/tree/master/npm-packages/cadence-language-server-demo) and the [parser](https://github.com/onflow/cadence/tree/master/npm-packages/cadence-parser-demo) that demonstrate the use of the packages.
+  In addition, there is also an example for the [language server](https://github.com/onflow/cadence/tree/master/npm-packages/cadence-language-server-demo) 
+  <!-- and the [parser](https://github.com/onflow/cadence/tree/master/npm-packages/cadence-parser-demo) that demonstrate the use of the packages.
+  >>
 
 - Add a command to the language server that allows getting the entry point (transaction or script) parameters (#406)
 
