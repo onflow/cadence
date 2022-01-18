@@ -1049,7 +1049,7 @@ func (checker *Checker) checkCompositeConformance(
 
 			// If the composite member exists, check if it satisfies the mem
 
-			if compositeMember != nil && !checker.memberSatisfied(compositeMember, interfaceMember) {
+			if !checker.memberSatisfied(compositeMember, interfaceMember) {
 				memberMismatches = append(
 					memberMismatches,
 					MemberMismatch{
