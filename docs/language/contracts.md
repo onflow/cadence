@@ -12,7 +12,7 @@ Therefore, an object of one of these types cannot exist
 without having been defined in a deployed Cadence contract.
 
 Contracts can be created, updated, and removed using the `contracts`
-object of [authorized accounts](../accounts).
+object of [authorized accounts](https://github.com/onflow/cadence/blob/master/docs/language/accounts.mdx).
 This functionality is covered in the [next section](#deploying,-updating,-and-removing-contracts)
 
 Contracts are types.
@@ -310,7 +310,7 @@ signer.contracts.add(
 >
 > Updating contracts is currently limited to maintain data consistency.
 > Read more details on valid changes and restrictions imposed on updating contracts in the
-> [contract updatability](../contract-updatability) section.
+> [contract updatability](https://github.com/onflow/cadence/blob/master/docs/language/contract-updatability.md) section.
 
 A deployed contract can be updated using the `update__experimental` function:
 
