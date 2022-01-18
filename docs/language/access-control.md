@@ -99,7 +99,7 @@ To summarize the behavior for functions:
 | `access(account)`        | Current, inner, and other contracts in same account |
 | `pub` / `access(all)`    | **All**                                             |
 
-Declarations of structures, resources, events, and [contracts](../contracts) can only be public.
+Declarations of structures, resources, events, and [contracts](https://github.com/onflow/cadence/blob/master/docs/language/contracts.md) can only be public.
 However, even though the declarations/types are publicly visible,
 resources can only be created from inside the contract they are declared in.
 
