@@ -3,7 +3,7 @@ title: Contract Updatability
 ---
 
 ## Introduction
-A [contract](../contracts) in Cadence is a collection of data (its state) and
+A [contract](https://github.com/onflow/cadence/blob/master/docs/language/contracts.md) in Cadence is a collection of data (its state) and
 code (its functions) that lives in the contract storage area of an account.
 When a contract is updated, it is important to make sure that the changes introduced do not lead to runtime
 inconsistencies for already stored data.
