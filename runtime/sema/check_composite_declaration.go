@@ -588,7 +588,7 @@ func (checker *Checker) declareCompositeMembersAndValue(
 				return
 			}
 
-			inheritedMembers := map[string]*Member{}
+			inheritedMembers := NewStringMemberOrderedMap()
 
 			for _, compositeTypeConformance := range compositeType.ExplicitInterfaceConformances {
 				conformanceNestedTypes := compositeTypeConformance.GetNestedTypes()
@@ -620,7 +620,7 @@ func (checker *Checker) declareCompositeMembersAndValue(
 						return
 					}
 
-					if _, ok := inheritedMembers[memberName]; ok {
+					if _, ok := inheritedMembers.Get(memberName); ok {
 						if member.HasImplementation {
 							checker.report(
 								&MultipleInterfaceDefaultImplementationsError{
@@ -641,16 +641,16 @@ func (checker *Checker) declareCompositeMembersAndValue(
 					}
 
 					if member.HasImplementation {
-						inheritedMembers[memberName] = member
+						inheritedMembers.Set(memberName, member)
 					}
 				})
 			}
 
-			for memberName, member := range inheritedMembers {
+			inheritedMembers.Foreach(func(memberName string, member *Member) {
 				inheritedMember := *member
 				inheritedMember.ContainerType = nestedCompositeType
 				nestedCompositeType.Members.Set(memberName, &inheritedMember)
-			}
+			})
 		})
 
 		// Declare members
@@ -1164,7 +1164,7 @@ func (checker *Checker) checkCompositeConformance(
 			return
 		}
 
-		inherited, ok := typeRequirementsInheritedMembers[name]
+		inherited := typeRequirementsInheritedMembers[name]
 		if inherited == nil {
 			inherited = map[string]struct{}{}
 			typeRequirementsInheritedMembers[name] = inherited

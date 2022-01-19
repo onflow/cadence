@@ -91,6 +91,7 @@ func TestInterpretInterfaceDefaultImplementation(t *testing.T) {
 				},
 			},
 		)
+		require.NoError(t, err)
 
 		value, err := inter.Invoke("main")
 		require.NoError(t, err)
