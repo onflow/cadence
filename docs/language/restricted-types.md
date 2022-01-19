@@ -157,5 +157,5 @@ Only concrete types may be restricted, e.g., the restricted type may not be an a
 the type `[T]{U}` is invalid.
 
 Restricted types are also useful when giving access to resources and structures
-to potentially untrusted third-party programs through [references](https://github.com/onflow/cadence/blob/master/docs/language/references.md),
+to potentially untrusted third-party programs through [references](https://docs.onflow.org/cadence/language/references),
 which are discussed in the next section.

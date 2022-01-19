@@ -44,5 +44,5 @@ Resources are based on linear types which were popularized by Rust.
 Events are inspired by Solidity.
 
 **Disclaimer:** In real Cadence code, all type definitions and code
-must be declared and contained in [contracts](https://github.com/onflow/cadence/blob/master/docs/language/contracts.md) or [transactions](https://github.com/onflow/cadence/blob/master/docs/language/transactions.md),
+must be declared and contained in [contracts](https://docs.onflow.org/cadence/language/contracts) or [transactions](https://docs.onflow.org/cadence/language/transactions),
 but we omit these containers in examples for simplicity.

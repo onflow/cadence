@@ -7,7 +7,7 @@ an optional *type annotation* can be provided,
 to make it explicit what type the declaration has.
 
 If no type annotation is provided, the type of the declaration is
-[inferred from the initial value](https://github.com/onflow/cadence/blob/master/docs/language/type-inference.md).
+[inferred from the initial value](https://docs.onflow.org/cadence/language/type-inference).
 
 For function parameters a type annotation must be provided.
 
@@ -36,7 +36,7 @@ let smallIntegerWithAnnotation: Int8 = 1
 
 If a type annotation is provided, the initial value must be of this type.
 All new values assigned to variables must match its type.
-This type safety is explained in more detail in a [separate section](https://github.com/onflow/cadence/blob/master/docs/language/type-safety.md).
+This type safety is explained in more detail in a [separate section](https://docs.onflow.org/cadence/language/type-safety).
 
 ```cadence
 // Invalid: declare a variable with an explicit type `Bool`,

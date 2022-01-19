@@ -2,7 +2,7 @@
 title: Transactions
 ---
 
-Transactions are objects that are signed by one or more [accounts](https://github.com/onflow/cadence/blob/master/docs/language/accounts.mdx)
+Transactions are objects that are signed by one or more [accounts](https://docs.onflow.org/cadence/language/accounts)
 and are sent to the chain to interact with it.
 
 Transactions are structured as such:

@@ -120,5 +120,5 @@ counterRef3.increment()
 counterRef3.count  // is `44`
 ```
 
-References are ephemeral, i.e they cannot be [stored](https://github.com/onflow/cadence/blob/master/docs/language/accounts.mdx#account-storage).
-Instead, consider [storing a capability and borrowing it](https://github.com/onflow/cadence/blob/master/docs/language/capability-based-access-control.md) when needed.
+References are ephemeral, i.e they cannot be [stored](https://docs.onflow.org/cadence/language/accounts/#account-storage).
+Instead, consider [storing a capability and borrowing it](https://docs.onflow.org/cadence/language/capability-based-access-control) when needed.
