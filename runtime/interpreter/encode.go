@@ -264,7 +264,7 @@ func (v *StringValue) Encode(e *atree.Encoder) error {
 
 // Encode encodes the value as a CBOR string
 //
-func (v stringAtreeValue) Encode(e *atree.Encoder) error {
+func (v StringAtreeValue) Encode(e *atree.Encoder) error {
 	return e.CBOR.EncodeString(string(v))
 }
 
