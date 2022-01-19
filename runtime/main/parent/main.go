@@ -27,7 +27,7 @@ import (
 
 func main() {
 	// TODO:
-	//  - Handle zombie processes (parent get killed, while child still running)
+	//  - Handle stale/orphan processes (parent get killed, while child still running)
 	//
 
 	pathToBin := "/Users/supun/work/cadence/runtime/main/main"
