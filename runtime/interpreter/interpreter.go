@@ -1897,12 +1897,12 @@ func (interpreter *Interpreter) compositeDestructorFunction(
 	}
 }
 
-func (interpreter *Interpreter) interfaceFunctions(
-	interfaceDeclaration *ast.InterfaceDeclaration,
+func (interpreter *Interpreter) defaultFunctions(
+	members *ast.Members,
 	lexicalScope *VariableActivation,
 ) map[string]FunctionValue {
 
-	functionDeclarations := interfaceDeclaration.Members.Functions()
+	functionDeclarations := members.Functions()
 	functionCount := len(functionDeclarations)
 
 	var functions map[string]FunctionValue
@@ -2296,13 +2296,13 @@ func (interpreter *Interpreter) declareInterface(
 	initializerFunctionWrapper := interpreter.initializerFunctionWrapper(declaration.Members, lexicalScope)
 	destructorFunctionWrapper := interpreter.destructorFunctionWrapper(declaration.Members, lexicalScope)
 	functionWrappers := interpreter.functionWrappers(declaration.Members, lexicalScope)
-	interfaceFunctions := interpreter.interfaceFunctions(declaration, lexicalScope)
+	defaultFunctions := interpreter.defaultFunctions(declaration.Members, lexicalScope)
 
 	interpreter.typeCodes.InterfaceCodes[typeID] = WrapperCode{
 		InitializerFunctionWrapper: initializerFunctionWrapper,
 		DestructorFunctionWrapper:  destructorFunctionWrapper,
 		FunctionWrappers:           functionWrappers,
-		Functions:                  interfaceFunctions,
+		Functions:                  defaultFunctions,
 	}
 }
 
@@ -2332,11 +2332,13 @@ func (interpreter *Interpreter) declareTypeRequirement(
 	initializerFunctionWrapper := interpreter.initializerFunctionWrapper(declaration.Members, lexicalScope)
 	destructorFunctionWrapper := interpreter.destructorFunctionWrapper(declaration.Members, lexicalScope)
 	functionWrappers := interpreter.functionWrappers(declaration.Members, lexicalScope)
+	defaultFunctions := interpreter.defaultFunctions(declaration.Members, lexicalScope)
 
 	interpreter.typeCodes.TypeRequirementCodes[typeID] = WrapperCode{
 		InitializerFunctionWrapper: initializerFunctionWrapper,
 		DestructorFunctionWrapper:  destructorFunctionWrapper,
 		FunctionWrappers:           functionWrappers,
+		Functions:                  defaultFunctions,
 	}
 }
 
