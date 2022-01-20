@@ -149,7 +149,7 @@ package interpreter_test
 //		name += fmt.Sprintf("_%dbytes", fileSize)
 //
 //		// Decode test data to value
-//		owner := common.BytesToAddress([]byte{})
+//		owner := common.MustBytesToAddress([]byte{})
 //
 //		value, err := DecodeValue(buf.Bytes(), &owner, nil, version, nil)
 //		if err != nil {

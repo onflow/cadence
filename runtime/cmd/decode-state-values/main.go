@@ -523,7 +523,7 @@ payloadLoop:
 		}
 
 		if filter {
-			owner := common.BytesToAddress([]byte(storageKey[0]))
+			owner := common.MustBytesToAddress([]byte(storageKey[0]))
 			var found bool
 			for _, address := range addresses {
 				if owner == address {

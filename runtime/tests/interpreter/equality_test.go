@@ -19,12 +19,15 @@
 package interpreter_test
 
 import (
+	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	. "github.com/onflow/cadence/runtime/tests/utils"
 
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -44,7 +47,7 @@ func TestInterpretEquality(t *testing.T) {
 			Type: &sema.CapabilityType{},
 			ValueFactory: func(_ *interpreter.Interpreter) interpreter.Value {
 				return &interpreter.CapabilityValue{
-					Address: interpreter.NewAddressValue(common.BytesToAddress([]byte{0x1})),
+					Address: interpreter.NewAddressValue(common.MustBytesToAddress([]byte{0x1})),
 					Path: interpreter.PathValue{
 						Domain:     common.PathDomainStorage,
 						Identifier: "something",
@@ -134,5 +137,189 @@ func TestInterpretEquality(t *testing.T) {
 			interpreter.BoolValue(false),
 			inter.Globals["res"].GetValue(),
 		)
+	})
+}
+
+func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
+
+	t.Parallel()
+
+	operations := []ast.Operation{
+		ast.OperationGreater,
+		ast.OperationGreaterEqual,
+		ast.OperationLess,
+		ast.OperationLessEqual,
+		ast.OperationEqual,
+		ast.OperationNotEqual,
+	}
+
+	t.Run("Integer subtypes", func(t *testing.T) {
+		t.Parallel()
+
+		intSubtypes := []interpreter.StaticType{
+			interpreter.PrimitiveStaticTypeInt,
+			interpreter.PrimitiveStaticTypeInt8,
+			interpreter.PrimitiveStaticTypeInt16,
+			interpreter.PrimitiveStaticTypeInt32,
+			interpreter.PrimitiveStaticTypeInt64,
+			interpreter.PrimitiveStaticTypeInt128,
+			interpreter.PrimitiveStaticTypeInt256,
+			interpreter.PrimitiveStaticTypeUInt,
+			interpreter.PrimitiveStaticTypeUInt8,
+			interpreter.PrimitiveStaticTypeUInt16,
+			interpreter.PrimitiveStaticTypeUInt32,
+			interpreter.PrimitiveStaticTypeUInt64,
+			interpreter.PrimitiveStaticTypeUInt128,
+			interpreter.PrimitiveStaticTypeUInt256,
+			interpreter.PrimitiveStaticTypeWord8,
+			interpreter.PrimitiveStaticTypeWord16,
+			interpreter.PrimitiveStaticTypeWord32,
+			interpreter.PrimitiveStaticTypeWord64,
+		}
+
+		for _, subtype := range intSubtypes {
+			rhsType := interpreter.PrimitiveStaticTypeInt
+			if subtype == rhsType {
+				rhsType = interpreter.PrimitiveStaticTypeUInt
+			}
+
+			for _, op := range operations {
+				t.Run(fmt.Sprintf("%s,%s", op.String(), subtype.String()), func(t *testing.T) {
+
+					code := fmt.Sprintf(`
+                        fun test(): Bool {
+                            let x: Integer = 5 as %s
+                            let y: Integer = 2 as %s
+                            return x %s y
+                        }`,
+						subtype.String(),
+						rhsType.String(),
+						op.Symbol(),
+					)
+
+					inter := parseCheckAndInterpret(t, code)
+
+					result, err := inter.Invoke("test")
+
+					switch op {
+					case ast.OperationEqual:
+						require.NoError(t, err)
+						assert.Equal(t, interpreter.BoolValue(false), result)
+					case ast.OperationNotEqual:
+						require.NoError(t, err)
+						assert.Equal(t, interpreter.BoolValue(true), result)
+					default:
+						require.Error(t, err)
+
+						operandError := &interpreter.InvalidOperandsError{}
+						require.ErrorAs(t, err, operandError)
+
+						assert.Equal(t, op, operandError.Operation)
+						assert.Equal(t, subtype, operandError.LeftType)
+						assert.Equal(t, rhsType, operandError.RightType)
+					}
+				})
+			}
+		}
+	})
+
+	t.Run("Fixed point subtypes", func(t *testing.T) {
+		t.Parallel()
+
+		fixedPointSubtypes := []interpreter.StaticType{
+			interpreter.PrimitiveStaticTypeFix64,
+		}
+
+		rhsType := interpreter.PrimitiveStaticTypeUFix64
+
+		for _, subtype := range fixedPointSubtypes {
+			for _, op := range operations {
+				t.Run(fmt.Sprintf("%s,%s", op.String(), subtype.String()), func(t *testing.T) {
+
+					code := fmt.Sprintf(`
+                        fun test(): Bool {
+                            let x: FixedPoint = 5.2 as %s
+                            let y: FixedPoint = 2.3 as %s
+                            return x %s y
+                        }`,
+						subtype.String(),
+						rhsType.String(),
+						op.Symbol(),
+					)
+
+					inter := parseCheckAndInterpret(t, code)
+
+					result, err := inter.Invoke("test")
+
+					switch op {
+					case ast.OperationEqual:
+						require.NoError(t, err)
+						assert.Equal(t, interpreter.BoolValue(false), result)
+					case ast.OperationNotEqual:
+						require.NoError(t, err)
+						assert.Equal(t, interpreter.BoolValue(true), result)
+					default:
+						require.Error(t, err)
+
+						operandError := &interpreter.InvalidOperandsError{}
+						require.ErrorAs(t, err, operandError)
+
+						assert.Equal(t, op, operandError.Operation)
+						assert.Equal(t, subtype, operandError.LeftType)
+						assert.Equal(t, rhsType, operandError.RightType)
+					}
+				})
+			}
+		}
+	})
+
+	t.Run("Unsigned fixed point subtypes", func(t *testing.T) {
+		t.Parallel()
+
+		fixedPointSubtypes := []interpreter.StaticType{
+			interpreter.PrimitiveStaticTypeUFix64,
+		}
+
+		rhsType := interpreter.PrimitiveStaticTypeFix64
+
+		for _, subtype := range fixedPointSubtypes {
+			for _, op := range operations {
+				t.Run(fmt.Sprintf("%s,%s", op.String(), subtype.String()), func(t *testing.T) {
+
+					code := fmt.Sprintf(`
+                        fun test(): Bool {
+                            let x: FixedPoint = 5.2 as %s
+                            let y: FixedPoint = 2.3 as %s
+                            return x %s y
+                        }`,
+						subtype.String(),
+						rhsType.String(),
+						op.Symbol(),
+					)
+
+					inter := parseCheckAndInterpret(t, code)
+
+					result, err := inter.Invoke("test")
+
+					switch op {
+					case ast.OperationEqual:
+						require.NoError(t, err)
+						assert.Equal(t, interpreter.BoolValue(false), result)
+					case ast.OperationNotEqual:
+						require.NoError(t, err)
+						assert.Equal(t, interpreter.BoolValue(true), result)
+					default:
+						require.Error(t, err)
+
+						operandError := &interpreter.InvalidOperandsError{}
+						require.ErrorAs(t, err, operandError)
+
+						assert.Equal(t, op, operandError.Operation)
+						assert.Equal(t, subtype, operandError.LeftType)
+						assert.Equal(t, rhsType, operandError.RightType)
+					}
+				})
+			}
+		}
 	})
 }

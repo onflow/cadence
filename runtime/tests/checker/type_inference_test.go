@@ -841,7 +841,7 @@ func TestCheckArraySupertypeInference(t *testing.T) {
 				},
 			},
 			{
-				name: "implicit covariant values",
+				name: "implicit covariant to interface",
 				code: `
                     let x = [[Bar()], [Baz()]]
 
@@ -851,11 +851,21 @@ func TestCheckArraySupertypeInference(t *testing.T) {
 
                     pub struct Baz: Foo {}
                 `,
-				// Covariance is not supported for now.
-				expectedElementType: sema.AnyStructType,
+				expectedElementType: &sema.VariableSizedType{
+					Type: &sema.RestrictedType{
+						Type: sema.AnyStructType,
+						Restrictions: []*sema.InterfaceType{
+							{
+								Location:      common.StringLocation("test"),
+								Identifier:    "Foo",
+								CompositeKind: common.CompositeKindStructure,
+							},
+						},
+					},
+				},
 			},
 			{
-				name: "explicit covariant values",
+				name: "explicit covariant to interface",
 				code: `
                     // Covariance is supported with explicit type annotation.
                     let x = [[Bar()], [Baz()]] as [[{Foo}]]
@@ -877,6 +887,32 @@ func TestCheckArraySupertypeInference(t *testing.T) {
 							},
 						},
 					},
+				},
+			},
+			{
+				name: "nested covariant var sized",
+				code: `let x = [[[1, 2]], [["foo", "bar"]], [[5.3, 6.4]]]`,
+				expectedElementType: &sema.VariableSizedType{
+					Type: &sema.VariableSizedType{
+						Type: sema.AnyStructType,
+					},
+				},
+			},
+			{
+				name: "nested covariant constant sized",
+				code: `let x = [[[1, 2] as [Int; 2]], [["foo", "bar"] as [String; 2]], [[5.3, 6.4] as [Fix64; 2]]]`,
+				expectedElementType: &sema.VariableSizedType{
+					Type: &sema.ConstantSizedType{
+						Type: sema.AnyStructType,
+						Size: 2,
+					},
+				},
+			},
+			{
+				name: "nested non-covariant constant sized",
+				code: `let x = [[[1, 2] as [Int; 2]], [["foo", "bar", "baz"] as [String; 3]], [[5.3, 6.4] as [Fix64; 2]]]`,
+				expectedElementType: &sema.VariableSizedType{
+					Type: sema.AnyStructType,
 				},
 			},
 		}
@@ -1008,7 +1044,7 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
 			{
 				name: "implicit covariant values",
 				code: `
-                    let x = {0: [Bar()], 1: [Baz()]}
+                    let x = { 0: {100: Bar()}, 1: {200: Baz()} }
 
                     pub struct interface Foo {}
 
@@ -1017,24 +1053,9 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
                     pub struct Baz: Foo {}
                 `,
 				expectedKeyType: sema.IntType,
-				// Covariance is not supported for now.
-				expectedValueType: sema.AnyStructType,
-			},
-			{
-				name: "explicit covariant values",
-				code: `
-                    // Covariance is supported with explicit type annotation.
-                    let x = {0: [Bar()], 1: [Baz()]} as {Int: [{Foo}]}
-
-                    pub struct interface Foo {}
-
-                    pub struct Bar: Foo {}
-
-                    pub struct Baz: Foo {}
-                `,
-				expectedKeyType: sema.IntType,
-				expectedValueType: &sema.VariableSizedType{
-					Type: &sema.RestrictedType{
+				expectedValueType: &sema.DictionaryType{
+					KeyType: sema.IntType,
+					ValueType: &sema.RestrictedType{
 						Type: sema.AnyStructType,
 						Restrictions: []*sema.InterfaceType{
 							{
@@ -1045,6 +1066,49 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
 						},
 					},
 				},
+			},
+			{
+				name: "explicit covariant values",
+				code: `
+                    // Covariance is supported with explicit type annotation.
+                    let x = { 0: {100: Bar()}, 1: {200: Baz()} } as {Int: {Int: {Foo}}}
+
+                    pub struct interface Foo {}
+
+                    pub struct Bar: Foo {}
+
+                    pub struct Baz: Foo {}
+                `,
+				expectedKeyType: sema.IntType,
+				expectedValueType: &sema.DictionaryType{
+					KeyType: sema.IntType,
+					ValueType: &sema.RestrictedType{
+						Type: sema.AnyStructType,
+						Restrictions: []*sema.InterfaceType{
+							{
+								Location:      common.StringLocation("test"),
+								Identifier:    "Foo",
+								CompositeKind: common.CompositeKindStructure,
+							},
+						},
+					},
+				},
+			},
+			{
+				name:              "no supertype for inner keys",
+				code:              `let x = {0: {10: 1, 20: 2}, 1: {"one": 1, "two": 2}}`,
+				expectedKeyType:   sema.IntType,
+				expectedValueType: sema.AnyStructType,
+			},
+			{
+				name: "no supertype for inner keys with resource values",
+				code: `
+                    let x <- {0: <- {10: <- create Foo()}, 1: <- {"one": <- create Foo()}}
+
+                    pub resource Foo {}
+                `,
+				expectedKeyType:   sema.IntType,
+				expectedValueType: sema.AnyResourceType,
 			},
 		}
 

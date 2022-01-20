@@ -104,7 +104,10 @@ func (interpreter *Interpreter) visitIfStatementWithTestExpression(
 	thenBlock, elseBlock *ast.Block,
 ) controlReturn {
 
-	value := interpreter.evalExpression(test).(BoolValue)
+	value, ok := interpreter.evalExpression(test).(BoolValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
 	var result interface{}
 	if value {
 		result = thenBlock.Accept(interpreter)
@@ -189,7 +192,10 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 
 func (interpreter *Interpreter) VisitSwitchStatement(switchStatement *ast.SwitchStatement) ast.Repr {
 
-	testValue := interpreter.evalExpression(switchStatement.Expression).(EquatableValue)
+	testValue, ok := interpreter.evalExpression(switchStatement.Expression).(EquatableValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
 
 	for _, switchCase := range switchStatement.Cases {
 
@@ -221,7 +227,11 @@ func (interpreter *Interpreter) VisitSwitchStatement(switchStatement *ast.Switch
 
 		result := interpreter.evalExpression(switchCase.Expression)
 
-		caseValue := result.(EquatableValue)
+		caseValue, ok := result.(EquatableValue)
+
+		if !ok {
+			continue
+		}
 
 		// If the test value and case values are equal,
 		// evaluate the case's statements
@@ -243,8 +253,8 @@ func (interpreter *Interpreter) VisitWhileStatement(statement *ast.WhileStatemen
 
 	for {
 
-		value := interpreter.evalExpression(statement.Test).(BoolValue)
-		if !value {
+		value, ok := interpreter.evalExpression(statement.Test).(BoolValue)
+		if !ok || !bool(value) {
 			return nil
 		}
 
@@ -339,7 +349,10 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) a
 }
 
 func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement) ast.Repr {
-	event := interpreter.evalExpression(statement.InvocationExpression).(*CompositeValue)
+	event, ok := interpreter.evalExpression(statement.InvocationExpression).(*CompositeValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
 
 	eventType := interpreter.Program.Elaboration.EmitStatementEventTypes[statement]
 

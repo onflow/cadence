@@ -28,7 +28,7 @@ but reading the rest is necessary to understand the language's design.
 
 </Callout>
 
-The NFT is an integral part of blockchain technology. 
+The NFT is an integral part of blockchain technology.
 We need NFTs to represent assets that are unique and indivisible
 (like CryptoKitties! Or Top Shot Moments!, or tickets to a really fun concert!).
 
@@ -48,10 +48,18 @@ We're going to take you through these steps to get comfortable with the NFT:
 8. Use a script to see what NFTs are stored in each account's collection.
 
 <Callout type="warning">
-It is important to remember that while this tutorial implements a working non-fungible token,
-it has been simplified for educational purposes and is not what any project should use in production.
-See the [Flow Fungible Token standard](https://github.com/onflow/flow-nft) for the standard interface and example implementation.
-Additionally check out the [Kitty Items Repo](https://github.com/onflow/kitty-items) for a production ready version!
+  It is important to remember that while this tutorial implements a working
+  non-fungible token, it has been simplified for educational purposes and is not
+  what any project should use in production. See the{" "}
+  <a href="https://github.com/onflow/flow-nft" target="_blank">
+    Flow Fungible Token standard
+  </a>{" "}
+  for the standard interface and example implementation. Additionally check out
+  the{" "}
+  <a href="https://github.com/onflow/kitty-items" target="_blank">
+    Kitty Items Repo
+  </a>{" "}
+  for a production ready version!
 </Callout>
 
 **Before proceeding with this tutorial**, we highly recommend
@@ -74,7 +82,7 @@ Historically, most of this metadata has been stored off-chain,
 and the on-chain token only contains a URL or something similar that points to the off-chain metadata.
 In Flow, this is possible, but the goal is to make it possible for all the metadata associated with a token to be stored on-chain.
 This is out of the scope of this tutorial though.
-This paradigm has been defined by the Flow community and the details are contained in 
+This paradigm has been defined by the Flow community and the details are contained in
 [the NFT metadata proposal.](https://github.com/onflow/flow/pull/636/files)
 
 When users on Flow want to transact with each other, they can do so peer-to-peer and without having to interact with a central NFT contract
@@ -151,7 +159,7 @@ self.account.save<@NFT>(<-create NFT(initID: 1), to: /storage/BasicNFTPath)
 ```
 
 Here we access the `AuthAccount` object on the account the contract is deployed to and call its `save` method,
-specifying `@NFT` as the type it is being saved as. 
+specifying `@NFT` as the type it is being saved as.
 We also create the NFT in the same line and pass it as the first argument to `save`.
 We save it to the `/storage` domain, where objects are meant to be stored.
 
@@ -384,6 +392,7 @@ There are a few new features that we use in this example, so let's walk through 
 ## Path fields
 
 In the ExampleNFT contract, we define three fields for paths in account storage:
+
 ```cadence
     pub let CollectionStoragePath: StoragePath
     pub let CollectionPublicPath: PublicPath
@@ -391,10 +400,10 @@ In the ExampleNFT contract, we define three fields for paths in account storage:
 ```
 
 These indicate what storage paths the collection and minter should be stored at
-and which public path the collection public capability should be linked at. 
+and which public path the collection public capability should be linked at.
 
 In program design, it is important to avoid hard-coding (directly typing a value into a statement)
-because that introduces opportunities for human error to cause problems in code. 
+because that introduces opportunities for human error to cause problems in code.
 Because we define paths in the contract for these types, external users can always reference the path field names
 instead of typing in the paths directly.
 
@@ -728,7 +737,7 @@ transaction {
     // The field that will hold the NFT as it is being
     // transferred to the other account
     let transferToken: @ExampleNFT.NFT
-	
+
     prepare(acct: AuthAccount) {
 
         // Borrow a reference from the stored collection
