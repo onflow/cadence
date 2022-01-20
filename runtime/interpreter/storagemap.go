@@ -63,9 +63,9 @@ func NewStorageMapWithRootID(storage atree.SlabStorage, storageID atree.StorageI
 //
 func (s StorageMap) ValueExists(key string) bool {
 	_, err := s.orderedMap.Get(
-		stringAtreeComparator,
-		stringAtreeHashInput,
-		stringAtreeValue(key),
+		StringAtreeComparator,
+		StringAtreeHashInput,
+		StringAtreeValue(key),
 	)
 	if err != nil {
 		if _, ok := err.(*atree.KeyNotFoundError); ok {
@@ -82,9 +82,9 @@ func (s StorageMap) ValueExists(key string) bool {
 //
 func (s StorageMap) ReadValue(key string) Value {
 	storable, err := s.orderedMap.Get(
-		stringAtreeComparator,
-		stringAtreeHashInput,
-		stringAtreeValue(key),
+		StringAtreeComparator,
+		StringAtreeHashInput,
+		StringAtreeValue(key),
 	)
 	if err != nil {
 		if _, ok := err.(*atree.KeyNotFoundError); ok {
@@ -113,9 +113,9 @@ func (s StorageMap) WriteValue(interpreter *Interpreter, key string, value Value
 //
 func (s StorageMap) setValue(interpreter *Interpreter, key string, value Value) {
 	existingStorable, err := s.orderedMap.Set(
-		stringAtreeComparator,
-		stringAtreeHashInput,
-		stringAtreeValue(key),
+		StringAtreeComparator,
+		StringAtreeHashInput,
+		StringAtreeValue(key),
 		value,
 	)
 	if err != nil {
@@ -134,9 +134,9 @@ func (s StorageMap) setValue(interpreter *Interpreter, key string, value Value) 
 //
 func (s StorageMap) removeValue(interpreter *Interpreter, key string) {
 	existingKeyStorable, existingValueStorable, err := s.orderedMap.Remove(
-		stringAtreeComparator,
-		stringAtreeHashInput,
-		stringAtreeValue(key),
+		StringAtreeComparator,
+		StringAtreeHashInput,
+		StringAtreeValue(key),
 	)
 	if err != nil {
 		if _, ok := err.(*atree.KeyNotFoundError); ok {
@@ -200,7 +200,7 @@ func (i StorageMapIterator) Next() (string, Value) {
 		return "", nil
 	}
 
-	key := string(k.(stringAtreeValue))
+	key := string(k.(StringAtreeValue))
 	value := MustConvertStoredValue(v)
 
 	return key, value
@@ -219,7 +219,7 @@ func (i StorageMapIterator) NextKey() string {
 		return ""
 	}
 
-	return string(k.(stringAtreeValue))
+	return string(k.(StringAtreeValue))
 }
 
 // NextValue returns the next value in the storage map iterator.

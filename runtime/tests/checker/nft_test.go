@@ -980,7 +980,7 @@ func TestCheckTopShotContract(t *testing.T) {
 		realNonFungibleTokenContractInterface,
 		ParseAndCheckOptions{
 			Location: common.AddressLocation{
-				Address: common.BytesToAddress([]byte{0x1}),
+				Address: common.MustBytesToAddress([]byte{0x1}),
 				Name:    "NonFungibleToken",
 			},
 		},
@@ -991,7 +991,7 @@ func TestCheckTopShotContract(t *testing.T) {
 		topShotContract,
 		ParseAndCheckOptions{
 			Location: common.AddressLocation{
-				Address: common.BytesToAddress([]byte{0x2}),
+				Address: common.MustBytesToAddress([]byte{0x2}),
 				Name:    "TopShot",
 			},
 			Options: []sema.Option{

@@ -100,7 +100,7 @@ func (d Decoder) decodeStorable() (atree.Storable, error) {
 		if err != nil {
 			return nil, err
 		}
-		storable = stringAtreeValue(v)
+		storable = StringAtreeValue(v)
 
 	case cbor.TagType:
 		var num uint64
@@ -373,8 +373,13 @@ func decodeAddressLocation(dec *cbor.StreamDecoder) (common.Location, error) {
 		return nil, err
 	}
 
+	address, err := common.BytesToAddress(encodedAddress)
+	if err != nil {
+		return nil, err
+	}
+
 	return common.AddressLocation{
-		Address: common.BytesToAddress(encodedAddress),
+		Address: address,
 		Name:    name,
 	}, nil
 }

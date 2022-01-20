@@ -20,21 +20,40 @@ package common
 
 import (
 	"encoding/hex"
+	goErrors "errors"
 	"fmt"
 	"strings"
 )
+
+var addressOverflowError = goErrors.New("address too large")
 
 const AddressLength = 8
 
 type Address [AddressLength]byte
 
+// MustBytesToAddress returns Address with value b.
+//
+// If the address is too large, then the function panics.
+//
+func MustBytesToAddress(b []byte) Address {
+	address, err := BytesToAddress(b)
+	if err != nil {
+		panic(err)
+	}
+	return address
+}
+
 // BytesToAddress returns Address with value b.
 //
-// If b is larger than len(h), b will be cropped from the left.
-func BytesToAddress(b []byte) Address {
+// If the address is too large, then the function returns an error.
+//
+func BytesToAddress(b []byte) (Address, error) {
+	if len(b) > AddressLength {
+		return Address{}, addressOverflowError
+	}
 	var a Address
 	a.SetBytes(b)
-	return a
+	return a, nil
 }
 
 // Hex returns the hex string representation of the address.
@@ -101,5 +120,5 @@ func HexToAddress(h string) (Address, error) {
 	if err != nil {
 		return Address{}, err
 	}
-	return BytesToAddress(b), nil
+	return BytesToAddress(b)
 }

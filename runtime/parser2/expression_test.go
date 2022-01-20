@@ -3034,6 +3034,68 @@ func TestParseIntegerLiterals(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("leading zero and underscore", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseExpression(`0_100`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.IntegerExpression{
+				PositiveLiteral: "0_100",
+				Value:           big.NewInt(100),
+				Base:            10,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("leading one and underscore", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseExpression(`1_100`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.IntegerExpression{
+				PositiveLiteral: "1_100",
+				Value:           big.NewInt(1100),
+				Base:            10,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("leading underscore", func(t *testing.T) {
+
+		t.Parallel()
+
+		// NOTE: a leading underscore introduces an identifier
+
+		result, errs := ParseExpression(`_100`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.IdentifierExpression{
+				Identifier: ast.Identifier{
+					Identifier: "_100",
+					Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			result,
+		)
+	})
 }
 
 func TestParseFixedPoint(t *testing.T) {

@@ -1628,6 +1628,54 @@ func TestLexIntegerLiterals(t *testing.T) {
 			},
 		)
 	})
+
+	t.Run("leading zero and underscore", func(t *testing.T) {
+
+		testLex(t,
+			"0_100",
+			[]Token{
+				{
+					Type:  TokenDecimalIntegerLiteral,
+					Value: "0_100",
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+					},
+				},
+				{
+					Type: TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+						EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+					},
+				},
+			},
+		)
+	})
+
+	t.Run("leading one and underscore", func(t *testing.T) {
+
+		testLex(t,
+			"1_100",
+			[]Token{
+				{
+					Type:  TokenDecimalIntegerLiteral,
+					Value: "1_100",
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+					},
+				},
+				{
+					Type: TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+						EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+					},
+				},
+			},
+		)
+	})
 }
 
 func TestLexFixedPoint(t *testing.T) {

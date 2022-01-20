@@ -169,6 +169,15 @@ func maybeDestroy(interpreter *Interpreter, getLocationRange func() LocationRang
 	resourceKindedValue.Destroy(interpreter, getLocationRange)
 }
 
+// ReferenceTrackedResourceKindedValue is a resource-kinded value
+// that must be tracked when a reference of it is taken.
+//
+type ReferenceTrackedResourceKindedValue interface {
+	ResourceKindedValue
+	IsReferenceTrackedResourceKindedValue()
+	StorageID() atree.StorageID
+}
+
 // TypeValue
 
 type TypeValue struct {
@@ -1002,6 +1011,7 @@ var _ atree.Value = &ArrayValue{}
 var _ EquatableValue = &ArrayValue{}
 var _ ValueIndexableValue = &ArrayValue{}
 var _ MemberAccessibleValue = &ArrayValue{}
+var _ ReferenceTrackedResourceKindedValue = &ArrayValue{}
 
 func (*ArrayValue) IsValue() {}
 
@@ -1598,6 +1608,8 @@ func (v *ArrayValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (a
 	return atree.StorageIDStorable(v.StorageID()), nil
 }
 
+func (v *ArrayValue) IsReferenceTrackedResourceKindedValue() {}
+
 func (v *ArrayValue) Transfer(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
@@ -1613,9 +1625,12 @@ func (v *ArrayValue) Transfer(
 		}()
 	}
 
+	currentStorageID := v.StorageID()
+	currentAddress := currentStorageID.Address
+
 	array := v.array
 
-	needsStoreTo := v.NeedsStoreTo(address)
+	needsStoreTo := address != currentAddress
 	isResourceKinded := v.IsResourceKinded(interpreter)
 
 	if needsStoreTo || !isResourceKinded {
@@ -1662,7 +1677,25 @@ func (v *ArrayValue) Transfer(
 	}
 
 	if isResourceKinded {
+		// Update the resource in-place,
+		// and also update all values that are referencing the same value
+		// (but currently point to an outdated Go instance of the value)
+
 		v.array = array
+
+		newStorageID := array.StorageID()
+		interpreter.updateReferencedResource(
+			currentStorageID,
+			newStorageID,
+			func(value ReferenceTrackedResourceKindedValue) {
+				arrayValue, ok := value.(*ArrayValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+				arrayValue.array = array
+			},
+		)
+
 		return v
 	} else {
 		return &ArrayValue{
@@ -11300,6 +11333,7 @@ var _ Value = &CompositeValue{}
 var _ EquatableValue = &CompositeValue{}
 var _ HashableValue = &CompositeValue{}
 var _ MemberAccessibleValue = &CompositeValue{}
+var _ ReferenceTrackedResourceKindedValue = &CompositeValue{}
 
 func (*CompositeValue) IsValue() {}
 
@@ -11393,9 +11427,9 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange fu
 	}
 
 	storable, err := v.dictionary.Get(
-		stringAtreeComparator,
-		stringAtreeHashInput,
-		stringAtreeValue(name),
+		StringAtreeComparator,
+		StringAtreeHashInput,
+		StringAtreeValue(name),
 	)
 	if err != nil {
 		if _, ok := err.(*atree.KeyNotFoundError); !ok {
@@ -11499,9 +11533,9 @@ func (v *CompositeValue) RemoveMember(
 	// No need to clean up storable for passed-in key value,
 	// as atree never calls Storable()
 	existingKeyStorable, existingValueStorable, err := v.dictionary.Remove(
-		stringAtreeComparator,
-		stringAtreeHashInput,
-		stringAtreeValue(name),
+		StringAtreeComparator,
+		StringAtreeHashInput,
+		StringAtreeValue(name),
 	)
 	if err != nil {
 		if _, ok := err.(*atree.KeyNotFoundError); ok {
@@ -11546,9 +11580,9 @@ func (v *CompositeValue) SetMember(
 	)
 
 	existingStorable, err := v.dictionary.Set(
-		stringAtreeComparator,
-		stringAtreeHashInput,
-		stringAtreeValue(name),
+		StringAtreeComparator,
+		StringAtreeHashInput,
+		StringAtreeValue(name),
 		value,
 	)
 	if err != nil {
@@ -11618,9 +11652,9 @@ func formatComposite(typeId string, fields []CompositeField, seenReferences Seen
 func (v *CompositeValue) GetField(name string) Value {
 
 	storable, err := v.dictionary.Get(
-		stringAtreeComparator,
-		stringAtreeHashInput,
-		stringAtreeValue(name),
+		StringAtreeComparator,
+		StringAtreeHashInput,
+		StringAtreeValue(name),
 	)
 	if err != nil {
 		if _, ok := err.(*atree.KeyNotFoundError); ok {
@@ -11659,7 +11693,7 @@ func (v *CompositeValue) Equal(interpreter *Interpreter, getLocationRange func()
 			return true
 		}
 
-		fieldName := string(key.(stringAtreeValue))
+		fieldName := string(key.(StringAtreeValue))
 
 		// NOTE: Do NOT use an iterator, iteration order of fields may be different
 		// (if stored in different account, as storage ID is used as hash seed)
@@ -11820,6 +11854,8 @@ func (v *CompositeValue) IsResourceKinded(_ *Interpreter) bool {
 	return v.Kind == common.CompositeKindResource
 }
 
+func (v *CompositeValue) IsReferenceTrackedResourceKindedValue() {}
+
 func (v *CompositeValue) Transfer(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
@@ -11828,9 +11864,10 @@ func (v *CompositeValue) Transfer(
 	storable atree.Storable,
 ) Value {
 
-	dictionary := v.dictionary
+	currentStorageID := v.StorageID()
+	currentAddress := currentStorageID.Address
 
-	currentAddress := v.StorageID().Address
+	dictionary := v.dictionary
 
 	needsStoreTo := address != currentAddress
 	isResourceKinded := v.IsResourceKinded(interpreter)
@@ -11846,8 +11883,8 @@ func (v *CompositeValue) Transfer(
 			address,
 			atree.NewDefaultDigesterBuilder(),
 			v.dictionary.Type(),
-			stringAtreeComparator,
-			stringAtreeHashInput,
+			StringAtreeComparator,
+			StringAtreeHashInput,
 			v.dictionary.Seed(),
 			func() (atree.Value, atree.Value, error) {
 
@@ -11888,7 +11925,26 @@ func (v *CompositeValue) Transfer(
 
 	var res *CompositeValue
 	if isResourceKinded {
+		// Update the resource in-place,
+		// and also update all values that are referencing the same value
+		// (but currently point to an outdated Go instance of the value)
+
 		v.dictionary = dictionary
+
+		newStorageID := dictionary.StorageID()
+
+		interpreter.updateReferencedResource(
+			currentStorageID,
+			newStorageID,
+			func(value ReferenceTrackedResourceKindedValue) {
+				compositeValue, ok := value.(*CompositeValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+				compositeValue.dictionary = dictionary
+			},
+		)
+
 		res = v
 	} else {
 		res = &CompositeValue{
@@ -11945,8 +12001,8 @@ func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
 		v.StorageID().Address,
 		atree.NewDefaultDigesterBuilder(),
 		v.dictionary.Type(),
-		stringAtreeComparator,
-		stringAtreeHashInput,
+		StringAtreeComparator,
+		StringAtreeHashInput,
 		v.dictionary.Seed(),
 		func() (atree.Value, atree.Value, error) {
 
@@ -12017,7 +12073,7 @@ func (v *CompositeValue) GetOwner() common.Address {
 func (v *CompositeValue) ForEachField(f func(fieldName string, fieldValue Value)) {
 	err := v.dictionary.Iterate(func(key atree.Value, value atree.Value) (resume bool, err error) {
 		f(
-			string(key.(stringAtreeValue)),
+			string(key.(StringAtreeValue)),
 			MustConvertStoredValue(value),
 		)
 		return true, nil
@@ -12038,9 +12094,9 @@ func (v *CompositeValue) RemoveField(
 ) {
 
 	existingKeyStorable, existingValueStorable, err := v.dictionary.Remove(
-		stringAtreeComparator,
-		stringAtreeHashInput,
-		stringAtreeValue(name),
+		StringAtreeComparator,
+		StringAtreeHashInput,
+		StringAtreeValue(name),
 	)
 	if err != nil {
 		if _, ok := err.(*atree.KeyNotFoundError); ok {
@@ -12159,6 +12215,7 @@ var _ atree.Value = &DictionaryValue{}
 var _ EquatableValue = &DictionaryValue{}
 var _ ValueIndexableValue = &DictionaryValue{}
 var _ MemberAccessibleValue = &DictionaryValue{}
+var _ ReferenceTrackedResourceKindedValue = &DictionaryValue{}
 
 func (*DictionaryValue) IsValue() {}
 
@@ -12723,6 +12780,8 @@ func (v *DictionaryValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint6
 	return atree.StorageIDStorable(v.StorageID()), nil
 }
 
+func (v *DictionaryValue) IsReferenceTrackedResourceKindedValue() {}
+
 func (v *DictionaryValue) Transfer(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
@@ -12738,9 +12797,12 @@ func (v *DictionaryValue) Transfer(
 		}()
 	}
 
+	currentStorageID := v.StorageID()
+	currentAddress := currentStorageID.Address
+
 	dictionary := v.dictionary
 
-	needsStoreTo := v.NeedsStoreTo(address)
+	needsStoreTo := address != currentAddress
 	isResourceKinded := v.IsResourceKinded(interpreter)
 
 	if needsStoreTo || !isResourceKinded {
@@ -12799,7 +12861,26 @@ func (v *DictionaryValue) Transfer(
 	}
 
 	if isResourceKinded {
+		// Update the resource in-place,
+		// and also update all values that are referencing the same value
+		// (but currently point to an outdated Go instance of the value)
+
 		v.dictionary = dictionary
+
+		newStorageID := dictionary.StorageID()
+
+		interpreter.updateReferencedResource(
+			currentStorageID,
+			newStorageID,
+			func(value ReferenceTrackedResourceKindedValue) {
+				dictionaryValue, ok := value.(*DictionaryValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+				dictionaryValue.dictionary = dictionary
+			},
+		)
+
 		return v
 	} else {
 		return &DictionaryValue{

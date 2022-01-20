@@ -505,9 +505,9 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 	runtime := newTestInterpreterRuntime()
 
-	contractsAddress := common.BytesToAddress([]byte{0x1})
-	senderAddress := common.BytesToAddress([]byte{0x2})
-	receiverAddress := common.BytesToAddress([]byte{0x3})
+	contractsAddress := common.MustBytesToAddress([]byte{0x1})
+	senderAddress := common.MustBytesToAddress([]byte{0x2})
+	receiverAddress := common.MustBytesToAddress([]byte{0x3})
 
 	accountCodes := map[common.LocationID][]byte{}
 
