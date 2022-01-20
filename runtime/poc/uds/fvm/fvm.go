@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net"
+	"time"
 
 	"github.com/onflow/cadence/runtime/poc/uds/utils"
 )
@@ -10,6 +11,11 @@ import (
 func main() {
 	conn, err := net.Dial(utils.UnixNetwork, utils.Address)
 	utils.HandleError(err)
+
+	start := time.Now()
+	defer func() {
+		fmt.Println("Time consumed:", time.Since(start))
+	}()
 
 	utils.WriteMessage(conn, "parse")
 
@@ -26,13 +32,13 @@ func listen(conn net.Conn) {
 	// is received.
 
 	for {
-		response := utils.ReadMessage(conn)
-		println("Cadence response:", response)
+		message := utils.ReadMessage(conn)
+		fmt.Println("Cadence message:", message)
 
 		var fvmResponse string
 
 		// TODO: switch on message header/meta_info
-		switch response {
+		switch message {
 		// All 'Interface' methods goes here
 		case "get_code":
 			fvmResponse = "pub fun foo() {}"
@@ -43,7 +49,9 @@ func listen(conn net.Conn) {
 			// Don't need to respond back.
 			return
 		default:
-			fvmResponse = fmt.Sprintf("enexpected response '%s'", response)
+			// Properly handle: add a case to listen ERROR header
+			fmt.Println(fmt.Sprintf("error occured '%s'", message))
+			return
 		}
 
 		utils.WriteMessage(conn, fvmResponse)

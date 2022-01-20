@@ -19,14 +19,16 @@ func main() {
 		utils.HandleError(err)
 
 		msg := utils.ReadMessage(conn)
+		fmt.Println(msg)
 
 		var response string
-		fmt.Println(msg)
 		switch msg {
 		case "parse":
 			parse(conn)
 			response = "OK"
 		default:
+			// TODO: add a case to listen ERROR header
+
 			response = fmt.Sprintf("unsupported operation '%s'", msg)
 		}
 

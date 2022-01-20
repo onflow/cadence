@@ -2,7 +2,6 @@ package utils
 
 import (
 	"encoding/binary"
-	"fmt"
 	"net"
 )
 
@@ -14,11 +13,9 @@ const (
 func ReadMessage(conn net.Conn) string {
 	var messageLength int32
 
-	// First 4 bytes is the size of message_length
+	// First 4 bytes is the size of message_content
 	err := binary.Read(conn, binary.BigEndian, &messageLength)
 	HandleError(err)
-
-	fmt.Println("Content size:", messageLength)
 
 	buf := make([]byte, messageLength)
 	err = binary.Read(conn, binary.BigEndian, buf)
