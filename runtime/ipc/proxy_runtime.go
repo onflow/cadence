@@ -9,8 +9,8 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/ipc/bridge"
+	pb "github.com/onflow/cadence/runtime/ipc/protobuf"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 // ProxyRuntime calls Cadence functionalities over the sockets.
@@ -34,9 +34,10 @@ func NewProxyRuntime(runtimeInterface runtime.Interface) *ProxyRuntime {
 }
 
 func (r *ProxyRuntime) ExecuteScript(script runtime.Script, context runtime.Context) (cadence.Value, error) {
-	request := &bridge.Request{
-		Name: RuntimeMethodExecuteScript,
-	}
+	request := bridge.NewRequestMessage(
+		RuntimeMethodExecuteScript,
+		string(script.Source),
+	)
 
 	WriteMessage(r.conn, request)
 
@@ -87,7 +88,7 @@ func (r *ProxyRuntime) ReadLinked(address common.Address, path cadence.Path, con
 	panic("implement me")
 }
 
-func (r *ProxyRuntime) listen() bridge.Message {
+func (r *ProxyRuntime) listen() *bridge.Message {
 	// Keep listening until the final response is received.
 	//
 	// Rationale:
@@ -99,26 +100,43 @@ func (r *ProxyRuntime) listen() bridge.Message {
 	for {
 		message := ReadMessage(r.conn)
 
-		var response bridge.Message
+		var response *bridge.Message
 
-		// TODO: switch on message header/meta_info
-		// All 'Interface' methods goes here
+		switch message.Type {
+		case pb.MessageType_REQUEST:
+			response = r.serveRequest(message.GetReq())
 
-		switch message.String() {
-		case InterfaceMethodGetCode:
-			location := utils.TestLocation
-			response = r.interfaceBridge.GetCode(location)
+		case pb.MessageType_RESPONSE:
+			return message
 
-		case InterfaceMethodGetProgram:
-			location := utils.TestLocation
-			response = r.interfaceBridge.GetProgram(location)
-
-		case InterfaceMethodResolveLocation:
+		case pb.MessageType_ERROR:
+			return message
 
 		default:
-			return message
+			panic("unsupported")
 		}
 
 		WriteMessage(r.conn, response)
 	}
+}
+
+func (r *ProxyRuntime) serveRequest(request *bridge.Request) *bridge.Message {
+	var response *bridge.Message
+
+	// All 'Interface' methods goes here
+	switch request.Name {
+	case InterfaceMethodGetCode:
+		response = r.interfaceBridge.GetCode(request.Params)
+
+	case InterfaceMethodGetProgram:
+		response = r.interfaceBridge.GetProgram(request.Params)
+
+	case InterfaceMethodResolveLocation:
+		response = r.interfaceBridge.ResolveLocation(request.Params)
+
+	default:
+		panic("unsupported")
+	}
+
+	return response
 }

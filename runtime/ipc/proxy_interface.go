@@ -1,15 +1,17 @@
 package ipc
 
 import (
-	"github.com/onflow/cadence/runtime/ipc/bridge"
 	"net"
 	"time"
 
 	"github.com/onflow/atree"
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime"
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/ipc/bridge"
+	"github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/opentracing/opentracing-go"
 )
 
@@ -28,31 +30,42 @@ func NewProxyInterface(conn net.Conn) *ProxyInterface {
 }
 
 func (p *ProxyInterface) ResolveLocation(identifiers []runtime.Identifier, location runtime.Location) ([]runtime.ResolvedLocation, error) {
-	request := &bridge.Request{
-		Name: InterfaceMethodResolveLocation,
-	}
-
+	request := bridge.NewRequestMessage(InterfaceMethodResolveLocation)
 	WriteMessage(p.conn, request)
+
+	// NOTE: this assumes when cadence call any 'Interface' method,
+	// there will only be one response from the host-env.
+	// i.e: Assumes there will not be any more requests from the host-env,
+	// until the current request is served.
 
 	// TODO: allow back and forth messaging rather than just one response??
 	_ = ReadMessage(p.conn)
 
-	return []runtime.ResolvedLocation{}, nil
+	// TODO: implement
+	return []runtime.ResolvedLocation{
+		{
+			Location:    utils.TestLocation,
+			Identifiers: []ast.Identifier{},
+		},
+	}, nil
 }
 
 func (p *ProxyInterface) GetCode(location runtime.Location) ([]byte, error) {
-	request := &bridge.Request{
-		Name: InterfaceMethodGetCode,
-	}
+	request := bridge.NewRequestMessage(InterfaceMethodGetCode)
 
 	WriteMessage(p.conn, request)
 	msg := ReadMessage(p.conn)
 
-	return []byte(msg.String()), nil
+	return []byte(msg.GetRes().Value), nil
 }
 
 func (p *ProxyInterface) GetProgram(location runtime.Location) (*interpreter.Program, error) {
-	panic("implement me")
+	request := bridge.NewRequestMessage(InterfaceMethodGetProgram)
+
+	WriteMessage(p.conn, request)
+	_ = ReadMessage(p.conn)
+
+	return nil, nil
 }
 
 func (p *ProxyInterface) SetProgram(location runtime.Location, program *interpreter.Program) error {

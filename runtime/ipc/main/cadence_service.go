@@ -23,41 +23,61 @@ func main() {
 		conn, err := listener.Accept()
 		ipc.HandleError(err)
 
-		context := runtime.Context{
-			Interface: ipc.NewProxyInterface(conn),
-			Location:  utils.TestLocation,
-		}
-		context.InitializeCodesAndPrograms()
-
 		msg := ipc.ReadMessage(conn)
 
-		var response bridge.Message
+		var response *bridge.Message
 
-		// TODO: change to switch on message type + meta-info
-		switch msg.String() {
-		case ipc.InitInterpreterRuntimeMethod:
+		switch msg.Type {
+		case bridge.REQUEST:
+			response = serveRequest(conn, runtimeBridge, msg.GetReq())
 
-		case ipc.RuntimeMethodExecuteScript:
-			script := runtime.Script{
-				Source: []byte("pub fun main():String { return \"Hello, world!\" }"),
-			}
-			response = runtimeBridge.ExecuteScript(script, context)
+		case bridge.RESPONSE:
+			panic("Don't know what to do yet, on a response")
 
-		case ipc.RuntimeMethodExecuteTransaction:
-			script := runtime.Script{
-				Source: []byte("pub fun main() {}"),
-			}
-			response = runtimeBridge.ExecuteScript(script, context)
-
-		case ipc.RuntimeMethodInvokeContractFunction:
-			response = runtimeBridge.InvokeContractFunction()
+		case bridge.ERROR:
+			// Forward the error
+			response = msg
 
 		default:
-			response = &bridge.Error{
-				Content: fmt.Sprintf("unsupported operation '%s'", msg),
-			}
+			panic("unsupported")
 		}
 
 		ipc.WriteMessage(conn, response)
 	}
+}
+
+func serveRequest(
+	conn net.Conn,
+	runtimeBridge *bridge.RuntimeBridge,
+	request *bridge.Request,
+) *bridge.Message {
+
+	context := runtime.Context{
+		Interface: ipc.NewProxyInterface(conn),
+		Location:  utils.TestLocation,
+	}
+	context.InitializeCodesAndPrograms()
+
+	var response *bridge.Message
+
+	// TODO: change to switch on message type + meta-info
+	switch request.Name {
+	case ipc.InitInterpreterRuntimeMethod:
+
+	case ipc.RuntimeMethodExecuteScript:
+		response = runtimeBridge.ExecuteScript(request.Params, context)
+
+	case ipc.RuntimeMethodExecuteTransaction:
+		response = runtimeBridge.ExecuteScript(request.Params, context)
+
+	case ipc.RuntimeMethodInvokeContractFunction:
+		response = runtimeBridge.InvokeContractFunction()
+
+	default:
+		response = bridge.NewErrorMessage(
+			fmt.Sprintf("unsupported request '%s'", request.Name),
+		)
+	}
+
+	return response
 }

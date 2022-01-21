@@ -18,32 +18,38 @@ func NewRuntimeBridge() *RuntimeBridge {
 	}
 }
 
-func (b *RuntimeBridge) ExecuteScript(script runtime.Script, context runtime.Context) Message {
+func (b *RuntimeBridge) ExecuteScript(params []string, context runtime.Context) *Message {
+	script := runtime.Script{
+		Source: []byte(params[0]),
+	}
+
 	value, err := b.Runtime.ExecuteScript(script, context)
 	if err != nil {
-		return &Error{
-			Content: fmt.Sprintf("error occured while executing script: '%s'", err.Error()),
-		}
+		return NewErrorMessage(
+			fmt.Sprintf("error occured while executing script: '%s'", err.Error()),
+		)
 	}
 
-	return &Response{
-		Content: value.String(),
-	}
+	return NewResponseMessage(value.String())
 }
 
-func (b *RuntimeBridge) ExecuteTransaction(script runtime.Script, context runtime.Context) Message {
-	err := b.Runtime.ExecuteTransaction(script, context)
+func (b *RuntimeBridge) ExecuteTransaction(params []string, context runtime.Context) *Message {
+	script := runtime.Script{
+		Source: []byte(params[0]),
+	}
+
+	value, err := b.Runtime.ExecuteScript(script, context)
 	if err != nil {
-		return &Error{
-			Content: fmt.Sprintf("error occured while executing transaction: '%s'", err.Error()),
-		}
+		return NewErrorMessage(
+			fmt.Sprintf("error occured while executing transaction: '%s'", err.Error()),
+		)
 	}
 
-	return &Response{}
+	return NewResponseMessage(value.String())
 }
 
-func (b *RuntimeBridge) InvokeContractFunction() Message {
-	return &Error{
-		Content: "InvokeContractFunction is not yet implemented",
-	}
+func (b *RuntimeBridge) InvokeContractFunction() *Message {
+	return NewErrorMessage(
+		"InvokeContractFunction is not yet implemented",
+	)
 }

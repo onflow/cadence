@@ -2,10 +2,13 @@ package bridge
 
 import (
 	"fmt"
+	"github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/onflow/cadence/runtime"
 )
 
+// InterfaceBridge converts the IPC call to the `runtime.Interface` method invocation
+// and convert the results back to IPC.
 type InterfaceBridge struct {
 	Interface runtime.Interface
 }
@@ -16,28 +19,41 @@ func NewInterfaceBridge(runtimeInterface runtime.Interface) *InterfaceBridge {
 	}
 }
 
-func (b *InterfaceBridge) GetCode(location runtime.Location) Message {
+func (b *InterfaceBridge) GetCode(params []string) *Message {
+	//TODO: parse from params
+	location := utils.TestLocation
+
 	code, err := b.Interface.GetCode(location)
 	if err != nil {
-		return &Error{
-			Content: fmt.Sprintf("error occured while executing script: '%s'", err.Error()),
-		}
+		return NewErrorMessage(
+			fmt.Sprintf("error occured while retrieving code: '%s'", err.Error()),
+		)
 	}
 
-	return &Response{
-		Content: string(code),
-	}
+	return NewResponseMessage(string(code))
 }
 
-func (b *InterfaceBridge) GetProgram(location runtime.Location) Message {
+func (b *InterfaceBridge) GetProgram(params []string) *Message {
+	//TODO: parse from params
+	location := utils.TestLocation
+
 	_, err := b.Interface.GetProgram(location)
 	if err != nil {
-		return &Error{
-			Content: fmt.Sprintf("error occured while executing script: '%s'", err.Error()),
-		}
+		return NewErrorMessage(
+			fmt.Sprintf("error occured while retrieving program: '%s'", err.Error()),
+		)
 	}
 
-	return &Response{
-		Content: "some program",
+	return NewResponseMessage("some program")
+}
+
+func (b *InterfaceBridge) ResolveLocation(params []string) *Message {
+	_, err := b.Interface.ResolveLocation(nil, nil)
+	if err != nil {
+		return NewErrorMessage(
+			fmt.Sprintf("error occured while retrieving program: '%s'", err.Error()),
+		)
 	}
+
+	return NewResponseMessage("some location")
 }

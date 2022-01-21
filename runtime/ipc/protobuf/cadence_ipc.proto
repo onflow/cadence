@@ -1,0 +1,35 @@
+syntax = "proto3";
+package pb;
+
+option go_package = "./;pb";
+
+//import "google/protobuf/any.proto";
+
+enum MessageType {
+  REQUEST = 0;
+  RESPONSE = 1;
+  ERROR = 2;
+}
+
+message Message {
+  MessageType type = 1;
+
+  oneof payloads {
+    Request req = 2;
+    Response res = 3;
+    Error err = 4;
+  }
+}
+
+message Request {
+  string name = 1;
+  repeated string params = 2;
+}
+
+message Response {
+  string value = 1;
+}
+
+message Error {
+  string err = 1;
+}

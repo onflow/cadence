@@ -1,50 +1,53 @@
 package bridge
 
-type messageKind int8
-
-const (
-	REQUEST messageKind = iota
-	RESPONSE
-	ERROR
-	DONE
+import (
+	pb "github.com/onflow/cadence/runtime/ipc/protobuf"
 )
 
-type Message interface {
-	IsMessage()
-	String() string
+const (
+	REQUEST  = pb.MessageType_REQUEST
+	RESPONSE = pb.MessageType_RESPONSE
+	ERROR    = pb.MessageType_ERROR
+)
+
+type Message = pb.Message
+
+type Request = pb.Request
+
+type Response = pb.Response
+
+type Error = pb.Error
+
+func NewErrorMessage(errMsg string) *Message {
+	return &Message{
+		Type: ERROR,
+		Payloads: &pb.Message_Err{
+			Err: &Error{
+				Err: errMsg,
+			},
+		},
+	}
 }
 
-var _ Message = &Request{}
-var _ Message = &Response{}
-var _ Message = &Error{}
-
-type Request struct {
-	Name   string
-	Params []interface{}
+func NewResponseMessage(value string) *Message {
+	return &Message{
+		Type: RESPONSE,
+		Payloads: &pb.Message_Res{
+			Res: &Response{
+				Value: value,
+			},
+		},
+	}
 }
 
-func (Request) IsMessage() {}
-
-func (r *Request) String() string {
-	return r.Name
-}
-
-type Response struct {
-	Content string
-}
-
-func (Response) IsMessage() {}
-
-func (r *Response) String() string {
-	return r.Content
-}
-
-type Error struct {
-	Content string
-}
-
-func (Error) IsMessage() {}
-
-func (e *Error) String() string {
-	return e.Content
+func NewRequestMessage(name string, params ...string) *Message {
+	return &Message{
+		Type: REQUEST,
+		Payloads: &pb.Message_Req{
+			Req: &Request{
+				Name:   name,
+				Params: params,
+			},
+		},
+	}
 }

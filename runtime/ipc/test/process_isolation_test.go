@@ -1,6 +1,10 @@
 package test
 
 import (
+	"github.com/stretchr/testify/assert"
+	"testing"
+	"time"
+
 	"github.com/onflow/atree"
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime"
@@ -8,29 +12,46 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/ipc"
 	"github.com/opentracing/opentracing-go"
-	"testing"
-	"time"
 )
+
+// TODO: Move under tests/ and delete redundant testRuntimeInterface
 
 func TestExecutingScript(t *testing.T) {
 	interfaceImpl := testRuntimeInterface{}
 	proxyRuntime := ipc.NewProxyRuntime(interfaceImpl)
-	proxyRuntime.ExecuteScript(runtime.Script{}, runtime.Context{})
+
+	_, err := proxyRuntime.ExecuteScript(
+		runtime.Script{
+			Source: []byte(`
+               pub fun main(): Int {
+                 return 4 + 7
+               }
+            `),
+		},
+		runtime.Context{},
+	)
+	assert.NoError(t, err)
 }
 
 type testRuntimeInterface struct {
 }
 
 func (t testRuntimeInterface) ResolveLocation(identifiers []runtime.Identifier, location runtime.Location) ([]runtime.ResolvedLocation, error) {
-	panic("implement me")
+	return []runtime.ResolvedLocation{}, nil
 }
 
 func (t testRuntimeInterface) GetCode(location runtime.Location) ([]byte, error) {
-	panic("implement me")
+	return []byte(`
+        pub contract Foo {
+            pub fun Add(_ a: Int, _ b: Int): Int {
+                return a + b
+            }
+        }
+    `), nil
 }
 
 func (t testRuntimeInterface) GetProgram(location runtime.Location) (*interpreter.Program, error) {
-	panic("implement me")
+	return nil, nil
 }
 
 func (t testRuntimeInterface) SetProgram(location runtime.Location, program *interpreter.Program) error {

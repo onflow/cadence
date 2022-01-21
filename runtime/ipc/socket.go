@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"net"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/onflow/cadence/runtime/ipc/bridge"
 )
 
@@ -12,7 +13,7 @@ const (
 	SocketAddress = "/tmp/cadence.socket"
 )
 
-func ReadMessage(conn net.Conn) bridge.Message {
+func ReadMessage(conn net.Conn) *bridge.Message {
 	var messageLength int32
 
 	// First 4 bytes is the size of message_content
@@ -23,16 +24,19 @@ func ReadMessage(conn net.Conn) bridge.Message {
 	err = binary.Read(conn, binary.BigEndian, buf)
 	HandleError(err)
 
-	return &bridge.Response{
-		Content: string(buf),
-	}
+	message := &bridge.Message{}
+	err = proto.Unmarshal(buf, message)
+	HandleError(err)
+
+	return message
 }
 
-func WriteMessage(conn net.Conn, msg bridge.Message) {
-	serialized := []byte(msg.String())
+func WriteMessage(conn net.Conn, msg *bridge.Message) {
+	serialized, err := proto.Marshal(msg)
+	HandleError(err)
 
 	// Write msg length
-	err := binary.Write(conn, binary.BigEndian, int32(len(serialized)))
+	err = binary.Write(conn, binary.BigEndian, int32(len(serialized)))
 	HandleError(err)
 
 	// Write msg
