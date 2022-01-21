@@ -1,16 +1,18 @@
-package utils
+package ipc
 
 import (
 	"encoding/binary"
 	"net"
+
+	"github.com/onflow/cadence/runtime/ipc/bridge"
 )
 
 const (
-	UnixNetwork = "unix"
-	Address     = "/tmp/cadence.socket"
+	UnixNetwork   = "unix"
+	SocketAddress = "/tmp/cadence.socket"
 )
 
-func ReadMessage(conn net.Conn) string {
+func ReadMessage(conn net.Conn) bridge.Message {
 	var messageLength int32
 
 	// First 4 bytes is the size of message_content
@@ -21,11 +23,13 @@ func ReadMessage(conn net.Conn) string {
 	err = binary.Read(conn, binary.BigEndian, buf)
 	HandleError(err)
 
-	return string(buf)
+	return &bridge.Response{
+		Content: string(buf),
+	}
 }
 
-func WriteMessage(conn net.Conn, content string) {
-	serialized := []byte(content)
+func WriteMessage(conn net.Conn, msg bridge.Message) {
+	serialized := []byte(msg.String())
 
 	// Write msg length
 	err := binary.Write(conn, binary.BigEndian, int32(len(serialized)))

@@ -32,7 +32,6 @@ func main() {
 	//
 
 	start := time.Now()
-
 	defer func() {
 		fmt.Println(time.Since(start))
 	}()
