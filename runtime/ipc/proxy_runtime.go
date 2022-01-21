@@ -1,7 +1,6 @@
 package ipc
 
 import (
-	"fmt"
 	"net"
 
 	"github.com/onflow/cadence"
@@ -40,9 +39,7 @@ func (r *ProxyRuntime) ExecuteScript(script runtime.Script, context runtime.Cont
 
 	WriteMessage(r.conn, request)
 
-	result := r.listen()
-
-	fmt.Println(result)
+	_ = r.listen()
 
 	return nil, nil
 }
@@ -132,6 +129,9 @@ func (r *ProxyRuntime) serveRequest(request *bridge.Request) *bridge.Message {
 
 	case InterfaceMethodResolveLocation:
 		response = r.interfaceBridge.ResolveLocation(request.Params)
+
+	case InterfaceMethodProgramLog:
+		response = r.interfaceBridge.ProgramLog(request.Params)
 
 	default:
 		panic("unsupported")

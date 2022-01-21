@@ -1,7 +1,6 @@
 package ipc
 
 const (
-	InitInterpreterRuntimeMethod = "initInterpreterRuntime"
 
 	// 'Runtime' method names
 
@@ -14,4 +13,5 @@ const (
 	InterfaceMethodGetCode         = "getCode"
 	InterfaceMethodGetProgram      = "getProgram"
 	InterfaceMethodResolveLocation = "resolveLocation"
+	InterfaceMethodProgramLog      = "programLog"
 )

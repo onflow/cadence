@@ -2,6 +2,7 @@ package ipc
 
 import (
 	"encoding/binary"
+	"fmt"
 	"net"
 	"syscall"
 
@@ -41,6 +42,8 @@ func ReadMessage(conn net.Conn) *bridge.Message {
 	message := &bridge.Message{}
 	err = proto.Unmarshal(buf, message)
 	HandleError(err)
+
+	fmt.Println(message)
 
 	return message
 }

@@ -57,3 +57,14 @@ func (b *InterfaceBridge) ResolveLocation(params []string) *Message {
 
 	return NewResponseMessage("some location")
 }
+
+func (b *InterfaceBridge) ProgramLog(params []string) *Message {
+	err := b.Interface.ProgramLog(params[0])
+	if err != nil {
+		return NewErrorMessage(
+			fmt.Sprintf("error occured while retrieving program: '%s'", err.Error()),
+		)
+	}
+
+	return NewResponseMessage("")
+}
