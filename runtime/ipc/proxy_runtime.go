@@ -24,8 +24,7 @@ type ProxyRuntime struct {
 var _ runtime.Runtime = &ProxyRuntime{}
 
 func NewProxyRuntime(runtimeInterface runtime.Interface) *ProxyRuntime {
-	conn, err := net.Dial(UnixNetwork, SocketAddress)
-	HandleError(err)
+	conn := StartConnection()
 
 	return &ProxyRuntime{
 		conn:            conn,

@@ -3,6 +3,7 @@ package ipc
 import (
 	"encoding/binary"
 	"net"
+	"syscall"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/onflow/cadence/runtime/ipc/bridge"
@@ -13,10 +14,23 @@ const (
 	SocketAddress = "/tmp/cadence.socket"
 )
 
+func StartListener() net.Listener {
+	syscall.Unlink(SocketAddress)
+	listener, err := net.Listen(UnixNetwork, SocketAddress)
+	HandleError(err)
+	return listener
+}
+
+func StartConnection() net.Conn {
+	conn, err := net.Dial(UnixNetwork, SocketAddress)
+	HandleError(err)
+	return conn
+}
+
 func ReadMessage(conn net.Conn) *bridge.Message {
 	var messageLength int32
 
-	// First 4 bytes is the size of message_content
+	// First 4 bytes is the message length
 	err := binary.Read(conn, binary.BigEndian, &messageLength)
 	HandleError(err)
 

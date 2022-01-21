@@ -18,7 +18,7 @@ import (
 var _ runtime.Interface = &ProxyInterface{}
 
 // ProxyInterface converts the `runtime.Interface` Go method calls to IPC calls over the socket.
-// Results are again converted back to Go corresponding structs.
+// Results are again converted back from IPC serialized format to corresponding Go structs.
 type ProxyInterface struct {
 	conn net.Conn
 }

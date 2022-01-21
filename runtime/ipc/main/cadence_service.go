@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"net"
-	"syscall"
 
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ipc"
@@ -12,9 +11,7 @@ import (
 )
 
 func main() {
-	syscall.Unlink(ipc.SocketAddress)
-	listener, err := net.Listen(ipc.UnixNetwork, ipc.SocketAddress)
-	ipc.HandleError(err)
+	listener := ipc.StartListener()
 
 	runtimeBridge := bridge.NewRuntimeBridge()
 
