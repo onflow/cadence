@@ -2,7 +2,6 @@ package ipc
 
 import (
 	"encoding/binary"
-	"fmt"
 	"net"
 	"syscall"
 
@@ -11,19 +10,35 @@ import (
 )
 
 const (
-	UnixNetwork   = "unix"
-	SocketAddress = "/tmp/cadence.socket"
+	UnixNetwork          = "unix"
+	RuntimeSocketAddress = "/tmp/cadence.socket"
+
+	// TODO: rename FVM to something generic
+	InterfaceSocketAddress = "/tmp/fvm.socket"
 )
 
-func StartListener() net.Listener {
-	syscall.Unlink(SocketAddress)
-	listener, err := net.Listen(UnixNetwork, SocketAddress)
+func NewRuntimeListener() net.Listener {
+	syscall.Unlink(RuntimeSocketAddress)
+	listener, err := net.Listen(UnixNetwork, RuntimeSocketAddress)
 	HandleError(err)
 	return listener
 }
 
-func StartConnection() net.Conn {
-	conn, err := net.Dial(UnixNetwork, SocketAddress)
+func NewRuntimeConnection() net.Conn {
+	conn, err := net.Dial(UnixNetwork, RuntimeSocketAddress)
+	HandleError(err)
+	return conn
+}
+
+func NewInterfaceListener() net.Listener {
+	syscall.Unlink(InterfaceSocketAddress)
+	listener, err := net.Listen(UnixNetwork, InterfaceSocketAddress)
+	HandleError(err)
+	return listener
+}
+
+func NewInterfaceConnection() net.Conn {
+	conn, err := net.Dial(UnixNetwork, InterfaceSocketAddress)
 	HandleError(err)
 	return conn
 }
@@ -43,12 +58,14 @@ func ReadMessage(conn net.Conn) *bridge.Message {
 	err = proto.Unmarshal(buf, message)
 	HandleError(err)
 
-	fmt.Println(message)
+	//fmt.Println("<--- received to", conn, " | message:", message)
 
 	return message
 }
 
 func WriteMessage(conn net.Conn, msg *bridge.Message) {
+	//fmt.Println("---> sent to ", conn, " | message:", msg)
+
 	serialized, err := proto.Marshal(msg)
 	HandleError(err)
 

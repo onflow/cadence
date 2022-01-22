@@ -1,6 +1,7 @@
 package test
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -18,29 +19,33 @@ import (
 
 // TODO: Move under tests/ and delete redundant *testRuntimeInterface
 
-func TestExecutingScript(t *testing.T) {
+var proxyRuntime = func() *ipc.ProxyRuntime {
 	interfaceImpl := &testRuntimeInterface{}
-	proxyRuntime := ipc.NewProxyRuntime(interfaceImpl)
+	return ipc.NewProxyRuntime(interfaceImpl)
+}()
 
-	interfaceImpl.proxyRuntime = proxyRuntime
-
-	_, err := proxyRuntime.ExecuteScript(
-		runtime.Script{
-			Source: []byte(`
+func TestExecutingScript(t *testing.T) {
+	for i := 0; i < 10; i++ {
+		start := time.Now()
+		_, err := proxyRuntime.ExecuteScript(
+			runtime.Script{
+				Source: []byte(`
                pub fun main(): Int {
                  log("hello")
                  return 4 + 8
                }
             `),
-		},
-		runtime.Context{},
-	)
-	assert.NoError(t, err)
+			},
+			runtime.Context{},
+		)
+
+		fmt.Println(time.Since(start))
+
+		assert.NoError(t, err)
+	}
 }
 
-type testRuntimeInterface struct {
-	proxyRuntime *ipc.ProxyRuntime
-}
+type testRuntimeInterface struct{}
 
 func (t *testRuntimeInterface) ResolveLocation(identifiers []runtime.Identifier, location runtime.Location) ([]runtime.ResolvedLocation, error) {
 	return []runtime.ResolvedLocation{}, nil
@@ -121,8 +126,8 @@ func (t *testRuntimeInterface) GetSigningAccounts() ([]runtime.Address, error) {
 }
 
 func (t *testRuntimeInterface) ProgramLog(s string) error {
-	// Test executing a script/transaction within a transaction
-	_, err := t.proxyRuntime.ExecuteScript(
+	// Test executing a script/transaction within a script/transaction
+	_, err := proxyRuntime.ExecuteScript(
 		runtime.Script{
 			Source: []byte(`
                pub fun main(): Int {

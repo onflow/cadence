@@ -1,9 +1,6 @@
 package ipc
 
 import (
-	"fmt"
-	pb "github.com/onflow/cadence/runtime/ipc/protobuf"
-	"net"
 	"time"
 
 	"github.com/onflow/atree"
@@ -22,87 +19,17 @@ var _ runtime.Interface = &ProxyInterface{}
 // ProxyInterface converts the `runtime.Interface` Go method calls to IPC calls over the socket.
 // Results are again converted back from IPC serialized format to corresponding Go structs.
 type ProxyInterface struct {
-	conn          net.Conn
-	runtimeBridge *bridge.RuntimeBridge
 }
 
-func NewProxyInterface(conn net.Conn, runtimeBridge *bridge.RuntimeBridge) *ProxyInterface {
-	return &ProxyInterface{
-		conn:          conn,
-		runtimeBridge: runtimeBridge,
-	}
-}
-
-func (p *ProxyInterface) listen() *bridge.Message {
-	// Keep listening until the final response is received.
-	//
-	// Rationale:
-	// Once the initial request is sent to cadence, it may respond back
-	// with requests (i.e: 'Interface' method calls). Hence, keep listening
-	// to those requests and respond back. Terminate once the final ack
-	// is received.
-
-	for {
-		message := ReadMessage(p.conn)
-
-		var response *bridge.Message
-
-		switch message.Type {
-		case pb.MessageType_REQUEST:
-			response = ServeRequest(p, message.GetReq())
-
-		case pb.MessageType_RESPONSE:
-			return message
-
-		case pb.MessageType_ERROR:
-			return message
-
-		default:
-			panic("unsupported")
-		}
-
-		WriteMessage(p.conn, response)
-	}
-}
-
-func ServeRequest(
-	proxyInterface *ProxyInterface,
-	request *bridge.Request,
-) *bridge.Message {
-
-	context := runtime.Context{
-		Interface: proxyInterface,
-		Location:  utils.TestLocation,
-	}
-	context.InitializeCodesAndPrograms()
-
-	runtimeBridge := proxyInterface.runtimeBridge
-
-	var response *bridge.Message
-
-	// TODO: change to switch on message type + meta-info
-	switch request.Name {
-	case RuntimeMethodExecuteScript:
-		response = runtimeBridge.ExecuteScript(request.Params, context)
-
-	case RuntimeMethodExecuteTransaction:
-		response = runtimeBridge.ExecuteTransaction(request.Params, context)
-
-	case RuntimeMethodInvokeContractFunction:
-		response = runtimeBridge.InvokeContractFunction()
-
-	default:
-		response = bridge.NewErrorMessage(
-			fmt.Sprintf("unsupported request '%s'", request.Name),
-		)
-	}
-
-	return response
+func NewProxyInterface() *ProxyInterface {
+	return &ProxyInterface{}
 }
 
 func (p *ProxyInterface) ResolveLocation(identifiers []runtime.Identifier, location runtime.Location) ([]runtime.ResolvedLocation, error) {
+	conn := NewInterfaceConnection()
+
 	request := bridge.NewRequestMessage(InterfaceMethodResolveLocation)
-	WriteMessage(p.conn, request)
+	WriteMessage(conn, request)
 
 	// NOTE: this assumes when cadence call any 'Interface' method,
 	// there will only be one response from the host-env.
@@ -110,7 +37,7 @@ func (p *ProxyInterface) ResolveLocation(identifiers []runtime.Identifier, locat
 	// until the current request is served.
 
 	// TODO: allow back and forth messaging rather than just one response??
-	_ = p.listen()
+	_ = ReadMessage(conn)
 
 	// TODO: implement
 	return []runtime.ResolvedLocation{
@@ -122,19 +49,23 @@ func (p *ProxyInterface) ResolveLocation(identifiers []runtime.Identifier, locat
 }
 
 func (p *ProxyInterface) GetCode(location runtime.Location) ([]byte, error) {
+	conn := NewInterfaceConnection()
+
 	request := bridge.NewRequestMessage(InterfaceMethodGetCode)
 
-	WriteMessage(p.conn, request)
-	msg := p.listen()
+	WriteMessage(conn, request)
+	msg := ReadMessage(conn)
 
 	return []byte(msg.GetRes().Value), nil
 }
 
 func (p *ProxyInterface) GetProgram(location runtime.Location) (*interpreter.Program, error) {
+	conn := NewInterfaceConnection()
+
 	request := bridge.NewRequestMessage(InterfaceMethodGetProgram)
 
-	WriteMessage(p.conn, request)
-	_ = p.listen()
+	WriteMessage(conn, request)
+	_ = ReadMessage(conn)
 
 	return nil, nil
 }
@@ -201,11 +132,13 @@ func (p *ProxyInterface) GetSigningAccounts() ([]runtime.Address, error) {
 }
 
 func (p *ProxyInterface) ProgramLog(s string) error {
+	conn := NewInterfaceConnection()
+
 	request := bridge.NewRequestMessage(InterfaceMethodProgramLog, s)
 
-	WriteMessage(p.conn, request)
+	WriteMessage(conn, request)
 
-	_ = p.listen()
+	_ = ReadMessage(conn)
 
 	return nil
 }
