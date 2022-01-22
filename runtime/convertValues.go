@@ -446,7 +446,8 @@ func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedTy
 	case cadence.Bool:
 		return interpreter.BoolValue(v), nil
 	case cadence.String:
-		return interpreter.NewStringValue(string(v)), nil
+		// TODO: meter?
+		return interpreter.NewUnmeteredStringValue(string(v)), nil
 	case cadence.Bytes:
 		return interpreter.ByteSliceToByteArrayValue(inter, v), nil
 	case cadence.Address:

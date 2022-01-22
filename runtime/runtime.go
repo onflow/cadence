@@ -2861,7 +2861,8 @@ func (r *interpreterRuntime) newAccountContractsGetNamesFunction(
 
 		values := make([]interpreter.Value, len(names))
 		for i, name := range names {
-			values[i] = interpreter.NewStringValue(name)
+			// TODO: meter?
+			values[i] = interpreter.NewUnmeteredStringValue(name)
 		}
 
 		return interpreter.NewArrayValue(

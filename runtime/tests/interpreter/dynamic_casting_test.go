@@ -304,7 +304,7 @@ func TestInterpretDynamicCastingString(t *testing.T) {
 						AssertValuesEqual(
 							t,
 							inter,
-							interpreter.NewStringValue("test"),
+							interpreter.NewUnmeteredStringValue("test"),
 							inter.Globals["x"].GetValue(),
 						)
 
@@ -312,7 +312,7 @@ func TestInterpretDynamicCastingString(t *testing.T) {
 							t,
 							inter,
 							interpreter.NewSomeValueNonCopying(
-								interpreter.NewStringValue("test"),
+								interpreter.NewUnmeteredStringValue("test"),
 							),
 							inter.Globals["y"].GetValue(),
 						)
@@ -1324,7 +1324,7 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 								KeyType:   interpreter.PrimitiveStaticTypeString,
 								ValueType: interpreter.PrimitiveStaticTypeInt,
 							},
-							interpreter.NewStringValue("test"), interpreter.NewIntValueFromInt64(42),
+							interpreter.NewUnmeteredStringValue("test"), interpreter.NewIntValueFromInt64(42),
 						)
 
 						AssertValuesEqual(
@@ -3630,7 +3630,7 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
 
 		result, err := inter.Invoke("test")
 		require.NoError(t, err)
-		require.Equal(t, interpreter.NewStringValue("hello from foo"), result)
+		require.Equal(t, interpreter.NewUnmeteredStringValue("hello from foo"), result)
 	})
 
 	t.Run("param contravariance", func(t *testing.T) {
@@ -3649,7 +3649,7 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
 
 		result, err := inter.Invoke("test")
 		require.NoError(t, err)
-		require.Equal(t, interpreter.NewStringValue("hello from foo"), result)
+		require.Equal(t, interpreter.NewUnmeteredStringValue("hello from foo"), result)
 	})
 
 	t.Run("param contravariance negative", func(t *testing.T) {
@@ -3686,7 +3686,7 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
 
 		result, err := inter.Invoke("test")
 		require.NoError(t, err)
-		require.Equal(t, interpreter.NewStringValue("hello from foo"), result)
+		require.Equal(t, interpreter.NewUnmeteredStringValue("hello from foo"), result)
 	})
 
 	t.Run("return type covariance negative", func(t *testing.T) {
@@ -3727,6 +3727,6 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
 
 		result, err := inter.Invoke("test")
 		require.NoError(t, err)
-		require.Equal(t, interpreter.NewStringValue("hello from foo.bar"), result)
+		require.Equal(t, interpreter.NewUnmeteredStringValue("hello from foo.bar"), result)
 	})
 }

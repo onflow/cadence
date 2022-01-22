@@ -1135,7 +1135,7 @@ func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) inte
 		b := []byte(v.Str)
 		data := make([]byte, len(b))
 		copy(data, b)
-		return interpreter.NewStringValue(string(data))
+		return interpreter.NewUnmeteredStringValue(string(data))
 
 	case interpreter.AddressValue:
 		b := v[:]
@@ -1325,10 +1325,10 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 	// String
 	case String_1, String_2, String_3, String_4: // small string - should be more common
 		size := randomInt(255)
-		return interpreter.NewStringValue(randomUTF8StringOfSize(size))
+		return interpreter.NewUnmeteredStringValue(randomUTF8StringOfSize(size))
 	case String_5: // large string
 		size := randomInt(4048) + 255
-		return interpreter.NewStringValue(randomUTF8StringOfSize(size))
+		return interpreter.NewUnmeteredStringValue(randomUTF8StringOfSize(size))
 
 	case Bool_True:
 		return interpreter.BoolValue(true)

@@ -193,7 +193,7 @@ func TestEncodeDecodeString(t *testing.T) {
 
 		t.Parallel()
 
-		expected := NewStringValue("")
+		expected := NewUnmeteredStringValue("")
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -212,7 +212,7 @@ func TestEncodeDecodeString(t *testing.T) {
 
 		t.Parallel()
 
-		expected := NewStringValue("foo")
+		expected := NewUnmeteredStringValue("foo")
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -235,7 +235,7 @@ func TestEncodeDecodeString(t *testing.T) {
 		t.Parallel()
 
 		maxInlineElementSize := atree.MaxInlineArrayElementSize
-		expected := NewStringValue(strings.Repeat("x", int(maxInlineElementSize+1)))
+		expected := NewUnmeteredStringValue(strings.Repeat("x", int(maxInlineElementSize+1)))
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -292,7 +292,7 @@ func TestEncodeDecodeArray(t *testing.T) {
 
 		inter := newTestInterpreter(t)
 
-		expectedString := NewStringValue("test")
+		expectedString := NewUnmeteredStringValue("test")
 
 		expected := NewArrayValue(
 			inter,
@@ -360,7 +360,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 
 		inter := newTestInterpreter(t)
 
-		stringValue := NewStringValue("test")
+		stringValue := NewUnmeteredStringValue("test")
 
 		fields := []CompositeField{
 			{Name: "string", Value: stringValue},
@@ -2374,7 +2374,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 	t.Run("string", func(t *testing.T) {
 		t.Parallel()
 
-		expectedString := NewStringValue("test")
+		expectedString := NewUnmeteredStringValue("test")
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -2421,7 +2421,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 		var str *StringValue
 		maxInlineElementSize := atree.MaxInlineArrayElementSize
 		for i := uint64(0); i < maxInlineElementSize; i++ {
-			str = NewStringValue(strings.Repeat("x", int(maxInlineElementSize-i)))
+			str = NewUnmeteredStringValue(strings.Repeat("x", int(maxInlineElementSize-i)))
 			size, err := StorableSize(str)
 			require.NoError(t, err)
 			if uint64(size) == maxInlineElementSize-1 {
@@ -2455,7 +2455,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 		var str *StringValue
 		maxInlineElementSize := atree.MaxInlineArrayElementSize
 		for i := uint64(0); i < maxInlineElementSize; i++ {
-			str = NewStringValue(strings.Repeat("x", int(maxInlineElementSize-i)))
+			str = NewUnmeteredStringValue(strings.Repeat("x", int(maxInlineElementSize-i)))
 			size, err := StorableSize(str)
 			require.NoError(t, err)
 			if uint64(size) == maxInlineElementSize+1 {

@@ -3200,7 +3200,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 			},
 			"helloArg",
 			[]interpreter.Value{
-				interpreter.NewStringValue("there!"),
+				interpreter.NewUnmeteredStringValue("there!"),
 			},
 			[]sema.Type{
 				sema.StringType,
@@ -3222,7 +3222,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 			},
 			"helloReturn",
 			[]interpreter.Value{
-				interpreter.NewStringValue("there!"),
+				interpreter.NewUnmeteredStringValue("there!"),
 			},
 			[]sema.Type{
 				sema.StringType,
@@ -3245,7 +3245,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 			},
 			"helloMultiArg",
 			[]interpreter.Value{
-				interpreter.NewStringValue("number"),
+				interpreter.NewUnmeteredStringValue("number"),
 				interpreter.NewIntValueFromInt64(42),
 				interpreter.AddressValue(addressValue),
 			},
@@ -3272,7 +3272,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 			},
 			"helloMultiArg",
 			[]interpreter.Value{
-				interpreter.NewStringValue("number"),
+				interpreter.NewUnmeteredStringValue("number"),
 				interpreter.NewIntValueFromInt64(42),
 			},
 			[]sema.Type{

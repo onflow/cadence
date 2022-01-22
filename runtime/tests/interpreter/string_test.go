@@ -53,7 +53,7 @@ func TestInterpretRecursiveValueString(t *testing.T) {
 	require.Equal(t,
 		`{"mapRef": ...}`,
 		mapValue.(*interpreter.DictionaryValue).
-			GetKey(inter, interpreter.ReturnEmptyLocationRange, interpreter.NewStringValue("mapRef")).
+			GetKey(inter, interpreter.ReturnEmptyLocationRange, interpreter.NewUnmeteredStringValue("mapRef")).
 			String(),
 	)
 }
@@ -74,7 +74,7 @@ func TestInterpretStringFunction(t *testing.T) {
 	RequireValuesEqual(
 		t,
 		inter,
-		interpreter.NewStringValue(""),
+		interpreter.NewUnmeteredStringValue(""),
 		result,
 	)
 }
@@ -125,7 +125,7 @@ func TestInterpretStringEncodeHex(t *testing.T) {
 	RequireValuesEqual(
 		t,
 		inter,
-		interpreter.NewStringValue("010203cade"),
+		interpreter.NewUnmeteredStringValue("010203cade"),
 		result,
 	)
 }
@@ -201,7 +201,7 @@ func TestInterpretStringToLower(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t,
-		interpreter.NewStringValue("flowers"),
+		interpreter.NewUnmeteredStringValue("flowers"),
 		result,
 	)
 }

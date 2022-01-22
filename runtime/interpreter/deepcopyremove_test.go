@@ -50,7 +50,7 @@ func TestValueDeepCopyAndDeepRemove(t *testing.T) {
 		ValueType: PrimitiveStaticTypeInt256,
 	}
 
-	dictValueKey := NewStringValue(
+	dictValueKey := NewUnmeteredStringValue(
 		strings.Repeat("x", int(atree.MaxInlineMapKeyOrValueSize+1)),
 	)
 

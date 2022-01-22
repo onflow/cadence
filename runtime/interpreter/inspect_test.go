@@ -40,7 +40,7 @@ func TestInspectValue(t *testing.T) {
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeInt256,
 		}
-		dictValueKey := NewStringValue("hello world")
+		dictValueKey := NewUnmeteredStringValue("hello world")
 		dictValueValue := NewInt256ValueFromInt64(1)
 		dictValue := NewDictionaryValue(
 			inter,
@@ -74,7 +74,7 @@ func TestInspectValue(t *testing.T) {
 	optionalValue := compositeValue.GetField("value").(*SomeValue)
 	arrayValue := optionalValue.Value.(*ArrayValue)
 	dictValue := arrayValue.Get(inter, ReturnEmptyLocationRange, 0).(*DictionaryValue)
-	dictValueKey := NewStringValue("hello world")
+	dictValueKey := NewUnmeteredStringValue("hello world")
 
 	dictValueValue, _ := dictValue.Get(inter, ReturnEmptyLocationRange, dictValueKey)
 
