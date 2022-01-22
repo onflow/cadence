@@ -58,7 +58,7 @@ func TestAssert(t *testing.T) {
 	_, err = inter.Invoke(
 		"assert",
 		interpreter.BoolValue(false),
-		interpreter.NewStringValue("oops"),
+		interpreter.NewUnmeteredStringValue("oops"),
 	)
 	assert.Equal(t,
 		interpreter.Error{
@@ -83,7 +83,7 @@ func TestAssert(t *testing.T) {
 	_, err = inter.Invoke(
 		"assert",
 		interpreter.BoolValue(true),
-		interpreter.NewStringValue("oops"),
+		interpreter.NewUnmeteredStringValue("oops"),
 	)
 	assert.NoError(t, err)
 
@@ -112,7 +112,7 @@ func TestPanic(t *testing.T) {
 	)
 	require.Nil(t, err)
 
-	_, err = inter.Invoke("panic", interpreter.NewStringValue("oops"))
+	_, err = inter.Invoke("panic", interpreter.NewUnmeteredStringValue("oops"))
 	assert.Equal(t,
 		interpreter.Error{
 			Err: PanicError{

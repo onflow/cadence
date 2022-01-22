@@ -249,7 +249,8 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ func() LocationRange, n
 		if staticType != nil {
 			typeID = string(interpreter.MustConvertStaticToSemaType(staticType).ID())
 		}
-		return NewStringValue(typeID)
+		// TODO: meter
+		return NewUnmeteredStringValue(typeID)
 	case "isSubtype":
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
@@ -719,7 +720,8 @@ func (v CharacterValue) GetMember(_ *Interpreter, _ func() LocationRange, name s
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				return NewStringValue(string(v))
+				// TODO: meter?
+				return NewUnmeteredStringValue(string(v))
 			},
 			sema.ToStringFunctionType,
 		)
@@ -750,12 +752,18 @@ type StringValue struct {
 	graphemes *uniseg.Graphemes
 }
 
-func NewStringValue(str string) *StringValue {
+func NewUnmeteredStringValue(str string) *StringValue {
 	return &StringValue{
 		Str: str,
 		// a negative value indicates the length has not been initialized, see Length()
 		length: -1,
 	}
+}
+
+func NewStringValue(interpreter *Interpreter, memoryUsage MemoryUsage, stringConstructor func() string) *StringValue {
+	interpreter.useMemory(memoryUsage)
+	str := stringConstructor()
+	return NewUnmeteredStringValue(str)
 }
 
 var _ Value = &StringValue{}
@@ -830,14 +838,27 @@ func (v *StringValue) NormalForm() string {
 	return norm.NFC.String(v.Str)
 }
 
-func (v *StringValue) Concat(other *StringValue) Value {
-	var sb strings.Builder
+func (v *StringValue) Concat(interpreter *Interpreter, other *StringValue) Value {
+	memoryUsage := MemoryUsage{
+		Type:   PrimitiveStaticTypeString,
+		Amount: uint64(len(v.Str)) + uint64(len(other.Str)),
+	}
 
-	sb.WriteString(v.Str)
-	sb.WriteString(other.Str)
+	return NewStringValue(
+		interpreter,
+		memoryUsage,
+		func() string {
+			var sb strings.Builder
 
-	return NewStringValue(sb.String())
+			sb.WriteString(v.Str)
+			sb.WriteString(other.Str)
+
+			return sb.String()
+		},
+	)
 }
+
+var emptyString = NewUnmeteredStringValue("")
 
 func (v *StringValue) Slice(from IntValue, to IntValue, getLocationRange func() LocationRange) Value {
 	fromIndex := from.ToInt()
@@ -864,7 +885,7 @@ func (v *StringValue) Slice(from IntValue, to IntValue, getLocationRange func() 
 	}
 
 	if fromIndex == toIndex {
-		return NewStringValue("")
+		return emptyString
 	}
 
 	v.prepareGraphemes()
@@ -881,7 +902,9 @@ func (v *StringValue) Slice(from IntValue, to IntValue, getLocationRange func() 
 	}
 	_, end := v.graphemes.Positions()
 
-	return NewStringValue(v.Str[start:end])
+	// NOTE: string slicing in Go does not copy,
+	// see https://stackoverflow.com/questions/52395730/does-slice-of-string-perform-copy-of-underlying-data
+	return NewUnmeteredStringValue(v.Str[start:end])
 }
 
 func (v *StringValue) checkBounds(index int, getLocationRange func() LocationRange) {
@@ -896,7 +919,7 @@ func (v *StringValue) checkBounds(index int, getLocationRange func() LocationRan
 	}
 }
 
-func (v *StringValue) GetKey(_ *Interpreter, getLocationRange func() LocationRange, key Value) Value {
+func (v *StringValue) GetKey(interpreter *Interpreter, getLocationRange func() LocationRange, key Value) Value {
 	index := key.(NumberValue).ToInt()
 	v.checkBounds(index, getLocationRange)
 
@@ -938,7 +961,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, _ func() LocationRange
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
-				return v.Concat(otherArray)
+				return v.Concat(interpreter, otherArray)
 			},
 			sema.StringTypeConcatFunctionType,
 		)
@@ -972,7 +995,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, _ func() LocationRange
 	case "toLower":
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				return v.ToLower()
+				return v.ToLower(invocation.Interpreter)
 			},
 			sema.StringTypeToLowerFunctionType,
 		)
@@ -1005,8 +1028,24 @@ func (v *StringValue) Length() int {
 	return v.length
 }
 
-func (v *StringValue) ToLower() *StringValue {
-	return NewStringValue(strings.ToLower(v.Str))
+func (v *StringValue) ToLower(interpreter *Interpreter) *StringValue {
+
+	// TODO:
+	// An uppercase character may be converted to several lower-case characters, e.g İ => [i, ̇]
+	// see https://stackoverflow.com/questions/28683805/is-there-a-unicode-string-which-gets-longer-when-converted-to-lowercase
+
+	memoryUsage := MemoryUsage{
+		Type:   PrimitiveStaticTypeString,
+		Amount: uint64(len(v.Str)),
+	}
+
+	return NewStringValue(
+		interpreter,
+		memoryUsage,
+		func() string {
+			return strings.ToLower(v.Str)
+		},
+	)
 }
 
 func (v *StringValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
@@ -1035,7 +1074,7 @@ func (v *StringValue) Transfer(
 }
 
 func (v *StringValue) Clone(_ *Interpreter) Value {
-	return NewStringValue(v.Str)
+	return NewUnmeteredStringValue(v.Str)
 }
 
 func (*StringValue) DeepRemove(_ *Interpreter) {
@@ -2266,7 +2305,18 @@ func getNumberValueMember(v NumberValue, name string, typ sema.Type) Value {
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				return NewStringValue(v.String())
+				interpreter := invocation.Interpreter
+				memoryUsage := MemoryUsage{
+					Type:   PrimitiveStaticTypeString,
+					Amount: uint64(OverEstimateNumberStringLength(v)),
+				}
+				return NewStringValue(
+					interpreter,
+					memoryUsage,
+					func() string {
+						return v.String()
+					},
+				)
 			},
 			sema.ToStringFunctionType,
 		)
@@ -2363,8 +2413,7 @@ type IntegerValue interface {
 	BitwiseRightShift(other IntegerValue) IntegerValue
 }
 
-// BigNumberValue.
-// Implemented by values with an integer value outside the range of int64
+// BigNumberValue is a number value with an integer value outside the range of int64
 //
 type BigNumberValue interface {
 	NumberValue
@@ -10766,6 +10815,14 @@ func (Word64Value) ChildStorables() []atree.Storable {
 	return nil
 }
 
+// FixedPointValue is a fixed-point number value
+//
+type FixedPointValue interface {
+	NumberValue
+	IntegerPart() NumberValue
+	Scale() int
+}
+
 // Fix64Value
 //
 type Fix64Value int64
@@ -10788,6 +10845,7 @@ func NewFix64ValueWithInteger(integer int64) Fix64Value {
 var _ Value = Fix64Value(0)
 var _ atree.Storable = Fix64Value(0)
 var _ NumberValue = Fix64Value(0)
+var _ FixedPointValue = Fix64Value(0)
 var _ EquatableValue = Fix64Value(0)
 var _ HashableValue = Fix64Value(0)
 var _ MemberAccessibleValue = Fix64Value(0)
@@ -11211,6 +11269,14 @@ func (Fix64Value) ChildStorables() []atree.Storable {
 	return nil
 }
 
+func (v Fix64Value) IntegerPart() NumberValue {
+	return UInt64Value(v / sema.Fix64Factor)
+}
+
+func (Fix64Value) Scale() int {
+	return sema.Fix64Scale
+}
+
 // UFix64Value
 //
 type UFix64Value uint64
@@ -11228,6 +11294,7 @@ func NewUFix64ValueWithInteger(integer uint64) UFix64Value {
 var _ Value = UFix64Value(0)
 var _ atree.Storable = UFix64Value(0)
 var _ NumberValue = UFix64Value(0)
+var _ FixedPointValue = Fix64Value(0)
 var _ EquatableValue = UFix64Value(0)
 var _ HashableValue = UFix64Value(0)
 var _ MemberAccessibleValue = UFix64Value(0)
@@ -11628,6 +11695,14 @@ func (v UFix64Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 
 func (UFix64Value) ChildStorables() []atree.Storable {
 	return nil
+}
+
+func (v UFix64Value) IntegerPart() NumberValue {
+	return UInt64Value(v / sema.Fix64Factor)
+}
+
+func (UFix64Value) Scale() int {
+	return sema.Fix64Scale
 }
 
 // CompositeValue
@@ -14958,7 +15033,18 @@ func (v AddressValue) GetMember(interpreter *Interpreter, _ func() LocationRange
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				return NewStringValue(v.String())
+				interpreter := invocation.Interpreter
+				memoryUsage := MemoryUsage{
+					Type:   PrimitiveStaticTypeString,
+					Amount: common.AddressLength * 2,
+				}
+				return NewStringValue(
+					interpreter,
+					memoryUsage,
+					func() string {
+						return v.String()
+					},
+				)
 			},
 			sema.ToStringFunctionType,
 		)
@@ -15164,7 +15250,19 @@ func (v PathValue) GetMember(_ *Interpreter, _ func() LocationRange, name string
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				return NewStringValue(v.String())
+				interpreter := invocation.Interpreter
+				memoryUsage := MemoryUsage{
+					Type: PrimitiveStaticTypeString,
+					Amount: uint64(len(v.Domain.Identifier())) +
+						uint64(len(v.Identifier)),
+				}
+				return NewStringValue(
+					interpreter,
+					memoryUsage,
+					func() string {
+						return v.String()
+					},
+				)
 			},
 			sema.ToStringFunctionType,
 		)

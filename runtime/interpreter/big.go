@@ -19,6 +19,7 @@
 package interpreter
 
 import (
+	"math"
 	"math/big"
 
 	"github.com/onflow/cadence/runtime/errors"
@@ -71,5 +72,57 @@ func UnsignedBigIntToBigEndianBytes(bigInt *big.Int) []byte {
 
 	default:
 		panic(errors.NewUnreachableError())
+	}
+}
+
+func OverEstimateNumberStringLength(value NumberValue) int {
+	switch value := value.(type) {
+	case BigNumberValue:
+		return OverEstimateBigIntStringLength(value.ToBigInt())
+
+	case NumberValue:
+		return OverEstimateIntStringLength(value.ToInt())
+
+	case FixedPointValue:
+		return OverEstimateFixedPointStringLength(value.IntegerPart(), value.Scale())
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func OverEstimateFixedPointStringLength(integerPart NumberValue, scale int) int {
+	return OverEstimateNumberStringLength(integerPart) + 1 + scale
+}
+
+func OverEstimateIntStringLength(n int) int {
+	switch {
+	case n < 0:
+		return 1 + OverEstimateIntStringLength(-n)
+	case n > 0:
+		return int(math.Floor(math.Log10(float64(n))) + 1)
+	default:
+		return 1
+	}
+}
+
+func OverEstimateBigIntStringLength(n *big.Int) int {
+	// From https://graphics.stanford.edu/~seander/bithacks.html#IntegerLog10:
+	//   By the relationship log10(v) = log2(v) / log2(10), we need to multiply it by 1/log2(10),
+	//   which is approximately 1233/4096, or 1233 followed by a right shift of 12.
+	//
+	// From Tarak:
+	//   Looking for the ceiling of the log 10 (the number of digits in base 10),
+	//   `(n.BitLen()*1233)>>12 + 1` indeed gives an approximation of that ceiling,
+	//   though it won't be an upper-bound for very very big integers.
+	//
+	//   To be sure it's always an upper bound (over-estimation), just use *1234,
+	//   since 1233/4096 is just smaller than 1/log2(10), but 1234/4096 becomes bigger.
+	//
+	l := (n.BitLen()*1234)>>12 + 1
+	if n.Sign() < 0 {
+		return l + 1
+	} else {
+		return l
 	}
 }

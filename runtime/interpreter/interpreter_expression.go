@@ -541,7 +541,8 @@ func (interpreter *Interpreter) VisitStringExpression(expression *ast.StringExpr
 		return NewCharacterValue(expression.Value)
 	}
 
-	return NewStringValue(expression.Value)
+	// NOTE: already metered in lexer/parser
+	return NewUnmeteredStringValue(expression.Value)
 }
 
 func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpression) ast.Repr {

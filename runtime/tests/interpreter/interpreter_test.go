@@ -251,7 +251,7 @@ func TestInterpretConstantAndVariableDeclarations(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewStringValue("123"),
+		interpreter.NewUnmeteredStringValue("123"),
 		inter.Globals["s"].GetValue(),
 	)
 }
@@ -912,7 +912,7 @@ func TestInterpretStringSlicing(t *testing.T) {
 				AssertValuesEqual(
 					t,
 					inter,
-					interpreter.NewStringValue(test.result),
+					interpreter.NewUnmeteredStringValue(test.result),
 					value,
 				)
 			} else {
@@ -1852,7 +1852,7 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 			AssertValuesEqual(
 				t,
 				inter,
-				interpreter.NewStringValue("test"),
+				interpreter.NewUnmeteredStringValue("test"),
 				invocation.Arguments[2],
 			)
 
@@ -3459,7 +3459,7 @@ func TestInterpretOptionalMap(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewSomeValueNonCopying(
-				interpreter.NewStringValue("42"),
+				interpreter.NewUnmeteredStringValue("42"),
 			),
 			inter.Globals["result"].GetValue(),
 		)
@@ -3954,8 +3954,8 @@ func TestInterpretDictionary(t *testing.T) {
 			KeyType:   interpreter.PrimitiveStaticTypeString,
 			ValueType: interpreter.PrimitiveStaticTypeInt,
 		},
-		interpreter.NewStringValue("a"), interpreter.NewIntValueFromInt64(1),
-		interpreter.NewStringValue("b"), interpreter.NewIntValueFromInt64(2),
+		interpreter.NewUnmeteredStringValue("a"), interpreter.NewIntValueFromInt64(1),
+		interpreter.NewUnmeteredStringValue("b"), interpreter.NewIntValueFromInt64(2),
 	)
 
 	actualDict := inter.Globals["x"].GetValue()
@@ -3982,9 +3982,9 @@ func TestInterpretDictionaryInsertionOrder(t *testing.T) {
 			KeyType:   interpreter.PrimitiveStaticTypeString,
 			ValueType: interpreter.PrimitiveStaticTypeInt,
 		},
-		interpreter.NewStringValue("c"), interpreter.NewIntValueFromInt64(3),
-		interpreter.NewStringValue("a"), interpreter.NewIntValueFromInt64(1),
-		interpreter.NewStringValue("b"), interpreter.NewIntValueFromInt64(2),
+		interpreter.NewUnmeteredStringValue("c"), interpreter.NewIntValueFromInt64(3),
+		interpreter.NewUnmeteredStringValue("a"), interpreter.NewIntValueFromInt64(1),
+		interpreter.NewUnmeteredStringValue("b"), interpreter.NewIntValueFromInt64(2),
 	)
 
 	actualDict := inter.Globals["x"].GetValue()
@@ -4078,7 +4078,7 @@ func TestInterpretDictionaryIndexingInt(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewSomeValueNonCopying(
-			interpreter.NewStringValue("a"),
+			interpreter.NewUnmeteredStringValue("a"),
 		),
 		inter.Globals["a"].GetValue(),
 	)
@@ -4087,7 +4087,7 @@ func TestInterpretDictionaryIndexingInt(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewSomeValueNonCopying(
-			interpreter.NewStringValue("b"),
+			interpreter.NewUnmeteredStringValue("b"),
 		),
 		inter.Globals["b"].GetValue(),
 	)
@@ -4125,21 +4125,21 @@ func TestInterpretDictionaryIndexingType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.NewSomeValueNonCopying(
-			interpreter.NewStringValue("a"),
+			interpreter.NewUnmeteredStringValue("a"),
 		),
 		inter.Globals["a"].GetValue(),
 	)
 
 	assert.Equal(t,
 		interpreter.NewSomeValueNonCopying(
-			interpreter.NewStringValue("b"),
+			interpreter.NewUnmeteredStringValue("b"),
 		),
 		inter.Globals["b"].GetValue(),
 	)
 
 	assert.Equal(t,
 		interpreter.NewSomeValueNonCopying(
-			interpreter.NewStringValue("c"),
+			interpreter.NewUnmeteredStringValue("c"),
 		),
 		inter.Globals["c"].GetValue(),
 	)
@@ -4157,7 +4157,7 @@ func TestInterpretDictionaryIndexingType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.NewSomeValueNonCopying(
-			interpreter.NewStringValue("f"),
+			interpreter.NewUnmeteredStringValue("f"),
 		),
 		inter.Globals["f"].GetValue(),
 	)
@@ -4190,7 +4190,7 @@ func TestInterpretDictionaryIndexingAssignmentExisting(t *testing.T) {
 	newValue := actualDict.GetKey(
 		inter,
 		interpreter.ReturnEmptyLocationRange,
-		interpreter.NewStringValue("abc"),
+		interpreter.NewUnmeteredStringValue("abc"),
 	)
 
 	AssertValuesEqual(
@@ -4204,7 +4204,7 @@ func TestInterpretDictionaryIndexingAssignmentExisting(t *testing.T) {
 		t,
 		inter,
 		[]interpreter.Value{
-			interpreter.NewStringValue("abc"),
+			interpreter.NewUnmeteredStringValue("abc"),
 			interpreter.NewIntValueFromInt64(23),
 		},
 		dictionaryKeyValues(actualDict),
@@ -4238,8 +4238,8 @@ func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
 			KeyType:   interpreter.PrimitiveStaticTypeString,
 			ValueType: interpreter.PrimitiveStaticTypeInt,
 		},
-		interpreter.NewStringValue("def"), interpreter.NewIntValueFromInt64(42),
-		interpreter.NewStringValue("abc"), interpreter.NewIntValueFromInt64(23),
+		interpreter.NewUnmeteredStringValue("def"), interpreter.NewIntValueFromInt64(42),
+		interpreter.NewUnmeteredStringValue("abc"), interpreter.NewIntValueFromInt64(23),
 	)
 
 	actualDict := inter.Globals["x"].GetValue().(*interpreter.DictionaryValue)
@@ -4254,7 +4254,7 @@ func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
 	newValue := actualDict.GetKey(
 		inter,
 		interpreter.ReturnEmptyLocationRange,
-		interpreter.NewStringValue("abc"),
+		interpreter.NewUnmeteredStringValue("abc"),
 	)
 
 	AssertValuesEqual(
@@ -4268,9 +4268,9 @@ func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
 		t,
 		inter,
 		[]interpreter.Value{
-			interpreter.NewStringValue("abc"),
+			interpreter.NewUnmeteredStringValue("abc"),
 			interpreter.NewIntValueFromInt64(23),
-			interpreter.NewStringValue("def"),
+			interpreter.NewUnmeteredStringValue("def"),
 			interpreter.NewIntValueFromInt64(42),
 		},
 		dictionaryKeyValues(actualDict),
@@ -4304,7 +4304,7 @@ func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 			KeyType:   interpreter.PrimitiveStaticTypeString,
 			ValueType: interpreter.PrimitiveStaticTypeInt,
 		},
-		interpreter.NewStringValue("abc"), interpreter.NewIntValueFromInt64(23),
+		interpreter.NewUnmeteredStringValue("abc"), interpreter.NewIntValueFromInt64(23),
 	)
 
 	actualDict := inter.Globals["x"].GetValue().(*interpreter.DictionaryValue)
@@ -4319,7 +4319,7 @@ func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 	newValue := actualDict.GetKey(
 		inter,
 		interpreter.ReturnEmptyLocationRange,
-		interpreter.NewStringValue("def"),
+		interpreter.NewUnmeteredStringValue("def"),
 	)
 
 	AssertValuesEqual(
@@ -4334,7 +4334,7 @@ func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 		inter,
 
 		[]interpreter.Value{
-			interpreter.NewStringValue("abc"),
+			interpreter.NewUnmeteredStringValue("abc"),
 			interpreter.NewIntValueFromInt64(23),
 		},
 		dictionaryKeyValues(actualDict),
@@ -5516,7 +5516,7 @@ func TestInterpretStringConcat(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewStringValue("abcdef"),
+		interpreter.NewUnmeteredStringValue("abcdef"),
 		value,
 	)
 }
@@ -5539,7 +5539,7 @@ func TestInterpretStringConcatBound(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewStringValue("abcdef"),
+		interpreter.NewUnmeteredStringValue("abcdef"),
 		value,
 	)
 }
@@ -5563,7 +5563,7 @@ func TestInterpretDictionaryRemove(t *testing.T) {
 		inter,
 
 		[]interpreter.Value{
-			interpreter.NewStringValue("def"),
+			interpreter.NewUnmeteredStringValue("def"),
 			interpreter.NewIntValueFromInt64(2),
 		},
 		dictionaryKeyValues(actualDict),
@@ -5597,9 +5597,9 @@ func TestInterpretDictionaryInsert(t *testing.T) {
 		t,
 		inter,
 		[]interpreter.Value{
-			interpreter.NewStringValue("abc"),
+			interpreter.NewUnmeteredStringValue("abc"),
 			interpreter.NewIntValueFromInt64(3),
-			interpreter.NewStringValue("def"),
+			interpreter.NewUnmeteredStringValue("def"),
 			interpreter.NewIntValueFromInt64(2),
 		},
 		dictionaryKeyValues(actualDict),
@@ -5637,9 +5637,9 @@ func TestInterpretDictionaryKeys(t *testing.T) {
 		inter,
 
 		[]interpreter.Value{
-			interpreter.NewStringValue("abc"),
-			interpreter.NewStringValue("def"),
-			interpreter.NewStringValue("a"),
+			interpreter.NewUnmeteredStringValue("abc"),
+			interpreter.NewUnmeteredStringValue("def"),
+			interpreter.NewUnmeteredStringValue("a"),
 		},
 		arrayElements(inter, arrayValue),
 	)
@@ -5726,7 +5726,7 @@ func TestInterpretDictionaryKeyTypes(t *testing.T) {
 				t,
 				inter,
 				interpreter.NewSomeValueNonCopying(
-					interpreter.NewStringValue("test"),
+					interpreter.NewUnmeteredStringValue("test"),
 				),
 				inter.Globals["v"].GetValue(),
 			)
@@ -5759,7 +5759,7 @@ func TestInterpretPathToString(t *testing.T) {
 				))
 
 			assert.Equal(t,
-				interpreter.NewStringValue(val),
+				interpreter.NewUnmeteredStringValue(val),
 				inter.Globals["y"].GetValue(),
 			)
 		})
@@ -6628,7 +6628,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 
 	validTypes := map[string]testValue{
 		"String": {
-			value: interpreter.NewStringValue("test"),
+			value: interpreter.NewUnmeteredStringValue("test"),
 			ty:    sema.StringType,
 		},
 		"Character": {
@@ -6968,7 +6968,7 @@ func TestInterpretSwapResourceDictionaryElementReturnDictionary(t *testing.T) {
 	)
 
 	foo := value.(*interpreter.DictionaryValue).
-		GetKey(inter, interpreter.ReturnEmptyLocationRange, interpreter.NewStringValue("foo"))
+		GetKey(inter, interpreter.ReturnEmptyLocationRange, interpreter.NewUnmeteredStringValue("foo"))
 
 	require.IsType(t,
 		&interpreter.SomeValue{},
@@ -7313,10 +7313,10 @@ func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
 				},
 				common.Address{},
 				interpreter.NewSomeValueNonCopying(
-					interpreter.NewStringValue("test"),
+					interpreter.NewUnmeteredStringValue("test"),
 				),
 				interpreter.NewSomeValueNonCopying(
-					interpreter.NewStringValue("test"),
+					interpreter.NewUnmeteredStringValue("test"),
 				),
 			),
 			value,
@@ -7399,10 +7399,10 @@ func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
 				},
 				common.Address{},
 				interpreter.NewSomeValueNonCopying(
-					interpreter.NewStringValue("test"),
+					interpreter.NewUnmeteredStringValue("test"),
 				),
 				interpreter.NewSomeValueNonCopying(
-					interpreter.NewStringValue("test"),
+					interpreter.NewUnmeteredStringValue("test"),
 				),
 			),
 			value,
@@ -8181,7 +8181,7 @@ func TestInterpretNonStorageReferenceToOptional(t *testing.T) {
 
 		AssertValuesEqual(
 			t,
-			inter, interpreter.NewStringValue("YES"), value)
+			inter, interpreter.NewUnmeteredStringValue("YES"), value)
 	})
 
 	t.Run("nil", func(t *testing.T) {
@@ -8619,8 +8619,8 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
 				common.Address{},
-				interpreter.NewStringValue("2"),
-				interpreter.NewStringValue("3"),
+				interpreter.NewUnmeteredStringValue("2"),
+				interpreter.NewUnmeteredStringValue("3"),
 			),
 			result,
 		)
@@ -9353,15 +9353,15 @@ func TestInterpretInternalAssignment(t *testing.T) {
 			interpreter.NewDictionaryValue(
 				inter,
 				stringIntDictionaryStaticType,
-				interpreter.NewStringValue("a"),
+				interpreter.NewUnmeteredStringValue("a"),
 				interpreter.NewIntValueFromInt64(1),
-				interpreter.NewStringValue("b"),
+				interpreter.NewUnmeteredStringValue("b"),
 				interpreter.NewIntValueFromInt64(2),
 			),
 			interpreter.NewDictionaryValue(
 				inter,
 				stringIntDictionaryStaticType,
-				interpreter.NewStringValue("a"),
+				interpreter.NewUnmeteredStringValue("a"),
 				interpreter.NewIntValueFromInt64(1),
 			),
 		),

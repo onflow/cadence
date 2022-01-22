@@ -228,7 +228,7 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewStringValue("[Int]"),
+			interpreter.NewUnmeteredStringValue("[Int]"),
 			inter.Globals["identifier"].GetValue(),
 		)
 	})
@@ -247,7 +247,7 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewStringValue("S.test.S"),
+			interpreter.NewUnmeteredStringValue("S.test.S"),
 			inter.Globals["identifier"].GetValue(),
 		)
 	})
@@ -290,7 +290,7 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewStringValue(""),
+			interpreter.NewUnmeteredStringValue(""),
 			inter.Globals["identifier"].GetValue(),
 		)
 	})

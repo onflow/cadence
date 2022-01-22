@@ -116,6 +116,13 @@ type OnInvokedFunctionReturnFunc func(
 	line int,
 )
 
+// OnMemoryUsageFunc is a function that is triggered when some amount of memory is about to get used.
+//
+type OnMemoryUsageFunc func(
+	inter *Interpreter,
+	memoryUsage MemoryUsage,
+)
+
 // OnRecordTraceFunc is a function thats records a trace.
 type OnRecordTraceFunc func(
 	inter *Interpreter,
@@ -326,6 +333,7 @@ type Interpreter struct {
 	onStatement                    OnStatementFunc
 	onLoopIteration                OnLoopIterationFunc
 	onFunctionInvocation           OnFunctionInvocationFunc
+	onMemoryUsage                  OnMemoryUsageFunc
 	onInvokedFunctionReturn        OnInvokedFunctionReturnFunc
 	onRecordTrace                  OnRecordTraceFunc
 	onResourceOwnerChange          OnResourceOwnerChangeFunc
@@ -401,6 +409,16 @@ func WithOnFunctionInvocationHandler(handler OnFunctionInvocationFunc) Option {
 func WithOnInvokedFunctionReturnHandler(handler OnInvokedFunctionReturnFunc) Option {
 	return func(interpreter *Interpreter) error {
 		interpreter.SetOnInvokedFunctionReturnHandler(handler)
+		return nil
+	}
+}
+
+// WithOnMemoryUsageHandler returns an interpreter option which sets
+// the given function as the memory usage handler.
+//
+func WithOnMemoryUsageHandler(handler OnMemoryUsageFunc) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetOnMemoryUsageHandler(handler)
 		return nil
 	}
 }
@@ -720,6 +738,12 @@ func (interpreter *Interpreter) SetOnFunctionInvocationHandler(function OnFuncti
 //
 func (interpreter *Interpreter) SetOnInvokedFunctionReturnHandler(function OnInvokedFunctionReturnFunc) {
 	interpreter.onInvokedFunctionReturn = function
+}
+
+// SetOnMemoryUsageHandler sets the function that is triggered when memory is about to get used.
+//
+func (interpreter *Interpreter) SetOnMemoryUsageHandler(function OnMemoryUsageFunc) {
+	interpreter.onMemoryUsage = function
 }
 
 // SetOnRecordTraceHandler sets the function that is triggered when a trace is recorded.
@@ -3363,7 +3387,7 @@ func defineBaseValue(activation *VariableActivation, name string, value Value) {
 var stringFunction = func() Value {
 	functionValue := NewHostFunctionValue(
 		func(invocation Invocation) Value {
-			return NewStringValue("")
+			return emptyString
 		},
 		&sema.FunctionType{
 			ReturnTypeAnnotation: sema.NewTypeAnnotation(
@@ -3388,8 +3412,20 @@ var stringFunction = func() Value {
 					panic(errors.NewUnreachableError())
 				}
 
-				bytes, _ := ByteArrayValueToByteSlice(argument)
-				return NewStringValue(hex.EncodeToString(bytes))
+				inter := invocation.Interpreter
+				memoryUsage := MemoryUsage{
+					Type:   PrimitiveStaticTypeString,
+					Amount: uint64(argument.Count()) * 2,
+				}
+				return NewStringValue(
+					inter,
+					memoryUsage,
+					func() string {
+						// TODO: meter
+						bytes, _ := ByteArrayValueToByteSlice(argument)
+						return hex.EncodeToString(bytes)
+					},
+				)
 			},
 			sema.StringTypeEncodeHexFunctionType,
 		),
@@ -4692,4 +4728,11 @@ func (interpreter *Interpreter) invalidateResource(value Value) {
 
 	// Remove the resource-to-variable mapping.
 	delete(interpreter.resourceVariables, resourceKindedValue)
+}
+
+func (interpreter *Interpreter) useMemory(usage MemoryUsage) {
+	if interpreter.onMemoryUsage == nil {
+		return
+	}
+	interpreter.onMemoryUsage(interpreter, usage)
 }

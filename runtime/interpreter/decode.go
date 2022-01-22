@@ -249,7 +249,8 @@ func (d Decoder) decodeStorable() (atree.Storable, error) {
 }
 
 func (d Decoder) decodeString(v string) *StringValue {
-	return NewStringValue(v)
+	// TODO: meter? but string is already decoded
+	return NewUnmeteredStringValue(v)
 }
 
 func (d Decoder) decodeCharacter(v string) (CharacterValue, error) {

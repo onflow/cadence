@@ -59,7 +59,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 			),
 			UInt64Value(500),
 			BoolValue(true),
-			NewStringValue("test"),
+			NewUnmeteredStringValue("test"),
 		}
 
 		for _, value := range invalid {
