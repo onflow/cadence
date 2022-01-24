@@ -1155,12 +1155,12 @@ func TestCheckInvalidDictionaryAccessOptionalReference(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
 		pub struct S {
-			pub let foo : Number
+			pub let foo: Number
 			init() {
 				self.foo = 0
 			}
 		}
-		let dict: {String : S} = {}
+		let dict: {String: S} = {}
 		let s = &dict[""] as &S?
 		let n = s.foo
     `)
@@ -1176,12 +1176,12 @@ func TestCheckInvalidDictionaryAccessNonOptionalReference(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
 		pub struct S {
-			pub let foo : Number
+			pub let foo: Number
 			init() {
 				self.foo = 0
 			}
 		}
-		let dict: {String : S} = {}
+		let dict: {String: S} = {}
 		let s = &dict[""] as &S
     `)
 
@@ -1196,7 +1196,7 @@ func TestCheckArrayAccessReference(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
 		pub struct S {
-			pub let foo : Number
+			pub let foo: Number
 			init() {
 				self.foo = 0
 			}
