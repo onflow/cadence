@@ -845,7 +845,7 @@ pub contract GarmentNFT: NonFungibleToken {
        pub fun borrowGarment(id: UInt64): &GarmentNFT.NFT? {
            if self.ownedNFTs[id] != nil {
                let ref = &self.ownedNFTs[id] as auth &NonFungibleToken.NFT?
-               return ref ?? ref as! &GarmentNFT.NFT
+               return ref as! &GarmentNFT.NFT?
            } else {
                return nil
            }
