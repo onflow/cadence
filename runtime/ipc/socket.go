@@ -2,6 +2,7 @@ package ipc
 
 import (
 	"encoding/binary"
+	"fmt"
 	"net"
 	"syscall"
 
@@ -58,13 +59,13 @@ func ReadMessage(conn net.Conn) *bridge.Message {
 	err = proto.Unmarshal(buf, message)
 	HandleError(err)
 
-	//fmt.Println("<--- received to", conn, " | message:", message)
+	fmt.Println("<--- received to", conn, " | message:", message)
 
 	return message
 }
 
 func WriteMessage(conn net.Conn, msg *bridge.Message) {
-	//fmt.Println("---> sent to ", conn, " | message:", msg)
+	fmt.Println("---> sent to ", conn, " | message:", msg)
 
 	serialized, err := proto.Marshal(msg)
 	HandleError(err)

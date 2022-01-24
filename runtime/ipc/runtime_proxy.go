@@ -1,6 +1,8 @@
 package ipc
 
 import (
+	"google.golang.org/protobuf/types/known/anypb"
+
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
@@ -10,8 +12,8 @@ import (
 )
 
 // ProxyRuntime calls Cadence functionalities over the sockets.
-// Converts the `runtime.Runtime` Go method calls to IPC calls and
-// the results are again converted back to Go corresponding structs.
+// Converts the `runtime.Runtime` Go method calls to IPC calls.
+// Results are again converted back from IPC serialized format to corresponding Go structs.
 type ProxyRuntime struct {
 }
 
@@ -26,9 +28,17 @@ func NewProxyRuntime(runtimeInterface runtime.Interface) *ProxyRuntime {
 }
 
 func (r *ProxyRuntime) ExecuteScript(script runtime.Script, context runtime.Context) (cadence.Value, error) {
+	param, err := anypb.New(
+		bridge.NewScript(script.Source, script.Arguments),
+	)
+
+	if err != nil {
+		// TODO
+	}
+
 	request := bridge.NewRequestMessage(
 		RuntimeMethodExecuteScript,
-		string(script.Source),
+		param,
 	)
 
 	conn := NewRuntimeConnection()

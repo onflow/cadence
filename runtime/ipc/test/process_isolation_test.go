@@ -2,6 +2,7 @@ package test
 
 import (
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -25,24 +26,56 @@ var proxyRuntime = func() *ipc.ProxyRuntime {
 }()
 
 func TestExecutingScript(t *testing.T) {
+
+	start := time.Now()
+	_, err := proxyRuntime.ExecuteScript(
+		runtime.Script{
+			Source: []byte(`
+               import Foo from 0x01
+
+               pub fun main(): Int {
+                 // log("hello")
+                 return Foo.add(4, 8)
+               }
+            `),
+		},
+		runtime.Context{},
+	)
+
+	fmt.Println(time.Since(start))
+
+	assert.NoError(t, err)
+
+}
+
+func TestExecutingScriptParallel(t *testing.T) {
+
+	wg := sync.WaitGroup{}
 	for i := 0; i < 10; i++ {
-		start := time.Now()
-		_, err := proxyRuntime.ExecuteScript(
-			runtime.Script{
-				Source: []byte(`
+		go func() {
+			wg.Add(1)
+			start := time.Now()
+			_, err := proxyRuntime.ExecuteScript(
+				runtime.Script{
+					Source: []byte(`
                pub fun main(): Int {
                  log("hello")
                  return 4 + 8
                }
             `),
-			},
-			runtime.Context{},
-		)
+				},
+				runtime.Context{},
+			)
 
-		fmt.Println(time.Since(start))
+			fmt.Println(time.Since(start))
 
-		assert.NoError(t, err)
+			assert.NoError(t, err)
+
+			wg.Done()
+		}()
 	}
+
+	wg.Wait()
 }
 
 type testRuntimeInterface struct{}
@@ -54,7 +87,7 @@ func (t *testRuntimeInterface) ResolveLocation(identifiers []runtime.Identifier,
 func (t *testRuntimeInterface) GetCode(location runtime.Location) ([]byte, error) {
 	return []byte(`
         pub contract Foo {
-            pub fun Add(_ a: Int, _ b: Int): Int {
+            pub fun add(_ a: Int, _ b: Int): Int {
                 return a + b
             }
         }
@@ -126,6 +159,8 @@ func (t *testRuntimeInterface) GetSigningAccounts() ([]runtime.Address, error) {
 }
 
 func (t *testRuntimeInterface) ProgramLog(s string) error {
+	time.Sleep(3 * time.Second)
+
 	// Test executing a script/transaction within a script/transaction
 	_, err := proxyRuntime.ExecuteScript(
 		runtime.Script{

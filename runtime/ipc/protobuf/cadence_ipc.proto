@@ -3,13 +3,14 @@ package pb;
 
 option go_package = "./;pb";
 
-//import "google/protobuf/any.proto";
+import "google/protobuf/any.proto";
 
-enum MessageType {
-  REQUEST = 0;
-  RESPONSE = 1;
-  ERROR = 2;
-}
+// IPC can send/receive three types of messages:
+//   - Request
+//       - Name - Request name is a unique identifier for the invoked method.
+//       - Params - Parameters for the invoked method. Is of `[]Any` type.
+//   - Response
+//   - Error
 
 message Message {
   MessageType type = 1;
@@ -21,9 +22,15 @@ message Message {
   }
 }
 
+enum MessageType {
+  REQUEST = 0;
+  RESPONSE = 1;
+  ERROR = 2;
+}
+
 message Request {
   string name = 1;
-  repeated string params = 2;
+  repeated google.protobuf.Any params = 2;
 }
 
 message Response {
@@ -32,4 +39,34 @@ message Response {
 
 message Error {
   string err = 1;
+}
+
+// Params and results
+
+message String {
+  string content = 1;
+}
+
+message Script {
+  bytes source = 1;
+  repeated bytes arguments = 2;
+}
+
+// Locations
+
+message StringLocation {
+  string content = 1;
+}
+
+message IdentifierLocation {
+  string content = 1;
+}
+
+message AddressLocation {
+  bytes address = 1;
+  string name = 2;
+}
+
+message TransactionLocation {
+  bytes content = 1;
 }

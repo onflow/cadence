@@ -52,7 +52,7 @@ func serveRequest(
 		response = runtimeBridge.ExecuteTransaction(request.Params, context)
 
 	case ipc.RuntimeMethodInvokeContractFunction:
-		response = runtimeBridge.InvokeContractFunction()
+		response = runtimeBridge.InvokeContractFunction(request.Params, context)
 
 	default:
 		response = bridge.NewErrorMessage(

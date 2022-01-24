@@ -3,6 +3,9 @@ package ipc
 import (
 	"time"
 
+	"github.com/opentracing/opentracing-go"
+	"google.golang.org/protobuf/types/known/anypb"
+
 	"github.com/onflow/atree"
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime"
@@ -11,7 +14,6 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/ipc/bridge"
 	"github.com/onflow/cadence/runtime/tests/utils"
-	"github.com/opentracing/opentracing-go"
 )
 
 var _ runtime.Interface = &ProxyInterface{}
@@ -28,15 +30,15 @@ func NewProxyInterface() *ProxyInterface {
 func (p *ProxyInterface) ResolveLocation(identifiers []runtime.Identifier, location runtime.Location) ([]runtime.ResolvedLocation, error) {
 	conn := NewInterfaceConnection()
 
-	request := bridge.NewRequestMessage(InterfaceMethodResolveLocation)
+	loc, err := bridge.NewLocation(location)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: also pass identifiers
+	request := bridge.NewRequestMessage(InterfaceMethodResolveLocation, loc)
 	WriteMessage(conn, request)
 
-	// NOTE: this assumes when cadence call any 'Interface' method,
-	// there will only be one response from the host-env.
-	// i.e: Assumes there will not be any more requests from the host-env,
-	// until the current request is served.
-
-	// TODO: allow back and forth messaging rather than just one response??
 	_ = ReadMessage(conn)
 
 	// TODO: implement
@@ -51,7 +53,12 @@ func (p *ProxyInterface) ResolveLocation(identifiers []runtime.Identifier, locat
 func (p *ProxyInterface) GetCode(location runtime.Location) ([]byte, error) {
 	conn := NewInterfaceConnection()
 
-	request := bridge.NewRequestMessage(InterfaceMethodGetCode)
+	param, err := bridge.NewLocation(location)
+	if err != nil {
+		return nil, err
+	}
+
+	request := bridge.NewRequestMessage(InterfaceMethodGetCode, param)
 
 	WriteMessage(conn, request)
 	msg := ReadMessage(conn)
@@ -62,7 +69,12 @@ func (p *ProxyInterface) GetCode(location runtime.Location) ([]byte, error) {
 func (p *ProxyInterface) GetProgram(location runtime.Location) (*interpreter.Program, error) {
 	conn := NewInterfaceConnection()
 
-	request := bridge.NewRequestMessage(InterfaceMethodGetProgram)
+	param, err := bridge.NewLocation(location)
+	if err != nil {
+		return nil, err
+	}
+
+	request := bridge.NewRequestMessage(InterfaceMethodGetProgram, param)
 
 	WriteMessage(conn, request)
 	_ = ReadMessage(conn)
@@ -134,7 +146,13 @@ func (p *ProxyInterface) GetSigningAccounts() ([]runtime.Address, error) {
 func (p *ProxyInterface) ProgramLog(s string) error {
 	conn := NewInterfaceConnection()
 
-	request := bridge.NewRequestMessage(InterfaceMethodProgramLog, s)
+	str := bridge.NewString(s)
+	param, err := anypb.New(str)
+	if err != nil {
+		return err
+	}
+
+	request := bridge.NewRequestMessage(InterfaceMethodProgramLog, param)
 
 	WriteMessage(conn, request)
 
