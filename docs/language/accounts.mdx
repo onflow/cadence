@@ -63,7 +63,7 @@ which represents the authorized portion of an account.
 Access to an `AuthAccount` means having full access to its [storage](#account-storage),
 public keys, and code.
 
-Only [signed transactions](../transactions) can get the `AuthAccount` for an account.
+Only [signed transactions](transactions) can get the `AuthAccount` for an account.
 For each signer of the transaction that signs as an authorizer, the corresponding `AuthAccount` object is passed
 to the `prepare` phase of the transaction.
 
@@ -197,7 +197,7 @@ struct AccountKey {
     let isRevoked: Bool
 }
 ```
-Refer the [PublicKey](../crypto/#publickey) section for more details on the creation and validity of public keys.
+Refer the [PublicKey](crypto/#publickey) section for more details on the creation and validity of public keys.
 
 ### Account Key API
 Account key API provides a set of functions to manage account keys.

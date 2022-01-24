@@ -10,9 +10,9 @@ and preconditions and postconditions that implementing types need to provide.
 
 There are three kinds of interfaces:
 
-- **Structure interfaces**: implemented by [structures](../composite-types#structures)
-- **Resource interfaces**: implemented by [resources](../composite-types#resources)
-- **Contract interfaces**: implemented by [contracts](../contracts)
+- **Structure interfaces**: implemented by [structures](composite-types#structures)
+- **Resource interfaces**: implemented by [resources](composite-types#resources)
+- **Contract interfaces**: implemented by [contracts](contracts)
 
 Structure, resource, and contract types may implement multiple interfaces.
 
@@ -331,7 +331,7 @@ pub struct AnImplementation: AnInterface {
 Interfaces can be used in types: The type `{I}` is the type of all objects
 that implement the interface `I`.
 
-This is called a [restricted type](../restricted-types):
+This is called a [restricted type](restricted-types):
 Only the functionality (members and functions) of the interface can be used
 when accessing a value of such a type.
 
