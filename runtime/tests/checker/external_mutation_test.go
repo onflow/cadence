@@ -58,14 +58,17 @@ func TestArrayUpdateIndexAccess(t *testing.T) {
 		}
 
 		t.Run(testName, func(t *testing.T) {
+
+			t.Parallel()
+
 			_, err := ParseAndCheckWithOptions(t,
 				fmt.Sprintf(`
 				pub contract C {
 					pub %s Foo {
-						%s %s x : [Int]
+						%s %s x: [Int]
 				
 						init() {
-						self.x = [3];
+						self.x = [3]
 						}
 					}
 
@@ -129,10 +132,10 @@ func TestDictionaryUpdateIndexAccess(t *testing.T) {
 				fmt.Sprintf(`
 				pub contract C {
 					pub %s Foo {
-						%s %s x : {Int: Int}
+						%s %s x: {Int: Int}
 				
 						init() {
-						self.x = {0:3};
+						self.x = {0: 3}
 						}
 					}
 
@@ -250,10 +253,10 @@ func TestNestedDictionaryUpdateIndexAccess(t *testing.T) {
 					}
 
 					pub struct Foo {
-						%s %s x : {Int: Int}
+						%s %s x: {Int: Int}
 				
 						init() {
-							self.x = {3:3}
+							self.x = {3: 3}
 						}
 					}
 
@@ -301,7 +304,7 @@ func TestMutateContractIndexAccess(t *testing.T) {
 			_, err := ParseAndCheckWithOptions(t,
 				fmt.Sprintf(`
 				pub contract Foo {
-					%s %s x : [Int]
+					%s %s x: [Int]
 				
 					init() {
 						self.x = [3]
@@ -359,10 +362,10 @@ func TestContractNestedStructIndexAccess(t *testing.T) {
 			_, err := ParseAndCheckWithOptions(t,
 				fmt.Sprintf(`
 				pub contract Foo {
-					pub let x : S
+					pub let x: S
 					
 					pub struct S {
-						%s %s y : [Int]
+						%s %s y: [Int]
 						init() {
 							self.y = [3]
 						}
@@ -424,10 +427,10 @@ func TestContractStructInitIndexAccess(t *testing.T) {
 			_, err := ParseAndCheckWithOptions(t,
 				fmt.Sprintf(`
 				pub contract Foo {
-					pub let x : S
+					pub let x: S
 					
 					pub struct S {
-						%s %s y : [Int]
+						%s %s y: [Int]
 						init() {
 							self.y = [3]
 						}
@@ -508,10 +511,10 @@ func TestArrayUpdateMethodCall(t *testing.T) {
 				fmt.Sprintf(`
 				pub contract C {
 					pub %s Foo {
-						%s %s x : [Int]
+						%s %s x: [Int]
 				
 						init() {
-						self.x = [3];
+						self.x = [3]
 						}
 					}
 
@@ -596,10 +599,10 @@ func TestDictionaryUpdateMethodCall(t *testing.T) {
 				fmt.Sprintf(`
 				pub contract C {
 					pub %s Foo {
-						%s %s x : {Int: Int}
+						%s %s x: {Int: Int}
 				
 						init() {
-						self.x = {3:3};
+						self.x = {3: 3}
 						}
 					}
 
@@ -643,7 +646,7 @@ func TestPubSetAccessModifier(t *testing.T) {
 					pub(set) var x: {Int: Int}
 			
 					init() {
-						self.x = {3:3};
+						self.x = {3: 3}
 					}
 				}
 
@@ -673,7 +676,7 @@ func TestPubSetNestedAccessModifier(t *testing.T) {
 				}
 				
 				pub struct Foo {
-					pub(set) var x : [Int]
+					pub(set) var x: [Int]
 				
 					init() {
 					   self.x = [3]
@@ -702,7 +705,7 @@ func TestSelfContainingStruct(t *testing.T) {
 					pub let x: {Int: Int}
 			
 					init() {
-						self.x = {3:3};
+						self.x = {3: 3}
 					}
 
 					pub fun bar() {
@@ -756,7 +759,7 @@ func TestMutationThroughAccess(t *testing.T) {
 			`
 			pub contract C {
 				pub struct Foo {
-					pub let arr : [Int]
+					pub let arr: [Int]
 					init() {
 						self.arr = [3]
 					}

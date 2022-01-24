@@ -2978,7 +2978,7 @@ type ExternalMutationError struct {
 
 func (e *ExternalMutationError) Error() string {
 	return fmt.Sprintf(
-		"cannot mutate `%s`: %s was defined inside `%s`",
+		"cannot mutate `%s`: %s is only mutable inside `%s`",
 		e.Name,
 		e.DeclarationKind.Name(),
 		e.EnclosingType.QualifiedString(),
