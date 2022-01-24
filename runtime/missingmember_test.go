@@ -836,7 +836,7 @@ pub contract GarmentNFT: NonFungibleToken {
        // read Garment data.
        //
        pub fun borrowNFT(id: UInt64): &NonFungibleToken.NFT {
-           return &self.ownedNFTs[id] as &NonFungibleToken.NFT
+           return (&self.ownedNFTs[id] as &NonFungibleToken.NFT?)!
        }
 
        // Parameters: id: The ID of the NFT to get the reference for
@@ -844,8 +844,8 @@ pub contract GarmentNFT: NonFungibleToken {
        // Returns: A reference to the NFT
        pub fun borrowGarment(id: UInt64): &GarmentNFT.NFT? {
            if self.ownedNFTs[id] != nil {
-               let ref = &self.ownedNFTs[id] as auth &NonFungibleToken.NFT
-               return ref as! &GarmentNFT.NFT
+               let ref = &self.ownedNFTs[id] as auth &NonFungibleToken.NFT?
+               return ref as! &GarmentNFT.NFT?
            } else {
                return nil
            }
@@ -1298,7 +1298,7 @@ pub contract MaterialNFT: NonFungibleToken {
        // read Material data.
        //
        pub fun borrowNFT(id: UInt64): &NonFungibleToken.NFT {
-           return &self.ownedNFTs[id] as &NonFungibleToken.NFT
+           return (&self.ownedNFTs[id] as &NonFungibleToken.NFT?)!
        }
 
        // Parameters: id: The ID of the NFT to get the reference for
@@ -1306,7 +1306,7 @@ pub contract MaterialNFT: NonFungibleToken {
        // Returns: A reference to the NFT
        pub fun borrowMaterial(id: UInt64): &MaterialNFT.NFT? {
            if self.ownedNFTs[id] != nil {
-               let ref = &self.ownedNFTs[id] as auth &NonFungibleToken.NFT
+               let ref = (&self.ownedNFTs[id] as auth &NonFungibleToken.NFT?)!
                return ref as! &MaterialNFT.NFT
            } else {
                return nil
@@ -1816,7 +1816,7 @@ pub contract ItemNFT: NonFungibleToken {
        // read Item data.
        //
        pub fun borrowNFT(id: UInt64): &NonFungibleToken.NFT {
-           return &self.ownedNFTs[id] as &NonFungibleToken.NFT
+           return (&self.ownedNFTs[id] as &NonFungibleToken.NFT?)!
        }
 
        // Parameters: id: The ID of the NFT to get the reference for
@@ -1824,7 +1824,7 @@ pub contract ItemNFT: NonFungibleToken {
        // Returns: A reference to the NFT
        pub fun borrowItem(id: UInt64): &ItemNFT.NFT? {
            if self.ownedNFTs[id] != nil {
-               let ref = &self.ownedNFTs[id] as auth &NonFungibleToken.NFT
+               let ref = (&self.ownedNFTs[id] as auth &NonFungibleToken.NFT?)!
                return ref as! &ItemNFT.NFT
            } else {
                return nil
@@ -3618,7 +3618,7 @@ pub contract AuctionDutch {
 			pre {
 				self.auctions[id] != nil: "auction doesn't exist"
 			}
-			return &self.auctions[id] as &Auction
+			return (&self.auctions[id] as &Auction?)!
 		}
 
 		pub fun bid(id: UInt64, vault: @FungibleToken.Vault, vaultCap: Capability<&{FungibleToken.Receiver}>, nftCap: Capability<&{NonFungibleToken.Receiver}>) : @Bid{
@@ -3806,7 +3806,7 @@ pub contract AuctionDutch {
 			pre {
 				self.bids[id] != nil: "bid doesn't exist"
 			}
-			return &self.bids[id] as &Bid
+			return (&self.bids[id] as &Bid?)!
 		}
 
 
