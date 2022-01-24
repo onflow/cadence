@@ -149,7 +149,7 @@ func (k DeclarationKind) Keywords() string {
 	case DeclarationKindVariable:
 		return "var"
 	case DeclarationKindConstant:
-		return "const"
+		return "let"
 	case DeclarationKindStructure:
 		return "struct"
 	case DeclarationKindResource:
