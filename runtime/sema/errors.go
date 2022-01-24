@@ -2971,7 +2971,7 @@ func (e *InvalidEntryPointTypeError) Error() string {
 
 type ExternalMutationError struct {
 	Name            string
-	EnclosingType   Type
+	ContainerType   Type
 	DeclarationKind common.DeclarationKind
 	ast.Range
 }
@@ -2981,7 +2981,7 @@ func (e *ExternalMutationError) Error() string {
 		"cannot mutate `%s`: %s is only mutable inside `%s`",
 		e.Name,
 		e.DeclarationKind.Name(),
-		e.EnclosingType.QualifiedString(),
+		e.ContainerType.QualifiedString(),
 	)
 }
 
@@ -2989,7 +2989,7 @@ func (e *ExternalMutationError) SecondaryError() string {
 	return fmt.Sprintf(
 		"Consider adding a setter for `%s` to `%s`",
 		e.Name,
-		e.EnclosingType.QualifiedString(),
+		e.ContainerType.QualifiedString(),
 	)
 }
 

@@ -221,8 +221,8 @@ func (checker *Checker) visitIndexExpressionAssignment(
 				&ExternalMutationError{
 					Name:            member.Identifier.Identifier,
 					DeclarationKind: member.DeclarationKind,
-					Range:           ast.NewRangeFromPositioned(targetExpression.Identifier),
-					EnclosingType:   member.ContainerType,
+					Range:           ast.NewRangeFromPositioned(targetExpression),
+					ContainerType:   member.ContainerType,
 				},
 			)
 		}

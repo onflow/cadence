@@ -172,7 +172,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 						Name:            m.Identifier.Identifier,
 						DeclarationKind: m.DeclarationKind,
 						Range:           ast.NewRangeFromPositioned(targetRange),
-						EnclosingType:   m.ContainerType,
+						ContainerType:   m.ContainerType,
 					},
 				)
 			}
@@ -327,11 +327,10 @@ func (checker *Checker) isWriteableMember(member *Member) bool {
 }
 
 // isMutatableMember returns true if the given member can be mutated
-// in the current location of the checker
-//
+// in the current location of the checker. Currently equivalent to
+// isWriteableMember above, but separate in case this changes
 func (checker *Checker) isMutatableMember(member *Member) bool {
-	return checker.isWriteableAccess(member.Access) ||
-		checker.containerTypes[member.ContainerType]
+	return checker.isWriteableMember(member)
 }
 
 // containingContractKindedType returns the containing contract-kinded type
