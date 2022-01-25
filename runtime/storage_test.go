@@ -2270,11 +2270,11 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 		require.Equal(t,
 			[]string{
 				"nil",
-				"0x0000000000000001",
+				"0x1",
 				"nil",
 				"nil",
-				"0x0000000000000002",
-				"0x0000000000000002",
+				"0x2",
+				"0x2",
 			},
 			loggedMessages,
 		)
