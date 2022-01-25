@@ -2,6 +2,9 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ipc"
@@ -9,9 +12,25 @@ import (
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
+var signalsToWatch = []os.Signal{
+	syscall.SIGINT, // same as `os.Interrupt`
+	syscall.SIGTERM,
+	//syscall.SIGKILL,
+}
+
 func main() {
 	listener := bridge.NewRuntimeListener()
 	runtimeBridge := bridge.NewRuntimeBridge()
+
+	// Handle interrupts
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, signalsToWatch...)
+	go func() {
+		_ = <-signals
+		fmt.Printf("Shutting down")
+		listener.Close()
+		os.Exit(0)
+	}()
 
 	// Keep listening and serving the requests.
 	for {
@@ -43,7 +62,7 @@ func serveRequest(
 		Interface: ipc.NewProxyInterface(),
 
 		// TODO:
-		Location:  utils.TestLocation,
+		Location: utils.TestLocation,
 	}
 	context.InitializeCodesAndPrograms()
 
