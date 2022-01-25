@@ -160,7 +160,7 @@ func decodeAddressLocationTypeID(typeID string) (AddressLocation, string, error)
 
 	// `<location>`, the second part, must be a hex string.
 
-	address, err := hex.DecodeString(parts[1])
+	rawAddress, err := hex.DecodeString(parts[1])
 	if err != nil {
 		return AddressLocation{}, "", fmt.Errorf(
 			"%s: invalid address: %w",
@@ -193,8 +193,13 @@ func decodeAddressLocationTypeID(typeID string) (AddressLocation, string, error)
 		panic(errors.NewUnreachableError())
 	}
 
+	address, err := BytesToAddress(rawAddress)
+	if err != nil {
+		return AddressLocation{}, "", err
+	}
+
 	location := AddressLocation{
-		Address: BytesToAddress(address),
+		Address: address,
 		Name:    name,
 	}
 

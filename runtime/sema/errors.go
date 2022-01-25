@@ -1040,7 +1040,7 @@ type UnresolvedImportError struct {
 }
 
 func (e *UnresolvedImportError) Error() string {
-	return "import could not be resolved"
+	return fmt.Sprintf("import could not be resolved: %s", e.ImportLocation)
 }
 
 func (*UnresolvedImportError) isSemanticError() {}

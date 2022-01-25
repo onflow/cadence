@@ -297,7 +297,7 @@ func TestRuntimeError(t *testing.T) {
               import A from 0x1
             `,
 			common.AddressLocation{
-				Address: common.BytesToAddress([]byte{0x1}),
+				Address: common.MustBytesToAddress([]byte{0x1}),
 				Name:    "A",
 			}.ID(): `
               // import program that has errors
@@ -312,7 +312,7 @@ func TestRuntimeError(t *testing.T) {
               }
             `,
 			common.AddressLocation{
-				Address: common.BytesToAddress([]byte{0x2}),
+				Address: common.MustBytesToAddress([]byte{0x2}),
 				Name:    "B",
 			}.ID(): `
               // invalid top-level declaration
