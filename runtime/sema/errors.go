@@ -2010,22 +2010,6 @@ func (e *NonReferenceTypeReferenceError) SecondaryError() string {
 
 func (*NonReferenceTypeReferenceError) isSemanticError() {}
 
-// OptionalTypeReferenceError
-
-type OptionalTypeReferenceError struct {
-	ActualType Type
-	ast.Range
-}
-
-func (e *OptionalTypeReferenceError) Error() string {
-	return fmt.Sprintf(
-		"cannot create reference to optional type, got `%s`",
-		e.ActualType.QualifiedString(),
-	)
-}
-
-func (*OptionalTypeReferenceError) isSemanticError() {}
-
 // InvalidResourceCreationError
 
 type InvalidResourceCreationError struct {
