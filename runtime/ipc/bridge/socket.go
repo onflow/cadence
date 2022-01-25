@@ -1,4 +1,4 @@
-package ipc
+package bridge
 
 import (
 	"encoding/binary"
@@ -6,8 +6,8 @@ import (
 	"net"
 	"syscall"
 
-	"github.com/golang/protobuf/proto"
-	"github.com/onflow/cadence/runtime/ipc/bridge"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/anypb"
 )
 
 const (
@@ -44,7 +44,7 @@ func NewInterfaceConnection() net.Conn {
 	return conn
 }
 
-func ReadMessage(conn net.Conn) *bridge.Message {
+func ReadMessage(conn net.Conn) Message {
 	var messageLength int32
 
 	// First 4 bytes is the message length
@@ -55,19 +55,26 @@ func ReadMessage(conn net.Conn) *bridge.Message {
 	err = binary.Read(conn, binary.BigEndian, buf)
 	HandleError(err)
 
-	message := &bridge.Message{}
+	message := &anypb.Any{}
 	err = proto.Unmarshal(buf, message)
+	HandleError(err)
+
+	// Unwrap `Any` to get the specific type of message.
+	typedMessage, err := message.UnmarshalNew()
 	HandleError(err)
 
 	fmt.Println("<--- received to", conn, " | message:", message)
 
-	return message
+	return typedMessage
 }
 
-func WriteMessage(conn net.Conn, msg *bridge.Message) {
+func WriteMessage(conn net.Conn, msg Message) {
 	fmt.Println("---> sent to ", conn, " | message:", msg)
 
-	serialized, err := proto.Marshal(msg)
+	// Wrap with `Any` to enrich type information for unmarshalling.
+	typedMessage, err := anypb.New(msg)
+
+	serialized, err := proto.Marshal(typedMessage)
 	HandleError(err)
 
 	// Write msg length

@@ -7,26 +7,10 @@ import "google/protobuf/any.proto";
 
 // IPC can send/receive three types of messages:
 //   - Request
-//       - Name - Request name is a unique identifier for the invoked method.
+//       - Name - A unique identifier indicating the invoked method.
 //       - Params - Parameters for the invoked method. Is of `[]Any` type.
 //   - Response
 //   - Error
-
-message Message {
-  MessageType type = 1;
-
-  oneof payloads {
-    Request req = 2;
-    Response res = 3;
-    Error err = 4;
-  }
-}
-
-enum MessageType {
-  REQUEST = 0;
-  RESPONSE = 1;
-  ERROR = 2;
-}
 
 message Request {
   string name = 1;

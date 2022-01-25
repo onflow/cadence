@@ -33,7 +33,7 @@ func (r *ProxyRuntime) ExecuteScript(script runtime.Script, context runtime.Cont
 	)
 
 	if err != nil {
-		// TODO
+		return nil, err
 	}
 
 	request := bridge.NewRequestMessage(
@@ -41,11 +41,11 @@ func (r *ProxyRuntime) ExecuteScript(script runtime.Script, context runtime.Cont
 		param,
 	)
 
-	conn := NewRuntimeConnection()
+	conn := bridge.NewRuntimeConnection()
 
-	WriteMessage(conn, request)
+	bridge.WriteMessage(conn, request)
 
-	_ = ReadMessage(conn)
+	_ = bridge.ReadMessage(conn)
 
 	return nil, nil
 }

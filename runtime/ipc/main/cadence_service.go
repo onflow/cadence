@@ -10,23 +10,26 @@ import (
 )
 
 func main() {
-	listener := ipc.NewRuntimeListener()
+	listener := bridge.NewRuntimeListener()
 	runtimeBridge := bridge.NewRuntimeBridge()
 
 	// Keep listening and serving the requests.
 	for {
 		conn, err := listener.Accept()
-		ipc.HandleError(err)
+		bridge.HandleError(err)
 
 		go func() {
-			msg := ipc.ReadMessage(conn)
+			msg := bridge.ReadMessage(conn)
 
-			if msg.Type != bridge.REQUEST {
-				panic("unsupported")
+			switch msg := msg.(type) {
+			case *bridge.Request:
+				response := serveRequest(runtimeBridge, msg)
+				bridge.WriteMessage(conn, response)
+			case *bridge.Error:
+				panic(fmt.Errorf(msg.GetErr()))
+			default:
+				panic(fmt.Errorf("unsupported message"))
 			}
-
-			response := serveRequest(runtimeBridge, msg.GetReq())
-			ipc.WriteMessage(conn, response)
 		}()
 	}
 }
@@ -34,7 +37,7 @@ func main() {
 func serveRequest(
 	runtimeBridge *bridge.RuntimeBridge,
 	request *bridge.Request,
-) *bridge.Message {
+) bridge.Message {
 
 	context := runtime.Context{
 		Interface: ipc.NewProxyInterface(),
@@ -42,7 +45,7 @@ func serveRequest(
 	}
 	context.InitializeCodesAndPrograms()
 
-	var response *bridge.Message
+	var response bridge.Message
 
 	switch request.Name {
 	case ipc.RuntimeMethodExecuteScript:

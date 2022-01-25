@@ -27,10 +27,28 @@ var proxyRuntime = func() *ipc.ProxyRuntime {
 
 func TestExecutingScript(t *testing.T) {
 
-	start := time.Now()
-	_, err := proxyRuntime.ExecuteScript(
-		runtime.Script{
-			Source: []byte(`
+	t.Run("simple script", func(t *testing.T) {
+		start := time.Now()
+		_, err := proxyRuntime.ExecuteScript(
+			runtime.Script{
+				Source: []byte(`
+               pub fun main(): Int {
+                 return 4+ 8
+               }
+            `),
+			},
+			runtime.Context{},
+		)
+
+		fmt.Println(time.Since(start))
+		assert.NoError(t, err)
+	})
+
+	t.Run("with imports", func(t *testing.T) {
+		start := time.Now()
+		_, err := proxyRuntime.ExecuteScript(
+			runtime.Script{
+				Source: []byte(`
                import Foo from 0x01
 
                pub fun main(): Int {
@@ -38,14 +56,13 @@ func TestExecutingScript(t *testing.T) {
                  return Foo.add(4, 8)
                }
             `),
-		},
-		runtime.Context{},
-	)
+			},
+			runtime.Context{},
+		)
 
-	fmt.Println(time.Since(start))
-
-	assert.NoError(t, err)
-
+		fmt.Println(time.Since(start))
+		assert.NoError(t, err)
+	})
 }
 
 func TestExecutingScriptParallel(t *testing.T) {

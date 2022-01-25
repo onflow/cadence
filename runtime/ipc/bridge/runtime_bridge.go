@@ -21,7 +21,7 @@ func NewRuntimeBridge() *RuntimeBridge {
 	}
 }
 
-func (b *RuntimeBridge) ExecuteScript(params []*anypb.Any, context runtime.Context) *Message {
+func (b *RuntimeBridge) ExecuteScript(params []*anypb.Any, context runtime.Context) Message {
 	if len(params) != 1 {
 		panic(errors.UnreachableError{})
 	}
@@ -47,7 +47,7 @@ func (b *RuntimeBridge) ExecuteScript(params []*anypb.Any, context runtime.Conte
 	return NewResponseMessage(value.String())
 }
 
-func (b *RuntimeBridge) ExecuteTransaction(params []*anypb.Any, context runtime.Context) *Message {
+func (b *RuntimeBridge) ExecuteTransaction(params []*anypb.Any, context runtime.Context) Message {
 	if len(params) != 1 {
 		panic(errors.UnreachableError{})
 	}
@@ -73,7 +73,7 @@ func (b *RuntimeBridge) ExecuteTransaction(params []*anypb.Any, context runtime.
 	return NewResponseMessage(value.String())
 }
 
-func (b *RuntimeBridge) InvokeContractFunction(params []*anypb.Any, context runtime.Context) *Message {
+func (b *RuntimeBridge) InvokeContractFunction(params []*anypb.Any, context runtime.Context) Message {
 	return NewErrorMessage(
 		"InvokeContractFunction is not yet implemented",
 	)

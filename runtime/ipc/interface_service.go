@@ -1,33 +1,37 @@
 package ipc
 
 import (
+	"fmt"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ipc/bridge"
 )
 
 func StartInterfaceService(runtimeInterface runtime.Interface) *bridge.Message {
-	listener := NewInterfaceListener()
+	listener := bridge.NewInterfaceListener()
 	interfaceBridge := bridge.NewInterfaceBridge(runtimeInterface)
 
 	for {
 		conn, err := listener.Accept()
-		HandleError(err)
+		bridge.HandleError(err)
 
 		go func() {
-			message := ReadMessage(conn)
+			msg := bridge.ReadMessage(conn)
 
-			if message.Type != bridge.REQUEST {
-				panic("unsupported")
+			switch msg := msg.(type) {
+			case *bridge.Request:
+				response := serveRequest(interfaceBridge, msg)
+				bridge.WriteMessage(conn, response)
+			case *bridge.Error:
+				panic(fmt.Errorf(msg.GetErr()))
+			default:
+				panic(fmt.Errorf("unsupported message"))
 			}
-
-			response := serveRequest(interfaceBridge, message.GetReq())
-			WriteMessage(conn, response)
 		}()
 	}
 }
 
-func serveRequest(interfaceBridge *bridge.InterfaceBridge, request *bridge.Request) *bridge.Message {
-	var response *bridge.Message
+func serveRequest(interfaceBridge *bridge.InterfaceBridge, request *bridge.Request) bridge.Message {
+	var response bridge.Message
 
 	// All 'Interface' methods goes here
 	switch request.Name {
@@ -49,4 +53,3 @@ func serveRequest(interfaceBridge *bridge.InterfaceBridge, request *bridge.Reque
 
 	return response
 }
-

@@ -21,7 +21,7 @@ func NewInterfaceBridge(runtimeInterface runtime.Interface) *InterfaceBridge {
 	}
 }
 
-func (b *InterfaceBridge) GetCode(params []*anypb.Any) *Message {
+func (b *InterfaceBridge) GetCode(params []*anypb.Any) Message {
 	if len(params) != 1 {
 		panic(errors.UnreachableError{})
 	}
@@ -38,7 +38,7 @@ func (b *InterfaceBridge) GetCode(params []*anypb.Any) *Message {
 	return NewResponseMessage(string(code))
 }
 
-func (b *InterfaceBridge) GetProgram(params []*anypb.Any) *Message {
+func (b *InterfaceBridge) GetProgram(params []*anypb.Any) Message {
 	if len(params) != 1 {
 		panic(errors.UnreachableError{})
 	}
@@ -55,7 +55,7 @@ func (b *InterfaceBridge) GetProgram(params []*anypb.Any) *Message {
 	return NewResponseMessage("some program")
 }
 
-func (b *InterfaceBridge) ResolveLocation(params []*anypb.Any) *Message {
+func (b *InterfaceBridge) ResolveLocation(params []*anypb.Any) Message {
 	if len(params) != 1 {
 		panic(errors.UnreachableError{})
 	}
@@ -75,7 +75,7 @@ func (b *InterfaceBridge) ResolveLocation(params []*anypb.Any) *Message {
 	return NewResponseMessage("some location")
 }
 
-func (b *InterfaceBridge) ProgramLog(params []*anypb.Any) *Message {
+func (b *InterfaceBridge) ProgramLog(params []*anypb.Any) Message {
 	if len(params) != 1 {
 		panic(errors.UnreachableError{})
 	}

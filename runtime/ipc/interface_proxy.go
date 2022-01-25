@@ -1,10 +1,10 @@
 package ipc
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/opentracing/opentracing-go"
-	"google.golang.org/protobuf/types/known/anypb"
 
 	"github.com/onflow/atree"
 	"github.com/onflow/cadence"
@@ -28,18 +28,20 @@ func NewProxyInterface() *ProxyInterface {
 }
 
 func (p *ProxyInterface) ResolveLocation(identifiers []runtime.Identifier, location runtime.Location) ([]runtime.ResolvedLocation, error) {
-	conn := NewInterfaceConnection()
+	conn := bridge.NewInterfaceConnection()
 
 	loc, err := bridge.NewLocation(location)
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO: also pass identifiers
-	request := bridge.NewRequestMessage(InterfaceMethodResolveLocation, loc)
-	WriteMessage(conn, request)
+	locationParam := bridge.AsParameter(loc)
 
-	_ = ReadMessage(conn)
+	// TODO: also pass 'identifiers' as params
+	request := bridge.NewRequestMessage(InterfaceMethodResolveLocation, locationParam)
+	bridge.WriteMessage(conn, request)
+
+	_ = bridge.ReadMessage(conn)
 
 	// TODO: implement
 	return []runtime.ResolvedLocation{
@@ -51,33 +53,43 @@ func (p *ProxyInterface) ResolveLocation(identifiers []runtime.Identifier, locat
 }
 
 func (p *ProxyInterface) GetCode(location runtime.Location) ([]byte, error) {
-	conn := NewInterfaceConnection()
+	conn := bridge.NewInterfaceConnection()
 
-	param, err := bridge.NewLocation(location)
+	loc, err := bridge.NewLocation(location)
 	if err != nil {
 		return nil, err
 	}
 
-	request := bridge.NewRequestMessage(InterfaceMethodGetCode, param)
+	locationParam := bridge.AsParameter(loc)
 
-	WriteMessage(conn, request)
-	msg := ReadMessage(conn)
+	request := bridge.NewRequestMessage(InterfaceMethodGetCode, locationParam)
 
-	return []byte(msg.GetRes().Value), nil
+	bridge.WriteMessage(conn, request)
+
+	msg := bridge.ReadMessage(conn)
+
+	response, err := p.getResponse(msg)
+	if err != nil {
+		return nil, err
+	}
+
+	return []byte(response.GetValue()), nil
 }
 
 func (p *ProxyInterface) GetProgram(location runtime.Location) (*interpreter.Program, error) {
-	conn := NewInterfaceConnection()
+	conn := bridge.NewInterfaceConnection()
 
-	param, err := bridge.NewLocation(location)
+	loc, err := bridge.NewLocation(location)
 	if err != nil {
 		return nil, err
 	}
 
-	request := bridge.NewRequestMessage(InterfaceMethodGetProgram, param)
+	locationParam := bridge.AsParameter(loc)
 
-	WriteMessage(conn, request)
-	_ = ReadMessage(conn)
+	request := bridge.NewRequestMessage(InterfaceMethodGetProgram, locationParam)
+
+	bridge.WriteMessage(conn, request)
+	_ = bridge.ReadMessage(conn)
 
 	return nil, nil
 }
@@ -144,19 +156,16 @@ func (p *ProxyInterface) GetSigningAccounts() ([]runtime.Address, error) {
 }
 
 func (p *ProxyInterface) ProgramLog(s string) error {
-	conn := NewInterfaceConnection()
+	conn := bridge.NewInterfaceConnection()
 
 	str := bridge.NewString(s)
-	param, err := anypb.New(str)
-	if err != nil {
-		return err
-	}
+	stringParam := bridge.AsParameter(str)
 
-	request := bridge.NewRequestMessage(InterfaceMethodProgramLog, param)
+	request := bridge.NewRequestMessage(InterfaceMethodProgramLog, stringParam)
 
-	WriteMessage(conn, request)
+	bridge.WriteMessage(conn, request)
 
-	_ = ReadMessage(conn)
+	_ = bridge.ReadMessage(conn)
 
 	return nil
 }
@@ -249,4 +258,15 @@ func (p *ProxyInterface) AggregateBLSPublicKeys(keys []*runtime.PublicKey) (*run
 
 func (p *ProxyInterface) ResourceOwnerChanged(resource *interpreter.CompositeValue, oldOwner common.Address, newOwner common.Address) {
 	panic("implement me")
+}
+
+func (p *ProxyInterface) getResponse(msg bridge.Message) (*bridge.Response, error) {
+	switch msg := msg.(type) {
+	case *bridge.Response:
+		return msg, nil
+	case *bridge.Error:
+		return nil, fmt.Errorf(msg.GetErr())
+	default:
+		return nil, fmt.Errorf("unsupported message")
+	}
 }

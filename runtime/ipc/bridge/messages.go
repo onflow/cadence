@@ -1,20 +1,18 @@
 package bridge
 
 import (
+	"fmt"
+
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	pb "github.com/onflow/cadence/runtime/ipc/protobuf"
+
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
-const (
-	REQUEST  = pb.MessageType_REQUEST
-	RESPONSE = pb.MessageType_RESPONSE
-	ERROR    = pb.MessageType_ERROR
-)
-
-type Message = pb.Message
+type Message = proto.Message
 
 type Request = pb.Request
 
@@ -22,37 +20,22 @@ type Response = pb.Response
 
 type Error = pb.Error
 
-func NewErrorMessage(errMsg string) *Message {
-	return &Message{
-		Type: ERROR,
-		Payloads: &pb.Message_Err{
-			Err: &Error{
-				Err: errMsg,
-			},
-		},
+func NewErrorMessage(errMsg string) *Error {
+	return &Error{
+		Err: errMsg,
 	}
 }
 
-func NewResponseMessage(value string) *Message {
-	return &Message{
-		Type: RESPONSE,
-		Payloads: &pb.Message_Res{
-			Res: &Response{
-				Value: value,
-			},
-		},
+func NewResponseMessage(value string) *Response {
+	return &Response{
+		Value: value,
 	}
 }
 
-func NewRequestMessage(name string, params ...*anypb.Any) *Message {
-	return &Message{
-		Type: REQUEST,
-		Payloads: &pb.Message_Req{
-			Req: &Request{
-				Name:   name,
-				Params: params,
-			},
-		},
+func NewRequestMessage(name string, params ...*anypb.Any) *Request {
+	return &Request{
+		Name:   name,
+		Params: params,
 	}
 }
 
@@ -69,35 +52,32 @@ func NewScript(source []byte, arguments [][]byte) *pb.Script {
 	}
 }
 
-func NewLocation(location common.Location) (*anypb.Any, error) {
-	var pbLocation *anypb.Any
-	var err error
+func NewLocation(runtimeLocation runtime.Location) (proto.Message, error) {
+	var location proto.Message
 
-	switch location := location.(type) {
+	switch runtimeLocation := runtimeLocation.(type) {
 	case common.StringLocation:
-		pbLocation, err = anypb.New(&pb.StringLocation{
-			Content: string(location),
-		})
+		location = &pb.StringLocation{
+			Content: string(runtimeLocation),
+		}
 	case common.IdentifierLocation:
-		pbLocation, err = anypb.New(&pb.IdentifierLocation{
-			Content: string(location),
-		})
+		location = &pb.IdentifierLocation{
+			Content: string(runtimeLocation),
+		}
 	case common.AddressLocation:
-		pbLocation, err = anypb.New(&pb.AddressLocation{
-			Address: location.Address[:],
-			Name:    location.Name,
-		})
+		location = &pb.AddressLocation{
+			Address: runtimeLocation.Address[:],
+			Name:    runtimeLocation.Name,
+		}
 	case common.TransactionLocation:
-		pbLocation, err = anypb.New(&pb.TransactionLocation{
-			Content: location,
-		})
+		location = &pb.TransactionLocation{
+			Content: runtimeLocation,
+		}
+	default:
+		return nil, fmt.Errorf("unsupported runtime location: %s", runtimeLocation)
 	}
 
-	if err != nil {
-		return nil, err
-	}
-
-	return pbLocation, nil
+	return location, nil
 }
 
 func LocationToRuntimeLocation(any *anypb.Any) runtime.Location {
@@ -126,4 +106,15 @@ func LocationToRuntimeLocation(any *anypb.Any) runtime.Location {
 	default:
 		panic(errors.UnreachableError{})
 	}
+}
+
+func AsParameter(value proto.Message) *anypb.Any {
+	param, err := anypb.New(value)
+
+	// These errors are not handle-able. Hence, panic.
+	if err != nil {
+		panic(err)
+	}
+
+	return param
 }
