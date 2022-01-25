@@ -368,7 +368,7 @@ func TestCheckContractNestedStructIndexAccess(t *testing.T) {
 		testName := fmt.Sprintf("%s %s", access.Keyword(), declaration.Keywords())
 
 		t.Run(testName, func(t *testing.T) {
-		
+
 			t.Parallel()
 
 			_, err := ParseAndCheck(t,
