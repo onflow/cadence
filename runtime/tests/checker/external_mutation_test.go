@@ -29,7 +29,7 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-func TestArrayUpdateIndexAccess(t *testing.T) {
+func TestCheckArrayUpdateIndexAccess(t *testing.T) {
 
 	t.Parallel()
 
@@ -98,7 +98,7 @@ func TestArrayUpdateIndexAccess(t *testing.T) {
 	}
 }
 
-func TestDictionaryUpdateIndexAccess(t *testing.T) {
+func TestCheckDictionaryUpdateIndexAccess(t *testing.T) {
 
 	t.Parallel()
 
@@ -129,6 +129,9 @@ func TestDictionaryUpdateIndexAccess(t *testing.T) {
 		}
 
 		t.Run(testName, func(t *testing.T) {
+
+			t.Parallel()
+
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(`
                 pub contract C {
@@ -164,7 +167,7 @@ func TestDictionaryUpdateIndexAccess(t *testing.T) {
 	}
 }
 
-func TestNestedArrayUpdateIndexAccess(t *testing.T) {
+func TestCheckNestedArrayUpdateIndexAccess(t *testing.T) {
 
 	t.Parallel()
 
@@ -183,6 +186,9 @@ func TestNestedArrayUpdateIndexAccess(t *testing.T) {
 		testName := fmt.Sprintf("%s %s", access.Keyword(), declaration.Keywords())
 
 		t.Run(testName, func(t *testing.T) {
+
+			t.Parallel()
+
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(`
                 pub contract C {
@@ -194,7 +200,7 @@ func TestNestedArrayUpdateIndexAccess(t *testing.T) {
                     }
 
                     pub struct Foo {
-                        %s %s x : [Int]
+                        %s %s x: [Int]
                 
                         init() {
                             self.x = [3]
@@ -222,7 +228,7 @@ func TestNestedArrayUpdateIndexAccess(t *testing.T) {
 	}
 }
 
-func TestNestedDictionaryUpdateIndexAccess(t *testing.T) {
+func TestCheckNestedDictionaryUpdateIndexAccess(t *testing.T) {
 
 	t.Parallel()
 
@@ -241,6 +247,9 @@ func TestNestedDictionaryUpdateIndexAccess(t *testing.T) {
 		testName := fmt.Sprintf("%s %s", access.Keyword(), declaration.Keywords())
 
 		t.Run(testName, func(t *testing.T) {
+
+			t.Parallel()
+
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(`
                 pub contract C {
@@ -280,7 +289,7 @@ func TestNestedDictionaryUpdateIndexAccess(t *testing.T) {
 	}
 }
 
-func TestMutateContractIndexAccess(t *testing.T) {
+func TestCheckMutateContractIndexAccess(t *testing.T) {
 
 	t.Parallel()
 
@@ -299,6 +308,9 @@ func TestMutateContractIndexAccess(t *testing.T) {
 		testName := fmt.Sprintf("%s %s", access.Keyword(), declaration.Keywords())
 
 		t.Run(testName, func(t *testing.T) {
+
+			t.Parallel()
+
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(`
                 pub contract Foo {
@@ -337,7 +349,7 @@ func TestMutateContractIndexAccess(t *testing.T) {
 	}
 }
 
-func TestContractNestedStructIndexAccess(t *testing.T) {
+func TestCheckContractNestedStructIndexAccess(t *testing.T) {
 
 	t.Parallel()
 
@@ -356,6 +368,9 @@ func TestContractNestedStructIndexAccess(t *testing.T) {
 		testName := fmt.Sprintf("%s %s", access.Keyword(), declaration.Keywords())
 
 		t.Run(testName, func(t *testing.T) {
+		
+			t.Parallel()
+
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(`
                 pub contract Foo {
@@ -401,7 +416,7 @@ func TestContractNestedStructIndexAccess(t *testing.T) {
 	}
 }
 
-func TestContractStructInitIndexAccess(t *testing.T) {
+func TestCheckContractStructInitIndexAccess(t *testing.T) {
 
 	t.Parallel()
 
@@ -420,6 +435,9 @@ func TestContractStructInitIndexAccess(t *testing.T) {
 		testName := fmt.Sprintf("%s %s", access.Keyword(), declaration.Keywords())
 
 		t.Run(testName, func(t *testing.T) {
+
+			t.Parallel()
+
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(`
                 pub contract Foo {
@@ -453,7 +471,7 @@ func TestContractStructInitIndexAccess(t *testing.T) {
 	}
 }
 
-func TestArrayUpdateMethodCall(t *testing.T) {
+func TestCheckArrayUpdateMethodCall(t *testing.T) {
 
 	t.Parallel()
 
@@ -502,6 +520,9 @@ func TestArrayUpdateMethodCall(t *testing.T) {
 		}
 
 		t.Run(testName, func(t *testing.T) {
+
+			t.Parallel()
+
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(`
                 pub contract C {
@@ -543,7 +564,7 @@ func TestArrayUpdateMethodCall(t *testing.T) {
 	}
 }
 
-func TestDictionaryUpdateMethodCall(t *testing.T) {
+func TestCheckDictionaryUpdateMethodCall(t *testing.T) {
 
 	t.Parallel()
 
@@ -588,6 +609,9 @@ func TestDictionaryUpdateMethodCall(t *testing.T) {
 		}
 
 		t.Run(testName, func(t *testing.T) {
+
+			t.Parallel()
+
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(`
                 pub contract C {
@@ -595,7 +619,7 @@ func TestDictionaryUpdateMethodCall(t *testing.T) {
                         %s %s x: {Int: Int}
                 
                         init() {
-                        self.x = {3: 3}
+                            self.x = {3: 3}
                         }
                     }
 
@@ -629,8 +653,13 @@ func TestDictionaryUpdateMethodCall(t *testing.T) {
 	}
 }
 
-func TestPubSetAccessModifier(t *testing.T) {
+func TestCheckPubSetAccessModifier(t *testing.T) {
+
+	t.Parallel()
 	t.Run("pub set dict", func(t *testing.T) {
+
+		t.Parallel()
+
 		_, err := ParseAndCheck(t,
 			`
             pub contract C {
@@ -654,8 +683,13 @@ func TestPubSetAccessModifier(t *testing.T) {
 	})
 }
 
-func TestPubSetNestedAccessModifier(t *testing.T) {
+func TestCheckPubSetNestedAccessModifier(t *testing.T) {
+
+	t.Parallel()
 	t.Run("pub set nested", func(t *testing.T) {
+
+		t.Parallel()
+
 		_, err := ParseAndCheck(t,
 			`
             pub contract C {
@@ -686,8 +720,14 @@ func TestPubSetNestedAccessModifier(t *testing.T) {
 	})
 }
 
-func TestSelfContainingStruct(t *testing.T) {
+func TestCheckSelfContainingStruct(t *testing.T) {
+
+	t.Parallel()
+
 	t.Run("pub let", func(t *testing.T) {
+
+		t.Parallel()
+
 		_, err := ParseAndCheck(t,
 			`
             pub contract C {
@@ -711,8 +751,14 @@ func TestSelfContainingStruct(t *testing.T) {
 	})
 }
 
-func TestMutationThroughReference(t *testing.T) {
+func TestCheckMutationThroughReference(t *testing.T) {
+
+	t.Parallel()
+
 	t.Run("pub let", func(t *testing.T) {
+
+		t.Parallel()
+
 		_, err := ParseAndCheck(t,
 			`
             pub fun main() {
@@ -741,8 +787,14 @@ func TestMutationThroughReference(t *testing.T) {
 	})
 }
 
-func TestMutationThroughAccess(t *testing.T) {
+func TestCheckMutationThroughAccess(t *testing.T) {
+
+	t.Parallel()
+
 	t.Run("pub let", func(t *testing.T) {
+
+		t.Parallel()
+
 		_, err := ParseAndCheck(t,
 			`
             pub contract C {
