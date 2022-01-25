@@ -4,10 +4,12 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/ipc/bridge"
+	pb "github.com/onflow/cadence/runtime/ipc/protobuf"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -45,9 +47,18 @@ func (r *ProxyRuntime) ExecuteScript(script runtime.Script, context runtime.Cont
 
 	bridge.WriteMessage(conn, request)
 
-	_ = bridge.ReadMessage(conn)
+	response, err := bridge.ReadResponse(conn)
+	if err != nil {
+		return nil, err
+	}
 
-	return nil, nil
+	bytes := &pb.Bytes{}
+	err = response.Value.UnmarshalTo(bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	return json.Decode(bytes.Content)
 }
 
 func (r *ProxyRuntime) ExecuteTransaction(script runtime.Script, context runtime.Context) error {

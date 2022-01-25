@@ -35,7 +35,9 @@ func (b *InterfaceBridge) GetCode(params []*anypb.Any) Message {
 		)
 	}
 
-	return NewResponseMessage(string(code))
+	return NewResponseMessage(
+		AsAny(NewBytes(code)),
+	)
 }
 
 func (b *InterfaceBridge) GetProgram(params []*anypb.Any) Message {
@@ -52,7 +54,9 @@ func (b *InterfaceBridge) GetProgram(params []*anypb.Any) Message {
 		)
 	}
 
-	return NewResponseMessage("some program")
+	return NewResponseMessage(
+		AsAny(NewString("some program")),
+	)
 }
 
 func (b *InterfaceBridge) ResolveLocation(params []*anypb.Any) Message {
@@ -72,7 +76,9 @@ func (b *InterfaceBridge) ResolveLocation(params []*anypb.Any) Message {
 		)
 	}
 
-	return NewResponseMessage("some location")
+	return NewResponseMessage(
+		AsAny(NewString("some location")),
+	)
 }
 
 func (b *InterfaceBridge) ProgramLog(params []*anypb.Any) Message {
@@ -81,14 +87,19 @@ func (b *InterfaceBridge) ProgramLog(params []*anypb.Any) Message {
 	}
 
 	s := &pb.String{}
-	params[0].UnmarshalTo(s)
-
-	err := b.Interface.ProgramLog(s.GetContent())
+	err := params[0].UnmarshalTo(s)
 	if err != nil {
 		return NewErrorMessage(
 			fmt.Sprintf("error occured while retrieving program: '%s'", err.Error()),
 		)
 	}
 
-	return NewResponseMessage("")
+	err = b.Interface.ProgramLog(s.GetContent())
+	if err != nil {
+		return NewErrorMessage(
+			fmt.Sprintf("error occured while retrieving program: '%s'", err.Error()),
+		)
+	}
+
+	return EmptyResponse
 }

@@ -3,6 +3,7 @@ package bridge
 import (
 	"fmt"
 
+	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/errors"
 	pb "github.com/onflow/cadence/runtime/ipc/protobuf"
@@ -44,7 +45,16 @@ func (b *RuntimeBridge) ExecuteScript(params []*anypb.Any, context runtime.Conte
 		)
 	}
 
-	return NewResponseMessage(value.String())
+	encoded, err := json.Encode(value)
+	if err != nil {
+		return NewErrorMessage(
+			fmt.Sprintf("error occured while executing script: '%s'", err.Error()),
+		)
+	}
+
+	return NewResponseMessage(
+		AsAny(NewBytes(encoded)),
+	)
 }
 
 func (b *RuntimeBridge) ExecuteTransaction(params []*anypb.Any, context runtime.Context) Message {
@@ -70,7 +80,16 @@ func (b *RuntimeBridge) ExecuteTransaction(params []*anypb.Any, context runtime.
 		)
 	}
 
-	return NewResponseMessage(value.String())
+	encoded, err := json.Encode(value)
+	if err != nil {
+		return NewErrorMessage(
+			fmt.Sprintf("error occured while executing script: '%s'", err.Error()),
+		)
+	}
+
+	return NewResponseMessage(
+		AsAny(NewBytes(encoded)),
+	)
 }
 
 func (b *RuntimeBridge) InvokeContractFunction(params []*anypb.Any, context runtime.Context) Message {

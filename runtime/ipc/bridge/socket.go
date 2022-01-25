@@ -11,11 +11,9 @@ import (
 )
 
 const (
-	UnixNetwork          = "unix"
-	RuntimeSocketAddress = "/tmp/cadence.socket"
-
-	// TODO: rename FVM to something generic
-	InterfaceSocketAddress = "/tmp/fvm.socket"
+	UnixNetwork            = "unix"
+	RuntimeSocketAddress   = "/tmp/runtime.socket"
+	InterfaceSocketAddress = "/tmp/interface.socket"
 )
 
 func NewRuntimeListener() net.Listener {
@@ -66,6 +64,19 @@ func ReadMessage(conn net.Conn) Message {
 	fmt.Println("<--- received to", conn, " | message:", message)
 
 	return typedMessage
+}
+
+func ReadResponse(conn net.Conn) (*Response, error) {
+	msg := ReadMessage(conn)
+
+	switch msg := msg.(type) {
+	case *Response:
+		return msg, nil
+	case *Error:
+		return nil, fmt.Errorf(msg.GetErr())
+	default:
+		return nil, fmt.Errorf("unsupported message")
+	}
 }
 
 func WriteMessage(conn net.Conn, msg Message) {

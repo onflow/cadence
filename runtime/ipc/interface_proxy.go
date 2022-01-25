@@ -1,18 +1,19 @@
 package ipc
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/opentracing/opentracing-go"
 
 	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/ipc/bridge"
+	pb "github.com/onflow/cadence/runtime/ipc/protobuf"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -35,13 +36,16 @@ func (p *ProxyInterface) ResolveLocation(identifiers []runtime.Identifier, locat
 		return nil, err
 	}
 
-	locationParam := bridge.AsParameter(loc)
+	locationParam := bridge.AsAny(loc)
 
 	// TODO: also pass 'identifiers' as params
 	request := bridge.NewRequestMessage(InterfaceMethodResolveLocation, locationParam)
 	bridge.WriteMessage(conn, request)
 
-	_ = bridge.ReadMessage(conn)
+	_, err = bridge.ReadResponse(conn)
+	if err != nil {
+		return nil, err
+	}
 
 	// TODO: implement
 	return []runtime.ResolvedLocation{
@@ -60,20 +64,24 @@ func (p *ProxyInterface) GetCode(location runtime.Location) ([]byte, error) {
 		return nil, err
 	}
 
-	locationParam := bridge.AsParameter(loc)
+	locationParam := bridge.AsAny(loc)
 
 	request := bridge.NewRequestMessage(InterfaceMethodGetCode, locationParam)
 
 	bridge.WriteMessage(conn, request)
 
-	msg := bridge.ReadMessage(conn)
-
-	response, err := p.getResponse(msg)
+	response, err := bridge.ReadResponse(conn)
 	if err != nil {
 		return nil, err
 	}
 
-	return []byte(response.GetValue()), nil
+	code := &pb.Bytes{}
+	err = response.Value.UnmarshalTo(code)
+	if err != nil {
+		return nil, err
+	}
+
+	return code.Content, nil
 }
 
 func (p *ProxyInterface) GetProgram(location runtime.Location) (*interpreter.Program, error) {
@@ -84,12 +92,16 @@ func (p *ProxyInterface) GetProgram(location runtime.Location) (*interpreter.Pro
 		return nil, err
 	}
 
-	locationParam := bridge.AsParameter(loc)
+	locationParam := bridge.AsAny(loc)
 
 	request := bridge.NewRequestMessage(InterfaceMethodGetProgram, locationParam)
 
 	bridge.WriteMessage(conn, request)
-	_ = bridge.ReadMessage(conn)
+
+	_, err = bridge.ReadResponse(conn)
+	if err != nil {
+		return nil, err
+	}
 
 	return nil, nil
 }
@@ -159,15 +171,14 @@ func (p *ProxyInterface) ProgramLog(s string) error {
 	conn := bridge.NewInterfaceConnection()
 
 	str := bridge.NewString(s)
-	stringParam := bridge.AsParameter(str)
+	stringParam := bridge.AsAny(str)
 
 	request := bridge.NewRequestMessage(InterfaceMethodProgramLog, stringParam)
 
 	bridge.WriteMessage(conn, request)
 
-	_ = bridge.ReadMessage(conn)
-
-	return nil
+	_, err := bridge.ReadResponse(conn)
+	return err
 }
 
 func (p *ProxyInterface) EmitEvent(event cadence.Event) error {
@@ -258,15 +269,4 @@ func (p *ProxyInterface) AggregateBLSPublicKeys(keys []*runtime.PublicKey) (*run
 
 func (p *ProxyInterface) ResourceOwnerChanged(resource *interpreter.CompositeValue, oldOwner common.Address, newOwner common.Address) {
 	panic("implement me")
-}
-
-func (p *ProxyInterface) getResponse(msg bridge.Message) (*bridge.Response, error) {
-	switch msg := msg.(type) {
-	case *bridge.Response:
-		return msg, nil
-	case *bridge.Error:
-		return nil, fmt.Errorf(msg.GetErr())
-	default:
-		return nil, fmt.Errorf("unsupported message")
-	}
 }

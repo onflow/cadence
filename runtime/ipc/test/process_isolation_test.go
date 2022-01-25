@@ -29,11 +29,11 @@ func TestExecutingScript(t *testing.T) {
 
 	t.Run("simple script", func(t *testing.T) {
 		start := time.Now()
-		_, err := proxyRuntime.ExecuteScript(
+		value, err := proxyRuntime.ExecuteScript(
 			runtime.Script{
 				Source: []byte(`
                pub fun main(): Int {
-                 return 4+ 8
+                 return 4 + 8
                }
             `),
 			},
@@ -42,6 +42,8 @@ func TestExecutingScript(t *testing.T) {
 
 		fmt.Println(time.Since(start))
 		assert.NoError(t, err)
+
+		assert.Equal(t, cadence.NewInt(12), value)
 	})
 
 	t.Run("with imports", func(t *testing.T) {
@@ -52,7 +54,6 @@ func TestExecutingScript(t *testing.T) {
                import Foo from 0x01
 
                pub fun main(): Int {
-                 // log("hello")
                  return Foo.add(4, 8)
                }
             `),

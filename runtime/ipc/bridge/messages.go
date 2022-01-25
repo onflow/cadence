@@ -3,13 +3,13 @@ package bridge
 import (
 	"fmt"
 
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/anypb"
+
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	pb "github.com/onflow/cadence/runtime/ipc/protobuf"
-
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/anypb"
 )
 
 type Message = proto.Message
@@ -26,11 +26,13 @@ func NewErrorMessage(errMsg string) *Error {
 	}
 }
 
-func NewResponseMessage(value string) *Response {
+func NewResponseMessage(value *anypb.Any) *Response {
 	return &Response{
 		Value: value,
 	}
 }
+
+var EmptyResponse = &Response{}
 
 func NewRequestMessage(name string, params ...*anypb.Any) *Request {
 	return &Request{
@@ -41,6 +43,12 @@ func NewRequestMessage(name string, params ...*anypb.Any) *Request {
 
 func NewString(content string) *pb.String {
 	return &pb.String{
+		Content: content,
+	}
+}
+
+func NewBytes(content []byte) *pb.Bytes {
+	return &pb.Bytes{
 		Content: content,
 	}
 }
@@ -108,7 +116,7 @@ func LocationToRuntimeLocation(any *anypb.Any) runtime.Location {
 	}
 }
 
-func AsParameter(value proto.Message) *anypb.Any {
+func AsAny(value proto.Message) *anypb.Any {
 	param, err := anypb.New(value)
 
 	// These errors are not handle-able. Hence, panic.

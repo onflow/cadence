@@ -41,6 +41,8 @@ func serveRequest(
 
 	context := runtime.Context{
 		Interface: ipc.NewProxyInterface(),
+
+		// TODO:
 		Location:  utils.TestLocation,
 	}
 	context.InitializeCodesAndPrograms()

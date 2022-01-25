@@ -2,6 +2,7 @@ package ipc
 
 import (
 	"fmt"
+
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ipc/bridge"
 )

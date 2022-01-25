@@ -18,7 +18,7 @@ message Request {
 }
 
 message Response {
-  string value = 1;
+  google.protobuf.Any value = 1;
 }
 
 message Error {
@@ -29,6 +29,10 @@ message Error {
 
 message String {
   string content = 1;
+}
+
+message Bytes {
+  bytes content = 1;
 }
 
 message Script {
