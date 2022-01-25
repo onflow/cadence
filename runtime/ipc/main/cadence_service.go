@@ -6,10 +6,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ipc"
 	"github.com/onflow/cadence/runtime/ipc/bridge"
-	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 var signalsToWatch = []os.Signal{
@@ -17,6 +15,8 @@ var signalsToWatch = []os.Signal{
 	syscall.SIGTERM,
 	//syscall.SIGKILL,
 }
+
+var runtimeInterface = ipc.NewProxyInterface()
 
 func main() {
 	listener := bridge.NewRuntimeListener()
@@ -58,25 +58,17 @@ func serveRequest(
 	request *bridge.Request,
 ) bridge.Message {
 
-	context := runtime.Context{
-		Interface: ipc.NewProxyInterface(),
-
-		// TODO:
-		Location: utils.TestLocation,
-	}
-	context.InitializeCodesAndPrograms()
-
 	var response bridge.Message
 
 	switch request.Name {
 	case ipc.RuntimeMethodExecuteScript:
-		response = runtimeBridge.ExecuteScript(request.Params, context)
+		response = runtimeBridge.ExecuteScript(runtimeInterface, request.Params)
 
 	case ipc.RuntimeMethodExecuteTransaction:
-		response = runtimeBridge.ExecuteTransaction(request.Params, context)
+		response = runtimeBridge.ExecuteTransaction(runtimeInterface, request.Params)
 
 	case ipc.RuntimeMethodInvokeContractFunction:
-		response = runtimeBridge.InvokeContractFunction(request.Params, context)
+		response = runtimeBridge.InvokeContractFunction(request.Params)
 
 	default:
 		response = bridge.NewErrorMessage(

@@ -319,6 +319,108 @@ func (x *Script) GetArguments() [][]byte {
 	return nil
 }
 
+type Array struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Elements []*anypb.Any `protobuf:"bytes,1,rep,name=elements,proto3" json:"elements,omitempty"`
+}
+
+func (x *Array) Reset() {
+	*x = Array{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_cadence_ipc_proto_msgTypes[6]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *Array) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Array) ProtoMessage() {}
+
+func (x *Array) ProtoReflect() protoreflect.Message {
+	mi := &file_cadence_ipc_proto_msgTypes[6]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Array.ProtoReflect.Descriptor instead.
+func (*Array) Descriptor() ([]byte, []int) {
+	return file_cadence_ipc_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *Array) GetElements() []*anypb.Any {
+	if x != nil {
+		return x.Elements
+	}
+	return nil
+}
+
+type ResolvedLocation struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Location    *anypb.Any `protobuf:"bytes,1,opt,name=location,proto3" json:"location,omitempty"`
+	Identifiers *Array     `protobuf:"bytes,2,opt,name=identifiers,proto3" json:"identifiers,omitempty"`
+}
+
+func (x *ResolvedLocation) Reset() {
+	*x = ResolvedLocation{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_cadence_ipc_proto_msgTypes[7]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ResolvedLocation) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResolvedLocation) ProtoMessage() {}
+
+func (x *ResolvedLocation) ProtoReflect() protoreflect.Message {
+	mi := &file_cadence_ipc_proto_msgTypes[7]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResolvedLocation.ProtoReflect.Descriptor instead.
+func (*ResolvedLocation) Descriptor() ([]byte, []int) {
+	return file_cadence_ipc_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *ResolvedLocation) GetLocation() *anypb.Any {
+	if x != nil {
+		return x.Location
+	}
+	return nil
+}
+
+func (x *ResolvedLocation) GetIdentifiers() *Array {
+	if x != nil {
+		return x.Identifiers
+	}
+	return nil
+}
+
 type StringLocation struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -330,7 +432,7 @@ type StringLocation struct {
 func (x *StringLocation) Reset() {
 	*x = StringLocation{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_cadence_ipc_proto_msgTypes[6]
+		mi := &file_cadence_ipc_proto_msgTypes[8]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -343,7 +445,7 @@ func (x *StringLocation) String() string {
 func (*StringLocation) ProtoMessage() {}
 
 func (x *StringLocation) ProtoReflect() protoreflect.Message {
-	mi := &file_cadence_ipc_proto_msgTypes[6]
+	mi := &file_cadence_ipc_proto_msgTypes[8]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -356,7 +458,7 @@ func (x *StringLocation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StringLocation.ProtoReflect.Descriptor instead.
 func (*StringLocation) Descriptor() ([]byte, []int) {
-	return file_cadence_ipc_proto_rawDescGZIP(), []int{6}
+	return file_cadence_ipc_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *StringLocation) GetContent() string {
@@ -377,7 +479,7 @@ type IdentifierLocation struct {
 func (x *IdentifierLocation) Reset() {
 	*x = IdentifierLocation{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_cadence_ipc_proto_msgTypes[7]
+		mi := &file_cadence_ipc_proto_msgTypes[9]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -390,7 +492,7 @@ func (x *IdentifierLocation) String() string {
 func (*IdentifierLocation) ProtoMessage() {}
 
 func (x *IdentifierLocation) ProtoReflect() protoreflect.Message {
-	mi := &file_cadence_ipc_proto_msgTypes[7]
+	mi := &file_cadence_ipc_proto_msgTypes[9]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -403,7 +505,7 @@ func (x *IdentifierLocation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IdentifierLocation.ProtoReflect.Descriptor instead.
 func (*IdentifierLocation) Descriptor() ([]byte, []int) {
-	return file_cadence_ipc_proto_rawDescGZIP(), []int{7}
+	return file_cadence_ipc_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *IdentifierLocation) GetContent() string {
@@ -425,7 +527,7 @@ type AddressLocation struct {
 func (x *AddressLocation) Reset() {
 	*x = AddressLocation{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_cadence_ipc_proto_msgTypes[8]
+		mi := &file_cadence_ipc_proto_msgTypes[10]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -438,7 +540,7 @@ func (x *AddressLocation) String() string {
 func (*AddressLocation) ProtoMessage() {}
 
 func (x *AddressLocation) ProtoReflect() protoreflect.Message {
-	mi := &file_cadence_ipc_proto_msgTypes[8]
+	mi := &file_cadence_ipc_proto_msgTypes[10]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -451,7 +553,7 @@ func (x *AddressLocation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddressLocation.ProtoReflect.Descriptor instead.
 func (*AddressLocation) Descriptor() ([]byte, []int) {
-	return file_cadence_ipc_proto_rawDescGZIP(), []int{8}
+	return file_cadence_ipc_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *AddressLocation) GetAddress() []byte {
@@ -468,6 +570,53 @@ func (x *AddressLocation) GetName() string {
 	return ""
 }
 
+type ScriptLocation struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Content []byte `protobuf:"bytes,1,opt,name=content,proto3" json:"content,omitempty"`
+}
+
+func (x *ScriptLocation) Reset() {
+	*x = ScriptLocation{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_cadence_ipc_proto_msgTypes[11]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ScriptLocation) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ScriptLocation) ProtoMessage() {}
+
+func (x *ScriptLocation) ProtoReflect() protoreflect.Message {
+	mi := &file_cadence_ipc_proto_msgTypes[11]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ScriptLocation.ProtoReflect.Descriptor instead.
+func (*ScriptLocation) Descriptor() ([]byte, []int) {
+	return file_cadence_ipc_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *ScriptLocation) GetContent() []byte {
+	if x != nil {
+		return x.Content
+	}
+	return nil
+}
+
 type TransactionLocation struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -479,7 +628,7 @@ type TransactionLocation struct {
 func (x *TransactionLocation) Reset() {
 	*x = TransactionLocation{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_cadence_ipc_proto_msgTypes[9]
+		mi := &file_cadence_ipc_proto_msgTypes[12]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -492,7 +641,7 @@ func (x *TransactionLocation) String() string {
 func (*TransactionLocation) ProtoMessage() {}
 
 func (x *TransactionLocation) ProtoReflect() protoreflect.Message {
-	mi := &file_cadence_ipc_proto_msgTypes[9]
+	mi := &file_cadence_ipc_proto_msgTypes[12]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -505,7 +654,7 @@ func (x *TransactionLocation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TransactionLocation.ProtoReflect.Descriptor instead.
 func (*TransactionLocation) Descriptor() ([]byte, []int) {
-	return file_cadence_ipc_proto_rawDescGZIP(), []int{9}
+	return file_cadence_ipc_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *TransactionLocation) GetContent() []byte {
@@ -539,21 +688,35 @@ var file_cadence_ipc_proto_rawDesc = []byte{
 	0x69, 0x70, 0x74, 0x12, 0x16, 0x0a, 0x06, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x18, 0x01, 0x20,
 	0x01, 0x28, 0x0c, 0x52, 0x06, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x12, 0x1c, 0x0a, 0x09, 0x61,
 	0x72, 0x67, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x0c, 0x52, 0x09,
-	0x61, 0x72, 0x67, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x73, 0x22, 0x2a, 0x0a, 0x0e, 0x53, 0x74, 0x72,
-	0x69, 0x6e, 0x67, 0x4c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x18, 0x0a, 0x07, 0x63,
-	0x6f, 0x6e, 0x74, 0x65, 0x6e, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x63, 0x6f,
-	0x6e, 0x74, 0x65, 0x6e, 0x74, 0x22, 0x2e, 0x0a, 0x12, 0x49, 0x64, 0x65, 0x6e, 0x74, 0x69, 0x66,
-	0x69, 0x65, 0x72, 0x4c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x18, 0x0a, 0x07, 0x63,
-	0x6f, 0x6e, 0x74, 0x65, 0x6e, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x63, 0x6f,
-	0x6e, 0x74, 0x65, 0x6e, 0x74, 0x22, 0x3f, 0x0a, 0x0f, 0x41, 0x64, 0x64, 0x72, 0x65, 0x73, 0x73,
-	0x4c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x18, 0x0a, 0x07, 0x61, 0x64, 0x64, 0x72,
-	0x65, 0x73, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x07, 0x61, 0x64, 0x64, 0x72, 0x65,
-	0x73, 0x73, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09,
-	0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x22, 0x2f, 0x0a, 0x13, 0x54, 0x72, 0x61, 0x6e, 0x73, 0x61,
-	0x63, 0x74, 0x69, 0x6f, 0x6e, 0x4c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x18, 0x0a,
-	0x07, 0x63, 0x6f, 0x6e, 0x74, 0x65, 0x6e, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x07,
-	0x63, 0x6f, 0x6e, 0x74, 0x65, 0x6e, 0x74, 0x42, 0x07, 0x5a, 0x05, 0x2e, 0x2f, 0x3b, 0x70, 0x62,
-	0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x61, 0x72, 0x67, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x73, 0x22, 0x39, 0x0a, 0x05, 0x41, 0x72, 0x72,
+	0x61, 0x79, 0x12, 0x30, 0x0a, 0x08, 0x65, 0x6c, 0x65, 0x6d, 0x65, 0x6e, 0x74, 0x73, 0x18, 0x01,
+	0x20, 0x03, 0x28, 0x0b, 0x32, 0x14, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72,
+	0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x41, 0x6e, 0x79, 0x52, 0x08, 0x65, 0x6c, 0x65, 0x6d,
+	0x65, 0x6e, 0x74, 0x73, 0x22, 0x71, 0x0a, 0x10, 0x52, 0x65, 0x73, 0x6f, 0x6c, 0x76, 0x65, 0x64,
+	0x4c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x30, 0x0a, 0x08, 0x6c, 0x6f, 0x63, 0x61,
+	0x74, 0x69, 0x6f, 0x6e, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x14, 0x2e, 0x67, 0x6f, 0x6f,
+	0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x41, 0x6e, 0x79,
+	0x52, 0x08, 0x6c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x2b, 0x0a, 0x0b, 0x69, 0x64,
+	0x65, 0x6e, 0x74, 0x69, 0x66, 0x69, 0x65, 0x72, 0x73, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32,
+	0x09, 0x2e, 0x70, 0x62, 0x2e, 0x41, 0x72, 0x72, 0x61, 0x79, 0x52, 0x0b, 0x69, 0x64, 0x65, 0x6e,
+	0x74, 0x69, 0x66, 0x69, 0x65, 0x72, 0x73, 0x22, 0x2a, 0x0a, 0x0e, 0x53, 0x74, 0x72, 0x69, 0x6e,
+	0x67, 0x4c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x18, 0x0a, 0x07, 0x63, 0x6f, 0x6e,
+	0x74, 0x65, 0x6e, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x63, 0x6f, 0x6e, 0x74,
+	0x65, 0x6e, 0x74, 0x22, 0x2e, 0x0a, 0x12, 0x49, 0x64, 0x65, 0x6e, 0x74, 0x69, 0x66, 0x69, 0x65,
+	0x72, 0x4c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x18, 0x0a, 0x07, 0x63, 0x6f, 0x6e,
+	0x74, 0x65, 0x6e, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x63, 0x6f, 0x6e, 0x74,
+	0x65, 0x6e, 0x74, 0x22, 0x3f, 0x0a, 0x0f, 0x41, 0x64, 0x64, 0x72, 0x65, 0x73, 0x73, 0x4c, 0x6f,
+	0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x18, 0x0a, 0x07, 0x61, 0x64, 0x64, 0x72, 0x65, 0x73,
+	0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x07, 0x61, 0x64, 0x64, 0x72, 0x65, 0x73, 0x73,
+	0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04,
+	0x6e, 0x61, 0x6d, 0x65, 0x22, 0x2a, 0x0a, 0x0e, 0x53, 0x63, 0x72, 0x69, 0x70, 0x74, 0x4c, 0x6f,
+	0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x18, 0x0a, 0x07, 0x63, 0x6f, 0x6e, 0x74, 0x65, 0x6e,
+	0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x07, 0x63, 0x6f, 0x6e, 0x74, 0x65, 0x6e, 0x74,
+	0x22, 0x2f, 0x0a, 0x13, 0x54, 0x72, 0x61, 0x6e, 0x73, 0x61, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x4c,
+	0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x18, 0x0a, 0x07, 0x63, 0x6f, 0x6e, 0x74, 0x65,
+	0x6e, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x07, 0x63, 0x6f, 0x6e, 0x74, 0x65, 0x6e,
+	0x74, 0x42, 0x07, 0x5a, 0x05, 0x2e, 0x2f, 0x3b, 0x70, 0x62, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74,
+	0x6f, 0x33,
 }
 
 var (
@@ -568,7 +731,7 @@ func file_cadence_ipc_proto_rawDescGZIP() []byte {
 	return file_cadence_ipc_proto_rawDescData
 }
 
-var file_cadence_ipc_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_cadence_ipc_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_cadence_ipc_proto_goTypes = []interface{}{
 	(*Request)(nil),             // 0: pb.Request
 	(*Response)(nil),            // 1: pb.Response
@@ -576,20 +739,26 @@ var file_cadence_ipc_proto_goTypes = []interface{}{
 	(*String)(nil),              // 3: pb.String
 	(*Bytes)(nil),               // 4: pb.Bytes
 	(*Script)(nil),              // 5: pb.Script
-	(*StringLocation)(nil),      // 6: pb.StringLocation
-	(*IdentifierLocation)(nil),  // 7: pb.IdentifierLocation
-	(*AddressLocation)(nil),     // 8: pb.AddressLocation
-	(*TransactionLocation)(nil), // 9: pb.TransactionLocation
-	(*anypb.Any)(nil),           // 10: google.protobuf.Any
+	(*Array)(nil),               // 6: pb.Array
+	(*ResolvedLocation)(nil),    // 7: pb.ResolvedLocation
+	(*StringLocation)(nil),      // 8: pb.StringLocation
+	(*IdentifierLocation)(nil),  // 9: pb.IdentifierLocation
+	(*AddressLocation)(nil),     // 10: pb.AddressLocation
+	(*ScriptLocation)(nil),      // 11: pb.ScriptLocation
+	(*TransactionLocation)(nil), // 12: pb.TransactionLocation
+	(*anypb.Any)(nil),           // 13: google.protobuf.Any
 }
 var file_cadence_ipc_proto_depIdxs = []int32{
-	10, // 0: pb.Request.params:type_name -> google.protobuf.Any
-	10, // 1: pb.Response.value:type_name -> google.protobuf.Any
-	2,  // [2:2] is the sub-list for method output_type
-	2,  // [2:2] is the sub-list for method input_type
-	2,  // [2:2] is the sub-list for extension type_name
-	2,  // [2:2] is the sub-list for extension extendee
-	0,  // [0:2] is the sub-list for field type_name
+	13, // 0: pb.Request.params:type_name -> google.protobuf.Any
+	13, // 1: pb.Response.value:type_name -> google.protobuf.Any
+	13, // 2: pb.Array.elements:type_name -> google.protobuf.Any
+	13, // 3: pb.ResolvedLocation.location:type_name -> google.protobuf.Any
+	6,  // 4: pb.ResolvedLocation.identifiers:type_name -> pb.Array
+	5,  // [5:5] is the sub-list for method output_type
+	5,  // [5:5] is the sub-list for method input_type
+	5,  // [5:5] is the sub-list for extension type_name
+	5,  // [5:5] is the sub-list for extension extendee
+	0,  // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_cadence_ipc_proto_init() }
@@ -671,7 +840,7 @@ func file_cadence_ipc_proto_init() {
 			}
 		}
 		file_cadence_ipc_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*StringLocation); i {
+			switch v := v.(*Array); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -683,7 +852,7 @@ func file_cadence_ipc_proto_init() {
 			}
 		}
 		file_cadence_ipc_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*IdentifierLocation); i {
+			switch v := v.(*ResolvedLocation); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -695,7 +864,7 @@ func file_cadence_ipc_proto_init() {
 			}
 		}
 		file_cadence_ipc_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*AddressLocation); i {
+			switch v := v.(*StringLocation); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -707,6 +876,42 @@ func file_cadence_ipc_proto_init() {
 			}
 		}
 		file_cadence_ipc_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*IdentifierLocation); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_cadence_ipc_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*AddressLocation); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_cadence_ipc_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ScriptLocation); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_cadence_ipc_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*TransactionLocation); i {
 			case 0:
 				return &v.state
@@ -725,7 +930,7 @@ func file_cadence_ipc_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_cadence_ipc_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   10,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

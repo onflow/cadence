@@ -1,8 +1,6 @@
 package ipc
 
 import (
-	"google.golang.org/protobuf/types/known/anypb"
-
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime"
@@ -30,17 +28,20 @@ func NewProxyRuntime(runtimeInterface runtime.Interface) *ProxyRuntime {
 }
 
 func (r *ProxyRuntime) ExecuteScript(script runtime.Script, context runtime.Context) (cadence.Value, error) {
-	param, err := anypb.New(
+	scriptParam := bridge.AsAny(
 		bridge.NewScript(script.Source, script.Arguments),
 	)
 
+	location, err := bridge.NewLocation(context.Location)
 	if err != nil {
 		return nil, err
 	}
+	locationParam := bridge.AsAny(location)
 
 	request := bridge.NewRequestMessage(
 		RuntimeMethodExecuteScript,
-		param,
+		scriptParam,
+		locationParam,
 	)
 
 	conn := bridge.NewRuntimeConnection()

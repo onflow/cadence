@@ -58,7 +58,9 @@ func TestExecutingScript(t *testing.T) {
                }
             `),
 			},
-			runtime.Context{},
+			runtime.Context{
+				Location: common.ScriptLocation("0x42"),
+			},
 		)
 
 		fmt.Println(time.Since(start))
@@ -99,7 +101,15 @@ func TestExecutingScriptParallel(t *testing.T) {
 type testRuntimeInterface struct{}
 
 func (t *testRuntimeInterface) ResolveLocation(identifiers []runtime.Identifier, location runtime.Location) ([]runtime.ResolvedLocation, error) {
-	return []runtime.ResolvedLocation{}, nil
+	return []runtime.ResolvedLocation{
+		{
+			Location: common.AddressLocation{
+				Address: location.(common.AddressLocation).Address,
+				Name:    identifiers[0].Identifier,
+			},
+			Identifiers: identifiers,
+		},
+	}, nil
 }
 
 func (t *testRuntimeInterface) GetCode(location runtime.Location) ([]byte, error) {

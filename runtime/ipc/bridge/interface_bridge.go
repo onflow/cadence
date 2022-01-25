@@ -26,7 +26,7 @@ func (b *InterfaceBridge) GetCode(params []*anypb.Any) Message {
 		panic(errors.UnreachableError{})
 	}
 
-	location := LocationToRuntimeLocation(params[0])
+	location := ToRuntimeLocation(params[0])
 
 	code, err := b.Interface.GetCode(location)
 	if err != nil {
@@ -45,7 +45,7 @@ func (b *InterfaceBridge) GetProgram(params []*anypb.Any) Message {
 		panic(errors.UnreachableError{})
 	}
 
-	location := LocationToRuntimeLocation(params[0])
+	location := ToRuntimeLocation(params[0])
 
 	_, err := b.Interface.GetProgram(location)
 	if err != nil {
@@ -60,16 +60,15 @@ func (b *InterfaceBridge) GetProgram(params []*anypb.Any) Message {
 }
 
 func (b *InterfaceBridge) ResolveLocation(params []*anypb.Any) Message {
-	if len(params) != 1 {
+	if len(params) != 2 {
 		panic(errors.UnreachableError{})
 	}
 
-	// TODO: parse from params
-	identifiers := make([]runtime.Identifier, 0)
+	identifiers := ToRuntimeIdentifiersFromAny(params[0])
 
-	location := LocationToRuntimeLocation(params[0])
+	location := ToRuntimeLocation(params[1])
 
-	_, err := b.Interface.ResolveLocation(identifiers, location)
+	resolvedLocation, err := b.Interface.ResolveLocation(identifiers, location)
 	if err != nil {
 		return NewErrorMessage(
 			fmt.Sprintf("error occured while retrieving program: '%s'", err.Error()),
@@ -77,7 +76,7 @@ func (b *InterfaceBridge) ResolveLocation(params []*anypb.Any) Message {
 	}
 
 	return NewResponseMessage(
-		AsAny(NewString("some location")),
+		AsAny(NewResolvedLocations(resolvedLocation)),
 	)
 }
 

@@ -83,7 +83,7 @@ func WriteMessage(conn net.Conn, msg Message) {
 	fmt.Println("---> sent to ", conn, " | message:", msg)
 
 	// Wrap with `Any` to enrich type information for unmarshalling.
-	typedMessage, err := anypb.New(msg)
+	typedMessage := AsAny(msg)
 
 	serialized, err := proto.Marshal(typedMessage)
 	HandleError(err)

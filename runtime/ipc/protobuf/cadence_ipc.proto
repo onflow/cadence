@@ -40,6 +40,16 @@ message Script {
   repeated bytes arguments = 2;
 }
 
+message Array {
+  repeated google.protobuf.Any elements = 1;
+}
+
+message ResolvedLocation {
+  google.protobuf.Any location = 1;
+  Array identifiers = 2;
+}
+
+
 // Locations
 
 message StringLocation {
@@ -53,6 +63,10 @@ message IdentifierLocation {
 message AddressLocation {
   bytes address = 1;
   string name = 2;
+}
+
+message ScriptLocation {
+  bytes content = 1;
 }
 
 message TransactionLocation {

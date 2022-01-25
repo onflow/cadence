@@ -9,12 +9,10 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime"
-	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/ipc/bridge"
 	pb "github.com/onflow/cadence/runtime/ipc/protobuf"
-	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 var _ runtime.Interface = &ProxyInterface{}
@@ -36,24 +34,20 @@ func (p *ProxyInterface) ResolveLocation(identifiers []runtime.Identifier, locat
 		return nil, err
 	}
 
-	locationParam := bridge.AsAny(loc)
+	idents := bridge.NewIdentifiers(identifiers)
 
-	// TODO: also pass 'identifiers' as params
-	request := bridge.NewRequestMessage(InterfaceMethodResolveLocation, locationParam)
+	locationParam := bridge.AsAny(loc)
+	identifiersParam := bridge.AsAny(idents)
+
+	request := bridge.NewRequestMessage(InterfaceMethodResolveLocation, identifiersParam, locationParam)
 	bridge.WriteMessage(conn, request)
 
-	_, err = bridge.ReadResponse(conn)
+	resp, err := bridge.ReadResponse(conn)
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO: implement
-	return []runtime.ResolvedLocation{
-		{
-			Location:    utils.TestLocation,
-			Identifiers: []ast.Identifier{},
-		},
-	}, nil
+	return bridge.ToRuntimeResolvedLocationsFromAny(resp.Value), nil
 }
 
 func (p *ProxyInterface) GetCode(location runtime.Location) ([]byte, error) {

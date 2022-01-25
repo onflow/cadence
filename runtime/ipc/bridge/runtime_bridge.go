@@ -2,7 +2,6 @@ package bridge
 
 import (
 	"fmt"
-
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/errors"
@@ -22,8 +21,8 @@ func NewRuntimeBridge() *RuntimeBridge {
 	}
 }
 
-func (b *RuntimeBridge) ExecuteScript(params []*anypb.Any, context runtime.Context) Message {
-	if len(params) != 1 {
+func (b *RuntimeBridge) ExecuteScript(runtimeInterface runtime.Interface, params []*anypb.Any) Message {
+	if len(params) != 2 {
 		panic(errors.UnreachableError{})
 	}
 
@@ -37,6 +36,8 @@ func (b *RuntimeBridge) ExecuteScript(params []*anypb.Any, context runtime.Conte
 		Source:    s.GetSource(),
 		Arguments: s.GetArguments(),
 	}
+
+	context := newContext(runtimeInterface, params[1])
 
 	value, err := b.Runtime.ExecuteScript(script, context)
 	if err != nil {
@@ -57,8 +58,8 @@ func (b *RuntimeBridge) ExecuteScript(params []*anypb.Any, context runtime.Conte
 	)
 }
 
-func (b *RuntimeBridge) ExecuteTransaction(params []*anypb.Any, context runtime.Context) Message {
-	if len(params) != 1 {
+func (b *RuntimeBridge) ExecuteTransaction(runtimeInterface runtime.Interface, params []*anypb.Any) Message {
+	if len(params) != 2 {
 		panic(errors.UnreachableError{})
 	}
 
@@ -72,6 +73,8 @@ func (b *RuntimeBridge) ExecuteTransaction(params []*anypb.Any, context runtime.
 		Source:    s.GetSource(),
 		Arguments: s.GetArguments(),
 	}
+
+	context := newContext(runtimeInterface, params[1])
 
 	value, err := b.Runtime.ExecuteScript(script, context)
 	if err != nil {
@@ -92,8 +95,19 @@ func (b *RuntimeBridge) ExecuteTransaction(params []*anypb.Any, context runtime.
 	)
 }
 
-func (b *RuntimeBridge) InvokeContractFunction(params []*anypb.Any, context runtime.Context) Message {
+func (b *RuntimeBridge) InvokeContractFunction(params []*anypb.Any) Message {
 	return NewErrorMessage(
 		"InvokeContractFunction is not yet implemented",
 	)
+}
+
+func newContext(runtimeInterface runtime.Interface, anyLocation *anypb.Any) runtime.Context {
+	location := ToRuntimeLocation(anyLocation)
+	context := runtime.Context{
+		Interface:         runtimeInterface,
+		Location:          location,
+		PredeclaredValues: []runtime.ValueDeclaration{},
+	}
+	context.InitializeCodesAndPrograms()
+	return context
 }
