@@ -2244,26 +2244,61 @@ func TestCheckResourceUseInNestedIfStatement(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
-      resource X {}
+	t.Run("resource loss", func(t *testing.T) {
+		t.Parallel()
 
-      fun test() {
-          let x <- create X()
-          if 1 > 2 {
-              if 2 > 1 {
+		_, err := ParseAndCheck(t, `
+          resource X {}
+
+          fun test() {
+              let x <- create X()
+              if 1 > 2 {
+                  if 2 > 1 {
+                      absorb(<-x)
+                  }
+                  // NOTE: resource is not destroyed in the else path
+              } else {
                   absorb(<-x)
               }
-          } else {
-              absorb(<-x)
           }
-      }
 
-      fun absorb(_ x: @X) {
-          destroy x
-      }
-    `)
+          fun absorb(_ x: @X) {
+              destroy x
+          }
+        `)
 
-	require.NoError(t, err)
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("no resource loss", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          resource X {}
+
+          fun test() {
+              let x <- create X()
+              if 1 > 2 {
+                  if 2 > 1 {
+                      absorb(<-x)
+                  } else {
+                      absorb(<-x)
+                  }
+              } else {
+                  absorb(<-x)
+              }
+          }
+
+          fun absorb(_ x: @X) {
+              destroy x
+          }
+        `)
+
+		require.NoError(t, err)
+	})
 }
 
 ////
@@ -2698,10 +2733,11 @@ func TestCheckInvalidResourceLossThroughReturn(t *testing.T) {
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := ExpectCheckerErrors(t, err, 3)
 
 	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	assert.IsType(t, &sema.UnreachableStatementError{}, errs[1])
+	assert.IsType(t, &sema.ResourceLossError{}, errs[2])
 }
 
 func TestCheckInvalidResourceLossThroughReturnInIfStatementThenBranch(t *testing.T) {
@@ -2748,10 +2784,11 @@ func TestCheckInvalidResourceLossThroughReturnInIfStatementBranches(t *testing.T
       }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := ExpectCheckerErrors(t, err, 3)
 
 	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	assert.IsType(t, &sema.UnreachableStatementError{}, errs[1])
+	assert.IsType(t, &sema.ResourceLossError{}, errs[2])
 }
 
 func TestCheckResourceWithMoveAndReturnInIfStatementThenAndDestroyInElse(t *testing.T) {
@@ -5047,5 +5084,386 @@ func TestCheckEmptyResourceCollectionMove(t *testing.T) {
         `)
 
 		require.NoError(t, err)
+	})
+}
+
+func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("if-else: missing else branch", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+            fun test(r: @R) {
+                if true {
+                    destroy r
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("if-else: missing else branches", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+            fun test(r: @R) {
+                if true {
+                    if true {
+                       destroy r
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("if-else: missing else branches", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+            fun test(r: @R) {
+                if true {
+                    if true {
+                       destroy r
+                    }
+                } else {
+                    destroy r
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("switch-case: missing destruction in one case", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test(n: Int, r: @R) {
+                switch n {
+                    case 1:
+                        destroy r
+                    case 2:
+                        // Some random statement that has no effect
+                        let a = "do nothing"
+                    default:
+                        destroy r
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("switch-case: missing destruction in default case", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test(n: Int, r: @R) {
+                switch n {
+                    case 1:
+                        destroy r
+                    case 2:
+                        destroy r
+                    default:
+                        break
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("switch-case: resource destruction in all cases", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test(n: Int, r: @R) {
+                switch n {
+                    case 1:
+                        destroy r
+                    case 2:
+                        destroy r
+                    default:
+                        destroy r
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("switch-case: no default", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+            fun test(n: Int, r: @R) {
+                switch n {
+                    case 1:
+                        destroy r
+                    case 2:
+                        destroy r
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("switch-case: missing destruction of one resource in one case", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test(n: Int, r1: @R, r2: @R) {
+                switch n {
+                    case n:
+                        destroy r1
+                        destroy r2
+                    case 2:
+                        destroy r1
+                    default:
+                        destroy r1
+                        destroy r2
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("switch-case: missing destruction of one resource in default case", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test(n: Int, r1: @R, r2: @R) {
+                switch n {
+                    case n:
+                        destroy r1
+                        destroy r2
+                    case 2:
+                        destroy r1
+                        destroy r2
+                    default:
+                        destroy r1
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("switch-case: loss of all resources in one case", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test(n: Int, r1: @R, r2: @R) {
+                switch n {
+                    case 1:
+                        destroy r1
+                        destroy r2
+                    case 2:
+                        break
+                    default:
+                        destroy r1
+                        destroy r2
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+	})
+
+	t.Run("switch-case: loss of all resources in default case", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test(n: Int, r1: @R, r2: @R) {
+                switch n {
+                    case 1:
+                        destroy r1
+                        destroy r2
+                    case 2:
+                        destroy r1
+                        destroy r2
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+	})
+
+	t.Run("switch-case: unreachable destruction due to break", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test(n: Int, r: @R) {
+                switch n {
+                    case 1:
+                        break
+                        destroy r  // unreachable
+                    default:
+                        destroy r
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+	})
+
+	t.Run("switch-case: return in one case", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test(n: Int, r: @R) {
+                switch n {
+                    case 1:
+                        destroy r
+                        return
+                    default:
+                        destroy r
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("switch-case: break in one case", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test(n: Int, r: @R) {
+                switch n {
+                    case 1:
+                        destroy r
+                        break
+                    default:
+                        destroy r
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("switch-case: destroy missing in default case", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test(n: Int, r: @R) {
+                switch n {
+                    case 1:
+                        destroy r
+                        return
+                    default:
+                        return
+                }
+                destroy r
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 3)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[1])
+		assert.IsType(t, &sema.ResourceLossError{}, errs[2])
+	})
+
+	t.Run("while loop: unreachable destruction due to break", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test(r: @R) {
+                while true {
+                    break
+                    destroy r  // unreachable
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+	})
+
+	t.Run("while loop: unreachable destruction due to continue", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test(r: @R) {
+                while true {
+                    continue
+                    destroy r  // unreachable
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
 	})
 }
