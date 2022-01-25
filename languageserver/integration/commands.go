@@ -571,8 +571,8 @@ func (i *FlowIntegration) createAccountHelper(conn protocol.Conn) (address flow.
 		signer,
 		keys,
 		weights,
-		crypto.ECDSA_P256,
-		crypto.SHA3_256,
+		[]crypto.SignatureAlgorithm{crypto.ECDSA_P256},
+		[]crypto.HashAlgorithm{crypto.SHA3_256},
 		nil,
 	)
 	if err != nil {
