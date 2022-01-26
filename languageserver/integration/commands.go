@@ -252,6 +252,7 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{
 		maxGasLimit,
 		txArgs,
 		"",
+		true,
 	)
 
 	if err != nil {
@@ -274,7 +275,7 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{
 	// transaction error: &errors.errorString{s:"failed to decode partial transaction...
 	// ...encoding/hex: invalid byte: U+00F9 'ù'"
 	txBytes := []byte(fmt.Sprintf("%x", tx.FlowTransaction().Encode()))
-	_, txResult, err := i.sharedServices.Transactions.SendSigned(txBytes)
+	_, txResult, err := i.sharedServices.Transactions.SendSigned(txBytes, true)
 
 	if err != nil {
 		return nil, errorWithMessage(conn, ErrorMessageTransactionError, err)
