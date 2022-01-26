@@ -80,11 +80,11 @@ func OverEstimateNumberStringLength(value NumberValue) int {
 	case BigNumberValue:
 		return OverEstimateBigIntStringLength(value.ToBigInt())
 
-	case NumberValue:
-		return OverEstimateIntStringLength(value.ToInt())
-
 	case FixedPointValue:
 		return OverEstimateFixedPointStringLength(value.IntegerPart(), value.Scale())
+
+	case NumberValue:
+		return OverEstimateIntStringLength(value.ToInt())
 
 	default:
 		panic(errors.NewUnreachableError())
