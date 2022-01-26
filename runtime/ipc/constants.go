@@ -10,8 +10,9 @@ const (
 
 	// 'Interface' method names
 
-	InterfaceMethodGetCode         = "getCode"
-	InterfaceMethodGetProgram      = "getProgram"
-	InterfaceMethodResolveLocation = "resolveLocation"
-	InterfaceMethodProgramLog      = "programLog"
+	InterfaceMethodGetCode                = "getCode"
+	InterfaceMethodGetProgram             = "getProgram"
+	InterfaceMethodResolveLocation        = "resolveLocation"
+	InterfaceMethodProgramLog             = "programLog"
+	InterfaceMethodGetAccountContractCode = "getAccountContractCode"
 )

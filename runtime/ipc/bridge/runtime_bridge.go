@@ -2,11 +2,12 @@ package bridge
 
 import (
 	"fmt"
+
+	"google.golang.org/protobuf/types/known/anypb"
+
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/errors"
-	pb "github.com/onflow/cadence/runtime/ipc/protobuf"
-	"google.golang.org/protobuf/types/known/anypb"
 )
 
 // RuntimeBridge converts the IPC call to the `runtime.Runtime` method invocation
@@ -26,17 +27,7 @@ func (b *RuntimeBridge) ExecuteScript(runtimeInterface runtime.Interface, params
 		panic(errors.UnreachableError{})
 	}
 
-	s := &pb.Script{}
-	err := params[0].UnmarshalTo(s)
-	if err != nil {
-		panic(err)
-	}
-
-	script := runtime.Script{
-		Source:    s.GetSource(),
-		Arguments: s.GetArguments(),
-	}
-
+	script := ToRuntimeScript(params[0])
 	context := newContext(runtimeInterface, params[1])
 
 	value, err := b.Runtime.ExecuteScript(script, context)
@@ -63,17 +54,7 @@ func (b *RuntimeBridge) ExecuteTransaction(runtimeInterface runtime.Interface, p
 		panic(errors.UnreachableError{})
 	}
 
-	s := &pb.Script{}
-	err := params[0].UnmarshalTo(s)
-	if err != nil {
-		panic(err)
-	}
-
-	script := runtime.Script{
-		Source:    s.GetSource(),
-		Arguments: s.GetArguments(),
-	}
-
+	script := ToRuntimeScript(params[0])
 	context := newContext(runtimeInterface, params[1])
 
 	value, err := b.Runtime.ExecuteScript(script, context)

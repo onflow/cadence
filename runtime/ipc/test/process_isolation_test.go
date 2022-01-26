@@ -175,7 +175,13 @@ func (t *testRuntimeInterface) UpdateAccountContractCode(address runtime.Address
 }
 
 func (t *testRuntimeInterface) GetAccountContractCode(address runtime.Address, name string) (code []byte, err error) {
-	panic("implement me")
+	return []byte(`
+        pub contract Foo {
+            pub fun add(_ a: Int, _ b: Int): Int {
+                return a + b
+            }
+        }
+    `), nil
 }
 
 func (t *testRuntimeInterface) RemoveAccountContractCode(address runtime.Address, name string) (err error) {

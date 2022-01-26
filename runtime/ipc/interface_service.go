@@ -48,6 +48,9 @@ func serveRequest(interfaceBridge *bridge.InterfaceBridge, request *bridge.Reque
 	case InterfaceMethodProgramLog:
 		response = interfaceBridge.ProgramLog(request.Params)
 
+	case InterfaceMethodGetAccountContractCode:
+		response = interfaceBridge.GetAccountContractCode(request.Params)
+
 	default:
 		panic("unsupported")
 	}

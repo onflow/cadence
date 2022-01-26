@@ -12,7 +12,6 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/ipc/bridge"
-	pb "github.com/onflow/cadence/runtime/ipc/protobuf"
 )
 
 var _ runtime.Interface = &ProxyInterface{}
@@ -69,13 +68,8 @@ func (p *ProxyInterface) GetCode(location runtime.Location) ([]byte, error) {
 		return nil, err
 	}
 
-	code := &pb.Bytes{}
-	err = response.Value.UnmarshalTo(code)
-	if err != nil {
-		return nil, err
-	}
-
-	return code.Content, nil
+	code := bridge.ToRuntimeBytes(response.Value)
+	return code, nil
 }
 
 func (p *ProxyInterface) GetProgram(location runtime.Location) (*interpreter.Program, error) {
@@ -149,8 +143,27 @@ func (p *ProxyInterface) UpdateAccountContractCode(address runtime.Address, name
 	panic("implement me")
 }
 
-func (p *ProxyInterface) GetAccountContractCode(address runtime.Address, name string) (code []byte, err error) {
-	panic("implement me")
+func (p *ProxyInterface) GetAccountContractCode(address runtime.Address, name string) ([]byte, error) {
+	conn := bridge.NewInterfaceConnection()
+
+	addressBytes := bridge.NewBytes(address[:])
+	addressParam := bridge.AsAny(addressBytes)
+
+	nameStr := bridge.NewString(name)
+	nameParam := bridge.AsAny(nameStr)
+
+	request := bridge.NewRequestMessage(InterfaceMethodGetAccountContractCode, addressParam, nameParam)
+
+	bridge.WriteMessage(conn, request)
+
+	response, err := bridge.ReadResponse(conn)
+	if err != nil {
+		return nil, err
+	}
+
+	code := bridge.ToRuntimeBytes(response.Value)
+
+	return code, nil
 }
 
 func (p *ProxyInterface) RemoveAccountContractCode(address runtime.Address, name string) (err error) {

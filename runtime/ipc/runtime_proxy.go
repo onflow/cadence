@@ -7,7 +7,6 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/ipc/bridge"
-	pb "github.com/onflow/cadence/runtime/ipc/protobuf"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -53,13 +52,9 @@ func (r *ProxyRuntime) ExecuteScript(script runtime.Script, context runtime.Cont
 		return nil, err
 	}
 
-	bytes := &pb.Bytes{}
-	err = response.Value.UnmarshalTo(bytes)
-	if err != nil {
-		return nil, err
-	}
+	bytes := bridge.ToRuntimeBytes(response.Value)
 
-	return json.Decode(bytes.Content)
+	return json.Decode(bytes)
 }
 
 func (r *ProxyRuntime) ExecuteTransaction(script runtime.Script, context runtime.Context) error {

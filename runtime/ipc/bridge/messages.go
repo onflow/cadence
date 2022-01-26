@@ -47,10 +47,30 @@ func NewString(content string) *pb.String {
 	}
 }
 
+func ToRuntimeString(any *anypb.Any) string {
+	str := &pb.String{}
+	err := any.UnmarshalTo(str)
+	if err != nil {
+		panic(err)
+	}
+
+	return str.Content
+}
+
 func NewBytes(content []byte) *pb.Bytes {
 	return &pb.Bytes{
 		Content: content,
 	}
+}
+
+func ToRuntimeBytes(any *anypb.Any) []byte {
+	bytes := &pb.Bytes{}
+	err := any.UnmarshalTo(bytes)
+	if err != nil {
+		panic(err)
+	}
+
+	return bytes.Content
 }
 
 func NewScript(source []byte, arguments [][]byte) *pb.Script {
@@ -58,6 +78,20 @@ func NewScript(source []byte, arguments [][]byte) *pb.Script {
 		Source:    source,
 		Arguments: arguments,
 	}
+}
+
+func ToRuntimeScript(any *anypb.Any) runtime.Script {
+	s := &pb.Script{}
+	err := any.UnmarshalTo(s)
+	if err != nil {
+		panic(err)
+	}
+
+	script := runtime.Script{
+		Source:    s.Source,
+		Arguments: s.Arguments,
+	}
+	return script
 }
 
 func NewLocation(runtimeLocation runtime.Location) (proto.Message, error) {
@@ -151,16 +185,12 @@ func ToRuntimeIdentifiers(identifiersArray *pb.Array) []runtime.Identifier {
 	identifiers := make([]runtime.Identifier, 0, len(identifiersArray.Elements))
 
 	for _, element := range identifiersArray.Elements {
-		str := &pb.String{}
-		err := element.UnmarshalTo(str)
-		if err != nil {
-			panic(err)
-		}
+		identifierStr := ToRuntimeString(element)
 
 		identifiers = append(
 			identifiers,
 			runtime.Identifier{
-				Identifier: str.Content,
+				Identifier: identifierStr,
 			},
 		)
 	}
