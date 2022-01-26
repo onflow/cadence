@@ -1296,8 +1296,8 @@ github.com/onflow/flow-cli v0.20.3-0.20210512000809-474effb7e7db/go.mod h1:Yh4dg
 github.com/onflow/flow-cli v0.23.1-0.20210621124332-11c4cd22ffb4/go.mod h1:OD9UVPFIvktnO86dSLavf1tTVFIsKQ5By5KBBDLfC3Q=
 github.com/onflow/flow-cli v0.29.0/go.mod h1:slJqAWVVwwOtpJh65Bxtn5E3LslMmKD950YbV0sBues=
 github.com/onflow/flow-cli v0.30.3-0.20220125144640-34cd91e47b33/go.mod h1:2Hv4LSYa5EdyzXuPl8cO2RuktGwx9icSeUEjjAPOojQ=
-github.com/onflow/flow-cli v0.30.3-0.20220125152348-b47ffe3d194f h1:dqg0LiX5QiqiktZs8p1VabcTnVXAw5glbBU7Nw9ZLms=
-github.com/onflow/flow-cli v0.30.3-0.20220125152348-b47ffe3d194f/go.mod h1:DLNhYv41+egWwQfF4VDEhn6r6ASACCXfE6teZIFm/WA=
+github.com/onflow/flow-cli v0.30.3-0.20220126134510-498fab1cd1ad h1:ImiLgx7jkE6kH9ayccRAauyX6P9i/2Y4rWWpEan+EHU=
+github.com/onflow/flow-cli v0.30.3-0.20220126134510-498fab1cd1ad/go.mod h1:DLNhYv41+egWwQfF4VDEhn6r6ASACCXfE6teZIFm/WA=
 github.com/onflow/flow-core-contracts/lib/go/contracts v0.7.2/go.mod h1:IZ2e7UyLCYmpQ8Kd7k0A32uXqdqfiV1r2sKs5/riblo=
 github.com/onflow/flow-core-contracts/lib/go/contracts v0.7.3-0.20210527134022-58c25247091a/go.mod h1:IZ2e7UyLCYmpQ8Kd7k0A32uXqdqfiV1r2sKs5/riblo=
 github.com/onflow/flow-core-contracts/lib/go/contracts v0.7.3/go.mod h1:MSNt2rodpRXm1n0iGQWL6ltDoJCtXEzlPw9nhE/zQmk=
