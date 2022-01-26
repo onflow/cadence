@@ -523,3 +523,34 @@ func TestParseArgumentList(t *testing.T) {
 	})
 
 }
+
+func TestParseBufferedErrors(t *testing.T) {
+
+	t.Parallel()
+
+	// Test that both top-level and buffered errors are reported.
+	//
+	// Test this using type argument lists, which are parsed through buffering:
+	// Only a subsequent open parenthesis will determine if a less-than sign
+	// introduced a type argument list of a function call,
+	// or if the expression is a less-than comparison.
+	//
+	// Inside the potential type argument list there is an error (missing type after comma),
+	// and outside (at the top-level, after buffering of the type argument list),
+	// there is another error (missing closing parenthesis after).
+
+	_, errs := ParseExpression("a<b,>(")
+	utils.AssertEqualWithDiff(t,
+		[]error{
+			&SyntaxError{
+				Message: "missing type annotation after comma",
+				Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+			},
+			&SyntaxError{
+				Message: "missing ')' at end of invocation argument list",
+				Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
+			},
+		},
+		errs,
+	)
+}
