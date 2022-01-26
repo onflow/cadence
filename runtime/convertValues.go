@@ -451,8 +451,7 @@ func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedTy
 	case cadence.Bool:
 		return interpreter.BoolValue(v), nil
 	case cadence.String:
-		// TODO: meter?
-		return interpreter.NewUnmeteredStringValue(string(v)), nil
+		return importString(inter, v), nil
 	case cadence.Character:
 		return interpreter.NewCharacterValue(string(v)), nil
 	case cadence.Bytes:
@@ -556,6 +555,20 @@ func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedTy
 	}
 
 	return nil, fmt.Errorf("cannot import value of type %T", value)
+}
+
+func importString(inter *interpreter.Interpreter, v cadence.String) *interpreter.StringValue {
+	memoryUsage := interpreter.MemoryUsage{
+		Type:   interpreter.PrimitiveStaticTypeString,
+		Amount: uint64(len(v)),
+	}
+	return interpreter.NewStringValue(
+		inter,
+		memoryUsage,
+		func() string {
+			return string(v)
+		},
+	)
 }
 
 func importPathValue(v cadence.Path) interpreter.PathValue {
