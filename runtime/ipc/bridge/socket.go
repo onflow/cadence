@@ -98,6 +98,7 @@ func WriteMessage(conn net.Conn, msg Message) {
 }
 
 func HandleError(err error) {
+	// TODO: handle EOF error
 	if err != nil {
 		panic(err)
 	}

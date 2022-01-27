@@ -18,11 +18,7 @@ type ProxyRuntime struct {
 
 var _ runtime.Runtime = &ProxyRuntime{}
 
-func NewProxyRuntime(runtimeInterface runtime.Interface) *ProxyRuntime {
-	// TODO: Move to an appropriate place
-	// TODO: handle termination
-	go StartInterfaceService(runtimeInterface)
-
+func NewProxyRuntime() *ProxyRuntime {
 	return &ProxyRuntime{}
 }
 
