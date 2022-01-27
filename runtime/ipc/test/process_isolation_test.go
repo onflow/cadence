@@ -1,7 +1,10 @@
 package test
 
 import (
+	"encoding/hex"
 	"fmt"
+	"github.com/stretchr/testify/require"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -21,7 +24,7 @@ import (
 // TODO: Move under tests/ and delete redundant *testRuntimeInterface
 
 var proxyRuntime = func() *ipc.ProxyRuntime {
-	interfaceImpl := &testRuntimeInterface{}
+	interfaceImpl := newTestRuntimeInterface()
 	return ipc.NewProxyRuntime(interfaceImpl)
 }()
 
@@ -47,8 +50,37 @@ func TestExecutingScript(t *testing.T) {
 	})
 
 	t.Run("with imports", func(t *testing.T) {
+
+		// Deploy Fungible Token contract
+
+		err := proxyRuntime.ExecuteTransaction(
+			runtime.Script{
+				Source: []byte(fmt.Sprintf(
+					`
+                  transaction {
+                      prepare(signer: AuthAccount) {
+                          signer.contracts.add(name: "Foo", code: "%s".decodeHex())
+                      }
+                  }
+                `,
+					hex.EncodeToString([]byte(`
+						pub contract Foo {
+							init() { }
+
+							pub fun add(_ a: Int, _ b: Int): Int {
+								return a + b
+							}
+						}`)),
+				)),
+			},
+			runtime.Context{
+				Location: common.TransactionLocation("0x01"),
+			},
+		)
+		require.NoError(t, err)
+
 		start := time.Now()
-		_, err := proxyRuntime.ExecuteScript(
+		_, err = proxyRuntime.ExecuteScript(
 			runtime.Script{
 				Source: []byte(`
                import Foo from 0x01
@@ -59,7 +91,7 @@ func TestExecutingScript(t *testing.T) {
             `),
 			},
 			runtime.Context{
-				Location: common.ScriptLocation("0x42"),
+				Location: common.ScriptLocation("0x01"),
 			},
 		)
 
@@ -98,7 +130,17 @@ func TestExecutingScriptParallel(t *testing.T) {
 	wg.Wait()
 }
 
-type testRuntimeInterface struct{}
+type testRuntimeInterface struct {
+	values        map[string][]byte
+	contractCodes map[string][]byte
+}
+
+func newTestRuntimeInterface() *testRuntimeInterface {
+	return &testRuntimeInterface{
+		values: map[string][]byte{},
+		contractCodes: map[string][]byte{},
+	}
+}
 
 func (t *testRuntimeInterface) ResolveLocation(identifiers []runtime.Identifier, location runtime.Location) ([]runtime.ResolvedLocation, error) {
 	return []runtime.ResolvedLocation{
@@ -131,11 +173,14 @@ func (t *testRuntimeInterface) SetProgram(location runtime.Location, program *in
 }
 
 func (t *testRuntimeInterface) GetValue(owner, key []byte) (value []byte, err error) {
-	panic("implement me")
+	sKey := storageKey(owner, key)
+	return t.values[sKey], nil
 }
 
 func (t *testRuntimeInterface) SetValue(owner, key, value []byte) (err error) {
-	panic("implement me")
+	sKey := storageKey(owner, key)
+	t.values[sKey] = value
+	return nil
 }
 
 func (t *testRuntimeInterface) ValueExists(owner, key []byte) (exists bool, err error) {
@@ -143,7 +188,7 @@ func (t *testRuntimeInterface) ValueExists(owner, key []byte) (exists bool, err 
 }
 
 func (t *testRuntimeInterface) AllocateStorageIndex(owner []byte) (atree.StorageIndex, error) {
-	panic("implement me")
+	return atree.StorageIndex{0, 0, 0, 0, 0, 0, 0, 1}, nil
 }
 
 func (t *testRuntimeInterface) CreateAccount(payer runtime.Address) (address runtime.Address, err error) {
@@ -170,18 +215,15 @@ func (t *testRuntimeInterface) RevokeAccountKey(address runtime.Address, index i
 	panic("implement me")
 }
 
-func (t *testRuntimeInterface) UpdateAccountContractCode(address runtime.Address, name string, code []byte) (err error) {
-	panic("implement me")
+func (t *testRuntimeInterface) UpdateAccountContractCode(address runtime.Address, name string, code []byte) error {
+	key := strings.Join([]string{address.Hex(), name}, "")
+	t.contractCodes[key] = code
+	return nil
 }
 
-func (t *testRuntimeInterface) GetAccountContractCode(address runtime.Address, name string) (code []byte, err error) {
-	return []byte(`
-        pub contract Foo {
-            pub fun add(_ a: Int, _ b: Int): Int {
-                return a + b
-            }
-        }
-    `), nil
+func (t *testRuntimeInterface) GetAccountContractCode(address runtime.Address, name string) ([]byte, error) {
+	key := strings.Join([]string{address.Hex(), name}, "")
+	return t.contractCodes[key], nil
 }
 
 func (t *testRuntimeInterface) RemoveAccountContractCode(address runtime.Address, name string) (err error) {
@@ -303,3 +345,12 @@ func (t *testRuntimeInterface) ResourceOwnerChanged(resource *interpreter.Compos
 }
 
 var _ runtime.Interface = &testRuntimeInterface{}
+
+func storageKey(owner, key []byte) string {
+	return strings.Join(
+		[]string{
+			string(owner), string(key),
+		},
+		"|",
+	)
+}

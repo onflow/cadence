@@ -57,23 +57,14 @@ func (b *RuntimeBridge) ExecuteTransaction(runtimeInterface runtime.Interface, p
 	script := ToRuntimeScript(params[0])
 	context := newContext(runtimeInterface, params[1])
 
-	value, err := b.Runtime.ExecuteScript(script, context)
+	err := b.Runtime.ExecuteTransaction(script, context)
 	if err != nil {
 		return NewErrorMessage(
 			fmt.Sprintf("error occured while executing transaction: '%s'", err.Error()),
 		)
 	}
 
-	encoded, err := json.Encode(value)
-	if err != nil {
-		return NewErrorMessage(
-			fmt.Sprintf("error occured while executing script: '%s'", err.Error()),
-		)
-	}
-
-	return NewResponseMessage(
-		AsAny(NewBytes(encoded)),
-	)
+	return EmptyResponse
 }
 
 func (b *RuntimeBridge) InvokeContractFunction(params []*anypb.Any) Message {

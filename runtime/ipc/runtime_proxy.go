@@ -58,41 +58,66 @@ func (r *ProxyRuntime) ExecuteScript(script runtime.Script, context runtime.Cont
 }
 
 func (r *ProxyRuntime) ExecuteTransaction(script runtime.Script, context runtime.Context) error {
-	panic("implement me")
+	scriptParam := bridge.AsAny(
+		bridge.NewScript(script.Source, script.Arguments),
+	)
+
+	location, err := bridge.NewLocation(context.Location)
+	if err != nil {
+		return err
+	}
+	locationParam := bridge.AsAny(location)
+
+	request := bridge.NewRequestMessage(
+		RuntimeMethodExecuteTransaction,
+		scriptParam,
+		locationParam,
+	)
+
+	conn := bridge.NewRuntimeConnection()
+
+	bridge.WriteMessage(conn, request)
+
+	_, err = bridge.ReadResponse(conn)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (r *ProxyRuntime) InvokeContractFunction(contractLocation common.AddressLocation, functionName string, arguments []interpreter.Value, argumentTypes []sema.Type, context runtime.Context) (cadence.Value, error) {
-	panic("implement me")
+	panic(UnimplementedError())
 }
 
 func (r *ProxyRuntime) ParseAndCheckProgram(source []byte, context runtime.Context) (*interpreter.Program, error) {
-	panic("implement me")
+	panic(UnimplementedError())
 }
 
 func (r *ProxyRuntime) SetCoverageReport(coverageReport *runtime.CoverageReport) {
-	panic("implement me")
+	panic(UnimplementedError())
 }
 
 func (r *ProxyRuntime) SetContractUpdateValidationEnabled(enabled bool) {
-	panic("implement me")
+	panic(UnimplementedError())
 }
 
 func (r *ProxyRuntime) SetAtreeValidationEnabled(enabled bool) {
-	panic("implement me")
+	panic(UnimplementedError())
 }
 
 func (r *ProxyRuntime) SetTracingEnabled(enabled bool) {
-	panic("implement me")
+	panic(UnimplementedError())
 }
 
 func (r *ProxyRuntime) SetResourceOwnerChangeHandlerEnabled(enabled bool) {
-	panic("implement me")
+	panic(UnimplementedError())
 }
 
 func (r *ProxyRuntime) ReadStored(address common.Address, path cadence.Path, context runtime.Context) (cadence.Value, error) {
-	panic("implement me")
+	panic(UnimplementedError())
 }
 
 func (r *ProxyRuntime) ReadLinked(address common.Address, path cadence.Path, context runtime.Context) (cadence.Value, error) {
-	panic("implement me")
+	panic(UnimplementedError())
 }

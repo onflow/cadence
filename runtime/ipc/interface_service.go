@@ -51,6 +51,18 @@ func serveRequest(interfaceBridge *bridge.InterfaceBridge, request *bridge.Reque
 	case InterfaceMethodGetAccountContractCode:
 		response = interfaceBridge.GetAccountContractCode(request.Params)
 
+	case InterfaceMethodUpdateAccountContractCode:
+		response = interfaceBridge.UpdateAccountContractCode(request.Params)
+
+	case InterfaceMethodGetValue:
+		response = interfaceBridge.GetValue(request.Params)
+
+	case InterfaceMethodSetValue:
+		response = interfaceBridge.SetValue(request.Params)
+
+	case InterfaceMethodAllocateStorageIndex:
+		response = interfaceBridge.AllocateStorageIndex(request.Params)
+
 	default:
 		panic("unsupported")
 	}
