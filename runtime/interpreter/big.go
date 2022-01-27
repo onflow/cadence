@@ -98,12 +98,17 @@ func OverEstimateFixedPointStringLength(integerPart NumberValue, scale int) int 
 func OverEstimateIntStringLength(n int) int {
 	switch {
 	case n < 0:
-		return 1 + OverEstimateIntStringLength(-n)
+		// Handle math.MinInt
+		return 1 + OverEstimateUintStringLength(uint(-(n+1))+1)
 	case n > 0:
-		return int(math.Floor(math.Log10(float64(n))) + 1)
+		return OverEstimateUintStringLength(uint(n))
 	default:
 		return 1
 	}
+}
+
+func OverEstimateUintStringLength(n uint) int {
+	return int(math.Floor(math.Log10(float64(n))) + 1)
 }
 
 func OverEstimateBigIntStringLength(n *big.Int) int {
