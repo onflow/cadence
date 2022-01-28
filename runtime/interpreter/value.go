@@ -526,6 +526,7 @@ func (v BoolValue) String() string {
 func (v BoolValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
+
 func (v BoolValue) ConformsToDynamicType(
 	_ *Interpreter,
 	_ func() LocationRange,
@@ -578,6 +579,116 @@ func (v BoolValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 }
 
 func (BoolValue) ChildStorables() []atree.Storable {
+	return nil
+}
+
+// CharacterValue
+
+type CharacterValue byte
+
+func NewCharacterValue(r byte) CharacterValue {
+	return CharacterValue(r)
+}
+
+var _ Value = CharacterValue('a')
+var _ atree.Storable = CharacterValue('a')
+var _ EquatableValue = CharacterValue('a')
+var _ HashableValue = CharacterValue('a')
+
+func (CharacterValue) IsValue() {}
+
+func (v CharacterValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitCharacterValue(interpreter, v)
+}
+
+func (CharacterValue) Walk(_ func(Value)) {
+	// NO-OP
+}
+
+var charDyanmicType DynamicType = CharacterDynamicType{}
+
+func (CharacterValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
+	return charDyanmicType
+}
+
+func (CharacterValue) StaticType() StaticType {
+	return PrimitiveStaticTypeCharacter
+}
+
+func (v CharacterValue) String() string {
+	return string(v)
+}
+
+func (v CharacterValue) RecursiveString(_ SeenReferences) string {
+	return v.String()
+}
+
+func (v CharacterValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
+	otherChar, ok := other.(CharacterValue)
+	if !ok {
+		return false
+	}
+	return byte(v) == byte(otherChar)
+}
+
+func (v CharacterValue) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
+	scratch[0] = byte(HashInputTypeCharacter)
+	scratch[1] = byte(v)
+	return scratch[:2]
+}
+
+func (v CharacterValue) ConformsToDynamicType(
+	_ *Interpreter,
+	_ func() LocationRange,
+	dynamicType DynamicType,
+	_ TypeConformanceResults,
+) bool {
+	_, ok := dynamicType.(BoolDynamicType)
+	return ok
+}
+
+func (v CharacterValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+	return v, nil
+}
+
+func (CharacterValue) NeedsStoreTo(_ atree.Address) bool {
+	return false
+}
+
+func (CharacterValue) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (v CharacterValue) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
+	return v
+}
+
+func (v CharacterValue) Clone(_ *Interpreter) Value {
+	return v
+}
+
+func (CharacterValue) DeepRemove(_ *Interpreter) {
+	// NO-OP
+}
+
+func (v CharacterValue) ByteSize() uint32 {
+	return 1
+}
+
+func (v CharacterValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
+func (CharacterValue) ChildStorables() []atree.Storable {
 	return nil
 }
 

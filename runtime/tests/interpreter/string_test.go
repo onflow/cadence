@@ -205,3 +205,23 @@ func TestInterpretStringToLower(t *testing.T) {
 		result,
 	)
 }
+
+func TestInterpretStringAccess(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+	fun test(): Type {
+		let c: Character = "x"[0]
+		return c.getType() 
+	}
+	`)
+
+	result, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	require.Equal(t,
+		interpreter.TypeValue{Type: interpreter.PrimitiveStaticTypeCharacter},
+		result,
+	)
+}
