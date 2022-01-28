@@ -730,7 +730,7 @@ Capabilities always link to objects in the `/storage/` domain.
 To borrow a reference to an object from the capability, we use the capability's `borrow` method.
 
 ```cadence
-let helloReference = capability!.borrow()
+let helloReference = capability.borrow()
     ?? panic("Could not borrow a reference to the hello capability")
 ```
 
