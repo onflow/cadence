@@ -153,7 +153,7 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 
 	t.Parallel()
 
-	address := common.BytesToAddress([]byte{0x1})
+	address := common.MustBytesToAddress([]byte{0x1})
 
 	importedCheckerA, err := checker.ParseAndCheckWithOptions(t,
 		`
@@ -319,7 +319,7 @@ func TestInterpretResourceConstructionThroughIndirectImport(t *testing.T) {
 
 	t.Parallel()
 
-	address := common.BytesToAddress([]byte{0x1})
+	address := common.MustBytesToAddress([]byte{0x1})
 
 	importedChecker, err := checker.ParseAndCheckWithOptions(t,
 		`

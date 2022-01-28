@@ -22,12 +22,12 @@ import (
 	"github.com/onflow/atree"
 )
 
-type stringAtreeValue string
+type StringAtreeValue string
 
-var _ atree.Value = stringAtreeValue("")
-var _ atree.Storable = stringAtreeValue("")
+var _ atree.Value = StringAtreeValue("")
+var _ atree.Storable = StringAtreeValue("")
 
-func (v stringAtreeValue) Storable(
+func (v StringAtreeValue) Storable(
 	storage atree.SlabStorage,
 	address atree.Address,
 	maxInlineSize uint64,
@@ -38,29 +38,29 @@ func (v stringAtreeValue) Storable(
 	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 
-func (v stringAtreeValue) ByteSize() uint32 {
+func (v StringAtreeValue) ByteSize() uint32 {
 	return getBytesCBORSize([]byte(v))
 }
 
-func (v stringAtreeValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
+func (v StringAtreeValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
-func (stringAtreeValue) ChildStorables() []atree.Storable {
+func (StringAtreeValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func stringAtreeHashInput(v atree.Value, _ []byte) ([]byte, error) {
-	return []byte(v.(stringAtreeValue)), nil
+func StringAtreeHashInput(v atree.Value, _ []byte) ([]byte, error) {
+	return []byte(v.(StringAtreeValue)), nil
 }
 
-func stringAtreeComparator(storage atree.SlabStorage, value atree.Value, otherStorable atree.Storable) (bool, error) {
+func StringAtreeComparator(storage atree.SlabStorage, value atree.Value, otherStorable atree.Storable) (bool, error) {
 	otherValue, err := otherStorable.StoredValue(storage)
 	if err != nil {
 		return false, err
 	}
 
-	result := value.(stringAtreeValue) == otherValue.(stringAtreeValue)
+	result := value.(StringAtreeValue) == otherValue.(StringAtreeValue)
 
 	return result, nil
 }

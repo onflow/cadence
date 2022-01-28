@@ -654,7 +654,7 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 	runtimeInterface := &testRuntimeInterface{
 		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
-			return []Address{common.BytesToAddress([]byte{0x1})}, nil
+			return []Address{common.MustBytesToAddress([]byte{0x1})}, nil
 		},
 		updateAccountContractCode: func(address Address, name string, code []byte) error {
 			location := common.AddressLocation{

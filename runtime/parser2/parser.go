@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/parser2/lexer"
 )
 
@@ -142,7 +143,11 @@ func (p *parser) next() {
 
 		if token.Is(lexer.TokenError) {
 			// Report error token as error, skip.
-			err := token.Value.(error)
+			err, ok := token.Value.(error)
+			// we just checked that this is an error token
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
 			parseError, ok := err.(ParseError)
 			if !ok {
 				parseError = &SyntaxError{
@@ -260,7 +265,11 @@ func (p *parser) parseTrivia(options triviaOptions) (containsNewline bool, docSt
 	for !atEnd {
 		switch p.current.Type {
 		case lexer.TokenSpace:
-			space := p.current.Value.(lexer.Space)
+			space, ok := p.current.Value.(lexer.Space)
+			// we just checked that this is a space
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
 
 			if space.ContainsNewline {
 				containsNewline = true
@@ -285,7 +294,11 @@ func (p *parser) parseTrivia(options triviaOptions) (containsNewline bool, docSt
 
 		case lexer.TokenLineComment:
 			if options.parseDocStrings {
-				comment := p.current.Value.(string)
+				comment, ok := p.current.Value.(string)
+				if !ok {
+					// we just checked that this is a comment
+					panic(errors.NewUnreachableError())
+				}
 				if strings.HasPrefix(comment, "///") {
 					if inLineDocString {
 						docStringBuilder.WriteRune('\n')
@@ -322,61 +335,76 @@ func tokenToIdentifier(identifier lexer.Token) ast.Identifier {
 	}
 }
 
-func ParseExpression(input string) (expression ast.Expression, errors []error) {
+func ParseExpression(input string) (expression ast.Expression, errs []error) {
 	var res interface{}
-	res, errors = Parse(input, func(p *parser) interface{} {
+	res, errs = Parse(input, func(p *parser) interface{} {
 		return parseExpression(p, lowestBindingPower)
 	})
 	if res == nil {
 		expression = nil
 		return
 	}
-	expression = res.(ast.Expression)
+	expression, ok := res.(ast.Expression)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
 	return
 }
 
-func ParseStatements(input string) (statements []ast.Statement, errors []error) {
+func ParseStatements(input string) (statements []ast.Statement, errs []error) {
 	var res interface{}
-	res, errors = Parse(input, func(p *parser) interface{} {
+	res, errs = Parse(input, func(p *parser) interface{} {
 		return parseStatements(p, nil)
 	})
 	if res == nil {
 		statements = nil
 		return
 	}
-	statements = res.([]ast.Statement)
+
+	statements, ok := res.([]ast.Statement)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
 	return
 }
 
-func ParseType(input string) (ty ast.Type, errors []error) {
+func ParseType(input string) (ty ast.Type, errs []error) {
 	var res interface{}
-	res, errors = Parse(input, func(p *parser) interface{} {
+	res, errs = Parse(input, func(p *parser) interface{} {
 		return parseType(p, lowestBindingPower)
 	})
 	if res == nil {
 		ty = nil
 		return
 	}
-	ty = res.(ast.Type)
+
+	ty, ok := res.(ast.Type)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
 	return
 }
 
-func ParseDeclarations(input string) (declarations []ast.Declaration, errors []error) {
+func ParseDeclarations(input string) (declarations []ast.Declaration, errs []error) {
 	var res interface{}
-	res, errors = Parse(input, func(p *parser) interface{} {
+	res, errs = Parse(input, func(p *parser) interface{} {
 		return parseDeclarations(p, lexer.TokenEOF)
 	})
 	if res == nil {
 		declarations = nil
 		return
 	}
-	declarations = res.([]ast.Declaration)
+
+	declarations, ok := res.([]ast.Declaration)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
 	return
 }
 
-func ParseArgumentList(input string) (arguments ast.Arguments, errors []error) {
+func ParseArgumentList(input string) (arguments ast.Arguments, errs []error) {
 	var res interface{}
-	res, errors = Parse(input, func(p *parser) interface{} {
+	res, errs = Parse(input, func(p *parser) interface{} {
 		p.skipSpaceAndComments(true)
 		p.mustOne(lexer.TokenParenOpen)
 		arguments, _ := parseArgumentListRemainder(p)
@@ -386,7 +414,12 @@ func ParseArgumentList(input string) (arguments ast.Arguments, errors []error) {
 		arguments = nil
 		return
 	}
-	arguments = res.([]*ast.Argument)
+
+	arguments, ok := res.([]*ast.Argument)
+
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
 	return
 }
 
@@ -411,7 +444,10 @@ func ParseProgramFromTokenStream(input lexer.TokenStream) (program *ast.Program,
 		return
 	}
 
-	declarations := res.([]ast.Declaration)
+	declarations, ok := res.([]ast.Declaration)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
 
 	program = ast.NewProgram(declarations)
 

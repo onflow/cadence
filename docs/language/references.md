@@ -120,5 +120,5 @@ counterRef3.increment()
 counterRef3.count  // is `44`
 ```
 
-References are ephemeral, i.e they cannot be [stored](../accounts#account-storage).
-Instead, consider [storing a capability and borrowing it](../capability-based-access-control) when needed.
+References are ephemeral, i.e they cannot be [stored](accounts#account-storage).
+Instead, consider [storing a capability and borrowing it](capability-based-access-control) when needed.

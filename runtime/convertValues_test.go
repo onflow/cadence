@@ -19,6 +19,7 @@
 package runtime
 
 import (
+	_ "embed"
 	"fmt"
 	"testing"
 	"unicode/utf8"
@@ -1389,17 +1390,17 @@ func TestExportResourceDictionaryValue(t *testing.T) {
 	actual := exportValueFromScript(t, script)
 	expected := cadence.NewDictionary([]cadence.KeyValuePair{
 		{
-			Key: cadence.String("a"),
-			Value: cadence.NewResource([]cadence.Value{
-				cadence.NewUInt64(0),
-				cadence.NewInt(1),
-			}).WithType(fooResourceType),
-		},
-		{
 			Key: cadence.String("b"),
 			Value: cadence.NewResource([]cadence.Value{
 				cadence.NewUInt64(0),
 				cadence.NewInt(2),
+			}).WithType(fooResourceType),
+		},
+		{
+			Key: cadence.String("a"),
+			Value: cadence.NewResource([]cadence.Value{
+				cadence.NewUInt64(0),
+				cadence.NewInt(1),
 			}).WithType(fooResourceType),
 		},
 	})
@@ -1940,6 +1941,9 @@ func TestExportLinkValue(t *testing.T) {
 	})
 }
 
+//go:embed test-export-json-deterministic.txt
+var exportJsonDeterministicExpected string
+
 func TestExportJsonDeterministic(t *testing.T) {
 
 	// exported order of field in a dictionary depends on the execution ,
@@ -1985,7 +1989,8 @@ func TestExportJsonDeterministic(t *testing.T) {
 	bytes, err := json.Encode(event)
 
 	assert.NoError(t, err)
-	assert.Equal(t, "{\"type\":\"Event\",\"value\":{\"id\":\"S.test.Foo\",\"fields\":[{\"name\":\"bar\",\"value\":{\"type\":\"Int\",\"value\":\"2\"}},{\"name\":\"aaa\",\"value\":{\"type\":\"Dictionary\",\"value\":[{\"key\":{\"type\":\"Int\",\"value\":\"2\"},\"value\":{\"type\":\"Dictionary\",\"value\":[{\"key\":{\"type\":\"Int\",\"value\":\"1\"},\"value\":{\"type\":\"String\",\"value\":\"c\"}},{\"key\":{\"type\":\"Int\",\"value\":\"7\"},\"value\":{\"type\":\"String\",\"value\":\"d\"}},{\"key\":{\"type\":\"Int\",\"value\":\"3\"},\"value\":{\"type\":\"String\",\"value\":\"b\"}}]}},{\"key\":{\"type\":\"Int\",\"value\":\"0\"},\"value\":{\"type\":\"Dictionary\",\"value\":[{\"key\":{\"type\":\"Int\",\"value\":\"0\"},\"value\":{\"type\":\"String\",\"value\":\"a\"}},{\"key\":{\"type\":\"Int\",\"value\":\"2\"},\"value\":{\"type\":\"String\",\"value\":\"c\"}},{\"key\":{\"type\":\"Int\",\"value\":\"1\"},\"value\":{\"type\":\"String\",\"value\":\"a\"}},{\"key\":{\"type\":\"Int\",\"value\":\"3\"},\"value\":{\"type\":\"String\",\"value\":\"c\"}}]}},{\"key\":{\"type\":\"Int\",\"value\":\"1\"},\"value\":{\"type\":\"Dictionary\",\"value\":[{\"key\":{\"type\":\"Int\",\"value\":\"1\"},\"value\":{\"type\":\"String\",\"value\":\"\"}},{\"key\":{\"type\":\"Int\",\"value\":\"2\"},\"value\":{\"type\":\"String\",\"value\":\"a\"}},{\"key\":{\"type\":\"Int\",\"value\":\"3\"},\"value\":{\"type\":\"String\",\"value\":\"a\"}},{\"key\":{\"type\":\"Int\",\"value\":\"7\"},\"value\":{\"type\":\"String\",\"value\":\"b\"}}]}}]}}]}}\n", string(bytes))
+	// NOTE: NOT using JSONEq, as we want to check order (by string equality), instead of structural equality
+	assert.Equal(t, exportJsonDeterministicExpected, string(bytes))
 }
 
 var fooFields = []cadence.Field{

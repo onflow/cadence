@@ -57,7 +57,7 @@ func TestRuntimeTypeStorage(t *testing.T) {
 		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{
-				common.BytesToAddress([]byte{42}),
+				common.MustBytesToAddress([]byte{42}),
 			}, nil
 		},
 		log: func(message string) {

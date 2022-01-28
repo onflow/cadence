@@ -4299,8 +4299,8 @@ func (interpreter *Interpreter) ValidateAtreeValue(v atree.Value) {
 	defaultHIP := newHashInputProvider(interpreter, ReturnEmptyLocationRange)
 
 	hip := func(value atree.Value, buffer []byte) ([]byte, error) {
-		if _, ok := value.(stringAtreeValue); ok {
-			return stringAtreeHashInput(value, buffer)
+		if _, ok := value.(StringAtreeValue); ok {
+			return StringAtreeHashInput(value, buffer)
 		}
 
 		return defaultHIP(value, buffer)
@@ -4312,8 +4312,8 @@ func (interpreter *Interpreter) ValidateAtreeValue(v atree.Value) {
 			panic(err)
 		}
 
-		if _, ok := value.(stringAtreeValue); ok {
-			equal, err := stringAtreeComparator(interpreter.Storage, value, otherStorable)
+		if _, ok := value.(StringAtreeValue); ok {
+			equal, err := StringAtreeComparator(interpreter.Storage, value, otherStorable)
 			if err != nil {
 				panic(err)
 			}

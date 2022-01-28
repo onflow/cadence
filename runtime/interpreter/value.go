@@ -11468,9 +11468,9 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange fu
 	}
 
 	storable, err := v.dictionary.Get(
-		stringAtreeComparator,
-		stringAtreeHashInput,
-		stringAtreeValue(name),
+		StringAtreeComparator,
+		StringAtreeHashInput,
+		StringAtreeValue(name),
 	)
 	if err != nil {
 		if _, ok := err.(*atree.KeyNotFoundError); !ok {
@@ -11574,9 +11574,9 @@ func (v *CompositeValue) RemoveMember(
 	// No need to clean up storable for passed-in key value,
 	// as atree never calls Storable()
 	existingKeyStorable, existingValueStorable, err := v.dictionary.Remove(
-		stringAtreeComparator,
-		stringAtreeHashInput,
-		stringAtreeValue(name),
+		StringAtreeComparator,
+		StringAtreeHashInput,
+		StringAtreeValue(name),
 	)
 	if err != nil {
 		if _, ok := err.(*atree.KeyNotFoundError); ok {
@@ -11621,9 +11621,9 @@ func (v *CompositeValue) SetMember(
 	)
 
 	existingStorable, err := v.dictionary.Set(
-		stringAtreeComparator,
-		stringAtreeHashInput,
-		stringAtreeValue(name),
+		StringAtreeComparator,
+		StringAtreeHashInput,
+		StringAtreeValue(name),
 		value,
 	)
 	if err != nil {
@@ -11693,9 +11693,9 @@ func formatComposite(typeId string, fields []CompositeField, seenReferences Seen
 func (v *CompositeValue) GetField(name string) Value {
 
 	storable, err := v.dictionary.Get(
-		stringAtreeComparator,
-		stringAtreeHashInput,
-		stringAtreeValue(name),
+		StringAtreeComparator,
+		StringAtreeHashInput,
+		StringAtreeValue(name),
 	)
 	if err != nil {
 		if _, ok := err.(*atree.KeyNotFoundError); ok {
@@ -11734,7 +11734,7 @@ func (v *CompositeValue) Equal(interpreter *Interpreter, getLocationRange func()
 			return true
 		}
 
-		fieldName := string(key.(stringAtreeValue))
+		fieldName := string(key.(StringAtreeValue))
 
 		// NOTE: Do NOT use an iterator, iteration order of fields may be different
 		// (if stored in different account, as storage ID is used as hash seed)
@@ -11924,8 +11924,8 @@ func (v *CompositeValue) Transfer(
 			address,
 			atree.NewDefaultDigesterBuilder(),
 			v.dictionary.Type(),
-			stringAtreeComparator,
-			stringAtreeHashInput,
+			StringAtreeComparator,
+			StringAtreeHashInput,
 			v.dictionary.Seed(),
 			func() (atree.Value, atree.Value, error) {
 
@@ -12042,8 +12042,8 @@ func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
 		v.StorageID().Address,
 		atree.NewDefaultDigesterBuilder(),
 		v.dictionary.Type(),
-		stringAtreeComparator,
-		stringAtreeHashInput,
+		StringAtreeComparator,
+		StringAtreeHashInput,
 		v.dictionary.Seed(),
 		func() (atree.Value, atree.Value, error) {
 
@@ -12114,7 +12114,7 @@ func (v *CompositeValue) GetOwner() common.Address {
 func (v *CompositeValue) ForEachField(f func(fieldName string, fieldValue Value)) {
 	err := v.dictionary.Iterate(func(key atree.Value, value atree.Value) (resume bool, err error) {
 		f(
-			string(key.(stringAtreeValue)),
+			string(key.(StringAtreeValue)),
 			MustConvertStoredValue(value),
 		)
 		return true, nil
@@ -12135,9 +12135,9 @@ func (v *CompositeValue) RemoveField(
 ) {
 
 	existingKeyStorable, existingValueStorable, err := v.dictionary.Remove(
-		stringAtreeComparator,
-		stringAtreeHashInput,
-		stringAtreeValue(name),
+		StringAtreeComparator,
+		StringAtreeHashInput,
+		StringAtreeValue(name),
 	)
 	if err != nil {
 		if _, ok := err.(*atree.KeyNotFoundError); ok {
