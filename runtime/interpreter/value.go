@@ -584,9 +584,9 @@ func (BoolValue) ChildStorables() []atree.Storable {
 
 // CharacterValue
 
-type CharacterValue byte
+type CharacterValue rune
 
-func NewCharacterValue(r byte) CharacterValue {
+func NewCharacterValue(r rune) CharacterValue {
 	return CharacterValue(r)
 }
 
@@ -628,13 +628,22 @@ func (v CharacterValue) Equal(_ *Interpreter, _ func() LocationRange, other Valu
 	if !ok {
 		return false
 	}
-	return byte(v) == byte(otherChar)
+	return rune(v) == rune(otherChar)
 }
 
 func (v CharacterValue) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
-	scratch[0] = byte(HashInputTypeCharacter)
-	scratch[1] = byte(v)
-	return scratch[:2]
+	s := []byte(string(v))
+	length := 1 + len(s)
+	var buffer []byte
+	if length <= len(scratch) {
+		buffer = scratch[:length]
+	} else {
+		buffer = make([]byte, length)
+	}
+
+	buffer[0] = byte(HashInputTypeCharacter)
+	copy(buffer[1:], s)
+	return buffer
 }
 
 func (v CharacterValue) ConformsToDynamicType(
@@ -643,7 +652,7 @@ func (v CharacterValue) ConformsToDynamicType(
 	dynamicType DynamicType,
 	_ TypeConformanceResults,
 ) bool {
-	_, ok := dynamicType.(BoolDynamicType)
+	_, ok := dynamicType.(CharacterDynamicType)
 	return ok
 }
 
@@ -861,7 +870,7 @@ func (v *StringValue) GetKey(_ *Interpreter, getLocationRange func() LocationRan
 		v.graphemes.Next()
 	}
 
-	chars := v.graphemes.Bytes()
+	chars := v.graphemes.Runes()
 	if len(chars) != 1 {
 		panic(errors.NewUnreachableError())
 	}

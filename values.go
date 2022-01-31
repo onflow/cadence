@@ -183,9 +183,9 @@ func (v Bytes) String() string {
 
 // Character
 
-type Character byte
+type Character rune
 
-func NewCharacter(b byte) Character {
+func NewCharacter(b rune) Character {
 	return Character(b)
 }
 
@@ -196,7 +196,7 @@ func (Character) Type() Type {
 }
 
 func (v Character) ToGoValue() interface{} {
-	return byte(v)
+	return string(v)
 }
 
 func (v Character) String() string {

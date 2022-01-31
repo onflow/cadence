@@ -94,12 +94,12 @@ func TestEncodeCharacter(t *testing.T) {
 	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"a",
-			cadence.NewCharacter(byte('a')),
+			cadence.NewCharacter('a'),
 			`{"type":"Bool","value":'a'}`,
 		},
 		{
 			"b",
-			cadence.NewCharacter(byte('a')),
+			cadence.NewCharacter('a'),
 			`{"type":"Bool","value":'b'}`,
 		},
 	}...)
