@@ -234,7 +234,7 @@ func decodeBool(valueJSON interface{}) cadence.Bool {
 }
 
 func decodeCharacter(valueJSON interface{}) cadence.Character {
-	return cadence.NewCharacter(toByte(valueJSON))
+	return cadence.NewCharacter(toRune(valueJSON))
 }
 
 func decodeString(valueJSON interface{}) cadence.String {
@@ -1025,9 +1025,9 @@ func toBool(valueJSON interface{}) bool {
 	return v
 }
 
-func toByte(valueJSON interface{}) byte {
-	v, isByte := valueJSON.(byte)
-	if !isByte {
+func toRune(valueJSON interface{}) rune {
+	v, toRune := valueJSON.(rune)
+	if !toRune {
 		// TODO: improve error message
 		panic(ErrInvalidJSONCadence)
 	}
