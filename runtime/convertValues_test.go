@@ -237,6 +237,11 @@ func TestExportValue(t *testing.T) {
 			expected: cadence.NewInt(42),
 		},
 		{
+			label:    "Character",
+			value:    interpreter.NewCharacterValue(byte('a')),
+			expected: cadence.NewCharacter(byte('a')),
+		},
+		{
 			label:    "Int8",
 			value:    interpreter.Int8Value(42),
 			expected: cadence.NewInt8(42),
@@ -612,6 +617,11 @@ func TestImportValue(t *testing.T) {
 			label:    "Int",
 			value:    cadence.NewInt(42),
 			expected: interpreter.NewIntValueFromInt64(42),
+		},
+		{
+			label:    "Character",
+			value:    cadence.NewCharacter(byte('a')),
+			expected: interpreter.NewCharacterValue(byte('a')),
 		},
 		{
 			label:    "Int8",

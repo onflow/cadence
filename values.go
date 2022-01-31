@@ -181,6 +181,28 @@ func (v Bytes) String() string {
 	return format.Bytes(v)
 }
 
+// Character
+
+type Character byte
+
+func NewCharacter(b byte) Character {
+	return Character(b)
+}
+
+func (Character) isValue() {}
+
+func (Character) Type() Type {
+	return CharacterType{}
+}
+
+func (v Character) ToGoValue() interface{} {
+	return byte(v)
+}
+
+func (v Character) String() string {
+	return format.String(string(v))
+}
+
 // Address
 
 const AddressLength = 8

@@ -138,6 +138,8 @@ func decodeJSON(v interface{}) cadence.Value {
 		return decodeOptional(valueJSON)
 	case boolTypeStr:
 		return decodeBool(valueJSON)
+	case characterTypeStr:
+		return decodeCharacter(valueJSON)
 	case stringTypeStr:
 		return decodeString(valueJSON)
 	case addressTypeStr:
@@ -229,6 +231,10 @@ func decodeOptional(valueJSON interface{}) cadence.Optional {
 
 func decodeBool(valueJSON interface{}) cadence.Bool {
 	return cadence.NewBool(toBool(valueJSON))
+}
+
+func decodeCharacter(valueJSON interface{}) cadence.Character {
+	return cadence.NewCharacter(toByte(valueJSON))
 }
 
 func decodeString(valueJSON interface{}) cadence.String {
@@ -1012,6 +1018,16 @@ func (obj jsonObject) GetValue(key string) cadence.Value {
 func toBool(valueJSON interface{}) bool {
 	v, isBool := valueJSON.(bool)
 	if !isBool {
+		// TODO: improve error message
+		panic(ErrInvalidJSONCadence)
+	}
+
+	return v
+}
+
+func toByte(valueJSON interface{}) byte {
+	v, isByte := valueJSON.(byte)
+	if !isByte {
 		// TODO: improve error message
 		panic(ErrInvalidJSONCadence)
 	}

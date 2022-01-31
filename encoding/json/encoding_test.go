@@ -87,6 +87,24 @@ func TestEncodeBool(t *testing.T) {
 	}...)
 }
 
+func TestEncodeCharacter(t *testing.T) {
+
+	t.Parallel()
+
+	testAllEncodeAndDecode(t, []encodeTest{
+		{
+			"a",
+			cadence.NewCharacter(byte('a')),
+			`{"type":"Bool","value":'a'}`,
+		},
+		{
+			"b",
+			cadence.NewCharacter(byte('a')),
+			`{"type":"Bool","value":'b'}`,
+		},
+	}...)
+}
+
 func TestEncodeString(t *testing.T) {
 
 	t.Parallel()
