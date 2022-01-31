@@ -947,9 +947,9 @@ func StaticTypeToBytes(t StaticType) (cbor.RawMessage, error) {
 	return buf.Bytes(), nil
 }
 
-func StaticTypeFromBytes(data []byte) (StaticType, error) {
+func StaticTypeFromBytes(data []byte, memoryGauge MemoryGauge) (StaticType, error) {
 	dec := CBORDecMode.NewByteStreamDecoder(data)
-	return decodeStaticType(dec)
+	return DecodeStaticType(dec, memoryGauge)
 }
 
 func EncodeStaticType(e *cbor.StreamEncoder, t StaticType) error {

@@ -1156,6 +1156,8 @@ func (r *interpreterRuntime) newInterpreter(
 		preDeclaredValues = append(preDeclaredValues, predeclaredValue)
 	}
 
+	memoryGauge, _ := context.Interface.(interpreter.MemoryGauge)
+
 	publicKeyValidator := func(
 		inter *interpreter.Interpreter,
 		getLocationRange func() interpreter.LocationRange,
@@ -1305,8 +1307,13 @@ func (r *interpreterRuntime) newInterpreter(
 			},
 		),
 		interpreter.WithOnRecordTraceHandler(
-			func(intr *interpreter.Interpreter, functionName string, duration time.Duration, logs []opentracing.LogRecord) {
-				context.Interface.RecordTrace(functionName, intr.Location, duration, logs)
+			func(
+				interpreter *interpreter.Interpreter,
+				functionName string,
+				duration time.Duration,
+				logs []opentracing.LogRecord,
+			) {
+				context.Interface.RecordTrace(functionName, interpreter.Location, duration, logs)
 			},
 		),
 		interpreter.WithTracingEnabled(r.tracingEnabled),
@@ -1316,6 +1323,7 @@ func (r *interpreterRuntime) newInterpreter(
 		// Instead, storage is validated after commits (if validation is enabled).
 		interpreter.WithAtreeStorageValidationEnabled(false),
 		interpreter.WithOnResourceOwnerChangeHandler(r.resourceOwnerChangedHandler(context.Interface)),
+		interpreter.WithMemoryGauge(memoryGauge),
 	}
 
 	defaultOptions = append(defaultOptions,
