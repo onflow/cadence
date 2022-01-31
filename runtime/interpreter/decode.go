@@ -253,7 +253,7 @@ func (d Decoder) decodeString(v string) *StringValue {
 }
 
 func (d Decoder) decodeCharacter(v string) (CharacterValue, error) {
-	if len(v) > 0 {
+	if len(v) > 1 {
 		return '0', fmt.Errorf(
 			"invalid character encoding: %s",
 			v,

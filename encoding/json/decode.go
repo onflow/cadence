@@ -1026,13 +1026,13 @@ func toBool(valueJSON interface{}) bool {
 }
 
 func toRune(valueJSON interface{}) rune {
-	v, toRune := valueJSON.(rune)
+	v, toRune := valueJSON.(float64)
 	if !toRune {
 		// TODO: improve error message
 		panic(ErrInvalidJSONCadence)
 	}
 
-	return v
+	return rune(v)
 }
 
 func toUInt(valueJSON interface{}) uint {

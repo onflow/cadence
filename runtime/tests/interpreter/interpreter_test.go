@@ -6617,7 +6617,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			ty:    sema.StringType,
 		},
 		"Character": {
-			value: interpreter.NewStringValue("X"),
+			value: interpreter.NewCharacterValue('X'),
 			ty:    sema.CharacterType,
 		},
 		"Bool": {

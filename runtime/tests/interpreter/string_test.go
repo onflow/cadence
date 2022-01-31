@@ -66,7 +66,7 @@ func TestInterpretStringFunction(t *testing.T) {
       fun test(): String {
           return String()
       }
-	`)
+    `)
 
 	result, err := inter.Invoke("test")
 	require.NoError(t, err)
@@ -87,7 +87,7 @@ func TestInterpretStringDecodeHex(t *testing.T) {
       fun test(): [UInt8] {
           return "01CADE".decodeHex()
       }
-	`)
+    `)
 
 	result, err := inter.Invoke("test")
 	require.NoError(t, err)
@@ -117,7 +117,7 @@ func TestInterpretStringEncodeHex(t *testing.T) {
       fun test(): String {
           return String.encodeHex([1, 2, 3, 0xCA, 0xDE])
       }
-	`)
+    `)
 
 	result, err := inter.Invoke("test")
 	require.NoError(t, err)
@@ -138,7 +138,7 @@ func TestInterpretStringUtf8Field(t *testing.T) {
       fun test(): [UInt8] {
           return "Flowers \u{1F490} are beautiful".utf8
       }
-	`)
+    `)
 
 	result, err := inter.Invoke("test")
 	require.NoError(t, err)
@@ -195,7 +195,7 @@ func TestInterpretStringToLower(t *testing.T) {
       fun test(): String {
           return "Flowers".toLower()
       }
-	`)
+    `)
 
 	result, err := inter.Invoke("test")
 	require.NoError(t, err)
@@ -211,11 +211,11 @@ func TestInterpretStringAccess(t *testing.T) {
 	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
-	fun test(): Type {
-		let c: Character = "x"[0]
-		return c.getType() 
-	}
-	`)
+    fun test(): Type {
+        let c: Character = "x"[0]
+        return c.getType() 
+    }
+    `)
 
 	result, err := inter.Invoke("test")
 	require.NoError(t, err)
@@ -231,11 +231,11 @@ func TestInterpretCharacterLiteralType(t *testing.T) {
 	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
-	fun test(): Type {
-		let c: Character = "x"
-		return c.getType() 
-	}
-	`)
+    fun test(): Type {
+        let c: Character = "x"
+        return c.getType() 
+    }
+    `)
 
 	result, err := inter.Invoke("test")
 	require.NoError(t, err)
@@ -251,18 +251,17 @@ func TestInterpretOneCharacterStringLiteralType(t *testing.T) {
 	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
-	fun test(): Type {
-		let c: String = "x"
-		return c.getType() 
-	}
-	`)
+    fun test(): Type {
+        let c: String = "x"
+        return c.getType() 
+    }
+    `)
 
 	result, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	// dynamic type is still a character, characater is a subtype of string
 	require.Equal(t,
-		interpreter.TypeValue{Type: interpreter.PrimitiveStaticTypeCharacter},
+		interpreter.TypeValue{Type: interpreter.PrimitiveStaticTypeString},
 		result,
 	)
 }
@@ -272,33 +271,31 @@ func TestInterpretCharacterLiteralTypeNoAnnotation(t *testing.T) {
 	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
-	fun test(): Type {
-		let c = "x"
-		return c.getType() 
-	}
-	`)
+    fun test(): Type {
+        let c = "x"
+        return c.getType() 
+    }
+    `)
 
 	result, err := inter.Invoke("test")
 	require.NoError(t, err)
 
 	require.Equal(t,
-		interpreter.TypeValue{Type: interpreter.PrimitiveStaticTypeCharacter},
+		interpreter.TypeValue{Type: interpreter.PrimitiveStaticTypeString},
 		result,
 	)
 }
 
-func TestInterpretCharacterConcatenation(t *testing.T) {
+func TestConvertCharacterToString(t *testing.T) {
 
 	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
-	fun test(): Type {
-		let x: Character = "a"
-		let y: Character = "b"
-		let z: String = x.concat(y)
-		return z.getType() 
-	}
-	`)
+    fun test(): String {
+        let c: Character = "x"
+        return c.toString()
+    }
+    `)
 
 	result, err := inter.Invoke("test")
 	require.NoError(t, err)

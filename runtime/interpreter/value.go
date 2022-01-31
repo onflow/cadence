@@ -616,7 +616,7 @@ func (CharacterValue) StaticType() StaticType {
 }
 
 func (v CharacterValue) String() string {
-	return string(v)
+	return format.String(string(v))
 }
 
 func (v CharacterValue) RecursiveString(_ SeenReferences) string {
