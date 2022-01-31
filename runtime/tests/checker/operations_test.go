@@ -481,7 +481,7 @@ func TestCheckNumericSuperTypeBinaryOperations(t *testing.T) {
 	}
 
 	t.Run("non saturating operations", func(t *testing.T) {
-	
+
 		t.Parallel()
 
 		operations := []ast.Operation{

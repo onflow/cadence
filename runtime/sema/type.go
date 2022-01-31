@@ -753,6 +753,7 @@ type IntegerRangedType interface {
 	Type
 	MinInt() *big.Int
 	MaxInt() *big.Int
+	IsSuperType() bool
 }
 
 type FractionalRangedType interface {
@@ -856,6 +857,7 @@ type NumericType struct {
 	supportsSaturatingDivide   bool
 	memberResolvers            map[string]MemberResolver
 	memberResolversOnce        sync.Once
+	isSuperType                bool
 }
 
 var _ IntegerRangedType = &NumericType{}
@@ -1003,6 +1005,15 @@ func (t *NumericType) initializeMemberResolvers() {
 	})
 }
 
+func (t *NumericType) AsSuperType() *NumericType {
+	t.isSuperType = true
+	return t
+}
+
+func (t *NumericType) IsSuperType() bool {
+	return t.isSuperType
+}
+
 // FixedPointNumericType represents all the types in the fixed-point range.
 //
 type FixedPointNumericType struct {
@@ -1019,6 +1030,7 @@ type FixedPointNumericType struct {
 	supportsSaturatingDivide   bool
 	memberResolvers            map[string]MemberResolver
 	memberResolversOnce        sync.Once
+	isSuperType                bool
 }
 
 var _ FractionalRangedType = &FixedPointNumericType{}
@@ -1195,25 +1207,38 @@ func (t *FixedPointNumericType) initializeMemberResolvers() {
 	})
 }
 
+func (t *FixedPointNumericType) AsSuperType() *FixedPointNumericType {
+	t.isSuperType = true
+	return t
+}
+
+func (t *FixedPointNumericType) IsSuperType() bool {
+	return t.isSuperType
+}
+
 // Numeric types
 
 var (
 
 	// NumberType represents the super-type of all number types
 	NumberType = NewNumericType(NumberTypeName).
-			WithTag(NumberTypeTag)
+			WithTag(NumberTypeTag).
+			AsSuperType()
 
 	// SignedNumberType represents the super-type of all signed number types
 	SignedNumberType = NewNumericType(SignedNumberTypeName).
-				WithTag(SignedNumberTypeTag)
+				WithTag(SignedNumberTypeTag).
+				AsSuperType()
 
 	// IntegerType represents the super-type of all integer types
 	IntegerType = NewNumericType(IntegerTypeName).
-			WithTag(IntegerTypeTag)
+			WithTag(IntegerTypeTag).
+			AsSuperType()
 
 	// SignedIntegerType represents the super-type of all signed integer types
 	SignedIntegerType = NewNumericType(SignedIntegerTypeName).
-				WithTag(SignedIntegerTypeTag)
+				WithTag(SignedIntegerTypeTag).
+				AsSuperType()
 
 	// IntType represents the arbitrary-precision integer type `Int`
 	IntType = NewNumericType(IntTypeName).
@@ -1359,11 +1384,13 @@ var (
 
 	// FixedPointType represents the super-type of all fixed-point types
 	FixedPointType = NewNumericType(FixedPointTypeName).
-			WithTag(FixedPointTypeTag)
+			WithTag(FixedPointTypeTag).
+			AsSuperType()
 
 	// SignedFixedPointType represents the super-type of all signed fixed-point types
 	SignedFixedPointType = NewNumericType(SignedFixedPointTypeName).
-				WithTag(SignedFixedPointTypeTag)
+				WithTag(SignedFixedPointTypeTag).
+				AsSuperType()
 
 	// Fix64Type represents the 64-bit signed decimal fixed-point type `Fix64`
 	// which has a scale of Fix64Scale, and checks for overflow and underflow
@@ -6265,16 +6292,10 @@ func getFieldNames(members []*Member) []string {
 	return fields
 }
 
-func isNumericSuperType(numberType Type) bool {
-	switch numberType {
-	case NumberType,
-		SignedNumberType,
-		IntegerType,
-		SignedIntegerType,
-		FixedPointType,
-		SignedFixedPointType:
-		return true
-	default:
-		return false
+func isNumericSuperType(typ Type) bool {
+	if numberType, ok := typ.(IntegerRangedType); ok {
+		return numberType.IsSuperType()
 	}
+
+	return false
 }
