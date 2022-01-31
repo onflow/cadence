@@ -23,6 +23,7 @@ import (
 	"runtime"
 	"sort"
 
+	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -42,13 +43,26 @@ type Storage struct {
 var _ atree.SlabStorage = &Storage{}
 var _ interpreter.Storage = &Storage{}
 
-func NewStorage(ledger atree.Ledger) *Storage {
+func NewStorage(ledger atree.Ledger, memoryGauge interpreter.MemoryGauge) *Storage {
+	decodeStorable := func(
+		decoder *cbor.StreamDecoder,
+		slabStorageID atree.StorageID,
+	) (
+		atree.Storable,
+		error,
+	) {
+		return interpreter.DecodeStorable(
+			decoder,
+			slabStorageID,
+			memoryGauge,
+		)
+	}
 	ledgerStorage := atree.NewLedgerBaseStorage(ledger)
 	persistentSlabStorage := atree.NewPersistentSlabStorage(
 		ledgerStorage,
 		interpreter.CBOREncMode,
 		interpreter.CBORDecMode,
-		interpreter.DecodeStorable,
+		decodeStorable,
 		interpreter.DecodeTypeInfo,
 	)
 	return &Storage{

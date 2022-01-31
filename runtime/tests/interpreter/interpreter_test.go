@@ -92,7 +92,7 @@ func parseCheckAndInterpretWithOptions(
 				uuid++
 				return uuid, nil
 			}),
-			interpreter.WithStorage(interpreter.NewInMemoryStorage()),
+			interpreter.WithStorage(interpreter.NewInMemoryStorage(nil)),
 			interpreter.WithAtreeValueValidationEnabled(true),
 			interpreter.WithAtreeStorageValidationEnabled(true),
 		},
@@ -1757,7 +1757,7 @@ func TestInterpretHostFunction(t *testing.T) {
 	err = checker.Check()
 	require.NoError(t, err)
 
-	storage := interpreter.NewInMemoryStorage()
+	storage := interpreter.NewInMemoryStorage(nil)
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
@@ -1861,7 +1861,7 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 	err = checker.Check()
 	require.NoError(t, err)
 
-	storage := interpreter.NewInMemoryStorage()
+	storage := interpreter.NewInMemoryStorage(nil)
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
@@ -3789,7 +3789,7 @@ func TestInterpretImport(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	storage := interpreter.NewInMemoryStorage()
+	storage := interpreter.NewInMemoryStorage(nil)
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),
@@ -3885,7 +3885,7 @@ func TestInterpretImportError(t *testing.T) {
 		stdlib.PanicFunction,
 	}.ToInterpreterValueDeclarations()
 
-	storage := interpreter.NewInMemoryStorage()
+	storage := interpreter.NewInMemoryStorage(nil)
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),
@@ -4578,7 +4578,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		valueDeclarations := standardLibraryFunctions.ToSemaValueDeclarations()
 		values := standardLibraryFunctions.ToInterpreterValueDeclarations()
 
-		storage := interpreter.NewInMemoryStorage()
+		storage := interpreter.NewInMemoryStorage(nil)
 
 		var err error
 		inter, err = parseCheckAndInterpretWithOptions(t,
@@ -6007,7 +6007,7 @@ func TestInterpretCompositeFunctionInvocationFromImportingProgram(t *testing.T) 
 	)
 	require.NoError(t, err)
 
-	storage := interpreter.NewInMemoryStorage()
+	storage := interpreter.NewInMemoryStorage(nil)
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),
@@ -6592,7 +6592,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 		Members:    sema.NewStringMemberOrderedMap(),
 	}
 
-	storage := interpreter.NewInMemoryStorage()
+	storage := interpreter.NewInMemoryStorage(nil)
 
 	inter, err := interpreter.NewInterpreter(
 		nil,
@@ -7970,7 +7970,7 @@ func TestInterpretConformToImportedInterface(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	storage := interpreter.NewInMemoryStorage()
+	storage := interpreter.NewInMemoryStorage(nil)
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),

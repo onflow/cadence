@@ -603,8 +603,10 @@ func NewUnmeteredStringValue(str string) *StringValue {
 	}
 }
 
-func NewStringValue(interpreter *Interpreter, memoryUsage MemoryUsage, stringConstructor func() string) *StringValue {
-	interpreter.useMemory(memoryUsage)
+func NewStringValue(memoryGauge MemoryGauge, memoryUsage MemoryUsage, stringConstructor func() string) *StringValue {
+	if memoryGauge != nil {
+		memoryGauge.UseMemory(memoryUsage)
+	}
 	str := stringConstructor()
 	return NewUnmeteredStringValue(str)
 }

@@ -36,7 +36,7 @@ func TestValueDeepCopyAndDeepRemove(t *testing.T) {
 
 	address := common.Address{0x1}
 
-	storage := NewInMemoryStorage()
+	storage := NewInMemoryStorage(nil)
 
 	inter, err := NewInterpreter(
 		nil,

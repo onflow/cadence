@@ -46,7 +46,7 @@ func withWritesToStorage(
 	handler func(*Storage, *interpreter.Interpreter),
 ) {
 	ledger := newTestLedger(nil, onWrite)
-	storage := NewStorage(ledger)
+	storage := NewStorage(ledger, nil)
 
 	inter := newTestInterpreter(tb)
 

@@ -4554,7 +4554,7 @@ func TestRuntimeStaticTypeAvailability(t *testing.T) {
 }
 
 func newTestInterpreter(tb testing.TB) *interpreter.Interpreter {
-	storage := interpreter.NewInMemoryStorage()
+	storage := interpreter.NewInMemoryStorage(nil)
 
 	inter, err := interpreter.NewInterpreter(
 		nil,

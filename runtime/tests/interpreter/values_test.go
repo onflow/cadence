@@ -58,7 +58,7 @@ func TestRandomMapOperations(t *testing.T) {
 	fmt.Printf("Seed used for map opearations test: %d \n", seed)
 	rand.Seed(seed)
 
-	storage := interpreter.NewInMemoryStorage()
+	storage := interpreter.NewInMemoryStorage(nil)
 	inter, err := interpreter.NewInterpreter(
 		&interpreter.Program{
 			Program:     ast.NewProgram([]ast.Declaration{}),
@@ -494,7 +494,7 @@ func TestRandomArrayOperations(t *testing.T) {
 	fmt.Printf("Seed used for array opearations test: %d \n", seed)
 	rand.Seed(seed)
 
-	storage := interpreter.NewInMemoryStorage()
+	storage := interpreter.NewInMemoryStorage(nil)
 	inter, err := interpreter.NewInterpreter(
 		&interpreter.Program{
 			Program:     ast.NewProgram([]ast.Declaration{}),
@@ -852,7 +852,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 	fmt.Printf("Seed used for compsoite opearations test: %d \n", seed)
 	rand.Seed(seed)
 
-	storage := interpreter.NewInMemoryStorage()
+	storage := interpreter.NewInMemoryStorage(nil)
 	inter, err := interpreter.NewInterpreter(
 		&interpreter.Program{
 			Program:     ast.NewProgram([]ast.Declaration{}),

@@ -156,7 +156,7 @@ func PrepareInterpreter(filename string, debugger *interpreter.Debugger) (*inter
 
 	var uuid uint64
 
-	storage := interpreter.NewInMemoryStorage()
+	storage := interpreter.NewInMemoryStorage(nil)
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),

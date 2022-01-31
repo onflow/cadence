@@ -109,7 +109,7 @@ func NewREPL(
 
 	var uuid uint64
 
-	storage := interpreter.NewInMemoryStorage()
+	storage := interpreter.NewInMemoryStorage(nil)
 
 	interpreterOptions = append(
 		[]interpreter.Option{

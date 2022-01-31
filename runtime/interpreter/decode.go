@@ -56,14 +56,20 @@ func (e UnsupportedTagDecodingError) Error() string {
 func DecodeStorable(
 	decoder *cbor.StreamDecoder,
 	slabStorageID atree.StorageID,
-) (atree.Storable, error) {
+	memoryGauge MemoryGauge,
+) (
+	atree.Storable,
+	error,
+) {
 	return Decoder{
+		memoryGauge:   memoryGauge,
 		decoder:       decoder,
 		slabStorageID: slabStorageID,
 	}.decodeStorable()
 }
 
 type Decoder struct {
+	memoryGauge   MemoryGauge
 	decoder       *cbor.StreamDecoder
 	slabStorageID atree.StorageID
 }
@@ -96,6 +102,7 @@ func (d Decoder) decodeStorable() (atree.Storable, error) {
 		storable = NilValue{}
 
 	case cbor.TextStringType:
+		// TODO: meter
 		v, err := d.decoder.DecodeString()
 		if err != nil {
 			return nil, err
@@ -122,11 +129,10 @@ func (d Decoder) decodeStorable() (atree.Storable, error) {
 			storable = VoidValue{}
 
 		case CBORTagStringValue:
-			v, err := d.decoder.DecodeString()
+			storable, err = d.decodeString()
 			if err != nil {
 				return nil, err
 			}
-			storable = d.decodeString(v)
 
 		case CBORTagSomeValue:
 			storable, err = d.decodeSome()
@@ -238,9 +244,28 @@ func (d Decoder) decodeStorable() (atree.Storable, error) {
 	return storable, nil
 }
 
-func (d Decoder) decodeString(v string) *StringValue {
-	// TODO: meter? but string is already decoded
-	return NewUnmeteredStringValue(v)
+func (d Decoder) decodeString() (*StringValue, error) {
+	length, err := d.decoder.NextSize()
+	if err != nil {
+		return nil, err
+	}
+	memoryUsage := MemoryUsage{
+		Type:   PrimitiveStaticTypeString,
+		Amount: length,
+	}
+	value := NewStringValue(
+		d.memoryGauge,
+		memoryUsage,
+		func() string {
+			var v string
+			v, err = d.decoder.DecodeString()
+			return v
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	return value, nil
 }
 
 func decodeLocation(dec *cbor.StreamDecoder) (common.Location, error) {
@@ -288,6 +313,7 @@ func decodeLocation(dec *cbor.StreamDecoder) (common.Location, error) {
 }
 
 func decodeStringLocation(dec *cbor.StreamDecoder) (common.Location, error) {
+	// TODO: meter
 	s, err := dec.DecodeString()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -303,6 +329,7 @@ func decodeStringLocation(dec *cbor.StreamDecoder) (common.Location, error) {
 }
 
 func decodeIdentifierLocation(dec *cbor.StreamDecoder) (common.Location, error) {
+	// TODO: meter?
 	s, err := dec.DecodeString()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -363,6 +390,7 @@ func decodeAddressLocation(dec *cbor.StreamDecoder) (common.Location, error) {
 	// Name
 
 	// Decode name at array index encodedAddressLocationNameFieldKey
+	// TODO: meter?
 	name, err := dec.DecodeString()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -828,6 +856,7 @@ func (d Decoder) decodePath() (PathValue, error) {
 	}
 
 	// Decode identifier at array index encodedPathValueIdentifierFieldKey
+	// TODO: meter
 	identifier, err := d.decoder.DecodeString()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -1130,6 +1159,7 @@ func decodeCompositeStaticType(dec *cbor.StreamDecoder) (StaticType, error) {
 	}
 
 	// Decode qualified identifier at array index encodedCompositeStaticTypeQualifiedIdentifierFieldKey
+	// TODO: meter
 	qualifiedIdentifier, err := dec.DecodeString()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -1180,6 +1210,7 @@ func decodeInterfaceStaticType(dec *cbor.StreamDecoder) (InterfaceStaticType, er
 	}
 
 	// Decode qualified identifier at array index encodedInterfaceStaticTypeQualifiedIdentifierFieldKey
+	// TODO: meter
 	qualifiedIdentifier, err := dec.DecodeString()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -1498,6 +1529,7 @@ func decodeCompositeTypeInfo(dec *cbor.StreamDecoder) (atree.TypeInfo, error) {
 		return nil, err
 	}
 
+	// TODO: meter
 	qualifiedIdentifier, err := dec.DecodeString()
 	if err != nil {
 		return nil, err
