@@ -259,7 +259,7 @@ func (d Decoder) decodeCharacter(v string) (CharacterValue, error) {
 			v,
 		)
 	}
-	return NewCharacterValue(byte(v[0])), nil
+	return NewCharacterValue(rune(v[0])), nil
 }
 
 func decodeLocation(dec *cbor.StreamDecoder) (common.Location, error) {
