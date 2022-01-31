@@ -861,9 +861,12 @@ func (v *StringValue) GetKey(_ *Interpreter, getLocationRange func() LocationRan
 		v.graphemes.Next()
 	}
 
-	char := v.graphemes.Str()
+	chars := v.graphemes.Bytes()
+	if len(chars) != 1 {
+		panic(errors.NewUnreachableError())
+	}
 
-	return NewStringValue(char)
+	return NewCharacterValue(chars[0])
 }
 
 func (*StringValue) SetKey(_ *Interpreter, _ func() LocationRange, _ Value, _ Value) {

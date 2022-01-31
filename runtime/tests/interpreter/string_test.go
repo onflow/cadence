@@ -225,3 +225,86 @@ func TestInterpretStringAccess(t *testing.T) {
 		result,
 	)
 }
+
+func TestInterpretCharacterLiteralType(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+	fun test(): Type {
+		let c: Character = "x"
+		return c.getType() 
+	}
+	`)
+
+	result, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	require.Equal(t,
+		interpreter.TypeValue{Type: interpreter.PrimitiveStaticTypeCharacter},
+		result,
+	)
+}
+
+func TestInterpretOneCharacterStringLiteralType(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+	fun test(): Type {
+		let c: String = "x"
+		return c.getType() 
+	}
+	`)
+
+	result, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	// dynamic type is still a character, characater is a subtype of string
+	require.Equal(t,
+		interpreter.TypeValue{Type: interpreter.PrimitiveStaticTypeCharacter},
+		result,
+	)
+}
+
+func TestInterpretCharacterLiteralTypeNoAnnotation(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+	fun test(): Type {
+		let c = "x"
+		return c.getType() 
+	}
+	`)
+
+	result, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	require.Equal(t,
+		interpreter.TypeValue{Type: interpreter.PrimitiveStaticTypeCharacter},
+		result,
+	)
+}
+
+func TestInterpretCharacterConcatenation(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+	fun test(): Type {
+		let x: Character = "a"
+		let y: Character = "b"
+		let z: String = x.concat(y)
+		return z.getType() 
+	}
+	`)
+
+	result, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	require.Equal(t,
+		interpreter.TypeValue{Type: interpreter.PrimitiveStaticTypeString},
+		result,
+	)
+}
