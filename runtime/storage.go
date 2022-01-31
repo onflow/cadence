@@ -57,13 +57,18 @@ func NewStorage(ledger atree.Ledger, memoryGauge interpreter.MemoryGauge) *Stora
 			memoryGauge,
 		)
 	}
+
+	decodeTypeInfo := func(decoder *cbor.StreamDecoder) (atree.TypeInfo, error) {
+		return interpreter.DecodeTypeInfo(decoder, memoryGauge)
+	}
+
 	ledgerStorage := atree.NewLedgerBaseStorage(ledger)
 	persistentSlabStorage := atree.NewPersistentSlabStorage(
 		ledgerStorage,
 		interpreter.CBOREncMode,
 		interpreter.CBORDecMode,
 		decodeStorable,
-		interpreter.DecodeTypeInfo,
+		decodeTypeInfo,
 	)
 	return &Storage{
 		Ledger:                ledger,

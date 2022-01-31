@@ -3818,7 +3818,7 @@ func TestEncodeDecodeStaticType(t *testing.T) {
 
 		AssertEqualWithDiff(t, encoded, actualEncoded)
 
-		actualType, err := StaticTypeFromBytes(encoded)
+		actualType, err := StaticTypeFromBytes(encoded, nil)
 		require.NoError(t, err)
 
 		require.Equal(t, ty, actualType)

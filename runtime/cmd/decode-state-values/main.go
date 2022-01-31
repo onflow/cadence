@@ -94,13 +94,17 @@ func decodeStorable(decoder *cbor.StreamDecoder, storableSlabStorageID atree.Sto
 	return interpreter.DecodeStorable(decoder, storableSlabStorageID, nil)
 }
 
+func decodeTypeInfo(decoder *cbor.StreamDecoder) (atree.TypeInfo, error) {
+	return interpreter.DecodeTypeInfo(decoder, nil)
+}
+
 func decodeSlab(id atree.StorageID, data []byte) (atree.Slab, error) {
 	return atree.DecodeSlab(
 		id,
 		data,
 		interpreter.CBORDecMode,
 		decodeStorable,
-		interpreter.DecodeTypeInfo,
+		decodeTypeInfo,
 	)
 }
 

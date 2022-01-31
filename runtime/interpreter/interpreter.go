@@ -2640,6 +2640,7 @@ func (interpreter *Interpreter) NewSubInterpreter(
 		WithTracingEnabled(interpreter.tracingEnabled),
 		WithOnRecordTraceHandler(interpreter.onRecordTrace),
 		WithOnResourceOwnerChangeHandler(interpreter.onResourceOwnerChange),
+		WithMemoryGauge(interpreter.memoryGauge),
 	}
 
 	return NewInterpreter(
@@ -4558,7 +4559,7 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 			CBORDecMode,
 			CBOREncMode,
 			interpreter.DecodeStorable,
-			DecodeTypeInfo,
+			interpreter.DecodeTypeInfo,
 			compare,
 		)
 		if err != nil {
@@ -4584,7 +4585,7 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 			CBORDecMode,
 			CBOREncMode,
 			interpreter.DecodeStorable,
-			DecodeTypeInfo,
+			interpreter.DecodeTypeInfo,
 			compare,
 		)
 		if err != nil {
@@ -4755,4 +4756,8 @@ func (interpreter *Interpreter) DecodeStorable(
 	error,
 ) {
 	return DecodeStorable(decoder, storageID, interpreter)
+}
+
+func (interpreter *Interpreter) DecodeTypeInfo(decoder *cbor.StreamDecoder) (atree.TypeInfo, error) {
+	return DecodeTypeInfo(decoder, interpreter)
 }
