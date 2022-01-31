@@ -44,7 +44,9 @@ func TestExecutingScript(t *testing.T) {
                }
             `),
 			},
-			runtime.Context{},
+			runtime.Context{
+				Location: common.TransactionLocation("0x01"),
+			},
 		)
 
 		fmt.Println(time.Since(start))
@@ -105,6 +107,9 @@ func TestExecutingScript(t *testing.T) {
 }
 
 func TestExecutingScriptParallel(t *testing.T) {
+	// TODO: FVM should start this service
+	go ipc.StartInterfaceService(runtimeInterface)
+
 	proxyRuntime := ipc.NewProxyRuntime()
 
 	wg := sync.WaitGroup{}
@@ -116,12 +121,14 @@ func TestExecutingScriptParallel(t *testing.T) {
 				runtime.Script{
 					Source: []byte(`
                pub fun main(): Int {
-                 log("hello")
+                 // log("hello")
                  return 4 + 8
                }
             `),
 				},
-				runtime.Context{},
+				runtime.Context{
+					Location: common.ScriptLocation("0x01"),
+				},
 			)
 
 			fmt.Println(time.Since(start))

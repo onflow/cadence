@@ -7,6 +7,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/ipc/bridge"
+	"github.com/onflow/cadence/runtime/ipc/protobuf"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -23,17 +24,17 @@ func NewProxyRuntime() *ProxyRuntime {
 }
 
 func (r *ProxyRuntime) ExecuteScript(script runtime.Script, context runtime.Context) (cadence.Value, error) {
-	scriptParam := bridge.AsAny(
-		bridge.NewScript(script.Source, script.Arguments),
+	scriptParam := pb.AsAny(
+		pb.NewScript(script.Source, script.Arguments),
 	)
 
-	location, err := bridge.NewLocation(context.Location)
+	location, err := pb.NewLocation(context.Location)
 	if err != nil {
 		return nil, err
 	}
-	locationParam := bridge.AsAny(location)
+	locationParam := pb.AsAny(location)
 
-	request := bridge.NewRequestMessage(
+	request := pb.NewRequestMessage(
 		RuntimeMethodExecuteScript,
 		scriptParam,
 		locationParam,
@@ -48,23 +49,23 @@ func (r *ProxyRuntime) ExecuteScript(script runtime.Script, context runtime.Cont
 		return nil, err
 	}
 
-	bytes := bridge.ToRuntimeBytes(response.Value)
+	bytes := pb.ToRuntimeBytes(response.Value)
 
 	return json.Decode(bytes)
 }
 
 func (r *ProxyRuntime) ExecuteTransaction(script runtime.Script, context runtime.Context) error {
-	scriptParam := bridge.AsAny(
-		bridge.NewScript(script.Source, script.Arguments),
+	scriptParam := pb.AsAny(
+		pb.NewScript(script.Source, script.Arguments),
 	)
 
-	location, err := bridge.NewLocation(context.Location)
+	location, err := pb.NewLocation(context.Location)
 	if err != nil {
 		return err
 	}
-	locationParam := bridge.AsAny(location)
+	locationParam := pb.AsAny(location)
 
-	request := bridge.NewRequestMessage(
+	request := pb.NewRequestMessage(
 		RuntimeMethodExecuteTransaction,
 		scriptParam,
 		locationParam,

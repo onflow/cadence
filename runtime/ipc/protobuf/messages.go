@@ -1,4 +1,4 @@
-package bridge
+package pb
 
 import (
 	"fmt"
@@ -9,16 +9,11 @@ import (
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
-	pb "github.com/onflow/cadence/runtime/ipc/protobuf"
 )
 
 type Message = proto.Message
 
-type Request = pb.Request
-
-type Response = pb.Response
-
-type Error = pb.Error
+type Parameter = anypb.Any
 
 func NewErrorMessage(errMsg string) *Error {
 	return &Error{
@@ -41,14 +36,14 @@ func NewRequestMessage(name string, params ...*anypb.Any) *Request {
 	}
 }
 
-func NewString(content string) *pb.String {
-	return &pb.String{
+func NewString(content string) *String {
+	return &String{
 		Content: content,
 	}
 }
 
 func ToRuntimeString(any *anypb.Any) string {
-	str := &pb.String{}
+	str := &String{}
 	err := any.UnmarshalTo(str)
 	if err != nil {
 		panic(err)
@@ -57,14 +52,14 @@ func ToRuntimeString(any *anypb.Any) string {
 	return str.Content
 }
 
-func NewBytes(content []byte) *pb.Bytes {
-	return &pb.Bytes{
+func NewBytes(content []byte) *Bytes {
+	return &Bytes{
 		Content: content,
 	}
 }
 
 func ToRuntimeBytes(any *anypb.Any) []byte {
-	bytes := &pb.Bytes{}
+	bytes := &Bytes{}
 	err := any.UnmarshalTo(bytes)
 	if err != nil {
 		panic(err)
@@ -73,15 +68,15 @@ func ToRuntimeBytes(any *anypb.Any) []byte {
 	return bytes.Content
 }
 
-func NewScript(source []byte, arguments [][]byte) *pb.Script {
-	return &pb.Script{
+func NewScript(source []byte, arguments [][]byte) *Script {
+	return &Script{
 		Source:    source,
 		Arguments: arguments,
 	}
 }
 
 func ToRuntimeScript(any *anypb.Any) runtime.Script {
-	s := &pb.Script{}
+	s := &Script{}
 	err := any.UnmarshalTo(s)
 	if err != nil {
 		panic(err)
@@ -99,24 +94,24 @@ func NewLocation(runtimeLocation runtime.Location) (proto.Message, error) {
 
 	switch runtimeLocation := runtimeLocation.(type) {
 	case common.StringLocation:
-		location = &pb.StringLocation{
+		location = &StringLocation{
 			Content: string(runtimeLocation),
 		}
 	case common.IdentifierLocation:
-		location = &pb.IdentifierLocation{
+		location = &IdentifierLocation{
 			Content: string(runtimeLocation),
 		}
 	case common.AddressLocation:
-		location = &pb.AddressLocation{
+		location = &AddressLocation{
 			Address: runtimeLocation.Address[:],
 			Name:    runtimeLocation.Name,
 		}
 	case common.TransactionLocation:
-		location = &pb.TransactionLocation{
+		location = &TransactionLocation{
 			Content: runtimeLocation,
 		}
 	case common.ScriptLocation:
-		location = &pb.ScriptLocation{
+		location = &ScriptLocation{
 			Content: runtimeLocation,
 		}
 	default:
@@ -133,11 +128,11 @@ func ToRuntimeLocation(any *anypb.Any) runtime.Location {
 	}
 
 	switch location := location.(type) {
-	case *pb.StringLocation:
+	case *StringLocation:
 		return common.StringLocation(location.GetContent())
-	case *pb.IdentifierLocation:
+	case *IdentifierLocation:
 		return common.IdentifierLocation(location.GetContent())
-	case *pb.AddressLocation:
+	case *AddressLocation:
 		address, err := common.BytesToAddress(location.GetAddress())
 		if err != nil {
 			panic(err)
@@ -147,16 +142,16 @@ func ToRuntimeLocation(any *anypb.Any) runtime.Location {
 			Address: address,
 			Name:    location.GetName(),
 		}
-	case *pb.ScriptLocation:
+	case *ScriptLocation:
 		return common.ScriptLocation(location.GetContent())
-	case *pb.TransactionLocation:
+	case *TransactionLocation:
 		return common.TransactionLocation(location.GetContent())
 	default:
 		panic(errors.UnreachableError{})
 	}
 }
 
-func NewIdentifiers(identifiers []runtime.Identifier) *pb.Array {
+func NewIdentifiers(identifiers []runtime.Identifier) *Array {
 	elements := make([]*anypb.Any, 0, len(identifiers))
 
 	for _, identifier := range identifiers {
@@ -166,13 +161,13 @@ func NewIdentifiers(identifiers []runtime.Identifier) *pb.Array {
 		)
 	}
 
-	return &pb.Array{
+	return &Array{
 		Elements: elements,
 	}
 }
 
 func ToRuntimeIdentifiersFromAny(any *anypb.Any) []runtime.Identifier {
-	array := &pb.Array{}
+	array := &Array{}
 	err := any.UnmarshalTo(array)
 	if err != nil {
 		panic(err)
@@ -181,7 +176,7 @@ func ToRuntimeIdentifiersFromAny(any *anypb.Any) []runtime.Identifier {
 	return ToRuntimeIdentifiers(array)
 }
 
-func ToRuntimeIdentifiers(identifiersArray *pb.Array) []runtime.Identifier {
+func ToRuntimeIdentifiers(identifiersArray *Array) []runtime.Identifier {
 	identifiers := make([]runtime.Identifier, 0, len(identifiersArray.Elements))
 
 	for _, element := range identifiersArray.Elements {
@@ -198,39 +193,39 @@ func ToRuntimeIdentifiers(identifiersArray *pb.Array) []runtime.Identifier {
 	return identifiers
 }
 
-func NewResolvedLocation(resolvedLoc runtime.ResolvedLocation) *pb.ResolvedLocation {
+func NewResolvedLocation(resolvedLoc runtime.ResolvedLocation) *ResolvedLocation {
 	location, err := NewLocation(resolvedLoc.Location)
 	if err != nil {
 		panic(err)
 	}
 
-	return &pb.ResolvedLocation{
+	return &ResolvedLocation{
 		Location:    AsAny(location),
 		Identifiers: NewIdentifiers(resolvedLoc.Identifiers),
 	}
 }
 
-func ToRuntimeResolvedLocation(resolvedLoc *pb.ResolvedLocation) runtime.ResolvedLocation {
+func ToRuntimeResolvedLocation(resolvedLoc *ResolvedLocation) runtime.ResolvedLocation {
 	return runtime.ResolvedLocation{
 		Location:    ToRuntimeLocation(resolvedLoc.Location),
 		Identifiers: ToRuntimeIdentifiers(resolvedLoc.Identifiers),
 	}
 }
 
-func NewResolvedLocations(resolvedLocations []runtime.ResolvedLocation) *pb.Array {
+func NewResolvedLocations(resolvedLocations []runtime.ResolvedLocation) *Array {
 	elements := make([]*anypb.Any, 0, len(resolvedLocations))
 
 	for _, location := range resolvedLocations {
 		elements = append(elements, AsAny(NewResolvedLocation(location)))
 	}
 
-	return &pb.Array{
+	return &Array{
 		Elements: elements,
 	}
 }
 
 func ToRuntimeResolvedLocationsFromAny(any *anypb.Any) []runtime.ResolvedLocation {
-	array := &pb.Array{}
+	array := &Array{}
 	err := any.UnmarshalTo(array)
 	if err != nil {
 		panic(err)
@@ -239,11 +234,11 @@ func ToRuntimeResolvedLocationsFromAny(any *anypb.Any) []runtime.ResolvedLocatio
 	return ToRuntimeResolvedLocations(array)
 }
 
-func ToRuntimeResolvedLocations(resolvedLocationsArray *pb.Array) []runtime.ResolvedLocation {
+func ToRuntimeResolvedLocations(resolvedLocationsArray *Array) []runtime.ResolvedLocation {
 	resolvedLocations := make([]runtime.ResolvedLocation, 0, len(resolvedLocationsArray.Elements))
 
 	for _, location := range resolvedLocationsArray.Elements {
-		loc := &pb.ResolvedLocation{}
+		loc := &ResolvedLocation{}
 		err := location.UnmarshalTo(loc)
 		if err != nil {
 			panic(err)

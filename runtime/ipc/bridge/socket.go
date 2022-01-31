@@ -3,6 +3,7 @@ package bridge
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/onflow/cadence/runtime/ipc/protobuf"
 	"net"
 	"syscall"
 
@@ -42,7 +43,7 @@ func NewInterfaceConnection() net.Conn {
 	return conn
 }
 
-func ReadMessage(conn net.Conn) Message {
+func ReadMessage(conn net.Conn) pb.Message {
 	var messageLength int32
 
 	// First 4 bytes is the message length
@@ -66,24 +67,24 @@ func ReadMessage(conn net.Conn) Message {
 	return typedMessage
 }
 
-func ReadResponse(conn net.Conn) (*Response, error) {
+func ReadResponse(conn net.Conn) (*pb.Response, error) {
 	msg := ReadMessage(conn)
 
 	switch msg := msg.(type) {
-	case *Response:
+	case *pb.Response:
 		return msg, nil
-	case *Error:
+	case *pb.Error:
 		return nil, fmt.Errorf(msg.GetErr())
 	default:
 		return nil, fmt.Errorf("unsupported message")
 	}
 }
 
-func WriteMessage(conn net.Conn, msg Message) {
+func WriteMessage(conn net.Conn, msg pb.Message) {
 	fmt.Println("---> sent to ", conn, " | message:", msg)
 
 	// Wrap with `Any` to enrich type information for unmarshalling.
-	typedMessage := AsAny(msg)
+	typedMessage := pb.AsAny(msg)
 
 	serialized, err := proto.Marshal(typedMessage)
 	HandleError(err)

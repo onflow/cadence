@@ -13,6 +13,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/ipc/bridge"
+	"github.com/onflow/cadence/runtime/ipc/protobuf"
 )
 
 var _ runtime.Interface = &ProxyInterface{}
@@ -29,17 +30,17 @@ func NewProxyInterface() *ProxyInterface {
 func (p *ProxyInterface) ResolveLocation(identifiers []runtime.Identifier, location runtime.Location) ([]runtime.ResolvedLocation, error) {
 	conn := bridge.NewInterfaceConnection()
 
-	loc, err := bridge.NewLocation(location)
+	loc, err := pb.NewLocation(location)
 	if err != nil {
 		return nil, err
 	}
 
-	idents := bridge.NewIdentifiers(identifiers)
+	idents := pb.NewIdentifiers(identifiers)
 
-	locationParam := bridge.AsAny(loc)
-	identifiersParam := bridge.AsAny(idents)
+	locationParam := pb.AsAny(loc)
+	identifiersParam := pb.AsAny(idents)
 
-	request := bridge.NewRequestMessage(InterfaceMethodResolveLocation, identifiersParam, locationParam)
+	request := pb.NewRequestMessage(InterfaceMethodResolveLocation, identifiersParam, locationParam)
 	bridge.WriteMessage(conn, request)
 
 	resp, err := bridge.ReadResponse(conn)
@@ -47,20 +48,20 @@ func (p *ProxyInterface) ResolveLocation(identifiers []runtime.Identifier, locat
 		return nil, err
 	}
 
-	return bridge.ToRuntimeResolvedLocationsFromAny(resp.Value), nil
+	return pb.ToRuntimeResolvedLocationsFromAny(resp.Value), nil
 }
 
 func (p *ProxyInterface) GetCode(location runtime.Location) ([]byte, error) {
 	conn := bridge.NewInterfaceConnection()
 
-	loc, err := bridge.NewLocation(location)
+	loc, err := pb.NewLocation(location)
 	if err != nil {
 		return nil, err
 	}
 
-	locationParam := bridge.AsAny(loc)
+	locationParam := pb.AsAny(loc)
 
-	request := bridge.NewRequestMessage(InterfaceMethodGetCode, locationParam)
+	request := pb.NewRequestMessage(InterfaceMethodGetCode, locationParam)
 
 	bridge.WriteMessage(conn, request)
 
@@ -69,21 +70,21 @@ func (p *ProxyInterface) GetCode(location runtime.Location) ([]byte, error) {
 		return nil, err
 	}
 
-	code := bridge.ToRuntimeBytes(response.Value)
+	code := pb.ToRuntimeBytes(response.Value)
 	return code, nil
 }
 
 func (p *ProxyInterface) GetProgram(location runtime.Location) (*interpreter.Program, error) {
 	conn := bridge.NewInterfaceConnection()
 
-	loc, err := bridge.NewLocation(location)
+	loc, err := pb.NewLocation(location)
 	if err != nil {
 		return nil, err
 	}
 
-	locationParam := bridge.AsAny(loc)
+	locationParam := pb.AsAny(loc)
 
-	request := bridge.NewRequestMessage(InterfaceMethodGetProgram, locationParam)
+	request := pb.NewRequestMessage(InterfaceMethodGetProgram, locationParam)
 
 	bridge.WriteMessage(conn, request)
 
@@ -104,13 +105,13 @@ func (p *ProxyInterface) SetProgram(location runtime.Location, program *interpre
 func (p *ProxyInterface) GetValue(owner, key []byte) (value []byte, err error) {
 	conn := bridge.NewInterfaceConnection()
 
-	pbOwner := bridge.NewBytes(owner)
-	pbKey := bridge.NewBytes(key)
+	pbOwner := pb.NewBytes(owner)
+	pbKey := pb.NewBytes(key)
 
-	ownerParam := bridge.AsAny(pbOwner)
-	keyParam := bridge.AsAny(pbKey)
+	ownerParam := pb.AsAny(pbOwner)
+	keyParam := pb.AsAny(pbKey)
 
-	request := bridge.NewRequestMessage(InterfaceMethodGetValue, ownerParam, keyParam)
+	request := pb.NewRequestMessage(InterfaceMethodGetValue, ownerParam, keyParam)
 
 	bridge.WriteMessage(conn, request)
 
@@ -119,21 +120,21 @@ func (p *ProxyInterface) GetValue(owner, key []byte) (value []byte, err error) {
 		return nil, err
 	}
 
-	return bridge.ToRuntimeBytes(resp.Value), nil
+	return pb.ToRuntimeBytes(resp.Value), nil
 }
 
 func (p *ProxyInterface) SetValue(owner, key, value []byte) (err error) {
 	conn := bridge.NewInterfaceConnection()
 
-	pbOwner := bridge.NewBytes(owner)
-	pbKey := bridge.NewBytes(key)
-	pbValue := bridge.NewBytes(value)
+	pbOwner := pb.NewBytes(owner)
+	pbKey := pb.NewBytes(key)
+	pbValue := pb.NewBytes(value)
 
-	ownerParam := bridge.AsAny(pbOwner)
-	keyParam := bridge.AsAny(pbKey)
-	valueParam := bridge.AsAny(pbValue)
+	ownerParam := pb.AsAny(pbOwner)
+	keyParam := pb.AsAny(pbKey)
+	valueParam := pb.AsAny(pbValue)
 
-	request := bridge.NewRequestMessage(InterfaceMethodSetValue, ownerParam, keyParam, valueParam)
+	request := pb.NewRequestMessage(InterfaceMethodSetValue, ownerParam, keyParam, valueParam)
 
 	bridge.WriteMessage(conn, request)
 
@@ -152,10 +153,10 @@ func (p *ProxyInterface) ValueExists(owner, key []byte) (exists bool, err error)
 func (p *ProxyInterface) AllocateStorageIndex(owner []byte) (atree.StorageIndex, error) {
 	conn := bridge.NewInterfaceConnection()
 
-	pbOwner := bridge.NewBytes(owner)
-	ownerParam := bridge.AsAny(pbOwner)
+	pbOwner := pb.NewBytes(owner)
+	ownerParam := pb.AsAny(pbOwner)
 
-	request := bridge.NewRequestMessage(InterfaceMethodAllocateStorageIndex, ownerParam)
+	request := pb.NewRequestMessage(InterfaceMethodAllocateStorageIndex, ownerParam)
 
 	bridge.WriteMessage(conn, request)
 
@@ -164,7 +165,7 @@ func (p *ProxyInterface) AllocateStorageIndex(owner []byte) (atree.StorageIndex,
 		return [8]byte{}, err
 	}
 
-	indexBytes := bridge.ToRuntimeBytes(resp.Value)
+	indexBytes := pb.ToRuntimeBytes(resp.Value)
 
 	var storageIndex atree.StorageIndex
 	copy(storageIndex[:], indexBytes[:])
@@ -199,16 +200,16 @@ func (p *ProxyInterface) RevokeAccountKey(address runtime.Address, index int) (*
 func (p *ProxyInterface) UpdateAccountContractCode(address runtime.Address, name string, code []byte) (err error) {
 	conn := bridge.NewInterfaceConnection()
 
-	addressBytes := bridge.NewBytes(address[:])
-	addressParam := bridge.AsAny(addressBytes)
+	addressBytes := pb.NewBytes(address[:])
+	addressParam := pb.AsAny(addressBytes)
 
-	nameStr := bridge.NewString(name)
-	nameParam := bridge.AsAny(nameStr)
+	nameStr := pb.NewString(name)
+	nameParam := pb.AsAny(nameStr)
 
-	codeBytes := bridge.NewBytes(code)
-	codeParam := bridge.AsAny(codeBytes)
+	codeBytes := pb.NewBytes(code)
+	codeParam := pb.AsAny(codeBytes)
 
-	request := bridge.NewRequestMessage(InterfaceMethodUpdateAccountContractCode, addressParam, nameParam, codeParam)
+	request := pb.NewRequestMessage(InterfaceMethodUpdateAccountContractCode, addressParam, nameParam, codeParam)
 
 	bridge.WriteMessage(conn, request)
 
@@ -223,13 +224,13 @@ func (p *ProxyInterface) UpdateAccountContractCode(address runtime.Address, name
 func (p *ProxyInterface) GetAccountContractCode(address runtime.Address, name string) ([]byte, error) {
 	conn := bridge.NewInterfaceConnection()
 
-	addressBytes := bridge.NewBytes(address[:])
-	addressParam := bridge.AsAny(addressBytes)
+	addressBytes := pb.NewBytes(address[:])
+	addressParam := pb.AsAny(addressBytes)
 
-	nameStr := bridge.NewString(name)
-	nameParam := bridge.AsAny(nameStr)
+	nameStr := pb.NewString(name)
+	nameParam := pb.AsAny(nameStr)
 
-	request := bridge.NewRequestMessage(InterfaceMethodGetAccountContractCode, addressParam, nameParam)
+	request := pb.NewRequestMessage(InterfaceMethodGetAccountContractCode, addressParam, nameParam)
 
 	bridge.WriteMessage(conn, request)
 
@@ -238,7 +239,7 @@ func (p *ProxyInterface) GetAccountContractCode(address runtime.Address, name st
 		return nil, err
 	}
 
-	code := bridge.ToRuntimeBytes(response.Value)
+	code := pb.ToRuntimeBytes(response.Value)
 
 	return code, nil
 }
@@ -257,10 +258,10 @@ func (p *ProxyInterface) GetSigningAccounts() ([]runtime.Address, error) {
 func (p *ProxyInterface) ProgramLog(s string) error {
 	conn := bridge.NewInterfaceConnection()
 
-	str := bridge.NewString(s)
-	stringParam := bridge.AsAny(str)
+	str := pb.NewString(s)
+	stringParam := pb.AsAny(str)
 
-	request := bridge.NewRequestMessage(InterfaceMethodProgramLog, stringParam)
+	request := pb.NewRequestMessage(InterfaceMethodProgramLog, stringParam)
 
 	bridge.WriteMessage(conn, request)
 

@@ -8,6 +8,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/ipc"
 	"github.com/onflow/cadence/runtime/ipc/bridge"
+	"github.com/onflow/cadence/runtime/ipc/protobuf"
 )
 
 var signalsToWatch = []os.Signal{
@@ -41,10 +42,10 @@ func main() {
 			msg := bridge.ReadMessage(conn)
 
 			switch msg := msg.(type) {
-			case *bridge.Request:
+			case *pb.Request:
 				response := serveRequest(runtimeBridge, msg)
 				bridge.WriteMessage(conn, response)
-			case *bridge.Error:
+			case *pb.Error:
 				panic(fmt.Errorf(msg.GetErr()))
 			default:
 				panic(fmt.Errorf("unsupported message"))
@@ -55,10 +56,10 @@ func main() {
 
 func serveRequest(
 	runtimeBridge *bridge.RuntimeBridge,
-	request *bridge.Request,
-) bridge.Message {
+	request *pb.Request,
+) pb.Message {
 
-	var response bridge.Message
+	var response pb.Message
 
 	switch request.Name {
 	case ipc.RuntimeMethodExecuteScript:
@@ -71,7 +72,7 @@ func serveRequest(
 		response = runtimeBridge.InvokeContractFunction(request.Params)
 
 	default:
-		response = bridge.NewErrorMessage(
+		response = pb.NewErrorMessage(
 			fmt.Sprintf("unsupported request '%s'", request.Name),
 		)
 	}

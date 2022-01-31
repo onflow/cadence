@@ -5,9 +5,10 @@ import (
 
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ipc/bridge"
+	"github.com/onflow/cadence/runtime/ipc/protobuf"
 )
 
-func StartInterfaceService(runtimeInterface runtime.Interface) *bridge.Message {
+func StartInterfaceService(runtimeInterface runtime.Interface) *pb.Message {
 	listener := bridge.NewInterfaceListener()
 	interfaceBridge := bridge.NewInterfaceBridge(runtimeInterface)
 
@@ -19,10 +20,10 @@ func StartInterfaceService(runtimeInterface runtime.Interface) *bridge.Message {
 			msg := bridge.ReadMessage(conn)
 
 			switch msg := msg.(type) {
-			case *bridge.Request:
+			case *pb.Request:
 				response := serveRequest(interfaceBridge, msg)
 				bridge.WriteMessage(conn, response)
-			case *bridge.Error:
+			case *pb.Error:
 				panic(fmt.Errorf(msg.GetErr()))
 			default:
 				panic(fmt.Errorf("unsupported message"))
@@ -31,8 +32,8 @@ func StartInterfaceService(runtimeInterface runtime.Interface) *bridge.Message {
 	}
 }
 
-func serveRequest(interfaceBridge *bridge.InterfaceBridge, request *bridge.Request) bridge.Message {
-	var response bridge.Message
+func serveRequest(interfaceBridge *bridge.InterfaceBridge, request *pb.Request) pb.Message {
+	var response pb.Message
 
 	// All 'Interface' methods goes here
 	switch request.Name {
