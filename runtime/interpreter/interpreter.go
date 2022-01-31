@@ -26,6 +26,7 @@ import (
 	goRuntime "runtime"
 	"time"
 
+	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
 	"github.com/opentracing/opentracing-go"
 
@@ -114,13 +115,6 @@ type OnFunctionInvocationFunc func(
 type OnInvokedFunctionReturnFunc func(
 	inter *Interpreter,
 	line int,
-)
-
-// OnMemoryUsageFunc is a function that is triggered when some amount of memory is about to get used.
-//
-type OnMemoryUsageFunc func(
-	inter *Interpreter,
-	memoryUsage MemoryUsage,
 )
 
 // OnRecordTraceFunc is a function thats records a trace.
@@ -333,7 +327,6 @@ type Interpreter struct {
 	onStatement                    OnStatementFunc
 	onLoopIteration                OnLoopIterationFunc
 	onFunctionInvocation           OnFunctionInvocationFunc
-	onMemoryUsage                  OnMemoryUsageFunc
 	onInvokedFunctionReturn        OnInvokedFunctionReturnFunc
 	onRecordTrace                  OnRecordTraceFunc
 	onResourceOwnerChange          OnResourceOwnerChangeFunc
@@ -359,7 +352,10 @@ type Interpreter struct {
 	referencedResourceKindedValues       ReferencedResourceKindedValues
 	invalidatedResourceValidationEnabled bool
 	resourceVariables                    map[ResourceKindedValue]*Variable
+	memoryGauge                          MemoryGauge
 }
+
+var _ MemoryGauge = &Interpreter{}
 
 type Option func(*Interpreter) error
 
@@ -413,12 +409,12 @@ func WithOnInvokedFunctionReturnHandler(handler OnInvokedFunctionReturnFunc) Opt
 	}
 }
 
-// WithOnMemoryUsageHandler returns an interpreter option which sets
-// the given function as the memory usage handler.
+// WithMemoryGauge returns an interpreter option which sets
+// the given object as the memory gauge.
 //
-func WithOnMemoryUsageHandler(handler OnMemoryUsageFunc) Option {
+func WithMemoryGauge(memoryGauge MemoryGauge) Option {
 	return func(interpreter *Interpreter) error {
-		interpreter.SetOnMemoryUsageHandler(handler)
+		interpreter.SetMemoryGauge(memoryGauge)
 		return nil
 	}
 }
@@ -740,10 +736,10 @@ func (interpreter *Interpreter) SetOnInvokedFunctionReturnHandler(function OnInv
 	interpreter.onInvokedFunctionReturn = function
 }
 
-// SetOnMemoryUsageHandler sets the function that is triggered when memory is about to get used.
+// SetMemoryGauge sets the object as the memory gauge.
 //
-func (interpreter *Interpreter) SetOnMemoryUsageHandler(function OnMemoryUsageFunc) {
-	interpreter.onMemoryUsage = function
+func (interpreter *Interpreter) SetMemoryGauge(memoryGauge MemoryGauge) {
+	interpreter.memoryGauge = memoryGauge
 }
 
 // SetOnRecordTraceHandler sets the function that is triggered when a trace is recorded.
@@ -4498,7 +4494,7 @@ func (interpreter *Interpreter) maybeValidateAtreeValue(v atree.Value) {
 	}
 }
 
-func (interpreter *Interpreter) ValidateAtreeValue(v atree.Value) {
+func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 	tic := func(info atree.TypeInfo, other atree.TypeInfo) bool {
 		switch info := info.(type) {
 		case ConstantSizedStaticType:
@@ -4550,14 +4546,21 @@ func (interpreter *Interpreter) ValidateAtreeValue(v atree.Value) {
 		return true
 	}
 
-	switch v := v.(type) {
+	switch value := value.(type) {
 	case *atree.Array:
-		err := atree.ValidArray(v, v.Type(), tic, hip)
+		err := atree.ValidArray(value, value.Type(), tic, hip)
 		if err != nil {
 			panic(ExternalError{err})
 		}
 
-		err = atree.ValidArraySerialization(v, CBORDecMode, CBOREncMode, DecodeStorable, DecodeTypeInfo, compare)
+		err = atree.ValidArraySerialization(
+			value,
+			CBORDecMode,
+			CBOREncMode,
+			interpreter.DecodeStorable,
+			DecodeTypeInfo,
+			compare,
+		)
 		if err != nil {
 			var nonStorableValueErr NonStorableValueError
 			var nonStorableStaticTypeErr NonStorableStaticTypeError
@@ -4565,18 +4568,25 @@ func (interpreter *Interpreter) ValidateAtreeValue(v atree.Value) {
 			if !(goErrors.As(err, &nonStorableValueErr) ||
 				goErrors.As(err, &nonStorableStaticTypeErr)) {
 
-				atree.PrintArray(v)
+				atree.PrintArray(value)
 				panic(ExternalError{err})
 			}
 		}
 
 	case *atree.OrderedMap:
-		err := atree.ValidMap(v, v.Type(), tic, hip)
+		err := atree.ValidMap(value, value.Type(), tic, hip)
 		if err != nil {
 			panic(ExternalError{err})
 		}
 
-		err = atree.ValidMapSerialization(v, CBORDecMode, CBOREncMode, DecodeStorable, DecodeTypeInfo, compare)
+		err = atree.ValidMapSerialization(
+			value,
+			CBORDecMode,
+			CBOREncMode,
+			interpreter.DecodeStorable,
+			DecodeTypeInfo,
+			compare,
+		)
 		if err != nil {
 			var nonStorableValueErr NonStorableValueError
 			var nonStorableStaticTypeErr NonStorableStaticTypeError
@@ -4584,7 +4594,7 @@ func (interpreter *Interpreter) ValidateAtreeValue(v atree.Value) {
 			if !(goErrors.As(err, &nonStorableValueErr) ||
 				goErrors.As(err, &nonStorableStaticTypeErr)) {
 
-				atree.PrintMap(v)
+				atree.PrintMap(value)
 				panic(ExternalError{err})
 			}
 		}
@@ -4730,9 +4740,19 @@ func (interpreter *Interpreter) invalidateResource(value Value) {
 	delete(interpreter.resourceVariables, resourceKindedValue)
 }
 
-func (interpreter *Interpreter) useMemory(usage MemoryUsage) {
-	if interpreter.onMemoryUsage == nil {
+func (interpreter *Interpreter) UseMemory(usage MemoryUsage) {
+	if interpreter.memoryGauge == nil {
 		return
 	}
-	interpreter.onMemoryUsage(interpreter, usage)
+	interpreter.memoryGauge.UseMemory(usage)
+}
+
+func (interpreter *Interpreter) DecodeStorable(
+	decoder *cbor.StreamDecoder,
+	storageID atree.StorageID,
+) (
+	atree.Storable,
+	error,
+) {
+	return DecodeStorable(decoder, storageID, interpreter)
 }

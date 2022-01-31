@@ -34,6 +34,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
 	"github.com/schollz/progressbar/v3"
 
@@ -89,12 +90,16 @@ func storageKeySlabStorageID(address atree.Address, key string) atree.StorageID 
 	return result
 }
 
+func decodeStorable(decoder *cbor.StreamDecoder, storableSlabStorageID atree.StorageID) (atree.Storable, error) {
+	return interpreter.DecodeStorable(decoder, storableSlabStorageID, nil)
+}
+
 func decodeSlab(id atree.StorageID, data []byte) (atree.Slab, error) {
 	return atree.DecodeSlab(
 		id,
 		data,
 		interpreter.CBORDecMode,
-		interpreter.DecodeStorable,
+		decodeStorable,
 		interpreter.DecodeTypeInfo,
 	)
 }
@@ -328,7 +333,7 @@ func loadStorageKey(
 
 			reader := bytes.NewReader(data)
 			decoder := interpreter.CBORDecMode.NewStreamDecoder(reader)
-			storable, err := interpreter.DecodeStorable(decoder, atree.StorageIDUndefined)
+			storable, err := interpreter.DecodeStorable(decoder, atree.StorageIDUndefined, nil)
 			if err != nil {
 				log.Printf(
 					"Failed to decode storable @ 0x%x %s: %s (data: %x)\n",

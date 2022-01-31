@@ -36,7 +36,7 @@ func TestCompositeStorage(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	storage := NewInMemoryStorage(nil)
 
 	inter, err := NewInterpreter(
 		nil,
@@ -99,7 +99,7 @@ func TestArrayStorage(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		storage := NewInMemoryStorage(nil)
 
 		inter, err := NewInterpreter(
 			nil,
@@ -162,7 +162,7 @@ func TestArrayStorage(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		storage := NewInMemoryStorage(nil)
 
 		inter, err := NewInterpreter(
 			nil,
@@ -225,7 +225,7 @@ func TestDictionaryStorage(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		storage := NewInMemoryStorage(nil)
 
 		inter, err := NewInterpreter(
 			nil,
@@ -281,7 +281,7 @@ func TestDictionaryStorage(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		storage := NewInMemoryStorage(nil)
 
 		inter, err := NewInterpreter(
 			nil,
@@ -330,7 +330,7 @@ func TestDictionaryStorage(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		storage := NewInMemoryStorage(nil)
 
 		inter, err := NewInterpreter(
 			nil,
@@ -378,7 +378,7 @@ func TestDictionaryStorage(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		storage := NewInMemoryStorage(nil)
 
 		inter, err := NewInterpreter(
 			nil,
@@ -426,7 +426,7 @@ func TestStorageOverwriteAndRemove(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	storage := NewInMemoryStorage(nil)
 
 	inter, err := NewInterpreter(
 		nil,

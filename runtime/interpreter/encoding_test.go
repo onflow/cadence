@@ -56,7 +56,7 @@ var testOwner = common.MustBytesToAddress([]byte{0x42})
 func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 
 	if test.storage == nil {
-		test.storage = NewInMemoryStorage()
+		test.storage = NewInMemoryStorage(nil)
 	}
 
 	var encoded []byte
@@ -90,7 +90,7 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 	}
 
 	decoder := CBORDecMode.NewByteStreamDecoder(encoded)
-	decoded, err := DecodeStorable(decoder, test.slabStorageID)
+	decoded, err := DecodeStorable(decoder, test.slabStorageID, nil)
 
 	if test.invalid {
 		require.Error(t, err)

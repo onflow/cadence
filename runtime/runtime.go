@@ -275,7 +275,9 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val 
 
 	context.InitializeCodesAndPrograms()
 
-	storage := NewStorage(context.Interface)
+	memoryGauge, _ := context.Interface.(interpreter.MemoryGauge)
+
+	storage := NewStorage(context.Interface, memoryGauge)
 
 	var checkerOptions []sema.Option
 	var interpreterOptions []interpreter.Option
@@ -519,7 +521,9 @@ func (r *interpreterRuntime) InvokeContractFunction(
 
 	context.InitializeCodesAndPrograms()
 
-	storage := NewStorage(context.Interface)
+	memoryGauge, _ := context.Interface.(interpreter.MemoryGauge)
+
+	storage := NewStorage(context.Interface, memoryGauge)
 
 	var interpreterOptions []interpreter.Option
 	var checkerOptions []sema.Option
@@ -653,7 +657,9 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 
 	context.InitializeCodesAndPrograms()
 
-	storage := NewStorage(context.Interface)
+	memoryGauge, _ := context.Interface.(interpreter.MemoryGauge)
+
+	storage := NewStorage(context.Interface, memoryGauge)
 
 	var interpreterOptions []interpreter.Option
 	var checkerOptions []sema.Option
@@ -998,7 +1004,9 @@ func (r *interpreterRuntime) ParseAndCheckProgram(
 
 	context.InitializeCodesAndPrograms()
 
-	storage := NewStorage(context.Interface)
+	memoryGauge, _ := context.Interface.(interpreter.MemoryGauge)
+
+	storage := NewStorage(context.Interface, memoryGauge)
 
 	var interpreterOptions []interpreter.Option
 	var checkerOptions []sema.Option
@@ -2993,7 +3001,9 @@ func (r *interpreterRuntime) executeNonProgram(interpret interpretFunc, context 
 
 	var program *interpreter.Program
 
-	storage := NewStorage(context.Interface)
+	memoryGauge, _ := context.Interface.(interpreter.MemoryGauge)
+
+	storage := NewStorage(context.Interface, memoryGauge)
 
 	var functions stdlib.StandardLibraryFunctions
 	var values stdlib.StandardLibraryValues

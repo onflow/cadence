@@ -62,7 +62,7 @@ func TestOwnerNewArray(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	storage := NewInMemoryStorage(nil)
 
 	elaboration := sema.NewElaboration()
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
@@ -101,7 +101,7 @@ func TestOwnerArrayDeepCopy(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	storage := NewInMemoryStorage(nil)
 
 	elaboration := sema.NewElaboration()
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
@@ -152,7 +152,7 @@ func TestOwnerArrayElement(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	storage := NewInMemoryStorage(nil)
 
 	elaboration := sema.NewElaboration()
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
@@ -190,7 +190,7 @@ func TestOwnerArraySetIndex(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	storage := NewInMemoryStorage(nil)
 
 	elaboration := sema.NewElaboration()
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
@@ -238,7 +238,7 @@ func TestOwnerArrayAppend(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	storage := NewInMemoryStorage(nil)
 
 	elaboration := sema.NewElaboration()
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
@@ -280,7 +280,7 @@ func TestOwnerArrayInsert(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	storage := NewInMemoryStorage(nil)
 
 	elaboration := sema.NewElaboration()
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
@@ -322,7 +322,7 @@ func TestOwnerArrayRemove(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	storage := NewInMemoryStorage(nil)
 
 	elaboration := sema.NewElaboration()
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
@@ -362,7 +362,7 @@ func TestOwnerNewDictionary(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	storage := NewInMemoryStorage(nil)
 
 	elaboration := sema.NewElaboration()
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
@@ -405,7 +405,7 @@ func TestOwnerDictionary(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	storage := NewInMemoryStorage(nil)
 
 	elaboration := sema.NewElaboration()
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
@@ -448,7 +448,7 @@ func TestOwnerDictionaryCopy(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	storage := NewInMemoryStorage(nil)
 
 	elaboration := sema.NewElaboration()
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
@@ -503,7 +503,7 @@ func TestOwnerDictionarySetSome(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	storage := NewInMemoryStorage(nil)
 
 	elaboration := sema.NewElaboration()
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
@@ -553,7 +553,7 @@ func TestOwnerDictionaryInsertNonExisting(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	storage := NewInMemoryStorage(nil)
 
 	elaboration := sema.NewElaboration()
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
@@ -604,7 +604,7 @@ func TestOwnerDictionaryRemove(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	storage := NewInMemoryStorage(nil)
 
 	elaboration := sema.NewElaboration()
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
@@ -661,7 +661,7 @@ func TestOwnerDictionaryInsertExisting(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	storage := NewInMemoryStorage(nil)
 
 	elaboration := sema.NewElaboration()
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
@@ -1516,7 +1516,7 @@ func TestEphemeralReferenceTypeConformance(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	storage := NewInMemoryStorage(nil)
 
 	// Obtain a self referencing (cyclic) ephemeral reference value.
 
@@ -3133,7 +3133,7 @@ func TestPublicKeyValue(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		storage := NewInMemoryStorage(nil)
 
 		inter, err := NewInterpreter(
 			nil,
@@ -3177,7 +3177,7 @@ func TestPublicKeyValue(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		storage := NewInMemoryStorage(nil)
 
 		fakeError := fakeError{}
 
@@ -3334,7 +3334,7 @@ func checkHashable(ty types.Type) error {
 
 func newTestInterpreter(tb testing.TB) *Interpreter {
 
-	storage := NewInMemoryStorage()
+	storage := NewInMemoryStorage(nil)
 
 	inter, err := NewInterpreter(
 		nil,
@@ -3352,7 +3352,7 @@ func TestNonStorable(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	storage := NewInMemoryStorage(nil)
 
 	code := `
       pub struct Foo {
