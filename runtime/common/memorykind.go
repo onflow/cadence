@@ -16,13 +16,24 @@
  * limitations under the License.
  */
 
-package interpreter
+package common
 
-type MemoryUsage struct {
-	Type   StaticType
-	Amount uint64
-}
+//go:generate go run golang.org/x/tools/cmd/stringer -type=MemoryKind -trimprefix=MemoryKind
 
-type MemoryGauge interface {
-	UseMemory(usage MemoryUsage)
-}
+// MemoryKind
+//
+type MemoryKind uint
+
+const (
+	MemoryKindUnknown MemoryKind = iota
+	MemoryKindBool
+	MemoryKindAddress
+	MemoryKindString
+	MemoryKindCharacter
+	MemoryKindMetaType
+	MemoryKindBlock
+	MemoryKindNumber
+	MemoryKindArray
+	MemoryKindDictionary
+	MemoryKindComposite
+)

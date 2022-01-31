@@ -352,10 +352,10 @@ type Interpreter struct {
 	referencedResourceKindedValues       ReferencedResourceKindedValues
 	invalidatedResourceValidationEnabled bool
 	resourceVariables                    map[ResourceKindedValue]*Variable
-	memoryGauge                          MemoryGauge
+	memoryGauge                          common.MemoryGauge
 }
 
-var _ MemoryGauge = &Interpreter{}
+var _ common.MemoryGauge = &Interpreter{}
 
 type Option func(*Interpreter) error
 
@@ -412,7 +412,7 @@ func WithOnInvokedFunctionReturnHandler(handler OnInvokedFunctionReturnFunc) Opt
 // WithMemoryGauge returns an interpreter option which sets
 // the given object as the memory gauge.
 //
-func WithMemoryGauge(memoryGauge MemoryGauge) Option {
+func WithMemoryGauge(memoryGauge common.MemoryGauge) Option {
 	return func(interpreter *Interpreter) error {
 		interpreter.SetMemoryGauge(memoryGauge)
 		return nil
@@ -738,7 +738,7 @@ func (interpreter *Interpreter) SetOnInvokedFunctionReturnHandler(function OnInv
 
 // SetMemoryGauge sets the object as the memory gauge.
 //
-func (interpreter *Interpreter) SetMemoryGauge(memoryGauge MemoryGauge) {
+func (interpreter *Interpreter) SetMemoryGauge(memoryGauge common.MemoryGauge) {
 	interpreter.memoryGauge = memoryGauge
 }
 
@@ -3410,8 +3410,8 @@ var stringFunction = func() Value {
 				}
 
 				inter := invocation.Interpreter
-				memoryUsage := MemoryUsage{
-					Type:   PrimitiveStaticTypeString,
+				memoryUsage := common.MemoryUsage{
+					Kind:   common.MemoryKindString,
 					Amount: uint64(argument.Count()) * 2,
 				}
 				return NewStringValue(
@@ -4741,7 +4741,9 @@ func (interpreter *Interpreter) invalidateResource(value Value) {
 	delete(interpreter.resourceVariables, resourceKindedValue)
 }
 
-func (interpreter *Interpreter) UseMemory(usage MemoryUsage) {
+// UseMemory delegates the memory usage to the interpreter's memory gauge, if any.
+//
+func (interpreter *Interpreter) UseMemory(usage common.MemoryUsage) {
 	if interpreter.memoryGauge == nil {
 		return
 	}

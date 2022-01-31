@@ -43,7 +43,7 @@ type Storage struct {
 var _ atree.SlabStorage = &Storage{}
 var _ interpreter.Storage = &Storage{}
 
-func NewStorage(ledger atree.Ledger, memoryGauge interpreter.MemoryGauge) *Storage {
+func NewStorage(ledger atree.Ledger, memoryGauge common.MemoryGauge) *Storage {
 	decodeStorable := func(
 		decoder *cbor.StreamDecoder,
 		slabStorageID atree.StorageID,

@@ -275,7 +275,7 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val 
 
 	context.InitializeCodesAndPrograms()
 
-	memoryGauge, _ := context.Interface.(interpreter.MemoryGauge)
+	memoryGauge, _ := context.Interface.(common.MemoryGauge)
 
 	storage := NewStorage(context.Interface, memoryGauge)
 
@@ -521,7 +521,7 @@ func (r *interpreterRuntime) InvokeContractFunction(
 
 	context.InitializeCodesAndPrograms()
 
-	memoryGauge, _ := context.Interface.(interpreter.MemoryGauge)
+	memoryGauge, _ := context.Interface.(common.MemoryGauge)
 
 	storage := NewStorage(context.Interface, memoryGauge)
 
@@ -657,7 +657,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 
 	context.InitializeCodesAndPrograms()
 
-	memoryGauge, _ := context.Interface.(interpreter.MemoryGauge)
+	memoryGauge, _ := context.Interface.(common.MemoryGauge)
 
 	storage := NewStorage(context.Interface, memoryGauge)
 
@@ -1004,7 +1004,7 @@ func (r *interpreterRuntime) ParseAndCheckProgram(
 
 	context.InitializeCodesAndPrograms()
 
-	memoryGauge, _ := context.Interface.(interpreter.MemoryGauge)
+	memoryGauge, _ := context.Interface.(common.MemoryGauge)
 
 	storage := NewStorage(context.Interface, memoryGauge)
 
@@ -1217,7 +1217,7 @@ func (r *interpreterRuntime) newInterpreter(
 		preDeclaredValues = append(preDeclaredValues, predeclaredValue)
 	}
 
-	memoryGauge, _ := context.Interface.(interpreter.MemoryGauge)
+	memoryGauge, _ := context.Interface.(common.MemoryGauge)
 
 	publicKeyValidator := func(
 		inter *interpreter.Interpreter,
@@ -3009,7 +3009,7 @@ func (r *interpreterRuntime) executeNonProgram(interpret interpretFunc, context 
 
 	var program *interpreter.Program
 
-	memoryGauge, _ := context.Interface.(interpreter.MemoryGauge)
+	memoryGauge, _ := context.Interface.(common.MemoryGauge)
 
 	storage := NewStorage(context.Interface, memoryGauge)
 

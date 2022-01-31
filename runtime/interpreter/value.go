@@ -760,7 +760,7 @@ func NewUnmeteredStringValue(str string) *StringValue {
 	}
 }
 
-func NewStringValue(memoryGauge MemoryGauge, memoryUsage MemoryUsage, stringConstructor func() string) *StringValue {
+func NewStringValue(memoryGauge common.MemoryGauge, memoryUsage common.MemoryUsage, stringConstructor func() string) *StringValue {
 	if memoryGauge != nil {
 		memoryGauge.UseMemory(memoryUsage)
 	}
@@ -841,8 +841,8 @@ func (v *StringValue) NormalForm() string {
 }
 
 func (v *StringValue) Concat(interpreter *Interpreter, other *StringValue) Value {
-	memoryUsage := MemoryUsage{
-		Type:   PrimitiveStaticTypeString,
+	memoryUsage := common.MemoryUsage{
+		Kind:   common.MemoryKindString,
 		Amount: uint64(len(v.Str)) + uint64(len(other.Str)),
 	}
 
@@ -1036,8 +1036,8 @@ func (v *StringValue) ToLower(interpreter *Interpreter) *StringValue {
 	// An uppercase character may be converted to several lower-case characters, e.g İ => [i, ̇]
 	// see https://stackoverflow.com/questions/28683805/is-there-a-unicode-string-which-gets-longer-when-converted-to-lowercase
 
-	memoryUsage := MemoryUsage{
-		Type:   PrimitiveStaticTypeString,
+	memoryUsage := common.MemoryUsage{
+		Kind:   common.MemoryKindString,
 		Amount: uint64(len(v.Str)),
 	}
 
@@ -2308,8 +2308,8 @@ func getNumberValueMember(v NumberValue, name string, typ sema.Type) Value {
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
 				interpreter := invocation.Interpreter
-				memoryUsage := MemoryUsage{
-					Type:   PrimitiveStaticTypeString,
+				memoryUsage := common.MemoryUsage{
+					Kind:   common.MemoryKindString,
 					Amount: uint64(OverEstimateNumberStringLength(v)),
 				}
 				return NewStringValue(
@@ -15036,8 +15036,8 @@ func (v AddressValue) GetMember(interpreter *Interpreter, _ func() LocationRange
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
 				interpreter := invocation.Interpreter
-				memoryUsage := MemoryUsage{
-					Type:   PrimitiveStaticTypeString,
+				memoryUsage := common.MemoryUsage{
+					Kind:   common.MemoryKindString,
 					Amount: common.AddressLength * 2,
 				}
 				return NewStringValue(
@@ -15253,8 +15253,8 @@ func (v PathValue) GetMember(_ *Interpreter, _ func() LocationRange, name string
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
 				interpreter := invocation.Interpreter
-				memoryUsage := MemoryUsage{
-					Type: PrimitiveStaticTypeString,
+				memoryUsage := common.MemoryUsage{
+					Kind: common.MemoryKindString,
 					Amount: uint64(len(v.Domain.Identifier())) +
 						uint64(len(v.Identifier)),
 				}

@@ -53,13 +53,13 @@ func (e UnsupportedTagDecodingError) Error() string {
 	)
 }
 
-func decodeString(dec *cbor.StreamDecoder, memoryGauge MemoryGauge) (string, error) {
+func decodeString(dec *cbor.StreamDecoder, memoryGauge common.MemoryGauge) (string, error) {
 	length, err := dec.NextSize()
 	if err != nil {
 		return "", err
 	}
-	memoryUsage := MemoryUsage{
-		Type:   PrimitiveStaticTypeString,
+	memoryUsage := common.MemoryUsage{
+		Kind:   common.MemoryKindString,
 		Amount: length,
 	}
 	if memoryGauge != nil {
@@ -71,7 +71,7 @@ func decodeString(dec *cbor.StreamDecoder, memoryGauge MemoryGauge) (string, err
 func DecodeStorable(
 	decoder *cbor.StreamDecoder,
 	slabStorageID atree.StorageID,
-	memoryGauge MemoryGauge,
+	memoryGauge common.MemoryGauge,
 ) (
 	atree.Storable,
 	error,
@@ -84,7 +84,7 @@ func DecodeStorable(
 }
 
 type StorableDecoder struct {
-	memoryGauge   MemoryGauge
+	memoryGauge   common.MemoryGauge
 	decoder       *cbor.StreamDecoder
 	slabStorageID atree.StorageID
 }
@@ -900,7 +900,7 @@ func (d StorableDecoder) decodeType() (TypeValue, error) {
 }
 
 type TypeDecoder struct {
-	memoryGauge MemoryGauge
+	memoryGauge common.MemoryGauge
 	decoder     *cbor.StreamDecoder
 }
 
@@ -1400,14 +1400,14 @@ func (d TypeDecoder) decodeCompositeTypeInfo() (atree.TypeInfo, error) {
 	}, nil
 }
 
-func DecodeStaticType(decoder *cbor.StreamDecoder, memoryGauge MemoryGauge) (StaticType, error) {
+func DecodeStaticType(decoder *cbor.StreamDecoder, memoryGauge common.MemoryGauge) (StaticType, error) {
 	return TypeDecoder{
 		decoder:     decoder,
 		memoryGauge: memoryGauge,
 	}.decodeStaticType()
 }
 
-func DecodeTypeInfo(decoder *cbor.StreamDecoder, memoryGauge MemoryGauge) (atree.TypeInfo, error) {
+func DecodeTypeInfo(decoder *cbor.StreamDecoder, memoryGauge common.MemoryGauge) (atree.TypeInfo, error) {
 	d := TypeDecoder{
 		decoder:     decoder,
 		memoryGauge: memoryGauge,
@@ -1452,10 +1452,10 @@ func DecodeTypeInfo(decoder *cbor.StreamDecoder, memoryGauge MemoryGauge) (atree
 
 type LocationDecoder struct {
 	decoder     *cbor.StreamDecoder
-	memoryGauge MemoryGauge
+	memoryGauge common.MemoryGauge
 }
 
-func decodeLocation(decoder *cbor.StreamDecoder, memoryGauge MemoryGauge) (common.Location, error) {
+func decodeLocation(decoder *cbor.StreamDecoder, memoryGauge common.MemoryGauge) (common.Location, error) {
 	return LocationDecoder{
 		decoder:     decoder,
 		memoryGauge: memoryGauge,
