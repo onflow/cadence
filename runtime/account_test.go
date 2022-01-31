@@ -272,7 +272,7 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		storage := newTestAccountKeyStorage()
 		rt := newTestInterpreterRuntime()
 		runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
-
+		runtimeInterface.validatePublicKey = func(_ *PublicKey) (bool, error) { return true, nil }
 		addAuthAccountKey(t, rt, runtimeInterface)
 
 		assert.Equal(t, []*AccountKey{accountKeyA}, storage.keys)
@@ -286,6 +286,7 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		storage := newTestAccountKeyStorage()
 		rt := newTestInterpreterRuntime()
 		runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
+		runtimeInterface.validatePublicKey = func(_ *PublicKey) (bool, error) { return true, nil }
 
 		addAuthAccountKey(t, rt, runtimeInterface)
 
@@ -322,6 +323,7 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		storage := newTestAccountKeyStorage()
 		rt := newTestInterpreterRuntime()
 		runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
+		runtimeInterface.validatePublicKey = func(_ *PublicKey) (bool, error) { return true, nil }
 
 		addAuthAccountKey(t, rt, runtimeInterface)
 
@@ -348,6 +350,7 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		storage := newTestAccountKeyStorage()
 		rt := newTestInterpreterRuntime()
 		runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
+		runtimeInterface.validatePublicKey = func(_ *PublicKey) (bool, error) { return true, nil }
 
 		addAuthAccountKey(t, rt, runtimeInterface)
 
@@ -376,6 +379,7 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		storage := newTestAccountKeyStorage()
 		rt := newTestInterpreterRuntime()
 		runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
+		runtimeInterface.validatePublicKey = func(_ *PublicKey) (bool, error) { return true, nil }
 
 		addAuthAccountKey(t, rt, runtimeInterface)
 
@@ -422,6 +426,7 @@ func TestRuntimeAuthAccountKeysAdd(t *testing.T) {
 
 	storage := newTestAccountKeyStorage()
 	runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
+	runtimeInterface.validatePublicKey = func(_ *PublicKey) (bool, error) { return true, nil }
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
@@ -1018,6 +1023,7 @@ func TestRuntimePublicKey(t *testing.T) {
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
+			validatePublicKey: func(_ *PublicKey) (bool, error) { return true, nil },
 		}
 
 		value, err := executeScript(script, runtimeInterface)
@@ -1174,6 +1180,7 @@ func TestRuntimePublicKey(t *testing.T) {
 				invoked = true
 				return true, nil
 			},
+			validatePublicKey: func(_ *PublicKey) (bool, error) { return true, nil },
 		}
 
 		value, err := executeScript(script, runtimeInterface)
@@ -1278,6 +1285,7 @@ func TestRuntimePublicKey(t *testing.T) {
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
+			validatePublicKey: func(_ *PublicKey) (bool, error) { return true, nil },
 		}
 
 		value, err := executeScript(script, runtimeInterface)
