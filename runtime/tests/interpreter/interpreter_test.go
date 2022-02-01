@@ -8075,7 +8075,7 @@ func TestInterpretNonStorageReference(t *testing.T) {
                   <-create NFT(id: 2)
               ]
 
-              let nftRef = &resources[1] as &NFT
+              let nftRef = (&resources[1] as &NFT?)!
               let nftRef2 = nftRef
               nftRef2.id = 3
 
@@ -8140,10 +8140,9 @@ func TestInterpretNonStorageReferenceToOptional(t *testing.T) {
               }
           }
 
-
           fun testSome(): String {
               let xs: @{String: Foo} <- {"yes": <-create Foo(name: "YES")}
-              let ref = &xs["yes"] as &Foo
+              let ref = (&xs["yes"] as &Foo?)!
               let name = ref.name
               destroy xs
               return name
@@ -8151,14 +8150,13 @@ func TestInterpretNonStorageReferenceToOptional(t *testing.T) {
 
           fun testNil(): String {
               let xs: @{String: Foo} <- {}
-              let ref = &xs["no"] as &Foo
+              let ref = (&xs["no"] as &Foo?)!
               let name = ref.name
               destroy xs
               return name
           }
         `,
 	)
-
 	t.Run("some", func(t *testing.T) {
 		value, err := inter.Invoke("testSome")
 		require.NoError(t, err)
@@ -8171,8 +8169,7 @@ func TestInterpretNonStorageReferenceToOptional(t *testing.T) {
 	t.Run("nil", func(t *testing.T) {
 		_, err := inter.Invoke("testNil")
 		require.Error(t, err)
-
-		require.ErrorAs(t, err, &interpreter.DereferenceError{})
+		require.ErrorAs(t, err, &interpreter.ForceNilError{})
 	})
 }
 
@@ -8965,14 +8962,14 @@ func TestInterpretEphemeralReferenceToOptional(t *testing.T) {
                   }
               }
 
-              fun borrow(id: Int): &R {
-                  return &C.rs[id] as &R
+              fun borrow(id: Int): &R? {
+                  return &C.rs[id] as &R?
               }
 
               init() {
                   self.rs <- {}
                   self.rs[1] <-! create R(id: 1)
-                  let ref = self.borrow(id: 1)
+                  let ref = self.borrow(id: 1)!
                   ref.id
               }
           }
@@ -9616,4 +9613,40 @@ func TestInterpretArrayTypeInference(t *testing.T) {
 			value,
 		)
 	})
+}
+
+func TestInterpretOptionalReference(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t,
+		`
+          fun present(): &Int {
+              let x: Int? = 1
+              let y = &x as &Int?
+              return y!
+          }
+
+          fun absent(): &Int {
+              let x: Int? = nil
+              let y = &x as &Int?
+              return y!
+          }
+        `,
+	)
+
+	value, err := inter.Invoke("present")
+	require.NoError(t, err)
+	require.Equal(
+		t,
+		&interpreter.EphemeralReferenceValue{
+			Value:        interpreter.NewIntValueFromInt64(1),
+			BorrowedType: sema.IntType,
+		},
+		value,
+	)
+
+	_, err = inter.Invoke("absent")
+	var forceNilError interpreter.ForceNilError
+	require.ErrorAs(t, err, &forceNilError)
 }

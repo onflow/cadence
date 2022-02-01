@@ -824,11 +824,39 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 		interpreter.trackReferencedResourceKindedValue(result.StorageID(), result)
 	}
 
-	return &EphemeralReferenceValue{
-		Authorized:   borrowType.Authorized,
-		Value:        result,
-		BorrowedType: borrowType.Type,
+	switch typ := borrowType.(type) {
+	case *sema.OptionalType:
+		innerBorrowType, ok := typ.Type.(*sema.ReferenceType)
+		// we enforce this in the checker
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+		switch result := result.(type) {
+		// references to optionals are transformed into optional references, so move
+		// the *SomeValue out to the reference itself
+		case *SomeValue:
+			return NewSomeValueNonCopying(&EphemeralReferenceValue{
+				Authorized:   innerBorrowType.Authorized,
+				Value:        result.Value,
+				BorrowedType: innerBorrowType.Type,
+			})
+		case NilValue:
+			return NilValue{}
+		default:
+			return &EphemeralReferenceValue{
+				Authorized:   innerBorrowType.Authorized,
+				Value:        result,
+				BorrowedType: innerBorrowType.Type,
+			}
+		}
+	case *sema.ReferenceType:
+		return &EphemeralReferenceValue{
+			Authorized:   typ.Authorized,
+			Value:        result,
+			BorrowedType: typ.Type,
+		}
 	}
+	panic(errors.NewUnreachableError())
 }
 
 func (interpreter *Interpreter) VisitForceExpression(expression *ast.ForceExpression) ast.Repr {
