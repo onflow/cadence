@@ -165,6 +165,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 		member = resolver.Resolve(identifier, targetRange, checker.report)
 		switch targetExpression := accessedExpression.(type) {
 		case *ast.MemberExpression:
+			// calls to this method are cached, so this performs no computation
 			_, m, _ := checker.visitMember(targetExpression)
 			if !checker.isMutatableMember(m) && resolver.Mutating {
 				checker.report(

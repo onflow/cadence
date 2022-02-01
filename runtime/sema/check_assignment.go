@@ -215,6 +215,7 @@ func (checker *Checker) visitIndexExpressionAssignment(
 	targetExpression := target.TargetExpression
 	switch targetExpression := targetExpression.(type) {
 	case *ast.MemberExpression:
+		// calls to this method are cached, so this performs no computation
 		_, member, _ := checker.visitMember(targetExpression)
 		if !checker.isMutatableMember(member) {
 			checker.report(
