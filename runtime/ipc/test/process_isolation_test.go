@@ -114,14 +114,14 @@ func TestExecutingScriptParallel(t *testing.T) {
 
 	wg := sync.WaitGroup{}
 	for i := 0; i < 10; i++ {
-		go func() {
+		//go func() {
 			wg.Add(1)
 			start := time.Now()
 			_, err := proxyRuntime.ExecuteScript(
 				runtime.Script{
 					Source: []byte(`
                pub fun main(): Int {
-                 // log("hello")
+                 log("hello")
                  return 4 + 8
                }
             `),
@@ -136,7 +136,7 @@ func TestExecutingScriptParallel(t *testing.T) {
 			assert.NoError(t, err)
 
 			wg.Done()
-		}()
+		//}()
 	}
 
 	wg.Wait()

@@ -6,6 +6,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	zlog "github.com/rs/zerolog/log"
+
 	"github.com/onflow/cadence/runtime/ipc"
 	"github.com/onflow/cadence/runtime/ipc/bridge"
 	"github.com/onflow/cadence/runtime/ipc/protobuf"
@@ -23,13 +25,21 @@ func main() {
 	listener := bridge.NewRuntimeListener()
 	runtimeBridge := bridge.NewRuntimeBridge()
 
+	log := zlog.Logger
+	log.Info().Msg("starting cadence runtime")
+
 	// Handle interrupts
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, signalsToWatch...)
 	go func() {
 		_ = <-signals
-		fmt.Printf("Shutting down")
-		listener.Close()
+		log.Info().Msg("shutting down cadence runtime")
+
+		err := listener.Close()
+		if err != nil {
+			log.Info().Msgf("error occurred while closing listener: %w", err)
+		}
+
 		os.Exit(0)
 	}()
 
@@ -39,6 +49,20 @@ func main() {
 		bridge.HandleError(err)
 
 		go func() {
+
+			// Gracefully handle all errors.
+			// Server shouldn't crash upon any errors.
+			defer func() {
+				if err, ok := recover().(error); ok {
+					errMsg := fmt.Sprintf("error occurred: '%s'", err.Error())
+					log.Error().Msg(errMsg)
+
+					// TODO: send an error response, only if the 'conn' is still alive
+					errResp := pb.NewErrorMessage(errMsg)
+					bridge.WriteMessage(conn, errResp)
+				}
+			}()
+
 			msg := bridge.ReadMessage(conn)
 
 			switch msg := msg.(type) {
@@ -46,9 +70,9 @@ func main() {
 				response := serveRequest(runtimeBridge, msg)
 				bridge.WriteMessage(conn, response)
 			case *pb.Error:
-				panic(fmt.Errorf(msg.GetErr()))
+				log.Error().Msg(msg.GetErr())
 			default:
-				panic(fmt.Errorf("unsupported message"))
+				log.Error().Msg("unsupported message")
 			}
 		}()
 	}

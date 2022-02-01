@@ -2,6 +2,8 @@ package ipc
 
 import (
 	"fmt"
+	"github.com/rs/zerolog"
+	zlog "github.com/rs/zerolog/log"
 
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ipc/bridge"
@@ -12,27 +14,43 @@ func StartInterfaceService(runtimeInterface runtime.Interface) *pb.Message {
 	listener := bridge.NewInterfaceListener()
 	interfaceBridge := bridge.NewInterfaceBridge(runtimeInterface)
 
+	log := zlog.Logger
+
 	for {
 		conn, err := listener.Accept()
 		bridge.HandleError(err)
 
 		go func() {
+
+			// Gracefully handle all errors.
+			// Server shouldn't crash upon any errors.
+			defer func() {
+				if err, ok := recover().(error); ok {
+					errMsg := fmt.Sprintf("error occurred: '%s'", err.Error())
+					log.Error().Msg(errMsg)
+
+					// TODO: send an error response, only if the 'conn' is still alive
+					errResp := pb.NewErrorMessage(errMsg)
+					bridge.WriteMessage(conn, errResp)
+				}
+			}()
+
 			msg := bridge.ReadMessage(conn)
 
 			switch msg := msg.(type) {
 			case *pb.Request:
-				response := serveRequest(interfaceBridge, msg)
+				response := serveRequest(interfaceBridge, msg, log)
 				bridge.WriteMessage(conn, response)
 			case *pb.Error:
-				panic(fmt.Errorf(msg.GetErr()))
+				log.Error().Msg(msg.GetErr())
 			default:
-				panic(fmt.Errorf("unsupported message"))
+				log.Error().Msg("unsupported message")
 			}
 		}()
 	}
 }
 
-func serveRequest(interfaceBridge *bridge.InterfaceBridge, request *pb.Request) pb.Message {
+func serveRequest(interfaceBridge *bridge.InterfaceBridge, request *pb.Request, log zerolog.Logger) pb.Message {
 	var response pb.Message
 
 	// All 'Interface' methods goes here
@@ -65,7 +83,7 @@ func serveRequest(interfaceBridge *bridge.InterfaceBridge, request *pb.Request) 
 		response = interfaceBridge.AllocateStorageIndex(request.Params)
 
 	default:
-		panic("unsupported")
+		log.Error().Msgf("unsupported request '%s'", request.Name)
 	}
 
 	return response
