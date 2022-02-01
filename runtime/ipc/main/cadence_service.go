@@ -22,10 +22,16 @@ var signalsToWatch = []os.Signal{
 var runtimeInterface = ipc.NewProxyInterface()
 
 func main() {
-	listener := bridge.NewRuntimeListener()
+	log := zlog.Logger
+
+	listener, err := bridge.NewRuntimeListener()
+	if err != nil {
+		log.Info().Msgf("cannot start cadence runtime: %s", err.Error())
+		return
+	}
+
 	runtimeBridge := bridge.NewRuntimeBridge()
 
-	log := zlog.Logger
 	log.Info().Msg("starting cadence runtime")
 
 	// Handle interrupts
@@ -37,7 +43,7 @@ func main() {
 
 		err := listener.Close()
 		if err != nil {
-			log.Info().Msgf("error occurred while closing listener: %w", err)
+			log.Info().Msgf("error occurred while closing listener: %s", err.Error())
 		}
 
 		os.Exit(0)
@@ -54,7 +60,7 @@ func main() {
 			// Server shouldn't crash upon any errors.
 			defer func() {
 				if err, ok := recover().(error); ok {
-					errMsg := fmt.Sprintf("error occurred: '%s'", err.Error())
+					errMsg := fmt.Sprintf("error occurred: %s", err.Error())
 					log.Error().Msg(errMsg)
 
 					// TODO: send an error response, only if the 'conn' is still alive

@@ -40,7 +40,10 @@ func (r *ProxyRuntime) ExecuteScript(script runtime.Script, context runtime.Cont
 		locationParam,
 	)
 
-	conn := bridge.NewRuntimeConnection()
+	conn, err := bridge.NewRuntimeConnection()
+	if err != nil {
+		return nil, err
+	}
 
 	bridge.WriteMessage(conn, request)
 
@@ -71,7 +74,10 @@ func (r *ProxyRuntime) ExecuteTransaction(script runtime.Script, context runtime
 		locationParam,
 	)
 
-	conn := bridge.NewRuntimeConnection()
+	conn, err := bridge.NewRuntimeConnection()
+	if err != nil {
+		return err
+	}
 
 	bridge.WriteMessage(conn, request)
 

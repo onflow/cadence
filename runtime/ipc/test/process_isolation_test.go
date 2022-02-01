@@ -50,7 +50,7 @@ func TestExecutingScript(t *testing.T) {
 		)
 
 		fmt.Println(time.Since(start))
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		assert.Equal(t, cadence.NewInt(12), value)
 	})
@@ -102,7 +102,7 @@ func TestExecutingScript(t *testing.T) {
 		)
 
 		fmt.Println(time.Since(start))
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 }
 
@@ -114,7 +114,7 @@ func TestExecutingScriptParallel(t *testing.T) {
 
 	wg := sync.WaitGroup{}
 	for i := 0; i < 10; i++ {
-		//go func() {
+		go func() {
 			wg.Add(1)
 			start := time.Now()
 			_, err := proxyRuntime.ExecuteScript(
@@ -136,7 +136,7 @@ func TestExecutingScriptParallel(t *testing.T) {
 			assert.NoError(t, err)
 
 			wg.Done()
-		//}()
+		}()
 	}
 
 	wg.Wait()

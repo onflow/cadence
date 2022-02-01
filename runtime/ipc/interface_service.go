@@ -10,11 +10,15 @@ import (
 	"github.com/onflow/cadence/runtime/ipc/protobuf"
 )
 
-func StartInterfaceService(runtimeInterface runtime.Interface) *pb.Message {
-	listener := bridge.NewInterfaceListener()
-	interfaceBridge := bridge.NewInterfaceBridge(runtimeInterface)
-
+func StartInterfaceService(runtimeInterface runtime.Interface) error {
 	log := zlog.Logger
+
+	listener, err := bridge.NewInterfaceListener()
+	if err != nil {
+		return err
+	}
+
+	interfaceBridge := bridge.NewInterfaceBridge(runtimeInterface)
 
 	for {
 		conn, err := listener.Accept()
@@ -26,7 +30,7 @@ func StartInterfaceService(runtimeInterface runtime.Interface) *pb.Message {
 			// Server shouldn't crash upon any errors.
 			defer func() {
 				if err, ok := recover().(error); ok {
-					errMsg := fmt.Sprintf("error occurred: '%s'", err.Error())
+					errMsg := fmt.Sprintf("error occurred: %s", err.Error())
 					log.Error().Msg(errMsg)
 
 					// TODO: send an error response, only if the 'conn' is still alive

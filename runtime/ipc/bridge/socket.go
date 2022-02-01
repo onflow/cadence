@@ -17,30 +17,47 @@ const (
 	InterfaceSocketAddress = "/tmp/interface.socket"
 )
 
-func NewRuntimeListener() net.Listener {
+func NewRuntimeListener() (net.Listener, error) {
 	syscall.Unlink(RuntimeSocketAddress)
+
 	listener, err := net.Listen(UnixNetwork, RuntimeSocketAddress)
-	HandleError(err)
-	return listener
+	if err != nil {
+		return nil, err
+	}
+
+	return listener, nil
 }
 
-func NewRuntimeConnection() net.Conn {
+func NewRuntimeConnection() (net.Conn, error) {
 	conn, err := net.Dial(UnixNetwork, RuntimeSocketAddress)
-	HandleError(err)
-	return conn
+	if err != nil {
+		// Do not expose network info to the user.
+		// Return a generic error instead.
+		return nil, fmt.Errorf("cannot connect to cadence runtime")
+	}
+
+	return conn, nil
 }
 
-func NewInterfaceListener() net.Listener {
+func NewInterfaceListener() (net.Listener, error) {
 	syscall.Unlink(InterfaceSocketAddress)
 	listener, err := net.Listen(UnixNetwork, InterfaceSocketAddress)
-	HandleError(err)
-	return listener
+	if err != nil {
+		return nil, err
+	}
+
+	return listener, nil
 }
 
-func NewInterfaceConnection() net.Conn {
+func NewInterfaceConnection() (net.Conn, error) {
 	conn, err := net.Dial(UnixNetwork, InterfaceSocketAddress)
-	HandleError(err)
-	return conn
+	if err != nil {
+		// Do not expose network info to the user.
+		// Return a generic error instead.
+		return nil, fmt.Errorf("cannot connect to host-env")
+	}
+
+	return conn, nil
 }
 
 func ReadMessage(conn net.Conn) pb.Message {
