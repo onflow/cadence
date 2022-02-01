@@ -624,12 +624,16 @@ func (v CharacterValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
+func (v CharacterValue) NormalForm() string {
+	return norm.NFC.String(string(v))
+}
+
 func (v CharacterValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		return false
 	}
-	return string(v) == string(otherChar)
+	return v.NormalForm() == otherChar.NormalForm()
 }
 
 func (v CharacterValue) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {

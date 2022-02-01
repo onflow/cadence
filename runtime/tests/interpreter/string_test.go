@@ -305,3 +305,39 @@ func TestConvertCharacterToString(t *testing.T) {
 		result,
 	)
 }
+
+func TestCompareCharacters(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        let a: Character = "ü"
+        let b: Character = "\u{FC}"
+		let c: Character = "\u{75}\u{308}"
+        let d: Character = "y"
+        let x = a == b
+        let y = a == c
+		let z = a == d
+    `)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.BoolValue(true),
+		inter.Globals["x"].GetValue(),
+	)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.BoolValue(true),
+		inter.Globals["y"].GetValue(),
+	)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.BoolValue(false),
+		inter.Globals["z"].GetValue(),
+	)
+}
