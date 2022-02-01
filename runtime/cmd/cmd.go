@@ -62,7 +62,7 @@ func PrepareProgramFromFile(location common.StringLocation, codes map[common.Loc
 func PrepareProgram(code string, location common.Location, codes map[common.LocationID]string) (*ast.Program, func(error)) {
 	must := mustClosure(location, codes)
 
-	program, err := parser2.ParseProgram(code)
+	program, err := parser2.ParseProgram(code, nil)
 	codes[location.ID()] = code
 	must(err)
 

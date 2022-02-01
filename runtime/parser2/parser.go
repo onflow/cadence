@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/parser2/lexer"
 )
@@ -45,6 +46,8 @@ type parser struct {
 	backtrackingCursorStack []int
 	// bufferedErrorsStack is the stack of parsing errors encountered during buffering
 	bufferedErrorsStack [][]error
+	// memoryGauge is the memory gauge
+	memoryGauge common.MemoryGauge
 }
 
 // Parse creates a lexer to scan the given input string,
@@ -56,11 +59,21 @@ type parser struct {
 func Parse(input string, parse func(*parser) interface{}) (result interface{}, errors []error) {
 	// create a lexer, which turns the input string into tokens
 	tokens := lexer.Lex(input)
-	return ParseTokenStream(tokens, parse)
+	return ParseTokenStream(tokens, parse, nil)
 }
 
-func ParseTokenStream(tokens lexer.TokenStream, parse func(*parser) interface{}) (result interface{}, errors []error) {
-	p := &parser{tokens: tokens}
+func ParseTokenStream(
+	tokens lexer.TokenStream,
+	parse func(*parser) interface{},
+	memoryGauge common.MemoryGauge,
+) (
+	result interface{},
+	errors []error,
+) {
+	p := &parser{
+		tokens:      tokens,
+		memoryGauge: memoryGauge,
+	}
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -80,11 +93,17 @@ func ParseTokenStream(tokens lexer.TokenStream, parse func(*parser) interface{})
 		}
 	}()
 
+	startPos := ast.Position{
+		Offset: 0,
+		Line:   1,
+		Column: 0,
+	}
+
 	p.current = lexer.Token{
 		Type: lexer.TokenEOF,
 		Range: ast.Range{
-			StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
-			EndPos:   ast.Position{Offset: 0, Line: 1, Column: 0},
+			StartPos: startPos,
+			EndPos:   startPos,
 		},
 	}
 
@@ -431,16 +450,26 @@ func ParseArgumentList(input string) (arguments ast.Arguments, errs []error) {
 	return
 }
 
-func ParseProgram(input string) (program *ast.Program, err error) {
-	return ParseProgramFromTokenStream(lexer.Lex(input))
+func ParseProgram(code string, memoryGauge common.MemoryGauge) (program *ast.Program, err error) {
+	return ParseProgramFromTokenStream(lexer.Lex(code), memoryGauge)
 }
 
-func ParseProgramFromTokenStream(input lexer.TokenStream) (program *ast.Program, err error) {
+func ParseProgramFromTokenStream(
+	input lexer.TokenStream,
+	memoryGauge common.MemoryGauge,
+) (
+	program *ast.Program,
+	err error,
+) {
 	var res interface{}
 	var errs []error
-	res, errs = ParseTokenStream(input, func(p *parser) interface{} {
-		return parseDeclarations(p, lexer.TokenEOF)
-	})
+	res, errs = ParseTokenStream(
+		input,
+		func(p *parser) interface{} {
+			return parseDeclarations(p, lexer.TokenEOF)
+		},
+		memoryGauge,
+	)
 	if len(errs) > 0 {
 		err = Error{
 			Code:   input.Input(),
@@ -462,7 +491,14 @@ func ParseProgramFromTokenStream(input lexer.TokenStream) (program *ast.Program,
 	return
 }
 
-func ParseProgramFromFile(filename string) (program *ast.Program, code string, err error) {
+func ParseProgramFromFile(
+	filename string,
+	memoryGauge common.MemoryGauge,
+) (
+	program *ast.Program,
+	code string,
+	err error,
+) {
 	var data []byte
 	data, err = ioutil.ReadFile(filename)
 	if err != nil {
@@ -471,7 +507,7 @@ func ParseProgramFromFile(filename string) (program *ast.Program, code string, e
 
 	code = string(data)
 
-	program, err = ParseProgram(code)
+	program, err = ParseProgram(code, memoryGauge)
 	if err != nil {
 		return nil, code, err
 	}

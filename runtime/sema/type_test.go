@@ -635,7 +635,7 @@ func TestIdentifierCacheUpdate(t *testing.T) {
           }
 	`
 
-	program, err := parser2.ParseProgram(code)
+	program, err := parser2.ParseProgram(code, nil)
 	require.NoError(t, err)
 
 	checker, err := NewChecker(

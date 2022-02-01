@@ -1126,7 +1126,7 @@ func TestParseString(t *testing.T) {
 	})
 }
 
-func TestInvocation(t *testing.T) {
+func TestParseInvocation(t *testing.T) {
 
 	t.Parallel()
 
@@ -1559,7 +1559,7 @@ func TestInvocation(t *testing.T) {
 	})
 }
 
-func TestMemberExpression(t *testing.T) {
+func TestParseMemberExpression(t *testing.T) {
 
 	t.Parallel()
 
@@ -1739,6 +1739,48 @@ func TestMemberExpression(t *testing.T) {
 				},
 			},
 			result,
+		)
+	})
+
+	t.Run("in declaration", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = `
+          let a = b.c
+        `
+		result, errs := ParseProgram(code, nil)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.VariableDeclaration{
+					IsConstant: true,
+					Identifier: ast.Identifier{
+						Identifier: "a",
+						Pos:        ast.Position{Offset: 15, Line: 2, Column: 14},
+					},
+					Transfer: &ast.Transfer{
+						Operation: ast.TransferOperationCopy,
+						Pos:       ast.Position{Offset: 17, Line: 2, Column: 16},
+					},
+					Value: &ast.MemberExpression{
+						Expression: &ast.IdentifierExpression{
+							Identifier: ast.Identifier{
+								Identifier: "b",
+								Pos:        ast.Position{Offset: 19, Line: 2, Column: 18},
+							},
+						},
+						Identifier: ast.Identifier{
+							Identifier: "c",
+							Pos:        ast.Position{Offset: 21, Line: 2, Column: 20},
+						},
+						AccessPos: ast.Position{Offset: 20, Line: 2, Column: 19},
+					},
+					StartPos: ast.Position{Offset: 11, Line: 2, Column: 10},
+				},
+			},
+			result.Declarations(),
 		)
 	})
 }
@@ -3718,9 +3760,10 @@ func TestParseBoolExpression(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
 	    let a = true
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -3753,9 +3796,10 @@ func TestParseIdentifierExpression(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
 	    let b = a
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -3787,9 +3831,10 @@ func TestParseArrayExpressionInVariableDeclaration(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
 	    let a = [1, 2]
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -3840,9 +3885,10 @@ func TestParseDictionaryExpressionInVariableDeclaration(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
 	    let x = {"a": 1, "b": 2}
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -3911,9 +3957,10 @@ func TestParseInvocationExpressionWithoutLabels(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
 	    let a = b(1, 2)
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -3977,9 +4024,10 @@ func TestParseInvocationExpressionWithLabels(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
 	    let a = b(x: 1, y: 2)
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -4043,54 +4091,14 @@ func TestParseInvocationExpressionWithLabels(t *testing.T) {
 	)
 }
 
-func TestParseMemberExpression(t *testing.T) {
-
-	t.Parallel()
-
-	result, errs := ParseProgram(`
-	    let a = b.c
-	`)
-	require.Empty(t, errs)
-
-	utils.AssertEqualWithDiff(t,
-		[]ast.Declaration{
-			&ast.VariableDeclaration{
-				IsConstant: true,
-				Identifier: ast.Identifier{
-					Identifier: "a",
-					Pos:        ast.Position{Offset: 10, Line: 2, Column: 9},
-				},
-				Transfer: &ast.Transfer{
-					Operation: ast.TransferOperationCopy,
-					Pos:       ast.Position{Offset: 12, Line: 2, Column: 11},
-				},
-				Value: &ast.MemberExpression{
-					Expression: &ast.IdentifierExpression{
-						Identifier: ast.Identifier{
-							Identifier: "b",
-							Pos:        ast.Position{Offset: 14, Line: 2, Column: 13},
-						},
-					},
-					Identifier: ast.Identifier{
-						Identifier: "c",
-						Pos:        ast.Position{Offset: 16, Line: 2, Column: 15},
-					},
-					AccessPos: ast.Position{Offset: 15, Line: 2, Column: 14},
-				},
-				StartPos: ast.Position{Offset: 6, Line: 2, Column: 5},
-			},
-		},
-		result.Declarations(),
-	)
-}
-
 func TestParseOptionalMemberExpression(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
 	    let a = b?.c
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -4130,9 +4138,10 @@ func TestParseIndexExpressionInVariableDeclaration(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
 	    let a = b[1]
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -4179,9 +4188,10 @@ func TestParseUnaryExpression(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
 	    let foo = -boo
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -4217,9 +4227,10 @@ func TestParseOrExpression(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
         let a = false || true
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -4262,9 +4273,10 @@ func TestParseAndExpression(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
         let a = false && true
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -4307,9 +4319,10 @@ func TestParseEqualityExpression(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
         let a = false == true
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -4352,9 +4365,10 @@ func TestParseRelationalExpression(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
         let a = 1 < 2
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -4401,9 +4415,10 @@ func TestParseAdditiveExpression(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
         let a = 1 + 2
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -4450,9 +4465,10 @@ func TestParseMultiplicativeExpression(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
         let a = 1 * 2
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -4499,9 +4515,10 @@ func TestParseFunctionExpressionAndReturn(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
 	    let test = fun (): Int { return 1 }
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -4571,9 +4588,10 @@ func TestParseLeftAssociativity(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
         let a = 1 + 2 + 3
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -4632,9 +4650,10 @@ func TestParseNegativeInteger(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
       let a = -42
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -4669,9 +4688,10 @@ func TestParseNegativeFixedPoint(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
       let a = -42.3
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -4708,11 +4728,12 @@ func TestParseTernaryRightAssociativity(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
         let a = 2 > 1
           ? 0
           : 3 > 2 ? 1 : 2
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -4811,10 +4832,11 @@ func TestParseMissingReturnType(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
 		let noop: ((): Void) =
             fun () { return }
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -5030,9 +5052,10 @@ func TestParseNilCoalescing(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
        let x = nil ?? 1
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -5074,9 +5097,10 @@ func TestParseNilCoalescingRightAssociativity(t *testing.T) {
 	t.Parallel()
 
 	// NOTE: only syntactically, not semantically valid
-	result, errs := ParseProgram(`
+	const code = `
        let x = 1 ?? 2 ?? 3
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -5135,9 +5159,10 @@ func TestParseFailableCasting(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
        let x = 0 as? Int
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	failableDowncast := &ast.CastingExpression{
@@ -5191,9 +5216,10 @@ func TestParseMoveOperator(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
       let x = foo(<-y)
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -5247,9 +5273,10 @@ func TestParseFunctionExpressionWithResourceTypeAnnotation(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
         let f = fun (): @R { return X }
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -5317,9 +5344,10 @@ func TestParseFailableCastingResourceTypeAnnotation(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
         let y = x as? @R
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	failableDowncast := &ast.CastingExpression{
@@ -5370,9 +5398,10 @@ func TestParseCasting(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
         let y = x as Y
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	cast := &ast.CastingExpression{
@@ -5425,7 +5454,7 @@ func TestParseIdentifiers(t *testing.T) {
 	for _, name := range []string{"foo", "from", "create", "destroy", "for", "in"} {
 		t.Run(name, func(t *testing.T) {
 			code := fmt.Sprintf(`let %s = 1`, name)
-			_, errs := ParseProgram(code)
+			_, errs := ParseProgram(code, nil)
 			require.Empty(t, errs)
 		})
 	}
@@ -5435,9 +5464,10 @@ func TestParseReferenceInVariableDeclaration(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
        let x = &account.storage[R] as &R
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -5500,9 +5530,10 @@ func TestParseFixedPointExpression(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
 	    let a = -1234_5678_90.0009_8765_4321
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -5538,9 +5569,10 @@ func TestParseFixedPointExpressionZeroInteger(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
 	    let a = -0.1
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -5576,9 +5608,10 @@ func TestParsePathLiteral(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
 	    let a = /foo/bar
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -5614,9 +5647,10 @@ func TestParseBitwiseExpression(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
       let a = 1 | 2 ^ 3 & 4 << 5 >> 6
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -5711,9 +5745,10 @@ func TestParseInvalidNegativeIntegerLiteralWithIncorrectPrefix(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseProgram(`
+	const code = `
 	    let e = -0K0
-	`)
+	`
+	_, err := ParseProgram(code, nil)
 
 	require.Error(t, err)
 }

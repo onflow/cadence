@@ -30,7 +30,7 @@ import (
 
 var CryptoChecker = func() *sema.Checker {
 
-	program, err := parser2.ParseProgram(contracts.Crypto)
+	program, err := parser2.ParseProgram(contracts.Crypto, nil)
 	if err != nil {
 		panic(err)
 	}
