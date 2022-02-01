@@ -376,18 +376,18 @@ someStruct = testStruct
 
 // Declare a resource named `TestResource`
 
-resource Test {}
+resource TestResource {}
 
 // Declare a variable that has the type `AnyResource`.
 // Any resource-typed value can be assigned to it,
 // but not non-resource typed values.
 //
-var someResource: @AnyResource <- create Test()
+var someResource: @AnyResource <- create TestResource()
 
 // Invalid: Resource-typed values can not be assigned
 // to `AnyStruct`-typed variables
 //
-someStruct <- create Test()
+someStruct <- create TestResource()
 
 // Invalid: Non-resource typed values can not be assigned
 // to `AnyResource`-typed variables

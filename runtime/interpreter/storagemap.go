@@ -100,18 +100,18 @@ func (s StorageMap) ReadValue(key string) Value {
 // If the given value is a SomeValue, the key is updated.
 // If the given value is NilValue, the key is removed.
 //
-func (s StorageMap) WriteValue(interpreter *Interpreter, key string, value Value) {
+func (s StorageMap) WriteValue(interpreter *Interpreter, key string, value atree.Value) {
 	if value == nil {
 		s.removeValue(interpreter, key)
 	} else {
-		s.setValue(interpreter, key, value)
+		s.SetValue(interpreter, key, value)
 	}
 }
 
-// setValue sets a value in the storage map.
+// SetValue sets a value in the storage map.
 // If the given key already stores a value, it is overwritten.
 //
-func (s StorageMap) setValue(interpreter *Interpreter, key string, value Value) {
+func (s StorageMap) SetValue(interpreter *Interpreter, key string, value atree.Value) {
 	existingStorable, err := s.orderedMap.Set(
 		StringAtreeComparator,
 		StringAtreeHashInput,
