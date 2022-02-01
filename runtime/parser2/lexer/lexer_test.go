@@ -50,7 +50,7 @@ func testLex(t *testing.T, input string, expected []Token) {
 
 	t.Parallel()
 
-	withTokens(Lex(input), func(tokens []Token) {
+	withTokens(Lex(input, nil), func(tokens []Token) {
 		utils.AssertEqualWithDiff(t, expected, tokens)
 	})
 }
@@ -1898,7 +1898,7 @@ func TestRevert(t *testing.T) {
 
 	t.Parallel()
 
-	tokenStream := Lex("1 2 3")
+	tokenStream := Lex("1 2 3", nil)
 
 	// Assert all tokens
 
@@ -2062,7 +2062,7 @@ func TestEOFsAfterError(t *testing.T) {
 
 	t.Parallel()
 
-	tokenStream := Lex(`1 ''`)
+	tokenStream := Lex(`1 ''`, nil)
 
 	// Assert all tokens
 
@@ -2124,7 +2124,7 @@ func TestEOFsAfterEmptyInput(t *testing.T) {
 
 	t.Parallel()
 
-	tokenStream := Lex(``)
+	tokenStream := Lex(``, nil)
 
 	// Assert EOFs keep on being returned for Next()
 	// at the end of the stream

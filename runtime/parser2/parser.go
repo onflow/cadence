@@ -46,7 +46,7 @@ type parser struct {
 	backtrackingCursorStack []int
 	// bufferedErrorsStack is the stack of parsing errors encountered during buffering
 	bufferedErrorsStack [][]error
-	// memoryGauge is the memory gauge
+	// memoryGauge is used to meter memory usage
 	memoryGauge common.MemoryGauge
 }
 
@@ -58,7 +58,7 @@ type parser struct {
 //
 func Parse(input string, parse func(*parser) interface{}) (result interface{}, errors []error) {
 	// create a lexer, which turns the input string into tokens
-	tokens := lexer.Lex(input)
+	tokens := lexer.Lex(input, nil)
 	return ParseTokenStream(tokens, parse, nil)
 }
 
@@ -451,7 +451,8 @@ func ParseArgumentList(input string) (arguments ast.Arguments, errs []error) {
 }
 
 func ParseProgram(code string, memoryGauge common.MemoryGauge) (program *ast.Program, err error) {
-	return ParseProgramFromTokenStream(lexer.Lex(code), memoryGauge)
+	tokenStream := lexer.Lex(code, memoryGauge)
+	return ParseProgramFromTokenStream(tokenStream, memoryGauge)
 }
 
 func ParseProgramFromTokenStream(

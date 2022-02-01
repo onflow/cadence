@@ -23,6 +23,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 )
 
 type position struct {
@@ -31,27 +32,30 @@ type position struct {
 }
 
 type lexer struct {
-	// the entire input string
+	// input is the entire input string
 	input string
-	// the start offset of the current word in the current line
+	// startOffset is the start offset of the current word in the current line
 	startOffset int
-	// the end offset of the current word in the current line
+	// endOffset is the end offset of the current word in the current line
 	endOffset int
-	// the previous end offset, used for stepping back
+	// prevEndOffset is the previous end offset, used for stepping back
 	prevEndOffset int
-	// the current rune is scanned
+	// current is the currently scanned rune
 	current rune
-	// the previous rune was scanned, used for stepping back
+	// prev is the previously scanned rune, used for stepping back
 	prev rune
-	// signal whether stepping back is allowed
+	// canBackup indicates whether stepping back is allowed
 	canBackup bool
-	// the start position of the current word
+	// startPos is the start position of the current word
 	startPos position
-	// the offset in the token stream
+	// cursor is the offset in the token stream
 	cursor int
-	// the tokens of the stream
-	tokens     []Token
+	// tokens contains all tokens of the stream
+	tokens []Token
+	// tokenCount is the number of tokens in the stream
 	tokenCount int
+	// memoryGauge is used for metering memory usage
+	memoryGauge common.MemoryGauge
 }
 
 var _ TokenStream = &lexer{}
@@ -95,7 +99,7 @@ func (l *lexer) Revert(cursor int) {
 	l.cursor = cursor
 }
 
-func Lex(input string) TokenStream {
+func Lex(input string, memoryGauge common.MemoryGauge) TokenStream {
 	l := &lexer{
 		input:         input,
 		startPos:      position{line: 1},
@@ -103,6 +107,7 @@ func Lex(input string) TokenStream {
 		prevEndOffset: 0,
 		current:       EOF,
 		prev:          EOF,
+		memoryGauge:   memoryGauge,
 	}
 	l.run(rootState)
 	return l
@@ -175,6 +180,10 @@ func (l *lexer) backupOne() {
 
 	l.endOffset = l.prevEndOffset
 	l.current = l.prev
+}
+
+func (l *lexer) wordLength() int {
+	return l.endOffset - l.startOffset
 }
 
 func (l *lexer) word() string {

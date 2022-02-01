@@ -562,7 +562,7 @@ func TestParseInvalidSingleQuoteImport(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseProgram(`import 'X'`)
+	_, err := ParseProgram(`import 'X'`, nil)
 
 	require.EqualError(t, err, "Parsing failed:\nerror: unrecognized character: U+0027 '''\n --> :1:7\n  |\n1 | import 'X'\n  |        ^\n\nerror: unexpected end in import declaration: expected string, address, or identifier\n --> :1:7\n  |\n1 | import 'X'\n  |        ^\n")
 }
