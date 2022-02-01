@@ -369,8 +369,8 @@ func TestExportValue(t *testing.T) {
 							_ *interpreter.Interpreter,
 							_ func() interpreter.LocationRange,
 							_ *interpreter.CompositeValue,
-						) (interpreter.BoolValue, error) {
-							return true, nil
+						) error {
+							return nil
 						},
 					),
 					stdlib.NewHashAlgorithmCase(inter, 1),
@@ -3774,9 +3774,9 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 	t.Run("Test importing validates PublicKey", func(t *testing.T) {
 		t.Parallel()
 
-		testPublicKeyImport := func(publicKeyActualValidity bool) {
+		testPublicKeyImport := func(publicKeyActualError error) {
 			t.Run(
-				fmt.Sprintf("Actual(%v)", publicKeyActualValidity),
+				fmt.Sprintf("Actual(%v)", publicKeyActualError),
 				func(t *testing.T) {
 
 					t.Parallel()
@@ -3810,9 +3810,9 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 							return json.Decode(b)
 						},
 
-						validatePublicKey: func(publicKey *PublicKey) (bool, error) {
+						validatePublicKey: func(publicKey *PublicKey) error {
 							publicKeyValidated = true
-							return publicKeyActualValidity, nil
+							return publicKeyActualError
 						},
 					}
 
@@ -3822,20 +3822,23 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 					assert.True(t, publicKeyValidated)
 
 					// Invalid PublicKey errors but valid does not.
-					if publicKeyActualValidity {
+					if publicKeyActualError == nil {
 						require.NoError(t, err)
 					} else {
 						assert.Error(t, err)
 						var invalidEntryPointArgumentError *InvalidEntryPointArgumentError
+						var invalidPublicKeyError *interpreter.InvalidPublicKeyError
+						var fakeErrorInstance *fakeError
 						assert.ErrorAs(t, err, &invalidEntryPointArgumentError)
-						assert.ErrorAs(t, err, &interpreter.InvalidPublicKeyError{})
+						assert.ErrorAs(t, err, &invalidPublicKeyError)
+						assert.ErrorAs(t, err, &fakeErrorInstance)
 					}
 				},
 			)
 		}
 
-		testPublicKeyImport(true)
-		testPublicKeyImport(false)
+		testPublicKeyImport(nil)
+		testPublicKeyImport(&fakeError{})
 	})
 
 	t.Run("Test Verify", func(t *testing.T) {
@@ -3886,8 +3889,8 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 				verifyInvoked = true
 				return true, nil
 			},
-			validatePublicKey: func(publicKey *PublicKey) (bool, error) {
-				return true, nil
+			validatePublicKey: func(publicKey *PublicKey) error {
+				return nil
 			},
 		}
 
@@ -4235,9 +4238,9 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return json.Decode(b)
 			},
-			validatePublicKey: func(publicKey *PublicKey) (bool, error) {
+			validatePublicKey: func(publicKey *PublicKey) error {
 				publicKeyValidated = true
-				return true, nil
+				return nil
 			},
 		}
 
@@ -4305,9 +4308,9 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return json.Decode(b)
 			},
-			validatePublicKey: func(publicKey *PublicKey) (bool, error) {
+			validatePublicKey: func(publicKey *PublicKey) error {
 				publicKeyValidated = true
-				return true, nil
+				return nil
 			},
 		}
 

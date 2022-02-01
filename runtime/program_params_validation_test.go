@@ -84,10 +84,8 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return json.Decode(b)
 			},
-			validatePublicKey: func(publicKey *PublicKey) (bool, error) {
-				return true, nil
-			},
 		}
+		addPublicKeyValidation(runtimeInterface, nil)
 
 		_, err = rt.ExecuteScript(
 			Script{
@@ -551,10 +549,8 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return json.Decode(b)
 			},
-			validatePublicKey: func(publicKey *PublicKey) (bool, error) {
-				return true, nil
-			},
 		}
+		addPublicKeyValidation(runtimeInterface, nil)
 
 		return rt.ExecuteTransaction(
 			Script{

@@ -3136,11 +3136,7 @@ func TestPublicKeyValue(t *testing.T) {
 			nil,
 			utils.TestLocation,
 			WithStorage(storage),
-			WithPublicKeyValidationHandler(
-				func(_ *Interpreter, _ func() LocationRange, _ *CompositeValue) (BoolValue, error) {
-					return true, nil
-				},
-			),
+			WithPublicKeyValidationHandler(alwaysValidates),
 		)
 		require.NoError(t, err)
 
@@ -3187,8 +3183,8 @@ func TestPublicKeyValue(t *testing.T) {
 			utils.TestLocation,
 			WithStorage(storage),
 			WithPublicKeyValidationHandler(
-				func(_ *Interpreter, _ func() LocationRange, _ *CompositeValue) (BoolValue, error) {
-					return false, fakeError
+				func(_ *Interpreter, _ func() LocationRange, _ *CompositeValue) error {
+					return fakeError
 				},
 			),
 		)
@@ -3212,8 +3208,8 @@ func TestPublicKeyValue(t *testing.T) {
 			sema.SignatureAlgorithmECDSA_secp256k1.RawValue(),
 		)
 
-		assert.PanicsWithValue(t,
-			InvalidPublicKeyError{PublicKey: publicKey, Err: fakeError},
+		assert.PanicsWithError(t,
+			(&InvalidPublicKeyError{PublicKey: publicKey, Err: fakeError}).Error(),
 			func() {
 				_ = NewPublicKeyValue(
 					inter,
@@ -3397,4 +3393,12 @@ type fakeError struct{}
 
 func (fakeError) Error() string {
 	return "fake error for testing"
+}
+
+func alwaysValidates(
+	_ *Interpreter,
+	_ func() LocationRange,
+	_ *CompositeValue,
+) error {
+	return nil
 }

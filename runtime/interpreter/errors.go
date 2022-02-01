@@ -599,10 +599,11 @@ type InvalidPublicKeyError struct {
 	LocationRange
 }
 
-func (e InvalidPublicKeyError) Error() string {
-	if e.Err == nil {
-		return fmt.Sprintf("invalid public key %s", e.PublicKey)
-	} else {
-		return fmt.Sprintf("invalid public key %s with error %s", e.PublicKey, e.Err)
-	}
+func (e *InvalidPublicKeyError) Error() string {
+	return fmt.Sprintf("invalid public key %s", e.PublicKey)
+}
+
+
+func (e *InvalidPublicKeyError) Unwrap() error {
+	return e.Err
 }

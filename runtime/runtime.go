@@ -1197,7 +1197,7 @@ func (r *interpreterRuntime) newInterpreter(
 		inter *interpreter.Interpreter,
 		getLocationRange func() interpreter.LocationRange,
 		publicKey *interpreter.CompositeValue,
-	) (interpreter.BoolValue, error) {
+	) error {
 		return validatePublicKey(
 			inter,
 			getLocationRange,
@@ -3346,7 +3346,7 @@ func NewPublicKeyValue(
 			inter *interpreter.Interpreter,
 			getLocationRange func() interpreter.LocationRange,
 			publicKeyValue *interpreter.CompositeValue,
-		) (interpreter.BoolValue, error) {
+		) error {
 			return validatePublicKey(inter, getLocationRange, publicKeyValue)
 		},
 	)
@@ -3394,23 +3394,17 @@ func validatePublicKey(
 	getLocationRange func() interpreter.LocationRange,
 	publicKeyValue *interpreter.CompositeValue,
 	runtimeInterface Interface,
-) (interpreter.BoolValue, error) {
+) error {
 	publicKey, err := NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
 	if err != nil {
-		return false, err
+		return err
 	}
 
-	var valid bool
 	wrapPanic(func() {
-		valid, err = runtimeInterface.ValidatePublicKey(publicKey)
+		err = runtimeInterface.ValidatePublicKey(publicKey)
 	})
 
-	// if there is an error here then it is NOT a user error, so panic
-	if err != nil {
-		panic(err)
-	}
-
-	return interpreter.BoolValue(valid), nil
+	return err
 }
 
 func verifyBLSPOP(
@@ -3556,6 +3550,6 @@ func alwaysValidates(
 	_ *interpreter.Interpreter,
 	_ func() interpreter.LocationRange,
 	_ *interpreter.CompositeValue,
-) (interpreter.BoolValue, error) {
-	return true, nil
+) error {
+	return nil
 }
