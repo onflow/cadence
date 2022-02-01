@@ -1723,12 +1723,13 @@ func TestExportTypeValue(t *testing.T) {
 
 		t.Parallel()
 
-		program, err := parser2.ParseProgram(`
+		const code = `
           pub struct interface SI {}
 
           pub struct S: SI {}
 
-        `)
+        `
+		program, err := parser2.ParseProgram(code, nil)
 		require.NoError(t, err)
 
 		checker, err := sema.NewChecker(program, TestLocation)
@@ -1811,7 +1812,10 @@ func TestExportCapabilityValue(t *testing.T) {
 
 	t.Run("Struct", func(t *testing.T) {
 
-		program, err := parser2.ParseProgram(`pub struct S {}`)
+		const code = `
+          pub struct S {}
+        `
+		program, err := parser2.ParseProgram(code, nil)
 		require.NoError(t, err)
 
 		checker, err := sema.NewChecker(program, TestLocation)
@@ -1906,7 +1910,10 @@ func TestExportLinkValue(t *testing.T) {
 
 	t.Run("Struct", func(t *testing.T) {
 
-		program, err := parser2.ParseProgram(`pub struct S {}`)
+		const code = `
+          pub struct S {}
+        `
+		program, err := parser2.ParseProgram(code, nil)
 		require.NoError(t, err)
 
 		checker, err := sema.NewChecker(program, TestLocation)

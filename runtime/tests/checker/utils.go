@@ -65,7 +65,7 @@ func ParseAndCheckWithOptions(
 		options.Location = utils.TestLocation
 	}
 
-	program, err := parser2.ParseProgram(code)
+	program, err := parser2.ParseProgram(code, nil)
 	if !options.IgnoreParseError && !assert.NoError(t, err) {
 		var sb strings.Builder
 		locationID := options.Location.ID()

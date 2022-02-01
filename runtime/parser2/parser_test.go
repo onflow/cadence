@@ -40,7 +40,7 @@ func TestParseInvalid(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseProgram("X")
+	_, err := ParseProgram("X", nil)
 	require.EqualError(t, err, "Parsing failed:\nerror: unexpected token: identifier\n --> :1:0\n  |\n1 | X\n  | ^\n")
 }
 
@@ -234,7 +234,7 @@ func TestParseBuffering(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseProgram(`
+		const code = `
           fun main() {
               assert(isneg(x:-1.0))
               assert(!isneg(x:-0.0/0.0))
@@ -245,7 +245,8 @@ func TestParseBuffering(t *testing.T) {
                      <                             /* ************/((TODO?{/*))************ *//
                     -x                             /* maybe it says NaNs are not negative?  */
           }
-        `)
+        `
+		_, err := ParseProgram(code, nil)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -261,14 +262,15 @@ func TestParseBuffering(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseProgram(`
+		const code = `
           fun main() {
               fun abs(_:Int):Int { return _ > 0 ? _ : -_ }
               let sanity = 0 <          /*****/((TODO?{/*****//
                                abs(-1)
               assert(sanity)
           }
-        `)
+        `
+		_, err := ParseProgram(code, nil)
 
 		utils.AssertEqualWithDiff(t,
 			[]error{
@@ -300,7 +302,7 @@ func TestParseBuffering(t *testing.T) {
                 }
             }`
 
-		_, err := ParseProgram(src)
+		_, err := ParseProgram(src, nil)
 		assert.NoError(t, err)
 	})
 
@@ -319,7 +321,7 @@ func TestParseBuffering(t *testing.T) {
                 return g(a:A<B, C<(D>>(5)))
             }`
 
-		_, err := ParseProgram(src)
+		_, err := ParseProgram(src, nil)
 		assert.NoError(t, err)
 	})
 
@@ -406,7 +408,7 @@ func TestParseNames(t *testing.T) {
 
 		code := fmt.Sprintf(`let %s = 1`, name)
 
-		actual, err := ParseProgram(code)
+		actual, err := ParseProgram(code, nil)
 
 		if validExpected {
 			assert.NotNil(t, actual)

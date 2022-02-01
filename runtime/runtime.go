@@ -996,12 +996,14 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 		context.SetCode(context.Location, string(code))
 	}
 
+	memoryGauge, _ := context.Interface.(common.MemoryGauge)
+
 	// Parse
 
 	var parse *ast.Program
 	reportMetric(
 		func() {
-			parse, err = parser2.ParseProgram(string(code))
+			parse, err = parser2.ParseProgram(string(code), memoryGauge)
 		},
 		context.Interface,
 		func(metrics Metrics, duration time.Duration) {
@@ -2553,7 +2555,8 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				if cachedProgram != nil {
 					oldProgram = cachedProgram.Program
 				} else {
-					oldProgram, err = parser2.ParseProgram(string(existingCode))
+					memoryGauge, _ := context.Interface.(common.MemoryGauge)
+					oldProgram, err = parser2.ParseProgram(string(existingCode), memoryGauge)
 					handleContractUpdateError(err)
 				}
 
@@ -2798,7 +2801,8 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 				// the existing code contains enums.
 				if r.contractUpdateValidationEnabled {
 
-					existingProgram, err := parser2.ParseProgram(string(code))
+					memoryGauge, _ := runtimeInterface.(common.MemoryGauge)
+					existingProgram, err := parser2.ParseProgram(string(code), memoryGauge)
 
 					// If the existing code is not parsable (i.e: `err != nil`), that shouldn't be a reason to
 					// fail the contract removal. Therefore, validate only if the code is a valid one.

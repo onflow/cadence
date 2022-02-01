@@ -1709,9 +1709,10 @@ func TestInterpretHostFunction(t *testing.T) {
 
 	t.Parallel()
 
-	program, err := parser2.ParseProgram(`
+	const code = `
       pub let a = test(1, 2)
-    `)
+    `
+	program, err := parser2.ParseProgram(code, nil)
 
 	require.NoError(t, err)
 
@@ -1786,9 +1787,10 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 
 	t.Parallel()
 
-	program, err := parser2.ParseProgram(`
+	const code = `
       pub let nothing = test(1, true, "test")
-    `)
+    `
+	program, err := parser2.ParseProgram(code, nil)
 
 	require.NoError(t, err)
 
