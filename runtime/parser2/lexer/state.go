@@ -20,6 +20,8 @@ package lexer
 
 import (
 	"fmt"
+
+	"github.com/onflow/cadence/runtime/common"
 )
 
 const keywordAs = "as"
@@ -291,6 +293,13 @@ func identifierState(l *lexer) stateFn {
 
 func stringState(l *lexer) stateFn {
 	l.scanString('"')
+	memoryGauge := l.memoryGauge
+	if memoryGauge != nil {
+		memoryGauge.UseMemory(common.MemoryUsage{
+			Kind:   common.MemoryKindString,
+			Amount: uint64(l.wordLength()),
+		})
+	}
 	l.emitValue(TokenString)
 	return rootState
 }

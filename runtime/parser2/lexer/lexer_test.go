@@ -49,7 +49,7 @@ func testLex(t *testing.T, input string, expected []Token) {
 
 	t.Parallel()
 
-	withTokens(Lex(input), func(tokens []Token) {
+	withTokens(Lex(input, nil), func(tokens []Token) {
 		utils.AssertEqualWithDiff(t, expected, tokens)
 	})
 }
@@ -1897,7 +1897,7 @@ func TestRevert(t *testing.T) {
 
 	t.Parallel()
 
-	tokenStream := Lex("1 2 3")
+	tokenStream := Lex("1 2 3", nil)
 
 	// Assert all tokens
 
