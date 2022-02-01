@@ -15261,9 +15261,7 @@ func (v PathValue) GetMember(_ *Interpreter, _ func() LocationRange, name string
 				return NewStringValue(
 					interpreter,
 					memoryUsage,
-					func() string {
-						return v.String()
-					},
+					v.String,
 				)
 			},
 			sema.ToStringFunctionType,
