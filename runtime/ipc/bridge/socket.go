@@ -60,6 +60,11 @@ func NewInterfaceConnection() (net.Conn, error) {
 	return conn, nil
 }
 
+func CloseConnection(conn net.Conn) {
+	// Ignore errors?
+	_ = conn.Close()
+}
+
 func ReadMessage(conn net.Conn) pb.Message {
 	var messageLength int32
 

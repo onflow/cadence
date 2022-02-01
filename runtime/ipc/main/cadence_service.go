@@ -43,7 +43,7 @@ func main() {
 
 		err := listener.Close()
 		if err != nil {
-			log.Info().Msgf("error occurred while closing listener: %s", err.Error())
+			log.Info().Msgf("failed to close listener: %s", err.Error())
 		}
 
 		os.Exit(0)
@@ -55,7 +55,6 @@ func main() {
 		bridge.HandleError(err)
 
 		go func() {
-
 			// Gracefully handle all errors.
 			// Server shouldn't crash upon any errors.
 			defer func() {
@@ -68,6 +67,9 @@ func main() {
 					bridge.WriteMessage(conn, errResp)
 				}
 			}()
+
+			// Close the connection once everything is done.
+			defer bridge.CloseConnection(conn)
 
 			msg := bridge.ReadMessage(conn)
 

@@ -32,6 +32,7 @@ func (p *ProxyInterface) ResolveLocation(identifiers []runtime.Identifier, locat
 	if err != nil {
 		return nil, err
 	}
+	defer bridge.CloseConnection(conn)
 
 	loc, err := pb.NewLocation(location)
 	if err != nil {
@@ -59,6 +60,7 @@ func (p *ProxyInterface) GetCode(location runtime.Location) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer bridge.CloseConnection(conn)
 
 	loc, err := pb.NewLocation(location)
 	if err != nil {
@@ -85,6 +87,7 @@ func (p *ProxyInterface) GetProgram(location runtime.Location) (*interpreter.Pro
 	if err != nil {
 		return nil, err
 	}
+	defer bridge.CloseConnection(conn)
 
 	loc, err := pb.NewLocation(location)
 	if err != nil {
@@ -116,6 +119,7 @@ func (p *ProxyInterface) GetValue(owner, key []byte) (value []byte, err error) {
 	if err != nil {
 		return nil, err
 	}
+	defer bridge.CloseConnection(conn)
 
 	pbOwner := pb.NewBytes(owner)
 	pbKey := pb.NewBytes(key)
@@ -140,6 +144,7 @@ func (p *ProxyInterface) SetValue(owner, key, value []byte) (err error) {
 	if err != nil {
 		return err
 	}
+	defer bridge.CloseConnection(conn)
 
 	pbOwner := pb.NewBytes(owner)
 	pbKey := pb.NewBytes(key)
@@ -170,6 +175,7 @@ func (p *ProxyInterface) AllocateStorageIndex(owner []byte) (atree.StorageIndex,
 	if err != nil {
 		return atree.StorageIndex{}, err
 	}
+	defer bridge.CloseConnection(conn)
 
 	pbOwner := pb.NewBytes(owner)
 	ownerParam := pb.AsAny(pbOwner)
@@ -220,6 +226,7 @@ func (p *ProxyInterface) UpdateAccountContractCode(address runtime.Address, name
 	if err != nil {
 		return err
 	}
+	defer bridge.CloseConnection(conn)
 
 	addressBytes := pb.NewBytes(address[:])
 	addressParam := pb.AsAny(addressBytes)
@@ -247,6 +254,7 @@ func (p *ProxyInterface) GetAccountContractCode(address runtime.Address, name st
 	if err != nil {
 		return nil, err
 	}
+	defer bridge.CloseConnection(conn)
 
 	addressBytes := pb.NewBytes(address[:])
 	addressParam := pb.AsAny(addressBytes)
@@ -284,6 +292,7 @@ func (p *ProxyInterface) ProgramLog(s string) error {
 	if err != nil {
 		return err
 	}
+	defer bridge.CloseConnection(conn)
 
 	str := pb.NewString(s)
 	stringParam := pb.AsAny(str)

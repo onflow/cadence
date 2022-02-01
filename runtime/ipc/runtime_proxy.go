@@ -44,6 +44,7 @@ func (r *ProxyRuntime) ExecuteScript(script runtime.Script, context runtime.Cont
 	if err != nil {
 		return nil, err
 	}
+	defer bridge.CloseConnection(conn)
 
 	bridge.WriteMessage(conn, request)
 
@@ -78,6 +79,7 @@ func (r *ProxyRuntime) ExecuteTransaction(script runtime.Script, context runtime
 	if err != nil {
 		return err
 	}
+	defer bridge.CloseConnection(conn)
 
 	bridge.WriteMessage(conn, request)
 

@@ -39,6 +39,9 @@ func StartInterfaceService(runtimeInterface runtime.Interface) error {
 				}
 			}()
 
+			// Close the connection once everything is done.
+			defer bridge.CloseConnection(conn)
+
 			msg := bridge.ReadMessage(conn)
 
 			switch msg := msg.(type) {
