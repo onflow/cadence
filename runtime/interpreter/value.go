@@ -584,16 +584,16 @@ func (BoolValue) ChildStorables() []atree.Storable {
 
 // CharacterValue
 
-type CharacterValue rune
+type CharacterValue string
 
-func NewCharacterValue(r rune) CharacterValue {
+func NewCharacterValue(r string) CharacterValue {
 	return CharacterValue(r)
 }
 
-var _ Value = CharacterValue('a')
-var _ atree.Storable = CharacterValue('a')
-var _ EquatableValue = CharacterValue('a')
-var _ HashableValue = CharacterValue('a')
+var _ Value = CharacterValue("a")
+var _ atree.Storable = CharacterValue("a")
+var _ EquatableValue = CharacterValue("a")
+var _ HashableValue = CharacterValue("a")
 
 func (CharacterValue) IsValue() {}
 
@@ -628,7 +628,7 @@ func (v CharacterValue) Equal(_ *Interpreter, _ func() LocationRange, other Valu
 	if !ok {
 		return false
 	}
-	return rune(v) == rune(otherChar)
+	return string(v) == string(otherChar)
 }
 
 func (v CharacterValue) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
@@ -690,7 +690,7 @@ func (CharacterValue) DeepRemove(_ *Interpreter) {
 }
 
 func (v CharacterValue) ByteSize() uint32 {
-	return 1
+	return cborTagSize + getBytesCBORSize([]byte(string(v)))
 }
 
 func (v CharacterValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -870,12 +870,8 @@ func (v *StringValue) GetKey(_ *Interpreter, getLocationRange func() LocationRan
 		v.graphemes.Next()
 	}
 
-	chars := v.graphemes.Runes()
-	if len(chars) != 1 {
-		panic(errors.NewUnreachableError())
-	}
-
-	return NewCharacterValue(chars[0])
+	char := v.graphemes.Str()
+	return NewCharacterValue(char)
 }
 
 func (*StringValue) SetKey(_ *Interpreter, _ func() LocationRange, _ Value, _ Value) {

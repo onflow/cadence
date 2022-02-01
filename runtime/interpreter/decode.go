@@ -254,12 +254,12 @@ func (d Decoder) decodeString(v string) *StringValue {
 
 func (d Decoder) decodeCharacter(v string) (CharacterValue, error) {
 	if len(v) > 1 {
-		return '0', fmt.Errorf(
+		return "", fmt.Errorf(
 			"invalid character encoding: %s",
 			v,
 		)
 	}
-	return NewCharacterValue(rune(v[0])), nil
+	return NewCharacterValue(v), nil
 }
 
 func decodeLocation(dec *cbor.StreamDecoder) (common.Location, error) {

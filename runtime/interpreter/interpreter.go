@@ -3239,7 +3239,7 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 
 	case CharacterDynamicType:
 		switch superType {
-		case sema.AnyStructType, sema.CharacterType, sema.StringType:
+		case sema.AnyStructType, sema.CharacterType:
 			return true
 		}
 

@@ -94,13 +94,13 @@ func TestEncodeCharacter(t *testing.T) {
 	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"a",
-			cadence.NewCharacter('a'),
-			`{"type":"Character","value":97}`,
+			cadence.NewCharacter("a"),
+			`{"type":"Character","value":"a"}`,
 		},
 		{
 			"b",
-			cadence.NewCharacter('b'),
-			`{"type":"Character","value":98}`,
+			cadence.NewCharacter("b"),
+			`{"type":"Character","value":"b"}`,
 		},
 	}...)
 }

@@ -183,9 +183,9 @@ func (v Bytes) String() string {
 
 // Character
 
-type Character rune
+type Character string
 
-func NewCharacter(b rune) Character {
+func NewCharacter(b string) Character {
 	return Character(b)
 }
 

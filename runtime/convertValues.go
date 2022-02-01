@@ -69,7 +69,7 @@ func exportValueWithInterpreter(
 	case *interpreter.StringValue:
 		return cadence.NewString(v.Str)
 	case interpreter.CharacterValue:
-		return cadence.NewCharacter(rune(v)), nil
+		return cadence.NewCharacter(string(v)), nil
 	case *interpreter.ArrayValue:
 		return exportArrayValue(v, inter, seenReferences)
 	case interpreter.IntValue:
@@ -450,7 +450,7 @@ func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedTy
 	case cadence.String:
 		return interpreter.NewStringValue(string(v)), nil
 	case cadence.Character:
-		return interpreter.NewCharacterValue(rune(v)), nil
+		return interpreter.NewCharacterValue(string(v)), nil
 	case cadence.Bytes:
 		return interpreter.ByteSliceToByteArrayValue(inter, v), nil
 	case cadence.Address:

@@ -234,7 +234,7 @@ func decodeBool(valueJSON interface{}) cadence.Bool {
 }
 
 func decodeCharacter(valueJSON interface{}) cadence.Character {
-	return cadence.NewCharacter(toRune(valueJSON))
+	return cadence.NewCharacter(toString(valueJSON))
 }
 
 func decodeString(valueJSON interface{}) cadence.String {
@@ -1023,16 +1023,6 @@ func toBool(valueJSON interface{}) bool {
 	}
 
 	return v
-}
-
-func toRune(valueJSON interface{}) rune {
-	v, toRune := valueJSON.(float64)
-	if !toRune {
-		// TODO: improve error message
-		panic(ErrInvalidJSONCadence)
-	}
-
-	return rune(v)
 }
 
 func toUInt(valueJSON interface{}) uint {
