@@ -594,6 +594,7 @@ var _ Value = CharacterValue("a")
 var _ atree.Storable = CharacterValue("a")
 var _ EquatableValue = CharacterValue("a")
 var _ HashableValue = CharacterValue("a")
+var _ MemberAccessibleValue = CharacterValue("a")
 
 func (CharacterValue) IsValue() {}
 
@@ -699,6 +700,29 @@ func (v CharacterValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 
 func (CharacterValue) ChildStorables() []atree.Storable {
 	return nil
+}
+
+func (v CharacterValue) GetMember(inter *Interpreter, _ func() LocationRange, name string) Value {
+	switch name {
+	case sema.ToStringFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				return NewStringValue(string(v))
+			},
+			sema.ToStringFunctionType,
+		)
+	}
+	return nil
+}
+
+func (CharacterValue) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
+	// Characters have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
+func (CharacterValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+	// Characters have no settable members (fields / functions)
+	panic(errors.NewUnreachableError())
 }
 
 // StringValue

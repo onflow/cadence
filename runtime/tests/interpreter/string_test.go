@@ -301,7 +301,7 @@ func TestConvertCharacterToString(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t,
-		interpreter.TypeValue{Type: interpreter.PrimitiveStaticTypeString},
+		interpreter.NewStringValue("x"),
 		result,
 	)
 }

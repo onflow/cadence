@@ -18,6 +18,11 @@
 
 package sema
 
+import (
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
+)
+
 // CharacterType represents the character type
 //
 var CharacterType = &SimpleType{
@@ -31,4 +36,22 @@ var CharacterType = &SimpleType{
 	Equatable:            true,
 	ExternallyReturnable: true,
 	Importable:           true,
+}
+
+func init() {
+	CharacterType.Members = func(t *SimpleType) map[string]MemberResolver {
+		return map[string]MemberResolver{
+			"toString": {
+				Kind: common.DeclarationKindField,
+				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicFunctionMember(
+						t,
+						identifier,
+						ToStringFunctionType,
+						toStringFunctionDocString,
+					)
+				},
+			},
+		}
+	}
 }
