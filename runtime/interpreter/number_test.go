@@ -30,6 +30,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const goIntSize = 32 << (^uint(0) >> 63) // 32 or 64
+const goMaxInt = 1<<(goIntSize-1) - 1
+const goMinInt = -1 << (goIntSize - 1)
+
 func TestOverEstimateIntStringLength(t *testing.T) {
 
 	properties := gopter.NewProperties(nil)
@@ -44,7 +48,7 @@ func TestOverEstimateIntStringLength(t *testing.T) {
 	properties.TestingRun(t)
 
 	for _, v := range []int{
-		math.MinInt,
+		goMinInt,
 		-1000,
 		-999,
 		-100,
@@ -60,7 +64,7 @@ func TestOverEstimateIntStringLength(t *testing.T) {
 		100,
 		999,
 		1000,
-		math.MaxInt,
+		goMaxInt,
 	} {
 		assert.LessOrEqual(t,
 			len(strconv.Itoa(v)),
@@ -140,7 +144,7 @@ func TestOverEstimateFixedPointStringLength(t *testing.T) {
 	const testScale = 10
 
 	for _, v := range []int{
-		math.MinInt,
+		goMinInt,
 		-1000,
 		-999,
 		-100,
@@ -156,7 +160,7 @@ func TestOverEstimateFixedPointStringLength(t *testing.T) {
 		100,
 		999,
 		1000,
-		math.MaxInt,
+		goMaxInt,
 	} {
 		assert.LessOrEqual(t,
 			len(strconv.Itoa(v))+1+testScale,
