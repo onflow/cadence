@@ -787,6 +787,41 @@ func TestCheckMutationThroughReference(t *testing.T) {
 	})
 }
 
+func TestCheckMutationThroughInnerReference(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("pub let", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            pub fun main() {
+                let foo = Foo()
+                var arrayRef = &foo.ref.arr as &[String]
+                arrayRef[0] = "y"
+              }
+              
+              pub struct Foo {
+                pub let ref: &Bar
+                init() {
+                  self.ref = &Bar() as &Bar
+                }
+              }
+              
+              pub struct Bar {
+                pub let arr: [String]
+                init() {
+                  self.arr = ["x"]
+                }
+              }
+        `,
+		)
+		require.NoError(t, err)
+	})
+}
+
 func TestCheckMutationThroughAccess(t *testing.T) {
 
 	t.Parallel()
