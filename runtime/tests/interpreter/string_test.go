@@ -313,7 +313,7 @@ func TestCompareCharacters(t *testing.T) {
 	inter := parseCheckAndInterpret(t, `
         let a: Character = "ü"
         let b: Character = "\u{FC}"
-		let c: Character = "\u{75}\u{308}"
+        let c: Character = "\u{75}\u{308}"
         let d: Character = "y"
         let x = a == b
         let y = a == c

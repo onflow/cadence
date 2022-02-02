@@ -69,7 +69,7 @@ func exportValueWithInterpreter(
 	case *interpreter.StringValue:
 		return cadence.NewString(v.Str)
 	case interpreter.CharacterValue:
-		return cadence.NewCharacter(string(v)), nil
+		return cadence.NewCharacter(string(v))
 	case *interpreter.ArrayValue:
 		return exportArrayValue(v, inter, seenReferences)
 	case interpreter.IntValue:

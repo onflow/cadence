@@ -189,8 +189,11 @@ func (v Bytes) String() string {
 //
 type Character string
 
-func NewCharacter(b string) Character {
-	return Character(b)
+func NewCharacter(b string) (Character, error) {
+	if !format.IsValidCharacter(b) {
+		return "_", fmt.Errorf("invalid character: %s", b)
+	}
+	return Character(b), nil
 }
 
 func (Character) isValue() {}

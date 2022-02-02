@@ -26,6 +26,7 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/format"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -253,7 +254,7 @@ func (d Decoder) decodeString(v string) *StringValue {
 }
 
 func (d Decoder) decodeCharacter(v string) (CharacterValue, error) {
-	if len(v) > 1 {
+	if !format.IsValidCharacter(v) {
 		return "", fmt.Errorf(
 			"invalid character encoding: %s",
 			v,

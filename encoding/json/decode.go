@@ -234,7 +234,11 @@ func decodeBool(valueJSON interface{}) cadence.Bool {
 }
 
 func decodeCharacter(valueJSON interface{}) cadence.Character {
-	return cadence.NewCharacter(toString(valueJSON))
+	char, err := cadence.NewCharacter(toString(valueJSON))
+	if err != nil {
+		panic(err)
+	}
+	return char
 }
 
 func decodeString(valueJSON interface{}) cadence.String {
