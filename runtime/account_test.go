@@ -1301,6 +1301,44 @@ func TestRuntimePublicKey(t *testing.T) {
 		assert.IsType(t, &sema.ExternalMutationError{}, errs[0])
 	})
 
+	t.Run("raw-key reference mutability", func(t *testing.T) {
+		script := `
+        pub fun main(): PublicKey {
+            let publicKey =  PublicKey(
+				publicKey: "0102".decodeHex(),
+				signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
+			)
+          
+            var publickeyRef = &publicKey.publicKey as &[UInt8]
+            publickeyRef[0] = 3
+
+			return publicKey
+          }
+        `
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+		}
+
+		value, err := executeScript(script, runtimeInterface)
+		require.NoError(t, err)
+
+		expected := cadence.Struct{
+			StructType: PublicKeyType,
+			Fields: []cadence.Value{
+				// Public key (bytes)
+				newBytesValue([]byte{1, 2}),
+				// Signature Algo
+				newSignAlgoValue(sema.SignatureAlgorithmECDSA_P256),
+				// valid
+				cadence.Bool(false),
+			},
+		}
+		assert.Equal(t, expected, value)
+	})
+
 }
 
 func TestAuthAccountContracts(t *testing.T) {
