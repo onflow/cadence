@@ -9,10 +9,12 @@ import (
 // ItemType represents the type of an item
 type ItemType uint8
 
+// TODO idea: maybe just bytes and list
+// and do conversion on bytes type
+
 const (
-	Byte   ItemType = 0
-	String ItemType = 1
-	List   ItemType = 2
+	Bytes ItemType = 0 // what is called string in some other implementations
+	List  ItemType = 1
 )
 
 const (
@@ -25,10 +27,8 @@ const (
 
 func (it ItemType) String() string {
 	switch it {
-	case Byte:
-		return "Byte"
-	case String:
-		return "String"
+	case Bytes:
+		return "Bytes"
 	case List:
 		return "List"
 	default:
@@ -40,20 +40,13 @@ type Item interface {
 	Type() ItemType
 }
 
-var _ Item = ByteItem(0)
-var _ Item = StringItem("")
+var _ Item = BytesItem("")
 var _ Item = ListItem{}
 
-type ByteItem int
+type BytesItem []byte
 
-func (ByteItem) Type() ItemType {
-	return Byte
-}
-
-type StringItem string
-
-func (StringItem) Type() ItemType {
-	return String
+func (BytesItem) Type() ItemType {
+	return Bytes
 }
 
 type ListItem []Item
@@ -79,70 +72,58 @@ const (
 	LongListRangeEnd      = 0xff // not in use, here only for inclusivity
 )
 
-func peakNextType(inp []byte, startIndex int) ItemType {
-	// TODO check len
-	firstByte := inp[startIndex]
-	switch {
-	case firstByte < ShortStringRangeStart:
-		return Byte
-	case firstByte < ShortListRangeStart:
-		return String
-	default:
-		return List
+func peekNextType(inp []byte, startIndex int) (ItemType, error) {
+	if startIndex >= len(inp) {
+		return 0, fmt.Errorf("startIndex error")
 	}
+	firstByte := inp[startIndex]
+	if firstByte < ShortListRangeStart {
+		return Bytes, nil
+	}
+	return List, nil
 }
 
-// TODO add max size limits
-
 func Decode(inp []byte) (Item, error) {
-
 	if len(inp) == 0 {
 		return nil, errors.New("data is empty")
 	}
 	if len(inp) >= MaxInputByteSize {
 		return nil, errors.New("max input size has reached")
 	}
+
 	var item Item
 	var nextIndex int
 	var err error
-	switch peakNextType(inp, 0) {
-	case Byte:
-		item, nextIndex, err = ReadByteItem(inp, 0)
-	case String:
-		item, nextIndex, err = ReadStringItem(inp, 0)
-	case List:
-		item, nextIndex, err = ReadListItem(inp, 0, 0)
-	}
+
+	nextType, err := peekNextType(inp, 0)
 	if err != nil {
 		return nil, err
 	}
+
+	switch nextType {
+	case Bytes:
+		item, nextIndex, err = ReadBytesItem(inp, 0)
+	case List:
+		item, nextIndex, err = ReadListItem(inp, 0, 0)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
 	if len(inp) != nextIndex {
 		return nil, errors.New("unused data in the stream")
 	}
+
 	return item, nil
 }
 
-func ReadByteItem(inp []byte, startIndex int) (data ByteItem, nextStartIndex int, err error) {
+func ReadBytesItem(inp []byte, startIndex int) (str BytesItem, nextStartIndex int, err error) {
 	if startIndex >= len(inp) {
-		return 0, startIndex, fmt.Errorf("startIndex error") // TODO make this more formal
+		return nil, 0, fmt.Errorf("startIndex error") // TODO make this more formal
 	}
 	if len(inp) >= MaxInputByteSize {
-		return 0, 0, errors.New("max input size has reached")
-	}
-	firstByte := inp[startIndex]
-	startIndex++
-	if firstByte > ByteRangeEnd {
-		return 0, startIndex, fmt.Errorf("type mismatch")
-	}
-	return ByteItem(firstByte), startIndex, nil
-}
-
-func ReadStringItem(inp []byte, startIndex int) (str StringItem, nextStartIndex int, err error) {
-	if startIndex >= len(inp) {
-		return "", 0, fmt.Errorf("startIndex error") // TODO make this more formal
-	}
-	if len(inp) >= MaxInputByteSize {
-		return "", 0, errors.New("max input size has reached")
+		return nil, 0, errors.New("max input size has reached")
 	}
 
 	var strLen uint
@@ -150,12 +131,12 @@ func ReadStringItem(inp []byte, startIndex int) (str StringItem, nextStartIndex 
 	startIndex++
 
 	if firstByte > LongStringRangeEnd {
-		return "", 0, fmt.Errorf("type mismatch")
+		return nil, 0, fmt.Errorf("type mismatch")
 	}
 
 	// one byte
 	if firstByte < ShortStringRangeStart {
-		return StringItem(firstByte), startIndex, nil
+		return []byte{firstByte}, startIndex, nil
 	}
 
 	// short strings
@@ -168,9 +149,9 @@ func ReadStringItem(inp []byte, startIndex int) (str StringItem, nextStartIndex 
 		endIndex := startIndex + int(strLen)
 		if len(inp) < int(endIndex) {
 			// TODO validate the range
-			return "", 0, fmt.Errorf("not enough bytes to read")
+			return nil, 0, fmt.Errorf("not enough bytes to read")
 		}
-		return StringItem(inp[startIndex:endIndex]), endIndex, nil
+		return inp[startIndex:endIndex], endIndex, nil
 	}
 
 	// long string otherwise
@@ -185,7 +166,7 @@ func ReadStringItem(inp []byte, startIndex int) (str StringItem, nextStartIndex 
 	switch bytesToReadForLen {
 	case 0:
 		// this condition never happens - TODO remove it
-		return "", 0, fmt.Errorf("invalid string size")
+		return nil, 0, fmt.Errorf("invalid string size")
 
 	case 1:
 		strLen = uint(inp[startIndex])
@@ -204,15 +185,15 @@ func ReadStringItem(inp []byte, startIndex int) (str StringItem, nextStartIndex 
 	}
 
 	if strLen >= MaxStringSize {
-		return "", 0, fmt.Errorf("max string size has been hit")
+		return nil, 0, fmt.Errorf("max string size has been hit")
 	}
 
 	endIndex := startIndex + int(strLen)
 	if len(inp) < int(endIndex) {
 		// TODO validate the range
-		return "", 0, fmt.Errorf("not enough bytes to read")
+		return nil, 0, fmt.Errorf("not enough bytes to read")
 	}
-	return StringItem(inp[startIndex:endIndex]), endIndex, nil
+	return inp[startIndex:endIndex], endIndex, nil
 }
 
 func ReadListItem(inp []byte, startIndex int, depth int) (str ListItem, newStartIndex int, err error) {
@@ -244,14 +225,15 @@ func ReadListItem(inp []byte, startIndex int, depth int) (str ListItem, newStart
 		listDataPrevIndex := startIndex
 		bytesRead := 0
 		for i := 0; bytesRead < int(listDataSize); i++ {
-			itemType := peakNextType(inp, startIndex)
+			itemType, err := peekNextType(inp, startIndex)
+			if err != nil {
+				return nil, 0, err
+			}
 			var item Item
 			listDataPrevIndex = listDataStartIndex
 			switch itemType {
-			case Byte:
-				item, listDataStartIndex, err = ReadByteItem(inp, listDataStartIndex)
-			case String:
-				item, listDataStartIndex, err = ReadStringItem(inp, listDataStartIndex)
+			case Bytes:
+				item, listDataStartIndex, err = ReadBytesItem(inp, listDataStartIndex)
 			case List:
 				item, listDataStartIndex, err = ReadListItem(inp, listDataStartIndex, depth+1)
 			}
@@ -296,14 +278,15 @@ func ReadListItem(inp []byte, startIndex int, depth int) (str ListItem, newStart
 	listDataPrevIndex := startIndex
 	bytesRead := 0
 	for i := 0; bytesRead < int(listDataSize); i++ {
-		itemType := peakNextType(inp, startIndex)
+		itemType, err := peekNextType(inp, startIndex)
+		if err != nil {
+			return nil, 0, err
+		}
 		var item Item
 		listDataPrevIndex = listDataStartIndex
 		switch itemType {
-		case Byte:
-			item, listDataStartIndex, err = ReadByteItem(inp, listDataStartIndex)
-		case String:
-			item, listDataStartIndex, err = ReadStringItem(inp, listDataStartIndex)
+		case Bytes:
+			item, listDataStartIndex, err = ReadBytesItem(inp, listDataStartIndex)
 		case List:
 			item, listDataStartIndex, err = ReadListItem(inp, listDataStartIndex, depth+1)
 		}
