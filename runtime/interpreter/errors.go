@@ -603,7 +603,6 @@ func (e InvalidPublicKeyError) Error() string {
 	return fmt.Sprintf("invalid public key: %s", e.PublicKey)
 }
 
-
 func (e InvalidPublicKeyError) Unwrap() error {
 	return e.Err
 }
