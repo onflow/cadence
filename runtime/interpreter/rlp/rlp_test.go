@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestRLPReadStringItem(t *testing.T) {
+func TestRLPReadBytesItem(t *testing.T) {
 	tests := []struct {
 		inp     string
 		encoded []byte
@@ -114,7 +114,7 @@ func TestRLPReadStringItem(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		item, nextIndex, err := rlp.ReadStringItem(test.encoded, 0)
+		item, nextIndex, err := rlp.ReadBytesItem(test.encoded, 0)
 		require.NoError(t, err)
 		require.Equal(t, nextIndex, len(test.encoded))
 		require.Equal(t, string(item), test.inp)
@@ -134,13 +134,13 @@ func TestRLPReadListItem(t *testing.T) {
 		encoded []byte
 	}{
 		{
-			[]rlp.Item{rlp.ByteItem('A')}, // single element
+			[]rlp.Item{rlp.BytesItem("A")}, // single element
 			[]byte{0xc1, 0x41},
 		},
 		{
 			[]rlp.Item{
-				rlp.StringItem("ABCDEFG"),
-				rlp.StringItem("HIJKLMN"),
+				rlp.BytesItem("ABCDEFG"),
+				rlp.BytesItem("HIJKLMN"),
 			}, // two short string elements
 			[]byte{0xd0, // number of elements in a short list
 				0x87,                                     // size of string
@@ -151,12 +151,12 @@ func TestRLPReadListItem(t *testing.T) {
 		},
 		{
 			[]rlp.Item{
-				rlp.StringItem("AB"),
-				rlp.StringItem("CD"),
-				rlp.StringItem("EF"),
-				rlp.StringItem(""),
-				rlp.StringItem("GH"),
-				rlp.StringItem(""),
+				rlp.BytesItem("AB"),
+				rlp.BytesItem("CD"),
+				rlp.BytesItem("EF"),
+				rlp.BytesItem(""),
+				rlp.BytesItem("GH"),
+				rlp.BytesItem(""),
 			},
 			[]byte{0xce, 0x82, 0x41, 0x42, 0x82, 0x43, 0x44, 0x82, 0x45, 0x46, 0x80, 0x82, 0x47, 0x48, 0x80},
 		},

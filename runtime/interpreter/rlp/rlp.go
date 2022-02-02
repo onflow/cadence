@@ -12,6 +12,12 @@ type ItemType uint8
 // TODO idea: maybe just bytes and list
 // and do conversion on bytes type
 
+// TODO idea:
+// just expose helper methods, so the user can do it step by step
+// this would help with having access to the encoded version of each property
+
+// TODO check all the input ranges
+
 const (
 	Bytes ItemType = 0 // what is called string in some other implementations
 	List  ItemType = 1
@@ -66,8 +72,10 @@ const (
 	ShortStringRangeEnd   = 0xb7
 	LongStringRangeStart  = 0xb8
 	LongStringRangeEnd    = 0xbf
+	MaxShortStringLength  = ShortStringRangeEnd - ShortStringRangeStart
 	ShortListRangeStart   = 0xc0
 	ShortListRangeEnd     = 0xf7
+	MaxShortListLength    = ShortListRangeEnd - ShortListRangeStart
 	LongListRangeStart    = 0xf8
 	LongListRangeEnd      = 0xff // not in use, here only for inclusivity
 )
@@ -119,49 +127,49 @@ func Decode(inp []byte) (Item, error) {
 }
 
 func ReadBytesItem(inp []byte, startIndex int) (str BytesItem, nextStartIndex int, err error) {
-	if startIndex >= len(inp) {
-		return nil, 0, fmt.Errorf("startIndex error") // TODO make this more formal
-	}
+	// check input size
 	if len(inp) >= MaxInputByteSize {
 		return nil, 0, errors.New("max input size has reached")
+	}
+
+	// check startIndex boundries
+	if startIndex >= len(inp) {
+		return nil, 0, fmt.Errorf("startIndex error")
 	}
 
 	var strLen uint
 	firstByte := inp[startIndex]
 	startIndex++
 
+	// check the type is right
 	if firstByte > LongStringRangeEnd {
 		return nil, 0, fmt.Errorf("type mismatch")
 	}
 
-	// one byte
+	// single character mode
 	if firstByte < ShortStringRangeStart {
 		return []byte{firstByte}, startIndex, nil
 	}
 
-	// short strings
-	// if a string is 0-55 bytes long, the RLP encoding consists
-	// of a single byte with value 0x80 plus the length of the string
-	// followed by the string. The range of the first byte is thus [0x80, 0xB7].
+	// short strings mode (0-55 bytes long string)
+	// firstByte minus the start range for the short strings would return the data size
+	// valid range of firstByte is [0x80, 0xB7].
 	if firstByte < LongStringRangeStart {
 		strLen = uint(firstByte - ShortStringRangeStart)
-		// TODO check for non zero len
 		endIndex := startIndex + int(strLen)
+		// check endIndex is in the range
 		if len(inp) < int(endIndex) {
-			// TODO validate the range
 			return nil, 0, fmt.Errorf("not enough bytes to read")
 		}
 		return inp[startIndex:endIndex], endIndex, nil
 	}
 
-	// long string otherwise
-	// If a string is more than 55 bytes long, the RLP encoding consists of a
-	// single byte with value 0xB7 plus the length of the length of the
-	// string in binary form (big endian), followed by the length of the string, followed
-	// by the string. For example, a length-1024 string would be encoded as
-	// 0xB90400 followed by the string. The range of the first byte is thus
-	// [0xB8, 0xBF].
-
+	// long string mode (55+ long strings)
+	// firstByte minus the end range of short string, returns the number of bytes
+	// we need to read to compute the length of the length of the
+	// string in binary form (big endian)
+	// e.g. a length-1024 string would be encoded as 0xB9 0x04 0x00 followed by the string.
+	// valid range of firstByte is [0xB8, 0xBF].
 	bytesToReadForLen := uint(firstByte - ShortStringRangeEnd)
 	switch bytesToReadForLen {
 	case 0:
@@ -171,6 +179,11 @@ func ReadBytesItem(inp []byte, startIndex int) (str BytesItem, nextStartIndex in
 	case 1:
 		strLen = uint(inp[startIndex])
 		startIndex++
+		if strLen <= MaxShortStringLength {
+			// encoding is not canonical, unnecessary bytes used for encoding
+			// should have encoded as a short string
+			return nil, 0, fmt.Errorf("non canonical encoding")
+		}
 
 	default:
 		// allocate 8 bytes
@@ -178,36 +191,51 @@ func ReadBytesItem(inp []byte, startIndex int) (str BytesItem, nextStartIndex in
 		// but copy to lower part only
 		start := int(8 - bytesToReadForLen)
 
-		// TODO check on size we want to read
+		// encodign is not canonical, unnecessary bytes used for encoding
+		// checking only the first byte ensures that we don't have included
+		// trailing empty bytes in the encoding
+		if inp[startIndex] == 0 {
+			return nil, 0, fmt.Errorf("non canonical encoding")
+		}
+
 		copy(lenData[start:], inp[startIndex:startIndex+int(bytesToReadForLen)])
 		startIndex += int(bytesToReadForLen)
 		strLen = uint(binary.BigEndian.Uint64(lenData))
+
+		if strLen <= MaxShortStringLength {
+			// encoding is not canonical, unnecessary bytes used for encoding
+			// should have encoded as a short string
+			return nil, 0, fmt.Errorf("non canonical encoding")
+		}
 	}
 
+	// this is not the limit by RLP but a protection for memory
 	if strLen >= MaxStringSize {
-		return nil, 0, fmt.Errorf("max string size has been hit")
+		return nil, 0, fmt.Errorf("max string size has been hit (this is not a limit of RLP)")
 	}
 
 	endIndex := startIndex + int(strLen)
 	if len(inp) < int(endIndex) {
-		// TODO validate the range
 		return nil, 0, fmt.Errorf("not enough bytes to read")
 	}
 	return inp[startIndex:endIndex], endIndex, nil
 }
 
 func ReadListItem(inp []byte, startIndex int, depth int) (str ListItem, newStartIndex int, err error) {
-	if len(inp) == 0 {
-		return nil, 0, fmt.Errorf("input is empty")
-	}
+	// check input size
 	if len(inp) >= MaxInputByteSize {
 		return nil, 0, errors.New("max input size has reached")
 	}
+
+	// prevents infinite recursive calls
 	if depth >= MaxDepthAllowed {
 		return nil, 0, errors.New("max depth has been reached")
 	}
-	var listDataSize uint
-	retList := make([]Item, 0)
+
+	// check startIndex boundries
+	if startIndex >= len(inp) {
+		return nil, 0, fmt.Errorf("startIndex error")
+	}
 
 	firstByte := inp[startIndex]
 	startIndex++
@@ -216,13 +244,13 @@ func ReadListItem(inp []byte, startIndex int, depth int) (str ListItem, newStart
 		return nil, 0, fmt.Errorf("type mismatch")
 	}
 
-	if firstByte < LongListRangeStart { // short list
-		// TODO check max depth, and max byte readable
-		// TODO check for non zero len
+	var listDataSize uint
+	retList := make([]Item, 0)
 
+	// short list mode
+	if firstByte < LongListRangeStart {
 		listDataSize = uint(firstByte - ShortListRangeStart)
 		listDataStartIndex := startIndex
-		listDataPrevIndex := startIndex
 		bytesRead := 0
 		for i := 0; bytesRead < int(listDataSize); i++ {
 			itemType, err := peekNextType(inp, startIndex)
@@ -230,35 +258,44 @@ func ReadListItem(inp []byte, startIndex int, depth int) (str ListItem, newStart
 				return nil, 0, err
 			}
 			var item Item
-			listDataPrevIndex = listDataStartIndex
+			var newStartIndex int
 			switch itemType {
 			case Bytes:
-				item, listDataStartIndex, err = ReadBytesItem(inp, listDataStartIndex)
+				item, newStartIndex, err = ReadBytesItem(inp, listDataStartIndex)
 			case List:
-				item, listDataStartIndex, err = ReadListItem(inp, listDataStartIndex, depth+1)
+				item, newStartIndex, err = ReadListItem(inp, listDataStartIndex, depth+1)
 			}
+
 			if err != nil {
 				return nil, 0, fmt.Errorf("cannot read list item: %w", err)
 			}
 			retList = append(retList, item)
-			bytesRead += listDataStartIndex - listDataPrevIndex
+			bytesRead += newStartIndex - listDataStartIndex
+			listDataStartIndex = newStartIndex
+		}
+
+		// check bytescounts
+		if bytesRead != int(listDataSize) {
+			return nil, 0, errors.New("more bytes where used by items of the list than what has been reported")
 		}
 
 		return retList, listDataStartIndex, nil
 	}
 
 	bytesToReadForLen := uint(firstByte - ShortListRangeEnd)
-	// TODO
-	// if bytesToReadForLen < 56 {
-	// 	// error canonical size ????
-	// }
 	switch bytesToReadForLen {
-	case 0:
-		return nil, startIndex, fmt.Errorf("invalid list size")
+	// this case never happens
+	// case 0:
+	// 	return nil, startIndex, fmt.Errorf("invalid list size")
 
 	case 1:
 		listDataSize = uint(inp[startIndex])
 		startIndex++
+		if listDataSize <= MaxShortListLength {
+			// encoding is not canonical, unnecessary bytes used for encoding
+			// should have encoded as a short string
+			return nil, 0, fmt.Errorf("non canonical encoding")
+		}
 
 	default:
 		// allocate 8 bytes
@@ -266,14 +303,30 @@ func ReadListItem(inp []byte, startIndex int, depth int) (str ListItem, newStart
 		// but copy to lower part only
 		start := int(8 - bytesToReadForLen)
 
+		// encodign is not canonical, unnecessary bytes used for encoding
+		// checking only the first byte ensures that we don't have included
+		// trailing empty bytes in the encoding
+		if inp[startIndex] == 0 {
+			return nil, 0, fmt.Errorf("non canonical encoding")
+		}
+
+		endIndex := startIndex + int(bytesToReadForLen)
+		if endIndex > len(inp) {
+			return nil, 0, fmt.Errorf("not enough data to read")
+		}
 		// TODO check on size we want to read
-		copy(lenData[start:], inp[startIndex:startIndex+int(bytesToReadForLen)])
+		copy(lenData[start:], inp[startIndex:endIndex])
 		startIndex += int(bytesToReadForLen)
 		listDataSize = uint(binary.BigEndian.Uint64(lenData))
+
+		if listDataSize <= MaxShortListLength {
+			// encoding is not canonical, unnecessary bytes used for encoding
+			// should have encoded as a short string
+			return nil, 0, fmt.Errorf("non canonical encoding")
+		}
+
 	}
 
-	// TODO check max depth, and max byte readable
-	// TODO check for non zero len
 	listDataStartIndex := startIndex
 	listDataPrevIndex := startIndex
 	bytesRead := 0
@@ -295,6 +348,11 @@ func ReadListItem(inp []byte, startIndex int, depth int) (str ListItem, newStart
 		}
 		retList = append(retList, item)
 		bytesRead += listDataStartIndex - listDataPrevIndex
+
+		// check bytescounts
+		if bytesRead != int(listDataSize) {
+			return nil, 0, errors.New("more bytes where used by items of the list than what has been reported")
+		}
 	}
 	return retList, listDataStartIndex, nil
 }
