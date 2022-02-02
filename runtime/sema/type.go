@@ -4641,6 +4641,8 @@ func (t *ReferenceType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 // AddressType represents the address type
 type AddressType struct{}
 
+var _ IntegerRangedType = &AddressType{}
+
 func (*AddressType) IsType() {}
 
 func (t *AddressType) Tag() TypeTag {
@@ -4705,6 +4707,10 @@ func (*AddressType) MinInt() *big.Int {
 
 func (*AddressType) MaxInt() *big.Int {
 	return AddressTypeMaxIntBig
+}
+
+func (*AddressType) IsSuperType() bool {
+	return false
 }
 
 func (*AddressType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
