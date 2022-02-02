@@ -1431,6 +1431,45 @@ func TestAuthAccountContracts(t *testing.T) {
 
 		assert.IsType(t, &sema.ExternalMutationError{}, errs[0])
 	})
+
+	t.Run("update names through reference", func(t *testing.T) {
+		t.Parallel()
+
+		rt := newTestInterpreterRuntime()
+
+		script := []byte(`
+            transaction {
+                prepare(signer: AuthAccount) {
+                    var namesRef = &signer.contracts.names as &[String]
+					namesRef[0] = "baz"
+
+					assert(signer.contracts.names[0] == "foo")
+                }
+            }
+        `)
+
+		runtimeInterface := &testRuntimeInterface{
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{{42}}, nil
+			},
+			getAccountContractNames: func(_ Address) ([]string, error) {
+				return []string{"foo", "bar"}, nil
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		err := rt.ExecuteTransaction(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+	})
 }
 
 func TestPublicAccountContracts(t *testing.T) {
