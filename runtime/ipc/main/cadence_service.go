@@ -19,8 +19,6 @@ var signalsToWatch = []os.Signal{
 	//syscall.SIGKILL,
 }
 
-var runtimeInterface = ipc.NewProxyInterface()
-
 func main() {
 	log := zlog.Logger
 
@@ -54,7 +52,9 @@ func main() {
 		conn, err := listener.Accept()
 		bridge.HandleError(err)
 
-		go func() {
+		runtimeInterface := ipc.NewProxyInterface(runtimeBridge, conn)
+
+		func() {
 			// Gracefully handle all errors.
 			// Server shouldn't crash upon any errors.
 			defer func() {
@@ -75,7 +75,7 @@ func main() {
 
 			switch msg := msg.(type) {
 			case *pb.Request:
-				response := serveRequest(runtimeBridge, msg)
+				response := runtimeInterface.ServeRequest(msg)
 				bridge.WriteMessage(conn, response)
 			case *pb.Error:
 				log.Error().Msg(msg.GetErr())
@@ -84,30 +84,4 @@ func main() {
 			}
 		}()
 	}
-}
-
-func serveRequest(
-	runtimeBridge *bridge.RuntimeBridge,
-	request *pb.Request,
-) pb.Message {
-
-	var response pb.Message
-
-	switch request.Name {
-	case ipc.RuntimeMethodExecuteScript:
-		response = runtimeBridge.ExecuteScript(runtimeInterface, request.Params)
-
-	case ipc.RuntimeMethodExecuteTransaction:
-		response = runtimeBridge.ExecuteTransaction(runtimeInterface, request.Params)
-
-	case ipc.RuntimeMethodInvokeContractFunction:
-		response = runtimeBridge.InvokeContractFunction(request.Params)
-
-	default:
-		response = pb.NewErrorMessage(
-			fmt.Sprintf("unsupported request '%s'", request.Name),
-		)
-	}
-
-	return response
 }

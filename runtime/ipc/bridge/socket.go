@@ -12,9 +12,8 @@ import (
 )
 
 const (
-	UnixNetwork            = "unix"
-	RuntimeSocketAddress   = "/tmp/runtime.socket"
-	InterfaceSocketAddress = "/tmp/interface.socket"
+	UnixNetwork          = "unix"
+	RuntimeSocketAddress = "/tmp/runtime.socket"
 )
 
 func NewRuntimeListener() (net.Listener, error) {
@@ -34,27 +33,6 @@ func NewRuntimeConnection() (net.Conn, error) {
 		// Do not expose network info to the user.
 		// Return a generic error instead.
 		return nil, fmt.Errorf("cannot connect to cadence runtime")
-	}
-
-	return conn, nil
-}
-
-func NewInterfaceListener() (net.Listener, error) {
-	syscall.Unlink(InterfaceSocketAddress)
-	listener, err := net.Listen(UnixNetwork, InterfaceSocketAddress)
-	if err != nil {
-		return nil, err
-	}
-
-	return listener, nil
-}
-
-func NewInterfaceConnection() (net.Conn, error) {
-	conn, err := net.Dial(UnixNetwork, InterfaceSocketAddress)
-	if err != nil {
-		// Do not expose network info to the user.
-		// Return a generic error instead.
-		return nil, fmt.Errorf("cannot connect to host-env")
 	}
 
 	return conn, nil

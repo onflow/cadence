@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"github.com/onflow/cadence/runtime/ipc/bridge"
 	"strconv"
 	"strings"
 	"sync"
@@ -29,10 +30,9 @@ import (
 
 func TestExecutingScript(t *testing.T) {
 
-	// TODO: FVM should start this service
-	go ipc.StartInterfaceService(runtimeInterface)
-
-	proxyRuntime := ipc.NewProxyRuntime()
+	proxyRuntime := ipc.NewProxyRuntime(
+		bridge.NewInterfaceBridge(runtimeInterface),
+	)
 
 	t.Run("simple script", func(t *testing.T) {
 		start := time.Now()
@@ -107,10 +107,10 @@ func TestExecutingScript(t *testing.T) {
 }
 
 func TestExecutingScriptParallel(t *testing.T) {
-	// TODO: FVM should start this service
-	go ipc.StartInterfaceService(runtimeInterface)
 
-	proxyRuntime := ipc.NewProxyRuntime()
+	proxyRuntime := ipc.NewProxyRuntime(
+		bridge.NewInterfaceBridge(runtimeInterface),
+	)
 
 	wg := sync.WaitGroup{}
 	for i := 0; i < 10; i++ {
