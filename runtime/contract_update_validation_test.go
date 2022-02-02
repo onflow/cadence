@@ -21,13 +21,13 @@ package runtime
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/onflow/cadence/encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"

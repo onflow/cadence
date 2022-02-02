@@ -211,7 +211,7 @@ A field may belong to a contract, struct, resource, or interface.
   pub struct interface Foo {    // Invalid type declaration change
   }
   ```
-- Removing, or changing interface conformance of a struct/resource is not valid.
+- Removing an interface conformance of a struct/resource is not valid.
   ```cadence
   // Existing struct
   
