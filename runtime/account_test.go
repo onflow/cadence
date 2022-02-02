@@ -1305,14 +1305,14 @@ func TestRuntimePublicKey(t *testing.T) {
 		script := `
         pub fun main(): PublicKey {
             let publicKey =  PublicKey(
-				publicKey: "0102".decodeHex(),
-				signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
-			)
+                publicKey: "0102".decodeHex(),
+                signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
+            )
           
             var publickeyRef = &publicKey.publicKey as &[UInt8]
             publickeyRef[0] = 3
 
-			return publicKey
+            return publicKey
           }
         `
 
@@ -1441,9 +1441,9 @@ func TestAuthAccountContracts(t *testing.T) {
             transaction {
                 prepare(signer: AuthAccount) {
                     var namesRef = &signer.contracts.names as &[String]
-					namesRef[0] = "baz"
+                    namesRef[0] = "baz"
 
-					assert(signer.contracts.names[0] == "foo")
+                    assert(signer.contracts.names[0] == "foo")
                 }
             }
         `)
