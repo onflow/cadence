@@ -413,28 +413,11 @@ func (e *InvalidDeclarationKindChangeError) Error() string {
 // does not match the existing one.
 type ConformanceMismatchError struct {
 	DeclName string
-	Err      error
 	ast.Range
 }
 
 func (e *ConformanceMismatchError) Error() string {
 	return fmt.Sprintf("conformances does not match in `%s`", e.DeclName)
-}
-
-func (e *ConformanceMismatchError) SecondaryError() string {
-	return e.Err.Error()
-}
-
-// ConformanceCountMismatchError is reported during a contract update, when the conformance count
-// does not match the existing conformance count.
-type ConformanceCountMismatchError struct {
-	Expected int
-	Found    int
-	ast.Range
-}
-
-func (e *ConformanceCountMismatchError) Error() string {
-	return fmt.Sprintf("conformances count does not match: expected %d, found %d", e.Expected, e.Found)
 }
 
 // EnumCaseMismatchError is reported during an enum update, when an updated enum case
