@@ -506,10 +506,14 @@ func (validator *ContractUpdateValidator) checkConformances(
 	// Having extra new conformance is OK. See: https://github.com/onflow/cadence/issues/1394
 	for _, oldConformance := range oldConformances {
 		found := false
-		for _, newConformance := range newConformances {
+		for index, newConformance := range newConformances {
 			err := oldConformance.CheckEqual(newConformance, validator)
 			if err == nil {
 				found = true
+
+				// Remove the matched conformance, so we don't have to check it again.
+				// i.e: optimization
+				newConformances = append(newConformances[:index], newConformances[index+1:]...)
 				break
 			}
 		}
