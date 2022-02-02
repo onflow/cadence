@@ -21,6 +21,7 @@ package runtime
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/onflow/cadence/encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -42,11 +43,11 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 	newDeployTransaction := func(function, name, code string) []byte {
 		return []byte(fmt.Sprintf(`
-			transaction {
-				prepare(signer: AuthAccount) {
-					signer.contracts.%s(name: "%s", code: "%s".decodeHex())
-				}
-			}`,
+            transaction {
+                prepare(signer: AuthAccount) {
+                    signer.contracts.%s(name: "%s", code: "%s".decodeHex())
+                }
+            }`,
 			function,
 			name,
 			hex.EncodeToString([]byte(code)),
@@ -55,11 +56,11 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 	newContractRemovalTransaction := func(contractName string) []byte {
 		return []byte(fmt.Sprintf(`
-			transaction {
-				prepare(signer: AuthAccount) {
-					signer.contracts.%s(name: "%s")
-				}
-			}`,
+            transaction {
+                prepare(signer: AuthAccount) {
+                    signer.contracts.%s(name: "%s")
+                }
+            }`,
 			sema.AuthAccountContractsTypeRemoveFunctionName,
 			contractName,
 		))
@@ -98,20 +99,20 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 	t.Run("change field type", func(t *testing.T) {
 		const oldCode = `
-			pub contract Test1 {
-				pub var a: String
-				init() {
-					self.a = "hello"
-				}
-      		}`
+            pub contract Test1 {
+                pub var a: String
+                init() {
+                    self.a = "hello"
+                }
+              }`
 
 		const newCode = `
-			pub contract Test1 {
-				pub var a: Int
-				init() {
-					self.a = 0
-				}
-			}`
+            pub contract Test1 {
+                pub var a: Int
+                init() {
+                    self.a = 0
+                }
+            }`
 
 		err := deployAndUpdate(t, "Test1", oldCode, newCode)
 		require.Error(t, err)
@@ -122,22 +123,22 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 	t.Run("add field", func(t *testing.T) {
 		const oldCode = `
-      		pub contract Test2 {
-          		pub var a: String
-				init() {
-					self.a = "hello"
-				}
-      		}`
+              pub contract Test2 {
+                  pub var a: String
+                init() {
+                    self.a = "hello"
+                }
+              }`
 
 		const newCode = `
-			pub contract Test2 {
-				pub var a: String
-				pub var b: Int
-				init() {
-					self.a = "hello"
-					self.b = 0
-				}
-			}`
+            pub contract Test2 {
+                pub var a: String
+                pub var b: Int
+                init() {
+                    self.a = "hello"
+                    self.b = 0
+                }
+            }`
 
 		err := deployAndUpdate(t, "Test2", oldCode, newCode)
 		require.Error(t, err)
@@ -148,23 +149,23 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 	t.Run("remove field", func(t *testing.T) {
 		const oldCode = `
-			pub contract Test3 {
-				pub var a: String
-				pub var b: Int
-				init() {
-					self.a = "hello"
-					self.b = 0
-				}
-			}`
+            pub contract Test3 {
+                pub var a: String
+                pub var b: Int
+                init() {
+                    self.a = "hello"
+                    self.b = 0
+                }
+            }`
 
 		const newCode = `
-			pub contract Test3 {
-				pub var a: String
+            pub contract Test3 {
+                pub var a: String
 
-				init() {
-					self.a = "hello"
-				}
-			}`
+                init() {
+                    self.a = "hello"
+                }
+            }`
 
 		err := deployAndUpdate(t, "Test3", oldCode, newCode)
 		require.NoError(t, err)
@@ -172,42 +173,42 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 	t.Run("change nested decl field type", func(t *testing.T) {
 		const oldCode = `
-			pub contract Test4 {
+            pub contract Test4 {
 
-				pub var a: @TestResource
+                pub var a: @TestResource
 
-				init() {
-					self.a <- create Test4.TestResource()
-				}
+                init() {
+                    self.a <- create Test4.TestResource()
+                }
 
-				pub resource TestResource {
+                pub resource TestResource {
 
-					pub let b: Int
+                    pub let b: Int
 
-					init() {
-						self.b = 1234
-					}
-				}
-			}`
+                    init() {
+                        self.b = 1234
+                    }
+                }
+            }`
 
 		const newCode = `
-			pub contract Test4 {
+            pub contract Test4 {
 
-				pub var a: @Test4.TestResource
+                pub var a: @Test4.TestResource
 
-				init() {
-					self.a <- create Test4.TestResource()
-				}
+                init() {
+                    self.a <- create Test4.TestResource()
+                }
 
-				pub resource TestResource {
+                pub resource TestResource {
 
-					pub let b: String
+                    pub let b: String
 
-					init() {
-						self.b = "string_1234"
-					}
-				}
-			}`
+                    init() {
+                        self.b = "string_1234"
+                    }
+                }
+            }`
 
 		err := deployAndUpdate(t, "Test4", oldCode, newCode)
 		require.Error(t, err)
@@ -218,44 +219,44 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 	t.Run("add field to nested decl", func(t *testing.T) {
 		const oldCode = `
-			pub contract Test5 {
+            pub contract Test5 {
 
-				pub var a: @TestResource
+                pub var a: @TestResource
 
-				init() {
-					self.a <- create Test5.TestResource()
-				}
+                init() {
+                    self.a <- create Test5.TestResource()
+                }
 
-				pub resource TestResource {
+                pub resource TestResource {
 
-					pub var b: String
+                    pub var b: String
 
-					init() {
-						self.b = "hello"
-					}
-				}
-			}`
+                    init() {
+                        self.b = "hello"
+                    }
+                }
+            }`
 
 		const newCode = `
-			pub contract Test5 {
+            pub contract Test5 {
 
-				pub var a: @Test5.TestResource
+                pub var a: @Test5.TestResource
 
-				init() {
-					self.a <- create Test5.TestResource()
-				}
+                init() {
+                    self.a <- create Test5.TestResource()
+                }
 
-				pub resource TestResource {
+                pub resource TestResource {
 
-					pub var b: String
-					pub var c: Int
+                    pub var b: String
+                    pub var c: Int
 
-					init() {
-						self.b = "hello"
-						self.c = 0
-					}
-				}
-			}`
+                    init() {
+                        self.b = "hello"
+                        self.c = 0
+                    }
+                }
+            }`
 
 		err := deployAndUpdate(t, "Test5", oldCode, newCode)
 		require.Error(t, err)
@@ -266,44 +267,44 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 	t.Run("change indirect field type", func(t *testing.T) {
 		const oldCode = `
-			pub contract Test6 {
+            pub contract Test6 {
 
-				pub var x: [TestStruct; 1]
+                pub var x: [TestStruct; 1]
 
-				init() {
-					self.x = [TestStruct()]
-				}
+                init() {
+                    self.x = [TestStruct()]
+                }
 
-				pub struct TestStruct {
-					pub let a: Int
-					pub var b: Int
+                pub struct TestStruct {
+                    pub let a: Int
+                    pub var b: Int
 
-					init() {
-						self.a = 123
-						self.b = 456
-					}
-				}
-			}`
+                    init() {
+                        self.a = 123
+                        self.b = 456
+                    }
+                }
+            }`
 
 		const newCode = `
-			pub contract Test6 {
+            pub contract Test6 {
 
-				pub var x: [TestStruct; 1]
+                pub var x: [TestStruct; 1]
 
-				init() {
-					self.x = [TestStruct()]
-				}
+                init() {
+                    self.x = [TestStruct()]
+                }
 
-				pub struct TestStruct {
-					pub let a: Int
-					pub var b: String
+                pub struct TestStruct {
+                    pub let a: Int
+                    pub var b: String
 
-					init() {
-						self.a = 123
-						self.b = "string_456"
-					}
-				}
-			}`
+                    init() {
+                        self.a = 123
+                        self.b = "string_456"
+                    }
+                }
+            }`
 
 		err := deployAndUpdate(t, "Test6", oldCode, newCode)
 		require.Error(t, err)
@@ -314,68 +315,68 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 	t.Run("circular types refs", func(t *testing.T) {
 		const oldCode = `
-			pub contract Test7{
+            pub contract Test7{
 
-				pub var x: {String: Foo}
+                pub var x: {String: Foo}
 
-				init() {
-					self.x = { "foo" : Foo() }
-				}
+                init() {
+                    self.x = { "foo" : Foo() }
+                }
 
-				pub struct Foo {
+                pub struct Foo {
 
-					pub let a: Foo?
-					pub let b: Bar
+                    pub let a: Foo?
+                    pub let b: Bar
 
-					init() {
-						self.a = nil
-						self.b = Bar()
-					}
-				}
+                    init() {
+                        self.a = nil
+                        self.b = Bar()
+                    }
+                }
 
-				pub struct Bar {
+                pub struct Bar {
 
-					pub let c: Foo?
-					pub let d: Bar?
+                    pub let c: Foo?
+                    pub let d: Bar?
 
-					init() {
-						self.c = nil
-						self.d = nil
-					}
-				}
-			}`
+                    init() {
+                        self.c = nil
+                        self.d = nil
+                    }
+                }
+            }`
 
 		const newCode = `
-			pub contract Test7 {
+            pub contract Test7 {
 
-				pub var x: {String: Foo}
+                pub var x: {String: Foo}
 
-				init() {
-					self.x = { "foo" : Foo() }
-				}
+                init() {
+                    self.x = { "foo" : Foo() }
+                }
 
-				pub struct Foo {
+                pub struct Foo {
 
-					pub let a: Foo?
-					pub let b: Bar
+                    pub let a: Foo?
+                    pub let b: Bar
 
-					init() {
-						self.a = nil
-						self.b = Bar()
-					}
-				}
+                    init() {
+                        self.a = nil
+                        self.b = Bar()
+                    }
+                }
 
-				pub struct Bar {
+                pub struct Bar {
 
-					pub let c: Foo?
-					pub let d: String
+                    pub let c: Foo?
+                    pub let d: String
 
-					init() {
-						self.c = nil
-						self.d = "string_d"
-					}
-				}
-			}`
+                    init() {
+                        self.c = nil
+                        self.d = "string_d"
+                    }
+                }
+            }`
 
 		err := deployAndUpdate(t, "Test7", oldCode, newCode)
 		require.Error(t, err)
@@ -386,44 +387,44 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 	t.Run("qualified vs unqualified nominal type", func(t *testing.T) {
 		const oldCode = `
-			pub contract Test8 {
+            pub contract Test8 {
 
-				pub var x: Test8.TestStruct
-				pub var y: TestStruct
+                pub var x: Test8.TestStruct
+                pub var y: TestStruct
 
-				init() {
-					self.x = Test8.TestStruct()
-					self.y = TestStruct()
-				}
+                init() {
+                    self.x = Test8.TestStruct()
+                    self.y = TestStruct()
+                }
 
-				pub struct TestStruct {
-					pub let a: Int
+                pub struct TestStruct {
+                    pub let a: Int
 
-					init() {
-						self.a = 123
-					}
-				}
-			}`
+                    init() {
+                        self.a = 123
+                    }
+                }
+            }`
 
 		const newCode = `
-			pub contract Test8 {
+            pub contract Test8 {
 
-				pub var x: TestStruct
-				pub var y: Test8.TestStruct
+                pub var x: TestStruct
+                pub var y: Test8.TestStruct
 
-				init() {
-					self.x = TestStruct()
-					self.y = Test8.TestStruct()
-				}
+                init() {
+                    self.x = TestStruct()
+                    self.y = Test8.TestStruct()
+                }
 
-				pub struct TestStruct {
-					pub let a: Int
+                pub struct TestStruct {
+                    pub let a: Int
 
-					init() {
-						self.a = 123
-					}
-				}
-			}`
+                    init() {
+                        self.a = 123
+                    }
+                }
+            }`
 
 		err := deployAndUpdate(t, "Test8", oldCode, newCode)
 		require.NoError(t, err)
@@ -431,18 +432,18 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 	t.Run("change imported nominal type to local", func(t *testing.T) {
 		const importCode = `
-			pub contract Test9Import {
+            pub contract Test9Import {
 
-				pub struct TestStruct {
-					pub let a: Int
-					pub var b: Int
+                pub struct TestStruct {
+                    pub let a: Int
+                    pub var b: Int
 
-					init() {
-						self.a = 123
-						self.b = 456
-					}
-				}
-			}`
+                    init() {
+                        self.a = 123
+                        self.b = 456
+                    }
+                }
+            }`
 
 		deployTx1 := newDeployTransaction(
 			sema.AuthAccountContractsTypeAddFunctionName,
@@ -461,36 +462,36 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		require.NoError(t, err)
 
 		const oldCode = `
-			import Test9Import from 0x42
+            import Test9Import from 0x42
 
-			pub contract Test9 {
+            pub contract Test9 {
 
-				pub var x: Test9Import.TestStruct
+                pub var x: Test9Import.TestStruct
 
-				init() {
-					self.x = Test9Import.TestStruct()
-				}
-			}`
+                init() {
+                    self.x = Test9Import.TestStruct()
+                }
+            }`
 
 		const newCode = `
-			pub contract Test9 {
+            pub contract Test9 {
 
-				pub var x: TestStruct
+                pub var x: TestStruct
 
-				init() {
-					self.x = TestStruct()
-				}
+                init() {
+                    self.x = TestStruct()
+                }
 
-				pub struct TestStruct {
-					pub let a: Int
-					pub var b: Int
+                pub struct TestStruct {
+                    pub let a: Int
+                    pub var b: Int
 
-					init() {
-						self.a = 123
-						self.b = 456
-					}
-				}
-			}`
+                    init() {
+                        self.a = 123
+                        self.b = 456
+                    }
+                }
+            }`
 
 		err = deployAndUpdate(t, "Test9", oldCode, newCode)
 		require.Error(t, err)
@@ -501,16 +502,16 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 	t.Run("contract interface update", func(t *testing.T) {
 		const oldCode = `
-			pub contract interface Test10 {
-				pub var a: String
-				pub fun getA() : String
-			}`
+            pub contract interface Test10 {
+                pub var a: String
+                pub fun getA() : String
+            }`
 
 		const newCode = `
-			pub contract interface Test10 {
-				pub var a: Int
-				pub fun getA() : Int
-			}`
+            pub contract interface Test10 {
+                pub var a: Int
+                pub fun getA() : Int
+            }`
 
 		err := deployAndUpdate(t, "Test10", oldCode, newCode)
 		require.Error(t, err)
@@ -521,24 +522,24 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 	t.Run("convert interface to contract", func(t *testing.T) {
 		const oldCode = `
-			pub contract interface Test11 {
-				pub var a: String
-				pub fun getA() : String
-			}`
+            pub contract interface Test11 {
+                pub var a: String
+                pub fun getA() : String
+            }`
 
 		const newCode = `
-			pub contract Test11 {
+            pub contract Test11 {
 
-				pub var a: String
+                pub var a: String
 
-				init() {
-					self.a = "hello"
-				}
+                init() {
+                    self.a = "hello"
+                }
 
-				pub fun getA() : String {
-					return self.a
-				}
-			}`
+                pub fun getA() : String {
+                    return self.a
+                }
+            }`
 
 		err := deployAndUpdate(t, "Test11", oldCode, newCode)
 		require.Error(t, err)
@@ -555,24 +556,24 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 	t.Run("convert contract to interface", func(t *testing.T) {
 		const oldCode = `
-			pub contract Test12 {
+            pub contract Test12 {
 
-				pub var a: String
+                pub var a: String
 
-				init() {
-					self.a = "hello"
-				}
+                init() {
+                    self.a = "hello"
+                }
 
-				pub fun getA() : String {
-					return self.a
-				}
-			}`
+                pub fun getA() : String {
+                    return self.a
+                }
+            }`
 
 		const newCode = `
-			pub contract interface Test12 {
-				pub var a: String
-				pub fun getA() : String
-			}`
+            pub contract interface Test12 {
+                pub var a: String
+                pub fun getA() : String
+            }`
 
 		err := deployAndUpdate(t, "Test12", oldCode, newCode)
 		require.Error(t, err)
@@ -589,76 +590,76 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 	t.Run("change non stored", func(t *testing.T) {
 		const oldCode = `
-			pub contract Test13 {
+            pub contract Test13 {
 
-				pub var x: UsedStruct
+                pub var x: UsedStruct
 
-				init() {
-					self.x = UsedStruct()
-				}
+                init() {
+                    self.x = UsedStruct()
+                }
 
-				pub struct UsedStruct {
-					pub let a: Int
+                pub struct UsedStruct {
+                    pub let a: Int
 
-					init() {
-						self.a = 123
-					}
+                    init() {
+                        self.a = 123
+                    }
 
-					pub fun getA() : Int {
-						return self.a
-					}
-				}
+                    pub fun getA() : Int {
+                        return self.a
+                    }
+                }
 
-				pub struct UnusedStruct {
-					pub let a: Int
+                pub struct UnusedStruct {
+                    pub let a: Int
 
-					init() {
-						self.a = 123
-					}
+                    init() {
+                        self.a = 123
+                    }
 
-					pub fun getA() : Int {
-						return self.a
-					}
-				}
-			}`
+                    pub fun getA() : Int {
+                        return self.a
+                    }
+                }
+            }`
 
 		const newCode = `
-			pub contract Test13 {
+            pub contract Test13 {
 
-				pub var x: UsedStruct
+                pub var x: UsedStruct
 
-				init() {
-					self.x = UsedStruct()
-				}
+                init() {
+                    self.x = UsedStruct()
+                }
 
-				pub struct UsedStruct {
-					pub let a: Int
+                pub struct UsedStruct {
+                    pub let a: Int
 
-					init() {
-						self.a = 123
-					}
+                    init() {
+                        self.a = 123
+                    }
 
-					pub fun getA() : String {
-						return "hello_123"
-					}
+                    pub fun getA() : String {
+                        return "hello_123"
+                    }
 
-					pub fun getA_new() : Int {
-						return self.a
-					}
-				}
+                    pub fun getA_new() : Int {
+                        return self.a
+                    }
+                }
 
-				pub struct UnusedStruct {
-					pub let a: String
+                pub struct UnusedStruct {
+                    pub let a: String
 
-					init() {
-						self.a = "string_456"
-					}
+                    init() {
+                        self.a = "string_456"
+                    }
 
-					pub fun getA() : String {
-						return self.a
-					}
-				}
-			}`
+                    pub fun getA() : String {
+                        return self.a
+                    }
+                }
+            }`
 
 		err := deployAndUpdate(t, "Test13", oldCode, newCode)
 
@@ -672,72 +673,72 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 	t.Run("change enum type", func(t *testing.T) {
 		const oldCode = `
-			pub contract Test14 {
+            pub contract Test14 {
 
-				pub var x: Foo
+                pub var x: Foo
 
-				init() {
-					self.x = Foo.up
-				}
+                init() {
+                    self.x = Foo.up
+                }
 
-				pub enum Foo: UInt8 {
-					pub case up
-					pub case down
-				}
-			}`
+                pub enum Foo: UInt8 {
+                    pub case up
+                    pub case down
+                }
+            }`
 
 		const newCode = `
-			pub contract Test14 {
+            pub contract Test14 {
 
-				pub var x: Foo
+                pub var x: Foo
 
-				init() {
-					self.x = Foo.up
-				}
+                init() {
+                    self.x = Foo.up
+                }
 
-				pub enum Foo: UInt128 {
-					pub case up
-					pub case down
-				}
-			}`
+                pub enum Foo: UInt128 {
+                    pub case up
+                    pub case down
+                }
+            }`
 
 		err := deployAndUpdate(t, "Test14", oldCode, newCode)
 		require.Error(t, err)
 
 		cause := getErrorCause(t, err, "Test14")
-		assertConformanceMismatchError(t, cause, "Foo", "UInt8", "UInt128")
+		assertConformanceMismatchError(t, cause, "Foo")
 	})
 
 	t.Run("change nested interface", func(t *testing.T) {
 		const oldCode = `
-			pub contract Test15 {
+            pub contract Test15 {
 
-				pub var x: AnyStruct{TestStruct}?
+                pub var x: AnyStruct{TestStruct}?
 
-				init() {
-					self.x = nil
-				}
+                init() {
+                    self.x = nil
+                }
 
-				pub struct interface TestStruct {
-					pub let a: String
-					pub var b: Int
-				}
-			}`
+                pub struct interface TestStruct {
+                    pub let a: String
+                    pub var b: Int
+                }
+            }`
 
 		const newCode = `
-			pub contract Test15 {
+            pub contract Test15 {
 
-				pub var x: AnyStruct{TestStruct}?
+                pub var x: AnyStruct{TestStruct}?
 
-				init() {
-					self.x = nil
-				}
+                init() {
+                    self.x = nil
+                }
 
-				pub struct interface TestStruct {
-					pub let a: Int
-					pub var b: Int
-				}
-			}`
+                pub struct interface TestStruct {
+                    pub let a: Int
+                    pub var b: Int
+                }
+            }`
 
 		err := deployAndUpdate(t, "Test15", oldCode, newCode)
 		require.Error(t, err)
@@ -748,22 +749,22 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 	t.Run("change nested interface to struct", func(t *testing.T) {
 		const oldCode = `
-			pub contract Test16 {
-				pub struct interface TestStruct {
-					pub var a: Int
-				}
-			}`
+            pub contract Test16 {
+                pub struct interface TestStruct {
+                    pub var a: Int
+                }
+            }`
 
 		const newCode = `
-			pub contract Test16 {
-				pub struct TestStruct {
-					pub let a: Int
+            pub contract Test16 {
+                pub struct TestStruct {
+                    pub let a: Int
 
-					init() {
-						self.a = 123
-					}
-				}
-			}`
+                    init() {
+                        self.a = 123
+                    }
+                }
+            }`
 
 		err := deployAndUpdate(t, "Test16", oldCode, newCode)
 		require.Error(t, err)
@@ -780,19 +781,19 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 	t.Run("adding a nested struct", func(t *testing.T) {
 		const oldCode = `
-			pub contract Test17 {
-			}`
+            pub contract Test17 {
+            }`
 
 		const newCode = `
-			pub contract Test17 {
-				pub struct TestStruct {
-					pub let a: Int
+            pub contract Test17 {
+                pub struct TestStruct {
+                    pub let a: Int
 
-					init() {
-						self.a = 123
-					}
-				}
-			}`
+                    init() {
+                        self.a = 123
+                    }
+                }
+            }`
 
 		err := deployAndUpdate(t, "Test17", oldCode, newCode)
 		require.NoError(t, err)
@@ -800,19 +801,19 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 	t.Run("removing a nested struct", func(t *testing.T) {
 		const oldCode = `
-			pub contract Test18 {
-				pub struct TestStruct {
-					pub let a: Int
+            pub contract Test18 {
+                pub struct TestStruct {
+                    pub let a: Int
 
-					init() {
-						self.a = 123
-					}
-				}
-			}`
+                    init() {
+                        self.a = 123
+                    }
+                }
+            }`
 
 		const newCode = `
-			pub contract Test18 {
-			}`
+            pub contract Test18 {
+            }`
 
 		err := deployAndUpdate(t, "Test18", oldCode, newCode)
 		require.Error(t, err)
@@ -823,20 +824,20 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 	t.Run("add and remove field", func(t *testing.T) {
 		const oldCode = `
-			pub contract Test19 {
-				pub var a: String
-				init() {
-					self.a = "hello"
-				}
-			}`
+            pub contract Test19 {
+                pub var a: String
+                init() {
+                    self.a = "hello"
+                }
+            }`
 
 		const newCode = `
-			pub contract Test19 {
-				pub var b: Int
-				init() {
-					self.b = 0
-				}
-			}`
+            pub contract Test19 {
+                pub var b: Int
+                init() {
+                    self.b = 0
+                }
+            }`
 
 		err := deployAndUpdate(t, "Test19", oldCode, newCode)
 		require.Error(t, err)
@@ -847,36 +848,36 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 	t.Run("multiple errors", func(t *testing.T) {
 		const oldCode = `
-			pub contract Test20 {
-				pub var a: String
+            pub contract Test20 {
+                pub var a: String
 
-				init() {
-					self.a = "hello"
-				}
+                init() {
+                    self.a = "hello"
+                }
 
-				pub struct interface TestStruct {
-					pub var a: Int
-				}
-			}`
+                pub struct interface TestStruct {
+                    pub var a: Int
+                }
+            }`
 
 		const newCode = `
-			pub contract Test20 {
-				pub var a: Int
-				pub var b: String
+            pub contract Test20 {
+                pub var a: Int
+                pub var b: String
 
-				init() {
-					self.a = 0
-					self.b = "hello"
-				}
+                init() {
+                    self.a = 0
+                    self.b = "hello"
+                }
 
-				pub struct TestStruct {
-					pub let a: Int
+                pub struct TestStruct {
+                    pub let a: Int
 
-					init() {
-						self.a = 123
-					}
-				}
-			}`
+                    init() {
+                        self.a = 123
+                    }
+                }
+            }`
 
 		err := deployAndUpdate(t, "Test20", oldCode, newCode)
 		require.Error(t, err)
@@ -960,40 +961,40 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 	t.Run("Test reference types", func(t *testing.T) {
 		const oldCode = `
-			pub contract Test22 {
+            pub contract Test22 {
 
-				pub var vault: Capability<&TestStruct>?
+                pub var vault: Capability<&TestStruct>?
 
-				init() {
-					self.vault = nil
-				}
+                init() {
+                    self.vault = nil
+                }
 
-				pub struct TestStruct {
-					pub let a: Int
+                pub struct TestStruct {
+                    pub let a: Int
 
-					init() {
-						self.a = 123
-					}
-				}
-			}`
+                    init() {
+                        self.a = 123
+                    }
+                }
+            }`
 
 		const newCode = `
-			pub contract Test22 {
+            pub contract Test22 {
 
-				pub var vault: Capability<&TestStruct>?
+                pub var vault: Capability<&TestStruct>?
 
-				init() {
-					self.vault = nil
-				}
+                init() {
+                    self.vault = nil
+                }
 
-				pub struct TestStruct {
-					pub let a: Int
+                pub struct TestStruct {
+                    pub let a: Int
 
-					init() {
-						self.a = 123
-					}
-				}
-			}`
+                    init() {
+                        self.a = 123
+                    }
+                }
+            }`
 
 		err := deployAndUpdate(t, "Test22", oldCode, newCode)
 		require.NoError(t, err)
@@ -1001,36 +1002,36 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 	t.Run("Test function type", func(t *testing.T) {
 		const oldCode = `
-			pub contract Test23 {
+            pub contract Test23 {
 
-				pub struct TestStruct {
-					pub let a: Int
+                pub struct TestStruct {
+                    pub let a: Int
 
-					init() {
-						self.a = 123
-					}
-				}
-			}`
+                    init() {
+                        self.a = 123
+                    }
+                }
+            }`
 
 		const newCode = `
-			pub contract Test23 {
+            pub contract Test23 {
 
-				pub var add: ((Int, Int): Int)
+                pub var add: ((Int, Int): Int)
 
-				init() {
-					self.add = fun (a: Int, b: Int): Int {
-						return a + b
-					}
-				}
+                init() {
+                    self.add = fun (a: Int, b: Int): Int {
+                        return a + b
+                    }
+                }
 
-				pub struct TestStruct {
-					pub let a: Int
+                pub struct TestStruct {
+                    pub let a: Int
 
-					init() {
-						self.a = 123
-					}
-				}
-			}`
+                    init() {
+                        self.a = 123
+                    }
+                }
+            }`
 
 		err := deployAndUpdate(t, "Test23", oldCode, newCode)
 		require.Error(t, err)
@@ -1039,11 +1040,11 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 	t.Run("Test conformance", func(t *testing.T) {
 		const importCode = `
-			pub contract Test24Import {
-				pub struct interface AnInterface {
-					pub a: Int
-				}
-			}`
+            pub contract Test24Import {
+                pub struct interface AnInterface {
+                    pub a: Int
+                }
+            }`
 
 		deployTx1 := newDeployTransaction("add", "Test24Import", importCode)
 		err := runtime.ExecuteTransaction(
@@ -1058,45 +1059,45 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		require.NoError(t, err)
 
 		const oldCode = `
-			import Test24Import from 0x42
+            import Test24Import from 0x42
 
-			pub contract Test24 {
-				pub struct TestStruct1 {
-					pub let a: Int
-					init() {
-						self.a = 123
-					}
-				}
+            pub contract Test24 {
+                pub struct TestStruct1 {
+                    pub let a: Int
+                    init() {
+                        self.a = 123
+                    }
+                }
 
-				pub struct TestStruct2: Test24Import.AnInterface {
-					pub let a: Int
+                pub struct TestStruct2: Test24Import.AnInterface {
+                    pub let a: Int
 
-					init() {
-						self.a = 123
-					}
-				}
-			}`
+                    init() {
+                        self.a = 123
+                    }
+                }
+            }`
 
 		const newCode = `
-			import Test24Import from 0x42
+            import Test24Import from 0x42
 
-			pub contract Test24 {
+            pub contract Test24 {
 
-				pub struct TestStruct2: Test24Import.AnInterface {
-					pub let a: Int
+                pub struct TestStruct2: Test24Import.AnInterface {
+                    pub let a: Int
 
-					init() {
-						self.a = 123
-					}
-				}
+                    init() {
+                        self.a = 123
+                    }
+                }
 
-				pub struct TestStruct1 {
-					pub let a: Int
-					init() {
-						self.a = 123
-					}
-				}
-			}`
+                pub struct TestStruct1 {
+                    pub let a: Int
+                    init() {
+                        self.a = 123
+                    }
+                }
+            }`
 
 		err = deployAndUpdate(t, "Test24", oldCode, newCode)
 		require.NoError(t, err)
@@ -1105,114 +1106,114 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 	t.Run("Test all types", func(t *testing.T) {
 
 		const oldCode = `
-			pub contract Test25 {
-				// simple nominal type
-				pub var a: TestStruct
+            pub contract Test25 {
+                // simple nominal type
+                pub var a: TestStruct
 
-				// qualified nominal type
-				pub var b: Test25.TestStruct
+                // qualified nominal type
+                pub var b: Test25.TestStruct
 
-				// optional type
-				pub var c: Int?
+                // optional type
+                pub var c: Int?
 
-				// variable sized type
-				pub var d: [Int]
+                // variable sized type
+                pub var d: [Int]
 
-				// constant sized type
-				pub var e: [Int; 2]
+                // constant sized type
+                pub var e: [Int; 2]
 
-				// dictionary type
-				pub var f: {Int: String}
+                // dictionary type
+                pub var f: {Int: String}
 
-				// restricted type
-				pub var g: {TestInterface}
+                // restricted type
+                pub var g: {TestInterface}
 
-				// instantiation and reference types
-				pub var h:  Capability<&TestStruct>?
+                // instantiation and reference types
+                pub var h:  Capability<&TestStruct>?
 
-				// function type
-				pub var i: Capability<&((Int, Int): Int)>?
+                // function type
+                pub var i: Capability<&((Int, Int): Int)>?
 
-				init() {
-					var count: Int = 567
-					self.a = TestStruct()
-					self.b = Test25.TestStruct()
-					self.c = 123
-					self.d = [123]
-					self.e = [123, 456]
-					self.f = {1: "Hello"}
-					self.g = TestStruct()
-					self.h = nil
-					self.i = nil
-				}
+                init() {
+                    var count: Int = 567
+                    self.a = TestStruct()
+                    self.b = Test25.TestStruct()
+                    self.c = 123
+                    self.d = [123]
+                    self.e = [123, 456]
+                    self.f = {1: "Hello"}
+                    self.g = TestStruct()
+                    self.h = nil
+                    self.i = nil
+                }
 
-				pub struct TestStruct:TestInterface {
-					pub let a: Int
-					init() {
-						self.a = 123
-					}
-				}
+                pub struct TestStruct:TestInterface {
+                    pub let a: Int
+                    init() {
+                        self.a = 123
+                    }
+                }
 
-				pub struct interface TestInterface {
-					pub let a: Int
-				}
-			}`
+                pub struct interface TestInterface {
+                    pub let a: Int
+                }
+            }`
 
 		const newCode = `
-			pub contract Test25 {
+            pub contract Test25 {
 
 
-				// function type
-				pub var i: Capability<&((Int, Int): Int)>?
+                // function type
+                pub var i: Capability<&((Int, Int): Int)>?
 
-				// instantiation and reference types
-				pub var h:  Capability<&TestStruct>?
+                // instantiation and reference types
+                pub var h:  Capability<&TestStruct>?
 
-				// restricted type
-				pub var g: {TestInterface}
+                // restricted type
+                pub var g: {TestInterface}
 
-				// dictionary type
-				pub var f: {Int: String}
+                // dictionary type
+                pub var f: {Int: String}
 
-				// constant sized type
-				pub var e: [Int; 2]
+                // constant sized type
+                pub var e: [Int; 2]
 
-				// variable sized type
-				pub var d: [Int]
+                // variable sized type
+                pub var d: [Int]
 
-				// optional type
-				pub var c: Int?
+                // optional type
+                pub var c: Int?
 
-				// qualified nominal type
-				pub var b: Test25.TestStruct
+                // qualified nominal type
+                pub var b: Test25.TestStruct
 
-				// simple nominal type
-				pub var a: TestStruct
+                // simple nominal type
+                pub var a: TestStruct
 
-				init() {
-					var count: Int = 567
-					self.a = TestStruct()
-					self.b = Test25.TestStruct()
-					self.c = 123
-					self.d = [123]
-					self.e = [123, 456]
-					self.f = {1: "Hello"}
-					self.g = TestStruct()
-					self.h = nil
-					self.i = nil
-				}
+                init() {
+                    var count: Int = 567
+                    self.a = TestStruct()
+                    self.b = Test25.TestStruct()
+                    self.c = 123
+                    self.d = [123]
+                    self.e = [123, 456]
+                    self.f = {1: "Hello"}
+                    self.g = TestStruct()
+                    self.h = nil
+                    self.i = nil
+                }
 
-				pub struct TestStruct:TestInterface {
-					pub let a: Int
-					init() {
-						self.a = 123
-					}
-				}
+                pub struct TestStruct:TestInterface {
+                    pub let a: Int
+                    init() {
+                        self.a = 123
+                    }
+                }
 
-				pub struct interface TestInterface {
-					pub let a: Int
-				}
-			}`
+                pub struct interface TestInterface {
+                    pub let a: Int
+                }
+            }`
 
 		err := deployAndUpdate(t, "Test25", oldCode, newCode)
 		require.NoError(t, err)
@@ -1221,60 +1222,60 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 	t.Run("Test restricted types", func(t *testing.T) {
 
 		const oldCode = `
-			pub contract Test26 {
+            pub contract Test26 {
 
-				// restricted type
-				pub var a: {TestInterface}
-				pub var b: {TestInterface}
-				pub var c: AnyStruct{TestInterface}
-				pub var d: AnyStruct{TestInterface}
+                // restricted type
+                pub var a: {TestInterface}
+                pub var b: {TestInterface}
+                pub var c: AnyStruct{TestInterface}
+                pub var d: AnyStruct{TestInterface}
 
-				init() {
-					var count: Int = 567
-					self.a = TestStruct()
-					self.b = TestStruct()
-					self.c = TestStruct()
-					self.d = TestStruct()
-				}
+                init() {
+                    var count: Int = 567
+                    self.a = TestStruct()
+                    self.b = TestStruct()
+                    self.c = TestStruct()
+                    self.d = TestStruct()
+                }
 
-				pub struct TestStruct:TestInterface {
-					pub let a: Int
-					init() {
-						self.a = 123
-					}
-				}
+                pub struct TestStruct:TestInterface {
+                    pub let a: Int
+                    init() {
+                        self.a = 123
+                    }
+                }
 
-				pub struct interface TestInterface {
-					pub let a: Int
-				}
-			}`
+                pub struct interface TestInterface {
+                    pub let a: Int
+                }
+            }`
 
 		const newCode = `
-			pub contract Test26 {
-				pub var a: {TestInterface}
-				pub var b: AnyStruct{TestInterface}
-				pub var c: {TestInterface}
-				pub var d: AnyStruct{TestInterface}
+            pub contract Test26 {
+                pub var a: {TestInterface}
+                pub var b: AnyStruct{TestInterface}
+                pub var c: {TestInterface}
+                pub var d: AnyStruct{TestInterface}
 
-				init() {
-					var count: Int = 567
-					self.a = TestStruct()
-					self.b = TestStruct()
-					self.c = TestStruct()
-					self.d = TestStruct()
-				}
+                init() {
+                    var count: Int = 567
+                    self.a = TestStruct()
+                    self.b = TestStruct()
+                    self.c = TestStruct()
+                    self.d = TestStruct()
+                }
 
-				pub struct TestStruct:TestInterface {
-					pub let a: Int
-					init() {
-						self.a = 123
-					}
-				}
+                pub struct TestStruct:TestInterface {
+                    pub let a: Int
+                    init() {
+                        self.a = 123
+                    }
+                }
 
-				pub struct interface TestInterface {
-					pub let a: Int
-				}
-			}`
+                pub struct interface TestInterface {
+                    pub let a: Int
+                }
+            }`
 
 		err := deployAndUpdate(t, "Test26", oldCode, newCode)
 		require.NoError(t, err)
@@ -1283,81 +1284,81 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 	t.Run("Test invalid restricted types change", func(t *testing.T) {
 
 		const oldCode = `
-			pub contract Test27 {
+            pub contract Test27 {
 
-				// restricted type
-				pub var a: TestStruct{TestInterface}
-				pub var b: {TestInterface}
+                // restricted type
+                pub var a: TestStruct{TestInterface}
+                pub var b: {TestInterface}
 
-				init() {
-					var count: Int = 567
-					self.a = TestStruct()
-					self.b = TestStruct()
-				}
+                init() {
+                    var count: Int = 567
+                    self.a = TestStruct()
+                    self.b = TestStruct()
+                }
 
-				pub struct TestStruct:TestInterface {
-					pub let a: Int
-					init() {
-						self.a = 123
-					}
-				}
+                pub struct TestStruct:TestInterface {
+                    pub let a: Int
+                    init() {
+                        self.a = 123
+                    }
+                }
 
-				pub struct interface TestInterface {
-					pub let a: Int
-				}
-			}`
+                pub struct interface TestInterface {
+                    pub let a: Int
+                }
+            }`
 
 		const newCode = `
-			pub contract Test27 {
-				pub var a: {TestInterface}
-				pub var b: TestStruct{TestInterface}
+            pub contract Test27 {
+                pub var a: {TestInterface}
+                pub var b: TestStruct{TestInterface}
 
-				init() {
-					var count: Int = 567
-					self.a = TestStruct()
-					self.b = TestStruct()
-				}
+                init() {
+                    var count: Int = 567
+                    self.a = TestStruct()
+                    self.b = TestStruct()
+                }
 
-				pub struct TestStruct:TestInterface {
-					pub let a: Int
-					init() {
-						self.a = 123
-					}
-				}
+                pub struct TestStruct:TestInterface {
+                    pub let a: Int
+                    init() {
+                        self.a = 123
+                    }
+                }
 
-				pub struct interface TestInterface {
-					pub let a: Int
-				}
-			}`
+                pub struct interface TestInterface {
+                    pub let a: Int
+                }
+            }`
 
 		err := deployAndUpdate(t, "Test27", oldCode, newCode)
 		require.Error(t, err)
 
 		assert.Contains(t, err.Error(), "pub var a: {TestInterface}"+
-			"\n  |                ^^^^^^^^^^^^^^^ "+
+			"\n  |                            ^^^^^^^^^^^^^^^ "+
 			"incompatible type annotations. expected `TestStruct{TestInterface}`, found `{TestInterface}`")
 
 		assert.Contains(t, err.Error(), "pub var b: TestStruct{TestInterface}"+
-			"\n  |                ^^^^^^^^^^^^^^^^^^^^^^^^^ "+
+			"\n  |                            ^^^^^^^^^^^^^^^^^^^^^^^^^ "+
 			"incompatible type annotations. expected `{TestInterface}`, found `TestStruct{TestInterface}`")
 	})
 
 	t.Run("enum valid", func(t *testing.T) {
 		const oldCode = `
-			pub contract Test28 {
-				pub enum Foo: UInt8 {
-					pub case up
-					pub case down
-				}
-			}`
+            pub contract Test28 {
+                pub enum Foo: UInt8 {
+                    pub case up
+                    pub case down
+                }
+            }`
 
 		const newCode = `
-			pub contract Test28 {
-				pub enum Foo: UInt8 {
-					pub case up
-					pub case down
-				}
-			}`
+            pub contract Test28 {
+                pub enum Foo: UInt8 {
+                    pub case up
+                    pub case down
+                }
+            }`
 
 		err := deployAndUpdate(t, "Test28", oldCode, newCode)
 		require.NoError(t, err)
@@ -1365,19 +1366,19 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 	t.Run("enum remove case", func(t *testing.T) {
 		const oldCode = `
-			pub contract Test29 {
-				pub enum Foo: UInt8 {
-					pub case up
-					pub case down
-				}
-			}`
+            pub contract Test29 {
+                pub enum Foo: UInt8 {
+                    pub case up
+                    pub case down
+                }
+            }`
 
 		const newCode = `
-			pub contract Test29 {
-				pub enum Foo: UInt8 {
-					pub case up
-				}
-			}`
+            pub contract Test29 {
+                pub enum Foo: UInt8 {
+                    pub case up
+                }
+            }`
 
 		err := deployAndUpdate(t, "Test29", oldCode, newCode)
 		require.Error(t, err)
@@ -1388,21 +1389,21 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 	t.Run("enum add case", func(t *testing.T) {
 		const oldCode = `
-			pub contract Test30 {
-				pub enum Foo: UInt8 {
-					pub case up
-					pub case down
-				}
-			}`
+            pub contract Test30 {
+                pub enum Foo: UInt8 {
+                    pub case up
+                    pub case down
+                }
+            }`
 
 		const newCode = `
-			pub contract Test30 {
-				pub enum Foo: UInt8 {
-					pub case up
-					pub case down
-					pub case left
-				}
-			}`
+            pub contract Test30 {
+                pub enum Foo: UInt8 {
+                    pub case up
+                    pub case down
+                    pub case left
+                }
+            }`
 
 		err := deployAndUpdate(t, "Test30", oldCode, newCode)
 		require.NoError(t, err)
@@ -1410,22 +1411,22 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 	t.Run("enum swap cases", func(t *testing.T) {
 		const oldCode = `
-			pub contract Test31 {
-				pub enum Foo: UInt8 {
-					pub case up
-					pub case down
-					pub case left
-				}
-			}`
+            pub contract Test31 {
+                pub enum Foo: UInt8 {
+                    pub case up
+                    pub case down
+                    pub case left
+                }
+            }`
 
 		const newCode = `
-			pub contract Test31 {
-				pub enum Foo: UInt8 {
-					pub case down
-					pub case left
-					pub case up
-				}
-			}`
+            pub contract Test31 {
+                pub enum Foo: UInt8 {
+                    pub case down
+                    pub case left
+                    pub case up
+                }
+            }`
 
 		err := deployAndUpdate(t, "Test31", oldCode, newCode)
 		require.Error(t, err)
@@ -1444,22 +1445,22 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 	t.Run("Remove and add struct", func(t *testing.T) {
 		const oldCode = `
-			pub contract Test32 {
+            pub contract Test32 {
 
-				pub struct TestStruct {
-					pub let a: Int
-					pub var b: Int
+                pub struct TestStruct {
+                    pub let a: Int
+                    pub var b: Int
 
-					init() {
-						self.a = 123
-						self.b = 456
-					}
-				}
-			}`
+                    init() {
+                        self.a = 123
+                        self.b = 456
+                    }
+                }
+            }`
 
 		const updateCode1 = `
-			pub contract Test32 {
-			}`
+            pub contract Test32 {
+            }`
 
 		err := deployAndUpdate(t, "Test32", oldCode, updateCode1)
 		require.Error(t, err)
@@ -1468,16 +1469,16 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		assertMissingCompositeDeclarationError(t, cause, "TestStruct")
 
 		const updateCode2 = `
-			pub contract Test32 {
+            pub contract Test32 {
 
-				pub struct TestStruct {
-					pub let a: String
+                pub struct TestStruct {
+                    pub let a: String
 
-					init() {
-						self.a = "hello123"
-					}
-				}
-			}`
+                    init() {
+                        self.a = "hello123"
+                    }
+                }
+            }`
 
 		updateTx := newDeployTransaction(
 			sema.AuthAccountContractsTypeUpdateExperimentalFunctionName,
@@ -1503,18 +1504,18 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 	t.Run("Rename struct", func(t *testing.T) {
 		const oldCode = `
-			pub contract Test33 {
+            pub contract Test33 {
 
-				pub struct TestStruct {
-					pub let a: Int
-					pub var b: Int
+                pub struct TestStruct {
+                    pub let a: Int
+                    pub var b: Int
 
-					init() {
-						self.a = 123
-						self.b = 456
-					}
-				}
-			}`
+                    init() {
+                        self.a = 123
+                        self.b = 456
+                    }
+                }
+            }`
 
 		err := runtime.ExecuteTransaction(
 			Script{
@@ -1534,18 +1535,18 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		// Rename the struct
 
 		const newCode = `
-			pub contract Test33 {
+            pub contract Test33 {
 
-				pub struct TestStructRenamed {
-					pub let a: Int
-					pub var b: Int
+                pub struct TestStructRenamed {
+                    pub let a: Int
+                    pub var b: Int
 
-					init() {
-						self.a = 123
-						self.b = 456
-					}
-				}
-			}`
+                    init() {
+                        self.a = 123
+                        self.b = 456
+                    }
+                }
+            }`
 
 		err = runtime.ExecuteTransaction(
 			Script{
@@ -1569,10 +1570,10 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 	t.Run("Remove contract with enum", func(t *testing.T) {
 		// Add contract
 		const oldCode = `
-			pub contract Test34 {
-				pub enum TestEnum: Int {
-				}
-			}`
+            pub contract Test34 {
+                pub enum TestEnum: Int {
+                }
+            }`
 
 		err := runtime.ExecuteTransaction(
 			Script{
@@ -1622,10 +1623,10 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 	t.Run("Remove contract interface with enum", func(t *testing.T) {
 		// Add contract
 		const oldCode = `
-			pub contract interface Test35 {
-				pub enum TestEnum: Int {
-				}
-			}`
+            pub contract interface Test35 {
+                pub enum TestEnum: Int {
+                }
+            }`
 
 		err := runtime.ExecuteTransaction(
 			Script{
@@ -1675,15 +1676,15 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 	t.Run("Remove contract without enum", func(t *testing.T) {
 		// Add contract
 		const oldCode = `
-			pub contract Test36 {
-				pub struct TestStruct {
-					pub let a: Int
+            pub contract Test36 {
+                pub struct TestStruct {
+                    pub let a: Int
 
-					init() {
-						self.a = 123
-					}
-				}
-			}`
+                    init() {
+                        self.a = 123
+                    }
+                }
+            }`
 
 		err := runtime.ExecuteTransaction(
 			Script{
@@ -1771,8 +1772,6 @@ func assertConformanceMismatchError(
 	t *testing.T,
 	err error,
 	erroneousDeclName string,
-	expectedType string,
-	foundType string,
 ) {
 
 	require.Error(t, err)
@@ -1782,13 +1781,6 @@ func assertConformanceMismatchError(
 		t,
 		fmt.Sprintf("conformances does not match in `%s`", erroneousDeclName),
 		conformanceMismatchError.Error(),
-	)
-
-	assert.IsType(t, &TypeMismatchError{}, conformanceMismatchError.Err)
-	assert.Equal(
-		t,
-		fmt.Sprintf("incompatible type annotations. expected `%s`, found `%s`", expectedType, foundType),
-		conformanceMismatchError.Err.Error(),
 	)
 }
 
@@ -1917,11 +1909,11 @@ func TestContractUpdateValidationDisabled(t *testing.T) {
 
 	newDeployTransaction := func(function, name, code string) []byte {
 		return []byte(fmt.Sprintf(`
-			transaction {
-				prepare(signer: AuthAccount) {
-					signer.contracts.%s(name: "%s", code: "%s".decodeHex())
-				}
-			}`,
+            transaction {
+                prepare(signer: AuthAccount) {
+                    signer.contracts.%s(name: "%s", code: "%s".decodeHex())
+                }
+            }`,
 			function,
 			name,
 			hex.EncodeToString([]byte(code)),
@@ -1961,22 +1953,351 @@ func TestContractUpdateValidationDisabled(t *testing.T) {
 
 	t.Run("change field type", func(t *testing.T) {
 		const oldCode = `
-			pub contract Test1 {
-				pub var a: String
-				init() {
-					self.a = "hello"
-				}
-      		}`
+            pub contract Test1 {
+                pub var a: String
+                init() {
+                    self.a = "hello"
+                }
+              }`
 
 		const newCode = `
-			pub contract Test1 {
-				pub var a: Int
-				init() {
-					self.a = 0
-				}
-			}`
+            pub contract Test1 {
+                pub var a: Int
+                init() {
+                    self.a = 0
+                }
+            }`
 
 		err := deployAndUpdate(t, "Test1", oldCode, newCode)
+		require.NoError(t, err)
+	})
+}
+
+func TestConformanceChanges(t *testing.T) {
+
+	t.Parallel()
+
+	contractAddress := common.MustBytesToAddress([]byte{0x1})
+
+	runtime := newTestInterpreterRuntime(
+		WithContractUpdateValidationEnabled(true),
+	)
+
+	newDeployTransaction := func(function, name, code string) []byte {
+		return []byte(fmt.Sprintf(`
+            transaction {
+                prepare(signer: AuthAccount) {
+                    signer.contracts.%s(name: "%s", code: "%s".decodeHex())
+                }
+            }`,
+			function,
+			name,
+			hex.EncodeToString([]byte(code)),
+		))
+	}
+
+	accountCodes := map[common.LocationID][]byte{}
+	var events []cadence.Event
+
+	signerAccount := contractAddress
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(location Location) (bytes []byte, err error) {
+			return accountCodes[location.ID()], nil
+		},
+		storage: newTestLedger(nil, nil),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{signerAccount}, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			return accountCodes[location.ID()], nil
+		},
+		updateAccountContractCode: func(address Address, name string, code []byte) error {
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			accountCodes[location.ID()] = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(b)
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	t.Run("Adding conformance", func(t *testing.T) {
+		const oldCode = `
+            pub contract Test1 {
+                pub var a: Foo
+                init() {
+                    self.a = Foo()
+                }
+
+                pub struct Foo {
+                    init() {}
+                }
+            }`
+		deployTx1 := newDeployTransaction(sema.AuthAccountContractsTypeAddFunctionName, "Test1", oldCode)
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: deployTx1,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.NoError(t, err)
+
+		const newCode = `
+            pub contract Test1 {
+                pub var a: Foo
+                init() {
+                    self.a = Foo()
+                }
+
+                pub struct Foo: Bar {
+                    init() {
+                    }
+
+                    pub fun getName(): String {
+                        return "John"
+                    }
+                }
+
+                pub struct interface Bar {
+                    pub fun getName(): String
+                }
+            }`
+
+		deployTx2 := newDeployTransaction(sema.AuthAccountContractsTypeUpdateExperimentalFunctionName, "Test1", newCode)
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: deployTx2,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.NoError(t, err)
+
+		const scriptCode = `
+        import Test1 from 0x01
+
+        pub fun main(): String {
+            var x: {Test1.Bar} = Test1.a
+            return x.getName()
+        }
+`
+
+		result, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(scriptCode),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.NoError(t, err)
+		assert.Equal(t, cadence.String("John"), result)
+	})
+
+	t.Run("Adding conformance with new fields", func(t *testing.T) {
+		const oldCode = `
+            pub contract Test2 {
+                pub var a: Foo
+                init() {
+                    self.a = Foo()
+                }
+
+                pub struct Foo {
+                    init() {}
+                }
+            }`
+		deployTx1 := newDeployTransaction(sema.AuthAccountContractsTypeAddFunctionName, "Test2", oldCode)
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: deployTx1,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.NoError(t, err)
+
+		const newCode = `
+            pub contract Test2 {
+                pub var a: Foo
+                init() {
+                    self.a = Foo()
+                }
+
+                pub struct Foo: Bar {
+                    pub var name: String
+
+                    init() {
+                        self.name = "John"
+                    }
+                }
+
+                pub struct interface Bar {
+                    pub var name: String
+                }
+            }`
+
+		deployTx2 := newDeployTransaction(sema.AuthAccountContractsTypeUpdateExperimentalFunctionName, "Test2", newCode)
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: deployTx2,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.Error(t, err)
+		cause := getErrorCause(t, err, "Test2")
+		assertExtraneousFieldError(t, cause, "Foo", "name")
+	})
+
+	t.Run("Removing conformance", func(t *testing.T) {
+		const oldCode = `
+            pub contract Test3 {
+                pub var a: Foo
+                init() {
+                    self.a = Foo()
+                }
+
+                pub struct Foo: Bar {
+                    init() {}
+                }
+
+                pub struct interface Bar {
+                }
+            }`
+		deployTx1 := newDeployTransaction(sema.AuthAccountContractsTypeAddFunctionName, "Test3", oldCode)
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: deployTx1,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.NoError(t, err)
+
+		const newCode = `
+            pub contract Test3 {
+                pub var a: Foo
+                init() {
+                    self.a = Foo()
+                }
+
+                pub struct Foo {
+                    init() {}
+                }
+
+                pub struct interface Bar {
+                }
+            }`
+
+		deployTx2 := newDeployTransaction(sema.AuthAccountContractsTypeUpdateExperimentalFunctionName, "Test3", newCode)
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: deployTx2,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.Error(t, err)
+		cause := getErrorCause(t, err, "Test3")
+		assertConformanceMismatchError(t, cause, "Foo")
+	})
+
+	t.Run("Change conformance order", func(t *testing.T) {
+		const oldCode = `
+            pub contract Test4 {
+                pub var a: Foo
+                init() {
+                    self.a = Foo()
+                }
+
+                pub struct Foo: First, Second {
+                    init() {}
+                }
+
+                pub struct interface First {
+                }
+
+                pub struct interface Second {
+                }
+            }`
+		deployTx1 := newDeployTransaction(sema.AuthAccountContractsTypeAddFunctionName, "Test4", oldCode)
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: deployTx1,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.NoError(t, err)
+
+		const newCode = `
+            pub contract Test4 {
+                pub var a: Foo
+                init() {
+                    self.a = Foo()
+                }
+
+                pub struct Foo: Second, First {
+                    init() {}
+                }
+
+                pub struct interface First {
+                }
+
+                pub struct interface Second {
+                }
+            }`
+
+		deployTx2 := newDeployTransaction(sema.AuthAccountContractsTypeUpdateExperimentalFunctionName, "Test4", newCode)
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: deployTx2,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
 		require.NoError(t, err)
 	})
 }
