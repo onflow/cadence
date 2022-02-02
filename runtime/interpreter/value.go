@@ -584,6 +584,10 @@ func (BoolValue) ChildStorables() []atree.Storable {
 
 // CharacterValue
 
+// CharacterValue represents a Cadence character, which is a Unicode extended grapheme cluster.
+// Hence, use a Go string to be able to hold multiple Unicode code points (Go runes).
+// It should consist of exactly one grapheme cluster
+//
 type CharacterValue string
 
 func NewCharacterValue(r string) CharacterValue {

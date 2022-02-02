@@ -41,8 +41,8 @@ var CharacterType = &SimpleType{
 func init() {
 	CharacterType.Members = func(t *SimpleType) map[string]MemberResolver {
 		return map[string]MemberResolver{
-			"toString": {
-				Kind: common.DeclarationKindField,
+			ToStringFunctionName: {
+				Kind: common.DeclarationKindFunction,
 				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicFunctionMember(
 						t,
