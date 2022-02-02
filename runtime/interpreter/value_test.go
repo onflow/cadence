@@ -3209,7 +3209,7 @@ func TestPublicKeyValue(t *testing.T) {
 		)
 
 		assert.PanicsWithError(t,
-			(&InvalidPublicKeyError{PublicKey: publicKey, Err: fakeError}).Error(),
+			(InvalidPublicKeyError{PublicKey: publicKey, Err: fakeError}).Error(),
 			func() {
 				_ = NewPublicKeyValue(
 					inter,

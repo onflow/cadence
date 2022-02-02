@@ -3821,17 +3821,15 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 					// runtimeInterface.validatePublicKey() should be called
 					assert.True(t, publicKeyValidated)
 
-					// Invalid PublicKey errors but valid does not.
+					// Invalid PublicKey errors but valid PublicKey does not.
 					if publicKeyActualError == nil {
 						require.NoError(t, err)
 					} else {
 						assert.Error(t, err)
 						var invalidEntryPointArgumentError *InvalidEntryPointArgumentError
-						var invalidPublicKeyError *interpreter.InvalidPublicKeyError
-						var fakeErrorInstance *fakeError
 						assert.ErrorAs(t, err, &invalidEntryPointArgumentError)
-						assert.ErrorAs(t, err, &invalidPublicKeyError)
-						assert.ErrorAs(t, err, &fakeErrorInstance)
+						assert.ErrorAs(t, err, &interpreter.InvalidPublicKeyError{})
+						assert.ErrorAs(t, err, &publicKeyActualError)
 					}
 				},
 			)
@@ -3889,10 +3887,8 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 				verifyInvoked = true
 				return true, nil
 			},
-			validatePublicKey: func(publicKey *PublicKey) error {
-				return nil
-			},
 		}
+		addPublicKeyValidation(runtimeInterface, nil)
 
 		actual, err := executeScript(t, script, publicKey, runtimeInterface)
 		require.NoError(t, err)

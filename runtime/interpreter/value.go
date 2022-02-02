@@ -14859,7 +14859,7 @@ func NewPublicKeyValue(
 
 	err := validatePublicKey(interpreter, getLocationRange, publicKeyValue)
 	if err != nil {
-		panic(&InvalidPublicKeyError{
+		panic(InvalidPublicKeyError{
 			PublicKey:     publicKey,
 			Err:           err,
 			LocationRange: getLocationRange(),

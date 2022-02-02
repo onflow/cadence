@@ -20,6 +20,7 @@ package runtime
 
 import (
 	"fmt"
+	"github.com/onflow/cadence/runtime/interpreter"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -1102,19 +1103,9 @@ func TestRuntimePublicKey(t *testing.T) {
 				assert.NoError(t, err)
 			} else {
 				assert.Nil(t, value)
+				assert.ErrorAs(t, err, &errorToReturn)
+				assert.ErrorAs(t, err, &interpreter.InvalidPublicKeyError{})
 			}
-
-			//if panics {
-			//	assert.Nil(t, value)
-			//	assert.Error(t, err)
-			//	assert.ErrorAs(t, err, &fakeError)
-			//} else if validity {
-			//	assert.NotNil(t, value)
-			//	assert.NoError(t, err)
-			//} else {
-			//	assert.Error(t, err)
-			//	assert.ErrorAs(t, err, &interpreter.InvalidPublicKeyError{})
-			//}
 		}
 	})
 
@@ -1768,6 +1759,6 @@ func TestGetAuthAccount(t *testing.T) {
 
 type fakeError struct{}
 
-func (*fakeError) Error() string {
+func (fakeError) Error() string {
 	return "fake error for testing"
 }
