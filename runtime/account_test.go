@@ -1085,7 +1085,6 @@ func TestRuntimePublicKey(t *testing.T) {
 
 			storage := newTestLedger(nil, nil)
 
-
 			runtimeInterface := &testRuntimeInterface{
 				storage: storage,
 				validatePublicKey: func(publicKey *PublicKey) error {
