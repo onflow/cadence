@@ -65,73 +65,54 @@ var rlpDecodeListFunctionType = &sema.FunctionType{
 	),
 }
 
-// RLPBuiltinImpls defines the set of functions needed to implement the RLP
-// built-in functions.
-type RLPBuiltinImpls struct {
-	RLPDecodeString interpreter.HostFunction
-	RLPDecodeList   interpreter.HostFunction
-}
+var RLPDecodeStringFunction = NewStandardLibraryFunction(
+	"RLPDecodeString",
+	rlpDecodeStringFunctionType,
+	rlpDecodeStringFunctionDocString,
+	func(invocation interpreter.Invocation) interpreter.Value {
+		input := invocation.Arguments[0].(*interpreter.ArrayValue)
 
-// RLPBuiltInFunctions returns a list of standard library functions, bound to
-// the provided implementation.
-func RLPBuiltInFunctions(impls RLPBuiltinImpls) StandardLibraryFunctions {
-	return StandardLibraryFunctions{
-		NewStandardLibraryFunction(
-			"RLPDecodeString",
-			rlpDecodeStringFunctionType,
-			rlpDecodeStringFunctionDocString,
-			impls.RLPDecodeString,
-		),
-		NewStandardLibraryFunction(
-			"RLPDecodeList",
-			rlpDecodeListFunctionType,
-			rlpDecodeListFunctionDocString,
-			impls.RLPDecodeList,
-		),
-	}
-}
+		convertedInput, err := interpreter.ByteArrayValueToByteSlice(input)
+		if err != nil {
+			panic(err)
+		}
+		output, err := rlp.DecodeString(convertedInput, 0)
+		if err != nil {
+			panic(err)
+		}
+		return interpreter.ByteSliceToByteArrayValue(invocation.Interpreter, output)
+	},
+)
 
-func DefaultRLPBuiltinImpls() RLPBuiltinImpls {
-	return RLPBuiltinImpls{
-		RLPDecodeString: func(invocation interpreter.Invocation) interpreter.Value {
-			input := invocation.Arguments[0].(*interpreter.ArrayValue)
+var RLPDecodeListFunction = NewStandardLibraryFunction(
+	"RLPDecodeList",
+	rlpDecodeListFunctionType,
+	rlpDecodeListFunctionDocString,
+	func(invocation interpreter.Invocation) interpreter.Value {
+		input := invocation.Arguments[0].(*interpreter.ArrayValue)
 
-			convertedInput, err := interpreter.ByteArrayValueToByteSlice(input)
-			if err != nil {
-				panic(err)
-			}
-			output, err := rlp.DecodeString(convertedInput, 0)
-			if err != nil {
-				panic(err)
-			}
-			return interpreter.ByteSliceToByteArrayValue(invocation.Interpreter, output)
-		},
-		RLPDecodeList: func(invocation interpreter.Invocation) interpreter.Value {
-			input := invocation.Arguments[0].(*interpreter.ArrayValue)
+		convertedInput, err := interpreter.ByteArrayValueToByteSlice(input)
+		if err != nil {
+			panic(err)
+		}
 
-			convertedInput, err := interpreter.ByteArrayValueToByteSlice(input)
-			if err != nil {
-				panic(err)
-			}
+		output, err := rlp.DecodeList(convertedInput, 0)
+		if err != nil {
+			panic(err)
+		}
 
-			output, err := rlp.DecodeList(convertedInput, 0)
-			if err != nil {
-				panic(err)
-			}
+		values := make([]interpreter.Value, len(output))
+		for i, b := range output {
+			values[i] = interpreter.ByteSliceToByteArrayValue(invocation.Interpreter, b)
+		}
 
-			values := make([]interpreter.Value, len(output))
-			for i, b := range output {
-				values[i] = interpreter.ByteSliceToByteArrayValue(invocation.Interpreter, b)
-			}
-
-			return interpreter.NewArrayValue(
-				invocation.Interpreter,
-				interpreter.VariableSizedStaticType{
-					Type: interpreter.ByteArrayStaticType,
-				},
-				common.Address{},
-				values...,
-			)
-		},
-	}
-}
+		return interpreter.NewArrayValue(
+			invocation.Interpreter,
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.ByteArrayStaticType,
+			},
+			common.Address{},
+			values...,
+		)
+	},
+)
