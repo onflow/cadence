@@ -21,8 +21,9 @@ package rlp_test
 import (
 	"testing"
 
-	"github.com/onflow/cadence/runtime/stdlib/rlp"
 	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/cadence/runtime/stdlib/rlp"
 )
 
 func TestRLPReadSize(t *testing.T) {
