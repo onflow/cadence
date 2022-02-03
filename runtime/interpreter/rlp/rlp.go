@@ -62,12 +62,12 @@ func ReadSize(inp []byte, startIndex int) (isString bool, dataStartIndex, dataSi
 	firstByte := inp[startIndex]
 	startIndex++
 
-	// single character mode - first byte is the only data
+	// single character space - first byte holds the data itslef
 	if firstByte < ShortStringRangeStart {
 		return true, startIndex - 1, 1, nil
 	}
 
-	// short strings mode (0-55 bytes long string)
+	// short strings space (0-55 bytes long string)
 	// firstByte minus the start range for the short strings would return the data size
 	// valid range of firstByte is [0x80, 0xB7].
 	if firstByte < LongStringRangeStart {
@@ -75,14 +75,14 @@ func ReadSize(inp []byte, startIndex int) (isString bool, dataStartIndex, dataSi
 		return true, startIndex, int(strLen), nil
 	}
 
-	// short list mode
+	// short list space
 	// firstByte minus the start range for the short list would return the data size
 	if firstByte >= ShortListRangeStart && firstByte <= ShortListRangeEnd {
 		strLen := uint(firstByte - ShortListRangeStart)
 		return false, startIndex, int(strLen), nil
 	}
 
-	// string and list long mode
+	// string and list long space
 
 	var bytesToReadForLen uint
 	// long string mode (55+ long strings)
@@ -98,7 +98,7 @@ func ReadSize(inp []byte, startIndex int) (isString bool, dataStartIndex, dataSi
 		isString = false
 	}
 
-	// check atleast 1 byte is there to read
+	// check atleast there is one more byte to read
 	if int(startIndex) >= len(inp) {
 		return false, 0, 0, ErrIncompleteInput
 	}
@@ -116,19 +116,16 @@ func ReadSize(inp []byte, startIndex int) (isString bool, dataStartIndex, dataSi
 		return isString, startIndex, int(strLen), nil
 	}
 
-	if bytesToReadForLen > 8 {
-		return false, 0, 0, ErrNonCanonicalInput
-	}
 	// several bytes case
 
 	// allocate 8 bytes
 	lenData := make([]byte, 8)
 	// but copy to lower part only
+	// note that its not possible for bytesToReadForLen to go beyond 8
 	start := int(8 - bytesToReadForLen)
 
-	// encodign is not canonical, unnecessary bytes used for encoding
-	// checking only the first byte ensures that we don't have included
-	// trailing empty bytes in the encoding
+	// if any trailing zero bytes, unnecessary bytes were used for encoding
+	// checking only the first byte is sufficent
 	if inp[startIndex] == 0 {
 		return false, 0, 0, ErrNonCanonicalInput
 	}
