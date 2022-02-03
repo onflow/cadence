@@ -99,7 +99,7 @@ func ReadSize(inp []byte, startIndex int) (isString bool, dataStartIndex, dataSi
 	}
 
 	// check atleast there is one more byte to read
-	if int(startIndex) >= len(inp) {
+	if startIndex >= len(inp) {
 		return false, 0, 0, ErrIncompleteInput
 	}
 
@@ -125,14 +125,14 @@ func ReadSize(inp []byte, startIndex int) (isString bool, dataStartIndex, dataSi
 	start := int(8 - bytesToReadForLen)
 
 	// if any trailing zero bytes, unnecessary bytes were used for encoding
-	// checking only the first byte is sufficent
+	// checking only the first byte is sufficient
 	if inp[startIndex] == 0 {
 		return false, 0, 0, ErrNonCanonicalInput
 	}
 
 	endIndex := startIndex + int(bytesToReadForLen)
 	// check endIndex is in the range
-	if int(endIndex) > len(inp) {
+	if endIndex > len(inp) {
 		return false, 0, 0, ErrIncompleteInput
 	}
 
@@ -198,7 +198,7 @@ func DecodeList(inp []byte, startIndex int) (encodedItems [][]byte, err error) {
 	bytesRead := 0
 	retList := make([][]byte, 0)
 
-	for bytesRead < int(listDataSize) {
+	for bytesRead < listDataSize {
 
 		_, itemDataStartIndex, itemSize, err := ReadSize(inp, itemStartIndex)
 		if err != nil {
