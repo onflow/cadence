@@ -98,11 +98,11 @@ func DefaultRLPBuiltinImpls() RLPBuiltinImpls {
 
 			convertedInput, err := interpreter.ByteArrayValueToByteSlice(input)
 			if err != nil {
-				panic(err) // TODO should I panic this way?
+				panic(err)
 			}
 			output, err := rlp.DecodeString(convertedInput, 0)
 			if err != nil {
-				panic(err) // TODO should I panic this way?
+				panic(err)
 			}
 			return interpreter.ByteSliceToByteArrayValue(invocation.Interpreter, output)
 		},
@@ -111,12 +111,12 @@ func DefaultRLPBuiltinImpls() RLPBuiltinImpls {
 
 			convertedInput, err := interpreter.ByteArrayValueToByteSlice(input)
 			if err != nil {
-				panic(err) // TODO should I panic this way?
+				panic(err)
 			}
 
 			output, err := rlp.DecodeList(convertedInput, 0)
 			if err != nil {
-				panic(err) // TODO should I panic this way?
+				panic(err)
 			}
 
 			values := make([]interpreter.Value, len(output))
@@ -126,7 +126,9 @@ func DefaultRLPBuiltinImpls() RLPBuiltinImpls {
 
 			return interpreter.NewArrayValue(
 				invocation.Interpreter,
-				interpreter.ByteArrayStaticType,
+				interpreter.VariableSizedStaticType{
+					Type: interpreter.ByteArrayStaticType,
+				},
 				common.Address{},
 				values...,
 			)
