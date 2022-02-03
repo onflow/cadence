@@ -494,30 +494,37 @@ func (validator *ContractUpdateValidator) checkConformances(
 	newDecl *ast.CompositeDeclaration,
 ) {
 
+	// Here it is assumed enums will always have one and only one conformance.
+	// This is enforced by the checker.
+	// Therefore, below check for multiple conformances is only applicable
+	// for non-enum type composite declarations. i.e: structs, resources, etc.
+
 	oldConformances := oldDecl.Conformances
 	newConformances := newDecl.Conformances
 
-	if len(oldConformances) != len(newConformances) {
-		validator.report(&ConformanceCountMismatchError{
-			Expected: len(oldConformances),
-			Found:    len(newConformances),
-			Range:    ast.NewRangeFromPositioned(newDecl.Identifier),
-		})
+	// All the existing conformances must have a match. Order is not important.
+	// Having extra new conformance is OK. See: https://github.com/onflow/cadence/issues/1394
+	for _, oldConformance := range oldConformances {
+		found := false
+		for index, newConformance := range newConformances {
+			err := oldConformance.CheckEqual(newConformance, validator)
+			if err == nil {
+				found = true
 
-		// If the lengths are not the same, trying to match the conformance
-		// may result in too many regression errors. hence return.
-		return
-	}
+				// Remove the matched conformance, so we don't have to check it again.
+				// i.e: optimization
+				newConformances = append(newConformances[:index], newConformances[index+1:]...)
+				break
+			}
+		}
 
-	for index, oldConformance := range oldConformances {
-		newConformance := newConformances[index]
-		err := oldConformance.CheckEqual(newConformance, validator)
-		if err != nil {
+		if !found {
 			validator.report(&ConformanceMismatchError{
 				DeclName: newDecl.Identifier.Identifier,
-				Err:      err,
-				Range:    ast.NewRangeFromPositioned(newConformance),
+				Range:    ast.NewRangeFromPositioned(newDecl.Identifier),
 			})
+
+			return
 		}
 	}
 }
