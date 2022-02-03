@@ -19,10 +19,10 @@
 package stdlib
 
 import (
-	"fmt"
-
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib/rlp"
 )
 
 // This file defines functions built in to the Flow runtime.
@@ -94,16 +94,42 @@ func RLPBuiltInFunctions(impls RLPBuiltinImpls) StandardLibraryFunctions {
 func DefaultRLPBuiltinImpls() RLPBuiltinImpls {
 	return RLPBuiltinImpls{
 		RLPDecodeString: func(invocation interpreter.Invocation) interpreter.Value {
-			// input := invocation.Arguments[0].(*interpreter.ArrayValue)
-			// output, err := rlp.DecodeString(input, 0)
-			// if err != nil {
-			// 	panic(err)
-			// }
-			// return output
-			panic(fmt.Errorf("cannot rlp decode string"))
+			input := invocation.Arguments[0].(*interpreter.ArrayValue)
+
+			convertedInput, err := interpreter.ByteArrayValueToByteSlice(input)
+			if err != nil {
+				panic(err) // TODO should I panic this way?
+			}
+			output, err := rlp.DecodeString(convertedInput, 0)
+			if err != nil {
+				panic(err) // TODO should I panic this way?
+			}
+			return interpreter.ByteSliceToByteArrayValue(invocation.Interpreter, output)
 		},
 		RLPDecodeList: func(invocation interpreter.Invocation) interpreter.Value {
-			panic(fmt.Errorf("cannot rlp decode list"))
+			input := invocation.Arguments[0].(*interpreter.ArrayValue)
+
+			convertedInput, err := interpreter.ByteArrayValueToByteSlice(input)
+			if err != nil {
+				panic(err) // TODO should I panic this way?
+			}
+
+			output, err := rlp.DecodeList(convertedInput, 0)
+			if err != nil {
+				panic(err) // TODO should I panic this way?
+			}
+
+			values := make([]interpreter.Value, len(output))
+			for i, b := range output {
+				values[i] = interpreter.ByteSliceToByteArrayValue(invocation.Interpreter, b)
+			}
+
+			return interpreter.NewArrayValue(
+				invocation.Interpreter,
+				interpreter.ByteArrayStaticType,
+				common.Address{},
+				values...,
+			)
 		},
 	}
 }
