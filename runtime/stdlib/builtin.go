@@ -121,6 +121,8 @@ var BuiltinFunctions = StandardLibraryFunctions{
 	CreatePublicKeyFunction,
 	AggregateBLSSignaturesFunction,
 	AggregateBLSPublicKeysFunction,
+	RLPDecodeStringFunction,
+	RLPDecodeListFunction,
 }
 
 // LogFunction
