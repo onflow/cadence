@@ -21,7 +21,7 @@ package rlp_test
 import (
 	"testing"
 
-	"github.com/onflow/cadence/runtime/interpreter/rlp"
+	"github.com/onflow/cadence/runtime/stdlib/rlp"
 	"github.com/stretchr/testify/require"
 )
 
