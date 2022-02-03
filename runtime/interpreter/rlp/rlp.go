@@ -21,7 +21,6 @@ package rlp
 import (
 	"encoding/binary"
 	"errors"
-	"fmt"
 )
 
 const (
@@ -36,19 +35,28 @@ const (
 	LongListRangeStart    = 0xf8
 	LongListRangeEnd      = 0xff // not in use, here only for inclusivity
 	MaxShortLengthAllowed = 55
-	MaxLongLengthAllowed  = 9223372036854775807 // max value of int
+	MaxLongLengthAllowed  = 9223372036854775807 // max int value (needed for slicing)
 )
 
-// TODO make error messages better
+var (
+	ErrEmptyInput              = errors.New("input data is empty")
+	ErrInvalidStartIndex       = errors.New("invalid start index")
+	ErrIncompleteInput         = errors.New("incomplete input! not enough bytes to read")
+	ErrNonCanonicalInput       = errors.New("non-canonical encoded input")
+	ErrDataSizeTooLarge        = errors.New("data size is larger than what is supported")
+	ErrListSizeMismatch        = errors.New("list size doesn't match the size of items")
+	ErrInputContainsExtraBytes = errors.New("input contains extra bytes")
+	ErrTypeMismatch            = errors.New("type extracted from input doesn't match the function")
+)
 
 func ReadSize(inp []byte, startIndex int) (isString bool, dataStartIndex, dataSize int, err error) {
 	if len(inp) == 0 {
-		return false, 0, 0, fmt.Errorf("input data is empty")
+		return false, 0, 0, ErrEmptyInput
 	}
 
 	// check startIndex is in the range
 	if startIndex >= len(inp) {
-		return false, 0, 0, fmt.Errorf("start index is out of the range")
+		return false, 0, 0, ErrInvalidStartIndex
 	}
 
 	firstByte := inp[startIndex]
@@ -92,7 +100,7 @@ func ReadSize(inp []byte, startIndex int) (isString bool, dataStartIndex, dataSi
 
 	// check atleast 1 byte is there to read
 	if int(startIndex) >= len(inp) {
-		return false, 0, 0, fmt.Errorf("not enough bytes to read string size")
+		return false, 0, 0, ErrIncompleteInput
 	}
 
 	// bytesToReadForLen with value of zero never happens
@@ -103,13 +111,13 @@ func ReadSize(inp []byte, startIndex int) (isString bool, dataStartIndex, dataSi
 		if strLen <= MaxShortLengthAllowed {
 			// encoding is not canonical, unnecessary bytes used for encoding
 			// should have encoded as a short string
-			return false, 0, 0, fmt.Errorf("non canonical encoding")
+			return false, 0, 0, ErrNonCanonicalInput
 		}
 		return isString, startIndex, int(strLen), nil
 	}
 
 	if bytesToReadForLen > 8 {
-		return false, 0, 0, fmt.Errorf("bytes to read for len is too large")
+		return false, 0, 0, ErrNonCanonicalInput
 	}
 	// several bytes case
 
@@ -122,13 +130,13 @@ func ReadSize(inp []byte, startIndex int) (isString bool, dataStartIndex, dataSi
 	// checking only the first byte ensures that we don't have included
 	// trailing empty bytes in the encoding
 	if inp[startIndex] == 0 {
-		return false, 0, 0, fmt.Errorf("non canonical encoding")
+		return false, 0, 0, ErrNonCanonicalInput
 	}
 
 	endIndex := startIndex + int(bytesToReadForLen)
 	// check endIndex is in the range
 	if int(endIndex) > len(inp) {
-		return false, 0, 0, fmt.Errorf("not enough bytes to read string size 2")
+		return false, 0, 0, ErrIncompleteInput
 	}
 
 	copy(lenData[start:], inp[startIndex:endIndex])
@@ -138,47 +146,55 @@ func ReadSize(inp []byte, startIndex int) (isString bool, dataStartIndex, dataSi
 	if strLen <= MaxShortLengthAllowed {
 		// encoding is not canonical, unnecessary bytes used for encoding
 		// should have encoded as a short string
-		return false, 0, 0, fmt.Errorf("non canonical encoding")
+		return false, 0, 0, ErrNonCanonicalInput
 	}
 	if strLen > MaxLongLengthAllowed {
-		return false, 0, 0, fmt.Errorf("data size is too large")
+		return false, 0, 0, ErrDataSizeTooLarge
 	}
 	return isString, startIndex, int(strLen), nil
 }
 
-func DecodeString(inp []byte, startIndex int) (str []byte, nextStartIndex int, err error) {
+func DecodeString(inp []byte, startIndex int) (str []byte, err error) {
 	// read data size info
 	isString, dataStartIndex, dataSize, err := ReadSize(inp, startIndex)
 	if err != nil {
-		return nil, 0, fmt.Errorf("decode string failed: %w", err)
+		return nil, err
 	}
 	// check type
 	if !isString {
-		return nil, 0, errors.New("type mismatch, expected string but got list")
+		return nil, ErrTypeMismatch
 	}
 	// single character special case
 	if dataSize == 1 && startIndex == dataStartIndex {
-		return []byte{inp[dataStartIndex]}, startIndex + 1, nil
+		if len(inp) > 1 {
+			return nil, ErrInputContainsExtraBytes
+		}
+		return []byte{inp[dataStartIndex]}, nil
 	}
 
 	// collect and return string
 	dataEndIndex := dataStartIndex + dataSize
 	if dataEndIndex > len(inp) {
-		return nil, 0, fmt.Errorf("not enough bytes to read string data")
+		return nil, ErrIncompleteInput
 	}
-	return inp[dataStartIndex:dataEndIndex], dataEndIndex, nil
+
+	if len(inp) > dataEndIndex {
+		return nil, ErrInputContainsExtraBytes
+	}
+
+	return inp[dataStartIndex:dataEndIndex], nil
 }
 
-func DecodeList(inp []byte, startIndex int) (encodedItems [][]byte, newStartIndex int, err error) {
+func DecodeList(inp []byte, startIndex int) (encodedItems [][]byte, err error) {
 	// read data size info
 	isString, dataStartIndex, listDataSize, err := ReadSize(inp, startIndex)
 	if err != nil {
-		return nil, 0, fmt.Errorf("decode string failed: %w", err)
+		return nil, err
 	}
 
 	// check type
 	if isString {
-		return nil, 0, errors.New("type mismatch, expected list but got string")
+		return nil, ErrTypeMismatch
 	}
 
 	itemStartIndex := dataStartIndex
@@ -189,17 +205,24 @@ func DecodeList(inp []byte, startIndex int) (encodedItems [][]byte, newStartInde
 
 		_, itemDataStartIndex, itemSize, err := ReadSize(inp, itemStartIndex)
 		if err != nil {
-			return nil, 0, fmt.Errorf("cannot read list item: %w", err)
+			return nil, err
 		}
 		// collect encoded item
 		itemEndIndex := itemDataStartIndex + itemSize
 		if itemEndIndex > len(inp) {
-			return nil, 0, fmt.Errorf("not enough bytes to read string data")
+			return nil, ErrIncompleteInput
 		}
 		retList = append(retList, inp[itemDataStartIndex:itemEndIndex])
 		bytesRead += itemEndIndex - itemStartIndex
 		itemStartIndex = itemEndIndex
 	}
+	if bytesRead != listDataSize {
+		return nil, ErrListSizeMismatch
+	}
 
-	return retList, itemStartIndex, nil
+	if len(inp) > itemStartIndex {
+		return nil, ErrInputContainsExtraBytes
+	}
+
+	return retList, nil
 }

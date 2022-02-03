@@ -25,7 +25,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TODO Add test cases for all other errors
+// TODO Add test cases for all other errors, some errors are not covered here
+
 func TestRLPReadSize(t *testing.T) {
 	tests := []struct {
 		input          []byte
@@ -33,78 +34,78 @@ func TestRLPReadSize(t *testing.T) {
 		isString       bool
 		dataStartIndex int
 		dataSize       int
-		errorMsg       string
+		expectedErr    error
 	}{
 		// string test
 
 		// empty data
-		{[]byte{}, 0, false, 0, 0, "input data is empty"},
+		{[]byte{}, 0, false, 0, 0, rlp.ErrEmptyInput},
 		// out of range index
-		{[]byte{0x00}, 1, false, 0, 0, "start index is out of the range"},
+		{[]byte{0x00}, 1, false, 0, 0, rlp.ErrInvalidStartIndex},
 		// first char
-		{[]byte{0x00}, 0, true, 0, 1, ""},
+		{[]byte{0x00}, 0, true, 0, 1, nil},
 		// next char
-		{[]byte{0x01}, 0, true, 0, 1, ""},
+		{[]byte{0x01}, 0, true, 0, 1, nil},
 		// last char
-		{[]byte{0x7f}, 0, true, 0, 1, ""},
+		{[]byte{0x7f}, 0, true, 0, 1, nil},
 		// empty string
-		{[]byte{0x80}, 0, true, 1, 0, ""},
+		{[]byte{0x80}, 0, true, 1, 0, nil},
 		// start of short string
-		{[]byte{0x81}, 0, true, 1, 1, ""},
+		{[]byte{0x81}, 0, true, 1, 1, nil},
 		// end of short string
-		{[]byte{0xb7}, 0, true, 1, 55, ""},
+		{[]byte{0xb7}, 0, true, 1, 55, nil},
 		// start of long string (reading next byte to find out the size and decoding of that byte is smaller than 55)
-		{[]byte{0xb8, 0x01}, 0, false, 0, 0, "non canonical encoding"},
-		{[]byte{0xb8, 0x37}, 0, false, 0, 0, "non canonical encoding"},
+		{[]byte{0xb8, 0x01}, 0, false, 0, 0, rlp.ErrNonCanonicalInput},
+		{[]byte{0xb8, 0x37}, 0, false, 0, 0, rlp.ErrNonCanonicalInput},
 		// first valid long string entry (string len 56, first two bytes used for string size)
-		{[]byte{0xb8, 0x38}, 0, true, 2, 56, ""},
-		{[]byte{0xb8, 0x39}, 0, true, 2, 57, ""},
+		{[]byte{0xb8, 0x38}, 0, true, 2, 56, nil},
+		{[]byte{0xb8, 0x39}, 0, true, 2, 57, nil},
 		// end of long string with only 1 extra byte (string len 255)
-		{[]byte{0xb8, 0xff}, 0, true, 2, 255, ""},
+		{[]byte{0xb8, 0xff}, 0, true, 2, 255, nil},
 		// long string (string len 256)
-		{[]byte{0xb9, 0x01, 0x00}, 0, true, 3, 256, ""},
+		{[]byte{0xb9, 0x01, 0x00}, 0, true, 3, 256, nil},
 		// trailing zero bytes are not allowed (ie. the size has to be bigger than 255)
-		{[]byte{0xb8, 0x00, 0xff}, 0, false, 0, 0, "non canonical encoding"},
+		{[]byte{0xb8, 0x00, 0xff}, 0, false, 0, 0, rlp.ErrNonCanonicalInput},
 		// several bytes
-		{[]byte{0xba, 0x01, 0x00, 0x00}, 0, true, 4, 65536, ""},
+		{[]byte{0xba, 0x01, 0x00, 0x00}, 0, true, 4, 65536, nil},
 		// end of large string (max number of bytes)
-		{[]byte{0xbf, 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}, 0, true, 9, 9223372036854775807, ""},
+		{[]byte{0xbf, 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}, 0, true, 9, 9223372036854775807, nil},
 		// we don't support data size larger than 9223372036854775807
-		{[]byte{0xbf, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}, 0, false, 0, 0, "data size is too large"},
+		{[]byte{0xbf, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}, 0, false, 0, 0, rlp.ErrDataSizeTooLarge},
 
 		// list test
 
 		// empty list
-		{[]byte{0xc0}, 0, false, 1, 0, ""},
+		{[]byte{0xc0}, 0, false, 1, 0, nil},
 		// short list with 1 byte of data
-		{[]byte{0xc1}, 0, false, 1, 1, ""},
+		{[]byte{0xc1}, 0, false, 1, 1, nil},
 		// short list with 55 bytes of data
-		{[]byte{0xf7}, 0, false, 1, 55, ""},
+		{[]byte{0xf7}, 0, false, 1, 55, nil},
 		// start of long list (reading next byte to find out the size and decoding of that byte is smaller than 55)
-		{[]byte{0xf8, 0x01}, 0, false, 0, 0, "non canonical encoding"},
-		{[]byte{0xf8, 0x37}, 0, false, 0, 0, "non canonical encoding"},
+		{[]byte{0xf8, 0x01}, 0, false, 0, 0, rlp.ErrNonCanonicalInput},
+		{[]byte{0xf8, 0x37}, 0, false, 0, 0, rlp.ErrNonCanonicalInput},
 		// first valid long string entry (string len 56, first two bytes used for string size)
-		{[]byte{0xf8, 0x38}, 0, false, 2, 56, ""},
-		{[]byte{0xf8, 0x39}, 0, false, 2, 57, ""},
+		{[]byte{0xf8, 0x38}, 0, false, 2, 56, nil},
+		{[]byte{0xf8, 0x39}, 0, false, 2, 57, nil},
 		// end of long string with only 1 extra byte (string len 255)
-		{[]byte{0xf8, 0xff}, 0, false, 2, 255, ""},
+		{[]byte{0xf8, 0xff}, 0, false, 2, 255, nil},
 		// long list (len 256) 2 extra bytes
-		{[]byte{0xf9, 0x01, 0x00}, 0, false, 3, 256, ""},
+		{[]byte{0xf9, 0x01, 0x00}, 0, false, 3, 256, nil},
 		// trailing zero bytes are not allowed (ie. the size has to be bigger than 255)
-		{[]byte{0xf8, 0x00, 0xff}, 0, false, 0, 0, "non canonical encoding"},
+		{[]byte{0xf8, 0x00, 0xff}, 0, false, 0, 0, rlp.ErrNonCanonicalInput},
 		// several bytes
-		{[]byte{0xfa, 0x01, 0x00, 0x00}, 0, false, 4, 65536, ""},
+		{[]byte{0xfa, 0x01, 0x00, 0x00}, 0, false, 4, 65536, nil},
 		// end of large list (max number of bytes)
-		{[]byte{0xff, 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}, 0, false, 9, rlp.MaxLongLengthAllowed, ""},
+		{[]byte{0xff, 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}, 0, false, 9, rlp.MaxLongLengthAllowed, nil},
 		// we don't support data size larger than 9223372036854775807
-		{[]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}, 0, false, 0, 0, "data size is too large"},
+		{[]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}, 0, false, 0, 0, rlp.ErrDataSizeTooLarge},
 	}
 
 	for _, test := range tests {
 		isString, dataStartIndex, dataSize, err := rlp.ReadSize(test.input, test.startIndex)
-		if len(test.errorMsg) > 0 {
+		if test.expectedErr != nil {
 			require.Error(t, err)
-			require.Equal(t, test.errorMsg, err.Error())
+			require.Equal(t, test.expectedErr, err)
 		} else {
 			require.NoError(t, err)
 		}
@@ -207,11 +208,9 @@ func TestHappyCaseReadBytesItem(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		item, nextIndex, err := rlp.DecodeString(test.encoded, 0)
+		item, err := rlp.DecodeString(test.encoded, 0)
 		require.NoError(t, err)
-		require.Equal(t, nextIndex, len(test.encoded))
 		require.Equal(t, item, test.inp)
-
 	}
 }
 
@@ -329,9 +328,8 @@ func TestHappyCaseReadListItem(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		item, nextIndex, err := rlp.DecodeList(test.encoded, 0)
+		item, err := rlp.DecodeList(test.encoded, 0)
 		require.NoError(t, err)
-		require.Equal(t, nextIndex, len(test.encoded))
 		for i, expectedItem := range test.items {
 			require.Equal(t, item[i], expectedItem)
 		}
