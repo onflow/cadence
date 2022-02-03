@@ -120,6 +120,8 @@ var BuiltinFunctions = StandardLibraryFunctions{
 	AssertFunction,
 	PanicFunction,
 	CreatePublicKeyFunction,
+	RLPDecodeStringFunction,
+	RLPDecodeListFunction,
 }
 
 // LogFunction
