@@ -27,16 +27,16 @@ import (
 
 func TestRLPReadBytesItem(t *testing.T) {
 	tests := []struct {
-		inp     string
+		inp     []byte
 		encoded []byte
 	}{
-		{"A",
+		{[]byte("A"),
 			[]byte{0x41},
 		},
-		{"dog",
+		{[]byte("dog"),
 			[]byte{0x83, 0x64, 0x6f, 0x67},
 		},
-		{"this is a test lo0o0o0o0o0ong string with 55 characters",
+		{[]byte("this is a test lo0o0o0o0o0ong string with 55 characters"),
 			[]byte{0xb7, // one byte size
 				0x74, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20,
 				0x61, 0x20, 0x74, 0x65, 0x73, 0x74, 0x20, 0x6c,
@@ -46,7 +46,7 @@ func TestRLPReadBytesItem(t *testing.T) {
 				0x68, 0x20, 0x35, 0x35, 0x20, 0x63, 0x68, 0x61,
 				0x72, 0x61, 0x63, 0x74, 0x65, 0x72, 0x73},
 		},
-		{"this is a test lo0o0o0o0o0o0ng string with 56 characters",
+		{[]byte("this is a test lo0o0o0o0o0o0ng string with 56 characters"),
 			[]byte{0xb8, 0x38, // an extra byte for size
 				0x74, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20,
 				0x61, 0x20, 0x74, 0x65, 0x73, 0x74, 0x20, 0x6c,
@@ -56,9 +56,9 @@ func TestRLPReadBytesItem(t *testing.T) {
 				0x74, 0x68, 0x20, 0x35, 0x36, 0x20, 0x63, 0x68,
 				0x61, 0x72, 0x61, 0x63, 0x74, 0x65, 0x72, 0x73},
 		},
-		{"Lorem ipsum dolor sit amet, consectetuer adipiscing elit. " +
+		{[]byte("Lorem ipsum dolor sit amet, consectetuer adipiscing elit. " +
 			"Aenean commodo ligula eget dolor. Aenean massa. Cum sociis natoque penatibus" +
-			" et magnis dis parturient montes, nascetur ridiculus mus.",
+			" et magnis dis parturient montes, nascetur ridiculus mus."),
 			[]byte{0xb8, 0xbf, // two byte sizes
 				0x4c, 0x6f, 0x72, 0x65, 0x6d, 0x20, 0x69, 0x70, 0x73, 0x75,
 				0x6d, 0x20, 0x64, 0x6f, 0x6c, 0x6f, 0x72, 0x20, 0x73, 0x69,
@@ -81,10 +81,10 @@ func TestRLPReadBytesItem(t *testing.T) {
 				0x69, 0x63, 0x75, 0x6c, 0x75, 0x73, 0x20, 0x6d, 0x75, 0x73,
 				0x2e},
 		},
-		{"Lorem ipsum dolor sit amet, consectetur adipiscing elit. " +
+		{[]byte("Lorem ipsum dolor sit amet, consectetur adipiscing elit. " +
 			"Sed imperdiet odio a nibh rutrum blandit. Phasellus porta " +
 			"eleifend tellus non consequat. Donec sodales velit in tortor " +
-			"iaculis, sollicitudin dignissim orci maximus. Nunc at est sem. Sed congue proin.",
+			"iaculis, sollicitudin dignissim orci maximus. Nunc at est sem. Sed congue proin."),
 			[]byte{0xb9, 0x01, 0x00, // three bytes for size (256 chars) - checks big endian encoding
 				0x4c, 0x6f, 0x72, 0x65, 0x6d, 0x20, 0x69, 0x70, 0x73, 0x75, 0x6d,
 				0x20, 0x64, 0x6f, 0x6c, 0x6f, 0x72, 0x20, 0x73, 0x69, 0x74, 0x20,
@@ -114,10 +114,10 @@ func TestRLPReadBytesItem(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		item, nextIndex, err := rlp.ReadBytesItem(test.encoded, 0)
+		item, nextIndex, err := rlp.RLPDecodeString(test.encoded, 0)
 		require.NoError(t, err)
 		require.Equal(t, nextIndex, len(test.encoded))
-		require.Equal(t, string(item), test.inp)
+		require.Equal(t, item, test.inp)
 
 	}
 }
@@ -130,17 +130,16 @@ func TestRLPReadListItem(t *testing.T) {
 	// TODO add a single item string
 
 	tests := []struct {
-		items   []rlp.Item
+		items   [][]byte
 		encoded []byte
 	}{
 		{
-			[]rlp.Item{rlp.BytesItem("A")}, // single element
+			[][]byte{[]byte("A")}, // single element
 			[]byte{0xc1, 0x41},
 		},
 		{
-			[]rlp.Item{
-				rlp.BytesItem("ABCDEFG"),
-				rlp.BytesItem("HIJKLMN"),
+			[][]byte{[]byte("ABCDEFG"),
+				[]byte("HIJKLMN"),
 			}, // two short string elements
 			[]byte{0xd0, // number of elements in a short list
 				0x87,                                     // size of string
@@ -150,13 +149,12 @@ func TestRLPReadListItem(t *testing.T) {
 			},
 		},
 		{
-			[]rlp.Item{
-				rlp.BytesItem("AB"),
-				rlp.BytesItem("CD"),
-				rlp.BytesItem("EF"),
-				rlp.BytesItem(""),
-				rlp.BytesItem("GH"),
-				rlp.BytesItem(""),
+			[][]byte{[]byte("AB"),
+				[]byte("CD"),
+				[]byte("EF"),
+				[]byte(""),
+				[]byte("GH"),
+				[]byte(""),
 			},
 			[]byte{0xce, 0x82, 0x41, 0x42, 0x82, 0x43, 0x44, 0x82, 0x45, 0x46, 0x80, 0x82, 0x47, 0x48, 0x80},
 		},
@@ -166,14 +164,14 @@ func TestRLPReadListItem(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		item, nextIndex, err := rlp.ReadListItem(test.encoded, 0, 0)
+		item, nextIndex, err := rlp.RLPDecodeList(test.encoded, 0)
 		require.NoError(t, err)
 		require.Equal(t, nextIndex, len(test.encoded))
 		for i, expectedItem := range test.items {
-			require.Equal(t, item.Get(i), expectedItem)
+			require.Equal(t, item[i], expectedItem)
 		}
 
 	}
 }
 
-// TODO add nested tests
+// // TODO add nested tests
