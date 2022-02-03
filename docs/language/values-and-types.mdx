@@ -886,6 +886,27 @@ The `String` type also provides the following functions:
   String.encodeHex(data)  // is `"010203cade"`
   ```
 
+`String`s are also indexable, returning a `Character` value. 
+
+```cadence
+let str = "abc"
+let c = str[0] // is the Character "a"
+```
+
+### Character Fields and Functions
+
+`Character` values can be converted into `String` values using the `toString` function:
+
+- `cadence•fun toString(): String`
+
+  Returns the string representation of the character.
+
+  ```cadence
+  let c: Character = "x"
+
+  c.toString()  // is "x"
+  ```
+
 ## Arrays
 
 Arrays are mutable, ordered collections of values.

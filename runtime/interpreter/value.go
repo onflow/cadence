@@ -526,6 +526,7 @@ func (v BoolValue) String() string {
 func (v BoolValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
+
 func (v BoolValue) ConformsToDynamicType(
 	_ *Interpreter,
 	_ func() LocationRange,
@@ -579,6 +580,157 @@ func (v BoolValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 
 func (BoolValue) ChildStorables() []atree.Storable {
 	return nil
+}
+
+// CharacterValue
+
+// CharacterValue represents a Cadence character, which is a Unicode extended grapheme cluster.
+// Hence, use a Go string to be able to hold multiple Unicode code points (Go runes).
+// It should consist of exactly one grapheme cluster
+//
+type CharacterValue string
+
+func NewCharacterValue(r string) CharacterValue {
+	return CharacterValue(r)
+}
+
+var _ Value = CharacterValue("a")
+var _ atree.Storable = CharacterValue("a")
+var _ EquatableValue = CharacterValue("a")
+var _ HashableValue = CharacterValue("a")
+var _ MemberAccessibleValue = CharacterValue("a")
+
+func (CharacterValue) IsValue() {}
+
+func (v CharacterValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitCharacterValue(interpreter, v)
+}
+
+func (CharacterValue) Walk(_ func(Value)) {
+	// NO-OP
+}
+
+var charDyanmicType DynamicType = CharacterDynamicType{}
+
+func (CharacterValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
+	return charDyanmicType
+}
+
+func (CharacterValue) StaticType() StaticType {
+	return PrimitiveStaticTypeCharacter
+}
+
+func (v CharacterValue) String() string {
+	return format.String(string(v))
+}
+
+func (v CharacterValue) RecursiveString(_ SeenReferences) string {
+	return v.String()
+}
+
+func (v CharacterValue) NormalForm() string {
+	return norm.NFC.String(string(v))
+}
+
+func (v CharacterValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
+	otherChar, ok := other.(CharacterValue)
+	if !ok {
+		return false
+	}
+	return v.NormalForm() == otherChar.NormalForm()
+}
+
+func (v CharacterValue) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
+	s := []byte(string(v))
+	length := 1 + len(s)
+	var buffer []byte
+	if length <= len(scratch) {
+		buffer = scratch[:length]
+	} else {
+		buffer = make([]byte, length)
+	}
+
+	buffer[0] = byte(HashInputTypeCharacter)
+	copy(buffer[1:], s)
+	return buffer
+}
+
+func (v CharacterValue) ConformsToDynamicType(
+	_ *Interpreter,
+	_ func() LocationRange,
+	dynamicType DynamicType,
+	_ TypeConformanceResults,
+) bool {
+	_, ok := dynamicType.(CharacterDynamicType)
+	return ok
+}
+
+func (v CharacterValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+	return v, nil
+}
+
+func (CharacterValue) NeedsStoreTo(_ atree.Address) bool {
+	return false
+}
+
+func (CharacterValue) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (v CharacterValue) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
+	return v
+}
+
+func (v CharacterValue) Clone(_ *Interpreter) Value {
+	return v
+}
+
+func (CharacterValue) DeepRemove(_ *Interpreter) {
+	// NO-OP
+}
+
+func (v CharacterValue) ByteSize() uint32 {
+	return cborTagSize + getBytesCBORSize([]byte(string(v)))
+}
+
+func (v CharacterValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
+func (CharacterValue) ChildStorables() []atree.Storable {
+	return nil
+}
+
+func (v CharacterValue) GetMember(inter *Interpreter, _ func() LocationRange, name string) Value {
+	switch name {
+	case sema.ToStringFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				return NewStringValue(string(v))
+			},
+			sema.ToStringFunctionType,
+		)
+	}
+	return nil
+}
+
+func (CharacterValue) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
+	// Characters have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
+func (CharacterValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+	// Characters have no settable members (fields / functions)
+	panic(errors.NewUnreachableError())
 }
 
 // StringValue
@@ -751,8 +903,7 @@ func (v *StringValue) GetKey(_ *Interpreter, getLocationRange func() LocationRan
 	}
 
 	char := v.graphemes.Str()
-
-	return NewStringValue(char)
+	return NewCharacterValue(char)
 }
 
 func (*StringValue) SetKey(_ *Interpreter, _ func() LocationRange, _ Value, _ Value) {

@@ -513,6 +513,13 @@ func (interpreter *Interpreter) VisitFixedPointExpression(expression *ast.FixedP
 }
 
 func (interpreter *Interpreter) VisitStringExpression(expression *ast.StringExpression) ast.Repr {
+	stringType := interpreter.Program.Elaboration.StringExpressionType[expression]
+
+	switch stringType {
+	case sema.CharacterType:
+		return NewCharacterValue(expression.Value)
+	}
+
 	return NewStringValue(expression.Value)
 }
 
