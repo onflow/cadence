@@ -527,7 +527,14 @@ func TestCheckIntegerLiteralArguments(t *testing.T) {
 				),
 			)
 
-			require.NoError(t, err)
+			switch ty {
+			case sema.IntegerType,
+				sema.SignedIntegerType:
+				errs := ExpectCheckerErrors(t, err, 1)
+				assert.IsType(t, &sema.InvalidBinaryOperandsError{}, errs[0])
+			default:
+				require.NoError(t, err)
+			}
 		})
 	}
 }
