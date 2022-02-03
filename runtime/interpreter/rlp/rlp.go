@@ -36,14 +36,19 @@ const (
 	LongListRangeStart    = 0xf8
 	LongListRangeEnd      = 0xff // not in use, here only for inclusivity
 	MaxShortLengthAllowed = 55
+	MaxLongLengthAllowed  = 9223372036854775807 // max value of int
 )
 
 // TODO make error messages better
 
-func rlpReadSize(inp []byte, startIndex int) (isString bool, dataStartIndex, dataSize int, err error) {
+func ReadSize(inp []byte, startIndex int) (isString bool, dataStartIndex, dataSize int, err error) {
+	if len(inp) == 0 {
+		return false, 0, 0, fmt.Errorf("input data is empty")
+	}
+
 	// check startIndex is in the range
 	if startIndex >= len(inp) {
-		return false, 0, 0, fmt.Errorf("startIndex error")
+		return false, 0, 0, fmt.Errorf("start index is out of the range")
 	}
 
 	firstByte := inp[startIndex]
@@ -81,7 +86,7 @@ func rlpReadSize(inp []byte, startIndex int) (isString bool, dataStartIndex, dat
 
 	// long list mode
 	if firstByte >= LongListRangeStart {
-		bytesToReadForLen = uint(firstByte - ShortStringRangeEnd)
+		bytesToReadForLen = uint(firstByte - ShortListRangeEnd)
 		isString = false
 	}
 
@@ -103,6 +108,9 @@ func rlpReadSize(inp []byte, startIndex int) (isString bool, dataStartIndex, dat
 		return isString, startIndex, int(strLen), nil
 	}
 
+	if bytesToReadForLen > 8 {
+		return false, 0, 0, fmt.Errorf("bytes to read for len is too large")
+	}
 	// several bytes case
 
 	// allocate 8 bytes
@@ -132,12 +140,15 @@ func rlpReadSize(inp []byte, startIndex int) (isString bool, dataStartIndex, dat
 		// should have encoded as a short string
 		return false, 0, 0, fmt.Errorf("non canonical encoding")
 	}
+	if strLen > MaxLongLengthAllowed {
+		return false, 0, 0, fmt.Errorf("data size is too large")
+	}
 	return isString, startIndex, int(strLen), nil
 }
 
-func RLPDecodeString(inp []byte, startIndex int) (str []byte, nextStartIndex int, err error) {
+func DecodeString(inp []byte, startIndex int) (str []byte, nextStartIndex int, err error) {
 	// read data size info
-	isString, dataStartIndex, dataSize, err := rlpReadSize(inp, startIndex)
+	isString, dataStartIndex, dataSize, err := ReadSize(inp, startIndex)
 	if err != nil {
 		return nil, 0, fmt.Errorf("decode string failed: %w", err)
 	}
@@ -158,9 +169,9 @@ func RLPDecodeString(inp []byte, startIndex int) (str []byte, nextStartIndex int
 	return inp[dataStartIndex:dataEndIndex], dataEndIndex, nil
 }
 
-func RLPDecodeList(inp []byte, startIndex int) (encodedItems [][]byte, newStartIndex int, err error) {
+func DecodeList(inp []byte, startIndex int) (encodedItems [][]byte, newStartIndex int, err error) {
 	// read data size info
-	isString, dataStartIndex, listDataSize, err := rlpReadSize(inp, startIndex)
+	isString, dataStartIndex, listDataSize, err := ReadSize(inp, startIndex)
 	if err != nil {
 		return nil, 0, fmt.Errorf("decode string failed: %w", err)
 	}
@@ -176,7 +187,7 @@ func RLPDecodeList(inp []byte, startIndex int) (encodedItems [][]byte, newStartI
 
 	for bytesRead < int(listDataSize) {
 
-		_, itemDataStartIndex, itemSize, err := rlpReadSize(inp, itemStartIndex)
+		_, itemDataStartIndex, itemSize, err := ReadSize(inp, itemStartIndex)
 		if err != nil {
 			return nil, 0, fmt.Errorf("cannot read list item: %w", err)
 		}
