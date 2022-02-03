@@ -21,6 +21,7 @@ package sema
 import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/rivo/uniseg"
 )
 
 // CharacterType represents the character type
@@ -36,6 +37,12 @@ var CharacterType = &SimpleType{
 	Equatable:            true,
 	ExternallyReturnable: true,
 	Importable:           true,
+}
+
+func IsValidCharacter(s string) bool {
+	graphemes := uniseg.NewGraphemes(s)
+	// a valid character must have exactly one grapheme cluster
+	return graphemes.Next() && !graphemes.Next()
 }
 
 func init() {

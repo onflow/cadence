@@ -317,7 +317,7 @@ func TestCompareCharacters(t *testing.T) {
         let d: Character = "y"
         let x = a == b
         let y = a == c
-		let z = a == d
+        let z = a == d
     `)
 
 	AssertValuesEqual(

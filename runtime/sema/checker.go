@@ -28,7 +28,6 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/format"
 )
 
 const ArgumentLabelNotRequired = "_"
@@ -1929,7 +1928,7 @@ func (checker *Checker) checkFieldsAccessModifier(fields []*ast.FieldDeclaration
 // i.e. it has exactly one grapheme cluster.
 //
 func (checker *Checker) checkCharacterLiteral(expression *ast.StringExpression) {
-	if format.IsValidCharacter(expression.Value) {
+	if IsValidCharacter(expression.Value) {
 		return
 	}
 
