@@ -286,7 +286,7 @@ func TestInterpretCharacterLiteralTypeNoAnnotation(t *testing.T) {
 	)
 }
 
-func TestConvertCharacterToString(t *testing.T) {
+func TestInterpretConvertCharacterToString(t *testing.T) {
 
 	t.Parallel()
 
@@ -306,7 +306,7 @@ func TestConvertCharacterToString(t *testing.T) {
 	)
 }
 
-func TestCompareCharacters(t *testing.T) {
+func TestInterpretCompareCharacters(t *testing.T) {
 
 	t.Parallel()
 
