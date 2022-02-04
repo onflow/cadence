@@ -68,7 +68,7 @@ func TestRLPDecodeString(t *testing.T) {
 				interpreter.ByteArrayStaticType,
 				common.Address{},
 			),
-			"RLPDecodeString has Failed: input data is empty",
+			"rlpDecodeString has Failed: input data is empty",
 		},
 		{ // empty string
 			interpreter.NewArrayValue(
@@ -131,7 +131,7 @@ func TestRLPDecodeString(t *testing.T) {
 				interpreter.ByteArrayStaticType,
 				common.Address{},
 			),
-			"RLPDecodeString has Failed: incomplete input! not enough bytes to read",
+			"rlpDecodeString has Failed: incomplete input! not enough bytes to read",
 		},
 		// { // wrong input type
 		// 	interpreter.NewArrayValue(
@@ -153,7 +153,7 @@ func TestRLPDecodeString(t *testing.T) {
 
 	for _, test := range tests {
 		output, err := inter.Invoke(
-			"RLPDecodeString",
+			"rlpDecodeString",
 			test.input,
 		)
 		if len(test.expectedErrMsg) > 0 {
@@ -212,7 +212,7 @@ func TestRLPDecodeList(t *testing.T) {
 				},
 				common.Address{},
 			),
-			"RLPDecodeList has Failed: input data is empty",
+			"rlpDecodeList has Failed: input data is empty",
 		},
 		{ // empty list
 			interpreter.NewArrayValue(
@@ -297,7 +297,7 @@ func TestRLPDecodeList(t *testing.T) {
 
 	for _, test := range tests {
 		output, err := inter.Invoke(
-			"RLPDecodeList",
+			"rlpDecodeList",
 			test.input,
 		)
 		if len(test.expectedErrMsg) > 0 {
