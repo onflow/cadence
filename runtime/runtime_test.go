@@ -409,22 +409,37 @@ func (i *testRuntimeInterface) Hash(data []byte, tag string, hashAlgorithm HashA
 }
 
 func (i *testRuntimeInterface) SetCadenceValue(owner common.Address, key string, value cadence.Value) (err error) {
+	if i.setCadenceValue == nil {
+		panic("must specify testRuntimeInterface.setCadenceValue")
+	}
 	return i.setCadenceValue(owner, key, value)
 }
 
 func (i *testRuntimeInterface) GetAccountBalance(address Address) (uint64, error) {
+	if i.getAccountBalance == nil {
+		panic("must specify testRuntimeInterface.getAccountBalance")
+	}
 	return i.getAccountBalance(address)
 }
 
 func (i *testRuntimeInterface) GetAccountAvailableBalance(address Address) (uint64, error) {
+	if i.getAccountAvailableBalance == nil {
+		panic("must specify testRuntimeInterface.getAccountAvailableBalance")
+	}
 	return i.getAccountAvailableBalance(address)
 }
 
 func (i *testRuntimeInterface) GetStorageUsed(address Address) (uint64, error) {
+	if i.getStorageUsed == nil {
+		panic("must specify testRuntimeInterface.getStorageUsed")
+	}
 	return i.getStorageUsed(address)
 }
 
 func (i *testRuntimeInterface) GetStorageCapacity(address Address) (uint64, error) {
+	if i.getStorageCapacity == nil {
+		panic("must specify testRuntimeInterface.getStorageCapacity")
+	}
 	return i.getStorageCapacity(address)
 }
 
