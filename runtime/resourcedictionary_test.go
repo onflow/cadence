@@ -812,6 +812,9 @@ func TestRuntimeResourceDictionaryValues_Removal(t *testing.T) {
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},
+		generateUUID: func() (uint64, error) {
+			return 0, nil
+		},
 	}
 
 	nextTransactionLocation := newTransactionLocationGenerator()

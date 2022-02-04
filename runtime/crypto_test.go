@@ -20,7 +20,9 @@ package runtime
 
 import (
 	"fmt"
+	"github.com/onflow/cadence/runtime/common"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -409,6 +411,15 @@ func TestRuntimeHashAlgorithmImport(t *testing.T) {
 			log: func(message string) {
 				logs = append(logs, message)
 			},
+			programParsed: func(location common.Location, duration time.Duration) {
+				return
+			},
+			programChecked: func(location common.Location, duration time.Duration) {
+				return
+			},
+			programInterpreted: func(location common.Location, duration time.Duration) {
+				return
+			},
 		}
 
 		value, err := runtime.ExecuteScript(
@@ -609,6 +620,9 @@ func TestAggregateBLSPublicKeys(t *testing.T) {
 			}
 			called = true
 			return &PublicKey{PublicKey: ret, SignAlgo: SignatureAlgorithmBLS_BLS12_381}, nil
+		},
+		validatePublicKey: func(publicKey *PublicKey) (bool, error) {
+			return true, nil
 		},
 	}
 

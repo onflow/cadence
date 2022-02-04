@@ -1550,7 +1550,11 @@ func exportValueFromScript(t *testing.T, script string) cadence.Value {
 			Source: []byte(script),
 		},
 		Context{
-			Interface: &testRuntimeInterface{},
+			Interface: &testRuntimeInterface{
+				generateUUID: func() (uint64, error) {
+					return 0, nil
+				},
+			},
 			Location:  TestLocation,
 		},
 	)

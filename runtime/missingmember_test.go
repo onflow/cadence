@@ -2068,6 +2068,9 @@ pub contract ItemNFT: NonFungibleToken {
 		decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 			return json.Decode(b)
 		},
+		generateUUID: func() (uint64, error) {
+			return 0, nil
+		},
 	}
 
 	nextTransactionLocation := newTransactionLocationGenerator()
@@ -3886,6 +3889,9 @@ pub contract AuctionDutch {
 		},
 		decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 			return json.Decode(b)
+		},
+		generateUUID: func() (uint64, error) {
+			return 0, nil
 		},
 	}
 

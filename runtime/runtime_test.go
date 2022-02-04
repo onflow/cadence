@@ -190,19 +190,14 @@ var _ Interface = &testRuntimeInterface{}
 
 func (i *testRuntimeInterface) ResolveLocation(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
 	if i.resolveLocation == nil {
-		return []ResolvedLocation{
-			{
-				Location:    location,
-				Identifiers: identifiers,
-			},
-		}, nil
+		panic("must specify testRuntimeInterface.resolveLocation")
 	}
 	return i.resolveLocation(identifiers, location)
 }
 
 func (i *testRuntimeInterface) GetCode(location Location) ([]byte, error) {
 	if i.getCode == nil {
-		return nil, nil
+		panic("must specify testRuntimeInterface.getCode")
 	}
 	return i.getCode(location)
 }
@@ -231,60 +226,99 @@ func (i *testRuntimeInterface) SetProgram(location Location, program *interprete
 }
 
 func (i *testRuntimeInterface) ValueExists(owner, key []byte) (exists bool, err error) {
+	if i.storage.valueExists == nil {
+		panic("must specify testRuntimeInterface.storage.valueExists")
+	}
 	return i.storage.ValueExists(owner, key)
 }
 
 func (i *testRuntimeInterface) GetValue(owner, key []byte) (value []byte, err error) {
+	if i.storage.getValue == nil {
+		panic("must specify testRuntimeInterface.storage.getValue")
+	}
 	return i.storage.GetValue(owner, key)
 }
 
 func (i *testRuntimeInterface) SetValue(owner, key, value []byte) (err error) {
+	if i.storage.setValue == nil {
+		panic("must specify testRuntimeInterface.storage.setValue")
+	}
 	return i.storage.SetValue(owner, key, value)
 }
 
 func (i *testRuntimeInterface) AllocateStorageIndex(owner []byte) (atree.StorageIndex, error) {
+	if i.storage.allocateStorageIndex == nil {
+		panic("must specify testRuntimeInterface.storage.allocateStorageIndex")
+	}
 	return i.storage.AllocateStorageIndex(owner)
 }
 
 func (i *testRuntimeInterface) CreateAccount(payer Address) (address Address, err error) {
+	if i.createAccount == nil {
+		panic("must specify testRuntimeInterface.createAccount")
+	}
 	return i.createAccount(payer)
 }
 
 func (i *testRuntimeInterface) AddEncodedAccountKey(address Address, publicKey []byte) error {
+	if i.addEncodedAccountKey == nil {
+		panic("must specify testRuntimeInterface.addEncodedAccountKey")
+	}
 	return i.addEncodedAccountKey(address, publicKey)
 }
 
 func (i *testRuntimeInterface) RevokeEncodedAccountKey(address Address, index int) ([]byte, error) {
+	if i.removeEncodedAccountKey == nil {
+		panic("must specify testRuntimeInterface.removeEncodedAccountKey")
+	}
 	return i.removeEncodedAccountKey(address, index)
 }
 
 func (i *testRuntimeInterface) AddAccountKey(address Address, publicKey *PublicKey, hashAlgo HashAlgorithm, weight int) (*AccountKey, error) {
+	if i.addAccountKey == nil {
+		panic("must specify testRuntimeInterface.addAccountKey")
+	}
 	return i.addAccountKey(address, publicKey, hashAlgo, weight)
 }
 
 func (i *testRuntimeInterface) GetAccountKey(address Address, index int) (*AccountKey, error) {
+	if i.getAccountKey == nil {
+		panic("must specify testRuntimeInterface.getAccountKey")
+	}
 	return i.getAccountKey(address, index)
 }
 
 func (i *testRuntimeInterface) RevokeAccountKey(address Address, index int) (*AccountKey, error) {
+	if i.removeAccountKey == nil {
+		panic("must specify testRuntimeInterface.removeAccountKey")
+	}
 	return i.removeAccountKey(address, index)
 }
 
 func (i *testRuntimeInterface) UpdateAccountContractCode(address Address, name string, code []byte) (err error) {
+	if i.updateAccountContractCode == nil {
+		panic("must specify testRuntimeInterface.updateAccountContractCode")
+	}
 	return i.updateAccountContractCode(address, name, code)
 }
 
 func (i *testRuntimeInterface) GetAccountContractCode(address Address, name string) (code []byte, err error) {
+	if i.getAccountContractCode == nil {
+		panic("must specify testRuntimeInterface.getAccountContractCode")
+	}
 	return i.getAccountContractCode(address, name)
 }
 
 func (i *testRuntimeInterface) RemoveAccountContractCode(address Address, name string) (err error) {
+	if i.removeAccountContractCode == nil {
+		panic("must specify testRuntimeInterface.removeAccountContractCode")
+	}
 	return i.removeAccountContractCode(address, name)
 }
 
 func (i *testRuntimeInterface) GetSigningAccounts() ([]Address, error) {
 	if i.getSigningAccounts == nil {
-		return nil, nil
+		panic("must specify testRuntimeInterface.getSigningAccounts")
 	}
 	return i.getSigningAccounts()
 }
@@ -310,7 +344,7 @@ func (i *testRuntimeInterface) ResourceOwnerChanged(
 
 func (i *testRuntimeInterface) GenerateUUID() (uint64, error) {
 	if i.generateUUID == nil {
-		return 0, nil
+		panic("must specify testRuntimeInterface.generateUUID")
 	}
 	return i.generateUUID()
 }
@@ -330,6 +364,7 @@ func (i *testRuntimeInterface) DecodeArgument(b []byte, t cadence.Type) (cadence
 func (i *testRuntimeInterface) ProgramParsed(location common.Location, duration time.Duration) {
 	if i.programParsed == nil {
 		return
+		//panic("must specify testRuntimeInterface.programParsed")
 	}
 	i.programParsed(location, duration)
 }
@@ -337,6 +372,7 @@ func (i *testRuntimeInterface) ProgramParsed(location common.Location, duration 
 func (i *testRuntimeInterface) ProgramChecked(location common.Location, duration time.Duration) {
 	if i.programChecked == nil {
 		return
+		//panic("must specify testRuntimeInterface.programChecked")
 	}
 	i.programChecked(location, duration)
 }
@@ -344,6 +380,7 @@ func (i *testRuntimeInterface) ProgramChecked(location common.Location, duration
 func (i *testRuntimeInterface) ProgramInterpreted(location common.Location, duration time.Duration) {
 	if i.programInterpreted == nil {
 		return
+		//panic("must specify testRuntimeInterface.programInterpreted")
 	}
 	i.programInterpreted(location, duration)
 }
@@ -375,7 +412,7 @@ func (i *testRuntimeInterface) GetBlockAtHeight(height uint64) (block Block, exi
 
 func (i *testRuntimeInterface) UnsafeRandom() (uint64, error) {
 	if i.unsafeRandom == nil {
-		return 0, nil
+		panic("must specify testRuntimeInterface.unsafeRandom")
 	}
 	return i.unsafeRandom()
 }
@@ -389,7 +426,7 @@ func (i *testRuntimeInterface) VerifySignature(
 	hashAlgorithm HashAlgorithm,
 ) (bool, error) {
 	if i.verifySignature == nil {
-		return false, nil
+		panic("must specify testRuntimeInterface.verifySignature")
 	}
 	return i.verifySignature(
 		signature,
@@ -403,7 +440,7 @@ func (i *testRuntimeInterface) VerifySignature(
 
 func (i *testRuntimeInterface) Hash(data []byte, tag string, hashAlgorithm HashAlgorithm) ([]byte, error) {
 	if i.hash == nil {
-		return nil, nil
+		panic("must specify testRuntimeInterface.hash")
 	}
 	return i.hash(data, tag, hashAlgorithm)
 }
@@ -452,7 +489,7 @@ func (i *testRuntimeInterface) ImplementationDebugLog(message string) error {
 
 func (i *testRuntimeInterface) ValidatePublicKey(key *PublicKey) (bool, error) {
 	if i.validatePublicKey == nil {
-		return false, nil
+		panic("must specify testRuntimeInterface.validatePublicKey")
 	}
 
 	return i.validatePublicKey(key)
@@ -460,7 +497,7 @@ func (i *testRuntimeInterface) ValidatePublicKey(key *PublicKey) (bool, error) {
 
 func (i *testRuntimeInterface) BLSVerifyPOP(key *PublicKey, s []byte) (bool, error) {
 	if i.bLSVerifyPOP == nil {
-		return false, nil
+		panic("must specify testRuntimeInterface.bLSVerifyPOP")
 	}
 
 	return i.bLSVerifyPOP(key, s)
@@ -468,7 +505,7 @@ func (i *testRuntimeInterface) BLSVerifyPOP(key *PublicKey, s []byte) (bool, err
 
 func (i *testRuntimeInterface) AggregateBLSSignatures(sigs [][]byte) ([]byte, error) {
 	if i.aggregateBLSSignatures == nil {
-		return []byte{}, nil
+		panic("must specify testRuntimeInterface.aggregateBLSSignatures")
 	}
 
 	return i.aggregateBLSSignatures(sigs)
@@ -476,7 +513,7 @@ func (i *testRuntimeInterface) AggregateBLSSignatures(sigs [][]byte) ([]byte, er
 
 func (i *testRuntimeInterface) AggregateBLSPublicKeys(keys []*PublicKey) (*PublicKey, error) {
 	if i.aggregateBLSPublicKeys == nil {
-		return nil, nil
+		panic("must specify testRuntimeInterface.aggregateBLSPublicKeys")
 	}
 
 	return i.aggregateBLSPublicKeys(keys)
@@ -484,7 +521,7 @@ func (i *testRuntimeInterface) AggregateBLSPublicKeys(keys []*PublicKey) (*Publi
 
 func (i *testRuntimeInterface) GetAccountContractNames(address Address) ([]string, error) {
 	if i.getAccountContractNames == nil {
-		return []string{}, nil
+		panic("must specify testRuntimeInterface.getAccountContractNames")
 	}
 
 	return i.getAccountContractNames(address)
@@ -492,7 +529,7 @@ func (i *testRuntimeInterface) GetAccountContractNames(address Address) ([]strin
 
 func (i *testRuntimeInterface) RecordTrace(operation string, location common.Location, duration time.Duration, logs []opentracing.LogRecord) {
 	if i.recordTrace == nil {
-		return
+		panic("must specify testRuntimeInterface.recordTrace")
 	}
 	i.recordTrace(operation, location, duration, logs)
 }
@@ -614,6 +651,7 @@ func TestRuntimeConcurrentImport(t *testing.T) {
 
 			return program, nil
 		},
+		resolveLocation: singleIdentifierLocationResolver(t),
 	}
 
 	nextTransactionLocation := newTransactionLocationGenerator()
@@ -4737,6 +4775,9 @@ func TestRuntimeResourceOwnerFieldUseComposite(t *testing.T) {
 		getStorageCapacity: func(_ Address) (uint64, error) {
 			// return a dummy value
 			return 1245, nil
+		},
+		generateUUID: func() (uint64, error) {
+			return 0, nil
 		},
 	}
 
