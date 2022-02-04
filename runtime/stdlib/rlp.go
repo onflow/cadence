@@ -52,11 +52,11 @@ type RLPDecodeStringError struct {
 }
 
 func (e RLPDecodeStringError) Error() string {
-	return fmt.Sprintf("RLPDecodeString has Failed: %s", e.Msg)
+	return fmt.Sprintf("rlpDecodeString has Failed: %s", e.Msg)
 }
 
 var RLPDecodeStringFunction = NewStandardLibraryFunction(
-	"RLPDecodeString",
+	"rlpDecodeString",
 	rlpDecodeStringFunctionType,
 	rlpDecodeStringFunctionDocString,
 	func(invocation interpreter.Invocation) interpreter.Value {
@@ -101,11 +101,11 @@ type RLPDecodeListError struct {
 }
 
 func (e RLPDecodeListError) Error() string {
-	return fmt.Sprintf("RLPDecodeList has Failed: %s", e.Msg)
+	return fmt.Sprintf("rlpDecodeList has Failed: %s", e.Msg)
 }
 
 var RLPDecodeListFunction = NewStandardLibraryFunction(
-	"RLPDecodeList",
+	"rlpDecodeList",
 	rlpDecodeListFunctionType,
 	rlpDecodeListFunctionDocString,
 	func(invocation interpreter.Invocation) interpreter.Value {
