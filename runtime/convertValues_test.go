@@ -116,6 +116,8 @@ func TestExportValue(t *testing.T) {
 		},
 	}
 
+	a, _ := cadence.NewCharacter("a")
+
 	for _, tt := range []exportTest{
 		{
 			label:    "Void",
@@ -235,6 +237,11 @@ func TestExportValue(t *testing.T) {
 			label:    "Int",
 			value:    interpreter.NewIntValueFromInt64(42),
 			expected: cadence.NewInt(42),
+		},
+		{
+			label:    "Character",
+			value:    interpreter.NewCharacterValue("a"),
+			expected: a,
 		},
 		{
 			label:    "Int8",
@@ -489,6 +496,8 @@ func TestImportValue(t *testing.T) {
 		})
 	}
 
+	a, _ := cadence.NewCharacter("a")
+
 	for _, tt := range []importTest{
 		{
 			label:    "Void",
@@ -612,6 +621,11 @@ func TestImportValue(t *testing.T) {
 			label:    "Int",
 			value:    cadence.NewInt(42),
 			expected: interpreter.NewIntValueFromInt64(42),
+		},
+		{
+			label:    "Character",
+			value:    a,
+			expected: interpreter.NewCharacterValue("a"),
 		},
 		{
 			label:    "Int8",

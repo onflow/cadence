@@ -61,7 +61,7 @@ const (
 	HashInputTypeAddress
 	HashInputTypePath
 	HashInputTypeType
-	_
+	HashInputTypeCharacter
 	_
 	_
 	_

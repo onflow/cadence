@@ -18,6 +18,13 @@
 
 package sema
 
+import (
+	"github.com/rivo/uniseg"
+
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
+)
+
 // CharacterType represents the character type
 //
 var CharacterType = &SimpleType{
@@ -31,4 +38,28 @@ var CharacterType = &SimpleType{
 	Equatable:            true,
 	ExternallyReturnable: true,
 	Importable:           true,
+}
+
+func IsValidCharacter(s string) bool {
+	graphemes := uniseg.NewGraphemes(s)
+	// a valid character must have exactly one grapheme cluster
+	return graphemes.Next() && !graphemes.Next()
+}
+
+func init() {
+	CharacterType.Members = func(t *SimpleType) map[string]MemberResolver {
+		return map[string]MemberResolver{
+			ToStringFunctionName: {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicFunctionMember(
+						t,
+						identifier,
+						ToStringFunctionType,
+						toStringFunctionDocString,
+					)
+				},
+			},
+		}
+	}
 }

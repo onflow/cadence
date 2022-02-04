@@ -2950,3 +2950,31 @@ func (e *InvalidEntryPointTypeError) Error() string {
 		e.Type.QualifiedString(),
 	)
 }
+
+// ImportedProgramError
+
+type ExternalMutationError struct {
+	Name            string
+	ContainerType   Type
+	DeclarationKind common.DeclarationKind
+	ast.Range
+}
+
+func (e *ExternalMutationError) Error() string {
+	return fmt.Sprintf(
+		"cannot mutate `%s`: %s is only mutable inside `%s`",
+		e.Name,
+		e.DeclarationKind.Name(),
+		e.ContainerType.QualifiedString(),
+	)
+}
+
+func (e *ExternalMutationError) SecondaryError() string {
+	return fmt.Sprintf(
+		"Consider adding a setter for `%s` to `%s`",
+		e.Name,
+		e.ContainerType.QualifiedString(),
+	)
+}
+
+func (*ExternalMutationError) isSemanticError() {}
