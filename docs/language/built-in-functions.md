@@ -34,14 +34,14 @@ title: Built-in Functions
 
 ## rlpDecodeString
 
-`cadence•fun rlpDecodeString([UInt8]): [UInt8]`
+`cadence•fun rlpDecodeString(input: [UInt8]): [UInt8]`
 
   Accepts a RLP encoded byte array (called string in the context of RLP) and decodes it. 
   Input should only contain a single encoded value for an string; if the encoded value type doesn't match or it has trailing unnecessary bytes it would error out. Any error while decoding fails the transaction. 
 
 ## rlpDecodeList
 
-`cadence•fun rlpDecodeList([UInt8]): [[UInt8]]`
+`cadence•fun rlpDecodeList(input: [UInt8]): [[UInt8]]`
 
   Accepts a RLP encoded list and decodes it into a array of encoded items.
   Input should only contain a single encoded value for a list; if the encoded value type doesn't match or it has trailing unnecessary bytes it would error out. Any error while decoding fails the transaction. 
