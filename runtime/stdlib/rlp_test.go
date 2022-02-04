@@ -133,22 +133,6 @@ func TestRLPDecodeString(t *testing.T) {
 			),
 			"RLPDecodeString has Failed: incomplete input! not enough bytes to read",
 		},
-		// { // wrong input type
-		// 	interpreter.NewArrayValue(
-		// 		inter,
-		// 		interpreter.VariableSizedStaticType{
-		// 			Type: interpreter.ByteArrayStaticType,
-		// 		},
-		// 		common.Address{},
-		// 		interpreter.UInt8Value(128),
-		// 	),
-		// 	interpreter.NewArrayValue(
-		// 		inter,
-		// 		interpreter.ByteArrayStaticType,
-		// 		common.Address{},
-		// 	),
-		// 	"",
-		// },
 	}
 
 	for _, test := range tests {
