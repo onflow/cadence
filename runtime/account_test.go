@@ -34,6 +34,52 @@ import (
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
+
+func TestRobert(t *testing.T) {
+
+	t.Parallel()
+
+	script := []byte(`
+        transaction() {
+			prepare(signer: AuthAccount) {
+				let key = signer.keys.get(keyIndex: 0) ?? panic("unexpectedly nil")
+				log(key)
+				// Works fine up to here. Fails on the next line.
+				var storageCapacity1: UInt64 = signer.storageCapacity
+
+				//var storageUsed1: UInt64 = signer.storageUsed
+				//var storageCapacity2: UInt64 = signer.storageCapacity
+				//var storageUsed2: UInt64 = signer.storageUsed
+				//
+				//var equalCapacity : ool = storageCapacity1 == storageCapacity2
+				
+				//if (storageCapacity1 != storageCapacity2) || (storageUsed1 != storageUsed2) {
+				//	panic(storageCapacity1.toString().concat(" vs ").concat(storageCapacity2.toString()).concat(", ").concat(storageUsed1.toString()).concat(" vs ").concat(storageUsed2.toString()))
+				//}
+			}
+		}
+    `)
+
+	storage := newTestAccountKeyStorage()
+	rt := newTestInterpreterRuntime()
+	runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
+	addPublicKeyValidation(runtimeInterface, nil)
+	addAuthAccountKey(t, rt, runtimeInterface)
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := rt.ExecuteTransaction(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+}
+
+
 func TestRuntimeTransaction_AddPublicKey(t *testing.T) {
 	rt := newTestInterpreterRuntime()
 
