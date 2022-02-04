@@ -19,16 +19,18 @@
 package stdlib
 
 import (
+	"fmt"
+
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib/rlp"
 )
 
-// This file defines functions built in to the Flow runtime.
-
 const rlpDecodeStringFunctionDocString = `
- accepts an RLP encoded byte array and decodes it into an string.
+ Accepts an RLP encoded byte array and decodes it into an string. 
+ Input should only contain a single encoded value for an string;
+ if the encoded value type doesn't match or it has trailing unnecessary bytes it would error out.
  `
 
 var rlpDecodeStringFunctionType = &sema.FunctionType{
@@ -45,8 +47,37 @@ var rlpDecodeStringFunctionType = &sema.FunctionType{
 	),
 }
 
+type RLPDecodeStringError struct {
+	Msg string
+}
+
+func (e RLPDecodeStringError) Error() string {
+	return fmt.Sprintf("RLPDecodeString has Failed: %s", e.Msg)
+}
+
+var RLPDecodeStringFunction = NewStandardLibraryFunction(
+	"RLPDecodeString",
+	rlpDecodeStringFunctionType,
+	rlpDecodeStringFunctionDocString,
+	func(invocation interpreter.Invocation) interpreter.Value {
+		input := invocation.Arguments[0].(*interpreter.ArrayValue)
+
+		convertedInput, err := interpreter.ByteArrayValueToByteSlice(input)
+		if err != nil {
+			panic(&RLPDecodeStringError{err.Error()})
+		}
+		output, err := rlp.DecodeString(convertedInput, 0)
+		if err != nil {
+			panic(&RLPDecodeStringError{err.Error()})
+		}
+		return interpreter.ByteSliceToByteArrayValue(invocation.Interpreter, output)
+	},
+)
+
 const rlpDecodeListFunctionDocString = `
- accepts an RLP encoded byte array and decodes it into an array of encoded elements.
+ Accepts an RLP encoded byte array and decodes it into an array of encoded elements, 
+ note that this method does not do the recursive decoding so each array element would be an RLP encoded byte array, 
+ which again can be decoded by calling 'RLPDecodeString' or 'RLPDecodeList'.
  `
 
 var rlpDecodeListFunctionType = &sema.FunctionType{
@@ -65,24 +96,13 @@ var rlpDecodeListFunctionType = &sema.FunctionType{
 	),
 }
 
-var RLPDecodeStringFunction = NewStandardLibraryFunction(
-	"RLPDecodeString",
-	rlpDecodeStringFunctionType,
-	rlpDecodeStringFunctionDocString,
-	func(invocation interpreter.Invocation) interpreter.Value {
-		input := invocation.Arguments[0].(*interpreter.ArrayValue)
+type RLPDecodeListError struct {
+	Msg string
+}
 
-		convertedInput, err := interpreter.ByteArrayValueToByteSlice(input)
-		if err != nil {
-			panic(err)
-		}
-		output, err := rlp.DecodeString(convertedInput, 0)
-		if err != nil {
-			panic(err)
-		}
-		return interpreter.ByteSliceToByteArrayValue(invocation.Interpreter, output)
-	},
-)
+func (e RLPDecodeListError) Error() string {
+	return fmt.Sprintf("RLPDecodeList has Failed: %s", e.Msg)
+}
 
 var RLPDecodeListFunction = NewStandardLibraryFunction(
 	"RLPDecodeList",
@@ -93,12 +113,12 @@ var RLPDecodeListFunction = NewStandardLibraryFunction(
 
 		convertedInput, err := interpreter.ByteArrayValueToByteSlice(input)
 		if err != nil {
-			panic(err)
+			panic(&RLPDecodeListError{err.Error()})
 		}
 
 		output, err := rlp.DecodeList(convertedInput, 0)
 		if err != nil {
-			panic(err)
+			panic(&RLPDecodeListError{err.Error()})
 		}
 
 		values := make([]interpreter.Value, len(output))

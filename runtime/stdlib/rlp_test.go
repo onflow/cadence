@@ -31,7 +31,7 @@ import (
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
-func TestRLPReadString(t *testing.T) {
+func TestRLPDecodeString(t *testing.T) {
 
 	t.Parallel()
 
@@ -53,10 +53,23 @@ func TestRLPReadString(t *testing.T) {
 	require.Nil(t, err)
 
 	tests := []struct {
-		input       interpreter.Value
-		output      interpreter.Value
-		expectedErr error
+		input          interpreter.Value
+		output         interpreter.Value
+		expectedErrMsg string
 	}{
+		{ // empty input
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.ByteArrayStaticType,
+				common.Address{},
+			),
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.ByteArrayStaticType,
+				common.Address{},
+			),
+			"RLPDecodeString has Failed: input data is empty",
+		},
 		{ // empty string
 			interpreter.NewArrayValue(
 				inter,
@@ -69,7 +82,7 @@ func TestRLPReadString(t *testing.T) {
 				interpreter.ByteArrayStaticType,
 				common.Address{},
 			),
-			nil,
+			"",
 		},
 		{ // single char
 			interpreter.NewArrayValue(
@@ -84,7 +97,7 @@ func TestRLPReadString(t *testing.T) {
 				common.Address{},
 				interpreter.UInt8Value(47),
 			),
-			nil,
+			"",
 		},
 		{ // dog
 			interpreter.NewArrayValue(
@@ -104,10 +117,38 @@ func TestRLPReadString(t *testing.T) {
 				interpreter.UInt8Value('o'),
 				interpreter.UInt8Value('g'),
 			),
-			nil,
+			"",
 		},
-
-		// TODO add some cases with errors
+		{ // error handling - incomplete data case
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.ByteArrayStaticType,
+				common.Address{},
+				interpreter.UInt8Value(131),
+			),
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.ByteArrayStaticType,
+				common.Address{},
+			),
+			"RLPDecodeString has Failed: incomplete input! not enough bytes to read",
+		},
+		// { // wrong input type
+		// 	interpreter.NewArrayValue(
+		// 		inter,
+		// 		interpreter.VariableSizedStaticType{
+		// 			Type: interpreter.ByteArrayStaticType,
+		// 		},
+		// 		common.Address{},
+		// 		interpreter.UInt8Value(128),
+		// 	),
+		// 	interpreter.NewArrayValue(
+		// 		inter,
+		// 		interpreter.ByteArrayStaticType,
+		// 		common.Address{},
+		// 	),
+		// 	"",
+		// },
 	}
 
 	for _, test := range tests {
@@ -115,15 +156,168 @@ func TestRLPReadString(t *testing.T) {
 			"RLPDecodeString",
 			test.input,
 		)
+		if len(test.expectedErrMsg) > 0 {
+			require.Error(t, err)
+			assert.Equal(t, test.expectedErrMsg, err.Error())
+			continue
+		}
+		require.NoError(t, err)
 		outputArray := output.(*interpreter.ArrayValue)
 		expectedOutputArray := test.output.(*interpreter.ArrayValue)
-		assert.Equal(t, test.expectedErr, err)
 		assert.Equal(t, expectedOutputArray.Count(), outputArray.Count())
 		for i := 0; i < expectedOutputArray.Count(); i++ {
 			assert.Equal(t,
 				expectedOutputArray.Get(inter, interpreter.ReturnEmptyLocationRange, i),
 				outputArray.Get(inter, interpreter.ReturnEmptyLocationRange, i))
 		}
+	}
+}
 
+func TestRLPDecodeList(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := sema.NewChecker(
+		&ast.Program{},
+		utils.TestLocation,
+		sema.WithPredeclaredValues(BuiltinFunctions.ToSemaValueDeclarations()),
+	)
+	require.Nil(t, err)
+
+	inter, err := interpreter.NewInterpreter(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+		interpreter.WithStorage(interpreter.NewInMemoryStorage()),
+		interpreter.WithPredeclaredValues(
+			BuiltinFunctions.ToInterpreterValueDeclarations(),
+		),
+	)
+	require.Nil(t, err)
+
+	tests := []struct {
+		input          interpreter.Value
+		output         interpreter.Value
+		expectedErrMsg string
+	}{
+		{ // empty input
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.ByteArrayStaticType,
+				common.Address{},
+			),
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.VariableSizedStaticType{
+					Type: interpreter.ByteArrayStaticType,
+				},
+				common.Address{},
+			),
+			"RLPDecodeList has Failed: input data is empty",
+		},
+		{ // empty list
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.ByteArrayStaticType,
+				common.Address{},
+				interpreter.UInt8Value(192),
+			),
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.VariableSizedStaticType{
+					Type: interpreter.ByteArrayStaticType,
+				},
+				common.Address{},
+			),
+			"",
+		},
+		{ // single element list
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.ByteArrayStaticType,
+				common.Address{},
+				interpreter.UInt8Value(193),
+				interpreter.UInt8Value(65),
+			),
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.VariableSizedStaticType{
+					Type: interpreter.ByteArrayStaticType,
+				},
+				common.Address{},
+				interpreter.NewArrayValue(
+					inter,
+					interpreter.ByteArrayStaticType,
+					common.Address{},
+					interpreter.UInt8Value('A'),
+				),
+			),
+			"",
+		},
+		{ // multiple member list
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.ByteArrayStaticType,
+				common.Address{},
+				interpreter.UInt8Value(200),
+				interpreter.UInt8Value(131),
+				interpreter.UInt8Value(65),
+				interpreter.UInt8Value(66),
+				interpreter.UInt8Value(67),
+				interpreter.UInt8Value(131),
+				interpreter.UInt8Value(69),
+				interpreter.UInt8Value(70),
+				interpreter.UInt8Value(71),
+			),
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.VariableSizedStaticType{
+					Type: interpreter.ByteArrayStaticType,
+				},
+				common.Address{},
+				interpreter.NewArrayValue(
+					inter,
+					interpreter.ByteArrayStaticType,
+					common.Address{},
+					interpreter.UInt8Value('A'),
+					interpreter.UInt8Value('B'),
+					interpreter.UInt8Value('C'),
+				),
+				interpreter.NewArrayValue(
+					inter,
+					interpreter.ByteArrayStaticType,
+					common.Address{},
+					interpreter.UInt8Value('E'),
+					interpreter.UInt8Value('F'),
+					interpreter.UInt8Value('G'),
+				),
+			),
+			"",
+		},
+	}
+
+	for _, test := range tests {
+		output, err := inter.Invoke(
+			"RLPDecodeList",
+			test.input,
+		)
+		if len(test.expectedErrMsg) > 0 {
+			require.Error(t, err)
+			assert.Equal(t, test.expectedErrMsg, err.Error())
+			continue
+		}
+		require.NoError(t, err)
+		outputArray := output.(*interpreter.ArrayValue)
+		expectedOutputArray := test.output.(*interpreter.ArrayValue)
+		assert.Equal(t, expectedOutputArray.Count(), outputArray.Count())
+		for i := 0; i < expectedOutputArray.Count(); i++ {
+			expectedElement := expectedOutputArray.Get(inter, interpreter.ReturnEmptyLocationRange, i).(*interpreter.ArrayValue)
+			element := outputArray.Get(inter, interpreter.ReturnEmptyLocationRange, i).(*interpreter.ArrayValue)
+			assert.Equal(t, expectedElement.Count(), element.Count())
+			for j := 0; j < expectedElement.Count(); j++ {
+				assert.Equal(t,
+					expectedElement.Get(inter, interpreter.ReturnEmptyLocationRange, j),
+					element.Get(inter, interpreter.ReturnEmptyLocationRange, j))
+			}
+		}
 	}
 }
