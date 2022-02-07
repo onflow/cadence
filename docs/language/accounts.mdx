@@ -228,7 +228,7 @@ transaction(publicKey: [UInt8]) {
 }
 ```
 
-To add a public key to the current auth account:
+To add a public key to an existing account, which signed the transaction:
 ```cadence
 transaction(publicKey: [UInt8]) {
     prepare(signer: AuthAccount) {
