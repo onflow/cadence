@@ -1449,7 +1449,7 @@ func TestCheckInvalidCreateImportedResource(t *testing.T) {
 	importedChecker, err := ParseAndCheckWithOptions(t,
 		`
           pub resource R {}
-	    `,
+        `,
 		ParseAndCheckOptions{
 			Location: ImportedLocation,
 		},
@@ -5465,5 +5465,170 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
 		errs := ExpectCheckerErrors(t, err, 2)
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+	})
+}
+
+func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("transaction: if, else", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+             resource R {}
+
+             fun f(_ r: @R) { destroy r }
+
+             transaction() {
+
+                 let r: @R
+
+                 prepare() {
+                     self.r <- create R()
+                 }
+
+                 execute {
+                     if false {
+                         f(<-self.r)
+                     } else {
+                         panic("")
+                     }
+                 }
+             }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("transaction: if-let, else", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+             resource R {}
+
+             fun f(_ r: @R) { destroy r }
+
+             transaction() {
+
+                 let r: @R
+
+                 prepare() {
+                     self.r <- create R()
+                 }
+
+                 execute {
+                     if let x = nil {
+                         f(<-self.r)
+                     } else {
+                         panic("")
+                     }
+                 }
+             }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("transaction: if-let, else if-let, else", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+             resource R {}
+
+             fun f(_ r: @R) { destroy r }
+
+             transaction() {
+
+                 let r: @R
+
+                 prepare() {
+                     self.r <- create R()
+                 }
+
+                 execute {
+                     if let x = nil {
+                         f(<-self.r)
+                     } else if let y = nil {
+                         f(<-self.r)
+                     } else {
+                         panic("")
+                     }
+                 }
+             }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("function: if, else", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+             resource R {}
+
+             fun f(_ r: @R) { destroy r }
+
+             fun test() {
+                 let r <- create R()
+                 if false {
+                     f(<-r)
+                 } else {
+                     panic("")
+                 }
+             }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("function: if-let, else", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+             resource R {}
+
+             fun f(_ r: @R) { destroy r }
+
+             fun test() {
+                 let r <- create R()
+                 if let x = nil {
+                     f(<-r)
+                 } else {
+                     panic("")
+                 }
+             }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("function: if-let, else if-let, else", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+             resource R {}
+
+             fun f(_ r: @R) { destroy r }
+
+             fun test() {
+                 let r <- create R()
+                 if let x = nil {
+                     f(<-r)
+                 } else if let y = nil {
+                     f(<-r)
+                 } else {
+                     panic("")
+                 }
+             }
+        `)
+
+		require.NoError(t, err)
 	})
 }
