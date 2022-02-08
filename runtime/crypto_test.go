@@ -689,7 +689,7 @@ func TestTraversingMerkleProof(t *testing.T) {
 		for encodedNode in accountProof {
 			log(nibbleIndex)
 			var nodeHash = HashAlgorithm.KECCAK_256.hash(encodedNode) 
-			var encodedChildren = rlpDecodeList(input: encodedNode)
+			var encodedChildren = DecodeRLPList(input: encodedNode)
 
 			// verify that expected node hash (from a higher level or given root hash)
 			// matches the hash of this level
