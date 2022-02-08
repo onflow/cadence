@@ -29,17 +29,17 @@ title: Built-in Functions
   Follow [best practices](https://github.com/ConsenSys/smart-contract-best-practices/blob/051ec2e42a66f4641d5216063430f177f018826e/docs/recommendations.md#remember-that-on-chain-data-is-public)
   to prevent security issues when using this function.
 
-## rlpDecodeString
+## DecodeRLPString
 
-`cadence•fun rlpDecodeString(input: [UInt8]): [UInt8]`
+`cadence•fun DecodeRLPString(input: [UInt8]): [UInt8]`
 
   Decodes an RLP-encoded byte array (called string in the context of RLP). 
   The byte array should only contain of a single encoded value for a string; if the encoded value type does not match, or it has trailing unnecessary bytes, the program aborts.
   If any error is encountered while decoding, the program aborts.
 
-## rlpDecodeList
+## DecodeRLPList
 
-`cadence•fun rlpDecodeList(input: [UInt8]): [[UInt8]]`
+`cadence•fun DecodeRLPList(input: [UInt8]): [[UInt8]]`
 
   Decodes an RLP-encoded list (called string in the context of RLP) into an array of RLP-encoded items.
   Note that this function does not recursively decode, so each element of the resulting array is RLP-encoded data.

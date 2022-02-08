@@ -21,6 +21,7 @@ package rlp
 import (
 	"encoding/binary"
 	"errors"
+	"math"
 )
 
 const (
