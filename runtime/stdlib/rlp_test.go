@@ -68,7 +68,7 @@ func TestRLPDecodeString(t *testing.T) {
 				interpreter.ByteArrayStaticType,
 				common.Address{},
 			),
-			"rlpDecodeString has Failed: input data is empty",
+			"failed to RLP-decode string: input data is empty",
 		},
 		{ // empty string
 			interpreter.NewArrayValue(
@@ -131,13 +131,13 @@ func TestRLPDecodeString(t *testing.T) {
 				interpreter.ByteArrayStaticType,
 				common.Address{},
 			),
-			"rlpDecodeString has Failed: incomplete input! not enough bytes to read",
+			"failed to RLP-decode string: incomplete input! not enough bytes to read",
 		},
 	}
 
 	for _, test := range tests {
 		output, err := inter.Invoke(
-			"rlpDecodeString",
+			"DecodeRLPString",
 			test.input,
 		)
 		if len(test.expectedErrMsg) > 0 {
@@ -146,14 +146,7 @@ func TestRLPDecodeString(t *testing.T) {
 			continue
 		}
 		require.NoError(t, err)
-		outputArray := output.(*interpreter.ArrayValue)
-		expectedOutputArray := test.output.(*interpreter.ArrayValue)
-		assert.Equal(t, expectedOutputArray.Count(), outputArray.Count())
-		for i := 0; i < expectedOutputArray.Count(); i++ {
-			assert.Equal(t,
-				expectedOutputArray.Get(inter, interpreter.ReturnEmptyLocationRange, i),
-				outputArray.Get(inter, interpreter.ReturnEmptyLocationRange, i))
-		}
+		utils.AssertValuesEqual(t, inter, test.output, output)
 	}
 }
 
@@ -196,7 +189,7 @@ func TestRLPDecodeList(t *testing.T) {
 				},
 				common.Address{},
 			),
-			"rlpDecodeList has Failed: input data is empty",
+			"failed to RLP-decode list: input data is empty",
 		},
 		{ // empty list
 			interpreter.NewArrayValue(
@@ -281,7 +274,7 @@ func TestRLPDecodeList(t *testing.T) {
 
 	for _, test := range tests {
 		output, err := inter.Invoke(
-			"rlpDecodeList",
+			"DecodeRLPList",
 			test.input,
 		)
 		if len(test.expectedErrMsg) > 0 {
@@ -290,18 +283,6 @@ func TestRLPDecodeList(t *testing.T) {
 			continue
 		}
 		require.NoError(t, err)
-		outputArray := output.(*interpreter.ArrayValue)
-		expectedOutputArray := test.output.(*interpreter.ArrayValue)
-		assert.Equal(t, expectedOutputArray.Count(), outputArray.Count())
-		for i := 0; i < expectedOutputArray.Count(); i++ {
-			expectedElement := expectedOutputArray.Get(inter, interpreter.ReturnEmptyLocationRange, i).(*interpreter.ArrayValue)
-			element := outputArray.Get(inter, interpreter.ReturnEmptyLocationRange, i).(*interpreter.ArrayValue)
-			assert.Equal(t, expectedElement.Count(), element.Count())
-			for j := 0; j < expectedElement.Count(); j++ {
-				assert.Equal(t,
-					expectedElement.Get(inter, interpreter.ReturnEmptyLocationRange, j),
-					element.Get(inter, interpreter.ReturnEmptyLocationRange, j))
-			}
-		}
+		utils.AssertValuesEqual(t, inter, test.output, output)
 	}
 }
