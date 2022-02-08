@@ -21,6 +21,7 @@ package rlp
 import (
 	"encoding/binary"
 	"errors"
+	"math"
 )
 
 const (
@@ -35,7 +36,7 @@ const (
 	LongListRangeStart    = 0xf8
 	LongListRangeEnd      = 0xff // not in use, here only for inclusivity
 	MaxShortLengthAllowed = 55
-	MaxLongLengthAllowed  = 9223372036854775807 // max int value (needed for slicing)
+	MaxLongLengthAllowed  = math.MaxInt64
 )
 
 var (

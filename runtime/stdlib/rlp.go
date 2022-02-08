@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,10 +28,10 @@ import (
 )
 
 const rlpDecodeStringFunctionDocString = `
- Accepts an RLP encoded byte array and decodes it into an string. 
- Input should only contain a single encoded value for an string;
- if the encoded value type doesn't match or it has trailing unnecessary bytes it would error out.
- `
+Decodes an RLP-encoded byte array (called string in the context of RLP). 
+The byte array should only contain of a single encoded value for a string; if the encoded value type does not match, or it has trailing unnecessary bytes, the program aborts.
+If any error is encountered while decoding, the program aborts.
+`
 
 var rlpDecodeStringFunctionType = &sema.FunctionType{
 	Parameters: []*sema.Parameter{
@@ -52,7 +52,7 @@ type RLPDecodeStringError struct {
 }
 
 func (e RLPDecodeStringError) Error() string {
-	return fmt.Sprintf("rlpDecodeString has Failed: %s", e.Msg)
+	return fmt.Sprintf("failed to RLP-decode string: %s", e.Msg)
 }
 
 var RLPDecodeStringFunction = NewStandardLibraryFunction(
@@ -75,10 +75,11 @@ var RLPDecodeStringFunction = NewStandardLibraryFunction(
 )
 
 const rlpDecodeListFunctionDocString = `
- Accepts an RLP encoded byte array and decodes it into an array of encoded elements, 
- note that this method does not do the recursive decoding so each array element would be an RLP encoded byte array, 
- which again can be decoded by calling 'RLPDecodeString' or 'RLPDecodeList'.
- `
+Decodes an RLP-encoded list (called string in the context of RLP) into an array of RLP-encoded items.
+Note that this function does not recursively decode, so each element of the resulting array is RLP-encoded data. 
+The byte array should only contain of a single encoded value for a list; if the encoded value type does not match, or it has trailing unnecessary bytes, the program aborts.
+If any error is encountered while decoding, the program aborts.
+`
 
 var rlpDecodeListFunctionType = &sema.FunctionType{
 	Parameters: []*sema.Parameter{
@@ -101,7 +102,7 @@ type RLPDecodeListError struct {
 }
 
 func (e RLPDecodeListError) Error() string {
-	return fmt.Sprintf("rlpDecodeList has Failed: %s", e.Msg)
+	return fmt.Sprintf("failed to RLP-decode list: %s", e.Msg)
 }
 
 var RLPDecodeListFunction = NewStandardLibraryFunction(
@@ -113,12 +114,12 @@ var RLPDecodeListFunction = NewStandardLibraryFunction(
 
 		convertedInput, err := interpreter.ByteArrayValueToByteSlice(input)
 		if err != nil {
-			panic(&RLPDecodeListError{err.Error()})
+			panic(RLPDecodeListError{err.Error()})
 		}
 
 		output, err := rlp.DecodeList(convertedInput, 0)
 		if err != nil {
-			panic(&RLPDecodeListError{err.Error()})
+			panic(RLPDecodeListError{err.Error()})
 		}
 
 		values := make([]interpreter.Value, len(output))
