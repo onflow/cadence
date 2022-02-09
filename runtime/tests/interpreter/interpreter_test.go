@@ -704,19 +704,19 @@ func TestInterpretStringIndexing(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewStringValue("a"),
+		interpreter.NewCharacterValue("a"),
 		inter.Globals["x"].GetValue(),
 	)
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewStringValue("b"),
+		interpreter.NewCharacterValue("b"),
 		inter.Globals["y"].GetValue(),
 	)
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewStringValue("c"),
+		interpreter.NewCharacterValue("c"),
 		inter.Globals["z"].GetValue(),
 	)
 }
@@ -785,7 +785,7 @@ func TestInterpretStringIndexingUnicode(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewStringValue("\u00e9"),
+		interpreter.NewCharacterValue("\u00e9"),
 		value,
 	)
 
@@ -795,24 +795,24 @@ func TestInterpretStringIndexingUnicode(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewStringValue("e\u0301"),
+		interpreter.NewCharacterValue("e\u0301"),
 		value,
 	)
-}
-
-type stringSliceTest struct {
-	str           string
-	from          int
-	to            int
-	result        string
-	expectedError error
 }
 
 func TestInterpretStringSlicing(t *testing.T) {
 
 	t.Parallel()
 
-	locationRange := interpreter.LocationRange{
+	locationRange1 := interpreter.LocationRange{
+		Location: TestLocation,
+		Range: ast.Range{
+			StartPos: ast.Position{Offset: 116, Line: 4, Column: 31},
+			EndPos:   ast.Position{Offset: 140, Line: 4, Column: 55},
+		},
+	}
+
+	locationRange2 := interpreter.LocationRange{
 		Location: TestLocation,
 		Range: ast.Range{
 			StartPos: ast.Position{Offset: 116, Line: 4, Column: 31},
@@ -820,7 +820,15 @@ func TestInterpretStringSlicing(t *testing.T) {
 		},
 	}
 
-	tests := []stringSliceTest{
+	type test struct {
+		str           string
+		from          int
+		to            int
+		result        string
+		expectedError error
+	}
+
+	tests := []test{
 		{"abcdef", 0, 6, "abcdef", nil},
 		{"abcdef", 0, 0, "", nil},
 		{"abcdef", 0, 1, "a", nil},
@@ -830,20 +838,28 @@ func TestInterpretStringSlicing(t *testing.T) {
 		{"abcdef", 5, 6, "f", nil},
 		{"abcdef", 1, 6, "bcdef", nil},
 		// Invalid indices
-		{"abcdef", -1, 0, "", interpreter.StringIndexOutOfBoundsError{
-			Index:         -1,
+		{"abcdef", -1, 0, "", interpreter.StringSliceIndicesError{
+			FromIndex:     -1,
+			UpToIndex:     0,
 			Length:        6,
-			LocationRange: locationRange,
+			LocationRange: locationRange2,
 		}},
-		{"abcdef", 0, -1, "", interpreter.StringIndexOutOfBoundsError{
-			Index:         -1,
+		{"abcdef", 0, -1, "", interpreter.StringSliceIndicesError{
+			FromIndex:     0,
+			UpToIndex:     -1,
 			Length:        6,
-			LocationRange: locationRange,
+			LocationRange: locationRange2,
 		}},
-		{"abcdef", 0, 10, "", interpreter.StringIndexOutOfBoundsError{
-			Index:         10,
+		{"abcdef", 0, 10, "", interpreter.StringSliceIndicesError{
+			FromIndex:     0,
+			UpToIndex:     10,
 			Length:        6,
-			LocationRange: locationRange,
+			LocationRange: locationRange2,
+		}},
+		{"abcdef", 2, 1, "", interpreter.InvalidSliceIndexError{
+			FromIndex:     2,
+			UpToIndex:     1,
+			LocationRange: locationRange1,
 		}},
 		// Unicode: indices are based on characters = grapheme clusters
 		{"cafe\\u{301}b", 0, 5, "cafe\u0301b", nil},
@@ -2177,7 +2193,7 @@ func TestInterpretStructureFieldAssignment(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewIntValueFromInt64(1),
-		test.GetField(inter, interpreter.ReturnEmptyLocationRange, "foo"),
+		test.GetField("foo"),
 	)
 
 	value, err := inter.Invoke("callTest")
@@ -2194,7 +2210,7 @@ func TestInterpretStructureFieldAssignment(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewIntValueFromInt64(3),
-		test.GetField(inter, interpreter.ReturnEmptyLocationRange, "foo"),
+		test.GetField("foo"),
 	)
 }
 
@@ -4510,7 +4526,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		// - `&R{RI}` (unauthorized, if argument for parameter `authorized` == false)
 		// - `auth &R{RI}` (authorized, if argument for parameter `authorized` == true)
 
-		storageAddress := common.BytesToAddress([]byte{0x42})
+		storageAddress := common.MustBytesToAddress([]byte{0x42})
 		storagePath := interpreter.PathValue{
 			Domain:     common.PathDomainStorage,
 			Identifier: "test",
@@ -5284,6 +5300,108 @@ func TestInterpretInvalidArrayRemoveLast(t *testing.T) {
 		},
 		indexErr,
 	)
+}
+
+func TestInterpretArraySlicing(t *testing.T) {
+
+	t.Parallel()
+
+	locationRange1 := interpreter.LocationRange{
+		Location: TestLocation,
+		Range: ast.Range{
+			StartPos: ast.Position{Offset: 125, Line: 4, Column: 31},
+			EndPos:   ast.Position{Offset: 149, Line: 4, Column: 55},
+		},
+	}
+
+	locationRange2 := interpreter.LocationRange{
+		Location: TestLocation,
+		Range: ast.Range{
+			StartPos: ast.Position{Offset: 125, Line: 4, Column: 31},
+			EndPos:   ast.Position{Offset: 150, Line: 4, Column: 56},
+		},
+	}
+
+	type test struct {
+		literal       string
+		from          int
+		to            int
+		result        string
+		expectedError error
+	}
+
+	tests := []test{
+		{"[1, 2, 3, 4, 5, 6]", 0, 6, "[1, 2, 3, 4, 5, 6]", nil},
+		{"[1, 2, 3, 4, 5, 6]", 0, 0, "[]", nil},
+		{"[1, 2, 3, 4, 5, 6]", 0, 1, "[1]", nil},
+		{"[1, 2, 3, 4, 5, 6]", 0, 2, "[1, 2]", nil},
+		{"[1, 2, 3, 4, 5, 6]", 1, 2, "[2]", nil},
+		{"[1, 2, 3, 4, 5, 6]", 2, 3, "[3]", nil},
+		{"[1, 2, 3, 4, 5, 6]", 5, 6, "[6]", nil},
+		{"[1, 2, 3, 4, 5, 6]", 1, 6, "[2, 3, 4, 5, 6]", nil},
+		// Invalid indices
+		{"[1, 2, 3, 4, 5, 6]", -1, 0, "", interpreter.ArraySliceIndicesError{
+			FromIndex:     -1,
+			UpToIndex:     0,
+			Size:          6,
+			LocationRange: locationRange2,
+		}},
+		{"[1, 2, 3, 4, 5, 6]", 0, -1, "", interpreter.ArraySliceIndicesError{
+			FromIndex:     0,
+			UpToIndex:     -1,
+			Size:          6,
+			LocationRange: locationRange2,
+		}},
+		{"[1, 2, 3, 4, 5, 6]", 0, 10, "", interpreter.ArraySliceIndicesError{
+			FromIndex:     0,
+			UpToIndex:     10,
+			Size:          6,
+			LocationRange: locationRange2,
+		}},
+		{"[1, 2, 3, 4, 5, 6]", 2, 1, "", interpreter.InvalidSliceIndexError{
+			FromIndex:     2,
+			UpToIndex:     1,
+			LocationRange: locationRange1,
+		}},
+	}
+
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+
+			inter := parseCheckAndInterpret(t,
+				fmt.Sprintf(
+					`
+                      fun test(): [Int] {
+                        let s = %s
+                        return s.slice(from: %d, upTo: %d)
+                      }
+                    `,
+					test.literal,
+					test.from,
+					test.to,
+				),
+			)
+
+			value, err := inter.Invoke("test")
+			if test.expectedError == nil {
+				require.NoError(t, err)
+
+				assert.Equal(
+					t,
+					test.result,
+					fmt.Sprint(value),
+				)
+			} else {
+				require.IsType(t,
+					interpreter.Error{},
+					err,
+				)
+				err = err.(interpreter.Error).Unwrap()
+
+				assert.Equal(t, test.expectedError, err)
+			}
+		})
+	}
 }
 
 func TestInterpretArrayContains(t *testing.T) {
@@ -6499,7 +6617,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			ty:    sema.StringType,
 		},
 		"Character": {
-			value: interpreter.NewStringValue("X"),
+			value: interpreter.NewCharacterValue("X"),
 			ty:    sema.CharacterType,
 		},
 		"Bool": {
@@ -7086,7 +7204,7 @@ func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewIntValueFromInt64(2),
-		firstResource.GetField(inter, interpreter.ReturnEmptyLocationRange, "id"),
+		firstResource.GetField("id"),
 	)
 
 	require.IsType(t,
@@ -7107,7 +7225,7 @@ func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewIntValueFromInt64(1),
-		secondResource.GetField(inter, interpreter.ReturnEmptyLocationRange, "id"),
+		secondResource.GetField("id"),
 	)
 }
 
@@ -7955,7 +8073,7 @@ func TestInterpretNonStorageReference(t *testing.T) {
                   <-create NFT(id: 2)
               ]
 
-              let nftRef = &resources[1] as &NFT
+              let nftRef = (&resources[1] as &NFT?)!
               let nftRef2 = nftRef
               nftRef2.id = 3
 
@@ -8020,10 +8138,9 @@ func TestInterpretNonStorageReferenceToOptional(t *testing.T) {
               }
           }
 
-
           fun testSome(): String {
               let xs: @{String: Foo} <- {"yes": <-create Foo(name: "YES")}
-              let ref = &xs["yes"] as &Foo
+              let ref = (&xs["yes"] as &Foo?)!
               let name = ref.name
               destroy xs
               return name
@@ -8031,14 +8148,13 @@ func TestInterpretNonStorageReferenceToOptional(t *testing.T) {
 
           fun testNil(): String {
               let xs: @{String: Foo} <- {}
-              let ref = &xs["no"] as &Foo
+              let ref = (&xs["no"] as &Foo?)!
               let name = ref.name
               destroy xs
               return name
           }
         `,
 	)
-
 	t.Run("some", func(t *testing.T) {
 		value, err := inter.Invoke("testSome")
 		require.NoError(t, err)
@@ -8051,8 +8167,7 @@ func TestInterpretNonStorageReferenceToOptional(t *testing.T) {
 	t.Run("nil", func(t *testing.T) {
 		_, err := inter.Invoke("testNil")
 		require.Error(t, err)
-
-		require.ErrorAs(t, err, &interpreter.DereferenceError{})
+		require.ErrorAs(t, err, &interpreter.ForceNilError{})
 	})
 }
 
@@ -8540,7 +8655,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 				interpreter.WithPredeclaredValues([]interpreter.ValueDeclaration{
 					valueDeclaration,
 				}),
-				interpreter.WithPublicAccountHandlerFunc(
+				interpreter.WithPublicAccountHandler(
 					func(_ *interpreter.Interpreter, address interpreter.AddressValue) interpreter.Value {
 						return newTestPublicAccountValue(address)
 					},
@@ -8845,14 +8960,14 @@ func TestInterpretEphemeralReferenceToOptional(t *testing.T) {
                   }
               }
 
-              fun borrow(id: Int): &R {
-                  return &C.rs[id] as &R
+              fun borrow(id: Int): &R? {
+                  return &C.rs[id] as &R?
               }
 
               init() {
                   self.rs <- {}
                   self.rs[1] <-! create R(id: 1)
-                  let ref = self.borrow(id: 1)
+                  let ref = self.borrow(id: 1)!
                   ref.id
               }
           }
@@ -9496,4 +9611,40 @@ func TestInterpretArrayTypeInference(t *testing.T) {
 			value,
 		)
 	})
+}
+
+func TestInterpretOptionalReference(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t,
+		`
+          fun present(): &Int {
+              let x: Int? = 1
+              let y = &x as &Int?
+              return y!
+          }
+
+          fun absent(): &Int {
+              let x: Int? = nil
+              let y = &x as &Int?
+              return y!
+          }
+        `,
+	)
+
+	value, err := inter.Invoke("present")
+	require.NoError(t, err)
+	require.Equal(
+		t,
+		&interpreter.EphemeralReferenceValue{
+			Value:        interpreter.NewIntValueFromInt64(1),
+			BorrowedType: sema.IntType,
+		},
+		value,
+	)
+
+	_, err = inter.Invoke("absent")
+	var forceNilError interpreter.ForceNilError
+	require.ErrorAs(t, err, &forceNilError)
 }

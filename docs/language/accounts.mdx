@@ -63,7 +63,7 @@ which represents the authorized portion of an account.
 Access to an `AuthAccount` means having full access to its [storage](#account-storage),
 public keys, and code.
 
-Only [signed transactions](../transactions) can get the `AuthAccount` for an account.
+Only [signed transactions](transactions) can get the `AuthAccount` for an account.
 For each signer of the transaction that signs as an authorizer, the corresponding `AuthAccount` object is passed
 to the `prepare` phase of the transaction.
 
@@ -197,7 +197,7 @@ struct AccountKey {
     let isRevoked: Bool
 }
 ```
-Refer the [PublicKey](../crypto/#publickey) section for more details on the creation and validity of public keys.
+Refer the [PublicKey](crypto/#publickey) section for more details on the creation and validity of public keys.
 
 ### Account Key API
 Account key API provides a set of functions to manage account keys.
@@ -220,6 +220,24 @@ transaction(publicKey: [UInt8]) {
         let account = AuthAccount(payer: signer)
 
         account.keys.add(
+            publicKey: key,
+            hashAlgorithm: HashAlgorithm.SHA3_256,
+            weight: 10.0
+        )
+    }
+}
+```
+
+To add a public key to an existing account, which signed the transaction:
+```cadence
+transaction(publicKey: [UInt8]) {
+    prepare(signer: AuthAccount) {
+        let key = PublicKey(
+            publicKey: publicKey,
+            signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
+        )
+
+        signer.keys.add(
             publicKey: key,
             hashAlgorithm: HashAlgorithm.SHA3_256,
             weight: 10.0
@@ -391,7 +409,7 @@ to all its stored objects.
   A type argument for the parameter must be provided explicitly.
 
   The type `T` must be a supertype of the type of the loaded object.
-  If it is not, the function returns `nil`.
+  If it is not, execution will abort with an error. 
   The given type does not necessarily need to be exactly the same as the type of the loaded object.
 
   The path must be a storage path, i.e., only the domain `storage` is allowed.
@@ -408,7 +426,7 @@ to all its stored objects.
   A type argument for the parameter must be provided explicitly.
 
   The type `T` must be a supertype of the type of the copied structure.
-  If it is not, the function returns `nil`.
+  If it is not, execution will abort with an error. 
   The given type does not necessarily need to be exactly the same as
   the type of the copied structure.
 
@@ -513,7 +531,7 @@ This is possible using the `borrow` function of an `AuthAccount`:
   A type argument for the parameter must be provided explicitly.
   The type argument must be a reference to any type (`&Any`; `Any` is the supertype of all types).
   It must be possible to create the given reference type `T` for the stored /  borrowed object.
-  If it is not, the function returns `nil`.
+  If it is not, execution will abort with an error. 
   The given type does not necessarily need to be exactly the same as the type of the borrowed object.
 
   The path must be a storage path, i.e., only the domain `storage` is allowed.

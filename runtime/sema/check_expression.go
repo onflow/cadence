@@ -218,12 +218,16 @@ func (checker *Checker) VisitFixedPointExpression(expression *ast.FixedPointExpr
 func (checker *Checker) VisitStringExpression(expression *ast.StringExpression) ast.Repr {
 	expectedType := UnwrapOptionalType(checker.expectedType)
 
+	var actualType Type = StringType
+
 	if IsSameTypeKind(expectedType, CharacterType) {
 		checker.checkCharacterLiteral(expression)
-		return expectedType
+		actualType = expectedType
 	}
 
-	return StringType
+	checker.Elaboration.StringExpressionType[expression] = actualType
+
+	return actualType
 }
 
 func (checker *Checker) VisitIndexExpression(expression *ast.IndexExpression) ast.Repr {

@@ -58,7 +58,7 @@ const resourceDictionaryContract = `
 
      pub resource C {
 
-         pub let rs: @{String: R}
+         pub(set) var rs: @{String: R}
 
          init() {
              self.rs <- {}
@@ -410,7 +410,7 @@ func TestRuntimeResourceDictionaryValues_Nested(t *testing.T) {
 
          pub resource C2 {
 
-             pub let rs: @{String: R}
+             pub(set) var rs: @{String: R}
 
              init() {
                  self.rs <- {}
@@ -431,7 +431,7 @@ func TestRuntimeResourceDictionaryValues_Nested(t *testing.T) {
 
          pub resource C {
 
-             pub let c2s: @{String: C2}
+             pub(set) var c2s: @{String: C2}
 
              init() {
                  self.c2s <- {}
@@ -575,8 +575,8 @@ func TestRuntimeResourceDictionaryValues_DictionaryTransfer(t *testing.T) {
 
 	t.Parallel()
 
-	signer1 := common.BytesToAddress([]byte{0x1})
-	signer2 := common.BytesToAddress([]byte{0x2})
+	signer1 := common.MustBytesToAddress([]byte{0x1})
+	signer2 := common.MustBytesToAddress([]byte{0x2})
 
 	runtime := newTestInterpreterRuntime()
 
@@ -602,7 +602,7 @@ func TestRuntimeResourceDictionaryValues_DictionaryTransfer(t *testing.T) {
 
          pub resource C {
 
-             pub let rs: @{String: R}
+             pub(set) var rs: @{String: R}
 
              init() {
                  self.rs <- {}
@@ -787,7 +787,7 @@ func TestRuntimeResourceDictionaryValues_Removal(t *testing.T) {
 	var events []cadence.Event
 	var loggedMessages []string
 
-	signer := common.BytesToAddress([]byte{0x1})
+	signer := common.MustBytesToAddress([]byte{0x1})
 
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(_ Location) (bytes []byte, err error) {
@@ -901,7 +901,7 @@ func TestRuntimeSResourceDictionaryValues_Destruction(t *testing.T) {
 	var events []cadence.Event
 	var loggedMessages []string
 
-	signer := common.BytesToAddress([]byte{0x1})
+	signer := common.MustBytesToAddress([]byte{0x1})
 
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(_ Location) (bytes []byte, err error) {
@@ -967,9 +967,9 @@ func TestRuntimeSResourceDictionaryValues_Destruction(t *testing.T) {
 	assert.Equal(t,
 		[]string{
 			`"destroying R"`,
-			"2",
-			`"destroying R"`,
 			"1",
+			`"destroying R"`,
+			"2",
 		},
 		loggedMessages,
 	)
@@ -1042,7 +1042,7 @@ func TestRuntimeResourceDictionaryValues_Insertion(t *testing.T) {
 	var events []cadence.Event
 	var loggedMessages []string
 
-	signer := common.BytesToAddress([]byte{0x1})
+	signer := common.MustBytesToAddress([]byte{0x1})
 
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(_ Location) (bytes []byte, err error) {
@@ -1189,9 +1189,9 @@ func TestRuntimeResourceDictionaryValues_ValueTransferAndDestroy(t *testing.T) {
 	var events []cadence.Event
 	var loggedMessages []string
 
-	signer1 := common.BytesToAddress([]byte{0x1})
-	signer2 := common.BytesToAddress([]byte{0x2})
-	signer3 := common.BytesToAddress([]byte{0x3})
+	signer1 := common.MustBytesToAddress([]byte{0x1})
+	signer2 := common.MustBytesToAddress([]byte{0x2})
+	signer3 := common.MustBytesToAddress([]byte{0x3})
 
 	var signers []Address
 

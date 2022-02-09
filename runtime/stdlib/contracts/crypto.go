@@ -16,6 +16,11 @@
  * limitations under the License.
  */
 
-package stdlib
+package contracts
 
-//go:generate go run github.com/kevinburke/go-bindata/go-bindata -o internal/contracts.gen.go -pkg internal -nometadata -nomemcopy contracts
+import (
+	_ "embed"
+)
+
+//go:embed crypto.cdc
+var Crypto string

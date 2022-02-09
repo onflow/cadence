@@ -1040,7 +1040,7 @@ type UnresolvedImportError struct {
 }
 
 func (e *UnresolvedImportError) Error() string {
-	return "import could not be resolved"
+	return fmt.Sprintf("import could not be resolved: %s", e.ImportLocation)
 }
 
 func (*UnresolvedImportError) isSemanticError() {}
@@ -2010,22 +2010,6 @@ func (e *NonReferenceTypeReferenceError) SecondaryError() string {
 
 func (*NonReferenceTypeReferenceError) isSemanticError() {}
 
-// OptionalTypeReferenceError
-
-type OptionalTypeReferenceError struct {
-	ActualType Type
-	ast.Range
-}
-
-func (e *OptionalTypeReferenceError) Error() string {
-	return fmt.Sprintf(
-		"cannot create reference to optional type, got `%s`",
-		e.ActualType.QualifiedString(),
-	)
-}
-
-func (*OptionalTypeReferenceError) isSemanticError() {}
-
 // InvalidResourceCreationError
 
 type InvalidResourceCreationError struct {
@@ -2966,3 +2950,31 @@ func (e *InvalidEntryPointTypeError) Error() string {
 		e.Type.QualifiedString(),
 	)
 }
+
+// ImportedProgramError
+
+type ExternalMutationError struct {
+	Name            string
+	ContainerType   Type
+	DeclarationKind common.DeclarationKind
+	ast.Range
+}
+
+func (e *ExternalMutationError) Error() string {
+	return fmt.Sprintf(
+		"cannot mutate `%s`: %s is only mutable inside `%s`",
+		e.Name,
+		e.DeclarationKind.Name(),
+		e.ContainerType.QualifiedString(),
+	)
+}
+
+func (e *ExternalMutationError) SecondaryError() string {
+	return fmt.Sprintf(
+		"Consider adding a setter for `%s` to `%s`",
+		e.Name,
+		e.ContainerType.QualifiedString(),
+	)
+}
+
+func (*ExternalMutationError) isSemanticError() {}

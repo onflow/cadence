@@ -120,7 +120,7 @@ type Interface interface {
 	// ImplementationDebugLog logs implementation log statements on a debug-level
 	ImplementationDebugLog(message string) error
 	// ValidatePublicKey verifies the validity of a public key.
-	ValidatePublicKey(key *PublicKey) (bool, error)
+	ValidatePublicKey(key *PublicKey) error
 	// GetAccountContractNames returns the names of all contracts deployed in an account.
 	GetAccountContractNames(address Address) ([]string, error)
 	// RecordTrace records a opentracing trace
@@ -131,6 +131,8 @@ type Interface interface {
 	BLSAggregateSignatures(sigs [][]byte) ([]byte, error)
 	// BLSAggregatePublicKeys aggregate multiple BLS public keys into one.
 	BLSAggregatePublicKeys(keys []*PublicKey) (*PublicKey, error)
+	// ResourceOwnerChanged gets called when a resource's owner changed (if enabled)
+	ResourceOwnerChanged(resource *interpreter.CompositeValue, oldOwner common.Address, newOwner common.Address)
 }
 
 type Metrics interface {

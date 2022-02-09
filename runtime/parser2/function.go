@@ -118,7 +118,13 @@ func parseParameter(p *parser) *ast.Parameter {
 		))
 	}
 	argumentLabel := ""
-	parameterName := p.current.Value.(string)
+	parameterName, ok := p.current.Value.(string)
+	if !ok {
+		panic(fmt.Errorf(
+			"expected parameter %s to be a string",
+			p.current,
+		))
+	}
 	// Skip the identifier
 	p.next()
 
@@ -128,7 +134,13 @@ func parseParameter(p *parser) *ast.Parameter {
 	p.skipSpaceAndComments(true)
 	if p.current.Is(lexer.TokenIdentifier) {
 		argumentLabel = parameterName
-		parameterName = p.current.Value.(string)
+		parameterName, ok = p.current.Value.(string)
+		if !ok {
+			panic(fmt.Errorf(
+				"expected parameter %s to be a string",
+				p.current,
+			))
+		}
 		parameterPos = p.current.StartPos
 		// Skip the identifier
 		p.next()

@@ -92,6 +92,9 @@ type Runtime interface {
 	// SetTracingEnabled configures if tracing is enabled.
 	SetTracingEnabled(enabled bool)
 
+	// SetResourceOwnerChangeCallbackEnabled configures if the resource owner change callback is enabled.
+	SetResourceOwnerChangeHandlerEnabled(enabled bool)
+
 	// ReadStored reads the value stored at the given path
 	//
 	ReadStored(address common.Address, path cadence.Path, context Context) (cadence.Value, error)
@@ -152,10 +155,11 @@ func reportMetric(
 
 // interpreterRuntime is a interpreter-based version of the Flow runtime.
 type interpreterRuntime struct {
-	coverageReport                  *CoverageReport
-	contractUpdateValidationEnabled bool
-	atreeValidationEnabled          bool
-	tracingEnabled                  bool
+	coverageReport                    *CoverageReport
+	contractUpdateValidationEnabled   bool
+	atreeValidationEnabled            bool
+	tracingEnabled                    bool
+	resourceOwnerChangeHandlerEnabled bool
 }
 
 type Option func(Runtime)
@@ -187,6 +191,15 @@ func WithTracingEnabled(enabled bool) Option {
 	}
 }
 
+// WithResourceOwnerChangeCallbackEnabled returns a runtime option
+// that configures if the resource owner change callback is enabled.
+//
+func WithResourceOwnerChangeCallbackEnabled(enabled bool) Option {
+	return func(runtime Runtime) {
+		runtime.SetResourceOwnerChangeHandlerEnabled(enabled)
+	}
+}
+
 // NewInterpreterRuntime returns a interpreter-based version of the Flow runtime.
 func NewInterpreterRuntime(options ...Option) Runtime {
 	runtime := &interpreterRuntime{}
@@ -194,6 +207,24 @@ func NewInterpreterRuntime(options ...Option) Runtime {
 		option(runtime)
 	}
 	return runtime
+}
+
+func (r *interpreterRuntime) Recover(onError func(error), context Context) {
+	recovered := recover()
+	if recovered == nil {
+		return
+	}
+
+	var err error
+	switch recovered := recovered.(type) {
+	case Error:
+		// avoid redundant wrapping
+		err = recovered
+	case error:
+		err = newError(recovered, context)
+	}
+
+	onError(err)
 }
 
 func (r *interpreterRuntime) SetCoverageReport(coverageReport *CoverageReport) {
@@ -212,7 +243,18 @@ func (r *interpreterRuntime) SetTracingEnabled(enabled bool) {
 	r.tracingEnabled = enabled
 }
 
-func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cadence.Value, error) {
+func (r *interpreterRuntime) SetResourceOwnerChangeHandlerEnabled(enabled bool) {
+	r.resourceOwnerChangeHandlerEnabled = enabled
+}
+
+func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val cadence.Value, err error) {
+	defer r.Recover(
+		func(internalErr error) {
+			err = internalErr
+		},
+		context,
+	)
+
 	context.InitializeCodesAndPrograms()
 
 	storage := NewStorage(context.Interface)
@@ -449,7 +491,14 @@ func (r *interpreterRuntime) InvokeContractFunction(
 	arguments []interpreter.Value,
 	argumentTypes []sema.Type,
 	context Context,
-) (cadence.Value, error) {
+) (val cadence.Value, err error) {
+	defer r.Recover(
+		func(internalErr error) {
+			err = internalErr
+		},
+		context,
+	)
+
 	context.InitializeCodesAndPrograms()
 
 	storage := NewStorage(context.Interface)
@@ -576,7 +625,14 @@ func (r *interpreterRuntime) convertArgument(
 	return argument
 }
 
-func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) error {
+func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) (err error) {
+	defer r.Recover(
+		func(internalErr error) {
+			err = internalErr
+		},
+		context,
+	)
+
 	context.InitializeCodesAndPrograms()
 
 	storage := NewStorage(context.Interface)
@@ -710,6 +766,37 @@ func wrapPanic(f func()) {
 	f()
 }
 
+// Executes `f`. On panic, the panic is returned as an error.
+// Wraps any non-`error` panics so panic is never propagated.
+func panicToError(f func()) (returnedError error) {
+	defer func() {
+		if r := recover(); r != nil {
+			var ok bool
+			err, ok := r.(error)
+			if ok {
+				returnedError = err
+			} else {
+				returnedError = fmt.Errorf("%s", r)
+			}
+		}
+	}()
+	f()
+	return nil
+}
+
+// Executes `f`. On panic, the panic is returned as an error.
+// Exception: panics when error is `goRuntime.Error` or `ExternalError`.
+func userPanicToError(f func()) error {
+	err := panicToError(f)
+
+	switch err := err.(type) {
+	case goRuntime.Error, interpreter.ExternalError:
+		panic(err)
+	default:
+		return err
+	}
+}
+
 func (r *interpreterRuntime) transactionExecutionFunction(
 	parameters []*sema.Parameter,
 	arguments [][]byte,
@@ -786,7 +873,19 @@ func validateArgumentParams(
 			}
 		}
 
-		arg, err := importValue(inter, value, parameterType)
+		var arg interpreter.Value
+		panicError := userPanicToError(func() {
+			// if importing an invalid public key, this call panics
+			arg, err = importValue(inter, value, parameterType)
+		})
+
+		if panicError != nil {
+			return nil, &InvalidEntryPointArgumentError{
+				Index: i,
+				Err:   panicError,
+			}
+		}
+
 		if err != nil {
 			return nil, &InvalidEntryPointArgumentError{
 				Index: i,
@@ -865,7 +964,20 @@ func hasValidStaticType(value interpreter.Value) bool {
 // ParseAndCheckProgram parses the given code and checks it.
 // Returns a program that can be interpreted (AST + elaboration).
 //
-func (r *interpreterRuntime) ParseAndCheckProgram(code []byte, context Context) (*interpreter.Program, error) {
+func (r *interpreterRuntime) ParseAndCheckProgram(
+	code []byte,
+	context Context,
+) (
+	program *interpreter.Program,
+	err error,
+) {
+	defer r.Recover(
+		func(internalErr error) {
+			err = internalErr
+		},
+		context,
+	)
+
 	context.InitializeCodesAndPrograms()
 
 	storage := NewStorage(context.Interface)
@@ -880,7 +992,7 @@ func (r *interpreterRuntime) ParseAndCheckProgram(code []byte, context Context) 
 		checkerOptions,
 	)
 
-	program, err := r.parseAndCheckProgram(
+	program, err = r.parseAndCheckProgram(
 		code,
 		context,
 		functions,
@@ -1083,7 +1195,7 @@ func (r *interpreterRuntime) newInterpreter(
 		inter *interpreter.Interpreter,
 		getLocationRange func() interpreter.LocationRange,
 		publicKey *interpreter.CompositeValue,
-	) interpreter.BoolValue {
+	) error {
 		return validatePublicKey(
 			inter,
 			getLocationRange,
@@ -1143,7 +1255,7 @@ func (r *interpreterRuntime) newInterpreter(
 		interpreter.WithOnStatementHandler(
 			r.onStatementHandler(),
 		),
-		interpreter.WithPublicAccountHandlerFunc(
+		interpreter.WithPublicAccountHandler(
 			func(_ *interpreter.Interpreter, address interpreter.AddressValue) interpreter.Value {
 				return r.getPublicAccount(
 					address,
@@ -1238,6 +1350,7 @@ func (r *interpreterRuntime) newInterpreter(
 		// and disable storage validation after each value modification.
 		// Instead, storage is validated after commits (if validation is enabled).
 		interpreter.WithAtreeStorageValidationEnabled(false),
+		interpreter.WithOnResourceOwnerChangeHandler(r.resourceOwnerChangedHandler(context.Interface)),
 	}
 
 	defaultOptions = append(defaultOptions,
@@ -1543,7 +1656,7 @@ func (r *interpreterRuntime) emitEvent(
 	fields := make([]exportableValue, len(eventType.ConstructorParameters))
 
 	for i, parameter := range eventType.ConstructorParameters {
-		value := event.GetField(inter, getLocationRange, parameter.Identifier)
+		value := event.GetField(parameter.Identifier)
 		fields[i] = newExportableValue(value, inter)
 	}
 
@@ -2850,7 +2963,21 @@ func (r *interpreterRuntime) executeNonProgram(interpret interpretFunc, context 
 	return exportValue(value)
 }
 
-func (r *interpreterRuntime) ReadStored(address common.Address, path cadence.Path, context Context) (cadence.Value, error) {
+func (r *interpreterRuntime) ReadStored(
+	address common.Address,
+	path cadence.Path,
+	context Context,
+) (
+	val cadence.Value,
+	err error,
+) {
+	defer r.Recover(
+		func(internalErr error) {
+			err = internalErr
+		},
+		context,
+	)
+
 	return r.executeNonProgram(
 		func(inter *interpreter.Interpreter) (interpreter.Value, error) {
 			pathValue := importPathValue(path)
@@ -2866,7 +2993,21 @@ func (r *interpreterRuntime) ReadStored(address common.Address, path cadence.Pat
 	)
 }
 
-func (r *interpreterRuntime) ReadLinked(address common.Address, path cadence.Path, context Context) (cadence.Value, error) {
+func (r *interpreterRuntime) ReadLinked(
+	address common.Address,
+	path cadence.Path,
+	context Context,
+) (
+	val cadence.Value,
+	err error,
+) {
+	defer r.Recover(
+		func(internalErr error) {
+			err = internalErr
+		},
+		context,
+	)
+
 	return r.executeNonProgram(
 		func(inter *interpreter.Interpreter) (interpreter.Value, error) {
 			targetPath, _, err := inter.GetCapabilityFinalTargetPath(
@@ -3021,7 +3162,7 @@ func (r *interpreterRuntime) newAccountKeysGetFunction(
 					inter,
 					invocation.GetLocationRange,
 					accountKey,
-					inter.PublicKeyValidationHandler,
+					DoNotValidatePublicKey, // key from FVM has already been validated
 				),
 			)
 		},
@@ -3074,7 +3215,7 @@ func (r *interpreterRuntime) newAccountKeysRevokeFunction(
 					inter,
 					invocation.GetLocationRange,
 					accountKey,
-					inter.PublicKeyValidationHandler,
+					DoNotValidatePublicKey, // key from FVM has already been validated
 				),
 			)
 		},
@@ -3112,6 +3253,26 @@ func (r *interpreterRuntime) newPublicAccountContracts(
 	)
 }
 
+func (r *interpreterRuntime) resourceOwnerChangedHandler(
+	runtimeInterface Interface,
+) interpreter.OnResourceOwnerChangeFunc {
+	if !r.resourceOwnerChangeHandlerEnabled {
+		return nil
+	}
+	return func(
+		_ *interpreter.Interpreter,
+		resource *interpreter.CompositeValue,
+		oldOwner common.Address,
+		newOwner common.Address,
+	) {
+		runtimeInterface.ResourceOwnerChanged(
+			resource,
+			oldOwner,
+			newOwner,
+		)
+	}
+}
+
 func NewPublicKeyFromValue(
 	inter *interpreter.Interpreter,
 	getLocationRange func() interpreter.LocationRange,
@@ -3143,7 +3304,7 @@ func NewPublicKeyFromValue(
 		)
 	}
 
-	rawValue := signAlgoValue.GetField(inter, getLocationRange, sema.EnumRawValueFieldName)
+	rawValue := signAlgoValue.GetField(sema.EnumRawValueFieldName)
 	if rawValue == nil {
 		return nil, errors.New("sign algorithm raw value is not set")
 	}
@@ -3156,19 +3317,9 @@ func NewPublicKeyFromValue(
 		)
 	}
 
-	// `valid` and `validated` fields
-	var valid, validated bool
-	validField := publicKey.GetMember(inter, getLocationRange, sema.PublicKeyIsValidField)
-	validated = validField != nil
-	if validated {
-		valid = bool(validField.(interpreter.BoolValue))
-	}
-
 	return &PublicKey{
 		PublicKey: byteArray,
 		SignAlgo:  SignatureAlgorithm(signAlgoRawValue.ToInt()),
-		IsValid:   valid,
-		Validated: validated,
 	}, nil
 }
 
@@ -3193,12 +3344,7 @@ func NewPublicKeyValue(
 			inter *interpreter.Interpreter,
 			getLocationRange func() interpreter.LocationRange,
 			publicKeyValue *interpreter.CompositeValue,
-		) interpreter.BoolValue {
-			// If the public key is already validated, avoid re-validating, and return the cached result.
-			if publicKey.Validated {
-				return interpreter.BoolValue(publicKey.IsValid)
-			}
-
+		) error {
 			return validatePublicKey(inter, getLocationRange, publicKeyValue)
 		},
 	)
@@ -3231,7 +3377,7 @@ func NewHashAlgorithmFromValue(
 ) HashAlgorithm {
 	hashAlgoValue := value.(*interpreter.CompositeValue)
 
-	rawValue := hashAlgoValue.GetField(inter, getLocationRange, sema.EnumRawValueFieldName)
+	rawValue := hashAlgoValue.GetField(sema.EnumRawValueFieldName)
 	if rawValue == nil {
 		panic("cannot find hash algorithm raw value")
 	}
@@ -3246,23 +3392,17 @@ func validatePublicKey(
 	getLocationRange func() interpreter.LocationRange,
 	publicKeyValue *interpreter.CompositeValue,
 	runtimeInterface Interface,
-) interpreter.BoolValue {
-
+) error {
 	publicKey, err := NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
 	if err != nil {
-		return false
+		return err
 	}
 
-	var valid bool
 	wrapPanic(func() {
-		valid, err = runtimeInterface.ValidatePublicKey(publicKey)
+		err = runtimeInterface.ValidatePublicKey(publicKey)
 	})
 
-	if err != nil {
-		panic(err)
-	}
-
-	return interpreter.BoolValue(valid)
+	return err
 }
 
 func verifyBLSPOP(
@@ -3415,4 +3555,15 @@ func hash(
 	}
 
 	return interpreter.ByteSliceToByteArrayValue(inter, result)
+}
+
+// DoNotValidatePublicKey conforms to the method signature for PublicKeyValidationHandlerFunc.
+// It disregards its input and returns `nil` indicating that the public key is valid.
+// It's used when handling public keys from the FVM, where they're already validated.
+func DoNotValidatePublicKey(
+	_ *interpreter.Interpreter,
+	_ func() interpreter.LocationRange,
+	_ *interpreter.CompositeValue,
+) error {
+	return nil
 }

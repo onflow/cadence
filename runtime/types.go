@@ -65,6 +65,7 @@ const (
 	HashAlgorithmSHA3_256              = sema.HashAlgorithmSHA3_256
 	HashAlgorithmSHA3_384              = sema.HashAlgorithmSHA3_384
 	HashAlgorithmKMAC128_BLS_BLS12_381 = sema.HashAlgorithmKMAC128_BLS_BLS12_381
+	HashAlgorithmKECCAK_256            = sema.HashAlgorithmKECCAK_256
 )
 
 type AccountKey struct {
@@ -78,6 +79,4 @@ type AccountKey struct {
 type PublicKey struct {
 	PublicKey []byte
 	SignAlgo  SignatureAlgorithm
-	IsValid   bool
-	Validated bool
 }

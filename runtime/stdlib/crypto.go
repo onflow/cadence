@@ -25,14 +25,12 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/stdlib/internal"
+	"github.com/onflow/cadence/runtime/stdlib/contracts"
 )
 
 var CryptoChecker = func() *sema.Checker {
 
-	code := internal.MustAssetString("contracts/crypto.cdc")
-
-	program, err := parser2.ParseProgram(code)
+	program, err := parser2.ParseProgram(contracts.Crypto)
 	if err != nil {
 		panic(err)
 	}

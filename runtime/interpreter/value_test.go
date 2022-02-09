@@ -21,6 +21,8 @@ package interpreter_test
 import (
 	"fmt"
 	"go/types"
+	"math"
+	"strings"
 	"testing"
 
 	"golang.org/x/tools/go/packages"
@@ -29,9 +31,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	. "github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 	checkerUtils "github.com/onflow/cadence/runtime/tests/checker"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -1116,81 +1120,241 @@ func TestGetHashInput(t *testing.T) {
 			value:    NewUIntValueFromUint64(10),
 			expected: []byte{byte(HashInputTypeUInt), 10},
 		},
+		"UInt min": {
+			value:    NewUIntValueFromUint64(0),
+			expected: []byte{byte(HashInputTypeUInt), 0},
+		},
+		"UInt large": {
+			value:    NewUIntValueFromBigInt(sema.UInt256TypeMaxIntBig),
+			expected: append([]byte{byte(HashInputTypeUInt)}, sema.UInt256TypeMaxIntBig.Bytes()...),
+		},
 		"UInt8": {
 			value:    UInt8Value(8),
 			expected: []byte{byte(HashInputTypeUInt8), 8},
+		},
+		"UInt8 min": {
+			value:    UInt8Value(0),
+			expected: []byte{byte(HashInputTypeUInt8), 0},
+		},
+		"UInt8 max": {
+			value:    UInt8Value(math.MaxUint8),
+			expected: []byte{byte(HashInputTypeUInt8), 0xff},
 		},
 		"UInt16": {
 			value:    UInt16Value(16),
 			expected: []byte{byte(HashInputTypeUInt16), 0, 16},
 		},
+		"UInt16 min": {
+			value:    UInt16Value(0),
+			expected: []byte{byte(HashInputTypeUInt16), 0, 0},
+		},
+		"UInt16 max": {
+			value:    UInt16Value(math.MaxUint16),
+			expected: []byte{byte(HashInputTypeUInt16), 0xff, 0xff},
+		},
 		"UInt32": {
 			value:    UInt32Value(32),
 			expected: []byte{byte(HashInputTypeUInt32), 0, 0, 0, 32},
+		},
+		"UInt32 min": {
+			value:    UInt32Value(0),
+			expected: []byte{byte(HashInputTypeUInt32), 0, 0, 0, 0},
+		},
+		"UInt32 max": {
+			value:    UInt32Value(math.MaxUint32),
+			expected: []byte{byte(HashInputTypeUInt32), 0xff, 0xff, 0xff, 0xff},
 		},
 		"UInt64": {
 			value:    UInt64Value(64),
 			expected: []byte{byte(HashInputTypeUInt64), 0, 0, 0, 0, 0, 0, 0, 64},
 		},
+		"UInt64 min": {
+			value:    UInt64Value(0),
+			expected: []byte{byte(HashInputTypeUInt64), 0, 0, 0, 0, 0, 0, 0, 0},
+		},
+		"UInt64 max": {
+			value:    UInt64Value(math.MaxUint64),
+			expected: []byte{byte(HashInputTypeUInt64), 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
+		},
 		"UInt128": {
 			value:    NewUInt128ValueFromUint64(128),
 			expected: []byte{byte(HashInputTypeUInt128), 128},
+		},
+		"UInt128 min": {
+			value:    NewUInt128ValueFromUint64(0),
+			expected: append([]byte{byte(HashInputTypeUInt128)}, 0),
+		},
+		"UInt128 max": {
+			value:    NewUInt128ValueFromBigInt(sema.UInt128TypeMaxIntBig),
+			expected: append([]byte{byte(HashInputTypeUInt128)}, sema.UInt128TypeMaxIntBig.Bytes()...),
 		},
 		"UInt256": {
 			value:    NewUInt256ValueFromUint64(256),
 			expected: []byte{byte(HashInputTypeUInt256), 1, 0},
 		},
+		"UInt256 min": {
+			value:    NewUInt256ValueFromUint64(0),
+			expected: append([]byte{byte(HashInputTypeUInt256)}, 0),
+		},
+		"UInt256 max": {
+			value:    NewUInt256ValueFromBigInt(sema.UInt256TypeMaxIntBig),
+			expected: append([]byte{byte(HashInputTypeUInt256)}, sema.UInt256TypeMaxIntBig.Bytes()...),
+		},
 		"Int": {
 			value:    NewIntValueFromInt64(10),
 			expected: []byte{byte(HashInputTypeInt), 10},
+		},
+		"Int small": {
+			value:    NewIntValueFromBigInt(sema.Int256TypeMinIntBig),
+			expected: append([]byte{byte(HashInputTypeInt)}, sema.Int256TypeMinIntBig.Bytes()...),
+		},
+		"Int large": {
+			value:    NewIntValueFromBigInt(sema.Int256TypeMaxIntBig),
+			expected: append([]byte{byte(HashInputTypeInt)}, sema.Int256TypeMaxIntBig.Bytes()...),
 		},
 		"Int8": {
 			value:    Int8Value(-8),
 			expected: []byte{byte(HashInputTypeInt8), 0xf8},
 		},
+		"Int8 min": {
+			value:    Int8Value(math.MinInt8),
+			expected: []byte{byte(HashInputTypeInt8), 0x80},
+		},
+		"Int8 max": {
+			value:    Int8Value(math.MaxInt8),
+			expected: []byte{byte(HashInputTypeInt8), 0x7f},
+		},
 		"Int16": {
 			value:    Int16Value(-16),
 			expected: []byte{byte(HashInputTypeInt16), 0xff, 0xf0},
+		},
+		"Int16 min": {
+			value:    Int16Value(math.MinInt16),
+			expected: []byte{byte(HashInputTypeInt16), 0x80, 0x00},
+		},
+		"Int16 max": {
+			value:    Int16Value(math.MaxInt16),
+			expected: []byte{byte(HashInputTypeInt16), 0x7f, 0xff},
 		},
 		"Int32": {
 			value:    Int32Value(-32),
 			expected: []byte{byte(HashInputTypeInt32), 0xff, 0xff, 0xff, 0xe0},
 		},
+		"Int32 min": {
+			value:    Int32Value(math.MinInt32),
+			expected: []byte{byte(HashInputTypeInt32), 0x80, 0x00, 0x00, 0x00},
+		},
+		"Int32 max": {
+			value:    Int32Value(math.MaxInt32),
+			expected: []byte{byte(HashInputTypeInt32), 0x7f, 0xff, 0xff, 0xff},
+		},
 		"Int64": {
 			value:    Int64Value(-64),
 			expected: []byte{byte(HashInputTypeInt64), 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xc0},
+		},
+		"Int64 min": {
+			value:    Int64Value(math.MinInt64),
+			expected: []byte{byte(HashInputTypeInt64), 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		},
+		"Int64 max": {
+			value:    Int64Value(math.MaxInt64),
+			expected: []byte{byte(HashInputTypeInt64), 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
 		},
 		"Int128": {
 			value:    NewInt128ValueFromInt64(-128),
 			expected: []byte{byte(HashInputTypeInt128), 0x80},
 		},
+		"Int128 min": {
+			value:    NewInt128ValueFromBigInt(sema.Int128TypeMinIntBig),
+			expected: append([]byte{byte(HashInputTypeInt128)}, sema.Int128TypeMinIntBig.Bytes()...),
+		},
+		"Int128 max": {
+			value:    NewInt128ValueFromBigInt(sema.Int128TypeMaxIntBig),
+			expected: append([]byte{byte(HashInputTypeInt128)}, sema.Int128TypeMaxIntBig.Bytes()...),
+		},
 		"Int256": {
 			value:    NewInt256ValueFromInt64(-256),
 			expected: []byte{byte(HashInputTypeInt256), 0xff, 0x0},
+		},
+		"Int256 min": {
+			value:    NewInt256ValueFromBigInt(sema.Int256TypeMinIntBig),
+			expected: append([]byte{byte(HashInputTypeInt256)}, sema.Int256TypeMinIntBig.Bytes()...),
+		},
+		"Int256 max": {
+			value:    NewInt256ValueFromBigInt(sema.Int256TypeMaxIntBig),
+			expected: append([]byte{byte(HashInputTypeInt256)}, sema.Int256TypeMaxIntBig.Bytes()...),
 		},
 		"Word8": {
 			value:    Word8Value(8),
 			expected: []byte{byte(HashInputTypeWord8), 8},
 		},
+		"Word8 min": {
+			value:    Word8Value(0),
+			expected: []byte{byte(HashInputTypeWord8), 0},
+		},
+		"Word8 max": {
+			value:    Word8Value(255),
+			expected: []byte{byte(HashInputTypeWord8), 0xff},
+		},
 		"Word16": {
 			value:    Word16Value(16),
 			expected: []byte{byte(HashInputTypeWord16), 0, 16},
+		},
+		"Word16 min": {
+			value:    Word16Value(0),
+			expected: []byte{byte(HashInputTypeWord16), 0, 0},
+		},
+		"Word16 max": {
+			value:    Word16Value(math.MaxUint16),
+			expected: []byte{byte(HashInputTypeWord16), 0xff, 0xff},
 		},
 		"Word32": {
 			value:    Word32Value(32),
 			expected: []byte{byte(HashInputTypeWord32), 0, 0, 0, 32},
 		},
+		"Word32 min": {
+			value:    Word32Value(0),
+			expected: []byte{byte(HashInputTypeWord32), 0, 0, 0, 0},
+		},
+		"Word32 max": {
+			value:    Word32Value(math.MaxUint32),
+			expected: []byte{byte(HashInputTypeWord32), 0xff, 0xff, 0xff, 0xff},
+		},
 		"Word64": {
 			value:    Word64Value(64),
 			expected: []byte{byte(HashInputTypeWord64), 0, 0, 0, 0, 0, 0, 0, 64},
+		},
+		"Word64 min": {
+			value:    Word64Value(0),
+			expected: []byte{byte(HashInputTypeWord64), 0, 0, 0, 0, 0, 0, 0, 0},
+		},
+		"Word64 max": {
+			value:    Word64Value(math.MaxUint64),
+			expected: []byte{byte(HashInputTypeWord64), 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
 		},
 		"UFix64": {
 			value:    NewUFix64ValueWithInteger(64),
 			expected: []byte{byte(HashInputTypeUFix64), 0x0, 0x0, 0x0, 0x1, 0x7d, 0x78, 0x40, 0x0},
 		},
+		"UFix64 min": {
+			value:    NewUFix64ValueWithInteger(0),
+			expected: []byte{byte(HashInputTypeUFix64), 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
+		},
+		"UFix64 max": {
+			value:    NewUFix64ValueWithInteger(sema.UFix64TypeMaxInt),
+			expected: []byte{byte(HashInputTypeUFix64), 0xff, 0xff, 0xff, 0xff, 0xff, 0x6e, 0x41, 0x0},
+		},
 		"Fix64": {
 			value:    NewFix64ValueWithInteger(-32),
 			expected: []byte{byte(HashInputTypeFix64), 0xff, 0xff, 0xff, 0xff, 0x41, 0x43, 0xe0, 0x0},
+		},
+		"Fix64 min": {
+			value:    NewFix64ValueWithInteger(sema.Fix64TypeMinInt),
+			expected: []byte{byte(HashInputTypeFix64), 0x80, 0x0, 0x0, 0x0, 0x03, 0x43, 0xd0, 0x0},
+		},
+		"Fix64 max": {
+			value:    NewFix64ValueWithInteger(sema.Fix64TypeMaxInt),
+			expected: []byte{byte(HashInputTypeFix64), 0x7f, 0xff, 0xff, 0xff, 0xfc, 0xbc, 0x30, 0x00},
 		},
 		"true": {
 			value:    BoolValue(true),
@@ -1206,6 +1370,12 @@ func TestGetHashInput(t *testing.T) {
 				byte(HashInputTypeString),
 				0x46, 0x6c, 0x6f, 0x77, 0x20, 0x72, 0x69, 0x64, 0x61, 0x68, 0x21,
 			},
+		},
+		"String long": {
+			value: NewStringValue(strings.Repeat("a", 32)),
+			expected: append([]byte{byte(HashInputTypeString)},
+				[]byte(strings.Repeat("a", 32))...,
+			),
 		},
 		"Address": {
 			value:    NewAddressValue(common.Address{0, 0, 0, 0, 0, 0, 0, 1}),
@@ -1238,6 +1408,37 @@ func TestGetHashInput(t *testing.T) {
 				42,
 			},
 		},
+		"enum long identifier": {
+			value: func() HashableValue {
+				inter := newTestInterpreter(t)
+
+				fields := []CompositeField{
+					{
+						Name:  "rawValue",
+						Value: UInt8Value(42),
+					},
+				}
+				return NewCompositeValue(
+					inter,
+					utils.TestLocation,
+					strings.Repeat("a", 32),
+					common.CompositeKindEnum,
+					fields,
+					common.Address{},
+				)
+			}(),
+			expected: append(
+				append([]byte{byte(HashInputTypeEnum)},
+					append(
+						// S.test.
+						[]byte{0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e},
+						// identifier
+						[]byte(strings.Repeat("a", 32))...,
+					)...),
+				byte(HashInputTypeUInt8),
+				42,
+			),
+		},
 		"Path": {
 			value: PathValue{
 				Domain:     common.PathDomainStorage,
@@ -1250,6 +1451,19 @@ func TestGetHashInput(t *testing.T) {
 				// identifier: "foo"
 				0x66, 0x6f, 0x6f,
 			},
+		},
+		"Path long identifier": {
+			value: PathValue{
+				Domain:     common.PathDomainStorage,
+				Identifier: strings.Repeat("a", 32),
+			},
+			expected: append(
+				[]byte{byte(HashInputTypePath),
+					// domain: storage
+					0x1},
+				// identifier: aaa...
+				[]byte(strings.Repeat("a", 32))...,
+			),
 		},
 	}
 
@@ -2923,11 +3137,7 @@ func TestPublicKeyValue(t *testing.T) {
 			nil,
 			utils.TestLocation,
 			WithStorage(storage),
-			WithPublicKeyValidationHandler(
-				func(_ *Interpreter, _ func() LocationRange, _ *CompositeValue) BoolValue {
-					return true
-				},
-			),
+			WithPublicKeyValidationHandler(runtime.DoNotValidatePublicKey),
 		)
 		require.NoError(t, err)
 
@@ -2942,18 +3152,9 @@ func TestPublicKeyValue(t *testing.T) {
 			NewIntValueFromInt64(3),
 		)
 
-		sigAlgo := NewCompositeValue(
+		sigAlgo := stdlib.NewSignatureAlgorithmCase(
 			inter,
-			nil,
-			sema.SignatureAlgorithmType.QualifiedIdentifier(),
-			sema.SignatureAlgorithmType.Kind,
-			[]CompositeField{
-				{
-					Name:  sema.EnumRawValueFieldName,
-					Value: UInt8Value(sema.SignatureAlgorithmECDSA_secp256k1.RawValue()),
-				},
-			},
-			common.Address{},
+			sema.SignatureAlgorithmECDSA_secp256k1.RawValue(),
 		)
 
 		key := NewPublicKeyValue(
@@ -2965,9 +3166,60 @@ func TestPublicKeyValue(t *testing.T) {
 		)
 
 		require.Equal(t,
-			"PublicKey(publicKey: [1, 7, 3], signatureAlgorithm: SignatureAlgorithm(rawValue: 2), isValid: true)",
+			"PublicKey(publicKey: [1, 7, 3], signatureAlgorithm: SignatureAlgorithm(rawValue: 2))",
 			key.String(),
 		)
+	})
+
+	t.Run("Panics when PublicKey is invalid", func(t *testing.T) {
+
+		t.Parallel()
+
+		storage := NewInMemoryStorage()
+
+		fakeError := fakeError{}
+
+		inter, err := NewInterpreter(
+			nil,
+			utils.TestLocation,
+			WithStorage(storage),
+			WithPublicKeyValidationHandler(
+				func(_ *Interpreter, _ func() LocationRange, _ *CompositeValue) error {
+					return fakeError
+				},
+			),
+		)
+		require.NoError(t, err)
+
+		publicKeyBytes := []byte{1, 7, 3}
+
+		publicKey := NewArrayValue(
+			inter,
+			VariableSizedStaticType{
+				Type: PrimitiveStaticTypeInt,
+			},
+			common.Address{},
+			NewIntValueFromInt64(int64(publicKeyBytes[0])),
+			NewIntValueFromInt64(int64(publicKeyBytes[1])),
+			NewIntValueFromInt64(int64(publicKeyBytes[2])),
+		)
+
+		sigAlgo := stdlib.NewSignatureAlgorithmCase(
+			inter,
+			sema.SignatureAlgorithmECDSA_secp256k1.RawValue(),
+		)
+
+		assert.PanicsWithError(t,
+			(InvalidPublicKeyError{PublicKey: publicKey, Err: fakeError}).Error(),
+			func() {
+				_ = NewPublicKeyValue(
+					inter,
+					ReturnEmptyLocationRange,
+					publicKey,
+					sigAlgo,
+					inter.PublicKeyValidationHandler,
+				)
+			})
 	})
 }
 
@@ -3136,4 +3388,10 @@ func TestNonStorable(t *testing.T) {
 	_, err = inter.Invoke("foo")
 	require.NoError(t, err)
 
+}
+
+type fakeError struct{}
+
+func (fakeError) Error() string {
+	return "fake error for testing"
 }

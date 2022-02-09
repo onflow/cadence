@@ -672,7 +672,16 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 // fits into range of the target integer type
 //
 func CheckIntegerLiteral(expression *ast.IntegerExpression, targetType Type, report func(error)) bool {
-	ranged := targetType.(IntegerRangedType)
+	ranged, ok := targetType.(IntegerRangedType)
+
+	// if this isn't an integer ranged type, report a mismatch
+	if !ok {
+		report(&TypeMismatchWithDescriptionError{
+			ActualType:              targetType,
+			ExpectedTypeDescription: "an integer type",
+			Range:                   ast.NewRangeFromPositioned(expression),
+		})
+	}
 	minInt := ranged.MinInt()
 	maxInt := ranged.MaxInt()
 
@@ -1308,7 +1317,7 @@ func (checker *Checker) convertNominalType(t *ast.NominalType) Type {
 	var resolvedIdentifiers []ast.Identifier
 
 	for _, identifier := range t.NestedIdentifiers {
-		if containerType, ok := ty.(ContainerType); ok && containerType.isContainerType() {
+		if containerType, ok := ty.(ContainerType); ok && containerType.IsContainerType() {
 			ty, _ = containerType.GetNestedTypes().Get(identifier.Identifier)
 		} else {
 			if !ty.IsInvalidType() {
@@ -1575,7 +1584,7 @@ func (checker *Checker) recordResourceInvalidation(
 	}
 
 	if checker.allowSelfResourceFieldInvalidation && accessedSelfMember != nil {
-		checker.resources.AddInvalidation(accessedSelfMember, invalidation)
+		checker.maybeAddResourceInvalidation(accessedSelfMember, invalidation)
 
 		return &recordedResourceInvalidation{
 			resource:     accessedSelfMember,
@@ -1605,7 +1614,7 @@ func (checker *Checker) recordResourceInvalidation(
 		)
 	}
 
-	checker.resources.AddInvalidation(variable, invalidation)
+	checker.maybeAddResourceInvalidation(variable, invalidation)
 
 	return &recordedResourceInvalidation{
 		resource:     variable,
@@ -1774,9 +1783,9 @@ func (checker *Checker) checkPotentiallyUnevaluated(check TypeCheckFunc) Type {
 		temporaryResources,
 	)
 
-	functionActivation.ReturnInfo.MaybeReturned =
-		functionActivation.ReturnInfo.MaybeReturned ||
-			temporaryReturnInfo.MaybeReturned
+	functionActivation.ReturnInfo.MaybeJumpedOrReturned =
+		functionActivation.ReturnInfo.MaybeJumpedOrReturned ||
+			temporaryReturnInfo.MaybeJumpedOrReturned
 
 	// NOTE: the definitive return state does not change
 
@@ -1919,15 +1928,13 @@ func (checker *Checker) checkFieldsAccessModifier(fields []*ast.FieldDeclaration
 // i.e. it has exactly one grapheme cluster.
 //
 func (checker *Checker) checkCharacterLiteral(expression *ast.StringExpression) {
-	length := uniseg.GraphemeClusterCount(expression.Value)
-
-	if length == 1 {
+	if IsValidCharacter(expression.Value) {
 		return
 	}
 
 	checker.report(
 		&InvalidCharacterLiteralError{
-			Length: length,
+			Length: uniseg.GraphemeClusterCount(expression.Value),
 			Range:  ast.NewRangeFromPositioned(expression),
 		},
 	)
@@ -2398,7 +2405,11 @@ func (checker *Checker) visitExpressionWithForceType(
 		checker.expectedType = prevExpectedType
 	}()
 
-	actualType = expr.Accept(checker).(Type)
+	actualType, ok := expr.Accept(checker).(Type)
+	if !ok {
+		// visiter must always return a Type
+		panic(errors.NewUnreachableError())
+	}
 
 	if forceType &&
 		expectedType != nil &&
@@ -2465,6 +2476,16 @@ func (checker *Checker) declareGlobalRanges() {
 	checker.Elaboration.GlobalTypes.Foreach(addRange)
 
 	checker.Elaboration.GlobalValues.Foreach(addRange)
+}
+
+func (checker *Checker) maybeAddResourceInvalidation(resource interface{}, invalidation ResourceInvalidation) {
+	functionActivation := checker.functionActivations.Current()
+
+	if functionActivation.ReturnInfo.IsUnreachable() {
+		return
+	}
+
+	checker.resources.AddInvalidation(resource, invalidation)
 }
 
 func wrapWithOptionalIfNotNil(typ Type) Type {

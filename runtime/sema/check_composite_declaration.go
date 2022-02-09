@@ -252,7 +252,11 @@ func (checker *Checker) declareCompositeNestedTypes(
 			if nestedCompositeDeclaration, isCompositeDeclaration :=
 				nestedDeclaration.(*ast.CompositeDeclaration); isCompositeDeclaration {
 
-				nestedCompositeType := nestedType.(*CompositeType)
+				nestedCompositeType, ok := nestedType.(*CompositeType)
+				if !ok {
+					// we just checked that this was a composite declaration
+					panic(errors.NewUnreachableError())
+				}
 
 				// Always determine composite constructor type
 
@@ -1114,8 +1118,12 @@ func (checker *Checker) memberSatisfied(compositeMember, interfaceMember *Member
 			// where argument labels are not considered,
 			// and parameters are contravariant.
 
-			interfaceMemberFunctionType := interfaceMemberType.(*FunctionType)
-			compositeMemberFunctionType := compositeMemberType.(*FunctionType)
+			interfaceMemberFunctionType, isInterfaceMemberFunctionType := interfaceMemberType.(*FunctionType)
+			compositeMemberFunctionType, isCompositeMemberFunctionType := compositeMemberType.(*FunctionType)
+
+			if !isInterfaceMemberFunctionType || !isCompositeMemberFunctionType {
+				return false
+			}
 
 			if !interfaceMemberFunctionType.HasSameArgumentLabels(compositeMemberFunctionType) {
 				return false
@@ -1225,13 +1233,31 @@ func (checker *Checker) checkTypeRequirement(
 	// Find the composite declaration of the composite type
 
 	var compositeDeclaration *ast.CompositeDeclaration
+	var foundRedeclaration bool
 
 	for _, nestedCompositeDeclaration := range containerDeclaration.Members.Composites() {
 		nestedCompositeIdentifier := nestedCompositeDeclaration.Identifier.Identifier
 		if nestedCompositeIdentifier == declaredCompositeType.Identifier {
+			// If we detected a second nested composite declaration with the same identifier,
+			// report an error and stop further type requirement checking
+			if compositeDeclaration != nil {
+				foundRedeclaration = true
+				checker.report(&RedeclarationError{
+					Kind:        nestedCompositeDeclaration.DeclarationKind(),
+					Name:        nestedCompositeDeclaration.Identifier.Identifier,
+					Pos:         nestedCompositeDeclaration.Identifier.Pos,
+					PreviousPos: &compositeDeclaration.Identifier.Pos,
+				})
+			}
 			compositeDeclaration = nestedCompositeDeclaration
-			break
+			// NOTE: Do not break / stop iteration, but keep looking for
+			// another (invalid) nested composite declaration with the same identifier,
+			// as the first found declaration is not necessarily the correct one
 		}
+	}
+
+	if foundRedeclaration {
+		return
 	}
 
 	if compositeDeclaration == nil {
@@ -1743,7 +1769,11 @@ func (checker *Checker) checkSpecialFunction(
 	case ContainerKindComposite:
 		// Event declarations have an empty initializer as it is synthesized
 
-		compositeType := containerType.(*CompositeType)
+		compositeType, ok := containerType.(*CompositeType)
+		if !ok {
+			// we just checked that the container was a composite
+			panic(errors.NewUnreachableError())
+		}
 		if compositeType.Kind != common.CompositeKindEvent &&
 			specialFunction.FunctionDeclaration.FunctionBlock == nil {
 

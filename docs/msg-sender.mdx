@@ -36,7 +36,7 @@ Limiting a user's control of resources that they own except in exceptional circu
 
 This code could check the resource owner, but doing so is an antipattern (see below) and should not be used as it cannot be relied on. It is better to use an object's `uuid`:
 
-[https://docs.onflow.org/cadence/language/composite-types/#resource-identifier](https://docs.onflow.org/cadence/language/composite-types/#resource-identifier)
+[https://docs.onflow.org/cadence/language/resources/#resource-identifier](https://docs.onflow.org/cadence/language/resources/#resource-identifier)
 
 For example: [forthcoming]
 
@@ -104,7 +104,7 @@ This is of limited use in replacing `msg.sender`, as it is essentially a tautolo
 
 Resources that are in storage (but not those that are located in-memory, e.g. when a resource has just been created) have the implicit field `let owner: PublicAccount?` :
 
-[https://docs.onflow.org/cadence/language/composite-types/#resource-owner](https://docs.onflow.org/cadence/language/composite-types/#resource-owner)
+[https://docs.onflow.org/cadence/language/resources/#resource-owner](https://docs.onflow.org/cadence/language/resources/#resource-owner)
 
 This can be defeated by using a newly created resource, as the owner will then be nil.
 

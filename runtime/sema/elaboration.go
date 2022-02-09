@@ -61,6 +61,7 @@ type Elaboration struct {
 	DictionaryExpressionType            map[*ast.DictionaryExpression]*DictionaryType
 	DictionaryExpressionEntryTypes      map[*ast.DictionaryExpression][]DictionaryEntryType
 	IntegerExpressionType               map[*ast.IntegerExpression]Type
+	StringExpressionType                map[*ast.StringExpression]Type
 	FixedPointExpression                map[*ast.FixedPointExpression]Type
 	TransactionDeclarationTypes         map[*ast.TransactionDeclaration]*TransactionType
 	SwapStatementLeftTypes              map[*ast.SwapStatement]Type
@@ -82,7 +83,7 @@ type Elaboration struct {
 	EffectivePredeclaredValues          map[string]ValueDeclaration
 	EffectivePredeclaredTypes           map[string]TypeDeclaration
 	isChecking                          bool
-	ReferenceExpressionBorrowTypes      map[*ast.ReferenceExpression]*ReferenceType
+	ReferenceExpressionBorrowTypes      map[*ast.ReferenceExpression]Type
 }
 
 func NewElaboration() *Elaboration {
@@ -117,6 +118,7 @@ func NewElaboration() *Elaboration {
 		DictionaryExpressionType:            map[*ast.DictionaryExpression]*DictionaryType{},
 		DictionaryExpressionEntryTypes:      map[*ast.DictionaryExpression][]DictionaryEntryType{},
 		IntegerExpressionType:               map[*ast.IntegerExpression]Type{},
+		StringExpressionType:                map[*ast.StringExpression]Type{},
 		FixedPointExpression:                map[*ast.FixedPointExpression]Type{},
 		TransactionDeclarationTypes:         map[*ast.TransactionDeclaration]*TransactionType{},
 		SwapStatementLeftTypes:              map[*ast.SwapStatement]Type{},
@@ -134,7 +136,7 @@ func NewElaboration() *Elaboration {
 		GlobalTypes:                         NewStringVariableOrderedMap(),
 		EffectivePredeclaredValues:          map[string]ValueDeclaration{},
 		EffectivePredeclaredTypes:           map[string]TypeDeclaration{},
-		ReferenceExpressionBorrowTypes:      map[*ast.ReferenceExpression]*ReferenceType{},
+		ReferenceExpressionBorrowTypes:      map[*ast.ReferenceExpression]Type{},
 	}
 }
 
