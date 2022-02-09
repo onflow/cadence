@@ -483,8 +483,8 @@ func TestBLSVerifyPoP(t *testing.T) {
 		storage: storage,
 		validatePublicKey: func(
 			pk *PublicKey,
-		) (bool, error) {
-			return true, nil
+		) error {
+			return nil
 		},
 		bLSVerifyPOP: func(
 			pk *PublicKey,
@@ -514,65 +514,6 @@ func TestBLSVerifyPoP(t *testing.T) {
 	)
 
 	assert.True(t, called)
-}
-
-func TestBLSVerifyPoPInvalid(t *testing.T) {
-
-	t.Parallel()
-
-	runtime := newTestInterpreterRuntime()
-
-	script := []byte(`
-
-      pub fun main(): Bool {
-          let publicKey = PublicKey(
-              publicKey: "0102".decodeHex(),
-              signatureAlgorithm: SignatureAlgorithm.BLS_BLS12_381
-          )
-
-          return publicKey.verifyPoP([1, 2, 3, 4, 5])
-      }
-    `)
-
-	called := false
-
-	storage := newTestLedger(nil, nil)
-
-	runtimeInterface := &testRuntimeInterface{
-		storage: storage,
-		validatePublicKey: func(
-			pk *PublicKey,
-		) (bool, error) {
-			return false, nil
-		},
-		bLSVerifyPOP: func(
-			pk *PublicKey,
-			proof []byte,
-		) (bool, error) {
-			assert.Equal(t, pk.PublicKey, []byte{1, 2})
-			called = true
-			return true, nil
-		},
-	}
-
-	result, err := runtime.ExecuteScript(
-		Script{
-			Source: script,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  utils.TestLocation,
-		},
-	)
-	require.NoError(t, err)
-
-	assert.Equal(t,
-		cadence.NewBool(false),
-		result,
-	)
-
-	// key is invalid, so the interface function should never be called
-	assert.False(t, called)
 }
 
 func TestBLSAggregateSignatures(t *testing.T) {
@@ -667,8 +608,8 @@ func TestAggregateBLSPublicKeys(t *testing.T) {
 		storage: storage,
 		validatePublicKey: func(
 			pk *PublicKey,
-		) (bool, error) {
-			return true, nil
+		) error {
+			return nil
 		},
 		aggregateBLSPublicKeys: func(
 			keys []*PublicKey,
@@ -706,71 +647,4 @@ func TestAggregateBLSPublicKeys(t *testing.T) {
 	)
 
 	assert.True(t, called)
-}
-
-func TestAggregateBLSPublicKeysInvalid(t *testing.T) {
-
-	t.Parallel()
-
-	runtime := newTestInterpreterRuntime()
-
-	script := []byte(`
-
-      pub fun main(): PublicKey? {
-		let k1 = PublicKey(
-			publicKey: "0302".decodeHex(),
-			signatureAlgorithm: SignatureAlgorithm.BLS_BLS12_381
-		)
-		let k2 = PublicKey(
-			publicKey: "0102".decodeHex(),
-			signatureAlgorithm: SignatureAlgorithm.BLS_BLS12_381
-		)
-		return AggregateBLSPublicKeys([k1, k2])
-      }
-    `)
-
-	called := false
-
-	storage := newTestLedger(nil, nil)
-
-	runtimeInterface := &testRuntimeInterface{
-		storage: storage,
-		validatePublicKey: func(
-			pk *PublicKey,
-		) (bool, error) {
-			return pk.PublicKey[0] != 0x1, nil
-		},
-		aggregateBLSPublicKeys: func(
-			keys []*PublicKey,
-		) (*PublicKey, error) {
-			assert.Equal(t, len(keys), 2)
-			ret := make([]byte, 0, len(keys))
-			for _, key := range keys {
-				ret = append(ret, key.PublicKey...)
-			}
-			called = true
-			return &PublicKey{PublicKey: ret, SignAlgo: SignatureAlgorithmBLS_BLS12_381}, nil
-		},
-	}
-
-	result, err := runtime.ExecuteScript(
-		Script{
-			Source: script,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  utils.TestLocation,
-		},
-	)
-	require.NoError(t, err)
-
-	assert.Equal(t,
-		cadence.Optional{
-			Value: cadence.Value(nil),
-		},
-		result,
-	)
-
-	// invalid public key will return nil before calling the interface function
-	assert.False(t, called)
 }
