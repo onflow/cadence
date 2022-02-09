@@ -1283,7 +1283,7 @@ func (r *interpreterRuntime) newInterpreter(
 			func(
 				signatures [][]byte,
 			) ([]byte, error) {
-				return context.Interface.AggregateBLSSignatures(signatures)
+				return context.Interface.BLSAggregateSignatures(signatures)
 			},
 			func(
 				inter *interpreter.Interpreter,
@@ -3422,8 +3422,9 @@ func verifyBLSPOP(
 		valid, err = runtimeInterface.BLSVerifyPOP(publicKey, signature)
 	})
 
+	// if the crypto layer produces an error, we have invalid input, return false
 	if err != nil {
-		return false, err
+		return interpreter.BoolValue(false), nil //nolint:nilerr
 	}
 
 	return interpreter.BoolValue(valid), nil
@@ -3448,18 +3449,21 @@ func aggregateBLSPublicKeys(
 	var err error
 	var key *PublicKey
 	wrapPanic(func() {
-		key, err = runtimeInterface.AggregateBLSPublicKeys(publicKeys)
+		key, err = runtimeInterface.BLSAggregatePublicKeys(publicKeys)
 	})
 
+	// if the crypto layer produces an error, we have invalid input, return nil
 	if err != nil {
-		return nil, err
+		return interpreter.NilValue{}, nil //nolint:nilerr
 	}
 
-	return NewPublicKeyValue(
-		inter,
-		getLocationRange,
-		key,
-		validator,
+	return interpreter.NewSomeValueNonCopying(
+		NewPublicKeyValue(
+			inter,
+			getLocationRange,
+			key,
+			validator,
+		),
 	), nil
 }
 
