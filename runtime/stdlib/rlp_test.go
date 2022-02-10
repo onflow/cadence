@@ -63,11 +63,7 @@ func TestRLPDecodeString(t *testing.T) {
 				interpreter.ByteArrayStaticType,
 				common.Address{},
 			),
-			interpreter.NewArrayValue(
-				inter,
-				interpreter.ByteArrayStaticType,
-				common.Address{},
-			),
+			nil,
 			"failed to RLP-decode string: input data is empty",
 		},
 		{ // empty string
@@ -99,6 +95,17 @@ func TestRLPDecodeString(t *testing.T) {
 			),
 			"",
 		},
+		{ //  single char with an extra trailing byte
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.ByteArrayStaticType,
+				common.Address{},
+				interpreter.UInt8Value(65),
+				interpreter.UInt8Value(1),
+			),
+			nil,
+			"failed to RLP-decode list: input data is expected to be RLP-encoded of a single string or a single list but it seems it contains extra trailing bytes.",
+		},
 		{ // dog
 			interpreter.NewArrayValue(
 				inter,
@@ -119,18 +126,28 @@ func TestRLPDecodeString(t *testing.T) {
 			),
 			"",
 		},
-		{ // error handling - incomplete data case
+		{ // dog str with an extra trailing byte
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.ByteArrayStaticType,
+				common.Address{},
+				interpreter.UInt8Value(131), // 0x83
+				interpreter.UInt8Value(100), // 0x64
+				interpreter.UInt8Value(111), // 0x6f
+				interpreter.UInt8Value(103), // 0x67
+				interpreter.UInt8Value(1),   // extra byte
+			),
+			nil,
+			"failed to RLP-decode list: input data is expected to be RLP-encoded of a single string or a single list but it seems it contains extra trailing bytes.",
+		},
+		{ // handling lower level errors - incomplete data case
 			interpreter.NewArrayValue(
 				inter,
 				interpreter.ByteArrayStaticType,
 				common.Address{},
 				interpreter.UInt8Value(131),
 			),
-			interpreter.NewArrayValue(
-				inter,
-				interpreter.ByteArrayStaticType,
-				common.Address{},
-			),
+			nil,
 			"failed to RLP-decode string: incomplete input! not enough bytes to read",
 		},
 	}
@@ -182,13 +199,7 @@ func TestRLPDecodeList(t *testing.T) {
 				interpreter.ByteArrayStaticType,
 				common.Address{},
 			),
-			interpreter.NewArrayValue(
-				inter,
-				interpreter.VariableSizedStaticType{
-					Type: interpreter.ByteArrayStaticType,
-				},
-				common.Address{},
-			),
+			nil,
 			"failed to RLP-decode list: input data is empty",
 		},
 		{ // empty list
@@ -230,6 +241,18 @@ func TestRLPDecodeList(t *testing.T) {
 			),
 			"",
 		},
+		{ // single element list with trailing extra bytes
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.ByteArrayStaticType,
+				common.Address{},
+				interpreter.UInt8Value(193),
+				interpreter.UInt8Value(65),
+				interpreter.UInt8Value(65), // extra byte
+			),
+			nil,
+			"failed to RLP-decode list: input data is expected to be RLP-encoded of a single string or a single list but it seems it contains extra trailing bytes.",
+		},
 		{ // multiple member list
 			interpreter.NewArrayValue(
 				inter,
@@ -255,25 +278,46 @@ func TestRLPDecodeList(t *testing.T) {
 					inter,
 					interpreter.ByteArrayStaticType,
 					common.Address{},
-					interpreter.UInt8Value('A'),
-					interpreter.UInt8Value('B'),
-					interpreter.UInt8Value('C'),
+					interpreter.UInt8Value(131),
+					interpreter.UInt8Value(65),
+					interpreter.UInt8Value(66),
+					interpreter.UInt8Value(67),
 				),
 				interpreter.NewArrayValue(
 					inter,
 					interpreter.ByteArrayStaticType,
 					common.Address{},
-					interpreter.UInt8Value('E'),
-					interpreter.UInt8Value('F'),
-					interpreter.UInt8Value('G'),
+					interpreter.UInt8Value(131),
+					interpreter.UInt8Value(69),
+					interpreter.UInt8Value(70),
+					interpreter.UInt8Value(71),
 				),
 			),
 			"",
 		},
+		{ // multiple member list with an extra trailing byte
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.ByteArrayStaticType,
+				common.Address{},
+				interpreter.UInt8Value(200),
+				interpreter.UInt8Value(131),
+				interpreter.UInt8Value(65),
+				interpreter.UInt8Value(66),
+				interpreter.UInt8Value(67),
+				interpreter.UInt8Value(131),
+				interpreter.UInt8Value(69),
+				interpreter.UInt8Value(70),
+				interpreter.UInt8Value(71),
+				interpreter.UInt8Value(55),
+			),
+			nil,
+			"failed to RLP-decode list: input data is expected to be RLP-encoded of a single string or a single list but it seems it contains extra trailing bytes.",
+		},
 	}
 
 	for _, test := range tests {
-		output, err := inter.Invoke(
+		decoded, err := inter.Invoke(
 			"DecodeRLPList",
 			test.input,
 		)
@@ -283,6 +327,6 @@ func TestRLPDecodeList(t *testing.T) {
 			continue
 		}
 		require.NoError(t, err)
-		utils.AssertValuesEqual(t, inter, test.output, output)
+		utils.AssertValuesEqual(t, inter, test.output, decoded)
 	}
 }
