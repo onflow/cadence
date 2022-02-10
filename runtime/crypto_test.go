@@ -705,7 +705,8 @@ func TestTraversingMerkleProof(t *testing.T) {
 				i = i + 1
 			}
 
-			expectedNodeHash = encodedChildren[nibbles[nibbleIndex]]
+			var encodedChild = encodedChildren[nibbles[nibbleIndex]]
+			expectedNodeHash = DecodeRLPString(input: encodedChild)
 			log(nibbles[nibbleIndex])
 			nibbleIndex = nibbleIndex + 1
 		}
