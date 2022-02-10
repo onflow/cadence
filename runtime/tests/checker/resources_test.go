@@ -3063,6 +3063,55 @@ func TestCheckInvalidContractResourceFieldMove(t *testing.T) {
 	assert.IsType(t, &sema.InvalidNestedResourceMoveError{}, errs[0])
 }
 
+func TestCheckInvalidEnumResourceField(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("raw type given", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+	      resource R {}
+
+          enum E: R {}
+	    `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidEnumRawTypeError{}, errs[0])
+	})
+
+	t.Run("raw type given, nested", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+	      resource R {
+              enum E: R {}
+          }
+	    `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		require.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
+		require.IsType(t, &sema.InvalidEnumRawTypeError{}, errs[1])
+	})
+
+	t.Run("raw type not given", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+	      enum E {}
+	    `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.MissingEnumRawTypeError{}, errs[0])
+	})
+}
+
 // TestCheckResourceInterfaceConformance tests the check
 // of conformance of resources to resource interfaces.
 //
