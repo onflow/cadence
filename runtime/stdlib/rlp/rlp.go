@@ -211,6 +211,10 @@ func DecodeList(inp []byte, startIndex int) (encodedItems [][]byte, bytesRead in
 		return retList, 1, nil
 	}
 
+	if dataBytesRead > len(inp) {
+		return nil, 0, ErrIncompleteInput
+	}
+
 	for dataBytesRead < listDataSize {
 
 		_, itemDataStartIndex, itemSize, err := ReadSize(inp, itemStartIndex)
