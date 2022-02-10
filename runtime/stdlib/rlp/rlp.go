@@ -40,16 +40,25 @@ const (
 )
 
 var (
-	ErrEmptyInput              = errors.New("input data is empty")
-	ErrInvalidStartIndex       = errors.New("invalid start index")
-	ErrIncompleteInput         = errors.New("incomplete input! not enough bytes to read")
-	ErrNonCanonicalInput       = errors.New("non-canonical encoded input")
-	ErrDataSizeTooLarge        = errors.New("data size is larger than what is supported")
-	ErrListSizeMismatch        = errors.New("list size doesn't match the size of items")
-	ErrInputContainsExtraBytes = errors.New("input contains extra bytes")
-	ErrTypeMismatch            = errors.New("type extracted from input doesn't match the function")
+	ErrEmptyInput        = errors.New("input data is empty")
+	ErrInvalidStartIndex = errors.New("invalid start index")
+	ErrIncompleteInput   = errors.New("incomplete input! not enough bytes to read")
+	ErrNonCanonicalInput = errors.New("non-canonical encoded input")
+	ErrDataSizeTooLarge  = errors.New("data size is larger than what is supported")
+	ErrListSizeMismatch  = errors.New("list size doesn't match the size of items")
+	ErrTypeMismatch      = errors.New("type extracted from input doesn't match the function")
 )
 
+// ReadSize looks at the first byte at startIndex to decode the type and reads as many bytes as needed
+// to determine the data byte size, it returns a flag if the type is string, start index of data part in the input,
+// number of bytes that has to be read for data (from start index of data) and error if any.
+//
+// it only supports RLP canonical form.  RLP canonical form requires:
+//   - if string is 0-55 bytes long (first byte is [0x80, 0xb7]), string length can't be 1 while string <= 0x7f
+//   - if string is more than 55 bytes long (first byte is [0xb8, 0xbf]), string length can't be <= 55
+//   - if string is more than 55 bytes long (first byte is [0xb8, 0xbf]), string length can't be encoded with leading 0s
+//   - if list payload is more than 55 bytes long (first byte is [0xf8, 0xff]), list payload length can't be <= 55
+//   - if list payload is more than 55 bytes long (first byte is [0xf8, 0xff]), list payload length can't be encoded with leading 0s
 func ReadSize(inp []byte, startIndex int) (isString bool, dataStartIndex, dataSize int, err error) {
 	if len(inp) == 0 {
 		return false, 0, 0, ErrEmptyInput
@@ -152,75 +161,74 @@ func ReadSize(inp []byte, startIndex int) (isString bool, dataStartIndex, dataSi
 	return isString, startIndex, int(strLen), nil
 }
 
-func DecodeString(inp []byte, startIndex int) (str []byte, err error) {
+// DecodeString decodes a RLP-encoded string given the startIndex
+// it returns decoded string, number of bytes that were read and err if any
+func DecodeString(inp []byte, startIndex int) (str []byte, bytesRead int, err error) {
 	// read data size info
 	isString, dataStartIndex, dataSize, err := ReadSize(inp, startIndex)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	// check type
 	if !isString {
-		return nil, ErrTypeMismatch
+		return nil, 0, ErrTypeMismatch
 	}
+
 	// single character special case
 	if dataSize == 1 && startIndex == dataStartIndex {
-		if len(inp) > 1 {
-			return nil, ErrInputContainsExtraBytes
-		}
-		return []byte{inp[dataStartIndex]}, nil
+		return []byte{inp[dataStartIndex]}, 1, nil
 	}
 
 	// collect and return string
 	dataEndIndex := dataStartIndex + dataSize
 	if dataEndIndex > len(inp) {
-		return nil, ErrIncompleteInput
+		return nil, 0, ErrIncompleteInput
 	}
 
-	if len(inp) > dataEndIndex {
-		return nil, ErrInputContainsExtraBytes
-	}
-
-	return inp[dataStartIndex:dataEndIndex], nil
+	return inp[dataStartIndex:dataEndIndex], dataEndIndex - startIndex, nil
 }
 
-func DecodeList(inp []byte, startIndex int) (encodedItems [][]byte, err error) {
+// DecodeList decodes a RLP-encoded list given the startIndex
+// it returns a list of encodedItems, number of bytes that were read and err if any
+func DecodeList(inp []byte, startIndex int) (encodedItems [][]byte, bytesRead int, err error) {
 	// read data size info
 	isString, dataStartIndex, listDataSize, err := ReadSize(inp, startIndex)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	// check type
 	if isString {
-		return nil, ErrTypeMismatch
+		return nil, 0, ErrTypeMismatch
 	}
 
 	itemStartIndex := dataStartIndex
-	bytesRead := 0
+	var dataBytesRead, itemEndIndex int
 	retList := make([][]byte, 0)
 
-	for bytesRead < listDataSize {
+	// special case - empty list
+	if listDataSize == 0 {
+		return retList, 1, nil
+	}
+
+	for dataBytesRead < listDataSize {
 
 		_, itemDataStartIndex, itemSize, err := ReadSize(inp, itemStartIndex)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		// collect encoded item
-		itemEndIndex := itemDataStartIndex + itemSize
+		itemEndIndex = itemDataStartIndex + itemSize
 		if itemEndIndex > len(inp) {
-			return nil, ErrIncompleteInput
+			return nil, 0, ErrIncompleteInput
 		}
 		retList = append(retList, inp[itemStartIndex:itemEndIndex])
-		bytesRead += itemEndIndex - itemStartIndex
+		dataBytesRead += itemEndIndex - itemStartIndex
 		itemStartIndex = itemEndIndex
 	}
-	if bytesRead != listDataSize {
-		return nil, ErrListSizeMismatch
+	if dataBytesRead != listDataSize {
+		return nil, 0, ErrListSizeMismatch
 	}
 
-	if len(inp) > itemStartIndex {
-		return nil, ErrInputContainsExtraBytes
-	}
-
-	return retList, nil
+	return retList, itemEndIndex - startIndex, nil
 }
