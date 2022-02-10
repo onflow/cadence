@@ -210,7 +210,7 @@ func DecodeList(inp []byte, startIndex int) (encodedItems [][]byte, err error) {
 		if itemEndIndex > len(inp) {
 			return nil, ErrIncompleteInput
 		}
-		retList = append(retList, inp[itemDataStartIndex:itemEndIndex])
+		retList = append(retList, inp[itemStartIndex:itemEndIndex])
 		bytesRead += itemEndIndex - itemStartIndex
 		itemStartIndex = itemEndIndex
 	}
