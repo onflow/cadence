@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,14 +64,14 @@ func ReadSize(inp []byte, startIndex int) (isString bool, dataStartIndex, dataSi
 	startIndex++
 
 	// single character space - first byte holds the data itslef
-	if firstByte < ShortStringRangeStart {
+	if firstByte <= ByteRangeEnd {
 		return true, startIndex - 1, 1, nil
 	}
 
-	// short strings space (0-55 bytes long string)
-	// firstByte minus the start range for the short strings would return the data size
+	// short string space (0-55 bytes long string)
+	// firstByte minus the start range for the short string returns the data size
 	// valid range of firstByte is [0x80, 0xB7].
-	if firstByte < LongStringRangeStart {
+	if firstByte <= ShortStringRangeEnd {
 		strLen := uint(firstByte - ShortStringRangeStart)
 		return true, startIndex, int(strLen), nil
 	}
