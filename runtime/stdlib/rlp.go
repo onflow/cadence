@@ -27,6 +27,8 @@ import (
 	"github.com/onflow/cadence/runtime/stdlib/rlp"
 )
 
+const ErrMsgInputContainsExtraBytes = "input data is expected to be RLP-encoded of a single string or a single list but it seems it contains extra trailing bytes."
+
 const DecodeRLPStringFunctionDocString = `
 Decodes an RLP-encoded byte array (called string in the context of RLP). 
 The byte array should only contain of a single encoded value for a string; if the encoded value type does not match, or it has trailing unnecessary bytes, the program aborts.
@@ -66,9 +68,12 @@ var DecodeRLPStringFunction = NewStandardLibraryFunction(
 		if err != nil {
 			panic(DecodeRLPStringError{err.Error()})
 		}
-		output, err := rlp.DecodeString(convertedInput, 0)
+		output, bytesRead, err := rlp.DecodeString(convertedInput, 0)
 		if err != nil {
 			panic(DecodeRLPStringError{err.Error()})
+		}
+		if bytesRead != len(convertedInput) {
+			panic(DecodeRLPListError{ErrMsgInputContainsExtraBytes})
 		}
 		return interpreter.ByteSliceToByteArrayValue(invocation.Interpreter, output)
 	},
@@ -117,9 +122,14 @@ var DecodeRLPListFunction = NewStandardLibraryFunction(
 			panic(DecodeRLPListError{err.Error()})
 		}
 
-		output, err := rlp.DecodeList(convertedInput, 0)
+		output, bytesRead, err := rlp.DecodeList(convertedInput, 0)
+
 		if err != nil {
 			panic(DecodeRLPListError{err.Error()})
+		}
+
+		if bytesRead != len(convertedInput) {
+			panic(DecodeRLPListError{ErrMsgInputContainsExtraBytes})
 		}
 
 		values := make([]interpreter.Value, len(output))

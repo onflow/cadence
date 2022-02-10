@@ -144,11 +144,6 @@ func TestDecodeString(t *testing.T) {
 			[]byte{0x41},
 			nil,
 		},
-		{ // extra data for char
-			[]byte("A"),
-			[]byte{0x41, 0x01},
-			rlp.ErrInputContainsExtraBytes,
-		},
 		{
 			[]byte("dog"),
 			[]byte{0x83, 0x64, 0x6f, 0x67},
@@ -163,11 +158,6 @@ func TestDecodeString(t *testing.T) {
 			nil,
 			[]byte{0x83, 0x64, 0x6f}, // requires 4 bytes
 			rlp.ErrIncompleteInput,
-		},
-		{
-			nil,
-			[]byte{0x83, 0x64, 0x6f, 0x67, 0x01}, // an extra byte
-			rlp.ErrInputContainsExtraBytes,
 		},
 		{
 			[]byte("this is a test lo0o0o0o0o0ong string with 55 characters"),
@@ -255,12 +245,13 @@ func TestDecodeString(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		item, err := rlp.DecodeString(test.encoded, 0)
+		item, bytesRead, err := rlp.DecodeString(test.encoded, 0)
 		if test.expectedErr != nil {
 			require.Equal(t, test.expectedErr, err)
 		} else {
 			require.NoError(t, err)
 			require.Equal(t, item, test.expectedOutput)
+			require.Equal(t, bytesRead, len(test.encoded))
 		}
 	}
 }
@@ -292,7 +283,7 @@ func TestDecodeList(t *testing.T) {
 			nil,
 		},
 		{
-			[][]byte{{0xc1, 0x41}, {0xc1, 0x42}, {0xc1, 0x43}}, // list with several empty list
+			[][]byte{{0xc1, 0x41}, {0xc1, 0x42}, {0xc1, 0x43}}, // list with several lists
 			[]byte{0xc6, 0xc1, 0x41, 0xc1, 0x42, 0xc1, 0x43},
 			nil,
 		},
@@ -325,18 +316,6 @@ func TestDecodeList(t *testing.T) {
 				0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, // content
 			},
 			rlp.ErrListSizeMismatch,
-		},
-		{
-			nil,
-			[]byte{
-				0xd0,                                     // 1 byte size
-				0x87,                                     // size of string
-				0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, // content
-				0x87,                                     // size of string
-				0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, // content
-				0x01,
-			},
-			rlp.ErrInputContainsExtraBytes,
 		},
 		{
 			[][]byte{
@@ -421,11 +400,12 @@ func TestDecodeList(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		item, err := rlp.DecodeList(test.encoded, 0)
+		item, bytesRead, err := rlp.DecodeList(test.encoded, 0)
 		if test.expectedErr != nil {
 			require.Equal(t, test.expectedErr, err)
 		} else {
 			require.NoError(t, err)
+			require.Equal(t, len(test.encoded), bytesRead)
 			for i, expectedItem := range test.expectedItems {
 				require.Equal(t, item[i], expectedItem)
 			}
