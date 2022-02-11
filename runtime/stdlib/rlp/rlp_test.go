@@ -334,6 +334,15 @@ func TestDecodeList(t *testing.T) {
 			rlp.ErrIncompleteInput,
 		},
 		{
+			nil,
+			[]byte{
+				0xf9, 0x01, 0x78, // two extra byte size
+				0x87,                                     // size of string
+				0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, // content
+			},
+			rlp.ErrInvalidStartIndex,
+		},
+		{
 			[][]byte{
 				{0x82, 0x41, 0x42},
 				{0x82, 0x43, 0x44},
