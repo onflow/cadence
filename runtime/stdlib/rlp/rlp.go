@@ -130,10 +130,6 @@ func ReadSize(inp []byte, startIndex int) (isString bool, dataStartIndex, dataSi
 	}
 
 	// several bytes case
-
-	// allocate 8 bytes
-	lenData := make([]byte, 8)
-	// but copy to lower part only
 	// note that its not possible for bytesToReadForLen to go beyond 8
 	start := int(8 - bytesToReadForLen)
 
@@ -149,15 +145,16 @@ func ReadSize(inp []byte, startIndex int) (isString bool, dataStartIndex, dataSi
 		return false, 0, 0, ErrIncompleteInput
 	}
 
+	// allocate 8 bytes
+	lenData := make([]byte, 8)
+	// but copy to lower part only
 	copy(lenData[start:], inp[startIndex:endIndex])
+
 	startIndex += int(bytesToReadForLen)
 	strLen := uint(binary.BigEndian.Uint64(lenData))
 
-	if strLen <= MaxShortLengthAllowed {
-		// encoding is not canonical, unnecessary bytes used for encoding
-		// should have encoded as a short string
-		return false, 0, 0, ErrNonCanonicalInput
-	}
+	// no need to check strLen <= MaxShortLengthAllowed since bytesToReadForLen is at least 2 here
+	// and can not contain leading zero byte.
 	if strLen > MaxLongLengthAllowed {
 		return false, 0, 0, ErrDataSizeTooLarge
 	}
