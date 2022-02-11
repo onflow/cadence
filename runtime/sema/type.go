@@ -3360,6 +3360,26 @@ func suggestFixedPointLiteralConversionReplacement(
 	}
 }
 
+func pathConversionFunctionType(pathType Type) *FunctionType {
+	return &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Identifier:     "identifier",
+				TypeAnnotation: NewTypeAnnotation(StringType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{
+				Type: pathType,
+			},
+		),
+	}
+}
+
+var PublicPathConversionFunctionType = pathConversionFunctionType(PublicPathType)
+var PrivatePathConversionFunctionType = pathConversionFunctionType(PrivatePathType)
+var StoragePathConversionFunctionType = pathConversionFunctionType(StoragePathType)
+
 func init() {
 
 	// Declare the run-time type construction function
@@ -3388,13 +3408,7 @@ func init() {
 		PublicPathType.String(),
 		baseFunctionVariable(
 			PublicPathType.String(),
-			&FunctionType{
-				Parameters: []*Parameter{{
-					Identifier:     "identifier",
-					TypeAnnotation: NewTypeAnnotation(StringType),
-				}},
-				ReturnTypeAnnotation: NewTypeAnnotation(&OptionalType{Type: PublicPathType}),
-			},
+			PublicPathConversionFunctionType,
 			"Converts the given string into a public path. Returns nil if the string does not specify a public path",
 		),
 	)
@@ -3403,13 +3417,7 @@ func init() {
 		PrivatePathType.String(),
 		baseFunctionVariable(
 			PrivatePathType.String(),
-			&FunctionType{
-				Parameters: []*Parameter{{
-					Identifier:     "identifier",
-					TypeAnnotation: NewTypeAnnotation(StringType),
-				}},
-				ReturnTypeAnnotation: NewTypeAnnotation(&OptionalType{Type: PrivatePathType}),
-			},
+			PrivatePathConversionFunctionType,
 			"Converts the given string into a private path. Returns nil if the string does not specify a private path",
 		),
 	)
@@ -3418,13 +3426,7 @@ func init() {
 		StoragePathType.String(),
 		baseFunctionVariable(
 			StoragePathType.String(),
-			&FunctionType{
-				Parameters: []*Parameter{{
-					Identifier:     "identifier",
-					TypeAnnotation: NewTypeAnnotation(StringType),
-				}},
-				ReturnTypeAnnotation: NewTypeAnnotation(&OptionalType{Type: StoragePathType}),
-			},
+			StoragePathConversionFunctionType,
 			"Converts the given string into a storage path. Returns nil if the string does not specify a storage path",
 		),
 	)

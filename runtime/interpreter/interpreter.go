@@ -2764,7 +2764,6 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 		max: UFix64Value(math.MaxUint64),
 	},
 	{
-
 		name:         sema.AddressTypeName,
 		functionType: sema.AddressConversionFunctionType,
 		convert: func(value Value) Value {
@@ -2772,16 +2771,19 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 		},
 	},
 	{
-		name:    sema.PublicPathType.Name,
-		convert: ConvertPublicPath,
+		name:         sema.PublicPathType.Name,
+		functionType: sema.PublicPathConversionFunctionType,
+		convert:      ConvertPublicPath,
 	},
 	{
-		name:    sema.PrivatePathType.Name,
-		convert: ConvertPrivatePath,
+		name:         sema.PrivatePathType.Name,
+		functionType: sema.PrivatePathConversionFunctionType,
+		convert:      ConvertPrivatePath,
 	},
 	{
-		name:    sema.StoragePathType.Name,
-		convert: ConvertStoragePath,
+		name:         sema.StoragePathType.Name,
+		functionType: sema.StoragePathConversionFunctionType,
+		convert:      ConvertStoragePath,
 	},
 }
 
