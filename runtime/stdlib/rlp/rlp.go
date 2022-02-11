@@ -202,8 +202,6 @@ func DecodeList(inp []byte, startIndex int) (encodedItems [][]byte, bytesRead in
 		return nil, 0, ErrTypeMismatch
 	}
 
-	itemStartIndex := dataStartIndex
-	var dataBytesRead, itemEndIndex int
 	retList := make([][]byte, 0)
 
 	// special case - empty list
@@ -215,8 +213,10 @@ func DecodeList(inp []byte, startIndex int) (encodedItems [][]byte, bytesRead in
 		return nil, 0, ErrIncompleteInput
 	}
 
-	for dataBytesRead < listDataSize {
+	var itemStartIndex, itemEndIndex, dataBytesRead int
+	itemStartIndex = dataStartIndex
 
+	for dataBytesRead < listDataSize {
 		_, itemDataStartIndex, itemSize, err := ReadSize(inp, itemStartIndex)
 		if err != nil {
 			return nil, 0, err
