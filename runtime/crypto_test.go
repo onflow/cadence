@@ -94,6 +94,7 @@ func TestRuntimeCrypto_verify(t *testing.T) {
 			return true, nil
 		},
 	}
+	addPublicKeyValidation(runtimeInterface, nil)
 
 	result, err := runtime.ExecuteScript(
 		Script{
@@ -482,6 +483,11 @@ func TestBLSVerifyPoP(t *testing.T) {
 
 	runtimeInterface := &testRuntimeInterface{
 		storage: storage,
+		validatePublicKey: func(
+			pk *PublicKey,
+		) error {
+			return nil
+		},
 		bLSVerifyPOP: func(
 			pk *PublicKey,
 			proof []byte,
@@ -491,6 +497,7 @@ func TestBLSVerifyPoP(t *testing.T) {
 			return true, nil
 		},
 	}
+	addPublicKeyValidation(runtimeInterface, nil)
 
 	result, err := runtime.ExecuteScript(
 		Script{
@@ -526,7 +533,7 @@ func TestBLSAggregateSignatures(t *testing.T) {
 			  [3, 3, 3, 3, 3],
 			  [4, 4, 4, 4, 4],
 			  [5, 5, 5, 5, 5]
-			])
+			])!
       }
     `)
 
@@ -582,7 +589,7 @@ func TestAggregateBLSPublicKeys(t *testing.T) {
 
 	script := []byte(`
 
-      pub fun main(): PublicKey {
+      pub fun main(): PublicKey? {
 		let k1 = PublicKey(
 			publicKey: "0102".decodeHex(),
 			signatureAlgorithm: SignatureAlgorithm.BLS_BLS12_381
@@ -601,6 +608,11 @@ func TestAggregateBLSPublicKeys(t *testing.T) {
 
 	runtimeInterface := &testRuntimeInterface{
 		storage: storage,
+		validatePublicKey: func(
+			pk *PublicKey,
+		) error {
+			return nil
+		},
 		aggregateBLSPublicKeys: func(
 			keys []*PublicKey,
 		) (*PublicKey, error) {
@@ -613,6 +625,7 @@ func TestAggregateBLSPublicKeys(t *testing.T) {
 			return &PublicKey{PublicKey: ret, SignAlgo: SignatureAlgorithmBLS_BLS12_381}, nil
 		},
 	}
+	addPublicKeyValidation(runtimeInterface, nil)
 
 	result, err := runtime.ExecuteScript(
 		Script{
@@ -632,7 +645,7 @@ func TestAggregateBLSPublicKeys(t *testing.T) {
 			cadence.UInt8(1),
 			cadence.UInt8(2),
 		}),
-		result.(cadence.Struct).Fields[0],
+		result.(cadence.Optional).Value.(cadence.Struct).Fields[0],
 	)
 
 	assert.True(t, called)

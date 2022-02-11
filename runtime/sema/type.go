@@ -6159,7 +6159,6 @@ var AccountKeyType = func() *CompositeType {
 const PublicKeyTypeName = "PublicKey"
 const PublicKeyPublicKeyField = "publicKey"
 const PublicKeySignAlgoField = "signatureAlgorithm"
-const PublicKeyIsValidField = "isValid"
 const PublicKeyVerifyFunction = "verify"
 const PublicKeyVerifyPoPFunction = "verifyPoP"
 
@@ -6171,10 +6170,6 @@ const publicKeySignAlgoFieldDocString = `
 The signature algorithm to be used with the key
 `
 
-const publicKeyIsValidFieldDocString = `
-Flag indicating whether the key is valid
-`
-
 const publicKeyVerifyFunctionDocString = `
 Verifies a signature. Checks whether the signature was produced by signing
 the given tag and data, using this public key and the given hash algorithm
@@ -6182,8 +6177,8 @@ the given tag and data, using this public key and the given hash algorithm
 
 const publicKeyVerifyPoPFunctionDocString = `
 Verifies the proof of possession of the private key. This function is 
-currently only implemented if the signature algorithm of the public 
-key is BLS, it errors if called with any other signature algorithm.
+only implemented if the signature algorithm of the public key is BLS, 
+it returns false if called with any other signature algorithm.
 `
 
 // PublicKeyType represents the public key associated with an account key.
@@ -6208,12 +6203,6 @@ var PublicKeyType = func() *CompositeType {
 			PublicKeySignAlgoField,
 			SignatureAlgorithmType,
 			publicKeySignAlgoFieldDocString,
-		),
-		NewPublicConstantFieldMember(
-			publicKeyType,
-			PublicKeyIsValidField,
-			BoolType,
-			publicKeyIsValidFieldDocString,
 		),
 		NewPublicFunctionMember(
 			publicKeyType,

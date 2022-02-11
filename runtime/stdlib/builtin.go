@@ -192,7 +192,7 @@ Signatures could be generated from the same or distinct messages,
 they could also be the aggregation of other signatures.
 The order of the signatures in the slice does not matter since the aggregation is commutative. 
 No subgroup membership check is performed on the input signatures.
-The function errors if the array is empty or if decoding one of the signature fails. 
+The function returns nil if the array is empty or if decoding one of the signature fails. 
 `
 
 var AggregateBLSSignaturesFunction = NewStandardLibraryFunction(
@@ -205,7 +205,7 @@ var AggregateBLSSignaturesFunction = NewStandardLibraryFunction(
 				TypeAnnotation: sema.NewTypeAnnotation(&sema.VariableSizedType{Type: sema.ByteArrayType}),
 			},
 		},
-		ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.ByteArrayType),
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(&sema.OptionalType{Type: sema.ByteArrayType}),
 	},
 	aggregateBLSSignaturesFunctionDocString,
 	func(invocation interpreter.Invocation) interpreter.Value {
@@ -220,7 +220,7 @@ It aggregates multiple BLS public keys into one.
 
 The order of the public keys in the slice does not matter since the aggregation is commutative. 
 No subgroup membership check is performed on the input keys.
-The function errors if the array is empty or any of the input keys is not a BLS key.
+The function returns nil if the array is empty or any of the input keys is not a BLS key.
 `
 
 var AggregateBLSPublicKeysFunction = NewStandardLibraryFunction(
@@ -233,7 +233,7 @@ var AggregateBLSPublicKeysFunction = NewStandardLibraryFunction(
 				TypeAnnotation: sema.NewTypeAnnotation(&sema.VariableSizedType{Type: sema.PublicKeyType}),
 			},
 		},
-		ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.PublicKeyType),
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(&sema.OptionalType{Type: sema.PublicKeyType}),
 	},
 	aggregateBLSPublicKeysFunctionDocString,
 	func(invocation interpreter.Invocation) interpreter.Value {
@@ -290,8 +290,10 @@ func AggregateBLSSignatures(
 	aggregatedBytes, err := inter.AggregateBLSSignaturesHandler(
 		bytesArray,
 	)
+
+	// if the crypto layer produces an error, we have invalid input, return nil
 	if err != nil {
-		panic(err)
+		return interpreter.NilValue{}
 	}
 
 	aggregatedSignature := make([]interpreter.Value, 0, len(aggregatedBytes))
@@ -299,12 +301,12 @@ func AggregateBLSSignatures(
 		aggregatedSignature = append(aggregatedSignature, interpreter.UInt8Value(b))
 	}
 
-	return interpreter.NewArrayValue(
+	return interpreter.NewSomeValueNonCopying(interpreter.NewArrayValue(
 		inter,
 		interpreter.ByteArrayStaticType,
 		signatures.GetOwner(),
 		aggregatedSignature...,
-	)
+	))
 }
 
 // BuiltinValues
