@@ -211,7 +211,7 @@ func DecodeList(inp []byte, startIndex int) (encodedItems [][]byte, bytesRead in
 		return retList, 1, nil
 	}
 
-	if dataBytesRead > len(inp) {
+	if listDataSize+dataStartIndex > len(inp) {
 		return nil, 0, ErrIncompleteInput
 	}
 
