@@ -91,6 +91,9 @@ type Resources struct {
 	// JumpsOrReturns indicates that the (branch of) the function
 	// contains a definite return, break, or continue statement
 	JumpsOrReturns bool
+	// Halts indicates that the (branch of) the function
+	// contains a definite halt (a function call with a Never return type)
+	Halts bool
 }
 
 func NewResources() *Resources {
@@ -164,6 +167,7 @@ func (ris *Resources) IsUseAfterInvalidationReported(resource interface{}, pos a
 func (ris *Resources) Clone() *Resources {
 	result := NewResources()
 	result.JumpsOrReturns = ris.JumpsOrReturns
+	result.Halts = ris.Halts
 	for pair := ris.resources.Oldest(); pair != nil; pair = pair.Next() {
 		resource := pair.Key
 		info := pair.Value
@@ -189,8 +193,10 @@ func (ris *Resources) ForEach(f func(resource interface{}, info ResourceInfo)) {
 func (ris *Resources) MergeBranches(thenResources *Resources, elseResources *Resources) {
 
 	elseJumpsOrReturns := false
+	elseHalts := false
 	if elseResources != nil {
 		elseJumpsOrReturns = elseResources.JumpsOrReturns
+		elseHalts = elseResources.Halts
 	}
 
 	merged := make(map[interface{}]struct{})
@@ -220,11 +226,21 @@ func (ris *Resources) MergeBranches(thenResources *Resources, elseResources *Res
 		}
 
 		// The resource can be considered definitively invalidated
-		// if it was already invalidated, or it was invalidated in both branches
+		// if it was already invalidated, or it was invalidated in both branches.
+		//
+		// A halting branch should also be considered resulting in a definitive invalidation,
+		// to support e.g.
+		//
+		//     let r <- create R()
+		//     if false {
+		//         f(<-r)
+		//     } else {
+		//         panic("")
+		//     }
 
 		definitelyInvalidatedInBranches :=
-			thenInfo.DefinitivelyInvalidated &&
-				elseInfo.DefinitivelyInvalidated
+			(thenInfo.DefinitivelyInvalidated || thenResources.Halts) &&
+				(elseInfo.DefinitivelyInvalidated || elseHalts)
 
 		info.DefinitivelyInvalidated =
 			info.DefinitivelyInvalidated ||
@@ -263,4 +279,7 @@ func (ris *Resources) MergeBranches(thenResources *Resources, elseResources *Res
 
 	ris.JumpsOrReturns = ris.JumpsOrReturns ||
 		(thenResources.JumpsOrReturns && elseJumpsOrReturns)
+
+	ris.Halts = ris.Halts ||
+		(thenResources.Halts && elseHalts)
 }
