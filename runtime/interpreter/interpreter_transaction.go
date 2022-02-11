@@ -64,8 +64,15 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 		nil,
 	)
 
-	transactionFunction := NewHostFunctionValue(
-		func(invocation Invocation) Value {
+	// Construct a raw HostFunctionValue without a type,
+	// instead of using NewHostFunctionValue, which requires a type.
+	//
+	// This host function value is an internally created and used function,
+	// and can never be passed around as a value.
+	// Hence, the type is not required.
+
+	transactionFunction := &HostFunctionValue{
+		Function: func(invocation Invocation) Value {
 			interpreter.activations.PushNewWithParent(lexicalScope)
 
 			invocation.Self = self
@@ -131,11 +138,7 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 				sema.VoidType,
 			)
 		},
-
-		// This is an internally used function.
-		// So ideally wouldn't need to perform type checks.
-		nil,
-	)
+	}
 
 	interpreter.Transactions = append(
 		interpreter.Transactions,
