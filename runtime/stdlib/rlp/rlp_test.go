@@ -314,7 +314,7 @@ func TestDecodeList(t *testing.T) {
 			nil,
 		},
 		{
-			nil,
+			nil, // more data bytes than what was decoded in the header
 			[]byte{
 				0xcf,                                     // 1 byte size
 				0x87,                                     // size of string
@@ -325,7 +325,7 @@ func TestDecodeList(t *testing.T) {
 			rlp.ErrListSizeMismatch,
 		},
 		{
-			nil,
+			nil, // covers a case that not enough bytes are available for a item read
 			[]byte{
 				0xcf,                                     // 1 byte size
 				0x87,                                     // size of string
@@ -337,10 +337,18 @@ func TestDecodeList(t *testing.T) {
 		},
 		{
 			nil,
-			[]byte{
-				0xf9, 0x01, 0x78, // two extra byte size
+			[]byte{ // covers the case that not enough data is available to read for items
+				0xf9, 0x01, 0x78,
 				0x87,                                     // size of string
 				0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, // content
+			},
+			rlp.ErrIncompleteInput,
+		},
+		{
+			nil,
+			[]byte{ // covers the case readSize for items are failing
+				0xf9, 0x01, 0x78, // two extra byte size
+				0xf9, 0x01,
 			},
 			rlp.ErrIncompleteInput,
 		},
