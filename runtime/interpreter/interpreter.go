@@ -829,7 +829,7 @@ func (interpreter *Interpreter) prepareInvoke(
 		parameterType := parameters[i].TypeAnnotation.Type
 
 		// converts the argument into the parameter type declared by the function
-		preparedArguments[i] = interpreter.ConvertAndBox(argument, nil, parameterType)
+		preparedArguments[i] = ConvertAndBox(argument, nil, parameterType)
 	}
 
 	// NOTE: can't fill argument types, as they are unknown
@@ -1571,7 +1571,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 
 	for i, enumCase := range enumCases {
 
-		rawValue := interpreter.convert(
+		rawValue := convert(
 			NewIntValueFromInt64(int64(i)),
 			intType,
 			compositeType.EnumRawType,
@@ -1888,7 +1888,7 @@ func (interpreter *Interpreter) transferAndConvert(
 		nil,
 	)
 
-	result := interpreter.ConvertAndBox(
+	result := ConvertAndBox(
 		transferredValue,
 		valueType,
 		targetType,
@@ -1905,12 +1905,12 @@ func (interpreter *Interpreter) transferAndConvert(
 }
 
 // ConvertAndBox converts a value to a target type, and boxes in optionals and any value, if necessary
-func (interpreter *Interpreter) ConvertAndBox(value Value, valueType, targetType sema.Type) Value {
-	value = interpreter.convert(value, valueType, targetType)
-	return interpreter.BoxOptional(value, valueType, targetType)
+func ConvertAndBox(value Value, valueType, targetType sema.Type) Value {
+	value = convert(value, valueType, targetType)
+	return BoxOptional(value, targetType)
 }
 
-func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.Type) Value {
+func convert(value Value, valueType, targetType sema.Type) Value {
 	if valueType == nil {
 		return value
 	}
@@ -2039,7 +2039,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 }
 
 // BoxOptional boxes a value in optionals, if necessary
-func (interpreter *Interpreter) BoxOptional(value Value, valueType, targetType sema.Type) Value {
+func BoxOptional(value Value, targetType sema.Type) Value {
 	inner := value
 	for {
 		optionalType, ok := targetType.(*sema.OptionalType)
@@ -2057,9 +2057,6 @@ func (interpreter *Interpreter) BoxOptional(value Value, valueType, targetType s
 
 		default:
 			value = NewSomeValueNonCopying(value)
-			valueType = &sema.OptionalType{
-				Type: valueType,
-			}
 		}
 
 		targetType = optionalType.Type
@@ -2067,7 +2064,7 @@ func (interpreter *Interpreter) BoxOptional(value Value, valueType, targetType s
 	return value
 }
 
-func (interpreter *Interpreter) unbox(value Value) Value {
+func Unbox(value Value) Value {
 	for {
 		some, ok := value.(*SomeValue)
 		if !ok {
