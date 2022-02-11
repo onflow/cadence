@@ -2226,8 +2226,15 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 	}
 
 	return func(inner FunctionValue) FunctionValue {
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
+		// Construct a raw HostFunctionValue without a type,
+		// instead of using NewHostFunctionValue, which requires a type.
+		//
+		// This host function value is an internally created and used function,
+		// and can never be passed around as a value.
+		// Hence, the type is not required.
+
+		return &HostFunctionValue{
+			Function: func(invocation Invocation) Value {
 				// Start a new activation record.
 				// Lexical scope: use the function declaration's activation record,
 				// not the current one (which would be dynamic scope)
@@ -2250,7 +2257,7 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 
 				var body func() controlReturn
 				if inner != nil {
-					// NOTE: It is important to wrap the invocation in a trampoline,
+					// NOTE: It is important to wrap the invocation in a function,
 					//  so the inner function isn't invoked here
 
 					body = func() controlReturn {
@@ -2271,11 +2278,7 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 					returnType,
 				)
 			},
-
-			// This is an internally created and used function, and can
-			// never be passed around as a value. Hence, the type is not required.
-			nil,
-		)
+		}
 	}
 }
 
@@ -2411,31 +2414,35 @@ func (interpreter *Interpreter) writeStored(storageAddress common.Address, key s
 	interpreter.Storage.WriteValue(interpreter, storageAddress, key, value)
 }
 
-type valueConverterDeclaration struct {
-	name    string
-	convert func(Value) Value
-	min     Value
-	max     Value
+type ValueConverterDeclaration struct {
+	name         string
+	convert      func(Value) Value
+	min          Value
+	max          Value
+	functionType *sema.FunctionType
 }
 
 // It would be nice if return types in Go's function types would be covariant
 //
-var converterDeclarations = []valueConverterDeclaration{
+var ConverterDeclarations = []ValueConverterDeclaration{
 	{
-		name: sema.IntTypeName,
+		name:         sema.IntTypeName,
+		functionType: sema.NumberConversionFunctionType(sema.IntType),
 		convert: func(value Value) Value {
 			return ConvertInt(value)
 		},
 	},
 	{
-		name: sema.UIntTypeName,
+		name:         sema.UIntTypeName,
+		functionType: sema.NumberConversionFunctionType(sema.UIntType),
 		convert: func(value Value) Value {
 			return ConvertUInt(value)
 		},
 		min: NewUIntValueFromBigInt(sema.UIntTypeMin),
 	},
 	{
-		name: sema.Int8TypeName,
+		name:         sema.Int8TypeName,
+		functionType: sema.NumberConversionFunctionType(sema.Int8Type),
 		convert: func(value Value) Value {
 			return ConvertInt8(value)
 		},
@@ -2443,7 +2450,8 @@ var converterDeclarations = []valueConverterDeclaration{
 		max: Int8Value(math.MaxInt8),
 	},
 	{
-		name: sema.Int16TypeName,
+		name:         sema.Int16TypeName,
+		functionType: sema.NumberConversionFunctionType(sema.Int16Type),
 		convert: func(value Value) Value {
 			return ConvertInt16(value)
 		},
@@ -2451,7 +2459,8 @@ var converterDeclarations = []valueConverterDeclaration{
 		max: Int16Value(math.MaxInt16),
 	},
 	{
-		name: sema.Int32TypeName,
+		name:         sema.Int32TypeName,
+		functionType: sema.NumberConversionFunctionType(sema.Int32Type),
 		convert: func(value Value) Value {
 			return ConvertInt32(value)
 		},
@@ -2459,7 +2468,8 @@ var converterDeclarations = []valueConverterDeclaration{
 		max: Int32Value(math.MaxInt32),
 	},
 	{
-		name: sema.Int64TypeName,
+		name:         sema.Int64TypeName,
+		functionType: sema.NumberConversionFunctionType(sema.Int64Type),
 		convert: func(value Value) Value {
 			return ConvertInt64(value)
 		},
@@ -2467,7 +2477,8 @@ var converterDeclarations = []valueConverterDeclaration{
 		max: Int64Value(math.MaxInt64),
 	},
 	{
-		name: sema.Int128TypeName,
+		name:         sema.Int128TypeName,
+		functionType: sema.NumberConversionFunctionType(sema.Int128Type),
 		convert: func(value Value) Value {
 			return ConvertInt128(value)
 		},
@@ -2475,7 +2486,8 @@ var converterDeclarations = []valueConverterDeclaration{
 		max: NewInt128ValueFromBigInt(sema.Int128TypeMaxIntBig),
 	},
 	{
-		name: sema.Int256TypeName,
+		name:         sema.Int256TypeName,
+		functionType: sema.NumberConversionFunctionType(sema.Int256Type),
 		convert: func(value Value) Value {
 			return ConvertInt256(value)
 		},
@@ -2483,7 +2495,8 @@ var converterDeclarations = []valueConverterDeclaration{
 		max: NewInt256ValueFromBigInt(sema.Int256TypeMaxIntBig),
 	},
 	{
-		name: sema.UInt8TypeName,
+		name:         sema.UInt8TypeName,
+		functionType: sema.NumberConversionFunctionType(sema.UInt8Type),
 		convert: func(value Value) Value {
 			return ConvertUInt8(value)
 		},
@@ -2491,7 +2504,8 @@ var converterDeclarations = []valueConverterDeclaration{
 		max: UInt8Value(math.MaxUint8),
 	},
 	{
-		name: sema.UInt16TypeName,
+		name:         sema.UInt16TypeName,
+		functionType: sema.NumberConversionFunctionType(sema.UInt16Type),
 		convert: func(value Value) Value {
 			return ConvertUInt16(value)
 		},
@@ -2499,7 +2513,8 @@ var converterDeclarations = []valueConverterDeclaration{
 		max: UInt16Value(math.MaxUint16),
 	},
 	{
-		name: sema.UInt32TypeName,
+		name:         sema.UInt32TypeName,
+		functionType: sema.NumberConversionFunctionType(sema.UInt32Type),
 		convert: func(value Value) Value {
 			return ConvertUInt32(value)
 		},
@@ -2507,7 +2522,8 @@ var converterDeclarations = []valueConverterDeclaration{
 		max: UInt32Value(math.MaxUint32),
 	},
 	{
-		name: sema.UInt64TypeName,
+		name:         sema.UInt64TypeName,
+		functionType: sema.NumberConversionFunctionType(sema.UInt64Type),
 		convert: func(value Value) Value {
 			return ConvertUInt64(value)
 		},
@@ -2515,7 +2531,8 @@ var converterDeclarations = []valueConverterDeclaration{
 		max: UInt64Value(math.MaxUint64),
 	},
 	{
-		name: sema.UInt128TypeName,
+		name:         sema.UInt128TypeName,
+		functionType: sema.NumberConversionFunctionType(sema.UInt128Type),
 		convert: func(value Value) Value {
 			return ConvertUInt128(value)
 		},
@@ -2523,7 +2540,8 @@ var converterDeclarations = []valueConverterDeclaration{
 		max: NewUInt128ValueFromBigInt(sema.UInt128TypeMaxIntBig),
 	},
 	{
-		name: sema.UInt256TypeName,
+		name:         sema.UInt256TypeName,
+		functionType: sema.NumberConversionFunctionType(sema.UInt256Type),
 		convert: func(value Value) Value {
 			return ConvertUInt256(value)
 		},
@@ -2531,7 +2549,8 @@ var converterDeclarations = []valueConverterDeclaration{
 		max: NewUInt256ValueFromBigInt(sema.UInt256TypeMaxIntBig),
 	},
 	{
-		name: sema.Word8TypeName,
+		name:         sema.Word8TypeName,
+		functionType: sema.NumberConversionFunctionType(sema.Word8Type),
 		convert: func(value Value) Value {
 			return ConvertWord8(value)
 		},
@@ -2539,7 +2558,8 @@ var converterDeclarations = []valueConverterDeclaration{
 		max: Word8Value(math.MaxUint8),
 	},
 	{
-		name: sema.Word16TypeName,
+		name:         sema.Word16TypeName,
+		functionType: sema.NumberConversionFunctionType(sema.Word16Type),
 		convert: func(value Value) Value {
 			return ConvertWord16(value)
 		},
@@ -2547,7 +2567,8 @@ var converterDeclarations = []valueConverterDeclaration{
 		max: Word16Value(math.MaxUint16),
 	},
 	{
-		name: sema.Word32TypeName,
+		name:         sema.Word32TypeName,
+		functionType: sema.NumberConversionFunctionType(sema.Word32Type),
 		convert: func(value Value) Value {
 			return ConvertWord32(value)
 		},
@@ -2555,7 +2576,8 @@ var converterDeclarations = []valueConverterDeclaration{
 		max: Word32Value(math.MaxUint32),
 	},
 	{
-		name: sema.Word64TypeName,
+		name:         sema.Word64TypeName,
+		functionType: sema.NumberConversionFunctionType(sema.Word64Type),
 		convert: func(value Value) Value {
 			return ConvertWord64(value)
 		},
@@ -2563,7 +2585,8 @@ var converterDeclarations = []valueConverterDeclaration{
 		max: Word64Value(math.MaxUint64),
 	},
 	{
-		name: sema.Fix64TypeName,
+		name:         sema.Fix64TypeName,
+		functionType: sema.NumberConversionFunctionType(sema.Fix64Type),
 		convert: func(value Value) Value {
 			return ConvertFix64(value)
 		},
@@ -2571,7 +2594,8 @@ var converterDeclarations = []valueConverterDeclaration{
 		max: Fix64Value(math.MaxInt64),
 	},
 	{
-		name: sema.UFix64TypeName,
+		name:         sema.UFix64TypeName,
+		functionType: sema.NumberConversionFunctionType(sema.UFix64Type),
 		convert: func(value Value) Value {
 			return ConvertUFix64(value)
 		},
@@ -2579,7 +2603,9 @@ var converterDeclarations = []valueConverterDeclaration{
 		max: UFix64Value(math.MaxUint64),
 	},
 	{
-		name: "Address",
+
+		name:         sema.AddressTypeName,
+		functionType: sema.AddressConversionFunctionType,
 		convert: func(value Value) Value {
 			return ConvertAddress(value)
 		},
@@ -2588,9 +2614,9 @@ var converterDeclarations = []valueConverterDeclaration{
 
 func init() {
 
-	converterNames := make(map[string]struct{}, len(converterDeclarations))
+	converterNames := make(map[string]struct{}, len(ConverterDeclarations))
 
-	for _, converterDeclaration := range converterDeclarations {
+	for _, converterDeclaration := range ConverterDeclarations {
 		converterNames[converterDeclaration.name] = struct{}{}
 	}
 
@@ -2627,19 +2653,16 @@ type converterFunction struct {
 //
 var converterFunctionValues = func() []converterFunction {
 
-	converterFuncValues := make([]converterFunction, len(converterDeclarations))
+	converterFuncValues := make([]converterFunction, len(ConverterDeclarations))
 
-	for index, declaration := range converterDeclarations {
+	for index, declaration := range ConverterDeclarations {
 		// NOTE: declare in loop, as captured in closure below
 		convert := declaration.convert
 		converterFunctionValue := NewHostFunctionValue(
 			func(invocation Invocation) Value {
 				return convert(invocation.Arguments[0])
 			},
-
-			// Converter functions are not passed around as values.
-			// Hence, the type is not required.
-			nil,
+			declaration.functionType,
 		)
 
 		addMember := func(name string, value Value) {
@@ -2688,14 +2711,13 @@ var typeFunction = NewHostFunctionValue(
 			Type: ConvertSemaToStaticType(ty),
 		}
 	},
-
 	&sema.FunctionType{
 		ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.MetaType),
 	},
 )
 
 func defineTypeFunction(activation *VariableActivation) {
-	defineBaseValue(activation, sema.MetaType.String(), typeFunction)
+	defineBaseValue(activation, sema.MetaTypeName, typeFunction)
 }
 
 func defineBaseValue(activation *VariableActivation, name string, value Value) {
