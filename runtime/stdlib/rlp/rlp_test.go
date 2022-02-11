@@ -55,6 +55,8 @@ func TestRLPReadSize(t *testing.T) {
 		{[]byte{0xb7}, 0, true, 1, 55, nil},
 		// start of long string (reading next byte to find out the size and decoding of that byte is smaller than 55)
 		{[]byte{0xb8, 0x01}, 0, false, 0, 0, rlp.ErrNonCanonicalInput},
+		// leading zero
+		{[]byte{0xb9, 0x00, 0x01}, 0, false, 0, 0, rlp.ErrNonCanonicalInput},
 		{[]byte{0xb8, 0x37}, 0, false, 0, 0, rlp.ErrNonCanonicalInput},
 		// not having the next byte to read
 		{[]byte{0xb8}, 0, false, 0, 0, rlp.ErrIncompleteInput},
