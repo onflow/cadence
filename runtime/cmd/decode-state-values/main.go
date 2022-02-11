@@ -143,7 +143,7 @@ func (s *slabStorage) SlabIterator() (atree.SlabIterator, error) {
 		storageKey
 	}
 
-	for key := range storage {
+	for key := range storage { //nolint:maprangecheck
 
 		var address atree.Address
 		copy(address[:], key[0])

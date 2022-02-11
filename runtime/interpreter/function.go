@@ -171,6 +171,13 @@ func NewHostFunctionValue(
 	function HostFunction,
 	funcType *sema.FunctionType,
 ) *HostFunctionValue {
+	// Host functions can be passed by value,
+	// so for the interpreter value transfer check to work,
+	// they need a static type
+	if funcType == nil {
+		panic(errors.NewUnreachableError())
+	}
+
 	return &HostFunctionValue{
 		Function: function,
 		Type:     funcType,
