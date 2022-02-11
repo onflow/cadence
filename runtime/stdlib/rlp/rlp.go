@@ -179,6 +179,12 @@ func DecodeString(inp []byte, startIndex int) (str []byte, bytesRead int, err er
 		return []byte{inp[dataStartIndex]}, 1, nil
 	}
 
+	// if for data we have to read only a single extra byte and that byte
+	// is in the range of characters, we are using two bytes instead of 1 byte
+	if dataSize == 1 && inp[dataStartIndex] <= ByteRangeEnd {
+		return nil, 0, ErrNonCanonicalInput
+	}
+
 	// collect and return string
 	dataEndIndex := dataStartIndex + dataSize
 	if dataEndIndex > len(inp) {

@@ -146,6 +146,11 @@ func TestDecodeString(t *testing.T) {
 			[]byte{0x41},
 			nil,
 		},
+		{ // short string but a single character encoded inside
+			nil,
+			[]byte{0x81, 0x01},
+			rlp.ErrNonCanonicalInput,
+		},
 		{
 			[]byte("dog"),
 			[]byte{0x83, 0x64, 0x6f, 0x67},
