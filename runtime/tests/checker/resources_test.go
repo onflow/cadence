@@ -5097,6 +5097,7 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             resource R {}
+
             fun test(r: @R) {
                 if true {
                     destroy r
@@ -5105,7 +5106,36 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
         `)
 
 		errs := ExpectCheckerErrors(t, err, 1)
+
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("if-else: missing else branch, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            transaction {
+
+                let r: @R
+
+                prepare() {
+                    self.r <- create R()
+                }
+
+                execute {
+                    if true {
+                        destroy self.r
+                    }
+                }
+           }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
 	})
 
 	t.Run("if-else: missing else branches", func(t *testing.T) {
@@ -5114,6 +5144,7 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             resource R {}
+
             fun test(r: @R) {
                 if true {
                     if true {
@@ -5124,15 +5155,47 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
         `)
 
 		errs := ExpectCheckerErrors(t, err, 1)
+
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
 
-	t.Run("if-else: missing else branches", func(t *testing.T) {
+	t.Run("if-else: missing else branches, transaction", func(t *testing.T) {
 
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
             resource R {}
+
+            transaction {
+
+                let r: @R
+
+                prepare() {
+                    self.r <- create R()
+                }
+
+                execute {
+                    if true {
+                        if true {
+                           destroy self.r
+                        }
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
+	})
+
+	t.Run("if-else: missing else branch in nested if", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
             fun test(r: @R) {
                 if true {
                     if true {
@@ -5145,7 +5208,40 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
         `)
 
 		errs := ExpectCheckerErrors(t, err, 1)
+
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("if-else: missing else branch in nested if, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            transaction {
+
+                let r: @R
+
+                prepare() {
+                    self.r <- create R()
+                }
+
+                execute {
+                    if true {
+                        if true {
+                           destroy self.r
+                        }
+                    } else {
+                        destroy self.r
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
 	})
 
 	t.Run("switch-case: missing destruction in one case", func(t *testing.T) {
@@ -5169,7 +5265,42 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
         `)
 
 		errs := ExpectCheckerErrors(t, err, 1)
+
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("switch-case: missing destruction in one case, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r: @R
+
+                prepare() {
+                    self.r <- create R()
+                }
+
+                execute {
+                    switch n {
+                        case 1:
+                            destroy self.r
+                        case 2:
+                            // Some random statement that has no effect
+                            let a = "do nothing"
+                        default:
+                            destroy self.r
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
 	})
 
 	t.Run("switch-case: missing destruction in default case", func(t *testing.T) {
@@ -5192,7 +5323,41 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
         `)
 
 		errs := ExpectCheckerErrors(t, err, 1)
+
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("switch-case: missing destruction in default case, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r: @R
+
+                prepare() {
+                    self.r <- create R()
+                }
+
+                execute {
+                    switch n {
+                        case 1:
+                            destroy self.r
+                        case 2:
+                            destroy self.r
+                        default:
+                            break
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
 	})
 
 	t.Run("switch-case: resource destruction in all cases", func(t *testing.T) {
@@ -5217,12 +5382,44 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("switch-case: resource destruction in all cases, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r: @R
+
+                prepare() {
+                    self.r <- create R()
+                }
+
+                execute {
+                    switch n {
+                        case 1:
+                            destroy self.r
+                        case 2:
+                            destroy self.r
+                        default:
+                            destroy self.r
+                    }
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
 	t.Run("switch-case: no default", func(t *testing.T) {
 
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
             resource R {}
+
             fun test(n: Int, r: @R) {
                 switch n {
                     case 1:
@@ -5234,7 +5431,39 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
         `)
 
 		errs := ExpectCheckerErrors(t, err, 1)
+
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("switch-case: no default, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r: @R
+
+                prepare() {
+                    self.r <- create R()
+                }
+
+                execute {
+                    switch n {
+                        case 1:
+                            destroy self.r
+                        case 2:
+                            destroy self.r
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
 	})
 
 	t.Run("switch-case: missing destruction of one resource in one case", func(t *testing.T) {
@@ -5259,7 +5488,45 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
         `)
 
 		errs := ExpectCheckerErrors(t, err, 1)
+
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("switch-case: missing destruction of one resource in one case, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r1: @R
+                let r2: @R
+
+                prepare() {
+                    self.r1 <- create R()
+                    self.r2 <- create R()
+                }
+
+                execute {
+                    switch n {
+                        case n:
+                            destroy self.r1
+                            destroy self.r2
+                        case 2:
+                            destroy self.r1
+                        default:
+                            destroy self.r1
+                            destroy self.r2
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
 	})
 
 	t.Run("switch-case: missing destruction of one resource in default case", func(t *testing.T) {
@@ -5284,7 +5551,45 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
         `)
 
 		errs := ExpectCheckerErrors(t, err, 1)
+
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("switch-case: missing destruction of one resource in default case, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r1: @R
+                let r2: @R
+
+                prepare() {
+                    self.r1 <- create R()
+                    self.r2 <- create R()
+                }
+
+                execute {
+                    switch n {
+                        case n:
+                            destroy self.r1
+                            destroy self.r2
+                        case 2:
+                            destroy self.r1
+                            destroy self.r2
+                        default:
+                            destroy self.r1
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
 	})
 
 	t.Run("switch-case: loss of all resources in one case", func(t *testing.T) {
@@ -5309,8 +5614,47 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
         `)
 
 		errs := ExpectCheckerErrors(t, err, 2)
+
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+	})
+
+	t.Run("switch-case: loss of all resources in one case, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r1: @R
+                let r2: @R
+
+                prepare() {
+                    self.r1 <- create R()
+                    self.r2 <- create R()
+                }
+
+                execute {
+                    switch n {
+                        case 1:
+                            destroy self.r1
+                            destroy self.r2
+                        case 2:
+                            break
+                        default:
+                            destroy self.r1
+                            destroy self.r2
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
 	})
 
 	t.Run("switch-case: loss of all resources in default case", func(t *testing.T) {
@@ -5333,8 +5677,45 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
         `)
 
 		errs := ExpectCheckerErrors(t, err, 2)
+
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+	})
+
+	t.Run("switch-case: loss of all resources in default case, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r1: @R
+                let r2: @R
+
+                prepare() {
+                    self.r1 <- create R()
+                    self.r2 <- create R()
+                }
+
+                execute {
+                    switch n {
+                        case 1:
+                            destroy self.r1
+                            destroy self.r2
+                        case 2:
+                            destroy self.r1
+                            destroy self.r2
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
 	})
 
 	t.Run("switch-case: unreachable destruction due to break", func(t *testing.T) {
@@ -5356,8 +5737,42 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
         `)
 
 		errs := ExpectCheckerErrors(t, err, 2)
+
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+	})
+
+	t.Run("switch-case: unreachable destruction due to break, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r: @R
+
+                prepare() {
+                    self.r <- create R()
+                }
+
+                execute {
+                    switch n {
+                        case 1:
+                            break
+                            destroy self.r  // unreachable
+                        default:
+                            destroy self.r
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
 	})
 
 	t.Run("switch-case: return in one case", func(t *testing.T) {
@@ -5374,6 +5789,36 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
                         return
                     default:
                         destroy r
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("switch-case: return in one case, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r: @R
+
+                prepare() {
+                    self.r <- create R()
+                }
+
+                execute {
+                    switch n {
+                        case 1:
+                            destroy self.r
+                            return
+                        default:
+                            destroy self.r
+                    }
                 }
             }
         `)
@@ -5402,6 +5847,36 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("switch-case: break in one case, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r: @R
+
+                prepare() {
+                    self.r <- create R()
+                }
+
+                execute {
+                    switch n {
+                        case 1:
+                            destroy self.r
+                            break
+                        default:
+                            destroy self.r
+                    }
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
 	t.Run("switch-case: destroy missing in default case", func(t *testing.T) {
 
 		t.Parallel()
@@ -5422,9 +5897,44 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
         `)
 
 		errs := ExpectCheckerErrors(t, err, 3)
+
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[1])
 		assert.IsType(t, &sema.ResourceLossError{}, errs[2])
+	})
+
+	t.Run("switch-case: destroy missing in default case, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r: @R
+
+                prepare() {
+                    self.r <- create R()
+                }
+
+                execute {
+                    switch n {
+                        case 1:
+                            destroy self.r
+                            return
+                        default:
+                            return
+                    }
+                    destroy self.r
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
 	})
 
 	t.Run("while loop: unreachable destruction due to break", func(t *testing.T) {
@@ -5443,8 +5953,39 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
         `)
 
 		errs := ExpectCheckerErrors(t, err, 2)
+
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+	})
+
+	t.Run("while loop: unreachable destruction due to break, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r: @R
+
+                prepare() {
+                    self.r <- create R()
+                }
+
+                execute {
+                    while true {
+                        break
+                        destroy self.r  // unreachable
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
 	})
 
 	t.Run("while loop: unreachable destruction due to continue", func(t *testing.T) {
@@ -5463,8 +6004,244 @@ func TestCheckResourceInvalidationInBranchesAndLoops(t *testing.T) {
         `)
 
 		errs := ExpectCheckerErrors(t, err, 2)
+
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+	})
+
+	t.Run("while loop: unreachable destruction due to continue, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r: @R
+
+                prepare() {
+                    self.r <- create R()
+                }
+
+                execute {
+                    while true {
+                        continue
+                        destroy self.r  // unreachable
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
+	})
+
+	t.Run("while loop: unreachable destruction due to return", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test(r: @R) {
+                while true {
+                    return
+                    destroy r  // unreachable
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 3)
+
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[1])
+		assert.IsType(t, &sema.ResourceLossError{}, errs[2])
+	})
+
+	t.Run("while loop: unreachable destruction due to return, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r: @R
+
+                prepare() {
+                    self.r <- create R()
+                }
+
+                execute {
+                    while true {
+                        return
+                        destroy self.r  // unreachable
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
+	})
+
+	t.Run("for loop: unreachable destruction due to break", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test(r: @R) {
+                for i in [] {
+                    break
+                    destroy r  // unreachable
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+	})
+
+	t.Run("for loop: unreachable destruction due to break, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r: @R
+
+                prepare() {
+                    self.r <- create R()
+                }
+
+                execute {
+                    for i in [] {
+                        break
+                        destroy self.r  // unreachable
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
+	})
+
+	t.Run("for loop: unreachable destruction due to continue", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test(r: @R) {
+                for i in [] {
+                    continue
+                    destroy r  // unreachable
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+	})
+
+	t.Run("for loop: unreachable destruction due to continue, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r: @R
+
+                prepare() {
+                    self.r <- create R()
+                }
+
+                execute {
+                    for i in [] {
+                        continue
+                        destroy self.r  // unreachable
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
+	})
+
+	t.Run("for loop: unreachable destruction due to return", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test(r: @R) {
+                for i in [] {
+                    return
+                    destroy r  // unreachable
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 3)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[1])
+		assert.IsType(t, &sema.ResourceLossError{}, errs[2])
+	})
+
+	t.Run("for loop: unreachable destruction due to return, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r: @R
+
+                prepare() {
+                    self.r <- create R()
+                }
+
+                execute {
+                    for i in [] {
+                        return
+                        destroy self.r  // unreachable
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
 	})
 }
 
@@ -5477,26 +6254,26 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheckWithPanic(t, `
-             resource R {}
+            resource R {}
 
-             fun f(_ r: @R) { destroy r }
+            fun f(_ r: @R) { destroy r }
 
-             transaction() {
+            transaction() {
 
-                 let r: @R
+                let r: @R
 
-                 prepare() {
-                     self.r <- create R()
-                 }
+                prepare() {
+                    self.r <- create R()
+                }
 
-                 execute {
-                     if false {
-                         f(<-self.r)
-                     } else {
-                         panic("")
-                     }
-                 }
-             }
+                execute {
+                    if false {
+                        f(<-self.r)
+                    } else {
+                        panic("")
+                    }
+                }
+            }
         `)
 
 		require.NoError(t, err)
@@ -5507,26 +6284,26 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheckWithPanic(t, `
-             resource R {}
+            resource R {}
 
-             fun f(_ r: @R) { destroy r }
+            fun f(_ r: @R) { destroy r }
 
-             transaction() {
+            transaction() {
 
-                 let r: @R
+                let r: @R
 
-                 prepare() {
-                     self.r <- create R()
-                 }
+                prepare() {
+                    self.r <- create R()
+                }
 
-                 execute {
-                     if let x = nil {
-                         f(<-self.r)
-                     } else {
-                         panic("")
-                     }
-                 }
-             }
+                execute {
+                    if let x = nil {
+                        f(<-self.r)
+                    } else {
+                        panic("")
+                    }
+                }
+            }
         `)
 
 		require.NoError(t, err)
@@ -5537,28 +6314,28 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheckWithPanic(t, `
-             resource R {}
+            resource R {}
 
-             fun f(_ r: @R) { destroy r }
+            fun f(_ r: @R) { destroy r }
 
-             transaction() {
+            transaction() {
 
-                 let r: @R
+                let r: @R
 
-                 prepare() {
-                     self.r <- create R()
-                 }
+                prepare() {
+                    self.r <- create R()
+                }
 
-                 execute {
-                     if let x = nil {
-                         f(<-self.r)
-                     } else if let y = nil {
-                         f(<-self.r)
-                     } else {
-                         panic("")
-                     }
-                 }
-             }
+                execute {
+                    if let x = nil {
+                        f(<-self.r)
+                    } else if let y = nil {
+                        f(<-self.r)
+                    } else {
+                        panic("")
+                    }
+                }
+            }
         `)
 
 		require.NoError(t, err)
@@ -5569,18 +6346,18 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheckWithPanic(t, `
-             resource R {}
+            resource R {}
 
-             fun f(_ r: @R) { destroy r }
+            fun f(_ r: @R) { destroy r }
 
-             fun test() {
-                 let r <- create R()
-                 if false {
-                     f(<-r)
-                 } else {
-                     panic("")
-                 }
-             }
+            fun test() {
+                let r <- create R()
+                if false {
+                    f(<-r)
+                } else {
+                    panic("")
+                }
+            }
         `)
 
 		require.NoError(t, err)
@@ -5591,18 +6368,18 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheckWithPanic(t, `
-             resource R {}
+            resource R {}
 
-             fun f(_ r: @R) { destroy r }
+            fun f(_ r: @R) { destroy r }
 
-             fun test() {
-                 let r <- create R()
-                 if let x = nil {
-                     f(<-r)
-                 } else {
-                     panic("")
-                 }
-             }
+            fun test() {
+                let r <- create R()
+                if let x = nil {
+                    f(<-r)
+                } else {
+                    panic("")
+                }
+            }
         `)
 
 		require.NoError(t, err)
@@ -5613,22 +6390,1862 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheckWithPanic(t, `
-             resource R {}
+            resource R {}
 
-             fun f(_ r: @R) { destroy r }
+            fun f(_ r: @R) { destroy r }
 
-             fun test() {
-                 let r <- create R()
-                 if let x = nil {
-                     f(<-r)
-                 } else if let y = nil {
-                     f(<-r)
-                 } else {
-                     panic("")
-                 }
-             }
+            fun test() {
+                let r <- create R()
+                if let x = nil {
+                    f(<-r)
+                } else if let y = nil {
+                    f(<-r)
+                } else {
+                    panic("")
+                }
+            }
         `)
 
 		require.NoError(t, err)
+	})
+
+	t.Run("if-else: missing else branch", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            fun test(r: @R) {
+                if true {
+                    panic("")
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("if-else: missing else branch, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            transaction {
+
+               let r: @R
+
+               prepare() {
+                   self.r <- create R()
+               }
+
+               execute {
+                   if true {
+                       panic("")
+                   }
+               }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
+	})
+
+	t.Run("if-else: missing else branches", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            fun test(r: @R) {
+                if true {
+                    if true {
+                       panic("")
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("if-else: missing else branches, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            transaction {
+
+                let r: @R
+
+                prepare() {
+                    self.r <- create R()
+                }
+
+                execute {
+                    if true {
+                        if true {
+                           panic("")
+                        }
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
+	})
+
+	t.Run("if-else: missing else branch in nested if", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            fun test(r: @R) {
+                if true {
+                    if true {
+                       panic("")
+                    }
+                } else {
+                    panic("")
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("if-else: missing else branch in nested if, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            transaction {
+
+                let r: @R
+
+                prepare() {
+                    self.r <- create R()
+                }
+
+                execute {
+                    if true {
+                        if true {
+                           panic("")
+                        }
+                    } else {
+                        panic("")
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
+	})
+
+	t.Run("switch-case: missing invalidation in one case", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            fun test(n: Int, r: @R) {
+                switch n {
+                    case 1:
+                        panic("")
+                    case 2:
+                        // Some random statement that has no effect
+                        let a = "do nothing"
+                    default:
+                        panic("")
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("switch-case: missing invalidation in one case, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r: @R
+
+                prepare() {
+                    self.r <- create R()
+                }
+
+                execute {
+                    switch n {
+                        case 1:
+                            panic("")
+                        case 2:
+                            // Some random statement that has no effect
+                            let a = "do nothing"
+                        default:
+                            panic("")
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
+	})
+
+	t.Run("switch-case: missing invalidation in one case, mixed", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            fun test(n: Int, r: @R) {
+                switch n {
+                    case 1:
+                        panic("")
+                    case 2:
+                        // Some random statement that has no effect
+                        let a = "do nothing"
+                    default:
+                        destroy r
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("switch-case: missing invalidation in one case, mixed, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r: @R
+
+                prepare() {
+                    self.r <- create R()
+                }
+
+                execute {
+                    switch n {
+                        case 1:
+                            panic("")
+                        case 2:
+                            // Some random statement that has no effect
+                            let a = "do nothing"
+                        default:
+                            destroy self.r
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
+	})
+
+	t.Run("switch-case: missing invalidation in default case", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            fun test(n: Int, r: @R) {
+                switch n {
+                    case 1:
+                        panic("")
+                    case 2:
+                        panic("")
+                    default:
+                        break
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("switch-case: missing invalidation in default case, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r: @R
+
+                prepare() {
+                    self.r <- create R()
+                }
+
+                execute {
+                    switch n {
+                        case 1:
+                            panic("")
+                        case 2:
+                            panic("")
+                        default:
+                            break
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
+	})
+
+	t.Run("switch-case: missing invalidation in default case, mixed", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            fun test(n: Int, r: @R) {
+                switch n {
+                    case 1:
+                        panic("")
+                    case 2:
+                        destroy r
+                    default:
+                        break
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("switch-case: missing invalidation in default case, mixed, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r: @R
+
+                prepare() {
+                    self.r <- create R()
+                }
+
+                execute {
+                    switch n {
+                        case 1:
+                            panic("")
+                        case 2:
+                            destroy self.r
+                        default:
+                            break
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
+	})
+
+	t.Run("switch-case: invalidation in all cases", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            fun test(n: Int, r: @R) {
+                switch n {
+                    case 1:
+                        panic("")
+                    case 2:
+                        panic("")
+                    default:
+                        panic("")
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("switch-case: invalidation in all cases, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r: @R
+
+                prepare() {
+                    self.r <- create R()
+                }
+
+                execute {
+                    switch n {
+                        case 1:
+                            panic("")
+                        case 2:
+                            panic("")
+                        default:
+                            panic("")
+                    }
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("switch-case: invalidation in all cases, mixed", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            fun test(n: Int, r: @R) {
+                switch n {
+                    case 1:
+                        panic("")
+                    case 2:
+                        destroy r
+                    default:
+                        panic("")
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("switch-case: invalidation in all cases, mixed, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r: @R
+
+                prepare() {
+                    self.r <- create R()
+                }
+
+                execute {
+                    switch n {
+                        case 1:
+                            panic("")
+                        case 2:
+                            destroy self.r
+                        default:
+                            panic("")
+                    }
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("switch-case: no default", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            fun test(n: Int, r: @R) {
+                switch n {
+                    case 1:
+                        panic("")
+                    case 2:
+                        panic("")
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("switch-case: no default, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r: @R
+
+                prepare() {
+                    self.r <- create R()
+                }
+
+                execute {
+                    switch n {
+                        case 1:
+                            panic("")
+                        case 2:
+                            panic("")
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
+	})
+
+	t.Run("switch-case: no default, mixed", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            fun test(n: Int, r: @R) {
+                switch n {
+                    case 1:
+                        panic("")
+                    case 2:
+                        destroy r
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("switch-case: no default, mixed, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r: @R
+
+                prepare() {
+                    self.r <- create R()
+                }
+
+                execute {
+                    switch n {
+                        case 1:
+                            panic("")
+                        case 2:
+                            destroy self.r
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
+	})
+
+	t.Run("switch-case: missing invalidation of one resource in one case", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            fun test(n: Int, r1: @R, r2: @R) {
+                switch n {
+                    case n:
+                        panic("")
+                    case 2:
+                        destroy r1
+                    default:
+                        panic("")
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("switch-case: missing invalidation of one resource in one case, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r1: @R
+                let r2: @R
+
+                prepare() {
+                    self.r1 <- create R()
+                    self.r2 <- create R()
+                }
+
+                execute {
+                    switch n {
+                        case n:
+                            panic("")
+                        case 2:
+                            destroy self.r1
+                        default:
+                            panic("")
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
+	})
+
+	t.Run("switch-case: missing invalidation of one resource in one case, mixed", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            fun test(n: Int, r1: @R, r2: @R) {
+                switch n {
+                    case n:
+                        panic("")
+                    case 2:
+                        destroy r1
+                    default:
+                        destroy r1
+                        destroy r2
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("switch-case: missing invalidation of one resource in one case, mixed, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r1: @R
+                let r2: @R
+
+                prepare() {
+                    self.r1 <- create R()
+                    self.r2 <- create R()
+                }
+
+                execute {
+                    switch n {
+                        case n:
+                            panic("")
+                        case 2:
+                            destroy self.r1
+                        default:
+                            destroy self.r1
+                            destroy self.r2
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
+	})
+
+	t.Run("switch-case: missing invalidation of one resource in default case", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            fun test(n: Int, r1: @R, r2: @R) {
+                switch n {
+                    case n:
+                        panic("")
+                    case 2:
+                        panic("")
+                    default:
+                        destroy r1
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("switch-case: missing invalidation of one resource in default case, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r1: @R
+                let r2: @R
+
+                prepare() {
+                    self.r1 <- create R()
+                    self.r2 <- create R()
+                }
+
+                execute {
+                    switch n {
+                        case n:
+                            panic("")
+                        case 2:
+                            panic("")
+                        default:
+                            destroy self.r1
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
+	})
+
+	t.Run("switch-case: missing invalidation of one resource in default case, mixed", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            fun test(n: Int, r1: @R, r2: @R) {
+                switch n {
+                    case n:
+                        panic("")
+                    case 2:
+                        destroy r1
+                        destroy r2
+                    default:
+                        destroy r1
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("switch-case: missing invalidation of one resource in default case, mixed, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r1: @R
+                let r2: @R
+
+                prepare() {
+                    self.r1 <- create R()
+                    self.r2 <- create R()
+                }
+
+                execute {
+                    switch n {
+                        case n:
+                            panic("")
+                        case 2:
+                            destroy self.r1
+                            destroy self.r2
+                        default:
+                            destroy self.r1
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
+	})
+
+	t.Run("switch-case: loss of all resources in one case", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            fun test(n: Int, r1: @R, r2: @R) {
+                switch n {
+                    case 1:
+                        panic("")
+                    case 2:
+                        break
+                    default:
+                        panic("")
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+	})
+
+	t.Run("switch-case: loss of all resources in one case, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r1: @R
+                let r2: @R
+
+                prepare() {
+                    self.r1 <- create R()
+                    self.r2 <- create R()
+                }
+
+                execute {
+                    switch n {
+                        case 1:
+                            panic("")
+                        case 2:
+                            break
+                        default:
+                            panic("")
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
+	})
+
+	t.Run("switch-case: loss of all resources in one case, mixed", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            fun test(n: Int, r1: @R, r2: @R) {
+                switch n {
+                    case 1:
+                        destroy r1
+                        destroy r2
+                    case 2:
+                        break
+                    default:
+                        panic("")
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+	})
+
+	t.Run("switch-case: loss of all resources in one case, mixed, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r1: @R
+                let r2: @R
+
+                prepare() {
+                    self.r1 <- create R()
+                    self.r2 <- create R()
+                }
+
+                execute {
+                    switch n {
+                        case 1:
+                            destroy self.r1
+                            destroy self.r2
+                        case 2:
+                            break
+                        default:
+                            panic("")
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
+	})
+
+	t.Run("switch-case: loss of all resources in default case", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            fun test(n: Int, r1: @R, r2: @R) {
+                switch n {
+                    case 1:
+                        panic("")
+                    case 2:
+                        panic("")
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+	})
+
+	t.Run("switch-case: loss of all resources in default case, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r1: @R
+                let r2: @R
+
+                prepare() {
+                    self.r1 <- create R()
+                    self.r2 <- create R()
+                }
+
+                execute {
+                    switch n {
+                        case 1:
+                            panic("")
+                        case 2:
+                            panic("")
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
+	})
+
+	t.Run("switch-case: loss of all resources in default case, mixed", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            fun test(n: Int, r1: @R, r2: @R) {
+                switch n {
+                    case 1:
+                        destroy r1
+                        destroy r2
+                    case 2:
+                        panic("")
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+	})
+
+	t.Run("switch-case: loss of all resources in default case, mixed, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r1: @R
+                let r2: @R
+
+                prepare() {
+                    self.r1 <- create R()
+                    self.r2 <- create R()
+                }
+
+                execute {
+                    switch n {
+                        case 1:
+                            destroy self.r1
+                            destroy self.r2
+                        case 2:
+                            panic("")
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
+	})
+
+	t.Run("switch-case: unreachable panic due to break", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            fun test(n: Int, r: @R) {
+                switch n {
+                    case 1:
+                        break
+                        panic("")  // unreachable
+                    default:
+                        panic("")
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+	})
+
+	t.Run("switch-case: unreachable panic due to break, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r: @R
+
+                prepare() {
+                    self.r <- create R()
+                }
+
+                execute {
+                    switch n {
+                        case 1:
+                            break
+                            panic("")  // unreachable
+                        default:
+                            panic("")
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+	})
+
+	t.Run("switch-case: unreachable panic due to break, mixed", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            fun test(n: Int, r: @R) {
+                switch n {
+                    case 1:
+                        break
+                        panic("")  // unreachable
+                    default:
+                        destroy r
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+	})
+
+	t.Run("switch-case: unreachable panic due to break, mixed, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r: @R
+
+                prepare() {
+                    self.r <- create R()
+                }
+
+                execute {
+                    switch n {
+                        case 1:
+                            break
+                            panic("")  // unreachable
+                        default:
+                            destroy self.r
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+	})
+
+	t.Run("switch-case: return in one case", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            fun test(n: Int, r: @R) {
+                switch n {
+                    case 1:
+                        panic("")
+                        return
+                    default:
+                        panic("")
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+		// TODO: remove
+		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+	})
+
+	t.Run("switch-case: return in one case, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r: @R
+
+                prepare() {
+                    self.r <- create R()
+                }
+
+                execute {
+                    switch n {
+                        case 1:
+                            panic("")
+                            return
+                        default:
+                            panic("")
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+	})
+
+	t.Run("switch-case: return in one case, mixed", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            fun test(n: Int, r: @R) {
+                switch n {
+                    case 1:
+                        panic("")
+                        return
+                    default:
+                        destroy r
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+		// TODO: remove
+		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+	})
+
+	t.Run("switch-case: return in one case, mixed, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r: @R
+
+                prepare() {
+                    self.r <- create R()
+                }
+
+                execute {
+                    switch n {
+                        case 1:
+                            panic("")
+                            return
+                        default:
+                            destroy self.r
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+	})
+
+	t.Run("switch-case: break in one case", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            fun test(n: Int, r: @R) {
+                switch n {
+                    case 1:
+                        panic("")
+                        break
+                    default:
+                        panic("")
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+	})
+
+	t.Run("switch-case: break in one case, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r: @R
+
+                prepare() {
+                    self.r <- create R()
+                }
+
+                execute {
+                    switch n {
+                        case 1:
+                            panic("")
+                            break
+                        default:
+                            panic("")
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+	})
+
+	t.Run("switch-case: break in one case, mixed", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            fun test(n: Int, r: @R) {
+                switch n {
+                    case 1:
+                        panic("")
+                        break
+                    default:
+                        destroy r
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+	})
+
+	t.Run("switch-case: break in one case, mixed, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r: @R
+
+                prepare() {
+                    self.r <- create R()
+                }
+
+                execute {
+                    switch n {
+                        case 1:
+                            panic("")
+                            break
+                        default:
+                            destroy self.r
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+	})
+
+	t.Run("switch-case: invalidation missing in default case", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            fun test(n: Int, r: @R) {
+                switch n {
+                    case 1:
+                        panic("")
+                        return
+                    default:
+                        return
+                }
+                panic("")
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 3)
+
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+		assert.IsType(t, &sema.ResourceLossError{}, errs[2])
+	})
+
+	t.Run("switch-case: invalidation missing in default case, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r: @R
+
+                prepare() {
+                    self.r <- create R()
+                }
+
+                execute {
+                    switch n {
+                        case 1:
+                            panic("")
+                            return
+                        default:
+                            return
+                    }
+                    panic("")
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
+	})
+
+	t.Run("switch-case: invalidation missing in default case, mixed", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            fun test(n: Int, r: @R) {
+                switch n {
+                    case 1:
+                        panic("")
+                        return
+                    default:
+                        return
+                }
+                destroy r
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 4)
+
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+		assert.IsType(t, &sema.ResourceLossError{}, errs[2])
+		// TODO: duplicate?
+		assert.IsType(t, &sema.ResourceLossError{}, errs[3])
+	})
+
+	t.Run("switch-case: invalidation missing in default case, mixed, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r: @R
+
+                prepare() {
+                    self.r <- create R()
+                }
+
+                execute {
+                    switch n {
+                        case 1:
+                            panic("")
+                            return
+                        default:
+                            return
+                    }
+                    destroy self.r
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
+	})
+
+	t.Run("while loop: unreachable panic due to break", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            fun test(r: @R) {
+                while true {
+                    break
+                    panic("")  // unreachable
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+	})
+
+	t.Run("while loop: unreachable panic due to break, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r: @R
+
+                prepare() {
+                    self.r <- create R()
+                }
+
+                execute {
+                    while true {
+                        break
+                        panic("")  // unreachable
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
+	})
+
+	t.Run("while loop: unreachable panic due to continue", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            fun test(r: @R) {
+                while true {
+                    continue
+                    panic("")  // unreachable
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+	})
+
+	t.Run("while loop: unreachable panic due to continue, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r: @R
+
+                prepare() {
+                    self.r <- create R()
+                }
+
+                execute {
+                    while true {
+                        continue
+                        panic("")  // unreachable
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
+	})
+
+	t.Run("while loop: unreachable panic due to return", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            fun test(r: @R) {
+                while true {
+                    return
+                    panic("")  // unreachable
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 3)
+
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[1])
+		assert.IsType(t, &sema.ResourceLossError{}, errs[2])
+	})
+
+	t.Run("while loop: unreachable panic due to return, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r: @R
+
+                prepare() {
+                    self.r <- create R()
+                }
+
+                execute {
+                    while true {
+                        return
+                        panic("")  // unreachable
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
+	})
+
+	t.Run("for loop: unreachable panic due to break", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            fun test(r: @R) {
+                for i in [] {
+                    break
+                    panic("")  // unreachable
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+	})
+
+	t.Run("for loop: unreachable panic due to break, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r: @R
+
+                prepare() {
+                    self.r <- create R()
+                }
+
+                execute {
+                    for i in [] {
+                        break
+                        panic("")  // unreachable
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
+	})
+
+	t.Run("for loop: unreachable panic due to continue", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            fun test(r: @R) {
+                for i in [] {
+                    continue
+                    panic("")  // unreachable
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+	})
+
+	t.Run("for loop: unreachable panic due to continue, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r: @R
+
+                prepare() {
+                    self.r <- create R()
+                }
+
+                execute {
+                    for i in [] {
+                        continue
+                        panic("")  // unreachable
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
+	})
+
+	t.Run("for loop: unreachable panic due to return", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            fun test(r: @R) {
+                for i in [] {
+                    return
+                    panic("")  // unreachable
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 3)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[1])
+		assert.IsType(t, &sema.ResourceLossError{}, errs[2])
+	})
+
+	t.Run("for loop: unreachable panic due to return, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+            resource R {}
+
+            transaction(n: Int) {
+
+                let r: @R
+
+                prepare() {
+                    self.r <- create R()
+                }
+
+                execute {
+                    for i in [] {
+                        return
+                        panic("")  // unreachable
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
 	})
 }
