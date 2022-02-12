@@ -14197,20 +14197,17 @@ var publicKeyVerifyPoPFunction = NewHostFunctionValue(
 		signatureValue.Iterate(func(element Value) (resume bool) {
 			b := element.(UInt8Value)
 			bytesArray = append(bytesArray, byte(b))
+
+			// Continue iteration
 			return true
 		})
 
-		var err error
-		v, err = interpreter.BLSVerifyPoPHandler(
+		return interpreter.BLSVerifyPoPHandler(
 			interpreter,
 			getLocationRange,
 			publicKey,
 			bytesArray,
 		)
-		if err != nil {
-			panic(err)
-		}
-		return
 	},
 	sema.PublicKeyVerifyPoPFunctionType,
 )

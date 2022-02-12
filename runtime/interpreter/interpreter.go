@@ -157,13 +157,13 @@ type PublicKeyValidationHandlerFunc func(
 	publicKey *CompositeValue,
 ) error
 
-// VerifyBLSPoPHandlerFunc is a function that verifies a BLS proof of possession
-type VerifyBLSPoPHandlerFunc func(
+// BLSVerifyPoPHandlerFunc is a function that verifies a BLS proof of possession
+type BLSVerifyPoPHandlerFunc func(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
 	publicKey MemberAccessibleValue,
 	signature []byte,
-) (BoolValue, error)
+) BoolValue
 
 // AggregateBLSSignaturesHandlerFunc is a function that joins a list of
 // BLS signatures
@@ -286,9 +286,9 @@ type Interpreter struct {
 	uuidHandler                    UUIDHandlerFunc
 	PublicKeyValidationHandler     PublicKeyValidationHandlerFunc
 	SignatureVerificationHandler   SignatureVerificationHandlerFunc
-	BLSVerifyPoPHandler            VerifyBLSPoPHandlerFunc
 	AggregateBLSSignaturesHandler  AggregateBLSSignaturesHandlerFunc
 	AggregateBLSPublicKeysHandler  AggregateBLSPublicKeysHandlerFunc
+	BLSVerifyPoPHandler            BLSVerifyPoPHandlerFunc
 	HashHandler                    HashHandlerFunc
 	ExitHandler                    ExitHandlerFunc
 	interpreted                    bool
@@ -446,7 +446,7 @@ func WithPublicKeyValidationHandler(handler PublicKeyValidationHandlerFunc) Opti
 // functions as the functions used to handle certain BLS-specific crypto functions.
 //
 func WithBLSCryptoFunctions(
-	verifyPoP VerifyBLSPoPHandlerFunc,
+	verifyPoP BLSVerifyPoPHandlerFunc,
 	aggregateSignatures AggregateBLSSignaturesHandlerFunc,
 	aggregatePublicKeys AggregateBLSPublicKeysHandlerFunc,
 ) Option {
@@ -662,7 +662,7 @@ func (interpreter *Interpreter) SetPublicKeyValidationHandler(function PublicKey
 // SetBLSCryptoFunctions sets the functions that are used to handle certain BLS specific crypt functions.
 //
 func (interpreter *Interpreter) SetBLSCryptoFunctions(
-	verifyPoP VerifyBLSPoPHandlerFunc,
+	verifyPoP BLSVerifyPoPHandlerFunc,
 	aggregateSignatures AggregateBLSSignaturesHandlerFunc,
 	aggregatePublicKeys AggregateBLSPublicKeysHandlerFunc,
 ) {
