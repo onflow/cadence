@@ -15101,20 +15101,17 @@ var publicKeyVerifyPoPFunction = NewHostFunctionValue(
 				panic(errors.NewUnreachableError())
 			}
 			bytesArray = append(bytesArray, byte(b))
+
+			// Continue iteration
 			return true
 		})
 
-		var err error
-		v, err = interpreter.BLSVerifyPoPHandler(
+		return interpreter.BLSVerifyPoPHandler(
 			interpreter,
 			getLocationRange,
 			publicKey,
 			bytesArray,
 		)
-		if err != nil {
-			panic(err)
-		}
-		return
 	},
 	sema.PublicKeyVerifyPoPFunctionType,
 )
