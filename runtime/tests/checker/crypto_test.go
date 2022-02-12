@@ -44,7 +44,7 @@ func TestCheckHashAlgorithmCases(t *testing.T) {
 			ParseAndCheckOptions{
 				Options: []sema.Option{
 					sema.WithPredeclaredValues(
-						stdlib.BuiltinValues().ToSemaValueDeclarations(),
+						stdlib.BuiltinValues.ToSemaValueDeclarations(),
 					),
 				},
 			},
@@ -69,7 +69,7 @@ func TestCheckHashAlgorithmConstructor(t *testing.T) {
 		ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithPredeclaredValues(
-					stdlib.BuiltinValues().ToSemaValueDeclarations(),
+					stdlib.BuiltinValues.ToSemaValueDeclarations(),
 				),
 			},
 		},
@@ -91,7 +91,7 @@ func TestCheckHashAlgorithmHashFunctions(t *testing.T) {
 		ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithPredeclaredValues(
-					stdlib.BuiltinValues().ToSemaValueDeclarations(),
+					stdlib.BuiltinValues.ToSemaValueDeclarations(),
 				),
 			},
 		},
@@ -116,7 +116,7 @@ func TestCheckSignatureAlgorithmCases(t *testing.T) {
 			ParseAndCheckOptions{
 				Options: []sema.Option{
 					sema.WithPredeclaredValues(
-						stdlib.BuiltinValues().ToSemaValueDeclarations(),
+						stdlib.BuiltinValues.ToSemaValueDeclarations(),
 					),
 				},
 			},
@@ -141,7 +141,7 @@ func TestCheckSignatureAlgorithmConstructor(t *testing.T) {
 		ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithPredeclaredValues(
-					stdlib.BuiltinValues().ToSemaValueDeclarations(),
+					stdlib.BuiltinValues.ToSemaValueDeclarations(),
 				),
 			},
 		},
@@ -165,7 +165,7 @@ func TestCheckVerifyPoP(t *testing.T) {
 		ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithPredeclaredValues(stdlib.BuiltinFunctions.ToSemaValueDeclarations()),
-				sema.WithPredeclaredValues(stdlib.BuiltinValues().ToSemaValueDeclarations()),
+				sema.WithPredeclaredValues(stdlib.BuiltinValues.ToSemaValueDeclarations()),
 			},
 		},
 	)
@@ -188,7 +188,7 @@ func TestCheckVerifyPoPInvalidArgument(t *testing.T) {
 		ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithPredeclaredValues(stdlib.BuiltinFunctions.ToSemaValueDeclarations()),
-				sema.WithPredeclaredValues(stdlib.BuiltinValues().ToSemaValueDeclarations()),
+				sema.WithPredeclaredValues(stdlib.BuiltinValues.ToSemaValueDeclarations()),
 			},
 		},
 	)
@@ -210,7 +210,7 @@ func TestCheckAggregateBLSSignatures(t *testing.T) {
 		ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithPredeclaredValues(stdlib.BuiltinFunctions.ToSemaValueDeclarations()),
-				sema.WithPredeclaredValues(stdlib.BuiltinValues().ToSemaValueDeclarations()),
+				sema.WithPredeclaredValues(stdlib.BuiltinValues.ToSemaValueDeclarations()),
 			},
 		},
 	)
@@ -229,7 +229,7 @@ func TestCheckAggregateBLSSignaturesError(t *testing.T) {
 		ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithPredeclaredValues(stdlib.BuiltinFunctions.ToSemaValueDeclarations()),
-				sema.WithPredeclaredValues(stdlib.BuiltinValues().ToSemaValueDeclarations()),
+				sema.WithPredeclaredValues(stdlib.BuiltinValues.ToSemaValueDeclarations()),
 			},
 		},
 	)
@@ -251,7 +251,7 @@ func TestCheckAggregateBLSPublicKeys(t *testing.T) {
 		ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithPredeclaredValues(stdlib.BuiltinFunctions.ToSemaValueDeclarations()),
-				sema.WithPredeclaredValues(stdlib.BuiltinValues().ToSemaValueDeclarations()),
+				sema.WithPredeclaredValues(stdlib.BuiltinValues.ToSemaValueDeclarations()),
 			},
 		},
 	)
@@ -270,7 +270,7 @@ func TestCheckAggregateBLSPublicKeysError(t *testing.T) {
 		ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithPredeclaredValues(stdlib.BuiltinFunctions.ToSemaValueDeclarations()),
-				sema.WithPredeclaredValues(stdlib.BuiltinValues().ToSemaValueDeclarations()),
+				sema.WithPredeclaredValues(stdlib.BuiltinValues.ToSemaValueDeclarations()),
 			},
 		},
 	)
