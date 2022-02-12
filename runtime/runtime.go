@@ -1236,8 +1236,8 @@ func (r *interpreterRuntime) newInterpreter(
 				getLocationRange func() interpreter.LocationRange,
 				publicKeyValue interpreter.MemberAccessibleValue,
 				signature []byte,
-			) (interpreter.BoolValue, error) {
-				return verifyBLSPOP(
+			) interpreter.BoolValue {
+				return blsVerifyPoP(
 					inter,
 					getLocationRange,
 					publicKeyValue,
@@ -3270,29 +3270,27 @@ func validatePublicKey(
 	return err
 }
 
-func verifyBLSPOP(
+func blsVerifyPoP(
 	inter *interpreter.Interpreter,
 	getLocationRange func() interpreter.LocationRange,
 	publicKeyValue interpreter.MemberAccessibleValue,
 	signature []byte,
 	runtimeInterface Interface,
-) (interpreter.BoolValue, error) {
+) interpreter.BoolValue {
 	publicKey, err := NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
 	if err != nil {
-		return false, err
+		panic(err)
 	}
 
 	var valid bool
 	wrapPanic(func() {
 		valid, err = runtimeInterface.BLSVerifyPOP(publicKey, signature)
 	})
-
-	// if the crypto layer produces an error, we have invalid input, return false
 	if err != nil {
-		return false, nil //nolint:nilerr
+		panic(err)
 	}
 
-	return interpreter.BoolValue(valid), nil
+	return interpreter.BoolValue(valid)
 }
 
 func aggregateBLSPublicKeys(
