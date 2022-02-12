@@ -672,45 +672,44 @@ func TestTraversingMerkleProof(t *testing.T) {
 	runtime := newTestInterpreterRuntime()
 
 	script := []byte(`
-		pub fun main(rootHash: [UInt8], address: [UInt8], accountProof: [[UInt8]]){
+        pub fun main(rootHash: [UInt8], address: [UInt8], accountProof: [[UInt8]]){
 
-		let path = HashAlgorithm.KECCAK_256.hash(address)
-	 
-		var nibbles: [UInt8]  = [] 
+        let path = HashAlgorithm.KECCAK_256.hash(address)
+     
+        var nibbles: [UInt8]  = [] 
 
-		for b in path {
-			nibbles.append(b >> 4)
-			nibbles.append(b % 16)
-		}
+        for b in path {
+            nibbles.append(b >> 4)
+            nibbles.append(b % 16)
+        }
 
-		var nibbleIndex = 0
-		var expectedNodeHash = rootHash 
+        var nibbleIndex = 0
+        var expectedNodeHash = rootHash 
 
-		for encodedNode in accountProof {
-			log(nibbleIndex)
-			var nodeHash = HashAlgorithm.KECCAK_256.hash(encodedNode) 
-			var encodedChildren = DecodeRLPList(input: encodedNode)
+        for encodedNode in accountProof {
+            log(nibbleIndex)
+            let nodeHash = HashAlgorithm.KECCAK_256.hash(encodedNode) 
 
-			// verify that expected node hash (from a higher level or given root hash)
-			// matches the hash of this level
+            // verify that expected node hash (from a higher level or given root hash)
+            // matches the hash of this level
 
-			if nodeHash.length != expectedNodeHash.length{
-				panic("invalid proof")
-			}
-			var i = 0
-			while i < nodeHash.length{
-				if nodeHash[i] != expectedNodeHash[i]{
-					panic("invalid proof")
-				}
-				i = i + 1
-			}
+            if nodeHash.length != expectedNodeHash.length {
+                panic("invalid proof")
+            }
 
-			var encodedChild = encodedChildren[nibbles[nibbleIndex]]
-			expectedNodeHash = DecodeRLPString(input: encodedChild)
-			log(nibbles[nibbleIndex])
-			nibbleIndex = nibbleIndex + 1
-		}
-	 }
+            for i, c in nodeHash {
+                if c != expectedNodeHash[i] {
+                    panic("invalid proof")
+                }
+            }
+
+            let encodedChildren = DecodeRLPList(input: encodedNode)
+            let encodedChild = encodedChildren[nibbles[nibbleIndex]]
+            expectedNodeHash = DecodeRLPString(input: encodedChild)
+            log(nibbles[nibbleIndex])
+            nibbleIndex = nibbleIndex + 1
+        }
+     }
     `)
 
 	accountProofInHex := []string{
@@ -738,6 +737,8 @@ func TestTraversingMerkleProof(t *testing.T) {
 	})
 
 	storage := newTestLedger(nil, nil)
+
+	var logMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
 		storage: storage,
@@ -771,7 +772,7 @@ func TestTraversingMerkleProof(t *testing.T) {
 			return nil, errors.New("Unknown input to the hash method")
 		},
 		log: func(message string) {
-			fmt.Println(message)
+			logMessages = append(logMessages, message)
 		},
 	}
 
@@ -786,4 +787,9 @@ func TestTraversingMerkleProof(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
+	require.Equal(t, 
+		[]string{"0", "11", "1", "6", "2", "9", "3", "7"}, 
+		logMessages,
+	)
+
 }
