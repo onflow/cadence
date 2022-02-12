@@ -6224,6 +6224,10 @@ var PublicKeyType = func() *CompositeType {
 	return publicKeyType
 }()
 
+var PublicKeyArrayType = &VariableSizedType{
+	Type: PublicKeyType,
+}
+
 var PublicKeyVerifyFunctionType = &FunctionType{
 	TypeParameters: []*TypeParameter{},
 	Parameters: []*Parameter{

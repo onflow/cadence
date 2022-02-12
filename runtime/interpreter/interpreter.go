@@ -169,35 +169,59 @@ type PublicAccountHandlerFunc func(
 type UUIDHandlerFunc func() (uint64, error)
 
 // PublicKeyValidationHandlerFunc is a function that validates a given public key.
+// Parameter types:
+// - publicKey: PublicKey
+//
 type PublicKeyValidationHandlerFunc func(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
 	publicKey *CompositeValue,
 ) error
 
-// BLSVerifyPoPHandlerFunc is a function that verifies a BLS proof of possession
+// BLSVerifyPoPHandlerFunc is a function that verifies a BLS proof of possession.
+// Parameter types:
+// - publicKey: PublicKey
+// - signature: [UInt8]
+// Expected result type: Bool
+//
 type BLSVerifyPoPHandlerFunc func(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
 	publicKey MemberAccessibleValue,
-	signature []byte,
+	signature *ArrayValue,
 ) BoolValue
 
-// AggregateBLSSignaturesHandlerFunc is a function that joins a list of
-// BLS signatures
-type AggregateBLSSignaturesHandlerFunc func(
-	signatures [][]byte,
-) ([]byte, error)
+// BLSAggregateSignaturesHandlerFunc is a function that aggregates multiple BLS signatures.
+// Parameter types:
+// - signatures: [[UInt8]]
+// Expected result type: [UInt8]?
+//
+type BLSAggregateSignaturesHandlerFunc func(
+	inter *Interpreter,
+	getLocationRange func() LocationRange,
+	signatures *ArrayValue,
+) OptionalValue
 
-// AggregateBLSPublicKeysHandlerFunc is a function that joins a list of
-// BLS public keys
-type AggregateBLSPublicKeysHandlerFunc func(
+// BLSAggregatePublicKeysHandlerFunc is a function that aggregates multiple BLS public keys.
+// Parameter types:
+// - publicKeys: [PublicKey]
+// Expected result type: PublicKey?
+//
+type BLSAggregatePublicKeysHandlerFunc func(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
-	publicKeys []MemberAccessibleValue,
-) (MemberAccessibleValue, error)
+	publicKeys *ArrayValue,
+) OptionalValue
 
 // SignatureVerificationHandlerFunc is a function that validates a signature.
+// Parameter types:
+// - signature: [UInt8]
+// - signedData: [UInt8]
+// - domainSeparationTag: String
+// - hashAlgorithm: HashAlgorithm
+// - publicKey: PublicKey
+// Expected result type: Bool
+//
 type SignatureVerificationHandlerFunc func(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
@@ -205,22 +229,28 @@ type SignatureVerificationHandlerFunc func(
 	signedData *ArrayValue,
 	domainSeparationTag *StringValue,
 	hashAlgorithm *CompositeValue,
-	key MemberAccessibleValue,
+	publicKey MemberAccessibleValue,
 ) BoolValue
 
 // HashHandlerFunc is a function that hashes.
+// Parameter types:
+// - data: [UInt8]
+// - domainSeparationTag: [UInt8]
+// - hashAlgorithm: HashAlgorithm
+// Expected result type: [UInt8]
+//
 type HashHandlerFunc func(
 	inter *Interpreter,
 	getLocationRange func() LocationRange,
 	data *ArrayValue,
-	tag *StringValue,
+	domainSeparationTag *StringValue,
 	hashAlgorithm MemberAccessibleValue,
 ) *ArrayValue
 
 // ExitHandlerFunc is a function that is called at the end of execution
 type ExitHandlerFunc func() error
 
-// CompositeTypeCode contains the the "prepared" / "callable" "code"
+// CompositeTypeCode contains the "prepared" / "callable" "code"
 // for the functions and the destructor of a composite
 // (contract, struct, resource, event).
 //
@@ -306,9 +336,9 @@ type Interpreter struct {
 	uuidHandler                    UUIDHandlerFunc
 	PublicKeyValidationHandler     PublicKeyValidationHandlerFunc
 	SignatureVerificationHandler   SignatureVerificationHandlerFunc
-	AggregateBLSSignaturesHandler  AggregateBLSSignaturesHandlerFunc
-	AggregateBLSPublicKeysHandler  AggregateBLSPublicKeysHandlerFunc
 	BLSVerifyPoPHandler            BLSVerifyPoPHandlerFunc
+	BLSAggregateSignaturesHandler  BLSAggregateSignaturesHandlerFunc
+	BLSAggregatePublicKeysHandler  BLSAggregatePublicKeysHandlerFunc
 	HashHandler                    HashHandlerFunc
 	ExitHandler                    ExitHandlerFunc
 	interpreted                    bool
@@ -489,8 +519,8 @@ func WithPublicKeyValidationHandler(handler PublicKeyValidationHandlerFunc) Opti
 //
 func WithBLSCryptoFunctions(
 	verifyPoP BLSVerifyPoPHandlerFunc,
-	aggregateSignatures AggregateBLSSignaturesHandlerFunc,
-	aggregatePublicKeys AggregateBLSPublicKeysHandlerFunc,
+	aggregateSignatures BLSAggregateSignaturesHandlerFunc,
+	aggregatePublicKeys BLSAggregatePublicKeysHandlerFunc,
 ) Option {
 	return func(interpreter *Interpreter) error {
 		interpreter.SetBLSCryptoFunctions(
@@ -736,12 +766,12 @@ func (interpreter *Interpreter) SetPublicKeyValidationHandler(function PublicKey
 //
 func (interpreter *Interpreter) SetBLSCryptoFunctions(
 	verifyPoP BLSVerifyPoPHandlerFunc,
-	aggregateSignatures AggregateBLSSignaturesHandlerFunc,
-	aggregatePublicKeys AggregateBLSPublicKeysHandlerFunc,
+	aggregateSignatures BLSAggregateSignaturesHandlerFunc,
+	aggregatePublicKeys BLSAggregatePublicKeysHandlerFunc,
 ) {
 	interpreter.BLSVerifyPoPHandler = verifyPoP
-	interpreter.AggregateBLSSignaturesHandler = aggregateSignatures
-	interpreter.AggregateBLSPublicKeysHandler = aggregatePublicKeys
+	interpreter.BLSAggregateSignaturesHandler = aggregateSignatures
+	interpreter.BLSAggregatePublicKeysHandler = aggregatePublicKeys
 }
 
 // SetSignatureVerificationHandler sets the function that is used to handle signature validation.
@@ -2527,8 +2557,8 @@ func (interpreter *Interpreter) NewSubInterpreter(
 		WithHashHandler(interpreter.HashHandler),
 		WithBLSCryptoFunctions(
 			interpreter.BLSVerifyPoPHandler,
-			interpreter.AggregateBLSSignaturesHandler,
-			interpreter.AggregateBLSPublicKeysHandler,
+			interpreter.BLSAggregateSignaturesHandler,
+			interpreter.BLSAggregatePublicKeysHandler,
 		),
 		WithDebugger(interpreter.debugger),
 		WithExitHandler(interpreter.ExitHandler),
