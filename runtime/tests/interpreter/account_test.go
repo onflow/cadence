@@ -1202,7 +1202,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 
 			require.Len(t, getAccountValues(), 2)
 
-			t.Run(fmt.Sprintf("%s", capabilityDomain.Identifier()), func(t *testing.T) {
+			t.Run(capabilityDomain.Identifier(), func(t *testing.T) {
 				value, err := inter.Invoke("linkToSamePath")
 				require.NoError(t, err)
 				require.IsType(t, interpreter.NilValue{}, value)
@@ -1286,7 +1286,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 
 			require.Len(t, getAccountValues(), 1)
 
-			t.Run(fmt.Sprintf("%s", capabilityDomain.Identifier()), func(t *testing.T) {
+			t.Run(capabilityDomain.Identifier(), func(t *testing.T) {
 				value, err := inter.Invoke("linkSameStorage")
 				require.NoError(t, err)
 				require.IsType(t, &interpreter.SomeValue{}, value)
