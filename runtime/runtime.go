@@ -273,7 +273,7 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val 
 		script.Source,
 		context,
 		functions,
-		stdlib.BuiltinValues(),
+		stdlib.BuiltinValues,
 		checkerOptions,
 		true,
 		importResolutionResults{},
@@ -318,7 +318,7 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val 
 		context,
 		storage,
 		functions,
-		stdlib.BuiltinValues(),
+		stdlib.BuiltinValues,
 		interpreterOptions,
 		checkerOptions,
 		interpret,
@@ -519,7 +519,7 @@ func (r *interpreterRuntime) InvokeContractFunction(
 		context,
 		storage,
 		functions,
-		stdlib.BuiltinValues(),
+		stdlib.BuiltinValues,
 		interpreterOptions,
 		checkerOptions,
 		nil,
@@ -651,7 +651,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 		script.Source,
 		context,
 		functions,
-		stdlib.BuiltinValues(),
+		stdlib.BuiltinValues,
 		checkerOptions,
 		true,
 		importResolutionResults{},
@@ -725,7 +725,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 		context,
 		storage,
 		functions,
-		stdlib.BuiltinValues(),
+		stdlib.BuiltinValues,
 		interpreterOptions,
 		checkerOptions,
 		r.transactionExecutionFunction(
@@ -996,7 +996,7 @@ func (r *interpreterRuntime) ParseAndCheckProgram(
 		code,
 		context,
 		functions,
-		stdlib.BuiltinValues(),
+		stdlib.BuiltinValues,
 		checkerOptions,
 		true,
 		importResolutionResults{},
@@ -2489,7 +2489,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				code,
 				context,
 				functions,
-				stdlib.BuiltinValues(),
+				stdlib.BuiltinValues,
 				checkerOptions,
 				storeProgram,
 				importResolutionResults{},
@@ -2699,7 +2699,7 @@ func (r *interpreterRuntime) updateAccountContractCode(
 	if createContract {
 
 		functions := r.standardLibraryFunctions(context, storage, interpreterOptions, checkerOptions)
-		values := stdlib.BuiltinValues()
+		values := stdlib.BuiltinValues
 
 		contractValue, err = r.instantiateContract(
 			program,

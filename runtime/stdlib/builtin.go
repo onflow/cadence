@@ -309,8 +309,8 @@ func AggregateBLSSignatures(
 
 // BuiltinValues
 
-func BuiltinValues() StandardLibraryValues {
-	signatureAlgorithmValue := StandardLibraryValue{
+var BuiltinValues = StandardLibraryValues{
+	{
 		Name: sema.SignatureAlgorithmTypeName,
 		Type: cryptoAlgorithmEnumConstructorType(
 			sema.SignatureAlgorithmType,
@@ -326,9 +326,8 @@ func BuiltinValues() StandardLibraryValues {
 			)
 		},
 		Kind: common.DeclarationKindEnum,
-	}
-
-	hashAlgorithmValue := StandardLibraryValue{
+	},
+	{
 		Name: sema.HashAlgorithmTypeName,
 		Type: cryptoAlgorithmEnumConstructorType(
 			sema.HashAlgorithmType,
@@ -344,12 +343,7 @@ func BuiltinValues() StandardLibraryValues {
 			)
 		},
 		Kind: common.DeclarationKindEnum,
-	}
-
-	return StandardLibraryValues{
-		signatureAlgorithmValue,
-		hashAlgorithmValue,
-	}
+	},
 }
 
 func NewSignatureAlgorithmCase(inter *interpreter.Interpreter, rawValue uint8) *interpreter.CompositeValue {
