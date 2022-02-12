@@ -543,7 +543,7 @@ func TestBLSAggregateSignatures(t *testing.T) {
 
 	runtimeInterface := &testRuntimeInterface{
 		storage: storage,
-		aggregateBLSSignatures: func(
+		blsAggregateSignatures: func(
 			sigs [][]byte,
 		) ([]byte, error) {
 			assert.Equal(t, len(sigs), 5)
@@ -613,7 +613,7 @@ func TestAggregateBLSPublicKeys(t *testing.T) {
 		) error {
 			return nil
 		},
-		aggregateBLSPublicKeys: func(
+		blsAggregatePublicKeys: func(
 			keys []*PublicKey,
 		) (*PublicKey, error) {
 			assert.Equal(t, len(keys), 2)
