@@ -665,6 +665,11 @@ func getCadenceValueArrayFromHexStr(t *testing.T, inp string) cadence.Value {
 
 // TestTraversingMerkleProof tests combination of KECCAK_256 hashing
 // and RLP decoding
+//
+// Warning!!! this code is only here to test functionality of utility methods
+// and should not be used as a sample code for Merkle Proof Verification,
+// for proper verification you need extra steps such as checking if the leaf content matches
+// what you're expecting and etc...
 func TestTraversingMerkleProof(t *testing.T) {
 
 	t.Parallel()
@@ -787,9 +792,8 @@ func TestTraversingMerkleProof(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	require.Equal(t, 
-		[]string{"0", "11", "1", "6", "2", "9", "3", "7"}, 
+	require.Equal(t,
+		[]string{"0", "11", "1", "6", "2", "9", "3", "7"},
 		logMessages,
 	)
-
 }
