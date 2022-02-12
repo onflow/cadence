@@ -527,13 +527,13 @@ func TestBLSAggregateSignatures(t *testing.T) {
 	script := []byte(`
 
       pub fun main(): [UInt8] {
-		return AggregateBLSSignatures([
-			  [1, 1, 1, 1, 1], 
-			  [2, 2, 2, 2, 2],
-			  [3, 3, 3, 3, 3],
-			  [4, 4, 4, 4, 4],
-			  [5, 5, 5, 5, 5]
-			])!
+        return BLS.aggregateSignatures([
+              [1, 1, 1, 1, 1],
+              [2, 2, 2, 2, 2],
+              [3, 3, 3, 3, 3],
+              [4, 4, 4, 4, 4],
+              [5, 5, 5, 5, 5]
+            ])!
       }
     `)
 
@@ -581,7 +581,7 @@ func TestBLSAggregateSignatures(t *testing.T) {
 	assert.True(t, called)
 }
 
-func TestAggregateBLSPublicKeys(t *testing.T) {
+func TestBLSAggregatePublicKeys(t *testing.T) {
 
 	t.Parallel()
 
@@ -590,15 +590,15 @@ func TestAggregateBLSPublicKeys(t *testing.T) {
 	script := []byte(`
 
       pub fun main(): PublicKey? {
-		let k1 = PublicKey(
-			publicKey: "0102".decodeHex(),
-			signatureAlgorithm: SignatureAlgorithm.BLS_BLS12_381
-		)
-		let k2 = PublicKey(
-			publicKey: "0102".decodeHex(),
-			signatureAlgorithm: SignatureAlgorithm.BLS_BLS12_381
-		)
-		return AggregateBLSPublicKeys([k1, k2])
+        let k1 = PublicKey(
+            publicKey: "0102".decodeHex(),
+            signatureAlgorithm: SignatureAlgorithm.BLS_BLS12_381
+        )
+        let k2 = PublicKey(
+            publicKey: "0102".decodeHex(),
+            signatureAlgorithm: SignatureAlgorithm.BLS_BLS12_381
+        )
+        return BLS.aggregatePublicKeys([k1, k2])
       }
     `)
 

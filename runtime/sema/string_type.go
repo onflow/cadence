@@ -164,8 +164,14 @@ It does not modify the original string.
 If either of the parameters are out of the bounds of the string, the function will fail
 `
 
+// ByteArrayType represents the type [UInt8]
 var ByteArrayType = &VariableSizedType{
 	Type: UInt8Type,
+}
+
+// ByteArrayArrayType represents the type [[UInt8]]
+var ByteArrayArrayType = &VariableSizedType{
+	Type: ByteArrayType,
 }
 
 var StringTypeDecodeHexFunctionType = &FunctionType{

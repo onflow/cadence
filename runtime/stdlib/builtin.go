@@ -119,8 +119,6 @@ var BuiltinFunctions = StandardLibraryFunctions{
 	AssertFunction,
 	PanicFunction,
 	CreatePublicKeyFunction,
-	AggregateBLSSignaturesFunction,
-	AggregateBLSPublicKeysFunction,
 	DecodeRLPStringFunction,
 	DecodeRLPListFunction,
 }
@@ -183,132 +181,6 @@ var CreatePublicKeyFunction = NewStandardLibraryFunction(
 	},
 )
 
-const aggregateBLSSignaturesFunctionDocString = `
-This is a specific function for the BLS signature scheme. 
-It aggregates multiple BLS signatures into one, 
-considering the proof of possession as a defense against rogue attacks.
-
-Signatures could be generated from the same or distinct messages, 
-they could also be the aggregation of other signatures.
-The order of the signatures in the slice does not matter since the aggregation is commutative. 
-No subgroup membership check is performed on the input signatures.
-The function returns nil if the array is empty or if decoding one of the signature fails. 
-`
-
-var AggregateBLSSignaturesFunction = NewStandardLibraryFunction(
-	"AggregateBLSSignatures",
-	&sema.FunctionType{
-		Parameters: []*sema.Parameter{
-			{
-				Label:          sema.ArgumentLabelNotRequired,
-				Identifier:     "signatures",
-				TypeAnnotation: sema.NewTypeAnnotation(&sema.VariableSizedType{Type: sema.ByteArrayType}),
-			},
-		},
-		ReturnTypeAnnotation: sema.NewTypeAnnotation(&sema.OptionalType{Type: sema.ByteArrayType}),
-	},
-	aggregateBLSSignaturesFunctionDocString,
-	func(invocation interpreter.Invocation) interpreter.Value {
-		signatures := invocation.Arguments[0].(*interpreter.ArrayValue)
-		return AggregateBLSSignatures(invocation.Interpreter, signatures)
-	},
-)
-
-const aggregateBLSPublicKeysFunctionDocString = `
-This is a specific function for the BLS signature scheme. 
-It aggregates multiple BLS public keys into one.
-
-The order of the public keys in the slice does not matter since the aggregation is commutative. 
-No subgroup membership check is performed on the input keys.
-The function returns nil if the array is empty or any of the input keys is not a BLS key.
-`
-
-var AggregateBLSPublicKeysFunction = NewStandardLibraryFunction(
-	"AggregateBLSPublicKeys",
-	&sema.FunctionType{
-		Parameters: []*sema.Parameter{
-			{
-				Label:          sema.ArgumentLabelNotRequired,
-				Identifier:     "keys",
-				TypeAnnotation: sema.NewTypeAnnotation(&sema.VariableSizedType{Type: sema.PublicKeyType}),
-			},
-		},
-		ReturnTypeAnnotation: sema.NewTypeAnnotation(&sema.OptionalType{Type: sema.PublicKeyType}),
-	},
-	aggregateBLSPublicKeysFunctionDocString,
-	func(invocation interpreter.Invocation) interpreter.Value {
-		publicKeys := invocation.Arguments[0].(*interpreter.ArrayValue)
-		return AggregateBLSPublicKeys(
-			invocation.Interpreter,
-			invocation.GetLocationRange,
-			publicKeys,
-		)
-	},
-)
-
-func AggregateBLSPublicKeys(
-	inter *interpreter.Interpreter,
-	getLocationRange func() interpreter.LocationRange,
-	publicKeys *interpreter.ArrayValue,
-) interpreter.Value {
-	publicKeyArray := make([]interpreter.MemberAccessibleValue, 0, publicKeys.Count())
-	publicKeys.Iterate(func(element interpreter.Value) (resume bool) {
-		publicKey := element.(interpreter.MemberAccessibleValue)
-		publicKeyArray = append(publicKeyArray, publicKey)
-		return true
-	})
-
-	aggregatedKey, err := inter.AggregateBLSPublicKeysHandler(
-		inter,
-		getLocationRange,
-		publicKeyArray,
-	)
-	if err != nil {
-		panic(err)
-	}
-
-	return aggregatedKey
-}
-
-func AggregateBLSSignatures(
-	inter *interpreter.Interpreter,
-	signatures *interpreter.ArrayValue,
-) interpreter.Value {
-	bytesArray := make([][]byte, 0, signatures.Count())
-	signatures.Iterate(func(element interpreter.Value) (resume bool) {
-		sig := element.(*interpreter.ArrayValue)
-		bytes := make([]byte, 0, sig.Count())
-		sig.Iterate(func(element interpreter.Value) (resume bool) {
-			i := element.(interpreter.UInt8Value)
-			bytes = append(bytes, byte(i))
-			return true
-		})
-		bytesArray = append(bytesArray, bytes)
-		return true
-	})
-
-	aggregatedBytes, err := inter.AggregateBLSSignaturesHandler(
-		bytesArray,
-	)
-
-	// if the crypto layer produces an error, we have invalid input, return nil
-	if err != nil {
-		return interpreter.NilValue{}
-	}
-
-	aggregatedSignature := make([]interpreter.Value, 0, len(aggregatedBytes))
-	for _, b := range aggregatedBytes {
-		aggregatedSignature = append(aggregatedSignature, interpreter.UInt8Value(b))
-	}
-
-	return interpreter.NewSomeValueNonCopying(interpreter.NewArrayValue(
-		inter,
-		interpreter.ByteArrayStaticType,
-		signatures.GetOwner(),
-		aggregatedSignature...,
-	))
-}
-
 // BuiltinValues
 
 var BuiltinValues = StandardLibraryValues{
@@ -345,6 +217,66 @@ var BuiltinValues = StandardLibraryValues{
 			)
 		},
 		Kind: common.DeclarationKindEnum,
+	},
+	{
+		Name: "BLS",
+		Type: blsContractType,
+		ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
+			return interpreter.NewSimpleCompositeValue(
+				blsContractType.ID(),
+				blsContractStaticType,
+				blsContractDynamicType,
+				nil,
+				map[string]interpreter.Value{
+					blsAggregatePublicKeysFunctionName: interpreter.NewHostFunctionValue(
+						func(invocation interpreter.Invocation) interpreter.Value {
+							publicKeys := invocation.Arguments[0].(*interpreter.ArrayValue)
+
+							inter := invocation.Interpreter
+							getLocationRange := invocation.GetLocationRange
+
+							inter.ExpectType(
+								publicKeys,
+								sema.PublicKeyArrayType,
+								getLocationRange,
+							)
+
+							return invocation.Interpreter.BLSAggregatePublicKeysHandler(
+								inter,
+								getLocationRange,
+								publicKeys,
+							)
+						},
+						blsAggregatePublicKeysFunctionType,
+					),
+					blsAggregateSignaturesFunctionName: interpreter.NewHostFunctionValue(
+						func(invocation interpreter.Invocation) interpreter.Value {
+							signatures := invocation.Arguments[0].(*interpreter.ArrayValue)
+
+							inter := invocation.Interpreter
+							getLocationRange := invocation.GetLocationRange
+
+							inter.ExpectType(
+								signatures,
+								sema.ByteArrayArrayType,
+								getLocationRange,
+							)
+
+							return inter.BLSAggregateSignaturesHandler(
+								inter,
+								getLocationRange,
+								signatures,
+							)
+						},
+						blsAggregateSignaturesFunctionType,
+					),
+				},
+				nil,
+				nil,
+				nil,
+			)
+		},
+		Kind: common.DeclarationKindContract,
 	},
 }
 

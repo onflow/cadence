@@ -157,10 +157,10 @@ func TestCheckVerifyPoP(t *testing.T) {
 	_, err := ParseAndCheckWithOptions(t,
 		`
            let key = PublicKey(
-              publicKey: "".decodeHex(), 
+              publicKey: "".decodeHex(),
               signatureAlgorithm: SignatureAlgorithm.BLS_BLS12_381)
 
-           let x: Bool = key.verifyPoP([1, 2, 3])  
+           let x: Bool = key.verifyPoP([1, 2, 3])
         `,
 		ParseAndCheckOptions{
 			Options: []sema.Option{
@@ -180,10 +180,10 @@ func TestCheckVerifyPoPInvalidArgument(t *testing.T) {
 	_, err := ParseAndCheckWithOptions(t,
 		`
            let key = PublicKey(
-              publicKey: "".decodeHex(), 
+              publicKey: "".decodeHex(),
               signatureAlgorithm: SignatureAlgorithm.BLS_BLS12_381)
 
-           let x: Int = key.verifyPoP([1 as Int32, 2, 3])  
+           let x: Int = key.verifyPoP([1 as Int32, 2, 3])
         `,
 		ParseAndCheckOptions{
 			Options: []sema.Option{
@@ -199,13 +199,13 @@ func TestCheckVerifyPoPInvalidArgument(t *testing.T) {
 	require.IsType(t, mismatch, errs[1])
 }
 
-func TestCheckAggregateBLSSignatures(t *testing.T) {
+func TestCheckBLSAggregateSignatures(t *testing.T) {
 
 	t.Parallel()
 
 	_, err := ParseAndCheckWithOptions(t,
 		`
-           let r: [UInt8] = AggregateBLSSignatures([[1 as UInt8, 2, 3], []])!
+           let r: [UInt8] = BLS.aggregateSignatures([[1 as UInt8, 2, 3], []])!
         `,
 		ParseAndCheckOptions{
 			Options: []sema.Option{
@@ -218,13 +218,13 @@ func TestCheckAggregateBLSSignatures(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestCheckAggregateBLSSignaturesError(t *testing.T) {
+func TestCheckBLSAggregateSignaturesError(t *testing.T) {
 
 	t.Parallel()
 
 	_, err := ParseAndCheckWithOptions(t,
 		`
-           let r: [UInt16] = AggregateBLSSignatures([[1 as UInt32, 2, 3], []])! 
+           let r: [UInt16] = BLS.aggregateSignatures([[1 as UInt32, 2, 3], []])!
         `,
 		ParseAndCheckOptions{
 			Options: []sema.Option{
@@ -240,13 +240,18 @@ func TestCheckAggregateBLSSignaturesError(t *testing.T) {
 	require.IsType(t, mismatch, errs[1])
 }
 
-func TestCheckAggregateBLSPublicKeys(t *testing.T) {
+func TestCheckBLSAggregatePublicKeys(t *testing.T) {
 
 	t.Parallel()
 
 	_, err := ParseAndCheckWithOptions(t,
 		`
-           let r: PublicKey = AggregateBLSPublicKeys([PublicKey(publicKey: [], signatureAlgorithm: SignatureAlgorithm.BLS_BLS12_381)])!
+           let r: PublicKey = BLS.aggregatePublicKeys([
+               PublicKey(
+                   publicKey: [],
+                   signatureAlgorithm: SignatureAlgorithm.BLS_BLS12_381
+               )
+           ])!
         `,
 		ParseAndCheckOptions{
 			Options: []sema.Option{
@@ -259,13 +264,13 @@ func TestCheckAggregateBLSPublicKeys(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestCheckAggregateBLSPublicKeysError(t *testing.T) {
+func TestCheckBLSAggregatePublicKeysError(t *testing.T) {
 
 	t.Parallel()
 
 	_, err := ParseAndCheckWithOptions(t,
 		`
-           let r: [PublicKey] = AggregateBLSPublicKeys([1])!  
+           let r: [PublicKey] = BLS.aggregatePublicKeys([1])!
         `,
 		ParseAndCheckOptions{
 			Options: []sema.Option{
