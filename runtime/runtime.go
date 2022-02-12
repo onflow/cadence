@@ -3424,7 +3424,7 @@ func verifyBLSPOP(
 
 	// if the crypto layer produces an error, we have invalid input, return false
 	if err != nil {
-		return interpreter.BoolValue(false), nil //nolint:nilerr
+		return false, nil //nolint:nilerr
 	}
 
 	return interpreter.BoolValue(valid), nil
