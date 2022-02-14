@@ -73,7 +73,7 @@ var DecodeRLPStringFunction = NewStandardLibraryFunction(
 			panic(DecodeRLPStringError{err.Error()})
 		}
 		if bytesRead != len(convertedInput) {
-			panic(DecodeRLPListError{ErrMsgInputContainsExtraBytes})
+			panic(DecodeRLPStringError{ErrMsgInputContainsExtraBytes})
 		}
 		return interpreter.ByteSliceToByteArrayValue(invocation.Interpreter, output)
 	},
