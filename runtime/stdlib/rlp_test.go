@@ -104,7 +104,7 @@ func TestRLPDecodeString(t *testing.T) {
 				interpreter.UInt8Value(1),
 			),
 			nil,
-			"failed to RLP-decode list: input data is expected to be RLP-encoded of a single string or a single list but it seems it contains extra trailing bytes.",
+			"failed to RLP-decode string: input data is expected to be RLP-encoded of a single string or a single list but it seems it contains extra trailing bytes.",
 		},
 		{ // dog
 			interpreter.NewArrayValue(
@@ -138,7 +138,7 @@ func TestRLPDecodeString(t *testing.T) {
 				interpreter.UInt8Value(1),   // extra byte
 			),
 			nil,
-			"failed to RLP-decode list: input data is expected to be RLP-encoded of a single string or a single list but it seems it contains extra trailing bytes.",
+			"failed to RLP-decode string: input data is expected to be RLP-encoded of a single string or a single list but it seems it contains extra trailing bytes.",
 		},
 		{ // handling lower level errors - incomplete data case
 			interpreter.NewArrayValue(
