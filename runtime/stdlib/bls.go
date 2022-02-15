@@ -75,9 +75,7 @@ var blsAggregateSignaturesFunctionType = &sema.FunctionType{
 			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "signatures",
 			TypeAnnotation: sema.NewTypeAnnotation(
-				&sema.VariableSizedType{
-					Type: sema.ByteArrayType,
-				},
+				sema.ByteArrayArrayType,
 			),
 		},
 	},
