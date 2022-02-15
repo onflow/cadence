@@ -19,7 +19,7 @@
 package sema
 
 type ReturnInfo struct {
-	// MaybeReturned indicates that the (branch of) the function
+	// MaybeReturned indicates that (a branch of) the function
 	// contains a potentially taken return statement
 	MaybeReturned      bool
 	DefinitelyReturned bool

@@ -287,7 +287,7 @@ func (checker *Checker) visitMemberExpressionAssignment(
 
 		if functionActivation.InitializationInfo != nil {
 
-			// If the function potentially returned or jumped before,
+			// If the function potentially returned before,
 			// then the initialization is not definitive, and it must be ignored
 
 			// NOTE: assignment can still be considered definitive if the function maybe halted

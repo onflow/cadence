@@ -730,6 +730,30 @@ func TestCheckFieldInitializationAfterJump(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("while, conditional break", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct Test {
+                var foo: Int
+
+                init(foo: Int) {
+                    while true {
+                        if true {
+                           break
+                        }
+
+                        self.foo = foo
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.FieldUninitializedError{}, errs[0])
+	})
+
 	t.Run("for, continue", func(t *testing.T) {
 
 		t.Parallel()
@@ -770,6 +794,30 @@ func TestCheckFieldInitializationAfterJump(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("for, conditional break", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct Test {
+                var foo: Int
+
+                init(foo: Int) {
+                    for i in [] {
+                        if true {
+                           break
+                        }
+
+                        self.foo = foo
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.FieldUninitializedError{}, errs[0])
+	})
+
 	t.Run("switch, break", func(t *testing.T) {
 
 		t.Parallel()
@@ -789,5 +837,29 @@ func TestCheckFieldInitializationAfterJump(t *testing.T) {
         `)
 
 		require.NoError(t, err)
+	})
+
+	t.Run("switch, conditional break", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+          struct Test {
+              let n: Int
+
+              init(n: Int) {
+                  switch n {
+                  case 1:
+                      if true {
+                         break
+                      }
+                      self.n = n
+                  }
+              }
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.FieldUninitializedError{}, errs[0])
 	})
 }
