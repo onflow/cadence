@@ -252,12 +252,14 @@ func (a *VariableActivations) Declare(declaration variableDeclaration) (variable
 
 	// Check if a variable with this name is already declared.
 	// Report an error if shadowing variables of outer scopes is not allowed,
-	// or the existing variable is declared in the current scope.
+	// or the existing variable is declared in the current scope,
+	// or the existing variable is a built-in.
 
 	existingVariable := a.Find(declaration.identifier)
 	if existingVariable != nil &&
 		(!declaration.allowOuterScopeShadowing ||
-			existingVariable.ActivationDepth == depth) {
+			existingVariable.ActivationDepth == depth ||
+			existingVariable.ActivationDepth == 0) {
 
 		err = &RedeclarationError{
 			Kind:        declaration.kind,

@@ -4532,24 +4532,26 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 			Identifier: "test",
 		}
 
+		getStorageReferenceFunctionType := &sema.FunctionType{
+			Parameters: []*sema.Parameter{
+				{
+					Label:      "authorized",
+					Identifier: "authorized",
+					TypeAnnotation: sema.NewTypeAnnotation(
+						sema.BoolType,
+					),
+				},
+			},
+			ReturnTypeAnnotation: sema.NewTypeAnnotation(
+				sema.AnyStructType,
+			),
+		}
+
 		standardLibraryFunctions :=
 			stdlib.StandardLibraryFunctions{
 				{
 					Name: "getStorageReference",
-					Type: &sema.FunctionType{
-						Parameters: []*sema.Parameter{
-							{
-								Label:      "authorized",
-								Identifier: "authorized",
-								TypeAnnotation: sema.NewTypeAnnotation(
-									sema.BoolType,
-								),
-							},
-						},
-						ReturnTypeAnnotation: sema.NewTypeAnnotation(
-							sema.AnyStructType,
-						),
-					},
+					Type: getStorageReferenceFunctionType,
 					Function: interpreter.NewHostFunctionValue(
 						func(invocation interpreter.Invocation) interpreter.Value {
 
@@ -4570,7 +4572,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 								},
 							}
 						},
-						nil,
+						getStorageReferenceFunctionType,
 					),
 				},
 			}
@@ -9647,4 +9649,75 @@ func TestInterpretOptionalReference(t *testing.T) {
 	_, err = inter.Invoke("absent")
 	var forceNilError interpreter.ForceNilError
 	require.ErrorAs(t, err, &forceNilError)
+}
+
+func TestInterpretCastingBoxing(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("failable cast", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          let a = (1 as? Int?!)?.getType()
+        `)
+
+		variable, ok := inter.Globals.Get("a")
+		require.True(t, ok)
+
+		require.Equal(
+			t,
+			interpreter.NewSomeValueNonCopying(
+				interpreter.TypeValue{
+					Type: interpreter.PrimitiveStaticTypeInt,
+				},
+			),
+			variable.GetValue(),
+		)
+	})
+
+	t.Run("force cast", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          let a = (1 as! Int?)?.getType()
+        `)
+
+		variable, ok := inter.Globals.Get("a")
+		require.True(t, ok)
+
+		require.Equal(
+			t,
+			interpreter.NewSomeValueNonCopying(
+				interpreter.TypeValue{
+					Type: interpreter.PrimitiveStaticTypeInt,
+				},
+			),
+			variable.GetValue(),
+		)
+	})
+
+	t.Run("cast", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          let a = (1 as Int?)?.getType()
+        `)
+
+		variable, ok := inter.Globals.Get("a")
+		require.True(t, ok)
+
+		require.Equal(
+			t,
+			interpreter.NewSomeValueNonCopying(
+				interpreter.TypeValue{
+					Type: interpreter.PrimitiveStaticTypeInt,
+				},
+			),
+			variable.GetValue(),
+		)
+	})
 }
