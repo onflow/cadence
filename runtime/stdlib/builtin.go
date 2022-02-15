@@ -29,7 +29,7 @@ var HelperFunctions = StandardLibraryFunctions{
 }
 
 var BuiltinValues = StandardLibraryValues{
-	signatureAlgorithmConstructor,
+	signatureAlgorithmConstructor,Ω
 	hashAlgorithmConstructor,
 	blsContract,
 	rlpContract,

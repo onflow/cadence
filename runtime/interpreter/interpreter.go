@@ -1802,8 +1802,12 @@ func EnumConstructorFunction(
 
 	constructor := NewHostFunctionValue(
 		func(invocation Invocation) Value {
+			rawValue, ok := invocation.Arguments[0].(IntegerValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
 
-			rawValueArgumentBigEndianBytes := invocation.Arguments[0].(IntegerValue).ToBigEndianBytes()
+			rawValueArgumentBigEndianBytes := rawValue.ToBigEndianBytes()
 
 			caseValue, ok := lookupTable[string(rawValueArgumentBigEndianBytes)]
 			if !ok {
@@ -2878,8 +2882,18 @@ func init() {
 		"DictionaryType",
 		NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				keyType := invocation.Arguments[0].(TypeValue).Type
-				valueType := invocation.Arguments[1].(TypeValue).Type
+				keyTypeValue, ok := invocation.Arguments[0].(TypeValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				valueTypeValue, ok := invocation.Arguments[1].(TypeValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				keyType := keyTypeValue.Type
+				valueType := valueTypeValue.Type
 
 				// if the given key is not a valid dictionary key, it wouldn't make sense to create this type
 				if keyType == nil ||
@@ -2901,7 +2915,11 @@ func init() {
 		"CompositeType",
 		NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				typeID := invocation.Arguments[0].(*StringValue).Str
+				typeIDValue, ok := invocation.Arguments[0].(*StringValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+				typeID := typeIDValue.Str
 
 				composite, err := lookupComposite(invocation.Interpreter, typeID)
 				if err != nil {
@@ -2921,7 +2939,11 @@ func init() {
 		"InterfaceType",
 		NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				typeID := invocation.Arguments[0].(*StringValue).Str
+				typeIDValue, ok := invocation.Arguments[0].(*StringValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+				typeID := typeIDValue.Str
 
 				interfaceType, err := lookupInterface(invocation.Interpreter, typeID)
 				if err != nil {
@@ -2941,19 +2963,28 @@ func init() {
 		"FunctionType",
 		NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				parameters, paramsOk := invocation.Arguments[0].(*ArrayValue)
-				if !paramsOk {
+				parameters, ok := invocation.Arguments[0].(*ArrayValue)
+				if !ok {
 					panic(errors.NewUnreachableError())
 				}
-				returnType := invocation.Interpreter.MustConvertStaticToSemaType(invocation.Arguments[1].(TypeValue).Type)
+
+				typeValue, ok := invocation.Arguments[1].(TypeValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				returnType := invocation.Interpreter.MustConvertStaticToSemaType(typeValue.Type)
 				parameterTypes := make([]*sema.Parameter, 0, parameters.Count())
 				parameters.Iterate(func(param Value) bool {
+					semaType := invocation.Interpreter.MustConvertStaticToSemaType(param.(TypeValue).Type)
 					parameterTypes = append(
 						parameterTypes,
 						&sema.Parameter{
-							TypeAnnotation: sema.NewTypeAnnotation(invocation.Interpreter.MustConvertStaticToSemaType(param.(TypeValue).Type)),
+							TypeAnnotation: sema.NewTypeAnnotation(semaType),
 						},
 					)
+
+					// Continue iteration
 					return true
 				})
 				return TypeValue{
@@ -2979,29 +3010,40 @@ func init() {
 }
 
 func RestrictedTypeFunction(invocation Invocation) Value {
-	restrictedIDs, restrictedIDsOk := invocation.Arguments[1].(*ArrayValue)
-
-	if !restrictedIDsOk {
+	restrictionIDs, ok := invocation.Arguments[1].(*ArrayValue)
+	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
-	staticRestrictions := make([]InterfaceStaticType, 0, restrictedIDs.Count())
-	semaRestrictions := make([]*sema.InterfaceType, 0, restrictedIDs.Count())
-	ok := true
+	staticRestrictions := make([]InterfaceStaticType, 0, restrictionIDs.Count())
+	semaRestrictions := make([]*sema.InterfaceType, 0, restrictionIDs.Count())
 
-	restrictedIDs.Iterate(func(typeID Value) bool {
-		restrictionInterface, err := lookupInterface(invocation.Interpreter, typeID.(*StringValue).Str)
+	var invalidRestrictionID bool
+	restrictionIDs.Iterate(func(typeID Value) bool {
+		typeIDValue, ok := typeID.(*StringValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		restrictionInterface, err := lookupInterface(invocation.Interpreter, typeIDValue.Str)
 		if err != nil {
-			ok = false
+			invalidRestrictionID = true
 			return true
 		}
 
-		staticRestrictions = append(staticRestrictions, ConvertSemaToStaticType(restrictionInterface).(InterfaceStaticType))
+		staticRestrictions = append(
+			staticRestrictions,
+			ConvertSemaToStaticType(restrictionInterface).(InterfaceStaticType),
+		)
 		semaRestrictions = append(semaRestrictions, restrictionInterface)
+
+		// Continue iteration
 		return true
 	})
 
-	if !ok {
+	// If there are any invalid restrictions,
+	// then return nil
+	if invalidRestrictionID {
 		return NilValue{}
 	}
 
@@ -3020,19 +3062,21 @@ func RestrictedTypeFunction(invocation Invocation) Value {
 		panic(errors.NewUnreachableError())
 	}
 
-	ok = true
+	var invalidRestrictedType bool
 	ty := sema.CheckRestrictedType(
 		semaType,
 		semaRestrictions,
 		func(_ func(*ast.RestrictedType) error) {
-			ok = false
+			invalidRestrictedType = true
 		},
 	)
 
-	// if the restricted type would have failed to typecheck statically, we return nil
-	if !ok {
+	// If the restricted type would have failed to type-check statically,
+	// then return nil
+	if invalidRestrictedType {
 		return NilValue{}
 	}
+
 	return NewSomeValueNonCopying(TypeValue{
 		Type: &RestrictedStaticType{
 			Type:         ConvertSemaToStaticType(ty),
@@ -3111,11 +3155,16 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 		name: "OptionalType",
 		converter: NewHostFunctionValue(
 			func(invocation Invocation) Value {
+				typeValue, ok := invocation.Arguments[0].(TypeValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
 				return TypeValue{
 					Type: OptionalStaticType{
-						Type: invocation.Arguments[0].(TypeValue).Type,
-					}}
-
+						Type: typeValue.Type,
+					},
+				}
 			},
 			sema.OptionalTypeFunctionType,
 		),
@@ -3124,10 +3173,16 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 		name: "VariableSizedArrayType",
 		converter: NewHostFunctionValue(
 			func(invocation Invocation) Value {
+				typeValue, ok := invocation.Arguments[0].(TypeValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
 				return TypeValue{
 					Type: VariableSizedStaticType{
-						Type: invocation.Arguments[0].(TypeValue).Type,
-					}}
+						Type: typeValue.Type,
+					},
+				}
 			},
 			sema.VariableSizedArrayTypeFunctionType,
 		),
@@ -3136,11 +3191,22 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 		name: "ConstantSizedArrayType",
 		converter: NewHostFunctionValue(
 			func(invocation Invocation) Value {
+				typeValue, ok := invocation.Arguments[0].(TypeValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				sizeValue, ok := invocation.Arguments[1].(IntValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
 				return TypeValue{
 					Type: ConstantSizedStaticType{
-						Type: invocation.Arguments[0].(TypeValue).Type,
-						Size: int64(invocation.Arguments[1].(IntValue).ToInt()),
-					}}
+						Type: typeValue.Type,
+						Size: int64(sizeValue.ToInt()),
+					},
+				}
 			},
 			sema.ConstantSizedArrayTypeFunctionType,
 		),
@@ -3149,11 +3215,22 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 		name: "ReferenceType",
 		converter: NewHostFunctionValue(
 			func(invocation Invocation) Value {
+				authorizedValue, ok := invocation.Arguments[0].(BoolValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				typeValue, ok := invocation.Arguments[1].(TypeValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
 				return TypeValue{
 					Type: ReferenceStaticType{
-						Authorized: bool(invocation.Arguments[0].(BoolValue)),
-						Type:       invocation.Arguments[1].(TypeValue).Type,
-					}}
+						Authorized: bool(authorizedValue),
+						Type:       typeValue.Type,
+					},
+				}
 			},
 			sema.ReferenceTypeFunctionType,
 		),
@@ -3162,12 +3239,18 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 		name: "CapabilityType",
 		converter: NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				ty := invocation.Arguments[0].(TypeValue).Type
+				typeValue, ok := invocation.Arguments[0].(TypeValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				ty := typeValue.Type
 				// Capabilities must hold references
-				_, ok := ty.(ReferenceStaticType)
+				_, ok = ty.(ReferenceStaticType)
 				if !ok {
 					return NilValue{}
 				}
+
 				return NewSomeValueNonCopying(
 					TypeValue{
 						Type: CapabilityStaticType{
@@ -3245,7 +3328,6 @@ var stringFunction = func() Value {
 		NewHostFunctionValue(
 			func(invocation Invocation) Value {
 				argument, ok := invocation.Arguments[0].(*ArrayValue)
-
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
@@ -3515,11 +3597,10 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 
 	return NewHostFunctionValue(
 		func(invocation Invocation) Value {
-
 			value := invocation.Arguments[0]
-			path, pathOk := invocation.Arguments[1].(PathValue)
 
-			if !pathOk {
+			path, ok := invocation.Arguments[1].(PathValue)
+			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
@@ -3569,10 +3650,8 @@ func (interpreter *Interpreter) authAccountTypeFunction(addressValue AddressValu
 
 	return NewHostFunctionValue(
 		func(invocation Invocation) Value {
-
-			path, pathOk := invocation.Arguments[0].(PathValue)
-
-			if !pathOk {
+			path, ok := invocation.Arguments[0].(PathValue)
+			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
@@ -3611,10 +3690,8 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 
 	return NewHostFunctionValue(
 		func(invocation Invocation) Value {
-
-			path, pathOk := invocation.Arguments[0].(PathValue)
-
-			if !pathOk {
+			path, ok := invocation.Arguments[0].(PathValue)
+			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
@@ -3680,10 +3757,8 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 
 	return NewHostFunctionValue(
 		func(invocation Invocation) Value {
-
-			path, pathOk := invocation.Arguments[0].(PathValue)
-
-			if !pathOk {
+			path, ok := invocation.Arguments[0].(PathValue)
+			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
@@ -3743,15 +3818,13 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 				panic(errors.NewUnreachableError())
 			}
 
-			newCapabilityPath, capabilityPathOk := invocation.Arguments[0].(PathValue)
-
-			if !capabilityPathOk {
+			newCapabilityPath, ok := invocation.Arguments[0].(PathValue)
+			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
-			targetPath, pathOk := invocation.Arguments[1].(PathValue)
-
-			if !pathOk {
+			targetPath, ok := invocation.Arguments[1].(PathValue)
+			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
@@ -3803,9 +3876,8 @@ func (interpreter *Interpreter) accountGetLinkTargetFunction(addressValue Addres
 	return NewHostFunctionValue(
 		func(invocation Invocation) Value {
 
-			capabilityPath, pathOk := invocation.Arguments[0].(PathValue)
-
-			if !pathOk {
+			capabilityPath, ok := invocation.Arguments[0].(PathValue)
+			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
@@ -3837,9 +3909,8 @@ func (interpreter *Interpreter) authAccountUnlinkFunction(addressValue AddressVa
 	return NewHostFunctionValue(
 		func(invocation Invocation) Value {
 
-			capabilityPath, pathOk := invocation.Arguments[0].(PathValue)
-
-			if !pathOk {
+			capabilityPath, ok := invocation.Arguments[0].(PathValue)
+			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
