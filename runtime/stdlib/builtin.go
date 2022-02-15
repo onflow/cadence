@@ -230,7 +230,10 @@ var BuiltinValues = StandardLibraryValues{
 				map[string]interpreter.Value{
 					blsAggregatePublicKeysFunctionName: interpreter.NewHostFunctionValue(
 						func(invocation interpreter.Invocation) interpreter.Value {
-							publicKeys := invocation.Arguments[0].(*interpreter.ArrayValue)
+							publicKeys, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
+							if !ok {
+								panic(errors.NewUnreachableError())
+							}
 
 							inter := invocation.Interpreter
 							getLocationRange := invocation.GetLocationRange
@@ -251,7 +254,10 @@ var BuiltinValues = StandardLibraryValues{
 					),
 					blsAggregateSignaturesFunctionName: interpreter.NewHostFunctionValue(
 						func(invocation interpreter.Invocation) interpreter.Value {
-							signatures := invocation.Arguments[0].(*interpreter.ArrayValue)
+							signatures, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
+							if !ok {
+								panic(errors.NewUnreachableError())
+							}
 
 							inter := invocation.Interpreter
 							getLocationRange := invocation.GetLocationRange
