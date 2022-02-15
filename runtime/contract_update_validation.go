@@ -220,13 +220,28 @@ func (validator *ContractUpdateValidator) checkNestedDeclarations(
 		delete(oldCompositeAndInterfaceDecls, newNestedDecl.Identifier.Identifier)
 	}
 
-	// The remaining old declarations doesn't have a corresponding new declaration.
-	// i.e: An existing declaration is removed.
-	// Hence report an error.
-	for name := range oldCompositeAndInterfaceDecls { //nolint:maprangecheck
-		validator.report(&MissingCompositeDeclarationError{
-			Name:  name,
-			Range: ast.NewRangeFromPositioned(newDeclaration.DeclarationIdentifier()),
+	// The remaining old declarations don't have a corresponding new declaration,
+	// i.e., an existing declaration was removed.
+	// Hence, report an error.
+
+	missingDeclarations := make([]ast.Declaration, 0, len(oldCompositeAndInterfaceDecls))
+
+	for _, declaration := range oldCompositeAndInterfaceDecls { //nolint:maprangecheck
+		missingDeclarations = append(missingDeclarations, declaration)
+	}
+
+	sort.Slice(missingDeclarations, func(i, j int) bool {
+		return missingDeclarations[i].DeclarationIdentifier().Identifier <
+			missingDeclarations[j].DeclarationIdentifier().Identifier
+	})
+
+	for _, declaration := range missingDeclarations {
+		validator.report(&MissingDeclarationError{
+			Name: declaration.DeclarationIdentifier().Identifier,
+			Kind: declaration.DeclarationKind(),
+			Range: ast.NewRangeFromPositioned(
+				newDeclaration.DeclarationIdentifier(),
+			),
 		})
 	}
 
