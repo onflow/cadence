@@ -3161,6 +3161,7 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 				}
 
 				return TypeValue{
+					//nolint:gosimple
 					Type: OptionalStaticType{
 						Type: typeValue.Type,
 					},
@@ -3179,6 +3180,7 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 				}
 
 				return TypeValue{
+					//nolint:gosimple
 					Type: VariableSizedStaticType{
 						Type: typeValue.Type,
 					},
