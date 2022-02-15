@@ -97,7 +97,9 @@ func TestInterpretVirtualImport(t *testing.T) {
 								func(invocation interpreter.Invocation) interpreter.Value {
 									return interpreter.UInt64Value(42)
 								},
-								nil,
+								&sema.FunctionType{
+									ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.UIntType),
+								},
 							),
 						}
 
