@@ -18,19 +18,22 @@
 
 package stdlib
 
-var BuiltinFunctions = StandardLibraryFunctions{
-	AssertFunction,
-	PanicFunction,
-	publicKeyConstructor,
-}
+import (
+	"fmt"
 
-var HelperFunctions = StandardLibraryFunctions{
-	LogFunction,
-}
+	"github.com/onflow/cadence/runtime/interpreter"
+)
 
-var BuiltinValues = StandardLibraryValues{
-	signatureAlgorithmConstructor,
-	hashAlgorithmConstructor,
-	blsContract,
-	rlpContract,
-}
+const logFunctionDocString = `
+Logs a string representation of the given value
+`
+
+var LogFunction = NewStandardLibraryFunction(
+	"log",
+	LogFunctionType,
+	logFunctionDocString,
+	func(invocation interpreter.Invocation) interpreter.Value {
+		fmt.Println(invocation.Arguments[0].String())
+		return interpreter.VoidValue{}
+	},
+)

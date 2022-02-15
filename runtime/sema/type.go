@@ -5955,7 +5955,7 @@ var PublicKeyType = func() *CompositeType {
 		NewPublicConstantFieldMember(
 			publicKeyType,
 			PublicKeyPublicKeyField,
-			&VariableSizedType{Type: UInt8Type},
+			ByteArrayType,
 			publicKeyKeyFieldDocString,
 		),
 		NewPublicConstantFieldMember(

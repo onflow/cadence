@@ -708,9 +708,9 @@ func TestTraversingMerkleProof(t *testing.T) {
                 }
             }
 
-            let encodedChildren = DecodeRLPList(input: encodedNode)
+            let encodedChildren = RLP.decodeList(encodedNode)
             let encodedChild = encodedChildren[nibbles[nibbleIndex]]
-            expectedNodeHash = DecodeRLPString(input: encodedChild)
+            expectedNodeHash = RLP.decodeString(encodedChild)
             log(nibbles[nibbleIndex])
             nibbleIndex = nibbleIndex + 1
         }
