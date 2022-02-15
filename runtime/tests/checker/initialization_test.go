@@ -642,3 +642,109 @@ func TestCheckFieldInitializationSwitchCase(t *testing.T) {
 		assert.IsType(t, &sema.FieldUninitializedError{}, errs[0])
 	})
 }
+
+func TestCheckFieldInitializationAfterJump(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("while, continue", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct Test {
+                var foo: Int
+
+                init(foo: Int) {
+                    while true {
+                        continue
+                    }
+                    self.foo = foo
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("while, break", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct Test {
+                var foo: Int
+
+                init(foo: Int) {
+                    while true {
+                        break
+                    }
+                    self.foo = foo
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("for, continue", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct Test {
+                var foo: Int
+
+                init(foo: Int) {
+                    for i in [] {
+                        continue
+                    }
+                    self.foo = foo
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("for, break", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct Test {
+                var foo: Int
+
+                init(foo: Int) {
+                    for i in [] {
+                        break
+                    }
+                    self.foo = foo
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("switch, break", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+          struct Test {
+              let n: Int
+
+              init(n: Int) {
+                  switch n {
+                  case 1:
+                      break
+                  }
+                  self.n = n
+              }
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+}
