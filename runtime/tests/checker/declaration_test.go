@@ -626,3 +626,54 @@ func TestCheckVariableDeclarationTypeAnnotationRequired(t *testing.T) {
 		assert.IsType(t, &sema.TypeAnnotationRequiredError{}, errs[0])
 	})
 }
+
+func TestCheckBuiltinRedeclaration(t *testing.T) {
+
+	t.Parallel()
+
+	// Check built-in conversion functions have a static type
+
+	_ = sema.BaseValueActivation.ForEach(
+		func(name string, _ *sema.Variable) error {
+
+			t.Run(name, func(t *testing.T) {
+
+				t.Run("re-declaration in function", func(t *testing.T) {
+
+					_, err := ParseAndCheck(t,
+						fmt.Sprintf(
+							`
+                                fun test() {
+                                    let %[1]s = %[1]s
+                                }
+                            `,
+							name,
+						),
+					)
+
+					errs := ExpectCheckerErrors(t, err, 1)
+
+					assert.IsType(t, &sema.RedeclarationError{}, errs[0])
+				})
+
+				t.Run("global re-declaration", func(t *testing.T) {
+
+					_, err := ParseAndCheck(t,
+						fmt.Sprintf(
+							`
+                                let %[1]s = %[1]s
+                            `,
+							name,
+						),
+					)
+
+					errs := ExpectCheckerErrors(t, err, 1)
+
+					assert.IsType(t, &sema.RedeclarationError{}, errs[0])
+				})
+			})
+
+			return nil
+		},
+	)
+}

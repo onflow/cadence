@@ -131,10 +131,13 @@ func (checker *Checker) checkFunction(
 
 	// Reset the returning state and restore it when leaving
 
-	returned := checker.resources.JumpsOrReturns
+	jumpedOrReturned := checker.resources.JumpsOrReturns
+	halted := checker.resources.Halts
 	checker.resources.JumpsOrReturns = false
+	checker.resources.Halts = false
 	defer func() {
-		checker.resources.JumpsOrReturns = returned
+		checker.resources.JumpsOrReturns = jumpedOrReturned
+		checker.resources.Halts = halted
 	}()
 
 	// NOTE: Always declare the function parameters, even if the function body is empty.
