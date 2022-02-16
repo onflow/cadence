@@ -453,16 +453,18 @@ func (e *MissingEnumCasesError) Error() string {
 	)
 }
 
-// MissingCompositeDeclarationError is reported during an contract update, if an existing
-// composite declaration (struct or struct interface) is removed.
-type MissingCompositeDeclarationError struct {
+// MissingDeclarationError is reported during a contract update,
+// if an existing declaration is removed.
+type MissingDeclarationError struct {
 	Name string
+	Kind common.DeclarationKind
 	ast.Range
 }
 
-func (e *MissingCompositeDeclarationError) Error() string {
+func (e *MissingDeclarationError) Error() string {
 	return fmt.Sprintf(
-		"missing composite declaration `%s`",
+		"missing %s declaration `%s`",
+		e.Kind,
 		e.Name,
 	)
 }
