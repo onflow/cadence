@@ -273,7 +273,7 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val 
 		script.Source,
 		context,
 		functions,
-		stdlib.BuiltinValues(),
+		stdlib.BuiltinValues,
 		checkerOptions,
 		true,
 		importResolutionResults{},
@@ -318,7 +318,7 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val 
 		context,
 		storage,
 		functions,
-		stdlib.BuiltinValues(),
+		stdlib.BuiltinValues,
 		interpreterOptions,
 		checkerOptions,
 		interpret,
@@ -519,7 +519,7 @@ func (r *interpreterRuntime) InvokeContractFunction(
 		context,
 		storage,
 		functions,
-		stdlib.BuiltinValues(),
+		stdlib.BuiltinValues,
 		interpreterOptions,
 		checkerOptions,
 		nil,
@@ -651,7 +651,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 		script.Source,
 		context,
 		functions,
-		stdlib.BuiltinValues(),
+		stdlib.BuiltinValues,
 		checkerOptions,
 		true,
 		importResolutionResults{},
@@ -725,7 +725,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 		context,
 		storage,
 		functions,
-		stdlib.BuiltinValues(),
+		stdlib.BuiltinValues,
 		interpreterOptions,
 		checkerOptions,
 		r.transactionExecutionFunction(
@@ -996,7 +996,7 @@ func (r *interpreterRuntime) ParseAndCheckProgram(
 		code,
 		context,
 		functions,
-		stdlib.BuiltinValues(),
+		stdlib.BuiltinValues,
 		checkerOptions,
 		true,
 		importResolutionResults{},
@@ -1270,9 +1270,9 @@ func (r *interpreterRuntime) newInterpreter(
 				inter *interpreter.Interpreter,
 				getLocationRange func() interpreter.LocationRange,
 				publicKeyValue interpreter.MemberAccessibleValue,
-				signature []byte,
-			) (interpreter.BoolValue, error) {
-				return verifyBLSPOP(
+				signature *interpreter.ArrayValue,
+			) interpreter.BoolValue {
+				return blsVerifyPoP(
 					inter,
 					getLocationRange,
 					publicKeyValue,
@@ -1281,21 +1281,27 @@ func (r *interpreterRuntime) newInterpreter(
 				)
 			},
 			func(
-				signatures [][]byte,
-			) ([]byte, error) {
-				return context.Interface.BLSAggregateSignatures(signatures)
+				inter *interpreter.Interpreter,
+				getLocationRange func() interpreter.LocationRange,
+				signatures *interpreter.ArrayValue,
+			) interpreter.OptionalValue {
+				return blsAggregateSignatures(
+					inter,
+					context.Interface,
+					signatures,
+				)
 			},
 			func(
 				inter *interpreter.Interpreter,
 				getLocationRange func() interpreter.LocationRange,
-				publicKeys []interpreter.MemberAccessibleValue,
-			) (interpreter.MemberAccessibleValue, error) {
-				return aggregateBLSPublicKeys(
+				publicKeys *interpreter.ArrayValue,
+			) interpreter.OptionalValue {
+				return blsAggregatePublicKeys(
 					inter,
 					getLocationRange,
 					publicKeys,
-					context.Interface,
 					publicKeyValidator,
+					context.Interface,
 				)
 			},
 		),
@@ -2489,7 +2495,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				code,
 				context,
 				functions,
-				stdlib.BuiltinValues(),
+				stdlib.BuiltinValues,
 				checkerOptions,
 				storeProgram,
 				importResolutionResults{},
@@ -2699,7 +2705,7 @@ func (r *interpreterRuntime) updateAccountContractCode(
 	if createContract {
 
 		functions := r.standardLibraryFunctions(context, storage, interpreterOptions, checkerOptions)
-		values := stdlib.BuiltinValues()
+		values := stdlib.BuiltinValues
 
 		contractValue, err = r.instantiateContract(
 			program,
@@ -3405,66 +3411,124 @@ func validatePublicKey(
 	return err
 }
 
-func verifyBLSPOP(
+func blsVerifyPoP(
 	inter *interpreter.Interpreter,
 	getLocationRange func() interpreter.LocationRange,
 	publicKeyValue interpreter.MemberAccessibleValue,
-	signature []byte,
+	signatureValue *interpreter.ArrayValue,
 	runtimeInterface Interface,
-) (interpreter.BoolValue, error) {
+) interpreter.BoolValue {
+
 	publicKey, err := NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
 	if err != nil {
-		return false, err
+		panic(err)
+	}
+
+	signature, err := interpreter.ByteArrayValueToByteSlice(signatureValue)
+	if err != nil {
+		panic(err)
 	}
 
 	var valid bool
 	wrapPanic(func() {
 		valid, err = runtimeInterface.BLSVerifyPOP(publicKey, signature)
 	})
-
-	// if the crypto layer produces an error, we have invalid input, return false
 	if err != nil {
-		return interpreter.BoolValue(false), nil //nolint:nilerr
+		panic(err)
 	}
 
-	return interpreter.BoolValue(valid), nil
+	return interpreter.BoolValue(valid)
 }
 
-func aggregateBLSPublicKeys(
+func blsAggregateSignatures(
 	inter *interpreter.Interpreter,
-	getLocationRange func() interpreter.LocationRange,
-	publicKeyValues []interpreter.MemberAccessibleValue,
 	runtimeInterface Interface,
-	validator interpreter.PublicKeyValidationHandlerFunc,
-) (interpreter.MemberAccessibleValue, error) {
-	publicKeys := make([]*PublicKey, 0, len(publicKeyValues))
-	for _, value := range publicKeyValues {
-		publicKey, err := NewPublicKeyFromValue(inter, getLocationRange, value)
-		if err != nil {
-			return nil, err
-		}
-		publicKeys = append(publicKeys, publicKey)
-	}
+	signaturesValue *interpreter.ArrayValue,
+) interpreter.OptionalValue {
 
-	var err error
-	var key *PublicKey
-	wrapPanic(func() {
-		key, err = runtimeInterface.BLSAggregatePublicKeys(publicKeys)
+	bytesArray := make([][]byte, 0, signaturesValue.Count())
+	signaturesValue.Iterate(func(element interpreter.Value) (resume bool) {
+		signature, ok := element.(*interpreter.ArrayValue)
+		if !ok {
+			panic(runtimeErrors.NewUnreachableError())
+		}
+
+		bytes, err := interpreter.ByteArrayValueToByteSlice(signature)
+		if err != nil {
+			panic(err)
+		}
+
+		bytesArray = append(bytesArray, bytes)
+
+		// Continue iteration
+		return true
 	})
 
-	// if the crypto layer produces an error, we have invalid input, return nil
+	var err error
+	var aggregatedSignature []byte
+	wrapPanic(func() {
+		aggregatedSignature, err = runtimeInterface.BLSAggregateSignatures(bytesArray)
+	})
+
+	// If the crypto layer produces an error, we have invalid input, return nil
 	if err != nil {
-		return interpreter.NilValue{}, nil //nolint:nilerr
+		return interpreter.NilValue{}
 	}
 
+	aggregatedSignatureValue := interpreter.ByteSliceToByteArrayValue(inter, aggregatedSignature)
+
 	return interpreter.NewSomeValueNonCopying(
-		NewPublicKeyValue(
-			inter,
-			getLocationRange,
-			key,
-			validator,
-		),
-	), nil
+		aggregatedSignatureValue,
+	)
+}
+
+func blsAggregatePublicKeys(
+	inter *interpreter.Interpreter,
+	getLocationRange func() interpreter.LocationRange,
+	publicKeysValue *interpreter.ArrayValue,
+	validator interpreter.PublicKeyValidationHandlerFunc,
+	runtimeInterface Interface,
+) interpreter.OptionalValue {
+
+	publicKeys := make([]*PublicKey, 0, publicKeysValue.Count())
+	publicKeysValue.Iterate(func(element interpreter.Value) (resume bool) {
+		publicKeyValue, ok := element.(*interpreter.CompositeValue)
+		if !ok {
+			panic(runtimeErrors.NewUnreachableError())
+		}
+
+		publicKey, err := NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
+		if err != nil {
+			panic(err)
+		}
+
+		publicKeys = append(publicKeys, publicKey)
+
+		// Continue iteration
+		return true
+	})
+
+	var err error
+	var aggregatedPublicKey *PublicKey
+	wrapPanic(func() {
+		aggregatedPublicKey, err = runtimeInterface.BLSAggregatePublicKeys(publicKeys)
+	})
+
+	// If the crypto layer produces an error, we have invalid input, return nil
+	if err != nil {
+		return interpreter.NilValue{}
+	}
+
+	aggregatedPublicKeyValue := NewPublicKeyValue(
+		inter,
+		getLocationRange,
+		aggregatedPublicKey,
+		validator,
+	)
+
+	return interpreter.NewSomeValueNonCopying(
+		aggregatedPublicKeyValue,
+	)
 }
 
 func verifySignature(

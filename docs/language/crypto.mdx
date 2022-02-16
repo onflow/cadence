@@ -191,26 +191,35 @@ The inputs to `verify()` depend on the signature scheme used:
 
 BLS verification performs the necessary membership check of the signature while the membership check of the public key is performed at the creation of the `PublicKey` object.
 
-The BLS signature scheme also supports two additional operations on keys and signatures:
+## BLS
 
-```cadence
-/// This is a specific function for the BLS signature scheme. It aggregate multiple BLS signatures into one, 
-/// considering the proof of possession as a defence against the rogue attacks.
-///
-/// Signatures could be generated from the same or distinct messages, they
-/// could also be the aggregation of other signatures.
-/// The order of the signatures in the slice does not matter since the aggregation is commutative. 
-/// No subgroup membership check is performed on the input signatures.
-/// The function returns nil if the array is empty or if decoding one of the signature fails. 
-AggregateBLSSignatures(_ signatures: [[UInt8]]): [UInt8]?
+<Callout type="info">
 
-/// This is a specific function for the BLS signature scheme. It aggregates multiple BLS public keys into one.
-///
-/// The order of the public keys in the slice does not matter since the aggregation is commutative. 
-/// No subgroup membership check is performed on the input keys.
-/// The function returns nil if the array is empty or any of the input keys is not a BLS key.
-AggregateBLSPublicKeys(_ signatures: [PublicKey]): PublicKey?
-```
+🚧 Status: This API is going to be available in an upcoming release of Cadence
+
+</Callout>
+
+The BLS signature scheme also supports two additional operations on keys and signatures.
+They are defined in the built-in `BLS` contract, which does not need to be imported.
+
+- `cadence•fun aggregateSignatures(_ signatures: [[UInt8]]): [UInt8]?`
+
+  Aggregates multiple BLS signatures into one,
+  considering the proof of possession as a defence against the rogue attacks.
+
+  Signatures could be generated from the same or distinct messages, they
+  could also be the aggregation of other signatures.
+  The order of the signatures in the slice does not matter since the aggregation is commutative.
+  No subgroup membership check is performed on the input signatures.
+  The function returns nil if the array is empty or if decoding one of the signature fails.
+
+- `cadence•fun aggregatePublicKeys(_ publicKeys: [PublicKey]): PublicKey?`
+
+  Aggregates multiple BLS public keys into one.
+
+  The order of the public keys in the slice does not matter since the aggregation is commutative.
+  No subgroup membership check is performed on the input keys.
+  The function returns nil if the array is empty or any of the input keys is not a BLS key.
 
 ## Crypto Contract
 

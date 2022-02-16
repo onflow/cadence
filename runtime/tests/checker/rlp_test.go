@@ -33,12 +33,12 @@ func TestCheckRLPDecodeStringError(t *testing.T) {
 
 	_, err := ParseAndCheckWithOptions(t,
 		`
-           var l = DecodeRLPString(input: "string")  
+           var l = DecodeRLPString(input: "string")
         `,
 		ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithPredeclaredValues(stdlib.BuiltinFunctions.ToSemaValueDeclarations()),
-				sema.WithPredeclaredValues(stdlib.BuiltinValues().ToSemaValueDeclarations()),
+				sema.WithPredeclaredValues(stdlib.BuiltinValues.ToSemaValueDeclarations()),
 			},
 		},
 	)
@@ -54,12 +54,12 @@ func TestCheckRLPDecodeListError(t *testing.T) {
 
 	_, err := ParseAndCheckWithOptions(t,
 		`
-           var l = DecodeRLPList(input: "string")  
+           var l = DecodeRLPList(input: "string")
         `,
 		ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithPredeclaredValues(stdlib.BuiltinFunctions.ToSemaValueDeclarations()),
-				sema.WithPredeclaredValues(stdlib.BuiltinValues().ToSemaValueDeclarations()),
+				sema.WithPredeclaredValues(stdlib.BuiltinValues.ToSemaValueDeclarations()),
 			},
 		},
 	)
