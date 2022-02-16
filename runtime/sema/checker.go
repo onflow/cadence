@@ -1783,9 +1783,9 @@ func (checker *Checker) checkPotentiallyUnevaluated(check TypeCheckFunc) Type {
 		temporaryResources,
 	)
 
-	functionActivation.ReturnInfo.MaybeJumpedOrReturned =
-		functionActivation.ReturnInfo.MaybeJumpedOrReturned ||
-			temporaryReturnInfo.MaybeJumpedOrReturned
+	functionActivation.ReturnInfo.MaybeReturned =
+		functionActivation.ReturnInfo.MaybeReturned ||
+			temporaryReturnInfo.MaybeReturned
 
 	// NOTE: the definitive return state does not change
 
