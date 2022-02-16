@@ -19,6 +19,8 @@
 package runtime
 
 import (
+	"sort"
+
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
@@ -151,9 +153,9 @@ func (validator *ContractUpdateValidator) checkFields(oldDeclaration ast.Declara
 	newFields := newDeclaration.DeclarationMembers().Fields()
 
 	// Updated contract has to have at-most the same number of field as the old contract.
-	// Any additional field may cause crashes/garbage-values when deserializing the
-	// already-stored data. However, having less number of fields is fine for now. It will
-	// only leave some unused-data, and will not do any harm to the programs that are running.
+	// Any additional field may cause crashes/garbage-values when deserializing the already-stored data.
+	// However, having fewer fields is fine for now. It will only leave some unused data,
+	// and will not do any harm to the programs that are running.
 
 	for _, newField := range newFields {
 		oldField := oldFields[newField.Identifier.Identifier]
@@ -195,13 +197,13 @@ func (validator *ContractUpdateValidator) checkNestedDeclarations(
 	for _, newNestedDecl := range newNestedCompositeDecls {
 		oldNestedDecl, found := oldCompositeAndInterfaceDecls[newNestedDecl.Identifier.Identifier]
 		if !found {
-			// Then its a new declaration
+			// Then it's a new declaration
 			continue
 		}
 
 		validator.checkDeclarationUpdatability(oldNestedDecl, newNestedDecl)
 
-		// If theres a matching new decl, then remove the old one from the map.
+		// If there's a matching new decl, then remove the old one from the map.
 		delete(oldCompositeAndInterfaceDecls, newNestedDecl.Identifier.Identifier)
 	}
 
@@ -216,21 +218,36 @@ func (validator *ContractUpdateValidator) checkNestedDeclarations(
 
 		validator.checkDeclarationUpdatability(oldNestedDecl, newNestedDecl)
 
-		// If theres a matching new decl, then remove the old one from the map.
+		// If there's a matching new decl, then remove the old one from the map.
 		delete(oldCompositeAndInterfaceDecls, newNestedDecl.Identifier.Identifier)
 	}
 
-	// The remaining old declarations doesn't have a corresponding new declaration.
-	// i.e: An existing declaration is removed.
-	// Hence report an error.
-	for name := range oldCompositeAndInterfaceDecls { //nolint:maprangecheck
-		validator.report(&MissingCompositeDeclarationError{
-			Name:  name,
-			Range: ast.NewRangeFromPositioned(newDeclaration.DeclarationIdentifier()),
+	// The remaining old declarations don't have a corresponding new declaration,
+	// i.e., an existing declaration was removed.
+	// Hence, report an error.
+
+	missingDeclarations := make([]ast.Declaration, 0, len(oldCompositeAndInterfaceDecls))
+
+	for _, declaration := range oldCompositeAndInterfaceDecls { //nolint:maprangecheck
+		missingDeclarations = append(missingDeclarations, declaration)
+	}
+
+	sort.Slice(missingDeclarations, func(i, j int) bool {
+		return missingDeclarations[i].DeclarationIdentifier().Identifier <
+			missingDeclarations[j].DeclarationIdentifier().Identifier
+	})
+
+	for _, declaration := range missingDeclarations {
+		validator.report(&MissingDeclarationError{
+			Name: declaration.DeclarationIdentifier().Identifier,
+			Kind: declaration.DeclarationKind(),
+			Range: ast.NewRangeFromPositioned(
+				newDeclaration.DeclarationIdentifier(),
+			),
 		})
 	}
 
-	// Check enum-cases, if theres any.
+	// Check enum-cases, if there are any.
 	validator.checkEnumCases(oldDeclaration, newDeclaration)
 }
 
@@ -269,7 +286,8 @@ func (validator *ContractUpdateValidator) checkEnumCases(oldDeclaration ast.Decl
 		})
 
 		// If some enum cases are removed, trying to match each enum case
-		// may result in too many regression errors. hence return.
+		// may result in too many regression errors.
+		// Hence, return.
 		return
 	}
 
