@@ -31,9 +31,12 @@ type Program struct {
 }
 
 func NewProgram(declarations []Declaration) *Program {
-	return &Program{
+	retval := &Program{
 		declarations: declarations,
 	}
+	// trigger the init() on one single thread
+	retval.PragmaDeclarations()
+	return retval
 }
 
 func (p *Program) Declarations() []Declaration {
