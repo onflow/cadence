@@ -32,9 +32,13 @@ type Members struct {
 }
 
 func NewMembers(declarations []Declaration) *Members {
-	return &Members{
+	retval := &Members{
 		declarations: declarations,
 	}
+
+	// cause init() to execute the once.Do statement, to prevent collisions
+	retval.Fields()
+	return retval
 }
 
 func (m *Members) Declarations() []Declaration {
