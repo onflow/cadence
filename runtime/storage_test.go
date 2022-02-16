@@ -19,72 +19,51 @@
 package runtime
 
 import (
-	"bytes"
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"math"
-	"strconv"
+	"math/rand"
 	"testing"
-	"time"
 
 	"github.com/onflow/atree"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/interpreter"
+
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func withWritesToStorage(
 	tb testing.TB,
-	arrayElementCount int,
-	storageItemCount int,
+	count int,
+	random *rand.Rand,
 	onWrite func(owner, key, value []byte),
 	handler func(*Storage, *interpreter.Interpreter),
 ) {
-
-	storage := NewStorage(
-		newTestLedger(nil, onWrite),
-		func(f func(), _ func(metrics Metrics, duration time.Duration)) {
-			f()
-		},
-	)
+	ledger := newTestLedger(nil, onWrite)
+	storage := NewStorage(ledger)
 
 	inter := newTestInterpreter(tb)
 
-	array := interpreter.NewArrayValue(
-		inter,
-		interpreter.VariableSizedStaticType{
-			Type: interpreter.PrimitiveStaticTypeInt,
-		},
-		common.Address{},
-	)
-
-	for i := 0; i < arrayElementCount; i++ {
-		array.Append(
-			inter,
-			interpreter.ReturnEmptyLocationRange,
-			interpreter.NewIntValueFromInt64(int64(i)),
-		)
-	}
-
 	address := common.MustBytesToAddress([]byte{0x1})
 
-	for i := 0; i < storageItemCount; i++ {
-		storable, err := array.Storable(
-			inter.Storage,
-			atree.Address(address),
-			math.MaxUint64,
-		)
-		require.NoError(tb, err)
+	for i := 0; i < count; i++ {
 
-		storage.writes[interpreter.StorageKey{
+		randomIndex := random.Uint32()
+
+		storageKey := interpreter.StorageKey{
 			Address: address,
-			Key:     strconv.Itoa(i),
-		}] = storable
+			Key:     fmt.Sprintf("%d", randomIndex),
+		}
+
+		var storageIndex atree.StorageIndex
+		binary.BigEndian.PutUint32(storageIndex[:], randomIndex)
+
+		storage.writes[storageKey] = storageIndex
 	}
 
 	handler(storage, inter)
@@ -94,29 +73,27 @@ func TestRuntimeStorageWriteCached(t *testing.T) {
 
 	t.Parallel()
 
-	var writes []testWrite
+	random := rand.New(rand.NewSource(42))
+
+	var writes int
 
 	onWrite := func(owner, key, value []byte) {
-		writes = append(writes, testWrite{
-			owner: owner,
-			key:   key,
-			value: value,
-		})
+		writes++
 	}
 
-	const arrayElementCount = 100
-	const storageItemCount = 100
+	const count = 100
+
 	withWritesToStorage(
 		t,
-		arrayElementCount,
-		storageItemCount,
+		count,
+		random,
 		onWrite,
 		func(storage *Storage, inter *interpreter.Interpreter) {
 			const commitContractUpdates = true
 			err := storage.Commit(inter, commitContractUpdates)
 			require.NoError(t, err)
 
-			require.Len(t, writes, storageItemCount)
+			require.Equal(t, count, writes)
 		},
 	)
 }
@@ -125,82 +102,45 @@ func TestRuntimeStorageWriteCachedIsDeterministic(t *testing.T) {
 
 	t.Parallel()
 
-	var writes []testWrite
+	var previousWrites []testWrite
 
-	onWrite := func(owner, key, value []byte) {
-		writes = append(writes, testWrite{
-			owner: owner,
-			key:   key,
-			value: value,
-		})
-	}
+	// verify for 10 times and check the writes are always deterministic
+	for i := 0; i < 10; i++ {
 
-	const arrayElementCount = 100
-	const storageItemCount = 100
-	withWritesToStorage(
-		t,
-		arrayElementCount,
-		storageItemCount,
-		onWrite,
-		func(storage *Storage, inter *interpreter.Interpreter) {
-			const commitContractUpdates = true
-			err := storage.Commit(inter, commitContractUpdates)
-			require.NoError(t, err)
+		var writes []testWrite
 
-			previousWrites := make([]testWrite, len(writes))
-			copy(previousWrites, writes)
+		onWrite := func(owner, key, _ []byte) {
+			writes = append(writes, testWrite{
+				owner: owner,
+				key:   key,
+			})
+		}
 
-			// verify for 10 times and check the writes are always deterministic
-			for i := 0; i < 10; i++ {
-				// test that writing again should produce the same result
-				writes = nil
-				err := storage.Commit(inter, commitContractUpdates)
-				require.NoError(t, err)
-
-				for i, previousWrite := range previousWrites {
-					// compare the new write with the old write
-					require.Equal(t, previousWrite, writes[i])
-				}
-
-				// no additional items
-				require.Len(t, writes, len(previousWrites))
-			}
-		},
-	)
-}
-
-func BenchmarkRuntimeStorageWriteCached(b *testing.B) {
-	var writes []testWrite
-
-	onWrite := func(owner, key, value []byte) {
-		writes = append(writes, testWrite{
-			owner: owner,
-			key:   key,
-			value: value,
-		})
-	}
-
-	const arrayElementCount = 100
-	const storageItemCount = 100
-	withWritesToStorage(
-		b,
-		arrayElementCount,
-		storageItemCount,
-		onWrite,
-		func(storage *Storage, inter *interpreter.Interpreter) {
-			b.ReportAllocs()
-			b.ResetTimer()
-
-			for i := 0; i < b.N; i++ {
-				writes = nil
+		const count = 100
+		withWritesToStorage(
+			t,
+			count,
+			rand.New(rand.NewSource(42)),
+			onWrite,
+			func(storage *Storage, inter *interpreter.Interpreter) {
 				const commitContractUpdates = true
 				err := storage.Commit(inter, commitContractUpdates)
-				require.NoError(b, err)
+				require.NoError(t, err)
+			},
+		)
 
-				require.Len(b, writes, storageItemCount)
+		if previousWrites != nil {
+			// no additional items
+			require.Len(t, writes, len(previousWrites))
+
+			for i, previousWrite := range previousWrites {
+				// compare the new write with the old write
+				require.Equal(t, previousWrite, writes[i])
 			}
-		},
-	)
+		}
+
+		previousWrites = writes
+	}
 }
 
 func TestRuntimeStorageWrite(t *testing.T) {
@@ -221,11 +161,10 @@ func TestRuntimeStorageWrite(t *testing.T) {
 
 	var writes []testWrite
 
-	onWrite := func(owner, key, value []byte) {
+	onWrite := func(owner, key, _ []byte) {
 		writes = append(writes, testWrite{
 			owner,
 			key,
-			value,
 		})
 	}
 
@@ -251,19 +190,15 @@ func TestRuntimeStorageWrite(t *testing.T) {
 
 	assert.Equal(t,
 		[]testWrite{
+			// storage index to storage domain storage map
 			{
 				[]byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
-				[]byte("storage\x1fone"),
-				[]byte{
-					// CBOR
-					// - tag
-					0xd8, 0x98,
-					// - positive bignum
-					0xc2,
-					// - byte string, length 1
-					0x41,
-					0x1,
-				},
+				[]byte("storage"),
+			},
+			// storage domain storage map
+			{
+				[]byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
+				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
 			},
 		},
 		writes,
@@ -741,7 +676,7 @@ func TestRuntimeStorageReadAndBorrow(t *testing.T) {
 			},
 		)
 		require.NoError(t, err)
-		require.Equal(t, cadence.NewOptional(cadence.NewInt(42)), value)
+		require.Equal(t, cadence.NewInt(42), value)
 	})
 
 	t.Run("read stored, non-existing", func(t *testing.T) {
@@ -758,7 +693,7 @@ func TestRuntimeStorageReadAndBorrow(t *testing.T) {
 			},
 		)
 		require.NoError(t, err)
-		require.Equal(t, cadence.NewOptional(nil), value)
+		require.Equal(t, nil, value)
 	})
 
 	t.Run("read linked, existing", func(t *testing.T) {
@@ -775,7 +710,7 @@ func TestRuntimeStorageReadAndBorrow(t *testing.T) {
 			},
 		)
 		require.NoError(t, err)
-		require.Equal(t, cadence.NewOptional(cadence.NewInt(42)), value)
+		require.Equal(t, cadence.NewInt(42), value)
 	})
 
 	t.Run("read linked, non-existing", func(t *testing.T) {
@@ -792,7 +727,7 @@ func TestRuntimeStorageReadAndBorrow(t *testing.T) {
 			},
 		)
 		require.NoError(t, err)
-		require.Equal(t, cadence.NewOptional(nil), value)
+		require.Equal(t, nil, value)
 	})
 }
 
@@ -907,16 +842,8 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
 
 	var signerAddress common.Address
 
-	var contractValueReads = 0
-
-	onRead := func(owner, key, value []byte) {
-		if bytes.Equal(key, []byte(formatContractKey("TopShot"))) {
-			contractValueReads++
-		}
-	}
-
 	runtimeInterface := &testRuntimeInterface{
-		storage: newTestLedger(onRead, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{signerAddress}, nil
 		},
@@ -968,8 +895,6 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
 
 	// Mint moments
 
-	contractValueReads = 0
-
 	err = runtime.ExecuteTransaction(
 		Script{
 			Source: []byte(`
@@ -1000,7 +925,6 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	require.Equal(t, 1, contractValueReads)
 
 	// Set up receiver
 
@@ -1025,8 +949,6 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
 
 	signerAddress = common.MustBytesToAddress([]byte{0x42})
 
-	contractValueReads = 0
-
 	err = runtime.ExecuteTransaction(
 		Script{
 			Source: []byte(setupTx),
@@ -1038,7 +960,6 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
 	)
 
 	require.NoError(t, err)
-	require.Equal(t, 1, contractValueReads)
 
 	// Transfer
 
@@ -1077,8 +998,6 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	contractValueReads = 0
-
 	err = runtime.ExecuteTransaction(
 		Script{
 			Source:    []byte(transferTx),
@@ -1091,8 +1010,6 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
 	)
 
 	require.NoError(t, err)
-
-	require.Equal(t, 0, contractValueReads)
 }
 
 func TestRuntimeBatchMintAndTransfer(t *testing.T) {
@@ -1533,15 +1450,13 @@ func TestRuntimeStorageSaveCapability(t *testing.T) {
 				require.NoError(t, err)
 
 				require.Equal(t,
-					cadence.Optional{
-						Value: cadence.Capability{
-							Path: cadence.Path{
-								Domain:     domain.Identifier(),
-								Identifier: "test",
-							},
-							Address:    cadence.Address(signer),
-							BorrowType: ty,
+					cadence.Capability{
+						Path: cadence.Path{
+							Domain:     domain.Identifier(),
+							Identifier: "test",
 						},
+						Address:    cadence.Address(signer),
+						BorrowType: ty,
 					},
 					value,
 				)
@@ -1835,7 +1750,11 @@ func TestRuntimeStorageTransfer(t *testing.T) {
 			nonEmptyKeys++
 		}
 	}
-	assert.Equal(t, 2, nonEmptyKeys)
+	// 5:
+	// - 2x storage index for storage domain storage map
+	// - 2x storage domain storage map
+	// - array (atree array)
+	assert.Equal(t, 5, nonEmptyKeys)
 }
 
 func TestRuntimeStorageUsed(t *testing.T) {
@@ -1905,67 +1824,67 @@ func TestRuntimeStorageUsed(t *testing.T) {
 
 }
 
-func TestSortAccountStorageEntries(t *testing.T) {
+func TestSortContractUpdates(t *testing.T) {
 
 	t.Parallel()
 
-	entries := []AccountStorageEntry{
+	updates := []ContractUpdate{
 		{
-			StorageKey: interpreter.StorageKey{
+			Key: interpreter.StorageKey{
 				Address: common.Address{2},
 				Key:     "a",
 			},
 		},
 		{
-			StorageKey: interpreter.StorageKey{
+			Key: interpreter.StorageKey{
 				Address: common.Address{1},
 				Key:     "b",
 			},
 		},
 		{
-			StorageKey: interpreter.StorageKey{
+			Key: interpreter.StorageKey{
 				Address: common.Address{1},
 				Key:     "a",
 			},
 		},
 		{
-			StorageKey: interpreter.StorageKey{
+			Key: interpreter.StorageKey{
 				Address: common.Address{0},
 				Key:     "x",
 			},
 		},
 	}
 
-	SortAccountStorageEntries(entries)
+	SortContractUpdates(updates)
 
 	require.Equal(t,
-		[]AccountStorageEntry{
+		[]ContractUpdate{
 			{
-				StorageKey: interpreter.StorageKey{
+				Key: interpreter.StorageKey{
 					Address: common.Address{0},
 					Key:     "x",
 				},
 			},
 			{
-				StorageKey: interpreter.StorageKey{
+				Key: interpreter.StorageKey{
 					Address: common.Address{1},
 					Key:     "a",
 				},
 			},
 			{
-				StorageKey: interpreter.StorageKey{
+				Key: interpreter.StorageKey{
 					Address: common.Address{1},
 					Key:     "b",
 				},
 			},
 			{
-				StorageKey: interpreter.StorageKey{
+				Key: interpreter.StorageKey{
 					Address: common.Address{2},
 					Key:     "a",
 				},
 			},
 		},
-		entries,
+		updates,
 	)
 }
 

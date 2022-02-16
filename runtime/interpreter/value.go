@@ -12760,7 +12760,7 @@ func (s SomeStorable) ChildStorables() []atree.Storable {
 type StorageReferenceValue struct {
 	Authorized           bool
 	TargetStorageAddress common.Address
-	TargetKey            string
+	TargetPath           PathValue
 	BorrowedType         sema.Type
 }
 
@@ -12815,26 +12815,25 @@ func (v *StorageReferenceValue) StaticType() StaticType {
 }
 
 func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter) *Value {
-	switch referenced := interpreter.ReadStored(v.TargetStorageAddress, v.TargetKey).(type) {
-	case *SomeValue:
-		value := referenced.Value
 
-		if v.BorrowedType != nil {
-			dynamicType := value.DynamicType(interpreter, SeenReferences{})
-			if !interpreter.IsSubType(dynamicType, v.BorrowedType) {
-				interpreter.IsSubType(dynamicType, v.BorrowedType)
-				return nil
-			}
-		}
+	address := v.TargetStorageAddress
+	domain := v.TargetPath.Domain.Identifier()
+	identifier := v.TargetPath.Identifier
 
-		return &value
-
-	case NilValue:
+	referenced := interpreter.ReadStored(address, domain, identifier)
+	if referenced == nil {
 		return nil
-
-	default:
-		panic(errors.NewUnreachableError())
 	}
+
+	if v.BorrowedType != nil {
+		dynamicType := referenced.DynamicType(interpreter, SeenReferences{})
+		if !interpreter.IsSubType(dynamicType, v.BorrowedType) {
+			interpreter.IsSubType(dynamicType, v.BorrowedType)
+			return nil
+		}
+	}
+
+	return &referenced
 }
 
 func (v *StorageReferenceValue) GetMember(
@@ -12981,7 +12980,7 @@ func (v *StorageReferenceValue) Equal(_ *Interpreter, _ func() LocationRange, ot
 	otherReference, ok := other.(*StorageReferenceValue)
 	if !ok ||
 		v.TargetStorageAddress != otherReference.TargetStorageAddress ||
-		v.TargetKey != otherReference.TargetKey ||
+		v.TargetPath != otherReference.TargetPath ||
 		v.Authorized != otherReference.Authorized {
 
 		return false
@@ -13056,6 +13055,15 @@ func (v *StorageReferenceValue) Transfer(
 		interpreter.RemoveReferencedSlab(storable)
 	}
 	return v
+}
+
+func (v *StorageReferenceValue) Clone(_ *Interpreter) Value {
+	return &StorageReferenceValue{
+		Authorized:           v.Authorized,
+		TargetStorageAddress: v.TargetStorageAddress,
+		TargetPath:           v.TargetPath,
+		BorrowedType:         v.BorrowedType,
+	}
 }
 
 func (*StorageReferenceValue) DeepRemove(_ *Interpreter) {
@@ -13610,6 +13618,8 @@ type PathValue struct {
 	Domain     common.PathDomain
 	Identifier string
 }
+
+var EmptyPathValue = PathValue{}
 
 var _ Value = PathValue{}
 var _ atree.Storable = PathValue{}
