@@ -177,7 +177,7 @@ type testRuntimeInterface struct {
 	getStorageCapacity         func(_ Address) (uint64, error)
 	programs                   map[common.LocationID]*interpreter.Program
 	implementationDebugLog     func(message string) error
-	validatePublicKey          func(publicKey *PublicKey) (bool, error)
+	validatePublicKey          func(publicKey *PublicKey) error
 	bLSVerifyPOP               func(pk *PublicKey, s []byte) (bool, error)
 	aggregateBLSSignatures     func(sigs [][]byte) ([]byte, error)
 	aggregateBLSPublicKeys     func(keys []*PublicKey) (*PublicKey, error)
@@ -231,54 +231,93 @@ func (i *testRuntimeInterface) SetProgram(location Location, program *interprete
 }
 
 func (i *testRuntimeInterface) ValueExists(owner, key []byte) (exists bool, err error) {
+	if i.storage.valueExists == nil {
+		panic("must specify testRuntimeInterface.storage.valueExists")
+	}
 	return i.storage.ValueExists(owner, key)
 }
 
 func (i *testRuntimeInterface) GetValue(owner, key []byte) (value []byte, err error) {
+	if i.storage.getValue == nil {
+		panic("must specify testRuntimeInterface.storage.getValue")
+	}
 	return i.storage.GetValue(owner, key)
 }
 
 func (i *testRuntimeInterface) SetValue(owner, key, value []byte) (err error) {
+	if i.storage.setValue == nil {
+		panic("must specify testRuntimeInterface.storage.setValue")
+	}
 	return i.storage.SetValue(owner, key, value)
 }
 
 func (i *testRuntimeInterface) AllocateStorageIndex(owner []byte) (atree.StorageIndex, error) {
+	if i.storage.allocateStorageIndex == nil {
+		panic("must specify testRuntimeInterface.storage.allocateStorageIndex")
+	}
 	return i.storage.AllocateStorageIndex(owner)
 }
 
 func (i *testRuntimeInterface) CreateAccount(payer Address) (address Address, err error) {
+	if i.createAccount == nil {
+		panic("must specify testRuntimeInterface.createAccount")
+	}
 	return i.createAccount(payer)
 }
 
 func (i *testRuntimeInterface) AddEncodedAccountKey(address Address, publicKey []byte) error {
+	if i.addEncodedAccountKey == nil {
+		panic("must specify testRuntimeInterface.addEncodedAccountKey")
+	}
 	return i.addEncodedAccountKey(address, publicKey)
 }
 
 func (i *testRuntimeInterface) RevokeEncodedAccountKey(address Address, index int) ([]byte, error) {
+	if i.removeEncodedAccountKey == nil {
+		panic("must specify testRuntimeInterface.removeEncodedAccountKey")
+	}
 	return i.removeEncodedAccountKey(address, index)
 }
 
 func (i *testRuntimeInterface) AddAccountKey(address Address, publicKey *PublicKey, hashAlgo HashAlgorithm, weight int) (*AccountKey, error) {
+	if i.addAccountKey == nil {
+		panic("must specify testRuntimeInterface.addAccountKey")
+	}
 	return i.addAccountKey(address, publicKey, hashAlgo, weight)
 }
 
 func (i *testRuntimeInterface) GetAccountKey(address Address, index int) (*AccountKey, error) {
+	if i.getAccountKey == nil {
+		panic("must specify testRuntimeInterface.getAccountKey")
+	}
 	return i.getAccountKey(address, index)
 }
 
 func (i *testRuntimeInterface) RevokeAccountKey(address Address, index int) (*AccountKey, error) {
+	if i.removeAccountKey == nil {
+		panic("must specify testRuntimeInterface.removeAccountKey")
+	}
 	return i.removeAccountKey(address, index)
 }
 
 func (i *testRuntimeInterface) UpdateAccountContractCode(address Address, name string, code []byte) (err error) {
+	if i.updateAccountContractCode == nil {
+		panic("must specify testRuntimeInterface.updateAccountContractCode")
+	}
 	return i.updateAccountContractCode(address, name, code)
 }
 
 func (i *testRuntimeInterface) GetAccountContractCode(address Address, name string) (code []byte, err error) {
+	if i.getAccountContractCode == nil {
+		panic("must specify testRuntimeInterface.getAccountContractCode")
+	}
 	return i.getAccountContractCode(address, name)
 }
 
 func (i *testRuntimeInterface) RemoveAccountContractCode(address Address, name string) (err error) {
+	if i.removeAccountContractCode == nil {
+		panic("must specify testRuntimeInterface.removeAccountContractCode")
+	}
 	return i.removeAccountContractCode(address, name)
 }
 
@@ -409,22 +448,37 @@ func (i *testRuntimeInterface) Hash(data []byte, tag string, hashAlgorithm HashA
 }
 
 func (i *testRuntimeInterface) SetCadenceValue(owner common.Address, key string, value cadence.Value) (err error) {
+	if i.setCadenceValue == nil {
+		panic("must specify testRuntimeInterface.setCadenceValue")
+	}
 	return i.setCadenceValue(owner, key, value)
 }
 
 func (i *testRuntimeInterface) GetAccountBalance(address Address) (uint64, error) {
+	if i.getAccountBalance == nil {
+		panic("must specify testRuntimeInterface.getAccountBalance")
+	}
 	return i.getAccountBalance(address)
 }
 
 func (i *testRuntimeInterface) GetAccountAvailableBalance(address Address) (uint64, error) {
+	if i.getAccountAvailableBalance == nil {
+		panic("must specify testRuntimeInterface.getAccountAvailableBalance")
+	}
 	return i.getAccountAvailableBalance(address)
 }
 
 func (i *testRuntimeInterface) GetStorageUsed(address Address) (uint64, error) {
+	if i.getStorageUsed == nil {
+		panic("must specify testRuntimeInterface.getStorageUsed")
+	}
 	return i.getStorageUsed(address)
 }
 
 func (i *testRuntimeInterface) GetStorageCapacity(address Address) (uint64, error) {
+	if i.getStorageCapacity == nil {
+		panic("must specify testRuntimeInterface.getStorageCapacity")
+	}
 	return i.getStorageCapacity(address)
 }
 
@@ -435,9 +489,9 @@ func (i *testRuntimeInterface) ImplementationDebugLog(message string) error {
 	return i.implementationDebugLog(message)
 }
 
-func (i *testRuntimeInterface) ValidatePublicKey(key *PublicKey) (bool, error) {
+func (i *testRuntimeInterface) ValidatePublicKey(key *PublicKey) error {
 	if i.validatePublicKey == nil {
-		return false, nil
+		return errors.New("mock defaults to public key validation failure")
 	}
 
 	return i.validatePublicKey(key)
@@ -451,7 +505,7 @@ func (i *testRuntimeInterface) BLSVerifyPOP(key *PublicKey, s []byte) (bool, err
 	return i.bLSVerifyPOP(key, s)
 }
 
-func (i *testRuntimeInterface) AggregateBLSSignatures(sigs [][]byte) ([]byte, error) {
+func (i *testRuntimeInterface) BLSAggregateSignatures(sigs [][]byte) ([]byte, error) {
 	if i.aggregateBLSSignatures == nil {
 		return []byte{}, nil
 	}
@@ -459,7 +513,7 @@ func (i *testRuntimeInterface) AggregateBLSSignatures(sigs [][]byte) ([]byte, er
 	return i.aggregateBLSSignatures(sigs)
 }
 
-func (i *testRuntimeInterface) AggregateBLSPublicKeys(keys []*PublicKey) (*PublicKey, error) {
+func (i *testRuntimeInterface) BLSAggregatePublicKeys(keys []*PublicKey) (*PublicKey, error) {
 	if i.aggregateBLSPublicKeys == nil {
 		return nil, nil
 	}
@@ -1685,7 +1739,7 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
 
 	container := []byte(`
       pub resource Container {
-        pub let values: [Int]
+        pub(set) var values: [Int]
 
         init() {
           self.values = []

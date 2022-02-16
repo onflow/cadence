@@ -68,6 +68,8 @@ func exportValueWithInterpreter(
 		return cadence.NewBool(bool(v)), nil
 	case *interpreter.StringValue:
 		return cadence.NewString(v.Str)
+	case interpreter.CharacterValue:
+		return cadence.NewCharacter(string(v))
 	case *interpreter.ArrayValue:
 		return exportArrayValue(v, inter, seenReferences)
 	case interpreter.IntValue:
@@ -447,6 +449,8 @@ func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedTy
 		return interpreter.BoolValue(v), nil
 	case cadence.String:
 		return importString(inter, v), nil
+	case cadence.Character:
+		return interpreter.NewCharacterValue(string(v)), nil
 	case cadence.Bytes:
 		return interpreter.ByteSliceToByteArrayValue(inter, v), nil
 	case cadence.Address:
@@ -900,10 +904,6 @@ func importPublicKey(
 			}
 
 			signAlgoValue = compositeValue
-
-		case sema.PublicKeyIsValidField:
-			// 'isValid' field set by the user must be ignored.
-			// This is calculated when creating the public key.
 
 		default:
 			return nil, fmt.Errorf(

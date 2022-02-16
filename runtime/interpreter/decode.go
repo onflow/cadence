@@ -148,6 +148,16 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 				return nil, err
 			}
 
+		case CBORTagCharacterValue:
+			v, err := d.decoder.DecodeString()
+			if err != nil {
+				return nil, err
+			}
+			storable, err = d.decodeCharacter(v)
+			if err != nil {
+				return nil, err
+			}
+
 		case CBORTagSomeValue:
 			storable, err = d.decodeSome()
 
@@ -265,6 +275,16 @@ func (d StorableDecoder) decodeStringValue() (*StringValue, error) {
 	}
 	// NOTE: already metered by StorableDecoder.decodeString
 	return NewUnmeteredStringValue(str), nil
+}
+
+func (d StorableDecoder) decodeCharacter(v string) (CharacterValue, error) {
+	if !sema.IsValidCharacter(v) {
+		return "", fmt.Errorf(
+			"invalid character encoding: %s",
+			v,
+		)
+	}
+	return NewCharacterValue(v), nil
 }
 
 func (d StorableDecoder) decodeInt() (IntValue, error) {

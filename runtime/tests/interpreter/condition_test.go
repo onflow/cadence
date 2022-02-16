@@ -1067,23 +1067,24 @@ func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
 	// in the post condition is in fact a reference (ephemeral reference value),
 	// and not a resource (composite value)
 
+	checkFunctionType := &sema.FunctionType{
+		Parameters: []*sema.Parameter{
+			{
+				Label:      sema.ArgumentLabelNotRequired,
+				Identifier: "value",
+				TypeAnnotation: sema.NewTypeAnnotation(
+					sema.AnyStructType,
+				),
+			},
+		},
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(
+			sema.VoidType,
+		),
+	}
 	valueDeclarations := stdlib.StandardLibraryValues{
 		{
 			Name: "check",
-			Type: &sema.FunctionType{
-				Parameters: []*sema.Parameter{
-					{
-						Label:      sema.ArgumentLabelNotRequired,
-						Identifier: "value",
-						TypeAnnotation: sema.NewTypeAnnotation(
-							sema.AnyStructType,
-						),
-					},
-				},
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(
-					sema.VoidType,
-				),
-			},
+			Type: checkFunctionType,
 			ValueFactory: func(_ *interpreter.Interpreter) interpreter.Value {
 				return interpreter.NewHostFunctionValue(
 					func(invocation interpreter.Invocation) interpreter.Value {
@@ -1094,7 +1095,7 @@ func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
 
 						return interpreter.VoidValue{}
 					},
-					nil,
+					checkFunctionType,
 				)
 			},
 			Kind: common.DeclarationKindConstant,

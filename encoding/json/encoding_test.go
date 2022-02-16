@@ -87,6 +87,60 @@ func TestEncodeBool(t *testing.T) {
 	}...)
 }
 
+func TestBadCharacters(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("empty", func(t *testing.T) {
+
+		t.Parallel()
+		_, err := cadence.NewCharacter("")
+		require.Error(t, err)
+	})
+
+	t.Run("long", func(t *testing.T) {
+
+		t.Parallel()
+		_, err := cadence.NewCharacter("ab")
+		require.Error(t, err)
+	})
+
+	t.Run("ok simple", func(t *testing.T) {
+
+		t.Parallel()
+		_, err := cadence.NewCharacter(`\a`)
+		require.Error(t, err)
+	})
+
+	t.Run("ok complex", func(t *testing.T) {
+
+		t.Parallel()
+		_, err := cadence.NewCharacter(`\u{75}\u{308}`)
+		require.Error(t, err)
+	})
+}
+
+func TestEncodeCharacter(t *testing.T) {
+
+	t.Parallel()
+
+	a, _ := cadence.NewCharacter("a")
+	b, _ := cadence.NewCharacter("b")
+
+	testAllEncodeAndDecode(t, []encodeTest{
+		{
+			"a",
+			a,
+			`{"type":"Character","value":"a"}`,
+		},
+		{
+			"b",
+			b,
+			`{"type":"Character","value":"b"}`,
+		},
+	}...)
+}
+
 func TestEncodeString(t *testing.T) {
 
 	t.Parallel()

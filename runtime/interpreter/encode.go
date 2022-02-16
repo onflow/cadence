@@ -115,7 +115,7 @@ const (
 	CBORTagTypeValue
 	_ // DO *NOT* REPLACE. Previously used for array values
 	CBORTagStringValue
-	_
+	CBORTagCharacterValue
 	_
 	_
 	_
@@ -247,6 +247,19 @@ func (v NilValue) Encode(e *atree.Encoder) error {
 func (v BoolValue) Encode(e *atree.Encoder) error {
 	// NOTE: when updating, also update BoolValue.ByteSize
 	return e.CBOR.EncodeBool(bool(v))
+}
+
+// Encode encodes the value as a CBOR string
+//
+func (v CharacterValue) Encode(e *atree.Encoder) error {
+	err := e.CBOR.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, CBORTagCharacterValue,
+	})
+	if err != nil {
+		return err
+	}
+	return e.CBOR.EncodeString(string(v))
 }
 
 // Encode encodes the value as a CBOR string

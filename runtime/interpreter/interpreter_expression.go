@@ -56,7 +56,7 @@ func (interpreter *Interpreter) assignmentGetterSetter(expression ast.Expression
 }
 
 // identifierExpressionGetterSetter returns a getter/setter function pair
-// for the target identifier expression, wrapped in a trampoline
+// for the target identifier expression
 //
 func (interpreter *Interpreter) identifierExpressionGetterSetter(identifierExpression *ast.IdentifierExpression) getterSetter {
 	variable := interpreter.findVariable(identifierExpression.Identifier.Identifier)
@@ -355,7 +355,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		resultType := interpreter.Program.Elaboration.BinaryExpressionResultTypes[expression]
 
 		// NOTE: important to convert both any and optional
-		return interpreter.ConvertAndBox(value, rightType, resultType)
+		return ConvertAndBox(value, rightType, resultType)
 	}
 
 	panic(&unsupportedOperation{
@@ -366,8 +366,8 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 }
 
 func (interpreter *Interpreter) testEqual(left, right Value, hasPosition ast.HasPosition) BoolValue {
-	left = interpreter.unbox(left)
-	right = interpreter.unbox(right)
+	left = Unbox(left)
+	right = Unbox(right)
 
 	leftEquatable, ok := left.(EquatableValue)
 	if !ok {
@@ -513,7 +513,14 @@ func (interpreter *Interpreter) VisitFixedPointExpression(expression *ast.FixedP
 }
 
 func (interpreter *Interpreter) VisitStringExpression(expression *ast.StringExpression) ast.Repr {
-	// TODO: meter?
+	stringType := interpreter.Program.Elaboration.StringExpressionType[expression]
+
+	switch stringType {
+	case sema.CharacterType:
+		return NewCharacterValue(expression.Value)
+	}
+
+	// NOTE: already metered in lexer/parser
 	return NewUnmeteredStringValue(expression.Value)
 }
 
@@ -774,6 +781,9 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 				return NilValue{}
 			}
 
+			// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
+			value = BoxOptional(value, expectedType)
+
 			return NewSomeValueNonCopying(value)
 
 		case ast.OperationForceCast:
@@ -785,7 +795,8 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 				})
 			}
 
-			return value
+			// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
+			return BoxOptional(value, expectedType)
 
 		default:
 			panic(errors.NewUnreachableError())
@@ -793,7 +804,8 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 
 	case ast.OperationCast:
 		staticValueType := interpreter.Program.Elaboration.CastingStaticValueTypes[expression]
-		return interpreter.ConvertAndBox(value, staticValueType, expectedType)
+		// The cast may upcast to an optional type, e.g. `1 as Int?`, so box
+		return ConvertAndBox(value, staticValueType, expectedType)
 
 	default:
 		panic(errors.NewUnreachableError())

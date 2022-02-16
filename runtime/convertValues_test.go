@@ -98,10 +98,6 @@ func TestExportValue(t *testing.T) {
 				Identifier: "signatureAlgorithm",
 				Type:       signatureAlgorithmType,
 			},
-			{
-				Identifier: "isValid",
-				Type:       cadence.BoolType{},
-			},
 		},
 	}
 
@@ -115,6 +111,8 @@ func TestExportValue(t *testing.T) {
 			},
 		},
 	}
+
+	a, _ := cadence.NewCharacter("a")
 
 	for _, tt := range []exportTest{
 		{
@@ -235,6 +233,11 @@ func TestExportValue(t *testing.T) {
 			label:    "Int",
 			value:    interpreter.NewIntValueFromInt64(42),
 			expected: cadence.NewInt(42),
+		},
+		{
+			label:    "Character",
+			value:    interpreter.NewCharacterValue("a"),
+			expected: a,
 		},
 		{
 			label:    "Int8",
@@ -368,15 +371,13 @@ func TestExportValue(t *testing.T) {
 						&PublicKey{
 							PublicKey: []byte{1, 2, 3},
 							SignAlgo:  2,
-							IsValid:   true,
-							Validated: true,
 						},
 						func(
 							_ *interpreter.Interpreter,
 							_ func() interpreter.LocationRange,
 							_ *interpreter.CompositeValue,
-						) interpreter.BoolValue {
-							return true
+						) error {
+							return nil
 						},
 					),
 					stdlib.NewHashAlgorithmCase(inter, 1),
@@ -426,7 +427,6 @@ func TestExportValue(t *testing.T) {
 									cadence.UInt8(2),
 								},
 							},
-							cadence.Bool(true),
 						},
 					},
 					cadence.Enum{
@@ -488,6 +488,8 @@ func TestImportValue(t *testing.T) {
 			}
 		})
 	}
+
+	a, _ := cadence.NewCharacter("a")
 
 	for _, tt := range []importTest{
 		{
@@ -612,6 +614,11 @@ func TestImportValue(t *testing.T) {
 			label:    "Int",
 			value:    cadence.NewInt(42),
 			expected: interpreter.NewIntValueFromInt64(42),
+		},
+		{
+			label:    "Character",
+			value:    a,
+			expected: interpreter.NewCharacterValue("a"),
 		},
 		{
 			label:    "Int8",
@@ -3785,19 +3792,18 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 		cadence.NewUInt8(2),
 	})
 
-	t.Run("Test IsValid", func(t *testing.T) {
+	t.Run("Test importing validates PublicKey", func(t *testing.T) {
 		t.Parallel()
 
-		testPublicKeyImport := func(userSetValidity, publicKeyActualValidity bool) {
+		testPublicKeyImport := func(publicKeyActualError error) {
 			t.Run(
-				fmt.Sprintf("UserSet(%v)|Actual(%v)", userSetValidity, publicKeyActualValidity),
+				fmt.Sprintf("Actual(%v)", publicKeyActualError),
 				func(t *testing.T) {
 
 					t.Parallel()
 
 					script := `
-                        pub fun main(key: PublicKey): Bool {
-                            return key.isValid
+                        pub fun main(key: PublicKey) {
                         }
                     `
 
@@ -3812,9 +3818,6 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 									cadence.NewUInt8(0),
 								},
 							).WithType(SignAlgoType),
-
-							// isValid
-							cadence.NewBool(userSetValidity),
 						},
 					).WithType(PublicKeyType)
 
@@ -3828,27 +3831,33 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 							return json.Decode(b)
 						},
 
-						validatePublicKey: func(publicKey *PublicKey) (bool, error) {
+						validatePublicKey: func(publicKey *PublicKey) error {
 							publicKeyValidated = true
-							return publicKeyActualValidity, nil
+							return publicKeyActualError
 						},
 					}
 
-					actual, err := executeScript(t, script, publicKey, runtimeInterface)
-					require.NoError(t, err)
+					_, err := executeScript(t, script, publicKey, runtimeInterface)
 
-					// Check whether 'isValid' field returns the actual validity of
-					// the public key, but not the one set by the user.
+					// runtimeInterface.validatePublicKey() should be called
 					assert.True(t, publicKeyValidated)
-					assert.Equal(t, actual, cadence.NewBool(publicKeyActualValidity))
+
+					// Invalid PublicKey errors but valid PublicKey does not.
+					if publicKeyActualError == nil {
+						require.NoError(t, err)
+					} else {
+						assert.Error(t, err)
+						var invalidEntryPointArgumentError *InvalidEntryPointArgumentError
+						assert.ErrorAs(t, err, &invalidEntryPointArgumentError)
+						assert.ErrorAs(t, err, &interpreter.InvalidPublicKeyError{})
+						assert.ErrorAs(t, err, &publicKeyActualError)
+					}
 				},
 			)
 		}
 
-		testPublicKeyImport(true, true)
-		testPublicKeyImport(true, false)
-		testPublicKeyImport(false, true)
-		testPublicKeyImport(false, false)
+		testPublicKeyImport(nil)
+		testPublicKeyImport(&fakeError{})
 	})
 
 	t.Run("Test Verify", func(t *testing.T) {
@@ -3876,9 +3885,6 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 						cadence.NewUInt8(0),
 					},
 				).WithType(SignAlgoType),
-
-				// isValid
-				cadence.NewBool(true),
 			},
 		).WithType(PublicKeyType)
 
@@ -3903,6 +3909,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 				return true, nil
 			},
 		}
+		addPublicKeyValidation(runtimeInterface, nil)
 
 		actual, err := executeScript(t, script, publicKey, runtimeInterface)
 		require.NoError(t, err)
@@ -3927,8 +3934,6 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 						cadence.NewUInt8(0),
 					},
 				).WithType(SignAlgoType),
-
-				cadence.NewBool(true),
 			},
 		).WithType(PublicKeyType)
 
@@ -3967,8 +3972,6 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 						cadence.NewUInt8(0),
 					},
 				).WithType(SignAlgoType),
-
-				cadence.NewBool(true),
 			},
 		).WithType(PublicKeyType)
 
@@ -3999,8 +4002,6 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 				publicKeyBytes,
 
 				// Invalid value for 'signatureAlgorithm' field
-				cadence.NewBool(true),
-
 				cadence.NewBool(true),
 			},
 		).WithType(PublicKeyType)
@@ -4037,8 +4038,6 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 						cadence.String("hello"),
 					},
 				).WithType(SignAlgoType),
-
-				cadence.NewBool(true),
 			},
 		).WithType(PublicKeyType)
 
@@ -4105,13 +4104,6 @@ func TestRuntimePublicKeyImport(t *testing.T) {
                             }
                         },
                         {
-                            "name":"isValid",
-                            "value":{
-                            "type":"Bool",
-                            "value":true
-                            }
-                        },
-                        {
                             "name":"extraField",
                             "value":{
                             "type":"Bool",
@@ -4154,8 +4146,8 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 	t.Run("Missing raw public key", func(t *testing.T) {
 		script := `
-            pub fun main(key: PublicKey): Bool {
-                return key.isValid
+            pub fun main(key: PublicKey): PublicKey {
+                return key
             }
         `
 
@@ -4181,13 +4173,6 @@ func TestRuntimePublicKeyImport(t *testing.T) {
                                         }
                                     ]
                                 }
-                            }
-                        },
-                        {
-                            "name":"isValid",
-                            "value":{
-                            "type":"Bool",
-                            "value":true
                             }
                         }
                     ]
@@ -4223,10 +4208,10 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 		require.ErrorAs(t, err, &argErr)
 	})
 
-	t.Run("Missing isValid", func(t *testing.T) {
+	t.Run("Missing publicKey", func(t *testing.T) {
 		script := `
-            pub fun main(key: PublicKey): Bool {
-                return key.isValid
+            pub fun main(key: PublicKey): [UInt8] {
+                return key.publicKey
             }
         `
 
@@ -4236,22 +4221,6 @@ func TestRuntimePublicKeyImport(t *testing.T) {
                 "value":{
                     "id":"PublicKey",
                     "fields":[
-                        {
-                            "name":"publicKey",
-                            "value":{
-                                "type":"Array",
-                                "value":[
-                                    {
-                                        "type":"UInt8",
-                                        "value":"1"
-                                    },
-                                    {
-                                        "type":"UInt8",
-                                        "value":"2"
-                                    }
-                                ]
-                            }
-                        },
                         {
                             "name":"signatureAlgorithm",
                             "value":{
@@ -4286,9 +4255,9 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return json.Decode(b)
 			},
-			validatePublicKey: func(publicKey *PublicKey) (bool, error) {
+			validatePublicKey: func(publicKey *PublicKey) error {
 				publicKeyValidated = true
-				return true, nil
+				return nil
 			},
 		}
 
@@ -4305,10 +4274,82 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			},
 		)
 
-		require.NoError(t, err)
-		assert.True(t, publicKeyValidated)
-		assert.Equal(t, value, cadence.NewBool(true))
+		assert.Contains(t, err.Error(),
+			"invalid argument at index 0: cannot import value of type 'PublicKey'. missing field 'publicKey'")
+		assert.False(t, publicKeyValidated)
+		assert.Nil(t, value)
 	})
+
+	t.Run("Missing signatureAlgorithm", func(t *testing.T) {
+		script := `
+            pub fun main(key: PublicKey): SignatureAlgorithm {
+                return key.signatureAlgorithm
+            }
+        `
+
+		jsonCdc := `
+            {
+                "type":"Struct",
+                "value":{
+                    "id":"PublicKey",
+                    "fields":[
+                        {
+                            "name":"publicKey",
+                            "value":{
+                                "type":"Array",
+                                "value":[
+                                    {
+                                        "type":"UInt8",
+                                        "value":"1"
+                                    },
+                                    {
+                                        "type":"UInt8",
+                                        "value":"2"
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        `
+
+		rt := newTestInterpreterRuntime()
+
+		publicKeyValidated := false
+
+		storage := newTestLedger(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(b)
+			},
+			validatePublicKey: func(publicKey *PublicKey) error {
+				publicKeyValidated = true
+				return nil
+			},
+		}
+
+		value, err := rt.ExecuteScript(
+			Script{
+				Source: []byte(script),
+				Arguments: [][]byte{
+					[]byte(jsonCdc),
+				},
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  TestLocation,
+			},
+		)
+
+		assert.Contains(t, err.Error(),
+			"invalid argument at index 0: cannot import value of type 'PublicKey'. missing field 'signatureAlgorithm'")
+		assert.False(t, publicKeyValidated)
+		assert.Nil(t, value)
+	})
+
 }
 
 func TestRuntimeImportExportComplex(t *testing.T) {

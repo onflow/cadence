@@ -212,6 +212,23 @@ func (checker *Checker) visitIndexExpressionAssignment(
 
 	elementType = checker.visitIndexExpression(target, true)
 
+	targetExpression := target.TargetExpression
+	switch targetExpression := targetExpression.(type) {
+	case *ast.MemberExpression:
+		// calls to this method are cached, so this performs no computation
+		_, member, _ := checker.visitMember(targetExpression)
+		if !checker.isMutatableMember(member) {
+			checker.report(
+				&ExternalMutationError{
+					Name:            member.Identifier.Identifier,
+					DeclarationKind: member.DeclarationKind,
+					Range:           ast.NewRangeFromPositioned(targetExpression),
+					ContainerType:   member.ContainerType,
+				},
+			)
+		}
+	}
+
 	if elementType == nil {
 		return InvalidType
 	}

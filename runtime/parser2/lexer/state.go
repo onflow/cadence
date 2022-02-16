@@ -39,7 +39,6 @@ func rootState(l *lexer) stateFn {
 		r := l.next()
 		switch r {
 		case EOF:
-			l.emitType(TokenEOF)
 			return nil
 		case '+':
 			l.emitType(TokenPlus)
@@ -319,7 +318,6 @@ func blockCommentState(nesting int) stateFn {
 		r := l.next()
 		switch r {
 		case EOF:
-			l.emitType(TokenEOF)
 			return nil
 		case '/':
 			beforeSlashOffset := l.prevEndOffset
