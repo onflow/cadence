@@ -1377,6 +1377,13 @@ func TestGetHashInput(t *testing.T) {
 				[]byte(strings.Repeat("a", 32))...,
 			),
 		},
+		"Character": {
+			value: NewCharacterValue("ᄀᄀᄀ각ᆨᆨ"),
+			expected: []byte{
+				byte(HashInputTypeCharacter),
+				0xe1, 0x84, 0x80, 0xe1, 0x84, 0x80, 0xe1, 0x84, 0x80, 0xea, 0xb0, 0x81, 0xe1, 0x86, 0xa8, 0xe1, 0x86, 0xa8,
+			},
+		},
 		"Address": {
 			value:    NewAddressValue(common.Address{0, 0, 0, 0, 0, 0, 0, 1}),
 			expected: []byte{byte(HashInputTypeAddress), 0, 0, 0, 0, 0, 0, 0, 1},
