@@ -45,6 +45,7 @@ func newHashInputProvider(interpreter *Interpreter, getLocationRange func() Loca
 //
 // Only remove types by:
 // - replace existing types with a placeholder `_`
+//   and a comment indicating that this placeholder cannot be used for a new type
 //
 // DO *NOT* REPLACE EXISTING TYPES!
 // DO *NOT* ADD NEW TYPES IN BETWEEN!
