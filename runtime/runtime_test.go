@@ -171,7 +171,10 @@ type testRuntimeInterface struct {
 	getStorageCapacity         func(_ Address) (uint64, error)
 	programs                   map[common.LocationID]*interpreter.Program
 	implementationDebugLog     func(message string) error
-	validatePublicKey          func(publicKey *PublicKey) (bool, error)
+	validatePublicKey          func(publicKey *PublicKey) error
+	bLSVerifyPOP               func(pk *PublicKey, s []byte) (bool, error)
+	blsAggregateSignatures     func(sigs [][]byte) ([]byte, error)
+	blsAggregatePublicKeys     func(keys []*PublicKey) (*PublicKey, error)
 	getAccountContractNames    func(address Address) ([]string, error)
 }
 
@@ -415,12 +418,36 @@ func (i *testRuntimeInterface) ImplementationDebugLog(message string) error {
 	return i.implementationDebugLog(message)
 }
 
-func (i *testRuntimeInterface) ValidatePublicKey(key *PublicKey) (bool, error) {
+func (i *testRuntimeInterface) ValidatePublicKey(key *PublicKey) error {
 	if i.validatePublicKey == nil {
-		return false, nil
+		return errors.New("mock defaults to public key validation failure")
 	}
 
 	return i.validatePublicKey(key)
+}
+
+func (i *testRuntimeInterface) BLSVerifyPOP(key *PublicKey, s []byte) (bool, error) {
+	if i.bLSVerifyPOP == nil {
+		return false, nil
+	}
+
+	return i.bLSVerifyPOP(key, s)
+}
+
+func (i *testRuntimeInterface) BLSAggregateSignatures(sigs [][]byte) ([]byte, error) {
+	if i.blsAggregateSignatures == nil {
+		return []byte{}, nil
+	}
+
+	return i.blsAggregateSignatures(sigs)
+}
+
+func (i *testRuntimeInterface) BLSAggregatePublicKeys(keys []*PublicKey) (*PublicKey, error) {
+	if i.blsAggregatePublicKeys == nil {
+		return nil, nil
+	}
+
+	return i.blsAggregatePublicKeys(keys)
 }
 
 func (i *testRuntimeInterface) GetAccountContractNames(address Address) ([]string, error) {

@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -181,8 +182,8 @@ var CreatePublicKeyFunction = NewStandardLibraryFunction(
 
 // BuiltinValues
 
-func BuiltinValues() StandardLibraryValues {
-	signatureAlgorithmValue := StandardLibraryValue{
+var BuiltinValues = StandardLibraryValues{
+	{
 		Name: sema.SignatureAlgorithmTypeName,
 		Type: cryptoAlgorithmEnumConstructorType(
 			sema.SignatureAlgorithmType,
@@ -198,9 +199,8 @@ func BuiltinValues() StandardLibraryValues {
 			)
 		},
 		Kind: common.DeclarationKindEnum,
-	}
-
-	hashAlgorithmValue := StandardLibraryValue{
+	},
+	{
 		Name: sema.HashAlgorithmTypeName,
 		Type: cryptoAlgorithmEnumConstructorType(
 			sema.HashAlgorithmType,
@@ -216,12 +216,73 @@ func BuiltinValues() StandardLibraryValues {
 			)
 		},
 		Kind: common.DeclarationKindEnum,
-	}
+	},
+	{
+		Name: "BLS",
+		Type: blsContractType,
+		ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
+			return interpreter.NewSimpleCompositeValue(
+				blsContractType.ID(),
+				blsContractStaticType,
+				blsContractDynamicType,
+				nil,
+				map[string]interpreter.Value{
+					blsAggregatePublicKeysFunctionName: interpreter.NewHostFunctionValue(
+						func(invocation interpreter.Invocation) interpreter.Value {
+							publicKeys, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
+							if !ok {
+								panic(errors.NewUnreachableError())
+							}
 
-	return StandardLibraryValues{
-		signatureAlgorithmValue,
-		hashAlgorithmValue,
-	}
+							inter := invocation.Interpreter
+							getLocationRange := invocation.GetLocationRange
+
+							inter.ExpectType(
+								publicKeys,
+								sema.PublicKeyArrayType,
+								getLocationRange,
+							)
+
+							return invocation.Interpreter.BLSAggregatePublicKeysHandler(
+								inter,
+								getLocationRange,
+								publicKeys,
+							)
+						},
+						blsAggregatePublicKeysFunctionType,
+					),
+					blsAggregateSignaturesFunctionName: interpreter.NewHostFunctionValue(
+						func(invocation interpreter.Invocation) interpreter.Value {
+							signatures, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
+							if !ok {
+								panic(errors.NewUnreachableError())
+							}
+
+							inter := invocation.Interpreter
+							getLocationRange := invocation.GetLocationRange
+
+							inter.ExpectType(
+								signatures,
+								sema.ByteArrayArrayType,
+								getLocationRange,
+							)
+
+							return inter.BLSAggregateSignaturesHandler(
+								inter,
+								getLocationRange,
+								signatures,
+							)
+						},
+						blsAggregateSignaturesFunctionType,
+					),
+				},
+				nil,
+				nil,
+				nil,
+			)
+		},
+		Kind: common.DeclarationKindContract,
+	},
 }
 
 func NewSignatureAlgorithmCase(inter *interpreter.Interpreter, rawValue uint8) *interpreter.CompositeValue {

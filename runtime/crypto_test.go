@@ -92,6 +92,7 @@ func TestRuntimeCrypto_verify(t *testing.T) {
 			return true, nil
 		},
 	}
+	addPublicKeyValidation(runtimeInterface, nil)
 
 	result, err := runtime.ExecuteScript(
 		Script{
@@ -454,4 +455,196 @@ func TestRuntimeHashAlgorithmImport(t *testing.T) {
 	for _, algo := range sema.SignatureAlgorithms {
 		testHashAlgorithm(algo)
 	}
+}
+
+func TestBLSVerifyPoP(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := newTestInterpreterRuntime()
+
+	script := []byte(`
+
+      pub fun main(): Bool {
+          let publicKey = PublicKey(
+              publicKey: "0102".decodeHex(),
+              signatureAlgorithm: SignatureAlgorithm.BLS_BLS12_381
+          )
+
+          return publicKey.verifyPoP([1, 2, 3, 4, 5])
+      }
+    `)
+
+	called := false
+
+	storage := newTestLedger(nil, nil)
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: storage,
+		validatePublicKey: func(
+			pk *PublicKey,
+		) error {
+			return nil
+		},
+		bLSVerifyPOP: func(
+			pk *PublicKey,
+			proof []byte,
+		) (bool, error) {
+			assert.Equal(t, pk.PublicKey, []byte{1, 2})
+			called = true
+			return true, nil
+		},
+	}
+	addPublicKeyValidation(runtimeInterface, nil)
+
+	result, err := runtime.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  utils.TestLocation,
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		cadence.NewBool(true),
+		result,
+	)
+
+	assert.True(t, called)
+}
+
+func TestBLSAggregateSignatures(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := newTestInterpreterRuntime()
+
+	script := []byte(`
+
+      pub fun main(): [UInt8] {
+        return BLS.aggregateSignatures([
+              [1, 1, 1, 1, 1],
+              [2, 2, 2, 2, 2],
+              [3, 3, 3, 3, 3],
+              [4, 4, 4, 4, 4],
+              [5, 5, 5, 5, 5]
+            ])!
+      }
+    `)
+
+	called := false
+
+	storage := newTestLedger(nil, nil)
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: storage,
+		blsAggregateSignatures: func(
+			sigs [][]byte,
+		) ([]byte, error) {
+			assert.Equal(t, len(sigs), 5)
+			ret := make([]byte, 0, len(sigs[0]))
+			for i, sig := range sigs {
+				ret = append(ret, sig[i])
+			}
+			called = true
+			return ret, nil
+		},
+	}
+
+	result, err := runtime.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  utils.TestLocation,
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		cadence.NewArray([]cadence.Value{
+			cadence.UInt8(1),
+			cadence.UInt8(2),
+			cadence.UInt8(3),
+			cadence.UInt8(4),
+			cadence.UInt8(5),
+		}),
+		result,
+	)
+
+	assert.True(t, called)
+}
+
+func TestBLSAggregatePublicKeys(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := newTestInterpreterRuntime()
+
+	script := []byte(`
+
+      pub fun main(): PublicKey? {
+        let k1 = PublicKey(
+            publicKey: "0102".decodeHex(),
+            signatureAlgorithm: SignatureAlgorithm.BLS_BLS12_381
+        )
+        let k2 = PublicKey(
+            publicKey: "0102".decodeHex(),
+            signatureAlgorithm: SignatureAlgorithm.BLS_BLS12_381
+        )
+        return BLS.aggregatePublicKeys([k1, k2])
+      }
+    `)
+
+	called := false
+
+	storage := newTestLedger(nil, nil)
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: storage,
+		validatePublicKey: func(
+			pk *PublicKey,
+		) error {
+			return nil
+		},
+		blsAggregatePublicKeys: func(
+			keys []*PublicKey,
+		) (*PublicKey, error) {
+			assert.Equal(t, len(keys), 2)
+			ret := make([]byte, 0, len(keys))
+			for _, key := range keys {
+				ret = append(ret, key.PublicKey...)
+			}
+			called = true
+			return &PublicKey{PublicKey: ret, SignAlgo: SignatureAlgorithmBLS_BLS12_381}, nil
+		},
+	}
+	addPublicKeyValidation(runtimeInterface, nil)
+
+	result, err := runtime.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  utils.TestLocation,
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		cadence.NewArray([]cadence.Value{
+			cadence.UInt8(1),
+			cadence.UInt8(2),
+			cadence.UInt8(1),
+			cadence.UInt8(2),
+		}),
+		result.(cadence.Optional).Value.(cadence.Struct).Fields[0],
+	)
+
+	assert.True(t, called)
 }

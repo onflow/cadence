@@ -238,7 +238,7 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val 
 		script.Source,
 		context,
 		functions,
-		stdlib.BuiltinValues(),
+		stdlib.BuiltinValues,
 		checkerOptions,
 		true,
 		importResolutionResults{},
@@ -283,7 +283,7 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val 
 		context,
 		storage,
 		functions,
-		stdlib.BuiltinValues(),
+		stdlib.BuiltinValues,
 		interpreterOptions,
 		checkerOptions,
 		interpret,
@@ -484,7 +484,7 @@ func (r *interpreterRuntime) InvokeContractFunction(
 		context,
 		storage,
 		functions,
-		stdlib.BuiltinValues(),
+		stdlib.BuiltinValues,
 		interpreterOptions,
 		checkerOptions,
 		nil,
@@ -616,7 +616,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 		script.Source,
 		context,
 		functions,
-		stdlib.BuiltinValues(),
+		stdlib.BuiltinValues,
 		checkerOptions,
 		true,
 		importResolutionResults{},
@@ -690,7 +690,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 		context,
 		storage,
 		functions,
-		stdlib.BuiltinValues(),
+		stdlib.BuiltinValues,
 		interpreterOptions,
 		checkerOptions,
 		r.transactionExecutionFunction(
@@ -729,6 +729,37 @@ func wrapPanic(f func()) {
 		}
 	}()
 	f()
+}
+
+// Executes `f`. On panic, the panic is returned as an error.
+// Wraps any non-`error` panics so panic is never propagated.
+func panicToError(f func()) (returnedError error) {
+	defer func() {
+		if r := recover(); r != nil {
+			var ok bool
+			err, ok := r.(error)
+			if ok {
+				returnedError = err
+			} else {
+				returnedError = fmt.Errorf("%s", r)
+			}
+		}
+	}()
+	f()
+	return nil
+}
+
+// Executes `f`. On panic, the panic is returned as an error.
+// Exception: panics when error is `goRuntime.Error` or `ExternalError`.
+func userPanicToError(f func()) error {
+	err := panicToError(f)
+
+	switch err := err.(type) {
+	case goRuntime.Error, interpreter.ExternalError:
+		panic(err)
+	default:
+		return err
+	}
 }
 
 func (r *interpreterRuntime) transactionExecutionFunction(
@@ -807,7 +838,19 @@ func validateArgumentParams(
 			}
 		}
 
-		arg, err := importValue(inter, value, parameterType)
+		var arg interpreter.Value
+		panicError := userPanicToError(func() {
+			// if importing an invalid public key, this call panics
+			arg, err = importValue(inter, value, parameterType)
+		})
+
+		if panicError != nil {
+			return nil, &InvalidEntryPointArgumentError{
+				Index: i,
+				Err:   panicError,
+			}
+		}
+
 		if err != nil {
 			return nil, &InvalidEntryPointArgumentError{
 				Index: i,
@@ -918,7 +961,7 @@ func (r *interpreterRuntime) ParseAndCheckProgram(
 		code,
 		context,
 		functions,
-		stdlib.BuiltinValues(),
+		stdlib.BuiltinValues,
 		checkerOptions,
 		true,
 		importResolutionResults{},
@@ -1113,6 +1156,19 @@ func (r *interpreterRuntime) newInterpreter(
 		preDeclaredValues = append(preDeclaredValues, predeclaredValue)
 	}
 
+	publicKeyValidator := func(
+		inter *interpreter.Interpreter,
+		getLocationRange func() interpreter.LocationRange,
+		publicKey *interpreter.CompositeValue,
+	) error {
+		return validatePublicKey(
+			inter,
+			getLocationRange,
+			publicKey,
+			context.Interface,
+		)
+	}
+
 	defaultOptions := []interpreter.Option{
 		interpreter.WithStorage(storage),
 		interpreter.WithPredeclaredValues(preDeclaredValues),
@@ -1173,16 +1229,43 @@ func (r *interpreterRuntime) newInterpreter(
 				)
 			},
 		),
-		interpreter.WithPublicKeyValidationHandler(
+		interpreter.WithPublicKeyValidationHandler(publicKeyValidator),
+		interpreter.WithBLSCryptoFunctions(
 			func(
 				inter *interpreter.Interpreter,
 				getLocationRange func() interpreter.LocationRange,
-				publicKey *interpreter.CompositeValue,
+				publicKeyValue interpreter.MemberAccessibleValue,
+				signature *interpreter.ArrayValue,
 			) interpreter.BoolValue {
-				return validatePublicKey(
+				return blsVerifyPoP(
 					inter,
 					getLocationRange,
-					publicKey,
+					publicKeyValue,
+					signature,
+					context.Interface,
+				)
+			},
+			func(
+				inter *interpreter.Interpreter,
+				getLocationRange func() interpreter.LocationRange,
+				signatures *interpreter.ArrayValue,
+			) interpreter.OptionalValue {
+				return blsAggregateSignatures(
+					inter,
+					context.Interface,
+					signatures,
+				)
+			},
+			func(
+				inter *interpreter.Interpreter,
+				getLocationRange func() interpreter.LocationRange,
+				publicKeys *interpreter.ArrayValue,
+			) interpreter.OptionalValue {
+				return blsAggregatePublicKeys(
+					inter,
+					getLocationRange,
+					publicKeys,
+					publicKeyValidator,
 					context.Interface,
 				)
 			},
@@ -2328,7 +2411,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				code,
 				context,
 				functions,
-				stdlib.BuiltinValues(),
+				stdlib.BuiltinValues,
 				checkerOptions,
 				storeProgram,
 				importResolutionResults{},
@@ -2538,7 +2621,7 @@ func (r *interpreterRuntime) updateAccountContractCode(
 	if createContract {
 
 		functions := r.standardLibraryFunctions(context, storage, interpreterOptions, checkerOptions)
-		values := stdlib.BuiltinValues()
+		values := stdlib.BuiltinValues
 
 		contractValue, err = r.instantiateContract(
 			program,
@@ -3001,7 +3084,7 @@ func (r *interpreterRuntime) newAccountKeysGetFunction(
 					inter,
 					invocation.GetLocationRange,
 					accountKey,
-					inter.PublicKeyValidationHandler,
+					DoNotValidatePublicKey, // key from FVM has already been validated
 				),
 			)
 		},
@@ -3054,7 +3137,7 @@ func (r *interpreterRuntime) newAccountKeysRevokeFunction(
 					inter,
 					invocation.GetLocationRange,
 					accountKey,
-					inter.PublicKeyValidationHandler,
+					DoNotValidatePublicKey, // key from FVM has already been validated
 				),
 			)
 		},
@@ -3136,19 +3219,9 @@ func NewPublicKeyFromValue(
 		)
 	}
 
-	// `valid` and `validated` fields
-	var valid, validated bool
-	validField := publicKey.GetMember(inter, getLocationRange, sema.PublicKeyIsValidField)
-	validated = validField != nil
-	if validated {
-		valid = bool(validField.(interpreter.BoolValue))
-	}
-
 	return &PublicKey{
 		PublicKey: byteArray,
 		SignAlgo:  SignatureAlgorithm(signAlgoRawValue.ToInt()),
-		IsValid:   valid,
-		Validated: validated,
 	}, nil
 }
 
@@ -3173,12 +3246,7 @@ func NewPublicKeyValue(
 			inter *interpreter.Interpreter,
 			getLocationRange func() interpreter.LocationRange,
 			publicKeyValue *interpreter.CompositeValue,
-		) interpreter.BoolValue {
-			// If the public key is already validated, avoid re-validating, and return the cached result.
-			if publicKey.Validated {
-				return interpreter.BoolValue(publicKey.IsValid)
-			}
-
+		) error {
 			return validatePublicKey(inter, getLocationRange, publicKeyValue)
 		},
 	)
@@ -3226,23 +3294,137 @@ func validatePublicKey(
 	getLocationRange func() interpreter.LocationRange,
 	publicKeyValue *interpreter.CompositeValue,
 	runtimeInterface Interface,
+) error {
+	publicKey, err := NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
+	if err != nil {
+		return err
+	}
+
+	wrapPanic(func() {
+		err = runtimeInterface.ValidatePublicKey(publicKey)
+	})
+
+	return err
+}
+
+func blsVerifyPoP(
+	inter *interpreter.Interpreter,
+	getLocationRange func() interpreter.LocationRange,
+	publicKeyValue interpreter.MemberAccessibleValue,
+	signatureValue *interpreter.ArrayValue,
+	runtimeInterface Interface,
 ) interpreter.BoolValue {
 
 	publicKey, err := NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
 	if err != nil {
-		return false
+		panic(err)
+	}
+
+	signature, err := interpreter.ByteArrayValueToByteSlice(signatureValue)
+	if err != nil {
+		panic(err)
 	}
 
 	var valid bool
 	wrapPanic(func() {
-		valid, err = runtimeInterface.ValidatePublicKey(publicKey)
+		valid, err = runtimeInterface.BLSVerifyPOP(publicKey, signature)
 	})
-
 	if err != nil {
 		panic(err)
 	}
 
 	return interpreter.BoolValue(valid)
+}
+
+func blsAggregateSignatures(
+	inter *interpreter.Interpreter,
+	runtimeInterface Interface,
+	signaturesValue *interpreter.ArrayValue,
+) interpreter.OptionalValue {
+
+	bytesArray := make([][]byte, 0, signaturesValue.Count())
+	signaturesValue.Iterate(func(element interpreter.Value) (resume bool) {
+		signature, ok := element.(*interpreter.ArrayValue)
+		if !ok {
+			panic(runtimeErrors.NewUnreachableError())
+		}
+
+		bytes, err := interpreter.ByteArrayValueToByteSlice(signature)
+		if err != nil {
+			panic(err)
+		}
+
+		bytesArray = append(bytesArray, bytes)
+
+		// Continue iteration
+		return true
+	})
+
+	var err error
+	var aggregatedSignature []byte
+	wrapPanic(func() {
+		aggregatedSignature, err = runtimeInterface.BLSAggregateSignatures(bytesArray)
+	})
+
+	// If the crypto layer produces an error, we have invalid input, return nil
+	if err != nil {
+		return interpreter.NilValue{}
+	}
+
+	aggregatedSignatureValue := interpreter.ByteSliceToByteArrayValue(inter, aggregatedSignature)
+
+	return interpreter.NewSomeValueNonCopying(
+		aggregatedSignatureValue,
+	)
+}
+
+func blsAggregatePublicKeys(
+	inter *interpreter.Interpreter,
+	getLocationRange func() interpreter.LocationRange,
+	publicKeysValue *interpreter.ArrayValue,
+	validator interpreter.PublicKeyValidationHandlerFunc,
+	runtimeInterface Interface,
+) interpreter.OptionalValue {
+
+	publicKeys := make([]*PublicKey, 0, publicKeysValue.Count())
+	publicKeysValue.Iterate(func(element interpreter.Value) (resume bool) {
+		publicKeyValue, ok := element.(*interpreter.CompositeValue)
+		if !ok {
+			panic(runtimeErrors.NewUnreachableError())
+		}
+
+		publicKey, err := NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
+		if err != nil {
+			panic(err)
+		}
+
+		publicKeys = append(publicKeys, publicKey)
+
+		// Continue iteration
+		return true
+	})
+
+	var err error
+	var aggregatedPublicKey *PublicKey
+	wrapPanic(func() {
+		aggregatedPublicKey, err = runtimeInterface.BLSAggregatePublicKeys(publicKeys)
+	})
+
+	// If the crypto layer produces an error, we have invalid input, return nil
+	if err != nil {
+		return interpreter.NilValue{}
+	}
+
+	aggregatedPublicKeyValue := NewPublicKeyValue(
+		inter,
+		getLocationRange,
+		aggregatedPublicKey,
+		validator,
+	)
+
+	return interpreter.NewSomeValueNonCopying(
+		aggregatedPublicKeyValue,
+	)
 }
 
 func verifySignature(
@@ -3324,4 +3506,15 @@ func hash(
 	}
 
 	return interpreter.ByteSliceToByteArrayValue(inter, result)
+}
+
+// DoNotValidatePublicKey conforms to the method signature for PublicKeyValidationHandlerFunc.
+// It disregards its input and returns `nil` indicating that the public key is valid.
+// It's used when handling public keys from the FVM, where they're already validated.
+func DoNotValidatePublicKey(
+	_ *interpreter.Interpreter,
+	_ func() interpreter.LocationRange,
+	_ *interpreter.CompositeValue,
+) error {
+	return nil
 }

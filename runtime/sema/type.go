@@ -5919,8 +5919,8 @@ var AccountKeyType = func() *CompositeType {
 const PublicKeyTypeName = "PublicKey"
 const PublicKeyPublicKeyField = "publicKey"
 const PublicKeySignAlgoField = "signatureAlgorithm"
-const PublicKeyIsValidField = "isValid"
 const PublicKeyVerifyFunction = "verify"
+const PublicKeyVerifyPoPFunction = "verifyPoP"
 
 const publicKeyKeyFieldDocString = `
 The public key
@@ -5930,13 +5930,15 @@ const publicKeySignAlgoFieldDocString = `
 The signature algorithm to be used with the key
 `
 
-const publicKeyIsValidFieldDocString = `
-Flag indicating whether the key is valid
-`
-
 const publicKeyVerifyFunctionDocString = `
 Verifies a signature. Checks whether the signature was produced by signing
 the given tag and data, using this public key and the given hash algorithm
+`
+
+const publicKeyVerifyPoPFunctionDocString = `
+Verifies the proof of possession of the private key. This function is 
+only implemented if the signature algorithm of the public key is BLS, 
+it returns false if called with any other signature algorithm.
 `
 
 // PublicKeyType represents the public key associated with an account key.
@@ -5962,17 +5964,17 @@ var PublicKeyType = func() *CompositeType {
 			SignatureAlgorithmType,
 			publicKeySignAlgoFieldDocString,
 		),
-		NewPublicConstantFieldMember(
-			publicKeyType,
-			PublicKeyIsValidField,
-			BoolType,
-			publicKeyIsValidFieldDocString,
-		),
 		NewPublicFunctionMember(
 			publicKeyType,
 			PublicKeyVerifyFunction,
 			PublicKeyVerifyFunctionType,
 			publicKeyVerifyFunctionDocString,
+		),
+		NewPublicFunctionMember(
+			publicKeyType,
+			PublicKeyVerifyPoPFunction,
+			PublicKeyVerifyPoPFunctionType,
+			publicKeyVerifyPoPFunctionDocString,
 		),
 	}
 
@@ -5981,6 +5983,10 @@ var PublicKeyType = func() *CompositeType {
 
 	return publicKeyType
 }()
+
+var PublicKeyArrayType = &VariableSizedType{
+	Type: PublicKeyType,
+}
 
 var PublicKeyVerifyFunctionType = &FunctionType{
 	TypeParameters: []*TypeParameter{},
@@ -6004,6 +6010,20 @@ var PublicKeyVerifyFunctionType = &FunctionType{
 		{
 			Identifier:     "hashAlgorithm",
 			TypeAnnotation: NewTypeAnnotation(HashAlgorithmType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(BoolType),
+}
+
+var PublicKeyVerifyPoPFunctionType = &FunctionType{
+	TypeParameters: []*TypeParameter{},
+	Parameters: []*Parameter{
+		{
+			Label:      ArgumentLabelNotRequired,
+			Identifier: "proof",
+			TypeAnnotation: NewTypeAnnotation(
+				ByteArrayType,
+			),
 		},
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(BoolType),
