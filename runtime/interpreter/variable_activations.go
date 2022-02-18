@@ -112,7 +112,16 @@ func (a *VariableActivation) Set(name string, value *Variable) {
 // at the top of the stack (see function `Current`).
 //
 type VariableActivations struct {
-	activations []*VariableActivation
+	activations       []*VariableActivation
+
+	// TODO: Maybe move this to each activation?
+	resourceVariables map[ResourceKindedValue]*Variable
+}
+
+func NewVariableActivations() *VariableActivations {
+	return &VariableActivations{
+		resourceVariables: make(map[ResourceKindedValue]*Variable),
+	}
 }
 
 // Current returns the current / most nested activation,
@@ -206,4 +215,22 @@ func (a *VariableActivations) CurrentOrNew() *VariableActivation {
 //
 func (a *VariableActivations) Depth() int {
 	return len(a.activations)
+}
+
+func (a *VariableActivations) CheckResourceDuplication(value ResourceKindedValue, variable *Variable) {
+	if existingVar, _ := a.resourceVariables[value]; existingVar != variable {
+		panic("Duplicate resource!")
+	}
+}
+
+func (a *VariableActivations) AddResourceVar(value ResourceKindedValue, variable *Variable) {
+	if _, exists := a.resourceVariables[value]; exists {
+		panic("Duplicate resource!")
+	}
+
+	a.resourceVariables[value] = variable
+}
+
+func (a *VariableActivations) InvalidateResourceVar(value ResourceKindedValue) {
+	delete(a.resourceVariables, value)
 }

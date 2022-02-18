@@ -642,7 +642,7 @@ func NewInterpreter(program *Program, location common.Location, options ...Optio
 	interpreter := &Interpreter{
 		Program:                    program,
 		Location:                   location,
-		activations:                &VariableActivations{},
+		activations:                NewVariableActivations(),
 		Globals:                    map[string]*Variable{},
 		effectivePredeclaredValues: map[string]ValueDeclaration{},
 	}
@@ -1145,11 +1145,19 @@ func (interpreter *Interpreter) VisitProgram(program *ast.Program) ast.Repr {
 		declaration := declaration
 
 		identifier := declaration.Identifier.Identifier
-		variable := NewVariableWithGetter(func() Value {
+
+		var variable *Variable
+
+		variable = NewVariableWithGetter(func() Value {
 			var result Value
 			interpreter.visitVariableDeclaration(declaration, func(_ string, value Value) {
 				result = value
 			})
+
+			// Global variables are lazily loaded. Therefore, start resource tracking also
+			// lazily when the resource is used for the first time.
+			// This is needed to support forward referencing.
+			interpreter.startResourceTracking(result, variable, identifier)
 			return result
 		})
 		interpreter.setVariable(identifier, variable)
@@ -1350,6 +1358,7 @@ func (interpreter *Interpreter) declareVariable(identifier string, value Value) 
 	// NOTE: semantic analysis already checked possible invalid redeclaration
 	variable := NewVariableWithValue(value)
 	interpreter.setVariable(identifier, variable)
+	interpreter.startResourceTracking(value, variable, identifier)
 	return variable
 }
 
@@ -4456,4 +4465,49 @@ func (interpreter *Interpreter) updateReferencedResource(
 		interpreter.referencedResourceKindedValues[newStorageID] = values
 		interpreter.referencedResourceKindedValues[currentStorageID] = nil
 	}
+}
+
+func (interpreter *Interpreter) startResourceTracking(value Value, variable *Variable, identifier string) {
+	if value == nil || !value.IsResourceKinded(interpreter) {
+		return
+	}
+
+	if identifier == sema.SelfIdentifier {
+		return
+	}
+
+	resourceKindedValue, ok := value.(ResourceKindedValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+	interpreter.activations.AddResourceVar(resourceKindedValue, variable)
+}
+
+func (interpreter *Interpreter) checkResourceDuplication(value Value, variable *Variable, identifier string) {
+	if value == nil || !value.IsResourceKinded(interpreter) {
+		return
+	}
+
+	if identifier == sema.SelfIdentifier {
+		return
+	}
+
+	resourceKindedValue, ok := value.(ResourceKindedValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+	interpreter.activations.CheckResourceDuplication(resourceKindedValue, variable)
+}
+
+func (interpreter *Interpreter) invalidateResource(value Value) {
+	if value == nil || !value.IsResourceKinded(interpreter) {
+		return
+	}
+
+	resourceKindedValue, ok := value.(ResourceKindedValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	interpreter.activations.InvalidateResourceVar(resourceKindedValue)
 }

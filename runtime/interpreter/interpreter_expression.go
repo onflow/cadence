@@ -59,12 +59,17 @@ func (interpreter *Interpreter) assignmentGetterSetter(expression ast.Expression
 // for the target identifier expression
 //
 func (interpreter *Interpreter) identifierExpressionGetterSetter(identifierExpression *ast.IdentifierExpression) getterSetter {
-	variable := interpreter.findVariable(identifierExpression.Identifier.Identifier)
+	indentifier := identifierExpression.Identifier.Identifier
+	variable := interpreter.findVariable(indentifier)
 	return getterSetter{
 		get: func(_ bool) Value {
-			return variable.GetValue()
+			value := variable.GetValue()
+			interpreter.checkResourceDuplication(value, variable, indentifier)
+			//interpreter.invalidateResource(value)
+			return value
 		},
 		set: func(value Value) {
+			interpreter.startResourceTracking(value, variable, indentifier)
 			variable.SetValue(value)
 		},
 	}
@@ -159,7 +164,10 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 func (interpreter *Interpreter) VisitIdentifierExpression(expression *ast.IdentifierExpression) ast.Repr {
 	name := expression.Identifier.Identifier
 	variable := interpreter.findVariable(name)
-	return variable.GetValue()
+	value := variable.GetValue()
+	interpreter.checkResourceDuplication(value, variable, name)
+	//interpreter.invalidateResource(value)
+	return value
 }
 
 func (interpreter *Interpreter) evalExpression(expression ast.Expression) Value {
@@ -398,6 +406,7 @@ func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpres
 		return integerValue.Negate()
 
 	case ast.OperationMove:
+		interpreter.invalidateResource(value)
 		return value
 	}
 
@@ -817,6 +826,10 @@ func (interpreter *Interpreter) VisitCreateExpression(expression *ast.CreateExpr
 
 func (interpreter *Interpreter) VisitDestroyExpression(expression *ast.DestroyExpression) ast.Repr {
 	value := interpreter.evalExpression(expression.Expression)
+
+	if _, ok := expression.Expression.(*ast.IdentifierExpression); ok {
+		interpreter.invalidateResource(value)
+	}
 
 	getLocationRange := locationRangeGetter(interpreter.Location, expression)
 
