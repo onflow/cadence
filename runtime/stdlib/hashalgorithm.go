@@ -20,6 +20,7 @@ package stdlib
 
 import (
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -40,7 +41,10 @@ func NewHashAlgorithmCase(inter *interpreter.Interpreter, rawValue uint8) *inter
 
 var hashAlgorithmHashFunction = interpreter.NewHostFunctionValue(
 	func(invocation interpreter.Invocation) interpreter.Value {
-		dataValue := invocation.Arguments[0].(*interpreter.ArrayValue)
+		dataValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
 		hashAlgoValue := invocation.Self
 
 		inter := invocation.Interpreter
@@ -66,8 +70,16 @@ var hashAlgorithmHashFunction = interpreter.NewHostFunctionValue(
 
 var hashAlgorithmHashWithTagFunction = interpreter.NewHostFunctionValue(
 	func(invocation interpreter.Invocation) interpreter.Value {
-		dataValue := invocation.Arguments[0].(*interpreter.ArrayValue)
-		tagValue := invocation.Arguments[1].(*interpreter.StringValue)
+		dataValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		tagValue, ok := invocation.Arguments[1].(*interpreter.StringValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
 		hashAlgoValue := invocation.Self
 
 		inter := invocation.Interpreter
