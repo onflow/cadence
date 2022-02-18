@@ -43,6 +43,8 @@ func (checker *Checker) VisitPathExpression(expression *ast.PathExpression) ast.
 	return ty
 }
 
+var isValidIdentifier = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`).MatchString
+
 func CheckPathLiteral(domainString, identifier string, domainRangeThunk, idRangeThunk func() ast.Range) (Type, error) {
 
 	// Check that the domain is valid
@@ -55,7 +57,6 @@ func CheckPathLiteral(domainString, identifier string, domainRangeThunk, idRange
 	}
 
 	// Check that the identifier is valid
-	isValidIdentifier := regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`).MatchString
 	if !isValidIdentifier(identifier) {
 		return PathType, &InvalidPathIdentifierError{
 			ActualIdentifier: identifier,

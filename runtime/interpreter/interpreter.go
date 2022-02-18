@@ -2709,17 +2709,17 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	},
 	{
 		name:         sema.PublicPathType.Name,
-		functionType: sema.PublicPathConverterType,
+		functionType: sema.PublicPathConversionFunctionType,
 		convert:      ConvertPublicPath,
 	},
 	{
 		name:         sema.PrivatePathType.Name,
-		functionType: sema.PrivatePathConverterType,
+		functionType: sema.PrivatePathConversionFunctionType,
 		convert:      ConvertPrivatePath,
 	},
 	{
 		name:         sema.StoragePathType.Name,
-		functionType: sema.StoragePathConverterType,
+		functionType: sema.StoragePathConversionFunctionType,
 		convert:      ConvertStoragePath,
 	},
 }
