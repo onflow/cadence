@@ -80,7 +80,7 @@ func TestConvertStringToPath(t *testing.T) {
 			inter := parseCheckAndInterpret(t,
 				fmt.Sprintf(
 					`
-                      let x = %[1]s("foo")!
+                      let x = %[1]s(identifier: "foo")!
                     `,
 					domainType.String(),
 				),
@@ -104,7 +104,7 @@ func TestConvertStringToPath(t *testing.T) {
 			inter := parseCheckAndInterpret(t,
 				fmt.Sprintf(
 					`
-                      let x = %[1]s("2")
+                      let x = %[1]s(identifier: "2")
                     `,
 					domainType.String(),
 				),
@@ -125,7 +125,7 @@ func TestConvertStringToPath(t *testing.T) {
 			inter := parseCheckAndInterpret(t,
 				fmt.Sprintf(
 					`
-                      let x = %[1]s("fo-o")
+                      let x = %[1]s(identifier: "fo-o")
                     `,
 					domainType.String(),
 				),
