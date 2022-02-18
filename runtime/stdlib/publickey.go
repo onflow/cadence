@@ -19,6 +19,7 @@
 package stdlib
 
 import (
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -46,8 +47,15 @@ var publicKeyConstructor = NewStandardLibraryFunction(
 	publicKeyConstructorFunctionType,
 	publicKeyConstructorFunctionDocString,
 	func(invocation interpreter.Invocation) interpreter.Value {
-		publicKey := invocation.Arguments[0].(*interpreter.ArrayValue)
-		signAlgo := invocation.Arguments[1].(*interpreter.CompositeValue)
+		publicKey, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		signAlgo, ok := invocation.Arguments[1].(*interpreter.CompositeValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
 
 		inter := invocation.Interpreter
 

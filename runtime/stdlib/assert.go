@@ -19,6 +19,7 @@
 package stdlib
 
 import (
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -55,11 +56,19 @@ var AssertFunction = NewStandardLibraryFunction(
 	assertFunctionType,
 	assertFunctionDocString,
 	func(invocation interpreter.Invocation) interpreter.Value {
-		result := invocation.Arguments[0].(interpreter.BoolValue)
+		result, ok := invocation.Arguments[0].(interpreter.BoolValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
 		if !result {
 			var message string
 			if len(invocation.Arguments) > 1 {
-				message = invocation.Arguments[1].(*interpreter.StringValue).Str
+				messageValue, ok := invocation.Arguments[1].(*interpreter.StringValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+				message = messageValue.Str
 			}
 			panic(AssertionError{
 				Message:       message,
