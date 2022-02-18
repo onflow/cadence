@@ -26,6 +26,8 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/onflow/cadence/runtime/ast"
+
 	"github.com/onflow/atree"
 	"github.com/rivo/uniseg"
 	"golang.org/x/text/unicode/norm"
