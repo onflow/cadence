@@ -21,6 +21,7 @@ package stdlib
 import (
 	"fmt"
 
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -54,9 +55,14 @@ var PanicFunction = NewStandardLibraryFunction(
 	},
 	panicFunctionDocString,
 	func(invocation interpreter.Invocation) interpreter.Value {
-		message := invocation.Arguments[0].(*interpreter.StringValue)
+		messageValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+		message := messageValue.Str
+
 		panic(PanicError{
-			Message:       message.Str,
+			Message:       message,
 			LocationRange: invocation.GetLocationRange(),
 		})
 	},
