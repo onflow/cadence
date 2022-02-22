@@ -831,9 +831,7 @@ func (interpreter *Interpreter) VisitCreateExpression(expression *ast.CreateExpr
 func (interpreter *Interpreter) VisitDestroyExpression(expression *ast.DestroyExpression) ast.Repr {
 	value := interpreter.evalExpression(expression.Expression)
 
-	if _, ok := expression.Expression.(*ast.IdentifierExpression); ok {
-		interpreter.invalidateResource(value)
-	}
+	interpreter.invalidateResource(value)
 
 	getLocationRange := locationRangeGetter(interpreter.Location, expression)
 
