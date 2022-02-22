@@ -174,6 +174,9 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 		interpreter.activations.PushNewWithCurrent()
 		defer interpreter.activations.Pop()
 
+		// Assignment can also be a resource move.
+		interpreter.invalidateResource(someValue.Value)
+
 		interpreter.declareVariable(
 			declaration.Identifier.Identifier,
 			transferredUnwrappedValue,
@@ -423,6 +426,9 @@ func (interpreter *Interpreter) visitVariableDeclaration(
 	if result == nil {
 		panic(errors.NewUnreachableError())
 	}
+
+	// Assignment is a potential resource move.
+	interpreter.invalidateResource(result)
 
 	getLocationRange := locationRangeGetter(interpreter.Location, declaration.Value)
 

@@ -569,3 +569,216 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 		)
 	})
 }
+
+func TestCheckResourceInvalidationWithMove(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("in casting expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource R {}
+
+            fun test() {
+                let r <- create R()
+                let copy <- (<- r) as @R
+                destroy r
+                destroy copy
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+	})
+
+	t.Run("in reference expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource R {}
+
+            fun test() {
+                let r <- create R()
+                let ref = &(<- r) as &AnyResource
+                destroy r
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+	})
+
+	t.Run("in conditional expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource R {}
+
+            fun test() {
+                let r1 <- create R()
+                let r2 <- create R()
+
+                let r3 <- true ? <- r1 : <- r2
+                destroy r3
+                destroy r1
+                destroy r2
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+	})
+
+	t.Run("in force expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource R {}
+
+            fun test() {
+                let r <- create R()
+                let copy <- (<- r)!
+                destroy r
+                destroy copy
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+	})
+
+	t.Run("in destroy expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource R {}
+
+            fun test() {
+                let r <- create R()
+	            destroy (<- r)
+	            destroy r
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+	})
+
+	t.Run("in function invocation expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource R {}
+
+            fun f(_ r: @R) {
+                destroy r
+            }
+
+            fun test() {
+                let r <- create R()
+	            f(<- (<- r))
+                destroy r
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+	})
+
+	t.Run("in array expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource R {}
+
+            fun test() {
+                let r <- create R()
+                let rs <- [<- (<- r)]
+                destroy r
+                destroy rs
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+	})
+
+	t.Run("in dictionary expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource R {}
+
+            fun test() {
+                let r <- create R()
+                let rs <- {"test": <- (<- r)}
+                destroy r
+                destroy rs
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+	})
+
+	t.Run("with inner conditional expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource R {}
+
+            fun test() {
+                let r1 <- create R()
+                let r2 <- create R()
+
+                let r3 <- true ? r1 : r2
+                destroy r3
+                destroy r1
+                destroy r2
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+	})
+}
+
+func TestCheckResourceInvalidationWithConditionalExprInDestroy(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        resource R {}
+        fun test() {
+            let r1 <- create R()
+            let r2 <- create R()
+
+            destroy true? r1 : r2
+            destroy r1
+            destroy r2
+        }
+    `)
+
+	_, err := inter.Invoke("test")
+	require.Error(t, err)
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+}

@@ -349,6 +349,7 @@ type Interpreter struct {
 	tracingEnabled                 bool
 	// TODO: ideally this would be a weak map, but Go has no weak references
 	referencedResourceKindedValues ReferencedResourceKindedValues
+	resourceVariables              map[ResourceKindedValue]*Variable
 }
 
 type Option func(*Interpreter) error
@@ -645,6 +646,7 @@ func NewInterpreter(program *Program, location common.Location, options ...Optio
 		activations:                &VariableActivations{},
 		Globals:                    map[string]*Variable{},
 		effectivePredeclaredValues: map[string]ValueDeclaration{},
+		resourceVariables:          map[ResourceKindedValue]*Variable{},
 	}
 
 	// Start a new activation/scope for the current program.
@@ -1145,11 +1147,21 @@ func (interpreter *Interpreter) VisitProgram(program *ast.Program) ast.Repr {
 		declaration := declaration
 
 		identifier := declaration.Identifier.Identifier
-		variable := NewVariableWithGetter(func() Value {
+
+		var variable *Variable
+
+		variable = NewVariableWithGetter(func() Value {
 			var result Value
 			interpreter.visitVariableDeclaration(declaration, func(_ string, value Value) {
 				result = value
 			})
+
+			getLocationRange := locationRangeGetter(interpreter.Location, declaration.Identifier)
+
+			// Global variables are lazily loaded. Therefore, start resource tracking also
+			// lazily when the resource is used for the first time.
+			// This is needed to support forward referencing.
+			interpreter.startResourceTracking(result, variable, identifier, getLocationRange)
 			return result
 		})
 		interpreter.setVariable(identifier, variable)
@@ -1350,6 +1362,10 @@ func (interpreter *Interpreter) declareVariable(identifier string, value Value) 
 	// NOTE: semantic analysis already checked possible invalid redeclaration
 	variable := NewVariableWithValue(value)
 	interpreter.setVariable(identifier, variable)
+
+	// TODO: add proper location info
+	interpreter.startResourceTracking(value, variable, identifier, ReturnEmptyLocationRange)
+
 	return variable
 }
 
@@ -4456,4 +4472,85 @@ func (interpreter *Interpreter) updateReferencedResource(
 		interpreter.referencedResourceKindedValues[newStorageID] = values
 		interpreter.referencedResourceKindedValues[currentStorageID] = nil
 	}
+}
+
+// startResourceTracking starts tracking the life-span of a resource.
+// A resource can only be associated with one variable at most, at a given time.
+func (interpreter *Interpreter) startResourceTracking(
+	value Value,
+	variable *Variable,
+	identifier string,
+	getLocationRange func() LocationRange,
+) {
+	if value == nil || !value.IsResourceKinded(interpreter) {
+		return
+	}
+
+	if identifier == sema.SelfIdentifier {
+		return
+	}
+
+	resourceKindedValue, ok := value.(ResourceKindedValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	// A resource value can be associated with only one variable at a time.
+	// If the resource already has a variable-association, that means there is a
+	// resource variable that has not been invalidated properly.
+	// This should not be allowed, and must have been caught by the checker ideally.
+	if _, exists := interpreter.resourceVariables[resourceKindedValue]; exists {
+		panic(InvalidatedResourceError{
+			LocationRange: getLocationRange(),
+		})
+	}
+
+	interpreter.resourceVariables[resourceKindedValue] = variable
+}
+
+// checkInvalidatedResourceUse checks whether a resource variable is used after invalidation.
+func (interpreter *Interpreter) checkInvalidatedResourceUse(
+	value Value,
+	variable *Variable,
+	identifier string,
+	getLocationRange func() LocationRange,
+) {
+	if value == nil || !value.IsResourceKinded(interpreter) {
+		return
+	}
+
+	if identifier == sema.SelfIdentifier {
+		return
+	}
+
+	resourceKindedValue, ok := value.(ResourceKindedValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	// A resource value can be associated with only one variable at a time.
+	// If the resource already has a variable-association other than the current variable,
+	// that means two variables are referring to the same resource at the same time.
+	// This should not be allowed, and must have been caught by the checker ideally.
+	//
+	// Note: if the `resourceVariables` doesn't have a mapping, that implies an invalidated resource.
+	if existingVar, _ := interpreter.resourceVariables[resourceKindedValue]; existingVar != variable {
+		panic(InvalidatedResourceError{
+			LocationRange: getLocationRange(),
+		})
+	}
+}
+
+func (interpreter *Interpreter) invalidateResource(value Value) {
+	if value == nil || !value.IsResourceKinded(interpreter) {
+		return
+	}
+
+	resourceKindedValue, ok := value.(ResourceKindedValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	// Remove the resource-to-variable mapping.
+	delete(interpreter.resourceVariables, resourceKindedValue)
 }

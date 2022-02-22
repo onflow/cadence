@@ -59,12 +59,19 @@ func (interpreter *Interpreter) assignmentGetterSetter(expression ast.Expression
 // for the target identifier expression
 //
 func (interpreter *Interpreter) identifierExpressionGetterSetter(identifierExpression *ast.IdentifierExpression) getterSetter {
-	variable := interpreter.findVariable(identifierExpression.Identifier.Identifier)
+	identifier := identifierExpression.Identifier.Identifier
+	variable := interpreter.findVariable(identifier)
+
+	getLocationRange := locationRangeGetter(interpreter.Location, identifierExpression)
+
 	return getterSetter{
 		get: func(_ bool) Value {
-			return variable.GetValue()
+			value := variable.GetValue()
+			interpreter.checkInvalidatedResourceUse(value, variable, identifier, getLocationRange)
+			return value
 		},
 		set: func(value Value) {
+			interpreter.startResourceTracking(value, variable, identifier, getLocationRange)
 			variable.SetValue(value)
 		},
 	}
@@ -159,7 +166,12 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 func (interpreter *Interpreter) VisitIdentifierExpression(expression *ast.IdentifierExpression) ast.Repr {
 	name := expression.Identifier.Identifier
 	variable := interpreter.findVariable(name)
-	return variable.GetValue()
+	value := variable.GetValue()
+
+	getLocationRange := locationRangeGetter(interpreter.Location, expression)
+
+	interpreter.checkInvalidatedResourceUse(value, variable, name, getLocationRange)
+	return value
 }
 
 func (interpreter *Interpreter) evalExpression(expression ast.Expression) Value {
@@ -398,6 +410,7 @@ func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpres
 		return integerValue.Negate()
 
 	case ast.OperationMove:
+		interpreter.invalidateResource(value)
 		return value
 	}
 
@@ -817,6 +830,8 @@ func (interpreter *Interpreter) VisitCreateExpression(expression *ast.CreateExpr
 
 func (interpreter *Interpreter) VisitDestroyExpression(expression *ast.DestroyExpression) ast.Repr {
 	value := interpreter.evalExpression(expression.Expression)
+
+	interpreter.invalidateResource(value)
 
 	getLocationRange := locationRangeGetter(interpreter.Location, expression)
 
