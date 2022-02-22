@@ -455,6 +455,7 @@ func (r *interpreterRuntime) interpret(
 }
 
 func (r *interpreterRuntime) newAuthAccountValue(
+	inter *interpreter.Interpreter,
 	addressValue interpreter.AddressValue,
 	context Context,
 	storage *Storage,
@@ -462,6 +463,7 @@ func (r *interpreterRuntime) newAuthAccountValue(
 	checkerOptions []sema.Option,
 ) interpreter.Value {
 	return interpreter.NewAuthAccountValue(
+		inter,
 		addressValue,
 		accountBalanceGetFunction(addressValue, context.Interface),
 		accountAvailableBalanceGetFunction(addressValue, context.Interface),
@@ -471,6 +473,7 @@ func (r *interpreterRuntime) newAuthAccountValue(
 		r.newRemovePublicKeyFunction(addressValue, context.Interface),
 		func() interpreter.Value {
 			return r.newAuthAccountContracts(
+				inter,
 				addressValue,
 				context,
 				storage,
@@ -480,6 +483,7 @@ func (r *interpreterRuntime) newAuthAccountValue(
 		},
 		func() interpreter.Value {
 			return r.newAuthAccountKeys(
+				inter,
 				addressValue,
 				context.Interface,
 			)
@@ -537,6 +541,7 @@ func (r *interpreterRuntime) InvokeContractFunction(
 
 	for i, argumentType := range argumentTypes {
 		arguments[i] = r.convertArgument(
+			inter,
 			arguments[i],
 			argumentType,
 			context,
@@ -597,6 +602,7 @@ func (r *interpreterRuntime) InvokeContractFunction(
 }
 
 func (r *interpreterRuntime) convertArgument(
+	inter *interpreter.Interpreter,
 	argument interpreter.Value,
 	argumentType sema.Type,
 	context Context,
@@ -609,6 +615,7 @@ func (r *interpreterRuntime) convertArgument(
 		// convert addresses to auth accounts so there is no need to construct an auth account value for the caller
 		if addressValue, ok := argument.(interpreter.AddressValue); ok {
 			return r.newAuthAccountValue(
+				inter,
 				interpreter.NewAddressValue(addressValue.ToAddress()),
 				context,
 				storage,
@@ -620,6 +627,7 @@ func (r *interpreterRuntime) convertArgument(
 		// convert addresses to public accounts so there is no need to construct a public account value for the caller
 		if addressValue, ok := argument.(interpreter.AddressValue); ok {
 			return r.getPublicAccount(
+				inter,
 				interpreter.NewAddressValue(addressValue.ToAddress()),
 				context.Interface,
 				storage,
@@ -715,6 +723,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 
 		for i, address := range authorizers {
 			authorizerValues[i] = r.newAuthAccountValue(
+				inter,
 				interpreter.NewAddressValue(address),
 				context,
 				storage,
@@ -1268,8 +1277,9 @@ func (r *interpreterRuntime) newInterpreter(
 			r.onStatementHandler(),
 		),
 		interpreter.WithPublicAccountHandler(
-			func(_ *interpreter.Interpreter, address interpreter.AddressValue) interpreter.Value {
+			func(inter *interpreter.Interpreter, address interpreter.AddressValue) interpreter.Value {
 				return r.getPublicAccount(
+					inter,
 					address,
 					context.Interface,
 					storage,
@@ -1504,6 +1514,7 @@ func (r *interpreterRuntime) injectedCompositeFieldsHandler(
 
 				return map[string]interpreter.Value{
 					"account": r.newAuthAccountValue(
+						inter,
 						addressValue,
 						context,
 						storage,
@@ -1782,6 +1793,7 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 		)
 
 		return r.newAuthAccountValue(
+			inter,
 			addressValue,
 			context,
 			storage,
@@ -2174,6 +2186,7 @@ func (r *interpreterRuntime) newGetAuthAccountFunction(
 	return func(invocation interpreter.Invocation) interpreter.Value {
 		accountAddress := invocation.Arguments[0].(interpreter.AddressValue)
 		return r.newAuthAccountValue(
+			invocation.Interpreter,
 			accountAddress,
 			context,
 			storage,
@@ -2187,6 +2200,7 @@ func (r *interpreterRuntime) newGetAccountFunction(runtimeInterface Interface, s
 	return func(invocation interpreter.Invocation) interpreter.Value {
 		accountAddress := invocation.Arguments[0].(interpreter.AddressValue)
 		return r.getPublicAccount(
+			invocation.Interpreter,
 			accountAddress,
 			runtimeInterface,
 			storage,
@@ -2195,22 +2209,24 @@ func (r *interpreterRuntime) newGetAccountFunction(runtimeInterface Interface, s
 }
 
 func (r *interpreterRuntime) getPublicAccount(
+	inter *interpreter.Interpreter,
 	accountAddress interpreter.AddressValue,
 	runtimeInterface Interface,
 	storage *Storage,
 ) interpreter.Value {
 
 	return interpreter.NewPublicAccountValue(
+		inter,
 		accountAddress,
 		accountBalanceGetFunction(accountAddress, runtimeInterface),
 		accountAvailableBalanceGetFunction(accountAddress, runtimeInterface),
 		storageUsedGetFunction(accountAddress, runtimeInterface, storage),
 		storageCapacityGetFunction(accountAddress, runtimeInterface),
 		func() interpreter.Value {
-			return r.newPublicAccountKeys(accountAddress, runtimeInterface)
+			return r.newPublicAccountKeys(inter, accountAddress, runtimeInterface)
 		},
 		func() interpreter.Value {
-			return r.newPublicAccountContracts(accountAddress, runtimeInterface)
+			return r.newPublicAccountContracts(inter, accountAddress, runtimeInterface)
 		},
 	)
 }
@@ -2322,6 +2338,7 @@ func (r *interpreterRuntime) newUnsafeRandomFunction(runtimeInterface Interface)
 }
 
 func (r *interpreterRuntime) newAuthAccountContracts(
+	inter *interpreter.Interpreter,
 	addressValue interpreter.AddressValue,
 	context Context,
 	storage *Storage,
@@ -2329,6 +2346,7 @@ func (r *interpreterRuntime) newAuthAccountContracts(
 	checkerOptions []sema.Option,
 ) interpreter.Value {
 	return interpreter.NewAuthAccountContractsValue(
+		inter,
 		addressValue,
 		r.newAuthAccountContractsChangeFunction(
 			addressValue,
@@ -2363,10 +2381,12 @@ func (r *interpreterRuntime) newAuthAccountContracts(
 }
 
 func (r *interpreterRuntime) newAuthAccountKeys(
+	inter *interpreter.Interpreter,
 	addressValue interpreter.AddressValue,
 	runtimeInterface Interface,
 ) interpreter.Value {
 	return interpreter.NewAuthAccountKeysValue(
+		inter,
 		addressValue,
 		r.newAccountKeysAddFunction(
 			addressValue,
@@ -2664,6 +2684,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 			}
 
 			return interpreter.NewDeployedContractValue(
+				inter,
 				addressValue,
 				nameValue,
 				newCodeValue,
@@ -2788,6 +2809,7 @@ func (r *interpreterRuntime) newAccountContractsGetFunction(
 			if len(code) > 0 {
 				return interpreter.NewSomeValueNonCopying(
 					interpreter.NewDeployedContractValue(
+						invocation.Interpreter,
 						addressValue,
 						nameValue,
 						interpreter.ByteSliceToByteArrayValue(
@@ -2888,6 +2910,7 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 
 				return interpreter.NewSomeValueNonCopying(
 					interpreter.NewDeployedContractValue(
+						invocation.Interpreter,
 						addressValue,
 						nameValue,
 						interpreter.ByteSliceToByteArrayValue(
@@ -3091,6 +3114,7 @@ func NewBlockValue(inter *interpreter.Interpreter, block Block) interpreter.Valu
 	timestampValue := interpreter.NewUFix64ValueWithInteger(uint64(time.Unix(0, block.Timestamp).Unix()))
 
 	return interpreter.NewBlockValue(
+		inter,
 		heightValue,
 		viewValue,
 		idValue,
@@ -3247,10 +3271,12 @@ func (r *interpreterRuntime) newAccountKeysRevokeFunction(
 }
 
 func (r *interpreterRuntime) newPublicAccountKeys(
+	inter *interpreter.Interpreter,
 	addressValue interpreter.AddressValue,
 	runtimeInterface Interface,
 ) interpreter.Value {
 	return interpreter.NewPublicAccountKeysValue(
+		inter,
 		addressValue,
 		r.newAccountKeysGetFunction(
 			addressValue,
@@ -3260,10 +3286,12 @@ func (r *interpreterRuntime) newPublicAccountKeys(
 }
 
 func (r *interpreterRuntime) newPublicAccountContracts(
+	inter *interpreter.Interpreter,
 	addressValue interpreter.AddressValue,
 	runtimeInterface Interface,
 ) interpreter.Value {
 	return interpreter.NewPublicAccountContractsValue(
+		inter,
 		addressValue,
 		r.newAccountContractsGetFunction(
 			addressValue,
@@ -3380,6 +3408,7 @@ func NewAccountKeyValue(
 	validatePublicKey interpreter.PublicKeyValidationHandlerFunc,
 ) interpreter.Value {
 	return interpreter.NewAccountKeyValue(
+		inter,
 		interpreter.NewIntValueFromInt64(int64(accountKey.KeyIndex)),
 		NewPublicKeyValue(
 			inter,
