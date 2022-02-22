@@ -19,6 +19,7 @@
 package interpreter_test
 
 import (
+	"github.com/stretchr/testify/assert"
 	"testing"
 
 	"github.com/onflow/atree"
@@ -804,4 +805,66 @@ func TestCheckResourceInvalidationWithConditionalExprInDestroy(t *testing.T) {
 	_, err := inter.Invoke("test")
 	require.Error(t, err)
 	require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+}
+
+func TestInterpretResourceUseAfterInvalidation(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("field access", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource R {
+                let s: String
+
+                init() {
+                    self.s = ""
+                }
+            }
+
+            fun test() {
+                let r <- create R()
+                let copy <- (<- r)
+                let str = r.s
+
+                destroy r
+                destroy copy
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		invalidatedResourceError := interpreter.InvalidatedResourceError{}
+		require.ErrorAs(t, err, &invalidatedResourceError)
+
+		// error must be thrown at field access
+		assert.Equal(t, 13, invalidatedResourceError.StartPosition().Line)
+	})
+
+	t.Run("parameter", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource R {}
+
+            fun test() {
+                let r <- create R()
+                foo(<-r)
+            }
+
+            fun foo(_ r: @R) {
+                let copy <- (<- r)
+                destroy r
+                destroy copy
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+	})
 }
