@@ -11534,6 +11534,12 @@ func NewCompositeValue(
 	address common.Address,
 ) *CompositeValue {
 
+	interpreter.UseMemory(common.MemoryUsage{
+		Kind: common.MemoryKindComposite,
+		// TODO: fill this in
+		Amount: uint64(5),
+	})
+
 	dictionary, err := atree.NewMap(
 		interpreter.Storage,
 		atree.Address(address),
