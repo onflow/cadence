@@ -59,19 +59,17 @@ func (interpreter *Interpreter) assignmentGetterSetter(expression ast.Expression
 // for the target identifier expression
 //
 func (interpreter *Interpreter) identifierExpressionGetterSetter(identifierExpression *ast.IdentifierExpression) getterSetter {
-	identifier := identifierExpression.Identifier.Identifier
-	variable := interpreter.findVariable(identifier)
-
-	getLocationRange := locationRangeGetter(interpreter.Location, identifierExpression)
-
 	return getterSetter{
 		get: func(_ bool) Value {
-			value := variable.GetValue()
-			interpreter.checkInvalidatedResourceUse(value, variable, identifier, getLocationRange)
-			return value
+			return interpreter.evalExpression(identifierExpression)
 		},
 		set: func(value Value) {
+			identifier := identifierExpression.Identifier.Identifier
+			variable := interpreter.findVariable(identifier)
+			getLocationRange := locationRangeGetter(interpreter.Location, identifierExpression)
+
 			interpreter.startResourceTracking(value, variable, identifier, getLocationRange)
+
 			variable.SetValue(value)
 		},
 	}
@@ -169,8 +167,8 @@ func (interpreter *Interpreter) VisitIdentifierExpression(expression *ast.Identi
 	value := variable.GetValue()
 
 	getLocationRange := locationRangeGetter(interpreter.Location, expression)
-
 	interpreter.checkInvalidatedResourceUse(value, variable, name, getLocationRange)
+
 	return value
 }
 
