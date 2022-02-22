@@ -227,7 +227,7 @@ func (t DictionaryStaticType) Equal(other StaticType) bool {
 
 func (DictionaryStaticType) GetMemoryUsage() common.MemoryUsage {
 	return common.MemoryUsage{
-		Kind: common.MemoryKindArray,
+		Kind: common.MemoryKindDictionary,
 		// TODO: fill this in
 		Amount: uint64(2),
 	}
