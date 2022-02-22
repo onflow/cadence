@@ -115,6 +115,7 @@ func (t InterfaceStaticType) Equal(other StaticType) bool {
 
 type ArrayStaticType interface {
 	StaticType
+	ConstantMemoryUsageType
 	isArrayStaticType()
 	ElementType() StaticType
 }
@@ -149,6 +150,14 @@ func (t VariableSizedStaticType) Equal(other StaticType) bool {
 	return t.Type.Equal(otherVariableSizedType.Type)
 }
 
+func (VariableSizedStaticType) GetMemoryUsage() common.MemoryUsage {
+	return common.MemoryUsage{
+		Kind: common.MemoryKindArray,
+		// TODO: fill this in
+		Amount: uint64(1),
+	}
+}
+
 // ConstantSizedStaticType
 
 type ConstantSizedStaticType struct {
@@ -165,6 +174,14 @@ func (ConstantSizedStaticType) isArrayStaticType() {}
 
 func (t ConstantSizedStaticType) ElementType() StaticType {
 	return t.Type
+}
+
+func (ConstantSizedStaticType) GetMemoryUsage() common.MemoryUsage {
+	return common.MemoryUsage{
+		Kind: common.MemoryKindArray,
+		// TODO: fill this in
+		Amount: uint64(2),
+	}
 }
 
 func (t ConstantSizedStaticType) String() string {
@@ -611,4 +628,10 @@ func (p TypeParameter) String() string {
 		builder.WriteString(p.TypeBound.String())
 	}
 	return builder.String()
+}
+
+// ConstantMemoryUsageType
+
+type ConstantMemoryUsageType interface {
+	GetMemoryUsage() common.MemoryUsage
 }
