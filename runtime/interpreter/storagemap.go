@@ -77,8 +77,8 @@ func (s StorageMap) ValueExists(key string) bool {
 	return true
 }
 
-// ReadValue returns the value for the given key as an OptionalValue,
-// i.e. SomeValue if it exists, and NilValue if the key does not exist.
+// ReadValue returns the value for the given key.
+// Returns nil if the key does not exist.
 //
 func (s StorageMap) ReadValue(key string) Value {
 	storable, err := s.orderedMap.Get(
@@ -97,8 +97,8 @@ func (s StorageMap) ReadValue(key string) Value {
 }
 
 // WriteValue sets or removes a value in the storage map.
-// If the given value is a SomeValue, the key is updated.
-// If the given value is NilValue, the key is removed.
+// If the given value is nil, the key is removed.
+// If the given value is non-nil, the key is added/updated.
 //
 func (s StorageMap) WriteValue(interpreter *Interpreter, key string, value atree.Value) {
 	if value == nil {
