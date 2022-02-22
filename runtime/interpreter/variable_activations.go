@@ -217,11 +217,15 @@ func (a *VariableActivations) Depth() int {
 	return len(a.activations)
 }
 
-func (a *VariableActivations) CheckResourceDuplication(
+func (a *VariableActivations) CheckInvalidatedResourceUse(
 	value ResourceKindedValue,
 	variable *Variable,
 	getLocationRange func() LocationRange,
 ) {
+	// A resource value can be associated with only one variable at a time.
+	// If the resource already has a variable-association other than the current variable,
+	// that means two variables are referring to the same resource at the same time.
+	// This should not be allowed, and must have been caught by the checker ideally.
 	if existingVar, _ := a.resourceVariables[value]; existingVar != variable {
 		panic(InvalidatedResourceError{
 			LocationRange: getLocationRange(),
@@ -234,6 +238,10 @@ func (a *VariableActivations) AddResourceVar(
 	variable *Variable,
 	getLocationRange func() LocationRange,
 ) {
+	// A resource value can be associated with only one variable at a time.
+	// If the resource already has a variable-association, that means there is a
+	// resource variable that has not been invalidated properly.
+	// This should not be allowed, and must have been caught by the checker ideally.
 	if _, exists := a.resourceVariables[value]; exists {
 		panic(InvalidatedResourceError{
 			LocationRange: getLocationRange(),
@@ -244,5 +252,6 @@ func (a *VariableActivations) AddResourceVar(
 }
 
 func (a *VariableActivations) InvalidateResourceVar(value ResourceKindedValue) {
+	// Remove the resource-to-variable mapping.
 	delete(a.resourceVariables, value)
 }

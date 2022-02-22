@@ -4472,6 +4472,8 @@ func (interpreter *Interpreter) updateReferencedResource(
 	}
 }
 
+// startResourceTracking starts tracking the life-span of a resource.
+// A resource can only be associated with one variable at most, at a given time.
 func (interpreter *Interpreter) startResourceTracking(
 	value Value,
 	variable *Variable,
@@ -4493,7 +4495,8 @@ func (interpreter *Interpreter) startResourceTracking(
 	interpreter.activations.AddResourceVar(resourceKindedValue, variable, getLocationRange)
 }
 
-func (interpreter *Interpreter) checkResourceDuplication(
+// checkInvalidatedResourceUse checks whether a resource variable is used after invalidation.
+func (interpreter *Interpreter) checkInvalidatedResourceUse(
 	value Value,
 	variable *Variable,
 	identifier string,
@@ -4511,7 +4514,7 @@ func (interpreter *Interpreter) checkResourceDuplication(
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
-	interpreter.activations.CheckResourceDuplication(resourceKindedValue, variable, getLocationRange)
+	interpreter.activations.CheckInvalidatedResourceUse(resourceKindedValue, variable, getLocationRange)
 }
 
 func (interpreter *Interpreter) invalidateResource(value Value) {

@@ -67,7 +67,7 @@ func (interpreter *Interpreter) identifierExpressionGetterSetter(identifierExpre
 	return getterSetter{
 		get: func(_ bool) Value {
 			value := variable.GetValue()
-			interpreter.checkResourceDuplication(value, variable, identifier, getLocationRange)
+			interpreter.checkInvalidatedResourceUse(value, variable, identifier, getLocationRange)
 			return value
 		},
 		set: func(value Value) {
@@ -170,7 +170,7 @@ func (interpreter *Interpreter) VisitIdentifierExpression(expression *ast.Identi
 
 	getLocationRange := locationRangeGetter(interpreter.Location, expression)
 
-	interpreter.checkResourceDuplication(value, variable, name, getLocationRange)
+	interpreter.checkInvalidatedResourceUse(value, variable, name, getLocationRange)
 	return value
 }
 
