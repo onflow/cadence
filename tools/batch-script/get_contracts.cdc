@@ -5,10 +5,6 @@ pub fun main(addresses: [Address]): {Address: {String: String}} {
         let account = getAccount(address)
         let contracts: {String: String} = {}
 
-        if account.storageUsed > 0 as UInt64 {
-            // this produces a deterministic error if account does not exist yet
-        }
-
         let names = account.contracts.names
         if names.length == 0 {
             continue
