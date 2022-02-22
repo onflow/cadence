@@ -1148,6 +1148,7 @@ func NewArrayValue(
 	address common.Address,
 	values ...Value,
 ) *ArrayValue {
+	interpreter.UseMemory(arrayType.GetMemoryUsage())
 
 	var index int
 	count := len(values)
