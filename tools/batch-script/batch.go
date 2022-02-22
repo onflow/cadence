@@ -45,10 +45,6 @@ func getFlowClient(flowClientUrl string) *flowclient.Client {
 type Config struct {
 	// BachSize is the number of addresses for which to run each script
 	BatchSize int
-	// ContinualPoll enables the script to continue polling Flow at the most recent block height after
-	// it is completed the current block height. If AtBlockHeight is set to a value greater than 0,
-	// ContinualPoll is ignored (it will be treated as false).
-	ContinualPoll bool
 	// 0 is treated as the latest block height.
 	AtBlockHeight     uint64
 	FlowAccessNodeURL string
@@ -58,7 +54,6 @@ type Config struct {
 
 var DefaultConfig = Config{
 	BatchSize:         1000,
-	ContinualPoll:     true,
 	AtBlockHeight:     0,
 	FlowAccessNodeURL: "access.mainnet.nodes.onflow.org:9000",
 	ConcurrentClients: 10, // should be a good number to not produce too much traffic
