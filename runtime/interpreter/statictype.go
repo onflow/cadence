@@ -206,6 +206,7 @@ type DictionaryStaticType struct {
 }
 
 var _ StaticType = DictionaryStaticType{}
+var _ ConstantMemoryUsageType = DictionaryStaticType{}
 var _ atree.TypeInfo = DictionaryStaticType{}
 
 func (DictionaryStaticType) isStaticType() {}
@@ -222,6 +223,14 @@ func (t DictionaryStaticType) Equal(other StaticType) bool {
 
 	return t.KeyType.Equal(otherDictionaryType.KeyType) &&
 		t.ValueType.Equal(otherDictionaryType.ValueType)
+}
+
+func (DictionaryStaticType) GetMemoryUsage() common.MemoryUsage {
+	return common.MemoryUsage{
+		Kind: common.MemoryKindArray,
+		// TODO: fill this in
+		Amount: uint64(2),
+	}
 }
 
 // OptionalStaticType
