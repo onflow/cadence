@@ -7916,7 +7916,7 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 						_ common.CompositeKind,
 					) map[string]interpreter.Value {
 						return map[string]interpreter.Value{
-							"account": newTestAuthAccountValue(addressValue),
+							"account": newTestAuthAccountValue(inter, addressValue),
 						}
 					},
 				),
@@ -8660,7 +8660,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 		Name: "account",
 		Type: sema.AuthAccountType,
 		ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
-			return newTestAuthAccountValue(interpreter.AddressValue(address))
+			return newTestAuthAccountValue(inter, interpreter.AddressValue(address))
 		},
 		Kind: common.DeclarationKindConstant,
 	}
@@ -8678,8 +8678,8 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 					valueDeclaration,
 				}),
 				interpreter.WithPublicAccountHandler(
-					func(_ *interpreter.Interpreter, address interpreter.AddressValue) interpreter.Value {
-						return newTestPublicAccountValue(address)
+					func(inter *interpreter.Interpreter, address interpreter.AddressValue) interpreter.Value {
+						return newTestPublicAccountValue(inter, address)
 					},
 				),
 			},
@@ -8702,6 +8702,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 }
 
 func newTestAuthAccountValue(
+	inter *interpreter.Interpreter,
 	addressValue interpreter.AddressValue,
 ) interpreter.Value {
 
@@ -8713,6 +8714,7 @@ func newTestAuthAccountValue(
 	)
 
 	return interpreter.NewAuthAccountValue(
+		inter,
 		addressValue,
 		returnZeroUFix64,
 		returnZeroUFix64,
@@ -8724,6 +8726,7 @@ func newTestAuthAccountValue(
 		panicFunction,
 		func() interpreter.Value {
 			return interpreter.NewAuthAccountContractsValue(
+				inter,
 				addressValue,
 				panicFunction,
 				panicFunction,
@@ -8742,6 +8745,7 @@ func newTestAuthAccountValue(
 		},
 		func() interpreter.Value {
 			return interpreter.NewAuthAccountKeysValue(
+				inter,
 				addressValue,
 				panicFunction,
 				panicFunction,
@@ -8752,6 +8756,7 @@ func newTestAuthAccountValue(
 }
 
 func newTestPublicAccountValue(
+	inter *interpreter.Interpreter,
 	addressValue interpreter.AddressValue,
 ) interpreter.Value {
 
@@ -8763,6 +8768,7 @@ func newTestPublicAccountValue(
 	)
 
 	return interpreter.NewPublicAccountValue(
+		inter,
 		addressValue,
 		returnZeroUFix64,
 		returnZeroUFix64,
@@ -8772,12 +8778,14 @@ func newTestPublicAccountValue(
 		returnZeroUInt64,
 		func() interpreter.Value {
 			return interpreter.NewPublicAccountKeysValue(
+				inter,
 				addressValue,
 				panicFunction,
 			)
 		},
 		func() interpreter.Value {
 			return interpreter.NewPublicAccountContractsValue(
+				inter,
 				addressValue,
 				panicFunction,
 				func(inter *interpreter.Interpreter) *interpreter.ArrayValue {
