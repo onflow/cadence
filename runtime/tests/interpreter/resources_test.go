@@ -760,6 +760,29 @@ func TestCheckResourceInvalidationWithMove(t *testing.T) {
 		require.Error(t, err)
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
 	})
+
+	t.Run("force move", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource R {}
+
+            fun test() {
+                let r1 <- create R()
+                let r2 <- create R()
+
+                let r3 <-! true ? r1 : r2
+                destroy r3
+                destroy r1
+                destroy r2
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+	})
 }
 
 func TestCheckResourceInvalidationWithConditionalExprInDestroy(t *testing.T) {
