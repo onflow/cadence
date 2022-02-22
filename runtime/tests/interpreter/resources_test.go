@@ -590,7 +590,8 @@ func TestCheckResourceInvalidationWithMove(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.NoError(t, err)
+		require.Error(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
 	})
 
 	t.Run("in reference expression", func(t *testing.T) {
@@ -608,7 +609,8 @@ func TestCheckResourceInvalidationWithMove(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.NoError(t, err)
+		require.Error(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
 	})
 
 	t.Run("in conditional expression", func(t *testing.T) {
@@ -630,7 +632,8 @@ func TestCheckResourceInvalidationWithMove(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.NoError(t, err)
+		require.Error(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
 	})
 
 	t.Run("in force expression", func(t *testing.T) {
@@ -649,7 +652,8 @@ func TestCheckResourceInvalidationWithMove(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.NoError(t, err)
+		require.Error(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
 	})
 
 	t.Run("in destroy expression", func(t *testing.T) {
@@ -667,9 +671,9 @@ func TestCheckResourceInvalidationWithMove(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.NoError(t, err)
+		require.Error(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
 	})
-
 
 	t.Run("in function invocation expression", func(t *testing.T) {
 
@@ -690,9 +694,9 @@ func TestCheckResourceInvalidationWithMove(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.NoError(t, err)
+		require.Error(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
 	})
-
 
 	t.Run("in array expression", func(t *testing.T) {
 
@@ -710,9 +714,9 @@ func TestCheckResourceInvalidationWithMove(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.NoError(t, err)
+		require.Error(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
 	})
-
 
 	t.Run("in dictionary expression", func(t *testing.T) {
 
@@ -730,6 +734,7 @@ func TestCheckResourceInvalidationWithMove(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.NoError(t, err)
+		require.Error(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
 	})
 }

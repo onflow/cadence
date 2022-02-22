@@ -112,7 +112,7 @@ func (a *VariableActivation) Set(name string, value *Variable) {
 // at the top of the stack (see function `Current`).
 //
 type VariableActivations struct {
-	activations       []*VariableActivation
+	activations []*VariableActivation
 
 	// TODO: Maybe move this to each activation?
 	resourceVariables map[ResourceKindedValue]*Variable
@@ -217,15 +217,27 @@ func (a *VariableActivations) Depth() int {
 	return len(a.activations)
 }
 
-func (a *VariableActivations) CheckResourceDuplication(value ResourceKindedValue, variable *Variable) {
+func (a *VariableActivations) CheckResourceDuplication(
+	value ResourceKindedValue,
+	variable *Variable,
+	getLocationRange func() LocationRange,
+) {
 	if existingVar, _ := a.resourceVariables[value]; existingVar != variable {
-		panic("Duplicate resource!")
+		panic(InvalidatedResourceError{
+			LocationRange: getLocationRange(),
+		})
 	}
 }
 
-func (a *VariableActivations) AddResourceVar(value ResourceKindedValue, variable *Variable) {
+func (a *VariableActivations) AddResourceVar(
+	value ResourceKindedValue,
+	variable *Variable,
+	getLocationRange func() LocationRange,
+) {
 	if _, exists := a.resourceVariables[value]; exists {
-		panic("Duplicate resource!")
+		panic(InvalidatedResourceError{
+			LocationRange: getLocationRange(),
+		})
 	}
 
 	a.resourceVariables[value] = variable

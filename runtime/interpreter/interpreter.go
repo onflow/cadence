@@ -1154,10 +1154,12 @@ func (interpreter *Interpreter) VisitProgram(program *ast.Program) ast.Repr {
 				result = value
 			})
 
+			getLocationRange := locationRangeGetter(interpreter.Location, declaration.Identifier)
+
 			// Global variables are lazily loaded. Therefore, start resource tracking also
 			// lazily when the resource is used for the first time.
 			// This is needed to support forward referencing.
-			interpreter.startResourceTracking(result, variable, identifier)
+			interpreter.startResourceTracking(result, variable, identifier, getLocationRange)
 			return result
 		})
 		interpreter.setVariable(identifier, variable)
@@ -1358,7 +1360,10 @@ func (interpreter *Interpreter) declareVariable(identifier string, value Value) 
 	// NOTE: semantic analysis already checked possible invalid redeclaration
 	variable := NewVariableWithValue(value)
 	interpreter.setVariable(identifier, variable)
-	interpreter.startResourceTracking(value, variable, identifier)
+
+	// TODO: add proper location info
+	interpreter.startResourceTracking(value, variable, identifier, ReturnEmptyLocationRange)
+
 	return variable
 }
 
@@ -4467,7 +4472,12 @@ func (interpreter *Interpreter) updateReferencedResource(
 	}
 }
 
-func (interpreter *Interpreter) startResourceTracking(value Value, variable *Variable, identifier string) {
+func (interpreter *Interpreter) startResourceTracking(
+	value Value,
+	variable *Variable,
+	identifier string,
+	getLocationRange func() LocationRange,
+) {
 	if value == nil || !value.IsResourceKinded(interpreter) {
 		return
 	}
@@ -4480,10 +4490,15 @@ func (interpreter *Interpreter) startResourceTracking(value Value, variable *Var
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
-	interpreter.activations.AddResourceVar(resourceKindedValue, variable)
+	interpreter.activations.AddResourceVar(resourceKindedValue, variable, getLocationRange)
 }
 
-func (interpreter *Interpreter) checkResourceDuplication(value Value, variable *Variable, identifier string) {
+func (interpreter *Interpreter) checkResourceDuplication(
+	value Value,
+	variable *Variable,
+	identifier string,
+	getLocationRange func() LocationRange,
+) {
 	if value == nil || !value.IsResourceKinded(interpreter) {
 		return
 	}
@@ -4496,7 +4511,7 @@ func (interpreter *Interpreter) checkResourceDuplication(value Value, variable *
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
-	interpreter.activations.CheckResourceDuplication(resourceKindedValue, variable)
+	interpreter.activations.CheckResourceDuplication(resourceKindedValue, variable, getLocationRange)
 }
 
 func (interpreter *Interpreter) invalidateResource(value Value) {
