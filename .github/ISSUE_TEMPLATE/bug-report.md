@@ -35,7 +35,7 @@ Please provide additional information:
 - Are you having a problem with the language server in Visual Studio Code?
   - Go to settings, search for "Cadence". Under "Cadence > Trace: Server": Select `verbose`. Restart
   - Reproduce the problem
-  - Copy the log output here: Choose `View` -> `Output`, then select “Cadence” in right top drop down
+  - Copy the log output here: Choose `View` -> `Output`, then select "Cadence" in right top drop down
 
 -->
 
