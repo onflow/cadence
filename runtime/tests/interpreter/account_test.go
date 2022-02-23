@@ -59,7 +59,7 @@ func testAccount(
 		Name: "authAccount",
 		Type: sema.AuthAccountType,
 		ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
-			return newTestAuthAccountValue(address)
+			return newTestAuthAccountValue(inter, address)
 		},
 		Kind: common.DeclarationKindConstant,
 	}
@@ -70,8 +70,8 @@ func testAccount(
 	pubAccountValueDeclaration := stdlib.StandardLibraryValue{
 		Name: "pubAccount",
 		Type: sema.PublicAccountType,
-		ValueFactory: func(_ *interpreter.Interpreter) interpreter.Value {
-			return newTestPublicAccountValue(address)
+		ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
+			return newTestPublicAccountValue(inter, address)
 		},
 		Kind: common.DeclarationKindConstant,
 	}
