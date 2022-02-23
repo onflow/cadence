@@ -1645,7 +1645,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 					)
 				}
 
-				// TODO: implement Equatable interface: https://github.com/dapperlabs/bamboo-node/issues/78
+				// TODO: implement Equatable interface
 
 				if !elementType.IsEquatable() {
 					report(
