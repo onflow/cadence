@@ -1185,7 +1185,10 @@ func NewArrayValueWithIterator(
 	address common.Address,
 	values func() Value,
 ) *ArrayValue {
-	interpreter.UseMemory(arrayType.GetMemoryUsage())
+	interpreter.UseMemory(common.MemoryUsage{
+		Kind:   common.MemoryKindArray,
+		Amount: uint64(1),
+	})
 
 	var v *ArrayValue
 
@@ -11765,9 +11768,8 @@ func NewCompositeValue(
 	}
 
 	interpreter.UseMemory(common.MemoryUsage{
-		Kind: common.MemoryKindComposite,
-		// TODO: fill this in
-		Amount: uint64(5),
+		Kind:   common.MemoryKindComposite,
+		Amount: uint64(len(fields)),
 	})
 
 	dictionary, err := atree.NewMap(
@@ -12825,7 +12827,10 @@ func NewDictionaryValueWithAddress(
 	address common.Address,
 	keysAndValues ...Value,
 ) *DictionaryValue {
-	interpreter.UseMemory(dictionaryType.GetMemoryUsage())
+	interpreter.UseMemory(common.MemoryUsage{
+		Kind:   common.MemoryKindDictionary,
+		Amount: uint64(1),
+	})
 
 	var v *DictionaryValue
 

@@ -58,9 +58,8 @@ func NewSimpleCompositeValue(
 	stringer func(SeenReferences) string,
 ) *SimpleCompositeValue {
 	inter.UseMemory(common.MemoryUsage{
-		Kind: common.MemoryKindComposite,
-		// TODO: fill this in
-		Amount: uint64(5),
+		Kind:   common.MemoryKindComposite,
+		Amount: uint64(len(fields)),
 	})
 
 	return &SimpleCompositeValue{
