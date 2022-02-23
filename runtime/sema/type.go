@@ -2994,6 +2994,7 @@ func baseFunctionVariable(name string, ty *FunctionType, docString string) *Vari
 	return &Variable{
 		Identifier:      name,
 		DeclarationKind: common.DeclarationKindFunction,
+		ArgumentLabels:  ty.ArgumentLabels(),
 		IsConstant:      true,
 		IsBaseValue:     true,
 		Type:            ty,
@@ -3241,6 +3242,26 @@ func suggestFixedPointLiteralConversionReplacement(
 	}
 }
 
+func pathConversionFunctionType(pathType Type) *FunctionType {
+	return &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Identifier:     "identifier",
+				TypeAnnotation: NewTypeAnnotation(StringType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{
+				Type: pathType,
+			},
+		),
+	}
+}
+
+var PublicPathConversionFunctionType = pathConversionFunctionType(PublicPathType)
+var PrivatePathConversionFunctionType = pathConversionFunctionType(PrivatePathType)
+var StoragePathConversionFunctionType = pathConversionFunctionType(StoragePathType)
+
 func init() {
 
 	// Declare the run-time type construction function
@@ -3262,6 +3283,33 @@ func init() {
 				ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
 			},
 			"Creates a run-time type representing the given static type as a value",
+		),
+	)
+
+	BaseValueActivation.Set(
+		PublicPathType.String(),
+		baseFunctionVariable(
+			PublicPathType.String(),
+			PublicPathConversionFunctionType,
+			"Converts the given string into a public path. Returns nil if the string does not specify a public path",
+		),
+	)
+
+	BaseValueActivation.Set(
+		PrivatePathType.String(),
+		baseFunctionVariable(
+			PrivatePathType.String(),
+			PrivatePathConversionFunctionType,
+			"Converts the given string into a private path. Returns nil if the string does not specify a private path",
+		),
+	)
+
+	BaseValueActivation.Set(
+		StoragePathType.String(),
+		baseFunctionVariable(
+			StoragePathType.String(),
+			StoragePathConversionFunctionType,
+			"Converts the given string into a storage path. Returns nil if the string does not specify a storage path",
 		),
 	)
 }
