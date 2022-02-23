@@ -25,11 +25,11 @@ func TestRuntimeArrayMetering(t *testing.T) {
 	runtime := newTestInterpreterRuntime()
 
 	script := []byte(`
-	pub fun main() {
-		let x: [Int8] = []
-		let y: [[String]] = [[]]
-		let z: [[[Bool]]] = [[[]]]
-	}
+    pub fun main() {
+        let x: [Int8] = []
+        let y: [[String]] = [[]]
+        let z: [[[Bool]]] = [[[]]]
+    }
     `)
 
 	meter := make(map[common.MemoryKind]uint64)
@@ -62,10 +62,10 @@ func TestRuntimeDictionaryMetering(t *testing.T) {
 	runtime := newTestInterpreterRuntime()
 
 	script := []byte(`
-	pub fun main() {
-		let x: {Int8: String} = {}
-		let y: {String: {Int8: String}} = {"a": {}}
-	}
+    pub fun main() {
+        let x: {Int8: String} = {}
+        let y: {String: {Int8: String}} = {"a": {}}
+    }
     `)
 
 	meter := make(map[common.MemoryKind]uint64)
@@ -100,24 +100,24 @@ func TestRuntimeCompositeMetering(t *testing.T) {
 
 	script := []byte(`
 
-	pub struct S {
-	}
+    pub struct S {
+    }
 
-	pub resource R {
-		pub let a: String
-		pub let b: String
+    pub resource R {
+        pub let a: String
+        pub let b: String
 
-		init(a: String, b: String) {
-			self.a = a
-			self.b = b
-		}
-	}
+        init(a: String, b: String) {
+            self.a = a
+            self.b = b
+        }
+    }
 
-	pub fun main() {
-		let s = S()
-		let r <- create R(a: "a", b: "b")
-		destroy r
-	}
+    pub fun main() {
+        let s = S()
+        let r <- create R(a: "a", b: "b")
+        destroy r
+    }
     `)
 
 	meter := make(map[common.MemoryKind]uint64)
