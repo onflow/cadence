@@ -82,9 +82,18 @@ func (NonStorable) ChildStorables() []atree.Storable {
 	return nil
 }
 
+// atree.Storable.StoredValue() implementations must load child *storables*, *not* values
+
 // Value
 
 type Value interface {
+	// Value Storable() implementation:
+	// If large (larger than max inline size) and immutable; or if mutable:
+	// store value in separate slab, return storage ID storable.
+	// Mutable values like array, dictionary, composite keep their storage ID.
+	// This allows these values to remove their own slab.
+	// Large, immutable values do not keep their own storage ID.
+	// This requires the parent to remove the child's slab.
 	atree.Value
 	// Stringer provides `func String() string`
 	// NOTE: important, error messages rely on values to implement String
@@ -110,6 +119,12 @@ type Value interface {
 		remove bool,
 		storable atree.Storable,
 	) Value
+	// DeepRemove removes the value (recursively) from storage.
+	// Implementations should:
+	// - Deep remove child values (recursively call DeepRemove)
+	// - Remove child storables from storage (slabs),
+	//   e.g. remove separately stored large immutable value,
+	//   which cannot remove itself, as it does not store its own storage ID
 	DeepRemove(interpreter *Interpreter)
 	// Clone returns a new value that is equal to this value.
 	// NOTE: not used by interpreter, but used externally (e.g. state migration)
