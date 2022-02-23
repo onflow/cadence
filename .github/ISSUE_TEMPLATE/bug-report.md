@@ -30,12 +30,12 @@ Please describe the problem you've encountered below.
 
 Please provide additional information:
 
-- What version of Cadence are you using? If you are using the CLI, run `flow version`?
+- What version of Cadence are you using? If you are using the CLI, run `flow version`
 - What operating system are you using? 
 - Are you having a problem with the language server in Visual Studio Code?
   - Go to settings, search for "Cadence". Under "Cadence > Trace: Server": Select `verbose`. Restart
   - Reproduce the problem
-  - Copy the log output here: Choose `View` -> `Output`, then select "Cadence" in right top drop down
+  - Copy the log output here: Select `View` -> `Output`, then select "Cadence" in right top drop down
 
 -->
 
