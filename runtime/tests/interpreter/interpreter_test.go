@@ -9615,6 +9615,54 @@ func TestInterpretArrayTypeInference(t *testing.T) {
 	})
 }
 
+func TestInterpretArrayFirstIndex(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      let xs = [1, 2, 3]
+
+      fun test(): Int? {
+          return xs.firstIndex(of: 2)
+      }
+    `)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewSomeValueNonCopying(
+			interpreter.NewIntValueFromInt64(1),
+		),
+		value,
+	)
+}
+
+func TestInterpretArrayFirstIndexDoesNotExist(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      let xs = [1, 2, 3]
+
+      fun test(): Int? {
+      return xs.firstIndex(of: 5)
+      }
+    `)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NilValue{},
+		value,
+	)
+}
+
 func TestInterpretOptionalReference(t *testing.T) {
 
 	t.Parallel()

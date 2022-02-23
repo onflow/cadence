@@ -501,7 +501,7 @@ module FPL-TYPING
   syntax Ident ::= "length" [token] | "x" [token] | "y" [token] | "at" [token]
                  | "concat" [token] | "contains" [token] | "append" [token]
                  | "insert" [token] | "remove" [token] | "removeFirst" [token]
-                 | "removeLast" [token]
+                 | "removeLast" [token] | "firstIndex" [token]
 
   /* #type() calculates the result type of an expression, but may
      use an extra "type" IntLit when there are integer literals

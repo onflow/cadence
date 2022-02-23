@@ -1508,6 +1508,33 @@ func (v *ArrayValue) RemoveLast(interpreter *Interpreter, getLocationRange func(
 	return v.Remove(interpreter, getLocationRange, v.Count()-1)
 }
 
+func (v *ArrayValue) FirstIndex(interpreter *Interpreter, getLocationRange func() LocationRange, needleValue Value) OptionalValue {
+
+	needleEquatable, ok := needleValue.(EquatableValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	var counter int64
+	var result bool
+	v.Iterate(func(element Value) (resume bool) {
+		if needleEquatable.Equal(interpreter, getLocationRange, element) {
+			result = true
+			// stop iteration
+			return false
+		}
+		counter++
+		// continue iteration
+		return true
+	})
+
+	if result {
+		value := NewIntValueFromInt64(counter)
+		return NewSomeValueNonCopying(value)
+	}
+	return NilValue{}
+}
+
 func (v *ArrayValue) Contains(interpreter *Interpreter, getLocationRange func() LocationRange, needleValue Value) BoolValue {
 
 	needleEquatable, ok := needleValue.(EquatableValue)
@@ -1652,6 +1679,20 @@ func (v *ArrayValue) GetMember(inter *Interpreter, _ func() LocationRange, name 
 				)
 			},
 			sema.ArrayRemoveLastFunctionType(
+				v.SemaType(inter).ElementType(false),
+			),
+		)
+
+	case "firstIndex":
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				return v.FirstIndex(
+					invocation.Interpreter,
+					invocation.GetLocationRange,
+					invocation.Arguments[0],
+				)
+			},
+			sema.ArrayFirstIndexFunctionType(
 				v.SemaType(inter).ElementType(false),
 			),
 		)
