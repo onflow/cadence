@@ -106,7 +106,7 @@ func TestCheckPath(t *testing.T) {
 	})
 }
 
-func TestConvertStringToPath(t *testing.T) {
+func TestCheckConvertStringToPath(t *testing.T) {
 	t.Parallel()
 
 	domainTypes := map[common.PathDomain]sema.Type{
