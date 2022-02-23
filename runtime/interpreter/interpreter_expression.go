@@ -376,7 +376,7 @@ func (interpreter *Interpreter) testEqual(left, right Value, hasPosition ast.Has
 
 	getLocationRange := locationRangeGetter(interpreter.Location, hasPosition)
 
-	return BoolValue(leftEquatable.Equal(interpreter, getLocationRange, right))
+	return NewBoolValue(interpreter.memoryGauge, leftEquatable.Equal(interpreter, getLocationRange, right))
 }
 
 func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpression) ast.Repr {
@@ -409,7 +409,7 @@ func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpres
 }
 
 func (interpreter *Interpreter) VisitBoolExpression(expression *ast.BoolExpression) ast.Repr {
-	return BoolValue(expression.Value)
+	return NewBoolValue(interpreter.memoryGauge, expression.Value)
 }
 
 func (interpreter *Interpreter) VisitNilExpression(_ *ast.NilExpression) ast.Repr {

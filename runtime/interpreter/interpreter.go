@@ -3969,7 +3969,7 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 			}
 
 			if targetPath == EmptyPathValue {
-				return BoolValue(false)
+				return NewBoolValue(interpreter.memoryGauge, false)
 			}
 
 			reference := &StorageReferenceValue{
@@ -3984,10 +3984,10 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 			// and performs a dynamic type check
 
 			if reference.ReferencedValue(interpreter) == nil {
-				return BoolValue(false)
+				return NewBoolValue(interpreter.memoryGauge, false)
 			}
 
-			return BoolValue(true)
+			return NewBoolValue(interpreter.memoryGauge, true)
 		},
 		sema.CapabilityTypeCheckFunctionType(borrowType),
 	)
@@ -4238,14 +4238,14 @@ func (interpreter *Interpreter) isInstanceFunction(self Value) *HostFunctionValu
 
 			// Values are never instances of unknown types
 			if staticType == nil {
-				return BoolValue(false)
+				return NewBoolValue(interpreter.memoryGauge, false)
 			}
 
 			semaType := interpreter.MustConvertStaticToSemaType(staticType)
 			// NOTE: not invocation.Self, as that is only set for composite values
 			dynamicType := self.DynamicType(interpreter, SeenReferences{})
 			result := interpreter.IsSubType(dynamicType, semaType)
-			return BoolValue(result)
+			return NewBoolValue(interpreter.memoryGauge, result)
 		},
 		sema.IsInstanceFunctionType,
 	)

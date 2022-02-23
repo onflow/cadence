@@ -259,7 +259,7 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ func() LocationRange, n
 
 				// if either type is unknown, the subtype relation is false, as it doesn't make sense to even ask this question
 				if staticType == nil || otherStaticType == nil {
-					return BoolValue(false)
+					return NewBoolValue(interpreter.memoryGauge, false)
 				}
 
 				inter := invocation.Interpreter
@@ -268,7 +268,7 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ func() LocationRange, n
 					inter.MustConvertStaticToSemaType(staticType),
 					inter.MustConvertStaticToSemaType(otherStaticType),
 				)
-				return BoolValue(result)
+				return NewBoolValue(interpreter.memoryGauge, result)
 			},
 			sema.MetaTypeIsSubtypeFunctionType,
 		)
@@ -474,6 +474,21 @@ var _ Value = BoolValue(false)
 var _ atree.Storable = BoolValue(false)
 var _ EquatableValue = BoolValue(false)
 var _ HashableValue = BoolValue(false)
+
+func NewUnmeteredBoolValue(value bool) BoolValue {
+	return BoolValue(value)
+}
+
+func NewBoolValue(memoryGauge common.MemoryGauge, value bool) BoolValue {
+	if memoryGauge != nil {
+		memoryGauge.UseMemory(common.MemoryUsage{
+			Kind:   common.MemoryKindBool,
+			Amount: 1,
+		})
+	}
+
+	return NewUnmeteredBoolValue(value)
+}
 
 func (BoolValue) IsValue() {}
 
@@ -1568,7 +1583,11 @@ func (v *ArrayValue) Contains(interpreter *Interpreter, getLocationRange func() 
 		return true
 	})
 
-	return BoolValue(result)
+	var memoryGauge common.MemoryGauge
+	if interpreter != nil {
+		memoryGauge = interpreter.memoryGauge
+	}
+	return NewBoolValue(memoryGauge, result)
 }
 
 func (v *ArrayValue) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {

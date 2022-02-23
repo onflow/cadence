@@ -107,7 +107,7 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 		if err != nil {
 			return nil, err
 		}
-		storable = BoolValue(v)
+		storable = NewBoolValue(d.memoryGauge, v)
 
 	case cbor.NilType:
 		err := d.decoder.DecodeNil()

@@ -446,7 +446,7 @@ func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedTy
 	case cadence.Optional:
 		return importOptionalValue(inter, v, expectedType)
 	case cadence.Bool:
-		return interpreter.BoolValue(v), nil
+		return interpreter.NewBoolValue(inter, bool(v)), nil
 	case cadence.String:
 		return importString(inter, v), nil
 	case cadence.Character:
