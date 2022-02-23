@@ -11539,7 +11539,7 @@ func NewCompositeValue(
 
 	interpreter.UseMemory(common.MemoryUsage{
 		Kind:   common.MemoryKindComposite,
-		Amount: uint64(len(fields)),
+		Amount: uint64(1),
 	})
 
 	dictionary, err := atree.NewMap(

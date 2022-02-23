@@ -59,7 +59,7 @@ func NewSimpleCompositeValue(
 ) *SimpleCompositeValue {
 	inter.UseMemory(common.MemoryUsage{
 		Kind:   common.MemoryKindComposite,
-		Amount: uint64(len(fields)),
+		Amount: uint64(1),
 	})
 
 	return &SimpleCompositeValue{
