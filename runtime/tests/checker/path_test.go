@@ -126,7 +126,7 @@ func TestCheckConvertStringToPath(t *testing.T) {
 			checker, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      let x: %[1]s? = %[1]s(identifier: "/%[2]s/foo")
+					let x = %[1]s(identifier: "foo")
                     `,
 					domainType.String(),
 					domain.Identifier(),
