@@ -517,7 +517,7 @@ func (interpreter *Interpreter) VisitStringExpression(expression *ast.StringExpr
 
 	switch stringType {
 	case sema.CharacterType:
-		return NewCharacterValue(expression.Value)
+		return NewCharacterValue(interpreter, expression.Value)
 	}
 
 	// NOTE: already metered in lexer/parser

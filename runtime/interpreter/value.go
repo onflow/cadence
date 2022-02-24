@@ -621,8 +621,23 @@ func (BoolValue) ChildStorables() []atree.Storable {
 //
 type CharacterValue string
 
-func NewCharacterValue(r string) CharacterValue {
+func NewUnmeteredCharacterValue(r string) CharacterValue {
 	return CharacterValue(r)
+}
+
+func NewCharacterValue(memoryGauge common.MemoryGauge, r string) CharacterValue {
+	if memoryGauge != nil {
+		length := len(r)
+		if length < 0 {
+			length = 0
+		}
+		memoryGauge.UseMemory(common.MemoryUsage{
+			Kind:   common.MemoryKindBool,
+			Amount: uint64(length),
+		})
+	}
+
+	return NewUnmeteredCharacterValue(r)
 }
 
 var _ Value = CharacterValue("a")
@@ -968,7 +983,7 @@ func (v *StringValue) GetKey(interpreter *Interpreter, getLocationRange func() L
 	}
 
 	char := v.graphemes.Str()
-	return NewCharacterValue(char)
+	return NewCharacterValue(interpreter, char)
 }
 
 func (*StringValue) SetKey(_ *Interpreter, _ func() LocationRange, _ Value, _ Value) {

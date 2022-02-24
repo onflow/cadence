@@ -450,7 +450,7 @@ func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedTy
 	case cadence.String:
 		return importString(inter, v), nil
 	case cadence.Character:
-		return interpreter.NewCharacterValue(string(v)), nil
+		return interpreter.NewCharacterValue(inter, string(v)), nil
 	case cadence.Bytes:
 		return interpreter.ByteSliceToByteArrayValue(inter, v), nil
 	case cadence.Address:

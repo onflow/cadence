@@ -704,19 +704,19 @@ func TestInterpretStringIndexing(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewCharacterValue("a"),
+		interpreter.NewUnmeteredCharacterValue("a"),
 		inter.Globals["x"].GetValue(),
 	)
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewCharacterValue("b"),
+		interpreter.NewUnmeteredCharacterValue("b"),
 		inter.Globals["y"].GetValue(),
 	)
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewCharacterValue("c"),
+		interpreter.NewUnmeteredCharacterValue("c"),
 		inter.Globals["z"].GetValue(),
 	)
 }
@@ -785,7 +785,7 @@ func TestInterpretStringIndexingUnicode(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewCharacterValue("\u00e9"),
+		interpreter.NewUnmeteredCharacterValue("\u00e9"),
 		value,
 	)
 
@@ -795,7 +795,7 @@ func TestInterpretStringIndexingUnicode(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewCharacterValue("e\u0301"),
+		interpreter.NewUnmeteredCharacterValue("e\u0301"),
 		value,
 	)
 }
@@ -6621,7 +6621,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			ty:    sema.StringType,
 		},
 		"Character": {
-			value: interpreter.NewCharacterValue("X"),
+			value: interpreter.NewUnmeteredCharacterValue("X"),
 			ty:    sema.CharacterType,
 		},
 		"Bool": {

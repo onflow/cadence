@@ -236,7 +236,7 @@ func TestExportValue(t *testing.T) {
 		},
 		{
 			label:    "Character",
-			value:    interpreter.NewCharacterValue("a"),
+			value:    interpreter.NewUnmeteredCharacterValue("a"),
 			expected: a,
 		},
 		{
@@ -618,7 +618,7 @@ func TestImportValue(t *testing.T) {
 		{
 			label:    "Character",
 			value:    a,
-			expected: interpreter.NewCharacterValue("a"),
+			expected: interpreter.NewUnmeteredCharacterValue("a"),
 		},
 		{
 			label:    "Int8",
