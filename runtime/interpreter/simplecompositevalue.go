@@ -57,10 +57,7 @@ func NewSimpleCompositeValue(
 	fieldFormatters map[string]func(Value, SeenReferences) string,
 	stringer func(SeenReferences) string,
 ) *SimpleCompositeValue {
-	inter.UseMemory(common.MemoryUsage{
-		Kind:   common.MemoryKindComposite,
-		Amount: uint64(1),
-	})
+	inter.UseKnownMemory(common.MemoryKindComposite, 1)
 
 	return &SimpleCompositeValue{
 		TypeID:          typeID,

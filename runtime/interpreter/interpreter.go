@@ -4749,6 +4749,15 @@ func (interpreter *Interpreter) UseMemory(usage common.MemoryUsage) {
 	interpreter.memoryGauge.UseMemory(usage)
 }
 
+// UseKnownMemory uses a pre-determined amount of memory
+//
+func (interpreter *Interpreter) UseKnownMemory(kind common.MemoryKind, amount uint64) {
+	interpreter.UseMemory(common.MemoryUsage{
+		Kind:   kind,
+		Amount: amount,
+	})
+}
+
 func (interpreter *Interpreter) DecodeStorable(
 	decoder *cbor.StreamDecoder,
 	storageID atree.StorageID,
