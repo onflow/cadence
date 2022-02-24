@@ -92,7 +92,11 @@ type Runtime interface {
 	// SetTracingEnabled configures if tracing is enabled.
 	SetTracingEnabled(enabled bool)
 
-	// SetResourceOwnerChangeCallbackEnabled configures if the resource owner change callback is enabled.
+	// SetInvalidatedResourceValidationEnabled configures
+	// if invalidated resource validation is enabled.
+	SetInvalidatedResourceValidationEnabled(enabled bool)
+
+	// SetResourceOwnerChangeHandlerEnabled configures if the resource owner change callback is enabled.
 	SetResourceOwnerChangeHandlerEnabled(enabled bool)
 
 	// ReadStored reads the value stored at the given path
@@ -155,11 +159,12 @@ func reportMetric(
 
 // interpreterRuntime is a interpreter-based version of the Flow runtime.
 type interpreterRuntime struct {
-	coverageReport                    *CoverageReport
-	contractUpdateValidationEnabled   bool
-	atreeValidationEnabled            bool
-	tracingEnabled                    bool
-	resourceOwnerChangeHandlerEnabled bool
+	coverageReport                       *CoverageReport
+	contractUpdateValidationEnabled      bool
+	atreeValidationEnabled               bool
+	tracingEnabled                       bool
+	resourceOwnerChangeHandlerEnabled    bool
+	invalidatedResourceValidationEnabled bool
 }
 
 type Option func(Runtime)
@@ -188,6 +193,15 @@ func WithAtreeValidationEnabled(enabled bool) Option {
 func WithTracingEnabled(enabled bool) Option {
 	return func(runtime Runtime) {
 		runtime.SetTracingEnabled(enabled)
+	}
+}
+
+// WithInvalidatedResourceValidationEnabled returns a runtime option
+// that configures if invalidated resource validation is enabled.
+//
+func WithInvalidatedResourceValidationEnabled(enabled bool) Option {
+	return func(runtime Runtime) {
+		runtime.SetInvalidatedResourceValidationEnabled(enabled)
 	}
 }
 
@@ -241,6 +255,10 @@ func (r *interpreterRuntime) SetAtreeValidationEnabled(enabled bool) {
 
 func (r *interpreterRuntime) SetTracingEnabled(enabled bool) {
 	r.tracingEnabled = enabled
+}
+
+func (r *interpreterRuntime) SetInvalidatedResourceValidationEnabled(enabled bool) {
+	r.invalidatedResourceValidationEnabled = enabled
 }
 
 func (r *interpreterRuntime) SetResourceOwnerChangeHandlerEnabled(enabled bool) {
@@ -1357,6 +1375,7 @@ func (r *interpreterRuntime) newInterpreter(
 		// Instead, storage is validated after commits (if validation is enabled).
 		interpreter.WithAtreeStorageValidationEnabled(false),
 		interpreter.WithOnResourceOwnerChangeHandler(r.resourceOwnerChangedHandler(context.Interface)),
+		interpreter.WithInvalidatedResourceValidationEnabled(r.invalidatedResourceValidationEnabled),
 	}
 
 	defaultOptions = append(defaultOptions,

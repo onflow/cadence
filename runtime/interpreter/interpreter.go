@@ -348,7 +348,8 @@ type Interpreter struct {
 	atreeStorageValidationEnabled  bool
 	tracingEnabled                 bool
 	// TODO: ideally this would be a weak map, but Go has no weak references
-	referencedResourceKindedValues ReferencedResourceKindedValues
+	referencedResourceKindedValues       ReferencedResourceKindedValues
+	invalidatedResourceValidationEnabled bool
 }
 
 type Option func(*Interpreter) error
@@ -602,6 +603,16 @@ func WithTracingEnabled(enabled bool) Option {
 	}
 }
 
+// WithInvalidatedResourceValidationEnabled returns an interpreter option which sets
+// the resource validation option.
+//
+func WithInvalidatedResourceValidationEnabled(enabled bool) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetInvalidatedResourceValidationEnabled(enabled)
+		return nil
+	}
+}
+
 // withTypeCodes returns an interpreter option which sets the type codes.
 //
 func withTypeCodes(typeCodes TypeCodes) Option {
@@ -820,6 +831,12 @@ func (interpreter *Interpreter) SetAtreeStorageValidationEnabled(enabled bool) {
 //
 func (interpreter *Interpreter) SetTracingEnabled(enabled bool) {
 	interpreter.tracingEnabled = enabled
+}
+
+// SetInvalidatedResourceValidationEnabled sets the invalidated resource validation option.
+//
+func (interpreter *Interpreter) SetInvalidatedResourceValidationEnabled(enabled bool) {
+	interpreter.invalidatedResourceValidationEnabled = enabled
 }
 
 // setTypeCodes sets the type codes.

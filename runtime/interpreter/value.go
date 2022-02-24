@@ -11640,6 +11640,8 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func
 
 func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
 
+	v.checkInvalidatedResourceUse(getLocationRange)
+
 	if v.Kind == common.CompositeKindResource &&
 		name == sema.ResourceOwnerFieldName {
 
@@ -11705,6 +11707,14 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange fu
 	}
 
 	return nil
+}
+
+func (v *CompositeValue) checkInvalidatedResourceUse(getLocationRange func() LocationRange) {
+	if v.isDestroyed || (v.dictionary == nil && v.Kind == common.CompositeKindResource) {
+		panic(InvalidatedResourceError{
+			LocationRange: getLocationRange(),
+		})
+	}
 }
 
 func (v *CompositeValue) getInterpreter(interpreter *Interpreter) *Interpreter {
@@ -12083,6 +12093,7 @@ func (v *CompositeValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 ) Value {
+	v.checkInvalidatedResourceUse(getLocationRange)
 
 	currentStorageID := v.StorageID()
 	currentAddress := currentStorageID.Address
@@ -12149,9 +12160,18 @@ func (v *CompositeValue) Transfer(
 		// and also update all values that are referencing the same value
 		// (but currently point to an outdated Go instance of the value)
 
-		v.dictionary = dictionary
-
 		newStorageID := dictionary.StorageID()
+
+		// If checking of transfers of invalidated resource is enabled,
+		// then mark the resource as invalidated, by unsetting the backing dictionary.
+		// This allows raising an error when the resource is attempted to be transferred/moved again
+		// (see beginning of this function).
+		if interpreter.invalidatedResourceValidationEnabled {
+			v.dictionary = nil
+		} else {
+			v.dictionary = dictionary
+			res = v
+		}
 
 		interpreter.updateReferencedResource(
 			currentStorageID,
@@ -12164,9 +12184,9 @@ func (v *CompositeValue) Transfer(
 				compositeValue.dictionary = dictionary
 			},
 		)
+	}
 
-		res = v
-	} else {
+	if res == nil {
 		res = &CompositeValue{
 			dictionary:          dictionary,
 			Location:            v.Location,
