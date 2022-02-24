@@ -132,19 +132,16 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			},
 		}
 
-		semaValueDeclarations := valueDeclarations.ToSemaValueDeclarations()
-		interpreterValueDeclarations := valueDeclarations.ToInterpreterValueDeclarations()
-
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
               let result = Type<Int>() == unknownType
             `,
 			ParseCheckAndInterpretOptions{
 				CheckerOptions: []sema.Option{
-					sema.WithPredeclaredValues(semaValueDeclarations),
+					sema.WithPredeclaredValues(valueDeclarations.ToSemaValueDeclarations()),
 				},
-				Options: []interpreter.Option{
-					interpreter.WithPredeclaredValues(interpreterValueDeclarations),
+				Options: &interpreter.Options{
+					PredeclaredValues: valueDeclarations.ToInterpreterValueDeclarations(),
 				},
 			},
 		)
@@ -185,19 +182,16 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			},
 		}
 
-		semaValueDeclarations := valueDeclarations.ToSemaValueDeclarations()
-		interpreterValueDeclarations := valueDeclarations.ToInterpreterValueDeclarations()
-
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
               let result = unknownType1 == unknownType2
             `,
 			ParseCheckAndInterpretOptions{
 				CheckerOptions: []sema.Option{
-					sema.WithPredeclaredValues(semaValueDeclarations),
+					sema.WithPredeclaredValues(valueDeclarations.ToSemaValueDeclarations()),
 				},
-				Options: []interpreter.Option{
-					interpreter.WithPredeclaredValues(interpreterValueDeclarations),
+				Options: &interpreter.Options{
+					PredeclaredValues: valueDeclarations.ToInterpreterValueDeclarations(),
 				},
 			},
 		)
@@ -269,19 +263,16 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 			},
 		}
 
-		semaValueDeclarations := valueDeclarations.ToSemaValueDeclarations()
-		interpreterValueDeclarations := valueDeclarations.ToInterpreterValueDeclarations()
-
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
               let identifier = unknownType.identifier
             `,
 			ParseCheckAndInterpretOptions{
 				CheckerOptions: []sema.Option{
-					sema.WithPredeclaredValues(semaValueDeclarations),
+					sema.WithPredeclaredValues(valueDeclarations.ToSemaValueDeclarations()),
 				},
-				Options: []interpreter.Option{
-					interpreter.WithPredeclaredValues(interpreterValueDeclarations),
+				Options: &interpreter.Options{
+					PredeclaredValues: valueDeclarations.ToInterpreterValueDeclarations(),
 				},
 			},
 		)
@@ -407,8 +398,8 @@ func TestInterpretIsInstance(t *testing.T) {
 				CheckerOptions: []sema.Option{
 					sema.WithPredeclaredValues(semaValueDeclarations),
 				},
-				Options: []interpreter.Option{
-					interpreter.WithPredeclaredValues(interpreterValueDeclarations),
+				Options: &interpreter.Options{
+					PredeclaredValues: interpreterValueDeclarations,
 				},
 			})
 			require.NoError(t, err)
@@ -548,8 +539,8 @@ func TestInterpretIsSubtype(t *testing.T) {
 				CheckerOptions: []sema.Option{
 					sema.WithPredeclaredValues(semaValueDeclarations),
 				},
-				Options: []interpreter.Option{
-					interpreter.WithPredeclaredValues(interpreterValueDeclarations),
+				Options: &interpreter.Options{
+					PredeclaredValues: interpreterValueDeclarations,
 				},
 			})
 			require.NoError(t, err)
@@ -719,9 +710,9 @@ func TestInterpretGetType(t *testing.T) {
 					CheckerOptions: []sema.Option{
 						sema.WithPredeclaredValues(valueDeclarations),
 					},
-					Options: []interpreter.Option{
-						interpreter.WithStorage(storage),
-						interpreter.WithPredeclaredValues(values),
+					Options: &interpreter.Options{
+						Storage:           storage,
+						PredeclaredValues: values,
 					},
 				},
 			)

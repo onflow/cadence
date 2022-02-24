@@ -95,8 +95,8 @@ func testAccount(
 			CheckerOptions: []sema.Option{
 				sema.WithPredeclaredValues(valueDeclarations.ToSemaValueDeclarations()),
 			},
-			Options: []interpreter.Option{
-				interpreter.WithPredeclaredValues(valueDeclarations.ToInterpreterValueDeclarations()),
+			Options: &interpreter.Options{
+				PredeclaredValues: valueDeclarations.ToInterpreterValueDeclarations(),
 			},
 		},
 	)
@@ -105,7 +105,9 @@ func testAccount(
 	getAccountValues := func() map[storageKey]interpreter.Value {
 		accountValues := make(map[storageKey]interpreter.Value)
 
-		for storageMapKey, accountStorage := range inter.Storage.(interpreter.InMemoryStorage).StorageMaps {
+		storageMaps := inter.Options.Storage.(interpreter.InMemoryStorage).StorageMaps
+
+		for storageMapKey, accountStorage := range storageMaps {
 			iterator := accountStorage.Iterator()
 			for {
 				key, value := iterator.Next()

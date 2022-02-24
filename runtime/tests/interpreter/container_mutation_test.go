@@ -332,8 +332,8 @@ func TestArrayMutation(t *testing.T) {
 				CheckerOptions: []sema.Option{
 					sema.WithPredeclaredValues(valueDeclarations),
 				},
-				Options: []interpreter.Option{
-					interpreter.WithPredeclaredValues(values),
+				Options: &interpreter.Options{
+					PredeclaredValues: values,
 				},
 			},
 		)
@@ -462,8 +462,8 @@ func TestArrayMutation(t *testing.T) {
 				CheckerOptions: []sema.Option{
 					sema.WithPredeclaredValues(valueDeclarations),
 				},
-				Options: []interpreter.Option{
-					interpreter.WithPredeclaredValues(values),
+				Options: &interpreter.Options{
+					PredeclaredValues: values,
 				},
 			},
 		)
@@ -713,8 +713,8 @@ func TestDictionaryMutation(t *testing.T) {
 				CheckerOptions: []sema.Option{
 					sema.WithPredeclaredValues(valueDeclarations),
 				},
-				Options: []interpreter.Option{
-					interpreter.WithPredeclaredValues(values),
+				Options: &interpreter.Options{
+					PredeclaredValues: values,
 				},
 			},
 		)
@@ -843,8 +843,8 @@ func TestDictionaryMutation(t *testing.T) {
 				CheckerOptions: []sema.Option{
 					sema.WithPredeclaredValues(valueDeclarations),
 				},
-				Options: []interpreter.Option{
-					interpreter.WithPredeclaredValues(values),
+				Options: &interpreter.Options{
+					PredeclaredValues: values,
 				},
 			},
 		)

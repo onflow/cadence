@@ -161,13 +161,15 @@ func PrepareInterpreter(filename string, debugger *interpreter.Debugger) (*inter
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
 		checker.Location,
-		interpreter.WithStorage(storage),
-		interpreter.WithPredeclaredValues(valueDeclarations.ToInterpreterValueDeclarations()),
-		interpreter.WithUUIDHandler(func() (uint64, error) {
-			defer func() { uuid++ }()
-			return uuid, nil
-		}),
-		interpreter.WithDebugger(debugger),
+		&interpreter.Options{
+			Storage:           storage,
+			PredeclaredValues: valueDeclarations.ToInterpreterValueDeclarations(),
+			ResourceUUIDHandler: func() (uint64, error) {
+				defer func() { uuid++ }()
+				return uuid, nil
+			},
+			Debugger: debugger,
+		},
 	)
 	must(err)
 

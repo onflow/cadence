@@ -165,8 +165,8 @@ type PublicAccountHandlerFunc func(
 	address AddressValue,
 ) Value
 
-// UUIDHandlerFunc is a function that handles the generation of UUIDs.
-type UUIDHandlerFunc func() (uint64, error)
+// ResourceUUIDHandlerFunc is a function that handles the generation of resource UUIDs.
+type ResourceUUIDHandlerFunc func() (uint64, error)
 
 // PublicKeyValidationHandlerFunc is a function that validates a given public key.
 // Parameter types:
@@ -309,324 +309,104 @@ type Storage interface {
 	CheckHealth() error
 }
 
-type ReferencedResourceKindedValues map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}
+type referencedResourceKindedValues map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}
+
+type sharedInterpreterState struct {
+	allInterpreters map[common.LocationID]*Interpreter
+	typeCodes       TypeCodes
+	// TODO: ideally this would be a weak map, but Go has no weak references
+	referencedResourceKindedValues referencedResourceKindedValues
+}
+
+func newSharedInterpreterState() *sharedInterpreterState {
+	return &sharedInterpreterState{
+		allInterpreters: map[common.LocationID]*Interpreter{},
+		typeCodes: TypeCodes{
+			CompositeCodes:       map[sema.TypeID]CompositeTypeCode{},
+			InterfaceCodes:       map[sema.TypeID]WrapperCode{},
+			TypeRequirementCodes: map[sema.TypeID]WrapperCode{},
+		},
+		referencedResourceKindedValues: map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}{},
+	}
+}
 
 type Interpreter struct {
-	Program                        *Program
-	Location                       common.Location
-	PredeclaredValues              []ValueDeclaration
-	effectivePredeclaredValues     map[string]ValueDeclaration
-	activations                    *VariableActivations
-	Globals                        GlobalVariables
-	allInterpreters                map[common.LocationID]*Interpreter
-	typeCodes                      TypeCodes
-	Transactions                   []*HostFunctionValue
-	Storage                        Storage
-	onEventEmitted                 OnEventEmittedFunc
-	onStatement                    OnStatementFunc
-	onLoopIteration                OnLoopIterationFunc
-	onFunctionInvocation           OnFunctionInvocationFunc
-	onInvokedFunctionReturn        OnInvokedFunctionReturnFunc
-	onRecordTrace                  OnRecordTraceFunc
-	onResourceOwnerChange          OnResourceOwnerChangeFunc
-	injectedCompositeFieldsHandler InjectedCompositeFieldsHandlerFunc
-	contractValueHandler           ContractValueHandlerFunc
-	importLocationHandler          ImportLocationHandlerFunc
-	publicAccountHandler           PublicAccountHandlerFunc
-	uuidHandler                    UUIDHandlerFunc
-	PublicKeyValidationHandler     PublicKeyValidationHandlerFunc
-	SignatureVerificationHandler   SignatureVerificationHandlerFunc
-	BLSVerifyPoPHandler            BLSVerifyPoPHandlerFunc
-	BLSAggregateSignaturesHandler  BLSAggregateSignaturesHandlerFunc
-	BLSAggregatePublicKeysHandler  BLSAggregatePublicKeysHandlerFunc
-	HashHandler                    HashHandlerFunc
-	ExitHandler                    ExitHandlerFunc
-	interpreted                    bool
-	statement                      ast.Statement
-	debugger                       *Debugger
-	atreeValueValidationEnabled    bool
-	atreeStorageValidationEnabled  bool
-	tracingEnabled                 bool
-	// TODO: ideally this would be a weak map, but Go has no weak references
-	referencedResourceKindedValues ReferencedResourceKindedValues
+	Program      *Program
+	Location     common.Location
+	Options      *Options
+	activations  *VariableActivations
+	Globals      GlobalVariables
+	Transactions []*HostFunctionValue
+	interpreted  bool
+	statement    ast.Statement
+	shared       *sharedInterpreterState
 }
 
-type Option func(*Interpreter) error
+type Options struct {
+	Storage  Storage
+	Debugger *Debugger
 
-// WithOnEventEmittedHandler returns an interpreter option which sets
-// the given function as the event handler.
-//
-func WithOnEventEmittedHandler(handler OnEventEmittedFunc) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetOnEventEmittedHandler(handler)
-		return nil
-	}
+	// PredeclaredValues are the declarations of predeclared values.
+	PredeclaredValues []ValueDeclaration
+	// InjectedCompositeFieldsHandler is the function that is used to initialize new composite values' fields.
+	InjectedCompositeFieldsHandler InjectedCompositeFieldsHandlerFunc
+	// OnEventEmitted is the function that is triggered when an event is emitted by the program.
+	OnEventEmitted OnEventEmittedFunc
+	// OnStatement is the function that is triggered when a statement is about to be executed.
+	OnStatement OnStatementFunc
+	// OnLoopIteration is the function that is triggered when a loop iteration is about to be executed.
+	OnLoopIteration OnLoopIterationFunc
+	// OnFunctionInvocation sets the function that is triggered when a function invocation is about to be executed.
+	OnFunctionInvocation OnFunctionInvocationFunc
+	// OnInvokedFunctionReturn is the function that is triggered when an invoked function returned.
+	OnInvokedFunctionReturn OnInvokedFunctionReturnFunc
+	// OnRecordTrace is the function that is triggered when a trace is recorded.
+	OnRecordTrace OnRecordTraceFunc
+	// OnResourceOwnerChange is the function that is triggered when the owner of a resource changes.
+	OnResourceOwnerChange OnResourceOwnerChangeFunc
+	// ContractValueHandler is the function that is used to declare a contract values / instances (singletons).
+	ContractValueHandler ContractValueHandlerFunc
+	// ImportLocationHandler is the function that is used to handle the imports of locations.
+	ImportLocationHandler ImportLocationHandlerFunc
+	// ResourceUUIDHandler is the function that is used to handle the generation of resource UUIDs.
+	ResourceUUIDHandler ResourceUUIDHandlerFunc
+	// PublicAccountHandler is the function that is used to create public account values.
+	PublicAccountHandler PublicAccountHandlerFunc
+	// HashHandler is the function that is used to hash.
+	HashHandler HashHandlerFunc
+	// AtreeValueValidationEnabled enables the validation of atree-backed values.
+	AtreeValueValidationEnabled bool
+	// AtreeStorageValidationEnabled enables validation of atree storage.
+	AtreeStorageValidationEnabled bool
+	// TracingEnabled enables tracing.
+	TracingEnabled bool
+	// PublicKeyValidationHandler is the function that is used to validate public keys.
+	PublicKeyValidationHandler PublicKeyValidationHandlerFunc
+	// SignatureVerificationHandler is the function that is used to verify signatures.
+	SignatureVerificationHandler SignatureVerificationHandlerFunc
+	// ExitHandler is the function that is triggered when execution is complete.
+	ExitHandler ExitHandlerFunc
+	// BLSVerifyPoPHandler is the function used to verify BLS proofs of possession.
+	BLSVerifyPoPHandler BLSVerifyPoPHandlerFunc
+	// BLSAggregateSignaturesHandler is the function used to aggregate BLS signatures
+	BLSAggregateSignaturesHandler BLSAggregateSignaturesHandlerFunc
+	// BLSAggregatePublicKeysHandler is the function used to aggregate BLS public keys
+	BLSAggregatePublicKeysHandler BLSAggregatePublicKeysHandlerFunc
 }
 
-// WithOnStatementHandler returns an interpreter option which sets
-// the given function as the statement handler.
-//
-func WithOnStatementHandler(handler OnStatementFunc) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetOnStatementHandler(handler)
-		return nil
-	}
-}
+func (interpreter *Interpreter) predeclareValues() error {
+	predeclaredValues := interpreter.Options.PredeclaredValues
 
-// WithOnLoopIterationHandler returns an interpreter option which sets
-// the given function as the loop iteration handler.
-//
-func WithOnLoopIterationHandler(handler OnLoopIterationFunc) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetOnLoopIterationHandler(handler)
-		return nil
-	}
-}
-
-// WithOnFunctionInvocationHandler returns an interpreter option which sets
-// the given function as the function invocation handler.
-//
-func WithOnFunctionInvocationHandler(handler OnFunctionInvocationFunc) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetOnFunctionInvocationHandler(handler)
-		return nil
-	}
-}
-
-// WithOnInvokedFunctionReturnHandler returns an interpreter option which sets
-// the given function as the invoked function return handler.
-//
-func WithOnInvokedFunctionReturnHandler(handler OnInvokedFunctionReturnFunc) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetOnInvokedFunctionReturnHandler(handler)
-		return nil
-	}
-}
-
-// WithOnRecordTraceHandler returns an interpreter option which sets
-// the given function as the record trace handler.
-//
-func WithOnRecordTraceHandler(handler OnRecordTraceFunc) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetOnRecordTraceHandler(handler)
-		return nil
-	}
-}
-
-// WithOnResourceOwnerChangeHandler returns an interpreter option which sets
-// the given function as the resource owner change handler.
-//
-func WithOnResourceOwnerChangeHandler(handler OnResourceOwnerChangeFunc) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetOnResourceOwnerChangeHandler(handler)
-		return nil
-	}
-}
-
-// WithPredeclaredValues returns an interpreter option which declares
-// the given the predeclared values.
-//
-func WithPredeclaredValues(predeclaredValues []ValueDeclaration) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.PredeclaredValues = predeclaredValues
-
-		for _, declaration := range predeclaredValues {
-			variable := interpreter.declareValue(declaration)
-			if variable == nil {
-				continue
-			}
-			name := declaration.ValueDeclarationName()
-			interpreter.Globals.Set(name, variable)
-			interpreter.effectivePredeclaredValues[name] = declaration
+	for _, declaration := range predeclaredValues {
+		variable := interpreter.declareValue(declaration)
+		if variable == nil {
+			continue
 		}
-
-		return nil
+		name := declaration.ValueDeclarationName()
+		interpreter.Globals.Set(name, variable)
 	}
-}
 
-// WithStorage returns an interpreter option which sets the given value
-// as the function that is used for storage operations.
-//
-func WithStorage(storage Storage) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetStorage(storage)
-		return nil
-	}
-}
-
-// WithInjectedCompositeFieldsHandler returns an interpreter option which sets the given function
-// as the function that is used to initialize new composite values' fields
-//
-func WithInjectedCompositeFieldsHandler(handler InjectedCompositeFieldsHandlerFunc) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetInjectedCompositeFieldsHandler(handler)
-		return nil
-	}
-}
-
-// WithContractValueHandler returns an interpreter option which sets the given function
-// as the function that is used to handle imports of values.
-//
-func WithContractValueHandler(handler ContractValueHandlerFunc) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetContractValueHandler(handler)
-		return nil
-	}
-}
-
-// WithImportLocationHandler returns an interpreter option which sets the given function
-// as the function that is used to handle the imports of locations.
-//
-func WithImportLocationHandler(handler ImportLocationHandlerFunc) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetImportLocationHandler(handler)
-		return nil
-	}
-}
-
-// WithPublicAccountHandler returns an interpreter option which sets the given function
-// as the function that is used to handle public accounts.
-//
-func WithPublicAccountHandler(handler PublicAccountHandlerFunc) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetPublicAccountHandler(handler)
-		return nil
-	}
-}
-
-// WithUUIDHandler returns an interpreter option which sets the given function
-// as the function that is used to generate UUIDs.
-//
-func WithUUIDHandler(handler UUIDHandlerFunc) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetUUIDHandler(handler)
-		return nil
-	}
-}
-
-// WithPublicKeyValidationHandler returns an interpreter option which sets the given
-// function as the function that is used to handle public key validation.
-//
-func WithPublicKeyValidationHandler(handler PublicKeyValidationHandlerFunc) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetPublicKeyValidationHandler(handler)
-		return nil
-	}
-}
-
-// WithBLSCryptoFunctions returns an interpreter option which sets the given
-// functions as the functions used to handle certain BLS-specific crypto functions.
-//
-func WithBLSCryptoFunctions(
-	verifyPoP BLSVerifyPoPHandlerFunc,
-	aggregateSignatures BLSAggregateSignaturesHandlerFunc,
-	aggregatePublicKeys BLSAggregatePublicKeysHandlerFunc,
-) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetBLSCryptoFunctions(
-			verifyPoP,
-			aggregateSignatures,
-			aggregatePublicKeys,
-		)
-		return nil
-	}
-}
-
-// WithSignatureVerificationHandler returns an interpreter option which sets the given
-// function as the function that is used to handle signature validation.
-//
-func WithSignatureVerificationHandler(handler SignatureVerificationHandlerFunc) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetSignatureVerificationHandler(handler)
-		return nil
-	}
-}
-
-// WithHashHandler returns an interpreter option which sets the given
-// function as the function that is used to hash.
-//
-func WithHashHandler(handler HashHandlerFunc) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetHashHandler(handler)
-		return nil
-	}
-}
-
-// WithExitHandler returns an interpreter option which sets the given
-// function as the function that is used when execution is complete.
-//
-func WithExitHandler(handler ExitHandlerFunc) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetExitHandler(handler)
-		return nil
-	}
-}
-
-// WithAllInterpreters returns an interpreter option which sets
-// the given map of interpreters as the map of all interpreters.
-//
-func WithAllInterpreters(allInterpreters map[common.LocationID]*Interpreter) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetAllInterpreters(allInterpreters)
-		return nil
-	}
-}
-
-// WithAtreeValueValidationEnabled returns an interpreter option which sets
-// the atree validation option.
-//
-func WithAtreeValueValidationEnabled(enabled bool) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetAtreeValueValidationEnabled(enabled)
-		return nil
-	}
-}
-
-// WithAtreeStorageValidationEnabled returns an interpreter option which sets
-// the atree validation option.
-//
-func WithAtreeStorageValidationEnabled(enabled bool) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetAtreeStorageValidationEnabled(enabled)
-		return nil
-	}
-}
-
-// WithTracingEnabled returns an interpreter option which sets
-// the tracing option.
-//
-func WithTracingEnabled(enabled bool) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetTracingEnabled(enabled)
-		return nil
-	}
-}
-
-// withTypeCodes returns an interpreter option which sets the type codes.
-//
-func withTypeCodes(typeCodes TypeCodes) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.setTypeCodes(typeCodes)
-		return nil
-	}
-}
-
-// withReferencedResourceKindedValues returns an interpreter option which sets the referenced values.
-//
-func withReferencedResourceKindedValues(referencedResourceKindedValues ReferencedResourceKindedValues) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.referencedResourceKindedValues = referencedResourceKindedValues
-		return nil
-	}
-}
-
-// WithDebugger returns an interpreter option which sets the given debugger
-//
-func WithDebugger(debugger *Debugger) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetDebugger(debugger)
-		return nil
-	}
+	return nil
 }
 
 // Create a base-activation so that it can be reused across all interpreters.
@@ -637,201 +417,48 @@ var baseActivation = func() *VariableActivation {
 	return activation
 }()
 
-func NewInterpreter(program *Program, location common.Location, options ...Option) (*Interpreter, error) {
+func NewInterpreter(program *Program, location common.Location, options *Options) (*Interpreter, error) {
+	return newInterpreter(program, location, options, newSharedInterpreterState())
+}
+
+func newInterpreter(
+	program *Program,
+	location common.Location,
+	options *Options,
+	sharedState *sharedInterpreterState,
+) (
+	*Interpreter,
+	error,
+) {
 
 	interpreter := &Interpreter{
-		Program:                    program,
-		Location:                   location,
-		activations:                &VariableActivations{},
-		Globals:                    map[string]*Variable{},
-		effectivePredeclaredValues: map[string]ValueDeclaration{},
+		Program:     program,
+		Location:    location,
+		Options:     options,
+		activations: &VariableActivations{},
+		Globals:     map[string]*Variable{},
+		shared:      sharedState,
 	}
 
 	// Start a new activation/scope for the current program.
 	// Use the base activation as the parent.
 	interpreter.activations.PushNewWithParent(baseActivation)
 
-	defaultOptions := []Option{
-		WithAllInterpreters(map[common.LocationID]*Interpreter{}),
-		withTypeCodes(TypeCodes{
-			CompositeCodes:       map[sema.TypeID]CompositeTypeCode{},
-			InterfaceCodes:       map[sema.TypeID]WrapperCode{},
-			TypeRequirementCodes: map[sema.TypeID]WrapperCode{},
-		}),
-		withReferencedResourceKindedValues(map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}{}),
+	// Register self
+	if location != nil {
+		locationID := interpreter.Location.ID()
+		sharedState.allInterpreters[locationID] = interpreter
 	}
 
-	for _, option := range defaultOptions {
-		err := option(interpreter)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	for _, option := range options {
-		err := option(interpreter)
+	// Predeclare values
+	if options != nil && options.PredeclaredValues != nil {
+		err := interpreter.predeclareValues()
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	return interpreter, nil
-}
-
-// SetOnEventEmittedHandler sets the function that is triggered when an event is emitted by the program.
-//
-func (interpreter *Interpreter) SetOnEventEmittedHandler(function OnEventEmittedFunc) {
-	interpreter.onEventEmitted = function
-}
-
-// SetOnStatementHandler sets the function that is triggered when a statement is about to be executed.
-//
-func (interpreter *Interpreter) SetOnStatementHandler(function OnStatementFunc) {
-	interpreter.onStatement = function
-}
-
-// SetOnLoopIterationHandler sets the function that is triggered when a loop iteration is about to be executed.
-//
-func (interpreter *Interpreter) SetOnLoopIterationHandler(function OnLoopIterationFunc) {
-	interpreter.onLoopIteration = function
-}
-
-// SetOnFunctionInvocationHandler sets the function that is triggered when a function invocation is about to be executed.
-//
-func (interpreter *Interpreter) SetOnFunctionInvocationHandler(function OnFunctionInvocationFunc) {
-	interpreter.onFunctionInvocation = function
-}
-
-// SetOnInvokedFunctionReturnHandler sets the function that is triggered when an invoked function returned.
-//
-func (interpreter *Interpreter) SetOnInvokedFunctionReturnHandler(function OnInvokedFunctionReturnFunc) {
-	interpreter.onInvokedFunctionReturn = function
-}
-
-// SetOnRecordTraceHandler sets the function that is triggered when a trace is recorded.
-//
-func (interpreter *Interpreter) SetOnRecordTraceHandler(function OnRecordTraceFunc) {
-	interpreter.onRecordTrace = function
-}
-
-// SetOnResourceOwnerChangeHandler sets the function that is triggered when the owner of a resource changes.
-//
-func (interpreter *Interpreter) SetOnResourceOwnerChangeHandler(function OnResourceOwnerChangeFunc) {
-	interpreter.onResourceOwnerChange = function
-}
-
-// SetStorage sets the value that is used for storage operations.
-func (interpreter *Interpreter) SetStorage(storage Storage) {
-	interpreter.Storage = storage
-}
-
-// SetInjectedCompositeFieldsHandler sets the function that is used to initialize
-// new composite values' fields
-//
-func (interpreter *Interpreter) SetInjectedCompositeFieldsHandler(function InjectedCompositeFieldsHandlerFunc) {
-	interpreter.injectedCompositeFieldsHandler = function
-}
-
-// SetContractValueHandler sets the function that is used to handle imports of values
-//
-func (interpreter *Interpreter) SetContractValueHandler(function ContractValueHandlerFunc) {
-	interpreter.contractValueHandler = function
-}
-
-// SetImportLocationHandler sets the function that is used to handle imports of locations.
-//
-func (interpreter *Interpreter) SetImportLocationHandler(function ImportLocationHandlerFunc) {
-	interpreter.importLocationHandler = function
-}
-
-// SetPublicAccountHandler sets the function that is used to handle accounts.
-//
-func (interpreter *Interpreter) SetPublicAccountHandler(function PublicAccountHandlerFunc) {
-	interpreter.publicAccountHandler = function
-}
-
-// SetUUIDHandler sets the function that is used to handle the generation of UUIDs.
-//
-func (interpreter *Interpreter) SetUUIDHandler(function UUIDHandlerFunc) {
-	interpreter.uuidHandler = function
-}
-
-// SetPublicKeyValidationHandler sets the function that is used to handle public key validation.
-//
-func (interpreter *Interpreter) SetPublicKeyValidationHandler(function PublicKeyValidationHandlerFunc) {
-	interpreter.PublicKeyValidationHandler = function
-}
-
-// SetBLSCryptoFunctions sets the functions that are used to handle certain BLS specific crypt functions.
-//
-func (interpreter *Interpreter) SetBLSCryptoFunctions(
-	verifyPoP BLSVerifyPoPHandlerFunc,
-	aggregateSignatures BLSAggregateSignaturesHandlerFunc,
-	aggregatePublicKeys BLSAggregatePublicKeysHandlerFunc,
-) {
-	interpreter.BLSVerifyPoPHandler = verifyPoP
-	interpreter.BLSAggregateSignaturesHandler = aggregateSignatures
-	interpreter.BLSAggregatePublicKeysHandler = aggregatePublicKeys
-}
-
-// SetSignatureVerificationHandler sets the function that is used to handle signature validation.
-//
-func (interpreter *Interpreter) SetSignatureVerificationHandler(function SignatureVerificationHandlerFunc) {
-	interpreter.SignatureVerificationHandler = function
-}
-
-// SetHashHandler sets the function that is used to hash.
-//
-func (interpreter *Interpreter) SetHashHandler(function HashHandlerFunc) {
-	interpreter.HashHandler = function
-}
-
-// SetExitHandler sets the function that is used to handle end of execution.
-//
-func (interpreter *Interpreter) SetExitHandler(function ExitHandlerFunc) {
-	interpreter.ExitHandler = function
-}
-
-// SetAllInterpreters sets the given map of interpreters as the map of all interpreters.
-//
-func (interpreter *Interpreter) SetAllInterpreters(allInterpreters map[common.LocationID]*Interpreter) {
-	interpreter.allInterpreters = allInterpreters
-
-	// Register self
-	if interpreter.Location != nil {
-		locationID := interpreter.Location.ID()
-		interpreter.allInterpreters[locationID] = interpreter
-	}
-}
-
-// SetAtreeValueValidationEnabled sets the atree value validation option.
-//
-func (interpreter *Interpreter) SetAtreeValueValidationEnabled(enabled bool) {
-	interpreter.atreeValueValidationEnabled = enabled
-}
-
-// SetAtreeStorageValidationEnabled sets the atree storage validation option.
-//
-func (interpreter *Interpreter) SetAtreeStorageValidationEnabled(enabled bool) {
-	interpreter.atreeStorageValidationEnabled = enabled
-}
-
-// SetTracingEnabled sets the tracing option.
-//
-func (interpreter *Interpreter) SetTracingEnabled(enabled bool) {
-	interpreter.tracingEnabled = enabled
-}
-
-// setTypeCodes sets the type codes.
-//
-func (interpreter *Interpreter) setTypeCodes(typeCodes TypeCodes) {
-	interpreter.typeCodes = typeCodes
-}
-
-// SetDebugger sets the debugger.
-//
-func (interpreter *Interpreter) SetDebugger(debugger *Debugger) {
-	interpreter.debugger = debugger
 }
 
 // locationRangeGetter returns a function that returns the location range
@@ -1576,10 +1203,12 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	// in reverse order: first the conformances, then the type requirements;
 	// each conformances and type requirements in reverse order as well.
 
+	typeCodes := interpreter.shared.typeCodes
+
 	for i := len(compositeType.ExplicitInterfaceConformances) - 1; i >= 0; i-- {
 		conformance := compositeType.ExplicitInterfaceConformances[i]
 
-		wrapFunctions(interpreter.typeCodes.InterfaceCodes[conformance.ID()])
+		wrapFunctions(typeCodes.InterfaceCodes[conformance.ID()])
 	}
 
 	typeRequirements := compositeType.TypeRequirements()
@@ -1587,10 +1216,10 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	for i := len(typeRequirements) - 1; i >= 0; i-- {
 		typeRequirement := typeRequirements[i]
 
-		wrapFunctions(interpreter.typeCodes.TypeRequirementCodes[typeRequirement.ID()])
+		wrapFunctions(typeCodes.TypeRequirementCodes[typeRequirement.ID()])
 	}
 
-	interpreter.typeCodes.CompositeCodes[compositeType.ID()] = CompositeTypeCode{
+	typeCodes.CompositeCodes[compositeType.ID()] = CompositeTypeCode{
 		DestructorFunction: destructorFunction,
 		CompositeFunctions: functions,
 	}
@@ -1617,8 +1246,8 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 				// Load injected fields
 				var injectedFields map[string]Value
-				if interpreter.injectedCompositeFieldsHandler != nil {
-					injectedFields = interpreter.injectedCompositeFieldsHandler(
+				if interpreter.Options.InjectedCompositeFieldsHandler != nil {
+					injectedFields = interpreter.Options.InjectedCompositeFieldsHandler(
 						interpreter,
 						location,
 						qualifiedIdentifier,
@@ -1630,13 +1259,13 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 				if declaration.CompositeKind == common.CompositeKindResource {
 
-					if interpreter.uuidHandler == nil {
+					if interpreter.Options.ResourceUUIDHandler == nil {
 						panic(UUIDUnavailableError{
 							LocationRange: invocation.GetLocationRange(),
 						})
 					}
 
-					uuid, err := interpreter.uuidHandler()
+					uuid, err := interpreter.Options.ResourceUUIDHandler()
 					if err != nil {
 						panic(err)
 					}
@@ -1694,7 +1323,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	if declaration.CompositeKind == common.CompositeKindContract {
 		variable.getter = func() Value {
 			positioned := ast.NewRangeFromPositioned(declaration.Identifier)
-			contract := interpreter.contractValueHandler(
+			contract := interpreter.Options.ContractValueHandler(
 				interpreter,
 				compositeType,
 				constructorGenerator,
@@ -2285,7 +1914,7 @@ func (interpreter *Interpreter) declareInterface(
 	destructorFunctionWrapper := interpreter.destructorFunctionWrapper(declaration.Members, lexicalScope)
 	functionWrappers := interpreter.functionWrappers(declaration.Members, lexicalScope)
 
-	interpreter.typeCodes.InterfaceCodes[typeID] = WrapperCode{
+	interpreter.shared.typeCodes.InterfaceCodes[typeID] = WrapperCode{
 		InitializerFunctionWrapper: initializerFunctionWrapper,
 		DestructorFunctionWrapper:  destructorFunctionWrapper,
 		FunctionWrappers:           functionWrappers,
@@ -2319,7 +1948,7 @@ func (interpreter *Interpreter) declareTypeRequirement(
 	destructorFunctionWrapper := interpreter.destructorFunctionWrapper(declaration.Members, lexicalScope)
 	functionWrappers := interpreter.functionWrappers(declaration.Members, lexicalScope)
 
-	interpreter.typeCodes.TypeRequirementCodes[typeID] = WrapperCode{
+	interpreter.shared.typeCodes.TypeRequirementCodes[typeID] = WrapperCode{
 		InitializerFunctionWrapper: initializerFunctionWrapper,
 		DestructorFunctionWrapper:  destructorFunctionWrapper,
 		FunctionWrappers:           functionWrappers,
@@ -2457,7 +2086,7 @@ func (interpreter *Interpreter) EnsureLoaded(
 	return interpreter.ensureLoadedWithLocationHandler(
 		location,
 		func() Import {
-			return interpreter.importLocationHandler(interpreter, location)
+			return interpreter.Options.ImportLocationHandler(interpreter, location)
 		},
 	)
 }
@@ -2471,7 +2100,7 @@ func (interpreter *Interpreter) ensureLoadedWithLocationHandler(
 
 	// If a sub-interpreter already exists, return it
 
-	subInterpreter := interpreter.allInterpreters[locationID]
+	subInterpreter := interpreter.shared.allInterpreters[locationID]
 	if subInterpreter != nil {
 		return subInterpreter
 	}
@@ -2511,12 +2140,12 @@ func (interpreter *Interpreter) ensureLoadedWithLocationHandler(
 			subInterpreter.Globals.Set(global.Name, variable)
 		}
 
-		subInterpreter.typeCodes.
+		subInterpreter.shared.typeCodes.
 			Merge(virtualImport.TypeCodes)
 
 		// Virtual import does not register interpreter itself,
 		// unlike InterpreterImport
-		interpreter.allInterpreters[locationID] = subInterpreter
+		interpreter.shared.allInterpreters[locationID] = subInterpreter
 
 		subInterpreter.Program = &Program{
 			Elaboration: virtualImport.Elaboration,
@@ -2532,52 +2161,15 @@ func (interpreter *Interpreter) ensureLoadedWithLocationHandler(
 func (interpreter *Interpreter) NewSubInterpreter(
 	program *Program,
 	location common.Location,
-	options ...Option,
 ) (
 	*Interpreter,
 	error,
 ) {
-
-	defaultOptions := []Option{
-		WithStorage(interpreter.Storage),
-		WithPredeclaredValues(interpreter.PredeclaredValues),
-		WithOnEventEmittedHandler(interpreter.onEventEmitted),
-		WithOnStatementHandler(interpreter.onStatement),
-		WithOnLoopIterationHandler(interpreter.onLoopIteration),
-		WithOnFunctionInvocationHandler(interpreter.onFunctionInvocation),
-		WithOnInvokedFunctionReturnHandler(interpreter.onInvokedFunctionReturn),
-		WithInjectedCompositeFieldsHandler(interpreter.injectedCompositeFieldsHandler),
-		WithContractValueHandler(interpreter.contractValueHandler),
-		WithImportLocationHandler(interpreter.importLocationHandler),
-		WithUUIDHandler(interpreter.uuidHandler),
-		WithAllInterpreters(interpreter.allInterpreters),
-		WithAtreeValueValidationEnabled(interpreter.atreeValueValidationEnabled),
-		WithAtreeStorageValidationEnabled(interpreter.atreeStorageValidationEnabled),
-		withTypeCodes(interpreter.typeCodes),
-		withReferencedResourceKindedValues(interpreter.referencedResourceKindedValues),
-		WithPublicAccountHandler(interpreter.publicAccountHandler),
-		WithPublicKeyValidationHandler(interpreter.PublicKeyValidationHandler),
-		WithSignatureVerificationHandler(interpreter.SignatureVerificationHandler),
-		WithHashHandler(interpreter.HashHandler),
-		WithBLSCryptoFunctions(
-			interpreter.BLSVerifyPoPHandler,
-			interpreter.BLSAggregateSignaturesHandler,
-			interpreter.BLSAggregatePublicKeysHandler,
-		),
-		WithDebugger(interpreter.debugger),
-		WithExitHandler(interpreter.ExitHandler),
-		WithTracingEnabled(interpreter.tracingEnabled),
-		WithOnRecordTraceHandler(interpreter.onRecordTrace),
-		WithOnResourceOwnerChangeHandler(interpreter.onResourceOwnerChange),
-	}
-
-	return NewInterpreter(
+	return newInterpreter(
 		program,
 		location,
-		append(
-			defaultOptions,
-			options...,
-		)...,
+		interpreter.Options,
+		interpreter.shared,
 	)
 }
 
@@ -2586,7 +2178,7 @@ func (interpreter *Interpreter) storedValueExists(
 	domain string,
 	identifier string,
 ) bool {
-	accountStorage := interpreter.Storage.GetStorageMap(storageAddress, domain)
+	accountStorage := interpreter.Options.Storage.GetStorageMap(storageAddress, domain)
 	return accountStorage.ValueExists(identifier)
 }
 
@@ -2595,7 +2187,7 @@ func (interpreter *Interpreter) ReadStored(
 	domain string,
 	identifier string,
 ) Value {
-	accountStorage := interpreter.Storage.GetStorageMap(storageAddress, domain)
+	accountStorage := interpreter.Options.Storage.GetStorageMap(storageAddress, domain)
 	return accountStorage.ReadValue(identifier)
 }
 
@@ -2605,7 +2197,7 @@ func (interpreter *Interpreter) writeStored(
 	identifier string,
 	value Value,
 ) {
-	accountStorage := interpreter.Storage.GetStorageMap(storageAddress, domain)
+	accountStorage := interpreter.Options.Storage.GetStorageMap(storageAddress, domain)
 	accountStorage.WriteValue(interpreter, identifier, value)
 }
 
@@ -4149,7 +3741,7 @@ func (interpreter *Interpreter) getElaboration(location common.Location) *sema.E
 
 	locationID := location.ID()
 
-	subInterpreter := inter.allInterpreters[locationID]
+	subInterpreter := inter.shared.allInterpreters[locationID]
 	if subInterpreter == nil || subInterpreter.Program == nil {
 		return nil
 	}
@@ -4244,28 +3836,28 @@ func (interpreter *Interpreter) getInterfaceType(location common.Location, quali
 }
 
 func (interpreter *Interpreter) reportLoopIteration(pos ast.HasPosition) {
-	if interpreter.onLoopIteration == nil {
+	if interpreter.Options.OnLoopIteration == nil {
 		return
 	}
 
 	line := pos.StartPosition().Line
-	interpreter.onLoopIteration(interpreter, line)
+	interpreter.Options.OnLoopIteration(interpreter, line)
 }
 
 func (interpreter *Interpreter) reportFunctionInvocation(line int) {
-	if interpreter.onFunctionInvocation == nil {
+	if interpreter.Options.OnFunctionInvocation == nil {
 		return
 	}
 
-	interpreter.onFunctionInvocation(interpreter, line)
+	interpreter.Options.OnFunctionInvocation(interpreter, line)
 }
 
 func (interpreter *Interpreter) reportInvokedFunctionReturn(line int) {
-	if interpreter.onInvokedFunctionReturn == nil {
+	if interpreter.Options.OnInvokedFunctionReturn == nil {
 		return
 	}
 
-	interpreter.onInvokedFunctionReturn(interpreter, line)
+	interpreter.Options.OnInvokedFunctionReturn(interpreter, line)
 }
 
 // getMember gets the member value by the given identifier from the given Value depending on its type.
@@ -4390,18 +3982,18 @@ func (interpreter *Interpreter) RemoveReferencedSlab(storable atree.Storable) {
 	}
 
 	storageID := atree.StorageID(storageIDStorable)
-	err := interpreter.Storage.Remove(storageID)
+	err := interpreter.Options.Storage.Remove(storageID)
 	if err != nil {
 		panic(ExternalError{err})
 	}
 }
 
 func (interpreter *Interpreter) maybeValidateAtreeValue(v atree.Value) {
-	if interpreter.atreeValueValidationEnabled {
+	if interpreter.Options.AtreeValueValidationEnabled {
 		interpreter.ValidateAtreeValue(v)
 	}
-	if interpreter.atreeStorageValidationEnabled {
-		err := interpreter.Storage.CheckHealth()
+	if interpreter.Options.AtreeStorageValidationEnabled {
+		err := interpreter.Options.Storage.CheckHealth()
 		if err != nil {
 			panic(ExternalError{err})
 		}
@@ -4437,13 +4029,13 @@ func (interpreter *Interpreter) ValidateAtreeValue(v atree.Value) {
 	}
 
 	compare := func(storable, otherStorable atree.Storable) bool {
-		value, err := storable.StoredValue(interpreter.Storage)
+		value, err := storable.StoredValue(interpreter.Options.Storage)
 		if err != nil {
 			panic(err)
 		}
 
 		if _, ok := value.(StringAtreeValue); ok {
-			equal, err := StringAtreeComparator(interpreter.Storage, value, otherStorable)
+			equal, err := StringAtreeComparator(interpreter.Options.Storage, value, otherStorable)
 			if err != nil {
 				panic(err)
 			}
@@ -4452,7 +4044,7 @@ func (interpreter *Interpreter) ValidateAtreeValue(v atree.Value) {
 		}
 
 		if equatableValue, ok := value.(EquatableValue); ok {
-			otherValue := StoredValue(otherStorable, interpreter.Storage)
+			otherValue := StoredValue(otherStorable, interpreter.Options.Storage)
 			return equatableValue.Equal(interpreter, ReturnEmptyLocationRange, otherValue)
 		}
 
@@ -4505,10 +4097,11 @@ func (interpreter *Interpreter) trackReferencedResourceKindedValue(
 	id atree.StorageID,
 	value ReferenceTrackedResourceKindedValue,
 ) {
-	values := interpreter.referencedResourceKindedValues[id]
+	allValues := interpreter.shared.referencedResourceKindedValues
+	values := allValues[id]
 	if values == nil {
 		values = map[ReferenceTrackedResourceKindedValue]struct{}{}
-		interpreter.referencedResourceKindedValues[id] = values
+		allValues[id] = values
 	}
 	values[value] = struct{}{}
 }
@@ -4518,7 +4111,8 @@ func (interpreter *Interpreter) updateReferencedResource(
 	newStorageID atree.StorageID,
 	updateFunc func(value ReferenceTrackedResourceKindedValue),
 ) {
-	values := interpreter.referencedResourceKindedValues[currentStorageID]
+	allValues := interpreter.shared.referencedResourceKindedValues
+	values := allValues[currentStorageID]
 	if values == nil {
 		return
 	}
@@ -4526,7 +4120,7 @@ func (interpreter *Interpreter) updateReferencedResource(
 		updateFunc(value)
 	}
 	if newStorageID != currentStorageID {
-		interpreter.referencedResourceKindedValues[newStorageID] = values
-		interpreter.referencedResourceKindedValues[currentStorageID] = nil
+		allValues[newStorageID] = values
+		allValues[currentStorageID] = nil
 	}
 }

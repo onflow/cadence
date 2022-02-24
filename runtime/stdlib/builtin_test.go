@@ -48,10 +48,10 @@ func TestAssert(t *testing.T) {
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
 		checker.Location,
-		interpreter.WithStorage(storage),
-		interpreter.WithPredeclaredValues(
-			BuiltinFunctions.ToInterpreterValueDeclarations(),
-		),
+		&interpreter.Options{
+			Storage:           storage,
+			PredeclaredValues: BuiltinFunctions.ToInterpreterValueDeclarations(),
+		},
 	)
 	require.Nil(t, err)
 
@@ -107,8 +107,10 @@ func TestPanic(t *testing.T) {
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
 		checker.Location,
-		interpreter.WithStorage(storage),
-		interpreter.WithPredeclaredValues(BuiltinFunctions.ToInterpreterValueDeclarations()),
+		&interpreter.Options{
+			Storage:           storage,
+			PredeclaredValues: BuiltinFunctions.ToInterpreterValueDeclarations(),
+		},
 	)
 	require.Nil(t, err)
 

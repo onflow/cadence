@@ -43,7 +43,7 @@ import (
 )
 
 type ParseCheckAndInterpretOptions struct {
-	Options            []interpreter.Option
+	Options            *interpreter.Options
 	CheckerOptions     []sema.Option
 	HandleCheckerError func(error)
 }
@@ -86,23 +86,29 @@ func parseCheckAndInterpretWithOptions(
 
 	var uuid uint64 = 0
 
-	interpreterOptions := append(
-		[]interpreter.Option{
-			interpreter.WithUUIDHandler(func() (uint64, error) {
-				uuid++
-				return uuid, nil
-			}),
-			interpreter.WithStorage(interpreter.NewInMemoryStorage()),
-			interpreter.WithAtreeValueValidationEnabled(true),
-			interpreter.WithAtreeStorageValidationEnabled(true),
-		},
-		options.Options...,
-	)
+	if options.Options == nil {
+		options.Options = &interpreter.Options{}
+	}
+
+	interpreterOptions := options.Options
+
+	if interpreterOptions.ResourceUUIDHandler == nil {
+		interpreterOptions.ResourceUUIDHandler = func() (uint64, error) {
+			uuid++
+			return uuid, nil
+		}
+	}
+
+	if interpreterOptions.Storage == nil {
+		interpreterOptions.Storage = interpreter.NewInMemoryStorage()
+	}
+	interpreterOptions.AtreeValueValidationEnabled = true
+	interpreterOptions.AtreeStorageValidationEnabled = true
 
 	inter, err = interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
 		checker.Location,
-		interpreterOptions...,
+		interpreterOptions,
 	)
 
 	require.NoError(t, err)
@@ -152,31 +158,29 @@ func makeContractValueHandler(
 	arguments []interpreter.Value,
 	argumentTypes []sema.Type,
 	parameterTypes []sema.Type,
-) interpreter.Option {
-	return interpreter.WithContractValueHandler(
-		func(
-			inter *interpreter.Interpreter,
-			compositeType *sema.CompositeType,
-			constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
-			invocationRange ast.Range,
-		) *interpreter.CompositeValue {
+) interpreter.ContractValueHandlerFunc {
+	return func(
+		inter *interpreter.Interpreter,
+		compositeType *sema.CompositeType,
+		constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
+		invocationRange ast.Range,
+	) *interpreter.CompositeValue {
 
-			constructor := constructorGenerator(common.Address{})
+		constructor := constructorGenerator(common.Address{})
 
-			value, err := inter.InvokeFunctionValue(
-				constructor,
-				arguments,
-				argumentTypes,
-				parameterTypes,
-				ast.Range{},
-			)
-			if err != nil {
-				panic(err)
-			}
+		value, err := inter.InvokeFunctionValue(
+			constructor,
+			arguments,
+			argumentTypes,
+			parameterTypes,
+			ast.Range{},
+		)
+		if err != nil {
+			panic(err)
+		}
 
-			return value.(*interpreter.CompositeValue)
-		},
-	)
+		return value.(*interpreter.CompositeValue)
+	}
 }
 
 func TestInterpretConstantAndVariableDeclarations(t *testing.T) {
@@ -1762,12 +1766,12 @@ func TestInterpretHostFunction(t *testing.T) {
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
 		checker.Location,
-		interpreter.WithStorage(storage),
-		interpreter.WithPredeclaredValues(
-			[]interpreter.ValueDeclaration{
+		&interpreter.Options{
+			Storage: storage,
+			PredeclaredValues: []interpreter.ValueDeclaration{
 				testFunction,
 			},
-		),
+		},
 	)
 	require.NoError(t, err)
 
@@ -1866,12 +1870,12 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
 		checker.Location,
-		interpreter.WithStorage(storage),
-		interpreter.WithPredeclaredValues(
-			[]interpreter.ValueDeclaration{
+		&interpreter.Options{
+			Storage: storage,
+			PredeclaredValues: []interpreter.ValueDeclaration{
 				testFunction,
 			},
-		),
+		},
 	)
 	require.NoError(t, err)
 
@@ -1907,8 +1911,8 @@ func TestInterpretCompositeDeclaration(t *testing.T) {
 					constructorArguments(compositeKind, ""),
 				),
 				ParseCheckAndInterpretOptions{
-					Options: []interpreter.Option{
-						makeContractValueHandler(nil, nil, nil),
+					Options: &interpreter.Options{
+						ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 					},
 				},
 			)
@@ -3521,8 +3525,8 @@ func TestInterpretCompositeNilEquality(t *testing.T) {
 					identifier,
 				),
 				ParseCheckAndInterpretOptions{
-					Options: []interpreter.Option{
-						makeContractValueHandler(nil, nil, nil),
+					Options: &interpreter.Options{
+						ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 					},
 				},
 			)
@@ -3651,8 +3655,8 @@ func TestInterpretInterfaceFieldUse(t *testing.T) {
 					identifier,
 				),
 				ParseCheckAndInterpretOptions{
-					Options: []interpreter.Option{
-						makeContractValueHandler(
+					Options: &interpreter.Options{
+						ContractValueHandler: makeContractValueHandler(
 							[]interpreter.Value{
 								interpreter.NewIntValueFromInt64(1),
 							},
@@ -3729,8 +3733,8 @@ func TestInterpretInterfaceFunctionUse(t *testing.T) {
 					identifier,
 				),
 				ParseCheckAndInterpretOptions{
-					Options: []interpreter.Option{
-						makeContractValueHandler(nil, nil, nil),
+					Options: &interpreter.Options{
+						ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 					},
 				},
 			)
@@ -3794,9 +3798,9 @@ func TestInterpretImport(t *testing.T) {
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),
 		importingChecker.Location,
-		interpreter.WithStorage(storage),
-		interpreter.WithImportLocationHandler(
-			func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+		&interpreter.Options{
+			Storage: storage,
+			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 				assert.Equal(t,
 					ImportedLocation,
 					location,
@@ -3812,7 +3816,7 @@ func TestInterpretImport(t *testing.T) {
 					Interpreter: subInterpreter,
 				}
 			},
-		),
+		},
 	)
 	require.NoError(t, err)
 
@@ -3890,10 +3894,10 @@ func TestInterpretImportError(t *testing.T) {
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),
 		importingChecker.Location,
-		interpreter.WithStorage(storage),
-		interpreter.WithPredeclaredValues(values),
-		interpreter.WithImportLocationHandler(
-			func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+		&interpreter.Options{
+			Storage:           storage,
+			PredeclaredValues: values,
+			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 				assert.Equal(t,
 					ImportedLocation,
 					location,
@@ -3909,7 +3913,7 @@ func TestInterpretImportError(t *testing.T) {
 					Interpreter: subInterpreter,
 				}
 			},
-		),
+		},
 	)
 	require.NoError(t, err)
 
@@ -4612,9 +4616,9 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 				CheckerOptions: []sema.Option{
 					sema.WithPredeclaredValues(valueDeclarations),
 				},
-				Options: []interpreter.Option{
-					interpreter.WithStorage(storage),
-					interpreter.WithPredeclaredValues(values),
+				Options: &interpreter.Options{
+					Storage:           storage,
+					PredeclaredValues: values,
 				},
 			},
 		)
@@ -6014,9 +6018,9 @@ func TestInterpretCompositeFunctionInvocationFromImportingProgram(t *testing.T) 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),
 		importingChecker.Location,
-		interpreter.WithStorage(storage),
-		interpreter.WithImportLocationHandler(
-			func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+		&interpreter.Options{
+			Storage: storage,
+			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 				assert.Equal(t,
 					ImportedLocation,
 					location,
@@ -6032,7 +6036,7 @@ func TestInterpretCompositeFunctionInvocationFromImportingProgram(t *testing.T) 
 					Interpreter: subInterpreter,
 				}
 			},
-		),
+		},
 	)
 	require.NoError(t, err)
 
@@ -6461,7 +6465,7 @@ func TestInterpretEmitEvent(t *testing.T) {
 
 	var actualEvents []interpreter.Value
 
-	inter := parseCheckAndInterpret(t,
+	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
           event Transfer(to: Int, from: Int)
           event TransferAmount(to: Int, from: Int, amount: Int)
@@ -6472,21 +6476,23 @@ func TestInterpretEmitEvent(t *testing.T) {
               emit TransferAmount(to: 1, from: 2, amount: 100)
           }
         `,
-	)
-
-	inter.SetOnEventEmittedHandler(
-		func(
-			_ *interpreter.Interpreter,
-			_ func() interpreter.LocationRange,
-			event *interpreter.CompositeValue,
-			eventType *sema.CompositeType,
-		) error {
-			actualEvents = append(actualEvents, event)
-			return nil
+		ParseCheckAndInterpretOptions{
+			Options: &interpreter.Options{
+				OnEventEmitted: func(
+					_ *interpreter.Interpreter,
+					_ func() interpreter.LocationRange,
+					event *interpreter.CompositeValue,
+					eventType *sema.CompositeType,
+				) error {
+					actualEvents = append(actualEvents, event)
+					return nil
+				},
+			},
 		},
 	)
+	require.NoError(t, err)
 
-	_, err := inter.Invoke("test")
+	_, err = inter.Invoke("test")
 	require.NoError(t, err)
 
 	transferEventType := checker.RequireGlobalType(t, inter.Program.Elaboration, "Transfer")
@@ -6599,7 +6605,9 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 	inter, err := interpreter.NewInterpreter(
 		nil,
 		TestLocation,
-		interpreter.WithStorage(storage),
+		&interpreter.Options{
+			Storage: storage,
+		},
 	)
 	require.NoError(t, err)
 
@@ -6833,6 +6841,8 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 				},
 			}
 
+			var actualEvents []interpreter.Value
+
 			inter, err := parseCheckAndInterpretWithOptions(
 				t, code, ParseCheckAndInterpretOptions{
 					CheckerOptions: []sema.Option{
@@ -6845,25 +6855,20 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 							},
 						}),
 					},
-					Options: []interpreter.Option{
-						interpreter.WithStorage(storage),
+					Options: &interpreter.Options{
+						Storage: storage,
+						OnEventEmitted: func(
+							_ *interpreter.Interpreter,
+							_ func() interpreter.LocationRange,
+							event *interpreter.CompositeValue,
+							eventType *sema.CompositeType,
+						) error {
+							actualEvents = append(actualEvents, event)
+							return nil
+						},
 					},
 				})
 			require.NoError(t, err)
-
-			var actualEvents []interpreter.Value
-
-			inter.SetOnEventEmittedHandler(
-				func(
-					_ *interpreter.Interpreter,
-					_ func() interpreter.LocationRange,
-					event *interpreter.CompositeValue,
-					eventType *sema.CompositeType,
-				) error {
-					actualEvents = append(actualEvents, event)
-					return nil
-				},
-			)
 
 			_, err = inter.Invoke("test")
 			require.NoError(t, err)
@@ -7393,7 +7398,7 @@ func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
 
 		var permanentSlabs []atree.Slab
 
-		for _, slab := range inter.Storage.(interpreter.InMemoryStorage).Slabs {
+		for _, slab := range inter.Options.Storage.(interpreter.InMemoryStorage).Slabs {
 			if slab.ID().Address == (atree.Address{}) {
 				continue
 			}
@@ -7412,7 +7417,7 @@ func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
 		var storedValues []string
 
 		for _, slab := range permanentSlabs {
-			storedValue := interpreter.StoredValue(slab, inter.Storage)
+			storedValue := interpreter.StoredValue(slab, inter.Options.Storage)
 			storedValues = append(storedValues, storedValue.String())
 		}
 
@@ -7640,8 +7645,8 @@ func TestInterpretOptionalChainingFieldReadAndNilCoalescing(t *testing.T) {
 			CheckerOptions: []sema.Option{
 				sema.WithPredeclaredValues(valueDeclarations),
 			},
-			Options: []interpreter.Option{
-				interpreter.WithPredeclaredValues(values),
+			Options: &interpreter.Options{
+				PredeclaredValues: values,
 			},
 		},
 	)
@@ -7682,8 +7687,8 @@ func TestInterpretOptionalChainingFunctionCallAndNilCoalescing(t *testing.T) {
 			CheckerOptions: []sema.Option{
 				sema.WithPredeclaredValues(valueDeclarations),
 			},
-			Options: []interpreter.Option{
-				interpreter.WithPredeclaredValues(values),
+			Options: &interpreter.Options{
+				PredeclaredValues: values,
 			},
 		},
 	)
@@ -7721,8 +7726,8 @@ func TestInterpretCompositeDeclarationNestedTypeScopingOuterInner(t *testing.T) 
           pub let x2 = x1.test()
         `,
 		ParseCheckAndInterpretOptions{
-			Options: []interpreter.Option{
-				makeContractValueHandler(nil, nil, nil),
+			Options: &interpreter.Options{
+				ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 			},
 		},
 	)
@@ -7766,8 +7771,8 @@ func TestInterpretCompositeDeclarationNestedConstructor(t *testing.T) {
           pub let x = Test.X()
         `,
 		ParseCheckAndInterpretOptions{
-			Options: []interpreter.Option{
-				makeContractValueHandler(nil, nil, nil),
+			Options: &interpreter.Options{
+				ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 			},
 		},
 	)
@@ -7827,9 +7832,9 @@ func TestInterpretFungibleTokenContract(t *testing.T) {
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		code,
 		ParseCheckAndInterpretOptions{
-			Options: []interpreter.Option{
-				interpreter.WithPredeclaredValues(values),
-				makeContractValueHandler(nil, nil, nil),
+			Options: &interpreter.Options{
+				PredeclaredValues:    values,
+				ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 			},
 			CheckerOptions: []sema.Option{
 				sema.WithPredeclaredValues(valueDeclarations),
@@ -7886,20 +7891,18 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 
 	inter, err := parseCheckAndInterpretWithOptions(t, code,
 		ParseCheckAndInterpretOptions{
-			Options: []interpreter.Option{
-				makeContractValueHandler(nil, nil, nil),
-				interpreter.WithInjectedCompositeFieldsHandler(
-					func(
-						inter *interpreter.Interpreter,
-						_ common.Location,
-						_ string,
-						_ common.CompositeKind,
-					) map[string]interpreter.Value {
-						return map[string]interpreter.Value{
-							"account": newTestAuthAccountValue(addressValue),
-						}
-					},
-				),
+			Options: &interpreter.Options{
+				ContractValueHandler: makeContractValueHandler(nil, nil, nil),
+				InjectedCompositeFieldsHandler: func(
+					inter *interpreter.Interpreter,
+					_ common.Location,
+					_ string,
+					_ common.CompositeKind,
+				) map[string]interpreter.Value {
+					return map[string]interpreter.Value{
+						"account": newTestAuthAccountValue(addressValue),
+					}
+				},
 			},
 		},
 	)
@@ -7977,9 +7980,9 @@ func TestInterpretConformToImportedInterface(t *testing.T) {
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),
 		importingChecker.Location,
-		interpreter.WithStorage(storage),
-		interpreter.WithImportLocationHandler(
-			func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+		&interpreter.Options{
+			Storage: storage,
+			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 				assert.Equal(t,
 					ImportedLocation,
 					location,
@@ -7995,7 +7998,7 @@ func TestInterpretConformToImportedInterface(t *testing.T) {
 					Interpreter: subInterpreter,
 				}
 			},
-		),
+		},
 	)
 	require.NoError(t, err)
 
@@ -8039,8 +8042,8 @@ func TestInterpretContractUseInNestedDeclaration(t *testing.T) {
           }
         `,
 		ParseCheckAndInterpretOptions{
-			Options: []interpreter.Option{
-				makeContractValueHandler(nil, nil, nil),
+			Options: &interpreter.Options{
+				ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 			},
 		},
 	)
@@ -8310,8 +8313,8 @@ func TestInterpretHexDecode(t *testing.T) {
 				CheckerOptions: []sema.Option{
 					sema.WithPredeclaredValues(valueDeclarations),
 				},
-				Options: []interpreter.Option{
-					interpreter.WithPredeclaredValues(values),
+				Options: &interpreter.Options{
+					PredeclaredValues: values,
 				},
 			},
 		)
@@ -8653,15 +8656,13 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 					valueDeclaration,
 				}),
 			},
-			Options: []interpreter.Option{
-				interpreter.WithPredeclaredValues([]interpreter.ValueDeclaration{
+			Options: &interpreter.Options{
+				PredeclaredValues: []interpreter.ValueDeclaration{
 					valueDeclaration,
-				}),
-				interpreter.WithPublicAccountHandler(
-					func(_ *interpreter.Interpreter, address interpreter.AddressValue) interpreter.Value {
-						return newTestPublicAccountValue(address)
-					},
-				),
+				},
+				PublicAccountHandler: func(_ *interpreter.Interpreter, address interpreter.AddressValue) interpreter.Value {
+					return newTestPublicAccountValue(address)
+				},
 			},
 		},
 	)
@@ -8975,8 +8976,8 @@ func TestInterpretEphemeralReferenceToOptional(t *testing.T) {
           }
         `,
 		ParseCheckAndInterpretOptions{
-			Options: []interpreter.Option{
-				makeContractValueHandler(nil, nil, nil),
+			Options: &interpreter.Options{
+				ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 			},
 		},
 	)
@@ -9013,8 +9014,8 @@ func TestInterpretNestedDeclarationOrder(t *testing.T) {
               }
             `,
 			ParseCheckAndInterpretOptions{
-				Options: []interpreter.Option{
-					makeContractValueHandler(nil, nil, nil),
+				Options: &interpreter.Options{
+					ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 				},
 			},
 		)
@@ -9047,8 +9048,8 @@ func TestInterpretNestedDeclarationOrder(t *testing.T) {
               }
             `,
 			ParseCheckAndInterpretOptions{
-				Options: []interpreter.Option{
-					makeContractValueHandler(nil, nil, nil),
+				Options: &interpreter.Options{
+					ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 				},
 			},
 		)
@@ -9154,8 +9155,8 @@ func TestInterpretFailableCastingCompositeTypeConfusion(t *testing.T) {
           let s = A.S() as? B.S
         `,
 		ParseCheckAndInterpretOptions{
-			Options: []interpreter.Option{
-				makeContractValueHandler(nil, nil, nil),
+			Options: &interpreter.Options{
+				ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 			},
 		},
 	)
@@ -9251,8 +9252,8 @@ func TestInterpretNestedDestroy(t *testing.T) {
           }
         `,
 		ParseCheckAndInterpretOptions{
-			Options: []interpreter.Option{
-				interpreter.WithPredeclaredValues(values),
+			Options: &interpreter.Options{
+				PredeclaredValues: values,
 			},
 			CheckerOptions: []sema.Option{
 				sema.WithPredeclaredValues(valueDeclarations),
@@ -9457,7 +9458,7 @@ func BenchmarkNewInterpreter(b *testing.B) {
 		b.ReportAllocs()
 
 		for i := 0; i < b.N; i++ {
-			_, err := interpreter.NewInterpreter(nil, nil)
+			_, err := interpreter.NewInterpreter(nil, nil, nil)
 			require.NoError(b, err)
 		}
 	})
@@ -9465,7 +9466,7 @@ func BenchmarkNewInterpreter(b *testing.B) {
 	b.Run("new sub-interpreter", func(b *testing.B) {
 		b.ReportAllocs()
 
-		inter, err := interpreter.NewInterpreter(nil, nil)
+		inter, err := interpreter.NewInterpreter(nil, nil, nil)
 		require.NoError(b, err)
 
 		b.ResetTimer()

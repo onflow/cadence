@@ -923,7 +923,7 @@ func importPublicKey(
 		interpreter.ReturnEmptyLocationRange,
 		publicKeyValue,
 		signAlgoValue,
-		inter.PublicKeyValidationHandler,
+		inter.Options.PublicKeyValidationHandler,
 	), nil
 }
 

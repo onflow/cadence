@@ -130,7 +130,7 @@ var blsAggregatePublicKeysFunction = interpreter.NewHostFunctionValue(
 			getLocationRange,
 		)
 
-		return invocation.Interpreter.BLSAggregatePublicKeysHandler(
+		return invocation.Interpreter.Options.BLSAggregatePublicKeysHandler(
 			inter,
 			getLocationRange,
 			publicKeys,
@@ -155,7 +155,7 @@ var blsAggregateSignaturesFunction = interpreter.NewHostFunctionValue(
 			getLocationRange,
 		)
 
-		return inter.BLSAggregateSignaturesHandler(
+		return inter.Options.BLSAggregateSignaturesHandler(
 			inter,
 			getLocationRange,
 			signatures,

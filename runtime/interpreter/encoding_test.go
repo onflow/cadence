@@ -107,7 +107,13 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 		if test.deepEquality {
 			assert.Equal(t, expectedValue, decodedValue)
 		} else {
-			inter, err := NewInterpreter(nil, TestLocation, WithStorage(test.storage))
+			inter, err := NewInterpreter(
+				nil,
+				TestLocation,
+				&Options{
+					Storage: test.storage,
+				},
+			)
 			require.NoError(t, err)
 			AssertValuesEqual(t, inter, expectedValue, decodedValue)
 		}
@@ -274,7 +280,7 @@ func TestEncodeDecodeArray(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				storage: inter.Storage,
+				storage: inter.Options.Storage,
 				value:   expected,
 				encoded: []byte{
 					// tag
@@ -306,7 +312,7 @@ func TestEncodeDecodeArray(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				storage: inter.Storage,
+				storage: inter.Options.Storage,
 				value:   expected,
 				encoded: []byte{
 					// tag
@@ -341,7 +347,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				storage: inter.Storage,
+				storage: inter.Options.Storage,
 				value:   expected,
 				encoded: []byte{
 					// tag
@@ -378,7 +384,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				storage: inter.Storage,
+				storage: inter.Options.Storage,
 				value:   expected,
 				encoded: []byte{
 					// tag

@@ -124,7 +124,7 @@ func (s StorageMap) SetValue(interpreter *Interpreter, key string, value atree.V
 	interpreter.maybeValidateAtreeValue(s.orderedMap)
 
 	if existingStorable != nil {
-		existingValue := StoredValue(existingStorable, interpreter.Storage)
+		existingValue := StoredValue(existingStorable, interpreter.Options.Storage)
 		existingValue.DeepRemove(interpreter)
 		interpreter.RemoveReferencedSlab(existingStorable)
 	}
@@ -155,7 +155,7 @@ func (s StorageMap) removeValue(interpreter *Interpreter, key string) {
 	// Value
 
 	if existingValueStorable != nil {
-		existingValue := StoredValue(existingValueStorable, interpreter.Storage)
+		existingValue := StoredValue(existingValueStorable, interpreter.Options.Storage)
 		existingValue.DeepRemove(interpreter)
 		interpreter.RemoveReferencedSlab(existingValueStorable)
 	}

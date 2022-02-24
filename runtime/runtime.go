@@ -21,7 +21,6 @@ package runtime
 import (
 	"errors"
 	"fmt"
-	"math"
 	goRuntime "runtime"
 	"time"
 
@@ -260,7 +259,7 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val 
 	storage := NewStorage(context.Interface)
 
 	var checkerOptions []sema.Option
-	var interpreterOptions []interpreter.Option
+	interpreterOptions := &interpreter.Options{}
 
 	functions := r.standardLibraryFunctions(
 		context,
@@ -399,7 +398,7 @@ func (r *interpreterRuntime) interpret(
 	storage *Storage,
 	functions stdlib.StandardLibraryFunctions,
 	values stdlib.StandardLibraryValues,
-	interpreterOptions []interpreter.Option,
+	interpreterOptions *interpreter.Options,
 	checkerOptions []sema.Option,
 	f interpretFunc,
 ) (
@@ -446,8 +445,9 @@ func (r *interpreterRuntime) interpret(
 		exportedValue = newExportableValue(result, inter)
 	}
 
-	if inter.ExitHandler != nil {
-		err = inter.ExitHandler()
+	exitHandler := inter.Options.ExitHandler
+	if exitHandler != nil {
+		err = exitHandler()
 	}
 	return exportedValue, inter, err
 }
@@ -456,7 +456,7 @@ func (r *interpreterRuntime) newAuthAccountValue(
 	addressValue interpreter.AddressValue,
 	context Context,
 	storage *Storage,
-	interpreterOptions []interpreter.Option,
+	interpreterOptions *interpreter.Options,
 	checkerOptions []sema.Option,
 ) interpreter.Value {
 	return interpreter.NewAuthAccountValue(
@@ -503,7 +503,7 @@ func (r *interpreterRuntime) InvokeContractFunction(
 
 	storage := NewStorage(context.Interface)
 
-	var interpreterOptions []interpreter.Option
+	interpreterOptions := &interpreter.Options{}
 	var checkerOptions []sema.Option
 
 	functions := r.standardLibraryFunctions(
@@ -597,7 +597,7 @@ func (r *interpreterRuntime) convertArgument(
 	argumentType sema.Type,
 	context Context,
 	storage *Storage,
-	interpreterOptions []interpreter.Option,
+	interpreterOptions *interpreter.Options,
 	checkerOptions []sema.Option,
 ) interpreter.Value {
 	switch argumentType {
@@ -637,7 +637,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 
 	storage := NewStorage(context.Interface)
 
-	var interpreterOptions []interpreter.Option
+	interpreterOptions := &interpreter.Options{}
 	var checkerOptions []sema.Option
 
 	functions := r.standardLibraryFunctions(
@@ -982,7 +982,7 @@ func (r *interpreterRuntime) ParseAndCheckProgram(
 
 	storage := NewStorage(context.Interface)
 
-	var interpreterOptions []interpreter.Option
+	interpreterOptions := &interpreter.Options{}
 	var checkerOptions []sema.Option
 
 	functions := r.standardLibraryFunctions(
@@ -1180,7 +1180,7 @@ func (r *interpreterRuntime) newInterpreter(
 	functions stdlib.StandardLibraryFunctions,
 	values stdlib.StandardLibraryValues,
 	storage *Storage,
-	interpreterOptions []interpreter.Option,
+	interpreterOptions *interpreter.Options,
 	checkerOptions []sema.Option,
 ) (*interpreter.Interpreter, error) {
 
@@ -1204,172 +1204,168 @@ func (r *interpreterRuntime) newInterpreter(
 		)
 	}
 
-	defaultOptions := []interpreter.Option{
-		interpreter.WithStorage(storage),
-		interpreter.WithPredeclaredValues(preDeclaredValues),
-		interpreter.WithOnEventEmittedHandler(
-			func(
-				inter *interpreter.Interpreter,
-				getLocationRange func() interpreter.LocationRange,
-				eventValue *interpreter.CompositeValue,
-				eventType *sema.CompositeType,
-			) error {
-				return r.emitEvent(
-					inter,
-					getLocationRange,
-					context.Interface,
-					eventValue,
-					eventType,
-				)
-			},
-		),
-		interpreter.WithInjectedCompositeFieldsHandler(
-			r.injectedCompositeFieldsHandler(context, storage, interpreterOptions, checkerOptions),
-		),
-		interpreter.WithUUIDHandler(func() (uuid uint64, err error) {
-			wrapPanic(func() {
-				uuid, err = context.Interface.GenerateUUID()
-			})
-			return
-		}),
-		interpreter.WithContractValueHandler(
-			func(
-				inter *interpreter.Interpreter,
-				compositeType *sema.CompositeType,
-				constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
-				invocationRange ast.Range,
-			) *interpreter.CompositeValue {
-
-				return r.loadContract(
-					inter,
-					compositeType,
-					constructorGenerator,
-					invocationRange,
-					storage,
-				)
-			},
-		),
-		interpreter.WithImportLocationHandler(
-			r.importLocationHandler(context, functions, values, checkerOptions),
-		),
-		interpreter.WithOnStatementHandler(
-			r.onStatementHandler(),
-		),
-		interpreter.WithPublicAccountHandler(
-			func(_ *interpreter.Interpreter, address interpreter.AddressValue) interpreter.Value {
-				return r.getPublicAccount(
-					address,
-					context.Interface,
-					storage,
-				)
-			},
-		),
-		interpreter.WithPublicKeyValidationHandler(publicKeyValidator),
-		interpreter.WithBLSCryptoFunctions(
-			func(
-				inter *interpreter.Interpreter,
-				getLocationRange func() interpreter.LocationRange,
-				publicKeyValue interpreter.MemberAccessibleValue,
-				signature *interpreter.ArrayValue,
-			) interpreter.BoolValue {
-				return blsVerifyPoP(
-					inter,
-					getLocationRange,
-					publicKeyValue,
-					signature,
-					context.Interface,
-				)
-			},
-			func(
-				inter *interpreter.Interpreter,
-				getLocationRange func() interpreter.LocationRange,
-				signatures *interpreter.ArrayValue,
-			) interpreter.OptionalValue {
-				return blsAggregateSignatures(
-					inter,
-					context.Interface,
-					signatures,
-				)
-			},
-			func(
-				inter *interpreter.Interpreter,
-				getLocationRange func() interpreter.LocationRange,
-				publicKeys *interpreter.ArrayValue,
-			) interpreter.OptionalValue {
-				return blsAggregatePublicKeys(
-					inter,
-					getLocationRange,
-					publicKeys,
-					publicKeyValidator,
-					context.Interface,
-				)
-			},
-		),
-		interpreter.WithSignatureVerificationHandler(
-			func(
-				inter *interpreter.Interpreter,
-				getLocationRange func() interpreter.LocationRange,
-				signature *interpreter.ArrayValue,
-				signedData *interpreter.ArrayValue,
-				domainSeparationTag *interpreter.StringValue,
-				hashAlgorithm *interpreter.CompositeValue,
-				publicKey interpreter.MemberAccessibleValue,
-			) interpreter.BoolValue {
-				return verifySignature(
-					inter,
-					getLocationRange,
-					signature,
-					signedData,
-					domainSeparationTag,
-					hashAlgorithm,
-					publicKey,
-					context.Interface,
-				)
-			},
-		),
-		interpreter.WithHashHandler(
-			func(
-				inter *interpreter.Interpreter,
-				getLocationRange func() interpreter.LocationRange,
-				data *interpreter.ArrayValue,
-				tag *interpreter.StringValue,
-				hashAlgorithm interpreter.MemberAccessibleValue,
-			) *interpreter.ArrayValue {
-				return hash(
-					inter,
-					getLocationRange,
-					data,
-					tag,
-					hashAlgorithm,
-					context.Interface,
-				)
-			},
-		),
-		interpreter.WithOnRecordTraceHandler(
-			func(intr *interpreter.Interpreter, functionName string, duration time.Duration, logs []opentracing.LogRecord) {
-				context.Interface.RecordTrace(functionName, intr.Location, duration, logs)
-			},
-		),
-		interpreter.WithTracingEnabled(r.tracingEnabled),
-		interpreter.WithAtreeValueValidationEnabled(r.atreeValidationEnabled),
-		// NOTE: ignore r.atreeValidationEnabled here,
-		// and disable storage validation after each value modification.
-		// Instead, storage is validated after commits (if validation is enabled).
-		interpreter.WithAtreeStorageValidationEnabled(false),
-		interpreter.WithOnResourceOwnerChangeHandler(r.resourceOwnerChangedHandler(context.Interface)),
+	interpreterOptions.Storage = storage
+	interpreterOptions.PredeclaredValues = preDeclaredValues
+	interpreterOptions.OnEventEmitted = func(
+		inter *interpreter.Interpreter,
+		_ func() interpreter.LocationRange,
+		eventValue *interpreter.CompositeValue,
+		eventType *sema.CompositeType,
+	) error {
+		return r.emitEvent(
+			inter,
+			context.Interface,
+			eventValue,
+			eventType,
+		)
 	}
 
-	defaultOptions = append(defaultOptions,
-		r.meteringInterpreterOptions(context.Interface)...,
-	)
+	interpreterOptions.InjectedCompositeFieldsHandler =
+		r.injectedCompositeFieldsHandler(context, storage, interpreterOptions, checkerOptions)
+
+	interpreterOptions.ResourceUUIDHandler = func() (uuid uint64, err error) {
+		wrapPanic(func() {
+			uuid, err = context.Interface.GenerateUUID()
+		})
+		return
+	}
+
+	if interpreterOptions.ContractValueHandler == nil {
+		interpreterOptions.ContractValueHandler = func(
+			inter *interpreter.Interpreter,
+			compositeType *sema.CompositeType,
+			constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
+			invocationRange ast.Range,
+		) *interpreter.CompositeValue {
+
+			return r.loadContract(
+				inter,
+				compositeType,
+				constructorGenerator,
+				invocationRange,
+				storage,
+			)
+		}
+	}
+
+	interpreterOptions.ImportLocationHandler =
+		r.importLocationHandler(context, functions, values, checkerOptions)
+
+	interpreterOptions.OnStatement = r.onStatementHandler()
+
+	interpreterOptions.PublicAccountHandler =
+		func(_ *interpreter.Interpreter, address interpreter.AddressValue) interpreter.Value {
+			return r.getPublicAccount(
+				address,
+				context.Interface,
+				storage,
+			)
+		}
+
+	interpreterOptions.PublicKeyValidationHandler = publicKeyValidator
+	interpreterOptions.BLSVerifyPoPHandler = func(
+		inter *interpreter.Interpreter,
+		getLocationRange func() interpreter.LocationRange,
+		publicKeyValue interpreter.MemberAccessibleValue,
+		signature *interpreter.ArrayValue,
+	) interpreter.BoolValue {
+		return blsVerifyPoP(
+			inter,
+			getLocationRange,
+			publicKeyValue,
+			signature,
+			context.Interface,
+		)
+	}
+
+	interpreterOptions.BLSAggregateSignaturesHandler = func(
+		inter *interpreter.Interpreter,
+		getLocationRange func() interpreter.LocationRange,
+		signatures *interpreter.ArrayValue,
+	) interpreter.OptionalValue {
+		return blsAggregateSignatures(
+			inter,
+			context.Interface,
+			signatures,
+		)
+	}
+
+	interpreterOptions.BLSAggregatePublicKeysHandler = func(
+		inter *interpreter.Interpreter,
+		getLocationRange func() interpreter.LocationRange,
+		publicKeys *interpreter.ArrayValue,
+	) interpreter.OptionalValue {
+		return blsAggregatePublicKeys(
+			inter,
+			getLocationRange,
+			publicKeys,
+			publicKeyValidator,
+			context.Interface,
+		)
+	}
+
+	interpreterOptions.SignatureVerificationHandler = func(
+		inter *interpreter.Interpreter,
+		getLocationRange func() interpreter.LocationRange,
+		signature *interpreter.ArrayValue,
+		signedData *interpreter.ArrayValue,
+		domainSeparationTag *interpreter.StringValue,
+		hashAlgorithm *interpreter.CompositeValue,
+		publicKey interpreter.MemberAccessibleValue,
+	) interpreter.BoolValue {
+		return verifySignature(
+			inter,
+			getLocationRange,
+			signature,
+			signedData,
+			domainSeparationTag,
+			hashAlgorithm,
+			publicKey,
+			context.Interface,
+		)
+	}
+
+	interpreterOptions.HashHandler = func(
+		inter *interpreter.Interpreter,
+		getLocationRange func() interpreter.LocationRange,
+		data *interpreter.ArrayValue,
+		tag *interpreter.StringValue,
+		hashAlgorithm interpreter.MemberAccessibleValue,
+	) *interpreter.ArrayValue {
+		return hash(
+			inter,
+			getLocationRange,
+			data,
+			tag,
+			hashAlgorithm,
+			context.Interface,
+		)
+	}
+
+	interpreterOptions.OnRecordTrace = func(
+		inter *interpreter.Interpreter,
+		functionName string,
+		duration time.Duration,
+		logs []opentracing.LogRecord,
+	) {
+		context.Interface.RecordTrace(functionName, inter.Location, duration, logs)
+	}
+
+	interpreterOptions.TracingEnabled = r.tracingEnabled
+	interpreterOptions.AtreeValueValidationEnabled = r.atreeValidationEnabled
+	// NOTE: ignore r.atreeValidationEnabled here,
+	// and disable storage validation after each value modification.
+	// Instead, storage is validated after commits (if validation is enabled).
+	interpreterOptions.AtreeStorageValidationEnabled = false
+
+	interpreterOptions.OnResourceOwnerChange = r.resourceOwnerChangedHandler(context.Interface)
+
+	// TODO: r.meteringInterpreterOptions(context.Interface)...,
 
 	return interpreter.NewInterpreter(
 		program,
 		context.Location,
-		append(
-			defaultOptions,
-			interpreterOptions...,
-		)...,
+		interpreterOptions,
 	)
 }
 
@@ -1462,7 +1458,7 @@ func (r *interpreterRuntime) getProgram(
 func (r *interpreterRuntime) injectedCompositeFieldsHandler(
 	context Context,
 	storage *Storage,
-	interpreterOptions []interpreter.Option,
+	interpreterOptions *interpreter.Options,
 	checkerOptions []sema.Option,
 ) interpreter.InjectedCompositeFieldsHandlerFunc {
 	return func(
@@ -1506,6 +1502,7 @@ func (r *interpreterRuntime) injectedCompositeFieldsHandler(
 	}
 }
 
+/* TODO:
 func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interface) []interpreter.Option {
 	var computationLimit uint64
 	wrapPanic(func() {
@@ -1587,6 +1584,7 @@ func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interfa
 		),
 	}
 }
+*/
 
 var getAuthAccountFunctionType = &sema.FunctionType{
 	Parameters: []*sema.Parameter{{
@@ -1600,7 +1598,7 @@ var getAuthAccountFunctionType = &sema.FunctionType{
 func (r *interpreterRuntime) standardLibraryFunctions(
 	context Context,
 	storage *Storage,
-	interpreterOptions []interpreter.Option,
+	interpreterOptions *interpreter.Options,
 	checkerOptions []sema.Option,
 ) stdlib.StandardLibraryFunctions {
 	builtins := stdlib.FlowBuiltInFunctions(stdlib.FlowBuiltinImpls{
@@ -1654,7 +1652,6 @@ func (r *interpreterRuntime) getCode(context Context) (code []byte, err error) {
 // emitEvent converts an event value to native Go types and emits it to the runtime interface.
 func (r *interpreterRuntime) emitEvent(
 	inter *interpreter.Interpreter,
-	getLocationRange func() interpreter.LocationRange,
 	runtimeInterface Interface,
 	event *interpreter.CompositeValue,
 	eventType *sema.CompositeType,
@@ -1723,7 +1720,7 @@ func CodeToHashValue(inter *interpreter.Interpreter, code []byte) *interpreter.A
 func (r *interpreterRuntime) newCreateAccountFunction(
 	context Context,
 	storage *Storage,
-	interpreterOptions []interpreter.Option,
+	interpreterOptions *interpreter.Options,
 	checkerOptions []sema.Option,
 ) interpreter.HostFunction {
 	return func(invocation interpreter.Invocation) interpreter.Value {
@@ -2030,7 +2027,7 @@ func (r *interpreterRuntime) instantiateContract(
 	storage *Storage,
 	functions stdlib.StandardLibraryFunctions,
 	values stdlib.StandardLibraryValues,
-	interpreterOptions []interpreter.Option,
+	interpreterOptions *interpreter.Options,
 	checkerOptions []sema.Option,
 ) (
 	*interpreter.CompositeValue,
@@ -2088,51 +2085,46 @@ func (r *interpreterRuntime) instantiateContract(
 
 	var contract *interpreter.CompositeValue
 
-	allInterpreterOptions := interpreterOptions[:]
+	allInterpreterOptions := *interpreterOptions
 
-	allInterpreterOptions = append(
-		allInterpreterOptions,
-		interpreter.WithContractValueHandler(
-			func(
-				inter *interpreter.Interpreter,
-				compositeType *sema.CompositeType,
-				constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
-				invocationRange ast.Range,
-			) *interpreter.CompositeValue {
+	allInterpreterOptions.ContractValueHandler = func(
+		inter *interpreter.Interpreter,
+		compositeType *sema.CompositeType,
+		constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
+		invocationRange ast.Range,
+	) *interpreter.CompositeValue {
 
-				constructor := constructorGenerator(address)
+		constructor := constructorGenerator(address)
 
-				// If the contract is the deployed contract, instantiate it using
-				// the provided constructor and given arguments
+		// If the contract is the deployed contract, instantiate it using
+		// the provided constructor and given arguments
 
-				if common.LocationsMatch(compositeType.Location, contractType.Location) &&
-					compositeType.Identifier == contractType.Identifier {
+		if common.LocationsMatch(compositeType.Location, contractType.Location) &&
+			compositeType.Identifier == contractType.Identifier {
 
-					value, err := inter.InvokeFunctionValue(
-						constructor,
-						constructorArguments,
-						argumentTypes,
-						parameterTypes,
-						invocationRange,
-					)
-					if err != nil {
-						panic(err)
-					}
+			value, err := inter.InvokeFunctionValue(
+				constructor,
+				constructorArguments,
+				argumentTypes,
+				parameterTypes,
+				invocationRange,
+			)
+			if err != nil {
+				panic(err)
+			}
 
-					return value.(*interpreter.CompositeValue)
-				}
+			return value.(*interpreter.CompositeValue)
+		}
 
-				// The contract is not the deployed contract, load it from storage
-				return r.loadContract(
-					inter,
-					compositeType,
-					constructorGenerator,
-					invocationRange,
-					storage,
-				)
-			},
-		),
-	)
+		// The contract is not the deployed contract, load it from storage
+		return r.loadContract(
+			inter,
+			compositeType,
+			constructorGenerator,
+			invocationRange,
+			storage,
+		)
+	}
 
 	_, inter, err := r.interpret(
 		program,
@@ -2140,7 +2132,7 @@ func (r *interpreterRuntime) instantiateContract(
 		storage,
 		functions,
 		values,
-		allInterpreterOptions,
+		&allInterpreterOptions,
 		checkerOptions,
 		nil,
 	)
@@ -2165,7 +2157,7 @@ func (r *interpreterRuntime) instantiateContract(
 func (r *interpreterRuntime) newGetAuthAccountFunction(
 	context Context,
 	storage *Storage,
-	interpreterOptions []interpreter.Option,
+	interpreterOptions *interpreter.Options,
 	checkerOptions []sema.Option,
 ) interpreter.HostFunction {
 	return func(invocation interpreter.Invocation) interpreter.Value {
@@ -2334,7 +2326,7 @@ func (r *interpreterRuntime) newAuthAccountContracts(
 	addressValue interpreter.AddressValue,
 	context Context,
 	storage *Storage,
-	interpreterOptions []interpreter.Option,
+	interpreterOptions *interpreter.Options,
 	checkerOptions []sema.Option,
 ) interpreter.Value {
 	return interpreter.NewAuthAccountContractsValue(
@@ -2400,7 +2392,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 	addressValue interpreter.AddressValue,
 	startContext Context,
 	storage *Storage,
-	interpreterOptions []interpreter.Option,
+	interpreterOptions *interpreter.Options,
 	checkerOptions []sema.Option,
 	isUpdate bool,
 ) *interpreter.HostFunctionValue {
@@ -2706,7 +2698,7 @@ func (r *interpreterRuntime) updateAccountContractCode(
 	contractType *sema.CompositeType,
 	constructorArguments []interpreter.Value,
 	constructorArgumentTypes []sema.Type,
-	interpreterOptions []interpreter.Option,
+	interpreterOptions *interpreter.Options,
 	checkerOptions []sema.Option,
 	options updateAccountContractCodeOptions,
 ) error {
@@ -2977,7 +2969,7 @@ func (r *interpreterRuntime) executeNonProgram(interpret interpretFunc, context 
 
 	var functions stdlib.StandardLibraryFunctions
 	var values stdlib.StandardLibraryValues
-	var interpreterOptions []interpreter.Option
+	var interpreterOptions *interpreter.Options
 	var checkerOptions []sema.Option
 
 	value, _, err := r.interpret(
@@ -3164,7 +3156,7 @@ func (r *interpreterRuntime) newAccountKeysAddFunction(
 				inter,
 				getLocationRange,
 				accountKey,
-				inter.PublicKeyValidationHandler,
+				inter.Options.PublicKeyValidationHandler,
 			)
 		},
 		sema.AuthAccountKeysTypeAddFunctionType,

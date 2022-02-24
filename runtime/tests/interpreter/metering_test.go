@@ -101,9 +101,9 @@ func TestInterpretStatementHandler(t *testing.T) {
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),
 		importingChecker.Location,
-		interpreter.WithStorage(storage),
-		interpreter.WithOnStatementHandler(
-			func(interpreter *interpreter.Interpreter, statement ast.Statement) {
+		&interpreter.Options{
+			Storage: storage,
+			OnStatement: func(interpreter *interpreter.Interpreter, statement ast.Statement) {
 				id, ok := interpreterIDs[interpreter]
 				if !ok {
 					id = nextInterpreterID
@@ -116,9 +116,7 @@ func TestInterpretStatementHandler(t *testing.T) {
 					line:          statement.StartPosition().Line,
 				})
 			},
-		),
-		interpreter.WithImportLocationHandler(
-			func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 				assert.Equal(t,
 					utils.ImportedLocation,
 					location,
@@ -134,7 +132,7 @@ func TestInterpretStatementHandler(t *testing.T) {
 					Interpreter: subInterpreter,
 				}
 			},
-		),
+		},
 	)
 	require.NoError(t, err)
 
@@ -230,9 +228,9 @@ func TestInterpretLoopIterationHandler(t *testing.T) {
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),
 		importingChecker.Location,
-		interpreter.WithStorage(storage),
-		interpreter.WithOnLoopIterationHandler(
-			func(inter *interpreter.Interpreter, line int) {
+		&interpreter.Options{
+			Storage: storage,
+			OnLoopIteration: func(inter *interpreter.Interpreter, line int) {
 
 				id, ok := interpreterIDs[inter]
 				if !ok {
@@ -246,9 +244,7 @@ func TestInterpretLoopIterationHandler(t *testing.T) {
 					line:          line,
 				})
 			},
-		),
-		interpreter.WithImportLocationHandler(
-			func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 				assert.Equal(t,
 					utils.ImportedLocation,
 					location,
@@ -264,7 +260,7 @@ func TestInterpretLoopIterationHandler(t *testing.T) {
 					Interpreter: subInterpreter,
 				}
 			},
-		),
+		},
 	)
 	require.NoError(t, err)
 
@@ -369,9 +365,9 @@ func TestInterpretFunctionInvocationHandler(t *testing.T) {
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),
 		importingChecker.Location,
-		interpreter.WithStorage(storage),
-		interpreter.WithOnFunctionInvocationHandler(
-			func(inter *interpreter.Interpreter, line int) {
+		&interpreter.Options{
+			Storage: storage,
+			OnFunctionInvocation: func(inter *interpreter.Interpreter, line int) {
 
 				id, ok := interpreterIDs[inter]
 				if !ok {
@@ -385,9 +381,7 @@ func TestInterpretFunctionInvocationHandler(t *testing.T) {
 					line:          line,
 				})
 			},
-		),
-		interpreter.WithImportLocationHandler(
-			func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 				assert.Equal(t,
 					utils.ImportedLocation,
 					location,
@@ -403,7 +397,7 @@ func TestInterpretFunctionInvocationHandler(t *testing.T) {
 					Interpreter: subInterpreter,
 				}
 			},
-		),
+		},
 	)
 	require.NoError(t, err)
 

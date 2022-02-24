@@ -57,7 +57,7 @@ var hashAlgorithmHashFunction = interpreter.NewHostFunctionValue(
 			getLocationRange,
 		)
 
-		return inter.HashHandler(
+		return inter.Options.HashHandler(
 			inter,
 			getLocationRange,
 			dataValue,
@@ -92,7 +92,7 @@ var hashAlgorithmHashWithTagFunction = interpreter.NewHostFunctionValue(
 			getLocationRange,
 		)
 
-		return inter.HashHandler(
+		return inter.Options.HashHandler(
 			inter,
 			getLocationRange,
 			dataValue,

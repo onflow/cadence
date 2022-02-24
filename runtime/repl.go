@@ -44,7 +44,7 @@ func NewREPL(
 	onError func(err error, location common.Location, codes map[common.LocationID]string),
 	onResult func(interpreter.Value),
 	checkerOptions []sema.Option,
-	interpreterOptions []interpreter.Option,
+	interpreterOptions *interpreter.Options,
 ) (*REPL, error) {
 
 	valueDeclarations := append(
@@ -105,28 +105,19 @@ func NewREPL(
 		return nil, err
 	}
 
-	values := valueDeclarations.ToInterpreterValueDeclarations()
-
 	var uuid uint64
 
-	storage := interpreter.NewInMemoryStorage()
-
-	interpreterOptions = append(
-		[]interpreter.Option{
-			interpreter.WithStorage(storage),
-			interpreter.WithPredeclaredValues(values),
-			interpreter.WithUUIDHandler(func() (uint64, error) {
-				defer func() { uuid++ }()
-				return uuid, nil
-			}),
-		},
-		interpreterOptions...,
-	)
+	interpreterOptions.Storage = interpreter.NewInMemoryStorage()
+	interpreterOptions.PredeclaredValues = valueDeclarations.ToInterpreterValueDeclarations()
+	interpreterOptions.ResourceUUIDHandler = func() (uint64, error) {
+		defer func() { uuid++ }()
+		return uuid, nil
+	}
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
 		checker.Location,
-		interpreterOptions...,
+		interpreterOptions,
 	)
 	if err != nil {
 		return nil, err

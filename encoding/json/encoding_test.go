@@ -736,17 +736,15 @@ func exportFromScript(t *testing.T, code string) cadence.Value {
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
 		checker.Location,
-		interpreter.WithUUIDHandler(
-			func() (uint64, error) {
+		&interpreter.Options{
+			Storage: interpreter.NewInMemoryStorage(),
+			ResourceUUIDHandler: func() (uint64, error) {
 				uuid++
 				return uuid, nil
 			},
-		),
-		interpreter.WithAtreeStorageValidationEnabled(true),
-		interpreter.WithAtreeValueValidationEnabled(true),
-		interpreter.WithStorage(
-			interpreter.NewInMemoryStorage(),
-		),
+			AtreeStorageValidationEnabled: true,
+			AtreeValueValidationEnabled:   true,
+		},
 	)
 	require.NoError(t, err)
 

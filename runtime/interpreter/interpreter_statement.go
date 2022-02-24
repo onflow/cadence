@@ -36,12 +36,12 @@ func (interpreter *Interpreter) evalStatement(statement ast.Statement) interface
 
 	interpreter.statement = statement
 
-	if interpreter.debugger != nil {
-		interpreter.debugger.onStatement(interpreter, statement)
+	if interpreter.Options.Debugger != nil {
+		interpreter.Options.Debugger.onStatement(interpreter, statement)
 	}
 
-	if interpreter.onStatement != nil {
-		interpreter.onStatement(interpreter, statement)
+	if interpreter.Options.OnStatement != nil {
+		interpreter.Options.OnStatement(interpreter, statement)
 	}
 
 	return statement.Accept(interpreter)
@@ -358,13 +358,13 @@ func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement)
 
 	getLocationRange := locationRangeGetter(interpreter.Location, statement)
 
-	if interpreter.onEventEmitted == nil {
+	if interpreter.Options.OnEventEmitted == nil {
 		panic(EventEmissionUnavailableError{
 			LocationRange: getLocationRange(),
 		})
 	}
 
-	err := interpreter.onEventEmitted(interpreter, getLocationRange, event, eventType)
+	err := interpreter.Options.OnEventEmitted(interpreter, getLocationRange, event, eventType)
 	if err != nil {
 		panic(err)
 	}

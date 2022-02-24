@@ -71,8 +71,8 @@ func TestInterpretTransferCheck(t *testing.T) {
 				sema.WithPredeclaredValues(valueDeclarations.ToSemaValueDeclarations()),
 				sema.WithPredeclaredTypes(typeDeclarations.ToTypeDeclarations()),
 			},
-			Options: []interpreter.Option{
-				interpreter.WithPredeclaredValues(valueDeclarations.ToInterpreterValueDeclarations()),
+			Options: &interpreter.Options{
+				PredeclaredValues: valueDeclarations.ToInterpreterValueDeclarations(),
 			},
 		},
 	)

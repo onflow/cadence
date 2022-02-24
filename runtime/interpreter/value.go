@@ -369,7 +369,7 @@ func (v TypeValue) HashInput(interpreter *Interpreter, _ func() LocationRange, s
 	}
 
 	buf[0] = byte(HashInputTypeType)
-	copy(buf[1:], []byte(typeID))
+	copy(buf[1:], typeID)
 	return buf
 }
 
@@ -703,7 +703,7 @@ func (CharacterValue) DeepRemove(_ *Interpreter) {
 }
 
 func (v CharacterValue) ByteSize() uint32 {
-	return cborTagSize + getBytesCBORSize([]byte(string(v)))
+	return cborTagSize + getBytesCBORSize([]byte(v))
 }
 
 func (v CharacterValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -714,7 +714,7 @@ func (CharacterValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func (v CharacterValue) GetMember(inter *Interpreter, _ func() LocationRange, name string) Value {
+func (v CharacterValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
@@ -1149,7 +1149,7 @@ func NewArrayValueWithIterator(
 ) *ArrayValue {
 
 	array, err := atree.NewArrayFromBatchData(
-		interpreter.Storage,
+		interpreter.Options.Storage,
 		atree.Address(address),
 		arrayType,
 		func() (atree.Value, error) {
@@ -1339,7 +1339,7 @@ func (v *ArrayValue) Get(interpreter *Interpreter, getLocationRange func() Locat
 		panic(ExternalError{err})
 	}
 
-	return StoredValue(storable, interpreter.Storage)
+	return StoredValue(storable, interpreter.Options.Storage)
 }
 
 func (v *ArrayValue) SetKey(interpreter *Interpreter, getLocationRange func() LocationRange, key Value, value Value) {
@@ -1378,7 +1378,7 @@ func (v *ArrayValue) Set(interpreter *Interpreter, getLocationRange func() Locat
 	}
 	interpreter.maybeValidateAtreeValue(v.array)
 
-	existingValue := StoredValue(existingStorable, interpreter.Storage)
+	existingValue := StoredValue(existingStorable, interpreter.Options.Storage)
 
 	existingValue.DeepRemove(interpreter)
 
@@ -1489,7 +1489,7 @@ func (v *ArrayValue) Remove(interpreter *Interpreter, getLocationRange func() Lo
 	}
 	interpreter.maybeValidateAtreeValue(v.array)
 
-	value := StoredValue(storable, interpreter.Storage)
+	value := StoredValue(storable, interpreter.Options.Storage)
 
 	return value.Transfer(
 		interpreter,
@@ -1797,7 +1797,7 @@ func (v *ArrayValue) Transfer(
 	storable atree.Storable,
 ) Value {
 
-	if interpreter.tracingEnabled {
+	if interpreter.Options.TracingEnabled {
 		startTime := time.Now()
 		defer func() {
 			interpreter.reportArrayValueTransferTrace(v.Type.String(), v.Count(), time.Since(startTime))
@@ -1820,7 +1820,7 @@ func (v *ArrayValue) Transfer(
 		}
 
 		array, err = atree.NewArrayFromBatchData(
-			interpreter.Storage,
+			interpreter.Options.Storage,
 			address,
 			v.array.Type(),
 			func() (atree.Value, error) {
@@ -1894,7 +1894,7 @@ func (v *ArrayValue) Clone(interpreter *Interpreter) Value {
 	}
 
 	array, err := atree.NewArrayFromBatchData(
-		interpreter.Storage,
+		interpreter.Options.Storage,
 		v.StorageID().Address,
 		v.array.Type(),
 		func() (atree.Value, error) {
@@ -11475,7 +11475,7 @@ func NewCompositeValue(
 ) *CompositeValue {
 
 	dictionary, err := atree.NewMap(
-		interpreter.Storage,
+		interpreter.Options.Storage,
 		atree.Address(address),
 		atree.NewDefaultDigesterBuilder(),
 		compositeTypeInfo{
@@ -11577,7 +11577,8 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func
 
 	// if composite was deserialized, dynamically link in the destructor
 	if v.Destructor == nil {
-		v.Destructor = interpreter.typeCodes.CompositeCodes[v.TypeID()].DestructorFunction
+		compositeCodes := interpreter.shared.typeCodes.CompositeCodes
+		v.Destructor = compositeCodes[v.TypeID()].DestructorFunction
 	}
 
 	destructor := v.Destructor
@@ -11616,7 +11617,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange fu
 		}
 	}
 	if storable != nil {
-		return StoredValue(storable, interpreter.Storage)
+		return StoredValue(storable, interpreter.Options.Storage)
 	}
 
 	if v.NestedVariables != nil {
@@ -11639,8 +11640,8 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange fu
 
 	v.InitializeFunctions(interpreter)
 
-	if v.InjectedFields == nil && interpreter.injectedCompositeFieldsHandler != nil {
-		v.InjectedFields = interpreter.injectedCompositeFieldsHandler(
+	if v.InjectedFields == nil && interpreter.Options.InjectedCompositeFieldsHandler != nil {
+		v.InjectedFields = interpreter.Options.InjectedCompositeFieldsHandler(
 			interpreter,
 			v.Location,
 			v.QualifiedIdentifier,
@@ -11685,7 +11686,8 @@ func (v *CompositeValue) InitializeFunctions(interpreter *Interpreter) {
 		return
 	}
 
-	v.Functions = interpreter.typeCodes.CompositeCodes[v.TypeID()].CompositeFunctions
+	compositeCodes := interpreter.shared.typeCodes.CompositeCodes
+	v.Functions = compositeCodes[v.TypeID()].CompositeFunctions
 }
 
 func (v *CompositeValue) OwnerValue(interpreter *Interpreter, getLocationRange func() LocationRange) OptionalValue {
@@ -11695,7 +11697,7 @@ func (v *CompositeValue) OwnerValue(interpreter *Interpreter, getLocationRange f
 		return NilValue{}
 	}
 
-	ownerAccount := interpreter.publicAccountHandler(interpreter, AddressValue(address))
+	ownerAccount := interpreter.Options.PublicAccountHandler(interpreter, AddressValue(address))
 
 	// Owner must be of `PublicAccount` type.
 	interpreter.ExpectType(ownerAccount, sema.PublicAccountType, getLocationRange)
@@ -11724,7 +11726,7 @@ func (v *CompositeValue) RemoveMember(
 	}
 	interpreter.maybeValidateAtreeValue(v.dictionary)
 
-	storage := interpreter.Storage
+	storage := interpreter.Options.Storage
 
 	// Key
 	interpreter.RemoveReferencedSlab(existingKeyStorable)
@@ -11770,7 +11772,7 @@ func (v *CompositeValue) SetMember(
 	interpreter.maybeValidateAtreeValue(v.dictionary)
 
 	if existingStorable != nil {
-		existingValue := StoredValue(existingStorable, interpreter.Storage)
+		existingValue := StoredValue(existingStorable, interpreter.Options.Storage)
 
 		existingValue.DeepRemove(interpreter)
 
@@ -12058,7 +12060,7 @@ func (v *CompositeValue) Transfer(
 		}
 
 		dictionary, err = atree.NewMapFromBatchData(
-			interpreter.Storage,
+			interpreter.Options.Storage,
 			address,
 			atree.NewDefaultDigesterBuilder(),
 			v.dictionary.Type(),
@@ -12146,9 +12148,9 @@ func (v *CompositeValue) Transfer(
 
 	if needsStoreTo &&
 		res.Kind == common.CompositeKindResource &&
-		interpreter.onResourceOwnerChange != nil {
+		interpreter.Options.OnResourceOwnerChange != nil {
 
-		interpreter.onResourceOwnerChange(
+		interpreter.Options.OnResourceOwnerChange(
 			interpreter,
 			res,
 			common.Address(currentAddress),
@@ -12176,7 +12178,7 @@ func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
 	}
 
 	dictionary, err := atree.NewMapFromBatchData(
-		interpreter.Storage,
+		interpreter.Options.Storage,
 		v.StorageID().Address,
 		atree.NewDefaultDigesterBuilder(),
 		v.dictionary.Type(),
@@ -12285,7 +12287,7 @@ func (v *CompositeValue) RemoveField(
 	}
 	interpreter.maybeValidateAtreeValue(v.dictionary)
 
-	storage := interpreter.Storage
+	storage := interpreter.Options.Storage
 
 	// Key
 
@@ -12364,7 +12366,7 @@ func NewDictionaryValueWithAddress(
 	}
 
 	dictionary, err := atree.NewMap(
-		interpreter.Storage,
+		interpreter.Options.Storage,
 		atree.Address(address),
 		atree.NewDefaultDigesterBuilder(),
 		dictionaryType,
@@ -12751,7 +12753,7 @@ func (v *DictionaryValue) Remove(
 	}
 	interpreter.maybeValidateAtreeValue(v.dictionary)
 
-	storage := interpreter.Storage
+	storage := interpreter.Options.Storage
 
 	// Key
 
@@ -12828,7 +12830,7 @@ func (v *DictionaryValue) Insert(
 		return NilValue{}
 	}
 
-	existingValue := StoredValue(existingValueStorable, interpreter.Storage).
+	existingValue := StoredValue(existingValueStorable, interpreter.Options.Storage).
 		Transfer(
 			interpreter,
 			getLocationRange,
@@ -12969,7 +12971,7 @@ func (v *DictionaryValue) Transfer(
 	storable atree.Storable,
 ) Value {
 
-	if interpreter.tracingEnabled {
+	if interpreter.Options.TracingEnabled {
 		startTime := time.Now()
 		defer func() {
 			interpreter.reportDictionaryValueTransferTrace(v.Type.String(), v.Count(), time.Since(startTime))
@@ -12995,7 +12997,7 @@ func (v *DictionaryValue) Transfer(
 		}
 
 		dictionary, err = atree.NewMapFromBatchData(
-			interpreter.Storage,
+			interpreter.Options.Storage,
 			address,
 			atree.NewDefaultDigesterBuilder(),
 			v.dictionary.Type(),
@@ -13083,7 +13085,7 @@ func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
 	}
 
 	dictionary, err := atree.NewMapFromBatchData(
-		interpreter.Storage,
+		interpreter.Options.Storage,
 		v.StorageID().Address,
 		atree.NewDefaultDigesterBuilder(),
 		v.dictionary.Type(),
@@ -15106,7 +15108,7 @@ var publicKeyVerifyFunction = NewHostFunctionValue(
 			getLocationRange,
 		)
 
-		return interpreter.SignatureVerificationHandler(
+		return interpreter.Options.SignatureVerificationHandler(
 			interpreter,
 			getLocationRange,
 			signatureValue,
@@ -15138,7 +15140,7 @@ var publicKeyVerifyPoPFunction = NewHostFunctionValue(
 			getLocationRange,
 		)
 
-		return interpreter.BLSVerifyPoPHandler(
+		return interpreter.Options.BLSVerifyPoPHandler(
 			interpreter,
 			getLocationRange,
 			publicKey,

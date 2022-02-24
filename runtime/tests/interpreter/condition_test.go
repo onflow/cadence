@@ -420,8 +420,8 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
 					tearDownCode,
 				),
 				ParseCheckAndInterpretOptions{
-					Options: []interpreter.Option{
-						makeContractValueHandler(nil, nil, nil),
+					Options: &interpreter.Options{
+						ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 					},
 				},
 			)
@@ -541,9 +541,9 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 						}
 					}
 
-					uuidHandler := interpreter.WithUUIDHandler(func() (uint64, error) {
+					resourceUUIDHandler := func() (uint64, error) {
 						return 0, nil
-					})
+					}
 
 					if compositeKind == common.CompositeKindContract {
 
@@ -552,19 +552,21 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 						inter, err := interpreter.NewInterpreter(
 							interpreter.ProgramFromChecker(checker),
 							checker.Location,
-							interpreter.WithStorage(storage),
-							makeContractValueHandler(
-								[]interpreter.Value{
-									interpreter.NewIntValueFromInt64(value),
-								},
-								[]sema.Type{
-									sema.IntType,
-								},
-								[]sema.Type{
-									sema.IntType,
-								},
-							),
-							uuidHandler,
+							&interpreter.Options{
+								Storage: storage,
+								ContractValueHandler: makeContractValueHandler(
+									[]interpreter.Value{
+										interpreter.NewIntValueFromInt64(value),
+									},
+									[]sema.Type{
+										sema.IntType,
+									},
+									[]sema.Type{
+										sema.IntType,
+									},
+								),
+								ResourceUUIDHandler: resourceUUIDHandler,
+							},
 						)
 						require.NoError(t, err)
 
@@ -579,8 +581,10 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 						inter, err := interpreter.NewInterpreter(
 							interpreter.ProgramFromChecker(checker),
 							checker.Location,
-							interpreter.WithStorage(storage),
-							uuidHandler,
+							&interpreter.Options{
+								Storage:             storage,
+								ResourceUUIDHandler: resourceUUIDHandler,
+							},
 						)
 						require.NoError(t, err)
 
@@ -638,8 +642,8 @@ func TestInterpretTypeRequirementWithPreCondition(t *testing.T) {
           }
         `,
 		ParseCheckAndInterpretOptions{
-			Options: []interpreter.Option{
-				makeContractValueHandler(nil, nil, nil),
+			Options: &interpreter.Options{
+				ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 			},
 		},
 	)
@@ -813,8 +817,8 @@ func TestInterpretResourceTypeRequirementInitializerAndDestructorPreConditions(t
           }
         `,
 		ParseCheckAndInterpretOptions{
-			Options: []interpreter.Option{
-				makeContractValueHandler(nil, nil, nil),
+			Options: &interpreter.Options{
+				ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 			},
 		},
 	)
@@ -1034,8 +1038,8 @@ func TestInterpretIsInstanceCheckInPreCondition(t *testing.T) {
 				condition,
 			),
 			ParseCheckAndInterpretOptions{
-				Options: []interpreter.Option{
-					makeContractValueHandler(nil, nil, nil),
+				Options: &interpreter.Options{
+					ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 				},
 			},
 		)
@@ -1153,8 +1157,8 @@ func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
 			CheckerOptions: []sema.Option{
 				sema.WithPredeclaredValues(semaValueDeclarations),
 			},
-			Options: []interpreter.Option{
-				interpreter.WithPredeclaredValues(interpreterValueDeclarations),
+			Options: &interpreter.Options{
+				PredeclaredValues: interpreterValueDeclarations,
 			},
 		},
 	)

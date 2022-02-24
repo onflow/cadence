@@ -65,10 +65,10 @@ func TestInterpretEquality(t *testing.T) {
               let res2 = maybeCapNil == nil
 		    `,
 			ParseCheckAndInterpretOptions{
-				Options: []interpreter.Option{
-					interpreter.WithPredeclaredValues([]interpreter.ValueDeclaration{
+				Options: &interpreter.Options{
+					PredeclaredValues: []interpreter.ValueDeclaration{
 						capabilityValueDeclaration,
-					}),
+					},
 				},
 				CheckerOptions: []sema.Option{
 					sema.WithPredeclaredValues([]sema.ValueDeclaration{

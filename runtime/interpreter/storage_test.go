@@ -41,7 +41,9 @@ func TestCompositeStorage(t *testing.T) {
 	inter, err := NewInterpreter(
 		nil,
 		common.AddressLocation{},
-		WithStorage(storage),
+		&Options{
+			Storage: storage,
+		},
 	)
 	require.NoError(t, err)
 
@@ -104,8 +106,10 @@ func TestArrayStorage(t *testing.T) {
 		inter, err := NewInterpreter(
 			nil,
 			common.AddressLocation{},
-			WithStorage(storage),
-			WithImportLocationHandler(importLocationHandlerFunc),
+			&Options{
+				Storage:               storage,
+				ImportLocationHandler: importLocationHandlerFunc,
+			},
 		)
 		require.NoError(t, err)
 
@@ -167,8 +171,10 @@ func TestArrayStorage(t *testing.T) {
 		inter, err := NewInterpreter(
 			nil,
 			common.AddressLocation{},
-			WithStorage(storage),
-			WithImportLocationHandler(importLocationHandlerFunc),
+			&Options{
+				Storage:               storage,
+				ImportLocationHandler: importLocationHandlerFunc,
+			},
 		)
 		require.NoError(t, err)
 
@@ -230,7 +236,9 @@ func TestDictionaryStorage(t *testing.T) {
 		inter, err := NewInterpreter(
 			nil,
 			common.AddressLocation{},
-			WithStorage(storage),
+			&Options{
+				Storage: storage,
+			},
 		)
 		require.NoError(t, err)
 
@@ -286,7 +294,9 @@ func TestDictionaryStorage(t *testing.T) {
 		inter, err := NewInterpreter(
 			nil,
 			common.AddressLocation{},
-			WithStorage(storage),
+			&Options{
+				Storage: storage,
+			},
 		)
 		require.NoError(t, err)
 
@@ -335,7 +345,9 @@ func TestDictionaryStorage(t *testing.T) {
 		inter, err := NewInterpreter(
 			nil,
 			common.AddressLocation{},
-			WithStorage(storage),
+			&Options{
+				Storage: storage,
+			},
 		)
 		require.NoError(t, err)
 
@@ -383,7 +395,9 @@ func TestDictionaryStorage(t *testing.T) {
 		inter, err := NewInterpreter(
 			nil,
 			common.AddressLocation{},
-			WithStorage(storage),
+			&Options{
+				Storage: storage,
+			},
 		)
 		require.NoError(t, err)
 
@@ -431,7 +445,9 @@ func TestStorageOverwriteAndRemove(t *testing.T) {
 	inter, err := NewInterpreter(
 		nil,
 		common.AddressLocation{},
-		WithStorage(storage),
+		&Options{
+			Storage: storage,
+		},
 	)
 	require.NoError(t, err)
 

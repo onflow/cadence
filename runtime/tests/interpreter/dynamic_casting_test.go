@@ -3486,10 +3486,10 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 				capabilityValueDeclaration,
 			}),
 		},
-		Options: []interpreter.Option{
-			interpreter.WithPredeclaredValues([]interpreter.ValueDeclaration{
+		Options: &interpreter.Options{
+			PredeclaredValues: []interpreter.ValueDeclaration{
 				capabilityValueDeclaration,
-			}),
+			},
 		},
 	}
 

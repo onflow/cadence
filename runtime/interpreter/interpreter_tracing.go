@@ -34,11 +34,11 @@ const (
 )
 
 func (interpreter *Interpreter) reportFunctionTrace(functionName string, duration time.Duration) {
-	interpreter.onRecordTrace(interpreter, tracingFunctionPrefix+functionName, duration, nil)
+	interpreter.Options.OnRecordTrace(interpreter, tracingFunctionPrefix+functionName, duration, nil)
 }
 
 func (interpreter *Interpreter) reportImportTrace(importPath string, duration time.Duration) {
-	interpreter.onRecordTrace(interpreter, tracingImportPrefix+importPath, duration, nil)
+	interpreter.Options.OnRecordTrace(interpreter, tracingImportPrefix+importPath, duration, nil)
 }
 
 func (interpreter *Interpreter) reportArrayValueTransferTrace(typeInfo string, count int, duration time.Duration) {
@@ -51,7 +51,7 @@ func (interpreter *Interpreter) reportArrayValueTransferTrace(typeInfo string, c
 			},
 		},
 	}
-	interpreter.onRecordTrace(interpreter, tracingArrayPrefix+tracingTransferPrefix, duration, logs)
+	interpreter.Options.OnRecordTrace(interpreter, tracingArrayPrefix+tracingTransferPrefix, duration, logs)
 }
 
 func (interpreter *Interpreter) reportDictionaryValueTransferTrace(typeInfo string, count int, duration time.Duration) {
@@ -64,5 +64,5 @@ func (interpreter *Interpreter) reportDictionaryValueTransferTrace(typeInfo stri
 			},
 		},
 	}
-	interpreter.onRecordTrace(interpreter, tracingDictionaryPrefix+tracingTransferPrefix, duration, logs)
+	interpreter.Options.OnRecordTrace(interpreter, tracingDictionaryPrefix+tracingTransferPrefix, duration, logs)
 }

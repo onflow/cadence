@@ -619,7 +619,7 @@ func (interpreter *Interpreter) VisitConditionalExpression(expression *ast.Condi
 func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *ast.InvocationExpression) ast.Repr {
 
 	// tracing
-	if interpreter.tracingEnabled {
+	if interpreter.Options.TracingEnabled {
 		startTime := time.Now()
 		defer func() {
 			interpreter.reportFunctionTrace(invocationExpression.InvokedExpression.String(), time.Since(startTime))
