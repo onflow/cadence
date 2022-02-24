@@ -114,7 +114,7 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 		if err != nil {
 			return nil, err
 		}
-		storable = NilValue{}
+		storable = NewNilValue(d.memoryGauge)
 
 	case cbor.TextStringType:
 		str, err := decodeString(d.decoder, d.memoryGauge)

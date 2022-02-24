@@ -293,7 +293,7 @@ func AggregateBLSSignatures(
 
 	// if the crypto layer produces an error, we have invalid input, return nil
 	if err != nil {
-		return interpreter.NilValue{}
+		return interpreter.NewNilValue(inter)
 	}
 
 	aggregatedSignature := make([]interpreter.Value, 0, len(aggregatedBytes))

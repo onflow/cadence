@@ -2300,7 +2300,7 @@ func (r *interpreterRuntime) newGetBlockFunction(runtimeInterface Interface) int
 		}
 
 		if block == nil {
-			return interpreter.NilValue{}
+			return interpreter.NewNilValue(invocation.Interpreter)
 		}
 
 		return interpreter.NewSomeValueNonCopying(block)
@@ -2797,7 +2797,7 @@ func (r *interpreterRuntime) newAccountContractsGetFunction(
 					),
 				)
 			} else {
-				return interpreter.NilValue{}
+				return interpreter.NewNilValue(invocation.Interpreter)
 			}
 		},
 		sema.AuthAccountContractsTypeGetFunctionType,
@@ -2897,7 +2897,7 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 					),
 				)
 			} else {
-				return interpreter.NilValue{}
+				return interpreter.NewNilValue(invocation.Interpreter)
 			}
 		},
 		sema.AuthAccountContractsTypeRemoveFunctionType,
@@ -3175,7 +3175,7 @@ func (r *interpreterRuntime) newAccountKeysGetFunction(
 			// This is done because, if the host function returns an error when a key is not found, then
 			// currently there's no way to distinguish between a 'key not found error' vs other internal errors.
 			if accountKey == nil {
-				return interpreter.NilValue{}
+				return interpreter.NewNilValue(invocation.Interpreter)
 			}
 
 			inter := invocation.Interpreter
@@ -3219,7 +3219,7 @@ func (r *interpreterRuntime) newAccountKeysRevokeFunction(
 			// This is done because, if the host function returns an error when a key is not found, then
 			// currently there's no way to distinguish between a 'key not found error' vs other internal errors.
 			if accountKey == nil {
-				return interpreter.NilValue{}
+				return interpreter.NewNilValue(invocation.Interpreter)
 			}
 
 			inter := invocation.Interpreter
@@ -3477,7 +3477,7 @@ func aggregateBLSPublicKeys(
 
 	// if the crypto layer produces an error, we have invalid input, return nil
 	if err != nil {
-		return interpreter.NilValue{}, nil //nolint:nilerr
+		return interpreter.NewNilValue(inter), nil //nolint:nilerr
 	}
 
 	return interpreter.NewSomeValueNonCopying(

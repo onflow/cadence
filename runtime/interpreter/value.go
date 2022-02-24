@@ -259,7 +259,7 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ func() LocationRange, n
 
 				// if either type is unknown, the subtype relation is false, as it doesn't make sense to even ask this question
 				if staticType == nil || otherStaticType == nil {
-					return NewBoolValue(interpreter.memoryGauge, false)
+					return NewBoolValue(interpreter, false)
 				}
 
 				inter := invocation.Interpreter
@@ -268,7 +268,7 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ func() LocationRange, n
 					inter.MustConvertStaticToSemaType(staticType),
 					inter.MustConvertStaticToSemaType(otherStaticType),
 				)
-				return NewBoolValue(interpreter.memoryGauge, result)
+				return NewBoolValue(interpreter, result)
 			},
 			sema.MetaTypeIsSubtypeFunctionType,
 		)
@@ -1583,11 +1583,7 @@ func (v *ArrayValue) Contains(interpreter *Interpreter, getLocationRange func() 
 		return true
 	})
 
-	var memoryGauge common.MemoryGauge
-	if interpreter != nil {
-		memoryGauge = interpreter.memoryGauge
-	}
-	return NewBoolValue(memoryGauge, result)
+	return NewBoolValue(interpreter, result)
 }
 
 func (v *ArrayValue) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
@@ -11770,7 +11766,7 @@ func (v *CompositeValue) OwnerValue(interpreter *Interpreter, getLocationRange f
 	address := v.StorageID().Address
 
 	if address == (atree.Address{}) {
-		return NilValue{}
+		return NewNilValue(interpreter)
 	}
 
 	ownerAccount := interpreter.publicAccountHandler(interpreter, AddressValue(address))
@@ -12606,7 +12602,7 @@ func (v *DictionaryValue) GetKey(interpreter *Interpreter, getLocationRange func
 		return NewSomeValueNonCopying(value)
 	}
 
-	return NilValue{}
+	return NewNilValue(interpreter)
 }
 
 func (v *DictionaryValue) SetKey(
@@ -12823,7 +12819,7 @@ func (v *DictionaryValue) Remove(
 	)
 	if err != nil {
 		if _, ok := err.(*atree.KeyNotFoundError); ok {
-			return NilValue{}
+			return NewNilValue(interpreter)
 		}
 		panic(ExternalError{err})
 	}
@@ -12903,7 +12899,7 @@ func (v *DictionaryValue) Insert(
 	interpreter.maybeValidateAtreeValue(v.dictionary)
 
 	if existingValueStorable == nil {
-		return NilValue{}
+		return NewNilValue(interpreter)
 	}
 
 	existingValue := StoredValue(existingValueStorable, interpreter.Storage).
@@ -13266,6 +13262,21 @@ var _ atree.Storable = NilValue{}
 var _ EquatableValue = NilValue{}
 var _ MemberAccessibleValue = NilValue{}
 
+func NewUnmeteredNilValue() NilValue {
+	return NilValue{}
+}
+
+func NewNilValue(memoryGauge common.MemoryGauge) NilValue {
+	if memoryGauge != nil {
+		memoryGauge.UseMemory(common.MemoryUsage{
+			Kind:   common.MemoryKindNil,
+			Amount: 1,
+		})
+	}
+
+	return NewUnmeteredNilValue()
+}
+
 func (NilValue) IsValue() {}
 
 func (v NilValue) Accept(interpreter *Interpreter, visitor Visitor) {
@@ -13308,7 +13319,7 @@ func (v NilValue) RecursiveString(_ SeenReferences) string {
 
 var nilValueMapFunction = NewHostFunctionValue(
 	func(invocation Invocation) Value {
-		return NilValue{}
+		return NewNilValue(invocation.Interpreter.memoryGauge)
 	},
 	&sema.FunctionType{
 		ReturnTypeAnnotation: sema.NewTypeAnnotation(
@@ -14707,7 +14718,7 @@ func (PathValue) IsStorable() bool {
 func convertPath(domain common.PathDomain, value Value) Value {
 	stringValue, ok := value.(*StringValue)
 	if !ok {
-		return NilValue{}
+		return nil
 	}
 
 	_, err := sema.CheckPathLiteral(
@@ -14717,7 +14728,7 @@ func convertPath(domain common.PathDomain, value Value) Value {
 		ReturnEmptyRange,
 	)
 	if err != nil {
-		return NilValue{}
+		return nil
 	}
 
 	return NewSomeValueNonCopying(PathValue{

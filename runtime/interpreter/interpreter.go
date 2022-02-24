@@ -1797,7 +1797,7 @@ func EnumConstructorFunction(
 
 			caseValue, ok := lookupTable[string(rawValueArgumentBigEndianBytes)]
 			if !ok {
-				return NilValue{}
+				return NewNilValue(inter.memoryGauge)
 			}
 
 			return NewSomeValueNonCopying(caseValue)
@@ -2875,7 +2875,7 @@ func init() {
 				// if the given key is not a valid dictionary key, it wouldn't make sense to create this type
 				if keyType == nil ||
 					!sema.IsValidDictionaryKeyType(invocation.Interpreter.MustConvertStaticToSemaType(keyType)) {
-					return NilValue{}
+					return NewNilValue(invocation.Interpreter)
 				}
 
 				return NewSomeValueNonCopying(TypeValue{
@@ -2896,7 +2896,7 @@ func init() {
 
 				composite, err := lookupComposite(invocation.Interpreter, typeID)
 				if err != nil {
-					return NilValue{}
+					return NewNilValue(invocation.Interpreter)
 				}
 
 				return NewSomeValueNonCopying(TypeValue{
@@ -2916,7 +2916,7 @@ func init() {
 
 				interfaceType, err := lookupInterface(invocation.Interpreter, typeID)
 				if err != nil {
-					return NilValue{}
+					return NewNilValue(invocation.Interpreter)
 				}
 
 				return NewSomeValueNonCopying(TypeValue{
@@ -2993,7 +2993,7 @@ func RestrictedTypeFunction(invocation Invocation) Value {
 	})
 
 	if !ok {
-		return NilValue{}
+		return NewNilValue(invocation.Interpreter)
 	}
 
 	var semaType sema.Type
@@ -3005,7 +3005,7 @@ func RestrictedTypeFunction(invocation Invocation) Value {
 	case *SomeValue:
 		semaType, err = lookupComposite(invocation.Interpreter, typeID.Value.(*StringValue).Str)
 		if err != nil {
-			return NilValue{}
+			return NewNilValue(invocation.Interpreter)
 		}
 	default:
 		panic(errors.NewUnreachableError())
@@ -3022,7 +3022,7 @@ func RestrictedTypeFunction(invocation Invocation) Value {
 
 	// if the restricted type would have failed to typecheck statically, we return nil
 	if !ok {
-		return NilValue{}
+		return NewNilValue(invocation.Interpreter)
 	}
 	return NewSomeValueNonCopying(TypeValue{
 		Type: &RestrictedStaticType{
@@ -3055,7 +3055,12 @@ var converterFunctionValues = func() []converterFunction {
 		convert := declaration.convert
 		converterFunctionValue := NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				return convert(invocation.Arguments[0])
+				val := convert(invocation.Arguments[0])
+				if val == nil {
+					return NewNilValue(invocation.Interpreter)
+				} else {
+					return val
+				}
 			},
 			declaration.functionType,
 		)
@@ -3157,7 +3162,7 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 				// Capabilities must hold references
 				_, ok := ty.(ReferenceStaticType)
 				if !ok {
-					return NilValue{}
+					return NewNilValue(invocation.Interpreter)
 				}
 				return NewSomeValueNonCopying(
 					TypeValue{
@@ -3584,7 +3589,7 @@ func (interpreter *Interpreter) authAccountTypeFunction(addressValue AddressValu
 			value := interpreter.ReadStored(address, domain, identifier)
 
 			if value == nil {
-				return NilValue{}
+				return NewNilValue(invocation.Interpreter)
 			}
 
 			return NewSomeValueNonCopying(
@@ -3626,7 +3631,7 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 			value := interpreter.ReadStored(address, domain, identifier)
 
 			if value == nil {
-				return NilValue{}
+				return NewNilValue(invocation.Interpreter)
 			}
 
 			// If there is value stored for the given path,
@@ -3717,7 +3722,7 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 				panic(err)
 			}
 			if value == nil {
-				return NilValue{}
+				return NewNilValue(invocation.Interpreter)
 			}
 
 			return NewSomeValueNonCopying(reference)
@@ -3765,7 +3770,7 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 				newCapabilityDomain,
 				newCapabilityIdentifier,
 			) {
-				return NilValue{}
+				return NewNilValue(invocation.Interpreter)
 			}
 
 			// Write new value
@@ -3817,12 +3822,12 @@ func (interpreter *Interpreter) accountGetLinkTargetFunction(addressValue Addres
 			value := interpreter.ReadStored(address, domain, identifier)
 
 			if value == nil {
-				return NilValue{}
+				return NewNilValue(invocation.Interpreter)
 			}
 
 			link, ok := value.(LinkValue)
 			if !ok {
-				return NilValue{}
+				return NewNilValue(invocation.Interpreter)
 			}
 
 			return NewSomeValueNonCopying(link.TargetPath)
@@ -3899,7 +3904,7 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 			}
 
 			if targetPath == EmptyPathValue {
-				return NilValue{}
+				return NewNilValue(invocation.Interpreter)
 			}
 
 			reference := &StorageReferenceValue{
@@ -3918,7 +3923,7 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 				panic(err)
 			}
 			if value == nil {
-				return NilValue{}
+				return NewNilValue(invocation.Interpreter)
 			}
 
 			return NewSomeValueNonCopying(reference)
@@ -3969,7 +3974,7 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 			}
 
 			if targetPath == EmptyPathValue {
-				return NewBoolValue(interpreter.memoryGauge, false)
+				return NewBoolValue(interpreter, false)
 			}
 
 			reference := &StorageReferenceValue{
@@ -3984,10 +3989,10 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 			// and performs a dynamic type check
 
 			if reference.ReferencedValue(interpreter) == nil {
-				return NewBoolValue(interpreter.memoryGauge, false)
+				return NewBoolValue(interpreter, false)
 			}
 
-			return NewBoolValue(interpreter.memoryGauge, true)
+			return NewBoolValue(interpreter, true)
 		},
 		sema.CapabilityTypeCheckFunctionType(borrowType),
 	)
@@ -4238,14 +4243,14 @@ func (interpreter *Interpreter) isInstanceFunction(self Value) *HostFunctionValu
 
 			// Values are never instances of unknown types
 			if staticType == nil {
-				return NewBoolValue(interpreter.memoryGauge, false)
+				return NewBoolValue(interpreter, false)
 			}
 
 			semaType := interpreter.MustConvertStaticToSemaType(staticType)
 			// NOTE: not invocation.Self, as that is only set for composite values
 			dynamicType := self.DynamicType(interpreter, SeenReferences{})
 			result := interpreter.IsSubType(dynamicType, semaType)
-			return NewBoolValue(interpreter.memoryGauge, result)
+			return NewBoolValue(interpreter, result)
 		},
 		sema.IsInstanceFunctionType,
 	)
@@ -4477,7 +4482,7 @@ func (interpreter *Interpreter) updateReferencedResource(
 // UseMemory delegates the memory usage to the interpreter's memory gauge, if any.
 //
 func (interpreter *Interpreter) UseMemory(usage common.MemoryUsage) {
-	if interpreter.memoryGauge == nil {
+	if interpreter == nil || interpreter.memoryGauge == nil {
 		return
 	}
 	interpreter.memoryGauge.UseMemory(usage)

@@ -633,7 +633,7 @@ func importOptionalValue(
 	error,
 ) {
 	if v.Value == nil {
-		return interpreter.NilValue{}, nil
+		return interpreter.NewNilValue(inter), nil
 	}
 
 	var innerType sema.Type
