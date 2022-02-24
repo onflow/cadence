@@ -1257,10 +1257,10 @@ func (interpreter *Interpreter) visitFunctionBody(
 		if ret, ok := result.(functionReturn); ok {
 			returnValue = ret.Value
 		} else {
-			returnValue = VoidValue{}
+			returnValue = NewVoidValue(interpreter)
 		}
 	} else {
-		returnValue = VoidValue{}
+		returnValue = NewVoidValue(interpreter)
 	}
 
 	// If there is a return type, declare the constant `result`.
@@ -3563,7 +3563,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 
 			interpreter.writeStored(address, domain, identifier, value)
 
-			return VoidValue{}
+			return NewVoidValue(interpreter)
 		},
 		sema.AuthAccountTypeSaveFunctionType,
 	)
@@ -3857,7 +3857,7 @@ func (interpreter *Interpreter) authAccountUnlinkFunction(addressValue AddressVa
 
 			interpreter.writeStored(address, domain, identifier, nil)
 
-			return VoidValue{}
+			return NewVoidValue(interpreter)
 		},
 		sema.AuthAccountTypeUnlinkFunctionType,
 	)

@@ -378,6 +378,21 @@ var _ Value = VoidValue{}
 var _ atree.Storable = VoidValue{}
 var _ EquatableValue = VoidValue{}
 
+func NewUnmeteredVoidValue() VoidValue {
+	return VoidValue{}
+}
+
+func NewVoidValue(memoryGauge common.MemoryGauge) VoidValue {
+	if memoryGauge != nil {
+		memoryGauge.UseMemory(common.MemoryUsage{
+			Kind:   common.MemoryKindVoid,
+			Amount: 1,
+		})
+	}
+
+	return NewUnmeteredVoidValue()
+}
+
 func (VoidValue) IsValue() {}
 
 func (v VoidValue) Accept(interpreter *Interpreter, visitor Visitor) {
@@ -1599,7 +1614,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ func() LocationRange,
 					invocation.GetLocationRange,
 					invocation.Arguments[0],
 				)
-				return VoidValue{}
+				return NewVoidValue(interpreter)
 			},
 			sema.ArrayAppendFunctionType(
 				v.SemaType(interpreter).ElementType(false),
@@ -1618,7 +1633,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ func() LocationRange,
 					invocation.GetLocationRange,
 					otherArray,
 				)
-				return VoidValue{}
+				return NewVoidValue(interpreter)
 			},
 			sema.ArrayAppendAllFunctionType(
 				v.SemaType(interpreter),
@@ -1654,7 +1669,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ func() LocationRange,
 					index,
 					element,
 				)
-				return VoidValue{}
+				return NewVoidValue(interpreter)
 			},
 			sema.ArrayInsertFunctionType(
 				v.SemaType(interpreter).ElementType(false),

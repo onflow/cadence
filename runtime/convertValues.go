@@ -442,7 +442,7 @@ func exportEvent(event exportableEvent, seenReferences seenReferences) (cadence.
 func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedType sema.Type) (interpreter.Value, error) {
 	switch v := value.(type) {
 	case cadence.Void:
-		return interpreter.VoidValue{}, nil
+		return interpreter.NewVoidValue(inter), nil
 	case cadence.Optional:
 		return importOptionalValue(inter, v, expectedType)
 	case cadence.Bool:

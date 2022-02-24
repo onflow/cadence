@@ -1916,7 +1916,7 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 				},
 			)
 
-			return interpreter.VoidValue{}
+			return interpreter.NewVoidValue(invocation.Interpreter)
 		},
 		sema.AuthAccountTypeAddPublicKeyFunctionType,
 	)
@@ -1959,7 +1959,7 @@ func (r *interpreterRuntime) newRemovePublicKeyFunction(
 				},
 			)
 
-			return interpreter.VoidValue{}
+			return interpreter.NewVoidValue(invocation.Interpreter)
 		},
 		sema.AuthAccountTypeRemovePublicKeyFunctionType,
 	)
@@ -2226,7 +2226,7 @@ func (r *interpreterRuntime) newLogFunction(runtimeInterface Interface) interpre
 		if err != nil {
 			panic(err)
 		}
-		return interpreter.VoidValue{}
+		return interpreter.NewVoidValue(invocation.Interpreter)
 	}
 }
 

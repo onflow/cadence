@@ -823,7 +823,7 @@ func (interpreter *Interpreter) VisitDestroyExpression(expression *ast.DestroyEx
 
 	value.(ResourceKindedValue).Destroy(interpreter, getLocationRange)
 
-	return VoidValue{}
+	return NewVoidValue(interpreter)
 }
 
 func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *ast.ReferenceExpression) ast.Repr {

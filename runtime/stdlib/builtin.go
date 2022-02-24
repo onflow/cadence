@@ -68,7 +68,7 @@ var AssertFunction = NewStandardLibraryFunction(
 				LocationRange: invocation.GetLocationRange(),
 			})
 		}
-		return interpreter.VoidValue{}
+		return interpreter.NewVoidValue(invocation.Interpreter)
 	},
 )
 
@@ -137,7 +137,7 @@ var LogFunction = NewStandardLibraryFunction(
 	logFunctionDocString,
 	func(invocation interpreter.Invocation) interpreter.Value {
 		fmt.Println(invocation.Arguments[0].String())
-		return interpreter.VoidValue{}
+		return interpreter.NewVoidValue(invocation.Interpreter)
 	},
 )
 
