@@ -54,7 +54,3 @@ func (c *Context) InitializeCodesAndPrograms() {
 		c.programs = map[common.LocationID]*ast.Program{}
 	}
 }
-
-func (c Context) UseMemory(usage common.MemoryUsage) {
-	c.Interface.UseMemory(usage)
-}
