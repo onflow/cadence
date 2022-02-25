@@ -1185,7 +1185,7 @@ func NewArrayValueWithIterator(
 	address common.Address,
 	values func() Value,
 ) *ArrayValue {
-	interpreter.UseKnownMemory(common.MemoryKindArray, 1)
+	interpreter.UseConstantMemory(common.MemoryKindArray)
 
 	var v *ArrayValue
 
@@ -11764,7 +11764,7 @@ func NewCompositeValue(
 		}()
 	}
 
-	interpreter.UseKnownMemory(common.MemoryKindComposite, 1)
+	interpreter.UseConstantMemory(common.MemoryKindComposite)
 
 	dictionary, err := atree.NewMap(
 		interpreter.Storage,
@@ -12821,7 +12821,7 @@ func NewDictionaryValueWithAddress(
 	address common.Address,
 	keysAndValues ...Value,
 ) *DictionaryValue {
-	interpreter.UseKnownMemory(common.MemoryKindDictionary, 1)
+	interpreter.UseConstantMemory(common.MemoryKindDictionary)
 
 	var v *DictionaryValue
 
