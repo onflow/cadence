@@ -41,7 +41,7 @@ const (
 	tracingConformsToDynamicTypePostfix = "conformsToDynamicType"
 	tracingClonePostfix                 = "clone"
 	tracingDeepRemovePostfix            = "deepRemove"
-	tracingDestroyPostfix               = "distroy"
+	tracingDestroyPostfix               = "destroy"
 
 	// MemberAccessible operation prefixes
 	tracingGetMemberPrefix    = "getMember."
