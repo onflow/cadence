@@ -75,6 +75,23 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) ast.Repr 
 		checker.recordVariableDeclarationOccurrence(identifier, variable)
 	}
 
+	if statement.Index != nil {
+		index := statement.Index.Identifier
+		indexVariable, err := checker.valueActivations.Declare(variableDeclaration{
+			identifier:               index,
+			ty:                       IntType,
+			kind:                     common.DeclarationKindConstant,
+			pos:                      statement.Index.Pos,
+			isConstant:               true,
+			argumentLabels:           nil,
+			allowOuterScopeShadowing: false,
+		})
+		checker.report(err)
+		if checker.positionInfoEnabled {
+			checker.recordVariableDeclarationOccurrence(index, indexVariable)
+		}
+	}
+
 	// The body of the loop will maybe be evaluated.
 	// That means that resource invalidations and
 	// returns are not definite, but only potential.
