@@ -83,6 +83,53 @@ func TestInterpreterTracing(t *testing.T) {
 		require.Equal(t, traceOps[3], "array.destroy")
 	})
 
+	t.Run("dictionary tracing", func(t *testing.T) {
+		storage := interpreter.NewInMemoryStorage()
+
+		traceOps := make([]string, 0)
+		inter, err := interpreter.NewInterpreter(
+			&interpreter.Program{},
+			utils.TestLocation,
+			interpreter.WithOnRecordTraceHandler(
+				func(inter *interpreter.Interpreter,
+					operationName string,
+					duration time.Duration,
+					logs []opentracing.LogRecord) {
+					traceOps = append(traceOps, operationName)
+				},
+			),
+			interpreter.WithStorage(storage),
+			interpreter.WithTracingEnabled(true),
+		)
+		require.NoError(t, err)
+
+		dict := interpreter.NewDictionaryValue(
+			inter,
+			interpreter.DictionaryStaticType{
+				KeyType:   interpreter.PrimitiveStaticTypeString,
+				ValueType: interpreter.PrimitiveStaticTypeInt,
+			},
+			interpreter.NewStringValue("test"), interpreter.NewIntValueFromInt64(42),
+		)
+		require.NotNil(t, dict)
+		fmt.Println(traceOps)
+		require.Equal(t, len(traceOps), 1)
+		require.Equal(t, traceOps[0], "dictionary.construct")
+
+		cloned := dict.Clone(inter)
+		require.NotNil(t, cloned)
+		require.Equal(t, len(traceOps), 2)
+		require.Equal(t, traceOps[1], "dictionary.clone")
+
+		cloned.DeepRemove(inter)
+		require.Equal(t, len(traceOps), 3)
+		require.Equal(t, traceOps[2], "dictionary.deepRemove")
+
+		dict.Destroy(inter, nil)
+		require.Equal(t, len(traceOps), 4)
+		require.Equal(t, traceOps[3], "dictionary.destroy")
+	})
+
 	t.Run("composite tracing", func(t *testing.T) {
 		storage := interpreter.NewInMemoryStorage()
 
