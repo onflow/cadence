@@ -10,6 +10,45 @@ They may provide a solution to a problem that you encounter when writing smart c
 If they do not clearly fit, these patterns may not be the right solution for a given situation or problem.
 They are not meant to be rules to be followed strictly, especially where a better solution presents itself.
 
+# General
+
+These are general patterns to follow when writing smart contracts.
+
+## Use Named Value Fields for Constants Instead of Hard-Coding
+
+### Problem
+
+Your contracts, resources, and scripts all have to refer to the same value.
+A number, a string, a storage path, etc.
+Entering these values manually in transactions and scripts is a potential source of error.
+See: [https://en.wikipedia.org/wiki/Magic*number*(programming)](<https://en.wikipedia.org/wiki/Magic_number_(programming)>)
+
+### Solution
+
+Add a public (`pub`) field, e.g. a `Path` , to the contract responsible for the value, and set it in the contract's initializer.
+Then refer to that value via this public field rather than specifying it manually.
+
+Example Snippet:
+
+```cadence
+
+// Bad Practice
+pub contract NamedFields {
+    pub resource Test {}
+
+    init() {
+        // hard-coded storage path
+        self.account.save(<-create Test(), to: /storage/testStorage)
+    }
+}
+
+// Instead, use a field
+// 
+
+```
+
+[Example Code](https://github.com/onflow/flow-core-contracts/blob/master/contracts/LockedTokens.cdc#L583)
+
 ## Capability Receiver
 
 ### Problem
@@ -73,18 +112,6 @@ See how this is done in the LockedTokens contract init function:
 and in the transaction that is used to deploy it:
 
 [admin_deploy_contract.cdc](https://github.com/onflow/flow-core-contracts/blob/master/transactions/lockedTokens/admin/admin_deploy_contract.cdc)
-
-## Named Value Field
-
-### Problem
-
-Your contracts, resources, and scripts all have to refer to the same value. A number, a string, a storage path. Entering these values manually in transactions and scripts is a potential source of error. See: [https://en.wikipedia.org/wiki/Magic*number*(programming)](<https://en.wikipedia.org/wiki/Magic_number_(programming)>)
-
-### Solution
-
-Add an `access(all)` field, e.g. a `Path` , to the contract responsible for the value, and set it in the contract's initializer. Then refer to that value via this public field rather than specifying it manually.
-
-[Example Code](https://github.com/onflow/flow-core-contracts/blob/master/contracts/LockedTokens.cdc#L583)
 
 ## Script-Accessible Public Field
 
