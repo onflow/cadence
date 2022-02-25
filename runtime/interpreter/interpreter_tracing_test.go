@@ -76,17 +76,33 @@ func TestInterpreterTracing(t *testing.T) {
 		require.Equal(t, len(traceOps), 3)
 		require.Equal(t, traceOps[2], "composite.deepRemove")
 
+		value.SetMember(inter, nil, "abc", interpreter.NilValue{})
+		require.Equal(t, len(traceOps), 4)
+		require.Equal(t, traceOps[3], "composite.setMember.abc")
+
+		value.GetMember(inter, nil, "abc")
+		require.Equal(t, len(traceOps), 5)
+		require.Equal(t, traceOps[4], "composite.getMember.abc")
+
+		value.RemoveMember(inter, nil, "abc")
+		require.Equal(t, len(traceOps), 6)
+		require.Equal(t, traceOps[5], "composite.removeMember.abc")
+
+		value.Destroy(inter, nil)
+		require.Equal(t, len(traceOps), 7)
+		require.Equal(t, traceOps[6], "composite.destroy")
+
 		array := interpreter.NewArrayValue(
 			inter,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
 			common.Address{},
-			value,
+			cloned,
 		)
 		require.NotNil(t, array)
-		require.Equal(t, len(traceOps), 5)
-		require.Equal(t, traceOps[3], "composite.transfer")
-		require.Equal(t, traceOps[4], "array.construct")
+		require.Equal(t, len(traceOps), 9)
+		require.Equal(t, traceOps[7], "composite.transfer")
+		require.Equal(t, traceOps[8], "array.construct")
 	})
 }
