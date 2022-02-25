@@ -622,7 +622,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 		require.ErrorAs(t, err, &invalidatedResourceErr)
 	})
 
-	t.Run("access after transfer", func(t *testing.T) {
+	t.Run("field read after transfer", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -642,6 +642,80 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
                   let n = r.n
                   destroy r2
                   return n
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				Options: []interpreter.Option{
+					interpreter.WithInvalidatedResourceValidationEnabled(true),
+				},
+				HandleCheckerError: func(err error) {
+					errs := checker.ExpectCheckerErrors(t, err, 1)
+					require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.Error(t, err)
+
+		var invalidatedResourceErr interpreter.InvalidatedResourceError
+		require.ErrorAs(t, err, &invalidatedResourceErr)
+	})
+
+	t.Run("field write after transfer", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, err := parseCheckAndInterpretWithOptions(t, `
+
+              resource R {
+                  var n: Int
+
+                  init(n: Int) {
+                      self.n = n
+                  }
+              }
+
+              fun test() {
+                  let r <- create R(n: 1)
+                  let r2 <- r
+                  r.n = 2
+                  destroy r2
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				Options: []interpreter.Option{
+					interpreter.WithInvalidatedResourceValidationEnabled(true),
+				},
+				HandleCheckerError: func(err error) {
+					errs := checker.ExpectCheckerErrors(t, err, 1)
+					require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.Error(t, err)
+
+		var invalidatedResourceErr interpreter.InvalidatedResourceError
+		require.ErrorAs(t, err, &invalidatedResourceErr)
+	})
+
+	t.Run("destruction after transfer", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, err := parseCheckAndInterpretWithOptions(t, `
+
+              resource R {}
+
+              fun test() {
+                  let r <- create R()
+                  let r2 <- r
+                  destroy r
+                  destroy r2
               }
             `,
 			ParseCheckAndInterpretOptions{
@@ -709,7 +783,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 		require.ErrorAs(t, err, &invalidatedResourceErr)
 	})
 
-	t.Run("use after destroy", func(t *testing.T) {
+	t.Run("field read after destroy", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -727,6 +801,78 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
                   let r <- create R(n: 1)
                   destroy r
                   return r.n
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				Options: []interpreter.Option{
+					interpreter.WithInvalidatedResourceValidationEnabled(true),
+				},
+				HandleCheckerError: func(err error) {
+					errs := checker.ExpectCheckerErrors(t, err, 1)
+					require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.Error(t, err)
+
+		var invalidatedResourceErr interpreter.InvalidatedResourceError
+		require.ErrorAs(t, err, &invalidatedResourceErr)
+	})
+
+	t.Run("field write after destroy", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, err := parseCheckAndInterpretWithOptions(t, `
+
+              resource R {
+                  var n: Int
+
+                  init(n: Int) {
+                      self.n = n
+                  }
+              }
+
+              fun test() {
+                  let r <- create R(n: 1)
+                  destroy r
+                  r.n = 2
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				Options: []interpreter.Option{
+					interpreter.WithInvalidatedResourceValidationEnabled(true),
+				},
+				HandleCheckerError: func(err error) {
+					errs := checker.ExpectCheckerErrors(t, err, 1)
+					require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.Error(t, err)
+
+		var invalidatedResourceErr interpreter.InvalidatedResourceError
+		require.ErrorAs(t, err, &invalidatedResourceErr)
+	})
+
+	t.Run("destruction after destruction", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, err := parseCheckAndInterpretWithOptions(t, `
+
+              resource R {}
+
+              fun test() {
+                  let r <- create R()
+                  destroy r
+                  destroy r
               }
             `,
 			ParseCheckAndInterpretOptions{

@@ -1832,8 +1832,9 @@ func TestRuntimeResourceOwnerChange(t *testing.T) {
 			resourceOwnerChanges = append(
 				resourceOwnerChanges,
 				resourceOwnerChange{
-					typeID:     resource.TypeID(),
-					uuid:       resource.ResourceUUID(),
+					typeID: resource.TypeID(),
+					// TODO: provide proper location range
+					uuid:       resource.ResourceUUID(interpreter.ReturnEmptyLocationRange),
 					oldAddress: oldAddress,
 					newAddress: newAddress,
 				},

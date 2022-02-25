@@ -883,7 +883,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 		storageSize, slabCounts = getSlabStorageSize(t, storage)
 
 		for fieldName, orgFieldValue := range orgFields {
-			fieldValue := testComposite.GetField(fieldName)
+			fieldValue := testComposite.GetField(interpreter.ReturnEmptyLocationRange, fieldName)
 			utils.AssertValuesEqual(t, inter, orgFieldValue, fieldValue)
 		}
 
@@ -915,7 +915,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 		).(*interpreter.CompositeValue)
 
 		for name, orgValue := range orgFields {
-			value := copyOfTestComposite.GetField(name)
+			value := copyOfTestComposite.GetField(interpreter.ReturnEmptyLocationRange, name)
 			utils.AssertValuesEqual(t, inter, orgValue, value)
 		}
 
@@ -935,7 +935,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 
 		// go over original values again and check no missing data (no side effect should be found)
 		for name, orgValue := range orgFields {
-			value := testComposite.GetField(name)
+			value := testComposite.GetField(interpreter.ReturnEmptyLocationRange, name)
 			utils.AssertValuesEqual(t, inter, orgValue, value)
 		}
 
@@ -958,7 +958,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 
 		for name := range orgFields {
 			composite.RemoveField(inter, interpreter.ReturnEmptyLocationRange, name)
-			value := composite.GetField(name)
+			value := composite.GetField(interpreter.ReturnEmptyLocationRange, name)
 			assert.Nil(t, value)
 		}
 	})
@@ -984,7 +984,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 
 		// Check the elements
 		for fieldName, orgFieldValue := range fields {
-			fieldValue := movedComposite.GetField(fieldName)
+			fieldValue := movedComposite.GetField(interpreter.ReturnEmptyLocationRange, fieldName)
 			utils.AssertValuesEqual(t, inter, orgFieldValue, fieldValue)
 		}
 
@@ -1380,7 +1380,7 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 			common.Address{},
 		)
 
-		if enum.GetField(sema.EnumRawValueFieldName) == nil {
+		if enum.GetField(interpreter.ReturnEmptyLocationRange, sema.EnumRawValueFieldName) == nil {
 			panic("enum without raw value")
 		}
 
@@ -1687,7 +1687,7 @@ func (m *valueMap) internalKey(key interpreter.Value) interface{} {
 			location:            key.Location,
 			qualifiedIdentifier: key.QualifiedIdentifier,
 			kind:                key.Kind,
-			rawValue:            key.GetField(sema.EnumRawValueFieldName),
+			rawValue:            key.GetField(interpreter.ReturnEmptyLocationRange, sema.EnumRawValueFieldName),
 		}
 	case interpreter.Value:
 		return key

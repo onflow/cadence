@@ -714,7 +714,7 @@ func (CharacterValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func (v CharacterValue) GetMember(inter *Interpreter, _ func() LocationRange, name string) Value {
+func (v CharacterValue) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
@@ -1556,7 +1556,7 @@ func (v *ArrayValue) Contains(interpreter *Interpreter, getLocationRange func() 
 	return BoolValue(result)
 }
 
-func (v *ArrayValue) GetMember(inter *Interpreter, _ func() LocationRange, name string) Value {
+func (v *ArrayValue) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case "length":
 		return NewIntValueFromInt64(int64(v.Count()))
@@ -1572,7 +1572,7 @@ func (v *ArrayValue) GetMember(inter *Interpreter, _ func() LocationRange, name 
 				return VoidValue{}
 			},
 			sema.ArrayAppendFunctionType(
-				v.SemaType(inter).ElementType(false),
+				v.SemaType(interpreter).ElementType(false),
 			),
 		)
 
@@ -1591,7 +1591,7 @@ func (v *ArrayValue) GetMember(inter *Interpreter, _ func() LocationRange, name 
 				return VoidValue{}
 			},
 			sema.ArrayAppendAllFunctionType(
-				v.SemaType(inter),
+				v.SemaType(interpreter),
 			),
 		)
 
@@ -1609,7 +1609,7 @@ func (v *ArrayValue) GetMember(inter *Interpreter, _ func() LocationRange, name 
 				)
 			},
 			sema.ArrayConcatFunctionType(
-				v.SemaType(inter),
+				v.SemaType(interpreter),
 			),
 		)
 
@@ -1633,7 +1633,7 @@ func (v *ArrayValue) GetMember(inter *Interpreter, _ func() LocationRange, name 
 				return VoidValue{}
 			},
 			sema.ArrayInsertFunctionType(
-				v.SemaType(inter).ElementType(false),
+				v.SemaType(interpreter).ElementType(false),
 			),
 		)
 
@@ -1653,7 +1653,7 @@ func (v *ArrayValue) GetMember(inter *Interpreter, _ func() LocationRange, name 
 				)
 			},
 			sema.ArrayRemoveFunctionType(
-				v.SemaType(inter).ElementType(false),
+				v.SemaType(interpreter).ElementType(false),
 			),
 		)
 
@@ -1666,7 +1666,7 @@ func (v *ArrayValue) GetMember(inter *Interpreter, _ func() LocationRange, name 
 				)
 			},
 			sema.ArrayRemoveFirstFunctionType(
-				v.SemaType(inter).ElementType(false),
+				v.SemaType(interpreter).ElementType(false),
 			),
 		)
 
@@ -1679,7 +1679,7 @@ func (v *ArrayValue) GetMember(inter *Interpreter, _ func() LocationRange, name 
 				)
 			},
 			sema.ArrayRemoveLastFunctionType(
-				v.SemaType(inter).ElementType(false),
+				v.SemaType(interpreter).ElementType(false),
 			),
 		)
 
@@ -1707,7 +1707,7 @@ func (v *ArrayValue) GetMember(inter *Interpreter, _ func() LocationRange, name 
 				)
 			},
 			sema.ArrayContainsFunctionType(
-				v.SemaType(inter).ElementType(false),
+				v.SemaType(interpreter).ElementType(false),
 			),
 		)
 
@@ -1732,7 +1732,7 @@ func (v *ArrayValue) GetMember(inter *Interpreter, _ func() LocationRange, name 
 				)
 			},
 			sema.ArraySliceFunctionType(
-				v.SemaType(inter).ElementType(false),
+				v.SemaType(interpreter).ElementType(false),
 			),
 		)
 	}
@@ -11614,6 +11614,9 @@ func (v *CompositeValue) IsDestroyed() bool {
 }
 
 func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
+
+	v.checkInvalidatedResourceUse(getLocationRange)
+
 	interpreter = v.getInterpreter(interpreter)
 
 	// if composite was deserialized, dynamically link in the destructor
@@ -11636,6 +11639,9 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func
 	}
 
 	v.isDestroyed = true
+	if interpreter.invalidatedResourceValidationEnabled {
+		v.dictionary = nil
+	}
 }
 
 func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
@@ -11799,6 +11805,9 @@ func (v *CompositeValue) SetMember(
 	name string,
 	value Value,
 ) {
+
+	v.checkInvalidatedResourceUse(getLocationRange)
+
 	address := v.StorageID().Address
 
 	value = value.Transfer(
@@ -11879,7 +11888,9 @@ func formatComposite(typeId string, fields []CompositeField, seenReferences Seen
 	return format.Composite(typeId, preparedFields)
 }
 
-func (v *CompositeValue) GetField(name string) Value {
+func (v *CompositeValue) GetField(getLocationRange func() LocationRange, name string) Value {
+
+	v.checkInvalidatedResourceUse(getLocationRange)
 
 	storable, err := v.dictionary.Get(
 		StringAtreeComparator,
@@ -11927,7 +11938,7 @@ func (v *CompositeValue) Equal(interpreter *Interpreter, getLocationRange func()
 
 		// NOTE: Do NOT use an iterator, iteration order of fields may be different
 		// (if stored in different account, as storage ID is used as hash seed)
-		otherValue := otherComposite.GetField(fieldName)
+		otherValue := otherComposite.GetField(getLocationRange, fieldName)
 
 		equatableValue, ok := MustConvertStoredValue(value).(EquatableValue)
 		if !ok || !equatableValue.Equal(interpreter, getLocationRange, otherValue) {
@@ -11944,7 +11955,7 @@ func (v *CompositeValue) HashInput(interpreter *Interpreter, getLocationRange fu
 	if v.Kind == common.CompositeKindEnum {
 		typeID := v.TypeID()
 
-		rawValue := v.GetField(sema.EnumRawValueFieldName)
+		rawValue := v.GetField(getLocationRange, sema.EnumRawValueFieldName)
 		rawValueHashInput := rawValue.(HashableValue).
 			HashInput(interpreter, getLocationRange, scratch)
 
@@ -12010,7 +12021,7 @@ func (v *CompositeValue) ConformsToDynamicType(
 	}
 
 	for _, fieldName := range compositeType.Fields {
-		value := v.GetField(fieldName)
+		value := v.GetField(getLocationRange, fieldName)
 		if value == nil {
 			if v.ComputedFields == nil {
 				return false
@@ -12220,8 +12231,8 @@ func (v *CompositeValue) Transfer(
 	return res
 }
 
-func (v *CompositeValue) ResourceUUID() *UInt64Value {
-	fieldValue := v.GetField(sema.ResourceUUIDFieldName)
+func (v *CompositeValue) ResourceUUID(getLocationRange func() LocationRange) *UInt64Value {
+	fieldValue := v.GetField(getLocationRange, sema.ResourceUUIDFieldName)
 	uuid, ok := fieldValue.(UInt64Value)
 	if !ok {
 		return nil
@@ -12311,6 +12322,7 @@ func (v *CompositeValue) GetOwner() common.Address {
 // It does NOT iterate over computed fields and functions!
 //
 func (v *CompositeValue) ForEachField(f func(fieldName string, fieldValue Value)) {
+
 	err := v.dictionary.Iterate(func(key atree.Value, value atree.Value) (resume bool, err error) {
 		f(
 			string(key.(StringAtreeValue)),
@@ -13450,7 +13462,7 @@ func (v *SomeValue) RecursiveString(seenReferences SeenReferences) string {
 	return v.Value.RecursiveString(seenReferences)
 }
 
-func (v *SomeValue) GetMember(inter *Interpreter, _ func() LocationRange, name string) Value {
+func (v *SomeValue) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case "map":
 		return NewHostFunctionValue(
@@ -13479,7 +13491,7 @@ func (v *SomeValue) GetMember(inter *Interpreter, _ func() LocationRange, name s
 
 				return NewSomeValueNonCopying(newValue)
 			},
-			sema.OptionalTypeMapFunctionType(inter.MustConvertStaticToSemaType(v.Value.StaticType())),
+			sema.OptionalTypeMapFunctionType(interpreter.MustConvertStaticToSemaType(v.Value.StaticType())),
 		)
 	}
 
@@ -15067,7 +15079,7 @@ func (v LinkValue) ChildStorables() []atree.Storable {
 
 // NewPublicKeyValue constructs a PublicKey value.
 func NewPublicKeyValue(
-	interpreter *Interpreter,
+	inter *Interpreter,
 	getLocationRange func() LocationRange,
 	publicKey *ArrayValue,
 	signAlgo *CompositeValue,
@@ -15082,7 +15094,7 @@ func NewPublicKeyValue(
 	}
 
 	publicKeyValue := NewCompositeValue(
-		interpreter,
+		inter,
 		sema.PublicKeyType.Location,
 		sema.PublicKeyType.QualifiedIdentifier(),
 		sema.PublicKeyType.Kind,
@@ -15100,7 +15112,7 @@ func NewPublicKeyValue(
 		sema.PublicKeyVerifyPoPFunction: publicKeyVerifyPoPFunction,
 	}
 
-	err := validatePublicKey(interpreter, getLocationRange, publicKeyValue)
+	err := validatePublicKey(inter, getLocationRange, publicKeyValue)
 	if err != nil {
 		panic(InvalidPublicKeyError{
 			PublicKey:     publicKey,
@@ -15119,7 +15131,7 @@ func NewPublicKeyValue(
 			{
 				Name: sema.PublicKeySignAlgoField,
 				// TODO: provide proper location range
-				Value: publicKeyValue.GetField(sema.PublicKeySignAlgoField),
+				Value: publicKeyValue.GetField(ReturnEmptyLocationRange, sema.PublicKeySignAlgoField),
 			},
 		}
 
