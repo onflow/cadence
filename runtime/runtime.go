@@ -1728,7 +1728,10 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 ) interpreter.HostFunction {
 	return func(invocation interpreter.Invocation) interpreter.Value {
 
-		payer := invocation.Arguments[0].(interpreter.MemberAccessibleValue)
+		payer, ok := invocation.Arguments[0].(interpreter.MemberAccessibleValue)
+		if !ok {
+			panic(runtimeErrors.NewUnreachableError())
+		}
 
 		inter := invocation.Interpreter
 		getLocationRange := invocation.GetLocationRange
@@ -1879,7 +1882,10 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
-			publicKeyValue := invocation.Arguments[0].(*interpreter.ArrayValue)
+			publicKeyValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
+			if !ok {
+				panic(runtimeErrors.NewUnreachableError())
+			}
 
 			publicKey, err := interpreter.ByteArrayValueToByteSlice(publicKeyValue)
 			if err != nil {
@@ -1920,7 +1926,10 @@ func (r *interpreterRuntime) newRemovePublicKeyFunction(
 
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
-			index := invocation.Arguments[0].(interpreter.IntValue)
+			index, ok := invocation.Arguments[0].(interpreter.IntValue)
+			if !ok {
+				panic(runtimeErrors.NewUnreachableError())
+			}
 
 			var publicKey []byte
 			var err error
@@ -2160,7 +2169,11 @@ func (r *interpreterRuntime) newGetAuthAccountFunction(
 	checkerOptions []sema.Option,
 ) interpreter.HostFunction {
 	return func(invocation interpreter.Invocation) interpreter.Value {
-		accountAddress := invocation.Arguments[0].(interpreter.AddressValue)
+		accountAddress, ok := invocation.Arguments[0].(interpreter.AddressValue)
+		if !ok {
+			panic(runtimeErrors.NewUnreachableError())
+		}
+
 		return r.newAuthAccountValue(
 			accountAddress,
 			context,
@@ -2173,7 +2186,11 @@ func (r *interpreterRuntime) newGetAuthAccountFunction(
 
 func (r *interpreterRuntime) newGetAccountFunction(runtimeInterface Interface, storage *Storage) interpreter.HostFunction {
 	return func(invocation interpreter.Invocation) interpreter.Value {
-		accountAddress := invocation.Arguments[0].(interpreter.AddressValue)
+		accountAddress, ok := invocation.Arguments[0].(interpreter.AddressValue)
+		if !ok {
+			panic(runtimeErrors.NewUnreachableError())
+		}
+
 		return r.getPublicAccount(
 			accountAddress,
 			runtimeInterface,
@@ -2277,9 +2294,13 @@ func (r *interpreterRuntime) newGetCurrentBlockFunction(runtimeInterface Interfa
 
 func (r *interpreterRuntime) newGetBlockFunction(runtimeInterface Interface) interpreter.HostFunction {
 	return func(invocation interpreter.Invocation) interpreter.Value {
-		height := uint64(invocation.Arguments[0].(interpreter.UInt64Value))
+		heightValue, ok := invocation.Arguments[0].(interpreter.UInt64Value)
+		if !ok {
+			panic(runtimeErrors.NewUnreachableError())
+		}
+
 		block, err := r.getBlockAtHeight(
-			height,
+			uint64(heightValue),
 			runtimeInterface,
 			invocation.Interpreter,
 		)
@@ -2388,8 +2409,15 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 
 			const requiredArgumentCount = 2
 
-			nameValue := invocation.Arguments[0].(*interpreter.StringValue)
-			newCodeValue := invocation.Arguments[1].(*interpreter.ArrayValue)
+			nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
+			if !ok {
+				panic(runtimeErrors.NewUnreachableError())
+			}
+
+			newCodeValue, ok := invocation.Arguments[1].(*interpreter.ArrayValue)
+			if !ok {
+				panic(runtimeErrors.NewUnreachableError())
+			}
 
 			constructorArguments := invocation.Arguments[requiredArgumentCount:]
 			constructorArgumentTypes := invocation.ArgumentTypes[requiredArgumentCount:]
@@ -2759,14 +2787,16 @@ func (r *interpreterRuntime) newAccountContractsGetFunction(
 
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
+			nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
+			if !ok {
+				panic(runtimeErrors.NewUnreachableError())
+			}
+			name := nameValue.Str
 
-			nameValue := invocation.Arguments[0].(*interpreter.StringValue)
-
-			nameArgument := nameValue.Str
 			var code []byte
 			var err error
 			wrapPanic(func() {
-				code, err = runtimeInterface.GetAccountContractCode(address, nameArgument)
+				code, err = runtimeInterface.GetAccountContractCode(address, name)
 			})
 			if err != nil {
 				panic(err)
@@ -2804,16 +2834,18 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 		func(invocation interpreter.Invocation) interpreter.Value {
 
 			inter := invocation.Interpreter
-			nameValue := invocation.Arguments[0].(*interpreter.StringValue)
-
-			nameArgument := nameValue.Str
+			nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
+			if !ok {
+				panic(runtimeErrors.NewUnreachableError())
+			}
+			name := nameValue.Str
 
 			// Get the current code
 
 			var code []byte
 			var err error
 			wrapPanic(func() {
-				code, err = runtimeInterface.GetAccountContractCode(address, nameArgument)
+				code, err = runtimeInterface.GetAccountContractCode(address, name)
 			})
 			if err != nil {
 				panic(err)
@@ -2837,14 +2869,14 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 					// fail the contract removal. Therefore, validate only if the code is a valid one.
 					if err == nil && containsEnumsInProgram(existingProgram) {
 						panic(&ContractRemovalError{
-							Name:          nameArgument,
+							Name:          name,
 							LocationRange: invocation.GetLocationRange(),
 						})
 					}
 				}
 
 				wrapPanic(func() {
-					err = runtimeInterface.RemoveAccountContractCode(address, nameArgument)
+					err = runtimeInterface.RemoveAccountContractCode(address, name)
 				})
 				if err != nil {
 					panic(err)
@@ -2856,7 +2888,7 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 				r.recordContractValue(
 					storage,
 					addressValue,
-					nameArgument,
+					name,
 					nil,
 				)
 
@@ -3091,7 +3123,10 @@ func (r *interpreterRuntime) newAccountKeysAddFunction(
 
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
-			publicKeyValue := invocation.Arguments[0].(*interpreter.CompositeValue)
+			publicKeyValue, ok := invocation.Arguments[0].(*interpreter.CompositeValue)
+			if !ok {
+				panic(runtimeErrors.NewUnreachableError())
+			}
 
 			inter := invocation.Interpreter
 			getLocationRange := invocation.GetLocationRange
@@ -3102,7 +3137,11 @@ func (r *interpreterRuntime) newAccountKeysAddFunction(
 			}
 
 			hashAlgo := NewHashAlgorithmFromValue(inter, getLocationRange, invocation.Arguments[1])
-			weight := invocation.Arguments[2].(interpreter.UFix64Value).ToInt()
+			weightValue, ok := invocation.Arguments[2].(interpreter.UFix64Value)
+			if !ok {
+				panic(runtimeErrors.NewUnreachableError())
+			}
+			weight := weightValue.ToInt()
 
 			var accountKey *AccountKey
 			wrapPanic(func() {
@@ -3142,7 +3181,11 @@ func (r *interpreterRuntime) newAccountKeysGetFunction(
 
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
-			index := invocation.Arguments[0].(interpreter.IntValue).ToInt()
+			indexValue, ok := invocation.Arguments[0].(interpreter.IntValue)
+			if !ok {
+				panic(runtimeErrors.NewUnreachableError())
+			}
+			index := indexValue.ToInt()
 
 			var err error
 			var accountKey *AccountKey
@@ -3186,7 +3229,10 @@ func (r *interpreterRuntime) newAccountKeysRevokeFunction(
 
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
-			indexValue := invocation.Arguments[0].(interpreter.IntValue)
+			indexValue, ok := invocation.Arguments[0].(interpreter.IntValue)
+			if !ok {
+				panic(runtimeErrors.NewUnreachableError())
+			}
 			index := indexValue.ToInt()
 
 			var err error
@@ -3271,11 +3317,13 @@ func (r *interpreterRuntime) resourceOwnerChangedHandler(
 		oldOwner common.Address,
 		newOwner common.Address,
 	) {
-		runtimeInterface.ResourceOwnerChanged(
-			resource,
-			oldOwner,
-			newOwner,
-		)
+		wrapPanic(func() {
+			runtimeInterface.ResourceOwnerChanged(
+				resource,
+				oldOwner,
+				newOwner,
+			)
+		})
 	}
 }
 

@@ -597,7 +597,10 @@ func (s *SwitchStatement) Accept(visitor Visitor) Repr {
 func (s *SwitchStatement) Walk(walkChild func(Element)) {
 	walkChild(s.Expression)
 	for _, switchCase := range s.Cases {
-		walkChild(switchCase.Expression)
+		// The default case has no expression
+		if switchCase.Expression != nil {
+			walkChild(switchCase.Expression)
+		}
 		walkStatements(walkChild, switchCase.Statements)
 	}
 }

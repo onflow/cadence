@@ -1539,6 +1539,11 @@ type ArrayType interface {
 	isArrayType()
 }
 
+const arrayTypeFirstIndexFunctionDocString = `
+Returns the index of the first element matching the given object in the array, nil if no match.
+Available if the array element type is not resource-kinded and equatable.
+`
+
 const arrayTypeContainsFunctionDocString = `
 Returns true if the given object is in the array
 `
@@ -1646,6 +1651,44 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 					identifier,
 					IntType,
 					arrayTypeLengthFieldDocString,
+				)
+			},
+		},
+		"firstIndex": {
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
+
+				elementType := arrayType.ElementType(false)
+
+				// It is impossible for an array of resources to have a `firstIndex` function:
+				// if the resource is passed as an argument, it cannot be inside the array
+
+				if elementType.IsResourceType() {
+					report(
+						&InvalidResourceArrayMemberError{
+							Name:            identifier,
+							DeclarationKind: common.DeclarationKindFunction,
+							Range:           targetRange,
+						},
+					)
+				}
+
+				// TODO: implement Equatable interface
+
+				if !elementType.IsEquatable() {
+					report(
+						&NotEquatableTypeError{
+							Type:  elementType,
+							Range: targetRange,
+						},
+					)
+				}
+
+				return NewPublicFunctionMember(
+					arrayType,
+					identifier,
+					ArrayFirstIndexFunctionType(elementType),
+					arrayTypeFirstIndexFunctionDocString,
 				)
 			},
 		},
@@ -1879,6 +1922,19 @@ func ArrayConcatFunctionType(arrayType Type) *FunctionType {
 	}
 }
 
+func ArrayFirstIndexFunctionType(elementType Type) *FunctionType {
+	return &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Identifier:     "of",
+				TypeAnnotation: NewTypeAnnotation(elementType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{Type: IntType},
+		),
+	}
+}
 func ArrayContainsFunctionType(elementType Type) *FunctionType {
 	return &FunctionType{
 		Parameters: []*Parameter{
@@ -6204,7 +6260,7 @@ var PublicKeyType = func() *CompositeType {
 		NewPublicConstantFieldMember(
 			publicKeyType,
 			PublicKeyPublicKeyField,
-			&VariableSizedType{Type: UInt8Type},
+			ByteArrayType,
 			publicKeyKeyFieldDocString,
 		),
 		NewPublicConstantFieldMember(

@@ -29,6 +29,8 @@ import (
 
 func TestWasmCodeGenSimple(t *testing.T) {
 
+	t.Skip("WIP")
+
 	mod := GenerateWasm([]*ir.Func{
 		{
 			Name: "inc",

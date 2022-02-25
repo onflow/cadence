@@ -254,7 +254,11 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ func() LocationRange, n
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
 				staticType := v.Type
-				otherStaticType := invocation.Arguments[0].(TypeValue).Type
+				otherTypeValue, ok := invocation.Arguments[0].(TypeValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+				otherStaticType := otherTypeValue.Type
 
 				// if either type is unknown, the subtype relation is false, as it doesn't make sense to even ask this question
 				if staticType == nil || otherStaticType == nil {
@@ -942,11 +946,16 @@ func (v *StringValue) GetMember(interpreter *Interpreter, _ func() LocationRange
 	case "slice":
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				from, fromOk := invocation.Arguments[0].(IntValue)
-				to, toOk := invocation.Arguments[1].(IntValue)
-				if !fromOk || !toOk {
+				from, ok := invocation.Arguments[0].(IntValue)
+				if !ok {
 					panic(errors.NewUnreachableError())
 				}
+
+				to, ok := invocation.Arguments[1].(IntValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
 				return v.Slice(from, to, invocation.GetLocationRange)
 			},
 			sema.StringTypeSliceFunctionType,
@@ -1499,6 +1508,33 @@ func (v *ArrayValue) RemoveLast(interpreter *Interpreter, getLocationRange func(
 	return v.Remove(interpreter, getLocationRange, v.Count()-1)
 }
 
+func (v *ArrayValue) FirstIndex(interpreter *Interpreter, getLocationRange func() LocationRange, needleValue Value) OptionalValue {
+
+	needleEquatable, ok := needleValue.(EquatableValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	var counter int64
+	var result bool
+	v.Iterate(func(element Value) (resume bool) {
+		if needleEquatable.Equal(interpreter, getLocationRange, element) {
+			result = true
+			// stop iteration
+			return false
+		}
+		counter++
+		// continue iteration
+		return true
+	})
+
+	if result {
+		value := NewIntValueFromInt64(counter)
+		return NewSomeValueNonCopying(value)
+	}
+	return NilValue{}
+}
+
 func (v *ArrayValue) Contains(interpreter *Interpreter, getLocationRange func() LocationRange, needleValue Value) BoolValue {
 
 	needleEquatable, ok := needleValue.(EquatableValue)
@@ -1580,8 +1616,14 @@ func (v *ArrayValue) GetMember(inter *Interpreter, _ func() LocationRange, name 
 	case "insert":
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				index := invocation.Arguments[0].(NumberValue).ToInt()
+				indexValue, ok := invocation.Arguments[0].(NumberValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+				index := indexValue.ToInt()
+
 				element := invocation.Arguments[1]
+
 				v.Insert(
 					invocation.Interpreter,
 					invocation.GetLocationRange,
@@ -1598,7 +1640,12 @@ func (v *ArrayValue) GetMember(inter *Interpreter, _ func() LocationRange, name 
 	case "remove":
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				index := invocation.Arguments[0].(NumberValue).ToInt()
+				indexValue, ok := invocation.Arguments[0].(NumberValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+				index := indexValue.ToInt()
+
 				return v.Remove(
 					invocation.Interpreter,
 					invocation.GetLocationRange,
@@ -1636,6 +1683,20 @@ func (v *ArrayValue) GetMember(inter *Interpreter, _ func() LocationRange, name 
 			),
 		)
 
+	case "firstIndex":
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				return v.FirstIndex(
+					invocation.Interpreter,
+					invocation.GetLocationRange,
+					invocation.Arguments[0],
+				)
+			},
+			sema.ArrayFirstIndexFunctionType(
+				v.SemaType(inter).ElementType(false),
+			),
+		)
+
 	case "contains":
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
@@ -1653,8 +1714,16 @@ func (v *ArrayValue) GetMember(inter *Interpreter, _ func() LocationRange, name 
 	case "slice":
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				from := invocation.Arguments[0].(IntValue)
-				to := invocation.Arguments[1].(IntValue)
+				from, ok := invocation.Arguments[0].(IntValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				to, ok := invocation.Arguments[1].(IntValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
 				return v.Slice(
 					invocation.Interpreter,
 					from,
@@ -13371,10 +13440,12 @@ func (v *SomeValue) GetMember(inter *Interpreter, _ func() LocationRange, name s
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
-				transformFunctionType, typeOk := invocation.ArgumentTypes[0].(*sema.FunctionType)
-				if !typeOk {
+
+				transformFunctionType, ok := invocation.ArgumentTypes[0].(*sema.FunctionType)
+				if !ok {
 					panic(errors.NewUnreachableError())
 				}
+
 				valueType := transformFunctionType.Parameters[0].TypeAnnotation.Type
 
 				transformInvocation := Invocation{
@@ -14398,10 +14469,11 @@ func accountGetCapabilityFunction(
 	return NewHostFunctionValue(
 		func(invocation Invocation) Value {
 
-			path, pathOk := invocation.Arguments[0].(PathValue)
-			if !pathOk {
+			path, ok := invocation.Arguments[0].(PathValue)
+			if !ok {
 				panic(errors.NewUnreachableError())
 			}
+
 			pathDynamicType := path.DynamicType(invocation.Interpreter, SeenReferences{})
 			if !invocation.Interpreter.IsSubType(pathDynamicType, pathType) {
 				panic(TypeMismatchError{
@@ -15043,14 +15115,26 @@ func NewPublicKeyValue(
 
 var publicKeyVerifyFunction = NewHostFunctionValue(
 	func(invocation Invocation) Value {
-		signatureValue, signatureValueOk := invocation.Arguments[0].(*ArrayValue)
-		signedDataValue, signedDataValueOk := invocation.Arguments[1].(*ArrayValue)
-		domainSeparationTag, tagOk := invocation.Arguments[2].(*StringValue)
-		hashAlgo, algoOk := invocation.Arguments[3].(*CompositeValue)
-
-		if !signatureValueOk || !signedDataValueOk || !tagOk || !algoOk {
+		signatureValue, ok := invocation.Arguments[0].(*ArrayValue)
+		if !ok {
 			panic(errors.NewUnreachableError())
 		}
+
+		signedDataValue, ok := invocation.Arguments[1].(*ArrayValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		domainSeparationTag, ok := invocation.Arguments[2].(*StringValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		hashAlgo, ok := invocation.Arguments[3].(*CompositeValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
 		publicKey := invocation.Self
 
 		interpreter := invocation.Interpreter
@@ -15082,6 +15166,7 @@ var publicKeyVerifyPoPFunction = NewHostFunctionValue(
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
+
 		publicKey := invocation.Self
 
 		interpreter := invocation.Interpreter

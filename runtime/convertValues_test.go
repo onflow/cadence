@@ -2932,9 +2932,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 		actual, err := importValue(
 			inter,
 			value,
-			&sema.VariableSizedType{
-				Type: sema.UInt8Type,
-			},
+			sema.ByteArrayType,
 		)
 		require.NoError(t, err)
 

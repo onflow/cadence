@@ -9,7 +9,7 @@ require (
 	github.com/fxamacker/cbor/v2 v2.3.1-0.20211029162100-5d5d7c3edd41
 	github.com/go-test/deep v1.0.5
 	github.com/logrusorgru/aurora v0.0.0-20200102142835-e9ef32dff381
-	github.com/onflow/atree v0.1.2-0.20211216135231-f8f0a14c7272
+	github.com/onflow/atree v0.1.2-0.20220215140047-82a5e53e8248
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/rivo/uniseg v0.2.1-0.20211004051800-57c86be7915a
 	github.com/schollz/progressbar/v3 v3.8.3

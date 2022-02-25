@@ -2928,3 +2928,50 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 		)
 	})
 }
+
+func TestRuntimeNoAtreeSendOnClosedChannelDuringCommit(t *testing.T) {
+
+	t.Parallel()
+
+	assert.NotPanics(t, func() {
+
+		for i := 0; i < 1000; i++ {
+
+			runtime := newTestInterpreterRuntime()
+
+			address := common.MustBytesToAddress([]byte{0x1})
+
+			const code = `
+              transaction {
+                  prepare(signer: AuthAccount) {
+                      let refs: [AnyStruct] = []
+                      refs.append(&refs as &AnyStruct)
+                      signer.save(refs, to: /storage/refs)
+                  }
+              }
+            `
+
+			runtimeInterface := &testRuntimeInterface{
+				storage: newTestLedger(nil, nil),
+				getSigningAccounts: func() ([]Address, error) {
+					return []Address{address}, nil
+				},
+			}
+
+			nextTransactionLocation := newTransactionLocationGenerator()
+
+			err := runtime.ExecuteTransaction(
+				Script{
+					Source: []byte(code),
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  nextTransactionLocation(),
+				},
+			)
+			require.Error(t, err)
+
+			require.Contains(t, err.Error(), "cannot store non-storable value")
+		}
+	})
+}
