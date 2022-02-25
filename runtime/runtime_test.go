@@ -179,8 +179,8 @@ type testRuntimeInterface struct {
 	implementationDebugLog     func(message string) error
 	validatePublicKey          func(publicKey *PublicKey) error
 	bLSVerifyPOP               func(pk *PublicKey, s []byte) (bool, error)
-	aggregateBLSSignatures     func(sigs [][]byte) ([]byte, error)
-	aggregateBLSPublicKeys     func(keys []*PublicKey) (*PublicKey, error)
+	blsAggregateSignatures     func(sigs [][]byte) ([]byte, error)
+	blsAggregatePublicKeys     func(keys []*PublicKey) (*PublicKey, error)
 	getAccountContractNames    func(address Address) ([]string, error)
 	recordTrace                func(operation string, location common.Location, duration time.Duration, logs []opentracing.LogRecord)
 }
@@ -505,20 +505,20 @@ func (i *testRuntimeInterface) BLSVerifyPOP(key *PublicKey, s []byte) (bool, err
 	return i.bLSVerifyPOP(key, s)
 }
 
-func (i *testRuntimeInterface) AggregateBLSSignatures(sigs [][]byte) ([]byte, error) {
-	if i.aggregateBLSSignatures == nil {
+func (i *testRuntimeInterface) BLSAggregateSignatures(sigs [][]byte) ([]byte, error) {
+	if i.blsAggregateSignatures == nil {
 		return []byte{}, nil
 	}
 
-	return i.aggregateBLSSignatures(sigs)
+	return i.blsAggregateSignatures(sigs)
 }
 
-func (i *testRuntimeInterface) AggregateBLSPublicKeys(keys []*PublicKey) (*PublicKey, error) {
-	if i.aggregateBLSPublicKeys == nil {
+func (i *testRuntimeInterface) BLSAggregatePublicKeys(keys []*PublicKey) (*PublicKey, error) {
+	if i.blsAggregatePublicKeys == nil {
 		return nil, nil
 	}
 
-	return i.aggregateBLSPublicKeys(keys)
+	return i.blsAggregatePublicKeys(keys)
 }
 
 func (i *testRuntimeInterface) GetAccountContractNames(address Address) ([]string, error) {

@@ -1539,6 +1539,11 @@ type ArrayType interface {
 	isArrayType()
 }
 
+const arrayTypeFirstIndexFunctionDocString = `
+Returns the index of the first element matching the given object in the array, nil if no match.
+Available if the array element type is not resource-kinded and equatable.
+`
+
 const arrayTypeContainsFunctionDocString = `
 Returns true if the given object is in the array
 `
@@ -1646,6 +1651,44 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 					identifier,
 					IntType,
 					arrayTypeLengthFieldDocString,
+				)
+			},
+		},
+		"firstIndex": {
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
+
+				elementType := arrayType.ElementType(false)
+
+				// It is impossible for an array of resources to have a `firstIndex` function:
+				// if the resource is passed as an argument, it cannot be inside the array
+
+				if elementType.IsResourceType() {
+					report(
+						&InvalidResourceArrayMemberError{
+							Name:            identifier,
+							DeclarationKind: common.DeclarationKindFunction,
+							Range:           targetRange,
+						},
+					)
+				}
+
+				// TODO: implement Equatable interface
+
+				if !elementType.IsEquatable() {
+					report(
+						&NotEquatableTypeError{
+							Type:  elementType,
+							Range: targetRange,
+						},
+					)
+				}
+
+				return NewPublicFunctionMember(
+					arrayType,
+					identifier,
+					ArrayFirstIndexFunctionType(elementType),
+					arrayTypeFirstIndexFunctionDocString,
 				)
 			},
 		},
@@ -1879,6 +1922,19 @@ func ArrayConcatFunctionType(arrayType Type) *FunctionType {
 	}
 }
 
+func ArrayFirstIndexFunctionType(elementType Type) *FunctionType {
+	return &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Identifier:     "of",
+				TypeAnnotation: NewTypeAnnotation(elementType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{Type: IntType},
+		),
+	}
+}
 func ArrayContainsFunctionType(elementType Type) *FunctionType {
 	return &FunctionType{
 		Parameters: []*Parameter{
@@ -3006,17 +3062,7 @@ func init() {
 				panic(errors.NewUnreachableError())
 			}
 
-			functionType := &FunctionType{
-				Parameters: []*Parameter{
-					{
-						Label:          ArgumentLabelNotRequired,
-						Identifier:     "value",
-						TypeAnnotation: NewTypeAnnotation(NumberType),
-					},
-				},
-				ReturnTypeAnnotation:     NewTypeAnnotation(numberType),
-				ArgumentExpressionsCheck: numberFunctionArgumentExpressionsChecker(numberType),
-			}
+			functionType := NumberConversionFunctionType(numberType)
 
 			addMember := func(member *Member) {
 				if functionType.Members == nil {
@@ -3094,6 +3140,20 @@ func init() {
 	}
 }
 
+func NumberConversionFunctionType(numberType Type) *FunctionType {
+	return &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "value",
+				TypeAnnotation: NewTypeAnnotation(NumberType),
+			},
+		},
+		ReturnTypeAnnotation:     NewTypeAnnotation(numberType),
+		ArgumentExpressionsCheck: numberFunctionArgumentExpressionsChecker(numberType),
+	}
+}
+
 func numberConversionDocString(targetDescription string) string {
 	return fmt.Sprintf(
 		"Converts the given number to %s. %s",
@@ -3115,46 +3175,45 @@ func baseFunctionVariable(name string, ty *FunctionType, docString string) *Vari
 	}
 }
 
-func init() {
+var AddressConversionFunctionType = &FunctionType{
+	Parameters: []*Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "value",
+			TypeAnnotation: NewTypeAnnotation(IntegerType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(&AddressType{}),
+	ArgumentExpressionsCheck: func(checker *Checker, argumentExpressions []ast.Expression, _ ast.Range) {
+		if len(argumentExpressions) < 1 {
+			return
+		}
 
+		intExpression, ok := argumentExpressions[0].(*ast.IntegerExpression)
+		if !ok {
+			return
+		}
+
+		CheckAddressLiteral(intExpression, checker.report)
+	},
+}
+
+func init() {
 	// Declare a conversion function for the address type
 
-	addressType := &AddressType{}
-	typeName := addressType.String()
-
 	// Check that the function is not accidentally redeclared
+
+	typeName := AddressTypeName
 
 	if BaseValueActivation.Find(typeName) != nil {
 		panic(errors.NewUnreachableError())
 	}
 
-	functionType := &FunctionType{
-		Parameters: []*Parameter{
-			{
-				Label:          ArgumentLabelNotRequired,
-				Identifier:     "value",
-				TypeAnnotation: NewTypeAnnotation(IntegerType),
-			},
-		},
-		ReturnTypeAnnotation: NewTypeAnnotation(addressType),
-		ArgumentExpressionsCheck: func(checker *Checker, argumentExpressions []ast.Expression, _ ast.Range) {
-			if len(argumentExpressions) < 1 {
-				return
-			}
-
-			intExpression, ok := argumentExpressions[0].(*ast.IntegerExpression)
-			if !ok {
-				return
-			}
-
-			CheckAddressLiteral(intExpression, checker.report)
-		},
-	}
 	BaseValueActivation.Set(
 		typeName,
 		baseFunctionVariable(
 			typeName,
-			functionType,
+			AddressConversionFunctionType,
 			numberConversionDocString("an address"),
 		),
 	)
@@ -3357,9 +3416,31 @@ func suggestFixedPointLiteralConversionReplacement(
 	}
 }
 
+func pathConversionFunctionType(pathType Type) *FunctionType {
+	return &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Identifier:     "identifier",
+				TypeAnnotation: NewTypeAnnotation(StringType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{
+				Type: pathType,
+			},
+		),
+	}
+}
+
+var PublicPathConversionFunctionType = pathConversionFunctionType(PublicPathType)
+var PrivatePathConversionFunctionType = pathConversionFunctionType(PrivatePathType)
+var StoragePathConversionFunctionType = pathConversionFunctionType(StoragePathType)
+
 func init() {
 
-	typeName := MetaType.String()
+	// Declare the run-time type construction function
+
+	typeName := MetaTypeName
 
 	// Check that the function is not accidentally redeclared
 
@@ -3383,13 +3464,7 @@ func init() {
 		PublicPathType.String(),
 		baseFunctionVariable(
 			PublicPathType.String(),
-			&FunctionType{
-				Parameters: []*Parameter{{
-					Identifier:     "identifier",
-					TypeAnnotation: NewTypeAnnotation(StringType),
-				}},
-				ReturnTypeAnnotation: NewTypeAnnotation(&OptionalType{Type: PublicPathType}),
-			},
+			PublicPathConversionFunctionType,
 			"Converts the given string into a public path. Returns nil if the string does not specify a public path",
 		),
 	)
@@ -3398,13 +3473,7 @@ func init() {
 		PrivatePathType.String(),
 		baseFunctionVariable(
 			PrivatePathType.String(),
-			&FunctionType{
-				Parameters: []*Parameter{{
-					Identifier:     "identifier",
-					TypeAnnotation: NewTypeAnnotation(StringType),
-				}},
-				ReturnTypeAnnotation: NewTypeAnnotation(&OptionalType{Type: PrivatePathType}),
-			},
+			PrivatePathConversionFunctionType,
 			"Converts the given string into a private path. Returns nil if the string does not specify a private path",
 		),
 	)
@@ -3413,13 +3482,7 @@ func init() {
 		StoragePathType.String(),
 		baseFunctionVariable(
 			StoragePathType.String(),
-			&FunctionType{
-				Parameters: []*Parameter{{
-					Identifier:     "identifier",
-					TypeAnnotation: NewTypeAnnotation(StringType),
-				}},
-				ReturnTypeAnnotation: NewTypeAnnotation(&OptionalType{Type: StoragePathType}),
-			},
+			StoragePathConversionFunctionType,
 			"Converts the given string into a storage path. Returns nil if the string does not specify a storage path",
 		),
 	)
@@ -4647,6 +4710,8 @@ func (t *ReferenceType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
+const AddressTypeName = "Address"
+
 // AddressType represents the address type
 type AddressType struct{}
 
@@ -4659,15 +4724,15 @@ func (t *AddressType) Tag() TypeTag {
 }
 
 func (*AddressType) String() string {
-	return "Address"
+	return AddressTypeName
 }
 
 func (*AddressType) QualifiedString() string {
-	return "Address"
+	return AddressTypeName
 }
 
 func (*AddressType) ID() TypeID {
-	return "Address"
+	return AddressTypeName
 }
 
 func (*AddressType) Equal(other Type) bool {
@@ -6177,8 +6242,8 @@ the given tag and data, using this public key and the given hash algorithm
 
 const publicKeyVerifyPoPFunctionDocString = `
 Verifies the proof of possession of the private key. This function is 
-currently only implemented if the signature algorithm of the public 
-key is BLS, it errors if called with any other signature algorithm.
+only implemented if the signature algorithm of the public key is BLS, 
+it returns false if called with any other signature algorithm.
 `
 
 // PublicKeyType represents the public key associated with an account key.
@@ -6195,7 +6260,7 @@ var PublicKeyType = func() *CompositeType {
 		NewPublicConstantFieldMember(
 			publicKeyType,
 			PublicKeyPublicKeyField,
-			&VariableSizedType{Type: UInt8Type},
+			ByteArrayType,
 			publicKeyKeyFieldDocString,
 		),
 		NewPublicConstantFieldMember(
@@ -6223,6 +6288,10 @@ var PublicKeyType = func() *CompositeType {
 
 	return publicKeyType
 }()
+
+var PublicKeyArrayType = &VariableSizedType{
+	Type: PublicKeyType,
+}
 
 var PublicKeyVerifyFunctionType = &FunctionType{
 	TypeParameters: []*TypeParameter{},

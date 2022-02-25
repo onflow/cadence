@@ -679,18 +679,20 @@ func TestInterpretGetType(t *testing.T) {
 			// Inject a function that returns a storage reference value,
 			// which is borrowed as: `auth &Int`
 
+			getStorageReferenceFunctionType := &sema.FunctionType{
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(
+					&sema.ReferenceType{
+						Authorized: true,
+						Type:       sema.IntType,
+					},
+				),
+			}
+
 			standardLibraryFunctions :=
 				stdlib.StandardLibraryFunctions{
 					{
 						Name: "getStorageReference",
-						Type: &sema.FunctionType{
-							ReturnTypeAnnotation: sema.NewTypeAnnotation(
-								&sema.ReferenceType{
-									Authorized: true,
-									Type:       sema.IntType,
-								},
-							),
-						},
+						Type: getStorageReferenceFunctionType,
 						Function: interpreter.NewHostFunctionValue(
 							func(invocation interpreter.Invocation) interpreter.Value {
 
@@ -701,7 +703,7 @@ func TestInterpretGetType(t *testing.T) {
 									BorrowedType:         sema.IntType,
 								}
 							},
-							nil,
+							getStorageReferenceFunctionType,
 						),
 					},
 				}
