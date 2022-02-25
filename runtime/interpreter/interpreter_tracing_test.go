@@ -22,12 +22,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/opentracing/opentracing-go"
+	"github.com/stretchr/testify/require"
+
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
-	"github.com/opentracing/opentracing-go"
-	"github.com/stretchr/testify/require"
 )
 
 func TestInterpreterTracing(t *testing.T) {
