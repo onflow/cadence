@@ -43,17 +43,10 @@ const (
 	tracingDeepRemovePostfix            = "deepRemove"
 	tracingDestroyPostfix               = "distroy"
 
-	// ValueIndexable operation postfixes
-	// TODO enable these
-	// tracingGetKeyPostfix    = "getKey."
-	// tracingSetKeyPostfix    = "setKey."
-	// tracingRemoveKeyPostfix = "removeKey."
-	// tracingInsertKeyPostfix = "insertKey."
-
-	// MemberAccessible operation postfixes
-	tracingGetMemberPostfix    = "getMember"
-	tracingSetMemberPostfix    = "setMember"
-	tracingRemoveMemberPostfix = "removeMember"
+	// MemberAccessible operation prefixes
+	tracingGetMemberPrefix    = "getMember."
+	tracingSetMemberPrefix    = "setMember."
+	tracingRemoveMemberPrefix = "removeMember."
 )
 
 func (interpreter *Interpreter) reportFunctionTrace(functionName string, duration time.Duration) {
@@ -124,6 +117,10 @@ func (interpreter *Interpreter) reportDictionaryValueConformsToDynamicTypeTrace(
 	interpreter.onRecordTrace(interpreter, tracingDictionaryPrefix+tracingConformsToDynamicTypePostfix, duration, prepareArrayAndMapValueTraceLogs(typeInfo, count))
 }
 
+func (interpreter *Interpreter) reportDictionaryValueGetMemberTrace(typeInfo string, count int, name string, duration time.Duration) {
+	interpreter.onRecordTrace(interpreter, tracingDictionaryPrefix+tracingGetMemberPrefix+name, duration, prepareArrayAndMapValueTraceLogs(typeInfo, count))
+}
+
 func prepareCompositeValueTraceLogs(owner, typeID, kind string) []opentracing.LogRecord {
 	return []opentracing.LogRecord{
 		{
@@ -161,14 +158,14 @@ func (interpreter *Interpreter) reportCompositeValueConformsToDynamicTypeTrace(o
 	interpreter.onRecordTrace(interpreter, tracingCompositePrefix+tracingConformsToDynamicTypePostfix, duration, prepareCompositeValueTraceLogs(owner, typeID, kind))
 }
 
-func (interpreter *Interpreter) reportCompositeValueGetMemberTrace(owner, typeID, kind string, duration time.Duration) {
-	interpreter.onRecordTrace(interpreter, tracingCompositePrefix+tracingGetMemberPostfix, duration, prepareCompositeValueTraceLogs(owner, typeID, kind))
+func (interpreter *Interpreter) reportCompositeValueGetMemberTrace(owner, typeID, kind, name string, duration time.Duration) {
+	interpreter.onRecordTrace(interpreter, tracingCompositePrefix+tracingGetMemberPrefix+name, duration, prepareCompositeValueTraceLogs(owner, typeID, kind))
 }
 
-func (interpreter *Interpreter) reportCompositeValueSetMemberTrace(owner, typeID, kind string, duration time.Duration) {
-	interpreter.onRecordTrace(interpreter, tracingCompositePrefix+tracingSetMemberPostfix, duration, prepareCompositeValueTraceLogs(owner, typeID, kind))
+func (interpreter *Interpreter) reportCompositeValueSetMemberTrace(owner, typeID, kind, name string, duration time.Duration) {
+	interpreter.onRecordTrace(interpreter, tracingCompositePrefix+tracingSetMemberPrefix+name, duration, prepareCompositeValueTraceLogs(owner, typeID, kind))
 }
 
-func (interpreter *Interpreter) reportCompositeValueRemoveMemberTrace(owner, typeID, kind string, duration time.Duration) {
-	interpreter.onRecordTrace(interpreter, tracingCompositePrefix+tracingRemoveMemberPostfix, duration, prepareCompositeValueTraceLogs(owner, typeID, kind))
+func (interpreter *Interpreter) reportCompositeValueRemoveMemberTrace(owner, typeID, kind, name string, duration time.Duration) {
+	interpreter.onRecordTrace(interpreter, tracingCompositePrefix+tracingRemoveMemberPrefix+name, duration, prepareCompositeValueTraceLogs(owner, typeID, kind))
 }

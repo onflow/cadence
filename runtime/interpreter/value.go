@@ -11006,7 +11006,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange fu
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
 		defer func() {
-			interpreter.reportCompositeValueGetMemberTrace(v.GetOwner().String(), string(v.TypeID()), v.Kind.String(), time.Since(startTime))
+			interpreter.reportCompositeValueGetMemberTrace(v.GetOwner().String(), string(v.TypeID()), v.Kind.String(), name, time.Since(startTime))
 		}()
 	}
 
@@ -11122,7 +11122,7 @@ func (v *CompositeValue) RemoveMember(
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
 		defer func() {
-			interpreter.reportCompositeValueRemoveMemberTrace(v.GetOwner().String(), string(v.TypeID()), v.Kind.String(), time.Since(startTime))
+			interpreter.reportCompositeValueRemoveMemberTrace(v.GetOwner().String(), string(v.TypeID()), v.Kind.String(), name, time.Since(startTime))
 		}()
 	}
 
@@ -11168,7 +11168,7 @@ func (v *CompositeValue) SetMember(
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
 		defer func() {
-			interpreter.reportCompositeValueSetMemberTrace(v.GetOwner().String(), string(v.TypeID()), v.Kind.String(), time.Since(startTime))
+			interpreter.reportCompositeValueSetMemberTrace(v.GetOwner().String(), string(v.TypeID()), v.Kind.String(), name, time.Since(startTime))
 		}()
 	}
 
@@ -11962,6 +11962,13 @@ func (v *DictionaryValue) GetMember(
 	getLocationRange func() LocationRange,
 	name string,
 ) Value {
+
+	if interpreter.tracingEnabled {
+		startTime := time.Now()
+		defer func() {
+			interpreter.reportDictionaryValueGetMemberTrace(v.Type.String(), v.Count(), name, time.Since(startTime))
+		}()
+	}
 
 	switch name {
 	case "length":
