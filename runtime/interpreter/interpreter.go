@@ -4483,12 +4483,12 @@ func (interpreter *Interpreter) UseMemory(usage common.MemoryUsage) {
 	interpreter.memoryGauge.UseMemory(usage)
 }
 
-// UseKnownMemory uses a pre-determined amount of memory
+// UseConstantMemory uses a pre-determined amount of memory
 //
-func (interpreter *Interpreter) UseKnownMemory(kind common.MemoryKind, amount uint64) {
+func (interpreter *Interpreter) UseConstantMemory(kind common.MemoryKind) {
 	interpreter.UseMemory(common.MemoryUsage{
 		Kind:   kind,
-		Amount: amount,
+		Amount: 1,
 	})
 }
 
