@@ -863,17 +863,18 @@ func (d StorableDecoder) decodeType() (TypeValue, error) {
 
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return TypeValue{}, fmt.Errorf(
+			return NewUnmeteredTypeValue(nil), fmt.Errorf(
 				"invalid type encoding: expected [%d]interface{}, got %s",
 				expectedLength,
 				e.ActualType.String(),
 			)
 		}
-		return TypeValue{}, err
+		// unmetered here and below because value is tossed in decodeStorable when err != nil
+		return NewUnmeteredTypeValue(nil), err
 	}
 
 	if arraySize != expectedLength {
-		return TypeValue{}, fmt.Errorf(
+		return NewUnmeteredTypeValue(nil), fmt.Errorf(
 			"invalid type encoding: expected [%d]interface{}, got [%d]interface{}",
 			expectedLength,
 			arraySize,
@@ -890,12 +891,10 @@ func (d StorableDecoder) decodeType() (TypeValue, error) {
 	}
 
 	if err != nil {
-		return TypeValue{}, fmt.Errorf("invalid type encoding: %w", err)
+		return NewUnmeteredTypeValue(nil), fmt.Errorf("invalid type encoding: %w", err)
 	}
 
-	return TypeValue{
-		Type: staticType,
-	}, nil
+	return NewTypeValue(d.memoryGauge, staticType), nil
 }
 
 type TypeDecoder struct {

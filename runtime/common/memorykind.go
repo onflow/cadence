@@ -38,4 +38,5 @@ const (
 	MemoryKindComposite
 	MemoryKindNil
 	MemoryKindVoid
+	MemoryKindTypeValue
 )

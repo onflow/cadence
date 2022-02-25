@@ -189,6 +189,25 @@ var _ atree.Storable = TypeValue{}
 var _ EquatableValue = TypeValue{}
 var _ MemberAccessibleValue = TypeValue{}
 
+func NewUnmeteredTypeValue(t StaticType) TypeValue {
+	return TypeValue{t}
+}
+
+func NewTypeValue(memoryGauge common.MemoryGauge, t StaticType) TypeValue {
+	if memoryGauge != nil {
+		length := len(t.String())
+		if length < 0 {
+			length = 0
+		}
+		memoryGauge.UseMemory(common.MemoryUsage{
+			Kind:   common.MemoryKindTypeValue,
+			Amount: uint64(length),
+		})
+	}
+
+	return NewUnmeteredTypeValue(t)
+}
+
 func (TypeValue) IsValue() {}
 
 func (v TypeValue) Accept(interpreter *Interpreter, visitor Visitor) {

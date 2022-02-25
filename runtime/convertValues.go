@@ -589,12 +589,11 @@ func importTypeValue(
 	   import is invalid */
 	_, err := inter.ConvertStaticToSemaType(typ)
 	if err != nil {
-		return interpreter.TypeValue{}, err
+		// unmetered because when err != nil, value should be ignored
+		return interpreter.NewUnmeteredTypeValue(nil), err
 	}
 
-	return interpreter.TypeValue{
-		Type: typ,
-	}, nil
+	return interpreter.NewTypeValue(inter, typ), nil
 }
 
 func importCapability(

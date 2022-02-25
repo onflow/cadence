@@ -2878,11 +2878,12 @@ func init() {
 					return NewNilValue(invocation.Interpreter)
 				}
 
-				return NewSomeValueNonCopying(TypeValue{
-					Type: DictionaryStaticType{
+				return NewSomeValueNonCopying(NewTypeValue(
+					invocation.Interpreter,
+					DictionaryStaticType{
 						KeyType:   keyType,
 						ValueType: valueType,
-					}})
+					}))
 			},
 			sema.DictionaryTypeFunctionType,
 		))
@@ -2899,9 +2900,10 @@ func init() {
 					return NewNilValue(invocation.Interpreter)
 				}
 
-				return NewSomeValueNonCopying(TypeValue{
-					Type: ConvertSemaToStaticType(composite),
-				})
+				return NewSomeValueNonCopying(NewTypeValue(
+					invocation.Interpreter,
+					ConvertSemaToStaticType(composite),
+			))
 			},
 			sema.CompositeTypeFunctionType,
 		),
@@ -2919,9 +2921,10 @@ func init() {
 					return NewNilValue(invocation.Interpreter)
 				}
 
-				return NewSomeValueNonCopying(TypeValue{
-					Type: ConvertSemaToStaticType(interfaceType),
-				})
+				return NewSomeValueNonCopying(NewTypeValue(
+					invocation.Interpreter,
+					ConvertSemaToStaticType(interfaceType),
+				))
 			},
 			sema.InterfaceTypeFunctionType,
 		),
@@ -2947,13 +2950,14 @@ func init() {
 					)
 					return true
 				})
-				return TypeValue{
-					Type: FunctionStaticType{
+				return NewTypeValue(
+					invocation.Interpreter,
+					FunctionStaticType{
 						Type: &sema.FunctionType{
 							ReturnTypeAnnotation: sema.NewTypeAnnotation(returnType),
 							Parameters:           parameterTypes,
 						},
-					}}
+					})
 			},
 			sema.FunctionTypeFunctionType,
 		),
@@ -3024,12 +3028,15 @@ func RestrictedTypeFunction(invocation Invocation) Value {
 	if !ok {
 		return NewNilValue(invocation.Interpreter)
 	}
-	return NewSomeValueNonCopying(TypeValue{
-		Type: &RestrictedStaticType{
-			Type:         ConvertSemaToStaticType(ty),
-			Restrictions: staticRestrictions,
-		},
-	})
+	return NewSomeValueNonCopying(
+		NewTypeValue(
+			invocation.Interpreter,
+			&RestrictedStaticType{
+				Type:         ConvertSemaToStaticType(ty),
+				Restrictions: staticRestrictions,
+			},
+		),
+	)
 }
 
 func defineBaseFunctions(activation *VariableActivation) {
@@ -3107,11 +3114,12 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 		name: "OptionalType",
 		converter: NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				return TypeValue{
-					Type: OptionalStaticType{
+				return NewTypeValue(
+					invocation.Interpreter,
+					OptionalStaticType{
 						Type: invocation.Arguments[0].(TypeValue).Type,
-					}}
-
+					},
+				)
 			},
 			sema.OptionalTypeFunctionType,
 		),
@@ -3120,10 +3128,12 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 		name: "VariableSizedArrayType",
 		converter: NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				return TypeValue{
-					Type: VariableSizedStaticType{
+				return NewTypeValue(
+					invocation.Interpreter,
+					VariableSizedStaticType{
 						Type: invocation.Arguments[0].(TypeValue).Type,
-					}}
+					},
+				)
 			},
 			sema.VariableSizedArrayTypeFunctionType,
 		),
@@ -3132,11 +3142,13 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 		name: "ConstantSizedArrayType",
 		converter: NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				return TypeValue{
-					Type: ConstantSizedStaticType{
+				return NewTypeValue(
+					invocation.Interpreter,
+					ConstantSizedStaticType{
 						Type: invocation.Arguments[0].(TypeValue).Type,
 						Size: int64(invocation.Arguments[1].(IntValue).ToInt()),
-					}}
+					},
+				)
 			},
 			sema.ConstantSizedArrayTypeFunctionType,
 		),
@@ -3145,11 +3157,13 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 		name: "ReferenceType",
 		converter: NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				return TypeValue{
-					Type: ReferenceStaticType{
+				return NewTypeValue(
+					invocation.Interpreter,
+					ReferenceStaticType{
 						Authorized: bool(invocation.Arguments[0].(BoolValue)),
 						Type:       invocation.Arguments[1].(TypeValue).Type,
-					}}
+					},
+				)
 			},
 			sema.ReferenceTypeFunctionType,
 		),
@@ -3165,11 +3179,12 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 					return NewNilValue(invocation.Interpreter)
 				}
 				return NewSomeValueNonCopying(
-					TypeValue{
-						Type: CapabilityStaticType{
+					NewTypeValue(
+						invocation.Interpreter,
+						CapabilityStaticType{
 							BorrowType: ty,
 						},
-					},
+					),
 				)
 			},
 			sema.CapabilityTypeFunctionType,
@@ -3195,9 +3210,10 @@ var typeFunction = NewHostFunctionValue(
 
 		ty := typeParameterPair.Value
 
-		return TypeValue{
-			Type: ConvertSemaToStaticType(ty),
-		}
+		return NewTypeValue(
+			invocation.Interpreter,
+			ConvertSemaToStaticType(ty),
+		)
 	},
 	&sema.FunctionType{
 		ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.MetaType),
@@ -3593,9 +3609,10 @@ func (interpreter *Interpreter) authAccountTypeFunction(addressValue AddressValu
 			}
 
 			return NewSomeValueNonCopying(
-				TypeValue{
-					Type: value.StaticType(),
-				},
+				NewTypeValue(
+					invocation.Interpreter,
+					value.StaticType(),
+				),
 			)
 		},
 
@@ -4259,9 +4276,10 @@ func (interpreter *Interpreter) isInstanceFunction(self Value) *HostFunctionValu
 func (interpreter *Interpreter) getTypeFunction(self Value) *HostFunctionValue {
 	return NewHostFunctionValue(
 		func(invocation Invocation) Value {
-			return TypeValue{
-				Type: self.StaticType(),
-			}
+			return NewTypeValue(
+				interpreter,
+				self.StaticType(),
+			)
 		},
 		sema.GetTypeFunctionType,
 	)
