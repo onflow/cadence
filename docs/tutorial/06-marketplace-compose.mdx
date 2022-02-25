@@ -806,7 +806,7 @@ pub contract Marketplace {
         let saleRef = collection.borrow()
             ?? panic("Invalid sale collection capability")
 
-        self.tokensForSale[saleRef.owner?.address] = collection
+        self.tokensForSale[saleRef.owner!.address] = collection
     }
 
     // removeSaleCollection removes a user's sale from the array
