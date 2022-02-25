@@ -3317,11 +3317,13 @@ func (r *interpreterRuntime) resourceOwnerChangedHandler(
 		oldOwner common.Address,
 		newOwner common.Address,
 	) {
-		runtimeInterface.ResourceOwnerChanged(
-			resource,
-			oldOwner,
-			newOwner,
-		)
+		wrapPanic(func() {
+			runtimeInterface.ResourceOwnerChanged(
+				resource,
+				oldOwner,
+				newOwner,
+			)
+		})
 	}
 }
 
