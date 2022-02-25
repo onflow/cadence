@@ -66,9 +66,8 @@ func (interpreter *Interpreter) identifierExpressionGetterSetter(identifierExpre
 		set: func(value Value) {
 			identifier := identifierExpression.Identifier.Identifier
 			variable := interpreter.findVariable(identifier)
-			getLocationRange := locationRangeGetter(interpreter.Location, identifierExpression)
 
-			interpreter.startResourceTracking(value, variable, identifier, getLocationRange)
+			interpreter.startResourceTracking(value, variable, identifier, interpreter.Location, identifierExpression)
 
 			variable.SetValue(value)
 		},
@@ -166,8 +165,7 @@ func (interpreter *Interpreter) VisitIdentifierExpression(expression *ast.Identi
 	variable := interpreter.findVariable(name)
 	value := variable.GetValue()
 
-	getLocationRange := locationRangeGetter(interpreter.Location, expression)
-	interpreter.checkInvalidatedResourceUse(value, variable, name, getLocationRange)
+	interpreter.checkInvalidatedResourceUse(value, variable, name, interpreter.Location, expression)
 
 	return value
 }
