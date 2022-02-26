@@ -274,7 +274,8 @@ func TestRandomMapOperations(t *testing.T) {
 			someValue := removedValue.(*interpreter.SomeValue)
 
 			// Removed value must be same as the original value
-			utils.AssertValuesEqual(t, inter, orgValue, someValue.Value)
+			innerValue := someValue.InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+			utils.AssertValuesEqual(t, inter, orgValue, innerValue)
 
 			return false
 		})
@@ -332,7 +333,8 @@ func TestRandomMapOperations(t *testing.T) {
 			someValue := removedValue.(*interpreter.SomeValue)
 
 			// Removed value must be same as the original value
-			utils.AssertValuesEqual(t, inter, orgValue, someValue.Value)
+			innerValue := someValue.InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+			utils.AssertValuesEqual(t, inter, orgValue, innerValue)
 
 			return false
 		})
@@ -410,7 +412,8 @@ func TestRandomMapOperations(t *testing.T) {
 				someValue := removedValue.(*interpreter.SomeValue)
 
 				// Removed value must be same as the original value
-				utils.AssertValuesEqual(t, inter, orgValue, someValue.Value)
+				innerValue := someValue.InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+				utils.AssertValuesEqual(t, inter, orgValue, innerValue)
 
 				deleteCount++
 			}
@@ -1214,7 +1217,8 @@ func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) inte
 			BorrowType: v.BorrowType,
 		}
 	case *interpreter.SomeValue:
-		return interpreter.NewSomeValueNonCopying(deepCopyValue(inter, v.Value))
+		innerValue := v.InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+		return interpreter.NewSomeValueNonCopying(deepCopyValue(inter, innerValue))
 	case interpreter.NilValue:
 		return interpreter.NilValue{}
 	default:
@@ -1253,9 +1257,9 @@ func randomStorableValue(inter *interpreter.Interpreter, currentDepth int) inter
 			},
 		}
 	case Some:
-		return &interpreter.SomeValue{
-			Value: randomStorableValue(inter, currentDepth+1),
-		}
+		return interpreter.NewSomeValueNonCopying(
+			randomStorableValue(inter, currentDepth+1),
+		)
 
 	// Hashable
 	default:

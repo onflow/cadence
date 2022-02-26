@@ -12729,7 +12729,8 @@ func (v *DictionaryValue) SetKey(
 
 	switch value := value.(type) {
 	case *SomeValue:
-		_ = v.Insert(interpreter, getLocationRange, keyValue, value.Value)
+		innerValue := value.InnerValue(interpreter, getLocationRange)
+		_ = v.Insert(interpreter, getLocationRange, keyValue, innerValue)
 
 	case NilValue:
 		_ = v.Remove(interpreter, getLocationRange, keyValue)
@@ -13543,7 +13544,7 @@ func (NilValue) ChildStorables() []atree.Storable {
 // SomeValue
 
 type SomeValue struct {
-	Value         Value
+	value         Value
 	valueStorable atree.Storable
 	// TODO: Store isDestroyed in SomeStorable?
 	isDestroyed bool
@@ -13551,7 +13552,7 @@ type SomeValue struct {
 
 func NewSomeValueNonCopying(value Value) *SomeValue {
 	return &SomeValue{
-		Value: value,
+		value: value,
 	}
 }
 
@@ -13566,20 +13567,20 @@ func (v *SomeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	if !descend {
 		return
 	}
-	v.Value.Accept(interpreter, visitor)
+	v.value.Accept(interpreter, visitor)
 }
 
 func (v *SomeValue) Walk(walkChild func(Value)) {
-	walkChild(v.Value)
+	walkChild(v.value)
 }
 
 func (v *SomeValue) DynamicType(interpreter *Interpreter, seenReferences SeenReferences) DynamicType {
-	innerType := v.Value.DynamicType(interpreter, seenReferences)
+	innerType := v.value.DynamicType(interpreter, seenReferences)
 	return SomeDynamicType{InnerType: innerType}
 }
 
 func (v *SomeValue) StaticType() StaticType {
-	innerType := v.Value.StaticType()
+	innerType := v.value.StaticType()
 	if innerType == nil {
 		return nil
 	}
@@ -13600,11 +13601,11 @@ func (v *SomeValue) Destroy(interpreter *Interpreter, getLocationRange func() Lo
 		v.checkInvalidatedResourceUse(getLocationRange)
 	}
 
-	maybeDestroy(interpreter, getLocationRange, v.Value)
+	maybeDestroy(interpreter, getLocationRange, v.value)
 	v.isDestroyed = true
 
 	if interpreter.invalidatedResourceValidationEnabled {
-		v.Value = nil
+		v.value = nil
 	}
 }
 
@@ -13613,7 +13614,7 @@ func (v *SomeValue) String() string {
 }
 
 func (v *SomeValue) RecursiveString(seenReferences SeenReferences) string {
-	return v.Value.RecursiveString(seenReferences)
+	return v.value.RecursiveString(seenReferences)
 }
 
 func (v *SomeValue) GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
@@ -13640,7 +13641,7 @@ func (v *SomeValue) GetMember(interpreter *Interpreter, getLocationRange func() 
 				valueType := transformFunctionType.Parameters[0].TypeAnnotation.Type
 
 				transformInvocation := Invocation{
-					Arguments:        []Value{v.Value},
+					Arguments:        []Value{v.value},
 					ArgumentTypes:    []sema.Type{valueType},
 					GetLocationRange: invocation.GetLocationRange,
 					Interpreter:      invocation.Interpreter,
@@ -13650,7 +13651,7 @@ func (v *SomeValue) GetMember(interpreter *Interpreter, getLocationRange func() 
 
 				return NewSomeValueNonCopying(newValue)
 			},
-			sema.OptionalTypeMapFunctionType(interpreter.MustConvertStaticToSemaType(v.Value.StaticType())),
+			sema.OptionalTypeMapFunctionType(interpreter.MustConvertStaticToSemaType(v.value.StaticType())),
 		)
 	}
 
@@ -13682,7 +13683,7 @@ func (v SomeValue) ConformsToDynamicType(
 	results TypeConformanceResults,
 ) bool {
 	someType, ok := dynamicType.(SomeDynamicType)
-	return ok && v.Value.ConformsToDynamicType(
+	return ok && v.value.ConformsToDynamicType(
 		interpreter,
 		getLocationRange,
 		someType.InnerType,
@@ -13696,12 +13697,12 @@ func (v *SomeValue) Equal(interpreter *Interpreter, getLocationRange func() Loca
 		return false
 	}
 
-	equatableValue, ok := v.Value.(EquatableValue)
+	equatableValue, ok := v.value.(EquatableValue)
 	if !ok {
 		return false
 	}
 
-	return equatableValue.Equal(interpreter, getLocationRange, otherSome.Value)
+	return equatableValue.Equal(interpreter, getLocationRange, otherSome.value)
 }
 
 func (v *SomeValue) Storable(
@@ -13712,7 +13713,7 @@ func (v *SomeValue) Storable(
 
 	if v.valueStorable == nil {
 		var err error
-		v.valueStorable, err = v.Value.Storable(
+		v.valueStorable, err = v.value.Storable(
 			storage,
 			address,
 			maxInlineSize,
@@ -13733,15 +13734,15 @@ func (v *SomeValue) Storable(
 }
 
 func (v *SomeValue) NeedsStoreTo(address atree.Address) bool {
-	return v.Value.NeedsStoreTo(address)
+	return v.value.NeedsStoreTo(address)
 }
 
 func (v *SomeValue) IsResourceKinded(interpreter *Interpreter) bool {
-	return v.Value.IsResourceKinded(interpreter)
+	return v.value.IsResourceKinded(interpreter)
 }
 
 func (v *SomeValue) checkInvalidatedResourceUse(getLocationRange func() LocationRange) {
-	if v.isDestroyed || v.Value == nil {
+	if v.isDestroyed || v.value == nil {
 		panic(InvalidatedResourceError{
 			LocationRange: getLocationRange(),
 		})
@@ -13760,14 +13761,14 @@ func (v *SomeValue) Transfer(
 		v.checkInvalidatedResourceUse(getLocationRange)
 	}
 
-	innerValue := v.Value
+	innerValue := v.value
 
 	needsStoreTo := v.NeedsStoreTo(address)
 	isResourceKinded := v.IsResourceKinded(interpreter)
 
 	if needsStoreTo || !isResourceKinded {
 
-		innerValue = v.Value.Transfer(interpreter, getLocationRange, address, remove, nil)
+		innerValue = v.value.Transfer(interpreter, getLocationRange, address, remove, nil)
 
 		if remove {
 			interpreter.RemoveReferencedSlab(v.valueStorable)
@@ -13788,9 +13789,9 @@ func (v *SomeValue) Transfer(
 		// to be transferred/moved again (see beginning of this function)
 
 		if interpreter.invalidatedResourceValidationEnabled {
-			v.Value = nil
+			v.value = nil
 		} else {
-			v.Value = innerValue
+			v.value = innerValue
 			v.valueStorable = nil
 			res = v
 		}
@@ -13807,15 +13808,24 @@ func (v *SomeValue) Transfer(
 }
 
 func (v *SomeValue) Clone(interpreter *Interpreter) Value {
-	innerValue := v.Value.Clone(interpreter)
+	innerValue := v.value.Clone(interpreter)
 	return NewSomeValueNonCopying(innerValue)
 }
 
 func (v *SomeValue) DeepRemove(interpreter *Interpreter) {
-	v.Value.DeepRemove(interpreter)
+	v.value.DeepRemove(interpreter)
 	if v.valueStorable != nil {
 		interpreter.RemoveReferencedSlab(v.valueStorable)
 	}
+}
+
+func (v *SomeValue) InnerValue(interpreter *Interpreter, getLocationRange func() LocationRange) Value {
+
+	if interpreter.invalidatedResourceValidationEnabled {
+		v.checkInvalidatedResourceUse(getLocationRange)
+	}
+
+	return v.value
 }
 
 type SomeStorable struct {
@@ -13832,7 +13842,7 @@ func (s SomeStorable) StoredValue(storage atree.SlabStorage) (atree.Value, error
 	value := StoredValue(s.Storable, storage)
 
 	return &SomeValue{
-		Value:         value,
+		value:         value,
 		valueStorable: s.Storable,
 	}, nil
 }
@@ -14206,7 +14216,8 @@ func (v *EphemeralReferenceValue) RecursiveString(seenReferences SeenReferences)
 }
 
 func (v *EphemeralReferenceValue) DynamicType(interpreter *Interpreter, seenReferences SeenReferences) DynamicType {
-	referencedValue := v.ReferencedValue()
+	// TODO: provide proper location range
+	referencedValue := v.ReferencedValue(interpreter, ReturnEmptyLocationRange)
 	if referencedValue == nil {
 		panic(DereferenceError{})
 	}
@@ -14238,13 +14249,17 @@ func (v *EphemeralReferenceValue) StaticType() StaticType {
 	}
 }
 
-func (v *EphemeralReferenceValue) ReferencedValue() *Value {
+func (v *EphemeralReferenceValue) ReferencedValue(
+	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
+) *Value {
 	// Just like for storage references, references to optionals are unwrapped,
 	// i.e. a reference to `nil` aborts when dereferenced.
 
 	switch referenced := v.Value.(type) {
 	case *SomeValue:
-		return &referenced.Value
+		innerValue := referenced.InnerValue(interpreter, getLocationRange)
+		return &innerValue
 	case NilValue:
 		return nil
 	default:
@@ -14257,7 +14272,7 @@ func (v *EphemeralReferenceValue) GetMember(
 	getLocationRange func() LocationRange,
 	name string,
 ) Value {
-	referencedValue := v.ReferencedValue()
+	referencedValue := v.ReferencedValue(interpreter, getLocationRange)
 	if referencedValue == nil {
 		panic(DereferenceError{
 			LocationRange: getLocationRange(),
@@ -14276,7 +14291,7 @@ func (v *EphemeralReferenceValue) RemoveMember(
 	getLocationRange func() LocationRange,
 	identifier string,
 ) Value {
-	referencedValue := v.ReferencedValue()
+	referencedValue := v.ReferencedValue(interpreter, getLocationRange)
 	if referencedValue == nil {
 		panic(DereferenceError{
 			LocationRange: getLocationRange(),
@@ -14300,7 +14315,7 @@ func (v *EphemeralReferenceValue) SetMember(
 	name string,
 	value Value,
 ) {
-	referencedValue := v.ReferencedValue()
+	referencedValue := v.ReferencedValue(interpreter, getLocationRange)
 	if referencedValue == nil {
 		panic(DereferenceError{
 			LocationRange: getLocationRange(),
@@ -14319,7 +14334,7 @@ func (v *EphemeralReferenceValue) GetKey(
 	getLocationRange func() LocationRange,
 	key Value,
 ) Value {
-	referencedValue := v.ReferencedValue()
+	referencedValue := v.ReferencedValue(interpreter, getLocationRange)
 	if referencedValue == nil {
 		panic(DereferenceError{
 			LocationRange: getLocationRange(),
@@ -14340,7 +14355,7 @@ func (v *EphemeralReferenceValue) SetKey(
 	key Value,
 	value Value,
 ) {
-	referencedValue := v.ReferencedValue()
+	referencedValue := v.ReferencedValue(interpreter, getLocationRange)
 	if referencedValue == nil {
 		panic(DereferenceError{
 			LocationRange: getLocationRange(),
@@ -14361,7 +14376,7 @@ func (v *EphemeralReferenceValue) InsertKey(
 	key Value,
 	value Value,
 ) {
-	referencedValue := v.ReferencedValue()
+	referencedValue := v.ReferencedValue(interpreter, getLocationRange)
 	if referencedValue == nil {
 		panic(DereferenceError{
 			LocationRange: getLocationRange(),
@@ -14381,7 +14396,7 @@ func (v *EphemeralReferenceValue) RemoveKey(
 	getLocationRange func() LocationRange,
 	key Value,
 ) Value {
-	referencedValue := v.ReferencedValue()
+	referencedValue := v.ReferencedValue(interpreter, getLocationRange)
 	if referencedValue == nil {
 		panic(DereferenceError{
 			LocationRange: getLocationRange(),
@@ -14434,7 +14449,7 @@ func (v *EphemeralReferenceValue) ConformsToDynamicType(
 		return false
 	}
 
-	referencedValue := v.ReferencedValue()
+	referencedValue := v.ReferencedValue(interpreter, getLocationRange)
 	if referencedValue == nil {
 		return false
 	}

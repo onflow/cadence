@@ -164,8 +164,9 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 
 		targetType := interpreter.Program.Elaboration.VariableDeclarationTargetTypes[declaration]
 		getLocationRange := locationRangeGetter(interpreter.Location, declaration.Value)
+		innerValue := someValue.InnerValue(interpreter, getLocationRange)
 		transferredUnwrappedValue := interpreter.transferAndConvert(
-			someValue.Value,
+			innerValue,
 			valueType,
 			targetType,
 			getLocationRange,

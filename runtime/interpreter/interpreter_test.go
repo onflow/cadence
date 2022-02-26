@@ -33,7 +33,10 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Bool to Bool?", func(t *testing.T) {
-		value := BoxOptional(
+		inter := newTestInterpreter(t)
+
+		value := inter.BoxOptional(
+			ReturnEmptyLocationRange,
 			BoolValue(true),
 			&sema.OptionalType{Type: sema.BoolType},
 		)
@@ -44,7 +47,10 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 	})
 
 	t.Run("Bool? to Bool?", func(t *testing.T) {
-		value := BoxOptional(
+		inter := newTestInterpreter(t)
+
+		value := inter.BoxOptional(
+			ReturnEmptyLocationRange,
 			NewSomeValueNonCopying(BoolValue(true)),
 			&sema.OptionalType{Type: sema.BoolType},
 		)
@@ -55,7 +61,10 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 	})
 
 	t.Run("Bool? to Bool??", func(t *testing.T) {
-		value := BoxOptional(
+		inter := newTestInterpreter(t)
+
+		value := inter.BoxOptional(
+			ReturnEmptyLocationRange,
 			NewSomeValueNonCopying(BoolValue(true)),
 			&sema.OptionalType{Type: &sema.OptionalType{Type: sema.BoolType}},
 		)
@@ -68,8 +77,11 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 	})
 
 	t.Run("nil (Never?) to Bool??", func(t *testing.T) {
+		inter := newTestInterpreter(t)
+
 		// NOTE:
-		value := BoxOptional(
+		value := inter.BoxOptional(
+			ReturnEmptyLocationRange,
 			NilValue{},
 			&sema.OptionalType{Type: &sema.OptionalType{Type: sema.BoolType}},
 		)
@@ -80,8 +92,11 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 	})
 
 	t.Run("nil (Some(nil): Never??) to Bool??", func(t *testing.T) {
+		inter := newTestInterpreter(t)
+
 		// NOTE:
-		value := BoxOptional(
+		value := inter.BoxOptional(
+			ReturnEmptyLocationRange,
 			NewSomeValueNonCopying(NilValue{}),
 			&sema.OptionalType{Type: &sema.OptionalType{Type: sema.BoolType}},
 		)
@@ -104,12 +119,14 @@ func TestInterpreterBoxing(t *testing.T) {
 		t.Run(anyType.String(), func(t *testing.T) {
 
 			t.Run(fmt.Sprintf("Bool to %s?", anyType), func(t *testing.T) {
+				inter := newTestInterpreter(t)
 
 				assert.Equal(t,
 					NewSomeValueNonCopying(
 						BoolValue(true),
 					),
-					ConvertAndBox(
+					inter.ConvertAndBox(
+						ReturnEmptyLocationRange,
 						BoolValue(true),
 						sema.BoolType,
 						&sema.OptionalType{Type: anyType},
@@ -119,12 +136,14 @@ func TestInterpreterBoxing(t *testing.T) {
 			})
 
 			t.Run(fmt.Sprintf("Bool? to %s?", anyType), func(t *testing.T) {
+				inter := newTestInterpreter(t)
 
 				assert.Equal(t,
 					NewSomeValueNonCopying(
 						BoolValue(true),
 					),
-					ConvertAndBox(
+					inter.ConvertAndBox(
+						ReturnEmptyLocationRange,
 						NewSomeValueNonCopying(BoolValue(true)),
 						&sema.OptionalType{Type: sema.BoolType},
 						&sema.OptionalType{Type: anyType},

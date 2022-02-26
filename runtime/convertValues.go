@@ -156,11 +156,14 @@ func exportSomeValue(
 	cadence.Optional,
 	error,
 ) {
-	if v.Value == nil {
+	// TODO: provide proper location range
+	innerValue := v.InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+
+	if innerValue == nil {
 		return cadence.NewOptional(nil), nil
 	}
 
-	value, err := exportValueWithInterpreter(v.Value, inter, seenReferences)
+	value, err := exportValueWithInterpreter(innerValue, inter, seenReferences)
 	if err != nil {
 		return cadence.Optional{}, err
 	}
