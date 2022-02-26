@@ -1825,6 +1825,7 @@ func TestRuntimeResourceOwnerChange(t *testing.T) {
 			loggedMessages = append(loggedMessages, message)
 		},
 		resourceOwnerChanged: func(
+			inter *interpreter.Interpreter,
 			resource *interpreter.CompositeValue,
 			oldAddress common.Address,
 			newAddress common.Address,
@@ -1834,7 +1835,7 @@ func TestRuntimeResourceOwnerChange(t *testing.T) {
 				resourceOwnerChange{
 					typeID: resource.TypeID(),
 					// TODO: provide proper location range
-					uuid:       resource.ResourceUUID(interpreter.ReturnEmptyLocationRange),
+					uuid:       resource.ResourceUUID(inter, interpreter.ReturnEmptyLocationRange),
 					oldAddress: oldAddress,
 					newAddress: newAddress,
 				},

@@ -1681,7 +1681,7 @@ func (r *interpreterRuntime) emitEvent(
 	fields := make([]exportableValue, len(eventType.ConstructorParameters))
 
 	for i, parameter := range eventType.ConstructorParameters {
-		value := event.GetField(getLocationRange, parameter.Identifier)
+		value := event.GetField(inter, getLocationRange, parameter.Identifier)
 		fields[i] = newExportableValue(value, inter)
 	}
 
@@ -3331,13 +3331,14 @@ func (r *interpreterRuntime) resourceOwnerChangedHandler(
 		return nil
 	}
 	return func(
-		_ *interpreter.Interpreter,
+		interpreter *interpreter.Interpreter,
 		resource *interpreter.CompositeValue,
 		oldOwner common.Address,
 		newOwner common.Address,
 	) {
 		wrapPanic(func() {
 			runtimeInterface.ResourceOwnerChanged(
+				interpreter,
 				resource,
 				oldOwner,
 				newOwner,
@@ -3377,7 +3378,7 @@ func NewPublicKeyFromValue(
 		)
 	}
 
-	rawValue := signAlgoValue.GetField(getLocationRange, sema.EnumRawValueFieldName)
+	rawValue := signAlgoValue.GetField(inter, getLocationRange, sema.EnumRawValueFieldName)
 	if rawValue == nil {
 		return nil, errors.New("sign algorithm raw value is not set")
 	}
@@ -3450,7 +3451,7 @@ func NewHashAlgorithmFromValue(
 ) HashAlgorithm {
 	hashAlgoValue := value.(*interpreter.CompositeValue)
 
-	rawValue := hashAlgoValue.GetField(getLocationRange, sema.EnumRawValueFieldName)
+	rawValue := hashAlgoValue.GetField(inter, getLocationRange, sema.EnumRawValueFieldName)
 	if rawValue == nil {
 		panic("cannot find hash algorithm raw value")
 	}

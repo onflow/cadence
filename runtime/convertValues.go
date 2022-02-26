@@ -222,7 +222,7 @@ func exportCompositeValue(
 		fieldName := field.Identifier
 
 		// TODO: provide proper location range
-		fieldValue := v.GetField(interpreter.ReturnEmptyLocationRange, fieldName)
+		fieldValue := v.GetField(inter, interpreter.ReturnEmptyLocationRange, fieldName)
 		if fieldValue == nil && v.ComputedFields != nil {
 			if computedField, ok := v.ComputedFields[fieldName]; ok {
 				// TODO: provide proper location range

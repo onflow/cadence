@@ -714,7 +714,7 @@ func (CharacterValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func (v CharacterValue) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+func (v CharacterValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
@@ -1227,12 +1227,28 @@ func (v *ArrayValue) StaticType() StaticType {
 	return v.Type
 }
 
+func (v *ArrayValue) checkInvalidatedResourceUse(interpreter *Interpreter, getLocationRange func() LocationRange) {
+	if v.isDestroyed || (v.array == nil && v.IsResourceKinded(interpreter)) {
+		panic(InvalidatedResourceError{
+			LocationRange: getLocationRange(),
+		})
+	}
+}
+
 func (v *ArrayValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
+
+	if interpreter.invalidatedResourceValidationEnabled {
+		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
+	}
+
 	v.Walk(func(element Value) {
 		maybeDestroy(interpreter, getLocationRange, element)
 	})
 
 	v.isDestroyed = true
+	if interpreter.invalidatedResourceValidationEnabled {
+		v.array = nil
+	}
 }
 
 func (v *ArrayValue) IsDestroyed() bool {
@@ -1305,6 +1321,11 @@ func (v *ArrayValue) Concat(interpreter *Interpreter, getLocationRange func() Lo
 }
 
 func (v *ArrayValue) GetKey(interpreter *Interpreter, getLocationRange func() LocationRange, key Value) Value {
+
+	if interpreter.invalidatedResourceValidationEnabled {
+		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
+	}
+
 	index := key.(NumberValue).ToInt()
 	return v.Get(interpreter, getLocationRange, index)
 }
@@ -1343,6 +1364,11 @@ func (v *ArrayValue) Get(interpreter *Interpreter, getLocationRange func() Locat
 }
 
 func (v *ArrayValue) SetKey(interpreter *Interpreter, getLocationRange func() LocationRange, key Value, value Value) {
+
+	if interpreter.invalidatedResourceValidationEnabled {
+		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
+	}
+
 	index := key.(NumberValue).ToInt()
 	v.Set(interpreter, getLocationRange, index, value)
 }
@@ -1427,6 +1453,11 @@ func (v *ArrayValue) AppendAll(interpreter *Interpreter, getLocationRange func()
 }
 
 func (v *ArrayValue) InsertKey(interpreter *Interpreter, getLocationRange func() LocationRange, key Value, value Value) {
+
+	if interpreter.invalidatedResourceValidationEnabled {
+		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
+	}
+
 	index := key.(NumberValue).ToInt()
 	v.Insert(interpreter, getLocationRange, index, value)
 }
@@ -1464,6 +1495,11 @@ func (v *ArrayValue) Insert(interpreter *Interpreter, getLocationRange func() Lo
 }
 
 func (v *ArrayValue) RemoveKey(interpreter *Interpreter, getLocationRange func() LocationRange, key Value) Value {
+
+	if interpreter.invalidatedResourceValidationEnabled {
+		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
+	}
+
 	index := key.(NumberValue).ToInt()
 	return v.Remove(interpreter, getLocationRange, index)
 }
@@ -1556,7 +1592,12 @@ func (v *ArrayValue) Contains(interpreter *Interpreter, getLocationRange func() 
 	return BoolValue(result)
 }
 
-func (v *ArrayValue) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
+
+	if interpreter.invalidatedResourceValidationEnabled {
+		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
+	}
+
 	switch name {
 	case "length":
 		return NewIntValueFromInt64(int64(v.Count()))
@@ -1740,12 +1781,22 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ func() LocationRange,
 	return nil
 }
 
-func (*ArrayValue) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
+func (v *ArrayValue) RemoveMember(interpreter *Interpreter, getLocationRange func() LocationRange, _ string) Value {
+
+	if interpreter.invalidatedResourceValidationEnabled {
+		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
+	}
+
 	// Arrays have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (*ArrayValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+func (v *ArrayValue) SetMember(interpreter *Interpreter, getLocationRange func() LocationRange, _ string, _ Value) {
+
+	if interpreter.invalidatedResourceValidationEnabled {
+		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
+	}
+
 	// Arrays have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -1845,6 +1896,10 @@ func (v *ArrayValue) Transfer(
 		}()
 	}
 
+	if interpreter.invalidatedResourceValidationEnabled {
+		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
+	}
+
 	currentStorageID := v.StorageID()
 	currentAddress := currentStorageID.Address
 
@@ -1896,14 +1951,27 @@ func (v *ArrayValue) Transfer(
 		}
 	}
 
+	var res *ArrayValue
+
 	if isResourceKinded {
 		// Update the resource in-place,
 		// and also update all values that are referencing the same value
 		// (but currently point to an outdated Go instance of the value)
 
-		v.array = array
+		// If checking of transfers of invalidated resource is enabled,
+		// then mark the resource array as invalidated, by unsetting the backing array.
+		// This allows raising an error when the resource array is attempted
+		// to be transferred/moved again (see beginning of this function)
+
+		if interpreter.invalidatedResourceValidationEnabled {
+			v.array = nil
+		} else {
+			v.array = array
+			res = v
+		}
 
 		newStorageID := array.StorageID()
+
 		interpreter.updateReferencedResource(
 			currentStorageID,
 			newStorageID,
@@ -1915,10 +1983,10 @@ func (v *ArrayValue) Transfer(
 				arrayValue.array = array
 			},
 		)
+	}
 
-		return v
-	} else {
-		return &ArrayValue{
+	if res == nil {
+		res = &ArrayValue{
 			Type:             v.Type,
 			semaType:         v.semaType,
 			isResourceKinded: v.isResourceKinded,
@@ -1926,6 +1994,8 @@ func (v *ArrayValue) Transfer(
 			isDestroyed:      v.isDestroyed,
 		}
 	}
+
+	return res
 }
 
 func (v *ArrayValue) Clone(interpreter *Interpreter) Value {
@@ -11615,7 +11685,9 @@ func (v *CompositeValue) IsDestroyed() bool {
 
 func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
 
-	v.checkInvalidatedResourceUse(getLocationRange)
+	if interpreter.invalidatedResourceValidationEnabled {
+		v.checkInvalidatedResourceUse(getLocationRange)
+	}
 
 	interpreter = v.getInterpreter(interpreter)
 
@@ -11646,7 +11718,9 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func
 
 func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
 
-	v.checkInvalidatedResourceUse(getLocationRange)
+	if interpreter.invalidatedResourceValidationEnabled {
+		v.checkInvalidatedResourceUse(getLocationRange)
+	}
 
 	if v.Kind == common.CompositeKindResource &&
 		name == sema.ResourceOwnerFieldName {
@@ -11805,8 +11879,9 @@ func (v *CompositeValue) SetMember(
 	name string,
 	value Value,
 ) {
-
-	v.checkInvalidatedResourceUse(getLocationRange)
+	if interpreter.invalidatedResourceValidationEnabled {
+		v.checkInvalidatedResourceUse(getLocationRange)
+	}
 
 	address := v.StorageID().Address
 
@@ -11888,9 +11963,11 @@ func formatComposite(typeId string, fields []CompositeField, seenReferences Seen
 	return format.Composite(typeId, preparedFields)
 }
 
-func (v *CompositeValue) GetField(getLocationRange func() LocationRange, name string) Value {
+func (v *CompositeValue) GetField(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
 
-	v.checkInvalidatedResourceUse(getLocationRange)
+	if interpreter.invalidatedResourceValidationEnabled {
+		v.checkInvalidatedResourceUse(getLocationRange)
+	}
 
 	storable, err := v.dictionary.Get(
 		StringAtreeComparator,
@@ -11938,7 +12015,7 @@ func (v *CompositeValue) Equal(interpreter *Interpreter, getLocationRange func()
 
 		// NOTE: Do NOT use an iterator, iteration order of fields may be different
 		// (if stored in different account, as storage ID is used as hash seed)
-		otherValue := otherComposite.GetField(getLocationRange, fieldName)
+		otherValue := otherComposite.GetField(interpreter, getLocationRange, fieldName)
 
 		equatableValue, ok := MustConvertStoredValue(value).(EquatableValue)
 		if !ok || !equatableValue.Equal(interpreter, getLocationRange, otherValue) {
@@ -11955,7 +12032,7 @@ func (v *CompositeValue) HashInput(interpreter *Interpreter, getLocationRange fu
 	if v.Kind == common.CompositeKindEnum {
 		typeID := v.TypeID()
 
-		rawValue := v.GetField(getLocationRange, sema.EnumRawValueFieldName)
+		rawValue := v.GetField(interpreter, getLocationRange, sema.EnumRawValueFieldName)
 		rawValueHashInput := rawValue.(HashableValue).
 			HashInput(interpreter, getLocationRange, scratch)
 
@@ -12021,7 +12098,7 @@ func (v *CompositeValue) ConformsToDynamicType(
 	}
 
 	for _, fieldName := range compositeType.Fields {
-		value := v.GetField(getLocationRange, fieldName)
+		value := v.GetField(interpreter, getLocationRange, fieldName)
 		if value == nil {
 			if v.ComputedFields == nil {
 				return false
@@ -12104,7 +12181,10 @@ func (v *CompositeValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 ) Value {
-	v.checkInvalidatedResourceUse(getLocationRange)
+
+	if interpreter.invalidatedResourceValidationEnabled {
+		v.checkInvalidatedResourceUse(getLocationRange)
+	}
 
 	currentStorageID := v.StorageID()
 	currentAddress := currentStorageID.Address
@@ -12166,23 +12246,25 @@ func (v *CompositeValue) Transfer(
 	}
 
 	var res *CompositeValue
+
 	if isResourceKinded {
 		// Update the resource in-place,
 		// and also update all values that are referencing the same value
 		// (but currently point to an outdated Go instance of the value)
 
-		newStorageID := dictionary.StorageID()
-
 		// If checking of transfers of invalidated resource is enabled,
 		// then mark the resource as invalidated, by unsetting the backing dictionary.
-		// This allows raising an error when the resource is attempted to be transferred/moved again
-		// (see beginning of this function).
+		// This allows raising an error when the resource is attempted
+		// to be transferred/moved again (see beginning of this function)
+
 		if interpreter.invalidatedResourceValidationEnabled {
 			v.dictionary = nil
 		} else {
 			v.dictionary = dictionary
 			res = v
 		}
+
+		newStorageID := dictionary.StorageID()
 
 		interpreter.updateReferencedResource(
 			currentStorageID,
@@ -12231,8 +12313,8 @@ func (v *CompositeValue) Transfer(
 	return res
 }
 
-func (v *CompositeValue) ResourceUUID(getLocationRange func() LocationRange) *UInt64Value {
-	fieldValue := v.GetField(getLocationRange, sema.ResourceUUIDFieldName)
+func (v *CompositeValue) ResourceUUID(interpreter *Interpreter, getLocationRange func() LocationRange) *UInt64Value {
+	fieldValue := v.GetField(interpreter, getLocationRange, sema.ResourceUUIDFieldName)
 	uuid, ok := fieldValue.(UInt64Value)
 	if !ok {
 		return nil
@@ -12535,7 +12617,20 @@ func (v *DictionaryValue) IsDestroyed() bool {
 	return v.isDestroyed
 }
 
+func (v *DictionaryValue) checkInvalidatedResourceUse(interpreter *Interpreter, getLocationRange func() LocationRange) {
+	if v.isDestroyed || (v.dictionary == nil && v.IsResourceKinded(interpreter)) {
+		panic(InvalidatedResourceError{
+			LocationRange: getLocationRange(),
+		})
+	}
+}
+
 func (v *DictionaryValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
+
+	if interpreter.invalidatedResourceValidationEnabled {
+		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
+	}
+
 	v.Iterate(func(key, value Value) (resume bool) {
 		// Resources cannot be keys at the moment, so should theoretically not be needed
 		maybeDestroy(interpreter, getLocationRange, key)
@@ -12544,6 +12639,9 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, getLocationRange fun
 	})
 
 	v.isDestroyed = true
+	if interpreter.invalidatedResourceValidationEnabled {
+		v.dictionary = nil
+	}
 }
 
 func (v *DictionaryValue) ContainsKey(
@@ -12596,6 +12694,11 @@ func (v *DictionaryValue) Get(
 }
 
 func (v *DictionaryValue) GetKey(interpreter *Interpreter, getLocationRange func() LocationRange, keyValue Value) Value {
+
+	if interpreter.invalidatedResourceValidationEnabled {
+		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
+	}
+
 	value, ok := v.Get(interpreter, getLocationRange, keyValue)
 	if ok {
 		return NewSomeValueNonCopying(value)
@@ -12610,6 +12713,11 @@ func (v *DictionaryValue) SetKey(
 	keyValue Value,
 	value Value,
 ) {
+
+	if interpreter.invalidatedResourceValidationEnabled {
+		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
+	}
+
 	interpreter.checkContainerMutation(v.Type.KeyType, keyValue, getLocationRange)
 	interpreter.checkContainerMutation(
 		OptionalStaticType{
@@ -12665,6 +12773,10 @@ func (v *DictionaryValue) GetMember(
 	getLocationRange func() LocationRange,
 	name string,
 ) Value {
+
+	if interpreter.invalidatedResourceValidationEnabled {
+		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
+	}
 
 	switch name {
 	case "length":
@@ -12778,12 +12890,22 @@ func (v *DictionaryValue) GetMember(
 	return nil
 }
 
-func (*DictionaryValue) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
+func (v *DictionaryValue) RemoveMember(interpreter *Interpreter, getLocationRange func() LocationRange, _ string) Value {
+
+	if interpreter.invalidatedResourceValidationEnabled {
+		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
+	}
+
 	// Dictionaries have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (*DictionaryValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+func (v *DictionaryValue) SetMember(interpreter *Interpreter, getLocationRange func() LocationRange, _ string, _ Value) {
+
+	if interpreter.invalidatedResourceValidationEnabled {
+		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
+	}
+
 	// Dictionaries have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -12797,6 +12919,11 @@ func (v *DictionaryValue) RemoveKey(
 	getLocationRange func() LocationRange,
 	key Value,
 ) Value {
+
+	if interpreter.invalidatedResourceValidationEnabled {
+		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
+	}
+
 	return v.Remove(interpreter, getLocationRange, key)
 }
 
@@ -13049,6 +13176,10 @@ func (v *DictionaryValue) Transfer(
 		}()
 	}
 
+	if interpreter.invalidatedResourceValidationEnabled {
+		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
+	}
+
 	currentStorageID := v.StorageID()
 	currentAddress := currentStorageID.Address
 
@@ -13112,12 +13243,24 @@ func (v *DictionaryValue) Transfer(
 		}
 	}
 
+	var res *DictionaryValue
+
 	if isResourceKinded {
 		// Update the resource in-place,
 		// and also update all values that are referencing the same value
 		// (but currently point to an outdated Go instance of the value)
 
-		v.dictionary = dictionary
+		// If checking of transfers of invalidated resource is enabled,
+		// then mark the resource array as invalidated, by unsetting the backing array.
+		// This allows raising an error when the resource array is attempted
+		// to be transferred/moved again (see beginning of this function)
+
+		if interpreter.invalidatedResourceValidationEnabled {
+			v.dictionary = nil
+		} else {
+			v.dictionary = dictionary
+			res = v
+		}
 
 		newStorageID := dictionary.StorageID()
 
@@ -13132,10 +13275,10 @@ func (v *DictionaryValue) Transfer(
 				dictionaryValue.dictionary = dictionary
 			},
 		)
+	}
 
-		return v
-	} else {
-		return &DictionaryValue{
+	if res == nil {
+		res = &DictionaryValue{
 			Type:             v.Type,
 			semaType:         v.semaType,
 			isResourceKinded: v.isResourceKinded,
@@ -13143,6 +13286,8 @@ func (v *DictionaryValue) Transfer(
 			isDestroyed:      v.isDestroyed,
 		}
 	}
+
+	return res
 }
 
 func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
@@ -13450,8 +13595,17 @@ func (v *SomeValue) IsDestroyed() bool {
 }
 
 func (v *SomeValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
+
+	if interpreter.invalidatedResourceValidationEnabled {
+		v.checkInvalidatedResourceUse(getLocationRange)
+	}
+
 	maybeDestroy(interpreter, getLocationRange, v.Value)
 	v.isDestroyed = true
+
+	if interpreter.invalidatedResourceValidationEnabled {
+		v.Value = nil
+	}
 }
 
 func (v *SomeValue) String() string {
@@ -13462,7 +13616,12 @@ func (v *SomeValue) RecursiveString(seenReferences SeenReferences) string {
 	return v.Value.RecursiveString(seenReferences)
 }
 
-func (v *SomeValue) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+func (v *SomeValue) GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
+
+	if interpreter.invalidatedResourceValidationEnabled {
+		v.checkInvalidatedResourceUse(getLocationRange)
+	}
+
 	switch name {
 	case "map":
 		return NewHostFunctionValue(
@@ -13498,11 +13657,21 @@ func (v *SomeValue) GetMember(interpreter *Interpreter, _ func() LocationRange, 
 	return nil
 }
 
-func (*SomeValue) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
+func (v *SomeValue) RemoveMember(interpreter *Interpreter, getLocationRange func() LocationRange, _ string) Value {
+
+	if interpreter.invalidatedResourceValidationEnabled {
+		v.checkInvalidatedResourceUse(getLocationRange)
+	}
+
 	panic(errors.NewUnreachableError())
 }
 
-func (*SomeValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+func (v *SomeValue) SetMember(interpreter *Interpreter, getLocationRange func() LocationRange, _ string, _ Value) {
+
+	if interpreter.invalidatedResourceValidationEnabled {
+		v.checkInvalidatedResourceUse(getLocationRange)
+	}
+
 	panic(errors.NewUnreachableError())
 }
 
@@ -13571,6 +13740,14 @@ func (v *SomeValue) IsResourceKinded(interpreter *Interpreter) bool {
 	return v.Value.IsResourceKinded(interpreter)
 }
 
+func (v *SomeValue) checkInvalidatedResourceUse(getLocationRange func() LocationRange) {
+	if v.isDestroyed || v.Value == nil {
+		panic(InvalidatedResourceError{
+			LocationRange: getLocationRange(),
+		})
+	}
+}
+
 func (v *SomeValue) Transfer(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
@@ -13578,6 +13755,10 @@ func (v *SomeValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 ) Value {
+
+	if interpreter.invalidatedResourceValidationEnabled {
+		v.checkInvalidatedResourceUse(getLocationRange)
+	}
 
 	innerValue := v.Value
 
@@ -13594,16 +13775,35 @@ func (v *SomeValue) Transfer(
 		}
 	}
 
+	var res *SomeValue
+
 	if isResourceKinded {
-		v.Value = innerValue
-		v.valueStorable = nil
-		return v
-	} else {
-		result := NewSomeValueNonCopying(innerValue)
-		result.valueStorable = nil
-		result.isDestroyed = v.isDestroyed
-		return result
+		// Update the resource in-place,
+		// and also update all values that are referencing the same value
+		// (but currently point to an outdated Go instance of the value)
+
+		// If checking of transfers of invalidated resource is enabled,
+		// then mark the resource array as invalidated, by unsetting the backing array.
+		// This allows raising an error when the resource array is attempted
+		// to be transferred/moved again (see beginning of this function)
+
+		if interpreter.invalidatedResourceValidationEnabled {
+			v.Value = nil
+		} else {
+			v.Value = innerValue
+			v.valueStorable = nil
+			res = v
+		}
+
 	}
+
+	if res == nil {
+		res = NewSomeValueNonCopying(innerValue)
+		res.valueStorable = nil
+		res.isDestroyed = v.isDestroyed
+	}
+
+	return res
 }
 
 func (v *SomeValue) Clone(interpreter *Interpreter) Value {
@@ -15079,7 +15279,7 @@ func (v LinkValue) ChildStorables() []atree.Storable {
 
 // NewPublicKeyValue constructs a PublicKey value.
 func NewPublicKeyValue(
-	inter *Interpreter,
+	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
 	publicKey *ArrayValue,
 	signAlgo *CompositeValue,
@@ -15094,7 +15294,7 @@ func NewPublicKeyValue(
 	}
 
 	publicKeyValue := NewCompositeValue(
-		inter,
+		interpreter,
 		sema.PublicKeyType.Location,
 		sema.PublicKeyType.QualifiedIdentifier(),
 		sema.PublicKeyType.Kind,
@@ -15112,7 +15312,7 @@ func NewPublicKeyValue(
 		sema.PublicKeyVerifyPoPFunction: publicKeyVerifyPoPFunction,
 	}
 
-	err := validatePublicKey(inter, getLocationRange, publicKeyValue)
+	err := validatePublicKey(interpreter, getLocationRange, publicKeyValue)
 	if err != nil {
 		panic(InvalidPublicKeyError{
 			PublicKey:     publicKey,
@@ -15131,7 +15331,7 @@ func NewPublicKeyValue(
 			{
 				Name: sema.PublicKeySignAlgoField,
 				// TODO: provide proper location range
-				Value: publicKeyValue.GetField(ReturnEmptyLocationRange, sema.PublicKeySignAlgoField),
+				Value: publicKeyValue.GetField(interpreter, ReturnEmptyLocationRange, sema.PublicKeySignAlgoField),
 			},
 		}
 
