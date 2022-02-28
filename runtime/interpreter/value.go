@@ -268,8 +268,13 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ func() LocationRange, n
 		if staticType != nil {
 			typeID = string(interpreter.MustConvertStaticToSemaType(staticType).ID())
 		}
-		// TODO: meter
-		return NewUnmeteredStringValue(typeID)
+		memoryUsage := common.MemoryUsage{
+			Kind:   common.MemoryKindString,
+			Amount: uint64(len(typeID)),
+		}
+		return NewStringValue(interpreter, memoryUsage, func() string {
+			return typeID
+		})
 	case "isSubtype":
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
@@ -350,8 +355,8 @@ func (v TypeValue) Transfer(
 	return v
 }
 
-func (v TypeValue) Clone(_ *Interpreter) Value {
-	return v
+func (v TypeValue) Clone(interpreter *Interpreter) Value {
+	return NewTypeValue(interpreter, v.Type)
 }
 
 func (TypeValue) DeepRemove(_ *Interpreter) {
