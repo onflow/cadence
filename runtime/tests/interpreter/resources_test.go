@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/onflow/atree"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/sema"
@@ -622,6 +623,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 19, invalidatedResourceErr.StartPosition().Line)
 			})
 
 			t.Run("optional", func(t *testing.T) {
@@ -666,6 +669,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 19, invalidatedResourceErr.StartPosition().Line)
 			})
 
 			t.Run("array", func(t *testing.T) {
@@ -710,6 +715,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 19, invalidatedResourceErr.StartPosition().Line)
 			})
 
 			t.Run("dictionary", func(t *testing.T) {
@@ -754,6 +761,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 19, invalidatedResourceErr.StartPosition().Line)
 			})
 		})
 
@@ -763,8 +772,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				t.Parallel()
 
-				inter, err := parseCheckAndInterpretWithOptions(t, `
-
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
                       resource R {
                           let n: Int
 
@@ -795,14 +804,16 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 13, invalidatedResourceErr.StartPosition().Line)
 			})
 
 			t.Run("optional", func(t *testing.T) {
 
 				t.Parallel()
 
-				inter, err := parseCheckAndInterpretWithOptions(t, `
-
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
                       resource R {
                           let n: Int
 
@@ -833,14 +844,16 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 13, invalidatedResourceErr.StartPosition().Line)
 			})
 
 			t.Run("array", func(t *testing.T) {
 
 				t.Parallel()
 
-				inter, err := parseCheckAndInterpretWithOptions(t, `
-
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
                       resource R {
                           let n: Int
 
@@ -871,14 +884,16 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 13, invalidatedResourceErr.StartPosition().Line)
 			})
 
 			t.Run("dictionary", func(t *testing.T) {
 
 				t.Parallel()
 
-				inter, err := parseCheckAndInterpretWithOptions(t, `
-
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
                       resource R {
                           let n: Int
 
@@ -909,6 +924,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 13, invalidatedResourceErr.StartPosition().Line)
 			})
 		})
 
@@ -918,8 +935,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				t.Parallel()
 
-				inter, err := parseCheckAndInterpretWithOptions(t, `
-
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
                       resource R {
                           var n: Int
 
@@ -949,6 +966,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 13, invalidatedResourceErr.StartPosition().Line)
 			})
 
 			// TODO: optional (how?)
@@ -957,8 +976,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				t.Parallel()
 
-				inter, err := parseCheckAndInterpretWithOptions(t, `
-
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
                       resource R {
                           var n: Int
 
@@ -988,6 +1007,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 13, invalidatedResourceErr.StartPosition().Line)
 			})
 
 			// TODO: dictionary (how?)
@@ -999,8 +1020,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				t.Parallel()
 
-				inter, err := parseCheckAndInterpretWithOptions(t, `
-
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
                       resource R {}
 
                       fun test() {
@@ -1024,14 +1045,16 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 7, invalidatedResourceErr.StartPosition().Line)
 			})
 
 			t.Run("optional", func(t *testing.T) {
 
 				t.Parallel()
 
-				inter, err := parseCheckAndInterpretWithOptions(t, `
-
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
                       resource R {}
 
                       fun test() {
@@ -1055,14 +1078,16 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 7, invalidatedResourceErr.StartPosition().Line)
 			})
 
 			t.Run("array", func(t *testing.T) {
 
 				t.Parallel()
 
-				inter, err := parseCheckAndInterpretWithOptions(t, `
-
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
                       resource R {}
 
                       fun test() {
@@ -1092,8 +1117,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				t.Parallel()
 
-				inter, err := parseCheckAndInterpretWithOptions(t, `
-
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
                       resource R {}
 
                       fun test() {
@@ -1117,6 +1142,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 7, invalidatedResourceErr.StartPosition().Line)
 			})
 		})
 	})
@@ -1129,8 +1156,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				t.Parallel()
 
-				inter, err := parseCheckAndInterpretWithOptions(t, `
-
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
                       resource R {
                           let n: Int
 
@@ -1166,14 +1193,16 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 19, invalidatedResourceErr.StartPosition().Line)
 			})
 
 			t.Run("optional", func(t *testing.T) {
 
 				t.Parallel()
 
-				inter, err := parseCheckAndInterpretWithOptions(t, `
-
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
                       resource R {
                           let n: Int
 
@@ -1209,14 +1238,16 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 19, invalidatedResourceErr.StartPosition().Line)
 			})
 
 			t.Run("array", func(t *testing.T) {
 
 				t.Parallel()
 
-				inter, err := parseCheckAndInterpretWithOptions(t, `
-
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
                       resource R {
                           let n: Int
 
@@ -1252,14 +1283,16 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 19, invalidatedResourceErr.StartPosition().Line)
 			})
 
 			t.Run("dictionary", func(t *testing.T) {
 
 				t.Parallel()
 
-				inter, err := parseCheckAndInterpretWithOptions(t, `
-
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
                       resource R {
                           let n: Int
 
@@ -1295,6 +1328,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 19, invalidatedResourceErr.StartPosition().Line)
 			})
 		})
 
@@ -1304,8 +1339,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				t.Parallel()
 
-				inter, err := parseCheckAndInterpretWithOptions(t, `
-
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
                       resource R {
                           let n: Int
 
@@ -1334,14 +1369,16 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 13, invalidatedResourceErr.StartPosition().Line)
 			})
 
 			t.Run("optional", func(t *testing.T) {
 
 				t.Parallel()
 
-				inter, err := parseCheckAndInterpretWithOptions(t, `
-
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
                       resource R {
                           let n: Int
 
@@ -1370,14 +1407,16 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 13, invalidatedResourceErr.StartPosition().Line)
 			})
 
 			t.Run("array", func(t *testing.T) {
 
 				t.Parallel()
 
-				inter, err := parseCheckAndInterpretWithOptions(t, `
-
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
                       resource R {
                           let n: Int
 
@@ -1406,14 +1445,16 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 13, invalidatedResourceErr.StartPosition().Line)
 			})
 
 			t.Run("dictionary", func(t *testing.T) {
 
 				t.Parallel()
 
-				inter, err := parseCheckAndInterpretWithOptions(t, `
-
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
                       resource R {
                           let n: Int
 
@@ -1442,6 +1483,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 13, invalidatedResourceErr.StartPosition().Line)
 			})
 		})
 
@@ -1451,8 +1494,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				t.Parallel()
 
-				inter, err := parseCheckAndInterpretWithOptions(t, `
-
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
                       resource R {
                           var n: Int
 
@@ -1481,6 +1524,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 13, invalidatedResourceErr.StartPosition().Line)
 			})
 
 			// TODO: optional (how?)
@@ -1489,8 +1534,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				t.Parallel()
 
-				inter, err := parseCheckAndInterpretWithOptions(t, `
-
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
                       resource R {
                           var n: Int
 
@@ -1519,6 +1564,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 13, invalidatedResourceErr.StartPosition().Line)
 			})
 
 			// TODO: dictionary (how?)
@@ -1531,8 +1578,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				t.Parallel()
 
-				inter, err := parseCheckAndInterpretWithOptions(t, `
-
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
                       resource R {}
 
                       fun test() {
@@ -1555,14 +1602,16 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 7, invalidatedResourceErr.StartPosition().Line)
 			})
 
 			t.Run("optional", func(t *testing.T) {
 
 				t.Parallel()
 
-				inter, err := parseCheckAndInterpretWithOptions(t, `
-
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
                       resource R {}
 
                       fun test() {
@@ -1585,14 +1634,16 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 7, invalidatedResourceErr.StartPosition().Line)
 			})
 
 			t.Run("array", func(t *testing.T) {
 
 				t.Parallel()
 
-				inter, err := parseCheckAndInterpretWithOptions(t, `
-
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
                       resource R {}
 
                       fun test() {
@@ -1615,14 +1666,16 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 7, invalidatedResourceErr.StartPosition().Line)
 			})
 
 			t.Run("dictionary", func(t *testing.T) {
 
 				t.Parallel()
 
-				inter, err := parseCheckAndInterpretWithOptions(t, `
-
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
                       resource R {}
 
                       fun test() {
@@ -1645,8 +1698,9 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 				var invalidatedResourceErr interpreter.InvalidatedResourceError
 				require.ErrorAs(t, err, &invalidatedResourceErr)
-			})
 
+				assert.Equal(t, 7, invalidatedResourceErr.StartPosition().Line)
+			})
 		})
 	})
 }
