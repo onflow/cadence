@@ -59,16 +59,17 @@ func (interpreter *Interpreter) assignmentGetterSetter(expression ast.Expression
 // for the target identifier expression
 //
 func (interpreter *Interpreter) identifierExpressionGetterSetter(identifierExpression *ast.IdentifierExpression) getterSetter {
+	identifier := identifierExpression.Identifier.Identifier
+	variable := interpreter.findVariable(identifier)
+
 	return getterSetter{
 		get: func(_ bool) Value {
-			return interpreter.evalExpression(identifierExpression)
+			value := variable.GetValue()
+			interpreter.checkInvalidatedResourceUse(value, variable, identifier, identifierExpression)
+			return value
 		},
 		set: func(value Value) {
-			identifier := identifierExpression.Identifier.Identifier
-			variable := interpreter.findVariable(identifier)
-
 			interpreter.startResourceTracking(value, variable, identifier, identifierExpression)
-
 			variable.SetValue(value)
 		},
 	}
