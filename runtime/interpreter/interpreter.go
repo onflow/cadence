@@ -1163,7 +1163,6 @@ func (interpreter *Interpreter) VisitProgram(program *ast.Program) ast.Repr {
 				result,
 				variable,
 				identifier,
-				interpreter.Location,
 				declaration.Identifier,
 			)
 
@@ -1369,7 +1368,7 @@ func (interpreter *Interpreter) declareVariable(identifier string, value Value) 
 	interpreter.setVariable(identifier, variable)
 
 	// TODO: add proper location info
-	interpreter.startResourceTracking(value, variable, identifier, interpreter.Location, nil)
+	interpreter.startResourceTracking(value, variable, identifier, nil)
 
 	return variable
 }
@@ -4485,7 +4484,6 @@ func (interpreter *Interpreter) startResourceTracking(
 	value Value,
 	variable *Variable,
 	identifier string,
-	location common.Location,
 	hasPosition ast.HasPosition,
 ) {
 	if value == nil || !value.IsResourceKinded(interpreter) {
@@ -4506,10 +4504,15 @@ func (interpreter *Interpreter) startResourceTracking(
 	// resource variable that has not been invalidated properly.
 	// This should not be allowed, and must have been caught by the checker ideally.
 	if _, exists := interpreter.resourceVariables[resourceKindedValue]; exists {
+		var astRange ast.Range
+		if hasPosition != nil {
+			astRange = ast.NewRangeFromPositioned(hasPosition)
+		}
+
 		panic(InvalidatedResourceError{
 			LocationRange: LocationRange{
-				Location: location,
-				Range:    ast.NewRangeFromPositioned(hasPosition),
+				Location: interpreter.Location,
+				Range:    astRange,
 			},
 		})
 	}
@@ -4522,7 +4525,6 @@ func (interpreter *Interpreter) checkInvalidatedResourceUse(
 	value Value,
 	variable *Variable,
 	identifier string,
-	location common.Location,
 	hasPosition ast.HasPosition,
 ) {
 	if value == nil || !value.IsResourceKinded(interpreter) {
@@ -4544,10 +4546,10 @@ func (interpreter *Interpreter) checkInvalidatedResourceUse(
 	// This should not be allowed, and must have been caught by the checker ideally.
 	//
 	// Note: if the `resourceVariables` doesn't have a mapping, that implies an invalidated resource.
-	if existingVar, _ := interpreter.resourceVariables[resourceKindedValue]; existingVar != variable {
+	if existingVar, exists := interpreter.resourceVariables[resourceKindedValue]; !exists || existingVar != variable {
 		panic(InvalidatedResourceError{
 			LocationRange: LocationRange{
-				Location: location,
+				Location: interpreter.Location,
 				Range:    ast.NewRangeFromPositioned(hasPosition),
 			},
 		})

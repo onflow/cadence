@@ -19,11 +19,12 @@
 package interpreter_test
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
 
-	"github.com/onflow/atree"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/runtime/tests/checker"
 	. "github.com/onflow/cadence/runtime/tests/utils"

@@ -67,7 +67,7 @@ func (interpreter *Interpreter) identifierExpressionGetterSetter(identifierExpre
 			identifier := identifierExpression.Identifier.Identifier
 			variable := interpreter.findVariable(identifier)
 
-			interpreter.startResourceTracking(value, variable, identifier, interpreter.Location, identifierExpression)
+			interpreter.startResourceTracking(value, variable, identifier, identifierExpression)
 
 			variable.SetValue(value)
 		},
@@ -165,7 +165,7 @@ func (interpreter *Interpreter) VisitIdentifierExpression(expression *ast.Identi
 	variable := interpreter.findVariable(name)
 	value := variable.GetValue()
 
-	interpreter.checkInvalidatedResourceUse(value, variable, name, interpreter.Location, expression)
+	interpreter.checkInvalidatedResourceUse(value, variable, name, expression)
 
 	return value
 }
