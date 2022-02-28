@@ -670,6 +670,7 @@ func NewInterpreter(program *Program, location common.Location, options ...Optio
 			TypeRequirementCodes: map[sema.TypeID]WrapperCode{},
 		}),
 		withReferencedResourceKindedValues(map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}{}),
+		WithInvalidatedResourceValidationEnabled(true),
 	}
 
 	for _, option := range defaultOptions {
