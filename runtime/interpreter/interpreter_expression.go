@@ -847,26 +847,16 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 		// references to optionals are transformed into optional references, so move
 		// the *SomeValue out to the reference itself
 		case *SomeValue:
-			return NewSomeValueNonCopying(&EphemeralReferenceValue{
-				Authorized:   innerBorrowType.Authorized,
-				Value:        result.Value,
-				BorrowedType: innerBorrowType.Type,
-			})
+			return NewSomeValueNonCopying(
+				NewEphemeralReferenceValue(interpreter, innerBorrowType.Authorized, result.Value, innerBorrowType.Type),
+			)
 		case NilValue:
 			return NewNilValue(interpreter)
 		default:
-			return &EphemeralReferenceValue{
-				Authorized:   innerBorrowType.Authorized,
-				Value:        result,
-				BorrowedType: innerBorrowType.Type,
-			}
+			return NewEphemeralReferenceValue(interpreter, innerBorrowType.Authorized, result, innerBorrowType.Type)
 		}
 	case *sema.ReferenceType:
-		return &EphemeralReferenceValue{
-			Authorized:   typ.Authorized,
-			Value:        result,
-			BorrowedType: typ.Type,
-		}
+		return NewEphemeralReferenceValue(interpreter, typ.Authorized, result, typ.Type)
 	}
 	panic(errors.NewUnreachableError())
 }

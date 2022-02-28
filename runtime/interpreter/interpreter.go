@@ -1270,10 +1270,7 @@ func (interpreter *Interpreter) visitFunctionBody(
 	if returnType != sema.VoidType {
 		var resultValue Value
 		if returnType.IsResourceType() {
-			resultValue = &EphemeralReferenceValue{
-				Value:        returnValue,
-				BorrowedType: returnType,
-			}
+			resultValue = NewEphemeralReferenceValue(interpreter, false, returnValue, returnType)
 		} else {
 			resultValue = returnValue
 		}

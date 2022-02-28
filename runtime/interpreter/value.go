@@ -14084,6 +14084,34 @@ var _ EquatableValue = &EphemeralReferenceValue{}
 var _ ValueIndexableValue = &EphemeralReferenceValue{}
 var _ MemberAccessibleValue = &EphemeralReferenceValue{}
 
+func NewUnmeteredEphemeralReferenceValue(
+	authorized bool,
+	value Value,
+	borrowedType sema.Type,
+) *EphemeralReferenceValue {
+	return &EphemeralReferenceValue{
+		Authorized:		authorized,
+		Value: 			value,
+		BorrowedType:	borrowedType,
+	}
+}
+
+func NewEphemeralReferenceValue(
+	memoryGauge common.MemoryGauge,
+	authorized bool,
+	value Value,
+	borrowedType sema.Type,
+) *EphemeralReferenceValue {
+	if memoryGauge != nil {
+		memoryGauge.UseMemory(common.MemoryUsage{
+			Kind:   common.MemoryKindEphemeralReferenceValue,
+			Amount: uint64(1),
+		})
+	}
+
+	return NewUnmeteredEphemeralReferenceValue(authorized, value, borrowedType)
+}
+
 func (*EphemeralReferenceValue) IsValue() {}
 
 func (v *EphemeralReferenceValue) Accept(interpreter *Interpreter, visitor Visitor) {
@@ -14397,12 +14425,8 @@ func (v *EphemeralReferenceValue) Transfer(
 	return v
 }
 
-func (v *EphemeralReferenceValue) Clone(_ *Interpreter) Value {
-	return &EphemeralReferenceValue{
-		Authorized:   v.Authorized,
-		BorrowedType: v.BorrowedType,
-		Value:        v.Value,
-	}
+func (v *EphemeralReferenceValue) Clone(interpreter *Interpreter) Value {
+	return NewEphemeralReferenceValue(interpreter, v.Authorized, v.Value, v.BorrowedType)
 }
 
 func (*EphemeralReferenceValue) DeepRemove(_ *Interpreter) {

@@ -40,4 +40,5 @@ const (
 	MemoryKindVoid
 	MemoryKindTypeValue
 	MemoryKindStorageReferenceValue
+	MemoryKindEphemeralReferenceValue
 )
