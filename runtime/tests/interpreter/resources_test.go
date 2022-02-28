@@ -22,8 +22,9 @@ import (
 	"testing"
 
 	"github.com/onflow/atree"
-	"github.com/onflow/cadence/runtime/sema"
 	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/cadence/runtime/sema"
 
 	"github.com/onflow/cadence/runtime/tests/checker"
 	. "github.com/onflow/cadence/runtime/tests/utils"
