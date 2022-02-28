@@ -39,4 +39,5 @@ const (
 	MemoryKindNil
 	MemoryKindVoid
 	MemoryKindTypeValue
+	MemoryKindStorageReferenceValue
 )

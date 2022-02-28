@@ -13725,6 +13725,41 @@ var _ EquatableValue = &StorageReferenceValue{}
 var _ ValueIndexableValue = &StorageReferenceValue{}
 var _ MemberAccessibleValue = &StorageReferenceValue{}
 
+func NewUnmeteredStorageReferenceValue(
+	authorized bool,
+	targetStorageAddress common.Address,
+	targetPath PathValue,
+	borrowedType sema.Type,
+	) *StorageReferenceValue {
+	return &StorageReferenceValue{
+		Authorized:           authorized,
+		TargetStorageAddress: targetStorageAddress,
+		TargetPath:           targetPath,
+		BorrowedType:         borrowedType,
+	}
+}
+
+func NewStorageReferenceValue(
+	memoryGauge common.MemoryGauge,
+	authorized bool,
+	targetStorageAddress common.Address,
+	targetPath PathValue,
+	borrowedType sema.Type,
+	) *StorageReferenceValue {
+	if memoryGauge != nil {
+		length := len(targetPath.String())
+		if length < 0 {
+			length = 0
+		}
+		memoryGauge.UseMemory(common.MemoryUsage{
+			Kind:   common.MemoryKindStorageReferenceValue,
+			Amount: uint64(length),
+		})
+	}
+
+	return NewUnmeteredStorageReferenceValue(authorized, targetStorageAddress, targetPath, borrowedType)
+}
+
 func (*StorageReferenceValue) IsValue() {}
 
 func (v *StorageReferenceValue) Accept(interpreter *Interpreter, visitor Visitor) {
@@ -14022,13 +14057,14 @@ func (v *StorageReferenceValue) Transfer(
 	return v
 }
 
-func (v *StorageReferenceValue) Clone(_ *Interpreter) Value {
-	return &StorageReferenceValue{
-		Authorized:           v.Authorized,
-		TargetStorageAddress: v.TargetStorageAddress,
-		TargetPath:           v.TargetPath,
-		BorrowedType:         v.BorrowedType,
-	}
+func (v *StorageReferenceValue) Clone(interpreter *Interpreter) Value {
+	return NewStorageReferenceValue(
+		interpreter,
+		v.Authorized,
+		v.TargetStorageAddress,
+		v.TargetPath,
+		v.BorrowedType,
+	)
 }
 
 func (*StorageReferenceValue) DeepRemove(_ *Interpreter) {

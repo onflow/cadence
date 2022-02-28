@@ -3723,12 +3723,13 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 				panic(errors.NewUnreachableError())
 			}
 
-			reference := &StorageReferenceValue{
-				Authorized:           referenceType.Authorized,
-				TargetStorageAddress: address,
-				TargetPath:           path,
-				BorrowedType:         referenceType.Type,
-			}
+			reference := NewStorageReferenceValue(
+				invocation.Interpreter,
+				referenceType.Authorized,
+				address,
+				path,
+				referenceType.Type,
+			)
 
 			// Attempt to dereference,
 			// which reads the stored value
@@ -3924,12 +3925,13 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 				return NewNilValue(invocation.Interpreter)
 			}
 
-			reference := &StorageReferenceValue{
-				Authorized:           authorized,
-				TargetStorageAddress: address,
-				TargetPath:           targetPath,
-				BorrowedType:         borrowType.Type,
-			}
+			reference := NewStorageReferenceValue(
+				invocation.Interpreter,
+				authorized,
+				address,
+				targetPath,
+				borrowType.Type,
+			)
 
 			// Attempt to dereference,
 			// which reads the stored value
@@ -3994,12 +3996,13 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 				return NewBoolValue(interpreter, false)
 			}
 
-			reference := &StorageReferenceValue{
-				Authorized:           authorized,
-				TargetStorageAddress: address,
-				TargetPath:           targetPath,
-				BorrowedType:         borrowType.Type,
-			}
+			reference := NewStorageReferenceValue(
+				invocation.Interpreter,
+				authorized,
+				address,
+				targetPath,
+				borrowType.Type,
+			)
 
 			// Attempt to dereference,
 			// which reads the stored value
