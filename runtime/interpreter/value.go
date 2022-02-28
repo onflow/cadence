@@ -13575,7 +13575,10 @@ func (v *SomeValue) Walk(walkChild func(Value)) {
 }
 
 func (v *SomeValue) DynamicType(interpreter *Interpreter, seenReferences SeenReferences) DynamicType {
-	innerType := v.value.DynamicType(interpreter, seenReferences)
+	// TODO: provide proper location range
+	innerValue := v.InnerValue(interpreter, ReturnEmptyLocationRange)
+
+	innerType := innerValue.DynamicType(interpreter, seenReferences)
 	return SomeDynamicType{InnerType: innerType}
 }
 
@@ -13601,7 +13604,9 @@ func (v *SomeValue) Destroy(interpreter *Interpreter, getLocationRange func() Lo
 		v.checkInvalidatedResourceUse(getLocationRange)
 	}
 
-	maybeDestroy(interpreter, getLocationRange, v.value)
+	innerValue := v.InnerValue(interpreter, getLocationRange)
+
+	maybeDestroy(interpreter, getLocationRange, innerValue)
 	v.isDestroyed = true
 
 	if interpreter.invalidatedResourceValidationEnabled {
@@ -13683,7 +13688,12 @@ func (v SomeValue) ConformsToDynamicType(
 	results TypeConformanceResults,
 ) bool {
 	someType, ok := dynamicType.(SomeDynamicType)
-	return ok && v.value.ConformsToDynamicType(
+	if !ok {
+		return false
+	}
+	innerValue := v.InnerValue(interpreter, getLocationRange)
+
+	return innerValue.ConformsToDynamicType(
 		interpreter,
 		getLocationRange,
 		someType.InnerType,
@@ -13697,7 +13707,9 @@ func (v *SomeValue) Equal(interpreter *Interpreter, getLocationRange func() Loca
 		return false
 	}
 
-	equatableValue, ok := v.value.(EquatableValue)
+	innerValue := v.InnerValue(interpreter, getLocationRange)
+
+	equatableValue, ok := innerValue.(EquatableValue)
 	if !ok {
 		return false
 	}
