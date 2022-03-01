@@ -348,7 +348,8 @@ type Interpreter struct {
 	atreeStorageValidationEnabled  bool
 	tracingEnabled                 bool
 	// TODO: ideally this would be a weak map, but Go has no weak references
-	referencedResourceKindedValues ReferencedResourceKindedValues
+	referencedResourceKindedValues       ReferencedResourceKindedValues
+	invalidatedResourceValidationEnabled bool
 }
 
 type Option func(*Interpreter) error
@@ -602,6 +603,16 @@ func WithTracingEnabled(enabled bool) Option {
 	}
 }
 
+// WithInvalidatedResourceValidationEnabled returns an interpreter option which sets
+// the resource validation option.
+//
+func WithInvalidatedResourceValidationEnabled(enabled bool) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetInvalidatedResourceValidationEnabled(enabled)
+		return nil
+	}
+}
+
 // withTypeCodes returns an interpreter option which sets the type codes.
 //
 func withTypeCodes(typeCodes TypeCodes) Option {
@@ -659,6 +670,7 @@ func NewInterpreter(program *Program, location common.Location, options ...Optio
 			TypeRequirementCodes: map[sema.TypeID]WrapperCode{},
 		}),
 		withReferencedResourceKindedValues(map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}{}),
+		WithInvalidatedResourceValidationEnabled(true),
 	}
 
 	for _, option := range defaultOptions {
@@ -820,6 +832,12 @@ func (interpreter *Interpreter) SetAtreeStorageValidationEnabled(enabled bool) {
 //
 func (interpreter *Interpreter) SetTracingEnabled(enabled bool) {
 	interpreter.tracingEnabled = enabled
+}
+
+// SetInvalidatedResourceValidationEnabled sets the invalidated resource validation option.
+//
+func (interpreter *Interpreter) SetInvalidatedResourceValidationEnabled(enabled bool) {
+	interpreter.invalidatedResourceValidationEnabled = enabled
 }
 
 // setTypeCodes sets the type codes.
@@ -992,18 +1010,20 @@ func (interpreter *Interpreter) prepareInvoke(
 		}
 	}
 
+	getLocationRange := ReturnEmptyLocationRange
+
 	preparedArguments := make([]Value, len(arguments))
 	for i, argument := range arguments {
 		parameterType := parameters[i].TypeAnnotation.Type
 
 		// converts the argument into the parameter type declared by the function
-		preparedArguments[i] = ConvertAndBox(argument, nil, parameterType)
+		preparedArguments[i] = interpreter.ConvertAndBox(getLocationRange, argument, nil, parameterType)
 	}
 
 	// NOTE: can't fill argument types, as they are unknown
 	invocation := Invocation{
 		Arguments:        preparedArguments,
-		GetLocationRange: ReturnEmptyLocationRange,
+		GetLocationRange: getLocationRange,
 		Interpreter:      interpreter,
 	}
 
@@ -1793,7 +1813,7 @@ func EnumConstructorFunction(
 	lookupTable := make(map[string]*CompositeValue)
 
 	for _, caseValue := range caseValues {
-		rawValue := caseValue.GetField(sema.EnumRawValueFieldName)
+		rawValue := caseValue.GetField(inter, getLocationRange, sema.EnumRawValueFieldName)
 		rawValueBigEndianBytes := rawValue.(IntegerValue).ToBigEndianBytes()
 		lookupTable[string(rawValueBigEndianBytes)] = caseValue
 	}
@@ -2060,7 +2080,8 @@ func (interpreter *Interpreter) transferAndConvert(
 		nil,
 	)
 
-	result := ConvertAndBox(
+	result := interpreter.ConvertAndBox(
+		getLocationRange,
 		transferredValue,
 		valueType,
 		targetType,
@@ -2077,9 +2098,13 @@ func (interpreter *Interpreter) transferAndConvert(
 }
 
 // ConvertAndBox converts a value to a target type, and boxes in optionals and any value, if necessary
-func ConvertAndBox(value Value, valueType, targetType sema.Type) Value {
+func (interpreter *Interpreter) ConvertAndBox(
+	getLocationRange func() LocationRange,
+	value Value,
+	valueType, targetType sema.Type,
+) Value {
 	value = convert(value, valueType, targetType)
-	return BoxOptional(value, targetType)
+	return interpreter.BoxOptional(getLocationRange, value, targetType)
 }
 
 func convert(value Value, valueType, targetType sema.Type) Value {
@@ -2211,8 +2236,14 @@ func convert(value Value, valueType, targetType sema.Type) Value {
 }
 
 // BoxOptional boxes a value in optionals, if necessary
-func BoxOptional(value Value, targetType sema.Type) Value {
+func (interpreter *Interpreter) BoxOptional(
+	getLocationRange func() LocationRange,
+	value Value,
+	targetType sema.Type,
+) Value {
+
 	inner := value
+
 	for {
 		optionalType, ok := targetType.(*sema.OptionalType)
 		if !ok {
@@ -2221,7 +2252,7 @@ func BoxOptional(value Value, targetType sema.Type) Value {
 
 		switch typedInner := inner.(type) {
 		case *SomeValue:
-			inner = typedInner.Value
+			inner = typedInner.InnerValue(interpreter, getLocationRange)
 
 		case NilValue:
 			// NOTE: nested nil will be unboxed!
@@ -2236,14 +2267,14 @@ func BoxOptional(value Value, targetType sema.Type) Value {
 	return value
 }
 
-func Unbox(value Value) Value {
+func (interpreter *Interpreter) Unbox(getLocationRange func() LocationRange, value Value) Value {
 	for {
 		some, ok := value.(*SomeValue)
 		if !ok {
 			return value
 		}
 
-		value = some.Value
+		value = some.InnerValue(interpreter, getLocationRange)
 	}
 }
 
@@ -3010,6 +3041,8 @@ func init() {
 }
 
 func RestrictedTypeFunction(invocation Invocation) Value {
+	interpreter := invocation.Interpreter
+
 	restrictionIDs, ok := invocation.Arguments[1].(*ArrayValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -3025,7 +3058,7 @@ func RestrictedTypeFunction(invocation Invocation) Value {
 			panic(errors.NewUnreachableError())
 		}
 
-		restrictionInterface, err := lookupInterface(invocation.Interpreter, typeIDValue.Str)
+		restrictionInterface, err := lookupInterface(interpreter, typeIDValue.Str)
 		if err != nil {
 			invalidRestrictionID = true
 			return true
@@ -3054,7 +3087,8 @@ func RestrictedTypeFunction(invocation Invocation) Value {
 	case NilValue:
 		semaType = nil
 	case *SomeValue:
-		semaType, err = lookupComposite(invocation.Interpreter, typeID.Value.(*StringValue).Str)
+		innerValue := typeID.InnerValue(interpreter, invocation.GetLocationRange)
+		semaType, err = lookupComposite(interpreter, innerValue.(*StringValue).Str)
 		if err != nil {
 			return NilValue{}
 		}

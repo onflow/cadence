@@ -119,7 +119,7 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 					return typedTarget
 
 				case *SomeValue:
-					target = typedTarget.Value
+					target = typedTarget.InnerValue(interpreter, getLocationRange)
 
 				default:
 					panic(errors.NewUnreachableError())
@@ -344,9 +344,11 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		return right
 
 	case ast.OperationNilCoalesce:
+		getLocationRange := locationRangeGetter(interpreter.Location, expression)
+
 		// only evaluate right-hand side if left-hand side is nil
 		if some, ok := leftValue.(*SomeValue); ok {
-			return some.Value
+			return some.InnerValue(interpreter, getLocationRange)
 		}
 
 		value := rightValue()
@@ -355,7 +357,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		resultType := interpreter.Program.Elaboration.BinaryExpressionResultTypes[expression]
 
 		// NOTE: important to convert both any and optional
-		return ConvertAndBox(value, rightType, resultType)
+		return interpreter.ConvertAndBox(getLocationRange, value, rightType, resultType)
 	}
 
 	panic(&unsupportedOperation{
@@ -365,18 +367,27 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 	})
 }
 
-func (interpreter *Interpreter) testEqual(left, right Value, hasPosition ast.HasPosition) BoolValue {
-	left = Unbox(left)
-	right = Unbox(right)
+func (interpreter *Interpreter) testEqual(left, right Value, expression *ast.BinaryExpression) BoolValue {
+	left = interpreter.Unbox(
+		locationRangeGetter(interpreter.Location, expression.Left),
+		left,
+	)
+
+	right = interpreter.Unbox(
+		locationRangeGetter(interpreter.Location, expression.Right),
+		right,
+	)
 
 	leftEquatable, ok := left.(EquatableValue)
 	if !ok {
 		return false
 	}
 
-	getLocationRange := locationRangeGetter(interpreter.Location, hasPosition)
-
-	return BoolValue(leftEquatable.Equal(interpreter, getLocationRange, right))
+	return BoolValue(leftEquatable.Equal(
+		interpreter,
+		locationRangeGetter(interpreter.Location, expression),
+		right,
+	))
 }
 
 func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpression) ast.Repr {
@@ -646,7 +657,10 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 			return typedResult
 
 		case *SomeValue:
-			result = typedResult.Value
+			result = typedResult.InnerValue(
+				interpreter,
+				locationRangeGetter(interpreter.Location, invocationExpression.InvokedExpression),
+			)
 
 		default:
 			panic(errors.NewUnreachableError())
@@ -767,6 +781,8 @@ func (interpreter *Interpreter) VisitFunctionExpression(expression *ast.Function
 func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingExpression) ast.Repr {
 	value := interpreter.evalExpression(expression.Expression)
 
+	getLocationRange := locationRangeGetter(interpreter.Location, expression.Expression)
+
 	expectedType := interpreter.Program.Elaboration.CastingTargetTypes[expression]
 
 	switch expression.Operation {
@@ -781,7 +797,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 			}
 
 			// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
-			value = BoxOptional(value, expectedType)
+			value = interpreter.BoxOptional(getLocationRange, value, expectedType)
 
 			return NewSomeValueNonCopying(value)
 
@@ -795,7 +811,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 			}
 
 			// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
-			return BoxOptional(value, expectedType)
+			return interpreter.BoxOptional(getLocationRange, value, expectedType)
 
 		default:
 			panic(errors.NewUnreachableError())
@@ -804,7 +820,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 	case ast.OperationCast:
 		staticValueType := interpreter.Program.Elaboration.CastingStaticValueTypes[expression]
 		// The cast may upcast to an optional type, e.g. `1 as Int?`, so box
-		return ConvertAndBox(value, staticValueType, expectedType)
+		return interpreter.ConvertAndBox(getLocationRange, value, staticValueType, expectedType)
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -846,9 +862,11 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 		// references to optionals are transformed into optional references, so move
 		// the *SomeValue out to the reference itself
 		case *SomeValue:
+			getLocationRange := locationRangeGetter(interpreter.Location, referenceExpression.Expression)
+
 			return NewSomeValueNonCopying(&EphemeralReferenceValue{
 				Authorized:   innerBorrowType.Authorized,
-				Value:        result.Value,
+				Value:        result.InnerValue(interpreter, getLocationRange),
 				BorrowedType: innerBorrowType.Type,
 			})
 		case NilValue:
@@ -875,7 +893,8 @@ func (interpreter *Interpreter) VisitForceExpression(expression *ast.ForceExpres
 
 	switch result := result.(type) {
 	case *SomeValue:
-		return result.Value
+		getLocationRange := locationRangeGetter(interpreter.Location, expression.Expression)
+		return result.InnerValue(interpreter, getLocationRange)
 
 	case NilValue:
 		panic(
