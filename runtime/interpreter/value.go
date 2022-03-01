@@ -926,13 +926,24 @@ func NewArrayValueWithIterator(
 	values func() Value,
 ) *ArrayValue {
 
+	var v *ArrayValue
+
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
+
 		defer func() {
-			// TODO figure out how to pass member counts here without iterating
+			// NOTE: in defer, as v is only initialized at the end of the function,
+			// if there was no error during construction
+			if v == nil {
+				return
+			}
+
+			typeInfo := v.Type.String()
+			count := v.Count()
+
 			interpreter.reportArrayValueConstructTrace(
-				arrayType.String(),
-				-1,
+				typeInfo,
+				count,
 				time.Since(startTime),
 			)
 		}()
@@ -950,10 +961,12 @@ func NewArrayValueWithIterator(
 		panic(ExternalError{err})
 	}
 
-	return &ArrayValue{
+	v = &ArrayValue{
 		Type:  arrayType,
 		array: array,
 	}
+
+	return v
 }
 
 var _ Value = &ArrayValue{}
@@ -1021,10 +1034,14 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, getLocationRange func() L
 
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
+
+		typeInfo := v.Type.String()
+		count := v.Count()
+
 		defer func() {
 			interpreter.reportArrayValueDestroyTrace(
-				v.Type.String(),
-				v.Count(),
+				typeInfo,
+				count,
 				time.Since(startTime),
 			)
 		}()
@@ -1431,12 +1448,17 @@ func (v *ArrayValue) ConformsToDynamicType(
 	results TypeConformanceResults,
 ) bool {
 
+	count := v.Count()
+
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
+
+		typeInfo := v.Type.String()
+
 		defer func() {
 			interpreter.reportArrayValueConformsToDynamicTypeTrace(
-				v.Type.String(),
-				v.Count(),
+				typeInfo,
+				count,
 				time.Since(startTime),
 			)
 		}()
@@ -1444,7 +1466,7 @@ func (v *ArrayValue) ConformsToDynamicType(
 
 	arrayType, ok := dynamicType.(*ArrayDynamicType)
 
-	if !ok || v.Count() != len(arrayType.ElementTypes) {
+	if !ok || count != len(arrayType.ElementTypes) {
 		return false
 	}
 
@@ -1521,10 +1543,14 @@ func (v *ArrayValue) Transfer(
 
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
+
+		typeInfo := v.Type.String()
+		count := v.Count()
+
 		defer func() {
 			interpreter.reportArrayValueTransferTrace(
-				v.Type.String(),
-				v.Count(),
+				typeInfo,
+				count,
 				time.Since(startTime),
 			)
 		}()
@@ -1617,10 +1643,14 @@ func (v *ArrayValue) DeepRemove(interpreter *Interpreter) {
 
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
+
+		typeInfo := v.Type.String()
+		count := v.Count()
+
 		defer func() {
 			interpreter.reportArrayValueDeepRemoveTrace(
-				v.Type.String(),
-				v.Count(),
+				typeInfo,
+				count,
 				time.Since(startTime),
 			)
 		}()
@@ -10887,13 +10917,26 @@ func NewCompositeValue(
 	address common.Address,
 ) *CompositeValue {
 
+	var v *CompositeValue
+
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
+
 		defer func() {
+			// NOTE: in defer, as v is only initialized at the end of the function
+			// if there was no error during construction
+			if v == nil {
+				return
+			}
+
+			owner := v.GetOwner().String()
+			typeID := string(v.TypeID())
+			kind := v.Kind.String()
+
 			interpreter.reportCompositeValueConstructTrace(
-				address.String(),
-				qualifiedIdentifier,
-				kind.String(),
+				owner,
+				typeID,
+				kind,
 				time.Since(startTime),
 			)
 		}()
@@ -10913,7 +10956,7 @@ func NewCompositeValue(
 		panic(ExternalError{err})
 	}
 
-	v := &CompositeValue{
+	v = &CompositeValue{
 		dictionary:          dictionary,
 		Location:            location,
 		QualifiedIdentifier: qualifiedIdentifier,
@@ -10997,11 +11040,16 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func
 
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
+
+		owner := v.GetOwner().String()
+		typeID := string(v.TypeID())
+		kind := v.Kind.String()
+
 		defer func() {
 			interpreter.reportCompositeValueDestroyTrace(
-				v.GetOwner().String(),
-				string(v.TypeID()),
-				v.Kind.String(),
+				owner,
+				typeID,
+				kind,
 				time.Since(startTime),
 			)
 		}()
@@ -11035,11 +11083,16 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange fu
 
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
+
+		owner := v.GetOwner().String()
+		typeID := string(v.TypeID())
+		kind := v.Kind.String()
+
 		defer func() {
 			interpreter.reportCompositeValueGetMemberTrace(
-				v.GetOwner().String(),
-				string(v.TypeID()),
-				v.Kind.String(),
+				owner,
+				typeID,
+				kind,
 				name,
 				time.Since(startTime),
 			)
@@ -11155,13 +11208,19 @@ func (v *CompositeValue) RemoveMember(
 	getLocationRange func() LocationRange,
 	name string,
 ) Value {
+
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
+
+		owner := v.GetOwner().String()
+		typeID := string(v.TypeID())
+		kind := v.Kind.String()
+
 		defer func() {
 			interpreter.reportCompositeValueRemoveMemberTrace(
-				v.GetOwner().String(),
-				string(v.TypeID()),
-				v.Kind.String(),
+				owner,
+				typeID,
+				kind,
 				name,
 				time.Since(startTime),
 			)
@@ -11209,11 +11268,16 @@ func (v *CompositeValue) SetMember(
 ) {
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
+
+		owner := v.GetOwner().String()
+		typeID := string(v.TypeID())
+		kind := v.Kind.String()
+
 		defer func() {
 			interpreter.reportCompositeValueSetMemberTrace(
-				v.GetOwner().String(),
-				string(v.TypeID()),
-				v.Kind.String(),
+				owner,
+				typeID,
+				kind,
 				name,
 				time.Since(startTime),
 			)
@@ -11398,11 +11462,16 @@ func (v *CompositeValue) ConformsToDynamicType(
 
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
+
+		owner := v.GetOwner().String()
+		typeID := string(v.TypeID())
+		kind := v.Kind.String()
+
 		defer func() {
 			interpreter.reportCompositeValueConformsToDynamicTypeTrace(
-				v.GetOwner().String(),
-				string(v.TypeID()),
-				v.Kind.String(),
+				owner,
+				typeID,
+				kind,
 				time.Since(startTime),
 			)
 		}()
@@ -11517,11 +11586,16 @@ func (v *CompositeValue) Transfer(
 
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
+
+		owner := v.GetOwner().String()
+		typeID := string(v.TypeID())
+		kind := v.Kind.String()
+
 		defer func() {
 			interpreter.reportCompositeValueTransferTrace(
-				v.GetOwner().String(),
-				string(v.TypeID()),
-				v.Kind.String(),
+				owner,
+				typeID,
+				kind,
 				time.Since(startTime),
 			)
 		}()
@@ -11631,11 +11705,16 @@ func (v *CompositeValue) DeepRemove(interpreter *Interpreter) {
 
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
+
+		owner := v.GetOwner().String()
+		typeID := string(v.TypeID())
+		kind := v.Kind.String()
+
 		defer func() {
 			interpreter.reportCompositeValueDeepRemoveTrace(
-				v.GetOwner().String(),
-				string(v.TypeID()),
-				v.Kind.String(),
+				owner,
+				typeID,
+				kind,
 				time.Since(startTime),
 			)
 		}()
@@ -11776,12 +11855,24 @@ func NewDictionaryValueWithAddress(
 	keysAndValues ...Value,
 ) *DictionaryValue {
 
+	var v *DictionaryValue
+
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
+
 		defer func() {
+			// NOTE: in defer, as v is only initialized at the end of the function
+			// if there was no error during construction
+			if v == nil {
+				return
+			}
+
+			typeInfo := v.Type.String()
+			count := v.Count()
+
 			interpreter.reportDictionaryValueConstructTrace(
-				dictionaryType.String(),
-				len(keysAndValues)/2,
+				typeInfo,
+				count,
 				time.Since(startTime),
 			)
 		}()
@@ -11802,7 +11893,7 @@ func NewDictionaryValueWithAddress(
 		panic(ExternalError{err})
 	}
 
-	v := &DictionaryValue{
+	v = &DictionaryValue{
 		Type:       dictionaryType,
 		dictionary: dictionary,
 	}
@@ -11895,10 +11986,14 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, getLocationRange fun
 
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
+
+		typeInfo := v.Type.String()
+		count := v.Count()
+
 		defer func() {
 			interpreter.reportDictionaryValueDestroyTrace(
-				v.Type.String(),
-				v.Count(),
+				typeInfo,
+				count,
 				time.Since(startTime),
 			)
 		}()
@@ -12036,10 +12131,14 @@ func (v *DictionaryValue) GetMember(
 
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
+
+		typeInfo := v.Type.String()
+		count := v.Count()
+
 		defer func() {
 			interpreter.reportDictionaryValueGetMemberTrace(
-				v.Type.String(),
-				v.Count(),
+				typeInfo,
+				count,
 				name,
 				time.Since(startTime),
 			)
@@ -12305,19 +12404,24 @@ func (v *DictionaryValue) ConformsToDynamicType(
 	results TypeConformanceResults,
 ) bool {
 
+	count := v.Count()
+
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
+
+		typeInfo := v.Type.String()
+
 		defer func() {
 			interpreter.reportDictionaryValueConformsToDynamicTypeTrace(
-				v.Type.String(),
-				v.Count(),
+				typeInfo,
+				count,
 				time.Since(startTime),
 			)
 		}()
 	}
 
 	dictionaryType, ok := dynamicType.(*DictionaryDynamicType)
-	if !ok || v.Count() != len(dictionaryType.EntryTypes) {
+	if !ok || count != len(dictionaryType.EntryTypes) {
 		return false
 	}
 
@@ -12435,10 +12539,14 @@ func (v *DictionaryValue) Transfer(
 
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
+
+		typeInfo := v.Type.String()
+		count := v.Count()
+
 		defer func() {
 			interpreter.reportDictionaryValueTransferTrace(
-				v.Type.String(),
-				v.Count(),
+				typeInfo,
+				count,
 				time.Since(startTime),
 			)
 		}()
@@ -12544,10 +12652,14 @@ func (v *DictionaryValue) DeepRemove(interpreter *Interpreter) {
 
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
+
+		typeInfo := v.Type.String()
+		count := v.Count()
+
 		defer func() {
 			interpreter.reportDictionaryValueDeepRemoveTrace(
-				v.Type.String(),
-				v.Count(),
+				typeInfo,
+				count,
 				time.Since(startTime),
 			)
 		}()

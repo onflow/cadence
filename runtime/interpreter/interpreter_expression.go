@@ -531,8 +531,12 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 	// tracing
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
+		invokedExpression := invocationExpression.InvokedExpression.String()
 		defer func() {
-			interpreter.reportFunctionTrace(invocationExpression.InvokedExpression.String(), time.Since(startTime))
+			interpreter.reportFunctionTrace(
+				invokedExpression,
+				time.Since(startTime),
+			)
 		}()
 	}
 
