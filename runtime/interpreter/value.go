@@ -1258,8 +1258,8 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, getLocationRange func() L
 				time.Since(startTime),
 			)
 		}()
-  }
-  
+	}
+
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
 	}
@@ -11768,8 +11768,8 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func
 				time.Since(startTime),
 			)
 		}()
-  }
-  
+	}
+
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(getLocationRange)
 	}
@@ -11814,8 +11814,8 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange fu
 				time.Since(startTime),
 			)
 		}()
-  }
-  
+	}
+
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(getLocationRange)
 	}
@@ -12001,8 +12001,8 @@ func (v *CompositeValue) SetMember(
 				time.Since(startTime),
 			)
 		}()
-  }
-  
+	}
+
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(getLocationRange)
 	}
@@ -12329,8 +12329,8 @@ func (v *CompositeValue) Transfer(
 				time.Since(startTime),
 			)
 		}()
-  }
-  
+	}
+
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(getLocationRange)
 	}
@@ -12820,8 +12820,8 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, getLocationRange fun
 				time.Since(startTime),
 			)
 		}()
-  }
-  
+	}
+
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
 	}
@@ -12980,8 +12980,8 @@ func (v *DictionaryValue) GetMember(
 				time.Since(startTime),
 			)
 		}()
-  }
-  
+	}
+
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
 	}
