@@ -76,6 +76,12 @@ func (checker *Checker) VisitUnaryExpression(expression *ast.UnaryExpression) as
 			return InvalidType
 		}
 
+		checker.recordResourceInvalidation(
+			expression.Expression,
+			valueType,
+			ResourceInvalidationKindMoveDefinite,
+		)
+
 		return valueType
 	}
 
