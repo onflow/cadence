@@ -863,12 +863,6 @@ func (checker *Checker) checkResourceMoveOperation(valueExpression ast.Expressio
 		)
 		return
 	}
-
-	checker.recordResourceInvalidation(
-		unaryExpression.Expression,
-		valueType,
-		ResourceInvalidationKindMoveDefinite,
-	)
 }
 
 func (checker *Checker) inLoop() bool {
