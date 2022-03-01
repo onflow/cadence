@@ -1734,7 +1734,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func()
 				)
 			},
 			sema.ArrayFirstIndexFunctionType(
-				v.SemaType(inter).ElementType(false),
+				v.SemaType(interpreter).ElementType(false),
 			),
 		)
 
