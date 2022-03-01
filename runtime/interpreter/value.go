@@ -12385,7 +12385,7 @@ func (v *CompositeValue) Transfer(
 		v.checkInvalidatedResourceUse(getLocationRange)
 	}
 
-	if interpreter.tracingEnabled && v.dictionary != nil {
+	if interpreter.tracingEnabled {
 		startTime := time.Now()
 
 		owner := v.GetOwner().String()
