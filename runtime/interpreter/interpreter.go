@@ -4593,21 +4593,15 @@ func (interpreter *Interpreter) startResourceTracking(
 	identifier string,
 	hasPosition ast.HasPosition,
 ) {
-	if !interpreter.invalidatedResourceValidationEnabled {
+
+	if !interpreter.invalidatedResourceValidationEnabled ||
+		identifier == sema.SelfIdentifier {
 		return
 	}
 
-	if value == nil || !value.IsResourceKinded(interpreter) {
+	resourceKindedValue := interpreter.resourceForValidation(value)
+	if resourceKindedValue == nil {
 		return
-	}
-
-	if identifier == sema.SelfIdentifier {
-		return
-	}
-
-	resourceKindedValue, ok := value.(ResourceKindedValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
 	}
 
 	// A resource value can be associated with only one variable at a time.
@@ -4638,21 +4632,15 @@ func (interpreter *Interpreter) checkInvalidatedResourceUse(
 	identifier string,
 	hasPosition ast.HasPosition,
 ) {
-	if !interpreter.invalidatedResourceValidationEnabled {
+
+	if !interpreter.invalidatedResourceValidationEnabled ||
+		identifier == sema.SelfIdentifier {
 		return
 	}
 
-	if value == nil || !value.IsResourceKinded(interpreter) {
+	resourceKindedValue := interpreter.resourceForValidation(value)
+	if resourceKindedValue == nil {
 		return
-	}
-
-	if identifier == sema.SelfIdentifier {
-		return
-	}
-
-	resourceKindedValue, ok := value.(ResourceKindedValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
 	}
 
 	// A resource value can be associated with only one variable at a time.
@@ -4669,6 +4657,23 @@ func (interpreter *Interpreter) checkInvalidatedResourceUse(
 			},
 		})
 	}
+}
+
+func (interpreter *Interpreter) resourceForValidation(value Value) ResourceKindedValue {
+	switch typedValue := value.(type) {
+	case *SomeValue:
+		// Optional value's inner value could be nil, if it was a resource
+		// and has been invalidated.
+		if typedValue.value == nil || value.IsResourceKinded(interpreter) {
+			return typedValue
+		}
+	case ResourceKindedValue:
+		if value.IsResourceKinded(interpreter) {
+			return typedValue
+		}
+	}
+
+	return nil
 }
 
 func (interpreter *Interpreter) invalidateResource(value Value) {
