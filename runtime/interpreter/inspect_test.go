@@ -71,8 +71,8 @@ func TestInspectValue(t *testing.T) {
 	// Get actually stored values.
 	// The values above were removed when they were inserted into the containers.
 
-	optionalValue := compositeValue.GetField("value").(*SomeValue)
-	arrayValue := optionalValue.Value.(*ArrayValue)
+	optionalValue := compositeValue.GetField(inter, ReturnEmptyLocationRange, "value").(*SomeValue)
+	arrayValue := optionalValue.InnerValue(inter, ReturnEmptyLocationRange).(*ArrayValue)
 	dictValue := arrayValue.Get(inter, ReturnEmptyLocationRange, 0).(*DictionaryValue)
 	dictValueKey := NewStringValue("hello world")
 

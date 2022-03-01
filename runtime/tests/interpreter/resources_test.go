@@ -22,7 +22,10 @@ import (
 	"testing"
 
 	"github.com/onflow/atree"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/cadence/runtime/sema"
 
 	"github.com/onflow/cadence/runtime/tests/checker"
 	. "github.com/onflow/cadence/runtime/tests/utils"
@@ -567,5 +570,1137 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 			),
 			value,
 		)
+	})
+}
+
+func TestInterpretInvalidatedResourceValidation(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("after transfer", func(t *testing.T) {
+
+		t.Run("transfer", func(t *testing.T) {
+
+			t.Run("single", func(t *testing.T) {
+
+				t.Parallel()
+
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
+                      resource R {
+                          let n: Int
+
+                          init(n: Int) {
+                              self.n = n
+                          }
+                      }
+
+                      fun f(_ r: @R): Int {
+                          let n = r.n
+                          destroy r
+                          return n
+                      }
+
+                      fun test(): Int {
+                          let r <- create R(n: 1)
+                          let r2 <- r
+                          let n = f(<- r)
+                          destroy r2
+                          return n
+                      }
+                    `,
+					ParseCheckAndInterpretOptions{
+						HandleCheckerError: func(err error) {
+							errs := checker.ExpectCheckerErrors(t, err, 1)
+							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+						},
+					},
+				)
+				require.NoError(t, err)
+
+				_, err = inter.Invoke("test")
+				require.Error(t, err)
+
+				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 19, invalidatedResourceErr.StartPosition().Line)
+			})
+
+			t.Run("optional", func(t *testing.T) {
+
+				t.Parallel()
+
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
+                      resource R {
+                          let n: Int
+
+                          init(n: Int) {
+                              self.n = n
+                          }
+                      }
+
+                      fun f(_ r: @R?): Int {
+                          let n = r?.n!
+                          destroy r
+                          return n
+                      }
+
+                      fun test(): Int {
+                          let r: @R? <- create R(n: 1)
+                          let r2 <- r
+                          let n = f(<- r)
+                          destroy r2
+                          return n
+                      }
+                    `,
+					ParseCheckAndInterpretOptions{
+						HandleCheckerError: func(err error) {
+							errs := checker.ExpectCheckerErrors(t, err, 1)
+							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+						},
+					},
+				)
+				require.NoError(t, err)
+
+				_, err = inter.Invoke("test")
+				require.Error(t, err)
+
+				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 19, invalidatedResourceErr.StartPosition().Line)
+			})
+
+			t.Run("array", func(t *testing.T) {
+
+				t.Parallel()
+
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
+                      resource R {
+                          let n: Int
+
+                          init(n: Int) {
+                              self.n = n
+                          }
+                      }
+
+                      fun f(_ rs: @[R]): Int {
+                          let n = rs[0].n
+                          destroy rs
+                          return n
+                      }
+
+                      fun test(): Int {
+                          let rs <- [<- create R(n: 1)]
+                          let rs2 <- rs
+                          let n = f(<- rs)
+                          destroy rs2
+                          return n
+                      }
+                    `,
+					ParseCheckAndInterpretOptions{
+						HandleCheckerError: func(err error) {
+							errs := checker.ExpectCheckerErrors(t, err, 1)
+							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+						},
+					},
+				)
+				require.NoError(t, err)
+
+				_, err = inter.Invoke("test")
+				require.Error(t, err)
+
+				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 19, invalidatedResourceErr.StartPosition().Line)
+			})
+
+			t.Run("dictionary", func(t *testing.T) {
+
+				t.Parallel()
+
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
+                      resource R {
+                          let n: Int
+
+                          init(n: Int) {
+                              self.n = n
+                          }
+                      }
+
+                      fun f(_ rs: @{Int: R}): Int {
+                          let n = rs[0]?.n!
+                          destroy rs
+                          return n
+                      }
+
+                      fun test(): Int {
+                          let rs <- {0: <- create R(n: 1)}
+                          let rs2 <- rs
+                          let n = f(<- rs)
+                          destroy rs2
+                          return n
+                      }
+                    `,
+					ParseCheckAndInterpretOptions{
+						HandleCheckerError: func(err error) {
+							errs := checker.ExpectCheckerErrors(t, err, 1)
+							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+						},
+					},
+				)
+				require.NoError(t, err)
+
+				_, err = inter.Invoke("test")
+				require.Error(t, err)
+
+				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 19, invalidatedResourceErr.StartPosition().Line)
+			})
+		})
+
+		t.Run("field read", func(t *testing.T) {
+
+			t.Run("single", func(t *testing.T) {
+
+				t.Parallel()
+
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
+                      resource R {
+                          let n: Int
+
+                          init(n: Int) {
+                              self.n = n
+                          }
+                      }
+
+                      fun test(): Int {
+                          let r <- create R(n: 1)
+                          let r2 <- r
+                          let n = r.n
+                          destroy r2
+                          return n
+                      }
+                    `,
+					ParseCheckAndInterpretOptions{
+						HandleCheckerError: func(err error) {
+							errs := checker.ExpectCheckerErrors(t, err, 1)
+							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+						},
+					},
+				)
+				require.NoError(t, err)
+
+				_, err = inter.Invoke("test")
+				require.Error(t, err)
+
+				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 13, invalidatedResourceErr.StartPosition().Line)
+			})
+
+			t.Run("optional", func(t *testing.T) {
+
+				t.Parallel()
+
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
+                      resource R {
+                          let n: Int
+
+                          init(n: Int) {
+                              self.n = n
+                          }
+                      }
+
+                      fun test(): Int {
+                          let r: @R? <- create R(n: 1)
+                          let r2 <- r
+                          let n = r?.n!
+                          destroy r2
+                          return n
+                      }
+                    `,
+					ParseCheckAndInterpretOptions{
+						HandleCheckerError: func(err error) {
+							errs := checker.ExpectCheckerErrors(t, err, 1)
+							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+						},
+					},
+				)
+				require.NoError(t, err)
+
+				_, err = inter.Invoke("test")
+				require.Error(t, err)
+
+				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 13, invalidatedResourceErr.StartPosition().Line)
+			})
+
+			t.Run("array", func(t *testing.T) {
+
+				t.Parallel()
+
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
+                      resource R {
+                          let n: Int
+
+                          init(n: Int) {
+                              self.n = n
+                          }
+                      }
+
+                      fun test(): Int {
+                          let rs <- [<- create R(n: 1)]
+                          let rs2 <- rs
+                          let n = rs[0].n
+                          destroy rs2
+                          return n
+                      }
+                    `,
+					ParseCheckAndInterpretOptions{
+						HandleCheckerError: func(err error) {
+							errs := checker.ExpectCheckerErrors(t, err, 1)
+							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+						},
+					},
+				)
+				require.NoError(t, err)
+
+				_, err = inter.Invoke("test")
+				require.Error(t, err)
+
+				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 13, invalidatedResourceErr.StartPosition().Line)
+			})
+
+			t.Run("dictionary", func(t *testing.T) {
+
+				t.Parallel()
+
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
+                      resource R {
+                          let n: Int
+
+                          init(n: Int) {
+                              self.n = n
+                          }
+                      }
+
+                      fun test(): Int {
+                          let rs <- {0: <- create R(n: 1)}
+                          let rs2 <- rs
+                          let n = rs[0]?.n!
+                          destroy rs2
+                          return n
+                      }
+                    `,
+					ParseCheckAndInterpretOptions{
+						HandleCheckerError: func(err error) {
+							errs := checker.ExpectCheckerErrors(t, err, 1)
+							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+						},
+					},
+				)
+				require.NoError(t, err)
+
+				_, err = inter.Invoke("test")
+				require.Error(t, err)
+
+				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 13, invalidatedResourceErr.StartPosition().Line)
+			})
+		})
+
+		t.Run("field write", func(t *testing.T) {
+
+			t.Run("single", func(t *testing.T) {
+
+				t.Parallel()
+
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
+                      resource R {
+                          var n: Int
+
+                          init(n: Int) {
+                              self.n = n
+                          }
+                      }
+
+                      fun test() {
+                          let r <- create R(n: 1)
+                          let r2 <- r
+                          r.n = 2
+                          destroy r2
+                      }
+                    `,
+					ParseCheckAndInterpretOptions{
+						HandleCheckerError: func(err error) {
+							errs := checker.ExpectCheckerErrors(t, err, 1)
+							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+						},
+					},
+				)
+				require.NoError(t, err)
+
+				_, err = inter.Invoke("test")
+				require.Error(t, err)
+
+				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 13, invalidatedResourceErr.StartPosition().Line)
+			})
+
+			// TODO: optional (how?)
+
+			t.Run("array", func(t *testing.T) {
+
+				t.Parallel()
+
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
+                      resource R {
+                          var n: Int
+
+                          init(n: Int) {
+                              self.n = n
+                          }
+                      }
+
+                      fun test() {
+                          let rs <- [<- create R(n: 1)]
+                          let rs2 <- rs
+                          rs[0].n = 2
+                          destroy rs2
+                      }
+                    `,
+					ParseCheckAndInterpretOptions{
+						HandleCheckerError: func(err error) {
+							errs := checker.ExpectCheckerErrors(t, err, 1)
+							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+						},
+					},
+				)
+				require.NoError(t, err)
+
+				_, err = inter.Invoke("test")
+				require.Error(t, err)
+
+				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 13, invalidatedResourceErr.StartPosition().Line)
+			})
+
+			// TODO: dictionary (how?)
+		})
+
+		t.Run("destruction", func(t *testing.T) {
+
+			t.Run("single", func(t *testing.T) {
+
+				t.Parallel()
+
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
+                      resource R {}
+
+                      fun test() {
+                          let r <- create R()
+                          let r2 <- r
+                          destroy r
+                          destroy r2
+                      }
+                    `,
+					ParseCheckAndInterpretOptions{
+						HandleCheckerError: func(err error) {
+							errs := checker.ExpectCheckerErrors(t, err, 1)
+							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+						},
+					},
+				)
+				require.NoError(t, err)
+
+				_, err = inter.Invoke("test")
+				require.Error(t, err)
+
+				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 7, invalidatedResourceErr.StartPosition().Line)
+			})
+
+			t.Run("optional", func(t *testing.T) {
+
+				t.Parallel()
+
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
+                      resource R {}
+
+                      fun test() {
+                          let r: @R? <- create R()
+                          let r2 <- r
+                          destroy r
+                          destroy r2
+                      }
+                    `,
+					ParseCheckAndInterpretOptions{
+						HandleCheckerError: func(err error) {
+							errs := checker.ExpectCheckerErrors(t, err, 1)
+							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+						},
+					},
+				)
+				require.NoError(t, err)
+
+				_, err = inter.Invoke("test")
+				require.Error(t, err)
+
+				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 7, invalidatedResourceErr.StartPosition().Line)
+			})
+
+			t.Run("array", func(t *testing.T) {
+
+				t.Parallel()
+
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
+                      resource R {}
+
+                      fun test() {
+                          let rs <- [<- create R()]
+                          let rs2 <- rs
+                          destroy rs
+                          destroy rs2
+                      }
+                    `,
+					ParseCheckAndInterpretOptions{
+						HandleCheckerError: func(err error) {
+							errs := checker.ExpectCheckerErrors(t, err, 1)
+							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+						},
+					},
+				)
+				require.NoError(t, err)
+
+				_, err = inter.Invoke("test")
+				require.Error(t, err)
+
+				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				require.ErrorAs(t, err, &invalidatedResourceErr)
+			})
+
+			t.Run("dictionary", func(t *testing.T) {
+
+				t.Parallel()
+
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
+                      resource R {}
+
+                      fun test() {
+                          let rs <- {0: <- create R()}
+                          let rs2 <- rs
+                          destroy rs
+                          destroy rs2
+                      }
+                    `,
+					ParseCheckAndInterpretOptions{
+						HandleCheckerError: func(err error) {
+							errs := checker.ExpectCheckerErrors(t, err, 1)
+							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+						},
+					},
+				)
+				require.NoError(t, err)
+
+				_, err = inter.Invoke("test")
+				require.Error(t, err)
+
+				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 7, invalidatedResourceErr.StartPosition().Line)
+			})
+		})
+	})
+
+	t.Run("after destruction", func(t *testing.T) {
+
+		t.Run("transfer", func(t *testing.T) {
+
+			t.Run("single", func(t *testing.T) {
+
+				t.Parallel()
+
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
+                      resource R {
+                          let n: Int
+
+                          init(n: Int) {
+                              self.n = n
+                          }
+                      }
+
+                      fun f(_ r: @R): Int {
+                          let n = r.n
+                          destroy r
+                          return n
+                      }
+
+                      fun test(): Int {
+                          let r <- create R(n: 1)
+                          destroy r
+                          let n = f(<- r)
+                          return n
+                      }
+                    `,
+					ParseCheckAndInterpretOptions{
+						HandleCheckerError: func(err error) {
+							errs := checker.ExpectCheckerErrors(t, err, 1)
+							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+						},
+					},
+				)
+				require.NoError(t, err)
+
+				_, err = inter.Invoke("test")
+				require.Error(t, err)
+
+				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 19, invalidatedResourceErr.StartPosition().Line)
+			})
+
+			t.Run("optional", func(t *testing.T) {
+
+				t.Parallel()
+
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
+                      resource R {
+                          let n: Int
+
+                          init(n: Int) {
+                              self.n = n
+                          }
+                      }
+
+                      fun f(_ r: @R?): Int {
+                          let n = r?.n!
+                          destroy r
+                          return n
+                      }
+
+                      fun test(): Int {
+                          let r: @R? <- create R(n: 1)
+                          destroy r
+                          let n = f(<- r)
+                          return n
+                      }
+                    `,
+					ParseCheckAndInterpretOptions{
+						HandleCheckerError: func(err error) {
+							errs := checker.ExpectCheckerErrors(t, err, 1)
+							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+						},
+					},
+				)
+				require.NoError(t, err)
+
+				_, err = inter.Invoke("test")
+				require.Error(t, err)
+
+				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 19, invalidatedResourceErr.StartPosition().Line)
+			})
+
+			t.Run("array", func(t *testing.T) {
+
+				t.Parallel()
+
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
+                      resource R {
+                          let n: Int
+
+                          init(n: Int) {
+                              self.n = n
+                          }
+                      }
+
+                      fun f(_ rs: @[R]): Int {
+                          let n = rs[0].n
+                          destroy rs
+                          return n
+                      }
+
+                      fun test(): Int {
+                          let rs <- [<- create R(n: 1)]
+                          destroy rs
+                          let n = f(<- rs)
+                          return n
+                      }
+                    `,
+					ParseCheckAndInterpretOptions{
+						HandleCheckerError: func(err error) {
+							errs := checker.ExpectCheckerErrors(t, err, 1)
+							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+						},
+					},
+				)
+				require.NoError(t, err)
+
+				_, err = inter.Invoke("test")
+				require.Error(t, err)
+
+				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 19, invalidatedResourceErr.StartPosition().Line)
+			})
+
+			t.Run("dictionary", func(t *testing.T) {
+
+				t.Parallel()
+
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
+                      resource R {
+                          let n: Int
+
+                          init(n: Int) {
+                              self.n = n
+                          }
+                      }
+
+                      fun f(_ rs: @{Int: R}): Int {
+                          let n = rs[0]?.n!
+                          destroy rs
+                          return n
+                      }
+
+                      fun test(): Int {
+                          let rs <- {0: <- create R(n: 1)}
+                          destroy rs
+                          let n = f(<- rs)
+                          return n
+                      }
+                    `,
+					ParseCheckAndInterpretOptions{
+						HandleCheckerError: func(err error) {
+							errs := checker.ExpectCheckerErrors(t, err, 1)
+							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+						},
+					},
+				)
+				require.NoError(t, err)
+
+				_, err = inter.Invoke("test")
+				require.Error(t, err)
+
+				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 19, invalidatedResourceErr.StartPosition().Line)
+			})
+		})
+
+		t.Run("field read", func(t *testing.T) {
+
+			t.Run("single", func(t *testing.T) {
+
+				t.Parallel()
+
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
+                      resource R {
+                          let n: Int
+
+                          init(n: Int) {
+                              self.n = n
+                          }
+                      }
+
+                      fun test(): Int {
+                          let r <- create R(n: 1)
+                          destroy r
+                          return r.n
+                      }
+                    `,
+					ParseCheckAndInterpretOptions{
+						HandleCheckerError: func(err error) {
+							errs := checker.ExpectCheckerErrors(t, err, 1)
+							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+						},
+					},
+				)
+				require.NoError(t, err)
+
+				_, err = inter.Invoke("test")
+				require.Error(t, err)
+
+				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 13, invalidatedResourceErr.StartPosition().Line)
+			})
+
+			t.Run("optional", func(t *testing.T) {
+
+				t.Parallel()
+
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
+                      resource R {
+                          let n: Int
+
+                          init(n: Int) {
+                              self.n = n
+                          }
+                      }
+
+                      fun test(): Int {
+                          let r: @R? <- create R(n: 1)
+                          destroy r
+                          return r?.n!
+                      }
+                    `,
+					ParseCheckAndInterpretOptions{
+						HandleCheckerError: func(err error) {
+							errs := checker.ExpectCheckerErrors(t, err, 1)
+							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+						},
+					},
+				)
+				require.NoError(t, err)
+
+				_, err = inter.Invoke("test")
+				require.Error(t, err)
+
+				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 13, invalidatedResourceErr.StartPosition().Line)
+			})
+
+			t.Run("array", func(t *testing.T) {
+
+				t.Parallel()
+
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
+                      resource R {
+                          let n: Int
+
+                          init(n: Int) {
+                              self.n = n
+                          }
+                      }
+
+                      fun test(): Int {
+                          let rs <- [<-create R(n: 1)]
+                          destroy rs
+                          return rs[0].n
+                      }
+                    `,
+					ParseCheckAndInterpretOptions{
+						HandleCheckerError: func(err error) {
+							errs := checker.ExpectCheckerErrors(t, err, 1)
+							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+						},
+					},
+				)
+				require.NoError(t, err)
+
+				_, err = inter.Invoke("test")
+				require.Error(t, err)
+
+				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 13, invalidatedResourceErr.StartPosition().Line)
+			})
+
+			t.Run("dictionary", func(t *testing.T) {
+
+				t.Parallel()
+
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
+                      resource R {
+                          let n: Int
+
+                          init(n: Int) {
+                              self.n = n
+                          }
+                      }
+
+                      fun test(): Int {
+                          let rs <- {0: <-create R(n: 1)}
+                          destroy rs
+                          return rs[0]?.n!
+                      }
+                    `,
+					ParseCheckAndInterpretOptions{
+						HandleCheckerError: func(err error) {
+							errs := checker.ExpectCheckerErrors(t, err, 1)
+							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+						},
+					},
+				)
+				require.NoError(t, err)
+
+				_, err = inter.Invoke("test")
+				require.Error(t, err)
+
+				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 13, invalidatedResourceErr.StartPosition().Line)
+			})
+		})
+
+		t.Run("field write", func(t *testing.T) {
+
+			t.Run("single", func(t *testing.T) {
+
+				t.Parallel()
+
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
+                      resource R {
+                          var n: Int
+
+                          init(n: Int) {
+                              self.n = n
+                          }
+                      }
+
+                      fun test() {
+                          let r <- create R(n: 1)
+                          destroy r
+                          r.n = 2
+                      }
+                    `,
+					ParseCheckAndInterpretOptions{
+						HandleCheckerError: func(err error) {
+							errs := checker.ExpectCheckerErrors(t, err, 1)
+							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+						},
+					},
+				)
+				require.NoError(t, err)
+
+				_, err = inter.Invoke("test")
+				require.Error(t, err)
+
+				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 13, invalidatedResourceErr.StartPosition().Line)
+			})
+
+			// TODO: optional (how?)
+
+			t.Run("array", func(t *testing.T) {
+
+				t.Parallel()
+
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
+                      resource R {
+                          var n: Int
+
+                          init(n: Int) {
+                              self.n = n
+                          }
+                      }
+
+                      fun test() {
+                          let rs <- [<- create R(n: 1)]
+                          destroy rs
+                          rs[0].n = 2
+                      }
+                    `,
+					ParseCheckAndInterpretOptions{
+						HandleCheckerError: func(err error) {
+							errs := checker.ExpectCheckerErrors(t, err, 1)
+							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+						},
+					},
+				)
+				require.NoError(t, err)
+
+				_, err = inter.Invoke("test")
+				require.Error(t, err)
+
+				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 13, invalidatedResourceErr.StartPosition().Line)
+			})
+
+			// TODO: dictionary (how?)
+
+		})
+
+		t.Run("destruction", func(t *testing.T) {
+
+			t.Run("single", func(t *testing.T) {
+
+				t.Parallel()
+
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
+                      resource R {}
+
+                      fun test() {
+                          let r <- create R()
+                          destroy r
+                          destroy r
+                      }
+                    `,
+					ParseCheckAndInterpretOptions{
+						HandleCheckerError: func(err error) {
+							errs := checker.ExpectCheckerErrors(t, err, 1)
+							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+						},
+					},
+				)
+				require.NoError(t, err)
+
+				_, err = inter.Invoke("test")
+				require.Error(t, err)
+
+				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 7, invalidatedResourceErr.StartPosition().Line)
+			})
+
+			t.Run("optional", func(t *testing.T) {
+
+				t.Parallel()
+
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
+                      resource R {}
+
+                      fun test() {
+                          let r: @R? <- create R()
+                          destroy r
+                          destroy r
+                      }
+                    `,
+					ParseCheckAndInterpretOptions{
+						HandleCheckerError: func(err error) {
+							errs := checker.ExpectCheckerErrors(t, err, 1)
+							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+						},
+					},
+				)
+				require.NoError(t, err)
+
+				_, err = inter.Invoke("test")
+				require.Error(t, err)
+
+				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 7, invalidatedResourceErr.StartPosition().Line)
+			})
+
+			t.Run("array", func(t *testing.T) {
+
+				t.Parallel()
+
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
+                      resource R {}
+
+                      fun test() {
+                          let rs <- [<-create R()]
+                          destroy rs
+                          destroy rs
+                      }
+                    `,
+					ParseCheckAndInterpretOptions{
+						HandleCheckerError: func(err error) {
+							errs := checker.ExpectCheckerErrors(t, err, 1)
+							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+						},
+					},
+				)
+				require.NoError(t, err)
+
+				_, err = inter.Invoke("test")
+				require.Error(t, err)
+
+				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 7, invalidatedResourceErr.StartPosition().Line)
+			})
+
+			t.Run("dictionary", func(t *testing.T) {
+
+				t.Parallel()
+
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					`
+                      resource R {}
+
+                      fun test() {
+                          let rs <- {0: <-create R()}
+                          destroy rs
+                          destroy rs
+                      }
+                    `,
+					ParseCheckAndInterpretOptions{
+						HandleCheckerError: func(err error) {
+							errs := checker.ExpectCheckerErrors(t, err, 1)
+							require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+						},
+					},
+				)
+				require.NoError(t, err)
+
+				_, err = inter.Invoke("test")
+				require.Error(t, err)
+
+				var invalidatedResourceErr interpreter.InvalidatedResourceError
+				require.ErrorAs(t, err, &invalidatedResourceErr)
+
+				assert.Equal(t, 7, invalidatedResourceErr.StartPosition().Line)
+			})
+		})
 	})
 }

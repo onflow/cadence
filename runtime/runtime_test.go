@@ -150,6 +150,7 @@ type testRuntimeInterface struct {
 	log                       func(string)
 	emitEvent                 func(cadence.Event) error
 	resourceOwnerChanged      func(
+		interpreter *interpreter.Interpreter,
 		resource *interpreter.CompositeValue,
 		oldAddress common.Address,
 		newAddress common.Address,
@@ -338,12 +339,18 @@ func (i *testRuntimeInterface) EmitEvent(event cadence.Event) error {
 }
 
 func (i *testRuntimeInterface) ResourceOwnerChanged(
+	interpreter *interpreter.Interpreter,
 	resource *interpreter.CompositeValue,
 	oldOwner common.Address,
 	newOwner common.Address,
 ) {
 	if i.resourceOwnerChanged != nil {
-		i.resourceOwnerChanged(resource, oldOwner, newOwner)
+		i.resourceOwnerChanged(
+			interpreter,
+			resource,
+			oldOwner,
+			newOwner,
+		)
 	}
 }
 

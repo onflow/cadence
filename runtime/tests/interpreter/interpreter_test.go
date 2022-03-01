@@ -2206,7 +2206,7 @@ func TestInterpretStructureFieldAssignment(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewIntValueFromInt64(1),
-		test.GetField("foo"),
+		test.GetField(inter, interpreter.ReturnEmptyLocationRange, "foo"),
 	)
 
 	value, err := inter.Invoke("callTest")
@@ -2223,7 +2223,7 @@ func TestInterpretStructureFieldAssignment(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewIntValueFromInt64(3),
-		test.GetField("foo"),
+		test.GetField(inter, interpreter.ReturnEmptyLocationRange, "foo"),
 	)
 }
 
@@ -6977,7 +6977,8 @@ func TestInterpretSwapResourceDictionaryElementReturnDictionary(t *testing.T) {
 
 	assert.IsType(t,
 		&interpreter.CompositeValue{},
-		foo.(*interpreter.SomeValue).Value,
+		foo.(*interpreter.SomeValue).
+			InnerValue(inter, interpreter.ReturnEmptyLocationRange),
 	)
 }
 
@@ -7007,7 +7008,8 @@ func TestInterpretSwapResourceDictionaryElementRemoveUsingNil(t *testing.T) {
 
 	assert.IsType(t,
 		&interpreter.CompositeValue{},
-		value.(*interpreter.SomeValue).Value,
+		value.(*interpreter.SomeValue).
+			InnerValue(inter, interpreter.ReturnEmptyLocationRange),
 	)
 }
 
@@ -7206,7 +7208,8 @@ func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
 		values[0],
 	)
 
-	firstValue := values[0].(*interpreter.SomeValue).Value
+	firstValue := values[0].(*interpreter.SomeValue).
+		InnerValue(inter, interpreter.ReturnEmptyLocationRange)
 
 	require.IsType(t,
 		&interpreter.CompositeValue{},
@@ -7219,7 +7222,7 @@ func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewIntValueFromInt64(2),
-		firstResource.GetField("id"),
+		firstResource.GetField(inter, interpreter.ReturnEmptyLocationRange, "id"),
 	)
 
 	require.IsType(t,
@@ -7227,7 +7230,8 @@ func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
 		values[1],
 	)
 
-	secondValue := values[1].(*interpreter.SomeValue).Value
+	secondValue := values[1].(*interpreter.SomeValue).
+		InnerValue(inter, interpreter.ReturnEmptyLocationRange)
 
 	require.IsType(t,
 		&interpreter.CompositeValue{},
@@ -7240,7 +7244,7 @@ func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewIntValueFromInt64(1),
-		secondResource.GetField("id"),
+		secondResource.GetField(inter, interpreter.ReturnEmptyLocationRange, "id"),
 	)
 }
 
@@ -7583,7 +7587,8 @@ func TestInterpretOptionalChainingFunctionRead(t *testing.T) {
 
 	assert.IsType(t,
 		interpreter.BoundFunctionValue{},
-		inter.Globals["x2"].GetValue().(*interpreter.SomeValue).Value,
+		inter.Globals["x2"].GetValue().(*interpreter.SomeValue).
+			InnerValue(inter, interpreter.ReturnEmptyLocationRange),
 	)
 }
 
@@ -8392,9 +8397,9 @@ func TestInterpretOptionalChainingOptionalFieldRead(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		&interpreter.SomeValue{
-			Value: interpreter.NewIntValueFromInt64(1),
-		},
+		interpreter.NewSomeValueNonCopying(
+			interpreter.NewIntValueFromInt64(1),
+		),
 		inter.Globals["x"].GetValue(),
 	)
 }
