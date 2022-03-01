@@ -926,6 +926,29 @@ func NewArrayValueWithIterator(
 	values func() Value,
 ) *ArrayValue {
 
+	var v *ArrayValue
+
+	if interpreter.tracingEnabled {
+		startTime := time.Now()
+
+		defer func() {
+			// NOTE: in defer, as v is only initialized at the end of the function,
+			// if there was no error during construction
+			if v == nil {
+				return
+			}
+
+			typeInfo := v.Type.String()
+			count := v.Count()
+
+			interpreter.reportArrayValueConstructTrace(
+				typeInfo,
+				count,
+				time.Since(startTime),
+			)
+		}()
+	}
+
 	array, err := atree.NewArrayFromBatchData(
 		interpreter.Storage,
 		atree.Address(address),
@@ -938,10 +961,12 @@ func NewArrayValueWithIterator(
 		panic(ExternalError{err})
 	}
 
-	return &ArrayValue{
+	v = &ArrayValue{
 		Type:  arrayType,
 		array: array,
 	}
+
+	return v
 }
 
 var _ Value = &ArrayValue{}
@@ -1006,6 +1031,22 @@ func (v *ArrayValue) StaticType() StaticType {
 }
 
 func (v *ArrayValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
+
+	if interpreter.tracingEnabled {
+		startTime := time.Now()
+
+		typeInfo := v.Type.String()
+		count := v.Count()
+
+		defer func() {
+			interpreter.reportArrayValueDestroyTrace(
+				typeInfo,
+				count,
+				time.Since(startTime),
+			)
+		}()
+	}
+
 	v.Walk(func(element Value) {
 		maybeDestroy(interpreter, getLocationRange, element)
 	})
@@ -1407,9 +1448,25 @@ func (v *ArrayValue) ConformsToDynamicType(
 	results TypeConformanceResults,
 ) bool {
 
+	count := v.Count()
+
+	if interpreter.tracingEnabled {
+		startTime := time.Now()
+
+		typeInfo := v.Type.String()
+
+		defer func() {
+			interpreter.reportArrayValueConformsToDynamicTypeTrace(
+				typeInfo,
+				count,
+				time.Since(startTime),
+			)
+		}()
+	}
+
 	arrayType, ok := dynamicType.(*ArrayDynamicType)
 
-	if !ok || v.Count() != len(arrayType.ElementTypes) {
+	if !ok || count != len(arrayType.ElementTypes) {
 		return false
 	}
 
@@ -1486,8 +1543,16 @@ func (v *ArrayValue) Transfer(
 
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
+
+		typeInfo := v.Type.String()
+		count := v.Count()
+
 		defer func() {
-			interpreter.reportArrayValueTransferTrace(v.Type.String(), v.Count(), time.Since(startTime))
+			interpreter.reportArrayValueTransferTrace(
+				typeInfo,
+				count,
+				time.Since(startTime),
+			)
 		}()
 	}
 
@@ -1575,6 +1640,21 @@ func (v *ArrayValue) Transfer(
 }
 
 func (v *ArrayValue) DeepRemove(interpreter *Interpreter) {
+
+	if interpreter.tracingEnabled {
+		startTime := time.Now()
+
+		typeInfo := v.Type.String()
+		count := v.Count()
+
+		defer func() {
+			interpreter.reportArrayValueDeepRemoveTrace(
+				typeInfo,
+				count,
+				time.Since(startTime),
+			)
+		}()
+	}
 
 	// Remove nested values and storables
 
@@ -10837,6 +10917,31 @@ func NewCompositeValue(
 	address common.Address,
 ) *CompositeValue {
 
+	var v *CompositeValue
+
+	if interpreter.tracingEnabled {
+		startTime := time.Now()
+
+		defer func() {
+			// NOTE: in defer, as v is only initialized at the end of the function
+			// if there was no error during construction
+			if v == nil {
+				return
+			}
+
+			owner := v.GetOwner().String()
+			typeID := string(v.TypeID())
+			kind := v.Kind.String()
+
+			interpreter.reportCompositeValueConstructTrace(
+				owner,
+				typeID,
+				kind,
+				time.Since(startTime),
+			)
+		}()
+	}
+
 	dictionary, err := atree.NewMap(
 		interpreter.Storage,
 		atree.Address(address),
@@ -10851,7 +10956,7 @@ func NewCompositeValue(
 		panic(ExternalError{err})
 	}
 
-	v := &CompositeValue{
+	v = &CompositeValue{
 		dictionary:          dictionary,
 		Location:            location,
 		QualifiedIdentifier: qualifiedIdentifier,
@@ -10932,6 +11037,24 @@ func (v *CompositeValue) IsDestroyed() bool {
 }
 
 func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
+
+	if interpreter.tracingEnabled {
+		startTime := time.Now()
+
+		owner := v.GetOwner().String()
+		typeID := string(v.TypeID())
+		kind := v.Kind.String()
+
+		defer func() {
+			interpreter.reportCompositeValueDestroyTrace(
+				owner,
+				typeID,
+				kind,
+				time.Since(startTime),
+			)
+		}()
+	}
+
 	interpreter = v.getInterpreter(interpreter)
 
 	// if composite was deserialized, dynamically link in the destructor
@@ -10957,6 +11080,24 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func
 }
 
 func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
+
+	if interpreter.tracingEnabled {
+		startTime := time.Now()
+
+		owner := v.GetOwner().String()
+		typeID := string(v.TypeID())
+		kind := v.Kind.String()
+
+		defer func() {
+			interpreter.reportCompositeValueGetMemberTrace(
+				owner,
+				typeID,
+				kind,
+				name,
+				time.Since(startTime),
+			)
+		}()
+	}
 
 	if v.Kind == common.CompositeKindResource &&
 		name == sema.ResourceOwnerFieldName {
@@ -11068,6 +11209,24 @@ func (v *CompositeValue) RemoveMember(
 	name string,
 ) Value {
 
+	if interpreter.tracingEnabled {
+		startTime := time.Now()
+
+		owner := v.GetOwner().String()
+		typeID := string(v.TypeID())
+		kind := v.Kind.String()
+
+		defer func() {
+			interpreter.reportCompositeValueRemoveMemberTrace(
+				owner,
+				typeID,
+				kind,
+				name,
+				time.Since(startTime),
+			)
+		}()
+	}
+
 	// No need to clean up storable for passed-in key value,
 	// as atree never calls Storable()
 	existingKeyStorable, existingValueStorable, err := v.dictionary.Remove(
@@ -11107,6 +11266,24 @@ func (v *CompositeValue) SetMember(
 	name string,
 	value Value,
 ) {
+	if interpreter.tracingEnabled {
+		startTime := time.Now()
+
+		owner := v.GetOwner().String()
+		typeID := string(v.TypeID())
+		kind := v.Kind.String()
+
+		defer func() {
+			interpreter.reportCompositeValueSetMemberTrace(
+				owner,
+				typeID,
+				kind,
+				name,
+				time.Since(startTime),
+			)
+		}()
+	}
+
 	address := v.StorageID().Address
 
 	value = value.Transfer(
@@ -11282,6 +11459,24 @@ func (v *CompositeValue) ConformsToDynamicType(
 	dynamicType DynamicType,
 	results TypeConformanceResults,
 ) bool {
+
+	if interpreter.tracingEnabled {
+		startTime := time.Now()
+
+		owner := v.GetOwner().String()
+		typeID := string(v.TypeID())
+		kind := v.Kind.String()
+
+		defer func() {
+			interpreter.reportCompositeValueConformsToDynamicTypeTrace(
+				owner,
+				typeID,
+				kind,
+				time.Since(startTime),
+			)
+		}()
+	}
+
 	compositeDynamicType, ok := dynamicType.(CompositeDynamicType)
 	if !ok {
 		return false
@@ -11389,6 +11584,23 @@ func (v *CompositeValue) Transfer(
 	storable atree.Storable,
 ) Value {
 
+	if interpreter.tracingEnabled {
+		startTime := time.Now()
+
+		owner := v.GetOwner().String()
+		typeID := string(v.TypeID())
+		kind := v.Kind.String()
+
+		defer func() {
+			interpreter.reportCompositeValueTransferTrace(
+				owner,
+				typeID,
+				kind,
+				time.Since(startTime),
+			)
+		}()
+	}
+
 	currentStorageID := v.StorageID()
 	currentAddress := currentStorageID.Address
 
@@ -11490,6 +11702,23 @@ func (v *CompositeValue) Transfer(
 }
 
 func (v *CompositeValue) DeepRemove(interpreter *Interpreter) {
+
+	if interpreter.tracingEnabled {
+		startTime := time.Now()
+
+		owner := v.GetOwner().String()
+		typeID := string(v.TypeID())
+		kind := v.Kind.String()
+
+		defer func() {
+			interpreter.reportCompositeValueDeepRemoveTrace(
+				owner,
+				typeID,
+				kind,
+				time.Since(startTime),
+			)
+		}()
+	}
 
 	// Remove nested values and storables
 
@@ -11626,6 +11855,29 @@ func NewDictionaryValueWithAddress(
 	keysAndValues ...Value,
 ) *DictionaryValue {
 
+	var v *DictionaryValue
+
+	if interpreter.tracingEnabled {
+		startTime := time.Now()
+
+		defer func() {
+			// NOTE: in defer, as v is only initialized at the end of the function
+			// if there was no error during construction
+			if v == nil {
+				return
+			}
+
+			typeInfo := v.Type.String()
+			count := v.Count()
+
+			interpreter.reportDictionaryValueConstructTrace(
+				typeInfo,
+				count,
+				time.Since(startTime),
+			)
+		}()
+	}
+
 	keysAndValuesCount := len(keysAndValues)
 	if keysAndValuesCount%2 != 0 {
 		panic("uneven number of keys and values")
@@ -11641,7 +11893,7 @@ func NewDictionaryValueWithAddress(
 		panic(ExternalError{err})
 	}
 
-	v := &DictionaryValue{
+	v = &DictionaryValue{
 		Type:       dictionaryType,
 		dictionary: dictionary,
 	}
@@ -11731,6 +11983,22 @@ func (v *DictionaryValue) IsDestroyed() bool {
 }
 
 func (v *DictionaryValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
+
+	if interpreter.tracingEnabled {
+		startTime := time.Now()
+
+		typeInfo := v.Type.String()
+		count := v.Count()
+
+		defer func() {
+			interpreter.reportDictionaryValueDestroyTrace(
+				typeInfo,
+				count,
+				time.Since(startTime),
+			)
+		}()
+	}
+
 	v.Iterate(func(key, value Value) (resume bool) {
 		// Resources cannot be keys at the moment, so should theoretically not be needed
 		maybeDestroy(interpreter, getLocationRange, key)
@@ -11860,6 +12128,22 @@ func (v *DictionaryValue) GetMember(
 	getLocationRange func() LocationRange,
 	name string,
 ) Value {
+
+	if interpreter.tracingEnabled {
+		startTime := time.Now()
+
+		typeInfo := v.Type.String()
+		count := v.Count()
+
+		defer func() {
+			interpreter.reportDictionaryValueGetMemberTrace(
+				typeInfo,
+				count,
+				name,
+				time.Since(startTime),
+			)
+		}()
+	}
 
 	switch name {
 	case "length":
@@ -12120,8 +12404,24 @@ func (v *DictionaryValue) ConformsToDynamicType(
 	results TypeConformanceResults,
 ) bool {
 
+	count := v.Count()
+
+	if interpreter.tracingEnabled {
+		startTime := time.Now()
+
+		typeInfo := v.Type.String()
+
+		defer func() {
+			interpreter.reportDictionaryValueConformsToDynamicTypeTrace(
+				typeInfo,
+				count,
+				time.Since(startTime),
+			)
+		}()
+	}
+
 	dictionaryType, ok := dynamicType.(*DictionaryDynamicType)
-	if !ok || v.Count() != len(dictionaryType.EntryTypes) {
+	if !ok || count != len(dictionaryType.EntryTypes) {
 		return false
 	}
 
@@ -12239,8 +12539,16 @@ func (v *DictionaryValue) Transfer(
 
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
+
+		typeInfo := v.Type.String()
+		count := v.Count()
+
 		defer func() {
-			interpreter.reportDictionaryValueTransferTrace(v.Type.String(), v.Count(), time.Since(startTime))
+			interpreter.reportDictionaryValueTransferTrace(
+				typeInfo,
+				count,
+				time.Since(startTime),
+			)
 		}()
 	}
 
@@ -12341,6 +12649,21 @@ func (v *DictionaryValue) Transfer(
 }
 
 func (v *DictionaryValue) DeepRemove(interpreter *Interpreter) {
+
+	if interpreter.tracingEnabled {
+		startTime := time.Now()
+
+		typeInfo := v.Type.String()
+		count := v.Count()
+
+		defer func() {
+			interpreter.reportDictionaryValueDeepRemoveTrace(
+				typeInfo,
+				count,
+				time.Since(startTime),
+			)
+		}()
+	}
 
 	// Remove nested values and storables
 

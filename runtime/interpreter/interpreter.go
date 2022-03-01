@@ -2519,6 +2519,8 @@ func (interpreter *Interpreter) NewSubInterpreter(
 			interpreter.BLSAggregateSignaturesHandler,
 			interpreter.BLSAggregatePublicKeysHandler,
 		),
+		WithOnRecordTraceHandler(interpreter.onRecordTrace),
+		WithTracingEnabled(interpreter.tracingEnabled),
 	}
 
 	return NewInterpreter(
