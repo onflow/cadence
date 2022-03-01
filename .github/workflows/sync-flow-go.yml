@@ -38,7 +38,7 @@ jobs:
         run: |
           git fetch
           BRANCH=$(git branch -r -l "*auto-cadence-upgrade/*" --format "%(refname:lstrip=3)" | sort -r | head -n 1)
-          [ -z $BRANCH ] && BRANCH=feature-secure-cadence
+          [ -z $BRANCH ] && BRANCH=feature/secure-cadence
           echo "BASE_BRANCH=$BRANCH" >> $GITHUB_ENV
 
       # create new branch name
