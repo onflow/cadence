@@ -39,7 +39,6 @@ const (
 	tracingConstructPostfix             = "construct"
 	tracingTransferPostfix              = "transfer"
 	tracingConformsToDynamicTypePostfix = "conformsToDynamicType"
-	tracingClonePostfix                 = "clone"
 	tracingDeepRemovePostfix            = "deepRemove"
 	tracingDestroyPostfix               = "destroy"
 
@@ -73,10 +72,6 @@ func (interpreter *Interpreter) reportArrayValueConstructTrace(typeInfo string, 
 	interpreter.onRecordTrace(interpreter, tracingArrayPrefix+tracingConstructPostfix, duration, prepareArrayAndMapValueTraceLogs(typeInfo, count))
 }
 
-func (interpreter *Interpreter) reportArrayValueCloneTrace(typeInfo string, count int, duration time.Duration) {
-	interpreter.onRecordTrace(interpreter, tracingArrayPrefix+tracingClonePostfix, duration, prepareArrayAndMapValueTraceLogs(typeInfo, count))
-}
-
 func (interpreter *Interpreter) reportArrayValueDeepRemoveTrace(typeInfo string, count int, duration time.Duration) {
 	interpreter.onRecordTrace(interpreter, tracingArrayPrefix+tracingDeepRemovePostfix, duration, prepareArrayAndMapValueTraceLogs(typeInfo, count))
 }
@@ -95,10 +90,6 @@ func (interpreter *Interpreter) reportArrayValueConformsToDynamicTypeTrace(typeI
 
 func (interpreter *Interpreter) reportDictionaryValueConstructTrace(typeInfo string, count int, duration time.Duration) {
 	interpreter.onRecordTrace(interpreter, tracingDictionaryPrefix+tracingConstructPostfix, duration, prepareArrayAndMapValueTraceLogs(typeInfo, count))
-}
-
-func (interpreter *Interpreter) reportDictionaryValueCloneTrace(typeInfo string, count int, duration time.Duration) {
-	interpreter.onRecordTrace(interpreter, tracingDictionaryPrefix+tracingClonePostfix, duration, prepareArrayAndMapValueTraceLogs(typeInfo, count))
 }
 
 func (interpreter *Interpreter) reportDictionaryValueDeepRemoveTrace(typeInfo string, count int, duration time.Duration) {
@@ -136,10 +127,6 @@ func prepareCompositeValueTraceLogs(owner, typeID, kind string) []opentracing.Lo
 
 func (interpreter *Interpreter) reportCompositeValueConstructTrace(owner, typeID, kind string, duration time.Duration) {
 	interpreter.onRecordTrace(interpreter, tracingCompositePrefix+tracingConstructPostfix, duration, prepareCompositeValueTraceLogs(owner, typeID, kind))
-}
-
-func (interpreter *Interpreter) reportCompositeValueCloneTrace(owner, typeID, kind string, duration time.Duration) {
-	interpreter.onRecordTrace(interpreter, tracingCompositePrefix+tracingClonePostfix, duration, prepareCompositeValueTraceLogs(owner, typeID, kind))
 }
 
 func (interpreter *Interpreter) reportCompositeValueDeepRemoveTrace(owner, typeID, kind string, duration time.Duration) {

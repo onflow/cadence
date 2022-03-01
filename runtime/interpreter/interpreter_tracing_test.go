@@ -78,16 +78,13 @@ func TestInterpreterTracing(t *testing.T) {
 
 		cloned := array.Clone(inter)
 		require.NotNil(t, cloned)
-		require.Equal(t, len(traceOps), 2)
-		require.Equal(t, traceOps[1], "array.clone")
-
 		cloned.DeepRemove(inter)
-		require.Equal(t, len(traceOps), 3)
-		require.Equal(t, traceOps[2], "array.deepRemove")
+		require.Equal(t, len(traceOps), 2)
+		require.Equal(t, traceOps[1], "array.deepRemove")
 
 		array.Destroy(inter, nil)
-		require.Equal(t, len(traceOps), 4)
-		require.Equal(t, traceOps[3], "array.destroy")
+		require.Equal(t, len(traceOps), 3)
+		require.Equal(t, traceOps[2], "array.destroy")
 	})
 
 	t.Run("dictionary tracing", func(t *testing.T) {
@@ -110,16 +107,13 @@ func TestInterpreterTracing(t *testing.T) {
 
 		cloned := dict.Clone(inter)
 		require.NotNil(t, cloned)
-		require.Equal(t, len(traceOps), 2)
-		require.Equal(t, traceOps[1], "dictionary.clone")
-
 		cloned.DeepRemove(inter)
-		require.Equal(t, len(traceOps), 3)
-		require.Equal(t, traceOps[2], "dictionary.deepRemove")
+		require.Equal(t, len(traceOps), 2)
+		require.Equal(t, traceOps[1], "dictionary.deepRemove")
 
 		dict.Destroy(inter, nil)
-		require.Equal(t, len(traceOps), 4)
-		require.Equal(t, traceOps[3], "dictionary.destroy")
+		require.Equal(t, len(traceOps), 3)
+		require.Equal(t, traceOps[2], "dictionary.destroy")
 	})
 
 	t.Run("composite tracing", func(t *testing.T) {
@@ -136,28 +130,25 @@ func TestInterpreterTracing(t *testing.T) {
 
 		cloned := value.Clone(inter)
 		require.NotNil(t, cloned)
-		require.Equal(t, len(traceOps), 2)
-		require.Equal(t, traceOps[1], "composite.clone")
-
 		cloned.DeepRemove(inter)
-		require.Equal(t, len(traceOps), 3)
-		require.Equal(t, traceOps[2], "composite.deepRemove")
+		require.Equal(t, len(traceOps), 2)
+		require.Equal(t, traceOps[1], "composite.deepRemove")
 
 		value.SetMember(inter, nil, "abc", interpreter.NilValue{})
-		require.Equal(t, len(traceOps), 4)
-		require.Equal(t, traceOps[3], "composite.setMember.abc")
+		require.Equal(t, len(traceOps), 3)
+		require.Equal(t, traceOps[2], "composite.setMember.abc")
 
 		value.GetMember(inter, nil, "abc")
-		require.Equal(t, len(traceOps), 5)
-		require.Equal(t, traceOps[4], "composite.getMember.abc")
+		require.Equal(t, len(traceOps), 4)
+		require.Equal(t, traceOps[3], "composite.getMember.abc")
 
 		value.RemoveMember(inter, nil, "abc")
-		require.Equal(t, len(traceOps), 6)
-		require.Equal(t, traceOps[5], "composite.removeMember.abc")
+		require.Equal(t, len(traceOps), 5)
+		require.Equal(t, traceOps[4], "composite.removeMember.abc")
 
 		value.Destroy(inter, nil)
-		require.Equal(t, len(traceOps), 7)
-		require.Equal(t, traceOps[6], "composite.destroy")
+		require.Equal(t, len(traceOps), 6)
+		require.Equal(t, traceOps[5], "composite.destroy")
 
 		array := interpreter.NewArrayValue(
 			inter,
@@ -168,8 +159,8 @@ func TestInterpreterTracing(t *testing.T) {
 			cloned,
 		)
 		require.NotNil(t, array)
-		require.Equal(t, len(traceOps), 9)
-		require.Equal(t, traceOps[7], "composite.transfer")
-		require.Equal(t, traceOps[8], "array.construct")
+		require.Equal(t, len(traceOps), 8)
+		require.Equal(t, traceOps[6], "composite.transfer")
+		require.Equal(t, traceOps[7], "array.construct")
 	})
 }
