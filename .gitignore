@@ -37,7 +37,7 @@ suppressions
 
 languageserver/test/languageserver
 coverage.txt
-coverage.txt-e
+
 runtime/cmd/check/check
 runtime/cmd/main/main
 runtime/cmd/parse/parse
