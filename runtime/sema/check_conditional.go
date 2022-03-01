@@ -68,6 +68,21 @@ func (checker *Checker) VisitConditionalExpression(expression *ast.ConditionalEx
 		panic(errors.NewUnreachableError())
 	}
 
+	if thenType.IsResourceType() {
+		checker.report(
+			&InvalidConditionalResourceOperandError{
+				Range: ast.NewRangeFromPositioned(expression.Then),
+			},
+		)
+	}
+	if elseType.IsResourceType() {
+		checker.report(
+			&InvalidConditionalResourceOperandError{
+				Range: ast.NewRangeFromPositioned(expression.Else),
+			},
+		)
+	}
+
 	// TODO: improve
 	resultType := thenType
 
