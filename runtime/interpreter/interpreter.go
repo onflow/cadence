@@ -2514,7 +2514,11 @@ func (interpreter *Interpreter) NewSubInterpreter(
 		WithPublicKeyValidationHandler(interpreter.PublicKeyValidationHandler),
 		WithSignatureVerificationHandler(interpreter.SignatureVerificationHandler),
 		WithHashHandler(interpreter.HashHandler),
-		WithBLSCryptoFunctions(interpreter.BLSVerifyPoPHandler, interpreter.BLSAggregateSignaturesHandler, interpreter.BLSAggregatePublicKeysHandler),
+		WithBLSCryptoFunctions(
+			interpreter.BLSVerifyPoPHandler,
+			interpreter.BLSAggregateSignaturesHandler,
+			interpreter.BLSAggregatePublicKeysHandler,
+		),
 	}
 
 	return NewInterpreter(
