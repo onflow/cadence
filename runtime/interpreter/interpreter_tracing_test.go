@@ -28,34 +28,41 @@ import (
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
+
+func setupInterpreterWithTracingCallBack(
+	t *testing.T,
+	tracingCallback func(opName string),
+) *interpreter.Interpreter {
+	storage := interpreter.NewInMemoryStorage()
+	inter, err := interpreter.NewInterpreter(
+		&interpreter.Program{},
+		utils.TestLocation,
+		interpreter.WithOnRecordTraceHandler(
+			func(inter *interpreter.Interpreter,
+				operationName string,
+				duration time.Duration,
+				logs []opentracing.LogRecord) {
+				tracingCallback(operationName)
+			},
+		),
+		interpreter.WithStorage(storage),
+		interpreter.WithTracingEnabled(true),
+	)
+	require.NoError(t, err)
+	return inter
+}
 
 func TestInterpreterTracing(t *testing.T) {
 
 	t.Parallel()
 
 	t.Run("array tracing", func(t *testing.T) {
-		storage := interpreter.NewInMemoryStorage()
-
 		traceOps := make([]string, 0)
-		inter, err := interpreter.NewInterpreter(
-			&interpreter.Program{},
-			utils.TestLocation,
-			interpreter.WithOnRecordTraceHandler(
-				func(inter *interpreter.Interpreter,
-					operationName string,
-					duration time.Duration,
-					logs []opentracing.LogRecord) {
-					traceOps = append(traceOps, operationName)
-				},
-			),
-			interpreter.WithStorage(storage),
-			interpreter.WithTracingEnabled(true),
-		)
-		require.NoError(t, err)
-
+		inter := setupInterpreterWithTracingCallBack(t, func(opName string) {
+			traceOps = append(traceOps, opName)
+		})
 		owner := common.Address{0x1}
 		array := interpreter.NewArrayValue(
 			inter,
@@ -84,25 +91,10 @@ func TestInterpreterTracing(t *testing.T) {
 	})
 
 	t.Run("dictionary tracing", func(t *testing.T) {
-		storage := interpreter.NewInMemoryStorage()
-
 		traceOps := make([]string, 0)
-		inter, err := interpreter.NewInterpreter(
-			&interpreter.Program{},
-			utils.TestLocation,
-			interpreter.WithOnRecordTraceHandler(
-				func(inter *interpreter.Interpreter,
-					operationName string,
-					duration time.Duration,
-					logs []opentracing.LogRecord) {
-					traceOps = append(traceOps, operationName)
-				},
-			),
-			interpreter.WithStorage(storage),
-			interpreter.WithTracingEnabled(true),
-		)
-		require.NoError(t, err)
-
+		inter := setupInterpreterWithTracingCallBack(t, func(opName string) {
+			traceOps = append(traceOps, opName)
+		})
 		dict := interpreter.NewDictionaryValue(
 			inter,
 			interpreter.DictionaryStaticType{
@@ -131,30 +123,10 @@ func TestInterpreterTracing(t *testing.T) {
 	})
 
 	t.Run("composite tracing", func(t *testing.T) {
-		storage := interpreter.NewInMemoryStorage()
-
-		elaboration := sema.NewElaboration()
-		elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
-
 		traceOps := make([]string, 0)
-		inter, err := interpreter.NewInterpreter(
-			&interpreter.Program{
-				Elaboration: elaboration,
-			},
-			utils.TestLocation,
-			interpreter.WithOnRecordTraceHandler(
-				func(inter *interpreter.Interpreter,
-					operationName string,
-					duration time.Duration,
-					logs []opentracing.LogRecord) {
-					traceOps = append(traceOps, operationName)
-				},
-			),
-			interpreter.WithStorage(storage),
-			interpreter.WithTracingEnabled(true),
-		)
-		require.NoError(t, err)
-
+		inter := setupInterpreterWithTracingCallBack(t, func(opName string) {
+			traceOps = append(traceOps, opName)
+		})
 		owner := common.Address{0x1}
 
 		value := newTestCompositeValue(inter, owner)

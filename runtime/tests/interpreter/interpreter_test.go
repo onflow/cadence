@@ -24,8 +24,10 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/onflow/atree"
+	"github.com/opentracing/opentracing-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -95,6 +97,17 @@ func parseCheckAndInterpretWithOptions(
 			interpreter.WithStorage(interpreter.NewInMemoryStorage()),
 			interpreter.WithAtreeValueValidationEnabled(true),
 			interpreter.WithAtreeStorageValidationEnabled(true),
+			interpreter.WithOnRecordTraceHandler(
+				func(
+					_ *interpreter.Interpreter,
+					_ string,
+					_ time.Duration,
+					_ []opentracing.LogRecord,
+				) {
+					// NO-OP
+				},
+			),
+			interpreter.WithTracingEnabled(true),
 		},
 		options.Options...,
 	)
