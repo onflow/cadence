@@ -1727,14 +1727,24 @@ func (checker *Checker) checkResourceFieldNesting(
 		return
 	}
 
-	// The field is not a resource or contract, check if there are
-	// any fields that have a resource type  and report them
+	// The field is not a resource or contract.
+	// Check if there are any fields that have a resource type and report them
 
 	members.Foreach(func(name string, member *Member) {
 		// NOTE: check type, not resource annotation:
 		// the field could have a wrong annotation
 
 		if !member.TypeAnnotation.Type.IsResourceType() {
+			return
+		}
+
+		// Skip enums' implicit rawValue field.
+		// If a resource type is used as the enum raw type,
+		// it is already reported
+
+		if compositeKind == common.CompositeKindEnum &&
+			name == EnumRawValueFieldName {
+
 			return
 		}
 

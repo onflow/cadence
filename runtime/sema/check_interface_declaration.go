@@ -87,7 +87,7 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 	)
 
 	fieldPositionGetter := func(name string) ast.Position {
-		return declaration.Members.FieldPosition(name, declaration.CompositeKind)
+		return interfaceType.FieldPosition(name, declaration)
 	}
 
 	checker.checkResourceFieldNesting(
