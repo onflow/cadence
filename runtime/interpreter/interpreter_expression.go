@@ -422,7 +422,7 @@ func (interpreter *Interpreter) VisitIntegerExpression(expression *ast.IntegerEx
 	value := expression.Value
 
 	if _, ok := typ.(*sema.AddressType); ok {
-		return NewAddressValueFromBytes(value.Bytes())
+		return NewAddressValueFromBytes(interpreter, value.Bytes())
 	}
 
 	// The ranges are checked at the checker level.

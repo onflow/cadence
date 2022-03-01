@@ -537,6 +537,7 @@ func (r *interpreterRuntime) InvokeContractFunction(
 
 	for i, argumentType := range argumentTypes {
 		arguments[i] = r.convertArgument(
+			inter,
 			arguments[i],
 			argumentType,
 			context,
@@ -597,6 +598,7 @@ func (r *interpreterRuntime) InvokeContractFunction(
 }
 
 func (r *interpreterRuntime) convertArgument(
+	inter *interpreter.Interpreter,
 	argument interpreter.Value,
 	argumentType sema.Type,
 	context Context,
@@ -609,7 +611,7 @@ func (r *interpreterRuntime) convertArgument(
 		// convert addresses to auth accounts so there is no need to construct an auth account value for the caller
 		if addressValue, ok := argument.(interpreter.AddressValue); ok {
 			return r.newAuthAccountValue(
-				interpreter.NewAddressValue(addressValue.ToAddress()),
+				interpreter.NewAddressValue(inter, addressValue.ToAddress()),
 				context,
 				storage,
 				interpreterOptions,
@@ -620,7 +622,7 @@ func (r *interpreterRuntime) convertArgument(
 		// convert addresses to public accounts so there is no need to construct a public account value for the caller
 		if addressValue, ok := argument.(interpreter.AddressValue); ok {
 			return r.getPublicAccount(
-				interpreter.NewAddressValue(addressValue.ToAddress()),
+				interpreter.NewAddressValue(inter, addressValue.ToAddress()),
 				context.Interface,
 				storage,
 			)
@@ -715,7 +717,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 
 		for i, address := range authorizers {
 			authorizerValues[i] = r.newAuthAccountValue(
-				interpreter.NewAddressValue(address),
+				interpreter.NewAddressValue(inter, address),
 				context,
 				storage,
 				interpreterOptions,
@@ -1500,7 +1502,7 @@ func (r *interpreterRuntime) injectedCompositeFieldsHandler(
 					panic(runtimeErrors.NewUnreachableError())
 				}
 
-				addressValue := interpreter.NewAddressValue(address)
+				addressValue := interpreter.NewAddressValue(inter, address)
 
 				return map[string]interpreter.Value{
 					"account": r.newAuthAccountValue(
@@ -1771,7 +1773,7 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 			panic(err)
 		}
 
-		addressValue := interpreter.NewAddressValue(address)
+		addressValue := interpreter.NewAddressValue(invocation.Interpreter, address)
 
 		r.emitAccountEvent(
 			stdlib.AccountCreatedEventType,

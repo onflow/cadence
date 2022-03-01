@@ -226,7 +226,7 @@ func TestExportValue(t *testing.T) {
 		},
 		{
 			label:    "Address",
-			value:    interpreter.NewAddressValueFromBytes([]byte{0x1}),
+			value:    interpreter.NewUnmeteredAddressValue([]byte{0x1}),
 			expected: cadence.NewAddress([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
 		},
 		{
@@ -607,7 +607,7 @@ func TestImportValue(t *testing.T) {
 		},
 		{
 			label:    "Address",
-			expected: interpreter.NewAddressValueFromBytes([]byte{0x1}),
+			expected: interpreter.NewUnmeteredAddressValue([]byte{0x1}),
 			value:    cadence.NewAddress([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
 		},
 		{

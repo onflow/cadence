@@ -2874,7 +2874,7 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 		t.Parallel()
 
 		value := &CapabilityValue{
-			Address: NewAddressValueFromBytes([]byte{0x2}),
+			Address: NewUnmeteredAddressValue([]byte{0x2}),
 			Path:    privatePathValue,
 		}
 
@@ -2916,7 +2916,7 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 		t.Parallel()
 
 		value := &CapabilityValue{
-			Address:    NewAddressValueFromBytes([]byte{0x2}),
+			Address:    NewUnmeteredAddressValue([]byte{0x2}),
 			Path:       privatePathValue,
 			BorrowType: PrimitiveStaticTypeBool,
 		}
@@ -2961,7 +2961,7 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 		t.Parallel()
 
 		value := &CapabilityValue{
-			Address: NewAddressValueFromBytes([]byte{0x3}),
+			Address: NewUnmeteredAddressValue([]byte{0x3}),
 			Path:    publicPathValue,
 		}
 
@@ -3004,7 +3004,7 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 		t.Parallel()
 
 		value := &CapabilityValue{
-			Address:    NewAddressValueFromBytes([]byte{0x3}),
+			Address:    NewUnmeteredAddressValue([]byte{0x3}),
 			Path:       publicPathValue,
 			BorrowType: PrimitiveStaticTypeBool,
 		}
@@ -3050,7 +3050,7 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 		t.Parallel()
 
 		capabilityValue := &CapabilityValue{
-			Address:    NewAddressValueFromBytes([]byte{0x3}),
+			Address:    NewUnmeteredAddressValue([]byte{0x3}),
 			Path:       publicPathValue,
 			BorrowType: PrimitiveStaticTypePublicAccount,
 		}

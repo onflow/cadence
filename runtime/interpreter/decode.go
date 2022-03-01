@@ -659,7 +659,7 @@ func (d StorableDecoder) decodeAddress() (AddressValue, error) {
 		return AddressValue{}, err
 	}
 
-	address := NewAddressValueFromBytes(addressBytes)
+	address := NewAddressValueFromBytes(d.memoryGauge, addressBytes)
 	return address, nil
 }
 

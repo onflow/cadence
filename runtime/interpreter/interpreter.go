@@ -2900,7 +2900,7 @@ func init() {
 				return NewSomeValueNonCopying(NewTypeValue(
 					invocation.Interpreter,
 					ConvertSemaToStaticType(composite),
-			))
+				))
 			},
 			sema.CompositeTypeFunctionType,
 		),

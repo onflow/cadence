@@ -13730,7 +13730,7 @@ func NewUnmeteredStorageReferenceValue(
 	targetStorageAddress common.Address,
 	targetPath PathValue,
 	borrowedType sema.Type,
-	) *StorageReferenceValue {
+) *StorageReferenceValue {
 	return &StorageReferenceValue{
 		Authorized:           authorized,
 		TargetStorageAddress: targetStorageAddress,
@@ -13745,7 +13745,7 @@ func NewStorageReferenceValue(
 	targetStorageAddress common.Address,
 	targetPath PathValue,
 	borrowedType sema.Type,
-	) *StorageReferenceValue {
+) *StorageReferenceValue {
 	if memoryGauge != nil {
 		length := len(targetPath.String())
 		if length < 0 {
@@ -14090,9 +14090,9 @@ func NewUnmeteredEphemeralReferenceValue(
 	borrowedType sema.Type,
 ) *EphemeralReferenceValue {
 	return &EphemeralReferenceValue{
-		Authorized:		authorized,
-		Value: 			value,
-		BorrowedType:	borrowedType,
+		Authorized:   authorized,
+		Value:        value,
+		BorrowedType: borrowedType,
 	}
 }
 
@@ -14437,14 +14437,25 @@ func (*EphemeralReferenceValue) DeepRemove(_ *Interpreter) {
 //
 type AddressValue common.Address
 
-func NewAddressValue(a common.Address) AddressValue {
-	return NewAddressValueFromBytes(a[:])
-}
-
-func NewAddressValueFromBytes(b []byte) AddressValue {
+func NewUnmeteredAddressValue(b []byte) AddressValue {
 	result := AddressValue{}
 	copy(result[common.AddressLength-len(b):], b)
 	return result
+}
+
+func NewAddressValue(memoryGauge common.MemoryGauge, a common.Address) AddressValue {
+	return NewAddressValueFromBytes(memoryGauge, a[:])
+}
+
+func NewAddressValueFromBytes(memoryGauge common.MemoryGauge, b []byte) AddressValue {
+	if memoryGauge != nil {
+		memoryGauge.UseMemory(common.MemoryUsage{
+			Kind:   common.MemoryKindAddress,
+			Amount: uint64(len(b)),
+		})
+	}
+
+	return NewUnmeteredAddressValue(b)
 }
 
 func ConvertAddress(value Value) AddressValue {
@@ -14611,8 +14622,8 @@ func (v AddressValue) Transfer(
 	return v
 }
 
-func (v AddressValue) Clone(_ *Interpreter) Value {
-	return v
+func (v AddressValue) Clone(interpreter *Interpreter) Value {
+	return NewAddressValue(interpreter, v.ToAddress())
 }
 
 func (AddressValue) DeepRemove(_ *Interpreter) {
