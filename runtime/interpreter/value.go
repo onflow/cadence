@@ -13750,6 +13750,12 @@ func (v *SomeValue) NeedsStoreTo(address atree.Address) bool {
 }
 
 func (v *SomeValue) IsResourceKinded(interpreter *Interpreter) bool {
+	// Assumption: inner-value of an optional could only be nil
+	// if it is a resource and has been invalidated/destroyed.
+	if v.value == nil {
+		return true
+	}
+
 	return v.value.IsResourceKinded(interpreter)
 }
 
