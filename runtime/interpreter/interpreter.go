@@ -4593,6 +4593,10 @@ func (interpreter *Interpreter) startResourceTracking(
 	identifier string,
 	hasPosition ast.HasPosition,
 ) {
+	if !interpreter.invalidatedResourceValidationEnabled {
+		return
+	}
+
 	if value == nil || !value.IsResourceKinded(interpreter) {
 		return
 	}
@@ -4634,6 +4638,10 @@ func (interpreter *Interpreter) checkInvalidatedResourceUse(
 	identifier string,
 	hasPosition ast.HasPosition,
 ) {
+	if !interpreter.invalidatedResourceValidationEnabled {
+		return
+	}
+
 	if value == nil || !value.IsResourceKinded(interpreter) {
 		return
 	}
@@ -4664,6 +4672,10 @@ func (interpreter *Interpreter) checkInvalidatedResourceUse(
 }
 
 func (interpreter *Interpreter) invalidateResource(value Value) {
+	if !interpreter.invalidatedResourceValidationEnabled {
+		return
+	}
+
 	if value == nil || !value.IsResourceKinded(interpreter) {
 		return
 	}
