@@ -38,7 +38,7 @@ func TestCheckRLPDecodeStringError(t *testing.T) {
 		ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithPredeclaredValues(stdlib.BuiltinFunctions.ToSemaValueDeclarations()),
-				sema.WithPredeclaredValues(stdlib.BuiltinValues().ToSemaValueDeclarations()),
+				sema.WithPredeclaredValues(stdlib.BuiltinValues.ToSemaValueDeclarations()),
 			},
 		},
 	)
@@ -59,7 +59,7 @@ func TestCheckRLPDecodeListError(t *testing.T) {
 		ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithPredeclaredValues(stdlib.BuiltinFunctions.ToSemaValueDeclarations()),
-				sema.WithPredeclaredValues(stdlib.BuiltinValues().ToSemaValueDeclarations()),
+				sema.WithPredeclaredValues(stdlib.BuiltinValues.ToSemaValueDeclarations()),
 			},
 		},
 	)
