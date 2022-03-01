@@ -3666,6 +3666,20 @@ func (t *CompositeType) initializeMemberResolvers() {
 	})
 }
 
+func (t *CompositeType) FieldPosition(name string, declaration *ast.CompositeDeclaration) ast.Position {
+	var pos ast.Position
+	if t.Kind == common.CompositeKindEnum &&
+		name == EnumRawValueFieldName {
+
+		if len(declaration.Conformances) > 0 {
+			pos = declaration.Conformances[0].StartPosition()
+		}
+	} else {
+		pos = declaration.Members.FieldPosition(name, declaration.CompositeKind)
+	}
+	return pos
+}
+
 // Member
 
 type Member struct {
@@ -4023,6 +4037,10 @@ func (t *InterfaceType) IsContainerType() bool {
 
 func (t *InterfaceType) GetNestedTypes() *StringTypeOrderedMap {
 	return t.nestedTypes
+}
+
+func (t *InterfaceType) FieldPosition(name string, declaration *ast.InterfaceDeclaration) ast.Position {
+	return declaration.Members.FieldPosition(name, declaration.CompositeKind)
 }
 
 // DictionaryType consists of the key and value type

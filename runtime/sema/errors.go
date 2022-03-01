@@ -475,6 +475,16 @@ func (e *InvalidNilCoalescingRightResourceOperandError) Error() string {
 	return "nil-coalescing with right-hand resource is not supported at the moment"
 }
 
+// InvalidConditionalResourceOperandError
+
+type InvalidConditionalResourceOperandError struct {
+	ast.Range
+}
+
+func (e *InvalidConditionalResourceOperandError) Error() string {
+	return "conditional with resource is not supported at the moment"
+}
+
 // ControlStatementError
 
 type ControlStatementError struct {
