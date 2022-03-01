@@ -25,6 +25,7 @@ import (
 	"math"
 	"math/big"
 	"strings"
+	"time"
 
 	"github.com/onflow/atree"
 	"github.com/rivo/uniseg"
@@ -1482,6 +1483,13 @@ func (v *ArrayValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 ) Value {
+
+	if interpreter.tracingEnabled {
+		startTime := time.Now()
+		defer func() {
+			interpreter.reportArrayValueTransferTrace(v.Type.String(), v.Count(), time.Since(startTime))
+		}()
+	}
 
 	currentStorageID := v.StorageID()
 	currentAddress := currentStorageID.Address
@@ -12229,6 +12237,13 @@ func (v *DictionaryValue) Transfer(
 	storable atree.Storable,
 ) Value {
 
+	if interpreter.tracingEnabled {
+		startTime := time.Now()
+		defer func() {
+			interpreter.reportDictionaryValueTransferTrace(v.Type.String(), v.Count(), time.Since(startTime))
+		}()
+	}
+
 	currentStorageID := v.StorageID()
 	currentAddress := currentStorageID.Address
 
@@ -12760,7 +12775,7 @@ func (s SomeStorable) ChildStorables() []atree.Storable {
 type StorageReferenceValue struct {
 	Authorized           bool
 	TargetStorageAddress common.Address
-	TargetKey            string
+	TargetPath           PathValue
 	BorrowedType         sema.Type
 }
 
@@ -12815,26 +12830,25 @@ func (v *StorageReferenceValue) StaticType() StaticType {
 }
 
 func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter) *Value {
-	switch referenced := interpreter.ReadStored(v.TargetStorageAddress, v.TargetKey).(type) {
-	case *SomeValue:
-		value := referenced.Value
 
-		if v.BorrowedType != nil {
-			dynamicType := value.DynamicType(interpreter, SeenReferences{})
-			if !interpreter.IsSubType(dynamicType, v.BorrowedType) {
-				interpreter.IsSubType(dynamicType, v.BorrowedType)
-				return nil
-			}
-		}
+	address := v.TargetStorageAddress
+	domain := v.TargetPath.Domain.Identifier()
+	identifier := v.TargetPath.Identifier
 
-		return &value
-
-	case NilValue:
+	referenced := interpreter.ReadStored(address, domain, identifier)
+	if referenced == nil {
 		return nil
-
-	default:
-		panic(errors.NewUnreachableError())
 	}
+
+	if v.BorrowedType != nil {
+		dynamicType := referenced.DynamicType(interpreter, SeenReferences{})
+		if !interpreter.IsSubType(dynamicType, v.BorrowedType) {
+			interpreter.IsSubType(dynamicType, v.BorrowedType)
+			return nil
+		}
+	}
+
+	return &referenced
 }
 
 func (v *StorageReferenceValue) GetMember(
@@ -12981,7 +12995,7 @@ func (v *StorageReferenceValue) Equal(_ *Interpreter, _ func() LocationRange, ot
 	otherReference, ok := other.(*StorageReferenceValue)
 	if !ok ||
 		v.TargetStorageAddress != otherReference.TargetStorageAddress ||
-		v.TargetKey != otherReference.TargetKey ||
+		v.TargetPath != otherReference.TargetPath ||
 		v.Authorized != otherReference.Authorized {
 
 		return false
@@ -13056,6 +13070,15 @@ func (v *StorageReferenceValue) Transfer(
 		interpreter.RemoveReferencedSlab(storable)
 	}
 	return v
+}
+
+func (v *StorageReferenceValue) Clone(_ *Interpreter) Value {
+	return &StorageReferenceValue{
+		Authorized:           v.Authorized,
+		TargetStorageAddress: v.TargetStorageAddress,
+		TargetPath:           v.TargetPath,
+		BorrowedType:         v.BorrowedType,
+	}
 }
 
 func (*StorageReferenceValue) DeepRemove(_ *Interpreter) {
@@ -13611,6 +13634,8 @@ type PathValue struct {
 	Identifier string
 }
 
+var EmptyPathValue = PathValue{}
+
 var _ Value = PathValue{}
 var _ atree.Storable = PathValue{}
 var _ EquatableValue = PathValue{}
@@ -13729,6 +13754,40 @@ func (v PathValue) HashInput(_ *Interpreter, _ func() LocationRange, scratch []b
 
 func (PathValue) IsStorable() bool {
 	return true
+}
+
+func convertPath(domain common.PathDomain, value Value) Value {
+	stringValue, ok := value.(*StringValue)
+	if !ok {
+		return NilValue{}
+	}
+
+	_, err := sema.CheckPathLiteral(
+		domain.Identifier(),
+		stringValue.Str,
+		ReturnEmptyRange,
+		ReturnEmptyRange,
+	)
+	if err != nil {
+		return NilValue{}
+	}
+
+	return NewSomeValueNonCopying(PathValue{
+		Domain:     domain,
+		Identifier: stringValue.Str,
+	})
+}
+
+func ConvertPublicPath(value Value) Value {
+	return convertPath(common.PathDomainPublic, value)
+}
+
+func ConvertPrivatePath(value Value) Value {
+	return convertPath(common.PathDomainPrivate, value)
+}
+
+func ConvertStoragePath(value Value) Value {
+	return convertPath(common.PathDomainStorage, value)
 }
 
 func (v PathValue) Storable(

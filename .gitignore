@@ -38,6 +38,11 @@ suppressions
 languageserver/test/languageserver
 coverage.txt
 
+runtime/cmd/check/check
+runtime/cmd/main/main
+runtime/cmd/parse/parse
+runtime/cmd/parse/parse.wasm
+languageserver/cmd/languageserver/languageserver
 languageserver/cmd/languageserver/languageserver.wasm
 tools/golangci-lint/golangci-lint
 tools/maprangecheck/maprangecheck.so

@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/onflow/atree"
+	"github.com/opentracing/opentracing-go"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
@@ -121,6 +122,8 @@ type Interface interface {
 	ValidatePublicKey(key *PublicKey) error
 	// GetAccountContractNames returns the names of all contracts deployed in an account.
 	GetAccountContractNames(address Address) ([]string, error)
+	// RecordTrace records a opentracing trace
+	RecordTrace(operation string, location common.Location, duration time.Duration, logs []opentracing.LogRecord)
 	// BLSVerifyPOP verifies a proof of possession (PoP) for the receiver public key.
 	BLSVerifyPOP(pk *PublicKey, s []byte) (bool, error)
 	// BLSAggregateSignatures aggregate multiple BLS signatures into one.
@@ -133,6 +136,4 @@ type Metrics interface {
 	ProgramParsed(location common.Location, duration time.Duration)
 	ProgramChecked(location common.Location, duration time.Duration)
 	ProgramInterpreted(location common.Location, duration time.Duration)
-	ValueEncoded(duration time.Duration)
-	ValueDecoded(duration time.Duration)
 }

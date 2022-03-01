@@ -395,21 +395,6 @@ func (e TypeLoadingError) Error() string {
 	return fmt.Sprintf("failed to load type: %s", e.TypeID)
 }
 
-// EncodingUnsupportedValueError
-//
-type EncodingUnsupportedValueError struct {
-	Value Value
-	Path  []string
-}
-
-func (e EncodingUnsupportedValueError) Error() string {
-	return fmt.Sprintf(
-		"encoding unsupported value to path [%s]: %[2]T, %[2]v",
-		strings.Join(e.Path, ","),
-		e.Value,
-	)
-}
-
 // MissingMemberValueError
 
 type MissingMemberValueError struct {
