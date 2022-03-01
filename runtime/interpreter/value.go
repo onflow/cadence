@@ -25,6 +25,7 @@ import (
 	"math"
 	"math/big"
 	"strings"
+	"time"
 
 	"github.com/onflow/atree"
 	"github.com/rivo/uniseg"
@@ -1482,6 +1483,13 @@ func (v *ArrayValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 ) Value {
+
+	if interpreter.tracingEnabled {
+		startTime := time.Now()
+		defer func() {
+			interpreter.reportArrayValueTransferTrace(v.Type.String(), v.Count(), time.Since(startTime))
+		}()
+	}
 
 	currentStorageID := v.StorageID()
 	currentAddress := currentStorageID.Address
@@ -12228,6 +12236,13 @@ func (v *DictionaryValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 ) Value {
+
+	if interpreter.tracingEnabled {
+		startTime := time.Now()
+		defer func() {
+			interpreter.reportDictionaryValueTransferTrace(v.Type.String(), v.Count(), time.Since(startTime))
+		}()
+	}
 
 	currentStorageID := v.StorageID()
 	currentAddress := currentStorageID.Address

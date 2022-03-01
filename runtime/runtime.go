@@ -25,6 +25,7 @@ import (
 	goRuntime "runtime"
 	"time"
 
+	opentracing "github.com/opentracing/opentracing-go"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/onflow/cadence"
@@ -87,6 +88,9 @@ type Runtime interface {
 
 	// SetAtreeValidationEnabled configures if atree validation is enabled.
 	SetAtreeValidationEnabled(enabled bool)
+
+	// SetTracingEnabled configures if tracing is enabled.
+	SetTracingEnabled(enabled bool)
 
 	// ReadStored reads the value stored at the given path
 	//
@@ -151,6 +155,7 @@ type interpreterRuntime struct {
 	coverageReport                  *CoverageReport
 	contractUpdateValidationEnabled bool
 	atreeValidationEnabled          bool
+	tracingEnabled                  bool
 }
 
 type Option func(Runtime)
@@ -170,6 +175,15 @@ func WithContractUpdateValidationEnabled(enabled bool) Option {
 func WithAtreeValidationEnabled(enabled bool) Option {
 	return func(runtime Runtime) {
 		runtime.SetAtreeValidationEnabled(enabled)
+	}
+}
+
+// WithTracingEnabled returns a runtime option
+// that configures if tracing is enabled.
+//
+func WithTracingEnabled(enabled bool) Option {
+	return func(runtime Runtime) {
+		runtime.SetTracingEnabled(enabled)
 	}
 }
 
@@ -210,6 +224,10 @@ func (r *interpreterRuntime) SetContractUpdateValidationEnabled(enabled bool) {
 
 func (r *interpreterRuntime) SetAtreeValidationEnabled(enabled bool) {
 	r.atreeValidationEnabled = enabled
+}
+
+func (r *interpreterRuntime) SetTracingEnabled(enabled bool) {
+	r.tracingEnabled = enabled
 }
 
 func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val cadence.Value, err error) {
@@ -1310,6 +1328,12 @@ func (r *interpreterRuntime) newInterpreter(
 				)
 			},
 		),
+		interpreter.WithOnRecordTraceHandler(
+			func(intr *interpreter.Interpreter, functionName string, duration time.Duration, logs []opentracing.LogRecord) {
+				context.Interface.RecordTrace(functionName, intr.Location, duration, logs)
+			},
+		),
+		interpreter.WithTracingEnabled(r.tracingEnabled),
 		interpreter.WithAtreeValueValidationEnabled(r.atreeValidationEnabled),
 		// NOTE: ignore r.atreeValidationEnabled here,
 		// and disable storage validation after each value modification.
