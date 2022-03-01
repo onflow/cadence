@@ -1725,6 +1725,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 				},
 			},
 		)
+		require.NoError(t, err)
 
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
@@ -1751,6 +1752,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 				},
 			},
 		)
+		require.NoError(t, err)
 
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
@@ -1784,6 +1786,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 				},
 			},
 		)
+		require.NoError(t, err)
 
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
@@ -1811,6 +1814,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 				},
 			},
 		)
+		require.NoError(t, err)
 
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
@@ -1837,6 +1841,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 				},
 			},
 		)
+		require.NoError(t, err)
 
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
@@ -1867,6 +1872,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 				},
 			},
 		)
+		require.NoError(t, err)
 
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
@@ -1894,6 +1900,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 				},
 			},
 		)
+		require.NoError(t, err)
 
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
@@ -1921,6 +1928,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 				},
 			},
 		)
+		require.NoError(t, err)
 
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
@@ -1952,6 +1960,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 				},
 			},
 		)
+		require.NoError(t, err)
 
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
@@ -1983,6 +1992,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 				},
 			},
 		)
+		require.NoError(t, err)
 
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
@@ -2013,6 +2023,7 @@ func TestCheckResourceInvalidationWithConditionalExprInDestroy(t *testing.T) {
 			},
 		},
 	)
+	require.NoError(t, err)
 
 	_, err = inter.Invoke("test")
 	require.Error(t, err)
@@ -2053,6 +2064,7 @@ func TestInterpretResourceUseAfterInvalidation(t *testing.T) {
 				},
 			},
 		)
+		require.NoError(t, err)
 
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
@@ -2089,6 +2101,7 @@ func TestInterpretResourceUseAfterInvalidation(t *testing.T) {
 				},
 			},
 		)
+		require.NoError(t, err)
 
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
