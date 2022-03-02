@@ -867,14 +867,6 @@ func validateArgumentParams(
 
 	argumentValues := make([]interpreter.Value, len(arguments))
 
-	var err error
-	wrapPanic(func() {
-		err = runtimeInterface.MeterComputation(OpTypeDecodeArgument, uint(len(parameters)))
-	})
-	if err != nil {
-		panic(err)
-	}
-
 	// Decode arguments against parameter types
 	for i, parameter := range parameters {
 		parameterType := parameter.TypeAnnotation.Type
@@ -1761,10 +1753,6 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 		var address Address
 		var err error
 		wrapPanic(func() {
-			err = context.Interface.MeterComputation(OpTypeCreateAccount, 1)
-			if err != nil {
-				return
-			}
 			address, err = context.Interface.CreateAccount(payerAddress)
 		})
 		if err != nil {
@@ -1803,10 +1791,6 @@ func accountBalanceGetFunction(
 		var balance uint64
 		var err error
 		wrapPanic(func() {
-			err = runtimeInterface.MeterComputation(OpTypeGetAccountBalance, 1)
-			if err != nil {
-				return
-			}
 			balance, err = runtimeInterface.GetAccountBalance(address)
 		})
 		if err != nil {
@@ -1828,10 +1812,6 @@ func accountAvailableBalanceGetFunction(
 		var balance uint64
 		var err error
 		wrapPanic(func() {
-			err = runtimeInterface.MeterComputation(OpTypeGetAccountAvailableBalance, 1)
-			if err != nil {
-				return
-			}
 			balance, err = runtimeInterface.GetAccountAvailableBalance(address)
 		})
 		if err != nil {
@@ -1862,10 +1842,6 @@ func storageUsedGetFunction(
 
 		var capacity uint64
 		wrapPanic(func() {
-			err = runtimeInterface.MeterComputation(OpTypeGetStorageUsed, 1)
-			if err != nil {
-				return
-			}
 			capacity, err = runtimeInterface.GetStorageUsed(address)
 		})
 		if err != nil {
@@ -1884,10 +1860,6 @@ func storageCapacityGetFunction(addressValue interpreter.AddressValue, runtimeIn
 		var capacity uint64
 		var err error
 		wrapPanic(func() {
-			err = runtimeInterface.MeterComputation(OpTypeGetStorageCapacity, 1)
-			if err != nil {
-				return
-			}
 			capacity, err = runtimeInterface.GetStorageCapacity(address)
 		})
 		if err != nil {
@@ -3479,10 +3451,6 @@ func validatePublicKey(
 	}
 
 	wrapPanic(func() {
-		err = runtimeInterface.MeterComputation(OpTypeValidatePublicKey, 1)
-		if err != nil {
-			return
-		}
 		err = runtimeInterface.ValidatePublicKey(publicKey)
 	})
 
@@ -3509,10 +3477,6 @@ func blsVerifyPoP(
 
 	var valid bool
 	wrapPanic(func() {
-		err = runtimeInterface.MeterComputation(OpTypeBLSVerifyPOP, 1)
-		if err != nil {
-			return
-		}
 		valid, err = runtimeInterface.BLSVerifyPOP(publicKey, signature)
 	})
 	if err != nil {
@@ -3549,10 +3513,6 @@ func blsAggregateSignatures(
 	var err error
 	var aggregatedSignature []byte
 	wrapPanic(func() {
-		err = runtimeInterface.MeterComputation(OpTypeBLSAggregateSignatures, uint(len(bytesArray)))
-		if err != nil {
-			return
-		}
 		aggregatedSignature, err = runtimeInterface.BLSAggregateSignatures(bytesArray)
 	})
 
@@ -3597,10 +3557,6 @@ func blsAggregatePublicKeys(
 	var err error
 	var aggregatedPublicKey *PublicKey
 	wrapPanic(func() {
-		err = runtimeInterface.MeterComputation(OpTypeBLSAggregatePublicKeys, uint(len(publicKeys)))
-		if err != nil {
-			return
-		}
 		aggregatedPublicKey, err = runtimeInterface.BLSAggregatePublicKeys(publicKeys)
 	})
 
@@ -3653,10 +3609,6 @@ func verifySignature(
 
 	var valid bool
 	wrapPanic(func() {
-		err = runtimeInterface.MeterComputation(OpTypeVerifySignature, uint(len(signedData)))
-		if err != nil {
-			return
-		}
 		valid, err = runtimeInterface.VerifySignature(
 			signature,
 			domainSeparationTag,
@@ -3697,10 +3649,6 @@ func hash(
 
 	var result []byte
 	wrapPanic(func() {
-		err = runtimeInterface.MeterComputation(OpTypeHash, uint(len(data)))
-		if err != nil {
-			return
-		}
 		result, err = runtimeInterface.Hash(data, tag, hashAlgorithm)
 	})
 	if err != nil {
