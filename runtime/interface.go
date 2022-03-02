@@ -83,10 +83,8 @@ type Interface interface {
 	EmitEvent(cadence.Event) error
 	// GenerateUUID is called to generate a UUID.
 	GenerateUUID() (uint64, error)
-	// GetComputationLimit returns the computation limit. A value <= 0 means there is no limit
-	GetComputationLimit() uint64
-	// SetComputationUsed reports the amount of computation used.
-	SetComputationUsed(used uint64) error
+	// MeterComputation is a callback method for metering computation
+	MeterComputation(operationType MetringOperationType, intensity uint) error
 	// DecodeArgument decodes a transaction argument against the given type.
 	DecodeArgument(argument []byte, argumentType cadence.Type) (cadence.Value, error)
 	// GetCurrentBlockHeight returns the current block height.

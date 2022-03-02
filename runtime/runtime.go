@@ -21,7 +21,6 @@ package runtime
 import (
 	"errors"
 	"fmt"
-	"math"
 	goRuntime "runtime"
 	"time"
 
@@ -833,6 +832,14 @@ func validateArgumentParams(
 
 	argumentValues := make([]interpreter.Value, len(arguments))
 
+	var err error
+	wrapPanic(func() {
+		err = runtimeInterface.MeterComputation(OpTypeDecodeArgument, uint(len(parameters)))
+	})
+	if err != nil {
+		panic(err)
+	}
+
 	// Decode arguments against parameter types
 	for i, parameter := range parameters {
 		parameterType := parameter.TypeAnnotation.Type
@@ -1489,40 +1496,6 @@ func (r *interpreterRuntime) injectedCompositeFieldsHandler(
 }
 
 func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interface) []interpreter.Option {
-	var computationLimit uint64
-	wrapPanic(func() {
-		computationLimit = runtimeInterface.GetComputationLimit()
-	})
-	if computationLimit == 0 {
-		return nil
-	}
-
-	if computationLimit == math.MaxUint64 {
-		computationLimit--
-	}
-
-	var computationUsed uint64
-
-	checkComputationLimit := func(increase uint64) {
-		computationUsed += increase
-
-		if computationUsed <= computationLimit {
-			return
-		}
-
-		var err error
-		wrapPanic(func() {
-			err = runtimeInterface.SetComputationUsed(computationUsed)
-		})
-		if err != nil {
-			panic(err)
-		}
-
-		panic(ComputationLimitExceededError{
-			Limit: computationLimit,
-		})
-	}
-
 	callStackDepth := 0
 	// TODO: make runtime interface function
 	const callStackDepthLimit = 2000
@@ -1541,12 +1514,24 @@ func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interfa
 	return []interpreter.Option{
 		interpreter.WithOnStatementHandler(
 			func(_ *interpreter.Interpreter, _ ast.Statement) {
-				checkComputationLimit(1)
+				var err error
+				wrapPanic(func() {
+					err = runtimeInterface.MeterComputation(OpTypeStatement, 1)
+				})
+				if err != nil {
+					panic(err)
+				}
 			},
 		),
 		interpreter.WithOnLoopIterationHandler(
 			func(_ *interpreter.Interpreter, _ int) {
-				checkComputationLimit(1)
+				var err error
+				wrapPanic(func() {
+					err = runtimeInterface.MeterComputation(OpTypeLoop, 1)
+				})
+				if err != nil {
+					panic(err)
+				}
 			},
 		),
 		interpreter.WithOnFunctionInvocationHandler(
@@ -1554,17 +1539,18 @@ func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interfa
 				callStackDepth++
 				checkCallStackDepth()
 
-				checkComputationLimit(1)
+				var err error
+				wrapPanic(func() {
+					err = runtimeInterface.MeterComputation(OpTypeFunctionInvocation, 1)
+				})
+				if err != nil {
+					panic(err)
+				}
 			},
 		),
 		interpreter.WithOnInvokedFunctionReturnHandler(
 			func(_ *interpreter.Interpreter, _ int) {
 				callStackDepth--
-			},
-		),
-		interpreter.WithExitHandler(
-			func() error {
-				return runtimeInterface.SetComputationUsed(computationUsed)
 			},
 		),
 	}
@@ -3431,6 +3417,10 @@ func blsAggregatePublicKeys(
 	var err error
 	var aggregatedPublicKey *PublicKey
 	wrapPanic(func() {
+		err = runtimeInterface.MeterComputation(OpTypeBLSAggregatePublicKeys, uint(len(publicKeys)))
+		if err != nil {
+			return
+		}
 		aggregatedPublicKey, err = runtimeInterface.BLSAggregatePublicKeys(publicKeys)
 	})
 
@@ -3483,6 +3473,10 @@ func verifySignature(
 
 	var valid bool
 	wrapPanic(func() {
+		err = runtimeInterface.MeterComputation(OpTypeVerifySignature, uint(len(signedData)))
+		if err != nil {
+			return
+		}
 		valid, err = runtimeInterface.VerifySignature(
 			signature,
 			domainSeparationTag,
@@ -3523,6 +3517,10 @@ func hash(
 
 	var result []byte
 	wrapPanic(func() {
+		err = runtimeInterface.MeterComputation(OpTypeHash, uint(len(data)))
+		if err != nil {
+			return
+		}
 		result, err = runtimeInterface.Hash(data, tag, hashAlgorithm)
 	})
 	if err != nil {
