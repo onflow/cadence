@@ -2306,7 +2306,7 @@ func getNumberValueMember(v NumberValue, name string, typ sema.Type) Value {
 			func(invocation Invocation) Value {
 				interpreter := invocation.Interpreter
 				memoryUsage := common.NewStringMemoryUsage(
-					uint64(OverEstimateNumberStringLength(v)),
+					OverEstimateNumberStringLength(v),
 				)
 				return NewStringValue(
 					interpreter,
@@ -10818,7 +10818,7 @@ func (Word64Value) ChildStorables() []atree.Storable {
 type FixedPointValue interface {
 	NumberValue
 	IntegerPart() NumberValue
-	Scale() int
+	Scale() uint64
 }
 
 // Fix64Value
@@ -11271,7 +11271,7 @@ func (v Fix64Value) IntegerPart() NumberValue {
 	return UInt64Value(v / sema.Fix64Factor)
 }
 
-func (Fix64Value) Scale() int {
+func (Fix64Value) Scale() uint64 {
 	return sema.Fix64Scale
 }
 
@@ -11699,7 +11699,7 @@ func (v UFix64Value) IntegerPart() NumberValue {
 	return UInt64Value(v / sema.Fix64Factor)
 }
 
-func (UFix64Value) Scale() int {
+func (UFix64Value) Scale() uint64 {
 	return sema.Fix64Scale
 }
 
