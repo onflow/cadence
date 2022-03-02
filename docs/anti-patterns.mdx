@@ -4,35 +4,111 @@ title: Cadence Anti-Patterns
 
 This is an opinionated list of issues that can be improved if they are found in Cadence code intended for production.
 
-## Security and Robustness
+# Security and Robustness
 
-### Events From Resources Might Not Be Unique
+## Avoid using `AuthAccount` as a function parameter
+
+### Problem
+
+Some projects want to authenticate users using account addresses or want to perform operations for users directly.
+A not-uncommon reaction is to expect a user to pass their `AuthAccount` object as a function parameter
+to a contract function so that address can be queried or so an object can be stored directly.
+This is a problem, because the `AuthAccount` object can be used to access ANY private area of an account,
+meaning that a project could do something with your `AuthAccount` that you don't intend it to do.
+
+### Solution
+
+Projects should find other ways to authenticate users, such as using resources and capabilities as authentication objects.
+They should also expect to perform most storage and linking operations within transaction bodies
+instead of in a contract utility functions.
+
+There are some scenarios where using an `AuthAccount` object is necessary, such as a cold storage multi-sig,
+but those cases are extremely rare and `AuthAccount` usage should still be avoided unless absolutely necessary.
+
+## Auth References should be avoided
+
+### Problem
+
+[`auth` references](/language/references) should be avoided unless necessary:
+it allows downcasting any restricted type to its unrestricted type.
+The parent type could expose functionality that was not intended to be exposed.
+If the auth keyword is used on local variables they will be references.
+References are ephemeral and cannot be stored.
+This prevents any reference casting to be stored under account storage.
+However, if the auth keyword is used to store a public capability serious harm
+could be achieved since the value could be downcasted to a type that has functionality and values altered.
+
+### Example
+
+A common pattern in many NFT smart contracts is to include a public borrow function
+that borrows an auth reference to an NFT ([See Top Shot for an example](https://github.com/dapperlabs/nba-smart-contracts/blob/master/contracts/TopShot.cdc#L889-L906)).
+This allows anyone to access the stored metadata or extra fields that weren't part of the NFT standard.
+While this is fine in most scenarios, some NFTs might have privledged functions that shouldn't
+be exposed this way, so be careful when copying NFT projects that use this pattern. 
+
+## Events From Resources Might Not Be Unique
+
+### Problem
 
 A public function on a contract that creates a resource can be called by any account.
-
 If that resource has functions that emit events, any account can create an instance of that resource and emit those events.
+If those events are meant to indicate actions taken using a single instance of that resource
+(for example an admin object, switchboard, or registry),
+or instances created through a particular workflow, then this will make event log search
+and management harder because events from other instances may be mixed in with the ones that you wish to examine.
 
-If those events are meant to indicate actions taken using a single instance of that resource (for example an admin object, switchboard, or registry), or instances created through a particular workflow, then this will make event log search and management harder because events from other instances may be mixed in with the ones that you wish to examine.
+### Solution
 
-To fix this, if there should be only a single instance of the resource it should be created and `link()`ed to a public path in an admin account's storage during the contracts's initializer.
+To fix this, if there should be only a single instance of the resource,
+it should be created and `link()`ed to a public path in an admin account's storage
+during the contracts's initializer.
 
-### Named Value Fields Are Preferable
+# Access Control
 
-Where contracts, resources, and scripts all have to repeatedly refer to the same constant values, entering these manually is a potential source of error. These are known as [magic values](<https://en.wikipedia.org/wiki/Magic_number_(programming)>).
+## Public Functions and Fields Should Be Avoided
 
-Rather than typing the values manually in functions, transactions and scripts, store the values once in fields of the contract responsible and then access them via those fields. This is the [Named Value Field pattern](design-patterns/#named-value-field)
-
-### Public Functions and Fields Should Be Avoided
+### Problem
 
 Be sure to keep track of access modifiers when structuring your code, and make public only what should be public.
+Accidentally exposed fields can be a security hole.
 
-### Array or Dictionary Fields Should Be Private
+### Solution
 
-#### Problem
+When writing your smart contract, look at every field and function and make sure
+that they are all `access(self)`, `access(contract)`, or `access(account)`, unless otherwise needed.
+
+## Capability-Typed Public Fields Are A Security Hole
 
 This is a specific case of "Public Functions And Fields Should Be Avoided", above.
 
-Public array or dictionary fields are not directly over-writable, but their members can be accessed and overwritten if the field is public. This could potentially result in security vulnerabilities for the contract if these fields are mistakenly made public.
+### Problem
+
+The values of public fields can be copied. Capabilities are value types,
+so if they are used as a public field, anyone can copy it from the field
+and call the functions that it exposes.
+This almost certainly is not what you want if a capability
+has been stored as a field on a contract or resource in this way.
+
+### Solution
+
+For public access to a capability, place it in an accounts public area so this expectation is explicit.
+
+## Array or Dictionary Fields Should Be Private
+
+<Callout type="info">
+
+This anti-pattern will no longer be an issue after the April 2022 Flow Spork and network upgrade.
+It was fixed with [FLIP #703](https://github.com/onflow/flow/blob/master/flips/20211129-cadence-mutability-restrictions.md)
+
+</Callout>
+
+### Problem
+
+This is a specific case of "Public Functions And Fields Should Be Avoided", above.
+Public array or dictionary fields are not directly over-writable,
+but their members can be accessed and overwritten if the field is public.
+This could potentially result in security vulnerabilities for the contract
+if these fields are mistakenly made public.
 
 Ex:
 
@@ -50,14 +126,15 @@ import Array from 0x01
 
 transaction {
     execute {
-		    Array.shouldbeConstantArray[0] = 1000
+		Array.shouldbeConstantArray[0] = 1000
     }
 }
 ```
 
-#### Solution
+### Solution
 
-Make sure that any array or dictionary fields in contracts, structs, or resources are `access(contract)` or `access(self)` unless they need to be intentionally made public.
+Make sure that any array or dictionary fields in contracts, structs, or resources
+are `access(contract)` or `access(self)` unless they need to be intentionally made public.
 
 ```cadence
 pub contract Array {
@@ -66,52 +143,159 @@ pub contract Array {
 }
 ```
 
-### Public Admin Resource Creation Functions Are Unsafe
+## Public Admin Resource Creation Functions Are Unsafe
 
 This is a specific case of "Public Functions And Fields Should Be Avoided", above.
+
+### Problem
 
 A public function on a contract that creates a resource can be called by any account.
+If that resource provides access to admin functions then the creation function should not be public.
 
-If that resource provides access to admin functions then the function should not be public.
+### Solution
 
-To fix this, a single instance of that resource created using it then `link()`ed to a private path in an admin account's storage during the contract's initializer. If the code to create the resource is complex enough that it needs its own function, the function that creates the resource should use `access(contract)` as its access modifier.
+To fix this, a single instance of that resource should be created in the contract's `init()` method,
+and then a new creation function can be potentially included within the Admin resource, if necessary.
+The admin resource can then be `link()`ed to a private path in an admin's account storage during the contract's initializer.
 
-### Public Capability Fields Are A Security Hole
+### Example
 
-This is a specific case of "Public Functions And Fields Should Be Avoided", above.
+```cadence
+// Pseudo-code
 
-The values of public fields can be copied. Capabilities are value types. Anyone who receives a Capability can use it. So if they can copy it from a public field they can call the functions that it exposes.
+// BAD
+pub contract Currency {
+    pub resource Admin {
+        pub fun mintTokens()
+    }
 
-This almost certainly is not what you want if a capability has been stored in this way. For public access to a capability, place it in an accounts public area.
+    // Anyone in the network can call this function
+    // And use the Admin resource to mint tokens
+    pub fun createAdmin(): @Admin {
+        return <-create Admin()
+    }
+}
 
-### Users Might Rebind Restricted Public Capability Paths
+// This contract makes the admin creation private and in the initializer
+// so that only the one who controls the account can mint tokens
+// GOOD
+pub contract Currency {
+    pub resource Admin {
+        pub fun mintTokens()
 
-A public capability on a user account that is a variant of a standard resource (such as a Vault) that has additional logic implemented to restrict or alter its behaviour can be replaced by that user at the same path with another resource that does not have those alterations.
+        // Only an admin can create new Admins
+        pub fun createAdmin(): @Admin {
+            return <-create Admin()
+        }
+    }
 
-To fix this, make sure to carefully specify the type of the capability that you are expecting in any code that accesses it.
+    init() {
+        // Create a single admin resource
+        let firstAdmin <- create Admin()
 
-## Readability
+        // Store it in private account storage in `init` so only the admin can use it
+        self.account.save(<-firstAdmin, to: /storage/currencyAdmin)
+    }
+}
+```
 
-### Descriptive Names Are Preferable
+## Do Not Modify Smart Contract State or Emit Events in public struct initializers
 
-`account` / `accounts` is better than `array` / `element`.
+This is another example of the risks of having publicly accessible parts to your smart contract.
 
-`providerAccount` / `tokenRecipientAccount` is better than `acct1` / `acct2`.
+### Problem
 
-Unless of course you are dealing with entities that really are best named that way, for example in utility code.
+Data structure definitions in Cadence currently must be declared as public so that they can be used by anyone.
+Structs do not have the same restrictions that resources have on them,
+which means that anyone can create a new instance of a struct without going through any authorization.
 
-### Omitting "Any" Types In Constraints Is Preferable
+### Solution
 
-Prefer `&{Receiver}` to `&AnyResource{Receiver}`.
+Any contract state-modifying operations related to the creation of structs
+should be contained in restricted resources instead of the initializers of structs.
 
-It's clearer and the `Any...` is implicit.
+### Example
 
-Note that this doesn't mean that the restricted type should _always_ be emitted, only if it's specifically `AnyStruct` or `AnyResource` .
+This used to be a bug in the NBA Top Shot smart contract, so we'll use that as an example.
+Before, when they created a new play,
+[they would initialize the play record with a struct,](https://github.com/dapperlabs/nba-smart-contracts/blob/55645478594858a6830e4ab095034068ef9753e9/contracts/TopShot.cdc#L155-L158)
+which increments the number that tracks the play IDs and emits an event:
 
-A good example of when the code should specify the type being restricted is checking the FLOW balance: the code must borrow `&FlowToken.Vault{FungibleToken.Balance}`, in order to ensure that it gets a FLOW token balance, and not just `&{FungibleToken.Balance}`, any balance – the user could store another object that conforms to the balance interface and return whatever value as the amount.
+```cadence
+// Simplified Code
+// BAD
+//
+pub contract TopShot {
 
-### Plural Names For Arrays And Maps Are Preferable
+    // The Record that is used to track every unique play ID
+    pub var nextPlayID: UInt32
 
-e.g. `accounts` rather than `account` for an array of accounts.
+    pub struct Play {
 
-This signals that the field or variable is not scalar. It also makes it easier to the singular form for a variable name during iteration.
+        pub let playID: UInt32
+
+        init() {
+
+            self.playID = TopShot.nextPlayID
+
+            // Increment the ID so that it isn't used again
+            TopShot.nextPlayID = TopShot.nextPlayID + UInt32(1)
+
+            emit PlayCreated(id: self.playID, metadata: metadata)
+        }
+    }
+}
+```
+
+This is a risk because anyone can create the `Play` struct as many times as they want,
+which could increment the `nextPlayID` field to the max `UInt32` value,
+effectively preventing new plays from being created. It also would emit bogus events.
+
+This bug was fixed by
+[instead updating the contract state in the admin function](https://github.com/dapperlabs/nba-smart-contracts/blob/master/contracts/TopShot.cdc#L682-L685)
+that creates the plays.
+
+
+```cadence
+// Update contract state in admin resource functions
+// GOOD
+//
+pub contract TopShot {
+
+    // The Record that is used to track every unique play ID
+    pub var nextPlayID: UInt32
+
+    pub struct Play {
+
+        pub let playID: UInt32
+
+        init() {
+
+            self.playID = TopShot.nextPlayID
+
+            // Increment the ID so that it isn't used again
+            TopShot.nextPlayID = TopShot.nextPlayID + UInt32(1)
+
+            emit PlayCreated(id: self.playID, metadata: metadata)
+        }
+    }
+
+    pub resource Admin {
+
+        // Protected within the private admin resource
+        pub fun createPlay() {
+            // Create the new Play
+            var newPlay = Play()
+
+            // Increment the ID so that it isn't used again
+            TopShot.nextPlayID = TopShot.nextPlayID + UInt32(1)
+
+            emit PlayCreated(id: newPlay.playID, metadata: metadata)
+
+            // Store it in the contract storage
+            TopShot.playDatas[newPlay.playID] = newPlay
+        }
+    }
+}
+```
+
