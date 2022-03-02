@@ -1697,6 +1697,10 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 		var address Address
 		var err error
 		wrapPanic(func() {
+			err = context.Interface.MeterComputation(OpTypeCreateAccount, 1)
+			if err != nil {
+				return
+			}
 			address, err = context.Interface.CreateAccount(payerAddress)
 		})
 		if err != nil {
@@ -1735,6 +1739,10 @@ func accountBalanceGetFunction(
 		var balance uint64
 		var err error
 		wrapPanic(func() {
+			err = runtimeInterface.MeterComputation(OpTypeGetAccountBalance, 1)
+			if err != nil {
+				return
+			}
 			balance, err = runtimeInterface.GetAccountBalance(address)
 		})
 		if err != nil {
@@ -1756,6 +1764,10 @@ func accountAvailableBalanceGetFunction(
 		var balance uint64
 		var err error
 		wrapPanic(func() {
+			err = runtimeInterface.MeterComputation(OpTypeGetAccountAvailableBalance, 1)
+			if err != nil {
+				return
+			}
 			balance, err = runtimeInterface.GetAccountAvailableBalance(address)
 		})
 		if err != nil {
@@ -1786,6 +1798,10 @@ func storageUsedGetFunction(
 
 		var capacity uint64
 		wrapPanic(func() {
+			err = runtimeInterface.MeterComputation(OpTypeGetStorageUsed, 1)
+			if err != nil {
+				return
+			}
 			capacity, err = runtimeInterface.GetStorageUsed(address)
 		})
 		if err != nil {
@@ -1804,6 +1820,10 @@ func storageCapacityGetFunction(addressValue interpreter.AddressValue, runtimeIn
 		var capacity uint64
 		var err error
 		wrapPanic(func() {
+			err = runtimeInterface.MeterComputation(OpTypeGetStorageCapacity, 1)
+			if err != nil {
+				return
+			}
 			capacity, err = runtimeInterface.GetStorageCapacity(address)
 		})
 		if err != nil {
@@ -3311,6 +3331,10 @@ func validatePublicKey(
 	}
 
 	wrapPanic(func() {
+		err = runtimeInterface.MeterComputation(OpTypeValidatePublicKey, 1)
+		if err != nil {
+			return
+		}
 		err = runtimeInterface.ValidatePublicKey(publicKey)
 	})
 
@@ -3337,6 +3361,10 @@ func blsVerifyPoP(
 
 	var valid bool
 	wrapPanic(func() {
+		err = runtimeInterface.MeterComputation(OpTypeBLSVerifyPOP, 1)
+		if err != nil {
+			return
+		}
 		valid, err = runtimeInterface.BLSVerifyPOP(publicKey, signature)
 	})
 	if err != nil {
@@ -3373,6 +3401,10 @@ func blsAggregateSignatures(
 	var err error
 	var aggregatedSignature []byte
 	wrapPanic(func() {
+		err = runtimeInterface.MeterComputation(OpTypeBLSAggregateSignatures, uint(len(bytesArray)))
+		if err != nil {
+			return
+		}
 		aggregatedSignature, err = runtimeInterface.BLSAggregateSignatures(bytesArray)
 	})
 
