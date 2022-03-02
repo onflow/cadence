@@ -85,7 +85,7 @@ type Interface interface {
 	// GenerateUUID is called to generate a UUID.
 	GenerateUUID() (uint64, error)
 	// MeterComputation is a callback method for metering computation, it returns error
-	// if user passes the computation limit enforced by the environment
+	// when computation passes the limit (set by the environment)
 	MeterComputation(operationType MetringOperationType, intensity uint) error
 	// DecodeArgument decodes a transaction argument against the given type.
 	DecodeArgument(argument []byte, argumentType cadence.Type) (cadence.Value, error)
