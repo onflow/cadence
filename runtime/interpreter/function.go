@@ -75,7 +75,7 @@ func NewInterpretedFunctionValue(
 	postConditions ast.Conditions,
 ) *InterpretedFunctionValue {
 
-	interpreter.UseConstantMemory(common.MemoryKindFunction)
+	interpreter.UseConstantMemory(common.MemoryKindInterpretedFunction)
 
 	return &InterpretedFunctionValue{
 		Interpreter:      interpreter,
