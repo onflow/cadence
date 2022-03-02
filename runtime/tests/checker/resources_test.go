@@ -3190,6 +3190,7 @@ func TestCheckResourceInterfaceUseAsType(t *testing.T) {
 	require.NoError(t, err)
 }
 
+
 func TestCheckResourceArrayIndexing(t *testing.T) {
 
 	t.Parallel()
@@ -8615,4 +8616,65 @@ func TestCheckResourceInvalidationWithConditionalExprInDestroy(t *testing.T) {
 	errs := ExpectCheckerErrors(t, err, 2)
 	assert.IsType(t, &sema.InvalidConditionalResourceOperandError{}, errs[0])
 	assert.IsType(t, &sema.InvalidConditionalResourceOperandError{}, errs[1])
+}
+
+func TestBadResourceInterface(t *testing.T) {
+	t.Parallel()
+
+	t.Run("bad resource interface: shorter", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, "resource interface struct{struct d:struct{ struct d:struct{ }struct d:struct{ struct d:struct{ }}}}")
+
+		errs := ExpectCheckerErrors(t, err, 17)
+
+		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
+		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[1])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[2])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[3])
+		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[4])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[5])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[6])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[7])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[8])
+		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[9])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[10])
+		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[11])
+		assert.IsType(t, &sema.ConformanceError{}, errs[12])
+		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[13])
+		assert.IsType(t, &sema.ConformanceError{}, errs[14])
+		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[15])
+		assert.IsType(t, &sema.ConformanceError{}, errs[16])
+	})
+
+	t.Run("bad resource interface: longer", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, "resource interface struct{struct d:struct{ contract d:struct{ contract x:struct{ struct d{} contract d:struct{ contract d:struct {}}}}}}")
+
+		errs := ExpectCheckerErrors(t, err, 24)
+
+		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
+		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[1])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[2])
+		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[3])
+		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[4])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[5])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[6])
+		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[7])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[8])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[9])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[10])
+		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[11])
+		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[12])
+		assert.IsType(t, &sema.ConformanceError{}, errs[13])
+		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[14])
+		assert.IsType(t, &sema.ConformanceError{}, errs[15])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[16])
+		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[17])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[18])
+		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[19])
+		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[20])
+		assert.IsType(t, &sema.ConformanceError{}, errs[21])
+		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[22])
+		assert.IsType(t, &sema.ConformanceError{}, errs[23])
+	})
 }
