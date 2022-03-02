@@ -42,7 +42,7 @@ func TestParseSimpleInfixExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("1+2*3")
+		result, errs := ParseExpression("1+2*3", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -87,7 +87,7 @@ func TestParseSimpleInfixExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("  1   +   2  *   3 ")
+		result, errs := ParseExpression("  1   +   2  *   3 ", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -132,7 +132,7 @@ func TestParseSimpleInfixExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("1 + 2 + 3")
+		result, errs := ParseExpression("1 + 2 + 3", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -177,7 +177,7 @@ func TestParseSimpleInfixExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("1 ?? 2 ?? 3")
+		result, errs := ParseExpression("1 ?? 2 ?? 3", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -227,7 +227,7 @@ func TestParseAdvancedExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("1 +- 2 -- 3")
+		result, errs := ParseExpression("1 +- 2 -- 3", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -272,7 +272,7 @@ func TestParseAdvancedExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("(1 + 2) * 3")
+		result, errs := ParseExpression("(1 + 2) * 3", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -317,7 +317,7 @@ func TestParseAdvancedExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("1 < 2 > 3")
+		result, errs := ParseExpression("1 < 2 > 3", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -362,7 +362,7 @@ func TestParseAdvancedExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("a ? b : c ? d : e")
+		result, errs := ParseExpression("a ? b : c ? d : e", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -408,7 +408,7 @@ func TestParseAdvancedExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("true + false")
+		result, errs := ParseExpression("true + false", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -437,7 +437,7 @@ func TestParseAdvancedExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("(<-x)")
+		result, errs := ParseExpression("(<-x)", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -465,7 +465,7 @@ func TestParseArrayExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("[ 1,2 + 3, 4  ,  5 ]")
+		result, errs := ParseExpression("[ 1,2 + 3, 4  ,  5 ]", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -538,7 +538,7 @@ func TestParseDictionaryExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("{ 1:2 + 3, 4  :  5 }")
+		result, errs := ParseExpression("{ 1:2 + 3, 4  :  5 }", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -609,7 +609,7 @@ func TestParseDictionaryExpression(t *testing.T) {
 
 func TestParseIndexExpression(t *testing.T) {
 	t.Run("index expression", func(t *testing.T) {
-		result, errs := ParseExpression("a[0]")
+		result, errs := ParseExpression("a[0]", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -638,7 +638,7 @@ func TestParseIndexExpression(t *testing.T) {
 		)
 	})
 	t.Run("index expression with whitespace", func(t *testing.T) {
-		result, errs := ParseExpression("a [ 0 ]")
+		result, errs := ParseExpression("a [ 0 ]", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -667,7 +667,7 @@ func TestParseIndexExpression(t *testing.T) {
 		)
 	})
 	t.Run("index expression with identifier", func(t *testing.T) {
-		result, errs := ParseExpression("a [foo]")
+		result, errs := ParseExpression("a [foo]", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -702,7 +702,7 @@ func TestParseIdentifier(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("a + 3")
+		result, errs := ParseExpression("a + 3", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -733,7 +733,7 @@ func TestParsePath(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseExpression("/foo/bar")
+	result, errs := ParseExpression("/foo/bar", nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -760,7 +760,7 @@ func TestParseString(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("\"\"")
+		result, errs := ParseExpression("\"\"", nil)
 		assert.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -779,7 +779,7 @@ func TestParseString(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("\"")
+		result, errs := ParseExpression("\"", nil)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -806,7 +806,7 @@ func TestParseString(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("\"\n")
+		result, errs := ParseExpression("\"\n", nil)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -832,7 +832,7 @@ func TestParseString(t *testing.T) {
 	t.Run("invalid, non-empty, missing end at end of file", func(t *testing.T) {
 
 		t.Parallel()
-		result, errs := ParseExpression("\"t")
+		result, errs := ParseExpression("\"t", nil)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -859,7 +859,7 @@ func TestParseString(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("\"t\n")
+		result, errs := ParseExpression("\"t\n", nil)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -886,7 +886,7 @@ func TestParseString(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("\"\\")
+		result, errs := ParseExpression("\"\\", nil)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -917,7 +917,7 @@ func TestParseString(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`"te\tst\"te\u{1F3CE}\u{FE0F}xt"`)
+		result, errs := ParseExpression(`"te\tst\"te\u{1F3CE}\u{FE0F}xt"`, nil)
 		assert.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -936,7 +936,7 @@ func TestParseString(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`"te\Xst"`)
+		result, errs := ParseExpression(`"te\Xst"`, nil)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -963,7 +963,7 @@ func TestParseString(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`"te\u`)
+		result, errs := ParseExpression(`"te\u`, nil)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -994,7 +994,7 @@ func TestParseString(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`"te\us`)
+		result, errs := ParseExpression(`"te\us`, nil)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -1025,7 +1025,7 @@ func TestParseString(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`"te\u{`)
+		result, errs := ParseExpression(`"te\u{`, nil)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -1056,7 +1056,7 @@ func TestParseString(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`"te\u{}"`)
+		result, errs := ParseExpression(`"te\u{}"`, nil)
 		assert.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1076,13 +1076,14 @@ func TestParseString(t *testing.T) {
 		t.Parallel()
 
 		result, errs := ParseExpression(
-			`"te\u{73}t ` +
-				`\u{4A}J\u{4a}J ` +
-				`\u{4B}K\u{4b}K ` +
-				`\u{4C}L\u{4c}L ` +
-				`\u{4D}M\u{4d}M ` +
-				`\u{4E}N\u{4e}N ` +
+			`"te\u{73}t `+
+				`\u{4A}J\u{4a}J `+
+				`\u{4B}K\u{4b}K `+
+				`\u{4C}L\u{4c}L `+
+				`\u{4D}M\u{4d}M `+
+				`\u{4E}N\u{4e}N `+
 				`\u{4F}O\u{4f}O"`,
+			nil,
 		)
 		assert.Empty(t, errs)
 
@@ -1102,7 +1103,7 @@ func TestParseString(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`"te\u{X}st"`)
+		result, errs := ParseExpression(`"te\u{X}st"`, nil)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -1134,7 +1135,7 @@ func TestParseInvocation(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("f()")
+		result, errs := ParseExpression("f()", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1157,7 +1158,7 @@ func TestParseInvocation(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("f ()")
+		result, errs := ParseExpression("f ()", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1180,7 +1181,7 @@ func TestParseInvocation(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("f ( )")
+		result, errs := ParseExpression("f ( )", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1203,7 +1204,7 @@ func TestParseInvocation(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("f(1)")
+		result, errs := ParseExpression("f(1)", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1240,7 +1241,7 @@ func TestParseInvocation(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("f(label:1)")
+		result, errs := ParseExpression("f(label:1)", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1279,7 +1280,7 @@ func TestParseInvocation(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("f(1,2)")
+		result, errs := ParseExpression("f(1,2)", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1329,7 +1330,7 @@ func TestParseInvocation(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("f(a:1,b:2)")
+		result, errs := ParseExpression("f(a:1,b:2)", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1383,7 +1384,7 @@ func TestParseInvocation(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseExpression("f(,,)")
+		_, errs := ParseExpression("f(,,)", nil)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -1399,7 +1400,7 @@ func TestParseInvocation(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseExpression("f(1,,)")
+		_, errs := ParseExpression("f(1,,)", nil)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -1415,7 +1416,7 @@ func TestParseInvocation(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseExpression("f(1 2)")
+		_, errs := ParseExpression("f(1 2)", nil)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -1432,7 +1433,7 @@ func TestParseInvocation(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("f(1,g(2))")
+		result, errs := ParseExpression("f(1,g(2))", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1498,7 +1499,7 @@ func TestParseInvocation(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("f(1,g(\"test\"))")
+		result, errs := ParseExpression("f(1,g(\"test\"))", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1567,7 +1568,7 @@ func TestParseMemberExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("f.n")
+		result, errs := ParseExpression("f.n", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1592,7 +1593,7 @@ func TestParseMemberExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("f .n")
+		result, errs := ParseExpression("f .n", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1617,7 +1618,7 @@ func TestParseMemberExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("f.")
+		result, errs := ParseExpression("f.", nil)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -1646,7 +1647,7 @@ func TestParseMemberExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("f.n * 3")
+		result, errs := ParseExpression("f.n * 3", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1683,7 +1684,7 @@ func TestParseMemberExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("3 * f.n")
+		result, errs := ParseExpression("3 * f.n", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1720,7 +1721,7 @@ func TestParseMemberExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("f?.n")
+		result, errs := ParseExpression("f?.n", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1793,7 +1794,7 @@ func TestParseBlockComment(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(" /* test  foo/* bar  */ asd*/ true")
+		result, errs := ParseExpression(" /* test  foo/* bar  */ asd*/ true", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1812,7 +1813,7 @@ func TestParseBlockComment(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(" /*test  foo*/ /* bar  */ true")
+		result, errs := ParseExpression(" /*test  foo*/ /* bar  */ true", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1831,7 +1832,7 @@ func TestParseBlockComment(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(" 1/*test  foo*/+/* bar  */ 2  ")
+		result, errs := ParseExpression(" 1/*test  foo*/+/* bar  */ 2  ", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1864,7 +1865,7 @@ func TestParseBlockComment(t *testing.T) {
 func BenchmarkParseInfix(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
-		_, errs := ParseExpression("(8 - 1 + 3) * 6 - ((3 + 7) * 2)")
+		_, errs := ParseExpression("(8 - 1 + 3) * 6 - ((3 + 7) * 2)", nil)
 		if len(errs) > 0 {
 			b.Fatalf("parsing expression failed: %s", errs)
 		}
@@ -1886,7 +1887,7 @@ func BenchmarkParseArray(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		_, errs := ParseExpression(lit)
+		_, errs := ParseExpression(lit, nil)
 		if len(errs) > 0 {
 			b.Fatalf("parsing expression failed: %s", errs)
 		}
@@ -1897,7 +1898,7 @@ func TestParseReference(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseExpression("& t as T")
+	result, errs := ParseExpression("& t as T", nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -1928,7 +1929,7 @@ func TestParseCasts(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(" t as T")
+		result, errs := ParseExpression(" t as T", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1958,7 +1959,7 @@ func TestParseCasts(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(" t as? T")
+		result, errs := ParseExpression(" t as? T", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1989,7 +1990,7 @@ func TestParseCasts(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(" t as! T")
+		result, errs := ParseExpression(" t as! T", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2025,7 +2026,7 @@ func TestParseForceExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("t!")
+		result, errs := ParseExpression("t!", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2046,7 +2047,7 @@ func TestParseForceExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(" t ! ")
+		result, errs := ParseExpression(" t ! ", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2067,7 +2068,7 @@ func TestParseForceExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("<-t!")
+		result, errs := ParseExpression("<-t!", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2092,7 +2093,7 @@ func TestParseForceExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("10 *  t!")
+		result, errs := ParseExpression("10 *  t!", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2124,7 +2125,7 @@ func TestParseForceExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseStatements("x\n!y")
+		result, errs := ParseStatements("x\n!y", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2158,7 +2159,7 @@ func TestParseForceExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseStatements("x\n.y!")
+		result, errs := ParseStatements("x\n.y!", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2190,7 +2191,7 @@ func TestParseForceExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseStatements("x. y")
+		result, errs := ParseStatements("x. y", nil)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -2232,7 +2233,7 @@ func TestParseCreate(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("create T()")
+		result, errs := ParseExpression("create T()", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2258,7 +2259,7 @@ func TestParseNil(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseExpression(" nil")
+	result, errs := ParseExpression(" nil", nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -2277,7 +2278,7 @@ func TestParseDestroy(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("destroy t")
+		result, errs := ParseExpression("destroy t", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2299,7 +2300,7 @@ func TestParseLineComment(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseExpression(" //// // this is a comment\n 1 / 2")
+	result, errs := ParseExpression(" //// // this is a comment\n 1 / 2", nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -2336,7 +2337,7 @@ func TestParseFunctionExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("fun () { }")
+		result, errs := ParseExpression("fun () { }", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2376,7 +2377,7 @@ func TestParseFunctionExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("fun (): X { }")
+		result, errs := ParseExpression("fun (): X { }", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2420,7 +2421,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`0b`)
+		result, errs := ParseExpression(`0b`, nil)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -2458,7 +2459,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`0b101010`)
+		result, errs := ParseExpression(`0b101010`, nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2477,7 +2478,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 	t.Run("binary with leading zeros", func(t *testing.T) {
 
-		result, errs := ParseExpression(`0b001000`)
+		result, errs := ParseExpression(`0b001000`, nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2498,7 +2499,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`0b101010_101010`)
+		result, errs := ParseExpression(`0b101010_101010`, nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2519,7 +2520,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`0b_101010_101010`)
+		result, errs := ParseExpression(`0b_101010_101010`, nil)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&InvalidIntegerLiteralError{
@@ -2553,7 +2554,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`0b101010_101010_`)
+		result, errs := ParseExpression(`0b101010_101010_`, nil)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&InvalidIntegerLiteralError{
@@ -2587,7 +2588,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`0o`)
+		result, errs := ParseExpression(`0o`, nil)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -2625,7 +2626,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`0o32`)
+		result, errs := ParseExpression(`0o32`, nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2646,7 +2647,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`0o32_45`)
+		result, errs := ParseExpression(`0o32_45`, nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2667,7 +2668,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`0o_32_45`)
+		result, errs := ParseExpression(`0o_32_45`, nil)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&InvalidIntegerLiteralError{
@@ -2701,7 +2702,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`0o32_45_`)
+		result, errs := ParseExpression(`0o32_45_`, nil)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&InvalidIntegerLiteralError{
@@ -2735,7 +2736,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`1234567890`)
+		result, errs := ParseExpression(`1234567890`, nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2756,7 +2757,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`1_234_567_890`)
+		result, errs := ParseExpression(`1_234_567_890`, nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2777,7 +2778,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`1_234_567_890_`)
+		result, errs := ParseExpression(`1_234_567_890_`, nil)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&InvalidIntegerLiteralError{
@@ -2811,7 +2812,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`0x`)
+		result, errs := ParseExpression(`0x`, nil)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -2849,7 +2850,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`0xf2`)
+		result, errs := ParseExpression(`0xf2`, nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2870,7 +2871,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`0xf2_09`)
+		result, errs := ParseExpression(`0xf2_09`, nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2891,7 +2892,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`0x_f2_09`)
+		result, errs := ParseExpression(`0x_f2_09`, nil)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&InvalidIntegerLiteralError{
@@ -2925,7 +2926,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`0xf2_09_`)
+		result, errs := ParseExpression(`0xf2_09_`, nil)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&InvalidIntegerLiteralError{
@@ -2959,7 +2960,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`0`)
+		result, errs := ParseExpression(`0`, nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2980,7 +2981,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`01`)
+		result, errs := ParseExpression(`01`, nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -3001,7 +3002,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`09`)
+		result, errs := ParseExpression(`09`, nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -3022,7 +3023,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("00123")
+		result, errs := ParseExpression("00123", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -3043,7 +3044,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`0z123`)
+		result, errs := ParseExpression(`0z123`, nil)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -3081,7 +3082,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`0_100`)
+		result, errs := ParseExpression(`0_100`, nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -3102,7 +3103,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression(`1_100`)
+		result, errs := ParseExpression(`1_100`, nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -3125,7 +3126,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		// NOTE: a leading underscore introduces an identifier
 
-		result, errs := ParseExpression(`_100`)
+		result, errs := ParseExpression(`_100`, nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -3148,7 +3149,7 @@ func TestParseFixedPoint(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("1234_5678_90.0009_8765_4321")
+		result, errs := ParseExpression("1234_5678_90.0009_8765_4321", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -3171,7 +3172,7 @@ func TestParseFixedPoint(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("0.1")
+		result, errs := ParseExpression("0.1", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -3194,7 +3195,7 @@ func TestParseFixedPoint(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("0.")
+		result, errs := ParseExpression("0.", nil)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -3228,7 +3229,7 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("1 < 2")
+		result, errs := ParseExpression("1 < 2", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -3261,7 +3262,7 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("a < > ()")
+		result, errs := ParseExpression("a < > ()", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -3285,7 +3286,7 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("a < { K : V } > ( 1 )")
+		result, errs := ParseExpression("a < { K : V } > ( 1 )", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -3345,7 +3346,7 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("a < { K : V } , @R , [ S ] > ( 1 , 2 )")
+		result, errs := ParseExpression("a < { K : V } , @R , [ S ] > ( 1 , 2 )", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -3443,7 +3444,7 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("1 + a<>()")
+		result, errs := ParseExpression("1 + a<>()", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -3479,7 +3480,7 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("a<T<U>>()")
+		result, errs := ParseExpression("a<T<U>>()", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -3529,7 +3530,7 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("a<T< U > >()")
+		result, errs := ParseExpression("a<T< U > >()", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -3579,7 +3580,7 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("0 + 1 < 2")
+		result, errs := ParseExpression("0 + 1 < 2", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -3624,7 +3625,7 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("0 + 1 << 2")
+		result, errs := ParseExpression("0 + 1 << 2", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -3669,7 +3670,7 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("0 + 1 > 2")
+		result, errs := ParseExpression("0 + 1 > 2", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -3714,7 +3715,7 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("0 + 1 >> 2")
+		result, errs := ParseExpression("0 + 1 >> 2", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -4919,7 +4920,7 @@ func TestParseExpression(t *testing.T) {
 
 	actual, errs := ParseExpression(`
         before(x + before(y)) + z
-	`)
+	`, nil)
 	var err error
 	if len(errs) > 0 {
 		err = Error{
@@ -4998,7 +4999,7 @@ func TestParseStringEscapes(t *testing.T) {
 
 	actual, errs := ParseExpression(`
        "test \0\n\r\t\"\'\\ xyz"
-	`)
+	`, nil)
 
 	var err error
 	if len(errs) > 0 {
@@ -5026,7 +5027,7 @@ func TestParseStringWithUnicode(t *testing.T) {
 
 	actual, errs := ParseExpression(`
       "this is a test \t\\new line and race car:\n\u{1F3CE}\u{FE0F}"
-	`)
+	`, nil)
 
 	var err error
 	if len(errs) > 0 {

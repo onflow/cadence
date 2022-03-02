@@ -34,7 +34,7 @@ func TestBeforeExtractor(t *testing.T) {
 
 	expression, errs := parser2.ParseExpression(`
         before(x + before(y)) + z
-    `)
+    `, nil)
 
 	require.Empty(t, errs)
 
