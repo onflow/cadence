@@ -3190,7 +3190,6 @@ func TestCheckResourceInterfaceUseAsType(t *testing.T) {
 	require.NoError(t, err)
 }
 
-
 func TestCheckResourceArrayIndexing(t *testing.T) {
 
 	t.Parallel()

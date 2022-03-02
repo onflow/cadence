@@ -40,7 +40,7 @@ func TestParseInvalid(t *testing.T) {
 	t.Parallel()
 
 	type test struct {
-		msg string
+		msg  string
 		code string
 	}
 
