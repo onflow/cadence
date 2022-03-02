@@ -9,7 +9,7 @@ require (
 	github.com/fxamacker/cbor/v2 v2.3.1-0.20211029162100-5d5d7c3edd41
 	github.com/go-test/deep v1.0.5
 	github.com/logrusorgru/aurora v0.0.0-20200102142835-e9ef32dff381
-	github.com/onflow/atree v0.1.1
+	github.com/onflow/atree v0.1.2-0.20220215140047-82a5e53e8248
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/rivo/uniseg v0.2.0
 	github.com/schollz/progressbar/v3 v3.8.3
@@ -20,5 +20,4 @@ require (
 	golang.org/x/text v0.3.6
 	golang.org/x/tools v0.0.0-20200828161849-5deb26317202
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
-
 )
