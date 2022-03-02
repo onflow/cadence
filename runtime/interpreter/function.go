@@ -75,7 +75,7 @@ func NewInterpretedFunctionValue(
 	postConditions ast.Conditions,
 ) *InterpretedFunctionValue {
 
-	interpreter.UseConstantMemory(common.MemoryKindFunction)
+	interpreter.UseConstantMemory(common.MemoryKindInterpretedFunction)
 
 	return &InterpretedFunctionValue{
 		Interpreter:      interpreter,
@@ -219,7 +219,7 @@ func NewHostFunctionValue(
 	funcType *sema.FunctionType,
 ) *HostFunctionValue {
 
-	interpreter.UseConstantMemory(common.MemoryKindFunction)
+	interpreter.UseConstantMemory(common.MemoryKindHostFunction)
 
 	return NewUnmeteredHostFunctionValue(function, funcType)
 }
