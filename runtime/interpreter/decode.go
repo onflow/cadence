@@ -58,12 +58,8 @@ func decodeString(dec *cbor.StreamDecoder, memoryGauge common.MemoryGauge) (stri
 	if err != nil {
 		return "", err
 	}
-	memoryUsage := common.MemoryUsage{
-		Kind:   common.MemoryKindString,
-		Amount: length,
-	}
 	if memoryGauge != nil {
-		memoryGauge.UseMemory(memoryUsage)
+		memoryGauge.UseMemory(common.NewStringMemoryUsage(length))
 	}
 	return dec.DecodeString()
 }
