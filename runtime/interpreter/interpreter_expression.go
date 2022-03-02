@@ -781,16 +781,16 @@ func (interpreter *Interpreter) VisitFunctionExpression(expression *ast.Function
 
 	statements := expression.FunctionBlock.Block.Statements
 
-	return &InterpretedFunctionValue{
-		Interpreter:      interpreter,
-		ParameterList:    expression.ParameterList,
-		Type:             functionType,
-		Activation:       lexicalScope,
-		BeforeStatements: beforeStatements,
-		PreConditions:    preConditions,
-		Statements:       statements,
-		PostConditions:   rewrittenPostConditions,
-	}
+	return NewInterpretedFunctionValue(
+		interpreter,
+		expression.ParameterList,
+		functionType,
+		lexicalScope,
+		beforeStatements,
+		preConditions,
+		statements,
+		rewrittenPostConditions,
+	)
 }
 
 func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingExpression) ast.Repr {

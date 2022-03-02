@@ -24,6 +24,7 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -61,6 +62,31 @@ type InterpretedFunctionValue struct {
 	PreConditions    ast.Conditions
 	Statements       []ast.Statement
 	PostConditions   ast.Conditions
+}
+
+func NewInterpretedFunctionValue(
+	interpreter *Interpreter,
+	parameterList *ast.ParameterList,
+	functionType *sema.FunctionType,
+	lexicalScope *VariableActivation,
+	beforeStatements []ast.Statement,
+	preConditions ast.Conditions,
+	statements []ast.Statement,
+	postConditions ast.Conditions,
+) *InterpretedFunctionValue {
+
+	interpreter.UseConstantMemory(common.MemoryKindFunction)
+
+	return &InterpretedFunctionValue{
+		Interpreter:      interpreter,
+		ParameterList:    parameterList,
+		Type:             functionType,
+		Activation:       lexicalScope,
+		BeforeStatements: beforeStatements,
+		PreConditions:    preConditions,
+		Statements:       statements,
+		PostConditions:   postConditions,
+	}
 }
 
 var _ Value = &InterpretedFunctionValue{}

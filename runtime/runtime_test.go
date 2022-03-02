@@ -184,6 +184,7 @@ type testRuntimeInterface struct {
 	blsAggregatePublicKeys     func(keys []*PublicKey) (*PublicKey, error)
 	getAccountContractNames    func(address Address) ([]string, error)
 	recordTrace                func(operation string, location common.Location, duration time.Duration, logs []opentracing.LogRecord)
+	useMemory                  func(usage common.MemoryUsage)
 }
 
 // testRuntimeInterface should implement Interface
@@ -541,6 +542,13 @@ func (i *testRuntimeInterface) RecordTrace(operation string, location common.Loc
 		return
 	}
 	i.recordTrace(operation, location, duration, logs)
+}
+
+func (i *testRuntimeInterface) UseMemory(usage common.MemoryUsage) {
+	if i.useMemory == nil {
+		return
+	}
+	i.useMemory(usage)
 }
 
 func TestRuntimeImport(t *testing.T) {
