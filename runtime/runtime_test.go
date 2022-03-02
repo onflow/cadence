@@ -156,7 +156,7 @@ type testRuntimeInterface struct {
 		newAddress common.Address,
 	)
 	generateUUID       func() (uint64, error)
-	computationLimit   uint64
+	meterComputation   func(optype MetringOperationType, intensity uint) error
 	decodeArgument     func(b []byte, t cadence.Type) (cadence.Value, error)
 	programParsed      func(location common.Location, duration time.Duration)
 	programChecked     func(location common.Location, duration time.Duration)
@@ -361,8 +361,11 @@ func (i *testRuntimeInterface) GenerateUUID() (uint64, error) {
 	return i.generateUUID()
 }
 
-func (i *testRuntimeInterface) GetComputationLimit() uint64 {
-	return i.computationLimit
+func (i *testRuntimeInterface) MeterComputation(opType MetringOperationType, intensity uint) error {
+	if i.meterComputation == nil {
+		return nil
+	}
+	return i.meterComputation(opType, intensity)
 }
 
 func (i *testRuntimeInterface) SetComputationUsed(uint64) error {
@@ -5282,12 +5285,24 @@ func TestRuntimeComputationLimit(t *testing.T) {
 
 			storage := newTestLedger(nil, nil)
 
+			var computationUsed uint
+
+			checkComputationLimit := func(_ MetringOperationType, intensity uint) error {
+				computationUsed += intensity
+				if computationUsed <= computationLimit {
+					return nil
+				}
+				panic(ComputationLimitExceededError{
+					Limit: computationLimit,
+				})
+			}
+
 			runtimeInterface := &testRuntimeInterface{
 				storage: storage,
 				getSigningAccounts: func() ([]Address, error) {
 					return nil, nil
 				},
-				computationLimit: computationLimit,
+				meterComputation: checkComputationLimit,
 			}
 
 			nextTransactionLocation := newTransactionLocationGenerator()
@@ -6946,7 +6961,6 @@ func TestRuntimeStackOverflow(t *testing.T) {
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},
-		computationLimit: 9999,
 	}
 
 	nextTransactionLocation := newTransactionLocationGenerator()
