@@ -46,7 +46,7 @@ func TestRuntimeInterpretedFunctionMetering(t *testing.T) {
 		)
 
 		require.NoError(t, err)
-		assert.Equal(t, meter[common.MemoryKindInterpretedFunction], uint64(1))
+		assert.Equal(t, uint64(1), meter[common.MemoryKindInterpretedFunction])
 	})
 
 	t.Run("function pointer creation", func(t *testing.T) {
@@ -78,7 +78,7 @@ func TestRuntimeInterpretedFunctionMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		// 1 for the main, and 1 for the anon-func
-		assert.Equal(t, meter[common.MemoryKindInterpretedFunction], uint64(2))
+		assert.Equal(t, uint64(2), meter[common.MemoryKindInterpretedFunction])
 	})
 
 	t.Run("function pointer passing", func(t *testing.T) {
@@ -116,7 +116,7 @@ func TestRuntimeInterpretedFunctionMetering(t *testing.T) {
 
 		// 1 for the main, and 1 for the anon-func.
 		// Assignment shouldn't allocate new memory, as the value is immutable and shouldn't be copied.
-		assert.Equal(t, meter[common.MemoryKindInterpretedFunction], uint64(2))
+		assert.Equal(t, uint64(2), meter[common.MemoryKindInterpretedFunction])
 	})
 
 	t.Run("struct method", func(t *testing.T) {
@@ -148,7 +148,7 @@ func TestRuntimeInterpretedFunctionMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		// 1 for the main, and 1 for the struct method.
-		assert.Equal(t, meter[common.MemoryKindInterpretedFunction], uint64(2))
+		assert.Equal(t, uint64(2), meter[common.MemoryKindInterpretedFunction])
 	})
 
 	t.Run("struct init", func(t *testing.T) {
@@ -180,7 +180,7 @@ func TestRuntimeInterpretedFunctionMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		// 1 for the main, and 1 for the struct init.
-		assert.Equal(t, meter[common.MemoryKindInterpretedFunction], uint64(2))
+		assert.Equal(t, uint64(2), meter[common.MemoryKindInterpretedFunction])
 	})
 }
 
