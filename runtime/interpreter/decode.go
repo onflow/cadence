@@ -58,12 +58,8 @@ func decodeString(dec *cbor.StreamDecoder, memoryGauge common.MemoryGauge) (stri
 	if err != nil {
 		return "", err
 	}
-	memoryUsage := common.MemoryUsage{
-		Kind:   common.MemoryKindString,
-		Amount: length,
-	}
 	if memoryGauge != nil {
-		memoryGauge.UseMemory(memoryUsage)
+		memoryGauge.UseMemory(common.NewStringMemoryUsage(length))
 	}
 	return dec.DecodeString()
 }
@@ -76,17 +72,30 @@ func DecodeStorable(
 	atree.Storable,
 	error,
 ) {
+	return NewStorableDecoder(decoder, slabStorageID, memoryGauge).decodeStorable()
+}
+
+func NewStorableDecoder(
+	decoder *cbor.StreamDecoder,
+	slabStorageID atree.StorageID,
+	memoryGauge common.MemoryGauge,
+) StorableDecoder {
 	return StorableDecoder{
-		memoryGauge:   memoryGauge,
 		decoder:       decoder,
+		memoryGauge:   memoryGauge,
 		slabStorageID: slabStorageID,
-	}.decodeStorable()
+		TypeDecoder: NewTypeDecoder(
+			decoder,
+			memoryGauge,
+		),
+	}
 }
 
 type StorableDecoder struct {
 	memoryGauge   common.MemoryGauge
 	decoder       *cbor.StreamDecoder
 	slabStorageID atree.StorageID
+	TypeDecoder
 }
 
 func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
@@ -268,15 +277,6 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 	return storable, nil
 }
 
-func (d StorableDecoder) decodeStringValue() (*StringValue, error) {
-	str, err := decodeString(d.decoder, d.memoryGauge)
-	if err != nil {
-		return nil, err
-	}
-	// NOTE: already metered by StorableDecoder.decodeString
-	return NewUnmeteredStringValue(str), nil
-}
-
 func (d StorableDecoder) decodeCharacter(memoryGauge common.MemoryGauge, v string) (CharacterValue, error) {
 	if !sema.IsValidCharacter(v) {
 		return "", fmt.Errorf(
@@ -285,6 +285,16 @@ func (d StorableDecoder) decodeCharacter(memoryGauge common.MemoryGauge, v strin
 		)
 	}
 	return NewCharacterValue(memoryGauge, v), nil
+}
+
+func (d StorableDecoder) decodeStringValue() (*StringValue, error) {
+	str, err := decodeString(d.decoder, d.memoryGauge)
+	if err != nil {
+		return nil, err
+	}
+
+	// NOTE: already metered by StorableDecoder.decodeString
+	return NewUnmeteredStringValue(str), nil
 }
 
 func (d StorableDecoder) decodeInt() (IntValue, error) {
@@ -793,7 +803,7 @@ func (d StorableDecoder) decodeCapability() (*CapabilityValue, error) {
 	// Optional borrow type can be CBOR nil.
 	err = d.decoder.DecodeNil()
 	if _, ok := err.(*cbor.WrongTypeError); ok {
-		borrowType, err = DecodeStaticType(d.decoder, d.memoryGauge)
+		borrowType, err = d.DecodeStaticType()
 	}
 
 	if err != nil {
@@ -845,7 +855,7 @@ func (d StorableDecoder) decodeLink() (LinkValue, error) {
 	}
 
 	// Decode type at array index encodedLinkValueTypeFieldKey
-	staticType, err := DecodeStaticType(d.decoder, d.memoryGauge)
+	staticType, err := d.DecodeStaticType()
 	if err != nil {
 		return LinkValue{}, fmt.Errorf("invalid link type encoding: %w", err)
 	}
@@ -887,7 +897,7 @@ func (d StorableDecoder) decodeType() (TypeValue, error) {
 	// Optional type can be CBOR nil.
 	err = d.decoder.DecodeNil()
 	if _, ok := err.(*cbor.WrongTypeError); ok {
-		staticType, err = DecodeStaticType(d.decoder, d.memoryGauge)
+		staticType, err = d.DecodeStaticType()
 	}
 
 	if err != nil {
@@ -898,12 +908,28 @@ func (d StorableDecoder) decodeType() (TypeValue, error) {
 }
 
 type TypeDecoder struct {
-	memoryGauge common.MemoryGauge
 	decoder     *cbor.StreamDecoder
+	memoryGauge common.MemoryGauge
+	LocationDecoder
 }
 
-func (d TypeDecoder) decodeStaticType() (StaticType, error) {
+func NewTypeDecoder(
+	decoder *cbor.StreamDecoder,
+	memoryGauge common.MemoryGauge,
+) TypeDecoder {
+	return TypeDecoder{
+		decoder:     decoder,
+		memoryGauge: memoryGauge,
+		LocationDecoder: NewLocationDecoder(
+			decoder,
+			memoryGauge,
+		),
+	}
+}
+
+func (d TypeDecoder) DecodeStaticType() (StaticType, error) {
 	number, err := d.decoder.DecodeTagNumber()
+
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return nil, fmt.Errorf(
@@ -963,7 +989,8 @@ func (d TypeDecoder) decodePrimitiveStaticType() (PrimitiveStaticType, error) {
 }
 
 func (d TypeDecoder) decodeOptionalStaticType() (StaticType, error) {
-	staticType, err := d.decodeStaticType()
+	staticType, err := d.DecodeStaticType()
+
 	if err != nil {
 		return nil, fmt.Errorf(
 			"invalid optional static type inner type encoding: %w",
@@ -999,7 +1026,7 @@ func (d TypeDecoder) decodeCompositeStaticType() (StaticType, error) {
 	}
 
 	// Decode location at array index encodedCompositeStaticTypeLocationFieldKey
-	location, err := decodeLocation(d.decoder, d.memoryGauge)
+	location, err := d.DecodeLocation()
 	if err != nil {
 		return nil, fmt.Errorf("invalid composite static type location encoding: %w", err)
 	}
@@ -1046,7 +1073,8 @@ func (d TypeDecoder) decodeInterfaceStaticType() (InterfaceStaticType, error) {
 	}
 
 	// Decode location at array index encodedInterfaceStaticTypeLocationFieldKey
-	location, err := decodeLocation(d.decoder, d.memoryGauge)
+
+	location, err := d.DecodeLocation()
 	if err != nil {
 		return InterfaceStaticType{}, fmt.Errorf(
 			"invalid interface static type location encoding: %w",
@@ -1074,7 +1102,7 @@ func (d TypeDecoder) decodeInterfaceStaticType() (InterfaceStaticType, error) {
 }
 
 func (d TypeDecoder) decodeVariableSizedStaticType() (StaticType, error) {
-	staticType, err := d.decodeStaticType()
+	staticType, err := d.DecodeStaticType()
 	if err != nil {
 		return nil, fmt.Errorf(
 			"invalid variable-sized static type encoding: %w",
@@ -1132,7 +1160,7 @@ func (d TypeDecoder) decodeConstantSizedStaticType() (StaticType, error) {
 	}
 
 	// Decode type at array index encodedConstantSizedStaticTypeTypeFieldKey
-	staticType, err := d.decodeStaticType()
+	staticType, err := d.DecodeStaticType()
 	if err != nil {
 		return nil, fmt.Errorf(
 			"invalid constant-sized static type inner type encoding: %w",
@@ -1150,6 +1178,7 @@ func (d TypeDecoder) decodeReferenceStaticType() (StaticType, error) {
 	const expectedLength = encodedReferenceStaticTypeLength
 
 	arraySize, err := d.decoder.DecodeArrayHead()
+
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return nil, fmt.Errorf(
@@ -1182,7 +1211,7 @@ func (d TypeDecoder) decodeReferenceStaticType() (StaticType, error) {
 	}
 
 	// Decode type at array index encodedReferenceStaticTypeTypeFieldKey
-	staticType, err := d.decodeStaticType()
+	staticType, err := d.DecodeStaticType()
 	if err != nil {
 		return nil, fmt.Errorf(
 			"invalid reference static type inner type encoding: %w",
@@ -1200,7 +1229,8 @@ func (d TypeDecoder) decodeDictionaryStaticType() (StaticType, error) {
 	const expectedLength = encodedDictionaryStaticTypeLength
 
 	arraySize, err := d.decoder.DecodeArrayHead()
-	if err != nil {
+
+ 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return nil, fmt.Errorf(
 				"invalid dictionary static type encoding: expected [%d]interface{}, got %s",
@@ -1220,7 +1250,7 @@ func (d TypeDecoder) decodeDictionaryStaticType() (StaticType, error) {
 	}
 
 	// Decode key type at array index encodedDictionaryStaticTypeKeyTypeFieldKey
-	keyType, err := d.decodeStaticType()
+	keyType, err := d.DecodeStaticType()
 	if err != nil {
 		return nil, fmt.Errorf(
 			"invalid dictionary static type key type encoding: %w",
@@ -1229,7 +1259,7 @@ func (d TypeDecoder) decodeDictionaryStaticType() (StaticType, error) {
 	}
 
 	// Decode value type at array index encodedDictionaryStaticTypeValueTypeFieldKey
-	valueType, err := d.decodeStaticType()
+	valueType, err := d.DecodeStaticType()
 	if err != nil {
 		return nil, fmt.Errorf(
 			"invalid dictionary static type value type encoding: %w",
@@ -1247,6 +1277,7 @@ func (d TypeDecoder) decodeRestrictedStaticType() (StaticType, error) {
 	const expectedLength = encodedRestrictedStaticTypeLength
 
 	arraySize, err := d.decoder.DecodeArrayHead()
+
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return nil, fmt.Errorf(
@@ -1267,7 +1298,7 @@ func (d TypeDecoder) decodeRestrictedStaticType() (StaticType, error) {
 	}
 
 	// Decode restricted type at array index encodedRestrictedStaticTypeTypeFieldKey
-	restrictedType, err := d.decodeStaticType()
+	restrictedType, err := d.DecodeStaticType()
 	if err != nil {
 		return nil, fmt.Errorf(
 			"invalid restricted static type key type encoding: %w",
@@ -1335,7 +1366,7 @@ func (d TypeDecoder) decodeCapabilityStaticType() (StaticType, error) {
 	// Optional borrow type can be CBOR nil.
 	err := d.decoder.DecodeNil()
 	if _, ok := err.(*cbor.WrongTypeError); ok {
-		borrowStaticType, err = d.decodeStaticType()
+		borrowStaticType, err = d.DecodeStaticType()
 	}
 
 	if err != nil {
@@ -1364,7 +1395,8 @@ func (d TypeDecoder) decodeCompositeTypeInfo() (atree.TypeInfo, error) {
 		)
 	}
 
-	location, err := decodeLocation(d.decoder, d.memoryGauge)
+
+	location, err := d.DecodeLocation()
 	if err != nil {
 		return nil, err
 	}
@@ -1393,18 +1425,9 @@ func (d TypeDecoder) decodeCompositeTypeInfo() (atree.TypeInfo, error) {
 	}, nil
 }
 
-func DecodeStaticType(decoder *cbor.StreamDecoder, memoryGauge common.MemoryGauge) (StaticType, error) {
-	return TypeDecoder{
-		decoder:     decoder,
-		memoryGauge: memoryGauge,
-	}.decodeStaticType()
-}
 
 func DecodeTypeInfo(decoder *cbor.StreamDecoder, memoryGauge common.MemoryGauge) (atree.TypeInfo, error) {
-	d := TypeDecoder{
-		decoder:     decoder,
-		memoryGauge: memoryGauge,
-	}
+	d := NewTypeDecoder(decoder, memoryGauge)
 
 	ty, err := d.decoder.NextType()
 	if err != nil {
@@ -1448,14 +1471,17 @@ type LocationDecoder struct {
 	memoryGauge common.MemoryGauge
 }
 
-func decodeLocation(decoder *cbor.StreamDecoder, memoryGauge common.MemoryGauge) (common.Location, error) {
+func NewLocationDecoder(
+	decoder *cbor.StreamDecoder,
+	memoryGauge common.MemoryGauge,
+) LocationDecoder {
 	return LocationDecoder{
 		decoder:     decoder,
 		memoryGauge: memoryGauge,
-	}.decodeLocation()
+	}
 }
 
-func (d LocationDecoder) decodeLocation() (common.Location, error) {
+func (d LocationDecoder) DecodeLocation() (common.Location, error) {
 	// Location can be CBOR nil.
 	err := d.decoder.DecodeNil()
 	if err == nil {
@@ -1534,6 +1560,7 @@ func (d LocationDecoder) decodeAddressLocation() (common.Location, error) {
 	const expectedLength = encodedAddressLocationLength
 
 	size, err := d.decoder.DecodeArrayHead()
+
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return nil, fmt.Errorf(

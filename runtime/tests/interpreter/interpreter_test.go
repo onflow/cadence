@@ -24,8 +24,10 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/onflow/atree"
+	"github.com/opentracing/opentracing-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -62,12 +64,40 @@ func parseCheckAndInterpretWithOptions(
 	inter *interpreter.Interpreter,
 	err error,
 ) {
+	return parseCheckAndInterpretWithOptionsAndMemoryMetering(t, code, options, nil)
+}
 
-	checker, err := checker.ParseAndCheckWithOptions(t,
+func parseCheckAndInterpretWithMemoryMetering(
+	t testing.TB,
+	code string,
+	memoryGauge common.MemoryGauge,
+) *interpreter.Interpreter {
+	inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(
+		t,
+		code,
+		ParseCheckAndInterpretOptions{},
+		memoryGauge,
+	)
+	require.NoError(t, err)
+	return inter
+}
+
+func parseCheckAndInterpretWithOptionsAndMemoryMetering(
+	t testing.TB,
+	code string,
+	options ParseCheckAndInterpretOptions,
+	memoryGauge common.MemoryGauge,
+) (
+	inter *interpreter.Interpreter,
+	err error,
+) {
+
+	checker, err := checker.ParseAndCheckWithOptionsAndMemoryMetering(t,
 		code,
 		checker.ParseAndCheckOptions{
 			Options: options.CheckerOptions,
 		},
+		memoryGauge,
 	)
 
 	if options.HandleCheckerError != nil {
@@ -95,9 +125,27 @@ func parseCheckAndInterpretWithOptions(
 			interpreter.WithStorage(interpreter.NewInMemoryStorage(nil)),
 			interpreter.WithAtreeValueValidationEnabled(true),
 			interpreter.WithAtreeStorageValidationEnabled(true),
+			interpreter.WithOnRecordTraceHandler(
+				func(
+					_ *interpreter.Interpreter,
+					_ string,
+					_ time.Duration,
+					_ []opentracing.LogRecord,
+				) {
+					// NO-OP
+				},
+			),
+			interpreter.WithTracingEnabled(true),
 		},
 		options.Options...,
 	)
+
+	if memoryGauge != nil {
+		interpreterOptions = append(
+			interpreterOptions,
+			interpreter.WithMemoryGauge(memoryGauge),
+		)
+	}
 
 	inter, err = interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
@@ -2195,7 +2243,7 @@ func TestInterpretStructureFieldAssignment(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewIntValueFromInt64(1),
-		test.GetField("foo"),
+		test.GetField(inter, interpreter.ReturnEmptyLocationRange, "foo"),
 	)
 
 	value, err := inter.Invoke("callTest")
@@ -2212,7 +2260,7 @@ func TestInterpretStructureFieldAssignment(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewIntValueFromInt64(3),
-		test.GetField("foo"),
+		test.GetField(inter, interpreter.ReturnEmptyLocationRange, "foo"),
 	)
 }
 
@@ -6966,7 +7014,8 @@ func TestInterpretSwapResourceDictionaryElementReturnDictionary(t *testing.T) {
 
 	assert.IsType(t,
 		&interpreter.CompositeValue{},
-		foo.(*interpreter.SomeValue).Value,
+		foo.(*interpreter.SomeValue).
+			InnerValue(inter, interpreter.ReturnEmptyLocationRange),
 	)
 }
 
@@ -6996,7 +7045,8 @@ func TestInterpretSwapResourceDictionaryElementRemoveUsingNil(t *testing.T) {
 
 	assert.IsType(t,
 		&interpreter.CompositeValue{},
-		value.(*interpreter.SomeValue).Value,
+		value.(*interpreter.SomeValue).
+			InnerValue(inter, interpreter.ReturnEmptyLocationRange),
 	)
 }
 
@@ -7195,7 +7245,8 @@ func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
 		values[0],
 	)
 
-	firstValue := values[0].(*interpreter.SomeValue).Value
+	firstValue := values[0].(*interpreter.SomeValue).
+		InnerValue(inter, interpreter.ReturnEmptyLocationRange)
 
 	require.IsType(t,
 		&interpreter.CompositeValue{},
@@ -7208,7 +7259,7 @@ func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewIntValueFromInt64(2),
-		firstResource.GetField("id"),
+		firstResource.GetField(inter, interpreter.ReturnEmptyLocationRange, "id"),
 	)
 
 	require.IsType(t,
@@ -7216,7 +7267,8 @@ func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
 		values[1],
 	)
 
-	secondValue := values[1].(*interpreter.SomeValue).Value
+	secondValue := values[1].(*interpreter.SomeValue).
+		InnerValue(inter, interpreter.ReturnEmptyLocationRange)
 
 	require.IsType(t,
 		&interpreter.CompositeValue{},
@@ -7229,7 +7281,7 @@ func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewIntValueFromInt64(1),
-		secondResource.GetField("id"),
+		secondResource.GetField(inter, interpreter.ReturnEmptyLocationRange, "id"),
 	)
 }
 
@@ -7572,7 +7624,8 @@ func TestInterpretOptionalChainingFunctionRead(t *testing.T) {
 
 	assert.IsType(t,
 		interpreter.BoundFunctionValue{},
-		inter.Globals["x2"].GetValue().(*interpreter.SomeValue).Value,
+		inter.Globals["x2"].GetValue().(*interpreter.SomeValue).
+			InnerValue(inter, interpreter.ReturnEmptyLocationRange),
 	)
 }
 
@@ -7898,7 +7951,7 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 						_ common.CompositeKind,
 					) map[string]interpreter.Value {
 						return map[string]interpreter.Value{
-							"account": newTestAuthAccountValue(addressValue),
+							"account": newTestAuthAccountValue(inter, addressValue),
 						}
 					},
 				),
@@ -8381,9 +8434,9 @@ func TestInterpretOptionalChainingOptionalFieldRead(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		&interpreter.SomeValue{
-			Value: interpreter.NewIntValueFromInt64(1),
-		},
+		interpreter.NewSomeValueNonCopying(
+			interpreter.NewIntValueFromInt64(1),
+		),
 		inter.Globals["x"].GetValue(),
 	)
 }
@@ -8642,7 +8695,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 		Name: "account",
 		Type: sema.AuthAccountType,
 		ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
-			return newTestAuthAccountValue(interpreter.AddressValue(address))
+			return newTestAuthAccountValue(inter, interpreter.AddressValue(address))
 		},
 		Kind: common.DeclarationKindConstant,
 	}
@@ -8660,9 +8713,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 					valueDeclaration,
 				}),
 				interpreter.WithPublicAccountHandler(
-					func(_ *interpreter.Interpreter, address interpreter.AddressValue) interpreter.Value {
-						return newTestPublicAccountValue(address)
-					},
+					newTestPublicAccountValue,
 				),
 			},
 		},
@@ -8684,6 +8735,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 }
 
 func newTestAuthAccountValue(
+	inter *interpreter.Interpreter,
 	addressValue interpreter.AddressValue,
 ) interpreter.Value {
 
@@ -8695,6 +8747,7 @@ func newTestAuthAccountValue(
 	)
 
 	return interpreter.NewAuthAccountValue(
+		inter,
 		addressValue,
 		returnZeroUFix64,
 		returnZeroUFix64,
@@ -8706,6 +8759,7 @@ func newTestAuthAccountValue(
 		panicFunction,
 		func() interpreter.Value {
 			return interpreter.NewAuthAccountContractsValue(
+				inter,
 				addressValue,
 				panicFunction,
 				panicFunction,
@@ -8724,6 +8778,7 @@ func newTestAuthAccountValue(
 		},
 		func() interpreter.Value {
 			return interpreter.NewAuthAccountKeysValue(
+				inter,
 				addressValue,
 				panicFunction,
 				panicFunction,
@@ -8734,6 +8789,7 @@ func newTestAuthAccountValue(
 }
 
 func newTestPublicAccountValue(
+	inter *interpreter.Interpreter,
 	addressValue interpreter.AddressValue,
 ) interpreter.Value {
 
@@ -8745,6 +8801,7 @@ func newTestPublicAccountValue(
 	)
 
 	return interpreter.NewPublicAccountValue(
+		inter,
 		addressValue,
 		returnZeroUFix64,
 		returnZeroUFix64,
@@ -8754,12 +8811,14 @@ func newTestPublicAccountValue(
 		returnZeroUInt64,
 		func() interpreter.Value {
 			return interpreter.NewPublicAccountKeysValue(
+				inter,
 				addressValue,
 				panicFunction,
 			)
 		},
 		func() interpreter.Value {
 			return interpreter.NewPublicAccountContractsValue(
+				inter,
 				addressValue,
 				panicFunction,
 				func(inter *interpreter.Interpreter) *interpreter.ArrayValue {
@@ -9615,6 +9674,54 @@ func TestInterpretArrayTypeInference(t *testing.T) {
 			value,
 		)
 	})
+}
+
+func TestInterpretArrayFirstIndex(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      let xs = [1, 2, 3]
+
+      fun test(): Int? {
+          return xs.firstIndex(of: 2)
+      }
+    `)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewSomeValueNonCopying(
+			interpreter.NewIntValueFromInt64(1),
+		),
+		value,
+	)
+}
+
+func TestInterpretArrayFirstIndexDoesNotExist(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      let xs = [1, 2, 3]
+
+      fun test(): Int? {
+      return xs.firstIndex(of: 5)
+      }
+    `)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NilValue{},
+		value,
+	)
 }
 
 func TestInterpretOptionalReference(t *testing.T) {

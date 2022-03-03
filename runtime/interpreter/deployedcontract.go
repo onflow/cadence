@@ -33,11 +33,13 @@ var deployedContractFieldNames = []string{
 }
 
 func NewDeployedContractValue(
+	inter *Interpreter,
 	address AddressValue,
 	name *StringValue,
 	code *ArrayValue,
 ) *SimpleCompositeValue {
 	return NewSimpleCompositeValue(
+		inter,
 		sema.DeployedContractType.TypeID,
 		deployedContractStaticType,
 		deployedContractDynamicType,

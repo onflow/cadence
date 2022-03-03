@@ -131,7 +131,7 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 	}
 
 	fieldPositionGetter := func(name string) ast.Position {
-		return declaration.Members.FieldPosition(name, declaration.CompositeKind)
+		return compositeType.FieldPosition(name, declaration)
 	}
 
 	checker.checkResourceFieldNesting(

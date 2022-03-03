@@ -170,35 +170,59 @@ type PublicAccountHandlerFunc func(
 type UUIDHandlerFunc func() (uint64, error)
 
 // PublicKeyValidationHandlerFunc is a function that validates a given public key.
+// Parameter types:
+// - publicKey: PublicKey
+//
 type PublicKeyValidationHandlerFunc func(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
 	publicKey *CompositeValue,
 ) error
 
-// VerifyBLSPoPHandlerFunc is a function that verifies a BLS proof of possession
-type VerifyBLSPoPHandlerFunc func(
+// BLSVerifyPoPHandlerFunc is a function that verifies a BLS proof of possession.
+// Parameter types:
+// - publicKey: PublicKey
+// - signature: [UInt8]
+// Expected result type: Bool
+//
+type BLSVerifyPoPHandlerFunc func(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
 	publicKey MemberAccessibleValue,
-	signature []byte,
-) (BoolValue, error)
+	signature *ArrayValue,
+) BoolValue
 
-// AggregateBLSSignaturesHandlerFunc is a function that joins a list of
-// BLS signatures
-type AggregateBLSSignaturesHandlerFunc func(
-	signatures [][]byte,
-) ([]byte, error)
+// BLSAggregateSignaturesHandlerFunc is a function that aggregates multiple BLS signatures.
+// Parameter types:
+// - signatures: [[UInt8]]
+// Expected result type: [UInt8]?
+//
+type BLSAggregateSignaturesHandlerFunc func(
+	inter *Interpreter,
+	getLocationRange func() LocationRange,
+	signatures *ArrayValue,
+) OptionalValue
 
-// AggregateBLSPublicKeysHandlerFunc is a function that joins a list of
-// BLS public keys
-type AggregateBLSPublicKeysHandlerFunc func(
+// BLSAggregatePublicKeysHandlerFunc is a function that aggregates multiple BLS public keys.
+// Parameter types:
+// - publicKeys: [PublicKey]
+// Expected result type: PublicKey?
+//
+type BLSAggregatePublicKeysHandlerFunc func(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
-	publicKeys []MemberAccessibleValue,
-) (MemberAccessibleValue, error)
+	publicKeys *ArrayValue,
+) OptionalValue
 
 // SignatureVerificationHandlerFunc is a function that validates a signature.
+// Parameter types:
+// - signature: [UInt8]
+// - signedData: [UInt8]
+// - domainSeparationTag: String
+// - hashAlgorithm: HashAlgorithm
+// - publicKey: PublicKey
+// Expected result type: Bool
+//
 type SignatureVerificationHandlerFunc func(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
@@ -206,22 +230,28 @@ type SignatureVerificationHandlerFunc func(
 	signedData *ArrayValue,
 	domainSeparationTag *StringValue,
 	hashAlgorithm *CompositeValue,
-	key MemberAccessibleValue,
+	publicKey MemberAccessibleValue,
 ) BoolValue
 
 // HashHandlerFunc is a function that hashes.
+// Parameter types:
+// - data: [UInt8]
+// - domainSeparationTag: [UInt8]
+// - hashAlgorithm: HashAlgorithm
+// Expected result type: [UInt8]
+//
 type HashHandlerFunc func(
 	inter *Interpreter,
 	getLocationRange func() LocationRange,
 	data *ArrayValue,
-	tag *StringValue,
+	domainSeparationTag *StringValue,
 	hashAlgorithm MemberAccessibleValue,
 ) *ArrayValue
 
 // ExitHandlerFunc is a function that is called at the end of execution
 type ExitHandlerFunc func() error
 
-// CompositeTypeCode contains the the "prepared" / "callable" "code"
+// CompositeTypeCode contains the "prepared" / "callable" "code"
 // for the functions and the destructor of a composite
 // (contract, struct, resource, event).
 //
@@ -307,9 +337,9 @@ type Interpreter struct {
 	uuidHandler                    UUIDHandlerFunc
 	PublicKeyValidationHandler     PublicKeyValidationHandlerFunc
 	SignatureVerificationHandler   SignatureVerificationHandlerFunc
-	BLSVerifyPoPHandler            VerifyBLSPoPHandlerFunc
-	AggregateBLSSignaturesHandler  AggregateBLSSignaturesHandlerFunc
-	AggregateBLSPublicKeysHandler  AggregateBLSPublicKeysHandlerFunc
+	BLSVerifyPoPHandler            BLSVerifyPoPHandlerFunc
+	BLSAggregateSignaturesHandler  BLSAggregateSignaturesHandlerFunc
+	BLSAggregatePublicKeysHandler  BLSAggregatePublicKeysHandlerFunc
 	HashHandler                    HashHandlerFunc
 	ExitHandler                    ExitHandlerFunc
 	interpreted                    bool
@@ -319,8 +349,10 @@ type Interpreter struct {
 	atreeStorageValidationEnabled  bool
 	tracingEnabled                 bool
 	// TODO: ideally this would be a weak map, but Go has no weak references
-	referencedResourceKindedValues ReferencedResourceKindedValues
-	memoryGauge                    common.MemoryGauge
+	referencedResourceKindedValues       ReferencedResourceKindedValues
+	invalidatedResourceValidationEnabled bool
+	resourceVariables                    map[ResourceKindedValue]*Variable
+	memoryGauge                          common.MemoryGauge
 }
 
 var _ common.MemoryGauge = &Interpreter{}
@@ -502,9 +534,9 @@ func WithPublicKeyValidationHandler(handler PublicKeyValidationHandlerFunc) Opti
 // functions as the functions used to handle certain BLS-specific crypto functions.
 //
 func WithBLSCryptoFunctions(
-	verifyPoP VerifyBLSPoPHandlerFunc,
-	aggregateSignatures AggregateBLSSignaturesHandlerFunc,
-	aggregatePublicKeys AggregateBLSPublicKeysHandlerFunc,
+	verifyPoP BLSVerifyPoPHandlerFunc,
+	aggregateSignatures BLSAggregateSignaturesHandlerFunc,
+	aggregatePublicKeys BLSAggregatePublicKeysHandlerFunc,
 ) Option {
 	return func(interpreter *Interpreter) error {
 		interpreter.SetBLSCryptoFunctions(
@@ -586,6 +618,16 @@ func WithTracingEnabled(enabled bool) Option {
 	}
 }
 
+// WithInvalidatedResourceValidationEnabled returns an interpreter option which sets
+// the resource validation option.
+//
+func WithInvalidatedResourceValidationEnabled(enabled bool) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetInvalidatedResourceValidationEnabled(enabled)
+		return nil
+	}
+}
+
 // withTypeCodes returns an interpreter option which sets the type codes.
 //
 func withTypeCodes(typeCodes TypeCodes) Option {
@@ -629,6 +671,7 @@ func NewInterpreter(program *Program, location common.Location, options ...Optio
 		activations:                &VariableActivations{},
 		Globals:                    map[string]*Variable{},
 		effectivePredeclaredValues: map[string]ValueDeclaration{},
+		resourceVariables:          map[ResourceKindedValue]*Variable{},
 	}
 
 	// Start a new activation/scope for the current program.
@@ -643,6 +686,7 @@ func NewInterpreter(program *Program, location common.Location, options ...Optio
 			TypeRequirementCodes: map[sema.TypeID]WrapperCode{},
 		}),
 		withReferencedResourceKindedValues(map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}{}),
+		WithInvalidatedResourceValidationEnabled(true),
 	}
 
 	for _, option := range defaultOptions {
@@ -755,13 +799,13 @@ func (interpreter *Interpreter) SetPublicKeyValidationHandler(function PublicKey
 // SetBLSCryptoFunctions sets the functions that are used to handle certain BLS specific crypt functions.
 //
 func (interpreter *Interpreter) SetBLSCryptoFunctions(
-	verifyPoP VerifyBLSPoPHandlerFunc,
-	aggregateSignatures AggregateBLSSignaturesHandlerFunc,
-	aggregatePublicKeys AggregateBLSPublicKeysHandlerFunc,
+	verifyPoP BLSVerifyPoPHandlerFunc,
+	aggregateSignatures BLSAggregateSignaturesHandlerFunc,
+	aggregatePublicKeys BLSAggregatePublicKeysHandlerFunc,
 ) {
 	interpreter.BLSVerifyPoPHandler = verifyPoP
-	interpreter.AggregateBLSSignaturesHandler = aggregateSignatures
-	interpreter.AggregateBLSPublicKeysHandler = aggregatePublicKeys
+	interpreter.BLSAggregateSignaturesHandler = aggregateSignatures
+	interpreter.BLSAggregatePublicKeysHandler = aggregatePublicKeys
 }
 
 // SetSignatureVerificationHandler sets the function that is used to handle signature validation.
@@ -810,6 +854,12 @@ func (interpreter *Interpreter) SetAtreeStorageValidationEnabled(enabled bool) {
 //
 func (interpreter *Interpreter) SetTracingEnabled(enabled bool) {
 	interpreter.tracingEnabled = enabled
+}
+
+// SetInvalidatedResourceValidationEnabled sets the invalidated resource validation option.
+//
+func (interpreter *Interpreter) SetInvalidatedResourceValidationEnabled(enabled bool) {
+	interpreter.invalidatedResourceValidationEnabled = enabled
 }
 
 // setTypeCodes sets the type codes.
@@ -982,18 +1032,20 @@ func (interpreter *Interpreter) prepareInvoke(
 		}
 	}
 
+	getLocationRange := ReturnEmptyLocationRange
+
 	preparedArguments := make([]Value, len(arguments))
 	for i, argument := range arguments {
 		parameterType := parameters[i].TypeAnnotation.Type
 
 		// converts the argument into the parameter type declared by the function
-		preparedArguments[i] = ConvertAndBox(argument, nil, parameterType)
+		preparedArguments[i] = interpreter.ConvertAndBox(getLocationRange, argument, nil, parameterType)
 	}
 
 	// NOTE: can't fill argument types, as they are unknown
 	invocation := Invocation{
 		Arguments:        preparedArguments,
-		GetLocationRange: ReturnEmptyLocationRange,
+		GetLocationRange: getLocationRange,
 		Interpreter:      interpreter,
 	}
 
@@ -1135,11 +1187,25 @@ func (interpreter *Interpreter) VisitProgram(program *ast.Program) ast.Repr {
 		declaration := declaration
 
 		identifier := declaration.Identifier.Identifier
-		variable := NewVariableWithGetter(func() Value {
+
+		var variable *Variable
+
+		variable = NewVariableWithGetter(func() Value {
 			var result Value
 			interpreter.visitVariableDeclaration(declaration, func(_ string, value Value) {
 				result = value
 			})
+
+			// Global variables are lazily loaded. Therefore, start resource tracking also
+			// lazily when the resource is used for the first time.
+			// This is needed to support forward referencing.
+			interpreter.startResourceTracking(
+				result,
+				variable,
+				identifier,
+				declaration.Identifier,
+			)
+
 			return result
 		})
 		interpreter.setVariable(identifier, variable)
@@ -1337,6 +1403,10 @@ func (interpreter *Interpreter) declareVariable(identifier string, value Value) 
 	// NOTE: semantic analysis already checked possible invalid redeclaration
 	variable := NewVariableWithValue(value)
 	interpreter.setVariable(identifier, variable)
+
+	// TODO: add proper location info
+	interpreter.startResourceTracking(value, variable, identifier, nil)
+
 	return variable
 }
 
@@ -1780,7 +1850,7 @@ func EnumConstructorFunction(
 	lookupTable := make(map[string]*CompositeValue)
 
 	for _, caseValue := range caseValues {
-		rawValue := caseValue.GetField(sema.EnumRawValueFieldName)
+		rawValue := caseValue.GetField(inter, getLocationRange, sema.EnumRawValueFieldName)
 		rawValueBigEndianBytes := rawValue.(IntegerValue).ToBigEndianBytes()
 		lookupTable[string(rawValueBigEndianBytes)] = caseValue
 	}
@@ -1789,8 +1859,12 @@ func EnumConstructorFunction(
 
 	constructor := NewHostFunctionValue(
 		func(invocation Invocation) Value {
+			rawValue, ok := invocation.Arguments[0].(IntegerValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
 
-			rawValueArgumentBigEndianBytes := invocation.Arguments[0].(IntegerValue).ToBigEndianBytes()
+			rawValueArgumentBigEndianBytes := rawValue.ToBigEndianBytes()
 
 			caseValue, ok := lookupTable[string(rawValueArgumentBigEndianBytes)]
 			if !ok {
@@ -2043,7 +2117,8 @@ func (interpreter *Interpreter) transferAndConvert(
 		nil,
 	)
 
-	result := ConvertAndBox(
+	result := interpreter.ConvertAndBox(
+		getLocationRange,
 		transferredValue,
 		valueType,
 		targetType,
@@ -2060,9 +2135,13 @@ func (interpreter *Interpreter) transferAndConvert(
 }
 
 // ConvertAndBox converts a value to a target type, and boxes in optionals and any value, if necessary
-func ConvertAndBox(value Value, valueType, targetType sema.Type) Value {
+func (interpreter *Interpreter) ConvertAndBox(
+	getLocationRange func() LocationRange,
+	value Value,
+	valueType, targetType sema.Type,
+) Value {
 	value = convert(value, valueType, targetType)
-	return BoxOptional(value, targetType)
+	return interpreter.BoxOptional(getLocationRange, value, targetType)
 }
 
 func convert(value Value, valueType, targetType sema.Type) Value {
@@ -2194,8 +2273,14 @@ func convert(value Value, valueType, targetType sema.Type) Value {
 }
 
 // BoxOptional boxes a value in optionals, if necessary
-func BoxOptional(value Value, targetType sema.Type) Value {
+func (interpreter *Interpreter) BoxOptional(
+	getLocationRange func() LocationRange,
+	value Value,
+	targetType sema.Type,
+) Value {
+
 	inner := value
+
 	for {
 		optionalType, ok := targetType.(*sema.OptionalType)
 		if !ok {
@@ -2204,7 +2289,7 @@ func BoxOptional(value Value, targetType sema.Type) Value {
 
 		switch typedInner := inner.(type) {
 		case *SomeValue:
-			inner = typedInner.Value
+			inner = typedInner.InnerValue(interpreter, getLocationRange)
 
 		case NilValue:
 			// NOTE: nested nil will be unboxed!
@@ -2219,14 +2304,14 @@ func BoxOptional(value Value, targetType sema.Type) Value {
 	return value
 }
 
-func Unbox(value Value) Value {
+func (interpreter *Interpreter) Unbox(getLocationRange func() LocationRange, value Value) Value {
 	for {
 		some, ok := value.(*SomeValue)
 		if !ok {
 			return value
 		}
 
-		value = some.Value
+		value = some.InnerValue(interpreter, getLocationRange)
 	}
 }
 
@@ -2544,8 +2629,8 @@ func (interpreter *Interpreter) NewSubInterpreter(
 		WithHashHandler(interpreter.HashHandler),
 		WithBLSCryptoFunctions(
 			interpreter.BLSVerifyPoPHandler,
-			interpreter.AggregateBLSSignaturesHandler,
-			interpreter.AggregateBLSPublicKeysHandler,
+			interpreter.BLSAggregateSignaturesHandler,
+			interpreter.BLSAggregatePublicKeysHandler,
 		),
 		WithDebugger(interpreter.debugger),
 		WithExitHandler(interpreter.ExitHandler),
@@ -2866,8 +2951,18 @@ func init() {
 		"DictionaryType",
 		NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				keyType := invocation.Arguments[0].(TypeValue).Type
-				valueType := invocation.Arguments[1].(TypeValue).Type
+				keyTypeValue, ok := invocation.Arguments[0].(TypeValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				valueTypeValue, ok := invocation.Arguments[1].(TypeValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				keyType := keyTypeValue.Type
+				valueType := valueTypeValue.Type
 
 				// if the given key is not a valid dictionary key, it wouldn't make sense to create this type
 				if keyType == nil ||
@@ -2890,7 +2985,11 @@ func init() {
 		"CompositeType",
 		NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				typeID := invocation.Arguments[0].(*StringValue).Str
+				typeIDValue, ok := invocation.Arguments[0].(*StringValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+				typeID := typeIDValue.Str
 
 				composite, err := lookupComposite(invocation.Interpreter, typeID)
 				if err != nil {
@@ -2911,7 +3010,11 @@ func init() {
 		"InterfaceType",
 		NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				typeID := invocation.Arguments[0].(*StringValue).Str
+				typeIDValue, ok := invocation.Arguments[0].(*StringValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+				typeID := typeIDValue.Str
 
 				interfaceType, err := lookupInterface(invocation.Interpreter, typeID)
 				if err != nil {
@@ -2932,19 +3035,28 @@ func init() {
 		"FunctionType",
 		NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				parameters, paramsOk := invocation.Arguments[0].(*ArrayValue)
-				if !paramsOk {
+				parameters, ok := invocation.Arguments[0].(*ArrayValue)
+				if !ok {
 					panic(errors.NewUnreachableError())
 				}
-				returnType := invocation.Interpreter.MustConvertStaticToSemaType(invocation.Arguments[1].(TypeValue).Type)
+
+				typeValue, ok := invocation.Arguments[1].(TypeValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				returnType := invocation.Interpreter.MustConvertStaticToSemaType(typeValue.Type)
 				parameterTypes := make([]*sema.Parameter, 0, parameters.Count())
 				parameters.Iterate(func(param Value) bool {
+					semaType := invocation.Interpreter.MustConvertStaticToSemaType(param.(TypeValue).Type)
 					parameterTypes = append(
 						parameterTypes,
 						&sema.Parameter{
-							TypeAnnotation: sema.NewTypeAnnotation(invocation.Interpreter.MustConvertStaticToSemaType(param.(TypeValue).Type)),
+							TypeAnnotation: sema.NewTypeAnnotation(semaType),
 						},
 					)
+
+					// Continue iteration
 					return true
 				})
 				return NewTypeValue(
@@ -2971,29 +3083,42 @@ func init() {
 }
 
 func RestrictedTypeFunction(invocation Invocation) Value {
-	restrictedIDs, restrictedIDsOk := invocation.Arguments[1].(*ArrayValue)
+	interpreter := invocation.Interpreter
 
-	if !restrictedIDsOk {
+	restrictionIDs, ok := invocation.Arguments[1].(*ArrayValue)
+	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
-	staticRestrictions := make([]InterfaceStaticType, 0, restrictedIDs.Count())
-	semaRestrictions := make([]*sema.InterfaceType, 0, restrictedIDs.Count())
-	ok := true
+	staticRestrictions := make([]InterfaceStaticType, 0, restrictionIDs.Count())
+	semaRestrictions := make([]*sema.InterfaceType, 0, restrictionIDs.Count())
 
-	restrictedIDs.Iterate(func(typeID Value) bool {
-		restrictionInterface, err := lookupInterface(invocation.Interpreter, typeID.(*StringValue).Str)
+	var invalidRestrictionID bool
+	restrictionIDs.Iterate(func(typeID Value) bool {
+		typeIDValue, ok := typeID.(*StringValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		restrictionInterface, err := lookupInterface(interpreter, typeIDValue.Str)
 		if err != nil {
-			ok = false
+			invalidRestrictionID = true
 			return true
 		}
 
-		staticRestrictions = append(staticRestrictions, ConvertSemaToStaticType(restrictionInterface).(InterfaceStaticType))
+		staticRestrictions = append(
+			staticRestrictions,
+			ConvertSemaToStaticType(restrictionInterface).(InterfaceStaticType),
+		)
 		semaRestrictions = append(semaRestrictions, restrictionInterface)
+
+		// Continue iteration
 		return true
 	})
 
-	if !ok {
+	// If there are any invalid restrictions,
+	// then return nil
+	if invalidRestrictionID {
 		return NewNilValue(invocation.Interpreter)
 	}
 
@@ -3004,7 +3129,8 @@ func RestrictedTypeFunction(invocation Invocation) Value {
 	case NilValue:
 		semaType = nil
 	case *SomeValue:
-		semaType, err = lookupComposite(invocation.Interpreter, typeID.Value.(*StringValue).Str)
+		innerValue := typeID.InnerValue(interpreter, invocation.GetLocationRange)
+		semaType, err = lookupComposite(interpreter, innerValue.(*StringValue).Str)
 		if err != nil {
 			return NewNilValue(invocation.Interpreter)
 		}
@@ -3012,19 +3138,21 @@ func RestrictedTypeFunction(invocation Invocation) Value {
 		panic(errors.NewUnreachableError())
 	}
 
-	ok = true
+	var invalidRestrictedType bool
 	ty := sema.CheckRestrictedType(
 		semaType,
 		semaRestrictions,
 		func(_ func(*ast.RestrictedType) error) {
-			ok = false
+			invalidRestrictedType = true
 		},
 	)
 
-	// if the restricted type would have failed to typecheck statically, we return nil
-	if !ok {
+	// If the restricted type would have failed to type-check statically,
+	// then return nil
+	if invalidRestrictedType {
 		return NewNilValue(invocation.Interpreter)
 	}
+
 	return NewSomeValueNonCopying(
 		NewTypeValue(
 			invocation.Interpreter,
@@ -3111,12 +3239,17 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 		name: "OptionalType",
 		converter: NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				return NewTypeValue(
-					invocation.Interpreter,
-					OptionalStaticType{
-						Type: invocation.Arguments[0].(TypeValue).Type,
+				typeValue, ok := invocation.Arguments[0].(TypeValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return TypeValue{
+					//nolint:gosimple
+					Type: OptionalStaticType{
+						Type: typeValue.Type,
 					},
-				)
+				}
 			},
 			sema.OptionalTypeFunctionType,
 		),
@@ -3125,12 +3258,17 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 		name: "VariableSizedArrayType",
 		converter: NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				return NewTypeValue(
-					invocation.Interpreter,
-					VariableSizedStaticType{
-						Type: invocation.Arguments[0].(TypeValue).Type,
+				typeValue, ok := invocation.Arguments[0].(TypeValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return TypeValue{
+					//nolint:gosimple
+					Type: VariableSizedStaticType{
+						Type: typeValue.Type,
 					},
-				)
+				}
 			},
 			sema.VariableSizedArrayTypeFunctionType,
 		),
@@ -3139,13 +3277,22 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 		name: "ConstantSizedArrayType",
 		converter: NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				return NewTypeValue(
-					invocation.Interpreter,
-					ConstantSizedStaticType{
-						Type: invocation.Arguments[0].(TypeValue).Type,
-						Size: int64(invocation.Arguments[1].(IntValue).ToInt()),
+				typeValue, ok := invocation.Arguments[0].(TypeValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				sizeValue, ok := invocation.Arguments[1].(IntValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return TypeValue{
+					Type: ConstantSizedStaticType{
+						Type: typeValue.Type,
+						Size: int64(sizeValue.ToInt()),
 					},
-				)
+				}
 			},
 			sema.ConstantSizedArrayTypeFunctionType,
 		),
@@ -3154,13 +3301,22 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 		name: "ReferenceType",
 		converter: NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				return NewTypeValue(
-					invocation.Interpreter,
-					ReferenceStaticType{
-						Authorized: bool(invocation.Arguments[0].(BoolValue)),
-						Type:       invocation.Arguments[1].(TypeValue).Type,
+				authorizedValue, ok := invocation.Arguments[0].(BoolValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				typeValue, ok := invocation.Arguments[1].(TypeValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return TypeValue{
+					Type: ReferenceStaticType{
+						Authorized: bool(authorizedValue),
+						Type:       typeValue.Type,
 					},
-				)
+				}
 			},
 			sema.ReferenceTypeFunctionType,
 		),
@@ -3169,12 +3325,18 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 		name: "CapabilityType",
 		converter: NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				ty := invocation.Arguments[0].(TypeValue).Type
+				typeValue, ok := invocation.Arguments[0].(TypeValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				ty := typeValue.Type
 				// Capabilities must hold references
-				_, ok := ty.(ReferenceStaticType)
+				_, ok = ty.(ReferenceStaticType)
 				if !ok {
 					return NewNilValue(invocation.Interpreter)
 				}
+
 				return NewSomeValueNonCopying(
 					NewTypeValue(
 						invocation.Interpreter,
@@ -3259,10 +3421,9 @@ var stringFunction = func() Value {
 				}
 
 				inter := invocation.Interpreter
-				memoryUsage := common.MemoryUsage{
-					Kind:   common.MemoryKindString,
-					Amount: uint64(argument.Count()) * 2,
-				}
+				memoryUsage := common.NewStringMemoryUsage(
+					uint64(argument.Count()) * 2,
+				)
 				return NewStringValue(
 					inter,
 					memoryUsage,
@@ -3535,11 +3696,10 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 
 	return NewHostFunctionValue(
 		func(invocation Invocation) Value {
-
 			value := invocation.Arguments[0]
-			path, pathOk := invocation.Arguments[1].(PathValue)
 
-			if !pathOk {
+			path, ok := invocation.Arguments[1].(PathValue)
+			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
@@ -3589,10 +3749,8 @@ func (interpreter *Interpreter) authAccountTypeFunction(addressValue AddressValu
 
 	return NewHostFunctionValue(
 		func(invocation Invocation) Value {
-
-			path, pathOk := invocation.Arguments[0].(PathValue)
-
-			if !pathOk {
+			path, ok := invocation.Arguments[0].(PathValue)
+			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
@@ -3632,10 +3790,8 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 
 	return NewHostFunctionValue(
 		func(invocation Invocation) Value {
-
-			path, pathOk := invocation.Arguments[0].(PathValue)
-
-			if !pathOk {
+			path, ok := invocation.Arguments[0].(PathValue)
+			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
@@ -3701,10 +3857,8 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 
 	return NewHostFunctionValue(
 		func(invocation Invocation) Value {
-
-			path, pathOk := invocation.Arguments[0].(PathValue)
-
-			if !pathOk {
+			path, ok := invocation.Arguments[0].(PathValue)
+			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
@@ -3765,15 +3919,13 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 				panic(errors.NewUnreachableError())
 			}
 
-			newCapabilityPath, capabilityPathOk := invocation.Arguments[0].(PathValue)
-
-			if !capabilityPathOk {
+			newCapabilityPath, ok := invocation.Arguments[0].(PathValue)
+			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
-			targetPath, pathOk := invocation.Arguments[1].(PathValue)
-
-			if !pathOk {
+			targetPath, ok := invocation.Arguments[1].(PathValue)
+			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
@@ -3825,9 +3977,8 @@ func (interpreter *Interpreter) accountGetLinkTargetFunction(addressValue Addres
 	return NewHostFunctionValue(
 		func(invocation Invocation) Value {
 
-			capabilityPath, pathOk := invocation.Arguments[0].(PathValue)
-
-			if !pathOk {
+			capabilityPath, ok := invocation.Arguments[0].(PathValue)
+			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
@@ -3859,9 +4010,8 @@ func (interpreter *Interpreter) authAccountUnlinkFunction(addressValue AddressVa
 	return NewHostFunctionValue(
 		func(invocation Invocation) Value {
 
-			capabilityPath, pathOk := invocation.Arguments[0].(PathValue)
-
-			if !pathOk {
+			capabilityPath, ok := invocation.Arguments[0].(PathValue)
+			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
@@ -4497,6 +4647,115 @@ func (interpreter *Interpreter) updateReferencedResource(
 	}
 }
 
+// startResourceTracking starts tracking the life-span of a resource.
+// A resource can only be associated with one variable at most, at a given time.
+func (interpreter *Interpreter) startResourceTracking(
+	value Value,
+	variable *Variable,
+	identifier string,
+	hasPosition ast.HasPosition,
+) {
+
+	if !interpreter.invalidatedResourceValidationEnabled ||
+		identifier == sema.SelfIdentifier {
+		return
+	}
+
+	resourceKindedValue := interpreter.resourceForValidation(value)
+	if resourceKindedValue == nil {
+		return
+	}
+
+	// A resource value can be associated with only one variable at a time.
+	// If the resource already has a variable-association, that means there is a
+	// resource variable that has not been invalidated properly.
+	// This should not be allowed, and must have been caught by the checker ideally.
+	if _, exists := interpreter.resourceVariables[resourceKindedValue]; exists {
+		var astRange ast.Range
+		if hasPosition != nil {
+			astRange = ast.NewRangeFromPositioned(hasPosition)
+		}
+
+		panic(InvalidatedResourceError{
+			LocationRange: LocationRange{
+				Location: interpreter.Location,
+				Range:    astRange,
+			},
+		})
+	}
+
+	interpreter.resourceVariables[resourceKindedValue] = variable
+}
+
+// checkInvalidatedResourceUse checks whether a resource variable is used after invalidation.
+func (interpreter *Interpreter) checkInvalidatedResourceUse(
+	value Value,
+	variable *Variable,
+	identifier string,
+	hasPosition ast.HasPosition,
+) {
+
+	if !interpreter.invalidatedResourceValidationEnabled ||
+		identifier == sema.SelfIdentifier {
+		return
+	}
+
+	resourceKindedValue := interpreter.resourceForValidation(value)
+	if resourceKindedValue == nil {
+		return
+	}
+
+	// A resource value can be associated with only one variable at a time.
+	// If the resource already has a variable-association other than the current variable,
+	// that means two variables are referring to the same resource at the same time.
+	// This should not be allowed, and must have been caught by the checker ideally.
+	//
+	// Note: if the `resourceVariables` doesn't have a mapping, that implies an invalidated resource.
+	if existingVar, exists := interpreter.resourceVariables[resourceKindedValue]; !exists || existingVar != variable {
+		panic(InvalidatedResourceError{
+			LocationRange: LocationRange{
+				Location: interpreter.Location,
+				Range:    ast.NewRangeFromPositioned(hasPosition),
+			},
+		})
+	}
+}
+
+func (interpreter *Interpreter) resourceForValidation(value Value) ResourceKindedValue {
+	switch typedValue := value.(type) {
+	case *SomeValue:
+		// Optional value's inner value could be nil, if it was a resource
+		// and has been invalidated.
+		if typedValue.value == nil || value.IsResourceKinded(interpreter) {
+			return typedValue
+		}
+	case ResourceKindedValue:
+		if value.IsResourceKinded(interpreter) {
+			return typedValue
+		}
+	}
+
+	return nil
+}
+
+func (interpreter *Interpreter) invalidateResource(value Value) {
+	if !interpreter.invalidatedResourceValidationEnabled {
+		return
+	}
+
+	if value == nil || !value.IsResourceKinded(interpreter) {
+		return
+	}
+
+	resourceKindedValue, ok := value.(ResourceKindedValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	// Remove the resource-to-variable mapping.
+	delete(interpreter.resourceVariables, resourceKindedValue)
+}
+
 // UseMemory delegates the memory usage to the interpreter's memory gauge, if any.
 //
 func (interpreter *Interpreter) UseMemory(usage common.MemoryUsage) {
@@ -4504,6 +4763,15 @@ func (interpreter *Interpreter) UseMemory(usage common.MemoryUsage) {
 		return
 	}
 	interpreter.memoryGauge.UseMemory(usage)
+}
+
+// UseConstantMemory uses a pre-determined amount of memory
+//
+func (interpreter *Interpreter) UseConstantMemory(kind common.MemoryKind) {
+	interpreter.UseMemory(common.MemoryUsage{
+		Kind:   kind,
+		Amount: 1,
+	})
 }
 
 func (interpreter *Interpreter) DecodeStorable(

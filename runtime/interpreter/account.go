@@ -39,6 +39,7 @@ var authAccountFieldNames = []string{
 
 // NewAuthAccountValue constructs an auth account value.
 func NewAuthAccountValue(
+	inter *Interpreter,
 	address AddressValue,
 	accountBalanceGet func() UFix64Value,
 	accountAvailableBalanceGet func() UFix64Value,
@@ -124,6 +125,7 @@ func NewAuthAccountValue(
 	}
 
 	return NewSimpleCompositeValue(
+		inter,
 		authAccountTypeID,
 		authAccountStaticType,
 		authAccountDynamicType,
@@ -150,6 +152,7 @@ var publicAccountFieldNames = []string{
 
 // NewPublicAccountValue constructs a public account value.
 func NewPublicAccountValue(
+	inter *Interpreter,
 	address AddressValue,
 	accountBalanceGet func() UFix64Value,
 	accountAvailableBalanceGet func() UFix64Value,
@@ -210,6 +213,7 @@ func NewPublicAccountValue(
 	}
 
 	return NewSimpleCompositeValue(
+		inter,
 		publicAccountTypeID,
 		publicAccountStaticType,
 		publicAccountDynamicType,

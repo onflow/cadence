@@ -56,23 +56,21 @@ type parser struct {
 // It can be composed with different parse functions to parse the input string into different results.
 // See "ParseExpression", "ParseStatements" as examples.
 //
-func Parse(input string, parse func(*parser) interface{}) (result interface{}, errors []error) {
+func Parse(input string, parse func(*parser) interface{}, memoryGauge common.MemoryGauge) (result interface{}, errors []error) {
 	// create a lexer, which turns the input string into tokens
-	tokens := lexer.Lex(input, nil)
-	return ParseTokenStream(tokens, parse, nil)
+	tokens := lexer.Lex(input, memoryGauge)
+	return ParseTokenStream(tokens, parse)
 }
 
 func ParseTokenStream(
 	tokens lexer.TokenStream,
 	parse func(*parser) interface{},
-	memoryGauge common.MemoryGauge,
 ) (
 	result interface{},
 	errors []error,
 ) {
 	p := &parser{
-		tokens:      tokens,
-		memoryGauge: memoryGauge,
+		tokens: tokens,
 	}
 
 	defer func() {
@@ -362,11 +360,15 @@ func tokenToIdentifier(identifier lexer.Token) ast.Identifier {
 	}
 }
 
-func ParseExpression(input string) (expression ast.Expression, errs []error) {
+func ParseExpression(input string, memoryGauge common.MemoryGauge) (expression ast.Expression, errs []error) {
 	var res interface{}
-	res, errs = Parse(input, func(p *parser) interface{} {
-		return parseExpression(p, lowestBindingPower)
-	})
+	res, errs = Parse(
+		input,
+		func(p *parser) interface{} {
+			return parseExpression(p, lowestBindingPower)
+		},
+		memoryGauge,
+	)
 	if res == nil {
 		expression = nil
 		return
@@ -378,11 +380,15 @@ func ParseExpression(input string) (expression ast.Expression, errs []error) {
 	return
 }
 
-func ParseStatements(input string) (statements []ast.Statement, errs []error) {
+func ParseStatements(input string, memoryGauge common.MemoryGauge) (statements []ast.Statement, errs []error) {
 	var res interface{}
-	res, errs = Parse(input, func(p *parser) interface{} {
-		return parseStatements(p, nil)
-	})
+	res, errs = Parse(
+		input,
+		func(p *parser) interface{} {
+			return parseStatements(p, nil)
+		},
+		memoryGauge,
+	)
 	if res == nil {
 		statements = nil
 		return
@@ -395,11 +401,15 @@ func ParseStatements(input string) (statements []ast.Statement, errs []error) {
 	return
 }
 
-func ParseType(input string) (ty ast.Type, errs []error) {
+func ParseType(input string, memoryGauge common.MemoryGauge) (ty ast.Type, errs []error) {
 	var res interface{}
-	res, errs = Parse(input, func(p *parser) interface{} {
-		return parseType(p, lowestBindingPower)
-	})
+	res, errs = Parse(
+		input,
+		func(p *parser) interface{} {
+			return parseType(p, lowestBindingPower)
+		},
+		memoryGauge,
+	)
 	if res == nil {
 		ty = nil
 		return
@@ -412,11 +422,15 @@ func ParseType(input string) (ty ast.Type, errs []error) {
 	return
 }
 
-func ParseDeclarations(input string) (declarations []ast.Declaration, errs []error) {
+func ParseDeclarations(input string, memoryGauge common.MemoryGauge) (declarations []ast.Declaration, errs []error) {
 	var res interface{}
-	res, errs = Parse(input, func(p *parser) interface{} {
-		return parseDeclarations(p, lexer.TokenEOF)
-	})
+	res, errs = Parse(
+		input,
+		func(p *parser) interface{} {
+			return parseDeclarations(p, lexer.TokenEOF)
+		},
+		memoryGauge,
+	)
 	if res == nil {
 		declarations = nil
 		return
@@ -429,14 +443,18 @@ func ParseDeclarations(input string) (declarations []ast.Declaration, errs []err
 	return
 }
 
-func ParseArgumentList(input string) (arguments ast.Arguments, errs []error) {
+func ParseArgumentList(input string, memoryGauge common.MemoryGauge) (arguments ast.Arguments, errs []error) {
 	var res interface{}
-	res, errs = Parse(input, func(p *parser) interface{} {
-		p.skipSpaceAndComments(true)
-		p.mustOne(lexer.TokenParenOpen)
-		arguments, _ := parseArgumentListRemainder(p)
-		return arguments
-	})
+	res, errs = Parse(
+		input,
+		func(p *parser) interface{} {
+			p.skipSpaceAndComments(true)
+			p.mustOne(lexer.TokenParenOpen)
+			arguments, _ := parseArgumentListRemainder(p)
+			return arguments
+		},
+		memoryGauge,
+	)
 	if res == nil {
 		arguments = nil
 		return
@@ -469,7 +487,6 @@ func ParseProgramFromTokenStream(
 		func(p *parser) interface{} {
 			return parseDeclarations(p, lexer.TokenEOF)
 		},
-		memoryGauge,
 	)
 	if len(errs) > 0 {
 		err = Error{

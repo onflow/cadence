@@ -364,6 +364,7 @@ func TestExportValue(t *testing.T) {
 			label: "Account key",
 			valueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
 				return interpreter.NewAccountKeyValue(
+					inter,
 					interpreter.NewIntValueFromInt64(1),
 					NewPublicKeyValue(
 						inter,
@@ -442,15 +443,18 @@ func TestExportValue(t *testing.T) {
 		},
 		{
 			label: "Deployed contract (invalid)",
-			value: interpreter.NewDeployedContractValue(
-				interpreter.AddressValue{},
-				interpreter.NewUnmeteredStringValue("C"),
-				interpreter.NewArrayValue(
-					newTestInterpreter(t),
-					interpreter.ByteArrayStaticType,
-					common.Address{},
-				),
-			),
+			valueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewDeployedContractValue(
+					inter,
+					interpreter.AddressValue{},
+					interpreter.NewUnmeteredStringValue("C"),
+					interpreter.NewArrayValue(
+						newTestInterpreter(t),
+						interpreter.ByteArrayStaticType,
+						common.Address{},
+					),
+				)
+			},
 			expected: nil,
 		},
 	} {
@@ -2939,9 +2943,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 		actual, err := importValue(
 			inter,
 			value,
-			&sema.VariableSizedType{
-				Type: sema.UInt8Type,
-			},
+			sema.ByteArrayType,
 		)
 		require.NoError(t, err)
 

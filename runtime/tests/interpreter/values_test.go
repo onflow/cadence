@@ -131,8 +131,8 @@ func TestRandomMapOperations(t *testing.T) {
 		require.Equal(t, testMap.Count(), entries.size())
 
 		testMap.Iterate(func(key, value interpreter.Value) (resume bool) {
-			orgValue, ok := entries.get(key)
-			require.True(t, ok, "cannot fine key: %v", key)
+			orgValue, ok := entries.get(inter, key)
+			require.True(t, ok, "cannot find key: %v", key)
 
 			utils.AssertValuesEqual(t, inter, orgValue, value)
 			return true
@@ -274,7 +274,8 @@ func TestRandomMapOperations(t *testing.T) {
 			someValue := removedValue.(*interpreter.SomeValue)
 
 			// Removed value must be same as the original value
-			utils.AssertValuesEqual(t, inter, orgValue, someValue.Value)
+			innerValue := someValue.InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+			utils.AssertValuesEqual(t, inter, orgValue, innerValue)
 
 			return false
 		})
@@ -332,7 +333,8 @@ func TestRandomMapOperations(t *testing.T) {
 			someValue := removedValue.(*interpreter.SomeValue)
 
 			// Removed value must be same as the original value
-			utils.AssertValuesEqual(t, inter, orgValue, someValue.Value)
+			innerValue := someValue.InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+			utils.AssertValuesEqual(t, inter, orgValue, innerValue)
 
 			return false
 		})
@@ -410,7 +412,8 @@ func TestRandomMapOperations(t *testing.T) {
 				someValue := removedValue.(*interpreter.SomeValue)
 
 				// Removed value must be same as the original value
-				utils.AssertValuesEqual(t, inter, orgValue, someValue.Value)
+				innerValue := someValue.InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+				utils.AssertValuesEqual(t, inter, orgValue, innerValue)
 
 				deleteCount++
 			}
@@ -883,7 +886,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 		storageSize, slabCounts = getSlabStorageSize(t, storage)
 
 		for fieldName, orgFieldValue := range orgFields {
-			fieldValue := testComposite.GetField(fieldName)
+			fieldValue := testComposite.GetField(inter, interpreter.ReturnEmptyLocationRange, fieldName)
 			utils.AssertValuesEqual(t, inter, orgFieldValue, fieldValue)
 		}
 
@@ -915,7 +918,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 		).(*interpreter.CompositeValue)
 
 		for name, orgValue := range orgFields {
-			value := copyOfTestComposite.GetField(name)
+			value := copyOfTestComposite.GetField(inter, interpreter.ReturnEmptyLocationRange, name)
 			utils.AssertValuesEqual(t, inter, orgValue, value)
 		}
 
@@ -935,7 +938,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 
 		// go over original values again and check no missing data (no side effect should be found)
 		for name, orgValue := range orgFields {
-			value := testComposite.GetField(name)
+			value := testComposite.GetField(inter, interpreter.ReturnEmptyLocationRange, name)
 			utils.AssertValuesEqual(t, inter, orgValue, value)
 		}
 
@@ -958,7 +961,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 
 		for name := range orgFields {
 			composite.RemoveField(inter, interpreter.ReturnEmptyLocationRange, name)
-			value := composite.GetField(name)
+			value := composite.GetField(inter, interpreter.ReturnEmptyLocationRange, name)
 			assert.Nil(t, value)
 		}
 	})
@@ -984,7 +987,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 
 		// Check the elements
 		for fieldName, orgFieldValue := range fields {
-			fieldValue := movedComposite.GetField(fieldName)
+			fieldValue := movedComposite.GetField(inter, interpreter.ReturnEmptyLocationRange, fieldName)
 			utils.AssertValuesEqual(t, inter, orgFieldValue, fieldValue)
 		}
 
@@ -1214,7 +1217,8 @@ func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) inte
 			BorrowType: v.BorrowType,
 		}
 	case *interpreter.SomeValue:
-		return interpreter.NewSomeValueNonCopying(deepCopyValue(inter, v.Value))
+		innerValue := v.InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+		return interpreter.NewSomeValueNonCopying(deepCopyValue(inter, innerValue))
 	case interpreter.NilValue:
 		return interpreter.NilValue{}
 	default:
@@ -1253,9 +1257,9 @@ func randomStorableValue(inter *interpreter.Interpreter, currentDepth int) inter
 			},
 		}
 	case Some:
-		return &interpreter.SomeValue{
-			Value: randomStorableValue(inter, currentDepth+1),
-		}
+		return interpreter.NewSomeValueNonCopying(
+			randomStorableValue(inter, currentDepth+1),
+		)
 
 	// Hashable
 	default:
@@ -1380,7 +1384,7 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 			common.Address{},
 		)
 
-		if enum.GetField(sema.EnumRawValueFieldName) == nil {
+		if enum.GetField(inter, interpreter.ReturnEmptyLocationRange, sema.EnumRawValueFieldName) == nil {
 			panic("enum without raw value")
 		}
 
@@ -1649,7 +1653,7 @@ type enumKey struct {
 }
 
 func (m *valueMap) put(inter *interpreter.Interpreter, key, value interpreter.Value) {
-	internalKey := m.internalKey(key)
+	internalKey := m.internalKey(inter, key)
 
 	// Deep copy enum keys. This should be fine since we use an internal key for enums.
 	// Deep copying other values would mess key-lookup.
@@ -1661,8 +1665,8 @@ func (m *valueMap) put(inter *interpreter.Interpreter, key, value interpreter.Va
 	m.values[internalKey] = deepCopyValue(inter, value)
 }
 
-func (m *valueMap) get(key interpreter.Value) (interpreter.Value, bool) {
-	internalKey := m.internalKey(key)
+func (m *valueMap) get(inter *interpreter.Interpreter, key interpreter.Value) (interpreter.Value, bool) {
+	internalKey := m.internalKey(inter, key)
 	value, ok := m.values[internalKey]
 	return value, ok
 }
@@ -1678,7 +1682,7 @@ func (m *valueMap) foreach(apply func(key, value interpreter.Value) (exit bool))
 	}
 }
 
-func (m *valueMap) internalKey(key interpreter.Value) interface{} {
+func (m *valueMap) internalKey(inter *interpreter.Interpreter, key interpreter.Value) interface{} {
 	switch key := key.(type) {
 	case *interpreter.StringValue:
 		return *key
@@ -1687,7 +1691,7 @@ func (m *valueMap) internalKey(key interpreter.Value) interface{} {
 			location:            key.Location,
 			qualifiedIdentifier: key.QualifiedIdentifier,
 			kind:                key.Kind,
-			rawValue:            key.GetField(sema.EnumRawValueFieldName),
+			rawValue:            key.GetField(inter, interpreter.ReturnEmptyLocationRange, sema.EnumRawValueFieldName),
 		}
 	case interpreter.Value:
 		return key

@@ -132,7 +132,14 @@ type Interface interface {
 	// BLSAggregatePublicKeys aggregate multiple BLS public keys into one.
 	BLSAggregatePublicKeys(keys []*PublicKey) (*PublicKey, error)
 	// ResourceOwnerChanged gets called when a resource's owner changed (if enabled)
-	ResourceOwnerChanged(resource *interpreter.CompositeValue, oldOwner common.Address, newOwner common.Address)
+	ResourceOwnerChanged(
+		interpreter *interpreter.Interpreter,
+		resource *interpreter.CompositeValue,
+		oldOwner common.Address,
+		newOwner common.Address,
+	)
+	// UseMemory gets called when new memory is allocated or used by the interpreter
+	UseMemory(usage common.MemoryUsage)
 }
 
 type Metrics interface {

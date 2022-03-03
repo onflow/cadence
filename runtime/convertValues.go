@@ -156,11 +156,14 @@ func exportSomeValue(
 	cadence.Optional,
 	error,
 ) {
-	if v.Value == nil {
+	// TODO: provide proper location range
+	innerValue := v.InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+
+	if innerValue == nil {
 		return cadence.NewOptional(nil), nil
 	}
 
-	value, err := exportValueWithInterpreter(v.Value, inter, seenReferences)
+	value, err := exportValueWithInterpreter(innerValue, inter, seenReferences)
 	if err != nil {
 		return cadence.Optional{}, err
 	}
@@ -222,7 +225,7 @@ func exportCompositeValue(
 		fieldName := field.Identifier
 
 		// TODO: provide proper location range
-		fieldValue := v.GetField(fieldName)
+		fieldValue := v.GetField(inter, interpreter.ReturnEmptyLocationRange, fieldName)
 		if fieldValue == nil && v.ComputedFields != nil {
 			if computedField, ok := v.ComputedFields[fieldName]; ok {
 				// TODO: provide proper location range
@@ -555,10 +558,7 @@ func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedTy
 }
 
 func importString(inter *interpreter.Interpreter, v cadence.String) *interpreter.StringValue {
-	memoryUsage := common.MemoryUsage{
-		Kind:   common.MemoryKindString,
-		Amount: uint64(len(v)),
-	}
+	memoryUsage := common.NewStringMemoryUsage(uint64(len(v)))
 	return interpreter.NewStringValue(
 		inter,
 		memoryUsage,
