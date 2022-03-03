@@ -1992,7 +1992,7 @@ func TestCheckInvalidInterfaceUseAsTypeSuggestion(t *testing.T) {
 	)
 }
 
-func TestBadStructInterface(t *testing.T) {
+func TestCheckBadStructInterface(t *testing.T) {
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, "struct interface var { contract h : var { contract h { } contract h { contract h { } } } }")
