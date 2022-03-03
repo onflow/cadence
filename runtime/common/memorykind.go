@@ -37,4 +37,5 @@ const (
 	MemoryKindDictionary
 	MemoryKindComposite
 	MemoryKindInterpretedFunction
+	MemoryKindHostFunction
 )

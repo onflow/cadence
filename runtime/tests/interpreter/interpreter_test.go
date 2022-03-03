@@ -4602,7 +4602,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 				{
 					Name: "getStorageReference",
 					Type: getStorageReferenceFunctionType,
-					Function: interpreter.NewHostFunctionValue(
+					Function: interpreter.NewUnmeteredHostFunctionValue(
 						func(invocation interpreter.Invocation) interpreter.Value {
 
 							authorized := bool(invocation.Arguments[0].(interpreter.BoolValue))
@@ -8740,6 +8740,7 @@ func newTestAuthAccountValue(
 ) interpreter.Value {
 
 	panicFunction := interpreter.NewHostFunctionValue(
+		inter,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			panic(errors.NewUnreachableError())
 		},
@@ -8794,6 +8795,7 @@ func newTestPublicAccountValue(
 ) interpreter.Value {
 
 	panicFunction := interpreter.NewHostFunctionValue(
+		inter,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			panic(errors.NewUnreachableError())
 		},

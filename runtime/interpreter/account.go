@@ -56,6 +56,7 @@ func NewAuthAccountValue(
 		sema.AuthAccountAddPublicKeyField:    addPublicKeyFunction,
 		sema.AuthAccountRemovePublicKeyField: removePublicKeyFunction,
 		sema.AuthAccountGetCapabilityField: accountGetCapabilityFunction(
+			inter,
 			address,
 			sema.CapabilityPathType,
 			sema.AuthAccountTypeGetCapabilityFunctionType,
@@ -165,6 +166,7 @@ func NewPublicAccountValue(
 	fields := map[string]Value{
 		sema.PublicAccountAddressField: address,
 		sema.PublicAccountGetCapabilityField: accountGetCapabilityFunction(
+			inter,
 			address,
 			sema.PublicPathType,
 			sema.PublicAccountTypeGetCapabilityFunctionType,

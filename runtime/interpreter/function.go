@@ -196,7 +196,7 @@ func (f *HostFunctionValue) RecursiveString(_ SeenReferences) string {
 	return f.String()
 }
 
-func NewHostFunctionValue(
+func NewUnmeteredHostFunctionValue(
 	function HostFunction,
 	funcType *sema.FunctionType,
 ) *HostFunctionValue {
@@ -211,6 +211,17 @@ func NewHostFunctionValue(
 		Function: function,
 		Type:     funcType,
 	}
+}
+
+func NewHostFunctionValue(
+	interpreter *Interpreter,
+	function HostFunction,
+	funcType *sema.FunctionType,
+) *HostFunctionValue {
+
+	interpreter.UseConstantMemory(common.MemoryKindHostFunction)
+
+	return NewUnmeteredHostFunctionValue(function, funcType)
 }
 
 var _ Value = &HostFunctionValue{}

@@ -20,11 +20,12 @@ func _() {
 	_ = x[MemoryKindDictionary-9]
 	_ = x[MemoryKindComposite-10]
 	_ = x[MemoryKindInterpretedFunction-11]
+	_ = x[MemoryKindHostFunction-12]
 }
 
-const _MemoryKind_name = "UnknownBoolAddressStringCharacterMetaTypeBlockNumberArrayDictionaryCompositeInterpretedFunction"
+const _MemoryKind_name = "UnknownBoolAddressStringCharacterMetaTypeBlockNumberArrayDictionaryCompositeInterpretedFunctionHostFunction"
 
-var _MemoryKind_index = [...]uint8{0, 7, 11, 18, 24, 33, 41, 46, 52, 57, 67, 76, 95}
+var _MemoryKind_index = [...]uint8{0, 7, 11, 18, 24, 33, 41, 46, 52, 57, 67, 76, 95, 107}
 
 func (i MemoryKind) String() string {
 	if i >= MemoryKind(len(_MemoryKind_index)-1) {
