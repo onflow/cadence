@@ -35,7 +35,7 @@ func TestParseReplInput(t *testing.T) {
 
 	actual, errs := ParseStatements(`
         struct X {}; let x = X(); x
-    `)
+    `, nil)
 
 	var err error
 	if len(errs) > 0 {
@@ -60,7 +60,7 @@ func TestParseReturnStatement(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseStatements("return")
+		result, errs := ParseStatements("return", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -80,7 +80,7 @@ func TestParseReturnStatement(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseStatements("return 1")
+		result, errs := ParseStatements("return 1", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -109,7 +109,7 @@ func TestParseReturnStatement(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseStatements("return \n1")
+		result, errs := ParseStatements("return \n1", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -140,7 +140,7 @@ func TestParseReturnStatement(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseStatements("return ;\n1")
+		result, errs := ParseStatements("return ;\n1", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -176,7 +176,7 @@ func TestParseIfStatement(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseStatements("if true { }")
+		result, errs := ParseStatements("if true { }", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -207,7 +207,7 @@ func TestParseIfStatement(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseStatements("if true { 1 ; 2 }")
+		result, errs := ParseStatements("if true { 1 ; 2 }", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -261,7 +261,7 @@ func TestParseIfStatement(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseStatements("if true { 1 \n 2 }")
+		result, errs := ParseStatements("if true { 1 \n 2 }", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -315,7 +315,7 @@ func TestParseIfStatement(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseStatements("if true { 1 } else { 2 }")
+		result, errs := ParseStatements("if true { 1 } else { 2 }", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -377,7 +377,7 @@ func TestParseIfStatement(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseStatements("if true{1}else if true {2} else{3}")
+		result, errs := ParseStatements("if true{1}else if true {2} else{3}", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -476,7 +476,7 @@ func TestParseIfStatement(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseStatements("if var x = 1 { }")
+		result, errs := ParseStatements("if var x = 1 { }", nil)
 		require.Empty(t, errs)
 
 		expected := &ast.IfStatement{
@@ -525,7 +525,7 @@ func TestParseIfStatement(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseStatements("if let x = 1 { }")
+		result, errs := ParseStatements("if let x = 1 { }", nil)
 		require.Empty(t, errs)
 
 		expected := &ast.IfStatement{
@@ -580,7 +580,7 @@ func TestParseWhileStatement(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseStatements("while true { }")
+		result, errs := ParseStatements("while true { }", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -616,7 +616,7 @@ func TestParseAssignmentStatement(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseStatements("x=1")
+		result, errs := ParseStatements("x=1", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -651,7 +651,7 @@ func TestParseAssignmentStatement(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseStatements(" x = 1")
+		result, errs := ParseStatements(" x = 1", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -686,7 +686,7 @@ func TestParseAssignmentStatement(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseStatements(" x <- 1")
+		result, errs := ParseStatements(" x <- 1", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -721,7 +721,7 @@ func TestParseAssignmentStatement(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseStatements(" x <-! 1")
+		result, errs := ParseStatements(" x <-! 1", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -761,7 +761,7 @@ func TestParseSwapStatement(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseStatements(" x <-> y")
+		result, errs := ParseStatements(" x <-> y", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -794,7 +794,7 @@ func TestParseForStatement(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseStatements("for x in y { }")
+		result, errs := ParseStatements("for x in y { }", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -833,7 +833,7 @@ func TestParseForStatementIndexBinding(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseStatements("for i, x in y { }")
+		result, errs := ParseStatements("for i, x in y { }", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -871,7 +871,7 @@ func TestParseForStatementIndexBinding(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseStatements("for i x in y { }")
+		_, errs := ParseStatements("for i x in y { }", nil)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -891,7 +891,7 @@ func TestParseForStatementIndexBinding(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseStatements("for in y { }")
+		_, errs := ParseStatements("for in y { }", nil)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -916,7 +916,7 @@ func TestParseEmit(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseStatements("emit T()")
+		result, errs := ParseStatements("emit T()", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -948,7 +948,7 @@ func TestParseFunctionStatementOrExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseStatements("fun foo() {}")
+		result, errs := ParseStatements("fun foo() {}", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -994,7 +994,7 @@ func TestParseFunctionStatementOrExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseStatements("fun () {}")
+		result, errs := ParseStatements("fun () {}", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1042,7 +1042,7 @@ func TestParseStatements(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseStatements("a + b < c\nd")
+		result, errs := ParseStatements("a + b < c\nd", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1090,7 +1090,7 @@ func TestParseStatements(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseStatements(`assert true`)
+		result, errs := ParseStatements(`assert true`, nil)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -1134,7 +1134,7 @@ func TestParseSwitchStatement(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseStatements("switch true { }")
+		result, errs := ParseStatements("switch true { }", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1162,7 +1162,7 @@ func TestParseSwitchStatement(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseStatements("switch x { case 1 :\n a\nb default : c\nd  }")
+		result, errs := ParseStatements("switch x { case 1 :\n a\nb default : c\nd  }", nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -1248,7 +1248,7 @@ func TestParseIfStatementInFunctionDeclaration(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
 	    fun test() {
             if true {
                 return
@@ -1259,7 +1259,8 @@ func TestParseIfStatementInFunctionDeclaration(t *testing.T) {
                 2
             }
         }
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -1396,7 +1397,7 @@ func TestParseIfStatementWithVariableDeclaration(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
 	    fun test() {
             if var y = x {
                 1
@@ -1404,7 +1405,8 @@ func TestParseIfStatementWithVariableDeclaration(t *testing.T) {
                 2
             }
         }
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	ifStatement := &ast.IfStatement{
@@ -1516,13 +1518,14 @@ func TestParseIfStatementNoElse(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
 	    fun test() {
             if true {
                 return
             }
         }
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -1594,7 +1597,7 @@ func TestParseWhileStatementInFunctionDeclaration(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
 	    fun test() {
             while true {
               return
@@ -1602,7 +1605,8 @@ func TestParseWhileStatementInFunctionDeclaration(t *testing.T) {
               continue
             }
         }
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -1686,11 +1690,12 @@ func TestParseForStatementInFunctionDeclaration(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
 	    fun test() {
             for x in xs {}
         }
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -1756,11 +1761,12 @@ func TestParseAssignment(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
 	    fun test() {
             a = 1
         }
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -1828,11 +1834,12 @@ func TestParseAccessAssignment(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
 	    fun test() {
             x.foo.bar[0][1].baz = 1
         }
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -1951,9 +1958,10 @@ func TestParseExpressionStatementWithAccess(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
 	    fun test() { x.foo.bar[0][1].baz }
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -2059,11 +2067,12 @@ func TestParseMoveStatement(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
         fun test() {
             x <- y
         }
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -2128,12 +2137,13 @@ func TestParseFunctionExpressionStatementAfterVariableDeclarationWithCreateExpre
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
       fun test() {
           let r <- create R()
           (fun () {})()
       }
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -2250,12 +2260,13 @@ func TestParseExpressionStatementAfterReturnStatement(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
       fun test() {
           return
           destroy x
       }
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -2321,11 +2332,12 @@ func TestParseSwapStatementInFunctionDeclaration(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseProgram(`
+	const code = `
       fun test() {
           foo[0] <-> bar.baz
       }
-	`)
+	`
+	result, errs := ParseProgram(code, nil)
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,

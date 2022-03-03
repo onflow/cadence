@@ -24,6 +24,7 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
@@ -38,8 +39,15 @@ var LiteralExpressionTypeError = fmt.Errorf("input is not a literal")
 // Returns an error if the literal string is not a literal (e.g. it does not have valid syntax,
 // or does not parse to a literal).
 //
-func ParseLiteral(literal string, ty sema.Type) (cadence.Value, error) {
-	expression, errs := parser2.ParseExpression(literal)
+func ParseLiteral(
+	literal string,
+	ty sema.Type,
+	memoryGauge common.MemoryGauge,
+) (
+	cadence.Value,
+	error,
+) {
+	expression, errs := parser2.ParseExpression(literal, memoryGauge)
 	if len(errs) > 0 {
 		return nil, parser2.Error{
 			Code:   literal,
@@ -54,8 +62,15 @@ func ParseLiteral(literal string, ty sema.Type) (cadence.Value, error) {
 //
 // Returns an error if the code is not a valid argument list, or the arguments are not literals.
 //
-func ParseLiteralArgumentList(argumentList string, parameterTypes []sema.Type) ([]cadence.Value, error) {
-	arguments, errs := parser2.ParseArgumentList(argumentList)
+func ParseLiteralArgumentList(
+	argumentList string,
+	parameterTypes []sema.Type,
+	memoryGauge common.MemoryGauge,
+) (
+	[]cadence.Value,
+	error,
+) {
+	arguments, errs := parser2.ParseArgumentList(argumentList, memoryGauge)
 	if len(errs) > 0 {
 		return nil, parser2.Error{
 			Errors: errs,

@@ -87,45 +87,6 @@ func ConvertStoredValue(value atree.Value) (Value, error) {
 	}
 }
 
-func DecodeTypeInfo(dec *cbor.StreamDecoder) (atree.TypeInfo, error) {
-	ty, err := dec.NextType()
-	if err != nil {
-		return nil, err
-	}
-
-	switch ty {
-	case cbor.TagType:
-
-		tag, err := dec.DecodeTagNumber()
-		if err != nil {
-			return nil, err
-		}
-
-		switch tag {
-		case CBORTagConstantSizedStaticType:
-			return decodeConstantSizedStaticType(dec)
-		case CBORTagVariableSizedStaticType:
-			return decodeVariableSizedStaticType(dec)
-		case CBORTagDictionaryStaticType:
-			return decodeDictionaryStaticType(dec)
-		case CBORTagCompositeValue:
-			return decodeCompositeTypeInfo(dec)
-		default:
-			return nil, fmt.Errorf("invalid type info CBOR tag: %d", tag)
-		}
-
-	case cbor.NilType:
-		err = dec.DecodeNil()
-		if err != nil {
-			return nil, err
-		}
-		return emptyTypeInfo, nil
-
-	default:
-		return nil, fmt.Errorf("invalid type info CBOR type: %d", ty)
-	}
-}
-
 type StorageKey struct {
 	Address common.Address
 	Key     string
@@ -153,12 +114,20 @@ type InMemoryStorage struct {
 
 var _ Storage = InMemoryStorage{}
 
-func NewInMemoryStorage() InMemoryStorage {
+func NewInMemoryStorage(memoryGauge common.MemoryGauge) InMemoryStorage {
+	decodeStorable := func(decoder *cbor.StreamDecoder, storableSlabStorageID atree.StorageID) (atree.Storable, error) {
+		return DecodeStorable(decoder, storableSlabStorageID, memoryGauge)
+	}
+
+	decodeTypeInfo := func(decoder *cbor.StreamDecoder) (atree.TypeInfo, error) {
+		return DecodeTypeInfo(decoder, memoryGauge)
+	}
+
 	slabStorage := atree.NewBasicSlabStorage(
 		CBOREncMode,
 		CBORDecMode,
-		DecodeStorable,
-		DecodeTypeInfo,
+		decodeStorable,
+		decodeTypeInfo,
 	)
 
 	return InMemoryStorage{

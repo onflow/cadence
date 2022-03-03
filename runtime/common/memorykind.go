@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,41 +16,24 @@
  * limitations under the License.
  */
 
-package cadence
+package common
 
-import (
-	"unicode/utf8"
+//go:generate go run golang.org/x/tools/cmd/stringer -type=MemoryKind -trimprefix=MemoryKind
 
-	"github.com/onflow/cadence/runtime/parser2"
-	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/tests/utils"
+// MemoryKind
+//
+type MemoryKind uint
+
+const (
+	MemoryKindUnknown MemoryKind = iota
+	MemoryKindBool
+	MemoryKindAddress
+	MemoryKindString
+	MemoryKindCharacter
+	MemoryKindMetaType
+	MemoryKindBlock
+	MemoryKindNumber
+	MemoryKindArray
+	MemoryKindDictionary
+	MemoryKindComposite
 )
-
-func Fuzz(data []byte) int {
-
-	if !utf8.Valid(data) {
-		return 0
-	}
-
-	program, err := parser2.ParseProgram(string(data), nil)
-
-	if err != nil {
-		return 0
-	}
-
-	checker, err := sema.NewChecker(
-		program,
-		utils.TestLocation,
-		sema.WithAccessCheckMode(sema.AccessCheckModeNotSpecifiedUnrestricted),
-	)
-	if err != nil {
-		return 0
-	}
-
-	err = checker.Check()
-	if err != nil {
-		return 0
-	}
-
-	return 1
-}

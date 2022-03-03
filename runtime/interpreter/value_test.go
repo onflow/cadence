@@ -62,7 +62,7 @@ func TestOwnerNewArray(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	storage := NewInMemoryStorage(nil)
 
 	elaboration := sema.NewElaboration()
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
@@ -101,7 +101,7 @@ func TestOwnerArrayDeepCopy(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	storage := NewInMemoryStorage(nil)
 
 	elaboration := sema.NewElaboration()
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
@@ -152,7 +152,7 @@ func TestOwnerArrayElement(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	storage := NewInMemoryStorage(nil)
 
 	elaboration := sema.NewElaboration()
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
@@ -190,7 +190,7 @@ func TestOwnerArraySetIndex(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	storage := NewInMemoryStorage(nil)
 
 	elaboration := sema.NewElaboration()
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
@@ -238,7 +238,7 @@ func TestOwnerArrayAppend(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	storage := NewInMemoryStorage(nil)
 
 	elaboration := sema.NewElaboration()
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
@@ -280,7 +280,7 @@ func TestOwnerArrayInsert(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	storage := NewInMemoryStorage(nil)
 
 	elaboration := sema.NewElaboration()
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
@@ -322,7 +322,7 @@ func TestOwnerArrayRemove(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	storage := NewInMemoryStorage(nil)
 
 	elaboration := sema.NewElaboration()
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
@@ -362,7 +362,7 @@ func TestOwnerNewDictionary(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	storage := NewInMemoryStorage(nil)
 
 	elaboration := sema.NewElaboration()
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
@@ -378,7 +378,7 @@ func TestOwnerNewDictionary(t *testing.T) {
 
 	oldOwner := common.Address{0x1}
 
-	keyValue := NewStringValue("test")
+	keyValue := NewUnmeteredStringValue("test")
 	value := newTestCompositeValue(inter, oldOwner)
 
 	assert.Equal(t, oldOwner, value.GetOwner())
@@ -405,7 +405,7 @@ func TestOwnerDictionary(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	storage := NewInMemoryStorage(nil)
 
 	elaboration := sema.NewElaboration()
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
@@ -422,7 +422,7 @@ func TestOwnerDictionary(t *testing.T) {
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
-	keyValue := NewStringValue("test")
+	keyValue := NewUnmeteredStringValue("test")
 	value := newTestCompositeValue(inter, oldOwner)
 
 	dictionary := NewDictionaryValueWithAddress(
@@ -448,7 +448,7 @@ func TestOwnerDictionaryCopy(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	storage := NewInMemoryStorage(nil)
 
 	elaboration := sema.NewElaboration()
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
@@ -465,7 +465,7 @@ func TestOwnerDictionaryCopy(t *testing.T) {
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
-	keyValue := NewStringValue("test")
+	keyValue := NewUnmeteredStringValue("test")
 	value := newTestCompositeValue(inter, oldOwner)
 
 	dictionary := NewDictionaryValueWithAddress(
@@ -503,7 +503,7 @@ func TestOwnerDictionarySetSome(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	storage := NewInMemoryStorage(nil)
 
 	elaboration := sema.NewElaboration()
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
@@ -520,7 +520,7 @@ func TestOwnerDictionarySetSome(t *testing.T) {
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
-	keyValue := NewStringValue("test")
+	keyValue := NewUnmeteredStringValue("test")
 	value := newTestCompositeValue(inter, oldOwner)
 
 	dictionary := NewDictionaryValueWithAddress(
@@ -553,7 +553,7 @@ func TestOwnerDictionaryInsertNonExisting(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	storage := NewInMemoryStorage(nil)
 
 	elaboration := sema.NewElaboration()
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
@@ -570,7 +570,7 @@ func TestOwnerDictionaryInsertNonExisting(t *testing.T) {
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
-	keyValue := NewStringValue("test")
+	keyValue := NewUnmeteredStringValue("test")
 	value := newTestCompositeValue(inter, oldOwner)
 
 	dictionary := NewDictionaryValueWithAddress(
@@ -604,7 +604,7 @@ func TestOwnerDictionaryRemove(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	storage := NewInMemoryStorage(nil)
 
 	elaboration := sema.NewElaboration()
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
@@ -621,7 +621,7 @@ func TestOwnerDictionaryRemove(t *testing.T) {
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
-	keyValue := NewStringValue("test")
+	keyValue := NewUnmeteredStringValue("test")
 	value1 := newTestCompositeValue(inter, oldOwner)
 	value2 := newTestCompositeValue(inter, oldOwner)
 
@@ -661,7 +661,7 @@ func TestOwnerDictionaryInsertExisting(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	storage := NewInMemoryStorage(nil)
 
 	elaboration := sema.NewElaboration()
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
@@ -678,7 +678,7 @@ func TestOwnerDictionaryInsertExisting(t *testing.T) {
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
-	keyValue := NewStringValue("test")
+	keyValue := NewUnmeteredStringValue("test")
 	value := newTestCompositeValue(inter, oldOwner)
 
 	dictionary := NewDictionaryValueWithAddress(
@@ -890,7 +890,7 @@ func TestStringer(t *testing.T) {
 			expected: "nil",
 		},
 		"String": {
-			value:    NewStringValue("Flow ridah!"),
+			value:    NewUnmeteredStringValue("Flow ridah!"),
 			expected: "\"Flow ridah!\"",
 		},
 		"Array": {
@@ -901,7 +901,7 @@ func TestStringer(t *testing.T) {
 				},
 				common.Address{},
 				NewIntValueFromInt64(10),
-				NewStringValue("TEST"),
+				NewUnmeteredStringValue("TEST"),
 			),
 			expected: "[10, \"TEST\"]",
 		},
@@ -912,8 +912,8 @@ func TestStringer(t *testing.T) {
 					KeyType:   PrimitiveStaticTypeString,
 					ValueType: PrimitiveStaticTypeUInt8,
 				},
-				NewStringValue("a"), UInt8Value(42),
-				NewStringValue("b"), UInt8Value(99),
+				NewUnmeteredStringValue("a"), UInt8Value(42),
+				NewUnmeteredStringValue("b"), UInt8Value(99),
 			),
 			expected: `{"b": 99, "a": 42}`,
 		},
@@ -928,7 +928,7 @@ func TestStringer(t *testing.T) {
 				fields := []CompositeField{
 					{
 						Name:  "y",
-						Value: NewStringValue("bar"),
+						Value: NewUnmeteredStringValue("bar"),
 					},
 				}
 
@@ -950,7 +950,7 @@ func TestStringer(t *testing.T) {
 				fields := []CompositeField{
 					{
 						Name:  "y",
-						Value: NewStringValue("bar"),
+						Value: NewUnmeteredStringValue("bar"),
 					},
 				}
 
@@ -1083,7 +1083,7 @@ func TestVisitor(t *testing.T) {
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeAny,
 		},
-		NewStringValue("42"), value,
+		NewUnmeteredStringValue("42"), value,
 	)
 
 	fields := []CompositeField{
@@ -1367,14 +1367,14 @@ func TestGetHashInput(t *testing.T) {
 			expected: []byte{byte(HashInputTypeBool), 0},
 		},
 		"String": {
-			value: NewStringValue("Flow ridah!"),
+			value: NewUnmeteredStringValue("Flow ridah!"),
 			expected: []byte{
 				byte(HashInputTypeString),
 				0x46, 0x6c, 0x6f, 0x77, 0x20, 0x72, 0x69, 0x64, 0x61, 0x68, 0x21,
 			},
 		},
 		"String long": {
-			value: NewStringValue(strings.Repeat("a", 32)),
+			value: NewUnmeteredStringValue(strings.Repeat("a", 32)),
 			expected: append([]byte{byte(HashInputTypeString)},
 				[]byte(strings.Repeat("a", 32))...,
 			),
@@ -1516,7 +1516,7 @@ func TestEphemeralReferenceTypeConformance(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	storage := NewInMemoryStorage(nil)
 
 	// Obtain a self referencing (cyclic) ephemeral reference value.
 
@@ -1747,7 +1747,7 @@ func TestCapabilityValue_Equal(t *testing.T) {
 			}).Equal(
 				inter,
 				ReturnEmptyLocationRange,
-				NewStringValue("test"),
+				NewUnmeteredStringValue("test"),
 			),
 		)
 	})
@@ -1879,10 +1879,10 @@ func TestStringValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.True(t,
-			NewStringValue("test").Equal(
+			NewUnmeteredStringValue("test").Equal(
 				inter,
 				ReturnEmptyLocationRange,
-				NewStringValue("test"),
+				NewUnmeteredStringValue("test"),
 			),
 		)
 	})
@@ -1894,10 +1894,10 @@ func TestStringValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			NewStringValue("test").Equal(
+			NewUnmeteredStringValue("test").Equal(
 				inter,
 				ReturnEmptyLocationRange,
-				NewStringValue("foo"),
+				NewUnmeteredStringValue("foo"),
 			),
 		)
 	})
@@ -1909,7 +1909,7 @@ func TestStringValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			NewStringValue("1").Equal(
+			NewUnmeteredStringValue("1").Equal(
 				inter,
 				ReturnEmptyLocationRange,
 				UInt8Value(1),
@@ -1964,10 +1964,10 @@ func TestSomeValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.True(t,
-			NewSomeValueNonCopying(NewStringValue("test")).Equal(
+			NewSomeValueNonCopying(NewUnmeteredStringValue("test")).Equal(
 				inter,
 				ReturnEmptyLocationRange,
-				NewSomeValueNonCopying(NewStringValue("test")),
+				NewSomeValueNonCopying(NewUnmeteredStringValue("test")),
 			),
 		)
 	})
@@ -1979,10 +1979,10 @@ func TestSomeValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			NewSomeValueNonCopying(NewStringValue("test")).Equal(
+			NewSomeValueNonCopying(NewUnmeteredStringValue("test")).Equal(
 				inter,
 				ReturnEmptyLocationRange,
-				NewSomeValueNonCopying(NewStringValue("foo")),
+				NewSomeValueNonCopying(NewUnmeteredStringValue("foo")),
 			),
 		)
 	})
@@ -1994,7 +1994,7 @@ func TestSomeValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			NewSomeValueNonCopying(NewStringValue("1")).Equal(
+			NewSomeValueNonCopying(NewUnmeteredStringValue("1")).Equal(
 				inter,
 				ReturnEmptyLocationRange,
 				UInt8Value(1),
@@ -2057,7 +2057,7 @@ func TestTypeValue_Equal(t *testing.T) {
 			}.Equal(
 				inter,
 				ReturnEmptyLocationRange,
-				NewStringValue("String"),
+				NewUnmeteredStringValue("String"),
 			),
 		)
 	})
@@ -2152,7 +2152,7 @@ func TestPathValue_Equal(t *testing.T) {
 			}.Equal(
 				inter,
 				ReturnEmptyLocationRange,
-				NewStringValue("/storage/test"),
+				NewUnmeteredStringValue("/storage/test"),
 			),
 		)
 	})
@@ -2259,7 +2259,7 @@ func TestLinkValue_Equal(t *testing.T) {
 			}.Equal(
 				inter,
 				ReturnEmptyLocationRange,
-				NewStringValue("test"),
+				NewUnmeteredStringValue("test"),
 			),
 		)
 	})
@@ -2516,9 +2516,9 @@ func TestDictionaryValue_Equal(t *testing.T) {
 				inter,
 				byteStringDictionaryType,
 				UInt8Value(1),
-				NewStringValue("1"),
+				NewUnmeteredStringValue("1"),
 				UInt8Value(2),
-				NewStringValue("2"),
+				NewUnmeteredStringValue("2"),
 			).Equal(
 				inter,
 				ReturnEmptyLocationRange,
@@ -2526,9 +2526,9 @@ func TestDictionaryValue_Equal(t *testing.T) {
 					inter,
 					byteStringDictionaryType,
 					UInt8Value(1),
-					NewStringValue("1"),
+					NewUnmeteredStringValue("1"),
 					UInt8Value(2),
-					NewStringValue("2"),
+					NewUnmeteredStringValue("2"),
 				),
 			),
 		)
@@ -2545,9 +2545,9 @@ func TestDictionaryValue_Equal(t *testing.T) {
 				inter,
 				byteStringDictionaryType,
 				UInt8Value(1),
-				NewStringValue("1"),
+				NewUnmeteredStringValue("1"),
 				UInt8Value(2),
-				NewStringValue("2"),
+				NewUnmeteredStringValue("2"),
 			).Equal(
 				inter,
 				ReturnEmptyLocationRange,
@@ -2555,9 +2555,9 @@ func TestDictionaryValue_Equal(t *testing.T) {
 					inter,
 					byteStringDictionaryType,
 					UInt8Value(2),
-					NewStringValue("1"),
+					NewUnmeteredStringValue("1"),
 					UInt8Value(3),
-					NewStringValue("2"),
+					NewUnmeteredStringValue("2"),
 				),
 			),
 		)
@@ -2574,9 +2574,9 @@ func TestDictionaryValue_Equal(t *testing.T) {
 				inter,
 				byteStringDictionaryType,
 				UInt8Value(1),
-				NewStringValue("1"),
+				NewUnmeteredStringValue("1"),
 				UInt8Value(2),
-				NewStringValue("2"),
+				NewUnmeteredStringValue("2"),
 			).Equal(
 				inter,
 				ReturnEmptyLocationRange,
@@ -2584,9 +2584,9 @@ func TestDictionaryValue_Equal(t *testing.T) {
 					inter,
 					byteStringDictionaryType,
 					UInt8Value(1),
-					NewStringValue("2"),
+					NewUnmeteredStringValue("2"),
 					UInt8Value(2),
-					NewStringValue("3"),
+					NewUnmeteredStringValue("3"),
 				),
 			),
 		)
@@ -2603,7 +2603,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 				inter,
 				byteStringDictionaryType,
 				UInt8Value(1),
-				NewStringValue("1"),
+				NewUnmeteredStringValue("1"),
 			).Equal(
 				inter,
 				ReturnEmptyLocationRange,
@@ -2611,9 +2611,9 @@ func TestDictionaryValue_Equal(t *testing.T) {
 					inter,
 					byteStringDictionaryType,
 					UInt8Value(1),
-					NewStringValue("1"),
+					NewUnmeteredStringValue("1"),
 					UInt8Value(2),
-					NewStringValue("2"),
+					NewUnmeteredStringValue("2"),
 				),
 			),
 		)
@@ -2630,9 +2630,9 @@ func TestDictionaryValue_Equal(t *testing.T) {
 				inter,
 				byteStringDictionaryType,
 				UInt8Value(1),
-				NewStringValue("1"),
+				NewUnmeteredStringValue("1"),
 				UInt8Value(2),
-				NewStringValue("2"),
+				NewUnmeteredStringValue("2"),
 			).Equal(
 				inter,
 				ReturnEmptyLocationRange,
@@ -2640,7 +2640,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 					inter,
 					byteStringDictionaryType,
 					UInt8Value(1),
-					NewStringValue("1"),
+					NewUnmeteredStringValue("1"),
 				),
 			),
 		)
@@ -2683,9 +2683,9 @@ func TestDictionaryValue_Equal(t *testing.T) {
 				inter,
 				byteStringDictionaryType,
 				UInt8Value(1),
-				NewStringValue("1"),
+				NewUnmeteredStringValue("1"),
 				UInt8Value(2),
-				NewStringValue("2"),
+				NewUnmeteredStringValue("2"),
 			).Equal(
 				inter,
 				ReturnEmptyLocationRange,
@@ -2714,14 +2714,14 @@ func TestCompositeValue_Equal(t *testing.T) {
 		fields1 := []CompositeField{
 			{
 				Name:  "a",
-				Value: NewStringValue("a"),
+				Value: NewUnmeteredStringValue("a"),
 			},
 		}
 
 		fields2 := []CompositeField{
 			{
 				Name:  "a",
-				Value: NewStringValue("a"),
+				Value: NewUnmeteredStringValue("a"),
 			},
 		}
 
@@ -2757,14 +2757,14 @@ func TestCompositeValue_Equal(t *testing.T) {
 		fields1 := []CompositeField{
 			{
 				Name:  "a",
-				Value: NewStringValue("a"),
+				Value: NewUnmeteredStringValue("a"),
 			},
 		}
 
 		fields2 := []CompositeField{
 			{
 				Name:  "a",
-				Value: NewStringValue("a"),
+				Value: NewUnmeteredStringValue("a"),
 			},
 		}
 
@@ -2800,14 +2800,14 @@ func TestCompositeValue_Equal(t *testing.T) {
 		fields1 := []CompositeField{
 			{
 				Name:  "a",
-				Value: NewStringValue("a"),
+				Value: NewUnmeteredStringValue("a"),
 			},
 		}
 
 		fields2 := []CompositeField{
 			{
 				Name:  "a",
-				Value: NewStringValue("a"),
+				Value: NewUnmeteredStringValue("a"),
 			},
 		}
 
@@ -2843,14 +2843,14 @@ func TestCompositeValue_Equal(t *testing.T) {
 		fields1 := []CompositeField{
 			{
 				Name:  "a",
-				Value: NewStringValue("a"),
+				Value: NewUnmeteredStringValue("a"),
 			},
 		}
 
 		fields2 := []CompositeField{
 			{
 				Name:  "a",
-				Value: NewStringValue("b"),
+				Value: NewUnmeteredStringValue("b"),
 			},
 		}
 
@@ -2886,18 +2886,18 @@ func TestCompositeValue_Equal(t *testing.T) {
 		fields1 := []CompositeField{
 			{
 				Name:  "a",
-				Value: NewStringValue("a"),
+				Value: NewUnmeteredStringValue("a"),
 			},
 		}
 
 		fields2 := []CompositeField{
 			{
 				Name:  "a",
-				Value: NewStringValue("a"),
+				Value: NewUnmeteredStringValue("a"),
 			},
 			{
 				Name:  "b",
-				Value: NewStringValue("b"),
+				Value: NewUnmeteredStringValue("b"),
 			},
 		}
 
@@ -2933,18 +2933,18 @@ func TestCompositeValue_Equal(t *testing.T) {
 		fields1 := []CompositeField{
 			{
 				Name:  "a",
-				Value: NewStringValue("a"),
+				Value: NewUnmeteredStringValue("a"),
 			},
 			{
 				Name:  "b",
-				Value: NewStringValue("b"),
+				Value: NewUnmeteredStringValue("b"),
 			},
 		}
 
 		fields2 := []CompositeField{
 			{
 				Name:  "a",
-				Value: NewStringValue("a"),
+				Value: NewUnmeteredStringValue("a"),
 			},
 		}
 
@@ -2980,14 +2980,14 @@ func TestCompositeValue_Equal(t *testing.T) {
 		fields1 := []CompositeField{
 			{
 				Name:  "a",
-				Value: NewStringValue("a"),
+				Value: NewUnmeteredStringValue("a"),
 			},
 		}
 
 		fields2 := []CompositeField{
 			{
 				Name:  "a",
-				Value: NewStringValue("a"),
+				Value: NewUnmeteredStringValue("a"),
 			},
 		}
 
@@ -3023,7 +3023,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 		fields1 := []CompositeField{
 			{
 				Name:  "a",
-				Value: NewStringValue("a"),
+				Value: NewUnmeteredStringValue("a"),
 			},
 		}
 
@@ -3038,7 +3038,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 			).Equal(
 				inter,
 				ReturnEmptyLocationRange,
-				NewStringValue("test"),
+				NewUnmeteredStringValue("test"),
 			),
 		)
 	})
@@ -3133,7 +3133,7 @@ func TestPublicKeyValue(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		storage := NewInMemoryStorage(nil)
 
 		inter, err := NewInterpreter(
 			nil,
@@ -3177,7 +3177,7 @@ func TestPublicKeyValue(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		storage := NewInMemoryStorage(nil)
 
 		fakeError := fakeError{}
 
@@ -3334,7 +3334,7 @@ func checkHashable(ty types.Type) error {
 
 func newTestInterpreter(tb testing.TB) *Interpreter {
 
-	storage := NewInMemoryStorage()
+	storage := NewInMemoryStorage(nil)
 
 	inter, err := NewInterpreter(
 		nil,
@@ -3352,7 +3352,7 @@ func TestNonStorable(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	storage := NewInMemoryStorage(nil)
 
 	code := `
       pub struct Foo {

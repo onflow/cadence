@@ -146,12 +146,12 @@ func TestExportValue(t *testing.T) {
 
 		{
 			label:    "String empty",
-			value:    interpreter.NewStringValue(""),
+			value:    interpreter.NewUnmeteredStringValue(""),
 			expected: cadence.String(""),
 		},
 		{
 			label:    "String non-empty",
-			value:    interpreter.NewStringValue("foo"),
+			value:    interpreter.NewUnmeteredStringValue("foo"),
 			expected: cadence.String("foo"),
 		},
 		{
@@ -177,7 +177,7 @@ func TestExportValue(t *testing.T) {
 					},
 					common.Address{},
 					interpreter.NewIntValueFromInt64(42),
-					interpreter.NewStringValue("foo"),
+					interpreter.NewUnmeteredStringValue("foo"),
 				)
 			},
 			expected: cadence.NewArray([]cadence.Value{
@@ -207,9 +207,9 @@ func TestExportValue(t *testing.T) {
 						KeyType:   interpreter.PrimitiveStaticTypeString,
 						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
-					interpreter.NewStringValue("a"),
+					interpreter.NewUnmeteredStringValue("a"),
 					interpreter.NewIntValueFromInt64(1),
-					interpreter.NewStringValue("b"),
+					interpreter.NewUnmeteredStringValue("b"),
 					interpreter.NewIntValueFromInt64(2),
 				)
 			},
@@ -444,7 +444,7 @@ func TestExportValue(t *testing.T) {
 			label: "Deployed contract (invalid)",
 			value: interpreter.NewDeployedContractValue(
 				interpreter.AddressValue{},
-				interpreter.NewStringValue("C"),
+				interpreter.NewUnmeteredStringValue("C"),
 				interpreter.NewArrayValue(
 					newTestInterpreter(t),
 					interpreter.ByteArrayStaticType,
@@ -522,12 +522,12 @@ func TestImportValue(t *testing.T) {
 		{
 			label:    "String empty",
 			value:    cadence.String(""),
-			expected: interpreter.NewStringValue(""),
+			expected: interpreter.NewUnmeteredStringValue(""),
 		},
 		{
 			label:    "String non-empty",
 			value:    cadence.String("foo"),
-			expected: interpreter.NewStringValue("foo"),
+			expected: interpreter.NewUnmeteredStringValue("foo"),
 		},
 		{
 			label: "Array empty",
@@ -556,7 +556,7 @@ func TestImportValue(t *testing.T) {
 				},
 				common.Address{},
 				interpreter.NewIntValueFromInt64(42),
-				interpreter.NewStringValue("foo"),
+				interpreter.NewUnmeteredStringValue("foo"),
 			),
 			expectedType: &sema.VariableSizedType{
 				Type: sema.AnyStructType,
@@ -585,9 +585,9 @@ func TestImportValue(t *testing.T) {
 					KeyType:   interpreter.PrimitiveStaticTypeString,
 					ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
-				interpreter.NewStringValue("a"),
+				interpreter.NewUnmeteredStringValue("a"),
 				interpreter.NewIntValueFromInt64(1),
-				interpreter.NewStringValue("b"),
+				interpreter.NewUnmeteredStringValue("b"),
 				interpreter.NewIntValueFromInt64(2),
 			),
 			value: cadence.NewDictionary([]cadence.KeyValuePair{
@@ -1730,12 +1730,13 @@ func TestExportTypeValue(t *testing.T) {
 
 		t.Parallel()
 
-		program, err := parser2.ParseProgram(`
+		const code = `
           pub struct interface SI {}
 
           pub struct S: SI {}
 
-        `)
+        `
+		program, err := parser2.ParseProgram(code, nil)
 		require.NoError(t, err)
 
 		checker, err := sema.NewChecker(program, TestLocation)
@@ -1818,7 +1819,10 @@ func TestExportCapabilityValue(t *testing.T) {
 
 	t.Run("Struct", func(t *testing.T) {
 
-		program, err := parser2.ParseProgram(`pub struct S {}`)
+		const code = `
+          pub struct S {}
+        `
+		program, err := parser2.ParseProgram(code, nil)
 		require.NoError(t, err)
 
 		checker, err := sema.NewChecker(program, TestLocation)
@@ -1913,7 +1917,10 @@ func TestExportLinkValue(t *testing.T) {
 
 	t.Run("Struct", func(t *testing.T) {
 
-		program, err := parser2.ParseProgram(`pub struct S {}`)
+		const code = `
+          pub struct S {}
+        `
+		program, err := parser2.ParseProgram(code, nil)
 		require.NoError(t, err)
 
 		checker, err := sema.NewChecker(program, TestLocation)
@@ -2961,7 +2968,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 			},
 			common.Address{},
 			interpreter.NewIntValueFromInt64(42),
-			interpreter.NewStringValue("foo"),
+			interpreter.NewUnmeteredStringValue("foo"),
 		)
 
 		actual, err := exportValueWithInterpreter(value, nil, seenReferences{})
@@ -3006,7 +3013,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 				},
 				common.Address{},
 				interpreter.NewIntValueFromInt64(42),
-				interpreter.NewStringValue("foo"),
+				interpreter.NewUnmeteredStringValue("foo"),
 			),
 			actual,
 		)
@@ -3138,8 +3145,8 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 				KeyType:   interpreter.PrimitiveStaticTypeString,
 				ValueType: interpreter.PrimitiveStaticTypeInt,
 			},
-			interpreter.NewStringValue("a"), interpreter.NewIntValueFromInt64(1),
-			interpreter.NewStringValue("b"), interpreter.NewIntValueFromInt64(2),
+			interpreter.NewUnmeteredStringValue("a"), interpreter.NewIntValueFromInt64(1),
+			interpreter.NewUnmeteredStringValue("b"), interpreter.NewIntValueFromInt64(2),
 		)
 
 		actual, err := exportValueWithInterpreter(value, nil, seenReferences{})
@@ -3196,8 +3203,8 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 					KeyType:   interpreter.PrimitiveStaticTypeString,
 					ValueType: interpreter.PrimitiveStaticTypeInt,
 				},
-				interpreter.NewStringValue("a"), interpreter.NewIntValueFromInt64(1),
-				interpreter.NewStringValue("b"), interpreter.NewIntValueFromInt64(2),
+				interpreter.NewUnmeteredStringValue("a"), interpreter.NewIntValueFromInt64(1),
+				interpreter.NewUnmeteredStringValue("b"), interpreter.NewIntValueFromInt64(2),
 			),
 			actual,
 		)
@@ -3258,7 +3265,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 					},
 				},
 
-				interpreter.NewStringValue("a"),
+				interpreter.NewUnmeteredStringValue("a"),
 				interpreter.NewDictionaryValue(
 					inter,
 					interpreter.DictionaryStaticType{
@@ -3266,17 +3273,17 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
 					interpreter.Int8Value(1), interpreter.NewIntValueFromInt64(100),
-					interpreter.Int8Value(2), interpreter.NewStringValue("hello"),
+					interpreter.Int8Value(2), interpreter.NewUnmeteredStringValue("hello"),
 				),
 
-				interpreter.NewStringValue("b"),
+				interpreter.NewUnmeteredStringValue("b"),
 				interpreter.NewDictionaryValue(
 					inter,
 					interpreter.DictionaryStaticType{
 						KeyType:   interpreter.PrimitiveStaticTypeSignedInteger,
 						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
-					interpreter.Int8Value(1), interpreter.NewStringValue("foo"),
+					interpreter.Int8Value(1), interpreter.NewUnmeteredStringValue("foo"),
 					interpreter.NewIntValueFromInt64(2), interpreter.NewIntValueFromInt64(50),
 				),
 			),
@@ -4373,7 +4380,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 		staticArrayType,
 		common.Address{},
 		interpreter.NewIntValueFromInt64(42),
-		interpreter.NewStringValue("foo"),
+		interpreter.NewUnmeteredStringValue("foo"),
 	)
 
 	externalArrayValue := cadence.NewArray([]cadence.Value{
@@ -4401,7 +4408,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 	internalDictionaryValue := interpreter.NewDictionaryValue(
 		inter,
 		staticDictionaryType,
-		interpreter.NewStringValue("a"), internalArrayValue,
+		interpreter.NewUnmeteredStringValue("a"), internalArrayValue,
 	)
 
 	externalDictionaryValue := cadence.NewDictionary([]cadence.KeyValuePair{
@@ -4593,7 +4600,7 @@ func TestRuntimeStaticTypeAvailability(t *testing.T) {
 }
 
 func newTestInterpreter(tb testing.TB) *interpreter.Interpreter {
-	storage := interpreter.NewInMemoryStorage()
+	storage := interpreter.NewInMemoryStorage(nil)
 
 	inter, err := interpreter.NewInterpreter(
 		nil,

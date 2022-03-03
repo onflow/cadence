@@ -36,7 +36,7 @@ func TestCompositeStorage(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	storage := NewInMemoryStorage(nil)
 
 	inter, err := NewInterpreter(
 		nil,
@@ -99,7 +99,7 @@ func TestArrayStorage(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		storage := NewInMemoryStorage(nil)
 
 		inter, err := NewInterpreter(
 			nil,
@@ -162,7 +162,7 @@ func TestArrayStorage(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		storage := NewInMemoryStorage(nil)
 
 		inter, err := NewInterpreter(
 			nil,
@@ -225,7 +225,7 @@ func TestDictionaryStorage(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		storage := NewInMemoryStorage(nil)
 
 		inter, err := NewInterpreter(
 			nil,
@@ -250,7 +250,7 @@ func TestDictionaryStorage(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, ok)
 
-		entryKey := NewStringValue("test")
+		entryKey := NewUnmeteredStringValue("test")
 		entryValue := BoolValue(true)
 
 		value.SetKey(
@@ -281,7 +281,7 @@ func TestDictionaryStorage(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		storage := NewInMemoryStorage(nil)
 
 		inter, err := NewInterpreter(
 			nil,
@@ -296,7 +296,7 @@ func TestDictionaryStorage(t *testing.T) {
 				KeyType:   PrimitiveStaticTypeString,
 				ValueType: PrimitiveStaticTypeAnyStruct,
 			},
-			NewStringValue("test"),
+			NewUnmeteredStringValue("test"),
 			NewSomeValueNonCopying(BoolValue(true)),
 		)
 
@@ -311,7 +311,7 @@ func TestDictionaryStorage(t *testing.T) {
 		value.SetKey(
 			inter,
 			ReturnEmptyLocationRange,
-			NewStringValue("test"),
+			NewUnmeteredStringValue("test"),
 			NilValue{},
 		)
 
@@ -330,7 +330,7 @@ func TestDictionaryStorage(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		storage := NewInMemoryStorage(nil)
 
 		inter, err := NewInterpreter(
 			nil,
@@ -345,7 +345,7 @@ func TestDictionaryStorage(t *testing.T) {
 				KeyType:   PrimitiveStaticTypeString,
 				ValueType: PrimitiveStaticTypeAnyStruct,
 			},
-			NewStringValue("test"),
+			NewUnmeteredStringValue("test"),
 			NewSomeValueNonCopying(BoolValue(true)),
 		)
 
@@ -360,7 +360,7 @@ func TestDictionaryStorage(t *testing.T) {
 		value.Remove(
 			inter,
 			ReturnEmptyLocationRange,
-			NewStringValue("test"),
+			NewUnmeteredStringValue("test"),
 		)
 
 		require.Equal(t, 1, storage.BasicSlabStorage.Count())
@@ -378,7 +378,7 @@ func TestDictionaryStorage(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		storage := NewInMemoryStorage(nil)
 
 		inter, err := NewInterpreter(
 			nil,
@@ -406,7 +406,7 @@ func TestDictionaryStorage(t *testing.T) {
 		value.Insert(
 			inter,
 			ReturnEmptyLocationRange,
-			NewStringValue("test"),
+			NewUnmeteredStringValue("test"),
 			NewSomeValueNonCopying(BoolValue(true)),
 		)
 
@@ -426,7 +426,7 @@ func TestStorageOverwriteAndRemove(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	storage := NewInMemoryStorage(nil)
 
 	inter, err := NewInterpreter(
 		nil,
@@ -443,7 +443,7 @@ func TestStorageOverwriteAndRemove(t *testing.T) {
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
 		address,
-		NewStringValue("first"),
+		NewUnmeteredStringValue("first"),
 	)
 
 	const identifier = "test"
@@ -460,7 +460,7 @@ func TestStorageOverwriteAndRemove(t *testing.T) {
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
 		address,
-		NewStringValue("second"),
+		NewUnmeteredStringValue("second"),
 	)
 
 	storageMap.WriteValue(inter, identifier, array2)

@@ -52,7 +52,7 @@ func BenchmarkParseDeploy(b *testing.B) {
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
-			_, err := ParseProgram(transaction)
+			_, err := ParseProgram(transaction, nil)
 			if err != nil {
 				b.FailNow()
 			}
@@ -79,7 +79,7 @@ func BenchmarkParseDeploy(b *testing.B) {
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
-			_, err := ParseProgram(transaction)
+			_, err := ParseProgram(transaction, nil)
 			if err != nil {
 				b.FailNow()
 			}
@@ -188,7 +188,7 @@ pub contract FungibleToken {
 func BenchmarkParseFungibleToken(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
-		_, err := ParseProgram(fungibleTokenContract)
+		_, err := ParseProgram(fungibleTokenContract, nil)
 		if err != nil {
 			b.Fatal(err)
 		}

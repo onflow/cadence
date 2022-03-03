@@ -26,6 +26,7 @@ import (
 	goRuntime "runtime"
 	"time"
 
+	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
 	"github.com/opentracing/opentracing-go"
 
@@ -351,7 +352,10 @@ type Interpreter struct {
 	referencedResourceKindedValues       ReferencedResourceKindedValues
 	invalidatedResourceValidationEnabled bool
 	resourceVariables                    map[ResourceKindedValue]*Variable
+	memoryGauge                          common.MemoryGauge
 }
+
+var _ common.MemoryGauge = &Interpreter{}
 
 type Option func(*Interpreter) error
 
@@ -401,6 +405,16 @@ func WithOnFunctionInvocationHandler(handler OnFunctionInvocationFunc) Option {
 func WithOnInvokedFunctionReturnHandler(handler OnInvokedFunctionReturnFunc) Option {
 	return func(interpreter *Interpreter) error {
 		interpreter.SetOnInvokedFunctionReturnHandler(handler)
+		return nil
+	}
+}
+
+// WithMemoryGauge returns an interpreter option which sets
+// the given object as the memory gauge.
+//
+func WithMemoryGauge(memoryGauge common.MemoryGauge) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetMemoryGauge(memoryGauge)
 		return nil
 	}
 }
@@ -720,6 +734,12 @@ func (interpreter *Interpreter) SetOnFunctionInvocationHandler(function OnFuncti
 //
 func (interpreter *Interpreter) SetOnInvokedFunctionReturnHandler(function OnInvokedFunctionReturnFunc) {
 	interpreter.onInvokedFunctionReturn = function
+}
+
+// SetMemoryGauge sets the object as the memory gauge.
+//
+func (interpreter *Interpreter) SetMemoryGauge(memoryGauge common.MemoryGauge) {
+	interpreter.memoryGauge = memoryGauge
 }
 
 // SetOnRecordTraceHandler sets the function that is triggered when a trace is recorded.
@@ -2620,6 +2640,7 @@ func (interpreter *Interpreter) NewSubInterpreter(
 		WithTracingEnabled(interpreter.tracingEnabled),
 		WithOnRecordTraceHandler(interpreter.onRecordTrace),
 		WithOnResourceOwnerChangeHandler(interpreter.onResourceOwnerChange),
+		WithMemoryGauge(interpreter.memoryGauge),
 	}
 
 	return NewInterpreter(
@@ -3363,7 +3384,7 @@ func defineBaseValue(activation *VariableActivation, name string, value Value) {
 var stringFunction = func() Value {
 	functionValue := NewHostFunctionValue(
 		func(invocation Invocation) Value {
-			return NewStringValue("")
+			return emptyString
 		},
 		&sema.FunctionType{
 			ReturnTypeAnnotation: sema.NewTypeAnnotation(
@@ -3388,8 +3409,19 @@ var stringFunction = func() Value {
 					panic(errors.NewUnreachableError())
 				}
 
-				bytes, _ := ByteArrayValueToByteSlice(argument)
-				return NewStringValue(hex.EncodeToString(bytes))
+				inter := invocation.Interpreter
+				memoryUsage := common.NewStringMemoryUsage(
+					uint64(argument.Count()) * 2,
+				)
+				return NewStringValue(
+					inter,
+					memoryUsage,
+					func() string {
+						// TODO: meter
+						bytes, _ := ByteArrayValueToByteSlice(argument)
+						return hex.EncodeToString(bytes)
+					},
+				)
 			},
 			sema.StringTypeEncodeHexFunctionType,
 		),
@@ -4462,7 +4494,7 @@ func (interpreter *Interpreter) maybeValidateAtreeValue(v atree.Value) {
 	}
 }
 
-func (interpreter *Interpreter) ValidateAtreeValue(v atree.Value) {
+func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 	tic := func(info atree.TypeInfo, other atree.TypeInfo) bool {
 		switch info := info.(type) {
 		case ConstantSizedStaticType:
@@ -4514,14 +4546,21 @@ func (interpreter *Interpreter) ValidateAtreeValue(v atree.Value) {
 		return true
 	}
 
-	switch v := v.(type) {
+	switch value := value.(type) {
 	case *atree.Array:
-		err := atree.ValidArray(v, v.Type(), tic, hip)
+		err := atree.ValidArray(value, value.Type(), tic, hip)
 		if err != nil {
 			panic(ExternalError{err})
 		}
 
-		err = atree.ValidArraySerialization(v, CBORDecMode, CBOREncMode, DecodeStorable, DecodeTypeInfo, compare)
+		err = atree.ValidArraySerialization(
+			value,
+			CBORDecMode,
+			CBOREncMode,
+			interpreter.DecodeStorable,
+			interpreter.DecodeTypeInfo,
+			compare,
+		)
 		if err != nil {
 			var nonStorableValueErr NonStorableValueError
 			var nonStorableStaticTypeErr NonStorableStaticTypeError
@@ -4529,18 +4568,25 @@ func (interpreter *Interpreter) ValidateAtreeValue(v atree.Value) {
 			if !(goErrors.As(err, &nonStorableValueErr) ||
 				goErrors.As(err, &nonStorableStaticTypeErr)) {
 
-				atree.PrintArray(v)
+				atree.PrintArray(value)
 				panic(ExternalError{err})
 			}
 		}
 
 	case *atree.OrderedMap:
-		err := atree.ValidMap(v, v.Type(), tic, hip)
+		err := atree.ValidMap(value, value.Type(), tic, hip)
 		if err != nil {
 			panic(ExternalError{err})
 		}
 
-		err = atree.ValidMapSerialization(v, CBORDecMode, CBOREncMode, DecodeStorable, DecodeTypeInfo, compare)
+		err = atree.ValidMapSerialization(
+			value,
+			CBORDecMode,
+			CBOREncMode,
+			interpreter.DecodeStorable,
+			interpreter.DecodeTypeInfo,
+			compare,
+		)
 		if err != nil {
 			var nonStorableValueErr NonStorableValueError
 			var nonStorableStaticTypeErr NonStorableStaticTypeError
@@ -4548,7 +4594,7 @@ func (interpreter *Interpreter) ValidateAtreeValue(v atree.Value) {
 			if !(goErrors.As(err, &nonStorableValueErr) ||
 				goErrors.As(err, &nonStorableStaticTypeErr)) {
 
-				atree.PrintMap(v)
+				atree.PrintMap(value)
 				panic(ExternalError{err})
 			}
 		}
@@ -4692,4 +4738,27 @@ func (interpreter *Interpreter) invalidateResource(value Value) {
 
 	// Remove the resource-to-variable mapping.
 	delete(interpreter.resourceVariables, resourceKindedValue)
+}
+
+// UseMemory delegates the memory usage to the interpreter's memory gauge, if any.
+//
+func (interpreter *Interpreter) UseMemory(usage common.MemoryUsage) {
+	if interpreter.memoryGauge == nil {
+		return
+	}
+	interpreter.memoryGauge.UseMemory(usage)
+}
+
+func (interpreter *Interpreter) DecodeStorable(
+	decoder *cbor.StreamDecoder,
+	storageID atree.StorageID,
+) (
+	atree.Storable,
+	error,
+) {
+	return DecodeStorable(decoder, storageID, interpreter)
+}
+
+func (interpreter *Interpreter) DecodeTypeInfo(decoder *cbor.StreamDecoder) (atree.TypeInfo, error) {
+	return DecodeTypeInfo(decoder, interpreter)
 }

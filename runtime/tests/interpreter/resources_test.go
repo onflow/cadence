@@ -139,7 +139,7 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewSomeValueNonCopying(
-				interpreter.NewStringValue("test"),
+				interpreter.NewUnmeteredStringValue("test"),
 			),
 			value,
 		)
@@ -205,7 +205,7 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewSomeValueNonCopying(
-				interpreter.NewStringValue("test"),
+				interpreter.NewUnmeteredStringValue("test"),
 			),
 			value,
 		)
@@ -259,7 +259,7 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewSomeValueNonCopying(
-				interpreter.NewStringValue("test"),
+				interpreter.NewUnmeteredStringValue("test"),
 			),
 			value,
 		)
@@ -327,7 +327,7 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewSomeValueNonCopying(
-				interpreter.NewStringValue("test"),
+				interpreter.NewUnmeteredStringValue("test"),
 			),
 			value,
 		)
@@ -378,7 +378,7 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewSomeValueNonCopying(
-				interpreter.NewStringValue("test"),
+				interpreter.NewUnmeteredStringValue("test"),
 			),
 			value,
 		)
@@ -444,7 +444,7 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewSomeValueNonCopying(
-				interpreter.NewStringValue("test"),
+				interpreter.NewUnmeteredStringValue("test"),
 			),
 			value,
 		)
@@ -498,7 +498,7 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewSomeValueNonCopying(
-				interpreter.NewStringValue("test"),
+				interpreter.NewUnmeteredStringValue("test"),
 			),
 			value,
 		)
@@ -566,7 +566,7 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewSomeValueNonCopying(
-				interpreter.NewStringValue("test"),
+				interpreter.NewUnmeteredStringValue("test"),
 			),
 			value,
 		)

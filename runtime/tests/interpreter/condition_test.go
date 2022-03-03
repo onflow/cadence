@@ -300,7 +300,7 @@ func TestInterpretFunctionPostConditionWithMessageUsingResult(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewStringValue("return value"),
+		interpreter.NewUnmeteredStringValue("return value"),
 		value,
 	)
 }
@@ -318,7 +318,7 @@ func TestInterpretFunctionPostConditionWithMessageUsingBefore(t *testing.T) {
       }
     `)
 
-	_, err := inter.Invoke("test", interpreter.NewStringValue("parameter value"))
+	_, err := inter.Invoke("test", interpreter.NewUnmeteredStringValue("parameter value"))
 
 	var conditionErr interpreter.ConditionError
 	require.ErrorAs(t, err, &conditionErr)
@@ -342,7 +342,7 @@ func TestInterpretFunctionPostConditionWithMessageUsingParameter(t *testing.T) {
       }
     `)
 
-	_, err := inter.Invoke("test", interpreter.NewStringValue("parameter value"))
+	_, err := inter.Invoke("test", interpreter.NewUnmeteredStringValue("parameter value"))
 
 	var conditionErr interpreter.ConditionError
 	require.ErrorAs(t, err, &conditionErr)
@@ -547,7 +547,7 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 
 					if compositeKind == common.CompositeKindContract {
 
-						storage := interpreter.NewInMemoryStorage()
+						storage := interpreter.NewInMemoryStorage(nil)
 
 						inter, err := interpreter.NewInterpreter(
 							interpreter.ProgramFromChecker(checker),
@@ -574,7 +574,7 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 						_, err = inter.Invoke("test")
 						check(err)
 					} else {
-						storage := interpreter.NewInMemoryStorage()
+						storage := interpreter.NewInMemoryStorage(nil)
 
 						inter, err := interpreter.NewInterpreter(
 							interpreter.ProgramFromChecker(checker),

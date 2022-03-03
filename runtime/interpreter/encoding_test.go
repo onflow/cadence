@@ -56,7 +56,7 @@ var testOwner = common.MustBytesToAddress([]byte{0x42})
 func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 
 	if test.storage == nil {
-		test.storage = NewInMemoryStorage()
+		test.storage = NewInMemoryStorage(nil)
 	}
 
 	var encoded []byte
@@ -90,7 +90,7 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 	}
 
 	decoder := CBORDecMode.NewByteStreamDecoder(encoded)
-	decoded, err := DecodeStorable(decoder, test.slabStorageID)
+	decoded, err := DecodeStorable(decoder, test.slabStorageID, nil)
 
 	if test.invalid {
 		require.Error(t, err)
@@ -193,7 +193,7 @@ func TestEncodeDecodeString(t *testing.T) {
 
 		t.Parallel()
 
-		expected := NewStringValue("")
+		expected := NewUnmeteredStringValue("")
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -212,7 +212,7 @@ func TestEncodeDecodeString(t *testing.T) {
 
 		t.Parallel()
 
-		expected := NewStringValue("foo")
+		expected := NewUnmeteredStringValue("foo")
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -235,7 +235,7 @@ func TestEncodeDecodeString(t *testing.T) {
 		t.Parallel()
 
 		maxInlineElementSize := atree.MaxInlineArrayElementSize
-		expected := NewStringValue(strings.Repeat("x", int(maxInlineElementSize+1)))
+		expected := NewUnmeteredStringValue(strings.Repeat("x", int(maxInlineElementSize+1)))
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -292,7 +292,7 @@ func TestEncodeDecodeArray(t *testing.T) {
 
 		inter := newTestInterpreter(t)
 
-		expectedString := NewStringValue("test")
+		expectedString := NewUnmeteredStringValue("test")
 
 		expected := NewArrayValue(
 			inter,
@@ -360,7 +360,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 
 		inter := newTestInterpreter(t)
 
-		stringValue := NewStringValue("test")
+		stringValue := NewUnmeteredStringValue("test")
 
 		fields := []CompositeField{
 			{Name: "string", Value: stringValue},
@@ -2374,7 +2374,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 	t.Run("string", func(t *testing.T) {
 		t.Parallel()
 
-		expectedString := NewStringValue("test")
+		expectedString := NewUnmeteredStringValue("test")
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -2421,7 +2421,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 		var str *StringValue
 		maxInlineElementSize := atree.MaxInlineArrayElementSize
 		for i := uint64(0); i < maxInlineElementSize; i++ {
-			str = NewStringValue(strings.Repeat("x", int(maxInlineElementSize-i)))
+			str = NewUnmeteredStringValue(strings.Repeat("x", int(maxInlineElementSize-i)))
 			size, err := StorableSize(str)
 			require.NoError(t, err)
 			if uint64(size) == maxInlineElementSize-1 {
@@ -2455,7 +2455,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 		var str *StringValue
 		maxInlineElementSize := atree.MaxInlineArrayElementSize
 		for i := uint64(0); i < maxInlineElementSize; i++ {
-			str = NewStringValue(strings.Repeat("x", int(maxInlineElementSize-i)))
+			str = NewUnmeteredStringValue(strings.Repeat("x", int(maxInlineElementSize-i)))
 			size, err := StorableSize(str)
 			require.NoError(t, err)
 			if uint64(size) == maxInlineElementSize+1 {
@@ -3790,6 +3790,11 @@ func TestEncodeDecodeTypeValue(t *testing.T) {
 	})
 }
 
+func staticTypeFromBytes(data []byte) (StaticType, error) {
+	dec := CBORDecMode.NewByteStreamDecoder(data)
+	return NewTypeDecoder(dec, nil).DecodeStaticType()
+}
+
 func TestEncodeDecodeStaticType(t *testing.T) {
 
 	t.Parallel()
@@ -3818,7 +3823,7 @@ func TestEncodeDecodeStaticType(t *testing.T) {
 
 		AssertEqualWithDiff(t, encoded, actualEncoded)
 
-		actualType, err := StaticTypeFromBytes(encoded)
+		actualType, err := staticTypeFromBytes(encoded)
 		require.NoError(t, err)
 
 		require.Equal(t, ty, actualType)

@@ -275,7 +275,9 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val 
 
 	context.InitializeCodesAndPrograms()
 
-	storage := NewStorage(context.Interface)
+	memoryGauge, _ := context.Interface.(common.MemoryGauge)
+
+	storage := NewStorage(context.Interface, memoryGauge)
 
 	var checkerOptions []sema.Option
 	var interpreterOptions []interpreter.Option
@@ -519,7 +521,9 @@ func (r *interpreterRuntime) InvokeContractFunction(
 
 	context.InitializeCodesAndPrograms()
 
-	storage := NewStorage(context.Interface)
+	memoryGauge, _ := context.Interface.(common.MemoryGauge)
+
+	storage := NewStorage(context.Interface, memoryGauge)
 
 	var interpreterOptions []interpreter.Option
 	var checkerOptions []sema.Option
@@ -653,7 +657,9 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 
 	context.InitializeCodesAndPrograms()
 
-	storage := NewStorage(context.Interface)
+	memoryGauge, _ := context.Interface.(common.MemoryGauge)
+
+	storage := NewStorage(context.Interface, memoryGauge)
 
 	var interpreterOptions []interpreter.Option
 	var checkerOptions []sema.Option
@@ -998,7 +1004,9 @@ func (r *interpreterRuntime) ParseAndCheckProgram(
 
 	context.InitializeCodesAndPrograms()
 
-	storage := NewStorage(context.Interface)
+	memoryGauge, _ := context.Interface.(common.MemoryGauge)
+
+	storage := NewStorage(context.Interface, memoryGauge)
 
 	var interpreterOptions []interpreter.Option
 	var checkerOptions []sema.Option
@@ -1049,12 +1057,14 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 		context.SetCode(context.Location, string(code))
 	}
 
+	memoryGauge, _ := context.Interface.(common.MemoryGauge)
+
 	// Parse
 
 	var parse *ast.Program
 	reportMetric(
 		func() {
-			parse, err = parser2.ParseProgram(string(code))
+			parse, err = parser2.ParseProgram(string(code), memoryGauge)
 		},
 		context.Interface,
 		func(metrics Metrics, duration time.Duration) {
@@ -1208,6 +1218,8 @@ func (r *interpreterRuntime) newInterpreter(
 	for _, predeclaredValue := range context.PredeclaredValues {
 		preDeclaredValues = append(preDeclaredValues, predeclaredValue)
 	}
+
+	memoryGauge, _ := context.Interface.(common.MemoryGauge)
 
 	publicKeyValidator := func(
 		inter *interpreter.Interpreter,
@@ -1364,8 +1376,13 @@ func (r *interpreterRuntime) newInterpreter(
 			},
 		),
 		interpreter.WithOnRecordTraceHandler(
-			func(intr *interpreter.Interpreter, functionName string, duration time.Duration, logs []opentracing.LogRecord) {
-				context.Interface.RecordTrace(functionName, intr.Location, duration, logs)
+			func(
+				interpreter *interpreter.Interpreter,
+				functionName string,
+				duration time.Duration,
+				logs []opentracing.LogRecord,
+			) {
+				context.Interface.RecordTrace(functionName, interpreter.Location, duration, logs)
 			},
 		),
 		interpreter.WithTracingEnabled(r.tracingEnabled),
@@ -1376,6 +1393,7 @@ func (r *interpreterRuntime) newInterpreter(
 		interpreter.WithAtreeStorageValidationEnabled(false),
 		interpreter.WithOnResourceOwnerChangeHandler(r.resourceOwnerChangedHandler(context.Interface)),
 		interpreter.WithInvalidatedResourceValidationEnabled(r.invalidatedResourceValidationEnabled),
+		interpreter.WithMemoryGauge(memoryGauge),
 	}
 
 	defaultOptions = append(defaultOptions,
@@ -2633,7 +2651,8 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				if cachedProgram != nil {
 					oldProgram = cachedProgram.Program
 				} else {
-					oldProgram, err = parser2.ParseProgram(string(existingCode))
+					memoryGauge, _ := context.Interface.(common.MemoryGauge)
+					oldProgram, err = parser2.ParseProgram(string(existingCode), memoryGauge)
 					handleContractUpdateError(err)
 				}
 
@@ -2882,7 +2901,8 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 				// the existing code contains enums.
 				if r.contractUpdateValidationEnabled {
 
-					existingProgram, err := parser2.ParseProgram(string(code))
+					memoryGauge, _ := runtimeInterface.(common.MemoryGauge)
+					existingProgram, err := parser2.ParseProgram(string(code), memoryGauge)
 
 					// If the existing code is not parsable (i.e: `err != nil`), that shouldn't be a reason to
 					// fail the contract removal. Therefore, validate only if the code is a valid one.
@@ -2961,7 +2981,8 @@ func (r *interpreterRuntime) newAccountContractsGetNamesFunction(
 
 		values := make([]interpreter.Value, len(names))
 		for i, name := range names {
-			values[i] = interpreter.NewStringValue(name)
+			// TODO: meter?
+			values[i] = interpreter.NewUnmeteredStringValue(name)
 		}
 
 		return interpreter.NewArrayValue(
@@ -2992,7 +3013,9 @@ func (r *interpreterRuntime) executeNonProgram(interpret interpretFunc, context 
 
 	var program *interpreter.Program
 
-	storage := NewStorage(context.Interface)
+	memoryGauge, _ := context.Interface.(common.MemoryGauge)
+
+	storage := NewStorage(context.Interface, memoryGauge)
 
 	var functions stdlib.StandardLibraryFunctions
 	var values stdlib.StandardLibraryValues

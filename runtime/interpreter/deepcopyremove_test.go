@@ -36,7 +36,7 @@ func TestValueDeepCopyAndDeepRemove(t *testing.T) {
 
 	address := common.Address{0x1}
 
-	storage := NewInMemoryStorage()
+	storage := NewInMemoryStorage(nil)
 
 	inter, err := NewInterpreter(
 		nil,
@@ -50,7 +50,7 @@ func TestValueDeepCopyAndDeepRemove(t *testing.T) {
 		ValueType: PrimitiveStaticTypeInt256,
 	}
 
-	dictValueKey := NewStringValue(
+	dictValueKey := NewUnmeteredStringValue(
 		strings.Repeat("x", int(atree.MaxInlineMapKeyOrValueSize+1)),
 	)
 

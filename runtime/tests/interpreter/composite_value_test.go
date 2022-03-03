@@ -52,14 +52,14 @@ func TestInterpretCompositeValue(t *testing.T) {
 		RequireValuesEqual(
 			t,
 			inter,
-			interpreter.NewStringValue("Apple"),
+			interpreter.NewUnmeteredStringValue("Apple"),
 			inter.Globals["name"].GetValue(),
 		)
 
 		RequireValuesEqual(
 			t,
 			inter,
-			interpreter.NewStringValue("Red"),
+			interpreter.NewUnmeteredStringValue("Red"),
 			inter.Globals["color"].GetValue(),
 		)
 	})
@@ -68,7 +68,7 @@ func TestInterpretCompositeValue(t *testing.T) {
 // Utility methods
 func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 
-	storage := interpreter.NewInMemoryStorage()
+	storage := interpreter.NewInMemoryStorage(nil)
 
 	// 'fruit' composite type
 	fruitType := &sema.CompositeType{
@@ -101,7 +101,7 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 				fields := []interpreter.CompositeField{
 					{
 						Name:  "name",
-						Value: interpreter.NewStringValue("Apple"),
+						Value: interpreter.NewUnmeteredStringValue("Apple"),
 					},
 				}
 
@@ -116,7 +116,7 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 
 				value.ComputedFields = map[string]interpreter.ComputedField{
 					"color": func(_ *interpreter.Interpreter, _ func() interpreter.LocationRange) interpreter.Value {
-						return interpreter.NewStringValue("Red")
+						return interpreter.NewUnmeteredStringValue("Red")
 					},
 				}
 
