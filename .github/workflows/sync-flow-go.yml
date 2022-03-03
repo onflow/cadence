@@ -50,7 +50,7 @@ jobs:
       # create feature branch if needed
       - name: Create feature/secure-cadence branch
         uses: peterjgrainger/action-create-branch@v2.0.1
-        if: ${{ env.BASE_BRANCH == "feature/secure-cadence" }}
+        if: env.BASE_BRANCH == "feature/secure-cadence"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
