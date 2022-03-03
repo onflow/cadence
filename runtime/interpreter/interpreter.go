@@ -1272,16 +1272,16 @@ func (interpreter *Interpreter) functionDeclarationValue(
 		beforeStatements = postConditionsRewrite.BeforeStatements
 	}
 
-	return &InterpretedFunctionValue{
-		Interpreter:      interpreter,
-		ParameterList:    declaration.ParameterList,
-		Type:             functionType,
-		Activation:       lexicalScope,
-		BeforeStatements: beforeStatements,
-		PreConditions:    preConditions,
-		Statements:       declaration.FunctionBlock.Block.Statements,
-		PostConditions:   rewrittenPostConditions,
-	}
+	return NewInterpretedFunctionValue(
+		interpreter,
+		declaration.ParameterList,
+		functionType,
+		lexicalScope,
+		beforeStatements,
+		preConditions,
+		declaration.FunctionBlock.Block.Statements,
+		rewrittenPostConditions,
+	)
 }
 
 func (interpreter *Interpreter) VisitBlock(block *ast.Block) ast.Repr {
@@ -1921,16 +1921,16 @@ func (interpreter *Interpreter) compositeInitializerFunction(
 		rewrittenPostConditions = postConditionsRewrite.RewrittenPostConditions
 	}
 
-	return &InterpretedFunctionValue{
-		Interpreter:      interpreter,
-		ParameterList:    parameterList,
-		Type:             functionType,
-		Activation:       lexicalScope,
-		BeforeStatements: beforeStatements,
-		PreConditions:    preConditions,
-		Statements:       statements,
-		PostConditions:   rewrittenPostConditions,
-	}
+	return NewInterpretedFunctionValue(
+		interpreter,
+		parameterList,
+		functionType,
+		lexicalScope,
+		beforeStatements,
+		preConditions,
+		statements,
+		rewrittenPostConditions,
+	)
 }
 
 func (interpreter *Interpreter) compositeDestructorFunction(
@@ -1964,15 +1964,16 @@ func (interpreter *Interpreter) compositeDestructorFunction(
 		rewrittenPostConditions = postConditionsRewrite.RewrittenPostConditions
 	}
 
-	return &InterpretedFunctionValue{
-		Interpreter:      interpreter,
-		Type:             emptyFunctionType,
-		Activation:       lexicalScope,
-		BeforeStatements: beforeStatements,
-		PreConditions:    preConditions,
-		Statements:       statements,
-		PostConditions:   rewrittenPostConditions,
-	}
+	return NewInterpretedFunctionValue(
+		interpreter,
+		nil,
+		emptyFunctionType,
+		lexicalScope,
+		beforeStatements,
+		preConditions,
+		statements,
+		rewrittenPostConditions,
+	)
 }
 
 func (interpreter *Interpreter) compositeFunctions(
@@ -2048,16 +2049,16 @@ func (interpreter *Interpreter) compositeFunction(
 	parameterList := functionDeclaration.ParameterList
 	statements := functionDeclaration.FunctionBlock.Block.Statements
 
-	return &InterpretedFunctionValue{
-		Interpreter:      interpreter,
-		ParameterList:    parameterList,
-		Type:             functionType,
-		Activation:       lexicalScope,
-		BeforeStatements: beforeStatements,
-		PreConditions:    preConditions,
-		Statements:       statements,
-		PostConditions:   postConditions,
-	}
+	return NewInterpretedFunctionValue(
+		interpreter,
+		parameterList,
+		functionType,
+		lexicalScope,
+		beforeStatements,
+		preConditions,
+		statements,
+		postConditions,
+	)
 }
 
 func (interpreter *Interpreter) VisitFieldDeclaration(_ *ast.FieldDeclaration) ast.Repr {
