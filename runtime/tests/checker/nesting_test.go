@@ -323,3 +323,13 @@ func TestCheckNestedTypeInvalidChildType(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckNestedTypeUnsupportedPublicKey(t *testing.T) {
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, "let b=0.0as!PublicKey.Contracts")
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.InvalidNestedTypeError{}, errs[0])
+}

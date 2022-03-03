@@ -2099,25 +2099,27 @@ func TestRuntimeEnumValue(t *testing.T) {
 }
 
 func executeTestScript(t *testing.T, script string, arg cadence.Value) (cadence.Value, error) {
-	encodedArg, err := json.Encode(arg)
-	require.NoError(t, err)
-
 	rt := newTestInterpreterRuntime()
 
-	storage := newTestLedger(nil, nil)
-
 	runtimeInterface := &testRuntimeInterface{
-		storage: storage,
+		storage: newTestLedger(nil, nil),
 		decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 			return json.Decode(b)
 		},
 	}
 
+	scriptParam := Script{
+		Source: []byte(script),
+	}
+
+	if arg != nil {
+		encodedArg, err := json.Encode(arg)
+		require.NoError(t, err)
+		scriptParam.Arguments = [][]byte{encodedArg}
+	}
+
 	return rt.ExecuteScript(
-		Script{
-			Source:    []byte(script),
-			Arguments: [][]byte{encodedArg},
-		},
+		scriptParam,
 		Context{
 			Interface: runtimeInterface,
 			Location:  TestLocation,
