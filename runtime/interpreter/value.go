@@ -13875,20 +13875,23 @@ func (v NilValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
+// nilValueMapFunction is created only once per interpreter.
+// Hence, no need to meter, as it's a constant.
+var nilValueMapFunction = NewUnmeteredHostFunctionValue(
+	func(invocation Invocation) Value {
+		return NilValue{}
+	},
+	&sema.FunctionType{
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(
+			sema.NeverType,
+		),
+	},
+)
+
 func (v NilValue) GetMember(inter *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case "map":
-		return NewHostFunctionValue(
-			inter,
-			func(invocation Invocation) Value {
-				return NilValue{}
-			},
-			&sema.FunctionType{
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(
-					sema.NeverType,
-				),
-			},
-		)
+		return nilValueMapFunction
 	}
 
 	return nil
@@ -15787,8 +15790,8 @@ func NewPublicKeyValue(
 		},
 	}
 	publicKeyValue.Functions = map[string]FunctionValue{
-		sema.PublicKeyVerifyFunction:    publicKeyVerifyFunction(interpreter),
-		sema.PublicKeyVerifyPoPFunction: publicKeyVerifyPoPFunction(interpreter),
+		sema.PublicKeyVerifyFunction:    publicKeyVerifyFunction,
+		sema.PublicKeyVerifyPoPFunction: publicKeyVerifyPoPFunction,
 	}
 
 	err := validatePublicKey(interpreter, getLocationRange, publicKeyValue)
@@ -15824,85 +15827,82 @@ func NewPublicKeyValue(
 	return publicKeyValue
 }
 
-var publicKeyVerifyFunction = func(inter *Interpreter) *HostFunctionValue {
-	return NewHostFunctionValue(
-		inter,
-		func(invocation Invocation) Value {
-			signatureValue, ok := invocation.Arguments[0].(*ArrayValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
+// publicKeyVerifyFunction is only created once for the interpreter.
+// Hence, no need to meter.
+var publicKeyVerifyFunction = NewUnmeteredHostFunctionValue(
+	func(invocation Invocation) Value {
+		signatureValue, ok := invocation.Arguments[0].(*ArrayValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
 
-			signedDataValue, ok := invocation.Arguments[1].(*ArrayValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
+		signedDataValue, ok := invocation.Arguments[1].(*ArrayValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
 
-			domainSeparationTag, ok := invocation.Arguments[2].(*StringValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
+		domainSeparationTag, ok := invocation.Arguments[2].(*StringValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
 
-			hashAlgo, ok := invocation.Arguments[3].(*CompositeValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
+		hashAlgo, ok := invocation.Arguments[3].(*CompositeValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
 
-			publicKey := invocation.Self
+		publicKey := invocation.Self
 
-			interpreter := invocation.Interpreter
+		interpreter := invocation.Interpreter
 
-			getLocationRange := invocation.GetLocationRange
+		getLocationRange := invocation.GetLocationRange
 
-			interpreter.ExpectType(
-				publicKey,
-				sema.PublicKeyType,
-				getLocationRange,
-			)
+		interpreter.ExpectType(
+			publicKey,
+			sema.PublicKeyType,
+			getLocationRange,
+		)
 
-			return interpreter.SignatureVerificationHandler(
-				interpreter,
-				getLocationRange,
-				signatureValue,
-				signedDataValue,
-				domainSeparationTag,
-				hashAlgo,
-				publicKey,
-			)
-		},
-		sema.PublicKeyVerifyFunctionType,
-	)
-}
+		return interpreter.SignatureVerificationHandler(
+			interpreter,
+			getLocationRange,
+			signatureValue,
+			signedDataValue,
+			domainSeparationTag,
+			hashAlgo,
+			publicKey,
+		)
+	},
+	sema.PublicKeyVerifyFunctionType,
+)
 
-var publicKeyVerifyPoPFunction = func(inter *Interpreter) *HostFunctionValue {
+// publicKeyVerifyPoPFunction is only created once for the interpreter.
+// Hence, no need to meter.
+var publicKeyVerifyPoPFunction = NewUnmeteredHostFunctionValue(
+	func(invocation Invocation) (v Value) {
+		signatureValue, ok := invocation.Arguments[0].(*ArrayValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
 
-	return NewHostFunctionValue(
-		inter,
-		func(invocation Invocation) (v Value) {
-			signatureValue, ok := invocation.Arguments[0].(*ArrayValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
+		publicKey := invocation.Self
 
-			publicKey := invocation.Self
+		interpreter := invocation.Interpreter
 
-			interpreter := invocation.Interpreter
+		getLocationRange := invocation.GetLocationRange
 
-			getLocationRange := invocation.GetLocationRange
+		interpreter.ExpectType(
+			publicKey,
+			sema.PublicKeyType,
+			getLocationRange,
+		)
 
-			interpreter.ExpectType(
-				publicKey,
-				sema.PublicKeyType,
-				getLocationRange,
-			)
-
-			return interpreter.BLSVerifyPoPHandler(
-				interpreter,
-				getLocationRange,
-				publicKey,
-				signatureValue,
-			)
-		},
-		sema.PublicKeyVerifyPoPFunctionType,
-	)
-}
+		return interpreter.BLSVerifyPoPHandler(
+			interpreter,
+			getLocationRange,
+			publicKey,
+			signatureValue,
+		)
+	},
+	sema.PublicKeyVerifyPoPFunctionType,
+)

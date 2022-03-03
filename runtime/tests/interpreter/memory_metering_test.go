@@ -19,15 +19,15 @@
 package interpreter_test
 
 import (
-	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/stdlib"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 type testMemoryGauge struct {
@@ -423,11 +423,9 @@ func TestRuntimeHostFunctionMetering(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		// 3 host functions created for:
-		//    - 'decodeHex' function of String value
-		//    - 'publicKeyVerify' function of PublicKey value
-		//    - 'publicKeyVerifyPop' function of PublicKey value
-		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindHostFunction))
+		// 1 host function created for 'decodeHex' of String value
+		// 'publicKeyVerify' and 'publicKeyVerifyPop' functions of PublicKey value are not metered
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindHostFunction))
 	})
 
 	t.Run("multiple public key creation", func(t *testing.T) {
@@ -485,10 +483,8 @@ func TestRuntimeHostFunctionMetering(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		// 5 = 3 host functions x 2:
-		//    - 'decodeHex' function of String value
-		//    - 'publicKeyVerify' function of PublicKey value
-		//    - 'publicKeyVerifyPop' function of PublicKey value
-		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindHostFunction))
+		// 2 = 2x 1 host function created for 'decodeHex' of String value
+		// 'publicKeyVerify' and 'publicKeyVerifyPop' functions of PublicKey value are not metered
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindHostFunction))
 	})
 }
