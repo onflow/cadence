@@ -8617,7 +8617,7 @@ func TestCheckResourceInvalidationWithConditionalExprInDestroy(t *testing.T) {
 	assert.IsType(t, &sema.InvalidConditionalResourceOperandError{}, errs[1])
 }
 
-func TestBadResourceInterface(t *testing.T) {
+func TestCheckBadResourceInterface(t *testing.T) {
 	t.Parallel()
 
 	t.Run("bad resource interface: shorter", func(t *testing.T) {
