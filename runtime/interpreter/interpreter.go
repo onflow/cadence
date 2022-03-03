@@ -4772,12 +4772,3 @@ func (interpreter *Interpreter) DecodeStorable(
 func (interpreter *Interpreter) DecodeTypeInfo(decoder *cbor.StreamDecoder) (atree.TypeInfo, error) {
 	return DecodeTypeInfo(decoder, interpreter)
 }
-
-// UseConstantMemory uses a pre-determined amount of memory
-//
-func (interpreter *Interpreter) UseConstantMemory(kind common.MemoryKind) {
-	interpreter.UseMemory(common.MemoryUsage{
-		Kind:   kind,
-		Amount: 1,
-	})
-}

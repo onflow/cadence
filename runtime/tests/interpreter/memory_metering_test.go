@@ -122,3 +122,113 @@ func TestRuntimeCompositeMetering(t *testing.T) {
 	assert.Equal(t, uint64(39), meter.getMemory(common.MemoryKindString))
 	assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindComposite))
 }
+
+func TestRuntimeInterpretedFunctionMetering(t *testing.T) {
+	t.Parallel()
+
+	t.Run("top level function", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {}
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindInterpretedFunction))
+	})
+
+	t.Run("function pointer creation", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let funcPointer = fun(a: String): String {
+                    return a
+                }
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		// 1 for the main, and 1 for the anon-func
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindInterpretedFunction))
+	})
+
+	t.Run("function pointer passing", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let funcPointer1 = fun(a: String): String {
+                    return a
+                }
+
+                let funcPointer2 = funcPointer1
+                let funcPointer3 = funcPointer2
+
+                let value = funcPointer3("hello")
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		// 1 for the main, and 1 for the anon-func.
+		// Assignment shouldn't allocate new memory, as the value is immutable and shouldn't be copied.
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindInterpretedFunction))
+	})
+
+	t.Run("struct method", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub struct Foo {
+                pub fun bar() {}
+            }
+
+            pub fun main() {}
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		// 1 for the main, and 1 for the struct method.
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindInterpretedFunction))
+	})
+
+	t.Run("struct init", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub struct Foo {
+                init() {}
+            }
+
+            pub fun main() {}
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		// 1 for the main, and 1 for the struct init.
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindInterpretedFunction))
+	})
+}
