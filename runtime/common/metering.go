@@ -26,3 +26,10 @@ type MemoryUsage struct {
 type MemoryGauge interface {
 	UseMemory(usage MemoryUsage)
 }
+
+func NewStringMemoryUsage(amount uint64) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindString,
+		Amount: amount,
+	}
+}

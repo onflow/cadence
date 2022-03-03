@@ -25,7 +25,7 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
-func OverEstimateNumberStringLength(value NumberValue) int {
+func OverEstimateNumberStringLength(value NumberValue) uint64 {
 	switch value := value.(type) {
 	case BigNumberValue:
 		return OverEstimateBigIntStringLength(value.ToBigInt())
@@ -41,11 +41,11 @@ func OverEstimateNumberStringLength(value NumberValue) int {
 	}
 }
 
-func OverEstimateFixedPointStringLength(integerPart NumberValue, scale int) int {
+func OverEstimateFixedPointStringLength(integerPart NumberValue, scale uint64) uint64 {
 	return OverEstimateNumberStringLength(integerPart) + 1 + scale
 }
 
-func OverEstimateIntStringLength(n int) int {
+func OverEstimateIntStringLength(n int) uint64 {
 	switch {
 	case n < 0:
 		// Handle math.MinInt
@@ -57,11 +57,11 @@ func OverEstimateIntStringLength(n int) int {
 	}
 }
 
-func OverEstimateUintStringLength(n uint) int {
-	return int(math.Floor(math.Log10(float64(n))) + 1)
+func OverEstimateUintStringLength(n uint) uint64 {
+	return uint64(math.Floor(math.Log10(float64(n))) + 1)
 }
 
-func OverEstimateBigIntStringLength(n *big.Int) int {
+func OverEstimateBigIntStringLength(n *big.Int) uint64 {
 	// From https://graphics.stanford.edu/~seander/bithacks.html#IntegerLog10:
 	//   By the relationship log10(v) = log2(v) / log2(10), we need to multiply it by 1/log2(10),
 	//   which is approximately 1233/4096, or 1233 followed by a right shift of 12.
@@ -74,7 +74,7 @@ func OverEstimateBigIntStringLength(n *big.Int) int {
 	//   To be sure it's always an upper bound (over-estimation), just use *1234,
 	//   since 1233/4096 is just smaller than 1/log2(10), but 1234/4096 becomes bigger.
 	//
-	l := (n.BitLen()*1234)>>12 + 1
+	l := uint64(n.BitLen()*1234)>>12 + 1
 	if n.Sign() < 0 {
 		return l + 1
 	} else {

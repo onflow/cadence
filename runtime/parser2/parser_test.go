@@ -52,23 +52,27 @@ func TestParseBuffering(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := Parse("a b c d", func(p *parser) interface{} {
-			p.mustOneString(lexer.TokenIdentifier, "a")
-			p.mustOne(lexer.TokenSpace)
+		_, errs := Parse(
+			"a b c d",
+			func(p *parser) interface{} {
+				p.mustOneString(lexer.TokenIdentifier, "a")
+				p.mustOne(lexer.TokenSpace)
 
-			p.startBuffering()
+				p.startBuffering()
 
-			p.mustOneString(lexer.TokenIdentifier, "b")
-			p.mustOne(lexer.TokenSpace)
-			p.mustOneString(lexer.TokenIdentifier, "c")
+				p.mustOneString(lexer.TokenIdentifier, "b")
+				p.mustOne(lexer.TokenSpace)
+				p.mustOneString(lexer.TokenIdentifier, "c")
 
-			p.acceptBuffered()
+				p.acceptBuffered()
 
-			p.mustOne(lexer.TokenSpace)
-			p.mustOneString(lexer.TokenIdentifier, "d")
+				p.mustOne(lexer.TokenSpace)
+				p.mustOneString(lexer.TokenIdentifier, "d")
 
-			return nil
-		})
+				return nil
+			},
+			nil,
+		)
 
 		assert.Empty(t, errs)
 	})
@@ -77,23 +81,27 @@ func TestParseBuffering(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := Parse("a b x d", func(p *parser) interface{} {
-			p.mustOneString(lexer.TokenIdentifier, "a")
-			p.mustOne(lexer.TokenSpace)
+		_, errs := Parse(
+			"a b x d",
+			func(p *parser) interface{} {
+				p.mustOneString(lexer.TokenIdentifier, "a")
+				p.mustOne(lexer.TokenSpace)
 
-			p.startBuffering()
+				p.startBuffering()
 
-			p.mustOneString(lexer.TokenIdentifier, "b")
-			p.mustOne(lexer.TokenSpace)
-			p.mustOneString(lexer.TokenIdentifier, "c")
+				p.mustOneString(lexer.TokenIdentifier, "b")
+				p.mustOne(lexer.TokenSpace)
+				p.mustOneString(lexer.TokenIdentifier, "c")
 
-			p.acceptBuffered()
+				p.acceptBuffered()
 
-			p.mustOne(lexer.TokenSpace)
-			p.mustOneString(lexer.TokenIdentifier, "d")
+				p.mustOne(lexer.TokenSpace)
+				p.mustOneString(lexer.TokenIdentifier, "d")
 
-			return nil
-		})
+				return nil
+			},
+			nil,
+		)
 
 		utils.AssertEqualWithDiff(t,
 			[]error{
@@ -110,26 +118,30 @@ func TestParseBuffering(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := Parse("a b c d", func(p *parser) interface{} {
-			p.mustOneString(lexer.TokenIdentifier, "a")
-			p.mustOne(lexer.TokenSpace)
+		_, errs := Parse(
+			"a b c d",
+			func(p *parser) interface{} {
+				p.mustOneString(lexer.TokenIdentifier, "a")
+				p.mustOne(lexer.TokenSpace)
 
-			p.startBuffering()
+				p.startBuffering()
 
-			p.mustOneString(lexer.TokenIdentifier, "b")
-			p.mustOne(lexer.TokenSpace)
-			p.mustOneString(lexer.TokenIdentifier, "c")
+				p.mustOneString(lexer.TokenIdentifier, "b")
+				p.mustOne(lexer.TokenSpace)
+				p.mustOneString(lexer.TokenIdentifier, "c")
 
-			p.replayBuffered()
+				p.replayBuffered()
 
-			p.mustOneString(lexer.TokenIdentifier, "b")
-			p.mustOne(lexer.TokenSpace)
-			p.mustOneString(lexer.TokenIdentifier, "c")
-			p.mustOne(lexer.TokenSpace)
-			p.mustOneString(lexer.TokenIdentifier, "d")
+				p.mustOneString(lexer.TokenIdentifier, "b")
+				p.mustOne(lexer.TokenSpace)
+				p.mustOneString(lexer.TokenIdentifier, "c")
+				p.mustOne(lexer.TokenSpace)
+				p.mustOneString(lexer.TokenIdentifier, "d")
 
-			return nil
-		})
+				return nil
+			},
+			nil,
+		)
 
 		assert.Empty(t, errs)
 	})
@@ -138,42 +150,46 @@ func TestParseBuffering(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := Parse("a b c d", func(p *parser) interface{} {
-			p.mustOneString(lexer.TokenIdentifier, "a")
-			p.mustOne(lexer.TokenSpace)
+		_, errs := Parse(
+			"a b c d",
+			func(p *parser) interface{} {
+				p.mustOneString(lexer.TokenIdentifier, "a")
+				p.mustOne(lexer.TokenSpace)
 
-			p.startBuffering()
+				p.startBuffering()
 
-			firstSucceeded := false
-			firstFailed := false
+				firstSucceeded := false
+				firstFailed := false
 
-			(func() {
-				defer func() {
-					if r := recover(); r != nil {
-						firstFailed = true
-					}
-				}()
+				(func() {
+					defer func() {
+						if r := recover(); r != nil {
+							firstFailed = true
+						}
+					}()
 
-				p.mustOneString(lexer.TokenIdentifier, "x")
+					p.mustOneString(lexer.TokenIdentifier, "x")
+					p.mustOne(lexer.TokenSpace)
+					p.mustOneString(lexer.TokenIdentifier, "c")
+
+					firstSucceeded = true
+				})()
+
+				assert.True(t, firstFailed)
+				assert.False(t, firstSucceeded)
+
+				p.replayBuffered()
+
+				p.mustOneString(lexer.TokenIdentifier, "b")
 				p.mustOne(lexer.TokenSpace)
 				p.mustOneString(lexer.TokenIdentifier, "c")
+				p.mustOne(lexer.TokenSpace)
+				p.mustOneString(lexer.TokenIdentifier, "d")
 
-				firstSucceeded = true
-			})()
-
-			assert.True(t, firstFailed)
-			assert.False(t, firstSucceeded)
-
-			p.replayBuffered()
-
-			p.mustOneString(lexer.TokenIdentifier, "b")
-			p.mustOne(lexer.TokenSpace)
-			p.mustOneString(lexer.TokenIdentifier, "c")
-			p.mustOne(lexer.TokenSpace)
-			p.mustOneString(lexer.TokenIdentifier, "d")
-
-			return nil
-		})
+				return nil
+			},
+			nil,
+		)
 
 		assert.Empty(t, errs)
 	})
@@ -182,42 +198,46 @@ func TestParseBuffering(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := Parse("a b c x", func(p *parser) interface{} {
-			p.mustOneString(lexer.TokenIdentifier, "a")
-			p.mustOne(lexer.TokenSpace)
+		_, errs := Parse(
+			"a b c x",
+			func(p *parser) interface{} {
+				p.mustOneString(lexer.TokenIdentifier, "a")
+				p.mustOne(lexer.TokenSpace)
 
-			p.startBuffering()
+				p.startBuffering()
 
-			firstSucceeded := false
-			firstFailed := false
+				firstSucceeded := false
+				firstFailed := false
 
-			(func() {
-				defer func() {
-					if r := recover(); r != nil {
-						firstFailed = true
-					}
-				}()
+				(func() {
+					defer func() {
+						if r := recover(); r != nil {
+							firstFailed = true
+						}
+					}()
 
-				p.mustOneString(lexer.TokenIdentifier, "x")
+					p.mustOneString(lexer.TokenIdentifier, "x")
+					p.mustOne(lexer.TokenSpace)
+					p.mustOneString(lexer.TokenIdentifier, "c")
+
+					firstSucceeded = true
+				})()
+
+				assert.True(t, firstFailed)
+				assert.False(t, firstSucceeded)
+
+				p.replayBuffered()
+
+				p.mustOneString(lexer.TokenIdentifier, "b")
 				p.mustOne(lexer.TokenSpace)
 				p.mustOneString(lexer.TokenIdentifier, "c")
+				p.mustOne(lexer.TokenSpace)
+				p.mustOneString(lexer.TokenIdentifier, "d")
 
-				firstSucceeded = true
-			})()
-
-			assert.True(t, firstFailed)
-			assert.False(t, firstSucceeded)
-
-			p.replayBuffered()
-
-			p.mustOneString(lexer.TokenIdentifier, "b")
-			p.mustOne(lexer.TokenSpace)
-			p.mustOneString(lexer.TokenIdentifier, "c")
-			p.mustOne(lexer.TokenSpace)
-			p.mustOneString(lexer.TokenIdentifier, "d")
-
-			return nil
-		})
+				return nil
+			},
+			nil,
+		)
 
 		utils.AssertEqualWithDiff(t,
 			[]error{
@@ -331,39 +351,43 @@ func TestParseEOF(t *testing.T) {
 
 	t.Parallel()
 
-	_, errs := Parse("a b", func(p *parser) interface{} {
-		p.mustOneString(lexer.TokenIdentifier, "a")
-		p.skipSpaceAndComments(true)
-		p.mustOneString(lexer.TokenIdentifier, "b")
+	_, errs := Parse(
+		"a b",
+		func(p *parser) interface{} {
+			p.mustOneString(lexer.TokenIdentifier, "a")
+			p.skipSpaceAndComments(true)
+			p.mustOneString(lexer.TokenIdentifier, "b")
 
-		p.next()
+			p.next()
 
-		assert.Equal(t,
-			lexer.Token{
-				Type: lexer.TokenEOF,
-				Range: ast.Range{
-					StartPos: ast.Position{Offset: 3, Line: 1, Column: 3},
-					EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
+			assert.Equal(t,
+				lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 3, Line: 1, Column: 3},
+						EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
+					},
 				},
-			},
-			p.current,
-		)
+				p.current,
+			)
 
-		p.next()
+			p.next()
 
-		assert.Equal(t,
-			lexer.Token{
-				Type: lexer.TokenEOF,
-				Range: ast.Range{
-					StartPos: ast.Position{Offset: 3, Line: 1, Column: 3},
-					EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
+			assert.Equal(t,
+				lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 3, Line: 1, Column: 3},
+						EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
+					},
 				},
-			},
-			p.current,
-		)
+				p.current,
+			)
 
-		return nil
-	})
+			return nil
+		},
+		nil,
+	)
 
 	assert.Empty(t, errs)
 }
@@ -426,7 +450,7 @@ func TestParseArgumentList(t *testing.T) {
 	t.Run("invalid", func(t *testing.T) {
 		t.Parallel()
 
-		_, errs := ParseArgumentList(`xyz`)
+		_, errs := ParseArgumentList(`xyz`, nil)
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -441,7 +465,7 @@ func TestParseArgumentList(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
 		t.Parallel()
 
-		result, errs := ParseArgumentList(`()`)
+		result, errs := ParseArgumentList(`()`, nil)
 		require.Empty(t, errs)
 
 		var expected ast.Arguments
@@ -455,7 +479,7 @@ func TestParseArgumentList(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
 		t.Parallel()
 
-		result, errs := ParseArgumentList(`(1, b: true)`)
+		result, errs := ParseArgumentList(`(1, b: true)`, nil)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -542,7 +566,7 @@ func TestParseBufferedErrors(t *testing.T) {
 	// and outside (at the top-level, after buffering of the type argument list),
 	// there is another error (missing closing parenthesis after).
 
-	_, errs := ParseExpression("a<b,>(")
+	_, errs := ParseExpression("a<b,>(", nil)
 	utils.AssertEqualWithDiff(t,
 		[]error{
 			&SyntaxError{

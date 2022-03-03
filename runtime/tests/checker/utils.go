@@ -60,12 +60,21 @@ func ParseAndCheckWithOptions(
 	code string,
 	options ParseAndCheckOptions,
 ) (*sema.Checker, error) {
+	return ParseAndCheckWithOptionsAndMemoryMetering(t, code, options, nil)
+}
+
+func ParseAndCheckWithOptionsAndMemoryMetering(
+	t testing.TB,
+	code string,
+	options ParseAndCheckOptions,
+	memoryGauge common.MemoryGauge,
+) (*sema.Checker, error) {
 
 	if options.Location == nil {
 		options.Location = utils.TestLocation
 	}
 
-	program, err := parser2.ParseProgram(code, nil)
+	program, err := parser2.ParseProgram(code, memoryGauge)
 	if !options.IgnoreParseError && !assert.NoError(t, err) {
 		var sb strings.Builder
 		locationID := options.Location.ID()

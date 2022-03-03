@@ -37,6 +37,7 @@ var accountKeyFieldNames = []string{
 
 // NewAccountKeyValue constructs an AccountKey value.
 func NewAccountKeyValue(
+	inter *Interpreter,
 	keyIndex IntValue,
 	publicKey *CompositeValue,
 	hashAlgo *CompositeValue,
@@ -52,6 +53,7 @@ func NewAccountKeyValue(
 	}
 
 	return NewSimpleCompositeValue(
+		inter,
 		accountKeyTypeID,
 		accountKeyStaticType,
 		accountKeyDynamicType,

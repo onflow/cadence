@@ -21,6 +21,7 @@ package interpreter
 import (
 	"github.com/onflow/atree"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/format"
 	"github.com/onflow/cadence/runtime/sema"
@@ -46,6 +47,7 @@ var _ Value = &SimpleCompositeValue{}
 var _ MemberAccessibleValue = &SimpleCompositeValue{}
 
 func NewSimpleCompositeValue(
+	inter *Interpreter,
 	typeID sema.TypeID,
 	staticType StaticType,
 	dynamicType DynamicType,
@@ -55,6 +57,8 @@ func NewSimpleCompositeValue(
 	fieldFormatters map[string]func(Value, SeenReferences) string,
 	stringer func(SeenReferences) string,
 ) *SimpleCompositeValue {
+	inter.UseConstantMemory(common.MemoryKindComposite)
+
 	return &SimpleCompositeValue{
 		TypeID:          typeID,
 		staticType:      staticType,

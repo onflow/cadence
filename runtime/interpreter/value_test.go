@@ -1500,6 +1500,7 @@ func TestBlockValue(t *testing.T) {
 	inter := newTestInterpreter(t)
 
 	block := NewBlockValue(
+		inter,
 		4,
 		5,
 		NewArrayValue(inter, ByteArrayStaticType, common.Address{}),

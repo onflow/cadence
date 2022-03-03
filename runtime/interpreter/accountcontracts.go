@@ -34,6 +34,7 @@ var authAccountContractsDynamicType DynamicType = CompositeDynamicType{
 var authAccountContractsFieldNames []string = nil
 
 func NewAuthAccountContractsValue(
+	inter *Interpreter,
 	address AddressValue,
 	addFunction FunctionValue,
 	updateFunction FunctionValue,
@@ -64,6 +65,7 @@ func NewAuthAccountContractsValue(
 	}
 
 	return NewSimpleCompositeValue(
+		inter,
 		authAccountContractsTypeID,
 		authAccountContractsStaticType,
 		authAccountContractsDynamicType,
@@ -84,6 +86,7 @@ var publicAccountContractsDynamicType DynamicType = CompositeDynamicType{
 }
 
 func NewPublicAccountContractsValue(
+	inter *Interpreter,
 	address AddressValue,
 	getFunction FunctionValue,
 	namesGetter func(interpreter *Interpreter) *ArrayValue,
@@ -108,6 +111,7 @@ func NewPublicAccountContractsValue(
 	}
 
 	return NewSimpleCompositeValue(
+		inter,
 		publicAccountContractsTypeID,
 		publicAccountContractsStaticType,
 		publicAccountContractsDynamicType,
