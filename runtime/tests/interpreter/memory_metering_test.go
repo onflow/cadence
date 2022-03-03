@@ -488,3 +488,76 @@ func TestRuntimeHostFunctionMetering(t *testing.T) {
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindHostFunction))
 	})
 }
+
+func TestRuntimeBoundFunctionMetering(t *testing.T) {
+	t.Parallel()
+
+	t.Run("struct method", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub struct Foo {
+                pub fun bar() {}
+            }
+
+            pub fun main() {}
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		// No bound functions are created without usages.
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoundFunction))
+	})
+
+	t.Run("struct init", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub struct Foo {
+                init() {}
+            }
+
+            pub fun main() {}
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		// No bound functions are created without usages.
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBoundFunction))
+	})
+
+	t.Run("struct method usage", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub struct Foo {
+                pub fun bar() {}
+            }
+
+            pub fun main() {
+                let foo = Foo()
+                foo.bar()
+                foo.bar()
+                foo.bar()
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		// 3 bound functions are created for the 3 invocations of 'bar()'.
+		// No bound functions are created for init invocation.
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindBoundFunction))
+	})
+}

@@ -333,6 +333,16 @@ type BoundFunctionValue struct {
 
 var _ Value = BoundFunctionValue{}
 
+func NewBoundFunctionValue(interpreter *Interpreter, function FunctionValue, self *CompositeValue) BoundFunctionValue {
+
+	interpreter.UseConstantMemory(common.MemoryKindBoundFunction)
+
+	return BoundFunctionValue{
+		Function: function,
+		Self:     self,
+	}
+}
+
 func (BoundFunctionValue) IsValue() {}
 
 func (f BoundFunctionValue) String() string {
