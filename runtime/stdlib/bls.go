@@ -174,6 +174,7 @@ var blsContract = StandardLibraryValue{
 	Type: blsContractType,
 	ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
 		return interpreter.NewSimpleCompositeValue(
+			inter,
 			blsContractType.ID(),
 			blsContractStaticType,
 			blsContractDynamicType,

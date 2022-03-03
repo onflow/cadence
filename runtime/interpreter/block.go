@@ -45,12 +45,14 @@ var blockFieldFormatters = map[string]func(Value, SeenReferences) string{
 }
 
 func NewBlockValue(
+	inter *Interpreter,
 	height UInt64Value,
 	view UInt64Value,
 	id *ArrayValue,
 	timestamp UFix64Value,
 ) *SimpleCompositeValue {
 	return NewSimpleCompositeValue(
+		inter,
 		sema.BlockType.TypeID,
 		blockStaticType,
 		blockDynamicType,

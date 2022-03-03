@@ -3790,6 +3790,11 @@ func TestEncodeDecodeTypeValue(t *testing.T) {
 	})
 }
 
+func staticTypeFromBytes(data []byte) (StaticType, error) {
+	dec := CBORDecMode.NewByteStreamDecoder(data)
+	return NewTypeDecoder(dec, nil).DecodeStaticType()
+}
+
 func TestEncodeDecodeStaticType(t *testing.T) {
 
 	t.Parallel()
@@ -3818,7 +3823,7 @@ func TestEncodeDecodeStaticType(t *testing.T) {
 
 		AssertEqualWithDiff(t, encoded, actualEncoded)
 
-		actualType, err := StaticTypeFromBytes(encoded, nil)
+		actualType, err := staticTypeFromBytes(encoded)
 		require.NoError(t, err)
 
 		require.Equal(t, ty, actualType)

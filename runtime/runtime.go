@@ -2396,6 +2396,7 @@ func (r *interpreterRuntime) newAuthAccountContracts(
 	checkerOptions []sema.Option,
 ) interpreter.Value {
 	return interpreter.NewAuthAccountContractsValue(
+		inter,
 		addressValue,
 		r.newAuthAccountContractsChangeFunction(
 			inter,
@@ -2439,6 +2440,7 @@ func (r *interpreterRuntime) newAuthAccountKeys(
 	runtimeInterface Interface,
 ) interpreter.Value {
 	return interpreter.NewAuthAccountKeysValue(
+		inter,
 		addressValue,
 		r.newAccountKeysAddFunction(
 			inter,
@@ -2748,6 +2750,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 			}
 
 			return interpreter.NewDeployedContractValue(
+				inter,
 				addressValue,
 				nameValue,
 				newCodeValue,
@@ -2876,6 +2879,7 @@ func (r *interpreterRuntime) newAccountContractsGetFunction(
 			if len(code) > 0 {
 				return interpreter.NewSomeValueNonCopying(
 					interpreter.NewDeployedContractValue(
+						invocation.Interpreter,
 						addressValue,
 						nameValue,
 						interpreter.ByteSliceToByteArrayValue(
@@ -2980,6 +2984,7 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 
 				return interpreter.NewSomeValueNonCopying(
 					interpreter.NewDeployedContractValue(
+						invocation.Interpreter,
 						addressValue,
 						nameValue,
 						interpreter.ByteSliceToByteArrayValue(
@@ -3183,6 +3188,7 @@ func NewBlockValue(inter *interpreter.Interpreter, block Block) interpreter.Valu
 	timestampValue := interpreter.NewUFix64ValueWithInteger(uint64(time.Unix(0, block.Timestamp).Unix()))
 
 	return interpreter.NewBlockValue(
+		inter,
 		heightValue,
 		viewValue,
 		idValue,
@@ -3364,6 +3370,7 @@ func (r *interpreterRuntime) newPublicAccountKeys(
 	runtimeInterface Interface,
 ) interpreter.Value {
 	return interpreter.NewPublicAccountKeysValue(
+		inter,
 		addressValue,
 		r.newAccountKeysGetFunction(
 			inter,
@@ -3379,6 +3386,7 @@ func (r *interpreterRuntime) newPublicAccountContracts(
 	runtimeInterface Interface,
 ) interpreter.Value {
 	return interpreter.NewPublicAccountContractsValue(
+		inter,
 		addressValue,
 		r.newAccountContractsGetFunction(
 			inter,
@@ -3499,6 +3507,7 @@ func NewAccountKeyValue(
 	validatePublicKey interpreter.PublicKeyValidationHandlerFunc,
 ) interpreter.Value {
 	return interpreter.NewAccountKeyValue(
+		inter,
 		interpreter.NewIntValueFromInt64(int64(accountKey.KeyIndex)),
 		NewPublicKeyValue(
 			inter,

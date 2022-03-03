@@ -693,7 +693,7 @@ func TestInterpretGetType(t *testing.T) {
 					{
 						Name: "getStorageReference",
 						Type: getStorageReferenceFunctionType,
-						Function: interpreter.NewHostFunctionValue(
+						Function: interpreter.NewUnmeteredHostFunctionValue(
 							func(invocation interpreter.Invocation) interpreter.Value {
 
 								return &interpreter.StorageReferenceValue{

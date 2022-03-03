@@ -64,12 +64,40 @@ func parseCheckAndInterpretWithOptions(
 	inter *interpreter.Interpreter,
 	err error,
 ) {
+	return parseCheckAndInterpretWithOptionsAndMemoryMetering(t, code, options, nil)
+}
 
-	checker, err := checker.ParseAndCheckWithOptions(t,
+func parseCheckAndInterpretWithMemoryMetering(
+	t testing.TB,
+	code string,
+	memoryGauge common.MemoryGauge,
+) *interpreter.Interpreter {
+	inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(
+		t,
+		code,
+		ParseCheckAndInterpretOptions{},
+		memoryGauge,
+	)
+	require.NoError(t, err)
+	return inter
+}
+
+func parseCheckAndInterpretWithOptionsAndMemoryMetering(
+	t testing.TB,
+	code string,
+	options ParseCheckAndInterpretOptions,
+	memoryGauge common.MemoryGauge,
+) (
+	inter *interpreter.Interpreter,
+	err error,
+) {
+
+	checker, err := checker.ParseAndCheckWithOptionsAndMemoryMetering(t,
 		code,
 		checker.ParseAndCheckOptions{
 			Options: options.CheckerOptions,
 		},
+		memoryGauge,
 	)
 
 	if options.HandleCheckerError != nil {
@@ -111,6 +139,13 @@ func parseCheckAndInterpretWithOptions(
 		},
 		options.Options...,
 	)
+
+	if memoryGauge != nil {
+		interpreterOptions = append(
+			interpreterOptions,
+			interpreter.WithMemoryGauge(memoryGauge),
+		)
+	}
 
 	inter, err = interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
@@ -4567,7 +4602,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 				{
 					Name: "getStorageReference",
 					Type: getStorageReferenceFunctionType,
-					Function: interpreter.NewHostFunctionValue(
+					Function: interpreter.NewUnmeteredHostFunctionValue(
 						func(invocation interpreter.Invocation) interpreter.Value {
 
 							authorized := bool(invocation.Arguments[0].(interpreter.BoolValue))
@@ -7916,7 +7951,7 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 						_ common.CompositeKind,
 					) map[string]interpreter.Value {
 						return map[string]interpreter.Value{
-							"account": newTestAuthAccountValue(addressValue),
+							"account": newTestAuthAccountValue(inter, addressValue),
 						}
 					},
 				),
@@ -8660,7 +8695,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 		Name: "account",
 		Type: sema.AuthAccountType,
 		ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
-			return newTestAuthAccountValue(interpreter.AddressValue(address))
+			return newTestAuthAccountValue(inter, interpreter.AddressValue(address))
 		},
 		Kind: common.DeclarationKindConstant,
 	}
@@ -8678,9 +8713,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 					valueDeclaration,
 				}),
 				interpreter.WithPublicAccountHandler(
-					func(_ *interpreter.Interpreter, address interpreter.AddressValue) interpreter.Value {
-						return newTestPublicAccountValue(address)
-					},
+					newTestPublicAccountValue,
 				),
 			},
 		},
@@ -8702,10 +8735,12 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 }
 
 func newTestAuthAccountValue(
+	inter *interpreter.Interpreter,
 	addressValue interpreter.AddressValue,
 ) interpreter.Value {
 
 	panicFunction := interpreter.NewHostFunctionValue(
+		inter,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			panic(errors.NewUnreachableError())
 		},
@@ -8713,6 +8748,7 @@ func newTestAuthAccountValue(
 	)
 
 	return interpreter.NewAuthAccountValue(
+		inter,
 		addressValue,
 		returnZeroUFix64,
 		returnZeroUFix64,
@@ -8724,6 +8760,7 @@ func newTestAuthAccountValue(
 		panicFunction,
 		func() interpreter.Value {
 			return interpreter.NewAuthAccountContractsValue(
+				inter,
 				addressValue,
 				panicFunction,
 				panicFunction,
@@ -8742,6 +8779,7 @@ func newTestAuthAccountValue(
 		},
 		func() interpreter.Value {
 			return interpreter.NewAuthAccountKeysValue(
+				inter,
 				addressValue,
 				panicFunction,
 				panicFunction,
@@ -8752,10 +8790,12 @@ func newTestAuthAccountValue(
 }
 
 func newTestPublicAccountValue(
+	inter *interpreter.Interpreter,
 	addressValue interpreter.AddressValue,
 ) interpreter.Value {
 
 	panicFunction := interpreter.NewHostFunctionValue(
+		inter,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			panic(errors.NewUnreachableError())
 		},
@@ -8763,6 +8803,7 @@ func newTestPublicAccountValue(
 	)
 
 	return interpreter.NewPublicAccountValue(
+		inter,
 		addressValue,
 		returnZeroUFix64,
 		returnZeroUFix64,
@@ -8772,12 +8813,14 @@ func newTestPublicAccountValue(
 		returnZeroUInt64,
 		func() interpreter.Value {
 			return interpreter.NewPublicAccountKeysValue(
+				inter,
 				addressValue,
 				panicFunction,
 			)
 		},
 		func() interpreter.Value {
 			return interpreter.NewPublicAccountContractsValue(
+				inter,
 				addressValue,
 				panicFunction,
 				func(inter *interpreter.Interpreter) *interpreter.ArrayValue {

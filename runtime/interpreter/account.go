@@ -126,6 +126,7 @@ func NewAuthAccountValue(
 	}
 
 	return NewSimpleCompositeValue(
+		inter,
 		authAccountTypeID,
 		authAccountStaticType,
 		authAccountDynamicType,
@@ -214,6 +215,7 @@ func NewPublicAccountValue(
 	}
 
 	return NewSimpleCompositeValue(
+		inter,
 		publicAccountTypeID,
 		publicAccountStaticType,
 		publicAccountDynamicType,

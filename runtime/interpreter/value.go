@@ -843,11 +843,9 @@ func (v *StringValue) NormalForm() string {
 }
 
 func (v *StringValue) Concat(interpreter *Interpreter, other *StringValue) Value {
-	memoryUsage := common.MemoryUsage{
-		Kind:   common.MemoryKindString,
-		Amount: uint64(len(v.Str)) + uint64(len(other.Str)),
-	}
-
+	memoryUsage := common.NewStringMemoryUsage(
+		uint64(len(v.Str)) + uint64(len(other.Str)),
+	)
 	return NewStringValue(
 		interpreter,
 		memoryUsage,
@@ -1042,10 +1040,9 @@ func (v *StringValue) ToLower(interpreter *Interpreter) *StringValue {
 	// An uppercase character may be converted to several lower-case characters, e.g İ => [i, ̇]
 	// see https://stackoverflow.com/questions/28683805/is-there-a-unicode-string-which-gets-longer-when-converted-to-lowercase
 
-	memoryUsage := common.MemoryUsage{
-		Kind:   common.MemoryKindString,
-		Amount: uint64(len(v.Str)),
-	}
+	memoryUsage := common.NewStringMemoryUsage(
+		uint64(len(v.Str)),
+	)
 
 	return NewStringValue(
 		interpreter,
@@ -1194,6 +1191,7 @@ func NewArrayValueWithIterator(
 	address common.Address,
 	values func() Value,
 ) *ArrayValue {
+	interpreter.UseConstantMemory(common.MemoryKindArray)
 
 	var v *ArrayValue
 
@@ -2325,10 +2323,9 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 			interpreter,
 			func(invocation Invocation) Value {
 				interpreter := invocation.Interpreter
-				memoryUsage := common.MemoryUsage{
-					Kind:   common.MemoryKindString,
-					Amount: uint64(OverEstimateNumberStringLength(v)),
-				}
+				memoryUsage := common.NewStringMemoryUsage(
+					OverEstimateNumberStringLength(v),
+				)
 				return NewStringValue(
 					interpreter,
 					memoryUsage,
@@ -10844,7 +10841,7 @@ func (Word64Value) ChildStorables() []atree.Storable {
 type FixedPointValue interface {
 	NumberValue
 	IntegerPart() NumberValue
-	Scale() int
+	Scale() uint64
 }
 
 // Fix64Value
@@ -11297,7 +11294,7 @@ func (v Fix64Value) IntegerPart() NumberValue {
 	return UInt64Value(v / sema.Fix64Factor)
 }
 
-func (Fix64Value) Scale() int {
+func (Fix64Value) Scale() uint64 {
 	return sema.Fix64Scale
 }
 
@@ -11725,7 +11722,7 @@ func (v UFix64Value) IntegerPart() NumberValue {
 	return UInt64Value(v / sema.Fix64Factor)
 }
 
-func (UFix64Value) Scale() int {
+func (UFix64Value) Scale() uint64 {
 	return sema.Fix64Scale
 }
 
@@ -11788,6 +11785,8 @@ func NewCompositeValue(
 			)
 		}()
 	}
+
+	interpreter.UseConstantMemory(common.MemoryKindComposite)
 
 	dictionary, err := atree.NewMap(
 		interpreter.Storage,
@@ -12844,6 +12843,7 @@ func NewDictionaryValueWithAddress(
 	address common.Address,
 	keysAndValues ...Value,
 ) *DictionaryValue {
+	interpreter.UseConstantMemory(common.MemoryKindDictionary)
 
 	var v *DictionaryValue
 
@@ -15062,10 +15062,9 @@ func (v AddressValue) GetMember(interpreter *Interpreter, _ func() LocationRange
 			interpreter,
 			func(invocation Invocation) Value {
 				interpreter := invocation.Interpreter
-				memoryUsage := common.MemoryUsage{
-					Kind:   common.MemoryKindString,
-					Amount: common.AddressLength * 2,
-				}
+				memoryUsage := common.NewStringMemoryUsage(
+					common.AddressLength * 2,
+				)
 				return NewStringValue(
 					interpreter,
 					memoryUsage,
@@ -15283,11 +15282,10 @@ func (v PathValue) GetMember(inter *Interpreter, _ func() LocationRange, name st
 			inter,
 			func(invocation Invocation) Value {
 				interpreter := invocation.Interpreter
-				memoryUsage := common.MemoryUsage{
-					Kind: common.MemoryKindString,
-					Amount: uint64(len(v.Domain.Identifier())) +
+				memoryUsage := common.NewStringMemoryUsage(
+					uint64(len(v.Domain.Identifier())) +
 						uint64(len(v.Identifier)),
-				}
+				)
 				return NewStringValue(
 					interpreter,
 					memoryUsage,

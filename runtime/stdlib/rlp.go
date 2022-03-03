@@ -223,6 +223,7 @@ var rlpContract = StandardLibraryValue{
 	Type: rlpContractType,
 	ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
 		return interpreter.NewSimpleCompositeValue(
+			inter,
 			rlpContractType.ID(),
 			rlpContractStaticType,
 			rlpContractDynamicType,

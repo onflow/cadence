@@ -3414,10 +3414,9 @@ var stringFunction = func() Value {
 				}
 
 				inter := invocation.Interpreter
-				memoryUsage := common.MemoryUsage{
-					Kind:   common.MemoryKindString,
-					Amount: uint64(argument.Count()) * 2,
-				}
+				memoryUsage := common.NewStringMemoryUsage(
+					uint64(argument.Count()) * 2,
+				)
 				return NewStringValue(
 					inter,
 					memoryUsage,
@@ -4765,6 +4764,15 @@ func (interpreter *Interpreter) UseMemory(usage common.MemoryUsage) {
 	interpreter.memoryGauge.UseMemory(usage)
 }
 
+// UseConstantMemory uses a pre-determined amount of memory
+//
+func (interpreter *Interpreter) UseConstantMemory(kind common.MemoryKind) {
+	interpreter.UseMemory(common.MemoryUsage{
+		Kind:   kind,
+		Amount: 1,
+	})
+}
+
 func (interpreter *Interpreter) DecodeStorable(
 	decoder *cbor.StreamDecoder,
 	storageID atree.StorageID,
@@ -4777,13 +4785,4 @@ func (interpreter *Interpreter) DecodeStorable(
 
 func (interpreter *Interpreter) DecodeTypeInfo(decoder *cbor.StreamDecoder) (atree.TypeInfo, error) {
 	return DecodeTypeInfo(decoder, interpreter)
-}
-
-// UseConstantMemory uses a pre-determined amount of memory
-//
-func (interpreter *Interpreter) UseConstantMemory(kind common.MemoryKind) {
-	interpreter.UseMemory(common.MemoryUsage{
-		Kind:   kind,
-		Amount: 1,
-	})
 }

@@ -1085,8 +1085,9 @@ func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
 		{
 			Name: "check",
 			Type: checkFunctionType,
-			ValueFactory: func(_ *interpreter.Interpreter) interpreter.Value {
+			ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
 				return interpreter.NewHostFunctionValue(
+					inter,
 					func(invocation interpreter.Invocation) interpreter.Value {
 						checkCalled = true
 

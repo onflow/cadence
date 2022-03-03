@@ -558,10 +558,7 @@ func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedTy
 }
 
 func importString(inter *interpreter.Interpreter, v cadence.String) *interpreter.StringValue {
-	memoryUsage := common.MemoryUsage{
-		Kind:   common.MemoryKindString,
-		Amount: uint64(len(v)),
-	}
+	memoryUsage := common.NewStringMemoryUsage(uint64(len(v)))
 	return interpreter.NewStringValue(
 		inter,
 		memoryUsage,
