@@ -34,6 +34,7 @@ var authAccountKeysDynamicType DynamicType = CompositeDynamicType{
 
 // NewAuthAccountKeysValue constructs a AuthAccount.Keys value.
 func NewAuthAccountKeysValue(
+	inter *Interpreter,
 	address AddressValue,
 	addFunction FunctionValue,
 	getFunction FunctionValue,
@@ -55,6 +56,7 @@ func NewAuthAccountKeysValue(
 	}
 
 	return NewSimpleCompositeValue(
+		inter,
 		authAccountKeysTypeID,
 		authAccountKeysStaticType,
 		authAccountKeysDynamicType,
@@ -76,6 +78,7 @@ var publicAccountKeysDynamicType DynamicType = CompositeDynamicType{
 
 // NewPublicAccountKeysValue constructs a PublicAccount.Keys value.
 func NewPublicAccountKeysValue(
+	inter *Interpreter,
 	address AddressValue,
 	getFunction FunctionValue,
 ) Value {
@@ -93,6 +96,7 @@ func NewPublicAccountKeysValue(
 	}
 
 	return NewSimpleCompositeValue(
+		inter,
 		publicAccountKeysTypeID,
 		publicAccountKeysStaticType,
 		publicAccountKeysDynamicType,
