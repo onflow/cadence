@@ -709,7 +709,7 @@ func TestCheckInvalidContractNestedTypeShadowing(t *testing.T) {
 	}
 }
 
-func TestBadContractNesting(t *testing.T) {
+func TestCheckBadContractNesting(t *testing.T) {
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, "contract signatureAlgorithm { resource interface payer { contract fun : payer { contract fun { contract fun { } contract fun { contract interface account { } } contract account { } } } } }")
