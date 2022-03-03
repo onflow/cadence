@@ -38,4 +38,5 @@ const (
 	MemoryKindComposite
 	MemoryKindInterpretedFunction
 	MemoryKindHostFunction
+	MemoryKindBoundFunction
 )

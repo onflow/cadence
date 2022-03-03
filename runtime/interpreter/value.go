@@ -12019,10 +12019,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange fu
 
 	function, ok := v.Functions[name]
 	if ok {
-		return BoundFunctionValue{
-			Self:     v,
-			Function: function,
-		}
+		return NewBoundFunctionValue(interpreter, function, v)
 	}
 
 	return nil
