@@ -64,12 +64,40 @@ func parseCheckAndInterpretWithOptions(
 	inter *interpreter.Interpreter,
 	err error,
 ) {
+	return parseCheckAndInterpretWithOptionsAndMemoryMetering(t, code, options, nil)
+}
 
-	checker, err := checker.ParseAndCheckWithOptions(t,
+func parseCheckAndInterpretWithMemoryMetering(
+	t testing.TB,
+	code string,
+	memoryGauge common.MemoryGauge,
+) *interpreter.Interpreter {
+	inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(
+		t,
+		code,
+		ParseCheckAndInterpretOptions{},
+		memoryGauge,
+	)
+	require.NoError(t, err)
+	return inter
+}
+
+func parseCheckAndInterpretWithOptionsAndMemoryMetering(
+	t testing.TB,
+	code string,
+	options ParseCheckAndInterpretOptions,
+	memoryGauge common.MemoryGauge,
+) (
+	inter *interpreter.Interpreter,
+	err error,
+) {
+
+	checker, err := checker.ParseAndCheckWithOptionsAndMemoryMetering(t,
 		code,
 		checker.ParseAndCheckOptions{
 			Options: options.CheckerOptions,
 		},
+		memoryGauge,
 	)
 
 	if options.HandleCheckerError != nil {
@@ -111,6 +139,13 @@ func parseCheckAndInterpretWithOptions(
 		},
 		options.Options...,
 	)
+
+	if memoryGauge != nil {
+		interpreterOptions = append(
+			interpreterOptions,
+			interpreter.WithMemoryGauge(memoryGauge),
+		)
+	}
 
 	inter, err = interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
