@@ -942,3 +942,11 @@ func TestRestrictedStaticType_Equal(t *testing.T) {
 		)
 	})
 }
+
+func TestPrimitiveStaticTypeCount(t *testing.T) {
+	t.Parallel()
+
+	t.Run("No new types added in between", func(t *testing.T) {
+		require.Equal(t, byte(98), byte(PrimitiveStaticType_Count))
+	})
+}

@@ -28,6 +28,6 @@ func TestHashableValue(t *testing.T) {
 	t.Parallel()
 
 	t.Run("No new types added in between", func(t *testing.T) {
-		require.Equal(t, byte(HashInputTypeUFix64), byte(46))
+		require.Equal(t, byte(50), byte(HashInputType_Count))
 	})
 }

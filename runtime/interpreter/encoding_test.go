@@ -3824,3 +3824,11 @@ func TestEncodeDecodeStaticType(t *testing.T) {
 		require.Equal(t, ty, actualType)
 	})
 }
+
+func TestCBORTagValue(t *testing.T) {
+	t.Parallel()
+
+	t.Run("No new types added in between", func(t *testing.T) {
+		require.Equal(t, byte(222), byte(CBORTag_Count))
+	})
+}

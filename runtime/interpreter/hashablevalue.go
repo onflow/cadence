@@ -115,4 +115,9 @@ const (
 	_ // future: UFix128
 	_ // future: UFix256
 	_
+
+	// !!! *WARNING* !!!
+	// ADD NEW TYPES *BEFORE* THIS WARNING.
+	// DO *NOT* ADD NEW TYPES AFTER THIS LINE!
+	HashInputType_Count
 )
