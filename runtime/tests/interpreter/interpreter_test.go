@@ -8713,9 +8713,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 					valueDeclaration,
 				}),
 				interpreter.WithPublicAccountHandler(
-					func(inter *interpreter.Interpreter, address interpreter.AddressValue) interpreter.Value {
-						return newTestPublicAccountValue(inter, address)
-					},
+					newTestPublicAccountValue,
 				),
 			},
 		},
