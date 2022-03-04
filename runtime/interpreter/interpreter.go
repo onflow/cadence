@@ -3647,11 +3647,9 @@ func (interpreter *Interpreter) IsSubType(subType StaticType, superType sema.Typ
 		}
 
 	case ReferenceStaticType:
-		semaType := interpreter.MustConvertStaticToSemaType(staticType).(*sema.ReferenceType)
-
 		if typedSuperType, ok := superType.(*sema.ReferenceType); ok {
 
-			// First, check that the dynamic type of the referenced value
+			// First, check that the static type of the referenced value
 			// is a subtype of the super type
 
 			if staticType.InnerType != nil && !interpreter.IsSubType(staticType.InnerType, typedSuperType.Type) {
@@ -3669,10 +3667,15 @@ func (interpreter *Interpreter) IsSubType(subType StaticType, superType sema.Typ
 			// If the reference value is not authorized,
 			// it may not be down-casted
 
+			var borrowType sema.Type
+			if staticType.Type != nil {
+				borrowType = interpreter.MustConvertStaticToSemaType(staticType.Type)
+			}
+
 			return sema.IsSubType(
 				&sema.ReferenceType{
 					Authorized: authorized,
-					Type:       semaType.Type,
+					Type:       borrowType,
 				},
 				typedSuperType,
 			)

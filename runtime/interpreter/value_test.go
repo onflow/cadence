@@ -1013,21 +1013,21 @@ func TestStringer(t *testing.T) {
 			},
 			expected: "Capability(address: 0x0000000102030405, path: /storage/foo)",
 		},
-		//"Recursive ephemeral reference (array)": {
-		//	value: func() Value {
-		//		array := NewArrayValue(
-		//			newTestInterpreter(t),
-		//			VariableSizedStaticType{
-		//				Type: PrimitiveStaticTypeAnyStruct,
-		//			},
-		//			common.Address{},
-		//		)
-		//		arrayRef := &EphemeralReferenceValue{Value: array}
-		//		array.Insert(newTestInterpreter(t), ReturnEmptyLocationRange, 0, arrayRef)
-		//		return array
-		//	}(),
-		//	expected: `[[...]]`,
-		//},
+		"Recursive ephemeral reference (array)": {
+			value: func() Value {
+				array := NewArrayValue(
+					newTestInterpreter(t),
+					VariableSizedStaticType{
+						Type: PrimitiveStaticTypeAnyStruct,
+					},
+					common.Address{},
+				)
+				arrayRef := &EphemeralReferenceValue{Value: array}
+				array.Insert(newTestInterpreter(t), ReturnEmptyLocationRange, 0, arrayRef)
+				return array
+			}(),
+			expected: `[[...]]`,
+		},
 	}
 
 	test := func(name string, testCase testCase) {
