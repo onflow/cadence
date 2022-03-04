@@ -182,6 +182,7 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 	// Update the return info for invocations that do not return (i.e. have a `Never` return type)
 
 	if returnType == NeverType {
+		checker.resources.Halts = true
 		functionActivation := checker.functionActivations.Current()
 		functionActivation.ReturnInfo.DefinitelyHalted = true
 	}
@@ -479,7 +480,6 @@ func (checker *Checker) checkInvocation(
 
 	// Save types in the elaboration
 
-	checker.Elaboration.InvocationExpressionReceiverTypes[invocationExpression] = functionType.ReceiverType
 	checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression] = typeArguments
 	checker.Elaboration.InvocationExpressionParameterTypes[invocationExpression] = parameterTypes
 	checker.Elaboration.InvocationExpressionReturnTypes[invocationExpression] = returnType

@@ -136,3 +136,31 @@ func TestCheckInvalidWhileContinueStatement(t *testing.T) {
 
 	assert.IsType(t, &sema.ControlStatementError{}, errs[0])
 }
+
+func TestCheckInvalidBreakStatement(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test() {
+          break
+      }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+	assert.IsType(t, &sema.ControlStatementError{}, errs[0])
+}
+
+func TestCheckInvalidContinueStatement(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test() {
+          continue
+      }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+	assert.IsType(t, &sema.ControlStatementError{}, errs[0])
+}

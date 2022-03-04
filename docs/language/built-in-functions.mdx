@@ -1,0 +1,60 @@
+---
+title: Built-in Functions
+---
+
+## panic
+`cadence•fun panic(_ message: String): Never`
+
+  Terminates the program unconditionally
+  and reports a message which explains why the unrecoverable error occurred.
+
+  ```cadence
+  let optionalAccount: AuthAccount? = // ...
+  let account = optionalAccount ?? panic("missing account")
+  ```
+
+## assert
+`cadence•fun assert(_ condition: Bool, message: String)`
+
+  Terminates the program if the given condition is false,
+  and reports a message which explains how the condition is false.
+  Use this function for internal sanity checks.
+
+  The message argument is optional.
+
+## unsafeRandom
+`cadence•fun unsafeRandom(): UInt64`
+
+  Returns a pseudo-random number.
+
+  NOTE: The use of this function is unsafe if not used correctly.
+
+  Follow [best practices](https://github.com/ConsenSys/smart-contract-best-practices/blob/051ec2e42a66f4641d5216063430f177f018826e/docs/recommendations.md#remember-that-on-chain-data-is-public)
+  to prevent security issues when using this function.
+
+## RLP
+
+<Callout type="info">
+
+🚧 Status: This API is going to be available in an upcoming release of Cadence
+
+</Callout>
+
+
+RLP (Recursive Length Prefix) serialization allows the encoding of arbitrarily nested arrays of binary data.
+
+Cadence provides RLP decoding functions in the built-in `RLP` contract, which does not need to be imported.
+
+- `cadence•fun decodeString(_ input: [UInt8]): [UInt8]`
+
+  Decodes an RLP-encoded byte array (called string in the context of RLP). 
+  The byte array should only contain of a single encoded value for a string; if the encoded value type does not match, or it has trailing unnecessary bytes, the program aborts.
+  If any error is encountered while decoding, the program aborts.
+
+
+- `cadence•fun decodeList(_ input: [UInt8]): [[UInt8]]`
+
+  Decodes an RLP-encoded list into an array of RLP-encoded items.
+  Note that this function does not recursively decode, so each element of the resulting array is RLP-encoded data.
+  The byte array should only contain of a single encoded value for a list; if the encoded value type does not match, or it has trailing unnecessary bytes, the program aborts.
+  If any error is encountered while decoding, the program aborts.

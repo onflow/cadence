@@ -591,6 +591,17 @@ The details of how the identifiers are generated is an implementation detail.
 Do not rely on or assume any particular behaviour in Cadence programs.
 </Callout>
 
+## Resource Owner
+
+Resources have the implicit field `let owner: PublicAccount?`.
+If the resource is currently [stored in an account](accounts#account-storage),
+then the field contains the publicly accessible portion of the account.
+Otherwise the field is `nil`.
+
+The field's value changes when the resource is moved from outside account storage
+into account storage, when it is moved from the storage of one account
+to the storage of another account, and when it is moved out of account storage.
+
 ## Unbound References / Nulls
 
 There is **no** support for `null`.
@@ -613,5 +624,5 @@ In addition, abstract types may declare functions,
 but omit the implementation of them
 and instead require subtypes to implement them.
 
-Instead, consider using [interfaces](../interfaces).
+Instead, consider using [interfaces](./interfaces).
 

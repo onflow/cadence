@@ -92,6 +92,13 @@ type Runtime interface {
 	// SetTracingEnabled configures if tracing is enabled.
 	SetTracingEnabled(enabled bool)
 
+	// SetInvalidatedResourceValidationEnabled configures
+	// if invalidated resource validation is enabled.
+	SetInvalidatedResourceValidationEnabled(enabled bool)
+
+	// SetResourceOwnerChangeHandlerEnabled configures if the resource owner change callback is enabled.
+	SetResourceOwnerChangeHandlerEnabled(enabled bool)
+
 	// ReadStored reads the value stored at the given path
 	//
 	ReadStored(address common.Address, path cadence.Path, context Context) (cadence.Value, error)
@@ -152,10 +159,12 @@ func reportMetric(
 
 // interpreterRuntime is a interpreter-based version of the Flow runtime.
 type interpreterRuntime struct {
-	coverageReport                  *CoverageReport
-	contractUpdateValidationEnabled bool
-	atreeValidationEnabled          bool
-	tracingEnabled                  bool
+	coverageReport                       *CoverageReport
+	contractUpdateValidationEnabled      bool
+	atreeValidationEnabled               bool
+	tracingEnabled                       bool
+	resourceOwnerChangeHandlerEnabled    bool
+	invalidatedResourceValidationEnabled bool
 }
 
 type Option func(Runtime)
@@ -187,6 +196,24 @@ func WithTracingEnabled(enabled bool) Option {
 	}
 }
 
+// WithInvalidatedResourceValidationEnabled returns a runtime option
+// that configures if invalidated resource validation is enabled.
+//
+func WithInvalidatedResourceValidationEnabled(enabled bool) Option {
+	return func(runtime Runtime) {
+		runtime.SetInvalidatedResourceValidationEnabled(enabled)
+	}
+}
+
+// WithResourceOwnerChangeCallbackEnabled returns a runtime option
+// that configures if the resource owner change callback is enabled.
+//
+func WithResourceOwnerChangeCallbackEnabled(enabled bool) Option {
+	return func(runtime Runtime) {
+		runtime.SetResourceOwnerChangeHandlerEnabled(enabled)
+	}
+}
+
 // NewInterpreterRuntime returns a interpreter-based version of the Flow runtime.
 func NewInterpreterRuntime(options ...Option) Runtime {
 	runtime := &interpreterRuntime{}
@@ -194,6 +221,24 @@ func NewInterpreterRuntime(options ...Option) Runtime {
 		option(runtime)
 	}
 	return runtime
+}
+
+func (r *interpreterRuntime) Recover(onError func(error), context Context) {
+	recovered := recover()
+	if recovered == nil {
+		return
+	}
+
+	var err error
+	switch recovered := recovered.(type) {
+	case Error:
+		// avoid redundant wrapping
+		err = recovered
+	case error:
+		err = newError(recovered, context)
+	}
+
+	onError(err)
 }
 
 func (r *interpreterRuntime) SetCoverageReport(coverageReport *CoverageReport) {
@@ -212,10 +257,25 @@ func (r *interpreterRuntime) SetTracingEnabled(enabled bool) {
 	r.tracingEnabled = enabled
 }
 
-func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cadence.Value, error) {
+func (r *interpreterRuntime) SetInvalidatedResourceValidationEnabled(enabled bool) {
+	r.invalidatedResourceValidationEnabled = enabled
+}
+
+func (r *interpreterRuntime) SetResourceOwnerChangeHandlerEnabled(enabled bool) {
+	r.resourceOwnerChangeHandlerEnabled = enabled
+}
+
+func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val cadence.Value, err error) {
+	defer r.Recover(
+		func(internalErr error) {
+			err = internalErr
+		},
+		context,
+	)
+
 	context.InitializeCodesAndPrograms()
 
-	storage := r.newStorage(context.Interface)
+	storage := NewStorage(context.Interface)
 
 	var checkerOptions []sema.Option
 	var interpreterOptions []interpreter.Option
@@ -231,7 +291,7 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cade
 		script.Source,
 		context,
 		functions,
-		stdlib.BuiltinValues(),
+		stdlib.BuiltinValues,
 		checkerOptions,
 		true,
 		importResolutionResults{},
@@ -276,7 +336,7 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cade
 		context,
 		storage,
 		functions,
-		stdlib.BuiltinValues(),
+		stdlib.BuiltinValues,
 		interpreterOptions,
 		checkerOptions,
 		interpret,
@@ -449,10 +509,17 @@ func (r *interpreterRuntime) InvokeContractFunction(
 	arguments []interpreter.Value,
 	argumentTypes []sema.Type,
 	context Context,
-) (cadence.Value, error) {
+) (val cadence.Value, err error) {
+	defer r.Recover(
+		func(internalErr error) {
+			err = internalErr
+		},
+		context,
+	)
+
 	context.InitializeCodesAndPrograms()
 
-	storage := r.newStorage(context.Interface)
+	storage := NewStorage(context.Interface)
 
 	var interpreterOptions []interpreter.Option
 	var checkerOptions []sema.Option
@@ -470,7 +537,7 @@ func (r *interpreterRuntime) InvokeContractFunction(
 		context,
 		storage,
 		functions,
-		stdlib.BuiltinValues(),
+		stdlib.BuiltinValues,
 		interpreterOptions,
 		checkerOptions,
 		nil,
@@ -576,10 +643,17 @@ func (r *interpreterRuntime) convertArgument(
 	return argument
 }
 
-func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) error {
+func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) (err error) {
+	defer r.Recover(
+		func(internalErr error) {
+			err = internalErr
+		},
+		context,
+	)
+
 	context.InitializeCodesAndPrograms()
 
-	storage := r.newStorage(context.Interface)
+	storage := NewStorage(context.Interface)
 
 	var interpreterOptions []interpreter.Option
 	var checkerOptions []sema.Option
@@ -595,7 +669,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 		script.Source,
 		context,
 		functions,
-		stdlib.BuiltinValues(),
+		stdlib.BuiltinValues,
 		checkerOptions,
 		true,
 		importResolutionResults{},
@@ -669,7 +743,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 		context,
 		storage,
 		functions,
-		stdlib.BuiltinValues(),
+		stdlib.BuiltinValues,
 		interpreterOptions,
 		checkerOptions,
 		r.transactionExecutionFunction(
@@ -708,6 +782,37 @@ func wrapPanic(f func()) {
 		}
 	}()
 	f()
+}
+
+// Executes `f`. On panic, the panic is returned as an error.
+// Wraps any non-`error` panics so panic is never propagated.
+func panicToError(f func()) (returnedError error) {
+	defer func() {
+		if r := recover(); r != nil {
+			var ok bool
+			err, ok := r.(error)
+			if ok {
+				returnedError = err
+			} else {
+				returnedError = fmt.Errorf("%s", r)
+			}
+		}
+	}()
+	f()
+	return nil
+}
+
+// Executes `f`. On panic, the panic is returned as an error.
+// Exception: panics when error is `goRuntime.Error` or `ExternalError`.
+func userPanicToError(f func()) error {
+	err := panicToError(f)
+
+	switch err := err.(type) {
+	case goRuntime.Error, interpreter.ExternalError:
+		panic(err)
+	default:
+		return err
+	}
 }
 
 func (r *interpreterRuntime) transactionExecutionFunction(
@@ -786,7 +891,19 @@ func validateArgumentParams(
 			}
 		}
 
-		arg, err := importValue(inter, value, parameterType)
+		var arg interpreter.Value
+		panicError := userPanicToError(func() {
+			// if importing an invalid public key, this call panics
+			arg, err = importValue(inter, value, parameterType)
+		})
+
+		if panicError != nil {
+			return nil, &InvalidEntryPointArgumentError{
+				Index: i,
+				Err:   panicError,
+			}
+		}
+
 		if err != nil {
 			return nil, &InvalidEntryPointArgumentError{
 				Index: i,
@@ -865,10 +982,23 @@ func hasValidStaticType(value interpreter.Value) bool {
 // ParseAndCheckProgram parses the given code and checks it.
 // Returns a program that can be interpreted (AST + elaboration).
 //
-func (r *interpreterRuntime) ParseAndCheckProgram(code []byte, context Context) (*interpreter.Program, error) {
+func (r *interpreterRuntime) ParseAndCheckProgram(
+	code []byte,
+	context Context,
+) (
+	program *interpreter.Program,
+	err error,
+) {
+	defer r.Recover(
+		func(internalErr error) {
+			err = internalErr
+		},
+		context,
+	)
+
 	context.InitializeCodesAndPrograms()
 
-	storage := r.newStorage(context.Interface)
+	storage := NewStorage(context.Interface)
 
 	var interpreterOptions []interpreter.Option
 	var checkerOptions []sema.Option
@@ -880,11 +1010,11 @@ func (r *interpreterRuntime) ParseAndCheckProgram(code []byte, context Context) 
 		checkerOptions,
 	)
 
-	program, err := r.parseAndCheckProgram(
+	program, err = r.parseAndCheckProgram(
 		code,
 		context,
 		functions,
-		stdlib.BuiltinValues(),
+		stdlib.BuiltinValues,
 		checkerOptions,
 		true,
 		importResolutionResults{},
@@ -1079,6 +1209,19 @@ func (r *interpreterRuntime) newInterpreter(
 		preDeclaredValues = append(preDeclaredValues, predeclaredValue)
 	}
 
+	publicKeyValidator := func(
+		inter *interpreter.Interpreter,
+		getLocationRange func() interpreter.LocationRange,
+		publicKey *interpreter.CompositeValue,
+	) error {
+		return validatePublicKey(
+			inter,
+			getLocationRange,
+			publicKey,
+			context.Interface,
+		)
+	}
+
 	defaultOptions := []interpreter.Option{
 		interpreter.WithStorage(storage),
 		interpreter.WithPredeclaredValues(preDeclaredValues),
@@ -1130,7 +1273,7 @@ func (r *interpreterRuntime) newInterpreter(
 		interpreter.WithOnStatementHandler(
 			r.onStatementHandler(),
 		),
-		interpreter.WithPublicAccountHandlerFunc(
+		interpreter.WithPublicAccountHandler(
 			func(_ *interpreter.Interpreter, address interpreter.AddressValue) interpreter.Value {
 				return r.getPublicAccount(
 					address,
@@ -1139,16 +1282,43 @@ func (r *interpreterRuntime) newInterpreter(
 				)
 			},
 		),
-		interpreter.WithPublicKeyValidationHandler(
+		interpreter.WithPublicKeyValidationHandler(publicKeyValidator),
+		interpreter.WithBLSCryptoFunctions(
 			func(
 				inter *interpreter.Interpreter,
 				getLocationRange func() interpreter.LocationRange,
-				publicKey *interpreter.CompositeValue,
+				publicKeyValue interpreter.MemberAccessibleValue,
+				signature *interpreter.ArrayValue,
 			) interpreter.BoolValue {
-				return validatePublicKey(
+				return blsVerifyPoP(
 					inter,
 					getLocationRange,
-					publicKey,
+					publicKeyValue,
+					signature,
+					context.Interface,
+				)
+			},
+			func(
+				inter *interpreter.Interpreter,
+				getLocationRange func() interpreter.LocationRange,
+				signatures *interpreter.ArrayValue,
+			) interpreter.OptionalValue {
+				return blsAggregateSignatures(
+					inter,
+					context.Interface,
+					signatures,
+				)
+			},
+			func(
+				inter *interpreter.Interpreter,
+				getLocationRange func() interpreter.LocationRange,
+				publicKeys *interpreter.ArrayValue,
+			) interpreter.OptionalValue {
+				return blsAggregatePublicKeys(
+					inter,
+					getLocationRange,
+					publicKeys,
+					publicKeyValidator,
 					context.Interface,
 				)
 			},
@@ -1204,6 +1374,8 @@ func (r *interpreterRuntime) newInterpreter(
 		// and disable storage validation after each value modification.
 		// Instead, storage is validated after commits (if validation is enabled).
 		interpreter.WithAtreeStorageValidationEnabled(false),
+		interpreter.WithOnResourceOwnerChangeHandler(r.resourceOwnerChangedHandler(context.Interface)),
+		interpreter.WithInvalidatedResourceValidationEnabled(r.invalidatedResourceValidationEnabled),
 	}
 
 	defaultOptions = append(defaultOptions,
@@ -1435,21 +1607,45 @@ func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interfa
 	}
 }
 
+var getAuthAccountFunctionType = &sema.FunctionType{
+	Parameters: []*sema.Parameter{{
+		Label:          sema.ArgumentLabelNotRequired,
+		Identifier:     "address",
+		TypeAnnotation: sema.NewTypeAnnotation(&sema.AddressType{}),
+	}},
+	ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.AuthAccountType),
+}
+
 func (r *interpreterRuntime) standardLibraryFunctions(
 	context Context,
 	storage *Storage,
 	interpreterOptions []interpreter.Option,
 	checkerOptions []sema.Option,
 ) stdlib.StandardLibraryFunctions {
+	builtins := stdlib.FlowBuiltInFunctions(stdlib.FlowBuiltinImpls{
+		CreateAccount:   r.newCreateAccountFunction(context, storage, interpreterOptions, checkerOptions),
+		GetAccount:      r.newGetAccountFunction(context.Interface, storage),
+		Log:             r.newLogFunction(context.Interface),
+		GetCurrentBlock: r.newGetCurrentBlockFunction(context.Interface),
+		GetBlock:        r.newGetBlockFunction(context.Interface),
+		UnsafeRandom:    r.newUnsafeRandomFunction(context.Interface),
+	})
+
+	switch context.Location.(type) {
+	case common.ScriptLocation:
+		// Scripts are read-only, so we can give them access to auth accounts
+		builtins = append(builtins,
+			stdlib.NewStandardLibraryFunction(
+				"getAuthAccount",
+				getAuthAccountFunctionType,
+				"Returns the AuthAccount associated with the given address. Only available in scripts",
+				r.newGetAuthAccountFunction(context, storage, interpreterOptions, checkerOptions),
+			),
+		)
+	}
+
 	return append(
-		stdlib.FlowBuiltInFunctions(stdlib.FlowBuiltinImpls{
-			CreateAccount:   r.newCreateAccountFunction(context, storage, interpreterOptions, checkerOptions),
-			GetAccount:      r.newGetAccountFunction(context.Interface, storage),
-			Log:             r.newLogFunction(context.Interface),
-			GetCurrentBlock: r.newGetCurrentBlockFunction(context.Interface),
-			GetBlock:        r.newGetBlockFunction(context.Interface),
-			UnsafeRandom:    r.newUnsafeRandomFunction(context.Interface),
-		}),
+		builtins,
 		stdlib.BuiltinFunctions...,
 	)
 }
@@ -1551,7 +1747,10 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 ) interpreter.HostFunction {
 	return func(invocation interpreter.Invocation) interpreter.Value {
 
-		payer := invocation.Arguments[0].(interpreter.MemberAccessibleValue)
+		payer, ok := invocation.Arguments[0].(interpreter.MemberAccessibleValue)
+		if !ok {
+			panic(runtimeErrors.NewUnreachableError())
+		}
 
 		inter := invocation.Interpreter
 		getLocationRange := invocation.GetLocationRange
@@ -1606,7 +1805,10 @@ func accountBalanceGetFunction(
 	addressValue interpreter.AddressValue,
 	runtimeInterface Interface,
 ) func() interpreter.UFix64Value {
+
+	// Converted addresses can be cached and don't have to be recomputed on each function invocation
 	address := addressValue.ToAddress()
+
 	return func() interpreter.UFix64Value {
 		var balance uint64
 		var err error
@@ -1624,7 +1826,10 @@ func accountAvailableBalanceGetFunction(
 	addressValue interpreter.AddressValue,
 	runtimeInterface Interface,
 ) func() interpreter.UFix64Value {
+
+	// Converted addresses can be cached and don't have to be recomputed on each function invocation
 	address := addressValue.ToAddress()
+
 	return func() interpreter.UFix64Value {
 		var balance uint64
 		var err error
@@ -1643,7 +1848,10 @@ func storageUsedGetFunction(
 	runtimeInterface Interface,
 	storage *Storage,
 ) func(inter *interpreter.Interpreter) interpreter.UInt64Value {
+
+	// Converted addresses can be cached and don't have to be recomputed on each function invocation
 	address := addressValue.ToAddress()
+
 	return func(inter *interpreter.Interpreter) interpreter.UInt64Value {
 
 		// NOTE: flush the cached values, so the host environment
@@ -1666,7 +1874,10 @@ func storageUsedGetFunction(
 }
 
 func storageCapacityGetFunction(addressValue interpreter.AddressValue, runtimeInterface Interface) func() interpreter.UInt64Value {
+
+	// Converted addresses can be cached and don't have to be recomputed on each function invocation
 	address := addressValue.ToAddress()
+
 	return func() interpreter.UInt64Value {
 		var capacity uint64
 		var err error
@@ -1684,9 +1895,16 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 	addressValue interpreter.AddressValue,
 	runtimeInterface Interface,
 ) *interpreter.HostFunctionValue {
+
+	// Converted addresses can be cached and don't have to be recomputed on each function invocation
+	address := addressValue.ToAddress()
+
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
-			publicKeyValue := invocation.Arguments[0].(*interpreter.ArrayValue)
+			publicKeyValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
+			if !ok {
+				panic(runtimeErrors.NewUnreachableError())
+			}
 
 			publicKey, err := interpreter.ByteArrayValueToByteSlice(publicKeyValue)
 			if err != nil {
@@ -1694,7 +1912,7 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 			}
 
 			wrapPanic(func() {
-				err = runtimeInterface.AddEncodedAccountKey(addressValue.ToAddress(), publicKey)
+				err = runtimeInterface.AddEncodedAccountKey(address, publicKey)
 			})
 			if err != nil {
 				panic(err)
@@ -1721,14 +1939,21 @@ func (r *interpreterRuntime) newRemovePublicKeyFunction(
 	addressValue interpreter.AddressValue,
 	runtimeInterface Interface,
 ) *interpreter.HostFunctionValue {
+
+	// Converted addresses can be cached and don't have to be recomputed on each function invocation
+	address := addressValue.ToAddress()
+
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
-			index := invocation.Arguments[0].(interpreter.IntValue)
+			index, ok := invocation.Arguments[0].(interpreter.IntValue)
+			if !ok {
+				panic(runtimeErrors.NewUnreachableError())
+			}
 
 			var publicKey []byte
 			var err error
 			wrapPanic(func() {
-				publicKey, err = runtimeInterface.RevokeEncodedAccountKey(addressValue.ToAddress(), index.ToInt())
+				publicKey, err = runtimeInterface.RevokeEncodedAccountKey(address, index.ToInt())
 			})
 			if err != nil {
 				panic(err)
@@ -1760,25 +1985,16 @@ func (r *interpreterRuntime) newRemovePublicKeyFunction(
 // It is only recorded and only written at the end of the execution
 //
 func (r *interpreterRuntime) recordContractValue(
-	inter *interpreter.Interpreter,
 	storage *Storage,
 	addressValue interpreter.AddressValue,
 	name string,
-	contractValue interpreter.Value,
+	contractValue *interpreter.CompositeValue,
 ) {
 	storage.recordContractUpdate(
-		inter,
 		addressValue.ToAddress(),
-		formatContractKey(name),
+		name,
 		contractValue,
 	)
-}
-
-func formatContractKey(name string) string {
-	const contractKey = "contract"
-
-	// \x1F = Information Separator One
-	return fmt.Sprintf("%s\x1F%s", contractKey, name)
 }
 
 func (r *interpreterRuntime) loadContract(
@@ -1803,26 +2019,23 @@ func (r *interpreterRuntime) loadContract(
 
 	default:
 
-		var storedValue interpreter.OptionalValue = interpreter.NilValue{}
+		var storedValue interpreter.Value
 
 		switch location := compositeType.Location.(type) {
 
 		case common.AddressLocation:
-			storedValue = storage.ReadValue(
-				inter,
+			storageMap := storage.GetStorageMap(
 				location.Address,
-				formatContractKey(location.Name),
+				StorageDomainContract,
 			)
+			storedValue = storageMap.ReadValue(location.Name)
 		}
 
-		switch typedValue := storedValue.(type) {
-		case *interpreter.SomeValue:
-			return typedValue.Value.(*interpreter.CompositeValue)
-		case interpreter.NilValue:
-			panic("failed to load contract")
-		default:
-			panic(runtimeErrors.NewUnreachableError())
+		if storedValue == nil {
+			panic(fmt.Errorf("failed to load contract: %s", compositeType.Location))
 		}
+
+		return storedValue.(*interpreter.CompositeValue)
 	}
 }
 
@@ -1839,7 +2052,7 @@ func (r *interpreterRuntime) instantiateContract(
 	interpreterOptions []interpreter.Option,
 	checkerOptions []sema.Option,
 ) (
-	interpreter.Value,
+	*interpreter.CompositeValue,
 	error,
 ) {
 	parameterTypes := make([]sema.Type, len(contractType.ConstructorParameters))
@@ -1968,9 +2181,35 @@ func (r *interpreterRuntime) instantiateContract(
 	return contract, err
 }
 
+func (r *interpreterRuntime) newGetAuthAccountFunction(
+	context Context,
+	storage *Storage,
+	interpreterOptions []interpreter.Option,
+	checkerOptions []sema.Option,
+) interpreter.HostFunction {
+	return func(invocation interpreter.Invocation) interpreter.Value {
+		accountAddress, ok := invocation.Arguments[0].(interpreter.AddressValue)
+		if !ok {
+			panic(runtimeErrors.NewUnreachableError())
+		}
+
+		return r.newAuthAccountValue(
+			accountAddress,
+			context,
+			storage,
+			interpreterOptions,
+			checkerOptions,
+		)
+	}
+}
+
 func (r *interpreterRuntime) newGetAccountFunction(runtimeInterface Interface, storage *Storage) interpreter.HostFunction {
 	return func(invocation interpreter.Invocation) interpreter.Value {
-		accountAddress := invocation.Arguments[0].(interpreter.AddressValue)
+		accountAddress, ok := invocation.Arguments[0].(interpreter.AddressValue)
+		if !ok {
+			panic(runtimeErrors.NewUnreachableError())
+		}
+
 		return r.getPublicAccount(
 			accountAddress,
 			runtimeInterface,
@@ -2074,9 +2313,13 @@ func (r *interpreterRuntime) newGetCurrentBlockFunction(runtimeInterface Interfa
 
 func (r *interpreterRuntime) newGetBlockFunction(runtimeInterface Interface) interpreter.HostFunction {
 	return func(invocation interpreter.Invocation) interpreter.Value {
-		height := uint64(invocation.Arguments[0].(interpreter.UInt64Value))
+		heightValue, ok := invocation.Arguments[0].(interpreter.UInt64Value)
+		if !ok {
+			panic(runtimeErrors.NewUnreachableError())
+		}
+
 		block, err := r.getBlockAtHeight(
-			height,
+			uint64(heightValue),
 			runtimeInterface,
 			invocation.Interpreter,
 		)
@@ -2185,8 +2428,15 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 
 			const requiredArgumentCount = 2
 
-			nameValue := invocation.Arguments[0].(*interpreter.StringValue)
-			newCodeValue := invocation.Arguments[1].(*interpreter.ArrayValue)
+			nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
+			if !ok {
+				panic(runtimeErrors.NewUnreachableError())
+			}
+
+			newCodeValue, ok := invocation.Arguments[1].(*interpreter.ArrayValue)
+			if !ok {
+				panic(runtimeErrors.NewUnreachableError())
+			}
 
 			constructorArguments := invocation.Arguments[requiredArgumentCount:]
 			constructorArgumentTypes := invocation.ArgumentTypes[requiredArgumentCount:]
@@ -2292,7 +2542,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				code,
 				context,
 				functions,
-				stdlib.BuiltinValues(),
+				stdlib.BuiltinValues,
 				checkerOptions,
 				storeProgram,
 				importResolutionResults{},
@@ -2369,8 +2619,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				context.SetCode(context.Location, string(code))
 
 				panic(fmt.Errorf(
-					"invalid %s: the name argument must match the name of the declaration"+
-						"name argument: %q, declaration name: %q",
+					"invalid %s: the name argument must match the name of the declaration: got %q, expected %q",
 					declarationKind.Name(),
 					nameArgument,
 					declaredName,
@@ -2492,7 +2741,7 @@ func (r *interpreterRuntime) updateAccountContractCode(
 	// If the Cadence `update__experimental` function is used,
 	// the new contract will NOT be deployed (options.createContract is false).
 
-	var contractValue interpreter.Value
+	var contractValue *interpreter.CompositeValue
 
 	createContract := contractType != nil && options.createContract
 
@@ -2503,7 +2752,7 @@ func (r *interpreterRuntime) updateAccountContractCode(
 	if createContract {
 
 		functions := r.standardLibraryFunctions(context, storage, interpreterOptions, checkerOptions)
-		values := stdlib.BuiltinValues()
+		values := stdlib.BuiltinValues
 
 		contractValue, err = r.instantiateContract(
 			program,
@@ -2537,7 +2786,6 @@ func (r *interpreterRuntime) updateAccountContractCode(
 		// until the end of the execution of the program
 
 		r.recordContractValue(
-			inter,
 			storage,
 			addressValue,
 			name,
@@ -2552,17 +2800,22 @@ func (r *interpreterRuntime) newAccountContractsGetFunction(
 	addressValue interpreter.AddressValue,
 	runtimeInterface Interface,
 ) *interpreter.HostFunctionValue {
+
+	// Converted addresses can be cached and don't have to be recomputed on each function invocation
+	address := addressValue.ToAddress()
+
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
+			nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
+			if !ok {
+				panic(runtimeErrors.NewUnreachableError())
+			}
+			name := nameValue.Str
 
-			nameValue := invocation.Arguments[0].(*interpreter.StringValue)
-
-			address := addressValue.ToAddress()
-			nameArgument := nameValue.Str
 			var code []byte
 			var err error
 			wrapPanic(func() {
-				code, err = runtimeInterface.GetAccountContractCode(address, nameArgument)
+				code, err = runtimeInterface.GetAccountContractCode(address, name)
 			})
 			if err != nil {
 				panic(err)
@@ -2592,21 +2845,26 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 	runtimeInterface Interface,
 	storage *Storage,
 ) *interpreter.HostFunctionValue {
+
+	// Converted addresses can be cached and don't have to be recomputed on each function invocation
+	address := addressValue.ToAddress()
+
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
 
 			inter := invocation.Interpreter
-			nameValue := invocation.Arguments[0].(*interpreter.StringValue)
-
-			address := addressValue.ToAddress()
-			nameArgument := nameValue.Str
+			nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
+			if !ok {
+				panic(runtimeErrors.NewUnreachableError())
+			}
+			name := nameValue.Str
 
 			// Get the current code
 
 			var code []byte
 			var err error
 			wrapPanic(func() {
-				code, err = runtimeInterface.GetAccountContractCode(address, nameArgument)
+				code, err = runtimeInterface.GetAccountContractCode(address, name)
 			})
 			if err != nil {
 				panic(err)
@@ -2630,14 +2888,14 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 					// fail the contract removal. Therefore, validate only if the code is a valid one.
 					if err == nil && containsEnumsInProgram(existingProgram) {
 						panic(&ContractRemovalError{
-							Name:          nameArgument,
+							Name:          name,
 							LocationRange: invocation.GetLocationRange(),
 						})
 					}
 				}
 
 				wrapPanic(func() {
-					err = runtimeInterface.RemoveAccountContractCode(address, nameArgument)
+					err = runtimeInterface.RemoveAccountContractCode(address, name)
 				})
 				if err != nil {
 					panic(err)
@@ -2647,10 +2905,9 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 				// until the end of the execution of the program
 
 				r.recordContractValue(
-					inter,
 					storage,
 					addressValue,
-					nameArgument,
+					name,
 					nil,
 				)
 
@@ -2688,6 +2945,8 @@ func (r *interpreterRuntime) newAccountContractsGetNamesFunction(
 	addressValue interpreter.AddressValue,
 	runtimeInterface Interface,
 ) func(inter *interpreter.Interpreter) *interpreter.ArrayValue {
+
+	// Converted addresses can be cached and don't have to be recomputed on each function invocation
 	address := addressValue.ToAddress()
 
 	return func(inter *interpreter.Interpreter) *interpreter.ArrayValue {
@@ -2733,7 +2992,7 @@ func (r *interpreterRuntime) executeNonProgram(interpret interpretFunc, context 
 
 	var program *interpreter.Program
 
-	storage := r.newStorage(context.Interface)
+	storage := NewStorage(context.Interface)
 
 	var functions stdlib.StandardLibraryFunctions
 	var values stdlib.StandardLibraryValues
@@ -2754,24 +3013,61 @@ func (r *interpreterRuntime) executeNonProgram(interpret interpretFunc, context 
 		return nil, newError(err, context)
 	}
 
+	if value.Value == nil {
+		return nil, nil
+	}
+
 	return exportValue(value)
 }
 
-func (r *interpreterRuntime) ReadStored(address common.Address, path cadence.Path, context Context) (cadence.Value, error) {
+func (r *interpreterRuntime) ReadStored(
+	address common.Address,
+	path cadence.Path,
+	context Context,
+) (
+	val cadence.Value,
+	err error,
+) {
+	defer r.Recover(
+		func(internalErr error) {
+			err = internalErr
+		},
+		context,
+	)
+
 	return r.executeNonProgram(
 		func(inter *interpreter.Interpreter) (interpreter.Value, error) {
-			key := interpreter.PathToStorageKey(importPathValue(path))
-			value := inter.ReadStored(address, key)
+			pathValue := importPathValue(path)
+
+			domain := pathValue.Domain.Identifier()
+			identifier := pathValue.Identifier
+
+			value := inter.ReadStored(address, domain, identifier)
+
 			return value, nil
 		},
 		context,
 	)
 }
 
-func (r *interpreterRuntime) ReadLinked(address common.Address, path cadence.Path, context Context) (cadence.Value, error) {
+func (r *interpreterRuntime) ReadLinked(
+	address common.Address,
+	path cadence.Path,
+	context Context,
+) (
+	val cadence.Value,
+	err error,
+) {
+	defer r.Recover(
+		func(internalErr error) {
+			err = internalErr
+		},
+		context,
+	)
+
 	return r.executeNonProgram(
 		func(inter *interpreter.Interpreter) (interpreter.Value, error) {
-			key, _, err := inter.GetCapabilityFinalTargetStorageKey(
+			targetPath, _, err := inter.GetCapabilityFinalTargetPath(
 				address,
 				importPathValue(path),
 				&sema.ReferenceType{
@@ -2782,7 +3078,16 @@ func (r *interpreterRuntime) ReadLinked(address common.Address, path cadence.Pat
 			if err != nil {
 				return nil, err
 			}
-			value := inter.ReadStored(address, key)
+
+			if targetPath == interpreter.EmptyPathValue {
+				return nil, nil
+			}
+
+			value := inter.ReadStored(
+				address,
+				targetPath.Domain.Identifier(),
+				targetPath.Identifier,
+			)
 			return value, nil
 		},
 		context,
@@ -2831,9 +3136,16 @@ func (r *interpreterRuntime) newAccountKeysAddFunction(
 	addressValue interpreter.AddressValue,
 	runtimeInterface Interface,
 ) *interpreter.HostFunctionValue {
+
+	// Converted addresses can be cached and don't have to be recomputed on each function invocation
+	address := addressValue.ToAddress()
+
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
-			publicKeyValue := invocation.Arguments[0].(*interpreter.CompositeValue)
+			publicKeyValue, ok := invocation.Arguments[0].(*interpreter.CompositeValue)
+			if !ok {
+				panic(runtimeErrors.NewUnreachableError())
+			}
 
 			inter := invocation.Interpreter
 			getLocationRange := invocation.GetLocationRange
@@ -2844,8 +3156,11 @@ func (r *interpreterRuntime) newAccountKeysAddFunction(
 			}
 
 			hashAlgo := NewHashAlgorithmFromValue(inter, getLocationRange, invocation.Arguments[1])
-			address := addressValue.ToAddress()
-			weight := invocation.Arguments[2].(interpreter.UFix64Value).ToInt()
+			weightValue, ok := invocation.Arguments[2].(interpreter.UFix64Value)
+			if !ok {
+				panic(runtimeErrors.NewUnreachableError())
+			}
+			weight := weightValue.ToInt()
 
 			var accountKey *AccountKey
 			wrapPanic(func() {
@@ -2879,10 +3194,17 @@ func (r *interpreterRuntime) newAccountKeysGetFunction(
 	addressValue interpreter.AddressValue,
 	runtimeInterface Interface,
 ) *interpreter.HostFunctionValue {
+
+	// Converted addresses can be cached and don't have to be recomputed on each function invocation
+	address := addressValue.ToAddress()
+
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
-			index := invocation.Arguments[0].(interpreter.IntValue).ToInt()
-			address := addressValue.ToAddress()
+			indexValue, ok := invocation.Arguments[0].(interpreter.IntValue)
+			if !ok {
+				panic(runtimeErrors.NewUnreachableError())
+			}
+			index := indexValue.ToInt()
 
 			var err error
 			var accountKey *AccountKey
@@ -2908,7 +3230,7 @@ func (r *interpreterRuntime) newAccountKeysGetFunction(
 					inter,
 					invocation.GetLocationRange,
 					accountKey,
-					inter.PublicKeyValidationHandler,
+					DoNotValidatePublicKey, // key from FVM has already been validated
 				),
 			)
 		},
@@ -2920,11 +3242,17 @@ func (r *interpreterRuntime) newAccountKeysRevokeFunction(
 	addressValue interpreter.AddressValue,
 	runtimeInterface Interface,
 ) *interpreter.HostFunctionValue {
+
+	// Converted addresses can be cached and don't have to be recomputed on each function invocation
+	address := addressValue.ToAddress()
+
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
-			indexValue := invocation.Arguments[0].(interpreter.IntValue)
+			indexValue, ok := invocation.Arguments[0].(interpreter.IntValue)
+			if !ok {
+				panic(runtimeErrors.NewUnreachableError())
+			}
 			index := indexValue.ToInt()
-			address := addressValue.ToAddress()
 
 			var err error
 			var accountKey *AccountKey
@@ -2958,7 +3286,7 @@ func (r *interpreterRuntime) newAccountKeysRevokeFunction(
 					inter,
 					invocation.GetLocationRange,
 					accountKey,
-					inter.PublicKeyValidationHandler,
+					DoNotValidatePublicKey, // key from FVM has already been validated
 				),
 			)
 		},
@@ -2996,13 +3324,27 @@ func (r *interpreterRuntime) newPublicAccountContracts(
 	)
 }
 
-func (r *interpreterRuntime) newStorage(runtimeInterface Interface) *Storage {
-	return NewStorage(
-		runtimeInterface,
-		func(f func(), report func(metrics Metrics, duration time.Duration)) {
-			reportMetric(f, runtimeInterface, report)
-		},
-	)
+func (r *interpreterRuntime) resourceOwnerChangedHandler(
+	runtimeInterface Interface,
+) interpreter.OnResourceOwnerChangeFunc {
+	if !r.resourceOwnerChangeHandlerEnabled {
+		return nil
+	}
+	return func(
+		interpreter *interpreter.Interpreter,
+		resource *interpreter.CompositeValue,
+		oldOwner common.Address,
+		newOwner common.Address,
+	) {
+		wrapPanic(func() {
+			runtimeInterface.ResourceOwnerChanged(
+				interpreter,
+				resource,
+				oldOwner,
+				newOwner,
+			)
+		})
+	}
 }
 
 func NewPublicKeyFromValue(
@@ -3049,19 +3391,9 @@ func NewPublicKeyFromValue(
 		)
 	}
 
-	// `valid` and `validated` fields
-	var valid, validated bool
-	validField := publicKey.GetMember(inter, getLocationRange, sema.PublicKeyIsValidField)
-	validated = validField != nil
-	if validated {
-		valid = bool(validField.(interpreter.BoolValue))
-	}
-
 	return &PublicKey{
 		PublicKey: byteArray,
 		SignAlgo:  SignatureAlgorithm(signAlgoRawValue.ToInt()),
-		IsValid:   valid,
-		Validated: validated,
 	}, nil
 }
 
@@ -3086,12 +3418,7 @@ func NewPublicKeyValue(
 			inter *interpreter.Interpreter,
 			getLocationRange func() interpreter.LocationRange,
 			publicKeyValue *interpreter.CompositeValue,
-		) interpreter.BoolValue {
-			// If the public key is already validated, avoid re-validating, and return the cached result.
-			if publicKey.Validated {
-				return interpreter.BoolValue(publicKey.IsValid)
-			}
-
+		) error {
 			return validatePublicKey(inter, getLocationRange, publicKeyValue)
 		},
 	)
@@ -3139,23 +3466,137 @@ func validatePublicKey(
 	getLocationRange func() interpreter.LocationRange,
 	publicKeyValue *interpreter.CompositeValue,
 	runtimeInterface Interface,
+) error {
+	publicKey, err := NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
+	if err != nil {
+		return err
+	}
+
+	wrapPanic(func() {
+		err = runtimeInterface.ValidatePublicKey(publicKey)
+	})
+
+	return err
+}
+
+func blsVerifyPoP(
+	inter *interpreter.Interpreter,
+	getLocationRange func() interpreter.LocationRange,
+	publicKeyValue interpreter.MemberAccessibleValue,
+	signatureValue *interpreter.ArrayValue,
+	runtimeInterface Interface,
 ) interpreter.BoolValue {
 
 	publicKey, err := NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
 	if err != nil {
-		return false
+		panic(err)
+	}
+
+	signature, err := interpreter.ByteArrayValueToByteSlice(signatureValue)
+	if err != nil {
+		panic(err)
 	}
 
 	var valid bool
 	wrapPanic(func() {
-		valid, err = runtimeInterface.ValidatePublicKey(publicKey)
+		valid, err = runtimeInterface.BLSVerifyPOP(publicKey, signature)
 	})
-
 	if err != nil {
 		panic(err)
 	}
 
 	return interpreter.BoolValue(valid)
+}
+
+func blsAggregateSignatures(
+	inter *interpreter.Interpreter,
+	runtimeInterface Interface,
+	signaturesValue *interpreter.ArrayValue,
+) interpreter.OptionalValue {
+
+	bytesArray := make([][]byte, 0, signaturesValue.Count())
+	signaturesValue.Iterate(func(element interpreter.Value) (resume bool) {
+		signature, ok := element.(*interpreter.ArrayValue)
+		if !ok {
+			panic(runtimeErrors.NewUnreachableError())
+		}
+
+		bytes, err := interpreter.ByteArrayValueToByteSlice(signature)
+		if err != nil {
+			panic(err)
+		}
+
+		bytesArray = append(bytesArray, bytes)
+
+		// Continue iteration
+		return true
+	})
+
+	var err error
+	var aggregatedSignature []byte
+	wrapPanic(func() {
+		aggregatedSignature, err = runtimeInterface.BLSAggregateSignatures(bytesArray)
+	})
+
+	// If the crypto layer produces an error, we have invalid input, return nil
+	if err != nil {
+		return interpreter.NilValue{}
+	}
+
+	aggregatedSignatureValue := interpreter.ByteSliceToByteArrayValue(inter, aggregatedSignature)
+
+	return interpreter.NewSomeValueNonCopying(
+		aggregatedSignatureValue,
+	)
+}
+
+func blsAggregatePublicKeys(
+	inter *interpreter.Interpreter,
+	getLocationRange func() interpreter.LocationRange,
+	publicKeysValue *interpreter.ArrayValue,
+	validator interpreter.PublicKeyValidationHandlerFunc,
+	runtimeInterface Interface,
+) interpreter.OptionalValue {
+
+	publicKeys := make([]*PublicKey, 0, publicKeysValue.Count())
+	publicKeysValue.Iterate(func(element interpreter.Value) (resume bool) {
+		publicKeyValue, ok := element.(*interpreter.CompositeValue)
+		if !ok {
+			panic(runtimeErrors.NewUnreachableError())
+		}
+
+		publicKey, err := NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
+		if err != nil {
+			panic(err)
+		}
+
+		publicKeys = append(publicKeys, publicKey)
+
+		// Continue iteration
+		return true
+	})
+
+	var err error
+	var aggregatedPublicKey *PublicKey
+	wrapPanic(func() {
+		aggregatedPublicKey, err = runtimeInterface.BLSAggregatePublicKeys(publicKeys)
+	})
+
+	// If the crypto layer produces an error, we have invalid input, return nil
+	if err != nil {
+		return interpreter.NilValue{}
+	}
+
+	aggregatedPublicKeyValue := NewPublicKeyValue(
+		inter,
+		getLocationRange,
+		aggregatedPublicKey,
+		validator,
+	)
+
+	return interpreter.NewSomeValueNonCopying(
+		aggregatedPublicKeyValue,
+	)
 }
 
 func verifySignature(
@@ -3237,4 +3678,15 @@ func hash(
 	}
 
 	return interpreter.ByteSliceToByteArrayValue(inter, result)
+}
+
+// DoNotValidatePublicKey conforms to the method signature for PublicKeyValidationHandlerFunc.
+// It disregards its input and returns `nil` indicating that the public key is valid.
+// It's used when handling public keys from the FVM, where they're already validated.
+func DoNotValidatePublicKey(
+	_ *interpreter.Interpreter,
+	_ func() interpreter.LocationRange,
+	_ *interpreter.CompositeValue,
+) error {
+	return nil
 }

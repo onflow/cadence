@@ -62,26 +62,47 @@ func (checker *Checker) VisitIfStatement(statement *ast.IfStatement) ast.Repr {
 
 func (checker *Checker) VisitConditionalExpression(expression *ast.ConditionalExpression) ast.Repr {
 
-	thenType, elseType := checker.visitConditional(expression.Test, expression.Then, expression.Else)
+	expectedType := checker.expectedType
+
+	checker.VisitExpression(expression.Test, BoolType)
+
+	thenType, elseType := checker.checkConditionalBranches(
+		func() Type {
+			return checker.VisitExpression(expression.Then, expectedType)
+		},
+		func() Type {
+			return checker.VisitExpression(expression.Else, expectedType)
+		},
+	)
 
 	if thenType == nil || elseType == nil {
 		panic(errors.NewUnreachableError())
 	}
 
-	// TODO: improve
-	resultType := thenType
-
-	if !IsSubType(elseType, resultType) {
+	if thenType.IsResourceType() {
 		checker.report(
-			&TypeMismatchError{
-				ExpectedType: resultType,
-				ActualType:   elseType,
-				Range:        ast.NewRangeFromPositioned(expression.Else),
+			&InvalidConditionalResourceOperandError{
+				Range: ast.NewRangeFromPositioned(expression.Then),
+			},
+		)
+	}
+	if elseType.IsResourceType() {
+		checker.report(
+			&InvalidConditionalResourceOperandError{
+				Range: ast.NewRangeFromPositioned(expression.Else),
 			},
 		)
 	}
 
-	return resultType
+	if expectedType != nil {
+		return expectedType
+	}
+
+	if thenType.Equal(elseType) {
+		return thenType
+	}
+
+	return LeastCommonSuperType(thenType, elseType)
 }
 
 // visitConditional checks a conditional.
@@ -100,18 +121,18 @@ func (checker *Checker) visitConditional(
 
 	return checker.checkConditionalBranches(
 		func() Type {
-			thenResult := thenElement.Accept(checker)
-			if thenResult == nil {
+			thenResult, ok := thenElement.Accept(checker).(Type)
+			if !ok || thenResult == nil {
 				return nil
 			}
-			return thenResult.(Type)
+			return thenResult
 		},
 		func() Type {
-			elseResult := elseElement.Accept(checker)
-			if elseResult == nil {
+			elseResult, ok := elseElement.Accept(checker).(Type)
+			if !ok || elseResult == nil {
 				return nil
 			}
-			return elseResult.(Type)
+			return elseResult
 		},
 	)
 }

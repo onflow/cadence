@@ -7,7 +7,9 @@ import {
   ProtocolConnection,
   StreamMessageReader,
   StreamMessageWriter,
-  TextDocumentItem
+  TextDocumentItem,
+  PublishDiagnosticsNotification,
+  PublishDiagnosticsParams
 } from "vscode-languageserver-protocol"
 
 import {execSync, spawn} from 'child_process'
@@ -187,4 +189,36 @@ describe("parseEntryPointArguments command", () => {
 
   test("transaction", async() =>
     testCode("transaction(a: Address) {}"))
+})
+
+describe("diagnostics", () => {
+
+  async function testCode(code: string) {
+    return withConnection(async (connection) => {
+
+      const notificationPromise = new Promise<PublishDiagnosticsParams>((resolve) => {
+        connection.onNotification(PublishDiagnosticsNotification.type, resolve)
+      })
+
+      const uri = await createTestDocument(connection, code)
+
+      const notification = await notificationPromise
+
+      expect(notification.uri).toEqual(uri)
+      expect(notification.diagnostics).toHaveLength(1)
+      expect(notification.diagnostics[0].message).toEqual("cannot find variable in this scope: `X`. not found in this scope")
+    })
+  }
+
+  test("script", async() =>
+    testCode(
+      `pub fun main() { X }`,
+    )
+  )
+
+  test("transaction", async() =>
+    testCode(
+      `transaction() { execute { X } }`,
+    )
+  )
 })

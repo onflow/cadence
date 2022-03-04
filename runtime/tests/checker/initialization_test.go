@@ -443,6 +443,10 @@ func TestCheckFieldInitializationWithReturn(t *testing.T) {
            }
        `)
 
+		// NOTE: at the moment the definite initialization analysis only considers
+		// an initialization definitive if there is no return or jump,
+		// even if it is only potential
+
 		errs := ExpectCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.FieldUninitializedError{}, errs[0])
@@ -463,8 +467,55 @@ func TestCheckFieldInitializationWithReturn(t *testing.T) {
            }
        `)
 
+		// NOTE: at the moment the definite initialization analysis only considers
+		// an initialization definitive if there is no return or jump,
+		// even if it is only potential
+
 		errs := ExpectCheckerErrors(t, err, 1)
 
+		assert.IsType(t, &sema.FieldUninitializedError{}, errs[0])
+	})
+
+	t.Run("inside for", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct Test {
+                var foo: Int
+
+                init(foo: Int) {
+                    for i in [] {
+                        return
+                    }
+                    self.foo = foo
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.FieldUninitializedError{}, errs[0])
+	})
+
+	t.Run("inside switch", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+          struct Test {
+              let n: Int
+
+              init(n: Int) {
+                  switch n {
+                  case 1:
+                      return
+                  }
+                  self.n = n
+              }
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.FieldUninitializedError{}, errs[0])
 	})
 }
@@ -530,4 +581,285 @@ func TestCheckInvalidFieldInitializationWithUseOfUninitializedInPrecondition(t *
 	errs := ExpectCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.UninitializedFieldAccessError{}, errs[0])
+}
+
+func TestCheckFieldInitializationSwitchCase(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("only initialized in one case, missing default", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+         struct Test {
+             let n: Int
+
+             init(n: Int) {
+                 switch n {
+                 case 1:
+                     self.n = n
+                 }
+             }
+         }
+       `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.FieldUninitializedError{}, errs[0])
+	})
+
+	t.Run("initialized in all cases", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+          struct Test {
+              let n: Int
+
+              init(n: Int) {
+                  switch n {
+                  case 1:
+                      self.n = n
+                  default:
+                      self.n = n
+                  }
+              }
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("uninitialized due to break", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+          struct Test {
+              let n: Int
+
+              init(n: Int) {
+                  switch n {
+                  case 1:
+                      break
+                      self.n = n
+                  default:
+                      self.n = n
+                  }
+              }
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+		assert.IsType(t, &sema.FieldUninitializedError{}, errs[1])
+	})
+
+	t.Run("definite initialization after statement", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+          struct Test {
+              let n: Int
+
+              init(n: Int) {
+                  switch n {
+                  case 1:
+                      self.n = n
+                      return
+                  }
+                  self.n = n
+              }
+          }
+        `)
+
+		// NOTE: at the moment the definite initialization analysis only considers
+		// an initialization definitive if there is no return or jump,
+		// even if it is only potential
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.FieldUninitializedError{}, errs[0])
+	})
+}
+
+func TestCheckFieldInitializationAfterJump(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("while, continue", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct Test {
+                var foo: Int
+
+                init(foo: Int) {
+                    while true {
+                        continue
+                    }
+                    self.foo = foo
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("while, break", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct Test {
+                var foo: Int
+
+                init(foo: Int) {
+                    while true {
+                        break
+                    }
+                    self.foo = foo
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("while, conditional break", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct Test {
+                var foo: Int
+
+                init(foo: Int) {
+                    while true {
+                        if true {
+                           break
+                        }
+
+                        self.foo = foo
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.FieldUninitializedError{}, errs[0])
+	})
+
+	t.Run("for, continue", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct Test {
+                var foo: Int
+
+                init(foo: Int) {
+                    for i in [] {
+                        continue
+                    }
+                    self.foo = foo
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("for, break", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct Test {
+                var foo: Int
+
+                init(foo: Int) {
+                    for i in [] {
+                        break
+                    }
+                    self.foo = foo
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("for, conditional break", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct Test {
+                var foo: Int
+
+                init(foo: Int) {
+                    for i in [] {
+                        if true {
+                           break
+                        }
+
+                        self.foo = foo
+                    }
+                }
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.FieldUninitializedError{}, errs[0])
+	})
+
+	t.Run("switch, break", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+          struct Test {
+              let n: Int
+
+              init(n: Int) {
+                  switch n {
+                  case 1:
+                      break
+                  }
+                  self.n = n
+              }
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("switch, conditional break", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+          struct Test {
+              let n: Int
+
+              init(n: Int) {
+                  switch n {
+                  case 1:
+                      if true {
+                         break
+                      }
+                      self.n = n
+                  }
+              }
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.FieldUninitializedError{}, errs[0])
+	})
 }

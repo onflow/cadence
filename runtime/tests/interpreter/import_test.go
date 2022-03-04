@@ -97,7 +97,9 @@ func TestInterpretVirtualImport(t *testing.T) {
 								func(invocation interpreter.Invocation) interpreter.Value {
 									return interpreter.UInt64Value(42)
 								},
-								nil,
+								&sema.FunctionType{
+									ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.UIntType),
+								},
 							),
 						}
 
@@ -153,7 +155,7 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 
 	t.Parallel()
 
-	address := common.BytesToAddress([]byte{0x1})
+	address := common.MustBytesToAddress([]byte{0x1})
 
 	importedCheckerA, err := checker.ParseAndCheckWithOptions(t,
 		`
@@ -319,7 +321,7 @@ func TestInterpretResourceConstructionThroughIndirectImport(t *testing.T) {
 
 	t.Parallel()
 
-	address := common.BytesToAddress([]byte{0x1})
+	address := common.MustBytesToAddress([]byte{0x1})
 
 	importedChecker, err := checker.ParseAndCheckWithOptions(t,
 		`

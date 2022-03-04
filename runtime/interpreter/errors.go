@@ -349,6 +349,34 @@ func (e ArrayIndexOutOfBoundsError) Error() string {
 	)
 }
 
+// ArraySliceIndicesError
+//
+type ArraySliceIndicesError struct {
+	FromIndex int
+	UpToIndex int
+	Size      int
+	LocationRange
+}
+
+func (e ArraySliceIndicesError) Error() string {
+	return fmt.Sprintf(
+		"slice indices [%d:%d] are out of bounds (size %d)",
+		e.FromIndex, e.UpToIndex, e.Size,
+	)
+}
+
+// InvalidSliceIndexError is returned when a slice index is invalid, such as fromIndex > upToIndex
+// This error can be returned even when fromIndex and upToIndex are both within bounds.
+type InvalidSliceIndexError struct {
+	FromIndex int
+	UpToIndex int
+	LocationRange
+}
+
+func (e InvalidSliceIndexError) Error() string {
+	return fmt.Sprintf("invalid slice index: %d > %d", e.FromIndex, e.UpToIndex)
+}
+
 // StringIndexOutOfBoundsError
 //
 type StringIndexOutOfBoundsError struct {
@@ -362,6 +390,22 @@ func (e StringIndexOutOfBoundsError) Error() string {
 		"string index out of bounds: %d, but length is %d",
 		e.Index,
 		e.Length,
+	)
+}
+
+// StringSliceIndicesError
+//
+type StringSliceIndicesError struct {
+	FromIndex int
+	UpToIndex int
+	Length    int
+	LocationRange
+}
+
+func (e StringSliceIndicesError) Error() string {
+	return fmt.Sprintf(
+		"slice indices [%d:%d] are out of bounds (length %d)",
+		e.FromIndex, e.UpToIndex, e.Length,
 	)
 }
 
@@ -393,21 +437,6 @@ type TypeLoadingError struct {
 
 func (e TypeLoadingError) Error() string {
 	return fmt.Sprintf("failed to load type: %s", e.TypeID)
-}
-
-// EncodingUnsupportedValueError
-//
-type EncodingUnsupportedValueError struct {
-	Value Value
-	Path  []string
-}
-
-func (e EncodingUnsupportedValueError) Error() string {
-	return fmt.Sprintf(
-		"encoding unsupported value to path [%s]: %[2]T, %[2]v",
-		strings.Join(e.Path, ","),
-		e.Value,
-	)
 }
 
 // MissingMemberValueError
@@ -530,9 +559,50 @@ type InterfaceMissingLocationError struct {
 	QualifiedIdentifier string
 }
 
-func (e *InterfaceMissingLocationError) Error() string {
+func (e InterfaceMissingLocationError) Error() string {
 	return fmt.Sprintf(
 		"tried to look up interface %s without a location",
 		e.QualifiedIdentifier,
 	)
+}
+
+// InvalidOperandsError
+//
+type InvalidOperandsError struct {
+	Operation    ast.Operation
+	FunctionName string
+	LeftType     StaticType
+	RightType    StaticType
+	LocationRange
+}
+
+func (e InvalidOperandsError) Error() string {
+	var op string
+	if e.Operation == ast.OperationUnknown {
+		op = e.FunctionName
+	} else {
+		op = e.Operation.Symbol()
+	}
+
+	return fmt.Sprintf(
+		"cannot apply operation %s to types: `%s`, `%s`",
+		op,
+		e.LeftType.String(),
+		e.RightType.String(),
+	)
+}
+
+// InvalidPublicKeyError is reported during PublicKey creation, if the PublicKey is invalid.
+type InvalidPublicKeyError struct {
+	PublicKey *ArrayValue
+	Err       error
+	LocationRange
+}
+
+func (e InvalidPublicKeyError) Error() string {
+	return fmt.Sprintf("invalid public key: %s", e.PublicKey)
+}
+
+func (e InvalidPublicKeyError) Unwrap() error {
+	return e.Err
 }

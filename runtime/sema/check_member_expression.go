@@ -84,23 +84,6 @@ func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) 
 
 	memberType := member.TypeAnnotation.Type
 
-	// If the member access is for a function,
-	// return a function type for a bound function,
-	// i.e. one with a receiver
-
-	if functionType, ok := memberType.(*FunctionType); ok && functionType != nil {
-
-		receiverType := accessedType
-		if isOptional {
-			receiverType = receiverType.(*OptionalType).Type
-		}
-
-		// Copy the function type and add the receiver (the accessed type)
-		functionTypeWithReceiver := *functionType
-		functionTypeWithReceiver.ReceiverType = receiverType
-		memberType = &functionTypeWithReceiver
-	}
-
 	// If the member access is optional chaining, only wrap the result value
 	// in an optional, if it is not already an optional value
 
@@ -180,6 +163,21 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 		}
 		targetRange := ast.NewRangeFromPositioned(expression.Expression)
 		member = resolver.Resolve(identifier, targetRange, checker.report)
+		switch targetExpression := accessedExpression.(type) {
+		case *ast.MemberExpression:
+			// calls to this method are cached, so this performs no computation
+			_, m, _ := checker.visitMember(targetExpression)
+			if !checker.isMutatableMember(m) && resolver.Mutating {
+				checker.report(
+					&ExternalMutationError{
+						Name:            m.Identifier.Identifier,
+						DeclarationKind: m.DeclarationKind,
+						Range:           ast.NewRangeFromPositioned(targetRange),
+						ContainerType:   m.ContainerType,
+					},
+				)
+			}
+		}
 	}
 
 	// Get the member from the accessed value based
@@ -327,6 +325,13 @@ func (checker *Checker) isReadableMember(member *Member) bool {
 func (checker *Checker) isWriteableMember(member *Member) bool {
 	return checker.isWriteableAccess(member.Access) ||
 		checker.containerTypes[member.ContainerType]
+}
+
+// isMutatableMember returns true if the given member can be mutated
+// in the current location of the checker. Currently equivalent to
+// isWriteableMember above, but separate in case this changes
+func (checker *Checker) isMutatableMember(member *Member) bool {
+	return checker.isWriteableMember(member)
 }
 
 // containingContractKindedType returns the containing contract-kinded type

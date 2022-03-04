@@ -566,19 +566,11 @@ func TestInterpretGetType(t *testing.T) {
 
 	t.Parallel()
 
-	storage := interpreter.NewInMemoryStorage()
-
-	storageAddress := common.BytesToAddress([]byte{0x42})
-	const storageKey = "test storage key"
-
-	storage.WriteValue(
-		nil,
-		storageAddress,
-		storageKey,
-		interpreter.NewSomeValueNonCopying(
-			interpreter.NewIntValueFromInt64(2),
-		),
-	)
+	storageAddress := common.MustBytesToAddress([]byte{0x42})
+	storagePath := interpreter.PathValue{
+		Domain:     common.PathDomainStorage,
+		Identifier: "test",
+	}
 
 	cases := []struct {
 		name   string
@@ -588,7 +580,9 @@ func TestInterpretGetType(t *testing.T) {
 		{
 			name: "String",
 			code: `
-              let result = "abc".getType()
+              fun test(): Type {
+                  return "abc".getType()
+              }
             `,
 			result: interpreter.TypeValue{
 				Type: interpreter.PrimitiveStaticTypeString,
@@ -597,7 +591,9 @@ func TestInterpretGetType(t *testing.T) {
 		{
 			name: "Int",
 			code: `
-              let result = (1).getType()
+              fun test(): Type {
+                  return (1).getType()
+              }
             `,
 			result: interpreter.TypeValue{
 				Type: interpreter.PrimitiveStaticTypeInt,
@@ -608,8 +604,12 @@ func TestInterpretGetType(t *testing.T) {
 			code: `
               resource R {}
 
-              let r <- create R()
-              let result = r.getType()
+              fun test(): Type {
+                  let r <- create R()
+                  let res = r.getType()
+                  destroy r
+                  return res
+              }
             `,
 			result: interpreter.TypeValue{
 				Type: interpreter.NewCompositeStaticType(TestLocation, "R"),
@@ -621,10 +621,12 @@ func TestInterpretGetType(t *testing.T) {
 			// i.e. EphemeralReferenceValue.StaticType is tested
 			name: "optional ephemeral reference",
 			code: `
-              let value = 1
-              let ref = &value as auth &Int
-              let optRef: &Int? = ref
-              let result = optRef.getType()
+              fun test(): Type {
+                  let value = 1
+                  let ref = &value as auth &Int
+                  let optRef: &Int? = ref
+                  return optRef.getType()
+              }
             `,
 			result: interpreter.TypeValue{
 				Type: interpreter.OptionalStaticType{
@@ -641,9 +643,11 @@ func TestInterpretGetType(t *testing.T) {
 			// i.e. StorageReferenceValue.StaticType is tested
 			name: "optional storage reference",
 			code: `
-              let ref = getStorageReference()
-              let optRef: &Int? = ref
-              let result = optRef.getType()
+              fun test(): Type {
+                  let ref = getStorageReference()
+                  let optRef: &Int? = ref
+                  return optRef.getType()
+              }
             `,
 			result: interpreter.TypeValue{
 				Type: interpreter.OptionalStaticType{
@@ -657,11 +661,13 @@ func TestInterpretGetType(t *testing.T) {
 		{
 			name: "array",
 			code: `
-              let result = [].getType()
+              fun test(): Type {
+                  return [1, 3].getType()
+              }
             `,
 			result: interpreter.TypeValue{
 				Type: interpreter.VariableSizedStaticType{
-					Type: interpreter.PrimitiveStaticTypeNever,
+					Type: interpreter.PrimitiveStaticTypeInt,
 				},
 			},
 		},
@@ -673,35 +679,39 @@ func TestInterpretGetType(t *testing.T) {
 			// Inject a function that returns a storage reference value,
 			// which is borrowed as: `auth &Int`
 
+			getStorageReferenceFunctionType := &sema.FunctionType{
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(
+					&sema.ReferenceType{
+						Authorized: true,
+						Type:       sema.IntType,
+					},
+				),
+			}
+
 			standardLibraryFunctions :=
 				stdlib.StandardLibraryFunctions{
 					{
 						Name: "getStorageReference",
-						Type: &sema.FunctionType{
-							ReturnTypeAnnotation: sema.NewTypeAnnotation(
-								&sema.ReferenceType{
-									Authorized: true,
-									Type:       sema.IntType,
-								},
-							),
-						},
+						Type: getStorageReferenceFunctionType,
 						Function: interpreter.NewHostFunctionValue(
 							func(invocation interpreter.Invocation) interpreter.Value {
 
 								return &interpreter.StorageReferenceValue{
 									Authorized:           true,
 									TargetStorageAddress: storageAddress,
-									TargetKey:            storageKey,
+									TargetPath:           storagePath,
 									BorrowedType:         sema.IntType,
 								}
 							},
-							nil,
+							getStorageReferenceFunctionType,
 						),
 					},
 				}
 
 			valueDeclarations := standardLibraryFunctions.ToSemaValueDeclarations()
 			values := standardLibraryFunctions.ToInterpreterValueDeclarations()
+
+			storage := interpreter.NewInMemoryStorage()
 
 			inter, err := parseCheckAndInterpretWithOptions(t,
 				testCase.code,
@@ -717,11 +727,21 @@ func TestInterpretGetType(t *testing.T) {
 			)
 			require.NoError(t, err)
 
+			storageMap := storage.GetStorageMap(storageAddress, storagePath.Domain.Identifier())
+			storageMap.WriteValue(
+				inter,
+				storagePath.Identifier,
+				interpreter.NewIntValueFromInt64(2),
+			)
+
+			result, err := inter.Invoke("test")
+			require.NoError(t, err)
+
 			AssertValuesEqual(
 				t,
 				inter,
 				testCase.result,
-				inter.Globals["result"].GetValue(),
+				result,
 			)
 		})
 	}

@@ -25,14 +25,12 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/stdlib/internal"
+	"github.com/onflow/cadence/runtime/stdlib/contracts"
 )
 
 var CryptoChecker = func() *sema.Checker {
 
-	code := internal.MustAssetString("contracts/crypto.cdc")
-
-	program, err := parser2.ParseProgram(code)
+	program, err := parser2.ParseProgram(contracts.Crypto)
 	if err != nil {
 		panic(err)
 	}
@@ -96,4 +94,67 @@ func NewCryptoContract(
 	compositeValue := value.(*interpreter.CompositeValue)
 
 	return compositeValue, nil
+}
+
+func cryptoAlgorithmEnumConstructorType(
+	enumType *sema.CompositeType,
+	enumCases []sema.CryptoAlgorithm,
+) *sema.FunctionType {
+
+	members := make([]*sema.Member, len(enumCases))
+	for i, algo := range enumCases {
+		members[i] = sema.NewPublicConstantFieldMember(
+			enumType,
+			algo.Name(),
+			enumType,
+			algo.DocString(),
+		)
+	}
+
+	constructorType := &sema.FunctionType{
+		IsConstructor: true,
+		Parameters: []*sema.Parameter{
+			{
+				Identifier:     sema.EnumRawValueFieldName,
+				TypeAnnotation: sema.NewTypeAnnotation(enumType.EnumRawType),
+			},
+		},
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(
+			&sema.OptionalType{
+				Type: enumType,
+			},
+		),
+		Members: sema.GetMembersAsMap(members),
+	}
+
+	return constructorType
+}
+
+func cryptoAlgorithmEnumValue(
+	inter *interpreter.Interpreter,
+	getLocationRange func() interpreter.LocationRange,
+	enumType *sema.CompositeType,
+	enumCases []sema.CryptoAlgorithm,
+	caseConstructor func(inter *interpreter.Interpreter, rawValue uint8) *interpreter.CompositeValue,
+) interpreter.Value {
+
+	caseCount := len(enumCases)
+	caseValues := make([]*interpreter.CompositeValue, caseCount)
+	constructorNestedVariables := map[string]*interpreter.Variable{}
+
+	for i, enumCase := range enumCases {
+		rawValue := enumCase.RawValue()
+		caseValue := caseConstructor(inter, rawValue)
+		caseValues[i] = caseValue
+		constructorNestedVariables[enumCase.Name()] =
+			interpreter.NewVariableWithValue(caseValue)
+	}
+
+	return interpreter.EnumConstructorFunction(
+		inter,
+		getLocationRange,
+		enumType,
+		caseValues,
+		constructorNestedVariables,
+	)
 }

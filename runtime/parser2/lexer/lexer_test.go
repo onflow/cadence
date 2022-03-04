@@ -22,6 +22,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -32,10 +34,10 @@ func TestMain(m *testing.M) {
 	goleak.VerifyTestMain(m)
 }
 
-func withTokens(tokenChan TokenStream, fn func([]Token)) {
+func withTokens(tokenStream TokenStream, fn func([]Token)) {
 	tokens := make([]Token, 0)
 	for {
-		token := tokenChan.Next()
+		token := tokenStream.Next()
 		tokens = append(tokens, token)
 		if token.Is(TokenEOF) {
 			fn(tokens)
@@ -1627,6 +1629,54 @@ func TestLexIntegerLiterals(t *testing.T) {
 			},
 		)
 	})
+
+	t.Run("leading zero and underscore", func(t *testing.T) {
+
+		testLex(t,
+			"0_100",
+			[]Token{
+				{
+					Type:  TokenDecimalIntegerLiteral,
+					Value: "0_100",
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+					},
+				},
+				{
+					Type: TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+						EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+					},
+				},
+			},
+		)
+	})
+
+	t.Run("leading one and underscore", func(t *testing.T) {
+
+		testLex(t,
+			"1_100",
+			[]Token{
+				{
+					Type:  TokenDecimalIntegerLiteral,
+					Value: "1_100",
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+					},
+				},
+				{
+					Type: TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+						EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+					},
+				},
+			},
+		)
+	})
 }
 
 func TestLexFixedPoint(t *testing.T) {
@@ -1842,4 +1892,254 @@ func TestLexLineComment(t *testing.T) {
 			},
 		)
 	})
+}
+
+func TestRevert(t *testing.T) {
+
+	t.Parallel()
+
+	tokenStream := Lex("1 2 3")
+
+	// Assert all tokens
+
+	assert.Equal(t,
+		Token{
+			Type:  TokenDecimalIntegerLiteral,
+			Value: "1",
+			Range: ast.Range{
+				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+			},
+		},
+		tokenStream.Next(),
+	)
+
+	assert.Equal(t,
+		Token{
+			Type:  TokenSpace,
+			Value: Space{String: " "},
+			Range: ast.Range{
+				StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+				EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+			},
+		},
+		tokenStream.Next(),
+	)
+
+	twoCursor := tokenStream.Cursor()
+
+	assert.Equal(t,
+		Token{
+			Type:  TokenDecimalIntegerLiteral,
+			Value: "2",
+			Range: ast.Range{
+				StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+				EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+			},
+		},
+		tokenStream.Next(),
+	)
+
+	assert.Equal(t,
+		Token{
+			Type:  TokenSpace,
+			Value: Space{String: " "},
+			Range: ast.Range{
+				StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+				EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+			},
+		},
+		tokenStream.Next(),
+	)
+
+	assert.Equal(t,
+		Token{
+			Type:  TokenDecimalIntegerLiteral,
+			Value: "3",
+			Range: ast.Range{
+				StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+				EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+			},
+		},
+		tokenStream.Next(),
+	)
+
+	// Assert EOF keeps on being returned for Next()
+	// at the end of the stream
+
+	assert.Equal(t,
+		Token{
+			Type: TokenEOF,
+			Range: ast.Range{
+				StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+				EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+			},
+		},
+		tokenStream.Next(),
+	)
+
+	assert.Equal(t,
+		Token{
+			Type: TokenEOF,
+			Range: ast.Range{
+				StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+				EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+			},
+		},
+		tokenStream.Next(),
+	)
+
+	// Revert back to token '2'
+
+	tokenStream.Revert(twoCursor)
+
+	// Re-assert tokens
+
+	assert.Equal(t,
+		Token{
+			Type:  TokenDecimalIntegerLiteral,
+			Value: "2",
+			Range: ast.Range{
+				StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+				EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+			},
+		},
+		tokenStream.Next(),
+	)
+
+	assert.Equal(t,
+		Token{
+			Type:  TokenSpace,
+			Value: Space{String: " "},
+			Range: ast.Range{
+				StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+				EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+			},
+		},
+		tokenStream.Next(),
+	)
+
+	assert.Equal(t,
+		Token{
+			Type:  TokenDecimalIntegerLiteral,
+			Value: "3",
+			Range: ast.Range{
+				StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+				EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+			},
+		},
+		tokenStream.Next(),
+	)
+
+	// Re-assert EOF keeps on being returned for Next()
+	// at the end of the stream
+
+	assert.Equal(t,
+		Token{
+			Type: TokenEOF,
+			Range: ast.Range{
+				StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+				EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+			},
+		},
+		tokenStream.Next(),
+	)
+
+	assert.Equal(t,
+		Token{
+			Type: TokenEOF,
+			Range: ast.Range{
+				StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+				EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+			},
+		},
+		tokenStream.Next(),
+	)
+
+}
+
+func TestEOFsAfterError(t *testing.T) {
+
+	t.Parallel()
+
+	tokenStream := Lex(`1 ''`)
+
+	// Assert all tokens
+
+	assert.Equal(t,
+		Token{
+			Type:  TokenDecimalIntegerLiteral,
+			Value: "1",
+			Range: ast.Range{
+				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+			},
+		},
+		tokenStream.Next(),
+	)
+
+	assert.Equal(t,
+		Token{
+			Type:  TokenSpace,
+			Value: Space{String: " "},
+			Range: ast.Range{
+				StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+				EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+			},
+		},
+		tokenStream.Next(),
+	)
+
+	assert.Equal(t,
+		Token{
+			Type:  TokenError,
+			Value: errors.New(`unrecognized character: U+0027 '''`),
+			Range: ast.Range{
+				StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+				EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+			},
+		},
+		tokenStream.Next(),
+	)
+
+	// Assert EOFs keep on being returned for Next()
+	// at the end of the stream
+
+	for i := 0; i < 10; i++ {
+
+		require.Equal(t,
+			Token{
+				Type: TokenEOF,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+					EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+				},
+			},
+			tokenStream.Next(),
+		)
+	}
+}
+
+func TestEOFsAfterEmptyInput(t *testing.T) {
+
+	t.Parallel()
+
+	tokenStream := Lex(``)
+
+	// Assert EOFs keep on being returned for Next()
+	// at the end of the stream
+
+	for i := 0; i < 10; i++ {
+
+		require.Equal(t,
+			Token{
+				Type: TokenEOF,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			tokenStream.Next(),
+		)
+	}
 }

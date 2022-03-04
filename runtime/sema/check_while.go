@@ -25,20 +25,7 @@ import (
 
 func (checker *Checker) VisitWhileStatement(statement *ast.WhileStatement) ast.Repr {
 
-	testExpression := statement.Test
-	testType := checker.VisitExpression(testExpression, nil)
-
-	if !testType.IsInvalidType() &&
-		!IsSubType(testType, BoolType) {
-
-		checker.report(
-			&TypeMismatchError{
-				ExpectedType: BoolType,
-				ActualType:   testType,
-				Range:        ast.NewRangeFromPositioned(testExpression),
-			},
-		)
-	}
+	checker.VisitExpression(statement.Test, BoolType)
 
 	// The body of the loop will maybe be evaluated.
 	// That means that resource invalidations and
@@ -123,7 +110,12 @@ func (checker *Checker) VisitBreakStatement(statement *ast.BreakStatement) ast.R
 				Range:            ast.NewRangeFromPositioned(statement),
 			},
 		)
+		return nil
 	}
+
+	functionActivation := checker.functionActivations.Current()
+	checker.resources.JumpsOrReturns = true
+	functionActivation.ReturnInfo.DefinitelyJumped = true
 
 	return nil
 }
@@ -139,7 +131,12 @@ func (checker *Checker) VisitContinueStatement(statement *ast.ContinueStatement)
 				Range:            ast.NewRangeFromPositioned(statement),
 			},
 		)
+		return nil
 	}
+
+	functionActivation := checker.functionActivations.Current()
+	checker.resources.JumpsOrReturns = true
+	functionActivation.ReturnInfo.DefinitelyJumped = true
 
 	return nil
 }

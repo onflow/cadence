@@ -31,12 +31,15 @@ const metaTypeSubtypeDocString = `
 Returns true if this type is a subtype of the given type at run-time
 `
 
+const MetaTypeName = "Type"
+
 // MetaType represents the type of a type.
 //
 var MetaType = &SimpleType{
-	Name:                 "Type",
-	QualifiedName:        "Type",
-	TypeID:               "Type",
+	Name:                 MetaTypeName,
+	QualifiedName:        MetaTypeName,
+	TypeID:               MetaTypeName,
+	tag:                  MetaTypeTag,
 	IsInvalid:            false,
 	IsResource:           false,
 	Storable:             true,

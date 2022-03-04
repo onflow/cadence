@@ -43,7 +43,10 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
 		defer func() {
-			interpreter.reportImportTrace(resolvedLocation.Location.String(), time.Since(startTime))
+			interpreter.reportImportTrace(
+				resolvedLocation.Location.String(),
+				time.Since(startTime),
+			)
 		}()
 	}
 

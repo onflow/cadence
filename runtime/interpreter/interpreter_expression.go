@@ -56,15 +56,20 @@ func (interpreter *Interpreter) assignmentGetterSetter(expression ast.Expression
 }
 
 // identifierExpressionGetterSetter returns a getter/setter function pair
-// for the target identifier expression, wrapped in a trampoline
+// for the target identifier expression
 //
 func (interpreter *Interpreter) identifierExpressionGetterSetter(identifierExpression *ast.IdentifierExpression) getterSetter {
-	variable := interpreter.findVariable(identifierExpression.Identifier.Identifier)
+	identifier := identifierExpression.Identifier.Identifier
+	variable := interpreter.findVariable(identifier)
+
 	return getterSetter{
 		get: func(_ bool) Value {
-			return variable.GetValue()
+			value := variable.GetValue()
+			interpreter.checkInvalidatedResourceUse(value, variable, identifier, identifierExpression)
+			return value
 		},
 		set: func(value Value) {
+			interpreter.startResourceTracking(value, variable, identifier, identifierExpression)
 			variable.SetValue(value)
 		},
 	}
@@ -74,7 +79,10 @@ func (interpreter *Interpreter) identifierExpressionGetterSetter(identifierExpre
 // for the target index expression
 //
 func (interpreter *Interpreter) indexExpressionGetterSetter(indexExpression *ast.IndexExpression) getterSetter {
-	target := interpreter.evalExpression(indexExpression.TargetExpression).(ValueIndexableValue)
+	target, ok := interpreter.evalExpression(indexExpression.TargetExpression).(ValueIndexableValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
 	indexingValue := interpreter.evalExpression(indexExpression.IndexingExpression)
 	getLocationRange := locationRangeGetter(interpreter.Location, indexExpression)
 	_, isNestedResourceMove := interpreter.Program.Elaboration.IsNestedResourceMoveExpression[indexExpression]
@@ -116,7 +124,7 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 					return typedTarget
 
 				case *SomeValue:
-					target = typedTarget.Value
+					target = typedTarget.InnerValue(interpreter, getLocationRange)
 
 				default:
 					panic(errors.NewUnreachableError())
@@ -156,7 +164,11 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 func (interpreter *Interpreter) VisitIdentifierExpression(expression *ast.IdentifierExpression) ast.Repr {
 	name := expression.Identifier.Identifier
 	variable := interpreter.findVariable(name)
-	return variable.GetValue()
+	value := variable.GetValue()
+
+	interpreter.checkInvalidatedResourceUse(value, variable, name, expression)
+
+	return value
 }
 
 func (interpreter *Interpreter) evalExpression(expression ast.Expression) Value {
@@ -164,90 +176,149 @@ func (interpreter *Interpreter) evalExpression(expression ast.Expression) Value 
 }
 
 func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpression) ast.Repr {
+
+	leftValue := interpreter.evalExpression(expression.Left)
+
+	// We make this a thunk so that we can skip computing it for certain short-circuiting operations
+	rightValue := func() Value {
+		return interpreter.evalExpression(expression.Right)
+	}
+
+	error := func(right Value) {
+		panic(InvalidOperandsError{
+			Operation:     expression.Operation,
+			LeftType:      leftValue.StaticType(),
+			RightType:     right.StaticType(),
+			LocationRange: locationRangeGetter(interpreter.Location, expression)(),
+		})
+	}
+
 	switch expression.Operation {
 	case ast.OperationPlus:
-		left := interpreter.evalExpression(expression.Left).(NumberValue)
-		right := interpreter.evalExpression(expression.Right).(NumberValue)
+		left, leftOk := leftValue.(NumberValue)
+		right, rightOk := rightValue().(NumberValue)
+		if !leftOk || !rightOk {
+			error(right)
+		}
 		return left.Plus(right)
 
 	case ast.OperationMinus:
-		left := interpreter.evalExpression(expression.Left).(NumberValue)
-		right := interpreter.evalExpression(expression.Right).(NumberValue)
+		left, leftOk := leftValue.(NumberValue)
+		right, rightOk := rightValue().(NumberValue)
+		if !leftOk || !rightOk {
+			error(right)
+		}
 		return left.Minus(right)
 
 	case ast.OperationMod:
-		left := interpreter.evalExpression(expression.Left).(NumberValue)
-		right := interpreter.evalExpression(expression.Right).(NumberValue)
+		left, leftOk := leftValue.(NumberValue)
+		right, rightOk := rightValue().(NumberValue)
+		if !leftOk || !rightOk {
+			error(right)
+		}
 		return left.Mod(right)
 
 	case ast.OperationMul:
-		left := interpreter.evalExpression(expression.Left).(NumberValue)
-		right := interpreter.evalExpression(expression.Right).(NumberValue)
+		left, leftOk := leftValue.(NumberValue)
+		right, rightOk := rightValue().(NumberValue)
+		if !leftOk || !rightOk {
+			error(right)
+		}
 		return left.Mul(right)
 
 	case ast.OperationDiv:
-		left := interpreter.evalExpression(expression.Left).(NumberValue)
-		right := interpreter.evalExpression(expression.Right).(NumberValue)
+		left, leftOk := leftValue.(NumberValue)
+		right, rightOk := rightValue().(NumberValue)
+		if !leftOk || !rightOk {
+			error(right)
+		}
 		return left.Div(right)
 
 	case ast.OperationBitwiseOr:
-		left := interpreter.evalExpression(expression.Left).(IntegerValue)
-		right := interpreter.evalExpression(expression.Right).(IntegerValue)
+		left, leftOk := leftValue.(IntegerValue)
+		right, rightOk := rightValue().(IntegerValue)
+		if !leftOk || !rightOk {
+			error(right)
+		}
 		return left.BitwiseOr(right)
 
 	case ast.OperationBitwiseXor:
-		left := interpreter.evalExpression(expression.Left).(IntegerValue)
-		right := interpreter.evalExpression(expression.Right).(IntegerValue)
+		left, leftOk := leftValue.(IntegerValue)
+		right, rightOk := rightValue().(IntegerValue)
+		if !leftOk || !rightOk {
+			error(right)
+		}
 		return left.BitwiseXor(right)
 
 	case ast.OperationBitwiseAnd:
-		left := interpreter.evalExpression(expression.Left).(IntegerValue)
-		right := interpreter.evalExpression(expression.Right).(IntegerValue)
+		left, leftOk := leftValue.(IntegerValue)
+		right, rightOk := rightValue().(IntegerValue)
+		if !leftOk || !rightOk {
+			error(right)
+		}
 		return left.BitwiseAnd(right)
 
 	case ast.OperationBitwiseLeftShift:
-		left := interpreter.evalExpression(expression.Left).(IntegerValue)
-		right := interpreter.evalExpression(expression.Right).(IntegerValue)
+		left, leftOk := leftValue.(IntegerValue)
+		right, rightOk := rightValue().(IntegerValue)
+		if !leftOk || !rightOk {
+			error(right)
+		}
 		return left.BitwiseLeftShift(right)
 
 	case ast.OperationBitwiseRightShift:
-		left := interpreter.evalExpression(expression.Left).(IntegerValue)
-		right := interpreter.evalExpression(expression.Right).(IntegerValue)
+		left, leftOk := leftValue.(IntegerValue)
+		right, rightOk := rightValue().(IntegerValue)
+		if !leftOk || !rightOk {
+			error(right)
+		}
 		return left.BitwiseRightShift(right)
 
 	case ast.OperationLess:
-		left := interpreter.evalExpression(expression.Left).(NumberValue)
-		right := interpreter.evalExpression(expression.Right).(NumberValue)
+		left, leftOk := leftValue.(NumberValue)
+		right, rightOk := rightValue().(NumberValue)
+		if !leftOk || !rightOk {
+			error(right)
+		}
 		return left.Less(right)
 
 	case ast.OperationLessEqual:
-		left := interpreter.evalExpression(expression.Left).(NumberValue)
-		right := interpreter.evalExpression(expression.Right).(NumberValue)
+		left, leftOk := leftValue.(NumberValue)
+		right, rightOk := rightValue().(NumberValue)
+		if !leftOk || !rightOk {
+			error(right)
+		}
 		return left.LessEqual(right)
 
 	case ast.OperationGreater:
-		left := interpreter.evalExpression(expression.Left).(NumberValue)
-		right := interpreter.evalExpression(expression.Right).(NumberValue)
+		left, leftOk := leftValue.(NumberValue)
+		right, rightOk := rightValue().(NumberValue)
+		if !leftOk || !rightOk {
+			error(right)
+		}
 		return left.Greater(right)
 
 	case ast.OperationGreaterEqual:
-		left := interpreter.evalExpression(expression.Left).(NumberValue)
-		right := interpreter.evalExpression(expression.Right).(NumberValue)
+		left, leftOk := leftValue.(NumberValue)
+		right, rightOk := rightValue().(NumberValue)
+		if !leftOk || !rightOk {
+			error(right)
+		}
 		return left.GreaterEqual(right)
 
 	case ast.OperationEqual:
-		left := interpreter.evalExpression(expression.Left)
-		right := interpreter.evalExpression(expression.Right)
-		return interpreter.testEqual(left, right, expression)
+		return interpreter.testEqual(leftValue, rightValue(), expression)
 
 	case ast.OperationNotEqual:
-		left := interpreter.evalExpression(expression.Left)
-		right := interpreter.evalExpression(expression.Right)
-		return !interpreter.testEqual(left, right, expression)
+		return !interpreter.testEqual(leftValue, rightValue(), expression)
 
 	case ast.OperationOr:
 		// interpret the left-hand side
-		left := interpreter.evalExpression(expression.Left).(BoolValue)
+		left, leftOk := leftValue.(BoolValue)
+		if !leftOk {
+			// ok to evaluate the right value here because we will abort afterwards
+			error(rightValue())
+		}
 		// only interpret right-hand side if left-hand side is false
 		if left {
 			return left
@@ -255,11 +326,19 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 
 		// after interpreting the left-hand side,
 		// interpret the right-hand side
-		return interpreter.evalExpression(expression.Right).(BoolValue)
+		right, rightOk := rightValue().(BoolValue)
+		if !rightOk {
+			error(right)
+		}
+		return right
 
 	case ast.OperationAnd:
 		// interpret the left-hand side
-		left := interpreter.evalExpression(expression.Left).(BoolValue)
+		left, leftOk := leftValue.(BoolValue)
+		if !leftOk {
+			// ok to evaluate the right value here because we will abort afterwards
+			error(rightValue())
+		}
 		// only interpret right-hand side if left-hand side is true
 		if !left {
 			return left
@@ -267,24 +346,27 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 
 		// after interpreting the left-hand side,
 		// interpret the right-hand side
-		return interpreter.evalExpression(expression.Right).(BoolValue)
+		right, rightOk := rightValue().(BoolValue)
+		if !rightOk {
+			error(right)
+		}
+		return right
 
 	case ast.OperationNilCoalesce:
-		// interpret the left-hand side
-		left := interpreter.evalExpression(expression.Left)
+		getLocationRange := locationRangeGetter(interpreter.Location, expression)
 
 		// only evaluate right-hand side if left-hand side is nil
-		if some, ok := left.(*SomeValue); ok {
-			return some.Value
+		if some, ok := leftValue.(*SomeValue); ok {
+			return some.InnerValue(interpreter, getLocationRange)
 		}
 
-		value := interpreter.evalExpression(expression.Right)
+		value := rightValue()
 
 		rightType := interpreter.Program.Elaboration.BinaryExpressionRightTypes[expression]
 		resultType := interpreter.Program.Elaboration.BinaryExpressionResultTypes[expression]
 
 		// NOTE: important to convert both any and optional
-		return interpreter.ConvertAndBox(value, rightType, resultType)
+		return interpreter.ConvertAndBox(getLocationRange, value, rightType, resultType)
 	}
 
 	panic(&unsupportedOperation{
@@ -294,18 +376,27 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 	})
 }
 
-func (interpreter *Interpreter) testEqual(left, right Value, hasPosition ast.HasPosition) BoolValue {
-	left = interpreter.unbox(left)
-	right = interpreter.unbox(right)
+func (interpreter *Interpreter) testEqual(left, right Value, expression *ast.BinaryExpression) BoolValue {
+	left = interpreter.Unbox(
+		locationRangeGetter(interpreter.Location, expression.Left),
+		left,
+	)
+
+	right = interpreter.Unbox(
+		locationRangeGetter(interpreter.Location, expression.Right),
+		right,
+	)
 
 	leftEquatable, ok := left.(EquatableValue)
 	if !ok {
 		return false
 	}
 
-	getLocationRange := locationRangeGetter(interpreter.Location, hasPosition)
-
-	return BoolValue(leftEquatable.Equal(interpreter, getLocationRange, right))
+	return BoolValue(leftEquatable.Equal(
+		interpreter,
+		locationRangeGetter(interpreter.Location, expression),
+		right,
+	))
 }
 
 func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpression) ast.Repr {
@@ -313,14 +404,21 @@ func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpres
 
 	switch expression.Operation {
 	case ast.OperationNegate:
-		boolValue := value.(BoolValue)
+		boolValue, ok := value.(BoolValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
 		return boolValue.Negate()
 
 	case ast.OperationMinus:
-		integerValue := value.(NumberValue)
+		integerValue, ok := value.(NumberValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
 		return integerValue.Negate()
 
 	case ast.OperationMove:
+		interpreter.invalidateResource(value)
 		return value
 	}
 
@@ -436,6 +534,13 @@ func (interpreter *Interpreter) VisitFixedPointExpression(expression *ast.FixedP
 }
 
 func (interpreter *Interpreter) VisitStringExpression(expression *ast.StringExpression) ast.Repr {
+	stringType := interpreter.Program.Elaboration.StringExpressionType[expression]
+
+	switch stringType {
+	case sema.CharacterType:
+		return NewCharacterValue(expression.Value)
+	}
+
 	return NewStringValue(expression.Value)
 }
 
@@ -511,14 +616,20 @@ func (interpreter *Interpreter) VisitMemberExpression(expression *ast.MemberExpr
 }
 
 func (interpreter *Interpreter) VisitIndexExpression(expression *ast.IndexExpression) ast.Repr {
-	typedResult := interpreter.evalExpression(expression.TargetExpression).(ValueIndexableValue)
+	typedResult, ok := interpreter.evalExpression(expression.TargetExpression).(ValueIndexableValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
 	indexingValue := interpreter.evalExpression(expression.IndexingExpression)
 	getLocationRange := locationRangeGetter(interpreter.Location, expression)
 	return typedResult.GetKey(interpreter, getLocationRange, indexingValue)
 }
 
 func (interpreter *Interpreter) VisitConditionalExpression(expression *ast.ConditionalExpression) ast.Repr {
-	value := interpreter.evalExpression(expression.Test).(BoolValue)
+	value, ok := interpreter.evalExpression(expression.Test).(BoolValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
 	if value {
 		return interpreter.evalExpression(expression.Then)
 	} else {
@@ -531,8 +642,12 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 	// tracing
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
+		invokedExpression := invocationExpression.InvokedExpression.String()
 		defer func() {
-			interpreter.reportFunctionTrace(invocationExpression.InvokedExpression.String(), time.Since(startTime))
+			interpreter.reportFunctionTrace(
+				invokedExpression,
+				time.Since(startTime),
+			)
 		}()
 	}
 
@@ -556,15 +671,20 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 			return typedResult
 
 		case *SomeValue:
-			result = typedResult.Value
+			result = typedResult.InnerValue(
+				interpreter,
+				locationRangeGetter(interpreter.Location, invocationExpression.InvokedExpression),
+			)
 
 		default:
 			panic(errors.NewUnreachableError())
 		}
 	}
 
-	function := result.(FunctionValue)
-
+	function, ok := result.(FunctionValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
 	// NOTE: evaluate all argument expressions in call-site scope, not in function body
 	argumentExpressions := make([]ast.Expression, len(invocationExpression.Arguments))
 	for i, argument := range invocationExpression.Arguments {
@@ -573,8 +693,6 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 
 	arguments := interpreter.visitExpressionsNonCopying(argumentExpressions)
 
-	receiverType :=
-		interpreter.Program.Elaboration.InvocationExpressionReceiverTypes[invocationExpression]
 	typeParameterTypes :=
 		interpreter.Program.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
 	argumentTypes :=
@@ -588,7 +706,6 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 
 	resultValue := interpreter.invokeFunctionValue(
 		function,
-		receiverType,
 		arguments,
 		argumentExpressions,
 		argumentTypes,
@@ -678,6 +795,8 @@ func (interpreter *Interpreter) VisitFunctionExpression(expression *ast.Function
 func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingExpression) ast.Repr {
 	value := interpreter.evalExpression(expression.Expression)
 
+	getLocationRange := locationRangeGetter(interpreter.Location, expression.Expression)
+
 	expectedType := interpreter.Program.Elaboration.CastingTargetTypes[expression]
 
 	switch expression.Operation {
@@ -690,6 +809,9 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 				return NilValue{}
 			}
 
+			// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
+			value = interpreter.BoxOptional(getLocationRange, value, expectedType)
+
 			return NewSomeValueNonCopying(value)
 
 		case ast.OperationForceCast:
@@ -701,7 +823,8 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 				})
 			}
 
-			return value
+			// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
+			return interpreter.BoxOptional(getLocationRange, value, expectedType)
 
 		default:
 			panic(errors.NewUnreachableError())
@@ -709,7 +832,8 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 
 	case ast.OperationCast:
 		staticValueType := interpreter.Program.Elaboration.CastingStaticValueTypes[expression]
-		return interpreter.ConvertAndBox(value, staticValueType, expectedType)
+		// The cast may upcast to an optional type, e.g. `1 as Int?`, so box
+		return interpreter.ConvertAndBox(getLocationRange, value, staticValueType, expectedType)
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -722,6 +846,8 @@ func (interpreter *Interpreter) VisitCreateExpression(expression *ast.CreateExpr
 
 func (interpreter *Interpreter) VisitDestroyExpression(expression *ast.DestroyExpression) ast.Repr {
 	value := interpreter.evalExpression(expression.Expression)
+
+	interpreter.invalidateResource(value)
 
 	getLocationRange := locationRangeGetter(interpreter.Location, expression)
 
@@ -736,11 +862,45 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 
 	result := interpreter.evalExpression(referenceExpression.Expression)
 
-	return &EphemeralReferenceValue{
-		Authorized:   borrowType.Authorized,
-		Value:        result,
-		BorrowedType: borrowType.Type,
+	if result, ok := result.(ReferenceTrackedResourceKindedValue); ok {
+		interpreter.trackReferencedResourceKindedValue(result.StorageID(), result)
 	}
+
+	switch typ := borrowType.(type) {
+	case *sema.OptionalType:
+		innerBorrowType, ok := typ.Type.(*sema.ReferenceType)
+		// we enforce this in the checker
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+		switch result := result.(type) {
+		// references to optionals are transformed into optional references, so move
+		// the *SomeValue out to the reference itself
+		case *SomeValue:
+			getLocationRange := locationRangeGetter(interpreter.Location, referenceExpression.Expression)
+
+			return NewSomeValueNonCopying(&EphemeralReferenceValue{
+				Authorized:   innerBorrowType.Authorized,
+				Value:        result.InnerValue(interpreter, getLocationRange),
+				BorrowedType: innerBorrowType.Type,
+			})
+		case NilValue:
+			return NilValue{}
+		default:
+			return &EphemeralReferenceValue{
+				Authorized:   innerBorrowType.Authorized,
+				Value:        result,
+				BorrowedType: innerBorrowType.Type,
+			}
+		}
+	case *sema.ReferenceType:
+		return &EphemeralReferenceValue{
+			Authorized:   typ.Authorized,
+			Value:        result,
+			BorrowedType: typ.Type,
+		}
+	}
+	panic(errors.NewUnreachableError())
 }
 
 func (interpreter *Interpreter) VisitForceExpression(expression *ast.ForceExpression) ast.Repr {
@@ -748,7 +908,8 @@ func (interpreter *Interpreter) VisitForceExpression(expression *ast.ForceExpres
 
 	switch result := result.(type) {
 	case *SomeValue:
-		return result.Value
+		getLocationRange := locationRangeGetter(interpreter.Location, expression.Expression)
+		return result.InnerValue(interpreter, getLocationRange)
 
 	case NilValue:
 		panic(

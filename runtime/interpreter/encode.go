@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"fmt"
 	"math"
+	"math/big"
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
@@ -30,6 +31,19 @@ import (
 )
 
 const cborTagSize = 2
+
+var bigOne = big.NewInt(1)
+
+func getBigIntCBORSize(v *big.Int) uint32 {
+	sign := v.Sign()
+	if sign < 0 {
+		v = new(big.Int).Abs(v)
+		v.Sub(v, bigOne)
+	}
+
+	// tag number + bytes
+	return 1 + getBytesCBORSize(v.Bytes())
+}
 
 func getIntCBORSize(v int64) uint32 {
 	if v < 0 {
@@ -101,7 +115,7 @@ const (
 	CBORTagTypeValue
 	_ // DO *NOT* REPLACE. Previously used for array values
 	CBORTagStringValue
-	_
+	CBORTagCharacterValue
 	_
 	_
 	_
@@ -237,6 +251,19 @@ func (v BoolValue) Encode(e *atree.Encoder) error {
 
 // Encode encodes the value as a CBOR string
 //
+func (v CharacterValue) Encode(e *atree.Encoder) error {
+	err := e.CBOR.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, CBORTagCharacterValue,
+	})
+	if err != nil {
+		return err
+	}
+	return e.CBOR.EncodeString(string(v))
+}
+
+// Encode encodes the value as a CBOR string
+//
 func (v *StringValue) Encode(e *atree.Encoder) error {
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
@@ -250,7 +277,7 @@ func (v *StringValue) Encode(e *atree.Encoder) error {
 
 // Encode encodes the value as a CBOR string
 //
-func (v stringAtreeValue) Encode(e *atree.Encoder) error {
+func (v StringAtreeValue) Encode(e *atree.Encoder) error {
 	return e.CBOR.EncodeString(string(v))
 }
 
@@ -1272,7 +1299,7 @@ func (t FunctionStaticType) Encode(_ *cbor.StreamEncoder) error {
 }
 
 // compositeTypeInfo
-
+//
 type compositeTypeInfo struct {
 	location            common.Location
 	qualifiedIdentifier string
@@ -1319,3 +1346,13 @@ func (c compositeTypeInfo) Equal(o atree.TypeInfo) bool {
 		c.qualifiedIdentifier == other.qualifiedIdentifier &&
 		c.kind == other.kind
 }
+
+// EmptyTypeInfo
+//
+type EmptyTypeInfo struct{}
+
+func (e EmptyTypeInfo) Encode(encoder *cbor.StreamEncoder) error {
+	return encoder.EncodeNil()
+}
+
+var emptyTypeInfo atree.TypeInfo = EmptyTypeInfo{}

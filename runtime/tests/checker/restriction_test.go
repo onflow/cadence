@@ -1124,3 +1124,17 @@ func TestCheckRestrictedConformance(t *testing.T) {
 
 	require.NoError(t, err)
 }
+
+func TestCheckInvalidRestriction(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      let x: {h} = nil
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 2)
+
+	require.IsType(t, &sema.NotDeclaredError{}, errs[0])
+	require.IsType(t, &sema.AmbiguousRestrictedTypeError{}, errs[1])
+}

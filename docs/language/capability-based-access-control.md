@@ -115,8 +115,9 @@ This can be done using the `borrow` function of the capability:
   If the function is called on a typed capability, the capability's type is used when borrowing.
   If the capability is untyped, a type argument must be provided explicitly in the call to `borrow`.
 
-  The function returns `nil` when the targeted path is empty, i.e. nothing is stored under it,
-  and when the requested type exceeds what is allowed by the capability (or any interim capabilities).
+  The function returns `nil` when the targeted path is empty, i.e. nothing is stored under it.
+  When the requested type exceeds what is allowed by the capability (or any interim capabilities),
+  execution will abort with an error.
 
 ```cadence
 // Declare a resource interface named `HasCount`, that has a field `count`

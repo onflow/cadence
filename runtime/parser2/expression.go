@@ -341,7 +341,13 @@ func init() {
 	defineExpr(literalExpr{
 		tokenType: lexer.TokenBinaryIntegerLiteral,
 		nullDenotation: func(p *parser, token lexer.Token) ast.Expression {
-			literal := token.Value.(string)
+			literal, ok := token.Value.(string)
+			if !ok {
+				panic(fmt.Errorf(
+					"value for token %s was not a string",
+					lexer.TokenBinaryIntegerLiteral,
+				))
+			}
 			return parseIntegerLiteral(
 				p,
 				literal,
@@ -355,7 +361,13 @@ func init() {
 	defineExpr(literalExpr{
 		tokenType: lexer.TokenOctalIntegerLiteral,
 		nullDenotation: func(p *parser, token lexer.Token) ast.Expression {
-			literal := token.Value.(string)
+			literal, ok := token.Value.(string)
+			if !ok {
+				panic(fmt.Errorf(
+					"value for token %s was not a string",
+					lexer.TokenOctalIntegerLiteral,
+				))
+			}
 			return parseIntegerLiteral(
 				p,
 				literal,
@@ -369,7 +381,13 @@ func init() {
 	defineExpr(literalExpr{
 		tokenType: lexer.TokenDecimalIntegerLiteral,
 		nullDenotation: func(p *parser, token lexer.Token) ast.Expression {
-			literal := token.Value.(string)
+			literal, ok := token.Value.(string)
+			if !ok {
+				panic(fmt.Errorf(
+					"value for token %s was not a string",
+					lexer.TokenDecimalIntegerLiteral,
+				))
+			}
 			return parseIntegerLiteral(
 				p,
 				literal,
@@ -383,7 +401,13 @@ func init() {
 	defineExpr(literalExpr{
 		tokenType: lexer.TokenHexadecimalIntegerLiteral,
 		nullDenotation: func(p *parser, token lexer.Token) ast.Expression {
-			literal := token.Value.(string)
+			literal, ok := token.Value.(string)
+			if !ok {
+				panic(fmt.Errorf(
+					"value for token %s was not a string",
+					lexer.TokenHexadecimalIntegerLiteral,
+				))
+			}
 			return parseIntegerLiteral(
 				p,
 				literal,
@@ -397,7 +421,13 @@ func init() {
 	defineExpr(literalExpr{
 		tokenType: lexer.TokenUnknownBaseIntegerLiteral,
 		nullDenotation: func(p *parser, token lexer.Token) ast.Expression {
-			literal := token.Value.(string)
+			literal, ok := token.Value.(string)
+			if !ok {
+				panic(fmt.Errorf(
+					"value for token %s was not a string",
+					lexer.TokenUnknownBaseIntegerLiteral,
+				))
+			}
 			return parseIntegerLiteral(
 				p,
 				literal,
@@ -1281,7 +1311,13 @@ func defaultExprMetaLeftDenotation(
 func exprLeftBindingPower(token lexer.Token) int {
 	tokenType := token.Type
 	if tokenType == lexer.TokenIdentifier {
-		identifier := token.Value.(string)
+		identifier, ok := token.Value.(string)
+		if !ok {
+			panic(fmt.Errorf(
+				"value for token %s was not a string",
+				tokenType,
+			))
+		}
 		return exprIdentifierLeftBindingPowers[identifier]
 	}
 	return exprLeftBindingPowers[tokenType]
@@ -1539,9 +1575,10 @@ func parseIntegerLiteral(p *parser, literal, text string, kind IntegerLiteralKin
 	}
 
 	return &ast.IntegerExpression{
-		Value: value,
-		Base:  base,
-		Range: tokenRange,
+		PositiveLiteral: literal,
+		Value:           value,
+		Base:            base,
+		Range:           tokenRange,
 	}
 }
 
@@ -1558,12 +1595,13 @@ func parseFixedPointPart(part string) (integer *big.Int, scale uint) {
 	return integer, scale
 }
 
-func parseFixedPointLiteral(text string, tokenRange ast.Range) *ast.FixedPointExpression {
-	parts := strings.Split(text, ".")
+func parseFixedPointLiteral(literal string, tokenRange ast.Range) *ast.FixedPointExpression {
+	parts := strings.Split(literal, ".")
 	integer, _ := parseFixedPointPart(parts[0])
 	fractional, scale := parseFixedPointPart(parts[1])
 
 	return &ast.FixedPointExpression{
+		PositiveLiteral: literal,
 		Negative:        false,
 		UnsignedInteger: integer,
 		Fractional:      fractional,

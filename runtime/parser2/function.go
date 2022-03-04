@@ -51,6 +51,9 @@ func parseParameterList(p *parser) (parameterList *ast.ParameterList) {
 		p.skipSpaceAndComments(true)
 		switch p.current.Type {
 		case lexer.TokenIdentifier:
+			if !expectParameter {
+				panic("expected comma, got start of parameter")
+			}
 			parameter := parseParameter(p)
 			parameters = append(parameters, parameter)
 			expectParameter = false
@@ -115,7 +118,13 @@ func parseParameter(p *parser) *ast.Parameter {
 		))
 	}
 	argumentLabel := ""
-	parameterName := p.current.Value.(string)
+	parameterName, ok := p.current.Value.(string)
+	if !ok {
+		panic(fmt.Errorf(
+			"expected parameter %s to be a string",
+			p.current,
+		))
+	}
 	// Skip the identifier
 	p.next()
 
@@ -125,7 +134,13 @@ func parseParameter(p *parser) *ast.Parameter {
 	p.skipSpaceAndComments(true)
 	if p.current.Is(lexer.TokenIdentifier) {
 		argumentLabel = parameterName
-		parameterName = p.current.Value.(string)
+		parameterName, ok = p.current.Value.(string)
+		if !ok {
+			panic(fmt.Errorf(
+				"expected parameter %s to be a string",
+				p.current,
+			))
+		}
 		parameterPos = p.current.StartPos
 		// Skip the identifier
 		p.next()

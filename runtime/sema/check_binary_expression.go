@@ -130,9 +130,9 @@ func (checker *Checker) VisitBinaryExpression(expression *ast.BinaryExpression) 
 
 		case BinaryOperationKindEquality:
 			return checker.checkBinaryExpressionEquality(
-				expression, operation, operationKind,
+				expression, operation,
 				leftType, rightType,
-				leftIsInvalid, rightIsInvalid, anyInvalid,
+				anyInvalid,
 			)
 
 		default:
@@ -163,16 +163,16 @@ func (checker *Checker) VisitBinaryExpression(expression *ast.BinaryExpression) 
 		switch operationKind {
 		case BinaryOperationKindBooleanLogic:
 			return checker.checkBinaryExpressionBooleanLogic(
-				expression, operation, operationKind,
+				expression, operation,
 				leftType, rightType,
 				leftIsInvalid, rightIsInvalid, anyInvalid,
 			)
 
 		case BinaryOperationKindNilCoalescing:
 			resultType := checker.checkBinaryExpressionNilCoalescing(
-				expression, operation, operationKind,
+				expression, operation,
 				leftType, rightType,
-				leftIsInvalid, rightIsInvalid, anyInvalid,
+				leftIsInvalid, rightIsInvalid,
 			)
 
 			checker.Elaboration.BinaryExpressionResultTypes[expression] = resultType
@@ -212,8 +212,8 @@ func (checker *Checker) checkBinaryExpressionArithmeticOrNonEqualityComparisonOr
 		panic(errors.NewUnreachableError())
 	}
 
-	leftIsNumber := IsSubType(leftType, expectedSuperType)
-	rightIsNumber := IsSubType(rightType, expectedSuperType)
+	leftIsNumber := IsSameTypeKind(leftType, expectedSuperType)
+	rightIsNumber := IsSameTypeKind(rightType, expectedSuperType)
 
 	reportedInvalidOperands := false
 
@@ -255,12 +255,23 @@ func (checker *Checker) checkBinaryExpressionArithmeticOrNonEqualityComparisonOr
 		}
 	}
 
-	// check both types are equal
+	shouldReportInvalidOperands := func(leftType, rightType Type) bool {
+		// If errors are already reported, then avoid reporting them again.
+		if reportedInvalidOperands || anyInvalid {
+			return false
+		}
 
-	if !reportedInvalidOperands &&
-		!anyInvalid &&
-		!leftType.Equal(rightType) {
+		// Both types should be equal.
+		if !leftType.Equal(rightType) {
+			return true
+		}
 
+		// Arithmetic, bitwise and non-equality comparison operators
+		// are not supported for numeric supertypes.
+		return isNumericSuperType(leftType)
+	}
+
+	if shouldReportInvalidOperands(leftType, rightType) {
 		checker.report(
 			&InvalidBinaryOperandsError{
 				Operation: operation,
@@ -288,9 +299,8 @@ func (checker *Checker) checkBinaryExpressionArithmeticOrNonEqualityComparisonOr
 func (checker *Checker) checkBinaryExpressionEquality(
 	expression *ast.BinaryExpression,
 	operation ast.Operation,
-	operationKind BinaryOperationKind,
 	leftType, rightType Type,
-	leftIsInvalid, rightIsInvalid, anyInvalid bool,
+	anyInvalid bool,
 ) (resultType Type) {
 
 	resultType = BoolType
@@ -319,14 +329,13 @@ func (checker *Checker) checkBinaryExpressionEquality(
 func (checker *Checker) checkBinaryExpressionBooleanLogic(
 	expression *ast.BinaryExpression,
 	operation ast.Operation,
-	operationKind BinaryOperationKind,
 	leftType, rightType Type,
 	leftIsInvalid, rightIsInvalid, anyInvalid bool,
 ) Type {
 	// check both types are boolean subtypes
 
-	leftIsBool := IsSubType(leftType, BoolType)
-	rightIsBool := IsSubType(rightType, BoolType)
+	leftIsBool := IsSameTypeKind(leftType, BoolType)
+	rightIsBool := IsSameTypeKind(rightType, BoolType)
 
 	if !leftIsBool && !rightIsBool {
 		if !anyInvalid {
@@ -371,9 +380,8 @@ func (checker *Checker) checkBinaryExpressionBooleanLogic(
 func (checker *Checker) checkBinaryExpressionNilCoalescing(
 	expression *ast.BinaryExpression,
 	operation ast.Operation,
-	operationKind BinaryOperationKind,
 	leftType, rightType Type,
-	leftIsInvalid, rightIsInvalid, anyInvalid bool,
+	leftIsInvalid, rightIsInvalid bool,
 ) Type {
 	leftOptional, leftIsOptional := leftType.(*OptionalType)
 

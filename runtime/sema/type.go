@@ -95,6 +95,7 @@ type TypeID = common.TypeID
 type Type interface {
 	IsType()
 	ID() TypeID
+	Tag() TypeTag
 	String() string
 	QualifiedString() string
 	Equal(other Type) bool
@@ -181,8 +182,9 @@ type ValueIndexableType interface {
 }
 
 type MemberResolver struct {
-	Kind    common.DeclarationKind
-	Resolve func(identifier string, targetRange ast.Range, report func(error)) *Member
+	Kind     common.DeclarationKind
+	Mutating bool
+	Resolve  func(identifier string, targetRange ast.Range, report func(error)) *Member
 }
 
 // ContainedType is a type which might have a container type
@@ -197,7 +199,7 @@ type ContainedType interface {
 //
 type ContainerType interface {
 	Type
-	isContainerType() bool
+	IsContainerType() bool
 	GetNestedTypes() *StringTypeOrderedMap
 }
 
@@ -205,7 +207,7 @@ func VisitThisAndNested(t Type, visit func(ty Type)) {
 	visit(t)
 
 	containerType, ok := t.(ContainerType)
-	if !ok || !containerType.isContainerType() {
+	if !ok || !containerType.IsContainerType() {
 		return
 	}
 
@@ -445,6 +447,14 @@ type OptionalType struct {
 
 func (*OptionalType) IsType() {}
 
+func (t *OptionalType) Tag() TypeTag {
+	if t.Type == NeverType {
+		return NilTypeTag
+	}
+
+	return t.Type.Tag().Or(NilTypeTag)
+}
+
 func (t *OptionalType) String() string {
 	if t.Type == nil {
 		return "optional"
@@ -629,6 +639,10 @@ type GenericType struct {
 
 func (*GenericType) IsType() {}
 
+func (t *GenericType) Tag() TypeTag {
+	return GenericTypeTag
+}
+
 func (t *GenericType) String() string {
 	return t.TypeParameter.Name
 }
@@ -740,6 +754,7 @@ type IntegerRangedType interface {
 	Type
 	MinInt() *big.Int
 	MaxInt() *big.Int
+	IsSuperType() bool
 }
 
 type FractionalRangedType interface {
@@ -834,6 +849,7 @@ func addSaturatingArithmeticFunctions(t SaturatingArithmeticType, members map[st
 //
 type NumericType struct {
 	name                       string
+	tag                        TypeTag
 	minInt                     *big.Int
 	maxInt                     *big.Int
 	supportsSaturatingAdd      bool
@@ -842,12 +858,22 @@ type NumericType struct {
 	supportsSaturatingDivide   bool
 	memberResolvers            map[string]MemberResolver
 	memberResolversOnce        sync.Once
+	isSuperType                bool
 }
 
 var _ IntegerRangedType = &NumericType{}
 
 func NewNumericType(typeName string) *NumericType {
 	return &NumericType{name: typeName}
+}
+
+func (t *NumericType) Tag() TypeTag {
+	return t.tag
+}
+
+func (t *NumericType) WithTag(tag TypeTag) *NumericType {
+	t.tag = tag
+	return t
 }
 
 func (t *NumericType) WithIntRange(min *big.Int, max *big.Int) *NumericType {
@@ -980,10 +1006,20 @@ func (t *NumericType) initializeMemberResolvers() {
 	})
 }
 
+func (t *NumericType) AsSuperType() *NumericType {
+	t.isSuperType = true
+	return t
+}
+
+func (t *NumericType) IsSuperType() bool {
+	return t.isSuperType
+}
+
 // FixedPointNumericType represents all the types in the fixed-point range.
 //
 type FixedPointNumericType struct {
 	name                       string
+	tag                        TypeTag
 	scale                      uint
 	minInt                     *big.Int
 	maxInt                     *big.Int
@@ -995,6 +1031,7 @@ type FixedPointNumericType struct {
 	supportsSaturatingDivide   bool
 	memberResolvers            map[string]MemberResolver
 	memberResolversOnce        sync.Once
+	isSuperType                bool
 }
 
 var _ FractionalRangedType = &FixedPointNumericType{}
@@ -1003,6 +1040,15 @@ func NewFixedPointNumericType(typeName string) *FixedPointNumericType {
 	return &FixedPointNumericType{
 		name: typeName,
 	}
+}
+
+func (t *FixedPointNumericType) Tag() TypeTag {
+	return t.tag
+}
+
+func (t *FixedPointNumericType) WithTag(tag TypeTag) *FixedPointNumericType {
+	t.tag = tag
+	return t
 }
 
 func (t *FixedPointNumericType) WithIntRange(minInt *big.Int, maxInt *big.Int) *FixedPointNumericType {
@@ -1162,27 +1208,46 @@ func (t *FixedPointNumericType) initializeMemberResolvers() {
 	})
 }
 
+func (t *FixedPointNumericType) AsSuperType() *FixedPointNumericType {
+	t.isSuperType = true
+	return t
+}
+
+func (t *FixedPointNumericType) IsSuperType() bool {
+	return t.isSuperType
+}
+
 // Numeric types
 
 var (
 
 	// NumberType represents the super-type of all number types
-	NumberType = NewNumericType(NumberTypeName)
+	NumberType = NewNumericType(NumberTypeName).
+			WithTag(NumberTypeTag).
+			AsSuperType()
 
 	// SignedNumberType represents the super-type of all signed number types
-	SignedNumberType = NewNumericType(SignedNumberTypeName)
+	SignedNumberType = NewNumericType(SignedNumberTypeName).
+				WithTag(SignedNumberTypeTag).
+				AsSuperType()
 
 	// IntegerType represents the super-type of all integer types
-	IntegerType = NewNumericType(IntegerTypeName)
+	IntegerType = NewNumericType(IntegerTypeName).
+			WithTag(IntegerTypeTag).
+			AsSuperType()
 
 	// SignedIntegerType represents the super-type of all signed integer types
-	SignedIntegerType = NewNumericType(SignedIntegerTypeName)
+	SignedIntegerType = NewNumericType(SignedIntegerTypeName).
+				WithTag(SignedIntegerTypeTag).
+				AsSuperType()
 
 	// IntType represents the arbitrary-precision integer type `Int`
-	IntType = NewNumericType(IntTypeName)
+	IntType = NewNumericType(IntTypeName).
+		WithTag(IntTypeTag)
 
 	// Int8Type represents the 8-bit signed integer type `Int8`
 	Int8Type = NewNumericType(Int8TypeName).
+			WithTag(Int8TypeTag).
 			WithIntRange(Int8TypeMinInt, Int8TypeMaxInt).
 			WithSaturatingAdd().
 			WithSaturatingSubtract().
@@ -1191,6 +1256,7 @@ var (
 
 	// Int16Type represents the 16-bit signed integer type `Int16`
 	Int16Type = NewNumericType(Int16TypeName).
+			WithTag(Int16TypeTag).
 			WithIntRange(Int16TypeMinInt, Int16TypeMaxInt).
 			WithSaturatingAdd().
 			WithSaturatingSubtract().
@@ -1199,6 +1265,7 @@ var (
 
 	// Int32Type represents the 32-bit signed integer type `Int32`
 	Int32Type = NewNumericType(Int32TypeName).
+			WithTag(Int32TypeTag).
 			WithIntRange(Int32TypeMinInt, Int32TypeMaxInt).
 			WithSaturatingAdd().
 			WithSaturatingSubtract().
@@ -1207,6 +1274,7 @@ var (
 
 	// Int64Type represents the 64-bit signed integer type `Int64`
 	Int64Type = NewNumericType(Int64TypeName).
+			WithTag(Int64TypeTag).
 			WithIntRange(Int64TypeMinInt, Int64TypeMaxInt).
 			WithSaturatingAdd().
 			WithSaturatingSubtract().
@@ -1215,6 +1283,7 @@ var (
 
 	// Int128Type represents the 128-bit signed integer type `Int128`
 	Int128Type = NewNumericType(Int128TypeName).
+			WithTag(Int128TypeTag).
 			WithIntRange(Int128TypeMinIntBig, Int128TypeMaxIntBig).
 			WithSaturatingAdd().
 			WithSaturatingSubtract().
@@ -1223,6 +1292,7 @@ var (
 
 	// Int256Type represents the 256-bit signed integer type `Int256`
 	Int256Type = NewNumericType(Int256TypeName).
+			WithTag(Int256TypeTag).
 			WithIntRange(Int256TypeMinIntBig, Int256TypeMaxIntBig).
 			WithSaturatingAdd().
 			WithSaturatingSubtract().
@@ -1231,12 +1301,14 @@ var (
 
 	// UIntType represents the arbitrary-precision unsigned integer type `UInt`
 	UIntType = NewNumericType(UIntTypeName).
+			WithTag(UIntTypeTag).
 			WithIntRange(UIntTypeMin, nil).
 			WithSaturatingSubtract()
 
 	// UInt8Type represents the 8-bit unsigned integer type `UInt8`
 	// which checks for overflow and underflow
 	UInt8Type = NewNumericType(UInt8TypeName).
+			WithTag(UInt8TypeTag).
 			WithIntRange(UInt8TypeMinInt, UInt8TypeMaxInt).
 			WithSaturatingAdd().
 			WithSaturatingSubtract().
@@ -1245,6 +1317,7 @@ var (
 	// UInt16Type represents the 16-bit unsigned integer type `UInt16`
 	// which checks for overflow and underflow
 	UInt16Type = NewNumericType(UInt16TypeName).
+			WithTag(UInt16TypeTag).
 			WithIntRange(UInt16TypeMinInt, UInt16TypeMaxInt).
 			WithSaturatingAdd().
 			WithSaturatingSubtract().
@@ -1253,6 +1326,7 @@ var (
 	// UInt32Type represents the 32-bit unsigned integer type `UInt32`
 	// which checks for overflow and underflow
 	UInt32Type = NewNumericType(UInt32TypeName).
+			WithTag(UInt32TypeTag).
 			WithIntRange(UInt32TypeMinInt, UInt32TypeMaxInt).
 			WithSaturatingAdd().
 			WithSaturatingSubtract().
@@ -1261,6 +1335,7 @@ var (
 	// UInt64Type represents the 64-bit unsigned integer type `UInt64`
 	// which checks for overflow and underflow
 	UInt64Type = NewNumericType(UInt64TypeName).
+			WithTag(UInt64TypeTag).
 			WithIntRange(UInt64TypeMinInt, UInt64TypeMaxInt).
 			WithSaturatingAdd().
 			WithSaturatingSubtract().
@@ -1269,6 +1344,7 @@ var (
 	// UInt128Type represents the 128-bit unsigned integer type `UInt128`
 	// which checks for overflow and underflow
 	UInt128Type = NewNumericType(UInt128TypeName).
+			WithTag(UInt128TypeTag).
 			WithIntRange(UInt128TypeMinIntBig, UInt128TypeMaxIntBig).
 			WithSaturatingAdd().
 			WithSaturatingSubtract().
@@ -1277,6 +1353,7 @@ var (
 	// UInt256Type represents the 256-bit unsigned integer type `UInt256`
 	// which checks for overflow and underflow
 	UInt256Type = NewNumericType(UInt256TypeName).
+			WithTag(UInt256TypeTag).
 			WithIntRange(UInt256TypeMinIntBig, UInt256TypeMaxIntBig).
 			WithSaturatingAdd().
 			WithSaturatingSubtract().
@@ -1285,32 +1362,41 @@ var (
 	// Word8Type represents the 8-bit unsigned integer type `Word8`
 	// which does NOT check for overflow and underflow
 	Word8Type = NewNumericType(Word8TypeName).
+			WithTag(Word8TypeTag).
 			WithIntRange(Word8TypeMinInt, Word8TypeMaxInt)
 
 	// Word16Type represents the 16-bit unsigned integer type `Word16`
 	// which does NOT check for overflow and underflow
 	Word16Type = NewNumericType(Word16TypeName).
+			WithTag(Word16TypeTag).
 			WithIntRange(Word16TypeMinInt, Word16TypeMaxInt)
 
 	// Word32Type represents the 32-bit unsigned integer type `Word32`
 	// which does NOT check for overflow and underflow
 	Word32Type = NewNumericType(Word32TypeName).
+			WithTag(Word32TypeTag).
 			WithIntRange(Word32TypeMinInt, Word32TypeMaxInt)
 
 	// Word64Type represents the 64-bit unsigned integer type `Word64`
 	// which does NOT check for overflow and underflow
 	Word64Type = NewNumericType(Word64TypeName).
+			WithTag(Word64TypeTag).
 			WithIntRange(Word64TypeMinInt, Word64TypeMaxInt)
 
 	// FixedPointType represents the super-type of all fixed-point types
-	FixedPointType = NewNumericType(FixedPointTypeName)
+	FixedPointType = NewNumericType(FixedPointTypeName).
+			WithTag(FixedPointTypeTag).
+			AsSuperType()
 
 	// SignedFixedPointType represents the super-type of all signed fixed-point types
-	SignedFixedPointType = NewNumericType(SignedFixedPointTypeName)
+	SignedFixedPointType = NewNumericType(SignedFixedPointTypeName).
+				WithTag(SignedFixedPointTypeTag).
+				AsSuperType()
 
 	// Fix64Type represents the 64-bit signed decimal fixed-point type `Fix64`
 	// which has a scale of Fix64Scale, and checks for overflow and underflow
 	Fix64Type = NewFixedPointNumericType(Fix64TypeName).
+			WithTag(Fix64TypeTag).
 			WithIntRange(Fix64TypeMinIntBig, Fix64TypeMaxIntBig).
 			WithFractionalRange(Fix64TypeMinFractionalBig, Fix64TypeMaxFractionalBig).
 			WithScale(Fix64Scale).
@@ -1322,6 +1408,7 @@ var (
 	// UFix64Type represents the 64-bit unsigned decimal fixed-point type `UFix64`
 	// which has a scale of 1E9, and checks for overflow and underflow
 	UFix64Type = NewFixedPointNumericType(UFix64TypeName).
+			WithTag(UFix64TypeTag).
 			WithIntRange(UFix64TypeMinIntBig, UFix64TypeMaxIntBig).
 			WithFractionalRange(UFix64TypeMinFractionalBig, UFix64TypeMaxFractionalBig).
 			WithScale(Fix64Scale).
@@ -1452,6 +1539,11 @@ type ArrayType interface {
 	isArrayType()
 }
 
+const arrayTypeFirstIndexFunctionDocString = `
+Returns the index of the first element matching the given object in the array, nil if no match.
+Available if the array element type is not resource-kinded and equatable.
+`
+
 const arrayTypeContainsFunctionDocString = `
 Returns true if the given object is in the array
 `
@@ -1500,6 +1592,14 @@ const arrayTypeRemoveLastFunctionDocString = `
 Removes the last element from the array and returns it.
 
 The array must not be empty. If the array is empty, the program aborts
+`
+
+const arrayTypeSliceFunctionDocString = `
+Returns a new variable-sized array containing the slice of the elements in the given array from start index ` + "`from`" + ` up to, but not including, the end index ` + "`upTo`" + `.
+
+This function creates a new array whose length is ` + "`upTo - from`" + `.
+It does not modify the original array.
+If either of the parameters are out of the bounds of the array, or the indices are invalid (` + "`from > upTo`" + `), then the function will fail.
 `
 
 func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
@@ -1554,6 +1654,44 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 				)
 			},
 		},
+		"firstIndex": {
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
+
+				elementType := arrayType.ElementType(false)
+
+				// It is impossible for an array of resources to have a `firstIndex` function:
+				// if the resource is passed as an argument, it cannot be inside the array
+
+				if elementType.IsResourceType() {
+					report(
+						&InvalidResourceArrayMemberError{
+							Name:            identifier,
+							DeclarationKind: common.DeclarationKindFunction,
+							Range:           targetRange,
+						},
+					)
+				}
+
+				// TODO: implement Equatable interface
+
+				if !elementType.IsEquatable() {
+					report(
+						&NotEquatableTypeError{
+							Type:  elementType,
+							Range: targetRange,
+						},
+					)
+				}
+
+				return NewPublicFunctionMember(
+					arrayType,
+					identifier,
+					ArrayFirstIndexFunctionType(elementType),
+					arrayTypeFirstIndexFunctionDocString,
+				)
+			},
+		},
 	}
 
 	// TODO: maybe still return members but report a helpful error?
@@ -1561,7 +1699,8 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 	if _, ok := arrayType.(*VariableSizedType); ok {
 
 		members["append"] = MemberResolver{
-			Kind: common.DeclarationKindFunction,
+			Kind:     common.DeclarationKindFunction,
+			Mutating: true,
 			Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
 				elementType := arrayType.ElementType(false)
 				return NewPublicFunctionMember(
@@ -1574,7 +1713,8 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 		}
 
 		members["appendAll"] = MemberResolver{
-			Kind: common.DeclarationKindFunction,
+			Kind:     common.DeclarationKindFunction,
+			Mutating: true,
 			Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
 
 				elementType := arrayType.ElementType(false)
@@ -1625,8 +1765,34 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 			},
 		}
 
-		members["insert"] = MemberResolver{
+		members["slice"] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
+			Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
+
+				elementType := arrayType.ElementType(false)
+
+				if elementType.IsResourceType() {
+					report(
+						&InvalidResourceArrayMemberError{
+							Name:            identifier,
+							DeclarationKind: common.DeclarationKindFunction,
+							Range:           targetRange,
+						},
+					)
+				}
+
+				return NewPublicFunctionMember(
+					arrayType,
+					identifier,
+					ArraySliceFunctionType(elementType),
+					arrayTypeSliceFunctionDocString,
+				)
+			},
+		}
+
+		members["insert"] = MemberResolver{
+			Kind:     common.DeclarationKindFunction,
+			Mutating: true,
 			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
 
 				elementType := arrayType.ElementType(false)
@@ -1641,7 +1807,8 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 		}
 
 		members["remove"] = MemberResolver{
-			Kind: common.DeclarationKindFunction,
+			Kind:     common.DeclarationKindFunction,
+			Mutating: true,
 			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
 
 				elementType := arrayType.ElementType(false)
@@ -1656,7 +1823,8 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 		}
 
 		members["removeFirst"] = MemberResolver{
-			Kind: common.DeclarationKindFunction,
+			Kind:     common.DeclarationKindFunction,
+			Mutating: true,
 			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
 
 				elementType := arrayType.ElementType(false)
@@ -1672,7 +1840,8 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 		}
 
 		members["removeLast"] = MemberResolver{
-			Kind: common.DeclarationKindFunction,
+			Kind:     common.DeclarationKindFunction,
+			Mutating: true,
 			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
 
 				elementType := arrayType.ElementType(false)
@@ -1753,6 +1922,19 @@ func ArrayConcatFunctionType(arrayType Type) *FunctionType {
 	}
 }
 
+func ArrayFirstIndexFunctionType(elementType Type) *FunctionType {
+	return &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Identifier:     "of",
+				TypeAnnotation: NewTypeAnnotation(elementType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{Type: IntType},
+		),
+	}
+}
 func ArrayContainsFunctionType(elementType Type) *FunctionType {
 	return &FunctionType{
 		Parameters: []*Parameter{
@@ -1796,6 +1978,24 @@ func ArrayAppendFunctionType(elementType Type) *FunctionType {
 	}
 }
 
+func ArraySliceFunctionType(elementType Type) *FunctionType {
+	return &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Identifier:     "from",
+				TypeAnnotation: NewTypeAnnotation(IntType),
+			},
+			{
+				Identifier:     "upTo",
+				TypeAnnotation: NewTypeAnnotation(IntType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(&VariableSizedType{
+			Type: elementType,
+		}),
+	}
+}
+
 // VariableSizedType is a variable sized array type
 type VariableSizedType struct {
 	Type                Type
@@ -1806,6 +2006,10 @@ type VariableSizedType struct {
 func (*VariableSizedType) IsType() {}
 
 func (*VariableSizedType) isArrayType() {}
+
+func (t *VariableSizedType) Tag() TypeTag {
+	return VariableSizedTypeTag
+}
 
 func (t *VariableSizedType) String() string {
 	return fmt.Sprintf("[%s]", t.Type)
@@ -1932,6 +2136,10 @@ type ConstantSizedType struct {
 func (*ConstantSizedType) IsType() {}
 
 func (*ConstantSizedType) isArrayType() {}
+
+func (t *ConstantSizedType) Tag() TypeTag {
+	return ConstantSizedTypeTag
+}
 
 func (t *ConstantSizedType) String() string {
 	return fmt.Sprintf("[%s; %d]", t.Type, t.Size)
@@ -2188,7 +2396,6 @@ func (p TypeParameter) checkTypeBound(ty Type, typeRange ast.Range) error {
 
 func formatFunctionType(
 	spaces bool,
-	receiverType string,
 	typeParameters []string,
 	parameters []string,
 	returnTypeAnnotation string,
@@ -2196,11 +2403,6 @@ func formatFunctionType(
 
 	var builder strings.Builder
 	builder.WriteRune('(')
-
-	if receiverType != "" {
-		builder.WriteString(receiverType)
-		builder.WriteRune('#')
-	}
 
 	if len(typeParameters) > 0 {
 		builder.WriteRune('<')
@@ -2237,7 +2439,6 @@ func formatFunctionType(
 // FunctionType
 //
 type FunctionType struct {
-	ReceiverType             Type
 	IsConstructor            bool
 	TypeParameters           []*TypeParameter
 	Parameters               []*Parameter
@@ -2253,6 +2454,10 @@ func RequiredArgumentCount(count int) *int {
 
 func (*FunctionType) IsType() {}
 
+func (t *FunctionType) Tag() TypeTag {
+	return FunctionTypeTag
+}
+
 func (t *FunctionType) CheckArgumentExpressions(
 	checker *Checker,
 	argumentExpressions []ast.Expression,
@@ -2265,11 +2470,6 @@ func (t *FunctionType) CheckArgumentExpressions(
 }
 
 func (t *FunctionType) String() string {
-
-	var receiverType string
-	if t.ReceiverType != nil {
-		receiverType = t.ReceiverType.String()
-	}
 
 	typeParameters := make([]string, len(t.TypeParameters))
 
@@ -2287,7 +2487,6 @@ func (t *FunctionType) String() string {
 
 	return formatFunctionType(
 		true,
-		receiverType,
 		typeParameters,
 		parameters,
 		returnTypeAnnotation,
@@ -2295,11 +2494,6 @@ func (t *FunctionType) String() string {
 }
 
 func (t *FunctionType) QualifiedString() string {
-
-	var receiverType string
-	if t.ReceiverType != nil {
-		receiverType = t.ReceiverType.QualifiedString()
-	}
 
 	typeParameters := make([]string, len(t.TypeParameters))
 
@@ -2317,7 +2511,6 @@ func (t *FunctionType) QualifiedString() string {
 
 	return formatFunctionType(
 		true,
-		receiverType,
 		typeParameters,
 		parameters,
 		returnTypeAnnotation,
@@ -2326,11 +2519,6 @@ func (t *FunctionType) QualifiedString() string {
 
 // NOTE: parameter names and argument labels are *not* part of the ID!
 func (t *FunctionType) ID() TypeID {
-
-	var receiverType string
-	if t.ReceiverType != nil {
-		receiverType = string(t.ReceiverType.ID())
-	}
 
 	typeParameters := make([]string, len(t.TypeParameters))
 
@@ -2349,7 +2537,6 @@ func (t *FunctionType) ID() TypeID {
 	return TypeID(
 		formatFunctionType(
 			false,
-			receiverType,
 			typeParameters,
 			parameters,
 			returnTypeAnnotation,
@@ -2401,21 +2588,6 @@ func (t *FunctionType) Equal(other Type) bool {
 
 	if !t.ReturnTypeAnnotation.Type.
 		Equal(otherFunction.ReturnTypeAnnotation.Type) {
-		return false
-	}
-
-	// receiver type
-
-	if t.ReceiverType != nil {
-		if otherFunction.ReceiverType == nil {
-			return false
-		}
-
-		if !t.ReceiverType.Equal(otherFunction.ReceiverType) {
-			return false
-		}
-
-	} else if otherFunction.ReceiverType != nil {
 		return false
 	}
 
@@ -2890,17 +3062,7 @@ func init() {
 				panic(errors.NewUnreachableError())
 			}
 
-			functionType := &FunctionType{
-				Parameters: []*Parameter{
-					{
-						Label:          ArgumentLabelNotRequired,
-						Identifier:     "value",
-						TypeAnnotation: NewTypeAnnotation(NumberType),
-					},
-				},
-				ReturnTypeAnnotation:     NewTypeAnnotation(numberType),
-				ArgumentExpressionsCheck: numberFunctionArgumentExpressionsChecker(numberType),
-			}
+			functionType := NumberConversionFunctionType(numberType)
 
 			addMember := func(member *Member) {
 				if functionType.Members == nil {
@@ -2978,6 +3140,20 @@ func init() {
 	}
 }
 
+func NumberConversionFunctionType(numberType Type) *FunctionType {
+	return &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "value",
+				TypeAnnotation: NewTypeAnnotation(NumberType),
+			},
+		},
+		ReturnTypeAnnotation:     NewTypeAnnotation(numberType),
+		ArgumentExpressionsCheck: numberFunctionArgumentExpressionsChecker(numberType),
+	}
+}
+
 func numberConversionDocString(targetDescription string) string {
 	return fmt.Sprintf(
 		"Converts the given number to %s. %s",
@@ -2999,46 +3175,45 @@ func baseFunctionVariable(name string, ty *FunctionType, docString string) *Vari
 	}
 }
 
-func init() {
+var AddressConversionFunctionType = &FunctionType{
+	Parameters: []*Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "value",
+			TypeAnnotation: NewTypeAnnotation(IntegerType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(&AddressType{}),
+	ArgumentExpressionsCheck: func(checker *Checker, argumentExpressions []ast.Expression, _ ast.Range) {
+		if len(argumentExpressions) < 1 {
+			return
+		}
 
+		intExpression, ok := argumentExpressions[0].(*ast.IntegerExpression)
+		if !ok {
+			return
+		}
+
+		CheckAddressLiteral(intExpression, checker.report)
+	},
+}
+
+func init() {
 	// Declare a conversion function for the address type
 
-	addressType := &AddressType{}
-	typeName := addressType.String()
-
 	// Check that the function is not accidentally redeclared
+
+	typeName := AddressTypeName
 
 	if BaseValueActivation.Find(typeName) != nil {
 		panic(errors.NewUnreachableError())
 	}
 
-	functionType := &FunctionType{
-		Parameters: []*Parameter{
-			{
-				Label:          ArgumentLabelNotRequired,
-				Identifier:     "value",
-				TypeAnnotation: NewTypeAnnotation(IntegerType),
-			},
-		},
-		ReturnTypeAnnotation: NewTypeAnnotation(addressType),
-		ArgumentExpressionsCheck: func(checker *Checker, argumentExpressions []ast.Expression, _ ast.Range) {
-			if len(argumentExpressions) < 1 {
-				return
-			}
-
-			intExpression, ok := argumentExpressions[0].(*ast.IntegerExpression)
-			if !ok {
-				return
-			}
-
-			CheckAddressLiteral(intExpression, checker.report)
-		},
-	}
 	BaseValueActivation.Set(
 		typeName,
 		baseFunctionVariable(
 			typeName,
-			functionType,
+			AddressConversionFunctionType,
 			numberConversionDocString("an address"),
 		),
 	)
@@ -3055,14 +3230,16 @@ func numberFunctionArgumentExpressionsChecker(targetType Type) ArgumentExpressio
 		switch argument := argument.(type) {
 		case *ast.IntegerExpression:
 			if CheckIntegerLiteral(argument, targetType, checker.report) {
-
-				suggestIntegerLiteralConversionReplacement(checker, argument, targetType, invocationRange)
+				if checker.lintEnabled {
+					suggestIntegerLiteralConversionReplacement(checker, argument, targetType, invocationRange)
+				}
 			}
 
 		case *ast.FixedPointExpression:
 			if CheckFixedPointLiteral(argument, targetType, checker.report) {
-
-				suggestFixedPointLiteralConversionReplacement(checker, targetType, argument, invocationRange)
+				if checker.lintEnabled {
+					suggestFixedPointLiteralConversionReplacement(checker, targetType, argument, invocationRange)
+				}
 			}
 		}
 	}
@@ -3137,12 +3314,12 @@ func suggestIntegerLiteralConversionReplacement(
 ) {
 	negative := argument.Value.Sign() < 0
 
-	if IsSubType(targetType, FixedPointType) {
+	if IsSameTypeKind(targetType, FixedPointType) {
 
 		// If the integer literal is converted to a fixed-point type,
 		// suggest replacing it with a fixed-point literal
 
-		signed := IsSubType(targetType, SignedFixedPointType)
+		signed := IsSameTypeKind(targetType, SignedFixedPointType)
 
 		var hintExpression ast.Expression = &ast.FixedPointExpression{
 			Negative:        negative,
@@ -3177,7 +3354,7 @@ func suggestIntegerLiteralConversionReplacement(
 			},
 		)
 
-	} else if IsSubType(targetType, IntegerType) {
+	} else if IsSameTypeKind(targetType, IntegerType) {
 
 		// If the integer literal is converted to an integer type,
 		// suggest replacing it with a fixed-point literal
@@ -3189,7 +3366,7 @@ func suggestIntegerLiteralConversionReplacement(
 		// as all integer literals (positive and negative)
 		// are inferred to be of type `Int`
 
-		if !IsSubType(targetType, IntType) {
+		if !IsSameTypeKind(targetType, IntType) {
 			hintExpression = &ast.CastingExpression{
 				Expression: hintExpression,
 				Operation:  ast.OperationCast,
@@ -3222,12 +3399,12 @@ func suggestFixedPointLiteralConversionReplacement(
 	// If the fixed-point literal is converted to a fixed-point type,
 	// suggest replacing it with a fixed-point literal
 
-	if !IsSubType(targetType, FixedPointType) {
+	if !IsSameTypeKind(targetType, FixedPointType) {
 		return
 	}
 
 	negative := argument.Negative
-	signed := IsSubType(targetType, SignedFixedPointType)
+	signed := IsSameTypeKind(targetType, SignedFixedPointType)
 
 	if (!negative && !signed) || (negative && signed) {
 		checker.hint(
@@ -3239,9 +3416,31 @@ func suggestFixedPointLiteralConversionReplacement(
 	}
 }
 
+func pathConversionFunctionType(pathType Type) *FunctionType {
+	return &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Identifier:     "identifier",
+				TypeAnnotation: NewTypeAnnotation(StringType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{
+				Type: pathType,
+			},
+		),
+	}
+}
+
+var PublicPathConversionFunctionType = pathConversionFunctionType(PublicPathType)
+var PrivatePathConversionFunctionType = pathConversionFunctionType(PrivatePathType)
+var StoragePathConversionFunctionType = pathConversionFunctionType(StoragePathType)
+
 func init() {
 
-	typeName := MetaType.String()
+	// Declare the run-time type construction function
+
+	typeName := MetaTypeName
 
 	// Check that the function is not accidentally redeclared
 
@@ -3265,13 +3464,7 @@ func init() {
 		PublicPathType.String(),
 		baseFunctionVariable(
 			PublicPathType.String(),
-			&FunctionType{
-				Parameters: []*Parameter{{
-					Identifier:     "identifier",
-					TypeAnnotation: NewTypeAnnotation(StringType),
-				}},
-				ReturnTypeAnnotation: NewTypeAnnotation(&OptionalType{Type: PublicPathType}),
-			},
+			PublicPathConversionFunctionType,
 			"Converts the given string into a public path. Returns nil if the string does not specify a public path",
 		),
 	)
@@ -3280,13 +3473,7 @@ func init() {
 		PrivatePathType.String(),
 		baseFunctionVariable(
 			PrivatePathType.String(),
-			&FunctionType{
-				Parameters: []*Parameter{{
-					Identifier:     "identifier",
-					TypeAnnotation: NewTypeAnnotation(StringType),
-				}},
-				ReturnTypeAnnotation: NewTypeAnnotation(&OptionalType{Type: PrivatePathType}),
-			},
+			PrivatePathConversionFunctionType,
 			"Converts the given string into a private path. Returns nil if the string does not specify a private path",
 		),
 	)
@@ -3295,13 +3482,7 @@ func init() {
 		StoragePathType.String(),
 		baseFunctionVariable(
 			StoragePathType.String(),
-			&FunctionType{
-				Parameters: []*Parameter{{
-					Identifier:     "identifier",
-					TypeAnnotation: NewTypeAnnotation(StringType),
-				}},
-				ReturnTypeAnnotation: NewTypeAnnotation(&OptionalType{Type: StoragePathType}),
-			},
+			StoragePathConversionFunctionType,
 			"Converts the given string into a storage path. Returns nil if the string does not specify a storage path",
 		),
 	)
@@ -3352,6 +3533,10 @@ type CompositeType struct {
 		QualifiedIdentifier string
 	}
 	cachedIdentifiersLock sync.RWMutex
+}
+
+func (t *CompositeType) Tag() TypeTag {
+	return CompositeTypeTag
 }
 
 func (t *CompositeType) ExplicitInterfaceConformanceSet() *InterfaceSet {
@@ -3627,8 +3812,8 @@ func (t *CompositeType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
-func (*CompositeType) isContainerType() bool {
-	return true
+func (t *CompositeType) IsContainerType() bool {
+	return t.nestedTypes != nil
 }
 
 func (t *CompositeType) GetNestedTypes() *StringTypeOrderedMap {
@@ -3667,6 +3852,20 @@ func (t *CompositeType) initializeMemberResolvers() {
 
 		t.memberResolvers = withBuiltinMembers(t, members)
 	})
+}
+
+func (t *CompositeType) FieldPosition(name string, declaration *ast.CompositeDeclaration) ast.Position {
+	var pos ast.Position
+	if t.Kind == common.CompositeKindEnum &&
+		name == EnumRawValueFieldName {
+
+		if len(declaration.Conformances) > 0 {
+			pos = declaration.Conformances[0].StartPosition()
+		}
+	} else {
+		pos = declaration.Members.FieldPosition(name, declaration.CompositeKind)
+	}
+	return pos
 }
 
 // Member
@@ -3818,6 +4017,10 @@ type InterfaceType struct {
 }
 
 func (*InterfaceType) IsType() {}
+
+func (t *InterfaceType) Tag() TypeTag {
+	return InterfaceTypeTag
+}
 
 func (t *InterfaceType) String() string {
 	return t.Identifier
@@ -4020,12 +4223,16 @@ func (t *InterfaceType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
-func (*InterfaceType) isContainerType() bool {
-	return true
+func (t *InterfaceType) IsContainerType() bool {
+	return t.nestedTypes != nil
 }
 
 func (t *InterfaceType) GetNestedTypes() *StringTypeOrderedMap {
 	return t.nestedTypes
+}
+
+func (t *InterfaceType) FieldPosition(name string, declaration *ast.InterfaceDeclaration) ast.Position {
+	return declaration.Members.FieldPosition(name, declaration.CompositeKind)
 }
 
 // DictionaryType consists of the key and value type
@@ -4041,6 +4248,10 @@ type DictionaryType struct {
 }
 
 func (*DictionaryType) IsType() {}
+
+func (t *DictionaryType) Tag() TypeTag {
+	return DictionaryTypeTag
+}
 
 func (t *DictionaryType) String() string {
 	return fmt.Sprintf(
@@ -4241,7 +4452,8 @@ func (t *DictionaryType) initializeMemberResolvers() {
 				},
 			},
 			"insert": {
-				Kind: common.DeclarationKindFunction,
+				Kind:     common.DeclarationKindFunction,
+				Mutating: true,
 				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicFunctionMember(t,
 						identifier,
@@ -4251,7 +4463,8 @@ func (t *DictionaryType) initializeMemberResolvers() {
 				},
 			},
 			"remove": {
-				Kind: common.DeclarationKindFunction,
+				Kind:     common.DeclarationKindFunction,
+				Mutating: true,
 				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicFunctionMember(t,
 						identifier,
@@ -4378,6 +4591,10 @@ type ReferenceType struct {
 }
 
 func (*ReferenceType) IsType() {}
+
+func (t *ReferenceType) Tag() TypeTag {
+	return ReferenceTypeTag
+}
 
 func (t *ReferenceType) string(typeFormatter func(Type) string) string {
 	if t.Type == nil {
@@ -4511,21 +4728,29 @@ func (t *ReferenceType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
+const AddressTypeName = "Address"
+
 // AddressType represents the address type
 type AddressType struct{}
 
+var _ IntegerRangedType = &AddressType{}
+
 func (*AddressType) IsType() {}
 
+func (t *AddressType) Tag() TypeTag {
+	return AddressTypeTag
+}
+
 func (*AddressType) String() string {
-	return "Address"
+	return AddressTypeName
 }
 
 func (*AddressType) QualifiedString() string {
-	return "Address"
+	return AddressTypeName
 }
 
 func (*AddressType) ID() TypeID {
-	return "Address"
+	return AddressTypeName
 }
 
 func (*AddressType) Equal(other Type) bool {
@@ -4576,6 +4801,10 @@ func (*AddressType) MaxInt() *big.Int {
 	return AddressTypeMaxIntBig
 }
 
+func (*AddressType) IsSuperType() bool {
+	return false
+}
+
 func (*AddressType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	return false
 }
@@ -4616,13 +4845,46 @@ func (t *AddressType) GetMembers() map[string]MemberResolver {
 //
 // Types are subtypes of themselves.
 //
+// NOTE: This method can be used to check the assignability of `subType` to `superType`.
+// However, to check if a type *strictly* belongs to a certain category, then consider
+// using `IsSameTypeKind` method. e.g: "Is type `T` an Integer type?". Using this method
+// for the later use-case may produce incorrect results.
+//   * IsSubType()      - To check the assignability. e.g: Is argument type T is a sub-type
+//                        of parameter type R. This is the more frequent use-case.
+//   * IsSameTypeKind() - To check if a type strictly belongs to a certain category. e.g: Is the
+//                        expression type T is any of the integer types, but nothing else.
+//                        Another way to check is, asking the question of "if the subType is Never,
+//                        should the check still pass?". A common code-smell for potential incorrect
+//                        usage is, using IsSubType() method with a constant/pre-defined superType.
+//                        e.g: IsSubType(<<someType>>, FixedPointType)
+//
 func IsSubType(subType Type, superType Type) bool {
+
+	if subType == nil {
+		return false
+	}
 
 	if subType.Equal(superType) {
 		return true
 	}
 
 	return checkSubTypeWithoutEquality(subType, superType)
+}
+
+// IsSameTypeKind determines if the given subtype belongs to the
+// same kind as the supertype.
+//
+// e.g: 'Never' type is a subtype of 'Integer', but not of the
+// same kind as 'Integer'. Whereas, 'Int8' is both a subtype
+// and also of same kind as 'Integer'.
+//
+func IsSameTypeKind(subType Type, superType Type) bool {
+
+	if subType == NeverType {
+		return false
+	}
+
+	return IsSubType(subType, superType)
 }
 
 // IsProperSubType is similar to IsSubType,
@@ -5317,6 +5579,10 @@ func (*TransactionType) ExecuteFunctionType() *FunctionType {
 
 func (*TransactionType) IsType() {}
 
+func (t *TransactionType) Tag() TypeTag {
+	return TransactionTypeTag
+}
+
 func (*TransactionType) String() string {
 	return "Transaction"
 }
@@ -5421,6 +5687,10 @@ func (t *RestrictedType) initializeRestrictionSet() {
 }
 
 func (*RestrictedType) IsType() {}
+
+func (t *RestrictedType) Tag() TypeTag {
+	return RestrictedTypeTag
+}
 
 func (t *RestrictedType) string(separator string, typeFormatter func(Type) string) string {
 	var result strings.Builder
@@ -5627,6 +5897,10 @@ type CapabilityType struct {
 }
 
 func (*CapabilityType) IsType() {}
+
+func (t *CapabilityType) Tag() TypeTag {
+	return CapabilityTypeTag
+}
 
 func (t *CapabilityType) string(typeFormatter func(Type) string) string {
 	var builder strings.Builder
@@ -5968,8 +6242,8 @@ var AccountKeyType = func() *CompositeType {
 const PublicKeyTypeName = "PublicKey"
 const PublicKeyPublicKeyField = "publicKey"
 const PublicKeySignAlgoField = "signatureAlgorithm"
-const PublicKeyIsValidField = "isValid"
 const PublicKeyVerifyFunction = "verify"
+const PublicKeyVerifyPoPFunction = "verifyPoP"
 
 const publicKeyKeyFieldDocString = `
 The public key
@@ -5979,13 +6253,15 @@ const publicKeySignAlgoFieldDocString = `
 The signature algorithm to be used with the key
 `
 
-const publicKeyIsValidFieldDocString = `
-Flag indicating whether the key is valid
-`
-
 const publicKeyVerifyFunctionDocString = `
 Verifies a signature. Checks whether the signature was produced by signing
 the given tag and data, using this public key and the given hash algorithm
+`
+
+const publicKeyVerifyPoPFunctionDocString = `
+Verifies the proof of possession of the private key. This function is 
+only implemented if the signature algorithm of the public key is BLS, 
+it returns false if called with any other signature algorithm.
 `
 
 // PublicKeyType represents the public key associated with an account key.
@@ -6002,7 +6278,7 @@ var PublicKeyType = func() *CompositeType {
 		NewPublicConstantFieldMember(
 			publicKeyType,
 			PublicKeyPublicKeyField,
-			&VariableSizedType{Type: UInt8Type},
+			ByteArrayType,
 			publicKeyKeyFieldDocString,
 		),
 		NewPublicConstantFieldMember(
@@ -6011,17 +6287,17 @@ var PublicKeyType = func() *CompositeType {
 			SignatureAlgorithmType,
 			publicKeySignAlgoFieldDocString,
 		),
-		NewPublicConstantFieldMember(
-			publicKeyType,
-			PublicKeyIsValidField,
-			BoolType,
-			publicKeyIsValidFieldDocString,
-		),
 		NewPublicFunctionMember(
 			publicKeyType,
 			PublicKeyVerifyFunction,
 			PublicKeyVerifyFunctionType,
 			publicKeyVerifyFunctionDocString,
+		),
+		NewPublicFunctionMember(
+			publicKeyType,
+			PublicKeyVerifyPoPFunction,
+			PublicKeyVerifyPoPFunctionType,
+			publicKeyVerifyPoPFunctionDocString,
 		),
 	}
 
@@ -6030,6 +6306,10 @@ var PublicKeyType = func() *CompositeType {
 
 	return publicKeyType
 }()
+
+var PublicKeyArrayType = &VariableSizedType{
+	Type: PublicKeyType,
+}
 
 var PublicKeyVerifyFunctionType = &FunctionType{
 	TypeParameters: []*TypeParameter{},
@@ -6053,6 +6333,20 @@ var PublicKeyVerifyFunctionType = &FunctionType{
 		{
 			Identifier:     "hashAlgorithm",
 			TypeAnnotation: NewTypeAnnotation(HashAlgorithmType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(BoolType),
+}
+
+var PublicKeyVerifyPoPFunctionType = &FunctionType{
+	TypeParameters: []*TypeParameter{},
+	Parameters: []*Parameter{
+		{
+			Label:      ArgumentLabelNotRequired,
+			Identifier: "proof",
+			TypeAnnotation: NewTypeAnnotation(
+				ByteArrayType,
+			),
 		},
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(BoolType),
@@ -6087,4 +6381,12 @@ func getFieldNames(members []*Member) []string {
 	}
 
 	return fields
+}
+
+func isNumericSuperType(typ Type) bool {
+	if numberType, ok := typ.(IntegerRangedType); ok {
+		return numberType.IsSuperType()
+	}
+
+	return false
 }

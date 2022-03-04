@@ -44,7 +44,6 @@ type Elaboration struct {
 	InterfaceTypeDeclarations           map[*InterfaceType]*ast.InterfaceDeclaration
 	ConstructorFunctionTypes            map[*ast.SpecialFunctionDeclaration]*FunctionType
 	FunctionExpressionFunctionType      map[*ast.FunctionExpression]*FunctionType
-	InvocationExpressionReceiverTypes   map[*ast.InvocationExpression]Type
 	InvocationExpressionArgumentTypes   map[*ast.InvocationExpression][]Type
 	InvocationExpressionParameterTypes  map[*ast.InvocationExpression][]Type
 	InvocationExpressionReturnTypes     map[*ast.InvocationExpression]Type
@@ -62,6 +61,7 @@ type Elaboration struct {
 	DictionaryExpressionType            map[*ast.DictionaryExpression]*DictionaryType
 	DictionaryExpressionEntryTypes      map[*ast.DictionaryExpression][]DictionaryEntryType
 	IntegerExpressionType               map[*ast.IntegerExpression]Type
+	StringExpressionType                map[*ast.StringExpression]Type
 	FixedPointExpression                map[*ast.FixedPointExpression]Type
 	TransactionDeclarationTypes         map[*ast.TransactionDeclaration]*TransactionType
 	SwapStatementLeftTypes              map[*ast.SwapStatement]Type
@@ -83,11 +83,7 @@ type Elaboration struct {
 	EffectivePredeclaredValues          map[string]ValueDeclaration
 	EffectivePredeclaredTypes           map[string]TypeDeclaration
 	isChecking                          bool
-	ReferenceExpressionBorrowTypes      map[*ast.ReferenceExpression]*ReferenceType
-
-	// Only to make the go-compiler happy with semver compatibility.
-	// TODO: Remove
-	IsResourceMoveIndexExpression map[*ast.IndexExpression]bool
+	ReferenceExpressionBorrowTypes      map[*ast.ReferenceExpression]Type
 }
 
 func NewElaboration() *Elaboration {
@@ -105,7 +101,6 @@ func NewElaboration() *Elaboration {
 		InterfaceTypeDeclarations:           map[*InterfaceType]*ast.InterfaceDeclaration{},
 		ConstructorFunctionTypes:            map[*ast.SpecialFunctionDeclaration]*FunctionType{},
 		FunctionExpressionFunctionType:      map[*ast.FunctionExpression]*FunctionType{},
-		InvocationExpressionReceiverTypes:   map[*ast.InvocationExpression]Type{},
 		InvocationExpressionArgumentTypes:   map[*ast.InvocationExpression][]Type{},
 		InvocationExpressionParameterTypes:  map[*ast.InvocationExpression][]Type{},
 		InvocationExpressionReturnTypes:     map[*ast.InvocationExpression]Type{},
@@ -123,6 +118,7 @@ func NewElaboration() *Elaboration {
 		DictionaryExpressionType:            map[*ast.DictionaryExpression]*DictionaryType{},
 		DictionaryExpressionEntryTypes:      map[*ast.DictionaryExpression][]DictionaryEntryType{},
 		IntegerExpressionType:               map[*ast.IntegerExpression]Type{},
+		StringExpressionType:                map[*ast.StringExpression]Type{},
 		FixedPointExpression:                map[*ast.FixedPointExpression]Type{},
 		TransactionDeclarationTypes:         map[*ast.TransactionDeclaration]*TransactionType{},
 		SwapStatementLeftTypes:              map[*ast.SwapStatement]Type{},
@@ -140,7 +136,7 @@ func NewElaboration() *Elaboration {
 		GlobalTypes:                         NewStringVariableOrderedMap(),
 		EffectivePredeclaredValues:          map[string]ValueDeclaration{},
 		EffectivePredeclaredTypes:           map[string]TypeDeclaration{},
-		ReferenceExpressionBorrowTypes:      map[*ast.ReferenceExpression]*ReferenceType{},
+		ReferenceExpressionBorrowTypes:      map[*ast.ReferenceExpression]Type{},
 	}
 }
 

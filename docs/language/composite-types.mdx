@@ -77,7 +77,7 @@ let a = SomeStruct()
 The constructor function may require parameters if the [initializer](#composite-type-fields)
 of the composite type requires them.
 
-Composite types can only be declared within [contracts](../contracts)
+Composite types can only be declared within [contracts](contracts)
 and not locally in functions.
 
 
@@ -152,10 +152,10 @@ that is to be initialized.
 Field types must be storable. Non-storable types are:
 
 - Functions
-- [Accounts (`AuthAccount` / `PublicAccount`)](../accounts)
-- [Transactions](../transactions)
-- [References](../references): References are ephemeral.
-  Consider [storing a capability and borrowing it](../capability-based-access-control) when needed instead.
+- [Accounts (`AuthAccount` / `PublicAccount`)](accounts)
+- [Transactions](transactions)
+- [References](references): References are ephemeral.
+  Consider [storing a capability and borrowing it](capability-based-access-control) when needed instead.
 
 Fields can be read (if they are constant or variable) and set (if they are variable),
 using the access syntax: the composite value is followed by a dot (`.`)
@@ -237,17 +237,6 @@ token.balance = 1
 //
 token.id = 23
 ```
-
-## Resource Owner
-
-Resources have the implicit field `let owner: PublicAccount?`.
-If the resource is currently [stored in an account](../accounts#account-storage),
-then the field contains the publicly accessible portion of the account.
-Otherwise the field is `nil`.
-
-The field's value changes when the resource is moved from outside account storage
-into account storage, when it is moved from the storage of one account
-to the storage of another account, and when it is moved out of account storage.
 
 ## Composite Data Initializer Overloading
 
@@ -756,4 +745,4 @@ let six = value!.setAndReturn(new: 6)
 
 ### Resources
 
-Resources are explained in detail [in the following page](../resources).
+Resources are explained in detail [in the following page](resources).

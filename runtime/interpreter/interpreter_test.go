@@ -23,30 +23,22 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
 	. "github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestInterpreterOptionalBoxing(t *testing.T) {
 
 	t.Parallel()
 
-	checker, err := sema.NewChecker(nil, utils.TestLocation)
-	require.NoError(t, err)
-
-	program := ProgramFromChecker(checker)
-
-	inter, err := NewInterpreter(program, checker.Location)
-	require.NoError(t, err)
-
 	t.Run("Bool to Bool?", func(t *testing.T) {
+		inter := newTestInterpreter(t)
+
 		value := inter.BoxOptional(
+			ReturnEmptyLocationRange,
 			BoolValue(true),
-			sema.BoolType,
 			&sema.OptionalType{Type: sema.BoolType},
 		)
 		assert.Equal(t,
@@ -56,9 +48,11 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 	})
 
 	t.Run("Bool? to Bool?", func(t *testing.T) {
+		inter := newTestInterpreter(t)
+
 		value := inter.BoxOptional(
+			ReturnEmptyLocationRange,
 			NewSomeValueNonCopying(BoolValue(true)),
-			&sema.OptionalType{Type: sema.BoolType},
 			&sema.OptionalType{Type: sema.BoolType},
 		)
 		assert.Equal(t,
@@ -68,9 +62,11 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 	})
 
 	t.Run("Bool? to Bool??", func(t *testing.T) {
+		inter := newTestInterpreter(t)
+
 		value := inter.BoxOptional(
+			ReturnEmptyLocationRange,
 			NewSomeValueNonCopying(BoolValue(true)),
-			&sema.OptionalType{Type: sema.BoolType},
 			&sema.OptionalType{Type: &sema.OptionalType{Type: sema.BoolType}},
 		)
 		assert.Equal(t,
@@ -82,10 +78,12 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 	})
 
 	t.Run("nil (Never?) to Bool??", func(t *testing.T) {
+		inter := newTestInterpreter(t)
+
 		// NOTE:
 		value := inter.BoxOptional(
+			ReturnEmptyLocationRange,
 			NilValue{},
-			&sema.OptionalType{Type: sema.NeverType},
 			&sema.OptionalType{Type: &sema.OptionalType{Type: sema.BoolType}},
 		)
 		assert.Equal(t,
@@ -95,10 +93,12 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 	})
 
 	t.Run("nil (Some(nil): Never??) to Bool??", func(t *testing.T) {
+		inter := newTestInterpreter(t)
+
 		// NOTE:
 		value := inter.BoxOptional(
+			ReturnEmptyLocationRange,
 			NewSomeValueNonCopying(NilValue{}),
-			&sema.OptionalType{Type: &sema.OptionalType{Type: sema.NeverType}},
 			&sema.OptionalType{Type: &sema.OptionalType{Type: sema.BoolType}},
 		)
 		assert.Equal(t,
@@ -112,14 +112,6 @@ func TestInterpreterBoxing(t *testing.T) {
 
 	t.Parallel()
 
-	checker, err := sema.NewChecker(nil, utils.TestLocation)
-	require.NoError(t, err)
-
-	program := ProgramFromChecker(checker)
-
-	inter, err := NewInterpreter(program, checker.Location)
-	require.NoError(t, err)
-
 	for _, anyType := range []sema.Type{
 		sema.AnyStructType,
 		sema.AnyResourceType,
@@ -128,12 +120,14 @@ func TestInterpreterBoxing(t *testing.T) {
 		t.Run(anyType.String(), func(t *testing.T) {
 
 			t.Run(fmt.Sprintf("Bool to %s?", anyType), func(t *testing.T) {
+				inter := newTestInterpreter(t)
 
 				assert.Equal(t,
 					NewSomeValueNonCopying(
 						BoolValue(true),
 					),
 					inter.ConvertAndBox(
+						ReturnEmptyLocationRange,
 						BoolValue(true),
 						sema.BoolType,
 						&sema.OptionalType{Type: anyType},
@@ -143,12 +137,14 @@ func TestInterpreterBoxing(t *testing.T) {
 			})
 
 			t.Run(fmt.Sprintf("Bool? to %s?", anyType), func(t *testing.T) {
+				inter := newTestInterpreter(t)
 
 				assert.Equal(t,
 					NewSomeValueNonCopying(
 						BoolValue(true),
 					),
 					inter.ConvertAndBox(
+						ReturnEmptyLocationRange,
 						NewSomeValueNonCopying(BoolValue(true)),
 						&sema.OptionalType{Type: sema.BoolType},
 						&sema.OptionalType{Type: anyType},

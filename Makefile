@@ -81,3 +81,9 @@ release:
 	npm-packages/cadence-parser/package.json \
 	npm-packages/cadence-docgen/package.json" \
 	./bump-version.sh $(bump))
+
+.PHONY: check-capabilities
+check-capabilities:
+	go install github.com/cugu/gocap@v0.1.0
+	go mod download
+	gocap check .

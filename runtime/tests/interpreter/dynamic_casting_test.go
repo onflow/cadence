@@ -593,7 +593,8 @@ func TestInterpretDynamicCastingStruct(t *testing.T) {
 
 						require.IsType(t,
 							&interpreter.CompositeValue{},
-							inter.Globals["y"].GetValue().(*interpreter.SomeValue).Value,
+							inter.Globals["y"].GetValue().(*interpreter.SomeValue).
+								InnerValue(inter, interpreter.ReturnEmptyLocationRange),
 						)
 					})
 				}
@@ -739,7 +740,8 @@ func testResourceCastValid(t *testing.T, types, fromType string, targetType stri
 
 		require.IsType(t,
 			&interpreter.CompositeValue{},
-			value.(*interpreter.SomeValue).Value,
+			value.(*interpreter.SomeValue).
+				InnerValue(inter, interpreter.ReturnEmptyLocationRange),
 		)
 
 	case ast.OperationForceCast:
@@ -885,7 +887,8 @@ func testStructCastValid(t *testing.T, types, fromType string, targetType string
 
 		require.IsType(t,
 			&interpreter.CompositeValue{},
-			value.(*interpreter.SomeValue).Value,
+			value.(*interpreter.SomeValue).
+				InnerValue(inter, interpreter.ReturnEmptyLocationRange),
 		)
 
 	case ast.OperationForceCast:
@@ -1194,7 +1197,7 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 						require.IsType(t, zValue, &interpreter.SomeValue{})
 						zSome := zValue.(*interpreter.SomeValue)
 
-						innerValue := zSome.Value
+						innerValue := zSome.InnerValue(inter, interpreter.ReturnEmptyLocationRange)
 						require.IsType(t, innerValue, &interpreter.ArrayValue{})
 						innerArray := innerValue.(*interpreter.ArrayValue)
 
@@ -2295,7 +2298,8 @@ func testReferenceCastValid(t *testing.T, types, fromType, targetType string, op
 
 		require.IsType(t,
 			&interpreter.EphemeralReferenceValue{},
-			value.(*interpreter.SomeValue).Value,
+			value.(*interpreter.SomeValue).
+				InnerValue(inter, interpreter.ReturnEmptyLocationRange),
 		)
 
 	case ast.OperationForceCast:
@@ -3474,7 +3478,7 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 
 	capabilityValue := &interpreter.CapabilityValue{
 		Address: interpreter.AddressValue{},
-		Path:    interpreter.PathValue{},
+		Path:    interpreter.EmptyPathValue,
 		BorrowType: interpreter.ConvertSemaToStaticType(
 			&sema.ReferenceType{
 				Type: structType,

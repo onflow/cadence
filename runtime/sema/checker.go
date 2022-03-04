@@ -115,6 +115,7 @@ type Checker struct {
 	checkHandler                       CheckHandlerFunc
 	expectedType                       Type
 	memberAccountAccessHandler         MemberAccountAccessHandlerFunc
+	lintEnabled                        bool
 }
 
 type Option func(*Checker) error
@@ -231,6 +232,16 @@ func WithPositionInfoEnabled(enabled bool) Option {
 			checker.FunctionInvocations = NewFunctionInvocations()
 		}
 
+		return nil
+	}
+}
+
+// WithLintingEnabled returns a checker option which enables/disables
+// advanced linting.
+//
+func WithLintingEnabled(enabled bool) Option {
+	return func(checker *Checker) error {
+		checker.lintEnabled = enabled
 		return nil
 	}
 }
@@ -587,19 +598,12 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 	case *ast.IntegerExpression:
 		unwrappedTargetType := UnwrapOptionalType(targetType)
 
-		// If the target type is `Never`, the checks below will be performed
-		// (as `Never` is the subtype of all types), but the checks are not valid
-
-		if IsSubType(unwrappedTargetType, NeverType) {
-			break
-		}
-
-		if IsSubType(unwrappedTargetType, IntegerType) {
+		if IsSameTypeKind(unwrappedTargetType, IntegerType) {
 			CheckIntegerLiteral(typedExpression, unwrappedTargetType, checker.report)
 
 			return true
 
-		} else if IsSubType(unwrappedTargetType, &AddressType{}) {
+		} else if IsSameTypeKind(unwrappedTargetType, &AddressType{}) {
 			CheckAddressLiteral(typedExpression, checker.report)
 
 			return true
@@ -608,16 +612,8 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 	case *ast.FixedPointExpression:
 		unwrappedTargetType := UnwrapOptionalType(targetType)
 
-		// If the target type is `Never`, the checks below will be performed
-		// (as `Never` is the subtype of all types), but the checks are not valid
-
-		if IsSubType(unwrappedTargetType, NeverType) {
-			break
-		}
-
-		valueTypeOK := CheckFixedPointLiteral(typedExpression, valueType, checker.report)
-
-		if IsSubType(unwrappedTargetType, FixedPointType) {
+		if IsSameTypeKind(unwrappedTargetType, FixedPointType) {
+			valueTypeOK := CheckFixedPointLiteral(typedExpression, valueType, checker.report)
 			if valueTypeOK {
 				CheckFixedPointLiteral(typedExpression, unwrappedTargetType, checker.report)
 			}
@@ -662,7 +658,7 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 	case *ast.StringExpression:
 		unwrappedTargetType := UnwrapOptionalType(targetType)
 
-		if IsSubType(unwrappedTargetType, CharacterType) {
+		if IsSameTypeKind(unwrappedTargetType, CharacterType) {
 			checker.checkCharacterLiteral(typedExpression)
 
 			return true
@@ -676,7 +672,16 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 // fits into range of the target integer type
 //
 func CheckIntegerLiteral(expression *ast.IntegerExpression, targetType Type, report func(error)) bool {
-	ranged := targetType.(IntegerRangedType)
+	ranged, ok := targetType.(IntegerRangedType)
+
+	// if this isn't an integer ranged type, report a mismatch
+	if !ok {
+		report(&TypeMismatchWithDescriptionError{
+			ActualType:              targetType,
+			ExpectedTypeDescription: "an integer type",
+			Range:                   ast.NewRangeFromPositioned(expression),
+		})
+	}
 	minInt := ranged.MinInt()
 	maxInt := ranged.MaxInt()
 
@@ -858,12 +863,6 @@ func (checker *Checker) checkResourceMoveOperation(valueExpression ast.Expressio
 		)
 		return
 	}
-
-	checker.recordResourceInvalidation(
-		unaryExpression.Expression,
-		valueType,
-		ResourceInvalidationKindMoveDefinite,
-	)
 }
 
 func (checker *Checker) inLoop() bool {
@@ -1141,6 +1140,10 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 					Range: ast.NewRangeFromPositioned(restriction),
 				})
 			}
+
+			// NOTE: ignore this invalid type
+			// and do not add it to the restrictions result
+			continue
 		}
 
 		restrictions = append(restrictions, restrictionInterfaceType)
@@ -1308,7 +1311,7 @@ func (checker *Checker) convertNominalType(t *ast.NominalType) Type {
 	var resolvedIdentifiers []ast.Identifier
 
 	for _, identifier := range t.NestedIdentifiers {
-		if containerType, ok := ty.(ContainerType); ok && containerType.isContainerType() {
+		if containerType, ok := ty.(ContainerType); ok && containerType.IsContainerType() {
 			ty, _ = containerType.GetNestedTypes().Get(identifier.Identifier)
 		} else {
 			if !ty.IsInvalidType() {
@@ -1575,7 +1578,7 @@ func (checker *Checker) recordResourceInvalidation(
 	}
 
 	if checker.allowSelfResourceFieldInvalidation && accessedSelfMember != nil {
-		checker.resources.AddInvalidation(accessedSelfMember, invalidation)
+		checker.maybeAddResourceInvalidation(accessedSelfMember, invalidation)
 
 		return &recordedResourceInvalidation{
 			resource:     accessedSelfMember,
@@ -1605,7 +1608,7 @@ func (checker *Checker) recordResourceInvalidation(
 		)
 	}
 
-	checker.resources.AddInvalidation(variable, invalidation)
+	checker.maybeAddResourceInvalidation(variable, invalidation)
 
 	return &recordedResourceInvalidation{
 		resource:     variable,
@@ -1724,14 +1727,24 @@ func (checker *Checker) checkResourceFieldNesting(
 		return
 	}
 
-	// The field is not a resource or contract, check if there are
-	// any fields that have a resource type  and report them
+	// The field is not a resource or contract.
+	// Check if there are any fields that have a resource type and report them
 
 	members.Foreach(func(name string, member *Member) {
 		// NOTE: check type, not resource annotation:
 		// the field could have a wrong annotation
 
 		if !member.TypeAnnotation.Type.IsResourceType() {
+			return
+		}
+
+		// Skip enums' implicit rawValue field.
+		// If a resource type is used as the enum raw type,
+		// it is already reported
+
+		if compositeKind == common.CompositeKindEnum &&
+			name == EnumRawValueFieldName {
+
 			return
 		}
 
@@ -1919,15 +1932,13 @@ func (checker *Checker) checkFieldsAccessModifier(fields []*ast.FieldDeclaration
 // i.e. it has exactly one grapheme cluster.
 //
 func (checker *Checker) checkCharacterLiteral(expression *ast.StringExpression) {
-	length := uniseg.GraphemeClusterCount(expression.Value)
-
-	if length == 1 {
+	if IsValidCharacter(expression.Value) {
 		return
 	}
 
 	checker.report(
 		&InvalidCharacterLiteralError{
-			Length: length,
+			Length: uniseg.GraphemeClusterCount(expression.Value),
 			Range:  ast.NewRangeFromPositioned(expression),
 		},
 	)
@@ -2392,22 +2403,21 @@ func (checker *Checker) visitExpressionWithForceType(
 	// as the new contextually expected type.
 	prevExpectedType := checker.expectedType
 
-	// If the expected type is invalid, treat it in the same manner as
-	// expected type is unknown.
-	if expectedType != nil && expectedType.IsInvalidType() {
-		expectedType = nil
-	}
-
 	checker.expectedType = expectedType
 	defer func() {
 		// Restore the prev contextually expected type
 		checker.expectedType = prevExpectedType
 	}()
 
-	actualType = expr.Accept(checker).(Type)
+	actualType, ok := expr.Accept(checker).(Type)
+	if !ok {
+		// visiter must always return a Type
+		panic(errors.NewUnreachableError())
+	}
 
 	if forceType &&
 		expectedType != nil &&
+		!expectedType.IsInvalidType() &&
 		actualType != InvalidType &&
 		!IsSubType(actualType, expectedType) {
 
@@ -2470,6 +2480,16 @@ func (checker *Checker) declareGlobalRanges() {
 	checker.Elaboration.GlobalTypes.Foreach(addRange)
 
 	checker.Elaboration.GlobalValues.Foreach(addRange)
+}
+
+func (checker *Checker) maybeAddResourceInvalidation(resource interface{}, invalidation ResourceInvalidation) {
+	functionActivation := checker.functionActivations.Current()
+
+	if functionActivation.ReturnInfo.IsUnreachable() {
+		return
+	}
+
+	checker.resources.AddInvalidation(resource, invalidation)
 }
 
 func wrapWithOptionalIfNotNil(typ Type) Type {

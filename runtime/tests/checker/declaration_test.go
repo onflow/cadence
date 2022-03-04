@@ -626,3 +626,88 @@ func TestCheckVariableDeclarationTypeAnnotationRequired(t *testing.T) {
 		assert.IsType(t, &sema.TypeAnnotationRequiredError{}, errs[0])
 	})
 }
+
+func TestCheckBuiltinRedeclaration(t *testing.T) {
+
+	t.Parallel()
+
+	// Check built-in conversion functions have a static type
+
+	_ = sema.BaseValueActivation.ForEach(
+		func(name string, _ *sema.Variable) error {
+
+			t.Run(name, func(t *testing.T) {
+
+				t.Run("re-declaration in function", func(t *testing.T) {
+
+					_, err := ParseAndCheck(t,
+						fmt.Sprintf(
+							`
+                                fun test() {
+                                    let %[1]s = %[1]s
+                                }
+                            `,
+							name,
+						),
+					)
+
+					errs := ExpectCheckerErrors(t, err, 1)
+
+					assert.IsType(t, &sema.RedeclarationError{}, errs[0])
+				})
+
+				t.Run("global re-declaration", func(t *testing.T) {
+
+					_, err := ParseAndCheck(t,
+						fmt.Sprintf(
+							`
+                                let %[1]s = %[1]s
+                            `,
+							name,
+						),
+					)
+
+					errs := ExpectCheckerErrors(t, err, 1)
+
+					assert.IsType(t, &sema.RedeclarationError{}, errs[0])
+				})
+			})
+
+			return nil
+		},
+	)
+}
+
+func TestCheckUint64RedeclarationFails(t *testing.T) {
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, "let UInt64 = UInt64 ( 0b0 )")
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.RedeclarationError{}, errs[0])
+}
+
+func TestCheckTypeRedeclarationFails(t *testing.T) {
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, "let Type = Type")
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.RedeclarationError{}, errs[0])
+}
+
+func TestCheckSetToTypeList(t *testing.T) {
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, "var a=[Type]")
+	assert.Nil(t, err)
+}
+
+func TestCheckSetToDictWithType(t *testing.T) {
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, "var j={0.0:Type}")
+	assert.Nil(t, err)
+}
