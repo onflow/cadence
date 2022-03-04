@@ -113,6 +113,7 @@ type Value interface {
 	DeepRemove(interpreter *Interpreter)
 	// Clone returns a new value that is equal to this value.
 	// NOTE: not used by interpreter, but used externally (e.g. state migration)
+	// NOTE: memory metering is unnecessary for Clone methods
 	Clone(interpreter *Interpreter) Value
 }
 
@@ -359,8 +360,8 @@ func (v TypeValue) Transfer(
 	return v
 }
 
-func (v TypeValue) Clone(interpreter *Interpreter) Value {
-	return NewTypeValue(interpreter, v.Type)
+func (v TypeValue) Clone(_ *Interpreter) Value {
+	return NewUnmeteredTypeValue(v.Type)
 }
 
 func (TypeValue) DeepRemove(_ *Interpreter) {
@@ -14706,9 +14707,8 @@ func (v *StorageReferenceValue) Transfer(
 	return v
 }
 
-func (v *StorageReferenceValue) Clone(interpreter *Interpreter) Value {
-	return NewStorageReferenceValue(
-		interpreter,
+func (v *StorageReferenceValue) Clone(_ *Interpreter) Value {
+	return NewUnmeteredStorageReferenceValue(
 		v.Authorized,
 		v.TargetStorageAddress,
 		v.TargetPath,
@@ -15079,8 +15079,8 @@ func (v *EphemeralReferenceValue) Transfer(
 	return v
 }
 
-func (v *EphemeralReferenceValue) Clone(interpreter *Interpreter) Value {
-	return NewEphemeralReferenceValue(interpreter, v.Authorized, v.Value, v.BorrowedType)
+func (v *EphemeralReferenceValue) Clone(_ *Interpreter) Value {
+	return NewUnmeteredEphemeralReferenceValue(v.Authorized, v.Value, v.BorrowedType)
 }
 
 func (*EphemeralReferenceValue) DeepRemove(_ *Interpreter) {
@@ -15275,8 +15275,8 @@ func (v AddressValue) Transfer(
 	return v
 }
 
-func (v AddressValue) Clone(interpreter *Interpreter) Value {
-	return NewAddressValue(interpreter, v.ToAddress())
+func (v AddressValue) Clone(_ *Interpreter) Value {
+	return NewUnmeteredAddressValue(v[:])
 }
 
 func (AddressValue) DeepRemove(_ *Interpreter) {
