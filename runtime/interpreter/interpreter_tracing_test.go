@@ -35,7 +35,7 @@ func setupInterpreterWithTracingCallBack(
 	t *testing.T,
 	tracingCallback func(opName string),
 ) *interpreter.Interpreter {
-	storage := interpreter.NewInMemoryStorage(nil)
+	storage := newUnmeteredInMemoryStorage()
 	inter, err := interpreter.NewInterpreter(
 		&interpreter.Program{},
 		utils.TestLocation,

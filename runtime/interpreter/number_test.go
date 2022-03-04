@@ -30,17 +30,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const goIntSize = 32 << (^uint(0) >> 63) // 32 or 64
-const goMaxInt = 1<<(goIntSize-1) - 1
-const goMinInt = -1 << (goIntSize - 1)
-
 func TestOverEstimateIntStringLength(t *testing.T) {
 
 	properties := gopter.NewProperties(nil)
 
 	properties.Property("estimate is greater or equal to actual length", prop.ForAll(
 		func(v int) bool {
-			return OverEstimateIntStringLength(v) >= uint64(len(strconv.Itoa(v)))
+			return OverEstimateIntStringLength(v) >= len(strconv.Itoa(v))
 		},
 		gen.Int(),
 	))
@@ -67,7 +63,7 @@ func TestOverEstimateIntStringLength(t *testing.T) {
 		goMaxInt,
 	} {
 		assert.LessOrEqual(t,
-			uint64(len(strconv.Itoa(v))),
+			len(strconv.Itoa(v)),
 			OverEstimateIntStringLength(v),
 		)
 	}
@@ -79,7 +75,7 @@ func TestOverEstimateBigIntStringLength(t *testing.T) {
 
 	properties.Property("estimate is greater or equal to actual length", prop.ForAll(
 		func(v *big.Int) bool {
-			return OverEstimateBigIntStringLength(v) >= uint64(len(v.String()))
+			return OverEstimateBigIntStringLength(v) >= len(v.String())
 		},
 		gen.Int64().Map(func(v int64) *big.Int {
 			b := big.NewInt(v)
@@ -111,13 +107,13 @@ func TestOverEstimateBigIntStringLength(t *testing.T) {
 		}(),
 	} {
 		assert.LessOrEqual(t,
-			uint64(len(v.String())),
+			len(v.String()),
 			OverEstimateBigIntStringLength(v),
 		)
 
 		neg := new(big.Int).Neg(v)
 		assert.LessOrEqual(t,
-			uint64(len(neg.String())),
+			len(neg.String()),
 			OverEstimateBigIntStringLength(neg),
 		)
 	}
@@ -128,13 +124,13 @@ func TestOverEstimateFixedPointStringLength(t *testing.T) {
 	properties := gopter.NewProperties(nil)
 
 	properties.Property("estimate is greater or equal to actual length", prop.ForAll(
-		func(v NumberValue, scale uint64) bool {
-			return OverEstimateFixedPointStringLength(v, scale) >= uint64(len(v.String()))+1+scale
+		func(v NumberValue, scale int) bool {
+			return OverEstimateFixedPointStringLength(v, scale) >= len(v.String())+1+scale
 		},
 		gen.Int64().Map(func(v int64) NumberValue {
 			return NewIntValueFromInt64(v)
 		}),
-		gen.UInt64(),
+		gen.Int(),
 	))
 
 	properties.TestingRun(t)
@@ -161,7 +157,7 @@ func TestOverEstimateFixedPointStringLength(t *testing.T) {
 		goMaxInt,
 	} {
 		assert.LessOrEqual(t,
-			uint64(len(strconv.Itoa(v))+1+testScale),
+			len(strconv.Itoa(v))+1+testScale,
 			OverEstimateFixedPointStringLength(NewIntValueFromInt64(int64(v)), testScale),
 		)
 	}

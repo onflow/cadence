@@ -4604,7 +4604,7 @@ func TestRuntimeStaticTypeAvailability(t *testing.T) {
 }
 
 func newTestInterpreter(tb testing.TB) *interpreter.Interpreter {
-	storage := interpreter.NewInMemoryStorage(nil)
+	storage := newUnmeteredInMemoryStorage()
 
 	inter, err := interpreter.NewInterpreter(
 		nil,
@@ -4616,6 +4616,10 @@ func newTestInterpreter(tb testing.TB) *interpreter.Interpreter {
 	require.NoError(tb, err)
 
 	return inter
+}
+
+func newUnmeteredInMemoryStorage() interpreter.Storage {
+	return interpreter.NewInMemoryStorage(nil)
 }
 
 func TestNestedStructArgPassing(t *testing.T) {
