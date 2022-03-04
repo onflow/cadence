@@ -41,4 +41,7 @@ const (
 	MemoryKindTypeValue
 	MemoryKindStorageReferenceValue
 	MemoryKindEphemeralReferenceValue
+	MemoryKindInterpretedFunction
+	MemoryKindHostFunction
+	MemoryKindBoundFunction
 )

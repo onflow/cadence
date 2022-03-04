@@ -278,6 +278,7 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ func() LocationRange, n
 		})
 	case "isSubtype":
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				staticType := v.Type
 				otherTypeValue, ok := invocation.Arguments[0].(TypeValue)
@@ -789,6 +790,7 @@ func (v CharacterValue) GetMember(interpreter *Interpreter, _ func() LocationRan
 	switch name {
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				memoryUsage := common.MemoryUsage{
 					Kind:   common.MemoryKindString,
@@ -1036,6 +1038,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, _ func() LocationRange
 
 	case "concat":
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				otherArray, ok := invocation.Arguments[0].(*StringValue)
 				if !ok {
@@ -1048,6 +1051,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, _ func() LocationRange
 
 	case "slice":
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				from, ok := invocation.Arguments[0].(IntValue)
 				if !ok {
@@ -1066,6 +1070,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, _ func() LocationRange
 
 	case "decodeHex":
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				return v.DecodeHex(invocation.Interpreter)
 			},
@@ -1074,6 +1079,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, _ func() LocationRange
 
 	case "toLower":
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				return v.ToLower(invocation.Interpreter)
 			},
@@ -1762,6 +1768,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func()
 
 	case "append":
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				v.Append(
 					invocation.Interpreter,
@@ -1777,6 +1784,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func()
 
 	case "appendAll":
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				otherArray, ok := invocation.Arguments[0].(*ArrayValue)
 				if !ok {
@@ -1796,6 +1804,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func()
 
 	case "concat":
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				otherArray, ok := invocation.Arguments[0].(*ArrayValue)
 				if !ok {
@@ -1814,6 +1823,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func()
 
 	case "insert":
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				indexValue, ok := invocation.Arguments[0].(NumberValue)
 				if !ok {
@@ -1838,6 +1848,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func()
 
 	case "remove":
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				indexValue, ok := invocation.Arguments[0].(NumberValue)
 				if !ok {
@@ -1858,6 +1869,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func()
 
 	case "removeFirst":
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				return v.RemoveFirst(
 					invocation.Interpreter,
@@ -1871,6 +1883,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func()
 
 	case "removeLast":
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				return v.RemoveLast(
 					invocation.Interpreter,
@@ -1884,6 +1897,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func()
 
 	case "firstIndex":
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				return v.FirstIndex(
 					invocation.Interpreter,
@@ -1898,6 +1912,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func()
 
 	case "contains":
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				return v.Contains(
 					invocation.Interpreter,
@@ -1912,6 +1927,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func()
 
 	case "slice":
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				from, ok := invocation.Arguments[0].(IntValue)
 				if !ok {
@@ -2378,11 +2394,12 @@ type NumberValue interface {
 	ToBigEndianBytes() []byte
 }
 
-func getNumberValueMember(v NumberValue, name string, typ sema.Type) Value {
+func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, typ sema.Type) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				interpreter := invocation.Interpreter
 				memoryUsage := common.NewStringMemoryUsage(
@@ -2401,6 +2418,7 @@ func getNumberValueMember(v NumberValue, name string, typ sema.Type) Value {
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				return ByteSliceToByteArrayValue(
 					invocation.Interpreter,
@@ -2416,6 +2434,7 @@ func getNumberValueMember(v NumberValue, name string, typ sema.Type) Value {
 
 	case sema.NumericTypeSaturatingAddFunctionName:
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				other, ok := invocation.Arguments[0].(NumberValue)
 				if !ok {
@@ -2432,6 +2451,7 @@ func getNumberValueMember(v NumberValue, name string, typ sema.Type) Value {
 
 	case sema.NumericTypeSaturatingSubtractFunctionName:
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				other, ok := invocation.Arguments[0].(NumberValue)
 				if !ok {
@@ -2448,6 +2468,7 @@ func getNumberValueMember(v NumberValue, name string, typ sema.Type) Value {
 
 	case sema.NumericTypeSaturatingMultiplyFunctionName:
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				other, ok := invocation.Arguments[0].(NumberValue)
 				if !ok {
@@ -2464,6 +2485,7 @@ func getNumberValueMember(v NumberValue, name string, typ sema.Type) Value {
 
 	case sema.NumericTypeSaturatingDivideFunctionName:
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				other, ok := invocation.Arguments[0].(NumberValue)
 				if !ok {
@@ -2890,8 +2912,8 @@ func (v IntValue) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return IntValue{res}
 }
 
-func (v IntValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, sema.IntType)
+func (v IntValue) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.IntType)
 }
 
 func (IntValue) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
@@ -3388,8 +3410,8 @@ func (v Int8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v Int8Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, sema.Int8Type)
+func (v Int8Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.Int8Type)
 }
 
 func (Int8Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
@@ -3887,8 +3909,8 @@ func (v Int16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v Int16Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, sema.Int16Type)
+func (v Int16Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.Int16Type)
 }
 
 func (Int16Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
@@ -4388,8 +4410,8 @@ func (v Int32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v Int32Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, sema.Int32Type)
+func (v Int32Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.Int32Type)
 }
 
 func (Int32Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
@@ -4888,8 +4910,8 @@ func (v Int64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v Int64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, sema.Int64Type)
+func (v Int64Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.Int64Type)
 }
 
 func (Int64Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
@@ -5472,8 +5494,8 @@ func (v Int128Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return Int128Value{res}
 }
 
-func (v Int128Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, sema.Int128Type)
+func (v Int128Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.Int128Type)
 }
 
 func (Int128Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
@@ -6054,8 +6076,8 @@ func (v Int256Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return Int256Value{res}
 }
 
-func (v Int256Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, sema.Int256Type)
+func (v Int256Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.Int256Type)
 }
 
 func (Int256Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
@@ -6535,8 +6557,8 @@ func (v UIntValue) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return UIntValue{res}
 }
 
-func (v UIntValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, sema.UIntType)
+func (v UIntValue) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.UIntType)
 }
 
 func (UIntValue) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
@@ -6974,8 +6996,8 @@ func (v UInt8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v UInt8Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, sema.UInt8Type)
+func (v UInt8Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.UInt8Type)
 }
 
 func (UInt8Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
@@ -7411,8 +7433,8 @@ func (v UInt16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v UInt16Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, sema.UInt16Type)
+func (v UInt16Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.UInt16Type)
 }
 
 func (UInt16Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
@@ -7855,8 +7877,8 @@ func (v UInt32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v UInt32Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, sema.UInt32Type)
+func (v UInt32Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.UInt32Type)
 }
 
 func (UInt32Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
@@ -8322,8 +8344,8 @@ func (v UInt64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v UInt64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, sema.UInt64Type)
+func (v UInt64Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.UInt64Type)
 }
 
 func (UInt64Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
@@ -8859,8 +8881,8 @@ func (v UInt128Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return UInt128Value{res}
 }
 
-func (v UInt128Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, sema.UInt128Type)
+func (v UInt128Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.UInt128Type)
 }
 
 func (UInt128Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
@@ -9395,8 +9417,8 @@ func (v UInt256Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return UInt256Value{res}
 }
 
-func (v UInt256Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, sema.UInt256Type)
+func (v UInt256Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.UInt256Type)
 }
 
 func (UInt256Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
@@ -9743,8 +9765,8 @@ func (v Word8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v Word8Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, sema.Word8Type)
+func (v Word8Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.Word8Type)
 }
 
 func (Word8Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
@@ -10091,8 +10113,8 @@ func (v Word16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v Word16Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, sema.Word16Type)
+func (v Word16Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.Word16Type)
 }
 
 func (Word16Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
@@ -10442,8 +10464,8 @@ func (v Word32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v Word32Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, sema.Word32Type)
+func (v Word32Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.Word32Type)
 }
 
 func (Word32Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
@@ -10814,8 +10836,8 @@ func (v Word64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v Word64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, sema.Word64Type)
+func (v Word64Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.Word64Type)
 }
 
 func (Word64Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
@@ -11268,8 +11290,8 @@ func ConvertFix64(value Value) Fix64Value {
 	}
 }
 
-func (v Fix64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, sema.Fix64Type)
+func (v Fix64Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.Fix64Type)
 }
 
 func (Fix64Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
@@ -11696,8 +11718,8 @@ func ConvertUFix64(value Value) UFix64Value {
 	}
 }
 
-func (v UFix64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, sema.UFix64Type)
+func (v UFix64Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.UFix64Type)
 }
 
 func (UFix64Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
@@ -12076,10 +12098,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange fu
 
 	function, ok := v.Functions[name]
 	if ok {
-		return BoundFunctionValue{
-			Self:     v,
-			Function: function,
-		}
+		return NewBoundFunctionValue(interpreter, function, v)
 	}
 
 	return nil
@@ -13283,6 +13302,7 @@ func (v *DictionaryValue) GetMember(
 
 	case "remove":
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				keyValue := invocation.Arguments[0]
 
@@ -13299,6 +13319,7 @@ func (v *DictionaryValue) GetMember(
 
 	case "insert":
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				keyValue := invocation.Arguments[0]
 				newValue := invocation.Arguments[1]
@@ -13317,6 +13338,7 @@ func (v *DictionaryValue) GetMember(
 
 	case "containsKey":
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				return v.ContainsKey(
 					invocation.Interpreter,
@@ -13944,7 +13966,9 @@ func (v NilValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-var nilValueMapFunction = NewHostFunctionValue(
+// nilValueMapFunction is created only once per interpreter.
+// Hence, no need to meter, as it's a constant.
+var nilValueMapFunction = NewUnmeteredHostFunctionValue(
 	func(invocation Invocation) Value {
 		return NewNilValue(invocation.Interpreter.memoryGauge)
 	},
@@ -13955,7 +13979,7 @@ var nilValueMapFunction = NewHostFunctionValue(
 	},
 )
 
-func (v NilValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+func (v NilValue) GetMember(inter *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case "map":
 		return nilValueMapFunction
@@ -14127,6 +14151,7 @@ func (v *SomeValue) GetMember(interpreter *Interpreter, getLocationRange func() 
 	switch name {
 	case "map":
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 
 				transformFunction, ok := invocation.Arguments[0].(FunctionValue)
@@ -15197,6 +15222,7 @@ func (v AddressValue) GetMember(interpreter *Interpreter, _ func() LocationRange
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				interpreter := invocation.Interpreter
 				memoryUsage := common.NewStringMemoryUsage(
@@ -15215,6 +15241,7 @@ func (v AddressValue) GetMember(interpreter *Interpreter, _ func() LocationRange
 
 	case sema.AddressTypeToBytesFunctionName:
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				address := common.Address(v)
 				return ByteSliceToByteArrayValue(interpreter, address[:])
@@ -15296,12 +15323,14 @@ func (AddressValue) ChildStorables() []atree.Storable {
 }
 
 func accountGetCapabilityFunction(
+	inter *Interpreter,
 	addressValue AddressValue,
 	pathType sema.Type,
 	funcType *sema.FunctionType,
 ) *HostFunctionValue {
 
 	return NewHostFunctionValue(
+		inter,
 		func(invocation Invocation) Value {
 
 			path, ok := invocation.Arguments[0].(PathValue)
@@ -15408,11 +15437,12 @@ func (v PathValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v PathValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+func (v PathValue) GetMember(inter *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
+			inter,
 			func(invocation Invocation) Value {
 				interpreter := invocation.Interpreter
 				memoryUsage := common.NewStringMemoryUsage(
@@ -15957,7 +15987,9 @@ func NewPublicKeyValue(
 	return publicKeyValue
 }
 
-var publicKeyVerifyFunction = NewHostFunctionValue(
+// publicKeyVerifyFunction is only created once for the interpreter.
+// Hence, no need to meter.
+var publicKeyVerifyFunction = NewUnmeteredHostFunctionValue(
 	func(invocation Invocation) Value {
 		signatureValue, ok := invocation.Arguments[0].(*ArrayValue)
 		if !ok {
@@ -16004,7 +16036,9 @@ var publicKeyVerifyFunction = NewHostFunctionValue(
 	sema.PublicKeyVerifyFunctionType,
 )
 
-var publicKeyVerifyPoPFunction = NewHostFunctionValue(
+// publicKeyVerifyPoPFunction is only created once for the interpreter.
+// Hence, no need to meter.
+var publicKeyVerifyPoPFunction = NewUnmeteredHostFunctionValue(
 	func(invocation Invocation) (v Value) {
 		signatureValue, ok := invocation.Arguments[0].(*ArrayValue)
 		if !ok {

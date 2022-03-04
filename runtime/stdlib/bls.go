@@ -114,7 +114,7 @@ var blsAggregatePublicKeysFunctionType = &sema.FunctionType{
 	),
 }
 
-var blsAggregatePublicKeysFunction = interpreter.NewHostFunctionValue(
+var blsAggregatePublicKeysFunction = interpreter.NewUnmeteredHostFunctionValue(
 	func(invocation interpreter.Invocation) interpreter.Value {
 		publicKeys, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
 		if !ok {
@@ -139,7 +139,7 @@ var blsAggregatePublicKeysFunction = interpreter.NewHostFunctionValue(
 	blsAggregatePublicKeysFunctionType,
 )
 
-var blsAggregateSignaturesFunction = interpreter.NewHostFunctionValue(
+var blsAggregateSignaturesFunction = interpreter.NewUnmeteredHostFunctionValue(
 	func(invocation interpreter.Invocation) interpreter.Value {
 		signatures, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
 		if !ok {

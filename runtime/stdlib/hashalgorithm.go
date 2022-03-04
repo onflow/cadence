@@ -39,7 +39,7 @@ func NewHashAlgorithmCase(inter *interpreter.Interpreter, rawValue uint8) *inter
 	)
 }
 
-var hashAlgorithmHashFunction = interpreter.NewHostFunctionValue(
+var hashAlgorithmHashFunction = interpreter.NewUnmeteredHostFunctionValue(
 	func(invocation interpreter.Invocation) interpreter.Value {
 		dataValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
 		if !ok {
@@ -68,7 +68,7 @@ var hashAlgorithmHashFunction = interpreter.NewHostFunctionValue(
 	sema.HashAlgorithmTypeHashFunctionType,
 )
 
-var hashAlgorithmHashWithTagFunction = interpreter.NewHostFunctionValue(
+var hashAlgorithmHashWithTagFunction = interpreter.NewUnmeteredHostFunctionValue(
 	func(invocation interpreter.Invocation) interpreter.Value {
 		dataValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
 		if !ok {

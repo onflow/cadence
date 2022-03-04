@@ -94,6 +94,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 
 						value.Functions = map[string]interpreter.FunctionValue{
 							"bar": interpreter.NewHostFunctionValue(
+								inter,
 								func(invocation interpreter.Invocation) interpreter.Value {
 									return interpreter.UInt64Value(42)
 								},

@@ -1272,16 +1272,16 @@ func (interpreter *Interpreter) functionDeclarationValue(
 		beforeStatements = postConditionsRewrite.BeforeStatements
 	}
 
-	return &InterpretedFunctionValue{
-		Interpreter:      interpreter,
-		ParameterList:    declaration.ParameterList,
-		Type:             functionType,
-		Activation:       lexicalScope,
-		BeforeStatements: beforeStatements,
-		PreConditions:    preConditions,
-		Statements:       declaration.FunctionBlock.Block.Statements,
-		PostConditions:   rewrittenPostConditions,
-	}
+	return NewInterpretedFunctionValue(
+		interpreter,
+		declaration.ParameterList,
+		functionType,
+		lexicalScope,
+		beforeStatements,
+		preConditions,
+		declaration.FunctionBlock.Block.Statements,
+		rewrittenPostConditions,
+	)
 }
 
 func (interpreter *Interpreter) VisitBlock(block *ast.Block) ast.Repr {
@@ -1566,6 +1566,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	var initializerFunction FunctionValue
 	if declaration.CompositeKind == common.CompositeKindEvent {
 		initializerFunction = NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				for i, argument := range invocation.Arguments {
 					parameter := compositeType.ConstructorParameters[i]
@@ -1658,6 +1659,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 	constructorGenerator := func(address common.Address) *HostFunctionValue {
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 
 				// Check that the resource is constructed
@@ -1858,6 +1860,7 @@ func EnumConstructorFunction(
 	// Prepare the constructor function which performs a lookup in the lookup table
 
 	constructor := NewHostFunctionValue(
+		inter,
 		func(invocation Invocation) Value {
 			rawValue, ok := invocation.Arguments[0].(IntegerValue)
 			if !ok {
@@ -1918,16 +1921,16 @@ func (interpreter *Interpreter) compositeInitializerFunction(
 		rewrittenPostConditions = postConditionsRewrite.RewrittenPostConditions
 	}
 
-	return &InterpretedFunctionValue{
-		Interpreter:      interpreter,
-		ParameterList:    parameterList,
-		Type:             functionType,
-		Activation:       lexicalScope,
-		BeforeStatements: beforeStatements,
-		PreConditions:    preConditions,
-		Statements:       statements,
-		PostConditions:   rewrittenPostConditions,
-	}
+	return NewInterpretedFunctionValue(
+		interpreter,
+		parameterList,
+		functionType,
+		lexicalScope,
+		beforeStatements,
+		preConditions,
+		statements,
+		rewrittenPostConditions,
+	)
 }
 
 func (interpreter *Interpreter) compositeDestructorFunction(
@@ -1961,15 +1964,16 @@ func (interpreter *Interpreter) compositeDestructorFunction(
 		rewrittenPostConditions = postConditionsRewrite.RewrittenPostConditions
 	}
 
-	return &InterpretedFunctionValue{
-		Interpreter:      interpreter,
-		Type:             emptyFunctionType,
-		Activation:       lexicalScope,
-		BeforeStatements: beforeStatements,
-		PreConditions:    preConditions,
-		Statements:       statements,
-		PostConditions:   rewrittenPostConditions,
-	}
+	return NewInterpretedFunctionValue(
+		interpreter,
+		nil,
+		emptyFunctionType,
+		lexicalScope,
+		beforeStatements,
+		preConditions,
+		statements,
+		rewrittenPostConditions,
+	)
 }
 
 func (interpreter *Interpreter) compositeFunctions(
@@ -2045,16 +2049,16 @@ func (interpreter *Interpreter) compositeFunction(
 	parameterList := functionDeclaration.ParameterList
 	statements := functionDeclaration.FunctionBlock.Block.Statements
 
-	return &InterpretedFunctionValue{
-		Interpreter:      interpreter,
-		ParameterList:    parameterList,
-		Type:             functionType,
-		Activation:       lexicalScope,
-		BeforeStatements: beforeStatements,
-		PreConditions:    preConditions,
-		Statements:       statements,
-		PostConditions:   postConditions,
-	}
+	return NewInterpretedFunctionValue(
+		interpreter,
+		parameterList,
+		functionType,
+		lexicalScope,
+		beforeStatements,
+		preConditions,
+		statements,
+		postConditions,
+	)
 }
 
 func (interpreter *Interpreter) VisitFieldDeclaration(_ *ast.FieldDeclaration) ast.Repr {
@@ -2949,7 +2953,7 @@ func init() {
 	defineBaseValue(
 		baseActivation,
 		"DictionaryType",
-		NewHostFunctionValue(
+		NewUnmeteredHostFunctionValue(
 			func(invocation Invocation) Value {
 				keyTypeValue, ok := invocation.Arguments[0].(TypeValue)
 				if !ok {
@@ -2983,7 +2987,7 @@ func init() {
 	defineBaseValue(
 		baseActivation,
 		"CompositeType",
-		NewHostFunctionValue(
+		NewUnmeteredHostFunctionValue(
 			func(invocation Invocation) Value {
 				typeIDValue, ok := invocation.Arguments[0].(*StringValue)
 				if !ok {
@@ -3008,7 +3012,7 @@ func init() {
 	defineBaseValue(
 		baseActivation,
 		"InterfaceType",
-		NewHostFunctionValue(
+		NewUnmeteredHostFunctionValue(
 			func(invocation Invocation) Value {
 				typeIDValue, ok := invocation.Arguments[0].(*StringValue)
 				if !ok {
@@ -3033,7 +3037,7 @@ func init() {
 	defineBaseValue(
 		baseActivation,
 		"FunctionType",
-		NewHostFunctionValue(
+		NewUnmeteredHostFunctionValue(
 			func(invocation Invocation) Value {
 				parameters, ok := invocation.Arguments[0].(*ArrayValue)
 				if !ok {
@@ -3075,7 +3079,7 @@ func init() {
 	defineBaseValue(
 		baseActivation,
 		"RestrictedType",
-		NewHostFunctionValue(
+		NewUnmeteredHostFunctionValue(
 			RestrictedTypeFunction,
 			sema.RestrictedTypeFunctionType,
 		),
@@ -3185,7 +3189,7 @@ var converterFunctionValues = func() []converterFunction {
 	for index, declaration := range ConverterDeclarations {
 		// NOTE: declare in loop, as captured in closure below
 		convert := declaration.convert
-		converterFunctionValue := NewHostFunctionValue(
+		converterFunctionValue := NewUnmeteredHostFunctionValue(
 			func(invocation Invocation) Value {
 				val := convert(invocation.Arguments[0])
 				if val == nil {
@@ -3237,7 +3241,7 @@ type runtimeTypeConstructor struct {
 var runtimeTypeConstructors = []runtimeTypeConstructor{
 	{
 		name: "OptionalType",
-		converter: NewHostFunctionValue(
+		converter: NewUnmeteredHostFunctionValue(
 			func(invocation Invocation) Value {
 				typeValue, ok := invocation.Arguments[0].(TypeValue)
 				if !ok {
@@ -3256,7 +3260,7 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 	},
 	{
 		name: "VariableSizedArrayType",
-		converter: NewHostFunctionValue(
+		converter: NewUnmeteredHostFunctionValue(
 			func(invocation Invocation) Value {
 				typeValue, ok := invocation.Arguments[0].(TypeValue)
 				if !ok {
@@ -3275,7 +3279,7 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 	},
 	{
 		name: "ConstantSizedArrayType",
-		converter: NewHostFunctionValue(
+		converter: NewUnmeteredHostFunctionValue(
 			func(invocation Invocation) Value {
 				typeValue, ok := invocation.Arguments[0].(TypeValue)
 				if !ok {
@@ -3299,7 +3303,7 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 	},
 	{
 		name: "ReferenceType",
-		converter: NewHostFunctionValue(
+		converter: NewUnmeteredHostFunctionValue(
 			func(invocation Invocation) Value {
 				authorizedValue, ok := invocation.Arguments[0].(BoolValue)
 				if !ok {
@@ -3323,7 +3327,7 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 	},
 	{
 		name: "CapabilityType",
-		converter: NewHostFunctionValue(
+		converter: NewUnmeteredHostFunctionValue(
 			func(invocation Invocation) Value {
 				typeValue, ok := invocation.Arguments[0].(TypeValue)
 				if !ok {
@@ -3359,7 +3363,7 @@ func defineRuntimeTypeConstructorFunctions(activation *VariableActivation) {
 
 // typeFunction is the `Type` function. It is stateless, hence it can be re-used across interpreters.
 //
-var typeFunction = NewHostFunctionValue(
+var typeFunction = NewUnmeteredHostFunctionValue(
 	func(invocation Invocation) Value {
 
 		typeParameterPair := invocation.TypeParameterTypes.Oldest()
@@ -3393,7 +3397,7 @@ func defineBaseValue(activation *VariableActivation, name string, value Value) {
 // stringFunction is the `String` function. It is stateless, hence it can be re-used across interpreters.
 //
 var stringFunction = func() Value {
-	functionValue := NewHostFunctionValue(
+	functionValue := NewUnmeteredHostFunctionValue(
 		func(invocation Invocation) Value {
 			return emptyString
 		},
@@ -3413,7 +3417,7 @@ var stringFunction = func() Value {
 
 	addMember(
 		sema.StringTypeEncodeHexFunctionName,
-		NewHostFunctionValue(
+		NewUnmeteredHostFunctionValue(
 			func(invocation Invocation) Value {
 				argument, ok := invocation.Arguments[0].(*ArrayValue)
 				if !ok {
@@ -3695,6 +3699,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 	address := addressValue.ToAddress()
 
 	return NewHostFunctionValue(
+		interpreter,
 		func(invocation Invocation) Value {
 			value := invocation.Arguments[0]
 
@@ -3748,6 +3753,7 @@ func (interpreter *Interpreter) authAccountTypeFunction(addressValue AddressValu
 	address := addressValue.ToAddress()
 
 	return NewHostFunctionValue(
+		interpreter,
 		func(invocation Invocation) Value {
 			path, ok := invocation.Arguments[0].(PathValue)
 			if !ok {
@@ -3789,6 +3795,7 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 	address := addressValue.ToAddress()
 
 	return NewHostFunctionValue(
+		interpreter,
 		func(invocation Invocation) Value {
 			path, ok := invocation.Arguments[0].(PathValue)
 			if !ok {
@@ -3856,6 +3863,7 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 	address := addressValue.ToAddress()
 
 	return NewHostFunctionValue(
+		interpreter,
 		func(invocation Invocation) Value {
 			path, ok := invocation.Arguments[0].(PathValue)
 			if !ok {
@@ -3906,6 +3914,7 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 	address := addressValue.ToAddress()
 
 	return NewHostFunctionValue(
+		interpreter,
 		func(invocation Invocation) Value {
 
 			typeParameterPair := invocation.TypeParameterTypes.Oldest()
@@ -3975,6 +3984,7 @@ func (interpreter *Interpreter) accountGetLinkTargetFunction(addressValue Addres
 	address := addressValue.ToAddress()
 
 	return NewHostFunctionValue(
+		interpreter,
 		func(invocation Invocation) Value {
 
 			capabilityPath, ok := invocation.Arguments[0].(PathValue)
@@ -4008,6 +4018,7 @@ func (interpreter *Interpreter) authAccountUnlinkFunction(addressValue AddressVa
 	address := addressValue.ToAddress()
 
 	return NewHostFunctionValue(
+		interpreter,
 		func(invocation Invocation) Value {
 
 			capabilityPath, ok := invocation.Arguments[0].(PathValue)
@@ -4038,6 +4049,7 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 	address := addressValue.ToAddress()
 
 	return NewHostFunctionValue(
+		interpreter,
 		func(invocation Invocation) Value {
 
 			if borrowType == nil {
@@ -4108,6 +4120,7 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 	address := addressValue.ToAddress()
 
 	return NewHostFunctionValue(
+		interpreter,
 		func(invocation Invocation) Value {
 
 			if borrowType == nil {
@@ -4398,6 +4411,7 @@ func (interpreter *Interpreter) getMember(self Value, getLocationRange func() Lo
 
 func (interpreter *Interpreter) isInstanceFunction(self Value) *HostFunctionValue {
 	return NewHostFunctionValue(
+		interpreter,
 		func(invocation Invocation) Value {
 			firstArgument := invocation.Arguments[0]
 			typeValue, ok := firstArgument.(TypeValue)
@@ -4425,6 +4439,7 @@ func (interpreter *Interpreter) isInstanceFunction(self Value) *HostFunctionValu
 
 func (interpreter *Interpreter) getTypeFunction(self Value) *HostFunctionValue {
 	return NewHostFunctionValue(
+		interpreter,
 		func(invocation Invocation) Value {
 			return NewTypeValue(
 				interpreter,
