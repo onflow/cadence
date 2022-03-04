@@ -61,7 +61,7 @@ func (e InvalidStringLengthError) Error() string {
 	return fmt.Sprintf(
 		"invalid string length: got %d, expected max %d",
 		e.Length,
-		math.MaxInt,
+		goMaxInt,
 	)
 }
 
@@ -70,7 +70,7 @@ func decodeString(dec *cbor.StreamDecoder, memoryGauge common.MemoryGauge) (stri
 	if err != nil {
 		return "", err
 	}
-	if length > math.MaxInt {
+	if length > goMaxInt {
 		return "", InvalidStringLengthError{
 			Length: length,
 		}

@@ -30,10 +30,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const goIntSize = 32 << (^uint(0) >> 63) // 32 or 64
-const goMaxInt = 1<<(goIntSize-1) - 1
-const goMinInt = -1 << (goIntSize - 1)
-
 func TestOverEstimateIntStringLength(t *testing.T) {
 
 	properties := gopter.NewProperties(nil)

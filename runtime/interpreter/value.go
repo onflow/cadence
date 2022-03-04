@@ -180,9 +180,9 @@ type ReferenceTrackedResourceKindedValue interface {
 
 func safeAdd(a, b int) int {
 	// INT32-C
-	if (b > 0) && (a > (math.MaxInt - b)) {
+	if (b > 0) && (a > (goMaxInt - b)) {
 		panic(OverflowError{})
-	} else if (b < 0) && (a < (math.MinInt - b)) {
+	} else if (b < 0) && (a < (goMinInt - b)) {
 		panic(UnderflowError{})
 	}
 	return a + b
@@ -193,24 +193,24 @@ func safeMul(a, b int) int {
 	if a > 0 {
 		if b > 0 {
 			// positive * positive = positive. overflow?
-			if a > (math.MaxInt / b) {
+			if a > (goMaxInt / b) {
 				panic(OverflowError{})
 			}
 		} else {
 			// positive * negative = negative. underflow?
-			if b < (math.MinInt / a) {
+			if b < (goMinInt / a) {
 				panic(UnderflowError{})
 			}
 		}
 	} else {
 		if b > 0 {
 			// negative * positive = negative. underflow?
-			if a < (math.MinInt / b) {
+			if a < (goMinInt / b) {
 				panic(UnderflowError{})
 			}
 		} else {
 			// negative * negative = positive. overflow?
-			if (a != 0) && (b < (math.MaxInt / a)) {
+			if (a != 0) && (b < (goMaxInt / a)) {
 				panic(OverflowError{})
 			}
 		}
