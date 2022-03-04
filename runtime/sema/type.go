@@ -5123,12 +5123,11 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 			case *CompositeType:
 				// An unrestricted type `T`
-				// is a subtype of a restricted type `U{Vs}`: if `T == U`.
+				// is a subtype of a restricted type `U{Vs}`: if `T <: U`.
 				//
 				// The owner may freely restrict.
 
-				return typedSubType == typedSuperType.Type
-
+				return IsSubType(typedSubType, typedSuperType.Type)
 			}
 
 			switch subType {
