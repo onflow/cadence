@@ -23,6 +23,13 @@ PATH := $(PATH):$(GOPATH)/bin
 
 COVERPKGS := $(shell go list ./... | grep -v /cmd | grep -v /runtime/test | tr "\n" "," | sed 's/,*$$//')
 
+
+LINTERS :=
+ifneq ($(linters),)
+	LINTERS = -E $(linters)
+endif
+
+
 .PHONY: test
 test:
 	# test all packages
@@ -45,12 +52,12 @@ lint-github-actions: build-linter
 
 .PHONY: lint
 lint: build-linter
-	tools/golangci-lint/golangci-lint run -v ./...
+	tools/golangci-lint/golangci-lint run $(LINTERS) -v ./...
 
 
 .PHONY: fix-lint
 fix-lint: build-linter
-	tools/golangci-lint/golangci-lint run -v --fix ./...
+	tools/golangci-lint/golangci-lint run -v --fix $(LINTERS) ./...
 
 .PHONY: build-linter
 build-linter: tools/golangci-lint/golangci-lint tools/maprangecheck/maprangecheck.so

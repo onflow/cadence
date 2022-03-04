@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,34 +16,25 @@
  * limitations under the License.
  */
 
-package testdata
+package main
 
-func testVariable() {
-	var m map[string]int
+import (
+	"golang.org/x/tools/go/analysis"
+	"golang.org/x/tools/go/analysis/singlechecker"
+)
 
-	for range m { // want "range statement over map: map\\[string\\]int"
+func main() {
+	singlechecker.Main(Analyzer)
+}
+
+type analyzerPlugin struct{}
+
+func (*analyzerPlugin) GetAnalyzers() []*analysis.Analyzer {
+	return []*analysis.Analyzer{
+		Analyzer,
 	}
 }
 
-func returnMap() map[int]string {
-	return nil
-}
-
-func testFunc() {
-	for range returnMap() { // want "range statement over map: map\\[int\\]string"
-	}
-}
-
-func testTypeDef() {
-	type M map[string]int
-	var m M
-	for range m { // want "range statement over map: map\\[string\\]int"
-	}
-}
-
-func testTypeAlias() {
-	type M = map[string]int
-	var m M
-	for range m { // want "range statement over map: map\\[string\\]int"
-	}
-}
+// This must be defined and named 'AnalyzerPlugin' for golangci-lint,
+// see https://golangci-lint.run/contributing/new-linters/#how-to-write-a-custom-linter
+var AnalyzerPlugin analyzerPlugin
