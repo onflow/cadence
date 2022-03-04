@@ -60,7 +60,7 @@ fix-lint: build-linter
 	tools/golangci-lint/golangci-lint run -v --fix $(LINTERS) ./...
 
 .PHONY: build-linter
-build-linter: tools/golangci-lint/golangci-lint tools/maprangecheck/maprangecheck.so
+build-linter: tools/golangci-lint/golangci-lint tools/maprangecheck/maprangecheck.so tools/constructorcheck/constructorcheck.so
 
 tools/maprangecheck/maprangecheck.so:
 	(cd tools/maprangecheck && $(MAKE) plugin)
