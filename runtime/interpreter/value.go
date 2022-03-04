@@ -12272,7 +12272,7 @@ func (v *CompositeValue) Equal(interpreter *Interpreter, getLocationRange func()
 		return false
 	}
 
-	if !v.StaticType(nil).Equal(otherComposite.StaticType(nil)) ||
+	if !v.StaticType(interpreter).Equal(otherComposite.StaticType(interpreter)) ||
 		v.Kind != otherComposite.Kind ||
 		v.dictionary.Count() != otherComposite.dictionary.Count() {
 
@@ -12417,14 +12417,14 @@ func (v *CompositeValue) ConformsToStaticType(
 			return false
 		}
 
-		if !interpreter.IsSubType(value.StaticType(nil), member.TypeAnnotation.Type) {
+		if !interpreter.IsSubType(value.StaticType(interpreter), member.TypeAnnotation.Type) {
 			return false
 		}
 
 		if !value.ConformsToStaticType(
 			interpreter,
 			getLocationRange,
-			value.StaticType(nil),
+			value.StaticType(interpreter),
 			results,
 		) {
 			return false
@@ -14083,7 +14083,11 @@ func (v *SomeValue) GetMember(interpreter *Interpreter, getLocationRange func() 
 
 				return NewSomeValueNonCopying(newValue)
 			},
-			sema.OptionalTypeMapFunctionType(interpreter.MustConvertStaticToSemaType(v.value.StaticType(nil))),
+			sema.OptionalTypeMapFunctionType(
+				interpreter.MustConvertStaticToSemaType(
+					v.value.StaticType(interpreter),
+				),
+			),
 		)
 	}
 
@@ -14348,7 +14352,6 @@ func (v *StorageReferenceValue) StaticType(inter *Interpreter) StaticType {
 	}
 
 	referencedValue, err := v.dereference(inter, ReturnEmptyLocationRange)
-
 	if err != nil {
 		panic(err)
 	}
@@ -15180,7 +15183,7 @@ func accountGetCapabilityFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			if !invocation.Interpreter.IsSubType(path.StaticType(nil), pathType) {
+			if !invocation.Interpreter.IsSubType(path.StaticType(invocation.Interpreter), pathType) {
 				panic(TypeMismatchError{
 					ExpectedType:  pathType,
 					LocationRange: invocation.GetLocationRange(),
