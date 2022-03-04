@@ -53,13 +53,30 @@ func (e UnsupportedTagDecodingError) Error() string {
 	)
 }
 
+type InvalidStringLengthError struct {
+	Length uint64
+}
+
+func (e InvalidStringLengthError) Error() string {
+	return fmt.Sprintf(
+		"invalid string length: got %d, expected max %d",
+		e.Length,
+		math.MaxInt,
+	)
+}
+
 func decodeString(dec *cbor.StreamDecoder, memoryGauge common.MemoryGauge) (string, error) {
 	length, err := dec.NextSize()
 	if err != nil {
 		return "", err
 	}
+	if length > math.MaxInt {
+		return "", InvalidStringLengthError{
+			Length: length,
+		}
+	}
 	if memoryGauge != nil {
-		memoryGauge.UseMemory(common.NewStringMemoryUsage(length))
+		memoryGauge.UseMemory(common.NewStringMemoryUsage(int(length)))
 	}
 	return dec.DecodeString()
 }

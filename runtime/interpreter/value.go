@@ -178,6 +178,46 @@ type ReferenceTrackedResourceKindedValue interface {
 	StorageID() atree.StorageID
 }
 
+func safeAdd(a, b int) int {
+	// INT32-C
+	if (b > 0) && (a > (math.MaxInt - b)) {
+		panic(OverflowError{})
+	} else if (b < 0) && (a < (math.MinInt - b)) {
+		panic(UnderflowError{})
+	}
+	return a + b
+}
+
+func safeMul(a, b int) int {
+	// INT32-C
+	if a > 0 {
+		if b > 0 {
+			// positive * positive = positive. overflow?
+			if a > (math.MaxInt / b) {
+				panic(OverflowError{})
+			}
+		} else {
+			// positive * negative = negative. underflow?
+			if b < (math.MinInt / a) {
+				panic(UnderflowError{})
+			}
+		}
+	} else {
+		if b > 0 {
+			// negative * positive = negative. underflow?
+			if a < (math.MinInt / b) {
+				panic(UnderflowError{})
+			}
+		} else {
+			// negative * negative = positive. overflow?
+			if (a != 0) && (b < (math.MaxInt / a)) {
+				panic(OverflowError{})
+			}
+		}
+	}
+	return a * b
+}
+
 // TypeValue
 
 type TypeValue struct {
@@ -843,9 +883,14 @@ func (v *StringValue) NormalForm() string {
 }
 
 func (v *StringValue) Concat(interpreter *Interpreter, other *StringValue) Value {
-	memoryUsage := common.NewStringMemoryUsage(
-		uint64(len(v.Str)) + uint64(len(other.Str)),
-	)
+
+	firstLength := len(v.Str)
+	secondLength := len(other.Str)
+
+	newLength := safeAdd(firstLength, secondLength)
+
+	memoryUsage := common.NewStringMemoryUsage(newLength)
+
 	return NewStringValue(
 		interpreter,
 		memoryUsage,
@@ -1041,7 +1086,7 @@ func (v *StringValue) ToLower(interpreter *Interpreter) *StringValue {
 	// see https://stackoverflow.com/questions/28683805/is-there-a-unicode-string-which-gets-longer-when-converted-to-lowercase
 
 	memoryUsage := common.NewStringMemoryUsage(
-		uint64(len(v.Str)),
+		len(v.Str),
 	)
 
 	return NewStringValue(
@@ -10841,7 +10886,7 @@ func (Word64Value) ChildStorables() []atree.Storable {
 type FixedPointValue interface {
 	NumberValue
 	IntegerPart() NumberValue
-	Scale() uint64
+	Scale() int
 }
 
 // Fix64Value
@@ -11294,7 +11339,7 @@ func (v Fix64Value) IntegerPart() NumberValue {
 	return UInt64Value(v / sema.Fix64Factor)
 }
 
-func (Fix64Value) Scale() uint64 {
+func (Fix64Value) Scale() int {
 	return sema.Fix64Scale
 }
 
@@ -11722,7 +11767,7 @@ func (v UFix64Value) IntegerPart() NumberValue {
 	return UInt64Value(v / sema.Fix64Factor)
 }
 
-func (UFix64Value) Scale() uint64 {
+func (UFix64Value) Scale() int {
 	return sema.Fix64Scale
 }
 
@@ -15066,7 +15111,7 @@ func (v AddressValue) GetMember(interpreter *Interpreter, _ func() LocationRange
 			func(invocation Invocation) Value {
 				interpreter := invocation.Interpreter
 				memoryUsage := common.NewStringMemoryUsage(
-					common.AddressLength * 2,
+					safeMul(common.AddressLength, 2),
 				)
 				return NewStringValue(
 					interpreter,
@@ -15285,10 +15330,14 @@ func (v PathValue) GetMember(inter *Interpreter, _ func() LocationRange, name st
 			inter,
 			func(invocation Invocation) Value {
 				interpreter := invocation.Interpreter
+
+				domainLength := len(v.Domain.Identifier())
+				identifierLength := len(v.Identifier)
+
 				memoryUsage := common.NewStringMemoryUsage(
-					uint64(len(v.Domain.Identifier())) +
-						uint64(len(v.Identifier)),
+					safeAdd(domainLength, identifierLength),
 				)
+
 				return NewStringValue(
 					interpreter,
 					memoryUsage,

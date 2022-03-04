@@ -295,7 +295,7 @@ func stringState(l *lexer) stateFn {
 	memoryGauge := l.memoryGauge
 	if memoryGauge != nil {
 		memoryGauge.UseMemory(
-			common.NewStringMemoryUsage(uint64(l.wordLength())),
+			common.NewStringMemoryUsage(l.wordLength()),
 		)
 	}
 	l.emitValue(TokenString)

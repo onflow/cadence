@@ -27,9 +27,9 @@ type MemoryGauge interface {
 	UseMemory(usage MemoryUsage)
 }
 
-func NewStringMemoryUsage(amount uint64) MemoryUsage {
+func NewStringMemoryUsage(length int) MemoryUsage {
 	return MemoryUsage{
 		Kind:   MemoryKindString,
-		Amount: amount,
+		Amount: uint64(length),
 	}
 }
