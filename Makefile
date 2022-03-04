@@ -65,6 +65,9 @@ build-linter: tools/golangci-lint/golangci-lint tools/maprangecheck/maprangechec
 tools/maprangecheck/maprangecheck.so:
 	(cd tools/maprangecheck && $(MAKE) plugin)
 
+tools/constructorcheck/constructorcheck.so:
+	(cd tools/constructorcheck && $(MAKE) plugin)
+
 tools/golangci-lint/golangci-lint:
 	(cd tools/golangci-lint && $(MAKE))
 
