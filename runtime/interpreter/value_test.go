@@ -1573,7 +1573,7 @@ func TestEphemeralReferenceTypeConformance(t *testing.T) {
 	conforms := value.ConformsToStaticType(
 		inter,
 		ReturnEmptyLocationRange,
-		value.StaticType(),
+		value.StaticType(inter),
 		TypeConformanceResults{},
 	)
 	assert.True(t, conforms)

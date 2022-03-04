@@ -9511,7 +9511,7 @@ func TestHostFunctionStaticType(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.ConvertSemaToStaticType(sema.ToStringFunctionType),
-			value.StaticType(),
+			value.StaticType(nil),
 		)
 	})
 
@@ -9531,14 +9531,14 @@ func TestHostFunctionStaticType(t *testing.T) {
 					ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.MetaType),
 				},
 			),
-			value.StaticType(),
+			value.StaticType(nil),
 		)
 
 		value = inter.Globals["y"].GetValue()
 		assert.Equal(
 			t,
 			interpreter.PrimitiveStaticTypeMetaType,
-			value.StaticType(),
+			value.StaticType(nil),
 		)
 
 		require.IsType(t, interpreter.TypeValue{}, value)
@@ -9564,17 +9564,17 @@ func TestHostFunctionStaticType(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.ConvertSemaToStaticType(sema.ToStringFunctionType),
-			xValue.StaticType(),
+			xValue.StaticType(nil),
 		)
 
 		yValue := inter.Globals["y"].GetValue()
 		assert.Equal(
 			t,
 			interpreter.ConvertSemaToStaticType(sema.ToStringFunctionType),
-			yValue.StaticType(),
+			yValue.StaticType(nil),
 		)
 
-		assert.Equal(t, xValue.StaticType(), yValue.StaticType())
+		assert.Equal(t, xValue.StaticType(nil), yValue.StaticType(nil))
 	})
 }
 

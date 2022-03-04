@@ -96,7 +96,7 @@ func (v *SimpleCompositeValue) DynamicType(_ *Interpreter, _ SeenReferences) Dyn
 	return v.dynamicType
 }
 
-func (v *SimpleCompositeValue) StaticType() StaticType {
+func (v *SimpleCompositeValue) StaticType(_ *Interpreter) StaticType {
 	return v.staticType
 }
 
@@ -171,12 +171,12 @@ func (v *SimpleCompositeValue) RecursiveString(seenReferences SeenReferences) st
 }
 
 func (v *SimpleCompositeValue) ConformsToStaticType(
-	_ *Interpreter,
+	inter *Interpreter,
 	_ func() LocationRange,
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return staticType.Equal(v.StaticType())
+	return staticType.Equal(v.StaticType(inter))
 }
 
 func (v *SimpleCompositeValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {

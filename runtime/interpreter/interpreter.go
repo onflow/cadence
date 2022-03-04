@@ -2056,7 +2056,7 @@ func (interpreter *Interpreter) CheckValueTransferTargetType(value Value, target
 		return true
 	}
 
-	if interpreter.IsSubType(value.StaticType(), targetType) {
+	if interpreter.IsSubType(value.StaticType(interpreter), targetType) {
 		return true
 	}
 
@@ -3767,7 +3767,7 @@ func (interpreter *Interpreter) authAccountTypeFunction(addressValue AddressValu
 
 			return NewSomeValueNonCopying(
 				TypeValue{
-					Type: value.StaticType(),
+					Type: value.StaticType(invocation.Interpreter),
 				},
 			)
 		},
@@ -3815,7 +3815,7 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 
 			ty := typeParameterPair.Value
 
-			if !interpreter.IsSubType(value.StaticType(), ty) {
+			if !interpreter.IsSubType(value.StaticType(invocation.Interpreter), ty) {
 				panic(ForceCastTypeMismatchError{
 					ExpectedType:  ty,
 					LocationRange: invocation.GetLocationRange(),
@@ -4412,7 +4412,7 @@ func (interpreter *Interpreter) isInstanceFunction(self Value) *HostFunctionValu
 
 			semaType := interpreter.MustConvertStaticToSemaType(staticType)
 			// NOTE: not invocation.Self, as that is only set for composite values
-			result := interpreter.IsSubType(self.StaticType(), semaType)
+			result := interpreter.IsSubType(self.StaticType(invocation.Interpreter), semaType)
 			return BoolValue(result)
 		},
 		sema.IsInstanceFunctionType,
@@ -4423,7 +4423,7 @@ func (interpreter *Interpreter) getTypeFunction(self Value) *HostFunctionValue {
 	return NewHostFunctionValue(
 		func(invocation Invocation) Value {
 			return TypeValue{
-				Type: self.StaticType(),
+				Type: self.StaticType(invocation.Interpreter),
 			}
 		},
 		sema.GetTypeFunctionType,
@@ -4439,7 +4439,7 @@ func (interpreter *Interpreter) ExpectType(
 	expectedType sema.Type,
 	getLocationRange func() LocationRange,
 ) {
-	if !interpreter.IsSubType(value.StaticType(), expectedType) {
+	if !interpreter.IsSubType(value.StaticType(interpreter), expectedType) {
 		var locationRange LocationRange
 		if getLocationRange != nil {
 			locationRange = getLocationRange()
@@ -4458,10 +4458,10 @@ func (interpreter *Interpreter) checkContainerMutation(
 ) {
 	expectedType := interpreter.MustConvertStaticToSemaType(elementType)
 
-	if !interpreter.IsSubType(element.StaticType(), expectedType) {
+	if !interpreter.IsSubType(element.StaticType(interpreter), expectedType) {
 		panic(ContainerMutationError{
 			ExpectedType:  expectedType,
-			ActualType:    interpreter.MustConvertStaticToSemaType(element.StaticType()),
+			ActualType:    interpreter.MustConvertStaticToSemaType(element.StaticType(interpreter)),
 			LocationRange: getLocationRange(),
 		})
 	}

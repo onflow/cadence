@@ -116,7 +116,7 @@ func TestArrayStorage(t *testing.T) {
 		value := NewArrayValue(
 			inter,
 			VariableSizedStaticType{
-				Type: element.StaticType(),
+				Type: element.StaticType(inter),
 			},
 			common.Address{},
 		)
@@ -179,7 +179,7 @@ func TestArrayStorage(t *testing.T) {
 		value := NewArrayValue(
 			inter,
 			VariableSizedStaticType{
-				Type: element.StaticType(),
+				Type: element.StaticType(inter),
 			},
 			common.Address{},
 			element,

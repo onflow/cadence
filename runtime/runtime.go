@@ -921,7 +921,7 @@ func validateArgumentParams(
 		}
 
 		// Check that decoded value is a subtype of static parameter type
-		if !inter.IsSubType(arg.StaticType(), parameterType) {
+		if !inter.IsSubType(arg.StaticType(inter), parameterType) {
 			return nil, &InvalidEntryPointArgumentError{
 				Index: i,
 				Err: &InvalidValueTypeError{
@@ -935,7 +935,7 @@ func validateArgumentParams(
 		if !arg.ConformsToStaticType(
 			inter,
 			interpreter.ReturnEmptyLocationRange,
-			arg.StaticType(),
+			arg.StaticType(inter),
 			conformanceResults,
 		) {
 			return nil, &InvalidEntryPointArgumentError{
@@ -952,7 +952,7 @@ func validateArgumentParams(
 				return true
 			}
 
-			if !hasValidStaticType(value) {
+			if !hasValidStaticType(inter, value) {
 				panic(fmt.Errorf("invalid static type for argument: %d", i))
 			}
 
@@ -965,7 +965,7 @@ func validateArgumentParams(
 	return argumentValues, nil
 }
 
-func hasValidStaticType(value interpreter.Value) bool {
+func hasValidStaticType(inter *interpreter.Interpreter, value interpreter.Value) bool {
 	switch value := value.(type) {
 	case *interpreter.ArrayValue:
 		return value.Type != nil
@@ -975,7 +975,7 @@ func hasValidStaticType(value interpreter.Value) bool {
 	default:
 		// For other values, static type is NOT inferred.
 		// Hence no need to validate it here.
-		return value.StaticType() != nil
+		return value.StaticType(inter) != nil
 	}
 }
 

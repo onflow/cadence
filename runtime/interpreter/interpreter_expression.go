@@ -187,8 +187,8 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 	error := func(right Value) {
 		panic(InvalidOperandsError{
 			Operation:     expression.Operation,
-			LeftType:      leftValue.StaticType(),
-			RightType:     right.StaticType(),
+			LeftType:      leftValue.StaticType(interpreter),
+			RightType:     right.StaticType(interpreter),
 			LocationRange: locationRangeGetter(interpreter.Location, expression)(),
 		})
 	}
@@ -801,7 +801,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 
 	switch expression.Operation {
 	case ast.OperationFailableCast, ast.OperationForceCast:
-		isSubType := interpreter.IsSubType(value.StaticType(), expectedType)
+		isSubType := interpreter.IsSubType(value.StaticType(interpreter), expectedType)
 
 		switch expression.Operation {
 		case ast.OperationFailableCast:
