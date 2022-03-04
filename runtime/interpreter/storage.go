@@ -51,6 +51,11 @@ func MustConvertStoredValue(value atree.Value) Value {
 }
 
 func ConvertStoredValue(value atree.Value) (Value, error) {
+	// TODO: Meter container values created below.
+	//   This is currently technically challenging because, this method is used in various
+	//   places directly/indirectly, where the interpreter instance is not available.
+	//   e.g: Iterator(), value walk(), RecursiveString(), String() method of values, etc.
+
 	switch value := value.(type) {
 	case *atree.Array:
 		return &ArrayValue{
