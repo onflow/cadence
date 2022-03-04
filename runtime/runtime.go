@@ -3021,8 +3021,14 @@ func (r *interpreterRuntime) newAccountContractsGetNamesFunction(
 
 		values := make([]interpreter.Value, len(names))
 		for i, name := range names {
-			// TODO: meter?
-			values[i] = interpreter.NewUnmeteredStringValue(name)
+			memoryUsage := common.NewStringMemoryUsage(len(name))
+			values[i] = interpreter.NewStringValue(
+				inter,
+				memoryUsage,
+				func() string {
+					return name
+				},
+			)
 		}
 
 		return interpreter.NewArrayValue(
