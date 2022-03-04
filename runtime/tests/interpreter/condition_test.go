@@ -547,7 +547,7 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 
 					if compositeKind == common.CompositeKindContract {
 
-						storage := interpreter.NewInMemoryStorage(nil)
+						storage := newUnmeteredInMemoryStorage()
 
 						inter, err := interpreter.NewInterpreter(
 							interpreter.ProgramFromChecker(checker),
@@ -574,7 +574,7 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 						_, err = inter.Invoke("test")
 						check(err)
 					} else {
-						storage := interpreter.NewInMemoryStorage(nil)
+						storage := newUnmeteredInMemoryStorage()
 
 						inter, err := interpreter.NewInterpreter(
 							interpreter.ProgramFromChecker(checker),
