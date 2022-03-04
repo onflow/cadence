@@ -1138,3 +1138,33 @@ func TestCheckInvalidRestriction(t *testing.T) {
 	require.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	require.IsType(t, &sema.AmbiguousRestrictedTypeError{}, errs[1])
 }
+
+func TestCheckTypeRequirementRestriction(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+	  contract interface CI {
+	      resource interface RI {}
+
+	      resource R: RI {}
+
+	      fun createR(): @R
+	  }
+
+      contract C: CI {
+	      resource R: CI.RI {}
+
+	      fun createR(): @R {
+	          return <- create R()
+	      }
+	  }
+
+      fun test() {
+          let r <- C.createR()
+          let r2: @CI.R{CI.RI} <- r
+          destroy r2
+      }
+    `)
+	require.NoError(t, err)
+}
