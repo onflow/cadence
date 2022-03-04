@@ -112,6 +112,47 @@ func TestInterpretTransferCheck(t *testing.T) {
 
               fun test() {
                   let r <- C.createR()
+                  let r2: @CI.R <- r as @CI.R
+                  let r3: @CI.R{CI.RI} <- r2
+                  destroy r3
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				Options: []interpreter.Option{
+					makeContractValueHandler(nil, nil, nil),
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("contract and restricted type, reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+		      contract interface CI {
+		          resource interface RI {}
+
+		          resource R: RI {}
+
+		          fun createR(): @R
+		      }
+
+              contract C: CI {
+		          resource R: CI.RI {}
+
+		          fun createR(): @R {
+		              return <- create R()
+		          }
+		      }
+
+              fun test() {
+                  let r <- C.createR()
                   let ref: &CI.R = &r as &CI.R
                   let restrictedRef: &CI.R{CI.RI} = ref
                   destroy r
