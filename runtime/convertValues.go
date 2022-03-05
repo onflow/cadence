@@ -612,11 +612,11 @@ func importCapability(
 		)
 	}
 
-	return &interpreter.CapabilityValue{
-		Path:       importPathValue(inter, path),
-		Address:    interpreter.NewAddressValueFromBytes(inter, address.Bytes()),
-		BorrowType: ImportType(borrowType),
-	}, nil
+	return interpreter.NewCapabilityValue(
+		inter,
+		interpreter.NewAddressValueFromBytes(inter, address.Bytes()),
+		importPathValue(inter, path),
+		ImportType(borrowType)), nil
 
 }
 

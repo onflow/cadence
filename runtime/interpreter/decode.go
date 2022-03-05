@@ -825,11 +825,7 @@ func (d StorableDecoder) decodeCapability() (*CapabilityValue, error) {
 		return nil, fmt.Errorf("invalid capability borrow type encoding: %w", err)
 	}
 
-	return &CapabilityValue{
-		Address:    address,
-		Path:       pathValue,
-		BorrowType: borrowType,
-	}, nil
+	return NewCapabilityValue(d.memoryGauge, address, pathValue, borrowType), nil
 }
 
 func (d StorableDecoder) decodeLink() (LinkValue, error) {
@@ -839,17 +835,17 @@ func (d StorableDecoder) decodeLink() (LinkValue, error) {
 	size, err := d.decoder.DecodeArrayHead()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return LinkValue{}, fmt.Errorf(
+			return EmptyLinkValue, fmt.Errorf(
 				"invalid link encoding: expected [%d]interface{}, got %s",
 				expectedLength,
 				e.ActualType.String(),
 			)
 		}
-		return LinkValue{}, err
+		return EmptyLinkValue, err
 	}
 
 	if size != expectedLength {
-		return LinkValue{}, fmt.Errorf(
+		return EmptyLinkValue, fmt.Errorf(
 			"invalid link encoding: expected [%d]interface{}, got [%d]interface{}",
 			expectedLength,
 			size,
@@ -859,26 +855,23 @@ func (d StorableDecoder) decodeLink() (LinkValue, error) {
 	// Decode path at array index encodedLinkValueTargetPathFieldKey
 	num, err := d.decoder.DecodeTagNumber()
 	if err != nil {
-		return LinkValue{}, fmt.Errorf("invalid link target path encoding: %w", err)
+		return EmptyLinkValue, fmt.Errorf("invalid link target path encoding: %w", err)
 	}
 	if num != CBORTagPathValue {
-		return LinkValue{}, fmt.Errorf("invalid link target path encoding: expected CBOR tag %d, got %d", CBORTagPathValue, num)
+		return EmptyLinkValue, fmt.Errorf("invalid link target path encoding: expected CBOR tag %d, got %d", CBORTagPathValue, num)
 	}
 	pathValue, err := d.decodePath()
 	if err != nil {
-		return LinkValue{}, fmt.Errorf("invalid link target path encoding: %w", err)
+		return EmptyLinkValue, fmt.Errorf("invalid link target path encoding: %w", err)
 	}
 
 	// Decode type at array index encodedLinkValueTypeFieldKey
 	staticType, err := d.DecodeStaticType()
 	if err != nil {
-		return LinkValue{}, fmt.Errorf("invalid link type encoding: %w", err)
+		return EmptyLinkValue, fmt.Errorf("invalid link type encoding: %w", err)
 	}
 
-	return LinkValue{
-		TargetPath: pathValue,
-		Type:       staticType,
-	}, nil
+	return NewLinkValue(d.memoryGauge, pathValue, staticType), nil
 }
 
 func (d StorableDecoder) decodeType() (TypeValue, error) {

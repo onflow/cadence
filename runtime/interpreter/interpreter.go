@@ -3953,10 +3953,7 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 
 			borrowStaticType := ConvertSemaToStaticType(borrowType)
 
-			linkValue := LinkValue{
-				TargetPath: targetPath,
-				Type:       borrowStaticType,
-			}
+			linkValue := NewLinkValue(interpreter, targetPath, borrowStaticType)
 
 			interpreter.writeStored(
 				address,
@@ -3966,11 +3963,7 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 			)
 
 			return NewSomeValueNonCopying(
-				&CapabilityValue{
-					Address:    addressValue,
-					Path:       newCapabilityPath,
-					BorrowType: borrowStaticType,
-				},
+				NewCapabilityValue(interpreter, addressValue, newCapabilityPath, borrowStaticType),
 			)
 
 		},

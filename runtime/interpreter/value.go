@@ -15406,11 +15406,7 @@ func accountGetCapabilityFunction(
 				borrowStaticType = ConvertSemaToStaticType(borrowType)
 			}
 
-			return &CapabilityValue{
-				Address:    addressValue,
-				Path:       path,
-				BorrowType: borrowStaticType,
-			}
+			return NewCapabilityValue(inter, addressValue, path, borrowStaticType)
 		},
 		funcType,
 	)
@@ -15683,6 +15679,21 @@ type CapabilityValue struct {
 	BorrowType StaticType
 }
 
+func NewUnmeteredCapabilityValue(address AddressValue, path PathValue, borrowType StaticType) *CapabilityValue {
+	return &CapabilityValue{address, path, borrowType}
+}
+
+func NewCapabilityValue(memoryGauge common.MemoryGauge, address AddressValue, path PathValue, borrowType StaticType) *CapabilityValue {
+	if memoryGauge != nil {
+		memoryGauge.UseMemory(common.MemoryUsage{
+			Kind: common.MemoryKindCapabilityValue,
+			// The only variable is Path, which is already metered as a PathValue.
+			Amount: 1,
+		})
+	}
+	return NewUnmeteredCapabilityValue(address, path, borrowType)
+}
+
 var _ Value = &CapabilityValue{}
 var _ atree.Storable = &CapabilityValue{}
 var _ EquatableValue = &CapabilityValue{}
@@ -15872,6 +15883,23 @@ type LinkValue struct {
 	TargetPath PathValue
 	Type       StaticType
 }
+
+func NewUnmeteredLinkValue(targetPath PathValue, staticType StaticType) LinkValue {
+	return LinkValue{targetPath, staticType}
+}
+
+func NewLinkValue(memoryGauge common.MemoryGauge, targetPath PathValue, staticType StaticType) LinkValue {
+	if memoryGauge != nil {
+		memoryGauge.UseMemory(common.MemoryUsage{
+			Kind: common.MemoryKindLinkValue,
+			// The only variable is TargetPath, which is already metered as a PathValue.
+			Amount: 1,
+		})
+	}
+	return NewUnmeteredLinkValue(targetPath, staticType)
+}
+
+var EmptyLinkValue = LinkValue{}
 
 var _ Value = LinkValue{}
 var _ atree.Value = LinkValue{}
