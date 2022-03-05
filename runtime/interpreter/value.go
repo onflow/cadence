@@ -225,6 +225,8 @@ type TypeValue struct {
 	Type StaticType
 }
 
+var EmptyTypeValue = TypeValue{}
+
 var _ Value = TypeValue{}
 var _ atree.Storable = TypeValue{}
 var _ EquatableValue = TypeValue{}

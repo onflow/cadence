@@ -587,7 +587,7 @@ func importTypeValue(
 	_, err := inter.ConvertStaticToSemaType(typ)
 	if err != nil {
 		// unmetered because when err != nil, value should be ignored
-		return interpreter.NewUnmeteredTypeValue(nil), err
+		return interpreter.EmptyTypeValue, err
 	}
 
 	return interpreter.NewTypeValue(inter, typ), nil
