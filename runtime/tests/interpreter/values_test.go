@@ -1218,7 +1218,7 @@ func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) inte
 		}
 	case *interpreter.SomeValue:
 		innerValue := v.InnerValue(inter, interpreter.ReturnEmptyLocationRange)
-		return interpreter.NewSomeValueNonCopying(deepCopyValue(inter, innerValue))
+		return interpreter.NewUnmeteredSomeValueNonCopying(deepCopyValue(inter, innerValue))
 	case interpreter.NilValue:
 		return interpreter.NilValue{}
 	default:
@@ -1257,7 +1257,7 @@ func randomStorableValue(inter *interpreter.Interpreter, currentDepth int) inter
 			},
 		}
 	case Some:
-		return interpreter.NewSomeValueNonCopying(
+		return interpreter.NewUnmeteredSomeValueNonCopying(
 			randomStorableValue(inter, currentDepth+1),
 		)
 

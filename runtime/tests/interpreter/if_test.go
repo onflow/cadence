@@ -251,7 +251,7 @@ func TestInterpretIfStatementTestWithDeclarationNestedOptionals(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewSomeValueNonCopying(
+			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.NewIntValueFromInt64(2),
 			),
 			value,
@@ -271,7 +271,7 @@ func TestInterpretIfStatementTestWithDeclarationNestedOptionals(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewSomeValueNonCopying(
+			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.NewIntValueFromInt64(0),
 			),
 			value,
@@ -312,7 +312,7 @@ func TestInterpretIfStatementTestWithDeclarationNestedOptionalsExplicitAnnotatio
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewSomeValueNonCopying(
+			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.NewIntValueFromInt64(2),
 			),
 			value,
@@ -332,7 +332,7 @@ func TestInterpretIfStatementTestWithDeclarationNestedOptionalsExplicitAnnotatio
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewSomeValueNonCopying(
+			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.NewIntValueFromInt64(0),
 			),
 			value,
