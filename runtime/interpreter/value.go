@@ -404,7 +404,7 @@ func (v TypeValue) Transfer(
 }
 
 func (v TypeValue) Clone(_ *Interpreter) Value {
-	return NewUnmeteredTypeValue(v.Type)
+	return v
 }
 
 func (TypeValue) DeepRemove(_ *Interpreter) {

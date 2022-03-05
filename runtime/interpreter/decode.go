@@ -937,7 +937,6 @@ func NewTypeDecoder(
 
 func (d TypeDecoder) DecodeStaticType() (StaticType, error) {
 	number, err := d.decoder.DecodeTagNumber()
-
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return nil, fmt.Errorf(
@@ -998,7 +997,6 @@ func (d TypeDecoder) decodePrimitiveStaticType() (PrimitiveStaticType, error) {
 
 func (d TypeDecoder) decodeOptionalStaticType() (StaticType, error) {
 	staticType, err := d.DecodeStaticType()
-
 	if err != nil {
 		return nil, fmt.Errorf(
 			"invalid optional static type inner type encoding: %w",
@@ -1081,7 +1079,6 @@ func (d TypeDecoder) decodeInterfaceStaticType() (InterfaceStaticType, error) {
 	}
 
 	// Decode location at array index encodedInterfaceStaticTypeLocationFieldKey
-
 	location, err := d.DecodeLocation()
 	if err != nil {
 		return InterfaceStaticType{}, fmt.Errorf(

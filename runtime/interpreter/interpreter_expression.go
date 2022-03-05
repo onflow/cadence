@@ -882,7 +882,12 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 			getLocationRange := locationRangeGetter(interpreter.Location, referenceExpression.Expression)
 
 			return NewSomeValueNonCopying(
-				NewEphemeralReferenceValue(interpreter, innerBorrowType.Authorized, result.InnerValue(interpreter, getLocationRange), innerBorrowType.Type),
+				NewEphemeralReferenceValue(
+					interpreter,
+					innerBorrowType.Authorized,
+					result.InnerValue(interpreter, getLocationRange),
+					innerBorrowType.Type,
+				),
 			)
 		case NilValue:
 			return NewNilValue(interpreter)
