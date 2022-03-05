@@ -55,75 +55,160 @@ func (g *testMemoryGauge) getMemory(kind common.MemoryKind) uint64 {
 func TestRuntimeArrayMetering(t *testing.T) {
 	t.Parallel()
 
-	script := `
-        pub fun main() {
-            let x: [Int8] = []
-            let y: [[String]] = [[]]
-            let z: [[[Bool]]] = [[[]]]
-        }
-    `
+	t.Run("creation", func(t *testing.T) {
+		t.Parallel()
 
-	meter := newTestMemoryGauge()
-	inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+		script := `
+            pub fun main() {
+                let x: [Int8] = []
+                let y: [[String]] = [[]]
+                let z: [[[Bool]]] = [[[]]]
+            }
+        `
 
-	_, err := inter.Invoke("main")
-	require.NoError(t, err)
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
-	assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindArray))
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindArray))
+	})
+
+	t.Run("iteration", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let values: [[Int8]] = [[], [], []]
+                for value in values {
+                  let a = value
+                }
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		// TODO:
+		// Iteration create new values for array typed elements.
+		// Currently, these are not metered. Only the initial 4-values are captured.
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindArray))
+	})
 }
 
 func TestRuntimeDictionaryMetering(t *testing.T) {
 	t.Parallel()
 
-	script := `
-        pub fun main() {
-            let x: {Int8: String} = {}
-            let y: {String: {Int8: String}} = {"a": {}}
-        }
-    `
+	t.Run("creation", func(t *testing.T) {
+		t.Parallel()
 
-	meter := newTestMemoryGauge()
-	inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+		script := `
+            pub fun main() {
+                let x: {Int8: String} = {}
+                let y: {String: {Int8: String}} = {"a": {}}
+            }
+        `
 
-	_, err := inter.Invoke("main")
-	require.NoError(t, err)
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
-	assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindString))
-	assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindDictionary))
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindString))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindDictionary))
+	})
+
+	t.Run("iteration", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let values: [{Int8: String}] = [{}, {}, {}]
+                for value in values {
+                  let a = value
+                }
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		// TODO:
+		// Iteration create new values for dictionary typed elements.
+		// Currently, these are not metered. Only the initial 3-values are captured.
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindDictionary))
+	})
 }
 
 func TestRuntimeCompositeMetering(t *testing.T) {
 	t.Parallel()
 
-	script := `
-        pub struct S {
-        }
+	t.Run("creation", func(t *testing.T) {
+		t.Parallel()
 
-        pub resource R {
-            pub let a: String
-            pub let b: String
+		script := `
+            pub struct S {}
 
-            init(a: String, b: String) {
-                self.a = a
-                self.b = b
+            pub resource R {
+                pub let a: String
+                pub let b: String
+
+                init(a: String, b: String) {
+                    self.a = a
+                    self.b = b
+                }
             }
-        }
 
-        pub fun main() {
-            let s = S()
-            let r <- create R(a: "a", b: "b")
-            destroy r
-        }
-    `
+            pub fun main() {
+                let s = S()
+                let r <- create R(a: "a", b: "b")
+                destroy r
+            }
+        `
 
-	meter := newTestMemoryGauge()
-	inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
-	_, err := inter.Invoke("main")
-	require.NoError(t, err)
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
 
-	assert.Equal(t, uint64(39), meter.getMemory(common.MemoryKindString))
-	assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindComposite))
+		assert.Equal(t, uint64(39), meter.getMemory(common.MemoryKindString))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindComposite))
+	})
+
+	t.Run("iteration", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub struct S {}
+
+            pub fun main() {
+                let values = [S(), S(), S()]
+                for value in values {
+                  let a = value
+                }
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		// TODO:
+		// Iteration create new values for composite typed elements.
+		// Currently, these are not metered. Only the initial 3-values are captured.
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindComposite))
+	})
 }
 
 func TestRuntimeInterpretedFunctionMetering(t *testing.T) {
