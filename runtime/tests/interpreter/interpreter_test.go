@@ -181,6 +181,10 @@ func parseCheckAndInterpretWithOptionsAndMemoryMetering(
 	return inter, err
 }
 
+func newUnmeteredInMemoryStorage() interpreter.InMemoryStorage {
+	return interpreter.NewInMemoryStorage(nil)
+}
+
 func constructorArguments(compositeKind common.CompositeKind, arguments string) string {
 	switch compositeKind {
 	case common.CompositeKindContract:
@@ -1806,7 +1810,7 @@ func TestInterpretHostFunction(t *testing.T) {
 	err = checker.Check()
 	require.NoError(t, err)
 
-	storage := interpreter.NewInMemoryStorage(nil)
+	storage := newUnmeteredInMemoryStorage()
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
@@ -1911,7 +1915,7 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 	err = checker.Check()
 	require.NoError(t, err)
 
-	storage := interpreter.NewInMemoryStorage(nil)
+	storage := newUnmeteredInMemoryStorage()
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
@@ -3839,7 +3843,7 @@ func TestInterpretImport(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	storage := interpreter.NewInMemoryStorage(nil)
+	storage := newUnmeteredInMemoryStorage()
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),
@@ -3935,7 +3939,7 @@ func TestInterpretImportError(t *testing.T) {
 		stdlib.PanicFunction,
 	}.ToInterpreterValueDeclarations()
 
-	storage := interpreter.NewInMemoryStorage(nil)
+	storage := newUnmeteredInMemoryStorage()
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),
@@ -4630,7 +4634,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		valueDeclarations := standardLibraryFunctions.ToSemaValueDeclarations()
 		values := standardLibraryFunctions.ToInterpreterValueDeclarations()
 
-		storage := interpreter.NewInMemoryStorage(nil)
+		storage := newUnmeteredInMemoryStorage()
 
 		var err error
 		inter, err = parseCheckAndInterpretWithOptions(t,
@@ -6059,7 +6063,7 @@ func TestInterpretCompositeFunctionInvocationFromImportingProgram(t *testing.T) 
 	)
 	require.NoError(t, err)
 
-	storage := interpreter.NewInMemoryStorage(nil)
+	storage := newUnmeteredInMemoryStorage()
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),
@@ -6644,7 +6648,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 		Members:    sema.NewStringMemberOrderedMap(),
 	}
 
-	storage := interpreter.NewInMemoryStorage(nil)
+	storage := newUnmeteredInMemoryStorage()
 
 	inter, err := interpreter.NewInterpreter(
 		nil,
@@ -8027,7 +8031,7 @@ func TestInterpretConformToImportedInterface(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	storage := interpreter.NewInMemoryStorage(nil)
+	storage := newUnmeteredInMemoryStorage()
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),

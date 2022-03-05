@@ -56,7 +56,7 @@ var testOwner = common.MustBytesToAddress([]byte{0x42})
 func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 
 	if test.storage == nil {
-		test.storage = NewInMemoryStorage(nil)
+		test.storage = newUnmeteredInMemoryStorage()
 	}
 
 	var encoded []byte

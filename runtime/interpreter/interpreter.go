@@ -3426,7 +3426,7 @@ var stringFunction = func() Value {
 
 				inter := invocation.Interpreter
 				memoryUsage := common.NewStringMemoryUsage(
-					uint64(argument.Count()) * 2,
+					safeMul(argument.Count(), 2),
 				)
 				return NewStringValue(
 					inter,

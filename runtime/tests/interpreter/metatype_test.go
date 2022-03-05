@@ -711,7 +711,7 @@ func TestInterpretGetType(t *testing.T) {
 			valueDeclarations := standardLibraryFunctions.ToSemaValueDeclarations()
 			values := standardLibraryFunctions.ToInterpreterValueDeclarations()
 
-			storage := interpreter.NewInMemoryStorage(nil)
+			storage := newUnmeteredInMemoryStorage()
 
 			inter, err := parseCheckAndInterpretWithOptions(t,
 				testCase.code,

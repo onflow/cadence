@@ -36,7 +36,7 @@ func TestValueDeepCopyAndDeepRemove(t *testing.T) {
 
 	address := common.Address{0x1}
 
-	storage := NewInMemoryStorage(nil)
+	storage := newUnmeteredInMemoryStorage()
 
 	inter, err := NewInterpreter(
 		nil,
@@ -94,4 +94,8 @@ func TestValueDeepCopyAndDeepRemove(t *testing.T) {
 	}
 
 	require.Equal(t, 1, count)
+}
+
+func newUnmeteredInMemoryStorage() InMemoryStorage {
+	return NewInMemoryStorage(nil)
 }

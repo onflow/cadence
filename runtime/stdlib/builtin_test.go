@@ -30,6 +30,10 @@ import (
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
+func newUnmeteredInMemoryStorage() interpreter.InMemoryStorage {
+	return interpreter.NewInMemoryStorage(nil)
+}
+
 func TestAssert(t *testing.T) {
 
 	t.Parallel()
@@ -43,7 +47,7 @@ func TestAssert(t *testing.T) {
 	)
 	require.Nil(t, err)
 
-	storage := interpreter.NewInMemoryStorage(nil)
+	storage := newUnmeteredInMemoryStorage()
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
@@ -102,7 +106,7 @@ func TestPanic(t *testing.T) {
 	)
 	require.Nil(t, err)
 
-	storage := interpreter.NewInMemoryStorage(nil)
+	storage := newUnmeteredInMemoryStorage()
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
