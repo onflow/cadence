@@ -39,6 +39,7 @@ const (
 	MemoryKindNil
 	MemoryKindVoid
 	MemoryKindTypeValue
+	MemoryKindPathValue
 	MemoryKindStorageReferenceValue
 	MemoryKindEphemeralReferenceValue
 	MemoryKindInterpretedFunction

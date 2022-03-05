@@ -697,6 +697,7 @@ func (d StorableDecoder) decodePath() (PathValue, error) {
 	size, err := d.decoder.DecodeArrayHead()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
+			// No need to meter EmptyPathValue here or below because it's ignored for the error
 			return EmptyPathValue, fmt.Errorf(
 				"invalid path encoding: expected [%d]interface{}, got %s",
 				expectedLength,
@@ -738,10 +739,7 @@ func (d StorableDecoder) decodePath() (PathValue, error) {
 		return EmptyPathValue, err
 	}
 
-	return PathValue{
-		Domain:     common.PathDomain(domain),
-		Identifier: identifier,
-	}, nil
+	return NewPathValue(d.memoryGauge, common.PathDomain(domain), identifier), nil
 }
 
 func (d StorableDecoder) decodeCapability() (*CapabilityValue, error) {
@@ -1247,7 +1245,7 @@ func (d TypeDecoder) decodeDictionaryStaticType() (StaticType, error) {
 
 	arraySize, err := d.decoder.DecodeArrayHead()
 
- 	if err != nil {
+	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return nil, fmt.Errorf(
 				"invalid dictionary static type encoding: expected [%d]interface{}, got %s",
@@ -1412,7 +1410,6 @@ func (d TypeDecoder) decodeCompositeTypeInfo() (atree.TypeInfo, error) {
 		)
 	}
 
-
 	location, err := d.DecodeLocation()
 	if err != nil {
 		return nil, err
@@ -1441,7 +1438,6 @@ func (d TypeDecoder) decodeCompositeTypeInfo() (atree.TypeInfo, error) {
 		kind:                common.CompositeKind(kind),
 	}, nil
 }
-
 
 func DecodeTypeInfo(decoder *cbor.StreamDecoder, memoryGauge common.MemoryGauge) (atree.TypeInfo, error) {
 	d := NewTypeDecoder(decoder, memoryGauge)

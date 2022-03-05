@@ -3106,7 +3106,7 @@ func (r *interpreterRuntime) ReadStored(
 
 	return r.executeNonProgram(
 		func(inter *interpreter.Interpreter) (interpreter.Value, error) {
-			pathValue := importPathValue(path)
+			pathValue := importPathValue(inter, path)
 
 			domain := pathValue.Domain.Identifier()
 			identifier := pathValue.Identifier
@@ -3138,7 +3138,7 @@ func (r *interpreterRuntime) ReadLinked(
 		func(inter *interpreter.Interpreter) (interpreter.Value, error) {
 			targetPath, _, err := inter.GetCapabilityFinalTargetPath(
 				address,
-				importPathValue(path),
+				importPathValue(inter, path),
 				&sema.ReferenceType{
 					Type: sema.AnyType,
 				},

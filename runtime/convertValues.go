@@ -499,7 +499,7 @@ func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedTy
 	case cadence.UFix64:
 		return interpreter.UFix64Value(v), nil
 	case cadence.Path:
-		return importPathValue(v), nil
+		return importPathValue(inter, v), nil
 	case cadence.Array:
 		return importArrayValue(inter, v, expectedType)
 	case cadence.Dictionary:
@@ -568,11 +568,8 @@ func importString(inter *interpreter.Interpreter, v cadence.String) *interpreter
 	)
 }
 
-func importPathValue(v cadence.Path) interpreter.PathValue {
-	return interpreter.PathValue{
-		Domain:     common.PathDomainFromIdentifier(v.Domain),
-		Identifier: v.Identifier,
-	}
+func importPathValue(inter *interpreter.Interpreter, v cadence.Path) interpreter.PathValue {
+	return interpreter.NewPathValue(inter, common.PathDomainFromIdentifier(v.Domain), v.Identifier)
 }
 
 func importTypeValue(
@@ -616,7 +613,7 @@ func importCapability(
 	}
 
 	return &interpreter.CapabilityValue{
-		Path:       importPathValue(path),
+		Path:       importPathValue(inter, path),
 		Address:    interpreter.NewAddressValueFromBytes(inter, address.Bytes()),
 		BorrowType: ImportType(borrowType),
 	}, nil

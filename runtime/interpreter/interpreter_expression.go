@@ -924,8 +924,5 @@ func (interpreter *Interpreter) VisitForceExpression(expression *ast.ForceExpres
 func (interpreter *Interpreter) VisitPathExpression(expression *ast.PathExpression) ast.Repr {
 	domain := common.PathDomainFromIdentifier(expression.Domain.Identifier)
 
-	return PathValue{
-		Domain:     domain,
-		Identifier: expression.Identifier.Identifier,
-	}
+	return NewPathValue(interpreter, domain, expression.Identifier.Identifier)
 }

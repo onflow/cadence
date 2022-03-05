@@ -15423,6 +15423,20 @@ type PathValue struct {
 	Identifier string
 }
 
+func NewUnmeteredPathValue(domain common.PathDomain, identifier string) PathValue {
+	return PathValue{domain, identifier}
+}
+
+func NewPathValue(memoryGauge common.MemoryGauge, domain common.PathDomain, identifier string) PathValue {
+	if memoryGauge != nil {
+		memoryGauge.UseMemory(common.MemoryUsage{
+			Kind:   common.MemoryKindPathValue,
+			Amount: uint64(len(identifier)),
+		})
+	}
+	return NewUnmeteredPathValue(domain, identifier)
+}
+
 var EmptyPathValue = PathValue{}
 
 var _ Value = PathValue{}
