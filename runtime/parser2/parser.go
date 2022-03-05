@@ -46,8 +46,6 @@ type parser struct {
 	backtrackingCursorStack []int
 	// bufferedErrorsStack is the stack of parsing errors encountered during buffering
 	bufferedErrorsStack [][]error
-	// memoryGauge is used to meter memory usage
-	memoryGauge common.MemoryGauge
 }
 
 // Parse creates a lexer to scan the given input string,
