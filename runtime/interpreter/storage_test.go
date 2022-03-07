@@ -130,7 +130,7 @@ func TestArrayStorage(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, ok)
 
-		require.False(t, bool(value.Contains(nil, nil, element)))
+		require.False(t, bool(value.Contains(inter, nil, element)))
 
 		value.Insert(
 			inter,
@@ -139,7 +139,7 @@ func TestArrayStorage(t *testing.T) {
 			element,
 		)
 
-		require.True(t, bool(value.Contains(nil, nil, element)))
+		require.True(t, bool(value.Contains(inter, nil, element)))
 
 		// array + original composite element + new copy of composite element
 		require.Equal(t, 3, storage.BasicSlabStorage.Count())
@@ -185,7 +185,7 @@ func TestArrayStorage(t *testing.T) {
 			element,
 		)
 
-		require.True(t, bool(value.Contains(nil, nil, element)))
+		require.True(t, bool(value.Contains(inter, nil, element)))
 
 		require.NotEqual(t, atree.StorageIDUndefined, value.StorageID())
 
@@ -213,7 +213,7 @@ func TestArrayStorage(t *testing.T) {
 		require.IsType(t, storedValue, &ArrayValue{})
 		storedArray := storedValue.(*ArrayValue)
 
-		require.False(t, bool(storedArray.Contains(nil, nil, element)))
+		require.False(t, bool(storedArray.Contains(inter, nil, element)))
 	})
 }
 
