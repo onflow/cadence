@@ -569,7 +569,11 @@ func importString(inter *interpreter.Interpreter, v cadence.String) *interpreter
 }
 
 func importPathValue(inter *interpreter.Interpreter, v cadence.Path) interpreter.PathValue {
-	return interpreter.NewPathValue(inter, common.PathDomainFromIdentifier(v.Domain), v.Identifier)
+	return interpreter.NewPathValue(
+		inter, 
+		common.PathDomainFromIdentifier(v.Domain),
+		v.Identifier,
+	)
 }
 
 func importTypeValue(
