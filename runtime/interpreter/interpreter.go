@@ -2672,7 +2672,7 @@ func (interpreter *Interpreter) ReadStored(
 	identifier string,
 ) Value {
 	accountStorage := interpreter.Storage.GetStorageMap(storageAddress, domain)
-	return accountStorage.ReadValue(identifier)
+	return accountStorage.ReadValue(interpreter, identifier)
 }
 
 func (interpreter *Interpreter) writeStored(
@@ -3051,7 +3051,7 @@ func init() {
 
 				returnType := invocation.Interpreter.MustConvertStaticToSemaType(typeValue.Type)
 				parameterTypes := make([]*sema.Parameter, 0, parameters.Count())
-				parameters.Iterate(func(param Value) bool {
+				parameters.Iterate(invocation.Interpreter, func(param Value) bool {
 					semaType := invocation.Interpreter.MustConvertStaticToSemaType(param.(TypeValue).Type)
 					parameterTypes = append(
 						parameterTypes,
@@ -3097,7 +3097,7 @@ func RestrictedTypeFunction(invocation Invocation) Value {
 	semaRestrictions := make([]*sema.InterfaceType, 0, restrictionIDs.Count())
 
 	var invalidRestrictionID bool
-	restrictionIDs.Iterate(func(typeID Value) bool {
+	restrictionIDs.Iterate(invocation.Interpreter, func(typeID Value) bool {
 		typeIDValue, ok := typeID.(*StringValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
@@ -3422,7 +3422,7 @@ var stringFunction = func() Value {
 					memoryUsage,
 					func() string {
 						// TODO: meter
-						bytes, _ := ByteArrayValueToByteSlice(argument)
+						bytes, _ := ByteArrayValueToByteSlice(inter, argument)
 						return hex.EncodeToString(bytes)
 					},
 				)
@@ -4553,7 +4553,7 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 		}
 
 		if equatableValue, ok := value.(EquatableValue); ok {
-			otherValue := StoredValue(otherStorable, interpreter.Storage)
+			otherValue := StoredValue(interpreter, otherStorable, interpreter.Storage)
 			return equatableValue.Equal(interpreter, ReturnEmptyLocationRange, otherValue)
 		}
 
@@ -4767,10 +4767,7 @@ func (interpreter *Interpreter) UseMemory(usage common.MemoryUsage) {
 // UseConstantMemory uses a pre-determined amount of memory
 //
 func (interpreter *Interpreter) UseConstantMemory(kind common.MemoryKind) {
-	interpreter.UseMemory(common.MemoryUsage{
-		Kind:   kind,
-		Amount: 1,
-	})
+	interpreter.UseMemory(common.NewConstantMemoryUsage(kind))
 }
 
 func (interpreter *Interpreter) DecodeStorable(

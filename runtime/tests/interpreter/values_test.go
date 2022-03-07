@@ -130,7 +130,7 @@ func TestRandomMapOperations(t *testing.T) {
 	t.Run("iterate", func(t *testing.T) {
 		require.Equal(t, testMap.Count(), entries.size())
 
-		testMap.Iterate(func(key, value interpreter.Value) (resume bool) {
+		testMap.Iterate(inter, func(key, value interpreter.Value) (resume bool) {
 			orgValue, ok := entries.get(inter, key)
 			require.True(t, ok, "cannot find key: %v", key)
 
@@ -557,7 +557,7 @@ func TestRandomArrayOperations(t *testing.T) {
 		require.Equal(t, testArray.Count(), len(elements))
 
 		index := 0
-		testArray.Iterate(func(element interpreter.Value) (resume bool) {
+		testArray.Iterate(inter, func(element interpreter.Value) (resume bool) {
 			orgElement := elements[index]
 			utils.AssertValuesEqual(t, inter, orgElement, element)
 
@@ -896,7 +896,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 
 	t.Run("iterate", func(t *testing.T) {
 		fieldCount := 0
-		testComposite.ForEachField(func(name string, value interpreter.Value) {
+		testComposite.ForEachField(inter, func(name string, value interpreter.Value) {
 			orgValue, ok := orgFields[name]
 			require.True(t, ok)
 			utils.AssertValuesEqual(t, inter, orgValue, value)
@@ -1164,7 +1164,7 @@ func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) inte
 
 	case *interpreter.DictionaryValue:
 		keyValues := make([]interpreter.Value, 0, v.Count()*2)
-		v.Iterate(func(key, value interpreter.Value) (resume bool) {
+		v.Iterate(inter, func(key, value interpreter.Value) (resume bool) {
 			keyValues = append(keyValues, deepCopyValue(inter, key))
 			keyValues = append(keyValues, deepCopyValue(inter, value))
 			return true
@@ -1181,7 +1181,7 @@ func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) inte
 		)
 	case *interpreter.ArrayValue:
 		elements := make([]interpreter.Value, 0, v.Count())
-		v.Iterate(func(value interpreter.Value) (resume bool) {
+		v.Iterate(inter, func(value interpreter.Value) (resume bool) {
 			elements = append(elements, deepCopyValue(inter, value))
 			return true
 		})
@@ -1194,7 +1194,7 @@ func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) inte
 		)
 	case *interpreter.CompositeValue:
 		fields := make([]interpreter.CompositeField, 0)
-		v.ForEachField(func(name string, value interpreter.Value) {
+		v.ForEachField(inter, func(name string, value interpreter.Value) {
 			fields = append(fields, interpreter.CompositeField{
 				Name:  name,
 				Value: deepCopyValue(inter, value),

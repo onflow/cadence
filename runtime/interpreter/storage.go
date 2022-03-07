@@ -33,24 +33,32 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
-func StoredValue(storable atree.Storable, storage atree.SlabStorage) Value {
+func StoredValue(gauge common.MemoryGauge, storable atree.Storable, storage atree.SlabStorage) Value {
 	storedValue, err := storable.StoredValue(storage)
 	if err != nil {
 		panic(err)
 	}
 
-	return MustConvertStoredValue(storedValue)
+	return MustConvertStoredValue(gauge, storedValue)
 }
 
-func MustConvertStoredValue(value atree.Value) Value {
-	converted, err := ConvertStoredValue(value)
+func MustConvertStoredValue(gauge common.MemoryGauge, value atree.Value) Value {
+	converted, err := ConvertStoredValue(gauge, value)
 	if err != nil {
 		panic(err)
 	}
 	return converted
 }
 
-func ConvertStoredValue(value atree.Value) (Value, error) {
+func MustConvertUnmeteredStoredValue(value atree.Value) Value {
+	converted, err := ConvertStoredValue(nil, value)
+	if err != nil {
+		panic(err)
+	}
+	return converted
+}
+
+func ConvertStoredValue(gauge common.MemoryGauge, value atree.Value) (Value, error) {
 	// TODO: Meter container values created below.
 	//   This is currently technically challenging because, this method is used in various
 	//   places directly/indirectly, where the interpreter instance is not available.
@@ -58,6 +66,9 @@ func ConvertStoredValue(value atree.Value) (Value, error) {
 
 	switch value := value.(type) {
 	case *atree.Array:
+		if gauge != nil {
+			gauge.UseMemory(common.NewConstantMemoryUsage(common.MemoryKindArray))
+		}
 		return &ArrayValue{
 			Type:  value.Type().(ArrayStaticType),
 			array: value,
@@ -67,12 +78,18 @@ func ConvertStoredValue(value atree.Value) (Value, error) {
 		typeInfo := value.Type()
 		switch typeInfo := typeInfo.(type) {
 		case DictionaryStaticType:
+			if gauge != nil {
+				gauge.UseMemory(common.NewConstantMemoryUsage(common.MemoryKindDictionary))
+			}
 			return &DictionaryValue{
 				Type:       typeInfo,
 				dictionary: value,
 			}, nil
 
 		case compositeTypeInfo:
+			if gauge != nil {
+				gauge.UseMemory(common.NewConstantMemoryUsage(common.MemoryKindComposite))
+			}
 			return &CompositeValue{
 				dictionary:          value,
 				Location:            typeInfo.location,

@@ -72,7 +72,7 @@ func TestRuntimeArrayMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindArray))
+		assert.Equal(t, uint64(15), meter.getMemory(common.MemoryKindArray))
 	})
 
 	t.Run("iteration", func(t *testing.T) {
@@ -93,10 +93,7 @@ func TestRuntimeArrayMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// TODO:
-		// Iteration create new values for array typed elements.
-		// Currently, these are not metered. Only the initial 4-values are captured.
-		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindArray))
+		assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindArray))
 	})
 }
 
@@ -120,7 +117,7 @@ func TestRuntimeDictionaryMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindString))
-		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindDictionary))
+		assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindDictionary))
 	})
 
 	t.Run("iteration", func(t *testing.T) {
@@ -141,10 +138,7 @@ func TestRuntimeDictionaryMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// TODO:
-		// Iteration create new values for dictionary typed elements.
-		// Currently, these are not metered. Only the initial 3-values are captured.
-		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindDictionary))
+		assert.Equal(t, uint64(15), meter.getMemory(common.MemoryKindDictionary))
 	})
 }
 
@@ -204,10 +198,7 @@ func TestRuntimeCompositeMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// TODO:
-		// Iteration create new values for composite typed elements.
-		// Currently, these are not metered. Only the initial 3-values are captured.
-		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindComposite))
+		assert.Equal(t, uint64(15), meter.getMemory(common.MemoryKindComposite))
 	})
 }
 

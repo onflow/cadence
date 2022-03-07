@@ -63,7 +63,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 		}
 
 		for _, value := range invalid {
-			_, err := ByteArrayValueToByteSlice(value)
+			_, err := ByteArrayValueToByteSlice(inter, value)
 			require.Error(t, err)
 		}
 	})
@@ -101,7 +101,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 		}
 
 		for value, expected := range invalid {
-			result, err := ByteArrayValueToByteSlice(value)
+			result, err := ByteArrayValueToByteSlice(inter, value)
 			require.NoError(t, err)
 			require.Equal(t, expected, result)
 		}

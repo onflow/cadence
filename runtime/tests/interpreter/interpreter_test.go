@@ -4248,7 +4248,7 @@ func TestInterpretDictionaryIndexingAssignmentExisting(t *testing.T) {
 			interpreter.NewUnmeteredStringValue("abc"),
 			interpreter.NewIntValueFromInt64(23),
 		},
-		dictionaryKeyValues(actualDict),
+		dictionaryKeyValues(inter, actualDict),
 	)
 }
 
@@ -4314,7 +4314,7 @@ func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
 			interpreter.NewUnmeteredStringValue("def"),
 			interpreter.NewIntValueFromInt64(42),
 		},
-		dictionaryKeyValues(actualDict),
+		dictionaryKeyValues(inter, actualDict),
 	)
 }
 
@@ -4378,7 +4378,7 @@ func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 			interpreter.NewUnmeteredStringValue("abc"),
 			interpreter.NewIntValueFromInt64(23),
 		},
-		dictionaryKeyValues(actualDict),
+		dictionaryKeyValues(inter, actualDict),
 	)
 }
 
@@ -5607,7 +5607,7 @@ func TestInterpretDictionaryRemove(t *testing.T) {
 			interpreter.NewUnmeteredStringValue("def"),
 			interpreter.NewIntValueFromInt64(2),
 		},
-		dictionaryKeyValues(actualDict),
+		dictionaryKeyValues(inter, actualDict),
 	)
 
 	AssertValuesEqual(
@@ -5643,7 +5643,7 @@ func TestInterpretDictionaryInsert(t *testing.T) {
 			interpreter.NewUnmeteredStringValue("def"),
 			interpreter.NewIntValueFromInt64(2),
 		},
-		dictionaryKeyValues(actualDict),
+		dictionaryKeyValues(inter, actualDict),
 	)
 
 	AssertValuesEqual(
@@ -7470,7 +7470,7 @@ func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
 		var storedValues []string
 
 		for _, slab := range permanentSlabs {
-			storedValue := interpreter.StoredValue(slab, inter.Storage)
+			storedValue := interpreter.StoredValue(inter, slab, inter.Storage)
 			storedValues = append(storedValues, storedValue.String())
 		}
 

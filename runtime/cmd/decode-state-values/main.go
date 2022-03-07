@@ -355,7 +355,7 @@ func loadStorageKey(
 				return err
 			}
 
-			value, err := interpreter.ConvertStoredValue(atreeValue)
+			value, err := interpreter.ConvertStoredValue(inter, atreeValue)
 			if err != nil {
 				log.Printf(
 					"Failed to convert stored value @ 0x%x %s: %s",
@@ -365,6 +365,7 @@ func loadStorageKey(
 			}
 
 			interpreter.InspectValue(
+				inter,
 				value,
 				func(v interpreter.Value) bool {
 

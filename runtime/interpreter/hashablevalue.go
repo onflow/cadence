@@ -31,7 +31,7 @@ type HashableValue interface {
 
 func newHashInputProvider(interpreter *Interpreter, getLocationRange func() LocationRange) atree.HashInputProvider {
 	return func(value atree.Value, scratch []byte) ([]byte, error) {
-		hashInput := MustConvertStoredValue(value).(HashableValue).
+		hashInput := MustConvertStoredValue(interpreter, value).(HashableValue).
 			HashInput(interpreter, getLocationRange, scratch)
 		return hashInput, nil
 	}

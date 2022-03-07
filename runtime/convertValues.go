@@ -182,7 +182,7 @@ func exportArrayValue(
 	values := make([]cadence.Value, 0, v.Count())
 
 	var err error
-	v.Iterate(func(value interpreter.Value) (resume bool) {
+	v.Iterate(inter, func(value interpreter.Value) (resume bool) {
 		var exportedValue cadence.Value
 		exportedValue, err = exportValueWithInterpreter(value, inter, seenReferences)
 		if err != nil {
@@ -357,7 +357,7 @@ func exportDictionaryValue(
 	pairs := make([]cadence.KeyValuePair, 0, v.Count())
 
 	var err error
-	v.Iterate(func(key, value interpreter.Value) (resume bool) {
+	v.Iterate(inter, func(key, value interpreter.Value) (resume bool) {
 
 		var convertedKey cadence.Value
 		convertedKey, err = exportValueWithInterpreter(key, inter, seenReferences)

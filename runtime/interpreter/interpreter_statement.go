@@ -329,7 +329,7 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) a
 
 		// atree.Array iterator returns low-level atree.Value,
 		// convert to high-level interpreter.Value
-		value := MustConvertStoredValue(atreeValue)
+		value := MustConvertStoredValue(interpreter, atreeValue)
 
 		variable.SetValue(value)
 

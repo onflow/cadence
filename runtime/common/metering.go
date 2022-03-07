@@ -27,6 +27,13 @@ type MemoryGauge interface {
 	UseMemory(usage MemoryUsage)
 }
 
+func NewConstantMemoryUsage(kind MemoryKind) MemoryUsage {
+	return MemoryUsage{
+		Kind:   kind,
+		Amount: 1,
+	}
+}
+
 func NewStringMemoryUsage(length int) MemoryUsage {
 	return MemoryUsage{
 		Kind:   MemoryKindString,
