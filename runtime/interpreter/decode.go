@@ -179,7 +179,7 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 			if err != nil {
 				return nil, err
 			}
-			storable, err = d.decodeCharacter(d.memoryGauge, v)
+			storable, err = d.decodeCharacter(v)
 			if err != nil {
 				return nil, err
 			}
@@ -294,14 +294,14 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 	return storable, nil
 }
 
-func (d StorableDecoder) decodeCharacter(memoryGauge common.MemoryGauge, v string) (CharacterValue, error) {
+func (d StorableDecoder) decodeCharacter(v string) (CharacterValue, error) {
 	if !sema.IsValidCharacter(v) {
 		return "", fmt.Errorf(
 			"invalid character encoding: %s",
 			v,
 		)
 	}
-	return NewCharacterValue(memoryGauge, v), nil
+	return NewCharacterValue(d.memoryGauge, v), nil
 }
 
 func (d StorableDecoder) decodeStringValue() (*StringValue, error) {
