@@ -3953,7 +3953,7 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 
 			borrowStaticType := ConvertSemaToStaticType(borrowType)
 
-			linkValue := NewLinkValue(interpreter, targetPath, borrowStaticType)
+			linkValue := NewLinkValue(invocation.Interpreter, targetPath, borrowStaticType)
 
 			interpreter.writeStored(
 				address,
@@ -3963,7 +3963,7 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 			)
 
 			return NewSomeValueNonCopying(
-				NewCapabilityValue(interpreter, addressValue, newCapabilityPath, borrowStaticType),
+				NewCapabilityValue(invocation.Interpreter, addressValue, newCapabilityPath, borrowStaticType),
 			)
 
 		},
@@ -4146,7 +4146,7 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 			}
 
 			if targetPath == EmptyPathValue {
-				return NewBoolValue(interpreter, false)
+				return NewBoolValue(invocation.Interpreter, false)
 			}
 
 			reference := NewStorageReferenceValue(
@@ -4162,10 +4162,10 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 			// and performs a dynamic type check
 
 			if reference.ReferencedValue(interpreter) == nil {
-				return NewBoolValue(interpreter, false)
+				return NewBoolValue(invocation.Interpreter, false)
 			}
 
-			return NewBoolValue(interpreter, true)
+			return NewBoolValue(invocation.Interpreter, true)
 		},
 		sema.CapabilityTypeCheckFunctionType(borrowType),
 	)
@@ -4417,14 +4417,14 @@ func (interpreter *Interpreter) isInstanceFunction(self Value) *HostFunctionValu
 
 			// Values are never instances of unknown types
 			if staticType == nil {
-				return NewBoolValue(interpreter, false)
+				return NewBoolValue(invocation.Interpreter, false)
 			}
 
 			semaType := interpreter.MustConvertStaticToSemaType(staticType)
 			// NOTE: not invocation.Self, as that is only set for composite values
-			dynamicType := self.DynamicType(interpreter, SeenReferences{})
+			dynamicType := self.DynamicType(invocation.Interpreter, SeenReferences{})
 			result := interpreter.IsSubType(dynamicType, semaType)
-			return NewBoolValue(interpreter, result)
+			return NewBoolValue(invocation.Interpreter, result)
 		},
 		sema.IsInstanceFunctionType,
 	)
