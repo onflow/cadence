@@ -620,7 +620,8 @@ func importCapability(
 		inter,
 		interpreter.NewAddressValueFromBytes(inter, address.Bytes()),
 		importPathValue(inter, path),
-		ImportType(borrowType)), nil
+		ImportType(borrowType),
+	), nil
 
 }
 
