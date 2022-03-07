@@ -1550,7 +1550,7 @@ func (v *ArrayValue) RecursiveString(seenReferences SeenReferences) string {
 
 	i := 0
 
-	v.array.Iterate(func(element atree.Value) (resume bool, err error) {
+	_ = v.array.Iterate(func(element atree.Value) (resume bool, err error) {
 		// ok to not meter anything created as part of this iteration, since we will discard the result
 		// upon creating the string
 		values[i] = MustConvertUnmeteredStoredValue(element).RecursiveString(seenReferences)
@@ -12248,7 +12248,7 @@ func (v *CompositeValue) RecursiveString(seenReferences SeenReferences) string {
 	}
 
 	var fields []CompositeField
-	v.dictionary.Iterate(func(key atree.Value, value atree.Value) (resume bool, err error) {
+	_ = v.dictionary.Iterate(func(key atree.Value, value atree.Value) (resume bool, err error) {
 		fields = append(
 			fields,
 			CompositeField{
@@ -13170,7 +13170,7 @@ func (v *DictionaryValue) RecursiveString(seenReferences SeenReferences) string 
 	}, v.Count())
 
 	index := 0
-	v.dictionary.Iterate(func(key, value atree.Value) (resume bool, err error) {
+	_ = v.dictionary.Iterate(func(key, value atree.Value) (resume bool, err error) {
 		// atree.OrderedMap iteration provides low-level atree.Value,
 		// convert to high-level interpreter.Value
 
