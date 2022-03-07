@@ -286,7 +286,7 @@ func TestInterpretAuthAccount_type(t *testing.T) {
 		value, err = inter.Invoke("typeAt")
 		require.NoError(t, err)
 		require.Equal(t,
-			interpreter.NewSomeValueNonCopying(
+			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.TypeValue{
 					Type: interpreter.CompositeStaticType{
 						Location:            utils.TestLocation,
@@ -309,7 +309,7 @@ func TestInterpretAuthAccount_type(t *testing.T) {
 		value, err = inter.Invoke("typeAt")
 		require.NoError(t, err)
 		require.Equal(t,
-			interpreter.NewSomeValueNonCopying(
+			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.TypeValue{
 					Type: interpreter.CompositeStaticType{
 						Location:            utils.TestLocation,

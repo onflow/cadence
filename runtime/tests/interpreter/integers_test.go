@@ -239,7 +239,7 @@ func TestInterpretIntegerLiteralTypeConversionInVariableDeclarationOptional(t *t
 			AssertValuesEqual(
 				t,
 				inter,
-				interpreter.NewSomeValueNonCopying(value),
+				interpreter.NewUnmeteredSomeValueNonCopying(value),
 				inter.Globals["x"].GetValue(),
 			)
 		})
@@ -310,7 +310,7 @@ func TestInterpretIntegerLiteralTypeConversionInAssignmentOptional(t *testing.T)
 			AssertValuesEqual(
 				t,
 				inter,
-				interpreter.NewSomeValueNonCopying(value),
+				interpreter.NewUnmeteredSomeValueNonCopying(value),
 				inter.Globals["x"].GetValue(),
 			)
 
@@ -322,7 +322,7 @@ func TestInterpretIntegerLiteralTypeConversionInAssignmentOptional(t *testing.T)
 			AssertValuesEqual(
 				t,
 				inter,
-				interpreter.NewSomeValueNonCopying(
+				interpreter.NewUnmeteredSomeValueNonCopying(
 					numberValue.Plus(numberValue),
 				),
 				inter.Globals["x"].GetValue(),
@@ -384,7 +384,7 @@ func TestInterpretIntegerLiteralTypeConversionInFunctionCallArgumentOptional(t *
 			AssertValuesEqual(
 				t,
 				inter,
-				interpreter.NewSomeValueNonCopying(value),
+				interpreter.NewUnmeteredSomeValueNonCopying(value),
 				inter.Globals["x"].GetValue(),
 			)
 		})
@@ -448,7 +448,7 @@ func TestInterpretIntegerLiteralTypeConversionInReturnOptional(t *testing.T) {
 			AssertValuesEqual(
 				t,
 				inter,
-				interpreter.NewSomeValueNonCopying(value),
+				interpreter.NewUnmeteredSomeValueNonCopying(value),
 				result,
 			)
 		})

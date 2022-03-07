@@ -36,6 +36,7 @@ const (
 	MemoryKindArray
 	MemoryKindDictionary
 	MemoryKindComposite
+	MemoryKindOptional
 	MemoryKindInterpretedFunction
 	MemoryKindHostFunction
 	MemoryKindBoundFunction

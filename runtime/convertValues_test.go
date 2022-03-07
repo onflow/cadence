@@ -127,7 +127,7 @@ func TestExportValue(t *testing.T) {
 		},
 		{
 			label: "SomeValue",
-			value: interpreter.NewSomeValueNonCopying(
+			value: interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.NewIntValueFromInt64(42),
 			),
 			expected: cadence.NewOptional(cadence.NewInt(42)),
@@ -509,7 +509,7 @@ func TestImportValue(t *testing.T) {
 		{
 			label: "SomeValue",
 			value: cadence.NewOptional(cadence.NewInt(42)),
-			expected: interpreter.NewSomeValueNonCopying(
+			expected: interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.NewIntValueFromInt64(42),
 			),
 		},

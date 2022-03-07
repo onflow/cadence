@@ -257,7 +257,7 @@ func TestDictionaryStorage(t *testing.T) {
 			inter,
 			ReturnEmptyLocationRange,
 			entryKey,
-			NewSomeValueNonCopying(entryValue),
+			NewUnmeteredSomeValueNonCopying(entryValue),
 		)
 
 		require.Equal(t, 1, storage.BasicSlabStorage.Count())
@@ -297,7 +297,7 @@ func TestDictionaryStorage(t *testing.T) {
 				ValueType: PrimitiveStaticTypeAnyStruct,
 			},
 			NewUnmeteredStringValue("test"),
-			NewSomeValueNonCopying(BoolValue(true)),
+			NewUnmeteredSomeValueNonCopying(BoolValue(true)),
 		)
 
 		require.NotEqual(t, atree.StorageIDUndefined, value.StorageID())
@@ -346,7 +346,7 @@ func TestDictionaryStorage(t *testing.T) {
 				ValueType: PrimitiveStaticTypeAnyStruct,
 			},
 			NewUnmeteredStringValue("test"),
-			NewSomeValueNonCopying(BoolValue(true)),
+			NewUnmeteredSomeValueNonCopying(BoolValue(true)),
 		)
 
 		require.NotEqual(t, atree.StorageIDUndefined, value.StorageID())
@@ -407,7 +407,7 @@ func TestDictionaryStorage(t *testing.T) {
 			inter,
 			ReturnEmptyLocationRange,
 			NewUnmeteredStringValue("test"),
-			NewSomeValueNonCopying(BoolValue(true)),
+			NewUnmeteredSomeValueNonCopying(BoolValue(true)),
 		)
 
 		require.Equal(t, 1, storage.BasicSlabStorage.Count())
