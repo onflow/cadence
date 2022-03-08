@@ -48,7 +48,7 @@ func TestInterpretForStatement(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewIntValueFromInt64(10),
+		interpreter.NewUnmeteredIntValueFromInt64(10),
 		value,
 	)
 }
@@ -73,7 +73,7 @@ func TestInterpretForStatementWithIndex(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewIntValueFromInt64(6),
+		interpreter.NewUnmeteredIntValueFromInt64(6),
 		value,
 	)
 }
@@ -102,7 +102,7 @@ func TestInterpretForStatementWithStoredIndex(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewIntValueFromInt64(6),
+		interpreter.NewUnmeteredIntValueFromInt64(6),
 		value,
 	)
 }
@@ -128,7 +128,7 @@ func TestInterpretForStatementWithReturn(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewIntValueFromInt64(4),
+		interpreter.NewUnmeteredIntValueFromInt64(4),
 		value,
 	)
 }
@@ -160,8 +160,8 @@ func TestInterpretForStatementWithContinue(t *testing.T) {
 		t,
 		inter,
 		[]interpreter.Value{
-			interpreter.NewIntValueFromInt64(4),
-			interpreter.NewIntValueFromInt64(5),
+			interpreter.NewUnmeteredIntValueFromInt64(4),
+			interpreter.NewUnmeteredIntValueFromInt64(5),
 		},
 		arrayElements(inter, arrayValue),
 	)
@@ -190,7 +190,7 @@ func TestInterpretForStatementWithBreak(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewIntValueFromInt64(4),
+		interpreter.NewUnmeteredIntValueFromInt64(4),
 		value,
 	)
 }

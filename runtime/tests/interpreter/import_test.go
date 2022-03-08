@@ -313,7 +313,7 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewIntValueFromInt64(3),
+		interpreter.NewUnmeteredIntValueFromInt64(3),
 		value,
 	)
 }

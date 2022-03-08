@@ -1941,7 +1941,7 @@ func TestDivModInt(t *testing.T) {
 		},
 	} {
 		assert.Panics(t, func() {
-			f(NewIntValueFromInt64(1), NewIntValueFromInt64(0))
+			f(NewUnmeteredIntValueFromInt64(1), NewUnmeteredIntValueFromInt64(0))
 		})
 	}
 }
@@ -3314,9 +3314,9 @@ func TestNegativeMod(t *testing.T) {
 				NewInt256ValueFromInt64(-1),
 			},
 			"Int": {
-				NewIntValueFromInt64(-1),
-				NewIntValueFromInt64(5),
-				NewIntValueFromInt64(-1),
+				NewUnmeteredIntValueFromInt64(-1),
+				NewUnmeteredIntValueFromInt64(5),
+				NewUnmeteredIntValueFromInt64(-1),
 			},
 		}
 

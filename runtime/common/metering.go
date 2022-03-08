@@ -33,3 +33,10 @@ func NewStringMemoryUsage(length int) MemoryUsage {
 		Amount: uint64(length),
 	}
 }
+
+func NewBigIntMemoryUsage(bytes int) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindBigInt,
+		Amount: uint64(bytes),
+	}
+}

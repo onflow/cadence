@@ -20,6 +20,7 @@ package runtime
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/fixedpoint"
@@ -55,7 +56,7 @@ func ParseLiteral(
 		}
 	}
 
-	return LiteralValue(expression, ty)
+	return LiteralValue(memoryGauge, expression, ty)
 }
 
 // ParseLiteralArgumentList parses an argument list with literals, that should have the given types.
@@ -92,7 +93,7 @@ func ParseLiteralArgumentList(
 
 	for i, argument := range arguments {
 		parameterType := parameterTypes[i]
-		value, err := LiteralValue(argument.Expression, parameterType)
+		value, err := LiteralValue(memoryGauge, argument.Expression, parameterType)
 		if err != nil {
 			return nil, fmt.Errorf("invalid argument at index %d: %w", i, err)
 		}
@@ -102,11 +103,11 @@ func ParseLiteralArgumentList(
 	return result, nil
 }
 
-func arrayLiteralValue(elements []ast.Expression, elementType sema.Type) (cadence.Value, error) {
+func arrayLiteralValue(memoryGauge common.MemoryGauge, elements []ast.Expression, elementType sema.Type) (cadence.Value, error) {
 	values := make([]cadence.Value, len(elements))
 
 	for i, element := range elements {
-		convertedElement, err := LiteralValue(element, elementType)
+		convertedElement, err := LiteralValue(memoryGauge, element, elementType)
 		if err != nil {
 			return nil, err
 		}
@@ -149,7 +150,11 @@ func pathLiteralValue(expression ast.Expression, ty sema.Type) (result cadence.V
 	}, nil
 }
 
-func integerLiteralValue(expression ast.Expression, ty sema.Type) (cadence.Value, error) {
+func integerLiteralValue(
+	memoryGauge common.MemoryGauge,
+	expression ast.Expression,
+	ty sema.Type,
+) (cadence.Value, error) {
 	integerExpression, ok := expression.(*ast.IntegerExpression)
 	if !ok {
 		return nil, LiteralExpressionTypeError
@@ -159,7 +164,16 @@ func integerLiteralValue(expression ast.Expression, ty sema.Type) (cadence.Value
 		return nil, InvalidLiteralError
 	}
 
-	intValue := interpreter.NewIntValueFromBigInt(integerExpression.Value)
+	memoryUsage := common.NewBigIntMemoryUsage(
+		len(integerExpression.Value.Bytes()),
+	)
+	intValue := interpreter.NewIntValueFromBigInt(
+		memoryGauge,
+		memoryUsage,
+		func() *big.Int {
+			return integerExpression.Value
+		},
+	)
 
 	convertedValue, err := convertIntValue(intValue, ty)
 	if err != nil {
@@ -246,7 +260,7 @@ func fixedPointLiteralValue(expression ast.Expression, ty sema.Type) (cadence.Va
 	return nil, UnsupportedLiteralError
 }
 
-func LiteralValue(expression ast.Expression, ty sema.Type) (cadence.Value, error) {
+func LiteralValue(memoryGauge common.MemoryGauge, expression ast.Expression, ty sema.Type) (cadence.Value, error) {
 	switch ty := ty.(type) {
 	case *sema.VariableSizedType:
 		expression, ok := expression.(*ast.ArrayExpression)
@@ -254,7 +268,7 @@ func LiteralValue(expression ast.Expression, ty sema.Type) (cadence.Value, error
 			return nil, LiteralExpressionTypeError
 		}
 
-		return arrayLiteralValue(expression.Values, ty.Type)
+		return arrayLiteralValue(memoryGauge, expression.Values, ty.Type)
 
 	case *sema.ConstantSizedType:
 		expression, ok := expression.(*ast.ArrayExpression)
@@ -262,14 +276,14 @@ func LiteralValue(expression ast.Expression, ty sema.Type) (cadence.Value, error
 			return nil, LiteralExpressionTypeError
 		}
 
-		return arrayLiteralValue(expression.Values, ty.Type)
+		return arrayLiteralValue(memoryGauge, expression.Values, ty.Type)
 
 	case *sema.OptionalType:
 		if _, ok := expression.(*ast.NilExpression); ok {
 			return cadence.NewOptional(nil), nil
 		}
 
-		converted, err := LiteralValue(expression, ty.Type)
+		converted, err := LiteralValue(memoryGauge, expression, ty.Type)
 		if err != nil {
 			return nil, err
 		}
@@ -288,12 +302,12 @@ func LiteralValue(expression ast.Expression, ty sema.Type) (cadence.Value, error
 
 		for i, entry := range expression.Entries {
 
-			pairs[i].Key, err = LiteralValue(entry.Key, ty.KeyType)
+			pairs[i].Key, err = LiteralValue(memoryGauge, entry.Key, ty.KeyType)
 			if err != nil {
 				return nil, err
 			}
 
-			pairs[i].Value, err = LiteralValue(entry.Value, ty.ValueType)
+			pairs[i].Value, err = LiteralValue(memoryGauge, entry.Value, ty.ValueType)
 			if err != nil {
 				return nil, err
 			}
@@ -334,7 +348,7 @@ func LiteralValue(expression ast.Expression, ty sema.Type) (cadence.Value, error
 
 	switch {
 	case sema.IsSameTypeKind(ty, sema.IntegerType):
-		return integerLiteralValue(expression, ty)
+		return integerLiteralValue(memoryGauge, expression, ty)
 
 	case sema.IsSameTypeKind(ty, sema.FixedPointType):
 		return fixedPointLiteralValue(expression, ty)

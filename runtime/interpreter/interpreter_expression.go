@@ -458,7 +458,8 @@ func (interpreter *Interpreter) VisitIntegerExpression(expression *ast.IntegerEx
 func NewIntValue(value *big.Int, intSubType sema.Type) Value {
 	switch intSubType {
 	case sema.IntType, sema.IntegerType, sema.SignedIntegerType:
-		return NewIntValueFromBigInt(value)
+		// TODO: meter
+		return NewUnmeteredIntValueFromBigInt(value)
 	case sema.UIntType:
 		return NewUIntValueFromBigInt(value)
 

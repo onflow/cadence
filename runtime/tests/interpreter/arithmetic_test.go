@@ -33,7 +33,7 @@ import (
 
 var integerTestValues = map[string]interpreter.NumberValue{
 	// Int*
-	"Int":    interpreter.NewIntValueFromInt64(60),
+	"Int":    interpreter.NewUnmeteredIntValueFromInt64(60),
 	"Int8":   interpreter.Int8Value(60),
 	"Int16":  interpreter.Int16Value(60),
 	"Int32":  interpreter.Int32Value(60),

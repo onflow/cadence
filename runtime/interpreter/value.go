@@ -996,7 +996,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, _ func() LocationRange
 	switch name {
 	case "length":
 		length := v.Length()
-		return NewIntValueFromInt64(int64(length))
+		return NewIntValueFromInt64(interpreter, int64(length))
 
 	case "utf8":
 		return ByteSliceToByteArrayValue(interpreter, []byte(v.Str))
@@ -1695,7 +1695,7 @@ func (v *ArrayValue) FirstIndex(interpreter *Interpreter, getLocationRange func(
 	})
 
 	if result {
-		value := NewIntValueFromInt64(counter)
+		value := NewIntValueFromInt64(interpreter, counter)
 		return NewSomeValueNonCopying(interpreter, value)
 	}
 	return NilValue{}
@@ -1730,7 +1730,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func()
 
 	switch name {
 	case "length":
-		return NewIntValueFromInt64(int64(v.Count()))
+		return NewIntValueFromInt64(interpreter, int64(v.Count()))
 
 	case "append":
 		return NewHostFunctionValue(
@@ -2483,6 +2483,7 @@ type IntegerValue interface {
 //
 type BigNumberValue interface {
 	NumberValue
+	ByteLength() int
 	ToBigInt() *big.Int
 }
 
@@ -2492,21 +2493,51 @@ type IntValue struct {
 	BigInt *big.Int
 }
 
-func NewIntValueFromInt64(value int64) IntValue {
-	return NewIntValueFromBigInt(big.NewInt(value))
+func NewIntValueFromInt64(memoryGauge common.MemoryGauge, value int64) IntValue {
+	return NewIntValueFromBigInt(
+		memoryGauge,
+		common.NewBigIntMemoryUsage(8),
+		func() *big.Int {
+			return big.NewInt(value)
+		},
+	)
 }
 
-func NewIntValueFromBigInt(value *big.Int) IntValue {
-	return IntValue{BigInt: value}
+func NewUnmeteredIntValueFromInt64(value int64) IntValue {
+	return NewUnmeteredIntValueFromBigInt(big.NewInt(value))
 }
 
-func ConvertInt(value Value) IntValue {
+func NewIntValueFromBigInt(
+	memoryGauge common.MemoryGauge,
+	memoryUsage common.MemoryUsage,
+	bigIntConstructor func() *big.Int,
+) IntValue {
+	if memoryGauge != nil {
+		memoryGauge.UseMemory(memoryUsage)
+	}
+	value := bigIntConstructor()
+	return NewUnmeteredIntValueFromBigInt(value)
+}
+
+func NewUnmeteredIntValueFromBigInt(value *big.Int) IntValue {
+	return IntValue{
+		BigInt: value,
+	}
+}
+
+func ConvertInt(memoryGauge common.MemoryGauge, value Value) IntValue {
 	switch value := value.(type) {
 	case BigNumberValue:
-		return NewIntValueFromBigInt(value.ToBigInt())
+		return NewIntValueFromBigInt(
+			memoryGauge,
+			common.NewBigIntMemoryUsage(value.ByteLength()),
+			func() *big.Int {
+				return value.ToBigInt()
+			},
+		)
 
 	case NumberValue:
-		return NewIntValueFromInt64(int64(value.ToInt()))
+		return NewIntValueFromInt64(memoryGauge, int64(value.ToInt()))
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -2548,6 +2579,10 @@ func (v IntValue) ToInt() int {
 	return int(v.BigInt.Int64())
 }
 
+func (v IntValue) ByteLength() int {
+	return len(v.BigInt.Bits())
+}
+
 func (v IntValue) ToBigInt() *big.Int {
 	return new(big.Int).Set(v.BigInt)
 }
@@ -2561,7 +2596,7 @@ func (v IntValue) RecursiveString(_ SeenReferences) string {
 }
 
 func (v IntValue) Negate() NumberValue {
-	return NewIntValueFromBigInt(new(big.Int).Neg(v.BigInt))
+	return IntValue{new(big.Int).Neg(v.BigInt)}
 }
 
 func (v IntValue) Plus(other NumberValue) NumberValue {
@@ -2932,7 +2967,7 @@ func (v IntValue) Transfer(
 }
 
 func (v IntValue) Clone(_ *Interpreter) Value {
-	return NewIntValueFromBigInt(v.BigInt)
+	return NewUnmeteredIntValueFromBigInt(v.BigInt)
 }
 
 func (IntValue) DeepRemove(_ *Interpreter) {
@@ -5000,6 +5035,10 @@ func (v Int128Value) ToInt() int {
 	return int(v.BigInt.Int64())
 }
 
+func (v Int128Value) ByteLength() int {
+	return len(v.BigInt.Bits())
+}
+
 func (v Int128Value) ToBigInt() *big.Int {
 	return new(big.Int).Set(v.BigInt)
 }
@@ -5580,6 +5619,10 @@ func (v Int256Value) ToInt() int {
 		panic(OverflowError{})
 	}
 	return int(v.BigInt.Int64())
+}
+
+func (v Int256Value) ByteLength() int {
+	return len(v.BigInt.Bits())
 }
 
 func (v Int256Value) ToBigInt() *big.Int {
@@ -6183,6 +6226,10 @@ func (v UIntValue) ToInt() int {
 		panic(OverflowError{})
 	}
 	return int(v.BigInt.Int64())
+}
+
+func (v UIntValue) ByteLength() int {
+	return len(v.BigInt.Bits())
 }
 
 func (v UIntValue) ToBigInt() *big.Int {
@@ -7976,6 +8023,10 @@ func (v UInt64Value) ToInt() int {
 	return int(v)
 }
 
+func (v UInt64Value) ByteLength() int {
+	return 8
+}
+
 // ToBigInt
 //
 // NOTE: important, do *NOT* remove:
@@ -8436,6 +8487,10 @@ func (v UInt128Value) ToInt() int {
 		panic(OverflowError{})
 	}
 	return int(v.BigInt.Int64())
+}
+
+func (v UInt128Value) ByteLength() int {
+	return len(v.BigInt.Bits())
 }
 
 func (v UInt128Value) ToBigInt() *big.Int {
@@ -8972,6 +9027,10 @@ func (v UInt256Value) ToInt() int {
 	}
 
 	return int(v.BigInt.Int64())
+}
+
+func (v UInt256Value) ByteLength() int {
+	return len(v.BigInt.Bits())
 }
 
 func (v UInt256Value) ToBigInt() *big.Int {
@@ -10561,6 +10620,10 @@ func (v Word64Value) ToInt() int {
 		panic(OverflowError{})
 	}
 	return int(v)
+}
+
+func (v Word64Value) ByteLength() int {
+	return 8
 }
 
 // ToBigInt
@@ -13209,7 +13272,7 @@ func (v *DictionaryValue) GetMember(
 
 	switch name {
 	case "length":
-		return NewIntValueFromInt64(int64(v.Count()))
+		return NewIntValueFromInt64(interpreter, int64(v.Count()))
 
 	case "keys":
 

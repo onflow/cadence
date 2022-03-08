@@ -3518,7 +3518,7 @@ func NewAccountKeyValue(
 ) interpreter.Value {
 	return interpreter.NewAccountKeyValue(
 		inter,
-		interpreter.NewIntValueFromInt64(int64(accountKey.KeyIndex)),
+		interpreter.NewIntValueFromInt64(inter, int64(accountKey.KeyIndex)),
 		NewPublicKeyValue(
 			inter,
 			getLocationRange,

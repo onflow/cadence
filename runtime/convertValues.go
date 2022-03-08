@@ -20,6 +20,7 @@ package runtime
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
@@ -459,7 +460,7 @@ func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedTy
 	case cadence.Address:
 		return interpreter.NewAddressValue(common.Address(v)), nil
 	case cadence.Int:
-		return interpreter.NewIntValueFromBigInt(v.Value), nil
+		return importInt(inter, v), nil
 	case cadence.Int8:
 		return interpreter.Int8Value(v), nil
 	case cadence.Int16:
@@ -555,6 +556,17 @@ func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedTy
 	}
 
 	return nil, fmt.Errorf("cannot import value of type %T", value)
+}
+
+func importInt(inter *interpreter.Interpreter, v cadence.Int) interpreter.Value {
+	memoryUsage := common.NewBigIntMemoryUsage(len(v.Value.Bytes()))
+	return interpreter.NewIntValueFromBigInt(
+		inter,
+		memoryUsage,
+		func() *big.Int {
+			return v.Value
+		},
+	)
 }
 
 func importString(inter *interpreter.Interpreter, v cadence.String) *interpreter.StringValue {

@@ -401,7 +401,7 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: NewIntValueFromInt64(0),
+				value: NewUnmeteredIntValueFromInt64(0),
 				encoded: []byte{
 					0xd8, CBORTagIntValue,
 					// positive bignum
@@ -418,7 +418,7 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: NewIntValueFromInt64(42),
+				value: NewUnmeteredIntValueFromInt64(42),
 				encoded: []byte{
 					0xd8, CBORTagIntValue,
 					// positive bignum
@@ -436,7 +436,7 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: NewIntValueFromInt64(-1),
+				value: NewUnmeteredIntValueFromInt64(-1),
 				encoded: []byte{
 					0xd8, CBORTagIntValue,
 					// negative bignum
@@ -453,7 +453,7 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: NewIntValueFromInt64(-42),
+				value: NewUnmeteredIntValueFromInt64(-42),
 				encoded: []byte{
 					0xd8, CBORTagIntValue,
 					// negative bignum
@@ -478,7 +478,7 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: NewIntValueFromBigInt(setString),
+				value: NewUnmeteredIntValueFromBigInt(setString),
 				encoded: []byte{
 					0xd8, CBORTagIntValue,
 					// negative bignum
@@ -500,7 +500,7 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: NewIntValueFromBigInt(bigInt),
+				value: NewUnmeteredIntValueFromBigInt(bigInt),
 				encoded: []byte{
 					// tag
 					0xd8, CBORTagIntValue,
@@ -518,7 +518,7 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 
 		t.Parallel()
 
-		expected := NewIntValueFromInt64(1_000_000_000)
+		expected := NewUnmeteredIntValueFromInt64(1_000_000_000)
 
 		maxInlineElementSize := atree.MaxInlineArrayElementSize
 		for len(expected.BigInt.Bytes()) < int(maxInlineElementSize+1) {

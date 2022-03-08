@@ -900,7 +900,7 @@ func TestStringer(t *testing.T) {
 					Type: PrimitiveStaticTypeAnyStruct,
 				},
 				common.Address{},
-				NewIntValueFromInt64(10),
+				NewUnmeteredIntValueFromInt64(10),
 				NewUnmeteredStringValue("TEST"),
 			),
 			expected: "[10, \"TEST\"]",
@@ -1066,7 +1066,7 @@ func TestVisitor(t *testing.T) {
 	}
 
 	var value Value
-	value = NewIntValueFromInt64(42)
+	value = NewUnmeteredIntValueFromInt64(42)
 	value = NewUnmeteredSomeValueNonCopying(value)
 	value = NewArrayValue(
 		inter,
@@ -1203,15 +1203,15 @@ func TestGetHashInput(t *testing.T) {
 			expected: append([]byte{byte(HashInputTypeUInt256)}, sema.UInt256TypeMaxIntBig.Bytes()...),
 		},
 		"Int": {
-			value:    NewIntValueFromInt64(10),
+			value:    NewUnmeteredIntValueFromInt64(10),
 			expected: []byte{byte(HashInputTypeInt), 10},
 		},
 		"Int small": {
-			value:    NewIntValueFromBigInt(sema.Int256TypeMinIntBig),
+			value:    NewUnmeteredIntValueFromBigInt(sema.Int256TypeMinIntBig),
 			expected: append([]byte{byte(HashInputTypeInt)}, sema.Int256TypeMinIntBig.Bytes()...),
 		},
 		"Int large": {
-			value:    NewIntValueFromBigInt(sema.Int256TypeMaxIntBig),
+			value:    NewUnmeteredIntValueFromBigInt(sema.Int256TypeMaxIntBig),
 			expected: append([]byte{byte(HashInputTypeInt)}, sema.Int256TypeMaxIntBig.Bytes()...),
 		},
 		"Int8": {
@@ -3150,9 +3150,9 @@ func TestPublicKeyValue(t *testing.T) {
 				Type: PrimitiveStaticTypeInt,
 			},
 			common.Address{},
-			NewIntValueFromInt64(1),
-			NewIntValueFromInt64(7),
-			NewIntValueFromInt64(3),
+			NewUnmeteredIntValueFromInt64(1),
+			NewUnmeteredIntValueFromInt64(7),
+			NewUnmeteredIntValueFromInt64(3),
 		)
 
 		sigAlgo := stdlib.NewSignatureAlgorithmCase(
@@ -3202,9 +3202,9 @@ func TestPublicKeyValue(t *testing.T) {
 				Type: PrimitiveStaticTypeInt,
 			},
 			common.Address{},
-			NewIntValueFromInt64(int64(publicKeyBytes[0])),
-			NewIntValueFromInt64(int64(publicKeyBytes[1])),
-			NewIntValueFromInt64(int64(publicKeyBytes[2])),
+			NewUnmeteredIntValueFromInt64(int64(publicKeyBytes[0])),
+			NewUnmeteredIntValueFromInt64(int64(publicKeyBytes[1])),
+			NewUnmeteredIntValueFromInt64(int64(publicKeyBytes[2])),
 		)
 
 		sigAlgo := stdlib.NewSignatureAlgorithmCase(

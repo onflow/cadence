@@ -35,7 +35,7 @@ import (
 
 var testIntegerTypesAndValues = map[string]interpreter.Value{
 	// Int*
-	"Int":    interpreter.NewIntValueFromInt64(50),
+	"Int":    interpreter.NewUnmeteredIntValueFromInt64(50),
 	"Int8":   interpreter.Int8Value(50),
 	"Int16":  interpreter.Int16Value(50),
 	"Int32":  interpreter.Int32Value(50),
@@ -506,20 +506,20 @@ func TestInterpretIntegerConversion(t *testing.T) {
 
 	testValues := map[*sema.NumericType]values{
 		sema.IntType: {
-			fortyTwo: interpreter.NewIntValueFromInt64(42),
+			fortyTwo: interpreter.NewUnmeteredIntValueFromInt64(42),
 			// Int does not actually have a minimum, but create a "large" value,
 			// which can be used for testing against other types
 			min: func() interpreter.Value {
 				i := big.NewInt(-1)
 				i.Lsh(i, 1000)
-				return interpreter.NewIntValueFromBigInt(i)
+				return interpreter.NewUnmeteredIntValueFromBigInt(i)
 			}(),
 			// Int does not actually have a maximum, but create a "large" value,
 			// which can be used for testing against other types
 			max: func() interpreter.Value {
 				i := big.NewInt(1)
 				i.Lsh(i, 1000)
-				return interpreter.NewIntValueFromBigInt(i)
+				return interpreter.NewUnmeteredIntValueFromBigInt(i)
 			}(),
 		},
 		sema.UIntType: {

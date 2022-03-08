@@ -255,7 +255,7 @@ func TestInterpretTransactions(t *testing.T) {
         `)
 
 		arguments := []interpreter.Value{
-			interpreter.NewIntValueFromInt64(1),
+			interpreter.NewUnmeteredIntValueFromInt64(1),
 			interpreter.BoolValue(true),
 		}
 
@@ -281,7 +281,7 @@ func TestInterpretTransactions(t *testing.T) {
 			[]interpreter.Value{
 				interpreter.AddressValue{},
 				interpreter.BoolValue(true),
-				interpreter.NewIntValueFromInt64(1),
+				interpreter.NewUnmeteredIntValueFromInt64(1),
 			},
 			arrayElements(inter, values.(*interpreter.ArrayValue)),
 		)
