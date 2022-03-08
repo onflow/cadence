@@ -34,52 +34,139 @@ func TestInterpretTransferCheck(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &sema.CompositeType{
-		Location:   utils.TestLocation,
-		Identifier: "Fruit",
-		Kind:       common.CompositeKindStructure,
-	}
+	t.Run("String value as composite", func(t *testing.T) {
 
-	valueDeclarations := stdlib.StandardLibraryValues{
-		{
-			Name: "fruit",
-			Type: ty,
-			// NOTE: not an instance of the type
-			ValueFactory: func(_ *interpreter.Interpreter) interpreter.Value {
-				return interpreter.NewStringValue("fruit")
+		t.Parallel()
+
+		ty := &sema.CompositeType{
+			Location:   utils.TestLocation,
+			Identifier: "Fruit",
+			Kind:       common.CompositeKindStructure,
+		}
+
+		valueDeclarations := stdlib.StandardLibraryValues{
+			{
+				Name: "fruit",
+				Type: ty,
+				// NOTE: not an instance of the type
+				ValueFactory: func(_ *interpreter.Interpreter) interpreter.Value {
+					return interpreter.NewStringValue("fruit")
+				},
+				Kind: common.DeclarationKindConstant,
 			},
-			Kind: common.DeclarationKindConstant,
-		},
-	}
+		}
 
-	typeDeclarations := stdlib.StandardLibraryTypes{
-		{
-			Name: ty.Identifier,
-			Type: ty,
-			Kind: common.DeclarationKindStructure,
-		},
-	}
-
-	inter, err := parseCheckAndInterpretWithOptions(t,
-		`
-          fun test() {
-            let alsoFruit: Fruit = fruit
-          }
-        `,
-		ParseCheckAndInterpretOptions{
-			CheckerOptions: []sema.Option{
-				sema.WithPredeclaredValues(valueDeclarations.ToSemaValueDeclarations()),
-				sema.WithPredeclaredTypes(typeDeclarations.ToTypeDeclarations()),
+		typeDeclarations := stdlib.StandardLibraryTypes{
+			{
+				Name: ty.Identifier,
+				Type: ty,
+				Kind: common.DeclarationKindStructure,
 			},
-			Options: []interpreter.Option{
-				interpreter.WithPredeclaredValues(valueDeclarations.ToInterpreterValueDeclarations()),
+		}
+
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+              fun test() {
+                  let alsoFruit: Fruit = fruit
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				CheckerOptions: []sema.Option{
+					sema.WithPredeclaredValues(valueDeclarations.ToSemaValueDeclarations()),
+					sema.WithPredeclaredTypes(typeDeclarations.ToTypeDeclarations()),
+				},
+				Options: []interpreter.Option{
+					interpreter.WithPredeclaredValues(valueDeclarations.ToInterpreterValueDeclarations()),
+				},
 			},
-		},
-	)
-	require.NoError(t, err)
+		)
+		require.NoError(t, err)
 
-	_, err = inter.Invoke("test")
-	require.Error(t, err)
+		_, err = inter.Invoke("test")
+		require.Error(t, err)
 
-	require.ErrorAs(t, err, &interpreter.ValueTransferTypeError{})
+		require.ErrorAs(t, err, &interpreter.ValueTransferTypeError{})
+	})
+
+	t.Run("contract and restricted type", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+		      contract interface CI {
+		          resource interface RI {}
+
+		          resource R: RI {}
+
+		          fun createR(): @R
+		      }
+
+              contract C: CI {
+		          resource R: CI.RI {}
+
+		          fun createR(): @R {
+		              return <- create R()
+		          }
+		      }
+
+              fun test() {
+                  let r <- C.createR()
+                  let r2: @CI.R <- r as @CI.R
+                  let r3: @CI.R{CI.RI} <- r2
+                  destroy r3
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				Options: []interpreter.Option{
+					makeContractValueHandler(nil, nil, nil),
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("contract and restricted type, reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+		      contract interface CI {
+		          resource interface RI {}
+
+		          resource R: RI {}
+
+		          fun createR(): @R
+		      }
+
+              contract C: CI {
+		          resource R: CI.RI {}
+
+		          fun createR(): @R {
+		              return <- create R()
+		          }
+		      }
+
+              fun test() {
+                  let r <- C.createR()
+                  let ref: &CI.R = &r as &CI.R
+                  let restrictedRef: &CI.R{CI.RI} = ref
+                  destroy r
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				Options: []interpreter.Option{
+					makeContractValueHandler(nil, nil, nil),
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+	})
 }
