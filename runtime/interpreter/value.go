@@ -1148,6 +1148,8 @@ func NewArrayValueWithIterator(
 	values func() Value,
 ) *ArrayValue {
 
+	interpreter.ReportComputation(common.ComputationKindCreateArrayValue, 1)
+
 	var v *ArrayValue
 
 	if interpreter.tracingEnabled {
@@ -1261,6 +1263,8 @@ func (v *ArrayValue) checkInvalidatedResourceUse(interpreter *Interpreter, getLo
 }
 
 func (v *ArrayValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
+
+	interpreter.ReportComputation(common.ComputationKindDestroyArrayValue, 1)
 
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
@@ -11665,8 +11669,9 @@ func NewCompositeValue(
 	address common.Address,
 ) *CompositeValue {
 
-	var v *CompositeValue
+	interpreter.ReportComputation(common.ComputationKindCreateCompositeValue, 1)
 
+	var v *CompositeValue
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
 
@@ -11789,6 +11794,8 @@ func (v *CompositeValue) IsDestroyed() bool {
 }
 
 func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
+
+	interpreter.ReportComputation(common.ComputationKindDestroyCompositeValue, 1)
 
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(getLocationRange)
@@ -12746,6 +12753,8 @@ func NewDictionaryValueWithAddress(
 	keysAndValues ...Value,
 ) *DictionaryValue {
 
+	interpreter.ReportComputation(common.ComputationKindCreateDictionaryValue, 1)
+
 	var v *DictionaryValue
 
 	if interpreter.tracingEnabled {
@@ -12883,6 +12892,7 @@ func (v *DictionaryValue) checkInvalidatedResourceUse(interpreter *Interpreter, 
 
 func (v *DictionaryValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
 
+	interpreter.ReportComputation(common.ComputationKindDestroyDictionaryValue, 1)
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
 	}
