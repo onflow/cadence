@@ -12297,7 +12297,7 @@ func (v *CompositeValue) ConformsToStaticType(
 			return false
 		}
 
-		if !interpreter.IsSubType(value.StaticType(interpreter), member.TypeAnnotation.Type) {
+		if !interpreter.IsSubTypeOfSemaType(value.StaticType(interpreter), member.TypeAnnotation.Type) {
 			return false
 		}
 
@@ -14250,7 +14250,7 @@ func (v *StorageReferenceValue) dereference(interpreter *Interpreter, getLocatio
 
 	if v.BorrowedType != nil {
 		staticType := referenced.StaticType(interpreter)
-		if !interpreter.IsSubType(staticType, v.BorrowedType) {
+		if !interpreter.IsSubTypeOfSemaType(staticType, v.BorrowedType) {
 			return nil, ForceCastTypeMismatchError{
 				ExpectedType:  v.BorrowedType,
 				LocationRange: getLocationRange(),
@@ -15053,7 +15053,7 @@ func accountGetCapabilityFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			if !invocation.Interpreter.IsSubType(path.StaticType(invocation.Interpreter), pathType) {
+			if !invocation.Interpreter.IsSubTypeOfSemaType(path.StaticType(invocation.Interpreter), pathType) {
 				panic(TypeMismatchError{
 					ExpectedType:  pathType,
 					LocationRange: invocation.GetLocationRange(),
@@ -15421,7 +15421,7 @@ func (v *CapabilityValue) ConformsToStaticType(
 		return false
 	}
 
-	return inter.IsSubType(v.StaticType(inter), semaType)
+	return inter.IsSubTypeOfSemaType(v.StaticType(inter), semaType)
 }
 
 func (v *CapabilityValue) Equal(interpreter *Interpreter, getLocationRange func() LocationRange, other Value) bool {
@@ -15773,16 +15773,5 @@ var publicKeyVerifyPoPFunction = NewHostFunctionValue(
 
 func primitiveValueConformsToStaticType(inter *Interpreter, v Value, targetStaticType StaticType) bool {
 	staticType := v.StaticType(inter)
-
-	// This is an optimization: If the static types are equal exit early.
-	if staticType.Equal(targetStaticType) {
-		return true
-	}
-
-	semaType, err := inter.ConvertStaticToSemaType(targetStaticType)
-	if err != nil {
-		return false
-	}
-
-	return inter.IsSubType(staticType, semaType)
+	return inter.IsSubType(staticType, targetStaticType)
 }

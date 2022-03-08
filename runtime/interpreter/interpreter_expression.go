@@ -801,7 +801,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 
 	switch expression.Operation {
 	case ast.OperationFailableCast, ast.OperationForceCast:
-		isSubType := interpreter.IsSubType(value.StaticType(interpreter), expectedType)
+		isSubType := interpreter.IsSubTypeOfSemaType(value.StaticType(interpreter), expectedType)
 
 		switch expression.Operation {
 		case ast.OperationFailableCast:

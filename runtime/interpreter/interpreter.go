@@ -2056,7 +2056,7 @@ func (interpreter *Interpreter) CheckValueTransferTargetType(value Value, target
 		return true
 	}
 
-	if interpreter.IsSubType(value.StaticType(interpreter), targetType) {
+	if interpreter.IsSubTypeOfSemaType(value.StaticType(interpreter), targetType) {
 		return true
 	}
 
@@ -3379,7 +3379,7 @@ func defineStringFunction(activation *VariableActivation) {
 	defineBaseValue(activation, sema.StringType.String(), stringFunction)
 }
 
-// DeprecatedIsSubType is the old implementation of IsSubType() check, and is deprecated.
+// DeprecatedIsSubType is the old implementation of IsSubTypeOfSemaType() check, and is deprecated.
 // This is renamed and left as-is for reference purpose, and for comparing convenience.
 // TODO: Remove this function, once the changes are merged.
 //
@@ -3621,7 +3621,26 @@ func (interpreter *Interpreter) DeprecatedIsSubType(subType DynamicType, superTy
 	return false
 }
 
-func (interpreter *Interpreter) IsSubType(subType StaticType, superType sema.Type) bool {
+func (interpreter *Interpreter) IsSubType(subType StaticType, superType StaticType) bool {
+	if superType == PrimitiveStaticTypeAny {
+		return true
+	}
+
+	// This is an optimization: If the static types are equal, then no need to check further.
+	// i.e: Saves the conversion time.
+	if subType.Equal(superType) {
+		return true
+	}
+
+	semaType, err := interpreter.ConvertStaticToSemaType(superType)
+	if err != nil {
+		return false
+	}
+
+	return interpreter.IsSubTypeOfSemaType(subType, semaType)
+}
+
+func (interpreter *Interpreter) IsSubTypeOfSemaType(subType StaticType, superType sema.Type) bool {
 	if superType == sema.AnyType {
 		return true
 	}
@@ -3634,12 +3653,12 @@ func (interpreter *Interpreter) IsSubType(subType StaticType, superType sema.Typ
 
 	case OptionalStaticType:
 		if typedSuperType, ok := superType.(*sema.OptionalType); ok {
-			return interpreter.IsSubType(staticType.Type, typedSuperType.Type)
+			return interpreter.IsSubTypeOfSemaType(staticType.Type, typedSuperType.Type)
 		}
 
 		switch superType {
 		case sema.AnyStructType, sema.AnyResourceType:
-			return interpreter.IsSubType(staticType.Type, superType)
+			return interpreter.IsSubTypeOfSemaType(staticType.Type, superType)
 		}
 
 	case ReferenceStaticType:
@@ -3648,7 +3667,7 @@ func (interpreter *Interpreter) IsSubType(subType StaticType, superType sema.Typ
 			// First, check that the static type of the referenced value
 			// is a subtype of the super type
 
-			if staticType.InnerType != nil && !interpreter.IsSubType(staticType.InnerType, typedSuperType.Type) {
+			if staticType.InnerType != nil && !interpreter.IsSubTypeOfSemaType(staticType.InnerType, typedSuperType.Type) {
 				return false
 			}
 
@@ -3683,10 +3702,7 @@ func (interpreter *Interpreter) IsSubType(subType StaticType, superType sema.Typ
 		// TODO: does this need special handling? Fallthrough for now.
 	}
 
-	semaType, err := interpreter.ConvertStaticToSemaType(subType)
-	if err != nil {
-		panic(err)
-	}
+	semaType := interpreter.MustConvertStaticToSemaType(subType)
 
 	return sema.IsSubType(semaType, superType)
 }
@@ -3815,7 +3831,7 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 
 			ty := typeParameterPair.Value
 
-			if !interpreter.IsSubType(value.StaticType(invocation.Interpreter), ty) {
+			if !interpreter.IsSubTypeOfSemaType(value.StaticType(invocation.Interpreter), ty) {
 				panic(ForceCastTypeMismatchError{
 					ExpectedType:  ty,
 					LocationRange: invocation.GetLocationRange(),
@@ -4410,9 +4426,8 @@ func (interpreter *Interpreter) isInstanceFunction(self Value) *HostFunctionValu
 				return BoolValue(false)
 			}
 
-			semaType := interpreter.MustConvertStaticToSemaType(staticType)
 			// NOTE: not invocation.Self, as that is only set for composite values
-			result := interpreter.IsSubType(self.StaticType(invocation.Interpreter), semaType)
+			result := interpreter.IsSubType(self.StaticType(invocation.Interpreter), staticType)
 			return BoolValue(result)
 		},
 		sema.IsInstanceFunctionType,
@@ -4439,7 +4454,7 @@ func (interpreter *Interpreter) ExpectType(
 	expectedType sema.Type,
 	getLocationRange func() LocationRange,
 ) {
-	if !interpreter.IsSubType(value.StaticType(interpreter), expectedType) {
+	if !interpreter.IsSubTypeOfSemaType(value.StaticType(interpreter), expectedType) {
 		var locationRange LocationRange
 		if getLocationRange != nil {
 			locationRange = getLocationRange()
@@ -4456,11 +4471,9 @@ func (interpreter *Interpreter) checkContainerMutation(
 	element Value,
 	getLocationRange func() LocationRange,
 ) {
-	expectedType := interpreter.MustConvertStaticToSemaType(elementType)
-
-	if !interpreter.IsSubType(element.StaticType(interpreter), expectedType) {
+	if !interpreter.IsSubType(element.StaticType(interpreter), elementType) {
 		panic(ContainerMutationError{
-			ExpectedType:  expectedType,
+			ExpectedType:  interpreter.MustConvertStaticToSemaType(elementType),
 			ActualType:    interpreter.MustConvertStaticToSemaType(element.StaticType(interpreter)),
 			LocationRange: getLocationRange(),
 		})
