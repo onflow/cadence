@@ -82,10 +82,10 @@ func TestRuntimeArrayMetering(t *testing.T) {
 		assert.Equal(t, uint64(15), meter.getMemory(common.MemoryKindArray))
 	})
 
-	/*t.Run("iteration", func(t *testing.T) {
-			t.Parallel()
+	t.Run("iteration", func(t *testing.T) {
+		t.Parallel()
 
-			script := `
+		script := `
 	            pub fun main() {
 	                let values: [[Int8]] = [[], [], []]
 	                for value in values {
@@ -94,14 +94,14 @@ func TestRuntimeArrayMetering(t *testing.T) {
 	            }
 	        `
 
-			meter := newTestMemoryGauge()
-			inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
-			_, err := inter.Invoke("main")
-			require.NoError(t, err)
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
 
-			assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindArray))
-		})*/
+		assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindArray))
+	})
 }
 
 func TestRuntimeDictionaryMetering(t *testing.T) {
