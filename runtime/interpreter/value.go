@@ -455,13 +455,7 @@ func NewUnmeteredVoidValue() VoidValue {
 }
 
 func NewVoidValue(memoryGauge common.MemoryGauge) VoidValue {
-	if memoryGauge != nil {
-		memoryGauge.UseMemory(common.MemoryUsage{
-			Kind:   common.MemoryKindVoid,
-			Amount: 1,
-		})
-	}
-
+	common.UseConstantMemory(memoryGauge, common.MemoryKindVoid)
 	return NewUnmeteredVoidValue()
 }
 
@@ -567,13 +561,7 @@ func NewUnmeteredBoolValue(value bool) BoolValue {
 }
 
 func NewBoolValue(memoryGauge common.MemoryGauge, value bool) BoolValue {
-	if memoryGauge != nil {
-		memoryGauge.UseMemory(common.MemoryUsage{
-			Kind:   common.MemoryKindBool,
-			Amount: 1,
-		})
-	}
-
+	common.UseConstantMemory(memoryGauge, common.MemoryKindBool)
 	return NewUnmeteredBoolValue(value)
 }
 
@@ -1318,7 +1306,7 @@ func NewArrayValueWithIterator(
 	address common.Address,
 	values func() Value,
 ) *ArrayValue {
-	interpreter.UseConstantMemory(common.MemoryKindArray)
+	common.UseConstantMemory(interpreter, common.MemoryKindArray)
 
 	var v *ArrayValue
 
@@ -11912,7 +11900,7 @@ func NewCompositeValue(
 		}()
 	}
 
-	interpreter.UseConstantMemory(common.MemoryKindComposite)
+	common.UseConstantMemory(interpreter, common.MemoryKindComposite)
 
 	dictionary, err := atree.NewMap(
 		interpreter.Storage,
@@ -12966,7 +12954,7 @@ func NewDictionaryValueWithAddress(
 	address common.Address,
 	keysAndValues ...Value,
 ) *DictionaryValue {
-	interpreter.UseConstantMemory(common.MemoryKindDictionary)
+	common.UseConstantMemory(interpreter, common.MemoryKindDictionary)
 
 	var v *DictionaryValue
 
@@ -13963,13 +13951,7 @@ func NewUnmeteredNilValue() NilValue {
 }
 
 func NewNilValue(memoryGauge common.MemoryGauge) NilValue {
-	if memoryGauge != nil {
-		memoryGauge.UseMemory(common.MemoryUsage{
-			Kind:   common.MemoryKindNil,
-			Amount: 1,
-		})
-	}
-
+	common.UseConstantMemory(memoryGauge, common.MemoryKindNil)
 	return NewUnmeteredNilValue()
 }
 
@@ -14017,7 +13999,7 @@ func (v NilValue) RecursiveString(_ SeenReferences) string {
 // Hence, no need to meter, as it's a constant.
 var nilValueMapFunction = NewUnmeteredHostFunctionValue(
 	func(invocation Invocation) Value {
-		return NewNilValue(invocation.Interpreter.memoryGauge)
+		return NewNilValue(invocation.Interpreter)
 	},
 	&sema.FunctionType{
 		ReturnTypeAnnotation: sema.NewTypeAnnotation(
@@ -14478,7 +14460,6 @@ func NewStorageReferenceValue(
 			Amount: uint64(length),
 		})
 	}
-
 	return NewUnmeteredStorageReferenceValue(authorized, targetStorageAddress, targetPath, borrowedType)
 }
 
@@ -14818,18 +14799,12 @@ func NewUnmeteredEphemeralReferenceValue(
 }
 
 func NewEphemeralReferenceValue(
-	memoryGauge common.MemoryGauge,
+	interpreter *Interpreter,
 	authorized bool,
 	value Value,
 	borrowedType sema.Type,
 ) *EphemeralReferenceValue {
-	if memoryGauge != nil {
-		memoryGauge.UseMemory(common.MemoryUsage{
-			Kind:   common.MemoryKindEphemeralReferenceValue,
-			Amount: uint64(1),
-		})
-	}
-
+	common.UseConstantMemory(interpreter, common.MemoryKindEphemeralReferenceValue)
 	return NewUnmeteredEphemeralReferenceValue(authorized, value, borrowedType)
 }
 
@@ -15180,7 +15155,6 @@ func NewAddressValueFromBytes(memoryGauge common.MemoryGauge, b []byte) AddressV
 			Amount: uint64(len(b)),
 		})
 	}
-
 	return NewUnmeteredAddressValue(b)
 }
 
@@ -15686,13 +15660,7 @@ func NewUnmeteredCapabilityValue(address AddressValue, path PathValue, borrowTyp
 }
 
 func NewCapabilityValue(memoryGauge common.MemoryGauge, address AddressValue, path PathValue, borrowType StaticType) *CapabilityValue {
-	if memoryGauge != nil {
-		memoryGauge.UseMemory(common.MemoryUsage{
-			Kind: common.MemoryKindCapabilityValue,
-			// The only variable is Path, which is already metered as a PathValue.
-			Amount: 1,
-		})
-	}
+	common.UseConstantMemory(memoryGauge, common.MemoryKindCapabilityValue)
 	return NewUnmeteredCapabilityValue(address, path, borrowType)
 }
 
@@ -15891,13 +15859,8 @@ func NewUnmeteredLinkValue(targetPath PathValue, staticType StaticType) LinkValu
 }
 
 func NewLinkValue(memoryGauge common.MemoryGauge, targetPath PathValue, staticType StaticType) LinkValue {
-	if memoryGauge != nil {
-		memoryGauge.UseMemory(common.MemoryUsage{
-			Kind: common.MemoryKindLinkValue,
-			// The only variable is TargetPath, which is already metered as a PathValue.
-			Amount: 1,
-		})
-	}
+	// The only variable is TargetPath, which is already metered as a PathValue.
+	common.UseConstantMemory(memoryGauge, common.MemoryKindLinkValue)
 	return NewUnmeteredLinkValue(targetPath, staticType)
 }
 

@@ -33,3 +33,15 @@ func NewStringMemoryUsage(length int) MemoryUsage {
 		Amount: uint64(length),
 	}
 }
+
+// UseConstantMemory uses a pre-determined amount of memory
+//
+func UseConstantMemory(memoryGauge MemoryGauge, kind MemoryKind) {
+	if memoryGauge == nil {
+		return
+	}
+	memoryGauge.UseMemory(MemoryUsage{
+		Kind:   kind,
+		Amount: 1,
+	})
+}
