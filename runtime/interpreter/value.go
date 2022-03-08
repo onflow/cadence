@@ -1545,6 +1545,8 @@ func (v *ArrayValue) Transfer(
 	storable atree.Storable,
 ) Value {
 
+	interpreter.ReportComputation(common.ComputationKindTransferArrayValue, uint(v.Count()))
+
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
 
@@ -11591,6 +11593,8 @@ func (v *CompositeValue) Transfer(
 	storable atree.Storable,
 ) Value {
 
+	interpreter.ReportComputation(common.ComputationKindTransferCompositeValue, 1)
+
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
 
@@ -12547,6 +12551,8 @@ func (v *DictionaryValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 ) Value {
+
+	interpreter.ReportComputation(common.ComputationKindTransferDictionaryValue, uint(v.Count()))
 
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
