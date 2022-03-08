@@ -2350,8 +2350,8 @@ type NumberValue interface {
 	Minus(other NumberValue) NumberValue
 	SaturatingMinus(other NumberValue) NumberValue
 	Mod(other NumberValue) NumberValue
-	Mul(other NumberValue) NumberValue
-	SaturatingMul(other NumberValue) NumberValue
+	Mul(interpreter *Interpreter, other NumberValue) NumberValue
+	SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue
 	Div(other NumberValue) NumberValue
 	SaturatingDiv(other NumberValue) NumberValue
 	Less(other NumberValue) BoolValue
@@ -2444,7 +2444,10 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
-				return v.SaturatingMul(other)
+				return v.SaturatingMul(
+					invocation.Interpreter,
+					other,
+				)
 			},
 			&sema.FunctionType{
 				ReturnTypeAnnotation: sema.NewTypeAnnotation(
@@ -2688,7 +2691,7 @@ func (v IntValue) Mod(other NumberValue) NumberValue {
 	return IntValue{res}
 }
 
-func (v IntValue) Mul(other NumberValue) NumberValue {
+func (v IntValue) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -2698,12 +2701,17 @@ func (v IntValue) Mul(other NumberValue) NumberValue {
 		})
 	}
 
-	res := new(big.Int)
-	res.Mul(v.BigInt, o.BigInt)
-	return IntValue{res}
+	return NewIntValueFromBigInt(
+		interpreter,
+		common.NewMulBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Mul(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v IntValue) SaturatingMul(other NumberValue) NumberValue {
+func (v IntValue) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	defer func() {
 		r := recover()
 		if _, ok := r.(InvalidOperandsError); ok {
@@ -2715,7 +2723,7 @@ func (v IntValue) SaturatingMul(other NumberValue) NumberValue {
 		}
 	}()
 
-	return v.Mul(other)
+	return v.Mul(interpreter, other)
 }
 
 func (v IntValue) Div(other NumberValue) NumberValue {
@@ -3140,7 +3148,7 @@ func (v Int8Value) Mod(other NumberValue) NumberValue {
 	return v % o
 }
 
-func (v Int8Value) Mul(other NumberValue) NumberValue {
+func (v Int8Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3179,7 +3187,7 @@ func (v Int8Value) Mul(other NumberValue) NumberValue {
 	return v * o
 }
 
-func (v Int8Value) SaturatingMul(other NumberValue) NumberValue {
+func (v Int8Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3639,7 +3647,7 @@ func (v Int16Value) Mod(other NumberValue) NumberValue {
 	return v % o
 }
 
-func (v Int16Value) Mul(other NumberValue) NumberValue {
+func (v Int16Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3678,7 +3686,7 @@ func (v Int16Value) Mul(other NumberValue) NumberValue {
 	return v * o
 }
 
-func (v Int16Value) SaturatingMul(other NumberValue) NumberValue {
+func (v Int16Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4140,7 +4148,7 @@ func (v Int32Value) Mod(other NumberValue) NumberValue {
 	return v % o
 }
 
-func (v Int32Value) Mul(other NumberValue) NumberValue {
+func (v Int32Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4179,7 +4187,7 @@ func (v Int32Value) Mul(other NumberValue) NumberValue {
 	return v * o
 }
 
-func (v Int32Value) SaturatingMul(other NumberValue) NumberValue {
+func (v Int32Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4645,7 +4653,7 @@ func (v Int64Value) Mod(other NumberValue) NumberValue {
 	return v % o
 }
 
-func (v Int64Value) Mul(other NumberValue) NumberValue {
+func (v Int64Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4684,7 +4692,7 @@ func (v Int64Value) Mul(other NumberValue) NumberValue {
 	return v * o
 }
 
-func (v Int64Value) SaturatingMul(other NumberValue) NumberValue {
+func (v Int64Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5219,7 +5227,7 @@ func (v Int128Value) Mod(other NumberValue) NumberValue {
 	return Int128Value{res}
 }
 
-func (v Int128Value) Mul(other NumberValue) NumberValue {
+func (v Int128Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5239,7 +5247,7 @@ func (v Int128Value) Mul(other NumberValue) NumberValue {
 	return Int128Value{res}
 }
 
-func (v Int128Value) SaturatingMul(other NumberValue) NumberValue {
+func (v Int128Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5805,7 +5813,7 @@ func (v Int256Value) Mod(other NumberValue) NumberValue {
 	return Int256Value{res}
 }
 
-func (v Int256Value) Mul(other NumberValue) NumberValue {
+func (v Int256Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5825,7 +5833,7 @@ func (v Int256Value) Mul(other NumberValue) NumberValue {
 	return Int256Value{res}
 }
 
-func (v Int256Value) SaturatingMul(other NumberValue) NumberValue {
+func (v Int256Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6285,7 +6293,7 @@ func (v UIntValue) SaturatingPlus(interpreter *Interpreter, other NumberValue) N
 		}
 	}()
 
-	return v.Plus(nil, other)
+	return v.Plus(interpreter, other)
 }
 
 func (v UIntValue) Minus(other NumberValue) NumberValue {
@@ -6345,7 +6353,7 @@ func (v UIntValue) Mod(other NumberValue) NumberValue {
 	return UIntValue{res}
 }
 
-func (v UIntValue) Mul(other NumberValue) NumberValue {
+func (v UIntValue) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6360,7 +6368,7 @@ func (v UIntValue) Mul(other NumberValue) NumberValue {
 	return UIntValue{res}
 }
 
-func (v UIntValue) SaturatingMul(other NumberValue) NumberValue {
+func (v UIntValue) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	defer func() {
 		r := recover()
 		if _, ok := r.(InvalidOperandsError); ok {
@@ -6372,7 +6380,7 @@ func (v UIntValue) SaturatingMul(other NumberValue) NumberValue {
 		}
 	}()
 
-	return v.Mul(other)
+	return v.Mul(interpreter, other)
 }
 
 func (v UIntValue) Div(other NumberValue) NumberValue {
@@ -6791,7 +6799,7 @@ func (v UInt8Value) Mod(other NumberValue) NumberValue {
 	return v % o
 }
 
-func (v UInt8Value) Mul(other NumberValue) NumberValue {
+func (v UInt8Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6808,7 +6816,7 @@ func (v UInt8Value) Mul(other NumberValue) NumberValue {
 	return v * o
 }
 
-func (v UInt8Value) SaturatingMul(other NumberValue) NumberValue {
+func (v UInt8Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7229,7 +7237,7 @@ func (v UInt16Value) Mod(other NumberValue) NumberValue {
 	return v % o
 }
 
-func (v UInt16Value) Mul(other NumberValue) NumberValue {
+func (v UInt16Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7246,7 +7254,7 @@ func (v UInt16Value) Mul(other NumberValue) NumberValue {
 	return v * o
 }
 
-func (v UInt16Value) SaturatingMul(other NumberValue) NumberValue {
+func (v UInt16Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7674,7 +7682,7 @@ func (v UInt32Value) Mod(other NumberValue) NumberValue {
 	return v % o
 }
 
-func (v UInt32Value) Mul(other NumberValue) NumberValue {
+func (v UInt32Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7690,7 +7698,7 @@ func (v UInt32Value) Mul(other NumberValue) NumberValue {
 	return v * o
 }
 
-func (v UInt32Value) SaturatingMul(other NumberValue) NumberValue {
+func (v UInt32Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8147,7 +8155,7 @@ func (v UInt64Value) Mod(other NumberValue) NumberValue {
 	return v % o
 }
 
-func (v UInt64Value) Mul(other NumberValue) NumberValue {
+func (v UInt64Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8163,7 +8171,7 @@ func (v UInt64Value) Mul(other NumberValue) NumberValue {
 	return v * o
 }
 
-func (v UInt64Value) SaturatingMul(other NumberValue) NumberValue {
+func (v UInt64Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8649,7 +8657,7 @@ func (v UInt128Value) Mod(other NumberValue) NumberValue {
 	return UInt128Value{res}
 }
 
-func (v UInt128Value) Mul(other NumberValue) NumberValue {
+func (v UInt128Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8667,7 +8675,7 @@ func (v UInt128Value) Mul(other NumberValue) NumberValue {
 	return UInt128Value{res}
 }
 
-func (v UInt128Value) SaturatingMul(other NumberValue) NumberValue {
+func (v UInt128Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9189,7 +9197,7 @@ func (v UInt256Value) Mod(other NumberValue) NumberValue {
 	return UInt256Value{res}
 }
 
-func (v UInt256Value) Mul(other NumberValue) NumberValue {
+func (v UInt256Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9207,7 +9215,7 @@ func (v UInt256Value) Mul(other NumberValue) NumberValue {
 	return UInt256Value{res}
 }
 
-func (v UInt256Value) SaturatingMul(other NumberValue) NumberValue {
+func (v UInt256Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9626,7 +9634,7 @@ func (v Word8Value) Mod(other NumberValue) NumberValue {
 	return v % o
 }
 
-func (v Word8Value) Mul(other NumberValue) NumberValue {
+func (v Word8Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9639,7 +9647,7 @@ func (v Word8Value) Mul(other NumberValue) NumberValue {
 	return v * o
 }
 
-func (v Word8Value) SaturatingMul(_ NumberValue) NumberValue {
+func (v Word8Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -9974,7 +9982,7 @@ func (v Word16Value) Mod(other NumberValue) NumberValue {
 	return v % o
 }
 
-func (v Word16Value) Mul(other NumberValue) NumberValue {
+func (v Word16Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9987,7 +9995,7 @@ func (v Word16Value) Mul(other NumberValue) NumberValue {
 	return v * o
 }
 
-func (v Word16Value) SaturatingMul(_ NumberValue) NumberValue {
+func (v Word16Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -10325,7 +10333,7 @@ func (v Word32Value) Mod(other NumberValue) NumberValue {
 	return v % o
 }
 
-func (v Word32Value) Mul(other NumberValue) NumberValue {
+func (v Word32Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10338,7 +10346,7 @@ func (v Word32Value) Mul(other NumberValue) NumberValue {
 	return v * o
 }
 
-func (v Word32Value) SaturatingMul(_ NumberValue) NumberValue {
+func (v Word32Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -10701,7 +10709,7 @@ func (v Word64Value) Mod(other NumberValue) NumberValue {
 	return v % o
 }
 
-func (v Word64Value) Mul(other NumberValue) NumberValue {
+func (v Word64Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10714,7 +10722,7 @@ func (v Word64Value) Mul(other NumberValue) NumberValue {
 	return v * o
 }
 
-func (v Word64Value) SaturatingMul(_ NumberValue) NumberValue {
+func (v Word64Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -11102,7 +11110,7 @@ func (v Fix64Value) SaturatingMinus(other NumberValue) NumberValue {
 var minInt64Big = big.NewInt(math.MinInt64)
 var maxInt64Big = big.NewInt(math.MaxInt64)
 
-func (v Fix64Value) Mul(other NumberValue) NumberValue {
+func (v Fix64Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11127,7 +11135,7 @@ func (v Fix64Value) Mul(other NumberValue) NumberValue {
 	return Fix64Value(result.Int64())
 }
 
-func (v Fix64Value) SaturatingMul(other NumberValue) NumberValue {
+func (v Fix64Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11222,7 +11230,7 @@ func (v Fix64Value) Mod(other NumberValue) NumberValue {
 		})
 	}
 	truncatedQuotient := (int64(quotient) / sema.Fix64Factor) * sema.Fix64Factor
-	return v.Minus(Fix64Value(truncatedQuotient).Mul(o))
+	return v.Minus(Fix64Value(truncatedQuotient).Mul(nil, o))
 }
 
 func (v Fix64Value) Less(other NumberValue) BoolValue {
@@ -11543,7 +11551,7 @@ func (v UFix64Value) SaturatingMinus(other NumberValue) NumberValue {
 	return diff
 }
 
-func (v UFix64Value) Mul(other NumberValue) NumberValue {
+func (v UFix64Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11566,7 +11574,7 @@ func (v UFix64Value) Mul(other NumberValue) NumberValue {
 	return UFix64Value(result.Uint64())
 }
 
-func (v UFix64Value) SaturatingMul(other NumberValue) NumberValue {
+func (v UFix64Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11643,7 +11651,7 @@ func (v UFix64Value) Mod(other NumberValue) NumberValue {
 		})
 	}
 	truncatedQuotient := (uint64(quotient) / sema.Fix64Factor) * sema.Fix64Factor
-	return v.Minus(UFix64Value(truncatedQuotient).Mul(o))
+	return v.Minus(UFix64Value(truncatedQuotient).Mul(nil, o))
 }
 
 func (v UFix64Value) Less(other NumberValue) BoolValue {

@@ -70,3 +70,9 @@ func NewPlusBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 		) + bigIntWordSize,
 	)
 }
+
+func NewMulBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
+	return NewBigIntMemoryUsage(
+		len(a.Bits()) + len(b.Bits()),
+	)
+}

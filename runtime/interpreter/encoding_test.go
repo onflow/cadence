@@ -518,11 +518,14 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 
 		t.Parallel()
 
+		inter, err := NewInterpreter(nil, nil)
+		require.NoError(t, err)
+
 		expected := NewUnmeteredIntValueFromInt64(1_000_000_000)
 
 		maxInlineElementSize := atree.MaxInlineArrayElementSize
 		for len(expected.BigInt.Bytes()) < int(maxInlineElementSize+1) {
-			expected = expected.Mul(expected).(IntValue)
+			expected = expected.Mul(inter, expected).(IntValue)
 		}
 
 		testEncodeDecode(t,
@@ -1473,11 +1476,14 @@ func TestEncodeDecodeUIntValue(t *testing.T) {
 
 		t.Parallel()
 
+		inter, err := NewInterpreter(nil, nil)
+		require.NoError(t, err)
+
 		expected := NewUIntValueFromUint64(1_000_000_000)
 
 		maxInlineElementSize := atree.MaxInlineArrayElementSize
 		for len(expected.BigInt.Bytes()) < int(maxInlineElementSize+1) {
-			expected = expected.Mul(expected).(UIntValue)
+			expected = expected.Mul(inter, expected).(UIntValue)
 		}
 
 		testEncodeDecode(t,
