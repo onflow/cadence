@@ -62,17 +62,22 @@ func min(a, b int) int {
 
 const bigIntWordSize = int(unsafe.Sizeof(big.Word(0)))
 
+func BigIntByteLength(v *big.Int) int {
+	return len(v.Bits()) * bigIntWordSize
+}
+
 func NewPlusBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 	return NewBigIntMemoryUsage(
 		max(
-			len(a.Bits()),
-			len(b.Bits()),
+			BigIntByteLength(a),
+			BigIntByteLength(b),
 		) + bigIntWordSize,
 	)
 }
 
 func NewMulBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 	return NewBigIntMemoryUsage(
-		len(a.Bits()) + len(b.Bits()),
+		BigIntByteLength(a) +
+			BigIntByteLength(b),
 	)
 }

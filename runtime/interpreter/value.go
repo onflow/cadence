@@ -2591,7 +2591,7 @@ func (v IntValue) ToInt() int {
 }
 
 func (v IntValue) ByteLength() int {
-	return len(v.BigInt.Bits())
+	return common.BigIntByteLength(v.BigInt)
 }
 
 func (v IntValue) ToBigInt() *big.Int {
@@ -2609,7 +2609,9 @@ func (v IntValue) RecursiveString(_ SeenReferences) string {
 func (v IntValue) Negate(interpreter *Interpreter) NumberValue {
 	return NewIntValueFromBigInt(
 		interpreter,
-		common.NewBigIntMemoryUsage(len(v.BigInt.Bits())),
+		common.NewBigIntMemoryUsage(
+			common.BigIntByteLength(v.BigInt),
+		),
 		func() *big.Int {
 			return new(big.Int).Neg(v.BigInt)
 		},
@@ -5063,7 +5065,7 @@ func (v Int128Value) ToInt() int {
 }
 
 func (v Int128Value) ByteLength() int {
-	return len(v.BigInt.Bits())
+	return common.BigIntByteLength(v.BigInt)
 }
 
 func (v Int128Value) ToBigInt() *big.Int {
@@ -5649,7 +5651,7 @@ func (v Int256Value) ToInt() int {
 }
 
 func (v Int256Value) ByteLength() int {
-	return len(v.BigInt.Bits())
+	return common.BigIntByteLength(v.BigInt)
 }
 
 func (v Int256Value) ToBigInt() *big.Int {
@@ -6290,7 +6292,7 @@ func (v UIntValue) ToInt() int {
 }
 
 func (v UIntValue) ByteLength() int {
-	return len(v.BigInt.Bits())
+	return common.BigIntByteLength(v.BigInt)
 }
 
 func (v UIntValue) ToBigInt() *big.Int {
@@ -8561,7 +8563,7 @@ func (v UInt128Value) ToInt() int {
 }
 
 func (v UInt128Value) ByteLength() int {
-	return len(v.BigInt.Bits())
+	return common.BigIntByteLength(v.BigInt)
 }
 
 func (v UInt128Value) ToBigInt() *big.Int {
@@ -9101,7 +9103,7 @@ func (v UInt256Value) ToInt() int {
 }
 
 func (v UInt256Value) ByteLength() int {
-	return len(v.BigInt.Bits())
+	return common.BigIntByteLength(v.BigInt)
 }
 
 func (v UInt256Value) ToBigInt() *big.Int {

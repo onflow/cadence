@@ -41,18 +41,15 @@ func newTestMemoryGauge() *testMemoryGauge {
 }
 
 func (g *testMemoryGauge) UseMemory(usage common.MemoryUsage) {
-	current, ok := g.meter[usage.Kind]
-	if !ok {
-		current = 0
-	}
-	g.meter[usage.Kind] = current + usage.Amount
+	g.meter[usage.Kind] += usage.Amount
 }
 
 func (g *testMemoryGauge) getMemory(kind common.MemoryKind) uint64 {
 	return g.meter[kind]
 }
 
-func TestRuntimeArrayMetering(t *testing.T) {
+func TestInterpretArrayMetering(t *testing.T) {
+
 	t.Parallel()
 
 	t.Run("creation", func(t *testing.T) {
@@ -100,7 +97,7 @@ func TestRuntimeArrayMetering(t *testing.T) {
 	})
 }
 
-func TestRuntimeDictionaryMetering(t *testing.T) {
+func TestInterpretDictionaryMetering(t *testing.T) {
 	t.Parallel()
 
 	t.Run("creation", func(t *testing.T) {
@@ -148,7 +145,7 @@ func TestRuntimeDictionaryMetering(t *testing.T) {
 	})
 }
 
-func TestRuntimeCompositeMetering(t *testing.T) {
+func TestInterpretCompositeMetering(t *testing.T) {
 	t.Parallel()
 
 	t.Run("creation", func(t *testing.T) {
@@ -211,7 +208,7 @@ func TestRuntimeCompositeMetering(t *testing.T) {
 	})
 }
 
-func TestRuntimeInterpretedFunctionMetering(t *testing.T) {
+func TestInterpretInterpretedFunctionMetering(t *testing.T) {
 	t.Parallel()
 
 	t.Run("top level function", func(t *testing.T) {
@@ -321,7 +318,7 @@ func TestRuntimeInterpretedFunctionMetering(t *testing.T) {
 	})
 }
 
-func TestRuntimeHostFunctionMetering(t *testing.T) {
+func TestInterpretHostFunctionMetering(t *testing.T) {
 	t.Parallel()
 
 	t.Run("top level function", func(t *testing.T) {
@@ -574,7 +571,7 @@ func TestRuntimeHostFunctionMetering(t *testing.T) {
 	})
 }
 
-func TestRuntimeBoundFunctionMetering(t *testing.T) {
+func TestInterpretBoundFunctionMetering(t *testing.T) {
 	t.Parallel()
 
 	t.Run("struct method", func(t *testing.T) {
@@ -647,7 +644,7 @@ func TestRuntimeBoundFunctionMetering(t *testing.T) {
 	})
 }
 
-func TestRuntimeOptionalValueMetering(t *testing.T) {
+func TestInterpretOptionalValueMetering(t *testing.T) {
 	t.Parallel()
 
 	t.Run("simple optional value", func(t *testing.T) {
@@ -686,5 +683,177 @@ func TestRuntimeOptionalValueMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindOptional))
+	})
+}
+
+func TestInterpretIntMetering(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("creation", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let x = 1
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		// TODO: meter literals
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBigInt))
+	})
+
+	t.Run("addition", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let x = 1 + 2
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		// result: 16 = max(8, 8) + 8
+		assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindBigInt))
+	})
+
+	t.Run("multiplication", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let x = 1 * 2
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		// result: 16 = 8 + 8
+		assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindBigInt))
+	})
+
+	t.Run("negation", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let x = 1
+		        let y = -x
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		// result: 8 = 8
+		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindBigInt))
+	})
+}
+
+func TestInterpretUIntMetering(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("creation", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let x = 1 as UInt
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		// TODO: meter literals
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBigInt))
+	})
+
+	t.Run("addition", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let x = 1 as UInt + 2 as UInt
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		// result: 16 = max(8, 8) + 8
+		assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindBigInt))
+	})
+
+	t.Run("multiplication", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let x = 1 as UInt * 2 as UInt
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		// result: 16 = 8 + 8
+		assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindBigInt))
+	})
+
+	t.Run("negation", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let x = 1
+		        let y = -x
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		// result: 8 = 8
+		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindBigInt))
 	})
 }
