@@ -123,7 +123,7 @@ func TestRuntimeDictionaryMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindString))
+		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindString))
 		assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindDictionary))
 	})
 
@@ -181,7 +181,7 @@ func TestRuntimeCompositeMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(39), meter.getMemory(common.MemoryKindString))
+		assert.Equal(t, uint64(56), meter.getMemory(common.MemoryKindString))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindComposite))
 	})
 

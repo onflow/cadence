@@ -37,6 +37,6 @@ func NewConstantMemoryUsage(kind MemoryKind) MemoryUsage {
 func NewStringMemoryUsage(length int) MemoryUsage {
 	return MemoryUsage{
 		Kind:   MemoryKindString,
-		Amount: uint64(length),
+		Amount: uint64(length) + 1, // +1 to account for empty strings
 	}
 }
