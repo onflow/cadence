@@ -238,13 +238,9 @@ func NewUnmeteredTypeValue(t StaticType) TypeValue {
 
 func NewTypeValue(memoryGauge common.MemoryGauge, t StaticType) TypeValue {
 	if memoryGauge != nil {
-		length := len(t.String())
-		if length < 0 {
-			length = 0
-		}
 		memoryGauge.UseMemory(common.MemoryUsage{
 			Kind:   common.MemoryKindTypeValue,
-			Amount: uint64(length),
+			Amount: uint64(len(t.String())),
 		})
 	}
 
@@ -687,13 +683,9 @@ func NewUnmeteredCharacterValue(r string) CharacterValue {
 
 func NewCharacterValue(memoryGauge common.MemoryGauge, r string) CharacterValue {
 	if memoryGauge != nil {
-		length := len(r)
-		if length < 0 {
-			length = 0
-		}
 		memoryGauge.UseMemory(common.MemoryUsage{
 			Kind:   common.MemoryKindBool,
-			Amount: uint64(length),
+			Amount: uint64(len(r)),
 		})
 	}
 
@@ -14451,13 +14443,9 @@ func NewStorageReferenceValue(
 	borrowedType sema.Type,
 ) *StorageReferenceValue {
 	if memoryGauge != nil {
-		length := len(targetPath.String())
-		if length < 0 {
-			length = 0
-		}
 		memoryGauge.UseMemory(common.MemoryUsage{
 			Kind:   common.MemoryKindStorageReferenceValue,
-			Amount: uint64(length),
+			Amount: uint64(len(targetPath.String())),
 		})
 	}
 	return NewUnmeteredStorageReferenceValue(authorized, targetStorageAddress, targetPath, borrowedType)
