@@ -1270,7 +1270,9 @@ func NewArrayValueWithIterator(
 	if err != nil {
 		panic(ExternalError{err})
 	}
-	return newArrayValueFromAtreeValue(interpreter, array, arrayType)
+	// must assign to v here for tracing to work properly
+	v = newArrayValueFromAtreeValue(interpreter, array, arrayType)
+	return v
 }
 
 func newArrayValueFromAtreeValue(
