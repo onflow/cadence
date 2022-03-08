@@ -209,6 +209,7 @@ const (
 	voidTypeStr       = "Void"
 	optionalTypeStr   = "Optional"
 	boolTypeStr       = "Bool"
+	characterTypeStr  = "Character"
 	stringTypeStr     = "String"
 	addressTypeStr    = "Address"
 	intTypeStr        = "Int"
@@ -254,6 +255,8 @@ func Prepare(v cadence.Value) jsonValue {
 		return prepareOptional(x)
 	case cadence.Bool:
 		return prepareBool(x)
+	case cadence.Character:
+		return prepareCharacter(x)
 	case cadence.String:
 		return prepareString(x)
 	case cadence.Address:
@@ -345,6 +348,13 @@ func prepareOptional(v cadence.Optional) jsonValue {
 func prepareBool(v cadence.Bool) jsonValue {
 	return jsonValueObject{
 		Type:  boolTypeStr,
+		Value: v,
+	}
+}
+
+func prepareCharacter(v cadence.Character) jsonValue {
+	return jsonValueObject{
+		Type:  characterTypeStr,
 		Value: v,
 	}
 }

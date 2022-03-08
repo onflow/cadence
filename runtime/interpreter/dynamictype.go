@@ -66,6 +66,16 @@ func (StringDynamicType) IsImportable() bool {
 	return sema.StringType.Importable
 }
 
+// StringDynamicType
+
+type CharacterDynamicType struct{}
+
+func (CharacterDynamicType) IsDynamicType() {}
+
+func (CharacterDynamicType) IsImportable() bool {
+	return sema.CharacterType.Importable
+}
+
 // BoolDynamicType
 
 type BoolDynamicType struct{}

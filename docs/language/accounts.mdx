@@ -228,6 +228,24 @@ transaction(publicKey: [UInt8]) {
 }
 ```
 
+To add a public key to an existing account, which signed the transaction:
+```cadence
+transaction(publicKey: [UInt8]) {
+    prepare(signer: AuthAccount) {
+        let key = PublicKey(
+            publicKey: publicKey,
+            signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
+        )
+
+        signer.keys.add(
+            publicKey: key,
+            hashAlgorithm: HashAlgorithm.SHA3_256,
+            weight: 10.0
+        )
+    }
+}
+```
+
 <Callout type="info">
 ⚠️  Note: Keys can also be added using the `addPublicKey` function.
 However, this method is currently deprecated and is available only for the backward compatibility.

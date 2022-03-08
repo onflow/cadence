@@ -128,6 +128,16 @@ func (d Decoder) decodeStorable() (atree.Storable, error) {
 			}
 			storable = d.decodeString(v)
 
+		case CBORTagCharacterValue:
+			v, err := d.decoder.DecodeString()
+			if err != nil {
+				return nil, err
+			}
+			storable, err = d.decodeCharacter(v)
+			if err != nil {
+				return nil, err
+			}
+
 		case CBORTagSomeValue:
 			storable, err = d.decodeSome()
 
@@ -240,6 +250,16 @@ func (d Decoder) decodeStorable() (atree.Storable, error) {
 
 func (d Decoder) decodeString(v string) *StringValue {
 	return NewStringValue(v)
+}
+
+func (d Decoder) decodeCharacter(v string) (CharacterValue, error) {
+	if !sema.IsValidCharacter(v) {
+		return "", fmt.Errorf(
+			"invalid character encoding: %s",
+			v,
+		)
+	}
+	return NewCharacterValue(v), nil
 }
 
 func decodeLocation(dec *cbor.StreamDecoder) (common.Location, error) {

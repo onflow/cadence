@@ -704,19 +704,19 @@ func TestInterpretStringIndexing(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewStringValue("a"),
+		interpreter.NewCharacterValue("a"),
 		inter.Globals["x"].GetValue(),
 	)
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewStringValue("b"),
+		interpreter.NewCharacterValue("b"),
 		inter.Globals["y"].GetValue(),
 	)
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewStringValue("c"),
+		interpreter.NewCharacterValue("c"),
 		inter.Globals["z"].GetValue(),
 	)
 }
@@ -785,7 +785,7 @@ func TestInterpretStringIndexingUnicode(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewStringValue("\u00e9"),
+		interpreter.NewCharacterValue("\u00e9"),
 		value,
 	)
 
@@ -795,7 +795,7 @@ func TestInterpretStringIndexingUnicode(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewStringValue("e\u0301"),
+		interpreter.NewCharacterValue("e\u0301"),
 		value,
 	)
 }
@@ -4532,24 +4532,26 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 			Identifier: "test",
 		}
 
+		getStorageReferenceFunctionType := &sema.FunctionType{
+			Parameters: []*sema.Parameter{
+				{
+					Label:      "authorized",
+					Identifier: "authorized",
+					TypeAnnotation: sema.NewTypeAnnotation(
+						sema.BoolType,
+					),
+				},
+			},
+			ReturnTypeAnnotation: sema.NewTypeAnnotation(
+				sema.AnyStructType,
+			),
+		}
+
 		standardLibraryFunctions :=
 			stdlib.StandardLibraryFunctions{
 				{
 					Name: "getStorageReference",
-					Type: &sema.FunctionType{
-						Parameters: []*sema.Parameter{
-							{
-								Label:      "authorized",
-								Identifier: "authorized",
-								TypeAnnotation: sema.NewTypeAnnotation(
-									sema.BoolType,
-								),
-							},
-						},
-						ReturnTypeAnnotation: sema.NewTypeAnnotation(
-							sema.AnyStructType,
-						),
-					},
+					Type: getStorageReferenceFunctionType,
 					Function: interpreter.NewHostFunctionValue(
 						func(invocation interpreter.Invocation) interpreter.Value {
 
@@ -4570,7 +4572,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 								},
 							}
 						},
-						nil,
+						getStorageReferenceFunctionType,
 					),
 				},
 			}
@@ -6617,7 +6619,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			ty:    sema.StringType,
 		},
 		"Character": {
-			value: interpreter.NewStringValue("X"),
+			value: interpreter.NewCharacterValue("X"),
 			ty:    sema.CharacterType,
 		},
 		"Bool": {
@@ -9647,4 +9649,75 @@ func TestInterpretOptionalReference(t *testing.T) {
 	_, err = inter.Invoke("absent")
 	var forceNilError interpreter.ForceNilError
 	require.ErrorAs(t, err, &forceNilError)
+}
+
+func TestInterpretCastingBoxing(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("failable cast", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          let a = (1 as? Int?!)?.getType()
+        `)
+
+		variable, ok := inter.Globals.Get("a")
+		require.True(t, ok)
+
+		require.Equal(
+			t,
+			interpreter.NewSomeValueNonCopying(
+				interpreter.TypeValue{
+					Type: interpreter.PrimitiveStaticTypeInt,
+				},
+			),
+			variable.GetValue(),
+		)
+	})
+
+	t.Run("force cast", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          let a = (1 as! Int?)?.getType()
+        `)
+
+		variable, ok := inter.Globals.Get("a")
+		require.True(t, ok)
+
+		require.Equal(
+			t,
+			interpreter.NewSomeValueNonCopying(
+				interpreter.TypeValue{
+					Type: interpreter.PrimitiveStaticTypeInt,
+				},
+			),
+			variable.GetValue(),
+		)
+	})
+
+	t.Run("cast", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          let a = (1 as Int?)?.getType()
+        `)
+
+		variable, ok := inter.Globals.Get("a")
+		require.True(t, ok)
+
+		require.Equal(
+			t,
+			interpreter.NewSomeValueNonCopying(
+				interpreter.TypeValue{
+					Type: interpreter.PrimitiveStaticTypeInt,
+				},
+			),
+			variable.GetValue(),
+		)
+	})
 }

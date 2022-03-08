@@ -212,6 +212,23 @@ func (checker *Checker) visitIndexExpressionAssignment(
 
 	elementType = checker.visitIndexExpression(target, true)
 
+	targetExpression := target.TargetExpression
+	switch targetExpression := targetExpression.(type) {
+	case *ast.MemberExpression:
+		// calls to this method are cached, so this performs no computation
+		_, member, _ := checker.visitMember(targetExpression)
+		if !checker.isMutatableMember(member) {
+			checker.report(
+				&ExternalMutationError{
+					Name:            member.Identifier.Identifier,
+					DeclarationKind: member.DeclarationKind,
+					Range:           ast.NewRangeFromPositioned(targetExpression),
+					ContainerType:   member.ContainerType,
+				},
+			)
+		}
+	}
+
 	if elementType == nil {
 		return InvalidType
 	}
@@ -270,12 +287,12 @@ func (checker *Checker) visitMemberExpressionAssignment(
 
 		if functionActivation.InitializationInfo != nil {
 
-			// If the function potentially returned or jumped before,
+			// If the function potentially returned before,
 			// then the initialization is not definitive, and it must be ignored
 
 			// NOTE: assignment can still be considered definitive if the function maybe halted
 
-			if !functionActivation.ReturnInfo.MaybeJumpedOrReturned {
+			if !functionActivation.ReturnInfo.MaybeReturned {
 
 				// If the field is constant and it has already previously been
 				// initialized, report an error for the repeated assignment

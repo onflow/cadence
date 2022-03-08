@@ -163,6 +163,21 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 		}
 		targetRange := ast.NewRangeFromPositioned(expression.Expression)
 		member = resolver.Resolve(identifier, targetRange, checker.report)
+		switch targetExpression := accessedExpression.(type) {
+		case *ast.MemberExpression:
+			// calls to this method are cached, so this performs no computation
+			_, m, _ := checker.visitMember(targetExpression)
+			if !checker.isMutatableMember(m) && resolver.Mutating {
+				checker.report(
+					&ExternalMutationError{
+						Name:            m.Identifier.Identifier,
+						DeclarationKind: m.DeclarationKind,
+						Range:           ast.NewRangeFromPositioned(targetRange),
+						ContainerType:   m.ContainerType,
+					},
+				)
+			}
+		}
 	}
 
 	// Get the member from the accessed value based
@@ -310,6 +325,13 @@ func (checker *Checker) isReadableMember(member *Member) bool {
 func (checker *Checker) isWriteableMember(member *Member) bool {
 	return checker.isWriteableAccess(member.Access) ||
 		checker.containerTypes[member.ContainerType]
+}
+
+// isMutatableMember returns true if the given member can be mutated
+// in the current location of the checker. Currently equivalent to
+// isWriteableMember above, but separate in case this changes
+func (checker *Checker) isMutatableMember(member *Member) bool {
+	return checker.isWriteableMember(member)
 }
 
 // containingContractKindedType returns the containing contract-kinded type

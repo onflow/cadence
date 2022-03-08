@@ -1159,6 +1159,202 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 		}
 	})
 
+	t.Run("link to same path", func(t *testing.T) {
+		address := interpreter.NewAddressValueFromBytes([]byte{42})
+
+		test := func(capabilityDomain common.PathDomain) {
+			inter, getAccountValues := testAccount(
+				t,
+				address,
+				true,
+				fmt.Sprintf(`
+                    struct S1 {}
+
+                    struct S2 {}
+
+                    fun save() {
+                        let s1 = S1()
+                        account.save(s1, to: /storage/s1)
+
+                        let s2 = S2()
+                        account.save(s2, to: /storage/s2)
+                    }
+
+                    fun linkToSamePath(): Capability? {
+                        account.link<&S1>(/%[1]s/sCap, target: /storage/s1)
+
+                        // link a different storage value to the same path.
+                        return account.link<&S2>(/%[1]s/sCap, target: /storage/s2)
+                    }
+
+                    fun getCapability(): Capability? {
+                        return account.getCapability<&S1>(/%[1]s/sCap)
+                    }`,
+
+					capabilityDomain.Identifier(),
+				),
+			)
+
+			// Save
+
+			_, err := inter.Invoke("save")
+			require.NoError(t, err)
+
+			require.Len(t, getAccountValues(), 2)
+
+			t.Run(capabilityDomain.Identifier(), func(t *testing.T) {
+				value, err := inter.Invoke("linkToSamePath")
+				require.NoError(t, err)
+				require.IsType(t, interpreter.NilValue{}, value)
+
+				// Only one link must have been created.
+				// i.e: 2 values + 1 link
+				require.Len(t, getAccountValues(), 3)
+
+				value, err = inter.Invoke("getCapability")
+				require.NoError(t, err)
+				require.IsType(t, &interpreter.SomeValue{}, value)
+
+				capability := value.(*interpreter.SomeValue).Value
+
+				sType := checker.RequireGlobalType(t, inter.Program.Elaboration, "S1")
+				expectedBorrowType := interpreter.ConvertSemaToStaticType(
+					&sema.ReferenceType{
+						Authorized: false,
+						Type:       sType,
+					},
+				)
+
+				RequireValuesEqual(
+					t,
+					inter,
+					&interpreter.CapabilityValue{
+						Address: address,
+						Path: interpreter.PathValue{
+							Domain:     capabilityDomain,
+							Identifier: "sCap",
+						},
+						BorrowType: expectedBorrowType,
+					},
+					capability,
+				)
+			})
+		}
+
+		for _, capabilityDomain := range []common.PathDomain{
+			common.PathDomainPrivate,
+			common.PathDomainPublic,
+		} {
+			test(capabilityDomain)
+		}
+	})
+
+	t.Run("link same storage", func(t *testing.T) {
+		address := interpreter.NewAddressValueFromBytes([]byte{42})
+
+		test := func(capabilityDomain common.PathDomain) {
+			inter, getAccountValues := testAccount(
+				t,
+				address,
+				true,
+				fmt.Sprintf(`
+                    struct S {}
+
+                    fun save() {
+                        let s = S()
+                        account.save(s, to: /storage/s)
+                    }
+
+                    fun linkSameStorage(): Capability? {
+                        account.link<&S>(/%[1]s/s1Cap, target: /storage/s)
+
+                        // link an already linked storage value to a different path.
+                        return account.link<&S>(/%[1]s/s2Cap, target: /storage/s)
+                    }
+
+                    fun getFirstCapability(): Capability? {
+                        return account.getCapability<&S>(/%[1]s/s1Cap)
+                    }`,
+
+					capabilityDomain.Identifier(),
+				),
+			)
+
+			// Save
+			_, err := inter.Invoke("save")
+			require.NoError(t, err)
+
+			require.Len(t, getAccountValues(), 1)
+
+			t.Run(capabilityDomain.Identifier(), func(t *testing.T) {
+				value, err := inter.Invoke("linkSameStorage")
+				require.NoError(t, err)
+				require.IsType(t, &interpreter.SomeValue{}, value)
+
+				// 1 value + 2 links
+				require.Len(t, getAccountValues(), 3)
+
+				capability := value.(*interpreter.SomeValue).Value
+
+				sType := checker.RequireGlobalType(t, inter.Program.Elaboration, "S")
+				expectedBorrowType := interpreter.ConvertSemaToStaticType(
+					&sema.ReferenceType{
+						Authorized: false,
+						Type:       sType,
+					},
+				)
+
+				RequireValuesEqual(
+					t,
+					inter,
+					&interpreter.CapabilityValue{
+						Address: address,
+						Path: interpreter.PathValue{
+							Domain:     capabilityDomain,
+							Identifier: "s2Cap",
+						},
+						BorrowType: expectedBorrowType,
+					},
+					capability,
+				)
+
+				value, err = inter.Invoke("getFirstCapability")
+				require.NoError(t, err)
+				require.IsType(t, &interpreter.SomeValue{}, value)
+
+				capability = value.(*interpreter.SomeValue).Value
+
+				sType = checker.RequireGlobalType(t, inter.Program.Elaboration, "S")
+				expectedBorrowType = interpreter.ConvertSemaToStaticType(
+					&sema.ReferenceType{
+						Authorized: false,
+						Type:       sType,
+					},
+				)
+
+				RequireValuesEqual(
+					t,
+					inter,
+					&interpreter.CapabilityValue{
+						Address: address,
+						Path: interpreter.PathValue{
+							Domain:     capabilityDomain,
+							Identifier: "s1Cap",
+						},
+						BorrowType: expectedBorrowType,
+					},
+					capability,
+				)
+			})
+		}
+
+		for _, capabilityDomain := range []common.PathDomain{
+			common.PathDomainPrivate,
+			common.PathDomainPublic,
+		} {
+			test(capabilityDomain)
+		}
+	})
 }
 
 func TestInterpretAuthAccount_unlink(t *testing.T) {

@@ -1783,9 +1783,9 @@ func (checker *Checker) checkPotentiallyUnevaluated(check TypeCheckFunc) Type {
 		temporaryResources,
 	)
 
-	functionActivation.ReturnInfo.MaybeJumpedOrReturned =
-		functionActivation.ReturnInfo.MaybeJumpedOrReturned ||
-			temporaryReturnInfo.MaybeJumpedOrReturned
+	functionActivation.ReturnInfo.MaybeReturned =
+		functionActivation.ReturnInfo.MaybeReturned ||
+			temporaryReturnInfo.MaybeReturned
 
 	// NOTE: the definitive return state does not change
 
@@ -1928,15 +1928,13 @@ func (checker *Checker) checkFieldsAccessModifier(fields []*ast.FieldDeclaration
 // i.e. it has exactly one grapheme cluster.
 //
 func (checker *Checker) checkCharacterLiteral(expression *ast.StringExpression) {
-	length := uniseg.GraphemeClusterCount(expression.Value)
-
-	if length == 1 {
+	if IsValidCharacter(expression.Value) {
 		return
 	}
 
 	checker.report(
 		&InvalidCharacterLiteralError{
-			Length: length,
+			Length: uniseg.GraphemeClusterCount(expression.Value),
 			Range:  ast.NewRangeFromPositioned(expression),
 		},
 	)

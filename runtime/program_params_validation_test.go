@@ -85,6 +85,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 				return json.Decode(b)
 			},
 		}
+		addPublicKeyValidation(runtimeInterface, nil)
 
 		_, err = rt.ExecuteScript(
 			Script{
@@ -369,9 +370,6 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 								cadence.NewUInt8(0),
 							},
 						).WithType(SignAlgoType),
-
-						// isValid
-						cadence.NewBool(false),
 					},
 				).WithType(PublicKeyType)
 
@@ -552,6 +550,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 				return json.Decode(b)
 			},
 		}
+		addPublicKeyValidation(runtimeInterface, nil)
 
 		return rt.ExecuteTransaction(
 			Script{
@@ -848,9 +847,6 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 								cadence.NewUInt8(0),
 							},
 						).WithType(SignAlgoType),
-
-						// isValid
-						cadence.NewBool(false),
 					},
 				).WithType(PublicKeyType)
 

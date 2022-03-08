@@ -79,6 +79,4 @@ type AccountKey struct {
 type PublicKey struct {
 	PublicKey []byte
 	SignAlgo  SignatureAlgorithm
-	IsValid   bool
-	Validated bool
 }

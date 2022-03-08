@@ -205,7 +205,7 @@ func TestCheckAggregateBLSSignatures(t *testing.T) {
 
 	_, err := ParseAndCheckWithOptions(t,
 		`
-           let r: [UInt8] = AggregateBLSSignatures([[1 as UInt8, 2, 3], []])  
+           let r: [UInt8] = AggregateBLSSignatures([[1 as UInt8, 2, 3], []])!
         `,
 		ParseAndCheckOptions{
 			Options: []sema.Option{
@@ -224,7 +224,7 @@ func TestCheckAggregateBLSSignaturesError(t *testing.T) {
 
 	_, err := ParseAndCheckWithOptions(t,
 		`
-           let r: [UInt16] = AggregateBLSSignatures([[1 as UInt32, 2, 3], []])  
+           let r: [UInt16] = AggregateBLSSignatures([[1 as UInt32, 2, 3], []])! 
         `,
 		ParseAndCheckOptions{
 			Options: []sema.Option{
@@ -246,7 +246,7 @@ func TestCheckAggregateBLSPublicKeys(t *testing.T) {
 
 	_, err := ParseAndCheckWithOptions(t,
 		`
-           let r: PublicKey = AggregateBLSPublicKeys([PublicKey(publicKey: [], signatureAlgorithm: SignatureAlgorithm.BLS_BLS12_381)])  
+           let r: PublicKey = AggregateBLSPublicKeys([PublicKey(publicKey: [], signatureAlgorithm: SignatureAlgorithm.BLS_BLS12_381)])!
         `,
 		ParseAndCheckOptions{
 			Options: []sema.Option{
@@ -265,7 +265,7 @@ func TestCheckAggregateBLSPublicKeysError(t *testing.T) {
 
 	_, err := ParseAndCheckWithOptions(t,
 		`
-           let r: [PublicKey] = AggregateBLSPublicKeys([1])  
+           let r: [PublicKey] = AggregateBLSPublicKeys([1])!  
         `,
 		ParseAndCheckOptions{
 			Options: []sema.Option{
