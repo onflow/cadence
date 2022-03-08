@@ -3632,8 +3632,6 @@ func (interpreter *Interpreter) IsSubType(subType StaticType, superType sema.Typ
 			return true
 		}
 
-		break
-
 	case OptionalStaticType:
 		if typedSuperType, ok := superType.(*sema.OptionalType); ok {
 			return interpreter.IsSubType(staticType.Type, typedSuperType.Type)

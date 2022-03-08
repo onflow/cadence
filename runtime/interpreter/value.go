@@ -296,12 +296,7 @@ func (v TypeValue) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	semaType, err := inter.ConvertStaticToSemaType(staticType)
-	if err != nil {
-		return false
-	}
-
-	return inter.IsSubType(v.StaticType(inter), semaType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (v TypeValue) Storable(
@@ -419,12 +414,7 @@ func (v VoidValue) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	semaType, err := inter.ConvertStaticToSemaType(staticType)
-	if err != nil {
-		return false
-	}
-
-	return inter.IsSubType(v.StaticType(inter), semaType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (v VoidValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -538,18 +528,14 @@ func (v BoolValue) String() string {
 func (v BoolValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
+
 func (v BoolValue) ConformsToStaticType(
 	inter *Interpreter,
 	_ func() LocationRange,
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	semaType, err := inter.ConvertStaticToSemaType(staticType)
-	if err != nil {
-		return false
-	}
-
-	return inter.IsSubType(v.StaticType(inter), semaType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (v BoolValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -671,12 +657,12 @@ func (v CharacterValue) HashInput(_ *Interpreter, _ func() LocationRange, scratc
 }
 
 func (v CharacterValue) ConformsToStaticType(
-	_ *Interpreter,
+	inter *Interpreter,
 	_ func() LocationRange,
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return staticType == PrimitiveStaticTypeCharacter
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (v CharacterValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -1100,12 +1086,7 @@ func (v *StringValue) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	semaType, err := inter.ConvertStaticToSemaType(staticType)
-	if err != nil {
-		return false
-	}
-
-	return inter.IsSubType(v.StaticType(inter), semaType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 // ArrayValue
@@ -2808,12 +2789,7 @@ func (v IntValue) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	semaType, err := inter.ConvertStaticToSemaType(staticType)
-	if err != nil {
-		return false
-	}
-
-	return inter.IsSubType(v.StaticType(inter), semaType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (v IntValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
@@ -3310,12 +3286,7 @@ func (v Int8Value) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	semaType, err := inter.ConvertStaticToSemaType(staticType)
-	if err != nil {
-		return false
-	}
-
-	return inter.IsSubType(v.StaticType(inter), semaType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (v Int8Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -3815,12 +3786,7 @@ func (v Int16Value) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	semaType, err := inter.ConvertStaticToSemaType(staticType)
-	if err != nil {
-		return false
-	}
-
-	return inter.IsSubType(v.StaticType(inter), semaType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (v Int16Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -4320,12 +4286,7 @@ func (v Int32Value) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	semaType, err := inter.ConvertStaticToSemaType(staticType)
-	if err != nil {
-		return false
-	}
-
-	return inter.IsSubType(v.StaticType(inter), semaType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (v Int32Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -4824,12 +4785,7 @@ func (v Int64Value) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	semaType, err := inter.ConvertStaticToSemaType(staticType)
-	if err != nil {
-		return false
-	}
-
-	return inter.IsSubType(v.StaticType(inter), semaType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (v Int64Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -5410,12 +5366,7 @@ func (v Int128Value) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	semaType, err := inter.ConvertStaticToSemaType(staticType)
-	if err != nil {
-		return false
-	}
-
-	return inter.IsSubType(v.StaticType(inter), semaType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (v Int128Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -5996,12 +5947,7 @@ func (v Int256Value) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	semaType, err := inter.ConvertStaticToSemaType(staticType)
-	if err != nil {
-		return false
-	}
-
-	return inter.IsSubType(v.StaticType(inter), semaType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (v Int256Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -6481,12 +6427,7 @@ func (v UIntValue) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	semaType, err := inter.ConvertStaticToSemaType(staticType)
-	if err != nil {
-		return false
-	}
-
-	return inter.IsSubType(v.StaticType(inter), semaType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (v UIntValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
@@ -6924,12 +6865,7 @@ func (v UInt8Value) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	semaType, err := inter.ConvertStaticToSemaType(staticType)
-	if err != nil {
-		return false
-	}
-
-	return inter.IsSubType(v.StaticType(inter), semaType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (v UInt8Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -7367,12 +7303,7 @@ func (v UInt16Value) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	semaType, err := inter.ConvertStaticToSemaType(staticType)
-	if err != nil {
-		return false
-	}
-
-	return inter.IsSubType(v.StaticType(inter), semaType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (UInt16Value) IsStorable() bool {
@@ -7815,12 +7746,7 @@ func (v UInt32Value) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	semaType, err := inter.ConvertStaticToSemaType(staticType)
-	if err != nil {
-		return false
-	}
-
-	return inter.IsSubType(v.StaticType(inter), semaType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (UInt32Value) IsStorable() bool {
@@ -8286,14 +8212,8 @@ func (v UInt64Value) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	semaType, err := inter.ConvertStaticToSemaType(staticType)
-	if err != nil {
-		return false
-	}
-
-	return inter.IsSubType(v.StaticType(inter), semaType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
-
 func (UInt64Value) IsStorable() bool {
 	return true
 }
@@ -8825,12 +8745,7 @@ func (v UInt128Value) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	semaType, err := inter.ConvertStaticToSemaType(staticType)
-	if err != nil {
-		return false
-	}
-
-	return inter.IsSubType(v.StaticType(inter), semaType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (UInt128Value) IsStorable() bool {
@@ -9365,12 +9280,7 @@ func (v UInt256Value) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	semaType, err := inter.ConvertStaticToSemaType(staticType)
-	if err != nil {
-		return false
-	}
-
-	return inter.IsSubType(v.StaticType(inter), semaType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (UInt256Value) IsStorable() bool {
@@ -9717,12 +9627,7 @@ func (v Word8Value) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	semaType, err := inter.ConvertStaticToSemaType(staticType)
-	if err != nil {
-		return false
-	}
-
-	return inter.IsSubType(v.StaticType(inter), semaType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (Word8Value) IsStorable() bool {
@@ -10071,12 +9976,7 @@ func (v Word16Value) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	semaType, err := inter.ConvertStaticToSemaType(staticType)
-	if err != nil {
-		return false
-	}
-
-	return inter.IsSubType(v.StaticType(inter), semaType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (Word16Value) IsStorable() bool {
@@ -10426,12 +10326,7 @@ func (v Word32Value) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	semaType, err := inter.ConvertStaticToSemaType(staticType)
-	if err != nil {
-		return false
-	}
-
-	return inter.IsSubType(v.StaticType(inter), semaType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (Word32Value) IsStorable() bool {
@@ -10802,12 +10697,7 @@ func (v Word64Value) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	semaType, err := inter.ConvertStaticToSemaType(staticType)
-	if err != nil {
-		return false
-	}
-
-	return inter.IsSubType(v.StaticType(inter), semaType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (Word64Value) IsStorable() bool {
@@ -11251,12 +11141,7 @@ func (v Fix64Value) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	semaType, err := inter.ConvertStaticToSemaType(staticType)
-	if err != nil {
-		return false
-	}
-
-	return inter.IsSubType(v.StaticType(inter), semaType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (Fix64Value) IsStorable() bool {
@@ -11674,12 +11559,7 @@ func (v UFix64Value) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	semaType, err := inter.ConvertStaticToSemaType(staticType)
-	if err != nil {
-		return false
-	}
-
-	return inter.IsSubType(v.StaticType(inter), semaType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (UFix64Value) IsStorable() bool {
@@ -13906,12 +13786,7 @@ func (v NilValue) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	semaType, err := inter.ConvertStaticToSemaType(staticType)
-	if err != nil {
-		return false
-	}
-
-	return inter.IsSubType(v.StaticType(inter), semaType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (v NilValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -15112,12 +14987,7 @@ func (v AddressValue) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	semaType, err := inter.ConvertStaticToSemaType(staticType)
-	if err != nil {
-		return false
-	}
-
-	return inter.IsSubType(v.StaticType(inter), semaType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (AddressValue) IsStorable() bool {
@@ -15900,3 +15770,19 @@ var publicKeyVerifyPoPFunction = NewHostFunctionValue(
 	},
 	sema.PublicKeyVerifyPoPFunctionType,
 )
+
+func primitiveValueConformsToStaticType(inter *Interpreter, v Value, targetStaticType StaticType) bool {
+	staticType := v.StaticType(inter)
+
+	// This is an optimization: If the static types are equal exit early.
+	if staticType.Equal(targetStaticType) {
+		return true
+	}
+
+	semaType, err := inter.ConvertStaticToSemaType(targetStaticType)
+	if err != nil {
+		return false
+	}
+
+	return inter.IsSubType(staticType, semaType)
+}
