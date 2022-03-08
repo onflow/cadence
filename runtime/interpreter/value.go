@@ -26,6 +26,7 @@ import (
 	"math/big"
 	"strings"
 	"time"
+	"unsafe"
 
 	"github.com/onflow/atree"
 	"github.com/rivo/uniseg"
@@ -2344,8 +2345,8 @@ type NumberValue interface {
 	EquatableValue
 	ToInt() int
 	Negate() NumberValue
-	Plus(other NumberValue) NumberValue
-	SaturatingPlus(other NumberValue) NumberValue
+	Plus(interpreter *Interpreter, other NumberValue) NumberValue
+	SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue
 	Minus(other NumberValue) NumberValue
 	SaturatingMinus(other NumberValue) NumberValue
 	Mod(other NumberValue) NumberValue
@@ -2406,7 +2407,10 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
-				return v.SaturatingPlus(other)
+				return v.SaturatingPlus(
+					invocation.Interpreter,
+					other,
+				)
 			},
 			&sema.FunctionType{
 				ReturnTypeAnnotation: sema.NewTypeAnnotation(
@@ -2494,9 +2498,10 @@ type IntValue struct {
 }
 
 func NewIntValueFromInt64(memoryGauge common.MemoryGauge, value int64) IntValue {
+	const int64Size = int(unsafe.Sizeof(int64(0)))
 	return NewIntValueFromBigInt(
 		memoryGauge,
-		common.NewBigIntMemoryUsage(8),
+		common.NewBigIntMemoryUsage(int64Size),
 		func() *big.Int {
 			return big.NewInt(value)
 		},
@@ -2599,7 +2604,7 @@ func (v IntValue) Negate() NumberValue {
 	return IntValue{new(big.Int).Neg(v.BigInt)}
 }
 
-func (v IntValue) Plus(other NumberValue) NumberValue {
+func (v IntValue) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -2609,12 +2614,17 @@ func (v IntValue) Plus(other NumberValue) NumberValue {
 		})
 	}
 
-	res := new(big.Int)
-	res.Add(v.BigInt, o.BigInt)
-	return IntValue{res}
+	return NewIntValueFromBigInt(
+		interpreter,
+		common.NewPlusBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Add(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v IntValue) SaturatingPlus(other NumberValue) NumberValue {
+func (v IntValue) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	defer func() {
 		r := recover()
 		if _, ok := r.(InvalidOperandsError); ok {
@@ -2626,7 +2636,7 @@ func (v IntValue) SaturatingPlus(other NumberValue) NumberValue {
 		}
 	}()
 
-	return v.Plus(other)
+	return v.Plus(interpreter, other)
 }
 
 func (v IntValue) Minus(other NumberValue) NumberValue {
@@ -3037,7 +3047,7 @@ func (v Int8Value) Negate() NumberValue {
 	return -v
 }
 
-func (v Int8Value) Plus(other NumberValue) NumberValue {
+func (v Int8Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3056,7 +3066,7 @@ func (v Int8Value) Plus(other NumberValue) NumberValue {
 	return v + o
 }
 
-func (v Int8Value) SaturatingPlus(other NumberValue) NumberValue {
+func (v Int8Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3536,7 +3546,7 @@ func (v Int16Value) Negate() NumberValue {
 	return -v
 }
 
-func (v Int16Value) Plus(other NumberValue) NumberValue {
+func (v Int16Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3555,7 +3565,7 @@ func (v Int16Value) Plus(other NumberValue) NumberValue {
 	return v + o
 }
 
-func (v Int16Value) SaturatingPlus(other NumberValue) NumberValue {
+func (v Int16Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4037,7 +4047,7 @@ func (v Int32Value) Negate() NumberValue {
 	return -v
 }
 
-func (v Int32Value) Plus(other NumberValue) NumberValue {
+func (v Int32Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4056,7 +4066,7 @@ func (v Int32Value) Plus(other NumberValue) NumberValue {
 	return v + o
 }
 
-func (v Int32Value) SaturatingPlus(other NumberValue) NumberValue {
+func (v Int32Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4548,7 +4558,7 @@ func safeAddInt64(a, b int64) int64 {
 	return a + b
 }
 
-func (v Int64Value) Plus(other NumberValue) NumberValue {
+func (v Int64Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4561,7 +4571,7 @@ func (v Int64Value) Plus(other NumberValue) NumberValue {
 	return Int64Value(safeAddInt64(int64(v), int64(o)))
 }
 
-func (v Int64Value) SaturatingPlus(other NumberValue) NumberValue {
+func (v Int64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5062,7 +5072,7 @@ func (v Int128Value) Negate() NumberValue {
 	return Int128Value{new(big.Int).Neg(v.BigInt)}
 }
 
-func (v Int128Value) Plus(other NumberValue) NumberValue {
+func (v Int128Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5094,7 +5104,7 @@ func (v Int128Value) Plus(other NumberValue) NumberValue {
 	return Int128Value{res}
 }
 
-func (v Int128Value) SaturatingPlus(other NumberValue) NumberValue {
+func (v Int128Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5648,7 +5658,7 @@ func (v Int256Value) Negate() NumberValue {
 	return Int256Value{BigInt: new(big.Int).Neg(v.BigInt)}
 }
 
-func (v Int256Value) Plus(other NumberValue) NumberValue {
+func (v Int256Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5680,7 +5690,7 @@ func (v Int256Value) Plus(other NumberValue) NumberValue {
 	return Int256Value{res}
 }
 
-func (v Int256Value) SaturatingPlus(other NumberValue) NumberValue {
+func (v Int256Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6248,7 +6258,7 @@ func (v UIntValue) Negate() NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v UIntValue) Plus(other NumberValue) NumberValue {
+func (v UIntValue) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6263,7 +6273,7 @@ func (v UIntValue) Plus(other NumberValue) NumberValue {
 	return UIntValue{res}
 }
 
-func (v UIntValue) SaturatingPlus(other NumberValue) NumberValue {
+func (v UIntValue) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	defer func() {
 		r := recover()
 		if _, ok := r.(InvalidOperandsError); ok {
@@ -6275,7 +6285,7 @@ func (v UIntValue) SaturatingPlus(other NumberValue) NumberValue {
 		}
 	}()
 
-	return v.Plus(other)
+	return v.Plus(nil, other)
 }
 
 func (v UIntValue) Minus(other NumberValue) NumberValue {
@@ -6691,7 +6701,7 @@ func (v UInt8Value) Negate() NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v UInt8Value) Plus(other NumberValue) NumberValue {
+func (v UInt8Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6709,7 +6719,7 @@ func (v UInt8Value) Plus(other NumberValue) NumberValue {
 	return sum
 }
 
-func (v UInt8Value) SaturatingPlus(other NumberValue) NumberValue {
+func (v UInt8Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7129,7 +7139,7 @@ func (v UInt16Value) Negate() NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v UInt16Value) Plus(other NumberValue) NumberValue {
+func (v UInt16Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7147,7 +7157,7 @@ func (v UInt16Value) Plus(other NumberValue) NumberValue {
 	return sum
 }
 
-func (v UInt16Value) SaturatingPlus(other NumberValue) NumberValue {
+func (v UInt16Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7573,7 +7583,7 @@ func (v UInt32Value) Negate() NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v UInt32Value) Plus(other NumberValue) NumberValue {
+func (v UInt32Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7592,7 +7602,7 @@ func (v UInt32Value) Plus(other NumberValue) NumberValue {
 	return sum
 }
 
-func (v UInt32Value) SaturatingPlus(other NumberValue) NumberValue {
+func (v UInt32Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8051,7 +8061,7 @@ func safeAddUint64(a, b uint64) uint64 {
 	return sum
 }
 
-func (v UInt64Value) Plus(other NumberValue) NumberValue {
+func (v UInt64Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8064,7 +8074,7 @@ func (v UInt64Value) Plus(other NumberValue) NumberValue {
 	return UInt64Value(safeAddUint64(uint64(v), uint64(o)))
 }
 
-func (v UInt64Value) SaturatingPlus(other NumberValue) NumberValue {
+func (v UInt64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8509,7 +8519,7 @@ func (v UInt128Value) Negate() NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v UInt128Value) Plus(other NumberValue) NumberValue {
+func (v UInt128Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8537,7 +8547,7 @@ func (v UInt128Value) Plus(other NumberValue) NumberValue {
 	return UInt128Value{sum}
 }
 
-func (v UInt128Value) SaturatingPlus(other NumberValue) NumberValue {
+func (v UInt128Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9049,7 +9059,7 @@ func (v UInt256Value) Negate() NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v UInt256Value) Plus(other NumberValue) NumberValue {
+func (v UInt256Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9077,7 +9087,7 @@ func (v UInt256Value) Plus(other NumberValue) NumberValue {
 	return UInt256Value{sum}
 }
 
-func (v UInt256Value) SaturatingPlus(other NumberValue) NumberValue {
+func (v UInt256Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9566,7 +9576,7 @@ func (v Word8Value) Negate() NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word8Value) Plus(other NumberValue) NumberValue {
+func (v Word8Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9579,7 +9589,7 @@ func (v Word8Value) Plus(other NumberValue) NumberValue {
 	return v + o
 }
 
-func (v Word8Value) SaturatingPlus(_ NumberValue) NumberValue {
+func (v Word8Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -9914,7 +9924,7 @@ func (v Word16Value) Negate() NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word16Value) Plus(other NumberValue) NumberValue {
+func (v Word16Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9927,7 +9937,7 @@ func (v Word16Value) Plus(other NumberValue) NumberValue {
 	return v + o
 }
 
-func (v Word16Value) SaturatingPlus(_ NumberValue) NumberValue {
+func (v Word16Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -10265,7 +10275,7 @@ func (v Word32Value) Negate() NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word32Value) Plus(other NumberValue) NumberValue {
+func (v Word32Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10278,7 +10288,7 @@ func (v Word32Value) Plus(other NumberValue) NumberValue {
 	return v + o
 }
 
-func (v Word32Value) SaturatingPlus(_ NumberValue) NumberValue {
+func (v Word32Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -10641,7 +10651,7 @@ func (v Word64Value) Negate() NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word64Value) Plus(other NumberValue) NumberValue {
+func (v Word64Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10654,7 +10664,7 @@ func (v Word64Value) Plus(other NumberValue) NumberValue {
 	return v + o
 }
 
-func (v Word64Value) SaturatingPlus(_ NumberValue) NumberValue {
+func (v Word64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -11019,7 +11029,7 @@ func (v Fix64Value) Negate() NumberValue {
 	return -v
 }
 
-func (v Fix64Value) Plus(other NumberValue) NumberValue {
+func (v Fix64Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11032,7 +11042,7 @@ func (v Fix64Value) Plus(other NumberValue) NumberValue {
 	return Fix64Value(safeAddInt64(int64(v), int64(o)))
 }
 
-func (v Fix64Value) SaturatingPlus(other NumberValue) NumberValue {
+func (v Fix64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11464,7 +11474,7 @@ func (v UFix64Value) Negate() NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v UFix64Value) Plus(other NumberValue) NumberValue {
+func (v UFix64Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11477,7 +11487,7 @@ func (v UFix64Value) Plus(other NumberValue) NumberValue {
 	return UFix64Value(safeAddUint64(uint64(v), uint64(o)))
 }
 
-func (v UFix64Value) SaturatingPlus(other NumberValue) NumberValue {
+func (v UFix64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{

@@ -18,6 +18,11 @@
 
 package common
 
+import (
+	"math/big"
+	"unsafe"
+)
+
 type MemoryUsage struct {
 	Kind   MemoryKind
 	Amount uint64
@@ -39,4 +44,29 @@ func NewBigIntMemoryUsage(bytes int) MemoryUsage {
 		Kind:   MemoryKindBigInt,
 		Amount: uint64(bytes),
 	}
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+const bigIntWordSize = int(unsafe.Sizeof(big.Word(0)))
+
+func NewPlusBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
+	return NewBigIntMemoryUsage(
+		max(
+			len(a.Bits()),
+			len(b.Bits()),
+		) + bigIntWordSize,
+	)
 }

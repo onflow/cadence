@@ -348,7 +348,9 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) a
 		}
 
 		if indexVariable != nil {
-			indexVariable.SetValue(indexVariable.GetValue().(IntValue).Plus(intOne))
+			currentIndex := indexVariable.GetValue().(IntValue)
+			nextIndex := currentIndex.Plus(interpreter, intOne)
+			indexVariable.SetValue(nextIndex)
 		}
 	}
 }
