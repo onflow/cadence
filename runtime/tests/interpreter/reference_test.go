@@ -588,7 +588,7 @@ func TestInterpretResourceReferenceAfterMove(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewSomeValueNonCopying(
+			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.NewUnmeteredStringValue("testValue"),
 			),
 			value,
@@ -752,7 +752,7 @@ func TestInterpretReferenceUseAfterShiftStatementMove(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewSomeValueNonCopying(
+			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.AddressValue{1},
 			),
 			r1Address,
@@ -766,7 +766,7 @@ func TestInterpretReferenceUseAfterShiftStatementMove(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewSomeValueNonCopying(
+			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.AddressValue{1},
 			),
 			r2Address,

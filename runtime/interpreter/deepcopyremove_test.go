@@ -70,7 +70,7 @@ func TestValueDeepCopyAndDeepRemove(t *testing.T) {
 		dictValue,
 	)
 
-	optionalValue := NewSomeValueNonCopying(arrayValue)
+	optionalValue := NewUnmeteredSomeValueNonCopying(arrayValue)
 
 	compositeValue := newTestCompositeValue(inter, address)
 

@@ -2770,8 +2770,8 @@ func TestInterpretOptionalVariableDeclaration(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewSomeValueNonCopying(
-			interpreter.NewSomeValueNonCopying(
+		interpreter.NewUnmeteredSomeValueNonCopying(
+			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.NewIntValueFromInt64(2),
 			),
 		),
@@ -2798,8 +2798,8 @@ func TestInterpretOptionalParameterInvokedExternal(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewSomeValueNonCopying(
-			interpreter.NewSomeValueNonCopying(
+		interpreter.NewUnmeteredSomeValueNonCopying(
+			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.NewIntValueFromInt64(2),
 			),
 		),
@@ -2827,8 +2827,8 @@ func TestInterpretOptionalParameterInvokedInternal(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewSomeValueNonCopying(
-			interpreter.NewSomeValueNonCopying(
+		interpreter.NewUnmeteredSomeValueNonCopying(
+			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.NewIntValueFromInt64(2),
 			),
 		),
@@ -2852,8 +2852,8 @@ func TestInterpretOptionalReturn(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewSomeValueNonCopying(
-			interpreter.NewSomeValueNonCopying(
+		interpreter.NewUnmeteredSomeValueNonCopying(
+			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.NewIntValueFromInt64(2),
 			),
 		),
@@ -2886,8 +2886,8 @@ func TestInterpretOptionalAssignment(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewSomeValueNonCopying(
-			interpreter.NewSomeValueNonCopying(
+		interpreter.NewUnmeteredSomeValueNonCopying(
+			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.NewIntValueFromInt64(2),
 			),
 		),
@@ -2965,7 +2965,7 @@ func TestInterpretSomeReturnValue(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewSomeValueNonCopying(
+		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewIntValueFromInt64(1),
 		),
 		value,
@@ -2989,7 +2989,7 @@ func TestInterpretSomeReturnValueFromDictionary(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewSomeValueNonCopying(
+		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewIntValueFromInt64(1),
 		),
 		value,
@@ -3009,7 +3009,7 @@ func TestInterpretNilCoalescingNilIntToOptional(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewSomeValueNonCopying(
+		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewIntValueFromInt64(1),
 		),
 		inter.Globals["x"].GetValue(),
@@ -3029,7 +3029,7 @@ func TestInterpretNilCoalescingNilIntToOptionals(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewSomeValueNonCopying(
+		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewIntValueFromInt64(1),
 		),
 		inter.Globals["x"].GetValue(),
@@ -3048,7 +3048,7 @@ func TestInterpretNilCoalescingNilIntToOptionalNilLiteral(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewSomeValueNonCopying(
+		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewIntValueFromInt64(1),
 		),
 		inter.Globals["x"].GetValue(),
@@ -3239,7 +3239,7 @@ func TestInterpretNilCoalescingOptionalRightHandSide(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewSomeValueNonCopying(
+		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewIntValueFromInt64(1),
 		),
 		inter.Globals["z"].GetValue(),
@@ -3259,7 +3259,7 @@ func TestInterpretNilCoalescingBothOptional(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewSomeValueNonCopying(
+		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewIntValueFromInt64(1),
 		),
 		inter.Globals["z"].GetValue(),
@@ -3279,7 +3279,7 @@ func TestInterpretNilCoalescingBothOptionalLeftNil(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewSomeValueNonCopying(
+		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewIntValueFromInt64(2),
 		),
 		inter.Globals["z"].GetValue(),
@@ -3499,7 +3499,7 @@ func TestInterpretOptionalMap(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewSomeValueNonCopying(
+			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.NewUnmeteredStringValue("42"),
 			),
 			inter.Globals["result"].GetValue(),
@@ -4052,7 +4052,7 @@ func TestInterpretDictionaryIndexingString(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewSomeValueNonCopying(
+		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewIntValueFromInt64(1),
 		),
 		inter.Globals["a"].GetValue(),
@@ -4061,7 +4061,7 @@ func TestInterpretDictionaryIndexingString(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewSomeValueNonCopying(
+		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewIntValueFromInt64(2),
 		),
 		inter.Globals["b"].GetValue(),
@@ -4088,7 +4088,7 @@ func TestInterpretDictionaryIndexingBool(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewSomeValueNonCopying(
+		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewIntValueFromInt64(1),
 		),
 		inter.Globals["a"].GetValue(),
@@ -4097,7 +4097,7 @@ func TestInterpretDictionaryIndexingBool(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewSomeValueNonCopying(
+		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewIntValueFromInt64(2),
 		),
 		inter.Globals["b"].GetValue(),
@@ -4118,7 +4118,7 @@ func TestInterpretDictionaryIndexingInt(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewSomeValueNonCopying(
+		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredStringValue("a"),
 		),
 		inter.Globals["a"].GetValue(),
@@ -4127,7 +4127,7 @@ func TestInterpretDictionaryIndexingInt(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewSomeValueNonCopying(
+		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredStringValue("b"),
 		),
 		inter.Globals["b"].GetValue(),
@@ -4165,21 +4165,21 @@ func TestInterpretDictionaryIndexingType(t *testing.T) {
     `)
 
 	assert.Equal(t,
-		interpreter.NewSomeValueNonCopying(
+		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredStringValue("a"),
 		),
 		inter.Globals["a"].GetValue(),
 	)
 
 	assert.Equal(t,
-		interpreter.NewSomeValueNonCopying(
+		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredStringValue("b"),
 		),
 		inter.Globals["b"].GetValue(),
 	)
 
 	assert.Equal(t,
-		interpreter.NewSomeValueNonCopying(
+		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredStringValue("c"),
 		),
 		inter.Globals["c"].GetValue(),
@@ -4197,7 +4197,7 @@ func TestInterpretDictionaryIndexingType(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		interpreter.NewSomeValueNonCopying(
+		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredStringValue("f"),
 		),
 		inter.Globals["f"].GetValue(),
@@ -4237,7 +4237,7 @@ func TestInterpretDictionaryIndexingAssignmentExisting(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewSomeValueNonCopying(interpreter.NewIntValueFromInt64(23)),
+		interpreter.NewUnmeteredSomeValueNonCopying(interpreter.NewIntValueFromInt64(23)),
 		newValue,
 	)
 
@@ -4301,7 +4301,7 @@ func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewSomeValueNonCopying(interpreter.NewIntValueFromInt64(23)),
+		interpreter.NewUnmeteredSomeValueNonCopying(interpreter.NewIntValueFromInt64(23)),
 		newValue,
 	)
 
@@ -4393,7 +4393,7 @@ func TestInterpretOptionalAnyStruct(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewSomeValueNonCopying(
+		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewIntValueFromInt64(42),
 		),
 		inter.Globals["x"].GetValue(),
@@ -4412,7 +4412,7 @@ func TestInterpretOptionalAnyStructFailableCasting(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewSomeValueNonCopying(
+		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewIntValueFromInt64(42),
 		),
 		inter.Globals["x"].GetValue(),
@@ -4421,7 +4421,7 @@ func TestInterpretOptionalAnyStructFailableCasting(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewSomeValueNonCopying(
+		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewIntValueFromInt64(42),
 		),
 		inter.Globals["y"].GetValue(),
@@ -4441,7 +4441,7 @@ func TestInterpretOptionalAnyStructFailableCastingInt(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewSomeValueNonCopying(
+		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewIntValueFromInt64(23),
 		),
 		inter.Globals["x"].GetValue(),
@@ -4457,7 +4457,7 @@ func TestInterpretOptionalAnyStructFailableCastingInt(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewSomeValueNonCopying(
+		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewIntValueFromInt64(23),
 		),
 		inter.Globals["z"].GetValue(),
@@ -4491,7 +4491,7 @@ func TestInterpretOptionalAnyStructFailableCastingNil(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewSomeValueNonCopying(
+		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewIntValueFromInt64(42),
 		),
 		inter.Globals["z"].GetValue(),
@@ -5613,7 +5613,7 @@ func TestInterpretDictionaryRemove(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewSomeValueNonCopying(
+		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewIntValueFromInt64(1),
 		),
 		inter.Globals["removed"].GetValue(),
@@ -5649,7 +5649,7 @@ func TestInterpretDictionaryInsert(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewSomeValueNonCopying(
+		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewIntValueFromInt64(1),
 		),
 		inter.Globals["inserted"].GetValue(),
@@ -5766,7 +5766,7 @@ func TestInterpretDictionaryKeyTypes(t *testing.T) {
 			AssertValuesEqual(
 				t,
 				inter,
-				interpreter.NewSomeValueNonCopying(
+				interpreter.NewUnmeteredSomeValueNonCopying(
 					interpreter.NewUnmeteredStringValue("test"),
 				),
 				inter.Globals["v"].GetValue(),
@@ -6810,7 +6810,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 
 		tests[fmt.Sprintf("%s?", validType)] =
 			testValue{
-				value:   interpreter.NewSomeValueNonCopying(testCase.value),
+				value:   interpreter.NewUnmeteredSomeValueNonCopying(testCase.value),
 				literal: testCase.literal,
 			}
 
@@ -7353,10 +7353,10 @@ func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
 					},
 				},
 				common.Address{},
-				interpreter.NewSomeValueNonCopying(
+				interpreter.NewUnmeteredSomeValueNonCopying(
 					interpreter.NewUnmeteredStringValue("test"),
 				),
-				interpreter.NewSomeValueNonCopying(
+				interpreter.NewUnmeteredSomeValueNonCopying(
 					interpreter.NewUnmeteredStringValue("test"),
 				),
 			),
@@ -7439,10 +7439,10 @@ func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
 					},
 				},
 				common.Address{},
-				interpreter.NewSomeValueNonCopying(
+				interpreter.NewUnmeteredSomeValueNonCopying(
 					interpreter.NewUnmeteredStringValue("test"),
 				),
-				interpreter.NewSomeValueNonCopying(
+				interpreter.NewUnmeteredSomeValueNonCopying(
 					interpreter.NewUnmeteredStringValue("test"),
 				),
 			),
@@ -7527,7 +7527,7 @@ func TestInterpretCastingIntLiteralToOptional(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewSomeValueNonCopying(interpreter.NewIntValueFromInt64(42)),
+		interpreter.NewUnmeteredSomeValueNonCopying(interpreter.NewIntValueFromInt64(42)),
 		inter.Globals["x"].GetValue(),
 	)
 }
@@ -7587,7 +7587,7 @@ func TestInterpretOptionalChainingFieldRead(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewSomeValueNonCopying(
+		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewIntValueFromInt64(42),
 		),
 		inter.Globals["x2"].GetValue(),
@@ -7663,7 +7663,7 @@ func TestInterpretOptionalChainingFunctionCall(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewSomeValueNonCopying(
+		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewIntValueFromInt64(42),
 		),
 		inter.Globals["x2"].GetValue(),
@@ -8438,7 +8438,7 @@ func TestInterpretOptionalChainingOptionalFieldRead(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewSomeValueNonCopying(
+		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewIntValueFromInt64(1),
 		),
 		inter.Globals["x"].GetValue(),
@@ -8732,7 +8732,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 		inter,
 		[]interpreter.Value{
 			interpreter.NilValue{},
-			interpreter.NewSomeValueNonCopying(interpreter.AddressValue(address)),
+			interpreter.NewUnmeteredSomeValueNonCopying(interpreter.AddressValue(address)),
 		},
 		arrayElements(inter, result.(*interpreter.ArrayValue)),
 	)
@@ -8961,7 +8961,7 @@ func TestInterpretForce(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewSomeValueNonCopying(
+			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.NewIntValueFromInt64(1),
 			),
 			inter.Globals["x"].GetValue(),
@@ -9700,7 +9700,7 @@ func TestInterpretArrayFirstIndex(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewSomeValueNonCopying(
+		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewIntValueFromInt64(1),
 		),
 		value,
@@ -9783,7 +9783,7 @@ func TestInterpretCastingBoxing(t *testing.T) {
 
 		require.Equal(
 			t,
-			interpreter.NewSomeValueNonCopying(
+			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.TypeValue{
 					Type: interpreter.PrimitiveStaticTypeInt,
 				},
@@ -9805,7 +9805,7 @@ func TestInterpretCastingBoxing(t *testing.T) {
 
 		require.Equal(
 			t,
-			interpreter.NewSomeValueNonCopying(
+			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.TypeValue{
 					Type: interpreter.PrimitiveStaticTypeInt,
 				},
@@ -9827,7 +9827,7 @@ func TestInterpretCastingBoxing(t *testing.T) {
 
 		require.Equal(
 			t,
-			interpreter.NewSomeValueNonCopying(
+			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.TypeValue{
 					Type: interpreter.PrimitiveStaticTypeInt,
 				},

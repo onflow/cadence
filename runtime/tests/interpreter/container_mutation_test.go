@@ -923,7 +923,7 @@ func TestInterpretContainerMutationAfterNilCoalescing(t *testing.T) {
 	utils.RequireValuesEqual(
 		t,
 		inter,
-		interpreter.NewSomeValueNonCopying(
+		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredStringValue("test"),
 		),
 		result,

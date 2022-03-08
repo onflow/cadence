@@ -646,7 +646,7 @@ func importOptionalValue(
 		return nil, err
 	}
 
-	return interpreter.NewSomeValueNonCopying(innerValue), nil
+	return interpreter.NewSomeValueNonCopying(inter, innerValue), nil
 }
 
 func importArrayValue(

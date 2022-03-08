@@ -138,7 +138,7 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewSomeValueNonCopying(
+			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.NewUnmeteredStringValue("test"),
 			),
 			value,
@@ -204,7 +204,7 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewSomeValueNonCopying(
+			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.NewUnmeteredStringValue("test"),
 			),
 			value,
@@ -258,7 +258,7 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewSomeValueNonCopying(
+			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.NewUnmeteredStringValue("test"),
 			),
 			value,
@@ -326,7 +326,7 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewSomeValueNonCopying(
+			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.NewUnmeteredStringValue("test"),
 			),
 			value,
@@ -377,7 +377,7 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewSomeValueNonCopying(
+			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.NewUnmeteredStringValue("test"),
 			),
 			value,
@@ -443,7 +443,7 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewSomeValueNonCopying(
+			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.NewUnmeteredStringValue("test"),
 			),
 			value,
@@ -497,7 +497,7 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewSomeValueNonCopying(
+			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.NewUnmeteredStringValue("test"),
 			),
 			value,
@@ -565,7 +565,7 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewSomeValueNonCopying(
+			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.NewUnmeteredStringValue("test"),
 			),
 			value,

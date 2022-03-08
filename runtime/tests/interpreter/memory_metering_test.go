@@ -644,3 +644,45 @@ func TestRuntimeBoundFunctionMetering(t *testing.T) {
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindBoundFunction))
 	})
 }
+
+func TestRuntimeOptionalValueMetering(t *testing.T) {
+	t.Parallel()
+
+	t.Run("simple optional value", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let x: String? = "hello"
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindOptional))
+	})
+
+	t.Run("dictionary get", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let x: {Int8: String} = {1: "foo", 2: "bar"}
+                let y = x[0]
+                let z = x[1]
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindOptional))
+	})
+}

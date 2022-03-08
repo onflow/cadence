@@ -2360,7 +2360,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: NewSomeValueNonCopying(NilValue{}),
+				value: NewUnmeteredSomeValueNonCopying(NilValue{}),
 				encoded: []byte{
 					// tag
 					0xd8, CBORTagSomeValue,
@@ -2378,7 +2378,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: NewSomeValueNonCopying(expectedString),
+				value: NewUnmeteredSomeValueNonCopying(expectedString),
 				encoded: []byte{
 					// tag
 					0xd8, CBORTagSomeValue,
@@ -2400,7 +2400,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: NewSomeValueNonCopying(BoolValue(true)),
+				value: NewUnmeteredSomeValueNonCopying(BoolValue(true)),
 				encoded: []byte{
 					// tag
 					0xd8, CBORTagSomeValue,
@@ -2429,7 +2429,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 			}
 		}
 
-		expected := NewSomeValueNonCopying(str)
+		expected := NewUnmeteredSomeValueNonCopying(str)
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -2463,7 +2463,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 			}
 		}
 
-		expected := NewSomeValueNonCopying(str)
+		expected := NewUnmeteredSomeValueNonCopying(str)
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
