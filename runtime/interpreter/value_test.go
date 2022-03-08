@@ -58,6 +58,17 @@ var testCompositeValueType = &sema.CompositeType{
 	Members:    sema.NewStringMemberOrderedMap(),
 }
 
+func getMeterCompFuncWithExpectedKinds(t *testing.T, kinds []common.ComputationKind) OnMeterComputationFunc {
+	expectedCompKindsIndex := 0
+	return func(compKind common.ComputationKind, intensity uint) {
+		if expectedCompKindsIndex >= len(kinds) {
+			t.Fatal("received an extra meterComputation call")
+		}
+		assert.Equal(t, kinds[expectedCompKindsIndex], compKind)
+		expectedCompKindsIndex++
+	}
+}
+
 func TestOwnerNewArray(t *testing.T) {
 
 	t.Parallel()
@@ -112,6 +123,16 @@ func TestOwnerArrayDeepCopy(t *testing.T) {
 		},
 		utils.TestLocation,
 		WithStorage(storage),
+		WithOnMeterComputationFuncHandler(
+			getMeterCompFuncWithExpectedKinds(t,
+				[]common.ComputationKind{
+					common.ComputationKindCreateCompositeValue,
+					common.ComputationKindCreateArrayValue,
+					common.ComputationKindTransferCompositeValue,
+					common.ComputationKindTransferArrayValue,
+					common.ComputationKindTransferCompositeValue,
+				}),
+		),
 	)
 	require.NoError(t, err)
 
@@ -459,6 +480,16 @@ func TestOwnerDictionaryCopy(t *testing.T) {
 		},
 		utils.TestLocation,
 		WithStorage(storage),
+		WithOnMeterComputationFuncHandler(
+			getMeterCompFuncWithExpectedKinds(t,
+				[]common.ComputationKind{
+					common.ComputationKindCreateCompositeValue,
+					common.ComputationKindCreateDictionaryValue,
+					common.ComputationKindTransferCompositeValue,
+					common.ComputationKindTransferDictionaryValue,
+					common.ComputationKindTransferCompositeValue,
+				}),
+		),
 	)
 	require.NoError(t, err)
 
