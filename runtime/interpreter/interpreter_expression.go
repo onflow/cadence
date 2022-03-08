@@ -216,7 +216,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.Mod(right)
+		return left.Mod(interpreter, right)
 
 	case ast.OperationMul:
 		left, leftOk := leftValue.(NumberValue)
