@@ -632,9 +632,16 @@ func (r *interpreterRuntime) convertArgument(
 	case sema.AuthAccountType:
 		// convert addresses to auth accounts so there is no need to construct an auth account value for the caller
 		if addressValue, ok := argument.(interpreter.AddressValue); ok {
+			address := addressValue.ToAddress()
 			return r.newAuthAccountValue(
 				inter,
-				interpreter.NewAddressValue(inter, addressValue.ToAddress()),
+				interpreter.NewAddressValue(
+					inter,
+					common.NewAddressMemoryUsage(len(address)),
+					func() common.Address {
+						return address
+					},
+				),
 				context,
 				storage,
 				interpreterOptions,
@@ -644,9 +651,16 @@ func (r *interpreterRuntime) convertArgument(
 	case sema.PublicAccountType:
 		// convert addresses to public accounts so there is no need to construct a public account value for the caller
 		if addressValue, ok := argument.(interpreter.AddressValue); ok {
+			address := addressValue.ToAddress()
 			return r.getPublicAccount(
 				inter,
-				interpreter.NewAddressValue(inter, addressValue.ToAddress()),
+				interpreter.NewAddressValue(
+					inter,
+					common.NewAddressMemoryUsage(len(address)),
+					func() common.Address {
+						return address
+					},
+				),
 				context.Interface,
 				storage,
 			)
@@ -742,7 +756,13 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 		for i, address := range authorizers {
 			authorizerValues[i] = r.newAuthAccountValue(
 				inter,
-				interpreter.NewAddressValue(inter, address),
+				interpreter.NewAddressValue(
+					inter,
+					common.NewAddressMemoryUsage(len(address)),
+					func() common.Address {
+						return address
+					},
+				),
 				context,
 				storage,
 				interpreterOptions,
@@ -1535,7 +1555,13 @@ func (r *interpreterRuntime) injectedCompositeFieldsHandler(
 					panic(runtimeErrors.NewUnreachableError())
 				}
 
-				addressValue := interpreter.NewAddressValue(inter, address)
+				addressValue := interpreter.NewAddressValue(
+					inter,
+					common.NewAddressMemoryUsage(len(address)),
+					func() common.Address {
+						return address
+					},
+				)
 
 				return map[string]interpreter.Value{
 					"account": r.newAuthAccountValue(
@@ -1810,7 +1836,13 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 			panic(err)
 		}
 
-		addressValue := interpreter.NewAddressValue(invocation.Interpreter, address)
+		addressValue := interpreter.NewAddressValue(
+			invocation.Interpreter,
+			common.NewAddressMemoryUsage(len(address)),
+			func() common.Address {
+				return address
+			},
+		)
 
 		r.emitAccountEvent(
 			stdlib.AccountCreatedEventType,

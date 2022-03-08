@@ -457,7 +457,7 @@ func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedTy
 	case cadence.Bytes:
 		return interpreter.ByteSliceToByteArrayValue(inter, v), nil
 	case cadence.Address:
-		return interpreter.NewAddressValue(inter, common.Address(v)), nil
+		return importAddress(inter, v), nil
 	case cadence.Int:
 		return interpreter.NewIntValueFromBigInt(v.Value), nil
 	case cadence.Int8:
@@ -568,6 +568,17 @@ func importString(inter *interpreter.Interpreter, v cadence.String) *interpreter
 	)
 }
 
+func importAddress(inter *interpreter.Interpreter, v cadence.Address) interpreter.AddressValue {
+	memoryUsage := common.NewAddressMemoryUsage(len(v))
+	return interpreter.NewAddressValue(
+		inter,
+		memoryUsage,
+		func() common.Address {
+			return common.Address(v)
+		},
+	)
+}
+
 func importPathValue(inter *interpreter.Interpreter, v cadence.Path) interpreter.PathValue {
 	return interpreter.NewPathValue(
 		inter,
@@ -616,9 +627,16 @@ func importCapability(
 		)
 	}
 
+	bytes := address.Bytes()
 	return interpreter.NewCapabilityValue(
 		inter,
-		interpreter.NewAddressValueFromBytes(inter, address.Bytes()),
+		interpreter.NewAddressValueFromBytes(
+			inter,
+			common.NewAddressMemoryUsage(len(bytes)),
+			func() []byte {
+				return bytes
+			},
+		),
 		importPathValue(inter, path),
 		ImportType(borrowType),
 	), nil

@@ -686,7 +686,13 @@ func (d StorableDecoder) decodeAddress() (AddressValue, error) {
 		return AddressValue{}, err
 	}
 
-	address := NewAddressValueFromBytes(d.memoryGauge, addressBytes)
+	address := NewAddressValueFromBytes(
+		d.memoryGauge,
+		common.NewAddressMemoryUsage(len(addressBytes)),
+		func() []byte {
+			return addressBytes
+		},
+	)
 	return address, nil
 }
 

@@ -443,7 +443,14 @@ func (interpreter *Interpreter) VisitIntegerExpression(expression *ast.IntegerEx
 	value := expression.Value
 
 	if _, ok := typ.(*sema.AddressType); ok {
-		return NewAddressValueFromBytes(interpreter, value.Bytes())
+		bytes := value.Bytes()
+		return NewAddressValueFromBytes(
+			interpreter,
+			common.NewAddressMemoryUsage(len(bytes)),
+			func() []byte {
+				return bytes
+			},
+		)
 	}
 
 	// The ranges are checked at the checker level.
