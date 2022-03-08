@@ -415,7 +415,7 @@ func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpres
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
-		return integerValue.Negate()
+		return integerValue.Negate(interpreter)
 
 	case ast.OperationMove:
 		interpreter.invalidateResource(value)

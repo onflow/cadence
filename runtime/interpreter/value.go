@@ -2344,7 +2344,7 @@ func (v *ArrayValue) Slice(
 type NumberValue interface {
 	EquatableValue
 	ToInt() int
-	Negate() NumberValue
+	Negate(*Interpreter) NumberValue
 	Plus(interpreter *Interpreter, other NumberValue) NumberValue
 	SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue
 	Minus(other NumberValue) NumberValue
@@ -2603,8 +2603,14 @@ func (v IntValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v IntValue) Negate() NumberValue {
-	return IntValue{new(big.Int).Neg(v.BigInt)}
+func (v IntValue) Negate(interpreter *Interpreter) NumberValue {
+	return NewIntValueFromBigInt(
+		interpreter,
+		common.NewBigIntMemoryUsage(len(v.BigInt.Bits())),
+		func() *big.Int {
+			return new(big.Int).Neg(v.BigInt)
+		},
+	)
 }
 
 func (v IntValue) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -3047,7 +3053,7 @@ func (v Int8Value) ToInt() int {
 	return int(v)
 }
 
-func (v Int8Value) Negate() NumberValue {
+func (v Int8Value) Negate(*Interpreter) NumberValue {
 	// INT32-C
 	if v == math.MinInt8 {
 		panic(OverflowError{})
@@ -3546,7 +3552,7 @@ func (v Int16Value) ToInt() int {
 	return int(v)
 }
 
-func (v Int16Value) Negate() NumberValue {
+func (v Int16Value) Negate(*Interpreter) NumberValue {
 	// INT32-C
 	if v == math.MinInt16 {
 		panic(OverflowError{})
@@ -4047,7 +4053,7 @@ func (v Int32Value) ToInt() int {
 	return int(v)
 }
 
-func (v Int32Value) Negate() NumberValue {
+func (v Int32Value) Negate(*Interpreter) NumberValue {
 	// INT32-C
 	if v == math.MinInt32 {
 		panic(OverflowError{})
@@ -4548,7 +4554,7 @@ func (v Int64Value) ToInt() int {
 	return int(v)
 }
 
-func (v Int64Value) Negate() NumberValue {
+func (v Int64Value) Negate(*Interpreter) NumberValue {
 	// INT32-C
 	if v == math.MinInt64 {
 		panic(OverflowError{})
@@ -5069,7 +5075,7 @@ func (v Int128Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v Int128Value) Negate() NumberValue {
+func (v Int128Value) Negate(*Interpreter) NumberValue {
 	// INT32-C
 	//   if v == Int128TypeMinIntBig {
 	//       ...
@@ -5655,7 +5661,7 @@ func (v Int256Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v Int256Value) Negate() NumberValue {
+func (v Int256Value) Negate(*Interpreter) NumberValue {
 	// INT32-C
 	//   if v == Int256TypeMinIntBig {
 	//       ...
@@ -6262,7 +6268,7 @@ func (v UIntValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v UIntValue) Negate() NumberValue {
+func (v UIntValue) Negate(*Interpreter) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
@@ -6705,7 +6711,7 @@ func (v UInt8Value) ToInt() int {
 	return int(v)
 }
 
-func (v UInt8Value) Negate() NumberValue {
+func (v UInt8Value) Negate(*Interpreter) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
@@ -7143,7 +7149,7 @@ func (v UInt16Value) RecursiveString(_ SeenReferences) string {
 func (v UInt16Value) ToInt() int {
 	return int(v)
 }
-func (v UInt16Value) Negate() NumberValue {
+func (v UInt16Value) Negate(*Interpreter) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
@@ -7587,7 +7593,7 @@ func (v UInt32Value) ToInt() int {
 	return int(v)
 }
 
-func (v UInt32Value) Negate() NumberValue {
+func (v UInt32Value) Negate(*Interpreter) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
@@ -8056,7 +8062,7 @@ func (v UInt64Value) ToBigInt() *big.Int {
 	return new(big.Int).SetUint64(uint64(v))
 }
 
-func (v UInt64Value) Negate() NumberValue {
+func (v UInt64Value) Negate(*Interpreter) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
@@ -8523,7 +8529,7 @@ func (v UInt128Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v UInt128Value) Negate() NumberValue {
+func (v UInt128Value) Negate(*Interpreter) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
@@ -8639,7 +8645,7 @@ func (v UInt128Value) SaturatingMinus(other NumberValue) NumberValue {
 	return UInt128Value{diff}
 }
 
-func (v UInt128Value) Mod(other NumberValue) NumberValue {
+func (v UInt128Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9063,7 +9069,7 @@ func (v UInt256Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v UInt256Value) Negate() NumberValue {
+func (v UInt256Value) Negate(*Interpreter) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
@@ -9580,7 +9586,7 @@ func (v Word8Value) ToInt() int {
 	return int(v)
 }
 
-func (v Word8Value) Negate() NumberValue {
+func (v Word8Value) Negate(*Interpreter) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
@@ -9928,7 +9934,7 @@ func (v Word16Value) RecursiveString(_ SeenReferences) string {
 func (v Word16Value) ToInt() int {
 	return int(v)
 }
-func (v Word16Value) Negate() NumberValue {
+func (v Word16Value) Negate(*Interpreter) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
@@ -10279,7 +10285,7 @@ func (v Word32Value) ToInt() int {
 	return int(v)
 }
 
-func (v Word32Value) Negate() NumberValue {
+func (v Word32Value) Negate(*Interpreter) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
@@ -10655,7 +10661,7 @@ func (v Word64Value) ToBigInt() *big.Int {
 	return new(big.Int).SetUint64(uint64(v))
 }
 
-func (v Word64Value) Negate() NumberValue {
+func (v Word64Value) Negate(*Interpreter) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
@@ -11029,7 +11035,7 @@ func (v Fix64Value) ToInt() int {
 	return int(v / sema.Fix64Factor)
 }
 
-func (v Fix64Value) Negate() NumberValue {
+func (v Fix64Value) Negate(*Interpreter) NumberValue {
 	// INT32-C
 	if v == math.MinInt64 {
 		panic(OverflowError{})
@@ -11479,7 +11485,7 @@ func (v UFix64Value) ToInt() int {
 	return int(v / sema.Fix64Factor)
 }
 
-func (v UFix64Value) Negate() NumberValue {
+func (v UFix64Value) Negate(*Interpreter) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
