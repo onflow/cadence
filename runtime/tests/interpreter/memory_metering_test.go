@@ -79,7 +79,7 @@ func TestRuntimeArrayMetering(t *testing.T) {
 		// 3 for creation of z
 		// 4 for transfer of z
 		// 3 for dynamic type check of z
-		assert.Equal(t, uint64(15), meter.getMemory(common.MemoryKindArray))
+		assert.Equal(t, uint64(29), meter.getMemory(common.MemoryKindArray))
 	})
 
 	t.Run("iteration", func(t *testing.T) {
@@ -100,7 +100,7 @@ func TestRuntimeArrayMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindArray))
+		assert.Equal(t, uint64(33), meter.getMemory(common.MemoryKindArray))
 	})
 }
 
@@ -124,7 +124,7 @@ func TestRuntimeDictionaryMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindString))
-		assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindDictionary))
+		assert.Equal(t, uint64(10), meter.getMemory(common.MemoryKindDictionary))
 	})
 
 	t.Run("iteration", func(t *testing.T) {
@@ -145,7 +145,7 @@ func TestRuntimeDictionaryMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(15), meter.getMemory(common.MemoryKindDictionary))
+		assert.Equal(t, uint64(30), meter.getMemory(common.MemoryKindDictionary))
 	})
 }
 
@@ -182,7 +182,7 @@ func TestRuntimeCompositeMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(56), meter.getMemory(common.MemoryKindString))
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindComposite))
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindComposite))
 	})
 
 	t.Run("iteration", func(t *testing.T) {
@@ -205,7 +205,7 @@ func TestRuntimeCompositeMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(15), meter.getMemory(common.MemoryKindComposite))
+		assert.Equal(t, uint64(30), meter.getMemory(common.MemoryKindComposite))
 	})
 }
 
