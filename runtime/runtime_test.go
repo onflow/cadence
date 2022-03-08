@@ -5217,9 +5217,7 @@ func TestRuntimeComputationLimit(t *testing.T) {
 				if computationUsed <= computationLimit {
 					return nil
 				}
-				panic(ComputationLimitExceededError{
-					Limit: computationLimit,
-				})
+				panic(errors.New("computation limited exceeded"))
 			}
 
 			runtimeInterface := &testRuntimeInterface{
@@ -5244,15 +5242,7 @@ func TestRuntimeComputationLimit(t *testing.T) {
 			if test.ok {
 				require.NoError(t, err)
 			} else {
-				var computationLimitErr ComputationLimitExceededError
-				require.ErrorAs(t, err, &computationLimitErr)
-
-				assert.Equal(t,
-					ComputationLimitExceededError{
-						Limit: computationLimit,
-					},
-					computationLimitErr,
-				)
+				require.Error(t, err)
 			}
 		})
 	}
