@@ -3704,7 +3704,6 @@ func TestRuntimeStorageLoadedDestructionAnyResource(t *testing.T) {
 }
 
 func TestRuntimeStorageLoadedDestructionAfterRemoval(t *testing.T) {
-	t.SkipNow()
 
 	t.Parallel()
 

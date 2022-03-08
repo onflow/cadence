@@ -3379,13 +3379,11 @@ func defineStringFunction(activation *VariableActivation) {
 	defineBaseValue(activation, sema.StringType.String(), stringFunction)
 }
 
-// TODO:
-// - FunctionType
+// DeprecatedIsSubType is the old implementation of IsSubType() check, and is deprecated.
+// This is renamed and left as-is for reference purpose, and for comparing convenience.
+// TODO: Remove this function, once the changes are merged.
 //
-// - Character
-// - Block
-
-func (interpreter *Interpreter) IsSubType_Deprecated(subType DynamicType, superType sema.Type) bool {
+func (interpreter *Interpreter) DeprecatedIsSubType(subType DynamicType, superType sema.Type) bool {
 	if superType == sema.AnyType {
 		return true
 	}
@@ -3475,7 +3473,7 @@ func (interpreter *Interpreter) IsSubType_Deprecated(subType DynamicType, superT
 		}
 
 		for _, elementType := range typedSubType.ElementTypes {
-			if !interpreter.IsSubType_Deprecated(elementType, superTypeElementType) {
+			if !interpreter.DeprecatedIsSubType(elementType, superTypeElementType) {
 				return false
 			}
 		}
@@ -3492,8 +3490,8 @@ func (interpreter *Interpreter) IsSubType_Deprecated(subType DynamicType, superT
 			}
 
 			for _, entryTypes := range typedSubType.EntryTypes {
-				if !interpreter.IsSubType_Deprecated(entryTypes.KeyType, typedSuperType.KeyType) ||
-					!interpreter.IsSubType_Deprecated(entryTypes.ValueType, typedSuperType.ValueType) {
+				if !interpreter.DeprecatedIsSubType(entryTypes.KeyType, typedSuperType.KeyType) ||
+					!interpreter.DeprecatedIsSubType(entryTypes.ValueType, typedSuperType.ValueType) {
 
 					return false
 				}
@@ -3519,7 +3517,7 @@ func (interpreter *Interpreter) IsSubType_Deprecated(subType DynamicType, superT
 
 	case SomeDynamicType:
 		if typedSuperType, ok := superType.(*sema.OptionalType); ok {
-			return interpreter.IsSubType_Deprecated(typedSubType.InnerType, typedSuperType.Type)
+			return interpreter.DeprecatedIsSubType(typedSubType.InnerType, typedSuperType.Type)
 		}
 
 		switch superType {
@@ -3533,7 +3531,7 @@ func (interpreter *Interpreter) IsSubType_Deprecated(subType DynamicType, superT
 			// First, check that the dynamic type of the referenced value
 			// is a subtype of the super type
 
-			if !interpreter.IsSubType_Deprecated(typedSubType.InnerType(), typedSuperType.Type) {
+			if !interpreter.DeprecatedIsSubType(typedSubType.InnerType(), typedSuperType.Type) {
 				return false
 			}
 
@@ -3689,8 +3687,9 @@ func (interpreter *Interpreter) IsSubType(subType StaticType, superType sema.Typ
 
 	semaType, err := interpreter.ConvertStaticToSemaType(subType)
 	if err != nil {
-		return false
+		panic(err)
 	}
+
 	return sema.IsSubType(semaType, superType)
 }
 
