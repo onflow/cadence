@@ -486,7 +486,8 @@ func (d StorableDecoder) decodeUInt() (UIntValue, error) {
 		return UIntValue{}, fmt.Errorf("invalid UInt: got %s, expected positive", bigInt)
 	}
 
-	return NewUIntValueFromBigInt(bigInt), nil
+	// NOTE: already metered by decodeBigInt
+	return NewUnmeteredUIntValueFromBigInt(bigInt), nil
 }
 
 func (d StorableDecoder) decodeUInt8() (UInt8Value, error) {

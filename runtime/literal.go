@@ -175,7 +175,11 @@ func integerLiteralValue(
 		},
 	)
 
-	convertedValue, err := convertIntValue(intValue, ty)
+	convertedValue, err := convertIntValue(
+		memoryGauge,
+		intValue,
+		ty,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -183,7 +187,14 @@ func integerLiteralValue(
 	return ExportValue(convertedValue, nil)
 }
 
-func convertIntValue(intValue interpreter.IntValue, ty sema.Type) (interpreter.Value, error) {
+func convertIntValue(
+	memoryGauge common.MemoryGauge,
+	intValue interpreter.IntValue,
+	ty sema.Type,
+) (
+	interpreter.Value,
+	error,
+) {
 
 	switch ty {
 	case sema.IntType, sema.IntegerType, sema.SignedIntegerType:
@@ -202,7 +213,7 @@ func convertIntValue(intValue interpreter.IntValue, ty sema.Type) (interpreter.V
 		return interpreter.ConvertInt256(intValue), nil
 
 	case sema.UIntType:
-		return interpreter.ConvertUInt(intValue), nil
+		return interpreter.ConvertUInt(memoryGauge, intValue), nil
 	case sema.UInt8Type:
 		return interpreter.ConvertUInt8(intValue), nil
 	case sema.UInt16Type:

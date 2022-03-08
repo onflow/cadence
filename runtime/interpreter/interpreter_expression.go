@@ -461,7 +461,8 @@ func NewIntValue(value *big.Int, intSubType sema.Type) Value {
 		// TODO: meter
 		return NewUnmeteredIntValueFromBigInt(value)
 	case sema.UIntType:
-		return NewUIntValueFromBigInt(value)
+		// TODO: meter
+		return NewUnmeteredUIntValueFromBigInt(value)
 
 	// Int*
 	case sema.Int8Type:

@@ -474,7 +474,7 @@ func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedTy
 	case cadence.Int256:
 		return interpreter.NewInt256ValueFromBigInt(v.Value), nil
 	case cadence.UInt:
-		return interpreter.NewUIntValueFromBigInt(v.Value), nil
+		return importUInt(inter, v), nil
 	case cadence.UInt8:
 		return interpreter.UInt8Value(v), nil
 	case cadence.UInt16:
@@ -558,9 +558,20 @@ func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedTy
 	return nil, fmt.Errorf("cannot import value of type %T", value)
 }
 
-func importInt(inter *interpreter.Interpreter, v cadence.Int) interpreter.Value {
+func importInt(inter *interpreter.Interpreter, v cadence.Int) interpreter.IntValue {
 	memoryUsage := common.NewBigIntMemoryUsage(len(v.Value.Bytes()))
 	return interpreter.NewIntValueFromBigInt(
+		inter,
+		memoryUsage,
+		func() *big.Int {
+			return v.Value
+		},
+	)
+}
+
+func importUInt(inter *interpreter.Interpreter, v cadence.UInt) interpreter.UIntValue {
+	memoryUsage := common.NewBigIntMemoryUsage(len(v.Value.Bytes()))
+	return interpreter.NewUIntValueFromBigInt(
 		inter,
 		memoryUsage,
 		func() *big.Int {

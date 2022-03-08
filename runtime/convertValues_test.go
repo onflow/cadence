@@ -271,7 +271,7 @@ func TestExportValue(t *testing.T) {
 		},
 		{
 			label:    "UInt",
-			value:    interpreter.NewUIntValueFromUint64(42),
+			value:    interpreter.NewUnmeteredUIntValueFromUint64(42),
 			expected: cadence.NewUInt(42),
 		},
 		{
@@ -657,7 +657,7 @@ func TestImportValue(t *testing.T) {
 		{
 			label:    "UInt",
 			value:    cadence.NewUInt(42),
-			expected: interpreter.NewUIntValueFromUint64(42),
+			expected: interpreter.NewUnmeteredUIntValueFromUint64(42),
 		},
 		{
 			label:    "UInt8",

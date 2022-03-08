@@ -2545,7 +2545,10 @@ func ConvertInt(memoryGauge common.MemoryGauge, value Value) IntValue {
 		)
 
 	case NumberValue:
-		return NewIntValueFromInt64(memoryGauge, int64(value.ToInt()))
+		return NewIntValueFromInt64(
+			memoryGauge,
+			int64(value.ToInt()),
+		)
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -6188,29 +6191,63 @@ type UIntValue struct {
 	BigInt *big.Int
 }
 
-func NewUIntValueFromUint64(value uint64) UIntValue {
-	return NewUIntValueFromBigInt(new(big.Int).SetUint64(value))
+func NewUIntValueFromUint64(memoryGauge common.MemoryGauge, value uint64) UIntValue {
+	const uint64Size = int(unsafe.Sizeof(uint64(0)))
+	return NewUIntValueFromBigInt(
+		memoryGauge,
+		common.NewBigIntMemoryUsage(uint64Size),
+		func() *big.Int {
+			return new(big.Int).SetUint64(value)
+		},
+	)
 }
 
-func NewUIntValueFromBigInt(value *big.Int) UIntValue {
-	return UIntValue{BigInt: value}
+func NewUnmeteredUIntValueFromUint64(value uint64) UIntValue {
+	return NewUnmeteredUIntValueFromBigInt(new(big.Int).SetUint64(value))
 }
 
-func ConvertUInt(value Value) UIntValue {
+func NewUIntValueFromBigInt(
+	memoryGauge common.MemoryGauge,
+	memoryUsage common.MemoryUsage,
+	bigIntConstructor func() *big.Int,
+) UIntValue {
+	if memoryGauge != nil {
+		memoryGauge.UseMemory(memoryUsage)
+	}
+	value := bigIntConstructor()
+	return NewUnmeteredUIntValueFromBigInt(value)
+}
+
+func NewUnmeteredUIntValueFromBigInt(value *big.Int) UIntValue {
+	return UIntValue{
+		BigInt: value,
+	}
+}
+
+func ConvertUInt(memoryGauge common.MemoryGauge, value Value) UIntValue {
 	switch value := value.(type) {
 	case BigNumberValue:
 		v := value.ToBigInt()
 		if v.Sign() < 0 {
 			panic(UnderflowError{})
 		}
-		return NewUIntValueFromBigInt(value.ToBigInt())
+		return NewUIntValueFromBigInt(
+			memoryGauge,
+			common.NewBigIntMemoryUsage(value.ByteLength()),
+			func() *big.Int {
+				return value.ToBigInt()
+			},
+		)
 
 	case NumberValue:
 		v := value.ToInt()
 		if v < 0 {
 			panic(UnderflowError{})
 		}
-		return NewUIntValueFromUint64(uint64(v))
+		return NewUIntValueFromUint64(
+			memoryGauge,
+			uint64(v),
+		)
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -6648,7 +6685,7 @@ func (v UIntValue) Transfer(
 }
 
 func (v UIntValue) Clone(_ *Interpreter) Value {
-	return NewUIntValueFromBigInt(v.BigInt)
+	return NewUnmeteredUIntValueFromBigInt(v.BigInt)
 }
 
 func (UIntValue) DeepRemove(_ *Interpreter) {

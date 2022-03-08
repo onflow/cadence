@@ -2171,7 +2171,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 
 	case sema.UIntType:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertUInt(value)
+			return ConvertUInt(interpreter, value)
 		}
 
 	// Int*
@@ -2707,10 +2707,10 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.UIntTypeName,
 		functionType: sema.NumberConversionFunctionType(sema.UIntType),
-		convert: func(_ *Interpreter, value Value) Value {
-			return ConvertUInt(value)
+		convert: func(interpreter *Interpreter, value Value) Value {
+			return ConvertUInt(interpreter, value)
 		},
-		min: NewUIntValueFromBigInt(sema.UIntTypeMin),
+		min: NewUnmeteredUIntValueFromBigInt(sema.UIntTypeMin),
 	},
 	{
 		name:         sema.Int8TypeName,

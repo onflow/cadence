@@ -52,7 +52,7 @@ func TestInterpretDynamicCastingNumber(t *testing.T) {
 
 	tests := []test{
 		{sema.IntType, "42", interpreter.NewUnmeteredIntValueFromInt64(42)},
-		{sema.UIntType, "42", interpreter.NewUIntValueFromUint64(42)},
+		{sema.UIntType, "42", interpreter.NewUnmeteredUIntValueFromUint64(42)},
 		{sema.Int8Type, "42", interpreter.Int8Value(42)},
 		{sema.Int16Type, "42", interpreter.Int16Value(42)},
 		{sema.Int32Type, "42", interpreter.Int32Value(42)},

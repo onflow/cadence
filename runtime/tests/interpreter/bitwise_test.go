@@ -52,7 +52,7 @@ var bitwiseTestValueFunctions = map[string]func(int) interpreter.NumberValue{
 	},
 	// UInt*
 	"UInt": func(v int) interpreter.NumberValue {
-		return interpreter.NewUIntValueFromUint64(uint64(v))
+		return interpreter.NewUnmeteredUIntValueFromUint64(uint64(v))
 	},
 	"UInt8": func(v int) interpreter.NumberValue {
 		return interpreter.UInt8Value(v)

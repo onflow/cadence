@@ -794,7 +794,7 @@ func TestStringer(t *testing.T) {
 
 	stringerTests := map[string]testCase{
 		"UInt": {
-			value:    NewUIntValueFromUint64(10),
+			value:    NewUnmeteredUIntValueFromUint64(10),
 			expected: "10",
 		},
 		"UInt8": {
@@ -1119,15 +1119,15 @@ func TestGetHashInput(t *testing.T) {
 
 	stringerTests := map[string]testCase{
 		"UInt": {
-			value:    NewUIntValueFromUint64(10),
+			value:    NewUnmeteredUIntValueFromUint64(10),
 			expected: []byte{byte(HashInputTypeUInt), 10},
 		},
 		"UInt min": {
-			value:    NewUIntValueFromUint64(0),
+			value:    NewUnmeteredUIntValueFromUint64(0),
 			expected: []byte{byte(HashInputTypeUInt), 0},
 		},
 		"UInt large": {
-			value:    NewUIntValueFromBigInt(sema.UInt256TypeMaxIntBig),
+			value:    NewUnmeteredUIntValueFromBigInt(sema.UInt256TypeMaxIntBig),
 			expected: append([]byte{byte(HashInputTypeUInt)}, sema.UInt256TypeMaxIntBig.Bytes()...),
 		},
 		"UInt8": {
@@ -3050,7 +3050,7 @@ func TestNumberValue_Equal(t *testing.T) {
 	t.Parallel()
 
 	testValues := map[string]EquatableValue{
-		"UInt":    NewUIntValueFromUint64(10),
+		"UInt":    NewUnmeteredUIntValueFromUint64(10),
 		"UInt8":   UInt8Value(8),
 		"UInt16":  UInt16Value(16),
 		"UInt32":  UInt32Value(32),

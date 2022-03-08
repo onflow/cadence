@@ -43,7 +43,7 @@ var testIntegerTypesAndValues = map[string]interpreter.Value{
 	"Int128": interpreter.NewInt128ValueFromInt64(50),
 	"Int256": interpreter.NewInt256ValueFromInt64(50),
 	// UInt*
-	"UInt":    interpreter.NewUIntValueFromUint64(50),
+	"UInt":    interpreter.NewUnmeteredUIntValueFromUint64(50),
 	"UInt8":   interpreter.UInt8Value(50),
 	"UInt16":  interpreter.UInt16Value(50),
 	"UInt32":  interpreter.UInt32Value(50),
@@ -523,14 +523,14 @@ func TestInterpretIntegerConversion(t *testing.T) {
 			}(),
 		},
 		sema.UIntType: {
-			fortyTwo: interpreter.NewUIntValueFromUint64(42),
-			min:      interpreter.NewUIntValueFromUint64(0),
+			fortyTwo: interpreter.NewUnmeteredUIntValueFromUint64(42),
+			min:      interpreter.NewUnmeteredUIntValueFromUint64(0),
 			// UInt does not actually have a maximum, but create a "large" value,
 			// which can be used for testing against other types
 			max: func() interpreter.Value {
 				i := big.NewInt(1)
 				i.Lsh(i, 1000)
-				return interpreter.NewUIntValueFromBigInt(i)
+				return interpreter.NewUnmeteredUIntValueFromBigInt(i)
 			}(),
 		},
 		sema.UInt8Type: {
@@ -705,7 +705,7 @@ func TestInterpretIntegerMinMax(t *testing.T) {
 	testCases := map[sema.Type]testCase{
 		sema.IntType: {},
 		sema.UIntType: {
-			min: interpreter.NewUIntValueFromUint64(0),
+			min: interpreter.NewUnmeteredUIntValueFromUint64(0),
 		},
 		sema.UInt8Type: {
 			min: interpreter.UInt8Value(0),
