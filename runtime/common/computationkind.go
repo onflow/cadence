@@ -38,11 +38,11 @@ const (
 	_
 	_
 	_
-	_
 	// interpreter value operations
 	ComputationKindCreateCompositeValue
 	ComputationKindTransferCompositeValue
 	ComputationKindDestroyCompositeValue
+	_
 	_
 	_
 	_
@@ -67,8 +67,9 @@ const (
 	_
 	_
 	_
+	_
+	_
 	ComputationKindCreateDictionaryValue
-	ComputationKindCopyDictionaryValue
 	ComputationKindTransferDictionaryValue
 	ComputationKindDestroyDictionaryValue
 	_
@@ -132,7 +133,7 @@ const (
 	//
 	ComputationKindSTDLIBPanic
 	ComputationKindSTDLIBAssert
-	ComputationKindSTDLIBunsafeRandom
+	ComputationKindSTDLIBUnsafeRandom
 	_
 	_
 	_
