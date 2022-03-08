@@ -6319,9 +6319,14 @@ func (v UIntValue) Plus(interpreter *Interpreter, other NumberValue) NumberValue
 		})
 	}
 
-	res := new(big.Int)
-	res.Add(v.BigInt, o.BigInt)
-	return UIntValue{res}
+	return NewUIntValueFromBigInt(
+		interpreter,
+		common.NewPlusBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Add(v.BigInt, o.BigInt)
+		},
+	)
 }
 
 func (v UIntValue) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -6406,9 +6411,14 @@ func (v UIntValue) Mul(interpreter *Interpreter, other NumberValue) NumberValue 
 		})
 	}
 
-	res := new(big.Int)
-	res.Mul(v.BigInt, o.BigInt)
-	return UIntValue{res}
+	return NewUIntValueFromBigInt(
+		interpreter,
+		common.NewMulBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Mul(v.BigInt, o.BigInt)
+		},
+	)
 }
 
 func (v UIntValue) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
