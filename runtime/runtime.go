@@ -1506,43 +1506,32 @@ func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interfa
 	return []interpreter.Option{
 		interpreter.WithOnStatementHandler(
 			func(_ *interpreter.Interpreter, _ ast.Statement) {
-				var err error
-				wrapPanic(func() {
-					err = runtimeInterface.MeterComputation(OpTypeStatement, 1)
-				})
-				if err != nil {
-					panic(err)
-				}
 			},
 		),
 		interpreter.WithOnLoopIterationHandler(
 			func(_ *interpreter.Interpreter, _ int) {
-				var err error
-				wrapPanic(func() {
-					err = runtimeInterface.MeterComputation(OpTypeLoop, 1)
-				})
-				if err != nil {
-					panic(err)
-				}
 			},
 		),
 		interpreter.WithOnFunctionInvocationHandler(
 			func(_ *interpreter.Interpreter, _ int) {
 				callStackDepth++
 				checkCallStackDepth()
-
-				var err error
-				wrapPanic(func() {
-					err = runtimeInterface.MeterComputation(OpTypeFunctionInvocation, 1)
-				})
-				if err != nil {
-					panic(err)
-				}
 			},
 		),
 		interpreter.WithOnInvokedFunctionReturnHandler(
 			func(_ *interpreter.Interpreter, _ int) {
 				callStackDepth--
+			},
+		),
+		interpreter.WithOnMeterComputationFuncHandler(
+			func(compKind common.ComputationKind, intensity uint) {
+				var err error
+				wrapPanic(func() {
+					err = runtimeInterface.MeterComputation(compKind, intensity)
+				})
+				if err != nil {
+					panic(err)
+				}
 			},
 		),
 	}

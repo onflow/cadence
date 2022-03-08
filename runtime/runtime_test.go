@@ -150,7 +150,7 @@ type testRuntimeInterface struct {
 	log                       func(string)
 	emitEvent                 func(cadence.Event) error
 	generateUUID              func() (uint64, error)
-	meterComputation          func(optype MetringOperationType, intensity uint) error
+	meterComputation          func(compKind common.ComputationKind, intensity uint) error
 	decodeArgument            func(b []byte, t cadence.Type) (cadence.Value, error)
 	programParsed             func(location common.Location, duration time.Duration)
 	programChecked            func(location common.Location, duration time.Duration)
@@ -305,11 +305,11 @@ func (i *testRuntimeInterface) GenerateUUID() (uint64, error) {
 	return i.generateUUID()
 }
 
-func (i *testRuntimeInterface) MeterComputation(opType MetringOperationType, intensity uint) error {
+func (i *testRuntimeInterface) MeterComputation(compKind common.ComputationKind, intensity uint) error {
 	if i.meterComputation == nil {
 		return nil
 	}
-	return i.meterComputation(opType, intensity)
+	return i.meterComputation(compKind, intensity)
 }
 
 func (i *testRuntimeInterface) SetComputationUsed(uint64) error {
@@ -5216,7 +5216,7 @@ func TestRuntimeComputationLimit(t *testing.T) {
 
 			var computationUsed uint
 
-			checkComputationLimit := func(_ MetringOperationType, intensity uint) error {
+			checkComputationLimit := func(_ common.ComputationKind, intensity uint) error {
 				computationUsed += intensity
 				if computationUsed <= computationLimit {
 					return nil

@@ -22,6 +22,7 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -35,6 +36,10 @@ func (interpreter *Interpreter) evalStatement(statement ast.Statement) interface
 	})
 
 	interpreter.statement = statement
+
+	if interpreter.onMeterComputation != nil {
+		interpreter.onMeterComputation(common.ComputationKindStatement, 1)
+	}
 
 	if interpreter.onStatement != nil {
 		interpreter.onStatement(interpreter, statement)
