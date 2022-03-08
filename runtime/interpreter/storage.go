@@ -59,44 +59,20 @@ func MustConvertUnmeteredStoredValue(value atree.Value) Value {
 }
 
 func ConvertStoredValue(gauge common.MemoryGauge, value atree.Value) (Value, error) {
-	// TODO: Meter container values created below.
-	//   This is currently technically challenging because, this method is used in various
-	//   places directly/indirectly, where the interpreter instance is not available.
-	//   e.g: Iterator(), value walk(), RecursiveString(), String() method of values, etc.
-
 	switch value := value.(type) {
 	case *atree.Array:
-		if gauge != nil {
-			gauge.UseMemory(common.NewConstantMemoryUsage(common.MemoryKindArray))
+		staticType, ok := value.Type().(ArrayStaticType)
+		if !ok {
+			panic(errors.NewUnreachableError())
 		}
-		return &ArrayValue{
-			Type:  value.Type().(ArrayStaticType),
-			array: value,
-		}, nil
-
+		return newArrayValueFromAtreeValue(gauge, value, staticType), nil
 	case *atree.OrderedMap:
 		typeInfo := value.Type()
 		switch typeInfo := typeInfo.(type) {
 		case DictionaryStaticType:
-			if gauge != nil {
-				gauge.UseMemory(common.NewConstantMemoryUsage(common.MemoryKindDictionary))
-			}
-			return &DictionaryValue{
-				Type:       typeInfo,
-				dictionary: value,
-			}, nil
-
+			return newDictionaryValueFromOrderedMap(gauge, value, typeInfo), nil
 		case compositeTypeInfo:
-			if gauge != nil {
-				gauge.UseMemory(common.NewConstantMemoryUsage(common.MemoryKindComposite))
-			}
-			return &CompositeValue{
-				dictionary:          value,
-				Location:            typeInfo.location,
-				QualifiedIdentifier: typeInfo.qualifiedIdentifier,
-				Kind:                typeInfo.kind,
-			}, nil
-
+			return newCompositeValueFromOrderedMap(gauge, value, typeInfo), nil
 		default:
 			return nil, fmt.Errorf("invalid ordered map type info: %T", typeInfo)
 		}

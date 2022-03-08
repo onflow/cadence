@@ -72,29 +72,36 @@ func TestRuntimeArrayMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
+		// 1 for creation of x
+		// 2 for creation of y
+		// 1 for transfer of y
+		// 1 dynamic type check of y
+		// 3 for creation of z
+		// 4 for transfer of z
+		// 3 for dynamic type check of z
 		assert.Equal(t, uint64(15), meter.getMemory(common.MemoryKindArray))
 	})
 
-	t.Run("iteration", func(t *testing.T) {
-		t.Parallel()
+	/*t.Run("iteration", func(t *testing.T) {
+			t.Parallel()
 
-		script := `
-            pub fun main() {
-                let values: [[Int8]] = [[], [], []]
-                for value in values {
-                  let a = value
-                }
-            }
-        `
+			script := `
+	            pub fun main() {
+	                let values: [[Int8]] = [[], [], []]
+	                for value in values {
+	                  let a = value
+	                }
+	            }
+	        `
 
-		meter := newTestMemoryGauge()
-		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+			meter := newTestMemoryGauge()
+			inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
-		_, err := inter.Invoke("main")
-		require.NoError(t, err)
+			_, err := inter.Invoke("main")
+			require.NoError(t, err)
 
-		assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindArray))
-	})
+			assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindArray))
+		})*/
 }
 
 func TestRuntimeDictionaryMetering(t *testing.T) {

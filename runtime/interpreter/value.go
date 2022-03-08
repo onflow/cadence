@@ -1236,8 +1236,6 @@ func NewArrayValueWithIterator(
 	address common.Address,
 	values func() Value,
 ) *ArrayValue {
-	interpreter.UseConstantMemory(common.MemoryKindArray)
-
 	var v *ArrayValue
 
 	if interpreter.tracingEnabled {
@@ -1272,13 +1270,21 @@ func NewArrayValueWithIterator(
 	if err != nil {
 		panic(ExternalError{err})
 	}
+	return newArrayValueFromAtreeValue(interpreter, array, arrayType)
+}
 
-	v = &ArrayValue{
-		Type:  arrayType,
+func newArrayValueFromAtreeValue(
+	memoryGauge common.MemoryGauge,
+	array *atree.Array,
+	staticType ArrayStaticType,
+) *ArrayValue {
+	if memoryGauge != nil {
+		memoryGauge.UseMemory(common.NewConstantMemoryUsage(common.MemoryKindArray))
+	}
+	return &ArrayValue{
+		Type:  staticType,
 		array: array,
 	}
-
-	return v
 }
 
 var _ Value = &ArrayValue{}
@@ -11835,8 +11841,6 @@ func NewCompositeValue(
 		}()
 	}
 
-	interpreter.UseConstantMemory(common.MemoryKindComposite)
-
 	dictionary, err := atree.NewMap(
 		interpreter.Storage,
 		atree.Address(address),
@@ -11851,12 +11855,11 @@ func NewCompositeValue(
 		panic(ExternalError{err})
 	}
 
-	v = &CompositeValue{
-		dictionary:          dictionary,
-		Location:            location,
-		QualifiedIdentifier: qualifiedIdentifier,
-		Kind:                kind,
+	typeInfo := compositeTypeInfo{
+		location, qualifiedIdentifier, kind,
 	}
+
+	v = newCompositeValueFromOrderedMap(interpreter, dictionary, typeInfo)
 
 	for _, field := range fields {
 		v.SetMember(
@@ -11869,6 +11872,22 @@ func NewCompositeValue(
 	}
 
 	return v
+}
+
+func newCompositeValueFromOrderedMap(
+	memoryGauge common.MemoryGauge,
+	dict *atree.OrderedMap,
+	typeInfo compositeTypeInfo,
+) *CompositeValue {
+	if memoryGauge != nil {
+		memoryGauge.UseMemory(common.NewConstantMemoryUsage(common.MemoryKindComposite))
+	}
+	return &CompositeValue{
+		dictionary:          dict,
+		Location:            typeInfo.location,
+		QualifiedIdentifier: typeInfo.qualifiedIdentifier,
+		Kind:                typeInfo.kind,
+	}
 }
 
 var _ Value = &CompositeValue{}
@@ -12891,8 +12910,6 @@ func NewDictionaryValueWithAddress(
 	address common.Address,
 	keysAndValues ...Value,
 ) *DictionaryValue {
-	interpreter.UseConstantMemory(common.MemoryKindDictionary)
-
 	var v *DictionaryValue
 
 	if interpreter.tracingEnabled {
@@ -12931,10 +12948,7 @@ func NewDictionaryValueWithAddress(
 		panic(ExternalError{err})
 	}
 
-	v = &DictionaryValue{
-		Type:       dictionaryType,
-		dictionary: dictionary,
-	}
+	v = newDictionaryValueFromOrderedMap(interpreter, dictionary, dictionaryType)
 
 	for i := 0; i < keysAndValuesCount; i += 2 {
 		key := keysAndValues[i]
@@ -12945,6 +12959,20 @@ func NewDictionaryValueWithAddress(
 	}
 
 	return v
+}
+
+func newDictionaryValueFromOrderedMap(
+	memoryGauge common.MemoryGauge,
+	dict *atree.OrderedMap,
+	staticType DictionaryStaticType,
+) *DictionaryValue {
+	if memoryGauge != nil {
+		memoryGauge.UseMemory(common.NewConstantMemoryUsage(common.MemoryKindDictionary))
+	}
+	return &DictionaryValue{
+		Type:       staticType,
+		dictionary: dict,
+	}
 }
 
 var _ Value = &DictionaryValue{}
