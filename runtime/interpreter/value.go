@@ -15569,7 +15569,7 @@ func (PathValue) IsStorable() bool {
 func convertPath(interpreter *Interpreter, domain common.PathDomain, value Value) Value {
 	stringValue, ok := value.(*StringValue)
 	if !ok {
-		return nil
+		return NewNilValue(interpreter)
 	}
 
 	_, err := sema.CheckPathLiteral(
@@ -15579,7 +15579,7 @@ func convertPath(interpreter *Interpreter, domain common.PathDomain, value Value
 		ReturnEmptyRange,
 	)
 	if err != nil {
-		return nil
+		return NewNilValue(interpreter)
 	}
 
 	return NewSomeValueNonCopying(interpreter, PathValue{

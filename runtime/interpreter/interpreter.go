@@ -3198,12 +3198,7 @@ var converterFunctionValues = func() []converterFunction {
 		convert := declaration.convert
 		converterFunctionValue := NewUnmeteredHostFunctionValue(
 			func(invocation Invocation) Value {
-				val := convert(invocation.Interpreter, invocation.Arguments[0])
-				if val == nil {
-					return NewNilValue(invocation.Interpreter)
-				} else {
-					return val
-				}
+				return convert(invocation.Interpreter, invocation.Arguments[0])
 			},
 			declaration.functionType,
 		)
