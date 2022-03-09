@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,32 +18,17 @@
 
 package testdata
 
-func testVariable() {
-	var m map[string]int
-
-	for range m { // want "range statement over map: map\\[string\\]int"
-	}
+type Value interface {
+	isValue()
 }
 
-func returnMap() map[int]string {
-	return nil
-}
+type XValue struct{}
 
-func testFunc() {
-	for range returnMap() { // want "range statement over map: map\\[int\\]string"
-	}
-}
+var _ Value = XValue{}
 
-func testTypeDef() {
-	type M map[string]int
-	var m M
-	for range m { // want "range statement over map: map\\[string\\]int"
-	}
-}
+func (XValue) isValue() {}
 
-func testTypeAlias() {
-	type M = map[string]int
-	var m M
-	for range m { // want "range statement over map: map\\[string\\]int"
-	}
+func testValue() {
+	v := XValue{} // want "value composite literal should be constructor function call"
+	_ = v
 }
