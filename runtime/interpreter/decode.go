@@ -402,6 +402,8 @@ func (d StorableDecoder) decodeInt16() (Int16Value, error) {
 }
 
 func (d StorableDecoder) decodeInt32() (Int32Value, error) {
+	common.UseMemory(d.memoryGauge, int32MemoryUsage)
+
 	v, err := d.decoder.DecodeInt64()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -419,7 +421,9 @@ func (d StorableDecoder) decodeInt32() (Int32Value, error) {
 	if v > max {
 		return 0, fmt.Errorf("invalid Int32: got %d, expected max %d", v, max)
 	}
-	return Int32Value(v), nil
+
+	// Already metered at the start of this function
+	return NewUnmeteredInt32Value(int32(v)), nil
 }
 
 func (d StorableDecoder) decodeInt64() (Int64Value, error) {
