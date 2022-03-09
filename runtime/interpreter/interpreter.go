@@ -2182,7 +2182,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 
 	case sema.Int16Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertInt16(value)
+			return ConvertInt16(interpreter, value)
 		}
 
 	case sema.Int32Type:
@@ -2724,11 +2724,11 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.Int16TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Int16Type),
-		convert: func(_ *Interpreter, value Value) Value {
-			return ConvertInt16(value)
+		convert: func(inter *Interpreter, value Value) Value {
+			return ConvertInt16(inter, value)
 		},
-		min: Int16Value(math.MinInt16),
-		max: Int16Value(math.MaxInt16),
+		min: NewUnmeteredInt16Value(math.MinInt16),
+		max: NewUnmeteredInt16Value(math.MaxInt16),
 	},
 	{
 		name:         sema.Int32TypeName,

@@ -464,7 +464,7 @@ func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedTy
 	case cadence.Int8:
 		return importInt8(inter, v), nil
 	case cadence.Int16:
-		return interpreter.Int16Value(v), nil
+		return importInt16(inter, v), nil
 	case cadence.Int32:
 		return interpreter.Int32Value(v), nil
 	case cadence.Int64:
@@ -574,6 +574,15 @@ func importInt8(inter *interpreter.Interpreter, v cadence.Int8) interpreter.Int8
 		inter,
 		func() int8 {
 			return int8(v)
+		},
+	)
+}
+
+func importInt16(inter *interpreter.Interpreter, v cadence.Int16) interpreter.Int16Value {
+	return interpreter.NewInt16Value(
+		inter,
+		func() int16 {
+			return int16(v)
 		},
 	)
 }
