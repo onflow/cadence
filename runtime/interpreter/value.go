@@ -2701,13 +2701,18 @@ func (v IntValue) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 		})
 	}
 
-	res := new(big.Int)
-	// INT33-C
-	if o.BigInt.Cmp(res) == 0 {
-		panic(DivisionByZeroError{})
-	}
-	res.Rem(v.BigInt, o.BigInt)
-	return IntValue{res}
+	return NewIntValueFromBigInt(
+		interpreter,
+		common.NewModBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			// INT33-C
+			if o.BigInt.Cmp(res) == 0 {
+				panic(DivisionByZeroError{})
+			}
+			return res.Rem(v.BigInt, o.BigInt)
+		},
+	)
 }
 
 func (v IntValue) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -6414,13 +6419,19 @@ func (v UIntValue) Mod(interpreter *Interpreter, other NumberValue) NumberValue 
 		})
 	}
 
-	res := new(big.Int)
-	// INT33-C
-	if o.BigInt.Cmp(res) == 0 {
-		panic(DivisionByZeroError{})
-	}
-	res.Rem(v.BigInt, o.BigInt)
-	return UIntValue{res}
+	return NewUIntValueFromBigInt(
+		interpreter,
+		common.NewModBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			// INT33-C
+			if o.BigInt.Cmp(res) == 0 {
+				panic(DivisionByZeroError{})
+			}
+			res.Rem(v.BigInt, o.BigInt)
+			return res
+		},
+	)
 }
 
 func (v UIntValue) Mul(interpreter *Interpreter, other NumberValue) NumberValue {

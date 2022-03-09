@@ -86,3 +86,13 @@ func NewMulBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 			BigIntByteLength(b),
 	)
 }
+
+func NewModBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
+	return NewBigIntMemoryUsage(
+		// TODO:
+		max(
+			BigIntByteLength(a),
+			BigIntByteLength(b),
+		),
+	)
+}
