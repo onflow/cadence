@@ -675,7 +675,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 			RequireValuesEqual(
 				t,
 				inter,
-				interpreter.NewIntValueFromInt64(42),
+				interpreter.NewUnmeteredIntValueFromInt64(42),
 				value,
 			)
 
@@ -812,7 +812,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 			RequireValuesEqual(
 				t,
 				inter,
-				interpreter.NewIntValueFromInt64(42),
+				interpreter.NewUnmeteredIntValueFromInt64(42),
 				value,
 			)
 

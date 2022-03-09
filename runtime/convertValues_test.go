@@ -128,7 +128,7 @@ func TestExportValue(t *testing.T) {
 		{
 			label: "SomeValue",
 			value: interpreter.NewUnmeteredSomeValueNonCopying(
-				interpreter.NewIntValueFromInt64(42),
+				interpreter.NewUnmeteredIntValueFromInt64(42),
 			),
 			expected: cadence.NewOptional(cadence.NewInt(42)),
 		},
@@ -176,7 +176,7 @@ func TestExportValue(t *testing.T) {
 						Type: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
 					common.Address{},
-					interpreter.NewIntValueFromInt64(42),
+					interpreter.NewUnmeteredIntValueFromInt64(42),
 					interpreter.NewUnmeteredStringValue("foo"),
 				)
 			},
@@ -208,9 +208,9 @@ func TestExportValue(t *testing.T) {
 						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
 					interpreter.NewUnmeteredStringValue("a"),
-					interpreter.NewIntValueFromInt64(1),
+					interpreter.NewUnmeteredIntValueFromInt64(1),
 					interpreter.NewUnmeteredStringValue("b"),
-					interpreter.NewIntValueFromInt64(2),
+					interpreter.NewUnmeteredIntValueFromInt64(2),
 				)
 			},
 			expected: cadence.NewDictionary([]cadence.KeyValuePair{
@@ -231,7 +231,7 @@ func TestExportValue(t *testing.T) {
 		},
 		{
 			label:    "Int",
-			value:    interpreter.NewIntValueFromInt64(42),
+			value:    interpreter.NewUnmeteredIntValueFromInt64(42),
 			expected: cadence.NewInt(42),
 		},
 		{
@@ -271,7 +271,7 @@ func TestExportValue(t *testing.T) {
 		},
 		{
 			label:    "UInt",
-			value:    interpreter.NewUIntValueFromUint64(42),
+			value:    interpreter.NewUnmeteredUIntValueFromUint64(42),
 			expected: cadence.NewUInt(42),
 		},
 		{
@@ -365,7 +365,7 @@ func TestExportValue(t *testing.T) {
 			valueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
 				return interpreter.NewAccountKeyValue(
 					inter,
-					interpreter.NewIntValueFromInt64(1),
+					interpreter.NewUnmeteredIntValueFromInt64(1),
 					NewPublicKeyValue(
 						inter,
 						interpreter.ReturnEmptyLocationRange,
@@ -510,7 +510,7 @@ func TestImportValue(t *testing.T) {
 			label: "SomeValue",
 			value: cadence.NewOptional(cadence.NewInt(42)),
 			expected: interpreter.NewUnmeteredSomeValueNonCopying(
-				interpreter.NewIntValueFromInt64(42),
+				interpreter.NewUnmeteredIntValueFromInt64(42),
 			),
 		},
 		{
@@ -559,7 +559,7 @@ func TestImportValue(t *testing.T) {
 					Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
 				common.Address{},
-				interpreter.NewIntValueFromInt64(42),
+				interpreter.NewUnmeteredIntValueFromInt64(42),
 				interpreter.NewUnmeteredStringValue("foo"),
 			),
 			expectedType: &sema.VariableSizedType{
@@ -590,9 +590,9 @@ func TestImportValue(t *testing.T) {
 					ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
 				interpreter.NewUnmeteredStringValue("a"),
-				interpreter.NewIntValueFromInt64(1),
+				interpreter.NewUnmeteredIntValueFromInt64(1),
 				interpreter.NewUnmeteredStringValue("b"),
-				interpreter.NewIntValueFromInt64(2),
+				interpreter.NewUnmeteredIntValueFromInt64(2),
 			),
 			value: cadence.NewDictionary([]cadence.KeyValuePair{
 				{
@@ -617,7 +617,7 @@ func TestImportValue(t *testing.T) {
 		{
 			label:    "Int",
 			value:    cadence.NewInt(42),
-			expected: interpreter.NewIntValueFromInt64(42),
+			expected: interpreter.NewUnmeteredIntValueFromInt64(42),
 		},
 		{
 			label:    "Character",
@@ -657,7 +657,7 @@ func TestImportValue(t *testing.T) {
 		{
 			label:    "UInt",
 			value:    cadence.NewUInt(42),
-			expected: interpreter.NewUIntValueFromUint64(42),
+			expected: interpreter.NewUnmeteredUIntValueFromUint64(42),
 		},
 		{
 			label:    "UInt8",
@@ -2971,7 +2971,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
 			common.Address{},
-			interpreter.NewIntValueFromInt64(42),
+			interpreter.NewUnmeteredIntValueFromInt64(42),
 			interpreter.NewUnmeteredStringValue("foo"),
 		)
 
@@ -3016,7 +3016,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 					Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
 				common.Address{},
-				interpreter.NewIntValueFromInt64(42),
+				interpreter.NewUnmeteredIntValueFromInt64(42),
 				interpreter.NewUnmeteredStringValue("foo"),
 			),
 			actual,
@@ -3149,8 +3149,8 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 				KeyType:   interpreter.PrimitiveStaticTypeString,
 				ValueType: interpreter.PrimitiveStaticTypeInt,
 			},
-			interpreter.NewUnmeteredStringValue("a"), interpreter.NewIntValueFromInt64(1),
-			interpreter.NewUnmeteredStringValue("b"), interpreter.NewIntValueFromInt64(2),
+			interpreter.NewUnmeteredStringValue("a"), interpreter.NewUnmeteredIntValueFromInt64(1),
+			interpreter.NewUnmeteredStringValue("b"), interpreter.NewUnmeteredIntValueFromInt64(2),
 		)
 
 		actual, err := exportValueWithInterpreter(value, nil, seenReferences{})
@@ -3207,8 +3207,8 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 					KeyType:   interpreter.PrimitiveStaticTypeString,
 					ValueType: interpreter.PrimitiveStaticTypeInt,
 				},
-				interpreter.NewUnmeteredStringValue("a"), interpreter.NewIntValueFromInt64(1),
-				interpreter.NewUnmeteredStringValue("b"), interpreter.NewIntValueFromInt64(2),
+				interpreter.NewUnmeteredStringValue("a"), interpreter.NewUnmeteredIntValueFromInt64(1),
+				interpreter.NewUnmeteredStringValue("b"), interpreter.NewUnmeteredIntValueFromInt64(2),
 			),
 			actual,
 		)
@@ -3276,7 +3276,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 						KeyType:   interpreter.PrimitiveStaticTypeInt8,
 						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
-					interpreter.Int8Value(1), interpreter.NewIntValueFromInt64(100),
+					interpreter.Int8Value(1), interpreter.NewUnmeteredIntValueFromInt64(100),
 					interpreter.Int8Value(2), interpreter.NewUnmeteredStringValue("hello"),
 				),
 
@@ -3288,7 +3288,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
 					interpreter.Int8Value(1), interpreter.NewUnmeteredStringValue("foo"),
-					interpreter.NewIntValueFromInt64(2), interpreter.NewIntValueFromInt64(50),
+					interpreter.NewUnmeteredIntValueFromInt64(2), interpreter.NewUnmeteredIntValueFromInt64(50),
 				),
 			),
 			actual,
@@ -4383,7 +4383,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 		inter,
 		staticArrayType,
 		common.Address{},
-		interpreter.NewIntValueFromInt64(42),
+		interpreter.NewUnmeteredIntValueFromInt64(42),
 		interpreter.NewUnmeteredStringValue("foo"),
 	)
 

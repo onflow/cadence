@@ -98,7 +98,7 @@ func TestInterpreterTracing(t *testing.T) {
 				KeyType:   interpreter.PrimitiveStaticTypeString,
 				ValueType: interpreter.PrimitiveStaticTypeInt,
 			},
-			interpreter.NewUnmeteredStringValue("test"), interpreter.NewIntValueFromInt64(42),
+			interpreter.NewUnmeteredStringValue("test"), interpreter.NewUnmeteredIntValueFromInt64(42),
 		)
 		require.NotNil(t, dict)
 		fmt.Println(traceOps)

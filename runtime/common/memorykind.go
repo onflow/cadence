@@ -48,4 +48,5 @@ const (
 	MemoryKindInterpretedFunction
 	MemoryKindHostFunction
 	MemoryKindBoundFunction
+	MemoryKindBigInt
 )

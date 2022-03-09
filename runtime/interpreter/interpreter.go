@@ -1798,8 +1798,9 @@ func (interpreter *Interpreter) declareEnumConstructor(
 
 	for i, enumCase := range enumCases {
 
-		rawValue := convert(
-			NewIntValueFromInt64(int64(i)),
+		// TODO: replace, avoid conversion
+		rawValue := interpreter.convert(
+			NewIntValueFromInt64(interpreter, int64(i)),
 			intType,
 			compositeType.EnumRawType,
 		)
@@ -2144,11 +2145,11 @@ func (interpreter *Interpreter) ConvertAndBox(
 	value Value,
 	valueType, targetType sema.Type,
 ) Value {
-	value = convert(value, valueType, targetType)
+	value = interpreter.convert(value, valueType, targetType)
 	return interpreter.BoxOptional(getLocationRange, value, targetType)
 }
 
-func convert(value Value, valueType, targetType sema.Type) Value {
+func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.Type) Value {
 	if valueType == nil {
 		return value
 	}
@@ -2162,12 +2163,12 @@ func convert(value Value, valueType, targetType sema.Type) Value {
 	switch unwrappedTargetType {
 	case sema.IntType:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertInt(value)
+			return ConvertInt(interpreter, value)
 		}
 
 	case sema.UIntType:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertUInt(value)
+			return ConvertUInt(interpreter, value)
 		}
 
 	// Int*
@@ -2696,17 +2697,17 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.IntTypeName,
 		functionType: sema.NumberConversionFunctionType(sema.IntType),
-		convert: func(_ *Interpreter, value Value) Value {
-			return ConvertInt(value)
+		convert: func(interpreter *Interpreter, value Value) Value {
+			return ConvertInt(interpreter, value)
 		},
 	},
 	{
 		name:         sema.UIntTypeName,
 		functionType: sema.NumberConversionFunctionType(sema.UIntType),
-		convert: func(_ *Interpreter, value Value) Value {
-			return ConvertUInt(value)
+		convert: func(interpreter *Interpreter, value Value) Value {
+			return ConvertUInt(interpreter, value)
 		},
-		min: NewUIntValueFromBigInt(sema.UIntTypeMin),
+		min: NewUnmeteredUIntValueFromBigInt(sema.UIntTypeMin),
 	},
 	{
 		name:         sema.Int8TypeName,
