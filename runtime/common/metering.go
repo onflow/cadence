@@ -53,16 +53,11 @@ func max(a, b int) int {
 	return b
 }
 
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 const bigIntWordSize = int(unsafe.Sizeof(big.Word(0)))
 
 func BigIntByteLength(v *big.Int) int {
+	// NOTE: big.Int.Bits() actually returns bytes:
+	// []big.Word, where big.Word = uint
 	return len(v.Bits()) * bigIntWordSize
 }
 
