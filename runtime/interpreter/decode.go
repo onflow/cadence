@@ -83,16 +83,13 @@ func decodeString(dec *cbor.StreamDecoder, memoryGauge common.MemoryGauge) (stri
 }
 
 func decodeBigInt(dec *cbor.StreamDecoder, memoryGauge common.MemoryGauge) (*big.Int, error) {
-	// TODO: meter. requires support in CBOR decoder
-	//
-	//length, err := dec.NextSize()
-	//if err != nil {
-	//	return nil, err
-	//}
-	//if memoryGauge != nil {
-	//	memoryGauge.UseMemory(common.NewBigIntMemoryUsage(int(length)))
-	//}
-	//
+	length, err := dec.NextSize()
+	if err != nil {
+		return nil, err
+	}
+	if memoryGauge != nil {
+		memoryGauge.UseMemory(common.NewBigIntMemoryUsage(int(length)))
+	}
 	return dec.DecodeBigInt()
 }
 
