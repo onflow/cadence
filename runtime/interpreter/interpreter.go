@@ -4775,7 +4775,7 @@ func (interpreter *Interpreter) invalidateResource(value Value) {
 // UseMemory delegates the memory usage to the interpreter's memory gauge, if any.
 //
 func (interpreter *Interpreter) UseMemory(usage common.MemoryUsage) {
-	if interpreter == nil || interpreter.memoryGauge == nil {
+	if interpreter.memoryGauge == nil {
 		return
 	}
 	interpreter.memoryGauge.UseMemory(usage)
