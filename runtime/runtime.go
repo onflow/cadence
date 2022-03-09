@@ -2401,7 +2401,7 @@ func (r *interpreterRuntime) newGetBlockFunction(runtimeInterface Interface) int
 			return interpreter.NewNilValue(invocation.Interpreter)
 		}
 
-		return interpreter.NewSomeValueNonCopying(block)
+		return interpreter.NewSomeValueNonCopying(invocation.Interpreter, block)
 	}
 }
 
@@ -2910,6 +2910,7 @@ func (r *interpreterRuntime) newAccountContractsGetFunction(
 
 			if len(code) > 0 {
 				return interpreter.NewSomeValueNonCopying(
+					invocation.Interpreter,
 					interpreter.NewDeployedContractValue(
 						invocation.Interpreter,
 						addressValue,
@@ -3015,6 +3016,7 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 				)
 
 				return interpreter.NewSomeValueNonCopying(
+					invocation.Interpreter,
 					interpreter.NewDeployedContractValue(
 						invocation.Interpreter,
 						addressValue,
@@ -3332,6 +3334,7 @@ func (r *interpreterRuntime) newAccountKeysGetFunction(
 			inter := invocation.Interpreter
 
 			return interpreter.NewSomeValueNonCopying(
+				inter,
 				NewAccountKeyValue(
 					inter,
 					invocation.GetLocationRange,
@@ -3390,6 +3393,7 @@ func (r *interpreterRuntime) newAccountKeysRevokeFunction(
 			)
 
 			return interpreter.NewSomeValueNonCopying(
+				inter,
 				NewAccountKeyValue(
 					inter,
 					invocation.GetLocationRange,
@@ -3661,6 +3665,7 @@ func blsAggregateSignatures(
 	aggregatedSignatureValue := interpreter.ByteSliceToByteArrayValue(inter, aggregatedSignature)
 
 	return interpreter.NewSomeValueNonCopying(
+		inter,
 		aggregatedSignatureValue,
 	)
 }
@@ -3710,6 +3715,7 @@ func blsAggregatePublicKeys(
 	)
 
 	return interpreter.NewSomeValueNonCopying(
+		inter,
 		aggregatedPublicKeyValue,
 	)
 }

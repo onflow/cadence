@@ -1758,7 +1758,7 @@ func (v *ArrayValue) FirstIndex(interpreter *Interpreter, getLocationRange func(
 
 	if result {
 		value := NewIntValueFromInt64(counter)
-		return NewSomeValueNonCopying(value)
+		return NewSomeValueNonCopying(interpreter, value)
 	}
 	return NilValue{}
 }
@@ -12173,7 +12173,7 @@ func (v *CompositeValue) OwnerValue(interpreter *Interpreter, getLocationRange f
 	// Owner must be of `PublicAccount` type.
 	interpreter.ExpectType(ownerAccount, sema.PublicAccountType, getLocationRange)
 
-	return NewSomeValueNonCopying(ownerAccount)
+	return NewSomeValueNonCopying(interpreter, ownerAccount)
 }
 
 func (v *CompositeValue) RemoveMember(
@@ -13174,7 +13174,7 @@ func (v *DictionaryValue) GetKey(interpreter *Interpreter, getLocationRange func
 
 	value, ok := v.Get(interpreter, getLocationRange, keyValue)
 	if ok {
-		return NewSomeValueNonCopying(value)
+		return NewSomeValueNonCopying(interpreter, value)
 	}
 
 	return NewNilValue(interpreter)
@@ -13463,7 +13463,7 @@ func (v *DictionaryValue) Remove(
 			existingValueStorable,
 		)
 
-	return NewSomeValueNonCopying(existingValue)
+	return NewSomeValueNonCopying(interpreter, existingValue)
 }
 
 func (v *DictionaryValue) InsertKey(
@@ -13530,7 +13530,7 @@ func (v *DictionaryValue) Insert(
 			existingValueStorable,
 		)
 
-	return NewSomeValueNonCopying(existingValue)
+	return NewSomeValueNonCopying(interpreter, existingValue)
 }
 
 type DictionaryEntryValues struct {
@@ -14092,7 +14092,13 @@ type SomeValue struct {
 	isDestroyed bool
 }
 
-func NewSomeValueNonCopying(value Value) *SomeValue {
+func NewSomeValueNonCopying(interpreter *Interpreter, value Value) *SomeValue {
+	common.UseConstantMemory(interpreter, common.MemoryKindOptional)
+
+	return NewUnmeteredSomeValueNonCopying(value)
+}
+
+func NewUnmeteredSomeValueNonCopying(value Value) *SomeValue {
 	return &SomeValue{
 		value: value,
 	}
@@ -14196,7 +14202,7 @@ func (v *SomeValue) GetMember(interpreter *Interpreter, getLocationRange func() 
 
 				newValue := transformFunction.invoke(transformInvocation)
 
-				return NewSomeValueNonCopying(newValue)
+				return NewSomeValueNonCopying(invocation.Interpreter, newValue)
 			},
 			sema.OptionalTypeMapFunctionType(interpreter.MustConvertStaticToSemaType(v.value.StaticType())),
 		)
@@ -14353,7 +14359,7 @@ func (v *SomeValue) Transfer(
 	}
 
 	if res == nil {
-		res = NewSomeValueNonCopying(innerValue)
+		res = NewSomeValueNonCopying(interpreter, innerValue)
 		res.valueStorable = nil
 		res.isDestroyed = v.isDestroyed
 	}
@@ -14363,7 +14369,7 @@ func (v *SomeValue) Transfer(
 
 func (v *SomeValue) Clone(interpreter *Interpreter) Value {
 	innerValue := v.value.Clone(interpreter)
-	return NewSomeValueNonCopying(innerValue)
+	return NewUnmeteredSomeValueNonCopying(innerValue)
 }
 
 func (v *SomeValue) DeepRemove(interpreter *Interpreter) {
@@ -15560,7 +15566,7 @@ func (PathValue) IsStorable() bool {
 	return true
 }
 
-func convertPath(domain common.PathDomain, value Value) Value {
+func convertPath(interpreter *Interpreter, domain common.PathDomain, value Value) Value {
 	stringValue, ok := value.(*StringValue)
 	if !ok {
 		return nil
@@ -15576,22 +15582,22 @@ func convertPath(domain common.PathDomain, value Value) Value {
 		return nil
 	}
 
-	return NewSomeValueNonCopying(PathValue{
+	return NewSomeValueNonCopying(interpreter, PathValue{
 		Domain:     domain,
 		Identifier: stringValue.Str,
 	})
 }
 
-func ConvertPublicPath(value Value) Value {
-	return convertPath(common.PathDomainPublic, value)
+func ConvertPublicPath(interpreter *Interpreter, value Value) Value {
+	return convertPath(interpreter, common.PathDomainPublic, value)
 }
 
-func ConvertPrivatePath(value Value) Value {
-	return convertPath(common.PathDomainPrivate, value)
+func ConvertPrivatePath(interpreter *Interpreter, value Value) Value {
+	return convertPath(interpreter, common.PathDomainPrivate, value)
 }
 
-func ConvertStoragePath(value Value) Value {
-	return convertPath(common.PathDomainStorage, value)
+func ConvertStoragePath(interpreter *Interpreter, value Value) Value {
+	return convertPath(interpreter, common.PathDomainStorage, value)
 }
 
 func (v PathValue) Storable(

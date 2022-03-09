@@ -539,7 +539,7 @@ func TestOwnerDictionarySetSome(t *testing.T) {
 		inter,
 		ReturnEmptyLocationRange,
 		keyValue,
-		NewSomeValueNonCopying(value),
+		NewUnmeteredSomeValueNonCopying(value),
 	)
 
 	queriedValue, _ := dictionary.Get(inter, ReturnEmptyLocationRange, keyValue)
@@ -882,7 +882,7 @@ func TestStringer(t *testing.T) {
 			expected: "false",
 		},
 		"some": {
-			value:    NewSomeValueNonCopying(BoolValue(true)),
+			value:    NewUnmeteredSomeValueNonCopying(BoolValue(true)),
 			expected: "true",
 		},
 		"nil": {
@@ -1067,7 +1067,7 @@ func TestVisitor(t *testing.T) {
 
 	var value Value
 	value = NewIntValueFromInt64(42)
-	value = NewSomeValueNonCopying(value)
+	value = NewUnmeteredSomeValueNonCopying(value)
 	value = NewArrayValue(
 		inter,
 		VariableSizedStaticType{
@@ -1965,10 +1965,10 @@ func TestSomeValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.True(t,
-			NewSomeValueNonCopying(NewUnmeteredStringValue("test")).Equal(
+			NewUnmeteredSomeValueNonCopying(NewUnmeteredStringValue("test")).Equal(
 				inter,
 				ReturnEmptyLocationRange,
-				NewSomeValueNonCopying(NewUnmeteredStringValue("test")),
+				NewUnmeteredSomeValueNonCopying(NewUnmeteredStringValue("test")),
 			),
 		)
 	})
@@ -1980,10 +1980,10 @@ func TestSomeValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			NewSomeValueNonCopying(NewUnmeteredStringValue("test")).Equal(
+			NewUnmeteredSomeValueNonCopying(NewUnmeteredStringValue("test")).Equal(
 				inter,
 				ReturnEmptyLocationRange,
-				NewSomeValueNonCopying(NewUnmeteredStringValue("foo")),
+				NewUnmeteredSomeValueNonCopying(NewUnmeteredStringValue("foo")),
 			),
 		)
 	})
@@ -1995,7 +1995,7 @@ func TestSomeValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			NewSomeValueNonCopying(NewUnmeteredStringValue("1")).Equal(
+			NewUnmeteredSomeValueNonCopying(NewUnmeteredStringValue("1")).Equal(
 				inter,
 				ReturnEmptyLocationRange,
 				UInt8Value(1),

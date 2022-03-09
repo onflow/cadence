@@ -149,7 +149,7 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 
 			if isOptional {
 				if _, ok := resultValue.(OptionalValue); !ok {
-					resultValue = NewSomeValueNonCopying(resultValue)
+					resultValue = NewSomeValueNonCopying(interpreter, resultValue)
 				}
 			}
 
@@ -727,7 +727,7 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 	// If this is invocation is optional chaining, wrap the result
 	// as an optional, as the result is expected to be an optional
 	if isOptionalChaining {
-		resultValue = NewSomeValueNonCopying(resultValue)
+		resultValue = NewSomeValueNonCopying(interpreter, resultValue)
 	}
 
 	return resultValue
@@ -821,7 +821,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 			// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
 			value = interpreter.BoxOptional(getLocationRange, value, expectedType)
 
-			return NewSomeValueNonCopying(value)
+			return NewSomeValueNonCopying(interpreter, value)
 
 		case ast.OperationForceCast:
 			if !isSubType {
@@ -889,12 +889,12 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 			getLocationRange := locationRangeGetter(interpreter.Location, referenceExpression.Expression)
 
 			return NewSomeValueNonCopying(
-				NewEphemeralReferenceValue(
-					interpreter,
-					innerBorrowType.Authorized,
-					result.InnerValue(interpreter, getLocationRange),
-					innerBorrowType.Type,
-				),
+				interpreter,
+				&EphemeralReferenceValue{
+					Authorized:   innerBorrowType.Authorized,
+					Value:        result.InnerValue(interpreter, getLocationRange),
+					BorrowedType: innerBorrowType.Type,
+				},
 			)
 		case NilValue:
 			return NewNilValue(interpreter)

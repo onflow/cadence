@@ -1874,7 +1874,7 @@ func EnumConstructorFunction(
 				return NewNilValue(inter.memoryGauge)
 			}
 
-			return NewSomeValueNonCopying(caseValue)
+			return NewSomeValueNonCopying(invocation.Interpreter, caseValue)
 		},
 		sema.EnumConstructorType(enumType),
 	)
@@ -2300,7 +2300,7 @@ func (interpreter *Interpreter) BoxOptional(
 			return inner
 
 		default:
-			value = NewSomeValueNonCopying(value)
+			value = NewSomeValueNonCopying(interpreter, value)
 		}
 
 		targetType = optionalType.Type
@@ -2684,7 +2684,7 @@ func (interpreter *Interpreter) writeStored(
 
 type ValueConverterDeclaration struct {
 	name         string
-	convert      func(Value) Value
+	convert      func(*Interpreter, Value) Value
 	min          Value
 	max          Value
 	functionType *sema.FunctionType
@@ -2696,14 +2696,14 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.IntTypeName,
 		functionType: sema.NumberConversionFunctionType(sema.IntType),
-		convert: func(value Value) Value {
+		convert: func(_ *Interpreter, value Value) Value {
 			return ConvertInt(value)
 		},
 	},
 	{
 		name:         sema.UIntTypeName,
 		functionType: sema.NumberConversionFunctionType(sema.UIntType),
-		convert: func(value Value) Value {
+		convert: func(_ *Interpreter, value Value) Value {
 			return ConvertUInt(value)
 		},
 		min: NewUIntValueFromBigInt(sema.UIntTypeMin),
@@ -2711,7 +2711,7 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.Int8TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Int8Type),
-		convert: func(value Value) Value {
+		convert: func(_ *Interpreter, value Value) Value {
 			return ConvertInt8(value)
 		},
 		min: Int8Value(math.MinInt8),
@@ -2720,7 +2720,7 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.Int16TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Int16Type),
-		convert: func(value Value) Value {
+		convert: func(_ *Interpreter, value Value) Value {
 			return ConvertInt16(value)
 		},
 		min: Int16Value(math.MinInt16),
@@ -2729,7 +2729,7 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.Int32TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Int32Type),
-		convert: func(value Value) Value {
+		convert: func(_ *Interpreter, value Value) Value {
 			return ConvertInt32(value)
 		},
 		min: Int32Value(math.MinInt32),
@@ -2738,7 +2738,7 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.Int64TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Int64Type),
-		convert: func(value Value) Value {
+		convert: func(_ *Interpreter, value Value) Value {
 			return ConvertInt64(value)
 		},
 		min: Int64Value(math.MinInt64),
@@ -2747,7 +2747,7 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.Int128TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Int128Type),
-		convert: func(value Value) Value {
+		convert: func(_ *Interpreter, value Value) Value {
 			return ConvertInt128(value)
 		},
 		min: NewInt128ValueFromBigInt(sema.Int128TypeMinIntBig),
@@ -2756,7 +2756,7 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.Int256TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Int256Type),
-		convert: func(value Value) Value {
+		convert: func(_ *Interpreter, value Value) Value {
 			return ConvertInt256(value)
 		},
 		min: NewInt256ValueFromBigInt(sema.Int256TypeMinIntBig),
@@ -2765,7 +2765,7 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.UInt8TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.UInt8Type),
-		convert: func(value Value) Value {
+		convert: func(_ *Interpreter, value Value) Value {
 			return ConvertUInt8(value)
 		},
 		min: UInt8Value(0),
@@ -2774,7 +2774,7 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.UInt16TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.UInt16Type),
-		convert: func(value Value) Value {
+		convert: func(_ *Interpreter, value Value) Value {
 			return ConvertUInt16(value)
 		},
 		min: UInt16Value(0),
@@ -2783,7 +2783,7 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.UInt32TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.UInt32Type),
-		convert: func(value Value) Value {
+		convert: func(_ *Interpreter, value Value) Value {
 			return ConvertUInt32(value)
 		},
 		min: UInt32Value(0),
@@ -2792,7 +2792,7 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.UInt64TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.UInt64Type),
-		convert: func(value Value) Value {
+		convert: func(_ *Interpreter, value Value) Value {
 			return ConvertUInt64(value)
 		},
 		min: UInt64Value(0),
@@ -2801,7 +2801,7 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.UInt128TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.UInt128Type),
-		convert: func(value Value) Value {
+		convert: func(_ *Interpreter, value Value) Value {
 			return ConvertUInt128(value)
 		},
 		min: NewUInt128ValueFromUint64(0),
@@ -2810,7 +2810,7 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.UInt256TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.UInt256Type),
-		convert: func(value Value) Value {
+		convert: func(_ *Interpreter, value Value) Value {
 			return ConvertUInt256(value)
 		},
 		min: NewUInt256ValueFromUint64(0),
@@ -2819,7 +2819,7 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.Word8TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Word8Type),
-		convert: func(value Value) Value {
+		convert: func(_ *Interpreter, value Value) Value {
 			return ConvertWord8(value)
 		},
 		min: Word8Value(0),
@@ -2828,7 +2828,7 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.Word16TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Word16Type),
-		convert: func(value Value) Value {
+		convert: func(_ *Interpreter, value Value) Value {
 			return ConvertWord16(value)
 		},
 		min: Word16Value(0),
@@ -2837,7 +2837,7 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.Word32TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Word32Type),
-		convert: func(value Value) Value {
+		convert: func(_ *Interpreter, value Value) Value {
 			return ConvertWord32(value)
 		},
 		min: Word32Value(0),
@@ -2846,7 +2846,7 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.Word64TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Word64Type),
-		convert: func(value Value) Value {
+		convert: func(_ *Interpreter, value Value) Value {
 			return ConvertWord64(value)
 		},
 		min: Word64Value(0),
@@ -2855,7 +2855,7 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.Fix64TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Fix64Type),
-		convert: func(value Value) Value {
+		convert: func(_ *Interpreter, value Value) Value {
 			return ConvertFix64(value)
 		},
 		min: Fix64Value(math.MinInt64),
@@ -2864,7 +2864,7 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.UFix64TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.UFix64Type),
-		convert: func(value Value) Value {
+		convert: func(_ *Interpreter, value Value) Value {
 			return ConvertUFix64(value)
 		},
 		min: UFix64Value(0),
@@ -2873,7 +2873,7 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.AddressTypeName,
 		functionType: sema.AddressConversionFunctionType,
-		convert: func(value Value) Value {
+		convert: func(_ *Interpreter, value Value) Value {
 			return ConvertAddress(value)
 		},
 	},
@@ -2974,12 +2974,15 @@ func init() {
 					return NewNilValue(invocation.Interpreter)
 				}
 
-				return NewSomeValueNonCopying(NewTypeValue(
+				return NewSomeValueNonCopying(
 					invocation.Interpreter,
-					DictionaryStaticType{
-						KeyType:   keyType,
-						ValueType: valueType,
-					}))
+					TypeValue{
+						Type: DictionaryStaticType{
+							KeyType:   keyType,
+							ValueType: valueType,
+						},
+					},
+				)
 			},
 			sema.DictionaryTypeFunctionType,
 		))
@@ -3000,10 +3003,12 @@ func init() {
 					return NewNilValue(invocation.Interpreter)
 				}
 
-				return NewSomeValueNonCopying(NewTypeValue(
+				return NewSomeValueNonCopying(
 					invocation.Interpreter,
-					ConvertSemaToStaticType(composite),
-				))
+					TypeValue{
+						Type: ConvertSemaToStaticType(composite),
+					},
+				)
 			},
 			sema.CompositeTypeFunctionType,
 		),
@@ -3025,10 +3030,12 @@ func init() {
 					return NewNilValue(invocation.Interpreter)
 				}
 
-				return NewSomeValueNonCopying(NewTypeValue(
+				return NewSomeValueNonCopying(
 					invocation.Interpreter,
-					ConvertSemaToStaticType(interfaceType),
-				))
+					TypeValue{
+						Type: ConvertSemaToStaticType(interfaceType),
+					},
+				)
 			},
 			sema.InterfaceTypeFunctionType,
 		),
@@ -3158,13 +3165,13 @@ func RestrictedTypeFunction(invocation Invocation) Value {
 	}
 
 	return NewSomeValueNonCopying(
-		NewTypeValue(
-			invocation.Interpreter,
-			&RestrictedStaticType{
+		interpreter,
+		TypeValue{
+			Type: &RestrictedStaticType{
 				Type:         ConvertSemaToStaticType(ty),
 				Restrictions: staticRestrictions,
 			},
-		),
+		},
 	)
 }
 
@@ -3191,7 +3198,7 @@ var converterFunctionValues = func() []converterFunction {
 		convert := declaration.convert
 		converterFunctionValue := NewUnmeteredHostFunctionValue(
 			func(invocation Invocation) Value {
-				val := convert(invocation.Arguments[0])
+				val := convert(invocation.Interpreter, invocation.Arguments[0])
 				if val == nil {
 					return NewNilValue(invocation.Interpreter)
 				} else {
@@ -3342,12 +3349,12 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 				}
 
 				return NewSomeValueNonCopying(
-					NewTypeValue(
-						invocation.Interpreter,
-						CapabilityStaticType{
+					invocation.Interpreter,
+					TypeValue{
+						Type: CapabilityStaticType{
 							BorrowType: ty,
 						},
-					),
+					},
 				)
 			},
 			sema.CapabilityTypeFunctionType,
@@ -3770,10 +3777,10 @@ func (interpreter *Interpreter) authAccountTypeFunction(addressValue AddressValu
 			}
 
 			return NewSomeValueNonCopying(
-				NewTypeValue(
-					invocation.Interpreter,
-					value.StaticType(),
-				),
+				invocation.Interpreter,
+				TypeValue{
+					Type: value.StaticType(),
+				},
 			)
 		},
 
@@ -3849,7 +3856,7 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 				interpreter.writeStored(address, domain, identifier, nil)
 			}
 
-			return NewSomeValueNonCopying(transferredValue)
+			return NewSomeValueNonCopying(invocation.Interpreter, transferredValue)
 		},
 
 		// same as sema.AuthAccountTypeCopyFunctionType
@@ -3902,7 +3909,7 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 				return NewNilValue(invocation.Interpreter)
 			}
 
-			return NewSomeValueNonCopying(reference)
+			return NewSomeValueNonCopying(invocation.Interpreter, reference)
 		},
 		sema.AuthAccountTypeBorrowFunctionType,
 	)
@@ -3963,7 +3970,12 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 			)
 
 			return NewSomeValueNonCopying(
-				NewCapabilityValue(invocation.Interpreter, addressValue, newCapabilityPath, borrowStaticType),
+				invocation.Interpreter,
+				&CapabilityValue{
+					Address:    addressValue,
+					Path:       newCapabilityPath,
+					BorrowType: borrowStaticType,
+				},
 			)
 
 		},
@@ -3999,7 +4011,7 @@ func (interpreter *Interpreter) accountGetLinkTargetFunction(addressValue Addres
 				return NewNilValue(invocation.Interpreter)
 			}
 
-			return NewSomeValueNonCopying(link.TargetPath)
+			return NewSomeValueNonCopying(invocation.Interpreter, link.TargetPath)
 		},
 		sema.AccountTypeGetLinkTargetFunctionType,
 	)
@@ -4097,7 +4109,7 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 				return NewNilValue(invocation.Interpreter)
 			}
 
-			return NewSomeValueNonCopying(reference)
+			return NewSomeValueNonCopying(invocation.Interpreter, reference)
 		},
 		sema.CapabilityTypeBorrowFunctionType(borrowType),
 	)

@@ -19,22 +19,23 @@ func _() {
 	_ = x[MemoryKindArray-8]
 	_ = x[MemoryKindDictionary-9]
 	_ = x[MemoryKindComposite-10]
-	_ = x[MemoryKindNil-11]
-	_ = x[MemoryKindVoid-12]
-	_ = x[MemoryKindTypeValue-13]
-	_ = x[MemoryKindPathValue-14]
-	_ = x[MemoryKindCapabilityValue-15]
-	_ = x[MemoryKindLinkValue-16]
-	_ = x[MemoryKindStorageReferenceValue-17]
-	_ = x[MemoryKindEphemeralReferenceValue-18]
-	_ = x[MemoryKindInterpretedFunction-19]
-	_ = x[MemoryKindHostFunction-20]
-	_ = x[MemoryKindBoundFunction-21]
+	_ = x[MemoryKindOptional-11]
+	_ = x[MemoryKindNil-12]
+	_ = x[MemoryKindVoid-13]
+	_ = x[MemoryKindTypeValue-14]
+	_ = x[MemoryKindPathValue-15]
+	_ = x[MemoryKindCapabilityValue-16]
+	_ = x[MemoryKindLinkValue-17]
+	_ = x[MemoryKindStorageReferenceValue-18]
+	_ = x[MemoryKindEphemeralReferenceValue-19]
+	_ = x[MemoryKindInterpretedFunction-20]
+	_ = x[MemoryKindHostFunction-21]
+	_ = x[MemoryKindBoundFunction-22]
 }
 
-const _MemoryKind_name = "UnknownBoolAddressStringCharacterMetaTypeBlockNumberArrayDictionaryCompositeNilVoidTypeValuePathValueCapabilityValueLinkValueStorageReferenceValueEphemeralReferenceValueInterpretedFunctionHostFunctionBoundFunction"
+const _MemoryKind_name = "UnknownBoolAddressStringCharacterMetaTypeBlockNumberArrayDictionaryCompositeOptionalNilVoidTypeValuePathValueCapabilityValueLinkValueStorageReferenceValueEphemeralReferenceValueInterpretedFunctionHostFunctionBoundFunction"
 
-var _MemoryKind_index = [...]uint8{0, 7, 11, 18, 24, 33, 41, 46, 52, 57, 67, 76, 79, 83, 92, 101, 116, 125, 146, 169, 188, 200, 213}
+var _MemoryKind_index = [...]uint8{0, 7, 11, 18, 24, 33, 41, 46, 52, 57, 67, 76, 84, 87, 91, 100, 109, 124, 133, 154, 177, 196, 208, 221}
 
 func (i MemoryKind) String() string {
 	if i >= MemoryKind(len(_MemoryKind_index)-1) {
