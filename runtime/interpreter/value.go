@@ -1822,7 +1822,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func()
 					invocation.GetLocationRange,
 					otherArray,
 				)
-				return NewVoidValue(interpreter)
+				return NewVoidValue(invocation.Interpreter)
 			},
 			sema.ArrayAppendAllFunctionType(
 				v.SemaType(interpreter),
