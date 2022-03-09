@@ -2500,11 +2500,14 @@ type IntValue struct {
 	BigInt *big.Int
 }
 
+const int64Size = int(unsafe.Sizeof(int64(0)))
+
+var int64BigIntMemoryUsage = common.NewBigIntMemoryUsage(int64Size)
+
 func NewIntValueFromInt64(memoryGauge common.MemoryGauge, value int64) IntValue {
-	const int64Size = int(unsafe.Sizeof(int64(0)))
 	return NewIntValueFromBigInt(
 		memoryGauge,
-		common.NewBigIntMemoryUsage(int64Size),
+		int64BigIntMemoryUsage,
 		func() *big.Int {
 			return big.NewInt(value)
 		},
@@ -6193,11 +6196,14 @@ type UIntValue struct {
 	BigInt *big.Int
 }
 
+const uint64Size = int(unsafe.Sizeof(uint64(0)))
+
+var uint64BigIntMemoryUsage = common.NewBigIntMemoryUsage(uint64Size)
+
 func NewUIntValueFromUint64(memoryGauge common.MemoryGauge, value uint64) UIntValue {
-	const uint64Size = int(unsafe.Sizeof(uint64(0)))
 	return NewUIntValueFromBigInt(
 		memoryGauge,
-		common.NewBigIntMemoryUsage(uint64Size),
+		uint64BigIntMemoryUsage,
 		func() *big.Int {
 			return new(big.Int).SetUint64(value)
 		},
