@@ -773,6 +773,28 @@ func TestInterpretIntMetering(t *testing.T) {
 		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
 	})
 
+	t.Run("division", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let x = 10 / 2
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		// TODO:
+		// creation: 8 + 8
+		// result: 8 = max(8, 8)
+		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindBigInt))
+	})
+
 	t.Run("modulo", func(t *testing.T) {
 
 		t.Parallel()
@@ -926,6 +948,28 @@ func TestInterpretUIntMetering(t *testing.T) {
 		// creation: 8 + 8
 		// result: 16 = 8 + 8
 		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
+	})
+
+	t.Run("division", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let x = 10 as UInt / 2 as UInt
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		// TODO:
+		// creation: 8 + 8
+		// result: 8 = max(8, 8)
+		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("modulo", func(t *testing.T) {
