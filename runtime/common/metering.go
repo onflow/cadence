@@ -63,6 +63,7 @@ func BigIntByteLength(v *big.Int) int {
 
 func NewPlusBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 	return NewBigIntMemoryUsage(
+		// TODO:
 		max(
 			BigIntByteLength(a),
 			BigIntByteLength(b),
@@ -82,6 +83,7 @@ func NewMinusBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 
 func NewMulBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 	return NewBigIntMemoryUsage(
+		// TODO:
 		BigIntByteLength(a) +
 			BigIntByteLength(b),
 	)
@@ -98,6 +100,36 @@ func NewModBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 }
 
 func NewDivBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
+	return NewBigIntMemoryUsage(
+		// TODO:
+		max(
+			BigIntByteLength(a),
+			BigIntByteLength(b),
+		),
+	)
+}
+
+func NewBitwiseOrBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
+	return NewBigIntMemoryUsage(
+		// TODO:
+		max(
+			BigIntByteLength(a),
+			BigIntByteLength(b),
+		),
+	)
+}
+
+func NewBitwiseXorBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
+	return NewBigIntMemoryUsage(
+		// TODO:
+		max(
+			BigIntByteLength(a),
+			BigIntByteLength(b),
+		),
+	)
+}
+
+func NewBitwiseAndBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 	return NewBigIntMemoryUsage(
 		// TODO:
 		max(

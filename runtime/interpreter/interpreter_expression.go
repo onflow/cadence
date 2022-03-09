@@ -240,7 +240,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.BitwiseOr(right)
+		return left.BitwiseOr(interpreter, right)
 
 	case ast.OperationBitwiseXor:
 		left, leftOk := leftValue.(IntegerValue)
@@ -248,7 +248,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.BitwiseXor(right)
+		return left.BitwiseXor(interpreter, right)
 
 	case ast.OperationBitwiseAnd:
 		left, leftOk := leftValue.(IntegerValue)
@@ -256,7 +256,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.BitwiseAnd(right)
+		return left.BitwiseAnd(interpreter, right)
 
 	case ast.OperationBitwiseLeftShift:
 		left, leftOk := leftValue.(IntegerValue)
