@@ -448,20 +448,32 @@ func (interpreter *Interpreter) VisitIntegerExpression(expression *ast.IntegerEx
 
 	// The ranges are checked at the checker level.
 	// Hence, it is safe to create the value without validation.
-	return NewIntegerValueFromBigInt(value, typ)
+	return interpreter.NewIntegerValueFromBigInt(value, typ)
 
 }
 
 // NewIntegerValueFromBigInt creates a Cadence interpreter value of a given subtype.
 // This method assumes the range validations are done prior to calling this method. (i.e: at semantic level)
 //
-func NewIntegerValueFromBigInt(value *big.Int, integerSubType sema.Type) Value {
+func (interpreter *Interpreter) NewIntegerValueFromBigInt(value *big.Int, integerSubType sema.Type) Value {
 	switch integerSubType {
 	case sema.IntType, sema.IntegerType, sema.SignedIntegerType:
-		// TODO: meter
+		memoryGauge := interpreter.memoryGauge
+		if memoryGauge != nil {
+			memoryUsage := common.NewBigIntMemoryUsage(
+				common.BigIntByteLength(value),
+			)
+			memoryGauge.UseMemory(memoryUsage)
+		}
 		return NewUnmeteredIntValueFromBigInt(value)
 	case sema.UIntType:
-		// TODO: meter
+		memoryGauge := interpreter.memoryGauge
+		if memoryGauge != nil {
+			memoryUsage := common.NewBigIntMemoryUsage(
+				common.BigIntByteLength(value),
+			)
+			memoryGauge.UseMemory(memoryUsage)
+		}
 		return NewUnmeteredUIntValueFromBigInt(value)
 
 	// Int*
