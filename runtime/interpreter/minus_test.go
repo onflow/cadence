@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	. "github.com/onflow/cadence/runtime/interpreter"
 )
@@ -2582,11 +2583,14 @@ func TestMinusUInt(t *testing.T) {
 		{0xff, 0xff, true},
 	}
 
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
+
 	for _, test := range tests {
 		f := func() {
 			a := NewUnmeteredUIntValueFromUint64(test.a)
 			b := NewUnmeteredUIntValueFromUint64(test.b)
-			a.Minus(nil, b)
+			a.Minus(inter, b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)

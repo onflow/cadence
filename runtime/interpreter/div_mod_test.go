@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	. "github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -3327,10 +3328,13 @@ func TestNegativeMod(t *testing.T) {
 			}
 		}
 
+		inter, err := NewInterpreter(nil, nil)
+		require.NoError(t, err)
+
 		for _, test := range tests {
 			assert.Equal(t,
 				test.expected,
-				test.a.Mod(nil, test.b),
+				test.a.Mod(inter, test.b),
 			)
 		}
 	})
