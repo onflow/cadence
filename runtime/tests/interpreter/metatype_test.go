@@ -731,7 +731,7 @@ func TestInterpretGetType(t *testing.T) {
 			storageMap.WriteValue(
 				inter,
 				storagePath.Identifier,
-				interpreter.NewIntValueFromInt64(2),
+				interpreter.NewUnmeteredIntValueFromInt64(2),
 			)
 
 			result, err := inter.Invoke("test")

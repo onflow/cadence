@@ -1094,7 +1094,7 @@ func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) inte
 	case interpreter.IntValue:
 		var n big.Int
 		n.Set(v.BigInt)
-		return interpreter.NewIntValueFromBigInt(&n)
+		return interpreter.NewUnmeteredIntValueFromBigInt(&n)
 	case interpreter.Int8Value,
 		interpreter.Int16Value,
 		interpreter.Int32Value,
@@ -1113,7 +1113,7 @@ func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) inte
 	case interpreter.UIntValue:
 		var n big.Int
 		n.Set(v.BigInt)
-		return interpreter.NewUIntValueFromBigInt(&n)
+		return interpreter.NewUnmeteredUIntValueFromBigInt(&n)
 	case interpreter.UInt8Value,
 		interpreter.UInt16Value,
 		interpreter.UInt32Value,
@@ -1276,7 +1276,7 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 
 	// Int
 	case Int:
-		return interpreter.NewIntValueFromInt64(int64(sign()) * rand.Int63())
+		return interpreter.NewUnmeteredIntValueFromInt64(int64(sign()) * rand.Int63())
 	case Int8:
 		return interpreter.Int8Value(randomInt(math.MaxUint8))
 	case Int16:
@@ -1292,7 +1292,7 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 
 	// UInt
 	case UInt:
-		return interpreter.NewUIntValueFromUint64(rand.Uint64())
+		return interpreter.NewUnmeteredUIntValueFromUint64(rand.Uint64())
 	case UInt8:
 		return interpreter.UInt8Value(randomInt(math.MaxUint8))
 	case UInt16:

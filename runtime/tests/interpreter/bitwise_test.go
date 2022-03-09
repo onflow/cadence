@@ -30,7 +30,7 @@ import (
 var bitwiseTestValueFunctions = map[string]func(int) interpreter.NumberValue{
 	// Int*
 	"Int": func(v int) interpreter.NumberValue {
-		return interpreter.NewIntValueFromInt64(int64(v))
+		return interpreter.NewUnmeteredIntValueFromInt64(int64(v))
 	},
 	"Int8": func(v int) interpreter.NumberValue {
 		return interpreter.Int8Value(v)
@@ -52,7 +52,7 @@ var bitwiseTestValueFunctions = map[string]func(int) interpreter.NumberValue{
 	},
 	// UInt*
 	"UInt": func(v int) interpreter.NumberValue {
-		return interpreter.NewUIntValueFromUint64(uint64(v))
+		return interpreter.NewUnmeteredUIntValueFromUint64(uint64(v))
 	},
 	"UInt8": func(v int) interpreter.NumberValue {
 		return interpreter.UInt8Value(v)

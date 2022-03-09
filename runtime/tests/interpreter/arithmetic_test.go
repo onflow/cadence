@@ -33,7 +33,7 @@ import (
 
 var integerTestValues = map[string]interpreter.NumberValue{
 	// Int*
-	"Int":    interpreter.NewIntValueFromInt64(60),
+	"Int":    interpreter.NewUnmeteredIntValueFromInt64(60),
 	"Int8":   interpreter.Int8Value(60),
 	"Int16":  interpreter.Int16Value(60),
 	"Int32":  interpreter.Int32Value(60),
@@ -41,7 +41,7 @@ var integerTestValues = map[string]interpreter.NumberValue{
 	"Int128": interpreter.NewInt128ValueFromInt64(60),
 	"Int256": interpreter.NewInt256ValueFromInt64(60),
 	// UInt*
-	"UInt":    interpreter.NewUIntValueFromUint64(60),
+	"UInt":    interpreter.NewUnmeteredUIntValueFromUint64(60),
 	"UInt8":   interpreter.UInt8Value(60),
 	"UInt16":  interpreter.UInt16Value(60),
 	"UInt32":  interpreter.UInt32Value(60),
@@ -550,9 +550,9 @@ func TestInterpretSaturatedArithmeticFunctions(t *testing.T) {
 		sema.UIntType: {
 			subtract: testCalls{
 				underflow: testCall{
-					interpreter.NewUIntValueFromBigInt(sema.UIntTypeMin),
-					interpreter.NewUIntValueFromUint64(2),
-					interpreter.NewUIntValueFromBigInt(sema.UIntTypeMin),
+					interpreter.NewUnmeteredUIntValueFromBigInt(sema.UIntTypeMin),
+					interpreter.NewUnmeteredUIntValueFromUint64(2),
+					interpreter.NewUnmeteredUIntValueFromBigInt(sema.UIntTypeMin),
 				},
 			},
 		},

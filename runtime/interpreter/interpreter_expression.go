@@ -200,7 +200,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.Plus(right)
+		return left.Plus(interpreter, right)
 
 	case ast.OperationMinus:
 		left, leftOk := leftValue.(NumberValue)
@@ -216,7 +216,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.Mod(right)
+		return left.Mod(interpreter, right)
 
 	case ast.OperationMul:
 		left, leftOk := leftValue.(NumberValue)
@@ -224,7 +224,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.Mul(right)
+		return left.Mul(interpreter, right)
 
 	case ast.OperationDiv:
 		left, leftOk := leftValue.(NumberValue)
@@ -415,7 +415,7 @@ func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpres
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
-		return integerValue.Negate()
+		return integerValue.Negate(interpreter)
 
 	case ast.OperationMove:
 		interpreter.invalidateResource(value)
@@ -447,20 +447,34 @@ func (interpreter *Interpreter) VisitIntegerExpression(expression *ast.IntegerEx
 	}
 
 	// The ranges are checked at the checker level.
-	// Hence it is safe to create the value without validation.
-	return NewIntValue(value, typ)
+	// Hence, it is safe to create the value without validation.
+	return interpreter.NewIntegerValueFromBigInt(value, typ)
 
 }
 
-// NewIntValue creates a Cadence interpreter value of a given subtype.
+// NewIntegerValueFromBigInt creates a Cadence interpreter value of a given subtype.
 // This method assumes the range validations are done prior to calling this method. (i.e: at semantic level)
 //
-func NewIntValue(value *big.Int, intSubType sema.Type) Value {
-	switch intSubType {
+func (interpreter *Interpreter) NewIntegerValueFromBigInt(value *big.Int, integerSubType sema.Type) Value {
+	switch integerSubType {
 	case sema.IntType, sema.IntegerType, sema.SignedIntegerType:
-		return NewIntValueFromBigInt(value)
+		memoryGauge := interpreter.memoryGauge
+		if memoryGauge != nil {
+			memoryUsage := common.NewBigIntMemoryUsage(
+				common.BigIntByteLength(value),
+			)
+			memoryGauge.UseMemory(memoryUsage)
+		}
+		return NewUnmeteredIntValueFromBigInt(value)
 	case sema.UIntType:
-		return NewUIntValueFromBigInt(value)
+		memoryGauge := interpreter.memoryGauge
+		if memoryGauge != nil {
+			memoryUsage := common.NewBigIntMemoryUsage(
+				common.BigIntByteLength(value),
+			)
+			memoryGauge.UseMemory(memoryUsage)
+		}
+		return NewUnmeteredUIntValueFromBigInt(value)
 
 	// Int*
 	case sema.Int8Type:
