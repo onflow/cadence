@@ -82,17 +82,6 @@ func decodeString(dec *cbor.StreamDecoder, memoryGauge common.MemoryGauge) (stri
 	return dec.DecodeString()
 }
 
-func decodeBigInt(dec *cbor.StreamDecoder, memoryGauge common.MemoryGauge) (*big.Int, error) {
-	length, err := dec.NextSize()
-	if err != nil {
-		return nil, err
-	}
-	if memoryGauge != nil {
-		memoryGauge.UseMemory(common.NewBigIntMemoryUsage(int(length)))
-	}
-	return dec.DecodeBigInt()
-}
-
 func DecodeStorable(
 	decoder *cbor.StreamDecoder,
 	slabStorageID atree.StorageID,
@@ -332,8 +321,20 @@ func (d StorableDecoder) decodeStringValue() (*StringValue, error) {
 	return NewUnmeteredStringValue(str), nil
 }
 
+func (d StorableDecoder) decodeBigInt() (*big.Int, error) {
+	length, err := d.decoder.NextSize()
+	if err != nil {
+		return nil, err
+	}
+	memoryGauge := d.memoryGauge
+	if memoryGauge != nil {
+		memoryGauge.UseMemory(common.NewBigIntMemoryUsage(int(length)))
+	}
+	return d.decoder.DecodeBigInt()
+}
+
 func (d StorableDecoder) decodeInt() (IntValue, error) {
-	bigInt, err := decodeBigInt(d.decoder, d.memoryGauge)
+	bigInt, err := d.decodeBigInt()
 	if err != nil {
 		if err, ok := err.(*cbor.WrongTypeError); ok {
 			return IntValue{}, fmt.Errorf(
@@ -427,7 +428,7 @@ func (d StorableDecoder) decodeInt64() (Int64Value, error) {
 }
 
 func (d StorableDecoder) decodeInt128() (Int128Value, error) {
-	bigInt, err := decodeBigInt(d.decoder, d.memoryGauge)
+	bigInt, err := d.decodeBigInt()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return Int128Value{}, fmt.Errorf("invalid Int128 encoding: %s", e.ActualType.String())
@@ -449,7 +450,7 @@ func (d StorableDecoder) decodeInt128() (Int128Value, error) {
 }
 
 func (d StorableDecoder) decodeInt256() (Int256Value, error) {
-	bigInt, err := decodeBigInt(d.decoder, d.memoryGauge)
+	bigInt, err := d.decodeBigInt()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return Int256Value{}, fmt.Errorf("invalid Int256 encoding: %s", e.ActualType.String())
@@ -471,7 +472,7 @@ func (d StorableDecoder) decodeInt256() (Int256Value, error) {
 }
 
 func (d StorableDecoder) decodeUInt() (UIntValue, error) {
-	bigInt, err := decodeBigInt(d.decoder, d.memoryGauge)
+	bigInt, err := d.decodeBigInt()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return UIntValue{}, fmt.Errorf("invalid UInt encoding: %s", e.ActualType.String())
@@ -546,7 +547,7 @@ func (d StorableDecoder) decodeUInt64() (UInt64Value, error) {
 }
 
 func (d StorableDecoder) decodeUInt128() (UInt128Value, error) {
-	bigInt, err := decodeBigInt(d.decoder, d.memoryGauge)
+	bigInt, err := d.decodeBigInt()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return UInt128Value{}, fmt.Errorf("invalid UInt128 encoding: %s", e.ActualType.String())
@@ -567,7 +568,7 @@ func (d StorableDecoder) decodeUInt128() (UInt128Value, error) {
 }
 
 func (d StorableDecoder) decodeUInt256() (UInt256Value, error) {
-	bigInt, err := decodeBigInt(d.decoder, d.memoryGauge)
+	bigInt, err := d.decodeBigInt()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return UInt256Value{}, fmt.Errorf("invalid UInt256 encoding: %s", e.ActualType.String())
