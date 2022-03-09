@@ -485,11 +485,26 @@ func (interpreter *Interpreter) NewIntegerValueFromBigInt(value *big.Int, intege
 			},
 		)
 	case sema.Int16Type:
-		return Int16Value(value.Int64())
+		return NewInt16Value(
+			interpreter,
+			func() int16 {
+				return int16(value.Int64())
+			},
+		)
 	case sema.Int32Type:
-		return Int32Value(value.Int64())
+		return NewInt32Value(
+			interpreter,
+			func() int32 {
+				return int32(value.Int64())
+			},
+		)
 	case sema.Int64Type:
-		return Int64Value(value.Int64())
+		return NewInt64Value(
+			interpreter,
+			func() int64 {
+				return value.Int64()
+			},
+		)
 	case sema.Int128Type:
 		return NewInt128ValueFromBigInt(value)
 	case sema.Int256Type:

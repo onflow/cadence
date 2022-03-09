@@ -2192,7 +2192,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 
 	case sema.Int64Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertInt64(value)
+			return ConvertInt64(interpreter, value)
 		}
 
 	case sema.Int128Type:
@@ -2742,11 +2742,11 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.Int64TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Int64Type),
-		convert: func(_ *Interpreter, value Value) Value {
-			return ConvertInt64(value)
+		convert: func(interpreter *Interpreter, value Value) Value {
+			return ConvertInt64(interpreter, value)
 		},
-		min: Int64Value(math.MinInt64),
-		max: Int64Value(math.MaxInt64),
+		min: NewUnmeteredInt64Value(math.MinInt64),
+		max: NewUnmeteredInt64Value(math.MaxInt64),
 	},
 	{
 		name:         sema.Int128TypeName,

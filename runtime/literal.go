@@ -206,7 +206,7 @@ func convertIntValue(
 	case sema.Int32Type:
 		return interpreter.ConvertInt32(memoryGauge, intValue), nil
 	case sema.Int64Type:
-		return interpreter.ConvertInt64(intValue), nil
+		return interpreter.ConvertInt64(memoryGauge, intValue), nil
 	case sema.Int128Type:
 		return interpreter.ConvertInt128(intValue), nil
 	case sema.Int256Type:

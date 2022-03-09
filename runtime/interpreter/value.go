@@ -4700,6 +4700,18 @@ func (Int32Value) ChildStorables() []atree.Storable {
 
 type Int64Value int64
 
+var int64MemoryUsage = common.NewNumberMemoryUsage(int(unsafe.Sizeof(Int64Value(0))))
+
+func NewInt64Value(gauge common.MemoryGauge, valueGetter func() int64) Int64Value {
+	common.UseMemory(gauge, int64MemoryUsage)
+
+	return NewUnmeteredInt64Value(valueGetter())
+}
+
+func NewUnmeteredInt64Value(value int64) Int64Value {
+	return Int64Value(value)
+}
+
 var _ Value = Int64Value(0)
 var _ atree.Storable = Int64Value(0)
 var _ NumberValue = Int64Value(0)
@@ -4740,12 +4752,17 @@ func (v Int64Value) ToInt() int {
 	return int(v)
 }
 
-func (v Int64Value) Negate(*Interpreter) NumberValue {
+func (v Int64Value) Negate(interpreter *Interpreter) NumberValue {
 	// INT32-C
 	if v == math.MinInt64 {
 		panic(OverflowError{})
 	}
-	return -v
+
+	valueGetter := func() int64 {
+		return int64(-v)
+	}
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
 func safeAddInt64(a, b int64) int64 {
@@ -4768,7 +4785,11 @@ func (v Int64Value) Plus(interpreter *Interpreter, other NumberValue) NumberValu
 		})
 	}
 
-	return Int64Value(safeAddInt64(int64(v), int64(o)))
+	valueGetter := func() int64 {
+		return safeAddInt64(int64(v), int64(o))
+	}
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
 func (v Int64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -4781,13 +4802,17 @@ func (v Int64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) 
 		})
 	}
 
-	// INT32-C
-	if (o > 0) && (v > (math.MaxInt64 - o)) {
-		return Int64Value(math.MaxInt64)
-	} else if (o < 0) && (v < (math.MinInt64 - o)) {
-		return Int64Value(math.MinInt64)
+	valueGetter := func() int64 {
+		// INT32-C
+		if (o > 0) && (v > (math.MaxInt64 - o)) {
+			return math.MaxInt64
+		} else if (o < 0) && (v < (math.MinInt64 - o)) {
+			return math.MinInt64
+		}
+		return int64(v + o)
 	}
-	return v + o
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
 func (v Int64Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -4806,7 +4831,12 @@ func (v Int64Value) Minus(interpreter *Interpreter, other NumberValue) NumberVal
 	} else if (o < 0) && (v > (math.MaxInt64 + o)) {
 		panic(UnderflowError{})
 	}
-	return v - o
+
+	valueGetter := func() int64 {
+		return int64(v - o)
+	}
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
 func (v Int64Value) SaturatingMinus(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -4819,13 +4849,17 @@ func (v Int64Value) SaturatingMinus(interpreter *Interpreter, other NumberValue)
 		})
 	}
 
-	// INT32-C
-	if (o > 0) && (v < (math.MinInt64 + o)) {
-		return Int64Value(math.MinInt64)
-	} else if (o < 0) && (v > (math.MaxInt64 + o)) {
-		return Int64Value(math.MaxInt64)
+	valueGetter := func() int64 {
+		// INT32-C
+		if (o > 0) && (v < (math.MinInt64 + o)) {
+			return math.MinInt64
+		} else if (o < 0) && (v > (math.MaxInt64 + o)) {
+			return math.MaxInt64
+		}
+		return int64(v - o)
 	}
-	return v - o
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
 func (v Int64Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -4842,7 +4876,12 @@ func (v Int64Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
-	return v % o
+
+	valueGetter := func() int64 {
+		return int64(v % o)
+	}
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
 func (v Int64Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -4881,7 +4920,12 @@ func (v Int64Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue
 			}
 		}
 	}
-	return v * o
+
+	valueGetter := func() int64 {
+		return int64(v * o)
+	}
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
 func (v Int64Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -4894,33 +4938,37 @@ func (v Int64Value) SaturatingMul(interpreter *Interpreter, other NumberValue) N
 		})
 	}
 
-	// INT32-C
-	if v > 0 {
-		if o > 0 {
-			// positive * positive = positive. overflow?
-			if v > (math.MaxInt64 / o) {
-				return Int64Value(math.MaxInt64)
+	valueGetter := func() int64 {
+		// INT32-C
+		if v > 0 {
+			if o > 0 {
+				// positive * positive = positive. overflow?
+				if v > (math.MaxInt64 / o) {
+					return math.MaxInt64
+				}
+			} else {
+				// positive * negative = negative. underflow?
+				if o < (math.MinInt64 / v) {
+					return math.MinInt64
+				}
 			}
 		} else {
-			// positive * negative = negative. underflow?
-			if o < (math.MinInt64 / v) {
-				return Int64Value(math.MinInt64)
+			if o > 0 {
+				// negative * positive = negative. underflow?
+				if v < (math.MinInt64 / o) {
+					return math.MinInt64
+				}
+			} else {
+				// negative * negative = positive. overflow?
+				if (v != 0) && (o < (math.MaxInt64 / v)) {
+					return math.MaxInt64
+				}
 			}
 		}
-	} else {
-		if o > 0 {
-			// negative * positive = negative. underflow?
-			if v < (math.MinInt64 / o) {
-				return Int64Value(math.MinInt64)
-			}
-		} else {
-			// negative * negative = positive. overflow?
-			if (v != 0) && (o < (math.MaxInt64 / v)) {
-				return Int64Value(math.MaxInt64)
-			}
-		}
+		return int64(v * o)
 	}
-	return v * o
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
 func (v Int64Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -4940,7 +4988,12 @@ func (v Int64Value) Div(interpreter *Interpreter, other NumberValue) NumberValue
 	} else if (v == math.MinInt64) && (o == -1) {
 		panic(OverflowError{})
 	}
-	return v / o
+
+	valueGetter := func() int64 {
+		return int64(v / o)
+	}
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
 func (v Int64Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -4953,14 +5006,18 @@ func (v Int64Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) N
 		})
 	}
 
-	// INT33-C
-	// https://golang.org/ref/spec#Integer_operators
-	if o == 0 {
-		panic(DivisionByZeroError{})
-	} else if (v == math.MinInt64) && (o == -1) {
-		return Int64Value(math.MaxInt64)
+	valueGetter := func() int64 {
+		// INT33-C
+		// https://golang.org/ref/spec#Integer_operators
+		if o == 0 {
+			panic(DivisionByZeroError{})
+		} else if (v == math.MinInt64) && (o == -1) {
+			return math.MaxInt64
+		}
+		return int64(v / o)
 	}
-	return v / o
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
 func (v Int64Value) Less(other NumberValue) BoolValue {
@@ -5032,28 +5089,28 @@ func (v Int64Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []
 	return scratch[:9]
 }
 
-func ConvertInt64(value Value) Int64Value {
-	var res int64
+func ConvertInt64(memoryGauge common.MemoryGauge, value Value) Int64Value {
+	converter := func() int64 {
+		switch value := value.(type) {
+		case BigNumberValue:
+			v := value.ToBigInt()
+			if v.Cmp(sema.Int64TypeMaxInt) > 0 {
+				panic(OverflowError{})
+			} else if v.Cmp(sema.Int64TypeMinInt) < 0 {
+				panic(UnderflowError{})
+			}
+			return v.Int64()
 
-	switch value := value.(type) {
-	case BigNumberValue:
-		v := value.ToBigInt()
-		if v.Cmp(sema.Int64TypeMaxInt) > 0 {
-			panic(OverflowError{})
-		} else if v.Cmp(sema.Int64TypeMinInt) < 0 {
-			panic(UnderflowError{})
+		case NumberValue:
+			v := value.ToInt()
+			return int64(v)
+
+		default:
+			panic(errors.NewUnreachableError())
 		}
-		res = v.Int64()
-
-	case NumberValue:
-		v := value.ToInt()
-		res = int64(v)
-
-	default:
-		panic(errors.NewUnreachableError())
 	}
 
-	return Int64Value(res)
+	return NewInt64Value(memoryGauge, converter)
 }
 
 func (v Int64Value) BitwiseOr(other IntegerValue) IntegerValue {
