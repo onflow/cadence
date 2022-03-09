@@ -208,7 +208,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.Minus(right)
+		return left.Minus(interpreter, right)
 
 	case ast.OperationMod:
 		left, leftOk := leftValue.(NumberValue)
@@ -232,7 +232,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.Div(right)
+		return left.Div(interpreter, right)
 
 	case ast.OperationBitwiseOr:
 		left, leftOk := leftValue.(IntegerValue)
@@ -478,7 +478,12 @@ func (interpreter *Interpreter) NewIntegerValueFromBigInt(value *big.Int, intege
 
 	// Int*
 	case sema.Int8Type:
-		return Int8Value(value.Int64())
+		return NewInt8Value(
+			interpreter,
+			func() int8 {
+				return int8(value.Int64())
+			},
+		)
 	case sema.Int16Type:
 		return Int16Value(value.Int64())
 	case sema.Int32Type:

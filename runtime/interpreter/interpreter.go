@@ -2177,7 +2177,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 	// Int*
 	case sema.Int8Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertInt8(value)
+			return ConvertInt8(interpreter, value)
 		}
 
 	case sema.Int16Type:
@@ -2715,11 +2715,11 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.Int8TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Int8Type),
-		convert: func(_ *Interpreter, value Value) Value {
-			return ConvertInt8(value)
+		convert: func(inter *Interpreter, value Value) Value {
+			return ConvertInt8(inter, value)
 		},
-		min: Int8Value(math.MinInt8),
-		max: Int8Value(math.MaxInt8),
+		min: NewUnmeteredInt8Value(math.MinInt8),
+		max: NewUnmeteredInt8Value(math.MaxInt8),
 	},
 	{
 		name:         sema.Int16TypeName,

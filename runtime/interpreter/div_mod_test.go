@@ -82,7 +82,7 @@ func TestDivModUInt8(t *testing.T) {
 	for _, test := range tests {
 		for _, f := range []func(a, b UInt8Value){
 			func(a, b UInt8Value) {
-				a.Div(b)
+				a.Div(nil, b)
 			},
 			func(a, b UInt8Value) {
 				a.Mod(nil, b)
@@ -154,7 +154,7 @@ func TestDivModUInt16(t *testing.T) {
 	for _, test := range tests {
 		for _, f := range []func(a, b UInt16Value){
 			func(a, b UInt16Value) {
-				a.Div(b)
+				a.Div(nil, b)
 			},
 			func(a, b UInt16Value) {
 				a.Mod(nil, b)
@@ -226,7 +226,7 @@ func TestDivModUInt32(t *testing.T) {
 	for _, test := range tests {
 		for _, f := range []func(a, b UInt32Value){
 			func(a, b UInt32Value) {
-				a.Div(b)
+				a.Div(nil, b)
 			},
 			func(a, b UInt32Value) {
 				a.Mod(nil, b)
@@ -388,7 +388,7 @@ func TestDivModUInt64(t *testing.T) {
 	for _, test := range tests {
 		for _, f := range []func(a, b UInt64Value){
 			func(a, b UInt64Value) {
-				a.Div(b)
+				a.Div(nil, b)
 			},
 			func(a, b UInt64Value) {
 				a.Mod(nil, b)
@@ -552,7 +552,7 @@ func TestDivModUInt128(t *testing.T) {
 	for _, test := range tests {
 		for _, f := range []func(a, b UInt128Value){
 			func(a, b UInt128Value) {
-				a.Div(b)
+				a.Div(nil, b)
 			},
 			func(a, b UInt128Value) {
 				a.Mod(nil, b)
@@ -1222,7 +1222,7 @@ func TestDivModUInt256(t *testing.T) {
 	for _, test := range tests {
 		for _, f := range []func(a, b UInt256Value){
 			func(a, b UInt256Value) {
-				a.Div(b)
+				a.Div(nil, b)
 			},
 			func(a, b UInt256Value) {
 				a.Mod(nil, b)
@@ -1294,7 +1294,7 @@ func TestDivInt8(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Div(test.b)
+			test.a.Div(nil, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1421,7 +1421,7 @@ func TestDivInt16(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Div(test.b)
+			test.a.Div(nil, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1548,7 +1548,7 @@ func TestDivInt32(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Div(test.b)
+			test.a.Div(nil, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1765,7 +1765,7 @@ func TestDivInt64(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Div(test.b)
+			test.a.Div(nil, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1934,7 +1934,7 @@ func TestDivModInt(t *testing.T) {
 
 	for _, f := range []func(a, b IntValue){
 		func(a, b IntValue) {
-			a.Div(b)
+			a.Div(nil, b)
 		},
 		func(a, b IntValue) {
 			a.Mod(nil, b)
@@ -2048,7 +2048,7 @@ func TestDivInt128(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Div(test.b)
+			test.a.Div(nil, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -2613,7 +2613,7 @@ func TestDivInt256(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Div(test.b)
+			test.a.Div(nil, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -3120,7 +3120,7 @@ func TestDivFix64(t *testing.T) {
 		f := func() {
 			a := NewFix64ValueWithInteger(test.a)
 			b := NewFix64ValueWithInteger(test.b)
-			a.Div(b)
+			a.Div(nil, b)
 		}
 
 		if test.valid {
@@ -3133,24 +3133,24 @@ func TestDivFix64(t *testing.T) {
 	assert.Equal(t,
 		Fix64Value(1),
 		NewFix64ValueWithInteger(1).
-			Div(NewFix64ValueWithInteger(sema.Fix64Factor)),
+			Div(nil, NewFix64ValueWithInteger(sema.Fix64Factor)),
 	)
 
 	assert.Equal(t,
 		Fix64Value(0),
 		NewFix64ValueWithInteger(1).
-			Div(Fix64Value(Fix64MaxValue)),
+			Div(nil, Fix64Value(Fix64MaxValue)),
 	)
 
 	assert.Equal(t,
 		Fix64Value(0),
 		Fix64Value(1).
-			Div(NewFix64ValueWithInteger(2)),
+			Div(nil, NewFix64ValueWithInteger(2)),
 	)
 
 	assert.Equal(t,
 		Fix64Value(1535399),
-		NewFix64ValueWithInteger(1543219).Div(NewFix64ValueWithInteger(100509284)),
+		NewFix64ValueWithInteger(1543219).Div(nil, NewFix64ValueWithInteger(100509284)),
 	)
 }
 
@@ -3228,7 +3228,7 @@ func TestDivModUFix64(t *testing.T) {
 
 		for _, f := range []func(a, b UFix64Value){
 			func(a, b UFix64Value) {
-				a.Div(b)
+				a.Div(nil, b)
 			},
 			func(a, b UFix64Value) {
 				a.Mod(nil, b)
@@ -3252,24 +3252,24 @@ func TestDivModUFix64(t *testing.T) {
 	assert.Equal(t,
 		UFix64Value(1),
 		NewUFix64ValueWithInteger(1).
-			Div(NewUFix64ValueWithInteger(sema.Fix64Factor)),
+			Div(nil, NewUFix64ValueWithInteger(sema.Fix64Factor)),
 	)
 
 	assert.Equal(t,
 		UFix64Value(0),
 		NewUFix64ValueWithInteger(1).
-			Div(UFix64Value(UFix64MaxValue)),
+			Div(nil, UFix64Value(UFix64MaxValue)),
 	)
 
 	assert.Equal(t,
 		UFix64Value(0),
 		UFix64Value(1).
-			Div(NewUFix64ValueWithInteger(2)),
+			Div(nil, NewUFix64ValueWithInteger(2)),
 	)
 
 	assert.Equal(t,
 		UFix64Value(1535399),
-		NewUFix64ValueWithInteger(1543219).Div(NewUFix64ValueWithInteger(100509284)),
+		NewUFix64ValueWithInteger(1543219).Div(nil, NewUFix64ValueWithInteger(100509284)),
 	)
 }
 

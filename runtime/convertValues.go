@@ -462,7 +462,7 @@ func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedTy
 	case cadence.Int:
 		return importInt(inter, v), nil
 	case cadence.Int8:
-		return interpreter.Int8Value(v), nil
+		return importInt8(inter, v), nil
 	case cadence.Int16:
 		return interpreter.Int16Value(v), nil
 	case cadence.Int32:
@@ -565,6 +565,15 @@ func importInt(inter *interpreter.Interpreter, v cadence.Int) interpreter.IntVal
 		memoryUsage,
 		func() *big.Int {
 			return v.Value
+		},
+	)
+}
+
+func importInt8(inter *interpreter.Interpreter, v cadence.Int8) interpreter.Int8Value {
+	return interpreter.NewInt8Value(
+		inter,
+		func() int8 {
+			return int8(v)
 		},
 	)
 }
