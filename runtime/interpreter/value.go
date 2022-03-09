@@ -2488,8 +2488,8 @@ type IntegerValue interface {
 	BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue
 	BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue
 	BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue
-	BitwiseLeftShift(other IntegerValue) IntegerValue
-	BitwiseRightShift(other IntegerValue) IntegerValue
+	BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue
+	BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue
 }
 
 // BigNumberValue is a number value with an integer value outside the range of int64
@@ -2936,7 +2936,7 @@ func (v IntValue) BitwiseAnd(interpreter *Interpreter, other IntegerValue) Integ
 	)
 }
 
-func (v IntValue) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v IntValue) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -2946,18 +2946,25 @@ func (v IntValue) BitwiseLeftShift(other IntegerValue) IntegerValue {
 		})
 	}
 
-	res := new(big.Int)
 	if o.BigInt.Sign() < 0 {
 		panic(UnderflowError{})
 	}
+
 	if !o.BigInt.IsUint64() {
 		panic(OverflowError{})
 	}
-	res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
-	return IntValue{res}
+
+	return NewIntValueFromBigInt(
+		interpreter,
+		common.NewBitwiseLeftShiftBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+		},
+	)
 }
 
-func (v IntValue) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v IntValue) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -2967,15 +2974,22 @@ func (v IntValue) BitwiseRightShift(other IntegerValue) IntegerValue {
 		})
 	}
 
-	res := new(big.Int)
 	if o.BigInt.Sign() < 0 {
 		panic(UnderflowError{})
 	}
+
 	if !o.BigInt.IsUint64() {
 		panic(OverflowError{})
 	}
-	res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
-	return IntValue{res}
+
+	return NewIntValueFromBigInt(
+		interpreter,
+		common.NewBitwiseRightShiftBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
+		},
+	)
 }
 
 func (v IntValue) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
@@ -3450,7 +3464,7 @@ func (v Int8Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) Inte
 	return v & o
 }
 
-func (v Int8Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v Int8Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3463,7 +3477,7 @@ func (v Int8Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 	return v << o
 }
 
-func (v Int8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v Int8Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3949,7 +3963,7 @@ func (v Int16Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) Int
 	return v & o
 }
 
-func (v Int16Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v Int16Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3962,7 +3976,7 @@ func (v Int16Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 	return v << o
 }
 
-func (v Int16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v Int16Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4450,7 +4464,7 @@ func (v Int32Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) Int
 	return v & o
 }
 
-func (v Int32Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v Int32Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4463,7 +4477,7 @@ func (v Int32Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 	return v << o
 }
 
-func (v Int32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v Int32Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4950,7 +4964,7 @@ func (v Int64Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) Int
 	return v & o
 }
 
-func (v Int64Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v Int64Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4963,7 +4977,7 @@ func (v Int64Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 	return v << o
 }
 
-func (v Int64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v Int64Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5522,7 +5536,7 @@ func (v Int128Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) In
 	return Int128Value{res}
 }
 
-func (v Int128Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v Int128Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5543,7 +5557,7 @@ func (v Int128Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 	return Int128Value{res}
 }
 
-func (v Int128Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v Int128Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6108,7 +6122,7 @@ func (v Int256Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) In
 	return Int256Value{res}
 }
 
-func (v Int256Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v Int256Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6129,7 +6143,7 @@ func (v Int256Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 	return Int256Value{res}
 }
 
-func (v Int256Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v Int256Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6675,7 +6689,7 @@ func (v UIntValue) BitwiseAnd(interpreter *Interpreter, other IntegerValue) Inte
 	)
 }
 
-func (v UIntValue) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v UIntValue) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6685,18 +6699,26 @@ func (v UIntValue) BitwiseLeftShift(other IntegerValue) IntegerValue {
 		})
 	}
 
-	res := new(big.Int)
 	if o.BigInt.Sign() < 0 {
 		panic(UnderflowError{})
 	}
+
 	if !o.BigInt.IsUint64() {
 		panic(OverflowError{})
 	}
-	res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
-	return UIntValue{res}
+
+	return NewUIntValueFromBigInt(
+		interpreter,
+		common.NewBitwiseLeftShiftBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+
+		},
+	)
 }
 
-func (v UIntValue) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v UIntValue) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6706,15 +6728,21 @@ func (v UIntValue) BitwiseRightShift(other IntegerValue) IntegerValue {
 		})
 	}
 
-	res := new(big.Int)
 	if o.BigInt.Sign() < 0 {
 		panic(UnderflowError{})
 	}
 	if !o.BigInt.IsUint64() {
 		panic(OverflowError{})
 	}
-	res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
-	return UIntValue{res}
+
+	return NewUIntValueFromBigInt(
+		interpreter,
+		common.NewBitwiseRightShiftBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
+		},
+	)
 }
 
 func (v UIntValue) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
@@ -7130,7 +7158,7 @@ func (v UInt8Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) Int
 	return v & o
 }
 
-func (v UInt8Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v UInt8Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7143,7 +7171,7 @@ func (v UInt8Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 	return v << o
 }
 
-func (v UInt8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v UInt8Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7567,7 +7595,7 @@ func (v UInt16Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) In
 	return v & o
 }
 
-func (v UInt16Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v UInt16Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7580,7 +7608,7 @@ func (v UInt16Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 	return v << o
 }
 
-func (v UInt16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v UInt16Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8011,7 +8039,7 @@ func (v UInt32Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) In
 	return v & o
 }
 
-func (v UInt32Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v UInt32Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8024,7 +8052,7 @@ func (v UInt32Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 	return v << o
 }
 
-func (v UInt32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v UInt32Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8482,7 +8510,7 @@ func (v UInt64Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) In
 	return v & o
 }
 
-func (v UInt64Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v UInt64Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8495,7 +8523,7 @@ func (v UInt64Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 	return v << o
 }
 
-func (v UInt64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v UInt64Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9007,7 +9035,7 @@ func (v UInt128Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) I
 	return UInt128Value{res}
 }
 
-func (v UInt128Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v UInt128Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9028,7 +9056,7 @@ func (v UInt128Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 	return UInt128Value{res}
 }
 
-func (v UInt128Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v UInt128Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9547,7 +9575,7 @@ func (v UInt256Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) I
 	return UInt256Value{res}
 }
 
-func (v UInt256Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v UInt256Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9568,7 +9596,7 @@ func (v UInt256Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 	return UInt256Value{res}
 }
 
-func (v UInt256Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v UInt256Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9911,7 +9939,7 @@ func (v Word8Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) Int
 	return v & o
 }
 
-func (v Word8Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v Word8Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9924,7 +9952,7 @@ func (v Word8Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 	return v << o
 }
 
-func (v Word8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v Word8Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10259,7 +10287,7 @@ func (v Word16Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) In
 	return v & o
 }
 
-func (v Word16Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v Word16Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10272,7 +10300,7 @@ func (v Word16Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 	return v << o
 }
 
-func (v Word16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v Word16Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10610,7 +10638,7 @@ func (v Word32Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) In
 	return v & o
 }
 
-func (v Word32Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v Word32Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10623,7 +10651,7 @@ func (v Word32Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 	return v << o
 }
 
-func (v Word32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v Word32Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10986,7 +11014,7 @@ func (v Word64Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) In
 	return v & o
 }
 
-func (v Word64Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v Word64Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10999,7 +11027,7 @@ func (v Word64Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 	return v << o
 }
 
-func (v Word64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v Word64Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{

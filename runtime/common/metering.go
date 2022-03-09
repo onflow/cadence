@@ -138,3 +138,21 @@ func NewBitwiseAndBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 		),
 	)
 }
+
+func NewBitwiseLeftShiftBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
+	return NewBigIntMemoryUsage(
+		// TODO:
+		BigIntByteLength(a) +
+			BigIntByteLength(b),
+	)
+}
+
+func NewBitwiseRightShiftBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
+	return NewBigIntMemoryUsage(
+		// TODO:
+		max(
+			BigIntByteLength(a),
+			BigIntByteLength(b),
+		),
+	)
+}
