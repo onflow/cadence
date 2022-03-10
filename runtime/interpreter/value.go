@@ -237,15 +237,16 @@ func NewUnmeteredTypeValue(t StaticType) TypeValue {
 	return TypeValue{t}
 }
 
-func NewTypeValue(memoryGauge common.MemoryGauge, t StaticType) TypeValue {
+func NewTypeValue(
+	memoryGauge common.MemoryGauge,
+	memoryUsage common.MemoryUsage,
+	staticTypeConstructor func() StaticType,
+) TypeValue {
 	if memoryGauge != nil {
-		memoryGauge.UseMemory(common.MemoryUsage{
-			Kind:   common.MemoryKindTypeValue,
-			Amount: uint64(len(t.String())),
-		})
+		memoryGauge.UseMemory(memoryUsage)
 	}
-
-	return NewUnmeteredTypeValue(t)
+	staticType := staticTypeConstructor()
+	return NewUnmeteredTypeValue(staticType)
 }
 
 func (TypeValue) IsValue() {}
@@ -15287,7 +15288,6 @@ func NewAddressValue(
 	memoryUsage common.MemoryUsage,
 	addressConstructor func() common.Address,
 ) AddressValue {
-
 	return NewAddressValueFromBytes(
 		memoryGauge,
 		memoryUsage,

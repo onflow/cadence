@@ -628,7 +628,11 @@ func importTypeValue(
 		return interpreter.EmptyTypeValue, err
 	}
 
-	return interpreter.NewTypeValue(inter, typ), nil
+	return interpreter.NewTypeValue(
+		inter,
+		common.NewTypeMemoryUsage(typ.String()),
+		func() interpreter.StaticType { return typ },
+	), nil
 }
 
 func importCapability(

@@ -3071,14 +3071,17 @@ func init() {
 					// Continue iteration
 					return true
 				})
+				functionStaticType := FunctionStaticType{
+					Type: &sema.FunctionType{
+						ReturnTypeAnnotation: sema.NewTypeAnnotation(returnType),
+						Parameters:           parameterTypes,
+					},
+				}
 				return NewTypeValue(
 					invocation.Interpreter,
-					FunctionStaticType{
-						Type: &sema.FunctionType{
-							ReturnTypeAnnotation: sema.NewTypeAnnotation(returnType),
-							Parameters:           parameterTypes,
-						},
-					})
+					common.NewTypeMemoryUsage(functionStaticType.String()),
+					func() StaticType { return functionStaticType },
+				)
 			},
 			sema.FunctionTypeFunctionType,
 		),
@@ -3376,9 +3379,11 @@ var typeFunction = NewUnmeteredHostFunctionValue(
 
 		ty := typeParameterPair.Value
 
+		staticType := ConvertSemaToStaticType(ty)
 		return NewTypeValue(
 			invocation.Interpreter,
-			ConvertSemaToStaticType(ty),
+			common.NewTypeMemoryUsage(staticType.String()),
+			func() StaticType { return staticType },
 		)
 	},
 	&sema.FunctionType{
@@ -4442,9 +4447,11 @@ func (interpreter *Interpreter) getTypeFunction(self Value) *HostFunctionValue {
 	return NewHostFunctionValue(
 		interpreter,
 		func(invocation Invocation) Value {
+			staticType := self.StaticType()
 			return NewTypeValue(
-				interpreter,
-				self.StaticType(),
+				invocation.Interpreter,
+				common.NewTypeMemoryUsage(staticType.String()),
+				func() StaticType { return staticType },
 			)
 		},
 		sema.GetTypeFunctionType,

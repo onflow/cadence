@@ -84,6 +84,13 @@ func NewAddressMemoryUsage(length int) MemoryUsage {
 	}
 }
 
+func NewTypeMemoryUsage(staticTypeAsString string) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindTypeValue,
+		Amount: uint64(len(staticTypeAsString)),
+	}
+}
+
 // UseConstantMemory uses a pre-determined amount of memory
 //
 func UseConstantMemory(memoryGauge MemoryGauge, kind MemoryKind) {
