@@ -1615,9 +1615,11 @@ func TestMulInt8(t *testing.T) {
 		{-1, -1, true},
 	}
 
+	inter := newTestInterpreter(t)
+
 	for _, test := range tests {
 		f := func() {
-			test.a.Mul(nil, test.b)
+			test.a.Mul(inter, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1803,9 +1805,11 @@ func TestMulInt16(t *testing.T) {
 		{-1, -1, true},
 	}
 
+	inter := newTestInterpreter(t)
+
 	for _, test := range tests {
 		f := func() {
-			test.a.Mul(nil, test.b)
+			test.a.Mul(inter, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1974,9 +1978,11 @@ func TestMulInt32(t *testing.T) {
 		{-1, -1, true},
 	}
 
+	inter := newTestInterpreter(t)
+
 	for _, test := range tests {
 		f := func() {
-			test.a.Mul(nil, test.b)
+			test.a.Mul(inter, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -2130,9 +2136,11 @@ func TestMulInt64(t *testing.T) {
 		{0xffffffff, 0x100000002, false},
 	}
 
+	inter := newTestInterpreter(t)
+
 	for _, test := range tests {
 		f := func() {
-			test.a.Mul(nil, test.b)
+			test.a.Mul(inter, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -2288,9 +2296,11 @@ func TestMulInt128(t *testing.T) {
 		{int128("-0x00000000000000000000000000000001"), int128("-0x00000000000000000000000000000001"), true},
 	}
 
+	inter := newTestInterpreter(t)
+
 	for _, test := range tests {
 		f := func() {
-			test.a.Mul(nil, test.b)
+			test.a.Mul(inter, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
