@@ -49,7 +49,7 @@ func TestInterpretWhileStatement(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewIntValueFromInt64(6),
+		interpreter.NewUnmeteredIntValueFromInt64(6),
 		value,
 	)
 }
@@ -77,7 +77,7 @@ func TestInterpretWhileStatementWithReturn(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewIntValueFromInt64(6),
+		interpreter.NewUnmeteredIntValueFromInt64(6),
 		value,
 	)
 }
@@ -107,7 +107,7 @@ func TestInterpretWhileStatementWithContinue(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewIntValueFromInt64(6),
+		interpreter.NewUnmeteredIntValueFromInt64(6),
 		value,
 	)
 }
@@ -135,7 +135,7 @@ func TestInterpretWhileStatementWithBreak(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewIntValueFromInt64(5),
+		interpreter.NewUnmeteredIntValueFromInt64(5),
 		value,
 	)
 }

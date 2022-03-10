@@ -21,6 +21,7 @@ package interpreter
 import (
 	"fmt"
 	"math"
+	"math/big"
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
@@ -307,23 +308,45 @@ func (d StorableDecoder) decodeCharacter(v string) (CharacterValue, error) {
 func (d StorableDecoder) decodeStringValue() (*StringValue, error) {
 	str, err := decodeString(d.decoder, d.memoryGauge)
 	if err != nil {
+		if err, ok := err.(*cbor.WrongTypeError); ok {
+			return nil, fmt.Errorf(
+				"invalid String encoding: %s",
+				err.ActualType.String(),
+			)
+		}
 		return nil, err
 	}
 
-	// NOTE: already metered by StorableDecoder.decodeString
+	// NOTE: already metered by decodeString
 	return NewUnmeteredStringValue(str), nil
 }
 
-func (d StorableDecoder) decodeInt() (IntValue, error) {
-	bigInt, err := d.decoder.DecodeBigInt()
+func (d StorableDecoder) decodeBigInt() (*big.Int, error) {
+	length, err := d.decoder.NextSize()
 	if err != nil {
-		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return IntValue{}, fmt.Errorf("invalid Int encoding: %s", e.ActualType.String())
+		return nil, err
+	}
+	memoryGauge := d.memoryGauge
+	if memoryGauge != nil {
+		memoryGauge.UseMemory(common.NewBigIntMemoryUsage(int(length)))
+	}
+	return d.decoder.DecodeBigInt()
+}
+
+func (d StorableDecoder) decodeInt() (IntValue, error) {
+	bigInt, err := d.decodeBigInt()
+	if err != nil {
+		if err, ok := err.(*cbor.WrongTypeError); ok {
+			return IntValue{}, fmt.Errorf(
+				"invalid Int encoding: %s",
+				err.ActualType.String(),
+			)
 		}
 		return IntValue{}, err
 	}
 
-	return NewIntValueFromBigInt(bigInt), nil
+	// NOTE: already metered by decodeBigInt
+	return NewUnmeteredIntValueFromBigInt(bigInt), nil
 }
 
 func (d StorableDecoder) decodeInt8() (Int8Value, error) {
@@ -405,7 +428,7 @@ func (d StorableDecoder) decodeInt64() (Int64Value, error) {
 }
 
 func (d StorableDecoder) decodeInt128() (Int128Value, error) {
-	bigInt, err := d.decoder.DecodeBigInt()
+	bigInt, err := d.decodeBigInt()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return Int128Value{}, fmt.Errorf("invalid Int128 encoding: %s", e.ActualType.String())
@@ -427,7 +450,7 @@ func (d StorableDecoder) decodeInt128() (Int128Value, error) {
 }
 
 func (d StorableDecoder) decodeInt256() (Int256Value, error) {
-	bigInt, err := d.decoder.DecodeBigInt()
+	bigInt, err := d.decodeBigInt()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return Int256Value{}, fmt.Errorf("invalid Int256 encoding: %s", e.ActualType.String())
@@ -449,7 +472,7 @@ func (d StorableDecoder) decodeInt256() (Int256Value, error) {
 }
 
 func (d StorableDecoder) decodeUInt() (UIntValue, error) {
-	bigInt, err := d.decoder.DecodeBigInt()
+	bigInt, err := d.decodeBigInt()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return UIntValue{}, fmt.Errorf("invalid UInt encoding: %s", e.ActualType.String())
@@ -461,7 +484,8 @@ func (d StorableDecoder) decodeUInt() (UIntValue, error) {
 		return UIntValue{}, fmt.Errorf("invalid UInt: got %s, expected positive", bigInt)
 	}
 
-	return NewUIntValueFromBigInt(bigInt), nil
+	// NOTE: already metered by decodeBigInt
+	return NewUnmeteredUIntValueFromBigInt(bigInt), nil
 }
 
 func (d StorableDecoder) decodeUInt8() (UInt8Value, error) {
@@ -523,7 +547,7 @@ func (d StorableDecoder) decodeUInt64() (UInt64Value, error) {
 }
 
 func (d StorableDecoder) decodeUInt128() (UInt128Value, error) {
-	bigInt, err := d.decoder.DecodeBigInt()
+	bigInt, err := d.decodeBigInt()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return UInt128Value{}, fmt.Errorf("invalid UInt128 encoding: %s", e.ActualType.String())
@@ -544,7 +568,7 @@ func (d StorableDecoder) decodeUInt128() (UInt128Value, error) {
 }
 
 func (d StorableDecoder) decodeUInt256() (UInt256Value, error) {
-	bigInt, err := d.decoder.DecodeBigInt()
+	bigInt, err := d.decodeBigInt()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return UInt256Value{}, fmt.Errorf("invalid UInt256 encoding: %s", e.ActualType.String())

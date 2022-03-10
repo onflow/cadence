@@ -128,7 +128,7 @@ func TestOverEstimateFixedPointStringLength(t *testing.T) {
 			return OverEstimateFixedPointStringLength(v, scale) >= len(v.String())+1+scale
 		},
 		gen.Int64().Map(func(v int64) NumberValue {
-			return NewIntValueFromInt64(v)
+			return NewUnmeteredIntValueFromInt64(v)
 		}),
 		gen.Int(),
 	))
@@ -158,7 +158,10 @@ func TestOverEstimateFixedPointStringLength(t *testing.T) {
 	} {
 		assert.LessOrEqual(t,
 			len(strconv.Itoa(v))+1+testScale,
-			OverEstimateFixedPointStringLength(NewIntValueFromInt64(int64(v)), testScale),
+			OverEstimateFixedPointStringLength(
+				NewUnmeteredIntValueFromInt64(int64(v)),
+				testScale,
+			),
 		)
 	}
 }

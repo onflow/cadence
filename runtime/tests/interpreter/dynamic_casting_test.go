@@ -51,8 +51,8 @@ func TestInterpretDynamicCastingNumber(t *testing.T) {
 	}
 
 	tests := []test{
-		{sema.IntType, "42", interpreter.NewIntValueFromInt64(42)},
-		{sema.UIntType, "42", interpreter.NewUIntValueFromUint64(42)},
+		{sema.IntType, "42", interpreter.NewUnmeteredIntValueFromInt64(42)},
+		{sema.UIntType, "42", interpreter.NewUnmeteredUIntValueFromUint64(42)},
 		{sema.Int8Type, "42", interpreter.Int8Value(42)},
 		{sema.Int16Type, "42", interpreter.Int16Value(42)},
 		{sema.Int32Type, "42", interpreter.Int32Value(42)},
@@ -1071,7 +1071,7 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 						)
 
 						expectedValue := interpreter.NewUnmeteredSomeValueNonCopying(
-							interpreter.NewIntValueFromInt64(42),
+							interpreter.NewUnmeteredIntValueFromInt64(42),
 						)
 
 						AssertValuesEqual(
@@ -1179,7 +1179,7 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 						)
 
 						expectedElements := []interpreter.Value{
-							interpreter.NewIntValueFromInt64(42),
+							interpreter.NewUnmeteredIntValueFromInt64(42),
 						}
 
 						yValue := inter.Globals["y"].GetValue()
@@ -1327,7 +1327,7 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 								KeyType:   interpreter.PrimitiveStaticTypeString,
 								ValueType: interpreter.PrimitiveStaticTypeInt,
 							},
-							interpreter.NewUnmeteredStringValue("test"), interpreter.NewIntValueFromInt64(42),
+							interpreter.NewUnmeteredStringValue("test"), interpreter.NewUnmeteredIntValueFromInt64(42),
 						)
 
 						AssertValuesEqual(

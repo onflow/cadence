@@ -26,6 +26,7 @@ import (
 	"math/big"
 	"strings"
 	"time"
+	"unsafe"
 
 	"github.com/onflow/atree"
 	"github.com/rivo/uniseg"
@@ -996,7 +997,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, _ func() LocationRange
 	switch name {
 	case "length":
 		length := v.Length()
-		return NewIntValueFromInt64(int64(length))
+		return NewIntValueFromInt64(interpreter, int64(length))
 
 	case "utf8":
 		return ByteSliceToByteArrayValue(interpreter, []byte(v.Str))
@@ -1707,7 +1708,7 @@ func (v *ArrayValue) FirstIndex(interpreter *Interpreter, getLocationRange func(
 	})
 
 	if result {
-		value := NewIntValueFromInt64(counter)
+		value := NewIntValueFromInt64(interpreter, counter)
 		return NewSomeValueNonCopying(interpreter, value)
 	}
 	return NilValue{}
@@ -1742,7 +1743,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func()
 
 	switch name {
 	case "length":
-		return NewIntValueFromInt64(int64(v.Count()))
+		return NewIntValueFromInt64(interpreter, int64(v.Count()))
 
 	case "append":
 		return NewHostFunctionValue(
@@ -2355,14 +2356,14 @@ func (v *ArrayValue) Slice(
 type NumberValue interface {
 	EquatableValue
 	ToInt() int
-	Negate() NumberValue
-	Plus(other NumberValue) NumberValue
-	SaturatingPlus(other NumberValue) NumberValue
+	Negate(*Interpreter) NumberValue
+	Plus(interpreter *Interpreter, other NumberValue) NumberValue
+	SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue
 	Minus(other NumberValue) NumberValue
 	SaturatingMinus(other NumberValue) NumberValue
-	Mod(other NumberValue) NumberValue
-	Mul(other NumberValue) NumberValue
-	SaturatingMul(other NumberValue) NumberValue
+	Mod(interpreter *Interpreter, other NumberValue) NumberValue
+	Mul(interpreter *Interpreter, other NumberValue) NumberValue
+	SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue
 	Div(other NumberValue) NumberValue
 	SaturatingDiv(other NumberValue) NumberValue
 	Less(other NumberValue) BoolValue
@@ -2418,7 +2419,10 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
-				return v.SaturatingPlus(other)
+				return v.SaturatingPlus(
+					invocation.Interpreter,
+					other,
+				)
 			},
 			&sema.FunctionType{
 				ReturnTypeAnnotation: sema.NewTypeAnnotation(
@@ -2452,7 +2456,10 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
-				return v.SaturatingMul(other)
+				return v.SaturatingMul(
+					invocation.Interpreter,
+					other,
+				)
 			},
 			&sema.FunctionType{
 				ReturnTypeAnnotation: sema.NewTypeAnnotation(
@@ -2495,6 +2502,7 @@ type IntegerValue interface {
 //
 type BigNumberValue interface {
 	NumberValue
+	ByteLength() int
 	ToBigInt() *big.Int
 }
 
@@ -2504,21 +2512,58 @@ type IntValue struct {
 	BigInt *big.Int
 }
 
-func NewIntValueFromInt64(value int64) IntValue {
-	return NewIntValueFromBigInt(big.NewInt(value))
+const int64Size = int(unsafe.Sizeof(int64(0)))
+
+var int64BigIntMemoryUsage = common.NewBigIntMemoryUsage(int64Size)
+
+func NewIntValueFromInt64(memoryGauge common.MemoryGauge, value int64) IntValue {
+	return NewIntValueFromBigInt(
+		memoryGauge,
+		int64BigIntMemoryUsage,
+		func() *big.Int {
+			return big.NewInt(value)
+		},
+	)
 }
 
-func NewIntValueFromBigInt(value *big.Int) IntValue {
-	return IntValue{BigInt: value}
+func NewUnmeteredIntValueFromInt64(value int64) IntValue {
+	return NewUnmeteredIntValueFromBigInt(big.NewInt(value))
 }
 
-func ConvertInt(value Value) IntValue {
+func NewIntValueFromBigInt(
+	memoryGauge common.MemoryGauge,
+	memoryUsage common.MemoryUsage,
+	bigIntConstructor func() *big.Int,
+) IntValue {
+	if memoryGauge != nil {
+		memoryGauge.UseMemory(memoryUsage)
+	}
+	value := bigIntConstructor()
+	return NewUnmeteredIntValueFromBigInt(value)
+}
+
+func NewUnmeteredIntValueFromBigInt(value *big.Int) IntValue {
+	return IntValue{
+		BigInt: value,
+	}
+}
+
+func ConvertInt(memoryGauge common.MemoryGauge, value Value) IntValue {
 	switch value := value.(type) {
 	case BigNumberValue:
-		return NewIntValueFromBigInt(value.ToBigInt())
+		return NewIntValueFromBigInt(
+			memoryGauge,
+			common.NewBigIntMemoryUsage(value.ByteLength()),
+			func() *big.Int {
+				return value.ToBigInt()
+			},
+		)
 
 	case NumberValue:
-		return NewIntValueFromInt64(int64(value.ToInt()))
+		return NewIntValueFromInt64(
+			memoryGauge,
+			int64(value.ToInt()),
+		)
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -2560,6 +2605,10 @@ func (v IntValue) ToInt() int {
 	return int(v.BigInt.Int64())
 }
 
+func (v IntValue) ByteLength() int {
+	return common.BigIntByteLength(v.BigInt)
+}
+
 func (v IntValue) ToBigInt() *big.Int {
 	return new(big.Int).Set(v.BigInt)
 }
@@ -2572,11 +2621,19 @@ func (v IntValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v IntValue) Negate() NumberValue {
-	return NewIntValueFromBigInt(new(big.Int).Neg(v.BigInt))
+func (v IntValue) Negate(interpreter *Interpreter) NumberValue {
+	return NewIntValueFromBigInt(
+		interpreter,
+		common.NewBigIntMemoryUsage(
+			common.BigIntByteLength(v.BigInt),
+		),
+		func() *big.Int {
+			return new(big.Int).Neg(v.BigInt)
+		},
+	)
 }
 
-func (v IntValue) Plus(other NumberValue) NumberValue {
+func (v IntValue) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -2586,12 +2643,17 @@ func (v IntValue) Plus(other NumberValue) NumberValue {
 		})
 	}
 
-	res := new(big.Int)
-	res.Add(v.BigInt, o.BigInt)
-	return IntValue{res}
+	return NewIntValueFromBigInt(
+		interpreter,
+		common.NewPlusBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Add(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v IntValue) SaturatingPlus(other NumberValue) NumberValue {
+func (v IntValue) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	defer func() {
 		r := recover()
 		if _, ok := r.(InvalidOperandsError); ok {
@@ -2603,7 +2665,7 @@ func (v IntValue) SaturatingPlus(other NumberValue) NumberValue {
 		}
 	}()
 
-	return v.Plus(other)
+	return v.Plus(interpreter, other)
 }
 
 func (v IntValue) Minus(other NumberValue) NumberValue {
@@ -2636,7 +2698,7 @@ func (v IntValue) SaturatingMinus(other NumberValue) NumberValue {
 	return v.Minus(other)
 }
 
-func (v IntValue) Mod(other NumberValue) NumberValue {
+func (v IntValue) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -2655,7 +2717,7 @@ func (v IntValue) Mod(other NumberValue) NumberValue {
 	return IntValue{res}
 }
 
-func (v IntValue) Mul(other NumberValue) NumberValue {
+func (v IntValue) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -2665,12 +2727,17 @@ func (v IntValue) Mul(other NumberValue) NumberValue {
 		})
 	}
 
-	res := new(big.Int)
-	res.Mul(v.BigInt, o.BigInt)
-	return IntValue{res}
+	return NewIntValueFromBigInt(
+		interpreter,
+		common.NewMulBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Mul(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v IntValue) SaturatingMul(other NumberValue) NumberValue {
+func (v IntValue) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	defer func() {
 		r := recover()
 		if _, ok := r.(InvalidOperandsError); ok {
@@ -2682,7 +2749,7 @@ func (v IntValue) SaturatingMul(other NumberValue) NumberValue {
 		}
 	}()
 
-	return v.Mul(other)
+	return v.Mul(interpreter, other)
 }
 
 func (v IntValue) Div(other NumberValue) NumberValue {
@@ -2944,7 +3011,7 @@ func (v IntValue) Transfer(
 }
 
 func (v IntValue) Clone(_ *Interpreter) Value {
-	return NewIntValueFromBigInt(v.BigInt)
+	return NewUnmeteredIntValueFromBigInt(v.BigInt)
 }
 
 func (IntValue) DeepRemove(_ *Interpreter) {
@@ -3006,7 +3073,7 @@ func (v Int8Value) ToInt() int {
 	return int(v)
 }
 
-func (v Int8Value) Negate() NumberValue {
+func (v Int8Value) Negate(*Interpreter) NumberValue {
 	// INT32-C
 	if v == math.MinInt8 {
 		panic(OverflowError{})
@@ -3014,7 +3081,7 @@ func (v Int8Value) Negate() NumberValue {
 	return -v
 }
 
-func (v Int8Value) Plus(other NumberValue) NumberValue {
+func (v Int8Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3033,7 +3100,7 @@ func (v Int8Value) Plus(other NumberValue) NumberValue {
 	return v + o
 }
 
-func (v Int8Value) SaturatingPlus(other NumberValue) NumberValue {
+func (v Int8Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3090,7 +3157,7 @@ func (v Int8Value) SaturatingMinus(other NumberValue) NumberValue {
 	return v - o
 }
 
-func (v Int8Value) Mod(other NumberValue) NumberValue {
+func (v Int8Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3107,7 +3174,7 @@ func (v Int8Value) Mod(other NumberValue) NumberValue {
 	return v % o
 }
 
-func (v Int8Value) Mul(other NumberValue) NumberValue {
+func (v Int8Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3146,7 +3213,7 @@ func (v Int8Value) Mul(other NumberValue) NumberValue {
 	return v * o
 }
 
-func (v Int8Value) SaturatingMul(other NumberValue) NumberValue {
+func (v Int8Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3505,7 +3572,7 @@ func (v Int16Value) ToInt() int {
 	return int(v)
 }
 
-func (v Int16Value) Negate() NumberValue {
+func (v Int16Value) Negate(*Interpreter) NumberValue {
 	// INT32-C
 	if v == math.MinInt16 {
 		panic(OverflowError{})
@@ -3513,7 +3580,7 @@ func (v Int16Value) Negate() NumberValue {
 	return -v
 }
 
-func (v Int16Value) Plus(other NumberValue) NumberValue {
+func (v Int16Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3532,7 +3599,7 @@ func (v Int16Value) Plus(other NumberValue) NumberValue {
 	return v + o
 }
 
-func (v Int16Value) SaturatingPlus(other NumberValue) NumberValue {
+func (v Int16Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3589,7 +3656,7 @@ func (v Int16Value) SaturatingMinus(other NumberValue) NumberValue {
 	return v - o
 }
 
-func (v Int16Value) Mod(other NumberValue) NumberValue {
+func (v Int16Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3606,7 +3673,7 @@ func (v Int16Value) Mod(other NumberValue) NumberValue {
 	return v % o
 }
 
-func (v Int16Value) Mul(other NumberValue) NumberValue {
+func (v Int16Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3645,7 +3712,7 @@ func (v Int16Value) Mul(other NumberValue) NumberValue {
 	return v * o
 }
 
-func (v Int16Value) SaturatingMul(other NumberValue) NumberValue {
+func (v Int16Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4006,7 +4073,7 @@ func (v Int32Value) ToInt() int {
 	return int(v)
 }
 
-func (v Int32Value) Negate() NumberValue {
+func (v Int32Value) Negate(*Interpreter) NumberValue {
 	// INT32-C
 	if v == math.MinInt32 {
 		panic(OverflowError{})
@@ -4014,7 +4081,7 @@ func (v Int32Value) Negate() NumberValue {
 	return -v
 }
 
-func (v Int32Value) Plus(other NumberValue) NumberValue {
+func (v Int32Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4033,7 +4100,7 @@ func (v Int32Value) Plus(other NumberValue) NumberValue {
 	return v + o
 }
 
-func (v Int32Value) SaturatingPlus(other NumberValue) NumberValue {
+func (v Int32Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4090,7 +4157,7 @@ func (v Int32Value) SaturatingMinus(other NumberValue) NumberValue {
 	return v - o
 }
 
-func (v Int32Value) Mod(other NumberValue) NumberValue {
+func (v Int32Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4107,7 +4174,7 @@ func (v Int32Value) Mod(other NumberValue) NumberValue {
 	return v % o
 }
 
-func (v Int32Value) Mul(other NumberValue) NumberValue {
+func (v Int32Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4146,7 +4213,7 @@ func (v Int32Value) Mul(other NumberValue) NumberValue {
 	return v * o
 }
 
-func (v Int32Value) SaturatingMul(other NumberValue) NumberValue {
+func (v Int32Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4507,7 +4574,7 @@ func (v Int64Value) ToInt() int {
 	return int(v)
 }
 
-func (v Int64Value) Negate() NumberValue {
+func (v Int64Value) Negate(*Interpreter) NumberValue {
 	// INT32-C
 	if v == math.MinInt64 {
 		panic(OverflowError{})
@@ -4525,7 +4592,7 @@ func safeAddInt64(a, b int64) int64 {
 	return a + b
 }
 
-func (v Int64Value) Plus(other NumberValue) NumberValue {
+func (v Int64Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4538,7 +4605,7 @@ func (v Int64Value) Plus(other NumberValue) NumberValue {
 	return Int64Value(safeAddInt64(int64(v), int64(o)))
 }
 
-func (v Int64Value) SaturatingPlus(other NumberValue) NumberValue {
+func (v Int64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4595,7 +4662,7 @@ func (v Int64Value) SaturatingMinus(other NumberValue) NumberValue {
 	return v - o
 }
 
-func (v Int64Value) Mod(other NumberValue) NumberValue {
+func (v Int64Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4612,7 +4679,7 @@ func (v Int64Value) Mod(other NumberValue) NumberValue {
 	return v % o
 }
 
-func (v Int64Value) Mul(other NumberValue) NumberValue {
+func (v Int64Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4651,7 +4718,7 @@ func (v Int64Value) Mul(other NumberValue) NumberValue {
 	return v * o
 }
 
-func (v Int64Value) SaturatingMul(other NumberValue) NumberValue {
+func (v Int64Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5012,6 +5079,10 @@ func (v Int128Value) ToInt() int {
 	return int(v.BigInt.Int64())
 }
 
+func (v Int128Value) ByteLength() int {
+	return common.BigIntByteLength(v.BigInt)
+}
+
 func (v Int128Value) ToBigInt() *big.Int {
 	return new(big.Int).Set(v.BigInt)
 }
@@ -5024,7 +5095,7 @@ func (v Int128Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v Int128Value) Negate() NumberValue {
+func (v Int128Value) Negate(*Interpreter) NumberValue {
 	// INT32-C
 	//   if v == Int128TypeMinIntBig {
 	//       ...
@@ -5035,7 +5106,7 @@ func (v Int128Value) Negate() NumberValue {
 	return Int128Value{new(big.Int).Neg(v.BigInt)}
 }
 
-func (v Int128Value) Plus(other NumberValue) NumberValue {
+func (v Int128Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5067,7 +5138,7 @@ func (v Int128Value) Plus(other NumberValue) NumberValue {
 	return Int128Value{res}
 }
 
-func (v Int128Value) SaturatingPlus(other NumberValue) NumberValue {
+func (v Int128Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5163,7 +5234,7 @@ func (v Int128Value) SaturatingMinus(other NumberValue) NumberValue {
 	return Int128Value{res}
 }
 
-func (v Int128Value) Mod(other NumberValue) NumberValue {
+func (v Int128Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5182,7 +5253,7 @@ func (v Int128Value) Mod(other NumberValue) NumberValue {
 	return Int128Value{res}
 }
 
-func (v Int128Value) Mul(other NumberValue) NumberValue {
+func (v Int128Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5202,7 +5273,7 @@ func (v Int128Value) Mul(other NumberValue) NumberValue {
 	return Int128Value{res}
 }
 
-func (v Int128Value) SaturatingMul(other NumberValue) NumberValue {
+func (v Int128Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5594,6 +5665,10 @@ func (v Int256Value) ToInt() int {
 	return int(v.BigInt.Int64())
 }
 
+func (v Int256Value) ByteLength() int {
+	return common.BigIntByteLength(v.BigInt)
+}
+
 func (v Int256Value) ToBigInt() *big.Int {
 	return new(big.Int).Set(v.BigInt)
 }
@@ -5606,7 +5681,7 @@ func (v Int256Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v Int256Value) Negate() NumberValue {
+func (v Int256Value) Negate(*Interpreter) NumberValue {
 	// INT32-C
 	//   if v == Int256TypeMinIntBig {
 	//       ...
@@ -5617,7 +5692,7 @@ func (v Int256Value) Negate() NumberValue {
 	return Int256Value{BigInt: new(big.Int).Neg(v.BigInt)}
 }
 
-func (v Int256Value) Plus(other NumberValue) NumberValue {
+func (v Int256Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5649,7 +5724,7 @@ func (v Int256Value) Plus(other NumberValue) NumberValue {
 	return Int256Value{res}
 }
 
-func (v Int256Value) SaturatingPlus(other NumberValue) NumberValue {
+func (v Int256Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5745,7 +5820,7 @@ func (v Int256Value) SaturatingMinus(other NumberValue) NumberValue {
 	return Int256Value{res}
 }
 
-func (v Int256Value) Mod(other NumberValue) NumberValue {
+func (v Int256Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5764,7 +5839,7 @@ func (v Int256Value) Mod(other NumberValue) NumberValue {
 	return Int256Value{res}
 }
 
-func (v Int256Value) Mul(other NumberValue) NumberValue {
+func (v Int256Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5784,7 +5859,7 @@ func (v Int256Value) Mul(other NumberValue) NumberValue {
 	return Int256Value{res}
 }
 
-func (v Int256Value) SaturatingMul(other NumberValue) NumberValue {
+func (v Int256Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6133,29 +6208,66 @@ type UIntValue struct {
 	BigInt *big.Int
 }
 
-func NewUIntValueFromUint64(value uint64) UIntValue {
-	return NewUIntValueFromBigInt(new(big.Int).SetUint64(value))
+const uint64Size = int(unsafe.Sizeof(uint64(0)))
+
+var uint64BigIntMemoryUsage = common.NewBigIntMemoryUsage(uint64Size)
+
+func NewUIntValueFromUint64(memoryGauge common.MemoryGauge, value uint64) UIntValue {
+	return NewUIntValueFromBigInt(
+		memoryGauge,
+		uint64BigIntMemoryUsage,
+		func() *big.Int {
+			return new(big.Int).SetUint64(value)
+		},
+	)
 }
 
-func NewUIntValueFromBigInt(value *big.Int) UIntValue {
-	return UIntValue{BigInt: value}
+func NewUnmeteredUIntValueFromUint64(value uint64) UIntValue {
+	return NewUnmeteredUIntValueFromBigInt(new(big.Int).SetUint64(value))
 }
 
-func ConvertUInt(value Value) UIntValue {
+func NewUIntValueFromBigInt(
+	memoryGauge common.MemoryGauge,
+	memoryUsage common.MemoryUsage,
+	bigIntConstructor func() *big.Int,
+) UIntValue {
+	if memoryGauge != nil {
+		memoryGauge.UseMemory(memoryUsage)
+	}
+	value := bigIntConstructor()
+	return NewUnmeteredUIntValueFromBigInt(value)
+}
+
+func NewUnmeteredUIntValueFromBigInt(value *big.Int) UIntValue {
+	return UIntValue{
+		BigInt: value,
+	}
+}
+
+func ConvertUInt(memoryGauge common.MemoryGauge, value Value) UIntValue {
 	switch value := value.(type) {
 	case BigNumberValue:
 		v := value.ToBigInt()
 		if v.Sign() < 0 {
 			panic(UnderflowError{})
 		}
-		return NewUIntValueFromBigInt(value.ToBigInt())
+		return NewUIntValueFromBigInt(
+			memoryGauge,
+			common.NewBigIntMemoryUsage(value.ByteLength()),
+			func() *big.Int {
+				return value.ToBigInt()
+			},
+		)
 
 	case NumberValue:
 		v := value.ToInt()
 		if v < 0 {
 			panic(UnderflowError{})
 		}
-		return NewUIntValueFromUint64(uint64(v))
+		return NewUIntValueFromUint64(
+			memoryGauge,
+			uint64(v),
+		)
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -6197,6 +6309,10 @@ func (v UIntValue) ToInt() int {
 	return int(v.BigInt.Int64())
 }
 
+func (v UIntValue) ByteLength() int {
+	return common.BigIntByteLength(v.BigInt)
+}
+
 func (v UIntValue) ToBigInt() *big.Int {
 	return new(big.Int).Set(v.BigInt)
 }
@@ -6209,11 +6325,11 @@ func (v UIntValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v UIntValue) Negate() NumberValue {
+func (v UIntValue) Negate(*Interpreter) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v UIntValue) Plus(other NumberValue) NumberValue {
+func (v UIntValue) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6223,12 +6339,17 @@ func (v UIntValue) Plus(other NumberValue) NumberValue {
 		})
 	}
 
-	res := new(big.Int)
-	res.Add(v.BigInt, o.BigInt)
-	return UIntValue{res}
+	return NewUIntValueFromBigInt(
+		interpreter,
+		common.NewPlusBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Add(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v UIntValue) SaturatingPlus(other NumberValue) NumberValue {
+func (v UIntValue) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	defer func() {
 		r := recover()
 		if _, ok := r.(InvalidOperandsError); ok {
@@ -6240,7 +6361,7 @@ func (v UIntValue) SaturatingPlus(other NumberValue) NumberValue {
 		}
 	}()
 
-	return v.Plus(other)
+	return v.Plus(interpreter, other)
 }
 
 func (v UIntValue) Minus(other NumberValue) NumberValue {
@@ -6281,7 +6402,7 @@ func (v UIntValue) SaturatingMinus(other NumberValue) NumberValue {
 	return UIntValue{res}
 }
 
-func (v UIntValue) Mod(other NumberValue) NumberValue {
+func (v UIntValue) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6300,7 +6421,7 @@ func (v UIntValue) Mod(other NumberValue) NumberValue {
 	return UIntValue{res}
 }
 
-func (v UIntValue) Mul(other NumberValue) NumberValue {
+func (v UIntValue) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6310,12 +6431,17 @@ func (v UIntValue) Mul(other NumberValue) NumberValue {
 		})
 	}
 
-	res := new(big.Int)
-	res.Mul(v.BigInt, o.BigInt)
-	return UIntValue{res}
+	return NewUIntValueFromBigInt(
+		interpreter,
+		common.NewMulBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Mul(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v UIntValue) SaturatingMul(other NumberValue) NumberValue {
+func (v UIntValue) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	defer func() {
 		r := recover()
 		if _, ok := r.(InvalidOperandsError); ok {
@@ -6327,7 +6453,7 @@ func (v UIntValue) SaturatingMul(other NumberValue) NumberValue {
 		}
 	}()
 
-	return v.Mul(other)
+	return v.Mul(interpreter, other)
 }
 
 func (v UIntValue) Div(other NumberValue) NumberValue {
@@ -6589,7 +6715,7 @@ func (v UIntValue) Transfer(
 }
 
 func (v UIntValue) Clone(_ *Interpreter) Value {
-	return NewUIntValueFromBigInt(v.BigInt)
+	return NewUnmeteredUIntValueFromBigInt(v.BigInt)
 }
 
 func (UIntValue) DeepRemove(_ *Interpreter) {
@@ -6652,11 +6778,11 @@ func (v UInt8Value) ToInt() int {
 	return int(v)
 }
 
-func (v UInt8Value) Negate() NumberValue {
+func (v UInt8Value) Negate(*Interpreter) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v UInt8Value) Plus(other NumberValue) NumberValue {
+func (v UInt8Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6674,7 +6800,7 @@ func (v UInt8Value) Plus(other NumberValue) NumberValue {
 	return sum
 }
 
-func (v UInt8Value) SaturatingPlus(other NumberValue) NumberValue {
+func (v UInt8Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6730,7 +6856,7 @@ func (v UInt8Value) SaturatingMinus(other NumberValue) NumberValue {
 	return diff
 }
 
-func (v UInt8Value) Mod(other NumberValue) NumberValue {
+func (v UInt8Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6746,7 +6872,7 @@ func (v UInt8Value) Mod(other NumberValue) NumberValue {
 	return v % o
 }
 
-func (v UInt8Value) Mul(other NumberValue) NumberValue {
+func (v UInt8Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6763,7 +6889,7 @@ func (v UInt8Value) Mul(other NumberValue) NumberValue {
 	return v * o
 }
 
-func (v UInt8Value) SaturatingMul(other NumberValue) NumberValue {
+func (v UInt8Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7090,11 +7216,11 @@ func (v UInt16Value) RecursiveString(_ SeenReferences) string {
 func (v UInt16Value) ToInt() int {
 	return int(v)
 }
-func (v UInt16Value) Negate() NumberValue {
+func (v UInt16Value) Negate(*Interpreter) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v UInt16Value) Plus(other NumberValue) NumberValue {
+func (v UInt16Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7112,7 +7238,7 @@ func (v UInt16Value) Plus(other NumberValue) NumberValue {
 	return sum
 }
 
-func (v UInt16Value) SaturatingPlus(other NumberValue) NumberValue {
+func (v UInt16Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7168,7 +7294,7 @@ func (v UInt16Value) SaturatingMinus(other NumberValue) NumberValue {
 	return diff
 }
 
-func (v UInt16Value) Mod(other NumberValue) NumberValue {
+func (v UInt16Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7184,7 +7310,7 @@ func (v UInt16Value) Mod(other NumberValue) NumberValue {
 	return v % o
 }
 
-func (v UInt16Value) Mul(other NumberValue) NumberValue {
+func (v UInt16Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7201,7 +7327,7 @@ func (v UInt16Value) Mul(other NumberValue) NumberValue {
 	return v * o
 }
 
-func (v UInt16Value) SaturatingMul(other NumberValue) NumberValue {
+func (v UInt16Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7534,11 +7660,11 @@ func (v UInt32Value) ToInt() int {
 	return int(v)
 }
 
-func (v UInt32Value) Negate() NumberValue {
+func (v UInt32Value) Negate(*Interpreter) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v UInt32Value) Plus(other NumberValue) NumberValue {
+func (v UInt32Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7557,7 +7683,7 @@ func (v UInt32Value) Plus(other NumberValue) NumberValue {
 	return sum
 }
 
-func (v UInt32Value) SaturatingPlus(other NumberValue) NumberValue {
+func (v UInt32Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7613,7 +7739,7 @@ func (v UInt32Value) SaturatingMinus(other NumberValue) NumberValue {
 	return diff
 }
 
-func (v UInt32Value) Mod(other NumberValue) NumberValue {
+func (v UInt32Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7629,7 +7755,7 @@ func (v UInt32Value) Mod(other NumberValue) NumberValue {
 	return v % o
 }
 
-func (v UInt32Value) Mul(other NumberValue) NumberValue {
+func (v UInt32Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7645,7 +7771,7 @@ func (v UInt32Value) Mul(other NumberValue) NumberValue {
 	return v * o
 }
 
-func (v UInt32Value) SaturatingMul(other NumberValue) NumberValue {
+func (v UInt32Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7988,6 +8114,10 @@ func (v UInt64Value) ToInt() int {
 	return int(v)
 }
 
+func (v UInt64Value) ByteLength() int {
+	return 8
+}
+
 // ToBigInt
 //
 // NOTE: important, do *NOT* remove:
@@ -7999,7 +8129,7 @@ func (v UInt64Value) ToBigInt() *big.Int {
 	return new(big.Int).SetUint64(uint64(v))
 }
 
-func (v UInt64Value) Negate() NumberValue {
+func (v UInt64Value) Negate(*Interpreter) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
@@ -8012,7 +8142,7 @@ func safeAddUint64(a, b uint64) uint64 {
 	return sum
 }
 
-func (v UInt64Value) Plus(other NumberValue) NumberValue {
+func (v UInt64Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8025,7 +8155,7 @@ func (v UInt64Value) Plus(other NumberValue) NumberValue {
 	return UInt64Value(safeAddUint64(uint64(v), uint64(o)))
 }
 
-func (v UInt64Value) SaturatingPlus(other NumberValue) NumberValue {
+func (v UInt64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8082,7 +8212,7 @@ func (v UInt64Value) SaturatingMinus(other NumberValue) NumberValue {
 	return diff
 }
 
-func (v UInt64Value) Mod(other NumberValue) NumberValue {
+func (v UInt64Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8098,7 +8228,7 @@ func (v UInt64Value) Mod(other NumberValue) NumberValue {
 	return v % o
 }
 
-func (v UInt64Value) Mul(other NumberValue) NumberValue {
+func (v UInt64Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8114,7 +8244,7 @@ func (v UInt64Value) Mul(other NumberValue) NumberValue {
 	return v * o
 }
 
-func (v UInt64Value) SaturatingMul(other NumberValue) NumberValue {
+func (v UInt64Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8450,6 +8580,10 @@ func (v UInt128Value) ToInt() int {
 	return int(v.BigInt.Int64())
 }
 
+func (v UInt128Value) ByteLength() int {
+	return common.BigIntByteLength(v.BigInt)
+}
+
 func (v UInt128Value) ToBigInt() *big.Int {
 	return new(big.Int).Set(v.BigInt)
 }
@@ -8462,11 +8596,11 @@ func (v UInt128Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v UInt128Value) Negate() NumberValue {
+func (v UInt128Value) Negate(*Interpreter) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v UInt128Value) Plus(other NumberValue) NumberValue {
+func (v UInt128Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8494,7 +8628,7 @@ func (v UInt128Value) Plus(other NumberValue) NumberValue {
 	return UInt128Value{sum}
 }
 
-func (v UInt128Value) SaturatingPlus(other NumberValue) NumberValue {
+func (v UInt128Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8578,7 +8712,7 @@ func (v UInt128Value) SaturatingMinus(other NumberValue) NumberValue {
 	return UInt128Value{diff}
 }
 
-func (v UInt128Value) Mod(other NumberValue) NumberValue {
+func (v UInt128Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8596,7 +8730,7 @@ func (v UInt128Value) Mod(other NumberValue) NumberValue {
 	return UInt128Value{res}
 }
 
-func (v UInt128Value) Mul(other NumberValue) NumberValue {
+func (v UInt128Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8614,7 +8748,7 @@ func (v UInt128Value) Mul(other NumberValue) NumberValue {
 	return UInt128Value{res}
 }
 
-func (v UInt128Value) SaturatingMul(other NumberValue) NumberValue {
+func (v UInt128Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8986,6 +9120,10 @@ func (v UInt256Value) ToInt() int {
 	return int(v.BigInt.Int64())
 }
 
+func (v UInt256Value) ByteLength() int {
+	return common.BigIntByteLength(v.BigInt)
+}
+
 func (v UInt256Value) ToBigInt() *big.Int {
 	return new(big.Int).Set(v.BigInt)
 }
@@ -8998,11 +9136,11 @@ func (v UInt256Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v UInt256Value) Negate() NumberValue {
+func (v UInt256Value) Negate(*Interpreter) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v UInt256Value) Plus(other NumberValue) NumberValue {
+func (v UInt256Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9030,7 +9168,7 @@ func (v UInt256Value) Plus(other NumberValue) NumberValue {
 	return UInt256Value{sum}
 }
 
-func (v UInt256Value) SaturatingPlus(other NumberValue) NumberValue {
+func (v UInt256Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9114,7 +9252,7 @@ func (v UInt256Value) SaturatingMinus(other NumberValue) NumberValue {
 	return UInt256Value{diff}
 }
 
-func (v UInt256Value) Mod(other NumberValue) NumberValue {
+func (v UInt256Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9132,7 +9270,7 @@ func (v UInt256Value) Mod(other NumberValue) NumberValue {
 	return UInt256Value{res}
 }
 
-func (v UInt256Value) Mul(other NumberValue) NumberValue {
+func (v UInt256Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9150,7 +9288,7 @@ func (v UInt256Value) Mul(other NumberValue) NumberValue {
 	return UInt256Value{res}
 }
 
-func (v UInt256Value) SaturatingMul(other NumberValue) NumberValue {
+func (v UInt256Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9515,11 +9653,11 @@ func (v Word8Value) ToInt() int {
 	return int(v)
 }
 
-func (v Word8Value) Negate() NumberValue {
+func (v Word8Value) Negate(*Interpreter) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word8Value) Plus(other NumberValue) NumberValue {
+func (v Word8Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9532,7 +9670,7 @@ func (v Word8Value) Plus(other NumberValue) NumberValue {
 	return v + o
 }
 
-func (v Word8Value) SaturatingPlus(_ NumberValue) NumberValue {
+func (v Word8Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -9553,7 +9691,7 @@ func (v Word8Value) SaturatingMinus(_ NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
-func (v Word8Value) Mod(other NumberValue) NumberValue {
+func (v Word8Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9569,7 +9707,7 @@ func (v Word8Value) Mod(other NumberValue) NumberValue {
 	return v % o
 }
 
-func (v Word8Value) Mul(other NumberValue) NumberValue {
+func (v Word8Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9582,7 +9720,7 @@ func (v Word8Value) Mul(other NumberValue) NumberValue {
 	return v * o
 }
 
-func (v Word8Value) SaturatingMul(_ NumberValue) NumberValue {
+func (v Word8Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -9863,11 +10001,11 @@ func (v Word16Value) RecursiveString(_ SeenReferences) string {
 func (v Word16Value) ToInt() int {
 	return int(v)
 }
-func (v Word16Value) Negate() NumberValue {
+func (v Word16Value) Negate(*Interpreter) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word16Value) Plus(other NumberValue) NumberValue {
+func (v Word16Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9880,7 +10018,7 @@ func (v Word16Value) Plus(other NumberValue) NumberValue {
 	return v + o
 }
 
-func (v Word16Value) SaturatingPlus(_ NumberValue) NumberValue {
+func (v Word16Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -9901,7 +10039,7 @@ func (v Word16Value) SaturatingMinus(_ NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
-func (v Word16Value) Mod(other NumberValue) NumberValue {
+func (v Word16Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9917,7 +10055,7 @@ func (v Word16Value) Mod(other NumberValue) NumberValue {
 	return v % o
 }
 
-func (v Word16Value) Mul(other NumberValue) NumberValue {
+func (v Word16Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9930,7 +10068,7 @@ func (v Word16Value) Mul(other NumberValue) NumberValue {
 	return v * o
 }
 
-func (v Word16Value) SaturatingMul(_ NumberValue) NumberValue {
+func (v Word16Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -10214,11 +10352,11 @@ func (v Word32Value) ToInt() int {
 	return int(v)
 }
 
-func (v Word32Value) Negate() NumberValue {
+func (v Word32Value) Negate(*Interpreter) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word32Value) Plus(other NumberValue) NumberValue {
+func (v Word32Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10231,7 +10369,7 @@ func (v Word32Value) Plus(other NumberValue) NumberValue {
 	return v + o
 }
 
-func (v Word32Value) SaturatingPlus(_ NumberValue) NumberValue {
+func (v Word32Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -10252,7 +10390,7 @@ func (v Word32Value) SaturatingMinus(_ NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
-func (v Word32Value) Mod(other NumberValue) NumberValue {
+func (v Word32Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10268,7 +10406,7 @@ func (v Word32Value) Mod(other NumberValue) NumberValue {
 	return v % o
 }
 
-func (v Word32Value) Mul(other NumberValue) NumberValue {
+func (v Word32Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10281,7 +10419,7 @@ func (v Word32Value) Mul(other NumberValue) NumberValue {
 	return v * o
 }
 
-func (v Word32Value) SaturatingMul(_ NumberValue) NumberValue {
+func (v Word32Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -10575,6 +10713,10 @@ func (v Word64Value) ToInt() int {
 	return int(v)
 }
 
+func (v Word64Value) ByteLength() int {
+	return 8
+}
+
 // ToBigInt
 //
 // NOTE: important, do *NOT* remove:
@@ -10586,11 +10728,11 @@ func (v Word64Value) ToBigInt() *big.Int {
 	return new(big.Int).SetUint64(uint64(v))
 }
 
-func (v Word64Value) Negate() NumberValue {
+func (v Word64Value) Negate(*Interpreter) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word64Value) Plus(other NumberValue) NumberValue {
+func (v Word64Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10603,7 +10745,7 @@ func (v Word64Value) Plus(other NumberValue) NumberValue {
 	return v + o
 }
 
-func (v Word64Value) SaturatingPlus(_ NumberValue) NumberValue {
+func (v Word64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -10624,7 +10766,7 @@ func (v Word64Value) SaturatingMinus(_ NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
-func (v Word64Value) Mod(other NumberValue) NumberValue {
+func (v Word64Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10640,7 +10782,7 @@ func (v Word64Value) Mod(other NumberValue) NumberValue {
 	return v % o
 }
 
-func (v Word64Value) Mul(other NumberValue) NumberValue {
+func (v Word64Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10653,7 +10795,7 @@ func (v Word64Value) Mul(other NumberValue) NumberValue {
 	return v * o
 }
 
-func (v Word64Value) SaturatingMul(_ NumberValue) NumberValue {
+func (v Word64Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -10960,7 +11102,7 @@ func (v Fix64Value) ToInt() int {
 	return int(v / sema.Fix64Factor)
 }
 
-func (v Fix64Value) Negate() NumberValue {
+func (v Fix64Value) Negate(*Interpreter) NumberValue {
 	// INT32-C
 	if v == math.MinInt64 {
 		panic(OverflowError{})
@@ -10968,7 +11110,7 @@ func (v Fix64Value) Negate() NumberValue {
 	return -v
 }
 
-func (v Fix64Value) Plus(other NumberValue) NumberValue {
+func (v Fix64Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10981,7 +11123,7 @@ func (v Fix64Value) Plus(other NumberValue) NumberValue {
 	return Fix64Value(safeAddInt64(int64(v), int64(o)))
 }
 
-func (v Fix64Value) SaturatingPlus(other NumberValue) NumberValue {
+func (v Fix64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11041,7 +11183,7 @@ func (v Fix64Value) SaturatingMinus(other NumberValue) NumberValue {
 var minInt64Big = big.NewInt(math.MinInt64)
 var maxInt64Big = big.NewInt(math.MaxInt64)
 
-func (v Fix64Value) Mul(other NumberValue) NumberValue {
+func (v Fix64Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11066,7 +11208,7 @@ func (v Fix64Value) Mul(other NumberValue) NumberValue {
 	return Fix64Value(result.Int64())
 }
 
-func (v Fix64Value) SaturatingMul(other NumberValue) NumberValue {
+func (v Fix64Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11141,7 +11283,7 @@ func (v Fix64Value) SaturatingDiv(other NumberValue) NumberValue {
 	return Fix64Value(result.Int64())
 }
 
-func (v Fix64Value) Mod(other NumberValue) NumberValue {
+func (v Fix64Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11161,7 +11303,8 @@ func (v Fix64Value) Mod(other NumberValue) NumberValue {
 		})
 	}
 	truncatedQuotient := (int64(quotient) / sema.Fix64Factor) * sema.Fix64Factor
-	return v.Minus(Fix64Value(truncatedQuotient).Mul(o))
+	return v.Minus(Fix64Value(truncatedQuotient).
+		Mul(interpreter, o))
 }
 
 func (v Fix64Value) Less(other NumberValue) BoolValue {
@@ -11409,11 +11552,11 @@ func (v UFix64Value) ToInt() int {
 	return int(v / sema.Fix64Factor)
 }
 
-func (v UFix64Value) Negate() NumberValue {
+func (v UFix64Value) Negate(*Interpreter) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v UFix64Value) Plus(other NumberValue) NumberValue {
+func (v UFix64Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11426,7 +11569,7 @@ func (v UFix64Value) Plus(other NumberValue) NumberValue {
 	return UFix64Value(safeAddUint64(uint64(v), uint64(o)))
 }
 
-func (v UFix64Value) SaturatingPlus(other NumberValue) NumberValue {
+func (v UFix64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11482,7 +11625,7 @@ func (v UFix64Value) SaturatingMinus(other NumberValue) NumberValue {
 	return diff
 }
 
-func (v UFix64Value) Mul(other NumberValue) NumberValue {
+func (v UFix64Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11505,7 +11648,7 @@ func (v UFix64Value) Mul(other NumberValue) NumberValue {
 	return UFix64Value(result.Uint64())
 }
 
-func (v UFix64Value) SaturatingMul(other NumberValue) NumberValue {
+func (v UFix64Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11562,7 +11705,7 @@ func (v UFix64Value) SaturatingDiv(other NumberValue) NumberValue {
 	return v.Div(other)
 }
 
-func (v UFix64Value) Mod(other NumberValue) NumberValue {
+func (v UFix64Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11582,7 +11725,8 @@ func (v UFix64Value) Mod(other NumberValue) NumberValue {
 		})
 	}
 	truncatedQuotient := (uint64(quotient) / sema.Fix64Factor) * sema.Fix64Factor
-	return v.Minus(UFix64Value(truncatedQuotient).Mul(o))
+	return v.Minus(UFix64Value(truncatedQuotient).
+		Mul(interpreter, o))
 }
 
 func (v UFix64Value) Less(other NumberValue) BoolValue {
@@ -13248,7 +13392,7 @@ func (v *DictionaryValue) GetMember(
 
 	switch name {
 	case "length":
-		return NewIntValueFromInt64(int64(v.Count()))
+		return NewIntValueFromInt64(interpreter, int64(v.Count()))
 
 	case "keys":
 
