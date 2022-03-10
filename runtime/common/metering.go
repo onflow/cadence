@@ -98,6 +98,13 @@ func NewCharacterMemoryUsage(char string) MemoryUsage {
 	}
 }
 
+func NewStorageReferenceMemoryUsage(targetPath string) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindStorageReferenceValue,
+		Amount: uint64(len(targetPath)),
+	}
+}
+
 // UseConstantMemory uses a pre-determined amount of memory
 //
 func UseConstantMemory(memoryGauge MemoryGauge, kind MemoryKind) {

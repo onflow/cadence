@@ -14596,17 +14596,13 @@ func NewUnmeteredStorageReferenceValue(
 
 func NewStorageReferenceValue(
 	memoryGauge common.MemoryGauge,
-	authorized bool,
-	targetStorageAddress common.Address,
-	targetPath PathValue,
-	borrowedType sema.Type,
+	memoryUsage common.MemoryUsage,
+	storageReferenceConstructor func() (bool, common.Address, PathValue, sema.Type),
 ) *StorageReferenceValue {
 	if memoryGauge != nil {
-		memoryGauge.UseMemory(common.MemoryUsage{
-			Kind:   common.MemoryKindStorageReferenceValue,
-			Amount: uint64(len(targetPath.String())),
-		})
+		memoryGauge.UseMemory(memoryUsage)
 	}
+	authorized, targetStorageAddress, targetPath, borrowedType := storageReferenceConstructor()
 	return NewUnmeteredStorageReferenceValue(authorized, targetStorageAddress, targetPath, borrowedType)
 }
 
