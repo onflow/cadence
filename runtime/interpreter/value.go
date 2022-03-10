@@ -1948,11 +1948,11 @@ func (v *ArrayValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 ) Value {
-	interpreter.ReportComputation(common.ComputationKindTransferArrayValue, uint(v.Count()))
-
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
 	}
+
+	interpreter.ReportComputation(common.ComputationKindTransferArrayValue, uint(v.Count()))
 
 	if interpreter.tracingEnabled {
 		startTime := time.Now()

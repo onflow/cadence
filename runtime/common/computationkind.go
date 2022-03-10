@@ -24,12 +24,12 @@ package common
 type ComputationKind uint
 
 // [1000,2000) is reserved for Cadence interpreter and runtime
-const computationKindRangeStart = 1000
+const ComputationKindRangeStart = 1000
 
 const (
 	ComputationKindUnknown ComputationKind = 0
 	// interpreter - base
-	ComputationKindStatement ComputationKind = computationKindRangeStart + iota
+	ComputationKindStatement ComputationKind = ComputationKindRangeStart + iota
 	ComputationKindLoop
 	ComputationKindFunctionInvocation
 	_
@@ -142,5 +142,4 @@ const (
 	// RLP
 	ComputationKindSTDLIBRLPDecodeString
 	ComputationKindSTDLIBRLPDecodeList
-	// Crypto
 )

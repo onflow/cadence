@@ -2646,6 +2646,7 @@ func (interpreter *Interpreter) NewSubInterpreter(
 		WithTracingEnabled(interpreter.tracingEnabled),
 		WithOnRecordTraceHandler(interpreter.onRecordTrace),
 		WithOnResourceOwnerChangeHandler(interpreter.onResourceOwnerChange),
+		WithOnMeterComputationFuncHandler(interpreter.onMeterComputation),
 	}
 
 	return NewInterpreter(
