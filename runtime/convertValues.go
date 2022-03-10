@@ -612,7 +612,9 @@ func importUInt256(inter *interpreter.Interpreter, v cadence.UInt256) interprete
 }
 
 func importInt(inter *interpreter.Interpreter, v cadence.Int) interpreter.IntValue {
-	memoryUsage := common.NewBigIntMemoryUsage(len(v.Value.Bytes()))
+	memoryUsage := common.NewBigIntMemoryUsage(
+		common.BigIntByteLength(v.Value),
+	)
 	return interpreter.NewIntValueFromBigInt(
 		inter,
 		memoryUsage,
@@ -623,7 +625,9 @@ func importInt(inter *interpreter.Interpreter, v cadence.Int) interpreter.IntVal
 }
 
 func importUInt(inter *interpreter.Interpreter, v cadence.UInt) interpreter.UIntValue {
-	memoryUsage := common.NewBigIntMemoryUsage(len(v.Value.Bytes()))
+	memoryUsage := common.NewBigIntMemoryUsage(
+		common.BigIntByteLength(v.Value),
+	)
 	return interpreter.NewUIntValueFromBigInt(
 		inter,
 		memoryUsage,
