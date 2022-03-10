@@ -82,6 +82,11 @@ func decodeString(dec *cbor.StreamDecoder, memoryGauge common.MemoryGauge) (stri
 	return dec.DecodeString()
 }
 
+func decodeInt64(d StorableDecoder) (int64, error) {
+	common.UseMemory(d.memoryGauge, int64MemoryUsage)
+	return d.decoder.DecodeInt64()
+}
+
 func DecodeStorable(
 	decoder *cbor.StreamDecoder,
 	slabStorageID atree.StorageID,
@@ -350,9 +355,7 @@ func (d StorableDecoder) decodeInt() (IntValue, error) {
 }
 
 func (d StorableDecoder) decodeInt8() (Int8Value, error) {
-	common.UseMemory(d.memoryGauge, int8MemoryUsage)
-
-	v, err := d.decoder.DecodeInt64()
+	v, err := decodeInt64(d)
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return 0, fmt.Errorf("unknown Int8 encoding: %s", e.ActualType.String())
@@ -371,14 +374,12 @@ func (d StorableDecoder) decodeInt8() (Int8Value, error) {
 		return 0, fmt.Errorf("invalid Int8: got %d, expected max %d", v, max)
 	}
 
-	// Already metered at the start of this function
+	// Already metered at `decodeInt64` function
 	return NewUnmeteredInt8Value(int8(v)), nil
 }
 
 func (d StorableDecoder) decodeInt16() (Int16Value, error) {
-	common.UseMemory(d.memoryGauge, int16MemoryUsage)
-
-	v, err := d.decoder.DecodeInt64()
+	v, err := decodeInt64(d)
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return 0, fmt.Errorf("unknown Int16 encoding: %s", e.ActualType.String())
@@ -397,14 +398,12 @@ func (d StorableDecoder) decodeInt16() (Int16Value, error) {
 		return 0, fmt.Errorf("invalid Int16: got %d, expected max %d", v, max)
 	}
 
-	// Already metered at the start of this function
+	// Already metered at `decodeInt64` function
 	return NewUnmeteredInt16Value(int16(v)), nil
 }
 
 func (d StorableDecoder) decodeInt32() (Int32Value, error) {
-	common.UseMemory(d.memoryGauge, int32MemoryUsage)
-
-	v, err := d.decoder.DecodeInt64()
+	v, err := decodeInt64(d)
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return 0, fmt.Errorf("unknown Int32 encoding: %s", e.ActualType.String())
@@ -422,14 +421,12 @@ func (d StorableDecoder) decodeInt32() (Int32Value, error) {
 		return 0, fmt.Errorf("invalid Int32: got %d, expected max %d", v, max)
 	}
 
-	// Already metered at the start of this function
+	// Already metered at `decodeInt64` function
 	return NewUnmeteredInt32Value(int32(v)), nil
 }
 
 func (d StorableDecoder) decodeInt64() (Int64Value, error) {
-	common.UseMemory(d.memoryGauge, int64MemoryUsage)
-
-	v, err := d.decoder.DecodeInt64()
+	v, err := decodeInt64(d)
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return 0, fmt.Errorf("unknown Int64 encoding: %s", e.ActualType.String())
@@ -437,7 +434,7 @@ func (d StorableDecoder) decodeInt64() (Int64Value, error) {
 		return 0, err
 	}
 
-	// Already metered at the start of this function
+	// Already metered at `decodeInt64` function
 	return NewUnmeteredInt64Value(v), nil
 }
 
