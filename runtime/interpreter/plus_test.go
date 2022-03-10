@@ -702,7 +702,7 @@ func uint128(v string) UInt128Value {
 	if res.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
 		panic(fmt.Sprintf("invalid value: larger than max: %s", v))
 	}
-	return NewUInt128ValueFromBigInt(res)
+	return NewUnmeteredUInt128ValueFromBigInt(res)
 }
 
 func TestPlusUInt128(t *testing.T) {
@@ -830,7 +830,7 @@ func uint256(v string) UInt256Value {
 	if res.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
 		panic(fmt.Sprintf("invalid value: larger than max: %s", v))
 	}
-	return NewUInt256ValueFromBigInt(res)
+	return NewUnmeteredUInt256ValueFromBigInt(res)
 }
 
 func TestPlusUInt256(t *testing.T) {

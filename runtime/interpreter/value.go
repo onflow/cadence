@@ -1165,7 +1165,12 @@ func (v *StringValue) DecodeHex(interpreter *Interpreter) *ArrayValue {
 				return nil
 			}
 
-			value := UInt8Value(bs[i])
+			value := NewUInt8Value(
+				interpreter,
+				func() uint8 {
+					return bs[i]
+				},
+			)
 
 			i++
 
@@ -6836,6 +6841,18 @@ var _ EquatableValue = UInt8Value(0)
 var _ HashableValue = UInt8Value(0)
 var _ MemberAccessibleValue = UInt8Value(0)
 
+var Uint8MemoryUsage = common.NewNumberMemoryUsage(int(unsafe.Sizeof(UInt8Value(0))))
+
+func NewUInt8Value(gauge common.MemoryGauge, uint8Constructor func() uint8) UInt8Value {
+	common.UseMemory(gauge, Uint8MemoryUsage)
+
+	return NewUnmeteredUInt8Value(uint8Constructor())
+}
+
+func NewUnmeteredUInt8Value(value uint8) UInt8Value {
+	return UInt8Value(value)
+}
+
 func (UInt8Value) IsValue() {}
 
 func (v UInt8Value) Accept(interpreter *Interpreter, visitor Visitor) {
@@ -7275,6 +7292,18 @@ var _ EquatableValue = UInt16Value(0)
 var _ HashableValue = UInt16Value(0)
 var _ MemberAccessibleValue = UInt16Value(0)
 
+var Uint16MemoryUsage = common.NewNumberMemoryUsage(int(unsafe.Sizeof(UInt16Value(0))))
+
+func NewUInt16Value(gauge common.MemoryGauge, uint16Constructor func() uint16) UInt16Value {
+	common.UseMemory(gauge, Uint16MemoryUsage)
+
+	return NewUnmeteredUInt16Value(uint16Constructor())
+}
+
+func NewUnmeteredUInt16Value(value uint16) UInt16Value {
+	return UInt16Value(value)
+}
+
 func (UInt16Value) IsValue() {}
 
 func (v UInt16Value) Accept(interpreter *Interpreter, visitor Visitor) {
@@ -7709,6 +7738,18 @@ func (UInt16Value) ChildStorables() []atree.Storable {
 // UInt32Value
 
 type UInt32Value uint32
+
+var Uint32MemoryUsage = common.NewNumberMemoryUsage(int(unsafe.Sizeof(UInt32Value(0))))
+
+func NewUInt32Value(gauge common.MemoryGauge, uint32Constructor func() uint32) UInt32Value {
+	common.UseMemory(gauge, Uint32MemoryUsage)
+
+	return NewUnmeteredUInt32Value(uint32Constructor())
+}
+
+func NewUnmeteredUInt32Value(value uint32) UInt32Value {
+	return UInt32Value(value)
+}
 
 var _ Value = UInt32Value(0)
 var _ atree.Storable = UInt32Value(0)
@@ -8169,6 +8210,18 @@ var _ MemberAccessibleValue = UInt64Value(0)
 //
 var _ BigNumberValue = UInt64Value(0)
 
+var Uint64MemoryUsage = common.NewNumberMemoryUsage(int(unsafe.Sizeof(UInt64Value(0))))
+
+func NewUInt64Value(gauge common.MemoryGauge, uint64Constructor func() uint64) UInt64Value {
+	common.UseMemory(gauge, Uint64MemoryUsage)
+
+	return NewUnmeteredUInt64Value(uint64Constructor())
+}
+
+func NewUnmeteredUInt64Value(value uint64) UInt64Value {
+	return UInt64Value(value)
+}
+
 func (UInt64Value) IsValue() {}
 
 func (v UInt64Value) Accept(interpreter *Interpreter, visitor Visitor) {
@@ -8627,12 +8680,31 @@ type UInt128Value struct {
 	BigInt *big.Int
 }
 
-func NewUInt128ValueFromUint64(value uint64) UInt128Value {
-	return NewUInt128ValueFromBigInt(new(big.Int).SetUint64(value))
+func NewUInt128ValueFromUint64(interpreter *Interpreter, value uint64) UInt128Value {
+	return NewUInt128ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			return new(big.Int).SetUint64(value)
+		},
+	)
 }
 
-func NewUInt128ValueFromBigInt(value *big.Int) UInt128Value {
-	return UInt128Value{BigInt: value}
+func NewUnmeteredUInt128ValueFromUint64(value uint64) UInt128Value {
+	return NewUnmeteredUInt128ValueFromBigInt(new(big.Int).SetUint64(value))
+}
+
+var Uint128MemoryUsage = common.NewNumberMemoryUsage(16)
+
+func NewUInt128ValueFromBigInt(memoryGauge common.MemoryGauge, bigIntConstructor func() *big.Int) UInt128Value {
+	common.UseMemory(memoryGauge, Uint128MemoryUsage)
+	value := bigIntConstructor()
+	return NewUnmeteredUInt128ValueFromBigInt(value)
+}
+
+func NewUnmeteredUInt128ValueFromBigInt(value *big.Int) UInt128Value {
+	return UInt128Value{
+		BigInt: value,
+	}
 }
 
 var _ Value = UInt128Value{}
@@ -8973,27 +9045,33 @@ func (v UInt128Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch 
 	return buffer
 }
 
-func ConvertUInt128(value Value) UInt128Value {
-	var v *big.Int
+func ConvertUInt128(memoryGauge common.MemoryGauge, value Value) UInt128Value {
+	return NewUInt128ValueFromBigInt(
+		memoryGauge,
+		func() *big.Int {
 
-	switch value := value.(type) {
-	case BigNumberValue:
-		v = value.ToBigInt()
+			var v *big.Int
 
-	case NumberValue:
-		v = big.NewInt(int64(value.ToInt()))
+			switch value := value.(type) {
+			case BigNumberValue:
+				v = value.ToBigInt()
 
-	default:
-		panic(errors.NewUnreachableError())
-	}
+			case NumberValue:
+				v = big.NewInt(int64(value.ToInt()))
 
-	if v.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
-		panic(OverflowError{})
-	} else if v.Sign() < 0 {
-		panic(UnderflowError{})
-	}
+			default:
+				panic(errors.NewUnreachableError())
+			}
 
-	return NewUInt128ValueFromBigInt(v)
+			if v.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
+				panic(OverflowError{})
+			} else if v.Sign() < 0 {
+				panic(UnderflowError{})
+			}
+
+			return v
+		},
+	)
 }
 
 func (v UInt128Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -9141,7 +9219,7 @@ func (v UInt128Value) Transfer(
 }
 
 func (v UInt128Value) Clone(_ *Interpreter) Value {
-	return NewUInt128ValueFromBigInt(v.BigInt)
+	return NewUnmeteredUInt128ValueFromBigInt(v.BigInt)
 }
 
 func (UInt128Value) DeepRemove(_ *Interpreter) {
@@ -9166,12 +9244,31 @@ type UInt256Value struct {
 	BigInt *big.Int
 }
 
-func NewUInt256ValueFromUint64(value uint64) UInt256Value {
-	return NewUInt256ValueFromBigInt(new(big.Int).SetUint64(value))
+func NewUInt256ValueFromUint64(interpreter *Interpreter, value uint64) UInt256Value {
+	return NewUInt256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			return new(big.Int).SetUint64(value)
+		},
+	)
 }
 
-func NewUInt256ValueFromBigInt(value *big.Int) UInt256Value {
-	return UInt256Value{BigInt: value}
+func NewUnmeteredUInt256ValueFromUint64(value uint64) UInt256Value {
+	return NewUnmeteredUInt256ValueFromBigInt(new(big.Int).SetUint64(value))
+}
+
+var Uint256MemoryUsage = common.NewNumberMemoryUsage(32)
+
+func NewUInt256ValueFromBigInt(memoryGauge common.MemoryGauge, bigIntConstructor func() *big.Int) UInt256Value {
+	common.UseMemory(memoryGauge, Uint256MemoryUsage)
+	value := bigIntConstructor()
+	return NewUnmeteredUInt256ValueFromBigInt(value)
+}
+
+func NewUnmeteredUInt256ValueFromBigInt(value *big.Int) UInt256Value {
+	return UInt256Value{
+		BigInt: value,
+	}
 }
 
 var _ Value = UInt256Value{}
@@ -9513,27 +9610,32 @@ func (v UInt256Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch 
 	return buffer
 }
 
-func ConvertUInt256(value Value) UInt256Value {
-	var v *big.Int
+func ConvertUInt256(memoryGauge common.MemoryGauge, value Value) UInt256Value {
+	return NewUInt256ValueFromBigInt(
+		memoryGauge,
+		func() *big.Int {
+			var v *big.Int
 
-	switch value := value.(type) {
-	case BigNumberValue:
-		v = value.ToBigInt()
+			switch value := value.(type) {
+			case BigNumberValue:
+				v = value.ToBigInt()
 
-	case NumberValue:
-		v = big.NewInt(int64(value.ToInt()))
+			case NumberValue:
+				v = big.NewInt(int64(value.ToInt()))
 
-	default:
-		panic(errors.NewUnreachableError())
-	}
+			default:
+				panic(errors.NewUnreachableError())
+			}
 
-	if v.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
-		panic(OverflowError{})
-	} else if v.Sign() < 0 {
-		panic(UnderflowError{})
-	}
+			if v.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
+				panic(OverflowError{})
+			} else if v.Sign() < 0 {
+				panic(UnderflowError{})
+			}
 
-	return NewUInt256ValueFromBigInt(v)
+			return v
+		},
+	)
 }
 
 func (v UInt256Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -9680,7 +9782,7 @@ func (v UInt256Value) Transfer(
 }
 
 func (v UInt256Value) Clone(_ *Interpreter) Value {
-	return NewUInt256ValueFromBigInt(v.BigInt)
+	return NewUnmeteredUInt256ValueFromBigInt(v.BigInt)
 }
 
 func (UInt256Value) DeepRemove(_ *Interpreter) {

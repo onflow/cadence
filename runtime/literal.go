@@ -223,9 +223,9 @@ func convertIntValue(
 	case sema.UInt64Type:
 		return interpreter.ConvertUInt64(intValue), nil
 	case sema.UInt128Type:
-		return interpreter.ConvertUInt128(intValue), nil
+		return interpreter.ConvertUInt128(memoryGauge, intValue), nil
 	case sema.UInt256Type:
-		return interpreter.ConvertUInt256(intValue), nil
+		return interpreter.ConvertUInt256(memoryGauge, intValue), nil
 
 	case sema.Word8Type:
 		return interpreter.ConvertWord8(intValue), nil

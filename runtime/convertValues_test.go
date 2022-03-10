@@ -276,32 +276,32 @@ func TestExportValue(t *testing.T) {
 		},
 		{
 			label:    "UInt8",
-			value:    interpreter.UInt8Value(42),
+			value:    interpreter.NewUnmeteredUInt8Value(42),
 			expected: cadence.NewUInt8(42),
 		},
 		{
 			label:    "UInt16",
-			value:    interpreter.UInt16Value(42),
+			value:    interpreter.NewUnmeteredUInt16Value(42),
 			expected: cadence.NewUInt16(42),
 		},
 		{
 			label:    "UInt32",
-			value:    interpreter.UInt32Value(42),
+			value:    interpreter.NewUnmeteredUInt32Value(42),
 			expected: cadence.NewUInt32(42),
 		},
 		{
 			label:    "UInt64",
-			value:    interpreter.UInt64Value(42),
+			value:    interpreter.NewUnmeteredUInt64Value(42),
 			expected: cadence.NewUInt64(42),
 		},
 		{
 			label:    "UInt128",
-			value:    interpreter.NewUInt128ValueFromUint64(42),
+			value:    interpreter.NewUnmeteredUInt128ValueFromUint64(42),
 			expected: cadence.NewUInt128(42),
 		},
 		{
 			label:    "UInt256",
-			value:    interpreter.NewUInt256ValueFromUint64(42),
+			value:    interpreter.NewUnmeteredUInt256ValueFromUint64(42),
 			expected: cadence.NewUInt256(42),
 		},
 		{
@@ -662,32 +662,32 @@ func TestImportValue(t *testing.T) {
 		{
 			label:    "UInt8",
 			value:    cadence.NewUInt8(42),
-			expected: interpreter.UInt8Value(42),
+			expected: interpreter.NewUnmeteredUInt8Value(42),
 		},
 		{
 			label:    "UInt16",
 			value:    cadence.NewUInt16(42),
-			expected: interpreter.UInt16Value(42),
+			expected: interpreter.NewUnmeteredUInt16Value(42),
 		},
 		{
 			label:    "UInt32",
 			value:    cadence.NewUInt32(42),
-			expected: interpreter.UInt32Value(42),
+			expected: interpreter.NewUnmeteredUInt32Value(42),
 		},
 		{
 			label:    "UInt64",
 			value:    cadence.NewUInt64(42),
-			expected: interpreter.UInt64Value(42),
+			expected: interpreter.NewUnmeteredUInt64Value(42),
 		},
 		{
 			label:    "UInt128",
 			value:    cadence.NewUInt128(42),
-			expected: interpreter.NewUInt128ValueFromUint64(42),
+			expected: interpreter.NewUnmeteredUInt128ValueFromUint64(42),
 		},
 		{
 			label:    "UInt256",
 			value:    cadence.NewUInt256(42),
-			expected: interpreter.NewUInt256ValueFromUint64(42),
+			expected: interpreter.NewUnmeteredUInt256ValueFromUint64(42),
 		},
 		{
 			label:    "Word8",

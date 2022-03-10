@@ -44,7 +44,7 @@ func NewAuthAccountValue(
 	accountBalanceGet func() UFix64Value,
 	accountAvailableBalanceGet func() UFix64Value,
 	storageUsedGet func(interpreter *Interpreter) UInt64Value,
-	storageCapacityGet func() UInt64Value,
+	storageCapacityGet func(interpreter *Interpreter) UInt64Value,
 	addPublicKeyFunction FunctionValue,
 	removePublicKeyFunction FunctionValue,
 	contractsConstructor func() Value,
@@ -88,8 +88,8 @@ func NewAuthAccountValue(
 		sema.AuthAccountStorageUsedField: func(inter *Interpreter, _ func() LocationRange) Value {
 			return storageUsedGet(inter)
 		},
-		sema.AuthAccountStorageCapacityField: func(_ *Interpreter, _ func() LocationRange) Value {
-			return storageCapacityGet()
+		sema.AuthAccountStorageCapacityField: func(interpreter *Interpreter, _ func() LocationRange) Value {
+			return storageCapacityGet(interpreter)
 		},
 		sema.AuthAccountTypeField: func(inter *Interpreter, _ func() LocationRange) Value {
 			return inter.authAccountTypeFunction(address)
@@ -158,7 +158,7 @@ func NewPublicAccountValue(
 	accountBalanceGet func() UFix64Value,
 	accountAvailableBalanceGet func() UFix64Value,
 	storageUsedGet func(interpreter *Interpreter) UInt64Value,
-	storageCapacityGet func() UInt64Value,
+	storageCapacityGet func(interpreter *Interpreter) UInt64Value,
 	keysConstructor func() Value,
 	contractsConstructor func() Value,
 ) Value {
@@ -198,8 +198,8 @@ func NewPublicAccountValue(
 		sema.PublicAccountStorageUsedField: func(inter *Interpreter, _ func() LocationRange) Value {
 			return storageUsedGet(inter)
 		},
-		sema.PublicAccountStorageCapacityField: func(_ *Interpreter, _ func() LocationRange) Value {
-			return storageCapacityGet()
+		sema.PublicAccountStorageCapacityField: func(inter *Interpreter, _ func() LocationRange) Value {
+			return storageCapacityGet(inter)
 		},
 		sema.PublicAccountGetTargetLinkField: func(inter *Interpreter, _ func() LocationRange) Value {
 			return inter.accountGetLinkTargetFunction(address)

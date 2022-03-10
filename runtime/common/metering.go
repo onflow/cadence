@@ -156,3 +156,18 @@ func NewBitwiseRightShiftBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 		),
 	)
 }
+
+func NewNumberMemoryUsage(bytes int) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindNumber,
+		Amount: uint64(bytes),
+	}
+}
+
+func UseMemory(gauge MemoryGauge, usage MemoryUsage) {
+	if gauge == nil {
+		return
+	}
+
+	gauge.UseMemory(usage)
+}

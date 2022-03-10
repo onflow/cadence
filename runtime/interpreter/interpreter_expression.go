@@ -456,24 +456,24 @@ func (interpreter *Interpreter) VisitIntegerExpression(expression *ast.IntegerEx
 // This method assumes the range validations are done prior to calling this method. (i.e: at semantic level)
 //
 func (interpreter *Interpreter) NewIntegerValueFromBigInt(value *big.Int, integerSubType sema.Type) Value {
+	memoryGauge := interpreter.memoryGauge
+
 	switch integerSubType {
 	case sema.IntType, sema.IntegerType, sema.SignedIntegerType:
-		memoryGauge := interpreter.memoryGauge
-		if memoryGauge != nil {
-			memoryUsage := common.NewBigIntMemoryUsage(
+		common.UseMemory(
+			memoryGauge,
+			common.NewBigIntMemoryUsage(
 				common.BigIntByteLength(value),
-			)
-			memoryGauge.UseMemory(memoryUsage)
-		}
+			),
+		)
 		return NewUnmeteredIntValueFromBigInt(value)
 	case sema.UIntType:
-		memoryGauge := interpreter.memoryGauge
-		if memoryGauge != nil {
-			memoryUsage := common.NewBigIntMemoryUsage(
+		common.UseMemory(
+			memoryGauge,
+			common.NewBigIntMemoryUsage(
 				common.BigIntByteLength(value),
-			)
-			memoryGauge.UseMemory(memoryUsage)
-		}
+			),
+		)
 		return NewUnmeteredUIntValueFromBigInt(value)
 
 	// Int*
@@ -492,17 +492,23 @@ func (interpreter *Interpreter) NewIntegerValueFromBigInt(value *big.Int, intege
 
 	// UInt*
 	case sema.UInt8Type:
-		return UInt8Value(value.Int64())
+		common.UseMemory(memoryGauge, Uint8MemoryUsage)
+		return NewUnmeteredUInt8Value(uint8(value.Uint64()))
 	case sema.UInt16Type:
-		return UInt16Value(value.Int64())
+		common.UseMemory(memoryGauge, Uint16MemoryUsage)
+		return NewUnmeteredUInt16Value(uint16(value.Uint64()))
 	case sema.UInt32Type:
-		return UInt32Value(value.Int64())
+		common.UseMemory(memoryGauge, Uint32MemoryUsage)
+		return NewUnmeteredUInt32Value(uint32(value.Uint64()))
 	case sema.UInt64Type:
-		return UInt64Value(value.Int64())
+		common.UseMemory(memoryGauge, Uint64MemoryUsage)
+		return NewUnmeteredUInt64Value(value.Uint64())
 	case sema.UInt128Type:
-		return NewUInt128ValueFromBigInt(value)
+		common.UseMemory(memoryGauge, Uint128MemoryUsage)
+		return NewUnmeteredUInt128ValueFromBigInt(value)
 	case sema.UInt256Type:
-		return NewUInt256ValueFromBigInt(value)
+		common.UseMemory(memoryGauge, Uint256MemoryUsage)
+		return NewUnmeteredUInt256ValueFromBigInt(value)
 
 	// Word*
 	case sema.Word8Type:

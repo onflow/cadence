@@ -85,6 +85,7 @@ func ByteValueToByte(element Value) (byte, error) {
 	return b, nil
 }
 
+// TODO: meter
 func ByteSliceToByteArrayValue(interpreter *Interpreter, buf []byte) *ArrayValue {
 	values := make([]Value, len(buf))
 	for i, b := range buf {

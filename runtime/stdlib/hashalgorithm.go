@@ -34,7 +34,9 @@ func NewHashAlgorithmCase(inter *interpreter.Interpreter, rawValue uint8) *inter
 	return interpreter.NewEnumCaseValue(
 		inter,
 		sema.HashAlgorithmType,
-		interpreter.UInt8Value(rawValue),
+		interpreter.NewUInt8Value(inter, func() uint8 {
+			return rawValue
+		}),
 		hashAlgorithmFunctions,
 	)
 }
