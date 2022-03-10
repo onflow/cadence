@@ -686,8 +686,8 @@ func NewUnmeteredCharacterValue(r string) CharacterValue {
 func NewCharacterValue(
 	memoryGauge common.MemoryGauge,
 	memoryUsage common.MemoryUsage,
-	characterConstructor func () string,
-	) CharacterValue {
+	characterConstructor func() string,
+) CharacterValue {
 	if memoryGauge != nil {
 		memoryGauge.UseMemory(memoryUsage)
 	}
