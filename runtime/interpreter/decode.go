@@ -775,7 +775,14 @@ func (d StorableDecoder) decodePath() (PathValue, error) {
 		return EmptyPathValue, err
 	}
 
-	return NewPathValue(d.memoryGauge, common.PathDomain(domain), identifier), nil
+	return NewPathValue(
+		d.memoryGauge,
+		common.NewPathMemoryUsage(identifier),
+		func() (common.PathDomain, string) {
+			return common.PathDomain(domain),
+				identifier
+		},
+	), nil
 }
 
 func (d StorableDecoder) decodeCapability() (*CapabilityValue, error) {

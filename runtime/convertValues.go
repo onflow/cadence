@@ -617,8 +617,11 @@ func importAddress(inter *interpreter.Interpreter, v cadence.Address) interprete
 func importPathValue(inter *interpreter.Interpreter, v cadence.Path) interpreter.PathValue {
 	return interpreter.NewPathValue(
 		inter,
-		common.PathDomainFromIdentifier(v.Domain),
-		v.Identifier,
+		common.NewPathMemoryUsage(v.Identifier),
+		func() (common.PathDomain, string) {
+			return common.PathDomainFromIdentifier(v.Domain),
+				v.Identifier
+		},
 	)
 }
 

@@ -956,5 +956,11 @@ func (interpreter *Interpreter) VisitForceExpression(expression *ast.ForceExpres
 func (interpreter *Interpreter) VisitPathExpression(expression *ast.PathExpression) ast.Repr {
 	domain := common.PathDomainFromIdentifier(expression.Domain.Identifier)
 
-	return NewPathValue(interpreter, domain, expression.Identifier.Identifier)
+	return NewPathValue(
+		interpreter,
+		common.NewPathMemoryUsage(expression.Identifier.Identifier),
+		func() (common.PathDomain, string) {
+			return domain, expression.Identifier.Identifier
+		},
+	)
 }
