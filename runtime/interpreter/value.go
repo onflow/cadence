@@ -683,15 +683,17 @@ func NewUnmeteredCharacterValue(r string) CharacterValue {
 	return CharacterValue(r)
 }
 
-func NewCharacterValue(memoryGauge common.MemoryGauge, r string) CharacterValue {
+func NewCharacterValue(
+	memoryGauge common.MemoryGauge,
+	memoryUsage common.MemoryUsage,
+	characterConstructor func () string,
+	) CharacterValue {
 	if memoryGauge != nil {
-		memoryGauge.UseMemory(common.MemoryUsage{
-			Kind:   common.MemoryKindBool,
-			Amount: uint64(len(r)),
-		})
+		memoryGauge.UseMemory(memoryUsage)
 	}
 
-	return NewUnmeteredCharacterValue(r)
+	character := characterConstructor()
+	return NewUnmeteredCharacterValue(character)
 }
 
 var _ Value = CharacterValue("a")
@@ -1041,7 +1043,13 @@ func (v *StringValue) GetKey(interpreter *Interpreter, getLocationRange func() L
 	}
 
 	char := v.graphemes.Str()
-	return NewCharacterValue(interpreter, char)
+	return NewCharacterValue(
+		interpreter,
+		common.NewCharacterMemoryUsage(char),
+		func() string {
+			return char
+		},
+	)
 }
 
 func (*StringValue) SetKey(_ *Interpreter, _ func() LocationRange, _ Value, _ Value) {

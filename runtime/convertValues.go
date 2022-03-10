@@ -454,7 +454,7 @@ func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedTy
 	case cadence.String:
 		return importString(inter, v), nil
 	case cadence.Character:
-		return interpreter.NewCharacterValue(inter, string(v)), nil
+		return importCharacter(inter, v), nil
 	case cadence.Bytes:
 		return interpreter.ByteSliceToByteArrayValue(inter, v), nil
 	case cadence.Address:
@@ -587,6 +587,18 @@ func importString(inter *interpreter.Interpreter, v cadence.String) *interpreter
 		memoryUsage,
 		func() string {
 			return string(v)
+		},
+	)
+}
+
+func importCharacter(inter *interpreter.Interpreter, v cadence.Character) interpreter.CharacterValue {
+	s := string(v)
+	memoryUsage := common.NewCharacterMemoryUsage(s)
+	return interpreter.NewCharacterValue(
+		inter,
+		memoryUsage,
+		func() string {
+			return s
 		},
 	)
 }

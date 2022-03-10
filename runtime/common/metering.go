@@ -91,6 +91,13 @@ func NewTypeMemoryUsage(staticTypeAsString string) MemoryUsage {
 	}
 }
 
+func NewCharacterMemoryUsage(char string) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindCharacter,
+		Amount: uint64(len(char)),
+	}
+}
+
 // UseConstantMemory uses a pre-determined amount of memory
 //
 func UseConstantMemory(memoryGauge MemoryGauge, kind MemoryKind) {

@@ -302,7 +302,13 @@ func (d StorableDecoder) decodeCharacter(v string) (CharacterValue, error) {
 			v,
 		)
 	}
-	return NewCharacterValue(d.memoryGauge, v), nil
+	return NewCharacterValue(
+		d.memoryGauge,
+		common.NewCharacterMemoryUsage(v),
+		func() string {
+			return v
+		},
+	), nil
 }
 
 func (d StorableDecoder) decodeStringValue() (*StringValue, error) {
