@@ -215,26 +215,26 @@ func convertIntValue(
 	case sema.UIntType:
 		return interpreter.ConvertUInt(memoryGauge, intValue), nil
 	case sema.UInt8Type:
-		return interpreter.ConvertUInt8(intValue), nil
+		return interpreter.ConvertUInt8(memoryGauge, intValue), nil
 	case sema.UInt16Type:
-		return interpreter.ConvertUInt16(intValue), nil
+		return interpreter.ConvertUInt16(memoryGauge, intValue), nil
 	case sema.UInt32Type:
-		return interpreter.ConvertUInt32(intValue), nil
+		return interpreter.ConvertUInt32(memoryGauge, intValue), nil
 	case sema.UInt64Type:
-		return interpreter.ConvertUInt64(intValue), nil
+		return interpreter.ConvertUInt64(memoryGauge, intValue), nil
 	case sema.UInt128Type:
 		return interpreter.ConvertUInt128(memoryGauge, intValue), nil
 	case sema.UInt256Type:
 		return interpreter.ConvertUInt256(memoryGauge, intValue), nil
 
 	case sema.Word8Type:
-		return interpreter.ConvertWord8(intValue), nil
+		return interpreter.ConvertWord8(memoryGauge, intValue), nil
 	case sema.Word16Type:
-		return interpreter.ConvertWord16(intValue), nil
+		return interpreter.ConvertWord16(memoryGauge, intValue), nil
 	case sema.Word32Type:
-		return interpreter.ConvertWord32(intValue), nil
+		return interpreter.ConvertWord32(memoryGauge, intValue), nil
 	case sema.Word64Type:
-		return interpreter.ConvertWord64(intValue), nil
+		return interpreter.ConvertWord64(memoryGauge, intValue), nil
 
 	default:
 		return nil, UnsupportedLiteralError

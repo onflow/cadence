@@ -11078,8 +11078,8 @@ func (v Word32Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch [
 	return scratch[:5]
 }
 
-func ConvertWord32(interpreter *Interpreter, value Value) Word32Value {
-	return Word32Value(ConvertUInt32(interpreter, value))
+func ConvertWord32(memoryGauge common.MemoryGauge, value Value) Word32Value {
+	return Word32Value(ConvertUInt32(memoryGauge, value))
 }
 
 func (v Word32Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -11454,8 +11454,8 @@ func (v Word64Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch [
 	return scratch[:9]
 }
 
-func ConvertWord64(interpreter *Interpreter, value Value) Word64Value {
-	return Word64Value(ConvertUInt64(interpreter, value))
+func ConvertWord64(memoryGauge common.MemoryGauge, value Value) Word64Value {
+	return Word64Value(ConvertUInt64(memoryGauge, value))
 }
 
 func (v Word64Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
