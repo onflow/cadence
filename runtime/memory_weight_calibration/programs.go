@@ -20,6 +20,16 @@ pub fun main() {
 }
 `
 
+var dict_test = `
+pub fun main() {
+	var i = 0
+	while i < 10000 {
+		let v: {String: String} = {}
+		i = i + 1
+	}
+}
+`
+
 var array_test = `
 pub fun main() {
 	var i = 0
@@ -37,4 +47,5 @@ var test_programs = []struct {
 	{name: "bool", code: bool_test},
 	{name: "void", code: void_test},
 	{name: "array", code: array_test},
+	{name: "dict", code: dict_test},
 }
