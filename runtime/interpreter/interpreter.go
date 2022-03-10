@@ -132,6 +132,15 @@ type OnResourceOwnerChangeFunc func(
 	newOwner common.Address,
 )
 
+// OnMeterComputationFunc is a function that is called when some computation is about to happen.
+// intensity captures the intensity of the computation and can be set using input sizes
+// complexity of computation given input sizes, or any other factors that could help the upper levels
+// to differentiate same kind of computation with different level (and time) of execution.
+type OnMeterComputationFunc func(
+	compKind common.ComputationKind,
+	intensity uint,
+)
+
 // InjectedCompositeFieldsHandlerFunc is a function that handles storage reads.
 //
 type InjectedCompositeFieldsHandlerFunc func(
@@ -329,6 +338,7 @@ type Interpreter struct {
 	onInvokedFunctionReturn        OnInvokedFunctionReturnFunc
 	onRecordTrace                  OnRecordTraceFunc
 	onResourceOwnerChange          OnResourceOwnerChangeFunc
+	onMeterComputation             OnMeterComputationFunc
 	injectedCompositeFieldsHandler InjectedCompositeFieldsHandlerFunc
 	contractValueHandler           ContractValueHandlerFunc
 	importLocationHandler          ImportLocationHandlerFunc
@@ -421,6 +431,16 @@ func WithOnRecordTraceHandler(handler OnRecordTraceFunc) Option {
 func WithOnResourceOwnerChangeHandler(handler OnResourceOwnerChangeFunc) Option {
 	return func(interpreter *Interpreter) error {
 		interpreter.SetOnResourceOwnerChangeHandler(handler)
+		return nil
+	}
+}
+
+// WithOnMeterComputationFuncHandler returns an interpreter option which sets
+// the given function as the meter computation handler.
+//
+func WithOnMeterComputationFuncHandler(handler OnMeterComputationFunc) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetOnMeterComputationHandler(handler)
 		return nil
 	}
 }
@@ -732,6 +752,12 @@ func (interpreter *Interpreter) SetOnRecordTraceHandler(function OnRecordTraceFu
 //
 func (interpreter *Interpreter) SetOnResourceOwnerChangeHandler(function OnResourceOwnerChangeFunc) {
 	interpreter.onResourceOwnerChange = function
+}
+
+// SetOnMeterComputationFuncHandler sets the function that is triggered when a computation is about to happen.
+//
+func (interpreter *Interpreter) SetOnMeterComputationHandler(function OnMeterComputationFunc) {
+	interpreter.onMeterComputation = function
 }
 
 // SetStorage sets the value that is used for storage operations.
@@ -2620,6 +2646,7 @@ func (interpreter *Interpreter) NewSubInterpreter(
 		WithTracingEnabled(interpreter.tracingEnabled),
 		WithOnRecordTraceHandler(interpreter.onRecordTrace),
 		WithOnResourceOwnerChangeHandler(interpreter.onResourceOwnerChange),
+		WithOnMeterComputationFuncHandler(interpreter.onMeterComputation),
 	}
 
 	return NewInterpreter(
@@ -4298,20 +4325,23 @@ func (interpreter *Interpreter) getInterfaceType(location common.Location, quali
 }
 
 func (interpreter *Interpreter) reportLoopIteration(pos ast.HasPosition) {
-	if interpreter.onLoopIteration == nil {
-		return
+	if interpreter.onMeterComputation != nil {
+		interpreter.onMeterComputation(common.ComputationKindLoop, 1)
 	}
 
-	line := pos.StartPosition().Line
-	interpreter.onLoopIteration(interpreter, line)
+	if interpreter.onLoopIteration != nil {
+		line := pos.StartPosition().Line
+		interpreter.onLoopIteration(interpreter, line)
+	}
 }
 
 func (interpreter *Interpreter) reportFunctionInvocation(line int) {
-	if interpreter.onFunctionInvocation == nil {
-		return
+	if interpreter.onMeterComputation != nil {
+		interpreter.onMeterComputation(common.ComputationKindFunctionInvocation, 1)
 	}
-
-	interpreter.onFunctionInvocation(interpreter, line)
+	if interpreter.onFunctionInvocation != nil {
+		interpreter.onFunctionInvocation(interpreter, line)
+	}
 }
 
 func (interpreter *Interpreter) reportInvokedFunctionReturn(line int) {
@@ -4320,6 +4350,12 @@ func (interpreter *Interpreter) reportInvokedFunctionReturn(line int) {
 	}
 
 	interpreter.onInvokedFunctionReturn(interpreter, line)
+}
+
+func (interpreter *Interpreter) ReportComputation(compKind common.ComputationKind, intensity uint) {
+	if interpreter.onMeterComputation != nil {
+		interpreter.onMeterComputation(compKind, intensity)
+	}
 }
 
 // getMember gets the member value by the given identifier from the given Value depending on its type.
