@@ -926,6 +926,8 @@ func NewArrayValueWithIterator(
 	values func() Value,
 ) *ArrayValue {
 
+	interpreter.ReportComputation(common.ComputationKindCreateArrayValue, 1)
+
 	var v *ArrayValue
 
 	if interpreter.tracingEnabled {
@@ -1031,6 +1033,8 @@ func (v *ArrayValue) StaticType() StaticType {
 }
 
 func (v *ArrayValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
+
+	interpreter.ReportComputation(common.ComputationKindDestroyArrayValue, 1)
 
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
@@ -1540,6 +1544,7 @@ func (v *ArrayValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 ) Value {
+	interpreter.ReportComputation(common.ComputationKindTransferArrayValue, uint(v.Count()))
 
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
@@ -10917,8 +10922,9 @@ func NewCompositeValue(
 	address common.Address,
 ) *CompositeValue {
 
-	var v *CompositeValue
+	interpreter.ReportComputation(common.ComputationKindCreateCompositeValue, 1)
 
+	var v *CompositeValue
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
 
@@ -11037,6 +11043,8 @@ func (v *CompositeValue) IsDestroyed() bool {
 }
 
 func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
+
+	interpreter.ReportComputation(common.ComputationKindDestroyCompositeValue, 1)
 
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
@@ -11584,6 +11592,8 @@ func (v *CompositeValue) Transfer(
 	storable atree.Storable,
 ) Value {
 
+	interpreter.ReportComputation(common.ComputationKindTransferCompositeValue, 1)
+
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
 
@@ -11855,6 +11865,8 @@ func NewDictionaryValueWithAddress(
 	keysAndValues ...Value,
 ) *DictionaryValue {
 
+	interpreter.ReportComputation(common.ComputationKindCreateDictionaryValue, 1)
+
 	var v *DictionaryValue
 
 	if interpreter.tracingEnabled {
@@ -11983,6 +11995,8 @@ func (v *DictionaryValue) IsDestroyed() bool {
 }
 
 func (v *DictionaryValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
+
+	interpreter.ReportComputation(common.ComputationKindDestroyDictionaryValue, 1)
 
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
@@ -12536,6 +12550,8 @@ func (v *DictionaryValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 ) Value {
+
+	interpreter.ReportComputation(common.ComputationKindTransferDictionaryValue, uint(v.Count()))
 
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
