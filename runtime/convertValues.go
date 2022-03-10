@@ -660,7 +660,7 @@ func importCapability(
 	error,
 ) {
 
-	_, ok := borrowType.(cadence.ReferenceType)
+	referenceType, ok := borrowType.(cadence.ReferenceType)
 
 	if !ok {
 		return nil, fmt.Errorf(
@@ -668,6 +668,9 @@ func importCapability(
 			borrowType.ID(),
 		)
 	}
+
+	// include memory usage for reference type
+	inter.UseMemory(common.NewTypeMemoryUsage(referenceType.Type.ID()))
 
 	bytes := address.Bytes()
 	return interpreter.NewCapabilityValue(

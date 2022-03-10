@@ -15817,7 +15817,13 @@ func NewUnmeteredCapabilityValue(address AddressValue, path PathValue, borrowTyp
 	return &CapabilityValue{address, path, borrowType}
 }
 
-func NewCapabilityValue(memoryGauge common.MemoryGauge, address AddressValue, path PathValue, borrowType StaticType) *CapabilityValue {
+func NewCapabilityValue(
+	memoryGauge common.MemoryGauge,
+	address AddressValue,
+	path PathValue,
+	borrowType StaticType,
+) *CapabilityValue {
+	// Constant because its constituents are already metered.
 	common.UseConstantMemory(memoryGauge, common.MemoryKindCapabilityValue)
 	return NewUnmeteredCapabilityValue(address, path, borrowType)
 }

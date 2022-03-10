@@ -19,6 +19,7 @@
 package runtime
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -46,36 +47,80 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 
 	runtime := newTestInterpreterRuntime()
 
-	t.Run("optional", func(t *testing.T) {
-		t.Parallel()
+	type importTest struct {
+		TypeName     string
+		MemoryKind   common.MemoryKind
+		Weight       uint64
+		TypeInstance cadence.Value
+	}
 
-		script := []byte(`
-            pub fun main(x: String?) {}
-        `)
+	tests := []importTest{
+		{TypeName: "String", MemoryKind: common.MemoryKindString, Weight: 7 + 1, TypeInstance: cadence.String("forever")},
+		{TypeName: "Character", MemoryKind: common.MemoryKindCharacter, Weight: 1, TypeInstance: cadence.Character("a")},
+		{TypeName: "Type", MemoryKind: common.MemoryKindTypeValue, Weight: 3, TypeInstance: cadence.TypeValue{StaticType: cadence.AnyType{}}},
+		{TypeName: "Bool", MemoryKind: common.MemoryKindBool, Weight: 1, TypeInstance: cadence.Bool(true)},
+		{TypeName: "Address", MemoryKind: common.MemoryKindAddress, Weight: 8, TypeInstance: cadence.Address{}},
+		{TypeName: "Path", MemoryKind: common.MemoryKindPathValue, Weight: 3, TypeInstance: cadence.Path{Domain: "storage", Identifier: "id3"}},
 
-		meter := make(map[common.MemoryKind]uint64)
+		// Verify Capability and its composing values, Path and Type.
+		{TypeName: "Capability", MemoryKind: common.MemoryKindCapabilityValue, Weight: 1, TypeInstance: cadence.Capability{
+			Path:       cadence.Path{Domain: "public", Identifier: "foobarrington"},
+			Address:    cadence.Address{},
+			BorrowType: cadence.ReferenceType{Authorized: true, Type: cadence.AnyType{}},
+		}},
+		{TypeName: "Capability", MemoryKind: common.MemoryKindPathValue, Weight: 13, TypeInstance: cadence.Capability{
+			Path:       cadence.Path{Domain: "public", Identifier: "foobarrington"},
+			Address:    cadence.Address{},
+			BorrowType: cadence.ReferenceType{Authorized: true, Type: cadence.AnyType{}},
+		}},
+		{TypeName: "Capability", MemoryKind: common.MemoryKindTypeValue, Weight: 3, TypeInstance: cadence.Capability{
+			Path:       cadence.Path{Domain: "public", Identifier: "foobarrington"},
+			Address:    cadence.Address{},
+			BorrowType: cadence.ReferenceType{Authorized: true, Type: cadence.AnyType{}},
+		}},
 
-		runtimeInterface := &testRuntimeInterface{
-			useMemory: testUseMemory(meter),
-			decodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
-				return jsoncdc.Decode(b)
-			},
-		}
+		// Verify Optional and its composing type
+		{TypeName: "String?", MemoryKind: common.MemoryKindOptional, Weight: 1, TypeInstance: cadence.NewOptional(cadence.String("hello"))},
+		{TypeName: "String?", MemoryKind: common.MemoryKindString, Weight: 5 + 1, TypeInstance: cadence.NewOptional(cadence.String("hello"))},
 
-		_, err := runtime.ExecuteScript(
-			Script{
-				Source: script,
-				Arguments: encodeArgs([]cadence.Value{
-					cadence.NewOptional(cadence.String("hello")),
-				}),
-			},
-			Context{
-				Interface: runtimeInterface,
-				Location:  utils.TestLocation,
-			},
-		)
+		// Not importable: Void
+		// Not a user-visible type (not in BaseTypeActivation): Link
+		// TODO: Bytes, U?Int\d*, Word\d+, U?Fix64, Array, Dictionary, Struct, Resource, Event, Contract, Enum
+	}
+	for _, test := range tests {
+		t.Run(test.TypeName, func(test importTest) func(t *testing.T) {
+			return func(t *testing.T) {
+				t.Parallel()
 
-		require.NoError(t, err)
-		assert.Equal(t, uint64(1), meter[common.MemoryKindOptional])
-	})
+				meter := make(map[common.MemoryKind]uint64)
+				runtimeInterface := &testRuntimeInterface{
+					useMemory: testUseMemory(meter),
+					decodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
+						return jsoncdc.Decode(b)
+					},
+				}
+
+				script := []byte(fmt.Sprintf(`
+            	pub fun main(x: %s) {}
+        	`, test.TypeName))
+
+				_, err := runtime.ExecuteScript(
+					Script{
+						Source: script,
+						Arguments: encodeArgs([]cadence.Value{
+							test.TypeInstance,
+						}),
+					},
+					Context{
+						Interface: runtimeInterface,
+						Location:  utils.TestLocation,
+					},
+				)
+
+				require.NoError(t, err)
+
+				assert.Equal(t, test.Weight, meter[test.MemoryKind])
+			}
+		}(test))
+	}
 }
