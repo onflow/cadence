@@ -85,7 +85,7 @@ func TestDivModUInt8(t *testing.T) {
 				a.Div(b)
 			},
 			func(a, b UInt8Value) {
-				a.Mod(b)
+				a.Mod(nil, b)
 			},
 		} {
 			f := func() {
@@ -157,7 +157,7 @@ func TestDivModUInt16(t *testing.T) {
 				a.Div(b)
 			},
 			func(a, b UInt16Value) {
-				a.Mod(b)
+				a.Mod(nil, b)
 			},
 		} {
 			f := func() {
@@ -229,7 +229,7 @@ func TestDivModUInt32(t *testing.T) {
 				a.Div(b)
 			},
 			func(a, b UInt32Value) {
-				a.Mod(b)
+				a.Mod(nil, b)
 			},
 		} {
 			f := func() {
@@ -391,7 +391,7 @@ func TestDivModUInt64(t *testing.T) {
 				a.Div(b)
 			},
 			func(a, b UInt64Value) {
-				a.Mod(b)
+				a.Mod(nil, b)
 			},
 		} {
 			f := func() {
@@ -555,7 +555,7 @@ func TestDivModUInt128(t *testing.T) {
 				a.Div(b)
 			},
 			func(a, b UInt128Value) {
-				a.Mod(b)
+				a.Mod(nil, b)
 			},
 		} {
 			f := func() {
@@ -1225,7 +1225,7 @@ func TestDivModUInt256(t *testing.T) {
 				a.Div(b)
 			},
 			func(a, b UInt256Value) {
-				a.Mod(b)
+				a.Mod(nil, b)
 			},
 		} {
 			f := func() {
@@ -1357,7 +1357,7 @@ func TestModInt8(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Mod(test.b)
+			test.a.Mod(nil, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1484,7 +1484,7 @@ func TestModInt16(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Mod(test.b)
+			test.a.Mod(nil, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1611,7 +1611,7 @@ func TestModInt32(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Mod(test.b)
+			test.a.Mod(nil, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1918,7 +1918,7 @@ func TestModInt64(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Mod(test.b)
+			test.a.Mod(nil, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1937,11 +1937,11 @@ func TestDivModInt(t *testing.T) {
 			a.Div(b)
 		},
 		func(a, b IntValue) {
-			a.Mod(b)
+			a.Mod(nil, b)
 		},
 	} {
 		assert.Panics(t, func() {
-			f(NewIntValueFromInt64(1), NewIntValueFromInt64(0))
+			f(NewUnmeteredIntValueFromInt64(1), NewUnmeteredIntValueFromInt64(0))
 		})
 	}
 }
@@ -2159,7 +2159,7 @@ func TestModInt128(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Mod(test.b)
+			test.a.Mod(nil, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -3066,7 +3066,7 @@ func TestModInt256(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Mod(test.b)
+			test.a.Mod(nil, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -3185,7 +3185,7 @@ func TestModFix64(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Mod(test.b)
+			test.a.Mod(nil, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -3231,7 +3231,7 @@ func TestDivModUFix64(t *testing.T) {
 				a.Div(b)
 			},
 			func(a, b UFix64Value) {
-				a.Mod(b)
+				a.Mod(nil, b)
 			},
 		} {
 
@@ -3314,9 +3314,9 @@ func TestNegativeMod(t *testing.T) {
 				NewInt256ValueFromInt64(-1),
 			},
 			"Int": {
-				NewIntValueFromInt64(-1),
-				NewIntValueFromInt64(5),
-				NewIntValueFromInt64(-1),
+				NewUnmeteredIntValueFromInt64(-1),
+				NewUnmeteredIntValueFromInt64(5),
+				NewUnmeteredIntValueFromInt64(-1),
 			},
 		}
 
@@ -3329,7 +3329,7 @@ func TestNegativeMod(t *testing.T) {
 		for _, test := range tests {
 			assert.Equal(t,
 				test.expected,
-				test.a.Mod(test.b),
+				test.a.Mod(nil, test.b),
 			)
 		}
 	})
@@ -3353,7 +3353,7 @@ func TestNegativeMod(t *testing.T) {
 		for _, test := range tests {
 			assert.Equal(t,
 				test.expected,
-				test.a.Mod(test.b),
+				test.a.Mod(nil, test.b),
 			)
 		}
 	})

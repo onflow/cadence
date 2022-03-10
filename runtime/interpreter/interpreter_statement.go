@@ -279,6 +279,8 @@ func (interpreter *Interpreter) VisitWhileStatement(statement *ast.WhileStatemen
 	}
 }
 
+var intOne = NewUnmeteredIntValueFromInt64(1)
+
 func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) ast.Repr {
 
 	interpreter.activations.PushNewWithCurrent()
@@ -306,11 +308,10 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) a
 	}
 
 	var indexVariable *Variable
-	var one = NewIntValueFromInt64(1)
 	if statement.Index != nil {
 		indexVariable = interpreter.declareVariable(
 			statement.Index.Identifier,
-			NewIntValueFromInt64(0),
+			NewIntValueFromInt64(interpreter, 0),
 		)
 	}
 
@@ -347,7 +348,9 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) a
 		}
 
 		if indexVariable != nil {
-			indexVariable.SetValue(indexVariable.GetValue().(IntValue).Plus(one))
+			currentIndex := indexVariable.GetValue().(IntValue)
+			nextIndex := currentIndex.Plus(interpreter, intOne)
+			indexVariable.SetValue(nextIndex)
 		}
 	}
 }
