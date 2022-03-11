@@ -4,7 +4,7 @@ var bool_test = `
 pub fun main() {
 	var i = 0
 	while i < 10000 {
-		let b = true
+		let b = true || false
 		i = i + 1
 	}
 }
@@ -14,7 +14,7 @@ var nil_test = `
 pub fun main() {
 	var i = 0
 	while i < 10000 {
-		let v = nil
+		let v = nil ?? nil
 		i = i + 1
 	}
 }
@@ -24,7 +24,7 @@ var string_test = `
 pub fun main() {
 	var i = 0
 	while i < 10000 {
-		let v = "x"
+		let v = "x".toLower()
 		i = i + 1
 	}
 }
@@ -34,7 +34,7 @@ var char_test = `
 pub fun main() {
 	var i = 0
 	while i < 10000 {
-		let v: Character = "e\u{301}"
+		let v: Character = "x"[0]
 		i = i + 1
 	}
 }
@@ -54,7 +54,7 @@ var int_test = `
 pub fun main() {
 	var i = 0
 	while i < 10000 {
-		let v = 3
+		let v = 1 + 1
 		i = i + 1
 	}
 }
@@ -64,7 +64,7 @@ var float_test = `
 pub fun main() {
 	var i = 0
 	while i < 10000 {
-		let v = 3.2
+		let v = 3.2 + 1.1
 		i = i + 1
 	}
 }
