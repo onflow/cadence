@@ -68,6 +68,21 @@ func (e InvalidStringLengthError) Error() string {
 	)
 }
 
+func decodeCharacter(dec *cbor.StreamDecoder, memoryGauge common.MemoryGauge) (string, error) {
+	length, err := dec.NextSize()
+	if err != nil {
+		return "", err
+	}
+	if length > goMaxInt {
+		return "", InvalidStringLengthError{
+			Length: length,
+		}
+	}
+
+	common.UseMemory(memoryGauge, common.NewCharacterMemoryUsage(int(length)))
+	return dec.DecodeString()
+}
+
 func decodeString(dec *cbor.StreamDecoder, memoryGauge common.MemoryGauge) (string, error) {
 	length, err := dec.NextSize()
 	if err != nil {
@@ -183,11 +198,7 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 			}
 
 		case CBORTagCharacterValue:
-			v, err := d.decoder.DecodeString()
-			if err != nil {
-				return nil, err
-			}
-			storable, err = d.decodeCharacter(v)
+			storable, err = d.decodeCharacter()
 			if err != nil {
 				return nil, err
 			}
@@ -302,20 +313,26 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 	return storable, nil
 }
 
-func (d StorableDecoder) decodeCharacter(v string) (CharacterValue, error) {
+func (d StorableDecoder) decodeCharacter() (CharacterValue, error) {
+	v, err := decodeCharacter(d.decoder, d.memoryGauge)
+	if err != nil {
+		if err, ok := err.(*cbor.WrongTypeError); ok {
+			return "", fmt.Errorf(
+				"invalid Character encoding: %s",
+				err.ActualType.String(),
+			)
+		}
+		return "", err
+	}
 	if !sema.IsValidCharacter(v) {
 		return "", fmt.Errorf(
 			"invalid character encoding: %s",
 			v,
 		)
 	}
-	return NewCharacterValue(
-		d.memoryGauge,
-		common.NewCharacterMemoryUsage(v),
-		func() string {
-			return v
-		},
-	), nil
+
+	// NOTE: already metered by decodeCharacter
+	return NewUnmeteredCharacterValue(v), nil
 }
 
 func (d StorableDecoder) decodeStringValue() (*StringValue, error) {

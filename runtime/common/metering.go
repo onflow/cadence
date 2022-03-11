@@ -96,10 +96,10 @@ func NewTypeMemoryUsage(staticTypeAsString string) MemoryUsage {
 	}
 }
 
-func NewCharacterMemoryUsage(char string) MemoryUsage {
+func NewCharacterMemoryUsage(length int) MemoryUsage {
 	return MemoryUsage{
 		Kind:   MemoryKindCharacter,
-		Amount: uint64(len(char)),
+		Amount: uint64(length),
 	}
 }
 

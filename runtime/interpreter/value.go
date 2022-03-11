@@ -1045,7 +1045,7 @@ func (v *StringValue) GetKey(interpreter *Interpreter, getLocationRange func() L
 	char := v.graphemes.Str()
 	return NewCharacterValue(
 		interpreter,
-		common.NewCharacterMemoryUsage(char),
+		common.NewCharacterMemoryUsage(len(char)),
 		func() string {
 			return char
 		},

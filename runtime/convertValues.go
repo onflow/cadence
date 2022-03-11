@@ -629,7 +629,7 @@ func importString(inter *interpreter.Interpreter, v cadence.String) *interpreter
 
 func importCharacter(inter *interpreter.Interpreter, v cadence.Character) interpreter.CharacterValue {
 	s := string(v)
-	memoryUsage := common.NewCharacterMemoryUsage(s)
+	memoryUsage := common.NewCharacterMemoryUsage(len(s))
 	return interpreter.NewCharacterValue(
 		inter,
 		memoryUsage,
@@ -678,7 +678,9 @@ func importTypeValue(
 	return interpreter.NewTypeValue(
 		inter,
 		common.NewTypeMemoryUsage(typ.String()),
-		func() interpreter.StaticType { return typ },
+		func() interpreter.StaticType {
+			return typ
+		},
 	), nil
 }
 
@@ -704,12 +706,11 @@ func importCapability(
 	// include memory usage for reference type
 	inter.UseMemory(common.NewTypeMemoryUsage(referenceType.Type.ID()))
 
-	bytes := address.Bytes()
 	return interpreter.NewCapabilityValue(
 		inter,
-		interpreter.NewAddressValueFromBytes(
+		interpreter.NewAddressValue(
 			inter,
-			bytes,
+			common.Address(address),
 		),
 		importPathValue(inter, path),
 		ImportType(borrowType),

@@ -3383,7 +3383,9 @@ var typeFunction = NewUnmeteredHostFunctionValue(
 		return NewTypeValue(
 			invocation.Interpreter,
 			common.NewTypeMemoryUsage(staticType.String()),
-			func() StaticType { return staticType },
+			func() StaticType {
+				return staticType
+			},
 		)
 	},
 	&sema.FunctionType{
