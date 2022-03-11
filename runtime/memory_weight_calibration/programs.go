@@ -40,6 +40,16 @@ pub fun main() {
 }
 `
 
+var ephemeral_ref_test = `
+pub fun main() {
+	var i: Int64 = 0
+	while i < 10000 {
+		let v = &i as &Int64
+		i = i + 1
+	}
+}
+`
+
 var int_test = `
 pub fun main() {
 	var i = 0
@@ -100,7 +110,7 @@ pub fun main() {
 }
 `
 
-var link_test = `
+/*var link_test = `
 pub fun main() {
 	var i = 0
 	while i < 10000 {
@@ -108,7 +118,7 @@ pub fun main() {
 		i = i + 1
 	}
 }
-`
+`*/
 
 var dict_test = `
 pub fun main() {
@@ -169,6 +179,30 @@ pub fun main() {
 }
 `
 
+var function_test = `
+pub fun main() {
+	var i = 0
+	while i < 10000 {
+		let f = fun() {}
+		i = i + 1
+	}
+}
+`
+
+var bound_function_test = `
+pub struct S {
+	fun foo() {}
+}
+pub fun main() {
+	var i = 0
+	while i < 10000 {
+		let s = S()
+		let f = s.foo
+		i = i + 1
+	}
+}
+`
+
 var test_programs = []struct {
 	name string
 	code string
@@ -181,12 +215,15 @@ var test_programs = []struct {
 	{name: "float", code: float_test},
 	{name: "path", code: path_test},
 	{name: "address", code: address_test},
-	{name: "link", code: link_test},
+	{name: "function", code: function_test},
+	//{name: "link", code: link_test},
+	{name: "ephemeral ref", code: ephemeral_ref_test},
 	{name: "meta type", code: meta_type_test},
 	//{name: "block", code: block_test},
 	{name: "array", code: array_test},
 	{name: "dict", code: dict_test},
 	{name: "optional bool", code: optional_test},
 	{name: "empty composite", code: composite_test},
+	{name: "bound function", code: bound_function_test},
 	{name: "composite with field", code: composite_field_test},
 }
