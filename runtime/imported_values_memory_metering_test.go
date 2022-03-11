@@ -148,33 +148,111 @@ func TestImportedValueMemoryMeteringIterate(t *testing.T) {
 	}
 
 	tests := []importTest{
-		{TypeName: "String", MemoryKind: common.MemoryKindString, Weight: 7 + 1, TypeInstance: cadence.String("forever")},
-		{TypeName: "Character", MemoryKind: common.MemoryKindCharacter, Weight: 1, TypeInstance: cadence.Character("a")},
-		{TypeName: "Type", MemoryKind: common.MemoryKindTypeValue, Weight: 3, TypeInstance: cadence.TypeValue{StaticType: cadence.AnyType{}}},
-		{TypeName: "Bool", MemoryKind: common.MemoryKindBool, Weight: 1, TypeInstance: cadence.Bool(true)},
-		{TypeName: "Address", MemoryKind: common.MemoryKindAddress, Weight: 8, TypeInstance: cadence.Address{}},
-		{TypeName: "Path", MemoryKind: common.MemoryKindPathValue, Weight: 3, TypeInstance: cadence.Path{Domain: "storage", Identifier: "id3"}},
+		{
+			TypeName:     "String",
+			MemoryKind:   common.MemoryKindString,
+			Weight:       7 + 1,
+			TypeInstance: cadence.String("forever"),
+		},
+		{
+			TypeName:     "Character",
+			MemoryKind:   common.MemoryKindCharacter,
+			Weight:       1,
+			TypeInstance: cadence.Character("a"),
+		},
+		{
+			TypeName:   "Type",
+			MemoryKind: common.MemoryKindTypeValue,
+			Weight:     3,
+			TypeInstance: cadence.TypeValue{
+				StaticType: cadence.AnyType{},
+			},
+		},
+		{
+			TypeName:     "Bool",
+			MemoryKind:   common.MemoryKindBool,
+			Weight:       1,
+			TypeInstance: cadence.Bool(true),
+		},
+		{
+			TypeName:     "Address",
+			MemoryKind:   common.MemoryKindAddress,
+			Weight:       8,
+			TypeInstance: cadence.Address{},
+		},
+		{
+			TypeName:   "Path",
+			MemoryKind: common.MemoryKindPathValue,
+			Weight:     3,
+			TypeInstance: cadence.Path{
+				Domain:     "storage",
+				Identifier: "id3",
+			},
+		},
 
 		// Verify Capability and its composing values, Path and Type.
-		{TypeName: "Capability", MemoryKind: common.MemoryKindCapabilityValue, Weight: 1, TypeInstance: cadence.Capability{
-			Path:       cadence.Path{Domain: "public", Identifier: "foobarrington"},
-			Address:    cadence.Address{},
-			BorrowType: cadence.ReferenceType{Authorized: true, Type: cadence.AnyType{}},
-		}},
-		{TypeName: "Capability", MemoryKind: common.MemoryKindPathValue, Weight: 13, TypeInstance: cadence.Capability{
-			Path:       cadence.Path{Domain: "public", Identifier: "foobarrington"},
-			Address:    cadence.Address{},
-			BorrowType: cadence.ReferenceType{Authorized: true, Type: cadence.AnyType{}},
-		}},
-		{TypeName: "Capability", MemoryKind: common.MemoryKindTypeValue, Weight: 3, TypeInstance: cadence.Capability{
-			Path:       cadence.Path{Domain: "public", Identifier: "foobarrington"},
-			Address:    cadence.Address{},
-			BorrowType: cadence.ReferenceType{Authorized: true, Type: cadence.AnyType{}},
-		}},
+		{
+			TypeName:   "Capability",
+			MemoryKind: common.MemoryKindCapabilityValue,
+			Weight:     1,
+			TypeInstance: cadence.Capability{
+				Path: cadence.Path{
+					Domain:     "public",
+					Identifier: "foobarrington",
+				},
+				Address: cadence.Address{},
+				BorrowType: cadence.ReferenceType{
+					Authorized: true,
+					Type:       cadence.AnyType{},
+				},
+			},
+		},
+		{
+			TypeName:   "Capability",
+			MemoryKind: common.MemoryKindPathValue,
+			Weight:     13,
+			TypeInstance: cadence.Capability{
+				Path: cadence.Path{
+					Domain:     "public",
+					Identifier: "foobarrington",
+				},
+				Address: cadence.Address{},
+				BorrowType: cadence.ReferenceType{
+					Authorized: true,
+					Type:       cadence.AnyType{},
+				},
+			},
+		},
+		{
+			TypeName:   "Capability",
+			MemoryKind: common.MemoryKindTypeValue,
+			Weight:     3,
+			TypeInstance: cadence.Capability{
+				Path: cadence.Path{
+					Domain:     "public",
+					Identifier: "foobarrington",
+				},
+				Address: cadence.Address{},
+				BorrowType: cadence.ReferenceType{
+					Authorized: true,
+					Type:       cadence.AnyType{},
+				},
+			},
+		},
 
 		// Verify Optional and its composing type
-		{TypeName: "String?", MemoryKind: common.MemoryKindOptional, Weight: 1, TypeInstance: cadence.NewOptional(cadence.String("hello"))},
-		{TypeName: "String?", MemoryKind: common.MemoryKindString, Weight: 5 + 1, TypeInstance: cadence.NewOptional(cadence.String("hello"))},
+		{
+			TypeName:     "String?",
+			MemoryKind:   common.MemoryKindOptional,
+			Weight:       1,
+			TypeInstance: cadence.NewOptional(cadence.String("hello")),
+		},
+		{
+			TypeName:     "String?",
+			MemoryKind:   common.MemoryKindString,
+			Weight:       5 + 1,
+			TypeInstance: cadence.NewOptional(cadence.String("hello")),
+		},
 
 		// Not importable: Void
 		// Not a user-visible type (not in BaseTypeActivation): Link
@@ -194,8 +272,8 @@ func TestImportedValueMemoryMeteringIterate(t *testing.T) {
 				}
 
 				script := []byte(fmt.Sprintf(`
-            	pub fun main(x: %s) {}
-        	`, test.TypeName))
+            		pub fun main(x: %s) {}
+        		`, test.TypeName))
 
 				_, err := runtime.ExecuteScript(
 					Script{
