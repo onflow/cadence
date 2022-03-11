@@ -1941,7 +1941,7 @@ func TestRuntimeResourceOwnerChange(t *testing.T) {
 		nonEmptyKeys,
 	)
 
-	expectedUUID := interpreter.UInt64Value(0)
+	expectedUUID := interpreter.NewUnmeteredUInt64Value(0)
 	assert.Equal(t,
 		[]resourceOwnerChange{
 			{

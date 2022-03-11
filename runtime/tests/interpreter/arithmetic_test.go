@@ -42,12 +42,12 @@ var integerTestValues = map[string]interpreter.NumberValue{
 	"Int256": interpreter.NewInt256ValueFromInt64(60),
 	// UInt*
 	"UInt":    interpreter.NewUnmeteredUIntValueFromUint64(60),
-	"UInt8":   interpreter.UInt8Value(60),
-	"UInt16":  interpreter.UInt16Value(60),
-	"UInt32":  interpreter.UInt32Value(60),
-	"UInt64":  interpreter.UInt64Value(60),
-	"UInt128": interpreter.NewUInt128ValueFromUint64(60),
-	"UInt256": interpreter.NewUInt256ValueFromUint64(60),
+	"UInt8":   interpreter.NewUnmeteredUInt8Value(60),
+	"UInt16":  interpreter.NewUnmeteredUInt16Value(60),
+	"UInt32":  interpreter.NewUnmeteredUInt32Value(60),
+	"UInt64":  interpreter.NewUnmeteredUInt64Value(60),
+	"UInt128": interpreter.NewUnmeteredUInt128ValueFromUint64(60),
+	"UInt256": interpreter.NewUnmeteredUInt256ValueFromUint64(60),
 	// Word*
 	"Word8":  interpreter.Word8Value(60),
 	"Word16": interpreter.Word16Value(60),
@@ -559,138 +559,138 @@ func TestInterpretSaturatedArithmeticFunctions(t *testing.T) {
 		sema.UInt8Type: {
 			add: testCalls{
 				overflow: testCall{
-					interpreter.UInt8Value(math.MaxUint8),
-					interpreter.UInt8Value(2),
-					interpreter.UInt8Value(math.MaxUint8),
+					interpreter.NewUnmeteredUInt8Value(math.MaxUint8),
+					interpreter.NewUnmeteredUInt8Value(2),
+					interpreter.NewUnmeteredUInt8Value(math.MaxUint8),
 				},
 			},
 			subtract: testCalls{
 				underflow: testCall{
-					interpreter.UInt8Value(0),
-					interpreter.UInt8Value(2),
-					interpreter.UInt8Value(0),
+					interpreter.NewUnmeteredUInt8Value(0),
+					interpreter.NewUnmeteredUInt8Value(2),
+					interpreter.NewUnmeteredUInt8Value(0),
 				},
 			},
 			multiply: testCalls{
 				overflow: testCall{
-					interpreter.UInt8Value(math.MaxUint8),
-					interpreter.UInt8Value(2),
-					interpreter.UInt8Value(math.MaxUint8),
+					interpreter.NewUnmeteredUInt8Value(math.MaxUint8),
+					interpreter.NewUnmeteredUInt8Value(2),
+					interpreter.NewUnmeteredUInt8Value(math.MaxUint8),
 				},
 			},
 		},
 		sema.UInt16Type: {
 			add: testCalls{
 				overflow: testCall{
-					interpreter.UInt16Value(math.MaxUint16),
-					interpreter.UInt16Value(2),
-					interpreter.UInt16Value(math.MaxUint16),
+					interpreter.NewUnmeteredUInt16Value(math.MaxUint16),
+					interpreter.NewUnmeteredUInt16Value(2),
+					interpreter.NewUnmeteredUInt16Value(math.MaxUint16),
 				},
 			},
 			subtract: testCalls{
 				underflow: testCall{
-					interpreter.UInt16Value(0),
-					interpreter.UInt16Value(2),
-					interpreter.UInt16Value(0),
+					interpreter.NewUnmeteredUInt16Value(0),
+					interpreter.NewUnmeteredUInt16Value(2),
+					interpreter.NewUnmeteredUInt16Value(0),
 				},
 			},
 			multiply: testCalls{
 				overflow: testCall{
-					interpreter.UInt16Value(math.MaxUint16),
-					interpreter.UInt16Value(2),
-					interpreter.UInt16Value(math.MaxUint16),
+					interpreter.NewUnmeteredUInt16Value(math.MaxUint16),
+					interpreter.NewUnmeteredUInt16Value(2),
+					interpreter.NewUnmeteredUInt16Value(math.MaxUint16),
 				},
 			},
 		},
 		sema.UInt32Type: {
 			add: testCalls{
 				overflow: testCall{
-					interpreter.UInt32Value(math.MaxUint32),
-					interpreter.UInt32Value(2),
-					interpreter.UInt32Value(math.MaxUint32),
+					interpreter.NewUnmeteredUInt32Value(math.MaxUint32),
+					interpreter.NewUnmeteredUInt32Value(2),
+					interpreter.NewUnmeteredUInt32Value(math.MaxUint32),
 				},
 			},
 			subtract: testCalls{
 				underflow: testCall{
-					interpreter.UInt32Value(0),
-					interpreter.UInt32Value(2),
-					interpreter.UInt32Value(0),
+					interpreter.NewUnmeteredUInt32Value(0),
+					interpreter.NewUnmeteredUInt32Value(2),
+					interpreter.NewUnmeteredUInt32Value(0),
 				},
 			},
 			multiply: testCalls{
 				overflow: testCall{
-					interpreter.UInt32Value(math.MaxUint32),
-					interpreter.UInt32Value(2),
-					interpreter.UInt32Value(math.MaxUint32),
+					interpreter.NewUnmeteredUInt32Value(math.MaxUint32),
+					interpreter.NewUnmeteredUInt32Value(2),
+					interpreter.NewUnmeteredUInt32Value(math.MaxUint32),
 				},
 			},
 		},
 		sema.UInt64Type: {
 			add: testCalls{
 				overflow: testCall{
-					interpreter.UInt64Value(math.MaxUint64),
-					interpreter.UInt64Value(2),
-					interpreter.UInt64Value(math.MaxUint64),
+					interpreter.NewUnmeteredUInt64Value(math.MaxUint64),
+					interpreter.NewUnmeteredUInt64Value(2),
+					interpreter.NewUnmeteredUInt64Value(math.MaxUint64),
 				},
 			},
 			subtract: testCalls{
 				underflow: testCall{
-					interpreter.UInt64Value(0),
-					interpreter.UInt64Value(2),
-					interpreter.UInt64Value(0),
+					interpreter.NewUnmeteredUInt64Value(0),
+					interpreter.NewUnmeteredUInt64Value(2),
+					interpreter.NewUnmeteredUInt64Value(0),
 				},
 			},
 			multiply: testCalls{
 				overflow: testCall{
-					interpreter.UInt64Value(math.MaxUint64),
-					interpreter.UInt64Value(2),
-					interpreter.UInt64Value(math.MaxUint64),
+					interpreter.NewUnmeteredUInt64Value(math.MaxUint64),
+					interpreter.NewUnmeteredUInt64Value(2),
+					interpreter.NewUnmeteredUInt64Value(math.MaxUint64),
 				},
 			},
 		},
 		sema.UInt128Type: {
 			add: testCalls{
 				overflow: testCall{
-					interpreter.NewUInt128ValueFromBigInt(sema.UInt128TypeMaxIntBig),
-					interpreter.NewUInt128ValueFromUint64(2),
-					interpreter.NewUInt128ValueFromBigInt(sema.UInt128TypeMaxIntBig),
+					interpreter.NewUnmeteredUInt128ValueFromBigInt(sema.UInt128TypeMaxIntBig),
+					interpreter.NewUnmeteredUInt128ValueFromUint64(2),
+					interpreter.NewUnmeteredUInt128ValueFromBigInt(sema.UInt128TypeMaxIntBig),
 				},
 			},
 			subtract: testCalls{
 				underflow: testCall{
-					interpreter.NewUInt128ValueFromBigInt(sema.UInt128TypeMinIntBig),
-					interpreter.NewUInt128ValueFromUint64(2),
-					interpreter.NewUInt128ValueFromBigInt(sema.UInt128TypeMinIntBig),
+					interpreter.NewUnmeteredUInt128ValueFromBigInt(sema.UInt128TypeMinIntBig),
+					interpreter.NewUnmeteredUInt128ValueFromUint64(2),
+					interpreter.NewUnmeteredUInt128ValueFromBigInt(sema.UInt128TypeMinIntBig),
 				},
 			},
 			multiply: testCalls{
 				overflow: testCall{
-					interpreter.NewUInt128ValueFromBigInt(sema.UInt128TypeMaxIntBig),
-					interpreter.NewUInt128ValueFromUint64(2),
-					interpreter.NewUInt128ValueFromBigInt(sema.UInt128TypeMaxIntBig),
+					interpreter.NewUnmeteredUInt128ValueFromBigInt(sema.UInt128TypeMaxIntBig),
+					interpreter.NewUnmeteredUInt128ValueFromUint64(2),
+					interpreter.NewUnmeteredUInt128ValueFromBigInt(sema.UInt128TypeMaxIntBig),
 				},
 			},
 		},
 		sema.UInt256Type: {
 			add: testCalls{
 				overflow: testCall{
-					interpreter.NewUInt256ValueFromBigInt(sema.UInt256TypeMaxIntBig),
-					interpreter.NewUInt256ValueFromUint64(2),
-					interpreter.NewUInt256ValueFromBigInt(sema.UInt256TypeMaxIntBig),
+					interpreter.NewUnmeteredUInt256ValueFromBigInt(sema.UInt256TypeMaxIntBig),
+					interpreter.NewUnmeteredUInt256ValueFromUint64(2),
+					interpreter.NewUnmeteredUInt256ValueFromBigInt(sema.UInt256TypeMaxIntBig),
 				},
 			},
 			subtract: testCalls{
 				underflow: testCall{
-					interpreter.NewUInt256ValueFromBigInt(sema.UInt256TypeMinIntBig),
-					interpreter.NewUInt256ValueFromUint64(2),
-					interpreter.NewUInt256ValueFromBigInt(sema.UInt256TypeMinIntBig),
+					interpreter.NewUnmeteredUInt256ValueFromBigInt(sema.UInt256TypeMinIntBig),
+					interpreter.NewUnmeteredUInt256ValueFromUint64(2),
+					interpreter.NewUnmeteredUInt256ValueFromBigInt(sema.UInt256TypeMinIntBig),
 				},
 			},
 			multiply: testCalls{
 				overflow: testCall{
-					interpreter.NewUInt256ValueFromBigInt(sema.UInt256TypeMaxIntBig),
-					interpreter.NewUInt256ValueFromUint64(2),
-					interpreter.NewUInt256ValueFromBigInt(sema.UInt256TypeMaxIntBig),
+					interpreter.NewUnmeteredUInt256ValueFromBigInt(sema.UInt256TypeMaxIntBig),
+					interpreter.NewUnmeteredUInt256ValueFromUint64(2),
+					interpreter.NewUnmeteredUInt256ValueFromBigInt(sema.UInt256TypeMaxIntBig),
 				},
 			},
 		},

@@ -476,17 +476,17 @@ func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedTy
 	case cadence.UInt:
 		return importUInt(inter, v), nil
 	case cadence.UInt8:
-		return interpreter.UInt8Value(v), nil
+		return importUInt8(inter, v), nil
 	case cadence.UInt16:
-		return interpreter.UInt16Value(v), nil
+		return importUInt16(inter, v), nil
 	case cadence.UInt32:
-		return interpreter.UInt32Value(v), nil
+		return importUInt32(inter, v), nil
 	case cadence.UInt64:
-		return interpreter.UInt64Value(v), nil
+		return importUInt64(inter, v), nil
 	case cadence.UInt128:
-		return interpreter.NewUInt128ValueFromBigInt(v.Value), nil
+		return importUInt128(inter, v), nil
 	case cadence.UInt256:
-		return interpreter.NewUInt256ValueFromBigInt(v.Value), nil
+		return importUInt256(inter, v), nil
 	case cadence.Word8:
 		return interpreter.Word8Value(v), nil
 	case cadence.Word16:
@@ -557,9 +557,64 @@ func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedTy
 
 	return nil, fmt.Errorf("cannot import value of type %T", value)
 }
+func importUInt8(inter *interpreter.Interpreter, v cadence.UInt8) interpreter.UInt8Value {
+	return interpreter.NewUInt8Value(
+		inter,
+		func() uint8 {
+			return uint8(v)
+		},
+	)
+}
+
+func importUInt16(inter *interpreter.Interpreter, v cadence.UInt16) interpreter.UInt16Value {
+	return interpreter.NewUInt16Value(
+		inter,
+		func() uint16 {
+			return uint16(v)
+		},
+	)
+}
+
+func importUInt32(inter *interpreter.Interpreter, v cadence.UInt32) interpreter.UInt32Value {
+	return interpreter.NewUInt32Value(
+		inter,
+		func() uint32 {
+			return uint32(v)
+		},
+	)
+}
+
+func importUInt64(inter *interpreter.Interpreter, v cadence.UInt64) interpreter.UInt64Value {
+	return interpreter.NewUInt64Value(
+		inter,
+		func() uint64 {
+			return uint64(v)
+		},
+	)
+}
+
+func importUInt128(inter *interpreter.Interpreter, v cadence.UInt128) interpreter.UInt128Value {
+	return interpreter.NewUInt128ValueFromBigInt(
+		inter,
+		func() *big.Int {
+			return v.Value
+		},
+	)
+}
+
+func importUInt256(inter *interpreter.Interpreter, v cadence.UInt256) interpreter.UInt256Value {
+	return interpreter.NewUInt256ValueFromBigInt(
+		inter,
+		func() *big.Int {
+			return v.Value
+		},
+	)
+}
 
 func importInt(inter *interpreter.Interpreter, v cadence.Int) interpreter.IntValue {
-	memoryUsage := common.NewBigIntMemoryUsage(len(v.Value.Bytes()))
+	memoryUsage := common.NewBigIntMemoryUsage(
+		common.BigIntByteLength(v.Value),
+	)
 	return interpreter.NewIntValueFromBigInt(
 		inter,
 		memoryUsage,
@@ -606,7 +661,9 @@ func importInt64(inter *interpreter.Interpreter, v cadence.Int64) interpreter.In
 }
 
 func importUInt(inter *interpreter.Interpreter, v cadence.UInt) interpreter.UIntValue {
-	memoryUsage := common.NewBigIntMemoryUsage(len(v.Value.Bytes()))
+	memoryUsage := common.NewBigIntMemoryUsage(
+		common.BigIntByteLength(v.Value),
+	)
 	return interpreter.NewUIntValueFromBigInt(
 		inter,
 		memoryUsage,

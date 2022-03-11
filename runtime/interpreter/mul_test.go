@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	. "github.com/onflow/cadence/runtime/interpreter"
 )
@@ -160,9 +161,12 @@ func TestMulUInt8(t *testing.T) {
 		{0xff, 0xff, false},
 	}
 
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
+
 	for _, test := range tests {
 		f := func() {
-			test.a.Mul(nil, test.b)
+			test.a.Mul(inter, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -306,9 +310,12 @@ func TestMulUInt16(t *testing.T) {
 		{0xffff, 0xffff, false},
 	}
 
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
+
 	for _, test := range tests {
 		f := func() {
-			test.a.Mul(nil, test.b)
+			test.a.Mul(inter, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -452,9 +459,12 @@ func TestMulUInt32(t *testing.T) {
 		{0xffffffff, 0xffffffff, false},
 	}
 
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
+
 	for _, test := range tests {
 		f := func() {
-			test.a.Mul(nil, test.b)
+			test.a.Mul(inter, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -609,9 +619,12 @@ func TestMulUInt64(t *testing.T) {
 		{0xffffffff, 0x100000002, false},
 	}
 
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
+
 	for _, test := range tests {
 		f := func() {
-			test.a.Mul(nil, test.b)
+			test.a.Mul(inter, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -768,9 +781,12 @@ func TestMulUInt128(t *testing.T) {
 		{uint128("0xffffffffffffffffffffffffffffffff"), uint128("0x10000000000000000000000000000002"), false},
 	}
 
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
+
 	for _, test := range tests {
 		f := func() {
-			test.a.Mul(nil, test.b)
+			test.a.Mul(inter, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1436,9 +1452,12 @@ func TestMulUInt256(t *testing.T) {
 		},
 	}
 
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
+
 	for _, test := range tests {
 		f := func() {
-			test.a.Mul(nil, test.b)
+			test.a.Mul(inter, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1615,7 +1634,8 @@ func TestMulInt8(t *testing.T) {
 		{-1, -1, true},
 	}
 
-	inter := newTestInterpreter(t)
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
 
 	for _, test := range tests {
 		f := func() {
@@ -1805,7 +1825,8 @@ func TestMulInt16(t *testing.T) {
 		{-1, -1, true},
 	}
 
-	inter := newTestInterpreter(t)
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
 
 	for _, test := range tests {
 		f := func() {
@@ -1978,7 +1999,8 @@ func TestMulInt32(t *testing.T) {
 		{-1, -1, true},
 	}
 
-	inter := newTestInterpreter(t)
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
 
 	for _, test := range tests {
 		f := func() {
@@ -2136,7 +2158,8 @@ func TestMulInt64(t *testing.T) {
 		{0xffffffff, 0x100000002, false},
 	}
 
-	inter := newTestInterpreter(t)
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
 
 	for _, test := range tests {
 		f := func() {
@@ -2296,7 +2319,8 @@ func TestMulInt128(t *testing.T) {
 		{int128("-0x00000000000000000000000000000001"), int128("-0x00000000000000000000000000000001"), true},
 	}
 
-	inter := newTestInterpreter(t)
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
 
 	for _, test := range tests {
 		f := func() {
@@ -2969,9 +2993,12 @@ func TestMulInt256(t *testing.T) {
 		},
 	}
 
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
+
 	for _, test := range tests {
 		f := func() {
-			test.a.Mul(nil, test.b)
+			test.a.Mul(inter, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)

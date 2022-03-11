@@ -55,22 +55,22 @@ var bitwiseTestValueFunctions = map[string]func(int) interpreter.NumberValue{
 		return interpreter.NewUnmeteredUIntValueFromUint64(uint64(v))
 	},
 	"UInt8": func(v int) interpreter.NumberValue {
-		return interpreter.UInt8Value(v)
+		return interpreter.NewUnmeteredUInt8Value(uint8(v))
 	},
 	"UInt16": func(v int) interpreter.NumberValue {
-		return interpreter.UInt16Value(v)
+		return interpreter.NewUnmeteredUInt16Value(uint16(v))
 	},
 	"UInt32": func(v int) interpreter.NumberValue {
-		return interpreter.UInt32Value(v)
+		return interpreter.NewUnmeteredUInt32Value(uint32(v))
 	},
 	"UInt64": func(v int) interpreter.NumberValue {
-		return interpreter.UInt64Value(v)
+		return interpreter.NewUnmeteredUInt64Value(uint64(v))
 	},
 	"UInt128": func(v int) interpreter.NumberValue {
-		return interpreter.NewUInt128ValueFromUint64(uint64(v))
+		return interpreter.NewUnmeteredUInt128ValueFromUint64(uint64(v))
 	},
 	"UInt256": func(v int) interpreter.NumberValue {
-		return interpreter.NewUInt256ValueFromUint64(uint64(v))
+		return interpreter.NewUnmeteredUInt256ValueFromUint64(uint64(v))
 	},
 	// Word*
 	"Word8": func(v int) interpreter.NumberValue {

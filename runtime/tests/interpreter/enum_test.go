@@ -261,7 +261,7 @@ func TestInterpretEnumInContract(t *testing.T) {
 	RequireValuesEqual(
 		t,
 		inter,
-		interpreter.UInt8Value(0),
+		interpreter.NewUnmeteredUInt8Value(0),
 		rawValue,
 	)
 }
