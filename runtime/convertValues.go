@@ -462,13 +462,13 @@ func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedTy
 	case cadence.Int:
 		return importInt(inter, v), nil
 	case cadence.Int8:
-		return interpreter.Int8Value(v), nil
+		return importInt8(inter, v), nil
 	case cadence.Int16:
-		return interpreter.Int16Value(v), nil
+		return importInt16(inter, v), nil
 	case cadence.Int32:
-		return interpreter.Int32Value(v), nil
+		return importInt32(inter, v), nil
 	case cadence.Int64:
-		return interpreter.Int64Value(v), nil
+		return importInt64(inter, v), nil
 	case cadence.Int128:
 		return interpreter.NewInt128ValueFromBigInt(v.Value), nil
 	case cadence.Int256:
@@ -620,6 +620,42 @@ func importInt(inter *interpreter.Interpreter, v cadence.Int) interpreter.IntVal
 		memoryUsage,
 		func() *big.Int {
 			return v.Value
+		},
+	)
+}
+
+func importInt8(inter *interpreter.Interpreter, v cadence.Int8) interpreter.Int8Value {
+	return interpreter.NewInt8Value(
+		inter,
+		func() int8 {
+			return int8(v)
+		},
+	)
+}
+
+func importInt16(inter *interpreter.Interpreter, v cadence.Int16) interpreter.Int16Value {
+	return interpreter.NewInt16Value(
+		inter,
+		func() int16 {
+			return int16(v)
+		},
+	)
+}
+
+func importInt32(inter *interpreter.Interpreter, v cadence.Int32) interpreter.Int32Value {
+	return interpreter.NewInt32Value(
+		inter,
+		func() int32 {
+			return int32(v)
+		},
+	)
+}
+
+func importInt64(inter *interpreter.Interpreter, v cadence.Int64) interpreter.Int64Value {
+	return interpreter.NewInt64Value(
+		inter,
+		func() int64 {
+			return int64(v)
 		},
 	)
 }

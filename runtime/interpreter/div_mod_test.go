@@ -3395,8 +3395,7 @@ func TestNegativeMod(t *testing.T) {
 			}
 		}
 
-		inter, err := NewInterpreter(nil, nil)
-		require.NoError(t, err)
+		inter := newTestInterpreter(t)
 
 		for _, test := range tests {
 			assert.Equal(t,

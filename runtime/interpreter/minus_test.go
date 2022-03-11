@@ -2619,8 +2619,7 @@ func TestMinusUInt(t *testing.T) {
 		{0xff, 0xff, true},
 	}
 
-	inter, err := NewInterpreter(nil, nil)
-	require.NoError(t, err)
+	inter := newTestInterpreter(t)
 
 	for _, test := range tests {
 		f := func() {

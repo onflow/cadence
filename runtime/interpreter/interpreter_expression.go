@@ -458,6 +458,8 @@ func (interpreter *Interpreter) VisitIntegerExpression(expression *ast.IntegerEx
 func (interpreter *Interpreter) NewIntegerValueFromBigInt(value *big.Int, integerSubType sema.Type) Value {
 	memoryGauge := interpreter.memoryGauge
 
+	// NOTE: cases meter manually and call the unmetered constructors to avoid allocating closures
+
 	switch integerSubType {
 	case sema.IntType, sema.IntegerType, sema.SignedIntegerType:
 		common.UseMemory(
@@ -478,13 +480,17 @@ func (interpreter *Interpreter) NewIntegerValueFromBigInt(value *big.Int, intege
 
 	// Int*
 	case sema.Int8Type:
-		return Int8Value(value.Int64())
+		common.UseMemory(memoryGauge, Int8MemoryUsage)
+		return NewUnmeteredInt8Value(int8(value.Int64()))
 	case sema.Int16Type:
-		return Int16Value(value.Int64())
+		common.UseMemory(memoryGauge, Int16MemoryUsage)
+		return NewUnmeteredInt16Value(int16(value.Int64()))
 	case sema.Int32Type:
-		return Int32Value(value.Int64())
+		common.UseMemory(memoryGauge, Int32MemoryUsage)
+		return NewUnmeteredInt32Value(int32(value.Int64()))
 	case sema.Int64Type:
-		return Int64Value(value.Int64())
+		common.UseMemory(memoryGauge, Int64MemoryUsage)
+		return NewUnmeteredInt64Value(value.Int64())
 	case sema.Int128Type:
 		return NewInt128ValueFromBigInt(value)
 	case sema.Int256Type:

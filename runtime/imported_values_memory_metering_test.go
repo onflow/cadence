@@ -32,11 +32,7 @@ import (
 
 func testUseMemory(meter map[common.MemoryKind]uint64) func(common.MemoryUsage) {
 	return func(usage common.MemoryUsage) {
-		current, ok := meter[usage.Kind]
-		if !ok {
-			current = 0
-		}
-		meter[usage.Kind] = current + usage.Amount
+		meter[usage.Kind] += usage.Amount
 	}
 }
 
@@ -104,18 +100,6 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		)
 
 		assert.Equal(t, uint64(1), meter[common.MemoryKindOptional])
-	})
-
-	t.Run("Int", func(t *testing.T) {
-		t.Parallel()
-
-		script := []byte(`
-            pub fun main(x: Int) {}
-        `)
-
-		meter := make(map[common.MemoryKind]uint64)
-		executeScript(script, meter, cadence.NewInt(2))
-		assert.Equal(t, uint64(8), meter[common.MemoryKindBigInt])
 	})
 
 	t.Run("UInt", func(t *testing.T) {
@@ -187,7 +171,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 
 		meter := make(map[common.MemoryKind]uint64)
 		executeScript(script, meter, cadence.NewUInt128(2))
-		assert.Equal(t, uint64(16), meter[common.MemoryKindNumber])
+		assert.Equal(t, uint64(16), meter[common.MemoryKindBigInt])
 	})
 
 	t.Run("UInt256", func(t *testing.T) {
@@ -199,7 +183,67 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 
 		meter := make(map[common.MemoryKind]uint64)
 		executeScript(script, meter, cadence.NewUInt256(2))
-		assert.Equal(t, uint64(32), meter[common.MemoryKindNumber])
+		assert.Equal(t, uint64(32), meter[common.MemoryKindBigInt])
+	})
+
+	t.Run("Int", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            pub fun main(x: Int) {}
+        `)
+
+		meter := make(map[common.MemoryKind]uint64)
+		executeScript(script, meter, cadence.NewInt(2))
+		assert.Equal(t, uint64(8), meter[common.MemoryKindBigInt])
+	})
+
+	t.Run("Int8", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            pub fun main(x: Int8) {}
+        `)
+
+		meter := make(map[common.MemoryKind]uint64)
+		executeScript(script, meter, cadence.NewInt8(2))
+		assert.Equal(t, uint64(1), meter[common.MemoryKindNumber])
+	})
+
+	t.Run("Int16", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            pub fun main(x: Int16) {}
+        `)
+
+		meter := make(map[common.MemoryKind]uint64)
+		executeScript(script, meter, cadence.NewInt16(2))
+		assert.Equal(t, uint64(2), meter[common.MemoryKindNumber])
+	})
+
+	t.Run("Int32", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            pub fun main(x: Int32) {}
+        `)
+
+		meter := make(map[common.MemoryKind]uint64)
+		executeScript(script, meter, cadence.NewInt32(2))
+		assert.Equal(t, uint64(4), meter[common.MemoryKindNumber])
+	})
+
+	t.Run("Int64", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            pub fun main(x: Int64) {}
+        `)
+
+		meter := make(map[common.MemoryKind]uint64)
+		executeScript(script, meter, cadence.NewInt64(2))
+		assert.Equal(t, uint64(8), meter[common.MemoryKindNumber])
 	})
 
 
