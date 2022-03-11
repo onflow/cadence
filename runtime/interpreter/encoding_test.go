@@ -2077,7 +2077,7 @@ func TestEncodeDecodeWord8Value(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: Word8Value(0),
+				value: NewUnmeteredWord8Value(0),
 				encoded: []byte{
 					// tag
 					0xd8, CBORTagWord8Value,
@@ -2110,7 +2110,7 @@ func TestEncodeDecodeWord8Value(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: Word8Value(42),
+				value: NewUnmeteredWord8Value(42),
 				encoded: []byte{
 					// tag
 					0xd8, CBORTagWord8Value,
@@ -2127,7 +2127,7 @@ func TestEncodeDecodeWord8Value(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: Word8Value(math.MaxUint8),
+				value: NewUnmeteredWord8Value(math.MaxUint8),
 				encoded: []byte{
 					// tag
 					0xd8, CBORTagWord8Value,
@@ -2166,7 +2166,7 @@ func TestEncodeDecodeWord16Value(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: Word16Value(0),
+				value: NewUnmeteredWord16Value(0),
 				encoded: []byte{
 					// tag
 					0xd8, CBORTagWord16Value,
@@ -2182,7 +2182,7 @@ func TestEncodeDecodeWord16Value(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: Word16Value(42),
+				value: NewUnmeteredWord16Value(42),
 				encoded: []byte{
 					// tag
 					0xd8, CBORTagWord16Value,
@@ -2199,7 +2199,7 @@ func TestEncodeDecodeWord16Value(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: Word16Value(math.MaxUint16),
+				value: NewUnmeteredWord16Value(math.MaxUint16),
 				encoded: []byte{
 					// tag
 					0xd8, CBORTagWord16Value,
@@ -2238,7 +2238,7 @@ func TestEncodeDecodeWord32Value(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: Word32Value(0),
+				value: NewUnmeteredWord32Value(0),
 				encoded: []byte{
 					// tag
 					0xd8, CBORTagWord32Value,
@@ -2254,7 +2254,7 @@ func TestEncodeDecodeWord32Value(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: Word32Value(42),
+				value: NewUnmeteredWord32Value(42),
 				encoded: []byte{
 					// tag
 					0xd8, CBORTagWord32Value,
@@ -2271,7 +2271,7 @@ func TestEncodeDecodeWord32Value(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: Word32Value(math.MaxUint32),
+				value: NewUnmeteredWord32Value(math.MaxUint32),
 				encoded: []byte{
 					// tag
 					0xd8, CBORTagWord32Value,
@@ -2310,7 +2310,7 @@ func TestEncodeDecodeWord64Value(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: Word64Value(0),
+				value: NewUnmeteredWord64Value(0),
 				encoded: []byte{
 					// tag
 					0xd8, CBORTagWord64Value,
@@ -2326,7 +2326,7 @@ func TestEncodeDecodeWord64Value(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: Word64Value(42),
+				value: NewUnmeteredWord64Value(42),
 				encoded: []byte{
 					// tag
 					0xd8, CBORTagWord64Value,
@@ -2343,7 +2343,7 @@ func TestEncodeDecodeWord64Value(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: Word64Value(math.MaxUint64),
+				value: NewUnmeteredWord64Value(math.MaxUint64),
 				encoded: []byte{
 					// tag
 					0xd8, CBORTagWord64Value,

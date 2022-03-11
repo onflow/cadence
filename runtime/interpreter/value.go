@@ -10187,6 +10187,20 @@ var _ EquatableValue = Word8Value(0)
 var _ HashableValue = Word8Value(0)
 var _ MemberAccessibleValue = Word8Value(0)
 
+const word8Size = int(unsafe.Sizeof(Word8Value(0)))
+
+var word8MemoryUsage = common.NewNumberMemoryUsage(word8Size)
+
+func NewWord8Value(gauge common.MemoryGauge, valueGetter func() uint8) Word8Value {
+	common.UseMemory(gauge, word8MemoryUsage)
+
+	return NewUnmeteredWord8Value(valueGetter())
+}
+
+func NewUnmeteredWord8Value(value uint8) Word8Value {
+	return Word8Value(value)
+}
+
 func (Word8Value) IsValue() {}
 
 func (v Word8Value) Accept(interpreter *Interpreter, visitor Visitor) {
@@ -10233,10 +10247,14 @@ func (v Word8Value) Plus(interpreter *Interpreter, other NumberValue) NumberValu
 		})
 	}
 
-	return v + o
+	valueGetter := func() uint8 {
+		return uint8(v + o)
+	}
+
+	return NewWord8Value(interpreter, valueGetter)
 }
 
-func (v Word8Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
+func (v Word8Value) SaturatingPlus(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -10250,10 +10268,14 @@ func (v Word8Value) Minus(interpreter *Interpreter, other NumberValue) NumberVal
 		})
 	}
 
-	return v - o
+	valueGetter := func() uint8 {
+		return uint8(v - o)
+	}
+
+	return NewWord8Value(interpreter, valueGetter)
 }
 
-func (v Word8Value) SaturatingMinus(interpreter *Interpreter, other NumberValue) NumberValue {
+func (v Word8Value) SaturatingMinus(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -10270,7 +10292,12 @@ func (v Word8Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
-	return v % o
+
+	valueGetter := func() uint8 {
+		return uint8(v % o)
+	}
+
+	return NewWord8Value(interpreter, valueGetter)
 }
 
 func (v Word8Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -10283,10 +10310,14 @@ func (v Word8Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue
 		})
 	}
 
-	return v * o
+	valueGetter := func() uint8 {
+		return uint8(v * o)
+	}
+
+	return NewWord8Value(interpreter, valueGetter)
 }
 
-func (v Word8Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
+func (v Word8Value) SaturatingMul(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -10303,10 +10334,15 @@ func (v Word8Value) Div(interpreter *Interpreter, other NumberValue) NumberValue
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
-	return v / o
+
+	valueGetter := func() uint8 {
+		return uint8(v / o)
+	}
+
+	return NewWord8Value(interpreter, valueGetter)
 }
 
-func (v Word8Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) NumberValue {
+func (v Word8Value) SaturatingDiv(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -10380,7 +10416,10 @@ func (v Word8Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []
 }
 
 func ConvertWord8(memoryGauge common.MemoryGauge, value Value) Word8Value {
-	return Word8Value(ConvertUInt8(memoryGauge, value))
+	uint8Value := ConvertUInt8(memoryGauge, value)
+
+	// Already metered during conversion in `ConvertUInt8`
+	return NewUnmeteredWord8Value(uint8(uint8Value))
 }
 
 func (v Word8Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -10393,7 +10432,11 @@ func (v Word8Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) Inte
 		})
 	}
 
-	return v | o
+	valueGetter := func() uint8 {
+		return uint8(v | o)
+	}
+
+	return NewWord8Value(interpreter, valueGetter)
 }
 
 func (v Word8Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -10405,7 +10448,12 @@ func (v Word8Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) Int
 			RightType: other.StaticType(),
 		})
 	}
-	return v ^ o
+
+	valueGetter := func() uint8 {
+		return uint8(v ^ o)
+	}
+
+	return NewWord8Value(interpreter, valueGetter)
 }
 
 func (v Word8Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -10418,7 +10466,11 @@ func (v Word8Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) Int
 		})
 	}
 
-	return v & o
+	valueGetter := func() uint8 {
+		return uint8(v & o)
+	}
+
+	return NewWord8Value(interpreter, valueGetter)
 }
 
 func (v Word8Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -10431,7 +10483,11 @@ func (v Word8Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValu
 		})
 	}
 
-	return v << o
+	valueGetter := func() uint8 {
+		return uint8(v << o)
+	}
+
+	return NewWord8Value(interpreter, valueGetter)
 }
 
 func (v Word8Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -10444,7 +10500,11 @@ func (v Word8Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVal
 		})
 	}
 
-	return v >> o
+	valueGetter := func() uint8 {
+		return uint8(v >> o)
+	}
+
+	return NewWord8Value(interpreter, valueGetter)
 }
 
 func (v Word8Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
@@ -10536,6 +10596,20 @@ var _ EquatableValue = Word16Value(0)
 var _ HashableValue = Word16Value(0)
 var _ MemberAccessibleValue = Word16Value(0)
 
+const word16Size = int(unsafe.Sizeof(Word16Value(0)))
+
+var word16MemoryUsage = common.NewNumberMemoryUsage(word16Size)
+
+func NewWord16Value(gauge common.MemoryGauge, valueGetter func() uint16) Word16Value {
+	common.UseMemory(gauge, word16MemoryUsage)
+
+	return NewUnmeteredWord16Value(valueGetter())
+}
+
+func NewUnmeteredWord16Value(value uint16) Word16Value {
+	return Word16Value(value)
+}
+
 func (Word16Value) IsValue() {}
 
 func (v Word16Value) Accept(interpreter *Interpreter, visitor Visitor) {
@@ -10581,10 +10655,14 @@ func (v Word16Value) Plus(interpreter *Interpreter, other NumberValue) NumberVal
 		})
 	}
 
-	return v + o
+	valueGetter := func() uint16 {
+		return uint16(v + o)
+	}
+
+	return NewWord16Value(interpreter, valueGetter)
 }
 
-func (v Word16Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
+func (v Word16Value) SaturatingPlus(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -10598,10 +10676,14 @@ func (v Word16Value) Minus(interpreter *Interpreter, other NumberValue) NumberVa
 		})
 	}
 
-	return v - o
+	valueGetter := func() uint16 {
+		return uint16(v - o)
+	}
+
+	return NewWord16Value(interpreter, valueGetter)
 }
 
-func (v Word16Value) SaturatingMinus(interpreter *Interpreter, other NumberValue) NumberValue {
+func (v Word16Value) SaturatingMinus(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -10618,7 +10700,12 @@ func (v Word16Value) Mod(interpreter *Interpreter, other NumberValue) NumberValu
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
-	return v % o
+
+	valueGetter := func() uint16 {
+		return uint16(v % o)
+	}
+
+	return NewWord16Value(interpreter, valueGetter)
 }
 
 func (v Word16Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -10631,10 +10718,14 @@ func (v Word16Value) Mul(interpreter *Interpreter, other NumberValue) NumberValu
 		})
 	}
 
-	return v * o
+	valueGetter := func() uint16 {
+		return uint16(v * o)
+	}
+
+	return NewWord16Value(interpreter, valueGetter)
 }
 
-func (v Word16Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
+func (v Word16Value) SaturatingMul(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -10651,10 +10742,15 @@ func (v Word16Value) Div(interpreter *Interpreter, other NumberValue) NumberValu
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
-	return v / o
+
+	valueGetter := func() uint16 {
+		return uint16(v / o)
+	}
+
+	return NewWord16Value(interpreter, valueGetter)
 }
 
-func (v Word16Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) NumberValue {
+func (v Word16Value) SaturatingDiv(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -10728,7 +10824,10 @@ func (v Word16Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch [
 }
 
 func ConvertWord16(memoryGauge common.MemoryGauge, value Value) Word16Value {
-	return Word16Value(ConvertUInt16(memoryGauge, value))
+	uint16Value := ConvertUInt16(memoryGauge, value)
+
+	// Already metered during conversion in `ConvertUInt16`
+	return NewUnmeteredWord16Value(uint16(uint16Value))
 }
 
 func (v Word16Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -10741,7 +10840,11 @@ func (v Word16Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) Int
 		})
 	}
 
-	return v | o
+	valueGetter := func() uint16 {
+		return uint16(v | o)
+	}
+
+	return NewWord16Value(interpreter, valueGetter)
 }
 
 func (v Word16Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -10753,7 +10856,12 @@ func (v Word16Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) In
 			RightType: other.StaticType(),
 		})
 	}
-	return v ^ o
+
+	valueGetter := func() uint16 {
+		return uint16(v ^ o)
+	}
+
+	return NewWord16Value(interpreter, valueGetter)
 }
 
 func (v Word16Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -10766,7 +10874,11 @@ func (v Word16Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) In
 		})
 	}
 
-	return v & o
+	valueGetter := func() uint16 {
+		return uint16(v & o)
+	}
+
+	return NewWord16Value(interpreter, valueGetter)
 }
 
 func (v Word16Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -10779,7 +10891,11 @@ func (v Word16Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVal
 		})
 	}
 
-	return v << o
+	valueGetter := func() uint16 {
+		return uint16(v << o)
+	}
+
+	return NewWord16Value(interpreter, valueGetter)
 }
 
 func (v Word16Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -10792,7 +10908,11 @@ func (v Word16Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVa
 		})
 	}
 
-	return v >> o
+	valueGetter := func() uint16 {
+		return uint16(v >> o)
+	}
+
+	return NewWord16Value(interpreter, valueGetter)
 }
 
 func (v Word16Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
@@ -10886,6 +11006,20 @@ var _ EquatableValue = Word32Value(0)
 var _ HashableValue = Word32Value(0)
 var _ MemberAccessibleValue = Word32Value(0)
 
+const word32Size = int(unsafe.Sizeof(Word32Value(0)))
+
+var word32MemoryUsage = common.NewNumberMemoryUsage(word32Size)
+
+func NewWord32Value(gauge common.MemoryGauge, valueGetter func() uint32) Word32Value {
+	common.UseMemory(gauge, word32MemoryUsage)
+
+	return NewUnmeteredWord32Value(valueGetter())
+}
+
+func NewUnmeteredWord32Value(value uint32) Word32Value {
+	return Word32Value(value)
+}
+
 func (Word32Value) IsValue() {}
 
 func (v Word32Value) Accept(interpreter *Interpreter, visitor Visitor) {
@@ -10932,10 +11066,14 @@ func (v Word32Value) Plus(interpreter *Interpreter, other NumberValue) NumberVal
 		})
 	}
 
-	return v + o
+	valueGetter := func() uint32 {
+		return uint32(v + o)
+	}
+
+	return NewWord32Value(interpreter, valueGetter)
 }
 
-func (v Word32Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
+func (v Word32Value) SaturatingPlus(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -10949,10 +11087,14 @@ func (v Word32Value) Minus(interpreter *Interpreter, other NumberValue) NumberVa
 		})
 	}
 
-	return v - o
+	valueGetter := func() uint32 {
+		return uint32(v - o)
+	}
+
+	return NewWord32Value(interpreter, valueGetter)
 }
 
-func (v Word32Value) SaturatingMinus(interpreter *Interpreter, other NumberValue) NumberValue {
+func (v Word32Value) SaturatingMinus(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -10969,7 +11111,12 @@ func (v Word32Value) Mod(interpreter *Interpreter, other NumberValue) NumberValu
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
-	return v % o
+
+	valueGetter := func() uint32 {
+		return uint32(v % o)
+	}
+
+	return NewWord32Value(interpreter, valueGetter)
 }
 
 func (v Word32Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -10982,7 +11129,11 @@ func (v Word32Value) Mul(interpreter *Interpreter, other NumberValue) NumberValu
 		})
 	}
 
-	return v * o
+	valueGetter := func() uint32 {
+		return uint32(v * o)
+	}
+
+	return NewWord32Value(interpreter, valueGetter)
 }
 
 func (v Word32Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -11002,10 +11153,15 @@ func (v Word32Value) Div(interpreter *Interpreter, other NumberValue) NumberValu
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
-	return v / o
+
+	valueGetter := func() uint32 {
+		return uint32(v / o)
+	}
+
+	return NewWord32Value(interpreter, valueGetter)
 }
 
-func (v Word32Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) NumberValue {
+func (v Word32Value) SaturatingDiv(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -11079,7 +11235,10 @@ func (v Word32Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch [
 }
 
 func ConvertWord32(memoryGauge common.MemoryGauge, value Value) Word32Value {
-	return Word32Value(ConvertUInt32(memoryGauge, value))
+	uint32Value := ConvertUInt32(memoryGauge, value)
+
+	// Already metered during conversion in `ConvertUInt32`
+	return NewUnmeteredWord32Value(uint32(uint32Value))
 }
 
 func (v Word32Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -11092,7 +11251,11 @@ func (v Word32Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) Int
 		})
 	}
 
-	return v | o
+	valueGetter := func() uint32 {
+		return uint32(v | o)
+	}
+
+	return NewWord32Value(interpreter, valueGetter)
 }
 
 func (v Word32Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -11104,7 +11267,12 @@ func (v Word32Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) In
 			RightType: other.StaticType(),
 		})
 	}
-	return v ^ o
+
+	valueGetter := func() uint32 {
+		return uint32(v ^ o)
+	}
+
+	return NewWord32Value(interpreter, valueGetter)
 }
 
 func (v Word32Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -11117,7 +11285,11 @@ func (v Word32Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) In
 		})
 	}
 
-	return v & o
+	valueGetter := func() uint32 {
+		return uint32(v & o)
+	}
+
+	return NewWord32Value(interpreter, valueGetter)
 }
 
 func (v Word32Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -11130,7 +11302,11 @@ func (v Word32Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVal
 		})
 	}
 
-	return v << o
+	valueGetter := func() uint32 {
+		return uint32(v << o)
+	}
+
+	return NewWord32Value(interpreter, valueGetter)
 }
 
 func (v Word32Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -11143,7 +11319,11 @@ func (v Word32Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVa
 		})
 	}
 
-	return v >> o
+	valueGetter := func() uint32 {
+		return uint32(v >> o)
+	}
+
+	return NewWord32Value(interpreter, valueGetter)
 }
 
 func (v Word32Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
@@ -11237,6 +11417,20 @@ var _ EquatableValue = Word64Value(0)
 var _ HashableValue = Word64Value(0)
 var _ MemberAccessibleValue = Word64Value(0)
 
+const word64Size = int(unsafe.Sizeof(Word64Value(0)))
+
+var word64MemoryUsage = common.NewNumberMemoryUsage(word64Size)
+
+func NewWord64Value(gauge common.MemoryGauge, valueGetter func() uint64) Word64Value {
+	common.UseMemory(gauge, word64MemoryUsage)
+
+	return NewUnmeteredWord64Value(valueGetter())
+}
+
+func NewUnmeteredWord64Value(value uint64) Word64Value {
+	return Word64Value(value)
+}
+
 // NOTE: important, do *NOT* remove:
 // Word64 values > math.MaxInt64 overflow int.
 // Implementing BigNumberValue ensures conversion functions
@@ -11308,10 +11502,14 @@ func (v Word64Value) Plus(interpreter *Interpreter, other NumberValue) NumberVal
 		})
 	}
 
-	return v + o
+	valueGetter := func() uint64 {
+		return uint64(v + o)
+	}
+
+	return NewWord64Value(interpreter, valueGetter)
 }
 
-func (v Word64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
+func (v Word64Value) SaturatingPlus(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -11325,10 +11523,14 @@ func (v Word64Value) Minus(interpreter *Interpreter, other NumberValue) NumberVa
 		})
 	}
 
-	return v - o
+	valueGetter := func() uint64 {
+		return uint64(v - o)
+	}
+
+	return NewWord64Value(interpreter, valueGetter)
 }
 
-func (v Word64Value) SaturatingMinus(interpreter *Interpreter, other NumberValue) NumberValue {
+func (v Word64Value) SaturatingMinus(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -11345,7 +11547,12 @@ func (v Word64Value) Mod(interpreter *Interpreter, other NumberValue) NumberValu
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
-	return v % o
+
+	valueGetter := func() uint64 {
+		return uint64(v % o)
+	}
+
+	return NewWord64Value(interpreter, valueGetter)
 }
 
 func (v Word64Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -11358,10 +11565,14 @@ func (v Word64Value) Mul(interpreter *Interpreter, other NumberValue) NumberValu
 		})
 	}
 
-	return v * o
+	valueGetter := func() uint64 {
+		return uint64(v * o)
+	}
+
+	return NewWord64Value(interpreter, valueGetter)
 }
 
-func (v Word64Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
+func (v Word64Value) SaturatingMul(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -11378,10 +11589,15 @@ func (v Word64Value) Div(interpreter *Interpreter, other NumberValue) NumberValu
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
-	return v / o
+
+	valueGetter := func() uint64 {
+		return uint64(v / o)
+	}
+
+	return NewWord64Value(interpreter, valueGetter)
 }
 
-func (v Word64Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) NumberValue {
+func (v Word64Value) SaturatingDiv(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -11455,7 +11671,10 @@ func (v Word64Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch [
 }
 
 func ConvertWord64(memoryGauge common.MemoryGauge, value Value) Word64Value {
-	return Word64Value(ConvertUInt64(memoryGauge, value))
+	uint64Value := ConvertUInt64(memoryGauge, value)
+
+	// Already metered during conversion in `ConvertUInt64`
+	return NewUnmeteredWord64Value(uint64(uint64Value))
 }
 
 func (v Word64Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -11468,7 +11687,11 @@ func (v Word64Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) Int
 		})
 	}
 
-	return v | o
+	valueGetter := func() uint64 {
+		return uint64(v | o)
+	}
+
+	return NewWord64Value(interpreter, valueGetter)
 }
 
 func (v Word64Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -11480,7 +11703,12 @@ func (v Word64Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) In
 			RightType: other.StaticType(),
 		})
 	}
-	return v ^ o
+
+	valueGetter := func() uint64 {
+		return uint64(v ^ o)
+	}
+
+	return NewWord64Value(interpreter, valueGetter)
 }
 
 func (v Word64Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -11493,7 +11721,11 @@ func (v Word64Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) In
 		})
 	}
 
-	return v & o
+	valueGetter := func() uint64 {
+		return uint64(v & o)
+	}
+
+	return NewWord64Value(interpreter, valueGetter)
 }
 
 func (v Word64Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -11506,7 +11738,11 @@ func (v Word64Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVal
 		})
 	}
 
-	return v << o
+	valueGetter := func() uint64 {
+		return uint64(v << o)
+	}
+
+	return NewWord64Value(interpreter, valueGetter)
 }
 
 func (v Word64Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -11519,7 +11755,11 @@ func (v Word64Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVa
 		})
 	}
 
-	return v >> o
+	valueGetter := func() uint64 {
+		return uint64(v >> o)
+	}
+
+	return NewWord64Value(interpreter, valueGetter)
 }
 
 func (v Word64Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {

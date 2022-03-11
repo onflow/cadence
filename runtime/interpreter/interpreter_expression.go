@@ -512,13 +512,17 @@ func (interpreter *Interpreter) NewIntegerValueFromBigInt(value *big.Int, intege
 
 	// Word*
 	case sema.Word8Type:
-		return Word8Value(value.Int64())
+		common.UseMemory(memoryGauge, word8MemoryUsage)
+		return NewUnmeteredWord8Value(uint8(value.Int64()))
 	case sema.Word16Type:
-		return Word16Value(value.Int64())
+		common.UseMemory(memoryGauge, word16MemoryUsage)
+		return NewUnmeteredWord16Value(uint16(value.Int64()))
 	case sema.Word32Type:
-		return Word32Value(value.Int64())
+		common.UseMemory(memoryGauge, word32MemoryUsage)
+		return NewUnmeteredWord32Value(uint32(value.Int64()))
 	case sema.Word64Type:
-		return Word64Value(value.Int64())
+		common.UseMemory(memoryGauge, word64MemoryUsage)
+		return NewUnmeteredWord64Value(uint64(value.Int64()))
 
 	default:
 		panic(errors.NewUnreachableError())
