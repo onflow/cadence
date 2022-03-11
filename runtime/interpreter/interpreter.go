@@ -2174,22 +2174,22 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 	// Int*
 	case sema.Int8Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertInt8(value)
+			return ConvertInt8(interpreter, value)
 		}
 
 	case sema.Int16Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertInt16(value)
+			return ConvertInt16(interpreter, value)
 		}
 
 	case sema.Int32Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertInt32(value)
+			return ConvertInt32(interpreter, value)
 		}
 
 	case sema.Int64Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertInt64(value)
+			return ConvertInt64(interpreter, value)
 		}
 
 	case sema.Int128Type:
@@ -2712,38 +2712,38 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.Int8TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Int8Type),
-		convert: func(_ *Interpreter, value Value) Value {
-			return ConvertInt8(value)
+		convert: func(interpreter *Interpreter, value Value) Value {
+			return ConvertInt8(interpreter, value)
 		},
-		min: Int8Value(math.MinInt8),
-		max: Int8Value(math.MaxInt8),
+		min: NewUnmeteredInt8Value(math.MinInt8),
+		max: NewUnmeteredInt8Value(math.MaxInt8),
 	},
 	{
 		name:         sema.Int16TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Int16Type),
-		convert: func(_ *Interpreter, value Value) Value {
-			return ConvertInt16(value)
+		convert: func(interpreter *Interpreter, value Value) Value {
+			return ConvertInt16(interpreter, value)
 		},
-		min: Int16Value(math.MinInt16),
-		max: Int16Value(math.MaxInt16),
+		min: NewUnmeteredInt16Value(math.MinInt16),
+		max: NewUnmeteredInt16Value(math.MaxInt16),
 	},
 	{
 		name:         sema.Int32TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Int32Type),
-		convert: func(_ *Interpreter, value Value) Value {
-			return ConvertInt32(value)
+		convert: func(interpreter *Interpreter, value Value) Value {
+			return ConvertInt32(interpreter, value)
 		},
-		min: Int32Value(math.MinInt32),
-		max: Int32Value(math.MaxInt32),
+		min: NewUnmeteredInt32Value(math.MinInt32),
+		max: NewUnmeteredInt32Value(math.MaxInt32),
 	},
 	{
 		name:         sema.Int64TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Int64Type),
-		convert: func(_ *Interpreter, value Value) Value {
-			return ConvertInt64(value)
+		convert: func(interpreter *Interpreter, value Value) Value {
+			return ConvertInt64(interpreter, value)
 		},
-		min: Int64Value(math.MinInt64),
-		max: Int64Value(math.MaxInt64),
+		min: NewUnmeteredInt64Value(math.MinInt64),
+		max: NewUnmeteredInt64Value(math.MaxInt64),
 	},
 	{
 		name:         sema.Int128TypeName,

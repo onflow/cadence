@@ -63,6 +63,7 @@ func BigIntByteLength(v *big.Int) int {
 
 func NewPlusBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 	return NewBigIntMemoryUsage(
+		// TODO: https://github.com/dapperlabs/cadence-private-issues/issues/32
 		max(
 			BigIntByteLength(a),
 			BigIntByteLength(b),
@@ -70,8 +71,19 @@ func NewPlusBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 	)
 }
 
+func NewMinusBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
+	return NewBigIntMemoryUsage(
+		// TODO: https://github.com/dapperlabs/cadence-private-issues/issues/32
+		max(
+			BigIntByteLength(a),
+			BigIntByteLength(b),
+		),
+	)
+}
+
 func NewMulBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 	return NewBigIntMemoryUsage(
+		// TODO: https://github.com/dapperlabs/cadence-private-issues/issues/32
 		BigIntByteLength(a) +
 			BigIntByteLength(b),
 	)
@@ -122,4 +134,87 @@ func UseConstantMemory(memoryGauge MemoryGauge, kind MemoryKind) {
 		Kind:   kind,
 		Amount: 1,
 	})
+}
+
+func NewModBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
+	return NewBigIntMemoryUsage(
+		// TODO: https://github.com/dapperlabs/cadence-private-issues/issues/32
+		max(
+			BigIntByteLength(a),
+			BigIntByteLength(b),
+		),
+	)
+}
+
+func NewDivBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
+	return NewBigIntMemoryUsage(
+		// TODO: https://github.com/dapperlabs/cadence-private-issues/issues/32
+		max(
+			BigIntByteLength(a),
+			BigIntByteLength(b),
+		),
+	)
+}
+
+func NewBitwiseOrBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
+	return NewBigIntMemoryUsage(
+		// TODO: https://github.com/dapperlabs/cadence-private-issues/issues/32
+		max(
+			BigIntByteLength(a),
+			BigIntByteLength(b),
+		),
+	)
+}
+
+func NewBitwiseXorBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
+	return NewBigIntMemoryUsage(
+		// TODO: https://github.com/dapperlabs/cadence-private-issues/issues/32
+		max(
+			BigIntByteLength(a),
+			BigIntByteLength(b),
+		),
+	)
+}
+
+func NewBitwiseAndBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
+	return NewBigIntMemoryUsage(
+		// TODO: https://github.com/dapperlabs/cadence-private-issues/issues/32
+		max(
+			BigIntByteLength(a),
+			BigIntByteLength(b),
+		),
+	)
+}
+
+func NewBitwiseLeftShiftBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
+	return NewBigIntMemoryUsage(
+		// TODO: https://github.com/dapperlabs/cadence-private-issues/issues/32
+		BigIntByteLength(a) +
+			BigIntByteLength(b),
+	)
+}
+
+func NewBitwiseRightShiftBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
+	return NewBigIntMemoryUsage(
+		// TODO: https://github.com/dapperlabs/cadence-private-issues/issues/32
+		max(
+			BigIntByteLength(a),
+			BigIntByteLength(b),
+		),
+	)
+}
+
+func NewNumberMemoryUsage(bytes int) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindNumber,
+		Amount: uint64(bytes),
+	}
+}
+
+func UseMemory(gauge MemoryGauge, usage MemoryUsage) {
+	if gauge == nil {
+		return
+	}
+
+	gauge.UseMemory(usage)
 }
