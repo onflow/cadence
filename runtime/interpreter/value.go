@@ -3500,7 +3500,11 @@ func (v Int8Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) Integ
 		})
 	}
 
-	return v | o
+	valueGetter := func() int8 {
+		return int8(v | o)
+	}
+
+	return NewInt8Value(interpreter, valueGetter)
 }
 
 func (v Int8Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -3513,7 +3517,11 @@ func (v Int8Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) Inte
 		})
 	}
 
-	return v ^ o
+	valueGetter := func() int8 {
+		return int8(v ^ o)
+	}
+
+	return NewInt8Value(interpreter, valueGetter)
 }
 
 func (v Int8Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -3526,7 +3534,11 @@ func (v Int8Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) Inte
 		})
 	}
 
-	return v & o
+	valueGetter := func() int8 {
+		return int8(v & o)
+	}
+
+	return NewInt8Value(interpreter, valueGetter)
 }
 
 func (v Int8Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -3539,7 +3551,11 @@ func (v Int8Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue
 		})
 	}
 
-	return v << o
+	valueGetter := func() int8 {
+		return int8(v << o)
+	}
+
+	return NewInt8Value(interpreter, valueGetter)
 }
 
 func (v Int8Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -3552,7 +3568,11 @@ func (v Int8Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValu
 		})
 	}
 
-	return v >> o
+	valueGetter := func() int8 {
+		return int8(v >> o)
+	}
+
+	return NewInt8Value(interpreter, valueGetter)
 }
 
 func (v Int8Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
@@ -4060,7 +4080,11 @@ func (v Int16Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) Inte
 		})
 	}
 
-	return v | o
+	valueGetter := func() int16 {
+		return int16(v | o)
+	}
+
+	return NewInt16Value(interpreter, valueGetter)
 }
 
 func (v Int16Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -4073,7 +4097,11 @@ func (v Int16Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) Int
 		})
 	}
 
-	return v ^ o
+	valueGetter := func() int16 {
+		return int16(v ^ o)
+	}
+
+	return NewInt16Value(interpreter, valueGetter)
 }
 
 func (v Int16Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -4086,7 +4114,11 @@ func (v Int16Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) Int
 		})
 	}
 
-	return v & o
+	valueGetter := func() int16 {
+		return int16(v & o)
+	}
+
+	return NewInt16Value(interpreter, valueGetter)
 }
 
 func (v Int16Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -4099,7 +4131,11 @@ func (v Int16Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValu
 		})
 	}
 
-	return v << o
+	valueGetter := func() int16 {
+		return int16(v << o)
+	}
+
+	return NewInt16Value(interpreter, valueGetter)
 }
 
 func (v Int16Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -4112,7 +4148,11 @@ func (v Int16Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVal
 		})
 	}
 
-	return v >> o
+	valueGetter := func() int16 {
+		return int16(v >> o)
+	}
+
+	return NewInt16Value(interpreter, valueGetter)
 }
 
 func (v Int16Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
@@ -4622,7 +4662,11 @@ func (v Int32Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) Inte
 		})
 	}
 
-	return v | o
+	valueGetter := func() int32 {
+		return int32(v | o)
+	}
+
+	return NewInt32Value(interpreter, valueGetter)
 }
 
 func (v Int32Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -4635,7 +4679,11 @@ func (v Int32Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) Int
 		})
 	}
 
-	return v ^ o
+	valueGetter := func() int32 {
+		return int32(v ^ o)
+	}
+
+	return NewInt32Value(interpreter, valueGetter)
 }
 
 func (v Int32Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -4648,7 +4696,11 @@ func (v Int32Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) Int
 		})
 	}
 
-	return v & o
+	valueGetter := func() int32 {
+		return int32(v & o)
+	}
+
+	return NewInt32Value(interpreter, valueGetter)
 }
 
 func (v Int32Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -4661,7 +4713,11 @@ func (v Int32Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValu
 		})
 	}
 
-	return v << o
+	valueGetter := func() int32 {
+		return int32(v << o)
+	}
+
+	return NewInt32Value(interpreter, valueGetter)
 }
 
 func (v Int32Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -4674,7 +4730,11 @@ func (v Int32Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVal
 		})
 	}
 
-	return v >> o
+	valueGetter := func() int32 {
+		return int32(v >> o)
+	}
+
+	return NewInt32Value(interpreter, valueGetter)
 }
 
 func (v Int32Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
@@ -5179,7 +5239,11 @@ func (v Int64Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) Inte
 		})
 	}
 
-	return v | o
+	valueGetter := func() int64 {
+		return int64(v | o)
+	}
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
 func (v Int64Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -5192,7 +5256,11 @@ func (v Int64Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) Int
 		})
 	}
 
-	return v ^ o
+	valueGetter := func() int64 {
+		return int64(v ^ o)
+	}
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
 func (v Int64Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -5205,7 +5273,11 @@ func (v Int64Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) Int
 		})
 	}
 
-	return v & o
+	valueGetter := func() int64 {
+		return int64(v & o)
+	}
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
 func (v Int64Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -5218,7 +5290,11 @@ func (v Int64Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValu
 		})
 	}
 
-	return v << o
+	valueGetter := func() int64 {
+		return int64(v << o)
+	}
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
 func (v Int64Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -5231,7 +5307,11 @@ func (v Int64Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVal
 		})
 	}
 
-	return v >> o
+	valueGetter := func() int64 {
+		return int64(v >> o)
+	}
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
 func (v Int64Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
