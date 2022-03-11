@@ -125,9 +125,11 @@ func TestMinusUInt8(t *testing.T) {
 		{0xff, 0xff, true},
 	}
 
+	inter := newTestInterpreter(t)
+
 	for _, test := range tests {
 		f := func() {
-			test.a.Minus(test.b)
+			test.a.Minus(inter, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -236,9 +238,11 @@ func TestMinusUInt16(t *testing.T) {
 		{0xffff, 0xffff, true},
 	}
 
+	inter := newTestInterpreter(t)
+
 	for _, test := range tests {
 		f := func() {
-			test.a.Minus(test.b)
+			test.a.Minus(inter, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -347,9 +351,11 @@ func TestMinusUInt32(t *testing.T) {
 		{0xffffffff, 0xffffffff, true},
 	}
 
+	inter := newTestInterpreter(t)
+
 	for _, test := range tests {
 		f := func() {
-			test.a.Minus(test.b)
+			test.a.Minus(inter, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -674,9 +680,11 @@ func TestMinusUInt64(t *testing.T) {
 		{0xffffffffffffffff, 0xffffffffffffffff, true},
 	}
 
+	inter := newTestInterpreter(t)
+
 	for _, test := range tests {
 		f := func() {
-			test.a.Minus(test.b)
+			test.a.Minus(inter, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -787,9 +795,11 @@ func TestMinusUInt128(t *testing.T) {
 		{uint128("0xffffffffffffffffffffffffffffffff"), uint128("0xffffffffffffffffffffffffffffffff"), true},
 	}
 
+	inter := newTestInterpreter(t)
+
 	for _, test := range tests {
 		f := func() {
-			test.a.Minus(test.b)
+			test.a.Minus(inter, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1242,9 +1252,11 @@ func TestMinusUInt256(t *testing.T) {
 		},
 	}
 
+	inter := newTestInterpreter(t)
+
 	for _, test := range tests {
 		f := func() {
-			test.a.Minus(test.b)
+			test.a.Minus(inter, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1353,9 +1365,11 @@ func TestMinusInt8(t *testing.T) {
 		{-1, -1, true},
 	}
 
+	inter := newTestInterpreter(t)
+
 	for _, test := range tests {
 		f := func() {
-			test.a.Minus(test.b)
+			test.a.Minus(inter, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1465,9 +1479,11 @@ func TestMinusInt16(t *testing.T) {
 		{-1, -1, true},
 	}
 
+	inter := newTestInterpreter(t)
+
 	for _, test := range tests {
 		f := func() {
-			test.a.Minus(test.b)
+			test.a.Minus(inter, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1576,9 +1592,11 @@ func TestMinusInt32(t *testing.T) {
 		{-1, -1, true},
 	}
 
+	inter := newTestInterpreter(t)
+
 	for _, test := range tests {
 		f := func() {
-			test.a.Minus(test.b)
+			test.a.Minus(inter, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1903,9 +1921,11 @@ func TestMinusInt64(t *testing.T) {
 		{-1, -1, true},
 	}
 
+	inter := newTestInterpreter(t)
+
 	for _, test := range tests {
 		f := func() {
-			test.a.Minus(test.b)
+			test.a.Minus(inter, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -2016,9 +2036,11 @@ func TestMinusInt128(t *testing.T) {
 		{int128("-0x00000000000000000000000000000001"), int128("-0x00000000000000000000000000000001"), true},
 	}
 
+	inter := newTestInterpreter(t)
+
 	for _, test := range tests {
 		f := func() {
-			test.a.Minus(test.b)
+			test.a.Minus(inter, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -2471,9 +2493,11 @@ func TestMinusInt256(t *testing.T) {
 		},
 	}
 
+	inter := newTestInterpreter(t)
+
 	for _, test := range tests {
 		f := func() {
-			test.a.Minus(test.b)
+			test.a.Minus(inter, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -2582,11 +2606,13 @@ func TestMinusUInt(t *testing.T) {
 		{0xff, 0xff, true},
 	}
 
+	inter := newTestInterpreter(t)
+
 	for _, test := range tests {
 		f := func() {
 			a := NewUnmeteredUIntValueFromUint64(test.a)
 			b := NewUnmeteredUIntValueFromUint64(test.b)
-			a.Minus(b)
+			a.Minus(inter, b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)

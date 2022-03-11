@@ -208,7 +208,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.Minus(right)
+		return left.Minus(interpreter, right)
 
 	case ast.OperationMod:
 		left, leftOk := leftValue.(NumberValue)
@@ -232,7 +232,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.Div(right)
+		return left.Div(interpreter, right)
 
 	case ast.OperationBitwiseOr:
 		left, leftOk := leftValue.(IntegerValue)
@@ -240,7 +240,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.BitwiseOr(right)
+		return left.BitwiseOr(interpreter, right)
 
 	case ast.OperationBitwiseXor:
 		left, leftOk := leftValue.(IntegerValue)
@@ -248,7 +248,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.BitwiseXor(right)
+		return left.BitwiseXor(interpreter, right)
 
 	case ast.OperationBitwiseAnd:
 		left, leftOk := leftValue.(IntegerValue)
@@ -256,7 +256,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.BitwiseAnd(right)
+		return left.BitwiseAnd(interpreter, right)
 
 	case ast.OperationBitwiseLeftShift:
 		left, leftOk := leftValue.(IntegerValue)
@@ -264,7 +264,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.BitwiseLeftShift(right)
+		return left.BitwiseLeftShift(interpreter, right)
 
 	case ast.OperationBitwiseRightShift:
 		left, leftOk := leftValue.(IntegerValue)
@@ -272,7 +272,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.BitwiseRightShift(right)
+		return left.BitwiseRightShift(interpreter, right)
 
 	case ast.OperationLess:
 		left, leftOk := leftValue.(NumberValue)
@@ -478,13 +478,33 @@ func (interpreter *Interpreter) NewIntegerValueFromBigInt(value *big.Int, intege
 
 	// Int*
 	case sema.Int8Type:
-		return Int8Value(value.Int64())
+		return NewInt8Value(
+			interpreter,
+			func() int8 {
+				return int8(value.Int64())
+			},
+		)
 	case sema.Int16Type:
-		return Int16Value(value.Int64())
+		return NewInt16Value(
+			interpreter,
+			func() int16 {
+				return int16(value.Int64())
+			},
+		)
 	case sema.Int32Type:
-		return Int32Value(value.Int64())
+		return NewInt32Value(
+			interpreter,
+			func() int32 {
+				return int32(value.Int64())
+			},
+		)
 	case sema.Int64Type:
-		return Int64Value(value.Int64())
+		return NewInt64Value(
+			interpreter,
+			func() int64 {
+				return value.Int64()
+			},
+		)
 	case sema.Int128Type:
 		return NewInt128ValueFromBigInt(value)
 	case sema.Int256Type:
