@@ -183,7 +183,16 @@ func TestImportedValueMemoryMeteringIterate(t *testing.T) {
 		{
 			TypeName:   "Path",
 			MemoryKind: common.MemoryKindPathValue,
-			Weight:     3,
+			Weight:     1,
+			TypeInstance: cadence.Path{
+				Domain:     "storage",
+				Identifier: "id3",
+			},
+		},
+		{
+			TypeName:   "Path",
+			MemoryKind: common.MemoryKindString,
+			Weight:     3 + 1,
 			TypeInstance: cadence.Path{
 				Domain:     "storage",
 				Identifier: "id3",
@@ -210,7 +219,23 @@ func TestImportedValueMemoryMeteringIterate(t *testing.T) {
 		{
 			TypeName:   "Capability",
 			MemoryKind: common.MemoryKindPathValue,
-			Weight:     13,
+			Weight:     1,
+			TypeInstance: cadence.Capability{
+				Path: cadence.Path{
+					Domain:     "public",
+					Identifier: "foobarrington",
+				},
+				Address: cadence.Address{},
+				BorrowType: cadence.ReferenceType{
+					Authorized: true,
+					Type:       cadence.AnyType{},
+				},
+			},
+		},
+		{
+			TypeName:   "Capability",
+			MemoryKind: common.MemoryKindString,
+			Weight:     13 + 1,
 			TypeInstance: cadence.Capability{
 				Path: cadence.Path{
 					Domain:     "public",

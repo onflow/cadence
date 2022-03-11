@@ -152,18 +152,20 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 	// CBOR Types
 
 	case cbor.BoolType:
+		common.UseConstantMemory(d.memoryGauge, common.MemoryKindBool)
 		v, err := d.decoder.DecodeBool()
 		if err != nil {
 			return nil, err
 		}
-		storable = NewBoolValue(d.memoryGauge, v)
+		storable = NewUnmeteredBoolValue(v)
 
 	case cbor.NilType:
+		common.UseConstantMemory(d.memoryGauge, common.MemoryKindNil)
 		err := d.decoder.DecodeNil()
 		if err != nil {
 			return nil, err
 		}
-		storable = NewNilValue(d.memoryGauge)
+		storable = NewUnmeteredNilValue()
 
 	case cbor.TextStringType:
 		str, err := decodeString(d.decoder, d.memoryGauge)
@@ -185,6 +187,7 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 			return atree.DecodeStorageIDStorable(d.decoder)
 
 		case CBORTagVoidValue:
+			common.UseConstantMemory(d.memoryGauge, common.MemoryKindVoid)
 			err := d.decoder.Skip()
 			if err != nil {
 				return nil, err
@@ -804,11 +807,8 @@ func (d StorableDecoder) decodePath() (PathValue, error) {
 
 	return NewPathValue(
 		d.memoryGauge,
-		common.NewPathMemoryUsage(identifier),
-		func() (common.PathDomain, string) {
-			return common.PathDomain(domain),
-				identifier
-		},
+		common.PathDomain(domain),
+		identifier,
 	), nil
 }
 

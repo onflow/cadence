@@ -15975,13 +15975,10 @@ func NewUnmeteredPathValue(domain common.PathDomain, identifier string) PathValu
 
 func NewPathValue(
 	memoryGauge common.MemoryGauge,
-	memoryUsage common.MemoryUsage,
-	pathConstructor func() (common.PathDomain, string),
+	domain common.PathDomain,
+	identifier string,
 ) PathValue {
-	if memoryGauge != nil {
-		memoryGauge.UseMemory(memoryUsage)
-	}
-	domain, identifier := pathConstructor()
+	common.UseConstantMemory(memoryGauge, common.MemoryKindPathValue)
 	return NewUnmeteredPathValue(domain, identifier)
 }
 
