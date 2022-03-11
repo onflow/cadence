@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	. "github.com/onflow/cadence/runtime/interpreter"
 )
@@ -127,7 +128,7 @@ func TestMinusUInt8(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Minus(test.b)
+			test.a.Minus(nil, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -238,7 +239,7 @@ func TestMinusUInt16(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Minus(test.b)
+			test.a.Minus(nil, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -349,7 +350,7 @@ func TestMinusUInt32(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Minus(test.b)
+			test.a.Minus(nil, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -676,7 +677,7 @@ func TestMinusUInt64(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Minus(test.b)
+			test.a.Minus(nil, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -789,7 +790,7 @@ func TestMinusUInt128(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Minus(test.b)
+			test.a.Minus(nil, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1244,7 +1245,7 @@ func TestMinusUInt256(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Minus(test.b)
+			test.a.Minus(nil, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1355,7 +1356,7 @@ func TestMinusInt8(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Minus(test.b)
+			test.a.Minus(nil, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1467,7 +1468,7 @@ func TestMinusInt16(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Minus(test.b)
+			test.a.Minus(nil, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1578,7 +1579,7 @@ func TestMinusInt32(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Minus(test.b)
+			test.a.Minus(nil, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1905,7 +1906,7 @@ func TestMinusInt64(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Minus(test.b)
+			test.a.Minus(nil, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -2018,7 +2019,7 @@ func TestMinusInt128(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Minus(test.b)
+			test.a.Minus(nil, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -2473,7 +2474,7 @@ func TestMinusInt256(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			test.a.Minus(test.b)
+			test.a.Minus(nil, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -2582,11 +2583,14 @@ func TestMinusUInt(t *testing.T) {
 		{0xff, 0xff, true},
 	}
 
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
+
 	for _, test := range tests {
 		f := func() {
 			a := NewUnmeteredUIntValueFromUint64(test.a)
 			b := NewUnmeteredUIntValueFromUint64(test.b)
-			a.Minus(b)
+			a.Minus(inter, b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
