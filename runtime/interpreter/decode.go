@@ -489,7 +489,7 @@ func (d StorableDecoder) decodeUInt() (UIntValue, error) {
 		return UIntValue{}, fmt.Errorf("invalid UInt: got %s, expected positive", bigInt)
 	}
 
-	// NOTE: already metered by decodeBigInt
+	// NOTE: already metered by `decodeBigInt`
 	return NewUnmeteredUIntValueFromBigInt(bigInt), nil
 }
 
@@ -505,6 +505,7 @@ func (d StorableDecoder) decodeUInt8() (UInt8Value, error) {
 	if value > max {
 		return 0, fmt.Errorf("invalid UInt8: got %d, expected max %d", value, max)
 	}
+	// NOTE: already metered by `decodeUint64`
 	return NewUnmeteredUInt8Value(uint8(value)), nil
 }
 
@@ -521,6 +522,7 @@ func (d StorableDecoder) decodeUInt16() (UInt16Value, error) {
 	if value > max {
 		return 0, fmt.Errorf("invalid UInt16: got %d, expected max %d", value, max)
 	}
+	// NOTE: already metered by `decodeUint64`
 	return NewUnmeteredUInt16Value(uint16(value)), nil
 }
 
@@ -537,6 +539,7 @@ func (d StorableDecoder) decodeUInt32() (UInt32Value, error) {
 	if value > max {
 		return 0, fmt.Errorf("invalid UInt32: got %d, expected max %d", value, max)
 	}
+	// NOTE: already metered by `decodeUint64`
 	return NewUnmeteredUInt32Value(uint32(value)), nil
 }
 
@@ -548,7 +551,8 @@ func (d StorableDecoder) decodeUInt64() (UInt64Value, error) {
 		}
 		return 0, err
 	}
-	return UInt64Value(value), nil
+	// NOTE: already metered by `decodeUint64`
+	return NewUnmeteredUInt64Value(value), nil
 }
 
 func (d StorableDecoder) decodeUInt128() (UInt128Value, error) {
@@ -569,7 +573,7 @@ func (d StorableDecoder) decodeUInt128() (UInt128Value, error) {
 		return UInt128Value{}, fmt.Errorf("invalid UInt128: got %s, expected max %s", bigInt, max)
 	}
 
-	// NOTE: already metered by decodeBigInt
+	// NOTE: already metered by `decodeBigInt`
 	return NewUnmeteredUInt128ValueFromBigInt(bigInt), nil
 }
 
