@@ -9188,7 +9188,7 @@ func NewUnmeteredUInt128ValueFromUint64(value uint64) UInt128Value {
 	return NewUnmeteredUInt128ValueFromBigInt(new(big.Int).SetUint64(value))
 }
 
-var Uint128MemoryUsage = common.NewNumberMemoryUsage(16)
+var Uint128MemoryUsage = common.NewBigIntMemoryUsage(16)
 
 func NewUInt128ValueFromBigInt(memoryGauge common.MemoryGauge, bigIntConstructor func() *big.Int) UInt128Value {
 	common.UseMemory(memoryGauge, Uint128MemoryUsage)
@@ -9812,7 +9812,7 @@ func NewUnmeteredUInt256ValueFromUint64(value uint64) UInt256Value {
 	return NewUnmeteredUInt256ValueFromBigInt(new(big.Int).SetUint64(value))
 }
 
-var Uint256MemoryUsage = common.NewNumberMemoryUsage(32)
+var Uint256MemoryUsage = common.NewBigIntMemoryUsage(32)
 
 func NewUInt256ValueFromBigInt(memoryGauge common.MemoryGauge, bigIntConstructor func() *big.Int) UInt256Value {
 	common.UseMemory(memoryGauge, Uint256MemoryUsage)
