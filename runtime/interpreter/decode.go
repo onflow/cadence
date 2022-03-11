@@ -719,8 +719,12 @@ func (d StorableDecoder) decodeSome() (SomeStorable, error) {
 	}, nil
 }
 
-func checkEncodedAddressLength(addressBytes []byte) error {
-	actualLength := len(addressBytes)
+func checkEncodedAddressLength(decoder *cbor.StreamDecoder) error {
+	actualLength, err := decoder.NextSize()
+	if err != nil {
+		return err
+	}
+
 	const expectedLength = common.AddressLength
 	if actualLength > expectedLength {
 		return fmt.Errorf(
@@ -733,6 +737,11 @@ func checkEncodedAddressLength(addressBytes []byte) error {
 }
 
 func (d StorableDecoder) decodeAddress() (AddressValue, error) {
+	err := checkEncodedAddressLength(d.decoder)
+	if err != nil {
+		return AddressValue{}, err
+	}
+
 	addressBytes, err := d.decoder.DecodeBytes()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -741,11 +750,6 @@ func (d StorableDecoder) decodeAddress() (AddressValue, error) {
 				e.ActualType.String(),
 			)
 		}
-		return AddressValue{}, err
-	}
-
-	err = checkEncodedAddressLength(addressBytes)
-	if err != nil {
 		return AddressValue{}, err
 	}
 
@@ -1662,6 +1666,11 @@ func (d LocationDecoder) decodeAddressLocation() (common.Location, error) {
 
 	// Address
 
+	err = checkEncodedAddressLength(d.decoder)
+	if err != nil {
+		return nil, err
+	}
+
 	// Decode address at array index encodedAddressLocationAddressFieldKey
 	encodedAddress, err := d.decoder.DecodeBytes()
 	if err != nil {
@@ -1671,11 +1680,6 @@ func (d LocationDecoder) decodeAddressLocation() (common.Location, error) {
 				e.ActualType.String(),
 			)
 		}
-		return nil, err
-	}
-
-	err = checkEncodedAddressLength(encodedAddress)
-	if err != nil {
 		return nil, err
 	}
 
