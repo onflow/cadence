@@ -201,4 +201,53 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		executeScript(script, meter, cadence.NewUInt256(2))
 		assert.Equal(t, uint64(32), meter[common.MemoryKindNumber])
 	})
+
+
+	t.Run("Word8", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            pub fun main(x: Word8) {}
+        `)
+
+		meter := make(map[common.MemoryKind]uint64)
+		executeScript(script, meter, cadence.NewWord8(2))
+		assert.Equal(t, uint64(1), meter[common.MemoryKindNumber])
+	})
+
+	t.Run("Word16", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            pub fun main(x: Word16) {}
+        `)
+
+		meter := make(map[common.MemoryKind]uint64)
+		executeScript(script, meter, cadence.NewWord16(2))
+		assert.Equal(t, uint64(2), meter[common.MemoryKindNumber])
+	})
+
+	t.Run("Word32", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            pub fun main(x: Word32) {}
+        `)
+
+		meter := make(map[common.MemoryKind]uint64)
+		executeScript(script, meter, cadence.NewWord32(2))
+		assert.Equal(t, uint64(4), meter[common.MemoryKindNumber])
+	})
+
+	t.Run("Word64", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            pub fun main(x: Word64) {}
+        `)
+
+		meter := make(map[common.MemoryKind]uint64)
+		executeScript(script, meter, cadence.NewWord64(2))
+		assert.Equal(t, uint64(8), meter[common.MemoryKindNumber])
+	})
 }
