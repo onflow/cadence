@@ -64,7 +64,6 @@ func main() {
 			panic(err)
 		}
 		_, err = inter.Invoke("main")
-		fmt.Println("invoked")
 		if err != nil {
 			panic(err)
 		}

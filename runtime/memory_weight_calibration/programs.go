@@ -140,6 +140,20 @@ pub fun main() {
 }
 `
 
+var iteration_test = `
+pub fun main() {
+	var i = 0
+	var a: [String] = []
+	while i < 10000 {
+		a.append("a")
+		i = i + 1
+	}
+	for s in a {
+		let x = s
+	}
+}
+`
+
 var composite_test = `
 pub struct S {}
 
@@ -225,5 +239,6 @@ var test_programs = []struct {
 	{name: "optional bool", code: optional_test},
 	{name: "empty composite", code: composite_test},
 	{name: "bound function", code: bound_function_test},
+	{name: "iteration", code: iteration_test},
 	{name: "composite with field", code: composite_field_test},
 }
