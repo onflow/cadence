@@ -3894,13 +3894,10 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 
 			reference := NewStorageReferenceValue(
 				invocation.Interpreter,
-				common.NewStorageReferenceMemoryUsage(path.String()),
-				func() (bool, common.Address, PathValue, sema.Type) {
-					return referenceType.Authorized,
-						address,
-						path,
-						referenceType.Type
-				},
+				referenceType.Authorized,
+				address,
+				path,
+				referenceType.Type,
 			)
 
 			// Attempt to dereference,
@@ -4097,13 +4094,10 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 
 			reference := NewStorageReferenceValue(
 				invocation.Interpreter,
-				common.NewStorageReferenceMemoryUsage(targetPath.String()),
-				func() (bool, common.Address, PathValue, sema.Type) {
-					return authorized,
-						address,
-						targetPath,
-						borrowType.Type
-				},
+				authorized,
+				address,
+				targetPath,
+				borrowType.Type,
 			)
 
 			// Attempt to dereference,
@@ -4172,13 +4166,10 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 
 			reference := NewStorageReferenceValue(
 				invocation.Interpreter,
-				common.NewStorageReferenceMemoryUsage(targetPath.String()),
-				func() (bool, common.Address, PathValue, sema.Type) {
-					return authorized,
-						address,
-						targetPath,
-						borrowType.Type
-				},
+				authorized,
+				address,
+				targetPath,
+				borrowType.Type,
 			)
 
 			// Attempt to dereference,

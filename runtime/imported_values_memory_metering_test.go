@@ -180,6 +180,8 @@ func TestImportedValueMemoryMeteringIterate(t *testing.T) {
 			Weight:       1,
 			TypeInstance: cadence.Address{},
 		},
+
+		// Verify Path and its composing type, String
 		{
 			TypeName:   "Path",
 			MemoryKind: common.MemoryKindPathValue,

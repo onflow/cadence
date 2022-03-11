@@ -15023,14 +15023,18 @@ func NewUnmeteredStorageReferenceValue(
 
 func NewStorageReferenceValue(
 	memoryGauge common.MemoryGauge,
-	memoryUsage common.MemoryUsage,
-	storageReferenceConstructor func() (bool, common.Address, PathValue, sema.Type),
+	authorized bool,
+	targetStorageAddress common.Address,
+	targetPath PathValue,
+	borrowedType sema.Type,
 ) *StorageReferenceValue {
-	if memoryGauge != nil {
-		memoryGauge.UseMemory(memoryUsage)
-	}
-	authorized, targetStorageAddress, targetPath, borrowedType := storageReferenceConstructor()
-	return NewUnmeteredStorageReferenceValue(authorized, targetStorageAddress, targetPath, borrowedType)
+	common.UseConstantMemory(memoryGauge, common.MemoryKindStorageReferenceValue)
+	return NewUnmeteredStorageReferenceValue(
+		authorized,
+		targetStorageAddress,
+		targetPath,
+		borrowedType,
+	)
 }
 
 func (*StorageReferenceValue) IsValue() {}
