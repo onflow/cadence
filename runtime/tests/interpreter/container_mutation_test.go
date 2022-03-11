@@ -897,10 +897,7 @@ func TestDictionaryMutation(t *testing.T) {
 			inter,
 			interpreter.NewAddressValue(
 				inter,
-				common.NewAddressMemoryUsage(1),
-				func() common.Address {
-					return common.Address{0x1}
-				},
+				common.Address{0x1},
 			),
 		)
 

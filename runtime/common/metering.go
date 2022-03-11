@@ -89,13 +89,6 @@ func NewMulBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 	)
 }
 
-func NewAddressMemoryUsage(length int) MemoryUsage {
-	return MemoryUsage{
-		Kind:   MemoryKindAddress,
-		Amount: uint64(length),
-	}
-}
-
 func NewTypeMemoryUsage(staticTypeAsString string) MemoryUsage {
 	return MemoryUsage{
 		Kind:   MemoryKindTypeValue,

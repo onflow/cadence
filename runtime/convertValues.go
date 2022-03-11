@@ -640,13 +640,9 @@ func importCharacter(inter *interpreter.Interpreter, v cadence.Character) interp
 }
 
 func importAddress(inter *interpreter.Interpreter, v cadence.Address) interpreter.AddressValue {
-	memoryUsage := common.NewAddressMemoryUsage(len(v))
 	return interpreter.NewAddressValue(
 		inter,
-		memoryUsage,
-		func() common.Address {
-			return common.Address(v)
-		},
+		common.Address(v),
 	)
 }
 
@@ -713,10 +709,7 @@ func importCapability(
 		inter,
 		interpreter.NewAddressValueFromBytes(
 			inter,
-			common.NewAddressMemoryUsage(len(bytes)),
-			func() []byte {
-				return bytes
-			},
+			bytes,
 		),
 		importPathValue(inter, path),
 		ImportType(borrowType),

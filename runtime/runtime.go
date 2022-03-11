@@ -637,10 +637,7 @@ func (r *interpreterRuntime) convertArgument(
 				inter,
 				interpreter.NewAddressValue(
 					inter,
-					common.NewAddressMemoryUsage(len(address)),
-					func() common.Address {
-						return address
-					},
+					address,
 				),
 				context,
 				storage,
@@ -656,10 +653,7 @@ func (r *interpreterRuntime) convertArgument(
 				inter,
 				interpreter.NewAddressValue(
 					inter,
-					common.NewAddressMemoryUsage(len(address)),
-					func() common.Address {
-						return address
-					},
+					address,
 				),
 				context.Interface,
 				storage,
@@ -758,10 +752,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 				inter,
 				interpreter.NewAddressValue(
 					inter,
-					common.NewAddressMemoryUsage(len(address)),
-					func() common.Address {
-						return address
-					},
+					address,
 				),
 				context,
 				storage,
@@ -1557,10 +1548,7 @@ func (r *interpreterRuntime) injectedCompositeFieldsHandler(
 
 				addressValue := interpreter.NewAddressValue(
 					inter,
-					common.NewAddressMemoryUsage(len(address)),
-					func() common.Address {
-						return address
-					},
+					address,
 				)
 
 				return map[string]interpreter.Value{
@@ -1838,10 +1826,7 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 
 		addressValue := interpreter.NewAddressValue(
 			invocation.Interpreter,
-			common.NewAddressMemoryUsage(len(address)),
-			func() common.Address {
-				return address
-			},
+			address,
 		)
 
 		r.emitAccountEvent(

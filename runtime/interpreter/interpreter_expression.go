@@ -446,10 +446,7 @@ func (interpreter *Interpreter) VisitIntegerExpression(expression *ast.IntegerEx
 		bytes := value.Bytes()
 		return NewAddressValueFromBytes(
 			interpreter,
-			common.NewAddressMemoryUsage(len(bytes)),
-			func() []byte {
-				return bytes
-			},
+			bytes,
 		)
 	}
 

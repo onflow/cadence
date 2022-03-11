@@ -15636,28 +15636,19 @@ func NewUnmeteredAddressValue(b []byte) AddressValue {
 
 func NewAddressValue(
 	memoryGauge common.MemoryGauge,
-	memoryUsage common.MemoryUsage,
-	addressConstructor func() common.Address,
+	address common.Address,
 ) AddressValue {
 	return NewAddressValueFromBytes(
 		memoryGauge,
-		memoryUsage,
-		func() []byte {
-			address := addressConstructor()
-			return address[:]
-		},
+		address[:],
 	)
 }
 
 func NewAddressValueFromBytes(
 	memoryGauge common.MemoryGauge,
-	memoryUsage common.MemoryUsage,
-	addressConstructor func() []byte,
+	address []byte,
 ) AddressValue {
-	if memoryGauge != nil {
-		memoryGauge.UseMemory(memoryUsage)
-	}
-	address := addressConstructor()
+	common.UseConstantMemory(memoryGauge, common.MemoryKindAddress)
 	return NewUnmeteredAddressValue(address)
 }
 

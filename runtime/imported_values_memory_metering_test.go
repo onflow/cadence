@@ -177,7 +177,7 @@ func TestImportedValueMemoryMeteringIterate(t *testing.T) {
 		{
 			TypeName:     "Address",
 			MemoryKind:   common.MemoryKindAddress,
-			Weight:       8,
+			Weight:       1,
 			TypeInstance: cadence.Address{},
 		},
 		{
