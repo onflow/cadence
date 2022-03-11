@@ -3079,10 +3079,10 @@ type Int8Value int8
 
 const int8Size = int(unsafe.Sizeof(Int8Value(0)))
 
-var int8MemoryUsage = common.NewNumberMemoryUsage(int8Size)
+var Int8MemoryUsage = common.NewNumberMemoryUsage(int8Size)
 
 func NewInt8Value(gauge common.MemoryGauge, valueGetter func() int8) Int8Value {
-	common.UseMemory(gauge, int8MemoryUsage)
+	common.UseMemory(gauge, Int8MemoryUsage)
 
 	return NewUnmeteredInt8Value(valueGetter())
 }
@@ -3639,10 +3639,10 @@ type Int16Value int16
 
 const int16Size = int(unsafe.Sizeof(Int16Value(0)))
 
-var int16MemoryUsage = common.NewNumberMemoryUsage(int16Size)
+var Int16MemoryUsage = common.NewNumberMemoryUsage(int16Size)
 
 func NewInt16Value(gauge common.MemoryGauge, valueGetter func() int16) Int16Value {
-	common.UseMemory(gauge, int16MemoryUsage)
+	common.UseMemory(gauge, Int16MemoryUsage)
 
 	return NewUnmeteredInt16Value(valueGetter())
 }
@@ -4201,10 +4201,10 @@ type Int32Value int32
 
 const int32Size = int(unsafe.Sizeof(Int32Value(0)))
 
-var int32MemoryUsage = common.NewNumberMemoryUsage(int32Size)
+var Int32MemoryUsage = common.NewNumberMemoryUsage(int32Size)
 
 func NewInt32Value(gauge common.MemoryGauge, valueGetter func() int32) Int32Value {
-	common.UseMemory(gauge, int32MemoryUsage)
+	common.UseMemory(gauge, Int32MemoryUsage)
 
 	return NewUnmeteredInt32Value(valueGetter())
 }
@@ -4761,10 +4761,10 @@ func (Int32Value) ChildStorables() []atree.Storable {
 
 type Int64Value int64
 
-var int64MemoryUsage = common.NewNumberMemoryUsage(int64Size)
+var Int64MemoryUsage = common.NewNumberMemoryUsage(int64Size)
 
 func NewInt64Value(gauge common.MemoryGauge, valueGetter func() int64) Int64Value {
-	common.UseMemory(gauge, int64MemoryUsage)
+	common.UseMemory(gauge, Int64MemoryUsage)
 
 	return NewUnmeteredInt64Value(valueGetter())
 }
