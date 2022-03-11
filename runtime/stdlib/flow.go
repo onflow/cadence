@@ -200,9 +200,7 @@ func DefaultFlowBuiltinImpls() FlowBuiltinImpls {
 		UnsafeRandom: func(invocation interpreter.Invocation) interpreter.Value {
 			return interpreter.NewUInt64Value(
 				invocation.Interpreter,
-				func() uint64 {
-					return rand.Uint64()
-				},
+				rand.Uint64,
 			)
 		},
 	}
