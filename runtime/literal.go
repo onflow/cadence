@@ -200,13 +200,13 @@ func convertIntValue(
 	case sema.IntType, sema.IntegerType, sema.SignedIntegerType:
 		return intValue, nil
 	case sema.Int8Type:
-		return interpreter.ConvertInt8(intValue), nil
+		return interpreter.ConvertInt8(memoryGauge, intValue), nil
 	case sema.Int16Type:
-		return interpreter.ConvertInt16(intValue), nil
+		return interpreter.ConvertInt16(memoryGauge, intValue), nil
 	case sema.Int32Type:
-		return interpreter.ConvertInt32(intValue), nil
+		return interpreter.ConvertInt32(memoryGauge, intValue), nil
 	case sema.Int64Type:
-		return interpreter.ConvertInt64(intValue), nil
+		return interpreter.ConvertInt64(memoryGauge, intValue), nil
 	case sema.Int128Type:
 		return interpreter.ConvertInt128(intValue), nil
 	case sema.Int256Type:
