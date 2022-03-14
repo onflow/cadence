@@ -10,11 +10,50 @@ This is an opinionated list of issues that can be improved if they are found in 
 
 ### Problem
 
-Some projects want to authenticate users using account addresses or want to perform operations for users directly.
-A not-uncommon reaction is to expect a user to pass their `AuthAccount` object as a function parameter
-to a contract function so that address can be queried or so an object can be stored directly.
-This is a problem, because the `AuthAccount` object can be used to access ANY private area of an account,
-meaning that a project could do something with your `AuthAccount` that you don't intend it to do.
+Some may choose to authenticate or perform operations for their users by using their account addresses.
+In order to do this, a commonly seen case would be to pass the user's `AuthAccount` object
+as a parameter to a contract function to use for querying the account or storing objects directly.
+This is problematic, as the `AuthAccount` object allows access to ALL private areas of the account,
+which provides the opportunity for bad actors to take advantage of.
+
+Example:
+
+```cadence
+...
+// Imagine this code is in a contract that uses AuthAccount to authenticate users
+// To transfer NFTs
+
+// They could deploy the contract with an Ethereum-style access control list functionality
+
+pub fun transferNFT(id: UInt64, owner: AuthAccount) {
+    assert(owner(id) == owner.address)
+
+    transfer(id)
+}
+
+// But they could upgrade the function to have the same signature
+// so it looks like it is doing the same thing, but they could also drain a little bit
+// of FLOW from the user's vault, a totally separate piece of the account that 
+// should not be accessible in this function
+// BAD
+
+pub fun transferNFT(id: UInt64, owner: AuthAccount) {
+    assert(owner(id) == owner.address)
+
+    transfer(id)
+
+    // Sneakily borrow a reference to the user's Flow Token Vault
+    // and withdraw a bit of FLOW
+    // BAD
+    let vaultRef = owner.borrow<&FlowToken.Vault>(/storage/flowTokenVault)!
+    let stolenTokens <- vaultRef.withdraw(amount: 0.1)
+
+    // deposit the stolen funds in the contract owners vault
+    // BAD
+    contractVault.deposit(<-stolenTokens)
+}
+...
+```
 
 ### Solution
 
@@ -30,32 +69,35 @@ but those cases are extremely rare and `AuthAccount` usage should still be avoid
 ### Problem
 
 [`auth` references](/language/references) should be avoided unless necessary:
-it allows downcasting any restricted type to its unrestricted type.
+An Auth Reference allows downcasting any restricted type to its unrestricted type.
 The parent type could expose functionality that was not intended to be exposed.
 If the auth keyword is used on local variables they will be references.
 References are ephemeral and cannot be stored.
 This prevents any reference casting to be stored under account storage.
-However, if the auth keyword is used to store a public capability serious harm
-could be achieved since the value could be downcasted to a type that has functionality and values altered.
+Additionally, if the `auth` keyword is used to store a public capability, serious harm
+could be happen since the value could be downcasted to a type
+that has functionality and values altered.
 
 ### Example
 
-A common pattern in many NFT smart contracts is to include a public borrow function
-that borrows an auth reference to an NFT ([See Top Shot for an example](https://github.com/dapperlabs/nba-smart-contracts/blob/master/contracts/TopShot.cdc#L889-L906)).
-This allows anyone to access the stored metadata or extra fields that weren't part of the NFT standard.
-While this is fine in most scenarios, some NFTs might have privledged functions that shouldn't
-be exposed this way, so be careful when copying NFT projects that use this pattern. 
+A commonly seen pattern in NFT smart contracts is including a public borrow function
+that borrows an auth reference to an NFT (eg. [NBA Top Shot](https://github.com/dapperlabs/nba-smart-contracts/blob/master/contracts/TopShot.cdc#L889-L906)).
+This allows anyone to access the stored metadata or extra fields that weren't part
+of the NFT standard. While generally safe in most scenarios, not all NFTs are built the same.
+Some NFTs may have admin functions that shouldn't be exposed by this method,
+so please be cautious & mindful when imitating NFT projects that use this pattern.
 
 ## Events From Resources Might Not Be Unique
 
 ### Problem
 
-A public function on a contract that creates a resource can be called by any account.
-If that resource has functions that emit events, any account can create an instance of that resource and emit those events.
+Public functions in a contract can be called by any account. 
+If that function creates a resource, and that resource has functions that emit events,
+that means any account can create an instance of that resource and emit those events.
 If those events are meant to indicate actions taken using a single instance of that resource
-(for example an admin object, switchboard, or registry),
-or instances created through a particular workflow, then this will make event log search
-and management harder because events from other instances may be mixed in with the ones that you wish to examine.
+(eg. admin object, registry), or instances created through a particular workflow,
+it's possible that events from other instances may be mixed in with the ones you're querying for -
+making the event log search and management more cumbersome.
 
 ### Solution
 
