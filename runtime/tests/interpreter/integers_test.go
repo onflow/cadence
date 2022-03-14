@@ -36,10 +36,10 @@ import (
 var testIntegerTypesAndValues = map[string]interpreter.Value{
 	// Int*
 	"Int":    interpreter.NewUnmeteredIntValueFromInt64(50),
-	"Int8":   interpreter.Int8Value(50),
-	"Int16":  interpreter.Int16Value(50),
-	"Int32":  interpreter.Int32Value(50),
-	"Int64":  interpreter.Int64Value(50),
+	"Int8":   interpreter.NewUnmeteredInt8Value(50),
+	"Int16":  interpreter.NewUnmeteredInt16Value(50),
+	"Int32":  interpreter.NewUnmeteredInt32Value(50),
+	"Int64":  interpreter.NewUnmeteredInt64Value(50),
 	"Int128": interpreter.NewInt128ValueFromInt64(50),
 	"Int256": interpreter.NewInt256ValueFromInt64(50),
 	// UInt*
@@ -584,24 +584,24 @@ func TestInterpretIntegerConversion(t *testing.T) {
 			max:      interpreter.Word64Value(math.MaxUint64),
 		},
 		sema.Int8Type: {
-			fortyTwo: interpreter.Int8Value(42),
-			min:      interpreter.Int8Value(math.MinInt8),
-			max:      interpreter.Int8Value(math.MaxInt8),
+			fortyTwo: interpreter.NewUnmeteredInt8Value(42),
+			min:      interpreter.NewUnmeteredInt8Value(math.MinInt8),
+			max:      interpreter.NewUnmeteredInt8Value(math.MaxInt8),
 		},
 		sema.Int16Type: {
-			fortyTwo: interpreter.Int16Value(42),
-			min:      interpreter.Int16Value(math.MinInt16),
-			max:      interpreter.Int16Value(math.MaxInt16),
+			fortyTwo: interpreter.NewUnmeteredInt16Value(42),
+			min:      interpreter.NewUnmeteredInt16Value(math.MinInt16),
+			max:      interpreter.NewUnmeteredInt16Value(math.MaxInt16),
 		},
 		sema.Int32Type: {
-			fortyTwo: interpreter.Int32Value(42),
-			min:      interpreter.Int32Value(math.MinInt32),
-			max:      interpreter.Int32Value(math.MaxInt32),
+			fortyTwo: interpreter.NewUnmeteredInt32Value(42),
+			min:      interpreter.NewUnmeteredInt32Value(math.MinInt32),
+			max:      interpreter.NewUnmeteredInt32Value(math.MaxInt32),
 		},
 		sema.Int64Type: {
-			fortyTwo: interpreter.Int64Value(42),
-			min:      interpreter.Int64Value(math.MinInt64),
-			max:      interpreter.Int64Value(math.MaxInt64),
+			fortyTwo: interpreter.NewUnmeteredInt64Value(42),
+			min:      interpreter.NewUnmeteredInt64Value(math.MinInt64),
+			max:      interpreter.NewUnmeteredInt64Value(math.MaxInt64),
 		},
 		sema.Int128Type: {
 			fortyTwo: interpreter.NewInt128ValueFromInt64(42),
@@ -748,20 +748,20 @@ func TestInterpretIntegerMinMax(t *testing.T) {
 			max: interpreter.Word64Value(math.MaxUint64),
 		},
 		sema.Int8Type: {
-			min: interpreter.Int8Value(math.MinInt8),
-			max: interpreter.Int8Value(math.MaxInt8),
+			min: interpreter.NewUnmeteredInt8Value(math.MinInt8),
+			max: interpreter.NewUnmeteredInt8Value(math.MaxInt8),
 		},
 		sema.Int16Type: {
-			min: interpreter.Int16Value(math.MinInt16),
-			max: interpreter.Int16Value(math.MaxInt16),
+			min: interpreter.NewUnmeteredInt16Value(math.MinInt16),
+			max: interpreter.NewUnmeteredInt16Value(math.MaxInt16),
 		},
 		sema.Int32Type: {
-			min: interpreter.Int32Value(math.MinInt32),
-			max: interpreter.Int32Value(math.MaxInt32),
+			min: interpreter.NewUnmeteredInt32Value(math.MinInt32),
+			max: interpreter.NewUnmeteredInt32Value(math.MaxInt32),
 		},
 		sema.Int64Type: {
-			min: interpreter.Int64Value(math.MinInt64),
-			max: interpreter.Int64Value(math.MaxInt64),
+			min: interpreter.NewUnmeteredInt64Value(math.MinInt64),
+			max: interpreter.NewUnmeteredInt64Value(math.MaxInt64),
 		},
 		sema.Int128Type: {
 			min: interpreter.NewInt128ValueFromBigInt(sema.Int128TypeMinIntBig),
