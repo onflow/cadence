@@ -40,8 +40,8 @@ var testIntegerTypesAndValues = map[string]interpreter.Value{
 	"Int16":  interpreter.Int16Value(50),
 	"Int32":  interpreter.Int32Value(50),
 	"Int64":  interpreter.Int64Value(50),
-	"Int128": interpreter.NewInt128ValueFromInt64(50),
-	"Int256": interpreter.NewInt256ValueFromInt64(50),
+	"Int128": interpreter.NewUnmeteredInt128ValueFromInt64(50),
+	"Int256": interpreter.NewUnmeteredInt256ValueFromInt64(50),
 	// UInt*
 	"UInt":    interpreter.NewUnmeteredUIntValueFromUint64(50),
 	"UInt8":   interpreter.NewUnmeteredUInt8Value(50),
@@ -604,14 +604,14 @@ func TestInterpretIntegerConversion(t *testing.T) {
 			max:      interpreter.Int64Value(math.MaxInt64),
 		},
 		sema.Int128Type: {
-			fortyTwo: interpreter.NewInt128ValueFromInt64(42),
-			min:      interpreter.NewInt128ValueFromBigInt(sema.Int128TypeMinIntBig),
-			max:      interpreter.NewInt128ValueFromBigInt(sema.Int128TypeMaxIntBig),
+			fortyTwo: interpreter.NewUnmeteredInt128ValueFromInt64(42),
+			min:      interpreter.NewUnmeteredInt128ValueFromBigInt(sema.Int128TypeMinIntBig),
+			max:      interpreter.NewUnmeteredInt128ValueFromBigInt(sema.Int128TypeMaxIntBig),
 		},
 		sema.Int256Type: {
-			fortyTwo: interpreter.NewInt256ValueFromInt64(42),
-			min:      interpreter.NewInt256ValueFromBigInt(sema.Int256TypeMinIntBig),
-			max:      interpreter.NewInt256ValueFromBigInt(sema.Int256TypeMaxIntBig),
+			fortyTwo: interpreter.NewUnmeteredInt256ValueFromInt64(42),
+			min:      interpreter.NewUnmeteredInt256ValueFromBigInt(sema.Int256TypeMinIntBig),
+			max:      interpreter.NewUnmeteredInt256ValueFromBigInt(sema.Int256TypeMaxIntBig),
 		},
 	}
 
@@ -764,12 +764,12 @@ func TestInterpretIntegerMinMax(t *testing.T) {
 			max: interpreter.Int64Value(math.MaxInt64),
 		},
 		sema.Int128Type: {
-			min: interpreter.NewInt128ValueFromBigInt(sema.Int128TypeMinIntBig),
-			max: interpreter.NewInt128ValueFromBigInt(sema.Int128TypeMaxIntBig),
+			min: interpreter.NewUnmeteredInt128ValueFromBigInt(sema.Int128TypeMinIntBig),
+			max: interpreter.NewUnmeteredInt128ValueFromBigInt(sema.Int128TypeMaxIntBig),
 		},
 		sema.Int256Type: {
-			min: interpreter.NewInt256ValueFromBigInt(sema.Int256TypeMinIntBig),
-			max: interpreter.NewInt256ValueFromBigInt(sema.Int256TypeMaxIntBig),
+			min: interpreter.NewUnmeteredInt256ValueFromBigInt(sema.Int256TypeMinIntBig),
+			max: interpreter.NewUnmeteredInt256ValueFromBigInt(sema.Int256TypeMaxIntBig),
 		},
 	}
 

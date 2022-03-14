@@ -6707,11 +6707,11 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			ty:    sema.Int64Type,
 		},
 		"Int128": {
-			value: interpreter.NewInt128ValueFromInt64(42),
+			value: interpreter.NewUnmeteredInt128ValueFromInt64(42),
 			ty:    sema.Int128Type,
 		},
 		"Int256": {
-			value: interpreter.NewInt256ValueFromInt64(42),
+			value: interpreter.NewUnmeteredInt256ValueFromInt64(42),
 			ty:    sema.Int256Type,
 		},
 		// UInt*

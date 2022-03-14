@@ -261,12 +261,12 @@ func TestExportValue(t *testing.T) {
 		},
 		{
 			label:    "Int128",
-			value:    interpreter.NewInt128ValueFromInt64(42),
+			value:    interpreter.NewUnmeteredInt128ValueFromInt64(42),
 			expected: cadence.NewInt128(42),
 		},
 		{
 			label:    "Int256",
-			value:    interpreter.NewInt256ValueFromInt64(42),
+			value:    interpreter.NewUnmeteredInt256ValueFromInt64(42),
 			expected: cadence.NewInt256(42),
 		},
 		{
@@ -647,12 +647,12 @@ func TestImportValue(t *testing.T) {
 		{
 			label:    "Int128",
 			value:    cadence.NewInt128(42),
-			expected: interpreter.NewInt128ValueFromInt64(42),
+			expected: interpreter.NewUnmeteredInt128ValueFromInt64(42),
 		},
 		{
 			label:    "Int256",
 			value:    cadence.NewInt256(42),
-			expected: interpreter.NewInt256ValueFromInt64(42),
+			expected: interpreter.NewUnmeteredInt256ValueFromInt64(42),
 		},
 		{
 			label:    "UInt",

@@ -838,11 +838,11 @@ func TestStringer(t *testing.T) {
 			expected: "-64",
 		},
 		"Int128": {
-			value:    NewInt128ValueFromInt64(-128),
+			value:    NewUnmeteredInt128ValueFromInt64(-128),
 			expected: "-128",
 		},
 		"Int256": {
-			value:    NewInt256ValueFromInt64(-256),
+			value:    NewUnmeteredInt256ValueFromInt64(-256),
 			expected: "-256",
 		},
 		"Word8": {
@@ -1263,27 +1263,27 @@ func TestGetHashInput(t *testing.T) {
 			expected: []byte{byte(HashInputTypeInt64), 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
 		},
 		"Int128": {
-			value:    NewInt128ValueFromInt64(-128),
+			value:    NewUnmeteredInt128ValueFromInt64(-128),
 			expected: []byte{byte(HashInputTypeInt128), 0x80},
 		},
 		"Int128 min": {
-			value:    NewInt128ValueFromBigInt(sema.Int128TypeMinIntBig),
+			value:    NewUnmeteredInt128ValueFromBigInt(sema.Int128TypeMinIntBig),
 			expected: append([]byte{byte(HashInputTypeInt128)}, sema.Int128TypeMinIntBig.Bytes()...),
 		},
 		"Int128 max": {
-			value:    NewInt128ValueFromBigInt(sema.Int128TypeMaxIntBig),
+			value:    NewUnmeteredInt128ValueFromBigInt(sema.Int128TypeMaxIntBig),
 			expected: append([]byte{byte(HashInputTypeInt128)}, sema.Int128TypeMaxIntBig.Bytes()...),
 		},
 		"Int256": {
-			value:    NewInt256ValueFromInt64(-256),
+			value:    NewUnmeteredInt256ValueFromInt64(-256),
 			expected: []byte{byte(HashInputTypeInt256), 0xff, 0x0},
 		},
 		"Int256 min": {
-			value:    NewInt256ValueFromBigInt(sema.Int256TypeMinIntBig),
+			value:    NewUnmeteredInt256ValueFromBigInt(sema.Int256TypeMinIntBig),
 			expected: append([]byte{byte(HashInputTypeInt256)}, sema.Int256TypeMinIntBig.Bytes()...),
 		},
 		"Int256 max": {
-			value:    NewInt256ValueFromBigInt(sema.Int256TypeMaxIntBig),
+			value:    NewUnmeteredInt256ValueFromBigInt(sema.Int256TypeMaxIntBig),
 			expected: append([]byte{byte(HashInputTypeInt256)}, sema.Int256TypeMaxIntBig.Bytes()...),
 		},
 		"Word8": {
@@ -3061,8 +3061,8 @@ func TestNumberValue_Equal(t *testing.T) {
 		"Int16":   Int16Value(-16),
 		"Int32":   Int32Value(-32),
 		"Int64":   Int64Value(-64),
-		"Int128":  NewInt128ValueFromInt64(-128),
-		"Int256":  NewInt256ValueFromInt64(-256),
+		"Int128":  NewUnmeteredInt128ValueFromInt64(-128),
+		"Int256":  NewUnmeteredInt256ValueFromInt64(-256),
 		"Word8":   Word8Value(8),
 		"Word16":  Word16Value(16),
 		"Word32":  Word32Value(32),

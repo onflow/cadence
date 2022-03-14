@@ -3373,14 +3373,14 @@ func TestNegativeMod(t *testing.T) {
 				Int64Value(-1),
 			},
 			"Int128": {
-				NewInt128ValueFromInt64(-1),
-				NewInt128ValueFromInt64(5),
-				NewInt128ValueFromInt64(-1),
+				NewUnmeteredInt128ValueFromInt64(-1),
+				NewUnmeteredInt128ValueFromInt64(5),
+				NewUnmeteredInt128ValueFromInt64(-1),
 			},
 			"Int256": {
-				NewInt256ValueFromInt64(-1),
-				NewInt256ValueFromInt64(5),
-				NewInt256ValueFromInt64(-1),
+				NewUnmeteredInt256ValueFromInt64(-1),
+				NewUnmeteredInt256ValueFromInt64(5),
+				NewUnmeteredInt256ValueFromInt64(-1),
 			},
 			"Int": {
 				NewUnmeteredIntValueFromInt64(-1),
