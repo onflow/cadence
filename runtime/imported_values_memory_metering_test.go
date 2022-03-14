@@ -246,7 +246,6 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		assert.Equal(t, uint64(8), meter[common.MemoryKindNumber])
 	})
 
-
 	t.Run("Word8", func(t *testing.T) {
 		t.Parallel()
 

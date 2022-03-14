@@ -4453,7 +4453,6 @@ func TestInterpretWord8Metering(t *testing.T) {
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindNumber))
 	})
 
-
 	t.Run("subtraction", func(t *testing.T) {
 
 		t.Parallel()
@@ -4475,7 +4474,6 @@ func TestInterpretWord8Metering(t *testing.T) {
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindNumber))
 	})
 
-
 	t.Run("multiplication", func(t *testing.T) {
 
 		t.Parallel()
@@ -4496,7 +4494,6 @@ func TestInterpretWord8Metering(t *testing.T) {
 		// result: 1
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindNumber))
 	})
-
 
 	t.Run("division", func(t *testing.T) {
 
@@ -4692,7 +4689,6 @@ func TestInterpretWord16Metering(t *testing.T) {
 		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindNumber))
 	})
 
-
 	t.Run("subtraction", func(t *testing.T) {
 
 		t.Parallel()
@@ -4714,7 +4710,6 @@ func TestInterpretWord16Metering(t *testing.T) {
 		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindNumber))
 	})
 
-
 	t.Run("multiplication", func(t *testing.T) {
 
 		t.Parallel()
@@ -4735,7 +4730,6 @@ func TestInterpretWord16Metering(t *testing.T) {
 		// result: 2
 		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindNumber))
 	})
-
 
 	t.Run("division", func(t *testing.T) {
 
@@ -4930,7 +4924,6 @@ func TestInterpretWord32Metering(t *testing.T) {
 		assert.Equal(t, uint64(12), meter.getMemory(common.MemoryKindNumber))
 	})
 
-
 	t.Run("subtraction", func(t *testing.T) {
 
 		t.Parallel()
@@ -4952,7 +4945,6 @@ func TestInterpretWord32Metering(t *testing.T) {
 		assert.Equal(t, uint64(12), meter.getMemory(common.MemoryKindNumber))
 	})
 
-
 	t.Run("multiplication", func(t *testing.T) {
 
 		t.Parallel()
@@ -4973,7 +4965,6 @@ func TestInterpretWord32Metering(t *testing.T) {
 		// result: 4
 		assert.Equal(t, uint64(12), meter.getMemory(common.MemoryKindNumber))
 	})
-
 
 	t.Run("division", func(t *testing.T) {
 
@@ -5168,7 +5159,6 @@ func TestInterpretWord64Metering(t *testing.T) {
 		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindNumber))
 	})
 
-
 	t.Run("subtraction", func(t *testing.T) {
 
 		t.Parallel()
@@ -5190,7 +5180,6 @@ func TestInterpretWord64Metering(t *testing.T) {
 		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindNumber))
 	})
 
-
 	t.Run("multiplication", func(t *testing.T) {
 
 		t.Parallel()
@@ -5211,7 +5200,6 @@ func TestInterpretWord64Metering(t *testing.T) {
 		// result: 8
 		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindNumber))
 	})
-
 
 	t.Run("division", func(t *testing.T) {
 
