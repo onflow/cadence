@@ -818,10 +818,7 @@ func (v CharacterValue) GetMember(interpreter *Interpreter, _ func() LocationRan
 		return NewHostFunctionValue(
 			interpreter,
 			func(invocation Invocation) Value {
-				memoryUsage := common.MemoryUsage{
-					Kind:   common.MemoryKindString,
-					Amount: uint64(len(v)),
-				}
+				memoryUsage := NewStringMemoryUsage(uint64(len(v)))
 
 				return NewStringValue(
 					interpreter,
