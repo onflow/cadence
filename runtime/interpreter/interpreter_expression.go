@@ -512,7 +512,7 @@ func (interpreter *Interpreter) NewIntegerValueFromBigInt(value *big.Int, intege
 		common.UseMemory(memoryGauge, Uint64MemoryUsage)
 		return NewUnmeteredUInt64Value(value.Uint64())
 	case sema.UInt128Type:
-		common.UseMemory(memoryGauge, Int128MemoryUsage)
+		common.UseMemory(memoryGauge, Uint128MemoryUsage)
 		return NewUnmeteredUInt128ValueFromBigInt(value)
 	case sema.UInt256Type:
 		common.UseMemory(memoryGauge, Uint256MemoryUsage)

@@ -9458,7 +9458,7 @@ func NewUnmeteredUInt128ValueFromUint64(value uint64) UInt128Value {
 var Uint128MemoryUsage = common.NewBigIntMemoryUsage(16)
 
 func NewUInt128ValueFromBigInt(memoryGauge common.MemoryGauge, bigIntConstructor func() *big.Int) UInt128Value {
-	common.UseMemory(memoryGauge, Int128MemoryUsage)
+	common.UseMemory(memoryGauge, Uint128MemoryUsage)
 	value := bigIntConstructor()
 	return NewUnmeteredUInt128ValueFromBigInt(value)
 }
