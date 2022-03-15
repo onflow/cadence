@@ -804,9 +804,7 @@ func NewUnmeteredStringValue(str string) *StringValue {
 }
 
 func NewStringValue(memoryGauge common.MemoryGauge, memoryUsage common.MemoryUsage, stringConstructor func() string) *StringValue {
-	if memoryGauge != nil {
-		memoryGauge.UseMemory(memoryUsage)
-	}
+	common.UseMemory(memoryGauge, memoryUsage)
 	str := stringConstructor()
 	return NewUnmeteredStringValue(str)
 }
@@ -2539,9 +2537,7 @@ func NewIntValueFromBigInt(
 	memoryUsage common.MemoryUsage,
 	bigIntConstructor func() *big.Int,
 ) IntValue {
-	if memoryGauge != nil {
-		memoryGauge.UseMemory(memoryUsage)
-	}
+	common.UseMemory(memoryGauge, memoryUsage)
 	value := bigIntConstructor()
 	return NewUnmeteredIntValueFromBigInt(value)
 }
@@ -6787,9 +6783,7 @@ func NewUIntValueFromBigInt(
 	memoryUsage common.MemoryUsage,
 	bigIntConstructor func() *big.Int,
 ) UIntValue {
-	if memoryGauge != nil {
-		memoryGauge.UseMemory(memoryUsage)
-	}
+	common.UseMemory(memoryGauge, memoryUsage)
 	value := bigIntConstructor()
 	return NewUnmeteredUIntValueFromBigInt(value)
 }

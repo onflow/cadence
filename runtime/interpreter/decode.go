@@ -76,9 +76,9 @@ func decodeString(dec *cbor.StreamDecoder, memoryGauge common.MemoryGauge) (stri
 			Length: length,
 		}
 	}
-	if memoryGauge != nil {
-		memoryGauge.UseMemory(common.NewStringMemoryUsage(int(length)))
-	}
+
+	common.UseMemory(memoryGauge, common.NewStringMemoryUsage(int(length)))
+
 	return dec.DecodeString()
 }
 
@@ -336,10 +336,9 @@ func (d StorableDecoder) decodeBigInt() (*big.Int, error) {
 	if err != nil {
 		return nil, err
 	}
-	memoryGauge := d.memoryGauge
-	if memoryGauge != nil {
-		memoryGauge.UseMemory(common.NewBigIntMemoryUsage(int(length)))
-	}
+
+	common.UseMemory(d.memoryGauge, common.NewBigIntMemoryUsage(int(length)))
+
 	return d.decoder.DecodeBigInt()
 }
 

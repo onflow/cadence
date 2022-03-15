@@ -30,9 +30,10 @@ import (
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
-func testUseMemory(meter map[common.MemoryKind]uint64) func(common.MemoryUsage) {
-	return func(usage common.MemoryUsage) {
+func testUseMemory(meter map[common.MemoryKind]uint64) func(common.MemoryUsage) error {
+	return func(usage common.MemoryUsage) error {
 		meter[usage.Kind] += usage.Amount
+		return nil
 	}
 }
 
@@ -44,7 +45,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 
 	runtimeInterface := func(meter map[common.MemoryKind]uint64) *testRuntimeInterface {
 		return &testRuntimeInterface{
-			useMemory: testUseMemory(meter),
+			meterMemory: testUseMemory(meter),
 			decodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
 				return jsoncdc.Decode(b)
 			},
