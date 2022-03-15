@@ -492,9 +492,11 @@ func (interpreter *Interpreter) NewIntegerValueFromBigInt(value *big.Int, intege
 		common.UseMemory(memoryGauge, Int64MemoryUsage)
 		return NewUnmeteredInt64Value(value.Int64())
 	case sema.Int128Type:
-		return NewInt128ValueFromBigInt(value)
+		common.UseMemory(memoryGauge, Int128MemoryUsage)
+		return NewUnmeteredInt128ValueFromBigInt(value)
 	case sema.Int256Type:
-		return NewInt256ValueFromBigInt(value)
+		common.UseMemory(memoryGauge, Int256MemoryUsage)
+		return NewUnmeteredInt256ValueFromBigInt(value)
 
 	// UInt*
 	case sema.UInt8Type:

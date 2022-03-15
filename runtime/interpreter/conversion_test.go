@@ -55,7 +55,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 					Type: PrimitiveStaticTypeInt256,
 				},
 				common.Address{},
-				NewInt256ValueFromBigInt(largeBigInt),
+				NewUnmeteredInt256ValueFromBigInt(largeBigInt),
 			),
 			NewUnmeteredUInt64Value(500),
 			BoolValue(true),
@@ -119,7 +119,7 @@ func TestByteValueToByte(t *testing.T) {
 
 		invalid := []Value{
 			NewUnmeteredUInt64Value(500),
-			NewInt256ValueFromBigInt(largeBigInt),
+			NewUnmeteredInt256ValueFromBigInt(largeBigInt),
 		}
 
 		for _, value := range invalid {

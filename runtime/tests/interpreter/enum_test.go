@@ -101,14 +101,14 @@ func TestInterpretEnumCaseRawValue(t *testing.T) {
 	RequireValuesEqual(
 		t,
 		inter,
-		interpreter.Int64Value(0),
+		interpreter.NewUnmeteredInt64Value(0),
 		inter.Globals["a"].GetValue(),
 	)
 
 	RequireValuesEqual(
 		t,
 		inter,
-		interpreter.Int64Value(1),
+		interpreter.NewUnmeteredInt64Value(1),
 		inter.Globals["b"].GetValue(),
 	)
 }

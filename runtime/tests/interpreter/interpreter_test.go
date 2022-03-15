@@ -6691,27 +6691,27 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			ty:    sema.IntType,
 		},
 		"Int8": {
-			value: interpreter.Int8Value(42),
+			value: interpreter.NewUnmeteredInt8Value(42),
 			ty:    sema.Int8Type,
 		},
 		"Int16": {
-			value: interpreter.Int16Value(42),
+			value: interpreter.NewUnmeteredInt16Value(42),
 			ty:    sema.Int16Type,
 		},
 		"Int32": {
-			value: interpreter.Int32Value(42),
+			value: interpreter.NewUnmeteredInt32Value(42),
 			ty:    sema.Int32Type,
 		},
 		"Int64": {
-			value: interpreter.Int64Value(42),
+			value: interpreter.NewUnmeteredInt64Value(42),
 			ty:    sema.Int64Type,
 		},
 		"Int128": {
-			value: interpreter.NewInt128ValueFromInt64(42),
+			value: interpreter.NewUnmeteredInt128ValueFromInt64(42),
 			ty:    sema.Int128Type,
 		},
 		"Int256": {
-			value: interpreter.NewInt256ValueFromInt64(42),
+			value: interpreter.NewUnmeteredInt256ValueFromInt64(42),
 			ty:    sema.Int256Type,
 		},
 		// UInt*
@@ -7495,7 +7495,7 @@ func TestInterpretCastingIntLiteralToInt8(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.Int8Value(42),
+		interpreter.NewUnmeteredInt8Value(42),
 		inter.Globals["x"].GetValue(),
 	)
 }

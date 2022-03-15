@@ -822,27 +822,27 @@ func TestStringer(t *testing.T) {
 			expected: "256",
 		},
 		"Int8": {
-			value:    Int8Value(-8),
+			value:    NewUnmeteredInt8Value(-8),
 			expected: "-8",
 		},
 		"Int16": {
-			value:    Int16Value(-16),
+			value:    NewUnmeteredInt16Value(-16),
 			expected: "-16",
 		},
 		"Int32": {
-			value:    Int32Value(-32),
+			value:    NewUnmeteredInt32Value(-32),
 			expected: "-32",
 		},
 		"Int64": {
-			value:    Int64Value(-64),
+			value:    NewUnmeteredInt64Value(-64),
 			expected: "-64",
 		},
 		"Int128": {
-			value:    NewInt128ValueFromInt64(-128),
+			value:    NewUnmeteredInt128ValueFromInt64(-128),
 			expected: "-128",
 		},
 		"Int256": {
-			value:    NewInt256ValueFromInt64(-256),
+			value:    NewUnmeteredInt256ValueFromInt64(-256),
 			expected: "-256",
 		},
 		"Word8": {
@@ -1215,75 +1215,75 @@ func TestGetHashInput(t *testing.T) {
 			expected: append([]byte{byte(HashInputTypeInt)}, sema.Int256TypeMaxIntBig.Bytes()...),
 		},
 		"Int8": {
-			value:    Int8Value(-8),
+			value:    NewUnmeteredInt8Value(-8),
 			expected: []byte{byte(HashInputTypeInt8), 0xf8},
 		},
 		"Int8 min": {
-			value:    Int8Value(math.MinInt8),
+			value:    NewUnmeteredInt8Value(math.MinInt8),
 			expected: []byte{byte(HashInputTypeInt8), 0x80},
 		},
 		"Int8 max": {
-			value:    Int8Value(math.MaxInt8),
+			value:    NewUnmeteredInt8Value(math.MaxInt8),
 			expected: []byte{byte(HashInputTypeInt8), 0x7f},
 		},
 		"Int16": {
-			value:    Int16Value(-16),
+			value:    NewUnmeteredInt16Value(-16),
 			expected: []byte{byte(HashInputTypeInt16), 0xff, 0xf0},
 		},
 		"Int16 min": {
-			value:    Int16Value(math.MinInt16),
+			value:    NewUnmeteredInt16Value(math.MinInt16),
 			expected: []byte{byte(HashInputTypeInt16), 0x80, 0x00},
 		},
 		"Int16 max": {
-			value:    Int16Value(math.MaxInt16),
+			value:    NewUnmeteredInt16Value(math.MaxInt16),
 			expected: []byte{byte(HashInputTypeInt16), 0x7f, 0xff},
 		},
 		"Int32": {
-			value:    Int32Value(-32),
+			value:    NewUnmeteredInt32Value(-32),
 			expected: []byte{byte(HashInputTypeInt32), 0xff, 0xff, 0xff, 0xe0},
 		},
 		"Int32 min": {
-			value:    Int32Value(math.MinInt32),
+			value:    NewUnmeteredInt32Value(math.MinInt32),
 			expected: []byte{byte(HashInputTypeInt32), 0x80, 0x00, 0x00, 0x00},
 		},
 		"Int32 max": {
-			value:    Int32Value(math.MaxInt32),
+			value:    NewUnmeteredInt32Value(math.MaxInt32),
 			expected: []byte{byte(HashInputTypeInt32), 0x7f, 0xff, 0xff, 0xff},
 		},
 		"Int64": {
-			value:    Int64Value(-64),
+			value:    NewUnmeteredInt64Value(-64),
 			expected: []byte{byte(HashInputTypeInt64), 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xc0},
 		},
 		"Int64 min": {
-			value:    Int64Value(math.MinInt64),
+			value:    NewUnmeteredInt64Value(math.MinInt64),
 			expected: []byte{byte(HashInputTypeInt64), 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
 		},
 		"Int64 max": {
-			value:    Int64Value(math.MaxInt64),
+			value:    NewUnmeteredInt64Value(math.MaxInt64),
 			expected: []byte{byte(HashInputTypeInt64), 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
 		},
 		"Int128": {
-			value:    NewInt128ValueFromInt64(-128),
+			value:    NewUnmeteredInt128ValueFromInt64(-128),
 			expected: []byte{byte(HashInputTypeInt128), 0x80},
 		},
 		"Int128 min": {
-			value:    NewInt128ValueFromBigInt(sema.Int128TypeMinIntBig),
+			value:    NewUnmeteredInt128ValueFromBigInt(sema.Int128TypeMinIntBig),
 			expected: append([]byte{byte(HashInputTypeInt128)}, sema.Int128TypeMinIntBig.Bytes()...),
 		},
 		"Int128 max": {
-			value:    NewInt128ValueFromBigInt(sema.Int128TypeMaxIntBig),
+			value:    NewUnmeteredInt128ValueFromBigInt(sema.Int128TypeMaxIntBig),
 			expected: append([]byte{byte(HashInputTypeInt128)}, sema.Int128TypeMaxIntBig.Bytes()...),
 		},
 		"Int256": {
-			value:    NewInt256ValueFromInt64(-256),
+			value:    NewUnmeteredInt256ValueFromInt64(-256),
 			expected: []byte{byte(HashInputTypeInt256), 0xff, 0x0},
 		},
 		"Int256 min": {
-			value:    NewInt256ValueFromBigInt(sema.Int256TypeMinIntBig),
+			value:    NewUnmeteredInt256ValueFromBigInt(sema.Int256TypeMinIntBig),
 			expected: append([]byte{byte(HashInputTypeInt256)}, sema.Int256TypeMinIntBig.Bytes()...),
 		},
 		"Int256 max": {
-			value:    NewInt256ValueFromBigInt(sema.Int256TypeMaxIntBig),
+			value:    NewUnmeteredInt256ValueFromBigInt(sema.Int256TypeMaxIntBig),
 			expected: append([]byte{byte(HashInputTypeInt256)}, sema.Int256TypeMaxIntBig.Bytes()...),
 		},
 		"Word8": {
@@ -3057,12 +3057,12 @@ func TestNumberValue_Equal(t *testing.T) {
 		"UInt64":  NewUnmeteredUInt64Value(64),
 		"UInt128": NewUnmeteredUInt128ValueFromUint64(128),
 		"UInt256": NewUnmeteredUInt256ValueFromUint64(256),
-		"Int8":    Int8Value(-8),
-		"Int16":   Int16Value(-16),
-		"Int32":   Int32Value(-32),
-		"Int64":   Int64Value(-64),
-		"Int128":  NewInt128ValueFromInt64(-128),
-		"Int256":  NewInt256ValueFromInt64(-256),
+		"Int8":    NewUnmeteredInt8Value(-8),
+		"Int16":   NewUnmeteredInt16Value(-16),
+		"Int32":   NewUnmeteredInt32Value(-32),
+		"Int64":   NewUnmeteredInt64Value(-64),
+		"Int128":  NewUnmeteredInt128ValueFromInt64(-128),
+		"Int256":  NewUnmeteredInt256ValueFromInt64(-256),
 		"Word8":   NewUnmeteredWord8Value(8),
 		"Word16":  NewUnmeteredWord16Value(16),
 		"Word32":  NewUnmeteredWord32Value(32),

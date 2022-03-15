@@ -2132,7 +2132,7 @@ func int256(v string) Int256Value {
 	if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
 		panic(fmt.Sprintf("invalid value: larger than max: %s", v))
 	}
-	return NewInt256ValueFromBigInt(res)
+	return NewUnmeteredInt256ValueFromBigInt(res)
 }
 
 func TestPlusInt256(t *testing.T) {

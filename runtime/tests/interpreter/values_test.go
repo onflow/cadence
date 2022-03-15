@@ -1103,11 +1103,11 @@ func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) inte
 	case interpreter.Int128Value:
 		var n big.Int
 		n.Set(v.BigInt)
-		return interpreter.NewInt128ValueFromBigInt(&n)
+		return interpreter.NewUnmeteredInt128ValueFromBigInt(&n)
 	case interpreter.Int256Value:
 		var n big.Int
 		n.Set(v.BigInt)
-		return interpreter.NewInt256ValueFromBigInt(&n)
+		return interpreter.NewUnmeteredInt256ValueFromBigInt(&n)
 
 	// Uint
 	case interpreter.UIntValue:
@@ -1278,17 +1278,17 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 	case Int:
 		return interpreter.NewUnmeteredIntValueFromInt64(int64(sign()) * rand.Int63())
 	case Int8:
-		return interpreter.Int8Value(randomInt(math.MaxUint8))
+		return interpreter.NewUnmeteredInt8Value(int8(randomInt(math.MaxUint8)))
 	case Int16:
-		return interpreter.Int16Value(randomInt(math.MaxUint16))
+		return interpreter.NewUnmeteredInt16Value(int16(randomInt(math.MaxUint16)))
 	case Int32:
-		return interpreter.Int32Value(int32(sign()) * rand.Int31())
+		return interpreter.NewUnmeteredInt32Value(int32(sign()) * rand.Int31())
 	case Int64:
-		return interpreter.Int64Value(int64(sign()) * rand.Int63())
+		return interpreter.NewUnmeteredInt64Value(int64(sign()) * rand.Int63())
 	case Int128:
-		return interpreter.NewInt128ValueFromInt64(int64(sign()) * rand.Int63())
+		return interpreter.NewUnmeteredInt128ValueFromInt64(int64(sign()) * rand.Int63())
 	case Int256:
-		return interpreter.NewInt256ValueFromInt64(int64(sign()) * rand.Int63())
+		return interpreter.NewUnmeteredInt256ValueFromInt64(int64(sign()) * rand.Int63())
 
 	// UInt
 	case UInt:

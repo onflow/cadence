@@ -462,7 +462,8 @@ func (d StorableDecoder) decodeInt128() (Int128Value, error) {
 		return Int128Value{}, fmt.Errorf("invalid Int128: got %s, expected max %s", bigInt, max)
 	}
 
-	return NewInt128ValueFromBigInt(bigInt), nil
+	// NOTE: already metered by `decodeBigInt`
+	return NewUnmeteredInt128ValueFromBigInt(bigInt), nil
 }
 
 func (d StorableDecoder) decodeInt256() (Int256Value, error) {
@@ -484,7 +485,8 @@ func (d StorableDecoder) decodeInt256() (Int256Value, error) {
 		return Int256Value{}, fmt.Errorf("invalid Int256: got %s, expected max %s", bigInt, max)
 	}
 
-	return NewInt256ValueFromBigInt(bigInt), nil
+	// NOTE: already metered by `decodeBigInt`
+	return NewUnmeteredInt256ValueFromBigInt(bigInt), nil
 }
 
 func (d StorableDecoder) decodeUInt() (UIntValue, error) {

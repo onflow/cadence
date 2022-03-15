@@ -3353,34 +3353,34 @@ func TestNegativeMod(t *testing.T) {
 
 		tests := map[string]struct{ a, b, expected NumberValue }{
 			"Int8": {
-				Int8Value(-1),
-				Int8Value(5),
-				Int8Value(-1),
+				NewUnmeteredInt8Value(-1),
+				NewUnmeteredInt8Value(5),
+				NewUnmeteredInt8Value(-1),
 			},
 			"Int16": {
-				Int16Value(-1),
-				Int16Value(5),
-				Int16Value(-1),
+				NewUnmeteredInt16Value(-1),
+				NewUnmeteredInt16Value(5),
+				NewUnmeteredInt16Value(-1),
 			},
 			"Int32": {
-				Int32Value(-1),
-				Int32Value(5),
-				Int32Value(-1),
+				NewUnmeteredInt32Value(-1),
+				NewUnmeteredInt32Value(5),
+				NewUnmeteredInt32Value(-1),
 			},
 			"Int64": {
-				Int64Value(-1),
-				Int64Value(5),
-				Int64Value(-1),
+				NewUnmeteredInt64Value(-1),
+				NewUnmeteredInt64Value(5),
+				NewUnmeteredInt64Value(-1),
 			},
 			"Int128": {
-				NewInt128ValueFromInt64(-1),
-				NewInt128ValueFromInt64(5),
-				NewInt128ValueFromInt64(-1),
+				NewUnmeteredInt128ValueFromInt64(-1),
+				NewUnmeteredInt128ValueFromInt64(5),
+				NewUnmeteredInt128ValueFromInt64(-1),
 			},
 			"Int256": {
-				NewInt256ValueFromInt64(-1),
-				NewInt256ValueFromInt64(5),
-				NewInt256ValueFromInt64(-1),
+				NewUnmeteredInt256ValueFromInt64(-1),
+				NewUnmeteredInt256ValueFromInt64(5),
+				NewUnmeteredInt256ValueFromInt64(-1),
 			},
 			"Int": {
 				NewUnmeteredIntValueFromInt64(-1),
