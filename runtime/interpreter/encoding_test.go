@@ -1045,7 +1045,7 @@ func TestEncodeDecodeInt128Value(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: NewInt128ValueFromInt64(0),
+				value: NewUnmeteredInt128ValueFromInt64(0),
 				encoded: []byte{
 					0xd8, CBORTagInt128Value,
 					// positive bignum
@@ -1062,7 +1062,7 @@ func TestEncodeDecodeInt128Value(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: NewInt128ValueFromInt64(42),
+				value: NewUnmeteredInt128ValueFromInt64(42),
 				encoded: []byte{
 					0xd8, CBORTagInt128Value,
 					// positive bignum
@@ -1080,7 +1080,7 @@ func TestEncodeDecodeInt128Value(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: NewInt128ValueFromInt64(-1),
+				value: NewUnmeteredInt128ValueFromInt64(-1),
 				encoded: []byte{
 					0xd8, CBORTagInt128Value,
 					// negative bignum
@@ -1097,7 +1097,7 @@ func TestEncodeDecodeInt128Value(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: NewInt128ValueFromInt64(-42),
+				value: NewUnmeteredInt128ValueFromInt64(-42),
 				encoded: []byte{
 					0xd8, CBORTagInt128Value,
 					// negative bignum
@@ -1115,7 +1115,7 @@ func TestEncodeDecodeInt128Value(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: NewInt128ValueFromBigInt(sema.Int128TypeMinIntBig),
+				value: NewUnmeteredInt128ValueFromBigInt(sema.Int128TypeMinIntBig),
 				encoded: []byte{
 					0xd8, CBORTagInt128Value,
 					// negative bignum
@@ -1153,7 +1153,7 @@ func TestEncodeDecodeInt128Value(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: NewInt128ValueFromBigInt(sema.Int128TypeMaxIntBig),
+				value: NewUnmeteredInt128ValueFromBigInt(sema.Int128TypeMaxIntBig),
 				encoded: []byte{
 					0xd8, CBORTagInt128Value,
 					// positive bignum
@@ -1195,7 +1195,7 @@ func TestEncodeDecodeInt128Value(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: NewInt128ValueFromBigInt(rfcValue),
+				value: NewUnmeteredInt128ValueFromBigInt(rfcValue),
 				encoded: []byte{
 					// tag
 					0xd8, CBORTagInt128Value,
@@ -1219,7 +1219,7 @@ func TestEncodeDecodeInt256Value(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: NewInt256ValueFromInt64(0),
+				value: NewUnmeteredInt256ValueFromInt64(0),
 				encoded: []byte{
 					0xd8, CBORTagInt256Value,
 					// positive bignum
@@ -1236,7 +1236,7 @@ func TestEncodeDecodeInt256Value(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: NewInt256ValueFromInt64(42),
+				value: NewUnmeteredInt256ValueFromInt64(42),
 				encoded: []byte{
 					0xd8, CBORTagInt256Value,
 					// positive bignum
@@ -1254,7 +1254,7 @@ func TestEncodeDecodeInt256Value(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: NewInt256ValueFromInt64(-1),
+				value: NewUnmeteredInt256ValueFromInt64(-1),
 				encoded: []byte{
 					0xd8, CBORTagInt256Value,
 					// negative bignum
@@ -1271,7 +1271,7 @@ func TestEncodeDecodeInt256Value(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: NewInt256ValueFromInt64(-42),
+				value: NewUnmeteredInt256ValueFromInt64(-42),
 				encoded: []byte{
 					0xd8, CBORTagInt256Value,
 					// negative bignum
@@ -1289,7 +1289,7 @@ func TestEncodeDecodeInt256Value(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: NewInt256ValueFromBigInt(sema.Int256TypeMinIntBig),
+				value: NewUnmeteredInt256ValueFromBigInt(sema.Int256TypeMinIntBig),
 				encoded: []byte{
 					0xd8, CBORTagInt256Value,
 					// negative bignum
@@ -1331,7 +1331,7 @@ func TestEncodeDecodeInt256Value(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: NewInt256ValueFromBigInt(sema.Int256TypeMaxIntBig),
+				value: NewUnmeteredInt256ValueFromBigInt(sema.Int256TypeMaxIntBig),
 				encoded: []byte{
 					0xd8, CBORTagInt256Value,
 					// positive bignum
@@ -1377,7 +1377,7 @@ func TestEncodeDecodeInt256Value(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: NewInt256ValueFromBigInt(rfcValue),
+				value: NewUnmeteredInt256ValueFromBigInt(rfcValue),
 				encoded: []byte{
 					// tag
 					0xd8, CBORTagInt256Value,

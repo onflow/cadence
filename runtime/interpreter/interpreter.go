@@ -2202,12 +2202,12 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 
 	case sema.Int128Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertInt128(value)
+			return ConvertInt128(interpreter, value)
 		}
 
 	case sema.Int256Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertInt256(value)
+			return ConvertInt256(interpreter, value)
 		}
 
 	// UInt*
@@ -2756,20 +2756,20 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.Int128TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Int128Type),
-		convert: func(_ *Interpreter, value Value) Value {
-			return ConvertInt128(value)
+		convert: func(interpreter *Interpreter, value Value) Value {
+			return ConvertInt128(interpreter, value)
 		},
-		min: NewInt128ValueFromBigInt(sema.Int128TypeMinIntBig),
-		max: NewInt128ValueFromBigInt(sema.Int128TypeMaxIntBig),
+		min: NewUnmeteredInt128ValueFromBigInt(sema.Int128TypeMinIntBig),
+		max: NewUnmeteredInt128ValueFromBigInt(sema.Int128TypeMaxIntBig),
 	},
 	{
 		name:         sema.Int256TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Int256Type),
-		convert: func(_ *Interpreter, value Value) Value {
-			return ConvertInt256(value)
+		convert: func(interpreter *Interpreter, value Value) Value {
+			return ConvertInt256(interpreter, value)
 		},
-		min: NewInt256ValueFromBigInt(sema.Int256TypeMinIntBig),
-		max: NewInt256ValueFromBigInt(sema.Int256TypeMaxIntBig),
+		min: NewUnmeteredInt256ValueFromBigInt(sema.Int256TypeMinIntBig),
+		max: NewUnmeteredInt256ValueFromBigInt(sema.Int256TypeMaxIntBig),
 	},
 	{
 		name:         sema.UInt8TypeName,
