@@ -3751,7 +3751,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 
 			interpreter.writeStored(address, domain, identifier, value)
 
-			return NewVoidValue(interpreter)
+			return NewVoidValue(invocation.Interpreter)
 		},
 		sema.AuthAccountTypeSaveFunctionType,
 	)
@@ -4041,7 +4041,7 @@ func (interpreter *Interpreter) authAccountUnlinkFunction(addressValue AddressVa
 
 			interpreter.writeStored(address, domain, identifier, nil)
 
-			return NewVoidValue(interpreter)
+			return NewVoidValue(invocation.Interpreter)
 		},
 		sema.AuthAccountTypeUnlinkFunctionType,
 	)

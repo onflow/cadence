@@ -1812,7 +1812,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func()
 					invocation.GetLocationRange,
 					invocation.Arguments[0],
 				)
-				return NewVoidValue(interpreter)
+				return NewVoidValue(invocation.Interpreter)
 			},
 			sema.ArrayAppendFunctionType(
 				v.SemaType(interpreter).ElementType(false),
@@ -1876,7 +1876,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func()
 					index,
 					element,
 				)
-				return NewVoidValue(interpreter)
+				return NewVoidValue(invocation.Interpreter)
 			},
 			sema.ArrayInsertFunctionType(
 				v.SemaType(interpreter).ElementType(false),
