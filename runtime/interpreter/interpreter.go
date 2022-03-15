@@ -3379,6 +3379,8 @@ var typeFunction = NewUnmeteredHostFunctionValue(
 
 		ty := typeParameterPair.Value
 
+		// TODO TypeValue metering is more complicated.
+		// 	    Here, staticType conversion should be delayed but can't be.
 		staticType := ConvertSemaToStaticType(ty)
 		return NewTypeValue(
 			invocation.Interpreter,
