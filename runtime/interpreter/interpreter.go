@@ -3974,11 +3974,12 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 
 			return NewSomeValueNonCopying(
 				invocation.Interpreter,
-				&CapabilityValue{
-					Address:    addressValue,
-					Path:       newCapabilityPath,
-					BorrowType: borrowStaticType,
-				},
+				NewCapabilityValue(
+					invocation.Interpreter,
+					addressValue,
+					newCapabilityPath,
+					borrowStaticType,
+				),
 			)
 
 		},
