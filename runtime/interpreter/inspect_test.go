@@ -41,7 +41,7 @@ func TestInspectValue(t *testing.T) {
 			ValueType: PrimitiveStaticTypeInt256,
 		}
 		dictValueKey := NewUnmeteredStringValue("hello world")
-		dictValueValue := NewInt256ValueFromInt64(1)
+		dictValueValue := NewUnmeteredInt256ValueFromInt64(1)
 		dictValue := NewDictionaryValue(
 			inter,
 			dictionaryStaticType,
