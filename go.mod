@@ -10,7 +10,7 @@ require (
 	github.com/go-test/deep v1.0.5
 	github.com/leanovate/gopter v0.2.9
 	github.com/logrusorgru/aurora v0.0.0-20200102142835-e9ef32dff381
-	github.com/onflow/atree v0.1.2-0.20220215140047-82a5e53e8248
+	github.com/onflow/atree v0.2.0
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/rivo/uniseg v0.2.1-0.20211004051800-57c86be7915a
 	github.com/schollz/progressbar/v3 v3.8.3

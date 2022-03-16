@@ -677,3 +677,37 @@ func TestCheckBuiltinRedeclaration(t *testing.T) {
 		},
 	)
 }
+
+func TestCheckUint64RedeclarationFails(t *testing.T) {
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, "let UInt64 = UInt64 ( 0b0 )")
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.RedeclarationError{}, errs[0])
+}
+
+func TestCheckTypeRedeclarationFails(t *testing.T) {
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, "let Type = Type")
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.RedeclarationError{}, errs[0])
+}
+
+func TestCheckSetToTypeList(t *testing.T) {
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, "var a=[Type]")
+	assert.Nil(t, err)
+}
+
+func TestCheckSetToDictWithType(t *testing.T) {
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, "var j={0.0:Type}")
+	assert.Nil(t, err)
+}
