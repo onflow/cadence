@@ -11,6 +11,25 @@ import (
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
+var memory_kinds = []common.MemoryKind{
+	common.MemoryKindUnknown,
+	common.MemoryKindBool,
+	common.MemoryKindAddress,
+	common.MemoryKindString,
+	common.MemoryKindCharacter,
+	common.MemoryKindMetaType,
+	common.MemoryKindBlock,
+	common.MemoryKindNumber,
+	common.MemoryKindArray,
+	common.MemoryKindDictionary,
+	common.MemoryKindComposite,
+	common.MemoryKindOptional,
+	common.MemoryKindInterpretedFunction,
+	common.MemoryKindHostFunction,
+	common.MemoryKindBoundFunction,
+	common.MemoryKindBigInt,
+}
+
 type calibrationMemoryGauge struct {
 	meter map[common.MemoryKind]uint64
 }
@@ -26,6 +45,10 @@ func (g *calibrationMemoryGauge) UseMemory(usage common.MemoryUsage) {
 }
 
 func main() {
+	unused_mem_kinds := make(map[common.MemoryKind]struct{}, len(memory_kinds))
+	for _, kind := range memory_kinds {
+		unused_mem_kinds[kind] = struct{}{}
+	}
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 	totalAlloc := m.TotalAlloc
@@ -68,12 +91,18 @@ func main() {
 			panic(err)
 		}
 
-		for kind, amount := range memoryGauge.meter {
-			fmt.Printf("%s: %d\n", kind.String(), amount)
+		for _, kind := range memory_kinds {
+			if amount, ok := memoryGauge.meter[kind]; ok {
+				delete(unused_mem_kinds, kind)
+				fmt.Printf("%s: %d\n", kind.String(), amount)
+			}
 		}
 		runtime.ReadMemStats(&m)
 		fmt.Printf("Actual Memory: %d\n", m.TotalAlloc-totalAlloc)
 		fmt.Println("--------------------")
 		totalAlloc = m.TotalAlloc
+	}
+	for kind := range unused_mem_kinds { //nolint:maprangecheck
+		fmt.Printf("Unusued memory kind: %s\n", kind.String())
 	}
 }
