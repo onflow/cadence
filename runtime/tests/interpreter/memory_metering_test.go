@@ -69,20 +69,27 @@ func TestInterpretArrayMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindArray))
+		// 1 for creation of x
+		// 2 for creation of y
+		// 1 for transfer of y
+		// 1 dynamic type check of y
+		// 3 for creation of z
+		// 4 for transfer of z
+		// 3 for dynamic type check of z
+		assert.Equal(t, uint64(15), meter.getMemory(common.MemoryKindArray))
 	})
 
 	t.Run("iteration", func(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
-                let values: [[Int8]] = [[], [], []]
-                for value in values {
-                  let a = value
-                }
-            }
-        `
+	            pub fun main() {
+	                let values: [[Int8]] = [[], [], []]
+	                for value in values {
+	                  let a = value
+	                }
+	            }
+	        `
 
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
@@ -90,10 +97,7 @@ func TestInterpretArrayMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// TODO:
-		// Iteration create new values for array typed elements.
-		// Currently, these are not metered. Only the initial 4-values are captured.
-		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindArray))
+		assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindArray))
 	})
 }
 
@@ -117,7 +121,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindString))
-		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindDictionary))
+		assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindDictionary))
 	})
 
 	t.Run("iteration", func(t *testing.T) {
@@ -138,10 +142,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// TODO:
-		// Iteration create new values for dictionary typed elements.
-		// Currently, these are not metered. Only the initial 3-values are captured.
-		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindDictionary))
+		assert.Equal(t, uint64(15), meter.getMemory(common.MemoryKindDictionary))
 	})
 }
 
@@ -201,10 +202,7 @@ func TestInterpretCompositeMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// TODO:
-		// Iteration create new values for composite typed elements.
-		// Currently, these are not metered. Only the initial 3-values are captured.
-		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindComposite))
+		assert.Equal(t, uint64(15), meter.getMemory(common.MemoryKindComposite))
 	})
 }
 

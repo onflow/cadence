@@ -708,6 +708,7 @@ func (d StorableDecoder) decodeSome() (SomeStorable, error) {
 	}
 
 	return SomeStorable{
+		gauge:    d.memoryGauge,
 		Storable: storable,
 	}, nil
 }
