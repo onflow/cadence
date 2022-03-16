@@ -113,10 +113,7 @@ func NewCharacterMemoryUsage(length int) MemoryUsage {
 // UseConstantMemory uses a pre-determined amount of memory
 //
 func UseConstantMemory(memoryGauge MemoryGauge, kind MemoryKind) {
-	if memoryGauge == nil {
-		return
-	}
-	memoryGauge.MeterMemory(MemoryUsage{
+	UseMemory(memoryGauge, MemoryUsage{
 		Kind:   kind,
 		Amount: 1,
 	})

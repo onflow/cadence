@@ -587,7 +587,7 @@ func TestImportedValueMemoryMeteringIterate(t *testing.T) {
 
 				meter := make(map[common.MemoryKind]uint64)
 				runtimeInterface := &testRuntimeInterface{
-					useMemory: testUseMemory(meter),
+					meterMemory: testUseMemory(meter),
 					decodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
 						return jsoncdc.Decode(b)
 					},

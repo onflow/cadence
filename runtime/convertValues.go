@@ -815,7 +815,7 @@ func importCapability(
 	}
 
 	// include memory usage for reference type
-	inter.UseMemory(common.NewTypeMemoryUsage(referenceType.Type.ID()))
+	common.UseMemory(inter, common.NewTypeMemoryUsage(referenceType.Type.ID()))
 
 	return interpreter.NewCapabilityValue(
 		inter,

@@ -242,9 +242,7 @@ func NewTypeValue(
 	memoryUsage common.MemoryUsage,
 	staticTypeConstructor func() StaticType,
 ) TypeValue {
-	if memoryGauge != nil {
-		memoryGauge.MeterMemory(memoryUsage)
-	}
+	common.UseMemory(memoryGauge, memoryUsage)
 	staticType := staticTypeConstructor()
 	return NewUnmeteredTypeValue(staticType)
 }
@@ -688,9 +686,7 @@ func NewCharacterValue(
 	memoryUsage common.MemoryUsage,
 	characterConstructor func() string,
 ) CharacterValue {
-	if memoryGauge != nil {
-		memoryGauge.MeterMemory(memoryUsage)
-	}
+	common.UseMemory(memoryGauge, memoryUsage)
 
 	character := characterConstructor()
 	return NewUnmeteredCharacterValue(character)
