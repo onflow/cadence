@@ -4823,7 +4823,7 @@ func (interpreter *Interpreter) MeterMemory(usage common.MemoryUsage) error {
 // UseConstantMemory uses a pre-determined amount of memory
 //
 func (interpreter *Interpreter) UseConstantMemory(kind common.MemoryKind) {
-	interpreter.MeterMemory(common.NewConstantMemoryUsage(kind))
+	common.UseMemory(interpreter.memoryGauge, common.NewConstantMemoryUsage(kind))
 }
 
 func (interpreter *Interpreter) DecodeStorable(
