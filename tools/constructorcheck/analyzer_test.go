@@ -16,36 +16,14 @@
  * limitations under the License.
  */
 
-package common
+package main
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=MemoryKind -trimprefix=MemoryKind
+import (
+	"testing"
 
-// MemoryKind
-//
-type MemoryKind uint
-
-const (
-	MemoryKindUnknown MemoryKind = iota
-	MemoryKindBool
-	MemoryKindAddress
-	MemoryKindString
-	MemoryKindCharacter
-	MemoryKindMetaType
-	MemoryKindNumber
-	MemoryKindArray
-	MemoryKindDictionary
-	MemoryKindComposite
-	MemoryKindOptional
-	MemoryKindNil
-	MemoryKindVoid
-	MemoryKindTypeValue
-	MemoryKindPathValue
-	MemoryKindCapabilityValue
-	MemoryKindLinkValue
-	MemoryKindStorageReferenceValue
-	MemoryKindEphemeralReferenceValue
-	MemoryKindInterpretedFunction
-	MemoryKindHostFunction
-	MemoryKindBoundFunction
-	MemoryKindBigInt
+	"golang.org/x/tools/go/analysis/analysistest"
 )
+
+func TestAll(t *testing.T) {
+	analysistest.Run(t, analysistest.TestData(), Analyzer)
+}

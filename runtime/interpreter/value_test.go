@@ -58,6 +58,25 @@ var testCompositeValueType = &sema.CompositeType{
 	Members:    sema.NewStringMemberOrderedMap(),
 }
 
+func getMeterCompFuncWithExpectedKinds(
+	t *testing.T,
+	kinds []common.ComputationKind,
+	intensities []uint,
+) OnMeterComputationFunc {
+	if len(kinds) != len(intensities) {
+		t.Fatal("size of kinds doesn't match size of intensitites")
+	}
+	expectedCompKindsIndex := 0
+	return func(compKind common.ComputationKind, intensity uint) {
+		if expectedCompKindsIndex >= len(kinds) {
+			t.Fatal("received an extra meterComputation call")
+		}
+		assert.Equal(t, kinds[expectedCompKindsIndex], compKind)
+		assert.Equal(t, intensities[expectedCompKindsIndex], intensity)
+		expectedCompKindsIndex++
+	}
+}
+
 func TestOwnerNewArray(t *testing.T) {
 
 	t.Parallel()
@@ -112,6 +131,18 @@ func TestOwnerArrayDeepCopy(t *testing.T) {
 		},
 		utils.TestLocation,
 		WithStorage(storage),
+		WithOnMeterComputationFuncHandler(
+			getMeterCompFuncWithExpectedKinds(t,
+				[]common.ComputationKind{
+					common.ComputationKindCreateCompositeValue,
+					common.ComputationKindCreateArrayValue,
+					common.ComputationKindTransferCompositeValue,
+					common.ComputationKindTransferArrayValue,
+					common.ComputationKindTransferCompositeValue,
+				},
+				[]uint{1, 1, 1, 1, 1},
+			),
+		),
 	)
 	require.NoError(t, err)
 
@@ -459,6 +490,18 @@ func TestOwnerDictionaryCopy(t *testing.T) {
 		},
 		utils.TestLocation,
 		WithStorage(storage),
+		WithOnMeterComputationFuncHandler(
+			getMeterCompFuncWithExpectedKinds(t,
+				[]common.ComputationKind{
+					common.ComputationKindCreateCompositeValue,
+					common.ComputationKindCreateDictionaryValue,
+					common.ComputationKindTransferCompositeValue,
+					common.ComputationKindTransferDictionaryValue,
+					common.ComputationKindTransferCompositeValue,
+				},
+				[]uint{1, 1, 1, 1, 1},
+			),
+		),
 	)
 	require.NoError(t, err)
 
@@ -798,67 +841,67 @@ func TestStringer(t *testing.T) {
 			expected: "10",
 		},
 		"UInt8": {
-			value:    UInt8Value(8),
+			value:    NewUnmeteredUInt8Value(8),
 			expected: "8",
 		},
 		"UInt16": {
-			value:    UInt16Value(16),
+			value:    NewUnmeteredUInt16Value(16),
 			expected: "16",
 		},
 		"UInt32": {
-			value:    UInt32Value(32),
+			value:    NewUnmeteredUInt32Value(32),
 			expected: "32",
 		},
 		"UInt64": {
-			value:    UInt64Value(64),
+			value:    NewUnmeteredUInt64Value(64),
 			expected: "64",
 		},
 		"UInt128": {
-			value:    NewUInt128ValueFromUint64(128),
+			value:    NewUnmeteredUInt128ValueFromUint64(128),
 			expected: "128",
 		},
 		"UInt256": {
-			value:    NewUInt256ValueFromUint64(256),
+			value:    NewUnmeteredUInt256ValueFromUint64(256),
 			expected: "256",
 		},
 		"Int8": {
-			value:    Int8Value(-8),
+			value:    NewUnmeteredInt8Value(-8),
 			expected: "-8",
 		},
 		"Int16": {
-			value:    Int16Value(-16),
+			value:    NewUnmeteredInt16Value(-16),
 			expected: "-16",
 		},
 		"Int32": {
-			value:    Int32Value(-32),
+			value:    NewUnmeteredInt32Value(-32),
 			expected: "-32",
 		},
 		"Int64": {
-			value:    Int64Value(-64),
+			value:    NewUnmeteredInt64Value(-64),
 			expected: "-64",
 		},
 		"Int128": {
-			value:    NewInt128ValueFromInt64(-128),
+			value:    NewUnmeteredInt128ValueFromInt64(-128),
 			expected: "-128",
 		},
 		"Int256": {
-			value:    NewInt256ValueFromInt64(-256),
+			value:    NewUnmeteredInt256ValueFromInt64(-256),
 			expected: "-256",
 		},
 		"Word8": {
-			value:    Word8Value(8),
+			value:    NewUnmeteredWord8Value(8),
 			expected: "8",
 		},
 		"Word16": {
-			value:    Word16Value(16),
+			value:    NewUnmeteredWord16Value(16),
 			expected: "16",
 		},
 		"Word32": {
-			value:    Word32Value(32),
+			value:    NewUnmeteredWord32Value(32),
 			expected: "32",
 		},
 		"Word64": {
-			value:    Word64Value(64),
+			value:    NewUnmeteredWord64Value(64),
 			expected: "64",
 		},
 		"UFix64": {
@@ -912,8 +955,8 @@ func TestStringer(t *testing.T) {
 					KeyType:   PrimitiveStaticTypeString,
 					ValueType: PrimitiveStaticTypeUInt8,
 				},
-				NewUnmeteredStringValue("a"), UInt8Value(42),
-				NewUnmeteredStringValue("b"), UInt8Value(99),
+				NewUnmeteredStringValue("a"), NewUnmeteredUInt8Value(42),
+				NewUnmeteredStringValue("b"), NewUnmeteredUInt8Value(99),
 			),
 			expected: `{"b": 99, "a": 42}`,
 		},
@@ -1131,75 +1174,75 @@ func TestGetHashInput(t *testing.T) {
 			expected: append([]byte{byte(HashInputTypeUInt)}, sema.UInt256TypeMaxIntBig.Bytes()...),
 		},
 		"UInt8": {
-			value:    UInt8Value(8),
+			value:    NewUnmeteredUInt8Value(8),
 			expected: []byte{byte(HashInputTypeUInt8), 8},
 		},
 		"UInt8 min": {
-			value:    UInt8Value(0),
+			value:    NewUnmeteredUInt8Value(0),
 			expected: []byte{byte(HashInputTypeUInt8), 0},
 		},
 		"UInt8 max": {
-			value:    UInt8Value(math.MaxUint8),
+			value:    NewUnmeteredUInt8Value(math.MaxUint8),
 			expected: []byte{byte(HashInputTypeUInt8), 0xff},
 		},
 		"UInt16": {
-			value:    UInt16Value(16),
+			value:    NewUnmeteredUInt16Value(16),
 			expected: []byte{byte(HashInputTypeUInt16), 0, 16},
 		},
 		"UInt16 min": {
-			value:    UInt16Value(0),
+			value:    NewUnmeteredUInt16Value(0),
 			expected: []byte{byte(HashInputTypeUInt16), 0, 0},
 		},
 		"UInt16 max": {
-			value:    UInt16Value(math.MaxUint16),
+			value:    NewUnmeteredUInt16Value(math.MaxUint16),
 			expected: []byte{byte(HashInputTypeUInt16), 0xff, 0xff},
 		},
 		"UInt32": {
-			value:    UInt32Value(32),
+			value:    NewUnmeteredUInt32Value(32),
 			expected: []byte{byte(HashInputTypeUInt32), 0, 0, 0, 32},
 		},
 		"UInt32 min": {
-			value:    UInt32Value(0),
+			value:    NewUnmeteredUInt32Value(0),
 			expected: []byte{byte(HashInputTypeUInt32), 0, 0, 0, 0},
 		},
 		"UInt32 max": {
-			value:    UInt32Value(math.MaxUint32),
+			value:    NewUnmeteredUInt32Value(math.MaxUint32),
 			expected: []byte{byte(HashInputTypeUInt32), 0xff, 0xff, 0xff, 0xff},
 		},
 		"UInt64": {
-			value:    UInt64Value(64),
+			value:    NewUnmeteredUInt64Value(64),
 			expected: []byte{byte(HashInputTypeUInt64), 0, 0, 0, 0, 0, 0, 0, 64},
 		},
 		"UInt64 min": {
-			value:    UInt64Value(0),
+			value:    NewUnmeteredUInt64Value(0),
 			expected: []byte{byte(HashInputTypeUInt64), 0, 0, 0, 0, 0, 0, 0, 0},
 		},
 		"UInt64 max": {
-			value:    UInt64Value(math.MaxUint64),
+			value:    NewUnmeteredUInt64Value(math.MaxUint64),
 			expected: []byte{byte(HashInputTypeUInt64), 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
 		},
 		"UInt128": {
-			value:    NewUInt128ValueFromUint64(128),
+			value:    NewUnmeteredUInt128ValueFromUint64(128),
 			expected: []byte{byte(HashInputTypeUInt128), 128},
 		},
 		"UInt128 min": {
-			value:    NewUInt128ValueFromUint64(0),
+			value:    NewUnmeteredUInt128ValueFromUint64(0),
 			expected: append([]byte{byte(HashInputTypeUInt128)}, 0),
 		},
 		"UInt128 max": {
-			value:    NewUInt128ValueFromBigInt(sema.UInt128TypeMaxIntBig),
+			value:    NewUnmeteredUInt128ValueFromBigInt(sema.UInt128TypeMaxIntBig),
 			expected: append([]byte{byte(HashInputTypeUInt128)}, sema.UInt128TypeMaxIntBig.Bytes()...),
 		},
 		"UInt256": {
-			value:    NewUInt256ValueFromUint64(256),
+			value:    NewUnmeteredUInt256ValueFromUint64(256),
 			expected: []byte{byte(HashInputTypeUInt256), 1, 0},
 		},
 		"UInt256 min": {
-			value:    NewUInt256ValueFromUint64(0),
+			value:    NewUnmeteredUInt256ValueFromUint64(0),
 			expected: append([]byte{byte(HashInputTypeUInt256)}, 0),
 		},
 		"UInt256 max": {
-			value:    NewUInt256ValueFromBigInt(sema.UInt256TypeMaxIntBig),
+			value:    NewUnmeteredUInt256ValueFromBigInt(sema.UInt256TypeMaxIntBig),
 			expected: append([]byte{byte(HashInputTypeUInt256)}, sema.UInt256TypeMaxIntBig.Bytes()...),
 		},
 		"Int": {
@@ -1215,123 +1258,123 @@ func TestGetHashInput(t *testing.T) {
 			expected: append([]byte{byte(HashInputTypeInt)}, sema.Int256TypeMaxIntBig.Bytes()...),
 		},
 		"Int8": {
-			value:    Int8Value(-8),
+			value:    NewUnmeteredInt8Value(-8),
 			expected: []byte{byte(HashInputTypeInt8), 0xf8},
 		},
 		"Int8 min": {
-			value:    Int8Value(math.MinInt8),
+			value:    NewUnmeteredInt8Value(math.MinInt8),
 			expected: []byte{byte(HashInputTypeInt8), 0x80},
 		},
 		"Int8 max": {
-			value:    Int8Value(math.MaxInt8),
+			value:    NewUnmeteredInt8Value(math.MaxInt8),
 			expected: []byte{byte(HashInputTypeInt8), 0x7f},
 		},
 		"Int16": {
-			value:    Int16Value(-16),
+			value:    NewUnmeteredInt16Value(-16),
 			expected: []byte{byte(HashInputTypeInt16), 0xff, 0xf0},
 		},
 		"Int16 min": {
-			value:    Int16Value(math.MinInt16),
+			value:    NewUnmeteredInt16Value(math.MinInt16),
 			expected: []byte{byte(HashInputTypeInt16), 0x80, 0x00},
 		},
 		"Int16 max": {
-			value:    Int16Value(math.MaxInt16),
+			value:    NewUnmeteredInt16Value(math.MaxInt16),
 			expected: []byte{byte(HashInputTypeInt16), 0x7f, 0xff},
 		},
 		"Int32": {
-			value:    Int32Value(-32),
+			value:    NewUnmeteredInt32Value(-32),
 			expected: []byte{byte(HashInputTypeInt32), 0xff, 0xff, 0xff, 0xe0},
 		},
 		"Int32 min": {
-			value:    Int32Value(math.MinInt32),
+			value:    NewUnmeteredInt32Value(math.MinInt32),
 			expected: []byte{byte(HashInputTypeInt32), 0x80, 0x00, 0x00, 0x00},
 		},
 		"Int32 max": {
-			value:    Int32Value(math.MaxInt32),
+			value:    NewUnmeteredInt32Value(math.MaxInt32),
 			expected: []byte{byte(HashInputTypeInt32), 0x7f, 0xff, 0xff, 0xff},
 		},
 		"Int64": {
-			value:    Int64Value(-64),
+			value:    NewUnmeteredInt64Value(-64),
 			expected: []byte{byte(HashInputTypeInt64), 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xc0},
 		},
 		"Int64 min": {
-			value:    Int64Value(math.MinInt64),
+			value:    NewUnmeteredInt64Value(math.MinInt64),
 			expected: []byte{byte(HashInputTypeInt64), 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
 		},
 		"Int64 max": {
-			value:    Int64Value(math.MaxInt64),
+			value:    NewUnmeteredInt64Value(math.MaxInt64),
 			expected: []byte{byte(HashInputTypeInt64), 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
 		},
 		"Int128": {
-			value:    NewInt128ValueFromInt64(-128),
+			value:    NewUnmeteredInt128ValueFromInt64(-128),
 			expected: []byte{byte(HashInputTypeInt128), 0x80},
 		},
 		"Int128 min": {
-			value:    NewInt128ValueFromBigInt(sema.Int128TypeMinIntBig),
+			value:    NewUnmeteredInt128ValueFromBigInt(sema.Int128TypeMinIntBig),
 			expected: append([]byte{byte(HashInputTypeInt128)}, sema.Int128TypeMinIntBig.Bytes()...),
 		},
 		"Int128 max": {
-			value:    NewInt128ValueFromBigInt(sema.Int128TypeMaxIntBig),
+			value:    NewUnmeteredInt128ValueFromBigInt(sema.Int128TypeMaxIntBig),
 			expected: append([]byte{byte(HashInputTypeInt128)}, sema.Int128TypeMaxIntBig.Bytes()...),
 		},
 		"Int256": {
-			value:    NewInt256ValueFromInt64(-256),
+			value:    NewUnmeteredInt256ValueFromInt64(-256),
 			expected: []byte{byte(HashInputTypeInt256), 0xff, 0x0},
 		},
 		"Int256 min": {
-			value:    NewInt256ValueFromBigInt(sema.Int256TypeMinIntBig),
+			value:    NewUnmeteredInt256ValueFromBigInt(sema.Int256TypeMinIntBig),
 			expected: append([]byte{byte(HashInputTypeInt256)}, sema.Int256TypeMinIntBig.Bytes()...),
 		},
 		"Int256 max": {
-			value:    NewInt256ValueFromBigInt(sema.Int256TypeMaxIntBig),
+			value:    NewUnmeteredInt256ValueFromBigInt(sema.Int256TypeMaxIntBig),
 			expected: append([]byte{byte(HashInputTypeInt256)}, sema.Int256TypeMaxIntBig.Bytes()...),
 		},
 		"Word8": {
-			value:    Word8Value(8),
+			value:    NewUnmeteredWord8Value(8),
 			expected: []byte{byte(HashInputTypeWord8), 8},
 		},
 		"Word8 min": {
-			value:    Word8Value(0),
+			value:    NewUnmeteredWord8Value(0),
 			expected: []byte{byte(HashInputTypeWord8), 0},
 		},
 		"Word8 max": {
-			value:    Word8Value(255),
+			value:    NewUnmeteredWord8Value(255),
 			expected: []byte{byte(HashInputTypeWord8), 0xff},
 		},
 		"Word16": {
-			value:    Word16Value(16),
+			value:    NewUnmeteredWord16Value(16),
 			expected: []byte{byte(HashInputTypeWord16), 0, 16},
 		},
 		"Word16 min": {
-			value:    Word16Value(0),
+			value:    NewUnmeteredWord16Value(0),
 			expected: []byte{byte(HashInputTypeWord16), 0, 0},
 		},
 		"Word16 max": {
-			value:    Word16Value(math.MaxUint16),
+			value:    NewUnmeteredWord16Value(math.MaxUint16),
 			expected: []byte{byte(HashInputTypeWord16), 0xff, 0xff},
 		},
 		"Word32": {
-			value:    Word32Value(32),
+			value:    NewUnmeteredWord32Value(32),
 			expected: []byte{byte(HashInputTypeWord32), 0, 0, 0, 32},
 		},
 		"Word32 min": {
-			value:    Word32Value(0),
+			value:    NewUnmeteredWord32Value(0),
 			expected: []byte{byte(HashInputTypeWord32), 0, 0, 0, 0},
 		},
 		"Word32 max": {
-			value:    Word32Value(math.MaxUint32),
+			value:    NewUnmeteredWord32Value(math.MaxUint32),
 			expected: []byte{byte(HashInputTypeWord32), 0xff, 0xff, 0xff, 0xff},
 		},
 		"Word64": {
-			value:    Word64Value(64),
+			value:    NewUnmeteredWord64Value(64),
 			expected: []byte{byte(HashInputTypeWord64), 0, 0, 0, 0, 0, 0, 0, 64},
 		},
 		"Word64 min": {
-			value:    Word64Value(0),
+			value:    NewUnmeteredWord64Value(0),
 			expected: []byte{byte(HashInputTypeWord64), 0, 0, 0, 0, 0, 0, 0, 0},
 		},
 		"Word64 max": {
-			value:    Word64Value(math.MaxUint64),
+			value:    NewUnmeteredWord64Value(math.MaxUint64),
 			expected: []byte{byte(HashInputTypeWord64), 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
 		},
 		"UFix64": {
@@ -1379,6 +1422,13 @@ func TestGetHashInput(t *testing.T) {
 				[]byte(strings.Repeat("a", 32))...,
 			),
 		},
+		"Character": {
+			value: NewCharacterValue("ᄀᄀᄀ각ᆨᆨ"),
+			expected: []byte{
+				byte(HashInputTypeCharacter),
+				0xe1, 0x84, 0x80, 0xe1, 0x84, 0x80, 0xe1, 0x84, 0x80, 0xea, 0xb0, 0x81, 0xe1, 0x86, 0xa8, 0xe1, 0x86, 0xa8,
+			},
+		},
 		"Address": {
 			value:    NewUnmeteredAddressValue([]byte{0, 0, 0, 0, 0, 0, 0, 1}),
 			expected: []byte{byte(HashInputTypeAddress), 0, 0, 0, 0, 0, 0, 0, 1},
@@ -1390,7 +1440,7 @@ func TestGetHashInput(t *testing.T) {
 				fields := []CompositeField{
 					{
 						Name:  "rawValue",
-						Value: UInt8Value(42),
+						Value: NewUnmeteredUInt8Value(42),
 					},
 				}
 				return NewCompositeValue(
@@ -1417,7 +1467,7 @@ func TestGetHashInput(t *testing.T) {
 				fields := []CompositeField{
 					{
 						Name:  "rawValue",
-						Value: UInt8Value(42),
+						Value: NewUnmeteredUInt8Value(42),
 					},
 				}
 				return NewCompositeValue(
@@ -1798,7 +1848,7 @@ func TestAddressValue_Equal(t *testing.T) {
 			AddressValue{0x1}.Equal(
 				inter,
 				ReturnEmptyLocationRange,
-				UInt8Value(1),
+				NewUnmeteredUInt8Value(1),
 			),
 		)
 	})
@@ -1863,7 +1913,7 @@ func TestBoolValue_Equal(t *testing.T) {
 			BoolValue(true).Equal(
 				inter,
 				ReturnEmptyLocationRange,
-				UInt8Value(1),
+				NewUnmeteredUInt8Value(1),
 			),
 		)
 	})
@@ -1913,7 +1963,7 @@ func TestStringValue_Equal(t *testing.T) {
 			NewUnmeteredStringValue("1").Equal(
 				inter,
 				ReturnEmptyLocationRange,
-				UInt8Value(1),
+				NewUnmeteredUInt8Value(1),
 			),
 		)
 	})
@@ -1948,7 +1998,7 @@ func TestNilValue_Equal(t *testing.T) {
 			NilValue{}.Equal(
 				inter,
 				ReturnEmptyLocationRange,
-				UInt8Value(0),
+				NewUnmeteredUInt8Value(0),
 			),
 		)
 	})
@@ -1998,7 +2048,7 @@ func TestSomeValue_Equal(t *testing.T) {
 			NewUnmeteredSomeValueNonCopying(NewUnmeteredStringValue("1")).Equal(
 				inter,
 				ReturnEmptyLocationRange,
-				UInt8Value(1),
+				NewUnmeteredUInt8Value(1),
 			),
 		)
 	})
@@ -2285,8 +2335,8 @@ func TestArrayValue_Equal(t *testing.T) {
 				inter,
 				uint8ArrayStaticType,
 				common.Address{},
-				UInt8Value(1),
-				UInt8Value(2),
+				NewUnmeteredUInt8Value(1),
+				NewUnmeteredUInt8Value(2),
 			).Equal(
 				inter,
 				ReturnEmptyLocationRange,
@@ -2294,8 +2344,8 @@ func TestArrayValue_Equal(t *testing.T) {
 					inter,
 					uint8ArrayStaticType,
 					common.Address{},
-					UInt8Value(1),
-					UInt8Value(2),
+					NewUnmeteredUInt8Value(1),
+					NewUnmeteredUInt8Value(2),
 				),
 			),
 		)
@@ -2312,8 +2362,8 @@ func TestArrayValue_Equal(t *testing.T) {
 				inter,
 				uint8ArrayStaticType,
 				common.Address{},
-				UInt8Value(1),
-				UInt8Value(2),
+				NewUnmeteredUInt8Value(1),
+				NewUnmeteredUInt8Value(2),
 			).Equal(
 				inter,
 				ReturnEmptyLocationRange,
@@ -2321,8 +2371,8 @@ func TestArrayValue_Equal(t *testing.T) {
 					inter,
 					uint8ArrayStaticType,
 					common.Address{},
-					UInt8Value(2),
-					UInt8Value(3),
+					NewUnmeteredUInt8Value(2),
+					NewUnmeteredUInt8Value(3),
 				),
 			),
 		)
@@ -2339,7 +2389,7 @@ func TestArrayValue_Equal(t *testing.T) {
 				inter,
 				uint8ArrayStaticType,
 				common.Address{},
-				UInt8Value(1),
+				NewUnmeteredUInt8Value(1),
 			).Equal(
 				inter,
 				ReturnEmptyLocationRange,
@@ -2347,8 +2397,8 @@ func TestArrayValue_Equal(t *testing.T) {
 					inter,
 					uint8ArrayStaticType,
 					common.Address{},
-					UInt8Value(1),
-					UInt8Value(2),
+					NewUnmeteredUInt8Value(1),
+					NewUnmeteredUInt8Value(2),
 				),
 			),
 		)
@@ -2365,8 +2415,8 @@ func TestArrayValue_Equal(t *testing.T) {
 				inter,
 				uint8ArrayStaticType,
 				common.Address{},
-				UInt8Value(1),
-				UInt8Value(2),
+				NewUnmeteredUInt8Value(1),
+				NewUnmeteredUInt8Value(2),
 			).Equal(
 				inter,
 				ReturnEmptyLocationRange,
@@ -2374,7 +2424,7 @@ func TestArrayValue_Equal(t *testing.T) {
 					inter,
 					uint8ArrayStaticType,
 					common.Address{},
-					UInt8Value(1),
+					NewUnmeteredUInt8Value(1),
 				),
 			),
 		)
@@ -2487,11 +2537,11 @@ func TestArrayValue_Equal(t *testing.T) {
 				inter,
 				uint8ArrayStaticType,
 				common.Address{},
-				UInt8Value(1),
+				NewUnmeteredUInt8Value(1),
 			).Equal(
 				inter,
 				ReturnEmptyLocationRange,
-				UInt8Value(1),
+				NewUnmeteredUInt8Value(1),
 			),
 		)
 	})
@@ -2516,9 +2566,9 @@ func TestDictionaryValue_Equal(t *testing.T) {
 			NewDictionaryValue(
 				inter,
 				byteStringDictionaryType,
-				UInt8Value(1),
+				NewUnmeteredUInt8Value(1),
 				NewUnmeteredStringValue("1"),
-				UInt8Value(2),
+				NewUnmeteredUInt8Value(2),
 				NewUnmeteredStringValue("2"),
 			).Equal(
 				inter,
@@ -2526,9 +2576,9 @@ func TestDictionaryValue_Equal(t *testing.T) {
 				NewDictionaryValue(
 					inter,
 					byteStringDictionaryType,
-					UInt8Value(1),
+					NewUnmeteredUInt8Value(1),
 					NewUnmeteredStringValue("1"),
-					UInt8Value(2),
+					NewUnmeteredUInt8Value(2),
 					NewUnmeteredStringValue("2"),
 				),
 			),
@@ -2545,9 +2595,9 @@ func TestDictionaryValue_Equal(t *testing.T) {
 			NewDictionaryValue(
 				inter,
 				byteStringDictionaryType,
-				UInt8Value(1),
+				NewUnmeteredUInt8Value(1),
 				NewUnmeteredStringValue("1"),
-				UInt8Value(2),
+				NewUnmeteredUInt8Value(2),
 				NewUnmeteredStringValue("2"),
 			).Equal(
 				inter,
@@ -2555,9 +2605,9 @@ func TestDictionaryValue_Equal(t *testing.T) {
 				NewDictionaryValue(
 					inter,
 					byteStringDictionaryType,
-					UInt8Value(2),
+					NewUnmeteredUInt8Value(2),
 					NewUnmeteredStringValue("1"),
-					UInt8Value(3),
+					NewUnmeteredUInt8Value(3),
 					NewUnmeteredStringValue("2"),
 				),
 			),
@@ -2574,9 +2624,9 @@ func TestDictionaryValue_Equal(t *testing.T) {
 			NewDictionaryValue(
 				inter,
 				byteStringDictionaryType,
-				UInt8Value(1),
+				NewUnmeteredUInt8Value(1),
 				NewUnmeteredStringValue("1"),
-				UInt8Value(2),
+				NewUnmeteredUInt8Value(2),
 				NewUnmeteredStringValue("2"),
 			).Equal(
 				inter,
@@ -2584,9 +2634,9 @@ func TestDictionaryValue_Equal(t *testing.T) {
 				NewDictionaryValue(
 					inter,
 					byteStringDictionaryType,
-					UInt8Value(1),
+					NewUnmeteredUInt8Value(1),
 					NewUnmeteredStringValue("2"),
-					UInt8Value(2),
+					NewUnmeteredUInt8Value(2),
 					NewUnmeteredStringValue("3"),
 				),
 			),
@@ -2603,7 +2653,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 			NewDictionaryValue(
 				inter,
 				byteStringDictionaryType,
-				UInt8Value(1),
+				NewUnmeteredUInt8Value(1),
 				NewUnmeteredStringValue("1"),
 			).Equal(
 				inter,
@@ -2611,9 +2661,9 @@ func TestDictionaryValue_Equal(t *testing.T) {
 				NewDictionaryValue(
 					inter,
 					byteStringDictionaryType,
-					UInt8Value(1),
+					NewUnmeteredUInt8Value(1),
 					NewUnmeteredStringValue("1"),
-					UInt8Value(2),
+					NewUnmeteredUInt8Value(2),
 					NewUnmeteredStringValue("2"),
 				),
 			),
@@ -2630,9 +2680,9 @@ func TestDictionaryValue_Equal(t *testing.T) {
 			NewDictionaryValue(
 				inter,
 				byteStringDictionaryType,
-				UInt8Value(1),
+				NewUnmeteredUInt8Value(1),
 				NewUnmeteredStringValue("1"),
-				UInt8Value(2),
+				NewUnmeteredUInt8Value(2),
 				NewUnmeteredStringValue("2"),
 			).Equal(
 				inter,
@@ -2640,7 +2690,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 				NewDictionaryValue(
 					inter,
 					byteStringDictionaryType,
-					UInt8Value(1),
+					NewUnmeteredUInt8Value(1),
 					NewUnmeteredStringValue("1"),
 				),
 			),
@@ -2683,9 +2733,9 @@ func TestDictionaryValue_Equal(t *testing.T) {
 			NewDictionaryValue(
 				inter,
 				byteStringDictionaryType,
-				UInt8Value(1),
+				NewUnmeteredUInt8Value(1),
 				NewUnmeteredStringValue("1"),
-				UInt8Value(2),
+				NewUnmeteredUInt8Value(2),
 				NewUnmeteredStringValue("2"),
 			).Equal(
 				inter,
@@ -2694,8 +2744,8 @@ func TestDictionaryValue_Equal(t *testing.T) {
 					inter,
 					ByteArrayStaticType,
 					common.Address{},
-					UInt8Value(1),
-					UInt8Value(2),
+					NewUnmeteredUInt8Value(1),
+					NewUnmeteredUInt8Value(2),
 				),
 			),
 		)
@@ -3051,22 +3101,22 @@ func TestNumberValue_Equal(t *testing.T) {
 
 	testValues := map[string]EquatableValue{
 		"UInt":    NewUnmeteredUIntValueFromUint64(10),
-		"UInt8":   UInt8Value(8),
-		"UInt16":  UInt16Value(16),
-		"UInt32":  UInt32Value(32),
-		"UInt64":  UInt64Value(64),
-		"UInt128": NewUInt128ValueFromUint64(128),
-		"UInt256": NewUInt256ValueFromUint64(256),
-		"Int8":    Int8Value(-8),
-		"Int16":   Int16Value(-16),
-		"Int32":   Int32Value(-32),
-		"Int64":   Int64Value(-64),
-		"Int128":  NewInt128ValueFromInt64(-128),
-		"Int256":  NewInt256ValueFromInt64(-256),
-		"Word8":   Word8Value(8),
-		"Word16":  Word16Value(16),
-		"Word32":  Word32Value(32),
-		"Word64":  Word64Value(64),
+		"UInt8":   NewUnmeteredUInt8Value(8),
+		"UInt16":  NewUnmeteredUInt16Value(16),
+		"UInt32":  NewUnmeteredUInt32Value(32),
+		"UInt64":  NewUnmeteredUInt64Value(64),
+		"UInt128": NewUnmeteredUInt128ValueFromUint64(128),
+		"UInt256": NewUnmeteredUInt256ValueFromUint64(256),
+		"Int8":    NewUnmeteredInt8Value(-8),
+		"Int16":   NewUnmeteredInt16Value(-16),
+		"Int32":   NewUnmeteredInt32Value(-32),
+		"Int64":   NewUnmeteredInt64Value(-64),
+		"Int128":  NewUnmeteredInt128ValueFromInt64(-128),
+		"Int256":  NewUnmeteredInt256ValueFromInt64(-256),
+		"Word8":   NewUnmeteredWord8Value(8),
+		"Word16":  NewUnmeteredWord16Value(16),
+		"Word32":  NewUnmeteredWord32Value(32),
+		"Word64":  NewUnmeteredWord64Value(64),
 		"UFix64":  NewUFix64ValueWithInteger(64),
 		"Fix64":   NewFix64ValueWithInteger(-32),
 	}

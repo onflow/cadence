@@ -72,7 +72,7 @@ func TestCompositeStorage(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, ok)
 
-	storedValue := StoredValue(retrievedStorable, storage)
+	storedValue := StoredValue(inter, retrievedStorable, storage)
 
 	require.IsType(t, storedValue, &CompositeValue{})
 	storedComposite := storedValue.(*CompositeValue)
@@ -148,7 +148,7 @@ func TestArrayStorage(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, ok)
 
-		storedValue := StoredValue(retrievedStorable, storage)
+		storedValue := StoredValue(inter, retrievedStorable, storage)
 
 		require.IsType(t, storedValue, &ArrayValue{})
 		storedArray := storedValue.(*ArrayValue)
@@ -208,7 +208,7 @@ func TestArrayStorage(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, ok)
 
-		storedValue := StoredValue(retrievedStorable, storage)
+		storedValue := StoredValue(inter, retrievedStorable, storage)
 
 		require.IsType(t, storedValue, &ArrayValue{})
 		storedArray := storedValue.(*ArrayValue)
@@ -266,7 +266,7 @@ func TestDictionaryStorage(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, ok)
 
-		storedValue := StoredValue(retrievedStorable, storage)
+		storedValue := StoredValue(inter, retrievedStorable, storage)
 
 		require.IsType(t, storedValue, &DictionaryValue{})
 		storedDictionary := storedValue.(*DictionaryValue)
@@ -321,7 +321,7 @@ func TestDictionaryStorage(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, ok)
 
-		storedValue := StoredValue(retrievedStorable, storage)
+		storedValue := StoredValue(inter, retrievedStorable, storage)
 
 		require.IsType(t, storedValue, &DictionaryValue{})
 	})
@@ -369,7 +369,7 @@ func TestDictionaryStorage(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, ok)
 
-		storedValue := StoredValue(retrievedStorable, storage)
+		storedValue := StoredValue(inter, retrievedStorable, storage)
 
 		require.IsType(t, storedValue, &DictionaryValue{})
 	})
@@ -416,7 +416,7 @@ func TestDictionaryStorage(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, ok)
 
-		storedValue := StoredValue(retrievedStorable, storage)
+		storedValue := StoredValue(inter, retrievedStorable, storage)
 
 		require.IsType(t, storedValue, &DictionaryValue{})
 	})

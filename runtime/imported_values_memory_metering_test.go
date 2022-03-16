@@ -28,12 +28,14 @@ import (
 	"github.com/onflow/cadence"
 	jsoncdc "github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
-func testUseMemory(meter map[common.MemoryKind]uint64) func(common.MemoryUsage) {
-	return func(usage common.MemoryUsage) {
+func testUseMemory(meter map[common.MemoryKind]uint64) func(common.MemoryUsage) error {
+	return func(usage common.MemoryUsage) error {
 		meter[usage.Kind] += usage.Amount
+		return nil
 	}
 }
 
@@ -45,7 +47,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 
 	runtimeInterface := func(meter map[common.MemoryKind]uint64) *testRuntimeInterface {
 		return &testRuntimeInterface{
-			useMemory: testUseMemory(meter),
+			meterMemory: testUseMemory(meter),
 			decodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
 				return jsoncdc.Decode(b)
 			},
@@ -67,6 +69,24 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		require.NoError(t, err)
 	}
 
+	t.Run("String", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            pub fun main(x: String) {}
+        `)
+
+		meter := make(map[common.MemoryKind]uint64)
+
+		executeScript(
+			script,
+			meter,
+			cadence.String("hello"),
+		)
+
+		assert.Equal(t, uint64(6), meter[common.MemoryKindString])
+	})
+
 	t.Run("Optional", func(t *testing.T) {
 		t.Parallel()
 
@@ -83,6 +103,102 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		)
 
 		assert.Equal(t, uint64(1), meter[common.MemoryKindOptional])
+	})
+
+	t.Run("UInt", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            pub fun main(x: UInt) {}
+        `)
+
+		meter := make(map[common.MemoryKind]uint64)
+		executeScript(script, meter, cadence.NewUInt(2))
+		assert.Equal(t, uint64(8), meter[common.MemoryKindBigInt])
+	})
+
+	t.Run("UInt8", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            pub fun main(x: UInt8) {}
+        `)
+
+		meter := make(map[common.MemoryKind]uint64)
+		executeScript(script, meter, cadence.NewUInt8(2))
+		assert.Equal(t, uint64(1), meter[common.MemoryKindNumber])
+	})
+
+	t.Run("UInt16", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            pub fun main(x: UInt16) {}
+        `)
+
+		meter := make(map[common.MemoryKind]uint64)
+		executeScript(script, meter, cadence.NewUInt16(2))
+		assert.Equal(t, uint64(2), meter[common.MemoryKindNumber])
+	})
+
+	t.Run("UInt32", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            pub fun main(x: UInt32) {}
+        `)
+
+		meter := make(map[common.MemoryKind]uint64)
+		executeScript(script, meter, cadence.NewUInt32(2))
+		assert.Equal(t, uint64(4), meter[common.MemoryKindNumber])
+	})
+
+	t.Run("UInt64", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            pub fun main(x: UInt64) {}
+        `)
+
+		meter := make(map[common.MemoryKind]uint64)
+		executeScript(script, meter, cadence.NewUInt64(2))
+		assert.Equal(t, uint64(8), meter[common.MemoryKindNumber])
+	})
+
+	t.Run("UInt128", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            pub fun main(x: UInt128) {}
+        `)
+
+		meter := make(map[common.MemoryKind]uint64)
+		executeScript(script, meter, cadence.NewUInt128(2))
+		assert.Equal(t, uint64(16), meter[common.MemoryKindBigInt])
+	})
+
+	t.Run("UInt256", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            pub fun main(x: UInt256) {}
+        `)
+
+		meter := make(map[common.MemoryKind]uint64)
+		executeScript(script, meter, cadence.NewUInt256(2))
+		assert.Equal(t, uint64(32), meter[common.MemoryKindBigInt])
+	})
+
+	t.Run("Int", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            pub fun main(x: Int) {}
+        `)
+
+		meter := make(map[common.MemoryKind]uint64)
+		executeScript(script, meter, cadence.NewInt(2))
+		assert.Equal(t, uint64(8), meter[common.MemoryKindBigInt])
 	})
 
 	t.Run("Int8", func(t *testing.T) {
@@ -131,6 +247,185 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		meter := make(map[common.MemoryKind]uint64)
 		executeScript(script, meter, cadence.NewInt64(2))
 		assert.Equal(t, uint64(8), meter[common.MemoryKindNumber])
+	})
+
+	t.Run("Int128", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            pub fun main(x: Int128) {}
+        `)
+
+		meter := make(map[common.MemoryKind]uint64)
+		executeScript(script, meter, cadence.NewInt128(2))
+		assert.Equal(t, uint64(16), meter[common.MemoryKindBigInt])
+	})
+
+	t.Run("Int256", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            pub fun main(x: Int256) {}
+        `)
+
+		meter := make(map[common.MemoryKind]uint64)
+		executeScript(script, meter, cadence.NewInt256(2))
+		assert.Equal(t, uint64(32), meter[common.MemoryKindBigInt])
+	})
+
+	t.Run("Word8", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            pub fun main(x: Word8) {}
+        `)
+
+		meter := make(map[common.MemoryKind]uint64)
+		executeScript(script, meter, cadence.NewWord8(2))
+		assert.Equal(t, uint64(1), meter[common.MemoryKindNumber])
+	})
+
+	t.Run("Word16", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            pub fun main(x: Word16) {}
+        `)
+
+		meter := make(map[common.MemoryKind]uint64)
+		executeScript(script, meter, cadence.NewWord16(2))
+		assert.Equal(t, uint64(2), meter[common.MemoryKindNumber])
+	})
+
+	t.Run("Word32", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            pub fun main(x: Word32) {}
+        `)
+
+		meter := make(map[common.MemoryKind]uint64)
+		executeScript(script, meter, cadence.NewWord32(2))
+		assert.Equal(t, uint64(4), meter[common.MemoryKindNumber])
+	})
+
+	t.Run("Word64", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            pub fun main(x: Word64) {}
+        `)
+
+		meter := make(map[common.MemoryKind]uint64)
+		executeScript(script, meter, cadence.NewWord64(2))
+		assert.Equal(t, uint64(8), meter[common.MemoryKindNumber])
+	})
+}
+
+type testMemoryError struct{}
+
+func (testMemoryError) Error() string {
+	return "memory limit exceeded"
+}
+
+func TestMemoryMeteringErrors(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := newTestInterpreterRuntime()
+
+	type memoryMeter map[common.MemoryKind]uint64
+
+	runtimeInterface := func(meter memoryMeter) *testRuntimeInterface {
+		return &testRuntimeInterface{
+			meterMemory: func(usage common.MemoryUsage) error {
+				if usage.Kind == common.MemoryKindInterpretedFunction {
+					return nil
+				}
+				return testMemoryError{}
+			},
+			decodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
+				return jsoncdc.Decode(b)
+			},
+		}
+	}
+
+	executeScript := func(script []byte, meter memoryMeter, args ...cadence.Value) error {
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source:    script,
+				Arguments: encodeArgs(args),
+			},
+			Context{
+				Interface: runtimeInterface(meter),
+				Location:  utils.TestLocation,
+			},
+		)
+
+		return err
+	}
+
+	t.Run("no errors", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            pub fun main() {}
+        `)
+
+		err := executeScript(script, memoryMeter{})
+		assert.NoError(t, err)
+	})
+
+	t.Run("importing", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            pub fun main(x: String) {}
+        `)
+
+		err := executeScript(
+			script,
+			memoryMeter{},
+			cadence.String("hello"),
+		)
+
+		assert.ErrorIs(t, err, testMemoryError{})
+	})
+
+	t.Run("at lexer", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            pub fun main() {
+                let x = "hello"
+            }
+        `)
+
+		err := executeScript(script, memoryMeter{})
+
+		require.IsType(t, Error{}, err)
+		runtimeError := err.(Error)
+
+		require.IsType(t, &ParsingCheckingError{}, runtimeError.Err)
+		parsingCheckingError := runtimeError.Err.(*ParsingCheckingError)
+
+		require.IsType(t, parser2.Error{}, parsingCheckingError.Err)
+		parserError := parsingCheckingError.Err.(parser2.Error)
+
+		assert.Contains(t, parserError.Error(), "memory limit exceeded")
+	})
+
+	t.Run("at interpreter", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            pub fun main() {
+                let x: [AnyStruct] = []
+            }
+        `)
+
+		err := executeScript(script, memoryMeter{})
+		assert.ErrorIs(t, err, testMemoryError{})
 	})
 }
 

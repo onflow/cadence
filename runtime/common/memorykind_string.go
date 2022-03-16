@@ -14,29 +14,28 @@ func _() {
 	_ = x[MemoryKindString-3]
 	_ = x[MemoryKindCharacter-4]
 	_ = x[MemoryKindMetaType-5]
-	_ = x[MemoryKindBlock-6]
-	_ = x[MemoryKindNumber-7]
-	_ = x[MemoryKindArray-8]
-	_ = x[MemoryKindDictionary-9]
-	_ = x[MemoryKindComposite-10]
-	_ = x[MemoryKindOptional-11]
-	_ = x[MemoryKindNil-12]
-	_ = x[MemoryKindVoid-13]
-	_ = x[MemoryKindTypeValue-14]
-	_ = x[MemoryKindPathValue-15]
-	_ = x[MemoryKindCapabilityValue-16]
-	_ = x[MemoryKindLinkValue-17]
-	_ = x[MemoryKindStorageReferenceValue-18]
-	_ = x[MemoryKindEphemeralReferenceValue-19]
-	_ = x[MemoryKindInterpretedFunction-20]
-	_ = x[MemoryKindHostFunction-21]
-	_ = x[MemoryKindBoundFunction-22]
-	_ = x[MemoryKindBigInt-23]
+	_ = x[MemoryKindNumber-6]
+	_ = x[MemoryKindArray-7]
+	_ = x[MemoryKindDictionary-8]
+	_ = x[MemoryKindComposite-9]
+	_ = x[MemoryKindOptional-10]
+	_ = x[MemoryKindNil-11]
+	_ = x[MemoryKindVoid-12]
+	_ = x[MemoryKindTypeValue-13]
+	_ = x[MemoryKindPathValue-14]
+	_ = x[MemoryKindCapabilityValue-15]
+	_ = x[MemoryKindLinkValue-16]
+	_ = x[MemoryKindStorageReferenceValue-17]
+	_ = x[MemoryKindEphemeralReferenceValue-18]
+	_ = x[MemoryKindInterpretedFunction-19]
+	_ = x[MemoryKindHostFunction-20]
+	_ = x[MemoryKindBoundFunction-21]
+	_ = x[MemoryKindBigInt-22]
 }
 
-const _MemoryKind_name = "UnknownBoolAddressStringCharacterMetaTypeBlockNumberArrayDictionaryCompositeOptionalNilVoidTypeValuePathValueCapabilityValueLinkValueStorageReferenceValueEphemeralReferenceValueInterpretedFunctionHostFunctionBoundFunctionBigInt"
+const _MemoryKind_name = "UnknownBoolAddressStringCharacterMetaTypeNumberArrayDictionaryCompositeOptionalNilVoidTypeValuePathValueCapabilityValueLinkValueStorageReferenceValueEphemeralReferenceValueInterpretedFunctionHostFunctionBoundFunctionBigInt"
 
-var _MemoryKind_index = [...]uint8{0, 7, 11, 18, 24, 33, 41, 46, 52, 57, 67, 76, 84, 87, 91, 100, 109, 124, 133, 154, 177, 196, 208, 221, 227}
+var _MemoryKind_index = [...]uint8{0, 7, 11, 18, 24, 33, 41, 47, 52, 62, 71, 79, 82, 86, 95, 104, 119, 128, 149, 172, 191, 203, 216, 222}
 
 func (i MemoryKind) String() string {
 	if i >= MemoryKind(len(_MemoryKind_index)-1) {

@@ -25,6 +25,7 @@ issues:
     - path: _test\.go
       linters:
         - maprangecheck
+        - constructorcheck
   max-issues-per-linter: 0
   max-same-issues: 0
 
@@ -43,5 +44,9 @@ linters-settings:
       path: tools/maprangecheck/maprangecheck.so
       description: reports range statements over maps
       original-url: github.com/onflow/cadence/tools/maprangecheck
+    constructorcheck:
+      path: tools/constructorcheck/constructorcheck.so
+      description: reports range statements over maps
+      original-url: github.com/onflow/cadence/tools/constructorcheck
 
 

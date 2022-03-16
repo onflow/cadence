@@ -16,36 +16,19 @@
  * limitations under the License.
  */
 
-package common
+package testdata
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=MemoryKind -trimprefix=MemoryKind
+type Value interface {
+	isValue()
+}
 
-// MemoryKind
-//
-type MemoryKind uint
+type XValue struct{}
 
-const (
-	MemoryKindUnknown MemoryKind = iota
-	MemoryKindBool
-	MemoryKindAddress
-	MemoryKindString
-	MemoryKindCharacter
-	MemoryKindMetaType
-	MemoryKindNumber
-	MemoryKindArray
-	MemoryKindDictionary
-	MemoryKindComposite
-	MemoryKindOptional
-	MemoryKindNil
-	MemoryKindVoid
-	MemoryKindTypeValue
-	MemoryKindPathValue
-	MemoryKindCapabilityValue
-	MemoryKindLinkValue
-	MemoryKindStorageReferenceValue
-	MemoryKindEphemeralReferenceValue
-	MemoryKindInterpretedFunction
-	MemoryKindHostFunction
-	MemoryKindBoundFunction
-	MemoryKindBigInt
-)
+var _ Value = XValue{}
+
+func (XValue) isValue() {}
+
+func testValue() {
+	v := XValue{} // want "value composite literal should be constructor function call"
+	_ = v
+}

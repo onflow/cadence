@@ -80,7 +80,7 @@ func (s StorageMap) ValueExists(key string) bool {
 // ReadValue returns the value for the given key.
 // Returns nil if the key does not exist.
 //
-func (s StorageMap) ReadValue(key string) Value {
+func (s StorageMap) ReadValue(interpreter *Interpreter, key string) Value {
 	storable, err := s.orderedMap.Get(
 		StringAtreeComparator,
 		StringAtreeHashInput,
@@ -93,7 +93,7 @@ func (s StorageMap) ReadValue(key string) Value {
 		panic(ExternalError{err})
 	}
 
-	return StoredValue(storable, s.orderedMap.Storage)
+	return StoredValue(interpreter, storable, s.orderedMap.Storage)
 }
 
 // WriteValue sets or removes a value in the storage map.
@@ -124,7 +124,7 @@ func (s StorageMap) SetValue(interpreter *Interpreter, key string, value atree.V
 	interpreter.maybeValidateAtreeValue(s.orderedMap)
 
 	if existingStorable != nil {
-		existingValue := StoredValue(existingStorable, interpreter.Storage)
+		existingValue := StoredValue(interpreter, existingStorable, interpreter.Storage)
 		existingValue.DeepRemove(interpreter)
 		interpreter.RemoveReferencedSlab(existingStorable)
 	}
@@ -155,7 +155,7 @@ func (s StorageMap) removeValue(interpreter *Interpreter, key string) {
 	// Value
 
 	if existingValueStorable != nil {
-		existingValue := StoredValue(existingValueStorable, interpreter.Storage)
+		existingValue := StoredValue(interpreter, existingValueStorable, interpreter.Storage)
 		existingValue.DeepRemove(interpreter)
 		interpreter.RemoveReferencedSlab(existingValueStorable)
 	}
@@ -164,13 +164,14 @@ func (s StorageMap) removeValue(interpreter *Interpreter, key string) {
 // Iterator returns an iterator (StorageMapIterator),
 // which allows iterating over the keys and values of the storage map
 //
-func (s StorageMap) Iterator() StorageMapIterator {
+func (s StorageMap) Iterator(interpreter *Interpreter) StorageMapIterator {
 	mapIterator, err := s.orderedMap.Iterator()
 	if err != nil {
 		panic(ExternalError{err})
 	}
 
 	return StorageMapIterator{
+		interpreter: interpreter,
 		mapIterator: mapIterator,
 		storage:     s.orderedMap.Storage,
 	}
@@ -183,6 +184,7 @@ func (s StorageMap) StorageID() atree.StorageID {
 // StorageMapIterator is an iterator over StorageMap
 //
 type StorageMapIterator struct {
+	interpreter *Interpreter
 	mapIterator *atree.MapIterator
 	storage     atree.SlabStorage
 }
@@ -201,7 +203,7 @@ func (i StorageMapIterator) Next() (string, Value) {
 	}
 
 	key := string(k.(StringAtreeValue))
-	value := MustConvertStoredValue(v)
+	value := MustConvertStoredValue(i.interpreter, v)
 
 	return key, value
 }
@@ -235,5 +237,5 @@ func (i StorageMapIterator) NextValue() Value {
 		return nil
 	}
 
-	return MustConvertStoredValue(v)
+	return MustConvertStoredValue(i.interpreter, v)
 }

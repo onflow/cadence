@@ -106,7 +106,7 @@ func testAccount(
 		accountValues := make(map[storageKey]interpreter.Value)
 
 		for storageMapKey, accountStorage := range inter.Storage.(interpreter.InMemoryStorage).StorageMaps {
-			iterator := accountStorage.Iterator()
+			iterator := accountStorage.Iterator(inter)
 			for {
 				key, value := iterator.Next()
 				if key == "" {
@@ -126,8 +126,8 @@ func testAccount(
 	return inter, getAccountValues
 }
 
-func returnZeroUInt64() interpreter.UInt64Value {
-	return interpreter.UInt64Value(0)
+func returnZeroUInt64(_ *interpreter.Interpreter) interpreter.UInt64Value {
+	return interpreter.NewUnmeteredUInt64Value(0)
 }
 
 func returnZeroUFix64() interpreter.UFix64Value {
@@ -1876,7 +1876,7 @@ func TestInterpretAccount_StorageFields(t *testing.T) {
 				AssertValuesEqual(
 					t,
 					inter,
-					interpreter.UInt64Value(0),
+					interpreter.NewUnmeteredUInt64Value(0),
 					value,
 				)
 			})
