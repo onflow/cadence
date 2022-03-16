@@ -389,7 +389,7 @@ func (interpreter *Interpreter) testEqual(left, right Value, expression *ast.Bin
 
 	leftEquatable, ok := left.(EquatableValue)
 	if !ok {
-		return false
+		return NewBoolValue(interpreter, false)
 	}
 
 	return NewBoolValue(interpreter, leftEquatable.Equal(
@@ -408,7 +408,7 @@ func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpres
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
-		return boolValue.Negate()
+		return boolValue.Negate(interpreter)
 
 	case ast.OperationMinus:
 		integerValue, ok := value.(NumberValue)
@@ -921,16 +921,21 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 
 			return NewSomeValueNonCopying(
 				interpreter,
-				&EphemeralReferenceValue{
-					Authorized:   innerBorrowType.Authorized,
-					Value:        result.InnerValue(interpreter, getLocationRange),
-					BorrowedType: innerBorrowType.Type,
-				},
+				NewEphemeralReferenceValue(
+					interpreter,
+					innerBorrowType.Authorized,
+					result.InnerValue(interpreter, getLocationRange),
+					innerBorrowType.Type),
 			)
 		case NilValue:
 			return NewNilValue(interpreter)
 		default:
-			return NewEphemeralReferenceValue(interpreter, innerBorrowType.Authorized, result, innerBorrowType.Type)
+			return NewEphemeralReferenceValue(
+				interpreter,
+				innerBorrowType.Authorized,
+				result,
+				innerBorrowType.Type,
+			)
 		}
 	case *sema.ReferenceType:
 		return NewEphemeralReferenceValue(interpreter, typ.Authorized, result, typ.Type)

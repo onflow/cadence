@@ -2270,7 +2270,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 	switch unwrappedTargetType.(type) {
 	case *sema.AddressType:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertAddress(value)
+			return ConvertAddress(interpreter, value)
 		}
 	}
 
@@ -2874,8 +2874,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.AddressTypeName,
 		functionType: sema.AddressConversionFunctionType,
-		convert: func(_ *Interpreter, value Value) Value {
-			return ConvertAddress(value)
+		convert: func(interpreter *Interpreter, value Value) Value {
+			return ConvertAddress(interpreter, value)
 		},
 	},
 	{
@@ -3965,7 +3965,8 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 
 			borrowStaticType := ConvertSemaToStaticType(borrowType)
 
-			linkValue := NewLinkValue(invocation.Interpreter, targetPath, borrowStaticType)
+			// Unmetered here because interpreter.writeStored(...) meters it
+			linkValue := NewUnmeteredLinkValue(targetPath, borrowStaticType)
 
 			interpreter.writeStored(
 				address,

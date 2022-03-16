@@ -583,8 +583,8 @@ func (BoolValue) StaticType() StaticType {
 	return PrimitiveStaticTypeBool
 }
 
-func (v BoolValue) Negate() BoolValue {
-	return !v
+func (v BoolValue) Negate(interpreter *Interpreter) BoolValue {
+	return NewBoolValue(interpreter, !bool(v))
 }
 
 func (v BoolValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -818,7 +818,7 @@ func (v CharacterValue) GetMember(interpreter *Interpreter, _ func() LocationRan
 		return NewHostFunctionValue(
 			interpreter,
 			func(invocation Invocation) Value {
-				memoryUsage := NewStringMemoryUsage(uint64(len(v)))
+				memoryUsage := common.NewStringMemoryUsage(len(v))
 
 				return NewStringValue(
 					interpreter,
@@ -15733,8 +15733,8 @@ func NewAddressValueFromBytes(
 	return NewUnmeteredAddressValue(address)
 }
 
-func ConvertAddress(value Value) AddressValue {
-	var result AddressValue
+func ConvertAddress(interpreter *Interpreter, value Value) AddressValue {
+	var result common.Address
 
 	uint64Value := ConvertUInt64(value)
 
@@ -15742,8 +15742,7 @@ func ConvertAddress(value Value) AddressValue {
 		result[:common.AddressLength],
 		uint64(uint64Value),
 	)
-
-	return result
+	return NewAddressValue(interpreter, result)
 }
 
 var _ Value = AddressValue{}
@@ -16148,10 +16147,14 @@ func convertPath(interpreter *Interpreter, domain common.PathDomain, value Value
 		return NewNilValue(interpreter)
 	}
 
-	return NewSomeValueNonCopying(interpreter, PathValue{
-		Domain:     domain,
-		Identifier: stringValue.Str,
-	})
+	return NewSomeValueNonCopying(
+		interpreter,
+		NewPathValue(
+			interpreter,
+			domain,
+			stringValue.Str,
+		),
+	)
 }
 
 func ConvertPublicPath(interpreter *Interpreter, value Value) Value {
