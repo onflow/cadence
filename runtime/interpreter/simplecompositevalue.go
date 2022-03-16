@@ -80,7 +80,7 @@ func (v *SimpleCompositeValue) Accept(interpreter *Interpreter, visitor Visitor)
 // ForEachField iterates over all field-name field-value pairs of the composite value.
 // It does NOT iterate over computed fields and functions!
 //
-func (v *SimpleCompositeValue) ForEachField(f func(fieldName string, fieldValue Value)) {
+func (v *SimpleCompositeValue) ForEachField(_ *Interpreter, f func(fieldName string, fieldValue Value)) {
 	for _, fieldName := range v.FieldNames {
 		fieldValue := v.Fields[fieldName]
 		f(fieldName, fieldValue)
@@ -90,8 +90,8 @@ func (v *SimpleCompositeValue) ForEachField(f func(fieldName string, fieldValue 
 // Walk iterates over all field values of the composite value.
 // It does NOT walk the computed fields and functions!
 //
-func (v *SimpleCompositeValue) Walk(walkChild func(Value)) {
-	v.ForEachField(func(_ string, fieldValue Value) {
+func (v *SimpleCompositeValue) Walk(interpreter *Interpreter, walkChild func(Value)) {
+	v.ForEachField(interpreter, func(_ string, fieldValue Value) {
 		walkChild(fieldValue)
 	})
 }

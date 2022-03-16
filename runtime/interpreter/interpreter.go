@@ -2705,7 +2705,7 @@ func (interpreter *Interpreter) ReadStored(
 	identifier string,
 ) Value {
 	accountStorage := interpreter.Storage.GetStorageMap(storageAddress, domain)
-	return accountStorage.ReadValue(identifier)
+	return accountStorage.ReadValue(interpreter, identifier)
 }
 
 func (interpreter *Interpreter) writeStored(
@@ -2858,8 +2858,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 		convert: func(interpreter *Interpreter, value Value) Value {
 			return ConvertWord8(interpreter, value)
 		},
-		min: Word8Value(0),
-		max: Word8Value(math.MaxUint8),
+		min: NewUnmeteredWord8Value(0),
+		max: NewUnmeteredWord8Value(math.MaxUint8),
 	},
 	{
 		name:         sema.Word16TypeName,
@@ -2867,8 +2867,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 		convert: func(interpreter *Interpreter, value Value) Value {
 			return ConvertWord16(interpreter, value)
 		},
-		min: Word16Value(0),
-		max: Word16Value(math.MaxUint16),
+		min: NewUnmeteredWord16Value(0),
+		max: NewUnmeteredWord16Value(math.MaxUint16),
 	},
 	{
 		name:         sema.Word32TypeName,
@@ -2876,8 +2876,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 		convert: func(interpreter *Interpreter, value Value) Value {
 			return ConvertWord32(interpreter, value)
 		},
-		min: Word32Value(0),
-		max: Word32Value(math.MaxUint32),
+		min: NewUnmeteredWord32Value(0),
+		max: NewUnmeteredWord32Value(math.MaxUint32),
 	},
 	{
 		name:         sema.Word64TypeName,
@@ -2885,8 +2885,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 		convert: func(interpreter *Interpreter, value Value) Value {
 			return ConvertWord64(interpreter, value)
 		},
-		min: Word64Value(0),
-		max: Word64Value(math.MaxUint64),
+		min: NewUnmeteredWord64Value(0),
+		max: NewUnmeteredWord64Value(math.MaxUint64),
 	},
 	{
 		name:         sema.Fix64TypeName,
@@ -3094,7 +3094,7 @@ func init() {
 
 				returnType := invocation.Interpreter.MustConvertStaticToSemaType(typeValue.Type)
 				parameterTypes := make([]*sema.Parameter, 0, parameters.Count())
-				parameters.Iterate(func(param Value) bool {
+				parameters.Iterate(invocation.Interpreter, func(param Value) bool {
 					semaType := invocation.Interpreter.MustConvertStaticToSemaType(param.(TypeValue).Type)
 					parameterTypes = append(
 						parameterTypes,
@@ -3140,7 +3140,7 @@ func RestrictedTypeFunction(invocation Invocation) Value {
 	semaRestrictions := make([]*sema.InterfaceType, 0, restrictionIDs.Count())
 
 	var invalidRestrictionID bool
-	restrictionIDs.Iterate(func(typeID Value) bool {
+	restrictionIDs.Iterate(invocation.Interpreter, func(typeID Value) bool {
 		typeIDValue, ok := typeID.(*StringValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
@@ -3469,7 +3469,7 @@ var stringFunction = func() Value {
 					memoryUsage,
 					func() string {
 						// TODO: meter
-						bytes, _ := ByteArrayValueToByteSlice(argument)
+						bytes, _ := ByteArrayValueToByteSlice(inter, argument)
 						return hex.EncodeToString(bytes)
 					},
 				)
@@ -4611,7 +4611,7 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 		}
 
 		if equatableValue, ok := value.(EquatableValue); ok {
-			otherValue := StoredValue(otherStorable, interpreter.Storage)
+			otherValue := StoredValue(interpreter, otherStorable, interpreter.Storage)
 			return equatableValue.Equal(interpreter, ReturnEmptyLocationRange, otherValue)
 		}
 
@@ -4823,10 +4823,7 @@ func (interpreter *Interpreter) MeterMemory(usage common.MemoryUsage) error {
 // UseConstantMemory uses a pre-determined amount of memory
 //
 func (interpreter *Interpreter) UseConstantMemory(kind common.MemoryKind) {
-	interpreter.MeterMemory(common.MemoryUsage{
-		Kind:   kind,
-		Amount: 1,
-	})
+	interpreter.MeterMemory(common.NewConstantMemoryUsage(kind))
 }
 
 func (interpreter *Interpreter) DecodeStorable(

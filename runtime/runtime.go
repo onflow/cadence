@@ -962,7 +962,7 @@ func validateArgumentParams(
 		}
 
 		// Ensure static type info is available for all values
-		interpreter.InspectValue(arg, func(value interpreter.Value) bool {
+		interpreter.InspectValue(inter, arg, func(value interpreter.Value) bool {
 			if value == nil {
 				return true
 			}
@@ -1911,7 +1911,7 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 				panic(runtimeErrors.NewUnreachableError())
 			}
 
-			publicKey, err := interpreter.ByteArrayValueToByteSlice(publicKeyValue)
+			publicKey, err := interpreter.ByteArrayValueToByteSlice(inter, publicKeyValue)
 			if err != nil {
 				panic("addPublicKey requires the first argument to be a byte array")
 			}
@@ -2035,7 +2035,7 @@ func (r *interpreterRuntime) loadContract(
 				location.Address,
 				StorageDomainContract,
 			)
-			storedValue = storageMap.ReadValue(location.Name)
+			storedValue = storageMap.ReadValue(inter, location.Name)
 		}
 
 		if storedValue == nil {
@@ -2470,7 +2470,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 			constructorArguments := invocation.Arguments[requiredArgumentCount:]
 			constructorArgumentTypes := invocation.ArgumentTypes[requiredArgumentCount:]
 
-			code, err := interpreter.ByteArrayValueToByteSlice(newCodeValue)
+			code, err := interpreter.ByteArrayValueToByteSlice(inter, newCodeValue)
 			if err != nil {
 				panic("add requires the second argument to be an array")
 			}
@@ -3438,7 +3438,7 @@ func NewPublicKeyFromValue(
 	// publicKey field
 	key := publicKey.GetMember(inter, getLocationRange, sema.PublicKeyPublicKeyField)
 
-	byteArray, err := interpreter.ByteArrayValueToByteSlice(key)
+	byteArray, err := interpreter.ByteArrayValueToByteSlice(inter, key)
 	if err != nil {
 		return nil, fmt.Errorf("public key needs to be a byte array. %w", err)
 	}
@@ -3572,7 +3572,7 @@ func blsVerifyPoP(
 		panic(err)
 	}
 
-	signature, err := interpreter.ByteArrayValueToByteSlice(signatureValue)
+	signature, err := interpreter.ByteArrayValueToByteSlice(inter, signatureValue)
 	if err != nil {
 		panic(err)
 	}
@@ -3595,13 +3595,13 @@ func blsAggregateSignatures(
 ) interpreter.OptionalValue {
 
 	bytesArray := make([][]byte, 0, signaturesValue.Count())
-	signaturesValue.Iterate(func(element interpreter.Value) (resume bool) {
+	signaturesValue.Iterate(inter, func(element interpreter.Value) (resume bool) {
 		signature, ok := element.(*interpreter.ArrayValue)
 		if !ok {
 			panic(runtimeErrors.NewUnreachableError())
 		}
 
-		bytes, err := interpreter.ByteArrayValueToByteSlice(signature)
+		bytes, err := interpreter.ByteArrayValueToByteSlice(inter, signature)
 		if err != nil {
 			panic(err)
 		}
@@ -3640,7 +3640,7 @@ func blsAggregatePublicKeys(
 ) interpreter.OptionalValue {
 
 	publicKeys := make([]*PublicKey, 0, publicKeysValue.Count())
-	publicKeysValue.Iterate(func(element interpreter.Value) (resume bool) {
+	publicKeysValue.Iterate(inter, func(element interpreter.Value) (resume bool) {
 		publicKeyValue, ok := element.(*interpreter.CompositeValue)
 		if !ok {
 			panic(runtimeErrors.NewUnreachableError())
@@ -3692,12 +3692,12 @@ func verifySignature(
 	runtimeInterface Interface,
 ) interpreter.BoolValue {
 
-	signature, err := interpreter.ByteArrayValueToByteSlice(signatureValue)
+	signature, err := interpreter.ByteArrayValueToByteSlice(inter, signatureValue)
 	if err != nil {
 		panic(fmt.Errorf("failed to get signature. %w", err))
 	}
 
-	signedData, err := interpreter.ByteArrayValueToByteSlice(signedDataValue)
+	signedData, err := interpreter.ByteArrayValueToByteSlice(inter, signedDataValue)
 	if err != nil {
 		panic(fmt.Errorf("failed to get signed data. %w", err))
 	}
@@ -3739,7 +3739,7 @@ func hash(
 	runtimeInterface Interface,
 ) *interpreter.ArrayValue {
 
-	data, err := interpreter.ByteArrayValueToByteSlice(dataValue)
+	data, err := interpreter.ByteArrayValueToByteSlice(inter, dataValue)
 	if err != nil {
 		panic(fmt.Errorf("failed to get data. %w", err))
 	}

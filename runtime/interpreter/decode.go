@@ -612,7 +612,7 @@ func (d StorableDecoder) decodeUInt256() (UInt256Value, error) {
 }
 
 func (d StorableDecoder) decodeWord8() (Word8Value, error) {
-	value, err := d.decoder.DecodeUint64()
+	value, err := decodeUint64(d.decoder, d.memoryGauge)
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return 0, fmt.Errorf("unknown Word8 encoding: %s", e.ActualType.String())
@@ -623,11 +623,13 @@ func (d StorableDecoder) decodeWord8() (Word8Value, error) {
 	if value > max {
 		return 0, fmt.Errorf("invalid Word8: got %d, expected max %d", value, max)
 	}
-	return Word8Value(value), nil
+
+	// Already metered at `decodeUint64`
+	return NewUnmeteredWord8Value(uint8(value)), nil
 }
 
 func (d StorableDecoder) decodeWord16() (Word16Value, error) {
-	value, err := d.decoder.DecodeUint64()
+	value, err := decodeUint64(d.decoder, d.memoryGauge)
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return 0, fmt.Errorf("unknown Word16 encoding: %s", e.ActualType.String())
@@ -638,11 +640,13 @@ func (d StorableDecoder) decodeWord16() (Word16Value, error) {
 	if value > max {
 		return 0, fmt.Errorf("invalid Word16: got %d, expected max %d", value, max)
 	}
-	return Word16Value(value), nil
+
+	// Already metered at `decodeUint64`
+	return NewUnmeteredWord16Value(uint16(value)), nil
 }
 
 func (d StorableDecoder) decodeWord32() (Word32Value, error) {
-	value, err := d.decoder.DecodeUint64()
+	value, err := decodeUint64(d.decoder, d.memoryGauge)
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return 0, fmt.Errorf("unknown Word32 encoding: %s", e.ActualType.String())
@@ -653,18 +657,22 @@ func (d StorableDecoder) decodeWord32() (Word32Value, error) {
 	if value > max {
 		return 0, fmt.Errorf("invalid Word32: got %d, expected max %d", value, max)
 	}
-	return Word32Value(value), nil
+
+	// Already metered at `decodeUint64`
+	return NewUnmeteredWord32Value(uint32(value)), nil
 }
 
 func (d StorableDecoder) decodeWord64() (Word64Value, error) {
-	value, err := d.decoder.DecodeUint64()
+	value, err := decodeUint64(d.decoder, d.memoryGauge)
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return 0, fmt.Errorf("unknown Word64 encoding: %s", e.ActualType.String())
 		}
 		return 0, err
 	}
-	return Word64Value(value), nil
+
+	// Already metered at `decodeUint64`
+	return NewUnmeteredWord64Value(value), nil
 }
 
 func (d StorableDecoder) decodeFix64() (Fix64Value, error) {
@@ -699,6 +707,7 @@ func (d StorableDecoder) decodeSome() (SomeStorable, error) {
 	}
 
 	return SomeStorable{
+		gauge:    d.memoryGauge,
 		Storable: storable,
 	}, nil
 }

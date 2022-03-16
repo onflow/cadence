@@ -130,7 +130,7 @@ func TestRandomMapOperations(t *testing.T) {
 	t.Run("iterate", func(t *testing.T) {
 		require.Equal(t, testMap.Count(), entries.size())
 
-		testMap.Iterate(func(key, value interpreter.Value) (resume bool) {
+		testMap.Iterate(inter, func(key, value interpreter.Value) (resume bool) {
 			orgValue, ok := entries.get(inter, key)
 			require.True(t, ok, "cannot find key: %v", key)
 
@@ -557,7 +557,7 @@ func TestRandomArrayOperations(t *testing.T) {
 		require.Equal(t, testArray.Count(), len(elements))
 
 		index := 0
-		testArray.Iterate(func(element interpreter.Value) (resume bool) {
+		testArray.Iterate(inter, func(element interpreter.Value) (resume bool) {
 			orgElement := elements[index]
 			utils.AssertValuesEqual(t, inter, orgElement, element)
 
@@ -896,7 +896,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 
 	t.Run("iterate", func(t *testing.T) {
 		fieldCount := 0
-		testComposite.ForEachField(func(name string, value interpreter.Value) {
+		testComposite.ForEachField(inter, func(name string, value interpreter.Value) {
 			orgValue, ok := orgFields[name]
 			require.True(t, ok)
 			utils.AssertValuesEqual(t, inter, orgValue, value)
@@ -1164,7 +1164,7 @@ func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) inte
 
 	case *interpreter.DictionaryValue:
 		keyValues := make([]interpreter.Value, 0, v.Count()*2)
-		v.Iterate(func(key, value interpreter.Value) (resume bool) {
+		v.Iterate(inter, func(key, value interpreter.Value) (resume bool) {
 			keyValues = append(keyValues, deepCopyValue(inter, key))
 			keyValues = append(keyValues, deepCopyValue(inter, value))
 			return true
@@ -1181,7 +1181,7 @@ func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) inte
 		)
 	case *interpreter.ArrayValue:
 		elements := make([]interpreter.Value, 0, v.Count())
-		v.Iterate(func(value interpreter.Value) (resume bool) {
+		v.Iterate(inter, func(value interpreter.Value) (resume bool) {
 			elements = append(elements, deepCopyValue(inter, value))
 			return true
 		})
@@ -1194,7 +1194,7 @@ func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) inte
 		)
 	case *interpreter.CompositeValue:
 		fields := make([]interpreter.CompositeField, 0)
-		v.ForEachField(func(name string, value interpreter.Value) {
+		v.ForEachField(inter, func(name string, value interpreter.Value) {
 			fields = append(fields, interpreter.CompositeField{
 				Name:  name,
 				Value: deepCopyValue(inter, value),
@@ -1278,13 +1278,13 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 	case Int:
 		return interpreter.NewUnmeteredIntValueFromInt64(int64(sign()) * rand.Int63())
 	case Int8:
-		return interpreter.Int8Value(randomInt(math.MaxUint8))
+		return interpreter.NewUnmeteredInt8Value(int8(randomInt(math.MaxUint8)))
 	case Int16:
-		return interpreter.Int16Value(randomInt(math.MaxUint16))
+		return interpreter.NewUnmeteredInt16Value(int16(randomInt(math.MaxUint16)))
 	case Int32:
-		return interpreter.Int32Value(int32(sign()) * rand.Int31())
+		return interpreter.NewUnmeteredInt32Value(int32(sign()) * rand.Int31())
 	case Int64:
-		return interpreter.Int64Value(int64(sign()) * rand.Int63())
+		return interpreter.NewUnmeteredInt64Value(int64(sign()) * rand.Int63())
 	case Int128:
 		return interpreter.NewUnmeteredInt128ValueFromInt64(int64(sign()) * rand.Int63())
 	case Int256:
@@ -1308,13 +1308,13 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 
 	// Word
 	case Word8:
-		return interpreter.Word8Value(randomInt(math.MaxUint8))
+		return interpreter.NewUnmeteredWord8Value(uint8(randomInt(math.MaxUint8)))
 	case Word16:
-		return interpreter.Word16Value(randomInt(math.MaxUint16))
+		return interpreter.NewUnmeteredWord16Value(uint16(randomInt(math.MaxUint16)))
 	case Word32:
-		return interpreter.Word32Value(rand.Uint32())
+		return interpreter.NewUnmeteredWord32Value(rand.Uint32())
 	case Word64:
-		return interpreter.Word64Value(rand.Uint64())
+		return interpreter.NewUnmeteredWord64Value(rand.Uint64())
 
 	// Fixed point
 	case Fix64:

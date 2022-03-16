@@ -106,7 +106,7 @@ var rlpDecodeStringFunction = interpreter.NewUnmeteredHostFunctionValue(
 
 		getLocationRange := invocation.GetLocationRange
 
-		convertedInput, err := interpreter.ByteArrayValueToByteSlice(input)
+		convertedInput, err := interpreter.ByteArrayValueToByteSlice(invocation.Interpreter, input)
 		if err != nil {
 			panic(RLPDecodeStringError{
 				Msg:           err.Error(),
@@ -176,7 +176,7 @@ var rlpDecodeListFunction = interpreter.NewUnmeteredHostFunctionValue(
 
 		getLocationRange := invocation.GetLocationRange
 
-		convertedInput, err := interpreter.ByteArrayValueToByteSlice(input)
+		convertedInput, err := interpreter.ByteArrayValueToByteSlice(invocation.Interpreter, input)
 		if err != nil {
 			panic(RLPDecodeListError{
 				Msg:           err.Error(),

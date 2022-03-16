@@ -4248,7 +4248,7 @@ func TestInterpretDictionaryIndexingAssignmentExisting(t *testing.T) {
 			interpreter.NewUnmeteredStringValue("abc"),
 			interpreter.NewUnmeteredIntValueFromInt64(23),
 		},
-		dictionaryKeyValues(actualDict),
+		dictionaryKeyValues(inter, actualDict),
 	)
 }
 
@@ -4314,7 +4314,7 @@ func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
 			interpreter.NewUnmeteredStringValue("def"),
 			interpreter.NewUnmeteredIntValueFromInt64(42),
 		},
-		dictionaryKeyValues(actualDict),
+		dictionaryKeyValues(inter, actualDict),
 	)
 }
 
@@ -4378,7 +4378,7 @@ func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 			interpreter.NewUnmeteredStringValue("abc"),
 			interpreter.NewUnmeteredIntValueFromInt64(23),
 		},
-		dictionaryKeyValues(actualDict),
+		dictionaryKeyValues(inter, actualDict),
 	)
 }
 
@@ -5607,7 +5607,7 @@ func TestInterpretDictionaryRemove(t *testing.T) {
 			interpreter.NewUnmeteredStringValue("def"),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
 		},
-		dictionaryKeyValues(actualDict),
+		dictionaryKeyValues(inter, actualDict),
 	)
 
 	AssertValuesEqual(
@@ -5643,7 +5643,7 @@ func TestInterpretDictionaryInsert(t *testing.T) {
 			interpreter.NewUnmeteredStringValue("def"),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
 		},
-		dictionaryKeyValues(actualDict),
+		dictionaryKeyValues(inter, actualDict),
 	)
 
 	AssertValuesEqual(
@@ -6691,19 +6691,19 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			ty:    sema.IntType,
 		},
 		"Int8": {
-			value: interpreter.Int8Value(42),
+			value: interpreter.NewUnmeteredInt8Value(42),
 			ty:    sema.Int8Type,
 		},
 		"Int16": {
-			value: interpreter.Int16Value(42),
+			value: interpreter.NewUnmeteredInt16Value(42),
 			ty:    sema.Int16Type,
 		},
 		"Int32": {
-			value: interpreter.Int32Value(42),
+			value: interpreter.NewUnmeteredInt32Value(42),
 			ty:    sema.Int32Type,
 		},
 		"Int64": {
-			value: interpreter.Int64Value(42),
+			value: interpreter.NewUnmeteredInt64Value(42),
 			ty:    sema.Int64Type,
 		},
 		"Int128": {
@@ -6745,19 +6745,19 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 		},
 		// Word*
 		"Word8": {
-			value: interpreter.Word8Value(42),
+			value: interpreter.NewUnmeteredWord8Value(42),
 			ty:    sema.Word8Type,
 		},
 		"Word16": {
-			value: interpreter.Word16Value(42),
+			value: interpreter.NewUnmeteredWord16Value(42),
 			ty:    sema.Word16Type,
 		},
 		"Word32": {
-			value: interpreter.Word32Value(42),
+			value: interpreter.NewUnmeteredWord32Value(42),
 			ty:    sema.Word32Type,
 		},
 		"Word64": {
-			value: interpreter.Word64Value(42),
+			value: interpreter.NewUnmeteredWord64Value(42),
 			ty:    sema.Word64Type,
 		},
 		// Fix*
@@ -7470,7 +7470,7 @@ func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
 		var storedValues []string
 
 		for _, slab := range permanentSlabs {
-			storedValue := interpreter.StoredValue(slab, inter.Storage)
+			storedValue := interpreter.StoredValue(inter, slab, inter.Storage)
 			storedValues = append(storedValues, storedValue.String())
 		}
 
@@ -7495,7 +7495,7 @@ func TestInterpretCastingIntLiteralToInt8(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.Int8Value(42),
+		interpreter.NewUnmeteredInt8Value(42),
 		inter.Globals["x"].GetValue(),
 	)
 }

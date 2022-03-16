@@ -83,6 +83,7 @@ func TestInspectValue(t *testing.T) {
 		var inspectedValues []Value
 
 		InspectValue(
+			inter,
 			dictValue,
 			func(value Value) bool {
 				inspectedValues = append(inspectedValues, value)
@@ -110,6 +111,7 @@ func TestInspectValue(t *testing.T) {
 		var inspectedValues []Value
 
 		InspectValue(
+			inter,
 			compositeValue,
 			func(value Value) bool {
 				inspectedValues = append(inspectedValues, value)

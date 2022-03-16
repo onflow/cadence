@@ -92,7 +92,7 @@ type Value interface {
 	fmt.Stringer
 	IsValue()
 	Accept(interpreter *Interpreter, visitor Visitor)
-	Walk(walkChild func(Value))
+	Walk(interpreter *Interpreter, walkChild func(Value))
 	DynamicType(interpreter *Interpreter, seenReferences SeenReferences) DynamicType
 	StaticType() StaticType
 	ConformsToDynamicType(
@@ -147,8 +147,8 @@ type EquatableValue interface {
 
 func newValueComparator(interpreter *Interpreter, getLocationRange func() LocationRange) atree.ValueComparator {
 	return func(storage atree.SlabStorage, atreeValue atree.Value, otherStorable atree.Storable) (bool, error) {
-		value := MustConvertStoredValue(atreeValue)
-		otherValue := StoredValue(otherStorable, storage)
+		value := MustConvertStoredValue(interpreter, atreeValue)
+		otherValue := StoredValue(interpreter, otherStorable, storage)
 		return value.(EquatableValue).Equal(interpreter, getLocationRange, otherValue), nil
 	}
 }
@@ -236,7 +236,7 @@ func (v TypeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitTypeValue(interpreter, v)
 }
 
-func (TypeValue) Walk(_ func(Value)) {
+func (TypeValue) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
@@ -430,7 +430,7 @@ func (v VoidValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitVoidValue(interpreter, v)
 }
 
-func (VoidValue) Walk(_ func(Value)) {
+func (VoidValue) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
@@ -527,7 +527,7 @@ func (v BoolValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitBoolValue(interpreter, v)
 }
 
-func (BoolValue) Walk(_ func(Value)) {
+func (BoolValue) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
@@ -653,7 +653,7 @@ func (v CharacterValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitCharacterValue(interpreter, v)
 }
 
-func (CharacterValue) Walk(_ func(Value)) {
+func (CharacterValue) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
@@ -830,7 +830,7 @@ func (v *StringValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitStringValue(interpreter, v)
 }
 
-func (*StringValue) Walk(_ func(Value)) {
+func (*StringValue) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
@@ -1240,8 +1240,6 @@ func NewArrayValueWithIterator(
 	address common.Address,
 	values func() Value,
 ) *ArrayValue {
-	interpreter.UseConstantMemory(common.MemoryKindArray)
-
 	interpreter.ReportComputation(common.ComputationKindCreateArrayValue, 1)
 
 	var v *ArrayValue
@@ -1278,13 +1276,23 @@ func NewArrayValueWithIterator(
 	if err != nil {
 		panic(ExternalError{err})
 	}
+	// must assign to v here for tracing to work properly
+	v = newArrayValueFromAtreeValue(interpreter, array, arrayType)
+	return v
+}
 
-	v = &ArrayValue{
-		Type:  arrayType,
+func newArrayValueFromAtreeValue(
+	memoryGauge common.MemoryGauge,
+	array *atree.Array,
+	staticType ArrayStaticType,
+) *ArrayValue {
+
+	common.UseMemory(memoryGauge, common.NewConstantMemoryUsage(common.MemoryKindArray))
+
+	return &ArrayValue{
+		Type:  staticType,
 		array: array,
 	}
-
-	return v
 }
 
 var _ Value = &ArrayValue{}
@@ -1302,17 +1310,17 @@ func (v *ArrayValue) Accept(interpreter *Interpreter, visitor Visitor) {
 		return
 	}
 
-	v.Walk(func(element Value) {
+	v.Walk(interpreter, func(element Value) {
 		element.Accept(interpreter, visitor)
 	})
 }
 
-func (v *ArrayValue) Iterate(f func(element Value) (resume bool)) {
+func (v *ArrayValue) Iterate(interpreter *Interpreter, f func(element Value) (resume bool)) {
 	err := v.array.Iterate(func(element atree.Value) (resume bool, err error) {
 		// atree.Array iteration provides low-level atree.Value,
 		// convert to high-level interpreter.Value
 
-		resume = f(MustConvertStoredValue(element))
+		resume = f(MustConvertStoredValue(interpreter, element))
 
 		return resume, nil
 	})
@@ -1321,8 +1329,8 @@ func (v *ArrayValue) Iterate(f func(element Value) (resume bool)) {
 	}
 }
 
-func (v *ArrayValue) Walk(walkChild func(Value)) {
-	v.Iterate(func(element Value) (resume bool) {
+func (v *ArrayValue) Walk(interpreter *Interpreter, walkChild func(Value)) {
+	v.Iterate(interpreter, func(element Value) (resume bool) {
 		walkChild(element)
 		return true
 	})
@@ -1333,7 +1341,7 @@ func (v *ArrayValue) DynamicType(interpreter *Interpreter, seenReferences SeenRe
 
 	i := 0
 
-	v.Walk(func(element Value) {
+	v.Walk(interpreter, func(element Value) {
 		elementTypes[i] = element.DynamicType(interpreter, seenReferences)
 		i++
 	})
@@ -1379,7 +1387,7 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, getLocationRange func() L
 		}()
 	}
 
-	v.Walk(func(element Value) {
+	v.Walk(interpreter, func(element Value) {
 		maybeDestroy(interpreter, getLocationRange, element)
 	})
 
@@ -1426,7 +1434,7 @@ func (v *ArrayValue) Concat(interpreter *Interpreter, getLocationRange func() Lo
 				if atreeValue == nil {
 					first = false
 				} else {
-					value = MustConvertStoredValue(atreeValue)
+					value = MustConvertStoredValue(interpreter, atreeValue)
 				}
 			}
 
@@ -1437,7 +1445,7 @@ func (v *ArrayValue) Concat(interpreter *Interpreter, getLocationRange func() Lo
 				}
 
 				if atreeValue != nil {
-					value = MustConvertStoredValue(atreeValue)
+					value = MustConvertStoredValue(interpreter, atreeValue)
 
 					interpreter.checkContainerMutation(elementType, value, getLocationRange)
 				}
@@ -1498,7 +1506,7 @@ func (v *ArrayValue) Get(interpreter *Interpreter, getLocationRange func() Locat
 		panic(ExternalError{err})
 	}
 
-	return StoredValue(storable, interpreter.Storage)
+	return StoredValue(interpreter, storable, interpreter.Storage)
 }
 
 func (v *ArrayValue) SetKey(interpreter *Interpreter, getLocationRange func() LocationRange, key Value, value Value) {
@@ -1542,7 +1550,7 @@ func (v *ArrayValue) Set(interpreter *Interpreter, getLocationRange func() Locat
 	}
 	interpreter.maybeValidateAtreeValue(v.array)
 
-	existingValue := StoredValue(existingStorable, interpreter.Storage)
+	existingValue := StoredValue(interpreter, existingStorable, interpreter.Storage)
 
 	existingValue.DeepRemove(interpreter)
 
@@ -1557,9 +1565,13 @@ func (v *ArrayValue) RecursiveString(seenReferences SeenReferences) string {
 	values := make([]string, v.Count())
 
 	i := 0
-	v.Walk(func(value Value) {
-		values[i] = value.RecursiveString(seenReferences)
+
+	_ = v.array.Iterate(func(element atree.Value) (resume bool, err error) {
+		// ok to not meter anything created as part of this iteration, since we will discard the result
+		// upon creating the string
+		values[i] = MustConvertUnmeteredStoredValue(element).RecursiveString(seenReferences)
 		i++
+		return true, nil
 	})
 
 	return format.Array(values)
@@ -1585,7 +1597,7 @@ func (v *ArrayValue) Append(interpreter *Interpreter, getLocationRange func() Lo
 }
 
 func (v *ArrayValue) AppendAll(interpreter *Interpreter, getLocationRange func() LocationRange, other *ArrayValue) {
-	other.Walk(func(value Value) {
+	other.Walk(interpreter, func(value Value) {
 		v.Append(interpreter, getLocationRange, value)
 	})
 }
@@ -1663,7 +1675,7 @@ func (v *ArrayValue) Remove(interpreter *Interpreter, getLocationRange func() Lo
 	}
 	interpreter.maybeValidateAtreeValue(v.array)
 
-	value := StoredValue(storable, interpreter.Storage)
+	value := StoredValue(interpreter, storable, interpreter.Storage)
 
 	return value.Transfer(
 		interpreter,
@@ -1691,7 +1703,7 @@ func (v *ArrayValue) FirstIndex(interpreter *Interpreter, getLocationRange func(
 
 	var counter int64
 	var result bool
-	v.Iterate(func(element Value) (resume bool) {
+	v.Iterate(interpreter, func(element Value) (resume bool) {
 		if needleEquatable.Equal(interpreter, getLocationRange, element) {
 			result = true
 			// stop iteration
@@ -1717,7 +1729,7 @@ func (v *ArrayValue) Contains(interpreter *Interpreter, getLocationRange func() 
 	}
 
 	var result bool
-	v.Iterate(func(element Value) (resume bool) {
+	v.Iterate(interpreter, func(element Value) (resume bool) {
 		if needleEquatable.Equal(interpreter, getLocationRange, element) {
 			result = true
 			// stop iteration
@@ -1985,7 +1997,7 @@ func (v *ArrayValue) ConformsToDynamicType(
 	result := true
 	index := 0
 
-	v.Iterate(func(element Value) (resume bool) {
+	v.Iterate(interpreter, func(element Value) (resume bool) {
 		if !element.ConformsToDynamicType(
 			interpreter,
 			getLocationRange,
@@ -2101,7 +2113,7 @@ func (v *ArrayValue) Transfer(
 					return nil, nil
 				}
 
-				element := MustConvertStoredValue(value).
+				element := MustConvertStoredValue(interpreter, value).
 					Transfer(interpreter, getLocationRange, address, remove, nil)
 
 				return element, nil
@@ -2191,7 +2203,7 @@ func (v *ArrayValue) Clone(interpreter *Interpreter) Value {
 				return nil, nil
 			}
 
-			element := MustConvertStoredValue(value).
+			element := MustConvertStoredValue(interpreter, value).
 				Clone(interpreter)
 
 			return element, nil
@@ -2231,7 +2243,7 @@ func (v *ArrayValue) DeepRemove(interpreter *Interpreter) {
 	storage := v.array.Storage
 
 	err := v.array.PopIterate(func(storable atree.Storable) {
-		value := StoredValue(storable, storage)
+		value := StoredValue(interpreter, storable, storage)
 		value.DeepRemove(interpreter)
 		interpreter.RemoveReferencedSlab(storable)
 	})
@@ -2329,7 +2341,7 @@ func (v *ArrayValue) Slice(
 			}
 
 			if atreeValue != nil {
-				value = MustConvertStoredValue(atreeValue)
+				value = MustConvertStoredValue(interpreter, atreeValue)
 			}
 
 			if value == nil {
@@ -2584,7 +2596,7 @@ func (v IntValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitIntValue(interpreter, v)
 }
 
-func (IntValue) Walk(_ func(Value)) {
+func (IntValue) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
@@ -3105,7 +3117,7 @@ func (v Int8Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInt8Value(interpreter, v)
 }
 
-func (Int8Value) Walk(_ func(Value)) {
+func (Int8Value) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
@@ -3686,7 +3698,7 @@ func (v Int16Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInt16Value(interpreter, v)
 }
 
-func (Int16Value) Walk(_ func(Value)) {
+func (Int16Value) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
@@ -4268,7 +4280,7 @@ func (v Int32Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInt32Value(interpreter, v)
 }
 
-func (Int32Value) Walk(_ func(Value)) {
+func (Int32Value) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
@@ -4848,7 +4860,7 @@ func (v Int64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInt64Value(interpreter, v)
 }
 
-func (Int64Value) Walk(_ func(Value)) {
+func (Int64Value) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
@@ -5442,7 +5454,7 @@ func (v Int128Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInt128Value(interpreter, v)
 }
 
-func (Int128Value) Walk(_ func(Value)) {
+func (Int128Value) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
@@ -6123,7 +6135,7 @@ func (v Int256Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInt256Value(interpreter, v)
 }
 
-func (Int256Value) Walk(_ func(Value)) {
+func (Int256Value) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
@@ -6838,7 +6850,7 @@ func (v UIntValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUIntValue(interpreter, v)
 }
 
-func (UIntValue) Walk(_ func(Value)) {
+func (UIntValue) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
@@ -7366,7 +7378,7 @@ func (v UInt8Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUInt8Value(interpreter, v)
 }
 
-func (UInt8Value) Walk(_ func(Value)) {
+func (UInt8Value) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
@@ -7876,7 +7888,7 @@ func (v UInt16Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUInt16Value(interpreter, v)
 }
 
-func (UInt16Value) Walk(_ func(Value)) {
+func (UInt16Value) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
@@ -8396,7 +8408,7 @@ func (v UInt32Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUInt32Value(interpreter, v)
 }
 
-func (UInt32Value) Walk(_ func(Value)) {
+func (UInt32Value) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
@@ -8924,7 +8936,7 @@ func (v UInt64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUInt64Value(interpreter, v)
 }
 
-func (UInt64Value) Walk(_ func(Value)) {
+func (UInt64Value) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
@@ -9482,7 +9494,7 @@ func (v UInt128Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUInt128Value(interpreter, v)
 }
 
-func (UInt128Value) Walk(_ func(Value)) {
+func (UInt128Value) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
@@ -10106,7 +10118,7 @@ func (v UInt256Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUInt256Value(interpreter, v)
 }
 
-func (UInt256Value) Walk(_ func(Value)) {
+func (UInt256Value) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
@@ -10694,13 +10706,27 @@ var _ EquatableValue = Word8Value(0)
 var _ HashableValue = Word8Value(0)
 var _ MemberAccessibleValue = Word8Value(0)
 
+const word8Size = int(unsafe.Sizeof(Word8Value(0)))
+
+var word8MemoryUsage = common.NewNumberMemoryUsage(word8Size)
+
+func NewWord8Value(gauge common.MemoryGauge, valueGetter func() uint8) Word8Value {
+	common.UseMemory(gauge, word8MemoryUsage)
+
+	return NewUnmeteredWord8Value(valueGetter())
+}
+
+func NewUnmeteredWord8Value(value uint8) Word8Value {
+	return Word8Value(value)
+}
+
 func (Word8Value) IsValue() {}
 
 func (v Word8Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitWord8Value(interpreter, v)
 }
 
-func (Word8Value) Walk(_ func(Value)) {
+func (Word8Value) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
@@ -10740,10 +10766,14 @@ func (v Word8Value) Plus(interpreter *Interpreter, other NumberValue) NumberValu
 		})
 	}
 
-	return v + o
+	valueGetter := func() uint8 {
+		return uint8(v + o)
+	}
+
+	return NewWord8Value(interpreter, valueGetter)
 }
 
-func (v Word8Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
+func (v Word8Value) SaturatingPlus(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -10757,10 +10787,14 @@ func (v Word8Value) Minus(interpreter *Interpreter, other NumberValue) NumberVal
 		})
 	}
 
-	return v - o
+	valueGetter := func() uint8 {
+		return uint8(v - o)
+	}
+
+	return NewWord8Value(interpreter, valueGetter)
 }
 
-func (v Word8Value) SaturatingMinus(_ *Interpreter, _ NumberValue) NumberValue {
+func (v Word8Value) SaturatingMinus(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -10777,7 +10811,12 @@ func (v Word8Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
-	return v % o
+
+	valueGetter := func() uint8 {
+		return uint8(v % o)
+	}
+
+	return NewWord8Value(interpreter, valueGetter)
 }
 
 func (v Word8Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -10790,10 +10829,14 @@ func (v Word8Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue
 		})
 	}
 
-	return v * o
+	valueGetter := func() uint8 {
+		return uint8(v * o)
+	}
+
+	return NewWord8Value(interpreter, valueGetter)
 }
 
-func (v Word8Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
+func (v Word8Value) SaturatingMul(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -10810,10 +10853,15 @@ func (v Word8Value) Div(interpreter *Interpreter, other NumberValue) NumberValue
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
-	return v / o
+
+	valueGetter := func() uint8 {
+		return uint8(v / o)
+	}
+
+	return NewWord8Value(interpreter, valueGetter)
 }
 
-func (v Word8Value) SaturatingDiv(_ *Interpreter, _ NumberValue) NumberValue {
+func (v Word8Value) SaturatingDiv(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -10887,7 +10935,10 @@ func (v Word8Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []
 }
 
 func ConvertWord8(memoryGauge common.MemoryGauge, value Value) Word8Value {
-	return Word8Value(ConvertUInt8(memoryGauge, value))
+	uint8Value := ConvertUInt8(memoryGauge, value)
+
+	// Already metered during conversion in `ConvertUInt8`
+	return NewUnmeteredWord8Value(uint8(uint8Value))
 }
 
 func (v Word8Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -10900,7 +10951,11 @@ func (v Word8Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) Inte
 		})
 	}
 
-	return v | o
+	valueGetter := func() uint8 {
+		return uint8(v | o)
+	}
+
+	return NewWord8Value(interpreter, valueGetter)
 }
 
 func (v Word8Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -10912,7 +10967,12 @@ func (v Word8Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) Int
 			RightType: other.StaticType(),
 		})
 	}
-	return v ^ o
+
+	valueGetter := func() uint8 {
+		return uint8(v ^ o)
+	}
+
+	return NewWord8Value(interpreter, valueGetter)
 }
 
 func (v Word8Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -10925,7 +10985,11 @@ func (v Word8Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) Int
 		})
 	}
 
-	return v & o
+	valueGetter := func() uint8 {
+		return uint8(v & o)
+	}
+
+	return NewWord8Value(interpreter, valueGetter)
 }
 
 func (v Word8Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -10938,7 +11002,11 @@ func (v Word8Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValu
 		})
 	}
 
-	return v << o
+	valueGetter := func() uint8 {
+		return uint8(v << o)
+	}
+
+	return NewWord8Value(interpreter, valueGetter)
 }
 
 func (v Word8Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -10951,7 +11019,11 @@ func (v Word8Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVal
 		})
 	}
 
-	return v >> o
+	valueGetter := func() uint8 {
+		return uint8(v >> o)
+	}
+
+	return NewWord8Value(interpreter, valueGetter)
 }
 
 func (v Word8Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
@@ -11043,13 +11115,27 @@ var _ EquatableValue = Word16Value(0)
 var _ HashableValue = Word16Value(0)
 var _ MemberAccessibleValue = Word16Value(0)
 
+const word16Size = int(unsafe.Sizeof(Word16Value(0)))
+
+var word16MemoryUsage = common.NewNumberMemoryUsage(word16Size)
+
+func NewWord16Value(gauge common.MemoryGauge, valueGetter func() uint16) Word16Value {
+	common.UseMemory(gauge, word16MemoryUsage)
+
+	return NewUnmeteredWord16Value(valueGetter())
+}
+
+func NewUnmeteredWord16Value(value uint16) Word16Value {
+	return Word16Value(value)
+}
+
 func (Word16Value) IsValue() {}
 
 func (v Word16Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitWord16Value(interpreter, v)
 }
 
-func (Word16Value) Walk(_ func(Value)) {
+func (Word16Value) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
@@ -11088,10 +11174,14 @@ func (v Word16Value) Plus(interpreter *Interpreter, other NumberValue) NumberVal
 		})
 	}
 
-	return v + o
+	valueGetter := func() uint16 {
+		return uint16(v + o)
+	}
+
+	return NewWord16Value(interpreter, valueGetter)
 }
 
-func (v Word16Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
+func (v Word16Value) SaturatingPlus(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -11105,10 +11195,14 @@ func (v Word16Value) Minus(interpreter *Interpreter, other NumberValue) NumberVa
 		})
 	}
 
-	return v - o
+	valueGetter := func() uint16 {
+		return uint16(v - o)
+	}
+
+	return NewWord16Value(interpreter, valueGetter)
 }
 
-func (v Word16Value) SaturatingMinus(_ *Interpreter, _ NumberValue) NumberValue {
+func (v Word16Value) SaturatingMinus(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -11125,7 +11219,12 @@ func (v Word16Value) Mod(interpreter *Interpreter, other NumberValue) NumberValu
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
-	return v % o
+
+	valueGetter := func() uint16 {
+		return uint16(v % o)
+	}
+
+	return NewWord16Value(interpreter, valueGetter)
 }
 
 func (v Word16Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -11138,10 +11237,14 @@ func (v Word16Value) Mul(interpreter *Interpreter, other NumberValue) NumberValu
 		})
 	}
 
-	return v * o
+	valueGetter := func() uint16 {
+		return uint16(v * o)
+	}
+
+	return NewWord16Value(interpreter, valueGetter)
 }
 
-func (v Word16Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
+func (v Word16Value) SaturatingMul(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -11158,10 +11261,15 @@ func (v Word16Value) Div(interpreter *Interpreter, other NumberValue) NumberValu
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
-	return v / o
+
+	valueGetter := func() uint16 {
+		return uint16(v / o)
+	}
+
+	return NewWord16Value(interpreter, valueGetter)
 }
 
-func (v Word16Value) SaturatingDiv(_ *Interpreter, _ NumberValue) NumberValue {
+func (v Word16Value) SaturatingDiv(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -11235,7 +11343,10 @@ func (v Word16Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch [
 }
 
 func ConvertWord16(memoryGauge common.MemoryGauge, value Value) Word16Value {
-	return Word16Value(ConvertUInt16(memoryGauge, value))
+	uint16Value := ConvertUInt16(memoryGauge, value)
+
+	// Already metered during conversion in `ConvertUInt16`
+	return NewUnmeteredWord16Value(uint16(uint16Value))
 }
 
 func (v Word16Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -11248,7 +11359,11 @@ func (v Word16Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) Int
 		})
 	}
 
-	return v | o
+	valueGetter := func() uint16 {
+		return uint16(v | o)
+	}
+
+	return NewWord16Value(interpreter, valueGetter)
 }
 
 func (v Word16Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -11260,7 +11375,12 @@ func (v Word16Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) In
 			RightType: other.StaticType(),
 		})
 	}
-	return v ^ o
+
+	valueGetter := func() uint16 {
+		return uint16(v ^ o)
+	}
+
+	return NewWord16Value(interpreter, valueGetter)
 }
 
 func (v Word16Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -11273,7 +11393,11 @@ func (v Word16Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) In
 		})
 	}
 
-	return v & o
+	valueGetter := func() uint16 {
+		return uint16(v & o)
+	}
+
+	return NewWord16Value(interpreter, valueGetter)
 }
 
 func (v Word16Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -11286,7 +11410,11 @@ func (v Word16Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVal
 		})
 	}
 
-	return v << o
+	valueGetter := func() uint16 {
+		return uint16(v << o)
+	}
+
+	return NewWord16Value(interpreter, valueGetter)
 }
 
 func (v Word16Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -11299,7 +11427,11 @@ func (v Word16Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVa
 		})
 	}
 
-	return v >> o
+	valueGetter := func() uint16 {
+		return uint16(v >> o)
+	}
+
+	return NewWord16Value(interpreter, valueGetter)
 }
 
 func (v Word16Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
@@ -11393,13 +11525,27 @@ var _ EquatableValue = Word32Value(0)
 var _ HashableValue = Word32Value(0)
 var _ MemberAccessibleValue = Word32Value(0)
 
+const word32Size = int(unsafe.Sizeof(Word32Value(0)))
+
+var word32MemoryUsage = common.NewNumberMemoryUsage(word32Size)
+
+func NewWord32Value(gauge common.MemoryGauge, valueGetter func() uint32) Word32Value {
+	common.UseMemory(gauge, word32MemoryUsage)
+
+	return NewUnmeteredWord32Value(valueGetter())
+}
+
+func NewUnmeteredWord32Value(value uint32) Word32Value {
+	return Word32Value(value)
+}
+
 func (Word32Value) IsValue() {}
 
 func (v Word32Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitWord32Value(interpreter, v)
 }
 
-func (Word32Value) Walk(_ func(Value)) {
+func (Word32Value) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
@@ -11439,10 +11585,14 @@ func (v Word32Value) Plus(interpreter *Interpreter, other NumberValue) NumberVal
 		})
 	}
 
-	return v + o
+	valueGetter := func() uint32 {
+		return uint32(v + o)
+	}
+
+	return NewWord32Value(interpreter, valueGetter)
 }
 
-func (v Word32Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
+func (v Word32Value) SaturatingPlus(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -11456,10 +11606,14 @@ func (v Word32Value) Minus(interpreter *Interpreter, other NumberValue) NumberVa
 		})
 	}
 
-	return v - o
+	valueGetter := func() uint32 {
+		return uint32(v - o)
+	}
+
+	return NewWord32Value(interpreter, valueGetter)
 }
 
-func (v Word32Value) SaturatingMinus(_ *Interpreter, _ NumberValue) NumberValue {
+func (v Word32Value) SaturatingMinus(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -11476,7 +11630,12 @@ func (v Word32Value) Mod(interpreter *Interpreter, other NumberValue) NumberValu
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
-	return v % o
+
+	valueGetter := func() uint32 {
+		return uint32(v % o)
+	}
+
+	return NewWord32Value(interpreter, valueGetter)
 }
 
 func (v Word32Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -11489,10 +11648,14 @@ func (v Word32Value) Mul(interpreter *Interpreter, other NumberValue) NumberValu
 		})
 	}
 
-	return v * o
+	valueGetter := func() uint32 {
+		return uint32(v * o)
+	}
+
+	return NewWord32Value(interpreter, valueGetter)
 }
 
-func (v Word32Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
+func (v Word32Value) SaturatingMul(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -11509,10 +11672,15 @@ func (v Word32Value) Div(interpreter *Interpreter, other NumberValue) NumberValu
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
-	return v / o
+
+	valueGetter := func() uint32 {
+		return uint32(v / o)
+	}
+
+	return NewWord32Value(interpreter, valueGetter)
 }
 
-func (v Word32Value) SaturatingDiv(_ *Interpreter, _ NumberValue) NumberValue {
+func (v Word32Value) SaturatingDiv(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -11586,7 +11754,10 @@ func (v Word32Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch [
 }
 
 func ConvertWord32(memoryGauge common.MemoryGauge, value Value) Word32Value {
-	return Word32Value(ConvertUInt32(memoryGauge, value))
+	uint32Value := ConvertUInt32(memoryGauge, value)
+
+	// Already metered during conversion in `ConvertUInt32`
+	return NewUnmeteredWord32Value(uint32(uint32Value))
 }
 
 func (v Word32Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -11599,7 +11770,11 @@ func (v Word32Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) Int
 		})
 	}
 
-	return v | o
+	valueGetter := func() uint32 {
+		return uint32(v | o)
+	}
+
+	return NewWord32Value(interpreter, valueGetter)
 }
 
 func (v Word32Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -11611,7 +11786,12 @@ func (v Word32Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) In
 			RightType: other.StaticType(),
 		})
 	}
-	return v ^ o
+
+	valueGetter := func() uint32 {
+		return uint32(v ^ o)
+	}
+
+	return NewWord32Value(interpreter, valueGetter)
 }
 
 func (v Word32Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -11624,7 +11804,11 @@ func (v Word32Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) In
 		})
 	}
 
-	return v & o
+	valueGetter := func() uint32 {
+		return uint32(v & o)
+	}
+
+	return NewWord32Value(interpreter, valueGetter)
 }
 
 func (v Word32Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -11637,7 +11821,11 @@ func (v Word32Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVal
 		})
 	}
 
-	return v << o
+	valueGetter := func() uint32 {
+		return uint32(v << o)
+	}
+
+	return NewWord32Value(interpreter, valueGetter)
 }
 
 func (v Word32Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -11650,7 +11838,11 @@ func (v Word32Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVa
 		})
 	}
 
-	return v >> o
+	valueGetter := func() uint32 {
+		return uint32(v >> o)
+	}
+
+	return NewWord32Value(interpreter, valueGetter)
 }
 
 func (v Word32Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
@@ -11744,6 +11936,20 @@ var _ EquatableValue = Word64Value(0)
 var _ HashableValue = Word64Value(0)
 var _ MemberAccessibleValue = Word64Value(0)
 
+const word64Size = int(unsafe.Sizeof(Word64Value(0)))
+
+var word64MemoryUsage = common.NewNumberMemoryUsage(word64Size)
+
+func NewWord64Value(gauge common.MemoryGauge, valueGetter func() uint64) Word64Value {
+	common.UseMemory(gauge, word64MemoryUsage)
+
+	return NewUnmeteredWord64Value(valueGetter())
+}
+
+func NewUnmeteredWord64Value(value uint64) Word64Value {
+	return Word64Value(value)
+}
+
 // NOTE: important, do *NOT* remove:
 // Word64 values > math.MaxInt64 overflow int.
 // Implementing BigNumberValue ensures conversion functions
@@ -11757,7 +11963,7 @@ func (v Word64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitWord64Value(interpreter, v)
 }
 
-func (Word64Value) Walk(_ func(Value)) {
+func (Word64Value) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
@@ -11815,10 +12021,14 @@ func (v Word64Value) Plus(interpreter *Interpreter, other NumberValue) NumberVal
 		})
 	}
 
-	return v + o
+	valueGetter := func() uint64 {
+		return uint64(v + o)
+	}
+
+	return NewWord64Value(interpreter, valueGetter)
 }
 
-func (v Word64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
+func (v Word64Value) SaturatingPlus(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -11832,10 +12042,14 @@ func (v Word64Value) Minus(interpreter *Interpreter, other NumberValue) NumberVa
 		})
 	}
 
-	return v - o
+	valueGetter := func() uint64 {
+		return uint64(v - o)
+	}
+
+	return NewWord64Value(interpreter, valueGetter)
 }
 
-func (v Word64Value) SaturatingMinus(_ *Interpreter, _ NumberValue) NumberValue {
+func (v Word64Value) SaturatingMinus(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -11852,7 +12066,12 @@ func (v Word64Value) Mod(interpreter *Interpreter, other NumberValue) NumberValu
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
-	return v % o
+
+	valueGetter := func() uint64 {
+		return uint64(v % o)
+	}
+
+	return NewWord64Value(interpreter, valueGetter)
 }
 
 func (v Word64Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -11865,10 +12084,14 @@ func (v Word64Value) Mul(interpreter *Interpreter, other NumberValue) NumberValu
 		})
 	}
 
-	return v * o
+	valueGetter := func() uint64 {
+		return uint64(v * o)
+	}
+
+	return NewWord64Value(interpreter, valueGetter)
 }
 
-func (v Word64Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
+func (v Word64Value) SaturatingMul(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -11885,10 +12108,15 @@ func (v Word64Value) Div(interpreter *Interpreter, other NumberValue) NumberValu
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
-	return v / o
+
+	valueGetter := func() uint64 {
+		return uint64(v / o)
+	}
+
+	return NewWord64Value(interpreter, valueGetter)
 }
 
-func (v Word64Value) SaturatingDiv(_ *Interpreter, _ NumberValue) NumberValue {
+func (v Word64Value) SaturatingDiv(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -11962,7 +12190,10 @@ func (v Word64Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch [
 }
 
 func ConvertWord64(memoryGauge common.MemoryGauge, value Value) Word64Value {
-	return Word64Value(ConvertUInt64(memoryGauge, value))
+	uint64Value := ConvertUInt64(memoryGauge, value)
+
+	// Already metered during conversion in `ConvertUInt64`
+	return NewUnmeteredWord64Value(uint64(uint64Value))
 }
 
 func (v Word64Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -11975,7 +12206,11 @@ func (v Word64Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) Int
 		})
 	}
 
-	return v | o
+	valueGetter := func() uint64 {
+		return uint64(v | o)
+	}
+
+	return NewWord64Value(interpreter, valueGetter)
 }
 
 func (v Word64Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -11987,7 +12222,12 @@ func (v Word64Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) In
 			RightType: other.StaticType(),
 		})
 	}
-	return v ^ o
+
+	valueGetter := func() uint64 {
+		return uint64(v ^ o)
+	}
+
+	return NewWord64Value(interpreter, valueGetter)
 }
 
 func (v Word64Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -12000,7 +12240,11 @@ func (v Word64Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) In
 		})
 	}
 
-	return v & o
+	valueGetter := func() uint64 {
+		return uint64(v & o)
+	}
+
+	return NewWord64Value(interpreter, valueGetter)
 }
 
 func (v Word64Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -12013,7 +12257,11 @@ func (v Word64Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVal
 		})
 	}
 
-	return v << o
+	valueGetter := func() uint64 {
+		return uint64(v << o)
+	}
+
+	return NewWord64Value(interpreter, valueGetter)
 }
 
 func (v Word64Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -12026,7 +12274,11 @@ func (v Word64Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVa
 		})
 	}
 
-	return v >> o
+	valueGetter := func() uint64 {
+		return uint64(v >> o)
+	}
+
+	return NewWord64Value(interpreter, valueGetter)
 }
 
 func (v Word64Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
@@ -12149,7 +12401,7 @@ func (v Fix64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitFix64Value(interpreter, v)
 }
 
-func (Fix64Value) Walk(_ func(Value)) {
+func (Fix64Value) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
@@ -12601,7 +12853,7 @@ func (v UFix64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUFix64Value(interpreter, v)
 }
 
-func (UFix64Value) Walk(_ func(Value)) {
+func (UFix64Value) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
@@ -13065,8 +13317,6 @@ func NewCompositeValue(
 		}()
 	}
 
-	interpreter.UseConstantMemory(common.MemoryKindComposite)
-
 	dictionary, err := atree.NewMap(
 		interpreter.Storage,
 		atree.Address(address),
@@ -13081,12 +13331,11 @@ func NewCompositeValue(
 		panic(ExternalError{err})
 	}
 
-	v = &CompositeValue{
-		dictionary:          dictionary,
-		Location:            location,
-		QualifiedIdentifier: qualifiedIdentifier,
-		Kind:                kind,
+	typeInfo := compositeTypeInfo{
+		location, qualifiedIdentifier, kind,
 	}
+
+	v = newCompositeValueFromOrderedMap(interpreter, dictionary, typeInfo)
 
 	for _, field := range fields {
 		v.SetMember(
@@ -13099,6 +13348,22 @@ func NewCompositeValue(
 	}
 
 	return v
+}
+
+func newCompositeValueFromOrderedMap(
+	memoryGauge common.MemoryGauge,
+	dict *atree.OrderedMap,
+	typeInfo compositeTypeInfo,
+) *CompositeValue {
+
+	common.UseMemory(memoryGauge, common.NewConstantMemoryUsage(common.MemoryKindComposite))
+
+	return &CompositeValue{
+		dictionary:          dict,
+		Location:            typeInfo.location,
+		QualifiedIdentifier: typeInfo.qualifiedIdentifier,
+		Kind:                typeInfo.kind,
+	}
 }
 
 var _ Value = &CompositeValue{}
@@ -13115,7 +13380,7 @@ func (v *CompositeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 		return
 	}
 
-	v.ForEachField(func(_ string, value Value) {
+	v.ForEachField(interpreter, func(_ string, value Value) {
 		value.Accept(interpreter, visitor)
 	})
 }
@@ -13123,8 +13388,8 @@ func (v *CompositeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 // Walk iterates over all field values of the composite value.
 // It does NOT walk the computed fields and functions!
 //
-func (v *CompositeValue) Walk(walkChild func(Value)) {
-	v.ForEachField(func(_ string, value Value) {
+func (v *CompositeValue) Walk(interpreter *Interpreter, walkChild func(Value)) {
+	v.ForEachField(interpreter, func(_ string, value Value) {
 		walkChild(value)
 	})
 }
@@ -13259,7 +13524,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange fu
 		}
 	}
 	if storable != nil {
-		return StoredValue(storable, interpreter.Storage)
+		return StoredValue(interpreter, storable, interpreter.Storage)
 	}
 
 	if v.NestedVariables != nil {
@@ -13401,7 +13666,7 @@ func (v *CompositeValue) RemoveMember(
 
 	// Value
 
-	storedValue := StoredValue(existingValueStorable, storage)
+	storedValue := StoredValue(interpreter, existingValueStorable, storage)
 	return storedValue.
 		Transfer(
 			interpreter,
@@ -13462,7 +13727,7 @@ func (v *CompositeValue) SetMember(
 	interpreter.maybeValidateAtreeValue(v.dictionary)
 
 	if existingStorable != nil {
-		existingValue := StoredValue(existingStorable, interpreter.Storage)
+		existingValue := StoredValue(interpreter, existingStorable, interpreter.Storage)
 
 		existingValue.DeepRemove(interpreter)
 
@@ -13480,15 +13745,17 @@ func (v *CompositeValue) RecursiveString(seenReferences SeenReferences) string {
 	}
 
 	var fields []CompositeField
-
-	v.ForEachField(func(name string, value Value) {
+	_ = v.dictionary.Iterate(func(key atree.Value, value atree.Value) (resume bool, err error) {
 		fields = append(
 			fields,
 			CompositeField{
-				Name:  name,
-				Value: value,
+				Name: string(key.(StringAtreeValue)),
+				// ok to not meter anything created as part of this iteration, since we will discard the result
+				// upon creating the string
+				Value: MustConvertUnmeteredStoredValue(value),
 			},
 		)
+		return true, nil
 	})
 
 	return formatComposite(string(v.TypeID()), fields, seenReferences)
@@ -13538,7 +13805,7 @@ func (v *CompositeValue) GetField(interpreter *Interpreter, getLocationRange fun
 		panic(ExternalError{err})
 	}
 
-	return StoredValue(storable, v.dictionary.Storage)
+	return StoredValue(interpreter, storable, v.dictionary.Storage)
 }
 
 func (v *CompositeValue) Equal(interpreter *Interpreter, getLocationRange func() LocationRange, other Value) bool {
@@ -13574,7 +13841,7 @@ func (v *CompositeValue) Equal(interpreter *Interpreter, getLocationRange func()
 		// (if stored in different account, as storage ID is used as hash seed)
 		otherValue := otherComposite.GetField(interpreter, getLocationRange, fieldName)
 
-		equatableValue, ok := MustConvertStoredValue(value).(EquatableValue)
+		equatableValue, ok := MustConvertStoredValue(interpreter, value).(EquatableValue)
 		if !ok || !equatableValue.Equal(interpreter, getLocationRange, otherValue) {
 			return false
 		}
@@ -13815,7 +14082,7 @@ func (v *CompositeValue) Transfer(
 				// NOTE: key is stringAtreeValue
 				// and does not need to be converted or copied
 
-				value := MustConvertStoredValue(atreeValue).
+				value := MustConvertStoredValue(interpreter, atreeValue).
 					Transfer(interpreter, getLocationRange, address, remove, nil)
 
 				return atreeKey, value, nil
@@ -13941,8 +14208,8 @@ func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
 				return nil, nil, nil
 			}
 
-			key := MustConvertStoredValue(atreeKey).Clone(interpreter)
-			value := MustConvertStoredValue(atreeValue).Clone(interpreter)
+			key := MustConvertStoredValue(interpreter, atreeKey).Clone(interpreter)
+			value := MustConvertStoredValue(interpreter, atreeValue).Clone(interpreter)
 
 			return key, value, nil
 		},
@@ -13997,7 +14264,7 @@ func (v *CompositeValue) DeepRemove(interpreter *Interpreter) {
 		// and not a Value, so no need to deep remove
 		interpreter.RemoveReferencedSlab(nameStorable)
 
-		value := StoredValue(valueStorable, storage)
+		value := StoredValue(interpreter, valueStorable, storage)
 		value.DeepRemove(interpreter)
 		interpreter.RemoveReferencedSlab(valueStorable)
 	})
@@ -14014,12 +14281,12 @@ func (v *CompositeValue) GetOwner() common.Address {
 // ForEachField iterates over all field-name field-value pairs of the composite value.
 // It does NOT iterate over computed fields and functions!
 //
-func (v *CompositeValue) ForEachField(f func(fieldName string, fieldValue Value)) {
+func (v *CompositeValue) ForEachField(interpreter *Interpreter, f func(fieldName string, fieldValue Value)) {
 
 	err := v.dictionary.Iterate(func(key atree.Value, value atree.Value) (resume bool, err error) {
 		f(
 			string(key.(StringAtreeValue)),
-			MustConvertStoredValue(value),
+			MustConvertStoredValue(interpreter, value),
 		)
 		return true, nil
 	})
@@ -14061,7 +14328,7 @@ func (v *CompositeValue) RemoveField(
 
 	// Value
 
-	existingValue := StoredValue(existingValueStorable, storage)
+	existingValue := StoredValue(interpreter, existingValueStorable, storage)
 	existingValue.DeepRemove(interpreter)
 	interpreter.RemoveReferencedSlab(existingValueStorable)
 }
@@ -14123,7 +14390,6 @@ func NewDictionaryValueWithAddress(
 	address common.Address,
 	keysAndValues ...Value,
 ) *DictionaryValue {
-	interpreter.UseConstantMemory(common.MemoryKindDictionary)
 
 	interpreter.ReportComputation(common.ComputationKindCreateDictionaryValue, 1)
 
@@ -14165,10 +14431,7 @@ func NewDictionaryValueWithAddress(
 		panic(ExternalError{err})
 	}
 
-	v = &DictionaryValue{
-		Type:       dictionaryType,
-		dictionary: dictionary,
-	}
+	v = newDictionaryValueFromOrderedMap(interpreter, dictionary, dictionaryType)
 
 	for i := 0; i < keysAndValuesCount; i += 2 {
 		key := keysAndValues[i]
@@ -14179,6 +14442,20 @@ func NewDictionaryValueWithAddress(
 	}
 
 	return v
+}
+
+func newDictionaryValueFromOrderedMap(
+	memoryGauge common.MemoryGauge,
+	dict *atree.OrderedMap,
+	staticType DictionaryStaticType,
+) *DictionaryValue {
+
+	common.UseMemory(memoryGauge, common.NewConstantMemoryUsage(common.MemoryKindDictionary))
+
+	return &DictionaryValue{
+		Type:       staticType,
+		dictionary: dict,
+	}
 }
 
 var _ Value = &DictionaryValue{}
@@ -14196,19 +14473,19 @@ func (v *DictionaryValue) Accept(interpreter *Interpreter, visitor Visitor) {
 		return
 	}
 
-	v.Walk(func(value Value) {
+	v.Walk(interpreter, func(value Value) {
 		value.Accept(interpreter, visitor)
 	})
 }
 
-func (v *DictionaryValue) Iterate(f func(key, value Value) (resume bool)) {
+func (v *DictionaryValue) Iterate(interpreter *Interpreter, f func(key, value Value) (resume bool)) {
 	err := v.dictionary.Iterate(func(key, value atree.Value) (resume bool, err error) {
 		// atree.OrderedMap iteration provides low-level atree.Value,
 		// convert to high-level interpreter.Value
 
 		resume = f(
-			MustConvertStoredValue(key),
-			MustConvertStoredValue(value),
+			MustConvertStoredValue(interpreter, key),
+			MustConvertStoredValue(interpreter, value),
 		)
 
 		return resume, nil
@@ -14218,8 +14495,8 @@ func (v *DictionaryValue) Iterate(f func(key, value Value) (resume bool)) {
 	}
 }
 
-func (v *DictionaryValue) Walk(walkChild func(Value)) {
-	v.Iterate(func(key, value Value) (resume bool) {
+func (v *DictionaryValue) Walk(interpreter *Interpreter, walkChild func(Value)) {
+	v.Iterate(interpreter, func(key, value Value) (resume bool) {
 		walkChild(key)
 		walkChild(value)
 		return true
@@ -14230,7 +14507,7 @@ func (v *DictionaryValue) DynamicType(interpreter *Interpreter, seenReferences S
 	entryTypes := make([]DictionaryStaticTypeEntry, v.Count())
 
 	index := 0
-	v.Iterate(func(key, value Value) (resume bool) {
+	v.Iterate(interpreter, func(key, value Value) (resume bool) {
 		entryTypes[index] =
 			DictionaryStaticTypeEntry{
 				KeyType:   key.DynamicType(interpreter, seenReferences),
@@ -14284,7 +14561,7 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, getLocationRange fun
 		}()
 	}
 
-	v.Iterate(func(key, value Value) (resume bool) {
+	v.Iterate(interpreter, func(key, value Value) (resume bool) {
 		// Resources cannot be keys at the moment, so should theoretically not be needed
 		maybeDestroy(interpreter, getLocationRange, key)
 		maybeDestroy(interpreter, getLocationRange, value)
@@ -14342,7 +14619,7 @@ func (v *DictionaryValue) Get(
 	}
 
 	storage := v.dictionary.Storage
-	value := StoredValue(storable, storage)
+	value := StoredValue(interpreter, storable, storage)
 	return value, true
 }
 
@@ -14405,18 +14682,21 @@ func (v *DictionaryValue) RecursiveString(seenReferences SeenReferences) string 
 	}, v.Count())
 
 	index := 0
-	v.Iterate(func(key, value Value) (resume bool) {
+	_ = v.dictionary.Iterate(func(key, value atree.Value) (resume bool, err error) {
+		// atree.OrderedMap iteration provides low-level atree.Value,
+		// convert to high-level interpreter.Value
+
 		pairs[index] = struct {
 			Key   string
 			Value string
 		}{
-			Key:   key.RecursiveString(seenReferences),
-			Value: value.RecursiveString(seenReferences),
+			// ok to not meter anything created as part of this iteration, since we will discard the result
+			// upon creating the string
+			MustConvertUnmeteredStoredValue(key).RecursiveString(seenReferences),
+			MustConvertUnmeteredStoredValue(value).RecursiveString(seenReferences),
 		}
-
 		index++
-
-		return true
+		return true, nil
 	})
 
 	return format.Dictionary(pairs)
@@ -14475,7 +14755,7 @@ func (v *DictionaryValue) GetMember(
 					return nil
 				}
 
-				return MustConvertStoredValue(key).
+				return MustConvertStoredValue(interpreter, key).
 					Transfer(interpreter, getLocationRange, atree.Address{}, false, nil)
 			},
 		)
@@ -14503,7 +14783,7 @@ func (v *DictionaryValue) GetMember(
 					return nil
 				}
 
-				return MustConvertStoredValue(value).
+				return MustConvertStoredValue(interpreter, value).
 					Transfer(interpreter, getLocationRange, atree.Address{}, false, nil)
 			})
 
@@ -14628,13 +14908,13 @@ func (v *DictionaryValue) Remove(
 
 	// Key
 
-	existingKeyValue := StoredValue(existingKeyStorable, storage)
+	existingKeyValue := StoredValue(interpreter, existingKeyStorable, storage)
 	existingKeyValue.DeepRemove(interpreter)
 	interpreter.RemoveReferencedSlab(existingKeyStorable)
 
 	// Value
 
-	existingValue := StoredValue(existingValueStorable, storage).
+	existingValue := StoredValue(interpreter, existingValueStorable, storage).
 		Transfer(
 			interpreter,
 			getLocationRange,
@@ -14701,7 +14981,7 @@ func (v *DictionaryValue) Insert(
 		return NilValue{}
 	}
 
-	existingValue := StoredValue(existingValueStorable, interpreter.Storage).
+	existingValue := StoredValue(interpreter, existingValueStorable, interpreter.Storage).
 		Transfer(
 			interpreter,
 			getLocationRange,
@@ -14767,7 +15047,7 @@ func (v *DictionaryValue) ConformsToDynamicType(
 
 		// atree.OrderedMap iteration provides low-level atree.Value,
 		// convert to high-level interpreter.Value
-		entryKey := MustConvertStoredValue(key)
+		entryKey := MustConvertStoredValue(interpreter, key)
 		if !entryKey.ConformsToDynamicType(
 			interpreter,
 			getLocationRange,
@@ -14781,7 +15061,7 @@ func (v *DictionaryValue) ConformsToDynamicType(
 
 		// atree.OrderedMap iteration provides low-level atree.Value,
 		// convert to high-level interpreter.Value
-		entryValue := MustConvertStoredValue(value)
+		entryValue := MustConvertStoredValue(interpreter, value)
 		if !entryValue.ConformsToDynamicType(
 			interpreter,
 			getLocationRange,
@@ -14830,14 +15110,14 @@ func (v *DictionaryValue) Equal(interpreter *Interpreter, getLocationRange func(
 			otherDictionary.Get(
 				interpreter,
 				getLocationRange,
-				MustConvertStoredValue(key),
+				MustConvertStoredValue(interpreter, key),
 			)
 
 		if !otherValueExists {
 			return false
 		}
 
-		equatableValue, ok := MustConvertStoredValue(value).(EquatableValue)
+		equatableValue, ok := MustConvertStoredValue(interpreter, value).(EquatableValue)
 		if !ok || !equatableValue.Equal(interpreter, getLocationRange, otherValue) {
 			return false
 		}
@@ -14915,10 +15195,10 @@ func (v *DictionaryValue) Transfer(
 					return nil, nil, nil
 				}
 
-				key := MustConvertStoredValue(atreeKey).
+				key := MustConvertStoredValue(interpreter, atreeKey).
 					Transfer(interpreter, getLocationRange, address, remove, nil)
 
-				value := MustConvertStoredValue(atreeValue).
+				value := MustConvertStoredValue(interpreter, atreeValue).
 					Transfer(interpreter, getLocationRange, address, remove, nil)
 
 				return key, value, nil
@@ -15017,10 +15297,10 @@ func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
 				return nil, nil, nil
 			}
 
-			key := MustConvertStoredValue(atreeKey).
+			key := MustConvertStoredValue(interpreter, atreeKey).
 				Clone(interpreter)
 
-			value := MustConvertStoredValue(atreeValue).
+			value := MustConvertStoredValue(interpreter, atreeValue).
 				Clone(interpreter)
 
 			return key, value, nil
@@ -15062,11 +15342,11 @@ func (v *DictionaryValue) DeepRemove(interpreter *Interpreter) {
 
 	err := v.dictionary.PopIterate(func(keyStorable atree.Storable, valueStorable atree.Storable) {
 
-		key := StoredValue(keyStorable, storage)
+		key := StoredValue(interpreter, keyStorable, storage)
 		key.DeepRemove(interpreter)
 		interpreter.RemoveReferencedSlab(keyStorable)
 
-		value := StoredValue(valueStorable, storage)
+		value := StoredValue(interpreter, valueStorable, storage)
 		value.DeepRemove(interpreter)
 		interpreter.RemoveReferencedSlab(valueStorable)
 	})
@@ -15126,7 +15406,7 @@ func (v NilValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitNilValue(interpreter, v)
 }
 
-func (NilValue) Walk(_ func(Value)) {
+func (NilValue) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
@@ -15291,7 +15571,7 @@ func (v *SomeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	v.value.Accept(interpreter, visitor)
 }
 
-func (v *SomeValue) Walk(walkChild func(Value)) {
+func (v *SomeValue) Walk(_ *Interpreter, walkChild func(Value)) {
 	walkChild(v.value)
 }
 
@@ -15563,6 +15843,7 @@ func (v *SomeValue) InnerValue(interpreter *Interpreter, getLocationRange func()
 }
 
 type SomeStorable struct {
+	gauge    common.MemoryGauge
 	Storable atree.Storable
 }
 
@@ -15573,7 +15854,7 @@ func (s SomeStorable) ByteSize() uint32 {
 }
 
 func (s SomeStorable) StoredValue(storage atree.SlabStorage) (atree.Value, error) {
-	value := StoredValue(s.Storable, storage)
+	value := StoredValue(s.gauge, s.Storable, storage)
 
 	return &SomeValue{
 		value:         value,
@@ -15607,7 +15888,7 @@ func (v *StorageReferenceValue) Accept(interpreter *Interpreter, visitor Visitor
 	visitor.VisitStorageReferenceValue(interpreter, v)
 }
 
-func (*StorageReferenceValue) Walk(_ func(Value)) {
+func (*StorageReferenceValue) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 	// NOTE: *not* walking referenced value!
 }
@@ -15930,7 +16211,7 @@ func (v *EphemeralReferenceValue) Accept(interpreter *Interpreter, visitor Visit
 	visitor.VisitEphemeralReferenceValue(interpreter, v)
 }
 
-func (*EphemeralReferenceValue) Walk(_ func(Value)) {
+func (*EphemeralReferenceValue) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 	// NOTE: *not* walking referenced value!
 }
@@ -16293,7 +16574,7 @@ func (v AddressValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitAddressValue(interpreter, v)
 }
 
-func (AddressValue) Walk(_ func(Value)) {
+func (AddressValue) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
@@ -16523,7 +16804,7 @@ func (v PathValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitPathValue(interpreter, v)
 }
 
-func (PathValue) Walk(_ func(Value)) {
+func (PathValue) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
@@ -16766,7 +17047,7 @@ func (v *CapabilityValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitCapabilityValue(interpreter, v)
 }
 
-func (v *CapabilityValue) Walk(walkChild func(Value)) {
+func (v *CapabilityValue) Walk(_ *Interpreter, walkChild func(Value)) {
 	walkChild(v.Address)
 	walkChild(v.Path)
 }
@@ -16955,7 +17236,7 @@ func (v LinkValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitLinkValue(interpreter, v)
 }
 
-func (v LinkValue) Walk(walkChild func(Value)) {
+func (v LinkValue) Walk(_ *Interpreter, walkChild func(Value)) {
 	walkChild(v.TargetPath)
 }
 
