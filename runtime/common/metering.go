@@ -116,7 +116,7 @@ func UseConstantMemory(memoryGauge MemoryGauge, kind MemoryKind) {
 	if memoryGauge == nil {
 		return
 	}
-	memoryGauge.UseMemory(MemoryUsage{
+	memoryGauge.MeterMemory(MemoryUsage{
 		Kind:   kind,
 		Amount: 1,
 	})

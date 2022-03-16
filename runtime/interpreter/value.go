@@ -243,7 +243,7 @@ func NewTypeValue(
 	staticTypeConstructor func() StaticType,
 ) TypeValue {
 	if memoryGauge != nil {
-		memoryGauge.UseMemory(memoryUsage)
+		memoryGauge.MeterMemory(memoryUsage)
 	}
 	staticType := staticTypeConstructor()
 	return NewUnmeteredTypeValue(staticType)
@@ -689,7 +689,7 @@ func NewCharacterValue(
 	characterConstructor func() string,
 ) CharacterValue {
 	if memoryGauge != nil {
-		memoryGauge.UseMemory(memoryUsage)
+		memoryGauge.MeterMemory(memoryUsage)
 	}
 
 	character := characterConstructor()
@@ -1308,7 +1308,7 @@ func NewArrayValueWithIterator(
 	address common.Address,
 	values func() Value,
 ) *ArrayValue {
-	common.ReportComputation(interpreter, common.ComputationKindCreateArrayValue, 1)
+	interpreter.ReportComputation(common.ComputationKindCreateArrayValue, 1)
 
 	var v *ArrayValue
 
@@ -14457,7 +14457,7 @@ func NewDictionaryValueWithAddress(
 	keysAndValues ...Value,
 ) *DictionaryValue {
 
-	common.ReportComputation(interpreter, common.ComputationKindCreateDictionaryValue, 1)
+	interpreter.ReportComputation(common.ComputationKindCreateDictionaryValue, 1)
 
 	var v *DictionaryValue
 
@@ -16682,7 +16682,7 @@ func NewAddressValueFromBytes(
 	return NewUnmeteredAddressValue(address)
 }
 
-func ConvertAddress(interpreter *Interpreter, value Value) AddressValue {
+func ConvertAddress(memoryGauge common.MemoryGauge, value Value) AddressValue {
 	var result common.Address
 
 	uint64Value := ConvertUInt64(memoryGauge, value)
@@ -16691,7 +16691,7 @@ func ConvertAddress(interpreter *Interpreter, value Value) AddressValue {
 		result[:common.AddressLength],
 		uint64(uint64Value),
 	)
-	return NewAddressValue(interpreter, result)
+	return NewAddressValue(memoryGauge, result)
 }
 
 var _ Value = AddressValue{}
