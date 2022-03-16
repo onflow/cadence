@@ -76,6 +76,7 @@ func TestInterpretArrayMetering(t *testing.T) {
 		// 3 for creation of z
 		// 4 for transfer of z
 		// 3 for dynamic type check of z
+		// 14 from value transfer
 		assert.Equal(t, uint64(29), meter.getMemory(common.MemoryKindArray))
 	})
 

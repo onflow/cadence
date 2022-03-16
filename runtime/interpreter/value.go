@@ -2174,9 +2174,9 @@ func (v *ArrayValue) Transfer(
 
 	if res == nil {
 		res = newArrayValueFromAtreeValue(interpreter, array, v.Type)
-		res.semaType		= v.semaType
-		res.isResourceKinded	= v.isResourceKinded,
-		res.isDestroyed		= v.isDestroyed,
+		res.semaType = v.semaType
+		res.isResourceKinded = v.isResourceKinded
+		res.isDestroyed = v.isDestroyed
 	}
 
 	return res
