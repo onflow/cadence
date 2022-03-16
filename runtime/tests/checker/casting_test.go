@@ -6676,3 +6676,24 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 		})
 	})
 }
+
+func TestCastResourceAsEnumAsEmptyDict(t *testing.T) {
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, "resource as { enum x : as { } }")
+
+	errs := ExpectCheckerErrors(t, err, 2)
+
+	assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
+	assert.IsType(t, &sema.InvalidEnumRawTypeError{}, errs[1])
+}
+
+//
+
+func TestCastNumbersManyTimesThenGetType(t *testing.T) {
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, "let a = 0x0 as UInt64!as?UInt64!as?UInt64?!?.getType()")
+
+	assert.Nil(t, err)
+}

@@ -102,6 +102,8 @@ var rlpDecodeStringFunction = interpreter.NewUnmeteredHostFunctionValue(
 			panic(errors.NewUnreachableError())
 		}
 
+		invocation.Interpreter.ReportComputation(common.ComputationKindSTDLIBRLPDecodeString, uint(input.Count()))
+
 		getLocationRange := invocation.GetLocationRange
 
 		convertedInput, err := interpreter.ByteArrayValueToByteSlice(invocation.Interpreter, input)
@@ -169,6 +171,8 @@ var rlpDecodeListFunction = interpreter.NewUnmeteredHostFunctionValue(
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
+
+		invocation.Interpreter.ReportComputation(common.ComputationKindSTDLIBRLPDecodeList, uint(input.Count()))
 
 		getLocationRange := invocation.GetLocationRange
 

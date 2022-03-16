@@ -21,9 +21,9 @@ package runtime
 import (
 	"errors"
 	"fmt"
-	"math"
 	goRuntime "runtime"
 	"time"
+	"unsafe"
 
 	opentracing "github.com/opentracing/opentracing-go"
 	"golang.org/x/crypto/sha3"
@@ -1555,40 +1555,6 @@ func (r *interpreterRuntime) injectedCompositeFieldsHandler(
 }
 
 func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interface) []interpreter.Option {
-	var computationLimit uint64
-	wrapPanic(func() {
-		computationLimit = runtimeInterface.GetComputationLimit()
-	})
-	if computationLimit == 0 {
-		return nil
-	}
-
-	if computationLimit == math.MaxUint64 {
-		computationLimit--
-	}
-
-	var computationUsed uint64
-
-	checkComputationLimit := func(increase uint64) {
-		computationUsed += increase
-
-		if computationUsed <= computationLimit {
-			return
-		}
-
-		var err error
-		wrapPanic(func() {
-			err = runtimeInterface.SetComputationUsed(computationUsed)
-		})
-		if err != nil {
-			panic(err)
-		}
-
-		panic(ComputationLimitExceededError{
-			Limit: computationLimit,
-		})
-	}
-
 	callStackDepth := 0
 	// TODO: make runtime interface function
 	const callStackDepthLimit = 2000
@@ -1605,22 +1571,10 @@ func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interfa
 	}
 
 	return []interpreter.Option{
-		interpreter.WithOnStatementHandler(
-			func(_ *interpreter.Interpreter, _ ast.Statement) {
-				checkComputationLimit(1)
-			},
-		),
-		interpreter.WithOnLoopIterationHandler(
-			func(_ *interpreter.Interpreter, _ int) {
-				checkComputationLimit(1)
-			},
-		),
 		interpreter.WithOnFunctionInvocationHandler(
 			func(_ *interpreter.Interpreter, _ int) {
 				callStackDepth++
 				checkCallStackDepth()
-
-				checkComputationLimit(1)
 			},
 		),
 		interpreter.WithOnInvokedFunctionReturnHandler(
@@ -1628,9 +1582,15 @@ func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interfa
 				callStackDepth--
 			},
 		),
-		interpreter.WithExitHandler(
-			func() error {
-				return runtimeInterface.SetComputationUsed(computationUsed)
+		interpreter.WithOnMeterComputationFuncHandler(
+			func(compKind common.ComputationKind, intensity uint) {
+				var err error
+				wrapPanic(func() {
+					err = runtimeInterface.MeterComputation(compKind, intensity)
+				})
+				if err != nil {
+					panic(err)
+				}
 			},
 		),
 	}
@@ -1892,32 +1852,45 @@ func storageUsedGetFunction(
 			panic(err)
 		}
 
-		var capacity uint64
-		wrapPanic(func() {
-			capacity, err = runtimeInterface.GetStorageUsed(address)
-		})
-		if err != nil {
-			panic(err)
-		}
-		return interpreter.UInt64Value(capacity)
+		return interpreter.NewUInt64Value(
+			inter,
+			func() uint64 {
+				var capacity uint64
+				wrapPanic(func() {
+					capacity, err = runtimeInterface.GetStorageUsed(address)
+				})
+				if err != nil {
+					panic(err)
+				}
+				return capacity
+			},
+		)
 	}
 }
 
-func storageCapacityGetFunction(addressValue interpreter.AddressValue, runtimeInterface Interface) func() interpreter.UInt64Value {
+func storageCapacityGetFunction(
+	addressValue interpreter.AddressValue,
+	runtimeInterface Interface,
+) func(*interpreter.Interpreter) interpreter.UInt64Value {
 
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation
 	address := addressValue.ToAddress()
 
-	return func() interpreter.UInt64Value {
-		var capacity uint64
-		var err error
-		wrapPanic(func() {
-			capacity, err = runtimeInterface.GetStorageCapacity(address)
-		})
-		if err != nil {
-			panic(err)
-		}
-		return interpreter.UInt64Value(capacity)
+	return func(inter *interpreter.Interpreter) interpreter.UInt64Value {
+		return interpreter.NewUInt64Value(
+			inter,
+			func() uint64 {
+				var capacity uint64
+				var err error
+				wrapPanic(func() {
+					capacity, err = runtimeInterface.GetStorageCapacity(address)
+				})
+				if err != nil {
+					panic(err)
+				}
+				return capacity
+			},
+		)
 	}
 }
 
@@ -2375,15 +2348,20 @@ func (r *interpreterRuntime) newGetBlockFunction(runtimeInterface Interface) int
 
 func (r *interpreterRuntime) newUnsafeRandomFunction(runtimeInterface Interface) interpreter.HostFunction {
 	return func(invocation interpreter.Invocation) interpreter.Value {
-		var rand uint64
-		var err error
-		wrapPanic(func() {
-			rand, err = runtimeInterface.UnsafeRandom()
-		})
-		if err != nil {
-			panic(err)
-		}
-		return interpreter.UInt64Value(rand)
+		return interpreter.NewUInt64Value(
+			invocation.Interpreter,
+			func() uint64 {
+				var rand uint64
+				var err error
+				wrapPanic(func() {
+					rand, err = runtimeInterface.UnsafeRandom()
+				})
+				if err != nil {
+					panic(err)
+				}
+				return rand
+			},
+		)
 	}
 }
 
@@ -3170,18 +3148,33 @@ var BlockIDStaticType = interpreter.ConstantSizedStaticType{
 	Size: 32,
 }
 
+var blockIDMemoryUsage = common.NewNumberMemoryUsage(
+	8 * int(unsafe.Sizeof(interpreter.UInt8Value(0))),
+)
+
 func NewBlockValue(inter *interpreter.Interpreter, block Block) interpreter.Value {
 
 	// height
-	heightValue := interpreter.UInt64Value(block.Height)
+	heightValue := interpreter.NewUInt64Value(
+		inter,
+		func() uint64 {
+			return block.Height
+		},
+	)
 
 	// view
-	viewValue := interpreter.UInt64Value(block.View)
+	viewValue := interpreter.NewUInt64Value(
+		inter,
+		func() uint64 {
+			return block.View
+		},
+	)
 
 	// ID
+	common.UseMemory(inter, blockIDMemoryUsage)
 	var values = make([]interpreter.Value, sema.BlockIDSize)
 	for i, b := range block.Hash {
-		values[i] = interpreter.UInt8Value(b)
+		values[i] = interpreter.NewUnmeteredUInt8Value(b)
 	}
 
 	idValue := interpreter.NewArrayValue(

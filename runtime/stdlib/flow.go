@@ -198,7 +198,10 @@ func DefaultFlowBuiltinImpls() FlowBuiltinImpls {
 			panic(fmt.Errorf("cannot get blocks"))
 		},
 		UnsafeRandom: func(invocation interpreter.Invocation) interpreter.Value {
-			return interpreter.UInt64Value(rand.Uint64())
+			return interpreter.NewUInt64Value(
+				invocation.Interpreter,
+				rand.Uint64,
+			)
 		},
 	}
 }
