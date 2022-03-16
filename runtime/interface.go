@@ -137,8 +137,8 @@ type Interface interface {
 		oldOwner common.Address,
 		newOwner common.Address,
 	)
-	// UseMemory gets called when new memory is allocated or used by the interpreter
-	UseMemory(usage common.MemoryUsage)
+	// MeterMemory gets called when new memory is allocated or used by the interpreter
+	MeterMemory(usage common.MemoryUsage) error
 }
 
 type Metrics interface {

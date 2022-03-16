@@ -292,12 +292,7 @@ func identifierState(l *lexer) stateFn {
 
 func stringState(l *lexer) stateFn {
 	l.scanString('"')
-	memoryGauge := l.memoryGauge
-	if memoryGauge != nil {
-		memoryGauge.UseMemory(
-			common.NewStringMemoryUsage(l.wordLength()),
-		)
-	}
+	common.UseMemory(l.memoryGauge, common.NewStringMemoryUsage(l.wordLength()))
 	l.emitValue(TokenString)
 	return rootState
 }

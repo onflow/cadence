@@ -804,9 +804,7 @@ func NewUnmeteredStringValue(str string) *StringValue {
 }
 
 func NewStringValue(memoryGauge common.MemoryGauge, memoryUsage common.MemoryUsage, stringConstructor func() string) *StringValue {
-	if memoryGauge != nil {
-		memoryGauge.UseMemory(memoryUsage)
-	}
+	common.UseMemory(memoryGauge, memoryUsage)
 	str := stringConstructor()
 	return NewUnmeteredStringValue(str)
 }
@@ -1288,9 +1286,9 @@ func newArrayValueFromAtreeValue(
 	array *atree.Array,
 	staticType ArrayStaticType,
 ) *ArrayValue {
-	if memoryGauge != nil {
-		memoryGauge.UseMemory(common.NewConstantMemoryUsage(common.MemoryKindArray))
-	}
+
+	common.UseMemory(memoryGauge, common.NewConstantMemoryUsage(common.MemoryKindArray))
+
 	return &ArrayValue{
 		Type:  staticType,
 		array: array,
@@ -2548,9 +2546,7 @@ func NewIntValueFromBigInt(
 	memoryUsage common.MemoryUsage,
 	bigIntConstructor func() *big.Int,
 ) IntValue {
-	if memoryGauge != nil {
-		memoryGauge.UseMemory(memoryUsage)
-	}
+	common.UseMemory(memoryGauge, memoryUsage)
 	value := bigIntConstructor()
 	return NewUnmeteredIntValueFromBigInt(value)
 }
@@ -6796,9 +6792,7 @@ func NewUIntValueFromBigInt(
 	memoryUsage common.MemoryUsage,
 	bigIntConstructor func() *big.Int,
 ) UIntValue {
-	if memoryGauge != nil {
-		memoryGauge.UseMemory(memoryUsage)
-	}
+	common.UseMemory(memoryGauge, memoryUsage)
 	value := bigIntConstructor()
 	return NewUnmeteredUIntValueFromBigInt(value)
 }
@@ -11658,7 +11652,7 @@ func (v Word32Value) Mul(interpreter *Interpreter, other NumberValue) NumberValu
 	return NewWord32Value(interpreter, valueGetter)
 }
 
-func (v Word32Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
+func (v Word32Value) SaturatingMul(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -13358,9 +13352,9 @@ func newCompositeValueFromOrderedMap(
 	dict *atree.OrderedMap,
 	typeInfo compositeTypeInfo,
 ) *CompositeValue {
-	if memoryGauge != nil {
-		memoryGauge.UseMemory(common.NewConstantMemoryUsage(common.MemoryKindComposite))
-	}
+
+	common.UseMemory(memoryGauge, common.NewConstantMemoryUsage(common.MemoryKindComposite))
+
 	return &CompositeValue{
 		dictionary:          dict,
 		Location:            typeInfo.location,
@@ -14452,9 +14446,9 @@ func newDictionaryValueFromOrderedMap(
 	dict *atree.OrderedMap,
 	staticType DictionaryStaticType,
 ) *DictionaryValue {
-	if memoryGauge != nil {
-		memoryGauge.UseMemory(common.NewConstantMemoryUsage(common.MemoryKindDictionary))
-	}
+
+	common.UseMemory(memoryGauge, common.NewConstantMemoryUsage(common.MemoryKindDictionary))
+
 	return &DictionaryValue{
 		Type:       staticType,
 		dictionary: dict,

@@ -40,8 +40,9 @@ func newTestMemoryGauge() *testMemoryGauge {
 	}
 }
 
-func (g *testMemoryGauge) UseMemory(usage common.MemoryUsage) {
+func (g *testMemoryGauge) MeterMemory(usage common.MemoryUsage) error {
 	g.meter[usage.Kind] += usage.Amount
+	return nil
 }
 
 func (g *testMemoryGauge) getMemory(kind common.MemoryKind) uint64 {

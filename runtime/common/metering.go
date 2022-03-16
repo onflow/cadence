@@ -29,7 +29,7 @@ type MemoryUsage struct {
 }
 
 type MemoryGauge interface {
-	UseMemory(usage MemoryUsage)
+	MeterMemory(usage MemoryUsage) error
 }
 
 func NewConstantMemoryUsage(kind MemoryKind) MemoryUsage {
@@ -176,5 +176,8 @@ func UseMemory(gauge MemoryGauge, usage MemoryUsage) {
 		return
 	}
 
-	gauge.UseMemory(usage)
+	err := gauge.MeterMemory(usage)
+	if err != nil {
+		panic(err)
+	}
 }
