@@ -2173,13 +2173,10 @@ func (v *ArrayValue) Transfer(
 	}
 
 	if res == nil {
-		res = &ArrayValue{
-			Type:             v.Type,
-			semaType:         v.semaType,
-			isResourceKinded: v.isResourceKinded,
-			array:            array,
-			isDestroyed:      v.isDestroyed,
-		}
+		res = newArrayValueFromAtreeValue(interpreter, array, v.Type)
+		res.semaType = v.semaType
+		res.isResourceKinded = v.isResourceKinded
+		res.isDestroyed = v.isDestroyed
 	}
 
 	return res
@@ -14147,22 +14144,22 @@ func (v *CompositeValue) Transfer(
 	}
 
 	if res == nil {
-		res = &CompositeValue{
-			dictionary:          dictionary,
-			Location:            v.Location,
-			QualifiedIdentifier: v.QualifiedIdentifier,
-			Kind:                v.Kind,
-			InjectedFields:      v.InjectedFields,
-			ComputedFields:      v.ComputedFields,
-			NestedVariables:     v.NestedVariables,
-			Functions:           v.Functions,
-			Destructor:          v.Destructor,
-			Stringer:            v.Stringer,
-			isDestroyed:         v.isDestroyed,
-			typeID:              v.typeID,
-			staticType:          v.staticType,
-			dynamicType:         v.dynamicType,
+		info := compositeTypeInfo{
+			location:            v.Location,
+			qualifiedIdentifier: v.QualifiedIdentifier,
+			kind:                v.Kind,
 		}
+		res = newCompositeValueFromOrderedMap(interpreter, dictionary, info)
+		res.InjectedFields = v.InjectedFields
+		res.ComputedFields = v.ComputedFields
+		res.NestedVariables = v.NestedVariables
+		res.Functions = v.Functions
+		res.Destructor = v.Destructor
+		res.Stringer = v.Stringer
+		res.isDestroyed = v.isDestroyed
+		res.typeID = v.typeID
+		res.staticType = v.staticType
+		res.dynamicType = v.dynamicType
 	}
 
 	if needsStoreTo &&
@@ -15263,13 +15260,10 @@ func (v *DictionaryValue) Transfer(
 	}
 
 	if res == nil {
-		res = &DictionaryValue{
-			Type:             v.Type,
-			semaType:         v.semaType,
-			isResourceKinded: v.isResourceKinded,
-			dictionary:       dictionary,
-			isDestroyed:      v.isDestroyed,
-		}
+		res = newDictionaryValueFromOrderedMap(interpreter, dictionary, v.Type)
+		res.semaType = v.semaType
+		res.isResourceKinded = v.isResourceKinded
+		res.isDestroyed = v.isDestroyed
 	}
 
 	return res
