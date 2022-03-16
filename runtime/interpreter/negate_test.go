@@ -35,25 +35,25 @@ func TestNegate(t *testing.T) {
 
 	t.Run("Int8", func(t *testing.T) {
 		assert.Panics(t, func() {
-			Int8Value(math.MinInt8).Negate(nil)
+			NewUnmeteredInt8Value(math.MinInt8).Negate(nil)
 		})
 	})
 
 	t.Run("Int16", func(t *testing.T) {
 		assert.Panics(t, func() {
-			Int16Value(math.MinInt16).Negate(nil)
+			NewUnmeteredInt16Value(math.MinInt16).Negate(nil)
 		})
 	})
 
 	t.Run("Int32", func(t *testing.T) {
 		assert.Panics(t, func() {
-			Int32Value(math.MinInt32).Negate(nil)
+			NewUnmeteredInt32Value(math.MinInt32).Negate(nil)
 		})
 	})
 
 	t.Run("Int64", func(t *testing.T) {
 		assert.Panics(t, func() {
-			Int64Value(math.MinInt64).Negate(nil)
+			NewUnmeteredInt64Value(math.MinInt64).Negate(nil)
 		})
 	})
 

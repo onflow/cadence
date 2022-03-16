@@ -41,7 +41,7 @@ func TestInspectValue(t *testing.T) {
 			ValueType: PrimitiveStaticTypeInt256,
 		}
 		dictValueKey := NewUnmeteredStringValue("hello world")
-		dictValueValue := NewInt256ValueFromInt64(1)
+		dictValueValue := NewUnmeteredInt256ValueFromInt64(1)
 		dictValue := NewDictionaryValue(
 			inter,
 			dictionaryStaticType,
@@ -83,6 +83,7 @@ func TestInspectValue(t *testing.T) {
 		var inspectedValues []Value
 
 		InspectValue(
+			inter,
 			dictValue,
 			func(value Value) bool {
 				inspectedValues = append(inspectedValues, value)
@@ -110,6 +111,7 @@ func TestInspectValue(t *testing.T) {
 		var inspectedValues []Value
 
 		InspectValue(
+			inter,
 			compositeValue,
 			func(value Value) bool {
 				inspectedValues = append(inspectedValues, value)

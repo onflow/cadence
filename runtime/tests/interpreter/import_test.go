@@ -96,7 +96,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 							"bar": interpreter.NewHostFunctionValue(
 								inter,
 								func(invocation interpreter.Invocation) interpreter.Value {
-									return interpreter.UInt64Value(42)
+									return interpreter.NewUnmeteredUInt64Value(42)
 								},
 								&sema.FunctionType{
 									ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.UIntType),
@@ -142,7 +142,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.UInt64Value(42),
+		interpreter.NewUnmeteredUInt64Value(42),
 		value,
 	)
 }

@@ -4248,7 +4248,7 @@ func TestInterpretDictionaryIndexingAssignmentExisting(t *testing.T) {
 			interpreter.NewUnmeteredStringValue("abc"),
 			interpreter.NewUnmeteredIntValueFromInt64(23),
 		},
-		dictionaryKeyValues(actualDict),
+		dictionaryKeyValues(inter, actualDict),
 	)
 }
 
@@ -4314,7 +4314,7 @@ func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
 			interpreter.NewUnmeteredStringValue("def"),
 			interpreter.NewUnmeteredIntValueFromInt64(42),
 		},
-		dictionaryKeyValues(actualDict),
+		dictionaryKeyValues(inter, actualDict),
 	)
 }
 
@@ -4378,7 +4378,7 @@ func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 			interpreter.NewUnmeteredStringValue("abc"),
 			interpreter.NewUnmeteredIntValueFromInt64(23),
 		},
-		dictionaryKeyValues(actualDict),
+		dictionaryKeyValues(inter, actualDict),
 	)
 }
 
@@ -5607,7 +5607,7 @@ func TestInterpretDictionaryRemove(t *testing.T) {
 			interpreter.NewUnmeteredStringValue("def"),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
 		},
-		dictionaryKeyValues(actualDict),
+		dictionaryKeyValues(inter, actualDict),
 	)
 
 	AssertValuesEqual(
@@ -5643,7 +5643,7 @@ func TestInterpretDictionaryInsert(t *testing.T) {
 			interpreter.NewUnmeteredStringValue("def"),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
 		},
-		dictionaryKeyValues(actualDict),
+		dictionaryKeyValues(inter, actualDict),
 	)
 
 	AssertValuesEqual(
@@ -6691,27 +6691,27 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			ty:    sema.IntType,
 		},
 		"Int8": {
-			value: interpreter.Int8Value(42),
+			value: interpreter.NewUnmeteredInt8Value(42),
 			ty:    sema.Int8Type,
 		},
 		"Int16": {
-			value: interpreter.Int16Value(42),
+			value: interpreter.NewUnmeteredInt16Value(42),
 			ty:    sema.Int16Type,
 		},
 		"Int32": {
-			value: interpreter.Int32Value(42),
+			value: interpreter.NewUnmeteredInt32Value(42),
 			ty:    sema.Int32Type,
 		},
 		"Int64": {
-			value: interpreter.Int64Value(42),
+			value: interpreter.NewUnmeteredInt64Value(42),
 			ty:    sema.Int64Type,
 		},
 		"Int128": {
-			value: interpreter.NewInt128ValueFromInt64(42),
+			value: interpreter.NewUnmeteredInt128ValueFromInt64(42),
 			ty:    sema.Int128Type,
 		},
 		"Int256": {
-			value: interpreter.NewInt256ValueFromInt64(42),
+			value: interpreter.NewUnmeteredInt256ValueFromInt64(42),
 			ty:    sema.Int256Type,
 		},
 		// UInt*
@@ -6720,44 +6720,44 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			ty:    sema.UIntType,
 		},
 		"UInt8": {
-			value: interpreter.UInt8Value(42),
+			value: interpreter.NewUnmeteredUInt8Value(42),
 			ty:    sema.UInt8Type,
 		},
 		"UInt16": {
-			value: interpreter.UInt16Value(42),
+			value: interpreter.NewUnmeteredUInt16Value(42),
 			ty:    sema.UInt16Type,
 		},
 		"UInt32": {
-			value: interpreter.UInt32Value(42),
+			value: interpreter.NewUnmeteredUInt32Value(42),
 			ty:    sema.UInt32Type,
 		},
 		"UInt64": {
-			value: interpreter.UInt64Value(42),
+			value: interpreter.NewUnmeteredUInt64Value(42),
 			ty:    sema.UInt64Type,
 		},
 		"UInt128": {
-			value: interpreter.NewUInt128ValueFromUint64(42),
+			value: interpreter.NewUnmeteredUInt128ValueFromUint64(42),
 			ty:    sema.UInt128Type,
 		},
 		"UInt256": {
-			value: interpreter.NewUInt256ValueFromUint64(42),
+			value: interpreter.NewUnmeteredUInt256ValueFromUint64(42),
 			ty:    sema.UInt256Type,
 		},
 		// Word*
 		"Word8": {
-			value: interpreter.Word8Value(42),
+			value: interpreter.NewUnmeteredWord8Value(42),
 			ty:    sema.Word8Type,
 		},
 		"Word16": {
-			value: interpreter.Word16Value(42),
+			value: interpreter.NewUnmeteredWord16Value(42),
 			ty:    sema.Word16Type,
 		},
 		"Word32": {
-			value: interpreter.Word32Value(42),
+			value: interpreter.NewUnmeteredWord32Value(42),
 			ty:    sema.Word32Type,
 		},
 		"Word64": {
-			value: interpreter.Word64Value(42),
+			value: interpreter.NewUnmeteredWord64Value(42),
 			ty:    sema.Word64Type,
 		},
 		// Fix*
@@ -7470,7 +7470,7 @@ func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
 		var storedValues []string
 
 		for _, slab := range permanentSlabs {
-			storedValue := interpreter.StoredValue(slab, inter.Storage)
+			storedValue := interpreter.StoredValue(inter, slab, inter.Storage)
 			storedValues = append(storedValues, storedValue.String())
 		}
 
@@ -7495,7 +7495,7 @@ func TestInterpretCastingIntLiteralToInt8(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.Int8Value(42),
+		interpreter.NewUnmeteredInt8Value(42),
 		inter.Globals["x"].GetValue(),
 	)
 }
@@ -8289,22 +8289,22 @@ func TestInterpretHexDecode(t *testing.T) {
 	t.Parallel()
 
 	expected := []interpreter.Value{
-		interpreter.UInt8Value(71),
-		interpreter.UInt8Value(111),
-		interpreter.UInt8Value(32),
-		interpreter.UInt8Value(87),
-		interpreter.UInt8Value(105),
-		interpreter.UInt8Value(116),
-		interpreter.UInt8Value(104),
-		interpreter.UInt8Value(32),
-		interpreter.UInt8Value(116),
-		interpreter.UInt8Value(104),
-		interpreter.UInt8Value(101),
-		interpreter.UInt8Value(32),
-		interpreter.UInt8Value(70),
-		interpreter.UInt8Value(108),
-		interpreter.UInt8Value(111),
-		interpreter.UInt8Value(119),
+		interpreter.NewUnmeteredUInt8Value(71),
+		interpreter.NewUnmeteredUInt8Value(111),
+		interpreter.NewUnmeteredUInt8Value(32),
+		interpreter.NewUnmeteredUInt8Value(87),
+		interpreter.NewUnmeteredUInt8Value(105),
+		interpreter.NewUnmeteredUInt8Value(116),
+		interpreter.NewUnmeteredUInt8Value(104),
+		interpreter.NewUnmeteredUInt8Value(32),
+		interpreter.NewUnmeteredUInt8Value(116),
+		interpreter.NewUnmeteredUInt8Value(104),
+		interpreter.NewUnmeteredUInt8Value(101),
+		interpreter.NewUnmeteredUInt8Value(32),
+		interpreter.NewUnmeteredUInt8Value(70),
+		interpreter.NewUnmeteredUInt8Value(108),
+		interpreter.NewUnmeteredUInt8Value(111),
+		interpreter.NewUnmeteredUInt8Value(119),
 	}
 
 	t.Run("in Cadence", func(t *testing.T) {
@@ -8756,9 +8756,7 @@ func newTestAuthAccountValue(
 		addressValue,
 		returnZeroUFix64,
 		returnZeroUFix64,
-		func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
-			return 0
-		},
+		returnZeroUInt64,
 		returnZeroUInt64,
 		panicFunction,
 		panicFunction,
@@ -8811,9 +8809,7 @@ func newTestPublicAccountValue(
 		addressValue,
 		returnZeroUFix64,
 		returnZeroUFix64,
-		func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
-			return 0
-		},
+		returnZeroUInt64,
 		returnZeroUInt64,
 		func() interpreter.Value {
 			return interpreter.NewPublicAccountKeysValue(
@@ -9189,7 +9185,7 @@ func TestInterpretCountDigits256(t *testing.T) {
 				inter.Globals["number"].GetValue().(interpreter.BigNumberValue).ToBigInt(),
 			)
 
-			expected := interpreter.UInt8Value(test.Count)
+			expected := interpreter.NewUnmeteredUInt8Value(uint8(test.Count))
 
 			for i := 1; i <= 3; i++ {
 				variableName := fmt.Sprintf("result%d", i)

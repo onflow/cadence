@@ -31,11 +31,11 @@ func arrayElements(inter *interpreter.Interpreter, array *interpreter.ArrayValue
 	return result
 }
 
-func dictionaryKeyValues(dict *interpreter.DictionaryValue) []interpreter.Value {
+func dictionaryKeyValues(inter *interpreter.Interpreter, dict *interpreter.DictionaryValue) []interpreter.Value {
 	count := dict.Count() * 2
 	result := make([]interpreter.Value, count)
 	i := 0
-	dict.Iterate(func(key, value interpreter.Value) (resume bool) {
+	dict.Iterate(inter, func(key, value interpreter.Value) (resume bool) {
 		result[i*2] = key
 		result[i*2+1] = value
 		i++

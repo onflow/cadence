@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	. "github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -128,7 +129,8 @@ func TestPlusUInt8(t *testing.T) {
 		{0xff, 0xff, false},
 	}
 
-	inter := newTestInterpreter(t)
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
 
 	for _, test := range tests {
 		f := func() {
@@ -242,7 +244,8 @@ func TestPlusUInt16(t *testing.T) {
 		{0xffff, 0xffff, false},
 	}
 
-	inter := newTestInterpreter(t)
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
 
 	for _, test := range tests {
 		f := func() {
@@ -355,7 +358,8 @@ func TestPlusUInt32(t *testing.T) {
 		{0xffffffff, 0xffffffff, false},
 	}
 
-	inter := newTestInterpreter(t)
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
 
 	for _, test := range tests {
 		f := func() {
@@ -685,7 +689,8 @@ func TestPlusUInt64(t *testing.T) {
 		{0xffffffffffffffff, 0xffffffffffffffff, false},
 	}
 
-	inter := newTestInterpreter(t)
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
 
 	for _, test := range tests {
 		f := func() {
@@ -710,7 +715,7 @@ func uint128(v string) UInt128Value {
 	if res.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
 		panic(fmt.Sprintf("invalid value: larger than max: %s", v))
 	}
-	return NewUInt128ValueFromBigInt(res)
+	return NewUnmeteredUInt128ValueFromBigInt(res)
 }
 
 func TestPlusUInt128(t *testing.T) {
@@ -814,7 +819,8 @@ func TestPlusUInt128(t *testing.T) {
 		{uint128("0xffffffffffffffffffffffffffffffff"), uint128("0xffffffffffffffffffffffffffffffff"), false},
 	}
 
-	inter := newTestInterpreter(t)
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
 
 	for _, test := range tests {
 		f := func() {
@@ -840,7 +846,7 @@ func uint256(v string) UInt256Value {
 	if res.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
 		panic(fmt.Sprintf("invalid value: larger than max: %s", v))
 	}
-	return NewUInt256ValueFromBigInt(res)
+	return NewUnmeteredUInt256ValueFromBigInt(res)
 }
 
 func TestPlusUInt256(t *testing.T) {
@@ -1284,7 +1290,8 @@ func TestPlusUInt256(t *testing.T) {
 		},
 	}
 
-	inter := newTestInterpreter(t)
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
 
 	for _, test := range tests {
 		f := func() {
@@ -1398,7 +1405,8 @@ func TestPlusInt8(t *testing.T) {
 		{-1, -1, true},
 	}
 
-	inter := newTestInterpreter(t)
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
 
 	for _, test := range tests {
 		f := func() {
@@ -1512,7 +1520,8 @@ func TestPlusInt16(t *testing.T) {
 		{-1, -1, true},
 	}
 
-	inter := newTestInterpreter(t)
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
 
 	for _, test := range tests {
 		f := func() {
@@ -1626,7 +1635,8 @@ func TestPlusInt32(t *testing.T) {
 		{-1, -1, true},
 	}
 
-	inter := newTestInterpreter(t)
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
 
 	for _, test := range tests {
 		f := func() {
@@ -1956,7 +1966,8 @@ func TestPlusInt64(t *testing.T) {
 		{-1, -1, true},
 	}
 
-	inter := newTestInterpreter(t)
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
 
 	for _, test := range tests {
 		f := func() {
@@ -2085,7 +2096,8 @@ func TestPlusInt128(t *testing.T) {
 		{int128("-0x00000000000000000000000000000001"), int128("-0x00000000000000000000000000000001"), true},
 	}
 
-	inter := newTestInterpreter(t)
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
 
 	for _, test := range tests {
 		f := func() {
@@ -2120,7 +2132,7 @@ func int256(v string) Int256Value {
 	if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
 		panic(fmt.Sprintf("invalid value: larger than max: %s", v))
 	}
-	return NewInt256ValueFromBigInt(res)
+	return NewUnmeteredInt256ValueFromBigInt(res)
 }
 
 func TestPlusInt256(t *testing.T) {
@@ -2520,7 +2532,8 @@ func TestPlusInt256(t *testing.T) {
 		},
 	}
 
-	inter := newTestInterpreter(t)
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
 
 	for _, test := range tests {
 		f := func() {

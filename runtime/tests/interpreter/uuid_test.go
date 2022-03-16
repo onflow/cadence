@@ -146,7 +146,7 @@ func TestInterpretResourceUUID(t *testing.T) {
 		RequireValuesEqual(
 			t,
 			inter,
-			interpreter.UInt64Value(i),
+			interpreter.NewUnmeteredUInt64Value(uint64(i)),
 			uuidValue,
 		)
 	}

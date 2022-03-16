@@ -133,6 +133,15 @@ type OnResourceOwnerChangeFunc func(
 	newOwner common.Address,
 )
 
+// OnMeterComputationFunc is a function that is called when some computation is about to happen.
+// intensity captures the intensity of the computation and can be set using input sizes
+// complexity of computation given input sizes, or any other factors that could help the upper levels
+// to differentiate same kind of computation with different level (and time) of execution.
+type OnMeterComputationFunc func(
+	compKind common.ComputationKind,
+	intensity uint,
+)
+
 // InjectedCompositeFieldsHandlerFunc is a function that handles storage reads.
 //
 type InjectedCompositeFieldsHandlerFunc func(
@@ -330,6 +339,7 @@ type Interpreter struct {
 	onInvokedFunctionReturn        OnInvokedFunctionReturnFunc
 	onRecordTrace                  OnRecordTraceFunc
 	onResourceOwnerChange          OnResourceOwnerChangeFunc
+	onMeterComputation             OnMeterComputationFunc
 	injectedCompositeFieldsHandler InjectedCompositeFieldsHandlerFunc
 	contractValueHandler           ContractValueHandlerFunc
 	importLocationHandler          ImportLocationHandlerFunc
@@ -435,6 +445,16 @@ func WithOnRecordTraceHandler(handler OnRecordTraceFunc) Option {
 func WithOnResourceOwnerChangeHandler(handler OnResourceOwnerChangeFunc) Option {
 	return func(interpreter *Interpreter) error {
 		interpreter.SetOnResourceOwnerChangeHandler(handler)
+		return nil
+	}
+}
+
+// WithOnMeterComputationFuncHandler returns an interpreter option which sets
+// the given function as the meter computation handler.
+//
+func WithOnMeterComputationFuncHandler(handler OnMeterComputationFunc) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetOnMeterComputationHandler(handler)
 		return nil
 	}
 }
@@ -752,6 +772,12 @@ func (interpreter *Interpreter) SetOnRecordTraceHandler(function OnRecordTraceFu
 //
 func (interpreter *Interpreter) SetOnResourceOwnerChangeHandler(function OnResourceOwnerChangeFunc) {
 	interpreter.onResourceOwnerChange = function
+}
+
+// SetOnMeterComputationFuncHandler sets the function that is triggered when a computation is about to happen.
+//
+func (interpreter *Interpreter) SetOnMeterComputationHandler(function OnMeterComputationFunc) {
+	interpreter.onMeterComputation = function
 }
 
 // SetStorage sets the value that is used for storage operations.
@@ -1706,8 +1732,13 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 					fields = append(
 						fields,
 						CompositeField{
-							Name:  sema.ResourceUUIDFieldName,
-							Value: UInt64Value(uuid),
+							Name: sema.ResourceUUIDFieldName,
+							Value: NewUInt64Value(
+								interpreter,
+								func() uint64 {
+									return uuid
+								},
+							),
 						},
 					)
 				}
@@ -2197,64 +2228,64 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 
 	case sema.Int128Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertInt128(value)
+			return ConvertInt128(interpreter, value)
 		}
 
 	case sema.Int256Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertInt256(value)
+			return ConvertInt256(interpreter, value)
 		}
 
 	// UInt*
 	case sema.UInt8Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertUInt8(value)
+			return ConvertUInt8(interpreter, value)
 		}
 
 	case sema.UInt16Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertUInt16(value)
+			return ConvertUInt16(interpreter, value)
 		}
 
 	case sema.UInt32Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertUInt32(value)
+			return ConvertUInt32(interpreter, value)
 		}
 
 	case sema.UInt64Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertUInt64(value)
+			return ConvertUInt64(interpreter, value)
 		}
 
 	case sema.UInt128Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertUInt128(value)
+			return ConvertUInt128(interpreter, value)
 		}
 
 	case sema.UInt256Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertUInt256(value)
+			return ConvertUInt256(interpreter, value)
 		}
 
 	// Word*
 	case sema.Word8Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertWord8(value)
+			return ConvertWord8(interpreter, value)
 		}
 
 	case sema.Word16Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertWord16(value)
+			return ConvertWord16(interpreter, value)
 		}
 
 	case sema.Word32Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertWord32(value)
+			return ConvertWord32(interpreter, value)
 		}
 
 	case sema.Word64Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertWord64(value)
+			return ConvertWord64(interpreter, value)
 		}
 
 	// Fix*
@@ -2273,7 +2304,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 	switch unwrappedTargetType.(type) {
 	case *sema.AddressType:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertAddress(value)
+			return ConvertAddress(interpreter, value)
 		}
 	}
 
@@ -2645,6 +2676,7 @@ func (interpreter *Interpreter) NewSubInterpreter(
 		WithTracingEnabled(interpreter.tracingEnabled),
 		WithOnRecordTraceHandler(interpreter.onRecordTrace),
 		WithOnResourceOwnerChangeHandler(interpreter.onResourceOwnerChange),
+		WithOnMeterComputationFuncHandler(interpreter.onMeterComputation),
 		WithMemoryGauge(interpreter.memoryGauge),
 	}
 
@@ -2673,7 +2705,7 @@ func (interpreter *Interpreter) ReadStored(
 	identifier string,
 ) Value {
 	accountStorage := interpreter.Storage.GetStorageMap(storageAddress, domain)
-	return accountStorage.ReadValue(identifier)
+	return accountStorage.ReadValue(interpreter, identifier)
 }
 
 func (interpreter *Interpreter) writeStored(
@@ -2751,110 +2783,110 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.Int128TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Int128Type),
-		convert: func(_ *Interpreter, value Value) Value {
-			return ConvertInt128(value)
+		convert: func(interpreter *Interpreter, value Value) Value {
+			return ConvertInt128(interpreter, value)
 		},
-		min: NewInt128ValueFromBigInt(sema.Int128TypeMinIntBig),
-		max: NewInt128ValueFromBigInt(sema.Int128TypeMaxIntBig),
+		min: NewUnmeteredInt128ValueFromBigInt(sema.Int128TypeMinIntBig),
+		max: NewUnmeteredInt128ValueFromBigInt(sema.Int128TypeMaxIntBig),
 	},
 	{
 		name:         sema.Int256TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Int256Type),
-		convert: func(_ *Interpreter, value Value) Value {
-			return ConvertInt256(value)
+		convert: func(interpreter *Interpreter, value Value) Value {
+			return ConvertInt256(interpreter, value)
 		},
-		min: NewInt256ValueFromBigInt(sema.Int256TypeMinIntBig),
-		max: NewInt256ValueFromBigInt(sema.Int256TypeMaxIntBig),
+		min: NewUnmeteredInt256ValueFromBigInt(sema.Int256TypeMinIntBig),
+		max: NewUnmeteredInt256ValueFromBigInt(sema.Int256TypeMaxIntBig),
 	},
 	{
 		name:         sema.UInt8TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.UInt8Type),
-		convert: func(_ *Interpreter, value Value) Value {
-			return ConvertUInt8(value)
+		convert: func(interpreter *Interpreter, value Value) Value {
+			return ConvertUInt8(interpreter, value)
 		},
-		min: UInt8Value(0),
-		max: UInt8Value(math.MaxUint8),
+		min: NewUnmeteredUInt8Value(0),
+		max: NewUnmeteredUInt8Value(math.MaxUint8),
 	},
 	{
 		name:         sema.UInt16TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.UInt16Type),
-		convert: func(_ *Interpreter, value Value) Value {
-			return ConvertUInt16(value)
+		convert: func(interpreter *Interpreter, value Value) Value {
+			return ConvertUInt16(interpreter, value)
 		},
-		min: UInt16Value(0),
-		max: UInt16Value(math.MaxUint16),
+		min: NewUnmeteredUInt16Value(0),
+		max: NewUnmeteredUInt16Value(math.MaxUint16),
 	},
 	{
 		name:         sema.UInt32TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.UInt32Type),
-		convert: func(_ *Interpreter, value Value) Value {
-			return ConvertUInt32(value)
+		convert: func(interpreter *Interpreter, value Value) Value {
+			return ConvertUInt32(interpreter, value)
 		},
-		min: UInt32Value(0),
-		max: UInt32Value(math.MaxUint32),
+		min: NewUnmeteredUInt32Value(0),
+		max: NewUnmeteredUInt32Value(math.MaxUint32),
 	},
 	{
 		name:         sema.UInt64TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.UInt64Type),
-		convert: func(_ *Interpreter, value Value) Value {
-			return ConvertUInt64(value)
+		convert: func(interpreter *Interpreter, value Value) Value {
+			return ConvertUInt64(interpreter, value)
 		},
-		min: UInt64Value(0),
-		max: UInt64Value(math.MaxUint64),
+		min: NewUnmeteredUInt64Value(0),
+		max: NewUnmeteredUInt64Value(math.MaxUint64),
 	},
 	{
 		name:         sema.UInt128TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.UInt128Type),
-		convert: func(_ *Interpreter, value Value) Value {
-			return ConvertUInt128(value)
+		convert: func(interpreter *Interpreter, value Value) Value {
+			return ConvertUInt128(interpreter, value)
 		},
-		min: NewUInt128ValueFromUint64(0),
-		max: NewUInt128ValueFromBigInt(sema.UInt128TypeMaxIntBig),
+		min: NewUnmeteredUInt128ValueFromUint64(0),
+		max: NewUnmeteredUInt128ValueFromBigInt(sema.UInt128TypeMaxIntBig),
 	},
 	{
 		name:         sema.UInt256TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.UInt256Type),
-		convert: func(_ *Interpreter, value Value) Value {
-			return ConvertUInt256(value)
+		convert: func(interpreter *Interpreter, value Value) Value {
+			return ConvertUInt256(interpreter, value)
 		},
-		min: NewUInt256ValueFromUint64(0),
-		max: NewUInt256ValueFromBigInt(sema.UInt256TypeMaxIntBig),
+		min: NewUnmeteredUInt256ValueFromUint64(0),
+		max: NewUnmeteredUInt256ValueFromBigInt(sema.UInt256TypeMaxIntBig),
 	},
 	{
 		name:         sema.Word8TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Word8Type),
-		convert: func(_ *Interpreter, value Value) Value {
-			return ConvertWord8(value)
+		convert: func(interpreter *Interpreter, value Value) Value {
+			return ConvertWord8(interpreter, value)
 		},
-		min: Word8Value(0),
-		max: Word8Value(math.MaxUint8),
+		min: NewUnmeteredWord8Value(0),
+		max: NewUnmeteredWord8Value(math.MaxUint8),
 	},
 	{
 		name:         sema.Word16TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Word16Type),
-		convert: func(_ *Interpreter, value Value) Value {
-			return ConvertWord16(value)
+		convert: func(interpreter *Interpreter, value Value) Value {
+			return ConvertWord16(interpreter, value)
 		},
-		min: Word16Value(0),
-		max: Word16Value(math.MaxUint16),
+		min: NewUnmeteredWord16Value(0),
+		max: NewUnmeteredWord16Value(math.MaxUint16),
 	},
 	{
 		name:         sema.Word32TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Word32Type),
-		convert: func(_ *Interpreter, value Value) Value {
-			return ConvertWord32(value)
+		convert: func(interpreter *Interpreter, value Value) Value {
+			return ConvertWord32(interpreter, value)
 		},
-		min: Word32Value(0),
-		max: Word32Value(math.MaxUint32),
+		min: NewUnmeteredWord32Value(0),
+		max: NewUnmeteredWord32Value(math.MaxUint32),
 	},
 	{
 		name:         sema.Word64TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Word64Type),
-		convert: func(_ *Interpreter, value Value) Value {
-			return ConvertWord64(value)
+		convert: func(interpreter *Interpreter, value Value) Value {
+			return ConvertWord64(interpreter, value)
 		},
-		min: Word64Value(0),
-		max: Word64Value(math.MaxUint64),
+		min: NewUnmeteredWord64Value(0),
+		max: NewUnmeteredWord64Value(math.MaxUint64),
 	},
 	{
 		name:         sema.Fix64TypeName,
@@ -2877,8 +2909,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.AddressTypeName,
 		functionType: sema.AddressConversionFunctionType,
-		convert: func(_ *Interpreter, value Value) Value {
-			return ConvertAddress(value)
+		convert: func(interpreter *Interpreter, value Value) Value {
+			return ConvertAddress(interpreter, value)
 		},
 	},
 	{
@@ -3062,7 +3094,7 @@ func init() {
 
 				returnType := invocation.Interpreter.MustConvertStaticToSemaType(typeValue.Type)
 				parameterTypes := make([]*sema.Parameter, 0, parameters.Count())
-				parameters.Iterate(func(param Value) bool {
+				parameters.Iterate(invocation.Interpreter, func(param Value) bool {
 					semaType := invocation.Interpreter.MustConvertStaticToSemaType(param.(TypeValue).Type)
 					parameterTypes = append(
 						parameterTypes,
@@ -3108,7 +3140,7 @@ func RestrictedTypeFunction(invocation Invocation) Value {
 	semaRestrictions := make([]*sema.InterfaceType, 0, restrictionIDs.Count())
 
 	var invalidRestrictionID bool
-	restrictionIDs.Iterate(func(typeID Value) bool {
+	restrictionIDs.Iterate(invocation.Interpreter, func(typeID Value) bool {
 		typeIDValue, ok := typeID.(*StringValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
@@ -3437,7 +3469,7 @@ var stringFunction = func() Value {
 					memoryUsage,
 					func() string {
 						// TODO: meter
-						bytes, _ := ByteArrayValueToByteSlice(argument)
+						bytes, _ := ByteArrayValueToByteSlice(inter, argument)
 						return hex.EncodeToString(bytes)
 					},
 				)
@@ -4360,20 +4392,23 @@ func (interpreter *Interpreter) getInterfaceType(location common.Location, quali
 }
 
 func (interpreter *Interpreter) reportLoopIteration(pos ast.HasPosition) {
-	if interpreter.onLoopIteration == nil {
-		return
+	if interpreter.onMeterComputation != nil {
+		interpreter.onMeterComputation(common.ComputationKindLoop, 1)
 	}
 
-	line := pos.StartPosition().Line
-	interpreter.onLoopIteration(interpreter, line)
+	if interpreter.onLoopIteration != nil {
+		line := pos.StartPosition().Line
+		interpreter.onLoopIteration(interpreter, line)
+	}
 }
 
 func (interpreter *Interpreter) reportFunctionInvocation(line int) {
-	if interpreter.onFunctionInvocation == nil {
-		return
+	if interpreter.onMeterComputation != nil {
+		interpreter.onMeterComputation(common.ComputationKindFunctionInvocation, 1)
 	}
-
-	interpreter.onFunctionInvocation(interpreter, line)
+	if interpreter.onFunctionInvocation != nil {
+		interpreter.onFunctionInvocation(interpreter, line)
+	}
 }
 
 func (interpreter *Interpreter) reportInvokedFunctionReturn(line int) {
@@ -4382,6 +4417,12 @@ func (interpreter *Interpreter) reportInvokedFunctionReturn(line int) {
 	}
 
 	interpreter.onInvokedFunctionReturn(interpreter, line)
+}
+
+func (interpreter *Interpreter) ReportComputation(compKind common.ComputationKind, intensity uint) {
+	if interpreter.onMeterComputation != nil {
+		interpreter.onMeterComputation(compKind, intensity)
+	}
 }
 
 // getMember gets the member value by the given identifier from the given Value depending on its type.
@@ -4570,7 +4611,7 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 		}
 
 		if equatableValue, ok := value.(EquatableValue); ok {
-			otherValue := StoredValue(otherStorable, interpreter.Storage)
+			otherValue := StoredValue(interpreter, otherStorable, interpreter.Storage)
 			return equatableValue.Equal(interpreter, ReturnEmptyLocationRange, otherValue)
 		}
 
@@ -4784,10 +4825,7 @@ func (interpreter *Interpreter) UseMemory(usage common.MemoryUsage) {
 // UseConstantMemory uses a pre-determined amount of memory
 //
 func (interpreter *Interpreter) UseConstantMemory(kind common.MemoryKind) {
-	interpreter.UseMemory(common.MemoryUsage{
-		Kind:   kind,
-		Amount: 1,
-	})
+	interpreter.UseMemory(common.NewConstantMemoryUsage(kind))
 }
 
 func (interpreter *Interpreter) DecodeStorable(

@@ -21,9 +21,9 @@ package runtime
 import (
 	"errors"
 	"fmt"
-	"math"
 	goRuntime "runtime"
 	"time"
+	"unsafe"
 
 	opentracing "github.com/opentracing/opentracing-go"
 	"golang.org/x/crypto/sha3"
@@ -962,7 +962,7 @@ func validateArgumentParams(
 		}
 
 		// Ensure static type info is available for all values
-		interpreter.InspectValue(arg, func(value interpreter.Value) bool {
+		interpreter.InspectValue(inter, arg, func(value interpreter.Value) bool {
 			if value == nil {
 				return true
 			}
@@ -1555,40 +1555,6 @@ func (r *interpreterRuntime) injectedCompositeFieldsHandler(
 }
 
 func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interface) []interpreter.Option {
-	var computationLimit uint64
-	wrapPanic(func() {
-		computationLimit = runtimeInterface.GetComputationLimit()
-	})
-	if computationLimit == 0 {
-		return nil
-	}
-
-	if computationLimit == math.MaxUint64 {
-		computationLimit--
-	}
-
-	var computationUsed uint64
-
-	checkComputationLimit := func(increase uint64) {
-		computationUsed += increase
-
-		if computationUsed <= computationLimit {
-			return
-		}
-
-		var err error
-		wrapPanic(func() {
-			err = runtimeInterface.SetComputationUsed(computationUsed)
-		})
-		if err != nil {
-			panic(err)
-		}
-
-		panic(ComputationLimitExceededError{
-			Limit: computationLimit,
-		})
-	}
-
 	callStackDepth := 0
 	// TODO: make runtime interface function
 	const callStackDepthLimit = 2000
@@ -1605,22 +1571,10 @@ func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interfa
 	}
 
 	return []interpreter.Option{
-		interpreter.WithOnStatementHandler(
-			func(_ *interpreter.Interpreter, _ ast.Statement) {
-				checkComputationLimit(1)
-			},
-		),
-		interpreter.WithOnLoopIterationHandler(
-			func(_ *interpreter.Interpreter, _ int) {
-				checkComputationLimit(1)
-			},
-		),
 		interpreter.WithOnFunctionInvocationHandler(
 			func(_ *interpreter.Interpreter, _ int) {
 				callStackDepth++
 				checkCallStackDepth()
-
-				checkComputationLimit(1)
 			},
 		),
 		interpreter.WithOnInvokedFunctionReturnHandler(
@@ -1628,9 +1582,15 @@ func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interfa
 				callStackDepth--
 			},
 		),
-		interpreter.WithExitHandler(
-			func() error {
-				return runtimeInterface.SetComputationUsed(computationUsed)
+		interpreter.WithOnMeterComputationFuncHandler(
+			func(compKind common.ComputationKind, intensity uint) {
+				var err error
+				wrapPanic(func() {
+					err = runtimeInterface.MeterComputation(compKind, intensity)
+				})
+				if err != nil {
+					panic(err)
+				}
 			},
 		),
 	}
@@ -1892,32 +1852,45 @@ func storageUsedGetFunction(
 			panic(err)
 		}
 
-		var capacity uint64
-		wrapPanic(func() {
-			capacity, err = runtimeInterface.GetStorageUsed(address)
-		})
-		if err != nil {
-			panic(err)
-		}
-		return interpreter.UInt64Value(capacity)
+		return interpreter.NewUInt64Value(
+			inter,
+			func() uint64 {
+				var capacity uint64
+				wrapPanic(func() {
+					capacity, err = runtimeInterface.GetStorageUsed(address)
+				})
+				if err != nil {
+					panic(err)
+				}
+				return capacity
+			},
+		)
 	}
 }
 
-func storageCapacityGetFunction(addressValue interpreter.AddressValue, runtimeInterface Interface) func() interpreter.UInt64Value {
+func storageCapacityGetFunction(
+	addressValue interpreter.AddressValue,
+	runtimeInterface Interface,
+) func(*interpreter.Interpreter) interpreter.UInt64Value {
 
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation
 	address := addressValue.ToAddress()
 
-	return func() interpreter.UInt64Value {
-		var capacity uint64
-		var err error
-		wrapPanic(func() {
-			capacity, err = runtimeInterface.GetStorageCapacity(address)
-		})
-		if err != nil {
-			panic(err)
-		}
-		return interpreter.UInt64Value(capacity)
+	return func(inter *interpreter.Interpreter) interpreter.UInt64Value {
+		return interpreter.NewUInt64Value(
+			inter,
+			func() uint64 {
+				var capacity uint64
+				var err error
+				wrapPanic(func() {
+					capacity, err = runtimeInterface.GetStorageCapacity(address)
+				})
+				if err != nil {
+					panic(err)
+				}
+				return capacity
+			},
+		)
 	}
 }
 
@@ -1938,7 +1911,7 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 				panic(runtimeErrors.NewUnreachableError())
 			}
 
-			publicKey, err := interpreter.ByteArrayValueToByteSlice(publicKeyValue)
+			publicKey, err := interpreter.ByteArrayValueToByteSlice(inter, publicKeyValue)
 			if err != nil {
 				panic("addPublicKey requires the first argument to be a byte array")
 			}
@@ -2062,7 +2035,7 @@ func (r *interpreterRuntime) loadContract(
 				location.Address,
 				StorageDomainContract,
 			)
-			storedValue = storageMap.ReadValue(location.Name)
+			storedValue = storageMap.ReadValue(inter, location.Name)
 		}
 
 		if storedValue == nil {
@@ -2375,15 +2348,20 @@ func (r *interpreterRuntime) newGetBlockFunction(runtimeInterface Interface) int
 
 func (r *interpreterRuntime) newUnsafeRandomFunction(runtimeInterface Interface) interpreter.HostFunction {
 	return func(invocation interpreter.Invocation) interpreter.Value {
-		var rand uint64
-		var err error
-		wrapPanic(func() {
-			rand, err = runtimeInterface.UnsafeRandom()
-		})
-		if err != nil {
-			panic(err)
-		}
-		return interpreter.UInt64Value(rand)
+		return interpreter.NewUInt64Value(
+			invocation.Interpreter,
+			func() uint64 {
+				var rand uint64
+				var err error
+				wrapPanic(func() {
+					rand, err = runtimeInterface.UnsafeRandom()
+				})
+				if err != nil {
+					panic(err)
+				}
+				return rand
+			},
+		)
 	}
 }
 
@@ -2492,7 +2470,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 			constructorArguments := invocation.Arguments[requiredArgumentCount:]
 			constructorArgumentTypes := invocation.ArgumentTypes[requiredArgumentCount:]
 
-			code, err := interpreter.ByteArrayValueToByteSlice(newCodeValue)
+			code, err := interpreter.ByteArrayValueToByteSlice(inter, newCodeValue)
 			if err != nil {
 				panic("add requires the second argument to be an array")
 			}
@@ -3170,18 +3148,33 @@ var BlockIDStaticType = interpreter.ConstantSizedStaticType{
 	Size: 32,
 }
 
+var blockIDMemoryUsage = common.NewNumberMemoryUsage(
+	8 * int(unsafe.Sizeof(interpreter.UInt8Value(0))),
+)
+
 func NewBlockValue(inter *interpreter.Interpreter, block Block) interpreter.Value {
 
 	// height
-	heightValue := interpreter.UInt64Value(block.Height)
+	heightValue := interpreter.NewUInt64Value(
+		inter,
+		func() uint64 {
+			return block.Height
+		},
+	)
 
 	// view
-	viewValue := interpreter.UInt64Value(block.View)
+	viewValue := interpreter.NewUInt64Value(
+		inter,
+		func() uint64 {
+			return block.View
+		},
+	)
 
 	// ID
+	common.UseMemory(inter, blockIDMemoryUsage)
 	var values = make([]interpreter.Value, sema.BlockIDSize)
 	for i, b := range block.Hash {
-		values[i] = interpreter.UInt8Value(b)
+		values[i] = interpreter.NewUnmeteredUInt8Value(b)
 	}
 
 	idValue := interpreter.NewArrayValue(
@@ -3445,7 +3438,7 @@ func NewPublicKeyFromValue(
 	// publicKey field
 	key := publicKey.GetMember(inter, getLocationRange, sema.PublicKeyPublicKeyField)
 
-	byteArray, err := interpreter.ByteArrayValueToByteSlice(key)
+	byteArray, err := interpreter.ByteArrayValueToByteSlice(inter, key)
 	if err != nil {
 		return nil, fmt.Errorf("public key needs to be a byte array. %w", err)
 	}
@@ -3579,7 +3572,7 @@ func blsVerifyPoP(
 		panic(err)
 	}
 
-	signature, err := interpreter.ByteArrayValueToByteSlice(signatureValue)
+	signature, err := interpreter.ByteArrayValueToByteSlice(inter, signatureValue)
 	if err != nil {
 		panic(err)
 	}
@@ -3602,13 +3595,13 @@ func blsAggregateSignatures(
 ) interpreter.OptionalValue {
 
 	bytesArray := make([][]byte, 0, signaturesValue.Count())
-	signaturesValue.Iterate(func(element interpreter.Value) (resume bool) {
+	signaturesValue.Iterate(inter, func(element interpreter.Value) (resume bool) {
 		signature, ok := element.(*interpreter.ArrayValue)
 		if !ok {
 			panic(runtimeErrors.NewUnreachableError())
 		}
 
-		bytes, err := interpreter.ByteArrayValueToByteSlice(signature)
+		bytes, err := interpreter.ByteArrayValueToByteSlice(inter, signature)
 		if err != nil {
 			panic(err)
 		}
@@ -3647,7 +3640,7 @@ func blsAggregatePublicKeys(
 ) interpreter.OptionalValue {
 
 	publicKeys := make([]*PublicKey, 0, publicKeysValue.Count())
-	publicKeysValue.Iterate(func(element interpreter.Value) (resume bool) {
+	publicKeysValue.Iterate(inter, func(element interpreter.Value) (resume bool) {
 		publicKeyValue, ok := element.(*interpreter.CompositeValue)
 		if !ok {
 			panic(runtimeErrors.NewUnreachableError())
@@ -3699,12 +3692,12 @@ func verifySignature(
 	runtimeInterface Interface,
 ) interpreter.BoolValue {
 
-	signature, err := interpreter.ByteArrayValueToByteSlice(signatureValue)
+	signature, err := interpreter.ByteArrayValueToByteSlice(inter, signatureValue)
 	if err != nil {
 		panic(fmt.Errorf("failed to get signature. %w", err))
 	}
 
-	signedData, err := interpreter.ByteArrayValueToByteSlice(signedDataValue)
+	signedData, err := interpreter.ByteArrayValueToByteSlice(inter, signedDataValue)
 	if err != nil {
 		panic(fmt.Errorf("failed to get signed data. %w", err))
 	}
@@ -3746,7 +3739,7 @@ func hash(
 	runtimeInterface Interface,
 ) *interpreter.ArrayValue {
 
-	data, err := interpreter.ByteArrayValueToByteSlice(dataValue)
+	data, err := interpreter.ByteArrayValueToByteSlice(inter, dataValue)
 	if err != nil {
 		panic(fmt.Errorf("failed to get data. %w", err))
 	}

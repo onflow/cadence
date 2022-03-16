@@ -22,6 +22,7 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -35,6 +36,10 @@ func (interpreter *Interpreter) evalStatement(statement ast.Statement) interface
 	})
 
 	interpreter.statement = statement
+
+	if interpreter.onMeterComputation != nil {
+		interpreter.onMeterComputation(common.ComputationKindStatement, 1)
+	}
 
 	if interpreter.debugger != nil {
 		interpreter.debugger.onStatement(interpreter, statement)
@@ -330,7 +335,7 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) a
 
 		// atree.Array iterator returns low-level atree.Value,
 		// convert to high-level interpreter.Value
-		value := MustConvertStoredValue(atreeValue)
+		value := MustConvertStoredValue(interpreter, atreeValue)
 
 		variable.SetValue(value)
 
