@@ -40,8 +40,9 @@ func newTestMemoryGauge() *testMemoryGauge {
 	}
 }
 
-func (g *testMemoryGauge) UseMemory(usage common.MemoryUsage) {
+func (g *testMemoryGauge) MeterMemory(usage common.MemoryUsage) error {
 	g.meter[usage.Kind] += usage.Amount
+	return nil
 }
 
 func (g *testMemoryGauge) getMemory(kind common.MemoryKind) uint64 {
@@ -76,7 +77,8 @@ func TestInterpretArrayMetering(t *testing.T) {
 		// 3 for creation of z
 		// 4 for transfer of z
 		// 3 for dynamic type check of z
-		assert.Equal(t, uint64(15), meter.getMemory(common.MemoryKindArray))
+		// 14 from value transfer
+		assert.Equal(t, uint64(29), meter.getMemory(common.MemoryKindArray))
 	})
 
 	t.Run("iteration", func(t *testing.T) {
@@ -97,7 +99,7 @@ func TestInterpretArrayMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindArray))
+		assert.Equal(t, uint64(33), meter.getMemory(common.MemoryKindArray))
 	})
 }
 
@@ -121,7 +123,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindString))
-		assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindDictionary))
+		assert.Equal(t, uint64(10), meter.getMemory(common.MemoryKindDictionary))
 	})
 
 	t.Run("iteration", func(t *testing.T) {
@@ -142,7 +144,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(15), meter.getMemory(common.MemoryKindDictionary))
+		assert.Equal(t, uint64(30), meter.getMemory(common.MemoryKindDictionary))
 	})
 }
 
@@ -179,7 +181,7 @@ func TestInterpretCompositeMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(56), meter.getMemory(common.MemoryKindString))
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindComposite))
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindComposite))
 	})
 
 	t.Run("iteration", func(t *testing.T) {
@@ -202,7 +204,7 @@ func TestInterpretCompositeMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(15), meter.getMemory(common.MemoryKindComposite))
+		assert.Equal(t, uint64(30), meter.getMemory(common.MemoryKindComposite))
 	})
 }
 

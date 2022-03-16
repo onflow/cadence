@@ -804,9 +804,7 @@ func NewUnmeteredStringValue(str string) *StringValue {
 }
 
 func NewStringValue(memoryGauge common.MemoryGauge, memoryUsage common.MemoryUsage, stringConstructor func() string) *StringValue {
-	if memoryGauge != nil {
-		memoryGauge.UseMemory(memoryUsage)
-	}
+	common.UseMemory(memoryGauge, memoryUsage)
 	str := stringConstructor()
 	return NewUnmeteredStringValue(str)
 }
@@ -1288,9 +1286,9 @@ func newArrayValueFromAtreeValue(
 	array *atree.Array,
 	staticType ArrayStaticType,
 ) *ArrayValue {
-	if memoryGauge != nil {
-		memoryGauge.UseMemory(common.NewConstantMemoryUsage(common.MemoryKindArray))
-	}
+
+	common.UseMemory(memoryGauge, common.NewConstantMemoryUsage(common.MemoryKindArray))
+
 	return &ArrayValue{
 		Type:  staticType,
 		array: array,
@@ -2173,13 +2171,10 @@ func (v *ArrayValue) Transfer(
 	}
 
 	if res == nil {
-		res = &ArrayValue{
-			Type:             v.Type,
-			semaType:         v.semaType,
-			isResourceKinded: v.isResourceKinded,
-			array:            array,
-			isDestroyed:      v.isDestroyed,
-		}
+		res = newArrayValueFromAtreeValue(interpreter, array, v.Type)
+		res.semaType = v.semaType
+		res.isResourceKinded = v.isResourceKinded
+		res.isDestroyed = v.isDestroyed
 	}
 
 	return res
@@ -2551,9 +2546,7 @@ func NewIntValueFromBigInt(
 	memoryUsage common.MemoryUsage,
 	bigIntConstructor func() *big.Int,
 ) IntValue {
-	if memoryGauge != nil {
-		memoryGauge.UseMemory(memoryUsage)
-	}
+	common.UseMemory(memoryGauge, memoryUsage)
 	value := bigIntConstructor()
 	return NewUnmeteredIntValueFromBigInt(value)
 }
@@ -6799,9 +6792,7 @@ func NewUIntValueFromBigInt(
 	memoryUsage common.MemoryUsage,
 	bigIntConstructor func() *big.Int,
 ) UIntValue {
-	if memoryGauge != nil {
-		memoryGauge.UseMemory(memoryUsage)
-	}
+	common.UseMemory(memoryGauge, memoryUsage)
 	value := bigIntConstructor()
 	return NewUnmeteredUIntValueFromBigInt(value)
 }
@@ -11661,7 +11652,7 @@ func (v Word32Value) Mul(interpreter *Interpreter, other NumberValue) NumberValu
 	return NewWord32Value(interpreter, valueGetter)
 }
 
-func (v Word32Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
+func (v Word32Value) SaturatingMul(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -13361,9 +13352,9 @@ func newCompositeValueFromOrderedMap(
 	dict *atree.OrderedMap,
 	typeInfo compositeTypeInfo,
 ) *CompositeValue {
-	if memoryGauge != nil {
-		memoryGauge.UseMemory(common.NewConstantMemoryUsage(common.MemoryKindComposite))
-	}
+
+	common.UseMemory(memoryGauge, common.NewConstantMemoryUsage(common.MemoryKindComposite))
+
 	return &CompositeValue{
 		dictionary:          dict,
 		Location:            typeInfo.location,
@@ -14147,22 +14138,22 @@ func (v *CompositeValue) Transfer(
 	}
 
 	if res == nil {
-		res = &CompositeValue{
-			dictionary:          dictionary,
-			Location:            v.Location,
-			QualifiedIdentifier: v.QualifiedIdentifier,
-			Kind:                v.Kind,
-			InjectedFields:      v.InjectedFields,
-			ComputedFields:      v.ComputedFields,
-			NestedVariables:     v.NestedVariables,
-			Functions:           v.Functions,
-			Destructor:          v.Destructor,
-			Stringer:            v.Stringer,
-			isDestroyed:         v.isDestroyed,
-			typeID:              v.typeID,
-			staticType:          v.staticType,
-			dynamicType:         v.dynamicType,
+		info := compositeTypeInfo{
+			location:            v.Location,
+			qualifiedIdentifier: v.QualifiedIdentifier,
+			kind:                v.Kind,
 		}
+		res = newCompositeValueFromOrderedMap(interpreter, dictionary, info)
+		res.InjectedFields = v.InjectedFields
+		res.ComputedFields = v.ComputedFields
+		res.NestedVariables = v.NestedVariables
+		res.Functions = v.Functions
+		res.Destructor = v.Destructor
+		res.Stringer = v.Stringer
+		res.isDestroyed = v.isDestroyed
+		res.typeID = v.typeID
+		res.staticType = v.staticType
+		res.dynamicType = v.dynamicType
 	}
 
 	if needsStoreTo &&
@@ -14455,9 +14446,9 @@ func newDictionaryValueFromOrderedMap(
 	dict *atree.OrderedMap,
 	staticType DictionaryStaticType,
 ) *DictionaryValue {
-	if memoryGauge != nil {
-		memoryGauge.UseMemory(common.NewConstantMemoryUsage(common.MemoryKindDictionary))
-	}
+
+	common.UseMemory(memoryGauge, common.NewConstantMemoryUsage(common.MemoryKindDictionary))
+
 	return &DictionaryValue{
 		Type:       staticType,
 		dictionary: dict,
@@ -15263,13 +15254,10 @@ func (v *DictionaryValue) Transfer(
 	}
 
 	if res == nil {
-		res = &DictionaryValue{
-			Type:             v.Type,
-			semaType:         v.semaType,
-			isResourceKinded: v.isResourceKinded,
-			dictionary:       dictionary,
-			isDestroyed:      v.isDestroyed,
-		}
+		res = newDictionaryValueFromOrderedMap(interpreter, dictionary, v.Type)
+		res.semaType = v.semaType
+		res.isResourceKinded = v.isResourceKinded
+		res.isDestroyed = v.isDestroyed
 	}
 
 	return res
