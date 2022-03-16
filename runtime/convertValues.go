@@ -488,13 +488,13 @@ func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedTy
 	case cadence.UInt256:
 		return importUInt256(inter, v), nil
 	case cadence.Word8:
-		return interpreter.Word8Value(v), nil
+		return importWord8(inter, v), nil
 	case cadence.Word16:
-		return interpreter.Word16Value(v), nil
+		return importWord16(inter, v), nil
 	case cadence.Word32:
-		return interpreter.Word32Value(v), nil
+		return importWord32(inter, v), nil
 	case cadence.Word64:
-		return interpreter.Word64Value(v), nil
+		return importWord64(inter, v), nil
 	case cadence.Fix64:
 		return interpreter.Fix64Value(v), nil
 	case cadence.UFix64:
@@ -687,6 +687,42 @@ func importUInt(inter *interpreter.Interpreter, v cadence.UInt) interpreter.UInt
 		memoryUsage,
 		func() *big.Int {
 			return v.Value
+		},
+	)
+}
+
+func importWord8(inter *interpreter.Interpreter, v cadence.Word8) interpreter.Word8Value {
+	return interpreter.NewWord8Value(
+		inter,
+		func() uint8 {
+			return uint8(v)
+		},
+	)
+}
+
+func importWord16(inter *interpreter.Interpreter, v cadence.Word16) interpreter.Word16Value {
+	return interpreter.NewWord16Value(
+		inter,
+		func() uint16 {
+			return uint16(v)
+		},
+	)
+}
+
+func importWord32(inter *interpreter.Interpreter, v cadence.Word32) interpreter.Word32Value {
+	return interpreter.NewWord32Value(
+		inter,
+		func() uint32 {
+			return uint32(v)
+		},
+	)
+}
+
+func importWord64(inter *interpreter.Interpreter, v cadence.Word64) interpreter.Word64Value {
+	return interpreter.NewWord64Value(
+		inter,
+		func() uint64 {
+			return uint64(v)
 		},
 	)
 }

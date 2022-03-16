@@ -1308,13 +1308,13 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 
 	// Word
 	case Word8:
-		return interpreter.Word8Value(randomInt(math.MaxUint8))
+		return interpreter.NewUnmeteredWord8Value(uint8(randomInt(math.MaxUint8)))
 	case Word16:
-		return interpreter.Word16Value(randomInt(math.MaxUint16))
+		return interpreter.NewUnmeteredWord16Value(uint16(randomInt(math.MaxUint16)))
 	case Word32:
-		return interpreter.Word32Value(rand.Uint32())
+		return interpreter.NewUnmeteredWord32Value(rand.Uint32())
 	case Word64:
-		return interpreter.Word64Value(rand.Uint64())
+		return interpreter.NewUnmeteredWord64Value(rand.Uint64())
 
 	// Fixed point
 	case Fix64:

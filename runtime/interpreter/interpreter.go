@@ -2831,8 +2831,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 		convert: func(interpreter *Interpreter, value Value) Value {
 			return ConvertWord8(interpreter, value)
 		},
-		min: Word8Value(0),
-		max: Word8Value(math.MaxUint8),
+		min: NewUnmeteredWord8Value(0),
+		max: NewUnmeteredWord8Value(math.MaxUint8),
 	},
 	{
 		name:         sema.Word16TypeName,
@@ -2840,8 +2840,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 		convert: func(interpreter *Interpreter, value Value) Value {
 			return ConvertWord16(interpreter, value)
 		},
-		min: Word16Value(0),
-		max: Word16Value(math.MaxUint16),
+		min: NewUnmeteredWord16Value(0),
+		max: NewUnmeteredWord16Value(math.MaxUint16),
 	},
 	{
 		name:         sema.Word32TypeName,
@@ -2849,8 +2849,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 		convert: func(interpreter *Interpreter, value Value) Value {
 			return ConvertWord32(interpreter, value)
 		},
-		min: Word32Value(0),
-		max: Word32Value(math.MaxUint32),
+		min: NewUnmeteredWord32Value(0),
+		max: NewUnmeteredWord32Value(math.MaxUint32),
 	},
 	{
 		name:         sema.Word64TypeName,
@@ -2858,8 +2858,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 		convert: func(interpreter *Interpreter, value Value) Value {
 			return ConvertWord64(interpreter, value)
 		},
-		min: Word64Value(0),
-		max: Word64Value(math.MaxUint64),
+		min: NewUnmeteredWord64Value(0),
+		max: NewUnmeteredWord64Value(math.MaxUint64),
 	},
 	{
 		name:         sema.Fix64TypeName,

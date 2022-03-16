@@ -6745,19 +6745,19 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 		},
 		// Word*
 		"Word8": {
-			value: interpreter.Word8Value(42),
+			value: interpreter.NewUnmeteredWord8Value(42),
 			ty:    sema.Word8Type,
 		},
 		"Word16": {
-			value: interpreter.Word16Value(42),
+			value: interpreter.NewUnmeteredWord16Value(42),
 			ty:    sema.Word16Type,
 		},
 		"Word32": {
-			value: interpreter.Word32Value(42),
+			value: interpreter.NewUnmeteredWord32Value(42),
 			ty:    sema.Word32Type,
 		},
 		"Word64": {
-			value: interpreter.Word64Value(42),
+			value: interpreter.NewUnmeteredWord64Value(42),
 			ty:    sema.Word64Type,
 		},
 		// Fix*

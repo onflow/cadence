@@ -306,22 +306,22 @@ func TestExportValue(t *testing.T) {
 		},
 		{
 			label:    "Word8",
-			value:    interpreter.Word8Value(42),
+			value:    interpreter.NewUnmeteredWord8Value(42),
 			expected: cadence.NewWord8(42),
 		},
 		{
 			label:    "Word16",
-			value:    interpreter.Word16Value(42),
+			value:    interpreter.NewUnmeteredWord16Value(42),
 			expected: cadence.NewWord16(42),
 		},
 		{
 			label:    "Word32",
-			value:    interpreter.Word32Value(42),
+			value:    interpreter.NewUnmeteredWord32Value(42),
 			expected: cadence.NewWord32(42),
 		},
 		{
 			label:    "Word64",
-			value:    interpreter.Word64Value(42),
+			value:    interpreter.NewUnmeteredWord64Value(42),
 			expected: cadence.NewWord64(42),
 		},
 		{
@@ -692,22 +692,22 @@ func TestImportValue(t *testing.T) {
 		{
 			label:    "Word8",
 			value:    cadence.NewWord8(42),
-			expected: interpreter.Word8Value(42),
+			expected: interpreter.NewUnmeteredWord8Value(42),
 		},
 		{
 			label:    "Word16",
 			value:    cadence.NewWord16(42),
-			expected: interpreter.Word16Value(42),
+			expected: interpreter.NewUnmeteredWord16Value(42),
 		},
 		{
 			label:    "Word32",
 			value:    cadence.NewWord32(42),
-			expected: interpreter.Word32Value(42),
+			expected: interpreter.NewUnmeteredWord32Value(42),
 		},
 		{
 			label:    "Word64",
 			value:    cadence.NewWord64(42),
-			expected: interpreter.Word64Value(42),
+			expected: interpreter.NewUnmeteredWord64Value(42),
 		},
 		{
 			label:    "Fix64",

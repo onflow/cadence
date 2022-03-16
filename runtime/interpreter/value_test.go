@@ -846,19 +846,19 @@ func TestStringer(t *testing.T) {
 			expected: "-256",
 		},
 		"Word8": {
-			value:    Word8Value(8),
+			value:    NewUnmeteredWord8Value(8),
 			expected: "8",
 		},
 		"Word16": {
-			value:    Word16Value(16),
+			value:    NewUnmeteredWord16Value(16),
 			expected: "16",
 		},
 		"Word32": {
-			value:    Word32Value(32),
+			value:    NewUnmeteredWord32Value(32),
 			expected: "32",
 		},
 		"Word64": {
-			value:    Word64Value(64),
+			value:    NewUnmeteredWord64Value(64),
 			expected: "64",
 		},
 		"UFix64": {
@@ -1287,51 +1287,51 @@ func TestGetHashInput(t *testing.T) {
 			expected: append([]byte{byte(HashInputTypeInt256)}, sema.Int256TypeMaxIntBig.Bytes()...),
 		},
 		"Word8": {
-			value:    Word8Value(8),
+			value:    NewUnmeteredWord8Value(8),
 			expected: []byte{byte(HashInputTypeWord8), 8},
 		},
 		"Word8 min": {
-			value:    Word8Value(0),
+			value:    NewUnmeteredWord8Value(0),
 			expected: []byte{byte(HashInputTypeWord8), 0},
 		},
 		"Word8 max": {
-			value:    Word8Value(255),
+			value:    NewUnmeteredWord8Value(255),
 			expected: []byte{byte(HashInputTypeWord8), 0xff},
 		},
 		"Word16": {
-			value:    Word16Value(16),
+			value:    NewUnmeteredWord16Value(16),
 			expected: []byte{byte(HashInputTypeWord16), 0, 16},
 		},
 		"Word16 min": {
-			value:    Word16Value(0),
+			value:    NewUnmeteredWord16Value(0),
 			expected: []byte{byte(HashInputTypeWord16), 0, 0},
 		},
 		"Word16 max": {
-			value:    Word16Value(math.MaxUint16),
+			value:    NewUnmeteredWord16Value(math.MaxUint16),
 			expected: []byte{byte(HashInputTypeWord16), 0xff, 0xff},
 		},
 		"Word32": {
-			value:    Word32Value(32),
+			value:    NewUnmeteredWord32Value(32),
 			expected: []byte{byte(HashInputTypeWord32), 0, 0, 0, 32},
 		},
 		"Word32 min": {
-			value:    Word32Value(0),
+			value:    NewUnmeteredWord32Value(0),
 			expected: []byte{byte(HashInputTypeWord32), 0, 0, 0, 0},
 		},
 		"Word32 max": {
-			value:    Word32Value(math.MaxUint32),
+			value:    NewUnmeteredWord32Value(math.MaxUint32),
 			expected: []byte{byte(HashInputTypeWord32), 0xff, 0xff, 0xff, 0xff},
 		},
 		"Word64": {
-			value:    Word64Value(64),
+			value:    NewUnmeteredWord64Value(64),
 			expected: []byte{byte(HashInputTypeWord64), 0, 0, 0, 0, 0, 0, 0, 64},
 		},
 		"Word64 min": {
-			value:    Word64Value(0),
+			value:    NewUnmeteredWord64Value(0),
 			expected: []byte{byte(HashInputTypeWord64), 0, 0, 0, 0, 0, 0, 0, 0},
 		},
 		"Word64 max": {
-			value:    Word64Value(math.MaxUint64),
+			value:    NewUnmeteredWord64Value(math.MaxUint64),
 			expected: []byte{byte(HashInputTypeWord64), 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
 		},
 		"UFix64": {
@@ -3063,10 +3063,10 @@ func TestNumberValue_Equal(t *testing.T) {
 		"Int64":   NewUnmeteredInt64Value(-64),
 		"Int128":  NewUnmeteredInt128ValueFromInt64(-128),
 		"Int256":  NewUnmeteredInt256ValueFromInt64(-256),
-		"Word8":   Word8Value(8),
-		"Word16":  Word16Value(16),
-		"Word32":  Word32Value(32),
-		"Word64":  Word64Value(64),
+		"Word8":   NewUnmeteredWord8Value(8),
+		"Word16":  NewUnmeteredWord16Value(16),
+		"Word32":  NewUnmeteredWord32Value(32),
+		"Word64":  NewUnmeteredWord64Value(64),
 		"UFix64":  NewUFix64ValueWithInteger(64),
 		"Fix64":   NewFix64ValueWithInteger(-32),
 	}
