@@ -31,7 +31,6 @@ const (
 	MemoryKindString
 	MemoryKindCharacter
 	MemoryKindMetaType
-	MemoryKindBlock
 	MemoryKindNumber
 	MemoryKindArray
 	MemoryKindDictionary

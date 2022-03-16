@@ -14,21 +14,20 @@ func _() {
 	_ = x[MemoryKindString-3]
 	_ = x[MemoryKindCharacter-4]
 	_ = x[MemoryKindMetaType-5]
-	_ = x[MemoryKindBlock-6]
-	_ = x[MemoryKindNumber-7]
-	_ = x[MemoryKindArray-8]
-	_ = x[MemoryKindDictionary-9]
-	_ = x[MemoryKindComposite-10]
-	_ = x[MemoryKindOptional-11]
-	_ = x[MemoryKindInterpretedFunction-12]
-	_ = x[MemoryKindHostFunction-13]
-	_ = x[MemoryKindBoundFunction-14]
-	_ = x[MemoryKindBigInt-15]
+	_ = x[MemoryKindNumber-6]
+	_ = x[MemoryKindArray-7]
+	_ = x[MemoryKindDictionary-8]
+	_ = x[MemoryKindComposite-9]
+	_ = x[MemoryKindOptional-10]
+	_ = x[MemoryKindInterpretedFunction-11]
+	_ = x[MemoryKindHostFunction-12]
+	_ = x[MemoryKindBoundFunction-13]
+	_ = x[MemoryKindBigInt-14]
 }
 
-const _MemoryKind_name = "UnknownBoolAddressStringCharacterMetaTypeBlockNumberArrayDictionaryCompositeOptionalInterpretedFunctionHostFunctionBoundFunctionBigInt"
+const _MemoryKind_name = "UnknownBoolAddressStringCharacterMetaTypeNumberArrayDictionaryCompositeOptionalInterpretedFunctionHostFunctionBoundFunctionBigInt"
 
-var _MemoryKind_index = [...]uint8{0, 7, 11, 18, 24, 33, 41, 46, 52, 57, 67, 76, 84, 103, 115, 128, 134}
+var _MemoryKind_index = [...]uint8{0, 7, 11, 18, 24, 33, 41, 47, 52, 62, 71, 79, 98, 110, 123, 129}
 
 func (i MemoryKind) String() string {
 	if i >= MemoryKind(len(_MemoryKind_index)-1) {
