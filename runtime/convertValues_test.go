@@ -241,32 +241,32 @@ func TestExportValue(t *testing.T) {
 		},
 		{
 			label:    "Int8",
-			value:    interpreter.Int8Value(42),
+			value:    interpreter.NewUnmeteredInt8Value(42),
 			expected: cadence.NewInt8(42),
 		},
 		{
 			label:    "Int16",
-			value:    interpreter.Int16Value(42),
+			value:    interpreter.NewUnmeteredInt16Value(42),
 			expected: cadence.NewInt16(42),
 		},
 		{
 			label:    "Int32",
-			value:    interpreter.Int32Value(42),
+			value:    interpreter.NewUnmeteredInt32Value(42),
 			expected: cadence.NewInt32(42),
 		},
 		{
 			label:    "Int64",
-			value:    interpreter.Int64Value(42),
+			value:    interpreter.NewUnmeteredInt64Value(42),
 			expected: cadence.NewInt64(42),
 		},
 		{
 			label:    "Int128",
-			value:    interpreter.NewInt128ValueFromInt64(42),
+			value:    interpreter.NewUnmeteredInt128ValueFromInt64(42),
 			expected: cadence.NewInt128(42),
 		},
 		{
 			label:    "Int256",
-			value:    interpreter.NewInt256ValueFromInt64(42),
+			value:    interpreter.NewUnmeteredInt256ValueFromInt64(42),
 			expected: cadence.NewInt256(42),
 		},
 		{
@@ -276,52 +276,52 @@ func TestExportValue(t *testing.T) {
 		},
 		{
 			label:    "UInt8",
-			value:    interpreter.UInt8Value(42),
+			value:    interpreter.NewUnmeteredUInt8Value(42),
 			expected: cadence.NewUInt8(42),
 		},
 		{
 			label:    "UInt16",
-			value:    interpreter.UInt16Value(42),
+			value:    interpreter.NewUnmeteredUInt16Value(42),
 			expected: cadence.NewUInt16(42),
 		},
 		{
 			label:    "UInt32",
-			value:    interpreter.UInt32Value(42),
+			value:    interpreter.NewUnmeteredUInt32Value(42),
 			expected: cadence.NewUInt32(42),
 		},
 		{
 			label:    "UInt64",
-			value:    interpreter.UInt64Value(42),
+			value:    interpreter.NewUnmeteredUInt64Value(42),
 			expected: cadence.NewUInt64(42),
 		},
 		{
 			label:    "UInt128",
-			value:    interpreter.NewUInt128ValueFromUint64(42),
+			value:    interpreter.NewUnmeteredUInt128ValueFromUint64(42),
 			expected: cadence.NewUInt128(42),
 		},
 		{
 			label:    "UInt256",
-			value:    interpreter.NewUInt256ValueFromUint64(42),
+			value:    interpreter.NewUnmeteredUInt256ValueFromUint64(42),
 			expected: cadence.NewUInt256(42),
 		},
 		{
 			label:    "Word8",
-			value:    interpreter.Word8Value(42),
+			value:    interpreter.NewUnmeteredWord8Value(42),
 			expected: cadence.NewWord8(42),
 		},
 		{
 			label:    "Word16",
-			value:    interpreter.Word16Value(42),
+			value:    interpreter.NewUnmeteredWord16Value(42),
 			expected: cadence.NewWord16(42),
 		},
 		{
 			label:    "Word32",
-			value:    interpreter.Word32Value(42),
+			value:    interpreter.NewUnmeteredWord32Value(42),
 			expected: cadence.NewWord32(42),
 		},
 		{
 			label:    "Word64",
-			value:    interpreter.Word64Value(42),
+			value:    interpreter.NewUnmeteredWord64Value(42),
 			expected: cadence.NewWord64(42),
 		},
 		{
@@ -627,32 +627,32 @@ func TestImportValue(t *testing.T) {
 		{
 			label:    "Int8",
 			value:    cadence.NewInt8(42),
-			expected: interpreter.Int8Value(42),
+			expected: interpreter.NewUnmeteredInt8Value(42),
 		},
 		{
 			label:    "Int16",
 			value:    cadence.NewInt16(42),
-			expected: interpreter.Int16Value(42),
+			expected: interpreter.NewUnmeteredInt16Value(42),
 		},
 		{
 			label:    "Int32",
 			value:    cadence.NewInt32(42),
-			expected: interpreter.Int32Value(42),
+			expected: interpreter.NewUnmeteredInt32Value(42),
 		},
 		{
 			label:    "Int64",
 			value:    cadence.NewInt64(42),
-			expected: interpreter.Int64Value(42),
+			expected: interpreter.NewUnmeteredInt64Value(42),
 		},
 		{
 			label:    "Int128",
 			value:    cadence.NewInt128(42),
-			expected: interpreter.NewInt128ValueFromInt64(42),
+			expected: interpreter.NewUnmeteredInt128ValueFromInt64(42),
 		},
 		{
 			label:    "Int256",
 			value:    cadence.NewInt256(42),
-			expected: interpreter.NewInt256ValueFromInt64(42),
+			expected: interpreter.NewUnmeteredInt256ValueFromInt64(42),
 		},
 		{
 			label:    "UInt",
@@ -662,52 +662,52 @@ func TestImportValue(t *testing.T) {
 		{
 			label:    "UInt8",
 			value:    cadence.NewUInt8(42),
-			expected: interpreter.UInt8Value(42),
+			expected: interpreter.NewUnmeteredUInt8Value(42),
 		},
 		{
 			label:    "UInt16",
 			value:    cadence.NewUInt16(42),
-			expected: interpreter.UInt16Value(42),
+			expected: interpreter.NewUnmeteredUInt16Value(42),
 		},
 		{
 			label:    "UInt32",
 			value:    cadence.NewUInt32(42),
-			expected: interpreter.UInt32Value(42),
+			expected: interpreter.NewUnmeteredUInt32Value(42),
 		},
 		{
 			label:    "UInt64",
 			value:    cadence.NewUInt64(42),
-			expected: interpreter.UInt64Value(42),
+			expected: interpreter.NewUnmeteredUInt64Value(42),
 		},
 		{
 			label:    "UInt128",
 			value:    cadence.NewUInt128(42),
-			expected: interpreter.NewUInt128ValueFromUint64(42),
+			expected: interpreter.NewUnmeteredUInt128ValueFromUint64(42),
 		},
 		{
 			label:    "UInt256",
 			value:    cadence.NewUInt256(42),
-			expected: interpreter.NewUInt256ValueFromUint64(42),
+			expected: interpreter.NewUnmeteredUInt256ValueFromUint64(42),
 		},
 		{
 			label:    "Word8",
 			value:    cadence.NewWord8(42),
-			expected: interpreter.Word8Value(42),
+			expected: interpreter.NewUnmeteredWord8Value(42),
 		},
 		{
 			label:    "Word16",
 			value:    cadence.NewWord16(42),
-			expected: interpreter.Word16Value(42),
+			expected: interpreter.NewUnmeteredWord16Value(42),
 		},
 		{
 			label:    "Word32",
 			value:    cadence.NewWord32(42),
-			expected: interpreter.Word32Value(42),
+			expected: interpreter.NewUnmeteredWord32Value(42),
 		},
 		{
 			label:    "Word64",
 			value:    cadence.NewWord64(42),
-			expected: interpreter.Word64Value(42),
+			expected: interpreter.NewUnmeteredWord64Value(42),
 		},
 		{
 			label:    "Fix64",
@@ -2110,25 +2110,27 @@ func TestRuntimeEnumValue(t *testing.T) {
 }
 
 func executeTestScript(t *testing.T, script string, arg cadence.Value) (cadence.Value, error) {
-	encodedArg, err := json.Encode(arg)
-	require.NoError(t, err)
-
 	rt := newTestInterpreterRuntime()
 
-	storage := newTestLedger(nil, nil)
-
 	runtimeInterface := &testRuntimeInterface{
-		storage: storage,
+		storage: newTestLedger(nil, nil),
 		decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 			return json.Decode(b)
 		},
 	}
 
+	scriptParam := Script{
+		Source: []byte(script),
+	}
+
+	if arg != nil {
+		encodedArg, err := json.Encode(arg)
+		require.NoError(t, err)
+		scriptParam.Arguments = [][]byte{encodedArg}
+	}
+
 	return rt.ExecuteScript(
-		Script{
-			Source:    []byte(script),
-			Arguments: [][]byte{encodedArg},
-		},
+		scriptParam,
 		Context{
 			Interface: runtimeInterface,
 			Location:  TestLocation,
@@ -3064,8 +3066,8 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 						Type: interpreter.PrimitiveStaticTypeInt8,
 					},
 					common.Address{},
-					interpreter.Int8Value(4),
-					interpreter.Int8Value(3),
+					interpreter.NewUnmeteredInt8Value(4),
+					interpreter.NewUnmeteredInt8Value(3),
 				),
 				interpreter.NewArrayValue(
 					inter,
@@ -3073,8 +3075,8 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 						Type: interpreter.PrimitiveStaticTypeInt8,
 					},
 					common.Address{},
-					interpreter.Int8Value(42),
-					interpreter.Int8Value(54),
+					interpreter.NewUnmeteredInt8Value(42),
+					interpreter.NewUnmeteredInt8Value(54),
 				),
 			),
 			actual,
@@ -3276,8 +3278,8 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 						KeyType:   interpreter.PrimitiveStaticTypeInt8,
 						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
-					interpreter.Int8Value(1), interpreter.NewUnmeteredIntValueFromInt64(100),
-					interpreter.Int8Value(2), interpreter.NewUnmeteredStringValue("hello"),
+					interpreter.NewUnmeteredInt8Value(1), interpreter.NewUnmeteredIntValueFromInt64(100),
+					interpreter.NewUnmeteredInt8Value(2), interpreter.NewUnmeteredStringValue("hello"),
 				),
 
 				interpreter.NewUnmeteredStringValue("b"),
@@ -3287,7 +3289,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 						KeyType:   interpreter.PrimitiveStaticTypeSignedInteger,
 						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
-					interpreter.Int8Value(1), interpreter.NewUnmeteredStringValue("foo"),
+					interpreter.NewUnmeteredInt8Value(1), interpreter.NewUnmeteredStringValue("foo"),
 					interpreter.NewUnmeteredIntValueFromInt64(2), interpreter.NewUnmeteredIntValueFromInt64(50),
 				),
 			),

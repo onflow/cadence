@@ -1165,7 +1165,12 @@ func (v *StringValue) DecodeHex(interpreter *Interpreter) *ArrayValue {
 				return nil
 			}
 
-			value := UInt8Value(bs[i])
+			value := NewUInt8Value(
+				interpreter,
+				func() uint8 {
+					return bs[i]
+				},
+			)
 
 			i++
 
@@ -1237,6 +1242,8 @@ func NewArrayValueWithIterator(
 	address common.Address,
 	values func() Value,
 ) *ArrayValue {
+	interpreter.ReportComputation(common.ComputationKindCreateArrayValue, 1)
+
 	var v *ArrayValue
 
 	if interpreter.tracingEnabled {
@@ -1360,6 +1367,8 @@ func (v *ArrayValue) checkInvalidatedResourceUse(interpreter *Interpreter, getLo
 }
 
 func (v *ArrayValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
+
+	interpreter.ReportComputation(common.ComputationKindDestroyArrayValue, 1)
 
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
@@ -2057,10 +2066,11 @@ func (v *ArrayValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 ) Value {
-
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
 	}
+
+	interpreter.ReportComputation(common.ComputationKindTransferArrayValue, uint(v.Count()))
 
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
@@ -2359,13 +2369,13 @@ type NumberValue interface {
 	Negate(*Interpreter) NumberValue
 	Plus(interpreter *Interpreter, other NumberValue) NumberValue
 	SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue
-	Minus(other NumberValue) NumberValue
-	SaturatingMinus(other NumberValue) NumberValue
+	Minus(interpreter *Interpreter, other NumberValue) NumberValue
+	SaturatingMinus(interpreter *Interpreter, other NumberValue) NumberValue
 	Mod(interpreter *Interpreter, other NumberValue) NumberValue
 	Mul(interpreter *Interpreter, other NumberValue) NumberValue
 	SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue
-	Div(other NumberValue) NumberValue
-	SaturatingDiv(other NumberValue) NumberValue
+	Div(interpreter *Interpreter, other NumberValue) NumberValue
+	SaturatingDiv(interpreter *Interpreter, other NumberValue) NumberValue
 	Less(other NumberValue) BoolValue
 	LessEqual(other NumberValue) BoolValue
 	Greater(other NumberValue) BoolValue
@@ -2439,7 +2449,10 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
-				return v.SaturatingMinus(other)
+				return v.SaturatingMinus(
+					invocation.Interpreter,
+					other,
+				)
 			},
 			&sema.FunctionType{
 				ReturnTypeAnnotation: sema.NewTypeAnnotation(
@@ -2476,7 +2489,10 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
-				return v.SaturatingDiv(other)
+				return v.SaturatingDiv(
+					invocation.Interpreter,
+					other,
+				)
 			},
 			&sema.FunctionType{
 				ReturnTypeAnnotation: sema.NewTypeAnnotation(
@@ -2491,11 +2507,11 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 
 type IntegerValue interface {
 	NumberValue
-	BitwiseOr(other IntegerValue) IntegerValue
-	BitwiseXor(other IntegerValue) IntegerValue
-	BitwiseAnd(other IntegerValue) IntegerValue
-	BitwiseLeftShift(other IntegerValue) IntegerValue
-	BitwiseRightShift(other IntegerValue) IntegerValue
+	BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue
+	BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue
+	BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue
+	BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue
+	BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue
 }
 
 // BigNumberValue is a number value with an integer value outside the range of int64
@@ -2668,7 +2684,7 @@ func (v IntValue) SaturatingPlus(interpreter *Interpreter, other NumberValue) Nu
 	return v.Plus(interpreter, other)
 }
 
-func (v IntValue) Minus(other NumberValue) NumberValue {
+func (v IntValue) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -2678,12 +2694,17 @@ func (v IntValue) Minus(other NumberValue) NumberValue {
 		})
 	}
 
-	res := new(big.Int)
-	res.Sub(v.BigInt, o.BigInt)
-	return IntValue{res}
+	return NewIntValueFromBigInt(
+		interpreter,
+		common.NewMinusBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Sub(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v IntValue) SaturatingMinus(other NumberValue) NumberValue {
+func (v IntValue) SaturatingMinus(interpreter *Interpreter, other NumberValue) NumberValue {
 	defer func() {
 		r := recover()
 		if _, ok := r.(InvalidOperandsError); ok {
@@ -2695,7 +2716,7 @@ func (v IntValue) SaturatingMinus(other NumberValue) NumberValue {
 		}
 	}()
 
-	return v.Minus(other)
+	return v.Minus(interpreter, other)
 }
 
 func (v IntValue) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -2708,13 +2729,18 @@ func (v IntValue) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 		})
 	}
 
-	res := new(big.Int)
-	// INT33-C
-	if o.BigInt.Cmp(res) == 0 {
-		panic(DivisionByZeroError{})
-	}
-	res.Rem(v.BigInt, o.BigInt)
-	return IntValue{res}
+	return NewIntValueFromBigInt(
+		interpreter,
+		common.NewModBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			// INT33-C
+			if o.BigInt.Cmp(res) == 0 {
+				panic(DivisionByZeroError{})
+			}
+			return res.Rem(v.BigInt, o.BigInt)
+		},
+	)
 }
 
 func (v IntValue) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -2752,7 +2778,7 @@ func (v IntValue) SaturatingMul(interpreter *Interpreter, other NumberValue) Num
 	return v.Mul(interpreter, other)
 }
 
-func (v IntValue) Div(other NumberValue) NumberValue {
+func (v IntValue) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -2762,16 +2788,21 @@ func (v IntValue) Div(other NumberValue) NumberValue {
 		})
 	}
 
-	res := new(big.Int)
-	// INT33-C
-	if o.BigInt.Cmp(res) == 0 {
-		panic(DivisionByZeroError{})
-	}
-	res.Div(v.BigInt, o.BigInt)
-	return IntValue{res}
+	return NewIntValueFromBigInt(
+		interpreter,
+		common.NewDivBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			// INT33-C
+			if o.BigInt.Cmp(res) == 0 {
+				panic(DivisionByZeroError{})
+			}
+			return res.Div(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v IntValue) SaturatingDiv(other NumberValue) NumberValue {
+func (v IntValue) SaturatingDiv(interpreter *Interpreter, other NumberValue) NumberValue {
 	defer func() {
 		r := recover()
 		if _, ok := r.(InvalidOperandsError); ok {
@@ -2783,7 +2814,7 @@ func (v IntValue) SaturatingDiv(other NumberValue) NumberValue {
 		}
 	}()
 
-	return v.Div(other)
+	return v.Div(interpreter, other)
 }
 
 func (v IntValue) Less(other NumberValue) BoolValue {
@@ -2870,7 +2901,7 @@ func (v IntValue) HashInput(_ *Interpreter, _ func() LocationRange, scratch []by
 	return buffer
 }
 
-func (v IntValue) BitwiseOr(other IntegerValue) IntegerValue {
+func (v IntValue) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -2880,12 +2911,17 @@ func (v IntValue) BitwiseOr(other IntegerValue) IntegerValue {
 		})
 	}
 
-	res := new(big.Int)
-	res.Or(v.BigInt, o.BigInt)
-	return IntValue{res}
+	return NewIntValueFromBigInt(
+		interpreter,
+		common.NewBitwiseOrBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Or(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v IntValue) BitwiseXor(other IntegerValue) IntegerValue {
+func (v IntValue) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -2895,12 +2931,17 @@ func (v IntValue) BitwiseXor(other IntegerValue) IntegerValue {
 		})
 	}
 
-	res := new(big.Int)
-	res.Xor(v.BigInt, o.BigInt)
-	return IntValue{res}
+	return NewIntValueFromBigInt(
+		interpreter,
+		common.NewBitwiseXorBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Xor(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v IntValue) BitwiseAnd(other IntegerValue) IntegerValue {
+func (v IntValue) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -2910,12 +2951,17 @@ func (v IntValue) BitwiseAnd(other IntegerValue) IntegerValue {
 		})
 	}
 
-	res := new(big.Int)
-	res.And(v.BigInt, o.BigInt)
-	return IntValue{res}
+	return NewIntValueFromBigInt(
+		interpreter,
+		common.NewBitwiseAndBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			return res.And(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v IntValue) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v IntValue) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -2925,18 +2971,25 @@ func (v IntValue) BitwiseLeftShift(other IntegerValue) IntegerValue {
 		})
 	}
 
-	res := new(big.Int)
 	if o.BigInt.Sign() < 0 {
 		panic(UnderflowError{})
 	}
+
 	if !o.BigInt.IsUint64() {
 		panic(OverflowError{})
 	}
-	res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
-	return IntValue{res}
+
+	return NewIntValueFromBigInt(
+		interpreter,
+		common.NewBitwiseLeftShiftBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+		},
+	)
 }
 
-func (v IntValue) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v IntValue) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -2946,15 +2999,22 @@ func (v IntValue) BitwiseRightShift(other IntegerValue) IntegerValue {
 		})
 	}
 
-	res := new(big.Int)
 	if o.BigInt.Sign() < 0 {
 		panic(UnderflowError{})
 	}
+
 	if !o.BigInt.IsUint64() {
 		panic(OverflowError{})
 	}
-	res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
-	return IntValue{res}
+
+	return NewIntValueFromBigInt(
+		interpreter,
+		common.NewBitwiseRightShiftBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
+		},
+	)
 }
 
 func (v IntValue) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
@@ -3034,6 +3094,20 @@ func (IntValue) ChildStorables() []atree.Storable {
 
 type Int8Value int8
 
+const int8Size = int(unsafe.Sizeof(Int8Value(0)))
+
+var Int8MemoryUsage = common.NewNumberMemoryUsage(int8Size)
+
+func NewInt8Value(gauge common.MemoryGauge, valueGetter func() int8) Int8Value {
+	common.UseMemory(gauge, Int8MemoryUsage)
+
+	return NewUnmeteredInt8Value(valueGetter())
+}
+
+func NewUnmeteredInt8Value(value int8) Int8Value {
+	return Int8Value(value)
+}
+
 var _ Value = Int8Value(0)
 var _ atree.Storable = Int8Value(0)
 var _ NumberValue = Int8Value(0)
@@ -3073,12 +3147,17 @@ func (v Int8Value) ToInt() int {
 	return int(v)
 }
 
-func (v Int8Value) Negate(*Interpreter) NumberValue {
+func (v Int8Value) Negate(interpreter *Interpreter) NumberValue {
 	// INT32-C
 	if v == math.MinInt8 {
 		panic(OverflowError{})
 	}
-	return -v
+
+	valueGetter := func() int8 {
+		return int8(-v)
+	}
+
+	return NewInt8Value(interpreter, valueGetter)
 }
 
 func (v Int8Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -3097,7 +3176,12 @@ func (v Int8Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue
 	} else if (o < 0) && (v < (math.MinInt8 - o)) {
 		panic(UnderflowError{})
 	}
-	return v + o
+
+	valueGetter := func() int8 {
+		return int8(v + o)
+	}
+
+	return NewInt8Value(interpreter, valueGetter)
 }
 
 func (v Int8Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -3110,16 +3194,20 @@ func (v Int8Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) N
 		})
 	}
 
-	// INT32-C
-	if (o > 0) && (v > (math.MaxInt8 - o)) {
-		return Int8Value(math.MaxInt8)
-	} else if (o < 0) && (v < (math.MinInt8 - o)) {
-		return Int8Value(math.MinInt8)
+	valueGetter := func() int8 {
+		// INT32-C
+		if (o > 0) && (v > (math.MaxInt8 - o)) {
+			return math.MaxInt8
+		} else if (o < 0) && (v < (math.MinInt8 - o)) {
+			return math.MinInt8
+		}
+		return int8(v + o)
 	}
-	return v + o
+
+	return NewInt8Value(interpreter, valueGetter)
 }
 
-func (v Int8Value) Minus(other NumberValue) NumberValue {
+func (v Int8Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3135,10 +3223,15 @@ func (v Int8Value) Minus(other NumberValue) NumberValue {
 	} else if (o < 0) && (v > (math.MaxInt8 + o)) {
 		panic(UnderflowError{})
 	}
-	return v - o
+
+	valueGetter := func() int8 {
+		return int8(v - o)
+	}
+
+	return NewInt8Value(interpreter, valueGetter)
 }
 
-func (v Int8Value) SaturatingMinus(other NumberValue) NumberValue {
+func (v Int8Value) SaturatingMinus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3148,13 +3241,17 @@ func (v Int8Value) SaturatingMinus(other NumberValue) NumberValue {
 		})
 	}
 
-	// INT32-C
-	if (o > 0) && (v < (math.MinInt8 + o)) {
-		return Int8Value(math.MinInt8)
-	} else if (o < 0) && (v > (math.MaxInt8 + o)) {
-		return Int8Value(math.MaxInt8)
+	valueGetter := func() int8 {
+		// INT32-C
+		if (o > 0) && (v < (math.MinInt8 + o)) {
+			return math.MinInt8
+		} else if (o < 0) && (v > (math.MaxInt8 + o)) {
+			return math.MaxInt8
+		}
+		return int8(v - o)
 	}
-	return v - o
+
+	return NewInt8Value(interpreter, valueGetter)
 }
 
 func (v Int8Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -3171,7 +3268,12 @@ func (v Int8Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue 
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
-	return v % o
+
+	valueGetter := func() int8 {
+		return int8(v % o)
+	}
+
+	return NewInt8Value(interpreter, valueGetter)
 }
 
 func (v Int8Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -3210,7 +3312,12 @@ func (v Int8Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue 
 			}
 		}
 	}
-	return v * o
+
+	valueGetter := func() int8 {
+		return int8(v * o)
+	}
+
+	return NewInt8Value(interpreter, valueGetter)
 }
 
 func (v Int8Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -3223,36 +3330,41 @@ func (v Int8Value) SaturatingMul(interpreter *Interpreter, other NumberValue) Nu
 		})
 	}
 
-	// INT32-C
-	if v > 0 {
-		if o > 0 {
-			// positive * positive = positive. overflow?
-			if v > (math.MaxInt8 / o) {
-				return Int8Value(math.MaxInt8)
+	valueGetter := func() int8 {
+		// INT32-C
+		if v > 0 {
+			if o > 0 {
+				// positive * positive = positive. overflow?
+				if v > (math.MaxInt8 / o) {
+					return math.MaxInt8
+				}
+			} else {
+				// positive * negative = negative. underflow?
+				if o < (math.MinInt8 / v) {
+					return math.MinInt8
+				}
 			}
 		} else {
-			// positive * negative = negative. underflow?
-			if o < (math.MinInt8 / v) {
-				return Int8Value(math.MinInt8)
+			if o > 0 {
+				// negative * positive = negative. underflow?
+				if v < (math.MinInt8 / o) {
+					return math.MinInt8
+				}
+			} else {
+				// negative * negative = positive. overflow?
+				if (v != 0) && (o < (math.MaxInt8 / v)) {
+					return math.MaxInt8
+				}
 			}
 		}
-	} else {
-		if o > 0 {
-			// negative * positive = negative. underflow?
-			if v < (math.MinInt8 / o) {
-				return Int8Value(math.MinInt8)
-			}
-		} else {
-			// negative * negative = positive. overflow?
-			if (v != 0) && (o < (math.MaxInt8 / v)) {
-				return Int8Value(math.MaxInt8)
-			}
-		}
+
+		return int8(v * o)
 	}
-	return v * o
+
+	return NewInt8Value(interpreter, valueGetter)
 }
 
-func (v Int8Value) Div(other NumberValue) NumberValue {
+func (v Int8Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3269,10 +3381,15 @@ func (v Int8Value) Div(other NumberValue) NumberValue {
 	} else if (v == math.MinInt8) && (o == -1) {
 		panic(OverflowError{})
 	}
-	return v / o
+
+	valueGetter := func() int8 {
+		return int8(v / o)
+	}
+
+	return NewInt8Value(interpreter, valueGetter)
 }
 
-func (v Int8Value) SaturatingDiv(other NumberValue) NumberValue {
+func (v Int8Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3282,14 +3399,18 @@ func (v Int8Value) SaturatingDiv(other NumberValue) NumberValue {
 		})
 	}
 
-	// INT33-C
-	// https://golang.org/ref/spec#Integer_operators
-	if o == 0 {
-		panic(DivisionByZeroError{})
-	} else if (v == math.MinInt8) && (o == -1) {
-		return Int8Value(math.MaxInt8)
+	valueGetter := func() int8 {
+		// INT33-C
+		// https://golang.org/ref/spec#Integer_operators
+		if o == 0 {
+			panic(DivisionByZeroError{})
+		} else if (v == math.MinInt8) && (o == -1) {
+			return math.MaxInt8
+		}
+		return int8(v / o)
 	}
-	return v / o
+
+	return NewInt8Value(interpreter, valueGetter)
 }
 
 func (v Int8Value) Less(other NumberValue) BoolValue {
@@ -3361,36 +3482,37 @@ func (v Int8Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []b
 	return scratch[:2]
 }
 
-func ConvertInt8(value Value) Int8Value {
-	var res int8
+func ConvertInt8(memoryGauge common.MemoryGauge, value Value) Int8Value {
+	converter := func() int8 {
 
-	switch value := value.(type) {
-	case BigNumberValue:
-		v := value.ToBigInt()
-		if v.Cmp(sema.Int8TypeMaxInt) > 0 {
-			panic(OverflowError{})
-		} else if v.Cmp(sema.Int8TypeMinInt) < 0 {
-			panic(UnderflowError{})
+		switch value := value.(type) {
+		case BigNumberValue:
+			v := value.ToBigInt()
+			if v.Cmp(sema.Int8TypeMaxInt) > 0 {
+				panic(OverflowError{})
+			} else if v.Cmp(sema.Int8TypeMinInt) < 0 {
+				panic(UnderflowError{})
+			}
+			return int8(v.Int64())
+
+		case NumberValue:
+			v := value.ToInt()
+			if v > math.MaxInt8 {
+				panic(OverflowError{})
+			} else if v < math.MinInt8 {
+				panic(UnderflowError{})
+			}
+			return int8(v)
+
+		default:
+			panic(errors.NewUnreachableError())
 		}
-		res = int8(v.Int64())
-
-	case NumberValue:
-		v := value.ToInt()
-		if v > math.MaxInt8 {
-			panic(OverflowError{})
-		} else if v < math.MinInt8 {
-			panic(UnderflowError{})
-		}
-		res = int8(v)
-
-	default:
-		panic(errors.NewUnreachableError())
 	}
 
-	return Int8Value(res)
+	return NewInt8Value(memoryGauge, converter)
 }
 
-func (v Int8Value) BitwiseOr(other IntegerValue) IntegerValue {
+func (v Int8Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3400,10 +3522,14 @@ func (v Int8Value) BitwiseOr(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v | o
+	valueGetter := func() int8 {
+		return int8(v | o)
+	}
+
+	return NewInt8Value(interpreter, valueGetter)
 }
 
-func (v Int8Value) BitwiseXor(other IntegerValue) IntegerValue {
+func (v Int8Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3413,10 +3539,14 @@ func (v Int8Value) BitwiseXor(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v ^ o
+	valueGetter := func() int8 {
+		return int8(v ^ o)
+	}
+
+	return NewInt8Value(interpreter, valueGetter)
 }
 
-func (v Int8Value) BitwiseAnd(other IntegerValue) IntegerValue {
+func (v Int8Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3426,10 +3556,14 @@ func (v Int8Value) BitwiseAnd(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v & o
+	valueGetter := func() int8 {
+		return int8(v & o)
+	}
+
+	return NewInt8Value(interpreter, valueGetter)
 }
 
-func (v Int8Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v Int8Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3439,10 +3573,14 @@ func (v Int8Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v << o
+	valueGetter := func() int8 {
+		return int8(v << o)
+	}
+
+	return NewInt8Value(interpreter, valueGetter)
 }
 
-func (v Int8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v Int8Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3452,7 +3590,11 @@ func (v Int8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v >> o
+	valueGetter := func() int8 {
+		return int8(v >> o)
+	}
+
+	return NewInt8Value(interpreter, valueGetter)
 }
 
 func (v Int8Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
@@ -3532,6 +3674,20 @@ func (Int8Value) ChildStorables() []atree.Storable {
 
 type Int16Value int16
 
+const int16Size = int(unsafe.Sizeof(Int16Value(0)))
+
+var Int16MemoryUsage = common.NewNumberMemoryUsage(int16Size)
+
+func NewInt16Value(gauge common.MemoryGauge, valueGetter func() int16) Int16Value {
+	common.UseMemory(gauge, Int16MemoryUsage)
+
+	return NewUnmeteredInt16Value(valueGetter())
+}
+
+func NewUnmeteredInt16Value(value int16) Int16Value {
+	return Int16Value(value)
+}
+
 var _ Value = Int16Value(0)
 var _ atree.Storable = Int16Value(0)
 var _ NumberValue = Int16Value(0)
@@ -3572,12 +3728,17 @@ func (v Int16Value) ToInt() int {
 	return int(v)
 }
 
-func (v Int16Value) Negate(*Interpreter) NumberValue {
+func (v Int16Value) Negate(interpreter *Interpreter) NumberValue {
 	// INT32-C
 	if v == math.MinInt16 {
 		panic(OverflowError{})
 	}
-	return -v
+
+	valueGetter := func() int16 {
+		return int16(-v)
+	}
+
+	return NewInt16Value(interpreter, valueGetter)
 }
 
 func (v Int16Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -3596,7 +3757,12 @@ func (v Int16Value) Plus(interpreter *Interpreter, other NumberValue) NumberValu
 	} else if (o < 0) && (v < (math.MinInt16 - o)) {
 		panic(UnderflowError{})
 	}
-	return v + o
+
+	valueGetter := func() int16 {
+		return int16(v + o)
+	}
+
+	return NewInt16Value(interpreter, valueGetter)
 }
 
 func (v Int16Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -3609,16 +3775,20 @@ func (v Int16Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) 
 		})
 	}
 
-	// INT32-C
-	if (o > 0) && (v > (math.MaxInt16 - o)) {
-		return Int16Value(math.MaxInt16)
-	} else if (o < 0) && (v < (math.MinInt16 - o)) {
-		return Int16Value(math.MinInt16)
+	valueGetter := func() int16 {
+		// INT32-C
+		if (o > 0) && (v > (math.MaxInt16 - o)) {
+			return math.MaxInt16
+		} else if (o < 0) && (v < (math.MinInt16 - o)) {
+			return math.MinInt16
+		}
+		return int16(v + o)
 	}
-	return v + o
+
+	return NewInt16Value(interpreter, valueGetter)
 }
 
-func (v Int16Value) Minus(other NumberValue) NumberValue {
+func (v Int16Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3634,10 +3804,15 @@ func (v Int16Value) Minus(other NumberValue) NumberValue {
 	} else if (o < 0) && (v > (math.MaxInt16 + o)) {
 		panic(UnderflowError{})
 	}
-	return v - o
+
+	valueGetter := func() int16 {
+		return int16(v - o)
+	}
+
+	return NewInt16Value(interpreter, valueGetter)
 }
 
-func (v Int16Value) SaturatingMinus(other NumberValue) NumberValue {
+func (v Int16Value) SaturatingMinus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3647,13 +3822,17 @@ func (v Int16Value) SaturatingMinus(other NumberValue) NumberValue {
 		})
 	}
 
-	// INT32-C
-	if (o > 0) && (v < (math.MinInt16 + o)) {
-		return Int16Value(math.MinInt16)
-	} else if (o < 0) && (v > (math.MaxInt16 + o)) {
-		return Int16Value(math.MaxInt16)
+	valueGetter := func() int16 {
+		// INT32-C
+		if (o > 0) && (v < (math.MinInt16 + o)) {
+			return math.MinInt16
+		} else if (o < 0) && (v > (math.MaxInt16 + o)) {
+			return math.MaxInt16
+		}
+		return int16(v - o)
 	}
-	return v - o
+
+	return NewInt16Value(interpreter, valueGetter)
 }
 
 func (v Int16Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -3670,7 +3849,12 @@ func (v Int16Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
-	return v % o
+
+	valueGetter := func() int16 {
+		return int16(v % o)
+	}
+
+	return NewInt16Value(interpreter, valueGetter)
 }
 
 func (v Int16Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -3709,7 +3893,12 @@ func (v Int16Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue
 			}
 		}
 	}
-	return v * o
+
+	valueGetter := func() int16 {
+		return int16(v * o)
+	}
+
+	return NewInt16Value(interpreter, valueGetter)
 }
 
 func (v Int16Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -3722,36 +3911,40 @@ func (v Int16Value) SaturatingMul(interpreter *Interpreter, other NumberValue) N
 		})
 	}
 
-	// INT32-C
-	if v > 0 {
-		if o > 0 {
-			// positive * positive = positive. overflow?
-			if v > (math.MaxInt16 / o) {
-				return Int16Value(math.MaxInt16)
+	valueGetter := func() int16 {
+		// INT32-C
+		if v > 0 {
+			if o > 0 {
+				// positive * positive = positive. overflow?
+				if v > (math.MaxInt16 / o) {
+					return math.MaxInt16
+				}
+			} else {
+				// positive * negative = negative. underflow?
+				if o < (math.MinInt16 / v) {
+					return math.MinInt16
+				}
 			}
 		} else {
-			// positive * negative = negative. underflow?
-			if o < (math.MinInt16 / v) {
-				return Int16Value(math.MinInt16)
+			if o > 0 {
+				// negative * positive = negative. underflow?
+				if v < (math.MinInt16 / o) {
+					return math.MinInt16
+				}
+			} else {
+				// negative * negative = positive. overflow?
+				if (v != 0) && (o < (math.MaxInt16 / v)) {
+					return math.MaxInt16
+				}
 			}
 		}
-	} else {
-		if o > 0 {
-			// negative * positive = negative. underflow?
-			if v < (math.MinInt16 / o) {
-				return Int16Value(math.MinInt16)
-			}
-		} else {
-			// negative * negative = positive. overflow?
-			if (v != 0) && (o < (math.MaxInt16 / v)) {
-				return Int16Value(math.MaxInt16)
-			}
-		}
+		return int16(v * o)
 	}
-	return v * o
+
+	return NewInt16Value(interpreter, valueGetter)
 }
 
-func (v Int16Value) Div(other NumberValue) NumberValue {
+func (v Int16Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3768,10 +3961,15 @@ func (v Int16Value) Div(other NumberValue) NumberValue {
 	} else if (v == math.MinInt16) && (o == -1) {
 		panic(OverflowError{})
 	}
-	return v / o
+
+	valueGetter := func() int16 {
+		return int16(v / o)
+	}
+
+	return NewInt16Value(interpreter, valueGetter)
 }
 
-func (v Int16Value) SaturatingDiv(other NumberValue) NumberValue {
+func (v Int16Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3781,14 +3979,18 @@ func (v Int16Value) SaturatingDiv(other NumberValue) NumberValue {
 		})
 	}
 
-	// INT33-C
-	// https://golang.org/ref/spec#Integer_operators
-	if o == 0 {
-		panic(DivisionByZeroError{})
-	} else if (v == math.MinInt16) && (o == -1) {
-		return Int16Value(math.MaxInt16)
+	valueGetter := func() int16 {
+		// INT33-C
+		// https://golang.org/ref/spec#Integer_operators
+		if o == 0 {
+			panic(DivisionByZeroError{})
+		} else if (v == math.MinInt16) && (o == -1) {
+			return math.MaxInt16
+		}
+		return int16(v / o)
 	}
-	return v / o
+
+	return NewInt16Value(interpreter, valueGetter)
 }
 
 func (v Int16Value) Less(other NumberValue) BoolValue {
@@ -3860,36 +4062,37 @@ func (v Int16Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []
 	return scratch[:3]
 }
 
-func ConvertInt16(value Value) Int16Value {
-	var res int16
+func ConvertInt16(memoryGauge common.MemoryGauge, value Value) Int16Value {
+	converter := func() int16 {
 
-	switch value := value.(type) {
-	case BigNumberValue:
-		v := value.ToBigInt()
-		if v.Cmp(sema.Int16TypeMaxInt) > 0 {
-			panic(OverflowError{})
-		} else if v.Cmp(sema.Int16TypeMinInt) < 0 {
-			panic(UnderflowError{})
+		switch value := value.(type) {
+		case BigNumberValue:
+			v := value.ToBigInt()
+			if v.Cmp(sema.Int16TypeMaxInt) > 0 {
+				panic(OverflowError{})
+			} else if v.Cmp(sema.Int16TypeMinInt) < 0 {
+				panic(UnderflowError{})
+			}
+			return int16(v.Int64())
+
+		case NumberValue:
+			v := value.ToInt()
+			if v > math.MaxInt16 {
+				panic(OverflowError{})
+			} else if v < math.MinInt16 {
+				panic(UnderflowError{})
+			}
+			return int16(v)
+
+		default:
+			panic(errors.NewUnreachableError())
 		}
-		res = int16(v.Int64())
-
-	case NumberValue:
-		v := value.ToInt()
-		if v > math.MaxInt16 {
-			panic(OverflowError{})
-		} else if v < math.MinInt16 {
-			panic(UnderflowError{})
-		}
-		res = int16(v)
-
-	default:
-		panic(errors.NewUnreachableError())
 	}
 
-	return Int16Value(res)
+	return NewInt16Value(memoryGauge, converter)
 }
 
-func (v Int16Value) BitwiseOr(other IntegerValue) IntegerValue {
+func (v Int16Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3899,10 +4102,14 @@ func (v Int16Value) BitwiseOr(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v | o
+	valueGetter := func() int16 {
+		return int16(v | o)
+	}
+
+	return NewInt16Value(interpreter, valueGetter)
 }
 
-func (v Int16Value) BitwiseXor(other IntegerValue) IntegerValue {
+func (v Int16Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3912,10 +4119,14 @@ func (v Int16Value) BitwiseXor(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v ^ o
+	valueGetter := func() int16 {
+		return int16(v ^ o)
+	}
+
+	return NewInt16Value(interpreter, valueGetter)
 }
 
-func (v Int16Value) BitwiseAnd(other IntegerValue) IntegerValue {
+func (v Int16Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3925,10 +4136,14 @@ func (v Int16Value) BitwiseAnd(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v & o
+	valueGetter := func() int16 {
+		return int16(v & o)
+	}
+
+	return NewInt16Value(interpreter, valueGetter)
 }
 
-func (v Int16Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v Int16Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3938,10 +4153,14 @@ func (v Int16Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v << o
+	valueGetter := func() int16 {
+		return int16(v << o)
+	}
+
+	return NewInt16Value(interpreter, valueGetter)
 }
 
-func (v Int16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v Int16Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3951,7 +4170,11 @@ func (v Int16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v >> o
+	valueGetter := func() int16 {
+		return int16(v >> o)
+	}
+
+	return NewInt16Value(interpreter, valueGetter)
 }
 
 func (v Int16Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
@@ -4033,6 +4256,20 @@ func (Int16Value) ChildStorables() []atree.Storable {
 
 type Int32Value int32
 
+const int32Size = int(unsafe.Sizeof(Int32Value(0)))
+
+var Int32MemoryUsage = common.NewNumberMemoryUsage(int32Size)
+
+func NewInt32Value(gauge common.MemoryGauge, valueGetter func() int32) Int32Value {
+	common.UseMemory(gauge, Int32MemoryUsage)
+
+	return NewUnmeteredInt32Value(valueGetter())
+}
+
+func NewUnmeteredInt32Value(value int32) Int32Value {
+	return Int32Value(value)
+}
+
 var _ Value = Int32Value(0)
 var _ atree.Storable = Int32Value(0)
 var _ NumberValue = Int32Value(0)
@@ -4073,12 +4310,17 @@ func (v Int32Value) ToInt() int {
 	return int(v)
 }
 
-func (v Int32Value) Negate(*Interpreter) NumberValue {
+func (v Int32Value) Negate(interpreter *Interpreter) NumberValue {
 	// INT32-C
 	if v == math.MinInt32 {
 		panic(OverflowError{})
 	}
-	return -v
+
+	valueGetter := func() int32 {
+		return int32(-v)
+	}
+
+	return NewInt32Value(interpreter, valueGetter)
 }
 
 func (v Int32Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -4097,7 +4339,12 @@ func (v Int32Value) Plus(interpreter *Interpreter, other NumberValue) NumberValu
 	} else if (o < 0) && (v < (math.MinInt32 - o)) {
 		panic(UnderflowError{})
 	}
-	return v + o
+
+	valueGetter := func() int32 {
+		return int32(v + o)
+	}
+
+	return NewInt32Value(interpreter, valueGetter)
 }
 
 func (v Int32Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -4110,16 +4357,20 @@ func (v Int32Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) 
 		})
 	}
 
-	// INT32-C
-	if (o > 0) && (v > (math.MaxInt32 - o)) {
-		return Int32Value(math.MaxInt32)
-	} else if (o < 0) && (v < (math.MinInt32 - o)) {
-		return Int32Value(math.MinInt32)
+	valueGetter := func() int32 {
+		// INT32-C
+		if (o > 0) && (v > (math.MaxInt32 - o)) {
+			return math.MaxInt32
+		} else if (o < 0) && (v < (math.MinInt32 - o)) {
+			return math.MinInt32
+		}
+		return int32(v + o)
 	}
-	return v + o
+
+	return NewInt32Value(interpreter, valueGetter)
 }
 
-func (v Int32Value) Minus(other NumberValue) NumberValue {
+func (v Int32Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4135,10 +4386,15 @@ func (v Int32Value) Minus(other NumberValue) NumberValue {
 	} else if (o < 0) && (v > (math.MaxInt32 + o)) {
 		panic(UnderflowError{})
 	}
-	return v - o
+
+	valueGetter := func() int32 {
+		return int32(v - o)
+	}
+
+	return NewInt32Value(interpreter, valueGetter)
 }
 
-func (v Int32Value) SaturatingMinus(other NumberValue) NumberValue {
+func (v Int32Value) SaturatingMinus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4148,13 +4404,17 @@ func (v Int32Value) SaturatingMinus(other NumberValue) NumberValue {
 		})
 	}
 
-	// INT32-C
-	if (o > 0) && (v < (math.MinInt32 + o)) {
-		return Int32Value(math.MinInt32)
-	} else if (o < 0) && (v > (math.MaxInt32 + o)) {
-		return Int32Value(math.MaxInt32)
+	valueGetter := func() int32 {
+		// INT32-C
+		if (o > 0) && (v < (math.MinInt32 + o)) {
+			return math.MinInt32
+		} else if (o < 0) && (v > (math.MaxInt32 + o)) {
+			return math.MaxInt32
+		}
+		return int32(v - o)
 	}
-	return v - o
+
+	return NewInt32Value(interpreter, valueGetter)
 }
 
 func (v Int32Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -4171,7 +4431,12 @@ func (v Int32Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
-	return v % o
+
+	valueGetter := func() int32 {
+		return int32(v % o)
+	}
+
+	return NewInt32Value(interpreter, valueGetter)
 }
 
 func (v Int32Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -4210,7 +4475,12 @@ func (v Int32Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue
 			}
 		}
 	}
-	return v * o
+
+	valueGetter := func() int32 {
+		return int32(v * o)
+	}
+
+	return NewInt32Value(interpreter, valueGetter)
 }
 
 func (v Int32Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -4223,36 +4493,40 @@ func (v Int32Value) SaturatingMul(interpreter *Interpreter, other NumberValue) N
 		})
 	}
 
-	// INT32-C
-	if v > 0 {
-		if o > 0 {
-			// positive * positive = positive. overflow?
-			if v > (math.MaxInt32 / o) {
-				return Int32Value(math.MaxInt32)
+	valueGetter := func() int32 {
+		// INT32-C
+		if v > 0 {
+			if o > 0 {
+				// positive * positive = positive. overflow?
+				if v > (math.MaxInt32 / o) {
+					return math.MaxInt32
+				}
+			} else {
+				// positive * negative = negative. underflow?
+				if o < (math.MinInt32 / v) {
+					return math.MinInt32
+				}
 			}
 		} else {
-			// positive * negative = negative. underflow?
-			if o < (math.MinInt32 / v) {
-				return Int32Value(math.MinInt32)
+			if o > 0 {
+				// negative * positive = negative. underflow?
+				if v < (math.MinInt32 / o) {
+					return math.MinInt32
+				}
+			} else {
+				// negative * negative = positive. overflow?
+				if (v != 0) && (o < (math.MaxInt32 / v)) {
+					return math.MaxInt32
+				}
 			}
 		}
-	} else {
-		if o > 0 {
-			// negative * positive = negative. underflow?
-			if v < (math.MinInt32 / o) {
-				return Int32Value(math.MinInt32)
-			}
-		} else {
-			// negative * negative = positive. overflow?
-			if (v != 0) && (o < (math.MaxInt32 / v)) {
-				return Int32Value(math.MaxInt32)
-			}
-		}
+		return int32(v * o)
 	}
-	return v * o
+
+	return NewInt32Value(interpreter, valueGetter)
 }
 
-func (v Int32Value) Div(other NumberValue) NumberValue {
+func (v Int32Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4269,10 +4543,15 @@ func (v Int32Value) Div(other NumberValue) NumberValue {
 	} else if (v == math.MinInt32) && (o == -1) {
 		panic(OverflowError{})
 	}
-	return v / o
+
+	valueGetter := func() int32 {
+		return int32(v / o)
+	}
+
+	return NewInt32Value(interpreter, valueGetter)
 }
 
-func (v Int32Value) SaturatingDiv(other NumberValue) NumberValue {
+func (v Int32Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4282,14 +4561,19 @@ func (v Int32Value) SaturatingDiv(other NumberValue) NumberValue {
 		})
 	}
 
-	// INT33-C
-	// https://golang.org/ref/spec#Integer_operators
-	if o == 0 {
-		panic(DivisionByZeroError{})
-	} else if (v == math.MinInt32) && (o == -1) {
-		return Int32Value(math.MaxInt32)
+	valueGetter := func() int32 {
+		// INT33-C
+		// https://golang.org/ref/spec#Integer_operators
+		if o == 0 {
+			panic(DivisionByZeroError{})
+		} else if (v == math.MinInt32) && (o == -1) {
+			return math.MaxInt32
+		}
+
+		return int32(v / o)
 	}
-	return v / o
+
+	return NewInt32Value(interpreter, valueGetter)
 }
 
 func (v Int32Value) Less(other NumberValue) BoolValue {
@@ -4361,36 +4645,36 @@ func (v Int32Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []
 	return scratch[:5]
 }
 
-func ConvertInt32(value Value) Int32Value {
-	var res int32
+func ConvertInt32(memoryGauge common.MemoryGauge, value Value) Int32Value {
+	converter := func() int32 {
+		switch value := value.(type) {
+		case BigNumberValue:
+			v := value.ToBigInt()
+			if v.Cmp(sema.Int32TypeMaxInt) > 0 {
+				panic(OverflowError{})
+			} else if v.Cmp(sema.Int32TypeMinInt) < 0 {
+				panic(UnderflowError{})
+			}
+			return int32(v.Int64())
 
-	switch value := value.(type) {
-	case BigNumberValue:
-		v := value.ToBigInt()
-		if v.Cmp(sema.Int32TypeMaxInt) > 0 {
-			panic(OverflowError{})
-		} else if v.Cmp(sema.Int32TypeMinInt) < 0 {
-			panic(UnderflowError{})
+		case NumberValue:
+			v := value.ToInt()
+			if v > math.MaxInt32 {
+				panic(OverflowError{})
+			} else if v < math.MinInt32 {
+				panic(UnderflowError{})
+			}
+			return int32(v)
+
+		default:
+			panic(errors.NewUnreachableError())
 		}
-		res = int32(v.Int64())
-
-	case NumberValue:
-		v := value.ToInt()
-		if v > math.MaxInt32 {
-			panic(OverflowError{})
-		} else if v < math.MinInt32 {
-			panic(UnderflowError{})
-		}
-		res = int32(v)
-
-	default:
-		panic(errors.NewUnreachableError())
 	}
 
-	return Int32Value(res)
+	return NewInt32Value(memoryGauge, converter)
 }
 
-func (v Int32Value) BitwiseOr(other IntegerValue) IntegerValue {
+func (v Int32Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4400,10 +4684,14 @@ func (v Int32Value) BitwiseOr(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v | o
+	valueGetter := func() int32 {
+		return int32(v | o)
+	}
+
+	return NewInt32Value(interpreter, valueGetter)
 }
 
-func (v Int32Value) BitwiseXor(other IntegerValue) IntegerValue {
+func (v Int32Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4413,10 +4701,14 @@ func (v Int32Value) BitwiseXor(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v ^ o
+	valueGetter := func() int32 {
+		return int32(v ^ o)
+	}
+
+	return NewInt32Value(interpreter, valueGetter)
 }
 
-func (v Int32Value) BitwiseAnd(other IntegerValue) IntegerValue {
+func (v Int32Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4426,10 +4718,14 @@ func (v Int32Value) BitwiseAnd(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v & o
+	valueGetter := func() int32 {
+		return int32(v & o)
+	}
+
+	return NewInt32Value(interpreter, valueGetter)
 }
 
-func (v Int32Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v Int32Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4439,10 +4735,14 @@ func (v Int32Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v << o
+	valueGetter := func() int32 {
+		return int32(v << o)
+	}
+
+	return NewInt32Value(interpreter, valueGetter)
 }
 
-func (v Int32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v Int32Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4452,7 +4752,11 @@ func (v Int32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v >> o
+	valueGetter := func() int32 {
+		return int32(v >> o)
+	}
+
+	return NewInt32Value(interpreter, valueGetter)
 }
 
 func (v Int32Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
@@ -4534,6 +4838,18 @@ func (Int32Value) ChildStorables() []atree.Storable {
 
 type Int64Value int64
 
+var Int64MemoryUsage = common.NewNumberMemoryUsage(int64Size)
+
+func NewInt64Value(gauge common.MemoryGauge, valueGetter func() int64) Int64Value {
+	common.UseMemory(gauge, Int64MemoryUsage)
+
+	return NewUnmeteredInt64Value(valueGetter())
+}
+
+func NewUnmeteredInt64Value(value int64) Int64Value {
+	return Int64Value(value)
+}
+
 var _ Value = Int64Value(0)
 var _ atree.Storable = Int64Value(0)
 var _ NumberValue = Int64Value(0)
@@ -4574,12 +4890,17 @@ func (v Int64Value) ToInt() int {
 	return int(v)
 }
 
-func (v Int64Value) Negate(*Interpreter) NumberValue {
+func (v Int64Value) Negate(interpreter *Interpreter) NumberValue {
 	// INT32-C
 	if v == math.MinInt64 {
 		panic(OverflowError{})
 	}
-	return -v
+
+	valueGetter := func() int64 {
+		return int64(-v)
+	}
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
 func safeAddInt64(a, b int64) int64 {
@@ -4602,7 +4923,11 @@ func (v Int64Value) Plus(interpreter *Interpreter, other NumberValue) NumberValu
 		})
 	}
 
-	return Int64Value(safeAddInt64(int64(v), int64(o)))
+	valueGetter := func() int64 {
+		return safeAddInt64(int64(v), int64(o))
+	}
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
 func (v Int64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -4615,16 +4940,20 @@ func (v Int64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) 
 		})
 	}
 
-	// INT32-C
-	if (o > 0) && (v > (math.MaxInt64 - o)) {
-		return Int64Value(math.MaxInt64)
-	} else if (o < 0) && (v < (math.MinInt64 - o)) {
-		return Int64Value(math.MinInt64)
+	valueGetter := func() int64 {
+		// INT32-C
+		if (o > 0) && (v > (math.MaxInt64 - o)) {
+			return math.MaxInt64
+		} else if (o < 0) && (v < (math.MinInt64 - o)) {
+			return math.MinInt64
+		}
+		return int64(v + o)
 	}
-	return v + o
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
-func (v Int64Value) Minus(other NumberValue) NumberValue {
+func (v Int64Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4640,10 +4969,15 @@ func (v Int64Value) Minus(other NumberValue) NumberValue {
 	} else if (o < 0) && (v > (math.MaxInt64 + o)) {
 		panic(UnderflowError{})
 	}
-	return v - o
+
+	valueGetter := func() int64 {
+		return int64(v - o)
+	}
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
-func (v Int64Value) SaturatingMinus(other NumberValue) NumberValue {
+func (v Int64Value) SaturatingMinus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4653,13 +4987,17 @@ func (v Int64Value) SaturatingMinus(other NumberValue) NumberValue {
 		})
 	}
 
-	// INT32-C
-	if (o > 0) && (v < (math.MinInt64 + o)) {
-		return Int64Value(math.MinInt64)
-	} else if (o < 0) && (v > (math.MaxInt64 + o)) {
-		return Int64Value(math.MaxInt64)
+	valueGetter := func() int64 {
+		// INT32-C
+		if (o > 0) && (v < (math.MinInt64 + o)) {
+			return math.MinInt64
+		} else if (o < 0) && (v > (math.MaxInt64 + o)) {
+			return math.MaxInt64
+		}
+		return int64(v - o)
 	}
-	return v - o
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
 func (v Int64Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -4676,7 +5014,12 @@ func (v Int64Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
-	return v % o
+
+	valueGetter := func() int64 {
+		return int64(v % o)
+	}
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
 func (v Int64Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -4715,7 +5058,12 @@ func (v Int64Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue
 			}
 		}
 	}
-	return v * o
+
+	valueGetter := func() int64 {
+		return int64(v * o)
+	}
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
 func (v Int64Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -4728,36 +5076,40 @@ func (v Int64Value) SaturatingMul(interpreter *Interpreter, other NumberValue) N
 		})
 	}
 
-	// INT32-C
-	if v > 0 {
-		if o > 0 {
-			// positive * positive = positive. overflow?
-			if v > (math.MaxInt64 / o) {
-				return Int64Value(math.MaxInt64)
+	valueGetter := func() int64 {
+		// INT32-C
+		if v > 0 {
+			if o > 0 {
+				// positive * positive = positive. overflow?
+				if v > (math.MaxInt64 / o) {
+					return math.MaxInt64
+				}
+			} else {
+				// positive * negative = negative. underflow?
+				if o < (math.MinInt64 / v) {
+					return math.MinInt64
+				}
 			}
 		} else {
-			// positive * negative = negative. underflow?
-			if o < (math.MinInt64 / v) {
-				return Int64Value(math.MinInt64)
+			if o > 0 {
+				// negative * positive = negative. underflow?
+				if v < (math.MinInt64 / o) {
+					return math.MinInt64
+				}
+			} else {
+				// negative * negative = positive. overflow?
+				if (v != 0) && (o < (math.MaxInt64 / v)) {
+					return math.MaxInt64
+				}
 			}
 		}
-	} else {
-		if o > 0 {
-			// negative * positive = negative. underflow?
-			if v < (math.MinInt64 / o) {
-				return Int64Value(math.MinInt64)
-			}
-		} else {
-			// negative * negative = positive. overflow?
-			if (v != 0) && (o < (math.MaxInt64 / v)) {
-				return Int64Value(math.MaxInt64)
-			}
-		}
+		return int64(v * o)
 	}
-	return v * o
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
-func (v Int64Value) Div(other NumberValue) NumberValue {
+func (v Int64Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4774,10 +5126,15 @@ func (v Int64Value) Div(other NumberValue) NumberValue {
 	} else if (v == math.MinInt64) && (o == -1) {
 		panic(OverflowError{})
 	}
-	return v / o
+
+	valueGetter := func() int64 {
+		return int64(v / o)
+	}
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
-func (v Int64Value) SaturatingDiv(other NumberValue) NumberValue {
+func (v Int64Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4787,14 +5144,18 @@ func (v Int64Value) SaturatingDiv(other NumberValue) NumberValue {
 		})
 	}
 
-	// INT33-C
-	// https://golang.org/ref/spec#Integer_operators
-	if o == 0 {
-		panic(DivisionByZeroError{})
-	} else if (v == math.MinInt64) && (o == -1) {
-		return Int64Value(math.MaxInt64)
+	valueGetter := func() int64 {
+		// INT33-C
+		// https://golang.org/ref/spec#Integer_operators
+		if o == 0 {
+			panic(DivisionByZeroError{})
+		} else if (v == math.MinInt64) && (o == -1) {
+			return math.MaxInt64
+		}
+		return int64(v / o)
 	}
-	return v / o
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
 func (v Int64Value) Less(other NumberValue) BoolValue {
@@ -4866,31 +5227,31 @@ func (v Int64Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []
 	return scratch[:9]
 }
 
-func ConvertInt64(value Value) Int64Value {
-	var res int64
+func ConvertInt64(memoryGauge common.MemoryGauge, value Value) Int64Value {
+	converter := func() int64 {
+		switch value := value.(type) {
+		case BigNumberValue:
+			v := value.ToBigInt()
+			if v.Cmp(sema.Int64TypeMaxInt) > 0 {
+				panic(OverflowError{})
+			} else if v.Cmp(sema.Int64TypeMinInt) < 0 {
+				panic(UnderflowError{})
+			}
+			return v.Int64()
 
-	switch value := value.(type) {
-	case BigNumberValue:
-		v := value.ToBigInt()
-		if v.Cmp(sema.Int64TypeMaxInt) > 0 {
-			panic(OverflowError{})
-		} else if v.Cmp(sema.Int64TypeMinInt) < 0 {
-			panic(UnderflowError{})
+		case NumberValue:
+			v := value.ToInt()
+			return int64(v)
+
+		default:
+			panic(errors.NewUnreachableError())
 		}
-		res = v.Int64()
-
-	case NumberValue:
-		v := value.ToInt()
-		res = int64(v)
-
-	default:
-		panic(errors.NewUnreachableError())
 	}
 
-	return Int64Value(res)
+	return NewInt64Value(memoryGauge, converter)
 }
 
-func (v Int64Value) BitwiseOr(other IntegerValue) IntegerValue {
+func (v Int64Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4900,10 +5261,14 @@ func (v Int64Value) BitwiseOr(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v | o
+	valueGetter := func() int64 {
+		return int64(v | o)
+	}
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
-func (v Int64Value) BitwiseXor(other IntegerValue) IntegerValue {
+func (v Int64Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4913,10 +5278,14 @@ func (v Int64Value) BitwiseXor(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v ^ o
+	valueGetter := func() int64 {
+		return int64(v ^ o)
+	}
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
-func (v Int64Value) BitwiseAnd(other IntegerValue) IntegerValue {
+func (v Int64Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4926,10 +5295,14 @@ func (v Int64Value) BitwiseAnd(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v & o
+	valueGetter := func() int64 {
+		return int64(v & o)
+	}
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
-func (v Int64Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v Int64Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4939,10 +5312,14 @@ func (v Int64Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v << o
+	valueGetter := func() int64 {
+		return int64(v << o)
+	}
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
-func (v Int64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v Int64Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4952,7 +5329,11 @@ func (v Int64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v >> o
+	valueGetter := func() int64 {
+		return int64(v >> o)
+	}
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
 func (v Int64Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
@@ -5036,12 +5417,31 @@ type Int128Value struct {
 	BigInt *big.Int
 }
 
-func NewInt128ValueFromInt64(value int64) Int128Value {
-	return NewInt128ValueFromBigInt(big.NewInt(value))
+func NewInt128ValueFromUint64(memoryGauge common.MemoryGauge, value int64) Int128Value {
+	return NewInt128ValueFromBigInt(
+		memoryGauge,
+		func() *big.Int {
+			return new(big.Int).SetInt64(value)
+		},
+	)
 }
 
-func NewInt128ValueFromBigInt(value *big.Int) Int128Value {
-	return Int128Value{BigInt: value}
+var Int128MemoryUsage = common.NewBigIntMemoryUsage(16)
+
+func NewInt128ValueFromBigInt(memoryGauge common.MemoryGauge, bigIntConstructor func() *big.Int) Int128Value {
+	common.UseMemory(memoryGauge, Int128MemoryUsage)
+	value := bigIntConstructor()
+	return NewUnmeteredInt128ValueFromBigInt(value)
+}
+
+func NewUnmeteredInt128ValueFromInt64(value int64) Int128Value {
+	return NewUnmeteredInt128ValueFromBigInt(big.NewInt(value))
+}
+
+func NewUnmeteredInt128ValueFromBigInt(value *big.Int) Int128Value {
+	return Int128Value{
+		BigInt: value,
+	}
 }
 
 var _ Value = Int128Value{}
@@ -5095,7 +5495,7 @@ func (v Int128Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v Int128Value) Negate(*Interpreter) NumberValue {
+func (v Int128Value) Negate(interpreter *Interpreter) NumberValue {
 	// INT32-C
 	//   if v == Int128TypeMinIntBig {
 	//       ...
@@ -5103,7 +5503,12 @@ func (v Int128Value) Negate(*Interpreter) NumberValue {
 	if v.BigInt.Cmp(sema.Int128TypeMinIntBig) == 0 {
 		panic(OverflowError{})
 	}
-	return Int128Value{new(big.Int).Neg(v.BigInt)}
+
+	valueGetter := func() *big.Int {
+		return new(big.Int).Neg(v.BigInt)
+	}
+
+	return NewInt128ValueFromBigInt(interpreter, valueGetter)
 }
 
 func (v Int128Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -5116,26 +5521,31 @@ func (v Int128Value) Plus(interpreter *Interpreter, other NumberValue) NumberVal
 		})
 	}
 
-	// Given that this value is backed by an arbitrary size integer,
-	// we can just add and check the range of the result.
-	//
-	// If Go gains a native int128 type and we switch this value
-	// to be based on it, then we need to follow INT32-C:
-	//
-	//   if (o > 0) && (v > (Int128TypeMaxIntBig - o)) {
-	//       ...
-	//   } else if (o < 0) && (v < (Int128TypeMinIntBig - o)) {
-	//       ...
-	//   }
-	//
-	res := new(big.Int)
-	res.Add(v.BigInt, o.BigInt)
-	if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
-		panic(UnderflowError{})
-	} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
-		panic(OverflowError{})
+	valueGetter := func() *big.Int {
+		// Given that this value is backed by an arbitrary size integer,
+		// we can just add and check the range of the result.
+		//
+		// If Go gains a native int128 type and we switch this value
+		// to be based on it, then we need to follow INT32-C:
+		//
+		//   if (o > 0) && (v > (Int128TypeMaxIntBig - o)) {
+		//       ...
+		//   } else if (o < 0) && (v < (Int128TypeMinIntBig - o)) {
+		//       ...
+		//   }
+		//
+		res := new(big.Int)
+		res.Add(v.BigInt, o.BigInt)
+		if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
+			panic(UnderflowError{})
+		} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
+			panic(OverflowError{})
+		}
+
+		return res
 	}
-	return Int128Value{res}
+
+	return NewInt128ValueFromBigInt(interpreter, valueGetter)
 }
 
 func (v Int128Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -5148,29 +5558,34 @@ func (v Int128Value) SaturatingPlus(interpreter *Interpreter, other NumberValue)
 		})
 	}
 
-	// Given that this value is backed by an arbitrary size integer,
-	// we can just add and check the range of the result.
-	//
-	// If Go gains a native int128 type and we switch this value
-	// to be based on it, then we need to follow INT32-C:
-	//
-	//   if (o > 0) && (v > (Int128TypeMaxIntBig - o)) {
-	//       ...
-	//   } else if (o < 0) && (v < (Int128TypeMinIntBig - o)) {
-	//       ...
-	//   }
-	//
-	res := new(big.Int)
-	res.Add(v.BigInt, o.BigInt)
-	if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
-		return Int128Value{sema.Int128TypeMinIntBig}
-	} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
-		return Int128Value{sema.Int128TypeMaxIntBig}
+	valueGetter := func() *big.Int {
+		// Given that this value is backed by an arbitrary size integer,
+		// we can just add and check the range of the result.
+		//
+		// If Go gains a native int128 type and we switch this value
+		// to be based on it, then we need to follow INT32-C:
+		//
+		//   if (o > 0) && (v > (Int128TypeMaxIntBig - o)) {
+		//       ...
+		//   } else if (o < 0) && (v < (Int128TypeMinIntBig - o)) {
+		//       ...
+		//   }
+		//
+		res := new(big.Int)
+		res.Add(v.BigInt, o.BigInt)
+		if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
+			return sema.Int128TypeMinIntBig
+		} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
+			return sema.Int128TypeMaxIntBig
+		}
+
+		return res
 	}
-	return Int128Value{res}
+
+	return NewInt128ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int128Value) Minus(other NumberValue) NumberValue {
+func (v Int128Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5180,29 +5595,34 @@ func (v Int128Value) Minus(other NumberValue) NumberValue {
 		})
 	}
 
-	// Given that this value is backed by an arbitrary size integer,
-	// we can just subtract and check the range of the result.
-	//
-	// If Go gains a native int128 type and we switch this value
-	// to be based on it, then we need to follow INT32-C:
-	//
-	//   if (o > 0) && (v < (Int128TypeMinIntBig + o)) {
-	// 	     ...
-	//   } else if (o < 0) && (v > (Int128TypeMaxIntBig + o)) {
-	//       ...
-	//   }
-	//
-	res := new(big.Int)
-	res.Sub(v.BigInt, o.BigInt)
-	if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
-		panic(UnderflowError{})
-	} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
-		panic(OverflowError{})
+	valueGetter := func() *big.Int {
+		// Given that this value is backed by an arbitrary size integer,
+		// we can just subtract and check the range of the result.
+		//
+		// If Go gains a native int128 type and we switch this value
+		// to be based on it, then we need to follow INT32-C:
+		//
+		//   if (o > 0) && (v < (Int128TypeMinIntBig + o)) {
+		// 	     ...
+		//   } else if (o < 0) && (v > (Int128TypeMaxIntBig + o)) {
+		//       ...
+		//   }
+		//
+		res := new(big.Int)
+		res.Sub(v.BigInt, o.BigInt)
+		if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
+			panic(UnderflowError{})
+		} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
+			panic(OverflowError{})
+		}
+
+		return res
 	}
-	return Int128Value{res}
+
+	return NewInt128ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int128Value) SaturatingMinus(other NumberValue) NumberValue {
+func (v Int128Value) SaturatingMinus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5212,26 +5632,31 @@ func (v Int128Value) SaturatingMinus(other NumberValue) NumberValue {
 		})
 	}
 
-	// Given that this value is backed by an arbitrary size integer,
-	// we can just subtract and check the range of the result.
-	//
-	// If Go gains a native int128 type and we switch this value
-	// to be based on it, then we need to follow INT32-C:
-	//
-	//   if (o > 0) && (v < (Int128TypeMinIntBig + o)) {
-	// 	     ...
-	//   } else if (o < 0) && (v > (Int128TypeMaxIntBig + o)) {
-	//       ...
-	//   }
-	//
-	res := new(big.Int)
-	res.Sub(v.BigInt, o.BigInt)
-	if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
-		return Int128Value{sema.Int128TypeMinIntBig}
-	} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
-		return Int128Value{sema.Int128TypeMaxIntBig}
+	valueGetter := func() *big.Int {
+		// Given that this value is backed by an arbitrary size integer,
+		// we can just subtract and check the range of the result.
+		//
+		// If Go gains a native int128 type and we switch this value
+		// to be based on it, then we need to follow INT32-C:
+		//
+		//   if (o > 0) && (v < (Int128TypeMinIntBig + o)) {
+		// 	     ...
+		//   } else if (o < 0) && (v > (Int128TypeMaxIntBig + o)) {
+		//       ...
+		//   }
+		//
+		res := new(big.Int)
+		res.Sub(v.BigInt, o.BigInt)
+		if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
+			return sema.Int128TypeMinIntBig
+		} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
+			return sema.Int128TypeMaxIntBig
+		}
+
+		return res
 	}
-	return Int128Value{res}
+
+	return NewInt128ValueFromBigInt(interpreter, valueGetter)
 }
 
 func (v Int128Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -5244,13 +5669,18 @@ func (v Int128Value) Mod(interpreter *Interpreter, other NumberValue) NumberValu
 		})
 	}
 
-	res := new(big.Int)
-	// INT33-C
-	if o.BigInt.Cmp(res) == 0 {
-		panic(DivisionByZeroError{})
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		// INT33-C
+		if o.BigInt.Cmp(res) == 0 {
+			panic(DivisionByZeroError{})
+		}
+		res.Rem(v.BigInt, o.BigInt)
+
+		return res
 	}
-	res.Rem(v.BigInt, o.BigInt)
-	return Int128Value{res}
+
+	return NewInt128ValueFromBigInt(interpreter, valueGetter)
 }
 
 func (v Int128Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -5263,14 +5693,19 @@ func (v Int128Value) Mul(interpreter *Interpreter, other NumberValue) NumberValu
 		})
 	}
 
-	res := new(big.Int)
-	res.Mul(v.BigInt, o.BigInt)
-	if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
-		panic(UnderflowError{})
-	} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
-		panic(OverflowError{})
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		res.Mul(v.BigInt, o.BigInt)
+		if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
+			panic(UnderflowError{})
+		} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
+			panic(OverflowError{})
+		}
+
+		return res
 	}
-	return Int128Value{res}
+
+	return NewInt128ValueFromBigInt(interpreter, valueGetter)
 }
 
 func (v Int128Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -5283,17 +5718,22 @@ func (v Int128Value) SaturatingMul(interpreter *Interpreter, other NumberValue) 
 		})
 	}
 
-	res := new(big.Int)
-	res.Mul(v.BigInt, o.BigInt)
-	if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
-		return Int128Value{sema.Int128TypeMinIntBig}
-	} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
-		return Int128Value{sema.Int128TypeMaxIntBig}
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		res.Mul(v.BigInt, o.BigInt)
+		if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
+			return sema.Int128TypeMinIntBig
+		} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
+			return sema.Int128TypeMaxIntBig
+		}
+
+		return res
 	}
-	return Int128Value{res}
+
+	return NewInt128ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int128Value) Div(other NumberValue) NumberValue {
+func (v Int128Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5303,25 +5743,30 @@ func (v Int128Value) Div(other NumberValue) NumberValue {
 		})
 	}
 
-	res := new(big.Int)
-	// INT33-C:
-	//   if o == 0 {
-	//       ...
-	//   } else if (v == Int128TypeMinIntBig) && (o == -1) {
-	//       ...
-	//   }
-	if o.BigInt.Cmp(res) == 0 {
-		panic(DivisionByZeroError{})
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		// INT33-C:
+		//   if o == 0 {
+		//       ...
+		//   } else if (v == Int128TypeMinIntBig) && (o == -1) {
+		//       ...
+		//   }
+		if o.BigInt.Cmp(res) == 0 {
+			panic(DivisionByZeroError{})
+		}
+		res.SetInt64(-1)
+		if (v.BigInt.Cmp(sema.Int128TypeMinIntBig) == 0) && (o.BigInt.Cmp(res) == 0) {
+			panic(OverflowError{})
+		}
+		res.Div(v.BigInt, o.BigInt)
+
+		return res
 	}
-	res.SetInt64(-1)
-	if (v.BigInt.Cmp(sema.Int128TypeMinIntBig) == 0) && (o.BigInt.Cmp(res) == 0) {
-		panic(OverflowError{})
-	}
-	res.Div(v.BigInt, o.BigInt)
-	return Int128Value{res}
+
+	return NewInt128ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int128Value) SaturatingDiv(other NumberValue) NumberValue {
+func (v Int128Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5331,22 +5776,27 @@ func (v Int128Value) SaturatingDiv(other NumberValue) NumberValue {
 		})
 	}
 
-	res := new(big.Int)
-	// INT33-C:
-	//   if o == 0 {
-	//       ...
-	//   } else if (v == Int128TypeMinIntBig) && (o == -1) {
-	//       ...
-	//   }
-	if o.BigInt.Cmp(res) == 0 {
-		panic(DivisionByZeroError{})
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		// INT33-C:
+		//   if o == 0 {
+		//       ...
+		//   } else if (v == Int128TypeMinIntBig) && (o == -1) {
+		//       ...
+		//   }
+		if o.BigInt.Cmp(res) == 0 {
+			panic(DivisionByZeroError{})
+		}
+		res.SetInt64(-1)
+		if (v.BigInt.Cmp(sema.Int128TypeMinIntBig) == 0) && (o.BigInt.Cmp(res) == 0) {
+			return sema.Int128TypeMaxIntBig
+		}
+		res.Div(v.BigInt, o.BigInt)
+
+		return res
 	}
-	res.SetInt64(-1)
-	if (v.BigInt.Cmp(sema.Int128TypeMinIntBig) == 0) && (o.BigInt.Cmp(res) == 0) {
-		return Int128Value{sema.Int128TypeMaxIntBig}
-	}
-	res.Div(v.BigInt, o.BigInt)
-	return Int128Value{res}
+
+	return NewInt128ValueFromBigInt(interpreter, valueGetter)
 }
 
 func (v Int128Value) Less(other NumberValue) BoolValue {
@@ -5433,30 +5883,34 @@ func (v Int128Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch [
 	return buffer
 }
 
-func ConvertInt128(value Value) Int128Value {
-	var v *big.Int
+func ConvertInt128(memoryGauge common.MemoryGauge, value Value) Int128Value {
+	converter := func() *big.Int {
+		var v *big.Int
 
-	switch value := value.(type) {
-	case BigNumberValue:
-		v = value.ToBigInt()
+		switch value := value.(type) {
+		case BigNumberValue:
+			v = value.ToBigInt()
 
-	case NumberValue:
-		v = big.NewInt(int64(value.ToInt()))
+		case NumberValue:
+			v = big.NewInt(int64(value.ToInt()))
 
-	default:
-		panic(errors.NewUnreachableError())
+		default:
+			panic(errors.NewUnreachableError())
+		}
+
+		if v.Cmp(sema.Int128TypeMaxIntBig) > 0 {
+			panic(OverflowError{})
+		} else if v.Cmp(sema.Int128TypeMinIntBig) < 0 {
+			panic(UnderflowError{})
+		}
+
+		return v
 	}
 
-	if v.Cmp(sema.Int128TypeMaxIntBig) > 0 {
-		panic(OverflowError{})
-	} else if v.Cmp(sema.Int128TypeMinIntBig) < 0 {
-		panic(UnderflowError{})
-	}
-
-	return NewInt128ValueFromBigInt(v)
+	return NewInt128ValueFromBigInt(memoryGauge, converter)
 }
 
-func (v Int128Value) BitwiseOr(other IntegerValue) IntegerValue {
+func (v Int128Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5466,12 +5920,16 @@ func (v Int128Value) BitwiseOr(other IntegerValue) IntegerValue {
 		})
 	}
 
-	res := new(big.Int)
-	res.Or(v.BigInt, o.BigInt)
-	return Int128Value{res}
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		res.Or(v.BigInt, o.BigInt)
+		return res
+	}
+
+	return NewInt128ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int128Value) BitwiseXor(other IntegerValue) IntegerValue {
+func (v Int128Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5481,12 +5939,16 @@ func (v Int128Value) BitwiseXor(other IntegerValue) IntegerValue {
 		})
 	}
 
-	res := new(big.Int)
-	res.Xor(v.BigInt, o.BigInt)
-	return Int128Value{res}
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		res.Xor(v.BigInt, o.BigInt)
+		return res
+	}
+
+	return NewInt128ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int128Value) BitwiseAnd(other IntegerValue) IntegerValue {
+func (v Int128Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5496,12 +5958,16 @@ func (v Int128Value) BitwiseAnd(other IntegerValue) IntegerValue {
 		})
 	}
 
-	res := new(big.Int)
-	res.And(v.BigInt, o.BigInt)
-	return Int128Value{res}
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		res.And(v.BigInt, o.BigInt)
+		return res
+	}
+
+	return NewInt128ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int128Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v Int128Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5511,18 +5977,23 @@ func (v Int128Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 		})
 	}
 
-	res := new(big.Int)
 	if o.BigInt.Sign() < 0 {
 		panic(UnderflowError{})
 	}
 	if !o.BigInt.IsUint64() {
 		panic(OverflowError{})
 	}
-	res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
-	return Int128Value{res}
+
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+		return res
+	}
+
+	return NewInt128ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int128Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v Int128Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5532,15 +6003,20 @@ func (v Int128Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 		})
 	}
 
-	res := new(big.Int)
 	if o.BigInt.Sign() < 0 {
 		panic(UnderflowError{})
 	}
 	if !o.BigInt.IsUint64() {
 		panic(OverflowError{})
 	}
-	res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
-	return Int128Value{res}
+
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
+		return res
+	}
+
+	return NewInt128ValueFromBigInt(interpreter, valueGetter)
 }
 
 func (v Int128Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
@@ -5597,7 +6073,7 @@ func (v Int128Value) Transfer(
 }
 
 func (v Int128Value) Clone(_ *Interpreter) Value {
-	return NewInt128ValueFromBigInt(v.BigInt)
+	return NewUnmeteredInt128ValueFromBigInt(v.BigInt)
 }
 
 func (Int128Value) DeepRemove(_ *Interpreter) {
@@ -5622,12 +6098,31 @@ type Int256Value struct {
 	BigInt *big.Int
 }
 
-func NewInt256ValueFromInt64(value int64) Int256Value {
-	return NewInt256ValueFromBigInt(big.NewInt(value))
+func NewInt256ValueFromUint64(memoryGauge common.MemoryGauge, value int64) Int256Value {
+	return NewInt256ValueFromBigInt(
+		memoryGauge,
+		func() *big.Int {
+			return new(big.Int).SetInt64(value)
+		},
+	)
 }
 
-func NewInt256ValueFromBigInt(value *big.Int) Int256Value {
-	return Int256Value{BigInt: value}
+var Int256MemoryUsage = common.NewBigIntMemoryUsage(32)
+
+func NewInt256ValueFromBigInt(memoryGauge common.MemoryGauge, bigIntConstructor func() *big.Int) Int256Value {
+	common.UseMemory(memoryGauge, Int256MemoryUsage)
+	value := bigIntConstructor()
+	return NewUnmeteredInt256ValueFromBigInt(value)
+}
+
+func NewUnmeteredInt256ValueFromInt64(value int64) Int256Value {
+	return NewUnmeteredInt256ValueFromBigInt(big.NewInt(value))
+}
+
+func NewUnmeteredInt256ValueFromBigInt(value *big.Int) Int256Value {
+	return Int256Value{
+		BigInt: value,
+	}
 }
 
 var _ Value = Int256Value{}
@@ -5681,7 +6176,7 @@ func (v Int256Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v Int256Value) Negate(*Interpreter) NumberValue {
+func (v Int256Value) Negate(interpreter *Interpreter) NumberValue {
 	// INT32-C
 	//   if v == Int256TypeMinIntBig {
 	//       ...
@@ -5689,7 +6184,12 @@ func (v Int256Value) Negate(*Interpreter) NumberValue {
 	if v.BigInt.Cmp(sema.Int256TypeMinIntBig) == 0 {
 		panic(OverflowError{})
 	}
-	return Int256Value{BigInt: new(big.Int).Neg(v.BigInt)}
+
+	valueGetter := func() *big.Int {
+		return new(big.Int).Neg(v.BigInt)
+	}
+
+	return NewInt256ValueFromBigInt(interpreter, valueGetter)
 }
 
 func (v Int256Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -5702,26 +6202,31 @@ func (v Int256Value) Plus(interpreter *Interpreter, other NumberValue) NumberVal
 		})
 	}
 
-	// Given that this value is backed by an arbitrary size integer,
-	// we can just add and check the range of the result.
-	//
-	// If Go gains a native int256 type and we switch this value
-	// to be based on it, then we need to follow INT32-C:
-	//
-	//   if (o > 0) && (v > (Int256TypeMaxIntBig - o)) {
-	//       ...
-	//   } else if (o < 0) && (v < (Int256TypeMinIntBig - o)) {
-	//       ...
-	//   }
-	//
-	res := new(big.Int)
-	res.Add(v.BigInt, o.BigInt)
-	if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
-		panic(UnderflowError{})
-	} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
-		panic(OverflowError{})
+	valueGetter := func() *big.Int {
+		// Given that this value is backed by an arbitrary size integer,
+		// we can just add and check the range of the result.
+		//
+		// If Go gains a native int256 type and we switch this value
+		// to be based on it, then we need to follow INT32-C:
+		//
+		//   if (o > 0) && (v > (Int256TypeMaxIntBig - o)) {
+		//       ...
+		//   } else if (o < 0) && (v < (Int256TypeMinIntBig - o)) {
+		//       ...
+		//   }
+		//
+		res := new(big.Int)
+		res.Add(v.BigInt, o.BigInt)
+		if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
+			panic(UnderflowError{})
+		} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
+			panic(OverflowError{})
+		}
+
+		return res
 	}
-	return Int256Value{res}
+
+	return NewInt256ValueFromBigInt(interpreter, valueGetter)
 }
 
 func (v Int256Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -5734,29 +6239,34 @@ func (v Int256Value) SaturatingPlus(interpreter *Interpreter, other NumberValue)
 		})
 	}
 
-	// Given that this value is backed by an arbitrary size integer,
-	// we can just add and check the range of the result.
-	//
-	// If Go gains a native int256 type and we switch this value
-	// to be based on it, then we need to follow INT32-C:
-	//
-	//   if (o > 0) && (v > (Int256TypeMaxIntBig - o)) {
-	//       ...
-	//   } else if (o < 0) && (v < (Int256TypeMinIntBig - o)) {
-	//       ...
-	//   }
-	//
-	res := new(big.Int)
-	res.Add(v.BigInt, o.BigInt)
-	if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
-		return Int256Value{sema.Int256TypeMinIntBig}
-	} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
-		return Int256Value{sema.Int256TypeMaxIntBig}
+	valueGetter := func() *big.Int {
+		// Given that this value is backed by an arbitrary size integer,
+		// we can just add and check the range of the result.
+		//
+		// If Go gains a native int256 type and we switch this value
+		// to be based on it, then we need to follow INT32-C:
+		//
+		//   if (o > 0) && (v > (Int256TypeMaxIntBig - o)) {
+		//       ...
+		//   } else if (o < 0) && (v < (Int256TypeMinIntBig - o)) {
+		//       ...
+		//   }
+		//
+		res := new(big.Int)
+		res.Add(v.BigInt, o.BigInt)
+		if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
+			return sema.Int256TypeMinIntBig
+		} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
+			return sema.Int256TypeMaxIntBig
+		}
+
+		return res
 	}
-	return Int256Value{res}
+
+	return NewInt256ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int256Value) Minus(other NumberValue) NumberValue {
+func (v Int256Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5766,29 +6276,34 @@ func (v Int256Value) Minus(other NumberValue) NumberValue {
 		})
 	}
 
-	// Given that this value is backed by an arbitrary size integer,
-	// we can just subtract and check the range of the result.
-	//
-	// If Go gains a native int256 type and we switch this value
-	// to be based on it, then we need to follow INT32-C:
-	//
-	//   if (o > 0) && (v < (Int256TypeMinIntBig + o)) {
-	// 	     ...
-	//   } else if (o < 0) && (v > (Int256TypeMaxIntBig + o)) {
-	//       ...
-	//   }
-	//
-	res := new(big.Int)
-	res.Sub(v.BigInt, o.BigInt)
-	if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
-		panic(UnderflowError{})
-	} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
-		panic(OverflowError{})
+	valueGetter := func() *big.Int {
+		// Given that this value is backed by an arbitrary size integer,
+		// we can just subtract and check the range of the result.
+		//
+		// If Go gains a native int256 type and we switch this value
+		// to be based on it, then we need to follow INT32-C:
+		//
+		//   if (o > 0) && (v < (Int256TypeMinIntBig + o)) {
+		// 	     ...
+		//   } else if (o < 0) && (v > (Int256TypeMaxIntBig + o)) {
+		//       ...
+		//   }
+		//
+		res := new(big.Int)
+		res.Sub(v.BigInt, o.BigInt)
+		if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
+			panic(UnderflowError{})
+		} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
+			panic(OverflowError{})
+		}
+
+		return res
 	}
-	return Int256Value{res}
+
+	return NewInt256ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int256Value) SaturatingMinus(other NumberValue) NumberValue {
+func (v Int256Value) SaturatingMinus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5798,26 +6313,31 @@ func (v Int256Value) SaturatingMinus(other NumberValue) NumberValue {
 		})
 	}
 
-	// Given that this value is backed by an arbitrary size integer,
-	// we can just subtract and check the range of the result.
-	//
-	// If Go gains a native int256 type and we switch this value
-	// to be based on it, then we need to follow INT32-C:
-	//
-	//   if (o > 0) && (v < (Int256TypeMinIntBig + o)) {
-	// 	     ...
-	//   } else if (o < 0) && (v > (Int256TypeMaxIntBig + o)) {
-	//       ...
-	//   }
-	//
-	res := new(big.Int)
-	res.Sub(v.BigInt, o.BigInt)
-	if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
-		return Int256Value{sema.Int256TypeMinIntBig}
-	} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
-		return Int256Value{sema.Int256TypeMaxIntBig}
+	valueGetter := func() *big.Int {
+		// Given that this value is backed by an arbitrary size integer,
+		// we can just subtract and check the range of the result.
+		//
+		// If Go gains a native int256 type and we switch this value
+		// to be based on it, then we need to follow INT32-C:
+		//
+		//   if (o > 0) && (v < (Int256TypeMinIntBig + o)) {
+		// 	     ...
+		//   } else if (o < 0) && (v > (Int256TypeMaxIntBig + o)) {
+		//       ...
+		//   }
+		//
+		res := new(big.Int)
+		res.Sub(v.BigInt, o.BigInt)
+		if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
+			return sema.Int256TypeMinIntBig
+		} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
+			return sema.Int256TypeMaxIntBig
+		}
+
+		return res
 	}
-	return Int256Value{res}
+
+	return NewInt256ValueFromBigInt(interpreter, valueGetter)
 }
 
 func (v Int256Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -5830,13 +6350,18 @@ func (v Int256Value) Mod(interpreter *Interpreter, other NumberValue) NumberValu
 		})
 	}
 
-	res := new(big.Int)
-	// INT33-C
-	if o.BigInt.Cmp(res) == 0 {
-		panic(DivisionByZeroError{})
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		// INT33-C
+		if o.BigInt.Cmp(res) == 0 {
+			panic(DivisionByZeroError{})
+		}
+		res.Rem(v.BigInt, o.BigInt)
+
+		return res
 	}
-	res.Rem(v.BigInt, o.BigInt)
-	return Int256Value{res}
+
+	return NewInt256ValueFromBigInt(interpreter, valueGetter)
 }
 
 func (v Int256Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -5849,14 +6374,19 @@ func (v Int256Value) Mul(interpreter *Interpreter, other NumberValue) NumberValu
 		})
 	}
 
-	res := new(big.Int)
-	res.Mul(v.BigInt, o.BigInt)
-	if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
-		panic(UnderflowError{})
-	} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
-		panic(OverflowError{})
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		res.Mul(v.BigInt, o.BigInt)
+		if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
+			panic(UnderflowError{})
+		} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
+			panic(OverflowError{})
+		}
+
+		return res
 	}
-	return Int256Value{res}
+
+	return NewInt256ValueFromBigInt(interpreter, valueGetter)
 }
 
 func (v Int256Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -5869,17 +6399,22 @@ func (v Int256Value) SaturatingMul(interpreter *Interpreter, other NumberValue) 
 		})
 	}
 
-	res := new(big.Int)
-	res.Mul(v.BigInt, o.BigInt)
-	if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
-		return Int256Value{sema.Int256TypeMinIntBig}
-	} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
-		return Int256Value{sema.Int256TypeMaxIntBig}
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		res.Mul(v.BigInt, o.BigInt)
+		if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
+			return sema.Int256TypeMinIntBig
+		} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
+			return sema.Int256TypeMaxIntBig
+		}
+
+		return res
 	}
-	return Int256Value{res}
+
+	return NewInt256ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int256Value) Div(other NumberValue) NumberValue {
+func (v Int256Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5889,25 +6424,29 @@ func (v Int256Value) Div(other NumberValue) NumberValue {
 		})
 	}
 
-	res := new(big.Int)
-	// INT33-C:
-	//   if o == 0 {
-	//       ...
-	//   } else if (v == Int256TypeMinIntBig) && (o == -1) {
-	//       ...
-	//   }
-	if o.BigInt.Cmp(res) == 0 {
-		panic(DivisionByZeroError{})
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		// INT33-C:
+		//   if o == 0 {
+		//       ...
+		//   } else if (v == Int256TypeMinIntBig) && (o == -1) {
+		//       ...
+		//   }
+		if o.BigInt.Cmp(res) == 0 {
+			panic(DivisionByZeroError{})
+		}
+		res.SetInt64(-1)
+		if (v.BigInt.Cmp(sema.Int256TypeMinIntBig) == 0) && (o.BigInt.Cmp(res) == 0) {
+			panic(OverflowError{})
+		}
+		res.Div(v.BigInt, o.BigInt)
+		return res
 	}
-	res.SetInt64(-1)
-	if (v.BigInt.Cmp(sema.Int256TypeMinIntBig) == 0) && (o.BigInt.Cmp(res) == 0) {
-		panic(OverflowError{})
-	}
-	res.Div(v.BigInt, o.BigInt)
-	return Int256Value{res}
+
+	return NewInt256ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int256Value) SaturatingDiv(other NumberValue) NumberValue {
+func (v Int256Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5917,22 +6456,26 @@ func (v Int256Value) SaturatingDiv(other NumberValue) NumberValue {
 		})
 	}
 
-	res := new(big.Int)
-	// INT33-C:
-	//   if o == 0 {
-	//       ...
-	//   } else if (v == Int256TypeMinIntBig) && (o == -1) {
-	//       ...
-	//   }
-	if o.BigInt.Cmp(res) == 0 {
-		panic(DivisionByZeroError{})
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		// INT33-C:
+		//   if o == 0 {
+		//       ...
+		//   } else if (v == Int256TypeMinIntBig) && (o == -1) {
+		//       ...
+		//   }
+		if o.BigInt.Cmp(res) == 0 {
+			panic(DivisionByZeroError{})
+		}
+		res.SetInt64(-1)
+		if (v.BigInt.Cmp(sema.Int256TypeMinIntBig) == 0) && (o.BigInt.Cmp(res) == 0) {
+			return sema.Int256TypeMaxIntBig
+		}
+		res.Div(v.BigInt, o.BigInt)
+		return res
 	}
-	res.SetInt64(-1)
-	if (v.BigInt.Cmp(sema.Int256TypeMinIntBig) == 0) && (o.BigInt.Cmp(res) == 0) {
-		return Int256Value{sema.Int256TypeMaxIntBig}
-	}
-	res.Div(v.BigInt, o.BigInt)
-	return Int256Value{res}
+
+	return NewInt256ValueFromBigInt(interpreter, valueGetter)
 }
 
 func (v Int256Value) Less(other NumberValue) BoolValue {
@@ -6019,30 +6562,34 @@ func (v Int256Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch [
 	return buffer
 }
 
-func ConvertInt256(value Value) Int256Value {
-	var v *big.Int
+func ConvertInt256(memoryGauge common.MemoryGauge, value Value) Int256Value {
+	converter := func() *big.Int {
+		var v *big.Int
 
-	switch value := value.(type) {
-	case BigNumberValue:
-		v = value.ToBigInt()
+		switch value := value.(type) {
+		case BigNumberValue:
+			v = value.ToBigInt()
 
-	case NumberValue:
-		v = big.NewInt(int64(value.ToInt()))
+		case NumberValue:
+			v = big.NewInt(int64(value.ToInt()))
 
-	default:
-		panic(errors.NewUnreachableError())
+		default:
+			panic(errors.NewUnreachableError())
+		}
+
+		if v.Cmp(sema.Int256TypeMaxIntBig) > 0 {
+			panic(OverflowError{})
+		} else if v.Cmp(sema.Int256TypeMinIntBig) < 0 {
+			panic(UnderflowError{})
+		}
+
+		return v
 	}
 
-	if v.Cmp(sema.Int256TypeMaxIntBig) > 0 {
-		panic(OverflowError{})
-	} else if v.Cmp(sema.Int256TypeMinIntBig) < 0 {
-		panic(UnderflowError{})
-	}
-
-	return NewInt256ValueFromBigInt(v)
+	return NewInt256ValueFromBigInt(memoryGauge, converter)
 }
 
-func (v Int256Value) BitwiseOr(other IntegerValue) IntegerValue {
+func (v Int256Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6052,12 +6599,16 @@ func (v Int256Value) BitwiseOr(other IntegerValue) IntegerValue {
 		})
 	}
 
-	res := new(big.Int)
-	res.Or(v.BigInt, o.BigInt)
-	return Int256Value{res}
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		res.Or(v.BigInt, o.BigInt)
+		return res
+	}
+
+	return NewInt256ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int256Value) BitwiseXor(other IntegerValue) IntegerValue {
+func (v Int256Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6067,12 +6618,16 @@ func (v Int256Value) BitwiseXor(other IntegerValue) IntegerValue {
 		})
 	}
 
-	res := new(big.Int)
-	res.Xor(v.BigInt, o.BigInt)
-	return Int256Value{res}
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		res.Xor(v.BigInt, o.BigInt)
+		return res
+	}
+
+	return NewInt256ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int256Value) BitwiseAnd(other IntegerValue) IntegerValue {
+func (v Int256Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6082,12 +6637,16 @@ func (v Int256Value) BitwiseAnd(other IntegerValue) IntegerValue {
 		})
 	}
 
-	res := new(big.Int)
-	res.And(v.BigInt, o.BigInt)
-	return Int256Value{res}
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		res.And(v.BigInt, o.BigInt)
+		return res
+	}
+
+	return NewInt256ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int256Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v Int256Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6097,18 +6656,23 @@ func (v Int256Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 		})
 	}
 
-	res := new(big.Int)
-	if o.BigInt.Sign() < 0 {
-		panic(UnderflowError{})
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		if o.BigInt.Sign() < 0 {
+			panic(UnderflowError{})
+		}
+		if !o.BigInt.IsUint64() {
+			panic(OverflowError{})
+		}
+		res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+
+		return res
 	}
-	if !o.BigInt.IsUint64() {
-		panic(OverflowError{})
-	}
-	res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
-	return Int256Value{res}
+
+	return NewInt256ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int256Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v Int256Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6118,15 +6682,19 @@ func (v Int256Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 		})
 	}
 
-	res := new(big.Int)
-	if o.BigInt.Sign() < 0 {
-		panic(UnderflowError{})
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		if o.BigInt.Sign() < 0 {
+			panic(UnderflowError{})
+		}
+		if !o.BigInt.IsUint64() {
+			panic(OverflowError{})
+		}
+		res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
+		return res
 	}
-	if !o.BigInt.IsUint64() {
-		panic(OverflowError{})
-	}
-	res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
-	return Int256Value{res}
+
+	return NewInt256ValueFromBigInt(interpreter, valueGetter)
 }
 
 func (v Int256Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
@@ -6183,7 +6751,7 @@ func (v Int256Value) Transfer(
 }
 
 func (v Int256Value) Clone(_ *Interpreter) Value {
-	return NewInt256ValueFromBigInt(v.BigInt)
+	return NewUnmeteredInt256ValueFromBigInt(v.BigInt)
 }
 
 func (Int256Value) DeepRemove(_ *Interpreter) {
@@ -6364,7 +6932,7 @@ func (v UIntValue) SaturatingPlus(interpreter *Interpreter, other NumberValue) N
 	return v.Plus(interpreter, other)
 }
 
-func (v UIntValue) Minus(other NumberValue) NumberValue {
+func (v UIntValue) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6374,16 +6942,22 @@ func (v UIntValue) Minus(other NumberValue) NumberValue {
 		})
 	}
 
-	res := new(big.Int)
-	res.Sub(v.BigInt, o.BigInt)
-	// INT30-C
-	if res.Sign() < 0 {
-		panic(UnderflowError{})
-	}
-	return UIntValue{res}
+	return NewUIntValueFromBigInt(
+		interpreter,
+		common.NewMinusBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			res.Sub(v.BigInt, o.BigInt)
+			// INT30-C
+			if res.Sign() < 0 {
+				panic(UnderflowError{})
+			}
+			return res
+		},
+	)
 }
 
-func (v UIntValue) SaturatingMinus(other NumberValue) NumberValue {
+func (v UIntValue) SaturatingMinus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6393,13 +6967,19 @@ func (v UIntValue) SaturatingMinus(other NumberValue) NumberValue {
 		})
 	}
 
-	res := new(big.Int)
-	res.Sub(v.BigInt, o.BigInt)
-	// INT30-C
-	if res.Sign() < 0 {
-		return UIntValue{sema.UIntTypeMin}
-	}
-	return UIntValue{res}
+	return NewUIntValueFromBigInt(
+		interpreter,
+		common.NewMinusBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			res.Sub(v.BigInt, o.BigInt)
+			// INT30-C
+			if res.Sign() < 0 {
+				return sema.UIntTypeMin
+			}
+			return res
+		},
+	)
 }
 
 func (v UIntValue) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -6412,13 +6992,19 @@ func (v UIntValue) Mod(interpreter *Interpreter, other NumberValue) NumberValue 
 		})
 	}
 
-	res := new(big.Int)
-	// INT33-C
-	if o.BigInt.Cmp(res) == 0 {
-		panic(DivisionByZeroError{})
-	}
-	res.Rem(v.BigInt, o.BigInt)
-	return UIntValue{res}
+	return NewUIntValueFromBigInt(
+		interpreter,
+		common.NewModBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			// INT33-C
+			if o.BigInt.Cmp(res) == 0 {
+				panic(DivisionByZeroError{})
+			}
+			res.Rem(v.BigInt, o.BigInt)
+			return res
+		},
+	)
 }
 
 func (v UIntValue) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -6456,7 +7042,7 @@ func (v UIntValue) SaturatingMul(interpreter *Interpreter, other NumberValue) Nu
 	return v.Mul(interpreter, other)
 }
 
-func (v UIntValue) Div(other NumberValue) NumberValue {
+func (v UIntValue) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6466,16 +7052,21 @@ func (v UIntValue) Div(other NumberValue) NumberValue {
 		})
 	}
 
-	res := new(big.Int)
-	// INT33-C
-	if o.BigInt.Cmp(res) == 0 {
-		panic(DivisionByZeroError{})
-	}
-	res.Div(v.BigInt, o.BigInt)
-	return UIntValue{res}
+	return NewUIntValueFromBigInt(
+		interpreter,
+		common.NewDivBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			// INT33-C
+			if o.BigInt.Cmp(res) == 0 {
+				panic(DivisionByZeroError{})
+			}
+			return res.Div(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v UIntValue) SaturatingDiv(other NumberValue) NumberValue {
+func (v UIntValue) SaturatingDiv(interpreter *Interpreter, other NumberValue) NumberValue {
 	defer func() {
 		r := recover()
 		if _, ok := r.(InvalidOperandsError); ok {
@@ -6487,7 +7078,7 @@ func (v UIntValue) SaturatingDiv(other NumberValue) NumberValue {
 		}
 	}()
 
-	return v.Div(other)
+	return v.Div(interpreter, other)
 }
 
 func (v UIntValue) Less(other NumberValue) BoolValue {
@@ -6574,7 +7165,7 @@ func (v UIntValue) HashInput(_ *Interpreter, _ func() LocationRange, scratch []b
 	return buffer
 }
 
-func (v UIntValue) BitwiseOr(other IntegerValue) IntegerValue {
+func (v UIntValue) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6584,12 +7175,17 @@ func (v UIntValue) BitwiseOr(other IntegerValue) IntegerValue {
 		})
 	}
 
-	res := new(big.Int)
-	res.Or(v.BigInt, o.BigInt)
-	return UIntValue{res}
+	return NewUIntValueFromBigInt(
+		interpreter,
+		common.NewBitwiseOrBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Or(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v UIntValue) BitwiseXor(other IntegerValue) IntegerValue {
+func (v UIntValue) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6599,12 +7195,17 @@ func (v UIntValue) BitwiseXor(other IntegerValue) IntegerValue {
 		})
 	}
 
-	res := new(big.Int)
-	res.Xor(v.BigInt, o.BigInt)
-	return UIntValue{res}
+	return NewUIntValueFromBigInt(
+		interpreter,
+		common.NewBitwiseXorBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Xor(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v UIntValue) BitwiseAnd(other IntegerValue) IntegerValue {
+func (v UIntValue) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6614,12 +7215,17 @@ func (v UIntValue) BitwiseAnd(other IntegerValue) IntegerValue {
 		})
 	}
 
-	res := new(big.Int)
-	res.And(v.BigInt, o.BigInt)
-	return UIntValue{res}
+	return NewUIntValueFromBigInt(
+		interpreter,
+		common.NewBitwiseAndBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			return res.And(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v UIntValue) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v UIntValue) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6629,18 +7235,26 @@ func (v UIntValue) BitwiseLeftShift(other IntegerValue) IntegerValue {
 		})
 	}
 
-	res := new(big.Int)
 	if o.BigInt.Sign() < 0 {
 		panic(UnderflowError{})
 	}
+
 	if !o.BigInt.IsUint64() {
 		panic(OverflowError{})
 	}
-	res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
-	return UIntValue{res}
+
+	return NewUIntValueFromBigInt(
+		interpreter,
+		common.NewBitwiseLeftShiftBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+
+		},
+	)
 }
 
-func (v UIntValue) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v UIntValue) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6650,15 +7264,21 @@ func (v UIntValue) BitwiseRightShift(other IntegerValue) IntegerValue {
 		})
 	}
 
-	res := new(big.Int)
 	if o.BigInt.Sign() < 0 {
 		panic(UnderflowError{})
 	}
 	if !o.BigInt.IsUint64() {
 		panic(OverflowError{})
 	}
-	res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
-	return UIntValue{res}
+
+	return NewUIntValueFromBigInt(
+		interpreter,
+		common.NewBitwiseRightShiftBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
+		},
+	)
 }
 
 func (v UIntValue) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
@@ -6746,6 +7366,18 @@ var _ EquatableValue = UInt8Value(0)
 var _ HashableValue = UInt8Value(0)
 var _ MemberAccessibleValue = UInt8Value(0)
 
+var Uint8MemoryUsage = common.NewNumberMemoryUsage(int(unsafe.Sizeof(UInt8Value(0))))
+
+func NewUInt8Value(gauge common.MemoryGauge, uint8Constructor func() uint8) UInt8Value {
+	common.UseMemory(gauge, Uint8MemoryUsage)
+
+	return NewUnmeteredUInt8Value(uint8Constructor())
+}
+
+func NewUnmeteredUInt8Value(value uint8) UInt8Value {
+	return UInt8Value(value)
+}
+
 func (UInt8Value) IsValue() {}
 
 func (v UInt8Value) Accept(interpreter *Interpreter, visitor Visitor) {
@@ -6792,12 +7424,14 @@ func (v UInt8Value) Plus(interpreter *Interpreter, other NumberValue) NumberValu
 		})
 	}
 
-	sum := v + o
-	// INT30-C
-	if sum < v {
-		panic(OverflowError{})
-	}
-	return sum
+	return NewUInt8Value(interpreter, func() uint8 {
+		sum := v + o
+		// INT30-C
+		if sum < v {
+			panic(OverflowError{})
+		}
+		return uint8(sum)
+	})
 }
 
 func (v UInt8Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -6810,15 +7444,17 @@ func (v UInt8Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) 
 		})
 	}
 
-	sum := v + o
-	// INT30-C
-	if sum < v {
-		return UInt8Value(math.MaxUint8)
-	}
-	return sum
+	return NewUInt8Value(interpreter, func() uint8 {
+		sum := v + o
+		// INT30-C
+		if sum < v {
+			return math.MaxUint8
+		}
+		return uint8(sum)
+	})
 }
 
-func (v UInt8Value) Minus(other NumberValue) NumberValue {
+func (v UInt8Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6828,16 +7464,20 @@ func (v UInt8Value) Minus(other NumberValue) NumberValue {
 		})
 	}
 
-	diff := v - o
-
-	// INT30-C
-	if diff > v {
-		panic(UnderflowError{})
-	}
-	return diff
+	return NewUInt8Value(
+		interpreter,
+		func() uint8 {
+			diff := v - o
+			// INT30-C
+			if diff > v {
+				panic(UnderflowError{})
+			}
+			return uint8(diff)
+		},
+	)
 }
 
-func (v UInt8Value) SaturatingMinus(other NumberValue) NumberValue {
+func (v UInt8Value) SaturatingMinus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6847,13 +7487,17 @@ func (v UInt8Value) SaturatingMinus(other NumberValue) NumberValue {
 		})
 	}
 
-	diff := v - o
-
-	// INT30-C
-	if diff > v {
-		return UInt8Value(0)
-	}
-	return diff
+	return NewUInt8Value(
+		interpreter,
+		func() uint8 {
+			diff := v - o
+			// INT30-C
+			if diff > v {
+				return 0
+			}
+			return uint8(diff)
+		},
+	)
 }
 
 func (v UInt8Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -6866,10 +7510,15 @@ func (v UInt8Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue
 		})
 	}
 
-	if o == 0 {
-		panic(DivisionByZeroError{})
-	}
-	return v % o
+	return NewUInt8Value(
+		interpreter,
+		func() uint8 {
+			if o == 0 {
+				panic(DivisionByZeroError{})
+			}
+			return uint8(v % o)
+		},
+	)
 }
 
 func (v UInt8Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -6882,11 +7531,16 @@ func (v UInt8Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue
 		})
 	}
 
-	// INT30-C
-	if (v > 0) && (o > 0) && (v > (math.MaxUint8 / o)) {
-		panic(OverflowError{})
-	}
-	return v * o
+	return NewUInt8Value(
+		interpreter,
+		func() uint8 {
+			// INT30-C
+			if (v > 0) && (o > 0) && (v > (math.MaxUint8 / o)) {
+				panic(OverflowError{})
+			}
+			return uint8(v * o)
+		},
+	)
 }
 
 func (v UInt8Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -6899,14 +7553,19 @@ func (v UInt8Value) SaturatingMul(interpreter *Interpreter, other NumberValue) N
 		})
 	}
 
-	// INT30-C
-	if (v > 0) && (o > 0) && (v > (math.MaxUint8 / o)) {
-		return UInt8Value(math.MaxUint8)
-	}
-	return v * o
+	return NewUInt8Value(
+		interpreter,
+		func() uint8 {
+			// INT30-C
+			if (v > 0) && (o > 0) && (v > (math.MaxUint8 / o)) {
+				return math.MaxUint8
+			}
+			return uint8(v * o)
+		},
+	)
 }
 
-func (v UInt8Value) Div(other NumberValue) NumberValue {
+func (v UInt8Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6916,13 +7575,18 @@ func (v UInt8Value) Div(other NumberValue) NumberValue {
 		})
 	}
 
-	if o == 0 {
-		panic(DivisionByZeroError{})
-	}
-	return v / o
+	return NewUInt8Value(
+		interpreter,
+		func() uint8 {
+			if o == 0 {
+				panic(DivisionByZeroError{})
+			}
+			return uint8(v / o)
+		},
+	)
 }
 
-func (v UInt8Value) SaturatingDiv(other NumberValue) NumberValue {
+func (v UInt8Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) NumberValue {
 	defer func() {
 		r := recover()
 		if _, ok := r.(InvalidOperandsError); ok {
@@ -6934,7 +7598,7 @@ func (v UInt8Value) SaturatingDiv(other NumberValue) NumberValue {
 		}
 	}()
 
-	return v.Div(other)
+	return v.Div(interpreter, other)
 }
 
 func (v UInt8Value) Less(other NumberValue) BoolValue {
@@ -7006,36 +7670,38 @@ func (v UInt8Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []
 	return scratch[:2]
 }
 
-func ConvertUInt8(value Value) UInt8Value {
-	var res uint8
+func ConvertUInt8(memoryGauge common.MemoryGauge, value Value) UInt8Value {
+	return NewUInt8Value(
+		memoryGauge,
+		func() uint8 {
 
-	switch value := value.(type) {
-	case BigNumberValue:
-		v := value.ToBigInt()
-		if v.Cmp(sema.UInt8TypeMaxInt) > 0 {
-			panic(OverflowError{})
-		} else if v.Sign() < 0 {
-			panic(UnderflowError{})
-		}
-		res = uint8(v.Int64())
+			switch value := value.(type) {
+			case BigNumberValue:
+				v := value.ToBigInt()
+				if v.Cmp(sema.UInt8TypeMaxInt) > 0 {
+					panic(OverflowError{})
+				} else if v.Sign() < 0 {
+					panic(UnderflowError{})
+				}
+				return uint8(v.Int64())
 
-	case NumberValue:
-		v := value.ToInt()
-		if v > math.MaxUint8 {
-			panic(OverflowError{})
-		} else if v < 0 {
-			panic(UnderflowError{})
-		}
-		res = uint8(v)
+			case NumberValue:
+				v := value.ToInt()
+				if v > math.MaxUint8 {
+					panic(OverflowError{})
+				} else if v < 0 {
+					panic(UnderflowError{})
+				}
+				return uint8(v)
 
-	default:
-		panic(errors.NewUnreachableError())
-	}
-
-	return UInt8Value(res)
+			default:
+				panic(errors.NewUnreachableError())
+			}
+		},
+	)
 }
 
-func (v UInt8Value) BitwiseOr(other IntegerValue) IntegerValue {
+func (v UInt8Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7045,10 +7711,15 @@ func (v UInt8Value) BitwiseOr(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v | o
+	return NewUInt8Value(
+		interpreter,
+		func() uint8 {
+			return uint8(v | o)
+		},
+	)
 }
 
-func (v UInt8Value) BitwiseXor(other IntegerValue) IntegerValue {
+func (v UInt8Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7058,10 +7729,15 @@ func (v UInt8Value) BitwiseXor(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v ^ o
+	return NewUInt8Value(
+		interpreter,
+		func() uint8 {
+			return uint8(v ^ o)
+		},
+	)
 }
 
-func (v UInt8Value) BitwiseAnd(other IntegerValue) IntegerValue {
+func (v UInt8Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7071,10 +7747,15 @@ func (v UInt8Value) BitwiseAnd(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v & o
+	return NewUInt8Value(
+		interpreter,
+		func() uint8 {
+			return uint8(v & o)
+		},
+	)
 }
 
-func (v UInt8Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v UInt8Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7084,10 +7765,15 @@ func (v UInt8Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v << o
+	return NewUInt8Value(
+		interpreter,
+		func() uint8 {
+			return uint8(v << o)
+		},
+	)
 }
 
-func (v UInt8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v UInt8Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7097,7 +7783,12 @@ func (v UInt8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v >> o
+	return NewUInt8Value(
+		interpreter,
+		func() uint8 {
+			return uint8(v >> o)
+		},
+	)
 }
 
 func (v UInt8Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
@@ -7185,6 +7876,18 @@ var _ EquatableValue = UInt16Value(0)
 var _ HashableValue = UInt16Value(0)
 var _ MemberAccessibleValue = UInt16Value(0)
 
+var Uint16MemoryUsage = common.NewNumberMemoryUsage(int(unsafe.Sizeof(UInt16Value(0))))
+
+func NewUInt16Value(gauge common.MemoryGauge, uint16Constructor func() uint16) UInt16Value {
+	common.UseMemory(gauge, Uint16MemoryUsage)
+
+	return NewUnmeteredUInt16Value(uint16Constructor())
+}
+
+func NewUnmeteredUInt16Value(value uint16) UInt16Value {
+	return UInt16Value(value)
+}
+
 func (UInt16Value) IsValue() {}
 
 func (v UInt16Value) Accept(interpreter *Interpreter, visitor Visitor) {
@@ -7230,12 +7933,17 @@ func (v UInt16Value) Plus(interpreter *Interpreter, other NumberValue) NumberVal
 		})
 	}
 
-	sum := v + o
-	// INT30-C
-	if sum < v {
-		panic(OverflowError{})
-	}
-	return sum
+	return NewUInt16Value(
+		interpreter,
+		func() uint16 {
+			sum := v + o
+			// INT30-C
+			if sum < v {
+				panic(OverflowError{})
+			}
+			return uint16(sum)
+		},
+	)
 }
 
 func (v UInt16Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -7248,15 +7956,20 @@ func (v UInt16Value) SaturatingPlus(interpreter *Interpreter, other NumberValue)
 		})
 	}
 
-	sum := v + o
-	// INT30-C
-	if sum < v {
-		return UInt16Value(math.MaxUint16)
-	}
-	return sum
+	return NewUInt16Value(
+		interpreter,
+		func() uint16 {
+			sum := v + o
+			// INT30-C
+			if sum < v {
+				return math.MaxUint16
+			}
+			return uint16(sum)
+		},
+	)
 }
 
-func (v UInt16Value) Minus(other NumberValue) NumberValue {
+func (v UInt16Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7266,16 +7979,20 @@ func (v UInt16Value) Minus(other NumberValue) NumberValue {
 		})
 	}
 
-	diff := v - o
-
-	// INT30-C
-	if diff > v {
-		panic(UnderflowError{})
-	}
-	return diff
+	return NewUInt16Value(
+		interpreter,
+		func() uint16 {
+			diff := v - o
+			// INT30-C
+			if diff > v {
+				panic(UnderflowError{})
+			}
+			return uint16(diff)
+		},
+	)
 }
 
-func (v UInt16Value) SaturatingMinus(other NumberValue) NumberValue {
+func (v UInt16Value) SaturatingMinus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7285,13 +8002,17 @@ func (v UInt16Value) SaturatingMinus(other NumberValue) NumberValue {
 		})
 	}
 
-	diff := v - o
-
-	// INT30-C
-	if diff > v {
-		return UInt16Value(0)
-	}
-	return diff
+	return NewUInt16Value(
+		interpreter,
+		func() uint16 {
+			diff := v - o
+			// INT30-C
+			if diff > v {
+				return 0
+			}
+			return uint16(diff)
+		},
+	)
 }
 
 func (v UInt16Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -7304,10 +8025,15 @@ func (v UInt16Value) Mod(interpreter *Interpreter, other NumberValue) NumberValu
 		})
 	}
 
-	if o == 0 {
-		panic(DivisionByZeroError{})
-	}
-	return v % o
+	return NewUInt16Value(
+		interpreter,
+		func() uint16 {
+			if o == 0 {
+				panic(DivisionByZeroError{})
+			}
+			return uint16(v % o)
+		},
+	)
 }
 
 func (v UInt16Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -7320,11 +8046,16 @@ func (v UInt16Value) Mul(interpreter *Interpreter, other NumberValue) NumberValu
 		})
 	}
 
-	// INT30-C
-	if (v > 0) && (o > 0) && (v > (math.MaxUint16 / o)) {
-		panic(OverflowError{})
-	}
-	return v * o
+	return NewUInt16Value(
+		interpreter,
+		func() uint16 {
+			// INT30-C
+			if (v > 0) && (o > 0) && (v > (math.MaxUint16 / o)) {
+				panic(OverflowError{})
+			}
+			return uint16(v * o)
+		},
+	)
 }
 
 func (v UInt16Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -7337,14 +8068,19 @@ func (v UInt16Value) SaturatingMul(interpreter *Interpreter, other NumberValue) 
 		})
 	}
 
-	// INT30-C
-	if (v > 0) && (o > 0) && (v > (math.MaxUint16 / o)) {
-		return UInt16Value(math.MaxUint16)
-	}
-	return v * o
+	return NewUInt16Value(
+		interpreter,
+		func() uint16 {
+			// INT30-C
+			if (v > 0) && (o > 0) && (v > (math.MaxUint16 / o)) {
+				return math.MaxUint16
+			}
+			return uint16(v * o)
+		},
+	)
 }
 
-func (v UInt16Value) Div(other NumberValue) NumberValue {
+func (v UInt16Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7354,13 +8090,18 @@ func (v UInt16Value) Div(other NumberValue) NumberValue {
 		})
 	}
 
-	if o == 0 {
-		panic(DivisionByZeroError{})
-	}
-	return v / o
+	return NewUInt16Value(
+		interpreter,
+		func() uint16 {
+			if o == 0 {
+				panic(DivisionByZeroError{})
+			}
+			return uint16(v / o)
+		},
+	)
 }
 
-func (v UInt16Value) SaturatingDiv(other NumberValue) NumberValue {
+func (v UInt16Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) NumberValue {
 	defer func() {
 		r := recover()
 		if _, ok := r.(InvalidOperandsError); ok {
@@ -7372,7 +8113,7 @@ func (v UInt16Value) SaturatingDiv(other NumberValue) NumberValue {
 		}
 	}()
 
-	return v.Div(other)
+	return v.Div(interpreter, other)
 }
 
 func (v UInt16Value) Less(other NumberValue) BoolValue {
@@ -7444,36 +8185,37 @@ func (v UInt16Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch [
 	return scratch[:3]
 }
 
-func ConvertUInt16(value Value) UInt16Value {
-	var res uint16
+func ConvertUInt16(memoryGauge common.MemoryGauge, value Value) UInt16Value {
+	return NewUInt16Value(
+		memoryGauge,
+		func() uint16 {
+			switch value := value.(type) {
+			case BigNumberValue:
+				v := value.ToBigInt()
+				if v.Cmp(sema.UInt16TypeMaxInt) > 0 {
+					panic(OverflowError{})
+				} else if v.Sign() < 0 {
+					panic(UnderflowError{})
+				}
+				return uint16(v.Int64())
 
-	switch value := value.(type) {
-	case BigNumberValue:
-		v := value.ToBigInt()
-		if v.Cmp(sema.UInt16TypeMaxInt) > 0 {
-			panic(OverflowError{})
-		} else if v.Sign() < 0 {
-			panic(UnderflowError{})
-		}
-		res = uint16(v.Int64())
+			case NumberValue:
+				v := value.ToInt()
+				if v > math.MaxUint16 {
+					panic(OverflowError{})
+				} else if v < 0 {
+					panic(UnderflowError{})
+				}
+				return uint16(v)
 
-	case NumberValue:
-		v := value.ToInt()
-		if v > math.MaxUint16 {
-			panic(OverflowError{})
-		} else if v < 0 {
-			panic(UnderflowError{})
-		}
-		res = uint16(v)
-
-	default:
-		panic(errors.NewUnreachableError())
-	}
-
-	return UInt16Value(res)
+			default:
+				panic(errors.NewUnreachableError())
+			}
+		},
+	)
 }
 
-func (v UInt16Value) BitwiseOr(other IntegerValue) IntegerValue {
+func (v UInt16Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7483,10 +8225,15 @@ func (v UInt16Value) BitwiseOr(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v | o
+	return NewUInt16Value(
+		interpreter,
+		func() uint16 {
+			return uint16(v | o)
+		},
+	)
 }
 
-func (v UInt16Value) BitwiseXor(other IntegerValue) IntegerValue {
+func (v UInt16Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7495,10 +8242,16 @@ func (v UInt16Value) BitwiseXor(other IntegerValue) IntegerValue {
 			RightType: other.StaticType(),
 		})
 	}
-	return v ^ o
+
+	return NewUInt16Value(
+		interpreter,
+		func() uint16 {
+			return uint16(v ^ o)
+		},
+	)
 }
 
-func (v UInt16Value) BitwiseAnd(other IntegerValue) IntegerValue {
+func (v UInt16Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7508,10 +8261,15 @@ func (v UInt16Value) BitwiseAnd(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v & o
+	return NewUInt16Value(
+		interpreter,
+		func() uint16 {
+			return uint16(v & o)
+		},
+	)
 }
 
-func (v UInt16Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v UInt16Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7521,10 +8279,15 @@ func (v UInt16Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v << o
+	return NewUInt16Value(
+		interpreter,
+		func() uint16 {
+			return uint16(v << o)
+		},
+	)
 }
 
-func (v UInt16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v UInt16Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7534,7 +8297,12 @@ func (v UInt16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v >> o
+	return NewUInt16Value(
+		interpreter,
+		func() uint16 {
+			return uint16(v >> o)
+		},
+	)
 }
 
 func (v UInt16Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
@@ -7620,6 +8388,18 @@ func (UInt16Value) ChildStorables() []atree.Storable {
 
 type UInt32Value uint32
 
+var Uint32MemoryUsage = common.NewNumberMemoryUsage(int(unsafe.Sizeof(UInt32Value(0))))
+
+func NewUInt32Value(gauge common.MemoryGauge, uint32Constructor func() uint32) UInt32Value {
+	common.UseMemory(gauge, Uint32MemoryUsage)
+
+	return NewUnmeteredUInt32Value(uint32Constructor())
+}
+
+func NewUnmeteredUInt32Value(value uint32) UInt32Value {
+	return UInt32Value(value)
+}
+
 var _ Value = UInt32Value(0)
 var _ atree.Storable = UInt32Value(0)
 var _ NumberValue = UInt32Value(0)
@@ -7674,13 +8454,17 @@ func (v UInt32Value) Plus(interpreter *Interpreter, other NumberValue) NumberVal
 		})
 	}
 
-	sum := v + o
-
-	// INT30-C
-	if sum < v {
-		panic(OverflowError{})
-	}
-	return sum
+	return NewUInt32Value(
+		interpreter,
+		func() uint32 {
+			sum := v + o
+			// INT30-C
+			if sum < v {
+				panic(OverflowError{})
+			}
+			return uint32(sum)
+		},
+	)
 }
 
 func (v UInt32Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -7693,15 +8477,20 @@ func (v UInt32Value) SaturatingPlus(interpreter *Interpreter, other NumberValue)
 		})
 	}
 
-	sum := v + o
-	// INT30-C
-	if sum < v {
-		return UInt32Value(math.MaxUint32)
-	}
-	return sum
+	return NewUInt32Value(
+		interpreter,
+		func() uint32 {
+			sum := v + o
+			// INT30-C
+			if sum < v {
+				return math.MaxUint32
+			}
+			return uint32(sum)
+		},
+	)
 }
 
-func (v UInt32Value) Minus(other NumberValue) NumberValue {
+func (v UInt32Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7711,16 +8500,20 @@ func (v UInt32Value) Minus(other NumberValue) NumberValue {
 		})
 	}
 
-	diff := v - o
-
-	// INT30-C
-	if diff > v {
-		panic(UnderflowError{})
-	}
-	return diff
+	return NewUInt32Value(
+		interpreter,
+		func() uint32 {
+			diff := v - o
+			// INT30-C
+			if diff > v {
+				panic(UnderflowError{})
+			}
+			return uint32(diff)
+		},
+	)
 }
 
-func (v UInt32Value) SaturatingMinus(other NumberValue) NumberValue {
+func (v UInt32Value) SaturatingMinus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7730,13 +8523,17 @@ func (v UInt32Value) SaturatingMinus(other NumberValue) NumberValue {
 		})
 	}
 
-	diff := v - o
-
-	// INT30-C
-	if diff > v {
-		return UInt32Value(0)
-	}
-	return diff
+	return NewUInt32Value(
+		interpreter,
+		func() uint32 {
+			diff := v - o
+			// INT30-C
+			if diff > v {
+				return 0
+			}
+			return uint32(diff)
+		},
+	)
 }
 
 func (v UInt32Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -7749,10 +8546,15 @@ func (v UInt32Value) Mod(interpreter *Interpreter, other NumberValue) NumberValu
 		})
 	}
 
-	if o == 0 {
-		panic(DivisionByZeroError{})
-	}
-	return v % o
+	return NewUInt32Value(
+		interpreter,
+		func() uint32 {
+			if o == 0 {
+				panic(DivisionByZeroError{})
+			}
+			return uint32(v % o)
+		},
+	)
 }
 
 func (v UInt32Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -7765,10 +8567,15 @@ func (v UInt32Value) Mul(interpreter *Interpreter, other NumberValue) NumberValu
 		})
 	}
 
-	if (v > 0) && (o > 0) && (v > (math.MaxUint32 / o)) {
-		panic(OverflowError{})
-	}
-	return v * o
+	return NewUInt32Value(
+		interpreter,
+		func() uint32 {
+			if (v > 0) && (o > 0) && (v > (math.MaxUint32 / o)) {
+				panic(OverflowError{})
+			}
+			return uint32(v * o)
+		},
+	)
 }
 
 func (v UInt32Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -7781,14 +8588,20 @@ func (v UInt32Value) SaturatingMul(interpreter *Interpreter, other NumberValue) 
 		})
 	}
 
-	// INT30-C
-	if (v > 0) && (o > 0) && (v > (math.MaxUint32 / o)) {
-		return UInt32Value(math.MaxUint32)
-	}
-	return v * o
+	return NewUInt32Value(
+		interpreter,
+		func() uint32 {
+
+			// INT30-C
+			if (v > 0) && (o > 0) && (v > (math.MaxUint32 / o)) {
+				return math.MaxUint32
+			}
+			return uint32(v * o)
+		},
+	)
 }
 
-func (v UInt32Value) Div(other NumberValue) NumberValue {
+func (v UInt32Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7798,13 +8611,18 @@ func (v UInt32Value) Div(other NumberValue) NumberValue {
 		})
 	}
 
-	if o == 0 {
-		panic(DivisionByZeroError{})
-	}
-	return v / o
+	return NewUInt32Value(
+		interpreter,
+		func() uint32 {
+			if o == 0 {
+				panic(DivisionByZeroError{})
+			}
+			return uint32(v / o)
+		},
+	)
 }
 
-func (v UInt32Value) SaturatingDiv(other NumberValue) NumberValue {
+func (v UInt32Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) NumberValue {
 	defer func() {
 		r := recover()
 		if _, ok := r.(InvalidOperandsError); ok {
@@ -7816,7 +8634,7 @@ func (v UInt32Value) SaturatingDiv(other NumberValue) NumberValue {
 		}
 	}()
 
-	return v.Div(other)
+	return v.Div(interpreter, other)
 }
 
 func (v UInt32Value) Less(other NumberValue) BoolValue {
@@ -7888,36 +8706,37 @@ func (v UInt32Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch [
 	return scratch[:5]
 }
 
-func ConvertUInt32(value Value) UInt32Value {
-	var res uint32
+func ConvertUInt32(memoryGauge common.MemoryGauge, value Value) UInt32Value {
+	return NewUInt32Value(
+		memoryGauge,
+		func() uint32 {
+			switch value := value.(type) {
+			case BigNumberValue:
+				v := value.ToBigInt()
+				if v.Cmp(sema.UInt32TypeMaxInt) > 0 {
+					panic(OverflowError{})
+				} else if v.Sign() < 0 {
+					panic(UnderflowError{})
+				}
+				return uint32(v.Int64())
 
-	switch value := value.(type) {
-	case BigNumberValue:
-		v := value.ToBigInt()
-		if v.Cmp(sema.UInt32TypeMaxInt) > 0 {
-			panic(OverflowError{})
-		} else if v.Sign() < 0 {
-			panic(UnderflowError{})
-		}
-		res = uint32(v.Int64())
+			case NumberValue:
+				v := value.ToInt()
+				if v > math.MaxUint32 {
+					panic(OverflowError{})
+				} else if v < 0 {
+					panic(UnderflowError{})
+				}
+				return uint32(v)
 
-	case NumberValue:
-		v := value.ToInt()
-		if v > math.MaxUint32 {
-			panic(OverflowError{})
-		} else if v < 0 {
-			panic(UnderflowError{})
-		}
-		res = uint32(v)
-
-	default:
-		panic(errors.NewUnreachableError())
-	}
-
-	return UInt32Value(res)
+			default:
+				panic(errors.NewUnreachableError())
+			}
+		},
+	)
 }
 
-func (v UInt32Value) BitwiseOr(other IntegerValue) IntegerValue {
+func (v UInt32Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7927,10 +8746,15 @@ func (v UInt32Value) BitwiseOr(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v | o
+	return NewUInt32Value(
+		interpreter,
+		func() uint32 {
+			return uint32(v | o)
+		},
+	)
 }
 
-func (v UInt32Value) BitwiseXor(other IntegerValue) IntegerValue {
+func (v UInt32Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7939,10 +8763,16 @@ func (v UInt32Value) BitwiseXor(other IntegerValue) IntegerValue {
 			RightType: other.StaticType(),
 		})
 	}
-	return v ^ o
+
+	return NewUInt32Value(
+		interpreter,
+		func() uint32 {
+			return uint32(v ^ o)
+		},
+	)
 }
 
-func (v UInt32Value) BitwiseAnd(other IntegerValue) IntegerValue {
+func (v UInt32Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7952,10 +8782,15 @@ func (v UInt32Value) BitwiseAnd(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v & o
+	return NewUInt32Value(
+		interpreter,
+		func() uint32 {
+			return uint32(v & o)
+		},
+	)
 }
 
-func (v UInt32Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v UInt32Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7965,10 +8800,15 @@ func (v UInt32Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v << o
+	return NewUInt32Value(
+		interpreter,
+		func() uint32 {
+			return uint32(v << o)
+		},
+	)
 }
 
-func (v UInt32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v UInt32Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7978,7 +8818,12 @@ func (v UInt32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v >> o
+	return NewUInt32Value(
+		interpreter,
+		func() uint32 {
+			return uint32(v >> o)
+		},
+	)
 }
 
 func (v UInt32Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
@@ -8079,6 +8924,18 @@ var _ MemberAccessibleValue = UInt64Value(0)
 //
 var _ BigNumberValue = UInt64Value(0)
 
+var Uint64MemoryUsage = common.NewNumberMemoryUsage(int(unsafe.Sizeof(UInt64Value(0))))
+
+func NewUInt64Value(gauge common.MemoryGauge, uint64Constructor func() uint64) UInt64Value {
+	common.UseMemory(gauge, Uint64MemoryUsage)
+
+	return NewUnmeteredUInt64Value(uint64Constructor())
+}
+
+func NewUnmeteredUInt64Value(value uint64) UInt64Value {
+	return UInt64Value(value)
+}
+
 func (UInt64Value) IsValue() {}
 
 func (v UInt64Value) Accept(interpreter *Interpreter, visitor Visitor) {
@@ -8152,7 +9009,12 @@ func (v UInt64Value) Plus(interpreter *Interpreter, other NumberValue) NumberVal
 		})
 	}
 
-	return UInt64Value(safeAddUint64(uint64(v), uint64(o)))
+	return NewUInt64Value(
+		interpreter,
+		func() uint64 {
+			return safeAddUint64(uint64(v), uint64(o))
+		},
+	)
 }
 
 func (v UInt64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -8165,16 +9027,20 @@ func (v UInt64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue)
 		})
 	}
 
-	sum := v + o
-
-	// INT30-C
-	if sum < v {
-		return UInt64Value(math.MaxUint64)
-	}
-	return sum
+	return NewUInt64Value(
+		interpreter,
+		func() uint64 {
+			sum := v + o
+			// INT30-C
+			if sum < v {
+				return math.MaxUint64
+			}
+			return uint64(sum)
+		},
+	)
 }
 
-func (v UInt64Value) Minus(other NumberValue) NumberValue {
+func (v UInt64Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8184,16 +9050,20 @@ func (v UInt64Value) Minus(other NumberValue) NumberValue {
 		})
 	}
 
-	diff := v - o
-
-	// INT30-C
-	if diff > v {
-		panic(UnderflowError{})
-	}
-	return diff
+	return NewUInt64Value(
+		interpreter,
+		func() uint64 {
+			diff := v - o
+			// INT30-C
+			if diff > v {
+				panic(UnderflowError{})
+			}
+			return uint64(diff)
+		},
+	)
 }
 
-func (v UInt64Value) SaturatingMinus(other NumberValue) NumberValue {
+func (v UInt64Value) SaturatingMinus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8203,13 +9073,17 @@ func (v UInt64Value) SaturatingMinus(other NumberValue) NumberValue {
 		})
 	}
 
-	diff := v - o
-
-	// INT30-C
-	if diff > v {
-		return UInt64Value(0)
-	}
-	return diff
+	return NewUInt64Value(
+		interpreter,
+		func() uint64 {
+			diff := v - o
+			// INT30-C
+			if diff > v {
+				return 0
+			}
+			return uint64(diff)
+		},
+	)
 }
 
 func (v UInt64Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -8222,10 +9096,15 @@ func (v UInt64Value) Mod(interpreter *Interpreter, other NumberValue) NumberValu
 		})
 	}
 
-	if o == 0 {
-		panic(DivisionByZeroError{})
-	}
-	return v % o
+	return NewUInt64Value(
+		interpreter,
+		func() uint64 {
+			if o == 0 {
+				panic(DivisionByZeroError{})
+			}
+			return uint64(v % o)
+		},
+	)
 }
 
 func (v UInt64Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -8238,10 +9117,15 @@ func (v UInt64Value) Mul(interpreter *Interpreter, other NumberValue) NumberValu
 		})
 	}
 
-	if (v > 0) && (o > 0) && (v > (math.MaxUint64 / o)) {
-		panic(OverflowError{})
-	}
-	return v * o
+	return NewUInt64Value(
+		interpreter,
+		func() uint64 {
+			if (v > 0) && (o > 0) && (v > (math.MaxUint64 / o)) {
+				panic(OverflowError{})
+			}
+			return uint64(v * o)
+		},
+	)
 }
 
 func (v UInt64Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -8254,14 +9138,19 @@ func (v UInt64Value) SaturatingMul(interpreter *Interpreter, other NumberValue) 
 		})
 	}
 
-	// INT30-C
-	if (v > 0) && (o > 0) && (v > (math.MaxUint64 / o)) {
-		return UInt64Value(math.MaxUint64)
-	}
-	return v * o
+	return NewUInt64Value(
+		interpreter,
+		func() uint64 {
+			// INT30-C
+			if (v > 0) && (o > 0) && (v > (math.MaxUint64 / o)) {
+				return math.MaxUint64
+			}
+			return uint64(v * o)
+		},
+	)
 }
 
-func (v UInt64Value) Div(other NumberValue) NumberValue {
+func (v UInt64Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8271,13 +9160,18 @@ func (v UInt64Value) Div(other NumberValue) NumberValue {
 		})
 	}
 
-	if o == 0 {
-		panic(DivisionByZeroError{})
-	}
-	return v / o
+	return NewUInt64Value(
+		interpreter,
+		func() uint64 {
+			if o == 0 {
+				panic(DivisionByZeroError{})
+			}
+			return uint64(v / o)
+		},
+	)
 }
 
-func (v UInt64Value) SaturatingDiv(other NumberValue) NumberValue {
+func (v UInt64Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) NumberValue {
 	defer func() {
 		r := recover()
 		if _, ok := r.(InvalidOperandsError); ok {
@@ -8289,7 +9183,7 @@ func (v UInt64Value) SaturatingDiv(other NumberValue) NumberValue {
 		}
 	}()
 
-	return v.Div(other)
+	return v.Div(interpreter, other)
 }
 
 func (v UInt64Value) Less(other NumberValue) BoolValue {
@@ -8361,34 +9255,36 @@ func (v UInt64Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch [
 	return scratch[:9]
 }
 
-func ConvertUInt64(value Value) UInt64Value {
-	var res uint64
+func ConvertUInt64(memoryGauge common.MemoryGauge, value Value) UInt64Value {
+	return NewUInt64Value(
+		memoryGauge,
+		func() uint64 {
+			switch value := value.(type) {
+			case BigNumberValue:
+				v := value.ToBigInt()
+				if v.Cmp(sema.UInt64TypeMaxInt) > 0 {
+					panic(OverflowError{})
+				} else if v.Sign() < 0 {
+					panic(UnderflowError{})
+				}
+				return uint64(v.Int64())
 
-	switch value := value.(type) {
-	case BigNumberValue:
-		v := value.ToBigInt()
-		if v.Cmp(sema.UInt64TypeMaxInt) > 0 {
-			panic(OverflowError{})
-		} else if v.Sign() < 0 {
-			panic(UnderflowError{})
-		}
-		res = uint64(v.Int64())
+			case NumberValue:
+				v := value.ToInt()
+				if v < 0 {
+					panic(UnderflowError{})
+				}
+				return uint64(v)
 
-	case NumberValue:
-		v := value.ToInt()
-		if v < 0 {
-			panic(UnderflowError{})
-		}
-		res = uint64(v)
+			default:
+				panic(errors.NewUnreachableError())
+			}
 
-	default:
-		panic(errors.NewUnreachableError())
-	}
-
-	return UInt64Value(res)
+		},
+	)
 }
 
-func (v UInt64Value) BitwiseOr(other IntegerValue) IntegerValue {
+func (v UInt64Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8398,10 +9294,15 @@ func (v UInt64Value) BitwiseOr(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v | o
+	return NewUInt64Value(
+		interpreter,
+		func() uint64 {
+			return uint64(v | o)
+		},
+	)
 }
 
-func (v UInt64Value) BitwiseXor(other IntegerValue) IntegerValue {
+func (v UInt64Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8410,10 +9311,16 @@ func (v UInt64Value) BitwiseXor(other IntegerValue) IntegerValue {
 			RightType: other.StaticType(),
 		})
 	}
-	return v ^ o
+
+	return NewUInt64Value(
+		interpreter,
+		func() uint64 {
+			return uint64(v ^ o)
+		},
+	)
 }
 
-func (v UInt64Value) BitwiseAnd(other IntegerValue) IntegerValue {
+func (v UInt64Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8423,10 +9330,15 @@ func (v UInt64Value) BitwiseAnd(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v & o
+	return NewUInt64Value(
+		interpreter,
+		func() uint64 {
+			return uint64(v & o)
+		},
+	)
 }
 
-func (v UInt64Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v UInt64Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8436,10 +9348,15 @@ func (v UInt64Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v << o
+	return NewUInt64Value(
+		interpreter,
+		func() uint64 {
+			return uint64(v << o)
+		},
+	)
 }
 
-func (v UInt64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v UInt64Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8449,7 +9366,12 @@ func (v UInt64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v >> o
+	return NewUInt64Value(
+		interpreter,
+		func() uint64 {
+			return uint64(v >> o)
+		},
+	)
 }
 
 func (v UInt64Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
@@ -8537,12 +9459,31 @@ type UInt128Value struct {
 	BigInt *big.Int
 }
 
-func NewUInt128ValueFromUint64(value uint64) UInt128Value {
-	return NewUInt128ValueFromBigInt(new(big.Int).SetUint64(value))
+func NewUInt128ValueFromUint64(interpreter *Interpreter, value uint64) UInt128Value {
+	return NewUInt128ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			return new(big.Int).SetUint64(value)
+		},
+	)
 }
 
-func NewUInt128ValueFromBigInt(value *big.Int) UInt128Value {
-	return UInt128Value{BigInt: value}
+func NewUnmeteredUInt128ValueFromUint64(value uint64) UInt128Value {
+	return NewUnmeteredUInt128ValueFromBigInt(new(big.Int).SetUint64(value))
+}
+
+var Uint128MemoryUsage = common.NewBigIntMemoryUsage(16)
+
+func NewUInt128ValueFromBigInt(memoryGauge common.MemoryGauge, bigIntConstructor func() *big.Int) UInt128Value {
+	common.UseMemory(memoryGauge, Uint128MemoryUsage)
+	value := bigIntConstructor()
+	return NewUnmeteredUInt128ValueFromBigInt(value)
+}
+
+func NewUnmeteredUInt128ValueFromBigInt(value *big.Int) UInt128Value {
+	return UInt128Value{
+		BigInt: value,
+	}
 }
 
 var _ Value = UInt128Value{}
@@ -8610,22 +9551,27 @@ func (v UInt128Value) Plus(interpreter *Interpreter, other NumberValue) NumberVa
 		})
 	}
 
-	sum := new(big.Int)
-	sum.Add(v.BigInt, o.BigInt)
-	// Given that this value is backed by an arbitrary size integer,
-	// we can just add and check the range of the result.
-	//
-	// If Go gains a native uint128 type and we switch this value
-	// to be based on it, then we need to follow INT30-C:
-	//
-	//  if sum < v {
-	//      ...
-	//  }
-	//
-	if sum.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
-		panic(OverflowError{})
-	}
-	return UInt128Value{sum}
+	return NewUInt128ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			sum := new(big.Int)
+			sum.Add(v.BigInt, o.BigInt)
+			// Given that this value is backed by an arbitrary size integer,
+			// we can just add and check the range of the result.
+			//
+			// If Go gains a native uint128 type and we switch this value
+			// to be based on it, then we need to follow INT30-C:
+			//
+			//  if sum < v {
+			//      ...
+			//  }
+			//
+			if sum.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
+				panic(OverflowError{})
+			}
+			return sum
+		},
+	)
 }
 
 func (v UInt128Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -8638,25 +9584,30 @@ func (v UInt128Value) SaturatingPlus(interpreter *Interpreter, other NumberValue
 		})
 	}
 
-	sum := new(big.Int)
-	sum.Add(v.BigInt, o.BigInt)
-	// Given that this value is backed by an arbitrary size integer,
-	// we can just add and check the range of the result.
-	//
-	// If Go gains a native uint128 type and we switch this value
-	// to be based on it, then we need to follow INT30-C:
-	//
-	//  if sum < v {
-	//      ...
-	//  }
-	//
-	if sum.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
-		return UInt128Value{sema.UInt128TypeMaxIntBig}
-	}
-	return UInt128Value{sum}
+	return NewUInt128ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			sum := new(big.Int)
+			sum.Add(v.BigInt, o.BigInt)
+			// Given that this value is backed by an arbitrary size integer,
+			// we can just add and check the range of the result.
+			//
+			// If Go gains a native uint128 type and we switch this value
+			// to be based on it, then we need to follow INT30-C:
+			//
+			//  if sum < v {
+			//      ...
+			//  }
+			//
+			if sum.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
+				return sema.UInt128TypeMaxIntBig
+			}
+			return sum
+		},
+	)
 }
 
-func (v UInt128Value) Minus(other NumberValue) NumberValue {
+func (v UInt128Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8666,25 +9617,30 @@ func (v UInt128Value) Minus(other NumberValue) NumberValue {
 		})
 	}
 
-	diff := new(big.Int)
-	diff.Sub(v.BigInt, o.BigInt)
-	// Given that this value is backed by an arbitrary size integer,
-	// we can just subtract and check the range of the result.
-	//
-	// If Go gains a native uint128 type and we switch this value
-	// to be based on it, then we need to follow INT30-C:
-	//
-	//   if diff > v {
-	// 	     ...
-	//   }
-	//
-	if diff.Cmp(sema.UInt128TypeMinIntBig) < 0 {
-		panic(UnderflowError{})
-	}
-	return UInt128Value{diff}
+	return NewUInt128ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			diff := new(big.Int)
+			diff.Sub(v.BigInt, o.BigInt)
+			// Given that this value is backed by an arbitrary size integer,
+			// we can just subtract and check the range of the result.
+			//
+			// If Go gains a native uint128 type and we switch this value
+			// to be based on it, then we need to follow INT30-C:
+			//
+			//   if diff > v {
+			// 	     ...
+			//   }
+			//
+			if diff.Cmp(sema.UInt128TypeMinIntBig) < 0 {
+				panic(UnderflowError{})
+			}
+			return diff
+		},
+	)
 }
 
-func (v UInt128Value) SaturatingMinus(other NumberValue) NumberValue {
+func (v UInt128Value) SaturatingMinus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8694,22 +9650,27 @@ func (v UInt128Value) SaturatingMinus(other NumberValue) NumberValue {
 		})
 	}
 
-	diff := new(big.Int)
-	diff.Sub(v.BigInt, o.BigInt)
-	// Given that this value is backed by an arbitrary size integer,
-	// we can just subtract and check the range of the result.
-	//
-	// If Go gains a native uint128 type and we switch this value
-	// to be based on it, then we need to follow INT30-C:
-	//
-	//   if diff > v {
-	// 	     ...
-	//   }
-	//
-	if diff.Cmp(sema.UInt128TypeMinIntBig) < 0 {
-		return UInt128Value{sema.UInt128TypeMinIntBig}
-	}
-	return UInt128Value{diff}
+	return NewUInt128ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			diff := new(big.Int)
+			diff.Sub(v.BigInt, o.BigInt)
+			// Given that this value is backed by an arbitrary size integer,
+			// we can just subtract and check the range of the result.
+			//
+			// If Go gains a native uint128 type and we switch this value
+			// to be based on it, then we need to follow INT30-C:
+			//
+			//   if diff > v {
+			// 	     ...
+			//   }
+			//
+			if diff.Cmp(sema.UInt128TypeMinIntBig) < 0 {
+				return sema.UInt128TypeMinIntBig
+			}
+			return diff
+		},
+	)
 }
 
 func (v UInt128Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -8722,12 +9683,16 @@ func (v UInt128Value) Mod(interpreter *Interpreter, other NumberValue) NumberVal
 		})
 	}
 
-	res := new(big.Int)
-	if o.BigInt.Cmp(res) == 0 {
-		panic(DivisionByZeroError{})
-	}
-	res.Rem(v.BigInt, o.BigInt)
-	return UInt128Value{res}
+	return NewUInt128ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			if o.BigInt.Cmp(res) == 0 {
+				panic(DivisionByZeroError{})
+			}
+			return res.Rem(v.BigInt, o.BigInt)
+		},
+	)
 }
 
 func (v UInt128Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -8740,12 +9705,17 @@ func (v UInt128Value) Mul(interpreter *Interpreter, other NumberValue) NumberVal
 		})
 	}
 
-	res := new(big.Int)
-	res.Mul(v.BigInt, o.BigInt)
-	if res.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
-		panic(OverflowError{})
-	}
-	return UInt128Value{res}
+	return NewUInt128ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			res.Mul(v.BigInt, o.BigInt)
+			if res.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
+				panic(OverflowError{})
+			}
+			return res
+		},
+	)
 }
 
 func (v UInt128Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -8758,15 +9728,20 @@ func (v UInt128Value) SaturatingMul(interpreter *Interpreter, other NumberValue)
 		})
 	}
 
-	res := new(big.Int)
-	res.Mul(v.BigInt, o.BigInt)
-	if res.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
-		return UInt128Value{sema.UInt128TypeMaxIntBig}
-	}
-	return UInt128Value{res}
+	return NewUInt128ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			res.Mul(v.BigInt, o.BigInt)
+			if res.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
+				return sema.UInt128TypeMaxIntBig
+			}
+			return res
+		},
+	)
 }
 
-func (v UInt128Value) Div(other NumberValue) NumberValue {
+func (v UInt128Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8776,15 +9751,20 @@ func (v UInt128Value) Div(other NumberValue) NumberValue {
 		})
 	}
 
-	res := new(big.Int)
-	if o.BigInt.Cmp(res) == 0 {
-		panic(DivisionByZeroError{})
-	}
-	res.Div(v.BigInt, o.BigInt)
-	return UInt128Value{res}
+	return NewUInt128ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			if o.BigInt.Cmp(res) == 0 {
+				panic(DivisionByZeroError{})
+			}
+			return res.Div(v.BigInt, o.BigInt)
+		},
+	)
+
 }
 
-func (v UInt128Value) SaturatingDiv(other NumberValue) NumberValue {
+func (v UInt128Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) NumberValue {
 	defer func() {
 		r := recover()
 		if _, ok := r.(InvalidOperandsError); ok {
@@ -8796,7 +9776,7 @@ func (v UInt128Value) SaturatingDiv(other NumberValue) NumberValue {
 		}
 	}()
 
-	return v.Div(other)
+	return v.Div(interpreter, other)
 }
 
 func (v UInt128Value) Less(other NumberValue) BoolValue {
@@ -8883,30 +9863,36 @@ func (v UInt128Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch 
 	return buffer
 }
 
-func ConvertUInt128(value Value) UInt128Value {
-	var v *big.Int
+func ConvertUInt128(memoryGauge common.MemoryGauge, value Value) Value {
+	return NewUInt128ValueFromBigInt(
+		memoryGauge,
+		func() *big.Int {
 
-	switch value := value.(type) {
-	case BigNumberValue:
-		v = value.ToBigInt()
+			var v *big.Int
 
-	case NumberValue:
-		v = big.NewInt(int64(value.ToInt()))
+			switch value := value.(type) {
+			case BigNumberValue:
+				v = value.ToBigInt()
 
-	default:
-		panic(errors.NewUnreachableError())
-	}
+			case NumberValue:
+				v = big.NewInt(int64(value.ToInt()))
 
-	if v.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
-		panic(OverflowError{})
-	} else if v.Sign() < 0 {
-		panic(UnderflowError{})
-	}
+			default:
+				panic(errors.NewUnreachableError())
+			}
 
-	return NewUInt128ValueFromBigInt(v)
+			if v.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
+				panic(OverflowError{})
+			} else if v.Sign() < 0 {
+				panic(UnderflowError{})
+			}
+
+			return v
+		},
+	)
 }
 
-func (v UInt128Value) BitwiseOr(other IntegerValue) IntegerValue {
+func (v UInt128Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8916,12 +9902,16 @@ func (v UInt128Value) BitwiseOr(other IntegerValue) IntegerValue {
 		})
 	}
 
-	res := new(big.Int)
-	res.Or(v.BigInt, o.BigInt)
-	return UInt128Value{res}
+	return NewUInt128ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Or(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v UInt128Value) BitwiseXor(other IntegerValue) IntegerValue {
+func (v UInt128Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8931,12 +9921,16 @@ func (v UInt128Value) BitwiseXor(other IntegerValue) IntegerValue {
 		})
 	}
 
-	res := new(big.Int)
-	res.Xor(v.BigInt, o.BigInt)
-	return UInt128Value{res}
+	return NewUInt128ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Xor(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v UInt128Value) BitwiseAnd(other IntegerValue) IntegerValue {
+func (v UInt128Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8946,12 +9940,17 @@ func (v UInt128Value) BitwiseAnd(other IntegerValue) IntegerValue {
 		})
 	}
 
-	res := new(big.Int)
-	res.And(v.BigInt, o.BigInt)
-	return UInt128Value{res}
+	return NewUInt128ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			return res.And(v.BigInt, o.BigInt)
+		},
+	)
+
 }
 
-func (v UInt128Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v UInt128Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8961,18 +9960,22 @@ func (v UInt128Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 		})
 	}
 
-	res := new(big.Int)
-	if o.BigInt.Sign() < 0 {
-		panic(UnderflowError{})
-	}
-	if !o.BigInt.IsUint64() {
-		panic(OverflowError{})
-	}
-	res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
-	return UInt128Value{res}
+	return NewUInt128ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			if o.BigInt.Sign() < 0 {
+				panic(UnderflowError{})
+			}
+			if !o.BigInt.IsUint64() {
+				panic(OverflowError{})
+			}
+			return res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+		},
+	)
 }
 
-func (v UInt128Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v UInt128Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8982,15 +9985,19 @@ func (v UInt128Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 		})
 	}
 
-	res := new(big.Int)
-	if o.BigInt.Sign() < 0 {
-		panic(UnderflowError{})
-	}
-	if !o.BigInt.IsUint64() {
-		panic(OverflowError{})
-	}
-	res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
-	return UInt128Value{res}
+	return NewUInt128ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			if o.BigInt.Sign() < 0 {
+				panic(UnderflowError{})
+			}
+			if !o.BigInt.IsUint64() {
+				panic(OverflowError{})
+			}
+			return res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
+		},
+	)
 }
 
 func (v UInt128Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
@@ -9051,7 +10058,7 @@ func (v UInt128Value) Transfer(
 }
 
 func (v UInt128Value) Clone(_ *Interpreter) Value {
-	return NewUInt128ValueFromBigInt(v.BigInt)
+	return NewUnmeteredUInt128ValueFromBigInt(v.BigInt)
 }
 
 func (UInt128Value) DeepRemove(_ *Interpreter) {
@@ -9076,12 +10083,31 @@ type UInt256Value struct {
 	BigInt *big.Int
 }
 
-func NewUInt256ValueFromUint64(value uint64) UInt256Value {
-	return NewUInt256ValueFromBigInt(new(big.Int).SetUint64(value))
+func NewUInt256ValueFromUint64(interpreter *Interpreter, value uint64) UInt256Value {
+	return NewUInt256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			return new(big.Int).SetUint64(value)
+		},
+	)
 }
 
-func NewUInt256ValueFromBigInt(value *big.Int) UInt256Value {
-	return UInt256Value{BigInt: value}
+func NewUnmeteredUInt256ValueFromUint64(value uint64) UInt256Value {
+	return NewUnmeteredUInt256ValueFromBigInt(new(big.Int).SetUint64(value))
+}
+
+var Uint256MemoryUsage = common.NewBigIntMemoryUsage(32)
+
+func NewUInt256ValueFromBigInt(memoryGauge common.MemoryGauge, bigIntConstructor func() *big.Int) UInt256Value {
+	common.UseMemory(memoryGauge, Uint256MemoryUsage)
+	value := bigIntConstructor()
+	return NewUnmeteredUInt256ValueFromBigInt(value)
+}
+
+func NewUnmeteredUInt256ValueFromBigInt(value *big.Int) UInt256Value {
+	return UInt256Value{
+		BigInt: value,
+	}
 }
 
 var _ Value = UInt256Value{}
@@ -9150,22 +10176,28 @@ func (v UInt256Value) Plus(interpreter *Interpreter, other NumberValue) NumberVa
 		})
 	}
 
-	sum := new(big.Int)
-	sum.Add(v.BigInt, o.BigInt)
-	// Given that this value is backed by an arbitrary size integer,
-	// we can just add and check the range of the result.
-	//
-	// If Go gains a native uint256 type and we switch this value
-	// to be based on it, then we need to follow INT30-C:
-	//
-	//  if sum < v {
-	//      ...
-	//  }
-	//
-	if sum.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
-		panic(OverflowError{})
-	}
-	return UInt256Value{sum}
+	return NewUInt256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			sum := new(big.Int)
+			sum.Add(v.BigInt, o.BigInt)
+			// Given that this value is backed by an arbitrary size integer,
+			// we can just add and check the range of the result.
+			//
+			// If Go gains a native uint256 type and we switch this value
+			// to be based on it, then we need to follow INT30-C:
+			//
+			//  if sum < v {
+			//      ...
+			//  }
+			//
+			if sum.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
+				panic(OverflowError{})
+			}
+			return sum
+		},
+	)
+
 }
 
 func (v UInt256Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -9178,25 +10210,30 @@ func (v UInt256Value) SaturatingPlus(interpreter *Interpreter, other NumberValue
 		})
 	}
 
-	sum := new(big.Int)
-	sum.Add(v.BigInt, o.BigInt)
-	// Given that this value is backed by an arbitrary size integer,
-	// we can just add and check the range of the result.
-	//
-	// If Go gains a native uint256 type and we switch this value
-	// to be based on it, then we need to follow INT30-C:
-	//
-	//  if sum < v {
-	//      ...
-	//  }
-	//
-	if sum.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
-		return UInt256Value{sema.UInt256TypeMaxIntBig}
-	}
-	return UInt256Value{sum}
+	return NewUInt256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			sum := new(big.Int)
+			sum.Add(v.BigInt, o.BigInt)
+			// Given that this value is backed by an arbitrary size integer,
+			// we can just add and check the range of the result.
+			//
+			// If Go gains a native uint256 type and we switch this value
+			// to be based on it, then we need to follow INT30-C:
+			//
+			//  if sum < v {
+			//      ...
+			//  }
+			//
+			if sum.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
+				return sema.UInt256TypeMaxIntBig
+			}
+			return sum
+		},
+	)
 }
 
-func (v UInt256Value) Minus(other NumberValue) NumberValue {
+func (v UInt256Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9206,25 +10243,30 @@ func (v UInt256Value) Minus(other NumberValue) NumberValue {
 		})
 	}
 
-	diff := new(big.Int)
-	diff.Sub(v.BigInt, o.BigInt)
-	// Given that this value is backed by an arbitrary size integer,
-	// we can just subtract and check the range of the result.
-	//
-	// If Go gains a native uint256 type and we switch this value
-	// to be based on it, then we need to follow INT30-C:
-	//
-	//   if diff > v {
-	// 	     ...
-	//   }
-	//
-	if diff.Cmp(sema.UInt256TypeMinIntBig) < 0 {
-		panic(UnderflowError{})
-	}
-	return UInt256Value{diff}
+	return NewUInt256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			diff := new(big.Int)
+			diff.Sub(v.BigInt, o.BigInt)
+			// Given that this value is backed by an arbitrary size integer,
+			// we can just subtract and check the range of the result.
+			//
+			// If Go gains a native uint256 type and we switch this value
+			// to be based on it, then we need to follow INT30-C:
+			//
+			//   if diff > v {
+			// 	     ...
+			//   }
+			//
+			if diff.Cmp(sema.UInt256TypeMinIntBig) < 0 {
+				panic(UnderflowError{})
+			}
+			return diff
+		},
+	)
 }
 
-func (v UInt256Value) SaturatingMinus(other NumberValue) NumberValue {
+func (v UInt256Value) SaturatingMinus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9234,22 +10276,28 @@ func (v UInt256Value) SaturatingMinus(other NumberValue) NumberValue {
 		})
 	}
 
-	diff := new(big.Int)
-	diff.Sub(v.BigInt, o.BigInt)
-	// Given that this value is backed by an arbitrary size integer,
-	// we can just subtract and check the range of the result.
-	//
-	// If Go gains a native uint256 type and we switch this value
-	// to be based on it, then we need to follow INT30-C:
-	//
-	//   if diff > v {
-	// 	     ...
-	//   }
-	//
-	if diff.Cmp(sema.UInt256TypeMinIntBig) < 0 {
-		return UInt256Value{sema.UInt256TypeMinIntBig}
-	}
-	return UInt256Value{diff}
+	return NewUInt256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			diff := new(big.Int)
+			diff.Sub(v.BigInt, o.BigInt)
+			// Given that this value is backed by an arbitrary size integer,
+			// we can just subtract and check the range of the result.
+			//
+			// If Go gains a native uint256 type and we switch this value
+			// to be based on it, then we need to follow INT30-C:
+			//
+			//   if diff > v {
+			// 	     ...
+			//   }
+			//
+			if diff.Cmp(sema.UInt256TypeMinIntBig) < 0 {
+				return sema.UInt256TypeMinIntBig
+			}
+			return diff
+		},
+	)
+
 }
 
 func (v UInt256Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -9262,12 +10310,16 @@ func (v UInt256Value) Mod(interpreter *Interpreter, other NumberValue) NumberVal
 		})
 	}
 
-	res := new(big.Int)
-	if o.BigInt.Cmp(res) == 0 {
-		panic(DivisionByZeroError{})
-	}
-	res.Rem(v.BigInt, o.BigInt)
-	return UInt256Value{res}
+	return NewUInt256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			if o.BigInt.Cmp(res) == 0 {
+				panic(DivisionByZeroError{})
+			}
+			return res.Rem(v.BigInt, o.BigInt)
+		},
+	)
 }
 
 func (v UInt256Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -9280,12 +10332,17 @@ func (v UInt256Value) Mul(interpreter *Interpreter, other NumberValue) NumberVal
 		})
 	}
 
-	res := new(big.Int)
-	res.Mul(v.BigInt, o.BigInt)
-	if res.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
-		panic(OverflowError{})
-	}
-	return UInt256Value{res}
+	return NewUInt256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			res.Mul(v.BigInt, o.BigInt)
+			if res.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
+				panic(OverflowError{})
+			}
+			return res
+		},
+	)
 }
 
 func (v UInt256Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -9298,15 +10355,20 @@ func (v UInt256Value) SaturatingMul(interpreter *Interpreter, other NumberValue)
 		})
 	}
 
-	res := new(big.Int)
-	res.Mul(v.BigInt, o.BigInt)
-	if res.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
-		return UInt256Value{sema.UInt256TypeMaxIntBig}
-	}
-	return UInt256Value{res}
+	return NewUInt256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			res.Mul(v.BigInt, o.BigInt)
+			if res.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
+				return sema.UInt256TypeMaxIntBig
+			}
+			return res
+		},
+	)
 }
 
-func (v UInt256Value) Div(other NumberValue) NumberValue {
+func (v UInt256Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9316,15 +10378,19 @@ func (v UInt256Value) Div(other NumberValue) NumberValue {
 		})
 	}
 
-	res := new(big.Int)
-	if o.BigInt.Cmp(res) == 0 {
-		panic(DivisionByZeroError{})
-	}
-	res.Div(v.BigInt, o.BigInt)
-	return UInt256Value{res}
+	return NewUInt256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			if o.BigInt.Cmp(res) == 0 {
+				panic(DivisionByZeroError{})
+			}
+			return res.Div(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v UInt256Value) SaturatingDiv(other NumberValue) NumberValue {
+func (v UInt256Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) NumberValue {
 	defer func() {
 		r := recover()
 		if _, ok := r.(InvalidOperandsError); ok {
@@ -9336,7 +10402,7 @@ func (v UInt256Value) SaturatingDiv(other NumberValue) NumberValue {
 		}
 	}()
 
-	return v.Div(other)
+	return v.Div(interpreter, other)
 }
 
 func (v UInt256Value) Less(other NumberValue) BoolValue {
@@ -9423,30 +10489,35 @@ func (v UInt256Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch 
 	return buffer
 }
 
-func ConvertUInt256(value Value) UInt256Value {
-	var v *big.Int
+func ConvertUInt256(memoryGauge common.MemoryGauge, value Value) UInt256Value {
+	return NewUInt256ValueFromBigInt(
+		memoryGauge,
+		func() *big.Int {
+			var v *big.Int
 
-	switch value := value.(type) {
-	case BigNumberValue:
-		v = value.ToBigInt()
+			switch value := value.(type) {
+			case BigNumberValue:
+				v = value.ToBigInt()
 
-	case NumberValue:
-		v = big.NewInt(int64(value.ToInt()))
+			case NumberValue:
+				v = big.NewInt(int64(value.ToInt()))
 
-	default:
-		panic(errors.NewUnreachableError())
-	}
+			default:
+				panic(errors.NewUnreachableError())
+			}
 
-	if v.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
-		panic(OverflowError{})
-	} else if v.Sign() < 0 {
-		panic(UnderflowError{})
-	}
+			if v.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
+				panic(OverflowError{})
+			} else if v.Sign() < 0 {
+				panic(UnderflowError{})
+			}
 
-	return NewUInt256ValueFromBigInt(v)
+			return v
+		},
+	)
 }
 
-func (v UInt256Value) BitwiseOr(other IntegerValue) IntegerValue {
+func (v UInt256Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9456,12 +10527,16 @@ func (v UInt256Value) BitwiseOr(other IntegerValue) IntegerValue {
 		})
 	}
 
-	res := new(big.Int)
-	res.Or(v.BigInt, o.BigInt)
-	return UInt256Value{res}
+	return NewUInt256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Or(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v UInt256Value) BitwiseXor(other IntegerValue) IntegerValue {
+func (v UInt256Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9471,12 +10546,16 @@ func (v UInt256Value) BitwiseXor(other IntegerValue) IntegerValue {
 		})
 	}
 
-	res := new(big.Int)
-	res.Xor(v.BigInt, o.BigInt)
-	return UInt256Value{res}
+	return NewUInt256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Xor(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v UInt256Value) BitwiseAnd(other IntegerValue) IntegerValue {
+func (v UInt256Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9486,12 +10565,16 @@ func (v UInt256Value) BitwiseAnd(other IntegerValue) IntegerValue {
 		})
 	}
 
-	res := new(big.Int)
-	res.And(v.BigInt, o.BigInt)
-	return UInt256Value{res}
+	return NewUInt256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			return res.And(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v UInt256Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v UInt256Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9501,18 +10584,22 @@ func (v UInt256Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 		})
 	}
 
-	res := new(big.Int)
-	if o.BigInt.Sign() < 0 {
-		panic(UnderflowError{})
-	}
-	if !o.BigInt.IsUint64() {
-		panic(OverflowError{})
-	}
-	res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
-	return UInt256Value{res}
+	return NewUInt256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			if o.BigInt.Sign() < 0 {
+				panic(UnderflowError{})
+			}
+			if !o.BigInt.IsUint64() {
+				panic(OverflowError{})
+			}
+			return res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+		},
+	)
 }
 
-func (v UInt256Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v UInt256Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9522,15 +10609,19 @@ func (v UInt256Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 		})
 	}
 
-	res := new(big.Int)
-	if o.BigInt.Sign() < 0 {
-		panic(UnderflowError{})
-	}
-	if !o.BigInt.IsUint64() {
-		panic(OverflowError{})
-	}
-	res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
-	return UInt256Value{res}
+	return NewUInt256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			if o.BigInt.Sign() < 0 {
+				panic(UnderflowError{})
+			}
+			if !o.BigInt.IsUint64() {
+				panic(OverflowError{})
+			}
+			return res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
+		},
+	)
 }
 
 func (v UInt256Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
@@ -9590,7 +10681,7 @@ func (v UInt256Value) Transfer(
 }
 
 func (v UInt256Value) Clone(_ *Interpreter) Value {
-	return NewUInt256ValueFromBigInt(v.BigInt)
+	return NewUnmeteredUInt256ValueFromBigInt(v.BigInt)
 }
 
 func (UInt256Value) DeepRemove(_ *Interpreter) {
@@ -9620,6 +10711,20 @@ var _ IntegerValue = Word8Value(0)
 var _ EquatableValue = Word8Value(0)
 var _ HashableValue = Word8Value(0)
 var _ MemberAccessibleValue = Word8Value(0)
+
+const word8Size = int(unsafe.Sizeof(Word8Value(0)))
+
+var word8MemoryUsage = common.NewNumberMemoryUsage(word8Size)
+
+func NewWord8Value(gauge common.MemoryGauge, valueGetter func() uint8) Word8Value {
+	common.UseMemory(gauge, word8MemoryUsage)
+
+	return NewUnmeteredWord8Value(valueGetter())
+}
+
+func NewUnmeteredWord8Value(value uint8) Word8Value {
+	return Word8Value(value)
+}
 
 func (Word8Value) IsValue() {}
 
@@ -9667,14 +10772,18 @@ func (v Word8Value) Plus(interpreter *Interpreter, other NumberValue) NumberValu
 		})
 	}
 
-	return v + o
+	valueGetter := func() uint8 {
+		return uint8(v + o)
+	}
+
+	return NewWord8Value(interpreter, valueGetter)
 }
 
-func (v Word8Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
+func (v Word8Value) SaturatingPlus(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
-func (v Word8Value) Minus(other NumberValue) NumberValue {
+func (v Word8Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9684,10 +10793,14 @@ func (v Word8Value) Minus(other NumberValue) NumberValue {
 		})
 	}
 
-	return v - o
+	valueGetter := func() uint8 {
+		return uint8(v - o)
+	}
+
+	return NewWord8Value(interpreter, valueGetter)
 }
 
-func (v Word8Value) SaturatingMinus(_ NumberValue) NumberValue {
+func (v Word8Value) SaturatingMinus(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -9704,7 +10817,12 @@ func (v Word8Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
-	return v % o
+
+	valueGetter := func() uint8 {
+		return uint8(v % o)
+	}
+
+	return NewWord8Value(interpreter, valueGetter)
 }
 
 func (v Word8Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -9717,14 +10835,18 @@ func (v Word8Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue
 		})
 	}
 
-	return v * o
+	valueGetter := func() uint8 {
+		return uint8(v * o)
+	}
+
+	return NewWord8Value(interpreter, valueGetter)
 }
 
-func (v Word8Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
+func (v Word8Value) SaturatingMul(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
-func (v Word8Value) Div(other NumberValue) NumberValue {
+func (v Word8Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9737,10 +10859,15 @@ func (v Word8Value) Div(other NumberValue) NumberValue {
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
-	return v / o
+
+	valueGetter := func() uint8 {
+		return uint8(v / o)
+	}
+
+	return NewWord8Value(interpreter, valueGetter)
 }
 
-func (v Word8Value) SaturatingDiv(_ NumberValue) NumberValue {
+func (v Word8Value) SaturatingDiv(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -9813,11 +10940,14 @@ func (v Word8Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []
 	return scratch[:2]
 }
 
-func ConvertWord8(value Value) Word8Value {
-	return Word8Value(ConvertUInt8(value))
+func ConvertWord8(memoryGauge common.MemoryGauge, value Value) Word8Value {
+	uint8Value := ConvertUInt8(memoryGauge, value)
+
+	// Already metered during conversion in `ConvertUInt8`
+	return NewUnmeteredWord8Value(uint8(uint8Value))
 }
 
-func (v Word8Value) BitwiseOr(other IntegerValue) IntegerValue {
+func (v Word8Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9827,10 +10957,14 @@ func (v Word8Value) BitwiseOr(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v | o
+	valueGetter := func() uint8 {
+		return uint8(v | o)
+	}
+
+	return NewWord8Value(interpreter, valueGetter)
 }
 
-func (v Word8Value) BitwiseXor(other IntegerValue) IntegerValue {
+func (v Word8Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9839,10 +10973,15 @@ func (v Word8Value) BitwiseXor(other IntegerValue) IntegerValue {
 			RightType: other.StaticType(),
 		})
 	}
-	return v ^ o
+
+	valueGetter := func() uint8 {
+		return uint8(v ^ o)
+	}
+
+	return NewWord8Value(interpreter, valueGetter)
 }
 
-func (v Word8Value) BitwiseAnd(other IntegerValue) IntegerValue {
+func (v Word8Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9852,10 +10991,14 @@ func (v Word8Value) BitwiseAnd(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v & o
+	valueGetter := func() uint8 {
+		return uint8(v & o)
+	}
+
+	return NewWord8Value(interpreter, valueGetter)
 }
 
-func (v Word8Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v Word8Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9865,10 +11008,14 @@ func (v Word8Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v << o
+	valueGetter := func() uint8 {
+		return uint8(v << o)
+	}
+
+	return NewWord8Value(interpreter, valueGetter)
 }
 
-func (v Word8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v Word8Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9878,7 +11025,11 @@ func (v Word8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v >> o
+	valueGetter := func() uint8 {
+		return uint8(v >> o)
+	}
+
+	return NewWord8Value(interpreter, valueGetter)
 }
 
 func (v Word8Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
@@ -9970,6 +11121,20 @@ var _ EquatableValue = Word16Value(0)
 var _ HashableValue = Word16Value(0)
 var _ MemberAccessibleValue = Word16Value(0)
 
+const word16Size = int(unsafe.Sizeof(Word16Value(0)))
+
+var word16MemoryUsage = common.NewNumberMemoryUsage(word16Size)
+
+func NewWord16Value(gauge common.MemoryGauge, valueGetter func() uint16) Word16Value {
+	common.UseMemory(gauge, word16MemoryUsage)
+
+	return NewUnmeteredWord16Value(valueGetter())
+}
+
+func NewUnmeteredWord16Value(value uint16) Word16Value {
+	return Word16Value(value)
+}
+
 func (Word16Value) IsValue() {}
 
 func (v Word16Value) Accept(interpreter *Interpreter, visitor Visitor) {
@@ -10015,14 +11180,18 @@ func (v Word16Value) Plus(interpreter *Interpreter, other NumberValue) NumberVal
 		})
 	}
 
-	return v + o
+	valueGetter := func() uint16 {
+		return uint16(v + o)
+	}
+
+	return NewWord16Value(interpreter, valueGetter)
 }
 
-func (v Word16Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
+func (v Word16Value) SaturatingPlus(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
-func (v Word16Value) Minus(other NumberValue) NumberValue {
+func (v Word16Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10032,10 +11201,14 @@ func (v Word16Value) Minus(other NumberValue) NumberValue {
 		})
 	}
 
-	return v - o
+	valueGetter := func() uint16 {
+		return uint16(v - o)
+	}
+
+	return NewWord16Value(interpreter, valueGetter)
 }
 
-func (v Word16Value) SaturatingMinus(_ NumberValue) NumberValue {
+func (v Word16Value) SaturatingMinus(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -10052,7 +11225,12 @@ func (v Word16Value) Mod(interpreter *Interpreter, other NumberValue) NumberValu
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
-	return v % o
+
+	valueGetter := func() uint16 {
+		return uint16(v % o)
+	}
+
+	return NewWord16Value(interpreter, valueGetter)
 }
 
 func (v Word16Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -10065,14 +11243,18 @@ func (v Word16Value) Mul(interpreter *Interpreter, other NumberValue) NumberValu
 		})
 	}
 
-	return v * o
+	valueGetter := func() uint16 {
+		return uint16(v * o)
+	}
+
+	return NewWord16Value(interpreter, valueGetter)
 }
 
-func (v Word16Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
+func (v Word16Value) SaturatingMul(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
-func (v Word16Value) Div(other NumberValue) NumberValue {
+func (v Word16Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10085,10 +11267,15 @@ func (v Word16Value) Div(other NumberValue) NumberValue {
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
-	return v / o
+
+	valueGetter := func() uint16 {
+		return uint16(v / o)
+	}
+
+	return NewWord16Value(interpreter, valueGetter)
 }
 
-func (v Word16Value) SaturatingDiv(_ NumberValue) NumberValue {
+func (v Word16Value) SaturatingDiv(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -10161,11 +11348,14 @@ func (v Word16Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch [
 	return scratch[:3]
 }
 
-func ConvertWord16(value Value) Word16Value {
-	return Word16Value(ConvertUInt16(value))
+func ConvertWord16(memoryGauge common.MemoryGauge, value Value) Word16Value {
+	uint16Value := ConvertUInt16(memoryGauge, value)
+
+	// Already metered during conversion in `ConvertUInt16`
+	return NewUnmeteredWord16Value(uint16(uint16Value))
 }
 
-func (v Word16Value) BitwiseOr(other IntegerValue) IntegerValue {
+func (v Word16Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10175,10 +11365,14 @@ func (v Word16Value) BitwiseOr(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v | o
+	valueGetter := func() uint16 {
+		return uint16(v | o)
+	}
+
+	return NewWord16Value(interpreter, valueGetter)
 }
 
-func (v Word16Value) BitwiseXor(other IntegerValue) IntegerValue {
+func (v Word16Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10187,10 +11381,15 @@ func (v Word16Value) BitwiseXor(other IntegerValue) IntegerValue {
 			RightType: other.StaticType(),
 		})
 	}
-	return v ^ o
+
+	valueGetter := func() uint16 {
+		return uint16(v ^ o)
+	}
+
+	return NewWord16Value(interpreter, valueGetter)
 }
 
-func (v Word16Value) BitwiseAnd(other IntegerValue) IntegerValue {
+func (v Word16Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10200,10 +11399,14 @@ func (v Word16Value) BitwiseAnd(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v & o
+	valueGetter := func() uint16 {
+		return uint16(v & o)
+	}
+
+	return NewWord16Value(interpreter, valueGetter)
 }
 
-func (v Word16Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v Word16Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10213,10 +11416,14 @@ func (v Word16Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v << o
+	valueGetter := func() uint16 {
+		return uint16(v << o)
+	}
+
+	return NewWord16Value(interpreter, valueGetter)
 }
 
-func (v Word16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v Word16Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10226,7 +11433,11 @@ func (v Word16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v >> o
+	valueGetter := func() uint16 {
+		return uint16(v >> o)
+	}
+
+	return NewWord16Value(interpreter, valueGetter)
 }
 
 func (v Word16Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
@@ -10320,6 +11531,20 @@ var _ EquatableValue = Word32Value(0)
 var _ HashableValue = Word32Value(0)
 var _ MemberAccessibleValue = Word32Value(0)
 
+const word32Size = int(unsafe.Sizeof(Word32Value(0)))
+
+var word32MemoryUsage = common.NewNumberMemoryUsage(word32Size)
+
+func NewWord32Value(gauge common.MemoryGauge, valueGetter func() uint32) Word32Value {
+	common.UseMemory(gauge, word32MemoryUsage)
+
+	return NewUnmeteredWord32Value(valueGetter())
+}
+
+func NewUnmeteredWord32Value(value uint32) Word32Value {
+	return Word32Value(value)
+}
+
 func (Word32Value) IsValue() {}
 
 func (v Word32Value) Accept(interpreter *Interpreter, visitor Visitor) {
@@ -10366,14 +11591,18 @@ func (v Word32Value) Plus(interpreter *Interpreter, other NumberValue) NumberVal
 		})
 	}
 
-	return v + o
+	valueGetter := func() uint32 {
+		return uint32(v + o)
+	}
+
+	return NewWord32Value(interpreter, valueGetter)
 }
 
-func (v Word32Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
+func (v Word32Value) SaturatingPlus(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
-func (v Word32Value) Minus(other NumberValue) NumberValue {
+func (v Word32Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10383,10 +11612,14 @@ func (v Word32Value) Minus(other NumberValue) NumberValue {
 		})
 	}
 
-	return v - o
+	valueGetter := func() uint32 {
+		return uint32(v - o)
+	}
+
+	return NewWord32Value(interpreter, valueGetter)
 }
 
-func (v Word32Value) SaturatingMinus(_ NumberValue) NumberValue {
+func (v Word32Value) SaturatingMinus(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -10403,7 +11636,12 @@ func (v Word32Value) Mod(interpreter *Interpreter, other NumberValue) NumberValu
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
-	return v % o
+
+	valueGetter := func() uint32 {
+		return uint32(v % o)
+	}
+
+	return NewWord32Value(interpreter, valueGetter)
 }
 
 func (v Word32Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -10416,14 +11654,18 @@ func (v Word32Value) Mul(interpreter *Interpreter, other NumberValue) NumberValu
 		})
 	}
 
-	return v * o
+	valueGetter := func() uint32 {
+		return uint32(v * o)
+	}
+
+	return NewWord32Value(interpreter, valueGetter)
 }
 
 func (v Word32Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
-func (v Word32Value) Div(other NumberValue) NumberValue {
+func (v Word32Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10436,10 +11678,15 @@ func (v Word32Value) Div(other NumberValue) NumberValue {
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
-	return v / o
+
+	valueGetter := func() uint32 {
+		return uint32(v / o)
+	}
+
+	return NewWord32Value(interpreter, valueGetter)
 }
 
-func (v Word32Value) SaturatingDiv(_ NumberValue) NumberValue {
+func (v Word32Value) SaturatingDiv(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -10512,11 +11759,14 @@ func (v Word32Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch [
 	return scratch[:5]
 }
 
-func ConvertWord32(value Value) Word32Value {
-	return Word32Value(ConvertUInt32(value))
+func ConvertWord32(memoryGauge common.MemoryGauge, value Value) Word32Value {
+	uint32Value := ConvertUInt32(memoryGauge, value)
+
+	// Already metered during conversion in `ConvertUInt32`
+	return NewUnmeteredWord32Value(uint32(uint32Value))
 }
 
-func (v Word32Value) BitwiseOr(other IntegerValue) IntegerValue {
+func (v Word32Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10526,10 +11776,14 @@ func (v Word32Value) BitwiseOr(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v | o
+	valueGetter := func() uint32 {
+		return uint32(v | o)
+	}
+
+	return NewWord32Value(interpreter, valueGetter)
 }
 
-func (v Word32Value) BitwiseXor(other IntegerValue) IntegerValue {
+func (v Word32Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10538,10 +11792,15 @@ func (v Word32Value) BitwiseXor(other IntegerValue) IntegerValue {
 			RightType: other.StaticType(),
 		})
 	}
-	return v ^ o
+
+	valueGetter := func() uint32 {
+		return uint32(v ^ o)
+	}
+
+	return NewWord32Value(interpreter, valueGetter)
 }
 
-func (v Word32Value) BitwiseAnd(other IntegerValue) IntegerValue {
+func (v Word32Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10551,10 +11810,14 @@ func (v Word32Value) BitwiseAnd(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v & o
+	valueGetter := func() uint32 {
+		return uint32(v & o)
+	}
+
+	return NewWord32Value(interpreter, valueGetter)
 }
 
-func (v Word32Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v Word32Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10564,10 +11827,14 @@ func (v Word32Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v << o
+	valueGetter := func() uint32 {
+		return uint32(v << o)
+	}
+
+	return NewWord32Value(interpreter, valueGetter)
 }
 
-func (v Word32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v Word32Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10577,7 +11844,11 @@ func (v Word32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v >> o
+	valueGetter := func() uint32 {
+		return uint32(v >> o)
+	}
+
+	return NewWord32Value(interpreter, valueGetter)
 }
 
 func (v Word32Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
@@ -10671,6 +11942,20 @@ var _ EquatableValue = Word64Value(0)
 var _ HashableValue = Word64Value(0)
 var _ MemberAccessibleValue = Word64Value(0)
 
+const word64Size = int(unsafe.Sizeof(Word64Value(0)))
+
+var word64MemoryUsage = common.NewNumberMemoryUsage(word64Size)
+
+func NewWord64Value(gauge common.MemoryGauge, valueGetter func() uint64) Word64Value {
+	common.UseMemory(gauge, word64MemoryUsage)
+
+	return NewUnmeteredWord64Value(valueGetter())
+}
+
+func NewUnmeteredWord64Value(value uint64) Word64Value {
+	return Word64Value(value)
+}
+
 // NOTE: important, do *NOT* remove:
 // Word64 values > math.MaxInt64 overflow int.
 // Implementing BigNumberValue ensures conversion functions
@@ -10742,14 +12027,18 @@ func (v Word64Value) Plus(interpreter *Interpreter, other NumberValue) NumberVal
 		})
 	}
 
-	return v + o
+	valueGetter := func() uint64 {
+		return uint64(v + o)
+	}
+
+	return NewWord64Value(interpreter, valueGetter)
 }
 
-func (v Word64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
+func (v Word64Value) SaturatingPlus(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
-func (v Word64Value) Minus(other NumberValue) NumberValue {
+func (v Word64Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10759,10 +12048,14 @@ func (v Word64Value) Minus(other NumberValue) NumberValue {
 		})
 	}
 
-	return v - o
+	valueGetter := func() uint64 {
+		return uint64(v - o)
+	}
+
+	return NewWord64Value(interpreter, valueGetter)
 }
 
-func (v Word64Value) SaturatingMinus(_ NumberValue) NumberValue {
+func (v Word64Value) SaturatingMinus(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -10779,7 +12072,12 @@ func (v Word64Value) Mod(interpreter *Interpreter, other NumberValue) NumberValu
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
-	return v % o
+
+	valueGetter := func() uint64 {
+		return uint64(v % o)
+	}
+
+	return NewWord64Value(interpreter, valueGetter)
 }
 
 func (v Word64Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -10792,14 +12090,18 @@ func (v Word64Value) Mul(interpreter *Interpreter, other NumberValue) NumberValu
 		})
 	}
 
-	return v * o
+	valueGetter := func() uint64 {
+		return uint64(v * o)
+	}
+
+	return NewWord64Value(interpreter, valueGetter)
 }
 
-func (v Word64Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
+func (v Word64Value) SaturatingMul(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
-func (v Word64Value) Div(other NumberValue) NumberValue {
+func (v Word64Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10812,10 +12114,15 @@ func (v Word64Value) Div(other NumberValue) NumberValue {
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
-	return v / o
+
+	valueGetter := func() uint64 {
+		return uint64(v / o)
+	}
+
+	return NewWord64Value(interpreter, valueGetter)
 }
 
-func (v Word64Value) SaturatingDiv(_ NumberValue) NumberValue {
+func (v Word64Value) SaturatingDiv(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
@@ -10888,11 +12195,14 @@ func (v Word64Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch [
 	return scratch[:9]
 }
 
-func ConvertWord64(value Value) Word64Value {
-	return Word64Value(ConvertUInt64(value))
+func ConvertWord64(memoryGauge common.MemoryGauge, value Value) Word64Value {
+	uint64Value := ConvertUInt64(memoryGauge, value)
+
+	// Already metered during conversion in `ConvertUInt64`
+	return NewUnmeteredWord64Value(uint64(uint64Value))
 }
 
-func (v Word64Value) BitwiseOr(other IntegerValue) IntegerValue {
+func (v Word64Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10902,10 +12212,14 @@ func (v Word64Value) BitwiseOr(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v | o
+	valueGetter := func() uint64 {
+		return uint64(v | o)
+	}
+
+	return NewWord64Value(interpreter, valueGetter)
 }
 
-func (v Word64Value) BitwiseXor(other IntegerValue) IntegerValue {
+func (v Word64Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10914,10 +12228,15 @@ func (v Word64Value) BitwiseXor(other IntegerValue) IntegerValue {
 			RightType: other.StaticType(),
 		})
 	}
-	return v ^ o
+
+	valueGetter := func() uint64 {
+		return uint64(v ^ o)
+	}
+
+	return NewWord64Value(interpreter, valueGetter)
 }
 
-func (v Word64Value) BitwiseAnd(other IntegerValue) IntegerValue {
+func (v Word64Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10927,10 +12246,14 @@ func (v Word64Value) BitwiseAnd(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v & o
+	valueGetter := func() uint64 {
+		return uint64(v & o)
+	}
+
+	return NewWord64Value(interpreter, valueGetter)
 }
 
-func (v Word64Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v Word64Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10940,10 +12263,14 @@ func (v Word64Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v << o
+	valueGetter := func() uint64 {
+		return uint64(v << o)
+	}
+
+	return NewWord64Value(interpreter, valueGetter)
 }
 
-func (v Word64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v Word64Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10953,7 +12280,11 @@ func (v Word64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 		})
 	}
 
-	return v >> o
+	valueGetter := func() uint64 {
+		return uint64(v >> o)
+	}
+
+	return NewWord64Value(interpreter, valueGetter)
 }
 
 func (v Word64Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
@@ -11142,7 +12473,7 @@ func (v Fix64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) 
 	return v + o
 }
 
-func (v Fix64Value) Minus(other NumberValue) NumberValue {
+func (v Fix64Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11161,7 +12492,7 @@ func (v Fix64Value) Minus(other NumberValue) NumberValue {
 	return v - o
 }
 
-func (v Fix64Value) SaturatingMinus(other NumberValue) NumberValue {
+func (v Fix64Value) SaturatingMinus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11233,7 +12564,7 @@ func (v Fix64Value) SaturatingMul(interpreter *Interpreter, other NumberValue) N
 	return Fix64Value(result.Int64())
 }
 
-func (v Fix64Value) Div(other NumberValue) NumberValue {
+func (v Fix64Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11258,7 +12589,7 @@ func (v Fix64Value) Div(other NumberValue) NumberValue {
 	return Fix64Value(result.Int64())
 }
 
-func (v Fix64Value) SaturatingDiv(other NumberValue) NumberValue {
+func (v Fix64Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11294,7 +12625,7 @@ func (v Fix64Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue
 	}
 
 	// v - int(v/o) * o
-	quotient, ok := v.Div(o).(Fix64Value)
+	quotient, ok := v.Div(interpreter, o).(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
@@ -11303,8 +12634,10 @@ func (v Fix64Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue
 		})
 	}
 	truncatedQuotient := (int64(quotient) / sema.Fix64Factor) * sema.Fix64Factor
-	return v.Minus(Fix64Value(truncatedQuotient).
-		Mul(interpreter, o))
+	return v.Minus(
+		interpreter,
+		Fix64Value(truncatedQuotient).Mul(interpreter, o),
+	)
 }
 
 func (v Fix64Value) Less(other NumberValue) BoolValue {
@@ -11587,7 +12920,7 @@ func (v UFix64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue)
 	return sum
 }
 
-func (v UFix64Value) Minus(other NumberValue) NumberValue {
+func (v UFix64Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11606,7 +12939,7 @@ func (v UFix64Value) Minus(other NumberValue) NumberValue {
 	return diff
 }
 
-func (v UFix64Value) SaturatingMinus(other NumberValue) NumberValue {
+func (v UFix64Value) SaturatingMinus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11671,7 +13004,7 @@ func (v UFix64Value) SaturatingMul(interpreter *Interpreter, other NumberValue) 
 	return UFix64Value(result.Uint64())
 }
 
-func (v UFix64Value) Div(other NumberValue) NumberValue {
+func (v UFix64Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11690,7 +13023,7 @@ func (v UFix64Value) Div(other NumberValue) NumberValue {
 	return UFix64Value(result.Uint64())
 }
 
-func (v UFix64Value) SaturatingDiv(other NumberValue) NumberValue {
+func (v UFix64Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) NumberValue {
 	defer func() {
 		r := recover()
 		if _, ok := r.(InvalidOperandsError); ok {
@@ -11702,7 +13035,7 @@ func (v UFix64Value) SaturatingDiv(other NumberValue) NumberValue {
 		}
 	}()
 
-	return v.Div(other)
+	return v.Div(interpreter, other)
 }
 
 func (v UFix64Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -11716,7 +13049,7 @@ func (v UFix64Value) Mod(interpreter *Interpreter, other NumberValue) NumberValu
 	}
 
 	// v - int(v/o) * o
-	quotient, ok := v.Div(o).(UFix64Value)
+	quotient, ok := v.Div(interpreter, o).(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
@@ -11725,8 +13058,10 @@ func (v UFix64Value) Mod(interpreter *Interpreter, other NumberValue) NumberValu
 		})
 	}
 	truncatedQuotient := (uint64(quotient) / sema.Fix64Factor) * sema.Fix64Factor
-	return v.Minus(UFix64Value(truncatedQuotient).
-		Mul(interpreter, o))
+	return v.Minus(
+		interpreter,
+		UFix64Value(truncatedQuotient).Mul(interpreter, o),
+	)
 }
 
 func (v UFix64Value) Less(other NumberValue) BoolValue {
@@ -11962,8 +13297,9 @@ func NewCompositeValue(
 	address common.Address,
 ) *CompositeValue {
 
-	var v *CompositeValue
+	interpreter.ReportComputation(common.ComputationKindCreateCompositeValue, 1)
 
+	var v *CompositeValue
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
 
@@ -12101,6 +13437,8 @@ func (v *CompositeValue) IsDestroyed() bool {
 }
 
 func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
+
+	interpreter.ReportComputation(common.ComputationKindDestroyCompositeValue, 1)
 
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(getLocationRange)
@@ -12692,6 +14030,8 @@ func (v *CompositeValue) Transfer(
 	storable atree.Storable,
 ) Value {
 
+	interpreter.ReportComputation(common.ComputationKindTransferCompositeValue, 1)
+
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(getLocationRange)
 	}
@@ -13056,6 +14396,9 @@ func NewDictionaryValueWithAddress(
 	address common.Address,
 	keysAndValues ...Value,
 ) *DictionaryValue {
+
+	interpreter.ReportComputation(common.ComputationKindCreateDictionaryValue, 1)
+
 	var v *DictionaryValue
 
 	if interpreter.tracingEnabled {
@@ -13204,6 +14547,7 @@ func (v *DictionaryValue) checkInvalidatedResourceUse(interpreter *Interpreter, 
 
 func (v *DictionaryValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
 
+	interpreter.ReportComputation(common.ComputationKindDestroyDictionaryValue, 1)
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
 	}
@@ -13799,6 +15143,8 @@ func (v *DictionaryValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 ) Value {
+
+	interpreter.ReportComputation(common.ComputationKindTransferDictionaryValue, uint(v.Count()))
 
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
@@ -15209,10 +16555,10 @@ func NewAddressValueFromBytes(b []byte) AddressValue {
 	return result
 }
 
-func ConvertAddress(value Value) AddressValue {
+func ConvertAddress(memoryGauge common.MemoryGauge, value Value) AddressValue {
 	var result AddressValue
 
-	uint64Value := ConvertUInt64(value)
+	uint64Value := ConvertUInt64(memoryGauge, value)
 
 	binary.BigEndian.PutUint64(
 		result[:common.AddressLength],

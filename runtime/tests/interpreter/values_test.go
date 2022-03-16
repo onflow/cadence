@@ -1103,11 +1103,11 @@ func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) inte
 	case interpreter.Int128Value:
 		var n big.Int
 		n.Set(v.BigInt)
-		return interpreter.NewInt128ValueFromBigInt(&n)
+		return interpreter.NewUnmeteredInt128ValueFromBigInt(&n)
 	case interpreter.Int256Value:
 		var n big.Int
 		n.Set(v.BigInt)
-		return interpreter.NewInt256ValueFromBigInt(&n)
+		return interpreter.NewUnmeteredInt256ValueFromBigInt(&n)
 
 	// Uint
 	case interpreter.UIntValue:
@@ -1122,11 +1122,11 @@ func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) inte
 	case interpreter.UInt128Value:
 		var n big.Int
 		n.Set(v.BigInt)
-		return interpreter.NewUInt128ValueFromBigInt(&n)
+		return interpreter.NewUnmeteredUInt128ValueFromBigInt(&n)
 	case interpreter.UInt256Value:
 		var n big.Int
 		n.Set(v.BigInt)
-		return interpreter.NewUInt256ValueFromBigInt(&n)
+		return interpreter.NewUnmeteredUInt256ValueFromBigInt(&n)
 
 	case interpreter.Word8Value,
 		interpreter.Word16Value,
@@ -1278,43 +1278,43 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 	case Int:
 		return interpreter.NewUnmeteredIntValueFromInt64(int64(sign()) * rand.Int63())
 	case Int8:
-		return interpreter.Int8Value(randomInt(math.MaxUint8))
+		return interpreter.NewUnmeteredInt8Value(int8(randomInt(math.MaxUint8)))
 	case Int16:
-		return interpreter.Int16Value(randomInt(math.MaxUint16))
+		return interpreter.NewUnmeteredInt16Value(int16(randomInt(math.MaxUint16)))
 	case Int32:
-		return interpreter.Int32Value(int32(sign()) * rand.Int31())
+		return interpreter.NewUnmeteredInt32Value(int32(sign()) * rand.Int31())
 	case Int64:
-		return interpreter.Int64Value(int64(sign()) * rand.Int63())
+		return interpreter.NewUnmeteredInt64Value(int64(sign()) * rand.Int63())
 	case Int128:
-		return interpreter.NewInt128ValueFromInt64(int64(sign()) * rand.Int63())
+		return interpreter.NewUnmeteredInt128ValueFromInt64(int64(sign()) * rand.Int63())
 	case Int256:
-		return interpreter.NewInt256ValueFromInt64(int64(sign()) * rand.Int63())
+		return interpreter.NewUnmeteredInt256ValueFromInt64(int64(sign()) * rand.Int63())
 
 	// UInt
 	case UInt:
 		return interpreter.NewUnmeteredUIntValueFromUint64(rand.Uint64())
 	case UInt8:
-		return interpreter.UInt8Value(randomInt(math.MaxUint8))
+		return interpreter.NewUnmeteredUInt8Value(uint8(randomInt(math.MaxUint8)))
 	case UInt16:
-		return interpreter.UInt16Value(randomInt(math.MaxUint16))
+		return interpreter.NewUnmeteredUInt16Value(uint16(randomInt(math.MaxUint16)))
 	case UInt32:
-		return interpreter.UInt32Value(rand.Uint32())
+		return interpreter.NewUnmeteredUInt32Value(rand.Uint32())
 	case UInt64_1, UInt64_2, UInt64_3, UInt64_4: // should be more common
-		return interpreter.UInt64Value(rand.Uint64())
+		return interpreter.NewUnmeteredUInt64Value(rand.Uint64())
 	case UInt128:
-		return interpreter.NewUInt128ValueFromUint64(rand.Uint64())
+		return interpreter.NewUnmeteredUInt128ValueFromUint64(rand.Uint64())
 	case UInt256:
-		return interpreter.NewUInt256ValueFromUint64(rand.Uint64())
+		return interpreter.NewUnmeteredUInt256ValueFromUint64(rand.Uint64())
 
 	// Word
 	case Word8:
-		return interpreter.Word8Value(randomInt(math.MaxUint8))
+		return interpreter.NewUnmeteredWord8Value(uint8(randomInt(math.MaxUint8)))
 	case Word16:
-		return interpreter.Word16Value(randomInt(math.MaxUint16))
+		return interpreter.NewUnmeteredWord16Value(uint16(randomInt(math.MaxUint16)))
 	case Word32:
-		return interpreter.Word32Value(rand.Uint32())
+		return interpreter.NewUnmeteredWord32Value(rand.Uint32())
 	case Word64:
-		return interpreter.Word64Value(rand.Uint64())
+		return interpreter.NewUnmeteredWord64Value(rand.Uint64())
 
 	// Fixed point
 	case Fix64:

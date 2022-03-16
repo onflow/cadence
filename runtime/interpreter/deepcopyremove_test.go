@@ -54,7 +54,7 @@ func TestValueDeepCopyAndDeepRemove(t *testing.T) {
 		strings.Repeat("x", int(atree.MaxInlineMapKeyOrValueSize+1)),
 	)
 
-	dictValueValue := NewInt256ValueFromInt64(1)
+	dictValueValue := NewUnmeteredInt256ValueFromInt64(1)
 	dictValue := NewDictionaryValue(
 		inter,
 		dictionaryStaticType,
