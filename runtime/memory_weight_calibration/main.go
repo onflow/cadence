@@ -10,7 +10,7 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
 
-	"github.com/cpmech/gosl/la"
+	"gonum.org/v1/gonum/mat"
 )
 
 var memory_kinds = []common.MemoryKind{
@@ -51,8 +51,8 @@ func main() {
 	for _, kind := range memory_kinds {
 		unused_mem_kinds[kind] = struct{}{}
 	}
-	abstract_measurements := make([]map[common.MemoryKind]uint64, len(test_programs))
-	concrete_measurements := make([]float64, len(test_programs))
+	abstract_measurements := make([]map[common.MemoryKind]uint64, 0, len(test_programs))
+	concrete_measurements := make([]float64, 0, len(test_programs))
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 	totalAlloc := m.TotalAlloc
@@ -119,28 +119,29 @@ func main() {
 	// to decide values for the weights, we have some linear equation A*x=b
 	// A here is a matrix holding the abstracted measured values, x is the
 	// vector of weights, and b is the vector of measured allocations
-
-	var t la.Triplet
-	// init matrix
-	// we have 1 more column than there are memory kinds, since the final columm will
-	// be used to represent the overhead constant, which we will give an abstract allocation
-	// amount of 1
-	t.Init(len(abstract_measurements), len(memory_kinds)+1, len(abstract_measurements)*(len(memory_kinds)+1))
-
-	for i, measurements := range abstract_measurements {
-		for j, kind := range memory_kinds {
+	v := make([]float64, 0, len(abstract_measurements)*(len(memory_kinds)+1))
+	for _, measurements := range abstract_measurements {
+		for _, kind := range memory_kinds {
 			measure, ok := measurements[kind]
 			if !ok {
-				t.Put(i, j, 0)
+				v = append(v, 0)
 			} else {
-				t.Put(i, j, float64(measure))
+				v = append(v, float64(measure))
 			}
 		}
 		// weight for overhead constant
-		t.Put(i, len(memory_kinds), 1)
+		v = append(v, 1)
 	}
 
-	weights := la.SpSolve(&t, concrete_measurements)
+	// we have 1 more column than there are memory kinds, since the final columm will
+	// be used to represent the overhead constant, which we will give an abstract allocation
+	// amount of 1
+	a := mat.NewDense(len(abstract_measurements), len(memory_kinds)+1, v)
+	b := mat.NewVecDense(len(concrete_measurements), concrete_measurements)
+	x := mat.NewVecDense(len(memory_kinds)+1, nil)
+	x.SolveVec(a, b)
+
+	weights := x.RawVector().Data
 	for i, kind := range memory_kinds {
 		fmt.Printf("Weight for %s: %f\n", kind.String(), weights[i])
 	}

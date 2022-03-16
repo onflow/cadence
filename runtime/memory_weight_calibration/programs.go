@@ -239,6 +239,6 @@ var test_programs = []struct {
 	{name: "optional bool", code: optional_test},
 	{name: "empty composite", code: composite_test},
 	{name: "bound function", code: bound_function_test},
-	{name: "iteration", code: iteration_test},
-	{name: "composite with field", code: composite_field_test},
+	//{name: "iteration", code: iteration_test},
+	//{name: "composite with field", code: composite_field_test},
 }
