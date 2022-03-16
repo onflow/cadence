@@ -20,7 +20,6 @@ var memory_kinds = []common.MemoryKind{
 	common.MemoryKindString,
 	common.MemoryKindCharacter,
 	common.MemoryKindMetaType,
-	common.MemoryKindBlock,
 	common.MemoryKindNumber,
 	common.MemoryKindArray,
 	common.MemoryKindDictionary,
@@ -42,8 +41,9 @@ func newTestMemoryGauge() *calibrationMemoryGauge {
 	}
 }
 
-func (g *calibrationMemoryGauge) UseMemory(usage common.MemoryUsage) {
+func (g *calibrationMemoryGauge) MeterMemory(usage common.MemoryUsage) error {
 	g.meter[usage.Kind] += usage.Amount
+	return nil
 }
 
 func main() {

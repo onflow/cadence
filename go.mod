@@ -21,7 +21,6 @@ require (
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
 	golang.org/x/text v0.3.7
 	golang.org/x/tools v0.1.9
-	gonum.org/v1/exp v0.0.0-20210902084608-ee159c05dd5a
 	gonum.org/v1/gonum v0.11.0
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 )
