@@ -13381,8 +13381,6 @@ func NewCompositeValue(
 		}()
 	}
 
-	common.UseConstantMemory(interpreter, common.MemoryKindComposite)
-
 	dictionary, err := atree.NewMap(
 		interpreter.Storage,
 		atree.Address(address),
