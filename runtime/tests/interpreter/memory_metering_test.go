@@ -6445,6 +6445,7 @@ func TestInterpretLinkValueMetering(t *testing.T) {
 		_, err := inter.Invoke("main", account)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindLinkValue))
+		// Metered twice only when Atree validation is enabled.
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindLinkValue))
 	})
 }
