@@ -5,26 +5,35 @@ import (
 	"runtime"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/utils"
 
 	"gonum.org/v1/gonum/mat"
 )
 
 var memory_kinds = []common.MemoryKind{
-	common.MemoryKindUnknown,
 	common.MemoryKindBool,
 	common.MemoryKindAddress,
 	common.MemoryKindString,
 	common.MemoryKindCharacter,
-	common.MemoryKindMetaType,
+	// common.MemoryKindMetaType,
 	common.MemoryKindNumber,
 	common.MemoryKindArray,
 	common.MemoryKindDictionary,
 	common.MemoryKindComposite,
 	common.MemoryKindOptional,
+	common.MemoryKindNil,
+	common.MemoryKindVoid,
+	// common.MemoryKindTypeValue,
+	common.MemoryKindPathValue,
+	common.MemoryKindCapabilityValue,
+	common.MemoryKindLinkValue,
+	common.MemoryKindStorageReferenceValue,
+	common.MemoryKindEphemeralReferenceValue,
 	common.MemoryKindInterpretedFunction,
 	common.MemoryKindHostFunction,
 	common.MemoryKindBoundFunction,
@@ -44,6 +53,66 @@ func newTestMemoryGauge() *calibrationMemoryGauge {
 func (g *calibrationMemoryGauge) MeterMemory(usage common.MemoryUsage) error {
 	g.meter[usage.Kind] += usage.Amount
 	return nil
+}
+
+func newTestAuthAccountValue(
+	inter *interpreter.Interpreter,
+	addressValue interpreter.AddressValue,
+) interpreter.Value {
+	var returnZeroUInt64 = func(interp *interpreter.Interpreter) interpreter.UInt64Value {
+		return interpreter.NewUInt64Value(interp, func() uint64 { return 0 })
+	}
+
+	var returnZeroUFix64 = func() interpreter.UFix64Value {
+		return interpreter.UFix64Value(0)
+	}
+
+	panicFunction := interpreter.NewHostFunctionValue(
+		inter,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			panic(errors.NewUnreachableError())
+		},
+		stdlib.PanicFunction.Type,
+	)
+
+	return interpreter.NewAuthAccountValue(
+		inter,
+		addressValue,
+		returnZeroUFix64,
+		returnZeroUFix64,
+		returnZeroUInt64,
+		returnZeroUInt64,
+		panicFunction,
+		panicFunction,
+		func() interpreter.Value {
+			return interpreter.NewAuthAccountContractsValue(
+				inter,
+				addressValue,
+				panicFunction,
+				panicFunction,
+				panicFunction,
+				panicFunction,
+				func(inter *interpreter.Interpreter) *interpreter.ArrayValue {
+					return interpreter.NewArrayValue(
+						inter,
+						interpreter.VariableSizedStaticType{
+							Type: interpreter.PrimitiveStaticTypeString,
+						},
+						common.Address{},
+					)
+				},
+			)
+		},
+		func() interpreter.Value {
+			return interpreter.NewAuthAccountKeysValue(
+				inter,
+				addressValue,
+				panicFunction,
+				panicFunction,
+				panicFunction,
+			)
+		},
+	)
 }
 
 func main() {
@@ -76,9 +145,15 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+		var uuid uint64 = 0
+
 		inter, err := interpreter.NewInterpreter(
 			interpreter.ProgramFromChecker(checker),
 			checker.Location,
+			interpreter.WithUUIDHandler(func() (uint64, error) {
+				uuid++
+				return uuid, nil
+			}),
 			interpreter.WithStorage(interpreter.NewInMemoryStorage(nil)),
 			interpreter.WithAtreeValueValidationEnabled(true),
 			interpreter.WithAtreeStorageValidationEnabled(true),
@@ -91,7 +166,8 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		_, err = inter.Invoke("main")
+		account := newTestAuthAccountValue(inter, interpreter.AddressValue{})
+		_, err = inter.Invoke("main", account)
 		if err != nil {
 			panic(err)
 		}
@@ -108,7 +184,8 @@ func main() {
 		fmt.Printf("Actual Memory: %d\n", allocs)
 		fmt.Println("--------------------")
 		abstract_measurements = append(abstract_measurements, measurements)
-		concrete_measurements = append(concrete_measurements, float64(allocs))
+		// round up memory measurement
+		concrete_measurements = append(concrete_measurements, float64((allocs/1000)*1000))
 		totalAlloc = m.TotalAlloc
 
 	}
@@ -139,7 +216,11 @@ func main() {
 	a := mat.NewDense(len(abstract_measurements), len(memory_kinds)+1, v)
 	b := mat.NewVecDense(len(concrete_measurements), concrete_measurements)
 	x := mat.NewVecDense(len(memory_kinds)+1, nil)
-	x.SolveVec(a, b)
+	err := x.SolveVec(a, b)
+
+	if err != nil {
+		panic(err)
+	}
 
 	weights := x.RawVector().Data
 	for i, kind := range memory_kinds {

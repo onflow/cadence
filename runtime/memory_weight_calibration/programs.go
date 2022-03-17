@@ -1,7 +1,21 @@
 package main
 
+var empty_test = `
+pub fun main(account: AuthAccount) {}
+`
+
+var void_test = `
+pub fun main(account: AuthAccount) {
+	var i = 0
+	while i < 10000 {
+		let x = [1].append(3)
+		i = i + 1
+	}
+}
+`
+
 var bool_test = `
-pub fun main() {
+pub fun main(account: AuthAccount) {
 	var i = 0
 	while i < 10000 {
 		let b = true || false
@@ -11,17 +25,17 @@ pub fun main() {
 `
 
 var nil_test = `
-pub fun main() {
+pub fun main(account: AuthAccount) {
 	var i = 0
 	while i < 10000 {
-		let v = nil ?? nil
+		let v = nil
 		i = i + 1
 	}
 }
 `
 
 var string_test = `
-pub fun main() {
+pub fun main(account: AuthAccount) {
 	var i = 0
 	while i < 10000 {
 		let v = "x".toLower()
@@ -31,7 +45,7 @@ pub fun main() {
 `
 
 var char_test = `
-pub fun main() {
+pub fun main(account: AuthAccount) {
 	var i = 0
 	while i < 10000 {
 		let v: Character = "x"[0]
@@ -41,7 +55,7 @@ pub fun main() {
 `
 
 var ephemeral_ref_test = `
-pub fun main() {
+pub fun main(account: AuthAccount) {
 	var i: Int64 = 0
 	while i < 10000 {
 		let v = &i as &Int64
@@ -51,7 +65,7 @@ pub fun main() {
 `
 
 var int_test = `
-pub fun main() {
+pub fun main(account: AuthAccount) {
 	var i = 0
 	while i < 10000 {
 		let v = 1 + 1
@@ -60,38 +74,28 @@ pub fun main() {
 }
 `
 
-var float_test = `
-pub fun main() {
+/*var float_test = `
+pub fun main(account: AuthAccount) {
 	var i = 0
 	while i < 10000 {
 		let v = 3.2 + 1.1
 		i = i + 1
 	}
 }
-`
+`*/
 
-var meta_type_test = `
-pub fun main() {
+/* var meta_type_test = `
+pub fun main(account: AuthAccount) {
 	var i = 0
 	while i < 10000 {
 		let t = i.getType()
 		i = i + 1
 	}
 }
-`
-
-/*var block_test = `
-pub fun main() {
-	var i = 0
-	while i < 10000 {
-		let t = {}
-		i = i + 1
-	}
-}
-`*/
+` */
 
 var path_test = `
-pub fun main() {
+pub fun main(account: AuthAccount) {
 	var i = 0
 	while i < 10000 {
 		let t: StoragePath = /storage/foo
@@ -101,7 +105,7 @@ pub fun main() {
 `
 
 var address_test = `
-pub fun main() {
+pub fun main(account: AuthAccount) {
 	var i = 0
 	while i < 10000 {
 		let t: Address = 0x1
@@ -110,18 +114,8 @@ pub fun main() {
 }
 `
 
-/*var link_test = `
-pub fun main() {
-	var i = 0
-	while i < 10000 {
-		let t = Link<Int>(/storage/foo)
-		i = i + 1
-	}
-}
-`*/
-
 var dict_test = `
-pub fun main() {
+pub fun main(account: AuthAccount) {
 	var i = 0
 	while i < 10000 {
 		let v: {String: String} = {}
@@ -131,7 +125,7 @@ pub fun main() {
 `
 
 var array_test = `
-pub fun main() {
+pub fun main(account: AuthAccount) {
 	var i = 0
 	while i < 10000 {
 		let a: [Int8] = []
@@ -141,7 +135,7 @@ pub fun main() {
 `
 
 var iteration_test = `
-pub fun main() {
+pub fun main(account: AuthAccount) {
 	var i = 0
 	var a: [String] = []
 	while i < 10000 {
@@ -157,7 +151,7 @@ pub fun main() {
 var composite_test = `
 pub struct S {}
 
-pub fun main() {
+pub fun main(account: AuthAccount) {
 	var i = 0
 	while i < 10000 {
 		let s = S()
@@ -174,7 +168,7 @@ pub struct S {
 	}
 }
 
-pub fun main() {
+pub fun main(account: AuthAccount) {
 	var i = 0
 	while i < 10000 {
 		let s = S(x: false)
@@ -184,7 +178,7 @@ pub fun main() {
 `
 
 var optional_test = `
-pub fun main() {
+pub fun main(account: AuthAccount) {
 	var i = 0
 	while i < 10000 {
 		let b: Bool? = true
@@ -194,7 +188,7 @@ pub fun main() {
 `
 
 var function_test = `
-pub fun main() {
+pub fun main(account: AuthAccount) {
 	var i = 0
 	while i < 10000 {
 		let f = fun() {}
@@ -207,7 +201,7 @@ var bound_function_test = `
 pub struct S {
 	fun foo() {}
 }
-pub fun main() {
+pub fun main(account: AuthAccount) {
 	var i = 0
 	while i < 10000 {
 		let s = S()
@@ -217,28 +211,78 @@ pub fun main() {
 }
 `
 
+var link_test = `
+resource R {}
+pub fun main(account: AuthAccount) {
+	var i = 0
+	let r <- create R()
+	account.save(<-r, to: /storage/r)
+	while i < 10000 {
+		let p = PublicPath(identifier: "capo".concat(i.toString()))!
+		let x = account.link<&R>(p, target: /storage/r)
+		i = i + 1 
+	}
+}
+`
+
+var capability_test = `
+resource R {}
+pub fun main(account: AuthAccount) {
+	var i = 0
+	while i < 10000 {
+		let x = account.getCapability<&R>(/public/capo)
+		i = i + 1
+	}
+}
+`
+
+var storage_ref_test = `
+resource R {}
+
+pub fun main(account: AuthAccount) {
+	var i = 0
+	while i < 10000 {
+		account.borrow<&R>(from: /storage/r)
+		i = i + 1
+	}
+}
+`
+
+var bitwise_test = `
+pub fun main(account: AuthAccount) {
+	var i = 0
+	while i < 10000 {
+		let x = 10 as Word64 << 2 as Word64
+		i = i + 1
+	}
+}`
+
 var test_programs = []struct {
 	name string
 	code string
 }{
+	{name: "empty", code: empty_test},
 	{name: "bool", code: bool_test},
 	{name: "nil", code: nil_test},
 	{name: "string", code: string_test},
 	{name: "char", code: char_test},
 	{name: "int", code: int_test},
-	{name: "float", code: float_test},
+	//{name: "float", code: float_test},
 	{name: "path", code: path_test},
 	{name: "address", code: address_test},
 	{name: "function", code: function_test},
-	//{name: "link", code: link_test},
 	{name: "ephemeral ref", code: ephemeral_ref_test},
-	{name: "meta type", code: meta_type_test},
-	//{name: "block", code: block_test},
+	// {name: "meta type", code: meta_type_test},
 	{name: "array", code: array_test},
 	{name: "dict", code: dict_test},
 	{name: "optional bool", code: optional_test},
 	{name: "empty composite", code: composite_test},
 	{name: "bound function", code: bound_function_test},
+	{name: "link", code: link_test},
+	{name: "capability", code: capability_test},
+	{name: "storage ref", code: storage_ref_test},
+	{name: "bitwise", code: bitwise_test},
+	{name: "void", code: void_test},
 	{name: "iteration", code: iteration_test},
 	{name: "composite with field", code: composite_field_test},
 }
