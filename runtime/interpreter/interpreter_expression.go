@@ -445,7 +445,7 @@ func (interpreter *Interpreter) VisitIntegerExpression(expression *ast.IntegerEx
 	if _, ok := typ.(*sema.AddressType); ok {
 		return NewAddressValueFromBytes(
 			interpreter,
-			value.Bytes,
+			value.Bytes(),
 		)
 	}
 
