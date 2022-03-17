@@ -752,6 +752,8 @@ func checkEncodedAddressLength(addressBytes []byte) error {
 }
 
 func (d StorableDecoder) decodeAddress() (AddressValue, error) {
+	common.UseConstantMemory(d.memoryGauge, common.MemoryKindAddress)
+
 	addressBytes, err := d.decoder.DecodeBytes()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -768,10 +770,8 @@ func (d StorableDecoder) decodeAddress() (AddressValue, error) {
 		return AddressValue{}, err
 	}
 
-	address := NewAddressValueFromBytes(
-		d.memoryGauge,
-		addressBytes,
-	)
+	// metered at start of method
+	address := NewUnmeteredAddressValue(addressBytes)
 	return address, nil
 }
 
@@ -999,10 +999,6 @@ func (d StorableDecoder) decodeType() (TypeValue, error) {
 
 	if err != nil {
 		return EmptyTypeValue, fmt.Errorf("invalid type encoding: %w", err)
-	}
-
-	if staticType == nil {
-		return EmptyTypeValue, nil
 	}
 
 	return NewUnmeteredTypeValue(staticType), nil
