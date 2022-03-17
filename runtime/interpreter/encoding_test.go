@@ -2497,7 +2497,7 @@ func TestEncodeDecodeFix64Value(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: Fix64Value(0),
+				value: NewUnmeteredFix64Value(0),
 				encoded: []byte{
 					// tag
 					0xd8, CBORTagFix64Value,
@@ -2513,7 +2513,7 @@ func TestEncodeDecodeFix64Value(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: Fix64Value(-42),
+				value: NewUnmeteredFix64Value(-42),
 				encoded: []byte{
 					// tag
 					0xd8, CBORTagFix64Value,
@@ -2530,7 +2530,7 @@ func TestEncodeDecodeFix64Value(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: Fix64Value(42),
+				value: NewUnmeteredFix64Value(42),
 				encoded: []byte{
 					// tag
 					0xd8, CBORTagFix64Value,
@@ -2547,7 +2547,7 @@ func TestEncodeDecodeFix64Value(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: Fix64Value(math.MinInt64),
+				value: NewUnmeteredFix64Value(math.MinInt64),
 				encoded: []byte{
 					// tag
 					0xd8, CBORTagFix64Value,
@@ -2581,7 +2581,7 @@ func TestEncodeDecodeFix64Value(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: Fix64Value(math.MaxInt64),
+				value: NewUnmeteredFix64Value(math.MaxInt64),
 				encoded: []byte{
 					// tag
 					0xd8, CBORTagFix64Value,
@@ -2621,7 +2621,7 @@ func TestEncodeDecodeUFix64Value(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: UFix64Value(0),
+				value: NewUnmeteredUFix64Value(0),
 				encoded: []byte{
 					// tag
 					0xd8, CBORTagUFix64Value,
@@ -2654,7 +2654,7 @@ func TestEncodeDecodeUFix64Value(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: UFix64Value(42),
+				value: NewUnmeteredUFix64Value(42),
 				encoded: []byte{
 					// tag
 					0xd8, CBORTagUFix64Value,
@@ -2671,7 +2671,7 @@ func TestEncodeDecodeUFix64Value(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: UFix64Value(math.MaxUint64),
+				value: NewUnmeteredUFix64Value(math.MaxUint64),
 				encoded: []byte{
 					// tag
 					0xd8, CBORTagUFix64Value,

@@ -496,9 +496,9 @@ func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedTy
 	case cadence.Word64:
 		return importWord64(inter, v), nil
 	case cadence.Fix64:
-		return interpreter.Fix64Value(v), nil
+		return importFix64(inter, v), nil
 	case cadence.UFix64:
-		return interpreter.UFix64Value(v), nil
+		return importUFix64(inter, v), nil
 	case cadence.Path:
 		return importPathValue(inter, v), nil
 	case cadence.Array:
@@ -720,6 +720,24 @@ func importWord32(inter *interpreter.Interpreter, v cadence.Word32) interpreter.
 
 func importWord64(inter *interpreter.Interpreter, v cadence.Word64) interpreter.Word64Value {
 	return interpreter.NewWord64Value(
+		inter,
+		func() uint64 {
+			return uint64(v)
+		},
+	)
+}
+
+func importFix64(inter *interpreter.Interpreter, v cadence.Fix64) interpreter.Fix64Value {
+	return interpreter.NewFix64Value(
+		inter,
+		func() int64 {
+			return int64(v)
+		},
+	)
+}
+
+func importUFix64(inter *interpreter.Interpreter, v cadence.UFix64) interpreter.UFix64Value {
+	return interpreter.NewUFix64Value(
 		inter,
 		func() uint64 {
 			return uint64(v)

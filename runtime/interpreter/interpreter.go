@@ -2289,12 +2289,12 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 
 	case sema.Fix64Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertFix64(value)
+			return ConvertFix64(interpreter, value)
 		}
 
 	case sema.UFix64Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertUFix64(value)
+			return ConvertUFix64(interpreter, value)
 		}
 	}
 
@@ -2888,20 +2888,20 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.Fix64TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Fix64Type),
-		convert: func(_ *Interpreter, value Value) Value {
-			return ConvertFix64(value)
+		convert: func(interpreter *Interpreter, value Value) Value {
+			return ConvertFix64(interpreter, value)
 		},
-		min: Fix64Value(math.MinInt64),
-		max: Fix64Value(math.MaxInt64),
+		min: NewUnmeteredFix64Value(math.MinInt64),
+		max: NewUnmeteredFix64Value(math.MaxInt64),
 	},
 	{
 		name:         sema.UFix64TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.UFix64Type),
-		convert: func(_ *Interpreter, value Value) Value {
-			return ConvertUFix64(value)
+		convert: func(interpreter *Interpreter, value Value) Value {
+			return ConvertUFix64(interpreter, value)
 		},
-		min: UFix64Value(0),
-		max: UFix64Value(math.MaxUint64),
+		min: NewUnmeteredUFix64Value(0),
+		max: NewUnmeteredUFix64Value(math.MaxUint64),
 	},
 	{
 		name:         sema.AddressTypeName,

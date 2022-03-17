@@ -552,14 +552,14 @@ func (interpreter *Interpreter) VisitFixedPointExpression(expression *ast.FixedP
 	)
 	switch fixedPointSubType {
 	case sema.Fix64Type, sema.SignedFixedPointType:
-		return Fix64Value(value.Int64())
+		return NewFix64Value(interpreter, value.Int64)
 	case sema.UFix64Type:
-		return UFix64Value(value.Uint64())
+		return NewUFix64Value(interpreter, value.Uint64)
 	case sema.FixedPointType:
 		if expression.Negative {
-			return Fix64Value(value.Int64())
+			return NewUnmeteredFix64Value(value.Int64())
 		} else {
-			return UFix64Value(value.Uint64())
+			return NewUnmeteredUFix64Value(value.Uint64())
 		}
 	default:
 		panic(errors.NewUnreachableError())
