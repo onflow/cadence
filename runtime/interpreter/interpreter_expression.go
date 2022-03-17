@@ -922,7 +922,8 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 					interpreter,
 					innerBorrowType.Authorized,
 					result.InnerValue(interpreter, getLocationRange),
-					innerBorrowType.Type),
+					innerBorrowType.Type,
+				),
 			)
 		case NilValue:
 			return NewNilValue(interpreter)
