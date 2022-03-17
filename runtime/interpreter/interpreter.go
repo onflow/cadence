@@ -1903,7 +1903,7 @@ func EnumConstructorFunction(
 
 			caseValue, ok := lookupTable[string(rawValueArgumentBigEndianBytes)]
 			if !ok {
-				return NewNilValue(inter.memoryGauge)
+				return NewNilValue(inter)
 			}
 
 			return NewSomeValueNonCopying(invocation.Interpreter, caseValue)
@@ -3987,8 +3987,8 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 
 			borrowStaticType := ConvertSemaToStaticType(borrowType)
 
-			// Unmetered here because interpreter.writeStored(...) meters it
-			linkValue := NewUnmeteredLinkValue(targetPath, borrowStaticType)
+			// Note that this will be metered twice if Atree validation is enabled.
+			linkValue := NewLinkValue(interpreter, targetPath, borrowStaticType)
 
 			interpreter.writeStored(
 				address,
