@@ -184,8 +184,7 @@ func main() {
 		fmt.Printf("Actual Memory: %d\n", allocs)
 		fmt.Println("--------------------")
 		abstract_measurements = append(abstract_measurements, measurements)
-		// round up memory measurement
-		concrete_measurements = append(concrete_measurements, float64((allocs/1000)*1000))
+		concrete_measurements = append(concrete_measurements, float64(allocs))
 		totalAlloc = m.TotalAlloc
 
 	}
