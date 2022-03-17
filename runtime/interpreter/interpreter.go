@@ -1903,7 +1903,7 @@ func EnumConstructorFunction(
 
 			caseValue, ok := lookupTable[string(rawValueArgumentBigEndianBytes)]
 			if !ok {
-				return NewNilValue(inter.memoryGauge)
+				return NewNilValue(inter)
 			}
 
 			return NewSomeValueNonCopying(invocation.Interpreter, caseValue)
