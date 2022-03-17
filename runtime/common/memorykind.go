@@ -36,6 +36,14 @@ const (
 	MemoryKindDictionary
 	MemoryKindComposite
 	MemoryKindOptional
+	MemoryKindNil
+	MemoryKindVoid
+	MemoryKindTypeValue
+	MemoryKindPathValue
+	MemoryKindCapabilityValue
+	MemoryKindLinkValue
+	MemoryKindStorageReferenceValue
+	MemoryKindEphemeralReferenceValue
 	MemoryKindInterpretedFunction
 	MemoryKindHostFunction
 	MemoryKindBoundFunction

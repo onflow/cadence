@@ -6036,3 +6036,415 @@ func TestInterpretWord64Metering(t *testing.T) {
 		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindNumber))
 	})
 }
+
+func TestInterpretBoolMetering(t *testing.T) {
+	t.Parallel()
+
+	t.Run("creation", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let x: Bool = true
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindBool))
+	})
+
+	t.Run("negation", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+				!true
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindBool))
+	})
+
+	t.Run("equality, true", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+				true == true
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindBool))
+	})
+
+	t.Run("equality, false", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+				true == false
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindBool))
+	})
+
+	t.Run("inequality", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+				true != false
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindBool))
+	})
+}
+
+func TestInterpretNilMetering(t *testing.T) {
+	t.Parallel()
+
+	t.Run("creation", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let x: Bool? = nil
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindNil))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBool))
+	})
+}
+
+func TestInterpretVoidMetering(t *testing.T) {
+	t.Parallel()
+
+	t.Run("returnless function", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindVoid))
+	})
+
+	t.Run("returning function", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main(): Bool {
+				return true
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindVoid))
+	})
+}
+
+func TestInterpretStorageReferenceValueMetering(t *testing.T) {
+	t.Parallel()
+
+	t.Run("creation", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+              resource R {}
+
+              pub fun main(account: AuthAccount) {
+                  account.borrow<&R>(from: /storage/r)
+              }
+            `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		account := newTestAuthAccountValue(inter, interpreter.AddressValue{})
+		_, err := inter.Invoke("main", account)
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindStorageReferenceValue))
+	})
+}
+
+func TestInterpretEphemeralReferenceValueMetering(t *testing.T) {
+	t.Parallel()
+
+	t.Run("creation", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		  resource R {}
+
+          pub fun main(): &Int {
+              let x: Int = 1
+              let y = &x as &Int
+              return y
+          }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindEphemeralReferenceValue))
+	})
+
+	t.Run("creation, optional", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		  resource R {}
+
+          pub fun main(): &Int {
+              let x: Int? = 1
+              let y = &x as &Int?
+              return y!
+          }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindEphemeralReferenceValue))
+	})
+}
+
+func TestInterpretCharacterMetering(t *testing.T) {
+	t.Parallel()
+
+	t.Run("creation", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let x: Character = "a"
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		// The lexer meters the literal "a" as a string.
+		// To avoid double-counting, it is NOT metered as a Character as well.
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindCharacter))
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindString))
+	})
+
+	t.Run("assignment", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let x: Character = "a"
+				let y = x
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		// The lexer meters the literal "a" as a string.
+		// To avoid double-counting, it is NOT metered as a Character as well.
+		// Since characters are immutable, assigning them also does not allocate memory for them.
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindCharacter))
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindString))
+	})
+
+	t.Run("from string GetKey", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let x: String = "a"
+				let y: Character = x[0]
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCharacter))
+	})
+}
+
+func TestInterpretAddressValueMetering(t *testing.T) {
+	t.Parallel()
+
+	t.Run("creation", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let x: Address = 0x0
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindAddress))
+	})
+
+	t.Run("convert", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let x = Address(0x0)
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindAddress))
+	})
+}
+
+func TestInterpretPathValueMetering(t *testing.T) {
+	t.Parallel()
+
+	t.Run("creation", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+				let x = /public/bar
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindPathValue))
+	})
+
+	t.Run("convert", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+				let x = PublicPath(identifier: "bar")
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindPathValue))
+	})
+}
+
+func TestInterpretCapabilityValueMetering(t *testing.T) {
+	t.Parallel()
+
+	t.Run("creation", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+			resource R {}
+
+            pub fun main(account: AuthAccount) {
+				let r <- create R()
+				account.save(<-r, to: /storage/r)
+				let x = account.link<&R>(/public/capo, target: /storage/r)
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		account := newTestAuthAccountValue(inter, interpreter.AddressValue{})
+		_, err := inter.Invoke("main", account)
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCapabilityValue))
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindPathValue))
+	})
+}
+
+func TestInterpretLinkValueMetering(t *testing.T) {
+	t.Parallel()
+
+	t.Run("creation", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+			resource R {}
+
+            pub fun main(account: AuthAccount) {
+				account.link<&R>(/public/capo, target: /private/p)
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		account := newTestAuthAccountValue(inter, interpreter.AddressValue{})
+		_, err := inter.Invoke("main", account)
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindLinkValue))
+	})
+}

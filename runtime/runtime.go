@@ -632,9 +632,13 @@ func (r *interpreterRuntime) convertArgument(
 	case sema.AuthAccountType:
 		// convert addresses to auth accounts so there is no need to construct an auth account value for the caller
 		if addressValue, ok := argument.(interpreter.AddressValue); ok {
+			address := addressValue.ToAddress()
 			return r.newAuthAccountValue(
 				inter,
-				interpreter.NewAddressValue(addressValue.ToAddress()),
+				interpreter.NewAddressValue(
+					inter,
+					address,
+				),
 				context,
 				storage,
 				interpreterOptions,
@@ -644,9 +648,13 @@ func (r *interpreterRuntime) convertArgument(
 	case sema.PublicAccountType:
 		// convert addresses to public accounts so there is no need to construct a public account value for the caller
 		if addressValue, ok := argument.(interpreter.AddressValue); ok {
+			address := addressValue.ToAddress()
 			return r.getPublicAccount(
 				inter,
-				interpreter.NewAddressValue(addressValue.ToAddress()),
+				interpreter.NewAddressValue(
+					inter,
+					address,
+				),
 				context.Interface,
 				storage,
 			)
@@ -742,7 +750,10 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 		for i, address := range authorizers {
 			authorizerValues[i] = r.newAuthAccountValue(
 				inter,
-				interpreter.NewAddressValue(address),
+				interpreter.NewAddressValue(
+					inter,
+					address,
+				),
 				context,
 				storage,
 				interpreterOptions,
@@ -1535,7 +1546,10 @@ func (r *interpreterRuntime) injectedCompositeFieldsHandler(
 					panic(runtimeErrors.NewUnreachableError())
 				}
 
-				addressValue := interpreter.NewAddressValue(address)
+				addressValue := interpreter.NewAddressValue(
+					inter,
+					address,
+				)
 
 				return map[string]interpreter.Value{
 					"account": r.newAuthAccountValue(
@@ -1770,7 +1784,10 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 			panic(err)
 		}
 
-		addressValue := interpreter.NewAddressValue(address)
+		addressValue := interpreter.NewAddressValue(
+			invocation.Interpreter,
+			address,
+		)
 
 		r.emitAccountEvent(
 			stdlib.AccountCreatedEventType,
@@ -1934,7 +1951,7 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 				},
 			)
 
-			return interpreter.VoidValue{}
+			return interpreter.NewVoidValue(invocation.Interpreter)
 		},
 		sema.AuthAccountTypeAddPublicKeyFunctionType,
 	)
@@ -1982,7 +1999,7 @@ func (r *interpreterRuntime) newRemovePublicKeyFunction(
 				},
 			)
 
-			return interpreter.VoidValue{}
+			return interpreter.NewVoidValue(invocation.Interpreter)
 		},
 		sema.AuthAccountTypeRemovePublicKeyFunctionType,
 	)
@@ -2261,7 +2278,7 @@ func (r *interpreterRuntime) newLogFunction(runtimeInterface Interface) interpre
 		if err != nil {
 			panic(err)
 		}
-		return interpreter.VoidValue{}
+		return interpreter.NewVoidValue(invocation.Interpreter)
 	}
 }
 
@@ -2339,7 +2356,7 @@ func (r *interpreterRuntime) newGetBlockFunction(runtimeInterface Interface) int
 		}
 
 		if block == nil {
-			return interpreter.NilValue{}
+			return interpreter.NewNilValue(invocation.Interpreter)
 		}
 
 		return interpreter.NewSomeValueNonCopying(invocation.Interpreter, block)
@@ -2868,7 +2885,7 @@ func (r *interpreterRuntime) newAccountContractsGetFunction(
 					),
 				)
 			} else {
-				return interpreter.NilValue{}
+				return interpreter.NewNilValue(invocation.Interpreter)
 			}
 		},
 		sema.AuthAccountContractsTypeGetFunctionType,
@@ -2974,7 +2991,7 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 					),
 				)
 			} else {
-				return interpreter.NilValue{}
+				return interpreter.NewNilValue(invocation.Interpreter)
 			}
 		},
 		sema.AuthAccountContractsTypeRemoveFunctionType,
@@ -3086,7 +3103,7 @@ func (r *interpreterRuntime) ReadStored(
 
 	return r.executeNonProgram(
 		func(inter *interpreter.Interpreter) (interpreter.Value, error) {
-			pathValue := importPathValue(path)
+			pathValue := importPathValue(inter, path)
 
 			domain := pathValue.Domain.Identifier()
 			identifier := pathValue.Identifier
@@ -3118,7 +3135,7 @@ func (r *interpreterRuntime) ReadLinked(
 		func(inter *interpreter.Interpreter) (interpreter.Value, error) {
 			targetPath, _, err := inter.GetCapabilityFinalTargetPath(
 				address,
-				importPathValue(path),
+				importPathValue(inter, path),
 				&sema.ReferenceType{
 					Type: sema.AnyType,
 				},
@@ -3289,7 +3306,7 @@ func (r *interpreterRuntime) newAccountKeysGetFunction(
 			// This is done because, if the host function returns an error when a key is not found, then
 			// currently there's no way to distinguish between a 'key not found error' vs other internal errors.
 			if accountKey == nil {
-				return interpreter.NilValue{}
+				return interpreter.NewNilValue(invocation.Interpreter)
 			}
 
 			inter := invocation.Interpreter
@@ -3339,7 +3356,7 @@ func (r *interpreterRuntime) newAccountKeysRevokeFunction(
 			// This is done because, if the host function returns an error when a key is not found, then
 			// currently there's no way to distinguish between a 'key not found error' vs other internal errors.
 			if accountKey == nil {
-				return interpreter.NilValue{}
+				return interpreter.NewNilValue(invocation.Interpreter)
 			}
 
 			inter := invocation.Interpreter

@@ -446,19 +446,19 @@ func exportEvent(event exportableEvent, seenReferences seenReferences) (cadence.
 func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedType sema.Type) (interpreter.Value, error) {
 	switch v := value.(type) {
 	case cadence.Void:
-		return interpreter.VoidValue{}, nil
+		return interpreter.NewVoidValue(inter), nil
 	case cadence.Optional:
 		return importOptionalValue(inter, v, expectedType)
 	case cadence.Bool:
-		return interpreter.BoolValue(v), nil
+		return interpreter.NewBoolValue(inter, bool(v)), nil
 	case cadence.String:
 		return importString(inter, v), nil
 	case cadence.Character:
-		return interpreter.NewCharacterValue(string(v)), nil
+		return importCharacter(inter, v), nil
 	case cadence.Bytes:
 		return interpreter.ByteSliceToByteArrayValue(inter, v), nil
 	case cadence.Address:
-		return interpreter.NewAddressValue(common.Address(v)), nil
+		return importAddress(inter, v), nil
 	case cadence.Int:
 		return importInt(inter, v), nil
 	case cadence.Int8:
@@ -500,7 +500,7 @@ func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedTy
 	case cadence.UFix64:
 		return interpreter.UFix64Value(v), nil
 	case cadence.Path:
-		return importPathValue(v), nil
+		return importPathValue(inter, v), nil
 	case cadence.Array:
 		return importArrayValue(inter, v, expectedType)
 	case cadence.Dictionary:
@@ -738,11 +738,34 @@ func importString(inter *interpreter.Interpreter, v cadence.String) *interpreter
 	)
 }
 
-func importPathValue(v cadence.Path) interpreter.PathValue {
-	return interpreter.PathValue{
-		Domain:     common.PathDomainFromIdentifier(v.Domain),
-		Identifier: v.Identifier,
-	}
+func importCharacter(inter *interpreter.Interpreter, v cadence.Character) interpreter.CharacterValue {
+	s := string(v)
+	memoryUsage := common.NewCharacterMemoryUsage(len(s))
+	return interpreter.NewCharacterValue(
+		inter,
+		memoryUsage,
+		func() string {
+			return s
+		},
+	)
+}
+
+func importAddress(inter *interpreter.Interpreter, v cadence.Address) interpreter.AddressValue {
+	return interpreter.NewAddressValue(
+		inter,
+		common.Address(v),
+	)
+}
+
+func importPathValue(inter *interpreter.Interpreter, v cadence.Path) interpreter.PathValue {
+	// meter the Path's Identifier since path is just a container
+	common.UseMemory(inter, common.NewStringMemoryUsage(len(v.Identifier)))
+
+	return interpreter.NewPathValue(
+		inter,
+		common.PathDomainFromIdentifier(v.Domain),
+		v.Identifier,
+	)
 }
 
 func importTypeValue(
@@ -759,16 +782,15 @@ func importTypeValue(
 	   import is invalid */
 	_, err := inter.ConvertStaticToSemaType(typ)
 	if err != nil {
-		return interpreter.TypeValue{}, err
+		// unmetered because when err != nil, value should be ignored
+		return interpreter.EmptyTypeValue, err
 	}
 
-	return interpreter.TypeValue{
-		Type: typ,
-	}, nil
+	return interpreter.NewUnmeteredTypeValue(typ), nil
 }
 
 func importCapability(
-	_ *interpreter.Interpreter,
+	inter *interpreter.Interpreter,
 	path cadence.Path,
 	address cadence.Address,
 	borrowType cadence.Type,
@@ -786,11 +808,15 @@ func importCapability(
 		)
 	}
 
-	return &interpreter.CapabilityValue{
-		Path:       importPathValue(path),
-		Address:    interpreter.NewAddressValueFromBytes(address.Bytes()),
-		BorrowType: ImportType(borrowType),
-	}, nil
+	return interpreter.NewCapabilityValue(
+		inter,
+		interpreter.NewAddressValue(
+			inter,
+			common.Address(address),
+		),
+		importPathValue(inter, path),
+		ImportType(borrowType),
+	), nil
 
 }
 
@@ -803,7 +829,7 @@ func importOptionalValue(
 	error,
 ) {
 	if v.Value == nil {
-		return interpreter.NilValue{}, nil
+		return interpreter.NewNilValue(inter), nil
 	}
 
 	var innerType sema.Type

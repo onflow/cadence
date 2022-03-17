@@ -389,10 +389,10 @@ func (interpreter *Interpreter) testEqual(left, right Value, expression *ast.Bin
 
 	leftEquatable, ok := left.(EquatableValue)
 	if !ok {
-		return false
+		return NewBoolValue(interpreter, false)
 	}
 
-	return BoolValue(leftEquatable.Equal(
+	return NewBoolValue(interpreter, leftEquatable.Equal(
 		interpreter,
 		locationRangeGetter(interpreter.Location, expression),
 		right,
@@ -408,7 +408,7 @@ func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpres
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
-		return boolValue.Negate()
+		return boolValue.Negate(interpreter)
 
 	case ast.OperationMinus:
 		integerValue, ok := value.(NumberValue)
@@ -430,11 +430,11 @@ func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpres
 }
 
 func (interpreter *Interpreter) VisitBoolExpression(expression *ast.BoolExpression) ast.Repr {
-	return BoolValue(expression.Value)
+	return NewBoolValue(interpreter, expression.Value)
 }
 
 func (interpreter *Interpreter) VisitNilExpression(_ *ast.NilExpression) ast.Repr {
-	return NilValue{}
+	return NewNilValue(interpreter)
 }
 
 func (interpreter *Interpreter) VisitIntegerExpression(expression *ast.IntegerExpression) ast.Repr {
@@ -443,7 +443,8 @@ func (interpreter *Interpreter) VisitIntegerExpression(expression *ast.IntegerEx
 	value := expression.Value
 
 	if _, ok := typ.(*sema.AddressType); ok {
-		return NewAddressValueFromBytes(value.Bytes())
+		common.UseConstantMemory(interpreter, common.MemoryKindAddress)
+		return NewUnmeteredAddressValue(value.Bytes())
 	}
 
 	// The ranges are checked at the checker level.
@@ -570,7 +571,7 @@ func (interpreter *Interpreter) VisitStringExpression(expression *ast.StringExpr
 
 	switch stringType {
 	case sema.CharacterType:
-		return NewCharacterValue(expression.Value)
+		return NewUnmeteredCharacterValue(expression.Value)
 	}
 
 	// NOTE: already metered in lexer/parser
@@ -840,7 +841,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 		switch expression.Operation {
 		case ast.OperationFailableCast:
 			if !isSubType {
-				return NilValue{}
+				return NewNilValue(interpreter)
 			}
 
 			// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
@@ -887,7 +888,7 @@ func (interpreter *Interpreter) VisitDestroyExpression(expression *ast.DestroyEx
 
 	value.(ResourceKindedValue).Destroy(interpreter, getLocationRange)
 
-	return VoidValue{}
+	return NewVoidValue(interpreter)
 }
 
 func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *ast.ReferenceExpression) ast.Repr {
@@ -915,27 +916,25 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 
 			return NewSomeValueNonCopying(
 				interpreter,
-				&EphemeralReferenceValue{
-					Authorized:   innerBorrowType.Authorized,
-					Value:        result.InnerValue(interpreter, getLocationRange),
-					BorrowedType: innerBorrowType.Type,
-				},
+				NewEphemeralReferenceValue(
+					interpreter,
+					innerBorrowType.Authorized,
+					result.InnerValue(interpreter, getLocationRange),
+					innerBorrowType.Type,
+				),
 			)
 		case NilValue:
-			return NilValue{}
+			return NewNilValue(interpreter)
 		default:
-			return &EphemeralReferenceValue{
-				Authorized:   innerBorrowType.Authorized,
-				Value:        result,
-				BorrowedType: innerBorrowType.Type,
-			}
+			return NewEphemeralReferenceValue(
+				interpreter,
+				innerBorrowType.Authorized,
+				result,
+				innerBorrowType.Type,
+			)
 		}
 	case *sema.ReferenceType:
-		return &EphemeralReferenceValue{
-			Authorized:   typ.Authorized,
-			Value:        result,
-			BorrowedType: typ.Type,
-		}
+		return NewEphemeralReferenceValue(interpreter, typ.Authorized, result, typ.Type)
 	}
 	panic(errors.NewUnreachableError())
 }
@@ -969,8 +968,12 @@ func (interpreter *Interpreter) VisitForceExpression(expression *ast.ForceExpres
 func (interpreter *Interpreter) VisitPathExpression(expression *ast.PathExpression) ast.Repr {
 	domain := common.PathDomainFromIdentifier(expression.Domain.Identifier)
 
-	return PathValue{
-		Domain:     domain,
-		Identifier: expression.Identifier.Identifier,
-	}
+	// meter the Path's Identifier since path is just a container
+	common.UseMemory(interpreter, common.NewStringMemoryUsage(len(expression.Identifier.Identifier)))
+
+	return NewPathValue(
+		interpreter,
+		domain,
+		expression.Identifier.Identifier,
+	)
 }
