@@ -430,7 +430,7 @@ func TestMemoryMeteringErrors(t *testing.T) {
 	})
 }
 
-func TestImportedValueMemoryMeteringIterate(t *testing.T) {
+func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 
 	t.Parallel()
 

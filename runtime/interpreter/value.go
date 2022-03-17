@@ -16841,7 +16841,7 @@ func (v AddressValue) Transfer(
 }
 
 func (v AddressValue) Clone(_ *Interpreter) Value {
-	return NewUnmeteredAddressValue(v[:])
+	return v
 }
 
 func (AddressValue) DeepRemove(_ *Interpreter) {
