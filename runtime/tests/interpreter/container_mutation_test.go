@@ -895,10 +895,7 @@ func TestDictionaryMutation(t *testing.T) {
 
 		owner := newTestPublicAccountValue(
 			inter,
-			interpreter.NewAddressValue(
-				inter,
-				common.Address{0x1},
-			),
+			interpreter.NewUnmeteredAddressValue(common.Address{0x1}),
 		)
 
 		_, err := inter.Invoke("test", owner)
