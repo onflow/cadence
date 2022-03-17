@@ -66,6 +66,21 @@ func (e InvalidStringLengthError) Error() string {
 	)
 }
 
+func decodeCharacter(dec *cbor.StreamDecoder, memoryGauge common.MemoryGauge) (string, error) {
+	length, err := dec.NextSize()
+	if err != nil {
+		return "", err
+	}
+	if length > goMaxInt {
+		return "", InvalidStringLengthError{
+			Length: length,
+		}
+	}
+
+	common.UseMemory(memoryGauge, common.NewCharacterMemoryUsage(int(length)))
+	return dec.DecodeString()
+}
+
 func decodeString(dec *cbor.StreamDecoder, memoryGauge common.MemoryGauge) (string, error) {
 	length, err := dec.NextSize()
 	if err != nil {
@@ -135,18 +150,20 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 	// CBOR Types
 
 	case cbor.BoolType:
+		common.UseConstantMemory(d.memoryGauge, common.MemoryKindBool)
 		v, err := d.decoder.DecodeBool()
 		if err != nil {
 			return nil, err
 		}
-		storable = BoolValue(v)
+		storable = NewUnmeteredBoolValue(v)
 
 	case cbor.NilType:
+		common.UseConstantMemory(d.memoryGauge, common.MemoryKindNil)
 		err := d.decoder.DecodeNil()
 		if err != nil {
 			return nil, err
 		}
-		storable = NilValue{}
+		storable = NewUnmeteredNilValue()
 
 	case cbor.TextStringType:
 		str, err := decodeString(d.decoder, d.memoryGauge)
@@ -168,11 +185,12 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 			return atree.DecodeStorageIDStorable(d.decoder)
 
 		case CBORTagVoidValue:
+			common.UseConstantMemory(d.memoryGauge, common.MemoryKindVoid)
 			err := d.decoder.Skip()
 			if err != nil {
 				return nil, err
 			}
-			storable = VoidValue{}
+			storable = NewVoidValue(d.memoryGauge)
 
 		case CBORTagStringValue:
 			storable, err = d.decodeStringValue()
@@ -181,11 +199,7 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 			}
 
 		case CBORTagCharacterValue:
-			v, err := d.decoder.DecodeString()
-			if err != nil {
-				return nil, err
-			}
-			storable, err = d.decodeCharacter(v)
+			storable, err = d.decodeCharacter()
 			if err != nil {
 				return nil, err
 			}
@@ -300,14 +314,26 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 	return storable, nil
 }
 
-func (d StorableDecoder) decodeCharacter(v string) (CharacterValue, error) {
+func (d StorableDecoder) decodeCharacter() (CharacterValue, error) {
+	v, err := decodeCharacter(d.decoder, d.memoryGauge)
+	if err != nil {
+		if err, ok := err.(*cbor.WrongTypeError); ok {
+			return "", fmt.Errorf(
+				"invalid Character encoding: %s",
+				err.ActualType.String(),
+			)
+		}
+		return "", err
+	}
 	if !sema.IsValidCharacter(v) {
 		return "", fmt.Errorf(
 			"invalid character encoding: %s",
 			v,
 		)
 	}
-	return NewCharacterValue(v), nil
+
+	// NOTE: already metered by decodeCharacter
+	return NewUnmeteredCharacterValue(v), nil
 }
 
 func (d StorableDecoder) decodeStringValue() (*StringValue, error) {
@@ -742,7 +768,10 @@ func (d StorableDecoder) decodeAddress() (AddressValue, error) {
 		return AddressValue{}, err
 	}
 
-	address := NewAddressValueFromBytes(addressBytes)
+	address := NewAddressValueFromBytes(
+		d.memoryGauge,
+		addressBytes,
+	)
 	return address, nil
 }
 
@@ -753,6 +782,7 @@ func (d StorableDecoder) decodePath() (PathValue, error) {
 	size, err := d.decoder.DecodeArrayHead()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
+			// No need to meter EmptyPathValue here or below because it's ignored for the error
 			return EmptyPathValue, fmt.Errorf(
 				"invalid path encoding: expected [%d]interface{}, got %s",
 				expectedLength,
@@ -794,10 +824,11 @@ func (d StorableDecoder) decodePath() (PathValue, error) {
 		return EmptyPathValue, err
 	}
 
-	return PathValue{
-		Domain:     common.PathDomain(domain),
-		Identifier: identifier,
-	}, nil
+	return NewPathValue(
+		d.memoryGauge,
+		common.PathDomain(domain),
+		identifier,
+	), nil
 }
 
 func (d StorableDecoder) decodeCapability() (*CapabilityValue, error) {
@@ -883,11 +914,7 @@ func (d StorableDecoder) decodeCapability() (*CapabilityValue, error) {
 		return nil, fmt.Errorf("invalid capability borrow type encoding: %w", err)
 	}
 
-	return &CapabilityValue{
-		Address:    address,
-		Path:       pathValue,
-		BorrowType: borrowType,
-	}, nil
+	return NewCapabilityValue(d.memoryGauge, address, pathValue, borrowType), nil
 }
 
 func (d StorableDecoder) decodeLink() (LinkValue, error) {
@@ -897,17 +924,17 @@ func (d StorableDecoder) decodeLink() (LinkValue, error) {
 	size, err := d.decoder.DecodeArrayHead()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return LinkValue{}, fmt.Errorf(
+			return EmptyLinkValue, fmt.Errorf(
 				"invalid link encoding: expected [%d]interface{}, got %s",
 				expectedLength,
 				e.ActualType.String(),
 			)
 		}
-		return LinkValue{}, err
+		return EmptyLinkValue, err
 	}
 
 	if size != expectedLength {
-		return LinkValue{}, fmt.Errorf(
+		return EmptyLinkValue, fmt.Errorf(
 			"invalid link encoding: expected [%d]interface{}, got [%d]interface{}",
 			expectedLength,
 			size,
@@ -917,26 +944,23 @@ func (d StorableDecoder) decodeLink() (LinkValue, error) {
 	// Decode path at array index encodedLinkValueTargetPathFieldKey
 	num, err := d.decoder.DecodeTagNumber()
 	if err != nil {
-		return LinkValue{}, fmt.Errorf("invalid link target path encoding: %w", err)
+		return EmptyLinkValue, fmt.Errorf("invalid link target path encoding: %w", err)
 	}
 	if num != CBORTagPathValue {
-		return LinkValue{}, fmt.Errorf("invalid link target path encoding: expected CBOR tag %d, got %d", CBORTagPathValue, num)
+		return EmptyLinkValue, fmt.Errorf("invalid link target path encoding: expected CBOR tag %d, got %d", CBORTagPathValue, num)
 	}
 	pathValue, err := d.decodePath()
 	if err != nil {
-		return LinkValue{}, fmt.Errorf("invalid link target path encoding: %w", err)
+		return EmptyLinkValue, fmt.Errorf("invalid link target path encoding: %w", err)
 	}
 
 	// Decode type at array index encodedLinkValueTypeFieldKey
 	staticType, err := d.DecodeStaticType()
 	if err != nil {
-		return LinkValue{}, fmt.Errorf("invalid link type encoding: %w", err)
+		return EmptyLinkValue, fmt.Errorf("invalid link type encoding: %w", err)
 	}
 
-	return LinkValue{
-		TargetPath: pathValue,
-		Type:       staticType,
-	}, nil
+	return NewLinkValue(d.memoryGauge, pathValue, staticType), nil
 }
 
 func (d StorableDecoder) decodeType() (TypeValue, error) {
@@ -946,17 +970,18 @@ func (d StorableDecoder) decodeType() (TypeValue, error) {
 
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return TypeValue{}, fmt.Errorf(
+			return EmptyTypeValue, fmt.Errorf(
 				"invalid type encoding: expected [%d]interface{}, got %s",
 				expectedLength,
 				e.ActualType.String(),
 			)
 		}
-		return TypeValue{}, err
+		// unmetered here and below because value is tossed in decodeStorable when err != nil
+		return EmptyTypeValue, err
 	}
 
 	if arraySize != expectedLength {
-		return TypeValue{}, fmt.Errorf(
+		return EmptyTypeValue, fmt.Errorf(
 			"invalid type encoding: expected [%d]interface{}, got [%d]interface{}",
 			expectedLength,
 			arraySize,
@@ -973,12 +998,14 @@ func (d StorableDecoder) decodeType() (TypeValue, error) {
 	}
 
 	if err != nil {
-		return TypeValue{}, fmt.Errorf("invalid type encoding: %w", err)
+		return EmptyTypeValue, fmt.Errorf("invalid type encoding: %w", err)
 	}
 
-	return TypeValue{
-		Type: staticType,
-	}, nil
+	if staticType == nil {
+		return EmptyTypeValue, nil
+	}
+
+	return NewUnmeteredTypeValue(staticType), nil
 }
 
 type TypeDecoder struct {
@@ -1078,7 +1105,6 @@ func (d TypeDecoder) decodeCompositeStaticType() (StaticType, error) {
 	const expectedLength = encodedCompositeStaticTypeLength
 
 	size, err := d.decoder.DecodeArrayHead()
-
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return nil, fmt.Errorf(
@@ -1191,7 +1217,6 @@ func (d TypeDecoder) decodeConstantSizedStaticType() (StaticType, error) {
 	const expectedLength = encodedConstantSizedStaticTypeLength
 
 	arraySize, err := d.decoder.DecodeArrayHead()
-
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return nil, fmt.Errorf(

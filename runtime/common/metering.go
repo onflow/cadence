@@ -96,6 +96,29 @@ func NewMulBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 	)
 }
 
+func NewTypeMemoryUsage(staticTypeAsString string) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindTypeValue,
+		Amount: uint64(len(staticTypeAsString)),
+	}
+}
+
+func NewCharacterMemoryUsage(length int) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindCharacter,
+		Amount: uint64(length),
+	}
+}
+
+// UseConstantMemory uses a pre-determined amount of memory
+//
+func UseConstantMemory(memoryGauge MemoryGauge, kind MemoryKind) {
+	UseMemory(memoryGauge, MemoryUsage{
+		Kind:   kind,
+		Amount: 1,
+	})
+}
+
 func NewModBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 	return NewBigIntMemoryUsage(
 		// TODO: https://github.com/dapperlabs/cadence-private-issues/issues/32

@@ -114,6 +114,7 @@ type Value interface {
 	DeepRemove(interpreter *Interpreter)
 	// Clone returns a new value that is equal to this value.
 	// NOTE: not used by interpreter, but used externally (e.g. state migration)
+	// NOTE: memory metering is unnecessary for Clone methods
 	Clone(interpreter *Interpreter) Value
 }
 
@@ -225,10 +226,26 @@ type TypeValue struct {
 	Type StaticType
 }
 
+var EmptyTypeValue = TypeValue{}
+
 var _ Value = TypeValue{}
 var _ atree.Storable = TypeValue{}
 var _ EquatableValue = TypeValue{}
 var _ MemberAccessibleValue = TypeValue{}
+
+func NewUnmeteredTypeValue(t StaticType) TypeValue {
+	return TypeValue{t}
+}
+
+func NewTypeValue(
+	memoryGauge common.MemoryGauge,
+	memoryUsage common.MemoryUsage,
+	staticTypeConstructor func() StaticType,
+) TypeValue {
+	common.UseMemory(memoryGauge, memoryUsage)
+	staticType := staticTypeConstructor()
+	return NewUnmeteredTypeValue(staticType)
+}
 
 func (TypeValue) IsValue() {}
 
@@ -290,8 +307,13 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ func() LocationRange, n
 		if staticType != nil {
 			typeID = string(interpreter.MustConvertStaticToSemaType(staticType).ID())
 		}
-		// TODO: meter
-		return NewUnmeteredStringValue(typeID)
+		memoryUsage := common.MemoryUsage{
+			Kind:   common.MemoryKindString,
+			Amount: uint64(len(typeID)),
+		}
+		return NewStringValue(interpreter, memoryUsage, func() string {
+			return typeID
+		})
 	case "isSubtype":
 		return NewHostFunctionValue(
 			interpreter,
@@ -305,7 +327,7 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ func() LocationRange, n
 
 				// if either type is unknown, the subtype relation is false, as it doesn't make sense to even ask this question
 				if staticType == nil || otherStaticType == nil {
-					return BoolValue(false)
+					return NewBoolValue(interpreter, false)
 				}
 
 				inter := invocation.Interpreter
@@ -314,7 +336,7 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ func() LocationRange, n
 					inter.MustConvertStaticToSemaType(staticType),
 					inter.MustConvertStaticToSemaType(otherStaticType),
 				)
-				return BoolValue(result)
+				return NewBoolValue(interpreter, result)
 			},
 			sema.MetaTypeIsSubtypeFunctionType,
 		)
@@ -424,6 +446,15 @@ var _ Value = VoidValue{}
 var _ atree.Storable = VoidValue{}
 var _ EquatableValue = VoidValue{}
 
+func NewUnmeteredVoidValue() VoidValue {
+	return VoidValue{}
+}
+
+func NewVoidValue(memoryGauge common.MemoryGauge) VoidValue {
+	common.UseConstantMemory(memoryGauge, common.MemoryKindVoid)
+	return NewUnmeteredVoidValue()
+}
+
 func (VoidValue) IsValue() {}
 
 func (v VoidValue) Accept(interpreter *Interpreter, visitor Visitor) {
@@ -521,6 +552,15 @@ var _ atree.Storable = BoolValue(false)
 var _ EquatableValue = BoolValue(false)
 var _ HashableValue = BoolValue(false)
 
+func NewUnmeteredBoolValue(value bool) BoolValue {
+	return BoolValue(value)
+}
+
+func NewBoolValue(memoryGauge common.MemoryGauge, value bool) BoolValue {
+	common.UseConstantMemory(memoryGauge, common.MemoryKindBool)
+	return NewUnmeteredBoolValue(value)
+}
+
 func (BoolValue) IsValue() {}
 
 func (v BoolValue) Accept(interpreter *Interpreter, visitor Visitor) {
@@ -541,8 +581,8 @@ func (BoolValue) StaticType() StaticType {
 	return PrimitiveStaticTypeBool
 }
 
-func (v BoolValue) Negate() BoolValue {
-	return !v
+func (v BoolValue) Negate(interpreter *Interpreter) BoolValue {
+	return NewBoolValue(interpreter, !bool(v))
 }
 
 func (v BoolValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -637,8 +677,19 @@ func (BoolValue) ChildStorables() []atree.Storable {
 //
 type CharacterValue string
 
-func NewCharacterValue(r string) CharacterValue {
+func NewUnmeteredCharacterValue(r string) CharacterValue {
 	return CharacterValue(r)
+}
+
+func NewCharacterValue(
+	memoryGauge common.MemoryGauge,
+	memoryUsage common.MemoryUsage,
+	characterConstructor func() string,
+) CharacterValue {
+	common.UseMemory(memoryGauge, memoryUsage)
+
+	character := characterConstructor()
+	return NewUnmeteredCharacterValue(character)
 }
 
 var _ Value = CharacterValue("a")
@@ -763,8 +814,15 @@ func (v CharacterValue) GetMember(interpreter *Interpreter, _ func() LocationRan
 		return NewHostFunctionValue(
 			interpreter,
 			func(invocation Invocation) Value {
-				// TODO: meter?
-				return NewUnmeteredStringValue(string(v))
+				memoryUsage := common.NewStringMemoryUsage(len(v))
+
+				return NewStringValue(
+					interpreter,
+					memoryUsage,
+					func() string {
+						return string(v)
+					},
+				)
 			},
 			sema.ToStringFunctionType,
 		)
@@ -976,7 +1034,13 @@ func (v *StringValue) GetKey(interpreter *Interpreter, getLocationRange func() L
 	}
 
 	char := v.graphemes.Str()
-	return NewCharacterValue(char)
+	return NewCharacterValue(
+		interpreter,
+		common.NewCharacterMemoryUsage(len(char)),
+		func() string {
+			return char
+		},
+	)
 }
 
 func (*StringValue) SetKey(_ *Interpreter, _ func() LocationRange, _ Value, _ Value) {
@@ -1739,7 +1803,7 @@ func (v *ArrayValue) Contains(interpreter *Interpreter, getLocationRange func() 
 		return true
 	})
 
-	return BoolValue(result)
+	return NewBoolValue(interpreter, result)
 }
 
 func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
@@ -1747,7 +1811,6 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func()
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
 	}
-
 	switch name {
 	case "length":
 		return NewIntValueFromInt64(interpreter, int64(v.Count()))
@@ -1761,7 +1824,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func()
 					invocation.GetLocationRange,
 					invocation.Arguments[0],
 				)
-				return VoidValue{}
+				return NewVoidValue(invocation.Interpreter)
 			},
 			sema.ArrayAppendFunctionType(
 				v.SemaType(interpreter).ElementType(false),
@@ -1781,7 +1844,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func()
 					invocation.GetLocationRange,
 					otherArray,
 				)
-				return VoidValue{}
+				return NewVoidValue(invocation.Interpreter)
 			},
 			sema.ArrayAppendAllFunctionType(
 				v.SemaType(interpreter),
@@ -1825,7 +1888,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func()
 					index,
 					element,
 				)
-				return VoidValue{}
+				return NewVoidValue(invocation.Interpreter)
 			},
 			sema.ArrayInsertFunctionType(
 				v.SemaType(interpreter).ElementType(false),
@@ -13602,7 +13665,7 @@ func (v *CompositeValue) OwnerValue(interpreter *Interpreter, getLocationRange f
 	address := v.StorageID().Address
 
 	if address == (atree.Address{}) {
-		return NilValue{}
+		return NewNilValue(interpreter)
 	}
 
 	ownerAccount := interpreter.publicAccountHandler(interpreter, AddressValue(address))
@@ -14631,7 +14694,7 @@ func (v *DictionaryValue) GetKey(interpreter *Interpreter, getLocationRange func
 		return NewSomeValueNonCopying(interpreter, value)
 	}
 
-	return NilValue{}
+	return NewNilValue(interpreter)
 }
 
 func (v *DictionaryValue) SetKey(
@@ -14895,7 +14958,7 @@ func (v *DictionaryValue) Remove(
 	)
 	if err != nil {
 		if _, ok := err.(*atree.KeyNotFoundError); ok {
-			return NilValue{}
+			return NewNilValue(interpreter)
 		}
 		panic(ExternalError{err})
 	}
@@ -14975,7 +15038,7 @@ func (v *DictionaryValue) Insert(
 	interpreter.maybeValidateAtreeValue(v.dictionary)
 
 	if existingValueStorable == nil {
-		return NilValue{}
+		return NewNilValue(interpreter)
 	}
 
 	existingValue := StoredValue(interpreter, existingValueStorable, interpreter.Storage).
@@ -15394,6 +15457,15 @@ var _ atree.Storable = NilValue{}
 var _ EquatableValue = NilValue{}
 var _ MemberAccessibleValue = NilValue{}
 
+func NewUnmeteredNilValue() NilValue {
+	return NilValue{}
+}
+
+func NewNilValue(memoryGauge common.MemoryGauge) NilValue {
+	common.UseConstantMemory(memoryGauge, common.MemoryKindNil)
+	return NewUnmeteredNilValue()
+}
+
 func (NilValue) IsValue() {}
 
 func (v NilValue) Accept(interpreter *Interpreter, visitor Visitor) {
@@ -15438,7 +15510,7 @@ func (v NilValue) RecursiveString(_ SeenReferences) string {
 // Hence, no need to meter, as it's a constant.
 var nilValueMapFunction = NewUnmeteredHostFunctionValue(
 	func(invocation Invocation) Value {
-		return NilValue{}
+		return NewNilValue(invocation.Interpreter)
 	},
 	&sema.FunctionType{
 		ReturnTypeAnnotation: sema.NewTypeAnnotation(
@@ -15540,7 +15612,7 @@ type SomeValue struct {
 }
 
 func NewSomeValueNonCopying(interpreter *Interpreter, value Value) *SomeValue {
-	interpreter.UseConstantMemory(common.MemoryKindOptional)
+	common.UseConstantMemory(interpreter, common.MemoryKindOptional)
 
 	return NewUnmeteredSomeValueNonCopying(value)
 }
@@ -15622,7 +15694,6 @@ func (v *SomeValue) GetMember(interpreter *Interpreter, getLocationRange func() 
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(getLocationRange)
 	}
-
 	switch name {
 	case "map":
 		return NewHostFunctionValue(
@@ -15875,6 +15946,36 @@ var _ Value = &StorageReferenceValue{}
 var _ EquatableValue = &StorageReferenceValue{}
 var _ ValueIndexableValue = &StorageReferenceValue{}
 var _ MemberAccessibleValue = &StorageReferenceValue{}
+
+func NewUnmeteredStorageReferenceValue(
+	authorized bool,
+	targetStorageAddress common.Address,
+	targetPath PathValue,
+	borrowedType sema.Type,
+) *StorageReferenceValue {
+	return &StorageReferenceValue{
+		Authorized:           authorized,
+		TargetStorageAddress: targetStorageAddress,
+		TargetPath:           targetPath,
+		BorrowedType:         borrowedType,
+	}
+}
+
+func NewStorageReferenceValue(
+	memoryGauge common.MemoryGauge,
+	authorized bool,
+	targetStorageAddress common.Address,
+	targetPath PathValue,
+	borrowedType sema.Type,
+) *StorageReferenceValue {
+	common.UseConstantMemory(memoryGauge, common.MemoryKindStorageReferenceValue)
+	return NewUnmeteredStorageReferenceValue(
+		authorized,
+		targetStorageAddress,
+		targetPath,
+		borrowedType,
+	)
+}
 
 func (*StorageReferenceValue) IsValue() {}
 
@@ -16174,12 +16275,12 @@ func (v *StorageReferenceValue) Transfer(
 }
 
 func (v *StorageReferenceValue) Clone(_ *Interpreter) Value {
-	return &StorageReferenceValue{
-		Authorized:           v.Authorized,
-		TargetStorageAddress: v.TargetStorageAddress,
-		TargetPath:           v.TargetPath,
-		BorrowedType:         v.BorrowedType,
-	}
+	return NewUnmeteredStorageReferenceValue(
+		v.Authorized,
+		v.TargetStorageAddress,
+		v.TargetPath,
+		v.BorrowedType,
+	)
 }
 
 func (*StorageReferenceValue) DeepRemove(_ *Interpreter) {
@@ -16198,6 +16299,28 @@ var _ Value = &EphemeralReferenceValue{}
 var _ EquatableValue = &EphemeralReferenceValue{}
 var _ ValueIndexableValue = &EphemeralReferenceValue{}
 var _ MemberAccessibleValue = &EphemeralReferenceValue{}
+
+func NewUnmeteredEphemeralReferenceValue(
+	authorized bool,
+	value Value,
+	borrowedType sema.Type,
+) *EphemeralReferenceValue {
+	return &EphemeralReferenceValue{
+		Authorized:   authorized,
+		Value:        value,
+		BorrowedType: borrowedType,
+	}
+}
+
+func NewEphemeralReferenceValue(
+	interpreter *Interpreter,
+	authorized bool,
+	value Value,
+	borrowedType sema.Type,
+) *EphemeralReferenceValue {
+	common.UseConstantMemory(interpreter, common.MemoryKindEphemeralReferenceValue)
+	return NewUnmeteredEphemeralReferenceValue(authorized, value, borrowedType)
+}
 
 func (*EphemeralReferenceValue) IsValue() {}
 
@@ -16518,11 +16641,7 @@ func (v *EphemeralReferenceValue) Transfer(
 }
 
 func (v *EphemeralReferenceValue) Clone(_ *Interpreter) Value {
-	return &EphemeralReferenceValue{
-		Authorized:   v.Authorized,
-		BorrowedType: v.BorrowedType,
-		Value:        v.Value,
-	}
+	return NewUnmeteredEphemeralReferenceValue(v.Authorized, v.Value, v.BorrowedType)
 }
 
 func (*EphemeralReferenceValue) DeepRemove(_ *Interpreter) {
@@ -16533,18 +16652,30 @@ func (*EphemeralReferenceValue) DeepRemove(_ *Interpreter) {
 //
 type AddressValue common.Address
 
-func NewAddressValue(a common.Address) AddressValue {
-	return NewAddressValueFromBytes(a[:])
-}
-
-func NewAddressValueFromBytes(b []byte) AddressValue {
+func NewUnmeteredAddressValue(b []byte) AddressValue {
 	result := AddressValue{}
 	copy(result[common.AddressLength-len(b):], b)
 	return result
 }
 
+func NewAddressValue(
+	memoryGauge common.MemoryGauge,
+	address common.Address,
+) AddressValue {
+	common.UseConstantMemory(memoryGauge, common.MemoryKindAddress)
+	return NewUnmeteredAddressValue(address[:])
+}
+
+func NewAddressValueFromBytes(
+	memoryGauge common.MemoryGauge,
+	address []byte,
+) AddressValue {
+	common.UseConstantMemory(memoryGauge, common.MemoryKindAddress)
+	return NewUnmeteredAddressValue(address)
+}
+
 func ConvertAddress(memoryGauge common.MemoryGauge, value Value) AddressValue {
-	var result AddressValue
+	var result common.Address
 
 	uint64Value := ConvertUInt64(memoryGauge, value)
 
@@ -16552,8 +16683,7 @@ func ConvertAddress(memoryGauge common.MemoryGauge, value Value) AddressValue {
 		result[:common.AddressLength],
 		uint64(uint64Value),
 	)
-
-	return result
+	return NewAddressValue(memoryGauge, result)
 }
 
 var _ Value = AddressValue{}
@@ -16767,11 +16897,7 @@ func accountGetCapabilityFunction(
 				borrowStaticType = ConvertSemaToStaticType(borrowType)
 			}
 
-			return &CapabilityValue{
-				Address:    addressValue,
-				Path:       path,
-				BorrowType: borrowStaticType,
-			}
+			return NewCapabilityValue(inter, addressValue, path, borrowStaticType)
 		},
 		funcType,
 	)
@@ -16782,6 +16908,19 @@ func accountGetCapabilityFunction(
 type PathValue struct {
 	Domain     common.PathDomain
 	Identifier string
+}
+
+func NewUnmeteredPathValue(domain common.PathDomain, identifier string) PathValue {
+	return PathValue{domain, identifier}
+}
+
+func NewPathValue(
+	memoryGauge common.MemoryGauge,
+	domain common.PathDomain,
+	identifier string,
+) PathValue {
+	common.UseConstantMemory(memoryGauge, common.MemoryKindPathValue)
+	return NewUnmeteredPathValue(domain, identifier)
 }
 
 var EmptyPathValue = PathValue{}
@@ -16936,7 +17075,7 @@ func (PathValue) IsStorable() bool {
 func convertPath(interpreter *Interpreter, domain common.PathDomain, value Value) Value {
 	stringValue, ok := value.(*StringValue)
 	if !ok {
-		return NilValue{}
+		return NewNilValue(interpreter)
 	}
 
 	_, err := sema.CheckPathLiteral(
@@ -16946,13 +17085,17 @@ func convertPath(interpreter *Interpreter, domain common.PathDomain, value Value
 		ReturnEmptyRange,
 	)
 	if err != nil {
-		return NilValue{}
+		return NewNilValue(interpreter)
 	}
 
-	return NewSomeValueNonCopying(interpreter, PathValue{
-		Domain:     domain,
-		Identifier: stringValue.Str,
-	})
+	return NewSomeValueNonCopying(
+		interpreter,
+		NewPathValue(
+			interpreter,
+			domain,
+			stringValue.Str,
+		),
+	)
 }
 
 func ConvertPublicPath(interpreter *Interpreter, value Value) Value {
@@ -17028,6 +17171,21 @@ type CapabilityValue struct {
 	Address    AddressValue
 	Path       PathValue
 	BorrowType StaticType
+}
+
+func NewUnmeteredCapabilityValue(address AddressValue, path PathValue, borrowType StaticType) *CapabilityValue {
+	return &CapabilityValue{address, path, borrowType}
+}
+
+func NewCapabilityValue(
+	memoryGauge common.MemoryGauge,
+	address AddressValue,
+	path PathValue,
+	borrowType StaticType,
+) *CapabilityValue {
+	// Constant because its constituents are already metered.
+	common.UseConstantMemory(memoryGauge, common.MemoryKindCapabilityValue)
+	return NewUnmeteredCapabilityValue(address, path, borrowType)
 }
 
 var _ Value = &CapabilityValue{}
@@ -17219,6 +17377,18 @@ type LinkValue struct {
 	TargetPath PathValue
 	Type       StaticType
 }
+
+func NewUnmeteredLinkValue(targetPath PathValue, staticType StaticType) LinkValue {
+	return LinkValue{targetPath, staticType}
+}
+
+func NewLinkValue(memoryGauge common.MemoryGauge, targetPath PathValue, staticType StaticType) LinkValue {
+	// The only variable is TargetPath, which is already metered as a PathValue.
+	common.UseConstantMemory(memoryGauge, common.MemoryKindLinkValue)
+	return NewUnmeteredLinkValue(targetPath, staticType)
+}
+
+var EmptyLinkValue = LinkValue{}
 
 var _ Value = LinkValue{}
 var _ atree.Value = LinkValue{}

@@ -961,7 +961,7 @@ func TestStringer(t *testing.T) {
 			expected: `{"b": 99, "a": 42}`,
 		},
 		"Address": {
-			value:    NewAddressValue(common.Address{0, 0, 0, 0, 0, 0, 0, 1}),
+			value:    NewUnmeteredAddressValue([]byte{0, 0, 0, 0, 0, 0, 0, 1}),
 			expected: "0x0000000000000001",
 		},
 		"composite": {
@@ -1041,7 +1041,7 @@ func TestStringer(t *testing.T) {
 					Domain:     common.PathDomainStorage,
 					Identifier: "foo",
 				},
-				Address:    NewAddressValueFromBytes([]byte{1, 2, 3, 4, 5}),
+				Address:    NewUnmeteredAddressValue([]byte{1, 2, 3, 4, 5}),
 				BorrowType: PrimitiveStaticTypeInt,
 			},
 			expected: "Capability<Int>(address: 0x0000000102030405, path: /storage/foo)",
@@ -1052,7 +1052,7 @@ func TestStringer(t *testing.T) {
 					Domain:     common.PathDomainStorage,
 					Identifier: "foo",
 				},
-				Address: NewAddressValueFromBytes([]byte{1, 2, 3, 4, 5}),
+				Address: NewUnmeteredAddressValue([]byte{1, 2, 3, 4, 5}),
 			},
 			expected: "Capability(address: 0x0000000102030405, path: /storage/foo)",
 		},
@@ -1423,14 +1423,14 @@ func TestGetHashInput(t *testing.T) {
 			),
 		},
 		"Character": {
-			value: NewCharacterValue("ᄀᄀᄀ각ᆨᆨ"),
+			value: NewUnmeteredCharacterValue("ᄀᄀᄀ각ᆨᆨ"),
 			expected: []byte{
 				byte(HashInputTypeCharacter),
 				0xe1, 0x84, 0x80, 0xe1, 0x84, 0x80, 0xe1, 0x84, 0x80, 0xea, 0xb0, 0x81, 0xe1, 0x86, 0xa8, 0xe1, 0x86, 0xa8,
 			},
 		},
 		"Address": {
-			value:    NewAddressValue(common.Address{0, 0, 0, 0, 0, 0, 0, 1}),
+			value:    NewUnmeteredAddressValue([]byte{0, 0, 0, 0, 0, 0, 0, 1}),
 			expected: []byte{byte(HashInputTypeAddress), 0, 0, 0, 0, 0, 0, 0, 1},
 		},
 		"enum": {
