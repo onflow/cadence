@@ -3109,11 +3109,7 @@ func init() {
 						Parameters:           parameterTypes,
 					},
 				}
-				return NewTypeValue(
-					invocation.Interpreter,
-					common.NewTypeMemoryUsage(functionStaticType.String()),
-					func() StaticType { return functionStaticType },
-				)
+				return NewUnmeteredTypeValue(functionStaticType)
 			},
 			sema.FunctionTypeFunctionType,
 		),
@@ -3414,13 +3410,7 @@ var typeFunction = NewUnmeteredHostFunctionValue(
 		// TODO TypeValue metering is more complicated.
 		// 	    Here, staticType conversion should be delayed but can't be.
 		staticType := ConvertSemaToStaticType(ty)
-		return NewTypeValue(
-			invocation.Interpreter,
-			common.NewTypeMemoryUsage(staticType.String()),
-			func() StaticType {
-				return staticType
-			},
-		)
+		return NewUnmeteredTypeValue(staticType)
 	},
 	&sema.FunctionType{
 		ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.MetaType),
@@ -4495,11 +4485,7 @@ func (interpreter *Interpreter) getTypeFunction(self Value) *HostFunctionValue {
 		interpreter,
 		func(invocation Invocation) Value {
 			staticType := self.StaticType()
-			return NewTypeValue(
-				invocation.Interpreter,
-				common.NewTypeMemoryUsage(staticType.String()),
-				func() StaticType { return staticType },
-			)
+			return NewUnmeteredTypeValue(staticType)
 		},
 		sema.GetTypeFunctionType,
 	)

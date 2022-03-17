@@ -456,14 +456,14 @@ func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 			Weight:       1,
 			TypeInstance: cadence.Character("a"),
 		},
-		{
-			TypeName:   "Type",
-			MemoryKind: common.MemoryKindTypeValue,
-			Weight:     3,
-			TypeInstance: cadence.TypeValue{
-				StaticType: cadence.AnyType{},
-			},
-		},
+		//{
+		//	TypeName:   "Type",
+		//	MemoryKind: common.MemoryKindTypeValue,
+		//	Weight:     3,
+		//	TypeInstance: cadence.TypeValue{
+		//		StaticType: cadence.AnyType{},
+		//	},
+		//},
 		{
 			TypeName:     "Bool",
 			MemoryKind:   common.MemoryKindBool,
@@ -546,22 +546,22 @@ func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 				},
 			},
 		},
-		{
-			TypeName:   "Capability",
-			MemoryKind: common.MemoryKindTypeValue,
-			Weight:     3,
-			TypeInstance: cadence.Capability{
-				Path: cadence.Path{
-					Domain:     "public",
-					Identifier: "foobarrington",
-				},
-				Address: cadence.Address{},
-				BorrowType: cadence.ReferenceType{
-					Authorized: true,
-					Type:       cadence.AnyType{},
-				},
-			},
-		},
+		//{
+		//	TypeName:   "Capability",
+		//	MemoryKind: common.MemoryKindTypeValue,
+		//	Weight:     3,
+		//	TypeInstance: cadence.Capability{
+		//		Path: cadence.Path{
+		//			Domain:     "public",
+		//			Identifier: "foobarrington",
+		//		},
+		//		Address: cadence.Address{},
+		//		BorrowType: cadence.ReferenceType{
+		//			Authorized: true,
+		//			Type:       cadence.AnyType{},
+		//		},
+		//	},
+		//},
 
 		// Verify Optional and its composing type
 		{

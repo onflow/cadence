@@ -1009,11 +1009,7 @@ func (d StorableDecoder) decodeType() (TypeValue, error) {
 		return EmptyTypeValue, nil
 	}
 
-	return NewTypeValue(
-		d.memoryGauge,
-		common.NewTypeMemoryUsage(staticType.String()),
-		func() StaticType { return staticType },
-	), nil
+	return NewUnmeteredTypeValue(staticType), nil
 }
 
 type TypeDecoder struct {

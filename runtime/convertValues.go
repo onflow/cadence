@@ -786,13 +786,7 @@ func importTypeValue(
 		return interpreter.EmptyTypeValue, err
 	}
 
-	return interpreter.NewTypeValue(
-		inter,
-		common.NewTypeMemoryUsage(typ.String()),
-		func() interpreter.StaticType {
-			return typ
-		},
-	), nil
+	return interpreter.NewUnmeteredTypeValue(typ), nil
 }
 
 func importCapability(
@@ -805,7 +799,7 @@ func importCapability(
 	error,
 ) {
 
-	referenceType, ok := borrowType.(cadence.ReferenceType)
+	_, ok := borrowType.(cadence.ReferenceType)
 
 	if !ok {
 		return nil, fmt.Errorf(
@@ -813,9 +807,6 @@ func importCapability(
 			borrowType.ID(),
 		)
 	}
-
-	// include memory usage for reference type
-	common.UseMemory(inter, common.NewTypeMemoryUsage(referenceType.Type.ID()))
 
 	return interpreter.NewCapabilityValue(
 		inter,
