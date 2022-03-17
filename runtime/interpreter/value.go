@@ -16662,10 +16662,8 @@ func NewAddressValue(
 	memoryGauge common.MemoryGauge,
 	address common.Address,
 ) AddressValue {
-	return NewAddressValueFromBytes(
-		memoryGauge,
-		address[:],
-	)
+	common.UseConstantMemory(memoryGauge, common.MemoryKindAddress)
+	return NewUnmeteredAddressValue(address[:])
 }
 
 func NewAddressValueFromBytes(
