@@ -48,4 +48,5 @@ const (
 	MemoryKindHostFunction
 	MemoryKindBoundFunction
 	MemoryKindBigInt
+	MemoryKindRawString
 )
