@@ -1921,7 +1921,7 @@ func (s *Server) getDiagnosticsForParentError(
 // parse parses the given code and returns the resultant program.
 func parse(conn protocol.Conn, code, location string) (*ast.Program, error) {
 	start := time.Now()
-	program, err := parser2.ParseProgram(code)
+	program, err := parser2.ParseProgram(code, nil)
 	elapsed := time.Since(start)
 
 	conn.LogMessage(&protocol.LogMessageParams{
@@ -1963,7 +1963,7 @@ func (s *Server) resolveImport(location common.Location) (program *ast.Program, 
 		return nil, err
 	}
 
-	return parser2.ParseProgram(code)
+	return parser2.ParseProgram(code, nil)
 }
 
 func (s *Server) GetDocument(uri protocol.DocumentUri) (doc Document, ok bool) {
@@ -2109,7 +2109,7 @@ func (s *Server) parseEntryPointArguments(_ protocol.Conn, args ...interface{}) 
 		if !ok {
 			return nil, fmt.Errorf("invalid argument at index %d: %#+v", i, argument)
 		}
-		value, err := runtime.ParseLiteral(argumentCode, parameterType)
+		value, err := runtime.ParseLiteral(argumentCode, parameterType, nil)
 		if err != nil {
 			return nil, err
 		}
