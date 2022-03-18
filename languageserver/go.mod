@@ -5,7 +5,7 @@ go 1.13
 require (
 	github.com/google/uuid v1.3.0
 	github.com/mattn/go-isatty v0.0.14
-	github.com/mitchellh/mapstructure v1.4.1
+	github.com/mitchellh/mapstructure v1.4.3
 	github.com/onflow/cadence v0.21.3-0.20220317173919-b23d45bcd67d
 	github.com/onflow/flow-cli v0.30.3-0.20220202132709-c9157226af28
 	github.com/onflow/flow-go-sdk v0.24.0
