@@ -93,8 +93,9 @@ func decodeString(dec *cbor.StreamDecoder, memoryGauge common.MemoryGauge, strin
 	}
 
 	common.UseMemory(memoryGauge, common.MemoryUsage{
-		Kind:   stringKind,
-		Amount: length,
+		Kind: stringKind,
+		// + 1 to account for empty string
+		Amount: length + 1,
 	})
 
 	return dec.DecodeString()

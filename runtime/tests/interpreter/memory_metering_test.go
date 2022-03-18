@@ -122,7 +122,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindString))
+		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindString))
 		assert.Equal(t, uint64(10), meter.getMemory(common.MemoryKindDictionary))
 	})
 
@@ -180,8 +180,8 @@ func TestInterpretCompositeMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(11), meter.getMemory(common.MemoryKindString))
-		assert.Equal(t, uint64(39), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, uint64(14), meter.getMemory(common.MemoryKindString))
+		assert.Equal(t, uint64(51), meter.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindComposite))
 	})
 
@@ -253,10 +253,7 @@ func TestInterpretCompositeFieldMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// 2 from field a
-		// 4 from type id of field a
-		// 2 from overhead of field a
-		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, uint64(11), meter.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindComposite))
 	})
 
@@ -283,13 +280,7 @@ func TestInterpretCompositeFieldMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// 2 from field a
-		// 2 from field b
-		// 4 from type id of field a
-		// 4 from type id of field b
-		// 2 from overhead of field a
-		// 2 from overhead of field b
-		assert.Equal(t, uint64(17), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindComposite))
 	})
 }
