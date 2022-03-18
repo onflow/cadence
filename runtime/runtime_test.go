@@ -2874,7 +2874,7 @@ func TestRuntimePublicAccountAddress(t *testing.T) {
 
 	var loggedMessages []string
 
-	address := interpreter.NewUnmeteredAddressValue([]byte{0x42})
+	address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x42})
 
 	runtimeInterface := &testRuntimeInterface{
 		getSigningAccounts: func() ([]Address, error) {
@@ -4303,7 +4303,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 		},
 		storage: newTestLedger(nil, nil),
 		createAccount: func(payer Address) (address Address, err error) {
-			result := interpreter.NewUnmeteredAddressValue([]byte{nextAccount})
+			result := interpreter.NewUnmeteredAddressValueFromBytes([]byte{nextAccount})
 			nextAccount++
 			return result.ToAddress(), nil
 		},
