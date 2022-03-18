@@ -20,6 +20,7 @@ package interpreter
 
 import (
 	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/runtime/common"
 )
 
@@ -40,7 +41,7 @@ func (v StringAtreeValue) Storable(
 }
 
 func NewStringAtreeValue(gauge common.MemoryGauge, s string) StringAtreeValue {
-	gauge.MeterMemory(common.NewRawStringMemoryUsage(len(s)))
+	common.UseMemory(gauge, common.NewRawStringMemoryUsage(len(s)))
 	return StringAtreeValue(s)
 }
 
