@@ -361,12 +361,14 @@ func (l *lexer) scanOctalRemainder() {
 }
 
 func (l *lexer) scanHexadecimalRemainder() {
-	l.acceptWhile(func(r rune) bool {
-		return (r >= '0' && r <= '9') ||
-			(r >= 'a' && r <= 'f') ||
-			(r >= 'A' && r <= 'F') ||
-			r == '_'
-	})
+	l.acceptWhile(isHexRune)
+}
+
+func isHexRune(r rune) bool {
+	return (r >= '0' && r <= '9') ||
+		(r >= 'a' && r <= 'f') ||
+		(r >= 'A' && r <= 'F') ||
+		r == '_'
 }
 
 func (l *lexer) scanDecimalOrFixedPointRemainder() TokenType {

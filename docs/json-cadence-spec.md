@@ -114,6 +114,14 @@ This format includes less type information than a complete [ABI](https://en.wiki
 }
 ```
 
+```json
+{
+  "type": "Address",
+  "value": "Fx0" // as hex-encoded string with Fx prefix
+}
+```
+
+
 ### Example
 
 ```json

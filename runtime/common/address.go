@@ -113,6 +113,7 @@ func (a Address) HexWithPrefix() string {
 // HexToAddress converts a hex string to an Address.
 func HexToAddress(h string) (Address, error) {
 	trimmed := strings.TrimPrefix(h, "0x")
+	trimmed = strings.TrimPrefix(trimmed, "Fx")
 	if len(trimmed)%2 == 1 {
 		trimmed = "0" + trimmed
 	}

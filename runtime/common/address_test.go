@@ -252,5 +252,9 @@ func TestAddress_HexToAddress(t *testing.T) {
 		address, err = HexToAddress("0x" + test.literal)
 		assert.NoError(t, err)
 		assert.Equal(t, expected, address)
+
+		address, err = HexToAddress("Fx" + test.literal)
+		assert.NoError(t, err)
+		assert.Equal(t, expected, address)
 	}
 }

@@ -253,7 +253,7 @@ func decodeAddress(valueJSON interface{}) cadence.Address {
 	v := toString(valueJSON)
 
 	// must include 0x prefix
-	if v[:2] != "0x" {
+	if v[:2] != "0x" && v[:2] != "Fx" {
 		// TODO: improve error message
 		panic(ErrInvalidJSONCadence)
 	}

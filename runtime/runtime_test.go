@@ -3928,8 +3928,9 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 
 	deploy := utils.DeploymentTransaction("FungibleToken", []byte(basicFungibleTokenContract))
 
+	// TODO replace `Fx` with `0x` and add `Fx` tests
 	setup1Transaction := []byte(`
-      import FungibleToken from 0x01
+      import FungibleToken from Fx01
 
       transaction {
 
