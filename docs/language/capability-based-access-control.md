@@ -134,6 +134,10 @@ resource Counter: HasCount {
     pub init(count: Int) {
         self.count = count
     }
+
+    pub fun incrementByVal(val: Int) {
+        self.count = self.count + val
+    }
 }
 
 // In this example an authorized account is available through the constant `authAccount`.
@@ -191,10 +195,10 @@ let countRef = countCap.borrow()!
 
 countRef.count  // is `42`
 
-// Invalid: The `increment` function is not accessible for the reference,
+// Invalid: The `incrementByVal` function is not accessible for the reference,
 // because it has the type `&{HasCount}`
 //
-countRef.increment()
+countRef.incrementByVal(val: 5)
 
 // Again, attempt to get a get a capability for the counter, but use the type `&Counter`.
 //
@@ -211,9 +215,10 @@ countRef.increment()
 // This shows how parts of the functionality of stored objects
 // can be safely exposed to other code
 //
-let counterRef = countCap.borrow()
+let countCapNew = publicAccount.getCapability<&{Counter}>(/public/hasCount)
+let counterRefNew = countCapNew.borrow()!
 
-// `counterRef` is `nil`
+// `counterRefNew` is `nil`
 
 // Invalid: Cannot access the counter object in storage directly,
 // the `borrow` function is not available for public accounts
