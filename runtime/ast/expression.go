@@ -1123,43 +1123,74 @@ func (e *FunctionExpression) String() string {
 	return "func ..."
 }
 
-var functionExpressionFunKeywordDoc prettier.Doc = prettier.Text("fun ")
-var functionExpressionParameterSeparatorDoc prettier.Doc = prettier.Concat{
-	prettier.Text(","),
-	prettier.Line{},
-}
+var functionFunKeywordSpaceDoc prettier.Doc = prettier.Text("fun ")
 
-var typeSeparatorDoc prettier.Doc = prettier.Text(": ")
 var functionExpressionEmptyBlockDoc prettier.Doc = prettier.Text(" {}")
 
-func (e *FunctionExpression) Doc() prettier.Doc {
+func FunctionDocument(
+	access Access,
+	includeKeyword bool,
+	identifier string,
+	parameterList *ParameterList,
+	returnTypeAnnotation *TypeAnnotation,
+	block *FunctionBlock,
+) prettier.Doc {
 
-	signatureDoc := e.parametersDoc()
-
-	if e.ReturnTypeAnnotation != nil &&
-		!IsEmptyType(e.ReturnTypeAnnotation.Type) {
-
-		signatureDoc = prettier.Concat{
+	var signatureDoc prettier.Concat
+	if parameterList != nil {
+		signatureDoc = append(
 			signatureDoc,
-			typeSeparatorDoc,
-			e.ReturnTypeAnnotation.Doc(),
+			parameterList.Doc(),
+		)
+
+		if returnTypeAnnotation != nil &&
+			!IsEmptyType(returnTypeAnnotation.Type) {
+
+			signatureDoc = append(
+				signatureDoc,
+				typeSeparatorSpaceDoc,
+				returnTypeAnnotation.Doc(),
+			)
 		}
 	}
 
-	doc := prettier.Concat{
-		functionExpressionFunKeywordDoc,
-		prettier.Group{
-			Doc: signatureDoc,
-		},
+	var doc prettier.Concat
+
+	if access != AccessNotSpecified {
+		doc = append(
+			doc,
+			prettier.Text(access.Keyword()),
+			prettier.Space,
+		)
 	}
 
-	if e.FunctionBlock.IsEmpty() {
+	if includeKeyword {
+		doc = append(
+			doc,
+			functionFunKeywordSpaceDoc,
+		)
+	}
+
+	if identifier != "" {
+		doc = append(
+			doc,
+			prettier.Text(identifier),
+		)
+	}
+
+	if signatureDoc != nil {
+		doc = append(
+			doc,
+			prettier.Group{
+				Doc: signatureDoc,
+			},
+		)
+	}
+
+	if block.IsEmpty() {
 		return append(doc, functionExpressionEmptyBlockDoc)
 	} else {
-		// TODO: pre-conditions
-		// TODO: post-conditions
-
-		blockDoc := e.FunctionBlock.Block.Doc()
+		blockDoc := block.Doc()
 
 		return append(
 			doc,
@@ -1169,42 +1200,14 @@ func (e *FunctionExpression) Doc() prettier.Doc {
 	}
 }
 
-func (e *FunctionExpression) parametersDoc() prettier.Doc {
-
-	if e.ParameterList == nil ||
-		len(e.ParameterList.Parameters) == 0 {
-
-		return prettier.Text("()")
-	}
-
-	parameterDocs := make([]prettier.Doc, 0, len(e.ParameterList.Parameters))
-
-	for _, parameter := range e.ParameterList.Parameters {
-		var parameterDoc prettier.Concat
-
-		if parameter.Label != "" {
-			parameterDoc = append(parameterDoc,
-				prettier.Text(parameter.Label),
-				prettier.Space,
-			)
-		}
-
-		parameterDoc = append(
-			parameterDoc,
-			prettier.Text(parameter.Identifier.Identifier),
-			typeSeparatorDoc,
-			parameter.TypeAnnotation.Doc(),
-		)
-
-		parameterDocs = append(parameterDocs, parameterDoc)
-	}
-
-	return prettier.WrapParentheses(
-		prettier.Join(
-			functionExpressionParameterSeparatorDoc,
-			parameterDocs...,
-		),
-		prettier.SoftLine{},
+func (e *FunctionExpression) Doc() prettier.Doc {
+	return FunctionDocument(
+		AccessNotSpecified,
+		true,
+		"",
+		e.ParameterList,
+		e.ReturnTypeAnnotation,
+		e.FunctionBlock,
 	)
 }
 
