@@ -3198,19 +3198,19 @@ func TestDivFix64(t *testing.T) {
 	)
 
 	assert.Equal(t,
-	 	NewUnmeteredFix64Value(0),
+		NewUnmeteredFix64Value(0),
 		NewUnmeteredFix64ValueWithInteger(1).
 			Div(inter, NewUnmeteredFix64Value(Fix64MaxValue)),
 	)
 
 	assert.Equal(t,
-	 	NewUnmeteredFix64Value(0),
-	 	NewUnmeteredFix64Value(1).
+		NewUnmeteredFix64Value(0),
+		NewUnmeteredFix64Value(1).
 			Div(inter, NewUnmeteredFix64ValueWithInteger(2)),
 	)
 
 	assert.Equal(t,
-	 	NewUnmeteredFix64Value(1535399),
+		NewUnmeteredFix64Value(1535399),
 		NewUnmeteredFix64ValueWithInteger(1543219).
 			Div(inter, NewUnmeteredFix64ValueWithInteger(100509284)),
 	)
@@ -3318,25 +3318,25 @@ func TestDivModUFix64(t *testing.T) {
 	}
 
 	assert.Equal(t,
-	 	NewUnmeteredUFix64Value(1),
+		NewUnmeteredUFix64Value(1),
 		NewUnmeteredUFix64ValueWithInteger(1).
 			Div(inter, NewUnmeteredUFix64ValueWithInteger(sema.Fix64Factor)),
 	)
 
 	assert.Equal(t,
-	 	NewUnmeteredUFix64Value(0),
+		NewUnmeteredUFix64Value(0),
 		NewUnmeteredUFix64ValueWithInteger(1).
 			Div(inter, NewUnmeteredUFix64Value(UFix64MaxValue)),
 	)
 
 	assert.Equal(t,
-	 	NewUnmeteredUFix64Value(0),
-	 	NewUnmeteredUFix64Value(1).
+		NewUnmeteredUFix64Value(0),
+		NewUnmeteredUFix64Value(1).
 			Div(inter, NewUnmeteredUFix64ValueWithInteger(2)),
 	)
 
 	assert.Equal(t,
-	 	NewUnmeteredUFix64Value(1535399),
+		NewUnmeteredUFix64Value(1535399),
 		NewUnmeteredUFix64ValueWithInteger(1543219).
 			Div(inter, NewUnmeteredUFix64ValueWithInteger(100509284)),
 	)

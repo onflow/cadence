@@ -3211,12 +3211,10 @@ func NewBlockValue(inter *interpreter.Interpreter, block Block) interpreter.Valu
 
 	// timestamp
 	// TODO: verify
-	timestampValue := interpreter.NewUFix64ValueFromConstructor(
+	timestampValue := interpreter.NewUFix64ValueWithInteger(
 		inter,
-		func() interpreter.UFix64Value {
-			return interpreter.NewUnmeteredUFix64ValueWithInteger(
-				uint64(time.Unix(0, block.Timestamp).Unix()),
-			)
+		func() uint64 {
+			return uint64(time.Unix(0, block.Timestamp).Unix())
 		},
 	)
 
@@ -3551,7 +3549,11 @@ func NewAccountKeyValue(
 			validatePublicKey,
 		),
 		stdlib.NewHashAlgorithmCase(inter, accountKey.HashAlgo.RawValue()),
-		interpreter.NewUFix64ValueWithInteger(inter, uint64(accountKey.Weight)),
+		interpreter.NewUFix64ValueWithInteger(
+			inter, func() uint64 {
+				return uint64(accountKey.Weight)
+			},
+		),
 		interpreter.BoolValue(accountKey.IsRevoked),
 	)
 }
