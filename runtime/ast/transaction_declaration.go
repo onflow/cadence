@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/turbolent/prettier"
 )
 
 type TransactionDeclaration struct {
@@ -34,6 +35,8 @@ type TransactionDeclaration struct {
 	DocString      string
 	Range
 }
+
+var _ Declaration = &TransactionDeclaration{}
 
 func (d *TransactionDeclaration) Accept(visitor Visitor) Repr {
 	return visitor.VisitTransactionDeclaration(d)
@@ -85,4 +88,66 @@ func (d *TransactionDeclaration) MarshalJSON() ([]byte, error) {
 		Type:  "TransactionDeclaration",
 		Alias: (*Alias)(d),
 	})
+}
+
+var transactionKeywordDoc = prettier.Text("transaction")
+
+func (d *TransactionDeclaration) Doc() prettier.Doc {
+
+	var contents []prettier.Doc
+
+	addContent := func(doc prettier.Doc) {
+		contents = append(
+			contents,
+			prettier.Concat{
+				prettier.HardLine{},
+				doc,
+			},
+		)
+	}
+
+	for _, field := range d.Fields {
+		addContent(field.Doc())
+	}
+
+	if d.Prepare != nil {
+		addContent(d.Prepare.Doc())
+	}
+
+	if conditionsDoc := d.PreConditions.Doc(preConditionsKeywordDoc); conditionsDoc != nil {
+		addContent(conditionsDoc)
+	}
+
+	if d.Execute != nil {
+		addContent(d.Execute.Doc())
+	}
+
+	if conditionsDoc := d.PostConditions.Doc(postConditionsKeywordDoc); conditionsDoc != nil {
+		addContent(conditionsDoc)
+	}
+
+	doc := prettier.Concat{
+		transactionKeywordDoc,
+	}
+
+	if !d.ParameterList.IsEmpty() {
+		doc = append(
+			doc,
+			d.ParameterList.Doc(),
+		)
+	}
+
+	return append(
+		doc,
+		prettier.Space,
+		blockStartDoc,
+		prettier.Indent{
+			Doc: prettier.Join(
+				prettier.HardLine{},
+				contents...,
+			),
+		},
+		prettier.HardLine{},
+		blockEndDoc,
+	)
 }
