@@ -969,7 +969,7 @@ func (interpreter *Interpreter) VisitPathExpression(expression *ast.PathExpressi
 	domain := common.PathDomainFromIdentifier(expression.Domain.Identifier)
 
 	// meter the Path's Identifier since path is just a container
-	common.UseMemory(interpreter, common.NewStringMemoryUsage(len(expression.Identifier.Identifier)))
+	common.UseMemory(interpreter, common.NewRawStringMemoryUsage(len(expression.Identifier.Identifier)))
 
 	return NewPathValue(
 		interpreter,
