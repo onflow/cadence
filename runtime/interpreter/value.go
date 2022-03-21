@@ -12843,26 +12843,29 @@ func ConvertFix64(memoryGauge common.MemoryGauge, value Value) Fix64Value {
 		)
 
 	case BigNumberValue:
-		v := value.ToBigInt()
+		converter := func() int64 {
+			v := value.ToBigInt()
 
-		// First, check if the value is at least in the int64 range.
-		// The integer range for Fix64 is smaller, but this test at least
-		// allows us to call `v.Int64()` safely.
+			// First, check if the value is at least in the int64 range.
+			// The integer range for Fix64 is smaller, but this test at least
+			// allows us to call `v.Int64()` safely.
 
-		if !v.IsInt64() {
-			panic(OverflowError{})
+			if !v.IsInt64() {
+				panic(OverflowError{})
+			}
+
+			return v.Int64()
 		}
 
 		// Now check that the integer value fits the range of Fix64
-		return NewFix64ValueWithInteger(memoryGauge, v.Int64)
+		return NewFix64ValueWithInteger(memoryGauge, converter)
 
 	case NumberValue:
-		v := value.ToInt()
 		// Check that the integer value fits the range of Fix64
 		return NewFix64ValueWithInteger(
 			memoryGauge,
 			func() int64 {
-				return int64(v)
+				return int64(value.ToInt())
 			},
 		)
 
@@ -13330,35 +13333,39 @@ func ConvertUFix64(memoryGauge common.MemoryGauge, value Value) UFix64Value {
 		)
 
 	case BigNumberValue:
-		v := value.ToBigInt()
+		converter := func() uint64 {
+			v := value.ToBigInt()
 
-		if v.Sign() < 0 {
-			panic(UnderflowError{})
-		}
+			if v.Sign() < 0 {
+				panic(UnderflowError{})
+			}
 
-		// First, check if the value is at least in the uint64 range.
-		// The integer range for UFix64 is smaller, but this test at least
-		// allows us to call `v.UInt64()` safely.
+			// First, check if the value is at least in the uint64 range.
+			// The integer range for UFix64 is smaller, but this test at least
+			// allows us to call `v.UInt64()` safely.
 
-		if !v.IsUint64() {
-			panic(OverflowError{})
+			if !v.IsUint64() {
+				panic(OverflowError{})
+			}
+
+			return v.Uint64()
 		}
 
 		// Now check that the integer value fits the range of UFix64
-		return NewUFix64ValueWithInteger(memoryGauge, v.Uint64)
+		return NewUFix64ValueWithInteger(memoryGauge, converter)
 
 	case NumberValue:
-		v := value.ToInt()
-		if v < 0 {
-			panic(UnderflowError{})
+		converter := func() uint64 {
+			v := value.ToInt()
+			if v < 0 {
+				panic(UnderflowError{})
+			}
+
+			return uint64(v)
 		}
+
 		// Check that the integer value fits the range of UFix64
-		return NewUFix64ValueWithInteger(
-			memoryGauge,
-			func() uint64 {
-				return uint64(v)
-			},
-		)
+		return NewUFix64ValueWithInteger(memoryGauge, converter)
 
 	default:
 		panic(fmt.Sprintf("can't convert to UFix64: %s", value))
