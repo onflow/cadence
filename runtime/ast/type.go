@@ -26,6 +26,8 @@ import (
 	"github.com/turbolent/prettier"
 )
 
+const typeSeparatorSpaceDoc = prettier.Text(": ")
+
 // TypeAnnotation
 
 type TypeAnnotation struct {
@@ -310,7 +312,6 @@ func (t *DictionaryType) String() string {
 
 const dictionaryTypeStartDoc = prettier.Text("{")
 const dictionaryTypeEndDoc = prettier.Text("}")
-const dictionaryTypeSeparatorSpaceDoc = prettier.Text(": ")
 
 func (t *DictionaryType) Doc() prettier.Doc {
 	return prettier.Concat{
@@ -319,7 +320,7 @@ func (t *DictionaryType) Doc() prettier.Doc {
 			Doc: prettier.Concat{
 				prettier.SoftLine{},
 				t.KeyType.Doc(),
-				dictionaryTypeSeparatorSpaceDoc,
+				typeSeparatorSpaceDoc,
 				t.ValueType.Doc(),
 			},
 		},
@@ -369,7 +370,6 @@ func (t *FunctionType) String() string {
 
 const functionTypeStartDoc = prettier.Text("(")
 const functionTypeEndDoc = prettier.Text(")")
-const functionTypeTypeSeparatorSpaceDoc = prettier.Text(": ")
 const functionTypeParameterSeparatorDoc = prettier.Text(",")
 
 func (t *FunctionType) Doc() prettier.Doc {
@@ -403,7 +403,7 @@ func (t *FunctionType) Doc() prettier.Doc {
 				functionTypeEndDoc,
 			},
 		},
-		functionTypeTypeSeparatorSpaceDoc,
+		typeSeparatorSpaceDoc,
 		t.ReturnTypeAnnotation.Doc(),
 		functionTypeEndDoc,
 	}
