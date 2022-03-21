@@ -120,8 +120,10 @@ func main() {
 	for _, kind := range memory_kinds {
 		unused_mem_kinds[kind] = struct{}{}
 	}
-	abstract_measurements := make([]map[common.MemoryKind]uint64, 0, len(test_programs))
-	concrete_measurements := make([]float64, 0, len(test_programs))
+	abstract_measurements := make([]map[common.MemoryKind]uint64, 0, len(test_programs)-1)
+	concrete_measurements := make([]float64, 0, len(test_programs)-1)
+	empty_abstract_measurement := make(map[common.MemoryKind]uint64)
+	var empty_concreate_measurement float64
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 	totalAlloc := m.TotalAlloc
@@ -183,13 +185,29 @@ func main() {
 		allocs := m.TotalAlloc - totalAlloc
 		fmt.Printf("Actual Memory: %d\n", allocs)
 		fmt.Println("--------------------")
-		abstract_measurements = append(abstract_measurements, measurements)
-		concrete_measurements = append(concrete_measurements, float64(allocs))
+		if code.name != "empty" {
+			abstract_measurements = append(abstract_measurements, measurements)
+			concrete_measurements = append(concrete_measurements, float64(allocs))
+		} else {
+			empty_abstract_measurement = measurements
+			empty_concreate_measurement = float64(allocs)
+		}
 		totalAlloc = m.TotalAlloc
 
 	}
 	for kind := range unused_mem_kinds { //nolint:maprangecheck
 		fmt.Printf("Unusued memory kind: %s\n", kind.String())
+	}
+
+	// condition the data by subtracting out the empty program
+	for i, measurements := range abstract_measurements {
+		for _, kind := range memory_kinds {
+			measurements[kind] = measurements[kind] - empty_abstract_measurement[kind]
+			abstract_measurements[i] = measurements
+		}
+	}
+	for i, measurement := range concrete_measurements {
+		concrete_measurements[i] = measurement - empty_concreate_measurement
 	}
 
 	// to decide values for the weights, we have some linear equation A*x=b
