@@ -320,6 +320,37 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		executeScript(script, meter, cadence.NewWord64(2))
 		assert.Equal(t, uint64(8), meter[common.MemoryKindNumber])
 	})
+
+	t.Run("Fix64", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            pub fun main(x: Fix64) {}
+        `)
+
+		meter := make(map[common.MemoryKind]uint64)
+
+		fix64Value, err := cadence.NewFix64FromParts(true, 1, 4)
+		require.NoError(t, err)
+
+		executeScript(script, meter, fix64Value)
+		assert.Equal(t, uint64(8), meter[common.MemoryKindNumber])
+	})
+
+	t.Run("UFix64", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            pub fun main(x: UFix64) {}
+        `)
+
+		meter := make(map[common.MemoryKind]uint64)
+		ufix64Value, err := cadence.NewUFix64FromParts(1, 4)
+		require.NoError(t, err)
+
+		executeScript(script, meter, ufix64Value)
+		assert.Equal(t, uint64(8), meter[common.MemoryKindNumber])
+	})
 }
 
 type testMemoryError struct{}
