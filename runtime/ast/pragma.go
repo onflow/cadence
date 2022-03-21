@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/turbolent/prettier"
 )
 
 // Pragma
@@ -30,6 +31,8 @@ type PragmaDeclaration struct {
 	Expression Expression
 	Range
 }
+
+var _ Declaration = &PragmaDeclaration{}
 
 func (*PragmaDeclaration) isDeclaration() {}
 
@@ -72,4 +75,11 @@ func (d *PragmaDeclaration) MarshalJSON() ([]byte, error) {
 		Type:  "PragmaDeclaration",
 		Alias: (*Alias)(d),
 	})
+}
+
+func (d *PragmaDeclaration) Doc() prettier.Doc {
+	return prettier.Concat{
+		prettier.Text("#"),
+		d.Expression.Doc(),
+	}
 }
