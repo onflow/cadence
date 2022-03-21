@@ -218,9 +218,8 @@ func parseTransactionExecute(p *parser) *ast.SpecialFunctionDeclaration {
 	return &ast.SpecialFunctionDeclaration{
 		Kind: common.DeclarationKindExecute,
 		FunctionDeclaration: &ast.FunctionDeclaration{
-			Access:        ast.AccessNotSpecified,
-			Identifier:    identifier,
-			ParameterList: &ast.ParameterList{},
+			Access:     ast.AccessNotSpecified,
+			Identifier: identifier,
 			FunctionBlock: &ast.FunctionBlock{
 				Block: block,
 			},

@@ -2289,7 +2289,6 @@ func TestParseTransactionDeclaration(t *testing.T) {
 								Identifier: "execute",
 								Pos:        ast.Position{Offset: 14, Line: 1, Column: 14},
 							},
-							ParameterList: &ast.ParameterList{},
 							FunctionBlock: &ast.FunctionBlock{
 								Block: &ast.Block{
 									Range: ast.Range{
@@ -2464,7 +2463,6 @@ func TestParseTransactionDeclaration(t *testing.T) {
 								Identifier: "execute",
 								Pos:        ast.Position{Offset: 104, Line: 10, Column: 6},
 							},
-							ParameterList:        &ast.ParameterList{},
 							ReturnTypeAnnotation: nil,
 							FunctionBlock: &ast.FunctionBlock{
 								Block: &ast.Block{
@@ -2704,7 +2702,6 @@ func TestParseTransactionDeclaration(t *testing.T) {
 								Identifier: "execute",
 								Pos:        ast.Position{Offset: 136, Line: 14, Column: 6},
 							},
-							ParameterList:        &ast.ParameterList{},
 							ReturnTypeAnnotation: nil,
 							FunctionBlock: &ast.FunctionBlock{
 								Block: &ast.Block{
@@ -2944,7 +2941,6 @@ func TestParseTransactionDeclaration(t *testing.T) {
 								Identifier: "execute",
 								Pos:        ast.Position{Offset: 179, Line: 18, Column: 6},
 							},
-							ParameterList:        &ast.ParameterList{},
 							ReturnTypeAnnotation: nil,
 							FunctionBlock: &ast.FunctionBlock{
 								Block: &ast.Block{
