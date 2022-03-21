@@ -58,13 +58,11 @@ const page = `
             padding: 0;
             font-family: monospace;
             height: 100vh;
-            overflow: hidden;
         }
 
         #panels {
             display: grid;
-            height: 100%;
-            grid-template-rows: 1fr;
+            grid-template-rows: 100vh;
             grid-template-columns: 50% 50%;
             grid-template-areas: "editor ast";
         }
@@ -82,6 +80,8 @@ const page = `
 
         #output {
             white-space: pre;
+            height: 100%;
+            overflow: scroll;
         }
 
         #bar {
@@ -93,6 +93,10 @@ const page = `
             background-color: black;
         }
 
+        #stepper {
+            position: sticky;
+            top: 0
+        }
     </style>
 </head>
 <body id="panels">
