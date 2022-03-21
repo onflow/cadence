@@ -22,6 +22,8 @@ import (
 	"encoding/json"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
+	"github.com/turbolent/prettier"
 )
 
 // CompositeDeclaration
@@ -37,6 +39,8 @@ type CompositeDeclaration struct {
 	DocString     string
 	Range
 }
+
+var _ Declaration = &CompositeDeclaration{}
 
 func (d *CompositeDeclaration) Accept(visitor Visitor) Repr {
 	return visitor.VisitCompositeDeclaration(d)
@@ -84,6 +88,146 @@ func (d *CompositeDeclaration) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (d *CompositeDeclaration) Doc() prettier.Doc {
+
+	if d.CompositeKind == common.CompositeKindEvent {
+		return d.EventDoc()
+	}
+
+	return CompositeDocument(
+		d.Access,
+		d.CompositeKind,
+		false,
+		d.Identifier.Identifier,
+		d.Conformances,
+		d.Members,
+	)
+}
+
+func (d *CompositeDeclaration) EventDoc() prettier.Doc {
+	var doc prettier.Concat
+
+	if d.Access != AccessNotSpecified {
+		doc = append(
+			doc,
+			prettier.Text(d.Access.Keyword()),
+			prettier.Space,
+		)
+	}
+
+	doc = append(
+		doc,
+		prettier.Text(d.CompositeKind.Keyword()),
+		prettier.Space,
+		prettier.Text(d.Identifier.Identifier),
+	)
+
+	initializers := d.Members.Initializers()
+	if len(initializers) != 1 {
+		return nil
+	}
+
+	initializer := initializers[0]
+	paramsDoc := initializer.FunctionDeclaration.ParameterList.Doc()
+
+	return append(doc, paramsDoc)
+}
+
+var interfaceKeywordSpaceDoc = prettier.Text("interface ")
+var compositeConformancesSeparatorDoc = prettier.Text(":")
+var compositeConformanceSeparatorDoc prettier.Doc = prettier.Concat{
+	prettier.Text(","),
+	prettier.Line{},
+}
+
+func CompositeDocument(
+	access Access,
+	kind common.CompositeKind,
+	isInterface bool,
+	identifier string,
+	conformances []*NominalType,
+	members *Members,
+) prettier.Doc {
+
+	var doc prettier.Concat
+
+	if access != AccessNotSpecified {
+		doc = append(
+			doc,
+			prettier.Text(access.Keyword()),
+			prettier.Space,
+		)
+	}
+
+	doc = append(
+		doc,
+		prettier.Text(kind.Keyword()),
+		prettier.Space,
+	)
+
+	if isInterface {
+		doc = append(
+			doc,
+			interfaceKeywordSpaceDoc,
+		)
+	}
+
+	doc = append(
+		doc,
+		prettier.Text(identifier),
+	)
+
+	if len(conformances) > 0 {
+
+		conformancesDoc := prettier.Concat{
+			prettier.Line{},
+		}
+
+		for i, conformance := range conformances {
+			if i > 0 {
+				conformancesDoc = append(
+					conformancesDoc,
+					compositeConformanceSeparatorDoc,
+				)
+			}
+
+			conformancesDoc = append(
+				conformancesDoc,
+				conformance.Doc(),
+			)
+		}
+
+		conformancesDoc = append(
+			conformancesDoc,
+			prettier.Dedent{
+				Doc: prettier.Concat{
+					prettier.Line{},
+					members.Doc(),
+				},
+			},
+		)
+
+		doc = append(
+			doc,
+			compositeConformancesSeparatorDoc,
+			prettier.Group{
+				Doc: prettier.Indent{
+					Doc: conformancesDoc,
+				},
+			},
+		)
+
+	} else {
+		doc = append(
+			doc,
+			prettier.Space,
+			members.Doc(),
+		)
+	}
+
+	return doc
+}
+
 // FieldDeclaration
 
 type FieldDeclaration struct {
@@ -94,6 +238,8 @@ type FieldDeclaration struct {
 	DocString      string
 	Range
 }
+
+var _ Declaration = &FieldDeclaration{}
 
 func (d *FieldDeclaration) Accept(visitor Visitor) Repr {
 	return visitor.VisitFieldDeclaration(d)
@@ -137,6 +283,70 @@ func (d *FieldDeclaration) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func VariableKindDoc(kind VariableKind) prettier.Doc {
+	switch kind {
+	case VariableKindNotSpecified:
+		return nil
+	case VariableKindConstant:
+		return letKeywordDoc
+	case VariableKindVariable:
+		return varKeywordDoc
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (d *FieldDeclaration) Doc() prettier.Doc {
+	identifierTypeDoc := prettier.Concat{
+		prettier.Text(d.Identifier.Identifier),
+	}
+
+	if d.TypeAnnotation != nil {
+		identifierTypeDoc = append(
+			identifierTypeDoc,
+			typeSeparatorSpaceDoc,
+			d.TypeAnnotation.Doc(),
+		)
+	}
+
+	var docs []prettier.Doc
+
+	if d.Access != AccessNotSpecified {
+		docs = append(
+			docs,
+			prettier.Text(d.Access.Keyword()),
+		)
+	}
+
+	keywordDoc := VariableKindDoc(d.VariableKind)
+
+	if keywordDoc != nil {
+		docs = append(
+			docs,
+			keywordDoc,
+		)
+	}
+
+	var doc prettier.Doc
+
+	if len(docs) > 0 {
+		docs = append(
+			docs,
+			prettier.Group{
+				Doc: identifierTypeDoc,
+			},
+		)
+
+		doc = prettier.Join(prettier.Space, docs...)
+	} else {
+		doc = identifierTypeDoc
+	}
+
+	return prettier.Group{
+		Doc: doc,
+	}
+}
+
 // EnumCaseDeclaration
 
 type EnumCaseDeclaration struct {
@@ -145,6 +355,8 @@ type EnumCaseDeclaration struct {
 	DocString  string
 	StartPos   Position `json:"-"`
 }
+
+var _ Declaration = &EnumCaseDeclaration{}
 
 func (d *EnumCaseDeclaration) Accept(visitor Visitor) Repr {
 	return visitor.VisitEnumCaseDeclaration(d)
@@ -195,4 +407,24 @@ func (d *EnumCaseDeclaration) MarshalJSON() ([]byte, error) {
 		Range: NewRangeFromPositioned(d),
 		Alias: (*Alias)(d),
 	})
+}
+
+const enumCaseKeywordSpaceDoc = prettier.Text("case ")
+
+func (d *EnumCaseDeclaration) Doc() prettier.Doc {
+	var doc prettier.Concat
+
+	if d.Access != AccessNotSpecified {
+		doc = append(
+			doc,
+			prettier.Text(d.Access.Keyword()),
+			prettier.Space,
+		)
+	}
+
+	return append(
+		doc,
+		enumCaseKeywordSpaceDoc,
+		prettier.Text(d.Identifier.Identifier),
+	)
 }
