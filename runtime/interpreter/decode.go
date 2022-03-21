@@ -738,8 +738,7 @@ func (d StorableDecoder) decodeSome() (SomeStorable, error) {
 	}, nil
 }
 
-func checkEncodedAddressLength(addressBytes []byte) error {
-	actualLength := len(addressBytes)
+func checkEncodedAddressLength(actualLength int) error {
 	const expectedLength = common.AddressLength
 	if actualLength > expectedLength {
 		return fmt.Errorf(
@@ -752,9 +751,7 @@ func checkEncodedAddressLength(addressBytes []byte) error {
 }
 
 func (d StorableDecoder) decodeAddress() (AddressValue, error) {
-	common.UseConstantMemory(d.memoryGauge, common.MemoryKindAddress)
-
-	addressBytes, err := d.decoder.DecodeBytes()
+	addressBytes, err := d.decodeAddressBytes()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return AddressValue{}, fmt.Errorf(
@@ -765,13 +762,25 @@ func (d StorableDecoder) decodeAddress() (AddressValue, error) {
 		return AddressValue{}, err
 	}
 
-	err = checkEncodedAddressLength(addressBytes)
+	// Already metered at `decodeAddressBytes()`
+	return NewUnmeteredAddressValueFromBytes(addressBytes), nil
+}
+
+func (d StorableDecoder) decodeAddressBytes() ([]byte, error) {
+	// Check the address length and validate before decoding.
+	length, err := d.decoder.NextSize()
 	if err != nil {
-		return AddressValue{}, err
+		return nil, err
 	}
 
-	// Already metered at the start of this method
-	return NewUnmeteredAddressValueFromBytes(addressBytes), nil
+	lengthErr := checkEncodedAddressLength(int(length))
+	if lengthErr != nil {
+		return nil, lengthErr
+	}
+
+	common.UseConstantMemory(d.memoryGauge, common.MemoryKindAddress)
+
+	return d.decoder.DecodeBytes()
 }
 
 func (d StorableDecoder) decodePath() (PathValue, error) {
@@ -1673,6 +1682,9 @@ func (d LocationDecoder) decodeAddressLocation() (common.Location, error) {
 	// Address
 
 	// Decode address at array index encodedAddressLocationAddressFieldKey
+	//
+	// TODO: Use `decodeAddressBytes` and remove the `checkEncodedAddressLength` below
+	//       when memory metering of locations is implemented.
 	encodedAddress, err := d.decoder.DecodeBytes()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -1684,7 +1696,7 @@ func (d LocationDecoder) decodeAddressLocation() (common.Location, error) {
 		return nil, err
 	}
 
-	err = checkEncodedAddressLength(encodedAddress)
+	err = checkEncodedAddressLength(len(encodedAddress))
 	if err != nil {
 		return nil, err
 	}
