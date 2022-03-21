@@ -24,6 +24,7 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/turbolent/prettier"
 )
 
@@ -36,6 +37,7 @@ type Expression interface {
 	isExpression()
 	AcceptExp(ExpressionVisitor) Repr
 	Doc() prettier.Doc
+	precedence() precedence
 }
 
 // BoolExpression
@@ -90,6 +92,10 @@ func (e *BoolExpression) MarshalJSON() ([]byte, error) {
 		Type:  "BoolExpression",
 		Alias: (*Alias)(e),
 	})
+}
+
+func (*BoolExpression) precedence() precedence {
+	return precedenceLiteral
 }
 
 // NilExpression
@@ -147,6 +153,10 @@ func (e *NilExpression) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (*NilExpression) precedence() precedence {
+	return precedenceLiteral
+}
+
 // StringExpression
 
 type StringExpression struct {
@@ -189,6 +199,10 @@ func (e *StringExpression) MarshalJSON() ([]byte, error) {
 		Type:  "StringExpression",
 		Alias: (*Alias)(e),
 	})
+}
+
+func (*StringExpression) precedence() precedence {
+	return precedenceLiteral
 }
 
 // IntegerExpression
@@ -245,6 +259,10 @@ func (e *IntegerExpression) MarshalJSON() ([]byte, error) {
 		Value: e.Value.String(),
 		Alias: (*Alias)(e),
 	})
+}
+
+func (*IntegerExpression) precedence() precedence {
+	return precedenceLiteral
 }
 
 // FixedPointExpression
@@ -322,6 +340,10 @@ func (e *FixedPointExpression) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (*FixedPointExpression) precedence() precedence {
+	return precedenceLiteral
+}
+
 // ArrayExpression
 
 type ArrayExpression struct {
@@ -389,6 +411,10 @@ func (e *ArrayExpression) MarshalJSON() ([]byte, error) {
 		Type:  "ArrayExpression",
 		Alias: (*Alias)(e),
 	})
+}
+
+func (*ArrayExpression) precedence() precedence {
+	return precedenceLiteral
 }
 
 // DictionaryExpression
@@ -464,6 +490,10 @@ func (e *DictionaryExpression) MarshalJSON() ([]byte, error) {
 		Type:  "DictionaryExpression",
 		Alias: (*Alias)(e),
 	})
+}
+
+func (*DictionaryExpression) precedence() precedence {
+	return precedenceLiteral
 }
 
 type DictionaryEntry struct {
@@ -553,6 +583,10 @@ func (e *IdentifierExpression) EndPosition() Position {
 	return e.Identifier.EndPosition()
 }
 
+func (*IdentifierExpression) precedence() precedence {
+	return precedenceLiteral
+}
+
 // Arguments
 
 type Arguments []*Argument
@@ -621,8 +655,10 @@ func (e *InvocationExpression) String() string {
 func (e *InvocationExpression) Doc() prettier.Doc {
 
 	result := prettier.Concat{
-		// TODO: potentially parenthesize
-		e.InvokedExpression.Doc(),
+		parenthesizedExpressionDoc(
+			e.InvokedExpression,
+			e.precedence(),
+		),
 	}
 
 	if len(e.TypeArguments) > 0 {
@@ -686,6 +722,10 @@ func (e *InvocationExpression) MarshalJSON() ([]byte, error) {
 		Range: NewRangeFromPositioned(e),
 		Alias: (*Alias)(e),
 	})
+}
+
+func (*InvocationExpression) precedence() precedence {
+	return precedenceAccess
 }
 
 // AccessExpression
@@ -752,9 +792,12 @@ func (e *MemberExpression) Doc() prettier.Doc {
 	} else {
 		separatorDoc = memberExpressionSeparatorDoc
 	}
+
 	return prettier.Concat{
-		// TODO: potentially parenthesize
-		e.Expression.Doc(),
+		parenthesizedExpressionDoc(
+			e.Expression,
+			e.precedence(),
+		),
 		prettier.Group{
 			Doc: prettier.Indent{
 				Doc: prettier.Concat{
@@ -790,6 +833,10 @@ func (e *MemberExpression) MarshalJSON() ([]byte, error) {
 		Range: NewRangeFromPositioned(e),
 		Alias: (*Alias)(e),
 	})
+}
+
+func (*MemberExpression) precedence() precedence {
+	return precedenceAccess
 }
 
 // IndexExpression
@@ -834,8 +881,10 @@ func (e *IndexExpression) String() string {
 
 func (e *IndexExpression) Doc() prettier.Doc {
 	return prettier.Concat{
-		// TODO: potentially parenthesize
-		e.TargetExpression.Doc(),
+		parenthesizedExpressionDoc(
+			e.TargetExpression,
+			e.precedence(),
+		),
 		prettier.WrapBrackets(
 			e.IndexingExpression.Doc(),
 			prettier.SoftLine{},
@@ -852,6 +901,10 @@ func (e *IndexExpression) MarshalJSON() ([]byte, error) {
 		Type:  "IndexExpression",
 		Alias: (*Alias)(e),
 	})
+}
+
+func (*IndexExpression) precedence() precedence {
+	return precedenceAccess
 }
 
 // ConditionalExpression
@@ -900,14 +953,30 @@ var conditionalExpressionBranchSeparatorDoc prettier.Doc = prettier.Concat{
 }
 
 func (e *ConditionalExpression) Doc() prettier.Doc {
-	// TODO: potentially parenthesize
+	ownPrecedence := e.precedence()
+
+	// NOTE: right associative
+
 	testDoc := e.Test.Doc()
+	testPrecedence := e.Test.precedence()
 
-	// TODO: potentially parenthesize
+	if ownPrecedence >= testPrecedence {
+		testDoc = prettier.WrapParentheses(testDoc, prettier.SoftLine{})
+	}
+
 	thenDoc := e.Then.Doc()
+	thenPrecedence := e.Then.precedence()
 
-	// TODO: potentially parenthesize
+	if ownPrecedence >= thenPrecedence {
+		thenDoc = prettier.WrapParentheses(thenDoc, prettier.SoftLine{})
+	}
+
 	elseDoc := e.Else.Doc()
+	elsePrecedence := e.Else.precedence()
+
+	if ownPrecedence > elsePrecedence {
+		elseDoc = prettier.WrapParentheses(elseDoc, prettier.SoftLine{})
+	}
 
 	return prettier.Group{
 		Doc: prettier.Concat{
@@ -949,6 +1018,10 @@ func (e *ConditionalExpression) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (*ConditionalExpression) precedence() precedence {
+	return precedenceTernary
+}
+
 // UnaryExpression
 
 type UnaryExpression struct {
@@ -983,11 +1056,25 @@ func (e *UnaryExpression) String() string {
 	)
 }
 
+func parenthesizedExpressionDoc(e Expression, parentPrecedence precedence) prettier.Doc {
+	doc := e.Doc()
+	subPrecedence := e.precedence()
+	if parentPrecedence <= subPrecedence {
+		return doc
+	}
+	return prettier.WrapParentheses(
+		doc,
+		prettier.SoftLine{},
+	)
+}
+
 func (e *UnaryExpression) Doc() prettier.Doc {
 	return prettier.Concat{
 		prettier.Text(e.Operation.Symbol()),
-		// TODO: potentially parenthesize
-		e.Expression.Doc(),
+		parenthesizedExpressionDoc(
+			e.Expression,
+			e.precedence(),
+		),
 	}
 }
 
@@ -1010,6 +1097,10 @@ func (e *UnaryExpression) MarshalJSON() ([]byte, error) {
 		Range: NewRangeFromPositioned(e),
 		Alias: (*Alias)(e),
 	})
+}
+
+func (*UnaryExpression) precedence() precedence {
+	return precedenceUnaryPrefix
 }
 
 // BinaryExpression
@@ -1047,11 +1138,28 @@ func (e *BinaryExpression) String() string {
 }
 
 func (e *BinaryExpression) Doc() prettier.Doc {
-	// TODO: potentially parenthesize
-	leftDoc := e.Left.Doc()
 
-	// TODO: potentially parenthesize
+	ownPrecedence := e.precedence()
+	isLeftAssociative := e.IsLeftAssociative()
+	isRightAssociative := !isLeftAssociative
+
+	leftDoc := e.Left.Doc()
+	leftPrecedence := e.Left.precedence()
+
+	if (isLeftAssociative && ownPrecedence > leftPrecedence) ||
+		(isRightAssociative && ownPrecedence >= leftPrecedence) {
+
+		leftDoc = prettier.WrapParentheses(leftDoc, prettier.SoftLine{})
+	}
+
 	rightDoc := e.Right.Doc()
+	rightPrecedence := e.Right.precedence()
+
+	if (isLeftAssociative && ownPrecedence >= rightPrecedence) ||
+		(isRightAssociative && ownPrecedence > rightPrecedence) {
+
+		rightDoc = prettier.WrapParentheses(rightDoc, prettier.SoftLine{})
+	}
 
 	return prettier.Group{
 		Doc: prettier.Concat{
@@ -1087,6 +1195,42 @@ func (e *BinaryExpression) MarshalJSON() ([]byte, error) {
 		Range: NewRangeFromPositioned(e),
 		Alias: (*Alias)(e),
 	})
+}
+
+func (e *BinaryExpression) precedence() precedence {
+	switch e.Operation {
+	case OperationOr:
+		return precedenceLogicalOr
+	case OperationAnd:
+		return precedenceLogicalAnd
+	case OperationEqual,
+		OperationNotEqual,
+		OperationLess,
+		OperationLessEqual,
+		OperationGreater,
+		OperationGreaterEqual:
+		return precedenceComparison
+	case OperationNilCoalesce:
+		return precedenceNilCoalescing
+	case OperationBitwiseOr:
+		return precedenceBitwiseOr
+	case OperationBitwiseXor:
+		return precedenceBitwiseXor
+	case OperationBitwiseAnd:
+		return precedenceBitwiseAnd
+	case OperationBitwiseLeftShift, OperationBitwiseRightShift:
+		return precedenceBitwiseShift
+	case OperationPlus, OperationMinus:
+		return precedenceAddition
+	case OperationMul, OperationDiv, OperationMod:
+		return precedenceMultiplication
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (e *BinaryExpression) IsLeftAssociative() bool {
+	return e.Operation != OperationNilCoalesce
 }
 
 // FunctionExpression
@@ -1232,6 +1376,10 @@ func (e *FunctionExpression) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (*FunctionExpression) precedence() precedence {
+	return precedenceLiteral
+}
+
 // CastingExpression
 
 type CastingExpression struct {
@@ -1267,8 +1415,10 @@ func (e *CastingExpression) String() string {
 }
 
 func (e *CastingExpression) Doc() prettier.Doc {
-	// TODO: potentially parenthesize
-	doc := e.Expression.Doc()
+	doc := parenthesizedExpressionDoc(
+		e.Expression,
+		e.precedence(),
+	)
 
 	return prettier.Group{
 		Doc: prettier.Concat{
@@ -1304,6 +1454,10 @@ func (e *CastingExpression) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (*CastingExpression) precedence() precedence {
+	return precedenceCasting
+}
+
 // CreateExpression
 
 type CreateExpression struct {
@@ -1336,10 +1490,11 @@ func (e *CreateExpression) String() string {
 	)
 }
 
+var createKeywordSpaceDoc = prettier.Text("create ")
+
 func (e *CreateExpression) Doc() prettier.Doc {
 	return prettier.Concat{
-		prettier.Text("create "),
-		// TODO: potentially parenthesize
+		createKeywordSpaceDoc,
 		e.InvocationExpression.Doc(),
 	}
 }
@@ -1363,6 +1518,10 @@ func (e *CreateExpression) MarshalJSON() ([]byte, error) {
 		Range: NewRangeFromPositioned(e),
 		Alias: (*Alias)(e),
 	})
+}
+
+func (*CreateExpression) precedence() precedence {
+	return precedenceUnaryPrefix
 }
 
 // DestroyExpression
@@ -1402,8 +1561,10 @@ const destroyExpressionKeywordDoc = prettier.Text("destroy ")
 func (e *DestroyExpression) Doc() prettier.Doc {
 	return prettier.Concat{
 		destroyExpressionKeywordDoc,
-		// TODO: potentially parenthesize
-		e.Expression.Doc(),
+		parenthesizedExpressionDoc(
+			e.Expression,
+			e.precedence(),
+		),
 	}
 }
 
@@ -1426,6 +1587,10 @@ func (e *DestroyExpression) MarshalJSON() ([]byte, error) {
 		Range: NewRangeFromPositioned(e),
 		Alias: (*Alias)(e),
 	})
+}
+
+func (*DestroyExpression) precedence() precedence {
+	return precedenceUnaryPrefix
 }
 
 // ReferenceExpression
@@ -1467,8 +1632,10 @@ var referenceExpressionRefOperatorDoc prettier.Doc = prettier.Text("&")
 var referenceExpressionAsOperatorDoc prettier.Doc = prettier.Text("as")
 
 func (e *ReferenceExpression) Doc() prettier.Doc {
-	// TODO: potentially parenthesize
-	doc := e.Expression.Doc()
+	doc := parenthesizedExpressionDoc(
+		e.Expression,
+		e.precedence(),
+	)
 
 	return prettier.Group{
 		Doc: prettier.Concat{
@@ -1505,6 +1672,10 @@ func (e *ReferenceExpression) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (*ReferenceExpression) precedence() precedence {
+	return precedenceUnaryPrefix
+}
+
 // ForceExpression
 
 type ForceExpression struct {
@@ -1538,8 +1709,10 @@ const forceExpressionOperatorDoc = prettier.Text("!")
 
 func (e *ForceExpression) Doc() prettier.Doc {
 	return prettier.Concat{
-		// TODO: potentially parenthesize
-		e.Expression.Doc(),
+		parenthesizedExpressionDoc(
+			e.Expression,
+			e.precedence(),
+		),
 		forceExpressionOperatorDoc,
 	}
 }
@@ -1563,6 +1736,10 @@ func (e *ForceExpression) MarshalJSON() ([]byte, error) {
 		Range: NewRangeFromPositioned(e),
 		Alias: (*Alias)(e),
 	})
+}
+
+func (*ForceExpression) precedence() precedence {
+	return precedenceUnaryPostfix
 }
 
 // PathExpression
@@ -1618,4 +1795,8 @@ func (e *PathExpression) MarshalJSON() ([]byte, error) {
 		Range: NewRangeFromPositioned(e),
 		Alias: (*Alias)(e),
 	})
+}
+
+func (*PathExpression) precedence() precedence {
+	return precedenceLiteral
 }

@@ -794,6 +794,118 @@ func TestMemberExpression_Doc(t *testing.T) {
 			expr.Doc(),
 		)
 	})
+
+	t.Run("nested, same precedence", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &MemberExpression{
+			Expression: &MemberExpression{
+				Expression: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "foo",
+					},
+				},
+				Identifier: Identifier{
+					Identifier: "bar",
+				},
+			},
+			Identifier: Identifier{
+				Identifier: "baz",
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Concat{
+					prettier.Text("foo"),
+					prettier.Group{
+						Doc: prettier.Indent{
+							Doc: prettier.Concat{
+								prettier.SoftLine{},
+								prettier.Text("."),
+								prettier.Text("bar"),
+							},
+						},
+					},
+				},
+				prettier.Group{
+					Doc: prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Text("."),
+							prettier.Text("baz"),
+						},
+					},
+				},
+			},
+			expr.Doc(),
+		)
+	})
+
+	t.Run("nested, lower precedence", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &MemberExpression{
+			Expression: &BinaryExpression{
+				Operation: OperationMinus,
+				Left: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "foo",
+					},
+				},
+				Right: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "bar",
+					},
+				},
+			},
+			Identifier: Identifier{
+				Identifier: "baz",
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Group{
+					Doc: prettier.Concat{
+						prettier.Text("("),
+						prettier.Indent{
+							Doc: prettier.Concat{
+								prettier.SoftLine{},
+								prettier.Group{
+									Doc: prettier.Concat{
+										prettier.Group{
+											Doc: prettier.Text("foo"),
+										},
+										prettier.Line{},
+										prettier.Text("-"),
+										prettier.Text(" "),
+										prettier.Group{
+											Doc: prettier.Text("bar"),
+										},
+									},
+								},
+							},
+						},
+						prettier.SoftLine{},
+						prettier.Text(")"),
+					},
+				},
+				prettier.Group{
+					Doc: prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Text("."),
+							prettier.Text("baz"),
+						},
+					},
+				},
+			},
+			expr.Doc(),
+		)
+	})
 }
 
 func TestIndexExpression_MarshalJSON(t *testing.T) {
@@ -847,38 +959,174 @@ func TestIndexExpression_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	expr := &IndexExpression{
-		TargetExpression: &IdentifierExpression{
-			Identifier: Identifier{
-				Identifier: "foo",
-			},
-		},
-		IndexingExpression: &IdentifierExpression{
-			Identifier: Identifier{
-				Identifier: "bar",
-			},
-		},
-	}
+	t.Run("simple", func(t *testing.T) {
 
-	assert.Equal(t,
-		prettier.Concat{
-			prettier.Text("foo"),
-			prettier.Group{
-				Doc: prettier.Concat{
-					prettier.Text("["),
-					prettier.Indent{
-						Doc: prettier.Concat{
-							prettier.SoftLine{},
-							prettier.Text("bar"),
-						},
-					},
-					prettier.SoftLine{},
-					prettier.Text("]"),
+		t.Parallel()
+
+		expr := &IndexExpression{
+			TargetExpression: &IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "foo",
 				},
 			},
-		},
-		expr.Doc(),
-	)
+			IndexingExpression: &IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "bar",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("foo"),
+				prettier.Group{
+					Doc: prettier.Concat{
+						prettier.Text("["),
+						prettier.Indent{
+							Doc: prettier.Concat{
+								prettier.SoftLine{},
+								prettier.Text("bar"),
+							},
+						},
+						prettier.SoftLine{},
+						prettier.Text("]"),
+					},
+				},
+			},
+			expr.Doc(),
+		)
+	})
+
+	t.Run("nested, same precedence", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &IndexExpression{
+			TargetExpression: &IndexExpression{
+				TargetExpression: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "foo",
+					},
+				},
+				IndexingExpression: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "bar",
+					},
+				},
+			},
+			IndexingExpression: &IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "baz",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Concat{
+					prettier.Text("foo"),
+					prettier.Group{
+						Doc: prettier.Concat{
+							prettier.Text("["),
+							prettier.Indent{
+								Doc: prettier.Concat{
+									prettier.SoftLine{},
+									prettier.Text("bar"),
+								},
+							},
+							prettier.SoftLine{},
+							prettier.Text("]"),
+						},
+					},
+				},
+				prettier.Group{
+					Doc: prettier.Concat{
+						prettier.Text("["),
+						prettier.Indent{
+							Doc: prettier.Concat{
+								prettier.SoftLine{},
+								prettier.Text("baz"),
+							},
+						},
+						prettier.SoftLine{},
+						prettier.Text("]"),
+					},
+				},
+			},
+			expr.Doc(),
+		)
+	})
+
+	t.Run("nested, lower precedence", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &IndexExpression{
+			TargetExpression: &BinaryExpression{
+				Operation: OperationMinus,
+				Left: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "foo",
+					},
+				},
+				Right: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "bar",
+					},
+				},
+			},
+			IndexingExpression: &IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "baz",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Group{
+					Doc: prettier.Concat{
+						prettier.Text("("),
+						prettier.Indent{
+							Doc: prettier.Concat{
+								prettier.SoftLine{},
+								prettier.Group{
+									Doc: prettier.Concat{
+										prettier.Group{
+											Doc: prettier.Text("foo"),
+										},
+										prettier.Line{},
+										prettier.Text("-"),
+										prettier.Text(" "),
+										prettier.Group{
+											Doc: prettier.Text("bar"),
+										},
+									},
+								},
+							},
+						},
+						prettier.SoftLine{},
+						prettier.Text(")"),
+					},
+				},
+				prettier.Group{
+					Doc: prettier.Concat{
+						prettier.Text("["),
+						prettier.Indent{
+							Doc: prettier.Concat{
+								prettier.SoftLine{},
+								prettier.Text("baz"),
+							},
+						},
+						prettier.SoftLine{},
+						prettier.Text("]"),
+					},
+				},
+			},
+			expr.Doc(),
+		)
+	})
+
 }
 
 func TestUnaryExpression_MarshalJSON(t *testing.T) {
@@ -927,22 +1175,109 @@ func TestUnaryExpression_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	expr := &UnaryExpression{
-		Operation: OperationMinus,
-		Expression: &IdentifierExpression{
-			Identifier: Identifier{
-				Identifier: "foo",
-			},
-		},
-	}
+	t.Run("simple", func(t *testing.T) {
 
-	assert.Equal(t,
-		prettier.Concat{
-			prettier.Text("-"),
-			prettier.Text("foo"),
-		},
-		expr.Doc(),
-	)
+		t.Parallel()
+
+		expr := &UnaryExpression{
+			Operation: OperationMinus,
+			Expression: &IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "foo",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("-"),
+				prettier.Text("foo"),
+			},
+			expr.Doc(),
+		)
+	})
+
+	t.Run("nested, same precedence", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &UnaryExpression{
+			Operation: OperationMinus,
+			Expression: &UnaryExpression{
+				Operation: OperationMinus,
+				Expression: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "foo",
+					},
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("-"),
+				prettier.Concat{
+					prettier.Text("-"),
+					prettier.Text("foo"),
+				},
+			},
+			expr.Doc(),
+		)
+	})
+
+	t.Run("nested, lower precedence", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &UnaryExpression{
+			Operation: OperationMinus,
+			Expression: &BinaryExpression{
+				Operation: OperationMinus,
+				Left: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "foo",
+					},
+				},
+				Right: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "bar",
+					},
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("-"),
+				prettier.Group{
+					Doc: prettier.Concat{
+						prettier.Text("("),
+						prettier.Indent{
+							Doc: prettier.Concat{
+								prettier.SoftLine{},
+								prettier.Group{
+									Doc: prettier.Concat{
+										prettier.Group{
+											Doc: prettier.Text("foo"),
+										},
+										prettier.Line{},
+										prettier.Text("-"),
+										prettier.Text(" "),
+										prettier.Group{
+											Doc: prettier.Text("bar"),
+										},
+									},
+								},
+							},
+						},
+						prettier.SoftLine{},
+						prettier.Text(")"),
+					},
+				},
+			},
+			expr.Doc(),
+		)
+	})
 }
 
 func TestBinaryExpression_MarshalJSON(t *testing.T) {
@@ -1007,36 +1342,290 @@ func TestBinaryExpression_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	expr := &BinaryExpression{
-		Operation: OperationPlus,
-		Left: &IntegerExpression{
-			PositiveLiteral: "42",
-			Value:           big.NewInt(42),
-			Base:            10,
-		},
-		Right: &IntegerExpression{
-			PositiveLiteral: "99",
-			Value:           big.NewInt(99),
-			Base:            10,
-		},
-	}
+	t.Run("simple", func(t *testing.T) {
 
-	assert.Equal(t,
-		prettier.Group{
-			Doc: prettier.Concat{
-				prettier.Group{
-					Doc: prettier.Text("42"),
-				},
-				prettier.Line{},
-				prettier.Text("+"),
-				prettier.Space,
-				prettier.Group{
-					Doc: prettier.Text("99"),
+		t.Parallel()
+
+		expr := &BinaryExpression{
+			Operation: OperationPlus,
+			Left: &IntegerExpression{
+				PositiveLiteral: "42",
+				Value:           big.NewInt(42),
+				Base:            10,
+			},
+			Right: &IntegerExpression{
+				PositiveLiteral: "99",
+				Value:           big.NewInt(99),
+				Base:            10,
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Group{
+						Doc: prettier.Text("42"),
+					},
+					prettier.Line{},
+					prettier.Text("+"),
+					prettier.Space,
+					prettier.Group{
+						Doc: prettier.Text("99"),
+					},
 				},
 			},
-		},
-		expr.Doc(),
-	)
+			expr.Doc(),
+		)
+	})
+
+	t.Run("nested, same precedence, left associative", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &BinaryExpression{
+			Operation: OperationPlus,
+			Left: &BinaryExpression{
+				Operation: OperationPlus,
+				Left: &IntegerExpression{
+					PositiveLiteral: "42",
+					Value:           big.NewInt(42),
+					Base:            10,
+				},
+				Right: &IntegerExpression{
+					PositiveLiteral: "1",
+					Value:           big.NewInt(42),
+					Base:            10,
+				},
+			},
+			Right: &IntegerExpression{
+				PositiveLiteral: "99",
+				Value:           big.NewInt(99),
+				Base:            10,
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Group{
+						Doc: prettier.Group{
+							Doc: prettier.Concat{
+								prettier.Group{
+									Doc: prettier.Text("42"),
+								},
+								prettier.Line{},
+								prettier.Text("+"),
+								prettier.Text(" "),
+								prettier.Group{
+									Doc: prettier.Text("1"),
+								},
+							},
+						},
+					},
+					prettier.Line{},
+					prettier.Text("+"),
+					prettier.Text(" "),
+					prettier.Group{
+						Doc: prettier.Text("99"),
+					},
+				},
+			},
+			expr.Doc(),
+		)
+	})
+
+	t.Run("nested, lower precedence, left associative", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &BinaryExpression{
+			Operation: OperationPlus,
+			Left: &BinaryExpression{
+				Operation: OperationBitwiseOr,
+				Left: &IntegerExpression{
+					PositiveLiteral: "42",
+					Value:           big.NewInt(42),
+					Base:            10,
+				},
+				Right: &IntegerExpression{
+					PositiveLiteral: "1",
+					Value:           big.NewInt(42),
+					Base:            10,
+				},
+			},
+			Right: &IntegerExpression{
+				PositiveLiteral: "99",
+				Value:           big.NewInt(99),
+				Base:            10,
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Group{
+						Doc: prettier.Group{
+							Doc: prettier.Concat{
+								prettier.Text("("),
+								prettier.Indent{
+									Doc: prettier.Concat{
+										prettier.SoftLine{},
+										prettier.Group{
+											Doc: prettier.Concat{
+												prettier.Group{
+													Doc: prettier.Text("42"),
+												},
+												prettier.Line{},
+												prettier.Text("|"),
+												prettier.Text(" "),
+												prettier.Group{
+													Doc: prettier.Text("1"),
+												},
+											},
+										},
+									},
+								},
+								prettier.SoftLine{},
+								prettier.Text(")"),
+							},
+						},
+					},
+					prettier.Line{},
+					prettier.Text("+"),
+					prettier.Text(" "),
+					prettier.Group{
+						Doc: prettier.Text("99"),
+					},
+				},
+			},
+			expr.Doc(),
+		)
+	})
+
+	t.Run("nested, same precedence, right associative", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &BinaryExpression{
+			Operation: OperationNilCoalesce,
+			Left: &IntegerExpression{
+				PositiveLiteral: "99",
+				Value:           big.NewInt(99),
+				Base:            10,
+			},
+			Right: &BinaryExpression{
+				Operation: OperationNilCoalesce,
+				Left: &IntegerExpression{
+					PositiveLiteral: "42",
+					Value:           big.NewInt(42),
+					Base:            10,
+				},
+				Right: &IntegerExpression{
+					PositiveLiteral: "1",
+					Value:           big.NewInt(42),
+					Base:            10,
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Group{
+						Doc: prettier.Text("99"),
+					},
+					prettier.Line{},
+					prettier.Text("??"),
+					prettier.Text(" "),
+					prettier.Group{
+						Doc: prettier.Group{
+							Doc: prettier.Concat{
+								prettier.Group{
+									Doc: prettier.Text("42"),
+								},
+								prettier.Line{},
+								prettier.Text("??"),
+								prettier.Text(" "),
+								prettier.Group{
+									Doc: prettier.Text("1"),
+								},
+							},
+						},
+					},
+				},
+			},
+			expr.Doc(),
+		)
+	})
+
+	t.Run("nested, lower precedence, right associative", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &BinaryExpression{
+			Operation: OperationNilCoalesce,
+			Left: &BinaryExpression{
+				Operation: OperationOr,
+				Left: &IntegerExpression{
+					PositiveLiteral: "42",
+					Value:           big.NewInt(42),
+					Base:            10,
+				},
+				Right: &IntegerExpression{
+					PositiveLiteral: "1",
+					Value:           big.NewInt(42),
+					Base:            10,
+				},
+			},
+			Right: &IntegerExpression{
+				PositiveLiteral: "99",
+				Value:           big.NewInt(99),
+				Base:            10,
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Group{
+						Doc: prettier.Group{
+							Doc: prettier.Concat{
+								prettier.Text("("),
+								prettier.Indent{
+									Doc: prettier.Concat{
+										prettier.SoftLine{},
+										prettier.Group{
+											Doc: prettier.Concat{
+												prettier.Group{
+													Doc: prettier.Text("42"),
+												},
+												prettier.Line{},
+												prettier.Text("||"),
+												prettier.Text(" "),
+												prettier.Group{
+													Doc: prettier.Text("1"),
+												},
+											},
+										},
+									},
+								},
+								prettier.SoftLine{},
+								prettier.Text(")"),
+							},
+						},
+					},
+					prettier.Line{},
+					prettier.Text("??"),
+					prettier.Text(" "),
+					prettier.Group{
+						Doc: prettier.Text("99"),
+					},
+				},
+			},
+			expr.Doc(),
+		)
+	})
+
 }
 
 func TestDestroyExpression_MarshalJSON(t *testing.T) {
@@ -1082,21 +1671,106 @@ func TestDestroyExpression_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	d := &DestroyExpression{
-		Expression: &IdentifierExpression{
-			Identifier: Identifier{
-				Identifier: "foo",
-			},
-		},
-	}
+	t.Run("simple", func(t *testing.T) {
 
-	assert.Equal(t,
-		prettier.Concat{
-			prettier.Text("destroy "),
-			prettier.Text("foo"),
-		},
-		d.Doc(),
-	)
+		t.Parallel()
+
+		expr := &DestroyExpression{
+			Expression: &IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "foo",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("destroy "),
+				prettier.Text("foo"),
+			},
+			expr.Doc(),
+		)
+	})
+
+	t.Run("nested, same precedence", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &DestroyExpression{
+			Expression: &UnaryExpression{
+				Operation: OperationMinus,
+				Expression: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "foo",
+					},
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("destroy "),
+				prettier.Concat{
+					prettier.Text("-"),
+					prettier.Text("foo"),
+				},
+			},
+			expr.Doc(),
+		)
+	})
+
+	t.Run("nested, lower precedence", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &DestroyExpression{
+			Expression: &BinaryExpression{
+				Operation: OperationMinus,
+				Left: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "foo",
+					},
+				},
+				Right: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "bar",
+					},
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("destroy "),
+				prettier.Group{
+					Doc: prettier.Concat{
+						prettier.Text("("),
+						prettier.Indent{
+							Doc: prettier.Concat{
+								prettier.SoftLine{},
+								prettier.Group{
+									Doc: prettier.Concat{
+										prettier.Group{
+											Doc: prettier.Text("foo"),
+										},
+										prettier.Line{},
+										prettier.Text("-"),
+										prettier.Text(" "),
+										prettier.Group{
+											Doc: prettier.Text("bar"),
+										},
+									},
+								},
+							},
+						},
+						prettier.SoftLine{},
+						prettier.Text(")"),
+					},
+				},
+			},
+			expr.Doc(),
+		)
+	})
 }
 
 func TestForceExpression_MarshalJSON(t *testing.T) {
@@ -1142,20 +1816,91 @@ func TestForceExpression_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	expr := &ForceExpression{
-		Expression: &IdentifierExpression{
-			Identifier: Identifier{
-				Identifier: "foo",
+	t.Run("simple", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &ForceExpression{
+			Expression: &IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "foo",
+				},
 			},
-		},
-	}
-	assert.Equal(t,
-		prettier.Concat{
-			prettier.Text("foo"),
-			prettier.Text("!"),
-		},
-		expr.Doc(),
-	)
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("foo"),
+				prettier.Text("!"),
+			},
+			expr.Doc(),
+		)
+	})
+
+	t.Run("nested, same precedence", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &ForceExpression{
+			Expression: &ForceExpression{
+				Expression: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "foo",
+					},
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Concat{
+					prettier.Text("foo"),
+					prettier.Text("!"),
+				},
+				prettier.Text("!"),
+			},
+			expr.Doc(),
+		)
+	})
+
+	t.Run("nested, lower precedence", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &ForceExpression{
+			Expression: &UnaryExpression{
+				Operation: OperationMinus,
+				Expression: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "foo",
+					},
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Group{
+					Doc: prettier.Concat{
+						prettier.Text("("),
+						prettier.Indent{
+							Doc: prettier.Concat{
+								prettier.SoftLine{},
+								prettier.Concat{
+									prettier.Text("-"),
+									prettier.Text("foo"),
+								},
+							},
+						},
+						prettier.SoftLine{},
+						prettier.Text(")"),
+					},
+				},
+				prettier.Text("!"),
+			},
+			expr.Doc(),
+		)
+	})
 }
 
 func TestConditionalExpression_MarshalJSON(t *testing.T) {
@@ -1231,48 +1976,321 @@ func TestConditionalExpression_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	expr := &ConditionalExpression{
-		Test: &BoolExpression{
-			Value: false,
-		},
-		Then: &IntegerExpression{
-			PositiveLiteral: "42",
-			Value:           big.NewInt(42),
-			Base:            10,
-		},
-		Else: &IntegerExpression{
-			PositiveLiteral: "99",
-			Value:           big.NewInt(99),
-			Base:            10,
-		},
-	}
+	t.Run("simple", func(t *testing.T) {
 
-	assert.Equal(t,
-		prettier.Group{
-			Doc: prettier.Concat{
-				prettier.Text(`false`),
-				prettier.Indent{
-					Doc: prettier.Concat{
-						prettier.Concat{
-							prettier.Line{},
-							prettier.Text("? "),
-						},
-						prettier.Indent{
-							Doc: prettier.Text(`42`),
-						},
-						prettier.Concat{
-							prettier.Line{},
-							prettier.Text(": "),
-						},
-						prettier.Indent{
-							Doc: prettier.Text(`99`),
+		t.Parallel()
+
+		expr := &ConditionalExpression{
+			Test: &BoolExpression{
+				Value: false,
+			},
+			Then: &IntegerExpression{
+				PositiveLiteral: "42",
+				Value:           big.NewInt(42),
+				Base:            10,
+			},
+			Else: &IntegerExpression{
+				PositiveLiteral: "99",
+				Value:           big.NewInt(99),
+				Base:            10,
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text(`false`),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.Concat{
+								prettier.Line{},
+								prettier.Text("? "),
+							},
+							prettier.Indent{
+								Doc: prettier.Text(`42`),
+							},
+							prettier.Concat{
+								prettier.Line{},
+								prettier.Text(": "),
+							},
+							prettier.Indent{
+								Doc: prettier.Text(`99`),
+							},
 						},
 					},
 				},
 			},
-		},
-		expr.Doc(),
-	)
+			expr.Doc(),
+		)
+
+	})
+
+	t.Run("nested test, same precedence", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &ConditionalExpression{
+			Test: &ConditionalExpression{
+				Test: &BoolExpression{
+					Value: false,
+				},
+				Then: &IntegerExpression{
+					PositiveLiteral: "1",
+					Value:           big.NewInt(1),
+					Base:            10,
+				},
+				Else: &IntegerExpression{
+					PositiveLiteral: "2",
+					Value:           big.NewInt(2),
+					Base:            10,
+				},
+			},
+			Then: &IntegerExpression{
+				PositiveLiteral: "3",
+				Value:           big.NewInt(3),
+				Base:            10,
+			},
+			Else: &IntegerExpression{
+				PositiveLiteral: "4",
+				Value:           big.NewInt(4),
+				Base:            10,
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Group{
+						Doc: prettier.Concat{
+							prettier.Text("("),
+							prettier.Indent{
+								Doc: prettier.Concat{
+									prettier.SoftLine{},
+									prettier.Group{
+										Doc: prettier.Concat{
+											prettier.Text("false"),
+											prettier.Indent{
+												Doc: prettier.Concat{
+													prettier.Concat{
+														prettier.Line{},
+														prettier.Text("? "),
+													},
+													prettier.Indent{
+														Doc: prettier.Text("1"),
+													},
+													prettier.Concat{
+														prettier.Line{},
+														prettier.Text(": "),
+													},
+													prettier.Indent{
+														Doc: prettier.Text("2"),
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+							prettier.SoftLine{},
+							prettier.Text(")"),
+						},
+					},
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.Concat{
+								prettier.Line{},
+								prettier.Text("? "),
+							},
+							prettier.Indent{
+								Doc: prettier.Text("3"),
+							},
+							prettier.Concat{
+								prettier.Line{},
+								prettier.Text(": "),
+							},
+							prettier.Indent{
+								Doc: prettier.Text("4"),
+							},
+						},
+					},
+				},
+			},
+			expr.Doc(),
+		)
+	})
+
+	t.Run("nested then, same precedence", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &ConditionalExpression{
+			Test: &BoolExpression{
+				Value: false,
+			},
+			Then: &ConditionalExpression{
+				Test: &BoolExpression{
+					Value: false,
+				},
+				Then: &IntegerExpression{
+					PositiveLiteral: "1",
+					Value:           big.NewInt(1),
+					Base:            10,
+				},
+				Else: &IntegerExpression{
+					PositiveLiteral: "2",
+					Value:           big.NewInt(2),
+					Base:            10,
+				},
+			},
+			Else: &IntegerExpression{
+				PositiveLiteral: "3",
+				Value:           big.NewInt(3),
+				Base:            10,
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("false"),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.Concat{
+								prettier.Line{},
+								prettier.Text("? "),
+							},
+							prettier.Indent{
+								Doc: prettier.Group{
+									Doc: prettier.Concat{
+										prettier.Text("("),
+										prettier.Indent{
+											Doc: prettier.Concat{
+												prettier.SoftLine{},
+												prettier.Group{
+													Doc: prettier.Concat{
+														prettier.Text("false"),
+														prettier.Indent{
+															Doc: prettier.Concat{
+																prettier.Concat{
+																	prettier.Line{},
+																	prettier.Text("? "),
+																},
+																prettier.Indent{
+																	Doc: prettier.Text("1"),
+																},
+																prettier.Concat{
+																	prettier.Line{},
+																	prettier.Text(": "),
+																},
+																prettier.Indent{
+																	Doc: prettier.Text("2"),
+																},
+															},
+														},
+													},
+												},
+											},
+										},
+										prettier.SoftLine{},
+										prettier.Text(")"),
+									},
+								},
+							},
+							prettier.Concat{
+								prettier.Line{},
+								prettier.Text(": "),
+							},
+							prettier.Indent{
+								Doc: prettier.Text("3"),
+							},
+						},
+					},
+				},
+			},
+			expr.Doc(),
+		)
+	})
+
+	t.Run("nested then, same precedence", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &ConditionalExpression{
+			Test: &BoolExpression{
+				Value: false,
+			},
+			Then: &IntegerExpression{
+				PositiveLiteral: "1",
+				Value:           big.NewInt(1),
+				Base:            10,
+			},
+			Else: &ConditionalExpression{
+				Test: &BoolExpression{
+					Value: false,
+				},
+				Then: &IntegerExpression{
+					PositiveLiteral: "2",
+					Value:           big.NewInt(2),
+					Base:            10,
+				},
+				Else: &IntegerExpression{
+					PositiveLiteral: "3",
+					Value:           big.NewInt(3),
+					Base:            10,
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("false"),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.Concat{
+								prettier.Line{},
+								prettier.Text("? "),
+							},
+							prettier.Indent{
+								Doc: prettier.Text("1"),
+							},
+							prettier.Concat{
+								prettier.Line{},
+								prettier.Text(": "),
+							},
+							prettier.Indent{
+								Doc: prettier.Group{
+									Doc: prettier.Concat{
+										prettier.Text("false"),
+										prettier.Indent{
+											Doc: prettier.Concat{
+												prettier.Concat{
+													prettier.Line{},
+													prettier.Text("? "),
+												},
+												prettier.Indent{
+													Doc: prettier.Text("2"),
+												},
+												prettier.Concat{
+													prettier.Line{},
+													prettier.Text(": "),
+												},
+												prettier.Indent{
+													Doc: prettier.Text("3"),
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expr.Doc(),
+		)
+	})
+
 }
 
 func TestInvocationExpression_MarshalJSON(t *testing.T) {
@@ -1395,6 +2413,59 @@ func TestInvocationExpression_Doc(t *testing.T) {
 		assert.Equal(t,
 			prettier.Concat{
 				prettier.Text("foobar"),
+				prettier.Text("()"),
+			},
+			expr.Doc(),
+		)
+	})
+
+	t.Run("target expression with lower precedence", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &InvocationExpression{
+			InvokedExpression: &CastingExpression{
+				Operation: OperationCast,
+				Expression: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "foo",
+					},
+				},
+				TypeAnnotation: &TypeAnnotation{
+					Type: &NominalType{
+						Identifier: Identifier{
+							Identifier: "T",
+						},
+					},
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Group{
+					Doc: prettier.Concat{
+						prettier.Text("("),
+						prettier.Indent{
+							Doc: prettier.Concat{
+								prettier.SoftLine{},
+								prettier.Group{
+									Doc: prettier.Concat{
+										prettier.Group{
+											Doc: prettier.Text("foo"),
+										},
+										prettier.Line{},
+										prettier.Text("as"),
+										prettier.Line{},
+										prettier.Text("T"),
+									},
+								},
+							},
+						},
+						prettier.SoftLine{},
+						prettier.Text(")"),
+					},
+				},
 				prettier.Text("()"),
 			},
 			expr.Doc(),
@@ -1541,40 +2612,164 @@ func TestCastingExpression_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	expr := &CastingExpression{
-		Expression: &IntegerExpression{
-			PositiveLiteral: "42",
-			Value:           big.NewInt(42),
-			Base:            10,
-		},
-		Operation: OperationFailableCast,
-		TypeAnnotation: &TypeAnnotation{
-			IsResource: true,
-			Type: &NominalType{
-				Identifier: Identifier{
-					Identifier: "R",
-				},
-			},
-		},
-	}
+	t.Run("simple", func(t *testing.T) {
 
-	assert.Equal(t,
-		prettier.Group{
-			Doc: prettier.Concat{
-				prettier.Group{
-					Doc: prettier.Text("42"),
-				},
-				prettier.Line{},
-				prettier.Text("as?"),
-				prettier.Line{},
-				prettier.Concat{
-					prettier.Text("@"),
-					prettier.Text("R"),
+		t.Parallel()
+
+		expr := &CastingExpression{
+			Expression: &IntegerExpression{
+				PositiveLiteral: "42",
+				Value:           big.NewInt(42),
+				Base:            10,
+			},
+			Operation: OperationFailableCast,
+			TypeAnnotation: &TypeAnnotation{
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "Int",
+					},
 				},
 			},
-		},
-		expr.Doc(),
-	)
+		}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Group{
+						Doc: prettier.Text("42"),
+					},
+					prettier.Line{},
+					prettier.Text("as?"),
+					prettier.Line{},
+					prettier.Text("Int"),
+				},
+			},
+			expr.Doc(),
+		)
+	})
+
+	t.Run("nested, same precedence", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &CastingExpression{
+			Expression: &CastingExpression{
+				Expression: &IntegerExpression{
+					PositiveLiteral: "42",
+					Value:           big.NewInt(42),
+					Base:            10,
+				},
+				Operation: OperationFailableCast,
+				TypeAnnotation: &TypeAnnotation{
+					Type: &NominalType{
+						Identifier: Identifier{
+							Identifier: "AnyStruct",
+						},
+					},
+				},
+			},
+			Operation: OperationFailableCast,
+			TypeAnnotation: &TypeAnnotation{
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "Int",
+					},
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Group{
+						Doc: prettier.Group{
+							Doc: prettier.Concat{
+								prettier.Group{
+									Doc: prettier.Text("42"),
+								},
+								prettier.Line{},
+								prettier.Text("as?"),
+								prettier.Line{},
+								prettier.Text("AnyStruct"),
+							},
+						},
+					},
+					prettier.Line{},
+					prettier.Text("as?"),
+					prettier.Line{},
+					prettier.Text("Int"),
+				},
+			},
+			expr.Doc(),
+		)
+	})
+
+	t.Run("nested, lower precedence", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &CastingExpression{
+			Expression: &BinaryExpression{
+				Operation: OperationMinus,
+				Left: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "foo",
+					},
+				},
+				Right: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "bar",
+					},
+				},
+			},
+			Operation: OperationFailableCast,
+			TypeAnnotation: &TypeAnnotation{
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "Int",
+					},
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Group{
+						Doc: prettier.Group{
+							Doc: prettier.Concat{
+								prettier.Text("("),
+								prettier.Indent{
+									Doc: prettier.Concat{
+										prettier.SoftLine{},
+										prettier.Group{
+											Doc: prettier.Concat{
+												prettier.Group{
+													Doc: prettier.Text("foo"),
+												},
+												prettier.Line{},
+												prettier.Text("-"),
+												prettier.Text(" "),
+												prettier.Group{
+													Doc: prettier.Text("bar"),
+												},
+											},
+										},
+									}},
+								prettier.SoftLine{},
+								prettier.Text(")"),
+							},
+						},
+					},
+					prettier.Line{},
+					prettier.Text("as?"),
+					prettier.Line{},
+					prettier.Text("Int"),
+				},
+			},
+			expr.Doc(),
+		)
+	})
 }
 
 func TestCreateExpression_MarshalJSON(t *testing.T) {
@@ -1769,41 +2964,184 @@ func TestReferenceExpression_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	expr := &ReferenceExpression{
-		Expression: &IntegerExpression{
-			PositiveLiteral: "42",
-			Value:           big.NewInt(42),
-			Base:            10,
-		},
-		Type: &ReferenceType{
-			Authorized: true,
-			Type: &NominalType{
-				Identifier: Identifier{
-					Identifier: "Int",
-				},
-			},
-		},
-	}
+	t.Run("simple", func(t *testing.T) {
 
-	assert.Equal(t,
-		prettier.Group{
-			Doc: prettier.Concat{
-				prettier.Text("&"),
-				prettier.Group{
-					Doc: prettier.Text("42"),
-				},
-				prettier.Line{},
-				prettier.Text("as"),
-				prettier.Line{},
-				prettier.Concat{
-					prettier.Text("auth "),
-					prettier.Text("&"),
-					prettier.Text("Int"),
+		t.Parallel()
+
+		expr := &ReferenceExpression{
+			Expression: &IntegerExpression{
+				PositiveLiteral: "42",
+				Value:           big.NewInt(42),
+				Base:            10,
+			},
+			Type: &ReferenceType{
+				Authorized: true,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "Int",
+					},
 				},
 			},
-		},
-		expr.Doc(),
-	)
+		}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("&"),
+					prettier.Group{
+						Doc: prettier.Text("42"),
+					},
+					prettier.Line{},
+					prettier.Text("as"),
+					prettier.Line{},
+					prettier.Concat{
+						prettier.Text("auth "),
+						prettier.Text("&"),
+						prettier.Text("Int"),
+					},
+				},
+			},
+			expr.Doc(),
+		)
+	})
+
+	t.Run("nested, same precedence", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &ReferenceExpression{
+			Expression: &ReferenceExpression{
+				Expression: &IntegerExpression{
+					PositiveLiteral: "42",
+					Value:           big.NewInt(42),
+					Base:            10,
+				},
+				Type: &ReferenceType{
+					Authorized: true,
+					Type: &NominalType{
+						Identifier: Identifier{
+							Identifier: "AnyStruct",
+						},
+					},
+				},
+			},
+			Type: &ReferenceType{
+				Authorized: true,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "XYZ",
+					},
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("&"),
+					prettier.Group{
+						Doc: prettier.Group{
+							Doc: prettier.Concat{
+								prettier.Text("&"),
+								prettier.Group{
+									Doc: prettier.Text("42"),
+								},
+								prettier.Line{},
+								prettier.Text("as"),
+								prettier.Line{},
+								prettier.Concat{
+									prettier.Text("auth "),
+									prettier.Text("&"),
+									prettier.Text("AnyStruct"),
+								},
+							},
+						},
+					},
+					prettier.Line{},
+					prettier.Text("as"),
+					prettier.Line{},
+					prettier.Concat{
+						prettier.Text("auth "),
+						prettier.Text("&"),
+						prettier.Text("XYZ"),
+					},
+				},
+			},
+			expr.Doc(),
+		)
+	})
+
+	t.Run("nested, lower precedence", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &ReferenceExpression{
+			Expression: &BinaryExpression{
+				Operation: OperationMinus,
+				Left: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "foo",
+					},
+				},
+				Right: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "bar",
+					},
+				},
+			},
+			Type: &ReferenceType{
+				Authorized: true,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "Int",
+					},
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("&"),
+					prettier.Group{
+						Doc: prettier.Group{
+							Doc: prettier.Concat{
+								prettier.Text("("),
+								prettier.Indent{
+									Doc: prettier.Concat{
+										prettier.SoftLine{},
+										prettier.Group{
+											Doc: prettier.Concat{
+												prettier.Group{
+													Doc: prettier.Text("foo"),
+												},
+												prettier.Line{},
+												prettier.Text("-"),
+												prettier.Text(" "),
+												prettier.Group{
+													Doc: prettier.Text("bar"),
+												},
+											},
+										},
+									}},
+								prettier.SoftLine{},
+								prettier.Text(")"),
+							},
+						},
+					},
+					prettier.Line{},
+					prettier.Text("as"),
+					prettier.Line{},
+					prettier.Concat{
+						prettier.Text("auth "),
+						prettier.Text("&"),
+						prettier.Text("Int"),
+					},
+				},
+			},
+			expr.Doc(),
+		)
+	})
 }
 
 func TestFunctionExpression_MarshalJSON(t *testing.T) {
@@ -1942,6 +3280,7 @@ func TestFunctionExpression_Doc(t *testing.T) {
 		t.Parallel()
 
 		expr := &FunctionExpression{
+			ParameterList: &ParameterList{},
 			FunctionBlock: &FunctionBlock{
 				Block: &Block{
 					Statements: []Statement{},
@@ -1952,7 +3291,9 @@ func TestFunctionExpression_Doc(t *testing.T) {
 		expected := prettier.Concat{
 			prettier.Text("fun "),
 			prettier.Group{
-				Doc: prettier.Text("()"),
+				Doc: prettier.Concat{
+					prettier.Text("()"),
+				},
 			},
 			prettier.Text(" {}"),
 		}
@@ -2069,6 +3410,141 @@ func TestFunctionExpression_Doc(t *testing.T) {
 						prettier.Concat{
 							prettier.Text("return "),
 							prettier.Text("1"),
+						},
+					},
+				},
+				prettier.HardLine{},
+				prettier.Text("}"),
+			},
+		}
+
+		assert.Equal(t, expected, expr.Doc())
+	})
+
+	t.Run("pre-conditions and post-conditions", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &FunctionExpression{
+			ParameterList: &ParameterList{},
+			ReturnTypeAnnotation: &TypeAnnotation{
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "Void",
+					},
+				},
+			},
+			FunctionBlock: &FunctionBlock{
+				PreConditions: &Conditions{
+					{
+						Kind: ConditionKindPre,
+						Test: &BoolExpression{
+							Value: true,
+						},
+						Message: &StringExpression{
+							Value: "pre",
+						},
+					},
+				},
+				PostConditions: &Conditions{
+					{
+						Kind: ConditionKindPre,
+						Test: &BoolExpression{
+							Value: false,
+						},
+						Message: &StringExpression{
+							Value: "post",
+						},
+					},
+				},
+				Block: &Block{
+					Statements: []Statement{
+						&ReturnStatement{
+							Expression: &IntegerExpression{
+								PositiveLiteral: "1",
+								Value:           big.NewInt(1),
+								Base:            10,
+							},
+						},
+					},
+				},
+			},
+		}
+
+		expected := prettier.Concat{
+			prettier.Text("fun "),
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("()"),
+					prettier.Text(": "),
+					prettier.Text("Void"),
+				},
+			},
+			prettier.Text(" "),
+			prettier.Concat{
+				prettier.Text("{"),
+				prettier.Indent{
+					Doc: prettier.Concat{
+						prettier.HardLine{},
+						prettier.Group{
+							Doc: prettier.Concat{
+								prettier.Text("pre"),
+								prettier.Text(" "),
+								prettier.Text("{"),
+								prettier.Indent{
+									Doc: prettier.Concat{
+										prettier.HardLine{},
+										prettier.Group{
+											Doc: prettier.Concat{
+												prettier.Text("true"),
+												prettier.Text(":"),
+												prettier.Indent{
+													Doc: prettier.Concat{
+														prettier.HardLine{},
+														prettier.Text("\"pre\""),
+													},
+												},
+											},
+										},
+									},
+								},
+								prettier.HardLine{},
+								prettier.Text("}"),
+							},
+						},
+						prettier.HardLine{},
+						prettier.Group{
+							Doc: prettier.Concat{
+								prettier.Text("post"),
+								prettier.Text(" "),
+								prettier.Text("{"),
+								prettier.Indent{
+									Doc: prettier.Concat{
+										prettier.HardLine{},
+										prettier.Group{
+											Doc: prettier.Concat{
+												prettier.Text("false"),
+												prettier.Text(":"),
+												prettier.Indent{
+													Doc: prettier.Concat{
+														prettier.HardLine{},
+														prettier.Text("\"post\""),
+													},
+												},
+											},
+										},
+									},
+								},
+								prettier.HardLine{},
+								prettier.Text("}"),
+							},
+						},
+						prettier.Concat{
+							prettier.HardLine{},
+							prettier.Concat{
+								prettier.Text("return "),
+								prettier.Text("1"),
+							},
 						},
 					},
 				},

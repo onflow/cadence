@@ -61,7 +61,6 @@ func (s *ReturnStatement) Doc() prettier.Doc {
 
 	return prettier.Concat{
 		returnStatementKeywordSpaceDoc,
-		// TODO: potentially parenthesize
 		s.Expression.Doc(),
 	}
 }
@@ -403,7 +402,6 @@ const emitStatementKeywordSpaceDoc = prettier.Text("emit ")
 func (s *EmitStatement) Doc() prettier.Doc {
 	return prettier.Concat{
 		emitStatementKeywordSpaceDoc,
-		// TODO: potentially parenthesize
 		s.InvocationExpression.Doc(),
 	}
 }
