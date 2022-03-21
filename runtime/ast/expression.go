@@ -24,8 +24,9 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/onflow/cadence/runtime/errors"
 	"github.com/turbolent/prettier"
+
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 const NilConstant = "nil"

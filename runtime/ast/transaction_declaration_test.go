@@ -22,10 +22,11 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/onflow/cadence/runtime/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/turbolent/prettier"
+
+	"github.com/onflow/cadence/runtime/common"
 )
 
 func TestTransactionDeclaration_MarshalJSON(t *testing.T) {

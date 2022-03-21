@@ -19,8 +19,9 @@
 package ast
 
 import (
-	"github.com/onflow/cadence/runtime/common"
 	"github.com/turbolent/prettier"
+
+	"github.com/onflow/cadence/runtime/common"
 )
 
 type Declaration interface {
