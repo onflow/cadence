@@ -3854,6 +3854,20 @@ func (t *CompositeType) initializeMemberResolvers() {
 	})
 }
 
+func (t *CompositeType) FieldPosition(name string, declaration *ast.CompositeDeclaration) ast.Position {
+	var pos ast.Position
+	if t.Kind == common.CompositeKindEnum &&
+		name == EnumRawValueFieldName {
+
+		if len(declaration.Conformances) > 0 {
+			pos = declaration.Conformances[0].StartPosition()
+		}
+	} else {
+		pos = declaration.Members.FieldPosition(name, declaration.CompositeKind)
+	}
+	return pos
+}
+
 // Member
 
 type Member struct {
@@ -4215,6 +4229,10 @@ func (t *InterfaceType) IsContainerType() bool {
 
 func (t *InterfaceType) GetNestedTypes() *StringTypeOrderedMap {
 	return t.nestedTypes
+}
+
+func (t *InterfaceType) FieldPosition(name string, declaration *ast.InterfaceDeclaration) ast.Position {
+	return declaration.Members.FieldPosition(name, declaration.CompositeKind)
 }
 
 // DictionaryType consists of the key and value type
@@ -5350,12 +5368,11 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 			case *CompositeType:
 				// An unrestricted type `T`
-				// is a subtype of a restricted type `U{Vs}`: if `T == U`.
+				// is a subtype of a restricted type `U{Vs}`: if `T <: U`.
 				//
 				// The owner may freely restrict.
 
-				return typedSubType == typedSuperType.Type
-
+				return IsSubType(typedSubType, typedSuperType.Type)
 			}
 
 			switch subType {

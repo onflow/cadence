@@ -58,6 +58,25 @@ var testCompositeValueType = &sema.CompositeType{
 	Members:    sema.NewStringMemberOrderedMap(),
 }
 
+func getMeterCompFuncWithExpectedKinds(
+	t *testing.T,
+	kinds []common.ComputationKind,
+	intensities []uint,
+) OnMeterComputationFunc {
+	if len(kinds) != len(intensities) {
+		t.Fatal("size of kinds doesn't match size of intensitites")
+	}
+	expectedCompKindsIndex := 0
+	return func(compKind common.ComputationKind, intensity uint) {
+		if expectedCompKindsIndex >= len(kinds) {
+			t.Fatal("received an extra meterComputation call")
+		}
+		assert.Equal(t, kinds[expectedCompKindsIndex], compKind)
+		assert.Equal(t, intensities[expectedCompKindsIndex], intensity)
+		expectedCompKindsIndex++
+	}
+}
+
 func TestOwnerNewArray(t *testing.T) {
 
 	t.Parallel()
@@ -112,6 +131,18 @@ func TestOwnerArrayDeepCopy(t *testing.T) {
 		},
 		utils.TestLocation,
 		WithStorage(storage),
+		WithOnMeterComputationFuncHandler(
+			getMeterCompFuncWithExpectedKinds(t,
+				[]common.ComputationKind{
+					common.ComputationKindCreateCompositeValue,
+					common.ComputationKindCreateArrayValue,
+					common.ComputationKindTransferCompositeValue,
+					common.ComputationKindTransferArrayValue,
+					common.ComputationKindTransferCompositeValue,
+				},
+				[]uint{1, 1, 1, 1, 1},
+			),
+		),
 	)
 	require.NoError(t, err)
 
@@ -459,6 +490,18 @@ func TestOwnerDictionaryCopy(t *testing.T) {
 		},
 		utils.TestLocation,
 		WithStorage(storage),
+		WithOnMeterComputationFuncHandler(
+			getMeterCompFuncWithExpectedKinds(t,
+				[]common.ComputationKind{
+					common.ComputationKindCreateCompositeValue,
+					common.ComputationKindCreateDictionaryValue,
+					common.ComputationKindTransferCompositeValue,
+					common.ComputationKindTransferDictionaryValue,
+					common.ComputationKindTransferCompositeValue,
+				},
+				[]uint{1, 1, 1, 1, 1},
+			),
+		),
 	)
 	require.NoError(t, err)
 
@@ -646,7 +689,8 @@ func TestOwnerDictionaryRemove(t *testing.T) {
 		value2,
 	)
 	require.IsType(t, &SomeValue{}, existingValue)
-	value1 = existingValue.(*SomeValue).Value.(*CompositeValue)
+	innerValue := existingValue.(*SomeValue).InnerValue(inter, ReturnEmptyLocationRange)
+	value1 = innerValue.(*CompositeValue)
 
 	queriedValue, _ := dictionary.Get(inter, ReturnEmptyLocationRange, keyValue)
 	value2 = queriedValue.(*CompositeValue)
@@ -699,7 +743,8 @@ func TestOwnerDictionaryInsertExisting(t *testing.T) {
 		keyValue,
 	)
 	require.IsType(t, &SomeValue{}, existingValue)
-	value = existingValue.(*SomeValue).Value.(*CompositeValue)
+	innerValue := existingValue.(*SomeValue).InnerValue(inter, ReturnEmptyLocationRange)
+	value = innerValue.(*CompositeValue)
 
 	assert.Equal(t, newOwner, dictionary.GetOwner())
 	assert.Equal(t, common.Address{}, value.GetOwner())
@@ -1376,6 +1421,13 @@ func TestGetHashInput(t *testing.T) {
 			expected: append([]byte{byte(HashInputTypeString)},
 				[]byte(strings.Repeat("a", 32))...,
 			),
+		},
+		"Character": {
+			value: NewCharacterValue("ᄀᄀᄀ각ᆨᆨ"),
+			expected: []byte{
+				byte(HashInputTypeCharacter),
+				0xe1, 0x84, 0x80, 0xe1, 0x84, 0x80, 0xe1, 0x84, 0x80, 0xea, 0xb0, 0x81, 0xe1, 0x86, 0xa8, 0xe1, 0x86, 0xa8,
+			},
 		},
 		"Address": {
 			value:    NewAddressValue(common.Address{0, 0, 0, 0, 0, 0, 0, 1}),

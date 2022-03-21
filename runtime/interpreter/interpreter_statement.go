@@ -22,6 +22,7 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -35,6 +36,10 @@ func (interpreter *Interpreter) evalStatement(statement ast.Statement) interface
 	})
 
 	interpreter.statement = statement
+
+	if interpreter.onMeterComputation != nil {
+		interpreter.onMeterComputation(common.ComputationKindStatement, 1)
+	}
 
 	if interpreter.debugger != nil {
 		interpreter.debugger.onStatement(interpreter, statement)
@@ -164,8 +169,9 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 
 		targetType := interpreter.Program.Elaboration.VariableDeclarationTargetTypes[declaration]
 		getLocationRange := locationRangeGetter(interpreter.Location, declaration.Value)
+		innerValue := someValue.InnerValue(interpreter, getLocationRange)
 		transferredUnwrappedValue := interpreter.transferAndConvert(
-			someValue.Value,
+			innerValue,
 			valueType,
 			targetType,
 			getLocationRange,
@@ -173,6 +179,9 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 
 		interpreter.activations.PushNewWithCurrent()
 		defer interpreter.activations.Pop()
+
+		// Assignment can also be a resource move.
+		interpreter.invalidateResource(innerValue)
 
 		interpreter.declareVariable(
 			declaration.Identifier.Identifier,
@@ -423,6 +432,9 @@ func (interpreter *Interpreter) visitVariableDeclaration(
 	if result == nil {
 		panic(errors.NewUnreachableError())
 	}
+
+	// Assignment is a potential resource move.
+	interpreter.invalidateResource(result)
 
 	getLocationRange := locationRangeGetter(interpreter.Location, declaration.Value)
 

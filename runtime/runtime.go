@@ -21,7 +21,6 @@ package runtime
 import (
 	"errors"
 	"fmt"
-	"math"
 	goRuntime "runtime"
 	"time"
 
@@ -92,7 +91,11 @@ type Runtime interface {
 	// SetTracingEnabled configures if tracing is enabled.
 	SetTracingEnabled(enabled bool)
 
-	// SetResourceOwnerChangeCallbackEnabled configures if the resource owner change callback is enabled.
+	// SetInvalidatedResourceValidationEnabled configures
+	// if invalidated resource validation is enabled.
+	SetInvalidatedResourceValidationEnabled(enabled bool)
+
+	// SetResourceOwnerChangeHandlerEnabled configures if the resource owner change callback is enabled.
 	SetResourceOwnerChangeHandlerEnabled(enabled bool)
 
 	// ReadStored reads the value stored at the given path
@@ -155,11 +158,12 @@ func reportMetric(
 
 // interpreterRuntime is a interpreter-based version of the Flow runtime.
 type interpreterRuntime struct {
-	coverageReport                    *CoverageReport
-	contractUpdateValidationEnabled   bool
-	atreeValidationEnabled            bool
-	tracingEnabled                    bool
-	resourceOwnerChangeHandlerEnabled bool
+	coverageReport                       *CoverageReport
+	contractUpdateValidationEnabled      bool
+	atreeValidationEnabled               bool
+	tracingEnabled                       bool
+	resourceOwnerChangeHandlerEnabled    bool
+	invalidatedResourceValidationEnabled bool
 }
 
 type Option func(Runtime)
@@ -188,6 +192,15 @@ func WithAtreeValidationEnabled(enabled bool) Option {
 func WithTracingEnabled(enabled bool) Option {
 	return func(runtime Runtime) {
 		runtime.SetTracingEnabled(enabled)
+	}
+}
+
+// WithInvalidatedResourceValidationEnabled returns a runtime option
+// that configures if invalidated resource validation is enabled.
+//
+func WithInvalidatedResourceValidationEnabled(enabled bool) Option {
+	return func(runtime Runtime) {
+		runtime.SetInvalidatedResourceValidationEnabled(enabled)
 	}
 }
 
@@ -241,6 +254,10 @@ func (r *interpreterRuntime) SetAtreeValidationEnabled(enabled bool) {
 
 func (r *interpreterRuntime) SetTracingEnabled(enabled bool) {
 	r.tracingEnabled = enabled
+}
+
+func (r *interpreterRuntime) SetInvalidatedResourceValidationEnabled(enabled bool) {
+	r.invalidatedResourceValidationEnabled = enabled
 }
 
 func (r *interpreterRuntime) SetResourceOwnerChangeHandlerEnabled(enabled bool) {
@@ -1357,6 +1374,7 @@ func (r *interpreterRuntime) newInterpreter(
 		// Instead, storage is validated after commits (if validation is enabled).
 		interpreter.WithAtreeStorageValidationEnabled(false),
 		interpreter.WithOnResourceOwnerChangeHandler(r.resourceOwnerChangedHandler(context.Interface)),
+		interpreter.WithInvalidatedResourceValidationEnabled(r.invalidatedResourceValidationEnabled),
 	}
 
 	defaultOptions = append(defaultOptions,
@@ -1507,40 +1525,6 @@ func (r *interpreterRuntime) injectedCompositeFieldsHandler(
 }
 
 func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interface) []interpreter.Option {
-	var computationLimit uint64
-	wrapPanic(func() {
-		computationLimit = runtimeInterface.GetComputationLimit()
-	})
-	if computationLimit == 0 {
-		return nil
-	}
-
-	if computationLimit == math.MaxUint64 {
-		computationLimit--
-	}
-
-	var computationUsed uint64
-
-	checkComputationLimit := func(increase uint64) {
-		computationUsed += increase
-
-		if computationUsed <= computationLimit {
-			return
-		}
-
-		var err error
-		wrapPanic(func() {
-			err = runtimeInterface.SetComputationUsed(computationUsed)
-		})
-		if err != nil {
-			panic(err)
-		}
-
-		panic(ComputationLimitExceededError{
-			Limit: computationLimit,
-		})
-	}
-
 	callStackDepth := 0
 	// TODO: make runtime interface function
 	const callStackDepthLimit = 2000
@@ -1557,22 +1541,10 @@ func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interfa
 	}
 
 	return []interpreter.Option{
-		interpreter.WithOnStatementHandler(
-			func(_ *interpreter.Interpreter, _ ast.Statement) {
-				checkComputationLimit(1)
-			},
-		),
-		interpreter.WithOnLoopIterationHandler(
-			func(_ *interpreter.Interpreter, _ int) {
-				checkComputationLimit(1)
-			},
-		),
 		interpreter.WithOnFunctionInvocationHandler(
 			func(_ *interpreter.Interpreter, _ int) {
 				callStackDepth++
 				checkCallStackDepth()
-
-				checkComputationLimit(1)
 			},
 		),
 		interpreter.WithOnInvokedFunctionReturnHandler(
@@ -1580,9 +1552,15 @@ func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interfa
 				callStackDepth--
 			},
 		),
-		interpreter.WithExitHandler(
-			func() error {
-				return runtimeInterface.SetComputationUsed(computationUsed)
+		interpreter.WithOnMeterComputationFuncHandler(
+			func(compKind common.ComputationKind, intensity uint) {
+				var err error
+				wrapPanic(func() {
+					err = runtimeInterface.MeterComputation(compKind, intensity)
+				})
+				if err != nil {
+					panic(err)
+				}
 			},
 		),
 	}
@@ -1662,7 +1640,7 @@ func (r *interpreterRuntime) emitEvent(
 	fields := make([]exportableValue, len(eventType.ConstructorParameters))
 
 	for i, parameter := range eventType.ConstructorParameters {
-		value := event.GetField(parameter.Identifier)
+		value := event.GetField(inter, getLocationRange, parameter.Identifier)
 		fields[i] = newExportableValue(value, inter)
 	}
 
@@ -3312,13 +3290,14 @@ func (r *interpreterRuntime) resourceOwnerChangedHandler(
 		return nil
 	}
 	return func(
-		_ *interpreter.Interpreter,
+		interpreter *interpreter.Interpreter,
 		resource *interpreter.CompositeValue,
 		oldOwner common.Address,
 		newOwner common.Address,
 	) {
 		wrapPanic(func() {
 			runtimeInterface.ResourceOwnerChanged(
+				interpreter,
 				resource,
 				oldOwner,
 				newOwner,
@@ -3358,7 +3337,7 @@ func NewPublicKeyFromValue(
 		)
 	}
 
-	rawValue := signAlgoValue.GetField(sema.EnumRawValueFieldName)
+	rawValue := signAlgoValue.GetField(inter, getLocationRange, sema.EnumRawValueFieldName)
 	if rawValue == nil {
 		return nil, errors.New("sign algorithm raw value is not set")
 	}
@@ -3431,7 +3410,7 @@ func NewHashAlgorithmFromValue(
 ) HashAlgorithm {
 	hashAlgoValue := value.(*interpreter.CompositeValue)
 
-	rawValue := hashAlgoValue.GetField(sema.EnumRawValueFieldName)
+	rawValue := hashAlgoValue.GetField(inter, getLocationRange, sema.EnumRawValueFieldName)
 	if rawValue == nil {
 		panic("cannot find hash algorithm raw value")
 	}

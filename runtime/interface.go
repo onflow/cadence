@@ -84,10 +84,9 @@ type Interface interface {
 	EmitEvent(cadence.Event) error
 	// GenerateUUID is called to generate a UUID.
 	GenerateUUID() (uint64, error)
-	// GetComputationLimit returns the computation limit. A value <= 0 means there is no limit
-	GetComputationLimit() uint64
-	// SetComputationUsed reports the amount of computation used.
-	SetComputationUsed(used uint64) error
+	// MeterComputation is a callback method for metering computation, it returns error
+	// when computation passes the limit (set by the environment)
+	MeterComputation(operationType common.ComputationKind, intensity uint) error
 	// DecodeArgument decodes a transaction argument against the given type.
 	DecodeArgument(argument []byte, argumentType cadence.Type) (cadence.Value, error)
 	// GetCurrentBlockHeight returns the current block height.
@@ -132,7 +131,12 @@ type Interface interface {
 	// BLSAggregatePublicKeys aggregate multiple BLS public keys into one.
 	BLSAggregatePublicKeys(keys []*PublicKey) (*PublicKey, error)
 	// ResourceOwnerChanged gets called when a resource's owner changed (if enabled)
-	ResourceOwnerChanged(resource *interpreter.CompositeValue, oldOwner common.Address, newOwner common.Address)
+	ResourceOwnerChanged(
+		interpreter *interpreter.Interpreter,
+		resource *interpreter.CompositeValue,
+		oldOwner common.Address,
+		newOwner common.Address,
+	)
 }
 
 type Metrics interface {

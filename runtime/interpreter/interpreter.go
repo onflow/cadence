@@ -132,6 +132,15 @@ type OnResourceOwnerChangeFunc func(
 	newOwner common.Address,
 )
 
+// OnMeterComputationFunc is a function that is called when some computation is about to happen.
+// intensity captures the intensity of the computation and can be set using input sizes
+// complexity of computation given input sizes, or any other factors that could help the upper levels
+// to differentiate same kind of computation with different level (and time) of execution.
+type OnMeterComputationFunc func(
+	compKind common.ComputationKind,
+	intensity uint,
+)
+
 // InjectedCompositeFieldsHandlerFunc is a function that handles storage reads.
 //
 type InjectedCompositeFieldsHandlerFunc func(
@@ -329,6 +338,7 @@ type Interpreter struct {
 	onInvokedFunctionReturn        OnInvokedFunctionReturnFunc
 	onRecordTrace                  OnRecordTraceFunc
 	onResourceOwnerChange          OnResourceOwnerChangeFunc
+	onMeterComputation             OnMeterComputationFunc
 	injectedCompositeFieldsHandler InjectedCompositeFieldsHandlerFunc
 	contractValueHandler           ContractValueHandlerFunc
 	importLocationHandler          ImportLocationHandlerFunc
@@ -348,7 +358,9 @@ type Interpreter struct {
 	atreeStorageValidationEnabled  bool
 	tracingEnabled                 bool
 	// TODO: ideally this would be a weak map, but Go has no weak references
-	referencedResourceKindedValues ReferencedResourceKindedValues
+	referencedResourceKindedValues       ReferencedResourceKindedValues
+	invalidatedResourceValidationEnabled bool
+	resourceVariables                    map[ResourceKindedValue]*Variable
 }
 
 type Option func(*Interpreter) error
@@ -419,6 +431,16 @@ func WithOnRecordTraceHandler(handler OnRecordTraceFunc) Option {
 func WithOnResourceOwnerChangeHandler(handler OnResourceOwnerChangeFunc) Option {
 	return func(interpreter *Interpreter) error {
 		interpreter.SetOnResourceOwnerChangeHandler(handler)
+		return nil
+	}
+}
+
+// WithOnMeterComputationFuncHandler returns an interpreter option which sets
+// the given function as the meter computation handler.
+//
+func WithOnMeterComputationFuncHandler(handler OnMeterComputationFunc) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetOnMeterComputationHandler(handler)
 		return nil
 	}
 }
@@ -602,6 +624,16 @@ func WithTracingEnabled(enabled bool) Option {
 	}
 }
 
+// WithInvalidatedResourceValidationEnabled returns an interpreter option which sets
+// the resource validation option.
+//
+func WithInvalidatedResourceValidationEnabled(enabled bool) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetInvalidatedResourceValidationEnabled(enabled)
+		return nil
+	}
+}
+
 // withTypeCodes returns an interpreter option which sets the type codes.
 //
 func withTypeCodes(typeCodes TypeCodes) Option {
@@ -645,6 +677,7 @@ func NewInterpreter(program *Program, location common.Location, options ...Optio
 		activations:                &VariableActivations{},
 		Globals:                    map[string]*Variable{},
 		effectivePredeclaredValues: map[string]ValueDeclaration{},
+		resourceVariables:          map[ResourceKindedValue]*Variable{},
 	}
 
 	// Start a new activation/scope for the current program.
@@ -659,6 +692,7 @@ func NewInterpreter(program *Program, location common.Location, options ...Optio
 			TypeRequirementCodes: map[sema.TypeID]WrapperCode{},
 		}),
 		withReferencedResourceKindedValues(map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}{}),
+		WithInvalidatedResourceValidationEnabled(true),
 	}
 
 	for _, option := range defaultOptions {
@@ -718,6 +752,12 @@ func (interpreter *Interpreter) SetOnRecordTraceHandler(function OnRecordTraceFu
 //
 func (interpreter *Interpreter) SetOnResourceOwnerChangeHandler(function OnResourceOwnerChangeFunc) {
 	interpreter.onResourceOwnerChange = function
+}
+
+// SetOnMeterComputationFuncHandler sets the function that is triggered when a computation is about to happen.
+//
+func (interpreter *Interpreter) SetOnMeterComputationHandler(function OnMeterComputationFunc) {
+	interpreter.onMeterComputation = function
 }
 
 // SetStorage sets the value that is used for storage operations.
@@ -820,6 +860,12 @@ func (interpreter *Interpreter) SetAtreeStorageValidationEnabled(enabled bool) {
 //
 func (interpreter *Interpreter) SetTracingEnabled(enabled bool) {
 	interpreter.tracingEnabled = enabled
+}
+
+// SetInvalidatedResourceValidationEnabled sets the invalidated resource validation option.
+//
+func (interpreter *Interpreter) SetInvalidatedResourceValidationEnabled(enabled bool) {
+	interpreter.invalidatedResourceValidationEnabled = enabled
 }
 
 // setTypeCodes sets the type codes.
@@ -992,18 +1038,20 @@ func (interpreter *Interpreter) prepareInvoke(
 		}
 	}
 
+	getLocationRange := ReturnEmptyLocationRange
+
 	preparedArguments := make([]Value, len(arguments))
 	for i, argument := range arguments {
 		parameterType := parameters[i].TypeAnnotation.Type
 
 		// converts the argument into the parameter type declared by the function
-		preparedArguments[i] = ConvertAndBox(argument, nil, parameterType)
+		preparedArguments[i] = interpreter.ConvertAndBox(getLocationRange, argument, nil, parameterType)
 	}
 
 	// NOTE: can't fill argument types, as they are unknown
 	invocation := Invocation{
 		Arguments:        preparedArguments,
-		GetLocationRange: ReturnEmptyLocationRange,
+		GetLocationRange: getLocationRange,
 		Interpreter:      interpreter,
 	}
 
@@ -1145,11 +1193,25 @@ func (interpreter *Interpreter) VisitProgram(program *ast.Program) ast.Repr {
 		declaration := declaration
 
 		identifier := declaration.Identifier.Identifier
-		variable := NewVariableWithGetter(func() Value {
+
+		var variable *Variable
+
+		variable = NewVariableWithGetter(func() Value {
 			var result Value
 			interpreter.visitVariableDeclaration(declaration, func(_ string, value Value) {
 				result = value
 			})
+
+			// Global variables are lazily loaded. Therefore, start resource tracking also
+			// lazily when the resource is used for the first time.
+			// This is needed to support forward referencing.
+			interpreter.startResourceTracking(
+				result,
+				variable,
+				identifier,
+				declaration.Identifier,
+			)
+
 			return result
 		})
 		interpreter.setVariable(identifier, variable)
@@ -1350,6 +1412,10 @@ func (interpreter *Interpreter) declareVariable(identifier string, value Value) 
 	// NOTE: semantic analysis already checked possible invalid redeclaration
 	variable := NewVariableWithValue(value)
 	interpreter.setVariable(identifier, variable)
+
+	// TODO: add proper location info
+	interpreter.startResourceTracking(value, variable, identifier, nil)
+
 	return variable
 }
 
@@ -1793,7 +1859,7 @@ func EnumConstructorFunction(
 	lookupTable := make(map[string]*CompositeValue)
 
 	for _, caseValue := range caseValues {
-		rawValue := caseValue.GetField(sema.EnumRawValueFieldName)
+		rawValue := caseValue.GetField(inter, getLocationRange, sema.EnumRawValueFieldName)
 		rawValueBigEndianBytes := rawValue.(IntegerValue).ToBigEndianBytes()
 		lookupTable[string(rawValueBigEndianBytes)] = caseValue
 	}
@@ -2060,7 +2126,8 @@ func (interpreter *Interpreter) transferAndConvert(
 		nil,
 	)
 
-	result := ConvertAndBox(
+	result := interpreter.ConvertAndBox(
+		getLocationRange,
 		transferredValue,
 		valueType,
 		targetType,
@@ -2077,9 +2144,13 @@ func (interpreter *Interpreter) transferAndConvert(
 }
 
 // ConvertAndBox converts a value to a target type, and boxes in optionals and any value, if necessary
-func ConvertAndBox(value Value, valueType, targetType sema.Type) Value {
+func (interpreter *Interpreter) ConvertAndBox(
+	getLocationRange func() LocationRange,
+	value Value,
+	valueType, targetType sema.Type,
+) Value {
 	value = convert(value, valueType, targetType)
-	return BoxOptional(value, targetType)
+	return interpreter.BoxOptional(getLocationRange, value, targetType)
 }
 
 func convert(value Value, valueType, targetType sema.Type) Value {
@@ -2211,8 +2282,14 @@ func convert(value Value, valueType, targetType sema.Type) Value {
 }
 
 // BoxOptional boxes a value in optionals, if necessary
-func BoxOptional(value Value, targetType sema.Type) Value {
+func (interpreter *Interpreter) BoxOptional(
+	getLocationRange func() LocationRange,
+	value Value,
+	targetType sema.Type,
+) Value {
+
 	inner := value
+
 	for {
 		optionalType, ok := targetType.(*sema.OptionalType)
 		if !ok {
@@ -2221,7 +2298,7 @@ func BoxOptional(value Value, targetType sema.Type) Value {
 
 		switch typedInner := inner.(type) {
 		case *SomeValue:
-			inner = typedInner.Value
+			inner = typedInner.InnerValue(interpreter, getLocationRange)
 
 		case NilValue:
 			// NOTE: nested nil will be unboxed!
@@ -2236,14 +2313,14 @@ func BoxOptional(value Value, targetType sema.Type) Value {
 	return value
 }
 
-func Unbox(value Value) Value {
+func (interpreter *Interpreter) Unbox(getLocationRange func() LocationRange, value Value) Value {
 	for {
 		some, ok := value.(*SomeValue)
 		if !ok {
 			return value
 		}
 
-		value = some.Value
+		value = some.InnerValue(interpreter, getLocationRange)
 	}
 }
 
@@ -2569,6 +2646,7 @@ func (interpreter *Interpreter) NewSubInterpreter(
 		WithTracingEnabled(interpreter.tracingEnabled),
 		WithOnRecordTraceHandler(interpreter.onRecordTrace),
 		WithOnResourceOwnerChangeHandler(interpreter.onResourceOwnerChange),
+		WithOnMeterComputationFuncHandler(interpreter.onMeterComputation),
 	}
 
 	return NewInterpreter(
@@ -3010,6 +3088,8 @@ func init() {
 }
 
 func RestrictedTypeFunction(invocation Invocation) Value {
+	interpreter := invocation.Interpreter
+
 	restrictionIDs, ok := invocation.Arguments[1].(*ArrayValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -3025,7 +3105,7 @@ func RestrictedTypeFunction(invocation Invocation) Value {
 			panic(errors.NewUnreachableError())
 		}
 
-		restrictionInterface, err := lookupInterface(invocation.Interpreter, typeIDValue.Str)
+		restrictionInterface, err := lookupInterface(interpreter, typeIDValue.Str)
 		if err != nil {
 			invalidRestrictionID = true
 			return true
@@ -3054,7 +3134,8 @@ func RestrictedTypeFunction(invocation Invocation) Value {
 	case NilValue:
 		semaType = nil
 	case *SomeValue:
-		semaType, err = lookupComposite(invocation.Interpreter, typeID.Value.(*StringValue).Str)
+		innerValue := typeID.InnerValue(interpreter, invocation.GetLocationRange)
+		semaType, err = lookupComposite(interpreter, innerValue.(*StringValue).Str)
 		if err != nil {
 			return NilValue{}
 		}
@@ -4244,20 +4325,23 @@ func (interpreter *Interpreter) getInterfaceType(location common.Location, quali
 }
 
 func (interpreter *Interpreter) reportLoopIteration(pos ast.HasPosition) {
-	if interpreter.onLoopIteration == nil {
-		return
+	if interpreter.onMeterComputation != nil {
+		interpreter.onMeterComputation(common.ComputationKindLoop, 1)
 	}
 
-	line := pos.StartPosition().Line
-	interpreter.onLoopIteration(interpreter, line)
+	if interpreter.onLoopIteration != nil {
+		line := pos.StartPosition().Line
+		interpreter.onLoopIteration(interpreter, line)
+	}
 }
 
 func (interpreter *Interpreter) reportFunctionInvocation(line int) {
-	if interpreter.onFunctionInvocation == nil {
-		return
+	if interpreter.onMeterComputation != nil {
+		interpreter.onMeterComputation(common.ComputationKindFunctionInvocation, 1)
 	}
-
-	interpreter.onFunctionInvocation(interpreter, line)
+	if interpreter.onFunctionInvocation != nil {
+		interpreter.onFunctionInvocation(interpreter, line)
+	}
 }
 
 func (interpreter *Interpreter) reportInvokedFunctionReturn(line int) {
@@ -4266,6 +4350,12 @@ func (interpreter *Interpreter) reportInvokedFunctionReturn(line int) {
 	}
 
 	interpreter.onInvokedFunctionReturn(interpreter, line)
+}
+
+func (interpreter *Interpreter) ReportComputation(compKind common.ComputationKind, intensity uint) {
+	if interpreter.onMeterComputation != nil {
+		interpreter.onMeterComputation(compKind, intensity)
+	}
 }
 
 // getMember gets the member value by the given identifier from the given Value depending on its type.
@@ -4529,4 +4619,113 @@ func (interpreter *Interpreter) updateReferencedResource(
 		interpreter.referencedResourceKindedValues[newStorageID] = values
 		interpreter.referencedResourceKindedValues[currentStorageID] = nil
 	}
+}
+
+// startResourceTracking starts tracking the life-span of a resource.
+// A resource can only be associated with one variable at most, at a given time.
+func (interpreter *Interpreter) startResourceTracking(
+	value Value,
+	variable *Variable,
+	identifier string,
+	hasPosition ast.HasPosition,
+) {
+
+	if !interpreter.invalidatedResourceValidationEnabled ||
+		identifier == sema.SelfIdentifier {
+		return
+	}
+
+	resourceKindedValue := interpreter.resourceForValidation(value)
+	if resourceKindedValue == nil {
+		return
+	}
+
+	// A resource value can be associated with only one variable at a time.
+	// If the resource already has a variable-association, that means there is a
+	// resource variable that has not been invalidated properly.
+	// This should not be allowed, and must have been caught by the checker ideally.
+	if _, exists := interpreter.resourceVariables[resourceKindedValue]; exists {
+		var astRange ast.Range
+		if hasPosition != nil {
+			astRange = ast.NewRangeFromPositioned(hasPosition)
+		}
+
+		panic(InvalidatedResourceError{
+			LocationRange: LocationRange{
+				Location: interpreter.Location,
+				Range:    astRange,
+			},
+		})
+	}
+
+	interpreter.resourceVariables[resourceKindedValue] = variable
+}
+
+// checkInvalidatedResourceUse checks whether a resource variable is used after invalidation.
+func (interpreter *Interpreter) checkInvalidatedResourceUse(
+	value Value,
+	variable *Variable,
+	identifier string,
+	hasPosition ast.HasPosition,
+) {
+
+	if !interpreter.invalidatedResourceValidationEnabled ||
+		identifier == sema.SelfIdentifier {
+		return
+	}
+
+	resourceKindedValue := interpreter.resourceForValidation(value)
+	if resourceKindedValue == nil {
+		return
+	}
+
+	// A resource value can be associated with only one variable at a time.
+	// If the resource already has a variable-association other than the current variable,
+	// that means two variables are referring to the same resource at the same time.
+	// This should not be allowed, and must have been caught by the checker ideally.
+	//
+	// Note: if the `resourceVariables` doesn't have a mapping, that implies an invalidated resource.
+	if existingVar, exists := interpreter.resourceVariables[resourceKindedValue]; !exists || existingVar != variable {
+		panic(InvalidatedResourceError{
+			LocationRange: LocationRange{
+				Location: interpreter.Location,
+				Range:    ast.NewRangeFromPositioned(hasPosition),
+			},
+		})
+	}
+}
+
+func (interpreter *Interpreter) resourceForValidation(value Value) ResourceKindedValue {
+	switch typedValue := value.(type) {
+	case *SomeValue:
+		// Optional value's inner value could be nil, if it was a resource
+		// and has been invalidated.
+		if typedValue.value == nil || value.IsResourceKinded(interpreter) {
+			return typedValue
+		}
+	case ResourceKindedValue:
+		if value.IsResourceKinded(interpreter) {
+			return typedValue
+		}
+	}
+
+	return nil
+}
+
+func (interpreter *Interpreter) invalidateResource(value Value) {
+	if !interpreter.invalidatedResourceValidationEnabled {
+		return
+	}
+
+	if value == nil || !value.IsResourceKinded(interpreter) {
+		return
+	}
+
+	resourceKindedValue, ok := value.(ResourceKindedValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	// Remove the resource-to-variable mapping.
+	delete(interpreter.resourceVariables, resourceKindedValue)
 }

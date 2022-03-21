@@ -498,6 +498,8 @@ func TestWASMWriter_writeNameSection(t *testing.T) {
 
 func TestWASMWriterReader(t *testing.T) {
 
+	t.Skip("WIP")
+
 	t.Parallel()
 
 	var b Buffer

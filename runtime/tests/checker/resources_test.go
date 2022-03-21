@@ -3063,6 +3063,55 @@ func TestCheckInvalidContractResourceFieldMove(t *testing.T) {
 	assert.IsType(t, &sema.InvalidNestedResourceMoveError{}, errs[0])
 }
 
+func TestCheckInvalidEnumResourceField(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("raw type given", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+	      resource R {}
+
+          enum E: R {}
+	    `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidEnumRawTypeError{}, errs[0])
+	})
+
+	t.Run("raw type given, nested", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+	      resource R {
+              enum E: R {}
+          }
+	    `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		require.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
+		require.IsType(t, &sema.InvalidEnumRawTypeError{}, errs[1])
+	})
+
+	t.Run("raw type not given", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+	      enum E {}
+	    `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.MissingEnumRawTypeError{}, errs[0])
+	})
+}
+
 // TestCheckResourceInterfaceConformance tests the check
 // of conformance of resources to resource interfaces.
 //
@@ -8242,5 +8291,389 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
+	})
+}
+
+func TestCheckResourceInvalidationInConditionalExpression(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+            resource R {
+                let foo: String
+
+                init() {
+                    self.foo = "hello"
+                }
+            }
+
+            fun test(r1: @R, r2: @R) {
+                let r3 <- true ? r1 : r2
+                r1.foo
+                r2.foo
+                destroy r3
+                destroy r1
+                destroy r2
+            }
+        `)
+
+	errs := ExpectCheckerErrors(t, err, 2)
+	assert.IsType(t, &sema.InvalidConditionalResourceOperandError{}, errs[0])
+	assert.IsType(t, &sema.InvalidConditionalResourceOperandError{}, errs[1])
+}
+
+func TestCheckResourceInvalidationInNilCoalescingExpression(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+            resource R {
+                let foo: String
+
+                init() {
+                    self.foo = "hello"
+                }
+            }
+
+            fun test(r1: @R?, r2: @R) {
+                let r3 <- r1 ?? r2
+                r1?.foo
+                r2.foo
+                destroy r3
+                destroy r1
+                destroy r2
+            }
+        `)
+
+	errs := ExpectCheckerErrors(t, err, 3)
+	assert.IsType(t, &sema.InvalidNilCoalescingRightResourceOperandError{}, errs[0])
+	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[1])
+	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[2])
+}
+
+func TestCheckResourceInvalidationInForceExpression(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test(r: @R) {
+                let copy <- r!
+                destroy r
+                destroy copy
+            }
+        `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+}
+
+func TestCheckResourceInvalidationWithMove(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("in conditional expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test(r1: @R, r2: @R) {
+                let r3 <- true ? <- r1 : <- r2
+                destroy r3
+                destroy r1
+                destroy r2
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 4)
+		assert.IsType(t, &sema.InvalidConditionalResourceOperandError{}, errs[0])
+		assert.IsType(t, &sema.InvalidConditionalResourceOperandError{}, errs[1])
+		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[2])
+		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[3])
+	})
+
+	t.Run("in reference expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test(r: @R) {
+                let ref = &(<- r) as &AnyResource
+                destroy r
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+	})
+
+	t.Run("in casting expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test(r: @R) {
+                let copy <- (<- r) as @R
+                destroy r
+                destroy copy
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+	})
+
+	t.Run("in member expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {
+                let foo: String
+
+                init() {
+                    self.foo = "hello"
+                }
+            }
+
+            fun test(r: @R) {
+                let foo = (<- r).foo
+                destroy r
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[1])
+	})
+
+	t.Run("in index expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test(rs: @[R]) {
+                let copy <- (<- rs)[0]
+                destroy rs
+                destroy copy
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 3)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+		assert.IsType(t, &sema.InvalidNestedResourceMoveError{}, errs[1])
+		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[2])
+	})
+
+	t.Run("in force expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test(r: @R) {
+                let copy <- (<- r)!
+                destroy r
+                destroy copy
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+	})
+
+	t.Run("in nil-coalescing expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {
+                let foo: String
+
+                init() {
+                    self.foo = "hello"
+                }
+            }
+
+            fun test(r1: @R?, r2: @R) {
+                let r3 <- (<- r1) ?? (<- r2)
+                r1?.foo
+                r2.foo
+                destroy r3
+                destroy r1
+                destroy r2
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 5)
+		assert.IsType(t, &sema.InvalidNilCoalescingRightResourceOperandError{}, errs[0])
+		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[1])
+		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[2])
+		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[3])
+		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[4])
+	})
+
+	t.Run("in destroy expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test(r: @R) {
+                destroy (<- r)
+                destroy r
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+	})
+
+	t.Run("in function invocation expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun f(_ r: @R) {
+                destroy r
+            }
+
+            fun test(r: @R) {
+                f(<- (<- r))
+                destroy r
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+	})
+
+	t.Run("in array expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test(r: @R) {
+                let rs <- [<- (<- r)]
+                destroy r
+                destroy rs
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+	})
+
+	t.Run("in dictionary expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test(r: @R) {
+                let rs <- {"test": <- (<- r)}
+                destroy r
+                destroy rs
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+	})
+}
+
+func TestCheckResourceInvalidationWithConditionalExprInDestroy(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+        resource R {}
+
+        fun test(r1: @R, r2: @R) {
+            destroy true? r1 : r2
+            destroy r1
+            destroy r2
+        }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 2)
+	assert.IsType(t, &sema.InvalidConditionalResourceOperandError{}, errs[0])
+	assert.IsType(t, &sema.InvalidConditionalResourceOperandError{}, errs[1])
+}
+
+func TestCheckBadResourceInterface(t *testing.T) {
+	t.Parallel()
+
+	t.Run("bad resource interface: shorter", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, "resource interface struct{struct d:struct{ struct d:struct{ }struct d:struct{ struct d:struct{ }}}}")
+
+		errs := ExpectCheckerErrors(t, err, 17)
+
+		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
+		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[1])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[2])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[3])
+		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[4])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[5])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[6])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[7])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[8])
+		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[9])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[10])
+		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[11])
+		assert.IsType(t, &sema.ConformanceError{}, errs[12])
+		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[13])
+		assert.IsType(t, &sema.ConformanceError{}, errs[14])
+		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[15])
+		assert.IsType(t, &sema.ConformanceError{}, errs[16])
+	})
+
+	t.Run("bad resource interface: longer", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, "resource interface struct{struct d:struct{ contract d:struct{ contract x:struct{ struct d{} contract d:struct{ contract d:struct {}}}}}}")
+
+		errs := ExpectCheckerErrors(t, err, 24)
+
+		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
+		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[1])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[2])
+		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[3])
+		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[4])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[5])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[6])
+		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[7])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[8])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[9])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[10])
+		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[11])
+		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[12])
+		assert.IsType(t, &sema.ConformanceError{}, errs[13])
+		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[14])
+		assert.IsType(t, &sema.ConformanceError{}, errs[15])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[16])
+		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[17])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[18])
+		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[19])
+		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[20])
+		assert.IsType(t, &sema.ConformanceError{}, errs[21])
+		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[22])
+		assert.IsType(t, &sema.ConformanceError{}, errs[23])
 	})
 }
