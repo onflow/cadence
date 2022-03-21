@@ -6689,6 +6689,25 @@ func TestInterpretFix64Metering(t *testing.T) {
 		// y: 8
 		assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindNumber))
 	})
+
+	t.Run("creation as supertype", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let x: FixedPoint = -1.4
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindNumber))
+	})
 }
 
 func TestInterpretUFix64Metering(t *testing.T) {
@@ -6908,5 +6927,24 @@ func TestInterpretUFix64Metering(t *testing.T) {
 		// truncatedQuotient.Mul(o): 8
 		// result: 8
 		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindNumber))
+	})
+
+	t.Run("creation as supertype", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let x: FixedPoint = 1.4
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindNumber))
 	})
 }

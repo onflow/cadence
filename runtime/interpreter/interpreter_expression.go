@@ -557,9 +557,9 @@ func (interpreter *Interpreter) VisitFixedPointExpression(expression *ast.FixedP
 		return NewUFix64Value(interpreter, value.Uint64)
 	case sema.FixedPointType:
 		if expression.Negative {
-			return NewUnmeteredFix64Value(value.Int64())
+			return NewFix64Value(interpreter, value.Int64)
 		} else {
-			return NewUnmeteredUFix64Value(value.Uint64())
+			return NewUFix64Value(interpreter, value.Uint64)
 		}
 	default:
 		panic(errors.NewUnreachableError())
