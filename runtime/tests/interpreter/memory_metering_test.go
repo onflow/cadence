@@ -85,13 +85,13 @@ func TestInterpretArrayMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-	            pub fun main() {
-	                let values: [[Int8]] = [[], [], []]
-	                for value in values {
-	                  let a = value
-	                }
-	            }
-	        `
+                pub fun main() {
+                    let values: [[Int8]] = [[], [], []]
+                    for value in values {
+                      let a = value
+                    }
+                }
+            `
 
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
@@ -3233,7 +3233,7 @@ func TestInterpretInt8Metering(t *testing.T) {
 
 		script := `
             pub fun main() {
-		        let x: Int8 = 3 % 2
+                let x: Int8 = 3 % 2
             }
         `
 
@@ -3255,7 +3255,7 @@ func TestInterpretInt8Metering(t *testing.T) {
 		script := `
             pub fun main() {
                 let x: Int8 = 1
-		        let y: Int8 = -x
+                let y: Int8 = -x
             }
         `
 
@@ -3276,7 +3276,7 @@ func TestInterpretInt8Metering(t *testing.T) {
 
 		script := `
             pub fun main() {
-		        let x: Int8 = 3 | 2
+                let x: Int8 = 3 | 2
             }
         `
 
@@ -3297,7 +3297,7 @@ func TestInterpretInt8Metering(t *testing.T) {
 
 		script := `
             pub fun main() {
-		        let x: Int8 = 3 ^ 2
+                let x: Int8 = 3 ^ 2
             }
         `
 
@@ -3318,7 +3318,7 @@ func TestInterpretInt8Metering(t *testing.T) {
 
 		script := `
             pub fun main() {
-		        let x: Int8 = 3 & 2
+                let x: Int8 = 3 & 2
             }
         `
 
@@ -3339,7 +3339,7 @@ func TestInterpretInt8Metering(t *testing.T) {
 
 		script := `
             pub fun main() {
-		        let x: Int8 = 3 << 2
+                let x: Int8 = 3 << 2
             }
         `
 
@@ -3360,7 +3360,7 @@ func TestInterpretInt8Metering(t *testing.T) {
 
 		script := `
             pub fun main() {
-		        let x: Int8 = 3 >> 2
+                let x: Int8 = 3 >> 2
             }
         `
 
@@ -3577,7 +3577,7 @@ func TestInterpretInt16Metering(t *testing.T) {
 
 		script := `
             pub fun main() {
-		        let x: Int16 = 3 % 2
+                let x: Int16 = 3 % 2
             }
         `
 
@@ -3599,7 +3599,7 @@ func TestInterpretInt16Metering(t *testing.T) {
 		script := `
             pub fun main() {
                 let x: Int16 = 1
-		        let y: Int16 = -x
+                let y: Int16 = -x
             }
         `
 
@@ -3620,7 +3620,7 @@ func TestInterpretInt16Metering(t *testing.T) {
 
 		script := `
             pub fun main() {
-		        let x: Int16 = 3 | 2
+                let x: Int16 = 3 | 2
             }
         `
 
@@ -3641,7 +3641,7 @@ func TestInterpretInt16Metering(t *testing.T) {
 
 		script := `
             pub fun main() {
-		        let x: Int16 = 3 ^ 2
+                let x: Int16 = 3 ^ 2
             }
         `
 
@@ -3662,7 +3662,7 @@ func TestInterpretInt16Metering(t *testing.T) {
 
 		script := `
             pub fun main() {
-		        let x: Int16 = 3 & 2
+                let x: Int16 = 3 & 2
             }
         `
 
@@ -3683,7 +3683,7 @@ func TestInterpretInt16Metering(t *testing.T) {
 
 		script := `
             pub fun main() {
-		        let x: Int16 = 3 << 2
+                let x: Int16 = 3 << 2
             }
         `
 
@@ -3704,7 +3704,7 @@ func TestInterpretInt16Metering(t *testing.T) {
 
 		script := `
             pub fun main() {
-		        let x: Int16 = 3 >> 2
+                let x: Int16 = 3 >> 2
             }
         `
 
@@ -3921,7 +3921,7 @@ func TestInterpretInt32Metering(t *testing.T) {
 
 		script := `
             pub fun main() {
-		        let x: Int32 = 3 % 2
+                let x: Int32 = 3 % 2
             }
         `
 
@@ -3943,7 +3943,7 @@ func TestInterpretInt32Metering(t *testing.T) {
 		script := `
             pub fun main() {
                 let x: Int32 = 1
-		        let y: Int32 = -x
+                let y: Int32 = -x
             }
         `
 
@@ -3964,7 +3964,7 @@ func TestInterpretInt32Metering(t *testing.T) {
 
 		script := `
             pub fun main() {
-		        let x: Int32 = 3 | 2
+                let x: Int32 = 3 | 2
             }
         `
 
@@ -3985,7 +3985,7 @@ func TestInterpretInt32Metering(t *testing.T) {
 
 		script := `
             pub fun main() {
-		        let x: Int32 = 3 ^ 2
+                let x: Int32 = 3 ^ 2
             }
         `
 
@@ -4006,7 +4006,7 @@ func TestInterpretInt32Metering(t *testing.T) {
 
 		script := `
             pub fun main() {
-		        let x: Int32 = 3 & 2
+                let x: Int32 = 3 & 2
             }
         `
 
@@ -4027,7 +4027,7 @@ func TestInterpretInt32Metering(t *testing.T) {
 
 		script := `
             pub fun main() {
-		        let x: Int32 = 3 << 2
+                let x: Int32 = 3 << 2
             }
         `
 
@@ -4048,7 +4048,7 @@ func TestInterpretInt32Metering(t *testing.T) {
 
 		script := `
             pub fun main() {
-		        let x: Int32 = 3 >> 2
+                let x: Int32 = 3 >> 2
             }
         `
 
@@ -4265,7 +4265,7 @@ func TestInterpretInt64Metering(t *testing.T) {
 
 		script := `
             pub fun main() {
-		        let x: Int64 = 3 % 2
+                let x: Int64 = 3 % 2
             }
         `
 
@@ -4287,7 +4287,7 @@ func TestInterpretInt64Metering(t *testing.T) {
 		script := `
             pub fun main() {
                 let x: Int64 = 1
-		        let y: Int64 = -x
+                let y: Int64 = -x
             }
         `
 
@@ -4308,7 +4308,7 @@ func TestInterpretInt64Metering(t *testing.T) {
 
 		script := `
             pub fun main() {
-		        let x: Int64 = 3 | 2
+                let x: Int64 = 3 | 2
             }
         `
 
@@ -4329,7 +4329,7 @@ func TestInterpretInt64Metering(t *testing.T) {
 
 		script := `
             pub fun main() {
-		        let x: Int64 = 3 ^ 2
+                let x: Int64 = 3 ^ 2
             }
         `
 
@@ -4350,7 +4350,7 @@ func TestInterpretInt64Metering(t *testing.T) {
 
 		script := `
             pub fun main() {
-		        let x: Int64 = 3 & 2
+                let x: Int64 = 3 & 2
             }
         `
 
@@ -4371,7 +4371,7 @@ func TestInterpretInt64Metering(t *testing.T) {
 
 		script := `
             pub fun main() {
-		        let x: Int64 = 3 << 2
+                let x: Int64 = 3 << 2
             }
         `
 
@@ -4392,7 +4392,7 @@ func TestInterpretInt64Metering(t *testing.T) {
 
 		script := `
             pub fun main() {
-		        let x: Int64 = 3 >> 2
+                let x: Int64 = 3 >> 2
             }
         `
 
@@ -4609,7 +4609,7 @@ func TestInterpretInt128Metering(t *testing.T) {
 
 		script := `
             pub fun main() {
-		        let x: Int128 = 3 % 2
+                let x: Int128 = 3 % 2
             }
         `
 
@@ -4631,7 +4631,7 @@ func TestInterpretInt128Metering(t *testing.T) {
 		script := `
             pub fun main() {
                 let x: Int128 = 1
-		        let y: Int128 = -x
+                let y: Int128 = -x
             }
         `
 
@@ -4652,7 +4652,7 @@ func TestInterpretInt128Metering(t *testing.T) {
 
 		script := `
             pub fun main() {
-		        let x: Int128 = 3 | 2
+                let x: Int128 = 3 | 2
             }
         `
 
@@ -4673,7 +4673,7 @@ func TestInterpretInt128Metering(t *testing.T) {
 
 		script := `
             pub fun main() {
-		        let x: Int128 = 3 ^ 2
+                let x: Int128 = 3 ^ 2
             }
         `
 
@@ -4694,7 +4694,7 @@ func TestInterpretInt128Metering(t *testing.T) {
 
 		script := `
             pub fun main() {
-		        let x: Int128 = 3 & 2
+                let x: Int128 = 3 & 2
             }
         `
 
@@ -4715,7 +4715,7 @@ func TestInterpretInt128Metering(t *testing.T) {
 
 		script := `
             pub fun main() {
-		        let x: Int128 = 3 << 2
+                let x: Int128 = 3 << 2
             }
         `
 
@@ -4736,7 +4736,7 @@ func TestInterpretInt128Metering(t *testing.T) {
 
 		script := `
             pub fun main() {
-		        let x: Int128 = 3 >> 2
+                let x: Int128 = 3 >> 2
             }
         `
 
@@ -4953,7 +4953,7 @@ func TestInterpretInt256Metering(t *testing.T) {
 
 		script := `
             pub fun main() {
-		        let x: Int256 = 3 % 2
+                let x: Int256 = 3 % 2
             }
         `
 
@@ -4975,7 +4975,7 @@ func TestInterpretInt256Metering(t *testing.T) {
 		script := `
             pub fun main() {
                 let x: Int256 = 1
-		        let y: Int256 = -x
+                let y: Int256 = -x
             }
         `
 
@@ -4996,7 +4996,7 @@ func TestInterpretInt256Metering(t *testing.T) {
 
 		script := `
             pub fun main() {
-		        let x: Int256 = 3 | 2
+                let x: Int256 = 3 | 2
             }
         `
 
@@ -5017,7 +5017,7 @@ func TestInterpretInt256Metering(t *testing.T) {
 
 		script := `
             pub fun main() {
-		        let x: Int256 = 3 ^ 2
+                let x: Int256 = 3 ^ 2
             }
         `
 
@@ -5038,7 +5038,7 @@ func TestInterpretInt256Metering(t *testing.T) {
 
 		script := `
             pub fun main() {
-		        let x: Int256 = 3 & 2
+                let x: Int256 = 3 & 2
             }
         `
 
@@ -5059,7 +5059,7 @@ func TestInterpretInt256Metering(t *testing.T) {
 
 		script := `
             pub fun main() {
-		        let x: Int256 = 3 << 2
+                let x: Int256 = 3 << 2
             }
         `
 
@@ -5080,7 +5080,7 @@ func TestInterpretInt256Metering(t *testing.T) {
 
 		script := `
             pub fun main() {
-		        let x: Int256 = 3 >> 2
+                let x: Int256 = 3 >> 2
             }
         `
 
@@ -6062,7 +6062,7 @@ func TestInterpretBoolMetering(t *testing.T) {
 
 		script := `
             pub fun main() {
-				!true
+                !true
             }
         `
 		meter := newTestMemoryGauge()
@@ -6079,7 +6079,7 @@ func TestInterpretBoolMetering(t *testing.T) {
 
 		script := `
             pub fun main() {
-				true == true
+                true == true
             }
         `
 		meter := newTestMemoryGauge()
@@ -6096,7 +6096,7 @@ func TestInterpretBoolMetering(t *testing.T) {
 
 		script := `
             pub fun main() {
-				true == false
+                true == false
             }
         `
 		meter := newTestMemoryGauge()
@@ -6113,7 +6113,7 @@ func TestInterpretBoolMetering(t *testing.T) {
 
 		script := `
             pub fun main() {
-				true != false
+                true != false
             }
         `
 		meter := newTestMemoryGauge()
@@ -6172,7 +6172,7 @@ func TestInterpretVoidMetering(t *testing.T) {
 
 		script := `
             pub fun main(): Bool {
-				return true
+                return true
             }
         `
 		meter := newTestMemoryGauge()
@@ -6217,7 +6217,7 @@ func TestInterpretEphemeralReferenceValueMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-		  resource R {}
+          resource R {}
 
           pub fun main(): &Int {
               let x: Int = 1
@@ -6239,7 +6239,7 @@ func TestInterpretEphemeralReferenceValueMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-		  resource R {}
+          resource R {}
 
           pub fun main(): &Int {
               let x: Int? = 1
@@ -6287,7 +6287,7 @@ func TestInterpretCharacterMetering(t *testing.T) {
 		script := `
             pub fun main() {
                 let x: Character = "a"
-				let y = x
+                let y = x
             }
         `
 		meter := newTestMemoryGauge()
@@ -6309,7 +6309,7 @@ func TestInterpretCharacterMetering(t *testing.T) {
 		script := `
             pub fun main() {
                 let x: String = "a"
-				let y: Character = x[0]
+                let y: Character = x[0]
             }
         `
 		meter := newTestMemoryGauge()
@@ -6368,7 +6368,7 @@ func TestInterpretPathValueMetering(t *testing.T) {
 
 		script := `
             pub fun main() {
-				let x = /public/bar
+                let x = /public/bar
             }
         `
 		meter := newTestMemoryGauge()
@@ -6385,7 +6385,7 @@ func TestInterpretPathValueMetering(t *testing.T) {
 
 		script := `
             pub fun main() {
-				let x = PublicPath(identifier: "bar")
+                let x = PublicPath(identifier: "bar")
             }
         `
 		meter := newTestMemoryGauge()
@@ -6405,12 +6405,12 @@ func TestInterpretCapabilityValueMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-			resource R {}
+            resource R {}
 
             pub fun main(account: AuthAccount) {
-				let r <- create R()
-				account.save(<-r, to: /storage/r)
-				let x = account.link<&R>(/public/capo, target: /storage/r)
+                let r <- create R()
+                account.save(<-r, to: /storage/r)
+                let x = account.link<&R>(/public/capo, target: /storage/r)
             }
         `
 		meter := newTestMemoryGauge()
@@ -6432,10 +6432,10 @@ func TestInterpretLinkValueMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-			resource R {}
+            resource R {}
 
             pub fun main(account: AuthAccount) {
-				account.link<&R>(/public/capo, target: /private/p)
+                account.link<&R>(/public/capo, target: /private/p)
             }
         `
 		meter := newTestMemoryGauge()
@@ -6650,7 +6650,7 @@ func TestInterpretFix64Metering(t *testing.T) {
 
 		script := `
             pub fun main() {
-		        let x: Fix64 = 3.4 % 2.5
+                let x: Fix64 = 3.4 % 2.5
             }
         `
 
@@ -6675,7 +6675,7 @@ func TestInterpretFix64Metering(t *testing.T) {
 		script := `
             pub fun main() {
                 let x: Fix64 = 1.4
-		        let y: Fix64 = -x
+                let y: Fix64 = -x
             }
         `
 
@@ -6892,7 +6892,7 @@ func TestInterpretUFix64Metering(t *testing.T) {
 
 		script := `
             pub fun main() {
-		        let x: UFix64 = 3.4 % 2.5
+                let x: UFix64 = 3.4 % 2.5
             }
         `
 

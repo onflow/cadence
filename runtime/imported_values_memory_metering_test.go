@@ -626,8 +626,8 @@ func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 				}
 
 				script := []byte(fmt.Sprintf(`
-            		pub fun main(x: %s) {}
-        		`, test.TypeName))
+                    pub fun main(x: %s) {}
+                `, test.TypeName))
 
 				_, err := runtime.ExecuteScript(
 					Script{
