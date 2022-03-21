@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/turbolent/prettier"
 )
 
 // InterfaceDeclaration
@@ -34,6 +35,8 @@ type InterfaceDeclaration struct {
 	DocString     string
 	Range
 }
+
+var _ Declaration = &InterfaceDeclaration{}
 
 func (d *InterfaceDeclaration) Accept(visitor Visitor) Repr {
 	return visitor.VisitInterfaceDeclaration(d)
@@ -79,4 +82,15 @@ func (d *InterfaceDeclaration) MarshalJSON() ([]byte, error) {
 		Type:  "InterfaceDeclaration",
 		Alias: (*Alias)(d),
 	})
+}
+
+func (d *InterfaceDeclaration) Doc() prettier.Doc {
+	return CompositeDocument(
+		d.Access,
+		d.CompositeKind,
+		true,
+		d.Identifier.Identifier,
+		nil,
+		d.Members,
+	)
 }
