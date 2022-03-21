@@ -13778,7 +13778,7 @@ func (v *CompositeValue) SetMember(
 	existingStorable, err := v.dictionary.Set(
 		StringAtreeComparator,
 		StringAtreeHashInput,
-		StringAtreeValue(name),
+		NewStringAtreeValue(interpreter, name),
 		value,
 	)
 	if err != nil {

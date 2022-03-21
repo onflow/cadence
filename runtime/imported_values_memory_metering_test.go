@@ -489,7 +489,7 @@ func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 		},
 		{
 			TypeName:   "Path",
-			MemoryKind: common.MemoryKindString,
+			MemoryKind: common.MemoryKindRawString,
 			Weight:     3 + 1,
 			TypeInstance: cadence.Path{
 				Domain:     "storage",
@@ -532,7 +532,7 @@ func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 		},
 		{
 			TypeName:   "Capability",
-			MemoryKind: common.MemoryKindString,
+			MemoryKind: common.MemoryKindRawString,
 			Weight:     13 + 1,
 			TypeInstance: cadence.Capability{
 				Path: cadence.Path{
