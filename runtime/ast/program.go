@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/turbolent/prettier"
 )
 
 type Program struct {
@@ -61,8 +62,8 @@ func (p *Program) Accept(visitor Visitor) Repr {
 	return visitor.VisitProgram(p)
 }
 
-func (d *Program) Walk(walkChild func(Element)) {
-	walkDeclarations(walkChild, d.declarations)
+func (p *Program) Walk(walkChild func(Element)) {
+	walkDeclarations(walkChild, p.declarations)
 }
 
 func (p *Program) PragmaDeclarations() []*PragmaDeclaration {
@@ -170,4 +171,21 @@ func (p *Program) MarshalJSON() ([]byte, error) {
 		Declarations: p.declarations,
 		Alias:        (*Alias)(p),
 	})
+}
+
+var programSeparatorDoc = prettier.Concat{
+	prettier.HardLine{},
+	prettier.HardLine{},
+}
+
+func (p *Program) Doc() prettier.Doc {
+	declarations := p.Declarations()
+
+	docs := make([]prettier.Doc, 0, len(declarations))
+
+	for _, declaration := range declarations {
+		docs = append(docs, declaration.Doc())
+	}
+
+	return prettier.Join(programSeparatorDoc, docs...)
 }

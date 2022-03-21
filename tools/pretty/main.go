@@ -38,22 +38,8 @@ func pretty(code string, maxLineWidth int) string {
 		return err.Error()
 	}
 
-	declarations := program.Declarations()
-
-	docs := make([]prettier.Doc, 0, len(declarations))
-
-	for _, declaration := range declarations {
-		// TODO: replace once Declaration implements Doc
-		hasDoc, ok := declaration.(interface{ Doc() prettier.Doc })
-		if !ok {
-			continue
-		}
-
-		docs = append(docs, hasDoc.Doc())
-	}
-
 	var b strings.Builder
-	prettier.Prettier(&b, prettier.Concat(docs), maxLineWidth, "    ")
+	prettier.Prettier(&b, program.Doc(), maxLineWidth, "    ")
 	return b.String()
 }
 
