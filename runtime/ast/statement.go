@@ -27,6 +27,7 @@ import (
 type Statement interface {
 	Element
 	isStatement()
+	Doc() prettier.Doc
 }
 
 // ReturnStatement
@@ -151,6 +152,7 @@ func (s *ContinueStatement) MarshalJSON() ([]byte, error) {
 type IfStatementTest interface {
 	Element
 	isIfStatementTest()
+	Doc() prettier.Doc
 }
 
 // IfStatement
@@ -193,12 +195,7 @@ const ifStatementIfKeywordSpaceDoc = prettier.Text("if ")
 const ifStatementSpaceElseKeywordSpaceDoc = prettier.Text(" else ")
 
 func (s *IfStatement) Doc() prettier.Doc {
-	var testDoc prettier.Doc
-	// TODO: replace once IfStatementTest implements Doc
-	testWithDoc, ok := s.Test.(interface{ Doc() prettier.Doc })
-	if ok {
-		testDoc = testWithDoc.Doc()
-	}
+	testDoc := s.Test.Doc()
 
 	doc := prettier.Concat{
 		ifStatementIfKeywordSpaceDoc,

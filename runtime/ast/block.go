@@ -61,23 +61,17 @@ func (b *Block) Doc() prettier.Doc {
 }
 
 func StatementsDoc(statements []Statement) prettier.Doc {
-	var statementsDoc prettier.Concat
+	var doc prettier.Concat
 
 	for _, statement := range statements {
-		// TODO: replace once Statement implements Doc
-		hasDoc, ok := statement.(interface{ Doc() prettier.Doc })
-		if !ok {
-			continue
-		}
-
-		statementsDoc = append(
-			statementsDoc,
+		doc = append(
+			doc,
 			prettier.HardLine{},
-			hasDoc.Doc(),
+			statement.Doc(),
 		)
 	}
 
-	return statementsDoc
+	return doc
 }
 
 func (b *Block) MarshalJSON() ([]byte, error) {
