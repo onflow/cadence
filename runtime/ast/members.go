@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/turbolent/prettier"
 )
 
 // Members
@@ -119,4 +120,38 @@ func (m *Members) MarshalJSON() ([]byte, error) {
 		Declarations: m.declarations,
 		Alias:        (*Alias)(m),
 	})
+}
+
+var membersStartDoc prettier.Doc = prettier.Text("{")
+var membersEndDoc prettier.Doc = prettier.Text("}")
+var membersEmptyDoc prettier.Doc = prettier.Text("{}")
+
+func (m *Members) Doc() prettier.Doc {
+	if len(m.declarations) == 0 {
+		return membersEmptyDoc
+	}
+
+	var docs []prettier.Doc
+
+	for _, decl := range m.declarations {
+		docs = append(
+			docs,
+			prettier.Concat{
+				prettier.HardLine{},
+				decl.Doc(),
+			},
+		)
+	}
+
+	return prettier.Concat{
+		membersStartDoc,
+		prettier.Indent{
+			Doc: prettier.Join(
+				prettier.HardLine{},
+				docs...,
+			),
+		},
+		prettier.HardLine{},
+		membersEndDoc,
+	}
 }
