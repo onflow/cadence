@@ -444,7 +444,7 @@ func (interpreter *Interpreter) VisitIntegerExpression(expression *ast.IntegerEx
 
 	if _, ok := typ.(*sema.AddressType); ok {
 		common.UseConstantMemory(interpreter, common.MemoryKindAddress)
-		return NewUnmeteredAddressValue(value.Bytes())
+		return NewUnmeteredAddressValueFromBytes(value.Bytes())
 	}
 
 	// The ranges are checked at the checker level.

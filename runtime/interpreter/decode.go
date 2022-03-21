@@ -775,9 +775,8 @@ func (d StorableDecoder) decodeAddress() (AddressValue, error) {
 		return AddressValue{}, err
 	}
 
-	// metered at start of method
-	address := NewUnmeteredAddressValue(addressBytes)
-	return address, nil
+	// Already metered at the start of this method
+	return NewUnmeteredAddressValueFromBytes(addressBytes), nil
 }
 
 func (d StorableDecoder) decodePath() (PathValue, error) {
