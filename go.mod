@@ -14,7 +14,7 @@ require (
 	github.com/rivo/uniseg v0.2.1-0.20211004051800-57c86be7915a
 	github.com/schollz/progressbar/v3 v3.8.3
 	github.com/stretchr/testify v1.7.1-0.20210824115523-ab6dc3262822
-	github.com/turbolent/prettier v0.0.0-20210613180524-3a3f5a5b49ba
+	github.com/turbolent/prettier v0.0.0-20220320183459-661cc755135d
 	go.uber.org/goleak v1.1.10
 	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
