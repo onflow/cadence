@@ -16,18 +16,18 @@ They are not meant to be rules to be followed strictly, especially where a bette
 
 These are general patterns to follow when writing smart contracts.
 
-## Use Named Value Fields for Constants Instead of Hard-Coding
+## Use named value fields for constants instead of hard-coding
 
 ### Problem
 
 Your contracts, resources, and scripts all have to refer to the same value.
 A number, a string, a storage path, etc.
 Entering these values manually in transactions and scripts is a potential source of error.
-See: [https://en.wikipedia.org/wiki/Magic*number*(programming)](<https://en.wikipedia.org/wiki/Magic_number_(programming)>)
+See [Wikipedia's page on magic numbers](https://en.wikipedia.org/wiki/Magic_number_(programming))
 
 ### Solution
 
-Add a public (`pub`) field, e.g. a `Path` , to the contract responsible for the value,
+Add a public (`pub`), constant (`let`) field, e.g. a `Path` , to the contract responsible for the value,
 and set it in the contract's initializer.
 Refer to that value via this public field rather than specifying it manually.
 
@@ -35,22 +35,22 @@ Example Snippet:
 
 ```cadence
 
-// Bad Practice
+// BAD Practice: Do not hard code storage paths
 pub contract NamedFields {
     pub resource Test {}
 
     init() {
-        // hard-coded storage path: BAD
+        // BAD: Hard-coded storage path
         self.account.save(<-create Test(), to: /storage/testStorage)
     }
 }
 
-// Instead, use a field
-// Good practice!
+// GOOD practice: Instead, use a field
+// 
 pub contract NamedFields {
     pub resource Test {}
 
-    // field storage path: GOOD
+    // GOOD: field storage path
     pub let TestStoragePath: StoragePath
 
     init() {
@@ -64,7 +64,7 @@ pub contract NamedFields {
 
 [Example Code](https://github.com/onflow/flow-core-contracts/blob/master/contracts/LockedTokens.cdc#L583)
 
-## Script-Accessible Public Field/Function
+## Script-Accessible public field/function
 
 Data availability is important in a blockchain environment.
 It is useful to publicize information about your smart contract and the assets it controls
@@ -78,7 +78,7 @@ Your contract, resource or struct has a field or resource that will need to be r
 
 Make sure that the field can be accessed from a script (using a `PublicAccount`)
 rather than requiring a transaction (using an `AuthAccount`).
-This saves the time and soon the expense required by having to read a property using a transaction.
+This saves the time and fees required to read a property using a transaction.
 Making the field or function `pub` and exposing it via a `/public/` capability will allow this.
 
 Be careful not to expose any data or functionality that should be kept private when doing so.
@@ -86,16 +86,14 @@ Be careful not to expose any data or functionality that should be kept private w
 Example:
 
 ```cadence
-// Field is private, so it cannot be read by the public
-// Bad
+// BAD: Field is private, so it cannot be read by the public
 access(self) let totalSupply: UFix64
 
-// Field is public, so it can be read and used by anyone
-// Good
+// GOOD: Field is public, so it can be read and used by anyone
 pub let totalSupply: UFix64
 ```
 
-## Script-Accessible Report
+## Script-Accessible report
 
 ### Problem
 
@@ -106,7 +104,8 @@ so a construct must be used to hold the data.
 
 ### Solution
 
-Declare a struct to hold the data that you wish to return from the script.
+Return a reference to a resource if the data from a single resource is all that is needed.
+Otherwise, declare a struct to hold the data that you wish to return from the script.
 Write a function that fills out the fields of this struct with the data
 from the resource that you wish to access.
 Then call this on the resource that you wish to access the fields of in a script,
@@ -170,7 +169,7 @@ There should not be a function to do this, as that would allow anyone to create 
 ### Solution
 
 Create any one-off resources in the contract's `init()` function
-and deliver them to an address or AuthAccount specified as an argument.
+and deliver them to an address or `AuthAccount` specified as an argument.
 
 See how this is done in the LockedTokens contract init function:
 
@@ -181,7 +180,7 @@ and in the transaction that is used to deploy it:
 [admin_deploy_contract.cdc](https://github.com/onflow/flow-core-contracts/blob/master/transactions/lockedTokens/admin/admin_deploy_contract.cdc)
 
 
-## Use Desciptive Names for fields, paths, functions, and variables
+## Use desciptive names for fields, paths, functions, and variables
 
 ### Problem
 
@@ -200,10 +199,9 @@ All fields, functions, types, variables, etc need to have names that clearly des
 `/storage/bestPracticesDocsCollectionPath` is better than `/storage/collection`
 
 ### Example
-
 ```cadence
-// Unclear naming
-// Bad
+// BAD: Unclear naming
+//
 pub contract Tax {
     // Do not use abbreviations unless absolutely necessary
     pub var pcnt: UFix64
@@ -217,8 +215,8 @@ pub contract Tax {
     }
 }
 
-// Clear naming
-// Good
+// GOOD: Clear naming
+//
 pub contract TaxUtilities {
     // Clearly states what the field is for
     pub var taxPercentage: UFix64
@@ -233,7 +231,7 @@ pub contract TaxUtilities {
 }
 ```
 
-## Include Concrete Types in Type Constraints, especially "Any" Types
+## Include concrete types in type constraints, especially "Any" types
 
 ### Problem
 
@@ -242,6 +240,7 @@ making it unclear if the developer actually intended it to be unspecified or not
 Paths also use a shared namespace between contracts, so an account may have stored a different object
 in a path that you would expect to be used for something else.
 Therefore, it is important to be explicit when getting objects or references to resources.
+
 
 ### Solution
 
@@ -254,14 +253,14 @@ When the developer does not care what the concrete type is, they should explicit
 by using `&AnyResource{Receiver}` instead of `&{Receiver}`.
 In the latter case, `AnyResource` is implicit, but not as clear as the former case.
 
-## Plural Names For Arrays And Maps Are Preferable
+## Plural names for arrays and maps are preferable
 
 e.g. `accounts` rather than `account` for an array of accounts.
 
 This signals that the field or variable is not scalar.
 It also makes it easier to use the singular form for a variable name during iteration.
 
-## Use transaction Post-Conditions when Applicable
+## Use transaction post-conditions when applicable
 
 ### Problem
 
@@ -300,12 +299,22 @@ transaction {
 }
 ```
 
-## Avoid Excessive Load and Save Storage Operations (Prefer in-place Mutations)
+## Avoid excessive load and save storage operations (prefer in-place mutations)
 
 ### Problem
 
 When modifying data in account storage, `load()` and `save()` are costly operations.
 This can quickly cause your transaction to reach the gas limit or slow down the network.
+
+This also applies to contract objects and their fields (which are implicitly stored in storage, i.e. read from/written to),
+or nested resources. Loading them from their fields just to modify them and save them back
+is just as costly.
+
+For example, a collection contains a dictionary of NFTs. There is no need to move the whole dictionary out of the field,
+update the dictionary on the stack (e.g. adding or removing an NFT),
+and then move the whole dictionary back to the field, it can be updated in-place.
+The same goes for a more complex data structure like a dictionary of nested resources:
+Each resource can be updated in-place by taking a reference to the nested object instead of loading and saving.
 
 ### Solution
 
@@ -317,8 +326,8 @@ This reference can be assigned to or can be used to access fields or call method
 ### Example
 
 ```cadence
-// Loads and stores a resource to use it
-// BAD
+// BAD: Loads and stores a resource to use it
+//
 transaction {
 
     prepare(acct: AuthAccount) {
@@ -337,8 +346,8 @@ transaction {
     }
 }
 
-// Uses borrow instead to avoid costly operations
-// GOOD
+// GOOD: Uses borrow instead to avoid costly operations
+//
 transaction {
 
     prepare(acct: AuthAccount) {
@@ -362,8 +371,14 @@ transaction {
 ### Problem
 
 An account must be given a [capability](/cadence/language/capability-based-access-control/)
-to a resource or contract in another account but a single transaction with both accounts authorizing it
-cannot be easily produced. This prevents a single transaction from fetching the capability
+to a resource or contract in another account. To create, i.e. link the capability,
+the transaction must be signed by a key which has access to the target account.
+
+To transfer / deliver the capability to the other account, the transaction also needs write access to that one.
+It is not as easy to produce a single transaction which is authorized by two accounts
+as it is to produce a typical transaction which is authorized by one account.
+
+This prevents a single transaction from fetching the capability
 from one account and delivering it to the other.
 
 ### Solution
@@ -403,6 +418,8 @@ See:
 A capability provided by one account to a second account must able to be revoked
 by the first account without the co-operation of the second.
 
+See the [Capability Controller FLIP](https://github.com/onflow/flow/pull/798) for a proposal to improve this in the future.
+
 ### Solution
 
 The first account should create the capability as a link to a capability in `/private/`,
@@ -425,7 +442,7 @@ in its private storage once the capability has been revoked,
 otherwise this will restore the second account's capability.
 
 
-## Check For Existing Links Before Create New ones
+## Check for existing links before creating new ones
 
 When linking a capability, the link might be already present.
 In that case, Cadence will not panic with a runtime error but the link function will return nil.

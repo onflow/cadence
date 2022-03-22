@@ -6,7 +6,7 @@ One question that every Solidity user asks when they start programming in Cadenc
 
 **"How do I get the account who authorized the transaction?"**
 
-In the Ethereum world, this account is referred to as `msg.sender`?. 
+In the Ethereum world, this account is referred to as `msg.sender`. 
 On Ethereum, checking `msg.sender` is used to modify a function's behaviour depending on who authorized it.
 Doing so is key to identity, permissions, ownership and security on Ethereum.
 
@@ -21,14 +21,14 @@ are placed in the *user* account's storage area rather than the contract account
 
 All of this means that a task that would be implemented
 by a single central contract checking `msg.sender` in Solidity 
-ill require a different approach in Cadence. The design of Cadence is intentionally different,
+will require a different approach in Cadence. The design of Cadence is intentionally different;
 it follows a [Capability-based security model](https://en.wikipedia.org/wiki/Capability-based_security)
 instead of an [Access-Control List-based model](https://en.wikipedia.org/wiki/Access-control_list).
 
 This design offers distinct advantages for code robustness and security.
 
 This article describes how to perform some common tasks in idiomatic ways
-that exploit those advantages and also describes some ways of approaching
+that use those advantages and also describes some ways of approaching
 the same tasks that should be avoided.
 
 # Patterns

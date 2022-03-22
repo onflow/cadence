@@ -10,16 +10,20 @@ This is an opinionated list of issues that can be improved if they are found in 
 
 ### Problem
 
-Some may choose to authenticate or perform operations for their users by using their account addresses.
+Some may choose to authenticate or perform operations for their users by using the users' account addresses.
 In order to do this, a commonly seen case would be to pass the user's `AuthAccount` object
 as a parameter to a contract function to use for querying the account or storing objects directly.
 This is problematic, as the `AuthAccount` object allows access to ALL private areas of the account,
+for example, all of the user's storage, authorized keys, etc.,
 which provides the opportunity for bad actors to take advantage of.
 
-Example:
+### Example:
 
 ```cadence
 ...
+// BAD CODE
+// DO NOT COPY
+
 // Imagine this code is in a contract that uses AuthAccount to authenticate users
 // To transfer NFTs
 
@@ -59,39 +63,80 @@ pub fun transferNFT(id: UInt64, owner: AuthAccount) {
 
 Projects should find other ways to authenticate users, such as using resources and capabilities as authentication objects.
 They should also expect to perform most storage and linking operations within transaction bodies
-instead of in a contract utility functions.
+rather than inside contract utility functions.
 
 There are some scenarios where using an `AuthAccount` object is necessary, such as a cold storage multi-sig,
 but those cases are extremely rare and `AuthAccount` usage should still be avoided unless absolutely necessary.
 
-## Auth References should be avoided
+## Auth references and capabilities should be avoided
 
 ### Problem
 
-[`auth` references](/language/references) should be avoided unless necessary:
-An Auth Reference allows downcasting any restricted type to its unrestricted type.
-The parent type could expose functionality that was not intended to be exposed.
-If the auth keyword is used on local variables they will be references.
+[Authorized references](/language/references) allow downcasting restricted
+types to their unrestricted type and should be avoided unless necessary.
+The type that is being restricted could expose functionality that was not intended to be exposed.
+If the `auth` keyword is used on local variables they will be references.
 References are ephemeral and cannot be stored.
 This prevents any reference casting to be stored under account storage.
 Additionally, if the `auth` keyword is used to store a public capability, serious harm
-could be happen since the value could be downcasted to a type
+could happen since the value could be downcasted to a type
 that has functionality and values altered.
 
 ### Example
 
 A commonly seen pattern in NFT smart contracts is including a public borrow function
-that borrows an auth reference to an NFT (eg. [NBA Top Shot](https://github.com/dapperlabs/nba-smart-contracts/blob/master/contracts/TopShot.cdc#L889-L906)).
+that borrows an auth reference to an NFT (eg. [NBA Top Shot](https://github.com/dapperlabs/nba-smart-contracts/blob/95fe72b7e94f43c9eff28412ce3642b69dcd8cd5/contracts/TopShot.cdc#L889-L906)).
 This allows anyone to access the stored metadata or extra fields that weren't part
 of the NFT standard. While generally safe in most scenarios, not all NFTs are built the same.
-Some NFTs may have admin functions that shouldn't be exposed by this method,
-so please be cautious & mindful when imitating NFT projects that use this pattern.
+Some NFTs may have privileged functions that shouldn't be exposed by this method,
+so please be cautious and mindful when imitating NFT projects that use this pattern.
 
-## Events From Resources Might Not Be Unique
+### Another Example
+
+When we create a public capability for our `FungibleToken.Vault` we do not use an auth capability:
+
+```cadence
+// GOOD: Create a public capability to the Vault that only exposes
+// the balance field through the Balance interface
+signer.link<&FlowToken.Vault{FungibleToken.Balance}>(
+    /public/flowTokenBalance,
+    target: /storage/flowTokenVault
+)
+```
+
+If we were to use an authorized type for the capability, like so:
+
+```cadence
+// BAD: Create an Authorized public capability to the Vault that only exposes
+// the balance field through the Balance interface
+// Authorized referenced can be downcasted to their unrestricted types, which is dangerous
+signer.link<auth &FlowToken.Vault{FungibleToken.Balance}>(
+    /public/flowTokenBalance,
+    target: /storage/flowTokenVault
+)
+```
+
+Then anyone in the network could take that restricted reference
+that is only supposed to expose the balance field and downcast it to expose the withdraw field
+and steal all our money!
+
+```cadence
+// Exploit of the auth capability to expose withdraw
+let balanceRef = getAccount(account)
+    .getCapability<auth &FlowToken.Vault{FungibleToken.Balance}>(/public/flowTokenBalance)
+    .borrow()!
+
+let fullVaultRef = balanceRef as! &FlowToken.Vault
+
+// Withdraw the newly exposed funds
+let solenFunds <- fullVaultRef.withdraw(amount: 1000000)
+```
+
+## Events from resources may not be unique
 
 ### Problem
 
-Public functions in a contract can be called by any account. 
+Public functions in a contract can be called by anyone, e.g. any other contract or any transaction. 
 If that function creates a resource, and that resource has functions that emit events,
 that means any account can create an instance of that resource and emit those events.
 If those events are meant to indicate actions taken using a single instance of that resource
@@ -107,7 +152,7 @@ during the contracts's initializer.
 
 # Access Control
 
-## Public Functions and Fields Should Be Avoided
+## Public functions and fields should be avoided
 
 ### Problem
 
@@ -119,7 +164,7 @@ Accidentally exposed fields can be a security hole.
 When writing your smart contract, look at every field and function and make sure
 that they are all `access(self)`, `access(contract)`, or `access(account)`, unless otherwise needed.
 
-## Capability-Typed Public Fields Are A Security Hole
+## Capability-Typed public fields are a security hole
 
 This is a specific case of "Public Functions And Fields Should Be Avoided", above.
 
@@ -135,11 +180,11 @@ has been stored as a field on a contract or resource in this way.
 
 For public access to a capability, place it in an accounts public area so this expectation is explicit.
 
-## Array or Dictionary Fields Should Be Private
+## Array or dictionary fields should be private
 
 <Callout type="info">
 
-This anti-pattern is fixed with [FLIP #703](https://github.com/onflow/flow/blob/master/flips/20211129-cadence-mutability-restrictions.md)
+This anti-pattern has been addressed with [FLIP #703](https://github.com/onflow/flow/blob/master/flips/20211129-cadence-mutability-restrictions.md)
 
 </Callout>
 
@@ -167,7 +212,7 @@ import Array from 0x01
 
 transaction {
     execute {
-		Array.shouldbeConstantArray[0] = 1000
+        Array.shouldbeConstantArray[0] = 1000
     }
 }
 ```
@@ -184,7 +229,7 @@ pub contract Array {
 }
 ```
 
-## Public Admin Resource Creation Functions Are Unsafe
+## Public admin resource creation functions are unsafe
 
 This is a specific case of "Public Functions And Fields Should Be Avoided", above.
 
@@ -196,7 +241,7 @@ If that resource provides access to admin functions then the creation function s
 ### Solution
 
 To fix this, a single instance of that resource should be created in the contract's `init()` method,
-and then a new creation function can be potentially included within the Admin resource, if necessary.
+and then a new creation function can be potentially included within the admin resource, if necessary.
 The admin resource can then be `link()`ed to a private path in an admin's account storage during the contract's initializer.
 
 ### Example
@@ -240,7 +285,7 @@ pub contract Currency {
 }
 ```
 
-## Do Not Modify Smart Contract State or Emit Events in public struct initializers
+## Do not modify smart contract state or emit events in public struct initializers
 
 This is another example of the risks of having publicly accessible parts to your smart contract.
 
@@ -258,8 +303,8 @@ should be contained in restricted resources instead of the initializers of struc
 ### Example
 
 This used to be a bug in the NBA Top Shot smart contract, so we'll use that as an example.
-Before, when they created a new play,
-[they would initialize the play record with a struct,](https://github.com/dapperlabs/nba-smart-contracts/blob/55645478594858a6830e4ab095034068ef9753e9/contracts/TopShot.cdc#L155-L158)
+Before, when it created a new play,
+[it would initialize the play record with a struct,](https://github.com/dapperlabs/nba-smart-contracts/blob/55645478594858a6830e4ab095034068ef9753e9/contracts/TopShot.cdc#L155-L158)
 which increments the number that tracks the play IDs and emits an event:
 
 ```cadence
@@ -280,7 +325,7 @@ pub contract TopShot {
             self.playID = TopShot.nextPlayID
 
             // Increment the ID so that it isn't used again
-            TopShot.nextPlayID = TopShot.nextPlayID + UInt32(1)
+            TopShot.nextPlayID = TopShot.nextPlayID + 1
 
             emit PlayCreated(id: self.playID, metadata: metadata)
         }
@@ -311,13 +356,7 @@ pub contract TopShot {
         pub let playID: UInt32
 
         init() {
-
             self.playID = TopShot.nextPlayID
-
-            // Increment the ID so that it isn't used again
-            TopShot.nextPlayID = TopShot.nextPlayID + UInt32(1)
-
-            emit PlayCreated(id: self.playID, metadata: metadata)
         }
     }
 
