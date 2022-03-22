@@ -38,6 +38,7 @@ var memory_kinds = []common.MemoryKind{
 	common.MemoryKindHostFunction,
 	common.MemoryKindBoundFunction,
 	common.MemoryKindBigInt,
+	common.MemoryKindRawString,
 }
 
 type calibrationMemoryGauge struct {
@@ -210,10 +211,19 @@ func main() {
 		concrete_measurements[i] = measurement - empty_concreate_measurement
 	}
 
+	for i, measurements := range abstract_measurements {
+		fmt.Println(test_programs[i+1].name)
+		for _, kind := range memory_kinds {
+			fmt.Printf("%s: %d\n", kind.String(), measurements[kind])
+		}
+		fmt.Printf("Actual Memory: %f\n", concrete_measurements[i])
+		fmt.Println("--------------------")
+	}
+
 	// to decide values for the weights, we have some linear equation A*x=b
 	// A here is a matrix holding the abstracted measured values, x is the
 	// vector of weights, and b is the vector of measured allocations
-	v := make([]float64, 0, len(abstract_measurements)*(len(memory_kinds)+1))
+	v := make([]float64, 0, len(abstract_measurements)*(len(memory_kinds)))
 	for _, measurements := range abstract_measurements {
 		for _, kind := range memory_kinds {
 			measure, ok := measurements[kind]
@@ -224,15 +234,15 @@ func main() {
 			}
 		}
 		// weight for overhead constant
-		v = append(v, 1)
+		// v = append(v, 1)
 	}
 
 	// we have 1 more column than there are memory kinds, since the final columm will
 	// be used to represent the overhead constant, which we will give an abstract allocation
 	// amount of 1
-	a := mat.NewDense(len(abstract_measurements), len(memory_kinds)+1, v)
+	a := mat.NewDense(len(abstract_measurements), len(memory_kinds), v)
 	b := mat.NewVecDense(len(concrete_measurements), concrete_measurements)
-	x := mat.NewVecDense(len(memory_kinds)+1, nil)
+	x := mat.NewVecDense(len(memory_kinds), nil)
 	err := x.SolveVec(a, b)
 
 	if err != nil {
@@ -243,5 +253,5 @@ func main() {
 	for i, kind := range memory_kinds {
 		fmt.Printf("Weight for %s: %f\n", kind.String(), weights[i])
 	}
-	fmt.Printf("Weight for constant factor: %f\n", weights[len(memory_kinds)])
+	// fmt.Printf("Weight for constant factor: %f\n", weights[len(memory_kinds)])
 }

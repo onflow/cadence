@@ -1,7 +1,12 @@
 package main
 
 var empty_test = `
-pub fun main(account: AuthAccount) {}
+pub fun main(account: AuthAccount) {
+	var i = 0
+	while i < 10000 {
+		i = i + 1
+	}
+}
 `
 
 var void_test = `
@@ -56,9 +61,10 @@ pub fun main(account: AuthAccount) {
 
 var ephemeral_ref_test = `
 pub fun main(account: AuthAccount) {
-	var i: Int64 = 0
+	var i = 0
 	while i < 10000 {
-		let v = &i as &Int64
+		let j: Int64 = 0
+		let v = &j as &Int64
 		i = i + 1
 	}
 }
