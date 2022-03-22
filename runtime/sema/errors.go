@@ -725,6 +725,17 @@ func (e *AssignmentToConstantMemberError) Error() string {
 
 func (*AssignmentToConstantMemberError) isSemanticError() {}
 
+type FieldReinitializationError struct {
+	Name string
+	ast.Range
+}
+
+func (e *FieldReinitializationError) Error() string {
+	return fmt.Sprintf("invalid reinitialization of field: `%s`", e.Name)
+}
+
+func (*FieldReinitializationError) isSemanticError() {}
+
 // FieldUninitializedError
 
 type FieldUninitializedError struct {

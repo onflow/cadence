@@ -148,24 +148,101 @@ func TestCheckConstantFieldInitialization(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestCheckInvalidRepeatedConstantFieldInitialization(t *testing.T) {
+func TestCheckInvalidRepeatedFieldInitialization(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("constant, struct-kinded", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          struct Test {
+              let foo: Int
+
+              init() {
+                  self.foo = 1
+                  self.foo = 1
+              }
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.FieldReinitializationError{}, errs[0])
+
+	})
+
+	t.Run("variable, struct-kinded", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          struct Test {
+              var foo: Int
+
+              init() {
+                  self.foo = 1
+                  self.foo = 1
+              }
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("variable, resourced-kinded", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+		  resource R {}
+
+          resource Test {
+              var r: @R
+
+              init() {
+                  self.r <- create R()
+                  self.r <- create R()
+              }
+
+		      destroy() {
+		          destroy self.r
+		      }
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.FieldReinitializationError{}, errs[0])
+	})
+}
+
+func TestCheckInvalidResourceMoveAfterInitialization(t *testing.T) {
 
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-      struct Test {
-          let foo: Int
+		  resource R {}
 
-          init() {
-              self.foo = 1
-              self.foo = 1
+          resource Test {
+              var r: @R
+
+              init() {
+                  self.r <- create R()
+                  let r <- self.r
+		          destroy r
+              }
+
+		      destroy() {
+		          destroy self.r
+		      }
           }
-      }
-    `)
+        `)
 
 	errs := ExpectCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.AssignmentToConstantMemberError{}, errs[0])
+	assert.IsType(t, &sema.InvalidNestedResourceMoveError{}, errs[0])
 }
 
 func TestCheckFieldInitializationInIfStatement(t *testing.T) {

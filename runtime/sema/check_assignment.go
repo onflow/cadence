@@ -274,6 +274,8 @@ func (checker *Checker) visitMemberExpressionAssignment(
 		)
 	}
 
+	targetIsConstant := member.VariableKind == ast.VariableKindConstant
+
 	// If this is an assignment to a `self` field, it needs special handling
 	// depending on if the assignment is in an initializer or not
 
@@ -294,17 +296,26 @@ func (checker *Checker) visitMemberExpressionAssignment(
 
 			if !functionActivation.ReturnInfo.MaybeReturned {
 
-				// If the field is constant and it has already previously been
-				// initialized, report an error for the repeated assignment
+				// If the field is constant,
+				// or it is variable and resource-kinded,
+				// and it has already previously been initialized,
+				// report an error for the repeated assignment / initialization
+				//
+				// Assigning to a variable, resource-kinded field is invalid,
+				// because the initial value would get lost.
 
 				initializedFieldMembers := functionActivation.InitializationInfo.InitializedFieldMembers
 
-				if accessedSelfMember.VariableKind == ast.VariableKindConstant &&
+				if (targetIsConstant || member.TypeAnnotation.Type.IsResourceType()) &&
 					initializedFieldMembers.Contains(accessedSelfMember) {
 
-					// TODO: dedicated error: assignment to constant after initialization
+					checker.report(
+						&FieldReinitializationError{
+							Name:  target.Identifier.Identifier,
+							Range: ast.NewRangeFromPositioned(target.Identifier),
+						},
+					)
 
-					reportAssignmentToConstant()
 				} else if _, ok := functionActivation.InitializationInfo.FieldMembers.Get(accessedSelfMember); !ok {
 					// This member is not supposed to be initialized
 
@@ -316,7 +327,7 @@ func (checker *Checker) visitMemberExpressionAssignment(
 				}
 			}
 
-		} else if accessedSelfMember.VariableKind == ast.VariableKindConstant {
+		} else if targetIsConstant {
 
 			// If this is an assignment outside the initializer,
 			// an assignment to a constant field is invalid
@@ -324,7 +335,7 @@ func (checker *Checker) visitMemberExpressionAssignment(
 			reportAssignmentToConstant()
 		}
 
-	} else if member.VariableKind == ast.VariableKindConstant {
+	} else if targetIsConstant {
 
 		// The assignment is not to a `self` field. Report if there is an attempt
 		// to assign to a constant field, which is always invalid,
