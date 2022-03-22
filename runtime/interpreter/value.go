@@ -556,6 +556,11 @@ func NewUnmeteredBoolValue(value bool) BoolValue {
 	return BoolValue(value)
 }
 
+func NewBoolValueFromConstructor(memoryGauge common.MemoryGauge, constructor func() bool) BoolValue {
+	common.UseConstantMemory(memoryGauge, common.MemoryKindBool)
+	return NewUnmeteredBoolValue(constructor())
+}
+
 func NewBoolValue(memoryGauge common.MemoryGauge, value bool) BoolValue {
 	common.UseConstantMemory(memoryGauge, common.MemoryKindBool)
 	return NewUnmeteredBoolValue(value)
@@ -1785,25 +1790,33 @@ func (v *ArrayValue) FirstIndex(interpreter *Interpreter, getLocationRange func(
 	return NilValue{}
 }
 
-func (v *ArrayValue) Contains(interpreter *Interpreter, getLocationRange func() LocationRange, needleValue Value) BoolValue {
+func (v *ArrayValue) Contains(
+	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
+	needleValue Value,
+) BoolValue {
 
 	needleEquatable, ok := needleValue.(EquatableValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
-	var result bool
-	v.Iterate(interpreter, func(element Value) (resume bool) {
-		if needleEquatable.Equal(interpreter, getLocationRange, element) {
-			result = true
-			// stop iteration
-			return false
-		}
-		// continue iteration
-		return true
-	})
+	valueGetter := func() bool {
+		result := false
+		v.Iterate(interpreter, func(element Value) (resume bool) {
+			if needleEquatable.Equal(interpreter, getLocationRange, element) {
+				result = true
+				// stop iteration
+				return false
+			}
+			// continue iteration
+			return true
+		})
 
-	return NewBoolValue(interpreter, result)
+		return result
+	}
+
+	return NewBoolValueFromConstructor(interpreter, valueGetter)
 }
 
 func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
@@ -2434,10 +2447,10 @@ type NumberValue interface {
 	SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue
 	Div(interpreter *Interpreter, other NumberValue) NumberValue
 	SaturatingDiv(interpreter *Interpreter, other NumberValue) NumberValue
-	Less(other NumberValue) BoolValue
-	LessEqual(other NumberValue) BoolValue
-	Greater(other NumberValue) BoolValue
-	GreaterEqual(other NumberValue) BoolValue
+	Less(interpreter *Interpreter, other NumberValue) BoolValue
+	LessEqual(interpreter *Interpreter, other NumberValue) BoolValue
+	Greater(interpreter *Interpreter, other NumberValue) BoolValue
+	GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue
 	ToBigEndianBytes() []byte
 }
 
@@ -2873,7 +2886,7 @@ func (v IntValue) SaturatingDiv(interpreter *Interpreter, other NumberValue) Num
 	return v.Div(interpreter, other)
 }
 
-func (v IntValue) Less(other NumberValue) BoolValue {
+func (v IntValue) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -2884,10 +2897,16 @@ func (v IntValue) Less(other NumberValue) BoolValue {
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp == -1
+
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return cmp == -1
+		},
+	)
 }
 
-func (v IntValue) LessEqual(other NumberValue) BoolValue {
+func (v IntValue) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -2898,10 +2917,15 @@ func (v IntValue) LessEqual(other NumberValue) BoolValue {
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp <= 0
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return cmp <= 0
+		},
+	)
 }
 
-func (v IntValue) Greater(other NumberValue) BoolValue {
+func (v IntValue) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -2912,10 +2936,15 @@ func (v IntValue) Greater(other NumberValue) BoolValue {
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp == 1
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return cmp == 1
+		},
+	)
 }
 
-func (v IntValue) GreaterEqual(other NumberValue) BoolValue {
+func (v IntValue) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -2926,7 +2955,12 @@ func (v IntValue) GreaterEqual(other NumberValue) BoolValue {
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp >= 0
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return cmp >= 0
+		},
+	)
 }
 
 func (v IntValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -3469,7 +3503,7 @@ func (v Int8Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) Nu
 	return NewInt8Value(interpreter, valueGetter)
 }
 
-func (v Int8Value) Less(other NumberValue) BoolValue {
+func (v Int8Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3479,10 +3513,15 @@ func (v Int8Value) Less(other NumberValue) BoolValue {
 		})
 	}
 
-	return v < o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v < o
+		},
+	)
 }
 
-func (v Int8Value) LessEqual(other NumberValue) BoolValue {
+func (v Int8Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3492,10 +3531,15 @@ func (v Int8Value) LessEqual(other NumberValue) BoolValue {
 		})
 	}
 
-	return v <= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v <= o
+		},
+	)
 }
 
-func (v Int8Value) Greater(other NumberValue) BoolValue {
+func (v Int8Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3505,10 +3549,15 @@ func (v Int8Value) Greater(other NumberValue) BoolValue {
 		})
 	}
 
-	return v > o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v > o
+		},
+	)
 }
 
-func (v Int8Value) GreaterEqual(other NumberValue) BoolValue {
+func (v Int8Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3518,7 +3567,12 @@ func (v Int8Value) GreaterEqual(other NumberValue) BoolValue {
 		})
 	}
 
-	return v >= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v >= o
+		},
+	)
 }
 
 func (v Int8Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -4049,7 +4103,7 @@ func (v Int16Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) N
 	return NewInt16Value(interpreter, valueGetter)
 }
 
-func (v Int16Value) Less(other NumberValue) BoolValue {
+func (v Int16Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4059,10 +4113,15 @@ func (v Int16Value) Less(other NumberValue) BoolValue {
 		})
 	}
 
-	return v < o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v < o
+		},
+	)
 }
 
-func (v Int16Value) LessEqual(other NumberValue) BoolValue {
+func (v Int16Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4072,10 +4131,15 @@ func (v Int16Value) LessEqual(other NumberValue) BoolValue {
 		})
 	}
 
-	return v <= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v <= o
+		},
+	)
 }
 
-func (v Int16Value) Greater(other NumberValue) BoolValue {
+func (v Int16Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4085,10 +4149,15 @@ func (v Int16Value) Greater(other NumberValue) BoolValue {
 		})
 	}
 
-	return v > o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v > o
+		},
+	)
 }
 
-func (v Int16Value) GreaterEqual(other NumberValue) BoolValue {
+func (v Int16Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4098,7 +4167,12 @@ func (v Int16Value) GreaterEqual(other NumberValue) BoolValue {
 		})
 	}
 
-	return v >= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v >= o
+		},
+	)
 }
 
 func (v Int16Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -4632,7 +4706,7 @@ func (v Int32Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) N
 	return NewInt32Value(interpreter, valueGetter)
 }
 
-func (v Int32Value) Less(other NumberValue) BoolValue {
+func (v Int32Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4642,10 +4716,15 @@ func (v Int32Value) Less(other NumberValue) BoolValue {
 		})
 	}
 
-	return v < o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v < o
+		},
+	)
 }
 
-func (v Int32Value) LessEqual(other NumberValue) BoolValue {
+func (v Int32Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4655,10 +4734,15 @@ func (v Int32Value) LessEqual(other NumberValue) BoolValue {
 		})
 	}
 
-	return v <= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v <= o
+		},
+	)
 }
 
-func (v Int32Value) Greater(other NumberValue) BoolValue {
+func (v Int32Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4668,10 +4752,15 @@ func (v Int32Value) Greater(other NumberValue) BoolValue {
 		})
 	}
 
-	return v > o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v > o
+		},
+	)
 }
 
-func (v Int32Value) GreaterEqual(other NumberValue) BoolValue {
+func (v Int32Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4681,7 +4770,12 @@ func (v Int32Value) GreaterEqual(other NumberValue) BoolValue {
 		})
 	}
 
-	return v >= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v >= o
+		},
+	)
 }
 
 func (v Int32Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -5214,7 +5308,7 @@ func (v Int64Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) N
 	return NewInt64Value(interpreter, valueGetter)
 }
 
-func (v Int64Value) Less(other NumberValue) BoolValue {
+func (v Int64Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5224,10 +5318,15 @@ func (v Int64Value) Less(other NumberValue) BoolValue {
 		})
 	}
 
-	return v < o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v < o
+		},
+	)
 }
 
-func (v Int64Value) LessEqual(other NumberValue) BoolValue {
+func (v Int64Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5237,10 +5336,15 @@ func (v Int64Value) LessEqual(other NumberValue) BoolValue {
 		})
 	}
 
-	return v <= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v <= o
+		},
+	)
 }
 
-func (v Int64Value) Greater(other NumberValue) BoolValue {
+func (v Int64Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5250,10 +5354,15 @@ func (v Int64Value) Greater(other NumberValue) BoolValue {
 		})
 	}
 
-	return v > o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v > o
+		},
+	)
 }
 
-func (v Int64Value) GreaterEqual(other NumberValue) BoolValue {
+func (v Int64Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5263,7 +5372,12 @@ func (v Int64Value) GreaterEqual(other NumberValue) BoolValue {
 		})
 	}
 
-	return v >= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v >= o
+		},
+	)
 }
 
 func (v Int64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -5855,7 +5969,7 @@ func (v Int128Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) 
 	return NewInt128ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int128Value) Less(other NumberValue) BoolValue {
+func (v Int128Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5866,10 +5980,15 @@ func (v Int128Value) Less(other NumberValue) BoolValue {
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp == -1
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return cmp == -1
+		},
+	)
 }
 
-func (v Int128Value) LessEqual(other NumberValue) BoolValue {
+func (v Int128Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5880,10 +5999,15 @@ func (v Int128Value) LessEqual(other NumberValue) BoolValue {
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp <= 0
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return cmp <= 0
+		},
+	)
 }
 
-func (v Int128Value) Greater(other NumberValue) BoolValue {
+func (v Int128Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5894,10 +6018,15 @@ func (v Int128Value) Greater(other NumberValue) BoolValue {
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp == 1
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return cmp == 1
+		},
+	)
 }
 
-func (v Int128Value) GreaterEqual(other NumberValue) BoolValue {
+func (v Int128Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5908,7 +6037,12 @@ func (v Int128Value) GreaterEqual(other NumberValue) BoolValue {
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp >= 0
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return cmp >= 0
+		},
+	)
 }
 
 func (v Int128Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -6534,7 +6668,7 @@ func (v Int256Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) 
 	return NewInt256ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int256Value) Less(other NumberValue) BoolValue {
+func (v Int256Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6545,10 +6679,15 @@ func (v Int256Value) Less(other NumberValue) BoolValue {
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp == -1
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return cmp == -1
+		},
+	)
 }
 
-func (v Int256Value) LessEqual(other NumberValue) BoolValue {
+func (v Int256Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6559,10 +6698,15 @@ func (v Int256Value) LessEqual(other NumberValue) BoolValue {
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp <= 0
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return cmp <= 0
+		},
+	)
 }
 
-func (v Int256Value) Greater(other NumberValue) BoolValue {
+func (v Int256Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6573,10 +6717,15 @@ func (v Int256Value) Greater(other NumberValue) BoolValue {
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp == 1
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return cmp == 1
+		},
+	)
 }
 
-func (v Int256Value) GreaterEqual(other NumberValue) BoolValue {
+func (v Int256Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6587,7 +6736,12 @@ func (v Int256Value) GreaterEqual(other NumberValue) BoolValue {
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp >= 0
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return cmp >= 0
+		},
+	)
 }
 
 func (v Int256Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -7135,7 +7289,7 @@ func (v UIntValue) SaturatingDiv(interpreter *Interpreter, other NumberValue) Nu
 	return v.Div(interpreter, other)
 }
 
-func (v UIntValue) Less(other NumberValue) BoolValue {
+func (v UIntValue) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7146,10 +7300,15 @@ func (v UIntValue) Less(other NumberValue) BoolValue {
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp == -1
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return cmp == -1
+		},
+	)
 }
 
-func (v UIntValue) LessEqual(other NumberValue) BoolValue {
+func (v UIntValue) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7160,10 +7319,15 @@ func (v UIntValue) LessEqual(other NumberValue) BoolValue {
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp <= 0
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return cmp <= 0
+		},
+	)
 }
 
-func (v UIntValue) Greater(other NumberValue) BoolValue {
+func (v UIntValue) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7174,10 +7338,15 @@ func (v UIntValue) Greater(other NumberValue) BoolValue {
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp == 1
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return cmp == 1
+		},
+	)
 }
 
-func (v UIntValue) GreaterEqual(other NumberValue) BoolValue {
+func (v UIntValue) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7188,7 +7357,12 @@ func (v UIntValue) GreaterEqual(other NumberValue) BoolValue {
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp >= 0
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return cmp >= 0
+		},
+	)
 }
 
 func (v UIntValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -7655,7 +7829,7 @@ func (v UInt8Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) N
 	return v.Div(interpreter, other)
 }
 
-func (v UInt8Value) Less(other NumberValue) BoolValue {
+func (v UInt8Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7665,10 +7839,15 @@ func (v UInt8Value) Less(other NumberValue) BoolValue {
 		})
 	}
 
-	return v < o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v < o
+		},
+	)
 }
 
-func (v UInt8Value) LessEqual(other NumberValue) BoolValue {
+func (v UInt8Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7678,10 +7857,15 @@ func (v UInt8Value) LessEqual(other NumberValue) BoolValue {
 		})
 	}
 
-	return v <= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v <= o
+		},
+	)
 }
 
-func (v UInt8Value) Greater(other NumberValue) BoolValue {
+func (v UInt8Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7691,10 +7875,15 @@ func (v UInt8Value) Greater(other NumberValue) BoolValue {
 		})
 	}
 
-	return v > o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v > o
+		},
+	)
 }
 
-func (v UInt8Value) GreaterEqual(other NumberValue) BoolValue {
+func (v UInt8Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7704,7 +7893,12 @@ func (v UInt8Value) GreaterEqual(other NumberValue) BoolValue {
 		})
 	}
 
-	return v >= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v >= o
+		},
+	)
 }
 
 func (v UInt8Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -8170,7 +8364,7 @@ func (v UInt16Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) 
 	return v.Div(interpreter, other)
 }
 
-func (v UInt16Value) Less(other NumberValue) BoolValue {
+func (v UInt16Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8180,10 +8374,15 @@ func (v UInt16Value) Less(other NumberValue) BoolValue {
 		})
 	}
 
-	return v < o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v < o
+		},
+	)
 }
 
-func (v UInt16Value) LessEqual(other NumberValue) BoolValue {
+func (v UInt16Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8193,10 +8392,15 @@ func (v UInt16Value) LessEqual(other NumberValue) BoolValue {
 		})
 	}
 
-	return v <= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v <= o
+		},
+	)
 }
 
-func (v UInt16Value) Greater(other NumberValue) BoolValue {
+func (v UInt16Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8206,10 +8410,15 @@ func (v UInt16Value) Greater(other NumberValue) BoolValue {
 		})
 	}
 
-	return v > o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v > o
+		},
+	)
 }
 
-func (v UInt16Value) GreaterEqual(other NumberValue) BoolValue {
+func (v UInt16Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8219,7 +8428,12 @@ func (v UInt16Value) GreaterEqual(other NumberValue) BoolValue {
 		})
 	}
 
-	return v >= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v >= o
+		},
+	)
 }
 
 func (v UInt16Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -8691,7 +8905,7 @@ func (v UInt32Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) 
 	return v.Div(interpreter, other)
 }
 
-func (v UInt32Value) Less(other NumberValue) BoolValue {
+func (v UInt32Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8701,10 +8915,15 @@ func (v UInt32Value) Less(other NumberValue) BoolValue {
 		})
 	}
 
-	return v < o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v < o
+		},
+	)
 }
 
-func (v UInt32Value) LessEqual(other NumberValue) BoolValue {
+func (v UInt32Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8714,10 +8933,15 @@ func (v UInt32Value) LessEqual(other NumberValue) BoolValue {
 		})
 	}
 
-	return v <= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v <= o
+		},
+	)
 }
 
-func (v UInt32Value) Greater(other NumberValue) BoolValue {
+func (v UInt32Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8727,10 +8951,15 @@ func (v UInt32Value) Greater(other NumberValue) BoolValue {
 		})
 	}
 
-	return v > o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v > o
+		},
+	)
 }
 
-func (v UInt32Value) GreaterEqual(other NumberValue) BoolValue {
+func (v UInt32Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8740,7 +8969,12 @@ func (v UInt32Value) GreaterEqual(other NumberValue) BoolValue {
 		})
 	}
 
-	return v >= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v >= o
+		},
+	)
 }
 
 func (v UInt32Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -9240,7 +9474,7 @@ func (v UInt64Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) 
 	return v.Div(interpreter, other)
 }
 
-func (v UInt64Value) Less(other NumberValue) BoolValue {
+func (v UInt64Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9250,10 +9484,15 @@ func (v UInt64Value) Less(other NumberValue) BoolValue {
 		})
 	}
 
-	return v < o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v < o
+		},
+	)
 }
 
-func (v UInt64Value) LessEqual(other NumberValue) BoolValue {
+func (v UInt64Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9263,10 +9502,15 @@ func (v UInt64Value) LessEqual(other NumberValue) BoolValue {
 		})
 	}
 
-	return v <= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v <= o
+		},
+	)
 }
 
-func (v UInt64Value) Greater(other NumberValue) BoolValue {
+func (v UInt64Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9276,10 +9520,15 @@ func (v UInt64Value) Greater(other NumberValue) BoolValue {
 		})
 	}
 
-	return v > o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v > o
+		},
+	)
 }
 
-func (v UInt64Value) GreaterEqual(other NumberValue) BoolValue {
+func (v UInt64Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9289,7 +9538,12 @@ func (v UInt64Value) GreaterEqual(other NumberValue) BoolValue {
 		})
 	}
 
-	return v >= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v >= o
+		},
+	)
 }
 
 func (v UInt64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -9833,7 +10087,7 @@ func (v UInt128Value) SaturatingDiv(interpreter *Interpreter, other NumberValue)
 	return v.Div(interpreter, other)
 }
 
-func (v UInt128Value) Less(other NumberValue) BoolValue {
+func (v UInt128Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9844,10 +10098,15 @@ func (v UInt128Value) Less(other NumberValue) BoolValue {
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp == -1
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return cmp == -1
+		},
+	)
 }
 
-func (v UInt128Value) LessEqual(other NumberValue) BoolValue {
+func (v UInt128Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9858,10 +10117,15 @@ func (v UInt128Value) LessEqual(other NumberValue) BoolValue {
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp <= 0
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return cmp <= 0
+		},
+	)
 }
 
-func (v UInt128Value) Greater(other NumberValue) BoolValue {
+func (v UInt128Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9872,10 +10136,15 @@ func (v UInt128Value) Greater(other NumberValue) BoolValue {
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp == 1
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return cmp == 1
+		},
+	)
 }
 
-func (v UInt128Value) GreaterEqual(other NumberValue) BoolValue {
+func (v UInt128Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9886,7 +10155,12 @@ func (v UInt128Value) GreaterEqual(other NumberValue) BoolValue {
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp >= 0
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return cmp >= 0
+		},
+	)
 }
 
 func (v UInt128Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -10459,7 +10733,7 @@ func (v UInt256Value) SaturatingDiv(interpreter *Interpreter, other NumberValue)
 	return v.Div(interpreter, other)
 }
 
-func (v UInt256Value) Less(other NumberValue) BoolValue {
+func (v UInt256Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10470,10 +10744,15 @@ func (v UInt256Value) Less(other NumberValue) BoolValue {
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp == -1
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return cmp == -1
+		},
+	)
 }
 
-func (v UInt256Value) LessEqual(other NumberValue) BoolValue {
+func (v UInt256Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10484,10 +10763,15 @@ func (v UInt256Value) LessEqual(other NumberValue) BoolValue {
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp <= 0
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return cmp <= 0
+		},
+	)
 }
 
-func (v UInt256Value) Greater(other NumberValue) BoolValue {
+func (v UInt256Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10498,10 +10782,15 @@ func (v UInt256Value) Greater(other NumberValue) BoolValue {
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp == 1
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return cmp == 1
+		},
+	)
 }
 
-func (v UInt256Value) GreaterEqual(other NumberValue) BoolValue {
+func (v UInt256Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10512,7 +10801,12 @@ func (v UInt256Value) GreaterEqual(other NumberValue) BoolValue {
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp >= 0
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return cmp >= 0
+		},
+	)
 }
 
 func (v UInt256Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -10925,7 +11219,7 @@ func (v Word8Value) SaturatingDiv(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
-func (v Word8Value) Less(other NumberValue) BoolValue {
+func (v Word8Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10935,10 +11229,15 @@ func (v Word8Value) Less(other NumberValue) BoolValue {
 		})
 	}
 
-	return v < o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v < o
+		},
+	)
 }
 
-func (v Word8Value) LessEqual(other NumberValue) BoolValue {
+func (v Word8Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10948,10 +11247,15 @@ func (v Word8Value) LessEqual(other NumberValue) BoolValue {
 		})
 	}
 
-	return v <= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v <= o
+		},
+	)
 }
 
-func (v Word8Value) Greater(other NumberValue) BoolValue {
+func (v Word8Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10961,10 +11265,15 @@ func (v Word8Value) Greater(other NumberValue) BoolValue {
 		})
 	}
 
-	return v > o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v > o
+		},
+	)
 }
 
-func (v Word8Value) GreaterEqual(other NumberValue) BoolValue {
+func (v Word8Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10974,7 +11283,12 @@ func (v Word8Value) GreaterEqual(other NumberValue) BoolValue {
 		})
 	}
 
-	return v >= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v >= o
+		},
+	)
 }
 
 func (v Word8Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -11333,7 +11647,7 @@ func (v Word16Value) SaturatingDiv(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
-func (v Word16Value) Less(other NumberValue) BoolValue {
+func (v Word16Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11343,10 +11657,15 @@ func (v Word16Value) Less(other NumberValue) BoolValue {
 		})
 	}
 
-	return v < o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v < o
+		},
+	)
 }
 
-func (v Word16Value) LessEqual(other NumberValue) BoolValue {
+func (v Word16Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11356,10 +11675,15 @@ func (v Word16Value) LessEqual(other NumberValue) BoolValue {
 		})
 	}
 
-	return v <= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v <= o
+		},
+	)
 }
 
-func (v Word16Value) Greater(other NumberValue) BoolValue {
+func (v Word16Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11369,10 +11693,15 @@ func (v Word16Value) Greater(other NumberValue) BoolValue {
 		})
 	}
 
-	return v > o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v > o
+		},
+	)
 }
 
-func (v Word16Value) GreaterEqual(other NumberValue) BoolValue {
+func (v Word16Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11382,7 +11711,12 @@ func (v Word16Value) GreaterEqual(other NumberValue) BoolValue {
 		})
 	}
 
-	return v >= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v >= o
+		},
+	)
 }
 
 func (v Word16Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -11744,7 +12078,7 @@ func (v Word32Value) SaturatingDiv(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
-func (v Word32Value) Less(other NumberValue) BoolValue {
+func (v Word32Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11754,10 +12088,15 @@ func (v Word32Value) Less(other NumberValue) BoolValue {
 		})
 	}
 
-	return v < o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v < o
+		},
+	)
 }
 
-func (v Word32Value) LessEqual(other NumberValue) BoolValue {
+func (v Word32Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11767,10 +12106,15 @@ func (v Word32Value) LessEqual(other NumberValue) BoolValue {
 		})
 	}
 
-	return v <= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v <= o
+		},
+	)
 }
 
-func (v Word32Value) Greater(other NumberValue) BoolValue {
+func (v Word32Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11780,10 +12124,15 @@ func (v Word32Value) Greater(other NumberValue) BoolValue {
 		})
 	}
 
-	return v > o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v > o
+		},
+	)
 }
 
-func (v Word32Value) GreaterEqual(other NumberValue) BoolValue {
+func (v Word32Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11793,7 +12142,12 @@ func (v Word32Value) GreaterEqual(other NumberValue) BoolValue {
 		})
 	}
 
-	return v >= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v >= o
+		},
+	)
 }
 
 func (v Word32Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -12180,7 +12534,7 @@ func (v Word64Value) SaturatingDiv(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
-func (v Word64Value) Less(other NumberValue) BoolValue {
+func (v Word64Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -12190,10 +12544,15 @@ func (v Word64Value) Less(other NumberValue) BoolValue {
 		})
 	}
 
-	return v < o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v < o
+		},
+	)
 }
 
-func (v Word64Value) LessEqual(other NumberValue) BoolValue {
+func (v Word64Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -12203,10 +12562,15 @@ func (v Word64Value) LessEqual(other NumberValue) BoolValue {
 		})
 	}
 
-	return v <= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v <= o
+		},
+	)
 }
 
-func (v Word64Value) Greater(other NumberValue) BoolValue {
+func (v Word64Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -12216,10 +12580,15 @@ func (v Word64Value) Greater(other NumberValue) BoolValue {
 		})
 	}
 
-	return v > o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v > o
+		},
+	)
 }
 
-func (v Word64Value) GreaterEqual(other NumberValue) BoolValue {
+func (v Word64Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -12229,7 +12598,12 @@ func (v Word64Value) GreaterEqual(other NumberValue) BoolValue {
 		})
 	}
 
-	return v >= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v >= o
+		},
+	)
 }
 
 func (v Word64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -12757,7 +13131,7 @@ func (v Fix64Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue
 	)
 }
 
-func (v Fix64Value) Less(other NumberValue) BoolValue {
+func (v Fix64Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -12767,10 +13141,15 @@ func (v Fix64Value) Less(other NumberValue) BoolValue {
 		})
 	}
 
-	return v < o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v < o
+		},
+	)
 }
 
-func (v Fix64Value) LessEqual(other NumberValue) BoolValue {
+func (v Fix64Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -12780,10 +13159,15 @@ func (v Fix64Value) LessEqual(other NumberValue) BoolValue {
 		})
 	}
 
-	return v <= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v <= o
+		},
+	)
 }
 
-func (v Fix64Value) Greater(other NumberValue) BoolValue {
+func (v Fix64Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -12793,10 +13177,15 @@ func (v Fix64Value) Greater(other NumberValue) BoolValue {
 		})
 	}
 
-	return v > o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v > o
+		},
+	)
 }
 
-func (v Fix64Value) GreaterEqual(other NumberValue) BoolValue {
+func (v Fix64Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -12806,7 +13195,12 @@ func (v Fix64Value) GreaterEqual(other NumberValue) BoolValue {
 		})
 	}
 
-	return v >= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v >= o
+		},
+	)
 }
 
 func (v Fix64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -13247,7 +13641,7 @@ func (v UFix64Value) Mod(interpreter *Interpreter, other NumberValue) NumberValu
 	)
 }
 
-func (v UFix64Value) Less(other NumberValue) BoolValue {
+func (v UFix64Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -13257,10 +13651,15 @@ func (v UFix64Value) Less(other NumberValue) BoolValue {
 		})
 	}
 
-	return v < o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v < o
+		},
+	)
 }
 
-func (v UFix64Value) LessEqual(other NumberValue) BoolValue {
+func (v UFix64Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -13270,10 +13669,15 @@ func (v UFix64Value) LessEqual(other NumberValue) BoolValue {
 		})
 	}
 
-	return v <= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v <= o
+		},
+	)
 }
 
-func (v UFix64Value) Greater(other NumberValue) BoolValue {
+func (v UFix64Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -13283,10 +13687,15 @@ func (v UFix64Value) Greater(other NumberValue) BoolValue {
 		})
 	}
 
-	return v > o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v > o
+		},
+	)
 }
 
-func (v UFix64Value) GreaterEqual(other NumberValue) BoolValue {
+func (v UFix64Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -13296,7 +13705,12 @@ func (v UFix64Value) GreaterEqual(other NumberValue) BoolValue {
 		})
 	}
 
-	return v >= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v >= o
+		},
+	)
 }
 
 func (v UFix64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -14791,13 +15205,18 @@ func (v *DictionaryValue) ContainsKey(
 		hashInputProvider,
 		keyValue,
 	)
-	if err != nil {
-		if _, ok := err.(*atree.KeyNotFoundError); ok {
-			return false
+
+	valueGetter := func() bool {
+		if err != nil {
+			if _, ok := err.(*atree.KeyNotFoundError); ok {
+				return false
+			}
+			panic(ExternalError{err})
 		}
-		panic(ExternalError{err})
+		return true
 	}
-	return true
+
+	return NewBoolValueFromConstructor(interpreter, valueGetter)
 }
 
 func (v *DictionaryValue) Get(

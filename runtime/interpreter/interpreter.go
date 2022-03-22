@@ -4465,16 +4465,19 @@ func (interpreter *Interpreter) isInstanceFunction(self Value) *HostFunctionValu
 
 			staticType := typeValue.Type
 
-			// Values are never instances of unknown types
-			if staticType == nil {
-				return NewBoolValue(invocation.Interpreter, false)
+			valueGetter := func() bool {
+				// Values are never instances of unknown types
+				if staticType == nil {
+					return false
+				}
+
+				semaType := interpreter.MustConvertStaticToSemaType(staticType)
+				// NOTE: not invocation.Self, as that is only set for composite values
+				dynamicType := self.DynamicType(invocation.Interpreter, SeenReferences{})
+				return interpreter.IsSubType(dynamicType, semaType)
 			}
 
-			semaType := interpreter.MustConvertStaticToSemaType(staticType)
-			// NOTE: not invocation.Self, as that is only set for composite values
-			dynamicType := self.DynamicType(invocation.Interpreter, SeenReferences{})
-			result := interpreter.IsSubType(dynamicType, semaType)
-			return NewBoolValue(invocation.Interpreter, result)
+			return NewBoolValueFromConstructor(invocation.Interpreter, valueGetter)
 		},
 		sema.IsInstanceFunctionType,
 	)

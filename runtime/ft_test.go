@@ -668,6 +668,8 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 	sum := interpreter.NewUnmeteredUFix64ValueWithInteger(0)
 
+	inter := &interpreter.Interpreter{}
+
 	for _, address := range []common.Address{
 		senderAddress,
 		receiverAddress,
@@ -689,9 +691,9 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 		value := interpreter.NewUnmeteredUFix64Value(uint64(result.(cadence.UFix64)))
 
-		require.True(b, bool(value.Less(mintAmountValue)))
+		require.True(b, bool(value.Less(inter, mintAmountValue)))
 
-		sum = sum.Plus(nil, value).(interpreter.UFix64Value)
+		sum = sum.Plus(inter, value).(interpreter.UFix64Value)
 	}
 
 	utils.RequireValuesEqual(b, nil, mintAmountValue, sum)
