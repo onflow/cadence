@@ -191,8 +191,8 @@ func (checker *Checker) checkConditionalBranches(
 		} else if elseReturnInfo.DefinitelyHalted {
 			functionActivation.InitializationInfo.InitializedFieldMembers = thenInitializedMembers
 		} else {
-			functionActivation.InitializationInfo.InitializedFieldMembers =
-				thenInitializedMembers.Intersection(elseInitializedMembers)
+			functionActivation.InitializationInfo.InitializedFieldMembers.
+				AddIntersection(thenInitializedMembers, elseInitializedMembers)
 		}
 	}
 
