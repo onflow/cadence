@@ -126,7 +126,7 @@ func testAccount(
 	return inter, getAccountValues
 }
 
-func returnZeroUInt64() interpreter.UInt64Value {
+func returnZeroUInt64(_ *interpreter.Interpreter) interpreter.UInt64Value {
 	return interpreter.UInt64Value(0)
 }
 
