@@ -13778,7 +13778,7 @@ func (v *CompositeValue) SetMember(
 	existingStorable, err := v.dictionary.Set(
 		StringAtreeComparator,
 		StringAtreeHashInput,
-		StringAtreeValue(name),
+		NewStringAtreeValue(interpreter, name),
 		value,
 	)
 	if err != nil {
@@ -16652,38 +16652,49 @@ func (*EphemeralReferenceValue) DeepRemove(_ *Interpreter) {
 //
 type AddressValue common.Address
 
-func NewUnmeteredAddressValue(b []byte) AddressValue {
+func NewUnmeteredAddressValueFromBytes(b []byte) AddressValue {
 	result := AddressValue{}
 	copy(result[common.AddressLength-len(b):], b)
 	return result
 }
 
+// NewAddressValue constructs an address-value from a `common.Address`.
+//
+// NOTE:
+// This method must only be used if the `address` value is already constructed,
+// and/or already loaded onto memory. This is a convenient method for better performance.
+// If the `address` needs to be constructed, the `NewAddressValueFromConstructor` must be used.
+//
 func NewAddressValue(
 	memoryGauge common.MemoryGauge,
 	address common.Address,
 ) AddressValue {
 	common.UseConstantMemory(memoryGauge, common.MemoryKindAddress)
-	return NewUnmeteredAddressValue(address[:])
+	return NewUnmeteredAddressValueFromBytes(address[:])
 }
 
-func NewAddressValueFromBytes(
+func NewAddressValueFromConstructor(
 	memoryGauge common.MemoryGauge,
-	address []byte,
+	addressConstructor func() common.Address,
 ) AddressValue {
 	common.UseConstantMemory(memoryGauge, common.MemoryKindAddress)
-	return NewUnmeteredAddressValue(address)
+	address := addressConstructor()
+	return NewUnmeteredAddressValueFromBytes(address[:])
 }
 
 func ConvertAddress(memoryGauge common.MemoryGauge, value Value) AddressValue {
-	var result common.Address
+	converter := func() (result common.Address) {
+		uint64Value := ConvertUInt64(memoryGauge, value)
 
-	uint64Value := ConvertUInt64(memoryGauge, value)
+		binary.BigEndian.PutUint64(
+			result[:common.AddressLength],
+			uint64(uint64Value),
+		)
 
-	binary.BigEndian.PutUint64(
-		result[:common.AddressLength],
-		uint64(uint64Value),
-	)
-	return NewAddressValue(memoryGauge, result)
+		return
+	}
+
+	return NewAddressValueFromConstructor(memoryGauge, converter)
 }
 
 var _ Value = AddressValue{}

@@ -180,7 +180,8 @@ func TestInterpretCompositeMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(56), meter.getMemory(common.MemoryKindString))
+		assert.Equal(t, uint64(14), meter.getMemory(common.MemoryKindString))
+		assert.Equal(t, uint64(51), meter.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindComposite))
 	})
 
@@ -205,6 +206,82 @@ func TestInterpretCompositeMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(30), meter.getMemory(common.MemoryKindComposite))
+	})
+}
+
+func TestInterpretCompositeFieldMetering(t *testing.T) {
+	t.Parallel()
+
+	t.Run("empty", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		            pub struct S {}
+		            pub fun main() {
+		                let s = S()
+		            }
+		        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindComposite))
+	})
+
+	t.Run("1 field", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+	            pub struct S {
+					pub let a: String
+	                init(_ a: String) {
+	                    self.a = a
+	                }
+				}
+	            pub fun main() {
+	                let s = S("a")
+	            }
+	        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(11), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindComposite))
+	})
+
+	t.Run("2 field", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub struct S {
+				pub let a: String
+				pub let b: String
+                init(_ a: String, _ b: String) {
+                    self.a = a
+					self.b = b
+                }
+			}
+            pub fun main() {
+                let s = S("a", "b")
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindComposite))
 	})
 }
 

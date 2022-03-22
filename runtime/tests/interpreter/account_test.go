@@ -142,7 +142,7 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 
 		t.Parallel()
 
-		address := interpreter.NewUnmeteredAddressValue([]byte{42})
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 		inter, getAccountValues := testAccount(
 			t,
@@ -188,7 +188,7 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 
 		t.Parallel()
 
-		address := interpreter.NewUnmeteredAddressValue([]byte{42})
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 		inter, getAccountValues := testAccount(
 			t,
@@ -240,7 +240,7 @@ func TestInterpretAuthAccount_type(t *testing.T) {
 
 		t.Parallel()
 
-		address := interpreter.NewUnmeteredAddressValue([]byte{42})
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 		inter, getAccountStorables := testAccount(
 			t,
@@ -331,7 +331,7 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 
 		t.Parallel()
 
-		address := interpreter.NewUnmeteredAddressValue([]byte{42})
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 		inter, getAccountValues := testAccount(
 			t,
@@ -412,7 +412,7 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 
 		t.Parallel()
 
-		address := interpreter.NewUnmeteredAddressValue([]byte{42})
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 		inter, getAccountValues := testAccount(
 			t,
@@ -516,7 +516,7 @@ func TestInterpretAuthAccount_copy(t *testing.T) {
 
 		t.Parallel()
 
-		address := interpreter.NewUnmeteredAddressValue([]byte{42})
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 		inter, getAccountValues := testAccount(
 			t,
@@ -556,7 +556,7 @@ func TestInterpretAuthAccount_copy(t *testing.T) {
 
 		t.Parallel()
 
-		address := interpreter.NewUnmeteredAddressValue([]byte{42})
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 		inter, getAccountValues := testAccount(
 			t,
@@ -590,7 +590,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 
 		t.Parallel()
 
-		address := interpreter.NewUnmeteredAddressValue([]byte{42})
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 		inter, getAccountValues := testAccount(
 			t,
@@ -720,7 +720,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 
 		t.Parallel()
 
-		address := interpreter.NewUnmeteredAddressValue([]byte{42})
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 		inter, getAccountValues := testAccount(
 			t,
@@ -872,7 +872,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 
 				t.Parallel()
 
-				address := interpreter.NewUnmeteredAddressValue([]byte{42})
+				address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 				inter, getAccountValues := testAccount(
 					t,
@@ -1022,7 +1022,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 
 				t.Parallel()
 
-				address := interpreter.NewUnmeteredAddressValue([]byte{42})
+				address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 				inter, getAccountValues := testAccount(
 					t,
@@ -1166,7 +1166,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 	})
 
 	t.Run("link to same path", func(t *testing.T) {
-		address := interpreter.NewUnmeteredAddressValue([]byte{42})
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 		test := func(capabilityDomain common.PathDomain) {
 			inter, getAccountValues := testAccount(
@@ -1256,7 +1256,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 	})
 
 	t.Run("link same storage", func(t *testing.T) {
-		address := interpreter.NewUnmeteredAddressValue([]byte{42})
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 		test := func(capabilityDomain common.PathDomain) {
 			inter, getAccountValues := testAccount(
@@ -1375,7 +1375,7 @@ func TestInterpretAuthAccount_unlink(t *testing.T) {
 
 				t.Parallel()
 
-				address := interpreter.NewUnmeteredAddressValue([]byte{42})
+				address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 				inter, getAccountValues := testAccount(
 					t,
@@ -1446,7 +1446,7 @@ func TestInterpretAuthAccount_unlink(t *testing.T) {
 
 				t.Parallel()
 
-				address := interpreter.NewUnmeteredAddressValue([]byte{42})
+				address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 				inter, getAccountValues := testAccount(
 					t,
@@ -1520,7 +1520,7 @@ func TestInterpretAccount_getLinkTarget(t *testing.T) {
 
 			t.Parallel()
 
-			address := interpreter.NewUnmeteredAddressValue([]byte{42})
+			address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 			inter, getAccountValues := testAccount(
 				t,
@@ -1598,7 +1598,7 @@ func TestInterpretAccount_getLinkTarget(t *testing.T) {
 
 			t.Parallel()
 
-			address := interpreter.NewUnmeteredAddressValue([]byte{42})
+			address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 			inter, getAccountValues := testAccount(
 				t,
@@ -1733,7 +1733,7 @@ func TestInterpretAccount_getCapability(t *testing.T) {
 
 				t.Run(testName, func(t *testing.T) {
 
-					address := interpreter.NewUnmeteredAddressValue([]byte{42})
+					address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 					inter, _ := testAccount(
 						t,
@@ -1800,7 +1800,7 @@ func TestInterpretAccount_BalanceFields(t *testing.T) {
 
 			t.Run(testName, func(t *testing.T) {
 
-				address := interpreter.NewUnmeteredAddressValue([]byte{42})
+				address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 				code := fmt.Sprintf(
 					`
@@ -1861,7 +1861,7 @@ func TestInterpretAccount_StorageFields(t *testing.T) {
 					fieldName,
 				)
 
-				address := interpreter.NewUnmeteredAddressValue([]byte{42})
+				address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 				inter, _ := testAccount(
 					t,

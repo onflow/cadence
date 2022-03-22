@@ -47,7 +47,7 @@ func TestInterpretEquality(t *testing.T) {
 			Type: &sema.CapabilityType{},
 			ValueFactory: func(_ *interpreter.Interpreter) interpreter.Value {
 				return &interpreter.CapabilityValue{
-					Address: interpreter.NewUnmeteredAddressValue([]byte{0x1}),
+					Address: interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 					Path: interpreter.PathValue{
 						Domain:     common.PathDomainStorage,
 						Identifier: "something",
