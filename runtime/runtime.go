@@ -632,12 +632,11 @@ func (r *interpreterRuntime) convertArgument(
 	case sema.AuthAccountType:
 		// convert addresses to auth accounts so there is no need to construct an auth account value for the caller
 		if addressValue, ok := argument.(interpreter.AddressValue); ok {
-			address := addressValue.ToAddress()
 			return r.newAuthAccountValue(
 				inter,
-				interpreter.NewAddressValue(
+				interpreter.NewAddressValueFromConstructor(
 					inter,
-					address,
+					addressValue.ToAddress,
 				),
 				context,
 				storage,
@@ -648,12 +647,11 @@ func (r *interpreterRuntime) convertArgument(
 	case sema.PublicAccountType:
 		// convert addresses to public accounts so there is no need to construct a public account value for the caller
 		if addressValue, ok := argument.(interpreter.AddressValue); ok {
-			address := addressValue.ToAddress()
 			return r.getPublicAccount(
 				inter,
-				interpreter.NewAddressValue(
+				interpreter.NewAddressValueFromConstructor(
 					inter,
-					address,
+					addressValue.ToAddress,
 				),
 				context.Interface,
 				storage,
@@ -1775,18 +1773,21 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 
 		payerAddress := payerAddressValue.(interpreter.AddressValue).ToAddress()
 
-		var address Address
-		var err error
-		wrapPanic(func() {
-			address, err = context.Interface.CreateAccount(payerAddress)
-		})
-		if err != nil {
-			panic(err)
+		addressGetter := func() (address common.Address) {
+			var err error
+			wrapPanic(func() {
+				address, err = context.Interface.CreateAccount(payerAddress)
+			})
+			if err != nil {
+				panic(err)
+			}
+
+			return
 		}
 
-		addressValue := interpreter.NewAddressValue(
+		addressValue := interpreter.NewAddressValueFromConstructor(
 			invocation.Interpreter,
-			address,
+			addressGetter,
 		)
 
 		r.emitAccountEvent(

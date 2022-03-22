@@ -1144,7 +1144,7 @@ func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) inte
 		b := v[:]
 		data := make([]byte, len(b))
 		copy(data, b)
-		return interpreter.NewUnmeteredAddressValue(data)
+		return interpreter.NewUnmeteredAddressValueFromBytes(data)
 	case interpreter.Fix64Value:
 		return interpreter.NewUnmeteredFix64ValueWithInteger(int64(v.ToInt()))
 	case interpreter.UFix64Value:
@@ -1406,7 +1406,7 @@ func sign() int {
 func randomAddressValue() interpreter.AddressValue {
 	data := make([]byte, 8)
 	rand.Read(data)
-	return interpreter.NewUnmeteredAddressValue(data)
+	return interpreter.NewUnmeteredAddressValueFromBytes(data)
 }
 
 func randomPathValue() interpreter.PathValue {

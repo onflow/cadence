@@ -81,7 +81,7 @@ func decodeCharacter(dec *cbor.StreamDecoder, memoryGauge common.MemoryGauge) (s
 	return dec.DecodeString()
 }
 
-func decodeString(dec *cbor.StreamDecoder, memoryGauge common.MemoryGauge) (string, error) {
+func decodeString(dec *cbor.StreamDecoder, memoryGauge common.MemoryGauge, stringKind common.MemoryKind) (string, error) {
 	length, err := dec.NextSize()
 	if err != nil {
 		return "", err
@@ -92,7 +92,11 @@ func decodeString(dec *cbor.StreamDecoder, memoryGauge common.MemoryGauge) (stri
 		}
 	}
 
-	common.UseMemory(memoryGauge, common.NewStringMemoryUsage(int(length)))
+	common.UseMemory(memoryGauge, common.MemoryUsage{
+		Kind: stringKind,
+		// + 1 to account for empty string
+		Amount: length + 1,
+	})
 
 	return dec.DecodeString()
 }
@@ -166,10 +170,11 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 		storable = NewUnmeteredNilValue()
 
 	case cbor.TextStringType:
-		str, err := decodeString(d.decoder, d.memoryGauge)
+		str, err := decodeString(d.decoder, d.memoryGauge, common.MemoryKindRawString)
 		if err != nil {
 			return nil, err
 		}
+		// already metered by decodeString
 		storable = StringAtreeValue(str)
 
 	case cbor.TagType:
@@ -337,7 +342,7 @@ func (d StorableDecoder) decodeCharacter() (CharacterValue, error) {
 }
 
 func (d StorableDecoder) decodeStringValue() (*StringValue, error) {
-	str, err := decodeString(d.decoder, d.memoryGauge)
+	str, err := decodeString(d.decoder, d.memoryGauge, common.MemoryKindString)
 	if err != nil {
 		if err, ok := err.(*cbor.WrongTypeError); ok {
 			return nil, fmt.Errorf(
@@ -756,6 +761,8 @@ func checkEncodedAddressLength(addressBytes []byte) error {
 }
 
 func (d StorableDecoder) decodeAddress() (AddressValue, error) {
+	common.UseConstantMemory(d.memoryGauge, common.MemoryKindAddress)
+
 	addressBytes, err := d.decoder.DecodeBytes()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -772,11 +779,8 @@ func (d StorableDecoder) decodeAddress() (AddressValue, error) {
 		return AddressValue{}, err
 	}
 
-	address := NewAddressValueFromBytes(
-		d.memoryGauge,
-		addressBytes,
-	)
-	return address, nil
+	// Already metered at the start of this method
+	return NewUnmeteredAddressValueFromBytes(addressBytes), nil
 }
 
 func (d StorableDecoder) decodePath() (PathValue, error) {
@@ -817,7 +821,7 @@ func (d StorableDecoder) decodePath() (PathValue, error) {
 	}
 
 	// Decode identifier at array index encodedPathValueIdentifierFieldKey
-	identifier, err := decodeString(d.decoder, d.memoryGauge)
+	identifier, err := decodeString(d.decoder, d.memoryGauge, common.MemoryKindRawString)
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return EmptyPathValue, fmt.Errorf(
@@ -1005,10 +1009,6 @@ func (d StorableDecoder) decodeType() (TypeValue, error) {
 		return EmptyTypeValue, fmt.Errorf("invalid type encoding: %w", err)
 	}
 
-	if staticType == nil {
-		return EmptyTypeValue, nil
-	}
-
 	return NewUnmeteredTypeValue(staticType), nil
 }
 
@@ -1135,7 +1135,7 @@ func (d TypeDecoder) decodeCompositeStaticType() (StaticType, error) {
 	}
 
 	// Decode qualified identifier at array index encodedCompositeStaticTypeQualifiedIdentifierFieldKey
-	qualifiedIdentifier, err := decodeString(d.decoder, d.memoryGauge)
+	qualifiedIdentifier, err := decodeString(d.decoder, d.memoryGauge, common.MemoryKindRawString)
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return nil, fmt.Errorf(
@@ -1185,7 +1185,7 @@ func (d TypeDecoder) decodeInterfaceStaticType() (InterfaceStaticType, error) {
 	}
 
 	// Decode qualified identifier at array index encodedInterfaceStaticTypeQualifiedIdentifierFieldKey
-	qualifiedIdentifier, err := decodeString(d.decoder, d.memoryGauge)
+	qualifiedIdentifier, err := decodeString(d.decoder, d.memoryGauge, common.MemoryKindRawString)
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return InterfaceStaticType{},
@@ -1502,7 +1502,7 @@ func (d TypeDecoder) decodeCompositeTypeInfo() (atree.TypeInfo, error) {
 		return nil, err
 	}
 
-	qualifiedIdentifier, err := decodeString(d.decoder, d.memoryGauge)
+	qualifiedIdentifier, err := decodeString(d.decoder, d.memoryGauge, common.MemoryKindRawString)
 	if err != nil {
 		return nil, err
 	}
@@ -1626,7 +1626,7 @@ func (d LocationDecoder) DecodeLocation() (common.Location, error) {
 }
 
 func (d LocationDecoder) decodeStringLocation() (common.Location, error) {
-	s, err := decodeString(d.decoder, d.memoryGauge)
+	s, err := decodeString(d.decoder, d.memoryGauge, common.MemoryKindRawString)
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return nil, fmt.Errorf(
@@ -1641,7 +1641,7 @@ func (d LocationDecoder) decodeStringLocation() (common.Location, error) {
 }
 
 func (d LocationDecoder) decodeIdentifierLocation() (common.Location, error) {
-	s, err := decodeString(d.decoder, d.memoryGauge)
+	s, err := decodeString(d.decoder, d.memoryGauge, common.MemoryKindRawString)
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return nil, fmt.Errorf(
@@ -1701,7 +1701,7 @@ func (d LocationDecoder) decodeAddressLocation() (common.Location, error) {
 	// Name
 
 	// Decode name at array index encodedAddressLocationNameFieldKey
-	name, err := decodeString(d.decoder, d.memoryGauge)
+	name, err := decodeString(d.decoder, d.memoryGauge, common.MemoryKindRawString)
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return nil, fmt.Errorf(

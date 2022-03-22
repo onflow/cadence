@@ -36,7 +36,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 
 		t.Parallel()
 
-		address := interpreter.NewUnmeteredAddressValue([]byte{42})
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 		inter, _ := testAccount(
 			t,
@@ -261,7 +261,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 
 		t.Parallel()
 
-		address := interpreter.NewUnmeteredAddressValue([]byte{42})
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 		inter, _ := testAccount(
 			t,
@@ -491,7 +491,7 @@ func TestInterpretCapability_check(t *testing.T) {
 
 		t.Parallel()
 
-		address := interpreter.NewUnmeteredAddressValue([]byte{42})
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 		inter, _ := testAccount(
 			t,
@@ -708,7 +708,7 @@ func TestInterpretCapability_check(t *testing.T) {
 
 		t.Parallel()
 
-		address := interpreter.NewUnmeteredAddressValue([]byte{42})
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 		inter, _ := testAccount(
 			t,
@@ -926,7 +926,7 @@ func TestInterpretCapability_address(t *testing.T) {
 
 	t.Parallel()
 
-	address := interpreter.NewUnmeteredAddressValue([]byte{42})
+	address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 	inter, _ := testAccount(
 		t,

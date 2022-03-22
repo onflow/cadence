@@ -444,7 +444,7 @@ func (interpreter *Interpreter) VisitIntegerExpression(expression *ast.IntegerEx
 
 	if _, ok := typ.(*sema.AddressType); ok {
 		common.UseConstantMemory(interpreter, common.MemoryKindAddress)
-		return NewUnmeteredAddressValue(value.Bytes())
+		return NewUnmeteredAddressValueFromBytes(value.Bytes())
 	}
 
 	// The ranges are checked at the checker level.
@@ -969,7 +969,7 @@ func (interpreter *Interpreter) VisitPathExpression(expression *ast.PathExpressi
 	domain := common.PathDomainFromIdentifier(expression.Domain.Identifier)
 
 	// meter the Path's Identifier since path is just a container
-	common.UseMemory(interpreter, common.NewStringMemoryUsage(len(expression.Identifier.Identifier)))
+	common.UseMemory(interpreter, common.NewRawStringMemoryUsage(len(expression.Identifier.Identifier)))
 
 	return NewPathValue(
 		interpreter,

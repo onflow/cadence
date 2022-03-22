@@ -46,6 +46,13 @@ func NewStringMemoryUsage(length int) MemoryUsage {
 	}
 }
 
+func NewRawStringMemoryUsage(length int) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindRawString,
+		Amount: uint64(length) + 1, // +1 to account for empty strings
+	}
+}
+
 func NewBigIntMemoryUsage(bytes int) MemoryUsage {
 	return MemoryUsage{
 		Kind:   MemoryKindBigInt,

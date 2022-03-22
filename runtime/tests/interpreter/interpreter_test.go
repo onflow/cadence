@@ -6682,7 +6682,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 		},
 		"Address": {
 			literal: `0x1`,
-			value:   interpreter.NewUnmeteredAddressValue([]byte{0x1}),
+			value:   interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 			ty:      &sema.AddressType{},
 		},
 		// Int*
