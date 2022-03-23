@@ -196,7 +196,8 @@ let countRef = countCap.borrow()!
 countRef.count  // is `42`
 
 // Invalid: The `increment` function is not accessible for the reference,
-// because it has the type `&{HasCount}`
+// because it has the type `&{HasCount}`, which does not expose an `increment` function,
+// only a `count` field
 //
 countRef.increment(by: 5)
 
@@ -215,10 +216,10 @@ countRef.increment(by: 5)
 // This shows how parts of the functionality of stored objects
 // can be safely exposed to other code
 //
-let countCapNew = publicAccount.getCapability<&{Counter}>(/public/hasCount)
-let counterRefNew = countCapNew.borrow()!
+let countCapNew = publicAccount.getCapability<&Counter>(/public/hasCount)
+let counterRefNew = countCapNew.borrow()
 
-// `counterRefNew` is `nil`
+// `counterRefNew` is `nil`, the borrow failed
 
 // Invalid: Cannot access the counter object in storage directly,
 // the `borrow` function is not available for public accounts
