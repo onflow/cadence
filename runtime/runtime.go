@@ -481,7 +481,7 @@ func (r *interpreterRuntime) newAuthAccountValue(
 		accountBalanceGetFunction(addressValue, context.Interface),
 		accountAvailableBalanceGetFunction(addressValue, context.Interface),
 		storageUsedGetFunction(addressValue, context.Interface, storage),
-		storageCapacityGetFunction(addressValue, context.Interface),
+		storageCapacityGetFunction(addressValue, context.Interface, storage),
 		r.newAddPublicKeyFunction(addressValue, context.Interface),
 		r.newRemovePublicKeyFunction(addressValue, context.Interface),
 		func() interpreter.Value {
@@ -1832,14 +1832,26 @@ func storageUsedGetFunction(
 	}
 }
 
-func storageCapacityGetFunction(addressValue interpreter.AddressValue, runtimeInterface Interface) func() interpreter.UInt64Value {
+func storageCapacityGetFunction(
+	addressValue interpreter.AddressValue,
+	runtimeInterface Interface,
+	storage *Storage,
+) func(inter *interpreter.Interpreter) interpreter.UInt64Value {
 
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation
 	address := addressValue.ToAddress()
 
-	return func() interpreter.UInt64Value {
-		var capacity uint64
+	return func(inter *interpreter.Interpreter) interpreter.UInt64Value {
 		var err error
+
+		// NOTE: flush the cached values, so the host environment
+		// can properly calculate the amount of storage available for the account
+		const commitContractUpdates = false
+		err = storage.Commit(inter, commitContractUpdates)
+		if err != nil {
+			panic(err)
+		}
+		var capacity uint64
 		wrapPanic(func() {
 			capacity, err = runtimeInterface.GetStorageCapacity(address)
 		})
@@ -2188,7 +2200,7 @@ func (r *interpreterRuntime) getPublicAccount(
 		accountBalanceGetFunction(accountAddress, runtimeInterface),
 		accountAvailableBalanceGetFunction(accountAddress, runtimeInterface),
 		storageUsedGetFunction(accountAddress, runtimeInterface, storage),
-		storageCapacityGetFunction(accountAddress, runtimeInterface),
+		storageCapacityGetFunction(accountAddress, runtimeInterface, storage),
 		func() interpreter.Value {
 			return r.newPublicAccountKeys(accountAddress, runtimeInterface)
 		},
