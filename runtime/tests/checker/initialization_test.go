@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -861,5 +861,116 @@ func TestCheckFieldInitializationAfterJump(t *testing.T) {
 
 		errs := ExpectCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.FieldUninitializedError{}, errs[0])
+	})
+
+	t.Run("nested if, empty", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+          struct Test {
+
+              let n: Int
+
+              init() {
+                  if false {
+                      self.n = 1
+                  } else {
+                      if true {}
+                      self.n = 2
+                  }
+              }
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("nested if, missing branch", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+          struct Test {
+
+              let n: Int
+
+              init() {
+                  if false {
+                      self.n = 1
+                  } else {
+                      if false {
+                         self.n = 2
+                      }
+                  }
+              }
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.FieldUninitializedError{}, errs[0])
+	})
+
+	t.Run("nested if, branch missing", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+          struct Test {
+
+              let n: Int
+
+              init() {
+                  if false {
+                      self.n = 1
+                  } else {
+                      if false {
+                         self.n = 2
+                      } else {
+                         self.n = 3
+                      }
+                  }
+              }
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("nested if, repeated", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+          struct test {
+
+              let a: Int
+              let b: Int
+
+              init() {
+                  if false {
+                      self.a = 1
+                  } else {
+                      if false {
+                         self.a = 1
+                      } else {
+                         self.a = 2
+                      }
+                  }
+
+                  if false {
+                      self.b = 1
+                  } else {
+                      if false {
+                         self.b = 2
+                      } else {
+                         self.b = 3
+                      }
+                  }
+              }
+          }
+        `)
+
+		require.NoError(t, err)
 	})
 }

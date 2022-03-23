@@ -209,6 +209,7 @@ func TestMemberSet_Intersection(t *testing.T) {
 	memberB := &sema.Member{}
 	memberC := &sema.Member{}
 	memberD := &sema.Member{}
+	memberE := &sema.Member{}
 
 	A := sema.NewMemberSet(nil)
 	A.Add(memberA)
@@ -225,11 +226,14 @@ func TestMemberSet_Intersection(t *testing.T) {
 	ADC := AD.Clone()
 	ADC.Add(memberC)
 
-	result := ABC.Intersection(ADC)
-	assert.True(t, result.Contains(memberA))
-	assert.False(t, result.Contains(memberB))
-	assert.True(t, result.Contains(memberC))
-	assert.False(t, result.Contains(memberD))
+	ACE := sema.NewMemberSet(nil)
+	ACE.Add(memberE)
+	ACE.AddIntersection(ABC, ADC)
+	assert.True(t, ACE.Contains(memberA))
+	assert.False(t, ACE.Contains(memberB))
+	assert.True(t, ACE.Contains(memberC))
+	assert.False(t, ACE.Contains(memberD))
+	assert.True(t, ACE.Contains(memberE))
 
 	assert.True(t, A.Contains(memberA))
 	assert.False(t, A.Contains(memberB))
