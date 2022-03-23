@@ -2916,10 +2916,10 @@ func (v IntValue) LessEqual(interpreter *Interpreter, other NumberValue) BoolVal
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
 	return NewBoolValueFromConstructor(
 		interpreter,
 		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
 			return cmp <= 0
 		},
 	)
@@ -2935,10 +2935,10 @@ func (v IntValue) Greater(interpreter *Interpreter, other NumberValue) BoolValue
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
 	return NewBoolValueFromConstructor(
 		interpreter,
 		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
 			return cmp == 1
 		},
 	)
@@ -2954,10 +2954,10 @@ func (v IntValue) GreaterEqual(interpreter *Interpreter, other NumberValue) Bool
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
 	return NewBoolValueFromConstructor(
 		interpreter,
 		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
 			return cmp >= 0
 		},
 	)
@@ -5979,10 +5979,10 @@ func (v Int128Value) Less(interpreter *Interpreter, other NumberValue) BoolValue
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
 	return NewBoolValueFromConstructor(
 		interpreter,
 		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
 			return cmp == -1
 		},
 	)
@@ -5998,10 +5998,10 @@ func (v Int128Value) LessEqual(interpreter *Interpreter, other NumberValue) Bool
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
 	return NewBoolValueFromConstructor(
 		interpreter,
 		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
 			return cmp <= 0
 		},
 	)
@@ -6017,10 +6017,10 @@ func (v Int128Value) Greater(interpreter *Interpreter, other NumberValue) BoolVa
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
 	return NewBoolValueFromConstructor(
 		interpreter,
 		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
 			return cmp == 1
 		},
 	)
@@ -6036,10 +6036,10 @@ func (v Int128Value) GreaterEqual(interpreter *Interpreter, other NumberValue) B
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
 	return NewBoolValueFromConstructor(
 		interpreter,
 		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
 			return cmp >= 0
 		},
 	)
@@ -6678,10 +6678,10 @@ func (v Int256Value) Less(interpreter *Interpreter, other NumberValue) BoolValue
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
 	return NewBoolValueFromConstructor(
 		interpreter,
 		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
 			return cmp == -1
 		},
 	)
@@ -6697,10 +6697,10 @@ func (v Int256Value) LessEqual(interpreter *Interpreter, other NumberValue) Bool
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
 	return NewBoolValueFromConstructor(
 		interpreter,
 		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
 			return cmp <= 0
 		},
 	)
@@ -6716,10 +6716,10 @@ func (v Int256Value) Greater(interpreter *Interpreter, other NumberValue) BoolVa
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
 	return NewBoolValueFromConstructor(
 		interpreter,
 		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
 			return cmp == 1
 		},
 	)
@@ -6735,10 +6735,10 @@ func (v Int256Value) GreaterEqual(interpreter *Interpreter, other NumberValue) B
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
 	return NewBoolValueFromConstructor(
 		interpreter,
 		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
 			return cmp >= 0
 		},
 	)
@@ -7299,10 +7299,10 @@ func (v UIntValue) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
 	return NewBoolValueFromConstructor(
 		interpreter,
 		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
 			return cmp == -1
 		},
 	)
@@ -7318,10 +7318,10 @@ func (v UIntValue) LessEqual(interpreter *Interpreter, other NumberValue) BoolVa
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
 	return NewBoolValueFromConstructor(
 		interpreter,
 		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
 			return cmp <= 0
 		},
 	)
@@ -7337,10 +7337,10 @@ func (v UIntValue) Greater(interpreter *Interpreter, other NumberValue) BoolValu
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
 	return NewBoolValueFromConstructor(
 		interpreter,
 		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
 			return cmp == 1
 		},
 	)
@@ -7356,10 +7356,10 @@ func (v UIntValue) GreaterEqual(interpreter *Interpreter, other NumberValue) Boo
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
 	return NewBoolValueFromConstructor(
 		interpreter,
 		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
 			return cmp >= 0
 		},
 	)
@@ -10097,10 +10097,10 @@ func (v UInt128Value) Less(interpreter *Interpreter, other NumberValue) BoolValu
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
 	return NewBoolValueFromConstructor(
 		interpreter,
 		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
 			return cmp == -1
 		},
 	)
@@ -10116,10 +10116,10 @@ func (v UInt128Value) LessEqual(interpreter *Interpreter, other NumberValue) Boo
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
 	return NewBoolValueFromConstructor(
 		interpreter,
 		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
 			return cmp <= 0
 		},
 	)
@@ -10135,10 +10135,10 @@ func (v UInt128Value) Greater(interpreter *Interpreter, other NumberValue) BoolV
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
 	return NewBoolValueFromConstructor(
 		interpreter,
 		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
 			return cmp == 1
 		},
 	)
@@ -10154,10 +10154,10 @@ func (v UInt128Value) GreaterEqual(interpreter *Interpreter, other NumberValue) 
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
 	return NewBoolValueFromConstructor(
 		interpreter,
 		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
 			return cmp >= 0
 		},
 	)
@@ -10743,10 +10743,10 @@ func (v UInt256Value) Less(interpreter *Interpreter, other NumberValue) BoolValu
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
 	return NewBoolValueFromConstructor(
 		interpreter,
 		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
 			return cmp == -1
 		},
 	)
@@ -10762,10 +10762,10 @@ func (v UInt256Value) LessEqual(interpreter *Interpreter, other NumberValue) Boo
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
 	return NewBoolValueFromConstructor(
 		interpreter,
 		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
 			return cmp <= 0
 		},
 	)
@@ -10781,10 +10781,10 @@ func (v UInt256Value) Greater(interpreter *Interpreter, other NumberValue) BoolV
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
 	return NewBoolValueFromConstructor(
 		interpreter,
 		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
 			return cmp == 1
 		},
 	)
@@ -10800,10 +10800,10 @@ func (v UInt256Value) GreaterEqual(interpreter *Interpreter, other NumberValue) 
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
 	return NewBoolValueFromConstructor(
 		interpreter,
 		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
 			return cmp >= 0
 		},
 	)
