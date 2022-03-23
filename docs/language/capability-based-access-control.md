@@ -135,8 +135,8 @@ resource Counter: HasCount {
         self.count = count
     }
 
-    pub fun incrementByVal(val: Int) {
-        self.count = self.count + val
+    pub fun increment(by amount: Int) {
+        self.count = self.count + amount
     }
 }
 
@@ -195,10 +195,10 @@ let countRef = countCap.borrow()!
 
 countRef.count  // is `42`
 
-// Invalid: The `incrementByVal` function is not accessible for the reference,
+// Invalid: The `increment` function is not accessible for the reference,
 // because it has the type `&{HasCount}`
 //
-countRef.incrementByVal(val: 5)
+countRef.increment(by: 5)
 
 // Again, attempt to get a get a capability for the counter, but use the type `&Counter`.
 //
