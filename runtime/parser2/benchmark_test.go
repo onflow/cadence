@@ -199,9 +199,10 @@ func (g *testMemoryGauge) MeterMemory(usage common.MemoryUsage) error {
 func BenchmarkParseFungibleToken(b *testing.B) {
 
 	b.Run("Without memory metering", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			b.ReportAllocs()
+		b.ReportAllocs()
+		b.ResetTimer()
 
+		for i := 0; i < b.N; i++ {
 			_, err := ParseProgram(fungibleTokenContract, nil)
 			if err != nil {
 				b.Fatal(err)
@@ -210,7 +211,6 @@ func BenchmarkParseFungibleToken(b *testing.B) {
 	})
 
 	b.Run("With memory metering", func(b *testing.B) {
-
 		meter := &testMemoryGauge{
 			meter: make(map[common.MemoryKind]uint64),
 		}
@@ -220,7 +220,6 @@ func BenchmarkParseFungibleToken(b *testing.B) {
 
 		for i := 0; i < b.N; i++ {
 			_, err := ParseProgram(fungibleTokenContract, meter)
-
 			if err != nil {
 				b.Fatal(err)
 			}

@@ -60,7 +60,7 @@ const (
 	// Tokens
 
 	MemoryKindTokenIdentifier
-	MemoryKindTokenBlockCommentContent
+	MemoryKindTokenComment
 	MemoryKindTokenNumericLiteral
 	MemoryKindTokenSyntax
 )

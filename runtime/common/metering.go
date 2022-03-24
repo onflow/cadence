@@ -28,8 +28,6 @@ type MemoryUsage struct {
 	Amount uint64
 }
 
-var EmptyUsage = MemoryUsage{}
-
 type MemoryGauge interface {
 	MeterMemory(usage MemoryUsage) error
 }
@@ -216,7 +214,7 @@ func NewNumberMemoryUsage(bytes int) MemoryUsage {
 
 func NewCommentTokenMemoryUsage(length int) MemoryUsage {
 	return MemoryUsage{
-		Kind:   MemoryKindTokenBlockCommentContent,
+		Kind:   MemoryKindTokenComment,
 		Amount: uint64(length),
 	}
 }

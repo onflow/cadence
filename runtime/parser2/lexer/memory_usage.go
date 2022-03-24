@@ -33,15 +33,17 @@ import (
 //     - Any numeric literal (e.g: integer, fixed-point, etc.)
 //
 func (l *lexer) valueMemoryUsage(tokenType TokenType) common.MemoryUsage {
+	tokenLength := l.wordLength()
+
 	switch tokenType {
 	case TokenString:
-		return common.NewStringMemoryUsage(l.wordLength())
+		return common.NewStringMemoryUsage(tokenLength)
 	case TokenIdentifier:
-		return common.NewIdentifierTokenMemoryUsage(l.wordLength())
+		return common.NewIdentifierTokenMemoryUsage(tokenLength)
 	case TokenBlockCommentContent, TokenLineComment:
-		return common.NewCommentTokenMemoryUsage(l.wordLength())
+		return common.NewCommentTokenMemoryUsage(tokenLength)
 	default:
-		return common.NewNumericLiteralTokenMemoryUsage(l.wordLength())
+		return common.NewNumericLiteralTokenMemoryUsage(tokenLength)
 	}
 }
 
@@ -54,7 +56,7 @@ var doubleWidthTokenMemoryUsage = common.NewSyntaxTokenMemoryUsage(2)
 // tripleWidthTokenMemoryUsage is the memory consumed by a token consist of three codepoints.
 var tripleWidthTokenMemoryUsage = common.NewSyntaxTokenMemoryUsage(3)
 
-// typeMemoryUsage returns the memory usage, given the token type of the type.
+// typeMemoryUsage returns the memory usage, given the type of a syntax token.
 //
 // NOTE: This assumes the token-type is always a syntax token.
 //  e.g:
