@@ -38,15 +38,17 @@ func (v *Variable) SetValue(value Value) {
 	v.value = value
 }
 
+var variableMemoryUsage = common.NewConstantMemoryUsage(common.MemoryKindVariable)
+
 func NewVariableWithValue(gauge common.MemoryGauge, value Value) *Variable {
-	common.UseMemory(gauge, common.NewConstantMemoryUsage(common.MemoryKindVariable))
+	common.UseMemory(gauge, variableMemoryUsage)
 	return &Variable{
 		value: value,
 	}
 }
 
 func NewVariableWithGetter(gauge common.MemoryGauge, getter func() Value) *Variable {
-	common.UseMemory(gauge, common.NewConstantMemoryUsage(common.MemoryKindVariable))
+	common.UseMemory(gauge, variableMemoryUsage)
 	return &Variable{
 		getter: getter,
 	}
