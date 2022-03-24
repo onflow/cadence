@@ -19,6 +19,8 @@
 package interpreter_test
 
 import (
+	"github.com/onflow/cadence/runtime/parser2"
+	"github.com/onflow/cadence/runtime/tests/checker"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -6606,5 +6608,129 @@ func TestVariableMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindVariable))
+	})
+}
+
+func TestTokenMetering(t *testing.T) {
+	t.Parallel()
+
+	t.Run("identifier tokens", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                var x: String = "hello"
+            }
+
+            pub struct foo {
+                var x: Int
+
+                init() {
+                    self.x = 4
+                }
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		// keywords + func/var names
+		assert.Equal(t, uint64(49), meter.getMemory(common.MemoryKindTokenIdentifier))
+	})
+
+	t.Run("syntax tokens", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                var a: [String] = []
+                var b = 4 + 6
+                var c = true && false != false
+                var d = 4 as! AnyStruct
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+		assert.Equal(t, uint64(21), meter.getMemory(common.MemoryKindTokenSyntax))
+	})
+
+	t.Run("comments", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            /*  first line
+                second line
+            */
+
+            // single line comment
+            pub fun main() {}
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		// block comment start, end, (, ), {, }
+		// Line comment start is not emitted
+		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindTokenSyntax))
+
+		assert.Equal(t, uint64(75), meter.getMemory(common.MemoryKindTokenBlockCommentContent))
+	})
+
+	t.Run("numeric literals", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                var a = 1
+                var b = 0b1
+                var c = 0o1
+                var d = 0x1
+                var e = 1.4
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+		assert.Equal(t, uint64(13), meter.getMemory(common.MemoryKindTokenNumericLiteral))
+	})
+}
+
+func BenchmarkTokenMetering(b *testing.B) {
+
+	code := ``
+	b.Run("With metering", func(b *testing.B) {
+		meter := newTestMemoryGauge()
+
+		for i := 0; i < b.N; i++ {
+			_, err := checker.ParseAndCheckWithOptionsAndMemoryMetering(
+				b,
+				code,
+				checker.ParseAndCheckOptions{
+					Options: []sema.Option{},
+				},
+				meter,
+			)
+
+			assert.NoError(b, err)
+		}
+	})
+
+	b.Run("Without metering", func(b *testing.B) {
+		meter := newTestMemoryGauge()
+
+		for i := 0; i < b.N; i++ {
+			_, err := parser2.ParseProgram(code, meter)
+
+			assert.NoError(b, err)
+		}
 	})
 }

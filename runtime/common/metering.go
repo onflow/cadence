@@ -28,8 +28,21 @@ type MemoryUsage struct {
 	Amount uint64
 }
 
+var EmptyUsage = MemoryUsage{}
+
 type MemoryGauge interface {
 	MeterMemory(usage MemoryUsage) error
+}
+
+func UseMemory(gauge MemoryGauge, usage MemoryUsage) {
+	if gauge == nil {
+		return
+	}
+
+	err := gauge.MeterMemory(usage)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func NewConstantMemoryUsage(kind MemoryKind) MemoryUsage {
@@ -201,13 +214,30 @@ func NewNumberMemoryUsage(bytes int) MemoryUsage {
 	}
 }
 
-func UseMemory(gauge MemoryGauge, usage MemoryUsage) {
-	if gauge == nil {
-		return
+func NewCommentTokenMemoryUsage(length int) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindTokenBlockCommentContent,
+		Amount: uint64(length),
 	}
+}
 
-	err := gauge.MeterMemory(usage)
-	if err != nil {
-		panic(err)
+func NewIdentifierTokenMemoryUsage(length int) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindTokenIdentifier,
+		Amount: uint64(length),
+	}
+}
+
+func NewNumericLiteralTokenMemoryUsage(length int) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindTokenNumericLiteral,
+		Amount: uint64(length),
+	}
+}
+
+func NewSyntaxTokenMemoryUsage(length int) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindTokenSyntax,
+		Amount: uint64(length),
 	}
 }

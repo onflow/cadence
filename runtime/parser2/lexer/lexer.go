@@ -270,10 +270,30 @@ func (l *lexer) endPos() position {
 }
 
 func (l *lexer) emitType(ty TokenType) {
+	if l.memoryGauge != nil {
+		usage := l.typeMemoryUsage(ty)
+
+		// Don't use `common.MemoryUsae()` to avoid redundant `nil` check.
+		err := l.memoryGauge.MeterMemory(usage)
+		if err != nil {
+			panic(err)
+		}
+	}
+
 	l.emit(ty, nil, l.startPosition(), true)
 }
 
 func (l *lexer) emitValue(ty TokenType) {
+	if l.memoryGauge != nil {
+		usage := l.valueMemoryUsage(ty)
+
+		// Don't use `common.MemoryUsae()` to avoid redundant `nil` check.
+		err := l.memoryGauge.MeterMemory(usage)
+		if err != nil {
+			panic(err)
+		}
+	}
+
 	l.emit(ty, l.word(), l.startPosition(), true)
 }
 
