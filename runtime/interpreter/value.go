@@ -16795,6 +16795,11 @@ func (*EphemeralReferenceValue) DeepRemove(_ *Interpreter) {
 //
 type AddressValue common.Address
 
+func NewAddressValueFromBytes(memoryGauge common.MemoryGauge, constructor func() []byte) AddressValue {
+	common.UseConstantMemory(memoryGauge, common.MemoryKindAddress)
+	return NewUnmeteredAddressValueFromBytes(constructor())
+}
+
 func NewUnmeteredAddressValueFromBytes(b []byte) AddressValue {
 	result := AddressValue{}
 	copy(result[common.AddressLength-len(b):], b)

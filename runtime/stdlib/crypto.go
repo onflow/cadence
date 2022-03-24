@@ -147,7 +147,7 @@ func cryptoAlgorithmEnumValue(
 		caseValue := caseConstructor(inter, rawValue)
 		caseValues[i] = caseValue
 		constructorNestedVariables[enumCase.Name()] =
-			interpreter.NewVariableWithValue(caseValue)
+			interpreter.NewVariableWithValue(inter, caseValue)
 	}
 
 	return interpreter.EnumConstructorFunction(

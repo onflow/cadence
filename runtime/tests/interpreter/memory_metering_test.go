@@ -79,6 +79,7 @@ func TestInterpretArrayMetering(t *testing.T) {
 		// 3 for dynamic type check of z
 		// 14 from value transfer
 		assert.Equal(t, uint64(29), meter.getMemory(common.MemoryKindArray))
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindVariable))
 	})
 
 	t.Run("iteration", func(t *testing.T) {
@@ -100,6 +101,7 @@ func TestInterpretArrayMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(33), meter.getMemory(common.MemoryKindArray))
+		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindVariable))
 	})
 }
 
@@ -124,6 +126,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 
 		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindString))
 		assert.Equal(t, uint64(10), meter.getMemory(common.MemoryKindDictionary))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindVariable))
 	})
 
 	t.Run("iteration", func(t *testing.T) {
@@ -145,6 +148,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(30), meter.getMemory(common.MemoryKindDictionary))
+		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindVariable))
 	})
 }
 
@@ -183,6 +187,7 @@ func TestInterpretCompositeMetering(t *testing.T) {
 		assert.Equal(t, uint64(14), meter.getMemory(common.MemoryKindString))
 		assert.Equal(t, uint64(51), meter.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindComposite))
+		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindVariable))
 	})
 
 	t.Run("iteration", func(t *testing.T) {
@@ -206,6 +211,7 @@ func TestInterpretCompositeMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(30), meter.getMemory(common.MemoryKindComposite))
+		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindVariable))
 	})
 }
 
@@ -216,11 +222,11 @@ func TestInterpretCompositeFieldMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-		            pub struct S {}
-		            pub fun main() {
-		                let s = S()
-		            }
-		        `
+                    pub struct S {}
+                    pub fun main() {
+                        let s = S()
+                    }
+                `
 
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
@@ -236,16 +242,16 @@ func TestInterpretCompositeFieldMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-	            pub struct S {
-					pub let a: String
-	                init(_ a: String) {
-	                    self.a = a
-	                }
-				}
-	            pub fun main() {
-	                let s = S("a")
-	            }
-	        `
+                pub struct S {
+                    pub let a: String
+                    init(_ a: String) {
+                        self.a = a
+                    }
+                }
+                pub fun main() {
+                    let s = S("a")
+                }
+            `
 
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
@@ -262,13 +268,13 @@ func TestInterpretCompositeFieldMetering(t *testing.T) {
 
 		script := `
             pub struct S {
-				pub let a: String
-				pub let b: String
+                pub let a: String
+                pub let b: String
                 init(_ a: String, _ b: String) {
                     self.a = a
-					self.b = b
+                    self.b = b
                 }
-			}
+            }
             pub fun main() {
                 let s = S("a", "b")
             }
@@ -6524,6 +6530,82 @@ func TestInterpretLinkValueMetering(t *testing.T) {
 
 		// Metered twice only when Atree validation is enabled.
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindLinkValue))
+	})
+}
+
+func TestVariableMetering(t *testing.T) {
+	t.Parallel()
+
+	t.Run("globals", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            var a = 3
+            let b = false
+
+            pub fun main() {
+                
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindVariable))
+	})
+
+	t.Run("params", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main(a: String, b: Bool) {
+                
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main", interpreter.NewUnmeteredStringValue(""), interpreter.NewUnmeteredBoolValue(false))
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindVariable))
+	})
+
+	t.Run("nested params", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                var x = fun (x: String, y: Bool) {}
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindVariable))
+	})
+
+	t.Run("applied nested params", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                var x = fun (x: String, y: Bool) {}
+                x("", false)
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindVariable))
 	})
 }
 
