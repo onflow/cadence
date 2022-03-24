@@ -1642,7 +1642,7 @@ func (d LocationDecoder) decodeStringLocation() (common.Location, error) {
 		return nil, err
 	}
 
-	return common.StringLocation(s), nil
+	return common.NewStringLocation(d.memoryGauge, s), nil
 }
 
 func (d LocationDecoder) decodeIdentifierLocation() (common.Location, error) {

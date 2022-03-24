@@ -116,7 +116,7 @@ func decodeStringLocationTypeID(gauge MemoryGauge, typeID string) (StringLocatio
 		)
 	}
 
-	location := StringLocation(parts[1])
+	location := NewStringLocation(gauge, parts[1])
 	qualifiedIdentifier := parts[2]
 
 	return location, qualifiedIdentifier, nil

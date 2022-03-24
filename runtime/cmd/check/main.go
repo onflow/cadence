@@ -222,7 +222,7 @@ func runPath(
 
 	codes := map[common.LocationID]string{}
 
-	location := common.StringLocation(path)
+	location := common.NewStringLocation(nil, path)
 
 	func() {
 		defer func() {
