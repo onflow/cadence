@@ -218,6 +218,11 @@ const (
 	CBORTagReferenceStaticType
 	CBORTagRestrictedStaticType
 	CBORTagCapabilityStaticType
+
+	// !!! *WARNING* !!!
+	// ADD NEW TYPES *BEFORE* THIS WARNING.
+	// DO *NOT* ADD NEW TYPES AFTER THIS LINE!
+	CBORTag_Count
 )
 
 // CBOREncMode

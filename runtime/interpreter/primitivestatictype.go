@@ -168,6 +168,11 @@ const (
 	PrimitiveStaticTypeAuthAccountKeys
 	PrimitiveStaticTypePublicAccountKeys
 	PrimitiveStaticTypeAccountKey
+
+	// !!! *WARNING* !!!
+	// ADD NEW TYPES *BEFORE* THIS WARNING.
+	// DO *NOT* ADD NEW TYPES AFTER THIS LINE!
+	PrimitiveStaticType_Count
 )
 
 func (PrimitiveStaticType) isStaticType() {}
