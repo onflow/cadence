@@ -371,6 +371,7 @@ func TestMemoryMeteringErrors(t *testing.T) {
 		return &testRuntimeInterface{
 			meterMemory: func(usage common.MemoryUsage) error {
 				if usage.Kind == common.MemoryKindInterpretedFunction ||
+					usage.Kind == common.MemoryKindVariable ||
 					usage.Kind == common.MemoryKindVoid {
 					return nil
 				}
