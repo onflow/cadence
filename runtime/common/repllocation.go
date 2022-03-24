@@ -66,7 +66,7 @@ func (l REPLLocation) MarshalJSON() ([]byte, error) {
 func init() {
 	RegisterTypeIDDecoder(
 		REPLLocationPrefix,
-		func(typeID string) (location Location, qualifiedIdentifier string, err error) {
+		func(_ MemoryGauge, typeID string) (location Location, qualifiedIdentifier string, err error) {
 			return decodeREPLLocationTypeID(typeID)
 		},
 	)

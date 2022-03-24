@@ -78,13 +78,13 @@ func (l TransactionLocation) MarshalJSON() ([]byte, error) {
 func init() {
 	RegisterTypeIDDecoder(
 		TransactionLocationPrefix,
-		func(typeID string) (location Location, qualifiedIdentifier string, err error) {
-			return decodeTransactionLocationTypeID(typeID)
+		func(gauge MemoryGauge, typeID string) (location Location, qualifiedIdentifier string, err error) {
+			return decodeTransactionLocationTypeID(gauge, typeID)
 		},
 	)
 }
 
-func decodeTransactionLocationTypeID(typeID string) (TransactionLocation, string, error) {
+func decodeTransactionLocationTypeID(gauge MemoryGauge, typeID string) (TransactionLocation, string, error) {
 
 	const errorMessagePrefix = "invalid transaction location type ID"
 

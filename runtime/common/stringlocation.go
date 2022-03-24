@@ -77,13 +77,13 @@ func (l StringLocation) MarshalJSON() ([]byte, error) {
 func init() {
 	RegisterTypeIDDecoder(
 		StringLocationPrefix,
-		func(typeID string) (location Location, qualifiedIdentifier string, err error) {
-			return decodeStringLocationTypeID(typeID)
+		func(gauge MemoryGauge, typeID string) (location Location, qualifiedIdentifier string, err error) {
+			return decodeStringLocationTypeID(gauge, typeID)
 		},
 	)
 }
 
-func decodeStringLocationTypeID(typeID string) (StringLocation, string, error) {
+func decodeStringLocationTypeID(gauge MemoryGauge, typeID string) (StringLocation, string, error) {
 
 	const errorMessagePrefix = "invalid string location type ID"
 

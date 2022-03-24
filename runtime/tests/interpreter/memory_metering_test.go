@@ -6526,3 +6526,28 @@ func TestInterpretLinkValueMetering(t *testing.T) {
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindLinkValue))
 	})
 }
+
+func TestInterpretAddressLocationMetering(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("creation", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+			import 
+            pub fun main() {
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		// creation: 2
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindNumber))
+	})
+}

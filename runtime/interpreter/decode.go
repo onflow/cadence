@@ -1724,11 +1724,7 @@ func (d LocationDecoder) decodeAddressLocation() (common.Location, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	return common.AddressLocation{
-		Address: address,
-		Name:    name,
-	}, nil
+	return common.NewAddressLocation(d.memoryGauge, address, name), nil
 }
 
 func (d LocationDecoder) decodeTransactionLocation() (common.Location, error) {

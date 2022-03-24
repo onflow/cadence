@@ -78,13 +78,13 @@ func (l ScriptLocation) MarshalJSON() ([]byte, error) {
 func init() {
 	RegisterTypeIDDecoder(
 		ScriptLocationPrefix,
-		func(typeID string) (location Location, qualifiedIdentifier string, err error) {
-			return decodeScriptLocationTypeID(typeID)
+		func(gauge MemoryGauge, typeID string) (location Location, qualifiedIdentifier string, err error) {
+			return decodeScriptLocationTypeID(gauge, typeID)
 		},
 	)
 }
 
-func decodeScriptLocationTypeID(typeID string) (ScriptLocation, string, error) {
+func decodeScriptLocationTypeID(gauge MemoryGauge, typeID string) (ScriptLocation, string, error) {
 
 	const errorMessagePrefix = "invalid script location type ID"
 

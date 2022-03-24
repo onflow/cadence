@@ -611,9 +611,8 @@ func parseHexadecimalLocation(literal string) common.AddressLocation {
 		panic(err)
 	}
 
-	return common.AddressLocation{
-		Address: address,
-	}
+	// TODO: add gauge when we meter parsing
+	return common.NewAddressLocation(nil, address, "")
 }
 
 // parseEventDeclaration parses an event declaration.
