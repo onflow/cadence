@@ -6762,12 +6762,12 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 		},
 		// Fix*
 		"Fix64": {
-			value: interpreter.Fix64Value(123000000),
+			value: interpreter.NewUnmeteredFix64Value(123000000),
 			ty:    sema.Fix64Type,
 		},
 		// UFix*
 		"UFix64": {
-			value: interpreter.UFix64Value(123000000),
+			value: interpreter.NewUnmeteredUFix64Value(123000000),
 			ty:    sema.UFix64Type,
 		},
 		// TODO:
@@ -8247,21 +8247,21 @@ func TestInterpretFix64(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.UFix64Value(78_900_123_010),
+		interpreter.NewUnmeteredUFix64Value(78_900_123_010),
 		inter.Globals["a"].GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.UFix64Value(123_405_600_000),
+		interpreter.NewUnmeteredUFix64Value(123_405_600_000),
 		inter.Globals["b"].GetValue(),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.Fix64Value(-1_234_500_678_900),
+		interpreter.NewUnmeteredFix64Value(-1_234_500_678_900),
 		inter.Globals["c"].GetValue(),
 	)
 }
@@ -8279,7 +8279,7 @@ func TestInterpretFix64Mul(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.Fix64Value(-121000000),
+		interpreter.NewUnmeteredFix64Value(-121000000),
 		inter.Globals["a"].GetValue(),
 	)
 }

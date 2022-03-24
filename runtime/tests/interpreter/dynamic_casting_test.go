@@ -69,8 +69,8 @@ func TestInterpretDynamicCastingNumber(t *testing.T) {
 		{sema.Word16Type, "42", interpreter.NewUnmeteredWord16Value(42)},
 		{sema.Word32Type, "42", interpreter.NewUnmeteredWord32Value(42)},
 		{sema.Word64Type, "42", interpreter.NewUnmeteredWord64Value(42)},
-		{sema.Fix64Type, "1.23", interpreter.Fix64Value(123000000)},
-		{sema.UFix64Type, "1.23", interpreter.UFix64Value(123000000)},
+		{sema.Fix64Type, "1.23", interpreter.NewUnmeteredFix64Value(123000000)},
+		{sema.UFix64Type, "1.23", interpreter.NewUnmeteredUFix64Value(123000000)},
 	}
 
 	for operation, returnsOptional := range dynamicCastingOperations {
