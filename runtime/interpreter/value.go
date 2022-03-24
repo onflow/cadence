@@ -2471,7 +2471,7 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 			func(invocation Invocation) Value {
 				interpreter := invocation.Interpreter
 				memoryUsage := common.NewStringMemoryUsage(
-					OverEstimateNumberStringLength(v),
+					OverEstimateNumberStringLength(interpreter, v),
 				)
 				return NewStringValue(
 					interpreter,
@@ -2598,7 +2598,7 @@ type IntegerValue interface {
 type BigNumberValue interface {
 	NumberValue
 	ByteLength() int
-	ToBigInt() *big.Int
+	ToBigInt(memoryGauge common.MemoryGauge) *big.Int
 }
 
 // Int
@@ -2644,12 +2644,8 @@ func NewUnmeteredIntValueFromBigInt(value *big.Int) IntValue {
 func ConvertInt(memoryGauge common.MemoryGauge, value Value) IntValue {
 	switch value := value.(type) {
 	case BigNumberValue:
-		return NewIntValueFromBigInt(
-			memoryGauge,
-			common.NewBigIntMemoryUsage(value.ByteLength()),
-			func() *big.Int {
-				return value.ToBigInt()
-			},
+		return NewUnmeteredIntValueFromBigInt(
+			value.ToBigInt(memoryGauge),
 		)
 
 	case NumberValue:
@@ -2702,7 +2698,8 @@ func (v IntValue) ByteLength() int {
 	return common.BigIntByteLength(v.BigInt)
 }
 
-func (v IntValue) ToBigInt() *big.Int {
+func (v IntValue) ToBigInt(memoryGauge common.MemoryGauge) *big.Int {
+	common.UseMemory(memoryGauge, common.NewBigIntMemoryUsage(v.ByteLength()))
 	return new(big.Int).Set(v.BigInt)
 }
 
@@ -3605,7 +3602,7 @@ func ConvertInt8(memoryGauge common.MemoryGauge, value Value) Int8Value {
 
 		switch value := value.(type) {
 		case BigNumberValue:
-			v := value.ToBigInt()
+			v := value.ToBigInt(memoryGauge)
 			if v.Cmp(sema.Int8TypeMaxInt) > 0 {
 				panic(OverflowError{})
 			} else if v.Cmp(sema.Int8TypeMinInt) < 0 {
@@ -4205,7 +4202,7 @@ func ConvertInt16(memoryGauge common.MemoryGauge, value Value) Int16Value {
 
 		switch value := value.(type) {
 		case BigNumberValue:
-			v := value.ToBigInt()
+			v := value.ToBigInt(memoryGauge)
 			if v.Cmp(sema.Int16TypeMaxInt) > 0 {
 				panic(OverflowError{})
 			} else if v.Cmp(sema.Int16TypeMinInt) < 0 {
@@ -4807,7 +4804,7 @@ func ConvertInt32(memoryGauge common.MemoryGauge, value Value) Int32Value {
 	converter := func() int32 {
 		switch value := value.(type) {
 		case BigNumberValue:
-			v := value.ToBigInt()
+			v := value.ToBigInt(memoryGauge)
 			if v.Cmp(sema.Int32TypeMaxInt) > 0 {
 				panic(OverflowError{})
 			} else if v.Cmp(sema.Int32TypeMinInt) < 0 {
@@ -5409,7 +5406,7 @@ func ConvertInt64(memoryGauge common.MemoryGauge, value Value) Int64Value {
 	converter := func() int64 {
 		switch value := value.(type) {
 		case BigNumberValue:
-			v := value.ToBigInt()
+			v := value.ToBigInt(memoryGauge)
 			if v.Cmp(sema.Int64TypeMaxInt) > 0 {
 				panic(OverflowError{})
 			} else if v.Cmp(sema.Int64TypeMinInt) < 0 {
@@ -5661,7 +5658,8 @@ func (v Int128Value) ByteLength() int {
 	return common.BigIntByteLength(v.BigInt)
 }
 
-func (v Int128Value) ToBigInt() *big.Int {
+func (v Int128Value) ToBigInt(memoryGauge common.MemoryGauge) *big.Int {
+	common.UseMemory(memoryGauge, common.NewBigIntMemoryUsage(v.ByteLength()))
 	return new(big.Int).Set(v.BigInt)
 }
 
@@ -6087,7 +6085,7 @@ func ConvertInt128(memoryGauge common.MemoryGauge, value Value) Int128Value {
 
 		switch value := value.(type) {
 		case BigNumberValue:
-			v = value.ToBigInt()
+			v = value.ToBigInt(memoryGauge)
 
 		case NumberValue:
 			v = big.NewInt(int64(value.ToInt()))
@@ -6362,7 +6360,8 @@ func (v Int256Value) ByteLength() int {
 	return common.BigIntByteLength(v.BigInt)
 }
 
-func (v Int256Value) ToBigInt() *big.Int {
+func (v Int256Value) ToBigInt(memoryGauge common.MemoryGauge) *big.Int {
+	common.UseMemory(memoryGauge, common.NewBigIntMemoryUsage(v.ByteLength()))
 	return new(big.Int).Set(v.BigInt)
 }
 
@@ -6786,7 +6785,7 @@ func ConvertInt256(memoryGauge common.MemoryGauge, value Value) Int256Value {
 
 		switch value := value.(type) {
 		case BigNumberValue:
-			v = value.ToBigInt()
+			v = value.ToBigInt(memoryGauge)
 
 		case NumberValue:
 			v = big.NewInt(int64(value.ToInt()))
@@ -7031,15 +7030,15 @@ func NewUnmeteredUIntValueFromBigInt(value *big.Int) UIntValue {
 func ConvertUInt(memoryGauge common.MemoryGauge, value Value) UIntValue {
 	switch value := value.(type) {
 	case BigNumberValue:
-		v := value.ToBigInt()
-		if v.Sign() < 0 {
-			panic(UnderflowError{})
-		}
 		return NewUIntValueFromBigInt(
 			memoryGauge,
 			common.NewBigIntMemoryUsage(value.ByteLength()),
 			func() *big.Int {
-				return value.ToBigInt()
+				v := value.ToBigInt(memoryGauge)
+				if v.Sign() < 0 {
+					panic(UnderflowError{})
+				}
+				return v
 			},
 		)
 
@@ -7097,7 +7096,8 @@ func (v UIntValue) ByteLength() int {
 	return common.BigIntByteLength(v.BigInt)
 }
 
-func (v UIntValue) ToBigInt() *big.Int {
+func (v UIntValue) ToBigInt(memoryGauge common.MemoryGauge) *big.Int {
+	common.UseMemory(memoryGauge, common.NewBigIntMemoryUsage(v.ByteLength()))
 	return new(big.Int).Set(v.BigInt)
 }
 
@@ -7602,10 +7602,10 @@ var _ EquatableValue = UInt8Value(0)
 var _ HashableValue = UInt8Value(0)
 var _ MemberAccessibleValue = UInt8Value(0)
 
-var Uint8MemoryUsage = common.NewNumberMemoryUsage(int(unsafe.Sizeof(UInt8Value(0))))
+var UInt8MemoryUsage = common.NewNumberMemoryUsage(int(unsafe.Sizeof(UInt8Value(0))))
 
 func NewUInt8Value(gauge common.MemoryGauge, uint8Constructor func() uint8) UInt8Value {
-	common.UseMemory(gauge, Uint8MemoryUsage)
+	common.UseMemory(gauge, UInt8MemoryUsage)
 
 	return NewUnmeteredUInt8Value(uint8Constructor())
 }
@@ -7933,7 +7933,7 @@ func ConvertUInt8(memoryGauge common.MemoryGauge, value Value) UInt8Value {
 
 			switch value := value.(type) {
 			case BigNumberValue:
-				v := value.ToBigInt()
+				v := value.ToBigInt(memoryGauge)
 				if v.Cmp(sema.UInt8TypeMaxInt) > 0 {
 					panic(OverflowError{})
 				} else if v.Sign() < 0 {
@@ -8132,10 +8132,10 @@ var _ EquatableValue = UInt16Value(0)
 var _ HashableValue = UInt16Value(0)
 var _ MemberAccessibleValue = UInt16Value(0)
 
-var Uint16MemoryUsage = common.NewNumberMemoryUsage(int(unsafe.Sizeof(UInt16Value(0))))
+var UInt16MemoryUsage = common.NewNumberMemoryUsage(int(unsafe.Sizeof(UInt16Value(0))))
 
 func NewUInt16Value(gauge common.MemoryGauge, uint16Constructor func() uint16) UInt16Value {
-	common.UseMemory(gauge, Uint16MemoryUsage)
+	common.UseMemory(gauge, UInt16MemoryUsage)
 
 	return NewUnmeteredUInt16Value(uint16Constructor())
 }
@@ -8467,7 +8467,7 @@ func ConvertUInt16(memoryGauge common.MemoryGauge, value Value) UInt16Value {
 		func() uint16 {
 			switch value := value.(type) {
 			case BigNumberValue:
-				v := value.ToBigInt()
+				v := value.ToBigInt(memoryGauge)
 				if v.Cmp(sema.UInt16TypeMaxInt) > 0 {
 					panic(OverflowError{})
 				} else if v.Sign() < 0 {
@@ -8664,10 +8664,10 @@ func (UInt16Value) ChildStorables() []atree.Storable {
 
 type UInt32Value uint32
 
-var Uint32MemoryUsage = common.NewNumberMemoryUsage(int(unsafe.Sizeof(UInt32Value(0))))
+var UInt32MemoryUsage = common.NewNumberMemoryUsage(int(unsafe.Sizeof(UInt32Value(0))))
 
 func NewUInt32Value(gauge common.MemoryGauge, uint32Constructor func() uint32) UInt32Value {
-	common.UseMemory(gauge, Uint32MemoryUsage)
+	common.UseMemory(gauge, UInt32MemoryUsage)
 
 	return NewUnmeteredUInt32Value(uint32Constructor())
 }
@@ -9008,7 +9008,7 @@ func ConvertUInt32(memoryGauge common.MemoryGauge, value Value) UInt32Value {
 		func() uint32 {
 			switch value := value.(type) {
 			case BigNumberValue:
-				v := value.ToBigInt()
+				v := value.ToBigInt(memoryGauge)
 				if v.Cmp(sema.UInt32TypeMaxInt) > 0 {
 					panic(OverflowError{})
 				} else if v.Sign() < 0 {
@@ -9220,10 +9220,10 @@ var _ MemberAccessibleValue = UInt64Value(0)
 //
 var _ BigNumberValue = UInt64Value(0)
 
-var Uint64MemoryUsage = common.NewNumberMemoryUsage(int(unsafe.Sizeof(UInt64Value(0))))
+var UInt64MemoryUsage = common.NewNumberMemoryUsage(int(unsafe.Sizeof(UInt64Value(0))))
 
 func NewUInt64Value(gauge common.MemoryGauge, uint64Constructor func() uint64) UInt64Value {
-	common.UseMemory(gauge, Uint64MemoryUsage)
+	common.UseMemory(gauge, UInt64MemoryUsage)
 
 	return NewUnmeteredUInt64Value(uint64Constructor())
 }
@@ -9278,7 +9278,8 @@ func (v UInt64Value) ByteLength() int {
 // Implementing BigNumberValue ensures conversion functions
 // call ToBigInt instead of ToInt.
 //
-func (v UInt64Value) ToBigInt() *big.Int {
+func (v UInt64Value) ToBigInt(memoryGauge common.MemoryGauge) *big.Int {
+	common.UseMemory(memoryGauge, common.NewBigIntMemoryUsage(v.ByteLength()))
 	return new(big.Int).SetUint64(uint64(v))
 }
 
@@ -9577,7 +9578,7 @@ func ConvertUInt64(memoryGauge common.MemoryGauge, value Value) UInt64Value {
 		func() uint64 {
 			switch value := value.(type) {
 			case BigNumberValue:
-				v := value.ToBigInt()
+				v := value.ToBigInt(memoryGauge)
 				if v.Cmp(sema.UInt64TypeMaxInt) > 0 {
 					panic(OverflowError{})
 				} else if v.Sign() < 0 {
@@ -9841,7 +9842,8 @@ func (v UInt128Value) ByteLength() int {
 	return common.BigIntByteLength(v.BigInt)
 }
 
-func (v UInt128Value) ToBigInt() *big.Int {
+func (v UInt128Value) ToBigInt(memoryGauge common.MemoryGauge) *big.Int {
+	common.UseMemory(memoryGauge, common.NewBigIntMemoryUsage(v.ByteLength()))
 	return new(big.Int).Set(v.BigInt)
 }
 
@@ -10208,7 +10210,7 @@ func ConvertUInt128(memoryGauge common.MemoryGauge, value Value) Value {
 
 			switch value := value.(type) {
 			case BigNumberValue:
-				v = value.ToBigInt()
+				v = value.ToBigInt(memoryGauge)
 
 			case NumberValue:
 				v = big.NewInt(int64(value.ToInt()))
@@ -10486,7 +10488,8 @@ func (v UInt256Value) ByteLength() int {
 	return common.BigIntByteLength(v.BigInt)
 }
 
-func (v UInt256Value) ToBigInt() *big.Int {
+func (v UInt256Value) ToBigInt(memoryGauge common.MemoryGauge) *big.Int {
+	common.UseMemory(memoryGauge, common.NewBigIntMemoryUsage(v.ByteLength()))
 	return new(big.Int).Set(v.BigInt)
 }
 
@@ -10853,7 +10856,7 @@ func ConvertUInt256(memoryGauge common.MemoryGauge, value Value) UInt256Value {
 
 			switch value := value.(type) {
 			case BigNumberValue:
-				v = value.ToBigInt()
+				v = value.ToBigInt(memoryGauge)
 
 			case NumberValue:
 				v = big.NewInt(int64(value.ToInt()))
@@ -12425,7 +12428,8 @@ func (v Word64Value) ByteLength() int {
 // Implementing BigNumberValue ensures conversion functions
 // call ToBigInt instead of ToInt.
 //
-func (v Word64Value) ToBigInt() *big.Int {
+func (v Word64Value) ToBigInt(memoryGauge common.MemoryGauge) *big.Int {
+	common.UseMemory(memoryGauge, common.NewBigIntMemoryUsage(v.ByteLength()))
 	return new(big.Int).SetUint64(uint64(v))
 }
 
@@ -13246,7 +13250,7 @@ func ConvertFix64(memoryGauge common.MemoryGauge, value Value) Fix64Value {
 
 	case BigNumberValue:
 		converter := func() int64 {
-			v := value.ToBigInt()
+			v := value.ToBigInt(memoryGauge)
 
 			// First, check if the value is at least in the int64 range.
 			// The integer range for Fix64 is smaller, but this test at least
@@ -13756,7 +13760,7 @@ func ConvertUFix64(memoryGauge common.MemoryGauge, value Value) UFix64Value {
 
 	case BigNumberValue:
 		converter := func() uint64 {
-			v := value.ToBigInt()
+			v := value.ToBigInt(memoryGauge)
 
 			if v.Sign() < 0 {
 				panic(UnderflowError{})

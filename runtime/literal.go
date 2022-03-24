@@ -165,7 +165,7 @@ func integerLiteralValue(
 	}
 
 	memoryUsage := common.NewBigIntMemoryUsage(
-		len(integerExpression.Value.Bytes()),
+		common.BigIntByteLength(integerExpression.Value),
 	)
 	intValue := interpreter.NewIntValueFromBigInt(
 		memoryGauge,
