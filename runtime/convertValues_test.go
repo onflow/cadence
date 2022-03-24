@@ -326,12 +326,12 @@ func TestExportValue(t *testing.T) {
 		},
 		{
 			label:    "Fix64",
-			value:    interpreter.Fix64Value(-123000000),
+			value:    interpreter.NewUnmeteredFix64Value(-123000000),
 			expected: cadence.Fix64(-123000000),
 		},
 		{
 			label:    "UFix64",
-			value:    interpreter.UFix64Value(123000000),
+			value:    interpreter.NewUnmeteredUFix64Value(123000000),
 			expected: cadence.UFix64(123000000),
 		},
 		{
@@ -382,7 +382,7 @@ func TestExportValue(t *testing.T) {
 						},
 					),
 					stdlib.NewHashAlgorithmCase(inter, 1),
-					interpreter.NewUFix64ValueWithInteger(10),
+					interpreter.NewUnmeteredUFix64ValueWithInteger(10),
 					false,
 				)
 			},
@@ -712,12 +712,12 @@ func TestImportValue(t *testing.T) {
 		{
 			label:    "Fix64",
 			value:    cadence.Fix64(-123000000),
-			expected: interpreter.Fix64Value(-123000000),
+			expected: interpreter.NewUnmeteredFix64Value(-123000000),
 		},
 		{
 			label:    "UFix64",
 			value:    cadence.UFix64(123000000),
-			expected: interpreter.UFix64Value(123000000),
+			expected: interpreter.NewUnmeteredUFix64Value(123000000),
 		},
 		{
 			label: "Path",

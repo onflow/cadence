@@ -1818,15 +1818,19 @@ func accountBalanceGetFunction(
 	address := addressValue.ToAddress()
 
 	return func() interpreter.UFix64Value {
-		var balance uint64
-		var err error
-		wrapPanic(func() {
-			balance, err = runtimeInterface.GetAccountBalance(address)
-		})
-		if err != nil {
-			panic(err)
+		balanceGetter := func() (balance uint64) {
+			var err error
+			wrapPanic(func() {
+				balance, err = runtimeInterface.GetAccountBalance(address)
+			})
+			if err != nil {
+				panic(err)
+			}
+
+			return
 		}
-		return interpreter.UFix64Value(balance)
+
+		return interpreter.NewUFix64Value(runtimeInterface, balanceGetter)
 	}
 }
 
@@ -1839,15 +1843,19 @@ func accountAvailableBalanceGetFunction(
 	address := addressValue.ToAddress()
 
 	return func() interpreter.UFix64Value {
-		var balance uint64
-		var err error
-		wrapPanic(func() {
-			balance, err = runtimeInterface.GetAccountAvailableBalance(address)
-		})
-		if err != nil {
-			panic(err)
+		balanceGetter := func() (balance uint64) {
+			var err error
+			wrapPanic(func() {
+				balance, err = runtimeInterface.GetAccountAvailableBalance(address)
+			})
+			if err != nil {
+				panic(err)
+			}
+
+			return
 		}
-		return interpreter.UFix64Value(balance)
+
+		return interpreter.NewUFix64Value(runtimeInterface, balanceGetter)
 	}
 }
 
@@ -3204,7 +3212,12 @@ func NewBlockValue(inter *interpreter.Interpreter, block Block) interpreter.Valu
 
 	// timestamp
 	// TODO: verify
-	timestampValue := interpreter.NewUFix64ValueWithInteger(uint64(time.Unix(0, block.Timestamp).Unix()))
+	timestampValue := interpreter.NewUFix64ValueWithInteger(
+		inter,
+		func() uint64 {
+			return uint64(time.Unix(0, block.Timestamp).Unix())
+		},
+	)
 
 	return interpreter.NewBlockValue(
 		inter,
@@ -3537,7 +3550,11 @@ func NewAccountKeyValue(
 			validatePublicKey,
 		),
 		stdlib.NewHashAlgorithmCase(inter, accountKey.HashAlgo.RawValue()),
-		interpreter.NewUFix64ValueWithInteger(uint64(accountKey.Weight)),
+		interpreter.NewUFix64ValueWithInteger(
+			inter, func() uint64 {
+				return uint64(accountKey.Weight)
+			},
+		),
 		interpreter.BoolValue(accountKey.IsRevoked),
 	)
 }

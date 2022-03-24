@@ -1146,9 +1146,9 @@ func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) inte
 		copy(data, b)
 		return interpreter.NewUnmeteredAddressValueFromBytes(data)
 	case interpreter.Fix64Value:
-		return interpreter.NewFix64ValueWithInteger(int64(v.ToInt()))
+		return interpreter.NewUnmeteredFix64ValueWithInteger(int64(v.ToInt()))
 	case interpreter.UFix64Value:
-		return interpreter.NewUFix64ValueWithInteger(uint64(v.ToInt()))
+		return interpreter.NewUnmeteredUFix64ValueWithInteger(uint64(v.ToInt()))
 
 	case interpreter.PathValue:
 		return interpreter.PathValue{
@@ -1318,9 +1318,9 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 
 	// Fixed point
 	case Fix64:
-		return interpreter.NewFix64ValueWithInteger(int64(sign()) * rand.Int63n(sema.Fix64TypeMaxInt))
+		return interpreter.NewUnmeteredFix64ValueWithInteger(int64(sign()) * rand.Int63n(sema.Fix64TypeMaxInt))
 	case UFix64:
-		return interpreter.NewUFix64ValueWithInteger(
+		return interpreter.NewUnmeteredUFix64ValueWithInteger(
 			uint64(rand.Int63n(
 				int64(sema.UFix64TypeMaxInt),
 			)),

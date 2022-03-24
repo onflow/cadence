@@ -615,7 +615,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 	mintAmount, err := cadence.NewUFix64("100000000000.0")
 	require.NoError(b, err)
 
-	mintAmountValue := interpreter.UFix64Value(mintAmount)
+	mintAmountValue := interpreter.NewUnmeteredUFix64Value(uint64(mintAmount))
 
 	signerAccount = contractsAddress
 
@@ -666,7 +666,9 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 	// Run validation scripts
 
-	sum := interpreter.NewUFix64ValueWithInteger(0)
+	sum := interpreter.NewUnmeteredUFix64ValueWithInteger(0)
+
+	inter := &interpreter.Interpreter{}
 
 	for _, address := range []common.Address{
 		senderAddress,
@@ -687,11 +689,11 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 		)
 		require.NoError(b, err)
 
-		value := interpreter.UFix64Value(result.(cadence.UFix64))
+		value := interpreter.NewUnmeteredUFix64Value(uint64(result.(cadence.UFix64)))
 
-		require.True(b, bool(value.Less(mintAmountValue)))
+		require.True(b, bool(value.Less(inter, mintAmountValue)))
 
-		sum = sum.Plus(nil, value).(interpreter.UFix64Value)
+		sum = sum.Plus(inter, value).(interpreter.UFix64Value)
 	}
 
 	utils.RequireValuesEqual(b, nil, mintAmountValue, sum)

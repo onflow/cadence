@@ -280,7 +280,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.Less(right)
+		return left.Less(interpreter, right)
 
 	case ast.OperationLessEqual:
 		left, leftOk := leftValue.(NumberValue)
@@ -288,7 +288,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.LessEqual(right)
+		return left.LessEqual(interpreter, right)
 
 	case ast.OperationGreater:
 		left, leftOk := leftValue.(NumberValue)
@@ -296,7 +296,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.Greater(right)
+		return left.Greater(interpreter, right)
 
 	case ast.OperationGreaterEqual:
 		left, leftOk := leftValue.(NumberValue)
@@ -304,7 +304,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if !leftOk || !rightOk {
 			error(right)
 		}
-		return left.GreaterEqual(right)
+		return left.GreaterEqual(interpreter, right)
 
 	case ast.OperationEqual:
 		return interpreter.testEqual(leftValue, rightValue(), expression)
@@ -387,16 +387,20 @@ func (interpreter *Interpreter) testEqual(left, right Value, expression *ast.Bin
 		right,
 	)
 
-	leftEquatable, ok := left.(EquatableValue)
-	if !ok {
-		return NewBoolValue(interpreter, false)
+	valueGetter := func() bool {
+		leftEquatable, ok := left.(EquatableValue)
+		if !ok {
+			return false
+		}
+
+		return leftEquatable.Equal(
+			interpreter,
+			locationRangeGetter(interpreter.Location, expression),
+			right,
+		)
 	}
 
-	return NewBoolValue(interpreter, leftEquatable.Equal(
-		interpreter,
-		locationRangeGetter(interpreter.Location, expression),
-		right,
-	))
+	return NewBoolValueFromConstructor(interpreter, valueGetter)
 }
 
 func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpression) ast.Repr {
@@ -551,14 +555,14 @@ func (interpreter *Interpreter) VisitFixedPointExpression(expression *ast.FixedP
 	)
 	switch fixedPointSubType {
 	case sema.Fix64Type, sema.SignedFixedPointType:
-		return Fix64Value(value.Int64())
+		return NewFix64Value(interpreter, value.Int64)
 	case sema.UFix64Type:
-		return UFix64Value(value.Uint64())
+		return NewUFix64Value(interpreter, value.Uint64)
 	case sema.FixedPointType:
 		if expression.Negative {
-			return Fix64Value(value.Int64())
+			return NewFix64Value(interpreter, value.Int64)
 		} else {
-			return UFix64Value(value.Uint64())
+			return NewUFix64Value(interpreter, value.Uint64)
 		}
 	default:
 		panic(errors.NewUnreachableError())
