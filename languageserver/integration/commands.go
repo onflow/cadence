@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,11 +21,12 @@ package integration
 import (
 	"errors"
 	"fmt"
-	"github.com/onflow/cadence"
 	"io/ioutil"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/onflow/cadence"
 
 	"github.com/onflow/flow-cli/pkg/flowkit"
 	"github.com/onflow/flow-go-sdk"
