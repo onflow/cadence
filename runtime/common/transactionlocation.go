@@ -31,6 +31,11 @@ const TransactionLocationPrefix = "t"
 //
 type TransactionLocation []byte
 
+func NewTransactionLocation(gauge MemoryGauge, script []byte) TransactionLocation {
+	UseMemory(gauge, NewBytesMemoryUsage(len(script)))
+	return TransactionLocation(script)
+}
+
 func (l TransactionLocation) ID() LocationID {
 	return NewLocationID(
 		TransactionLocationPrefix,

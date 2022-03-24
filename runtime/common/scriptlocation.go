@@ -31,6 +31,11 @@ const ScriptLocationPrefix = "s"
 //
 type ScriptLocation []byte
 
+func NewScriptLocation(gauge MemoryGauge, script []byte) ScriptLocation {
+	UseMemory(gauge, NewBytesMemoryUsage(len(script)))
+	return ScriptLocation(script)
+}
+
 func (l ScriptLocation) ID() LocationID {
 	return NewLocationID(
 		ScriptLocationPrefix,

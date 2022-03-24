@@ -49,4 +49,6 @@ const (
 	MemoryKindBoundFunction
 	MemoryKindBigInt
 	MemoryKindRawString
+	MemoryKindAddressLocation
+	MemoryKindBytes
 )

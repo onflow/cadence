@@ -36,6 +36,14 @@ type AddressLocation struct {
 	Name    string
 }
 
+func NewAddressLocation(gauge MemoryGauge, addr Address, name string) AddressLocation {
+	UseMemory(gauge, NewConstantMemoryUsage(MemoryKindAddressLocation))
+	return AddressLocation{
+		Address: addr,
+		Name:    name,
+	}
+}
+
 func (l AddressLocation) String() string {
 	if l.Name == "" {
 		return l.Address.String()
