@@ -3239,7 +3239,7 @@ var converterFunctionValues = func() []converterFunction {
 			if converterFunctionValue.NestedVariables == nil {
 				converterFunctionValue.NestedVariables = map[string]*Variable{}
 			}
-			// these variables are do need to be metered as they are only ever declared once,
+			// these variables are not needed to be metered as they are only ever declared once,
 			// and can be considered base interpreter overhead
 			converterFunctionValue.NestedVariables[name] = NewVariableWithValue(nil, value)
 		}
@@ -3427,7 +3427,7 @@ func defineBaseValue(activation *VariableActivation, name string, value Value) {
 	if activation.Find(name) != nil {
 		panic(errors.NewUnreachableError())
 	}
-	// these variables are do need to be metered as they are only ever declared once,
+	// these variables are not needed to be metered as they are only ever declared once,
 	// and can be considered base interpreter overhead
 	activation.Set(name, NewVariableWithValue(nil, value))
 }
@@ -3450,7 +3450,7 @@ var stringFunction = func() Value {
 		if functionValue.NestedVariables == nil {
 			functionValue.NestedVariables = map[string]*Variable{}
 		}
-		// these variables are do need to be metered as they are only ever declared once,
+		// these variables are not needed to be metered as they are only ever declared once,
 		// and can be considered base interpreter overhead
 		functionValue.NestedVariables[name] = NewVariableWithValue(nil, value)
 	}
