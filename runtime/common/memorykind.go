@@ -49,4 +49,5 @@ const (
 	MemoryKindBoundFunction
 	MemoryKindBigInt
 	MemoryKindRawString
+	MemoryKindVariable
 )

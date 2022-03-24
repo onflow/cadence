@@ -1216,7 +1216,7 @@ func (interpreter *Interpreter) VisitProgram(program *ast.Program) ast.Repr {
 
 		var variable *Variable
 
-		variable = NewVariableWithGetter(func() Value {
+		variable = NewVariableWithGetter(interpreter, func() Value {
 			var result Value
 			interpreter.visitVariableDeclaration(declaration, func(_ string, value Value) {
 				result = value
@@ -1427,7 +1427,7 @@ func (interpreter *Interpreter) declareValue(declaration ValueDeclaration) *Vari
 // declareVariable declares a variable in the latest scope
 func (interpreter *Interpreter) declareVariable(identifier string, value Value) *Variable {
 	// NOTE: semantic analysis already checked possible invalid redeclaration
-	variable := NewVariableWithValue(value)
+	variable := NewVariableWithValue(interpreter, value)
 	interpreter.setVariable(identifier, variable)
 
 	// TODO: add proper location info
@@ -1854,7 +1854,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 		caseValues[i] = caseValue
 
 		constructorNestedVariables[enumCase.Identifier.Identifier] =
-			NewVariableWithValue(caseValue)
+			NewVariableWithValue(interpreter, caseValue)
 	}
 
 	getLocationRange := locationRangeGetter(location, declaration)
@@ -2610,7 +2610,7 @@ func (interpreter *Interpreter) ensureLoadedWithLocationHandler(
 		// prepare the interpreter
 
 		for _, global := range virtualImport.Globals {
-			variable := NewVariableWithValue(global.Value)
+			variable := NewVariableWithValue(interpreter, global.Value)
 			subInterpreter.setVariable(global.Name, variable)
 			subInterpreter.Globals.Set(global.Name, variable)
 		}
@@ -3239,7 +3239,9 @@ var converterFunctionValues = func() []converterFunction {
 			if converterFunctionValue.NestedVariables == nil {
 				converterFunctionValue.NestedVariables = map[string]*Variable{}
 			}
-			converterFunctionValue.NestedVariables[name] = NewVariableWithValue(value)
+			// these variables are do need to be metered as they are only ever declared once,
+			// and can be considered base interpreter overhead
+			converterFunctionValue.NestedVariables[name] = NewVariableWithValue(nil, value)
 		}
 
 		if declaration.min != nil {
@@ -3425,7 +3427,9 @@ func defineBaseValue(activation *VariableActivation, name string, value Value) {
 	if activation.Find(name) != nil {
 		panic(errors.NewUnreachableError())
 	}
-	activation.Set(name, NewVariableWithValue(value))
+	// these variables are do need to be metered as they are only ever declared once,
+	// and can be considered base interpreter overhead
+	activation.Set(name, NewVariableWithValue(nil, value))
 }
 
 // stringFunction is the `String` function. It is stateless, hence it can be re-used across interpreters.
@@ -3446,7 +3450,9 @@ var stringFunction = func() Value {
 		if functionValue.NestedVariables == nil {
 			functionValue.NestedVariables = map[string]*Variable{}
 		}
-		functionValue.NestedVariables[name] = NewVariableWithValue(value)
+		// these variables are do need to be metered as they are only ever declared once,
+		// and can be considered base interpreter overhead
+		functionValue.NestedVariables[name] = NewVariableWithValue(nil, value)
 	}
 
 	addMember(
