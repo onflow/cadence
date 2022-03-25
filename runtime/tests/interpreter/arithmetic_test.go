@@ -505,45 +505,45 @@ func TestInterpretSaturatedArithmeticFunctions(t *testing.T) {
 		sema.Fix64Type: {
 			add: testCalls{
 				overflow: testCall{
-					interpreter.Fix64Value(math.MaxInt64),
-					interpreter.NewFix64ValueWithInteger(2),
-					interpreter.Fix64Value(math.MaxInt64),
+					interpreter.NewUnmeteredFix64Value(math.MaxInt64),
+					interpreter.NewUnmeteredFix64ValueWithInteger(2),
+					interpreter.NewUnmeteredFix64Value(math.MaxInt64),
 				},
 				underflow: testCall{
-					interpreter.Fix64Value(math.MinInt64),
-					interpreter.NewFix64ValueWithInteger(-2),
-					interpreter.Fix64Value(math.MinInt64),
+					interpreter.NewUnmeteredFix64Value(math.MinInt64),
+					interpreter.NewUnmeteredFix64ValueWithInteger(-2),
+					interpreter.NewUnmeteredFix64Value(math.MinInt64),
 				},
 			},
 			subtract: testCalls{
 				overflow: testCall{
-					interpreter.Fix64Value(math.MaxInt64),
-					interpreter.NewFix64ValueWithInteger(-2),
-					interpreter.Fix64Value(math.MaxInt64),
+					interpreter.NewUnmeteredFix64Value(math.MaxInt64),
+					interpreter.NewUnmeteredFix64ValueWithInteger(-2),
+					interpreter.NewUnmeteredFix64Value(math.MaxInt64),
 				},
 				underflow: testCall{
-					interpreter.Fix64Value(math.MinInt64),
-					interpreter.NewFix64ValueWithInteger(2),
-					interpreter.Fix64Value(math.MinInt64),
+					interpreter.NewUnmeteredFix64Value(math.MinInt64),
+					interpreter.NewUnmeteredFix64ValueWithInteger(2),
+					interpreter.NewUnmeteredFix64Value(math.MinInt64),
 				},
 			},
 			multiply: testCalls{
 				overflow: testCall{
-					interpreter.Fix64Value(math.MaxInt64),
-					interpreter.NewFix64ValueWithInteger(2),
-					interpreter.Fix64Value(math.MaxInt64),
+					interpreter.NewUnmeteredFix64Value(math.MaxInt64),
+					interpreter.NewUnmeteredFix64ValueWithInteger(2),
+					interpreter.NewUnmeteredFix64Value(math.MaxInt64),
 				},
 				underflow: testCall{
-					interpreter.Fix64Value(math.MinInt64),
-					interpreter.NewFix64ValueWithInteger(2),
-					interpreter.Fix64Value(math.MinInt64),
+					interpreter.NewUnmeteredFix64Value(math.MinInt64),
+					interpreter.NewUnmeteredFix64ValueWithInteger(2),
+					interpreter.NewUnmeteredFix64Value(math.MinInt64),
 				},
 			},
 			divide: testCalls{
 				overflow: testCall{
-					interpreter.Fix64Value(math.MinInt64),
-					interpreter.NewFix64ValueWithInteger(-1),
-					interpreter.Fix64Value(math.MaxInt64),
+					interpreter.NewUnmeteredFix64Value(math.MinInt64),
+					interpreter.NewUnmeteredFix64ValueWithInteger(-1),
+					interpreter.NewUnmeteredFix64Value(math.MaxInt64),
 				},
 			},
 		},
@@ -697,23 +697,23 @@ func TestInterpretSaturatedArithmeticFunctions(t *testing.T) {
 		sema.UFix64Type: {
 			add: testCalls{
 				overflow: testCall{
-					interpreter.UFix64Value(math.MaxUint64),
-					interpreter.NewUFix64ValueWithInteger(2),
-					interpreter.UFix64Value(math.MaxUint64),
+					interpreter.NewUnmeteredUFix64Value(math.MaxUint64),
+					interpreter.NewUnmeteredUFix64ValueWithInteger(2),
+					interpreter.NewUnmeteredUFix64Value(math.MaxUint64),
 				},
 			},
 			subtract: testCalls{
 				underflow: testCall{
-					interpreter.UFix64Value(0),
-					interpreter.NewUFix64ValueWithInteger(2),
-					interpreter.UFix64Value(0),
+					interpreter.NewUnmeteredUFix64Value(0),
+					interpreter.NewUnmeteredUFix64ValueWithInteger(2),
+					interpreter.NewUnmeteredUFix64Value(0),
 				},
 			},
 			multiply: testCalls{
 				overflow: testCall{
-					interpreter.UFix64Value(math.MaxUint64),
-					interpreter.NewUFix64ValueWithInteger(2),
-					interpreter.UFix64Value(math.MaxUint64),
+					interpreter.NewUnmeteredUFix64Value(math.MaxUint64),
+					interpreter.NewUnmeteredUFix64ValueWithInteger(2),
+					interpreter.NewUnmeteredUFix64Value(math.MaxUint64),
 				},
 			},
 		},

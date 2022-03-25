@@ -1216,7 +1216,7 @@ func (interpreter *Interpreter) VisitProgram(program *ast.Program) ast.Repr {
 
 		var variable *Variable
 
-		variable = NewVariableWithGetter(func() Value {
+		variable = NewVariableWithGetter(interpreter, func() Value {
 			var result Value
 			interpreter.visitVariableDeclaration(declaration, func(_ string, value Value) {
 				result = value
@@ -1427,7 +1427,7 @@ func (interpreter *Interpreter) declareValue(declaration ValueDeclaration) *Vari
 // declareVariable declares a variable in the latest scope
 func (interpreter *Interpreter) declareVariable(identifier string, value Value) *Variable {
 	// NOTE: semantic analysis already checked possible invalid redeclaration
-	variable := NewVariableWithValue(value)
+	variable := NewVariableWithValue(interpreter, value)
 	interpreter.setVariable(identifier, variable)
 
 	// TODO: add proper location info
@@ -1854,7 +1854,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 		caseValues[i] = caseValue
 
 		constructorNestedVariables[enumCase.Identifier.Identifier] =
-			NewVariableWithValue(caseValue)
+			NewVariableWithValue(interpreter, caseValue)
 	}
 
 	getLocationRange := locationRangeGetter(location, declaration)
@@ -2289,12 +2289,12 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 
 	case sema.Fix64Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertFix64(value)
+			return ConvertFix64(interpreter, value)
 		}
 
 	case sema.UFix64Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertUFix64(value)
+			return ConvertUFix64(interpreter, value)
 		}
 	}
 
@@ -2610,7 +2610,7 @@ func (interpreter *Interpreter) ensureLoadedWithLocationHandler(
 		// prepare the interpreter
 
 		for _, global := range virtualImport.Globals {
-			variable := NewVariableWithValue(global.Value)
+			variable := NewVariableWithValue(interpreter, global.Value)
 			subInterpreter.setVariable(global.Name, variable)
 			subInterpreter.Globals.Set(global.Name, variable)
 		}
@@ -2888,20 +2888,20 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.Fix64TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Fix64Type),
-		convert: func(_ *Interpreter, value Value) Value {
-			return ConvertFix64(value)
+		convert: func(interpreter *Interpreter, value Value) Value {
+			return ConvertFix64(interpreter, value)
 		},
-		min: Fix64Value(math.MinInt64),
-		max: Fix64Value(math.MaxInt64),
+		min: NewUnmeteredFix64Value(math.MinInt64),
+		max: NewUnmeteredFix64Value(math.MaxInt64),
 	},
 	{
 		name:         sema.UFix64TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.UFix64Type),
-		convert: func(_ *Interpreter, value Value) Value {
-			return ConvertUFix64(value)
+		convert: func(interpreter *Interpreter, value Value) Value {
+			return ConvertUFix64(interpreter, value)
 		},
-		min: UFix64Value(0),
-		max: UFix64Value(math.MaxUint64),
+		min: NewUnmeteredUFix64Value(0),
+		max: NewUnmeteredUFix64Value(math.MaxUint64),
 	},
 	{
 		name:         sema.AddressTypeName,
@@ -3239,7 +3239,9 @@ var converterFunctionValues = func() []converterFunction {
 			if converterFunctionValue.NestedVariables == nil {
 				converterFunctionValue.NestedVariables = map[string]*Variable{}
 			}
-			converterFunctionValue.NestedVariables[name] = NewVariableWithValue(value)
+			// these variables are not needed to be metered as they are only ever declared once,
+			// and can be considered base interpreter overhead
+			converterFunctionValue.NestedVariables[name] = NewVariableWithValue(nil, value)
 		}
 
 		if declaration.min != nil {
@@ -3425,7 +3427,9 @@ func defineBaseValue(activation *VariableActivation, name string, value Value) {
 	if activation.Find(name) != nil {
 		panic(errors.NewUnreachableError())
 	}
-	activation.Set(name, NewVariableWithValue(value))
+	// these variables are not needed to be metered as they are only ever declared once,
+	// and can be considered base interpreter overhead
+	activation.Set(name, NewVariableWithValue(nil, value))
 }
 
 // stringFunction is the `String` function. It is stateless, hence it can be re-used across interpreters.
@@ -3446,7 +3450,9 @@ var stringFunction = func() Value {
 		if functionValue.NestedVariables == nil {
 			functionValue.NestedVariables = map[string]*Variable{}
 		}
-		functionValue.NestedVariables[name] = NewVariableWithValue(value)
+		// these variables are not needed to be metered as they are only ever declared once,
+		// and can be considered base interpreter overhead
+		functionValue.NestedVariables[name] = NewVariableWithValue(nil, value)
 	}
 
 	addMember(
@@ -4465,16 +4471,19 @@ func (interpreter *Interpreter) isInstanceFunction(self Value) *HostFunctionValu
 
 			staticType := typeValue.Type
 
-			// Values are never instances of unknown types
-			if staticType == nil {
-				return NewBoolValue(invocation.Interpreter, false)
+			valueGetter := func() bool {
+				// Values are never instances of unknown types
+				if staticType == nil {
+					return false
+				}
+
+				semaType := interpreter.MustConvertStaticToSemaType(staticType)
+				// NOTE: not invocation.Self, as that is only set for composite values
+				dynamicType := self.DynamicType(invocation.Interpreter, SeenReferences{})
+				return interpreter.IsSubType(dynamicType, semaType)
 			}
 
-			semaType := interpreter.MustConvertStaticToSemaType(staticType)
-			// NOTE: not invocation.Self, as that is only set for composite values
-			dynamicType := self.DynamicType(invocation.Interpreter, SeenReferences{})
-			result := interpreter.IsSubType(dynamicType, semaType)
-			return NewBoolValue(invocation.Interpreter, result)
+			return NewBoolValueFromConstructor(invocation.Interpreter, valueGetter)
 		},
 		sema.IsInstanceFunctionType,
 	)

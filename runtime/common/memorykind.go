@@ -51,4 +51,5 @@ const (
 	MemoryKindRawString
 	MemoryKindAddressLocation
 	MemoryKindBytes
+	MemoryKindVariable
 )

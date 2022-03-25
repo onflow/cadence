@@ -905,11 +905,11 @@ func TestStringer(t *testing.T) {
 			expected: "64",
 		},
 		"UFix64": {
-			value:    NewUFix64ValueWithInteger(64),
+			value:    NewUnmeteredUFix64ValueWithInteger(64),
 			expected: "64.00000000",
 		},
 		"Fix64": {
-			value:    NewFix64ValueWithInteger(-32),
+			value:    NewUnmeteredFix64ValueWithInteger(-32),
 			expected: "-32.00000000",
 		},
 		"Void": {
@@ -1378,27 +1378,27 @@ func TestGetHashInput(t *testing.T) {
 			expected: []byte{byte(HashInputTypeWord64), 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
 		},
 		"UFix64": {
-			value:    NewUFix64ValueWithInteger(64),
+			value:    NewUnmeteredUFix64ValueWithInteger(64),
 			expected: []byte{byte(HashInputTypeUFix64), 0x0, 0x0, 0x0, 0x1, 0x7d, 0x78, 0x40, 0x0},
 		},
 		"UFix64 min": {
-			value:    NewUFix64ValueWithInteger(0),
+			value:    NewUnmeteredUFix64ValueWithInteger(0),
 			expected: []byte{byte(HashInputTypeUFix64), 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
 		},
 		"UFix64 max": {
-			value:    NewUFix64ValueWithInteger(sema.UFix64TypeMaxInt),
+			value:    NewUnmeteredUFix64ValueWithInteger(sema.UFix64TypeMaxInt),
 			expected: []byte{byte(HashInputTypeUFix64), 0xff, 0xff, 0xff, 0xff, 0xff, 0x6e, 0x41, 0x0},
 		},
 		"Fix64": {
-			value:    NewFix64ValueWithInteger(-32),
+			value:    NewUnmeteredFix64ValueWithInteger(-32),
 			expected: []byte{byte(HashInputTypeFix64), 0xff, 0xff, 0xff, 0xff, 0x41, 0x43, 0xe0, 0x0},
 		},
 		"Fix64 min": {
-			value:    NewFix64ValueWithInteger(sema.Fix64TypeMinInt),
+			value:    NewUnmeteredFix64ValueWithInteger(sema.Fix64TypeMinInt),
 			expected: []byte{byte(HashInputTypeFix64), 0x80, 0x0, 0x0, 0x0, 0x03, 0x43, 0xd0, 0x0},
 		},
 		"Fix64 max": {
-			value:    NewFix64ValueWithInteger(sema.Fix64TypeMaxInt),
+			value:    NewUnmeteredFix64ValueWithInteger(sema.Fix64TypeMaxInt),
 			expected: []byte{byte(HashInputTypeFix64), 0x7f, 0xff, 0xff, 0xff, 0xfc, 0xbc, 0x30, 0x00},
 		},
 		"true": {
@@ -3117,8 +3117,8 @@ func TestNumberValue_Equal(t *testing.T) {
 		"Word16":  NewUnmeteredWord16Value(16),
 		"Word32":  NewUnmeteredWord32Value(32),
 		"Word64":  NewUnmeteredWord64Value(64),
-		"UFix64":  NewUFix64ValueWithInteger(64),
-		"Fix64":   NewFix64ValueWithInteger(-32),
+		"UFix64":  NewUnmeteredUFix64ValueWithInteger(64),
+		"Fix64":   NewUnmeteredFix64ValueWithInteger(-32),
 	}
 
 	for name, value := range testValues {

@@ -131,7 +131,7 @@ func returnZeroUInt64(_ *interpreter.Interpreter) interpreter.UInt64Value {
 }
 
 func returnZeroUFix64() interpreter.UFix64Value {
-	return interpreter.UFix64Value(0)
+	return interpreter.NewUnmeteredUFix64Value(0)
 }
 
 func TestInterpretAuthAccount_save(t *testing.T) {
@@ -1823,7 +1823,7 @@ func TestInterpretAccount_BalanceFields(t *testing.T) {
 				AssertValuesEqual(
 					t,
 					inter,
-					interpreter.UFix64Value(0),
+					interpreter.NewUnmeteredUFix64Value(0),
 					value,
 				)
 			})

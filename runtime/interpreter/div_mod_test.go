@@ -3179,8 +3179,8 @@ func TestDivFix64(t *testing.T) {
 	for _, test := range tests {
 
 		f := func() {
-			a := NewFix64ValueWithInteger(test.a)
-			b := NewFix64ValueWithInteger(test.b)
+			a := NewUnmeteredFix64ValueWithInteger(test.a)
+			b := NewUnmeteredFix64ValueWithInteger(test.b)
 			a.Div(inter, b)
 		}
 
@@ -3192,27 +3192,27 @@ func TestDivFix64(t *testing.T) {
 	}
 
 	assert.Equal(t,
-		Fix64Value(1),
-		NewFix64ValueWithInteger(1).
-			Div(inter, NewFix64ValueWithInteger(sema.Fix64Factor)),
+		NewUnmeteredFix64Value(1),
+		NewUnmeteredFix64ValueWithInteger(1).
+			Div(inter, NewUnmeteredFix64ValueWithInteger(sema.Fix64Factor)),
 	)
 
 	assert.Equal(t,
-		Fix64Value(0),
-		NewFix64ValueWithInteger(1).
-			Div(inter, Fix64Value(Fix64MaxValue)),
+		NewUnmeteredFix64Value(0),
+		NewUnmeteredFix64ValueWithInteger(1).
+			Div(inter, NewUnmeteredFix64Value(Fix64MaxValue)),
 	)
 
 	assert.Equal(t,
-		Fix64Value(0),
-		Fix64Value(1).
-			Div(inter, NewFix64ValueWithInteger(2)),
+		NewUnmeteredFix64Value(0),
+		NewUnmeteredFix64Value(1).
+			Div(inter, NewUnmeteredFix64ValueWithInteger(2)),
 	)
 
 	assert.Equal(t,
-		Fix64Value(1535399),
-		NewFix64ValueWithInteger(1543219).
-			Div(inter, NewFix64ValueWithInteger(100509284)),
+		NewUnmeteredFix64Value(1535399),
+		NewUnmeteredFix64ValueWithInteger(1543219).
+			Div(inter, NewUnmeteredFix64ValueWithInteger(100509284)),
 	)
 }
 
@@ -3304,8 +3304,8 @@ func TestDivModUFix64(t *testing.T) {
 		} {
 
 			f := func() {
-				a := NewUFix64ValueWithInteger(test.a)
-				b := NewUFix64ValueWithInteger(test.b)
+				a := NewUnmeteredUFix64ValueWithInteger(test.a)
+				b := NewUnmeteredUFix64ValueWithInteger(test.b)
 				f(a, b)
 			}
 
@@ -3318,27 +3318,27 @@ func TestDivModUFix64(t *testing.T) {
 	}
 
 	assert.Equal(t,
-		UFix64Value(1),
-		NewUFix64ValueWithInteger(1).
-			Div(inter, NewUFix64ValueWithInteger(sema.Fix64Factor)),
+		NewUnmeteredUFix64Value(1),
+		NewUnmeteredUFix64ValueWithInteger(1).
+			Div(inter, NewUnmeteredUFix64ValueWithInteger(sema.Fix64Factor)),
 	)
 
 	assert.Equal(t,
-		UFix64Value(0),
-		NewUFix64ValueWithInteger(1).
-			Div(inter, UFix64Value(UFix64MaxValue)),
+		NewUnmeteredUFix64Value(0),
+		NewUnmeteredUFix64ValueWithInteger(1).
+			Div(inter, NewUnmeteredUFix64Value(UFix64MaxValue)),
 	)
 
 	assert.Equal(t,
-		UFix64Value(0),
-		UFix64Value(1).
-			Div(inter, NewUFix64ValueWithInteger(2)),
+		NewUnmeteredUFix64Value(0),
+		NewUnmeteredUFix64Value(1).
+			Div(inter, NewUnmeteredUFix64ValueWithInteger(2)),
 	)
 
 	assert.Equal(t,
-		UFix64Value(1535399),
-		NewUFix64ValueWithInteger(1543219).
-			Div(inter, NewUFix64ValueWithInteger(100509284)),
+		NewUnmeteredUFix64Value(1535399),
+		NewUnmeteredUFix64ValueWithInteger(1543219).
+			Div(inter, NewUnmeteredUFix64ValueWithInteger(100509284)),
 	)
 }
 
@@ -3409,9 +3409,9 @@ func TestNegativeMod(t *testing.T) {
 
 		tests := map[string]struct{ a, b, expected NumberValue }{
 			"Fix64": {
-				NewFix64ValueWithInteger(-1),
-				NewFix64ValueWithInteger(5),
-				NewFix64ValueWithInteger(-1),
+				NewUnmeteredFix64ValueWithInteger(-1),
+				NewUnmeteredFix64ValueWithInteger(5),
+				NewUnmeteredFix64ValueWithInteger(-1),
 			},
 		}
 
