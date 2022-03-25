@@ -46,7 +46,7 @@ func TestScriptLocation_MarshalJSON(t *testing.T) {
 	)
 }
 
-func TestdecodeScriptLocationTypeID(t *testing.T) {
+func TestDecodeScriptLocationTypeID(t *testing.T) {
 
 	t.Parallel()
 
