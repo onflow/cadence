@@ -1743,7 +1743,7 @@ func (d LocationDecoder) decodeTransactionLocation() (common.Location, error) {
 		return nil, err
 	}
 
-	return common.TransactionLocation(s), nil
+	return common.NewTransactionLocation(d.memoryGauge, s), nil
 }
 
 func (d LocationDecoder) decodeScriptLocation() (common.Location, error) {
@@ -1758,5 +1758,5 @@ func (d LocationDecoder) decodeScriptLocation() (common.Location, error) {
 		return nil, err
 	}
 
-	return common.ScriptLocation(s), nil
+	return common.NewScriptLocation(d.memoryGauge, s), nil
 }
