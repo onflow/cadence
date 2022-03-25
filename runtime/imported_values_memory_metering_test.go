@@ -46,12 +46,13 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 	runtime := newTestInterpreterRuntime()
 
 	runtimeInterface := func(meter map[common.MemoryKind]uint64) *testRuntimeInterface {
-		return &testRuntimeInterface{
+		intf := &testRuntimeInterface{
 			meterMemory: testUseMemory(meter),
-			decodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
-				return jsoncdc.Decode(b)
-			},
 		}
+		intf.decodeArgument = func(b []byte, t cadence.Type) (cadence.Value, error) {
+			return jsoncdc.Decode(intf, b)
+		}
+		return intf
 	}
 
 	executeScript := func(script []byte, meter map[common.MemoryKind]uint64, args ...cadence.Value) {
@@ -368,7 +369,7 @@ func TestMemoryMeteringErrors(t *testing.T) {
 	type memoryMeter map[common.MemoryKind]uint64
 
 	runtimeInterface := func(meter memoryMeter) *testRuntimeInterface {
-		return &testRuntimeInterface{
+		intf := &testRuntimeInterface{
 			meterMemory: func(usage common.MemoryUsage) error {
 				if usage.Kind == common.MemoryKindInterpretedFunction ||
 					usage.Kind == common.MemoryKindVariable ||
@@ -377,10 +378,11 @@ func TestMemoryMeteringErrors(t *testing.T) {
 				}
 				return testMemoryError{}
 			},
-			decodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
-				return jsoncdc.Decode(b)
-			},
 		}
+		intf.decodeArgument = func(b []byte, t cadence.Type) (cadence.Value, error) {
+			return jsoncdc.Decode(intf, b)
+		}
+		return intf
 	}
 
 	executeScript := func(script []byte, meter memoryMeter, args ...cadence.Value) error {
@@ -621,9 +623,9 @@ func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 				meter := make(map[common.MemoryKind]uint64)
 				runtimeInterface := &testRuntimeInterface{
 					meterMemory: testUseMemory(meter),
-					decodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
-						return jsoncdc.Decode(b)
-					},
+				}
+				runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (cadence.Value, error) {
+					return jsoncdc.Decode(runtimeInterface, b)
 				}
 
 				script := []byte(fmt.Sprintf(`
