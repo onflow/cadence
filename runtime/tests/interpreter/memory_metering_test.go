@@ -7805,6 +7805,27 @@ func TestInterpretIdentifierMetering(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
-		assert.Equal(t, uint64(14), meter.getMemory(common.MemoryKindIdentifier))
+		assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindIdentifier))
+	})
+
+	t.Run("member resolvers", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {            // 2 - 'main', empty-return-type
+                let foo = ["a", "b"]    // 1
+                foo.length              // 3 - 'foo', 'length', constant field resolver
+                foo.length              // 3 - 'foo', 'length', constant field resolver (not re-used)
+                foo.removeFirst()       // 3 - 'foo', 'removeFirst', function resolver
+                foo.removeFirst()       // 3 - 'foo', 'removeFirst', function resolver (not re-used)
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+		assert.Equal(t, uint64(15), meter.getMemory(common.MemoryKindIdentifier))
 	})
 }
