@@ -7737,3 +7737,74 @@ func TestTokenMetering(t *testing.T) {
 		assert.Equal(t, uint64(13), meter.getMemory(common.MemoryKindTokenNumericLiteral))
 	})
 }
+
+func TestInterpretIdentifierMetering(t *testing.T) {
+	t.Parallel()
+
+	t.Run("variable", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let foo = 4
+                let bar = 5
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		// 'main', 'foo', 'bar', empty-return-type
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindIdentifier))
+	})
+
+	t.Run("parameters", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main(foo: String, bar: String) {
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke(
+			"main",
+			interpreter.NewUnmeteredStringValue("x"),
+			interpreter.NewUnmeteredStringValue("y"),
+		)
+		require.NoError(t, err)
+
+		// 'main', 'foo', 'String', 'bar', 'String', empty-return-type
+		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindIdentifier))
+	})
+
+	t.Run("composite declaration", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {}
+
+            pub struct foo {
+                var x: String
+                var y: String
+
+                init() {
+                    self.x = "a"
+                    self.y = "b"
+                }
+
+                pub fun bar() {}
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+		assert.Equal(t, uint64(14), meter.getMemory(common.MemoryKindIdentifier))
+	})
+}
