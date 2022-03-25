@@ -7644,3 +7644,53 @@ func TestInterpretUFix64Metering(t *testing.T) {
 		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindBool))
 	})
 }
+
+func TestInterpreterStringLocationMetering(t *testing.T) {
+	t.Parallel()
+
+	t.Run("creation", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+        struct S {}
+
+        pub fun main(account: AuthAccount) {
+            let s = CompositeType("S.test.S")
+        }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		account := newTestAuthAccountValue(inter, interpreter.AddressValue{})
+		_, err := inter.Invoke("main", account)
+		require.NoError(t, err)
+
+		// raw string location is "test"
+		assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindRawString))
+	})
+}
+
+func TestInterpreterAddressLocationMetering(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("add contract", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		struct S {}
+
+		pub fun main(account: AuthAccount) {
+			let s = CompositeType("S")
+		}
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		account := newTestAuthAccountValue(inter, interpreter.AddressValue{})
+		_, err := inter.Invoke("main", account)
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindAddressLocation))
+	})
+}
