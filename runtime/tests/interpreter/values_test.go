@@ -1047,7 +1047,7 @@ func newCompositeValue(
 	for _, field := range fields {
 		compositeType.Members.Set(
 			field.Name,
-			sema.NewPublicConstantFieldMember(
+			sema.NewUnmeteredPublicConstantFieldMember(
 				compositeType,
 				field.Name,
 				sema.AnyStructType,
@@ -1506,7 +1506,7 @@ func randomCompositeValue(
 	for _, field := range fields {
 		compositeType.Members.Set(
 			field.Name,
-			sema.NewPublicConstantFieldMember(
+			sema.NewUnmeteredPublicConstantFieldMember(
 				compositeType,
 				field.Name,
 				sema.AnyStructType, // TODO: handle resources

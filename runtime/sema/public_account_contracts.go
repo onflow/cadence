@@ -37,13 +37,13 @@ var PublicAccountContractsType = func() *CompositeType {
 	}
 
 	var members = []*Member{
-		NewPublicFunctionMember(
+		NewUnmeteredPublicFunctionMember(
 			publicAccountContractsType,
 			PublicAccountContractsTypeGetFunctionName,
 			publicAccountContractsTypeGetFunctionType,
 			publicAccountContractsTypeGetFunctionDocString,
 		),
-		NewPublicConstantFieldMember(
+		NewUnmeteredPublicConstantFieldMember(
 			publicAccountContractsType,
 			PublicAccountContractsTypeNamesField,
 			&VariableSizedType{

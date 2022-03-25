@@ -157,13 +157,13 @@ var HashAlgorithmType = newNativeEnumType(
 	UInt8Type,
 	func(enumType *CompositeType) []*Member {
 		return []*Member{
-			NewPublicFunctionMember(
+			NewUnmeteredPublicFunctionMember(
 				enumType,
 				HashAlgorithmTypeHashFunctionName,
 				HashAlgorithmTypeHashFunctionType,
 				HashAlgorithmTypeHashFunctionDocString,
 			),
-			NewPublicFunctionMember(
+			NewUnmeteredPublicFunctionMember(
 				enumType,
 				HashAlgorithmTypeHashWithTagFunctionName,
 				HashAlgorithmTypeHashWithTagFunctionType,
@@ -277,7 +277,7 @@ func newNativeEnumType(
 	}
 
 	members = append(members,
-		NewPublicConstantFieldMember(
+		NewUnmeteredPublicConstantFieldMember(
 			ty,
 			EnumRawValueFieldName,
 			rawType,

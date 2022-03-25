@@ -158,7 +158,7 @@ func parseFunctionDeclarationOrFunctionExpressionStatement(p *parser) ast.Statem
 	p.skipSpaceAndComments(true)
 
 	if p.current.Is(lexer.TokenIdentifier) {
-		identifier := tokenToIdentifier(p.current)
+		identifier := p.tokenToIdentifier(p.current)
 
 		p.next()
 
@@ -352,7 +352,7 @@ func parseForStatement(p *parser) *ast.ForStatement {
 		p.next()
 	}
 
-	firstValue := mustIdentifier(p)
+	firstValue := p.mustIdentifier()
 
 	p.skipSpaceAndComments(true)
 
@@ -363,7 +363,7 @@ func parseForStatement(p *parser) *ast.ForStatement {
 		p.next()
 		p.skipSpaceAndComments(true)
 		index = &firstValue
-		identifier = mustIdentifier(p)
+		identifier = p.mustIdentifier()
 		p.skipSpaceAndComments(true)
 	} else {
 		identifier = firstValue

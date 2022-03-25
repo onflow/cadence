@@ -63,4 +63,8 @@ const (
 	MemoryKindTokenComment
 	MemoryKindTokenNumericLiteral
 	MemoryKindTokenSyntax
+
+	// AST nodes
+
+	MemoryKindIdentifier
 )

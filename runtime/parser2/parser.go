@@ -46,6 +46,8 @@ type parser struct {
 	backtrackingCursorStack []int
 	// bufferedErrorsStack is the stack of parsing errors encountered during buffering
 	bufferedErrorsStack [][]error
+	// memoryGauge is used for metering memory usage
+	memoryGauge common.MemoryGauge
 }
 
 // Parse creates a lexer to scan the given input string,
@@ -57,10 +59,11 @@ type parser struct {
 func Parse(input string, parse func(*parser) interface{}, memoryGauge common.MemoryGauge) (result interface{}, errors []error) {
 	// create a lexer, which turns the input string into tokens
 	tokens := lexer.Lex(input, memoryGauge)
-	return ParseTokenStream(tokens, parse)
+	return ParseTokenStream(memoryGauge, tokens, parse)
 }
 
 func ParseTokenStream(
+	memoryGauge common.MemoryGauge,
 	tokens lexer.TokenStream,
 	parse func(*parser) interface{},
 ) (
@@ -68,7 +71,8 @@ func ParseTokenStream(
 	errors []error,
 ) {
 	p := &parser{
-		tokens: tokens,
+		tokens:      tokens,
+		memoryGauge: memoryGauge,
 	}
 
 	defer func() {
@@ -346,16 +350,17 @@ func (p *parser) parseTrivia(options triviaOptions) (containsNewline bool, docSt
 	return
 }
 
-func mustIdentifier(p *parser) ast.Identifier {
+func (p *parser) mustIdentifier() ast.Identifier {
 	identifier := p.mustOne(lexer.TokenIdentifier)
-	return tokenToIdentifier(identifier)
+	return p.tokenToIdentifier(identifier)
 }
 
-func tokenToIdentifier(identifier lexer.Token) ast.Identifier {
-	return ast.Identifier{
-		Identifier: identifier.Value.(string),
-		Pos:        identifier.StartPos,
-	}
+func (p *parser) tokenToIdentifier(identifier lexer.Token) ast.Identifier {
+	return ast.NewIdentifier(
+		p.memoryGauge,
+		identifier.Value.(string),
+		identifier.StartPos,
+	)
 }
 
 func ParseExpression(input string, memoryGauge common.MemoryGauge) (expression ast.Expression, errs []error) {
@@ -481,6 +486,7 @@ func ParseProgramFromTokenStream(
 	var res interface{}
 	var errs []error
 	res, errs = ParseTokenStream(
+		memoryGauge,
 		input,
 		func(p *parser) interface{} {
 			return parseDeclarations(p, lexer.TokenEOF)

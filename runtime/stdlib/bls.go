@@ -32,13 +32,13 @@ var blsContractType = func() *sema.CompositeType {
 	}
 
 	ty.Members = sema.GetMembersAsMap([]*sema.Member{
-		sema.NewPublicFunctionMember(
+		sema.NewUnmeteredPublicFunctionMember(
 			ty,
 			blsAggregatePublicKeysFunctionName,
 			blsAggregatePublicKeysFunctionType,
 			blsAggregatePublicKeysFunctionDocString,
 		),
-		sema.NewPublicFunctionMember(
+		sema.NewUnmeteredPublicFunctionMember(
 			ty,
 			blsAggregateSignaturesFunctionName,
 			blsAggregateSignaturesFunctionType,

@@ -262,7 +262,7 @@ func parseVariableDeclaration(
 		))
 	}
 
-	identifier := tokenToIdentifier(p.current)
+	identifier := p.tokenToIdentifier(p.current)
 
 	// Skip the identifier
 	p.next()
@@ -410,7 +410,7 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 			parseStringOrAddressLocation()
 
 		case lexer.TokenIdentifier:
-			identifier := tokenToIdentifier(p.current)
+			identifier := p.tokenToIdentifier(p.current)
 			setIdentifierLocation(identifier)
 			p.next()
 
@@ -468,7 +468,7 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 					// and process the current 'from' token as an identifier.
 				}
 
-				identifier := tokenToIdentifier(p.current)
+				identifier := p.tokenToIdentifier(p.current)
 				identifiers = append(identifiers, identifier)
 
 				expectCommaOrFrom = true
@@ -521,7 +521,7 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 		parseStringOrAddressLocation()
 
 	case lexer.TokenIdentifier:
-		identifier := tokenToIdentifier(p.current)
+		identifier := p.tokenToIdentifier(p.current)
 		// Skip the identifier
 		p.next()
 		p.skipSpaceAndComments(true)
@@ -643,7 +643,7 @@ func parseEventDeclaration(
 		))
 	}
 
-	identifier := tokenToIdentifier(p.current)
+	identifier := p.tokenToIdentifier(p.current)
 	// Skip the identifier
 	p.next()
 
@@ -738,7 +738,7 @@ func parseFieldWithVariableKind(
 		))
 	}
 
-	identifier := tokenToIdentifier(p.current)
+	identifier := p.tokenToIdentifier(p.current)
 	// Skip the identifier
 	p.next()
 	p.skipSpaceAndComments(true)
@@ -816,7 +816,7 @@ func parseCompositeOrInterfaceDeclaration(
 			p.next()
 			continue
 		} else {
-			identifier = tokenToIdentifier(p.current)
+			identifier = p.tokenToIdentifier(p.current)
 			// Skip the identifier
 			p.next()
 			break
@@ -986,7 +986,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) ast.Declaration
 				panic(fmt.Errorf("unexpected %s", p.current.Type))
 			}
 
-			identifier := tokenToIdentifier(*previousIdentifierToken)
+			identifier := p.tokenToIdentifier(*previousIdentifierToken)
 			return parseFieldDeclarationWithoutVariableKind(p, access, accessPos, identifier, docString)
 
 		case lexer.TokenParenOpen:
@@ -994,7 +994,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) ast.Declaration
 				panic(fmt.Errorf("unexpected %s", p.current.Type))
 			}
 
-			identifier := tokenToIdentifier(*previousIdentifierToken)
+			identifier := p.tokenToIdentifier(*previousIdentifierToken)
 			return parseSpecialFunctionDeclaration(p, functionBlockIsOptional, access, accessPos, identifier)
 		}
 
@@ -1113,7 +1113,7 @@ func parseEnumCase(
 		))
 	}
 
-	identifier := tokenToIdentifier(p.current)
+	identifier := p.tokenToIdentifier(p.current)
 	// Skip the identifier
 	p.next()
 

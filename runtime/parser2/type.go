@@ -187,7 +187,7 @@ func parseNominalTypeRemainder(p *parser, token lexer.Token) *ast.NominalType {
 			))
 		}
 
-		nestedIdentifier := tokenToIdentifier(nestedToken)
+		nestedIdentifier := p.tokenToIdentifier(nestedToken)
 
 		// Skip the identifier
 		p.next()
@@ -200,7 +200,7 @@ func parseNominalTypeRemainder(p *parser, token lexer.Token) *ast.NominalType {
 	}
 
 	return &ast.NominalType{
-		Identifier:        tokenToIdentifier(token),
+		Identifier:        p.tokenToIdentifier(token),
 		NestedIdentifiers: nestedIdentifiers,
 	}
 }
