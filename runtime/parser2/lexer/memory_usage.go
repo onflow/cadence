@@ -65,56 +65,22 @@ var tripleWidthTokenMemoryUsage = common.NewSyntaxTokenMemoryUsage(3)
 //     - And other similar tokens, such as ?, //, /*
 //
 func (l *lexer) typeMemoryUsage(tokenType TokenType) common.MemoryUsage {
-	switch tokenType {
+	switch {
+
+	// non-syntax tokens
+	case tokenType < TokenPlaceHolderSingleWidthTokenStart:
+		panic(errors.NewUnreachableError())
 
 	// 1-length tokens
-	case TokenPlus,
-		TokenMinus,
-		TokenStar,
-		TokenSlash,
-		TokenPercent,
-		TokenParenOpen,
-		TokenParenClose,
-		TokenBraceOpen,
-		TokenBraceClose,
-		TokenBracketOpen,
-		TokenBracketClose,
-		TokenQuestionMark,
-		TokenComma,
-		TokenColon,
-		TokenDot,
-		TokenSemicolon,
-		TokenLess,
-		TokenGreater,
-		TokenEqual,
-		TokenExclamationMark,
-		TokenVerticalBar,
-		TokenAmpersand,
-		TokenCaret,
-		TokenAt,
-		TokenPragma:
+	case tokenType < TokenPlaceHolderDoubleWidthTokenStart:
 		return singleWidthTokenMemoryUsage
 
 	// 2-length tokens
-	case TokenDoubleQuestionMark,
-		TokenQuestionMarkDot,
-		TokenLeftArrow,
-		TokenLessEqual,
-		TokenLessLess,
-		TokenGreaterEqual,
-		TokenEqualEqual,
-		TokenNotEqual,
-		TokenBlockCommentStart,
-		TokenBlockCommentEnd,
-		TokenAmpersandAmpersand,
-		TokenVerticalBarVerticalBar:
+	case tokenType < TokenPlaceHolderTripleWidthTokenStart:
 		return doubleWidthTokenMemoryUsage
 
 	// 3-length tokens
-	case TokenLeftArrowExclamation,
-		TokenSwap,
-		TokenAsExclamationMark,
-		TokenAsQuestionMark:
+	case tokenType < TokenMax:
 		return tripleWidthTokenMemoryUsage
 
 	default:

@@ -38,12 +38,18 @@ const (
 	TokenFixedPointNumberLiteral
 	TokenIdentifier
 	TokenString
+	TokenBlockCommentContent
+	TokenLineComment
+
+	// TokenPlaceHolderSingleWidthTokenStart is not an actual token, just a placeholder
+	// to mark the start of tokens consist of one codepoint.
+	TokenPlaceHolderSingleWidthTokenStart
+
 	TokenPlus
 	TokenMinus
 	TokenStar
 	TokenSlash
 	TokenPercent
-	TokenDoubleQuestionMark
 	TokenParenOpen
 	TokenParenClose
 	TokenBraceOpen
@@ -51,36 +57,46 @@ const (
 	TokenBracketOpen
 	TokenBracketClose
 	TokenQuestionMark
-	TokenQuestionMarkDot
 	TokenComma
 	TokenColon
 	TokenDot
 	TokenSemicolon
-	TokenLeftArrow
-	TokenLeftArrowExclamation
-	TokenSwap
 	TokenLess
+	TokenGreater
+	TokenEqual
+	TokenExclamationMark
+	TokenVerticalBar
+	TokenAmpersand
+	TokenCaret
+	TokenAt
+	TokenPragma
+
+	// TokenPlaceHolderDoubleWidthTokenStart is not an actual token, just a placeholder
+	// to mark the start of tokens consist of two codepoints.
+	TokenPlaceHolderDoubleWidthTokenStart
+
+	TokenDoubleQuestionMark
+	TokenQuestionMarkDot
+	TokenLeftArrow
 	TokenLessEqual
 	TokenLessLess
-	TokenGreater
 	TokenGreaterEqual
-	TokenEqual
 	TokenEqualEqual
-	TokenExclamationMark
 	TokenNotEqual
 	TokenBlockCommentStart
 	TokenBlockCommentEnd
-	TokenBlockCommentContent
-	TokenLineComment
-	TokenAmpersand
 	TokenAmpersandAmpersand
-	TokenCaret
-	TokenVerticalBar
 	TokenVerticalBarVerticalBar
-	TokenAt
+
+	// TokenPlaceHolderTripleWidthTokenStart is not an actual token, just a placeholder
+	// to mark the start of tokens consist of three codepoints.
+	TokenPlaceHolderTripleWidthTokenStart
+
+	TokenLeftArrowExclamation
+	TokenSwap
 	TokenAsExclamationMark
 	TokenAsQuestionMark
-	TokenPragma
+
 	// NOTE: not an actual token, must be last item
 	TokenMax
 )
@@ -88,6 +104,13 @@ const (
 func init() {
 	// ensure all tokens have its string format
 	for t := TokenType(0); t < TokenMax; t++ {
+		switch t {
+		case TokenPlaceHolderSingleWidthTokenStart,
+			TokenPlaceHolderDoubleWidthTokenStart,
+			TokenPlaceHolderTripleWidthTokenStart:
+			continue
+		}
+
 		_ = t.String()
 	}
 }
