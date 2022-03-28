@@ -211,9 +211,11 @@ func (interpreter *Interpreter) VisitSwitchStatement(switchStatement *ast.Switch
 		runStatements := func() ast.Repr {
 			// NOTE: the new block ensures that a new scope is introduced
 
-			block := &ast.Block{
-				Statements: switchCase.Statements,
-			}
+			block := ast.NewBlock(
+				interpreter,
+				switchCase.Statements,
+				ReturnEmptyRange(),
+			)
 
 			result := block.Accept(interpreter)
 

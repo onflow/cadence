@@ -68,4 +68,5 @@ const (
 
 	MemoryKindIdentifier
 	MemoryKindArgument
+	MemoryKindBlock
 )

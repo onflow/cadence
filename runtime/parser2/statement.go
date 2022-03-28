@@ -311,10 +311,11 @@ func parseIfStatement(p *parser) *ast.IfStatement {
 
 	for i := length - 2; i >= 0; i-- {
 		outer := ifStatements[i]
-		outer.Else = &ast.Block{
-			Statements: []ast.Statement{result},
-			Range:      ast.NewRangeFromPositioned(result),
-		}
+		outer.Else = ast.NewBlock(
+			p.memoryGauge,
+			[]ast.Statement{result},
+			ast.NewRangeFromPositioned(result),
+		)
 		result = outer
 	}
 
@@ -399,13 +400,14 @@ func parseBlock(p *parser) *ast.Block {
 	})
 	endToken := p.mustOne(lexer.TokenBraceClose)
 
-	return &ast.Block{
-		Statements: statements,
-		Range: ast.Range{
+	return ast.NewBlock(
+		p.memoryGauge,
+		statements,
+		ast.Range{
 			StartPos: startToken.StartPos,
 			EndPos:   endToken.EndPos,
 		},
-	}
+	)
 }
 
 func parseFunctionBlock(p *parser) *ast.FunctionBlock {
@@ -438,13 +440,14 @@ func parseFunctionBlock(p *parser) *ast.FunctionBlock {
 	endToken := p.mustOne(lexer.TokenBraceClose)
 
 	return &ast.FunctionBlock{
-		Block: &ast.Block{
-			Statements: statements,
-			Range: ast.Range{
+		Block: ast.NewBlock(
+			p.memoryGauge,
+			statements,
+			ast.Range{
 				StartPos: startToken.StartPos,
 				EndPos:   endToken.EndPos,
 			},
-		},
+		),
 		PreConditions:  preConditions,
 		PostConditions: postConditions,
 	}

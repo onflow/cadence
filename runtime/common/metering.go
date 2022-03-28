@@ -35,6 +35,7 @@ type MemoryGauge interface {
 var (
 	IdentifierMemoryUsage = NewConstantMemoryUsage(MemoryKindIdentifier)
 	ArgumentMemoryUsage   = NewConstantMemoryUsage(MemoryKindArgument)
+	BlockMemoryUsage   = NewConstantMemoryUsage(MemoryKindBlock)
 )
 
 func UseMemory(gauge MemoryGauge, usage MemoryUsage) {

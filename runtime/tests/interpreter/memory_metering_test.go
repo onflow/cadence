@@ -7856,4 +7856,36 @@ func TestInterpretASTMetering(t *testing.T) {
 
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindArgument))
 	})
+
+	t.Run("blocks", func(t *testing.T) {
+		script := `
+            pub fun main() {
+                var i = 0
+                if i != 0 {
+                    i = 0
+                }
+
+                while i < 2 {
+                    i = i + 1
+                }
+
+                var a = "foo"
+                switch i {
+                    case 1:
+                        a = "foo_1"
+                    case 2:
+                        a = "foo_2"
+                    case 3:
+                        a = "foo_3"
+                }
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindBlock))
+	})
 }
