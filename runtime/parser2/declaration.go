@@ -559,15 +559,16 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 		))
 	}
 
-	return &ast.ImportDeclaration{
-		Identifiers: identifiers,
-		Location:    location,
-		Range: ast.Range{
+	return ast.NewImportDeclaration(
+		p.memoryGauge,
+		identifiers,
+		location,
+		ast.Range{
 			StartPos: startPosition,
 			EndPos:   endPos,
 		},
-		LocationPos: locationPos,
-	}
+		locationPos,
+	)
 }
 
 // isNextTokenCommaOrFrom check whether the token to follow is a comma or a from token.

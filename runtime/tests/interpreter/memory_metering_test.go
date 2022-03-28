@@ -24,10 +24,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
+	"github.com/onflow/cadence/runtime/tests/checker"
+	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 type testMemoryGauge struct {
@@ -7891,6 +7894,8 @@ func TestInterpretASTMetering(t *testing.T) {
 
 	t.Run("declarations", func(t *testing.T) {
 		script := `
+            import Foo from 0x42
+
             pub fun main() {}
 
             pub struct A {
@@ -7922,10 +7927,51 @@ func TestInterpretASTMetering(t *testing.T) {
             transaction {}
         `
 
-		meter := newTestMemoryGauge()
-		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+		importedChecker, err := checker.ParseAndCheckWithOptions(t,
+			`
+                pub let Foo = 1
+            `,
+			checker.ParseAndCheckOptions{
+				Location: utils.ImportedLocation,
+			},
+		)
 
-		_, err := inter.Invoke("main")
+		meter := newTestMemoryGauge()
+		inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(
+			t,
+			script,
+			ParseCheckAndInterpretOptions{
+				CheckerOptions: []sema.Option{
+					sema.WithImportHandler(
+						func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+							return sema.ElaborationImport{
+								Elaboration: importedChecker.Elaboration,
+							}, nil
+						},
+					),
+				},
+				Options: []interpreter.Option{
+					interpreter.WithImportLocationHandler(
+						func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+							require.IsType(t, common.AddressLocation{}, location)
+							program := interpreter.ProgramFromChecker(importedChecker)
+							subInterpreter, err := inter.NewSubInterpreter(program, location)
+							if err != nil {
+								panic(err)
+							}
+
+							return interpreter.InterpreterImport{
+								Interpreter: subInterpreter,
+							}
+						},
+					),
+				},
+			},
+			meter,
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindFunctionDeclaration))
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindCompositeDeclaration))
@@ -7933,5 +7979,6 @@ func TestInterpretASTMetering(t *testing.T) {
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindEnumCaseDeclaration))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindFieldDeclaration))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindTransactionDeclaration))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindImportDeclaration))
 	})
 }
