@@ -33,17 +33,19 @@ type MemoryGauge interface {
 }
 
 var (
-	IdentifierMemoryUsage             = NewConstantMemoryUsage(MemoryKindIdentifier)
-	ArgumentMemoryUsage               = NewConstantMemoryUsage(MemoryKindArgument)
-	BlockMemoryUsage                  = NewConstantMemoryUsage(MemoryKindBlock)
-	FunctionDeclarationMemoryUsage    = NewConstantMemoryUsage(MemoryKindFunctionDeclaration)
-	CompositeDeclarationMemoryUsage   = NewConstantMemoryUsage(MemoryKindCompositeDeclaration)
-	InterfaceDeclarationMemoryUsage   = NewConstantMemoryUsage(MemoryKindInterfaceDeclaration)
-	ImportDeclarationMemoryUsage      = NewConstantMemoryUsage(MemoryKindImportDeclaration)
-	TransactionDeclarationMemoryUsage = NewConstantMemoryUsage(MemoryKindTransactionDeclaration)
-	FieldDeclarationMemoryUsage       = NewConstantMemoryUsage(MemoryKindFieldDeclaration)
-	EnumCaseDeclarationMemoryUsage    = NewConstantMemoryUsage(MemoryKindEnumCaseDeclaration)
-	VariableDeclarationMemoryUsage    = NewConstantMemoryUsage(MemoryKindVariableDeclaration)
+	IdentifierMemoryUsage                 = NewConstantMemoryUsage(MemoryKindIdentifier)
+	ArgumentMemoryUsage                   = NewConstantMemoryUsage(MemoryKindArgument)
+	BlockMemoryUsage                      = NewConstantMemoryUsage(MemoryKindBlock)
+	FunctionDeclarationMemoryUsage        = NewConstantMemoryUsage(MemoryKindFunctionDeclaration)
+	CompositeDeclarationMemoryUsage       = NewConstantMemoryUsage(MemoryKindCompositeDeclaration)
+	InterfaceDeclarationMemoryUsage       = NewConstantMemoryUsage(MemoryKindInterfaceDeclaration)
+	ImportDeclarationMemoryUsage          = NewConstantMemoryUsage(MemoryKindImportDeclaration)
+	TransactionDeclarationMemoryUsage     = NewConstantMemoryUsage(MemoryKindTransactionDeclaration)
+	FieldDeclarationMemoryUsage           = NewConstantMemoryUsage(MemoryKindFieldDeclaration)
+	EnumCaseDeclarationMemoryUsage        = NewConstantMemoryUsage(MemoryKindEnumCaseDeclaration)
+	VariableDeclarationMemoryUsage        = NewConstantMemoryUsage(MemoryKindVariableDeclaration)
+	SpecialFunctionDeclarationMemoryUsage = NewConstantMemoryUsage(MemoryKindSpecialFunctionDeclaration)
+	PragmaDeclarationMemoryUsage          = NewConstantMemoryUsage(MemoryKindPragmaDeclaration)
 )
 
 func UseMemory(gauge MemoryGauge, usage MemoryUsage) {

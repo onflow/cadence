@@ -352,13 +352,14 @@ func parsePragmaDeclaration(p *parser) *ast.PragmaDeclaration {
 	startPos := p.current.StartPosition()
 	p.next()
 	expr := parseExpression(p, lowestBindingPower)
-	return &ast.PragmaDeclaration{
-		Range: ast.Range{
+	return ast.NewPragmaDeclaration(
+		p.memoryGauge,
+		expr,
+		ast.Range{
 			StartPos: startPos,
 			EndPos:   expr.EndPosition(),
 		},
-		Expression: expr,
-	}
+	)
 }
 
 // parseImportDeclaration parses an import declaration
@@ -651,20 +652,20 @@ func parseEventDeclaration(
 
 	parameterList := parseParameterList(p)
 
-	initializer :=
-		&ast.SpecialFunctionDeclaration{
-			Kind: common.DeclarationKindInitializer,
-			FunctionDeclaration: ast.NewFunctionDeclaration(
-				p.memoryGauge,
-				ast.AccessNotSpecified,
-				ast.NewEmptyIdentifier(p.memoryGauge, ast.EmptyPosition),
-				nil,
-				nil,
-				nil,
-				parameterList.StartPos,
-				"",
-			),
-		}
+	initializer := ast.NewSpecialFunctionDeclaration(
+		p.memoryGauge,
+		common.DeclarationKindInitializer,
+		ast.NewFunctionDeclaration(
+			p.memoryGauge,
+			ast.AccessNotSpecified,
+			ast.NewEmptyIdentifier(p.memoryGauge, ast.EmptyPosition),
+			nil,
+			nil,
+			nil,
+			parameterList.StartPos,
+			"",
+		),
+	)
 
 	members := ast.NewMembers([]ast.Declaration{
 		initializer,
@@ -1088,9 +1089,10 @@ func parseSpecialFunctionDeclaration(
 		declarationKind = common.DeclarationKindPrepare
 	}
 
-	return &ast.SpecialFunctionDeclaration{
-		Kind: declarationKind,
-		FunctionDeclaration: ast.NewFunctionDeclaration(
+	return ast.NewSpecialFunctionDeclaration(
+		p.memoryGauge,
+		declarationKind,
+		ast.NewFunctionDeclaration(
 			p.memoryGauge,
 			access,
 			identifier,
@@ -1100,7 +1102,7 @@ func parseSpecialFunctionDeclaration(
 			startPos,
 			"",
 		),
-	}
+	)
 }
 
 // parseEnumCase parses a field which has a variable kind.

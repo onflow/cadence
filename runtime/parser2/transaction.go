@@ -216,9 +216,10 @@ func parseTransactionExecute(p *parser) *ast.SpecialFunctionDeclaration {
 
 	block := parseBlock(p)
 
-	return &ast.SpecialFunctionDeclaration{
-		Kind: common.DeclarationKindExecute,
-		FunctionDeclaration: ast.NewFunctionDeclaration(
+	return ast.NewSpecialFunctionDeclaration(
+		p.memoryGauge,
+		common.DeclarationKindExecute,
+		ast.NewFunctionDeclaration(
 			p.memoryGauge,
 			ast.AccessNotSpecified,
 			identifier,
@@ -230,5 +231,5 @@ func parseTransactionExecute(p *parser) *ast.SpecialFunctionDeclaration {
 			identifier.Pos,
 			"",
 		),
-	}
+	)
 }

@@ -77,4 +77,6 @@ const (
 	MemoryKindTransactionDeclaration
 	MemoryKindImportDeclaration
 	MemoryKindVariableDeclaration
+	MemoryKindSpecialFunctionDeclaration
+	MemoryKindPragmaDeclaration
 )

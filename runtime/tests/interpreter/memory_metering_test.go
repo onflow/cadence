@@ -7930,6 +7930,8 @@ func TestInterpretASTMetering(t *testing.T) {
             }
 
             transaction {}
+
+            #pragma
         `
 
 		importedChecker, err := checker.ParseAndCheckWithOptions(t,
@@ -7978,6 +7980,7 @@ func TestInterpretASTMetering(t *testing.T) {
 
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
+
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindFunctionDeclaration))
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindCompositeDeclaration))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindInterfaceDeclaration))
@@ -7986,5 +7989,7 @@ func TestInterpretASTMetering(t *testing.T) {
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindTransactionDeclaration))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindImportDeclaration))
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindVariableDeclaration))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindSpecialFunctionDeclaration))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindPragmaDeclaration))
 	})
 }

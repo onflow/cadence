@@ -135,6 +135,19 @@ type SpecialFunctionDeclaration struct {
 	FunctionDeclaration *FunctionDeclaration
 }
 
+func NewSpecialFunctionDeclaration(
+	gauge common.MemoryGauge,
+	kind common.DeclarationKind,
+	funcDecl *FunctionDeclaration,
+) *SpecialFunctionDeclaration {
+	common.UseMemory(gauge, common.SpecialFunctionDeclarationMemoryUsage)
+
+	return &SpecialFunctionDeclaration{
+		Kind:                kind,
+		FunctionDeclaration: funcDecl,
+	}
+}
+
 func (d *SpecialFunctionDeclaration) StartPosition() Position {
 	return d.FunctionDeclaration.StartPosition()
 }

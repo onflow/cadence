@@ -48,11 +48,13 @@ func _() {
 	_ = x[MemoryKindTransactionDeclaration-37]
 	_ = x[MemoryKindImportDeclaration-38]
 	_ = x[MemoryKindVariableDeclaration-39]
+	_ = x[MemoryKindSpecialFunctionDeclaration-40]
+	_ = x[MemoryKindPragmaDeclaration-41]
 }
 
-const _MemoryKind_name = "UnknownBoolAddressStringCharacterMetaTypeNumberArrayDictionaryCompositeOptionalNilVoidTypeValuePathValueCapabilityValueLinkValueStorageReferenceValueEphemeralReferenceValueInterpretedFunctionHostFunctionBoundFunctionBigIntRawStringVariableTokenIdentifierTokenCommentTokenNumericLiteralTokenSyntaxIdentifierArgumentBlockFunctionDeclarationCompositeDeclarationInterfaceDeclarationEnumCaseDeclarationFieldDeclarationTransactionDeclarationImportDeclarationVariableDeclaration"
+const _MemoryKind_name = "UnknownBoolAddressStringCharacterMetaTypeNumberArrayDictionaryCompositeOptionalNilVoidTypeValuePathValueCapabilityValueLinkValueStorageReferenceValueEphemeralReferenceValueInterpretedFunctionHostFunctionBoundFunctionBigIntRawStringVariableTokenIdentifierTokenCommentTokenNumericLiteralTokenSyntaxIdentifierArgumentBlockFunctionDeclarationCompositeDeclarationInterfaceDeclarationEnumCaseDeclarationFieldDeclarationTransactionDeclarationImportDeclarationVariableDeclarationSpecialFunctionDeclarationPragmaDeclaration"
 
-var _MemoryKind_index = [...]uint16{0, 7, 11, 18, 24, 33, 41, 47, 52, 62, 71, 79, 82, 86, 95, 104, 119, 128, 149, 172, 191, 203, 216, 222, 231, 239, 254, 266, 285, 296, 306, 314, 319, 338, 358, 378, 397, 413, 435, 452, 471}
+var _MemoryKind_index = [...]uint16{0, 7, 11, 18, 24, 33, 41, 47, 52, 62, 71, 79, 82, 86, 95, 104, 119, 128, 149, 172, 191, 203, 216, 222, 231, 239, 254, 266, 285, 296, 306, 314, 319, 338, 358, 378, 397, 413, 435, 452, 471, 497, 514}
 
 func (i MemoryKind) String() string {
 	if i >= MemoryKind(len(_MemoryKind_index)-1) {
