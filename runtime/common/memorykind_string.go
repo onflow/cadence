@@ -33,11 +33,15 @@ func _() {
 	_ = x[MemoryKindBigInt-22]
 	_ = x[MemoryKindRawString-23]
 	_ = x[MemoryKindVariable-24]
+	_ = x[MemoryKindTokenIdentifier-25]
+	_ = x[MemoryKindTokenComment-26]
+	_ = x[MemoryKindTokenNumericLiteral-27]
+	_ = x[MemoryKindTokenSyntax-28]
 }
 
-const _MemoryKind_name = "UnknownBoolAddressStringCharacterMetaTypeNumberArrayDictionaryCompositeOptionalNilVoidTypeValuePathValueCapabilityValueLinkValueStorageReferenceValueEphemeralReferenceValueInterpretedFunctionHostFunctionBoundFunctionBigIntRawStringVariable"
+const _MemoryKind_name = "UnknownBoolAddressStringCharacterMetaTypeNumberArrayDictionaryCompositeOptionalNilVoidTypeValuePathValueCapabilityValueLinkValueStorageReferenceValueEphemeralReferenceValueInterpretedFunctionHostFunctionBoundFunctionBigIntRawStringVariableTokenIdentifierTokenCommentTokenNumericLiteralTokenSyntax"
 
-var _MemoryKind_index = [...]uint8{0, 7, 11, 18, 24, 33, 41, 47, 52, 62, 71, 79, 82, 86, 95, 104, 119, 128, 149, 172, 191, 203, 216, 222, 231, 239}
+var _MemoryKind_index = [...]uint16{0, 7, 11, 18, 24, 33, 41, 47, 52, 62, 71, 79, 82, 86, 95, 104, 119, 128, 149, 172, 191, 203, 216, 222, 231, 239, 254, 266, 285, 296}
 
 func (i MemoryKind) String() string {
 	if i >= MemoryKind(len(_MemoryKind_index)-1) {

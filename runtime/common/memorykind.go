@@ -26,6 +26,9 @@ type MemoryKind uint
 
 const (
 	MemoryKindUnknown MemoryKind = iota
+
+	// Values
+
 	MemoryKindBool
 	MemoryKindAddress
 	MemoryKindString
@@ -48,6 +51,16 @@ const (
 	MemoryKindHostFunction
 	MemoryKindBoundFunction
 	MemoryKindBigInt
+
+	// Misc
+
 	MemoryKindRawString
 	MemoryKindVariable
+
+	// Tokens
+
+	MemoryKindTokenIdentifier
+	MemoryKindTokenComment
+	MemoryKindTokenNumericLiteral
+	MemoryKindTokenSyntax
 )
