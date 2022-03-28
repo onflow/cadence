@@ -38,6 +38,29 @@ type CompositeDeclaration struct {
 	Range
 }
 
+func NewCompositeDeclaration(
+	memoryGauge common.MemoryGauge,
+	access Access,
+	compositeKind common.CompositeKind,
+	identifier Identifier,
+	conformances []*NominalType,
+	members *Members,
+	docString string,
+	declarationRange Range,
+) *CompositeDeclaration {
+	common.UseMemory(memoryGauge, common.CompositeDeclarationMemoryUsage)
+
+	return &CompositeDeclaration{
+		Access:        access,
+		CompositeKind: compositeKind,
+		Identifier:    identifier,
+		Conformances:  conformances,
+		Members:       members,
+		DocString:     docString,
+		Range:         declarationRange,
+	}
+}
+
 func (d *CompositeDeclaration) Accept(visitor Visitor) Repr {
 	return visitor.VisitCompositeDeclaration(d)
 }

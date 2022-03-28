@@ -7888,4 +7888,28 @@ func TestInterpretASTMetering(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindBlock))
 	})
+
+	t.Run("declarations", func(t *testing.T) {
+		script := `
+            pub fun main() {}
+
+            pub struct A {}
+
+            pub struct interface B {}
+
+            pub resource C {}
+
+            pub resource interface D {}
+
+            pub enum E: Int8 {}
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindCompositeDeclaration))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindInterfaceDeclaration))
+	})
 }

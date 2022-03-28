@@ -662,17 +662,19 @@ func parseEventDeclaration(
 		initializer,
 	})
 
-	return &ast.CompositeDeclaration{
-		Access:        access,
-		CompositeKind: common.CompositeKindEvent,
-		Identifier:    identifier,
-		Members:       members,
-		DocString:     docString,
-		Range: ast.Range{
+	return ast.NewCompositeDeclaration(
+		p.memoryGauge,
+		access,
+		common.CompositeKindEvent,
+		identifier,
+		nil,
+		members,
+		docString,
+		ast.Range{
 			StartPos: startPos,
 			EndPos:   parameterList.EndPos,
 		},
-	}
+	)
 }
 
 // parseCompositeKind parses a composite kind.
@@ -863,24 +865,26 @@ func parseCompositeOrInterfaceDeclaration(
 			panic(fmt.Errorf("unexpected conformances"))
 		}
 
-		return &ast.InterfaceDeclaration{
-			Access:        access,
-			CompositeKind: compositeKind,
-			Identifier:    identifier,
-			Members:       members,
-			DocString:     docString,
-			Range:         declarationRange,
-		}
+		return ast.NewInterfaceDeclaration(
+			p.memoryGauge,
+			access,
+			compositeKind,
+			identifier,
+			members,
+			docString,
+			declarationRange,
+		)
 	} else {
-		return &ast.CompositeDeclaration{
-			Access:        access,
-			CompositeKind: compositeKind,
-			Identifier:    identifier,
-			Conformances:  conformances,
-			Members:       members,
-			DocString:     docString,
-			Range:         declarationRange,
-		}
+		return ast.NewCompositeDeclaration(
+			p.memoryGauge,
+			access,
+			compositeKind,
+			identifier,
+			conformances,
+			members,
+			docString,
+			declarationRange,
+		)
 	}
 }
 

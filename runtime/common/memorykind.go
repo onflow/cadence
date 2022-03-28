@@ -69,4 +69,6 @@ const (
 	MemoryKindIdentifier
 	MemoryKindArgument
 	MemoryKindBlock
+	MemoryKindCompositeDeclaration
+	MemoryKindInterfaceDeclaration
 )
