@@ -652,10 +652,16 @@ func parseEventDeclaration(
 	initializer :=
 		&ast.SpecialFunctionDeclaration{
 			Kind: common.DeclarationKindInitializer,
-			FunctionDeclaration: &ast.FunctionDeclaration{
-				ParameterList: parameterList,
-				StartPos:      parameterList.StartPos,
-			},
+			FunctionDeclaration: ast.NewFunctionDeclaration(
+				p.memoryGauge,
+				ast.AccessNotSpecified,
+				ast.NewEmptyIdentifier(p.memoryGauge, ast.EmptyPosition),
+				nil,
+				nil,
+				nil,
+				parameterList.StartPos,
+				"",
+			),
 		}
 
 	members := ast.NewMembers([]ast.Declaration{
@@ -1082,13 +1088,16 @@ func parseSpecialFunctionDeclaration(
 
 	return &ast.SpecialFunctionDeclaration{
 		Kind: declarationKind,
-		FunctionDeclaration: &ast.FunctionDeclaration{
-			Access:        access,
-			Identifier:    identifier,
-			ParameterList: parameterList,
-			FunctionBlock: functionBlock,
-			StartPos:      startPos,
-		},
+		FunctionDeclaration: ast.NewFunctionDeclaration(
+			p.memoryGauge,
+			access,
+			identifier,
+			parameterList,
+			nil,
+			functionBlock,
+			startPos,
+			"",
+		),
 	}
 }
 

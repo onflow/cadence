@@ -165,14 +165,16 @@ func parseFunctionDeclarationOrFunctionExpressionStatement(p *parser) ast.Statem
 		parameterList, returnTypeAnnotation, functionBlock :=
 			parseFunctionParameterListAndRest(p, false)
 
-		return &ast.FunctionDeclaration{
-			Access:               ast.AccessNotSpecified,
-			Identifier:           identifier,
-			ParameterList:        parameterList,
-			ReturnTypeAnnotation: returnTypeAnnotation,
-			FunctionBlock:        functionBlock,
-			StartPos:             startPos,
-		}
+		return ast.NewFunctionDeclaration(
+			p.memoryGauge,
+			ast.AccessNotSpecified,
+			identifier,
+			parameterList,
+			returnTypeAnnotation,
+			functionBlock,
+			startPos,
+			"",
+		)
 	} else {
 		parameterList, returnTypeAnnotation, functionBlock :=
 			parseFunctionParameterListAndRest(p, false)

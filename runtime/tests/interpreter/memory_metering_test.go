@@ -7918,6 +7918,8 @@ func TestInterpretASTMetering(t *testing.T) {
                 pub case b
                 pub case c
             }
+
+            transaction {}
         `
 
 		meter := newTestMemoryGauge()
@@ -7925,9 +7927,11 @@ func TestInterpretASTMetering(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindFunctionDeclaration))
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindCompositeDeclaration))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindInterfaceDeclaration))
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindEnumCaseDeclaration))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindFieldDeclaration))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindTransactionDeclaration))
 	})
 }
