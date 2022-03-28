@@ -294,18 +294,19 @@ func parseVariableDeclaration(
 		secondValue = parseExpression(p, lowestBindingPower)
 	}
 
-	variableDeclaration := &ast.VariableDeclaration{
-		Access:         access,
-		IsConstant:     isLet,
-		Identifier:     identifier,
-		TypeAnnotation: typeAnnotation,
-		Value:          value,
-		Transfer:       transfer,
-		StartPos:       startPos,
-		SecondTransfer: secondTransfer,
-		SecondValue:    secondValue,
-		DocString:      docString,
-	}
+	variableDeclaration := ast.NewVariableDeclaration(
+		p.memoryGauge,
+		access,
+		isLet,
+		identifier,
+		typeAnnotation,
+		value,
+		transfer,
+		startPos,
+		secondTransfer,
+		secondValue,
+		docString,
+	)
 
 	castingExpression, leftIsCasting := value.(*ast.CastingExpression)
 	if leftIsCasting {

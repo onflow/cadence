@@ -7896,7 +7896,12 @@ func TestInterpretASTMetering(t *testing.T) {
 		script := `
             import Foo from 0x42
 
-            pub fun main() {}
+            pub let x = 1
+            pub var y = 2
+
+            pub fun main() {
+                var z = 3
+            }
 
             pub struct A {
                 pub var a: String
@@ -7980,5 +7985,6 @@ func TestInterpretASTMetering(t *testing.T) {
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindFieldDeclaration))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindTransactionDeclaration))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindImportDeclaration))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindVariableDeclaration))
 	})
 }
