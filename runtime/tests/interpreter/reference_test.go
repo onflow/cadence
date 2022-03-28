@@ -775,3 +775,110 @@ func TestInterpretReferenceUseAfterShiftStatementMove(t *testing.T) {
 		)
 	})
 }
+
+func TestInterpretReferenceExpressionOfOptional(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          resource R {}
+
+          let r: @R? <- create R()
+          let ref = &r as &R?
+        `)
+
+		value := inter.Globals["ref"].GetValue()
+		require.IsType(t, &interpreter.SomeValue{}, value)
+
+		innerValue := value.(*interpreter.SomeValue).
+			InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+		require.IsType(t, &interpreter.EphemeralReferenceValue{}, innerValue)
+	})
+
+	t.Run("struct", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          struct S {}
+
+          let s: S? = S()
+          let ref = &s as &S?
+        `)
+
+		value := inter.Globals["ref"].GetValue()
+		require.IsType(t, &interpreter.SomeValue{}, value)
+
+		innerValue := value.(*interpreter.SomeValue).
+			InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+		require.IsType(t, &interpreter.EphemeralReferenceValue{}, innerValue)
+	})
+
+	t.Run("non-composite", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          let i: Int? = 1
+          let ref = &i as &Int?
+        `)
+
+		value := inter.Globals["ref"].GetValue()
+		require.IsType(t, &interpreter.SomeValue{}, value)
+
+		innerValue := value.(*interpreter.SomeValue).
+			InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+		require.IsType(t, &interpreter.EphemeralReferenceValue{}, innerValue)
+	})
+
+	t.Run("as optional, some", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          let i: Int? = 1
+          let ref = &i as &Int?
+        `)
+
+		value := inter.Globals["ref"].GetValue()
+		require.IsType(t, &interpreter.SomeValue{}, value)
+
+		innerValue := value.(*interpreter.SomeValue).
+			InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+		require.IsType(t, &interpreter.EphemeralReferenceValue{}, innerValue)
+	})
+
+	t.Run("as optional, nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          let i: Int? = nil
+          let ref = &i as &Int?
+        `)
+
+		value := inter.Globals["ref"].GetValue()
+		require.IsType(t, interpreter.NilValue{}, value)
+	})
+
+	t.Run("upcast to optional", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          let i: Int = 1
+          let ref = &i as &Int?
+        `)
+
+		value := inter.Globals["ref"].GetValue()
+		require.IsType(t, &interpreter.SomeValue{}, value)
+
+		innerValue := value.(*interpreter.SomeValue).
+			InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+		require.IsType(t, &interpreter.EphemeralReferenceValue{}, innerValue)
+	})
+}
