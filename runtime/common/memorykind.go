@@ -67,4 +67,5 @@ const (
 	// AST nodes
 
 	MemoryKindIdentifier
+	MemoryKindArgument
 )

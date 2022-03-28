@@ -7829,3 +7829,31 @@ func TestInterpretIdentifierMetering(t *testing.T) {
 		assert.Equal(t, uint64(15), meter.getMemory(common.MemoryKindIdentifier))
 	})
 }
+
+func TestInterpretASTMetering(t *testing.T) {
+	t.Parallel()
+
+	t.Run("arguments", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                foo(a: "hello", b: 23)
+                bar("hello", 23)
+            }
+
+            pub fun foo(a: String, b: Int) {
+            }
+
+            pub fun bar(_ a: String, _ b: Int) {
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindArgument))
+	})
+}
