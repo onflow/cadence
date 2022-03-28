@@ -751,17 +751,18 @@ func parseFieldWithVariableKind(
 
 	typeAnnotation := parseTypeAnnotation(p)
 
-	return &ast.FieldDeclaration{
-		Access:         access,
-		VariableKind:   variableKind,
-		Identifier:     identifier,
-		TypeAnnotation: typeAnnotation,
-		DocString:      docString,
-		Range: ast.Range{
+	return ast.NewFieldDeclaration(
+		p.memoryGauge,
+		access,
+		variableKind,
+		identifier,
+		typeAnnotation,
+		docString,
+		ast.Range{
 			StartPos: startPos,
 			EndPos:   typeAnnotation.EndPosition(),
 		},
-	}
+	)
 }
 
 // parseCompositeOrInterfaceDeclaration parses an event declaration.
@@ -1025,17 +1026,18 @@ func parseFieldDeclarationWithoutVariableKind(
 
 	typeAnnotation := parseTypeAnnotation(p)
 
-	return &ast.FieldDeclaration{
-		Access:         access,
-		VariableKind:   ast.VariableKindNotSpecified,
-		Identifier:     identifier,
-		TypeAnnotation: typeAnnotation,
-		DocString:      docString,
-		Range: ast.Range{
+	return ast.NewFieldDeclaration(
+		p.memoryGauge,
+		access,
+		ast.VariableKindNotSpecified,
+		identifier,
+		typeAnnotation,
+		docString,
+		ast.Range{
 			StartPos: startPos,
 			EndPos:   typeAnnotation.EndPosition(),
 		},
-	}
+	)
 }
 
 func parseSpecialFunctionDeclaration(
@@ -1121,10 +1123,11 @@ func parseEnumCase(
 	// Skip the identifier
 	p.next()
 
-	return &ast.EnumCaseDeclaration{
-		Access:     access,
-		Identifier: identifier,
-		DocString:  docString,
-		StartPos:   startPos,
-	}
+	return ast.NewEnumCaseDeclaration(
+		p.memoryGauge,
+		access,
+		identifier,
+		docString,
+		startPos,
+	)
 }

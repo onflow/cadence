@@ -7893,15 +7893,31 @@ func TestInterpretASTMetering(t *testing.T) {
 		script := `
             pub fun main() {}
 
-            pub struct A {}
+            pub struct A {
+                pub var a: String
+
+                init() {
+                    self.a = "hello"
+                }
+            }
 
             pub struct interface B {}
 
-            pub resource C {}
+            pub resource C {
+                let a: Int
+
+                init() {
+                    self.a = 6
+                }
+            }
 
             pub resource interface D {}
 
-            pub enum E: Int8 {}
+            pub enum E: Int8 {
+                pub case a
+                pub case b
+                pub case c
+            }
         `
 
 		meter := newTestMemoryGauge()
@@ -7911,5 +7927,7 @@ func TestInterpretASTMetering(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindCompositeDeclaration))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindInterfaceDeclaration))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindEnumCaseDeclaration))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindFieldDeclaration))
 	})
 }

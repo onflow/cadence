@@ -33,11 +33,17 @@ type MemoryGauge interface {
 }
 
 var (
-	IdentifierMemoryUsage           = NewConstantMemoryUsage(MemoryKindIdentifier)
-	ArgumentMemoryUsage             = NewConstantMemoryUsage(MemoryKindArgument)
-	BlockMemoryUsage                = NewConstantMemoryUsage(MemoryKindBlock)
-	CompositeDeclarationMemoryUsage = NewConstantMemoryUsage(MemoryKindCompositeDeclaration)
-	InterfaceDeclarationMemoryUsage = NewConstantMemoryUsage(MemoryKindInterfaceDeclaration)
+	IdentifierMemoryUsage             = NewConstantMemoryUsage(MemoryKindIdentifier)
+	ArgumentMemoryUsage               = NewConstantMemoryUsage(MemoryKindArgument)
+	BlockMemoryUsage                  = NewConstantMemoryUsage(MemoryKindBlock)
+	FunctionDeclarationMemoryUsage    = NewConstantMemoryUsage(MemoryKindFunctionDeclaration)
+	CompositeDeclarationMemoryUsage   = NewConstantMemoryUsage(MemoryKindCompositeDeclaration)
+	InterfaceDeclarationMemoryUsage   = NewConstantMemoryUsage(MemoryKindInterfaceDeclaration)
+	ImportDeclarationMemoryUsage      = NewConstantMemoryUsage(MemoryKindImportDeclaration)
+	TransactionDeclarationMemoryUsage = NewConstantMemoryUsage(MemoryKindTransactionDeclaration)
+	FieldDeclarationMemoryUsage       = NewConstantMemoryUsage(MemoryKindFieldDeclaration)
+	EnumCaseDeclarationMemoryUsage    = NewConstantMemoryUsage(MemoryKindEnumCaseDeclaration)
+	VariableDeclarationMemoryUsage    = NewConstantMemoryUsage(MemoryKindVariableDeclaration)
 )
 
 func UseMemory(gauge MemoryGauge, usage MemoryUsage) {
