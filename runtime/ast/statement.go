@@ -188,6 +188,22 @@ type IfStatement struct {
 
 var _ Statement = &IfStatement{}
 
+func NewIfStatement(
+	gauge common.MemoryGauge,
+	test IfStatementTest,
+	thenBlock *Block,
+	elseBlock *Block,
+	startPos Position,
+) *IfStatement {
+	common.UseMemory(gauge, common.IfStatementMemoryUsage)
+	return &IfStatement{
+		Test:     test,
+		Then:     thenBlock,
+		Else:     elseBlock,
+		StartPos: startPos,
+	}
+}
+
 func (*IfStatement) isStatement() {}
 
 func (s *IfStatement) StartPosition() Position {
@@ -336,6 +352,25 @@ type ForStatement struct {
 
 var _ Statement = &ForStatement{}
 
+func NewForStatement(
+	gauge common.MemoryGauge,
+	identifier Identifier,
+	index *Identifier,
+	block *Block,
+	expression Expression,
+	startPos Position,
+) *ForStatement {
+	common.UseMemory(gauge, common.ForStatementMemoryUsage)
+
+	return &ForStatement{
+		Identifier: identifier,
+		Index:      index,
+		Block:      block,
+		Value:      expression,
+		StartPos:   startPos,
+	}
+}
+
 func (*ForStatement) isStatement() {}
 
 func (s *ForStatement) Accept(visitor Visitor) Repr {
@@ -406,6 +441,18 @@ type EmitStatement struct {
 }
 
 var _ Statement = &EmitStatement{}
+
+func NewEmitStatement(
+	gauge common.MemoryGauge,
+	invocation *InvocationExpression,
+	startPos Position,
+) *EmitStatement {
+	common.UseMemory(gauge, common.EmitStatementMemoryUsage)
+	return &EmitStatement{
+		InvocationExpression: invocation,
+		StartPos:             startPos,
+	}
+}
 
 func (*EmitStatement) isStatement() {}
 
@@ -581,6 +628,13 @@ type ExpressionStatement struct {
 }
 
 var _ Statement = &ExpressionStatement{}
+
+func NewExpressionStatement(gauge common.MemoryGauge, expression Expression) *ExpressionStatement {
+	common.UseMemory(gauge, common.ExpressionStatementMemoryUsage)
+	return &ExpressionStatement{
+		Expression: expression,
+	}
+}
 
 func (*ExpressionStatement) isStatement() {}
 

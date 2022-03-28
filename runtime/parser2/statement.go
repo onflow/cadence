@@ -20,7 +20,6 @@ package parser2
 
 import (
 	"fmt"
-
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/parser2/lexer"
@@ -138,9 +137,7 @@ func parseStatement(p *parser) ast.Statement {
 		}
 
 	default:
-		return &ast.ExpressionStatement{
-			Expression: expression,
-		}
+		return ast.NewExpressionStatement(p.memoryGauge, expression)
 	}
 }
 
@@ -175,14 +172,15 @@ func parseFunctionDeclarationOrFunctionExpressionStatement(p *parser) ast.Statem
 		parameterList, returnTypeAnnotation, functionBlock :=
 			parseFunctionParameterListAndRest(p, false)
 
-		return &ast.ExpressionStatement{
-			Expression: &ast.FunctionExpression{
+		return ast.NewExpressionStatement(
+			p.memoryGauge,
+			&ast.FunctionExpression{
 				ParameterList:        parameterList,
 				ReturnTypeAnnotation: returnTypeAnnotation,
 				FunctionBlock:        functionBlock,
 				StartPos:             startPos,
 			},
-		}
+		)
 	}
 }
 
@@ -282,12 +280,7 @@ func parseIfStatement(p *parser) *ast.IfStatement {
 			panic(errors.UnreachableError{})
 		}
 
-		ifStatement := &ast.IfStatement{
-			Test:     test,
-			Then:     thenBlock,
-			Else:     elseBlock,
-			StartPos: startPos,
-		}
+		ifStatement := ast.NewIfStatement(p.memoryGauge, test, thenBlock, elseBlock, startPos)
 
 		if variableDeclaration != nil {
 			variableDeclaration.ParentIfStatement = ifStatement
@@ -379,13 +372,7 @@ func parseForStatement(p *parser) *ast.ForStatement {
 
 	block := parseBlock(p)
 
-	return &ast.ForStatement{
-		Identifier: identifier,
-		Index:      index,
-		Block:      block,
-		Value:      expression,
-		StartPos:   startPos,
-	}
+	return ast.NewForStatement(p.memoryGauge, identifier, index, block, expression, startPos)
 }
 
 func parseBlock(p *parser) *ast.Block {
@@ -510,10 +497,7 @@ func parseEmitStatement(p *parser) *ast.EmitStatement {
 	p.next()
 
 	invocation := parseNominalTypeInvocationRemainder(p)
-	return &ast.EmitStatement{
-		InvocationExpression: invocation,
-		StartPos:             startPos,
-	}
+	return ast.NewEmitStatement(p.memoryGauge, invocation, startPos)
 }
 
 func parseSwitchStatement(p *parser) *ast.SwitchStatement {
