@@ -22,6 +22,8 @@ import (
 	"encoding/json"
 
 	"github.com/turbolent/prettier"
+
+	"github.com/onflow/cadence/runtime/common"
 )
 
 type Statement interface {
@@ -34,6 +36,14 @@ type Statement interface {
 type ReturnStatement struct {
 	Expression Expression
 	Range
+}
+
+func NewReturnStatement(gauge common.MemoryGauge, expression Expression, stmtRange Range) *ReturnStatement {
+	common.UseMemory(gauge, common.ReturnStatementMemoryUsage)
+	return &ReturnStatement{
+		Expression: expression,
+		Range:      stmtRange,
+	}
 }
 
 var _ Statement = &ReturnStatement{}
@@ -84,6 +94,13 @@ type BreakStatement struct {
 
 var _ Statement = &BreakStatement{}
 
+func NewBreakStatement(gauge common.MemoryGauge, tokenRange Range) *BreakStatement {
+	common.UseMemory(gauge, common.BreakStatementMemoryUsage)
+	return &BreakStatement{
+		Range: tokenRange,
+	}
+}
+
 func (*BreakStatement) isStatement() {}
 
 func (s *BreakStatement) Accept(visitor Visitor) Repr {
@@ -118,6 +135,13 @@ type ContinueStatement struct {
 }
 
 var _ Statement = &ContinueStatement{}
+
+func NewContinueStatement(gauge common.MemoryGauge, tokenRange Range) *ContinueStatement {
+	common.UseMemory(gauge, common.BreakStatementMemoryUsage)
+	return &ContinueStatement{
+		Range: tokenRange,
+	}
+}
 
 func (*ContinueStatement) isStatement() {}
 
@@ -433,6 +457,21 @@ type AssignmentStatement struct {
 }
 
 var _ Statement = &AssignmentStatement{}
+
+func NewAssignmentStatement(
+	gauge common.MemoryGauge,
+	expression Expression,
+	transfer *Transfer,
+	value Expression,
+) *AssignmentStatement {
+	common.UseMemory(gauge, common.AssignmentStatementMemoryUsage)
+
+	return &AssignmentStatement{
+		Target:   expression,
+		Transfer: transfer,
+		Value:    value,
+	}
+}
 
 func (*AssignmentStatement) isStatement() {}
 

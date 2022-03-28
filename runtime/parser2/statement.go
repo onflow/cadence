@@ -125,11 +125,7 @@ func parseStatement(p *parser) ast.Statement {
 
 		value := parseExpression(p, lowestBindingPower)
 
-		return &ast.AssignmentStatement{
-			Target:   expression,
-			Transfer: transfer,
-			Value:    value,
-		}
+		return ast.NewAssignmentStatement(p.memoryGauge, expression, transfer, value)
 
 	case lexer.TokenSwap:
 		p.next()
@@ -208,31 +204,28 @@ func parseReturnStatement(p *parser) *ast.ReturnStatement {
 		}
 	}
 
-	return &ast.ReturnStatement{
-		Expression: expression,
-		Range: ast.Range{
+	return ast.NewReturnStatement(
+		p.memoryGauge,
+		expression,
+		ast.Range{
 			StartPos: tokenRange.StartPos,
 			EndPos:   endPosition,
 		},
-	}
+	)
 }
 
 func parseBreakStatement(p *parser) *ast.BreakStatement {
 	tokenRange := p.current.Range
 	p.next()
 
-	return &ast.BreakStatement{
-		Range: tokenRange,
-	}
+	return ast.NewBreakStatement(p.memoryGauge, tokenRange)
 }
 
 func parseContinueStatement(p *parser) *ast.ContinueStatement {
 	tokenRange := p.current.Range
 	p.next()
 
-	return &ast.ContinueStatement{
-		Range: tokenRange,
-	}
+	return ast.NewContinueStatement(p.memoryGauge, tokenRange)
 }
 
 func parseIfStatement(p *parser) *ast.IfStatement {

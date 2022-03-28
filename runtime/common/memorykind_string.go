@@ -50,11 +50,22 @@ func _() {
 	_ = x[MemoryKindVariableDeclaration-39]
 	_ = x[MemoryKindSpecialFunctionDeclaration-40]
 	_ = x[MemoryKindPragmaDeclaration-41]
+	_ = x[MemoryKindAssignmentStatement-42]
+	_ = x[MemoryKindBreakStatement-43]
+	_ = x[MemoryKindContinueStatement-44]
+	_ = x[MemoryKindEmitStatement-45]
+	_ = x[MemoryKindExpressionStatement-46]
+	_ = x[MemoryKindForStatement-47]
+	_ = x[MemoryKindIfStatement-48]
+	_ = x[MemoryKindReturnStatement-49]
+	_ = x[MemoryKindSwapStatement-50]
+	_ = x[MemoryKindSwitchStatement-51]
+	_ = x[MemoryKindWhileStatement-52]
 }
 
-const _MemoryKind_name = "UnknownBoolAddressStringCharacterMetaTypeNumberArrayDictionaryCompositeOptionalNilVoidTypeValuePathValueCapabilityValueLinkValueStorageReferenceValueEphemeralReferenceValueInterpretedFunctionHostFunctionBoundFunctionBigIntRawStringVariableTokenIdentifierTokenCommentTokenNumericLiteralTokenSyntaxIdentifierArgumentBlockFunctionDeclarationCompositeDeclarationInterfaceDeclarationEnumCaseDeclarationFieldDeclarationTransactionDeclarationImportDeclarationVariableDeclarationSpecialFunctionDeclarationPragmaDeclaration"
+const _MemoryKind_name = "UnknownBoolAddressStringCharacterMetaTypeNumberArrayDictionaryCompositeOptionalNilVoidTypeValuePathValueCapabilityValueLinkValueStorageReferenceValueEphemeralReferenceValueInterpretedFunctionHostFunctionBoundFunctionBigIntRawStringVariableTokenIdentifierTokenCommentTokenNumericLiteralTokenSyntaxIdentifierArgumentBlockFunctionDeclarationCompositeDeclarationInterfaceDeclarationEnumCaseDeclarationFieldDeclarationTransactionDeclarationImportDeclarationVariableDeclarationSpecialFunctionDeclarationPragmaDeclarationAssignmentStatementBreakStatementContinueStatementEmitStatementExpressionStatementForStatementIfStatementReturnStatementSwapStatementSwitchStatementWhileStatement"
 
-var _MemoryKind_index = [...]uint16{0, 7, 11, 18, 24, 33, 41, 47, 52, 62, 71, 79, 82, 86, 95, 104, 119, 128, 149, 172, 191, 203, 216, 222, 231, 239, 254, 266, 285, 296, 306, 314, 319, 338, 358, 378, 397, 413, 435, 452, 471, 497, 514}
+var _MemoryKind_index = [...]uint16{0, 7, 11, 18, 24, 33, 41, 47, 52, 62, 71, 79, 82, 86, 95, 104, 119, 128, 149, 172, 191, 203, 216, 222, 231, 239, 254, 266, 285, 296, 306, 314, 319, 338, 358, 378, 397, 413, 435, 452, 471, 497, 514, 533, 547, 564, 577, 596, 608, 619, 634, 647, 662, 676}
 
 func (i MemoryKind) String() string {
 	if i >= MemoryKind(len(_MemoryKind_index)-1) {

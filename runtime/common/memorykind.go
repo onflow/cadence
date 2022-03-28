@@ -79,4 +79,15 @@ const (
 	MemoryKindVariableDeclaration
 	MemoryKindSpecialFunctionDeclaration
 	MemoryKindPragmaDeclaration
+	MemoryKindAssignmentStatement
+	MemoryKindBreakStatement
+	MemoryKindContinueStatement
+	MemoryKindEmitStatement
+	MemoryKindExpressionStatement
+	MemoryKindForStatement
+	MemoryKindIfStatement
+	MemoryKindReturnStatement
+	MemoryKindSwapStatement
+	MemoryKindSwitchStatement
+	MemoryKindWhileStatement
 )

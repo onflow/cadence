@@ -46,6 +46,17 @@ var (
 	VariableDeclarationMemoryUsage        = NewConstantMemoryUsage(MemoryKindVariableDeclaration)
 	SpecialFunctionDeclarationMemoryUsage = NewConstantMemoryUsage(MemoryKindSpecialFunctionDeclaration)
 	PragmaDeclarationMemoryUsage          = NewConstantMemoryUsage(MemoryKindPragmaDeclaration)
+	AssignmentStatementMemoryUsage        = NewConstantMemoryUsage(MemoryKindAssignmentStatement)
+	BreakStatementMemoryUsage             = NewConstantMemoryUsage(MemoryKindBreakStatement)
+	ContinueStatementMemoryUsage          = NewConstantMemoryUsage(MemoryKindContinueStatement)
+	EmitStatementMemoryUsage              = NewConstantMemoryUsage(MemoryKindEmitStatement)
+	ExpressionStatementMemoryUsage        = NewConstantMemoryUsage(MemoryKindExpressionStatement)
+	ForStatementMemoryUsage               = NewConstantMemoryUsage(MemoryKindForStatement)
+	IfStatementMemoryUsage                = NewConstantMemoryUsage(MemoryKindIfStatement)
+	ReturnStatementMemoryUsage            = NewConstantMemoryUsage(MemoryKindReturnStatement)
+	SwapStatementMemoryUsage              = NewConstantMemoryUsage(MemoryKindSwapStatement)
+	SwitchStatementMemoryUsage            = NewConstantMemoryUsage(MemoryKindSwitchStatement)
+	WhileStatementMemoryUsage             = NewConstantMemoryUsage(MemoryKindWhileStatement)
 )
 
 func UseMemory(gauge MemoryGauge, usage MemoryUsage) {
