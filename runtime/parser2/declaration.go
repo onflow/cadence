@@ -659,7 +659,7 @@ func parseEventDeclaration(
 			p.memoryGauge,
 			ast.AccessNotSpecified,
 			ast.NewEmptyIdentifier(p.memoryGauge, ast.EmptyPosition),
-			nil,
+			parameterList,
 			nil,
 			nil,
 			parameterList.StartPos,
