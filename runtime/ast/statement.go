@@ -137,7 +137,7 @@ type ContinueStatement struct {
 var _ Statement = &ContinueStatement{}
 
 func NewContinueStatement(gauge common.MemoryGauge, tokenRange Range) *ContinueStatement {
-	common.UseMemory(gauge, common.BreakStatementMemoryUsage)
+	common.UseMemory(gauge, common.ContinueStatementMemoryUsage)
 	return &ContinueStatement{
 		Range: tokenRange,
 	}
@@ -294,6 +294,20 @@ type WhileStatement struct {
 }
 
 var _ Statement = &WhileStatement{}
+
+func NewWhileStatement(
+	gauge common.MemoryGauge,
+	expression Expression,
+	block *Block,
+	startPos Position,
+) *WhileStatement {
+	common.UseMemory(gauge, common.WhileStatementMemoryUsage)
+	return &WhileStatement{
+		Test:     expression,
+		Block:    block,
+		StartPos: startPos,
+	}
+}
 
 func (*WhileStatement) isStatement() {}
 
@@ -577,6 +591,14 @@ type SwapStatement struct {
 
 var _ Statement = &SwapStatement{}
 
+func NewSwapStatement(gauge common.MemoryGauge, expression Expression, right Expression) *SwapStatement {
+	common.UseMemory(gauge, common.SwapStatementMemoryUsage)
+	return &SwapStatement{
+		Left:  expression,
+		Right: right,
+	}
+}
+
 func (*SwapStatement) isStatement() {}
 
 func (s *SwapStatement) StartPosition() Position {
@@ -680,6 +702,20 @@ type SwitchStatement struct {
 }
 
 var _ Statement = &SwitchStatement{}
+
+func NewSwitchStatement(
+	gauge common.MemoryGauge,
+	expression Expression,
+	cases []*SwitchCase,
+	stmtRange Range,
+) *SwitchStatement {
+	common.UseMemory(gauge, common.SwitchStatementMemoryUsage)
+	return &SwitchStatement{
+		Expression: expression,
+		Cases:      cases,
+		Range:      stmtRange,
+	}
+}
 
 func (*SwitchStatement) isStatement() {}
 

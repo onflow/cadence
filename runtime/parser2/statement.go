@@ -131,10 +131,7 @@ func parseStatement(p *parser) ast.Statement {
 
 		right := parseExpression(p, lowestBindingPower)
 
-		return &ast.SwapStatement{
-			Left:  expression,
-			Right: right,
-		}
+		return ast.NewSwapStatement(p.memoryGauge, expression, right)
 
 	default:
 		return ast.NewExpressionStatement(p.memoryGauge, expression)
@@ -319,11 +316,7 @@ func parseWhileStatement(p *parser) *ast.WhileStatement {
 
 	block := parseBlock(p)
 
-	return &ast.WhileStatement{
-		Test:     expression,
-		Block:    block,
-		StartPos: startPos,
-	}
+	return ast.NewWhileStatement(p.memoryGauge, expression, block, startPos)
 }
 
 func parseForStatement(p *parser) *ast.ForStatement {
@@ -515,14 +508,14 @@ func parseSwitchStatement(p *parser) *ast.SwitchStatement {
 
 	endToken := p.mustOne(lexer.TokenBraceClose)
 
-	return &ast.SwitchStatement{
-		Expression: expression,
-		Cases:      cases,
-		Range: ast.Range{
+	return ast.NewSwitchStatement(
+		p.memoryGauge,
+		expression,
+		cases,
+		ast.Range{
 			StartPos: startPos,
 			EndPos:   endToken.EndPos,
-		},
-	}
+		})
 }
 
 // parseSwitchCases parses cases of a switch statement.
