@@ -371,12 +371,11 @@ func TestMemoryMeteringErrors(t *testing.T) {
 	runtimeInterface := func(meter memoryMeter) *testRuntimeInterface {
 		intf := &testRuntimeInterface{
 			meterMemory: func(usage common.MemoryUsage) error {
-				if usage.Kind == common.MemoryKindInterpretedFunction ||
-					usage.Kind == common.MemoryKindVariable ||
-					usage.Kind == common.MemoryKindVoid {
-					return nil
+				if usage.Kind == common.MemoryKindString ||
+					usage.Kind == common.MemoryKindArray {
+					return testMemoryError{}
 				}
-				return testMemoryError{}
+				return nil
 			},
 		}
 		intf.decodeArgument = func(b []byte, t cadence.Type) (cadence.Value, error) {
