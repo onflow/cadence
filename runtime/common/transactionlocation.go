@@ -118,6 +118,8 @@ func decodeTransactionLocationTypeID(gauge MemoryGauge, typeID string) (Transact
 	}
 
 	location, err := hex.DecodeString(parts[1])
+	UseMemory(gauge, NewBytesMemoryUsage(len(location)))
+
 	if err != nil {
 		return nil, "", fmt.Errorf(
 			"%s: invalid location: %w",

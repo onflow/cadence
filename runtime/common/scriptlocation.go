@@ -118,6 +118,8 @@ func decodeScriptLocationTypeID(gauge MemoryGauge, typeID string) (ScriptLocatio
 	}
 
 	location, err := hex.DecodeString(parts[1])
+	UseMemory(gauge, NewBytesMemoryUsage(len(location)))
+
 	if err != nil {
 		return nil, "", fmt.Errorf(
 			"%s: invalid location: %w",

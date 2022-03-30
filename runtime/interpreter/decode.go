@@ -1724,6 +1724,7 @@ func (d LocationDecoder) decodeAddressLocation() (common.Location, error) {
 		return nil, err
 	}
 
+	common.UseMemory(d.memoryGauge, common.NewBytesMemoryUsage(len(encodedAddress)))
 	address, err := common.BytesToAddress(encodedAddress)
 	if err != nil {
 		return nil, err
