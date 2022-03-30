@@ -9,22 +9,25 @@ are supported by the language natively.
 
 ```cadence
 pub enum HashAlgorithm: UInt8 {
-    /// SHA2_256 is Secure Hashing Algorithm 2 (SHA-2) with a 256-bit digest.
+    /// SHA2_256 is SHA-2 with a 256-bit digest (also referred to as SHA256).
     pub case SHA2_256 = 1
 
-    /// SHA2_384 is Secure Hashing Algorithm 2 (SHA-2) with a 384-bit digest.
+    /// SHA2_384 is SHA-2 with a 384-bit digest (also referred to as  SHA384).
     pub case SHA2_384 = 2
 
-    /// SHA3_256 is Secure Hashing Algorithm 3 (SHA-3) with a 256-bit digest.
+    /// SHA3_256 is SHA-3 with a 256-bit digest.
     pub case SHA3_256 = 3
 
-    /// SHA3_384 is Secure Hashing Algorithm 3 (SHA-3) with a 384-bit digest.
+    /// SHA3_384 is SHA-3 with a 384-bit digest.
     pub case SHA3_384 = 4
 
-    /// KMAC128_BLS_BLS12_381 is an instance of KECCAK Message Authentication Code (KMAC128) mac algorithm,
-    /// that can be used as the hashing algorithm for BLS signature scheme on the curve BLS12-381.
-    /// This is a customized version of KMAC128 that is compatible with the hashing to curve
-    /// used in BLS signatures.
+    /// KMAC128_BLS_BLS12_381 is an instance of KECCAK Message Authentication Code (KMAC128) mac algorithm.
+    /// Although this is a MAC algorithm, KMAC is included in this list as it can be used hash 
+    /// when the key is used a non-public customizer.
+    /// KMAC128_BLS_BLS12_381 is used in particular as the hashing algorithm for the BLS signature scheme on the curve BLS12-381.
+    /// It is a customized version of KMAC128 that is compatible with the hashing to curve
+    /// used in BLS signatures. 
+    /// It is the same hasher used by signatures in the internal Flow protocol. 
     pub case KMAC128_BLS_BLS12_381 = 5
 
     /// KECCAK_256 is the legacy Keccak algorithm with a 256-bits digest, as per the original submission to the NIST SHA3 competition.
@@ -39,27 +42,12 @@ pub enum HashAlgorithm: UInt8 {
 }
 ```
 
-- `hash` hashes the input data using the input hashing algorithm.
-  If `KMAC128_BLS_BLS12_381` is used, data is hashed using the standard MAC `KMAC128(customizer, key, data, length)` with the following inputs:
-    - `customizer` is the UTF-8 encoding of `"H2C"`
-    - `key` is the UTF-8 encoding of `"APP_BLS_SIG_BLS12381G1_XOF:KMAC128_SSWU_RO_POP_"`
-    - `data` is the input data to hash
-    - `length` is 1024 bytes
+The hash algorithms provide two ways to hash input data into digests, `hash` and `hashWithTag`. 
 
-- `hashWithTag` hashes data along with a tag.
-  This allows instanciating independent hashing functions customized with a domain separation tag.
-  This is implemented differently depending on the hashing algorithm:
-    - `SHA2_256`, `SHA2_384`, `SHA3_256`, `SHA3_384`:
-      The hashed message is `bytes(tag) || data` where `bytes()` is the UTF-8 encoding of the input string,
-      padded with zeros till 32 bytes.
-      The tags accepted must not exceed 32 bytes.
-      If the tag used is empty, no data prefix is applied, and the hashed message is simply `data`.
-    - `KMAC128_BLS_BLS12_381`: this is a call to standard `KMAC128(customizer, key, data, length)` with the following inputs:
-      - `customizer` is the UTF-8 encoding of `"H2C"`
-      - `key` is the UTF-8 encoding of `"APP_" || tag || "BLS_SIG_BLS12381G1_XOF:KMAC128_SSWU_RO_POP_"`
-      - `data` is the input data to hash
-      - `length` is 1024 bytes
+## Hashing
 
+`hash` hashes the input data using the chosen hashing algorithm. The `KMAC` output is configured with 
+specific inputs (detailed under [KMAC128_BLS_BLS12_381](###KMAC128 for BLS on BLS12_381))
 
 For example, to compute a SHA3-256 hash:
 
@@ -67,6 +55,37 @@ For example, to compute a SHA3-256 hash:
 let data: [UInt8] = [1, 2, 3]
 let digest = HashAlgorithm.SHA3_256.hash(data)
 ```
+
+## Hashing with a domain tag
+
+`hashWithTag` hashes the input data along with an input tag.
+It allows instanciating independent hashing functions customized with a domain separation tag (DST).
+For most of the hashing algorithms, mixing the data with the tag is done by pre-fixing the data with the tag and
+hashing the result.
+
+- `SHA2_256`, `SHA2_384`, `SHA3_256`, `SHA3_384`, `KECCAK_256`:
+  If the tag in non-empty, the hashed message is `bytes(tag) || data` where `bytes()` is the UTF-8 encoding of the input string,
+  padded with zeros till 32 bytes. 
+  The tags accepted must not exceed 32 bytes.
+  If the tag used is empty, no data prefix is applied, and the hashed message is simply `data` (same as `hash`'s output).
+- `KMAC128_BLS_BLS12_381`: refer to [KMAC128_BLS_BLS12_381](###KMAC128 for BLS on BLS12_381) for details.
+
+
+###KMAC128 for BLS on BLS12_381
+
+`KMAC128_BLS_BLS12_381` is an instance of KECCAK-based KMAC128.
+Although this is a MAC algorithm, KMAC can be used as a hash when the key is used as a non-private customizer.
+`KMAC128_BLS_BLS12_381` is used in particular as the hashing algorithm for the BLS signature scheme on the curve BLS12-381.
+It is a customized instance of KMAC128 and is compatible with the hashing to curve used by BLS signatures. 
+It is the same hasher used by the internal Flow protocol, and can be used to verify Flow protocol signatures on-chain. 
+
+To define the MAC instance, `KMAC128(customizer, key, data, length)` is instanciated with the following parameters 
+(as referred to by the NIST [SHA-3 Derived Functions](https://nvlpubs.nist.gov/nistpubs/specialpublications/nist.sp.800-185.pdf)):
+  - `customizer` is the UTF-8 encoding of `"H2C"`
+  - `key` is the UTF-8 encoding of `"APP_BLS_SIG_BLS12381G1_XOF:KMAC128_SSWU_RO_POP_"` when `hash` is used. Is include the input `tag`
+  when `hashWithTag` is used, key becomes the UTF-8 encoding of `"APP_" || tag || "BLS_SIG_BLS12381G1_XOF:KMAC128_SSWU_RO_POP_"`.
+  - `data` is the input data to hash
+  - `length` is 1024 bytes
 
 ## Signing Algorithms
 
