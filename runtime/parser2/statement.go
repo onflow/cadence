@@ -278,7 +278,13 @@ func parseIfStatement(p *parser) *ast.IfStatement {
 			panic(errors.UnreachableError{})
 		}
 
-		ifStatement := ast.NewIfStatement(p.memoryGauge, test, thenBlock, elseBlock, startPos)
+		ifStatement := ast.NewIfStatement(
+			p.memoryGauge,
+			test,
+			thenBlock,
+			elseBlock,
+			startPos,
+		)
 
 		if variableDeclaration != nil {
 			variableDeclaration.ParentIfStatement = ifStatement
@@ -366,7 +372,14 @@ func parseForStatement(p *parser) *ast.ForStatement {
 
 	block := parseBlock(p)
 
-	return ast.NewForStatement(p.memoryGauge, identifier, index, block, expression, startPos)
+	return ast.NewForStatement(
+		p.memoryGauge,
+		identifier,
+		index,
+		block,
+		expression,
+		startPos,
+	)
 }
 
 func parseBlock(p *parser) *ast.Block {
