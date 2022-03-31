@@ -775,7 +775,7 @@ func (d StorableDecoder) decodeAddress() (AddressValue, error) {
 	return NewUnmeteredAddressValueFromBytes(addressBytes), nil
 }
 
-func (d StorableDecoder) decodeAddressBytes() ([]byte, error) {
+func (d LocationDecoder) decodeAddressBytes() ([]byte, error) {
 	// Check the address length and validate before decoding.
 	length, err := d.decoder.NextSize()
 	if err != nil {
@@ -1691,10 +1691,7 @@ func (d LocationDecoder) decodeAddressLocation() (common.Location, error) {
 	// Address
 
 	// Decode address at array index encodedAddressLocationAddressFieldKey
-	//
-	// TODO: Use `decodeAddressBytes` and remove the `checkEncodedAddressLength` below
-	//       when memory metering of locations is implemented.
-	encodedAddress, err := d.decoder.DecodeBytes()
+	encodedAddress, err := d.decodeAddressBytes()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return nil, fmt.Errorf(
@@ -1705,7 +1702,6 @@ func (d LocationDecoder) decodeAddressLocation() (common.Location, error) {
 		return nil, err
 	}
 
-	err = checkEncodedAddressLength(len(encodedAddress))
 	if err != nil {
 		return nil, err
 	}
@@ -1724,7 +1720,6 @@ func (d LocationDecoder) decodeAddressLocation() (common.Location, error) {
 		return nil, err
 	}
 
-	common.UseMemory(d.memoryGauge, common.NewBytesMemoryUsage(len(encodedAddress)))
 	address, err := common.BytesToAddress(encodedAddress)
 	if err != nil {
 		return nil, err
