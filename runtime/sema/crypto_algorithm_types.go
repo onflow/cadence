@@ -293,11 +293,11 @@ func newNativeEnumType(
 const SignatureAlgorithmTypeName = "SignatureAlgorithm"
 
 const SignatureAlgorithmDocStringECDSA_P256 = `
-ECDSA_P256 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the NIST P-256 curve
+ECDSA_P256 is ECDSA on the NIST P-256 curve
 `
 
 const SignatureAlgorithmDocStringECDSA_secp256k1 = `
-ECDSA_secp256k1 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the secp256k1 curve
+ECDSA_secp256k1 is ECDSA on the secp256k1 curve
 `
 
 const SignatureAlgorithmDocStringBLS_BLS12_381 = `
