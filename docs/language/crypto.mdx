@@ -126,7 +126,8 @@ struct PublicKey {
     ): Bool
 
     /// Verifies the proof of possession of the private key.
-    /// This function is only implemented if the signature algorithm of the public key is BLS, it errors if called with any other signature algorithm. 
+    /// This function is only implemented if the signature algorithm of the public key is BLS (BLS_BLS12_381).
+    /// It errors if called with any other signature algorithm. 
     pub fun verifyPoP(_ proof: [UInt8]): Bool
 }
 ```
@@ -143,9 +144,9 @@ let publicKey = PublicKey(
 The raw key value depends on the supported signature scheme:
 
 - `ECDSA_P256` and `ECDSA_secp256k1`:
-  The public key is a curve point `(X,Y)` where `X` and `Y` are two prime field elements.
+  The public key is an uncompressed curve point `(X,Y)` where `X` and `Y` are two prime field elements.
   The raw key is represented as `bytes(X) || bytes(Y)`, where `||` is the concatenation operation,
-  and `bytes()` is the bytes big-endian encoding of the input integer padded by zeros to the byte-length of the field prime.
+  and `bytes()` is the bytes big-endian encoding of the input integer left padded by zeros to the byte-length of the field prime.
   The raw public key is 64-bytes long.
 
 - `BLS_BLS_12_381`:
@@ -154,8 +155,20 @@ The raw key value depends on the supported signature scheme:
   [IETF draft-irtf-cfrg-pairing-friendly-curves-08](https://www.ietf.org/archive/id/draft-irtf-cfrg-pairing-friendly-curves-08.html#name-point-serialization-procedu).
   A public key is 96-bytes long.
 
+### Public Key validation
 
-A public key is validated at the time of creation. Hence, public keys are immutable.
+A public key is validated at the time of creation. Only valid public keys can be created.
+The validation of the public key depends on the supported signature scheme:
+
+- `ECDSA_P256` and `ECDSA_secp256k1`:
+  The given `X` and `Y` coordinates are correctly serialized, represent valid prime field elements, and the resulting
+  point is on the correct curve (no subgroup check needed since the cofactor of both supported curves is 1).
+
+- `BLS_BLS_12_381`:
+  The given key is correctly serialized following the compressed serialization in [IETF draft-irtf-cfrg-pairing-friendly-curves-08](https://www.ietf.org/archive/id/draft-irtf-cfrg-pairing-friendly-curves-08.html#name-point-serialization-procedu).
+  The coordinates represent valid prime field extension elemnents. The resulting point is on the curve, and is on the correct subgroup. 
+
+Since the validation happen only at the time of creation, public keys are immutable.
 
 ```cadence
 publicKey.signatureAlgorithm = SignatureAlgorithm.ECDSA_secp256k1   // Not allowed
@@ -188,16 +201,18 @@ let isValid = pk.verify(
 // `isValid` is false
 ```
 
-The inputs to `verify()` depend on the signature scheme used:
+A valid input to `verify()` depends on the signature scheme used:
 
 - ECDSA (`ECDSA_P256` and `ECDSA_secp256k1`):
-   - `signature` is the couple `(r,s)`. It is represented as `bytes(r) || bytes(s)`, where `||` is the concatenation operation,
-     and `bytes()` is the bytes big-endian encoding of the input integer padded by zeros to the byte-length of the curve order.
+   - `signature` is the couple `(r,s)`. It is serialized as `bytes(r) || bytes(s)`, where `||` is the concatenation operation,
+     and `bytes()` is the bytes big-endian encoding of the input integer left padded by zeros to the byte-length of the curve order.
      The signature is 64 bytes-long for both curves.
    - `signedData` is the arbitrary message to verify the signature against.
-   - `domainSeparationTag` is the domain tag used for signing. The interface only accepts the the user tag `"FLOW-V0.0-user"`.
-   - `hashAlgorithm` is the algorithm used to hash the message along with the given tag (check the [`hashWithTag` function](#hashing) for more details).
-     Only `SHA2_256` or `SHA3_256` are accepted.
+   - `domainSeparationTag` is the domain tag used for signing. Any tag value can be used (check the [`hashWithTag` function](#hashing) for more details).
+   - `hashAlgorithm` is either `SHA2_256` or `SHA3_256`. It is the algorithm used to hash the message along with the given tag (check the [`hashWithTag` function](#hashing) for more details).
+
+As noted in [`hashWithTag` function](#hashing) for `SHA2_256` and `SHA3_256`, using an empty `tag` results in hashing the input data only. If a signature verification
+needs to be done against data without any domain tag, this can be done by using an empty domain tag `""`.
 
 - BLS (`BLS_BLS_12_381`):
    - `signature` is a G_1 (curve over the prime field) point.
@@ -208,7 +223,8 @@ The inputs to `verify()` depend on the signature scheme used:
    - `hashAlgorithm` is the algorithm used to hash the message along with the given tag (check `hashWithTag` function for more details).
      Only `KMAC128_BLS_BLS12_381` is accepted.
 
-BLS verification performs the necessary membership check of the signature while the membership check of the public key is performed at the creation of the `PublicKey` object.
+BLS verification performs the necessary membership check of the signature while the membership check of the public key is performed at the creation of the `PublicKey` object
+and not repeated during the signature verification. 
 
 ## BLS
 
