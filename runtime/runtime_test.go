@@ -37,6 +37,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/encoding/json"
 	jsoncdc "github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -1194,12 +1195,15 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 				getSigningAccounts: func() ([]Address, error) {
 					return tc.authorizers, nil
 				},
-				decodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
-					return jsoncdc.Decode(b)
-				},
 				log: func(message string) {
 					loggedMessages = append(loggedMessages, message)
 				},
+				meterMemory: func(_ common.MemoryUsage) error {
+					return nil
+				},
+			}
+			runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(runtimeInterface, b)
 			}
 
 			err := rt.ExecuteTransaction(
@@ -1525,12 +1529,15 @@ func TestRuntimeScriptArguments(t *testing.T) {
 
 			runtimeInterface := &testRuntimeInterface{
 				storage: storage,
-				decodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
-					return jsoncdc.Decode(b)
-				},
 				log: func(message string) {
 					loggedMessages = append(loggedMessages, message)
 				},
+				meterMemory: func(_ common.MemoryUsage) error {
+					return nil
+				},
+			}
+			runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(runtimeInterface, b)
 			}
 
 			_, err := rt.ExecuteScript(
@@ -6567,9 +6574,12 @@ func TestRuntimeExecuteScriptArguments(t *testing.T) {
 
 			runtimeInterface := &testRuntimeInterface{
 				storage: storage,
-				decodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
-					return jsoncdc.Decode(b)
+				meterMemory: func(_ common.MemoryUsage) error {
+					return nil
 				},
+			}
+			runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(runtimeInterface, b)
 			}
 
 			_, err := runtime.ExecuteScript(
@@ -6845,12 +6855,15 @@ func TestRuntimeStackOverflow(t *testing.T) {
 			events = append(events, event)
 			return nil
 		},
-		decodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
-			return jsoncdc.Decode(b)
-		},
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},
+		meterMemory: func(_ common.MemoryUsage) error {
+			return nil
+		},
+	}
+	runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+		return json.Decode(runtimeInterface, b)
 	}
 
 	nextTransactionLocation := newTransactionLocationGenerator()

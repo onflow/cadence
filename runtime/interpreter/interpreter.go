@@ -2928,7 +2928,7 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 }
 
 func lookupInterface(interpreter *Interpreter, typeID string) (*sema.InterfaceType, error) {
-	location, qualifiedIdentifier, err := common.DecodeTypeID(typeID)
+	location, qualifiedIdentifier, err := common.DecodeTypeID(interpreter, typeID)
 	// if the typeID is invalid, return nil
 	if err != nil {
 		return nil, err
@@ -2943,7 +2943,7 @@ func lookupInterface(interpreter *Interpreter, typeID string) (*sema.InterfaceTy
 }
 
 func lookupComposite(interpreter *Interpreter, typeID string) (*sema.CompositeType, error) {
-	location, qualifiedIdentifier, err := common.DecodeTypeID(typeID)
+	location, qualifiedIdentifier, err := common.DecodeTypeID(interpreter, typeID)
 	// if the typeID is invalid, return nil
 	if err != nil {
 		return nil, err
