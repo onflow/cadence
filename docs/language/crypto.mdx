@@ -132,6 +132,9 @@ struct PublicKey {
 }
 ```
 
+`PublicKey` supports two methods `verify` and `verifyPoP`. 
+`verifyPoP` will be covered under [BLS multi-signature](### Proof of Possession).
+
 A `PublicKey` can be constructed using the raw key and the signing algorithm.
 
 ```cadence
@@ -233,7 +236,7 @@ While KMAC128 is used as a hash-to-field method resulting in two field elements,
 
 A valid signature would be generated using the expected `signedData` and `domainSeparationTag`, as well the same hashing to curve process. 
 
-## BLS
+## BLS multi-signature
 
 <Callout type="info">
 
@@ -241,27 +244,52 @@ A valid signature would be generated using the expected `signedData` and `domain
 
 </Callout>
 
-The BLS signature scheme also supports two additional operations on keys and signatures.
-They are defined in the built-in `BLS` contract, which does not need to be imported.
+The BLS signature scheme allows efficient multi-signature features. Multiple signatures can be aggregated
+into a single signature which can be verified against an aggregated public key. This allows authenticating
+multiple signers with a single signature verification. 
+While BLS provides multiple aggregation techniques,
+Cadence supports the basic aggregation tools that still cover a wide list of use-cases. 
+These tools are defined in the built-in `BLS` contract, which does not need to be imported.
 
-- `cadence•fun aggregateSignatures(_ signatures: [[UInt8]]): [UInt8]?`
+### Proof of Possession (PoP)
 
-  Aggregates multiple BLS signatures into one,
-  considering the proof of possession as a defence against the rogue attacks.
+Multi-signature verification in BLS requires a defense against rogue public-key attacks. Multiple ways are 
+available to protect BLS verification. Cadence provides the proof of possession of private key as a defense tool. 
+The proof of possession of private key is a BLS signature over the public key bytes. 
+The PoP signature follows the same requirements of a BLS signature (detailed in [Signature verification](### Signature verification)),
+except it uses a special domain separation tag. The key expected to be used in KMAC128 is the UTF-8 encoding of `"POP_BLS_SIG_BLS12381G1_XOF:KMAC128_SSWU_RO_POP_"`.
+The expected message to be signed by the PoP is the serialization of the BLS public key corresponding to the signing private key ([serialization details](## PublicKey)).
+The PoP can only be verified by the `PublicKey` method `verifyPoP`. 
 
-  Signatures could be generated from the same or distinct messages, they
-  could also be the aggregation of other signatures.
-  The order of the signatures in the slice does not matter since the aggregation is commutative.
-  No subgroup membership check is performed on the input signatures.
-  The function returns nil if the array is empty or if decoding one of the signature fails.
+### BLS signature aggregation
 
-- `cadence•fun aggregatePublicKeys(_ publicKeys: [PublicKey]): PublicKey?`
+`cadence•fun aggregateSignatures(_ signatures: [[UInt8]]): [UInt8]?`
 
-  Aggregates multiple BLS public keys into one.
+Aggregates multiple BLS signatures into one. 
+Signatures could be generated from the same or distinct messages, they
+could also be the aggregation of other signatures.
+The order of the signatures in the slice does not matter since the aggregation is commutative.
+There is no subgroup membership check performed on the input signatures.
+The function errors if the array is empty or if decoding one of the signature fails.
 
-  The order of the public keys in the slice does not matter since the aggregation is commutative.
-  No subgroup membership check is performed on the input keys.
-  The function returns nil if the array is empty or any of the input keys is not a BLS key.
+The output signature can be verified against an aggregated public key to authenticate multiple 
+signers at once. Since the `verify` method accepts a single data to verify against, it is only possible to 
+verfiy multiple signatures of the same message on Cadence. 
+
+### BLS public key aggregation
+
+`cadence•fun aggregatePublicKeys(_ publicKeys: [PublicKey]): PublicKey?`
+
+Aggregates multiple BLS public keys into one.
+
+The order of the public keys in the slice does not matter since the aggregation is commutative.
+The input keys are guaranteed to be in the correct subgroup since subgroup membership is checked
+at the key creatiom time. 
+The function errors nil if the array is empty or any of the input keys is not a BLS key.
+
+The output public key can be used to verify aggregated signatures to authenticate multiple 
+signers at once. Since the `verify` method accepts a single data to verify against, it is only possible to 
+verfiy multiple signatures of the same message on Cadence. 
 
 ## Crypto Contract
 
