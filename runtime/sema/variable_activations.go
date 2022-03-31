@@ -196,6 +196,7 @@ func (a *VariableActivations) Leave(getEndPosition func() ast.Position) {
 	}
 	lastIndex := count - 1
 	activation := a.activations[lastIndex]
+	a.activations[lastIndex] = nil
 	a.activations = a.activations[:lastIndex]
 	for _, callback := range activation.LeaveCallbacks {
 		callback(getEndPosition)
