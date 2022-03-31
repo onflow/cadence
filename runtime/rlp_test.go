@@ -27,6 +27,7 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -125,9 +126,12 @@ func TestRLPDecodeString(t *testing.T) {
 
 			runtimeInterface := &testRuntimeInterface{
 				storage: newTestLedger(nil, nil),
-				decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-					return json.Decode(b)
+				meterMemory: func(_ common.MemoryUsage) error {
+					return nil
 				},
+			}
+			runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(runtimeInterface, b)
 			}
 
 			result, err := runtime.ExecuteScript(
@@ -281,9 +285,12 @@ func TestRLPDecodeList(t *testing.T) {
 
 			runtimeInterface := &testRuntimeInterface{
 				storage: newTestLedger(nil, nil),
-				decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-					return json.Decode(b)
+				meterMemory: func(_ common.MemoryUsage) error {
+					return nil
 				},
+			}
+			runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(runtimeInterface, b)
 			}
 
 			result, err := runtime.ExecuteScript(

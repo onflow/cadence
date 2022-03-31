@@ -385,7 +385,8 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 		case lexer.TokenString:
 			parsedString, errs := parseStringLiteral(p.current.Value.(string))
 			p.report(errs...)
-			location = common.StringLocation(parsedString)
+			// TODO: add meter to this
+			location = common.NewStringLocation(nil, parsedString)
 
 		case lexer.TokenHexadecimalIntegerLiteral:
 			location = parseHexadecimalLocation(p.current.Value.(string))
@@ -611,9 +612,8 @@ func parseHexadecimalLocation(literal string) common.AddressLocation {
 		panic(err)
 	}
 
-	return common.AddressLocation{
-		Address: address,
-	}
+	// TODO: add gauge when we meter parsing
+	return common.NewAddressLocation(nil, address, "")
 }
 
 // parseEventDeclaration parses an event declaration.

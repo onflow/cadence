@@ -146,7 +146,8 @@ func PrepareInterpreter(filename string, debugger *interpreter.Debugger) (*inter
 
 	codes := map[common.LocationID]string{}
 
-	location := common.StringLocation(filename)
+	// do not need to meter this as it's a one-off overhead
+	location := common.NewStringLocation(nil, filename)
 
 	program, must := PrepareProgramFromFile(location, codes)
 

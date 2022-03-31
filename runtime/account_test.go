@@ -117,9 +117,12 @@ func TestRuntimeTransaction_AddPublicKey(t *testing.T) {
 				events = append(events, event)
 				return nil
 			},
-			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(b)
+			meterMemory: func(_ common.MemoryUsage) error {
+				return nil
 			},
+		}
+		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(runtimeInterface, b)
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
@@ -835,7 +838,7 @@ func accountKeyExportedValue(
 }
 
 func getAccountKeyTestRuntimeInterface(storage *testAccountKeyStorage) *testRuntimeInterface {
-	return &testRuntimeInterface{
+	runtimeInterface := &testRuntimeInterface{
 		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{{42}}, nil
@@ -888,10 +891,14 @@ func getAccountKeyTestRuntimeInterface(storage *testAccountKeyStorage) *testRunt
 			storage.events = append(storage.events, event)
 			return nil
 		},
-		decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-			return json.Decode(b)
+		meterMemory: func(_ common.MemoryUsage) error {
+			return nil
 		},
 	}
+	runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+		return json.Decode(runtimeInterface, b)
+	}
+	return runtimeInterface
 }
 
 func addAuthAccountKey(t *testing.T, runtime Runtime, runtimeInterface *testRuntimeInterface) {
