@@ -1648,6 +1648,9 @@ func (v *ArrayValue) RecursiveString(seenReferences SeenReferences) string {
 
 func (v *ArrayValue) Append(interpreter *Interpreter, getLocationRange func() LocationRange, element Value) {
 
+	// length increases by 1
+	common.UseMemory(interpreter, common.NewArrayMemoryUsage(0))
+
 	interpreter.checkContainerMutation(v.Type.ElementType(), element, getLocationRange)
 
 	element = element.Transfer(
@@ -1693,6 +1696,9 @@ func (v *ArrayValue) Insert(interpreter *Interpreter, getLocationRange func() Lo
 			LocationRange: getLocationRange(),
 		})
 	}
+
+	// length increases by 1
+	common.UseMemory(interpreter, common.NewArrayMemoryUsage(0))
 
 	interpreter.checkContainerMutation(v.Type.ElementType(), element, getLocationRange)
 
@@ -15561,6 +15567,9 @@ func (v *DictionaryValue) Insert(
 	getLocationRange func() LocationRange,
 	keyValue, value Value,
 ) OptionalValue {
+
+	// length increases by 1
+	common.UseMemory(interpreter, common.NewDictionaryMemoryUsage(0))
 
 	interpreter.checkContainerMutation(v.Type.KeyType, keyValue, getLocationRange)
 	interpreter.checkContainerMutation(v.Type.ValueType, value, getLocationRange)

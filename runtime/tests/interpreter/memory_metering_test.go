@@ -57,12 +57,12 @@ func TestInterpretArrayMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
-                let x: [Int8] = []
-                let y: [[String]] = [[]]
-                let z: [[[Bool]]] = [[[]]]
-            }
-        `
+	            pub fun main() {
+	                let x: [Int8] = []
+	                let y: [[String]] = [[]]
+	                let z: [[[Bool]]] = [[[]]]
+	            }
+	        `
 
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
@@ -78,13 +78,13 @@ func TestInterpretArrayMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-                pub fun main() {
-                    let values: [[Int8]] = [[], [], []]
-                    for value in values {
-                      let a = value
-                    }
-                }
-            `
+	                pub fun main() {
+	                    let values: [[Int8]] = [[], [], []]
+	                    for value in values {
+	                      let a = value
+	                    }
+	                }
+	            `
 
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
@@ -100,9 +100,28 @@ func TestInterpretArrayMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
+	            pub fun main() {
+	                let x: [Int8] = []
+	                x.contains(5)
+	            }
+	        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindBool))
+	})
+
+	t.Run("append", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
             pub fun main() {
                 let x: [Int8] = []
-                x.contains(5)
+                x.append(3)
             }
         `
 
@@ -112,7 +131,7 @@ func TestInterpretArrayMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindBool))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindArray))
 	})
 }
 
@@ -136,7 +155,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindString))
-		assert.Equal(t, uint64(11), meter.getMemory(common.MemoryKindDictionary))
+		assert.Equal(t, uint64(12), meter.getMemory(common.MemoryKindDictionary))
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindVariable))
 	})
 
@@ -179,6 +198,25 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindBool))
+	})
+
+	t.Run("insert", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let x: {Int8: String} = {}
+                x.insert(key: 5, "")
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindDictionary))
 	})
 }
 
