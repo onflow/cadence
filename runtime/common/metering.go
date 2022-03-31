@@ -50,6 +50,27 @@ func NewConstantMemoryUsage(kind MemoryKind) MemoryUsage {
 	}
 }
 
+func NewArrayMemoryUsage(length int) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindArray,
+		Amount: uint64(length) + 1, // +1 to account for empty arrays
+	}
+}
+
+func NewDictionaryMemoryUsage(length int) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindDictionary,
+		Amount: uint64(length) + 1, // +1 to account for empty dicts
+	}
+}
+
+func NewCompositeMemoryUsage(length int) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindComposite,
+		Amount: uint64(length) + 1, // +1 to account for empty composites
+	}
+}
+
 func NewStringMemoryUsage(length int) MemoryUsage {
 	return MemoryUsage{
 		Kind:   MemoryKindString,

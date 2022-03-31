@@ -1356,7 +1356,7 @@ func newArrayValueFromAtreeValue(
 	staticType ArrayStaticType,
 ) *ArrayValue {
 
-	common.UseMemory(memoryGauge, common.NewConstantMemoryUsage(common.MemoryKindArray))
+	common.UseMemory(memoryGauge, common.NewArrayMemoryUsage(int(array.Count())))
 
 	return &ArrayValue{
 		Type:  staticType,
@@ -13973,7 +13973,7 @@ func newCompositeValueFromOrderedMap(
 	typeInfo compositeTypeInfo,
 ) *CompositeValue {
 
-	common.UseMemory(memoryGauge, common.NewConstantMemoryUsage(common.MemoryKindComposite))
+	common.UseMemory(memoryGauge, common.NewCompositeMemoryUsage(int(dict.Count())))
 
 	return &CompositeValue{
 		dictionary:          dict,
@@ -15067,7 +15067,7 @@ func newDictionaryValueFromOrderedMap(
 	staticType DictionaryStaticType,
 ) *DictionaryValue {
 
-	common.UseMemory(memoryGauge, common.NewConstantMemoryUsage(common.MemoryKindDictionary))
+	common.UseMemory(memoryGauge, common.NewDictionaryMemoryUsage(int(dict.Count())))
 
 	return &DictionaryValue{
 		Type:       staticType,
