@@ -208,10 +208,10 @@ A valid input to `verify()` depends on the signature scheme used:
      and `bytes()` is the bytes big-endian encoding of the input integer left padded by zeros to the byte-length of the curve order.
      The signature is 64 bytes-long for both curves.
    - `signedData` is the arbitrary message to verify the signature against.
-   - `domainSeparationTag` is the domain tag used for signing. Any tag value can be used (check the [`hashWithTag` function](#hashing) for more details).
-   - `hashAlgorithm` is either `SHA2_256` or `SHA3_256`. It is the algorithm used to hash the message along with the given tag (check the [`hashWithTag` function](#hashing) for more details).
+   - `domainSeparationTag` is the domain tag used for signing. Multiple valid tag values can be used (check the [`hashWithTag` function](#hashing) for more details).
+   - `hashAlgorithm` is either `SHA2_256`, `SHA3_256` or `KECCAK_256`. It is the algorithm used to hash the message along with the given tag (check the [`hashWithTag` function](#hashing) for more details).
 
-As noted in [`hashWithTag` function](#hashing) for `SHA2_256` and `SHA3_256`, using an empty `tag` results in hashing the input data only. If a signature verification
+As noted in [`hashWithTag` function](#hashing) for `SHA2_256`, `SHA3_256` and `KECCAK_256, using an empty `tag` results in hashing the input data only. If a signature verification
 needs to be done against data without any domain tag, this can be done by using an empty domain tag `""`.
 
 - BLS (`BLS_BLS_12_381`):
