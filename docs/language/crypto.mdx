@@ -306,7 +306,7 @@ Aggregates multiple BLS public keys into one.
 The order of the public keys in the slice does not matter since the aggregation is commutative.
 The input keys are guaranteed to be in the correct subgroup since subgroup membership is checked
 at the key creatiom time. 
-The function errors nil if the array is empty or any of the input keys is not a BLS key.
+The function errors if the array is empty or any of the input keys is not a BLS key.
 
 The output public key can be used to verify aggregated signatures to authenticate multiple 
 signers at once. Since the `verify` method accepts a single data to verify against, it is only possible to 
