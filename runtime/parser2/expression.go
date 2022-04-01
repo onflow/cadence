@@ -791,9 +791,10 @@ func defineIdentifierExpression() {
 				return parseFunctionExpression(p, token)
 
 			default:
-				return &ast.IdentifierExpression{
-					Identifier: p.tokenToIdentifier(token),
-				}
+				return ast.NewIdentifierExpression(
+					p.memoryGauge,
+					p.tokenToIdentifier(token),
+				)
 			}
 		},
 	})
@@ -1011,13 +1012,14 @@ func defineArrayExpression() {
 				p.mustOne(lexer.TokenComma)
 			}
 			endToken := p.mustOne(lexer.TokenBracketClose)
-			return &ast.ArrayExpression{
-				Values: values,
-				Range: ast.Range{
+			return ast.NewArrayExpression(
+				p.memoryGauge,
+				values,
+				ast.Range{
 					StartPos: startToken.StartPos,
 					EndPos:   endToken.EndPos,
 				},
-			}
+			)
 		},
 	)
 }
@@ -1041,13 +1043,14 @@ func defineDictionaryExpression() {
 				p.mustOne(lexer.TokenComma)
 			}
 			endToken := p.mustOne(lexer.TokenBraceClose)
-			return &ast.DictionaryExpression{
-				Entries: entries,
-				Range: ast.Range{
+			return ast.NewDictionaryExpression(
+				p.memoryGauge,
+				entries,
+				ast.Range{
 					StartPos: startToken.StartPos,
 					EndPos:   endToken.EndPos,
 				},
-			}
+			)
 		},
 	)
 }

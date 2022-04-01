@@ -394,6 +394,19 @@ type ArrayExpression struct {
 
 var _ Expression = &ArrayExpression{}
 
+func NewArrayExpression(
+	gauge common.MemoryGauge,
+	values []Expression,
+	tokenRange Range,
+) *ArrayExpression {
+	common.UseMemory(gauge, common.ArrayExpressionMemoryUsage)
+
+	return &ArrayExpression{
+		Values: values,
+		Range:  tokenRange,
+	}
+}
+
 func (*ArrayExpression) isExpression() {}
 
 func (*ArrayExpression) isIfStatementTest() {}
@@ -462,6 +475,19 @@ type DictionaryExpression struct {
 }
 
 var _ Expression = &DictionaryExpression{}
+
+func NewDictionaryExpression(
+	gauge common.MemoryGauge,
+	entries []DictionaryEntry,
+	tokenRange Range,
+) *DictionaryExpression {
+	common.UseMemory(gauge, common.DictionaryExpressionMemoryUsage)
+
+	return &DictionaryExpression{
+		Entries: entries,
+		Range:   tokenRange,
+	}
+}
 
 func (*DictionaryExpression) isExpression() {}
 
@@ -570,6 +596,17 @@ type IdentifierExpression struct {
 }
 
 var _ Expression = &IdentifierExpression{}
+
+func NewIdentifierExpression(
+	gauge common.MemoryGauge,
+	identifier Identifier,
+) *IdentifierExpression {
+	common.UseMemory(gauge, common.IdentifierExpressionMemoryUsage)
+
+	return &IdentifierExpression{
+		Identifier: identifier,
+	}
+}
 
 func (*IdentifierExpression) isExpression() {}
 

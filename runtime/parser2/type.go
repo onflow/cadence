@@ -759,9 +759,10 @@ func parseNominalTypeInvocationRemainder(p *parser) *ast.InvocationExpression {
 	argumentsStartPos := parenOpenToken.EndPos
 	arguments, endPos := parseArgumentListRemainder(p)
 
-	var invokedExpression ast.Expression = &ast.IdentifierExpression{
-		Identifier: ty.Identifier,
-	}
+	var invokedExpression ast.Expression = ast.NewIdentifierExpression(
+		p.memoryGauge,
+		ty.Identifier,
+	)
 
 	for _, nestedIdentifier := range ty.NestedIdentifiers {
 		invokedExpression = &ast.MemberExpression{
