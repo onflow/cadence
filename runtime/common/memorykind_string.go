@@ -61,11 +61,32 @@ func _() {
 	_ = x[MemoryKindSwapStatement-50]
 	_ = x[MemoryKindSwitchStatement-51]
 	_ = x[MemoryKindWhileStatement-52]
+	_ = x[MemoryKindBooleanExpression-53]
+	_ = x[MemoryKindNilExpression-54]
+	_ = x[MemoryKindStringExpression-55]
+	_ = x[MemoryKindIntegerExpression-56]
+	_ = x[MemoryKindFixedPointExpression-57]
+	_ = x[MemoryKindArrayExpression-58]
+	_ = x[MemoryKindDictionaryExpression-59]
+	_ = x[MemoryKindIdentifierExpression-60]
+	_ = x[MemoryKindInvocationExpression-61]
+	_ = x[MemoryKindMemberExpression-62]
+	_ = x[MemoryKindIndexExpression-63]
+	_ = x[MemoryKindConditionalExpression-64]
+	_ = x[MemoryKindUnaryExpression-65]
+	_ = x[MemoryKindBinaryExpression-66]
+	_ = x[MemoryKindFunctionExpression-67]
+	_ = x[MemoryKindCastingExpression-68]
+	_ = x[MemoryKindCreateExpression-69]
+	_ = x[MemoryKindDestroyExpression-70]
+	_ = x[MemoryKindReferenceExpression-71]
+	_ = x[MemoryKindForceExpression-72]
+	_ = x[MemoryKindPathExpression-73]
 }
 
-const _MemoryKind_name = "UnknownBoolAddressStringCharacterMetaTypeNumberArrayDictionaryCompositeOptionalNilVoidTypeValuePathValueCapabilityValueLinkValueStorageReferenceValueEphemeralReferenceValueInterpretedFunctionHostFunctionBoundFunctionBigIntRawStringVariableTokenIdentifierTokenCommentTokenNumericLiteralTokenSyntaxIdentifierArgumentBlockFunctionDeclarationCompositeDeclarationInterfaceDeclarationEnumCaseDeclarationFieldDeclarationTransactionDeclarationImportDeclarationVariableDeclarationSpecialFunctionDeclarationPragmaDeclarationAssignmentStatementBreakStatementContinueStatementEmitStatementExpressionStatementForStatementIfStatementReturnStatementSwapStatementSwitchStatementWhileStatement"
+const _MemoryKind_name = "UnknownBoolAddressStringCharacterMetaTypeNumberArrayDictionaryCompositeOptionalNilVoidTypeValuePathValueCapabilityValueLinkValueStorageReferenceValueEphemeralReferenceValueInterpretedFunctionHostFunctionBoundFunctionBigIntRawStringVariableTokenIdentifierTokenCommentTokenNumericLiteralTokenSyntaxIdentifierArgumentBlockFunctionDeclarationCompositeDeclarationInterfaceDeclarationEnumCaseDeclarationFieldDeclarationTransactionDeclarationImportDeclarationVariableDeclarationSpecialFunctionDeclarationPragmaDeclarationAssignmentStatementBreakStatementContinueStatementEmitStatementExpressionStatementForStatementIfStatementReturnStatementSwapStatementSwitchStatementWhileStatementBooleanExpressionNilExpressionStringExpressionIntegerExpressionFixedPointExpressionArrayExpressionDictionaryExpressionIdentifierExpressionInvocationExpressionMemberExpressionIndexExpressionConditionalExpressionUnaryExpressionBinaryExpressionFunctionExpressionCastingExpressionCreateExpressionDestroyExpressionReferenceExpressionForceExpressionPathExpression"
 
-var _MemoryKind_index = [...]uint16{0, 7, 11, 18, 24, 33, 41, 47, 52, 62, 71, 79, 82, 86, 95, 104, 119, 128, 149, 172, 191, 203, 216, 222, 231, 239, 254, 266, 285, 296, 306, 314, 319, 338, 358, 378, 397, 413, 435, 452, 471, 497, 514, 533, 547, 564, 577, 596, 608, 619, 634, 647, 662, 676}
+var _MemoryKind_index = [...]uint16{0, 7, 11, 18, 24, 33, 41, 47, 52, 62, 71, 79, 82, 86, 95, 104, 119, 128, 149, 172, 191, 203, 216, 222, 231, 239, 254, 266, 285, 296, 306, 314, 319, 338, 358, 378, 397, 413, 435, 452, 471, 497, 514, 533, 547, 564, 577, 596, 608, 619, 634, 647, 662, 676, 693, 706, 722, 739, 759, 774, 794, 814, 834, 850, 865, 886, 901, 917, 935, 952, 968, 985, 1004, 1019, 1033}
 
 func (i MemoryKind) String() string {
 	if i >= MemoryKind(len(_MemoryKind_index)-1) {

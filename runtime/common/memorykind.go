@@ -90,4 +90,26 @@ const (
 	MemoryKindSwapStatement
 	MemoryKindSwitchStatement
 	MemoryKindWhileStatement
+
+	MemoryKindBooleanExpression
+	MemoryKindNilExpression
+	MemoryKindStringExpression
+	MemoryKindIntegerExpression
+	MemoryKindFixedPointExpression
+	MemoryKindArrayExpression
+	MemoryKindDictionaryExpression
+	MemoryKindIdentifierExpression
+	MemoryKindInvocationExpression
+	MemoryKindMemberExpression
+	MemoryKindIndexExpression
+	MemoryKindConditionalExpression
+	MemoryKindUnaryExpression
+	MemoryKindBinaryExpression
+	MemoryKindFunctionExpression
+	MemoryKindCastingExpression
+	MemoryKindCreateExpression
+	MemoryKindDestroyExpression
+	MemoryKindReferenceExpression
+	MemoryKindForceExpression
+	MemoryKindPathExpression
 )

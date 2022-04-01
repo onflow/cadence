@@ -453,10 +453,11 @@ func init() {
 		nullDenotation: func(p *parser, token lexer.Token) ast.Expression {
 			parsedString, errs := parseStringLiteral(token.Value.(string))
 			p.report(errs...)
-			return &ast.StringExpression{
-				Value: parsedString,
-				Range: token.Range,
-			}
+			return ast.NewStringExpression(
+				p.memoryGauge,
+				parsedString,
+				token.Range,
+			)
 		},
 	})
 
@@ -767,21 +768,13 @@ func defineIdentifierExpression() {
 		nullDenotation: func(p *parser, token lexer.Token) ast.Expression {
 			switch token.Value {
 			case keywordTrue:
-				return &ast.BoolExpression{
-					Value: true,
-					Range: token.Range,
-				}
+				return ast.NewBoolExpression(p.memoryGauge, true, token.Range)
 
 			case keywordFalse:
-				return &ast.BoolExpression{
-					Value: false,
-					Range: token.Range,
-				}
+				return ast.NewBoolExpression(p.memoryGauge, false, token.Range)
 
 			case keywordNil:
-				return &ast.NilExpression{
-					Pos: token.Range.StartPos,
-				}
+				return ast.NewNilExpression(p.memoryGauge, token.Range.StartPos)
 
 			case keywordCreate:
 				return parseCreateExpressionRemainder(p, token)

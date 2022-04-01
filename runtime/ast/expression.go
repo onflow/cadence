@@ -25,6 +25,8 @@ import (
 	"strings"
 
 	"github.com/turbolent/prettier"
+
+	"github.com/onflow/cadence/runtime/common"
 )
 
 const NilConstant = "nil"
@@ -46,6 +48,14 @@ type BoolExpression struct {
 }
 
 var _ Expression = &BoolExpression{}
+
+func NewBoolExpression(gauge common.MemoryGauge, value bool, exprRange Range) *BoolExpression {
+	common.UseMemory(gauge, common.BooleanExpressionMemoryUsage)
+	return &BoolExpression{
+		Value: value,
+		Range: exprRange,
+	}
+}
 
 func (*BoolExpression) isExpression() {}
 
@@ -99,6 +109,13 @@ type NilExpression struct {
 }
 
 var _ Expression = &NilExpression{}
+
+func NewNilExpression(gauge common.MemoryGauge, pos Position) *NilExpression {
+	common.UseMemory(gauge, common.NilExpressionMemoryUsage)
+	return &NilExpression{
+		Pos: pos,
+	}
+}
 
 func (*NilExpression) isExpression() {}
 
@@ -155,6 +172,14 @@ type StringExpression struct {
 }
 
 var _ Expression = &StringExpression{}
+
+func NewStringExpression(gauge common.MemoryGauge, value string, exprRange Range) *StringExpression {
+	common.UseMemory(gauge, common.StringExpressionMemoryUsage)
+	return &StringExpression{
+		Value: value,
+		Range: exprRange,
+	}
+}
 
 func (*StringExpression) isExpression() {}
 
