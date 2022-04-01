@@ -3343,12 +3343,15 @@ func suggestIntegerLiteralConversionReplacement(
 
 		signed := IsSameTypeKind(targetType, SignedFixedPointType)
 
-		var hintExpression ast.Expression = &ast.FixedPointExpression{
-			Negative:        negative,
-			UnsignedInteger: new(big.Int).Abs(argument.Value),
-			Fractional:      new(big.Int),
-			Scale:           1,
-		}
+		var hintExpression ast.Expression = ast.NewFixedPointExpression(
+			checker.memoryGauge,
+			"",
+			negative,
+			new(big.Int).Abs(argument.Value),
+			new(big.Int),
+			1,
+			argument.Range,
+		)
 
 		// If the fixed-point literal is positive
 		// and the the target fixed-point type is signed,

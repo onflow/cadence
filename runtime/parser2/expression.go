@@ -440,8 +440,9 @@ func init() {
 
 	defineExpr(literalExpr{
 		tokenType: lexer.TokenFixedPointNumberLiteral,
-		nullDenotation: func(_ *parser, token lexer.Token) ast.Expression {
+		nullDenotation: func(p *parser, token lexer.Token) ast.Expression {
 			return parseFixedPointLiteral(
+				p,
 				token.Value.(string),
 				token.Range,
 			)
@@ -1566,12 +1567,7 @@ func parseIntegerLiteral(p *parser, literal, text string, kind IntegerLiteralKin
 		value = new(big.Int)
 	}
 
-	return &ast.IntegerExpression{
-		PositiveLiteral: literal,
-		Value:           value,
-		Base:            base,
-		Range:           tokenRange,
-	}
+	return ast.NewIntegerExpression(p.memoryGauge, literal, value, base, tokenRange)
 }
 
 func parseFixedPointPart(part string) (integer *big.Int, scale uint) {
@@ -1587,17 +1583,18 @@ func parseFixedPointPart(part string) (integer *big.Int, scale uint) {
 	return integer, scale
 }
 
-func parseFixedPointLiteral(literal string, tokenRange ast.Range) *ast.FixedPointExpression {
+func parseFixedPointLiteral(p *parser, literal string, tokenRange ast.Range) *ast.FixedPointExpression {
 	parts := strings.Split(literal, ".")
 	integer, _ := parseFixedPointPart(parts[0])
 	fractional, scale := parseFixedPointPart(parts[1])
 
-	return &ast.FixedPointExpression{
-		PositiveLiteral: literal,
-		Negative:        false,
-		UnsignedInteger: integer,
-		Fractional:      fractional,
-		Scale:           scale,
-		Range:           tokenRange,
-	}
+	return ast.NewFixedPointExpression(
+		p.memoryGauge,
+		literal,
+		false,
+		integer,
+		fractional,
+		scale,
+		tokenRange,
+	)
 }

@@ -227,6 +227,23 @@ type IntegerExpression struct {
 
 var _ Expression = &IntegerExpression{}
 
+func NewIntegerExpression(
+	gauge common.MemoryGauge,
+	literal string,
+	value *big.Int,
+	base int,
+	tokenRange Range,
+) *IntegerExpression {
+	common.UseMemory(gauge, common.IntegerExpressionMemoryUsage)
+
+	return &IntegerExpression{
+		PositiveLiteral: literal,
+		Value:           value,
+		Base:            base,
+		Range:           tokenRange,
+	}
+}
+
 func (*IntegerExpression) isExpression() {}
 
 func (*IntegerExpression) isIfStatementTest() {}
@@ -284,6 +301,27 @@ type FixedPointExpression struct {
 }
 
 var _ Expression = &FixedPointExpression{}
+
+func NewFixedPointExpression(
+	gauge common.MemoryGauge,
+	literal string,
+	isNegative bool,
+	integer *big.Int,
+	fractional *big.Int,
+	scale uint,
+	tokenRange Range,
+) *FixedPointExpression {
+	common.UseMemory(gauge, common.FixedPointExpressionMemoryUsage)
+
+	return &FixedPointExpression{
+		PositiveLiteral: literal,
+		Negative:        isNegative,
+		UnsignedInteger: integer,
+		Fractional:      fractional,
+		Scale:           scale,
+		Range:           tokenRange,
+	}
+}
 
 func (*FixedPointExpression) isExpression() {}
 
