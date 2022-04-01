@@ -62,6 +62,7 @@ func (a *FunctionActivations) EnterFunction(functionType *FunctionType, valueAct
 
 func (a *FunctionActivations) LeaveFunction() {
 	lastIndex := len(a.activations) - 1
+	a.activations[lastIndex] = nil
 	a.activations = a.activations[:lastIndex]
 }
 

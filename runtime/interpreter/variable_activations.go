@@ -187,7 +187,9 @@ func (a *VariableActivations) Pop() {
 	if count < 1 {
 		return
 	}
-	a.activations = a.activations[:count-1]
+	lastIndex := count - 1
+	a.activations[lastIndex] = nil
+	a.activations = a.activations[:lastIndex]
 }
 
 // CurrentOrNew returns the current activation,
