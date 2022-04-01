@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"go/types"
 	"math"
+	"math/big"
 	"strings"
 	"testing"
 
@@ -3446,4 +3447,97 @@ type fakeError struct{}
 
 func (fakeError) Error() string {
 	return "fake error for testing"
+}
+
+func TestNumberValueIntegerConversion(t *testing.T) {
+
+	t.Parallel()
+
+	type converter struct {
+		convert func(NumberValue) (result interface{}, convertible bool)
+		check   func(t *testing.T, result interface{}) bool
+	}
+
+	test := func(
+		t *testing.T,
+		numericType sema.Type,
+		testValue NumberValue,
+		converter converter,
+	) {
+
+		result, convertible := converter.convert(testValue)
+		if !convertible {
+			return
+		}
+		converter.check(t, result)
+	}
+
+	testValues := map[*sema.NumericType]NumberValue{
+		sema.IntType:     NewIntValueFromInt64(42),
+		sema.UIntType:    NewUIntValueFromUint64(42),
+		sema.UInt8Type:   UInt8Value(42),
+		sema.UInt16Type:  UInt16Value(42),
+		sema.UInt32Type:  UInt32Value(42),
+		sema.UInt64Type:  UInt64Value(42),
+		sema.UInt128Type: NewUInt128ValueFromUint64(42),
+		sema.UInt256Type: NewUInt256ValueFromUint64(42),
+		sema.Word8Type:   Word8Value(42),
+		sema.Word16Type:  Word16Value(42),
+		sema.Word32Type:  Word32Value(42),
+		sema.Word64Type:  Word64Value(42),
+		sema.Int8Type:    Int8Value(42),
+		sema.Int16Type:   Int16Value(42),
+		sema.Int32Type:   Int32Value(42),
+		sema.Int64Type:   Int64Value(42),
+		sema.Int128Type:  NewInt128ValueFromInt64(42),
+		sema.Int256Type:  NewInt256ValueFromInt64(42),
+	}
+
+	for _, ty := range sema.AllIntegerTypes {
+		// Only test leaf types
+		switch ty {
+		case sema.IntegerType, sema.SignedIntegerType:
+			continue
+		}
+
+		_, ok := testValues[ty.(*sema.NumericType)]
+		require.True(t, ok, "missing expected value for type %s", ty.String())
+	}
+
+	converters := map[string]converter{
+		"ToInt": {
+			convert: func(value NumberValue) (interface{}, bool) {
+				return value.ToInt(), true
+			},
+			check: func(t *testing.T, result interface{}) bool {
+				return assert.Equal(t, 42, result)
+			},
+		},
+		"ToBigInt": {
+			convert: func(value NumberValue) (interface{}, bool) {
+				bigNumberValue, ok := value.(BigNumberValue)
+				if !ok {
+					return nil, false
+				}
+				return bigNumberValue.ToBigInt(), true
+			},
+			check: func(t *testing.T, result interface{}) bool {
+				return assert.Equal(t, big.NewInt(42), result)
+			},
+		},
+	}
+
+	for numericType, testValue := range testValues {
+
+		t.Run(numericType.String(), func(t *testing.T) {
+
+			for converterName, converter := range converters {
+
+				t.Run(converterName, func(t *testing.T) {
+					test(t, numericType, testValue, converter)
+				})
+
+			}
+		})
+	}
 }

@@ -6069,7 +6069,7 @@ func (UIntValue) StaticType() StaticType {
 }
 
 func (v UIntValue) ToInt() int {
-	if v.BigInt.IsInt64() {
+	if !v.BigInt.IsInt64() {
 		panic(OverflowError{})
 	}
 	return int(v.BigInt.Int64())
