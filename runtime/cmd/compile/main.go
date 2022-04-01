@@ -38,7 +38,7 @@ func main() {
 
 	path := args[1]
 
-	location := common.StringLocation(path)
+	location := common.NewStringLocation(nil, path)
 
 	codes := map[common.LocationID]string{}
 

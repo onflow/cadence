@@ -104,7 +104,7 @@ func NewTypeIDFromQualifiedName(location Location, qualifiedIdentifier string) T
 	return location.TypeID(qualifiedIdentifier)
 }
 
-type TypeIDDecoder func(typeID string) (location Location, qualifiedIdentifier string, err error)
+type TypeIDDecoder func(gauge MemoryGauge, typeID string) (location Location, qualifiedIdentifier string, err error)
 
 var typeIDDecoders = map[string]TypeIDDecoder{}
 
@@ -115,7 +115,7 @@ func RegisterTypeIDDecoder(prefix string, decoder TypeIDDecoder) {
 	typeIDDecoders[prefix] = decoder
 }
 
-func DecodeTypeID(typeID string) (location Location, qualifiedIdentifier string, err error) {
+func DecodeTypeID(gauge MemoryGauge, typeID string) (location Location, qualifiedIdentifier string, err error) {
 	pieces := strings.Split(typeID, ".")
 
 	if len(pieces) < 1 {
@@ -135,7 +135,7 @@ func DecodeTypeID(typeID string) (location Location, qualifiedIdentifier string,
 		return nil, typeID, nil
 	}
 
-	return decoder(typeID)
+	return decoder(gauge, typeID)
 }
 
 // HasImportLocation

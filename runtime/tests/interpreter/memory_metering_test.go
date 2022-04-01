@@ -223,7 +223,7 @@ func TestInterpretCompositeMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(14), meter.getMemory(common.MemoryKindString))
-		assert.Equal(t, uint64(51), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, uint64(66), meter.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindComposite))
 		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindVariable))
 	})
@@ -297,7 +297,7 @@ func TestInterpretCompositeFieldMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(11), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindComposite))
 	})
 
@@ -324,7 +324,7 @@ func TestInterpretCompositeFieldMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, uint64(34), meter.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindComposite))
 	})
 }
@@ -7735,6 +7735,30 @@ func TestTokenMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 		assert.Equal(t, uint64(13), meter.getMemory(common.MemoryKindTokenNumericLiteral))
+	})
+}
+
+func TestInterpreterStringLocationMetering(t *testing.T) {
+	t.Parallel()
+
+	t.Run("creation", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+        struct S {}
+
+        pub fun main(account: AuthAccount) {
+            let s = CompositeType("S.test.S")
+        }
+		`
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+		account := newTestAuthAccountValue(inter, interpreter.AddressValue{})
+		_, err := inter.Invoke("main", account)
+		require.NoError(t, err)
+
+		// raw string location is "test"
+		assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindRawString))
 	})
 }
 
