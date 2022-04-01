@@ -1136,11 +1136,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 			if tc.check != nil {
 				tc.check(t, err)
 			} else {
-				if !assert.NoError(t, err) {
-					for err := err; err != nil; err = errors.Unwrap(err) {
-						t.Log(err)
-					}
-				}
+				assert.NoError(t, err)
 				assert.ElementsMatch(t, tc.expectedLogs, loggedMessages)
 			}
 		})
@@ -1467,11 +1463,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 			if tt.check != nil {
 				tt.check(t, err)
 			} else {
-				if !assert.NoError(t, err) {
-					for err := err; err != nil; err = errors.Unwrap(err) {
-						t.Log(err)
-					}
-				}
+				assert.NoError(t, err)
 				assert.ElementsMatch(t, tt.expectedLogs, loggedMessages)
 			}
 		})
