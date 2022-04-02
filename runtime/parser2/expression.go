@@ -617,13 +617,14 @@ func defineLessThanOrTypeArgumentsExpression() {
 
 				arguments, endPos := parseArgumentListRemainder(p)
 
-				invocationExpression := &ast.InvocationExpression{
-					InvokedExpression: left,
-					TypeArguments:     typeArguments,
-					Arguments:         arguments,
-					ArgumentsStartPos: argumentsStartPos,
-					EndPos:            endPos,
-				}
+				invocationExpression := ast.NewInvocationExpression(
+					p.memoryGauge,
+					left,
+					typeArguments,
+					arguments,
+					argumentsStartPos,
+					endPos,
+				)
 
 				return invocationExpression, false
 
@@ -886,12 +887,14 @@ func defineInvocationExpression() {
 		lexer.TokenParenOpen,
 		func(p *parser, token lexer.Token, left ast.Expression) ast.Expression {
 			arguments, endPos := parseArgumentListRemainder(p)
-			return &ast.InvocationExpression{
-				InvokedExpression: left,
-				Arguments:         arguments,
-				ArgumentsStartPos: token.EndPos,
-				EndPos:            endPos,
-			}
+			return ast.NewInvocationExpression(
+				p.memoryGauge,
+				left,
+				nil,
+				arguments,
+				token.EndPos,
+				endPos,
+			)
 		},
 	)
 }
@@ -1062,14 +1065,15 @@ func defineIndexExpression() {
 		func(p *parser, token lexer.Token, left ast.Expression) ast.Expression {
 			firstIndexExpr := parseExpression(p, lowestBindingPower)
 			endToken := p.mustOne(lexer.TokenBracketClose)
-			return &ast.IndexExpression{
-				TargetExpression:   left,
-				IndexingExpression: firstIndexExpr,
-				Range: ast.Range{
+			return ast.NewIndexExpression(
+				p.memoryGauge,
+				left,
+				firstIndexExpr,
+				ast.Range{
 					StartPos: token.StartPos,
 					EndPos:   endToken.EndPos,
 				},
-			}
+			)
 		},
 	)
 }
@@ -1182,14 +1186,15 @@ func parseMemberAccess(p *parser, token lexer.Token, left ast.Expression, option
 		))
 	}
 
-	return &ast.MemberExpression{
-		Expression: left,
-		Optional:   optional,
+	return ast.NewMemberExpression(
+		p.memoryGauge,
+		left,
+		optional,
 		// NOTE: use the end position, because the token
 		// can be an optional access token `?.`
-		AccessPos:  token.EndPos,
-		Identifier: identifier,
-	}
+		token.EndPos,
+		identifier,
+	)
 }
 
 func exprLeftDenotationAllowsNewlineAfterNullDenotation(tokenType lexer.TokenType) bool {

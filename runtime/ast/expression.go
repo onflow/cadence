@@ -399,6 +399,8 @@ func NewArrayExpression(
 	values []Expression,
 	tokenRange Range,
 ) *ArrayExpression {
+
+	// TODO: Also consider the length of values
 	common.UseMemory(gauge, common.ArrayExpressionMemoryUsage)
 
 	return &ArrayExpression{
@@ -682,6 +684,25 @@ type InvocationExpression struct {
 
 var _ Expression = &InvocationExpression{}
 
+func NewInvocationExpression(
+	gauge common.MemoryGauge,
+	invokedExpression Expression,
+	typeArguments []*TypeAnnotation,
+	arguments Arguments,
+	argsStartPos Position,
+	endPos Position,
+) *InvocationExpression {
+	common.UseMemory(gauge, common.InvocationExpressionMemoryUsage)
+
+	return &InvocationExpression{
+		InvokedExpression: invokedExpression,
+		TypeArguments:     typeArguments,
+		Arguments:         arguments,
+		ArgumentsStartPos: argsStartPos,
+		EndPos:            endPos,
+	}
+}
+
 func (*InvocationExpression) isExpression() {}
 
 func (*InvocationExpression) isIfStatementTest() {}
@@ -809,6 +830,23 @@ type MemberExpression struct {
 
 var _ Expression = &MemberExpression{}
 
+func NewMemberExpression(
+	gauge common.MemoryGauge,
+	expression Expression,
+	optional bool,
+	accessPos Position,
+	identifier Identifier,
+) *MemberExpression {
+	common.UseMemory(gauge, common.MemberExpressionMemoryUsage)
+
+	return &MemberExpression{
+		Expression: expression,
+		Optional:   optional,
+		AccessPos:  accessPos,
+		Identifier: identifier,
+	}
+}
+
 func (*MemberExpression) isExpression() {}
 
 func (*MemberExpression) isIfStatementTest() {}
@@ -901,6 +939,21 @@ type IndexExpression struct {
 }
 
 var _ Expression = &IndexExpression{}
+
+func NewIndexExpression(
+	gauge common.MemoryGauge,
+	target Expression,
+	index Expression,
+	tokenRange Range,
+) *IndexExpression {
+	common.UseMemory(gauge, common.IndexExpressionMemoryUsage)
+
+	return &IndexExpression{
+		TargetExpression:   target,
+		IndexingExpression: index,
+		Range:              tokenRange,
+	}
+}
 
 func (*IndexExpression) isExpression() {}
 

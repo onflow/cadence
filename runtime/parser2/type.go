@@ -765,18 +765,23 @@ func parseNominalTypeInvocationRemainder(p *parser) *ast.InvocationExpression {
 	)
 
 	for _, nestedIdentifier := range ty.NestedIdentifiers {
-		invokedExpression = &ast.MemberExpression{
-			Expression: invokedExpression,
-			Identifier: nestedIdentifier,
-		}
+		invokedExpression = ast.NewMemberExpression(
+			p.memoryGauge,
+			invokedExpression,
+			false,
+			nestedIdentifier.Pos,
+			nestedIdentifier,
+		)
 	}
 
-	return &ast.InvocationExpression{
-		InvokedExpression: invokedExpression,
-		Arguments:         arguments,
-		ArgumentsStartPos: argumentsStartPos,
-		EndPos:            endPos,
-	}
+	return ast.NewInvocationExpression(
+		p.memoryGauge,
+		invokedExpression,
+		nil,
+		arguments,
+		argumentsStartPos,
+		endPos,
+	)
 }
 
 // parseCommaSeparatedTypeAnnotations parses zero or more type annotations separated by comma.
