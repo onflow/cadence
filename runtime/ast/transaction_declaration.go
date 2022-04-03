@@ -152,3 +152,7 @@ func (d *TransactionDeclaration) Doc() prettier.Doc {
 		blockEndDoc,
 	)
 }
+
+func (d *TransactionDeclaration) String() string {
+	return Prettier(d)
+}

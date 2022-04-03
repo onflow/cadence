@@ -19,6 +19,8 @@
 package ast
 
 import (
+	"fmt"
+
 	"github.com/turbolent/prettier"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -26,6 +28,7 @@ import (
 
 type Declaration interface {
 	Element
+	fmt.Stringer
 	isDeclaration()
 	DeclarationIdentifier() *Identifier
 	DeclarationKind() common.DeclarationKind

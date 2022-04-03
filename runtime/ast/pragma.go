@@ -84,3 +84,7 @@ func (d *PragmaDeclaration) Doc() prettier.Doc {
 		d.Expression.Doc(),
 	}
 }
+
+func (d *PragmaDeclaration) String() string {
+	return Prettier(d)
+}

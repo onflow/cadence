@@ -140,6 +140,10 @@ func (d *ImportDeclaration) Doc() prettier.Doc {
 	)
 }
 
+func (d *ImportDeclaration) String() string {
+	return Prettier(d)
+}
+
 func LocationDoc(location common.Location) prettier.Doc {
 	switch location := location.(type) {
 	case common.AddressLocation:

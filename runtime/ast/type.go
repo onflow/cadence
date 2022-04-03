@@ -21,7 +21,6 @@ package ast
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/turbolent/prettier"
 )
@@ -37,10 +36,7 @@ type TypeAnnotation struct {
 }
 
 func (t *TypeAnnotation) String() string {
-	if t.IsResource {
-		return fmt.Sprintf("@%s", t.Type)
-	}
-	return fmt.Sprint(t.Type)
+	return Prettier(t)
 }
 
 func (t *TypeAnnotation) StartPosition() Position {
@@ -102,13 +98,7 @@ var _ Type = &NominalType{}
 func (*NominalType) isType() {}
 
 func (t *NominalType) String() string {
-	var sb strings.Builder
-	sb.WriteString(t.Identifier.String())
-	for _, identifier := range t.NestedIdentifiers {
-		sb.WriteRune('.')
-		sb.WriteString(identifier.String())
-	}
-	return sb.String()
+	return Prettier(t)
 }
 
 func (t *NominalType) StartPosition() Position {
@@ -125,7 +115,19 @@ func (t *NominalType) EndPosition() Position {
 }
 
 func (t *NominalType) Doc() prettier.Doc {
-	return prettier.Text(t.String())
+	var doc prettier.Doc = prettier.Text(t.Identifier.String())
+	if len(t.NestedIdentifiers) > 0 {
+		concat := prettier.Concat{doc}
+		for _, identifier := range t.NestedIdentifiers {
+			concat = append(
+				concat,
+				prettier.Text("."),
+				prettier.Text(identifier.String()),
+			)
+		}
+		doc = concat
+	}
+	return doc
 }
 
 func (t *NominalType) MarshalJSON() ([]byte, error) {
@@ -161,7 +163,7 @@ var _ Type = &OptionalType{}
 func (*OptionalType) isType() {}
 
 func (t *OptionalType) String() string {
-	return fmt.Sprintf("%s?", t.Type)
+	return Prettier(t)
 }
 
 func (t *OptionalType) StartPosition() Position {
@@ -210,7 +212,7 @@ var _ Type = &VariableSizedType{}
 func (*VariableSizedType) isType() {}
 
 func (t *VariableSizedType) String() string {
-	return fmt.Sprintf("[%s]", t.Type)
+	return Prettier(t)
 }
 
 const arrayTypeStartDoc = prettier.Text("[")
@@ -258,7 +260,7 @@ var _ Type = &ConstantSizedType{}
 func (*ConstantSizedType) isType() {}
 
 func (t *ConstantSizedType) String() string {
-	return fmt.Sprintf("[%s; %s]", t.Type, t.Size)
+	return Prettier(t)
 }
 
 const constantSizedTypeSeparatorSpaceDoc = prettier.Text("; ")
@@ -307,7 +309,7 @@ var _ Type = &DictionaryType{}
 func (*DictionaryType) isType() {}
 
 func (t *DictionaryType) String() string {
-	return fmt.Sprintf("{%s: %s}", t.KeyType, t.ValueType)
+	return Prettier(t)
 }
 
 const dictionaryTypeStartDoc = prettier.Text("{")
@@ -357,15 +359,7 @@ var _ Type = &FunctionType{}
 func (*FunctionType) isType() {}
 
 func (t *FunctionType) String() string {
-	var parameters strings.Builder
-	for i, parameterTypeAnnotation := range t.ParameterTypeAnnotations {
-		if i > 0 {
-			parameters.WriteString(", ")
-		}
-		parameters.WriteString(parameterTypeAnnotation.String())
-	}
-
-	return fmt.Sprintf("((%s): %s)", parameters.String(), t.ReturnTypeAnnotation.String())
+	return Prettier(t)
 }
 
 const functionTypeStartDoc = prettier.Text("(")
@@ -437,13 +431,7 @@ var _ Type = &ReferenceType{}
 func (*ReferenceType) isType() {}
 
 func (t *ReferenceType) String() string {
-	var builder strings.Builder
-	if t.Authorized {
-		builder.WriteString("auth ")
-	}
-	builder.WriteRune('&')
-	builder.WriteString(t.Type.String())
-	return builder.String()
+	return Prettier(t)
 }
 
 func (t *ReferenceType) StartPosition() Position {
@@ -500,19 +488,7 @@ var _ Type = &RestrictedType{}
 func (*RestrictedType) isType() {}
 
 func (t *RestrictedType) String() string {
-	var builder strings.Builder
-	if t.Type != nil {
-		builder.WriteString(t.Type.String())
-	}
-	builder.WriteRune('{')
-	for i, restriction := range t.Restrictions {
-		if i > 0 {
-			builder.WriteString(", ")
-		}
-		builder.WriteString(restriction.String())
-	}
-	builder.WriteRune('}')
-	return builder.String()
+	return Prettier(t)
 }
 
 const restrictedTypeStartDoc = prettier.Text("{")
@@ -587,17 +563,7 @@ var _ Type = &InstantiationType{}
 func (*InstantiationType) isType() {}
 
 func (t *InstantiationType) String() string {
-	var sb strings.Builder
-	sb.WriteString(t.Type.String())
-	sb.WriteRune('<')
-	for i, typeArgument := range t.TypeArguments {
-		if i > 0 {
-			sb.WriteString(", ")
-		}
-		sb.WriteString(typeArgument.String())
-	}
-	sb.WriteRune('>')
-	return sb.String()
+	return Prettier(t)
 }
 
 func (t *InstantiationType) StartPosition() Position {

@@ -174,3 +174,68 @@ func TestImportDeclaration_Doc(t *testing.T) {
 		)
 	})
 }
+
+func TestImportDeclaration_String(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("no identifiers", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &ImportDeclaration{
+			Location: common.StringLocation("test"),
+		}
+
+		require.Equal(
+			t,
+			`import "test"`,
+			decl.String(),
+		)
+	})
+
+	t.Run("one identifier", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &ImportDeclaration{
+			Identifiers: []Identifier{
+				{
+					Identifier: "foo",
+				},
+			},
+			Location: common.AddressLocation{
+				Address: common.MustBytesToAddress([]byte{0x1}),
+			},
+		}
+
+		require.Equal(
+			t,
+			`import foo from 0x1`,
+			decl.String(),
+		)
+	})
+
+	t.Run("two identifiers", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &ImportDeclaration{
+			Identifiers: []Identifier{
+				{
+					Identifier: "foo",
+				},
+				{
+					Identifier: "bar",
+				},
+			},
+			Location: common.IdentifierLocation("test"),
+		}
+
+		require.Equal(
+			t,
+			`import foo, bar from test`,
+			decl.String(),
+		)
+	})
+}

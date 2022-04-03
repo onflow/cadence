@@ -340,3 +340,127 @@ func TestTransactionDeclaration_Doc(t *testing.T) {
 		decl.Doc(),
 	)
 }
+
+func TestTransactionDeclaration_String(t *testing.T) {
+
+	t.Parallel()
+
+	decl := &TransactionDeclaration{
+		ParameterList: &ParameterList{
+			Parameters: []*Parameter{
+				{
+					Identifier: Identifier{
+						Identifier: "x",
+					},
+					TypeAnnotation: &TypeAnnotation{
+						Type: &NominalType{
+							Identifier: Identifier{
+								Identifier: "X",
+							},
+						},
+					},
+				},
+			},
+		},
+		Fields: []*FieldDeclaration{
+			{
+				Access:       AccessPublic,
+				VariableKind: VariableKindConstant,
+				Identifier: Identifier{
+					Identifier: "f",
+				},
+				TypeAnnotation: &TypeAnnotation{
+					IsResource: true,
+					Type: &NominalType{
+						Identifier: Identifier{
+							Identifier: "F",
+						},
+					},
+				},
+			},
+		},
+		Prepare: &SpecialFunctionDeclaration{
+			Kind: common.DeclarationKindPrepare,
+			FunctionDeclaration: &FunctionDeclaration{
+				ParameterList: &ParameterList{
+					Parameters: []*Parameter{
+						{
+							Identifier: Identifier{
+								Identifier: "signer",
+							},
+							TypeAnnotation: &TypeAnnotation{
+								Type: &NominalType{
+									Identifier: Identifier{
+										Identifier: "AuthAccount",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		PreConditions: &Conditions{
+			{
+				Kind: ConditionKindPre,
+				Test: &BoolExpression{
+					Value: true,
+				},
+				Message: &StringExpression{
+					Value: "pre",
+				},
+			},
+		},
+		Execute: &SpecialFunctionDeclaration{
+			Kind: common.DeclarationKindExecute,
+			FunctionDeclaration: &FunctionDeclaration{
+				FunctionBlock: &FunctionBlock{
+					Block: &Block{
+						Statements: []Statement{
+							&ExpressionStatement{
+								&StringExpression{
+									Value: "xyz",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		PostConditions: &Conditions{
+			{
+				Kind: ConditionKindPre,
+				Test: &BoolExpression{
+					Value: false,
+				},
+				Message: &StringExpression{
+					Value: "post",
+				},
+			},
+		},
+	}
+
+	require.Equal(
+		t,
+		"transaction(x: X) {\n"+
+			"    pub let f: @F\n"+
+			"    \n"+
+			"    prepare(signer: AuthAccount) {}\n"+
+			"    \n"+
+			"    pre {\n"+
+			"        true:\n"+
+			"            \"pre\"\n"+
+			"    }\n"+
+			"    \n"+
+			"    execute {\n"+
+			"        \"xyz\"\n"+
+			"    }\n"+
+			"    \n"+
+			"    post {\n"+
+			"        false:\n"+
+			"            \"post\"\n"+
+			"    }\n"+
+			"}",
+		decl.String(),
+	)
+}

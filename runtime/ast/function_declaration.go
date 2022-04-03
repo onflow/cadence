@@ -122,6 +122,10 @@ func (d *FunctionDeclaration) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (d *FunctionDeclaration) String() string {
+	return Prettier(d)
+}
+
 // SpecialFunctionDeclaration
 
 type SpecialFunctionDeclaration struct {
@@ -195,4 +199,8 @@ func (d *SpecialFunctionDeclaration) MarshalJSON() ([]byte, error) {
 		Range: NewRangeFromPositioned(d),
 		Alias: (*Alias)(d),
 	})
+}
+
+func (d *SpecialFunctionDeclaration) String() string {
+	return Prettier(d)
 }

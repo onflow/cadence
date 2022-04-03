@@ -261,6 +261,117 @@ func TestFieldDeclaration_Doc(t *testing.T) {
 
 }
 
+func TestFieldDeclaration_String(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("with access, with kind", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &FieldDeclaration{
+			Access:       AccessPublic,
+			VariableKind: VariableKindConstant,
+			Identifier: Identifier{
+				Identifier: "xyz",
+			},
+			TypeAnnotation: &TypeAnnotation{
+				IsResource: true,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "CD",
+					},
+				},
+			},
+		}
+
+		require.Equal(
+			t,
+			"pub let xyz: @CD",
+			decl.String(),
+		)
+	})
+
+	t.Run("without access, with kind", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &FieldDeclaration{
+			VariableKind: VariableKindConstant,
+			Identifier: Identifier{
+				Identifier: "xyz",
+			},
+			TypeAnnotation: &TypeAnnotation{
+				IsResource: true,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "CD",
+					},
+				},
+			},
+		}
+
+		require.Equal(
+			t,
+			"let xyz: @CD",
+			decl.String(),
+		)
+	})
+
+	t.Run("with access, without kind", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &FieldDeclaration{
+			Access: AccessPublic,
+			Identifier: Identifier{
+				Identifier: "xyz",
+			},
+			TypeAnnotation: &TypeAnnotation{
+				IsResource: true,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "CD",
+					},
+				},
+			},
+		}
+
+		require.Equal(
+			t,
+			"pub xyz: @CD",
+			decl.String(),
+		)
+
+	})
+
+	t.Run("without access, without kind", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &FieldDeclaration{
+			Identifier: Identifier{
+				Identifier: "xyz",
+			},
+			TypeAnnotation: &TypeAnnotation{
+				IsResource: true,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "CD",
+					},
+				},
+			},
+		}
+
+		require.Equal(
+			t,
+			"xyz: @CD",
+			decl.String(),
+		)
+	})
+
+}
+
 func TestCompositeDeclaration_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
@@ -602,4 +713,196 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 			decl.Doc(),
 		)
 	})
+}
+
+func TestCompositeDeclaration_String(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("no members, conformances", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &CompositeDeclaration{
+			Access:        AccessPublic,
+			CompositeKind: common.CompositeKindResource,
+			Identifier: Identifier{
+				Identifier: "AB",
+			},
+			Conformances: []*NominalType{
+				{
+					Identifier: Identifier{
+						Identifier: "CD",
+					},
+				},
+				{
+					Identifier: Identifier{
+						Identifier: "EF",
+					},
+				},
+			},
+			Members: NewMembers([]Declaration{}),
+		}
+
+		require.Equal(
+			t,
+			"pub resource AB: CD, EF {}",
+			decl.String(),
+		)
+	})
+
+	t.Run("members, conformances", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &CompositeDeclaration{
+			Access:        AccessPublic,
+			CompositeKind: common.CompositeKindResource,
+			Identifier: Identifier{
+				Identifier: "AB",
+			},
+			Conformances: []*NominalType{
+				{
+					Identifier: Identifier{
+						Identifier: "CD",
+					},
+				},
+				{
+					Identifier: Identifier{
+						Identifier: "EF",
+					},
+				},
+			},
+			Members: NewMembers([]Declaration{
+				&FieldDeclaration{
+					Identifier: Identifier{
+						Identifier: "x",
+					},
+					TypeAnnotation: &TypeAnnotation{
+						Type: &NominalType{
+							Identifier: Identifier{
+								Identifier: "X",
+							},
+						},
+					},
+				},
+			}),
+		}
+
+		require.Equal(
+			t,
+			"pub resource AB: CD, EF {\n"+
+				"    x: X\n"+
+				"}",
+			decl.String(),
+		)
+	})
+
+	t.Run("event", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &CompositeDeclaration{
+			Access:        AccessPublic,
+			CompositeKind: common.CompositeKindEvent,
+			Identifier: Identifier{
+				Identifier: "AB",
+			},
+			Members: NewMembers([]Declaration{
+				&SpecialFunctionDeclaration{
+					Kind: common.DeclarationKindInitializer,
+					FunctionDeclaration: &FunctionDeclaration{
+						ParameterList: &ParameterList{
+							Parameters: []*Parameter{
+								{
+									Identifier: Identifier{Identifier: "e"},
+									TypeAnnotation: &TypeAnnotation{
+										Type: &NominalType{
+											Identifier: Identifier{Identifier: "E"},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}),
+		}
+
+		require.Equal(
+			t,
+			"pub event AB(e: E)",
+			decl.String(),
+		)
+	})
+
+	t.Run("enum", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &CompositeDeclaration{
+			Access:        AccessPublic,
+			CompositeKind: common.CompositeKindEnum,
+			Identifier: Identifier{
+				Identifier: "AB",
+			},
+			Conformances: []*NominalType{
+				{
+					Identifier: Identifier{
+						Identifier: "CD",
+					},
+				},
+			},
+			Members: NewMembers([]Declaration{
+				&EnumCaseDeclaration{
+					Identifier: Identifier{
+						Identifier: "x",
+					},
+				},
+			}),
+		}
+
+		require.Equal(
+			t,
+			"pub enum AB: CD {\n"+
+				"    case x\n"+
+				"}",
+			decl.String(),
+		)
+	})
+}
+
+func TestEnumCaseDeclaration_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	decl := &EnumCaseDeclaration{
+		Identifier: Identifier{
+			Identifier: "x",
+		},
+	}
+
+	require.Equal(t,
+		prettier.Concat{
+			prettier.Text("case "),
+			prettier.Text("x"),
+		},
+		decl.Doc(),
+	)
+}
+
+func TestEnumCaseDeclaration_String(t *testing.T) {
+
+	t.Parallel()
+
+	decl := &EnumCaseDeclaration{
+		Identifier: Identifier{
+			Identifier: "x",
+		},
+	}
+
+	require.Equal(t,
+		"case x",
+		decl.String(),
+	)
 }

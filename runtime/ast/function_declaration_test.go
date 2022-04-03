@@ -250,6 +250,53 @@ func TestFunctionDeclaration_Doc(t *testing.T) {
 	)
 }
 
+func TestFunctionDeclaration_String(t *testing.T) {
+
+	t.Parallel()
+
+	decl := &FunctionDeclaration{
+		Access: AccessPublic,
+		Identifier: Identifier{
+			Identifier: "xyz",
+		},
+		ParameterList: &ParameterList{
+			Parameters: []*Parameter{
+				{
+					Label: "ok",
+					Identifier: Identifier{
+						Identifier: "foobar",
+					},
+					TypeAnnotation: &TypeAnnotation{
+						Type: &NominalType{
+							Identifier: Identifier{
+								Identifier: "AB",
+							},
+						},
+					},
+				},
+			},
+		},
+		ReturnTypeAnnotation: &TypeAnnotation{
+			IsResource: true,
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "CD",
+				},
+			},
+		},
+		FunctionBlock: &FunctionBlock{
+			Block: &Block{
+				Statements: []Statement{},
+			},
+		},
+	}
+
+	require.Equal(t,
+		"pub fun xyz(ok foobar: AB): @CD {}",
+		decl.String(),
+	)
+}
+
 func TestSpecialFunctionDeclaration_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
@@ -477,5 +524,55 @@ func TestSpecialFunctionDeclaration_Doc(t *testing.T) {
 			prettier.Text(" {}"),
 		},
 		decl.Doc(),
+	)
+}
+
+func TestSpecialFunctionDeclaration_String(t *testing.T) {
+
+	t.Parallel()
+
+	decl := &SpecialFunctionDeclaration{
+		Kind: common.DeclarationKindInitializer,
+		FunctionDeclaration: &FunctionDeclaration{
+			Access: AccessNotSpecified,
+			Identifier: Identifier{
+				Identifier: "xyz",
+			},
+			ParameterList: &ParameterList{
+				Parameters: []*Parameter{
+					{
+						Label: "ok",
+						Identifier: Identifier{
+							Identifier: "foobar",
+						},
+						TypeAnnotation: &TypeAnnotation{
+							Type: &NominalType{
+								Identifier: Identifier{
+									Identifier: "AB",
+								},
+							},
+						},
+					},
+				},
+			},
+			ReturnTypeAnnotation: &TypeAnnotation{
+				IsResource: true,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "CD",
+					},
+				},
+			},
+			FunctionBlock: &FunctionBlock{
+				Block: &Block{
+					Statements: []Statement{},
+				},
+			},
+		},
+	}
+
+	require.Equal(t,
+		"init(ok foobar: AB): @CD {}",
+		decl.String(),
 	)
 }

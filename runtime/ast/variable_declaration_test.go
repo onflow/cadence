@@ -276,3 +276,78 @@ func TestVariableDeclaration_Doc(t *testing.T) {
 		)
 	})
 }
+
+func TestVariableDeclaration_String(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("with one value", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &VariableDeclaration{
+			Access:     AccessPublic,
+			IsConstant: true,
+			Identifier: Identifier{
+				Identifier: "foo",
+			},
+			TypeAnnotation: &TypeAnnotation{
+				IsResource: true,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "AB",
+					},
+				},
+			},
+			Value: &BoolExpression{
+				Value: true,
+			},
+			Transfer: &Transfer{
+				Operation: TransferOperationMove,
+			},
+		}
+
+		require.Equal(t,
+			"pub let foo: @AB <- true",
+			decl.String(),
+		)
+	})
+
+	t.Run("with second value", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &VariableDeclaration{
+			Access:     AccessPublic,
+			IsConstant: true,
+			Identifier: Identifier{
+				Identifier: "foo",
+			},
+			TypeAnnotation: &TypeAnnotation{
+				IsResource: true,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "AB",
+					},
+				},
+			},
+			Value: &BoolExpression{
+				Value: true,
+			},
+			Transfer: &Transfer{
+				Operation: TransferOperationMove,
+			},
+			SecondTransfer: &Transfer{
+				Operation: TransferOperationMove,
+			},
+			SecondValue: &BoolExpression{
+				Value: false,
+			},
+		}
+
+		require.Equal(t,
+			"pub let foo: @AB <- true <- false",
+			decl.String(),
+		)
+	})
+}

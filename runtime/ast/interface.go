@@ -95,3 +95,7 @@ func (d *InterfaceDeclaration) Doc() prettier.Doc {
 		d.Members,
 	)
 }
+
+func (d *InterfaceDeclaration) String() string {
+	return Prettier(d)
+}

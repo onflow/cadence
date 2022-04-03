@@ -85,3 +85,20 @@ func TestPragmaDeclaration_Doc(t *testing.T) {
 		decl.Doc(),
 	)
 }
+
+func TestPragmaDeclaration_String(t *testing.T) {
+
+	t.Parallel()
+
+	decl := &PragmaDeclaration{
+		Expression: &BoolExpression{
+			Value: false,
+		},
+	}
+
+	require.Equal(
+		t,
+		"#false",
+		decl.String(),
+	)
+}

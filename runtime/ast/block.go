@@ -74,6 +74,10 @@ func StatementsDoc(statements []Statement) prettier.Doc {
 	return doc
 }
 
+func (b *Block) String() interface{} {
+	return Prettier(b)
+}
+
 func (b *Block) MarshalJSON() ([]byte, error) {
 	type Alias Block
 	return json.Marshal(&struct {
@@ -180,6 +184,10 @@ func (b *FunctionBlock) Doc() prettier.Doc {
 		prettier.HardLine{},
 		blockEndDoc,
 	}
+}
+
+func (b *FunctionBlock) String() interface{} {
+	return Prettier(b)
 }
 
 // Condition

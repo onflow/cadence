@@ -201,3 +201,7 @@ func (d *VariableDeclaration) MarshalJSON() ([]byte, error) {
 		Alias: (*Alias)(d),
 	})
 }
+
+func (d *VariableDeclaration) String() string {
+	return Prettier(d)
+}

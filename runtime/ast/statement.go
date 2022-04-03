@@ -20,12 +20,14 @@ package ast
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/turbolent/prettier"
 )
 
 type Statement interface {
 	Element
+	fmt.Stringer
 	isStatement()
 	Doc() prettier.Doc
 }
@@ -65,6 +67,10 @@ func (s *ReturnStatement) Doc() prettier.Doc {
 	}
 }
 
+func (s *ReturnStatement) String() string {
+	return Prettier(s)
+}
+
 func (s *ReturnStatement) MarshalJSON() ([]byte, error) {
 	type Alias ReturnStatement
 	return json.Marshal(&struct {
@@ -100,6 +106,10 @@ func (*BreakStatement) Doc() prettier.Doc {
 	return breakStatementKeywordDoc
 }
 
+func (s *BreakStatement) String() string {
+	return Prettier(s)
+}
+
 func (s *BreakStatement) MarshalJSON() ([]byte, error) {
 	type Alias BreakStatement
 	return json.Marshal(&struct {
@@ -133,6 +143,10 @@ const continueStatementKeywordDoc = prettier.Text("continue")
 
 func (*ContinueStatement) Doc() prettier.Doc {
 	return continueStatementKeywordDoc
+}
+
+func (s *ContinueStatement) String() string {
+	return Prettier(s)
 }
 
 func (s *ContinueStatement) MarshalJSON() ([]byte, error) {
@@ -203,7 +217,7 @@ func (s *IfStatement) Doc() prettier.Doc {
 		s.Then.Doc(),
 	}
 
-	if s.Else != nil {
+	if s.Else != nil && len(s.Else.Statements) > 0 {
 		var elseDoc prettier.Doc
 		if len(s.Else.Statements) == 1 {
 			if elseIfStatement, ok := s.Else.Statements[0].(*IfStatement); ok {
@@ -226,6 +240,10 @@ func (s *IfStatement) Doc() prettier.Doc {
 	return prettier.Group{
 		Doc: doc,
 	}
+}
+
+func (s *IfStatement) String() string {
+	return Prettier(s)
 }
 
 func (s *IfStatement) MarshalJSON() ([]byte, error) {
@@ -281,6 +299,10 @@ func (s *WhileStatement) Doc() prettier.Doc {
 			s.Block.Doc(),
 		},
 	}
+}
+
+func (s *WhileStatement) String() string {
+	return Prettier(s)
 }
 
 func (s *WhileStatement) MarshalJSON() ([]byte, error) {
@@ -357,6 +379,10 @@ func (s *ForStatement) Doc() prettier.Doc {
 	}
 }
 
+func (s *ForStatement) String() string {
+	return Prettier(s)
+}
+
 func (s *ForStatement) MarshalJSON() ([]byte, error) {
 	type Alias ForStatement
 	return json.Marshal(&struct {
@@ -404,6 +430,10 @@ func (s *EmitStatement) Doc() prettier.Doc {
 		emitStatementKeywordSpaceDoc,
 		s.InvocationExpression.Doc(),
 	}
+}
+
+func (s *EmitStatement) String() string {
+	return Prettier(s)
 }
 
 func (s *EmitStatement) MarshalJSON() ([]byte, error) {
@@ -464,6 +494,10 @@ func (s *AssignmentStatement) Doc() prettier.Doc {
 	}
 }
 
+func (s *AssignmentStatement) String() string {
+	return Prettier(s)
+}
+
 func (s *AssignmentStatement) MarshalJSON() ([]byte, error) {
 	type Alias AssignmentStatement
 	return json.Marshal(&struct {
@@ -515,6 +549,10 @@ func (s *SwapStatement) Doc() prettier.Doc {
 			s.Right.Doc(),
 		},
 	}
+}
+
+func (s *SwapStatement) String() string {
+	return Prettier(s)
 }
 
 func (s *SwapStatement) MarshalJSON() ([]byte, error) {
@@ -571,6 +609,10 @@ func (s *ExpressionStatement) MarshalJSON() ([]byte, error) {
 		Range: NewRangeFromPositioned(s),
 		Alias: (*Alias)(s),
 	})
+}
+
+func (s *ExpressionStatement) String() string {
+	return Prettier(s)
 }
 
 // SwitchStatement
@@ -634,6 +676,10 @@ func (s *SwitchStatement) Doc() prettier.Doc {
 		prettier.HardLine{},
 		blockEndDoc,
 	}
+}
+
+func (s *SwitchStatement) String() string {
+	return Prettier(s)
 }
 
 func (s *SwitchStatement) MarshalJSON() ([]byte, error) {

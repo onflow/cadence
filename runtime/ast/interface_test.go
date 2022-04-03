@@ -167,3 +167,65 @@ func TestInterfaceDeclaration_Doc(t *testing.T) {
 
 	})
 }
+
+func TestInterfaceDeclaration_String(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("no members", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &InterfaceDeclaration{
+			Access:        AccessPublic,
+			CompositeKind: common.CompositeKindResource,
+			Identifier: Identifier{
+				Identifier: "AB",
+			},
+			Members: NewMembers([]Declaration{}),
+		}
+
+		require.Equal(
+			t,
+			"pub resource interface AB {}",
+			decl.String(),
+		)
+
+	})
+
+	t.Run("members", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &InterfaceDeclaration{
+			Access:        AccessPublic,
+			CompositeKind: common.CompositeKindResource,
+			Identifier: Identifier{
+				Identifier: "AB",
+			},
+			Members: NewMembers([]Declaration{
+				&FieldDeclaration{
+					Identifier: Identifier{
+						Identifier: "x",
+					},
+					TypeAnnotation: &TypeAnnotation{
+						Type: &NominalType{
+							Identifier: Identifier{
+								Identifier: "X",
+							},
+						},
+					},
+				},
+			}),
+		}
+
+		require.Equal(
+			t,
+			"pub resource interface AB {\n"+
+				"    x: X\n"+
+				"}",
+			decl.String(),
+		)
+
+	})
+}

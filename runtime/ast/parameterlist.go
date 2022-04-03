@@ -107,3 +107,7 @@ func (l *ParameterList) Doc() prettier.Doc {
 		prettier.SoftLine{},
 	)
 }
+
+func (l *ParameterList) String() string {
+	return Prettier(l)
+}

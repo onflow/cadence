@@ -50,6 +50,25 @@ func TestTypeAnnotation_Doc(t *testing.T) {
 	)
 }
 
+func TestTypeAnnotation_String(t *testing.T) {
+
+	t.Parallel()
+
+	ty := &TypeAnnotation{
+		IsResource: true,
+		Type: &NominalType{
+			Identifier: Identifier{
+				Identifier: "R",
+			},
+		},
+	}
+
+	assert.Equal(t,
+		"@R",
+		ty.String(),
+	)
+}
+
 func TestTypeAnnotation_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
@@ -94,16 +113,100 @@ func TestNominalType_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &NominalType{
-		Identifier: Identifier{
-			Identifier: "R",
-		},
-	}
+	t.Run("simple", func(t *testing.T) {
 
-	assert.Equal(t,
-		prettier.Text("R"),
-		ty.Doc(),
-	)
+		t.Parallel()
+
+		ty := &NominalType{
+			Identifier: Identifier{
+				Identifier: "R",
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Text("R"),
+			ty.Doc(),
+		)
+
+	})
+
+	t.Run("nested", func(t *testing.T) {
+
+		t.Parallel()
+
+		ty := &NominalType{
+			Identifier: Identifier{
+				Identifier: "R",
+			},
+			NestedIdentifiers: []Identifier{
+				{
+					Identifier: "S",
+				},
+				{
+					Identifier: "T",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("R"),
+				prettier.Text("."),
+				prettier.Text("S"),
+				prettier.Text("."),
+				prettier.Text("T"),
+			},
+			ty.Doc(),
+		)
+
+	})
+
+}
+
+func TestNominalType_String(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("simple", func(t *testing.T) {
+
+		ty := &NominalType{
+			Identifier: Identifier{
+				Identifier: "R",
+			},
+		}
+
+		assert.Equal(t,
+			"R",
+			ty.String(),
+		)
+
+	})
+
+	t.Run("nested", func(t *testing.T) {
+
+		t.Parallel()
+
+		ty := &NominalType{
+			Identifier: Identifier{
+				Identifier: "R",
+			},
+			NestedIdentifiers: []Identifier{
+				{
+					Identifier: "S",
+				},
+				{
+					Identifier: "T",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"R.S.T",
+			ty.String(),
+		)
+
+	})
+
 }
 
 func TestNominalType_MarshalJSON(t *testing.T) {
@@ -171,6 +274,24 @@ func TestOptionalType_Doc(t *testing.T) {
 	)
 }
 
+func TestOptionalType_String(t *testing.T) {
+
+	t.Parallel()
+
+	ty := &OptionalType{
+		Type: &NominalType{
+			Identifier: Identifier{
+				Identifier: "R",
+			},
+		},
+	}
+
+	assert.Equal(t,
+		"R?",
+		ty.String(),
+	)
+}
+
 func TestOptionalType_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
@@ -235,6 +356,24 @@ func TestVariableSizedType_Doc(t *testing.T) {
 			prettier.Text("]"),
 		},
 		ty.Doc(),
+	)
+}
+
+func TestVariableSizedType_String(t *testing.T) {
+
+	t.Parallel()
+
+	ty := &VariableSizedType{
+		Type: &NominalType{
+			Identifier: Identifier{
+				Identifier: "T",
+			},
+		},
+	}
+
+	assert.Equal(t,
+		"[T]",
+		ty.String(),
 	)
 }
 
@@ -312,6 +451,29 @@ func TestConstantSizedType_Doc(t *testing.T) {
 			prettier.Text("]"),
 		},
 		ty.Doc(),
+	)
+}
+
+func TestConstantSizedType_String(t *testing.T) {
+
+	t.Parallel()
+
+	ty := &ConstantSizedType{
+		Type: &NominalType{
+			Identifier: Identifier{
+				Identifier: "T",
+			},
+		},
+		Size: &IntegerExpression{
+			PositiveLiteral: "42",
+			Value:           big.NewInt(42),
+			Base:            10,
+		},
+	}
+
+	assert.Equal(t,
+		"[T; 42]",
+		ty.String(),
 	)
 }
 
@@ -406,6 +568,29 @@ func TestDictionaryType_Doc(t *testing.T) {
 			prettier.Text("}"),
 		},
 		ty.Doc(),
+	)
+}
+
+func TestDictionaryType_String(t *testing.T) {
+
+	t.Parallel()
+
+	ty := &DictionaryType{
+		KeyType: &NominalType{
+			Identifier: Identifier{
+				Identifier: "AB",
+			},
+		},
+		ValueType: &NominalType{
+			Identifier: Identifier{
+				Identifier: "CD",
+			},
+		},
+	}
+
+	assert.Equal(t,
+		"{AB: CD}",
+		ty.String(),
 	)
 }
 
@@ -529,6 +714,44 @@ func TestFunctionType_Doc(t *testing.T) {
 			prettier.Text(")"),
 		},
 		ty.Doc(),
+	)
+}
+
+func TestFunctionType_String(t *testing.T) {
+
+	t.Parallel()
+
+	ty := &FunctionType{
+		ParameterTypeAnnotations: []*TypeAnnotation{
+			{
+				IsResource: true,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "AB",
+					},
+				},
+			},
+			{
+				IsResource: true,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "CD",
+					},
+				},
+			},
+		},
+		ReturnTypeAnnotation: &TypeAnnotation{
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "EF",
+				},
+			},
+		},
+	}
+
+	assert.Equal(t,
+		"((@AB, @CD): EF)",
+		ty.String(),
 	)
 }
 
@@ -659,6 +882,48 @@ func TestReferenceType_Doc(t *testing.T) {
 			ty.Doc(),
 		)
 	})
+}
+
+func TestReferenceType_String(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("auth", func(t *testing.T) {
+
+		t.Parallel()
+
+		ty := &ReferenceType{
+			Authorized: true,
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "T",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"auth &T",
+			ty.String(),
+		)
+	})
+
+	t.Run("un-auth", func(t *testing.T) {
+
+		t.Parallel()
+
+		ty := &ReferenceType{
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "T",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"&T",
+			ty.String(),
+		)
+	})
 
 }
 
@@ -748,6 +1013,36 @@ func TestRestrictedType_Doc(t *testing.T) {
 			},
 		},
 		ty.Doc(),
+	)
+}
+
+func TestRestrictedType_String(t *testing.T) {
+
+	t.Parallel()
+
+	ty := &RestrictedType{
+		Type: &NominalType{
+			Identifier: Identifier{
+				Identifier: "AB",
+			},
+		},
+		Restrictions: []*NominalType{
+			{
+				Identifier: Identifier{
+					Identifier: "CD",
+				},
+			},
+			{
+				Identifier: Identifier{
+					Identifier: "EF",
+				},
+			},
+		},
+	}
+
+	assert.Equal(t,
+		"AB{CD, EF}",
+		ty.String(),
 	)
 }
 
@@ -883,6 +1178,42 @@ func TestInstantiationType_Doc(t *testing.T) {
 			},
 		},
 		ty.Doc(),
+	)
+}
+
+func TestInstantiationType_String(t *testing.T) {
+
+	t.Parallel()
+
+	ty := &InstantiationType{
+		Type: &NominalType{
+			Identifier: Identifier{
+				Identifier: "AB",
+			},
+		},
+		TypeArguments: []*TypeAnnotation{
+			{
+				IsResource: true,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "CD",
+					},
+				},
+			},
+			{
+				IsResource: false,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "EF",
+					},
+				},
+			},
+		},
+	}
+
+	assert.Equal(t,
+		"AB<@CD, EF>",
+		ty.String(),
 	)
 }
 

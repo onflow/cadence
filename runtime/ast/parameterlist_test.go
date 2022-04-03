@@ -165,3 +165,44 @@ func TestParameterList_Doc(t *testing.T) {
 		params.Doc(),
 	)
 }
+
+func TestParameterList_String(t *testing.T) {
+
+	t.Parallel()
+
+	params := &ParameterList{
+		Parameters: []*Parameter{
+			{
+				Identifier: Identifier{Identifier: "e"},
+				TypeAnnotation: &TypeAnnotation{
+					Type: &NominalType{
+						Identifier: Identifier{Identifier: "E"},
+					},
+				},
+			},
+			{
+				Label:      "c",
+				Identifier: Identifier{Identifier: "d"},
+				TypeAnnotation: &TypeAnnotation{
+					Type: &NominalType{
+						Identifier: Identifier{Identifier: "D"},
+					},
+				},
+			},
+			{
+				Label:      "a",
+				Identifier: Identifier{Identifier: "b"},
+				TypeAnnotation: &TypeAnnotation{
+					Type: &NominalType{
+						Identifier: Identifier{Identifier: "B"},
+					},
+				},
+			},
+		},
+	}
+
+	require.Equal(t,
+		"(e: E, c d: D, a b: B)",
+		params.String(),
+	)
+}

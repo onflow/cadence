@@ -78,6 +78,22 @@ func TestExpressionStatement_Doc(t *testing.T) {
 	)
 }
 
+func TestExpressionStatement_String(t *testing.T) {
+
+	t.Parallel()
+
+	stmt := &ExpressionStatement{
+		Expression: &BoolExpression{
+			Value: false,
+		},
+	}
+
+	assert.Equal(t,
+		"false",
+		stmt.String(),
+	)
+}
+
 func TestReturnStatement_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
@@ -153,6 +169,39 @@ func TestReturnStatement_Doc(t *testing.T) {
 	})
 }
 
+func TestReturnStatement_String(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("value", func(t *testing.T) {
+
+		t.Parallel()
+
+		stmt := &ReturnStatement{
+			Expression: &BoolExpression{
+				Value: false,
+			},
+		}
+
+		require.Equal(t,
+			"return false",
+			stmt.String(),
+		)
+	})
+
+	t.Run("no value", func(t *testing.T) {
+
+		t.Parallel()
+
+		stmt := &ReturnStatement{}
+
+		require.Equal(t,
+			"return",
+			stmt.String(),
+		)
+	})
+}
+
 func TestBreakStatement_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
@@ -189,6 +238,16 @@ func TestBreakStatement_Doc(t *testing.T) {
 	)
 }
 
+func TestBreakStatement_String(t *testing.T) {
+
+	t.Parallel()
+
+	assert.Equal(t,
+		"break",
+		(&BreakStatement{}).String(),
+	)
+}
+
 func TestContinueStatement_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
@@ -222,6 +281,16 @@ func TestContinueStatement_Doc(t *testing.T) {
 	assert.Equal(t,
 		prettier.Text("continue"),
 		(&ContinueStatement{}).Doc(),
+	)
+}
+
+func TestContinueStatement_String(t *testing.T) {
+
+	t.Parallel()
+
+	assert.Equal(t,
+		"continue",
+		(&ContinueStatement{}).String(),
 	)
 }
 
@@ -314,10 +383,6 @@ func TestIfStatement_Doc(t *testing.T) {
 					prettier.Text("false"),
 					prettier.Text(" "),
 					prettier.Text("{}"),
-					prettier.Text(" else "),
-					prettier.Group{
-						Doc: prettier.Text("{}"),
-					},
 				},
 			},
 			stmt.Doc(),
@@ -370,6 +435,64 @@ func TestIfStatement_Doc(t *testing.T) {
 				},
 			},
 			stmt.Doc(),
+		)
+	})
+}
+
+func TestIfStatement_String(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("empty if-else", func(t *testing.T) {
+
+		t.Parallel()
+
+		stmt := &IfStatement{
+			Test: &BoolExpression{
+				Value: false,
+			},
+			Then: &Block{
+				Statements: []Statement{},
+			},
+			Else: &Block{
+				Statements: []Statement{},
+			},
+		}
+
+		assert.Equal(t,
+			"if false {}",
+			stmt.String(),
+		)
+	})
+
+	t.Run("if-else if", func(t *testing.T) {
+
+		t.Parallel()
+
+		stmt := &IfStatement{
+			Test: &BoolExpression{
+				Value: false,
+			},
+			Then: &Block{
+				Statements: []Statement{},
+			},
+			Else: &Block{
+				Statements: []Statement{
+					&IfStatement{
+						Test: &BoolExpression{
+							Value: true,
+						},
+						Then: &Block{
+							Statements: []Statement{},
+						},
+					},
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"if false {} else if true {}",
+			stmt.String(),
 		)
 	})
 }
@@ -446,6 +569,25 @@ func TestWhileStatement_Doc(t *testing.T) {
 			},
 		},
 		stmt.Doc(),
+	)
+}
+
+func TestWhileStatement_String(t *testing.T) {
+
+	t.Parallel()
+
+	stmt := &WhileStatement{
+		Test: &BoolExpression{
+			Value: false,
+		},
+		Block: &Block{
+			Statements: []Statement{},
+		},
+	}
+
+	assert.Equal(t,
+		"while false {}",
+		stmt.String(),
 	)
 }
 
@@ -623,27 +765,16 @@ func TestForStatement_Doc(t *testing.T) {
 		stmt := &ForStatement{
 			Index: &Identifier{
 				Identifier: "i",
-				Pos:        Position{Offset: 1, Line: 2, Column: 3},
 			},
 			Identifier: Identifier{
 				Identifier: "foobar",
-				Pos:        Position{Offset: 4, Line: 5, Column: 6},
 			},
 			Value: &BoolExpression{
 				Value: false,
-				Range: Range{
-					StartPos: Position{Offset: 7, Line: 8, Column: 9},
-					EndPos:   Position{Offset: 10, Line: 11, Column: 12},
-				},
 			},
 			Block: &Block{
 				Statements: []Statement{},
-				Range: Range{
-					StartPos: Position{Offset: 13, Line: 14, Column: 15},
-					EndPos:   Position{Offset: 16, Line: 17, Column: 18},
-				},
 			},
-			StartPos: Position{Offset: 19, Line: 20, Column: 21},
 		}
 
 		assert.Equal(t,
@@ -660,6 +791,58 @@ func TestForStatement_Doc(t *testing.T) {
 				},
 			},
 			stmt.Doc(),
+		)
+	})
+}
+
+func TestForStatement_String(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("without index", func(t *testing.T) {
+
+		t.Parallel()
+
+		stmt := &ForStatement{
+			Identifier: Identifier{
+				Identifier: "foobar",
+			},
+			Value: &BoolExpression{
+				Value: false,
+			},
+			Block: &Block{
+				Statements: []Statement{},
+			},
+		}
+
+		assert.Equal(t,
+			"for foobar in false {}",
+			stmt.String(),
+		)
+	})
+
+	t.Run("with index", func(t *testing.T) {
+
+		t.Parallel()
+
+		stmt := &ForStatement{
+			Index: &Identifier{
+				Identifier: "i",
+			},
+			Identifier: Identifier{
+				Identifier: "foobar",
+			},
+			Value: &BoolExpression{
+				Value: false,
+			},
+			Block: &Block{
+				Statements: []Statement{},
+			},
+		}
+
+		assert.Equal(t,
+			"for i, foobar in false {}",
+			stmt.String(),
 		)
 	})
 }
@@ -761,6 +944,30 @@ func TestAssignmentStatement_Doc(t *testing.T) {
 	)
 }
 
+func TestAssignmentStatement_String(t *testing.T) {
+
+	t.Parallel()
+
+	stmt := &AssignmentStatement{
+		Target: &IdentifierExpression{
+			Identifier: Identifier{
+				Identifier: "foobar",
+			},
+		},
+		Transfer: &Transfer{
+			Operation: TransferOperationCopy,
+		},
+		Value: &BoolExpression{
+			Value: false,
+		},
+	}
+
+	require.Equal(t,
+		"foobar = false",
+		stmt.String(),
+	)
+}
+
 func TestSwapStatement_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
@@ -836,6 +1043,27 @@ func TestSwapStatement_Doc(t *testing.T) {
 			},
 		},
 		stmt.Doc(),
+	)
+}
+
+func TestSwapStatement_String(t *testing.T) {
+
+	t.Parallel()
+
+	stmt := &SwapStatement{
+		Left: &IdentifierExpression{
+			Identifier: Identifier{
+				Identifier: "foobar",
+			},
+		},
+		Right: &BoolExpression{
+			Value: false,
+		},
+	}
+
+	assert.Equal(t,
+		"foobar <-> false",
+		stmt.String(),
 	)
 }
 
@@ -971,6 +1199,26 @@ func TestEmitStatement_Doc(t *testing.T) {
 			},
 		},
 		stmt.Doc(),
+	)
+}
+
+func TestEmitStatement_String(t *testing.T) {
+
+	t.Parallel()
+
+	stmt := &EmitStatement{
+		InvocationExpression: &InvocationExpression{
+			InvokedExpression: &IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "foobar",
+				},
+			},
+		},
+	}
+
+	require.Equal(t,
+		"emit foobar()",
+		stmt.String(),
 	)
 }
 
@@ -1110,7 +1358,7 @@ func TestSwitchStatement_MarshalJSON(t *testing.T) {
 	)
 }
 
-func TestSwitchStatement_Doc(t *testing.T) {
+func TestSwitchStatement_String(t *testing.T) {
 
 	t.Parallel()
 
@@ -1194,5 +1442,55 @@ func TestSwitchStatement_Doc(t *testing.T) {
 			prettier.Text("}"),
 		},
 		stmt.Doc(),
+	)
+}
+
+func TestSwitchStatement_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	stmt := &SwitchStatement{
+		Expression: &IdentifierExpression{
+			Identifier: Identifier{
+				Identifier: "foo",
+			},
+		},
+		Cases: []*SwitchCase{
+			{
+				Expression: &BoolExpression{
+					Value: false,
+				},
+				Statements: []Statement{
+					&ExpressionStatement{
+						Expression: &IdentifierExpression{
+							Identifier: Identifier{
+								Identifier: "bar",
+							},
+						},
+					},
+				},
+			},
+			{
+				Statements: []Statement{
+					&ExpressionStatement{
+						Expression: &IdentifierExpression{
+							Identifier: Identifier{
+								Identifier: "baz",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	assert.Equal(t,
+		"switch foo {\n"+
+			"    case false:\n"+
+			"        bar\n"+
+			"    default:\n"+
+			"        baz\n"+
+			"}",
+		stmt.String(),
 	)
 }

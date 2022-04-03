@@ -134,6 +134,10 @@ func (d *CompositeDeclaration) EventDoc() prettier.Doc {
 	return append(doc, paramsDoc)
 }
 
+func (d *CompositeDeclaration) String() string {
+	return Prettier(d)
+}
+
 var interfaceKeywordSpaceDoc = prettier.Text("interface ")
 var compositeConformancesSeparatorDoc = prettier.Text(":")
 var compositeConformanceSeparatorDoc prettier.Doc = prettier.Concat{
@@ -348,6 +352,10 @@ func (d *FieldDeclaration) Doc() prettier.Doc {
 	}
 }
 
+func (d *FieldDeclaration) String() string {
+	return Prettier(d)
+}
+
 // EnumCaseDeclaration
 
 type EnumCaseDeclaration struct {
@@ -428,4 +436,8 @@ func (d *EnumCaseDeclaration) Doc() prettier.Doc {
 		enumCaseKeywordSpaceDoc,
 		prettier.Text(d.Identifier.Identifier),
 	)
+}
+
+func (d *EnumCaseDeclaration) String() string {
+	return Prettier(d)
 }
