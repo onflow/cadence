@@ -1357,6 +1357,10 @@ func newArrayValueFromAtreeValue(
 ) *ArrayValue {
 
 	common.UseMemory(memoryGauge, common.NewConstantMemoryUsage(common.MemoryKindArray))
+	common.UseMemory(memoryGauge, common.MemoryUsage{
+		Kind: common.MemoryKindArrayElement,
+		Amount: array.Count(),
+	})
 
 	return &ArrayValue{
 		Type:  staticType,

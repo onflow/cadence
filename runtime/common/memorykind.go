@@ -36,6 +36,7 @@ const (
 	MemoryKindMetaType
 	MemoryKindNumber
 	MemoryKindArray
+	MemoryKindArrayElement
 	MemoryKindDictionary
 	MemoryKindComposite
 	MemoryKindOptional
