@@ -3358,10 +3358,11 @@ func suggestIntegerLiteralConversionReplacement(
 		// then a static cast is required
 
 		if !negative && signed {
-			hintExpression = &ast.CastingExpression{
-				Expression: hintExpression,
-				Operation:  ast.OperationCast,
-				TypeAnnotation: &ast.TypeAnnotation{
+			hintExpression = ast.NewCastingExpression(
+				checker.memoryGauge,
+				hintExpression,
+				ast.OperationCast,
+				&ast.TypeAnnotation{
 					IsResource: false,
 					Type: &ast.NominalType{
 						Identifier: ast.NewIdentifier(
@@ -3371,7 +3372,8 @@ func suggestIntegerLiteralConversionReplacement(
 						),
 					},
 				},
-			}
+				nil,
+			)
 		}
 
 		checker.hint(
@@ -3394,10 +3396,11 @@ func suggestIntegerLiteralConversionReplacement(
 		// are inferred to be of type `Int`
 
 		if !IsSameTypeKind(targetType, IntType) {
-			hintExpression = &ast.CastingExpression{
-				Expression: hintExpression,
-				Operation:  ast.OperationCast,
-				TypeAnnotation: &ast.TypeAnnotation{
+			hintExpression = ast.NewCastingExpression(
+				checker.memoryGauge,
+				hintExpression,
+				ast.OperationCast,
+				&ast.TypeAnnotation{
 					IsResource: false,
 					Type: &ast.NominalType{
 						Identifier: ast.NewIdentifier(
@@ -3407,7 +3410,8 @@ func suggestIntegerLiteralConversionReplacement(
 						),
 					},
 				},
-			}
+				nil,
+			)
 		}
 
 		checker.hint(

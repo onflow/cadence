@@ -172,12 +172,13 @@ func parseFunctionDeclarationOrFunctionExpressionStatement(p *parser) ast.Statem
 
 		return ast.NewExpressionStatement(
 			p.memoryGauge,
-			&ast.FunctionExpression{
-				ParameterList:        parameterList,
-				ReturnTypeAnnotation: returnTypeAnnotation,
-				FunctionBlock:        functionBlock,
-				StartPos:             startPos,
-			},
+			ast.NewFunctionExpression(
+				p.memoryGauge,
+				parameterList,
+				returnTypeAnnotation,
+				functionBlock,
+				startPos,
+			),
 		)
 	}
 }

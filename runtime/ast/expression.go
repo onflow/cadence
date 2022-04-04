@@ -1298,6 +1298,23 @@ type FunctionExpression struct {
 
 var _ Expression = &FunctionExpression{}
 
+func NewFunctionExpression(
+	gauge common.MemoryGauge,
+	parameters *ParameterList,
+	returnType *TypeAnnotation,
+	functionBlock *FunctionBlock,
+	startPos Position,
+) *FunctionExpression {
+	common.UseMemory(gauge, common.FunctionExpressionMemoryUsage)
+
+	return &FunctionExpression{
+		ParameterList:        parameters,
+		ReturnTypeAnnotation: returnType,
+		FunctionBlock:        functionBlock,
+		StartPos:             startPos,
+	}
+}
+
 func (*FunctionExpression) isExpression() {}
 
 func (*FunctionExpression) isIfStatementTest() {}
@@ -1438,6 +1455,23 @@ type CastingExpression struct {
 
 var _ Expression = &CastingExpression{}
 
+func NewCastingExpression(
+	gauge common.MemoryGauge,
+	expression Expression,
+	operation Operation,
+	typeAnnotation *TypeAnnotation,
+	parentVariableDecl *VariableDeclaration,
+) *CastingExpression {
+	common.UseMemory(gauge, common.CastingExpressionMemoryUsage)
+
+	return &CastingExpression{
+		Expression:                expression,
+		Operation:                 operation,
+		TypeAnnotation:            typeAnnotation,
+		ParentVariableDeclaration: parentVariableDecl,
+	}
+}
+
 func (*CastingExpression) isExpression() {}
 
 func (*CastingExpression) isIfStatementTest() {}
@@ -1508,6 +1542,19 @@ type CreateExpression struct {
 
 var _ Expression = &CreateExpression{}
 
+func NewCreateExpression(
+	gauge common.MemoryGauge,
+	invocationExpression *InvocationExpression,
+	startPos Position,
+) *CreateExpression {
+	common.UseMemory(gauge, common.CreateExpressionMemoryUsage)
+
+	return &CreateExpression{
+		InvocationExpression: invocationExpression,
+		StartPos:             startPos,
+	}
+}
+
 func (*CreateExpression) isExpression() {}
 
 func (*CreateExpression) isIfStatementTest() {}
@@ -1568,6 +1615,19 @@ type DestroyExpression struct {
 }
 
 var _ Expression = &DestroyExpression{}
+
+func NewDestroyExpression(
+	gauge common.MemoryGauge,
+	expression Expression,
+	startPos Position,
+) *DestroyExpression {
+	common.UseMemory(gauge, common.DestroyExpressionMemoryUsage)
+
+	return &DestroyExpression{
+		Expression: expression,
+		StartPos:   startPos,
+	}
+}
 
 func (*DestroyExpression) isExpression() {}
 
@@ -1632,6 +1692,21 @@ type ReferenceExpression struct {
 }
 
 var _ Expression = &ReferenceExpression{}
+
+func NewReferenceExpression(
+	gauge common.MemoryGauge,
+	expression Expression,
+	targetType Type,
+	startPos Position,
+) *ReferenceExpression {
+	common.UseMemory(gauge, common.ReferenceExpressionMemoryUsage)
+
+	return &ReferenceExpression{
+		Expression: expression,
+		Type:       targetType,
+		StartPos:   startPos,
+	}
+}
 
 func (*ReferenceExpression) isExpression() {}
 
@@ -1709,6 +1784,19 @@ type ForceExpression struct {
 
 var _ Expression = &ForceExpression{}
 
+func NewForceExpression(
+	gauge common.MemoryGauge,
+	expression Expression,
+	endPos Position,
+) *ForceExpression {
+	common.UseMemory(gauge, common.ForceExpressionMemoryUsage)
+
+	return &ForceExpression{
+		Expression: expression,
+		EndPos:     endPos,
+	}
+}
+
 func (*ForceExpression) isExpression() {}
 
 func (*ForceExpression) isIfStatementTest() {}
@@ -1769,6 +1857,21 @@ type PathExpression struct {
 }
 
 var _ Expression = &PathExpression{}
+
+func NewPathExpression(
+	gauge common.MemoryGauge,
+	domain Identifier,
+	identifier Identifier,
+	startPos Position,
+) *PathExpression {
+	common.UseMemory(gauge, common.PathExpressionMemoryUsage)
+
+	return &PathExpression{
+		Domain:     domain,
+		Identifier: identifier,
+		StartPos:   startPos,
+	}
+}
 
 func (*PathExpression) isExpression() {}
 
