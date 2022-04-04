@@ -1017,6 +1017,21 @@ type ConditionalExpression struct {
 
 var _ Expression = &ConditionalExpression{}
 
+func NewConditionalExpression(
+	gauge common.MemoryGauge,
+	testExpr Expression,
+	thenExpr Expression,
+	elseExpr Expression,
+) *ConditionalExpression {
+	common.UseMemory(gauge, common.ConditionalExpressionMemoryUsage)
+
+	return &ConditionalExpression{
+		Test: testExpr,
+		Then: thenExpr,
+		Else: elseExpr,
+	}
+}
+
 func (*ConditionalExpression) isExpression() {}
 
 func (*ConditionalExpression) isIfStatementTest() {}
@@ -1112,6 +1127,21 @@ type UnaryExpression struct {
 
 var _ Expression = &UnaryExpression{}
 
+func NewUnaryExpression(
+	gauge common.MemoryGauge,
+	operation Operation,
+	expression Expression,
+	startPos Position,
+) *UnaryExpression {
+	common.UseMemory(gauge, common.UnaryExpressionMemoryUsage)
+
+	return &UnaryExpression{
+		Operation:  operation,
+		Expression: expression,
+		StartPos:   startPos,
+	}
+}
+
 func (*UnaryExpression) isExpression() {}
 
 func (*UnaryExpression) isIfStatementTest() {}
@@ -1174,6 +1204,21 @@ type BinaryExpression struct {
 }
 
 var _ Expression = &BinaryExpression{}
+
+func NewBinaryExpression(
+	gauge common.MemoryGauge,
+	operation Operation,
+	left Expression,
+	right Expression,
+) *BinaryExpression {
+	common.UseMemory(gauge, common.BinaryExpressionMemoryUsage)
+
+	return &BinaryExpression{
+		Operation: operation,
+		Left:      left,
+		Right:     right,
+	}
+}
 
 func (*BinaryExpression) isExpression() {}
 

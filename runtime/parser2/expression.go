@@ -47,8 +47,8 @@ const (
 	exprLeftBindingPowerAccess
 )
 
-type infixExprFunc func(left, right ast.Expression) ast.Expression
-type prefixExprFunc func(right ast.Expression, tokenRange ast.Range) ast.Expression
+type infixExprFunc func(parser *parser, left, right ast.Expression) ast.Expression
+type prefixExprFunc func(parser *parser, right ast.Expression, tokenRange ast.Range) ast.Expression
 type postfixExprFunc func(left ast.Expression, tokenRange ast.Range) ast.Expression
 type exprNullDenotationFunc func(parser *parser, token lexer.Token) ast.Expression
 type exprMetaLeftDenotationFunc func(
@@ -122,7 +122,7 @@ func defineExpr(def interface{}) {
 			tokenType,
 			func(parser *parser, _ lexer.Token, left ast.Expression) ast.Expression {
 				right := parseExpression(parser, rightBindingPower)
-				return def.leftDenotation(left, right)
+				return def.leftDenotation(parser, left, right)
 			},
 		)
 
@@ -131,12 +131,13 @@ func defineExpr(def interface{}) {
 			tokenType:        def.tokenType,
 			leftBindingPower: def.leftBindingPower,
 			rightAssociative: def.rightAssociative,
-			leftDenotation: func(left, right ast.Expression) ast.Expression {
-				return &ast.BinaryExpression{
-					Operation: def.operation,
-					Left:      left,
-					Right:     right,
-				}
+			leftDenotation: func(p *parser, left, right ast.Expression) ast.Expression {
+				return ast.NewBinaryExpression(
+					p.memoryGauge,
+					def.operation,
+					left,
+					right,
+				)
 			},
 		})
 
@@ -150,7 +151,7 @@ func defineExpr(def interface{}) {
 			tokenType,
 			func(parser *parser, token lexer.Token) ast.Expression {
 				right := parseExpression(parser, def.bindingPower)
-				return def.nullDenotation(right, token.Range)
+				return def.nullDenotation(parser, right, token.Range)
 			},
 		)
 
@@ -158,12 +159,13 @@ func defineExpr(def interface{}) {
 		defineExpr(prefixExpr{
 			tokenType:    def.tokenType,
 			bindingPower: def.bindingPower,
-			nullDenotation: func(right ast.Expression, tokenRange ast.Range) ast.Expression {
-				return &ast.UnaryExpression{
-					Operation:  def.operation,
-					Expression: right,
-					StartPos:   tokenRange.StartPos,
-				}
+			nullDenotation: func(p *parser, right ast.Expression, tokenRange ast.Range) ast.Expression {
+				return ast.NewUnaryExpression(
+					p.memoryGauge,
+					def.operation,
+					right,
+					tokenRange.StartPos,
+				)
 			},
 		})
 
@@ -465,7 +467,7 @@ func init() {
 	defineExpr(prefixExpr{
 		tokenType:    lexer.TokenMinus,
 		bindingPower: exprLeftBindingPowerUnaryPrefix,
-		nullDenotation: func(right ast.Expression, tokenRange ast.Range) ast.Expression {
+		nullDenotation: func(p *parser, right ast.Expression, tokenRange ast.Range) ast.Expression {
 			switch right := right.(type) {
 			case *ast.IntegerExpression:
 				if right.Value.Sign() > 0 {
@@ -484,11 +486,12 @@ func init() {
 				}
 			}
 
-			return &ast.UnaryExpression{
-				Operation:  ast.OperationMinus,
-				Expression: right,
-				StartPos:   tokenRange.StartPos,
-			}
+			return ast.NewUnaryExpression(
+				p.memoryGauge,
+				ast.OperationMinus,
+				right,
+				tokenRange.StartPos,
+			)
 		},
 	})
 
@@ -655,11 +658,12 @@ func defineLessThanOrTypeArgumentsExpression() {
 
 				right := parseExpression(p, binaryExpressionLeftBindingPower)
 
-				binaryExpression := &ast.BinaryExpression{
-					Operation: ast.OperationLess,
-					Left:      left,
-					Right:     right,
-				}
+				binaryExpression := ast.NewBinaryExpression(
+					p.memoryGauge,
+					ast.OperationLess,
+					left,
+					right,
+				)
 
 				return binaryExpression, false
 			}
@@ -754,11 +758,12 @@ func defineGreaterThanOrBitwiseRightShiftExpression() {
 
 			right := parseExpression(p, nextRightBindingPower)
 
-			binaryExpression := &ast.BinaryExpression{
-				Operation: operation,
-				Left:      left,
-				Right:     right,
-			}
+			binaryExpression := ast.NewBinaryExpression(
+				p.memoryGauge,
+				operation,
+				left,
+				right,
+			)
 
 			return binaryExpression, false
 		})
@@ -1087,11 +1092,12 @@ func defineConditionalExpression() {
 			thenExpression := parseExpression(p, lowestBindingPower)
 			p.mustOne(lexer.TokenColon)
 			elseExpression := parseExpression(p, lowestBindingPower)
-			return &ast.ConditionalExpression{
-				Test: testExpression,
-				Then: thenExpression,
-				Else: elseExpression,
-			}
+			return ast.NewConditionalExpression(
+				p.memoryGauge,
+				testExpression,
+				thenExpression,
+				elseExpression,
+			)
 		},
 	)
 }
