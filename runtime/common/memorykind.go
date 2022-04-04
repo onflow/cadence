@@ -69,6 +69,7 @@ const (
 	MemoryKindIdentifier
 	MemoryKindArgument
 	MemoryKindBlock
+
 	MemoryKindFunctionDeclaration
 	MemoryKindCompositeDeclaration
 	MemoryKindInterfaceDeclaration
@@ -79,6 +80,7 @@ const (
 	MemoryKindVariableDeclaration
 	MemoryKindSpecialFunctionDeclaration
 	MemoryKindPragmaDeclaration
+
 	MemoryKindAssignmentStatement
 	MemoryKindBreakStatement
 	MemoryKindContinueStatement
