@@ -8082,24 +8082,24 @@ func TestInterpretASTMetering(t *testing.T) {
 
 		script := `
             pub fun main() {
-                var a = 5                              // integer expr
-                var b = 1.2 + 2.3                      // binary, fixed-point expr
-                var c = !true                          // unary, boolean expr
-                var d: String? = "hello"               // string expr
-                var e = nil                            // nil expr
-                var f: [AnyStruct] = [[], [], []]      // array expr
-                var g: {Int: AnyStruct} = {}           // nil expr
-                var h <- create bar()                  // create, identifier, invocation
-                var i = h.baz                          // member access, identifier x2
-                destroy h                              // destroy
-                var j = f[0]                           // index access, identifier, integer
-                var k = fun() {}                       // function expr
-                k()                                    // identifier, invocation
-                var l = c ? 1 : 2                      // conditional, identifier, integer x2
-                var m = d as AnyStruct                 // casting, identifier
-                var n = &d as &AnyStruct               // reference, casting, identifier
-                var o = d!                             // force, identifier
-                var p = /public/somepath               // path
+                var a = 5                                // integer expr
+                var b = 1.2 + 2.3                        // binary, fixed-point expr
+                var c = !true                            // unary, boolean expr
+                var d: String? = "hello"                 // string expr
+                var e = nil                              // nil expr
+                var f: [AnyStruct] = [[], [], []]        // array expr
+                var g: {Int: {Int: AnyStruct}} = {1:{}}  // nil expr
+                var h <- create bar()                    // create, identifier, invocation
+                var i = h.baz                            // member access, identifier x2
+                destroy h                                // destroy
+                var j = f[0]                             // index access, identifier, integer
+                var k = fun() {}                         // function expr
+                k()                                      // identifier, invocation
+                var l = c ? 1 : 2                        // conditional, identifier, integer x2
+                var m = d as AnyStruct                   // casting, identifier
+                var n = &d as &AnyStruct                 // reference, casting, identifier
+                var o = d!                               // force, identifier
+                var p = /public/somepath                 // path
             }
 
             resource bar {
@@ -8119,10 +8119,10 @@ func TestInterpretASTMetering(t *testing.T) {
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindBooleanExpression))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindNilExpression))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindStringExpression))
-		assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindIntegerExpression))
+		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindIntegerExpression))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindFixedPointExpression))
-		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindArrayExpression))
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindDictionaryExpression))
+		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindArrayExpression))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindDictionaryExpression))
 		assert.Equal(t, uint64(10), meter.getMemory(common.MemoryKindIdentifierExpression))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindInvocationExpression))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindMemberExpression))

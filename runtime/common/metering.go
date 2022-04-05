@@ -62,8 +62,6 @@ var (
 	StringExpressionMemoryUsage           = NewConstantMemoryUsage(MemoryKindStringExpression)
 	IntegerExpressionMemoryUsage          = NewConstantMemoryUsage(MemoryKindIntegerExpression)
 	FixedPointExpressionMemoryUsage       = NewConstantMemoryUsage(MemoryKindFixedPointExpression)
-	ArrayExpressionMemoryUsage            = NewConstantMemoryUsage(MemoryKindArrayExpression)
-	DictionaryExpressionMemoryUsage       = NewConstantMemoryUsage(MemoryKindDictionaryExpression)
 	IdentifierExpressionMemoryUsage       = NewConstantMemoryUsage(MemoryKindIdentifierExpression)
 	InvocationExpressionMemoryUsage       = NewConstantMemoryUsage(MemoryKindInvocationExpression)
 	MemberExpressionMemoryUsage           = NewConstantMemoryUsage(MemoryKindMemberExpression)
@@ -285,5 +283,21 @@ func NewSyntaxTokenMemoryUsage(length int) MemoryUsage {
 	return MemoryUsage{
 		Kind:   MemoryKindTokenSyntax,
 		Amount: uint64(length),
+	}
+}
+
+func NewArrayExpressionMemoryUsage(length int) MemoryUsage {
+	return MemoryUsage{
+		Kind: MemoryKindArrayExpression,
+		// +1 to account for empty arrays
+		Amount: uint64(length) + 1,
+	}
+}
+
+func NewDictionaryExpressionMemoryUsage(length int) MemoryUsage {
+	return MemoryUsage{
+		Kind: MemoryKindDictionaryExpression,
+		// +1 to account for empty dictionaries
+		Amount: uint64(length) + 1,
 	}
 }

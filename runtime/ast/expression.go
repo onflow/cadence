@@ -400,8 +400,7 @@ func NewArrayExpression(
 	tokenRange Range,
 ) *ArrayExpression {
 
-	// TODO: Also consider the length of values
-	common.UseMemory(gauge, common.ArrayExpressionMemoryUsage)
+	common.UseMemory(gauge, common.NewArrayExpressionMemoryUsage(len(values)))
 
 	return &ArrayExpression{
 		Values: values,
@@ -483,7 +482,7 @@ func NewDictionaryExpression(
 	entries []DictionaryEntry,
 	tokenRange Range,
 ) *DictionaryExpression {
-	common.UseMemory(gauge, common.DictionaryExpressionMemoryUsage)
+	common.UseMemory(gauge, common.NewDictionaryExpressionMemoryUsage(len(entries)))
 
 	return &DictionaryExpression{
 		Entries: entries,
