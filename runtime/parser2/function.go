@@ -210,15 +210,16 @@ func parseFunctionDeclaration(
 	parameterList, returnTypeAnnotation, functionBlock :=
 		parseFunctionParameterListAndRest(p, functionBlockIsOptional)
 
-	return &ast.FunctionDeclaration{
-		Access:               access,
-		Identifier:           identifier,
-		ParameterList:        parameterList,
-		ReturnTypeAnnotation: returnTypeAnnotation,
-		FunctionBlock:        functionBlock,
-		StartPos:             startPos,
-		DocString:            docString,
-	}
+	return ast.NewFunctionDeclaration(
+		p.memoryGauge,
+		access,
+		identifier,
+		parameterList,
+		returnTypeAnnotation,
+		functionBlock,
+		startPos,
+		docString,
+	)
 }
 
 func parseFunctionParameterListAndRest(

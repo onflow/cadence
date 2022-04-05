@@ -24,10 +24,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
+	"github.com/onflow/cadence/runtime/tests/checker"
+	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 type testMemoryGauge struct {
@@ -7851,5 +7854,167 @@ func TestInterpretIdentifierMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 		assert.Equal(t, uint64(15), meter.getMemory(common.MemoryKindIdentifier))
+	})
+}
+
+func TestInterpretASTMetering(t *testing.T) {
+	t.Parallel()
+
+	t.Run("arguments", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                foo(a: "hello", b: 23)
+                bar("hello", 23)
+            }
+
+            pub fun foo(a: String, b: Int) {
+            }
+
+            pub fun bar(_ a: String, _ b: Int) {
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindArgument))
+	})
+
+	t.Run("blocks", func(t *testing.T) {
+		script := `
+            pub fun main() {
+                var i = 0
+                if i != 0 {
+                    i = 0
+                }
+
+                while i < 2 {
+                    i = i + 1
+                }
+
+                var a = "foo"
+                switch i {
+                    case 1:
+                        a = "foo_1"
+                    case 2:
+                        a = "foo_2"
+                    case 3:
+                        a = "foo_3"
+                }
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindBlock))
+	})
+
+	t.Run("declarations", func(t *testing.T) {
+		script := `
+            import Foo from 0x42
+
+            pub let x = 1
+            pub var y = 2
+
+            pub fun main() {
+                var z = 3
+            }
+
+            pub struct A {
+                pub var a: String
+
+                init() {
+                    self.a = "hello"
+                }
+            }
+
+            pub struct interface B {}
+
+            pub resource C {
+                let a: Int
+
+                init() {
+                    self.a = 6
+                }
+            }
+
+            pub resource interface D {}
+
+            pub enum E: Int8 {
+                pub case a
+                pub case b
+                pub case c
+            }
+
+            transaction {}
+
+            #pragma
+        `
+
+		importedChecker, err := checker.ParseAndCheckWithOptions(t,
+			`
+                pub let Foo = 1
+            `,
+			checker.ParseAndCheckOptions{
+				Location: utils.ImportedLocation,
+			},
+		)
+		require.NoError(t, err)
+
+		meter := newTestMemoryGauge()
+		inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(
+			t,
+			script,
+			ParseCheckAndInterpretOptions{
+				CheckerOptions: []sema.Option{
+					sema.WithImportHandler(
+						func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+							return sema.ElaborationImport{
+								Elaboration: importedChecker.Elaboration,
+							}, nil
+						},
+					),
+				},
+				Options: []interpreter.Option{
+					interpreter.WithImportLocationHandler(
+						func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+							require.IsType(t, common.AddressLocation{}, location)
+							program := interpreter.ProgramFromChecker(importedChecker)
+							subInterpreter, err := inter.NewSubInterpreter(program, location)
+							if err != nil {
+								panic(err)
+							}
+
+							return interpreter.InterpreterImport{
+								Interpreter: subInterpreter,
+							}
+						},
+					),
+				},
+			},
+			meter,
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindFunctionDeclaration))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindCompositeDeclaration))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindInterfaceDeclaration))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindEnumCaseDeclaration))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindFieldDeclaration))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindTransactionDeclaration))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindImportDeclaration))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindVariableDeclaration))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindSpecialFunctionDeclaration))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindPragmaDeclaration))
 	})
 }

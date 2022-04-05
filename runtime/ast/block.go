@@ -22,11 +22,22 @@ import (
 	"encoding/json"
 
 	"github.com/turbolent/prettier"
+
+	"github.com/onflow/cadence/runtime/common"
 )
 
 type Block struct {
 	Statements []Statement
 	Range
+}
+
+func NewBlock(memoryGauge common.MemoryGauge, statements []Statement, astRange Range) *Block {
+	common.UseMemory(memoryGauge, common.BlockMemoryUsage)
+
+	return &Block{
+		Statements: statements,
+		Range:      astRange,
+	}
 }
 
 func (b *Block) IsEmpty() bool {

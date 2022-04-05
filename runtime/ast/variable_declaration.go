@@ -40,6 +40,40 @@ type VariableDeclaration struct {
 	DocString         string
 }
 
+func NewVariableDeclaration(
+	gauge common.MemoryGauge,
+	access Access,
+	isLet bool,
+	identifier Identifier,
+	typeAnnotation *TypeAnnotation,
+	value Expression,
+	transfer *Transfer,
+	startPos Position,
+	secondTransfer *Transfer,
+	secondValue Expression,
+	docString string,
+) *VariableDeclaration {
+	common.UseMemory(gauge, common.VariableDeclarationMemoryUsage)
+
+	return &VariableDeclaration{
+		Access:         access,
+		IsConstant:     isLet,
+		Identifier:     identifier,
+		TypeAnnotation: typeAnnotation,
+		Value:          value,
+		Transfer:       transfer,
+		StartPos:       startPos,
+		SecondTransfer: secondTransfer,
+		SecondValue:    secondValue,
+		DocString:      docString,
+	}
+}
+
+func NewEmptyVariableDeclaration(gauge common.MemoryGauge) *VariableDeclaration {
+	common.UseMemory(gauge, common.VariableDeclarationMemoryUsage)
+	return &VariableDeclaration{}
+}
+
 func (d *VariableDeclaration) StartPosition() Position {
 	return d.StartPos
 }

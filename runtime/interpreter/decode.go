@@ -1702,10 +1702,6 @@ func (d LocationDecoder) decodeAddressLocation() (common.Location, error) {
 		return nil, err
 	}
 
-	if err != nil {
-		return nil, err
-	}
-
 	// Name
 
 	// Decode name at array index encodedAddressLocationNameFieldKey

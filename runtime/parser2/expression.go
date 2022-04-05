@@ -981,16 +981,15 @@ func parseArgument(p *parser) *ast.Argument {
 	}
 
 	if len(label) > 0 {
-		return &ast.Argument{
-			Label:         label,
-			LabelStartPos: &labelStartPos,
-			LabelEndPos:   &labelEndPos,
-			Expression:    expr,
-		}
+		return ast.NewArgument(
+			p.memoryGauge,
+			label,
+			&labelStartPos,
+			&labelEndPos,
+			expr,
+		)
 	}
-	return &ast.Argument{
-		Expression: expr,
-	}
+	return ast.NewUnlabeledArgument(p.memoryGauge, expr)
 }
 
 func defineNestedExpression() {

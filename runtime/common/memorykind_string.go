@@ -40,11 +40,23 @@ func _() {
 	_ = x[MemoryKindTokenNumericLiteral-29]
 	_ = x[MemoryKindTokenSyntax-30]
 	_ = x[MemoryKindIdentifier-31]
+	_ = x[MemoryKindArgument-32]
+	_ = x[MemoryKindBlock-33]
+	_ = x[MemoryKindFunctionDeclaration-34]
+	_ = x[MemoryKindCompositeDeclaration-35]
+	_ = x[MemoryKindInterfaceDeclaration-36]
+	_ = x[MemoryKindEnumCaseDeclaration-37]
+	_ = x[MemoryKindFieldDeclaration-38]
+	_ = x[MemoryKindTransactionDeclaration-39]
+	_ = x[MemoryKindImportDeclaration-40]
+	_ = x[MemoryKindVariableDeclaration-41]
+	_ = x[MemoryKindSpecialFunctionDeclaration-42]
+	_ = x[MemoryKindPragmaDeclaration-43]
 }
 
-const _MemoryKind_name = "UnknownBoolAddressStringCharacterMetaTypeNumberArrayDictionaryCompositeOptionalNilVoidTypeValuePathValueCapabilityValueLinkValueStorageReferenceValueEphemeralReferenceValueInterpretedFunctionHostFunctionBoundFunctionBigIntRawStringAddressLocationBytesVariableTokenIdentifierTokenCommentTokenNumericLiteralTokenSyntaxIdentifier"
+const _MemoryKind_name = "UnknownBoolAddressStringCharacterMetaTypeNumberArrayDictionaryCompositeOptionalNilVoidTypeValuePathValueCapabilityValueLinkValueStorageReferenceValueEphemeralReferenceValueInterpretedFunctionHostFunctionBoundFunctionBigIntRawStringAddressLocationBytesVariableTokenIdentifierTokenCommentTokenNumericLiteralTokenSyntaxIdentifierArgumentBlockFunctionDeclarationCompositeDeclarationInterfaceDeclarationEnumCaseDeclarationFieldDeclarationTransactionDeclarationImportDeclarationVariableDeclarationSpecialFunctionDeclarationPragmaDeclaration"
 
-var _MemoryKind_index = [...]uint16{0, 7, 11, 18, 24, 33, 41, 47, 52, 62, 71, 79, 82, 86, 95, 104, 119, 128, 149, 172, 191, 203, 216, 222, 231, 246, 251, 259, 274, 286, 305, 316, 326}
+var _MemoryKind_index = [...]uint16{0, 7, 11, 18, 24, 33, 41, 47, 52, 62, 71, 79, 82, 86, 95, 104, 119, 128, 149, 172, 191, 203, 216, 222, 231, 246, 251, 259, 274, 286, 305, 316, 326, 334, 339, 358, 378, 398, 417, 433, 455, 472, 491, 517, 534}
 
 func (i MemoryKind) String() string {
 	if i >= MemoryKind(len(_MemoryKind_index)-1) {

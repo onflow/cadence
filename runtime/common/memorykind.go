@@ -69,4 +69,16 @@ const (
 	// AST nodes
 
 	MemoryKindIdentifier
+	MemoryKindArgument
+	MemoryKindBlock
+	MemoryKindFunctionDeclaration
+	MemoryKindCompositeDeclaration
+	MemoryKindInterfaceDeclaration
+	MemoryKindEnumCaseDeclaration
+	MemoryKindFieldDeclaration
+	MemoryKindTransactionDeclaration
+	MemoryKindImportDeclaration
+	MemoryKindVariableDeclaration
+	MemoryKindSpecialFunctionDeclaration
+	MemoryKindPragmaDeclaration
 )
