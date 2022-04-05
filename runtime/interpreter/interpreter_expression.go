@@ -874,26 +874,43 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
+
 		switch result := result.(type) {
-		// references to optionals are transformed into optional references, so move
-		// the *SomeValue out to the reference itself
 		case *SomeValue:
+			// References to optionals are transformed into optional references,
+			// so move the *SomeValue out to the reference itself
+
 			getLocationRange := locationRangeGetter(interpreter.Location, referenceExpression.Expression)
 
-			return NewSomeValueNonCopying(&EphemeralReferenceValue{
-				Authorized:   innerBorrowType.Authorized,
-				Value:        result.InnerValue(interpreter, getLocationRange),
-				BorrowedType: innerBorrowType.Type,
-			})
+			return NewSomeValueNonCopying(
+				&EphemeralReferenceValue{
+					Authorized:   innerBorrowType.Authorized,
+					Value:        result.InnerValue(interpreter, getLocationRange),
+					BorrowedType: innerBorrowType.Type,
+				},
+			)
+
 		case NilValue:
 			return NilValue{}
+
 		default:
-			return &EphemeralReferenceValue{
-				Authorized:   innerBorrowType.Authorized,
-				Value:        result,
-				BorrowedType: innerBorrowType.Type,
-			}
+			// If the referenced value is non-optional,
+			// but the target type is optional,
+			// then box the reference properly
+
+			getLocationRange := locationRangeGetter(interpreter.Location, referenceExpression)
+
+			return interpreter.BoxOptional(
+				getLocationRange,
+				&EphemeralReferenceValue{
+					Authorized:   innerBorrowType.Authorized,
+					Value:        result,
+					BorrowedType: innerBorrowType.Type,
+				},
+				borrowType,
+			)
 		}
+
 	case *sema.ReferenceType:
 		return &EphemeralReferenceValue{
 			Authorized:   typ.Authorized,
