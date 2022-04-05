@@ -8249,6 +8249,6 @@ func TestInterpretASTMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(229), meter.getMemory(common.MemoryKindPosition))
+		assert.Equal(t, uint64(232), meter.getMemory(common.MemoryKindPosition))
 	})
 }

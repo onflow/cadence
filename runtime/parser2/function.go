@@ -162,7 +162,7 @@ func parseParameter(p *parser) *ast.Parameter {
 
 	typeAnnotation := parseTypeAnnotation(p)
 
-	endPos := typeAnnotation.EndPosition(nil)
+	endPos := typeAnnotation.EndPosition(p.memoryGauge)
 
 	return ast.NewParameter(
 		p.memoryGauge,
