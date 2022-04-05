@@ -243,17 +243,20 @@ func parseFunctionParameterListAndRest(
 		p.skipSpaceAndComments(true)
 	} else {
 		positionBeforeMissingReturnType := parameterList.EndPos
-		returnType := &ast.NominalType{
-			Identifier: ast.NewEmptyIdentifier(
+		returnType := ast.NewNominalType(
+			p.memoryGauge,
+			ast.NewEmptyIdentifier(
 				p.memoryGauge,
 				positionBeforeMissingReturnType,
 			),
-		}
-		returnTypeAnnotation = &ast.TypeAnnotation{
-			IsResource: false,
-			Type:       returnType,
-			StartPos:   positionBeforeMissingReturnType,
-		}
+			nil,
+		)
+		returnTypeAnnotation = ast.NewTypeAnnotation(
+			p.memoryGauge,
+			false,
+			returnType,
+			positionBeforeMissingReturnType,
+		)
 	}
 
 	p.skipSpaceAndComments(true)

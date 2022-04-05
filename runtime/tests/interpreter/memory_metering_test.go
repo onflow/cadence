@@ -8150,4 +8150,48 @@ func TestInterpretASTMetering(t *testing.T) {
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindForceExpression))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindPathExpression))
 	})
+
+	t.Run("types", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                var a: Int = 5                                     // nominal type
+                var b: String? = "hello"                           // optional type
+                var c: [Int; 2] = [1, 2]                           // constant sized type
+                var d: [String] = []                               // variable sized type
+                var e: {Int: String} = {}                          // dictionary type
+
+                var f: ((String):Int) = fun(_a: String): Int {     // function type
+                    return 1
+                }
+
+                var g = &a as &Int                                 // reference type
+                var h: AnyStruct{foo} = bar()                      // restricted type
+                var i: Capability<&bar>? = nil                     // instantiation type
+            }
+
+            struct interface foo {}
+
+            struct bar: foo {}
+        `
+		meter := newTestMemoryGauge()
+
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindConstantSizedType))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindDictionaryType))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindFunctionType))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindInstantiationType))
+		assert.Equal(t, uint64(17), meter.getMemory(common.MemoryKindNominalType))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindOptionalType))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindReferenceType))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindRestrictedType))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindVariableSizedType))
+
+		assert.Equal(t, uint64(15), meter.getMemory(common.MemoryKindTypeAnnotation))
+	})
 }

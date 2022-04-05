@@ -75,6 +75,7 @@ const (
 	MemoryKindParameterList
 	MemoryKindTransfer
 	MemoryKindMembers
+	MemoryKindTypeAnnotation
 
 	MemoryKindFunctionDeclaration
 	MemoryKindCompositeDeclaration
@@ -120,4 +121,14 @@ const (
 	MemoryKindReferenceExpression
 	MemoryKindForceExpression
 	MemoryKindPathExpression
+
+	MemoryKindConstantSizedType
+	MemoryKindDictionaryType
+	MemoryKindFunctionType
+	MemoryKindInstantiationType
+	MemoryKindNominalType
+	MemoryKindOptionalType
+	MemoryKindReferenceType
+	MemoryKindRestrictedType
+	MemoryKindVariableSizedType
 )

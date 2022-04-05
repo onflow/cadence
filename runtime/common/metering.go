@@ -33,14 +33,15 @@ type MemoryGauge interface {
 }
 
 var (
-	ProgramMemoryUsage       = NewConstantMemoryUsage(MemoryKindProgram)
-	IdentifierMemoryUsage    = NewConstantMemoryUsage(MemoryKindIdentifier)
-	ArgumentMemoryUsage      = NewConstantMemoryUsage(MemoryKindArgument)
-	BlockMemoryUsage         = NewConstantMemoryUsage(MemoryKindBlock)
-	FunctionBlockMemoryUsage = NewConstantMemoryUsage(MemoryKindFunctionBlock)
-	ParameterMemoryUsage     = NewConstantMemoryUsage(MemoryKindParameter)
-	ParameterListMemoryUsage = NewConstantMemoryUsage(MemoryKindParameterList)
-	TransferMemoryUsage      = NewConstantMemoryUsage(MemoryKindTransfer)
+	ProgramMemoryUsage        = NewConstantMemoryUsage(MemoryKindProgram)
+	IdentifierMemoryUsage     = NewConstantMemoryUsage(MemoryKindIdentifier)
+	ArgumentMemoryUsage       = NewConstantMemoryUsage(MemoryKindArgument)
+	BlockMemoryUsage          = NewConstantMemoryUsage(MemoryKindBlock)
+	FunctionBlockMemoryUsage  = NewConstantMemoryUsage(MemoryKindFunctionBlock)
+	ParameterMemoryUsage      = NewConstantMemoryUsage(MemoryKindParameter)
+	ParameterListMemoryUsage  = NewConstantMemoryUsage(MemoryKindParameterList)
+	TransferMemoryUsage       = NewConstantMemoryUsage(MemoryKindTransfer)
+	TypeAnnotationMemoryUsage = NewConstantMemoryUsage(MemoryKindTypeAnnotation)
 
 	FunctionDeclarationMemoryUsage        = NewConstantMemoryUsage(MemoryKindFunctionDeclaration)
 	CompositeDeclarationMemoryUsage       = NewConstantMemoryUsage(MemoryKindCompositeDeclaration)
@@ -84,6 +85,16 @@ var (
 	ReferenceExpressionMemoryUsage   = NewConstantMemoryUsage(MemoryKindReferenceExpression)
 	ForceExpressionMemoryUsage       = NewConstantMemoryUsage(MemoryKindForceExpression)
 	PathExpressionMemoryUsage        = NewConstantMemoryUsage(MemoryKindPathExpression)
+
+	ConstantSizedTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindConstantSizedType)
+	DictionaryTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindDictionaryType)
+	FunctionTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindFunctionType)
+	InstantiationTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindInstantiationType)
+	NominalTypeMemoryUsage       = NewConstantMemoryUsage(MemoryKindNominalType)
+	OptionalTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindOptionalType)
+	ReferenceTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindReferenceType)
+	RestrictedTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindRestrictedType)
+	VariableSizedTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindVariableSizedType)
 )
 
 func UseMemory(gauge MemoryGauge, usage MemoryUsage) {
