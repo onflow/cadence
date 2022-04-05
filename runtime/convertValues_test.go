@@ -2114,9 +2114,12 @@ func executeTestScript(t *testing.T, script string, arg cadence.Value) (cadence.
 
 	runtimeInterface := &testRuntimeInterface{
 		storage: newTestLedger(nil, nil),
-		decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-			return json.Decode(b)
+		meterMemory: func(_ common.MemoryUsage) error {
+			return nil
 		},
+	}
+	runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+		return json.Decode(runtimeInterface, b)
 	}
 
 	scriptParam := Script{
@@ -3407,13 +3410,16 @@ func TestRuntimeStringValueImport(t *testing.T) {
 		validated := false
 
 		runtimeInterface := &testRuntimeInterface{
-			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(b)
-			},
 			log: func(s string) {
 				assert.True(t, utf8.ValidString(s))
 				validated = true
 			},
+			meterMemory: func(_ common.MemoryUsage) error {
+				return nil
+			},
+		}
+		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(runtimeInterface, b)
 		}
 
 		_, err = rt.ExecuteScript(
@@ -3457,13 +3463,16 @@ func TestTypeValueImport(t *testing.T) {
 		var ok bool
 
 		runtimeInterface := &testRuntimeInterface{
-			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(b)
-			},
 			log: func(s string) {
 				assert.Equal(t, s, "\"Int\"")
 				ok = true
 			},
+			meterMemory: func(_ common.MemoryUsage) error {
+				return nil
+			},
+		}
+		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(runtimeInterface, b)
 		}
 
 		_, err = rt.ExecuteScript(
@@ -3503,9 +3512,12 @@ func TestTypeValueImport(t *testing.T) {
 		rt := NewInterpreterRuntime()
 
 		runtimeInterface := &testRuntimeInterface{
-			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(b)
+			meterMemory: func(_ common.MemoryUsage) error {
+				return nil
 			},
+		}
+		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(runtimeInterface, b)
 		}
 
 		_, err = rt.ExecuteScript(
@@ -3555,13 +3567,16 @@ func TestCapabilityValueImport(t *testing.T) {
 		var ok bool
 
 		runtimeInterface := &testRuntimeInterface{
-			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(b)
-			},
 			log: func(s string) {
 				assert.Equal(t, s, "Capability<&Int>(address: 0x0100000000000000, path: /public/foo)")
 				ok = true
 			},
+			meterMemory: func(_ common.MemoryUsage) error {
+				return nil
+			},
+		}
+		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(runtimeInterface, b)
 		}
 
 		_, err = rt.ExecuteScript(
@@ -3603,9 +3618,12 @@ func TestCapabilityValueImport(t *testing.T) {
 		rt := NewInterpreterRuntime()
 
 		runtimeInterface := &testRuntimeInterface{
-			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(b)
+			meterMemory: func(_ common.MemoryUsage) error {
+				return nil
 			},
+		}
+		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(runtimeInterface, b)
 		}
 
 		_, err = rt.ExecuteScript(
@@ -3646,9 +3664,12 @@ func TestCapabilityValueImport(t *testing.T) {
 		rt := NewInterpreterRuntime()
 
 		runtimeInterface := &testRuntimeInterface{
-			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(b)
+			meterMemory: func(_ common.MemoryUsage) error {
+				return nil
 			},
+		}
+		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(runtimeInterface, b)
 		}
 
 		_, err = rt.ExecuteScript(
@@ -3689,11 +3710,14 @@ func TestCapabilityValueImport(t *testing.T) {
 		rt := NewInterpreterRuntime()
 
 		runtimeInterface := &testRuntimeInterface{
-			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(b)
-			},
 			log: func(s string) {
 			},
+			meterMemory: func(_ common.MemoryUsage) error {
+				return nil
+			},
+		}
+		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(runtimeInterface, b)
 		}
 
 		_, err = rt.ExecuteScript(
@@ -3741,11 +3765,14 @@ func TestCapabilityValueImport(t *testing.T) {
 		rt := NewInterpreterRuntime()
 
 		runtimeInterface := &testRuntimeInterface{
-			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(b)
-			},
 			log: func(s string) {
 			},
+			meterMemory: func(_ common.MemoryUsage) error {
+				return nil
+			},
+		}
+		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(runtimeInterface, b)
 		}
 
 		_, err = rt.ExecuteScript(
@@ -3831,14 +3858,16 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 					runtimeInterface := &testRuntimeInterface{
 						storage: storage,
-						decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-							return json.Decode(b)
-						},
-
 						validatePublicKey: func(publicKey *PublicKey) error {
 							publicKeyValidated = true
 							return publicKeyActualError
 						},
+						meterMemory: func(_ common.MemoryUsage) error {
+							return nil
+						},
+					}
+					runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+						return json.Decode(runtimeInterface, b)
 					}
 
 					_, err := executeScript(t, script, publicKey, runtimeInterface)
@@ -3898,9 +3927,6 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
-			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(b)
-			},
 			verifySignature: func(
 				signature []byte,
 				tag string,
@@ -3912,6 +3938,12 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 				verifyInvoked = true
 				return true, nil
 			},
+			meterMemory: func(_ common.MemoryUsage) error {
+				return nil
+			},
+		}
+		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(runtimeInterface, b)
 		}
 		addPublicKeyValidation(runtimeInterface, nil)
 
@@ -3945,9 +3977,12 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
-			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(b)
+			meterMemory: func(_ common.MemoryUsage) error {
+				return nil
 			},
+		}
+		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(runtimeInterface, b)
 		}
 
 		_, err := executeScript(t, script, publicKey, runtimeInterface)
@@ -3983,9 +4018,12 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
-			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(b)
+			meterMemory: func(_ common.MemoryUsage) error {
+				return nil
 			},
+		}
+		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(runtimeInterface, b)
 		}
 
 		_, err := executeScript(t, script, publicKey, runtimeInterface)
@@ -4014,9 +4052,12 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
-			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(b)
+			meterMemory: func(_ common.MemoryUsage) error {
+				return nil
 			},
+		}
+		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(runtimeInterface, b)
 		}
 
 		_, err := executeScript(t, script, publicKey, runtimeInterface)
@@ -4049,9 +4090,12 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
-			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(b)
+			meterMemory: func(_ common.MemoryUsage) error {
+				return nil
 			},
+		}
+		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(runtimeInterface, b)
 		}
 
 		_, err := executeScript(t, script, publicKey, runtimeInterface)
@@ -4125,9 +4169,12 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
-			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(b)
+			meterMemory: func(_ common.MemoryUsage) error {
+				return nil
 			},
+		}
+		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(runtimeInterface, b)
 		}
 
 		_, err := rt.ExecuteScript(
@@ -4190,9 +4237,12 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
-			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(b)
+			meterMemory: func(_ common.MemoryUsage) error {
+				return nil
 			},
+		}
+		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(runtimeInterface, b)
 		}
 
 		_, err := rt.ExecuteScript(
@@ -4256,13 +4306,16 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
-			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(b)
-			},
 			validatePublicKey: func(publicKey *PublicKey) error {
 				publicKeyValidated = true
 				return nil
 			},
+			meterMemory: func(_ common.MemoryUsage) error {
+				return nil
+			},
+		}
+		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(runtimeInterface, b)
 		}
 
 		value, err := rt.ExecuteScript(
@@ -4326,13 +4379,16 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
-			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(b)
-			},
 			validatePublicKey: func(publicKey *PublicKey) error {
 				publicKeyValidated = true
 				return nil
 			},
+			meterMemory: func(_ common.MemoryUsage) error {
+				return nil
+			},
+		}
+		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(runtimeInterface, b)
 		}
 
 		value, err := rt.ExecuteScript(
@@ -4674,9 +4730,12 @@ func TestNestedStructArgPassing(t *testing.T) {
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
-			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(b)
+			meterMemory: func(_ common.MemoryUsage) error {
+				return nil
 			},
+		}
+		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(runtimeInterface, b)
 		}
 
 		value, err := rt.ExecuteScript(
@@ -4737,11 +4796,13 @@ func TestNestedStructArgPassing(t *testing.T) {
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
-			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(b)
+			meterMemory: func(_ common.MemoryUsage) error {
+				return nil
 			},
 		}
-
+		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(runtimeInterface, b)
+		}
 		_, err := rt.ExecuteScript(
 			Script{
 				Source: []byte(script),
