@@ -31,6 +31,11 @@ const ScriptLocationPrefix = "s"
 //
 type ScriptLocation []byte
 
+func NewScriptLocation(gauge MemoryGauge, script []byte) ScriptLocation {
+	UseMemory(gauge, NewBytesMemoryUsage(len(script)))
+	return ScriptLocation(script)
+}
+
 func (l ScriptLocation) ID() LocationID {
 	return NewLocationID(
 		ScriptLocationPrefix,
@@ -73,13 +78,13 @@ func (l ScriptLocation) MarshalJSON() ([]byte, error) {
 func init() {
 	RegisterTypeIDDecoder(
 		ScriptLocationPrefix,
-		func(typeID string) (location Location, qualifiedIdentifier string, err error) {
-			return decodeScriptLocationTypeID(typeID)
+		func(gauge MemoryGauge, typeID string) (location Location, qualifiedIdentifier string, err error) {
+			return decodeScriptLocationTypeID(gauge, typeID)
 		},
 	)
 }
 
-func decodeScriptLocationTypeID(typeID string) (ScriptLocation, string, error) {
+func decodeScriptLocationTypeID(gauge MemoryGauge, typeID string) (ScriptLocation, string, error) {
 
 	const errorMessagePrefix = "invalid script location type ID"
 
@@ -113,6 +118,8 @@ func decodeScriptLocationTypeID(typeID string) (ScriptLocation, string, error) {
 	}
 
 	location, err := hex.DecodeString(parts[1])
+	UseMemory(gauge, NewBytesMemoryUsage(len(location)))
+
 	if err != nil {
 		return nil, "", fmt.Errorf(
 			"%s: invalid location: %w",

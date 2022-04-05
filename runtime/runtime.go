@@ -2548,10 +2548,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 
 			// Check the code
 
-			location := common.AddressLocation{
-				Address: address,
-				Name:    nameArgument,
-			}
+			location := common.NewAddressLocation(invocation.Interpreter, address, nameArgument)
 
 			context := startContext.WithLocation(location)
 
