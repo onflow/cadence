@@ -71,6 +71,7 @@ const (
 	MemoryKindIdentifier
 	MemoryKindArgument
 	MemoryKindBlock
+
 	MemoryKindFunctionDeclaration
 	MemoryKindCompositeDeclaration
 	MemoryKindInterfaceDeclaration
@@ -81,6 +82,7 @@ const (
 	MemoryKindVariableDeclaration
 	MemoryKindSpecialFunctionDeclaration
 	MemoryKindPragmaDeclaration
+
 	MemoryKindAssignmentStatement
 	MemoryKindBreakStatement
 	MemoryKindContinueStatement
@@ -92,4 +94,26 @@ const (
 	MemoryKindSwapStatement
 	MemoryKindSwitchStatement
 	MemoryKindWhileStatement
+
+	MemoryKindBooleanExpression
+	MemoryKindNilExpression
+	MemoryKindStringExpression
+	MemoryKindIntegerExpression
+	MemoryKindFixedPointExpression
+	MemoryKindArrayExpression
+	MemoryKindDictionaryExpression
+	MemoryKindIdentifierExpression
+	MemoryKindInvocationExpression
+	MemoryKindMemberExpression
+	MemoryKindIndexExpression
+	MemoryKindConditionalExpression
+	MemoryKindUnaryExpression
+	MemoryKindBinaryExpression
+	MemoryKindFunctionExpression
+	MemoryKindCastingExpression
+	MemoryKindCreateExpression
+	MemoryKindDestroyExpression
+	MemoryKindReferenceExpression
+	MemoryKindForceExpression
+	MemoryKindPathExpression
 )

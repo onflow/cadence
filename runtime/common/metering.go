@@ -57,6 +57,25 @@ var (
 	SwapStatementMemoryUsage              = NewConstantMemoryUsage(MemoryKindSwapStatement)
 	SwitchStatementMemoryUsage            = NewConstantMemoryUsage(MemoryKindSwitchStatement)
 	WhileStatementMemoryUsage             = NewConstantMemoryUsage(MemoryKindWhileStatement)
+	BooleanExpressionMemoryUsage          = NewConstantMemoryUsage(MemoryKindBooleanExpression)
+	NilExpressionMemoryUsage              = NewConstantMemoryUsage(MemoryKindNilExpression)
+	StringExpressionMemoryUsage           = NewConstantMemoryUsage(MemoryKindStringExpression)
+	IntegerExpressionMemoryUsage          = NewConstantMemoryUsage(MemoryKindIntegerExpression)
+	FixedPointExpressionMemoryUsage       = NewConstantMemoryUsage(MemoryKindFixedPointExpression)
+	IdentifierExpressionMemoryUsage       = NewConstantMemoryUsage(MemoryKindIdentifierExpression)
+	InvocationExpressionMemoryUsage       = NewConstantMemoryUsage(MemoryKindInvocationExpression)
+	MemberExpressionMemoryUsage           = NewConstantMemoryUsage(MemoryKindMemberExpression)
+	IndexExpressionMemoryUsage            = NewConstantMemoryUsage(MemoryKindIndexExpression)
+	ConditionalExpressionMemoryUsage      = NewConstantMemoryUsage(MemoryKindConditionalExpression)
+	UnaryExpressionMemoryUsage            = NewConstantMemoryUsage(MemoryKindUnaryExpression)
+	BinaryExpressionMemoryUsage           = NewConstantMemoryUsage(MemoryKindBinaryExpression)
+	FunctionExpressionMemoryUsage         = NewConstantMemoryUsage(MemoryKindFunctionExpression)
+	CastingExpressionMemoryUsage          = NewConstantMemoryUsage(MemoryKindCastingExpression)
+	CreateExpressionMemoryUsage           = NewConstantMemoryUsage(MemoryKindCreateExpression)
+	DestroyExpressionMemoryUsage          = NewConstantMemoryUsage(MemoryKindDestroyExpression)
+	ReferenceExpressionMemoryUsage        = NewConstantMemoryUsage(MemoryKindReferenceExpression)
+	ForceExpressionMemoryUsage            = NewConstantMemoryUsage(MemoryKindForceExpression)
+	PathExpressionMemoryUsage             = NewConstantMemoryUsage(MemoryKindPathExpression)
 )
 
 func UseMemory(gauge MemoryGauge, usage MemoryUsage) {
@@ -271,5 +290,21 @@ func NewSyntaxTokenMemoryUsage(length int) MemoryUsage {
 	return MemoryUsage{
 		Kind:   MemoryKindTokenSyntax,
 		Amount: uint64(length),
+	}
+}
+
+func NewArrayExpressionMemoryUsage(length int) MemoryUsage {
+	return MemoryUsage{
+		Kind: MemoryKindArrayExpression,
+		// +1 to account for empty arrays
+		Amount: uint64(length) + 1,
+	}
+}
+
+func NewDictionaryExpressionMemoryUsage(length int) MemoryUsage {
+	return MemoryUsage{
+		Kind: MemoryKindDictionaryExpression,
+		// +1 to account for empty dictionaries
+		Amount: uint64(length) + 1,
 	}
 }

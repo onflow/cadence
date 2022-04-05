@@ -98,13 +98,14 @@ func (d *FunctionDeclaration) DeclarationAccess() Access {
 	return d.Access
 }
 
-func (d *FunctionDeclaration) ToExpression() *FunctionExpression {
-	return &FunctionExpression{
-		ParameterList:        d.ParameterList,
-		ReturnTypeAnnotation: d.ReturnTypeAnnotation,
-		FunctionBlock:        d.FunctionBlock,
-		StartPos:             d.StartPos,
-	}
+func (d *FunctionDeclaration) ToExpression(memoryGauge common.MemoryGauge) *FunctionExpression {
+	return NewFunctionExpression(
+		memoryGauge,
+		d.ParameterList,
+		d.ReturnTypeAnnotation,
+		d.FunctionBlock,
+		d.StartPos,
+	)
 }
 
 func (d *FunctionDeclaration) DeclarationMembers() *Members {

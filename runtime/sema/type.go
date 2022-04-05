@@ -3343,22 +3343,26 @@ func suggestIntegerLiteralConversionReplacement(
 
 		signed := IsSameTypeKind(targetType, SignedFixedPointType)
 
-		var hintExpression ast.Expression = &ast.FixedPointExpression{
-			Negative:        negative,
-			UnsignedInteger: new(big.Int).Abs(argument.Value),
-			Fractional:      new(big.Int),
-			Scale:           1,
-		}
+		var hintExpression ast.Expression = ast.NewFixedPointExpression(
+			checker.memoryGauge,
+			"",
+			negative,
+			new(big.Int).Abs(argument.Value),
+			new(big.Int),
+			1,
+			argument.Range,
+		)
 
 		// If the fixed-point literal is positive
 		// and the the target fixed-point type is signed,
 		// then a static cast is required
 
 		if !negative && signed {
-			hintExpression = &ast.CastingExpression{
-				Expression: hintExpression,
-				Operation:  ast.OperationCast,
-				TypeAnnotation: &ast.TypeAnnotation{
+			hintExpression = ast.NewCastingExpression(
+				checker.memoryGauge,
+				hintExpression,
+				ast.OperationCast,
+				&ast.TypeAnnotation{
 					IsResource: false,
 					Type: &ast.NominalType{
 						Identifier: ast.NewIdentifier(
@@ -3368,7 +3372,8 @@ func suggestIntegerLiteralConversionReplacement(
 						),
 					},
 				},
-			}
+				nil,
+			)
 		}
 
 		checker.hint(
@@ -3391,10 +3396,11 @@ func suggestIntegerLiteralConversionReplacement(
 		// are inferred to be of type `Int`
 
 		if !IsSameTypeKind(targetType, IntType) {
-			hintExpression = &ast.CastingExpression{
-				Expression: hintExpression,
-				Operation:  ast.OperationCast,
-				TypeAnnotation: &ast.TypeAnnotation{
+			hintExpression = ast.NewCastingExpression(
+				checker.memoryGauge,
+				hintExpression,
+				ast.OperationCast,
+				&ast.TypeAnnotation{
 					IsResource: false,
 					Type: &ast.NominalType{
 						Identifier: ast.NewIdentifier(
@@ -3404,7 +3410,8 @@ func suggestIntegerLiteralConversionReplacement(
 						),
 					},
 				},
-			}
+				nil,
+			)
 		}
 
 		checker.hint(

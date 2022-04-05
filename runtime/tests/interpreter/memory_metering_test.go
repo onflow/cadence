@@ -8101,4 +8101,66 @@ func TestInterpretASTMetering(t *testing.T) {
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindSwitchStatement))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindEmitStatement))
 	})
+
+	t.Run("expressions", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                var a = 5                                // integer expr
+                var b = 1.2 + 2.3                        // binary, fixed-point expr
+                var c = !true                            // unary, boolean expr
+                var d: String? = "hello"                 // string expr
+                var e = nil                              // nil expr
+                var f: [AnyStruct] = [[], [], []]        // array expr
+                var g: {Int: {Int: AnyStruct}} = {1:{}}  // nil expr
+                var h <- create bar()                    // create, identifier, invocation
+                var i = h.baz                            // member access, identifier x2
+                destroy h                                // destroy
+                var j = f[0]                             // index access, identifier, integer
+                var k = fun() {}                         // function expr
+                k()                                      // identifier, invocation
+                var l = c ? 1 : 2                        // conditional, identifier, integer x2
+                var m = d as AnyStruct                   // casting, identifier
+                var n = &d as &AnyStruct                 // reference, casting, identifier
+                var o = d!                               // force, identifier
+                var p = /public/somepath                 // path
+            }
+
+            resource bar {
+                let baz: Int
+                init() {
+                    self.baz = 0x4
+                }
+            }
+        `
+		meter := newTestMemoryGauge()
+
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindBooleanExpression))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindNilExpression))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindStringExpression))
+		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindIntegerExpression))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindFixedPointExpression))
+		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindArrayExpression))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindDictionaryExpression))
+		assert.Equal(t, uint64(10), meter.getMemory(common.MemoryKindIdentifierExpression))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindInvocationExpression))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindMemberExpression))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindIndexExpression))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindConditionalExpression))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindUnaryExpression))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindBinaryExpression))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindFunctionExpression))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCastingExpression))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCreateExpression))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindDestroyExpression))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindReferenceExpression))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindForceExpression))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindPathExpression))
+	})
 }
