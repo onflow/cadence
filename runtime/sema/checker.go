@@ -1335,10 +1335,11 @@ func (checker *Checker) convertNominalType(t *ast.NominalType) Type {
 			if !ty.IsInvalidType() {
 				checker.report(
 					&InvalidNestedTypeError{
-						Type: &ast.NominalType{
-							Identifier:        t.Identifier,
-							NestedIdentifiers: resolvedIdentifiers,
-						},
+						Type: ast.NewNominalType(
+							checker.memoryGauge,
+							t.Identifier,
+							resolvedIdentifiers,
+						),
 					},
 				)
 			}
@@ -1349,10 +1350,11 @@ func (checker *Checker) convertNominalType(t *ast.NominalType) Type {
 		resolvedIdentifiers = append(resolvedIdentifiers, identifier)
 
 		if ty == nil {
-			nonExistentType := &ast.NominalType{
-				Identifier:        t.Identifier,
-				NestedIdentifiers: resolvedIdentifiers,
-			}
+			nonExistentType := ast.NewNominalType(
+				checker.memoryGauge,
+				t.Identifier,
+				resolvedIdentifiers,
+			)
 			checker.report(
 				&NotDeclaredError{
 					ExpectedKind: common.DeclarationKindType,

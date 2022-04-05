@@ -3362,16 +3362,20 @@ func suggestIntegerLiteralConversionReplacement(
 				checker.memoryGauge,
 				hintExpression,
 				ast.OperationCast,
-				&ast.TypeAnnotation{
-					IsResource: false,
-					Type: &ast.NominalType{
-						Identifier: ast.NewIdentifier(
+				ast.NewTypeAnnotation(
+					checker.memoryGauge,
+					false,
+					ast.NewNominalType(
+						checker.memoryGauge,
+						ast.NewIdentifier(
 							checker.memoryGauge,
 							targetType.String(),
 							ast.EmptyPosition,
 						),
-					},
-				},
+						nil,
+					),
+					ast.EmptyPosition,
+				),
 				nil,
 			)
 		}
@@ -3400,16 +3404,20 @@ func suggestIntegerLiteralConversionReplacement(
 				checker.memoryGauge,
 				hintExpression,
 				ast.OperationCast,
-				&ast.TypeAnnotation{
-					IsResource: false,
-					Type: &ast.NominalType{
-						Identifier: ast.NewIdentifier(
+				ast.NewTypeAnnotation(
+					checker.memoryGauge,
+					false,
+					ast.NewNominalType(
+						checker.memoryGauge,
+						ast.NewIdentifier(
 							checker.memoryGauge,
 							targetType.String(),
 							ast.EmptyPosition,
 						),
-					},
-				},
+						nil,
+					),
+					ast.EmptyPosition,
+				),
 				nil,
 			)
 		}
