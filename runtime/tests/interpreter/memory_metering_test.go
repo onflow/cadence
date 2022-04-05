@@ -8194,4 +8194,36 @@ func TestInterpretASTMetering(t *testing.T) {
 
 		assert.Equal(t, uint64(15), meter.getMemory(common.MemoryKindTypeAnnotation))
 	})
+
+	t.Run("position info", func(t *testing.T) {
+		script := `
+            pub let x = 1
+            pub var y = 2
+
+            pub fun main() {
+                var z = 3
+            }
+
+            pub fun foo(_ x: String, _ y: Int) {}
+
+            pub struct A {
+                pub var a: String
+
+                init() {
+                    self.a = "hello"
+                }
+            }
+
+            pub struct interface B {}
+        `
+
+		meter := newTestMemoryGauge()
+
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(229), meter.getMemory(common.MemoryKindPosition))
+	})
 }

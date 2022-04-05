@@ -37,6 +37,7 @@ func NewBeforeExtractor(memoryGauge common.MemoryGauge, report func(error)) *Bef
 	expressionExtractor := &ast.ExpressionExtractor{
 		InvocationExtractor: beforeExtractor,
 		FunctionExtractor:   beforeExtractor,
+		MemoryGauge:         memoryGauge,
 	}
 	beforeExtractor.ExpressionExtractor = expressionExtractor
 	return beforeExtractor

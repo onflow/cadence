@@ -133,4 +133,5 @@ const (
 	MemoryKindVariableSizedType
 
 	MemoryKindPosition
+	MemoryKindRange
 )

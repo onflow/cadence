@@ -21,6 +21,7 @@ package ast
 import (
 	"fmt"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -131,6 +132,7 @@ type ExpressionExtractor struct {
 	ReferenceExtractor   ReferenceExtractor
 	ForceExtractor       ForceExtractor
 	PathExtractor        PathExtractor
+	MemoryGauge          common.MemoryGauge
 }
 
 func (extractor *ExpressionExtractor) Extract(expression Expression) ExpressionExtraction {
@@ -680,8 +682,7 @@ func (extractor *ExpressionExtractor) ExtractCreate(expression *CreateExpression
 
 		invocationExpression = &InvocationExpression{
 			InvokedExpression: result.RewrittenExpression,
-			// TODO: pass memory gauge
-			EndPos:            result.RewrittenExpression.EndPosition(nil),
+			EndPos:            result.RewrittenExpression.EndPosition(extractor.MemoryGauge),
 		}
 	}
 
