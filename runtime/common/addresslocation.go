@@ -36,6 +36,14 @@ type AddressLocation struct {
 	Name    string
 }
 
+func NewAddressLocation(gauge MemoryGauge, addr Address, name string) AddressLocation {
+	UseMemory(gauge, NewConstantMemoryUsage(MemoryKindAddressLocation))
+	return AddressLocation{
+		Address: addr,
+		Name:    name,
+	}
+}
+
 func (l AddressLocation) String() string {
 	if l.Name == "" {
 		return l.Address.String()
@@ -96,13 +104,13 @@ func (l AddressLocation) MarshalJSON() ([]byte, error) {
 func init() {
 	RegisterTypeIDDecoder(
 		AddressLocationPrefix,
-		func(typeID string) (location Location, qualifiedIdentifier string, err error) {
-			return decodeAddressLocationTypeID(typeID)
+		func(gauge MemoryGauge, typeID string) (location Location, qualifiedIdentifier string, err error) {
+			return decodeAddressLocationTypeID(gauge, typeID)
 		},
 	)
 }
 
-func decodeAddressLocationTypeID(typeID string) (AddressLocation, string, error) {
+func decodeAddressLocationTypeID(gauge MemoryGauge, typeID string) (AddressLocation, string, error) {
 
 	const errorMessagePrefix = "invalid address location type ID"
 
@@ -198,10 +206,7 @@ func decodeAddressLocationTypeID(typeID string) (AddressLocation, string, error)
 		return AddressLocation{}, "", err
 	}
 
-	location := AddressLocation{
-		Address: address,
-		Name:    name,
-	}
+	location := NewAddressLocation(gauge, address, name)
 
 	return location, qualifiedIdentifier, nil
 }

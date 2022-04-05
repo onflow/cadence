@@ -30,6 +30,11 @@ const IdentifierLocationPrefix = "I"
 //
 type IdentifierLocation string
 
+func NewIdentifierLocation(gauge MemoryGauge, id string) IdentifierLocation {
+	UseMemory(gauge, NewRawStringMemoryUsage(len(id)))
+	return IdentifierLocation(id)
+}
+
 func (l IdentifierLocation) ID() LocationID {
 	return NewLocationID(
 		IdentifierLocationPrefix,
@@ -72,13 +77,13 @@ func (l IdentifierLocation) MarshalJSON() ([]byte, error) {
 func init() {
 	RegisterTypeIDDecoder(
 		IdentifierLocationPrefix,
-		func(typeID string) (location Location, qualifiedIdentifier string, err error) {
-			return decodeIdentifierLocationTypeID(typeID)
+		func(gauge MemoryGauge, typeID string) (location Location, qualifiedIdentifier string, err error) {
+			return decodeIdentifierLocationTypeID(gauge, typeID)
 		},
 	)
 }
 
-func decodeIdentifierLocationTypeID(typeID string) (IdentifierLocation, string, error) {
+func decodeIdentifierLocationTypeID(gauge MemoryGauge, typeID string) (IdentifierLocation, string, error) {
 
 	const errorMessagePrefix = "invalid identifier location type ID"
 
