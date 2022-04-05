@@ -69,6 +69,9 @@ const (
 	MemoryKindIdentifier
 	MemoryKindArgument
 	MemoryKindBlock
+	MemoryKindFunctionBlock
+	MemoryKindParameter
+	MemoryKindParameterList
 
 	MemoryKindFunctionDeclaration
 	MemoryKindCompositeDeclaration

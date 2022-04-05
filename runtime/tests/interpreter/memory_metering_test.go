@@ -7890,6 +7890,7 @@ func TestInterpretASTMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindBlock))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindFunctionBlock))
 	})
 
 	t.Run("declarations", func(t *testing.T) {
@@ -7902,6 +7903,8 @@ func TestInterpretASTMetering(t *testing.T) {
             pub fun main() {
                 var z = 3
             }
+
+            pub fun foo(_ x: String, _ y: Int) {}
 
             pub struct A {
                 pub var a: String
@@ -7981,7 +7984,7 @@ func TestInterpretASTMetering(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindFunctionDeclaration))
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindFunctionDeclaration))
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindCompositeDeclaration))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindInterfaceDeclaration))
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindEnumCaseDeclaration))
@@ -7991,6 +7994,10 @@ func TestInterpretASTMetering(t *testing.T) {
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindVariableDeclaration))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindSpecialFunctionDeclaration))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindPragmaDeclaration))
+
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindFunctionBlock))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindParameter))
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindParameterList))
 	})
 
 	t.Run("statements", func(t *testing.T) {
