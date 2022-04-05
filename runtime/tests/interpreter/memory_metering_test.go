@@ -7966,6 +7966,7 @@ func TestInterpretASTMetering(t *testing.T) {
 				Location: utils.ImportedLocation,
 			},
 		)
+		require.NoError(t, err)
 
 		meter := newTestMemoryGauge()
 		inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(
