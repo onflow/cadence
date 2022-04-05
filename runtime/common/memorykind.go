@@ -55,6 +55,8 @@ const (
 	// Misc
 
 	MemoryKindRawString
+	MemoryKindAddressLocation
+	MemoryKindBytes
 	MemoryKindVariable
 
 	// Tokens

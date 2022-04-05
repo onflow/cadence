@@ -1744,7 +1744,7 @@ func TestDecodeFixedPoints(t *testing.T) {
 
 					enc := fmt.Sprintf(`{ "type": "%s", "value": "%s"}`, ty.ID(), tt.input)
 
-					actual, err := json.Decode([]byte(enc))
+					actual, err := json.Decode(nil, []byte(enc))
 
 					if tt.check != nil {
 						tt.check(t, actual, err)
@@ -1761,7 +1761,7 @@ func TestDecodeFixedPoints(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := json.Decode([]byte(`{"type": "Fix64", "value": "1.-1"}`))
+		_, err := json.Decode(nil, []byte(`{"type": "Fix64", "value": "1.-1"}`))
 		assert.Error(t, err)
 	})
 
@@ -1769,7 +1769,7 @@ func TestDecodeFixedPoints(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := json.Decode([]byte(`{"type": "Fix64", "value": "1.+1"}`))
+		_, err := json.Decode(nil, []byte(`{"type": "Fix64", "value": "1.+1"}`))
 		assert.Error(t, err)
 	})
 
@@ -1777,7 +1777,7 @@ func TestDecodeFixedPoints(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := json.Decode([]byte(`{"type": "Fix64", "value": ".1"}`))
+		_, err := json.Decode(nil, []byte(`{"type": "Fix64", "value": ".1"}`))
 		assert.Error(t, err)
 	})
 
@@ -1785,7 +1785,7 @@ func TestDecodeFixedPoints(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := json.Decode([]byte(`{"type": "Fix64", "value": "1."}`))
+		_, err := json.Decode(nil, []byte(`{"type": "Fix64", "value": "1."}`))
 		assert.Error(t, err)
 	})
 }
@@ -1864,7 +1864,7 @@ func TestDecodeInvalidType(t *testing.T) {
 			}
 		}
 	`
-		_, err := json.Decode([]byte(encodedValue))
+		_, err := json.Decode(nil, []byte(encodedValue))
 		require.Error(t, err)
 		assert.Equal(t, "failed to decode value: invalid JSON Cadence structure. invalid type ID: ``", err.Error())
 	})
@@ -1881,7 +1881,7 @@ func TestDecodeInvalidType(t *testing.T) {
 			}
 		}
 	`
-		_, err := json.Decode([]byte(encodedValue))
+		_, err := json.Decode(nil, []byte(encodedValue))
 		require.Error(t, err)
 		assert.Equal(t, "failed to decode value: invalid JSON Cadence structure. invalid type ID: `I.Foo`", err.Error())
 	})
@@ -1898,7 +1898,7 @@ func TestDecodeInvalidType(t *testing.T) {
 			}
 		}
 	`
-		_, err := json.Decode([]byte(encodedValue))
+		_, err := json.Decode(nil, []byte(encodedValue))
 		require.Error(t, err)
 		assert.Equal(t, "failed to decode value: invalid JSON Cadence structure. invalid type ID: `N.PublicKey`", err.Error())
 	})
@@ -1921,7 +1921,7 @@ func testEncode(t *testing.T, val cadence.Value, expectedJSON string) (actualJSO
 }
 
 func testDecode(t *testing.T, actualJSON string, expectedVal cadence.Value) {
-	decodedVal, err := json.Decode([]byte(actualJSON))
+	decodedVal, err := json.Decode(nil, []byte(actualJSON))
 	require.NoError(t, err)
 
 	assert.Equal(t, expectedVal, decodedVal)
@@ -1950,7 +1950,7 @@ func TestNonUTF8StringEncoding(t *testing.T) {
 	encodedValue, err := json.Encode(stringValue)
 	require.NoError(t, err)
 
-	decodedValue, err := json.Decode(encodedValue)
+	decodedValue, err := json.Decode(nil, encodedValue)
 	require.NoError(t, err)
 
 	// Decoded value must be a valid utf8 string
