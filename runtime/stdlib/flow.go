@@ -248,7 +248,7 @@ func (l FlowLocation) MarshalJSON() ([]byte, error) {
 func init() {
 	common.RegisterTypeIDDecoder(
 		FlowLocationPrefix,
-		func(typeID string) (location common.Location, qualifiedIdentifier string, err error) {
+		func(_ common.MemoryGauge, typeID string) (location common.Location, qualifiedIdentifier string, err error) {
 			return decodeFlowLocationTypeID(typeID)
 		},
 	)
