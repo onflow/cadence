@@ -22,6 +22,8 @@ import (
 	"encoding/json"
 
 	"github.com/turbolent/prettier"
+
+	"github.com/onflow/cadence/runtime/common"
 )
 
 type Statement interface {
@@ -34,6 +36,14 @@ type Statement interface {
 type ReturnStatement struct {
 	Expression Expression
 	Range
+}
+
+func NewReturnStatement(gauge common.MemoryGauge, expression Expression, stmtRange Range) *ReturnStatement {
+	common.UseMemory(gauge, common.ReturnStatementMemoryUsage)
+	return &ReturnStatement{
+		Expression: expression,
+		Range:      stmtRange,
+	}
 }
 
 var _ Statement = &ReturnStatement{}
@@ -84,6 +94,13 @@ type BreakStatement struct {
 
 var _ Statement = &BreakStatement{}
 
+func NewBreakStatement(gauge common.MemoryGauge, tokenRange Range) *BreakStatement {
+	common.UseMemory(gauge, common.BreakStatementMemoryUsage)
+	return &BreakStatement{
+		Range: tokenRange,
+	}
+}
+
 func (*BreakStatement) isStatement() {}
 
 func (s *BreakStatement) Accept(visitor Visitor) Repr {
@@ -118,6 +135,13 @@ type ContinueStatement struct {
 }
 
 var _ Statement = &ContinueStatement{}
+
+func NewContinueStatement(gauge common.MemoryGauge, tokenRange Range) *ContinueStatement {
+	common.UseMemory(gauge, common.ContinueStatementMemoryUsage)
+	return &ContinueStatement{
+		Range: tokenRange,
+	}
+}
 
 func (*ContinueStatement) isStatement() {}
 
@@ -163,6 +187,22 @@ type IfStatement struct {
 }
 
 var _ Statement = &IfStatement{}
+
+func NewIfStatement(
+	gauge common.MemoryGauge,
+	test IfStatementTest,
+	thenBlock *Block,
+	elseBlock *Block,
+	startPos Position,
+) *IfStatement {
+	common.UseMemory(gauge, common.IfStatementMemoryUsage)
+	return &IfStatement{
+		Test:     test,
+		Then:     thenBlock,
+		Else:     elseBlock,
+		StartPos: startPos,
+	}
+}
 
 func (*IfStatement) isStatement() {}
 
@@ -255,6 +295,20 @@ type WhileStatement struct {
 
 var _ Statement = &WhileStatement{}
 
+func NewWhileStatement(
+	gauge common.MemoryGauge,
+	expression Expression,
+	block *Block,
+	startPos Position,
+) *WhileStatement {
+	common.UseMemory(gauge, common.WhileStatementMemoryUsage)
+	return &WhileStatement{
+		Test:     expression,
+		Block:    block,
+		StartPos: startPos,
+	}
+}
+
 func (*WhileStatement) isStatement() {}
 
 func (s *WhileStatement) Accept(visitor Visitor) Repr {
@@ -311,6 +365,25 @@ type ForStatement struct {
 }
 
 var _ Statement = &ForStatement{}
+
+func NewForStatement(
+	gauge common.MemoryGauge,
+	identifier Identifier,
+	index *Identifier,
+	block *Block,
+	expression Expression,
+	startPos Position,
+) *ForStatement {
+	common.UseMemory(gauge, common.ForStatementMemoryUsage)
+
+	return &ForStatement{
+		Identifier: identifier,
+		Index:      index,
+		Block:      block,
+		Value:      expression,
+		StartPos:   startPos,
+	}
+}
 
 func (*ForStatement) isStatement() {}
 
@@ -383,6 +456,18 @@ type EmitStatement struct {
 
 var _ Statement = &EmitStatement{}
 
+func NewEmitStatement(
+	gauge common.MemoryGauge,
+	invocation *InvocationExpression,
+	startPos Position,
+) *EmitStatement {
+	common.UseMemory(gauge, common.EmitStatementMemoryUsage)
+	return &EmitStatement{
+		InvocationExpression: invocation,
+		StartPos:             startPos,
+	}
+}
+
 func (*EmitStatement) isStatement() {}
 
 func (s *EmitStatement) StartPosition() Position {
@@ -433,6 +518,21 @@ type AssignmentStatement struct {
 }
 
 var _ Statement = &AssignmentStatement{}
+
+func NewAssignmentStatement(
+	gauge common.MemoryGauge,
+	expression Expression,
+	transfer *Transfer,
+	value Expression,
+) *AssignmentStatement {
+	common.UseMemory(gauge, common.AssignmentStatementMemoryUsage)
+
+	return &AssignmentStatement{
+		Target:   expression,
+		Transfer: transfer,
+		Value:    value,
+	}
+}
 
 func (*AssignmentStatement) isStatement() {}
 
@@ -491,6 +591,14 @@ type SwapStatement struct {
 
 var _ Statement = &SwapStatement{}
 
+func NewSwapStatement(gauge common.MemoryGauge, expression Expression, right Expression) *SwapStatement {
+	common.UseMemory(gauge, common.SwapStatementMemoryUsage)
+	return &SwapStatement{
+		Left:  expression,
+		Right: right,
+	}
+}
+
 func (*SwapStatement) isStatement() {}
 
 func (s *SwapStatement) StartPosition() Position {
@@ -543,6 +651,13 @@ type ExpressionStatement struct {
 
 var _ Statement = &ExpressionStatement{}
 
+func NewExpressionStatement(gauge common.MemoryGauge, expression Expression) *ExpressionStatement {
+	common.UseMemory(gauge, common.ExpressionStatementMemoryUsage)
+	return &ExpressionStatement{
+		Expression: expression,
+	}
+}
+
 func (*ExpressionStatement) isStatement() {}
 
 func (s *ExpressionStatement) StartPosition() Position {
@@ -587,6 +702,20 @@ type SwitchStatement struct {
 }
 
 var _ Statement = &SwitchStatement{}
+
+func NewSwitchStatement(
+	gauge common.MemoryGauge,
+	expression Expression,
+	cases []*SwitchCase,
+	stmtRange Range,
+) *SwitchStatement {
+	common.UseMemory(gauge, common.SwitchStatementMemoryUsage)
+	return &SwitchStatement{
+		Expression: expression,
+		Cases:      cases,
+		Range:      stmtRange,
+	}
+}
 
 func (*SwitchStatement) isStatement() {}
 

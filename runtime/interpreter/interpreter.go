@@ -1387,9 +1387,7 @@ func (interpreter *Interpreter) visitCondition(condition *ast.Condition) {
 
 	// Evaluate the condition as a statement, so we get position information in case of an error
 
-	statement := &ast.ExpressionStatement{
-		Expression: condition.Test,
-	}
+	statement := ast.NewExpressionStatement(interpreter, condition.Test)
 
 	result, ok := interpreter.evalStatement(statement).(ExpressionStatementResult)
 

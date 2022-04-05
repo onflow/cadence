@@ -8017,4 +8017,88 @@ func TestInterpretASTMetering(t *testing.T) {
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindSpecialFunctionDeclaration))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindPragmaDeclaration))
 	})
+
+	t.Run("statements", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                var a = 5
+
+                while a < 10 {               // while
+                    if a == 5 {              // if
+                        a = a + 1            // assignment
+                        continue             // continue
+                    }
+                    break                    // break
+                }
+
+                foo()                        // expression statement
+
+                for value in [1, 2, 3] {}    // for
+
+                var r1 <- create bar()
+                var r2 <- create bar()
+                r1 <-> r2                    // swap
+
+                destroy r1                   // expression statement
+                destroy r2                   // expression statement
+
+                switch a {                   // switch
+                    case 1:
+                        a = 2                // assignment
+                }
+            }
+
+            pub fun foo(): Int {
+                 return 5                    // return
+            }
+
+            resource bar {}
+
+            pub contract Events {
+                event FooEvent(x: Int, y: Int)
+
+                fun events() {
+                    emit FooEvent(x: 1, y: 2)    // emit
+                }
+            }
+        `
+		meter := newTestMemoryGauge()
+
+		inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(
+			t,
+			script,
+			ParseCheckAndInterpretOptions{
+				Options: []interpreter.Option{
+					interpreter.WithContractValueHandler(func(
+						inter *interpreter.Interpreter,
+						compositeType *sema.CompositeType,
+						constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
+						invocationRange ast.Range,
+					) *interpreter.CompositeValue {
+						// Just return a dummy value
+						return &interpreter.CompositeValue{}
+					}),
+				},
+			},
+			meter,
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAssignmentStatement))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindBreakStatement))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindContinueStatement))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindIfStatement))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindForStatement))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindWhileStatement))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindReturnStatement))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindSwapStatement))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindExpressionStatement))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindSwitchStatement))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindEmitStatement))
+	})
 }
