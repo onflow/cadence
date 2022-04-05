@@ -7998,6 +7998,8 @@ func TestInterpretASTMetering(t *testing.T) {
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindFunctionBlock))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindParameter))
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindParameterList))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindProgram))
+		assert.Equal(t, uint64(13), meter.getMemory(common.MemoryKindMembers))
 	})
 
 	t.Run("statements", func(t *testing.T) {
@@ -8082,6 +8084,9 @@ func TestInterpretASTMetering(t *testing.T) {
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindExpressionStatement))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindSwitchStatement))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindEmitStatement))
+
+		assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindTransfer))
+		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindMembers))
 	})
 
 	t.Run("expressions", func(t *testing.T) {

@@ -20,6 +20,7 @@ package ast
 
 import (
 	"encoding/json"
+	"github.com/onflow/cadence/runtime/common"
 
 	"github.com/turbolent/prettier"
 )
@@ -30,6 +31,14 @@ import (
 type Transfer struct {
 	Operation TransferOperation
 	Pos       Position `json:"-"`
+}
+
+func NewTransfer(memoryGauge common.MemoryGauge, operation TransferOperation, position Position) *Transfer {
+	common.UseMemory(memoryGauge, common.TransferMemoryUsage)
+	return &Transfer{
+		Operation: operation,
+		Pos:       position,
+	}
 }
 
 func (f Transfer) StartPosition() Position {

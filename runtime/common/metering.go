@@ -33,12 +33,15 @@ type MemoryGauge interface {
 }
 
 var (
-	IdentifierMemoryUsage                 = NewConstantMemoryUsage(MemoryKindIdentifier)
-	ArgumentMemoryUsage                   = NewConstantMemoryUsage(MemoryKindArgument)
-	BlockMemoryUsage                      = NewConstantMemoryUsage(MemoryKindBlock)
-	FunctionBlockMemoryUsage              = NewConstantMemoryUsage(MemoryKindFunctionBlock)
-	ParameterMemoryUsage                  = NewConstantMemoryUsage(MemoryKindParameter)
-	ParameterListMemoryUsage              = NewConstantMemoryUsage(MemoryKindParameterList)
+	ProgramMemoryUsage       = NewConstantMemoryUsage(MemoryKindProgram)
+	IdentifierMemoryUsage    = NewConstantMemoryUsage(MemoryKindIdentifier)
+	ArgumentMemoryUsage      = NewConstantMemoryUsage(MemoryKindArgument)
+	BlockMemoryUsage         = NewConstantMemoryUsage(MemoryKindBlock)
+	FunctionBlockMemoryUsage = NewConstantMemoryUsage(MemoryKindFunctionBlock)
+	ParameterMemoryUsage     = NewConstantMemoryUsage(MemoryKindParameter)
+	ParameterListMemoryUsage = NewConstantMemoryUsage(MemoryKindParameterList)
+	TransferMemoryUsage      = NewConstantMemoryUsage(MemoryKindTransfer)
+
 	FunctionDeclarationMemoryUsage        = NewConstantMemoryUsage(MemoryKindFunctionDeclaration)
 	CompositeDeclarationMemoryUsage       = NewConstantMemoryUsage(MemoryKindCompositeDeclaration)
 	InterfaceDeclarationMemoryUsage       = NewConstantMemoryUsage(MemoryKindInterfaceDeclaration)
@@ -49,36 +52,38 @@ var (
 	VariableDeclarationMemoryUsage        = NewConstantMemoryUsage(MemoryKindVariableDeclaration)
 	SpecialFunctionDeclarationMemoryUsage = NewConstantMemoryUsage(MemoryKindSpecialFunctionDeclaration)
 	PragmaDeclarationMemoryUsage          = NewConstantMemoryUsage(MemoryKindPragmaDeclaration)
-	AssignmentStatementMemoryUsage        = NewConstantMemoryUsage(MemoryKindAssignmentStatement)
-	BreakStatementMemoryUsage             = NewConstantMemoryUsage(MemoryKindBreakStatement)
-	ContinueStatementMemoryUsage          = NewConstantMemoryUsage(MemoryKindContinueStatement)
-	EmitStatementMemoryUsage              = NewConstantMemoryUsage(MemoryKindEmitStatement)
-	ExpressionStatementMemoryUsage        = NewConstantMemoryUsage(MemoryKindExpressionStatement)
-	ForStatementMemoryUsage               = NewConstantMemoryUsage(MemoryKindForStatement)
-	IfStatementMemoryUsage                = NewConstantMemoryUsage(MemoryKindIfStatement)
-	ReturnStatementMemoryUsage            = NewConstantMemoryUsage(MemoryKindReturnStatement)
-	SwapStatementMemoryUsage              = NewConstantMemoryUsage(MemoryKindSwapStatement)
-	SwitchStatementMemoryUsage            = NewConstantMemoryUsage(MemoryKindSwitchStatement)
-	WhileStatementMemoryUsage             = NewConstantMemoryUsage(MemoryKindWhileStatement)
-	BooleanExpressionMemoryUsage          = NewConstantMemoryUsage(MemoryKindBooleanExpression)
-	NilExpressionMemoryUsage              = NewConstantMemoryUsage(MemoryKindNilExpression)
-	StringExpressionMemoryUsage           = NewConstantMemoryUsage(MemoryKindStringExpression)
-	IntegerExpressionMemoryUsage          = NewConstantMemoryUsage(MemoryKindIntegerExpression)
-	FixedPointExpressionMemoryUsage       = NewConstantMemoryUsage(MemoryKindFixedPointExpression)
-	IdentifierExpressionMemoryUsage       = NewConstantMemoryUsage(MemoryKindIdentifierExpression)
-	InvocationExpressionMemoryUsage       = NewConstantMemoryUsage(MemoryKindInvocationExpression)
-	MemberExpressionMemoryUsage           = NewConstantMemoryUsage(MemoryKindMemberExpression)
-	IndexExpressionMemoryUsage            = NewConstantMemoryUsage(MemoryKindIndexExpression)
-	ConditionalExpressionMemoryUsage      = NewConstantMemoryUsage(MemoryKindConditionalExpression)
-	UnaryExpressionMemoryUsage            = NewConstantMemoryUsage(MemoryKindUnaryExpression)
-	BinaryExpressionMemoryUsage           = NewConstantMemoryUsage(MemoryKindBinaryExpression)
-	FunctionExpressionMemoryUsage         = NewConstantMemoryUsage(MemoryKindFunctionExpression)
-	CastingExpressionMemoryUsage          = NewConstantMemoryUsage(MemoryKindCastingExpression)
-	CreateExpressionMemoryUsage           = NewConstantMemoryUsage(MemoryKindCreateExpression)
-	DestroyExpressionMemoryUsage          = NewConstantMemoryUsage(MemoryKindDestroyExpression)
-	ReferenceExpressionMemoryUsage        = NewConstantMemoryUsage(MemoryKindReferenceExpression)
-	ForceExpressionMemoryUsage            = NewConstantMemoryUsage(MemoryKindForceExpression)
-	PathExpressionMemoryUsage             = NewConstantMemoryUsage(MemoryKindPathExpression)
+
+	AssignmentStatementMemoryUsage = NewConstantMemoryUsage(MemoryKindAssignmentStatement)
+	BreakStatementMemoryUsage      = NewConstantMemoryUsage(MemoryKindBreakStatement)
+	ContinueStatementMemoryUsage   = NewConstantMemoryUsage(MemoryKindContinueStatement)
+	EmitStatementMemoryUsage       = NewConstantMemoryUsage(MemoryKindEmitStatement)
+	ExpressionStatementMemoryUsage = NewConstantMemoryUsage(MemoryKindExpressionStatement)
+	ForStatementMemoryUsage        = NewConstantMemoryUsage(MemoryKindForStatement)
+	IfStatementMemoryUsage         = NewConstantMemoryUsage(MemoryKindIfStatement)
+	ReturnStatementMemoryUsage     = NewConstantMemoryUsage(MemoryKindReturnStatement)
+	SwapStatementMemoryUsage       = NewConstantMemoryUsage(MemoryKindSwapStatement)
+	SwitchStatementMemoryUsage     = NewConstantMemoryUsage(MemoryKindSwitchStatement)
+	WhileStatementMemoryUsage      = NewConstantMemoryUsage(MemoryKindWhileStatement)
+
+	BooleanExpressionMemoryUsage     = NewConstantMemoryUsage(MemoryKindBooleanExpression)
+	NilExpressionMemoryUsage         = NewConstantMemoryUsage(MemoryKindNilExpression)
+	StringExpressionMemoryUsage      = NewConstantMemoryUsage(MemoryKindStringExpression)
+	IntegerExpressionMemoryUsage     = NewConstantMemoryUsage(MemoryKindIntegerExpression)
+	FixedPointExpressionMemoryUsage  = NewConstantMemoryUsage(MemoryKindFixedPointExpression)
+	IdentifierExpressionMemoryUsage  = NewConstantMemoryUsage(MemoryKindIdentifierExpression)
+	InvocationExpressionMemoryUsage  = NewConstantMemoryUsage(MemoryKindInvocationExpression)
+	MemberExpressionMemoryUsage      = NewConstantMemoryUsage(MemoryKindMemberExpression)
+	IndexExpressionMemoryUsage       = NewConstantMemoryUsage(MemoryKindIndexExpression)
+	ConditionalExpressionMemoryUsage = NewConstantMemoryUsage(MemoryKindConditionalExpression)
+	UnaryExpressionMemoryUsage       = NewConstantMemoryUsage(MemoryKindUnaryExpression)
+	BinaryExpressionMemoryUsage      = NewConstantMemoryUsage(MemoryKindBinaryExpression)
+	FunctionExpressionMemoryUsage    = NewConstantMemoryUsage(MemoryKindFunctionExpression)
+	CastingExpressionMemoryUsage     = NewConstantMemoryUsage(MemoryKindCastingExpression)
+	CreateExpressionMemoryUsage      = NewConstantMemoryUsage(MemoryKindCreateExpression)
+	DestroyExpressionMemoryUsage     = NewConstantMemoryUsage(MemoryKindDestroyExpression)
+	ReferenceExpressionMemoryUsage   = NewConstantMemoryUsage(MemoryKindReferenceExpression)
+	ForceExpressionMemoryUsage       = NewConstantMemoryUsage(MemoryKindForceExpression)
+	PathExpressionMemoryUsage        = NewConstantMemoryUsage(MemoryKindPathExpression)
 )
 
 func UseMemory(gauge MemoryGauge, usage MemoryUsage) {
@@ -301,6 +306,13 @@ func NewDictionaryExpressionMemoryUsage(length int) MemoryUsage {
 	return MemoryUsage{
 		Kind: MemoryKindDictionaryExpression,
 		// +1 to account for empty dictionaries
+		Amount: uint64(length) + 1,
+	}
+}
+func NewMembersMemoryUsage(length int) MemoryUsage {
+	return MemoryUsage{
+		Kind: MemoryKindMembers,
+		// +1 to account for empty members
 		Amount: uint64(length) + 1,
 	}
 }

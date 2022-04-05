@@ -66,12 +66,15 @@ const (
 
 	// AST nodes
 
+	MemoryKindProgram
 	MemoryKindIdentifier
 	MemoryKindArgument
 	MemoryKindBlock
 	MemoryKindFunctionBlock
 	MemoryKindParameter
 	MemoryKindParameterList
+	MemoryKindTransfer
+	MemoryKindMembers
 
 	MemoryKindFunctionDeclaration
 	MemoryKindCompositeDeclaration

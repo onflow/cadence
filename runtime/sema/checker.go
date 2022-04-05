@@ -2195,9 +2195,11 @@ func (checker *Checker) rewritePostConditions(postConditions []*ast.Condition) P
 			// The before statements are visited/checked later
 			variableDeclaration := ast.NewEmptyVariableDeclaration(checker.memoryGauge)
 			variableDeclaration.Identifier = extractedExpression.Identifier
-			variableDeclaration.Transfer = &ast.Transfer{
-				Operation: ast.TransferOperationCopy,
-			}
+			variableDeclaration.Transfer = ast.NewTransfer(
+				checker.memoryGauge,
+				ast.TransferOperationCopy,
+				ast.EmptyPosition,
+			)
 			variableDeclaration.Value = extractedExpression.Expression
 
 			beforeStatements = append(beforeStatements,
