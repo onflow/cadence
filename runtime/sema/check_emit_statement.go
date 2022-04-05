@@ -39,7 +39,7 @@ func (checker *Checker) VisitEmitStatement(statement *ast.EmitStatement) ast.Rep
 		checker.report(
 			&EmitNonEventError{
 				Type:  ty,
-				Range: ast.NewRangeFromPositioned(statement.InvocationExpression),
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, statement.InvocationExpression),
 			},
 		)
 		return nil
@@ -54,7 +54,7 @@ func (checker *Checker) VisitEmitStatement(statement *ast.EmitStatement) ast.Rep
 		checker.report(
 			&EmitImportedEventError{
 				Type:  ty,
-				Range: ast.NewRangeFromPositioned(statement.InvocationExpression),
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, statement.InvocationExpression),
 			},
 		)
 	}

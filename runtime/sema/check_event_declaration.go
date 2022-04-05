@@ -44,7 +44,7 @@ func (checker *Checker) checkEventParameters(
 					Type: parameterType,
 					Range: ast.Range{
 						StartPos: parameter.StartPos,
-						EndPos:   parameter.TypeAnnotation.EndPosition(),
+						EndPos:   parameter.TypeAnnotation.EndPosition(checker.memoryGauge),
 					},
 				},
 			)

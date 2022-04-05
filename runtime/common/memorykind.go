@@ -131,4 +131,6 @@ const (
 	MemoryKindReferenceType
 	MemoryKindRestrictedType
 	MemoryKindVariableSizedType
+
+	MemoryKindPosition
 )

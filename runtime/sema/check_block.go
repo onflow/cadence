@@ -47,7 +47,7 @@ func (checker *Checker) visitStatements(statements []ast.Statement) {
 				&UnreachableStatementError{
 					Range: ast.Range{
 						StartPos: statement.StartPosition(),
-						EndPos:   lastStatement.EndPosition(),
+						EndPos:   lastStatement.EndPosition(checker.memoryGauge),
 					},
 				},
 			)
@@ -92,7 +92,7 @@ func (checker *Checker) checkValidStatement(statement ast.Statement) bool {
 		&InvalidDeclarationError{
 			Identifier: name,
 			Kind:       declaration.DeclarationKind(),
-			Range:      ast.NewRangeFromPositioned(statement),
+			Range:      ast.NewRangeFromPositioned(checker.memoryGauge, statement),
 		},
 	)
 

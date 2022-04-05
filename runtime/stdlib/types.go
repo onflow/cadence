@@ -43,7 +43,7 @@ func (t StandardLibraryType) TypeDeclarationKind() common.DeclarationKind {
 }
 
 func (StandardLibraryType) TypeDeclarationPosition() ast.Position {
-	return ast.Position{}
+	return ast.EmptyPosition
 }
 
 // StandardLibraryTypes

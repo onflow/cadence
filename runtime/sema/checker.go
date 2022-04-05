@@ -566,7 +566,7 @@ func (checker *Checker) checkTopLevelDeclarationValidity(declarations []ast.Decl
 				EndPos:   position,
 			}
 		} else {
-			errorRange = ast.NewRangeFromPositioned(identifier)
+			errorRange = ast.NewRangeFromPositioned(checker.memoryGauge, identifier)
 		}
 
 		checker.report(
@@ -591,7 +591,7 @@ func (checker *Checker) checkTransfer(transfer *ast.Transfer, valueType Type) {
 				&IncorrectTransferOperationError{
 					ActualOperation:   transfer.Operation,
 					ExpectedOperation: ast.TransferOperationMove,
-					Range:             ast.NewRangeFromPositioned(transfer),
+					Range:             ast.NewRangeFromPositioned(checker.memoryGauge, transfer),
 				},
 			)
 		}
@@ -601,7 +601,7 @@ func (checker *Checker) checkTransfer(transfer *ast.Transfer, valueType Type) {
 				&IncorrectTransferOperationError{
 					ActualOperation:   transfer.Operation,
 					ExpectedOperation: ast.TransferOperationCopy,
-					Range:             ast.NewRangeFromPositioned(transfer),
+					Range:             ast.NewRangeFromPositioned(checker.memoryGauge, transfer),
 				},
 			)
 		}
@@ -617,12 +617,12 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 		unwrappedTargetType := UnwrapOptionalType(targetType)
 
 		if IsSameTypeKind(unwrappedTargetType, IntegerType) {
-			CheckIntegerLiteral(typedExpression, unwrappedTargetType, checker.report)
+			CheckIntegerLiteral(checker.memoryGauge, typedExpression, unwrappedTargetType, checker.report)
 
 			return true
 
 		} else if IsSameTypeKind(unwrappedTargetType, &AddressType{}) {
-			CheckAddressLiteral(typedExpression, checker.report)
+			CheckAddressLiteral(checker.memoryGauge, typedExpression, checker.report)
 
 			return true
 		}
@@ -631,9 +631,9 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 		unwrappedTargetType := UnwrapOptionalType(targetType)
 
 		if IsSameTypeKind(unwrappedTargetType, FixedPointType) {
-			valueTypeOK := CheckFixedPointLiteral(typedExpression, valueType, checker.report)
+			valueTypeOK := CheckFixedPointLiteral(checker.memoryGauge, typedExpression, valueType, checker.report)
 			if valueTypeOK {
-				CheckFixedPointLiteral(typedExpression, unwrappedTargetType, checker.report)
+				CheckFixedPointLiteral(checker.memoryGauge, typedExpression, unwrappedTargetType, checker.report)
 			}
 			return true
 		}
@@ -689,7 +689,7 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 // CheckIntegerLiteral checks that the value of the integer literal
 // fits into range of the target integer type
 //
-func CheckIntegerLiteral(expression *ast.IntegerExpression, targetType Type, report func(error)) bool {
+func CheckIntegerLiteral(memoryGauge common.MemoryGauge, expression *ast.IntegerExpression, targetType Type, report func(error)) bool {
 	ranged, ok := targetType.(IntegerRangedType)
 
 	// if this isn't an integer ranged type, report a mismatch
@@ -697,7 +697,7 @@ func CheckIntegerLiteral(expression *ast.IntegerExpression, targetType Type, rep
 		report(&TypeMismatchWithDescriptionError{
 			ActualType:              targetType,
 			ExpectedTypeDescription: "an integer type",
-			Range:                   ast.NewRangeFromPositioned(expression),
+			Range:                   ast.NewRangeFromPositioned(memoryGauge, expression),
 		})
 	}
 	minInt := ranged.MinInt()
@@ -709,7 +709,7 @@ func CheckIntegerLiteral(expression *ast.IntegerExpression, targetType Type, rep
 				ExpectedType:   targetType,
 				ExpectedMinInt: minInt,
 				ExpectedMaxInt: maxInt,
-				Range:          ast.NewRangeFromPositioned(expression),
+				Range:          ast.NewRangeFromPositioned(memoryGauge, expression),
 			})
 		}
 
@@ -722,7 +722,12 @@ func CheckIntegerLiteral(expression *ast.IntegerExpression, targetType Type, rep
 // CheckFixedPointLiteral checks that the value of the fixed-point literal
 // fits into range of the target fixed-point type
 //
-func CheckFixedPointLiteral(expression *ast.FixedPointExpression, targetType Type, report func(error)) bool {
+func CheckFixedPointLiteral(
+	memoryGauge common.MemoryGauge,
+	expression *ast.FixedPointExpression,
+	targetType Type,
+	report func(error),
+) bool {
 
 	// The target type might just be an integer type,
 	// in which case only the integer range can be checked.
@@ -740,7 +745,7 @@ func CheckFixedPointLiteral(expression *ast.FixedPointExpression, targetType Typ
 				report(&InvalidFixedPointLiteralScaleError{
 					ExpectedType:  targetType,
 					ExpectedScale: scale,
-					Range:         ast.NewRangeFromPositioned(expression),
+					Range:         ast.NewRangeFromPositioned(memoryGauge, expression),
 				})
 			}
 
@@ -763,7 +768,7 @@ func CheckFixedPointLiteral(expression *ast.FixedPointExpression, targetType Typ
 					ExpectedMinFractional: minFractional,
 					ExpectedMaxInt:        maxInt,
 					ExpectedMaxFractional: maxFractional,
-					Range:                 ast.NewRangeFromPositioned(expression),
+					Range:                 ast.NewRangeFromPositioned(memoryGauge, expression),
 				})
 			}
 
@@ -786,7 +791,7 @@ func CheckFixedPointLiteral(expression *ast.FixedPointExpression, targetType Typ
 					ExpectedType:   targetType,
 					ExpectedMinInt: minInt,
 					ExpectedMaxInt: maxInt,
-					Range:          ast.NewRangeFromPositioned(expression),
+					Range:          ast.NewRangeFromPositioned(memoryGauge, expression),
 				})
 			}
 
@@ -800,17 +805,16 @@ func CheckFixedPointLiteral(expression *ast.FixedPointExpression, targetType Typ
 // CheckAddressLiteral checks that the value of the integer literal
 // fits into the range of an address (64 bits), and is hexadecimal
 //
-func CheckAddressLiteral(expression *ast.IntegerExpression, report func(error)) bool {
-	ranged := &AddressType{}
-	rangeMin := ranged.MinInt()
-	rangeMax := ranged.MaxInt()
+func CheckAddressLiteral(memoryGauge common.MemoryGauge, expression *ast.IntegerExpression, report func(error)) bool {
+	rangeMin := AddressTypeMinIntBig
+	rangeMax := AddressTypeMaxIntBig
 
 	valid := true
 
 	if expression.Base != 16 {
 		if report != nil {
 			report(&InvalidAddressLiteralError{
-				Range: ast.NewRangeFromPositioned(expression),
+				Range: ast.NewRangeFromPositioned(memoryGauge, expression),
 			})
 		}
 
@@ -820,7 +824,7 @@ func CheckAddressLiteral(expression *ast.IntegerExpression, report func(error)) 
 	if !checkIntegerRange(expression.Value, rangeMin, rangeMax) {
 		if report != nil {
 			report(&InvalidAddressLiteralError{
-				Range: ast.NewRangeFromPositioned(expression),
+				Range: ast.NewRangeFromPositioned(memoryGauge, expression),
 			})
 		}
 
@@ -909,7 +913,7 @@ func (checker *Checker) findAndCheckValueVariable(identifierExpression *ast.Iden
 	if checker.positionInfoEnabled && recordOccurrence && identifier.Identifier != "" {
 		checker.recordVariableReferenceOccurrence(
 			identifier.StartPosition(),
-			identifier.EndPosition(),
+			identifier.EndPosition(checker.memoryGauge),
 			variable,
 		)
 	}
@@ -955,7 +959,12 @@ func (checker *Checker) ConvertType(t ast.Type) Type {
 	panic(&astTypeConversionError{invalidASTType: t})
 }
 
-func CheckRestrictedType(restrictedType Type, restrictions []*InterfaceType, report func(func(*ast.RestrictedType) error)) Type {
+func CheckRestrictedType(
+	memoryGauge common.MemoryGauge,
+	restrictedType Type,
+	restrictions []*InterfaceType,
+	report func(func(*ast.RestrictedType) error),
+) Type {
 	restrictionRanges := make(map[*InterfaceType]func(*ast.RestrictedType) ast.Range, len(restrictions))
 	restrictionsCompositeKind := common.CompositeKindUnknown
 	memberSet := map[string]*InterfaceType{}
@@ -971,7 +980,7 @@ func CheckRestrictedType(restrictedType Type, restrictions []*InterfaceType, rep
 				return &RestrictionCompositeKindMismatchError{
 					CompositeKind:         restrictionCompositeKind,
 					PreviousCompositeKind: restrictionsCompositeKind,
-					Range:                 ast.NewRangeFromPositioned(t.Restrictions[i]),
+					Range:                 ast.NewRangeFromPositioned(memoryGauge, t.Restrictions[i]),
 				}
 			})
 		}
@@ -982,14 +991,14 @@ func CheckRestrictedType(restrictedType Type, restrictions []*InterfaceType, rep
 			report(func(t *ast.RestrictedType) error {
 				return &InvalidRestrictionTypeDuplicateError{
 					Type:  restrictionInterfaceType,
-					Range: ast.NewRangeFromPositioned(t.Restrictions[i]),
+					Range: ast.NewRangeFromPositioned(memoryGauge, t.Restrictions[i]),
 				}
 			})
 
 		} else {
 			restrictionRanges[restrictionInterfaceType] =
 				func(t *ast.RestrictedType) ast.Range {
-					return ast.NewRangeFromPositioned(t.Restrictions[i])
+					return ast.NewRangeFromPositioned(memoryGauge, t.Restrictions[i])
 				}
 		}
 
@@ -1021,7 +1030,7 @@ func CheckRestrictedType(restrictedType Type, restrictions []*InterfaceType, rep
 							Name:                  name,
 							RedeclaringType:       restrictionInterfaceType,
 							OriginalDeclaringType: previousDeclaringInterfaceType,
-							Range:                 ast.NewRangeFromPositioned(t.Restrictions[i]),
+							Range:                 ast.NewRangeFromPositioned(memoryGauge, t.Restrictions[i]),
 						}
 					})
 				}
@@ -1045,7 +1054,7 @@ func CheckRestrictedType(restrictedType Type, restrictions []*InterfaceType, rep
 			restrictedType = InvalidType
 
 			report(func(t *ast.RestrictedType) error {
-				return &AmbiguousRestrictedTypeError{Range: ast.NewRangeFromPositioned(t)}
+				return &AmbiguousRestrictedTypeError{Range: ast.NewRangeFromPositioned(memoryGauge, t)}
 			})
 
 		case common.CompositeKindResource:
@@ -1066,7 +1075,7 @@ func CheckRestrictedType(restrictedType Type, restrictions []*InterfaceType, rep
 		report(func(t *ast.RestrictedType) error {
 			return &InvalidRestrictedTypeError{
 				Type:  restrictedType,
-				Range: ast.NewRangeFromPositioned(t.Type),
+				Range: ast.NewRangeFromPositioned(memoryGauge, t.Type),
 			}
 		})
 	}
@@ -1155,7 +1164,7 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 			if !restrictionResult.IsInvalidType() {
 				checker.report(&InvalidRestrictionTypeError{
 					Type:  restrictionResult,
-					Range: ast.NewRangeFromPositioned(restriction),
+					Range: ast.NewRangeFromPositioned(checker.memoryGauge, restriction),
 				})
 			}
 
@@ -1168,6 +1177,7 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 	}
 
 	restrictedType = CheckRestrictedType(
+		checker.memoryGauge,
 		restrictedType,
 		restrictions,
 		func(getError func(*ast.RestrictedType) error) {
@@ -1198,7 +1208,7 @@ func (checker *Checker) convertDictionaryType(t *ast.DictionaryType) Type {
 		checker.report(
 			&InvalidDictionaryKeyTypeError{
 				Type:  keyType,
-				Range: ast.NewRangeFromPositioned(t.KeyType),
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, t.KeyType),
 			},
 		)
 	}
@@ -1254,7 +1264,7 @@ func (checker *Checker) convertConstantSizedType(t *ast.ConstantSizedType) Type 
 				ActualSize:     t.Size.Value,
 				ExpectedMinInt: minSize,
 				ExpectedMaxInt: maxSize,
-				Range:          ast.NewRangeFromPositioned(t.Size),
+				Range:          ast.NewRangeFromPositioned(checker.memoryGauge, t.Size),
 			},
 		)
 
@@ -1275,7 +1285,7 @@ func (checker *Checker) convertConstantSizedType(t *ast.ConstantSizedType) Type 
 			&InvalidConstantSizedTypeBaseError{
 				ActualBase:   t.Size.Base,
 				ExpectedBase: expectedBase,
-				Range:        ast.NewRangeFromPositioned(t.Size),
+				Range:        ast.NewRangeFromPositioned(checker.memoryGauge, t.Size),
 			},
 		)
 	}
@@ -1310,7 +1320,7 @@ func (checker *Checker) findAndCheckTypeVariable(identifier ast.Identifier, reco
 	if checker.positionInfoEnabled && recordOccurrence && identifier.Identifier != "" {
 		checker.recordVariableReferenceOccurrence(
 			identifier.StartPosition(),
-			identifier.EndPosition(),
+			identifier.EndPosition(checker.memoryGauge),
 			variable,
 		)
 	}
@@ -1430,7 +1440,7 @@ func (checker *Checker) recordVariableReferenceOccurrence(startPos, endPos ast.P
 		startPos2 := variable.Pos
 		var endPos2 *ast.Position
 		if startPos2 != nil {
-			pos := startPos2.Shifted(len(variable.Identifier) - 1)
+			pos := startPos2.Shifted(checker.memoryGauge, len(variable.Identifier)-1)
 			endPos2 = &pos
 		}
 		origin = &Origin{
@@ -1450,7 +1460,7 @@ func (checker *Checker) recordVariableDeclarationOccurrence(name string, variabl
 		return
 	}
 	startPos := *variable.Pos
-	endPos := variable.Pos.Shifted(len(name) - 1)
+	endPos := variable.Pos.Shifted(checker.memoryGauge, len(name)-1)
 	checker.recordVariableReferenceOccurrence(startPos, endPos, variable)
 }
 
@@ -1464,7 +1474,7 @@ func (checker *Checker) recordFieldDeclarationOrigin(
 	}
 
 	startPosition := identifier.StartPosition()
-	endPosition := identifier.EndPosition()
+	endPosition := identifier.EndPosition(checker.memoryGauge)
 
 	origin := &Origin{
 		Type:            fieldType,
@@ -1492,7 +1502,7 @@ func (checker *Checker) recordFunctionDeclarationOrigin(
 	}
 
 	startPosition := function.Identifier.StartPosition()
-	endPosition := function.Identifier.EndPosition()
+	endPosition := function.Identifier.EndPosition(checker.memoryGauge)
 
 	origin := &Origin{
 		Type:            functionType,
@@ -1515,7 +1525,7 @@ func (checker *Checker) enterValueScope() {
 	checker.valueActivations.Enter()
 }
 
-func (checker *Checker) leaveValueScope(getEndPosition func() ast.Position, checkResourceLoss bool) {
+func (checker *Checker) leaveValueScope(getEndPosition EndPositionGetter, checkResourceLoss bool) {
 	if checkResourceLoss {
 		checker.checkResourceLoss(checker.valueActivations.Depth())
 	}
@@ -1542,7 +1552,7 @@ func (checker *Checker) checkResourceLoss(depth int) {
 				&ResourceLossError{
 					Range: ast.Range{
 						StartPos: *variable.Pos,
-						EndPos:   variable.Pos.Shifted(len(name) - 1),
+						EndPos:   variable.Pos.Shifted(checker.memoryGauge, len(name)-1),
 					},
 				},
 			)
@@ -1569,7 +1579,7 @@ func (checker *Checker) recordResourceInvalidation(
 		checker.report(
 			&InvalidNestedResourceMoveError{
 				StartPos: expression.StartPosition(),
-				EndPos:   expression.EndPosition(),
+				EndPos:   expression.EndPosition(checker.memoryGauge),
 			},
 		)
 	}
@@ -1594,7 +1604,7 @@ func (checker *Checker) recordResourceInvalidation(
 	invalidation := ResourceInvalidation{
 		Kind:     invalidationKind,
 		StartPos: expression.StartPosition(),
-		EndPos:   expression.EndPosition(),
+		EndPos:   expression.EndPosition(checker.memoryGauge),
 	}
 
 	if checker.allowSelfResourceFieldInvalidation && accessedSelfMember != nil {
@@ -1623,7 +1633,7 @@ func (checker *Checker) recordResourceInvalidation(
 			&InvalidSelfInvalidationError{
 				InvalidationKind: invalidationKind,
 				StartPos:         expression.StartPosition(),
-				EndPos:           expression.EndPosition(),
+				EndPos:           expression.EndPosition(checker.memoryGauge),
 			},
 		)
 	}
@@ -1725,7 +1735,7 @@ func (checker *Checker) checkUnusedExpressionResourceLoss(expressionType Type, e
 
 	checker.report(
 		&ResourceLossError{
-			Range: ast.NewRangeFromPositioned(expression),
+			Range: ast.NewRangeFromPositioned(checker.memoryGauge, expression),
 		},
 	)
 }
@@ -1959,7 +1969,7 @@ func (checker *Checker) checkCharacterLiteral(expression *ast.StringExpression) 
 	checker.report(
 		&InvalidCharacterLiteralError{
 			Length: uniseg.GraphemeClusterCount(expression.Value),
-			Range:  ast.NewRangeFromPositioned(expression),
+			Range:  ast.NewRangeFromPositioned(checker.memoryGauge, expression),
 		},
 	)
 }
@@ -2224,14 +2234,14 @@ func (checker *Checker) checkTypeAnnotation(typeAnnotation *TypeAnnotation, pos 
 	case TypeAnnotationStateMissingResourceAnnotation:
 		checker.report(
 			&MissingResourceAnnotationError{
-				Range: ast.NewRangeFromPositioned(pos),
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, pos),
 			},
 		)
 
 	case TypeAnnotationStateInvalidResourceAnnotation:
 		checker.report(
 			&InvalidResourceAnnotationError{
-				Range: ast.NewRangeFromPositioned(pos),
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, pos),
 			},
 		)
 	}
@@ -2248,7 +2258,7 @@ func (checker *Checker) checkInvalidInterfaceAsType(ty Type, pos ast.HasPosition
 				ExpectedType: rewrittenType,
 				Range: ast.Range{
 					StartPos: pos.StartPosition(),
-					EndPos:   pos.EndPosition(),
+					EndPos:   pos.EndPosition(checker.memoryGauge),
 				},
 			},
 		)
@@ -2325,7 +2335,7 @@ func (checker *Checker) convertInstantiationType(t *ast.InstantiationType) Type 
 			&UnparameterizedTypeInstantiationError{
 				Range: ast.Range{
 					StartPos: t.TypeArgumentsStartPos,
-					EndPos:   t.EndPosition(),
+					EndPos:   t.EndPosition(checker.memoryGauge),
 				},
 			},
 		)
@@ -2353,7 +2363,7 @@ func (checker *Checker) convertInstantiationType(t *ast.InstantiationType) Type 
 
 			err := typeParameter.checkTypeBound(
 				typeArgument,
-				ast.NewRangeFromPositioned(rawTypeArgument),
+				ast.NewRangeFromPositioned(checker.memoryGauge, rawTypeArgument),
 			)
 			checker.report(err)
 		}
@@ -2446,7 +2456,7 @@ func (checker *Checker) visitExpressionWithForceType(
 				ExpectedType: expectedType,
 				ActualType:   actualType,
 				Expression:   expr,
-				Range:        expressionRange(expr),
+				Range:        checker.expressionRange(expr),
 			},
 		)
 
@@ -2458,14 +2468,14 @@ func (checker *Checker) visitExpressionWithForceType(
 	return actualType, actualType
 }
 
-func expressionRange(expression ast.Expression) ast.Range {
+func (checker *Checker) expressionRange(expression ast.Expression) ast.Range {
 	if indexExpr, ok := expression.(*ast.IndexExpression); ok {
 		return ast.Range{
 			StartPos: indexExpr.TargetExpression.StartPosition(),
-			EndPos:   indexExpr.EndPosition(),
+			EndPos:   indexExpr.EndPosition(checker.memoryGauge),
 		}
 	} else {
-		return ast.NewRangeFromPositioned(expression)
+		return ast.NewRangeFromPositioned(checker.memoryGauge, expression)
 	}
 }
 
@@ -2476,8 +2486,8 @@ func (checker *Checker) declareGlobalRanges() {
 
 	addRange := func(name string, variable *Variable) {
 		checker.Ranges.Put(
-			ast.Position{Line: 1, Column: 0},
-			ast.Position{Line: math.MaxInt32, Column: 0},
+			ast.NewPosition(checker.memoryGauge, 0, 1, 0),
+			ast.NewPosition(checker.memoryGauge, 0, math.MaxInt32, 0),
 			Range{
 				Identifier:      name,
 				Type:            variable.Type,

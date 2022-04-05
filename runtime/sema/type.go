@@ -3216,7 +3216,8 @@ var AddressConversionFunctionType = &FunctionType{
 			return
 		}
 
-		CheckAddressLiteral(intExpression, checker.report)
+		// No need to meter. This is only checked once.
+		CheckAddressLiteral(nil, intExpression, checker.report)
 	},
 }
 
@@ -3251,14 +3252,14 @@ func numberFunctionArgumentExpressionsChecker(targetType Type) ArgumentExpressio
 
 		switch argument := argument.(type) {
 		case *ast.IntegerExpression:
-			if CheckIntegerLiteral(argument, targetType, checker.report) {
+			if CheckIntegerLiteral(nil, argument, targetType, checker.report) {
 				if checker.lintEnabled {
 					suggestIntegerLiteralConversionReplacement(checker, argument, targetType, invocationRange)
 				}
 			}
 
 		case *ast.FixedPointExpression:
-			if CheckFixedPointLiteral(argument, targetType, checker.report) {
+			if CheckFixedPointLiteral(nil, argument, targetType, checker.report) {
 				if checker.lintEnabled {
 					suggestFixedPointLiteralConversionReplacement(checker, targetType, argument, invocationRange)
 				}

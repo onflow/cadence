@@ -680,7 +680,8 @@ func (extractor *ExpressionExtractor) ExtractCreate(expression *CreateExpression
 
 		invocationExpression = &InvocationExpression{
 			InvokedExpression: result.RewrittenExpression,
-			EndPos:            result.RewrittenExpression.EndPosition(),
+			// TODO: pass memory gauge
+			EndPos:            result.RewrittenExpression.EndPosition(nil),
 		}
 	}
 

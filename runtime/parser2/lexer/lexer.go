@@ -67,11 +67,12 @@ func (l *lexer) Next() Token {
 		// emit a synthetic EOF token
 
 		endPos := l.endPos()
-		pos := ast.Position{
-			Offset: l.endOffset - 1,
-			Line:   endPos.line,
-			Column: endPos.column,
-		}
+		pos := ast.NewPosition(
+			l.memoryGauge,
+			l.endOffset-1,
+			endPos.line,
+			endPos.column,
+		)
 
 		return Token{
 			Type: TokenEOF,
@@ -213,11 +214,12 @@ func (l *lexer) emit(ty TokenType, val interface{}, rangeStart ast.Position, con
 		Value: val,
 		Range: ast.Range{
 			StartPos: rangeStart,
-			EndPos: ast.Position{
-				Line:   endPos.line,
-				Column: endPos.column,
-				Offset: l.endOffset - 1,
-			},
+			EndPos: ast.NewPosition(
+				l.memoryGauge,
+				l.endOffset-1,
+				endPos.line,
+				endPos.column,
+			),
 		},
 	}
 
@@ -240,11 +242,12 @@ func (l *lexer) emit(ty TokenType, val interface{}, rangeStart ast.Position, con
 }
 
 func (l *lexer) startPosition() ast.Position {
-	return ast.Position{
-		Line:   l.startPos.line,
-		Column: l.startPos.column,
-		Offset: l.startOffset,
-	}
+	return ast.NewPosition(
+		l.memoryGauge,
+		l.startOffset,
+		l.startPos.line,
+		l.startPos.column,
+	)
 }
 
 func (l *lexer) endPos() position {
@@ -299,11 +302,12 @@ func (l *lexer) emitValue(ty TokenType) {
 
 func (l *lexer) emitError(err error) {
 	endPos := l.endPos()
-	rangeStart := ast.Position{
-		Line:   endPos.line,
-		Column: endPos.column,
-		Offset: l.endOffset - 1,
-	}
+	rangeStart := ast.NewPosition(
+		l.memoryGauge,
+		l.endOffset-1,
+		endPos.line,
+		endPos.column,
+	)
 	l.emit(TokenError, err, rangeStart, false)
 }
 

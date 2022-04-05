@@ -982,7 +982,7 @@ func parseArgument(p *parser) *ast.Argument {
 		}
 		label = identifier.Identifier.Identifier
 		labelStartPos = expr.StartPosition()
-		labelEndPos = expr.EndPosition()
+		labelEndPos = expr.EndPosition(p.memoryGauge)
 
 		// Skip the identifier
 		p.next()

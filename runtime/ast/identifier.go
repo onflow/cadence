@@ -54,9 +54,9 @@ func (i Identifier) StartPosition() Position {
 	return i.Pos
 }
 
-func (i Identifier) EndPosition() Position {
+func (i Identifier) EndPosition(memoryGauge common.MemoryGauge) Position {
 	length := len(i.Identifier)
-	return i.Pos.Shifted(length - 1)
+	return i.Pos.Shifted(memoryGauge, length-1)
 }
 
 func (i Identifier) MarshalJSON() ([]byte, error) {
@@ -65,6 +65,6 @@ func (i Identifier) MarshalJSON() ([]byte, error) {
 		Range
 	}{
 		Identifier: i.Identifier,
-		Range:      NewRangeFromPositioned(i),
+		Range:      NewUnmeteredRangeFromPositioned(i),
 	})
 }

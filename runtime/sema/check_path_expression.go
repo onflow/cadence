@@ -31,10 +31,10 @@ func (checker *Checker) VisitPathExpression(expression *ast.PathExpression) ast.
 		expression.Domain.Identifier,
 		expression.Identifier.Identifier,
 		func() ast.Range {
-			return ast.NewRangeFromPositioned(expression.Domain)
+			return ast.NewRangeFromPositioned(checker.memoryGauge, expression.Domain)
 		},
 		func() ast.Range {
-			return ast.NewRangeFromPositioned(expression.Identifier)
+			return ast.NewRangeFromPositioned(checker.memoryGauge, expression.Identifier)
 		},
 	)
 

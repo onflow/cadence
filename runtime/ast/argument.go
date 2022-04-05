@@ -63,8 +63,8 @@ func (a *Argument) StartPosition() Position {
 	return a.Expression.StartPosition()
 }
 
-func (a *Argument) EndPosition() Position {
-	return a.Expression.EndPosition()
+func (a *Argument) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return a.Expression.EndPosition(memoryGauge)
 }
 
 func (a *Argument) String() string {
@@ -83,7 +83,7 @@ func (a *Argument) MarshalJSON() ([]byte, error) {
 		Range
 		*Alias
 	}{
-		Range: NewRangeFromPositioned(a),
+		Range: NewUnmeteredRangeFromPositioned(a),
 		Alias: (*Alias)(a),
 	})
 }

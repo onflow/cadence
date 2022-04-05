@@ -93,11 +93,12 @@ func ParseTokenStream(
 		}
 	}()
 
-	startPos := ast.Position{
-		Offset: 0,
-		Line:   1,
-		Column: 0,
-	}
+	startPos := ast.NewPosition(
+		p.memoryGauge,
+		0,
+		1,
+		0,
+	)
 
 	p.current = lexer.Token{
 		Type: lexer.TokenEOF,

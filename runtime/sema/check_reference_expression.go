@@ -55,7 +55,7 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 			checker.report(
 				&NonReferenceTypeReferenceError{
 					ActualType: resultType,
-					Range:      ast.NewRangeFromPositioned(referenceExpression.Type),
+					Range:      ast.NewRangeFromPositioned(checker.memoryGauge, referenceExpression.Type),
 				},
 			)
 		} else {

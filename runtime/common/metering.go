@@ -95,6 +95,8 @@ var (
 	ReferenceTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindReferenceType)
 	RestrictedTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindRestrictedType)
 	VariableSizedTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindVariableSizedType)
+
+	PositionMemoryUsage = NewConstantMemoryUsage(MemoryKindPosition)
 )
 
 func UseMemory(gauge MemoryGauge, usage MemoryUsage) {
