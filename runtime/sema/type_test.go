@@ -444,7 +444,7 @@ func TestRestrictedType_GetMember(t *testing.T) {
 		}
 
 		fieldName := "s"
-		resourceType.Members.Set(fieldName, NewPublicConstantFieldMember(
+		resourceType.Members.Set(fieldName, NewUnmeteredPublicConstantFieldMember(
 			ty.Type,
 			fieldName,
 			IntType,
@@ -456,9 +456,14 @@ func TestRestrictedType_GetMember(t *testing.T) {
 		require.Contains(t, actualMembers, fieldName)
 
 		var reportedError error
-		actualMember := actualMembers[fieldName].Resolve(fieldName, ast.Range{}, func(err error) {
-			reportedError = err
-		})
+		actualMember := actualMembers[fieldName].Resolve(
+			nil,
+			fieldName,
+			ast.Range{},
+			func(err error) {
+				reportedError = err
+			},
+		)
 
 		assert.IsType(t, &InvalidRestrictedTypeMemberAccessError{}, reportedError)
 		assert.NotNil(t, actualMember)
@@ -490,14 +495,14 @@ func TestRestrictedType_GetMember(t *testing.T) {
 
 		fieldName := "s"
 
-		resourceType.Members.Set(fieldName, NewPublicConstantFieldMember(
+		resourceType.Members.Set(fieldName, NewUnmeteredPublicConstantFieldMember(
 			restrictedType.Type,
 			fieldName,
 			IntType,
 			"",
 		))
 
-		interfaceMember := NewPublicConstantFieldMember(
+		interfaceMember := NewUnmeteredPublicConstantFieldMember(
 			restrictedType.Type,
 			fieldName,
 			IntType,
@@ -509,7 +514,7 @@ func TestRestrictedType_GetMember(t *testing.T) {
 
 		require.Contains(t, actualMembers, fieldName)
 
-		actualMember := actualMembers[fieldName].Resolve(fieldName, ast.Range{}, nil)
+		actualMember := actualMembers[fieldName].Resolve(nil, fieldName, ast.Range{}, nil)
 
 		assert.Same(t, interfaceMember, actualMember)
 	})

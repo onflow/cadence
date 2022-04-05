@@ -4494,7 +4494,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 
 	semaCompositeType.Members.Set(
 		"dictionary",
-		sema.NewPublicConstantFieldMember(
+		sema.NewUnmeteredPublicConstantFieldMember(
 			semaCompositeType,
 			"dictionary",
 			semaDictionaryType,

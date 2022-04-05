@@ -35,13 +35,13 @@ var rlpContractType = func() *sema.CompositeType {
 	}
 
 	ty.Members = sema.GetMembersAsMap([]*sema.Member{
-		sema.NewPublicFunctionMember(
+		sema.NewUnmeteredPublicFunctionMember(
 			ty,
 			rlpDecodeListFunctionName,
 			rlpDecodeListFunctionType,
 			rlpDecodeListFunctionDocString,
 		),
-		sema.NewPublicFunctionMember(
+		sema.NewUnmeteredPublicFunctionMember(
 			ty,
 			rlpDecodeStringFunctionName,
 			rlpDecodeStringFunctionType,

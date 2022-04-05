@@ -32,6 +32,8 @@ type MemoryGauge interface {
 	MeterMemory(usage MemoryUsage) error
 }
 
+var IdentifierMemoryUsage = NewConstantMemoryUsage(MemoryKindIdentifier)
+
 func UseMemory(gauge MemoryGauge, usage MemoryUsage) {
 	if gauge == nil {
 		return

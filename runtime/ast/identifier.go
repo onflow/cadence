@@ -20,6 +20,8 @@ package ast
 
 import (
 	"encoding/json"
+
+	"github.com/onflow/cadence/runtime/common"
 )
 
 // Identifier
@@ -27,6 +29,21 @@ import (
 type Identifier struct {
 	Identifier string
 	Pos        Position
+}
+
+func NewIdentifier(memoryGauge common.MemoryGauge, identifier string, pos Position) Identifier {
+	common.UseMemory(memoryGauge, common.IdentifierMemoryUsage)
+	return Identifier{
+		Identifier: identifier,
+		Pos:        pos,
+	}
+}
+
+func NewEmptyIdentifier(memoryGauge common.MemoryGauge, pos Position) Identifier {
+	common.UseMemory(memoryGauge, common.IdentifierMemoryUsage)
+	return Identifier{
+		Pos: pos,
+	}
 }
 
 func (i Identifier) String() string {

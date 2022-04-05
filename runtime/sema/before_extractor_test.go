@@ -38,7 +38,7 @@ func TestBeforeExtractor(t *testing.T) {
 
 	require.Empty(t, errs)
 
-	extractor := NewBeforeExtractor(nil)
+	extractor := NewBeforeExtractor(nil, nil)
 
 	identifier1 := ast.Identifier{
 		Identifier: extractor.ExpressionExtractor.FormatIdentifier(0),

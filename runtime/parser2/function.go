@@ -165,10 +165,11 @@ func parseParameter(p *parser) *ast.Parameter {
 
 	return &ast.Parameter{
 		Label: argumentLabel,
-		Identifier: ast.Identifier{
-			Identifier: parameterName,
-			Pos:        parameterPos,
-		},
+		Identifier: ast.NewIdentifier(
+			p.memoryGauge,
+			parameterName,
+			parameterPos,
+		),
 		TypeAnnotation: typeAnnotation,
 		Range: ast.Range{
 			StartPos: startPos,
@@ -201,7 +202,7 @@ func parseFunctionDeclaration(
 		))
 	}
 
-	identifier := tokenToIdentifier(p.current)
+	identifier := p.tokenToIdentifier(p.current)
 
 	// Skip the identifier
 	p.next()
@@ -240,9 +241,10 @@ func parseFunctionParameterListAndRest(
 	} else {
 		positionBeforeMissingReturnType := parameterList.EndPos
 		returnType := &ast.NominalType{
-			Identifier: ast.Identifier{
-				Pos: positionBeforeMissingReturnType,
-			},
+			Identifier: ast.NewEmptyIdentifier(
+				p.memoryGauge,
+				positionBeforeMissingReturnType,
+			),
 		}
 		returnTypeAnnotation = &ast.TypeAnnotation{
 			IsResource: false,

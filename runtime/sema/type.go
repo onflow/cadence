@@ -184,7 +184,12 @@ type ValueIndexableType interface {
 type MemberResolver struct {
 	Kind     common.DeclarationKind
 	Mutating bool
-	Resolve  func(identifier string, targetRange ast.Range, report func(error)) *Member
+	Resolve  func(
+		memoryGauge common.MemoryGauge,
+		identifier string,
+		targetRange ast.Range,
+		report func(error),
+	) *Member
 }
 
 // ContainedType is a type which might have a container type
@@ -379,8 +384,9 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 
 	members[IsInstanceFunctionName] = MemberResolver{
 		Kind: common.DeclarationKindFunction,
-		Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+		Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 			return NewPublicFunctionMember(
+				memoryGauge,
 				ty,
 				identifier,
 				IsInstanceFunctionType,
@@ -393,8 +399,9 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 
 	members[GetTypeFunctionName] = MemberResolver{
 		Kind: common.DeclarationKindFunction,
-		Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+		Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 			return NewPublicFunctionMember(
+				memoryGauge,
 				ty,
 				identifier,
 				GetTypeFunctionType,
@@ -409,8 +416,9 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 
 		members[ToStringFunctionName] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+			Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 				return NewPublicFunctionMember(
+					memoryGauge,
 					ty,
 					identifier,
 					ToStringFunctionType,
@@ -426,8 +434,9 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 
 		members[ToBigEndianBytesFunctionName] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+			Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 				return NewPublicFunctionMember(
+					memoryGauge,
 					ty,
 					identifier,
 					toBigEndianBytesFunctionType,
@@ -563,7 +572,7 @@ func (t *OptionalType) GetMembers() map[string]MemberResolver {
 	members := map[string]MemberResolver{
 		"map": {
 			Kind: common.DeclarationKindFunction,
-			Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
+			Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
 
 				// It invalid for an optional of a resource to have a `map` function
 
@@ -578,6 +587,7 @@ func (t *OptionalType) GetMembers() map[string]MemberResolver {
 				}
 
 				return NewPublicFunctionMember(
+					memoryGauge,
 					t,
 					identifier,
 					OptionalTypeMapFunctionType(t.Type),
@@ -809,8 +819,9 @@ func addSaturatingArithmeticFunctions(t SaturatingArithmeticType, members map[st
 	addArithmeticFunction := func(name string, docString string) {
 		members[name] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
-			Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
-				return NewPublicFunctionMember(t, name, arithmeticFunctionType, docString)
+			Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
+				return NewPublicFunctionMember(
+					memoryGauge, t, name, arithmeticFunctionType, docString)
 			},
 		}
 	}
@@ -1607,7 +1618,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 	members := map[string]MemberResolver{
 		"contains": {
 			Kind: common.DeclarationKindFunction,
-			Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
+			Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
 
 				elementType := arrayType.ElementType(false)
 
@@ -1636,6 +1647,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 				}
 
 				return NewPublicFunctionMember(
+					memoryGauge,
 					arrayType,
 					identifier,
 					ArrayContainsFunctionType(elementType),
@@ -1645,8 +1657,9 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 		},
 		"length": {
 			Kind: common.DeclarationKindField,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+			Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 				return NewPublicConstantFieldMember(
+					memoryGauge,
 					arrayType,
 					identifier,
 					IntType,
@@ -1656,7 +1669,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 		},
 		"firstIndex": {
 			Kind: common.DeclarationKindFunction,
-			Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
+			Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
 
 				elementType := arrayType.ElementType(false)
 
@@ -1685,6 +1698,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 				}
 
 				return NewPublicFunctionMember(
+					memoryGauge,
 					arrayType,
 					identifier,
 					ArrayFirstIndexFunctionType(elementType),
@@ -1701,9 +1715,10 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 		members["append"] = MemberResolver{
 			Kind:     common.DeclarationKindFunction,
 			Mutating: true,
-			Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
+			Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
 				elementType := arrayType.ElementType(false)
 				return NewPublicFunctionMember(
+					memoryGauge,
 					arrayType,
 					identifier,
 					ArrayAppendFunctionType(elementType),
@@ -1715,7 +1730,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 		members["appendAll"] = MemberResolver{
 			Kind:     common.DeclarationKindFunction,
 			Mutating: true,
-			Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
+			Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
 
 				elementType := arrayType.ElementType(false)
 
@@ -1730,6 +1745,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 				}
 
 				return NewPublicFunctionMember(
+					memoryGauge,
 					arrayType,
 					identifier,
 					ArrayAppendAllFunctionType(arrayType),
@@ -1740,7 +1756,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 
 		members["concat"] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
-			Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
+			Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
 
 				// TODO: maybe allow for resource element type
 
@@ -1757,6 +1773,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 				}
 
 				return NewPublicFunctionMember(
+					memoryGauge,
 					arrayType,
 					identifier,
 					ArrayConcatFunctionType(arrayType),
@@ -1767,7 +1784,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 
 		members["slice"] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
-			Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
+			Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
 
 				elementType := arrayType.ElementType(false)
 
@@ -1782,6 +1799,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 				}
 
 				return NewPublicFunctionMember(
+					memoryGauge,
 					arrayType,
 					identifier,
 					ArraySliceFunctionType(elementType),
@@ -1793,11 +1811,12 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 		members["insert"] = MemberResolver{
 			Kind:     common.DeclarationKindFunction,
 			Mutating: true,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+			Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 
 				elementType := arrayType.ElementType(false)
 
 				return NewPublicFunctionMember(
+					memoryGauge,
 					arrayType,
 					identifier,
 					ArrayInsertFunctionType(elementType),
@@ -1809,11 +1828,12 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 		members["remove"] = MemberResolver{
 			Kind:     common.DeclarationKindFunction,
 			Mutating: true,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+			Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 
 				elementType := arrayType.ElementType(false)
 
 				return NewPublicFunctionMember(
+					memoryGauge,
 					arrayType,
 					identifier,
 					ArrayRemoveFunctionType(elementType),
@@ -1825,11 +1845,12 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 		members["removeFirst"] = MemberResolver{
 			Kind:     common.DeclarationKindFunction,
 			Mutating: true,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+			Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 
 				elementType := arrayType.ElementType(false)
 
 				return NewPublicFunctionMember(
+					memoryGauge,
 					arrayType,
 					identifier,
 					ArrayRemoveFirstFunctionType(elementType),
@@ -1842,11 +1863,12 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 		members["removeLast"] = MemberResolver{
 			Kind:     common.DeclarationKindFunction,
 			Mutating: true,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+			Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 
 				elementType := arrayType.ElementType(false)
 
 				return NewPublicFunctionMember(
+					memoryGauge,
 					arrayType,
 					identifier,
 					ArrayRemoveLastFunctionType(elementType),
@@ -2877,7 +2899,7 @@ func (t *FunctionType) GetMembers() map[string]MemberResolver {
 			member := loopMember
 			members[name] = MemberResolver{
 				Kind: member.DeclarationKind,
-				Resolve: func(_ string, _ ast.Range, _ func(error)) *Member {
+				Resolve: func(_ common.MemoryGauge, _ string, _ ast.Range, _ func(error)) *Member {
 					return member
 				},
 			}
@@ -3079,7 +3101,7 @@ func init() {
 			switch numberType := numberType.(type) {
 			case *NumericType:
 				if numberType.minInt != nil {
-					addMember(NewPublicConstantFieldMember(
+					addMember(NewUnmeteredPublicConstantFieldMember(
 						functionType,
 						NumberTypeMinFieldName,
 						numberType,
@@ -3088,7 +3110,7 @@ func init() {
 				}
 
 				if numberType.maxInt != nil {
-					addMember(NewPublicConstantFieldMember(
+					addMember(NewUnmeteredPublicConstantFieldMember(
 						functionType,
 						NumberTypeMaxFieldName,
 						numberType,
@@ -3103,7 +3125,7 @@ func init() {
 						panic(errors.NewUnreachableError())
 					}
 
-					addMember(NewPublicConstantFieldMember(
+					addMember(NewUnmeteredPublicConstantFieldMember(
 						functionType,
 						NumberTypeMinFieldName,
 						numberType,
@@ -3117,7 +3139,7 @@ func init() {
 						panic(errors.NewUnreachableError())
 					}
 
-					addMember(NewPublicConstantFieldMember(
+					addMember(NewUnmeteredPublicConstantFieldMember(
 						functionType,
 						NumberTypeMaxFieldName,
 						numberType,
@@ -3274,7 +3296,7 @@ func init() {
 		functionType.Members.Set(name, member)
 	}
 
-	addMember(NewPublicFunctionMember(
+	addMember(NewUnmeteredPublicFunctionMember(
 		functionType,
 		StringTypeEncodeHexFunctionName,
 		StringTypeEncodeHexFunctionType,
@@ -3339,9 +3361,11 @@ func suggestIntegerLiteralConversionReplacement(
 				TypeAnnotation: &ast.TypeAnnotation{
 					IsResource: false,
 					Type: &ast.NominalType{
-						Identifier: ast.Identifier{
-							Identifier: targetType.String(),
-						},
+						Identifier: ast.NewIdentifier(
+							checker.memoryGauge,
+							targetType.String(),
+							ast.EmptyPosition,
+						),
 					},
 				},
 			}
@@ -3373,9 +3397,11 @@ func suggestIntegerLiteralConversionReplacement(
 				TypeAnnotation: &ast.TypeAnnotation{
 					IsResource: false,
 					Type: &ast.NominalType{
-						Identifier: ast.Identifier{
-							Identifier: targetType.String(),
-						},
+						Identifier: ast.NewIdentifier(
+							checker.memoryGauge,
+							targetType.String(),
+							ast.EmptyPosition,
+						),
 					},
 				},
 			}
@@ -3829,7 +3855,7 @@ func (t *CompositeType) initializeMemberResolvers() {
 			member := loopMember
 			members[name] = MemberResolver{
 				Kind: member.DeclarationKind,
-				Resolve: func(_ string, _ ast.Range, _ func(error)) *Member {
+				Resolve: func(_ common.MemoryGauge, _ string, _ ast.Range, _ func(error)) *Member {
 					return member
 				},
 			}
@@ -3886,7 +3912,23 @@ type Member struct {
 	DocString             string
 }
 
+func NewUnmeteredPublicFunctionMember(
+	containerType Type,
+	identifier string,
+	functionType *FunctionType,
+	docString string,
+) *Member {
+	return NewPublicFunctionMember(
+		nil,
+		containerType,
+		identifier,
+		functionType,
+		docString,
+	)
+}
+
 func NewPublicFunctionMember(
+	memoryGauge common.MemoryGauge,
 	containerType Type,
 	identifier string,
 	functionType *FunctionType,
@@ -3894,9 +3936,13 @@ func NewPublicFunctionMember(
 ) *Member {
 
 	return &Member{
-		ContainerType:   containerType,
-		Access:          ast.AccessPublic,
-		Identifier:      ast.Identifier{Identifier: identifier},
+		ContainerType: containerType,
+		Access:        ast.AccessPublic,
+		Identifier: ast.NewIdentifier(
+			memoryGauge,
+			identifier,
+			ast.EmptyPosition,
+		),
 		DeclarationKind: common.DeclarationKindFunction,
 		VariableKind:    ast.VariableKindConstant,
 		TypeAnnotation:  NewTypeAnnotation(functionType),
@@ -3905,16 +3951,36 @@ func NewPublicFunctionMember(
 	}
 }
 
+func NewUnmeteredPublicConstantFieldMember(
+	containerType Type,
+	identifier string,
+	fieldType Type,
+	docString string,
+) *Member {
+	return NewPublicConstantFieldMember(
+		nil,
+		containerType,
+		identifier,
+		fieldType,
+		docString,
+	)
+}
+
 func NewPublicConstantFieldMember(
+	memoryGauge common.MemoryGauge,
 	containerType Type,
 	identifier string,
 	fieldType Type,
 	docString string,
 ) *Member {
 	return &Member{
-		ContainerType:   containerType,
-		Access:          ast.AccessPublic,
-		Identifier:      ast.Identifier{Identifier: identifier},
+		ContainerType: containerType,
+		Access:        ast.AccessPublic,
+		Identifier: ast.NewIdentifier(
+			memoryGauge,
+			identifier,
+			ast.EmptyPosition,
+		),
 		DeclarationKind: common.DeclarationKindField,
 		VariableKind:    ast.VariableKindConstant,
 		TypeAnnotation:  NewTypeAnnotation(fieldType),
@@ -4119,7 +4185,7 @@ func (t *InterfaceType) initializeMemberResolvers() {
 			member := loopMember
 			members[name] = MemberResolver{
 				Kind: member.DeclarationKind,
-				Resolve: func(_ string, _ ast.Range, _ func(error)) *Member {
+				Resolve: func(_ common.MemoryGauge, _ string, _ ast.Range, _ func(error)) *Member {
 					return member
 				},
 			}
@@ -4384,9 +4450,10 @@ func (t *DictionaryType) initializeMemberResolvers() {
 		t.memberResolvers = withBuiltinMembers(t, map[string]MemberResolver{
 			"containsKey": {
 				Kind: common.DeclarationKindFunction,
-				Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
 
 					return NewPublicFunctionMember(
+						memoryGauge,
 						t,
 						identifier,
 						DictionaryContainsKeyFunctionType(t),
@@ -4396,8 +4463,9 @@ func (t *DictionaryType) initializeMemberResolvers() {
 			},
 			"length": {
 				Kind: common.DeclarationKindField,
-				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicConstantFieldMember(
+						memoryGauge,
 						t,
 						identifier,
 						IntType,
@@ -4407,7 +4475,7 @@ func (t *DictionaryType) initializeMemberResolvers() {
 			},
 			"keys": {
 				Kind: common.DeclarationKindField,
-				Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
 					// TODO: maybe allow for resource key type
 
 					if t.KeyType.IsResourceType() {
@@ -4421,6 +4489,7 @@ func (t *DictionaryType) initializeMemberResolvers() {
 					}
 
 					return NewPublicConstantFieldMember(
+						memoryGauge,
 						t,
 						identifier,
 						&VariableSizedType{Type: t.KeyType},
@@ -4430,7 +4499,7 @@ func (t *DictionaryType) initializeMemberResolvers() {
 			},
 			"values": {
 				Kind: common.DeclarationKindField,
-				Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
 					// TODO: maybe allow for resource value type
 
 					if t.ValueType.IsResourceType() {
@@ -4444,6 +4513,7 @@ func (t *DictionaryType) initializeMemberResolvers() {
 					}
 
 					return NewPublicConstantFieldMember(
+						memoryGauge,
 						t,
 						identifier,
 						&VariableSizedType{Type: t.ValueType},
@@ -4454,8 +4524,10 @@ func (t *DictionaryType) initializeMemberResolvers() {
 			"insert": {
 				Kind:     common.DeclarationKindFunction,
 				Mutating: true,
-				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-					return NewPublicFunctionMember(t,
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicFunctionMember(
+						memoryGauge,
+						t,
 						identifier,
 						DictionaryInsertFunctionType(t),
 						dictionaryTypeInsertFunctionDocString,
@@ -4465,8 +4537,10 @@ func (t *DictionaryType) initializeMemberResolvers() {
 			"remove": {
 				Kind:     common.DeclarationKindFunction,
 				Mutating: true,
-				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-					return NewPublicFunctionMember(t,
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicFunctionMember(
+						memoryGauge,
+						t,
 						identifier,
 						DictionaryRemoveFunctionType(t),
 						dictionaryTypeRemoveFunctionDocString,
@@ -4828,8 +4902,9 @@ Returns an array containing the byte representation of the address
 func (t *AddressType) GetMembers() map[string]MemberResolver {
 	return withBuiltinMembers(t, map[string]MemberResolver{
 		AddressTypeToBytesFunctionName: {
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+			Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 				return NewPublicFunctionMember(
+					memoryGauge,
 					t,
 					identifier,
 					AddressTypeToBytesFunctionType,
@@ -5641,7 +5716,7 @@ func (t *TransactionType) GetMembers() map[string]MemberResolver {
 			member := loopMember
 			members[name] = MemberResolver{
 				Kind: member.DeclarationKind,
-				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 					return member
 				},
 			}
@@ -5859,8 +5934,8 @@ func (t *RestrictedType) GetMembers() map[string]MemberResolver {
 
 		members[name] = MemberResolver{
 			Kind: resolver.Kind,
-			Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
-				member := resolver.Resolve(identifier, targetRange, report)
+			Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
+				member := resolver.Resolve(memoryGauge, identifier, targetRange, report)
 
 				report(
 					&InvalidRestrictedTypeMemberAccessError{
@@ -6122,8 +6197,9 @@ func (t *CapabilityType) initializeMemberResolvers() {
 		t.memberResolvers = withBuiltinMembers(t, map[string]MemberResolver{
 			"borrow": {
 				Kind: common.DeclarationKindFunction,
-				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicFunctionMember(
+						memoryGauge,
 						t,
 						identifier,
 						CapabilityTypeBorrowFunctionType(t.BorrowType),
@@ -6133,8 +6209,9 @@ func (t *CapabilityType) initializeMemberResolvers() {
 			},
 			"check": {
 				Kind: common.DeclarationKindFunction,
-				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicFunctionMember(
+						memoryGauge,
 						t,
 						identifier,
 						CapabilityTypeCheckFunctionType(t.BorrowType),
@@ -6144,8 +6221,9 @@ func (t *CapabilityType) initializeMemberResolvers() {
 			},
 			"address": {
 				Kind: common.DeclarationKindField,
-				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicConstantFieldMember(
+						memoryGauge,
 						t,
 						identifier,
 						&AddressType{},
@@ -6201,31 +6279,31 @@ var AccountKeyType = func() *CompositeType {
 	const accountKeyIsRevokedFieldDocString = `Flag indicating whether the key is revoked`
 
 	var members = []*Member{
-		NewPublicConstantFieldMember(
+		NewUnmeteredPublicConstantFieldMember(
 			accountKeyType,
 			AccountKeyKeyIndexField,
 			IntType,
 			accountKeyIndexFieldDocString,
 		),
-		NewPublicConstantFieldMember(
+		NewUnmeteredPublicConstantFieldMember(
 			accountKeyType,
 			AccountKeyPublicKeyField,
 			PublicKeyType,
 			accountKeyPublicKeyFieldDocString,
 		),
-		NewPublicConstantFieldMember(
+		NewUnmeteredPublicConstantFieldMember(
 			accountKeyType,
 			AccountKeyHashAlgoField,
 			HashAlgorithmType,
 			accountKeyHashAlgorithmFieldDocString,
 		),
-		NewPublicConstantFieldMember(
+		NewUnmeteredPublicConstantFieldMember(
 			accountKeyType,
 			AccountKeyWeightField,
 			UFix64Type,
 			accountKeyWeightFieldDocString,
 		),
-		NewPublicConstantFieldMember(
+		NewUnmeteredPublicConstantFieldMember(
 			accountKeyType,
 			AccountKeyIsRevokedField,
 			BoolType,
@@ -6274,25 +6352,25 @@ var PublicKeyType = func() *CompositeType {
 	}
 
 	var members = []*Member{
-		NewPublicConstantFieldMember(
+		NewUnmeteredPublicConstantFieldMember(
 			publicKeyType,
 			PublicKeyPublicKeyField,
 			ByteArrayType,
 			publicKeyKeyFieldDocString,
 		),
-		NewPublicConstantFieldMember(
+		NewUnmeteredPublicConstantFieldMember(
 			publicKeyType,
 			PublicKeySignAlgoField,
 			SignatureAlgorithmType,
 			publicKeySignAlgoFieldDocString,
 		),
-		NewPublicFunctionMember(
+		NewUnmeteredPublicFunctionMember(
 			publicKeyType,
 			PublicKeyVerifyFunction,
 			PublicKeyVerifyFunctionType,
 			publicKeyVerifyFunctionDocString,
 		),
-		NewPublicFunctionMember(
+		NewUnmeteredPublicFunctionMember(
 			publicKeyType,
 			PublicKeyVerifyPoPFunction,
 			PublicKeyVerifyPoPFunctionType,

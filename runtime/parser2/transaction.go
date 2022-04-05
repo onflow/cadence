@@ -74,7 +74,7 @@ func parseTransactionDeclaration(p *parser, docString string) *ast.TransactionDe
 
 		switch p.current.Value {
 		case keywordPrepare:
-			identifier := tokenToIdentifier(p.current)
+			identifier := p.tokenToIdentifier(p.current)
 			// Skip the `prepare` keyword
 			p.next()
 			prepare = parseSpecialFunctionDeclaration(p, false, ast.AccessNotSpecified, nil, identifier)
@@ -207,7 +207,7 @@ func parseTransactionFields(p *parser) (fields []*ast.FieldDeclaration) {
 }
 
 func parseTransactionExecute(p *parser) *ast.SpecialFunctionDeclaration {
-	identifier := tokenToIdentifier(p.current)
+	identifier := p.tokenToIdentifier(p.current)
 
 	// Skip the `execute` keyword
 	p.next()

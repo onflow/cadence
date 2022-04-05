@@ -56,8 +56,9 @@ func init() {
 		return map[string]MemberResolver{
 			"concat": {
 				Kind: common.DeclarationKindFunction,
-				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicFunctionMember(
+						memoryGauge,
 						t,
 						identifier,
 						StringTypeConcatFunctionType,
@@ -67,8 +68,9 @@ func init() {
 			},
 			"slice": {
 				Kind: common.DeclarationKindFunction,
-				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicFunctionMember(
+						memoryGauge,
 						t,
 						identifier,
 						StringTypeSliceFunctionType,
@@ -78,8 +80,9 @@ func init() {
 			},
 			"decodeHex": {
 				Kind: common.DeclarationKindFunction,
-				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicFunctionMember(
+						memoryGauge,
 						t,
 						identifier,
 						StringTypeDecodeHexFunctionType,
@@ -89,8 +92,9 @@ func init() {
 			},
 			"utf8": {
 				Kind: common.DeclarationKindField,
-				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicConstantFieldMember(
+						memoryGauge,
 						t,
 						identifier,
 						ByteArrayType,
@@ -100,8 +104,9 @@ func init() {
 			},
 			"length": {
 				Kind: common.DeclarationKindField,
-				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicConstantFieldMember(
+						memoryGauge,
 						t,
 						identifier,
 						IntType,
@@ -111,8 +116,9 @@ func init() {
 			},
 			"toLower": {
 				Kind: common.DeclarationKindField,
-				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicConstantFieldMember(
+						memoryGauge,
 						t,
 						identifier,
 						StringTypeToLowerFunctionType,

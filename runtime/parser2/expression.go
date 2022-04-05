@@ -798,7 +798,7 @@ func defineIdentifierExpression() {
 
 			default:
 				return &ast.IdentifierExpression{
-					Identifier: tokenToIdentifier(token),
+					Identifier: p.tokenToIdentifier(token),
 				}
 			}
 		},
@@ -1100,9 +1100,9 @@ func definePathExpression() {
 	setExprNullDenotation(
 		lexer.TokenSlash,
 		func(p *parser, token lexer.Token) ast.Expression {
-			domain := mustIdentifier(p)
+			domain := p.mustIdentifier()
 			p.mustOne(lexer.TokenSlash)
-			identifier := mustIdentifier(p)
+			identifier := p.mustIdentifier()
 			return &ast.PathExpression{
 				Domain:     domain,
 				Identifier: identifier,
@@ -1177,7 +1177,7 @@ func parseMemberAccess(p *parser, token lexer.Token, left ast.Expression, option
 
 	var identifier ast.Identifier
 	if p.current.Is(lexer.TokenIdentifier) {
-		identifier = tokenToIdentifier(p.current)
+		identifier = p.tokenToIdentifier(p.current)
 		p.next()
 	} else {
 		p.report(fmt.Errorf(

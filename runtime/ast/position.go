@@ -22,6 +22,8 @@ import (
 	"fmt"
 )
 
+var EmptyPosition = Position{}
+
 // Position defines a row/column within a Cadence script.
 type Position struct {
 	// offset, starting at 0

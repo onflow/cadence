@@ -116,6 +116,8 @@ type Checker struct {
 	expectedType                       Type
 	memberAccountAccessHandler         MemberAccountAccessHandlerFunc
 	lintEnabled                        bool
+	// memoryGauge is used for metering memory usage
+	memoryGauge common.MemoryGauge
 }
 
 type Option func(*Checker) error
@@ -246,6 +248,15 @@ func WithLintingEnabled(enabled bool) Option {
 	}
 }
 
+// WithMemoryGauge returns a checker option which sets the given memory gauge.
+//
+func WithMemoryGauge(memoryGauge common.MemoryGauge) Option {
+	return func(checker *Checker) error {
+		checker.SetMemoryGauge(memoryGauge)
+		return nil
+	}
+}
+
 func NewChecker(program *ast.Program, location common.Location, options ...Option) (*Checker, error) {
 
 	if location == nil {
@@ -271,14 +282,15 @@ func NewChecker(program *ast.Program, location common.Location, options ...Optio
 		Elaboration:         NewElaboration(),
 	}
 
-	checker.beforeExtractor = NewBeforeExtractor(checker.report)
-
 	for _, option := range options {
 		err := option(checker)
 		if err != nil {
 			return nil, err
 		}
 	}
+
+	// Should be done after setting checker-options, since memory-gauge is set via options.
+	checker.beforeExtractor = NewBeforeExtractor(checker.memoryGauge, checker.report)
 
 	err := checker.CheckerError()
 	if err != nil {
@@ -299,7 +311,12 @@ func (checker *Checker) SubChecker(program *ast.Program, location common.Locatio
 		WithCheckHandler(checker.checkHandler),
 		WithImportHandler(checker.importHandler),
 		WithLocationHandler(checker.locationHandler),
+		WithMemoryGauge(checker.memoryGauge),
 	)
+}
+
+func (checker *Checker) SetMemoryGauge(gauge common.MemoryGauge) {
+	checker.memoryGauge = gauge
 }
 
 func (checker *Checker) declareValue(declaration ValueDeclaration) *Variable {
@@ -329,10 +346,11 @@ func (checker *Checker) declareValue(declaration ValueDeclaration) *Variable {
 }
 
 func (checker *Checker) declareTypeDeclaration(declaration TypeDeclaration) {
-	identifier := ast.Identifier{
-		Identifier: declaration.TypeDeclarationName(),
-		Pos:        declaration.TypeDeclarationPosition(),
-	}
+	identifier := ast.NewIdentifier(
+		checker.memoryGauge,
+		declaration.TypeDeclarationName(),
+		declaration.TypeDeclarationPosition(),
+	)
 
 	ty := declaration.TypeDeclarationType()
 	// TODO: add access to TypeDeclaration and use declaration's access instead here
@@ -2025,7 +2043,7 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 		predeclaredMembers = append(predeclaredMembers, &Member{
 			ContainerType:         containerType,
 			Access:                access,
-			Identifier:            ast.Identifier{Identifier: identifier},
+			Identifier:            ast.NewIdentifier(checker.memoryGauge, identifier, ast.EmptyPosition),
 			DeclarationKind:       declarationKind,
 			VariableKind:          ast.VariableKindConstant,
 			TypeAnnotation:        NewTypeAnnotation(fieldType),
