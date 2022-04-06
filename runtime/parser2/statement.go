@@ -429,8 +429,9 @@ func parseFunctionBlock(p *parser) *ast.FunctionBlock {
 
 	endToken := p.mustOne(lexer.TokenBraceClose)
 
-	return &ast.FunctionBlock{
-		Block: ast.NewBlock(
+	return ast.NewFunctionBlock(
+		p.memoryGauge,
+		ast.NewBlock(
 			p.memoryGauge,
 			statements,
 			ast.Range{
@@ -438,9 +439,9 @@ func parseFunctionBlock(p *parser) *ast.FunctionBlock {
 				EndPos:   endToken.EndPos,
 			},
 		),
-		PreConditions:  preConditions,
-		PostConditions: postConditions,
-	}
+		preConditions,
+		postConditions,
+	)
 }
 
 // parseConditions parses conditions (pre/post)

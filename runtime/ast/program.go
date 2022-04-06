@@ -30,7 +30,8 @@ type Program struct {
 	indices      programIndices
 }
 
-func NewProgram(declarations []Declaration) *Program {
+func NewProgram(memoryGauge common.MemoryGauge, declarations []Declaration) *Program {
+	common.UseMemory(memoryGauge, common.ProgramMemoryUsage)
 	return &Program{
 		declarations: declarations,
 	}

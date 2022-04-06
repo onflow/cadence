@@ -508,7 +508,7 @@ func ParseProgramFromTokenStream(
 		panic(errors.NewUnreachableError())
 	}
 
-	program = ast.NewProgram(declarations)
+	program = ast.NewProgram(memoryGauge, declarations)
 
 	return
 }

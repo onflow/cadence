@@ -31,7 +31,12 @@ type Members struct {
 	indices      memberIndices
 }
 
-func NewMembers(declarations []Declaration) *Members {
+func NewMembers(memoryGauge common.MemoryGauge, declarations []Declaration) *Members {
+	common.UseMemory(memoryGauge, common.NewMembersMemoryUsage(len(declarations)))
+	return NewUnmeteredMembers(declarations)
+}
+
+func NewUnmeteredMembers(declarations []Declaration) *Members {
 	return &Members{
 		declarations: declarations,
 	}

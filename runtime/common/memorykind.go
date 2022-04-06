@@ -68,9 +68,16 @@ const (
 
 	// AST nodes
 
+	MemoryKindProgram
 	MemoryKindIdentifier
 	MemoryKindArgument
 	MemoryKindBlock
+	MemoryKindFunctionBlock
+	MemoryKindParameter
+	MemoryKindParameterList
+	MemoryKindTransfer
+	MemoryKindMembers
+	MemoryKindTypeAnnotation
 
 	MemoryKindFunctionDeclaration
 	MemoryKindCompositeDeclaration
@@ -116,4 +123,14 @@ const (
 	MemoryKindReferenceExpression
 	MemoryKindForceExpression
 	MemoryKindPathExpression
+
+	MemoryKindConstantSizedType
+	MemoryKindDictionaryType
+	MemoryKindFunctionType
+	MemoryKindInstantiationType
+	MemoryKindNominalType
+	MemoryKindOptionalType
+	MemoryKindReferenceType
+	MemoryKindRestrictedType
+	MemoryKindVariableSizedType
 )

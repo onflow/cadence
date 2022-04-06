@@ -81,6 +81,8 @@ type Range struct {
 	EndPos   Position
 }
 
+var EmptyRange = Range{}
+
 func (e Range) StartPosition() Position {
 	return e.StartPos
 }

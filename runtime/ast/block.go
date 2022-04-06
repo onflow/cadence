@@ -110,6 +110,20 @@ type FunctionBlock struct {
 	PostConditions *Conditions `json:",omitempty"`
 }
 
+func NewFunctionBlock(
+	memoryGauge common.MemoryGauge,
+	block *Block,
+	preConditions *Conditions,
+	postConditions *Conditions,
+) *FunctionBlock {
+	common.UseMemory(memoryGauge, common.FunctionBlockMemoryUsage)
+	return &FunctionBlock{
+		Block:          block,
+		PreConditions:  preConditions,
+		PostConditions: postConditions,
+	}
+}
+
 func (b *FunctionBlock) IsEmpty() bool {
 	return b == nil ||
 		(b.Block.IsEmpty() &&
