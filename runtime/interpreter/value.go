@@ -1386,12 +1386,12 @@ func (v *ArrayValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	})
 }
 
-func (v *ArrayValue) Iterate(interpreter *Interpreter, f func(element Value) (resume bool)) {
+func (v *ArrayValue) Iterate(gauge common.MemoryGauge, f func(element Value) (resume bool)) {
 	err := v.array.Iterate(func(element atree.Value) (resume bool, err error) {
 		// atree.Array iteration provides low-level atree.Value,
 		// convert to high-level interpreter.Value
 
-		resume = f(MustConvertStoredValue(interpreter, element))
+		resume = f(MustConvertStoredValue(gauge, element))
 
 		return resume, nil
 	})
@@ -14908,12 +14908,12 @@ func (v *CompositeValue) GetOwner() common.Address {
 // ForEachField iterates over all field-name field-value pairs of the composite value.
 // It does NOT iterate over computed fields and functions!
 //
-func (v *CompositeValue) ForEachField(interpreter *Interpreter, f func(fieldName string, fieldValue Value)) {
+func (v *CompositeValue) ForEachField(gauge common.MemoryGauge, f func(fieldName string, fieldValue Value)) {
 
 	err := v.dictionary.Iterate(func(key atree.Value, value atree.Value) (resume bool, err error) {
 		f(
 			string(key.(StringAtreeValue)),
-			MustConvertStoredValue(interpreter, value),
+			MustConvertStoredValue(gauge, value),
 		)
 		return true, nil
 	})
@@ -15107,14 +15107,14 @@ func (v *DictionaryValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	})
 }
 
-func (v *DictionaryValue) Iterate(interpreter *Interpreter, f func(key, value Value) (resume bool)) {
+func (v *DictionaryValue) Iterate(gauge common.MemoryGauge, f func(key, value Value) (resume bool)) {
 	err := v.dictionary.Iterate(func(key, value atree.Value) (resume bool, err error) {
 		// atree.OrderedMap iteration provides low-level atree.Value,
 		// convert to high-level interpreter.Value
 
 		resume = f(
-			MustConvertStoredValue(interpreter, key),
-			MustConvertStoredValue(interpreter, value),
+			MustConvertStoredValue(gauge, key),
+			MustConvertStoredValue(gauge, value),
 		)
 
 		return resume, nil

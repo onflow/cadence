@@ -214,12 +214,12 @@ func NewUnmeteredHostFunctionValue(
 }
 
 func NewHostFunctionValue(
-	interpreter *Interpreter,
+	gauge common.MemoryGauge,
 	function HostFunction,
 	funcType *sema.FunctionType,
 ) *HostFunctionValue {
 
-	common.UseConstantMemory(interpreter, common.MemoryKindHostFunction)
+	common.UseConstantMemory(gauge, common.MemoryKindHostFunction)
 
 	return NewUnmeteredHostFunctionValue(function, funcType)
 }
