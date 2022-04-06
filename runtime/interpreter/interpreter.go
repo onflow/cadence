@@ -306,7 +306,7 @@ func (c TypeCodes) Merge(codes TypeCodes) {
 
 type Storage interface {
 	atree.SlabStorage
-	GetStorageMap(address common.Address, domain string) *StorageMap
+	GetStorageMap(address common.Address, domain string, createIfNotExists bool) *StorageMap
 	CheckHealth() error
 }
 
@@ -2565,7 +2565,10 @@ func (interpreter *Interpreter) storedValueExists(
 	domain string,
 	identifier string,
 ) bool {
-	accountStorage := interpreter.Storage.GetStorageMap(storageAddress, domain)
+	accountStorage := interpreter.Storage.GetStorageMap(storageAddress, domain, false)
+	if accountStorage == nil {
+		return false
+	}
 	return accountStorage.ValueExists(identifier)
 }
 
@@ -2574,7 +2577,10 @@ func (interpreter *Interpreter) ReadStored(
 	domain string,
 	identifier string,
 ) Value {
-	accountStorage := interpreter.Storage.GetStorageMap(storageAddress, domain)
+	accountStorage := interpreter.Storage.GetStorageMap(storageAddress, domain, false)
+	if accountStorage == nil {
+		return nil
+	}
 	return accountStorage.ReadValue(identifier)
 }
 
@@ -2584,7 +2590,7 @@ func (interpreter *Interpreter) writeStored(
 	identifier string,
 	value Value,
 ) {
-	accountStorage := interpreter.Storage.GetStorageMap(storageAddress, domain)
+	accountStorage := interpreter.Storage.GetStorageMap(storageAddress, domain, true)
 	accountStorage.WriteValue(interpreter, identifier, value)
 }
 
