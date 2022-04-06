@@ -154,10 +154,10 @@ func (e *RedeclarationError) ErrorNotes() []errors.ErrorNote {
 
 	return []errors.ErrorNote{
 		&RedeclarationNote{
-			Range: ast.Range{
-				StartPos: previousStartPos,
-				EndPos:   previousEndPos,
-			},
+			Range: ast.NewUnmeteredRange(
+				previousStartPos,
+				previousEndPos,
+			),
 		},
 	}
 }
@@ -1552,10 +1552,10 @@ func (e *ResourceUseAfterInvalidationError) ErrorNotes() (notes []errors.ErrorNo
 	for _, invalidation := range e.Invalidations {
 		notes = append(notes, &ResourceInvalidationNote{
 			ResourceInvalidation: invalidation,
-			Range: ast.Range{
-				StartPos: invalidation.StartPos,
-				EndPos:   invalidation.EndPos,
-			},
+			Range: ast.NewUnmeteredRange(
+				invalidation.StartPos,
+				invalidation.EndPos,
+			),
 		})
 	}
 	return

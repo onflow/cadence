@@ -76,10 +76,11 @@ func (l *lexer) Next() Token {
 
 		return Token{
 			Type: TokenEOF,
-			Range: ast.Range{
-				StartPos: pos,
-				EndPos:   pos,
-			},
+			Range: ast.NewRange(
+				l.memoryGauge,
+				pos,
+				pos,
+			),
 		}
 
 	}
@@ -212,15 +213,16 @@ func (l *lexer) emit(ty TokenType, val interface{}, rangeStart ast.Position, con
 	token := Token{
 		Type:  ty,
 		Value: val,
-		Range: ast.Range{
-			StartPos: rangeStart,
-			EndPos: ast.NewPosition(
+		Range: ast.NewRange(
+			l.memoryGauge,
+			rangeStart,
+			ast.NewPosition(
 				l.memoryGauge,
 				l.endOffset-1,
 				endPos.line,
 				endPos.column,
 			),
-		},
+		),
 	}
 
 	l.tokens = append(l.tokens, token)

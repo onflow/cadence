@@ -329,10 +329,11 @@ func (checker *Checker) checkInvocationArgumentLabels(
 					&IncorrectArgumentLabelError{
 						ActualArgumentLabel:   providedLabel,
 						ExpectedArgumentLabel: "",
-						Range: ast.Range{
-							StartPos: *argument.LabelStartPos,
-							EndPos:   *argument.LabelEndPos,
-						},
+						Range: ast.NewRange(
+							checker.memoryGauge,
+							*argument.LabelStartPos,
+							*argument.LabelEndPos,
+						),
 					},
 				)
 			}
@@ -351,10 +352,11 @@ func (checker *Checker) checkInvocationArgumentLabels(
 					&IncorrectArgumentLabelError{
 						ActualArgumentLabel:   providedLabel,
 						ExpectedArgumentLabel: argumentLabel,
-						Range: ast.Range{
-							StartPos: *argument.LabelStartPos,
-							EndPos:   *argument.LabelEndPos,
-						},
+						Range: ast.NewRange(
+							checker.memoryGauge,
+							*argument.LabelStartPos,
+							*argument.LabelEndPos,
+						),
 					},
 				)
 			}
@@ -611,10 +613,11 @@ func (checker *Checker) reportInvalidTypeArgumentCount(
 		&InvalidTypeArgumentCountError{
 			TypeParameterCount: typeParameterCount,
 			TypeArgumentCount:  typeArgumentCount,
-			Range: ast.Range{
-				StartPos: firstSuperfluousTypeArgument.StartPosition(),
-				EndPos:   lastSuperfluousTypeArgument.EndPosition(checker.memoryGauge),
-			},
+			Range: ast.NewRange(
+				checker.memoryGauge,
+				firstSuperfluousTypeArgument.StartPosition(),
+				lastSuperfluousTypeArgument.EndPosition(checker.memoryGauge),
+			),
 		},
 	)
 }

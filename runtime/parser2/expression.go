@@ -1031,10 +1031,11 @@ func defineArrayExpression() {
 			return ast.NewArrayExpression(
 				p.memoryGauge,
 				values,
-				ast.Range{
-					StartPos: startToken.StartPos,
-					EndPos:   endToken.EndPos,
-				},
+				ast.NewRange(
+					p.memoryGauge,
+					startToken.StartPos,
+					endToken.EndPos,
+				),
 			)
 		},
 	)
@@ -1062,10 +1063,11 @@ func defineDictionaryExpression() {
 			return ast.NewDictionaryExpression(
 				p.memoryGauge,
 				entries,
-				ast.Range{
-					StartPos: startToken.StartPos,
-					EndPos:   endToken.EndPos,
-				},
+				ast.NewRange(
+					p.memoryGauge,
+					startToken.StartPos,
+					endToken.EndPos,
+				),
 			)
 		},
 	)
@@ -1082,10 +1084,11 @@ func defineIndexExpression() {
 				p.memoryGauge,
 				left,
 				firstIndexExpr,
-				ast.Range{
-					StartPos: token.StartPos,
-					EndPos:   endToken.EndPos,
-				},
+				ast.NewRange(
+					p.memoryGauge,
+					token.StartPos,
+					endToken.EndPos,
+				),
 			)
 		},
 	)

@@ -166,10 +166,11 @@ func parseTransactionDeclaration(p *parser, docString string) *ast.TransactionDe
 		postConditions,
 		execute,
 		docString,
-		ast.Range{
-			StartPos: startPos,
-			EndPos:   endPos,
-		},
+		ast.NewRange(
+			p.memoryGauge,
+			startPos,
+			endPos,
+		),
 	)
 }
 

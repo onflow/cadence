@@ -204,10 +204,11 @@ func parseReturnStatement(p *parser) *ast.ReturnStatement {
 	return ast.NewReturnStatement(
 		p.memoryGauge,
 		expression,
-		ast.Range{
-			StartPos: tokenRange.StartPos,
-			EndPos:   endPosition,
-		},
+		ast.NewRange(
+			p.memoryGauge,
+			tokenRange.StartPos,
+			endPosition,
+		),
 	)
 }
 
@@ -393,10 +394,11 @@ func parseBlock(p *parser) *ast.Block {
 	return ast.NewBlock(
 		p.memoryGauge,
 		statements,
-		ast.Range{
-			StartPos: startToken.StartPos,
-			EndPos:   endToken.EndPos,
-		},
+		ast.NewRange(
+			p.memoryGauge,
+			startToken.StartPos,
+			endToken.EndPos,
+		),
 	)
 }
 
@@ -434,10 +436,11 @@ func parseFunctionBlock(p *parser) *ast.FunctionBlock {
 		ast.NewBlock(
 			p.memoryGauge,
 			statements,
-			ast.Range{
-				StartPos: startToken.StartPos,
-				EndPos:   endToken.EndPos,
-			},
+			ast.NewRange(
+				p.memoryGauge,
+				startToken.StartPos,
+				endToken.EndPos,
+			),
 		),
 		preConditions,
 		postConditions,
@@ -528,10 +531,12 @@ func parseSwitchStatement(p *parser) *ast.SwitchStatement {
 		p.memoryGauge,
 		expression,
 		cases,
-		ast.Range{
-			StartPos: startPos,
-			EndPos:   endToken.EndPos,
-		})
+		ast.NewRange(
+			p.memoryGauge,
+			startPos,
+			endToken.EndPos,
+		),
+	)
 }
 
 // parseSwitchCases parses cases of a switch statement.
@@ -641,9 +646,10 @@ func parseSwitchCase(p *parser, hasExpression bool) *ast.SwitchCase {
 	return &ast.SwitchCase{
 		Expression: expression,
 		Statements: statements,
-		Range: ast.Range{
-			StartPos: startPos,
-			EndPos:   endPos,
-		},
+		Range: ast.NewRange(
+			p.memoryGauge,
+			startPos,
+			endPos,
+		),
 	}
 }

@@ -174,10 +174,11 @@ func (checker *Checker) checkSwitchCaseStatements(switchCase *ast.SwitchCase) {
 	block := ast.NewBlock(
 		checker.memoryGauge,
 		switchCase.Statements,
-		ast.Range{
-			StartPos: switchCase.Statements[0].StartPosition(),
-			EndPos:   switchCase.EndPos,
-		},
+		ast.NewRange(
+			checker.memoryGauge,
+			switchCase.Statements[0].StartPosition(),
+			switchCase.EndPos,
+		),
 	)
 	block.Accept(checker)
 }
