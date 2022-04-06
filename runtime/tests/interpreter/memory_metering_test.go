@@ -193,6 +193,7 @@ func TestInterpretArrayMetering(t *testing.T) {
 
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindArrayBase))
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindArrayLength))
+
 	})
 
 	t.Run("insert many", func(t *testing.T) {
