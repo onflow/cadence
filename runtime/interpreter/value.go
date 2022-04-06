@@ -463,7 +463,6 @@ func (VoidValue) Walk(_ *Interpreter, _ func(Value)) {
 }
 
 func (VoidValue) StaticType(interpreter *Interpreter) StaticType {
-	common.UseConstantMemory(interpreter, common.MemoryKindPrimitiveStaticType)
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeVoid)
 }
 
