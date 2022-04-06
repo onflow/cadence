@@ -34,6 +34,29 @@ type FunctionDeclaration struct {
 	StartPos             Position `json:"-"`
 }
 
+func NewFunctionDeclaration(
+	gauge common.MemoryGauge,
+	access Access,
+	identifier Identifier,
+	parameterList *ParameterList,
+	returnTypeAnnotation *TypeAnnotation,
+	functionBlock *FunctionBlock,
+	startPos Position,
+	docString string,
+) *FunctionDeclaration {
+	common.UseMemory(gauge, common.FunctionDeclarationMemoryUsage)
+
+	return &FunctionDeclaration{
+		Access:               access,
+		Identifier:           identifier,
+		ParameterList:        parameterList,
+		ReturnTypeAnnotation: returnTypeAnnotation,
+		FunctionBlock:        functionBlock,
+		StartPos:             startPos,
+		DocString:            docString,
+	}
+}
+
 func (d *FunctionDeclaration) StartPosition() Position {
 	return d.StartPos
 }
@@ -75,13 +98,14 @@ func (d *FunctionDeclaration) DeclarationAccess() Access {
 	return d.Access
 }
 
-func (d *FunctionDeclaration) ToExpression() *FunctionExpression {
-	return &FunctionExpression{
-		ParameterList:        d.ParameterList,
-		ReturnTypeAnnotation: d.ReturnTypeAnnotation,
-		FunctionBlock:        d.FunctionBlock,
-		StartPos:             d.StartPos,
-	}
+func (d *FunctionDeclaration) ToExpression(memoryGauge common.MemoryGauge) *FunctionExpression {
+	return NewFunctionExpression(
+		memoryGauge,
+		d.ParameterList,
+		d.ReturnTypeAnnotation,
+		d.FunctionBlock,
+		d.StartPos,
+	)
 }
 
 func (d *FunctionDeclaration) DeclarationMembers() *Members {
@@ -110,6 +134,19 @@ func (d *FunctionDeclaration) MarshalJSON() ([]byte, error) {
 type SpecialFunctionDeclaration struct {
 	Kind                common.DeclarationKind
 	FunctionDeclaration *FunctionDeclaration
+}
+
+func NewSpecialFunctionDeclaration(
+	gauge common.MemoryGauge,
+	kind common.DeclarationKind,
+	funcDecl *FunctionDeclaration,
+) *SpecialFunctionDeclaration {
+	common.UseMemory(gauge, common.SpecialFunctionDeclarationMemoryUsage)
+
+	return &SpecialFunctionDeclaration{
+		Kind:                kind,
+		FunctionDeclaration: funcDecl,
+	}
 }
 
 func (d *SpecialFunctionDeclaration) StartPosition() Position {

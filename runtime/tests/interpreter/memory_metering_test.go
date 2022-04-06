@@ -24,10 +24,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
+	"github.com/onflow/cadence/runtime/tests/checker"
+	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 type testMemoryGauge struct {
@@ -7789,5 +7792,405 @@ func TestInterpreterStringLocationMetering(t *testing.T) {
 
 		// raw string location is "test"
 		assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindRawString))
+	})
+}
+
+func TestInterpretIdentifierMetering(t *testing.T) {
+	t.Parallel()
+
+	t.Run("variable", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let foo = 4
+                let bar = 5
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		// 'main', 'foo', 'bar', empty-return-type
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindIdentifier))
+	})
+
+	t.Run("parameters", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main(foo: String, bar: String) {
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke(
+			"main",
+			interpreter.NewUnmeteredStringValue("x"),
+			interpreter.NewUnmeteredStringValue("y"),
+		)
+		require.NoError(t, err)
+
+		// 'main', 'foo', 'String', 'bar', 'String', empty-return-type
+		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindIdentifier))
+	})
+
+	t.Run("composite declaration", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {}
+
+            pub struct foo {
+                var x: String
+                var y: String
+
+                init() {
+                    self.x = "a"
+                    self.y = "b"
+                }
+
+                pub fun bar() {}
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+		assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindIdentifier))
+	})
+
+	t.Run("member resolvers", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {            // 2 - 'main', empty-return-type
+                let foo = ["a", "b"]    // 1
+                foo.length              // 3 - 'foo', 'length', constant field resolver
+                foo.length              // 3 - 'foo', 'length', constant field resolver (not re-used)
+                foo.removeFirst()       // 3 - 'foo', 'removeFirst', function resolver
+                foo.removeFirst()       // 3 - 'foo', 'removeFirst', function resolver (not re-used)
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+		assert.Equal(t, uint64(15), meter.getMemory(common.MemoryKindIdentifier))
+	})
+}
+
+func TestInterpretASTMetering(t *testing.T) {
+	t.Parallel()
+
+	t.Run("arguments", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                foo(a: "hello", b: 23)
+                bar("hello", 23)
+            }
+
+            pub fun foo(a: String, b: Int) {
+            }
+
+            pub fun bar(_ a: String, _ b: Int) {
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindArgument))
+	})
+
+	t.Run("blocks", func(t *testing.T) {
+		script := `
+            pub fun main() {
+                var i = 0
+                if i != 0 {
+                    i = 0
+                }
+
+                while i < 2 {
+                    i = i + 1
+                }
+
+                var a = "foo"
+                switch i {
+                    case 1:
+                        a = "foo_1"
+                    case 2:
+                        a = "foo_2"
+                    case 3:
+                        a = "foo_3"
+                }
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindBlock))
+	})
+
+	t.Run("declarations", func(t *testing.T) {
+		script := `
+            import Foo from 0x42
+
+            pub let x = 1
+            pub var y = 2
+
+            pub fun main() {
+                var z = 3
+            }
+
+            pub struct A {
+                pub var a: String
+
+                init() {
+                    self.a = "hello"
+                }
+            }
+
+            pub struct interface B {}
+
+            pub resource C {
+                let a: Int
+
+                init() {
+                    self.a = 6
+                }
+            }
+
+            pub resource interface D {}
+
+            pub enum E: Int8 {
+                pub case a
+                pub case b
+                pub case c
+            }
+
+            transaction {}
+
+            #pragma
+        `
+
+		importedChecker, err := checker.ParseAndCheckWithOptions(t,
+			`
+                pub let Foo = 1
+            `,
+			checker.ParseAndCheckOptions{
+				Location: utils.ImportedLocation,
+			},
+		)
+		require.NoError(t, err)
+
+		meter := newTestMemoryGauge()
+		inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(
+			t,
+			script,
+			ParseCheckAndInterpretOptions{
+				CheckerOptions: []sema.Option{
+					sema.WithImportHandler(
+						func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+							return sema.ElaborationImport{
+								Elaboration: importedChecker.Elaboration,
+							}, nil
+						},
+					),
+				},
+				Options: []interpreter.Option{
+					interpreter.WithImportLocationHandler(
+						func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+							require.IsType(t, common.AddressLocation{}, location)
+							program := interpreter.ProgramFromChecker(importedChecker)
+							subInterpreter, err := inter.NewSubInterpreter(program, location)
+							if err != nil {
+								panic(err)
+							}
+
+							return interpreter.InterpreterImport{
+								Interpreter: subInterpreter,
+							}
+						},
+					),
+				},
+			},
+			meter,
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindFunctionDeclaration))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindCompositeDeclaration))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindInterfaceDeclaration))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindEnumCaseDeclaration))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindFieldDeclaration))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindTransactionDeclaration))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindImportDeclaration))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindVariableDeclaration))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindSpecialFunctionDeclaration))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindPragmaDeclaration))
+	})
+
+	t.Run("statements", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                var a = 5
+
+                while a < 10 {               // while
+                    if a == 5 {              // if
+                        a = a + 1            // assignment
+                        continue             // continue
+                    }
+                    break                    // break
+                }
+
+                foo()                        // expression statement
+
+                for value in [1, 2, 3] {}    // for
+
+                var r1 <- create bar()
+                var r2 <- create bar()
+                r1 <-> r2                    // swap
+
+                destroy r1                   // expression statement
+                destroy r2                   // expression statement
+
+                switch a {                   // switch
+                    case 1:
+                        a = 2                // assignment
+                }
+            }
+
+            pub fun foo(): Int {
+                 return 5                    // return
+            }
+
+            resource bar {}
+
+            pub contract Events {
+                event FooEvent(x: Int, y: Int)
+
+                fun events() {
+                    emit FooEvent(x: 1, y: 2)    // emit
+                }
+            }
+        `
+		meter := newTestMemoryGauge()
+
+		inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(
+			t,
+			script,
+			ParseCheckAndInterpretOptions{
+				Options: []interpreter.Option{
+					interpreter.WithContractValueHandler(func(
+						inter *interpreter.Interpreter,
+						compositeType *sema.CompositeType,
+						constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
+						invocationRange ast.Range,
+					) *interpreter.CompositeValue {
+						// Just return a dummy value
+						return &interpreter.CompositeValue{}
+					}),
+				},
+			},
+			meter,
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAssignmentStatement))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindBreakStatement))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindContinueStatement))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindIfStatement))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindForStatement))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindWhileStatement))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindReturnStatement))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindSwapStatement))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindExpressionStatement))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindSwitchStatement))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindEmitStatement))
+	})
+
+	t.Run("expressions", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                var a = 5                                // integer expr
+                var b = 1.2 + 2.3                        // binary, fixed-point expr
+                var c = !true                            // unary, boolean expr
+                var d: String? = "hello"                 // string expr
+                var e = nil                              // nil expr
+                var f: [AnyStruct] = [[], [], []]        // array expr
+                var g: {Int: {Int: AnyStruct}} = {1:{}}  // nil expr
+                var h <- create bar()                    // create, identifier, invocation
+                var i = h.baz                            // member access, identifier x2
+                destroy h                                // destroy
+                var j = f[0]                             // index access, identifier, integer
+                var k = fun() {}                         // function expr
+                k()                                      // identifier, invocation
+                var l = c ? 1 : 2                        // conditional, identifier, integer x2
+                var m = d as AnyStruct                   // casting, identifier
+                var n = &d as &AnyStruct                 // reference, casting, identifier
+                var o = d!                               // force, identifier
+                var p = /public/somepath                 // path
+            }
+
+            resource bar {
+                let baz: Int
+                init() {
+                    self.baz = 0x4
+                }
+            }
+        `
+		meter := newTestMemoryGauge()
+
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindBooleanExpression))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindNilExpression))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindStringExpression))
+		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindIntegerExpression))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindFixedPointExpression))
+		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindArrayExpression))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindDictionaryExpression))
+		assert.Equal(t, uint64(10), meter.getMemory(common.MemoryKindIdentifierExpression))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindInvocationExpression))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindMemberExpression))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindIndexExpression))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindConditionalExpression))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindUnaryExpression))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindBinaryExpression))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindFunctionExpression))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCastingExpression))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCreateExpression))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindDestroyExpression))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindReferenceExpression))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindForceExpression))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindPathExpression))
 	})
 }

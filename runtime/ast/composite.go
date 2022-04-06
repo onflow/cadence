@@ -38,6 +38,29 @@ type CompositeDeclaration struct {
 	Range
 }
 
+func NewCompositeDeclaration(
+	memoryGauge common.MemoryGauge,
+	access Access,
+	compositeKind common.CompositeKind,
+	identifier Identifier,
+	conformances []*NominalType,
+	members *Members,
+	docString string,
+	declarationRange Range,
+) *CompositeDeclaration {
+	common.UseMemory(memoryGauge, common.CompositeDeclarationMemoryUsage)
+
+	return &CompositeDeclaration{
+		Access:        access,
+		CompositeKind: compositeKind,
+		Identifier:    identifier,
+		Conformances:  conformances,
+		Members:       members,
+		DocString:     docString,
+		Range:         declarationRange,
+	}
+}
+
 func (d *CompositeDeclaration) Accept(visitor Visitor) Repr {
 	return visitor.VisitCompositeDeclaration(d)
 }
@@ -95,6 +118,27 @@ type FieldDeclaration struct {
 	Range
 }
 
+func NewFieldDeclaration(
+	memoryGauge common.MemoryGauge,
+	access Access,
+	variableKind VariableKind,
+	identifier Identifier,
+	typeAnnotation *TypeAnnotation,
+	docString string,
+	declRange Range,
+) *FieldDeclaration {
+	common.UseMemory(memoryGauge, common.FieldDeclarationMemoryUsage)
+
+	return &FieldDeclaration{
+		Access:         access,
+		VariableKind:   variableKind,
+		Identifier:     identifier,
+		TypeAnnotation: typeAnnotation,
+		DocString:      docString,
+		Range:          declRange,
+	}
+}
+
 func (d *FieldDeclaration) Accept(visitor Visitor) Repr {
 	return visitor.VisitFieldDeclaration(d)
 }
@@ -144,6 +188,23 @@ type EnumCaseDeclaration struct {
 	Identifier Identifier
 	DocString  string
 	StartPos   Position `json:"-"`
+}
+
+func NewEnumCaseDeclaration(
+	memoryGauge common.MemoryGauge,
+	access Access,
+	identifier Identifier,
+	docString string,
+	startPos Position,
+) *EnumCaseDeclaration {
+	common.UseMemory(memoryGauge, common.EnumCaseDeclarationMemoryUsage)
+
+	return &EnumCaseDeclaration{
+		Access:     access,
+		Identifier: identifier,
+		DocString:  docString,
+		StartPos:   startPos,
+	}
 }
 
 func (d *EnumCaseDeclaration) Accept(visitor Visitor) Repr {

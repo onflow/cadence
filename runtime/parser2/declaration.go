@@ -262,7 +262,7 @@ func parseVariableDeclaration(
 		))
 	}
 
-	identifier := tokenToIdentifier(p.current)
+	identifier := p.tokenToIdentifier(p.current)
 
 	// Skip the identifier
 	p.next()
@@ -294,18 +294,19 @@ func parseVariableDeclaration(
 		secondValue = parseExpression(p, lowestBindingPower)
 	}
 
-	variableDeclaration := &ast.VariableDeclaration{
-		Access:         access,
-		IsConstant:     isLet,
-		Identifier:     identifier,
-		TypeAnnotation: typeAnnotation,
-		Value:          value,
-		Transfer:       transfer,
-		StartPos:       startPos,
-		SecondTransfer: secondTransfer,
-		SecondValue:    secondValue,
-		DocString:      docString,
-	}
+	variableDeclaration := ast.NewVariableDeclaration(
+		p.memoryGauge,
+		access,
+		isLet,
+		identifier,
+		typeAnnotation,
+		value,
+		transfer,
+		startPos,
+		secondTransfer,
+		secondValue,
+		docString,
+	)
 
 	castingExpression, leftIsCasting := value.(*ast.CastingExpression)
 	if leftIsCasting {
@@ -351,13 +352,14 @@ func parsePragmaDeclaration(p *parser) *ast.PragmaDeclaration {
 	startPos := p.current.StartPosition()
 	p.next()
 	expr := parseExpression(p, lowestBindingPower)
-	return &ast.PragmaDeclaration{
-		Range: ast.Range{
+	return ast.NewPragmaDeclaration(
+		p.memoryGauge,
+		expr,
+		ast.Range{
 			StartPos: startPos,
 			EndPos:   expr.EndPosition(),
 		},
-		Expression: expr,
-	}
+	)
 }
 
 // parseImportDeclaration parses an import declaration
@@ -411,7 +413,7 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 			parseStringOrAddressLocation()
 
 		case lexer.TokenIdentifier:
-			identifier := tokenToIdentifier(p.current)
+			identifier := p.tokenToIdentifier(p.current)
 			setIdentifierLocation(identifier)
 			p.next()
 
@@ -469,7 +471,7 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 					// and process the current 'from' token as an identifier.
 				}
 
-				identifier := tokenToIdentifier(p.current)
+				identifier := p.tokenToIdentifier(p.current)
 				identifiers = append(identifiers, identifier)
 
 				expectCommaOrFrom = true
@@ -522,7 +524,7 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 		parseStringOrAddressLocation()
 
 	case lexer.TokenIdentifier:
-		identifier := tokenToIdentifier(p.current)
+		identifier := p.tokenToIdentifier(p.current)
 		// Skip the identifier
 		p.next()
 		p.skipSpaceAndComments(true)
@@ -560,15 +562,16 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 		))
 	}
 
-	return &ast.ImportDeclaration{
-		Identifiers: identifiers,
-		Location:    location,
-		Range: ast.Range{
+	return ast.NewImportDeclaration(
+		p.memoryGauge,
+		identifiers,
+		location,
+		ast.Range{
 			StartPos: startPosition,
 			EndPos:   endPos,
 		},
-		LocationPos: locationPos,
-	}
+		locationPos,
+	)
 }
 
 // isNextTokenCommaOrFrom check whether the token to follow is a comma or a from token.
@@ -643,36 +646,44 @@ func parseEventDeclaration(
 		))
 	}
 
-	identifier := tokenToIdentifier(p.current)
+	identifier := p.tokenToIdentifier(p.current)
 	// Skip the identifier
 	p.next()
 
 	parameterList := parseParameterList(p)
 
-	initializer :=
-		&ast.SpecialFunctionDeclaration{
-			Kind: common.DeclarationKindInitializer,
-			FunctionDeclaration: &ast.FunctionDeclaration{
-				ParameterList: parameterList,
-				StartPos:      parameterList.StartPos,
-			},
-		}
+	initializer := ast.NewSpecialFunctionDeclaration(
+		p.memoryGauge,
+		common.DeclarationKindInitializer,
+		ast.NewFunctionDeclaration(
+			p.memoryGauge,
+			ast.AccessNotSpecified,
+			ast.NewEmptyIdentifier(p.memoryGauge, ast.EmptyPosition),
+			parameterList,
+			nil,
+			nil,
+			parameterList.StartPos,
+			"",
+		),
+	)
 
 	members := ast.NewMembers([]ast.Declaration{
 		initializer,
 	})
 
-	return &ast.CompositeDeclaration{
-		Access:        access,
-		CompositeKind: common.CompositeKindEvent,
-		Identifier:    identifier,
-		Members:       members,
-		DocString:     docString,
-		Range: ast.Range{
+	return ast.NewCompositeDeclaration(
+		p.memoryGauge,
+		access,
+		common.CompositeKindEvent,
+		identifier,
+		nil,
+		members,
+		docString,
+		ast.Range{
 			StartPos: startPos,
 			EndPos:   parameterList.EndPos,
 		},
-	}
+	)
 }
 
 // parseCompositeKind parses a composite kind.
@@ -738,7 +749,7 @@ func parseFieldWithVariableKind(
 		))
 	}
 
-	identifier := tokenToIdentifier(p.current)
+	identifier := p.tokenToIdentifier(p.current)
 	// Skip the identifier
 	p.next()
 	p.skipSpaceAndComments(true)
@@ -749,17 +760,18 @@ func parseFieldWithVariableKind(
 
 	typeAnnotation := parseTypeAnnotation(p)
 
-	return &ast.FieldDeclaration{
-		Access:         access,
-		VariableKind:   variableKind,
-		Identifier:     identifier,
-		TypeAnnotation: typeAnnotation,
-		DocString:      docString,
-		Range: ast.Range{
+	return ast.NewFieldDeclaration(
+		p.memoryGauge,
+		access,
+		variableKind,
+		identifier,
+		typeAnnotation,
+		docString,
+		ast.Range{
 			StartPos: startPos,
 			EndPos:   typeAnnotation.EndPosition(),
 		},
-	}
+	)
 }
 
 // parseCompositeOrInterfaceDeclaration parses an event declaration.
@@ -816,7 +828,7 @@ func parseCompositeOrInterfaceDeclaration(
 			p.next()
 			continue
 		} else {
-			identifier = tokenToIdentifier(p.current)
+			identifier = p.tokenToIdentifier(p.current)
 			// Skip the identifier
 			p.next()
 			break
@@ -863,24 +875,26 @@ func parseCompositeOrInterfaceDeclaration(
 			panic(fmt.Errorf("unexpected conformances"))
 		}
 
-		return &ast.InterfaceDeclaration{
-			Access:        access,
-			CompositeKind: compositeKind,
-			Identifier:    identifier,
-			Members:       members,
-			DocString:     docString,
-			Range:         declarationRange,
-		}
+		return ast.NewInterfaceDeclaration(
+			p.memoryGauge,
+			access,
+			compositeKind,
+			identifier,
+			members,
+			docString,
+			declarationRange,
+		)
 	} else {
-		return &ast.CompositeDeclaration{
-			Access:        access,
-			CompositeKind: compositeKind,
-			Identifier:    identifier,
-			Conformances:  conformances,
-			Members:       members,
-			DocString:     docString,
-			Range:         declarationRange,
-		}
+		return ast.NewCompositeDeclaration(
+			p.memoryGauge,
+			access,
+			compositeKind,
+			identifier,
+			conformances,
+			members,
+			docString,
+			declarationRange,
+		)
 	}
 }
 
@@ -986,7 +1000,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) ast.Declaration
 				panic(fmt.Errorf("unexpected %s", p.current.Type))
 			}
 
-			identifier := tokenToIdentifier(*previousIdentifierToken)
+			identifier := p.tokenToIdentifier(*previousIdentifierToken)
 			return parseFieldDeclarationWithoutVariableKind(p, access, accessPos, identifier, docString)
 
 		case lexer.TokenParenOpen:
@@ -994,7 +1008,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) ast.Declaration
 				panic(fmt.Errorf("unexpected %s", p.current.Type))
 			}
 
-			identifier := tokenToIdentifier(*previousIdentifierToken)
+			identifier := p.tokenToIdentifier(*previousIdentifierToken)
 			return parseSpecialFunctionDeclaration(p, functionBlockIsOptional, access, accessPos, identifier)
 		}
 
@@ -1021,17 +1035,18 @@ func parseFieldDeclarationWithoutVariableKind(
 
 	typeAnnotation := parseTypeAnnotation(p)
 
-	return &ast.FieldDeclaration{
-		Access:         access,
-		VariableKind:   ast.VariableKindNotSpecified,
-		Identifier:     identifier,
-		TypeAnnotation: typeAnnotation,
-		DocString:      docString,
-		Range: ast.Range{
+	return ast.NewFieldDeclaration(
+		p.memoryGauge,
+		access,
+		ast.VariableKindNotSpecified,
+		identifier,
+		typeAnnotation,
+		docString,
+		ast.Range{
 			StartPos: startPos,
 			EndPos:   typeAnnotation.EndPosition(),
 		},
-	}
+	)
 }
 
 func parseSpecialFunctionDeclaration(
@@ -1074,16 +1089,20 @@ func parseSpecialFunctionDeclaration(
 		declarationKind = common.DeclarationKindPrepare
 	}
 
-	return &ast.SpecialFunctionDeclaration{
-		Kind: declarationKind,
-		FunctionDeclaration: &ast.FunctionDeclaration{
-			Access:        access,
-			Identifier:    identifier,
-			ParameterList: parameterList,
-			FunctionBlock: functionBlock,
-			StartPos:      startPos,
-		},
-	}
+	return ast.NewSpecialFunctionDeclaration(
+		p.memoryGauge,
+		declarationKind,
+		ast.NewFunctionDeclaration(
+			p.memoryGauge,
+			access,
+			identifier,
+			parameterList,
+			nil,
+			functionBlock,
+			startPos,
+			"",
+		),
+	)
 }
 
 // parseEnumCase parses a field which has a variable kind.
@@ -1113,14 +1132,15 @@ func parseEnumCase(
 		))
 	}
 
-	identifier := tokenToIdentifier(p.current)
+	identifier := p.tokenToIdentifier(p.current)
 	// Skip the identifier
 	p.next()
 
-	return &ast.EnumCaseDeclaration{
-		Access:     access,
-		Identifier: identifier,
-		DocString:  docString,
-		StartPos:   startPos,
-	}
+	return ast.NewEnumCaseDeclaration(
+		p.memoryGauge,
+		access,
+		identifier,
+		docString,
+		startPos,
+	)
 }

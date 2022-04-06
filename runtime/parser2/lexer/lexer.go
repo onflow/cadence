@@ -273,7 +273,7 @@ func (l *lexer) emitType(ty TokenType) {
 	if l.memoryGauge != nil {
 		usage := l.typeMemoryUsage(ty)
 
-		// Don't use `common.MemoryUsae()` to avoid redundant `nil` check.
+		// Don't use `common.MemoryUsage()` to avoid redundant `nil` check.
 		err := l.memoryGauge.MeterMemory(usage)
 		if err != nil {
 			panic(err)
@@ -287,7 +287,7 @@ func (l *lexer) emitValue(ty TokenType) {
 	if l.memoryGauge != nil {
 		usage := l.valueMemoryUsage(ty)
 
-		// Don't use `common.MemoryUsae()` to avoid redundant `nil` check.
+		// Don't use `common.MemoryUsage()` to avoid redundant `nil` check.
 		err := l.memoryGauge.MeterMemory(usage)
 		if err != nil {
 			panic(err)

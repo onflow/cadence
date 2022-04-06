@@ -103,7 +103,7 @@ func cryptoAlgorithmEnumConstructorType(
 
 	members := make([]*sema.Member, len(enumCases))
 	for i, algo := range enumCases {
-		members[i] = sema.NewPublicConstantFieldMember(
+		members[i] = sema.NewUnmeteredPublicConstantFieldMember(
 			enumType,
 			algo.Name(),
 			enumType,

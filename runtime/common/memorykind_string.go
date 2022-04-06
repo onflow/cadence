@@ -39,11 +39,56 @@ func _() {
 	_ = x[MemoryKindTokenComment-28]
 	_ = x[MemoryKindTokenNumericLiteral-29]
 	_ = x[MemoryKindTokenSyntax-30]
+	_ = x[MemoryKindIdentifier-31]
+	_ = x[MemoryKindArgument-32]
+	_ = x[MemoryKindBlock-33]
+	_ = x[MemoryKindFunctionDeclaration-34]
+	_ = x[MemoryKindCompositeDeclaration-35]
+	_ = x[MemoryKindInterfaceDeclaration-36]
+	_ = x[MemoryKindEnumCaseDeclaration-37]
+	_ = x[MemoryKindFieldDeclaration-38]
+	_ = x[MemoryKindTransactionDeclaration-39]
+	_ = x[MemoryKindImportDeclaration-40]
+	_ = x[MemoryKindVariableDeclaration-41]
+	_ = x[MemoryKindSpecialFunctionDeclaration-42]
+	_ = x[MemoryKindPragmaDeclaration-43]
+	_ = x[MemoryKindAssignmentStatement-44]
+	_ = x[MemoryKindBreakStatement-45]
+	_ = x[MemoryKindContinueStatement-46]
+	_ = x[MemoryKindEmitStatement-47]
+	_ = x[MemoryKindExpressionStatement-48]
+	_ = x[MemoryKindForStatement-49]
+	_ = x[MemoryKindIfStatement-50]
+	_ = x[MemoryKindReturnStatement-51]
+	_ = x[MemoryKindSwapStatement-52]
+	_ = x[MemoryKindSwitchStatement-53]
+	_ = x[MemoryKindWhileStatement-54]
+	_ = x[MemoryKindBooleanExpression-55]
+	_ = x[MemoryKindNilExpression-56]
+	_ = x[MemoryKindStringExpression-57]
+	_ = x[MemoryKindIntegerExpression-58]
+	_ = x[MemoryKindFixedPointExpression-59]
+	_ = x[MemoryKindArrayExpression-60]
+	_ = x[MemoryKindDictionaryExpression-61]
+	_ = x[MemoryKindIdentifierExpression-62]
+	_ = x[MemoryKindInvocationExpression-63]
+	_ = x[MemoryKindMemberExpression-64]
+	_ = x[MemoryKindIndexExpression-65]
+	_ = x[MemoryKindConditionalExpression-66]
+	_ = x[MemoryKindUnaryExpression-67]
+	_ = x[MemoryKindBinaryExpression-68]
+	_ = x[MemoryKindFunctionExpression-69]
+	_ = x[MemoryKindCastingExpression-70]
+	_ = x[MemoryKindCreateExpression-71]
+	_ = x[MemoryKindDestroyExpression-72]
+	_ = x[MemoryKindReferenceExpression-73]
+	_ = x[MemoryKindForceExpression-74]
+	_ = x[MemoryKindPathExpression-75]
 }
 
-const _MemoryKind_name = "UnknownBoolAddressStringCharacterMetaTypeNumberArrayDictionaryCompositeOptionalNilVoidTypeValuePathValueCapabilityValueLinkValueStorageReferenceValueEphemeralReferenceValueInterpretedFunctionHostFunctionBoundFunctionBigIntRawStringAddressLocationBytesVariableTokenIdentifierTokenCommentTokenNumericLiteralTokenSyntax"
+const _MemoryKind_name = "UnknownBoolAddressStringCharacterMetaTypeNumberArrayDictionaryCompositeOptionalNilVoidTypeValuePathValueCapabilityValueLinkValueStorageReferenceValueEphemeralReferenceValueInterpretedFunctionHostFunctionBoundFunctionBigIntRawStringAddressLocationBytesVariableTokenIdentifierTokenCommentTokenNumericLiteralTokenSyntaxIdentifierArgumentBlockFunctionDeclarationCompositeDeclarationInterfaceDeclarationEnumCaseDeclarationFieldDeclarationTransactionDeclarationImportDeclarationVariableDeclarationSpecialFunctionDeclarationPragmaDeclarationAssignmentStatementBreakStatementContinueStatementEmitStatementExpressionStatementForStatementIfStatementReturnStatementSwapStatementSwitchStatementWhileStatementBooleanExpressionNilExpressionStringExpressionIntegerExpressionFixedPointExpressionArrayExpressionDictionaryExpressionIdentifierExpressionInvocationExpressionMemberExpressionIndexExpressionConditionalExpressionUnaryExpressionBinaryExpressionFunctionExpressionCastingExpressionCreateExpressionDestroyExpressionReferenceExpressionForceExpressionPathExpression"
 
-var _MemoryKind_index = [...]uint16{0, 7, 11, 18, 24, 33, 41, 47, 52, 62, 71, 79, 82, 86, 95, 104, 119, 128, 149, 172, 191, 203, 216, 222, 231, 246, 251, 259, 274, 286, 305, 316}
+var _MemoryKind_index = [...]uint16{0, 7, 11, 18, 24, 33, 41, 47, 52, 62, 71, 79, 82, 86, 95, 104, 119, 128, 149, 172, 191, 203, 216, 222, 231, 246, 251, 259, 274, 286, 305, 316, 326, 334, 339, 358, 378, 398, 417, 433, 455, 472, 491, 517, 534, 553, 567, 584, 597, 616, 628, 639, 654, 667, 682, 696, 713, 726, 742, 759, 779, 794, 814, 834, 854, 870, 885, 906, 921, 937, 955, 972, 988, 1005, 1024, 1039, 1053}
 
 func (i MemoryKind) String() string {
 	if i >= MemoryKind(len(_MemoryKind_index)-1) {

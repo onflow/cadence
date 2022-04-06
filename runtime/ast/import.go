@@ -33,6 +33,23 @@ type ImportDeclaration struct {
 	Range
 }
 
+func NewImportDeclaration(
+	gauge common.MemoryGauge,
+	identifiers []Identifier,
+	location common.Location,
+	declRange Range,
+	locationPos Position,
+) *ImportDeclaration {
+	common.UseMemory(gauge, common.ImportDeclarationMemoryUsage)
+
+	return &ImportDeclaration{
+		Identifiers: identifiers,
+		Location:    location,
+		Range:       declRange,
+		LocationPos: locationPos,
+	}
+}
+
 func (*ImportDeclaration) isDeclaration() {}
 
 func (*ImportDeclaration) isStatement() {}

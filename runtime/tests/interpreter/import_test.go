@@ -46,7 +46,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 	fooType.Members = sema.NewStringMemberOrderedMap()
 	fooType.Members.Set(
 		"bar",
-		sema.NewPublicFunctionMember(
+		sema.NewUnmeteredPublicFunctionMember(
 			fooType,
 			"bar",
 			&sema.FunctionType{

@@ -35,6 +35,27 @@ type InterfaceDeclaration struct {
 	Range
 }
 
+func NewInterfaceDeclaration(
+	gauge common.MemoryGauge,
+	access Access,
+	compositeKind common.CompositeKind,
+	identifier Identifier,
+	members *Members,
+	docString string,
+	declRange Range,
+) *InterfaceDeclaration {
+	common.UseMemory(gauge, common.InterfaceDeclarationMemoryUsage)
+
+	return &InterfaceDeclaration{
+		Access:        access,
+		CompositeKind: compositeKind,
+		Identifier:    identifier,
+		Members:       members,
+		DocString:     docString,
+		Range:         declRange,
+	}
+}
+
 func (d *InterfaceDeclaration) Accept(visitor Visitor) Repr {
 	return visitor.VisitInterfaceDeclaration(d)
 }

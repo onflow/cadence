@@ -1622,9 +1622,11 @@ func (checker *Checker) enumMembersAndOrigins(
 		&Member{
 			ContainerType: containerType,
 			Access:        ast.AccessPublic,
-			Identifier: ast.Identifier{
-				Identifier: EnumRawValueFieldName,
-			},
+			Identifier: ast.NewIdentifier(
+				checker.memoryGauge,
+				EnumRawValueFieldName,
+				ast.EmptyPosition,
+			),
 			DeclarationKind: common.DeclarationKindField,
 			TypeAnnotation:  NewTypeAnnotation(containerType.EnumRawType),
 			VariableKind:    ast.VariableKindConstant,

@@ -125,26 +125,17 @@ func parseStatement(p *parser) ast.Statement {
 
 		value := parseExpression(p, lowestBindingPower)
 
-		return &ast.AssignmentStatement{
-			Target:   expression,
-			Transfer: transfer,
-			Value:    value,
-		}
+		return ast.NewAssignmentStatement(p.memoryGauge, expression, transfer, value)
 
 	case lexer.TokenSwap:
 		p.next()
 
 		right := parseExpression(p, lowestBindingPower)
 
-		return &ast.SwapStatement{
-			Left:  expression,
-			Right: right,
-		}
+		return ast.NewSwapStatement(p.memoryGauge, expression, right)
 
 	default:
-		return &ast.ExpressionStatement{
-			Expression: expression,
-		}
+		return ast.NewExpressionStatement(p.memoryGauge, expression)
 	}
 }
 
@@ -158,33 +149,37 @@ func parseFunctionDeclarationOrFunctionExpressionStatement(p *parser) ast.Statem
 	p.skipSpaceAndComments(true)
 
 	if p.current.Is(lexer.TokenIdentifier) {
-		identifier := tokenToIdentifier(p.current)
+		identifier := p.tokenToIdentifier(p.current)
 
 		p.next()
 
 		parameterList, returnTypeAnnotation, functionBlock :=
 			parseFunctionParameterListAndRest(p, false)
 
-		return &ast.FunctionDeclaration{
-			Access:               ast.AccessNotSpecified,
-			Identifier:           identifier,
-			ParameterList:        parameterList,
-			ReturnTypeAnnotation: returnTypeAnnotation,
-			FunctionBlock:        functionBlock,
-			StartPos:             startPos,
-		}
+		return ast.NewFunctionDeclaration(
+			p.memoryGauge,
+			ast.AccessNotSpecified,
+			identifier,
+			parameterList,
+			returnTypeAnnotation,
+			functionBlock,
+			startPos,
+			"",
+		)
 	} else {
 		parameterList, returnTypeAnnotation, functionBlock :=
 			parseFunctionParameterListAndRest(p, false)
 
-		return &ast.ExpressionStatement{
-			Expression: &ast.FunctionExpression{
-				ParameterList:        parameterList,
-				ReturnTypeAnnotation: returnTypeAnnotation,
-				FunctionBlock:        functionBlock,
-				StartPos:             startPos,
-			},
-		}
+		return ast.NewExpressionStatement(
+			p.memoryGauge,
+			ast.NewFunctionExpression(
+				p.memoryGauge,
+				parameterList,
+				returnTypeAnnotation,
+				functionBlock,
+				startPos,
+			),
+		)
 	}
 }
 
@@ -206,31 +201,28 @@ func parseReturnStatement(p *parser) *ast.ReturnStatement {
 		}
 	}
 
-	return &ast.ReturnStatement{
-		Expression: expression,
-		Range: ast.Range{
+	return ast.NewReturnStatement(
+		p.memoryGauge,
+		expression,
+		ast.Range{
 			StartPos: tokenRange.StartPos,
 			EndPos:   endPosition,
 		},
-	}
+	)
 }
 
 func parseBreakStatement(p *parser) *ast.BreakStatement {
 	tokenRange := p.current.Range
 	p.next()
 
-	return &ast.BreakStatement{
-		Range: tokenRange,
-	}
+	return ast.NewBreakStatement(p.memoryGauge, tokenRange)
 }
 
 func parseContinueStatement(p *parser) *ast.ContinueStatement {
 	tokenRange := p.current.Range
 	p.next()
 
-	return &ast.ContinueStatement{
-		Range: tokenRange,
-	}
+	return ast.NewContinueStatement(p.memoryGauge, tokenRange)
 }
 
 func parseIfStatement(p *parser) *ast.IfStatement {
@@ -287,12 +279,13 @@ func parseIfStatement(p *parser) *ast.IfStatement {
 			panic(errors.UnreachableError{})
 		}
 
-		ifStatement := &ast.IfStatement{
-			Test:     test,
-			Then:     thenBlock,
-			Else:     elseBlock,
-			StartPos: startPos,
-		}
+		ifStatement := ast.NewIfStatement(
+			p.memoryGauge,
+			test,
+			thenBlock,
+			elseBlock,
+			startPos,
+		)
 
 		if variableDeclaration != nil {
 			variableDeclaration.ParentIfStatement = ifStatement
@@ -311,10 +304,11 @@ func parseIfStatement(p *parser) *ast.IfStatement {
 
 	for i := length - 2; i >= 0; i-- {
 		outer := ifStatements[i]
-		outer.Else = &ast.Block{
-			Statements: []ast.Statement{result},
-			Range:      ast.NewRangeFromPositioned(result),
-		}
+		outer.Else = ast.NewBlock(
+			p.memoryGauge,
+			[]ast.Statement{result},
+			ast.NewRangeFromPositioned(result),
+		)
 		result = outer
 	}
 
@@ -330,11 +324,7 @@ func parseWhileStatement(p *parser) *ast.WhileStatement {
 
 	block := parseBlock(p)
 
-	return &ast.WhileStatement{
-		Test:     expression,
-		Block:    block,
-		StartPos: startPos,
-	}
+	return ast.NewWhileStatement(p.memoryGauge, expression, block, startPos)
 }
 
 func parseForStatement(p *parser) *ast.ForStatement {
@@ -352,7 +342,7 @@ func parseForStatement(p *parser) *ast.ForStatement {
 		p.next()
 	}
 
-	firstValue := mustIdentifier(p)
+	firstValue := p.mustIdentifier()
 
 	p.skipSpaceAndComments(true)
 
@@ -363,7 +353,7 @@ func parseForStatement(p *parser) *ast.ForStatement {
 		p.next()
 		p.skipSpaceAndComments(true)
 		index = &firstValue
-		identifier = mustIdentifier(p)
+		identifier = p.mustIdentifier()
 		p.skipSpaceAndComments(true)
 	} else {
 		identifier = firstValue
@@ -383,13 +373,14 @@ func parseForStatement(p *parser) *ast.ForStatement {
 
 	block := parseBlock(p)
 
-	return &ast.ForStatement{
-		Identifier: identifier,
-		Index:      index,
-		Block:      block,
-		Value:      expression,
-		StartPos:   startPos,
-	}
+	return ast.NewForStatement(
+		p.memoryGauge,
+		identifier,
+		index,
+		block,
+		expression,
+		startPos,
+	)
 }
 
 func parseBlock(p *parser) *ast.Block {
@@ -399,13 +390,14 @@ func parseBlock(p *parser) *ast.Block {
 	})
 	endToken := p.mustOne(lexer.TokenBraceClose)
 
-	return &ast.Block{
-		Statements: statements,
-		Range: ast.Range{
+	return ast.NewBlock(
+		p.memoryGauge,
+		statements,
+		ast.Range{
 			StartPos: startToken.StartPos,
 			EndPos:   endToken.EndPos,
 		},
-	}
+	)
 }
 
 func parseFunctionBlock(p *parser) *ast.FunctionBlock {
@@ -438,13 +430,14 @@ func parseFunctionBlock(p *parser) *ast.FunctionBlock {
 	endToken := p.mustOne(lexer.TokenBraceClose)
 
 	return &ast.FunctionBlock{
-		Block: &ast.Block{
-			Statements: statements,
-			Range: ast.Range{
+		Block: ast.NewBlock(
+			p.memoryGauge,
+			statements,
+			ast.Range{
 				StartPos: startToken.StartPos,
 				EndPos:   endToken.EndPos,
 			},
-		},
+		),
 		PreConditions:  preConditions,
 		PostConditions: postConditions,
 	}
@@ -512,10 +505,7 @@ func parseEmitStatement(p *parser) *ast.EmitStatement {
 	p.next()
 
 	invocation := parseNominalTypeInvocationRemainder(p)
-	return &ast.EmitStatement{
-		InvocationExpression: invocation,
-		StartPos:             startPos,
-	}
+	return ast.NewEmitStatement(p.memoryGauge, invocation, startPos)
 }
 
 func parseSwitchStatement(p *parser) *ast.SwitchStatement {
@@ -533,14 +523,14 @@ func parseSwitchStatement(p *parser) *ast.SwitchStatement {
 
 	endToken := p.mustOne(lexer.TokenBraceClose)
 
-	return &ast.SwitchStatement{
-		Expression: expression,
-		Cases:      cases,
-		Range: ast.Range{
+	return ast.NewSwitchStatement(
+		p.memoryGauge,
+		expression,
+		cases,
+		ast.Range{
 			StartPos: startPos,
 			EndPos:   endToken.EndPos,
-		},
-	}
+		})
 }
 
 // parseSwitchCases parses cases of a switch statement.

@@ -65,4 +65,55 @@ const (
 	MemoryKindTokenComment
 	MemoryKindTokenNumericLiteral
 	MemoryKindTokenSyntax
+
+	// AST nodes
+
+	MemoryKindIdentifier
+	MemoryKindArgument
+	MemoryKindBlock
+
+	MemoryKindFunctionDeclaration
+	MemoryKindCompositeDeclaration
+	MemoryKindInterfaceDeclaration
+	MemoryKindEnumCaseDeclaration
+	MemoryKindFieldDeclaration
+	MemoryKindTransactionDeclaration
+	MemoryKindImportDeclaration
+	MemoryKindVariableDeclaration
+	MemoryKindSpecialFunctionDeclaration
+	MemoryKindPragmaDeclaration
+
+	MemoryKindAssignmentStatement
+	MemoryKindBreakStatement
+	MemoryKindContinueStatement
+	MemoryKindEmitStatement
+	MemoryKindExpressionStatement
+	MemoryKindForStatement
+	MemoryKindIfStatement
+	MemoryKindReturnStatement
+	MemoryKindSwapStatement
+	MemoryKindSwitchStatement
+	MemoryKindWhileStatement
+
+	MemoryKindBooleanExpression
+	MemoryKindNilExpression
+	MemoryKindStringExpression
+	MemoryKindIntegerExpression
+	MemoryKindFixedPointExpression
+	MemoryKindArrayExpression
+	MemoryKindDictionaryExpression
+	MemoryKindIdentifierExpression
+	MemoryKindInvocationExpression
+	MemoryKindMemberExpression
+	MemoryKindIndexExpression
+	MemoryKindConditionalExpression
+	MemoryKindUnaryExpression
+	MemoryKindBinaryExpression
+	MemoryKindFunctionExpression
+	MemoryKindCastingExpression
+	MemoryKindCreateExpression
+	MemoryKindDestroyExpression
+	MemoryKindReferenceExpression
+	MemoryKindForceExpression
+	MemoryKindPathExpression
 )

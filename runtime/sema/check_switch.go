@@ -171,12 +171,13 @@ func (checker *Checker) checkSwitchCaseStatements(switchCase *ast.SwitchCase) {
 
 	// NOTE: the block ensures that the statements are checked in a new scope
 
-	block := &ast.Block{
-		Statements: switchCase.Statements,
-		Range: ast.Range{
+	block := ast.NewBlock(
+		checker.memoryGauge,
+		switchCase.Statements,
+		ast.Range{
 			StartPos: switchCase.Statements[0].StartPosition(),
 			EndPos:   switchCase.EndPos,
 		},
-	}
+	)
 	block.Accept(checker)
 }

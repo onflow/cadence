@@ -21,6 +21,8 @@ package ast
 import (
 	"encoding/json"
 	"strings"
+
+	"github.com/onflow/cadence/runtime/common"
 )
 
 type Argument struct {
@@ -29,6 +31,29 @@ type Argument struct {
 	LabelEndPos          *Position `json:",omitempty"`
 	TrailingSeparatorPos Position
 	Expression           Expression
+}
+
+func NewArgument(
+	memoryGauge common.MemoryGauge,
+	label string,
+	labelStartPos,
+	labelEndPos *Position,
+	expression Expression,
+) *Argument {
+	common.UseMemory(memoryGauge, common.ArgumentMemoryUsage)
+	return &Argument{
+		Label:         label,
+		LabelStartPos: labelStartPos,
+		LabelEndPos:   labelEndPos,
+		Expression:    expression,
+	}
+}
+
+func NewUnlabeledArgument(memoryGauge common.MemoryGauge, expression Expression) *Argument {
+	common.UseMemory(memoryGauge, common.ArgumentMemoryUsage)
+	return &Argument{
+		Expression: expression,
+	}
 }
 
 func (a *Argument) StartPosition() Position {

@@ -309,7 +309,7 @@ func newFlowEventType(identifier string, parameters ...*sema.Parameter) *sema.Co
 
 		eventType.Members.Set(
 			parameter.Identifier,
-			sema.NewPublicConstantFieldMember(
+			sema.NewUnmeteredPublicConstantFieldMember(
 				eventType,
 				parameter.Identifier,
 				parameter.TypeAnnotation.Type,

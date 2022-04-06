@@ -40,31 +40,31 @@ var AuthAccountContractsType = func() *CompositeType {
 	}
 
 	var members = []*Member{
-		NewPublicFunctionMember(
+		NewUnmeteredPublicFunctionMember(
 			authAccountContractsType,
 			AuthAccountContractsTypeAddFunctionName,
 			AuthAccountContractsTypeAddFunctionType,
 			authAccountContractsTypeAddFunctionDocString,
 		),
-		NewPublicFunctionMember(
+		NewUnmeteredPublicFunctionMember(
 			authAccountContractsType,
 			AuthAccountContractsTypeUpdateExperimentalFunctionName,
 			AuthAccountContractsTypeUpdateExperimentalFunctionType,
 			authAccountContractsTypeUpdateExperimentalFunctionDocString,
 		),
-		NewPublicFunctionMember(
+		NewUnmeteredPublicFunctionMember(
 			authAccountContractsType,
 			AuthAccountContractsTypeGetFunctionName,
 			AuthAccountContractsTypeGetFunctionType,
 			authAccountContractsTypeGetFunctionDocString,
 		),
-		NewPublicFunctionMember(
+		NewUnmeteredPublicFunctionMember(
 			authAccountContractsType,
 			AuthAccountContractsTypeRemoveFunctionName,
 			AuthAccountContractsTypeRemoveFunctionType,
 			authAccountContractsTypeRemoveFunctionDocString,
 		),
-		NewPublicConstantFieldMember(
+		NewUnmeteredPublicConstantFieldMember(
 			authAccountContractsType,
 			AuthAccountContractsTypeNamesField,
 			&VariableSizedType{
