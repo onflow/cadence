@@ -472,6 +472,7 @@ func (VoidValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 }
 
 func (VoidValue) StaticType(interpreter *Interpreter) StaticType {
+	common.UseConstantMemory(interpreter, common.MemoryKindPrimitiveStaticType)
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeVoid)
 }
 
