@@ -27,8 +27,7 @@ import (
 // AuthAccountContractsValue
 
 var authAccountContractsTypeID = sema.AuthAccountContractsType.ID()
-var authAccountContractsStaticType StaticType = PrimitiveStaticTypeAuthAccountContracts
-
+var authAccountContractsStaticType StaticType = PrimitiveStaticTypeAuthAccountContracts // unmetered
 var authAccountContractsFieldNames []string = nil
 
 func NewAuthAccountContractsValue(

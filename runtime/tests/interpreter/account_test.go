@@ -922,6 +922,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					rType := checker.RequireGlobalType(t, inter.Program.Elaboration, "R")
 
 					expectedBorrowType := interpreter.ConvertSemaToStaticType(
+						nil,
 						&sema.ReferenceType{
 							Authorized: false,
 							Type:       rType,
@@ -970,6 +971,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					r2Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R2")
 
 					expectedBorrowType := interpreter.ConvertSemaToStaticType(
+						nil,
 						&sema.ReferenceType{
 							Authorized: false,
 							Type:       r2Type,
@@ -1072,6 +1074,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					sType := checker.RequireGlobalType(t, inter.Program.Elaboration, "S")
 
 					expectedBorrowType := interpreter.ConvertSemaToStaticType(
+						nil,
 						&sema.ReferenceType{
 							Authorized: false,
 							Type:       sType,
@@ -1121,6 +1124,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					s2Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "S2")
 
 					expectedBorrowType := interpreter.ConvertSemaToStaticType(
+						nil,
 						&sema.ReferenceType{
 							Authorized: false,
 							Type:       s2Type,
@@ -1225,6 +1229,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 
 				sType := checker.RequireGlobalType(t, inter.Program.Elaboration, "S1")
 				expectedBorrowType := interpreter.ConvertSemaToStaticType(
+					nil,
 					&sema.ReferenceType{
 						Authorized: false,
 						Type:       sType,
@@ -1304,6 +1309,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 
 				sType := checker.RequireGlobalType(t, inter.Program.Elaboration, "S")
 				expectedBorrowType := interpreter.ConvertSemaToStaticType(
+					nil,
 					&sema.ReferenceType{
 						Authorized: false,
 						Type:       sType,
@@ -1332,6 +1338,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 
 				sType = checker.RequireGlobalType(t, inter.Program.Elaboration, "S")
 				expectedBorrowType = interpreter.ConvertSemaToStaticType(
+					nil,
 					&sema.ReferenceType{
 						Authorized: false,
 						Type:       sType,
@@ -1760,6 +1767,7 @@ func TestInterpretAccount_getCapability(t *testing.T) {
 
 					if typed {
 						expectedBorrowType := interpreter.ConvertSemaToStaticType(
+							nil,
 							&sema.ReferenceType{
 								Authorized: false,
 								Type:       sema.IntType,

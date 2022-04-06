@@ -3211,7 +3211,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 
 		value := LinkValue{
 			TargetPath: publicPathValue,
-			Type:       ConvertSemaToPrimitiveStaticType(sema.BoolType),
+			Type:       ConvertSemaToPrimitiveStaticType(nil, sema.BoolType),
 		}
 
 		//nolint:gocritic
@@ -3689,7 +3689,7 @@ func TestEncodeDecodeTypeValue(t *testing.T) {
 		t.Parallel()
 
 		value := TypeValue{
-			Type: ConvertSemaToPrimitiveStaticType(sema.BoolType),
+			Type: ConvertSemaToPrimitiveStaticType(nil, sema.BoolType),
 		}
 
 		encoded := []byte{
@@ -3716,7 +3716,7 @@ func TestEncodeDecodeTypeValue(t *testing.T) {
 		t.Parallel()
 
 		value := TypeValue{
-			Type: ConvertSemaToPrimitiveStaticType(sema.IntType),
+			Type: ConvertSemaToPrimitiveStaticType(nil, sema.IntType),
 		}
 
 		encoded := []byte{
