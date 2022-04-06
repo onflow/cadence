@@ -131,6 +131,24 @@ func TestCheckArrayIndexingAssignmentWithInteger(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestCheckInvalidIndexAssignmentMissingMember(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+	  struct S {}
+
+      fun test() {
+	      let s = S()
+	      s.x[0] = 0
+	  }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+}
+
 func TestCheckInvalidArrayIndexingAssignmentWithWrongType(t *testing.T) {
 
 	t.Parallel()
