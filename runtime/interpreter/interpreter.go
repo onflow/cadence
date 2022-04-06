@@ -3646,11 +3646,6 @@ func (interpreter *Interpreter) IsSubTypeOfSemaType(subType StaticType, superTyp
 	}
 
 	switch staticType := subType.(type) {
-	case PrimitiveStaticType:
-		if subType == PrimitiveStaticTypeString && superType == sema.CharacterType {
-			return true
-		}
-
 	case OptionalStaticType:
 		if typedSuperType, ok := superType.(*sema.OptionalType); ok {
 			return interpreter.IsSubTypeOfSemaType(staticType.Type, typedSuperType.Type)
@@ -3697,9 +3692,6 @@ func (interpreter *Interpreter) IsSubTypeOfSemaType(subType StaticType, superTyp
 		}
 
 		return superType == sema.AnyStructType
-
-	case CapabilityStaticType:
-		// TODO: does this need special handling? Fallthrough for now.
 	}
 
 	semaType := interpreter.MustConvertStaticToSemaType(subType)
