@@ -1998,8 +1998,11 @@ func (r *interpreterRuntime) loadContract(
 			storageMap := storage.GetStorageMap(
 				location.Address,
 				StorageDomainContract,
+				false,
 			)
-			storedValue = storageMap.ReadValue(location.Name)
+			if storageMap != nil {
+				storedValue = storageMap.ReadValue(location.Name)
+			}
 		}
 
 		if storedValue == nil {

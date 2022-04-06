@@ -62,7 +62,13 @@ func NewStorage(ledger atree.Ledger) *Storage {
 
 const storageIndexLength = 8
 
-func (s *Storage) GetStorageMap(address common.Address, domain string) (storageMap *interpreter.StorageMap) {
+func (s *Storage) GetStorageMap(
+	address common.Address,
+	domain string,
+	createIfNotExists bool,
+) (
+	storageMap *interpreter.StorageMap,
+) {
 	key := interpreter.StorageKey{
 		Address: address,
 		Key:     domain,
@@ -100,11 +106,13 @@ func (s *Storage) GetStorageMap(address common.Address, domain string) (storageM
 			var storageIndex atree.StorageIndex
 			copy(storageIndex[:], data[:])
 			storageMap = s.loadExistingStorageMap(atreeAddress, storageIndex)
-		} else {
+		} else if createIfNotExists {
 			storageMap = s.storeNewStorageMap(atreeAddress, domain)
 		}
 
-		s.storageMaps[key] = storageMap
+		if storageMap != nil {
+			s.storageMaps[key] = storageMap
+		}
 	}
 
 	return storageMap
@@ -213,7 +221,7 @@ func (s *Storage) writeContractUpdate(
 	key interpreter.StorageKey,
 	contractValue *interpreter.CompositeValue,
 ) {
-	storageMap := s.GetStorageMap(key.Address, StorageDomainContract)
+	storageMap := s.GetStorageMap(key.Address, StorageDomainContract, true)
 	// NOTE: pass nil instead of allocating a Value-typed  interface that points to nil
 	if contractValue == nil {
 		storageMap.WriteValue(inter, key.Key, nil)
