@@ -3217,3 +3217,42 @@ func TestRuntimeStorageEnumCase(t *testing.T) {
 		loggedMessages,
 	)
 }
+
+func TestStorageReadNoImplicitWrite(t *testing.T) {
+
+	t.Parallel()
+
+	rt := newTestInterpreterRuntime()
+
+	address, err := common.HexToAddress("0x1")
+	require.NoError(t, err)
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: newTestLedger(nil, func(_, _, _ []byte) {
+			assert.FailNow(t, "unexpected write")
+		}),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{address}, nil
+		},
+	}
+
+	err = rt.ExecuteTransaction(
+		Script{
+			Source: []byte((`
+              transaction {
+			    prepare(signer: AuthAccount) {
+			        let ref = getAccount(0x2)
+			            .getCapability(/public/test)
+			            .borrow<&AnyStruct>()
+                    assert(ref == nil)
+			    }
+              }
+            `)),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  common.TransactionLocation{},
+		},
+	)
+	require.NoError(t, err)
+}
