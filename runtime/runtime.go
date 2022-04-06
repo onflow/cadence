@@ -976,7 +976,7 @@ func validateArgumentParams(
 				return true
 			}
 
-			if !hasValidStaticType(value) {
+			if !hasValidStaticType(inter, value) {
 				panic(fmt.Errorf("invalid static type for argument: %d", i))
 			}
 
@@ -989,7 +989,7 @@ func validateArgumentParams(
 	return argumentValues, nil
 }
 
-func hasValidStaticType(value interpreter.Value) bool {
+func hasValidStaticType(inter *interpreter.Interpreter, value interpreter.Value) bool {
 	switch value := value.(type) {
 	case *interpreter.ArrayValue:
 		return value.Type != nil
@@ -999,7 +999,7 @@ func hasValidStaticType(value interpreter.Value) bool {
 	default:
 		// For other values, static type is NOT inferred.
 		// Hence no need to validate it here.
-		return value.StaticType() != nil
+		return value.StaticType(inter) != nil
 	}
 }
 
@@ -3037,14 +3037,9 @@ func (r *interpreterRuntime) newAccountContractsGetNamesFunction(
 			)
 		}
 
-		return interpreter.NewArrayValue(
-			inter,
-			interpreter.VariableSizedStaticType{
-				Type: interpreter.PrimitiveStaticTypeString,
-			},
-			common.Address{},
-			values...,
-		)
+		return interpreter.NewArrayValue(inter, interpreter.VariableSizedStaticType{
+			Type: interpreter.NewPrimitiveStaticType(inter, interpreter.PrimitiveStaticTypeString),
+		}, common.Address{}, values...)
 	}
 }
 
@@ -3170,7 +3165,7 @@ func (r *interpreterRuntime) ReadLinked(
 }
 
 var BlockIDStaticType = interpreter.ConstantSizedStaticType{
-	Type: interpreter.PrimitiveStaticTypeUInt8,
+	Type: interpreter.PrimitiveStaticTypeUInt8, // unmetered
 	Size: 32,
 }
 

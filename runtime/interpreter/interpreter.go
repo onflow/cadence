@@ -3037,7 +3037,7 @@ func init() {
 				return NewSomeValueNonCopying(
 					invocation.Interpreter,
 					TypeValue{
-						Type: ConvertSemaToStaticType(composite),
+						Type: ConvertSemaToStaticType(invocation.Interpreter, composite),
 					},
 				)
 			},
@@ -3064,7 +3064,7 @@ func init() {
 				return NewSomeValueNonCopying(
 					invocation.Interpreter,
 					TypeValue{
-						Type: ConvertSemaToStaticType(interfaceType),
+						Type: ConvertSemaToStaticType(invocation.Interpreter, interfaceType),
 					},
 				)
 			},
@@ -3124,8 +3124,6 @@ func init() {
 }
 
 func RestrictedTypeFunction(invocation Invocation) Value {
-	interpreter := invocation.Interpreter
-
 	restrictionIDs, ok := invocation.Arguments[1].(*ArrayValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -3141,7 +3139,7 @@ func RestrictedTypeFunction(invocation Invocation) Value {
 			panic(errors.NewUnreachableError())
 		}
 
-		restrictionInterface, err := lookupInterface(interpreter, typeIDValue.Str)
+		restrictionInterface, err := lookupInterface(invocation.Interpreter, typeIDValue.Str)
 		if err != nil {
 			invalidRestrictionID = true
 			return true
@@ -3149,7 +3147,7 @@ func RestrictedTypeFunction(invocation Invocation) Value {
 
 		staticRestrictions = append(
 			staticRestrictions,
-			ConvertSemaToStaticType(restrictionInterface).(InterfaceStaticType),
+			ConvertSemaToStaticType(invocation.Interpreter, restrictionInterface).(InterfaceStaticType),
 		)
 		semaRestrictions = append(semaRestrictions, restrictionInterface)
 
@@ -3170,8 +3168,8 @@ func RestrictedTypeFunction(invocation Invocation) Value {
 	case NilValue:
 		semaType = nil
 	case *SomeValue:
-		innerValue := typeID.InnerValue(interpreter, invocation.GetLocationRange)
-		semaType, err = lookupComposite(interpreter, innerValue.(*StringValue).Str)
+		innerValue := typeID.InnerValue(invocation.Interpreter, invocation.GetLocationRange)
+		semaType, err = lookupComposite(invocation.Interpreter, innerValue.(*StringValue).Str)
 		if err != nil {
 			return NewNilValue(invocation.Interpreter)
 		}
@@ -3195,10 +3193,10 @@ func RestrictedTypeFunction(invocation Invocation) Value {
 	}
 
 	return NewSomeValueNonCopying(
-		interpreter,
+		invocation.Interpreter,
 		TypeValue{
 			Type: &RestrictedStaticType{
-				Type:         ConvertSemaToStaticType(ty),
+				Type:         ConvertSemaToStaticType(invocation.Interpreter, ty),
 				Restrictions: staticRestrictions,
 			},
 		},
@@ -3409,7 +3407,7 @@ var typeFunction = NewUnmeteredHostFunctionValue(
 
 		// TODO TypeValue metering is more complicated.
 		// 	    Here, staticType conversion should be delayed but can't be.
-		staticType := ConvertSemaToStaticType(ty)
+		staticType := ConvertSemaToStaticType(invocation.Interpreter, ty)
 		return NewUnmeteredTypeValue(staticType)
 	},
 	&sema.FunctionType{
@@ -3810,7 +3808,7 @@ func (interpreter *Interpreter) authAccountTypeFunction(addressValue AddressValu
 			return NewSomeValueNonCopying(
 				invocation.Interpreter,
 				TypeValue{
-					Type: value.StaticType(),
+					Type: value.StaticType(invocation.Interpreter),
 				},
 			)
 		},
@@ -3989,7 +3987,7 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 
 			// Write new value
 
-			borrowStaticType := ConvertSemaToStaticType(borrowType)
+			borrowStaticType := ConvertSemaToStaticType(invocation.Interpreter, borrowType)
 
 			// Note that this will be metered twice if Atree validation is enabled.
 			linkValue := NewLinkValue(interpreter, targetPath, borrowStaticType)
@@ -4491,7 +4489,7 @@ func (interpreter *Interpreter) getTypeFunction(self Value) *HostFunctionValue {
 	return NewHostFunctionValue(
 		interpreter,
 		func(invocation Invocation) Value {
-			staticType := self.StaticType()
+			staticType := self.StaticType(invocation.Interpreter)
 			return NewUnmeteredTypeValue(staticType)
 		},
 		sema.GetTypeFunctionType,
@@ -4531,7 +4529,7 @@ func (interpreter *Interpreter) checkContainerMutation(
 	if !interpreter.IsSubType(actualType, expectedType) {
 		panic(ContainerMutationError{
 			ExpectedType:  expectedType,
-			ActualType:    interpreter.MustConvertStaticToSemaType(element.StaticType()),
+			ActualType:    interpreter.MustConvertStaticToSemaType(element.StaticType(interpreter)),
 			LocationRange: getLocationRange(),
 		})
 	}
@@ -4824,12 +4822,6 @@ func (interpreter *Interpreter) invalidateResource(value Value) {
 func (interpreter *Interpreter) MeterMemory(usage common.MemoryUsage) error {
 	common.UseMemory(interpreter.memoryGauge, usage)
 	return nil
-}
-
-// UseConstantMemory uses a pre-determined amount of memory
-//
-func (interpreter *Interpreter) UseConstantMemory(kind common.MemoryKind) {
-	common.UseMemory(interpreter.memoryGauge, common.NewConstantMemoryUsage(kind))
 }
 
 func (interpreter *Interpreter) DecodeStorable(

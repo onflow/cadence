@@ -3466,6 +3466,7 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 		Address: interpreter.AddressValue{},
 		Path:    interpreter.EmptyPathValue,
 		BorrowType: interpreter.ConvertSemaToStaticType(
+			nil,
 			&sema.ReferenceType{
 				Type: structType,
 			},

@@ -23,7 +23,7 @@ import (
 )
 
 var accountKeyTypeID = sema.AccountKeyType.ID()
-var accountKeyStaticType StaticType = PrimitiveStaticTypeAccountKey
+var accountKeyStaticType StaticType = PrimitiveStaticTypeAccountKey // unmetered
 var accountKeyDynamicType DynamicType = CompositeDynamicType{
 	StaticType: sema.AccountKeyType,
 }

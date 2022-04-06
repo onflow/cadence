@@ -100,7 +100,7 @@ func (v *SimpleCompositeValue) DynamicType(_ *Interpreter, _ SeenReferences) Dyn
 	return v.dynamicType
 }
 
-func (v *SimpleCompositeValue) StaticType() StaticType {
+func (v *SimpleCompositeValue) StaticType(_ *Interpreter) StaticType {
 	return v.staticType
 }
 

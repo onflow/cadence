@@ -27,7 +27,7 @@ import (
 // AuthAccountContractsValue
 
 var authAccountContractsTypeID = sema.AuthAccountContractsType.ID()
-var authAccountContractsStaticType StaticType = PrimitiveStaticTypeAuthAccountContracts
+var authAccountContractsStaticType StaticType = PrimitiveStaticTypeAuthAccountContracts // unmetered
 var authAccountContractsDynamicType DynamicType = CompositeDynamicType{
 	StaticType: sema.AuthAccountContractsType,
 }
@@ -80,7 +80,7 @@ func NewAuthAccountContractsValue(
 // PublicAccountContractsValue
 
 var publicAccountContractsTypeID = sema.PublicAccountContractsType.ID()
-var publicAccountContractsStaticType StaticType = PrimitiveStaticTypePublicAccountContracts
+var publicAccountContractsStaticType StaticType = PrimitiveStaticTypePublicAccountContracts // unmetered
 var publicAccountContractsDynamicType DynamicType = CompositeDynamicType{
 	StaticType: sema.PublicAccountContractsType,
 }

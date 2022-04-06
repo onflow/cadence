@@ -25,7 +25,7 @@ import (
 // DeployedContractValue
 
 var deployedContractDynamicType DynamicType = DeployedContractDynamicType{}
-var deployedContractStaticType StaticType = PrimitiveStaticTypeDeployedContract
+var deployedContractStaticType StaticType = PrimitiveStaticTypeDeployedContract // unmetered
 var deployedContractFieldNames = []string{
 	sema.DeployedContractTypeAddressFieldName,
 	sema.DeployedContractTypeNameFieldName,

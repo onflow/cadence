@@ -6819,7 +6819,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 				value: interpreter.NewArrayValue(
 					inter,
 					interpreter.VariableSizedStaticType{
-						Type: interpreter.ConvertSemaToStaticType(testCase.ty),
+						Type: interpreter.ConvertSemaToStaticType(nil, testCase.ty),
 					},
 					common.Address{},
 					testCase.value,
@@ -6832,7 +6832,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 				value: interpreter.NewArrayValue(
 					inter,
 					interpreter.ConstantSizedStaticType{
-						Type: interpreter.ConvertSemaToStaticType(testCase.ty),
+						Type: interpreter.ConvertSemaToStaticType(nil, testCase.ty),
 						Size: 1,
 					},
 					common.Address{},
@@ -6846,8 +6846,8 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			value := interpreter.NewDictionaryValue(
 				inter,
 				interpreter.DictionaryStaticType{
-					KeyType:   interpreter.ConvertSemaToStaticType(testCase.ty),
-					ValueType: interpreter.ConvertSemaToStaticType(testCase.ty),
+					KeyType:   interpreter.ConvertSemaToStaticType(nil, testCase.ty),
+					ValueType: interpreter.ConvertSemaToStaticType(nil, testCase.ty),
 				},
 				testCase.value, testCase.value,
 			)
@@ -9555,8 +9555,8 @@ func TestHostFunctionStaticType(t *testing.T) {
 		value := inter.Globals["y"].GetValue()
 		assert.Equal(
 			t,
-			interpreter.ConvertSemaToStaticType(sema.ToStringFunctionType),
-			value.StaticType(),
+			interpreter.ConvertSemaToStaticType(nil, sema.ToStringFunctionType),
+			value.StaticType(inter),
 		)
 	})
 
@@ -9572,18 +9572,19 @@ func TestHostFunctionStaticType(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.ConvertSemaToStaticType(
+				nil,
 				&sema.FunctionType{
 					ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.MetaType),
 				},
 			),
-			value.StaticType(),
+			value.StaticType(inter),
 		)
 
 		value = inter.Globals["y"].GetValue()
 		assert.Equal(
 			t,
 			interpreter.PrimitiveStaticTypeMetaType,
-			value.StaticType(),
+			value.StaticType(inter),
 		)
 
 		require.IsType(t, interpreter.TypeValue{}, value)
@@ -9608,18 +9609,18 @@ func TestHostFunctionStaticType(t *testing.T) {
 		xValue := inter.Globals["x"].GetValue()
 		assert.Equal(
 			t,
-			interpreter.ConvertSemaToStaticType(sema.ToStringFunctionType),
-			xValue.StaticType(),
+			interpreter.ConvertSemaToStaticType(nil, sema.ToStringFunctionType),
+			xValue.StaticType(inter),
 		)
 
 		yValue := inter.Globals["y"].GetValue()
 		assert.Equal(
 			t,
-			interpreter.ConvertSemaToStaticType(sema.ToStringFunctionType),
-			yValue.StaticType(),
+			interpreter.ConvertSemaToStaticType(nil, sema.ToStringFunctionType),
+			yValue.StaticType(inter),
 		)
 
-		assert.Equal(t, xValue.StaticType(), yValue.StaticType())
+		assert.Equal(t, xValue.StaticType(inter), yValue.StaticType(inter))
 	})
 }
 

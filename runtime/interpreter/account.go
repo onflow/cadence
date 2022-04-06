@@ -27,7 +27,7 @@ import (
 // AuthAccount
 
 var authAccountTypeID = sema.AuthAccountType.ID()
-var authAccountStaticType StaticType = PrimitiveStaticTypeAuthAccount
+var authAccountStaticType StaticType = PrimitiveStaticTypeAuthAccount // unmetered
 var authAccountDynamicType DynamicType = CompositeDynamicType{
 	StaticType: sema.AuthAccountType,
 }
@@ -141,7 +141,7 @@ func NewAuthAccountValue(
 // PublicAccount
 
 var publicAccountTypeID = sema.PublicAccountType.ID()
-var publicAccountStaticType StaticType = PrimitiveStaticTypePublicAccount
+var publicAccountStaticType StaticType = PrimitiveStaticTypePublicAccount // unmetered
 var publicAccountDynamicType DynamicType = CompositeDynamicType{
 	StaticType: sema.PublicAccountType,
 }

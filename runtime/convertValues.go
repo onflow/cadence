@@ -793,7 +793,7 @@ func importTypeValue(
 	interpreter.TypeValue,
 	error,
 ) {
-	typ := ImportType(v)
+	typ := ImportType(inter, v)
 	/* creating a static type performs no validation, so
 	   in order to be sure the type we have created is legal,
 	   we convert it to a sema type. If this fails, the
@@ -833,7 +833,7 @@ func importCapability(
 			common.Address(address),
 		),
 		importPathValue(inter, path),
-		ImportType(borrowType),
+		ImportType(inter, borrowType),
 	), nil
 
 }
@@ -889,12 +889,12 @@ func importArrayValue(
 
 	var staticArrayType interpreter.ArrayStaticType
 	if arrayType != nil {
-		staticArrayType = interpreter.ConvertSemaArrayTypeToStaticArrayType(arrayType)
+		staticArrayType = interpreter.ConvertSemaArrayTypeToStaticArrayType(inter, arrayType)
 	} else {
 		types := make([]sema.Type, len(v.Values))
 
 		for i, value := range values {
-			typ, err := inter.ConvertStaticToSemaType(value.StaticType())
+			typ, err := inter.ConvertStaticToSemaType(value.StaticType(inter))
 			if err != nil {
 				return nil, err
 			}
@@ -907,7 +907,7 @@ func importArrayValue(
 		}
 
 		staticArrayType = interpreter.VariableSizedStaticType{
-			Type: interpreter.ConvertSemaToStaticType(elementSuperType),
+			Type: interpreter.ConvertSemaToStaticType(inter, elementSuperType),
 		}
 	}
 
@@ -954,20 +954,20 @@ func importDictionaryValue(
 
 	var dictionaryStaticType interpreter.DictionaryStaticType
 	if dictionaryType != nil {
-		dictionaryStaticType = interpreter.ConvertSemaDictionaryTypeToStaticDictionaryType(dictionaryType)
+		dictionaryStaticType = interpreter.ConvertSemaDictionaryTypeToStaticDictionaryType(inter, dictionaryType)
 	} else {
 		size := len(v.Pairs)
 		keyTypes := make([]sema.Type, size)
 		valueTypes := make([]sema.Type, size)
 
 		for i := 0; i < size; i++ {
-			keyType, err := inter.ConvertStaticToSemaType(keysAndValues[i*2].StaticType())
+			keyType, err := inter.ConvertStaticToSemaType(keysAndValues[i*2].StaticType(inter))
 			if err != nil {
 				return nil, err
 			}
 			keyTypes[i] = keyType
 
-			valueType, err := inter.ConvertStaticToSemaType(keysAndValues[i*2+1].StaticType())
+			valueType, err := inter.ConvertStaticToSemaType(keysAndValues[i*2+1].StaticType(inter))
 			if err != nil {
 				return nil, err
 			}
@@ -988,8 +988,8 @@ func importDictionaryValue(
 		}
 
 		dictionaryStaticType = interpreter.DictionaryStaticType{
-			KeyType:   interpreter.ConvertSemaToStaticType(keySuperType),
-			ValueType: interpreter.ConvertSemaToStaticType(valueSuperType),
+			KeyType:   interpreter.ConvertSemaToStaticType(inter, keySuperType),
+			ValueType: interpreter.ConvertSemaToStaticType(inter, valueSuperType),
 		}
 	}
 

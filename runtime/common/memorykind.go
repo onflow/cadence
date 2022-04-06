@@ -52,6 +52,9 @@ const (
 	MemoryKindBoundFunction
 	MemoryKindBigInt
 
+	// Static Types
+	MemoryKindPrimitiveStaticType
+
 	// Misc
 
 	MemoryKindRawString

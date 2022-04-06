@@ -83,6 +83,10 @@ func TestInterpretArrayMetering(t *testing.T) {
 		// 14 from value transfer
 		assert.Equal(t, uint64(29), meter.getMemory(common.MemoryKindArray))
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindVariable))
+		// 1 Int8 for type
+		// 2 String: 1 for type, 1 for value
+		// 3 Bool: 1 for type, 2 for value
+		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 
 	t.Run("iteration", func(t *testing.T) {
@@ -105,6 +109,9 @@ func TestInterpretArrayMetering(t *testing.T) {
 
 		assert.Equal(t, uint64(33), meter.getMemory(common.MemoryKindArray))
 		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindVariable))
+
+		// 4 Int8: 1 for type, 3 for values
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 
 	t.Run("contains", func(t *testing.T) {
@@ -124,6 +131,9 @@ func TestInterpretArrayMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindBool))
+
+		// 1 Int8 for type
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 }
 
@@ -149,6 +159,12 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindString))
 		assert.Equal(t, uint64(10), meter.getMemory(common.MemoryKindDictionary))
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindVariable))
+
+		// 1 Int8 for `x` type
+		// 2 Int8: 1 for `y` type, 1 for `y` value
+		// 1 String for `x` type
+		// 3 String: 2 for `y` type, 1 for `y` value
+		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 
 	t.Run("iteration", func(t *testing.T) {
@@ -171,6 +187,10 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 
 		assert.Equal(t, uint64(30), meter.getMemory(common.MemoryKindDictionary))
 		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindVariable))
+
+		// 4 Int8: 1 for type, 3 for values
+		// 4 String: 1 for type, 3 for values
+		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 
 	t.Run("contains", func(t *testing.T) {
@@ -190,6 +210,10 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindBool))
+
+		// 1 for Int8 for keys
+		// 1 for String for values
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 }
 
@@ -807,6 +831,10 @@ func TestInterpretOptionalValueMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindOptional))
+
+		// 1 for Int8 for keys
+		// 1 for String for values
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 }
 
@@ -7854,6 +7882,9 @@ func TestInterpretIdentifierMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 		assert.Equal(t, uint64(15), meter.getMemory(common.MemoryKindIdentifier))
+
+		// 1 String for `foo` array type
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 }
 
@@ -8112,6 +8143,9 @@ func TestInterpretASTMetering(t *testing.T) {
 
 		assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindTransfer))
 		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindMembers))
+
+		// 1 Int for for loop array
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 
 	t.Run("expressions", func(t *testing.T) {
@@ -8174,6 +8208,11 @@ func TestInterpretASTMetering(t *testing.T) {
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindReferenceExpression))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindForceExpression))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindPathExpression))
+
+		// 3 Int for `g`: 2 for the type, 1 for the element
+		// 4 AnyStruct for `f`: 1 for the type, 1 for each element
+		// 2 AnyStruct for `g`: 1 for the type, 1 for the element
+		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 
 	t.Run("types", func(t *testing.T) {

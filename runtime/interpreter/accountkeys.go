@@ -71,7 +71,7 @@ func NewAuthAccountKeysValue(
 // PublicAccountKeys
 
 var publicAccountKeysTypeID = sema.PublicAccountKeysType.ID()
-var publicAccountKeysStaticType StaticType = PrimitiveStaticTypePublicAccountKeys
+var publicAccountKeysStaticType StaticType = PrimitiveStaticTypePublicAccountKeys // unmetered
 var publicAccountKeysDynamicType DynamicType = CompositeDynamicType{
 	StaticType: sema.PublicAccountKeysType,
 }
