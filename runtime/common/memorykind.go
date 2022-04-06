@@ -68,9 +68,16 @@ const (
 
 	// AST nodes
 
+	MemoryKindProgram
 	MemoryKindIdentifier
 	MemoryKindArgument
 	MemoryKindBlock
+	MemoryKindFunctionBlock
+	MemoryKindParameter
+	MemoryKindParameterList
+	MemoryKindTransfer
+	MemoryKindMembers
+	MemoryKindTypeAnnotation
 
 	MemoryKindFunctionDeclaration
 	MemoryKindCompositeDeclaration
@@ -116,6 +123,16 @@ const (
 	MemoryKindReferenceExpression
 	MemoryKindForceExpression
 	MemoryKindPathExpression
+
+	MemoryKindConstantSizedType
+	MemoryKindDictionaryType
+	MemoryKindFunctionType
+	MemoryKindInstantiationType
+	MemoryKindNominalType
+	MemoryKindOptionalType
+	MemoryKindReferenceType
+	MemoryKindRestrictedType
+	MemoryKindVariableSizedType
 
 	// Placeholder kind to allow consistent indexing
 	// this should always be the last kind

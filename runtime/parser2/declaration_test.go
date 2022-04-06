@@ -1531,7 +1531,7 @@ func TestParseEvent(t *testing.T) {
 						Identifier: "E",
 						Pos:        ast.Position{Offset: 6, Line: 1, Column: 6},
 					},
-					Members: ast.NewMembers(
+					Members: ast.NewUnmeteredMembers(
 						[]ast.Declaration{
 							&ast.SpecialFunctionDeclaration{
 								Kind: common.DeclarationKindInitializer,
@@ -1574,7 +1574,7 @@ func TestParseEvent(t *testing.T) {
 						Identifier: "E2",
 						Pos:        ast.Position{Offset: 12, Line: 1, Column: 12},
 					},
-					Members: ast.NewMembers(
+					Members: ast.NewUnmeteredMembers(
 						[]ast.Declaration{
 							&ast.SpecialFunctionDeclaration{
 								Kind: common.DeclarationKindInitializer,
@@ -1822,7 +1822,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 						Identifier: "Test",
 						Pos:        ast.Position{Offset: 18, Line: 2, Column: 17},
 					},
-					Members: ast.NewMembers(
+					Members: ast.NewUnmeteredMembers(
 						[]ast.Declaration{
 							&ast.FieldDeclaration{
 								Access:       ast.AccessPublicSettable,
@@ -2068,7 +2068,7 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 						Identifier: "Test",
 						Pos:        ast.Position{Offset: 28, Line: 2, Column: 27},
 					},
-					Members: ast.NewMembers(
+					Members: ast.NewUnmeteredMembers(
 						[]ast.Declaration{
 							&ast.FieldDeclaration{
 								Access:       ast.AccessPublicSettable,
@@ -2239,7 +2239,7 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 						Identifier: "E",
 						Pos:        ast.Position{Line: 1, Column: 10, Offset: 10},
 					},
-					Members: ast.NewMembers(
+					Members: ast.NewUnmeteredMembers(
 						[]ast.Declaration{
 							&ast.EnumCaseDeclaration{
 								Access: ast.AccessNotSpecified,
@@ -3235,7 +3235,7 @@ func TestParseStructure(t *testing.T) {
 					Identifier: "Test",
 					Pos:        ast.Position{Offset: 16, Line: 2, Column: 15},
 				},
-				Members: ast.NewMembers(
+				Members: ast.NewUnmeteredMembers(
 					[]ast.Declaration{
 						&ast.FieldDeclaration{
 							Access:       ast.AccessPublicSettable,
@@ -3757,7 +3757,7 @@ func TestParseInterface(t *testing.T) {
 				Identifier: "Test",
 				Pos:        ast.Position{Offset: 30, Line: 2, Column: 29},
 			},
-			Members: ast.NewMembers(
+			Members: ast.NewUnmeteredMembers(
 				[]ast.Declaration{
 					&ast.FieldDeclaration{
 						Access:       ast.AccessNotSpecified,
@@ -4043,7 +4043,7 @@ func TestParseFieldWithFromIdentifier(t *testing.T) {
 					Identifier: "S",
 					Pos:        ast.Position{Offset: 14, Line: 2, Column: 13},
 				},
-				Members: ast.NewMembers(
+				Members: ast.NewUnmeteredMembers(
 					[]ast.Declaration{
 						&ast.FieldDeclaration{
 							Access:       ast.AccessNotSpecified,
@@ -4181,7 +4181,7 @@ func TestParseEventDeclaration(t *testing.T) {
 					Identifier: "Transfer",
 					Pos:        ast.Position{Offset: 15, Line: 2, Column: 14},
 				},
-				Members: ast.NewMembers(
+				Members: ast.NewUnmeteredMembers(
 					[]ast.Declaration{
 						&ast.SpecialFunctionDeclaration{
 							Kind: common.DeclarationKindInitializer,
@@ -4566,7 +4566,7 @@ func TestParseFieldDeclarationWithMoveTypeAnnotation(t *testing.T) {
 					Identifier: "X",
 					Pos:        ast.Position{Offset: 16, Line: 2, Column: 15},
 				},
-				Members: ast.NewMembers(
+				Members: ast.NewUnmeteredMembers(
 					[]ast.Declaration{
 						&ast.FieldDeclaration{
 							Access:       ast.AccessNotSpecified,
@@ -4622,7 +4622,7 @@ func TestParseDestructor(t *testing.T) {
 					Identifier: "Test",
 					Pos:        ast.Position{Offset: 18, Line: 2, Column: 17},
 				},
-				Members: ast.NewMembers(
+				Members: ast.NewUnmeteredMembers(
 					[]ast.Declaration{
 						&ast.SpecialFunctionDeclaration{
 							Kind: common.DeclarationKindDestructor,
@@ -4678,7 +4678,7 @@ func TestParseCompositeDeclarationWithSemicolonSeparatedMembers(t *testing.T) {
 					Identifier: "Kitty",
 					Pos:        ast.Position{Offset: 16, Line: 2, Column: 15},
 				},
-				Members: ast.NewMembers(
+				Members: ast.NewUnmeteredMembers(
 					[]ast.Declaration{
 						&ast.FieldDeclaration{
 							VariableKind: ast.VariableKindConstant,

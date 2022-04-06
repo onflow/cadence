@@ -342,10 +342,11 @@ func parseTransfer(p *parser) *ast.Transfer {
 
 	p.next()
 
-	return &ast.Transfer{
-		Operation: operation,
-		Pos:       pos,
-	}
+	return ast.NewTransfer(
+		p.memoryGauge,
+		operation,
+		pos,
+	)
 }
 
 func parsePragmaDeclaration(p *parser) *ast.PragmaDeclaration {
@@ -667,9 +668,12 @@ func parseEventDeclaration(
 		),
 	)
 
-	members := ast.NewMembers([]ast.Declaration{
-		initializer,
-	})
+	members := ast.NewMembers(
+		p.memoryGauge,
+		[]ast.Declaration{
+			initializer,
+		},
+	)
 
 	return ast.NewCompositeDeclaration(
 		p.memoryGauge,
@@ -920,12 +924,12 @@ func parseMembersAndNestedDeclarations(p *parser, endTokenType lexer.TokenType) 
 			continue
 
 		case endTokenType, lexer.TokenEOF:
-			return ast.NewMembers(declarations)
+			return ast.NewMembers(p.memoryGauge, declarations)
 
 		default:
 			memberOrNestedDeclaration := parseMemberOrNestedDeclaration(p, docString)
 			if memberOrNestedDeclaration == nil {
-				return ast.NewMembers(declarations)
+				return ast.NewMembers(p.memoryGauge, declarations)
 			}
 
 			declarations = append(declarations, memberOrNestedDeclaration)

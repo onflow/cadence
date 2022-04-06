@@ -18,11 +18,29 @@
 
 package ast
 
+import "github.com/onflow/cadence/runtime/common"
+
 type Parameter struct {
 	Label          string
 	Identifier     Identifier
 	TypeAnnotation *TypeAnnotation
 	Range
+}
+
+func NewParameter(
+	gauge common.MemoryGauge,
+	label string,
+	identifier Identifier,
+	typeAnnotation *TypeAnnotation,
+	astRange Range,
+) *Parameter {
+	common.UseMemory(gauge, common.ParameterMemoryUsage)
+	return &Parameter{
+		Label:          label,
+		Identifier:     identifier,
+		TypeAnnotation: typeAnnotation,
+		Range:          astRange,
+	}
 }
 
 // EffectiveArgumentLabel returns the effective argument label that
