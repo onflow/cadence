@@ -167,10 +167,16 @@ func NewInMemoryStorage() InMemoryStorage {
 	}
 }
 
-func (i InMemoryStorage) GetStorageMap(address common.Address, domain string) (storageMap *StorageMap) {
+func (i InMemoryStorage) GetStorageMap(
+	address common.Address,
+	domain string,
+	createIfNotExists bool,
+) (
+	storageMap *StorageMap,
+) {
 	key := StorageKey{address, domain}
 	storageMap = i.StorageMaps[key]
-	if storageMap == nil {
+	if storageMap == nil && createIfNotExists {
 		storageMap = NewStorageMap(i, atree.Address(address))
 		i.StorageMaps[key] = storageMap
 	}

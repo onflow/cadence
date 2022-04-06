@@ -727,7 +727,7 @@ func TestInterpretGetType(t *testing.T) {
 			)
 			require.NoError(t, err)
 
-			storageMap := storage.GetStorageMap(storageAddress, storagePath.Domain.Identifier())
+			storageMap := storage.GetStorageMap(storageAddress, storagePath.Domain.Identifier(), true)
 			storageMap.WriteValue(
 				inter,
 				storagePath.Identifier,
