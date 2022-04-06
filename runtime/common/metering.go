@@ -96,25 +96,48 @@ func NewConstantMemoryUsage(kind MemoryKind) MemoryUsage {
 	}
 }
 
-func NewArrayMemoryUsage(length int) MemoryUsage {
+func NewArrayMemoryUsages(length int) (MemoryUsage, MemoryUsage) {
 	return MemoryUsage{
-		Kind:   MemoryKindArray,
-		Amount: uint64(length) + 1, // +1 to account for empty arrays
+			Kind:   MemoryKindArrayBase,
+			Amount: 1,
+		}, MemoryUsage{
+			Kind:   MemoryKindArrayLength,
+			Amount: uint64(length),
+		}
+}
+
+func NewArrayLengthUsage(length int) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindArrayLength,
+		Amount: uint64(length),
 	}
 }
 
-func NewDictionaryMemoryUsage(length int) MemoryUsage {
+func NewDictionaryMemoryUsages(length int) (MemoryUsage, MemoryUsage) {
 	return MemoryUsage{
-		Kind:   MemoryKindDictionary,
-		Amount: uint64(length) + 1, // +1 to account for empty dicts
+			Kind:   MemoryKindDictionaryBase,
+			Amount: 1,
+		}, MemoryUsage{
+			Kind:   MemoryKindDictionarySize,
+			Amount: uint64(length),
+		}
+}
+
+func NewDictionarySizeUsage(length int) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindDictionarySize,
+		Amount: uint64(length),
 	}
 }
 
-func NewCompositeMemoryUsage(length int) MemoryUsage {
+func NewCompositeMemoryUsages(length int) (MemoryUsage, MemoryUsage) {
 	return MemoryUsage{
-		Kind:   MemoryKindComposite,
-		Amount: uint64(length) + 1, // +1 to account for empty composites
-	}
+			Kind:   MemoryKindCompositeBase,
+			Amount: 1,
+		}, MemoryUsage{
+			Kind:   MemoryKindCompositeSize,
+			Amount: uint64(length),
+		}
 }
 
 func NewStringMemoryUsage(length int) MemoryUsage {
