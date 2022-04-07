@@ -57,12 +57,13 @@ const (
 
 	// Static Types
 	MemoryKindPrimitiveStaticType
-	MemoryKindOptionalStaticType
-	MemoryKindVariableSizedStaticType
-	MemoryKindConstantSizedStaticType
-	MemoryKindDictionaryStaticType
 	MemoryKindCompositeStaticType
 	MemoryKindInterfaceStaticType
+	MemoryKindVariableSizedStaticType
+	MemoryKindConstantSizedStaticType
+
+	MemoryKindOptionalStaticType
+	MemoryKindDictionaryStaticType
 	MemoryKindReferenceStaticType
 	MemoryKindRestrictedStaticType
 	MemoryKindCapabilityStaticType

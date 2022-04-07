@@ -921,9 +921,10 @@ func importArrayValue(
 			return nil, fmt.Errorf("cannot import array: elements do not belong to the same type")
 		}
 
-		staticArrayType = interpreter.VariableSizedStaticType{
-			Type: interpreter.ConvertSemaToStaticType(inter, elementSuperType),
-		}
+		staticArrayType = interpreter.NewVariableSizedStaticType(
+			inter,
+			interpreter.ConvertSemaToStaticType(inter, elementSuperType),
+		)
 	}
 
 	return interpreter.NewArrayValue(

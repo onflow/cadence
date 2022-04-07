@@ -1217,9 +1217,7 @@ func (d TypeDecoder) decodeVariableSizedStaticType() (StaticType, error) {
 			err,
 		)
 	}
-	return VariableSizedStaticType{
-		Type: staticType,
-	}, nil
+	return NewVariableSizedStaticType(d.memoryGauge, staticType), nil
 }
 
 func (d TypeDecoder) decodeConstantSizedStaticType() (StaticType, error) {

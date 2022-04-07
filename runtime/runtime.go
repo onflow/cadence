@@ -3050,9 +3050,10 @@ func (r *interpreterRuntime) newAccountContractsGetNamesFunction(
 			)
 		}
 
-		return interpreter.NewArrayValue(inter, interpreter.VariableSizedStaticType{
-			Type: interpreter.NewPrimitiveStaticType(inter, interpreter.PrimitiveStaticTypeString),
-		}, common.Address{}, values...)
+		return interpreter.NewArrayValue(inter, interpreter.NewVariableSizedStaticType(
+			inter,
+			interpreter.NewPrimitiveStaticType(inter, interpreter.PrimitiveStaticTypeString),
+		), common.Address{}, values...)
 	}
 }
 

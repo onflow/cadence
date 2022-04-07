@@ -506,10 +506,7 @@ func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.Stat
 	case cadence.UFix64Type:
 		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeUFix64)
 	case cadence.VariableSizedArrayType:
-		common.UseConstantMemory(memoryGauge, common.MemoryKindVariableSizedStaticType)
-		return interpreter.VariableSizedStaticType{
-			Type: ImportType(memoryGauge, t.ElementType),
-		}
+		return interpreter.NewVariableSizedStaticType(memoryGauge, ImportType(memoryGauge, t.ElementType))
 	case cadence.ConstantSizedArrayType:
 		common.UseConstantMemory(memoryGauge, common.MemoryKindConstantSizedStaticType)
 		return interpreter.ConstantSizedStaticType{

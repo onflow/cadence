@@ -3289,9 +3289,10 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 
 				return TypeValue{
 					//nolint:gosimple
-					Type: VariableSizedStaticType{
-						Type: typeValue.Type,
-					},
+					Type: NewVariableSizedStaticType(
+						invocation.Interpreter,
+						typeValue.Type,
+					),
 				}
 			},
 			sema.VariableSizedArrayTypeFunctionType,

@@ -35,12 +35,12 @@ func _() {
 	_ = x[MemoryKindBoundFunction-24]
 	_ = x[MemoryKindBigInt-25]
 	_ = x[MemoryKindPrimitiveStaticType-26]
-	_ = x[MemoryKindOptionalStaticType-27]
-	_ = x[MemoryKindVariableSizedStaticType-28]
-	_ = x[MemoryKindConstantSizedStaticType-29]
-	_ = x[MemoryKindDictionaryStaticType-30]
-	_ = x[MemoryKindCompositeStaticType-31]
-	_ = x[MemoryKindInterfaceStaticType-32]
+	_ = x[MemoryKindCompositeStaticType-27]
+	_ = x[MemoryKindInterfaceStaticType-28]
+	_ = x[MemoryKindVariableSizedStaticType-29]
+	_ = x[MemoryKindConstantSizedStaticType-30]
+	_ = x[MemoryKindOptionalStaticType-31]
+	_ = x[MemoryKindDictionaryStaticType-32]
 	_ = x[MemoryKindReferenceStaticType-33]
 	_ = x[MemoryKindRestrictedStaticType-34]
 	_ = x[MemoryKindCapabilityStaticType-35]
@@ -118,9 +118,9 @@ func _() {
 	_ = x[MemoryKindLast-107]
 }
 
-const _MemoryKind_name = "UnknownBoolAddressStringCharacterMetaTypeNumberArrayBaseArrayLengthDictionaryBaseDictionarySizeCompositeBaseCompositeSizeOptionalNilVoidTypeValuePathValueCapabilityValueLinkValueStorageReferenceValueEphemeralReferenceValueInterpretedFunctionHostFunctionBoundFunctionBigIntPrimitiveStaticTypeOptionalStaticTypeVariableSizedStaticTypeConstantSizedStaticTypeDictionaryStaticTypeCompositeStaticTypeInterfaceStaticTypeReferenceStaticTypeRestrictedStaticTypeCapabilityStaticTypeRawStringAddressLocationBytesVariableValueTokenSyntaxTokenSpaceTokenProgramIdentifierArgumentBlockFunctionBlockParameterParameterListTransferMembersTypeAnnotationDictionaryEntryFunctionDeclarationCompositeDeclarationInterfaceDeclarationEnumCaseDeclarationFieldDeclarationTransactionDeclarationImportDeclarationVariableDeclarationSpecialFunctionDeclarationPragmaDeclarationAssignmentStatementBreakStatementContinueStatementEmitStatementExpressionStatementForStatementIfStatementReturnStatementSwapStatementSwitchStatementWhileStatementBooleanExpressionNilExpressionStringExpressionIntegerExpressionFixedPointExpressionArrayExpressionDictionaryExpressionIdentifierExpressionInvocationExpressionMemberExpressionIndexExpressionConditionalExpressionUnaryExpressionBinaryExpressionFunctionExpressionCastingExpressionCreateExpressionDestroyExpressionReferenceExpressionForceExpressionPathExpressionConstantSizedTypeDictionaryTypeFunctionTypeInstantiationTypeNominalTypeOptionalTypeReferenceTypeRestrictedTypeVariableSizedTypePositionRangeLast"
+const _MemoryKind_name = "UnknownBoolAddressStringCharacterMetaTypeNumberArrayBaseArrayLengthDictionaryBaseDictionarySizeCompositeBaseCompositeSizeOptionalNilVoidTypeValuePathValueCapabilityValueLinkValueStorageReferenceValueEphemeralReferenceValueInterpretedFunctionHostFunctionBoundFunctionBigIntPrimitiveStaticTypeCompositeStaticTypeInterfaceStaticTypeVariableSizedStaticTypeConstantSizedStaticTypeOptionalStaticTypeDictionaryStaticTypeReferenceStaticTypeRestrictedStaticTypeCapabilityStaticTypeRawStringAddressLocationBytesVariableValueTokenSyntaxTokenSpaceTokenProgramIdentifierArgumentBlockFunctionBlockParameterParameterListTransferMembersTypeAnnotationDictionaryEntryFunctionDeclarationCompositeDeclarationInterfaceDeclarationEnumCaseDeclarationFieldDeclarationTransactionDeclarationImportDeclarationVariableDeclarationSpecialFunctionDeclarationPragmaDeclarationAssignmentStatementBreakStatementContinueStatementEmitStatementExpressionStatementForStatementIfStatementReturnStatementSwapStatementSwitchStatementWhileStatementBooleanExpressionNilExpressionStringExpressionIntegerExpressionFixedPointExpressionArrayExpressionDictionaryExpressionIdentifierExpressionInvocationExpressionMemberExpressionIndexExpressionConditionalExpressionUnaryExpressionBinaryExpressionFunctionExpressionCastingExpressionCreateExpressionDestroyExpressionReferenceExpressionForceExpressionPathExpressionConstantSizedTypeDictionaryTypeFunctionTypeInstantiationTypeNominalTypeOptionalTypeReferenceTypeRestrictedTypeVariableSizedTypePositionRangeLast"
 
-var _MemoryKind_index = [...]uint16{0, 7, 11, 18, 24, 33, 41, 47, 56, 67, 81, 95, 108, 121, 129, 132, 136, 145, 154, 169, 178, 199, 222, 241, 253, 266, 272, 291, 309, 332, 355, 375, 394, 413, 432, 452, 472, 481, 496, 501, 509, 519, 530, 540, 547, 557, 565, 570, 583, 592, 605, 613, 620, 634, 649, 668, 688, 708, 727, 743, 765, 782, 801, 827, 844, 863, 877, 894, 907, 926, 938, 949, 964, 977, 992, 1006, 1023, 1036, 1052, 1069, 1089, 1104, 1124, 1144, 1164, 1180, 1195, 1216, 1231, 1247, 1265, 1282, 1298, 1315, 1334, 1349, 1363, 1380, 1394, 1406, 1423, 1434, 1446, 1459, 1473, 1490, 1498, 1503, 1507}
+var _MemoryKind_index = [...]uint16{0, 7, 11, 18, 24, 33, 41, 47, 56, 67, 81, 95, 108, 121, 129, 132, 136, 145, 154, 169, 178, 199, 222, 241, 253, 266, 272, 291, 310, 329, 352, 375, 393, 413, 432, 452, 472, 481, 496, 501, 509, 519, 530, 540, 547, 557, 565, 570, 583, 592, 605, 613, 620, 634, 649, 668, 688, 708, 727, 743, 765, 782, 801, 827, 844, 863, 877, 894, 907, 926, 938, 949, 964, 977, 992, 1006, 1023, 1036, 1052, 1069, 1089, 1104, 1124, 1144, 1164, 1180, 1195, 1216, 1231, 1247, 1265, 1282, 1298, 1315, 1334, 1349, 1363, 1380, 1394, 1406, 1423, 1434, 1446, 1459, 1473, 1490, 1498, 1503, 1507}
 
 func (i MemoryKind) String() string {
 	if i >= MemoryKind(len(_MemoryKind_index)-1) {

@@ -156,6 +156,17 @@ type VariableSizedStaticType struct {
 var _ ArrayStaticType = VariableSizedStaticType{}
 var _ atree.TypeInfo = VariableSizedStaticType{}
 
+func NewVariableSizedStaticType(
+	memoryGauge common.MemoryGauge,
+	elementType StaticType,
+) VariableSizedStaticType {
+	common.UseConstantMemory(memoryGauge, common.MemoryKindVariableSizedStaticType)
+
+	return VariableSizedStaticType{
+		Type: elementType,
+	}
+}
+
 func (VariableSizedStaticType) isStaticType() {}
 
 func (VariableSizedStaticType) isArrayStaticType() {}
