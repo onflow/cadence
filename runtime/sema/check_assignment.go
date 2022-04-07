@@ -207,17 +207,17 @@ func (checker *Checker) visitIdentifierExpressionAssignment(
 }
 
 func (checker *Checker) visitIndexExpressionAssignment(
-	target *ast.IndexExpression,
+	indexExpression *ast.IndexExpression,
 ) (elementType Type) {
 
-	elementType = checker.visitIndexExpression(target, true)
+	elementType = checker.visitIndexExpression(indexExpression, true)
 
-	targetExpression := target.TargetExpression
-	switch targetExpression := targetExpression.(type) {
-	case *ast.MemberExpression:
-		// calls to this method are cached, so this performs no computation
+	if targetExpression, ok := indexExpression.TargetExpression.(*ast.MemberExpression); ok {
+		// visitMember caches its result, so visiting the target expression again,
+		// after it had been previously visited by visiting the outer index expression,
+		// performs no computation
 		_, member, _ := checker.visitMember(targetExpression)
-		if !checker.isMutatableMember(member) {
+		if member != nil && !checker.isMutatableMember(member) {
 			checker.report(
 				&ExternalMutationError{
 					Name:            member.Identifier.Identifier,
