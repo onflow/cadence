@@ -2995,10 +2995,11 @@ func init() {
 				return NewSomeValueNonCopying(
 					invocation.Interpreter,
 					TypeValue{
-						Type: DictionaryStaticType{
-							KeyType:   keyType,
-							ValueType: valueType,
-						},
+						Type: NewDictionaryStaticType(
+							invocation.Interpreter,
+							keyType,
+							valueType,
+						),
 					},
 				)
 			},

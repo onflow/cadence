@@ -243,6 +243,18 @@ type DictionaryStaticType struct {
 var _ StaticType = DictionaryStaticType{}
 var _ atree.TypeInfo = DictionaryStaticType{}
 
+func NewDictionaryStaticType(
+	memoryGauge common.MemoryGauge,
+	keyType, valueType StaticType,
+) DictionaryStaticType {
+	common.UseConstantMemory(memoryGauge, common.MemoryKindDictionaryStaticType)
+
+	return DictionaryStaticType{
+		KeyType:   keyType,
+		ValueType: valueType,
+	}
+}
+
 func (DictionaryStaticType) isStaticType() {}
 
 func (t DictionaryStaticType) String() string {
@@ -473,10 +485,11 @@ func ConvertSemaDictionaryTypeToStaticDictionaryType(
 	memoryGauge common.MemoryGauge,
 	t *sema.DictionaryType,
 ) DictionaryStaticType {
-	return DictionaryStaticType{
-		KeyType:   ConvertSemaToStaticType(memoryGauge, t.KeyType),
-		ValueType: ConvertSemaToStaticType(memoryGauge, t.ValueType),
-	}
+	return NewDictionaryStaticType(
+		memoryGauge,
+		ConvertSemaToStaticType(memoryGauge, t.KeyType),
+		ConvertSemaToStaticType(memoryGauge, t.ValueType),
+	)
 }
 
 func ConvertSemaReferenceTypeToStaticReferenceType(
