@@ -55,16 +55,29 @@ type CompositeStaticType struct {
 var _ StaticType = CompositeStaticType{}
 
 func NewCompositeStaticType(
+	memoryGauge common.MemoryGauge,
 	location common.Location,
 	qualifiedIdentifier string,
+	typeID common.TypeID,
 ) CompositeStaticType {
-	var typeID = common.NewTypeIDFromQualifiedName(location, qualifiedIdentifier)
+	common.UseConstantMemory(memoryGauge, common.MemoryKindCompositeStaticType)
 
 	return CompositeStaticType{
 		Location:            location,
 		QualifiedIdentifier: qualifiedIdentifier,
 		TypeID:              typeID,
 	}
+}
+
+func NewCompositeStaticTypeComputeTypeID(
+	memoryGauge common.MemoryGauge,
+	location common.Location,
+	qualifiedIdentifier string,
+) CompositeStaticType {
+	// TODO compute memory usage before building typeID string
+	typeID := common.NewTypeIDFromQualifiedName(location, qualifiedIdentifier)
+
+	return NewCompositeStaticType(memoryGauge, location, qualifiedIdentifier, typeID)
 }
 
 func (CompositeStaticType) isStaticType() {}
@@ -347,11 +360,7 @@ func (t CapabilityStaticType) Equal(other StaticType) bool {
 func ConvertSemaToStaticType(memoryGauge common.MemoryGauge, t sema.Type) StaticType {
 	switch t := t.(type) {
 	case *sema.CompositeType:
-		return CompositeStaticType{
-			Location:            t.Location,
-			QualifiedIdentifier: t.QualifiedIdentifier(),
-			TypeID:              t.ID(),
-		}
+		return NewCompositeStaticType(memoryGauge, t.Location, t.QualifiedIdentifier(), t.ID())
 
 	case *sema.InterfaceType:
 		return ConvertSemaInterfaceTypeToStaticInterfaceType(t)

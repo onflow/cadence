@@ -176,11 +176,13 @@ func TestCompositeStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.True(t,
-			NewCompositeStaticType(
+			NewCompositeStaticTypeComputeTypeID(
+				nil,
 				utils.TestLocation,
 				"X",
 			).Equal(
-				NewCompositeStaticType(
+				NewCompositeStaticTypeComputeTypeID(
+					nil,
 					utils.TestLocation,
 					"X",
 				),
@@ -193,11 +195,13 @@ func TestCompositeStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			NewCompositeStaticType(
+			NewCompositeStaticTypeComputeTypeID(
+				nil,
 				utils.TestLocation,
 				"X",
 			).Equal(
-				NewCompositeStaticType(
+				NewCompositeStaticTypeComputeTypeID(
+					nil,
 					utils.TestLocation,
 					"Y",
 				),
@@ -210,11 +214,13 @@ func TestCompositeStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			NewCompositeStaticType(
+			NewCompositeStaticTypeComputeTypeID(
+				nil,
 				common.IdentifierLocation("A"),
 				"X",
 			).Equal(
-				NewCompositeStaticType(
+				NewCompositeStaticTypeComputeTypeID(
+					nil,
 					common.IdentifierLocation("B"),
 					"X",
 				),
@@ -227,11 +233,13 @@ func TestCompositeStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			NewCompositeStaticType(
+			NewCompositeStaticTypeComputeTypeID(
+				nil,
 				common.IdentifierLocation("A"),
 				"X",
 			).Equal(
-				NewCompositeStaticType(
+				NewCompositeStaticTypeComputeTypeID(
+					nil,
 					common.StringLocation("A"),
 					"X",
 				),
@@ -244,11 +252,13 @@ func TestCompositeStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.True(t,
-			NewCompositeStaticType(
+			NewCompositeStaticTypeComputeTypeID(
+				nil,
 				nil,
 				"X",
 			).Equal(
-				NewCompositeStaticType(
+				NewCompositeStaticTypeComputeTypeID(
+					nil,
 					nil,
 					"X",
 				),
@@ -261,11 +271,13 @@ func TestCompositeStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			NewCompositeStaticType(
+			NewCompositeStaticTypeComputeTypeID(
+				nil,
 				nil,
 				"X",
 			).Equal(
-				NewCompositeStaticType(
+				NewCompositeStaticTypeComputeTypeID(
+					nil,
 					nil,
 					"Y",
 				),
@@ -278,11 +290,13 @@ func TestCompositeStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			NewCompositeStaticType(
+			NewCompositeStaticTypeComputeTypeID(
+				nil,
 				nil,
 				"X",
 			).Equal(
-				NewCompositeStaticType(
+				NewCompositeStaticTypeComputeTypeID(
+					nil,
 					common.StringLocation("B"),
 					"X",
 				),
@@ -295,7 +309,8 @@ func TestCompositeStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			NewCompositeStaticType(
+			NewCompositeStaticTypeComputeTypeID(
+				nil,
 				nil,
 				"X",
 			).Equal(
@@ -440,7 +455,8 @@ func TestInterfaceStaticType_Equal(t *testing.T) {
 				Location:            nil,
 				QualifiedIdentifier: "X",
 			}.Equal(
-				NewCompositeStaticType(
+				NewCompositeStaticTypeComputeTypeID(
+					nil,
 					nil,
 					"X",
 				),
