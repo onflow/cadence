@@ -58,12 +58,12 @@ const (
 	MemoryKindInterfaceStaticType
 	MemoryKindVariableSizedStaticType
 	MemoryKindConstantSizedStaticType
-
-	MemoryKindOptionalStaticType
 	MemoryKindDictionaryStaticType
-	MemoryKindReferenceStaticType
+	MemoryKindOptionalStaticType
 	MemoryKindRestrictedStaticType
+	MemoryKindReferenceStaticType
 	MemoryKindCapabilityStaticType
+	MemoryKindFunctionStaticType
 
 	// Misc
 
