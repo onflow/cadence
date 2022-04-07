@@ -410,11 +410,11 @@ func exportCapabilityType(t *sema.CapabilityType, results map[sema.TypeID]cadenc
 }
 
 func importInterfaceType(memoryGauge common.MemoryGauge, t cadence.InterfaceType) interpreter.InterfaceStaticType {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindInterfaceStaticType)
-	return interpreter.InterfaceStaticType{
-		Location:            t.InterfaceTypeLocation(),
-		QualifiedIdentifier: t.InterfaceTypeQualifiedIdentifier(),
-	}
+	return interpreter.NewInterfaceStaticType(
+		memoryGauge,
+		t.InterfaceTypeLocation(),
+		t.InterfaceTypeQualifiedIdentifier(),
+	)
 }
 
 func importCompositeType(memoryGauge common.MemoryGauge, t cadence.CompositeType) interpreter.CompositeStaticType {
