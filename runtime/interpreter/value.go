@@ -472,6 +472,7 @@ func (VoidValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 }
 
 func (VoidValue) StaticType(interpreter *Interpreter) StaticType {
+	common.UseConstantMemory(interpreter, common.MemoryKindPrimitiveStaticType)
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeVoid)
 }
 
@@ -14036,11 +14037,12 @@ func (v *CompositeValue) StaticType(interpreter *Interpreter) StaticType {
 	if v.staticType == nil {
 		// NOTE: Instead of using NewCompositeStaticType, which always generates the type ID,
 		// use the TypeID accessor, which may return an already computed type ID
-		v.staticType = CompositeStaticType{
-			Location:            v.Location,
-			QualifiedIdentifier: v.QualifiedIdentifier,
-			TypeID:              v.TypeID(),
-		}
+		v.staticType = NewCompositeStaticType(
+			interpreter,
+			v.Location,
+			v.QualifiedIdentifier,
+			v.TypeID(), // TODO TypeID metering
+		)
 	}
 	return v.staticType
 }

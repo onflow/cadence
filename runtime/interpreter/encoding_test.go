@@ -3269,7 +3269,8 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 
 		value := LinkValue{
 			TargetPath: publicPathValue,
-			Type: NewCompositeStaticType(
+			Type: NewCompositeStaticTypeComputeTypeID(
+				nil,
 				utils.TestLocation,
 				"SimpleStruct",
 			),
@@ -3514,7 +3515,8 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 		value := LinkValue{
 			TargetPath: publicPathValue,
 			Type: &RestrictedStaticType{
-				Type: NewCompositeStaticType(
+				Type: NewCompositeStaticTypeComputeTypeID(
+					nil,
 					utils.TestLocation,
 					"S",
 				),
@@ -3774,7 +3776,8 @@ func TestEncodeDecodeTypeValue(t *testing.T) {
 		identifier := strings.Repeat("x", int(maxInlineElementSize+1))
 
 		expected := TypeValue{
-			Type: NewCompositeStaticType(
+			Type: NewCompositeStaticTypeComputeTypeID(
+				nil,
 				common.AddressLocation{},
 				identifier,
 			),
@@ -3809,7 +3812,7 @@ func TestEncodeDecodeStaticType(t *testing.T) {
 
 		t.Parallel()
 
-		ty := NewCompositeStaticType(nil, "PublicKey")
+		ty := NewCompositeStaticTypeComputeTypeID(nil, nil, "PublicKey")
 
 		encoded := cbor.RawMessage{
 			// tag
