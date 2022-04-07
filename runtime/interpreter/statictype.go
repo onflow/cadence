@@ -107,6 +107,19 @@ type InterfaceStaticType struct {
 
 var _ StaticType = InterfaceStaticType{}
 
+func NewInterfaceStaticType(
+	memoryGauge common.MemoryGauge,
+	location common.Location,
+	qualifiedIdentifier string,
+) InterfaceStaticType {
+	common.UseConstantMemory(memoryGauge, common.MemoryKindInterfaceStaticType)
+
+	return InterfaceStaticType{
+		Location:            location,
+		QualifiedIdentifier: qualifiedIdentifier,
+	}
+}
+
 func (InterfaceStaticType) isStaticType() {}
 
 func (t InterfaceStaticType) String() string {
@@ -363,7 +376,7 @@ func ConvertSemaToStaticType(memoryGauge common.MemoryGauge, t sema.Type) Static
 		return NewCompositeStaticType(memoryGauge, t.Location, t.QualifiedIdentifier(), t.ID())
 
 	case *sema.InterfaceType:
-		return ConvertSemaInterfaceTypeToStaticInterfaceType(t)
+		return ConvertSemaInterfaceTypeToStaticInterfaceType(memoryGauge, t)
 
 	case sema.ArrayType:
 		return ConvertSemaArrayTypeToStaticArrayType(memoryGauge, t)
@@ -380,7 +393,7 @@ func ConvertSemaToStaticType(memoryGauge common.MemoryGauge, t sema.Type) Static
 		restrictions := make([]InterfaceStaticType, len(t.Restrictions))
 
 		for i, restriction := range t.Restrictions {
-			restrictions[i] = ConvertSemaInterfaceTypeToStaticInterfaceType(restriction)
+			restrictions[i] = ConvertSemaInterfaceTypeToStaticInterfaceType(memoryGauge, restriction)
 		}
 
 		return &RestrictedStaticType{
@@ -452,11 +465,11 @@ func ConvertSemaReferenceTypeToStaticReferenceType(
 	}
 }
 
-func ConvertSemaInterfaceTypeToStaticInterfaceType(t *sema.InterfaceType) InterfaceStaticType {
-	return InterfaceStaticType{
-		Location:            t.Location,
-		QualifiedIdentifier: t.QualifiedIdentifier(),
-	}
+func ConvertSemaInterfaceTypeToStaticInterfaceType(
+	memoryGauge common.MemoryGauge,
+	t *sema.InterfaceType,
+) InterfaceStaticType {
+	return NewInterfaceStaticType(memoryGauge, t.Location, t.QualifiedIdentifier())
 }
 
 func ConvertStaticToSemaType(
