@@ -60,12 +60,12 @@ func TestInterpretArrayMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-	            pub fun main() {
-	                let x: [Int8] = []
-	                let y: [[String]] = [[]]
-	                let z: [[[Bool]]] = [[[]]]
-	            }
-	        `
+                pub fun main() {
+                    let x: [Int8] = []
+                    let y: [[String]] = [[]]
+                    let z: [[[Bool]]] = [[[]]]
+                }
+            `
 
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
@@ -82,13 +82,13 @@ func TestInterpretArrayMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-	                pub fun main() {
-	                    let values: [[Int8]] = [[], [], []]
-	                    for value in values {
-	                      let a = value
-	                    }
-	                }
-	            `
+                    pub fun main() {
+                        let values: [[Int8]] = [[], [], []]
+                        for value in values {
+                          let a = value
+                        }
+                    }
+                `
 
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
@@ -105,11 +105,11 @@ func TestInterpretArrayMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-	            pub fun main() {
-	                let x: [Int8] = []
-	                x.contains(5)
-	            }
-	        `
+                pub fun main() {
+                    let x: [Int8] = []
+                    x.contains(5)
+                }
+            `
 
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
@@ -127,6 +127,26 @@ func TestInterpretArrayMetering(t *testing.T) {
             pub fun main() {
                 let x: [Int8] = []
                 x.append(3)
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindArrayBase))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindArrayLength))
+	})
+
+	t.Run("insert", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let x: [Int8] = []
+                x.insert(at:0, 3)
             }
         `
 
@@ -7793,7 +7813,7 @@ func TestInterpreterStringLocationMetering(t *testing.T) {
         pub fun main(account: AuthAccount) {
             let s = CompositeType("S.test.S")
         }
-		`
+        `
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 		account := newTestAuthAccountValue(inter, interpreter.AddressValue{})

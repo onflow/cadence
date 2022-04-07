@@ -1700,7 +1700,7 @@ func (v *ArrayValue) Insert(interpreter *Interpreter, getLocationRange func() Lo
 	}
 
 	// length increases by 1
-	common.UseMemory(interpreter, common.NewArrayLengthUsage(0))
+	common.UseMemory(interpreter, common.NewArrayLengthUsage(1))
 
 	interpreter.checkContainerMutation(v.Type.ElementType(), element, getLocationRange)
 
