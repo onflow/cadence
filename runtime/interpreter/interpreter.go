@@ -3325,10 +3325,11 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 				}
 
 				return TypeValue{
-					Type: ConstantSizedStaticType{
-						Type: typeValue.Type,
-						Size: int64(sizeValue.ToInt()),
-					},
+					Type: NewConstantSizedStaticType(
+						invocation.Interpreter,
+						typeValue.Type,
+						int64(sizeValue.ToInt()),
+					),
 				}
 			},
 			sema.ConstantSizedArrayTypeFunctionType,

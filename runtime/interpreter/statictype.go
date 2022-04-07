@@ -198,6 +198,19 @@ type ConstantSizedStaticType struct {
 var _ ArrayStaticType = ConstantSizedStaticType{}
 var _ atree.TypeInfo = ConstantSizedStaticType{}
 
+func NewConstantSizedStaticType(
+	memoryGauge common.MemoryGauge,
+	elementType StaticType,
+	size int64,
+) ConstantSizedStaticType {
+	common.UseConstantMemory(memoryGauge, common.MemoryKindConstantSizedStaticType)
+
+	return ConstantSizedStaticType{
+		Type: elementType,
+		Size: size,
+	}
+}
+
 func (ConstantSizedStaticType) isStaticType() {}
 
 func (ConstantSizedStaticType) isArrayStaticType() {}
