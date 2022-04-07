@@ -2403,9 +2403,7 @@ func (v *ArrayValue) Slice(
 
 	return NewArrayValueWithIterator(
 		interpreter,
-		VariableSizedStaticType{
-			Type: v.Type.ElementType(),
-		},
+		NewVariableSizedStaticType(interpreter, v.Type.ElementType()),
 		common.Address{},
 		func() Value {
 
@@ -15368,9 +15366,7 @@ func (v *DictionaryValue) GetMember(
 
 		return NewArrayValueWithIterator(
 			interpreter,
-			VariableSizedStaticType{
-				Type: v.Type.KeyType,
-			},
+			NewVariableSizedStaticType(interpreter, v.Type.KeyType),
 			common.Address{},
 			func() Value {
 
@@ -15396,9 +15392,7 @@ func (v *DictionaryValue) GetMember(
 
 		return NewArrayValueWithIterator(
 			interpreter,
-			VariableSizedStaticType{
-				Type: v.Type.ValueType,
-			},
+			NewVariableSizedStaticType(interpreter, v.Type.ValueType),
 			common.Address{},
 			func() Value {
 
