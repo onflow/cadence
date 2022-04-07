@@ -1274,10 +1274,11 @@ func (d TypeDecoder) decodeConstantSizedStaticType() (StaticType, error) {
 		)
 	}
 
-	return ConstantSizedStaticType{
-		Type: staticType,
-		Size: int64(size),
-	}, nil
+	return NewConstantSizedStaticType(
+		d.memoryGauge,
+		staticType,
+		int64(size),
+	), nil
 }
 
 func (d TypeDecoder) decodeReferenceStaticType() (StaticType, error) {
