@@ -302,8 +302,8 @@ ECDSA_secp256k1 is ECDSA on the secp256k1 curve
 
 const SignatureAlgorithmDocStringBLS_BLS12_381 = `
 BLS_BLS12_381 is BLS signature scheme on the BLS12-381 curve.
-The scheme is set-up so that signatures are in G_1 (curve over the prime field)
-while public keys are in G_2 (curve over the prime field extension).
+The scheme is set-up so that signatures are in G_1 (subgroup of the curve over the prime field)
+while public keys are in G_2 (subgroup of the curve over the prime field extension).
 `
 
 const HashAlgorithmTypeName = "HashAlgorithm"

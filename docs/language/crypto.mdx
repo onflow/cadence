@@ -127,8 +127,9 @@ struct PublicKey {
     ): Bool
 
     /// Verifies the proof of possession of the private key.
-    /// This function is only implemented if the signature algorithm of the public key is BLS (BLS_BLS12_381).
-    /// It errors if called with any other signature algorithm. 
+    /// This function is only implemented if the signature algorithm
+    /// of the public key is BLS (BLS_BLS12_381).
+    /// If called with any other signature algorithm, the program aborts
     pub fun verifyPoP(_ proof: [UInt8]): Bool
 }
 ```
@@ -291,7 +292,7 @@ Signatures could be generated from the same or distinct messages, they
 could also be the aggregation of other signatures.
 The order of the signatures in the slice does not matter since the aggregation is commutative.
 There is no subgroup membership check performed on the input signatures.
-The function errors if the array is empty or if decoding one of the signature fails.
+If the array is empty or if decoding one of the signature fails, the program aborts
 
 The output signature can be verified against an aggregated public key to authenticate multiple 
 signers at once. Since the `verify` method accepts a single data to verify against, it is only possible to 
@@ -306,7 +307,7 @@ Aggregates multiple BLS public keys into one.
 The order of the public keys in the slice does not matter since the aggregation is commutative.
 The input keys are guaranteed to be in the correct subgroup since subgroup membership is checked
 at the key creatiom time. 
-The function errors if the array is empty or any of the input keys is not a BLS key.
+If the array is empty or any of the input keys is not a BLS key, the program aborts
 
 The output public key can be used to verify aggregated signatures to authenticate multiple 
 signers at once. Since the `verify` method accepts a single data to verify against, it is only possible to 
