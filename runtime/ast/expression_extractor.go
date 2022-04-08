@@ -353,10 +353,11 @@ func (extractor *ExpressionExtractor) ExtractDictionary(expression *DictionaryEx
 		valueResult := extractor.Extract(entry.Value)
 		extractedExpressions = append(extractedExpressions, valueResult.ExtractedExpressions...)
 
-		rewrittenEntries[i] = DictionaryEntry{
-			Key:   keyResult.RewrittenExpression,
-			Value: valueResult.RewrittenExpression,
-		}
+		rewrittenEntries[i] = NewDictionaryEntry(
+			extractor.MemoryGauge,
+			keyResult.RewrittenExpression,
+			valueResult.RewrittenExpression,
+		)
 	}
 
 	newExpression.Entries = rewrittenEntries

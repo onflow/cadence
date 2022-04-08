@@ -33,15 +33,16 @@ type MemoryGauge interface {
 }
 
 var (
-	ProgramMemoryUsage        = NewConstantMemoryUsage(MemoryKindProgram)
-	IdentifierMemoryUsage     = NewConstantMemoryUsage(MemoryKindIdentifier)
-	ArgumentMemoryUsage       = NewConstantMemoryUsage(MemoryKindArgument)
-	BlockMemoryUsage          = NewConstantMemoryUsage(MemoryKindBlock)
-	FunctionBlockMemoryUsage  = NewConstantMemoryUsage(MemoryKindFunctionBlock)
-	ParameterMemoryUsage      = NewConstantMemoryUsage(MemoryKindParameter)
-	ParameterListMemoryUsage  = NewConstantMemoryUsage(MemoryKindParameterList)
-	TransferMemoryUsage       = NewConstantMemoryUsage(MemoryKindTransfer)
-	TypeAnnotationMemoryUsage = NewConstantMemoryUsage(MemoryKindTypeAnnotation)
+	ProgramMemoryUsage         = NewConstantMemoryUsage(MemoryKindProgram)
+	IdentifierMemoryUsage      = NewConstantMemoryUsage(MemoryKindIdentifier)
+	ArgumentMemoryUsage        = NewConstantMemoryUsage(MemoryKindArgument)
+	BlockMemoryUsage           = NewConstantMemoryUsage(MemoryKindBlock)
+	FunctionBlockMemoryUsage   = NewConstantMemoryUsage(MemoryKindFunctionBlock)
+	ParameterMemoryUsage       = NewConstantMemoryUsage(MemoryKindParameter)
+	ParameterListMemoryUsage   = NewConstantMemoryUsage(MemoryKindParameterList)
+	TransferMemoryUsage        = NewConstantMemoryUsage(MemoryKindTransfer)
+	TypeAnnotationMemoryUsage  = NewConstantMemoryUsage(MemoryKindTypeAnnotation)
+	DictionaryEntryMemoryUsage = NewConstantMemoryUsage(MemoryKindDictionaryEntry)
 
 	FunctionDeclarationMemoryUsage        = NewConstantMemoryUsage(MemoryKindFunctionDeclaration)
 	CompositeDeclarationMemoryUsage       = NewConstantMemoryUsage(MemoryKindCompositeDeclaration)
