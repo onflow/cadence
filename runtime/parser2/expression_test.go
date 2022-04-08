@@ -1855,27 +1855,65 @@ func TestParseReference(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := ParseExpression("& t as T")
-	require.Empty(t, errs)
+	t.Run("valid", func(t *testing.T) {
 
-	utils.AssertEqualWithDiff(t,
-		&ast.ReferenceExpression{
-			Expression: &ast.IdentifierExpression{
-				Identifier: ast.Identifier{
-					Identifier: "t",
-					Pos:        ast.Position{Line: 1, Column: 2, Offset: 2},
+		t.Parallel()
+
+		result, errs := ParseExpression("& t as T")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.ReferenceExpression{
+				Expression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "t",
+						Pos:        ast.Position{Line: 1, Column: 2, Offset: 2},
+					},
+				},
+				Type: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "T",
+						Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+					},
+				},
+				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+			},
+			result,
+		)
+	})
+
+	t.Run("invalid: force cast", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseExpression("& t as! T")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: `invalid operator: got "as!", expected "as"`,
+					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
 				},
 			},
-			Type: &ast.NominalType{
-				Identifier: ast.Identifier{
-					Identifier: "T",
-					Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+			errs,
+		)
+	})
+
+	t.Run("invalid: failable cast", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseExpression("& t as? T")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: `invalid operator: got "as?", expected "as"`,
+					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
 				},
 			},
-			StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-		},
-		result,
-	)
+			errs,
+		)
+	})
+
 }
 
 func TestParseCasts(t *testing.T) {
@@ -1891,13 +1929,14 @@ func TestParseCasts(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.CastingExpression{
-				Operation: ast.OperationCast,
 				Expression: &ast.IdentifierExpression{
 					Identifier: ast.Identifier{
 						Identifier: "t",
 						Pos:        ast.Position{Line: 1, Column: 1, Offset: 1},
 					},
 				},
+				Operation:    ast.OperationCast,
+				OperationPos: ast.Position{Line: 1, Column: 3, Offset: 3},
 				TypeAnnotation: &ast.TypeAnnotation{
 					Type: &ast.NominalType{
 						Identifier: ast.Identifier{
@@ -1921,13 +1960,14 @@ func TestParseCasts(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.CastingExpression{
-				Operation: ast.OperationFailableCast,
 				Expression: &ast.IdentifierExpression{
 					Identifier: ast.Identifier{
 						Identifier: "t",
 						Pos:        ast.Position{Line: 1, Column: 1, Offset: 1},
 					},
 				},
+				Operation:    ast.OperationFailableCast,
+				OperationPos: ast.Position{Line: 1, Column: 3, Offset: 3},
 				TypeAnnotation: &ast.TypeAnnotation{
 					Type: &ast.NominalType{
 						Identifier: ast.Identifier{
@@ -1952,13 +1992,14 @@ func TestParseCasts(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.CastingExpression{
-				Operation: ast.OperationForceCast,
 				Expression: &ast.IdentifierExpression{
 					Identifier: ast.Identifier{
 						Identifier: "t",
 						Pos:        ast.Position{Line: 1, Column: 1, Offset: 1},
 					},
 				},
+				Operation:    ast.OperationForceCast,
+				OperationPos: ast.Position{Line: 1, Column: 3, Offset: 3},
 				TypeAnnotation: &ast.TypeAnnotation{
 					Type: &ast.NominalType{
 						Identifier: ast.Identifier{
@@ -5150,7 +5191,8 @@ func TestParseFailableCasting(t *testing.T) {
 				EndPos:   ast.Position{Offset: 16, Line: 2, Column: 15},
 			},
 		},
-		Operation: ast.OperationFailableCast,
+		Operation:    ast.OperationFailableCast,
+		OperationPos: ast.Position{Line: 2, Column: 17, Offset: 18},
 		TypeAnnotation: &ast.TypeAnnotation{
 			IsResource: false,
 			Type: &ast.NominalType{
@@ -5329,7 +5371,8 @@ func TestParseFailableCastingResourceTypeAnnotation(t *testing.T) {
 				Pos:        ast.Position{Offset: 17, Line: 2, Column: 16},
 			},
 		},
-		Operation: ast.OperationFailableCast,
+		Operation:    ast.OperationFailableCast,
+		OperationPos: ast.Position{Offset: 19, Line: 2, Column: 18},
 		TypeAnnotation: &ast.TypeAnnotation{
 			IsResource: true,
 			Type: &ast.NominalType{
@@ -5382,7 +5425,8 @@ func TestParseCasting(t *testing.T) {
 				Pos:        ast.Position{Offset: 17, Line: 2, Column: 16},
 			},
 		},
-		Operation: ast.OperationCast,
+		Operation:    ast.OperationCast,
+		OperationPos: ast.Position{Offset: 19, Line: 2, Column: 18},
 		TypeAnnotation: &ast.TypeAnnotation{
 			Type: &ast.NominalType{
 				Identifier: ast.Identifier{

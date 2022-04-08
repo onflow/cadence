@@ -828,8 +828,9 @@ func defineCastingExpression() {
 			case keywordAs:
 				right := parseTypeAnnotation(parser)
 				return &ast.CastingExpression{
-					Operation:      ast.OperationCast,
 					Expression:     left,
+					Operation:      ast.OperationCast,
+					OperationPos:   t.StartPos,
 					TypeAnnotation: right,
 				}
 			default:
@@ -861,8 +862,9 @@ func defineCastingExpression() {
 			return func(parser *parser, t lexer.Token, left ast.Expression) ast.Expression {
 				right := parseTypeAnnotation(parser)
 				return &ast.CastingExpression{
-					Operation:      operation,
 					Expression:     left,
+					Operation:      operation,
+					OperationPos:   t.StartPos,
 					TypeAnnotation: right,
 				}
 			}
@@ -1125,6 +1127,17 @@ func defineReferenceExpression() {
 			castingExpression, ok := expression.(*ast.CastingExpression)
 			if !ok {
 				panic(fmt.Errorf("expected casting expression"))
+			}
+
+			if castingExpression.Operation != ast.OperationCast {
+				p.report(&SyntaxError{
+					Message: fmt.Sprintf(
+						"invalid operator: got %q, expected %q",
+						castingExpression.Operation.Symbol(),
+						ast.OperationCast.Symbol(),
+					),
+					Pos: castingExpression.OperationPos,
+				})
 			}
 
 			return &ast.ReferenceExpression{

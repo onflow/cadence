@@ -1234,6 +1234,7 @@ func (e *FunctionExpression) MarshalJSON() ([]byte, error) {
 type CastingExpression struct {
 	Expression                Expression
 	Operation                 Operation
+	OperationPos              Position
 	TypeAnnotation            *TypeAnnotation
 	ParentVariableDeclaration *VariableDeclaration `json:"-"`
 }

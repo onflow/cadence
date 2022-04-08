@@ -1483,7 +1483,8 @@ func TestCastingExpression_MarshalJSON(t *testing.T) {
 				Pos:        Position{Offset: 1, Line: 2, Column: 3},
 			},
 		},
-		Operation: OperationForceCast,
+		Operation:    OperationForceCast,
+		OperationPos: Position{Offset: 10, Line: 11, Column: 12},
 		TypeAnnotation: &TypeAnnotation{
 			IsResource: true,
 			Type: &NominalType{
@@ -1514,6 +1515,7 @@ func TestCastingExpression_MarshalJSON(t *testing.T) {
                "EndPos": {"Offset": 6, "Line": 2, "Column": 8}
             },
             "Operation": "OperationForceCast",
+            "OperationPos": {"Offset": 10, "Line": 11, "Column": 12},
             "TypeAnnotation": {
                "IsResource": true,
                "AnnotatedType": {
