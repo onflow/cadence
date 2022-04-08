@@ -134,12 +134,6 @@ struct PublicKey {
 }
 ```
 
-<Callout type="info">
-
-🚧 Status: VerifyPoP is going to be available in an upcoming release of Cadence
-
-</Callout>
-
 `PublicKey` supports two methods `verify` and `verifyPoP`. 
 `verifyPoP` will be covered under [BLS multi-signature](#proof-of-possession-pop).
 
@@ -169,12 +163,6 @@ The raw key value depends on the supported signature scheme:
   A public key is 96-bytes long.
 
 ### Public Key validation
-
-<Callout type="info">
-
-🚧 Status: Validation at creation time is going to be available in an upcoming release of Cadence
-
-</Callout>
 
 A public key is validated at the time of creation. Only valid public keys can be created.
 The validation of the public key depends on the supported signature scheme:
@@ -230,12 +218,6 @@ The inputs to `verify` depend on the signature scheme used:
   - `domainSeparationTag` is the expected domain tag. Multiple valid tag values can be used (check [`hashWithTag`](#hashing) for more details).
   - `hashAlgorithm` is either `SHA2_256`, `SHA3_256` or `KECCAK_256`. It is the algorithm used to hash the message along with the given tag (check the `hashWithTag`[function](#hashing) for more details).
 
-<Callout type="info">
-
-🚧 Status: ECDSA verificaction with any tag is going to be available in an upcoming release of Cadence
-
-</Callout>
-
 As noted in [`hashWithTag`](#hashing) for `SHA2_256`, `SHA3_256` and `KECCAK_256, using an empty `tag` results in hashing the input data only. If a signature verification
 needs to be done against data without any domain tag, this can be done by using an empty domain tag `""`.
 
@@ -259,12 +241,6 @@ While KMAC128 is used as a hash-to-field method resulting in two field elements,
 A valid signature would be generated using the expected `signedData` and `domainSeparationTag`, as well the same hashing to curve process. 
 
 ## BLS multi-signature
-
-<Callout type="info">
-
-🚧 Status: This API is going to be available in an upcoming release of Cadence
-
-</Callout>
 
 BLS signature scheme allows efficient multi-signature features. Multiple signatures can be aggregated
 into a single signature which can be verified against an aggregated public key. This allows authenticating
