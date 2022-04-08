@@ -107,6 +107,7 @@ type InterfaceStaticType struct {
 
 var _ StaticType = InterfaceStaticType{}
 
+// TODO when is this called?
 func NewInterfaceStaticType(
 	memoryGauge common.MemoryGauge,
 	location common.Location,
