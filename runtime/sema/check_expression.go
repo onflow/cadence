@@ -272,10 +272,9 @@ func (checker *Checker) visitIndexExpression(
 		return InvalidType
 	}
 
-	elementType := checker.visitValueIndexingExpression(
-		indexedType,
+	indexingType := checker.VisitExpression(
 		indexExpression.IndexingExpression,
-		isAssignment,
+		indexedType.IndexingType(),
 	)
 
 	if isAssignment && !indexedType.AllowsValueIndexingAssignment() {
@@ -287,17 +286,12 @@ func (checker *Checker) visitIndexExpression(
 		)
 	}
 
+	elementType := indexedType.ElementType(isAssignment)
+
 	checker.checkUnusedExpressionResourceLoss(elementType, targetExpression)
 
+	checker.Elaboration.IndexExpressionIndexedTypes[indexExpression] = indexedType
+	checker.Elaboration.IndexExpressionIndexingTypes[indexExpression] = indexingType
+
 	return elementType
-}
-
-func (checker *Checker) visitValueIndexingExpression(
-	indexedType ValueIndexableType,
-	indexingExpression ast.Expression,
-	isAssignment bool,
-) Type {
-	checker.VisitExpression(indexingExpression, indexedType.IndexingType())
-
-	return indexedType.ElementType(isAssignment)
 }

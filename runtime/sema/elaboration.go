@@ -88,6 +88,8 @@ type Elaboration struct {
 	// Only to make the go-compiler happy with semver compatibility.
 	// TODO: Remove
 	IsResourceMoveIndexExpression map[*ast.IndexExpression]bool
+	IndexExpressionIndexedTypes   map[*ast.IndexExpression]ValueIndexableType
+	IndexExpressionIndexingTypes  map[*ast.IndexExpression]Type
 }
 
 func NewElaboration() *Elaboration {
@@ -141,6 +143,8 @@ func NewElaboration() *Elaboration {
 		EffectivePredeclaredValues:          map[string]ValueDeclaration{},
 		EffectivePredeclaredTypes:           map[string]TypeDeclaration{},
 		ReferenceExpressionBorrowTypes:      map[*ast.ReferenceExpression]*ReferenceType{},
+		IndexExpressionIndexedTypes:         map[*ast.IndexExpression]ValueIndexableType{},
+		IndexExpressionIndexingTypes:        map[*ast.IndexExpression]Type{},
 	}
 }
 
