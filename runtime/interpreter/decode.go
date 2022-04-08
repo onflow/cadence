@@ -1374,10 +1374,7 @@ func (d TypeDecoder) decodeDictionaryStaticType() (StaticType, error) {
 		)
 	}
 
-	return DictionaryStaticType{
-		KeyType:   keyType,
-		ValueType: valueType,
-	}, nil
+	return NewDictionaryStaticType(d.memoryGauge, keyType, valueType), nil
 }
 
 func (d TypeDecoder) decodeRestrictedStaticType() (StaticType, error) {

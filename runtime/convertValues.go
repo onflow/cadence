@@ -988,10 +988,11 @@ func importDictionaryValue(
 			return nil, fmt.Errorf("cannot import dictionary: values does not belong to the same type")
 		}
 
-		dictionaryStaticType = interpreter.DictionaryStaticType{
-			KeyType:   interpreter.ConvertSemaToStaticType(inter, keySuperType),
-			ValueType: interpreter.ConvertSemaToStaticType(inter, valueSuperType),
-		}
+		dictionaryStaticType = interpreter.NewDictionaryStaticType(
+			inter,
+			interpreter.ConvertSemaToStaticType(inter, keySuperType),
+			interpreter.ConvertSemaToStaticType(inter, valueSuperType),
+		)
 	}
 
 	return interpreter.NewDictionaryValue(
