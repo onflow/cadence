@@ -17801,9 +17801,10 @@ func (v *CapabilityValue) DynamicType(interpreter *Interpreter, _ SeenReferences
 }
 
 func (v *CapabilityValue) StaticType(interpreter *Interpreter) StaticType {
-	return CapabilityStaticType{
-		BorrowType: v.BorrowType,
-	}
+	return NewCapabilityStaticType(
+		interpreter,
+		v.BorrowType,
+	)
 }
 
 func (v *CapabilityValue) String() string {

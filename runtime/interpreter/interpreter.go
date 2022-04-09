@@ -3381,9 +3381,10 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 				return NewSomeValueNonCopying(
 					invocation.Interpreter,
 					TypeValue{
-						Type: CapabilityStaticType{
-							BorrowType: ty,
-						},
+						Type: NewCapabilityStaticType(
+							invocation.Interpreter,
+							ty,
+						),
 					},
 				)
 			},

@@ -1483,9 +1483,10 @@ func (d TypeDecoder) decodeCapabilityStaticType() (StaticType, error) {
 		)
 	}
 
-	return CapabilityStaticType{
-		BorrowType: borrowStaticType,
-	}, nil
+	return NewCapabilityStaticType(
+		d.memoryGauge,
+		borrowStaticType,
+	), nil
 }
 
 func (d TypeDecoder) decodeCompositeTypeInfo() (atree.TypeInfo, error) {

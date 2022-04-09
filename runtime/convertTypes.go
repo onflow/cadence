@@ -557,9 +557,7 @@ func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.Stat
 	case cadence.PrivatePathType:
 		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypePrivatePath)
 	case cadence.CapabilityType:
-		return interpreter.CapabilityStaticType{
-			BorrowType: ImportType(memoryGauge, t.BorrowType),
-		}
+		return interpreter.NewCapabilityStaticType(memoryGauge, ImportType(memoryGauge, t.BorrowType))
 	case cadence.AccountKeyType:
 		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeAccountKey)
 	case cadence.AuthAccountContractsType:

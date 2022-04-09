@@ -414,6 +414,17 @@ type CapabilityStaticType struct {
 
 var _ StaticType = CapabilityStaticType{}
 
+func NewCapabilityStaticType(
+	memoryGauge common.MemoryGauge,
+	borrowType StaticType,
+) CapabilityStaticType {
+	common.UseConstantMemory(memoryGauge, common.MemoryKindCapabilityStaticType)
+
+	return CapabilityStaticType{
+		BorrowType: borrowType,
+	}
+}
+
 func (CapabilityStaticType) isStaticType() {}
 
 func (t CapabilityStaticType) String() string {
@@ -478,11 +489,11 @@ func ConvertSemaToStaticType(memoryGauge common.MemoryGauge, t sema.Type) Static
 		return ConvertSemaReferenceTyoeToStaticReferenceType(memoryGauge, t)
 
 	case *sema.CapabilityType:
-		result := CapabilityStaticType{}
+		var borrowType StaticType
 		if t.BorrowType != nil {
-			result.BorrowType = ConvertSemaToStaticType(memoryGauge, t.BorrowType)
+			borrowType = ConvertSemaToStaticType(memoryGauge, t.BorrowType)
 		}
-		return result
+		return NewCapabilityStaticType(memoryGauge, borrowType)
 
 	case *sema.FunctionType:
 		return FunctionStaticType{
