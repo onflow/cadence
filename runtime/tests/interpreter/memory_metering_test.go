@@ -282,6 +282,7 @@ func TestInterpretArrayMetering(t *testing.T) {
 		// 1 for each other type
 		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindConstantSizedType))
 	})
+<<<<<<< HEAD
 
 	t.Run("ROBERT", func(t *testing.T) {
 		t.Parallel()
@@ -326,6 +327,8 @@ func TestInterpretArrayMetering(t *testing.T) {
 		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindConstantSizedType))
 >>>>>>> 3b528900 (tests and fixes)
 	})
+=======
+>>>>>>> eb083775 (test static interface type)
 }
 
 func TestInterpretDictionaryMetering(t *testing.T) {
@@ -8170,6 +8173,35 @@ func TestInterpretIdentifierMetering(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, uint64(15), meter.getMemory(common.MemoryKindIdentifier))
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindPrimitiveStaticType))
+	})
+}
+
+func TestInterpretInterfaceStaticType(t *testing.T) {
+	t.Parallel()
+
+	t.Run("RestrictedType", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+			struct interface I {}
+
+			pub fun main() {
+				let type = Type<AnyStruct{I}>()
+
+				RestrictedType(
+					identifier: type.identifier, 
+					restrictions: [type.identifier]
+				)
+			}
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindInterfaceStaticType))
 	})
 }
 
