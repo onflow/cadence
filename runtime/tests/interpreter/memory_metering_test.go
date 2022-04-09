@@ -206,44 +206,6 @@ func TestInterpretArrayMetering(t *testing.T) {
 		// 1 for each other type
 		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindConstantSizedType))
 	})
-
-	t.Run("ROBERT", func(t *testing.T) {
-		t.Parallel()
-
-		script := `
-            pub fun main() {
-                let x: [Int8; 0] = []
-            }
-        `
-
-		meter := newTestMemoryGauge()
-		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-
-		_, err := inter.Invoke("main")
-		require.NoError(t, err)
-
-		fmt.Println(meter)
-
-		// 2 for creation of x
-		// 2 for creation of y
-		// 2 for creation of z
-		// 8 for creation of w: 2 for type, 6 for element
-		// 14 for creation of r: 2 for type, 6 for each element
-		// 14 for creation of q: 2 for type, 6 for each element
-		assert.Equal(t, uint64(42), meter.getMemory(common.MemoryKindArray))
-		// 6 Int8 for types
-		// 1 Int8 for `w` element
-		// 2 Int8 for `r` elements
-		// 2 Int8 for `q` elements
-		assert.Equal(t, uint64(11), meter.getMemory(common.MemoryKindPrimitiveStaticType))
-		// 1 for `w`: 1 for the element
-		// 2 for `r`: 1 for each element
-		// 2 for `q`: 1 for each element
-		assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindConstantSizedStaticType))
-		// 2 for `q` type
-		// 1 for each other type
-		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindConstantSizedType))
-	})
 }
 
 func TestInterpretDictionaryMetering(t *testing.T) {
@@ -8016,6 +7978,35 @@ func TestInterpretIdentifierMetering(t *testing.T) {
 
 		// 1 String for `foo` array type
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindPrimitiveStaticType))
+	})
+}
+
+func TestInterpretInterfaceStaticType(t *testing.T) {
+	t.Parallel()
+
+	t.Run("RestrictedType", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+			struct interface I {}
+
+			pub fun main() {
+				let type = Type<AnyStruct{I}>()
+
+				RestrictedType(
+					identifier: type.identifier, 
+					restrictions: [type.identifier]
+				)
+			}
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindInterfaceStaticType))
 	})
 }
 
