@@ -7994,7 +7994,7 @@ func TestInterpretInterfaceStaticType(t *testing.T) {
 				let type = Type<AnyStruct{I}>()
 
 				RestrictedType(
-					identifier: type.identifier, 
+					identifier: type.identifier,
 					restrictions: [type.identifier]
 				)
 			}

@@ -15275,7 +15275,7 @@ func (v *DictionaryValue) SetKey(
 
 	interpreter.checkContainerMutation(v.Type.KeyType, keyValue, getLocationRange)
 	interpreter.checkContainerMutation(
-		OptionalStaticType{
+		OptionalStaticType{ // intentionally unmetered
 			Type: v.Type.ValueType,
 		},
 		value,
@@ -16044,9 +16044,10 @@ func (NilValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 }
 
 func (NilValue) StaticType(interpreter *Interpreter) StaticType {
-	return OptionalStaticType{
-		Type: NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeNever),
-	}
+	return NewOptionalStaticType(
+		interpreter,
+		NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeNever),
+	)
 }
 
 func (NilValue) isOptionalValue() {}
@@ -16215,9 +16216,10 @@ func (v *SomeValue) StaticType(interpreter *Interpreter) StaticType {
 	if innerType == nil {
 		return nil
 	}
-	return OptionalStaticType{
-		Type: innerType,
-	}
+	return NewOptionalStaticType(
+		interpreter,
+		innerType,
+	)
 }
 
 func (*SomeValue) isOptionalValue() {}

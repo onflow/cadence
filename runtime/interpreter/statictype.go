@@ -280,6 +280,15 @@ type OptionalStaticType struct {
 
 var _ StaticType = OptionalStaticType{}
 
+func NewOptionalStaticType(
+	memoryGauge common.MemoryGauge,
+	typ StaticType,
+) OptionalStaticType {
+	common.UseConstantMemory(memoryGauge, common.MemoryKindOptionalStaticType)
+
+	return OptionalStaticType{Type: typ}
+}
+
 func (OptionalStaticType) isStaticType() {}
 
 func (t OptionalStaticType) String() string {

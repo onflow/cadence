@@ -1109,9 +1109,10 @@ func (d TypeDecoder) decodeOptionalStaticType() (StaticType, error) {
 			err,
 		)
 	}
-	return OptionalStaticType{
-		Type: staticType,
-	}, nil
+	return NewOptionalStaticType(
+		d.memoryGauge,
+		staticType,
+	), nil
 }
 
 func (d TypeDecoder) decodeCompositeStaticType() (StaticType, error) {

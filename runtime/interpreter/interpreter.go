@@ -3282,10 +3282,10 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 				}
 
 				return TypeValue{
-					//nolint:gosimple
-					Type: OptionalStaticType{
-						Type: typeValue.Type,
-					},
+					Type: NewOptionalStaticType(
+						invocation.Interpreter,
+						typeValue.Type,
+					),
 				}
 			},
 			sema.OptionalTypeFunctionType,

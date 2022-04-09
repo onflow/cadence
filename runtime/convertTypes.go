@@ -435,9 +435,7 @@ func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.Stat
 	case cadence.AnyResourceType:
 		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeAnyResource)
 	case cadence.OptionalType:
-		return interpreter.OptionalStaticType{
-			Type: ImportType(memoryGauge, t.Type),
-		}
+		return interpreter.NewOptionalStaticType(memoryGauge, ImportType(memoryGauge, t.Type))
 	case cadence.MetaType:
 		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeMetaType)
 	case cadence.VoidType:
