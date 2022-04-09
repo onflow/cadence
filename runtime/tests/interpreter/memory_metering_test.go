@@ -20,6 +20,7 @@ package interpreter_test
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -55,19 +56,18 @@ func (g *testMemoryGauge) getMemory(kind common.MemoryKind) uint64 {
 
 func (g *testMemoryGauge) String() string {
 	s := ""
-	found := false
 	for kind, amount := range g.meter {
-		k := common.MemoryKind(kind).String()
-		//if strings.Contains(k, "StaticType") {
-		s += fmt.Sprintf("%s\t%d\n", k, amount)
-		found = true
-		//}
+		k := kind.String()
+		if strings.Contains(k, "StaticType") {
+			s += fmt.Sprintf("%s\t%d\n", k, amount)
+		}
 	}
-	if found {
-		return s
-	} else {
-		return "NO STATIC TYPES FOUND"
+
+	if len(s) == 0 {
+		s = "NO STATIC TYPES FOUND"
 	}
+
+	return s
 }
 
 func TestInterpretArrayMetering(t *testing.T) {
@@ -919,6 +919,7 @@ func TestInterpretOptionalValueMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
+		// 2 for `z`
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindOptional))
 
 		// 1 for Int8 for keys
@@ -926,6 +927,51 @@ func TestInterpretOptionalValueMetering(t *testing.T) {
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 		// 3 for `x`: 1 for type, 2 for values
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindDictionaryStaticType))
+	})
+
+	t.Run("dictionary set", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let x: {Int8: String} = {1: "foo", 2: "bar"}
+				x[0] = "a"
+				x[1] = "b"
+            }
+        `
+
+		meter := newTestMemoryGauge()
+
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		// 1 from creating new entry by setting x[0]
+		// 2 from overwriting entry by setting x[1]
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindOptional))
+	})
+
+	t.Run("OptionalType", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let type: Type = Type<Int>()
+                let a = OptionalType(type)
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		// 0: optional type is created here, not an optional value
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindOptional))
+		// 1: `a`
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindOptionalStaticType))
 	})
 }
 
@@ -7113,6 +7159,7 @@ func TestInterpretCapabilityValueMetering(t *testing.T) {
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCapabilityValue))
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindPathValue))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindReferenceStaticType))
 	})
 }
 
@@ -7138,6 +7185,7 @@ func TestInterpretLinkValueMetering(t *testing.T) {
 
 		// Metered twice only when Atree validation is enabled.
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindLinkValue))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindReferenceStaticType))
 	})
 }
 
@@ -8007,6 +8055,95 @@ func TestInterpretInterfaceStaticType(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindInterfaceStaticType))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindRestrictedStaticType))
+	})
+}
+
+func TestInterpretFunctionStaticType(t *testing.T) {
+	t.Parallel()
+
+	t.Run("FunctionType", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                FunctionType(parameters: [], return: Type<Never>())
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindFunctionStaticType))
+	})
+
+	t.Run("array element", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun hello() {}
+
+            pub fun main() {
+                let a = [hello]
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindFunctionStaticType))
+	})
+
+	t.Run("set bound function to variable", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+			pub struct S {
+				fun naught() {}
+			}
+
+            pub fun main() {
+				let x = S()
+				let y = x.naught
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindFunctionStaticType))
+	})
+
+	t.Run("isInstance", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+			pub struct S {
+				fun naught() {}
+			}
+
+            pub fun main() {
+				let x = S()
+                x.naught.isInstance(Type<Int>())
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindFunctionStaticType))
 	})
 }
 

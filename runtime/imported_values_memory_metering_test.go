@@ -104,6 +104,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		)
 
 		assert.Equal(t, uint64(1), meter[common.MemoryKindOptional])
+		assert.Equal(t, uint64(1), meter[common.MemoryKindOptionalStaticType])
 	})
 
 	t.Run("UInt", func(t *testing.T) {
@@ -600,6 +601,12 @@ func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 		{
 			TypeName:     "String?",
 			MemoryKind:   common.MemoryKindOptional,
+			Weight:       1,
+			TypeInstance: cadence.NewOptional(cadence.String("hello")),
+		},
+		{
+			TypeName:     "String?",
+			MemoryKind:   common.MemoryKindOptionalStaticType,
 			Weight:       1,
 			TypeInstance: cadence.NewOptional(cadence.String("hello")),
 		},
