@@ -1327,10 +1327,11 @@ func (d TypeDecoder) decodeReferenceStaticType() (StaticType, error) {
 		)
 	}
 
-	return ReferenceStaticType{
-		Authorized: authorized,
-		Type:       staticType,
-	}, nil
+	return NewReferenceStaticType(
+		d.memoryGauge,
+		authorized,
+		staticType,
+	), nil
 }
 
 func (d TypeDecoder) decodeDictionaryStaticType() (StaticType, error) {
@@ -1461,9 +1462,9 @@ func (d TypeDecoder) decodeRestrictedStaticType() (StaticType, error) {
 
 	return NewRestrictedStaticType(
 		d.memoryGauge,
-		         restrictedType,
-		 restrictions,
-		), nil
+		restrictedType,
+		restrictions,
+	), nil
 }
 
 func (d TypeDecoder) decodeCapabilityStaticType() (StaticType, error) {

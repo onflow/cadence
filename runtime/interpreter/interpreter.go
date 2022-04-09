@@ -3198,8 +3198,8 @@ func RestrictedTypeFunction(invocation Invocation) Value {
 		TypeValue{
 			Type: NewRestrictedStaticType(
 				invocation.Interpreter,
-				 ConvertSemaToStaticType(invocation.Interpreter, ty),
-				 staticRestrictions,
+				ConvertSemaToStaticType(invocation.Interpreter, ty),
+				staticRestrictions,
 			),
 		},
 	)
@@ -3352,10 +3352,11 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 				}
 
 				return TypeValue{
-					Type: ReferenceStaticType{
-						Authorized: bool(authorizedValue),
-						Type:       typeValue.Type,
-					},
+					Type: NewReferenceStaticType(
+						invocation.Interpreter,
+						bool(authorizedValue),
+						typeValue.Type,
+					),
 				}
 			},
 			sema.ReferenceTypeFunctionType,

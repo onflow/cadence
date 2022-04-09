@@ -16579,10 +16579,11 @@ func (v *StorageReferenceValue) StaticType(interpreter *Interpreter) StaticType 
 	if v.BorrowedType != nil {
 		borrowedType = ConvertSemaToStaticType(interpreter, v.BorrowedType)
 	}
-	return ReferenceStaticType{
-		Authorized: v.Authorized,
-		Type:       borrowedType,
-	}
+	return NewReferenceStaticType(
+		interpreter,
+		v.Authorized,
+		borrowedType,
+	)
 }
 
 func (v *StorageReferenceValue) dereference(interpreter *Interpreter, getLocationRange func() LocationRange) (*Value, error) {
@@ -16938,10 +16939,11 @@ func (v *EphemeralReferenceValue) StaticType(interpreter *Interpreter) StaticTyp
 	if v.BorrowedType != nil {
 		borrowedType = ConvertSemaToStaticType(interpreter, v.BorrowedType)
 	}
-	return ReferenceStaticType{
-		Authorized: v.Authorized,
-		Type:       borrowedType,
-	}
+	return NewReferenceStaticType(
+		interpreter,
+		v.Authorized,
+		borrowedType,
+	)
 }
 
 func (v *EphemeralReferenceValue) ReferencedValue(

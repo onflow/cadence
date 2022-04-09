@@ -315,13 +315,13 @@ var _ StaticType = &RestrictedStaticType{}
 
 func NewRestrictedStaticType(
 	memoryGauge common.MemoryGauge,
-	typ StaticType,
+	staticType StaticType,
 	restrictions []InterfaceStaticType,
 ) *RestrictedStaticType {
 	common.UseConstantMemory(memoryGauge, common.MemoryKindRestrictedStaticType)
 
 	return &RestrictedStaticType{
-		Type: typ,
+		Type:         staticType,
 		Restrictions: restrictions,
 	}
 }
@@ -371,6 +371,19 @@ type ReferenceStaticType struct {
 }
 
 var _ StaticType = ReferenceStaticType{}
+
+func NewReferenceStaticType(
+	memoryGauge common.MemoryGauge,
+	authorized bool,
+	staticType StaticType,
+) ReferenceStaticType {
+	common.UseConstantMemory(memoryGauge, common.MemoryKindReferenceStaticType)
+
+	return ReferenceStaticType{
+		Authorized: authorized,
+		Type:       staticType,
+	}
+}
 
 func (ReferenceStaticType) isStaticType() {}
 
@@ -445,8 +458,8 @@ func ConvertSemaToStaticType(memoryGauge common.MemoryGauge, t sema.Type) Static
 	case *sema.OptionalType:
 		return NewOptionalStaticType(
 			memoryGauge,
-			 ConvertSemaToStaticType(memoryGauge, t.Type),
-	)
+			ConvertSemaToStaticType(memoryGauge, t.Type),
+		)
 
 	case *sema.RestrictedType:
 		restrictions := make([]InterfaceStaticType, len(t.Restrictions))
@@ -457,9 +470,9 @@ func ConvertSemaToStaticType(memoryGauge common.MemoryGauge, t sema.Type) Static
 
 		return NewRestrictedStaticType(
 			memoryGauge,
-			  ConvertSemaToStaticType(memoryGauge, t.Type),
-			 restrictions,
-	)
+			ConvertSemaToStaticType(memoryGauge, t.Type),
+			restrictions,
+		)
 
 	case *sema.ReferenceType:
 		return ConvertSemaReferenceTyoeToStaticReferenceType(memoryGauge, t)
@@ -520,10 +533,11 @@ func ConvertSemaReferenceTyoeToStaticReferenceType(
 	memoryGauge common.MemoryGauge,
 	t *sema.ReferenceType,
 ) ReferenceStaticType {
-	return ReferenceStaticType{
-		Authorized: t.Authorized,
-		Type:       ConvertSemaToStaticType(memoryGauge, t.Type),
-	}
+	return NewReferenceStaticType(
+		memoryGauge,
+		t.Authorized,
+		ConvertSemaToStaticType(memoryGauge, t.Type),
+	)
 }
 
 func ConvertSemaInterfaceTypeToStaticInterfaceType(

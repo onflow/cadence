@@ -527,10 +527,11 @@ func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.Stat
 		*cadence.ContractInterfaceType:
 		return importInterfaceType(memoryGauge, t.(cadence.InterfaceType))
 	case cadence.ReferenceType:
-		return interpreter.ReferenceStaticType{
-			Authorized: t.Authorized,
-			Type:       ImportType(memoryGauge, t.Type),
-		}
+		return interpreter.NewReferenceStaticType(
+			memoryGauge,
+			t.Authorized,
+			ImportType(memoryGauge, t.Type),
+		)
 	case cadence.RestrictedType:
 		restrictions := make([]interpreter.InterfaceStaticType, 0, len(t.Restrictions))
 		for _, restriction := range t.Restrictions {
@@ -544,7 +545,7 @@ func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.Stat
 			memoryGauge,
 			ImportType(memoryGauge, t.Type),
 			restrictions,
-	)
+		)
 	case cadence.BlockType:
 		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeBlock)
 	case cadence.CapabilityPathType:
