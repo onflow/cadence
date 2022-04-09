@@ -540,10 +540,11 @@ func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.Stat
 			}
 			restrictions = append(restrictions, importInterfaceType(memoryGauge, intf))
 		}
-		return &interpreter.RestrictedStaticType{
-			Type:         ImportType(memoryGauge, t.Type),
-			Restrictions: restrictions,
-		}
+		return interpreter.NewRestrictedStaticType(
+			memoryGauge,
+			ImportType(memoryGauge, t.Type),
+			restrictions,
+	)
 	case cadence.BlockType:
 		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeBlock)
 	case cadence.CapabilityPathType:

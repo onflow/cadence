@@ -313,6 +313,19 @@ type RestrictedStaticType struct {
 
 var _ StaticType = &RestrictedStaticType{}
 
+func NewRestrictedStaticType(
+	memoryGauge common.MemoryGauge,
+	typ StaticType,
+	restrictions []InterfaceStaticType,
+) *RestrictedStaticType {
+	common.UseConstantMemory(memoryGauge, common.MemoryKindRestrictedStaticType)
+
+	return &RestrictedStaticType{
+		Type: typ,
+		Restrictions: restrictions,
+	}
+}
+
 // NOTE: must be pointer receiver, as static types get used in type values,
 // which are used as keys in maps when exporting.
 // Key types in Go maps must be (transitively) hashable types,
@@ -430,9 +443,10 @@ func ConvertSemaToStaticType(memoryGauge common.MemoryGauge, t sema.Type) Static
 		return ConvertSemaDictionaryTypeToStaticDictionaryType(memoryGauge, t)
 
 	case *sema.OptionalType:
-		return OptionalStaticType{
-			Type: ConvertSemaToStaticType(memoryGauge, t.Type),
-		}
+		return NewOptionalStaticType(
+			memoryGauge,
+			 ConvertSemaToStaticType(memoryGauge, t.Type),
+	)
 
 	case *sema.RestrictedType:
 		restrictions := make([]InterfaceStaticType, len(t.Restrictions))
@@ -441,10 +455,11 @@ func ConvertSemaToStaticType(memoryGauge common.MemoryGauge, t sema.Type) Static
 			restrictions[i] = ConvertSemaInterfaceTypeToStaticInterfaceType(memoryGauge, restriction)
 		}
 
-		return &RestrictedStaticType{
-			Type:         ConvertSemaToStaticType(memoryGauge, t.Type),
-			Restrictions: restrictions,
-		}
+		return NewRestrictedStaticType(
+			memoryGauge,
+			  ConvertSemaToStaticType(memoryGauge, t.Type),
+			 restrictions,
+	)
 
 	case *sema.ReferenceType:
 		return ConvertSemaReferenceTyoeToStaticReferenceType(memoryGauge, t)

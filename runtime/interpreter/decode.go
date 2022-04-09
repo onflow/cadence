@@ -1459,10 +1459,11 @@ func (d TypeDecoder) decodeRestrictedStaticType() (StaticType, error) {
 		restrictions[i] = restriction
 	}
 
-	return &RestrictedStaticType{
-		Type:         restrictedType,
-		Restrictions: restrictions,
-	}, nil
+	return NewRestrictedStaticType(
+		d.memoryGauge,
+		         restrictedType,
+		 restrictions,
+		), nil
 }
 
 func (d TypeDecoder) decodeCapabilityStaticType() (StaticType, error) {

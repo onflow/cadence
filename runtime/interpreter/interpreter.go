@@ -3196,10 +3196,11 @@ func RestrictedTypeFunction(invocation Invocation) Value {
 	return NewSomeValueNonCopying(
 		invocation.Interpreter,
 		TypeValue{
-			Type: &RestrictedStaticType{
-				Type:         ConvertSemaToStaticType(invocation.Interpreter, ty),
-				Restrictions: staticRestrictions,
-			},
+			Type: NewRestrictedStaticType(
+				invocation.Interpreter,
+				 ConvertSemaToStaticType(invocation.Interpreter, ty),
+				 staticRestrictions,
+			),
 		},
 	)
 }
