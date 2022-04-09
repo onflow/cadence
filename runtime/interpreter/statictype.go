@@ -496,9 +496,7 @@ func ConvertSemaToStaticType(memoryGauge common.MemoryGauge, t sema.Type) Static
 		return NewCapabilityStaticType(memoryGauge, borrowType)
 
 	case *sema.FunctionType:
-		return FunctionStaticType{
-			Type: t,
-		}
+		return NewFunctionStaticType(memoryGauge, t)
 	}
 
 	primitiveStaticType := ConvertSemaToPrimitiveStaticType(memoryGauge, t)
@@ -654,6 +652,17 @@ type FunctionStaticType struct {
 }
 
 var _ StaticType = FunctionStaticType{}
+
+func NewFunctionStaticType(
+	memoryGauge common.MemoryGauge,
+	functionType *sema.FunctionType,
+) FunctionStaticType {
+	common.UseConstantMemory(memoryGauge, common.MemoryKindFunctionStaticType)
+
+	return FunctionStaticType{
+		Type: functionType,
+	}
+}
 
 func (t FunctionStaticType) TypeParameters(interpreter *Interpreter) []*TypeParameter {
 	typeParameters := make([]*TypeParameter, len(t.Type.TypeParameters))

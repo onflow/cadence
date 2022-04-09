@@ -3102,12 +3102,13 @@ func init() {
 					// Continue iteration
 					return true
 				})
-				functionStaticType := FunctionStaticType{
-					Type: &sema.FunctionType{
+				functionStaticType := NewFunctionStaticType(
+					invocation.Interpreter,
+					&sema.FunctionType{
 						ReturnTypeAnnotation: sema.NewTypeAnnotation(returnType),
 						Parameters:           parameterTypes,
 					},
-				}
+				)
 				return NewUnmeteredTypeValue(functionStaticType)
 			},
 			sema.FunctionTypeFunctionType,
