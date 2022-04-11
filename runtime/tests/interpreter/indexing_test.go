@@ -31,7 +31,7 @@ import (
 // If the indexing value is used for an assignment,
 // it will be transferred into the indexed value,
 // and as part of it, will get removed.
-// Ensure the *copy* is removed, and not *not the original*.
+// Ensure the *copy* is removed, and *not the original*.
 //
 func TestInterpretIndexingExpressionTransfer(t *testing.T) {
 
