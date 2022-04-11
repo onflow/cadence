@@ -115,6 +115,50 @@ func NewConstantMemoryUsage(kind MemoryKind) MemoryUsage {
 	}
 }
 
+func NewArrayMemoryUsages(length int) (MemoryUsage, MemoryUsage) {
+	return MemoryUsage{
+			Kind:   MemoryKindArrayBase,
+			Amount: 1,
+		}, MemoryUsage{
+			Kind:   MemoryKindArrayLength,
+			Amount: uint64(length),
+		}
+}
+
+func NewArrayLengthUsage(length int) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindArrayLength,
+		Amount: uint64(length),
+	}
+}
+
+func NewDictionaryMemoryUsages(length int) (MemoryUsage, MemoryUsage) {
+	return MemoryUsage{
+			Kind:   MemoryKindDictionaryBase,
+			Amount: 1,
+		}, MemoryUsage{
+			Kind:   MemoryKindDictionarySize,
+			Amount: uint64(length),
+		}
+}
+
+func NewDictionarySizeUsage(length int) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindDictionarySize,
+		Amount: uint64(length),
+	}
+}
+
+func NewCompositeMemoryUsages(length int) (MemoryUsage, MemoryUsage) {
+	return MemoryUsage{
+			Kind:   MemoryKindCompositeBase,
+			Amount: 1,
+		}, MemoryUsage{
+			Kind:   MemoryKindCompositeSize,
+			Amount: uint64(length),
+		}
+}
+
 func NewStringMemoryUsage(length int) MemoryUsage {
 	return MemoryUsage{
 		Kind:   MemoryKindString,

@@ -35,9 +35,12 @@ const (
 	MemoryKindCharacter
 	MemoryKindMetaType
 	MemoryKindNumber
-	MemoryKindArray
-	MemoryKindDictionary
-	MemoryKindComposite
+	MemoryKindArrayBase
+	MemoryKindArrayLength
+	MemoryKindDictionaryBase
+	MemoryKindDictionarySize
+	MemoryKindCompositeBase
+	MemoryKindCompositeSize
 	MemoryKindOptional
 	MemoryKindNil
 	MemoryKindVoid

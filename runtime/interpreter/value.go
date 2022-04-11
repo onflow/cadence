@@ -1356,7 +1356,9 @@ func newArrayValueFromAtreeValue(
 	staticType ArrayStaticType,
 ) *ArrayValue {
 
-	common.UseMemory(memoryGauge, common.NewConstantMemoryUsage(common.MemoryKindArray))
+	baseUse, lengthUse := common.NewArrayMemoryUsages(int(array.Count()))
+	common.UseMemory(memoryGauge, baseUse)
+	common.UseMemory(memoryGauge, lengthUse)
 
 	return &ArrayValue{
 		Type:  staticType,
@@ -1648,6 +1650,9 @@ func (v *ArrayValue) RecursiveString(seenReferences SeenReferences) string {
 
 func (v *ArrayValue) Append(interpreter *Interpreter, getLocationRange func() LocationRange, element Value) {
 
+	// length increases by 1
+	common.UseMemory(interpreter, common.NewArrayLengthUsage(1))
+
 	interpreter.checkContainerMutation(v.Type.ElementType(), element, getLocationRange)
 
 	element = element.Transfer(
@@ -1693,6 +1698,9 @@ func (v *ArrayValue) Insert(interpreter *Interpreter, getLocationRange func() Lo
 			LocationRange: getLocationRange(),
 		})
 	}
+
+	// length increases by 1
+	common.UseMemory(interpreter, common.NewArrayLengthUsage(1))
 
 	interpreter.checkContainerMutation(v.Type.ElementType(), element, getLocationRange)
 
@@ -13973,7 +13981,9 @@ func newCompositeValueFromOrderedMap(
 	typeInfo compositeTypeInfo,
 ) *CompositeValue {
 
-	common.UseMemory(memoryGauge, common.NewConstantMemoryUsage(common.MemoryKindComposite))
+	baseUse, lengthUse := common.NewCompositeMemoryUsages(int(dict.Count()))
+	common.UseMemory(memoryGauge, baseUse)
+	common.UseMemory(memoryGauge, lengthUse)
 
 	return &CompositeValue{
 		dictionary:          dict,
@@ -15067,7 +15077,9 @@ func newDictionaryValueFromOrderedMap(
 	staticType DictionaryStaticType,
 ) *DictionaryValue {
 
-	common.UseMemory(memoryGauge, common.NewConstantMemoryUsage(common.MemoryKindDictionary))
+	baseUse, lengthUse := common.NewDictionaryMemoryUsages(int(dict.Count()))
+	common.UseMemory(memoryGauge, baseUse)
+	common.UseMemory(memoryGauge, lengthUse)
 
 	return &DictionaryValue{
 		Type:       staticType,
@@ -15561,6 +15573,9 @@ func (v *DictionaryValue) Insert(
 	getLocationRange func() LocationRange,
 	keyValue, value Value,
 ) OptionalValue {
+
+	// length increases by 1
+	common.UseMemory(interpreter, common.NewDictionarySizeUsage(1))
 
 	interpreter.checkContainerMutation(v.Type.KeyType, keyValue, getLocationRange)
 	interpreter.checkContainerMutation(v.Type.ValueType, value, getLocationRange)
