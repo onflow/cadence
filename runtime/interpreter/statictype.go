@@ -279,9 +279,9 @@ outer:
 // ReferenceStaticType
 
 type ReferenceStaticType struct {
-	Authorized bool
-	Type       StaticType
-	InnerType  StaticType
+	Authorized     bool
+	BorrowedType   StaticType
+	ReferencedType StaticType
 }
 
 var _ StaticType = ReferenceStaticType{}
@@ -294,7 +294,7 @@ func (t ReferenceStaticType) String() string {
 		auth = "auth "
 	}
 
-	return fmt.Sprintf("%s&%s", auth, t.Type)
+	return fmt.Sprintf("%s&%s", auth, t.BorrowedType)
 }
 
 func (t ReferenceStaticType) Equal(other StaticType) bool {
@@ -304,7 +304,7 @@ func (t ReferenceStaticType) Equal(other StaticType) bool {
 	}
 
 	return t.Authorized == otherReferenceType.Authorized &&
-		t.Type.Equal(otherReferenceType.Type)
+		t.BorrowedType.Equal(otherReferenceType.BorrowedType)
 }
 
 // CapabilityStaticType
@@ -378,7 +378,7 @@ func ConvertSemaToStaticType(t sema.Type) StaticType {
 		}
 
 	case *sema.ReferenceType:
-		return ConvertSemaReferenceTyoeToStaticReferenceType(t)
+		return ConvertSemaReferenceTypeToStaticReferenceType(t)
 
 	case *sema.CapabilityType:
 		result := CapabilityStaticType{}
@@ -425,10 +425,10 @@ func ConvertSemaDictionaryTypeToStaticDictionaryType(t *sema.DictionaryType) Dic
 	}
 }
 
-func ConvertSemaReferenceTyoeToStaticReferenceType(t *sema.ReferenceType) ReferenceStaticType {
+func ConvertSemaReferenceTypeToStaticReferenceType(t *sema.ReferenceType) ReferenceStaticType {
 	return ReferenceStaticType{
-		Authorized: t.Authorized,
-		Type:       ConvertSemaToStaticType(t.Type),
+		Authorized:   t.Authorized,
+		BorrowedType: ConvertSemaToStaticType(t.Type),
 	}
 }
 
@@ -498,7 +498,7 @@ func ConvertStaticToSemaType(
 		}, err
 
 	case ReferenceStaticType:
-		ty, err := ConvertStaticToSemaType(t.Type, getInterface, getComposite)
+		ty, err := ConvertStaticToSemaType(t.BorrowedType, getInterface, getComposite)
 		return &sema.ReferenceType{
 			Authorized: t.Authorized,
 			Type:       ty,

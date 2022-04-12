@@ -1337,8 +1337,8 @@ func decodeReferenceStaticType(dec *cbor.StreamDecoder) (StaticType, error) {
 	}
 
 	return ReferenceStaticType{
-		Authorized: authorized,
-		Type:       staticType,
+		Authorized:   authorized,
+		BorrowedType: staticType,
 	}, nil
 }
 

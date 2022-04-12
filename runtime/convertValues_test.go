@@ -1069,8 +1069,8 @@ func TestImportRuntimeType(t *testing.T) {
 				Type:       cadence.IntType{},
 			},
 			expected: interpreter.ReferenceStaticType{
-				Authorized: false,
-				Type:       interpreter.PrimitiveStaticTypeInt,
+				Authorized:   false,
+				BorrowedType: interpreter.PrimitiveStaticTypeInt,
 			},
 		},
 		{

@@ -41,8 +41,8 @@ import (
 type TypeConformanceResults map[typeConformanceResultEntry]bool
 
 type typeConformanceResultEntry struct {
-	EphemeralReferenceValue       *EphemeralReferenceValue
-	EphemeralReferenceDynamicType ReferenceStaticType
+	EphemeralReferenceValue *EphemeralReferenceValue
+	EphemeralReferenceType  ReferenceStaticType
 }
 
 // SeenReferences is a set of seen references.
@@ -14236,20 +14236,15 @@ func (v *StorageReferenceValue) DynamicType(interpreter *Interpreter, seenRefere
 }
 
 func (v *StorageReferenceValue) StaticType(inter *Interpreter) StaticType {
-	var borrowedType StaticType
-	if v.BorrowedType != nil {
-		borrowedType = ConvertSemaToStaticType(v.BorrowedType)
-	}
-
 	referencedValue, err := v.dereference(inter, ReturnEmptyLocationRange)
 	if err != nil {
 		panic(err)
 	}
 
 	return ReferenceStaticType{
-		Authorized: v.Authorized,
-		Type:       borrowedType,
-		InnerType:  (*referencedValue).StaticType(inter),
+		Authorized:     v.Authorized,
+		BorrowedType:   ConvertSemaToStaticType(v.BorrowedType),
+		ReferencedType: (*referencedValue).StaticType(inter),
 	}
 }
 
@@ -14455,11 +14450,11 @@ func (v *StorageReferenceValue) ConformsToStaticType(
 		return false
 	}
 
-	if refType.Type == nil {
+	if refType.BorrowedType == nil {
 		if v.BorrowedType != nil {
 			return false
 		}
-	} else if !refType.Type.Equal(ConvertSemaToStaticType(v.BorrowedType)) {
+	} else if !refType.BorrowedType.Equal(ConvertSemaToStaticType(v.BorrowedType)) {
 		return false
 	}
 
@@ -14471,7 +14466,7 @@ func (v *StorageReferenceValue) ConformsToStaticType(
 	return (*referencedValue).ConformsToStaticType(
 		interpreter,
 		getLocationRange,
-		refType.InnerType,
+		refType.ReferencedType,
 		results,
 	)
 }
@@ -14580,20 +14575,15 @@ func (v *EphemeralReferenceValue) DynamicType(interpreter *Interpreter, seenRefe
 }
 
 func (v *EphemeralReferenceValue) StaticType(inter *Interpreter) StaticType {
-	var borrowedType StaticType
-	if v.BorrowedType != nil {
-		borrowedType = ConvertSemaToStaticType(v.BorrowedType)
-	}
-
 	referencedValue := v.ReferencedValue(inter, ReturnEmptyLocationRange)
 	if referencedValue == nil {
 		panic(DereferenceError{})
 	}
 
 	return ReferenceStaticType{
-		Authorized: v.Authorized,
-		Type:       borrowedType,
-		InnerType:  (*referencedValue).StaticType(inter),
+		Authorized:     v.Authorized,
+		BorrowedType:   ConvertSemaToStaticType(v.BorrowedType),
+		ReferencedType: (*referencedValue).StaticType(inter),
 	}
 }
 
@@ -14789,11 +14779,11 @@ func (v *EphemeralReferenceValue) ConformsToStaticType(
 		return false
 	}
 
-	if refType.Type == nil {
+	if refType.BorrowedType == nil {
 		if v.BorrowedType != nil {
 			return false
 		}
-	} else if !refType.Type.Equal(ConvertSemaToStaticType(v.BorrowedType)) {
+	} else if !refType.BorrowedType.Equal(ConvertSemaToStaticType(v.BorrowedType)) {
 		return false
 	}
 
@@ -14803,8 +14793,8 @@ func (v *EphemeralReferenceValue) ConformsToStaticType(
 	}
 
 	entry := typeConformanceResultEntry{
-		EphemeralReferenceValue:       v,
-		EphemeralReferenceDynamicType: refType,
+		EphemeralReferenceValue: v,
+		EphemeralReferenceType:  refType,
 	}
 
 	if result, contains := results[entry]; contains {
@@ -14818,7 +14808,7 @@ func (v *EphemeralReferenceValue) ConformsToStaticType(
 	result := (*referencedValue).ConformsToStaticType(
 		interpreter,
 		getLocationRange,
-		refType.InnerType,
+		refType.ReferencedType,
 		results,
 	)
 
