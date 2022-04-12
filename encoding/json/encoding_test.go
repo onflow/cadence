@@ -48,7 +48,7 @@ func TestEncodeVoid(t *testing.T) {
 
 	t.Parallel()
 
-	testEncodeAndDecode(t, cadence.NewVoid(), `{"type":"Void"}`)
+	testEncodeAndDecode(t, cadence.NewUnmeteredVoid(), `{"type":"Void"}`)
 }
 
 func TestEncodeOptional(t *testing.T) {

@@ -67,6 +67,7 @@ const (
 
 	// Cadence Values
 	MemoryKindCadenceOptional
+	MemoryKindCadenceVoid
 
 	// Misc
 

@@ -118,7 +118,7 @@ func TestExportValue(t *testing.T) {
 		{
 			label:    "Void",
 			value:    interpreter.VoidValue{},
-			expected: cadence.NewVoid(),
+			expected: cadence.NewUnmeteredVoid(),
 		},
 		{
 			label:    "Nil",
@@ -499,7 +499,7 @@ func TestImportValue(t *testing.T) {
 		{
 			label:    "Void",
 			expected: interpreter.VoidValue{},
-			value:    cadence.NewVoid(),
+			value:    cadence.NewUnmeteredVoid(),
 		},
 		{
 			label:    "Nil",
