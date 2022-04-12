@@ -137,11 +137,11 @@ func TestStringer(t *testing.T) {
 			expected: "false",
 		},
 		"some": {
-			value:    NewOptional(ufix64),
+			value:    NewUnmeteredOptional(ufix64),
 			expected: "64.01000000",
 		},
 		"nil": {
-			value:    NewOptional(nil),
+			value:    NewUnmeteredOptional(nil),
 			expected: "nil",
 		},
 		"String": {

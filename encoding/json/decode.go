@@ -227,10 +227,10 @@ func (d *Decoder) decodeVoid(m map[string]interface{}) cadence.Void {
 
 func (d *Decoder) decodeOptional(valueJSON interface{}) cadence.Optional {
 	if valueJSON == nil {
-		return cadence.NewOptional(nil)
+		return cadence.NewOptional(d.gauge, nil)
 	}
 
-	return cadence.NewOptional(d.decodeJSON(valueJSON))
+	return cadence.NewOptional(d.gauge, d.decodeJSON(valueJSON))
 }
 
 func (d *Decoder) decodeBool(valueJSON interface{}) cadence.Bool {

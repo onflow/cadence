@@ -69,7 +69,7 @@ func TestLiteralValue(t *testing.T) {
 		)
 		require.NoError(t, err)
 		require.Equal(t,
-			cadence.NewOptional(nil),
+			cadence.NewUnmeteredOptional(nil),
 			value,
 		)
 	})
@@ -82,7 +82,7 @@ func TestLiteralValue(t *testing.T) {
 		)
 		require.NoError(t, err)
 		require.Equal(t,
-			cadence.NewOptional(cadence.NewBool(true)),
+			cadence.NewUnmeteredOptional(cadence.NewBool(true)),
 			value,
 		)
 	})

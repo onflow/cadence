@@ -291,7 +291,7 @@ func LiteralValue(memoryGauge common.MemoryGauge, expression ast.Expression, ty 
 
 	case *sema.OptionalType:
 		if _, ok := expression.(*ast.NilExpression); ok {
-			return cadence.NewOptional(nil), nil
+			return cadence.NewOptional(memoryGauge, nil), nil
 		}
 
 		converted, err := LiteralValue(memoryGauge, expression, ty.Type)
@@ -299,7 +299,7 @@ func LiteralValue(memoryGauge common.MemoryGauge, expression ast.Expression, ty 
 			return nil, err
 		}
 
-		return cadence.NewOptional(converted), nil
+		return cadence.NewOptional(memoryGauge, converted), nil
 
 	case *sema.DictionaryType:
 		expression, ok := expression.(*ast.DictionaryExpression)
