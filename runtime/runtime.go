@@ -910,12 +910,12 @@ func validateArgumentParams(
 			}
 		}
 
-		dynamicType := arg.DynamicType(inter, interpreter.SeenReferences{})
-
 		// Ensure the argument is of an importable type
-		if !dynamicType.IsImportable() {
+		staticType := arg.StaticType(inter)
+		semaType, err := inter.ConvertStaticToSemaType(staticType)
+		if err != nil || !semaType.IsImportable(map[*sema.Member]bool{}) {
 			return nil, &ArgumentNotImportableError{
-				Type: dynamicType,
+				Type: staticType,
 			}
 		}
 

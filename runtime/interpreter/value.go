@@ -92,7 +92,6 @@ type Value interface {
 	IsValue()
 	Accept(interpreter *Interpreter, visitor Visitor)
 	Walk(walkChild func(Value))
-	DynamicType(interpreter *Interpreter, seenReferences SeenReferences) DynamicType
 	StaticType(interpreter *Interpreter) StaticType
 	ConformsToStaticType(
 		interpreter *Interpreter,
@@ -197,12 +196,6 @@ func (v TypeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 
 func (TypeValue) Walk(_ func(Value)) {
 	// NO-OP
-}
-
-var metaTypeDynamicType DynamicType = MetaTypeDynamicType{}
-
-func (TypeValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return metaTypeDynamicType
 }
 
 func (TypeValue) StaticType(_ *Interpreter) StaticType {
@@ -390,12 +383,6 @@ func (VoidValue) Walk(_ func(Value)) {
 	// NO-OP
 }
 
-var voidDynamicType DynamicType = VoidDynamicType{}
-
-func (VoidValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return voidDynamicType
-}
-
 func (VoidValue) StaticType(_ *Interpreter) StaticType {
 	return PrimitiveStaticTypeVoid
 }
@@ -484,12 +471,6 @@ func (v BoolValue) Accept(interpreter *Interpreter, visitor Visitor) {
 
 func (BoolValue) Walk(_ func(Value)) {
 	// NO-OP
-}
-
-var boolDynamicType DynamicType = BoolDynamicType{}
-
-func (BoolValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return boolDynamicType
 }
 
 func (BoolValue) StaticType(_ *Interpreter) StaticType {
@@ -609,12 +590,6 @@ func (v CharacterValue) Accept(interpreter *Interpreter, visitor Visitor) {
 
 func (CharacterValue) Walk(_ func(Value)) {
 	// NO-OP
-}
-
-var charDyanmicType DynamicType = CharacterDynamicType{}
-
-func (CharacterValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return charDyanmicType
 }
 
 func (CharacterValue) StaticType(_ *Interpreter) StaticType {
@@ -777,12 +752,6 @@ func (v *StringValue) Accept(interpreter *Interpreter, visitor Visitor) {
 
 func (*StringValue) Walk(_ func(Value)) {
 	// NO-OP
-}
-
-var stringDynamicType DynamicType = StringDynamicType{}
-
-func (*StringValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return stringDynamicType
 }
 
 func (*StringValue) StaticType(_ *Interpreter) StaticType {
@@ -1227,22 +1196,6 @@ func (v *ArrayValue) Walk(walkChild func(Value)) {
 		walkChild(element)
 		return true
 	})
-}
-
-func (v *ArrayValue) DynamicType(interpreter *Interpreter, seenReferences SeenReferences) DynamicType {
-	elementTypes := make([]DynamicType, v.Count())
-
-	i := 0
-
-	v.Walk(func(element Value) {
-		elementTypes[i] = element.DynamicType(interpreter, seenReferences)
-		i++
-	})
-
-	return &ArrayDynamicType{
-		ElementTypes: elementTypes,
-		StaticType:   v.Type,
-	}
 }
 
 func (v *ArrayValue) StaticType(_ *Interpreter) StaticType {
@@ -1859,7 +1812,7 @@ func (v *ArrayValue) ConformsToStaticType(
 		typeInfo := v.Type.String()
 
 		defer func() {
-			interpreter.reportArrayValueConformsToDynamicTypeTrace(
+			interpreter.reportArrayValueConformsToStaticTypeTrace(
 				typeInfo,
 				count,
 				time.Since(startTime),
@@ -2423,12 +2376,6 @@ func (IntValue) Walk(_ func(Value)) {
 	// NO-OP
 }
 
-var intDynamicType DynamicType = NumberDynamicType{sema.IntType}
-
-func (IntValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return intDynamicType
-}
-
 func (IntValue) StaticType(_ *Interpreter) StaticType {
 	return PrimitiveStaticTypeInt
 }
@@ -2861,12 +2808,6 @@ func (v Int8Value) Accept(interpreter *Interpreter, visitor Visitor) {
 
 func (Int8Value) Walk(_ func(Value)) {
 	// NO-OP
-}
-
-var int8DynamicType DynamicType = NumberDynamicType{sema.Int8Type}
-
-func (Int8Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return int8DynamicType
 }
 
 func (Int8Value) StaticType(_ *Interpreter) StaticType {
@@ -3359,12 +3300,6 @@ func (v Int16Value) Accept(interpreter *Interpreter, visitor Visitor) {
 
 func (Int16Value) Walk(_ func(Value)) {
 	// NO-OP
-}
-
-var int16DynamicType DynamicType = NumberDynamicType{sema.Int16Type}
-
-func (Int16Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return int16DynamicType
 }
 
 func (Int16Value) StaticType(_ *Interpreter) StaticType {
@@ -3861,12 +3796,6 @@ func (Int32Value) Walk(_ func(Value)) {
 	// NO-OP
 }
 
-var int32DynamicType DynamicType = NumberDynamicType{sema.Int32Type}
-
-func (Int32Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return int32DynamicType
-}
-
 func (Int32Value) StaticType(_ *Interpreter) StaticType {
 	return PrimitiveStaticTypeInt32
 }
@@ -4359,12 +4288,6 @@ func (v Int64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 
 func (Int64Value) Walk(_ func(Value)) {
 	// NO-OP
-}
-
-var int64DynamicType DynamicType = NumberDynamicType{sema.Int64Type}
-
-func (Int64Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return int64DynamicType
 }
 
 func (Int64Value) StaticType(_ *Interpreter) StaticType {
@@ -4868,12 +4791,6 @@ func (v Int128Value) Accept(interpreter *Interpreter, visitor Visitor) {
 
 func (Int128Value) Walk(_ func(Value)) {
 	// NO-OP
-}
-
-var int128DynamicType DynamicType = NumberDynamicType{sema.Int128Type}
-
-func (Int128Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return int128DynamicType
 }
 
 func (Int128Value) StaticType(_ *Interpreter) StaticType {
@@ -5449,12 +5366,6 @@ func (v Int256Value) Accept(interpreter *Interpreter, visitor Visitor) {
 
 func (Int256Value) Walk(_ func(Value)) {
 	// NO-OP
-}
-
-var int256DynamicType DynamicType = NumberDynamicType{sema.Int256Type}
-
-func (Int256Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return int256DynamicType
 }
 
 func (Int256Value) StaticType(_ *Interpreter) StaticType {
@@ -6053,12 +5964,6 @@ func (UIntValue) Walk(_ func(Value)) {
 	// NO-OP
 }
 
-var uintDynamicType DynamicType = NumberDynamicType{sema.UIntType}
-
-func (UIntValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return uintDynamicType
-}
-
 func (UIntValue) StaticType(_ *Interpreter) StaticType {
 	return PrimitiveStaticTypeUInt
 }
@@ -6502,12 +6407,6 @@ func (UInt8Value) Walk(_ func(Value)) {
 	// NO-OP
 }
 
-var uint8DynamicType DynamicType = NumberDynamicType{sema.UInt8Type}
-
-func (UInt8Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return uint8DynamicType
-}
-
 func (UInt8Value) StaticType(_ *Interpreter) StaticType {
 	return PrimitiveStaticTypeUInt8
 }
@@ -6938,12 +6837,6 @@ func (v UInt16Value) Accept(interpreter *Interpreter, visitor Visitor) {
 
 func (UInt16Value) Walk(_ func(Value)) {
 	// NO-OP
-}
-
-var uint16DynamicType DynamicType = NumberDynamicType{sema.UInt16Type}
-
-func (UInt16Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return uint16DynamicType
 }
 
 func (UInt16Value) StaticType(_ *Interpreter) StaticType {
@@ -7380,12 +7273,6 @@ func (v UInt32Value) Accept(interpreter *Interpreter, visitor Visitor) {
 
 func (UInt32Value) Walk(_ func(Value)) {
 	// NO-OP
-}
-
-var uint32DynamicType DynamicType = NumberDynamicType{sema.UInt32Type}
-
-func (UInt32Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return uint32DynamicType
 }
 
 func (UInt32Value) StaticType(_ *Interpreter) StaticType {
@@ -7830,12 +7717,6 @@ func (v UInt64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 
 func (UInt64Value) Walk(_ func(Value)) {
 	// NO-OP
-}
-
-var uint64DynamicType DynamicType = NumberDynamicType{sema.UInt64Type}
-
-func (UInt64Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return uint64DynamicType
 }
 
 func (UInt64Value) StaticType(_ *Interpreter) StaticType {
@@ -8298,12 +8179,6 @@ func (v UInt128Value) Accept(interpreter *Interpreter, visitor Visitor) {
 
 func (UInt128Value) Walk(_ func(Value)) {
 	// NO-OP
-}
-
-var uint128DynamicType DynamicType = NumberDynamicType{sema.UInt128Type}
-
-func (UInt128Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return uint128DynamicType
 }
 
 func (UInt128Value) StaticType(_ *Interpreter) StaticType {
@@ -8834,12 +8709,6 @@ func (UInt256Value) Walk(_ func(Value)) {
 	// NO-OP
 }
 
-var uint256DynamicType DynamicType = NumberDynamicType{sema.UInt256Type}
-
-func (UInt256Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return uint256DynamicType
-}
-
 func (UInt256Value) StaticType(_ *Interpreter) StaticType {
 	return PrimitiveStaticTypeUInt256
 }
@@ -9358,12 +9227,6 @@ func (Word8Value) Walk(_ func(Value)) {
 	// NO-OP
 }
 
-var word8DynamicType DynamicType = NumberDynamicType{sema.Word8Type}
-
-func (Word8Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return word8DynamicType
-}
-
 func (Word8Value) StaticType(_ *Interpreter) StaticType {
 	return PrimitiveStaticTypeWord8
 }
@@ -9704,12 +9567,6 @@ func (v Word16Value) Accept(interpreter *Interpreter, visitor Visitor) {
 
 func (Word16Value) Walk(_ func(Value)) {
 	// NO-OP
-}
-
-var word16DynamicType DynamicType = NumberDynamicType{sema.Word16Type}
-
-func (Word16Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return word16DynamicType
 }
 
 func (Word16Value) StaticType(_ *Interpreter) StaticType {
@@ -10053,12 +9910,6 @@ func (v Word32Value) Accept(interpreter *Interpreter, visitor Visitor) {
 
 func (Word32Value) Walk(_ func(Value)) {
 	// NO-OP
-}
-
-var word32DynamicType DynamicType = NumberDynamicType{sema.Word32Type}
-
-func (Word32Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return word32DynamicType
 }
 
 func (Word32Value) StaticType(_ *Interpreter) StaticType {
@@ -10410,12 +10261,6 @@ func (v Word64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 
 func (Word64Value) Walk(_ func(Value)) {
 	// NO-OP
-}
-
-var word64DynamicType DynamicType = NumberDynamicType{sema.Word64Type}
-
-func (Word64Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return word64DynamicType
 }
 
 func (Word64Value) StaticType(_ *Interpreter) StaticType {
@@ -10788,12 +10633,6 @@ func (v Fix64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 
 func (Fix64Value) Walk(_ func(Value)) {
 	// NO-OP
-}
-
-var fix64DynamicType DynamicType = NumberDynamicType{sema.Fix64Type}
-
-func (Fix64Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return fix64DynamicType
 }
 
 func (Fix64Value) StaticType(_ *Interpreter) StaticType {
@@ -11229,12 +11068,6 @@ func (UFix64Value) Walk(_ func(Value)) {
 	// NO-OP
 }
 
-var ufix64DynamicType DynamicType = NumberDynamicType{sema.UFix64Type}
-
-func (UFix64Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return ufix64DynamicType
-}
-
 func (UFix64Value) StaticType(_ *Interpreter) StaticType {
 	return PrimitiveStaticTypeUFix64
 }
@@ -11632,7 +11465,6 @@ type CompositeValue struct {
 	isDestroyed         bool
 	typeID              common.TypeID
 	staticType          StaticType
-	dynamicType         DynamicType
 }
 
 type ComputedField func(*Interpreter, func() LocationRange) Value
@@ -11737,25 +11569,6 @@ func (v *CompositeValue) Walk(walkChild func(Value)) {
 	v.ForEachField(func(_ string, value Value) {
 		walkChild(value)
 	})
-}
-
-func (v *CompositeValue) DynamicType(interpreter *Interpreter, _ SeenReferences) DynamicType {
-	if v.dynamicType == nil {
-		var staticType sema.Type
-		var err error
-		if v.Location == nil {
-			staticType, err = interpreter.getNativeCompositeType(v.QualifiedIdentifier)
-		} else {
-			staticType, err = interpreter.getUserCompositeType(v.Location, v.TypeID())
-		}
-		if err != nil {
-			panic(err)
-		}
-		v.dynamicType = CompositeDynamicType{
-			StaticType: staticType,
-		}
-	}
-	return v.dynamicType
 }
 
 func (v *CompositeValue) StaticType(_ *Interpreter) StaticType {
@@ -12254,7 +12067,7 @@ func (v *CompositeValue) ConformsToStaticType(
 		kind := v.Kind.String()
 
 		defer func() {
-			interpreter.reportCompositeValueConformsToDynamicTypeTrace(
+			interpreter.reportCompositeValueConformsToStaticTypeTrace(
 				owner,
 				typeID,
 				kind,
@@ -12499,7 +12312,6 @@ func (v *CompositeValue) Transfer(
 			isDestroyed:         v.isDestroyed,
 			typeID:              v.typeID,
 			staticType:          v.staticType,
-			dynamicType:         v.dynamicType,
 		}
 	}
 
@@ -12576,7 +12388,6 @@ func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
 		isDestroyed:         v.isDestroyed,
 		typeID:              v.typeID,
 		staticType:          v.staticType,
-		dynamicType:         v.dynamicType,
 	}
 }
 
@@ -12834,26 +12645,6 @@ func (v *DictionaryValue) Walk(walkChild func(Value)) {
 		walkChild(value)
 		return true
 	})
-}
-
-func (v *DictionaryValue) DynamicType(interpreter *Interpreter, seenReferences SeenReferences) DynamicType {
-	entryTypes := make([]DictionaryStaticTypeEntry, v.Count())
-
-	index := 0
-	v.Iterate(func(key, value Value) (resume bool) {
-		entryTypes[index] =
-			DictionaryStaticTypeEntry{
-				KeyType:   key.DynamicType(interpreter, seenReferences),
-				ValueType: value.DynamicType(interpreter, seenReferences),
-			}
-		index++
-		return true
-	})
-
-	return &DictionaryDynamicType{
-		EntryTypes: entryTypes,
-		StaticType: v.Type,
-	}
 }
 
 func (v *DictionaryValue) StaticType(_ *Interpreter) StaticType {
@@ -13340,7 +13131,7 @@ func (v *DictionaryValue) ConformsToStaticType(
 		typeInfo := v.Type.String()
 
 		defer func() {
-			interpreter.reportDictionaryValueConformsToDynamicTypeTrace(
+			interpreter.reportDictionaryValueConformsToStaticTypeTrace(
 				typeInfo,
 				count,
 				time.Since(startTime),
@@ -13735,12 +13526,6 @@ func (NilValue) Walk(_ func(Value)) {
 	// NO-OP
 }
 
-var nilDynamicType DynamicType = NilDynamicType{}
-
-func (NilValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return nilDynamicType
-}
-
 func (NilValue) StaticType(_ *Interpreter) StaticType {
 	return OptionalStaticType{
 		Type: PrimitiveStaticTypeNever,
@@ -13889,14 +13674,6 @@ func (v *SomeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 
 func (v *SomeValue) Walk(walkChild func(Value)) {
 	walkChild(v.value)
-}
-
-func (v *SomeValue) DynamicType(interpreter *Interpreter, seenReferences SeenReferences) DynamicType {
-	// TODO: provide proper location range
-	innerValue := v.InnerValue(interpreter, ReturnEmptyLocationRange)
-
-	innerType := innerValue.DynamicType(interpreter, seenReferences)
-	return SomeDynamicType{InnerType: innerType}
 }
 
 func (v *SomeValue) StaticType(inter *Interpreter) StaticType {
@@ -14220,21 +13997,6 @@ func (v *StorageReferenceValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v *StorageReferenceValue) DynamicType(interpreter *Interpreter, seenReferences SeenReferences) DynamicType {
-	referencedValue := v.ReferencedValue(interpreter)
-	if referencedValue == nil {
-		panic(DereferenceError{})
-	}
-
-	innerType := (*referencedValue).DynamicType(interpreter, seenReferences)
-
-	return StorageReferenceDynamicType{
-		authorized:   v.Authorized,
-		innerType:    innerType,
-		borrowedType: v.BorrowedType,
-	}
-}
-
 func (v *StorageReferenceValue) StaticType(inter *Interpreter) StaticType {
 	referencedValue, err := v.dereference(inter, ReturnEmptyLocationRange)
 	if err != nil {
@@ -14549,29 +14311,6 @@ func (v *EphemeralReferenceValue) RecursiveString(seenReferences SeenReferences)
 	defer delete(seenReferences, v)
 
 	return v.Value.RecursiveString(seenReferences)
-}
-
-func (v *EphemeralReferenceValue) DynamicType(interpreter *Interpreter, seenReferences SeenReferences) DynamicType {
-	// TODO: provide proper location range
-	referencedValue := v.ReferencedValue(interpreter, ReturnEmptyLocationRange)
-	if referencedValue == nil {
-		panic(DereferenceError{})
-	}
-
-	if _, ok := seenReferences[v]; ok {
-		return nil
-	}
-
-	seenReferences[v] = struct{}{}
-	defer delete(seenReferences, v)
-
-	innerType := (*referencedValue).DynamicType(interpreter, seenReferences)
-
-	return EphemeralReferenceDynamicType{
-		authorized:   v.Authorized,
-		innerType:    innerType,
-		borrowedType: v.BorrowedType,
-	}
 }
 
 func (v *EphemeralReferenceValue) StaticType(inter *Interpreter) StaticType {
@@ -14901,12 +14640,6 @@ func (AddressValue) Walk(_ func(Value)) {
 	// NO-OP
 }
 
-var addressDynamicType DynamicType = AddressDynamicType{}
-
-func (AddressValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return addressDynamicType
-}
-
 func (AddressValue) StaticType(_ *Interpreter) StaticType {
 	return PrimitiveStaticTypeAddress
 }
@@ -15113,23 +14846,6 @@ func (v PathValue) Accept(interpreter *Interpreter, visitor Visitor) {
 
 func (PathValue) Walk(_ func(Value)) {
 	// NO-OP
-}
-
-var storagePathDynamicType DynamicType = StoragePathDynamicType{}
-var publicPathDynamicType DynamicType = PublicPathDynamicType{}
-var privatePathDynamicType DynamicType = PrivatePathDynamicType{}
-
-func (v PathValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	switch v.Domain {
-	case common.PathDomainStorage:
-		return storagePathDynamicType
-	case common.PathDomainPublic:
-		return publicPathDynamicType
-	case common.PathDomainPrivate:
-		return privatePathDynamicType
-	default:
-		panic(errors.NewUnreachableError())
-	}
 }
 
 func (v PathValue) StaticType(_ *Interpreter) StaticType {
@@ -15345,19 +15061,6 @@ func (v *CapabilityValue) Walk(walkChild func(Value)) {
 	walkChild(v.Path)
 }
 
-func (v *CapabilityValue) DynamicType(interpreter *Interpreter, _ SeenReferences) DynamicType {
-	var borrowType *sema.ReferenceType
-	if v.BorrowType != nil {
-		// this function will panic already if this conversion fails
-		borrowType, _ = interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
-	}
-
-	return CapabilityDynamicType{
-		BorrowType: borrowType,
-		Domain:     v.Path.Domain,
-	}
-}
-
 func (v *CapabilityValue) StaticType(_ *Interpreter) StaticType {
 	return CapabilityStaticType{
 		BorrowType: v.BorrowType,
@@ -15535,10 +15238,6 @@ func (v LinkValue) Accept(interpreter *Interpreter, visitor Visitor) {
 
 func (v LinkValue) Walk(walkChild func(Value)) {
 	walkChild(v.TargetPath)
-}
-
-func (LinkValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return nil
 }
 
 func (LinkValue) StaticType(_ *Interpreter) StaticType {

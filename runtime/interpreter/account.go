@@ -28,9 +28,7 @@ import (
 
 var authAccountTypeID = sema.AuthAccountType.ID()
 var authAccountStaticType StaticType = PrimitiveStaticTypeAuthAccount
-var authAccountDynamicType DynamicType = CompositeDynamicType{
-	StaticType: sema.AuthAccountType,
-}
+
 var authAccountFieldNames = []string{
 	sema.AuthAccountAddressField,
 	sema.AuthAccountContractsField,
@@ -126,7 +124,6 @@ func NewAuthAccountValue(
 	return NewSimpleCompositeValue(
 		authAccountTypeID,
 		authAccountStaticType,
-		authAccountDynamicType,
 		authAccountFieldNames,
 		fields,
 		computedFields,
@@ -139,9 +136,7 @@ func NewAuthAccountValue(
 
 var publicAccountTypeID = sema.PublicAccountType.ID()
 var publicAccountStaticType StaticType = PrimitiveStaticTypePublicAccount
-var publicAccountDynamicType DynamicType = CompositeDynamicType{
-	StaticType: sema.PublicAccountType,
-}
+
 var publicAccountFieldNames = []string{
 	sema.PublicAccountAddressField,
 	sema.PublicAccountContractsField,
@@ -212,7 +207,6 @@ func NewPublicAccountValue(
 	return NewSimpleCompositeValue(
 		publicAccountTypeID,
 		publicAccountStaticType,
-		publicAccountDynamicType,
 		publicAccountFieldNames,
 		fields,
 		computedFields,

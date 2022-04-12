@@ -29,9 +29,8 @@ import (
 // SimpleCompositeValue
 
 type SimpleCompositeValue struct {
-	TypeID      sema.TypeID
-	staticType  StaticType
-	dynamicType DynamicType
+	TypeID     sema.TypeID
+	staticType StaticType
 	// FieldNames are the names of the field members (i.e. not functions, and not computed fields), in order
 	FieldNames      []string
 	Fields          map[string]Value
@@ -48,7 +47,6 @@ var _ MemberAccessibleValue = &SimpleCompositeValue{}
 func NewSimpleCompositeValue(
 	typeID sema.TypeID,
 	staticType StaticType,
-	dynamicType DynamicType,
 	fieldNames []string,
 	fields map[string]Value,
 	computedFields map[string]ComputedField,
@@ -58,7 +56,6 @@ func NewSimpleCompositeValue(
 	return &SimpleCompositeValue{
 		TypeID:          typeID,
 		staticType:      staticType,
-		dynamicType:     dynamicType,
 		FieldNames:      fieldNames,
 		Fields:          fields,
 		ComputedFields:  computedFields,
@@ -90,10 +87,6 @@ func (v *SimpleCompositeValue) Walk(walkChild func(Value)) {
 	v.ForEachField(func(_ string, fieldValue Value) {
 		walkChild(fieldValue)
 	})
-}
-
-func (v *SimpleCompositeValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return v.dynamicType
 }
 
 func (v *SimpleCompositeValue) StaticType(_ *Interpreter) StaticType {
@@ -218,7 +211,6 @@ func (v *SimpleCompositeValue) Clone(interpreter *Interpreter) Value {
 	return &SimpleCompositeValue{
 		TypeID:          v.TypeID,
 		staticType:      v.staticType,
-		dynamicType:     v.dynamicType,
 		FieldNames:      v.FieldNames,
 		Fields:          clonedFields,
 		ComputedFields:  v.ComputedFields,

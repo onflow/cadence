@@ -36,11 +36,11 @@ const (
 	tracingCompositePrefix  = "composite."
 
 	// Value operation postfixes
-	tracingConstructPostfix             = "construct"
-	tracingTransferPostfix              = "transfer"
-	tracingConformsToDynamicTypePostfix = "conformsToDynamicType"
-	tracingDeepRemovePostfix            = "deepRemove"
-	tracingDestroyPostfix               = "destroy"
+	tracingConstructPostfix            = "construct"
+	tracingTransferPostfix             = "transfer"
+	tracingConformsToStaticTypePostfix = "conformsToStaticType"
+	tracingDeepRemovePostfix           = "deepRemove"
+	tracingDestroyPostfix              = "destroy"
 
 	// MemberAccessible operation prefixes
 	tracingGetMemberPrefix    = "getMember."
@@ -84,8 +84,8 @@ func (interpreter *Interpreter) reportArrayValueTransferTrace(typeInfo string, c
 	interpreter.onRecordTrace(interpreter, tracingArrayPrefix+tracingTransferPostfix, duration, prepareArrayAndMapValueTraceLogs(typeInfo, count))
 }
 
-func (interpreter *Interpreter) reportArrayValueConformsToDynamicTypeTrace(typeInfo string, count int, duration time.Duration) {
-	interpreter.onRecordTrace(interpreter, tracingArrayPrefix+tracingConformsToDynamicTypePostfix, duration, prepareArrayAndMapValueTraceLogs(typeInfo, count))
+func (interpreter *Interpreter) reportArrayValueConformsToStaticTypeTrace(typeInfo string, count int, duration time.Duration) {
+	interpreter.onRecordTrace(interpreter, tracingArrayPrefix+tracingConformsToStaticTypePostfix, duration, prepareArrayAndMapValueTraceLogs(typeInfo, count))
 }
 
 func (interpreter *Interpreter) reportDictionaryValueConstructTrace(typeInfo string, count int, duration time.Duration) {
@@ -104,8 +104,8 @@ func (interpreter *Interpreter) reportDictionaryValueTransferTrace(typeInfo stri
 	interpreter.onRecordTrace(interpreter, tracingDictionaryPrefix+tracingTransferPostfix, duration, prepareArrayAndMapValueTraceLogs(typeInfo, count))
 }
 
-func (interpreter *Interpreter) reportDictionaryValueConformsToDynamicTypeTrace(typeInfo string, count int, duration time.Duration) {
-	interpreter.onRecordTrace(interpreter, tracingDictionaryPrefix+tracingConformsToDynamicTypePostfix, duration, prepareArrayAndMapValueTraceLogs(typeInfo, count))
+func (interpreter *Interpreter) reportDictionaryValueConformsToStaticTypeTrace(typeInfo string, count int, duration time.Duration) {
+	interpreter.onRecordTrace(interpreter, tracingDictionaryPrefix+tracingConformsToStaticTypePostfix, duration, prepareArrayAndMapValueTraceLogs(typeInfo, count))
 }
 
 func (interpreter *Interpreter) reportDictionaryValueGetMemberTrace(typeInfo string, count int, name string, duration time.Duration) {
@@ -141,8 +141,8 @@ func (interpreter *Interpreter) reportCompositeValueTransferTrace(owner, typeID,
 	interpreter.onRecordTrace(interpreter, tracingCompositePrefix+tracingTransferPostfix, duration, prepareCompositeValueTraceLogs(owner, typeID, kind))
 }
 
-func (interpreter *Interpreter) reportCompositeValueConformsToDynamicTypeTrace(owner, typeID, kind string, duration time.Duration) {
-	interpreter.onRecordTrace(interpreter, tracingCompositePrefix+tracingConformsToDynamicTypePostfix, duration, prepareCompositeValueTraceLogs(owner, typeID, kind))
+func (interpreter *Interpreter) reportCompositeValueConformsToStaticTypeTrace(owner, typeID, kind string, duration time.Duration) {
+	interpreter.onRecordTrace(interpreter, tracingCompositePrefix+tracingConformsToStaticTypePostfix, duration, prepareCompositeValueTraceLogs(owner, typeID, kind))
 }
 
 func (interpreter *Interpreter) reportCompositeValueGetMemberTrace(owner, typeID, kind, name string, duration time.Duration) {
