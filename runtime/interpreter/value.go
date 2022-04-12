@@ -854,7 +854,11 @@ func NewUnmeteredStringValue(str string) *StringValue {
 	}
 }
 
-func NewStringValue(memoryGauge common.MemoryGauge, memoryUsage common.MemoryUsage, stringConstructor func() string) *StringValue {
+func NewStringValue(
+	memoryGauge common.MemoryGauge,
+	memoryUsage common.MemoryUsage,
+	stringConstructor func() string,
+) *StringValue {
 	common.UseMemory(memoryGauge, memoryUsage)
 	str := stringConstructor()
 	return NewUnmeteredStringValue(str)

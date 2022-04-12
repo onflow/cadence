@@ -137,12 +137,22 @@ func (v Bool) String() string {
 
 type String string
 
-func NewString(s string) (String, error) {
+func NewUnmeteredString(s string) (String, error) {
 	if !utf8.ValidString(s) {
 		return "", fmt.Errorf("invalid UTF-8 in string: %s", s)
 	}
 
 	return String(s), nil
+}
+
+func NewString(
+	memoryGauge common.MemoryGauge,
+	memoryUsage common.MemoryUsage,
+	stringConstructor func() string,
+) (String, error) {
+	common.UseMemory(memoryGauge, memoryUsage)
+	str := stringConstructor()
+	return NewUnmeteredString(str)
 }
 
 func (String) isValue() {}

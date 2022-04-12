@@ -23,7 +23,7 @@ import "fmt"
 func NewValue(value interface{}) (Value, error) {
 	switch v := value.(type) {
 	case string:
-		return NewString(v)
+		return NewUnmeteredString(v)
 	case int:
 		return NewInt(v), nil
 	case int8:

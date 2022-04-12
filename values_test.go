@@ -503,7 +503,7 @@ func TestNonUTF8String(t *testing.T) {
 	// Make sure it is an invalid utf8 string
 	assert.False(t, utf8.ValidString(nonUTF8String))
 
-	_, err := NewString(nonUTF8String)
+	_, err := NewUnmeteredString(nonUTF8String)
 	require.Error(t, err)
 
 	assert.Contains(t, err.Error(), "invalid UTF-8 in string")

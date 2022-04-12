@@ -2581,7 +2581,7 @@ transaction(recipientAddr: Address, name: String, garmentWithdrawID: UInt64, mat
 
 	signerAddress = testAddress
 
-	itemString, err := cadence.NewString("item")
+	itemString, err := cadence.NewUnmeteredString("item")
 	require.NoError(t, err)
 
 	err = runtime.ExecuteTransaction(

@@ -354,7 +354,13 @@ func LiteralValue(memoryGauge common.MemoryGauge, expression ast.Expression, ty 
 			return nil, LiteralExpressionTypeError
 		}
 
-		return cadence.NewString(expression.Value)
+		return cadence.NewString(
+			memoryGauge,
+			common.NewCadenceStringMemoryUsage(len(expression.Value)),
+			func() string {
+				return expression.Value
+			},
+		)
 	}
 
 	switch {
