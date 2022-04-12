@@ -64,10 +64,9 @@ const (
 
 	// Tokens
 
-	MemoryKindTokenIdentifier
-	MemoryKindTokenComment
-	MemoryKindTokenNumericLiteral
-	MemoryKindTokenSyntax
+	MemoryKindValueToken
+	MemoryKindSyntaxToken
+	MemoryKindSpaceToken
 
 	// AST nodes
 
