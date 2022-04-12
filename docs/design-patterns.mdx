@@ -5,106 +5,111 @@ title: Cadence Design Patterns
 This is a selection of software design patterns developed by core Flow developers
 while writing Cadence code for deployment to Flow Mainnet.
 
+Many of these design patters apply to most other programming languages, but some are specific to Cadence.
+
 [Design patterns](https://en.wikipedia.org/wiki/Software_design_pattern) are building blocks for software development.
 They may provide a solution to a problem that you encounter when writing smart contracts in Cadence.
 If they do not clearly fit, these patterns may not be the right solution for a given situation or problem.
 They are not meant to be rules to be followed strictly, especially where a better solution presents itself.
 
-## Capability Receiver
+# General
+
+These are general patterns to follow when writing smart contracts.
+
+## Use named value fields for constants instead of hard-coding
 
 ### Problem
 
-An account must be given a [capability](/cadence/language/capability-based-access-control/) to a resource or contract in another account but a single transaction with both accounts authorizing it cannot be easily produced. This prevents a single transaction from fetching the capability from one account and delivering it to the other.
+Your contracts, resources, and scripts all have to refer to the same value.
+A number, a string, a storage path, etc.
+Entering these values manually in transactions and scripts is a potential source of error.
+See [Wikipedia's page on magic numbers](https://en.wikipedia.org/wiki/Magic_number_(programming))
 
 ### Solution
 
-Account B creates a resource that can receive the capability and stores this in their `/storage/` area. They then expose a Capability to this in their `/public/` area with a function that can receive the desired Capability and store it in the resource for later use.
+Add a public (`pub`), constant (`let`) field, e.g. a `Path` , to the contract responsible for the value,
+and set it in the contract's initializer.
+Refer to that value via this public field rather than specifying it manually.
 
-Account A fetches the receiver Capability from B's `/public/` area, creates the desired Capability, and passes it to the receiver function. The receiver function stores the Capability in the resource that it is on in account B's `/storage/` area for later use.
+Example Snippet:
 
-There are two nuances to this workflow that are required to ensure that it is secure.
+```cadence
 
-The first is that only Account A should be able to create instances of the desired Capability. This ensures that nobody else can create instances of it and call the receiver function on B's receiver capability instead of A. This means that A is probably an admin account.
+// BAD Practice: Do not hard code storage paths
+pub contract NamedFields {
+    pub resource Test {}
 
-The second is that the field on the receiver resource that stores the desired Capability should be access(contract) and only accessed by code within the contract that needs to. This ensures that B cannot copy and share the Capability with anyone else.
+    init() {
+        // BAD: Hard-coded storage path
+        self.account.save(<-create Test(), to: /storage/testStorage)
+    }
+}
 
-### Example Code
+// GOOD practice: Instead, use a field
+// 
+pub contract NamedFields {
+    pub resource Test {}
 
-See:
+    // GOOD: field storage path
+    pub let TestStoragePath: StoragePath
 
-[LockedTokens.cdc](https://github.com/onflow/flow-core-contracts/blob/bfb115869bd9f815cde1fe64ab6d91ca95c0938e/contracts/LockedTokens.cdc#L527)
+    init() {
+        // assign and access the field here and in transactions
+        self.TestStoragePath = /storage/testStorage
+        self.account.save(<-create Test(), to: self.TestStoragePath)
+    }
+}
 
-[custody_setup_account_creator.cdc](https://github.com/onflow/flow-core-contracts/blob/79941fe65b634800065a440ae5243744b2ca8a2f/transactions/lockedTokens/admin/custody_setup_account_creator.cdc)
-
-[admin_deposit_account_creator.cdc](https://github.com/onflow/flow-core-contracts/blob/79941fe65b634800065a440ae5243744b2ca8a2f/transactions/lockedTokens/admin/admin_deposit_account_creator.cdc)
-
-## Capability Revocation
-
-### Problem
-
-A capability provided by one account to a second account must able to be revoked by the first account without the co-operation of the second.
-
-### Solution
-
-The first account should create the capability as a link to a capability in `/private/`, which then links to a resource in `/storage/`. That first link is then handed to the second account as the capability for them to use. This can be stored in their private storage or a Capability Receiver.
-
-**Account 1:** `/private/capability` → `/storage/resource`
-
-**Account 2:** `Capability Receiver(Capability(→Account 1: /private/capability))`
-
-If the first account wants to revoke access to the resource in storage, they should delete the `/private/` link that the second account's capability refers to. Capabilities use paths rather than resource identifiers, so this will break the capability.
-
-The first account should be careful not to create another link at the same location in its private storage once the capability has been revoked, otherwise this will restore the second account's capability.
-
-## Init Singleton
-
-### Problem
-
-An admin resource must be created and delivered to a specified account. There should not be a function to do this, as that would allow anyone to create an admin resource.
-
-### Solution
-
-Create any one-off resources in the contract's `init()` function and deliver them to an address or AuthAccount specified as an argument.
-
-See how this is done in the LockedTokens contract init function:
-
-[LockedTokens.cdc](https://github.com/onflow/flow-core-contracts/blob/master/contracts/LockedTokens.cdc#L583)
-
-and in the transaction that is used to deploy it:
-
-[admin_deploy_contract.cdc](https://github.com/onflow/flow-core-contracts/blob/master/transactions/lockedTokens/admin/admin_deploy_contract.cdc)
-
-## Named Value Field
-
-### Problem
-
-Your contracts, resources, and scripts all have to refer to the same value. A number, a string, a storage path. Entering these values manually in transactions and scripts is a potential source of error. See: [https://en.wikipedia.org/wiki/Magic*number*(programming)](<https://en.wikipedia.org/wiki/Magic_number_(programming)>)
-
-### Solution
-
-Add an `access(all)` field, e.g. a `Path` , to the contract responsible for the value, and set it in the contract's initializer. Then refer to that value via this public field rather than specifying it manually.
+```
 
 [Example Code](https://github.com/onflow/flow-core-contracts/blob/master/contracts/LockedTokens.cdc#L583)
 
-## Script-Accessible Public Field
+## Script-Accessible public field/function
+
+Data availability is important in a blockchain environment.
+It is useful to publicize information about your smart contract and the assets it controls
+so other smart contracts and apps can easily query it.
 
 ### Problem
 
-Your contract, resource or struct has a field that will need to be read and used off-chain, often in bulk.
+Your contract, resource or struct has a field or resource that will need to be read and used on or off-chain, often in bulk.
 
 ### Solution
 
-Make sure that the field can be accessed from a script (using an `Account`) rather than requiring a transaction (using an `AuthAccount`). This saves the time and soon the expense required by having to read a property using a transaction. Making the field `access(all)` and exposing it via a `/public/` capability will allow this. Be careful not to expose any data or functionality that should be kept private when doing so.
+Make sure that the field can be accessed from a script (using a `PublicAccount`)
+rather than requiring a transaction (using an `AuthAccount`).
+This saves the time and fees required to read a property using a transaction.
+Making the field or function `pub` and exposing it via a `/public/` capability will allow this.
 
-## Script-Accessible Report
+Be careful not to expose any data or functionality that should be kept private when doing so.
+
+Example:
+
+```cadence
+// BAD: Field is private, so it cannot be read by the public
+access(self) let totalSupply: UFix64
+
+// GOOD: Field is public, so it can be read and used by anyone
+pub let totalSupply: UFix64
+```
+
+## Script-Accessible report
 
 ### Problem
 
-Your contract, resource or struct has a resource that you wish to access fields of off-chain via a script. But scripts cannot return resources.
+Your contract has a resource that you wish to access fields of.
+Resources are often stored in private places and are hard to access.
+Additionally, scripts cannot return resources to the external context,
+so a construct must be used to hold the data.
 
 ### Solution
 
-Declare a struct to hold the data that you wish to return from the script. Write a function that fills out the fields of this struct with the data from the resource that you wish to access. Then call this on the resource that you wish to access the fields of in a script, and return the struct from the script.
+Return a reference to a resource if the data from a single resource is all that is needed.
+Otherwise, declare a struct to hold the data that you wish to return from the script.
+Write a function that fills out the fields of this struct with the data
+from the resource that you wish to access.
+Then call this on the resource that you wish to access the fields of in a script,
+and return the struct from the script.
 
 See [Script-Accessible Public Field](#script-accessible-public-field), above, for how best to expose this capability.
 
@@ -112,6 +117,26 @@ See [Script-Accessible Public Field](#script-accessible-public-field), above, fo
 
 ```cadence
 pub contract AContract {
+
+    // Resource definition
+    pub resource BResource {
+        pub var c: UInt64
+        pub var d: string
+
+        // Generate a struct with the same fields
+        // to return when a script wants to see the fields of the resource
+        // without having to return the actual resource
+        pub fun generateReport() BReportStruct {
+            return BReportStruct(c: c, d: d)
+        }
+
+        init(c: UInt64, d: string) {
+            self.c = c
+            self.d = d
+        }
+    }
+
+    // Define a struct with the same fields as the resource
     pub struct BReportStruct {
         pub var c: UInt64
         pub var d: string
@@ -122,27 +147,329 @@ pub contract AContract {
         }
 
     }
-
-    pub resource BResource {
-        pub var c: UInt64
-        pub var d: string
-
-        pub fun generateReport() BReportStruct {
-            return BReportStruct(c: c, d: d)
-        }
-
-        init(c: UInt64, d: string) {
-            self.c = c
-            self.d = d
-        }
-    }
 }
 ...
 import A from 0xA
 
+// Return the struct with a script
 pub fun main(): A.BReport {
     let b: AContract.BResource // Borrow the resource
     let report = b.generateReport()
     return b
+}
+```
+
+## Init Singleton
+
+### Problem
+
+An admin resource must be created and delivered to a specified account.
+There should not be a function to do this, as that would allow anyone to create an admin resource.
+
+### Solution
+
+Create any one-off resources in the contract's `init()` function
+and deliver them to an address or `AuthAccount` specified as an argument.
+
+See how this is done in the LockedTokens contract init function:
+
+[LockedTokens.cdc](https://github.com/onflow/flow-core-contracts/blob/master/contracts/LockedTokens.cdc#L583)
+
+and in the transaction that is used to deploy it:
+
+[admin_deploy_contract.cdc](https://github.com/onflow/flow-core-contracts/blob/master/transactions/lockedTokens/admin/admin_deploy_contract.cdc)
+
+
+## Use desciptive names for fields, paths, functions, and variables
+
+### Problem
+
+Smart contracts often are vitally important pieces of a project and often have many other
+smart contracts and applications that rely on them.
+Therefore, they need to be clearly writted and easy to understand.
+
+### Solution
+
+All fields, functions, types, variables, etc need to have names that clearly describe what they are used for.
+
+`account` / `accounts` is better than `array` / `element`.
+
+`providerAccount` / `tokenRecipientAccount` is better than `acct1` / `acct2`.
+
+`/storage/bestPracticesDocsCollectionPath` is better than `/storage/collection`
+
+### Example
+```cadence
+// BAD: Unclear naming
+//
+pub contract Tax {
+    // Do not use abbreviations unless absolutely necessary
+    pub var pcnt: UFix64
+
+    // Not clear what the function is calculating or what the parameter should be
+    pub fun calculate(num: UFix64): UFix64 {
+        // What total is this referring to?
+        let total = num + (num * self.pcnt)
+
+        return total
+    }
+}
+
+// GOOD: Clear naming
+//
+pub contract TaxUtilities {
+    // Clearly states what the field is for
+    pub var taxPercentage: UFix64
+
+    // Clearly states that this function calculates the
+    // total cost after tax
+    pub fun calculateTotalCostPlusTax(preTaxCost: UFix64): UFix64 {
+        let postTaxCost = preTaxCost + (preTaxCost * self.taxPercentage)
+
+        return postTaxCost
+    }
+}
+```
+
+## Include concrete types in type constraints, especially "Any" types
+
+### Problem
+
+When specifying type constraints for capabilities or borrows, concrete types often do not get specified,
+making it unclear if the developer actually intended it to be unspecified or not.
+Paths also use a shared namespace between contracts, so an account may have stored a different object
+in a path that you would expect to be used for something else.
+Therefore, it is important to be explicit when getting objects or references to resources.
+
+
+### Solution
+
+A good example of when the code should specify the type being restricted is checking the FLOW balance:
+The code must borrow `&FlowToken.Vault{FungibleToken.Balance}`, in order to ensure that it gets a FLOW token balance,
+and not just `&{FungibleToken.Balance}`, any balance – the user could store another object
+that conforms to the balance interface and return whatever value as the amount.
+
+When the developer does not care what the concrete type is, they should explicitly indicate that
+by using `&AnyResource{Receiver}` instead of `&{Receiver}`.
+In the latter case, `AnyResource` is implicit, but not as clear as the former case.
+
+## Plural names for arrays and maps are preferable
+
+e.g. `accounts` rather than `account` for an array of accounts.
+
+This signals that the field or variable is not scalar.
+It also makes it easier to use the singular form for a variable name during iteration.
+
+## Use transaction post-conditions when applicable
+
+### Problem
+
+Transactions can contain any amount of valid Cadence code and access many contracts and accounts.
+The power of resources and capabilities means that there may be some behaviors of programs that are not expected.
+
+### Solution
+
+It is usually safe to include post-conditions in transactions to verify the intended outcome.
+
+### Example
+
+This could be used when purchasing an NFT to verify that the NFT was deposited in your account's collection.
+
+```cadence
+// Psuedo-code
+
+transaction {
+
+    pub let buyerCollectionRef: &NonFungibleToken.Collection
+
+    prepare(acct: AuthAccount) {
+
+        // Get tokens to buy and a collection to deposit the bought NFT to
+        let temporaryVault <- vaultRef.withdraw(amount: 10.0)
+        let self.buyerCollectionRef = acct.borrow(from: /storage/Collection)
+
+        // purchase, supplying the buyers collection reference
+        saleRef.purchase(tokenID: 1, recipient: self.buyerCollectionRef, buyTokens: <-temporaryVault)
+
+    }
+    post {
+        // verify that the buyer now owns the NFT
+        self.buyerCollectionRef.idExists(1) == true: "Bought NFT ID was not deposited into the buyers collection"
+    }
+}
+```
+
+## Avoid excessive load and save storage operations (prefer in-place mutations)
+
+### Problem
+
+When modifying data in account storage, `load()` and `save()` are costly operations.
+This can quickly cause your transaction to reach the gas limit or slow down the network.
+
+This also applies to contract objects and their fields (which are implicitly stored in storage, i.e. read from/written to),
+or nested resources. Loading them from their fields just to modify them and save them back
+is just as costly.
+
+For example, a collection contains a dictionary of NFTs. There is no need to move the whole dictionary out of the field,
+update the dictionary on the stack (e.g. adding or removing an NFT),
+and then move the whole dictionary back to the field, it can be updated in-place.
+The same goes for a more complex data structure like a dictionary of nested resources:
+Each resource can be updated in-place by taking a reference to the nested object instead of loading and saving.
+
+### Solution
+
+For making modifications to values in storage or accessing stored objects,
+`borrow()` should always be used to access them instead of `load` or `save` unless absolutely necessary.
+`borrow()` returns a reference to the object at the storage path instead of having to load the entire object.
+This reference can be assigned to or can be used to access fields or call methods on stored objects.
+
+### Example
+
+```cadence
+// BAD: Loads and stores a resource to use it
+//
+transaction {
+
+    prepare(acct: AuthAccount) {
+
+        // Removes the vault from storage, a costly operation
+        let vault <- acct.load<@ExampleToken.Vault>(from: /storage/exampleToken)
+
+        // Withdraws tokens
+        let burnVault <- vault.withdraw(amount: 10)
+
+        destroy burnVault
+
+        // Saves the used vault back to storage, another costly operation
+        acct.save(to: /storage/exampleToken)
+
+    }
+}
+
+// GOOD: Uses borrow instead to avoid costly operations
+//
+transaction {
+
+    prepare(acct: AuthAccount) {
+
+        // Borrows a reference to the stored vault, much less costly operation
+        let vault <- acct.borrow<&ExampleToken.Vault>(from: /storage/exampleToken)
+
+        let burnVault <- vault.withdraw(amount: 10)
+
+        destroy burnVault
+
+        // No `save` required because we only used a reference
+    }
+}
+```
+
+# Capabilities
+
+## Capability Receiver
+
+### Problem
+
+An account must be given a [capability](/cadence/language/capability-based-access-control/)
+to a resource or contract in another account. To create, i.e. link the capability,
+the transaction must be signed by a key which has access to the target account.
+
+To transfer / deliver the capability to the other account, the transaction also needs write access to that one.
+It is not as easy to produce a single transaction which is authorized by two accounts
+as it is to produce a typical transaction which is authorized by one account.
+
+This prevents a single transaction from fetching the capability
+from one account and delivering it to the other.
+
+### Solution
+
+Account B creates a resource that can receive the capability and stores this in their `/storage/` area.
+They then expose a Capability to this in their `/public/` area with a function
+that can receive the desired Capability and store it in the resource for later use.
+
+Account A fetches the receiver Capability from B's `/public/` area, creates the desired Capability,
+and passes it to the receiver function. The receiver function stores the Capability
+in the resource that it is on in account B's `/storage/` area for later use.
+
+There are two nuances to this workflow that are required to ensure that it is secure.
+
+The first is that only Account A should be able to create instances of the desired Capability.
+This ensures that nobody else can create instances of it and call the receiver function
+on B's receiver capability instead of A. This means that A is probably an admin account.
+
+The second is that the field on the receiver resource that stores the desired Capability
+should be `access(contract)` and only accessed by code within the contract that needs to.
+This ensures that B cannot copy and share the Capability with anyone else.
+
+### Example Code
+
+See:
+
+[LockedTokens.cdc](https://github.com/onflow/flow-core-contracts/blob/bfb115869bd9f815cde1fe64ab6d91ca95c0938e/contracts/LockedTokens.cdc#L527-L546)
+
+[custody_setup_account_creator.cdc](https://github.com/onflow/flow-core-contracts/blob/79941fe65b634800065a440ae5243744b2ca8a2f/transactions/lockedTokens/admin/custody_setup_account_creator.cdc)
+
+[admin_deposit_account_creator.cdc](https://github.com/onflow/flow-core-contracts/blob/79941fe65b634800065a440ae5243744b2ca8a2f/transactions/lockedTokens/admin/admin_deposit_account_creator.cdc)
+
+## Capability Revocation
+
+### Problem
+
+A capability provided by one account to a second account must able to be revoked
+by the first account without the co-operation of the second.
+
+See the [Capability Controller FLIP](https://github.com/onflow/flow/pull/798) for a proposal to improve this in the future.
+
+### Solution
+
+The first account should create the capability as a link to a capability in `/private/`,
+which then links to a resource in `/storage/`. That second-order link is then handed
+to the second account as the capability for them to use.
+This can be stored in their private storage or a Capability Receiver.
+
+**Account 1:** `/private/capability` → `/storage/resource`
+
+`/private/revokableLink` -> `/private/capability`
+
+**Account 2:** `Capability Receiver(Capability(→Account 1: /private/revokableLink))`
+
+If the first account wants to revoke access to the resource in storage,
+they should delete the `/private/` link that the second account's capability refers to.
+Capabilities use paths rather than resource identifiers, so this will break the capability.
+
+The first account should be careful not to create another link at the same location
+in its private storage once the capability has been revoked,
+otherwise this will restore the second account's capability.
+
+
+## Check for existing links before creating new ones
+
+When linking a capability, the link might be already present.
+In that case, Cadence will not panic with a runtime error but the link function will return nil.
+The documentation states that: The link function does not check if the target path is valid/exists
+at the time the capability is created and does not check if the target value conforms to the given type.
+In that sense, it is a good practice to check if the link does already exist with `AuthAccount.getLinkTarget`
+before creating it with `AuthAccount.link()`. 
+`AuthAccount.getLinkTarget` will return nil if the link does not exist.
+
+### Example
+
+```cadence
+transaction {
+    prepare(signer: AuthAccount) {
+        // Create a public capability to the Vault that only exposes
+        // the deposit function through the Receiver interface
+        //
+        // Check to see if there is a link already and unlink it if there is
+
+        if signer.getLinkTarget(/public/exampleTokenReceiver) != nil {
+            signer.unlink(/public/exampleTokenReceiver)
+        }
+
+        signer.link<&ExampleToken.Vault{FungibleToken.Receiver}>(
+            /public/exampleTokenReceiver,
+            target: /storage/exampleTokenVault
+        )
+    }
 }
 ```

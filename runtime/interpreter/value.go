@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -7087,7 +7087,7 @@ func (UIntValue) StaticType() StaticType {
 }
 
 func (v UIntValue) ToInt() int {
-	if v.BigInt.IsInt64() {
+	if !v.BigInt.IsInt64() {
 		panic(OverflowError{})
 	}
 	return int(v.BigInt.Int64())
