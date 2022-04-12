@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,6 +62,7 @@ func (a *FunctionActivations) EnterFunction(functionType *FunctionType, valueAct
 
 func (a *FunctionActivations) LeaveFunction() {
 	lastIndex := len(a.activations) - 1
+	a.activations[lastIndex] = nil
 	a.activations = a.activations[:lastIndex]
 }
 
