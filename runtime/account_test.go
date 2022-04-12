@@ -148,10 +148,10 @@ func TestRuntimeTransaction_AddPublicKey(t *testing.T) {
 			assert.Len(t, keys, tt.keyCount)
 			assert.Equal(t, tt.expected, keys)
 
-			assert.EqualValues(t, stdlib.AccountCreatedEventType.ID(), events[0].Type().ID())
+			assert.EqualValues(t, stdlib.AccountCreatedEventType.ID(), events[0].Type(nil).ID())
 
 			for _, event := range events[1:] {
-				assert.EqualValues(t, stdlib.AccountKeyAddedEventType.ID(), event.Type().ID())
+				assert.EqualValues(t, stdlib.AccountKeyAddedEventType.ID(), event.Type(nil).ID())
 			}
 		})
 	}
@@ -449,12 +449,12 @@ func TestRuntimeAuthAccountKeysAdd(t *testing.T) {
 
 	assert.EqualValues(t,
 		stdlib.AccountCreatedEventType.ID(),
-		storage.events[0].Type().ID(),
+		storage.events[0].Type(nil).ID(),
 	)
 
 	assert.EqualValues(t,
 		stdlib.AccountKeyAddedEventType.ID(),
-		storage.events[1].Type().ID(),
+		storage.events[1].Type(nil).ID(),
 	)
 }
 
@@ -771,7 +771,7 @@ var SignAlgoType = ExportedBuiltinType(sema.SignatureAlgorithmType).(*cadence.En
 var HashAlgoType = ExportedBuiltinType(sema.HashAlgorithmType).(*cadence.EnumType)
 
 func ExportedBuiltinType(internalType sema.Type) cadence.Type {
-	return ExportType(internalType, map[sema.TypeID]cadence.Type{})
+	return ExportType(nil, internalType, map[sema.TypeID]cadence.Type{})
 }
 
 func newBytesValue(bytes []byte) cadence.Array {
@@ -797,7 +797,11 @@ func accountKeyExportedValue(
 	isRevoked bool,
 ) cadence.Struct {
 
-	weightUFix64, err := cadence.NewUFix64(weight)
+	parsed, err := cadence.ParseUFix64(weight)
+	if err != nil {
+		panic(err)
+	}
+	weightUFix64, err := cadence.NewUFix64(parsed)
 	if err != nil {
 		panic(err)
 	}

@@ -19,7 +19,6 @@
 package interpreter_test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -51,23 +50,6 @@ func (g *testMemoryGauge) MeterMemory(usage common.MemoryUsage) error {
 
 func (g *testMemoryGauge) getMemory(kind common.MemoryKind) uint64 {
 	return g.meter[kind]
-}
-
-func (g *testMemoryGauge) String() string {
-	s := ""
-	found := false
-	for kind, amount := range g.meter {
-		k := kind.String()
-		//if strings.Contains(k, "StaticType") {
-		s += fmt.Sprintf("%s\t%d\n", k, amount)
-		found = true
-		//}
-	}
-	if found {
-		return s
-	} else {
-		return "NO STATIC TYPES FOUND"
-	}
 }
 
 func TestInterpretArrayMetering(t *testing.T) {

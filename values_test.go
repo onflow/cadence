@@ -40,8 +40,11 @@ func TestStringer(t *testing.T) {
 		expected string
 	}
 
-	ufix64, _ := NewUFix64("64.01")
-	fix64, _ := NewFix64("-32.11")
+	parsedU, _ := ParseUFix64("64.01")
+	ufix64, _ := NewUFix64(parsedU)
+
+	parsed, _ := ParseFix64("-32.11")
+	fix64, _ := NewFix64(parsed)
 
 	stringerTests := map[string]testCase{
 		"UInt": {
@@ -257,7 +260,7 @@ func TestStringer(t *testing.T) {
 		"Capability": {
 			value: Capability{
 				Path:       Path{Domain: "storage", Identifier: "foo"},
-				Address:    BytesToAddress([]byte{1, 2, 3, 4, 5}),
+				Address:    BytesToUnmeteredAddress([]byte{1, 2, 3, 4, 5}),
 				BorrowType: IntType{},
 			},
 			expected: "Capability<Int>(address: 0x0000000102030405, path: /storage/foo)",
@@ -480,7 +483,7 @@ func TestOptional_Type(t *testing.T) {
 			OptionalType{
 				Type: NeverType{},
 			},
-			Optional{}.Type(),
+			Optional{}.Type(nil),
 		)
 	})
 
@@ -492,7 +495,7 @@ func TestOptional_Type(t *testing.T) {
 			},
 			Optional{
 				Value: Int8(2),
-			}.Type(),
+			}.Type(nil),
 		)
 	})
 }
