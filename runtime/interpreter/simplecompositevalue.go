@@ -93,6 +93,15 @@ func (v *SimpleCompositeValue) StaticType(_ *Interpreter) StaticType {
 	return v.staticType
 }
 
+func (v *SimpleCompositeValue) IsImportable(inter *Interpreter) bool {
+	staticType := v.StaticType(inter)
+	semaType, err := inter.ConvertStaticToSemaType(staticType)
+	if err != nil {
+		panic(err)
+	}
+	return semaType.IsImportable(map[*sema.Member]bool{})
+}
+
 func (v *SimpleCompositeValue) GetMember(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,

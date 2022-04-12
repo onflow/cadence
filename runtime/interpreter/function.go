@@ -87,6 +87,10 @@ func (f *InterpretedFunctionValue) StaticType(_ *Interpreter) StaticType {
 	return ConvertSemaToStaticType(f.Type)
 }
 
+func (*InterpretedFunctionValue) IsImportable(_ *Interpreter) bool {
+	return false
+}
+
 func (*InterpretedFunctionValue) isFunctionValue() {}
 
 func (f *InterpretedFunctionValue) invoke(invocation Invocation) Value {
@@ -198,6 +202,10 @@ func (f *HostFunctionValue) StaticType(_ *Interpreter) StaticType {
 	return ConvertSemaToStaticType(f.Type)
 }
 
+func (*HostFunctionValue) IsImportable(_ *Interpreter) bool {
+	return false
+}
+
 func (*HostFunctionValue) isFunctionValue() {}
 
 func (f *HostFunctionValue) invoke(invocation Invocation) Value {
@@ -304,6 +312,10 @@ func (f BoundFunctionValue) Walk(_ func(Value)) {
 
 func (f BoundFunctionValue) StaticType(inter *Interpreter) StaticType {
 	return f.Function.StaticType(inter)
+}
+
+func (BoundFunctionValue) IsImportable(_ *Interpreter) bool {
+	return false
 }
 
 func (BoundFunctionValue) isFunctionValue() {}

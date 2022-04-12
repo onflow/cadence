@@ -911,11 +911,9 @@ func validateArgumentParams(
 		}
 
 		// Ensure the argument is of an importable type
-		staticType := arg.StaticType(inter)
-		semaType, err := inter.ConvertStaticToSemaType(staticType)
-		if err != nil || !semaType.IsImportable(map[*sema.Member]bool{}) {
+		if !arg.IsImportable(inter) {
 			return nil, &ArgumentNotImportableError{
-				Type: staticType,
+				Type: arg.StaticType(inter),
 			}
 		}
 

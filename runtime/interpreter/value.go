@@ -113,6 +113,7 @@ type Value interface {
 	// Clone returns a new value that is equal to this value.
 	// NOTE: not used by interpreter, but used externally (e.g. state migration)
 	Clone(interpreter *Interpreter) Value
+	IsImportable(interpreter *Interpreter) bool
 }
 
 // ValueIndexableValue
@@ -200,6 +201,10 @@ func (TypeValue) Walk(_ func(Value)) {
 
 func (TypeValue) StaticType(_ *Interpreter) StaticType {
 	return PrimitiveStaticTypeMetaType
+}
+
+func (TypeValue) IsImportable(_ *Interpreter) bool {
+	return sema.MetaType.Importable
 }
 
 func (v TypeValue) String() string {
@@ -387,6 +392,10 @@ func (VoidValue) StaticType(_ *Interpreter) StaticType {
 	return PrimitiveStaticTypeVoid
 }
 
+func (VoidValue) IsImportable(_ *Interpreter) bool {
+	return sema.VoidType.Importable
+}
+
 func (VoidValue) String() string {
 	return format.Void
 }
@@ -475,6 +484,10 @@ func (BoolValue) Walk(_ func(Value)) {
 
 func (BoolValue) StaticType(_ *Interpreter) StaticType {
 	return PrimitiveStaticTypeBool
+}
+
+func (BoolValue) IsImportable(_ *Interpreter) bool {
+	return sema.BoolType.Importable
 }
 
 func (v BoolValue) Negate() BoolValue {
@@ -594,6 +607,10 @@ func (CharacterValue) Walk(_ func(Value)) {
 
 func (CharacterValue) StaticType(_ *Interpreter) StaticType {
 	return PrimitiveStaticTypeCharacter
+}
+
+func (CharacterValue) IsImportable(_ *Interpreter) bool {
+	return sema.CharacterType.Importable
 }
 
 func (v CharacterValue) String() string {
@@ -756,6 +773,10 @@ func (*StringValue) Walk(_ func(Value)) {
 
 func (*StringValue) StaticType(_ *Interpreter) StaticType {
 	return PrimitiveStaticTypeString
+}
+
+func (*StringValue) IsImportable(_ *Interpreter) bool {
+	return sema.StringType.Importable
 }
 
 func (v *StringValue) String() string {
@@ -1200,6 +1221,22 @@ func (v *ArrayValue) Walk(walkChild func(Value)) {
 
 func (v *ArrayValue) StaticType(_ *Interpreter) StaticType {
 	return v.Type
+}
+
+func (v *ArrayValue) IsImportable(inter *Interpreter) bool {
+	importable := true
+	v.Iterate(func(element Value) (resume bool) {
+		if !element.IsImportable(inter) {
+			importable = false
+			// stop iteration
+			return false
+		}
+
+		// continue iteration
+		return true
+	})
+
+	return importable
 }
 
 func (v *ArrayValue) checkInvalidatedResourceUse(interpreter *Interpreter, getLocationRange func() LocationRange) {
@@ -2380,6 +2417,10 @@ func (IntValue) StaticType(_ *Interpreter) StaticType {
 	return PrimitiveStaticTypeInt
 }
 
+func (IntValue) IsImportable(_ *Interpreter) bool {
+	return true
+}
+
 func (v IntValue) ToInt() int {
 	if !v.BigInt.IsInt64() {
 		panic(OverflowError{})
@@ -2812,6 +2853,10 @@ func (Int8Value) Walk(_ func(Value)) {
 
 func (Int8Value) StaticType(_ *Interpreter) StaticType {
 	return PrimitiveStaticTypeInt8
+}
+
+func (Int8Value) IsImportable(_ *Interpreter) bool {
+	return true
 }
 
 func (v Int8Value) String() string {
@@ -3304,6 +3349,10 @@ func (Int16Value) Walk(_ func(Value)) {
 
 func (Int16Value) StaticType(_ *Interpreter) StaticType {
 	return PrimitiveStaticTypeInt16
+}
+
+func (Int16Value) IsImportable(_ *Interpreter) bool {
+	return true
 }
 
 func (v Int16Value) String() string {
@@ -3800,6 +3849,10 @@ func (Int32Value) StaticType(_ *Interpreter) StaticType {
 	return PrimitiveStaticTypeInt32
 }
 
+func (Int32Value) IsImportable(_ *Interpreter) bool {
+	return true
+}
+
 func (v Int32Value) String() string {
 	return format.Int(int64(v))
 }
@@ -4292,6 +4345,10 @@ func (Int64Value) Walk(_ func(Value)) {
 
 func (Int64Value) StaticType(_ *Interpreter) StaticType {
 	return PrimitiveStaticTypeInt64
+}
+
+func (Int64Value) IsImportable(_ *Interpreter) bool {
+	return true
 }
 
 func (v Int64Value) String() string {
@@ -4795,6 +4852,10 @@ func (Int128Value) Walk(_ func(Value)) {
 
 func (Int128Value) StaticType(_ *Interpreter) StaticType {
 	return PrimitiveStaticTypeInt128
+}
+
+func (Int128Value) IsImportable(_ *Interpreter) bool {
+	return true
 }
 
 func (v Int128Value) ToInt() int {
@@ -5370,6 +5431,10 @@ func (Int256Value) Walk(_ func(Value)) {
 
 func (Int256Value) StaticType(_ *Interpreter) StaticType {
 	return PrimitiveStaticTypeInt256
+}
+
+func (Int256Value) IsImportable(_ *Interpreter) bool {
+	return true
 }
 
 func (v Int256Value) ToInt() int {
@@ -5968,6 +6033,10 @@ func (UIntValue) StaticType(_ *Interpreter) StaticType {
 	return PrimitiveStaticTypeUInt
 }
 
+func (v UIntValue) IsImportable(_ *Interpreter) bool {
+	return true
+}
+
 func (v UIntValue) ToInt() int {
 	if !v.BigInt.IsInt64() {
 		panic(OverflowError{})
@@ -6411,6 +6480,10 @@ func (UInt8Value) StaticType(_ *Interpreter) StaticType {
 	return PrimitiveStaticTypeUInt8
 }
 
+func (UInt8Value) IsImportable(_ *Interpreter) bool {
+	return true
+}
+
 func (v UInt8Value) String() string {
 	return format.Uint(uint64(v))
 }
@@ -6841,6 +6914,10 @@ func (UInt16Value) Walk(_ func(Value)) {
 
 func (UInt16Value) StaticType(_ *Interpreter) StaticType {
 	return PrimitiveStaticTypeUInt16
+}
+
+func (UInt16Value) IsImportable(_ *Interpreter) bool {
+	return true
 }
 
 func (v UInt16Value) String() string {
@@ -7277,6 +7354,10 @@ func (UInt32Value) Walk(_ func(Value)) {
 
 func (UInt32Value) StaticType(_ *Interpreter) StaticType {
 	return PrimitiveStaticTypeUInt32
+}
+
+func (UInt32Value) IsImportable(_ *Interpreter) bool {
+	return true
 }
 
 func (v UInt32Value) String() string {
@@ -7721,6 +7802,10 @@ func (UInt64Value) Walk(_ func(Value)) {
 
 func (UInt64Value) StaticType(_ *Interpreter) StaticType {
 	return PrimitiveStaticTypeUInt64
+}
+
+func (UInt64Value) IsImportable(_ *Interpreter) bool {
+	return true
 }
 
 func (v UInt64Value) String() string {
@@ -8183,6 +8268,10 @@ func (UInt128Value) Walk(_ func(Value)) {
 
 func (UInt128Value) StaticType(_ *Interpreter) StaticType {
 	return PrimitiveStaticTypeUInt128
+}
+
+func (UInt128Value) IsImportable(_ *Interpreter) bool {
+	return true
 }
 
 func (v UInt128Value) ToInt() int {
@@ -8713,6 +8802,10 @@ func (UInt256Value) StaticType(_ *Interpreter) StaticType {
 	return PrimitiveStaticTypeUInt256
 }
 
+func (UInt256Value) IsImportable(_ *Interpreter) bool {
+	return true
+}
+
 func (v UInt256Value) ToInt() int {
 	if !v.BigInt.IsInt64() {
 		panic(OverflowError{})
@@ -9231,6 +9324,10 @@ func (Word8Value) StaticType(_ *Interpreter) StaticType {
 	return PrimitiveStaticTypeWord8
 }
 
+func (Word8Value) IsImportable(_ *Interpreter) bool {
+	return true
+}
+
 func (v Word8Value) String() string {
 	return format.Uint(uint64(v))
 }
@@ -9571,6 +9668,10 @@ func (Word16Value) Walk(_ func(Value)) {
 
 func (Word16Value) StaticType(_ *Interpreter) StaticType {
 	return PrimitiveStaticTypeWord16
+}
+
+func (Word16Value) IsImportable(_ *Interpreter) bool {
+	return true
 }
 
 func (v Word16Value) String() string {
@@ -9914,6 +10015,10 @@ func (Word32Value) Walk(_ func(Value)) {
 
 func (Word32Value) StaticType(_ *Interpreter) StaticType {
 	return PrimitiveStaticTypeWord32
+}
+
+func (Word32Value) IsImportable(_ *Interpreter) bool {
+	return true
 }
 
 func (v Word32Value) String() string {
@@ -10265,6 +10370,10 @@ func (Word64Value) Walk(_ func(Value)) {
 
 func (Word64Value) StaticType(_ *Interpreter) StaticType {
 	return PrimitiveStaticTypeWord64
+}
+
+func (Word64Value) IsImportable(_ *Interpreter) bool {
+	return true
 }
 
 func (v Word64Value) String() string {
@@ -10637,6 +10746,10 @@ func (Fix64Value) Walk(_ func(Value)) {
 
 func (Fix64Value) StaticType(_ *Interpreter) StaticType {
 	return PrimitiveStaticTypeFix64
+}
+
+func (Fix64Value) IsImportable(_ *Interpreter) bool {
+	return true
 }
 
 func (v Fix64Value) String() string {
@@ -11070,6 +11183,10 @@ func (UFix64Value) Walk(_ func(Value)) {
 
 func (UFix64Value) StaticType(_ *Interpreter) StaticType {
 	return PrimitiveStaticTypeUFix64
+}
+
+func (UFix64Value) IsImportable(_ *Interpreter) bool {
+	return true
 }
 
 func (v UFix64Value) String() string {
@@ -11582,6 +11699,15 @@ func (v *CompositeValue) StaticType(_ *Interpreter) StaticType {
 		}
 	}
 	return v.staticType
+}
+
+func (v *CompositeValue) IsImportable(inter *Interpreter) bool {
+	staticType := v.StaticType(inter)
+	semaType, err := inter.ConvertStaticToSemaType(staticType)
+	if err != nil {
+		panic(err)
+	}
+	return semaType.IsImportable(map[*sema.Member]bool{})
 }
 
 func (v *CompositeValue) IsDestroyed() bool {
@@ -12651,6 +12777,22 @@ func (v *DictionaryValue) StaticType(_ *Interpreter) StaticType {
 	return v.Type
 }
 
+func (v *DictionaryValue) IsImportable(inter *Interpreter) bool {
+	importable := true
+	v.Iterate(func(key, value Value) (resume bool) {
+		if !key.IsImportable(inter) || !value.IsImportable(inter) {
+			importable = false
+			// stop iteration
+			return false
+		}
+
+		// continue iteration
+		return true
+	})
+
+	return importable
+}
+
 func (v *DictionaryValue) IsDestroyed() bool {
 	return v.isDestroyed
 }
@@ -13532,6 +13674,10 @@ func (NilValue) StaticType(_ *Interpreter) StaticType {
 	}
 }
 
+func (NilValue) IsImportable(_ *Interpreter) bool {
+	return true
+}
+
 func (NilValue) isOptionalValue() {}
 
 func (NilValue) IsDestroyed() bool {
@@ -13684,6 +13830,10 @@ func (v *SomeValue) StaticType(inter *Interpreter) StaticType {
 	return OptionalStaticType{
 		Type: innerType,
 	}
+}
+
+func (v *SomeValue) IsImportable(inter *Interpreter) bool {
+	return v.value.IsImportable(inter)
 }
 
 func (*SomeValue) isOptionalValue() {}
@@ -14010,6 +14160,10 @@ func (v *StorageReferenceValue) StaticType(inter *Interpreter) StaticType {
 	}
 }
 
+func (*StorageReferenceValue) IsImportable(_ *Interpreter) bool {
+	return false
+}
+
 func (v *StorageReferenceValue) dereference(interpreter *Interpreter, getLocationRange func() LocationRange) (*Value, error) {
 	address := v.TargetStorageAddress
 	domain := v.TargetPath.Domain.Identifier()
@@ -14324,6 +14478,10 @@ func (v *EphemeralReferenceValue) StaticType(inter *Interpreter) StaticType {
 		BorrowedType:   ConvertSemaToStaticType(v.BorrowedType),
 		ReferencedType: (*referencedValue).StaticType(inter),
 	}
+}
+
+func (*EphemeralReferenceValue) IsImportable(_ *Interpreter) bool {
+	return false
 }
 
 func (v *EphemeralReferenceValue) ReferencedValue(
@@ -14644,6 +14802,10 @@ func (AddressValue) StaticType(_ *Interpreter) StaticType {
 	return PrimitiveStaticTypeAddress
 }
 
+func (AddressValue) IsImportable(_ *Interpreter) bool {
+	return true
+}
+
 func (v AddressValue) String() string {
 	return format.Address(common.Address(v))
 }
@@ -14861,6 +15023,19 @@ func (v PathValue) StaticType(_ *Interpreter) StaticType {
 	}
 }
 
+func (v PathValue) IsImportable(_ *Interpreter) bool {
+	switch v.Domain {
+	case common.PathDomainStorage:
+		return sema.StoragePathType.Importable
+	case common.PathDomainPublic:
+		return sema.PublicPathType.Importable
+	case common.PathDomainPrivate:
+		return sema.PrivatePathType.Importable
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
 func (v PathValue) String() string {
 	return format.Path(
 		v.Domain.Identifier(),
@@ -15067,6 +15242,10 @@ func (v *CapabilityValue) StaticType(_ *Interpreter) StaticType {
 	}
 }
 
+func (v *CapabilityValue) IsImportable(_ *Interpreter) bool {
+	return v.Path.Domain == common.PathDomainPublic
+}
+
 func (v *CapabilityValue) String() string {
 	return v.RecursiveString(SeenReferences{})
 }
@@ -15242,6 +15421,10 @@ func (v LinkValue) Walk(walkChild func(Value)) {
 
 func (LinkValue) StaticType(_ *Interpreter) StaticType {
 	return nil
+}
+
+func (LinkValue) IsImportable(_ *Interpreter) bool {
+	return false
 }
 
 func (v LinkValue) String() string {
