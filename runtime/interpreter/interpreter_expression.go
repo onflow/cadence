@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -911,10 +911,12 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
+
 		switch result := result.(type) {
-		// references to optionals are transformed into optional references, so move
-		// the *SomeValue out to the reference itself
 		case *SomeValue:
+			// References to optionals are transformed into optional references,
+			// so move the *SomeValue out to the reference itself
+
 			getLocationRange := locationRangeGetter(interpreter, interpreter.Location, referenceExpression.Expression)
 
 			return NewSomeValueNonCopying(
@@ -926,16 +928,29 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 					innerBorrowType.Type,
 				),
 			)
+
 		case NilValue:
 			return NewNilValue(interpreter)
+
 		default:
-			return NewEphemeralReferenceValue(
-				interpreter,
-				innerBorrowType.Authorized,
-				result,
-				innerBorrowType.Type,
+			// If the referenced value is non-optional,
+			// but the target type is optional,
+			// then box the reference properly
+
+			getLocationRange := locationRangeGetter(interpreter, interpreter.Location, referenceExpression)
+
+			return interpreter.BoxOptional(
+				getLocationRange,
+				NewEphemeralReferenceValue(
+					interpreter,
+					innerBorrowType.Authorized,
+					result,
+					innerBorrowType.Type,
+				),
+				borrowType,
 			)
 		}
+
 	case *sema.ReferenceType:
 		return NewEphemeralReferenceValue(interpreter, typ.Authorized, result, typ.Type)
 	}

@@ -35,9 +35,12 @@ const (
 	MemoryKindCharacter
 	MemoryKindMetaType
 	MemoryKindNumber
-	MemoryKindArray
-	MemoryKindDictionary
-	MemoryKindComposite
+	MemoryKindArrayBase
+	MemoryKindArrayLength
+	MemoryKindDictionaryBase
+	MemoryKindDictionarySize
+	MemoryKindCompositeBase
+	MemoryKindCompositeSize
 	MemoryKindOptional
 	MemoryKindNil
 	MemoryKindVoid
@@ -136,4 +139,8 @@ const (
 
 	MemoryKindPosition
 	MemoryKindRange
+
+	// Placeholder kind to allow consistent indexing
+	// this should always be the last kind
+	MemoryKindLast
 )

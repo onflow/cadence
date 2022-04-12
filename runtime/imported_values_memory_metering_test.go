@@ -372,7 +372,7 @@ func TestMemoryMeteringErrors(t *testing.T) {
 		intf := &testRuntimeInterface{
 			meterMemory: func(usage common.MemoryUsage) error {
 				if usage.Kind == common.MemoryKindString ||
-					usage.Kind == common.MemoryKindArray {
+					usage.Kind == common.MemoryKindArrayBase {
 					return testMemoryError{}
 				}
 				return nil

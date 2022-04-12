@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,7 +57,10 @@ func NewSimpleCompositeValue(
 	fieldFormatters map[string]func(Value, SeenReferences) string,
 	stringer func(SeenReferences) string,
 ) *SimpleCompositeValue {
-	common.UseConstantMemory(inter, common.MemoryKindComposite)
+
+	baseUsage, lengthUsage := common.NewCompositeMemoryUsages(len(fields))
+	common.UseMemory(inter, baseUsage)
+	common.UseMemory(inter, lengthUsage)
 
 	return &SimpleCompositeValue{
 		TypeID:          typeID,

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,8 @@ package interpreter
 
 import (
 	"github.com/onflow/atree"
+
+	"github.com/onflow/cadence/runtime/common"
 )
 
 // StorageMap is an ordered map which stores values in an account.
@@ -164,14 +166,14 @@ func (s StorageMap) removeValue(interpreter *Interpreter, key string) {
 // Iterator returns an iterator (StorageMapIterator),
 // which allows iterating over the keys and values of the storage map
 //
-func (s StorageMap) Iterator(interpreter *Interpreter) StorageMapIterator {
+func (s StorageMap) Iterator(gauge common.MemoryGauge) StorageMapIterator {
 	mapIterator, err := s.orderedMap.Iterator()
 	if err != nil {
 		panic(ExternalError{err})
 	}
 
 	return StorageMapIterator{
-		interpreter: interpreter,
+		gauge:       gauge,
 		mapIterator: mapIterator,
 		storage:     s.orderedMap.Storage,
 	}
@@ -184,7 +186,7 @@ func (s StorageMap) StorageID() atree.StorageID {
 // StorageMapIterator is an iterator over StorageMap
 //
 type StorageMapIterator struct {
-	interpreter *Interpreter
+	gauge       common.MemoryGauge
 	mapIterator *atree.MapIterator
 	storage     atree.SlabStorage
 }
@@ -203,7 +205,7 @@ func (i StorageMapIterator) Next() (string, Value) {
 	}
 
 	key := string(k.(StringAtreeValue))
-	value := MustConvertStoredValue(i.interpreter, v)
+	value := MustConvertStoredValue(i.gauge, v)
 
 	return key, value
 }
@@ -237,5 +239,5 @@ func (i StorageMapIterator) NextValue() Value {
 		return nil
 	}
 
-	return MustConvertStoredValue(i.interpreter, v)
+	return MustConvertStoredValue(i.gauge, v)
 }

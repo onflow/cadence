@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -315,7 +315,7 @@ func (c TypeCodes) Merge(codes TypeCodes) {
 
 type Storage interface {
 	atree.SlabStorage
-	GetStorageMap(address common.Address, domain string) *StorageMap
+	GetStorageMap(address common.Address, domain string, createIfNotExists bool) *StorageMap
 	CheckHealth() error
 }
 
@@ -2694,7 +2694,10 @@ func (interpreter *Interpreter) storedValueExists(
 	domain string,
 	identifier string,
 ) bool {
-	accountStorage := interpreter.Storage.GetStorageMap(storageAddress, domain)
+	accountStorage := interpreter.Storage.GetStorageMap(storageAddress, domain, false)
+	if accountStorage == nil {
+		return false
+	}
 	return accountStorage.ValueExists(identifier)
 }
 
@@ -2703,7 +2706,10 @@ func (interpreter *Interpreter) ReadStored(
 	domain string,
 	identifier string,
 ) Value {
-	accountStorage := interpreter.Storage.GetStorageMap(storageAddress, domain)
+	accountStorage := interpreter.Storage.GetStorageMap(storageAddress, domain, false)
+	if accountStorage == nil {
+		return nil
+	}
 	return accountStorage.ReadValue(interpreter, identifier)
 }
 
@@ -2713,7 +2719,7 @@ func (interpreter *Interpreter) writeStored(
 	identifier string,
 	value Value,
 ) {
-	accountStorage := interpreter.Storage.GetStorageMap(storageAddress, domain)
+	accountStorage := interpreter.Storage.GetStorageMap(storageAddress, domain, true)
 	accountStorage.WriteValue(interpreter, identifier, value)
 }
 

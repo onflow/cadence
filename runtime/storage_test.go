@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1937,7 +1937,7 @@ func TestRuntimeResourceOwnerChange(t *testing.T) {
 			//   + contract
 			"\x00\x00\x00\x00\x00\x00\x00\x01|$\x00\x00\x00\x00\x00\x00\x00\x01",
 			"\x00\x00\x00\x00\x00\x00\x00\x01|$\x00\x00\x00\x00\x00\x00\x00\x02",
-			"\x00\x00\x00\x00\x00\x00\x00\x01|$\x00\x00\x00\x00\x00\x00\x00\x03",
+			"\x00\x00\x00\x00\x00\x00\x00\x01|$\x00\x00\x00\x00\x00\x00\x00\x04",
 			"\x00\x00\x00\x00\x00\x00\x00\x01|contract",
 			"\x00\x00\x00\x00\x00\x00\x00\x01|storage",
 			// account 0x2
@@ -3003,4 +3003,43 @@ func TestRuntimeNoAtreeSendOnClosedChannelDuringCommit(t *testing.T) {
 			require.Contains(t, err.Error(), "cannot store non-storable value")
 		}
 	})
+}
+
+func TestStorageReadNoImplicitWrite(t *testing.T) {
+
+	t.Parallel()
+
+	rt := newTestInterpreterRuntime()
+
+	address, err := common.HexToAddress("0x1")
+	require.NoError(t, err)
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: newTestLedger(nil, func(_, _, _ []byte) {
+			assert.FailNow(t, "unexpected write")
+		}),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{address}, nil
+		},
+	}
+
+	err = rt.ExecuteTransaction(
+		Script{
+			Source: []byte((`
+              transaction {
+			    prepare(signer: AuthAccount) {
+			        let ref = getAccount(0x2)
+			            .getCapability(/public/test)
+			            .borrow<&AnyStruct>()
+                    assert(ref == nil)
+			    }
+              }
+            `)),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  common.TransactionLocation{},
+		},
+	)
+	require.NoError(t, err)
 }
