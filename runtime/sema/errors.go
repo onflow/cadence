@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -724,6 +724,17 @@ func (e *AssignmentToConstantMemberError) Error() string {
 }
 
 func (*AssignmentToConstantMemberError) isSemanticError() {}
+
+type FieldReinitializationError struct {
+	Name string
+	ast.Range
+}
+
+func (e *FieldReinitializationError) Error() string {
+	return fmt.Sprintf("invalid reinitialization of field: `%s`", e.Name)
+}
+
+func (*FieldReinitializationError) isSemanticError() {}
 
 // FieldUninitializedError
 

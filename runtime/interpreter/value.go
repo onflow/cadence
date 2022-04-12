@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1356,7 +1356,9 @@ func newArrayValueFromAtreeValue(
 	staticType ArrayStaticType,
 ) *ArrayValue {
 
-	common.UseMemory(memoryGauge, common.NewConstantMemoryUsage(common.MemoryKindArray))
+	baseUse, lengthUse := common.NewArrayMemoryUsages(int(array.Count()))
+	common.UseMemory(memoryGauge, baseUse)
+	common.UseMemory(memoryGauge, lengthUse)
 
 	return &ArrayValue{
 		Type:  staticType,
@@ -1384,12 +1386,12 @@ func (v *ArrayValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	})
 }
 
-func (v *ArrayValue) Iterate(interpreter *Interpreter, f func(element Value) (resume bool)) {
+func (v *ArrayValue) Iterate(gauge common.MemoryGauge, f func(element Value) (resume bool)) {
 	err := v.array.Iterate(func(element atree.Value) (resume bool, err error) {
 		// atree.Array iteration provides low-level atree.Value,
 		// convert to high-level interpreter.Value
 
-		resume = f(MustConvertStoredValue(interpreter, element))
+		resume = f(MustConvertStoredValue(gauge, element))
 
 		return resume, nil
 	})
@@ -1648,6 +1650,9 @@ func (v *ArrayValue) RecursiveString(seenReferences SeenReferences) string {
 
 func (v *ArrayValue) Append(interpreter *Interpreter, getLocationRange func() LocationRange, element Value) {
 
+	// length increases by 1
+	common.UseMemory(interpreter, common.NewArrayLengthUsage(1))
+
 	interpreter.checkContainerMutation(v.Type.ElementType(), element, getLocationRange)
 
 	element = element.Transfer(
@@ -1693,6 +1698,9 @@ func (v *ArrayValue) Insert(interpreter *Interpreter, getLocationRange func() Lo
 			LocationRange: getLocationRange(),
 		})
 	}
+
+	// length increases by 1
+	common.UseMemory(interpreter, common.NewArrayLengthUsage(1))
 
 	interpreter.checkContainerMutation(v.Type.ElementType(), element, getLocationRange)
 
@@ -7079,7 +7087,7 @@ func (UIntValue) StaticType() StaticType {
 }
 
 func (v UIntValue) ToInt() int {
-	if v.BigInt.IsInt64() {
+	if !v.BigInt.IsInt64() {
 		panic(OverflowError{})
 	}
 	return int(v.BigInt.Int64())
@@ -13973,7 +13981,9 @@ func newCompositeValueFromOrderedMap(
 	typeInfo compositeTypeInfo,
 ) *CompositeValue {
 
-	common.UseMemory(memoryGauge, common.NewConstantMemoryUsage(common.MemoryKindComposite))
+	baseUse, lengthUse := common.NewCompositeMemoryUsages(int(dict.Count()))
+	common.UseMemory(memoryGauge, baseUse)
+	common.UseMemory(memoryGauge, lengthUse)
 
 	return &CompositeValue{
 		dictionary:          dict,
@@ -14898,12 +14908,12 @@ func (v *CompositeValue) GetOwner() common.Address {
 // ForEachField iterates over all field-name field-value pairs of the composite value.
 // It does NOT iterate over computed fields and functions!
 //
-func (v *CompositeValue) ForEachField(interpreter *Interpreter, f func(fieldName string, fieldValue Value)) {
+func (v *CompositeValue) ForEachField(gauge common.MemoryGauge, f func(fieldName string, fieldValue Value)) {
 
 	err := v.dictionary.Iterate(func(key atree.Value, value atree.Value) (resume bool, err error) {
 		f(
 			string(key.(StringAtreeValue)),
-			MustConvertStoredValue(interpreter, value),
+			MustConvertStoredValue(gauge, value),
 		)
 		return true, nil
 	})
@@ -15067,7 +15077,9 @@ func newDictionaryValueFromOrderedMap(
 	staticType DictionaryStaticType,
 ) *DictionaryValue {
 
-	common.UseMemory(memoryGauge, common.NewConstantMemoryUsage(common.MemoryKindDictionary))
+	baseUse, lengthUse := common.NewDictionaryMemoryUsages(int(dict.Count()))
+	common.UseMemory(memoryGauge, baseUse)
+	common.UseMemory(memoryGauge, lengthUse)
 
 	return &DictionaryValue{
 		Type:       staticType,
@@ -15095,14 +15107,14 @@ func (v *DictionaryValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	})
 }
 
-func (v *DictionaryValue) Iterate(interpreter *Interpreter, f func(key, value Value) (resume bool)) {
+func (v *DictionaryValue) Iterate(gauge common.MemoryGauge, f func(key, value Value) (resume bool)) {
 	err := v.dictionary.Iterate(func(key, value atree.Value) (resume bool, err error) {
 		// atree.OrderedMap iteration provides low-level atree.Value,
 		// convert to high-level interpreter.Value
 
 		resume = f(
-			MustConvertStoredValue(interpreter, key),
-			MustConvertStoredValue(interpreter, value),
+			MustConvertStoredValue(gauge, key),
+			MustConvertStoredValue(gauge, value),
 		)
 
 		return resume, nil
@@ -15561,6 +15573,9 @@ func (v *DictionaryValue) Insert(
 	getLocationRange func() LocationRange,
 	keyValue, value Value,
 ) OptionalValue {
+
+	// length increases by 1
+	common.UseMemory(interpreter, common.NewDictionarySizeUsage(1))
 
 	interpreter.checkContainerMutation(v.Type.KeyType, keyValue, getLocationRange)
 	interpreter.checkContainerMutation(v.Type.ValueType, value, getLocationRange)

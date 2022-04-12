@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -81,7 +81,13 @@ func NewStorage(ledger atree.Ledger, memoryGauge common.MemoryGauge) *Storage {
 
 const storageIndexLength = 8
 
-func (s *Storage) GetStorageMap(address common.Address, domain string) (storageMap *interpreter.StorageMap) {
+func (s *Storage) GetStorageMap(
+	address common.Address,
+	domain string,
+	createIfNotExists bool,
+) (
+	storageMap *interpreter.StorageMap,
+) {
 	key := interpreter.StorageKey{
 		Address: address,
 		Key:     domain,
@@ -119,11 +125,13 @@ func (s *Storage) GetStorageMap(address common.Address, domain string) (storageM
 			var storageIndex atree.StorageIndex
 			copy(storageIndex[:], data[:])
 			storageMap = s.loadExistingStorageMap(atreeAddress, storageIndex)
-		} else {
+		} else if createIfNotExists {
 			storageMap = s.storeNewStorageMap(atreeAddress, domain)
 		}
 
-		s.storageMaps[key] = storageMap
+		if storageMap != nil {
+			s.storageMaps[key] = storageMap
+		}
 	}
 
 	return storageMap
@@ -232,7 +240,7 @@ func (s *Storage) writeContractUpdate(
 	key interpreter.StorageKey,
 	contractValue *interpreter.CompositeValue,
 ) {
-	storageMap := s.GetStorageMap(key.Address, StorageDomainContract)
+	storageMap := s.GetStorageMap(key.Address, StorageDomainContract, true)
 	// NOTE: pass nil instead of allocating a Value-typed  interface that points to nil
 	if contractValue == nil {
 		storageMap.WriteValue(inter, key.Key, nil)

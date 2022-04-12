@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -486,7 +486,7 @@ func (r *interpreterRuntime) newAuthAccountValue(
 		accountBalanceGetFunction(addressValue, context.Interface),
 		accountAvailableBalanceGetFunction(addressValue, context.Interface),
 		storageUsedGetFunction(addressValue, context.Interface, storage),
-		storageCapacityGetFunction(addressValue, context.Interface),
+		storageCapacityGetFunction(addressValue, context.Interface, storage),
 		r.newAddPublicKeyFunction(inter, addressValue, context.Interface),
 		r.newRemovePublicKeyFunction(inter, addressValue, context.Interface),
 		func() interpreter.Value {
@@ -1900,17 +1900,28 @@ func storageUsedGetFunction(
 func storageCapacityGetFunction(
 	addressValue interpreter.AddressValue,
 	runtimeInterface Interface,
-) func(*interpreter.Interpreter) interpreter.UInt64Value {
+	storage *Storage,
+) func(inter *interpreter.Interpreter) interpreter.UInt64Value {
 
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation
 	address := addressValue.ToAddress()
 
 	return func(inter *interpreter.Interpreter) interpreter.UInt64Value {
+
+		var err error
+
+		// NOTE: flush the cached values, so the host environment
+		// can properly calculate the amount of storage available for the account
+		const commitContractUpdates = false
+		err = storage.Commit(inter, commitContractUpdates)
+		if err != nil {
+			panic(err)
+		}
+
 		return interpreter.NewUInt64Value(
 			inter,
 			func() uint64 {
 				var capacity uint64
-				var err error
 				wrapPanic(func() {
 					capacity, err = runtimeInterface.GetStorageCapacity(address)
 				})
@@ -1920,6 +1931,7 @@ func storageCapacityGetFunction(
 				return capacity
 			},
 		)
+
 	}
 }
 
@@ -2063,8 +2075,11 @@ func (r *interpreterRuntime) loadContract(
 			storageMap := storage.GetStorageMap(
 				location.Address,
 				StorageDomainContract,
+				false,
 			)
-			storedValue = storageMap.ReadValue(inter, location.Name)
+			if storageMap != nil {
+				storedValue = storageMap.ReadValue(inter, location.Name)
+			}
 		}
 
 		if storedValue == nil {
@@ -2269,7 +2284,7 @@ func (r *interpreterRuntime) getPublicAccount(
 		accountBalanceGetFunction(accountAddress, runtimeInterface),
 		accountAvailableBalanceGetFunction(accountAddress, runtimeInterface),
 		storageUsedGetFunction(accountAddress, runtimeInterface, storage),
-		storageCapacityGetFunction(accountAddress, runtimeInterface),
+		storageCapacityGetFunction(accountAddress, runtimeInterface, storage),
 		func() interpreter.Value {
 			return r.newPublicAccountKeys(inter, accountAddress, runtimeInterface)
 		},
