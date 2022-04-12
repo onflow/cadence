@@ -311,6 +311,19 @@ func NewFixedPointExpression(
 	scale uint,
 	tokenRange Range,
 ) *FixedPointExpression {
+	common.UseMemory(
+		gauge,
+		common.NewBigIntMemoryUsage(
+			common.BigIntByteLength(integer),
+		),
+	)
+	common.UseMemory(
+		gauge,
+		common.NewBigIntMemoryUsage(
+			common.BigIntByteLength(fractional),
+		),
+	)
+
 	common.UseMemory(gauge, common.FixedPointExpressionMemoryUsage)
 
 	return &FixedPointExpression{
