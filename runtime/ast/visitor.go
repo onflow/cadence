@@ -18,6 +18,8 @@
 
 package ast
 
+import "github.com/onflow/cadence/runtime/common"
+
 type Repr interface{}
 
 type Element interface {
@@ -34,11 +36,11 @@ func (NotAnElement) Accept(Visitor) Repr {
 }
 
 func (NotAnElement) StartPosition() Position {
-	return Position{}
+	return EmptyPosition
 }
 
-func (NotAnElement) EndPosition() Position {
-	return Position{}
+func (NotAnElement) EndPosition(common.MemoryGauge) Position {
+	return EmptyPosition
 }
 
 func (NotAnElement) Walk(_ func(Element)) {

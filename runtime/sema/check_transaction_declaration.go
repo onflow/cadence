@@ -213,7 +213,7 @@ func (checker *Checker) checkTransactionPrepareFunctionParameters(
 			checker.report(
 				&InvalidTransactionPrepareParameterTypeError{
 					Type:  parameterType,
-					Range: ast.NewRangeFromPositioned(parameter.TypeAnnotation),
+					Range: ast.NewRangeFromPositioned(checker.memoryGauge, parameter.TypeAnnotation),
 				},
 			)
 		}

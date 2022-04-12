@@ -42,7 +42,7 @@ func (checker *Checker) VisitReturnStatement(statement *ast.ReturnStatement) ast
 			checker.report(
 				&MissingReturnValueError{
 					ExpectedValueType: returnType,
-					Range:             ast.NewRangeFromPositioned(statement),
+					Range:             ast.NewRangeFromPositioned(checker.memoryGauge, statement),
 				},
 			)
 		}

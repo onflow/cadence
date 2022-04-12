@@ -78,11 +78,11 @@ func (d *VariableDeclaration) StartPosition() Position {
 	return d.StartPos
 }
 
-func (d *VariableDeclaration) EndPosition() Position {
+func (d *VariableDeclaration) EndPosition(memoryGauge common.MemoryGauge) Position {
 	if d.SecondValue != nil {
-		return d.SecondValue.EndPosition()
+		return d.SecondValue.EndPosition(memoryGauge)
 	}
-	return d.Value.EndPosition()
+	return d.Value.EndPosition(memoryGauge)
 }
 
 func (*VariableDeclaration) isIfStatementTest() {}
@@ -170,7 +170,7 @@ func (d *VariableDeclaration) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "VariableDeclaration",
-		Range: NewRangeFromPositioned(d),
+		Range: NewUnmeteredRangeFromPositioned(d),
 		Alias: (*Alias)(d),
 	})
 }

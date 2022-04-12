@@ -86,7 +86,7 @@ func newExcerpt(obj interface{}, message string, isError bool) excerpt {
 		startPos := positioned.StartPosition()
 		excerpt.startPos = &startPos
 
-		endPos := positioned.EndPosition()
+		endPos := positioned.EndPosition(nil)
 		excerpt.endPos = &endPos
 	}
 	return excerpt

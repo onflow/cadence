@@ -158,7 +158,7 @@ func (b *FunctionBlock) StartPosition() Position {
 	return b.Block.StartPos
 }
 
-func (b *FunctionBlock) EndPosition() Position {
+func (b *FunctionBlock) EndPosition(common.MemoryGauge) Position {
 	return b.Block.EndPos
 }
 

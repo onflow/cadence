@@ -239,7 +239,7 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 		checker.report(
 			&InvalidInterfaceDeclarationError{
 				CompositeKind: declaration.CompositeKind,
-				Range:         ast.NewRangeFromPositioned(declaration.Identifier),
+				Range:         ast.NewRangeFromPositioned(checker.memoryGauge, declaration.Identifier),
 			},
 		)
 	}

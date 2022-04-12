@@ -84,7 +84,7 @@ func (interpreter *Interpreter) indexExpressionGetterSetter(indexExpression *ast
 		panic(errors.NewUnreachableError())
 	}
 	indexingValue := interpreter.evalExpression(indexExpression.IndexingExpression)
-	getLocationRange := locationRangeGetter(interpreter.Location, indexExpression)
+	getLocationRange := locationRangeGetter(interpreter, interpreter.Location, indexExpression)
 	_, isNestedResourceMove := interpreter.Program.Elaboration.IsNestedResourceMoveExpression[indexExpression]
 	return getterSetter{
 		target: target,
@@ -111,7 +111,7 @@ func (interpreter *Interpreter) indexExpressionGetterSetter(indexExpression *ast
 func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *ast.MemberExpression) getterSetter {
 	target := interpreter.evalExpression(memberExpression.Expression)
 	identifier := memberExpression.Identifier.Identifier
-	getLocationRange := locationRangeGetter(interpreter.Location, memberExpression)
+	getLocationRange := locationRangeGetter(interpreter, interpreter.Location, memberExpression)
 	_, isNestedResourceMove := interpreter.Program.Elaboration.IsNestedResourceMoveExpression[memberExpression]
 	return getterSetter{
 		target: target,
@@ -189,7 +189,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 			Operation:     expression.Operation,
 			LeftType:      leftValue.StaticType(),
 			RightType:     right.StaticType(),
-			LocationRange: locationRangeGetter(interpreter.Location, expression)(),
+			LocationRange: locationRangeGetter(interpreter, interpreter.Location, expression)(),
 		})
 	}
 
@@ -353,7 +353,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		return right
 
 	case ast.OperationNilCoalesce:
-		getLocationRange := locationRangeGetter(interpreter.Location, expression)
+		getLocationRange := locationRangeGetter(interpreter, interpreter.Location, expression)
 
 		// only evaluate right-hand side if left-hand side is nil
 		if some, ok := leftValue.(*SomeValue); ok {
@@ -372,18 +372,18 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 	panic(&unsupportedOperation{
 		kind:      common.OperationKindBinary,
 		operation: expression.Operation,
-		Range:     ast.NewRangeFromPositioned(expression),
+		Range:     ast.NewUnmeteredRangeFromPositioned(expression),
 	})
 }
 
 func (interpreter *Interpreter) testEqual(left, right Value, expression *ast.BinaryExpression) BoolValue {
 	left = interpreter.Unbox(
-		locationRangeGetter(interpreter.Location, expression.Left),
+		locationRangeGetter(interpreter, interpreter.Location, expression.Left),
 		left,
 	)
 
 	right = interpreter.Unbox(
-		locationRangeGetter(interpreter.Location, expression.Right),
+		locationRangeGetter(interpreter, interpreter.Location, expression.Right),
 		right,
 	)
 
@@ -395,7 +395,7 @@ func (interpreter *Interpreter) testEqual(left, right Value, expression *ast.Bin
 
 		return leftEquatable.Equal(
 			interpreter,
-			locationRangeGetter(interpreter.Location, expression),
+			locationRangeGetter(interpreter, interpreter.Location, expression),
 			right,
 		)
 	}
@@ -429,7 +429,7 @@ func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpres
 	panic(&unsupportedOperation{
 		kind:      common.OperationKindUnary,
 		operation: expression.Operation,
-		Range:     ast.NewRangeFromPositioned(expression),
+		Range:     ast.NewUnmeteredRangeFromPositioned(expression),
 	})
 }
 
@@ -592,7 +592,7 @@ func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpres
 	for i, argument := range values {
 		argumentType := argumentTypes[i]
 		argumentExpression := expression.Values[i]
-		getLocationRange := locationRangeGetter(interpreter.Location, argumentExpression)
+		getLocationRange := locationRangeGetter(interpreter, interpreter.Location, argumentExpression)
 		copies[i] = interpreter.transferAndConvert(argument, argumentType, elementType, getLocationRange)
 	}
 
@@ -623,14 +623,14 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 			dictionaryEntryValues.Key,
 			entryType.KeyType,
 			dictionaryType.KeyType,
-			locationRangeGetter(interpreter.Location, entry.Key),
+			locationRangeGetter(interpreter, interpreter.Location, entry.Key),
 		)
 
 		value := interpreter.transferAndConvert(
 			dictionaryEntryValues.Value,
 			entryType.ValueType,
 			dictionaryType.ValueType,
-			locationRangeGetter(interpreter.Location, entry.Value),
+			locationRangeGetter(interpreter, interpreter.Location, entry.Value),
 		)
 
 		// TODO: panic for duplicate keys?
@@ -658,7 +658,7 @@ func (interpreter *Interpreter) VisitIndexExpression(expression *ast.IndexExpres
 		panic(errors.NewUnreachableError())
 	}
 	indexingValue := interpreter.evalExpression(expression.IndexingExpression)
-	getLocationRange := locationRangeGetter(interpreter.Location, expression)
+	getLocationRange := locationRangeGetter(interpreter, interpreter.Location, expression)
 	return typedResult.GetKey(interpreter, getLocationRange, indexingValue)
 }
 
@@ -710,7 +710,7 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 		case *SomeValue:
 			result = typedResult.InnerValue(
 				interpreter,
-				locationRangeGetter(interpreter.Location, invocationExpression.InvokedExpression),
+				locationRangeGetter(interpreter, interpreter.Location, invocationExpression.InvokedExpression),
 			)
 
 		default:
@@ -832,7 +832,7 @@ func (interpreter *Interpreter) VisitFunctionExpression(expression *ast.Function
 func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingExpression) ast.Repr {
 	value := interpreter.evalExpression(expression.Expression)
 
-	getLocationRange := locationRangeGetter(interpreter.Location, expression.Expression)
+	getLocationRange := locationRangeGetter(interpreter, interpreter.Location, expression.Expression)
 
 	expectedType := interpreter.Program.Elaboration.CastingTargetTypes[expression]
 
@@ -854,7 +854,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 
 		case ast.OperationForceCast:
 			if !isSubType {
-				getLocationRange := locationRangeGetter(interpreter.Location, expression.Expression)
+				getLocationRange := locationRangeGetter(interpreter, interpreter.Location, expression.Expression)
 				panic(ForceCastTypeMismatchError{
 					ExpectedType:  expectedType,
 					LocationRange: getLocationRange(),
@@ -887,7 +887,7 @@ func (interpreter *Interpreter) VisitDestroyExpression(expression *ast.DestroyEx
 
 	interpreter.invalidateResource(value)
 
-	getLocationRange := locationRangeGetter(interpreter.Location, expression)
+	getLocationRange := locationRangeGetter(interpreter, interpreter.Location, expression)
 
 	value.(ResourceKindedValue).Destroy(interpreter, getLocationRange)
 
@@ -917,7 +917,7 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 			// References to optionals are transformed into optional references,
 			// so move the *SomeValue out to the reference itself
 
-			getLocationRange := locationRangeGetter(interpreter.Location, referenceExpression.Expression)
+			getLocationRange := locationRangeGetter(interpreter, interpreter.Location, referenceExpression.Expression)
 
 			return NewSomeValueNonCopying(
 				interpreter,
@@ -937,7 +937,7 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 			// but the target type is optional,
 			// then box the reference properly
 
-			getLocationRange := locationRangeGetter(interpreter.Location, referenceExpression)
+			getLocationRange := locationRangeGetter(interpreter, interpreter.Location, referenceExpression)
 
 			return interpreter.BoxOptional(
 				getLocationRange,
@@ -962,7 +962,7 @@ func (interpreter *Interpreter) VisitForceExpression(expression *ast.ForceExpres
 
 	switch result := result.(type) {
 	case *SomeValue:
-		getLocationRange := locationRangeGetter(interpreter.Location, expression.Expression)
+		getLocationRange := locationRangeGetter(interpreter, interpreter.Location, expression.Expression)
 		return result.InnerValue(interpreter, getLocationRange)
 
 	case NilValue:
@@ -971,8 +971,8 @@ func (interpreter *Interpreter) VisitForceExpression(expression *ast.ForceExpres
 				LocationRange: LocationRange{
 					Location: interpreter.Location,
 					Range: ast.Range{
-						StartPos: expression.EndPosition(),
-						EndPos:   expression.EndPosition(),
+						StartPos: expression.EndPosition(nil),
+						EndPos:   expression.EndPosition(nil),
 					},
 				},
 			},

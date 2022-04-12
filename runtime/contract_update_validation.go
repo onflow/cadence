@@ -83,7 +83,7 @@ func (validator *ContractUpdateValidator) getRootDeclaration(program *ast.Progra
 
 	if err != nil {
 		validator.report(&ContractNotFoundError{
-			Range: ast.NewRangeFromPositioned(program),
+			Range: ast.NewUnmeteredRangeFromPositioned(program),
 		})
 	}
 
@@ -102,7 +102,7 @@ func getRootDeclaration(program *ast.Program) (ast.Declaration, error) {
 	}
 
 	return nil, &ContractNotFoundError{
-		Range: ast.NewRangeFromPositioned(program),
+		Range: ast.NewUnmeteredRangeFromPositioned(program),
 	}
 
 }
@@ -124,7 +124,7 @@ func (validator *ContractUpdateValidator) checkDeclarationUpdatability(
 			Name:    oldDeclaration.DeclarationIdentifier().Identifier,
 			OldKind: oldDeclaration.DeclarationKind(),
 			NewKind: newDeclaration.DeclarationKind(),
-			Range:   ast.NewRangeFromPositioned(newDeclaration.DeclarationIdentifier()),
+			Range:   ast.NewUnmeteredRangeFromPositioned(newDeclaration.DeclarationIdentifier()),
 		})
 
 		return
@@ -163,7 +163,7 @@ func (validator *ContractUpdateValidator) checkFields(oldDeclaration ast.Declara
 			validator.report(&ExtraneousFieldError{
 				DeclName:  newDeclaration.DeclarationIdentifier().Identifier,
 				FieldName: newField.Identifier.Identifier,
-				Range:     ast.NewRangeFromPositioned(newField.Identifier),
+				Range:     ast.NewUnmeteredRangeFromPositioned(newField.Identifier),
 			})
 
 			continue
@@ -180,7 +180,7 @@ func (validator *ContractUpdateValidator) checkField(oldField *ast.FieldDeclarat
 			DeclName:  validator.currentDecl.DeclarationIdentifier().Identifier,
 			FieldName: newField.Identifier.Identifier,
 			Err:       err,
-			Range:     ast.NewRangeFromPositioned(newField.TypeAnnotation),
+			Range:     ast.NewUnmeteredRangeFromPositioned(newField.TypeAnnotation),
 		})
 	}
 }
@@ -241,7 +241,7 @@ func (validator *ContractUpdateValidator) checkNestedDeclarations(
 		validator.report(&MissingDeclarationError{
 			Name: declaration.DeclarationIdentifier().Identifier,
 			Kind: declaration.DeclarationKind(),
-			Range: ast.NewRangeFromPositioned(
+			Range: ast.NewUnmeteredRangeFromPositioned(
 				newDeclaration.DeclarationIdentifier(),
 			),
 		})
@@ -282,7 +282,7 @@ func (validator *ContractUpdateValidator) checkEnumCases(oldDeclaration ast.Decl
 			DeclName: newDeclaration.DeclarationIdentifier().Identifier,
 			Expected: oldEnumCaseCount,
 			Found:    newEnumCaseCount,
-			Range:    ast.NewRangeFromPositioned(newDeclaration.DeclarationIdentifier()),
+			Range:    ast.NewUnmeteredRangeFromPositioned(newDeclaration.DeclarationIdentifier()),
 		})
 
 		// If some enum cases are removed, trying to match each enum case
@@ -304,7 +304,7 @@ func (validator *ContractUpdateValidator) checkEnumCases(oldDeclaration ast.Decl
 			validator.report(&EnumCaseMismatchError{
 				ExpectedName: oldEnumCase.Identifier.Identifier,
 				FoundName:    newEnumCase.Identifier.Identifier,
-				Range:        ast.NewRangeFromPositioned(newEnumCase),
+				Range:        ast.NewUnmeteredRangeFromPositioned(newEnumCase),
 			})
 		}
 	}
@@ -539,7 +539,7 @@ func (validator *ContractUpdateValidator) checkConformances(
 		if !found {
 			validator.report(&ConformanceMismatchError{
 				DeclName: newDecl.Identifier.Identifier,
-				Range:    ast.NewRangeFromPositioned(newDecl.Identifier),
+				Range:    ast.NewUnmeteredRangeFromPositioned(newDecl.Identifier),
 			})
 
 			return
@@ -566,7 +566,7 @@ func getTypeMismatchError(expectedType ast.Type, foundType ast.Type) *TypeMismat
 	return &TypeMismatchError{
 		ExpectedType: expectedType,
 		FoundType:    foundType,
-		Range:        ast.NewRangeFromPositioned(foundType),
+		Range:        ast.NewUnmeteredRangeFromPositioned(foundType),
 	}
 }
 

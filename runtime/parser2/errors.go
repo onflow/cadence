@@ -71,7 +71,7 @@ func (e *SyntaxError) StartPosition() ast.Position {
 	return e.Pos
 }
 
-func (e *SyntaxError) EndPosition() ast.Position {
+func (e *SyntaxError) EndPosition(common.MemoryGauge) ast.Position {
 	return e.Pos
 }
 
@@ -91,7 +91,7 @@ func (e *JuxtaposedUnaryOperatorsError) StartPosition() ast.Position {
 	return e.Pos
 }
 
-func (e *JuxtaposedUnaryOperatorsError) EndPosition() ast.Position {
+func (e *JuxtaposedUnaryOperatorsError) EndPosition(common.MemoryGauge) ast.Position {
 	return e.Pos
 }
 

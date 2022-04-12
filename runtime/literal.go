@@ -117,7 +117,7 @@ func arrayLiteralValue(memoryGauge common.MemoryGauge, elements []ast.Expression
 	return cadence.NewArray(values), nil
 }
 
-func pathLiteralValue(expression ast.Expression, ty sema.Type) (result cadence.Value, errResult error) {
+func pathLiteralValue(memoryGauge common.MemoryGauge, expression ast.Expression, ty sema.Type) (result cadence.Value, errResult error) {
 	pathExpression, ok := expression.(*ast.PathExpression)
 	if !ok {
 		return nil, LiteralExpressionTypeError
@@ -127,10 +127,10 @@ func pathLiteralValue(expression ast.Expression, ty sema.Type) (result cadence.V
 		pathExpression.Domain.Identifier,
 		pathExpression.Identifier.Identifier,
 		func() ast.Range {
-			return ast.NewRangeFromPositioned(pathExpression.Domain)
+			return ast.NewRangeFromPositioned(memoryGauge, pathExpression.Domain)
 		},
 		func() ast.Range {
-			return ast.NewRangeFromPositioned(pathExpression.Identifier)
+			return ast.NewRangeFromPositioned(memoryGauge, pathExpression.Identifier)
 		},
 	)
 	if err != nil {
@@ -160,7 +160,7 @@ func integerLiteralValue(
 		return nil, LiteralExpressionTypeError
 	}
 
-	if !sema.CheckIntegerLiteral(integerExpression, ty, nil) {
+	if !sema.CheckIntegerLiteral(memoryGauge, integerExpression, ty, nil) {
 		return nil, InvalidLiteralError
 	}
 
@@ -241,13 +241,13 @@ func convertIntValue(
 	}
 }
 
-func fixedPointLiteralValue(expression ast.Expression, ty sema.Type) (cadence.Value, error) {
+func fixedPointLiteralValue(memoryGauge common.MemoryGauge, expression ast.Expression, ty sema.Type) (cadence.Value, error) {
 	fixedPointExpression, ok := expression.(*ast.FixedPointExpression)
 	if !ok {
 		return nil, LiteralExpressionTypeError
 	}
 
-	if !sema.CheckFixedPointLiteral(fixedPointExpression, ty, nil) {
+	if !sema.CheckFixedPointLiteral(memoryGauge, fixedPointExpression, ty, nil) {
 		return nil, InvalidLiteralError
 	}
 
@@ -332,7 +332,7 @@ func LiteralValue(memoryGauge common.MemoryGauge, expression ast.Expression, ty 
 			return nil, LiteralExpressionTypeError
 		}
 
-		if !sema.CheckAddressLiteral(expression, nil) {
+		if !sema.CheckAddressLiteral(memoryGauge, expression, nil) {
 			return nil, InvalidLiteralError
 		}
 
@@ -362,10 +362,10 @@ func LiteralValue(memoryGauge common.MemoryGauge, expression ast.Expression, ty 
 		return integerLiteralValue(memoryGauge, expression, ty)
 
 	case sema.IsSameTypeKind(ty, sema.FixedPointType):
-		return fixedPointLiteralValue(expression, ty)
+		return fixedPointLiteralValue(memoryGauge, expression, ty)
 
 	case sema.IsSameTypeKind(ty, sema.PathType):
-		return pathLiteralValue(expression, ty)
+		return pathLiteralValue(memoryGauge, expression, ty)
 	}
 
 	return nil, UnsupportedLiteralError

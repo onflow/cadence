@@ -42,7 +42,7 @@ func (checker *Checker) VisitSwapStatement(swap *ast.SwapStatement) ast.Repr {
 			&TypeMismatchError{
 				ExpectedType: leftType,
 				ActualType:   rightType,
-				Range:        ast.NewRangeFromPositioned(swap.Right),
+				Range:        ast.NewRangeFromPositioned(checker.memoryGauge, swap.Right),
 			},
 		)
 	}
@@ -70,7 +70,7 @@ func (checker *Checker) checkSwapStatementExpression(
 		checker.report(
 			&InvalidSwapExpressionError{
 				Side:  opSide,
-				Range: ast.NewRangeFromPositioned(expression),
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, expression),
 			},
 		)
 		return false

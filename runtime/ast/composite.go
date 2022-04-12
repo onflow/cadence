@@ -233,8 +233,8 @@ func (d *EnumCaseDeclaration) StartPosition() Position {
 	return d.StartPos
 }
 
-func (d *EnumCaseDeclaration) EndPosition() Position {
-	return d.Identifier.EndPosition()
+func (d *EnumCaseDeclaration) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return d.Identifier.EndPosition(memoryGauge)
 }
 
 func (d *EnumCaseDeclaration) DeclarationMembers() *Members {
@@ -253,7 +253,7 @@ func (d *EnumCaseDeclaration) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "EnumCaseDeclaration",
-		Range: NewRangeFromPositioned(d),
+		Range: NewUnmeteredRangeFromPositioned(d),
 		Alias: (*Alias)(d),
 	})
 }

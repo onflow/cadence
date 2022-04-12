@@ -181,7 +181,7 @@ func (checker *Checker) importResolvedLocation(resolvedLocation ResolvedLocation
 				Name:              identifier.Identifier,
 				RestrictingAccess: invalidAccessedElement.Access,
 				DeclarationKind:   invalidAccessedElement.DeclarationKind,
-				Range:             ast.NewRangeFromPositioned(identifier),
+				Range:             ast.NewRangeFromPositioned(checker.memoryGauge, identifier),
 			},
 		)
 	}
@@ -341,7 +341,7 @@ func (checker *Checker) importElements(
 				access: access,
 				kind:   element.DeclarationKind,
 				// TODO:
-				pos:                      ast.Position{},
+				pos:                      ast.EmptyPosition,
 				isConstant:               true,
 				argumentLabels:           element.ArgumentLabels,
 				allowOuterScopeShadowing: false,

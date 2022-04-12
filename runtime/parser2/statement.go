@@ -55,7 +55,7 @@ func parseStatements(p *parser, isEndToken func(token lexer.Token) bool) (statem
 				statementCount := len(statements)
 				if statementCount > 1 {
 					previousStatement := statements[statementCount-2]
-					previousLine := previousStatement.EndPosition().Line
+					previousLine := previousStatement.EndPosition(p.memoryGauge).Line
 					currentStartPos := statement.StartPosition()
 					if previousLine == currentStartPos.Line {
 						p.report(&SyntaxError{
@@ -197,7 +197,7 @@ func parseReturnStatement(p *parser) *ast.ReturnStatement {
 	default:
 		if !sawNewLine {
 			expression = parseExpression(p, lowestBindingPower)
-			endPosition = expression.EndPosition()
+			endPosition = expression.EndPosition(p.memoryGauge)
 		}
 	}
 
@@ -307,7 +307,7 @@ func parseIfStatement(p *parser) *ast.IfStatement {
 		outer.Else = ast.NewBlock(
 			p.memoryGauge,
 			[]ast.Statement{result},
-			ast.NewRangeFromPositioned(result),
+			ast.NewRangeFromPositioned(p.memoryGauge, result),
 		)
 		result = outer
 	}
@@ -635,7 +635,7 @@ func parseSwitchCase(p *parser, hasExpression bool) *ast.SwitchCase {
 
 	if len(statements) > 0 {
 		lastStatementIndex := len(statements) - 1
-		endPos = statements[lastStatementIndex].EndPosition()
+		endPos = statements[lastStatementIndex].EndPosition(p.memoryGauge)
 	}
 
 	return &ast.SwitchCase{

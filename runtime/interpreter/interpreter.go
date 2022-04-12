@@ -903,11 +903,15 @@ func (interpreter *Interpreter) SetDebugger(debugger *Debugger) {
 // locationRangeGetter returns a function that returns the location range
 // for the given location and positioned element.
 //
-func locationRangeGetter(location common.Location, hasPosition ast.HasPosition) func() LocationRange {
+func locationRangeGetter(
+	memoryGauge common.MemoryGauge,
+	location common.Location,
+	hasPosition ast.HasPosition,
+) func() LocationRange {
 	return func() LocationRange {
 		return LocationRange{
 			Location: location,
-			Range:    ast.NewRangeFromPositioned(hasPosition),
+			Range:    ast.NewRangeFromPositioned(memoryGauge, hasPosition),
 		}
 	}
 }
@@ -1132,7 +1136,7 @@ func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 
 			_, ok := err.(ast.HasPosition)
 			if !ok && interpreter.statement != nil {
-				r := ast.NewRangeFromPositioned(interpreter.statement)
+				r := ast.NewUnmeteredRangeFromPositioned(interpreter.statement)
 
 				err = PositionedError{
 					Err:   err,
@@ -1406,7 +1410,7 @@ func (interpreter *Interpreter) visitCondition(condition *ast.Condition) {
 	panic(ConditionError{
 		ConditionKind: condition.Kind,
 		Message:       message,
-		LocationRange: locationRangeGetter(interpreter.Location, condition.Test)(),
+		LocationRange: locationRangeGetter(interpreter, interpreter.Location, condition.Test)(),
 	})
 }
 
@@ -1443,7 +1447,7 @@ func (interpreter *Interpreter) visitAssignment(
 	// First evaluate the target, which results in a getter/setter function pair
 	getterSetter := interpreter.assignmentGetterSetter(targetExpression)
 
-	getLocationRange := locationRangeGetter(interpreter.Location, position)
+	getLocationRange := locationRangeGetter(interpreter, interpreter.Location, position)
 
 	// If the assignment is a forced move,
 	// ensure that the target is nil,
@@ -1459,7 +1463,7 @@ func (interpreter *Interpreter) visitAssignment(
 		target := getterSetter.get(allowMissing)
 
 		if _, ok := target.(NilValue); !ok && target != nil {
-			getLocationRange := locationRangeGetter(interpreter.Location, position)
+			getLocationRange := locationRangeGetter(interpreter, interpreter.Location, position)
 			panic(ForceAssignmentToNonNilResourceError{
 				LocationRange: getLocationRange(),
 			})
@@ -1781,7 +1785,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 	if declaration.CompositeKind == common.CompositeKindContract {
 		variable.getter = func() Value {
-			positioned := ast.NewRangeFromPositioned(declaration.Identifier)
+			positioned := ast.NewRangeFromPositioned(interpreter, declaration.Identifier)
 			contract := interpreter.contractValueHandler(
 				interpreter,
 				compositeType,
@@ -1855,7 +1859,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 			NewVariableWithValue(interpreter, caseValue)
 	}
 
-	getLocationRange := locationRangeGetter(location, declaration)
+	getLocationRange := locationRangeGetter(interpreter, location, declaration)
 
 	value := EnumConstructorFunction(
 		interpreter,
@@ -3187,6 +3191,7 @@ func RestrictedTypeFunction(invocation Invocation) Value {
 
 	var invalidRestrictedType bool
 	ty := sema.CheckRestrictedType(
+		interpreter,
 		semaType,
 		semaRestrictions,
 		func(_ func(*ast.RestrictedType) error) {
@@ -4742,7 +4747,7 @@ func (interpreter *Interpreter) startResourceTracking(
 	if _, exists := interpreter.resourceVariables[resourceKindedValue]; exists {
 		var astRange ast.Range
 		if hasPosition != nil {
-			astRange = ast.NewRangeFromPositioned(hasPosition)
+			astRange = ast.NewUnmeteredRangeFromPositioned(hasPosition)
 		}
 
 		panic(InvalidatedResourceError{
@@ -4784,7 +4789,7 @@ func (interpreter *Interpreter) checkInvalidatedResourceUse(
 		panic(InvalidatedResourceError{
 			LocationRange: LocationRange{
 				Location: interpreter.Location,
-				Range:    ast.NewRangeFromPositioned(hasPosition),
+				Range:    ast.NewUnmeteredRangeFromPositioned(hasPosition),
 			},
 		})
 	}

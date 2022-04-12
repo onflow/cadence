@@ -358,7 +358,7 @@ func parsePragmaDeclaration(p *parser) *ast.PragmaDeclaration {
 		expr,
 		ast.Range{
 			StartPos: startPos,
-			EndPos:   expr.EndPosition(),
+			EndPos:   expr.EndPosition(p.memoryGauge),
 		},
 	)
 }
@@ -405,7 +405,7 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 	setIdentifierLocation := func(identifier ast.Identifier) {
 		location = common.IdentifierLocation(identifier.Identifier)
 		locationPos = identifier.Pos
-		endPos = identifier.EndPosition()
+		endPos = identifier.EndPosition(p.memoryGauge)
 	}
 
 	parseLocation := func() {
@@ -773,7 +773,7 @@ func parseFieldWithVariableKind(
 		docString,
 		ast.Range{
 			StartPos: startPos,
-			EndPos:   typeAnnotation.EndPosition(),
+			EndPos:   typeAnnotation.EndPosition(p.memoryGauge),
 		},
 	)
 }
@@ -1048,7 +1048,7 @@ func parseFieldDeclarationWithoutVariableKind(
 		docString,
 		ast.Range{
 			StartPos: startPos,
-			EndPos:   typeAnnotation.EndPosition(),
+			EndPos:   typeAnnotation.EndPosition(p.memoryGauge),
 		},
 	)
 }
