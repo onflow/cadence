@@ -234,7 +234,7 @@ func (d *Decoder) decodeOptional(valueJSON interface{}) cadence.Optional {
 }
 
 func (d *Decoder) decodeBool(valueJSON interface{}) cadence.Bool {
-	return cadence.NewBool(toBool(valueJSON))
+	return cadence.NewBool(d.gauge, toBool(valueJSON))
 }
 
 func (d *Decoder) decodeCharacter(valueJSON interface{}) cadence.Character {

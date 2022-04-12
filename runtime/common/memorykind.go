@@ -66,8 +66,9 @@ const (
 	MemoryKindFunctionStaticType
 
 	// Cadence Values
-	MemoryKindCadenceOptional
 	MemoryKindCadenceVoid
+	MemoryKindCadenceOptional
+	MemoryKindCadenceBool
 
 	// Misc
 

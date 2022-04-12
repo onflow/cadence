@@ -346,7 +346,7 @@ func LiteralValue(memoryGauge common.MemoryGauge, expression ast.Expression, ty 
 			return nil, LiteralExpressionTypeError
 		}
 
-		return cadence.NewBool(expression.Value), nil
+		return cadence.NewBool(memoryGauge, expression.Value), nil
 
 	case sema.StringType:
 		expression, ok := expression.(*ast.StringExpression)

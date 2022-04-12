@@ -129,11 +129,11 @@ func TestStringer(t *testing.T) {
 			expected: "()",
 		},
 		"true": {
-			value:    NewBool(true),
+			value:    NewUnmeteredBool(true),
 			expected: "true",
 		},
 		"false": {
-			value:    NewBool(false),
+			value:    NewUnmeteredBool(false),
 			expected: "false",
 		},
 		"some": {
