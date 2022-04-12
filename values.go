@@ -52,8 +52,13 @@ type NumberValue interface {
 
 type Void struct{}
 
-func NewVoid() Void {
+func NewUnmeteredVoid() Void {
 	return Void{}
+}
+
+func NewVoid(memoryGauge common.MemoryGauge) Void {
+	common.UseConstantMemory(memoryGauge, common.MemoryKindCadenceVoid)
+	return NewUnmeteredVoid()
 }
 
 func (Void) isValue() {}

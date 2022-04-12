@@ -125,7 +125,7 @@ func TestStringer(t *testing.T) {
 			expected: "-32.11000000",
 		},
 		"Void": {
-			value:    NewVoid(),
+			value:    NewUnmeteredVoid(),
 			expected: "()",
 		},
 		"true": {

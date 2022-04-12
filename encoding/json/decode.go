@@ -222,7 +222,7 @@ func (d *Decoder) decodeVoid(m map[string]interface{}) cadence.Void {
 		panic(ErrInvalidJSONCadence)
 	}
 
-	return cadence.NewVoid()
+	return cadence.NewVoid(d.gauge)
 }
 
 func (d *Decoder) decodeOptional(valueJSON interface{}) cadence.Optional {

@@ -61,7 +61,7 @@ func exportValueWithInterpreter(
 
 	switch v := value.(type) {
 	case interpreter.VoidValue:
-		return cadence.NewVoid(), nil
+		return cadence.NewVoid(inter), nil
 	case interpreter.NilValue:
 		return cadence.NewOptional(inter, nil), nil
 	case *interpreter.SomeValue:
