@@ -246,7 +246,14 @@ func (d *Decoder) decodeCharacter(valueJSON interface{}) cadence.Character {
 }
 
 func (d *Decoder) decodeString(valueJSON interface{}) cadence.String {
-	str, err := cadence.NewString(toString(valueJSON))
+	asString := toString(valueJSON)
+	str, err := cadence.NewString(
+		d.gauge,
+		common.NewCadenceStringMemoryUsage(len(asString)),
+		func() string {
+			return asString
+		},
+	)
 	if err != nil {
 		panic(err)
 	}

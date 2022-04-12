@@ -86,7 +86,7 @@ func (i *FlowIntegration) getAccountAddress(name string) (flow.Address, error) {
 		return flow.Address{}, err
 	}
 
-	cadenceName, err := cadence.NewString(name)
+	cadenceName, err := cadence.NewUnmeteredString(name)
 	if err != nil {
 		return flow.Address{}, err
 	}
