@@ -58,12 +58,12 @@ func TestEncodeOptional(t *testing.T) {
 	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Nil",
-			cadence.NewOptional(nil),
+			cadence.NewUnmeteredOptional(nil),
 			`{"type":"Optional","value":null}`,
 		},
 		{
 			"Non-nil",
-			cadence.NewOptional(cadence.NewUnmeteredInt(42)),
+			cadence.NewUnmeteredOptional(cadence.NewUnmeteredInt(42)),
 			`{"type":"Optional","value":{"type":"Int","value":"42"}}`,
 		},
 	}...)

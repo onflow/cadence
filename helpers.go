@@ -20,6 +20,7 @@ package cadence
 
 import "fmt"
 
+// Unmetered because this function is only used by the client.
 func NewValue(value interface{}) (Value, error) {
 	switch v := value.(type) {
 	case string:
@@ -56,7 +57,7 @@ func NewValue(value interface{}) (Value, error) {
 
 		return NewArray(values), nil
 	case nil:
-		return NewOptional(nil), nil
+		return NewUnmeteredOptional(nil), nil
 	}
 
 	return nil, fmt.Errorf("value type %T cannot be converted to ABI value type", value)

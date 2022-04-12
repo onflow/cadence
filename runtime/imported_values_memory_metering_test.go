@@ -100,7 +100,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		executeScript(
 			script,
 			meter,
-			cadence.NewOptional(cadence.String("hello")),
+			cadence.NewUnmeteredOptional(cadence.String("hello")),
 		)
 
 		assert.Equal(t, uint64(1), meter[common.MemoryKindOptional])
@@ -602,19 +602,19 @@ func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 			TypeName:     "String?",
 			MemoryKind:   common.MemoryKindOptional,
 			Weight:       1,
-			TypeInstance: cadence.NewOptional(cadence.String("hello")),
+			TypeInstance: cadence.NewUnmeteredOptional(cadence.String("hello")),
 		},
 		{
 			TypeName:     "String?",
 			MemoryKind:   common.MemoryKindOptionalStaticType,
 			Weight:       3,
-			TypeInstance: cadence.NewOptional(cadence.String("hello")),
+			TypeInstance: cadence.NewUnmeteredOptional(cadence.String("hello")),
 		},
 		{
 			TypeName:     "String?",
 			MemoryKind:   common.MemoryKindString,
 			Weight:       5 + 1,
-			TypeInstance: cadence.NewOptional(cadence.String("hello")),
+			TypeInstance: cadence.NewUnmeteredOptional(cadence.String("hello")),
 		},
 
 		// Not importable: Void

@@ -63,7 +63,7 @@ func exportValueWithInterpreter(
 	case interpreter.VoidValue:
 		return cadence.NewVoid(), nil
 	case interpreter.NilValue:
-		return cadence.NewOptional(nil), nil
+		return cadence.NewOptional(inter, nil), nil
 	case *interpreter.SomeValue:
 		return exportSomeValue(v, inter, seenReferences)
 	case interpreter.BoolValue:
@@ -212,7 +212,7 @@ func exportSomeValue(
 	innerValue := v.InnerValue(inter, interpreter.ReturnEmptyLocationRange)
 
 	if innerValue == nil {
-		return cadence.NewOptional(nil), nil
+		return cadence.NewOptional(inter, nil), nil
 	}
 
 	value, err := exportValueWithInterpreter(innerValue, inter, seenReferences)
@@ -220,7 +220,7 @@ func exportSomeValue(
 		return cadence.Optional{}, err
 	}
 
-	return cadence.NewOptional(value), nil
+	return cadence.NewOptional(inter, value), nil
 }
 
 func exportArrayValue(

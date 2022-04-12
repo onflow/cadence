@@ -76,8 +76,13 @@ type Optional struct {
 	Value Value
 }
 
-func NewOptional(value Value) Optional {
+func NewUnmeteredOptional(value Value) Optional {
 	return Optional{Value: value}
+}
+
+func NewOptional(memoryGauge common.MemoryGauge, value Value) Optional {
+	common.UseConstantMemory(memoryGauge, common.MemoryKindCadenceOptional)
+	return NewUnmeteredOptional(value)
 }
 
 func (Optional) isValue() {}

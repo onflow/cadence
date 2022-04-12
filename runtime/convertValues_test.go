@@ -123,14 +123,14 @@ func TestExportValue(t *testing.T) {
 		{
 			label:    "Nil",
 			value:    interpreter.NilValue{},
-			expected: cadence.NewOptional(nil),
+			expected: cadence.NewUnmeteredOptional(nil),
 		},
 		{
 			label: "SomeValue",
 			value: interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.NewUnmeteredIntValueFromInt64(42),
 			),
-			expected: cadence.NewOptional(cadence.NewUnmeteredInt(42)),
+			expected: cadence.NewUnmeteredOptional(cadence.NewUnmeteredInt(42)),
 		},
 		{
 			label:    "Bool true",
@@ -503,12 +503,12 @@ func TestImportValue(t *testing.T) {
 		},
 		{
 			label:    "Nil",
-			value:    cadence.NewOptional(nil),
+			value:    cadence.NewUnmeteredOptional(nil),
 			expected: interpreter.NilValue{},
 		},
 		{
 			label: "SomeValue",
-			value: cadence.NewOptional(cadence.NewUnmeteredInt(42)),
+			value: cadence.NewUnmeteredOptional(cadence.NewUnmeteredInt(42)),
 			expected: interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.NewUnmeteredIntValueFromInt64(42),
 			),
@@ -2156,7 +2156,7 @@ func TestRuntimeArgumentPassing(t *testing.T) {
 		{
 			label:         "Nil",
 			typeSignature: "String?",
-			exportedValue: cadence.NewOptional(nil),
+			exportedValue: cadence.NewUnmeteredOptional(nil),
 		},
 		{
 			label:         "Bool true",
@@ -2441,7 +2441,7 @@ func TestRuntimeComplexStructArgumentPassing(t *testing.T) {
 		},
 
 		Fields: []cadence.Value{
-			cadence.NewOptional(
+			cadence.NewUnmeteredOptional(
 				cadence.String("John"),
 			),
 			cadence.NewDictionary([]cadence.KeyValuePair{
@@ -2566,7 +2566,7 @@ func TestRuntimeComplexStructWithAnyStructFields(t *testing.T) {
 		},
 
 		Fields: []cadence.Value{
-			cadence.NewOptional(cadence.String("John")),
+			cadence.NewUnmeteredOptional(cadence.String("John")),
 			cadence.NewDictionary([]cadence.KeyValuePair{
 				{
 					Key:   cadence.String("name"),
@@ -2824,7 +2824,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 		{
 			label:                                    "Malformed Optional",
 			typeSignature:                            "Foo?",
-			exportedValue:                            cadence.NewOptional(malformedStruct1),
+			exportedValue:                            cadence.NewUnmeteredOptional(malformedStruct1),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{

@@ -136,7 +136,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
             }
         `
 
-		err := executeScript(t, script, cadence.NewOptional(nil))
+		err := executeScript(t, script, cadence.NewUnmeteredOptional(nil))
 		expectNonImportableError(t, err)
 	})
 
@@ -148,7 +148,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
             }
         `
 
-		err := executeScript(t, script, cadence.NewOptional(nil))
+		err := executeScript(t, script, cadence.NewUnmeteredOptional(nil))
 		assert.NoError(t, err)
 	})
 
@@ -182,7 +182,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
             }
         `
 
-		err := executeScript(t, script, cadence.NewOptional(nil))
+		err := executeScript(t, script, cadence.NewUnmeteredOptional(nil))
 		expectNonImportableError(t, err)
 	})
 
@@ -198,7 +198,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
             }
         `
 
-		err := executeScript(t, script, cadence.NewOptional(nil))
+		err := executeScript(t, script, cadence.NewUnmeteredOptional(nil))
 		expectNonImportableError(t, err)
 	})
 
@@ -211,7 +211,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
             }
         `
 
-		err := executeScript(t, script, cadence.NewOptional(nil))
+		err := executeScript(t, script, cadence.NewUnmeteredOptional(nil))
 		expectNonImportableError(t, err)
 	})
 
@@ -226,7 +226,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
             }
         `
 
-		err := executeScript(t, script, cadence.NewOptional(nil))
+		err := executeScript(t, script, cadence.NewUnmeteredOptional(nil))
 		expectNonImportableError(t, err)
 	})
 
@@ -289,7 +289,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
             }
         `
 
-		err := executeScript(t, script, cadence.NewOptional(nil))
+		err := executeScript(t, script, cadence.NewUnmeteredOptional(nil))
 		assert.NoError(t, err)
 	})
 
@@ -325,7 +325,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 					typ.QualifiedString(),
 				)
 
-				err := executeScript(t, script, cadence.NewOptional(nil))
+				err := executeScript(t, script, cadence.NewUnmeteredOptional(nil))
 				assert.NoError(t, err)
 			})
 		}
@@ -388,7 +388,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 			testCase := &argumentPassingTest{
 				label:         typeName,
 				typeSignature: typeName + "?",
-				argument:      cadence.NewOptional(value),
+				argument:      cadence.NewUnmeteredOptional(value),
 				expectErrors:  expectErrors,
 			}
 
@@ -602,7 +602,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
             }
         `
 
-		err := executeTransaction(t, script, cadence.NewOptional(nil))
+		err := executeTransaction(t, script, cadence.NewUnmeteredOptional(nil))
 		expectCheckerErrors(
 			t,
 			err,
@@ -618,7 +618,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
             }
         `
 
-		err := executeTransaction(t, script, cadence.NewOptional(nil))
+		err := executeTransaction(t, script, cadence.NewUnmeteredOptional(nil))
 		assert.NoError(t, err)
 	})
 
@@ -652,7 +652,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
             }
         `
 
-		err := executeTransaction(t, script, cadence.NewOptional(nil))
+		err := executeTransaction(t, script, cadence.NewUnmeteredOptional(nil))
 
 		expectCheckerErrors(
 			t,
@@ -672,7 +672,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
             }
         `
 
-		err := executeTransaction(t, script, cadence.NewOptional(nil))
+		err := executeTransaction(t, script, cadence.NewUnmeteredOptional(nil))
 
 		expectCheckerErrors(
 			t,
@@ -690,7 +690,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
             }
         `
 
-		err := executeTransaction(t, script, cadence.NewOptional(nil))
+		err := executeTransaction(t, script, cadence.NewUnmeteredOptional(nil))
 
 		expectCheckerErrors(
 			t,
@@ -711,7 +711,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
             }
         `
 
-		err := executeTransaction(t, script, cadence.NewOptional(nil))
+		err := executeTransaction(t, script, cadence.NewUnmeteredOptional(nil))
 
 		expectCheckerErrors(
 			t,
@@ -769,7 +769,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
             }
         `
 
-		err := executeTransaction(t, script, cadence.NewOptional(nil))
+		err := executeTransaction(t, script, cadence.NewUnmeteredOptional(nil))
 		assert.NoError(t, err)
 	})
 
@@ -805,7 +805,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 					typ.QualifiedString(),
 				)
 
-				err := executeTransaction(t, script, cadence.NewOptional(nil))
+				err := executeTransaction(t, script, cadence.NewUnmeteredOptional(nil))
 				assert.NoError(t, err)
 			})
 		}
@@ -868,7 +868,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 			testCase := &argumentPassingTest{
 				label:         typeName,
 				typeSignature: typeName + "?",
-				argument:      cadence.NewOptional(value),
+				argument:      cadence.NewUnmeteredOptional(value),
 				expectErrors:  expectErrors,
 			}
 
@@ -919,7 +919,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
                 }
             `
 
-		err := executeTransaction(t, script, cadence.NewOptional(fooStruct))
+		err := executeTransaction(t, script, cadence.NewUnmeteredOptional(fooStruct))
 		expectRuntimeError(t, err, &ArgumentNotImportableError{})
 	})
 
@@ -939,7 +939,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
                 }
             `
 
-		err := executeTransaction(t, script, cadence.NewOptional(fooStruct))
+		err := executeTransaction(t, script, cadence.NewUnmeteredOptional(fooStruct))
 		expectRuntimeError(t, err, &ArgumentNotImportableError{})
 	})
 
