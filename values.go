@@ -126,8 +126,13 @@ func (o Optional) String() string {
 
 type Bool bool
 
-func NewBool(b bool) Bool {
+func NewUnmeteredBool(b bool) Bool {
 	return Bool(b)
+}
+
+func NewBool(memoryGauge common.MemoryGauge, b bool) Bool {
+	common.UseConstantMemory(memoryGauge, common.MemoryKindCadenceBool)
+	return NewUnmeteredBool(b)
 }
 
 func (Bool) isValue() {}

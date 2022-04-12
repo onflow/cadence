@@ -135,13 +135,13 @@ func TestExportValue(t *testing.T) {
 		{
 			label:    "Bool true",
 			value:    interpreter.BoolValue(true),
-			expected: cadence.NewBool(true),
+			expected: cadence.NewUnmeteredBool(true),
 		},
 
 		{
 			label:    "Bool false",
 			value:    interpreter.BoolValue(false),
-			expected: cadence.NewBool(false),
+			expected: cadence.NewUnmeteredBool(false),
 		},
 
 		{
@@ -515,13 +515,13 @@ func TestImportValue(t *testing.T) {
 		},
 		{
 			label:    "Bool true",
-			value:    cadence.NewBool(true),
+			value:    cadence.NewUnmeteredBool(true),
 			expected: interpreter.BoolValue(true),
 		},
 		{
 			label:    "Bool false",
 			expected: interpreter.BoolValue(false),
-			value:    cadence.NewBool(false),
+			value:    cadence.NewUnmeteredBool(false),
 		},
 		{
 			label:    "String empty",
@@ -2161,12 +2161,12 @@ func TestRuntimeArgumentPassing(t *testing.T) {
 		{
 			label:         "Bool true",
 			typeSignature: "Bool",
-			exportedValue: cadence.NewBool(true),
+			exportedValue: cadence.NewUnmeteredBool(true),
 		},
 		{
 			label:         "Bool false",
 			typeSignature: "Bool",
-			exportedValue: cadence.NewBool(false),
+			exportedValue: cadence.NewUnmeteredBool(false),
 		},
 		{
 			label:         "String empty",
@@ -2459,7 +2459,7 @@ func TestRuntimeComplexStructArgumentPassing(t *testing.T) {
 				cadence.String("bar"),
 			}),
 			cadence.NewUnmeteredAddress([8]byte{0, 0, 0, 0, 0, 1, 0, 2}),
-			cadence.NewBool(true),
+			cadence.NewUnmeteredBool(true),
 			cadence.Path{
 				Domain:     "storage",
 				Identifier: "foo",
@@ -3955,7 +3955,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.True(t, verifyInvoked)
-		assert.Equal(t, actual, cadence.NewBool(true))
+		assert.Equal(t, actual, cadence.NewUnmeteredBool(true))
 	})
 
 	t.Run("Invalid raw public key", func(t *testing.T) {
@@ -3967,7 +3967,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 		publicKey := cadence.NewStruct(
 			[]cadence.Value{
 				// Invalid value for 'publicKey' field
-				cadence.NewBool(true),
+				cadence.NewUnmeteredBool(true),
 
 				cadence.NewEnum(
 					[]cadence.Value{
@@ -4048,7 +4048,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 				publicKeyBytes,
 
 				// Invalid value for 'signatureAlgorithm' field
-				cadence.NewBool(true),
+				cadence.NewUnmeteredBool(true),
 			},
 		).WithType(PublicKeyType)
 

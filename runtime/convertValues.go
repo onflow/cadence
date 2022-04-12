@@ -67,7 +67,7 @@ func exportValueWithInterpreter(
 	case *interpreter.SomeValue:
 		return exportSomeValue(v, inter, seenReferences)
 	case interpreter.BoolValue:
-		return cadence.NewBool(bool(v)), nil
+		return cadence.NewBool(inter, bool(v)), nil
 	case *interpreter.StringValue:
 		return cadence.NewString(
 			inter,

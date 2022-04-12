@@ -76,12 +76,12 @@ func TestEncodeBool(t *testing.T) {
 	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"True",
-			cadence.NewBool(true),
+			cadence.NewUnmeteredBool(true),
 			`{"type":"Bool","value":true}`,
 		},
 		{
 			"False",
-			cadence.NewBool(false),
+			cadence.NewUnmeteredBool(false),
 			`{"type":"Bool","value":false}`,
 		},
 	}...)

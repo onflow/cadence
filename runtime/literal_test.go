@@ -50,7 +50,7 @@ func TestLiteralValue(t *testing.T) {
 		value, err := ParseLiteral(`true`, sema.BoolType, newTestInterpreter(t))
 		require.NoError(t, err)
 		require.Equal(t,
-			cadence.NewBool(true),
+			cadence.NewUnmeteredBool(true),
 			value,
 		)
 	})
@@ -82,7 +82,7 @@ func TestLiteralValue(t *testing.T) {
 		)
 		require.NoError(t, err)
 		require.Equal(t,
-			cadence.NewUnmeteredOptional(cadence.NewBool(true)),
+			cadence.NewUnmeteredOptional(cadence.NewUnmeteredBool(true)),
 			value,
 		)
 	})
@@ -119,7 +119,7 @@ func TestLiteralValue(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.NewArray([]cadence.Value{
-				cadence.NewBool(true),
+				cadence.NewUnmeteredBool(true),
 			}),
 			value,
 		)
@@ -157,7 +157,7 @@ func TestLiteralValue(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.NewArray([]cadence.Value{
-				cadence.NewBool(true),
+				cadence.NewUnmeteredBool(true),
 			}),
 			value,
 		)
@@ -203,7 +203,7 @@ func TestLiteralValue(t *testing.T) {
 			cadence.NewDictionary([]cadence.KeyValuePair{
 				{
 					Key:   cadence.String("hello"),
-					Value: cadence.NewBool(true),
+					Value: cadence.NewUnmeteredBool(true),
 				},
 			}),
 			value,

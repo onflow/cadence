@@ -829,7 +829,7 @@ func accountKeyExportedValue(
 			weightUFix64,
 
 			// IsRevoked
-			cadence.NewBool(isRevoked),
+			cadence.NewUnmeteredBool(isRevoked),
 		},
 	}
 }

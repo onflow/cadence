@@ -109,7 +109,7 @@ func TestRuntimeCrypto_verify(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t,
-		cadence.NewBool(true),
+		cadence.NewUnmeteredBool(true),
 		result,
 	)
 
@@ -518,7 +518,7 @@ func TestBLSVerifyPoP(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t,
-		cadence.NewBool(true),
+		cadence.NewUnmeteredBool(true),
 		result,
 	)
 
