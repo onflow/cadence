@@ -162,7 +162,7 @@ func NewDictionaryAdditionalSizeUsage(originalSize, additionalSize int) MemoryUs
 		newAmount = uint64(math.Log2(float64(originalSize)) + float64(additionalSize))
 	}
 	return MemoryUsage{
-		Kind: MemoryKindDictionarySize,
+		Kind:   MemoryKindDictionarySize,
 		Amount: newAmount,
 	}
 }
