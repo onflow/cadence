@@ -561,10 +561,11 @@ func (checker *Checker) checkTopLevelDeclarationValidity(declarations []ast.Decl
 		identifier := declaration.DeclarationIdentifier()
 		if identifier == nil {
 			position := declaration.StartPosition()
-			errorRange = ast.Range{
-				StartPos: position,
-				EndPos:   position,
-			}
+			errorRange = ast.NewRange(
+				checker.memoryGauge,
+				position,
+				position,
+			)
 		} else {
 			errorRange = ast.NewRangeFromPositioned(checker.memoryGauge, identifier)
 		}
@@ -1550,10 +1551,11 @@ func (checker *Checker) checkResourceLoss(depth int) {
 
 			checker.report(
 				&ResourceLossError{
-					Range: ast.Range{
-						StartPos: *variable.Pos,
-						EndPos:   variable.Pos.Shifted(checker.memoryGauge, len(name)-1),
-					},
+					Range: ast.NewRange(
+						checker.memoryGauge,
+						*variable.Pos,
+						variable.Pos.Shifted(checker.memoryGauge, len(name)-1),
+					),
 				},
 			)
 		}
@@ -2256,10 +2258,11 @@ func (checker *Checker) checkInvalidInterfaceAsType(ty Type, pos ast.HasPosition
 			&InvalidInterfaceTypeError{
 				ActualType:   ty,
 				ExpectedType: rewrittenType,
-				Range: ast.Range{
-					StartPos: pos.StartPosition(),
-					EndPos:   pos.EndPosition(checker.memoryGauge),
-				},
+				Range: ast.NewRange(
+					checker.memoryGauge,
+					pos.StartPosition(),
+					pos.EndPosition(checker.memoryGauge),
+				),
 			},
 		)
 	}
@@ -2333,10 +2336,11 @@ func (checker *Checker) convertInstantiationType(t *ast.InstantiationType) Type 
 
 		checker.report(
 			&UnparameterizedTypeInstantiationError{
-				Range: ast.Range{
-					StartPos: t.TypeArgumentsStartPos,
-					EndPos:   t.EndPosition(checker.memoryGauge),
-				},
+				Range: ast.NewRange(
+					checker.memoryGauge,
+					t.TypeArgumentsStartPos,
+					t.EndPosition(checker.memoryGauge),
+				),
 			},
 		)
 
@@ -2377,10 +2381,11 @@ func (checker *Checker) convertInstantiationType(t *ast.InstantiationType) Type 
 			&InvalidTypeArgumentCountError{
 				TypeParameterCount: typeParameterCount,
 				TypeArgumentCount:  typeArgumentCount,
-				Range: ast.Range{
-					StartPos: t.TypeArgumentsStartPos,
-					EndPos:   t.EndPos,
-				},
+				Range: ast.NewRange(
+					checker.memoryGauge,
+					t.TypeArgumentsStartPos,
+					t.EndPos,
+				),
 			},
 		)
 
@@ -2470,10 +2475,11 @@ func (checker *Checker) visitExpressionWithForceType(
 
 func (checker *Checker) expressionRange(expression ast.Expression) ast.Range {
 	if indexExpr, ok := expression.(*ast.IndexExpression); ok {
-		return ast.Range{
-			StartPos: indexExpr.TargetExpression.StartPosition(),
-			EndPos:   indexExpr.EndPosition(checker.memoryGauge),
-		}
+		return ast.NewRange(
+			checker.memoryGauge,
+			indexExpr.TargetExpression.StartPosition(),
+			indexExpr.EndPosition(checker.memoryGauge),
+		)
 	} else {
 		return ast.NewRangeFromPositioned(checker.memoryGauge, expression)
 	}

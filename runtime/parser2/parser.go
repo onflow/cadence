@@ -102,10 +102,11 @@ func ParseTokenStream(
 
 	p.current = lexer.Token{
 		Type: lexer.TokenEOF,
-		Range: ast.Range{
-			StartPos: startPos,
-			EndPos:   startPos,
-		},
+		Range: ast.NewRange(
+			p.memoryGauge,
+			startPos,
+			startPos,
+		),
 	}
 
 	// Get the initial token

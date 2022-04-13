@@ -928,10 +928,11 @@ func (checker *Checker) enumRawType(declaration *ast.CompositeDeclaration) Type 
 
 		checker.report(
 			&InvalidEnumConformancesError{
-				Range: ast.Range{
-					StartPos: secondConformance.StartPosition(),
-					EndPos:   lastConformance.EndPosition(checker.memoryGauge),
-				},
+				Range: ast.NewRange(
+					checker.memoryGauge,
+					secondConformance.StartPosition(),
+					lastConformance.EndPosition(checker.memoryGauge),
+				),
 			},
 		)
 

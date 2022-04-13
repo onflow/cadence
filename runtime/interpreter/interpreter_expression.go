@@ -970,10 +970,10 @@ func (interpreter *Interpreter) VisitForceExpression(expression *ast.ForceExpres
 			ForceNilError{
 				LocationRange: LocationRange{
 					Location: interpreter.Location,
-					Range: ast.Range{
-						StartPos: expression.EndPosition(nil),
-						EndPos:   expression.EndPosition(nil),
-					},
+					Range: ast.NewUnmeteredRange(
+						expression.EndPosition(nil),
+						expression.EndPosition(nil),
+					),
 				},
 			},
 		)

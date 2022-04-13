@@ -44,11 +44,12 @@ func (checker *Checker) VisitImportDeclaration(_ *ast.ImportDeclaration) ast.Rep
 }
 
 func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclaration) ast.Repr {
-	locationRange := ast.Range{
-		StartPos: declaration.LocationPos,
+	locationRange := ast.NewRange(
+		checker.memoryGauge,
+		declaration.LocationPos,
 		// TODO: improve
-		EndPos: declaration.LocationPos,
-	}
+		declaration.LocationPos,
+	)
 
 	resolvedLocations, err := checker.resolveLocation(declaration.Identifiers, declaration.Location)
 	if err != nil {

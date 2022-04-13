@@ -45,10 +45,11 @@ func (checker *Checker) visitStatements(statements []ast.Statement) {
 
 			checker.report(
 				&UnreachableStatementError{
-					Range: ast.Range{
-						StartPos: statement.StartPosition(),
-						EndPos:   lastStatement.EndPosition(checker.memoryGauge),
-					},
+					Range: ast.NewRange(
+						checker.memoryGauge,
+						statement.StartPosition(),
+						lastStatement.EndPosition(checker.memoryGauge),
+					),
 				},
 			)
 
