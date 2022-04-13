@@ -188,7 +188,7 @@ var brokenAddresses = map[flow.Address]struct{}{
 
 func (p *AddressProvider) GenerateAddressBatches(addressChan chan<- []flow.Address, batchSize int) {
 	var done bool
-	for {
+	for !done {
 		addresses := make([]flow.Address, 0)
 
 		for i := 0; i < batchSize; i++ {
@@ -209,10 +209,6 @@ func (p *AddressProvider) GenerateAddressBatches(addressChan chan<- []flow.Addre
 
 		if len(addresses) > 0 {
 			addressChan <- addresses
-		}
-
-		if done {
-			break
 		}
 	}
 
