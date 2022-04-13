@@ -3293,8 +3293,8 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 
 				return TypeValue{
 					Type: ReferenceStaticType{
-						Authorized: bool(authorizedValue),
-						Type:       typeValue.Type,
+						Authorized:   bool(authorizedValue),
+						BorrowedType: typeValue.Type,
 					},
 				}
 			},
@@ -3678,30 +3678,32 @@ func (interpreter *Interpreter) IsSubTypeOfSemaType(subType StaticType, superTyp
 		return true
 	}
 
-	switch staticType := subType.(type) {
+	switch subType := subType.(type) {
 	case OptionalStaticType:
-		if typedSuperType, ok := superType.(*sema.OptionalType); ok {
-			return interpreter.IsSubTypeOfSemaType(staticType.Type, typedSuperType.Type)
+		if superType, ok := superType.(*sema.OptionalType); ok {
+			return interpreter.IsSubTypeOfSemaType(subType.Type, superType.Type)
 		}
 
 		switch superType {
 		case sema.AnyStructType, sema.AnyResourceType:
-			return interpreter.IsSubTypeOfSemaType(staticType.Type, superType)
+			return interpreter.IsSubTypeOfSemaType(subType.Type, superType)
 		}
 
 	case ReferenceStaticType:
-		if typedSuperType, ok := superType.(*sema.ReferenceType); ok {
+		if superType, ok := superType.(*sema.ReferenceType); ok {
 
 			// First, check that the static type of the referenced value
 			// is a subtype of the super type
 
-			if staticType.InnerType != nil && !interpreter.IsSubTypeOfSemaType(staticType.InnerType, typedSuperType.Type) {
+			if subType.ReferencedType == nil ||
+				!interpreter.IsSubTypeOfSemaType(subType.ReferencedType, superType.Type) {
+
 				return false
 			}
 
 			// If the reference value is authorized it may be downcasted
 
-			authorized := staticType.Authorized
+			authorized := subType.Authorized
 
 			if authorized {
 				return true
@@ -3710,17 +3712,14 @@ func (interpreter *Interpreter) IsSubTypeOfSemaType(subType StaticType, superTyp
 			// If the reference value is not authorized,
 			// it may not be down-casted
 
-			var borrowType sema.Type
-			if staticType.Type != nil {
-				borrowType = interpreter.MustConvertStaticToSemaType(staticType.Type)
-			}
+			borrowType := interpreter.MustConvertStaticToSemaType(subType.BorrowedType)
 
 			return sema.IsSubType(
 				&sema.ReferenceType{
 					Authorized: authorized,
 					Type:       borrowType,
 				},
-				typedSuperType,
+				superType,
 			)
 		}
 

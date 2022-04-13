@@ -527,8 +527,8 @@ func ImportType(t cadence.Type) interpreter.StaticType {
 		return importInterfaceType(t.(cadence.InterfaceType))
 	case cadence.ReferenceType:
 		return interpreter.ReferenceStaticType{
-			Authorized: t.Authorized,
-			Type:       ImportType(t.Type),
+			Authorized:   t.Authorized,
+			BorrowedType: ImportType(t.Type),
 		}
 	case cadence.RestrictedType:
 		restrictions := make([]interpreter.InterfaceStaticType, 0, len(t.Restrictions))
