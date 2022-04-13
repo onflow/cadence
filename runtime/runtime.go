@@ -910,12 +910,10 @@ func validateArgumentParams(
 			}
 		}
 
-		dynamicType := arg.DynamicType(inter, interpreter.SeenReferences{})
-
 		// Ensure the argument is of an importable type
-		if !dynamicType.IsImportable() {
+		if !arg.IsImportable(inter) {
 			return nil, &ArgumentNotImportableError{
-				Type: dynamicType,
+				Type: arg.StaticType(inter),
 			}
 		}
 

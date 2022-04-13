@@ -222,7 +222,7 @@ func (e *ScriptParameterTypeNotImportableError) Error() string {
 // script arguments that belongs to non-importable types.
 //
 type ArgumentNotImportableError struct {
-	Type interpreter.DynamicType
+	Type interpreter.StaticType
 }
 
 func (e *ArgumentNotImportableError) Error() string {

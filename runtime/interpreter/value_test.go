@@ -3276,7 +3276,7 @@ func TestPublicKeyValue(t *testing.T) {
 
 func TestHashable(t *testing.T) {
 
-	// Assert that all Value and DynamicType implementations are hashable
+	// Assert that all Value implementations are hashable
 
 	pkgs, err := packages.Load(
 		&packages.Config{
@@ -3323,7 +3323,6 @@ func TestHashable(t *testing.T) {
 	}
 
 	test("Value")
-	test("DynamicType")
 }
 
 func checkHashable(ty types.Type) error {

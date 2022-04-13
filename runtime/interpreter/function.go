@@ -83,14 +83,12 @@ func (f *InterpretedFunctionValue) Walk(_ func(Value)) {
 	// NO-OP
 }
 
-func (f *InterpretedFunctionValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return FunctionDynamicType{
-		FuncType: f.Type,
-	}
-}
-
 func (f *InterpretedFunctionValue) StaticType(_ *Interpreter) StaticType {
 	return ConvertSemaToStaticType(f.Type)
+}
+
+func (*InterpretedFunctionValue) IsImportable(_ *Interpreter) bool {
+	return false
 }
 
 func (*InterpretedFunctionValue) isFunctionValue() {}
@@ -200,14 +198,12 @@ func (f *HostFunctionValue) Walk(_ func(Value)) {
 	// NO-OP
 }
 
-func (f *HostFunctionValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return FunctionDynamicType{
-		FuncType: f.Type,
-	}
-}
-
 func (f *HostFunctionValue) StaticType(_ *Interpreter) StaticType {
 	return ConvertSemaToStaticType(f.Type)
+}
+
+func (*HostFunctionValue) IsImportable(_ *Interpreter) bool {
+	return false
 }
 
 func (*HostFunctionValue) isFunctionValue() {}
@@ -314,19 +310,12 @@ func (f BoundFunctionValue) Walk(_ func(Value)) {
 	// NO-OP
 }
 
-func (f BoundFunctionValue) DynamicType(inter *Interpreter, _ SeenReferences) DynamicType {
-	funcStaticType, ok := f.Function.StaticType(inter).(FunctionStaticType)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	return FunctionDynamicType{
-		FuncType: funcStaticType.Type,
-	}
-}
-
 func (f BoundFunctionValue) StaticType(inter *Interpreter) StaticType {
 	return f.Function.StaticType(inter)
+}
+
+func (BoundFunctionValue) IsImportable(_ *Interpreter) bool {
+	return false
 }
 
 func (BoundFunctionValue) isFunctionValue() {}

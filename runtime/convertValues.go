@@ -23,6 +23,7 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
@@ -210,10 +211,18 @@ func exportCompositeValue(
 	error,
 ) {
 
-	dynamicType := v.DynamicType(inter, interpreter.SeenReferences{}).(interpreter.CompositeDynamicType)
-	staticType := dynamicType.StaticType.(*sema.CompositeType)
+	staticType, err := inter.ConvertStaticToSemaType(v.StaticType(inter))
+	if err != nil {
+		return nil, err
+	}
+
+	compositeType, ok := staticType.(*sema.CompositeType)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
 	// TODO: consider making the results map "global", by moving it up to exportValueWithInterpreter
-	t := exportCompositeType(staticType, map[sema.TypeID]cadence.Type{})
+	t := exportCompositeType(compositeType, map[sema.TypeID]cadence.Type{})
 
 	// NOTE: use the exported type's fields to ensure fields in type
 	// and value are in sync
@@ -243,7 +252,7 @@ func exportCompositeValue(
 	// NOTE: when modifying the cases below,
 	// also update the error message below!
 
-	switch staticType.Kind {
+	switch compositeType.Kind {
 	case common.CompositeKindStructure:
 		return cadence.NewStruct(fields).WithType(t.(*cadence.StructType)), nil
 	case common.CompositeKindResource:
@@ -258,7 +267,7 @@ func exportCompositeValue(
 
 	return nil, fmt.Errorf(
 		"invalid composite kind `%s`, must be %s",
-		staticType.Kind,
+		compositeType.Kind,
 		common.EnumerateWords(
 			[]string{
 				common.CompositeKindStructure.Name(),
@@ -280,15 +289,21 @@ func exportSimpleCompositeValue(
 	cadence.Value,
 	error,
 ) {
-	dynamicType, ok := v.DynamicType(inter, interpreter.SeenReferences{}).(interpreter.CompositeDynamicType)
+	staticType, err := inter.ConvertStaticToSemaType(v.StaticType(inter))
+	if err != nil {
+		return nil, err
+	}
+
+	compositeType, ok := staticType.(*sema.CompositeType)
 	if !ok {
 		return nil, fmt.Errorf(
-			"unexportable composite value: %s", dynamicType.StaticType,
+			"unexportable composite value: %s",
+			staticType,
 		)
 	}
-	staticType := dynamicType.StaticType.(*sema.CompositeType)
+
 	// TODO: consider making the results map "global", by moving it up to exportValueWithInterpreter
-	t := exportCompositeType(staticType, map[sema.TypeID]cadence.Type{})
+	t := exportCompositeType(compositeType, map[sema.TypeID]cadence.Type{})
 
 	// NOTE: use the exported type's fields to ensure fields in type
 	// and value are in sync
@@ -317,7 +332,7 @@ func exportSimpleCompositeValue(
 	// NOTE: when modifying the cases below,
 	// also update the error message below!
 
-	switch staticType.Kind {
+	switch compositeType.Kind {
 	case common.CompositeKindStructure:
 		return cadence.NewStruct(fields).WithType(t.(*cadence.StructType)), nil
 	case common.CompositeKindResource:
@@ -332,7 +347,7 @@ func exportSimpleCompositeValue(
 
 	return nil, fmt.Errorf(
 		"invalid composite kind `%s`, must be %s",
-		staticType.Kind,
+		compositeType.Kind,
 		common.EnumerateWords(
 			[]string{
 				common.CompositeKindStructure.Name(),

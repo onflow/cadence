@@ -53,9 +53,6 @@ var blsContractStaticType interpreter.StaticType = interpreter.CompositeStaticTy
 	QualifiedIdentifier: blsContractType.Identifier,
 	TypeID:              blsContractTypeID,
 }
-var blsContractDynamicType interpreter.DynamicType = interpreter.CompositeDynamicType{
-	StaticType: blsContractType,
-}
 
 const blsAggregateSignaturesFunctionDocString = `
 Aggregates multiple BLS signatures into one,
@@ -176,7 +173,6 @@ var blsContract = StandardLibraryValue{
 		return interpreter.NewSimpleCompositeValue(
 			blsContractType.ID(),
 			blsContractStaticType,
-			blsContractDynamicType,
 			nil,
 			blsContractFields,
 			nil,
