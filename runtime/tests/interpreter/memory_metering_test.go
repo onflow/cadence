@@ -60,12 +60,12 @@ func TestInterpretArrayMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-                pub fun main() {
-                    let x: [Int8] = []
-                    let y: [[String]] = [[]]
-                    let z: [[[Bool]]] = [[[]]]
-                }
-            `
+                      pub fun main() {
+                          let x: [Int8] = []
+                          let y: [[String]] = [[]]
+                          let z: [[[Bool]]] = [[[]]]
+                      }
+                  `
 
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
@@ -82,13 +82,13 @@ func TestInterpretArrayMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-                    pub fun main() {
-                        let values: [[Int8]] = [[], [], []]
-                        for value in values {
-                          let a = value
-                        }
-                    }
-                `
+                          pub fun main() {
+                              let values: [[Int8]] = [[], [], []]
+                              for value in values {
+                                let a = value
+                              }
+                          }
+                      `
 
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
@@ -105,11 +105,11 @@ func TestInterpretArrayMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-                pub fun main() {
-                    let x: [Int8] = []
-                    x.contains(5)
-                }
-            `
+                      pub fun main() {
+                          let x: [Int8] = []
+                          x.contains(5)
+                      }
+                  `
 
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
@@ -127,7 +127,7 @@ func TestInterpretArrayMetering(t *testing.T) {
             pub fun main() {
                 let x: [Int8] = []
                 x.append(3)
-				x.append(4)
+                        x.append(4)
             }
         `
 
@@ -141,14 +141,18 @@ func TestInterpretArrayMetering(t *testing.T) {
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindArrayLength))
 	})
 
-	t.Run("insert", func(t *testing.T) {
+	t.Run("append many", func(t *testing.T) {
 		t.Parallel()
 
 		script := `
             pub fun main() {
                 let x: [Int8] = []
-                x.insert(at:0, 3)
-				x.insert(at:1, 3)
+                x.append(0) // adds 1
+                        x.append(1) // adds 2
+                        x.append(2) // adds 2
+                        x.append(3) // adds 2
+                        x.append(4) // adds 3
+                        x.append(5) // adds 3
             }
         `
 
@@ -159,7 +163,53 @@ func TestInterpretArrayMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindArrayBase))
+		assert.Equal(t, uint64(13), meter.getMemory(common.MemoryKindArrayLength))
+	})
+
+	t.Run("insert", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+                        pub fun main() {
+                            let x: [Int8] = []
+                            x.insert(at:0, 3)
+                                    x.insert(at:1, 3)
+                        }
+                    `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindArrayBase))
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindArrayLength))
+	})
+
+	t.Run("insert many", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+                        pub fun main() {
+                            let x: [Int8] = []
+                            x.insert(at:0, 3) // adds 1
+                                    x.insert(at:1, 3) // adds 2
+                                    x.insert(at:2, 3) // adds 2
+                                    x.insert(at:3, 3) // adds 2
+                                    x.insert(at:4, 3) // adds 3
+                                    x.insert(at:5, 3) // adds 3
+                        }
+                    `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindArrayBase))
+		assert.Equal(t, uint64(13), meter.getMemory(common.MemoryKindArrayLength))
 	})
 }
 
@@ -236,7 +286,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
             pub fun main() {
                 let x: {Int8: String} = {}
                 x.insert(key: 5, "")
-				x.insert(key: 4, "")
+                        x.insert(key: 4, "")
             }
         `
 
