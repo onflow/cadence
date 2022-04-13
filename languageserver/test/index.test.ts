@@ -241,7 +241,7 @@ describe("diagnostics", () => {
         for (let doc of docs) {
           const notification = new Promise<PublishDiagnosticsParams>((resolve) => {
             connection.onNotification(PublishDiagnosticsNotification.type, (notification) => {
-              if (notification.uri == `file:///${doc.name}.cdc`) {
+              if (notification.uri == `file://${doc.name}.cdc`) {
                 resolve(notification)
               }
             })
@@ -252,7 +252,7 @@ describe("diagnostics", () => {
           })
 
           await connection.sendNotification(DidOpenTextDocumentNotification.type, {
-            textDocument: TextDocumentItem.create(`file:///${doc.name}.cdc`, "cadence", 1, doc.code)
+            textDocument: TextDocumentItem.create(`file://${doc.name}.cdc`, "cadence", 1, doc.code)
           })
         }
 
@@ -284,7 +284,7 @@ describe("diagnostics", () => {
     ])
 
     let script = await docNotifications.find(n => n.name == scriptName).notification
-    expect(script.uri).toEqual(`file:///${scriptName}.cdc`)
+    expect(script.uri).toEqual(`file://${scriptName}.cdc`)
     expect(script.diagnostics).toHaveLength(0)
   })
 
