@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
@@ -68,6 +69,8 @@ func exportValueWithInterpreter(
 		return cadence.NewBool(bool(v)), nil
 	case *interpreter.StringValue:
 		return cadence.NewString(v.Str)
+	case interpreter.CharacterValue:
+		return cadence.NewCharacter(string(v))
 	case *interpreter.ArrayValue:
 		return exportArrayValue(v, inter, seenReferences)
 	case interpreter.IntValue:
@@ -154,11 +157,14 @@ func exportSomeValue(
 	cadence.Optional,
 	error,
 ) {
-	if v.Value == nil {
+	// TODO: provide proper location range
+	innerValue := v.InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+
+	if innerValue == nil {
 		return cadence.NewOptional(nil), nil
 	}
 
-	value, err := exportValueWithInterpreter(v.Value, inter, seenReferences)
+	value, err := exportValueWithInterpreter(innerValue, inter, seenReferences)
 	if err != nil {
 		return cadence.Optional{}, err
 	}
@@ -205,10 +211,18 @@ func exportCompositeValue(
 	error,
 ) {
 
-	dynamicType := v.DynamicType(inter, interpreter.SeenReferences{}).(interpreter.CompositeDynamicType)
-	staticType := dynamicType.StaticType.(*sema.CompositeType)
+	staticType, err := inter.ConvertStaticToSemaType(v.StaticType(inter))
+	if err != nil {
+		return nil, err
+	}
+
+	compositeType, ok := staticType.(*sema.CompositeType)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
 	// TODO: consider making the results map "global", by moving it up to exportValueWithInterpreter
-	t := exportCompositeType(staticType, map[sema.TypeID]cadence.Type{})
+	t := exportCompositeType(compositeType, map[sema.TypeID]cadence.Type{})
 
 	// NOTE: use the exported type's fields to ensure fields in type
 	// and value are in sync
@@ -220,7 +234,7 @@ func exportCompositeValue(
 		fieldName := field.Identifier
 
 		// TODO: provide proper location range
-		fieldValue := v.GetField(fieldName)
+		fieldValue := v.GetField(inter, interpreter.ReturnEmptyLocationRange, fieldName)
 		if fieldValue == nil && v.ComputedFields != nil {
 			if computedField, ok := v.ComputedFields[fieldName]; ok {
 				// TODO: provide proper location range
@@ -238,7 +252,7 @@ func exportCompositeValue(
 	// NOTE: when modifying the cases below,
 	// also update the error message below!
 
-	switch staticType.Kind {
+	switch compositeType.Kind {
 	case common.CompositeKindStructure:
 		return cadence.NewStruct(fields).WithType(t.(*cadence.StructType)), nil
 	case common.CompositeKindResource:
@@ -253,7 +267,7 @@ func exportCompositeValue(
 
 	return nil, fmt.Errorf(
 		"invalid composite kind `%s`, must be %s",
-		staticType.Kind,
+		compositeType.Kind,
 		common.EnumerateWords(
 			[]string{
 				common.CompositeKindStructure.Name(),
@@ -275,15 +289,21 @@ func exportSimpleCompositeValue(
 	cadence.Value,
 	error,
 ) {
-	dynamicType, ok := v.DynamicType(inter, interpreter.SeenReferences{}).(interpreter.CompositeDynamicType)
+	staticType, err := inter.ConvertStaticToSemaType(v.StaticType(inter))
+	if err != nil {
+		return nil, err
+	}
+
+	compositeType, ok := staticType.(*sema.CompositeType)
 	if !ok {
 		return nil, fmt.Errorf(
-			"unexportable composite value: %s", dynamicType.StaticType,
+			"unexportable composite value: %s",
+			staticType,
 		)
 	}
-	staticType := dynamicType.StaticType.(*sema.CompositeType)
+
 	// TODO: consider making the results map "global", by moving it up to exportValueWithInterpreter
-	t := exportCompositeType(staticType, map[sema.TypeID]cadence.Type{})
+	t := exportCompositeType(compositeType, map[sema.TypeID]cadence.Type{})
 
 	// NOTE: use the exported type's fields to ensure fields in type
 	// and value are in sync
@@ -312,7 +332,7 @@ func exportSimpleCompositeValue(
 	// NOTE: when modifying the cases below,
 	// also update the error message below!
 
-	switch staticType.Kind {
+	switch compositeType.Kind {
 	case common.CompositeKindStructure:
 		return cadence.NewStruct(fields).WithType(t.(*cadence.StructType)), nil
 	case common.CompositeKindResource:
@@ -327,7 +347,7 @@ func exportSimpleCompositeValue(
 
 	return nil, fmt.Errorf(
 		"invalid composite kind `%s`, must be %s",
-		staticType.Kind,
+		compositeType.Kind,
 		common.EnumerateWords(
 			[]string{
 				common.CompositeKindStructure.Name(),
@@ -447,6 +467,8 @@ func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedTy
 		return interpreter.BoolValue(v), nil
 	case cadence.String:
 		return interpreter.NewStringValue(string(v)), nil
+	case cadence.Character:
+		return interpreter.NewCharacterValue(string(v)), nil
 	case cadence.Bytes:
 		return interpreter.ByteSliceToByteArrayValue(inter, v), nil
 	case cadence.Address:
@@ -662,7 +684,7 @@ func importArrayValue(
 		types := make([]sema.Type, len(v.Values))
 
 		for i, value := range values {
-			typ, err := inter.ConvertStaticToSemaType(value.StaticType())
+			typ, err := inter.ConvertStaticToSemaType(value.StaticType(inter))
 			if err != nil {
 				return nil, err
 			}
@@ -729,13 +751,13 @@ func importDictionaryValue(
 		valueTypes := make([]sema.Type, size)
 
 		for i := 0; i < size; i++ {
-			keyType, err := inter.ConvertStaticToSemaType(keysAndValues[i*2].StaticType())
+			keyType, err := inter.ConvertStaticToSemaType(keysAndValues[i*2].StaticType(inter))
 			if err != nil {
 				return nil, err
 			}
 			keyTypes[i] = keyType
 
-			valueType, err := inter.ConvertStaticToSemaType(keysAndValues[i*2+1].StaticType())
+			valueType, err := inter.ConvertStaticToSemaType(keysAndValues[i*2+1].StaticType(inter))
 			if err != nil {
 				return nil, err
 			}
@@ -886,10 +908,6 @@ func importPublicKey(
 			}
 
 			signAlgoValue = compositeValue
-
-		case sema.PublicKeyIsValidField:
-			// 'isValid' field set by the user must be ignored.
-			// This is calculated when creating the public key.
 
 		default:
 			return nil, fmt.Errorf(

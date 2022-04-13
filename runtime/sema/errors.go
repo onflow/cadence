@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -475,6 +475,16 @@ func (e *InvalidNilCoalescingRightResourceOperandError) Error() string {
 	return "nil-coalescing with right-hand resource is not supported at the moment"
 }
 
+// InvalidConditionalResourceOperandError
+
+type InvalidConditionalResourceOperandError struct {
+	ast.Range
+}
+
+func (e *InvalidConditionalResourceOperandError) Error() string {
+	return "conditional with resource is not supported at the moment"
+}
+
 // ControlStatementError
 
 type ControlStatementError struct {
@@ -714,6 +724,17 @@ func (e *AssignmentToConstantMemberError) Error() string {
 }
 
 func (*AssignmentToConstantMemberError) isSemanticError() {}
+
+type FieldReinitializationError struct {
+	Name string
+	ast.Range
+}
+
+func (e *FieldReinitializationError) Error() string {
+	return fmt.Sprintf("invalid reinitialization of field: `%s`", e.Name)
+}
+
+func (*FieldReinitializationError) isSemanticError() {}
 
 // FieldUninitializedError
 
@@ -2950,3 +2971,31 @@ func (e *InvalidEntryPointTypeError) Error() string {
 		e.Type.QualifiedString(),
 	)
 }
+
+// ImportedProgramError
+
+type ExternalMutationError struct {
+	Name            string
+	ContainerType   Type
+	DeclarationKind common.DeclarationKind
+	ast.Range
+}
+
+func (e *ExternalMutationError) Error() string {
+	return fmt.Sprintf(
+		"cannot mutate `%s`: %s is only mutable inside `%s`",
+		e.Name,
+		e.DeclarationKind.Name(),
+		e.ContainerType.QualifiedString(),
+	)
+}
+
+func (e *ExternalMutationError) SecondaryError() string {
+	return fmt.Sprintf(
+		"Consider adding a setter for `%s` to `%s`",
+		e.Name,
+		e.ContainerType.QualifiedString(),
+	)
+}
+
+func (*ExternalMutationError) isSemanticError() {}

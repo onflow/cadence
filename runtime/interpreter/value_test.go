@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"go/types"
 	"math"
+	"math/big"
 	"strings"
 	"testing"
 
@@ -31,9 +32,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	. "github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 	checkerUtils "github.com/onflow/cadence/runtime/tests/checker"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -54,6 +57,25 @@ var testCompositeValueType = &sema.CompositeType{
 	Identifier: "Test",
 	Kind:       common.CompositeKindStructure,
 	Members:    sema.NewStringMemberOrderedMap(),
+}
+
+func getMeterCompFuncWithExpectedKinds(
+	t *testing.T,
+	kinds []common.ComputationKind,
+	intensities []uint,
+) OnMeterComputationFunc {
+	if len(kinds) != len(intensities) {
+		t.Fatal("size of kinds doesn't match size of intensitites")
+	}
+	expectedCompKindsIndex := 0
+	return func(compKind common.ComputationKind, intensity uint) {
+		if expectedCompKindsIndex >= len(kinds) {
+			t.Fatal("received an extra meterComputation call")
+		}
+		assert.Equal(t, kinds[expectedCompKindsIndex], compKind)
+		assert.Equal(t, intensities[expectedCompKindsIndex], intensity)
+		expectedCompKindsIndex++
+	}
 }
 
 func TestOwnerNewArray(t *testing.T) {
@@ -110,6 +132,18 @@ func TestOwnerArrayDeepCopy(t *testing.T) {
 		},
 		utils.TestLocation,
 		WithStorage(storage),
+		WithOnMeterComputationFuncHandler(
+			getMeterCompFuncWithExpectedKinds(t,
+				[]common.ComputationKind{
+					common.ComputationKindCreateCompositeValue,
+					common.ComputationKindCreateArrayValue,
+					common.ComputationKindTransferCompositeValue,
+					common.ComputationKindTransferArrayValue,
+					common.ComputationKindTransferCompositeValue,
+				},
+				[]uint{1, 1, 1, 1, 1},
+			),
+		),
 	)
 	require.NoError(t, err)
 
@@ -457,6 +491,18 @@ func TestOwnerDictionaryCopy(t *testing.T) {
 		},
 		utils.TestLocation,
 		WithStorage(storage),
+		WithOnMeterComputationFuncHandler(
+			getMeterCompFuncWithExpectedKinds(t,
+				[]common.ComputationKind{
+					common.ComputationKindCreateCompositeValue,
+					common.ComputationKindCreateDictionaryValue,
+					common.ComputationKindTransferCompositeValue,
+					common.ComputationKindTransferDictionaryValue,
+					common.ComputationKindTransferCompositeValue,
+				},
+				[]uint{1, 1, 1, 1, 1},
+			),
+		),
 	)
 	require.NoError(t, err)
 
@@ -644,7 +690,8 @@ func TestOwnerDictionaryRemove(t *testing.T) {
 		value2,
 	)
 	require.IsType(t, &SomeValue{}, existingValue)
-	value1 = existingValue.(*SomeValue).Value.(*CompositeValue)
+	innerValue := existingValue.(*SomeValue).InnerValue(inter, ReturnEmptyLocationRange)
+	value1 = innerValue.(*CompositeValue)
 
 	queriedValue, _ := dictionary.Get(inter, ReturnEmptyLocationRange, keyValue)
 	value2 = queriedValue.(*CompositeValue)
@@ -697,7 +744,8 @@ func TestOwnerDictionaryInsertExisting(t *testing.T) {
 		keyValue,
 	)
 	require.IsType(t, &SomeValue{}, existingValue)
-	value = existingValue.(*SomeValue).Value.(*CompositeValue)
+	innerValue := existingValue.(*SomeValue).InnerValue(inter, ReturnEmptyLocationRange)
+	value = innerValue.(*CompositeValue)
 
 	assert.Equal(t, newOwner, dictionary.GetOwner())
 	assert.Equal(t, common.Address{}, value.GetOwner())
@@ -1375,6 +1423,13 @@ func TestGetHashInput(t *testing.T) {
 				[]byte(strings.Repeat("a", 32))...,
 			),
 		},
+		"Character": {
+			value: NewCharacterValue("ᄀᄀᄀ각ᆨᆨ"),
+			expected: []byte{
+				byte(HashInputTypeCharacter),
+				0xe1, 0x84, 0x80, 0xe1, 0x84, 0x80, 0xe1, 0x84, 0x80, 0xea, 0xb0, 0x81, 0xe1, 0x86, 0xa8, 0xe1, 0x86, 0xa8,
+			},
+		},
 		"Address": {
 			value:    NewAddressValue(common.Address{0, 0, 0, 0, 0, 0, 0, 1}),
 			expected: []byte{byte(HashInputTypeAddress), 0, 0, 0, 0, 0, 0, 0, 1},
@@ -1558,22 +1613,20 @@ func TestEphemeralReferenceTypeConformance(t *testing.T) {
 	require.NoError(t, err)
 	require.IsType(t, &EphemeralReferenceValue{}, value)
 
-	dynamicType := value.DynamicType(inter, SeenReferences{})
-
 	// Check the dynamic type conformance on a cyclic value.
-	conforms := value.ConformsToDynamicType(
+	conforms := value.ConformsToStaticType(
 		inter,
 		ReturnEmptyLocationRange,
-		dynamicType,
+		value.StaticType(inter),
 		TypeConformanceResults{},
 	)
 	assert.True(t, conforms)
 
 	// Check against a non-conforming type
-	conforms = value.ConformsToDynamicType(
+	conforms = value.ConformsToStaticType(
 		inter,
 		ReturnEmptyLocationRange,
-		EphemeralReferenceDynamicType{},
+		ReferenceStaticType{},
 		TypeConformanceResults{},
 	)
 	assert.False(t, conforms)
@@ -3135,11 +3188,7 @@ func TestPublicKeyValue(t *testing.T) {
 			nil,
 			utils.TestLocation,
 			WithStorage(storage),
-			WithPublicKeyValidationHandler(
-				func(_ *Interpreter, _ func() LocationRange, _ *CompositeValue) BoolValue {
-					return true
-				},
-			),
+			WithPublicKeyValidationHandler(runtime.DoNotValidatePublicKey),
 		)
 		require.NoError(t, err)
 
@@ -3154,18 +3203,9 @@ func TestPublicKeyValue(t *testing.T) {
 			NewIntValueFromInt64(3),
 		)
 
-		sigAlgo := NewCompositeValue(
+		sigAlgo := stdlib.NewSignatureAlgorithmCase(
 			inter,
-			nil,
-			sema.SignatureAlgorithmType.QualifiedIdentifier(),
-			sema.SignatureAlgorithmType.Kind,
-			[]CompositeField{
-				{
-					Name:  sema.EnumRawValueFieldName,
-					Value: UInt8Value(sema.SignatureAlgorithmECDSA_secp256k1.RawValue()),
-				},
-			},
-			common.Address{},
+			sema.SignatureAlgorithmECDSA_secp256k1.RawValue(),
 		)
 
 		key := NewPublicKeyValue(
@@ -3177,15 +3217,66 @@ func TestPublicKeyValue(t *testing.T) {
 		)
 
 		require.Equal(t,
-			"PublicKey(publicKey: [1, 7, 3], signatureAlgorithm: SignatureAlgorithm(rawValue: 2), isValid: true)",
+			"PublicKey(publicKey: [1, 7, 3], signatureAlgorithm: SignatureAlgorithm(rawValue: 2))",
 			key.String(),
 		)
+	})
+
+	t.Run("Panics when PublicKey is invalid", func(t *testing.T) {
+
+		t.Parallel()
+
+		storage := NewInMemoryStorage()
+
+		fakeError := fakeError{}
+
+		inter, err := NewInterpreter(
+			nil,
+			utils.TestLocation,
+			WithStorage(storage),
+			WithPublicKeyValidationHandler(
+				func(_ *Interpreter, _ func() LocationRange, _ *CompositeValue) error {
+					return fakeError
+				},
+			),
+		)
+		require.NoError(t, err)
+
+		publicKeyBytes := []byte{1, 7, 3}
+
+		publicKey := NewArrayValue(
+			inter,
+			VariableSizedStaticType{
+				Type: PrimitiveStaticTypeInt,
+			},
+			common.Address{},
+			NewIntValueFromInt64(int64(publicKeyBytes[0])),
+			NewIntValueFromInt64(int64(publicKeyBytes[1])),
+			NewIntValueFromInt64(int64(publicKeyBytes[2])),
+		)
+
+		sigAlgo := stdlib.NewSignatureAlgorithmCase(
+			inter,
+			sema.SignatureAlgorithmECDSA_secp256k1.RawValue(),
+		)
+
+		assert.PanicsWithError(t,
+			(InvalidPublicKeyError{PublicKey: publicKey, Err: fakeError}).Error(),
+			func() {
+				_ = NewPublicKeyValue(
+					inter,
+					ReturnEmptyLocationRange,
+					publicKey,
+					sigAlgo,
+					inter.PublicKeyValidationHandler,
+				)
+			})
 	})
 }
 
 func TestHashable(t *testing.T) {
 
-	// Assert that all Value and DynamicType implementations are hashable
+	// Assert that all Value implementations are hashable
 
 	pkgs, err := packages.Load(
 		&packages.Config{
@@ -3232,7 +3323,6 @@ func TestHashable(t *testing.T) {
 	}
 
 	test("Value")
-	test("DynamicType")
 }
 
 func checkHashable(ty types.Type) error {
@@ -3348,4 +3438,103 @@ func TestNonStorable(t *testing.T) {
 	_, err = inter.Invoke("foo")
 	require.NoError(t, err)
 
+}
+
+type fakeError struct{}
+
+func (fakeError) Error() string {
+	return "fake error for testing"
+}
+
+func TestNumberValueIntegerConversion(t *testing.T) {
+
+	t.Parallel()
+
+	type converter struct {
+		convert func(NumberValue) (result interface{}, convertible bool)
+		check   func(t *testing.T, result interface{}) bool
+	}
+
+	test := func(
+		t *testing.T,
+		numericType sema.Type,
+		testValue NumberValue,
+		converter converter,
+	) {
+
+		result, convertible := converter.convert(testValue)
+		if !convertible {
+			return
+		}
+		converter.check(t, result)
+	}
+
+	testValues := map[*sema.NumericType]NumberValue{
+		sema.IntType:     NewIntValueFromInt64(42),
+		sema.UIntType:    NewUIntValueFromUint64(42),
+		sema.UInt8Type:   UInt8Value(42),
+		sema.UInt16Type:  UInt16Value(42),
+		sema.UInt32Type:  UInt32Value(42),
+		sema.UInt64Type:  UInt64Value(42),
+		sema.UInt128Type: NewUInt128ValueFromUint64(42),
+		sema.UInt256Type: NewUInt256ValueFromUint64(42),
+		sema.Word8Type:   Word8Value(42),
+		sema.Word16Type:  Word16Value(42),
+		sema.Word32Type:  Word32Value(42),
+		sema.Word64Type:  Word64Value(42),
+		sema.Int8Type:    Int8Value(42),
+		sema.Int16Type:   Int16Value(42),
+		sema.Int32Type:   Int32Value(42),
+		sema.Int64Type:   Int64Value(42),
+		sema.Int128Type:  NewInt128ValueFromInt64(42),
+		sema.Int256Type:  NewInt256ValueFromInt64(42),
+	}
+
+	for _, ty := range sema.AllIntegerTypes {
+		// Only test leaf types
+		switch ty {
+		case sema.IntegerType, sema.SignedIntegerType:
+			continue
+		}
+
+		_, ok := testValues[ty.(*sema.NumericType)]
+		require.True(t, ok, "missing expected value for type %s", ty.String())
+	}
+
+	converters := map[string]converter{
+		"ToInt": {
+			convert: func(value NumberValue) (interface{}, bool) {
+				return value.ToInt(), true
+			},
+			check: func(t *testing.T, result interface{}) bool {
+				return assert.Equal(t, 42, result)
+			},
+		},
+		"ToBigInt": {
+			convert: func(value NumberValue) (interface{}, bool) {
+				bigNumberValue, ok := value.(BigNumberValue)
+				if !ok {
+					return nil, false
+				}
+				return bigNumberValue.ToBigInt(), true
+			},
+			check: func(t *testing.T, result interface{}) bool {
+				return assert.Equal(t, big.NewInt(42), result)
+			},
+		},
+	}
+
+	for numericType, testValue := range testValues {
+
+		t.Run(numericType.String(), func(t *testing.T) {
+
+			for converterName, converter := range converters {
+
+				t.Run(converterName, func(t *testing.T) {
+					test(t, numericType, testValue, converter)
+				})
+
+			}
+		})
+	}
 }

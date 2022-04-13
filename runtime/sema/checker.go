@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -863,12 +863,6 @@ func (checker *Checker) checkResourceMoveOperation(valueExpression ast.Expressio
 		)
 		return
 	}
-
-	checker.recordResourceInvalidation(
-		unaryExpression.Expression,
-		valueType,
-		ResourceInvalidationKindMoveDefinite,
-	)
 }
 
 func (checker *Checker) inLoop() bool {
@@ -1733,14 +1727,24 @@ func (checker *Checker) checkResourceFieldNesting(
 		return
 	}
 
-	// The field is not a resource or contract, check if there are
-	// any fields that have a resource type  and report them
+	// The field is not a resource or contract.
+	// Check if there are any fields that have a resource type and report them
 
 	members.Foreach(func(name string, member *Member) {
 		// NOTE: check type, not resource annotation:
 		// the field could have a wrong annotation
 
 		if !member.TypeAnnotation.Type.IsResourceType() {
+			return
+		}
+
+		// Skip enums' implicit rawValue field.
+		// If a resource type is used as the enum raw type,
+		// it is already reported
+
+		if compositeKind == common.CompositeKindEnum &&
+			name == EnumRawValueFieldName {
+
 			return
 		}
 
@@ -1783,9 +1787,9 @@ func (checker *Checker) checkPotentiallyUnevaluated(check TypeCheckFunc) Type {
 		temporaryResources,
 	)
 
-	functionActivation.ReturnInfo.MaybeJumpedOrReturned =
-		functionActivation.ReturnInfo.MaybeJumpedOrReturned ||
-			temporaryReturnInfo.MaybeJumpedOrReturned
+	functionActivation.ReturnInfo.MaybeReturned =
+		functionActivation.ReturnInfo.MaybeReturned ||
+			temporaryReturnInfo.MaybeReturned
 
 	// NOTE: the definitive return state does not change
 
@@ -1928,15 +1932,13 @@ func (checker *Checker) checkFieldsAccessModifier(fields []*ast.FieldDeclaration
 // i.e. it has exactly one grapheme cluster.
 //
 func (checker *Checker) checkCharacterLiteral(expression *ast.StringExpression) {
-	length := uniseg.GraphemeClusterCount(expression.Value)
-
-	if length == 1 {
+	if IsValidCharacter(expression.Value) {
 		return
 	}
 
 	checker.report(
 		&InvalidCharacterLiteralError{
-			Length: length,
+			Length: uniseg.GraphemeClusterCount(expression.Value),
 			Range:  ast.NewRangeFromPositioned(expression),
 		},
 	)

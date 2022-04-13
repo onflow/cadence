@@ -376,18 +376,18 @@ someStruct = testStruct
 
 // Declare a resource named `TestResource`
 
-resource Test {}
+resource TestResource {}
 
 // Declare a variable that has the type `AnyResource`.
 // Any resource-typed value can be assigned to it,
 // but not non-resource typed values.
 //
-var someResource: @AnyResource <- create Test()
+var someResource: @AnyResource <- create TestResource()
 
 // Invalid: Resource-typed values can not be assigned
 // to `AnyStruct`-typed variables
 //
-someStruct <- create Test()
+someStruct <- create TestResource()
 
 // Invalid: Non-resource typed values can not be assigned
 // to `AnyResource`-typed variables
@@ -886,6 +886,27 @@ The `String` type also provides the following functions:
   String.encodeHex(data)  // is `"010203cade"`
   ```
 
+`String`s are also indexable, returning a `Character` value. 
+
+```cadence
+let str = "abc"
+let c = str[0] // is the Character "a"
+```
+
+### Character Fields and Functions
+
+`Character` values can be converted into `String` values using the `toString` function:
+
+- `cadence•fun toString(): String`
+
+  Returns the string representation of the character.
+
+  ```cadence
+  let c: Character = "x"
+
+  c.toString()  // is "x"
+  ```
+
 ## Arrays
 
 Arrays are mutable, ordered collections of values.
@@ -1079,6 +1100,23 @@ are available for both variable-sized and fixed-sized or variable-sized arrays.
   let containsKitty = numbers.contains("Kitty")
   ```
 
+- `cadence•fun firstIndex(of: T): Int?`
+  Returns the index of the first element matching the given object in the array, nil if no match.
+  Available if `T` is not resource-kinded and equatable.
+
+ ```cadence
+  // Declare an array of integers.
+  let numbers = [42, 23, 31, 12]
+
+  // Check if the array contains 31
+  let index = numbers.firstIndex(of: 31)
+  // `index` is 2
+
+  // Check if the array contains 22
+  let index = numbers.firstIndex(of: 22)
+  // `index` is nil
+  ```
+
 - `cadence•fun slice(from: Int, upTo: Int): [T]`
 
   Returns an array slice of the elements
@@ -1112,7 +1150,9 @@ It is invalid to use one of these functions on a fixed-sized array.
 
   Adds the new element `element` of type `T` to the end of the array.
 
-  The new element must be the same type as all the other elements in the array.
+  The new element must be the same type as all the other elements in the array. 
+
+  This function [mutates](../access-control) the array.
 
   ```cadence
   // Declare an array of integers.
@@ -1132,6 +1172,8 @@ It is invalid to use one of these functions on a fixed-sized array.
   the function is called on.
 
   Both arrays must be the same type `T`.
+
+  This function [mutates](../access-control) the array.
 
   ```cadence
   // Declare an array of integers.
@@ -1160,6 +1202,8 @@ It is invalid to use one of these functions on a fixed-sized array.
   All the elements after the new inserted element
   are shifted to the right by one.
 
+  This function [mutates](../access-control) the array.
+
   ```cadence
   // Declare an array of integers.
   let numbers = [42, 23, 31, 12]
@@ -1178,6 +1222,8 @@ It is invalid to use one of these functions on a fixed-sized array.
 
   The `index` must be within the bounds of the array.
   If the index is outside the bounds, the program aborts.
+
+  This function [mutates](../access-control) the array.
 
   ```cadence
   // Declare an array of integers.
@@ -1198,6 +1244,8 @@ It is invalid to use one of these functions on a fixed-sized array.
 
   The array must not be empty.
   If the array is empty, the program aborts.
+
+  This function [mutates](../access-control) the array.
 
   ```cadence
   // Declare an array of integers.
@@ -1223,6 +1271,8 @@ It is invalid to use one of these functions on a fixed-sized array.
 
   The array must not be empty.
   If the array is empty, the program aborts.
+
+  This function [mutates](../access-control) the array.
 
   ```cadence
   // Declare an array of integers.
@@ -1398,6 +1448,8 @@ booleans[0] = true
   if the dictionary contained the key,
   otherwise `nil`.
 
+  This function [mutates](../access-control) the dictionary.
+
   ```cadence
   // Declare a dictionary mapping strings to integers.
   let numbers = {"twentyThree": 23}
@@ -1419,6 +1471,8 @@ booleans[0] = true
   Returns the value of type `V` as an optional
   if the dictionary contained the key,
   otherwise `nil`.
+
+  This function [mutates](../access-control) the dictionary.
 
   ```cadence
   // Declare a dictionary mapping strings to integers.

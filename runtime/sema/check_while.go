@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -115,7 +115,6 @@ func (checker *Checker) VisitBreakStatement(statement *ast.BreakStatement) ast.R
 
 	functionActivation := checker.functionActivations.Current()
 	checker.resources.JumpsOrReturns = true
-	functionActivation.ReturnInfo.MaybeJumpedOrReturned = true
 	functionActivation.ReturnInfo.DefinitelyJumped = true
 
 	return nil
@@ -137,7 +136,6 @@ func (checker *Checker) VisitContinueStatement(statement *ast.ContinueStatement)
 
 	functionActivation := checker.functionActivations.Current()
 	checker.resources.JumpsOrReturns = true
-	functionActivation.ReturnInfo.MaybeJumpedOrReturned = true
 	functionActivation.ReturnInfo.DefinitelyJumped = true
 
 	return nil

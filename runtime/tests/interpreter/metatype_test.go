@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -631,8 +631,8 @@ func TestInterpretGetType(t *testing.T) {
 			result: interpreter.TypeValue{
 				Type: interpreter.OptionalStaticType{
 					Type: interpreter.ReferenceStaticType{
-						Authorized: true,
-						Type:       interpreter.PrimitiveStaticTypeInt,
+						Authorized:   true,
+						BorrowedType: interpreter.PrimitiveStaticTypeInt,
 					},
 				},
 			},
@@ -652,8 +652,8 @@ func TestInterpretGetType(t *testing.T) {
 			result: interpreter.TypeValue{
 				Type: interpreter.OptionalStaticType{
 					Type: interpreter.ReferenceStaticType{
-						Authorized: true,
-						Type:       interpreter.PrimitiveStaticTypeInt,
+						Authorized:   true,
+						BorrowedType: interpreter.PrimitiveStaticTypeInt,
 					},
 				},
 			},
@@ -679,18 +679,20 @@ func TestInterpretGetType(t *testing.T) {
 			// Inject a function that returns a storage reference value,
 			// which is borrowed as: `auth &Int`
 
+			getStorageReferenceFunctionType := &sema.FunctionType{
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(
+					&sema.ReferenceType{
+						Authorized: true,
+						Type:       sema.IntType,
+					},
+				),
+			}
+
 			standardLibraryFunctions :=
 				stdlib.StandardLibraryFunctions{
 					{
 						Name: "getStorageReference",
-						Type: &sema.FunctionType{
-							ReturnTypeAnnotation: sema.NewTypeAnnotation(
-								&sema.ReferenceType{
-									Authorized: true,
-									Type:       sema.IntType,
-								},
-							),
-						},
+						Type: getStorageReferenceFunctionType,
 						Function: interpreter.NewHostFunctionValue(
 							func(invocation interpreter.Invocation) interpreter.Value {
 
@@ -701,7 +703,7 @@ func TestInterpretGetType(t *testing.T) {
 									BorrowedType:         sema.IntType,
 								}
 							},
-							nil,
+							getStorageReferenceFunctionType,
 						),
 					},
 				}
@@ -725,7 +727,7 @@ func TestInterpretGetType(t *testing.T) {
 			)
 			require.NoError(t, err)
 
-			storageMap := storage.GetStorageMap(storageAddress, storagePath.Domain.Identifier())
+			storageMap := storage.GetStorageMap(storageAddress, storagePath.Domain.Identifier(), true)
 			storageMap.WriteValue(
 				inter,
 				storagePath.Identifier,

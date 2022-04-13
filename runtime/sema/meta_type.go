@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,12 +31,14 @@ const metaTypeSubtypeDocString = `
 Returns true if this type is a subtype of the given type at run-time
 `
 
+const MetaTypeName = "Type"
+
 // MetaType represents the type of a type.
 //
 var MetaType = &SimpleType{
-	Name:                 "Type",
-	QualifiedName:        "Type",
-	TypeID:               "Type",
+	Name:                 MetaTypeName,
+	QualifiedName:        MetaTypeName,
+	TypeID:               MetaTypeName,
 	tag:                  MetaTypeTag,
 	IsInvalid:            false,
 	IsResource:           false,

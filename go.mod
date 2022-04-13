@@ -6,12 +6,12 @@ require (
 	github.com/bytecodealliance/wasmtime-go v0.22.0
 	github.com/c-bata/go-prompt v0.2.5
 	github.com/cheekybits/genny v1.0.0
-	github.com/fxamacker/cbor/v2 v2.3.1-0.20211029162100-5d5d7c3edd41
+	github.com/fxamacker/cbor/v2 v2.4.1-0.20220314011055-12f5cb4b5eb0
 	github.com/go-test/deep v1.0.5
 	github.com/logrusorgru/aurora v0.0.0-20200102142835-e9ef32dff381
-	github.com/onflow/atree v0.1.2-0.20211216135231-f8f0a14c7272
+	github.com/onflow/atree v0.3.0
 	github.com/opentracing/opentracing-go v1.2.0
-	github.com/rivo/uniseg v0.2.0
+	github.com/rivo/uniseg v0.2.1-0.20211004051800-57c86be7915a
 	github.com/schollz/progressbar/v3 v3.8.3
 	github.com/stretchr/testify v1.7.1-0.20210824115523-ab6dc3262822
 	github.com/turbolent/prettier v0.0.0-20210613180524-3a3f5a5b49ba

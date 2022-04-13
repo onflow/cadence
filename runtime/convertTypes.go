@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -527,8 +527,8 @@ func ImportType(t cadence.Type) interpreter.StaticType {
 		return importInterfaceType(t.(cadence.InterfaceType))
 	case cadence.ReferenceType:
 		return interpreter.ReferenceStaticType{
-			Authorized: t.Authorized,
-			Type:       ImportType(t.Type),
+			Authorized:   t.Authorized,
+			BorrowedType: ImportType(t.Type),
 		}
 	case cadence.RestrictedType:
 		restrictions := make([]interpreter.InterfaceStaticType, 0, len(t.Restrictions))

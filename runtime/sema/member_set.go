@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -93,23 +93,17 @@ func (ms *MemberSet) ForEach(cb func(member *Member) error) error {
 	return nil
 }
 
-// Intersection returns a new set containing all members that exist in this and the given set.
+// AddIntersection adds the members that exist in both given member sets.
 //
-func (ms *MemberSet) Intersection(otherMS *MemberSet) *MemberSet {
+func (ms *MemberSet) AddIntersection(a, b *MemberSet) {
 
-	result := NewMemberSet(nil)
-
-	_ = ms.ForEach(func(member *Member) error {
-		if !otherMS.Contains(member) {
-			return nil
+	_ = a.ForEach(func(member *Member) error {
+		if b.Contains(member) {
+			ms.Add(member)
 		}
-
-		result.Add(member)
 
 		return nil
 	})
-
-	return result
 }
 
 // Clone returns a new child member set that contains all entries of this parent set.

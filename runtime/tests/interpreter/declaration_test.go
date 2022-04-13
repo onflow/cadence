@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,13 @@
 package interpreter_test
 
 import (
+	"fmt"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 func TestInterpretForwardReferenceCall(t *testing.T) {
@@ -72,4 +78,75 @@ func TestInterpretForwardReferenceCall(t *testing.T) {
 	    `)
 	})
 
+}
+
+func TestInterpretShadowingInFunction(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+	  fun foo(): Int {
+          var x = 1
+          fun bar() {
+              var x = x
+              x = 2
+          }
+          bar()
+          return x
+      }
+	`)
+
+	result, err := inter.Invoke("foo")
+	require.NoError(t, err)
+
+	require.Equal(t,
+		interpreter.NewIntValueFromInt64(1),
+		result,
+	)
+}
+
+func TestInterpretPassBuiltinByValue(t *testing.T) {
+
+	t.Parallel()
+
+	// Check built-ins have a static type, so value transfer check works
+
+	_ = sema.BaseValueActivation.ForEach(
+		func(name string, _ *sema.Variable) error {
+
+			t.Run(name, func(t *testing.T) {
+
+				t.Run("in function", func(t *testing.T) {
+
+					inter := parseCheckAndInterpret(t,
+						fmt.Sprintf(
+							`
+                                fun test() {
+                                    let x = %s
+                                }
+                            `,
+							name,
+						),
+					)
+
+					_, err := inter.Invoke("test")
+					require.NoError(t, err)
+				})
+
+				t.Run("global declaration", func(t *testing.T) {
+
+					_ = parseCheckAndInterpret(t,
+						fmt.Sprintf(
+							`
+                                let x = %s
+                            `,
+							name,
+						),
+					)
+				})
+			})
+
+			return nil
+		},
+	)
 }

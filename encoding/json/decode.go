@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -138,6 +138,8 @@ func decodeJSON(v interface{}) cadence.Value {
 		return decodeOptional(valueJSON)
 	case boolTypeStr:
 		return decodeBool(valueJSON)
+	case characterTypeStr:
+		return decodeCharacter(valueJSON)
 	case stringTypeStr:
 		return decodeString(valueJSON)
 	case addressTypeStr:
@@ -229,6 +231,14 @@ func decodeOptional(valueJSON interface{}) cadence.Optional {
 
 func decodeBool(valueJSON interface{}) cadence.Bool {
 	return cadence.NewBool(toBool(valueJSON))
+}
+
+func decodeCharacter(valueJSON interface{}) cadence.Character {
+	char, err := cadence.NewCharacter(toString(valueJSON))
+	if err != nil {
+		panic(err)
+	}
+	return char
 }
 
 func decodeString(valueJSON interface{}) cadence.String {

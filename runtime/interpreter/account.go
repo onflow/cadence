@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,9 +28,7 @@ import (
 
 var authAccountTypeID = sema.AuthAccountType.ID()
 var authAccountStaticType StaticType = PrimitiveStaticTypeAuthAccount
-var authAccountDynamicType DynamicType = CompositeDynamicType{
-	StaticType: sema.AuthAccountType,
-}
+
 var authAccountFieldNames = []string{
 	sema.AuthAccountAddressField,
 	sema.AuthAccountContractsField,
@@ -43,7 +41,7 @@ func NewAuthAccountValue(
 	accountBalanceGet func() UFix64Value,
 	accountAvailableBalanceGet func() UFix64Value,
 	storageUsedGet func(interpreter *Interpreter) UInt64Value,
-	storageCapacityGet func() UInt64Value,
+	storageCapacityGet func(interpreter *Interpreter) UInt64Value,
 	addPublicKeyFunction FunctionValue,
 	removePublicKeyFunction FunctionValue,
 	contractsConstructor func() Value,
@@ -86,8 +84,8 @@ func NewAuthAccountValue(
 		sema.AuthAccountStorageUsedField: func(inter *Interpreter, _ func() LocationRange) Value {
 			return storageUsedGet(inter)
 		},
-		sema.AuthAccountStorageCapacityField: func(_ *Interpreter, _ func() LocationRange) Value {
-			return storageCapacityGet()
+		sema.AuthAccountStorageCapacityField: func(inter *Interpreter, _ func() LocationRange) Value {
+			return storageCapacityGet(inter)
 		},
 		sema.AuthAccountTypeField: func(inter *Interpreter, _ func() LocationRange) Value {
 			return inter.authAccountTypeFunction(address)
@@ -126,7 +124,6 @@ func NewAuthAccountValue(
 	return NewSimpleCompositeValue(
 		authAccountTypeID,
 		authAccountStaticType,
-		authAccountDynamicType,
 		authAccountFieldNames,
 		fields,
 		computedFields,
@@ -139,9 +136,7 @@ func NewAuthAccountValue(
 
 var publicAccountTypeID = sema.PublicAccountType.ID()
 var publicAccountStaticType StaticType = PrimitiveStaticTypePublicAccount
-var publicAccountDynamicType DynamicType = CompositeDynamicType{
-	StaticType: sema.PublicAccountType,
-}
+
 var publicAccountFieldNames = []string{
 	sema.PublicAccountAddressField,
 	sema.PublicAccountContractsField,
@@ -154,7 +149,7 @@ func NewPublicAccountValue(
 	accountBalanceGet func() UFix64Value,
 	accountAvailableBalanceGet func() UFix64Value,
 	storageUsedGet func(interpreter *Interpreter) UInt64Value,
-	storageCapacityGet func() UInt64Value,
+	storageCapacityGet func(interpreter *Interpreter) UInt64Value,
 	keysConstructor func() Value,
 	contractsConstructor func() Value,
 ) Value {
@@ -193,8 +188,8 @@ func NewPublicAccountValue(
 		sema.PublicAccountStorageUsedField: func(inter *Interpreter, _ func() LocationRange) Value {
 			return storageUsedGet(inter)
 		},
-		sema.PublicAccountStorageCapacityField: func(_ *Interpreter, _ func() LocationRange) Value {
-			return storageCapacityGet()
+		sema.PublicAccountStorageCapacityField: func(inter *Interpreter, _ func() LocationRange) Value {
+			return storageCapacityGet(inter)
 		},
 		sema.PublicAccountGetTargetLinkField: func(inter *Interpreter, _ func() LocationRange) Value {
 			return inter.accountGetLinkTargetFunction(address)
@@ -212,7 +207,6 @@ func NewPublicAccountValue(
 	return NewSimpleCompositeValue(
 		publicAccountTypeID,
 		publicAccountStaticType,
-		publicAccountDynamicType,
 		publicAccountFieldNames,
 		fields,
 		computedFields,

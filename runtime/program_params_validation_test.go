@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -85,6 +85,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 				return json.Decode(b)
 			},
 		}
+		addPublicKeyValidation(runtimeInterface, nil)
 
 		_, err = rt.ExecuteScript(
 			Script{
@@ -369,9 +370,6 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 								cadence.NewUInt8(0),
 							},
 						).WithType(SignAlgoType),
-
-						// isValid
-						cadence.NewBool(false),
 					},
 				).WithType(PublicKeyType)
 
@@ -552,6 +550,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 				return json.Decode(b)
 			},
 		}
+		addPublicKeyValidation(runtimeInterface, nil)
 
 		return rt.ExecuteTransaction(
 			Script{
@@ -848,9 +847,6 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 								cadence.NewUInt8(0),
 							},
 						).WithType(SignAlgoType),
-
-						// isValid
-						cadence.NewBool(false),
 					},
 				).WithType(PublicKeyType)
 

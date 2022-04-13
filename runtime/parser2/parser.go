@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,10 +41,10 @@ type parser struct {
 	current lexer.Token
 	// errors are the parsing errors encountered during parsing
 	errors []error
-	// backtrackingCursors
-	backtrackingCursors []int
-	// bufferedErrors are the parsing errors encountered during buffering
-	bufferedErrors [][]error
+	// backtrackingCursorStack is the stack of lexer cursors used when backtracking
+	backtrackingCursorStack []int
+	// bufferedErrorsStack is the stack of parsing errors encountered during buffering
+	bufferedErrorsStack [][]error
 }
 
 // Parse creates a lexer to scan the given input string,
@@ -75,7 +75,7 @@ func ParseTokenStream(tokens lexer.TokenStream, parse func(*parser) interface{})
 			errors = p.errors
 		}
 
-		for _, bufferedErrors := range p.bufferedErrors {
+		for _, bufferedErrors := range p.bufferedErrorsStack {
 			errors = append(errors, bufferedErrors...)
 		}
 	}()
@@ -119,11 +119,11 @@ func (p *parser) report(errs ...error) {
 		// Add the errors to the buffered errors if buffering,
 		// or the final errors if not
 
-		bufferedErrorsDepth := len(p.bufferedErrors)
+		bufferedErrorsDepth := len(p.bufferedErrorsStack)
 		if bufferedErrorsDepth > 0 {
 			bufferedErrorsIndex := bufferedErrorsDepth - 1
-			p.bufferedErrors[bufferedErrorsIndex] = append(
-				p.bufferedErrors[bufferedErrorsIndex],
+			p.bufferedErrorsStack[bufferedErrorsIndex] = append(
+				p.bufferedErrorsStack[bufferedErrorsIndex],
 				parseError,
 			)
 		} else {
@@ -186,31 +186,39 @@ func (p *parser) mustOneString(tokenType lexer.TokenType, string string) lexer.T
 func (p *parser) startBuffering() {
 	// Push the lexer's previous cursor to the stack.
 	// When start buffering is called, the lexer has already advanced to the next token
-	p.backtrackingCursors = append(p.backtrackingCursors, p.tokens.Cursor()-1)
+	p.backtrackingCursorStack = append(p.backtrackingCursorStack, p.tokens.Cursor()-1)
 
 	// Push an empty slice of errors to the stack
-	p.bufferedErrors = append(p.bufferedErrors, nil)
+	p.bufferedErrorsStack = append(p.bufferedErrorsStack, nil)
 }
 
 func (p *parser) acceptBuffered() {
 	// Pop the last backtracking cursor from the stack
 	// and ignore it
 
-	lastIndex := len(p.backtrackingCursors) - 1
-	p.backtrackingCursors = p.backtrackingCursors[:lastIndex]
+	lastIndex := len(p.backtrackingCursorStack) - 1
+	p.backtrackingCursorStack = p.backtrackingCursorStack[:lastIndex]
 
-	// Pop the last buffered errors from the stack
-	// and apply them to the previous errors on the buffered errors stack,
+	// Pop the last buffered errors from the stack.
+	//
+	// The element type is a slice (reference type),
+	// so we need to replace the slice with nil explicitly
+	// to free the memory.
+	// The slice's underlying storage would otherwise
+	// keep a reference to it and prevent it from being garbage collected.
+
+	lastIndex = len(p.bufferedErrorsStack) - 1
+	bufferedErrors := p.bufferedErrorsStack[lastIndex]
+	p.bufferedErrorsStack[lastIndex] = nil
+	p.bufferedErrorsStack = p.bufferedErrorsStack[:lastIndex]
+
+	// Apply the accepted buffered errors to the last errors on the buffered errors stack,
 	// or the final errors, if we reached the bottom of the stack
 	// (i.e. this acceptance disables buffering)
 
-	lastIndex = len(p.bufferedErrors) - 1
-	bufferedErrors := p.bufferedErrors[lastIndex]
-	p.bufferedErrors[lastIndex] = nil
-	p.bufferedErrors = p.bufferedErrors[:lastIndex]
-	if len(bufferedErrors) > 0 {
-		p.bufferedErrors[lastIndex-1] = append(
-			p.bufferedErrors[lastIndex-1],
+	if len(p.bufferedErrorsStack) > 0 {
+		p.bufferedErrorsStack[lastIndex-1] = append(
+			p.bufferedErrorsStack[lastIndex-1],
 			bufferedErrors...,
 		)
 	} else {
@@ -225,18 +233,18 @@ func (p *parser) replayBuffered() {
 	// Pop the last backtracking cursor from the stack
 	// and revert the lexer back to it
 
-	lastIndex := len(p.backtrackingCursors) - 1
-	cursor := p.backtrackingCursors[lastIndex]
+	lastIndex := len(p.backtrackingCursorStack) - 1
+	cursor := p.backtrackingCursorStack[lastIndex]
 	p.tokens.Revert(cursor)
 	p.next()
-	p.backtrackingCursors = p.backtrackingCursors[:lastIndex]
+	p.backtrackingCursorStack = p.backtrackingCursorStack[:lastIndex]
 
 	// Pop the last buffered errors from the stack
 	// and ignore them
 
-	lastIndex = len(p.bufferedErrors) - 1
-	p.bufferedErrors[lastIndex] = nil
-	p.bufferedErrors = p.bufferedErrors[:lastIndex]
+	lastIndex = len(p.bufferedErrorsStack) - 1
+	p.bufferedErrorsStack[lastIndex] = nil
+	p.bufferedErrorsStack = p.bufferedErrorsStack[:lastIndex]
 }
 
 type triviaOptions struct {

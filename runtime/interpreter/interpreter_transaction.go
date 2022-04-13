@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,15 +57,21 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 		staticType.TypeID,
 		staticType,
 		nil,
-		nil,
 		map[string]Value{},
 		nil,
 		nil,
 		nil,
 	)
 
-	transactionFunction := NewHostFunctionValue(
-		func(invocation Invocation) Value {
+	// Construct a raw HostFunctionValue without a type,
+	// instead of using NewHostFunctionValue, which requires a type.
+	//
+	// This host function value is an internally created and used function,
+	// and can never be passed around as a value.
+	// Hence, the type is not required.
+
+	transactionFunction := &HostFunctionValue{
+		Function: func(invocation Invocation) Value {
 			interpreter.activations.PushNewWithParent(lexicalScope)
 
 			invocation.Self = self
@@ -131,11 +137,7 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 				sema.VoidType,
 			)
 		},
-
-		// This is an internally used function.
-		// So ideally wouldn't need to perform type checks.
-		nil,
-	)
+	}
 
 	interpreter.Transactions = append(
 		interpreter.Transactions,

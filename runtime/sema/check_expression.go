@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -218,12 +218,16 @@ func (checker *Checker) VisitFixedPointExpression(expression *ast.FixedPointExpr
 func (checker *Checker) VisitStringExpression(expression *ast.StringExpression) ast.Repr {
 	expectedType := UnwrapOptionalType(checker.expectedType)
 
+	var actualType Type = StringType
+
 	if IsSameTypeKind(expectedType, CharacterType) {
 		checker.checkCharacterLiteral(expression)
-		return expectedType
+		actualType = expectedType
 	}
 
-	return StringType
+	checker.Elaboration.StringExpressionType[expression] = actualType
+
+	return actualType
 }
 
 func (checker *Checker) VisitIndexExpression(expression *ast.IndexExpression) ast.Repr {

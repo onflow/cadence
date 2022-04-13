@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -128,6 +128,16 @@ func (d Decoder) decodeStorable() (atree.Storable, error) {
 			}
 			storable = d.decodeString(v)
 
+		case CBORTagCharacterValue:
+			v, err := d.decoder.DecodeString()
+			if err != nil {
+				return nil, err
+			}
+			storable, err = d.decodeCharacter(v)
+			if err != nil {
+				return nil, err
+			}
+
 		case CBORTagSomeValue:
 			storable, err = d.decodeSome()
 
@@ -240,6 +250,16 @@ func (d Decoder) decodeStorable() (atree.Storable, error) {
 
 func (d Decoder) decodeString(v string) *StringValue {
 	return NewStringValue(v)
+}
+
+func (d Decoder) decodeCharacter(v string) (CharacterValue, error) {
+	if !sema.IsValidCharacter(v) {
+		return "", fmt.Errorf(
+			"invalid character encoding: %s",
+			v,
+		)
+	}
+	return NewCharacterValue(v), nil
 }
 
 func decodeLocation(dec *cbor.StreamDecoder) (common.Location, error) {
@@ -1317,8 +1337,8 @@ func decodeReferenceStaticType(dec *cbor.StreamDecoder) (StaticType, error) {
 	}
 
 	return ReferenceStaticType{
-		Authorized: authorized,
-		Type:       staticType,
+		Authorized:   authorized,
+		BorrowedType: staticType,
 	}, nil
 }
 

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ type Visitor interface {
 	VisitVoidValue(interpreter *Interpreter, value VoidValue)
 	VisitBoolValue(interpreter *Interpreter, value BoolValue)
 	VisitStringValue(interpreter *Interpreter, value *StringValue)
+	VisitCharacterValue(interpreter *Interpreter, value CharacterValue)
 	VisitArrayValue(interpreter *Interpreter, value *ArrayValue) bool
 	VisitIntValue(interpreter *Interpreter, value IntValue)
 	VisitInt8Value(interpreter *Interpreter, value Int8Value)
@@ -65,6 +66,7 @@ type EmptyVisitor struct {
 	TypeValueVisitor                func(interpreter *Interpreter, value TypeValue)
 	VoidValueVisitor                func(interpreter *Interpreter, value VoidValue)
 	BoolValueVisitor                func(interpreter *Interpreter, value BoolValue)
+	CharacterValueVisitor           func(interpreter *Interpreter, value CharacterValue)
 	StringValueVisitor              func(interpreter *Interpreter, value *StringValue)
 	ArrayValueVisitor               func(interpreter *Interpreter, value *ArrayValue) bool
 	IntValueVisitor                 func(interpreter *Interpreter, value IntValue)
@@ -137,6 +139,13 @@ func (v EmptyVisitor) VisitStringValue(interpreter *Interpreter, value *StringVa
 		return
 	}
 	v.StringValueVisitor(interpreter, value)
+}
+
+func (v EmptyVisitor) VisitCharacterValue(interpreter *Interpreter, value CharacterValue) {
+	if v.StringValueVisitor == nil {
+		return
+	}
+	v.CharacterValueVisitor(interpreter, value)
 }
 
 func (v EmptyVisitor) VisitArrayValue(interpreter *Interpreter, value *ArrayValue) bool {

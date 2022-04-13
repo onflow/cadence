@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -165,8 +165,14 @@ It does not modify the original string.
 If either of the parameters are out of the bounds of the string, or the indices are invalid (` + "`from > upTo`" + `), then the function will fail
 `
 
+// ByteArrayType represents the type [UInt8]
 var ByteArrayType = &VariableSizedType{
 	Type: UInt8Type,
+}
+
+// ByteArrayArrayType represents the type [[UInt8]]
+var ByteArrayArrayType = &VariableSizedType{
+	Type: ByteArrayType,
 }
 
 var StringTypeDecodeHexFunctionType = &FunctionType{

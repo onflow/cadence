@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -77,8 +77,8 @@ func (s StorageMap) ValueExists(key string) bool {
 	return true
 }
 
-// ReadValue returns the value for the given key as an OptionalValue,
-// i.e. SomeValue if it exists, and NilValue if the key does not exist.
+// ReadValue returns the value for the given key.
+// Returns nil if the key does not exist.
 //
 func (s StorageMap) ReadValue(key string) Value {
 	storable, err := s.orderedMap.Get(
@@ -97,21 +97,21 @@ func (s StorageMap) ReadValue(key string) Value {
 }
 
 // WriteValue sets or removes a value in the storage map.
-// If the given value is a SomeValue, the key is updated.
-// If the given value is NilValue, the key is removed.
+// If the given value is nil, the key is removed.
+// If the given value is non-nil, the key is added/updated.
 //
-func (s StorageMap) WriteValue(interpreter *Interpreter, key string, value Value) {
+func (s StorageMap) WriteValue(interpreter *Interpreter, key string, value atree.Value) {
 	if value == nil {
 		s.removeValue(interpreter, key)
 	} else {
-		s.setValue(interpreter, key, value)
+		s.SetValue(interpreter, key, value)
 	}
 }
 
-// setValue sets a value in the storage map.
+// SetValue sets a value in the storage map.
 // If the given key already stores a value, it is overwritten.
 //
-func (s StorageMap) setValue(interpreter *Interpreter, key string, value Value) {
+func (s StorageMap) SetValue(interpreter *Interpreter, key string, value atree.Value) {
 	existingStorable, err := s.orderedMap.Set(
 		StringAtreeComparator,
 		StringAtreeHashInput,

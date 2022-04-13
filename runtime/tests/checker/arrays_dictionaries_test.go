@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -751,6 +751,71 @@ func TestCheckInvalidArrayRemoveLastFromConstantSized(t *testing.T) {
 	errs := ExpectCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+}
+
+func TestCheckArrayIndexOf(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test(): Int? {
+          let x = [1, 2, 3]
+          return x.firstIndex(of: 2)
+      }
+    `)
+
+	require.NoError(t, err)
+}
+
+func TestCheckArrayIndexOfNonEquatableValueArray(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test(): Int? {
+          let x = [[1, 2], [3]]
+          return x.firstIndex(of: [3])
+      }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+	assert.IsType(t, &sema.NotEquatableTypeError{}, errs[0])
+}
+
+func TestCheckArrayFirstIndexWrongType(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test(): Int? {
+          let x = [1, 2, 3]
+          return x.firstIndex(of: "foo")
+      }
+    `)
+	errs := ExpectCheckerErrors(t, err, 1)
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+}
+
+func TestCheckInvalidResourceFirstIndex(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      resource X {}
+
+      fun test(): Int? {
+          let xs <- [<-create X()]
+          return xs.firstIndex(of: <-create X())
+      }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 4)
+
+	assert.IsType(t, &sema.InvalidResourceArrayMemberError{}, errs[0])
+	assert.IsType(t, &sema.NotEquatableTypeError{}, errs[1])
+	assert.IsType(t, &sema.ResourceLossError{}, errs[2])
+	assert.IsType(t, &sema.ResourceLossError{}, errs[3])
+
 }
 
 func TestCheckArrayContains(t *testing.T) {

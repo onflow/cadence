@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -559,7 +559,7 @@ type InterfaceMissingLocationError struct {
 	QualifiedIdentifier string
 }
 
-func (e *InterfaceMissingLocationError) Error() string {
+func (e InterfaceMissingLocationError) Error() string {
 	return fmt.Sprintf(
 		"tried to look up interface %s without a location",
 		e.QualifiedIdentifier,
@@ -590,4 +590,19 @@ func (e InvalidOperandsError) Error() string {
 		e.LeftType.String(),
 		e.RightType.String(),
 	)
+}
+
+// InvalidPublicKeyError is reported during PublicKey creation, if the PublicKey is invalid.
+type InvalidPublicKeyError struct {
+	PublicKey *ArrayValue
+	Err       error
+	LocationRange
+}
+
+func (e InvalidPublicKeyError) Error() string {
+	return fmt.Sprintf("invalid public key: %s", e.PublicKey)
+}
+
+func (e InvalidPublicKeyError) Unwrap() error {
+	return e.Err
 }

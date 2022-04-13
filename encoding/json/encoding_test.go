@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -83,6 +83,60 @@ func TestEncodeBool(t *testing.T) {
 			"False",
 			cadence.NewBool(false),
 			`{"type":"Bool","value":false}`,
+		},
+	}...)
+}
+
+func TestBadCharacters(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("empty", func(t *testing.T) {
+
+		t.Parallel()
+		_, err := cadence.NewCharacter("")
+		require.Error(t, err)
+	})
+
+	t.Run("long", func(t *testing.T) {
+
+		t.Parallel()
+		_, err := cadence.NewCharacter("ab")
+		require.Error(t, err)
+	})
+
+	t.Run("ok simple", func(t *testing.T) {
+
+		t.Parallel()
+		_, err := cadence.NewCharacter(`\a`)
+		require.Error(t, err)
+	})
+
+	t.Run("ok complex", func(t *testing.T) {
+
+		t.Parallel()
+		_, err := cadence.NewCharacter(`\u{75}\u{308}`)
+		require.Error(t, err)
+	})
+}
+
+func TestEncodeCharacter(t *testing.T) {
+
+	t.Parallel()
+
+	a, _ := cadence.NewCharacter("a")
+	b, _ := cadence.NewCharacter("b")
+
+	testAllEncodeAndDecode(t, []encodeTest{
+		{
+			"a",
+			a,
+			`{"type":"Character","value":"a"}`,
+		},
+		{
+			"b",
+			b,
+			`{"type":"Character","value":"b"}`,
 		},
 	}...)
 }

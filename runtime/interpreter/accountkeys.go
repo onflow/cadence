@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,9 +28,6 @@ import (
 
 var authAccountKeysTypeID = sema.AuthAccountKeysType.ID()
 var authAccountKeysStaticType StaticType = PrimitiveStaticTypeAuthAccountKeys
-var authAccountKeysDynamicType DynamicType = CompositeDynamicType{
-	StaticType: sema.AuthAccountKeysType,
-}
 
 // NewAuthAccountKeysValue constructs a AuthAccount.Keys value.
 func NewAuthAccountKeysValue(
@@ -57,7 +54,6 @@ func NewAuthAccountKeysValue(
 	return NewSimpleCompositeValue(
 		authAccountKeysTypeID,
 		authAccountKeysStaticType,
-		authAccountKeysDynamicType,
 		nil,
 		fields,
 		nil,
@@ -70,9 +66,6 @@ func NewAuthAccountKeysValue(
 
 var publicAccountKeysTypeID = sema.PublicAccountKeysType.ID()
 var publicAccountKeysStaticType StaticType = PrimitiveStaticTypePublicAccountKeys
-var publicAccountKeysDynamicType DynamicType = CompositeDynamicType{
-	StaticType: sema.PublicAccountKeysType,
-}
 
 // NewPublicAccountKeysValue constructs a PublicAccount.Keys value.
 func NewPublicAccountKeysValue(
@@ -95,7 +88,6 @@ func NewPublicAccountKeysValue(
 	return NewSimpleCompositeValue(
 		publicAccountKeysTypeID,
 		publicAccountKeysStaticType,
-		publicAccountKeysDynamicType,
 		nil,
 		fields,
 		nil,

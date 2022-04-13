@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -84,10 +84,9 @@ type Interface interface {
 	EmitEvent(cadence.Event) error
 	// GenerateUUID is called to generate a UUID.
 	GenerateUUID() (uint64, error)
-	// GetComputationLimit returns the computation limit. A value <= 0 means there is no limit
-	GetComputationLimit() uint64
-	// SetComputationUsed reports the amount of computation used.
-	SetComputationUsed(used uint64) error
+	// MeterComputation is a callback method for metering computation, it returns error
+	// when computation passes the limit (set by the environment)
+	MeterComputation(operationType common.ComputationKind, intensity uint) error
 	// DecodeArgument decodes a transaction argument against the given type.
 	DecodeArgument(argument []byte, argumentType cadence.Type) (cadence.Value, error)
 	// GetCurrentBlockHeight returns the current block height.
@@ -120,19 +119,24 @@ type Interface interface {
 	// ImplementationDebugLog logs implementation log statements on a debug-level
 	ImplementationDebugLog(message string) error
 	// ValidatePublicKey verifies the validity of a public key.
-	ValidatePublicKey(key *PublicKey) (bool, error)
+	ValidatePublicKey(key *PublicKey) error
 	// GetAccountContractNames returns the names of all contracts deployed in an account.
 	GetAccountContractNames(address Address) ([]string, error)
 	// RecordTrace records a opentracing trace
 	RecordTrace(operation string, location common.Location, duration time.Duration, logs []opentracing.LogRecord)
 	// BLSVerifyPOP verifies a proof of possession (PoP) for the receiver public key.
 	BLSVerifyPOP(pk *PublicKey, s []byte) (bool, error)
-	// AggregateBLSSignatures aggregates multiple BLS signatures into one.
-	AggregateBLSSignatures(sigs [][]byte) ([]byte, error)
-	// AggregateBLSPublicKeys aggregates multiple BLS public keys into one.
-	AggregateBLSPublicKeys(keys []*PublicKey) (*PublicKey, error)
+	// BLSAggregateSignatures aggregate multiple BLS signatures into one.
+	BLSAggregateSignatures(sigs [][]byte) ([]byte, error)
+	// BLSAggregatePublicKeys aggregate multiple BLS public keys into one.
+	BLSAggregatePublicKeys(keys []*PublicKey) (*PublicKey, error)
 	// ResourceOwnerChanged gets called when a resource's owner changed (if enabled)
-	ResourceOwnerChanged(resource *interpreter.CompositeValue, oldOwner common.Address, newOwner common.Address)
+	ResourceOwnerChanged(
+		interpreter *interpreter.Interpreter,
+		resource *interpreter.CompositeValue,
+		oldOwner common.Address,
+		newOwner common.Address,
+	)
 }
 
 type Metrics interface {

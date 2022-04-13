@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -115,7 +115,7 @@ const (
 	CBORTagTypeValue
 	_ // DO *NOT* REPLACE. Previously used for array values
 	CBORTagStringValue
-	_
+	CBORTagCharacterValue
 	_
 	_
 	_
@@ -218,6 +218,11 @@ const (
 	CBORTagReferenceStaticType
 	CBORTagRestrictedStaticType
 	CBORTagCapabilityStaticType
+
+	// !!! *WARNING* !!!
+	// ADD NEW TYPES *BEFORE* THIS WARNING.
+	// DO *NOT* ADD NEW TYPES AFTER THIS LINE!
+	CBORTag_Count
 )
 
 // CBOREncMode
@@ -247,6 +252,19 @@ func (v NilValue) Encode(e *atree.Encoder) error {
 func (v BoolValue) Encode(e *atree.Encoder) error {
 	// NOTE: when updating, also update BoolValue.ByteSize
 	return e.CBOR.EncodeBool(bool(v))
+}
+
+// Encode encodes the value as a CBOR string
+//
+func (v CharacterValue) Encode(e *atree.Encoder) error {
+	err := e.CBOR.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, CBORTagCharacterValue,
+	})
+	if err != nil {
+		return err
+	}
+	return e.CBOR.EncodeString(string(v))
 }
 
 // Encode encodes the value as a CBOR string
@@ -1169,7 +1187,7 @@ func (t ReferenceStaticType) Encode(e *cbor.StreamEncoder) error {
 		return err
 	}
 	// Encode type at array index encodedReferenceStaticTypeTypeFieldKey
-	return EncodeStaticType(e, t.Type)
+	return EncodeStaticType(e, t.BorrowedType)
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64

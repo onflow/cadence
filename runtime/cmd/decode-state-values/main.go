@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -211,7 +211,7 @@ type interpreterStorage struct {
 
 var _ interpreter.Storage = &interpreterStorage{}
 
-func (i interpreterStorage) GetStorageMap(_ common.Address, _ string) *interpreter.StorageMap {
+func (i interpreterStorage) GetStorageMap(_ common.Address, _ string, _ bool) *interpreter.StorageMap {
 	panic("unexpected GetStorageMap call")
 }
 
@@ -361,7 +361,7 @@ func loadStorageKey(
 
 					if composite, ok := v.(*interpreter.CompositeValue); ok &&
 						composite.Kind == common.CompositeKindResource &&
-						composite.ResourceUUID() == nil {
+						composite.ResourceUUID(inter, interpreter.ReturnEmptyLocationRange) == nil {
 
 						log.Printf(
 							"Failed to get UUID for resource @ 0x%x %s",

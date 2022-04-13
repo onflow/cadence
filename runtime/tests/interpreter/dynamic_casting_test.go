@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -593,7 +593,8 @@ func TestInterpretDynamicCastingStruct(t *testing.T) {
 
 						require.IsType(t,
 							&interpreter.CompositeValue{},
-							inter.Globals["y"].GetValue().(*interpreter.SomeValue).Value,
+							inter.Globals["y"].GetValue().(*interpreter.SomeValue).
+								InnerValue(inter, interpreter.ReturnEmptyLocationRange),
 						)
 					})
 				}
@@ -739,7 +740,8 @@ func testResourceCastValid(t *testing.T, types, fromType string, targetType stri
 
 		require.IsType(t,
 			&interpreter.CompositeValue{},
-			value.(*interpreter.SomeValue).Value,
+			value.(*interpreter.SomeValue).
+				InnerValue(inter, interpreter.ReturnEmptyLocationRange),
 		)
 
 	case ast.OperationForceCast:
@@ -885,7 +887,8 @@ func testStructCastValid(t *testing.T, types, fromType string, targetType string
 
 		require.IsType(t,
 			&interpreter.CompositeValue{},
-			value.(*interpreter.SomeValue).Value,
+			value.(*interpreter.SomeValue).
+				InnerValue(inter, interpreter.ReturnEmptyLocationRange),
 		)
 
 	case ast.OperationForceCast:
@@ -1194,7 +1197,7 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 						require.IsType(t, zValue, &interpreter.SomeValue{})
 						zSome := zValue.(*interpreter.SomeValue)
 
-						innerValue := zSome.Value
+						innerValue := zSome.InnerValue(inter, interpreter.ReturnEmptyLocationRange)
 						require.IsType(t, innerValue, &interpreter.ArrayValue{})
 						innerArray := innerValue.(*interpreter.ArrayValue)
 
@@ -1279,6 +1282,20 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 			})
 		})
 	}
+
+	t.Run("[AnyStruct] to [Int]", func(t *testing.T) {
+		inter := parseCheckAndInterpret(t, `
+		    fun test(): [Int] {
+		        let x: [AnyStruct] = [1, 2, 3]
+		        return x as! [Int]
+		    }
+		`)
+
+		_, err := inter.Invoke("test")
+
+		require.Error(t, err)
+		assert.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+	})
 }
 
 func TestInterpretDynamicCastingDictionary(t *testing.T) {
@@ -2281,7 +2298,8 @@ func testReferenceCastValid(t *testing.T, types, fromType, targetType string, op
 
 		require.IsType(t,
 			&interpreter.EphemeralReferenceValue{},
-			value.(*interpreter.SomeValue).Value,
+			value.(*interpreter.SomeValue).
+				InnerValue(inter, interpreter.ReturnEmptyLocationRange),
 		)
 
 	case ast.OperationForceCast:

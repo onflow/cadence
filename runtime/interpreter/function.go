@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -83,14 +83,12 @@ func (f *InterpretedFunctionValue) Walk(_ func(Value)) {
 	// NO-OP
 }
 
-func (f *InterpretedFunctionValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return FunctionDynamicType{
-		FuncType: f.Type,
-	}
+func (f *InterpretedFunctionValue) StaticType(_ *Interpreter) StaticType {
+	return ConvertSemaToStaticType(f.Type)
 }
 
-func (f *InterpretedFunctionValue) StaticType() StaticType {
-	return ConvertSemaToStaticType(f.Type)
+func (*InterpretedFunctionValue) IsImportable(_ *Interpreter) bool {
+	return false
 }
 
 func (*InterpretedFunctionValue) isFunctionValue() {}
@@ -103,18 +101,18 @@ func (f *InterpretedFunctionValue) invoke(invocation Invocation) Value {
 	return f.Interpreter.invokeInterpretedFunction(f, invocation)
 }
 
-func (f *InterpretedFunctionValue) ConformsToDynamicType(
+func (f *InterpretedFunctionValue) ConformsToStaticType(
 	_ *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	targetType, ok := dynamicType.(FunctionDynamicType)
+	targetType, ok := staticType.(FunctionStaticType)
 	if !ok {
 		return false
 	}
 
-	return f.Type.Equal(targetType.FuncType)
+	return f.Type.Equal(targetType.Type)
 }
 
 func (f *InterpretedFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -174,6 +172,13 @@ func NewHostFunctionValue(
 	function HostFunction,
 	funcType *sema.FunctionType,
 ) *HostFunctionValue {
+	// Host functions can be passed by value,
+	// so for the interpreter value transfer check to work,
+	// they need a static type
+	if funcType == nil {
+		panic(errors.NewUnreachableError())
+	}
+
 	return &HostFunctionValue{
 		Function: function,
 		Type:     funcType,
@@ -193,14 +198,12 @@ func (f *HostFunctionValue) Walk(_ func(Value)) {
 	// NO-OP
 }
 
-func (f *HostFunctionValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return FunctionDynamicType{
-		FuncType: f.Type,
-	}
+func (f *HostFunctionValue) StaticType(_ *Interpreter) StaticType {
+	return ConvertSemaToStaticType(f.Type)
 }
 
-func (f *HostFunctionValue) StaticType() StaticType {
-	return ConvertSemaToStaticType(f.Type)
+func (*HostFunctionValue) IsImportable(_ *Interpreter) bool {
+	return false
 }
 
 func (*HostFunctionValue) isFunctionValue() {}
@@ -232,18 +235,18 @@ func (*HostFunctionValue) SetMember(_ *Interpreter, _ func() LocationRange, _ st
 	panic(errors.NewUnreachableError())
 }
 
-func (f *HostFunctionValue) ConformsToDynamicType(
+func (f *HostFunctionValue) ConformsToStaticType(
 	_ *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	targetType, ok := dynamicType.(FunctionDynamicType)
+	targetType, ok := staticType.(FunctionStaticType)
 	if !ok {
 		return false
 	}
 
-	return f.Type.Equal(targetType.FuncType)
+	return f.Type.Equal(targetType.Type)
 }
 
 func (f *HostFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -307,19 +310,12 @@ func (f BoundFunctionValue) Walk(_ func(Value)) {
 	// NO-OP
 }
 
-func (f BoundFunctionValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	funcStaticType, ok := f.Function.StaticType().(FunctionStaticType)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	return FunctionDynamicType{
-		FuncType: funcStaticType.Type,
-	}
+func (f BoundFunctionValue) StaticType(inter *Interpreter) StaticType {
+	return f.Function.StaticType(inter)
 }
 
-func (f BoundFunctionValue) StaticType() StaticType {
-	return f.Function.StaticType()
+func (BoundFunctionValue) IsImportable(_ *Interpreter) bool {
+	return false
 }
 
 func (BoundFunctionValue) isFunctionValue() {}
@@ -329,16 +325,16 @@ func (f BoundFunctionValue) invoke(invocation Invocation) Value {
 	return f.Function.invoke(invocation)
 }
 
-func (f BoundFunctionValue) ConformsToDynamicType(
+func (f BoundFunctionValue) ConformsToStaticType(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	results TypeConformanceResults,
 ) bool {
-	return f.Function.ConformsToDynamicType(
+	return f.Function.ConformsToStaticType(
 		interpreter,
 		getLocationRange,
-		dynamicType,
+		staticType,
 		results,
 	)
 }

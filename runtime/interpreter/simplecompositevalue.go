@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,9 +29,8 @@ import (
 // SimpleCompositeValue
 
 type SimpleCompositeValue struct {
-	TypeID      sema.TypeID
-	staticType  StaticType
-	dynamicType DynamicType
+	TypeID     sema.TypeID
+	staticType StaticType
 	// FieldNames are the names of the field members (i.e. not functions, and not computed fields), in order
 	FieldNames      []string
 	Fields          map[string]Value
@@ -48,7 +47,6 @@ var _ MemberAccessibleValue = &SimpleCompositeValue{}
 func NewSimpleCompositeValue(
 	typeID sema.TypeID,
 	staticType StaticType,
-	dynamicType DynamicType,
 	fieldNames []string,
 	fields map[string]Value,
 	computedFields map[string]ComputedField,
@@ -58,7 +56,6 @@ func NewSimpleCompositeValue(
 	return &SimpleCompositeValue{
 		TypeID:          typeID,
 		staticType:      staticType,
-		dynamicType:     dynamicType,
 		FieldNames:      fieldNames,
 		Fields:          fields,
 		ComputedFields:  computedFields,
@@ -92,12 +89,17 @@ func (v *SimpleCompositeValue) Walk(walkChild func(Value)) {
 	})
 }
 
-func (v *SimpleCompositeValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return v.dynamicType
+func (v *SimpleCompositeValue) StaticType(_ *Interpreter) StaticType {
+	return v.staticType
 }
 
-func (v *SimpleCompositeValue) StaticType() StaticType {
-	return v.staticType
+func (v *SimpleCompositeValue) IsImportable(inter *Interpreter) bool {
+	staticType := v.StaticType(inter)
+	semaType, err := inter.ConvertStaticToSemaType(staticType)
+	if err != nil {
+		panic(err)
+	}
+	return semaType.IsImportable(map[*sema.Member]bool{})
 }
 
 func (v *SimpleCompositeValue) GetMember(
@@ -170,13 +172,13 @@ func (v *SimpleCompositeValue) RecursiveString(seenReferences SeenReferences) st
 	return format.Composite(string(v.TypeID), fields)
 }
 
-func (v *SimpleCompositeValue) ConformsToDynamicType(
-	_ *Interpreter,
+func (v *SimpleCompositeValue) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return dynamicType == v.dynamicType
+	return staticType.Equal(v.StaticType(inter))
 }
 
 func (v *SimpleCompositeValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -218,7 +220,6 @@ func (v *SimpleCompositeValue) Clone(interpreter *Interpreter) Value {
 	return &SimpleCompositeValue{
 		TypeID:          v.TypeID,
 		staticType:      v.staticType,
-		dynamicType:     v.dynamicType,
 		FieldNames:      v.FieldNames,
 		Fields:          clonedFields,
 		ComputedFields:  v.ComputedFields,

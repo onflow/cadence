@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -811,7 +811,7 @@ func TestParseString(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message: "invalid end of string literal: missing '\"'",
-					Pos:     ast.Position{Offset: 2, Line: 2, Column: 0},
+					Pos:     ast.Position{Line: 2, Column: 0, Offset: 2},
 				},
 			},
 			errs,
@@ -864,7 +864,7 @@ func TestParseString(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message: "invalid end of string literal: missing '\"'",
-					Pos:     ast.Position{Offset: 3, Line: 2, Column: 0},
+					Pos:     ast.Position{Line: 2, Column: 0, Offset: 3},
 				},
 			},
 			errs,

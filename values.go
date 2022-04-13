@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -179,6 +179,35 @@ func (v Bytes) ToGoValue() interface{} {
 
 func (v Bytes) String() string {
 	return format.Bytes(v)
+}
+
+// Character
+
+// Character represents a Cadence character, which is a Unicode extended grapheme cluster.
+// Hence, use a Go string to be able to hold multiple Unicode code points (Go runes).
+// It should consist of exactly one grapheme cluster
+//
+type Character string
+
+func NewCharacter(b string) (Character, error) {
+	if !sema.IsValidCharacter(b) {
+		return "\uFFFD", fmt.Errorf("invalid character: %s", b)
+	}
+	return Character(b), nil
+}
+
+func (Character) isValue() {}
+
+func (Character) Type() Type {
+	return CharacterType{}
+}
+
+func (v Character) ToGoValue() interface{} {
+	return string(v)
+}
+
+func (v Character) String() string {
+	return format.String(string(v))
 }
 
 // Address

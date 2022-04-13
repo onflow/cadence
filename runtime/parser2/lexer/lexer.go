@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,7 +58,25 @@ var _ TokenStream = &lexer{}
 
 func (l *lexer) Next() Token {
 	if l.cursor >= l.tokenCount {
-		return l.tokens[l.tokenCount-1]
+
+		// At the end of the token stream,
+		// emit a synthetic EOF token
+
+		endPos := l.endPos()
+		pos := ast.Position{
+			Offset: l.endOffset - 1,
+			Line:   endPos.line,
+			Column: endPos.column,
+		}
+
+		return Token{
+			Type: TokenEOF,
+			Range: ast.Range{
+				StartPos: pos,
+				EndPos:   pos,
+			},
+		}
+
 	}
 	token := l.tokens[l.cursor]
 	l.cursor++
@@ -120,8 +138,6 @@ func (l *lexer) run(state stateFn) {
 	for state != nil {
 		state = state(l)
 	}
-
-	l.emitEOF()
 }
 
 // next decodes the next rune (UTF8 character) from the input string.
@@ -373,25 +389,6 @@ func (l *lexer) scanFixedPointRemainder() {
 		return
 	}
 	l.acceptWhile(isDecimalDigitOrUnderscore)
-}
-
-func (l *lexer) emitEOF() {
-	endPos := l.endPos()
-	pos := ast.Position{
-		Offset: l.endOffset - 1,
-		Line:   endPos.line,
-		Column: endPos.column - 1,
-	}
-
-	token := Token{
-		Type: TokenEOF,
-		Range: ast.Range{
-			StartPos: pos,
-			EndPos:   pos,
-		},
-	}
-
-	l.tokens = append(l.tokens, token)
 }
 
 func isDecimalDigitOrUnderscore(r rune) bool {
