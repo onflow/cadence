@@ -3411,8 +3411,8 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 		value := LinkValue{
 			TargetPath: publicPathValue,
 			Type: ReferenceStaticType{
-				Authorized: true,
-				Type:       PrimitiveStaticTypeBool,
+				Authorized:   true,
+				BorrowedType: PrimitiveStaticTypeBool,
 			},
 		}
 
@@ -3445,8 +3445,8 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 		value := LinkValue{
 			TargetPath: publicPathValue,
 			Type: ReferenceStaticType{
-				Authorized: false,
-				Type:       PrimitiveStaticTypeBool,
+				Authorized:   false,
+				BorrowedType: PrimitiveStaticTypeBool,
 			},
 		}
 

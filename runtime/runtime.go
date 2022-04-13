@@ -935,17 +935,15 @@ func validateArgumentParams(
 			}
 		}
 
-		dynamicType := arg.DynamicType(inter, interpreter.SeenReferences{})
-
 		// Ensure the argument is of an importable type
-		if !dynamicType.IsImportable() {
+		if !arg.IsImportable(inter) {
 			return nil, &ArgumentNotImportableError{
-				Type: dynamicType,
+				Type: arg.StaticType(inter),
 			}
 		}
 
 		// Check that decoded value is a subtype of static parameter type
-		if !inter.IsSubType(dynamicType, parameterType) {
+		if !inter.IsSubTypeOfSemaType(arg.StaticType(inter), parameterType) {
 			return nil, &InvalidEntryPointArgumentError{
 				Index: i,
 				Err: &InvalidValueTypeError{
@@ -956,10 +954,10 @@ func validateArgumentParams(
 
 		// Check whether the decoded value conforms to the type associated with the value
 		conformanceResults := interpreter.TypeConformanceResults{}
-		if !arg.ConformsToDynamicType(
+		if !arg.ConformsToStaticType(
 			inter,
 			interpreter.ReturnEmptyLocationRange,
-			dynamicType,
+			arg.StaticType(inter),
 			conformanceResults,
 		) {
 			return nil, &InvalidEntryPointArgumentError{
@@ -976,7 +974,7 @@ func validateArgumentParams(
 				return true
 			}
 
-			if !hasValidStaticType(value) {
+			if !hasValidStaticType(inter, value) {
 				panic(fmt.Errorf("invalid static type for argument: %d", i))
 			}
 
@@ -989,7 +987,7 @@ func validateArgumentParams(
 	return argumentValues, nil
 }
 
-func hasValidStaticType(value interpreter.Value) bool {
+func hasValidStaticType(inter *interpreter.Interpreter, value interpreter.Value) bool {
 	switch value := value.(type) {
 	case *interpreter.ArrayValue:
 		return value.Type != nil
@@ -999,7 +997,7 @@ func hasValidStaticType(value interpreter.Value) bool {
 	default:
 		// For other values, static type is NOT inferred.
 		// Hence no need to validate it here.
-		return value.StaticType() != nil
+		return value.StaticType(inter) != nil
 	}
 }
 

@@ -24,7 +24,6 @@ import (
 
 // DeployedContractValue
 
-var deployedContractDynamicType DynamicType = DeployedContractDynamicType{}
 var deployedContractStaticType StaticType = PrimitiveStaticTypeDeployedContract
 var deployedContractFieldNames = []string{
 	sema.DeployedContractTypeAddressFieldName,
@@ -42,7 +41,6 @@ func NewDeployedContractValue(
 		inter,
 		sema.DeployedContractType.TypeID,
 		deployedContractStaticType,
-		deployedContractDynamicType,
 		deployedContractFieldNames,
 		map[string]Value{
 			sema.DeployedContractTypeAddressFieldName: address,

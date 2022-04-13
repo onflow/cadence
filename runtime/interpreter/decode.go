@@ -1331,8 +1331,8 @@ func (d TypeDecoder) decodeReferenceStaticType() (StaticType, error) {
 	}
 
 	return ReferenceStaticType{
-		Authorized: authorized,
-		Type:       staticType,
+		Authorized:   authorized,
+		BorrowedType: staticType,
 	}, nil
 }
 
