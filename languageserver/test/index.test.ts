@@ -14,6 +14,7 @@ import {
 
 import {execSync, spawn} from 'child_process'
 import * as path from "path"
+import * as fs from "fs";
 
 beforeAll(() => {
   execSync("go build ../cmd/languageserver", {cwd: __dirname})
@@ -232,6 +233,8 @@ describe("diagnostics", () => {
     notification: Promise<PublishDiagnosticsParams>
   }
 
+  const fooContractCode = fs.readFileSync('./foo.cdc', 'utf8')
+
   async function testImports(docs: TestDoc[]): Promise<DocNotification[]> {
     return new Promise<DocNotification[]>(resolve => {
 
@@ -264,14 +267,6 @@ describe("diagnostics", () => {
 
   test("script with import", async() => {
     const contractName = "foo"
-    const contractCode = `
-      pub contract Foo {
-        pub let bar: String
-        init() {
-          self.bar = "hello"
-        }
-      }
-    `
     const scriptName = "script"
     const scriptCode = `
       import Foo from "./foo.cdc"
@@ -279,7 +274,7 @@ describe("diagnostics", () => {
     `
 
     let docNotifications = await testImports([
-      { name: contractName, code: contractCode },
+      { name: contractName, code: fooContractCode },
       { name: scriptName, code: scriptCode }
     ])
 
@@ -290,14 +285,6 @@ describe("diagnostics", () => {
 
   test("script import failure", async() => {
     const contractName = "foo"
-    const contractCode = `
-      pub contract Foo {
-        pub let bar: String
-        init() {
-          self.bar = "hello"
-        }
-      }
-    `
     const scriptName = "script"
     const scriptCode = `
       import Foo from "./foo.cdc"
@@ -305,12 +292,12 @@ describe("diagnostics", () => {
     `
 
     let docNotifications = await testImports([
-      { name: contractName, code: contractCode },
+      { name: contractName, code: fooContractCode },
       { name: scriptName, code: scriptCode }
     ])
 
     let script = await docNotifications.find(n => n.name == scriptName).notification
-    expect(script.uri).toEqual(`file:///${scriptName}.cdc`)
+    expect(script.uri).toEqual(`file://${scriptName}.cdc`)
     expect(script.diagnostics).toHaveLength(1)
     expect(script.diagnostics[0].message).toEqual("value of type `Foo` has no member `zoo`. unknown member")
   })
