@@ -250,7 +250,9 @@ func WithLintingEnabled(enabled bool) Option {
 }
 
 // WithErrorShortCircuitingEnabled returns a checker option which enables/disables
-// error short-circuiting.
+// error short-circuiting in the checker.
+// When enabled, the checker will stop running once it encounters an error.
+// When disabled (the default), the checker reports the error then continues checking.
 //
 func WithErrorShortCircuitingEnabled(enabled bool) Option {
 	return func(checker *Checker) error {
