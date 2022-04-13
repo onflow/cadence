@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,19 +59,6 @@ func (e Error) Error() string {
 		panic(printErr)
 	}
 	return sb.String()
-}
-
-// ComputationLimitExceededError
-
-type ComputationLimitExceededError struct {
-	Limit uint64
-}
-
-func (e ComputationLimitExceededError) Error() string {
-	return fmt.Sprintf(
-		"computation limited exceeded: %d",
-		e.Limit,
-	)
 }
 
 // CallStackLimitExceededError

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -131,7 +131,7 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 	}
 
 	fieldPositionGetter := func(name string) ast.Position {
-		return declaration.Members.FieldPosition(name, declaration.CompositeKind)
+		return compositeType.FieldPosition(name, declaration)
 	}
 
 	checker.checkResourceFieldNesting(

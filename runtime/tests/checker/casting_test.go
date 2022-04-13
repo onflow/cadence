@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -6675,4 +6675,25 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 			require.IsType(t, &sema.FunctionType{}, castHint.TargetType)
 		})
 	})
+}
+
+func TestCastResourceAsEnumAsEmptyDict(t *testing.T) {
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, "resource as { enum x : as { } }")
+
+	errs := ExpectCheckerErrors(t, err, 2)
+
+	assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
+	assert.IsType(t, &sema.InvalidEnumRawTypeError{}, errs[1])
+}
+
+//
+
+func TestCastNumbersManyTimesThenGetType(t *testing.T) {
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, "let a = 0x0 as UInt64!as?UInt64!as?UInt64?!?.getType()")
+
+	assert.Nil(t, err)
 }

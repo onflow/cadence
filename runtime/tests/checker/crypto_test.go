@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -209,7 +209,6 @@ func TestCheckBLSAggregateSignatures(t *testing.T) {
         `,
 		ParseAndCheckOptions{
 			Options: []sema.Option{
-				sema.WithPredeclaredValues(stdlib.BuiltinFunctions.ToSemaValueDeclarations()),
 				sema.WithPredeclaredValues(stdlib.BuiltinValues.ToSemaValueDeclarations()),
 			},
 		},
@@ -218,7 +217,7 @@ func TestCheckBLSAggregateSignatures(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestCheckBLSAggregateSignaturesError(t *testing.T) {
+func TestCheckInvalidBLSAggregateSignatures(t *testing.T) {
 
 	t.Parallel()
 
@@ -228,7 +227,6 @@ func TestCheckBLSAggregateSignaturesError(t *testing.T) {
         `,
 		ParseAndCheckOptions{
 			Options: []sema.Option{
-				sema.WithPredeclaredValues(stdlib.BuiltinFunctions.ToSemaValueDeclarations()),
 				sema.WithPredeclaredValues(stdlib.BuiltinValues.ToSemaValueDeclarations()),
 			},
 		},
@@ -264,7 +262,7 @@ func TestCheckBLSAggregatePublicKeys(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestCheckBLSAggregatePublicKeysError(t *testing.T) {
+func TestCheckInvalidBLSAggregatePublicKeys(t *testing.T) {
 
 	t.Parallel()
 
@@ -274,7 +272,6 @@ func TestCheckBLSAggregatePublicKeysError(t *testing.T) {
         `,
 		ParseAndCheckOptions{
 			Options: []sema.Option{
-				sema.WithPredeclaredValues(stdlib.BuiltinFunctions.ToSemaValueDeclarations()),
 				sema.WithPredeclaredValues(stdlib.BuiltinValues.ToSemaValueDeclarations()),
 			},
 		},

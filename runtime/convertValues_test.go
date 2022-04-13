@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1069,8 +1069,8 @@ func TestImportRuntimeType(t *testing.T) {
 				Type:       cadence.IntType{},
 			},
 			expected: interpreter.ReferenceStaticType{
-				Authorized: false,
-				Type:       interpreter.PrimitiveStaticTypeInt,
+				Authorized:   false,
+				BorrowedType: interpreter.PrimitiveStaticTypeInt,
 			},
 		},
 		{
@@ -2099,25 +2099,27 @@ func TestRuntimeEnumValue(t *testing.T) {
 }
 
 func executeTestScript(t *testing.T, script string, arg cadence.Value) (cadence.Value, error) {
-	encodedArg, err := json.Encode(arg)
-	require.NoError(t, err)
-
 	rt := newTestInterpreterRuntime()
 
-	storage := newTestLedger(nil, nil)
-
 	runtimeInterface := &testRuntimeInterface{
-		storage: storage,
+		storage: newTestLedger(nil, nil),
 		decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 			return json.Decode(b)
 		},
 	}
 
+	scriptParam := Script{
+		Source: []byte(script),
+	}
+
+	if arg != nil {
+		encodedArg, err := json.Encode(arg)
+		require.NoError(t, err)
+		scriptParam.Arguments = [][]byte{encodedArg}
+	}
+
 	return rt.ExecuteScript(
-		Script{
-			Source:    []byte(script),
-			Arguments: [][]byte{encodedArg},
-		},
+		scriptParam,
 		Context{
 			Interface: runtimeInterface,
 			Location:  TestLocation,
@@ -2777,7 +2779,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 			exportedValue: cadence.NewArray([]cadence.Value{
 				cadence.NewInt(1),
 			}),
-			expectedInvalidEntryPointArgumentErrType: &InvalidValueTypeError{},
+			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
 			label:         "Constant-size array with too many elements",
@@ -2787,7 +2789,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 				cadence.NewInt(2),
 				cadence.NewInt(3),
 			}),
-			expectedInvalidEntryPointArgumentErrType: &InvalidValueTypeError{},
+			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
 			label:         "Nested array with mismatching element",
@@ -2797,7 +2799,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 					cadence.NewInt(5),
 				}),
 			}),
-			expectedInvalidEntryPointArgumentErrType: &InvalidValueTypeError{},
+			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
 			label:                                    "Inner array with mismatching element",
@@ -2932,9 +2934,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 		actual, err := importValue(
 			inter,
 			value,
-			&sema.VariableSizedType{
-				Type: sema.UInt8Type,
-			},
+			sema.ByteArrayType,
 		)
 		require.NoError(t, err)
 

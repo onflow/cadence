@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2022 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ package stdlib
 
 import (
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -111,4 +112,77 @@ var blsAggregatePublicKeysFunctionType = &sema.FunctionType{
 			Type: sema.PublicKeyType,
 		},
 	),
+}
+
+var blsAggregatePublicKeysFunction = interpreter.NewHostFunctionValue(
+	func(invocation interpreter.Invocation) interpreter.Value {
+		publicKeys, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		inter := invocation.Interpreter
+		getLocationRange := invocation.GetLocationRange
+
+		inter.ExpectType(
+			publicKeys,
+			sema.PublicKeyArrayType,
+			getLocationRange,
+		)
+
+		return invocation.Interpreter.BLSAggregatePublicKeysHandler(
+			inter,
+			getLocationRange,
+			publicKeys,
+		)
+	},
+	blsAggregatePublicKeysFunctionType,
+)
+
+var blsAggregateSignaturesFunction = interpreter.NewHostFunctionValue(
+	func(invocation interpreter.Invocation) interpreter.Value {
+		signatures, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		inter := invocation.Interpreter
+		getLocationRange := invocation.GetLocationRange
+
+		inter.ExpectType(
+			signatures,
+			sema.ByteArrayArrayType,
+			getLocationRange,
+		)
+
+		return inter.BLSAggregateSignaturesHandler(
+			inter,
+			getLocationRange,
+			signatures,
+		)
+	},
+	blsAggregateSignaturesFunctionType,
+)
+
+var blsContractFields = map[string]interpreter.Value{
+	blsAggregatePublicKeysFunctionName: blsAggregatePublicKeysFunction,
+	blsAggregateSignaturesFunctionName: blsAggregateSignaturesFunction,
+}
+
+var blsContract = StandardLibraryValue{
+	Name: "BLS",
+	Type: blsContractType,
+	ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
+		return interpreter.NewSimpleCompositeValue(
+			blsContractType.ID(),
+			blsContractStaticType,
+			blsContractDynamicType,
+			nil,
+			blsContractFields,
+			nil,
+			nil,
+			nil,
+		)
+	},
+	Kind: common.DeclarationKindContract,
 }

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -96,7 +96,7 @@ func (v *SimpleCompositeValue) DynamicType(_ *Interpreter, _ SeenReferences) Dyn
 	return v.dynamicType
 }
 
-func (v *SimpleCompositeValue) StaticType() StaticType {
+func (v *SimpleCompositeValue) StaticType(_ *Interpreter) StaticType {
 	return v.staticType
 }
 
@@ -170,13 +170,13 @@ func (v *SimpleCompositeValue) RecursiveString(seenReferences SeenReferences) st
 	return format.Composite(string(v.TypeID), fields)
 }
 
-func (v *SimpleCompositeValue) ConformsToDynamicType(
-	_ *Interpreter,
+func (v *SimpleCompositeValue) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return dynamicType == v.dynamicType
+	return staticType.Equal(v.StaticType(inter))
 }
 
 func (v *SimpleCompositeValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {

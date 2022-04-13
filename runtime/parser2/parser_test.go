@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,11 +37,28 @@ func TestMain(m *testing.M) {
 }
 
 func TestParseInvalid(t *testing.T) {
-
 	t.Parallel()
 
-	_, err := ParseProgram("X")
-	require.EqualError(t, err, "Parsing failed:\nerror: unexpected token: identifier\n --> :1:0\n  |\n1 | X\n  | ^\n")
+	type test struct {
+		msg  string
+		code string
+	}
+
+	unexpectedToken := "Parsing failed:\nerror: unexpected token: identifier"
+	expectedExpression := "Parsing failed:\nerror: expected expression"
+	missingTypeAnnotation := "Parsing failed:\nerror: missing type annotation after comma"
+
+	for _, test := range []test{
+		{unexpectedToken, "X"},
+		{unexpectedToken, "paste your code in here"},
+		{expectedExpression, "# a ( b > c > d > e > f > g > h > i > j > k > l > m > n > o > p > q > r > s > t > u > v > w > x > y > z > A > B > C > D > E > F>"},
+		{missingTypeAnnotation, "#0x0<{},>()"},
+	} {
+		t.Run(test.code, func(t *testing.T) {
+			_, err := ParseProgram(test.code)
+			require.ErrorContains(t, err, test.msg)
+		})
+	}
 }
 
 func TestParseBuffering(t *testing.T) {

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -150,12 +150,13 @@ type testRuntimeInterface struct {
 	log                       func(string)
 	emitEvent                 func(cadence.Event) error
 	resourceOwnerChanged      func(
+		interpreter *interpreter.Interpreter,
 		resource *interpreter.CompositeValue,
 		oldAddress common.Address,
 		newAddress common.Address,
 	)
 	generateUUID       func() (uint64, error)
-	computationLimit   uint64
+	meterComputation   func(compKind common.ComputationKind, intensity uint) error
 	decodeArgument     func(b []byte, t cadence.Type) (cadence.Value, error)
 	programParsed      func(location common.Location, duration time.Duration)
 	programChecked     func(location common.Location, duration time.Duration)
@@ -338,12 +339,18 @@ func (i *testRuntimeInterface) EmitEvent(event cadence.Event) error {
 }
 
 func (i *testRuntimeInterface) ResourceOwnerChanged(
+	interpreter *interpreter.Interpreter,
 	resource *interpreter.CompositeValue,
 	oldOwner common.Address,
 	newOwner common.Address,
 ) {
 	if i.resourceOwnerChanged != nil {
-		i.resourceOwnerChanged(resource, oldOwner, newOwner)
+		i.resourceOwnerChanged(
+			interpreter,
+			resource,
+			oldOwner,
+			newOwner,
+		)
 	}
 }
 
@@ -354,12 +361,11 @@ func (i *testRuntimeInterface) GenerateUUID() (uint64, error) {
 	return i.generateUUID()
 }
 
-func (i *testRuntimeInterface) GetComputationLimit() uint64 {
-	return i.computationLimit
-}
-
-func (i *testRuntimeInterface) SetComputationUsed(uint64) error {
-	return nil
+func (i *testRuntimeInterface) MeterComputation(compKind common.ComputationKind, intensity uint) error {
+	if i.meterComputation == nil {
+		return nil
+	}
+	return i.meterComputation(compKind, intensity)
 }
 
 func (i *testRuntimeInterface) DecodeArgument(b []byte, t cadence.Type) (cadence.Value, error) {
@@ -1201,11 +1207,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 			if tc.check != nil {
 				tc.check(t, err)
 			} else {
-				if !assert.NoError(t, err) {
-					for err := err; err != nil; err = errors.Unwrap(err) {
-						t.Log(err)
-					}
-				}
+				assert.NoError(t, err)
 				assert.ElementsMatch(t, tc.expectedLogs, loggedMessages)
 			}
 		})
@@ -1532,11 +1534,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 			if tt.check != nil {
 				tt.check(t, err)
 			} else {
-				if !assert.NoError(t, err) {
-					for err := err; err != nil; err = errors.Unwrap(err) {
-						t.Log(err)
-					}
-				}
+				assert.NoError(t, err)
 				assert.ElementsMatch(t, tt.expectedLogs, loggedMessages)
 			}
 		})
@@ -5208,109 +5206,6 @@ func TestRuntimeResourceOwnerFieldUseDictionary(t *testing.T) {
 	)
 }
 
-func TestRuntimeComputationLimit(t *testing.T) {
-
-	t.Parallel()
-
-	const computationLimit = 5
-
-	type test struct {
-		name string
-		code string
-		ok   bool
-	}
-
-	tests := []test{
-		{
-			name: "Infinite while loop",
-			code: `
-              while true {}
-            `,
-			ok: false,
-		},
-		{
-			name: "Limited while loop",
-			code: `
-              var i = 0
-              while i < 5 {
-                  i = i + 1
-              }
-            `,
-			ok: false,
-		},
-		{
-			name: "Too many for-in loop iterations",
-			code: `
-              for i in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] {}
-            `,
-			ok: false,
-		},
-		{
-			name: "Some for-in loop iterations",
-			code: `
-              for i in [1, 2, 3, 4] {}
-            `,
-			ok: true,
-		},
-	}
-
-	for _, test := range tests {
-
-		t.Run(test.name, func(t *testing.T) {
-
-			script := []byte(
-				fmt.Sprintf(
-					`
-                      transaction {
-                          prepare() {
-                              %s
-                          }
-                      }
-                    `,
-					test.code,
-				),
-			)
-
-			runtime := newTestInterpreterRuntime()
-
-			storage := newTestLedger(nil, nil)
-
-			runtimeInterface := &testRuntimeInterface{
-				storage: storage,
-				getSigningAccounts: func() ([]Address, error) {
-					return nil, nil
-				},
-				computationLimit: computationLimit,
-			}
-
-			nextTransactionLocation := newTransactionLocationGenerator()
-
-			err := runtime.ExecuteTransaction(
-				Script{
-					Source: script,
-				},
-				Context{
-					Interface: runtimeInterface,
-					Location:  nextTransactionLocation(),
-				},
-			)
-			if test.ok {
-				require.NoError(t, err)
-			} else {
-				var computationLimitErr ComputationLimitExceededError
-				require.ErrorAs(t, err, &computationLimitErr)
-
-				assert.Equal(t,
-					ComputationLimitExceededError{
-						Limit: computationLimit,
-					},
-					computationLimitErr,
-				)
-			}
-		})
-	}
-}
-
 func TestRuntimeMetrics(t *testing.T) {
 
 	t.Parallel()
@@ -5667,17 +5562,6 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 
 	deploy := utils.DeploymentTransaction("Test", contract)
 
-	setupTx := []byte(`
-      import Test from 0xCADE
-
-       transaction {
-
-          prepare(signer: AuthAccount) {
-              signer.save(<-Test.createR(), to: /storage/r)
-          }
-       }
-    `)
-
 	var accountCode []byte
 	var events []cadence.Event
 	var loggedMessages []string
@@ -5755,7 +5639,16 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 
 	err = runtime.ExecuteTransaction(
 		Script{
-			Source: setupTx,
+			Source: []byte(`
+              import Test from 0xCADE
+
+               transaction {
+
+                  prepare(signer: AuthAccount) {
+                      signer.save(<-Test.createR(), to: /storage/r)
+                  }
+               }
+            `),
 		},
 		Context{
 			Interface: runtimeInterface,
@@ -5771,12 +5664,12 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 				addressValue[:],
 				[]byte("storage"),
 			},
-			// storage domain storage map
+			// resource value
 			{
 				addressValue[:],
 				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x3},
 			},
-			// resource value
+			// storage domain storage map
 			{
 				addressValue[:],
 				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4},
@@ -5841,7 +5734,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 			// resource value
 			{
 				addressValue[:],
-				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4},
+				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x3},
 			},
 		},
 		writes,
@@ -6939,7 +6832,6 @@ func TestRuntimeStackOverflow(t *testing.T) {
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},
-		computationLimit: 9999,
 	}
 
 	nextTransactionLocation := newTransactionLocationGenerator()
@@ -7232,4 +7124,115 @@ func TestRuntimeInternalErrors(t *testing.T) {
 		require.Error(t, err)
 		require.ErrorAs(t, err, &Error{})
 	})
+}
+
+func TestRuntimeComputationMetring(t *testing.T) {
+	t.Parallel()
+
+	type test struct {
+		name        string
+		code        string
+		ok          bool
+		expCompUsed uint
+	}
+
+	compLimit := uint(6)
+
+	tests := []test{
+		{
+			name: "Infinite while loop",
+			code: `
+		  while true {}
+		`,
+			ok:          false,
+			expCompUsed: compLimit,
+		},
+		{
+			name: "Limited while loop",
+			code: `
+		  var i = 0
+		  while i < 5 {
+			  i = i + 1
+		  }
+		`,
+			ok:          false,
+			expCompUsed: compLimit,
+		},
+		{
+			name: "statement + createArray + transferArray + too many for-in loop iterations",
+			code: `
+		  for i in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] {}
+		`,
+			ok:          false,
+			expCompUsed: compLimit,
+		},
+		{
+			name: "statement + createArray + transferArray + some for-in loop iterations",
+			code: `
+		  for i in [1, 2] {}
+		`,
+			ok:          true,
+			expCompUsed: 5,
+		},
+	}
+
+	for _, test := range tests {
+
+		t.Run(test.name, func(t *testing.T) {
+
+			script := []byte(
+				fmt.Sprintf(
+					`
+				  transaction {
+					  prepare() {
+						  %s
+					  }
+				  }
+				`,
+					test.code,
+				),
+			)
+
+			runtime := newTestInterpreterRuntime()
+
+			compErr := errors.New("computation exceeded limit")
+			var compUsed uint
+			meterComputationFunc := func(kind common.ComputationKind, intensity uint) error {
+				compUsed++
+				if compUsed >= compLimit {
+					return compErr
+				}
+				return nil
+			}
+
+			runtimeInterface := &testRuntimeInterface{
+				storage: newTestLedger(nil, nil),
+				getSigningAccounts: func() ([]Address, error) {
+					return nil, nil
+				},
+				meterComputation: meterComputationFunc,
+			}
+
+			nextTransactionLocation := newTransactionLocationGenerator()
+
+			err := runtime.ExecuteTransaction(
+				Script{
+					Source: script,
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  nextTransactionLocation(),
+				},
+			)
+			if test.ok {
+				require.NoError(t, err)
+			} else {
+				var executionErr Error
+				require.ErrorAs(t, err, &executionErr)
+				require.ErrorAs(t, err.(Error).Unwrap(), &compErr)
+			}
+
+			require.Equal(t, test.expCompUsed, compUsed)
+		})
+	}
 }

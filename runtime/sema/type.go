@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1539,6 +1539,11 @@ type ArrayType interface {
 	isArrayType()
 }
 
+const arrayTypeFirstIndexFunctionDocString = `
+Returns the index of the first element matching the given object in the array, nil if no match.
+Available if the array element type is not resource-kinded and equatable.
+`
+
 const arrayTypeContainsFunctionDocString = `
 Returns true if the given object is in the array
 `
@@ -1646,6 +1651,44 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 					identifier,
 					IntType,
 					arrayTypeLengthFieldDocString,
+				)
+			},
+		},
+		"firstIndex": {
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
+
+				elementType := arrayType.ElementType(false)
+
+				// It is impossible for an array of resources to have a `firstIndex` function:
+				// if the resource is passed as an argument, it cannot be inside the array
+
+				if elementType.IsResourceType() {
+					report(
+						&InvalidResourceArrayMemberError{
+							Name:            identifier,
+							DeclarationKind: common.DeclarationKindFunction,
+							Range:           targetRange,
+						},
+					)
+				}
+
+				// TODO: implement Equatable interface
+
+				if !elementType.IsEquatable() {
+					report(
+						&NotEquatableTypeError{
+							Type:  elementType,
+							Range: targetRange,
+						},
+					)
+				}
+
+				return NewPublicFunctionMember(
+					arrayType,
+					identifier,
+					ArrayFirstIndexFunctionType(elementType),
+					arrayTypeFirstIndexFunctionDocString,
 				)
 			},
 		},
@@ -1879,6 +1922,19 @@ func ArrayConcatFunctionType(arrayType Type) *FunctionType {
 	}
 }
 
+func ArrayFirstIndexFunctionType(elementType Type) *FunctionType {
+	return &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Identifier:     "of",
+				TypeAnnotation: NewTypeAnnotation(elementType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{Type: IntType},
+		),
+	}
+}
 func ArrayContainsFunctionType(elementType Type) *FunctionType {
 	return &FunctionType{
 		Parameters: []*Parameter{
@@ -3798,6 +3854,20 @@ func (t *CompositeType) initializeMemberResolvers() {
 	})
 }
 
+func (t *CompositeType) FieldPosition(name string, declaration *ast.CompositeDeclaration) ast.Position {
+	var pos ast.Position
+	if t.Kind == common.CompositeKindEnum &&
+		name == EnumRawValueFieldName {
+
+		if len(declaration.Conformances) > 0 {
+			pos = declaration.Conformances[0].StartPosition()
+		}
+	} else {
+		pos = declaration.Members.FieldPosition(name, declaration.CompositeKind)
+	}
+	return pos
+}
+
 // Member
 
 type Member struct {
@@ -4159,6 +4229,10 @@ func (t *InterfaceType) IsContainerType() bool {
 
 func (t *InterfaceType) GetNestedTypes() *StringTypeOrderedMap {
 	return t.nestedTypes
+}
+
+func (t *InterfaceType) FieldPosition(name string, declaration *ast.InterfaceDeclaration) ast.Position {
+	return declaration.Members.FieldPosition(name, declaration.CompositeKind)
 }
 
 // DictionaryType consists of the key and value type
@@ -5294,12 +5368,11 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 			case *CompositeType:
 				// An unrestricted type `T`
-				// is a subtype of a restricted type `U{Vs}`: if `T == U`.
+				// is a subtype of a restricted type `U{Vs}`: if `T <: U`.
 				//
 				// The owner may freely restrict.
 
-				return typedSubType == typedSuperType.Type
-
+				return IsSubType(typedSubType, typedSuperType.Type)
 			}
 
 			switch subType {
@@ -6185,9 +6258,10 @@ the given tag and data, using this public key and the given hash algorithm
 `
 
 const publicKeyVerifyPoPFunctionDocString = `
-Verifies the proof of possession of the private key. This function is 
-only implemented if the signature algorithm of the public key is BLS, 
-it returns false if called with any other signature algorithm.
+Verifies the proof of possession of the private key.
+This function is only implemented if the signature algorithm
+of the public key is BLS (BLS_BLS12_381).
+If called with any other signature algorithm, the program aborts
 `
 
 // PublicKeyType represents the public key associated with an account key.
@@ -6204,7 +6278,7 @@ var PublicKeyType = func() *CompositeType {
 		NewPublicConstantFieldMember(
 			publicKeyType,
 			PublicKeyPublicKeyField,
-			&VariableSizedType{Type: UInt8Type},
+			ByteArrayType,
 			publicKeyKeyFieldDocString,
 		),
 		NewPublicConstantFieldMember(
