@@ -128,10 +128,10 @@ func NewArrayMemoryUsages(length int) (MemoryUsage, MemoryUsage) {
 		}
 }
 
-func NewArrayLengthUsage(length int) MemoryUsage {
+func NewArrayAdditionalLengthUsage(originalLength, additionalLength int) MemoryUsage {
 	return MemoryUsage{
 		Kind:   MemoryKindArrayLength,
-		Amount: uint64(length),
+		Amount: uint64(originalLength + additionalLength),
 	}
 }
 
@@ -145,10 +145,10 @@ func NewDictionaryMemoryUsages(length int) (MemoryUsage, MemoryUsage) {
 		}
 }
 
-func NewDictionarySizeUsage(length int) MemoryUsage {
+func NewDictionaryAdditionalSizeUsage(originalSize, additionalSize int) MemoryUsage {
 	return MemoryUsage{
 		Kind:   MemoryKindDictionarySize,
-		Amount: uint64(length),
+		Amount: uint64(originalSize + additionalSize),
 	}
 }
 

@@ -127,6 +127,7 @@ func TestInterpretArrayMetering(t *testing.T) {
             pub fun main() {
                 let x: [Int8] = []
                 x.append(3)
+				x.append(4)
             }
         `
 
@@ -137,7 +138,7 @@ func TestInterpretArrayMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindArrayBase))
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindArrayLength))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindArrayLength))
 	})
 
 	t.Run("insert", func(t *testing.T) {
@@ -147,6 +148,7 @@ func TestInterpretArrayMetering(t *testing.T) {
             pub fun main() {
                 let x: [Int8] = []
                 x.insert(at:0, 3)
+				x.insert(at:1, 3)
             }
         `
 
@@ -157,7 +159,7 @@ func TestInterpretArrayMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindArrayBase))
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindArrayLength))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindArrayLength))
 	})
 }
 
@@ -234,6 +236,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
             pub fun main() {
                 let x: {Int8: String} = {}
                 x.insert(key: 5, "")
+				x.insert(key: 4, "")
             }
         `
 
@@ -244,7 +247,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindDictionaryBase))
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindDictionarySize))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindDictionarySize))
 	})
 }
 
