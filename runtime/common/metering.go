@@ -19,6 +19,7 @@
 package common
 
 import (
+	"math"
 	"math/big"
 	"unsafe"
 )
@@ -128,10 +129,17 @@ func NewArrayMemoryUsages(length int) (MemoryUsage, MemoryUsage) {
 		}
 }
 
-func NewArrayLengthUsage(length int) MemoryUsage {
+func NewArrayAdditionalLengthUsage(originalLength, additionalLength int) MemoryUsage {
+	var newAmount uint64
+	if originalLength <= 1 {
+		newAmount = uint64(originalLength + additionalLength)
+	} else {
+		// size of b+ tree grows logarithmically with the size of the tree
+		newAmount = uint64(math.Log2(float64(originalLength)) + float64(additionalLength))
+	}
 	return MemoryUsage{
 		Kind:   MemoryKindArrayLength,
-		Amount: uint64(length),
+		Amount: newAmount,
 	}
 }
 
@@ -145,10 +153,17 @@ func NewDictionaryMemoryUsages(length int) (MemoryUsage, MemoryUsage) {
 		}
 }
 
-func NewDictionarySizeUsage(length int) MemoryUsage {
+func NewDictionaryAdditionalSizeUsage(originalSize, additionalSize int) MemoryUsage {
+	var newAmount uint64
+	if originalSize <= 1 {
+		newAmount = uint64(originalSize + additionalSize)
+	} else {
+		// size of b+ tree grows logarithmically with the size of the tree
+		newAmount = uint64(math.Log2(float64(originalSize)) + float64(additionalSize))
+	}
 	return MemoryUsage{
 		Kind:   MemoryKindDictionarySize,
-		Amount: uint64(length),
+		Amount: newAmount,
 	}
 }
 
