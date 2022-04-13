@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -74,7 +74,7 @@ func exportValueWithInterpreter(
 	case *interpreter.ArrayValue:
 		return exportArrayValue(v, inter, seenReferences)
 	case interpreter.IntValue:
-		return cadence.NewIntFromBig(v.ToBigInt()), nil
+		return cadence.NewIntFromBig(v.ToBigInt(inter)), nil
 	case interpreter.Int8Value:
 		return cadence.NewInt8(int8(v)), nil
 	case interpreter.Int16Value:
@@ -84,11 +84,11 @@ func exportValueWithInterpreter(
 	case interpreter.Int64Value:
 		return cadence.NewInt64(int64(v)), nil
 	case interpreter.Int128Value:
-		return cadence.NewInt128FromBig(v.ToBigInt())
+		return cadence.NewInt128FromBig(v.ToBigInt(inter))
 	case interpreter.Int256Value:
-		return cadence.NewInt256FromBig(v.ToBigInt())
+		return cadence.NewInt256FromBig(v.ToBigInt(inter))
 	case interpreter.UIntValue:
-		return cadence.NewUIntFromBig(v.ToBigInt())
+		return cadence.NewUIntFromBig(v.ToBigInt(inter))
 	case interpreter.UInt8Value:
 		return cadence.NewUInt8(uint8(v)), nil
 	case interpreter.UInt16Value:
@@ -98,9 +98,9 @@ func exportValueWithInterpreter(
 	case interpreter.UInt64Value:
 		return cadence.NewUInt64(uint64(v)), nil
 	case interpreter.UInt128Value:
-		return cadence.NewUInt128FromBig(v.ToBigInt())
+		return cadence.NewUInt128FromBig(v.ToBigInt(inter))
 	case interpreter.UInt256Value:
-		return cadence.NewUInt256FromBig(v.ToBigInt())
+		return cadence.NewUInt256FromBig(v.ToBigInt(inter))
 	case interpreter.Word8Value:
 		return cadence.NewWord8(uint8(v)), nil
 	case interpreter.Word16Value:

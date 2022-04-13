@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -214,12 +214,12 @@ func NewUnmeteredHostFunctionValue(
 }
 
 func NewHostFunctionValue(
-	interpreter *Interpreter,
+	gauge common.MemoryGauge,
 	function HostFunction,
 	funcType *sema.FunctionType,
 ) *HostFunctionValue {
 
-	common.UseConstantMemory(interpreter, common.MemoryKindHostFunction)
+	common.UseConstantMemory(gauge, common.MemoryKindHostFunction)
 
 	return NewUnmeteredHostFunctionValue(function, funcType)
 }

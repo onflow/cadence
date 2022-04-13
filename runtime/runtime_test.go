@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1220,11 +1220,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 			if tc.check != nil {
 				tc.check(t, err)
 			} else {
-				if !assert.NoError(t, err) {
-					for err := err; err != nil; err = errors.Unwrap(err) {
-						t.Log(err)
-					}
-				}
+				assert.NoError(t, err)
 				assert.ElementsMatch(t, tc.expectedLogs, loggedMessages)
 			}
 		})
@@ -1554,11 +1550,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 			if tt.check != nil {
 				tt.check(t, err)
 			} else {
-				if !assert.NoError(t, err) {
-					for err := err; err != nil; err = errors.Unwrap(err) {
-						t.Log(err)
-					}
-				}
+				assert.NoError(t, err)
 				assert.ElementsMatch(t, tt.expectedLogs, loggedMessages)
 			}
 		})
@@ -5586,17 +5578,6 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 
 	deploy := utils.DeploymentTransaction("Test", contract)
 
-	setupTx := []byte(`
-      import Test from 0xCADE
-
-       transaction {
-
-          prepare(signer: AuthAccount) {
-              signer.save(<-Test.createR(), to: /storage/r)
-          }
-       }
-    `)
-
 	var accountCode []byte
 	var events []cadence.Event
 	var loggedMessages []string
@@ -5674,7 +5655,16 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 
 	err = runtime.ExecuteTransaction(
 		Script{
-			Source: setupTx,
+			Source: []byte(`
+              import Test from 0xCADE
+
+               transaction {
+
+                  prepare(signer: AuthAccount) {
+                      signer.save(<-Test.createR(), to: /storage/r)
+                  }
+               }
+            `),
 		},
 		Context{
 			Interface: runtimeInterface,
@@ -5690,12 +5680,12 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 				addressValue[:],
 				[]byte("storage"),
 			},
-			// storage domain storage map
+			// resource value
 			{
 				addressValue[:],
 				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x3},
 			},
-			// resource value
+			// storage domain storage map
 			{
 				addressValue[:],
 				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4},
@@ -5760,7 +5750,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 			// resource value
 			{
 				addressValue[:],
-				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4},
+				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x3},
 			},
 		},
 		writes,

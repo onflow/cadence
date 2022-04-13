@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -504,16 +504,16 @@ func (interpreter *Interpreter) NewIntegerValueFromBigInt(value *big.Int, intege
 
 	// UInt*
 	case sema.UInt8Type:
-		common.UseMemory(memoryGauge, Uint8MemoryUsage)
+		common.UseMemory(memoryGauge, UInt8MemoryUsage)
 		return NewUnmeteredUInt8Value(uint8(value.Uint64()))
 	case sema.UInt16Type:
-		common.UseMemory(memoryGauge, Uint16MemoryUsage)
+		common.UseMemory(memoryGauge, UInt16MemoryUsage)
 		return NewUnmeteredUInt16Value(uint16(value.Uint64()))
 	case sema.UInt32Type:
-		common.UseMemory(memoryGauge, Uint32MemoryUsage)
+		common.UseMemory(memoryGauge, UInt32MemoryUsage)
 		return NewUnmeteredUInt32Value(uint32(value.Uint64()))
 	case sema.UInt64Type:
-		common.UseMemory(memoryGauge, Uint64MemoryUsage)
+		common.UseMemory(memoryGauge, UInt64MemoryUsage)
 		return NewUnmeteredUInt64Value(value.Uint64())
 	case sema.UInt128Type:
 		common.UseMemory(memoryGauge, Uint128MemoryUsage)
@@ -911,10 +911,12 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
+
 		switch result := result.(type) {
-		// references to optionals are transformed into optional references, so move
-		// the *SomeValue out to the reference itself
 		case *SomeValue:
+			// References to optionals are transformed into optional references,
+			// so move the *SomeValue out to the reference itself
+
 			getLocationRange := locationRangeGetter(interpreter, interpreter.Location, referenceExpression.Expression)
 
 			return NewSomeValueNonCopying(
@@ -926,16 +928,29 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 					innerBorrowType.Type,
 				),
 			)
+
 		case NilValue:
 			return NewNilValue(interpreter)
+
 		default:
-			return NewEphemeralReferenceValue(
-				interpreter,
-				innerBorrowType.Authorized,
-				result,
-				innerBorrowType.Type,
+			// If the referenced value is non-optional,
+			// but the target type is optional,
+			// then box the reference properly
+
+			getLocationRange := locationRangeGetter(interpreter, interpreter.Location, referenceExpression)
+
+			return interpreter.BoxOptional(
+				getLocationRange,
+				NewEphemeralReferenceValue(
+					interpreter,
+					innerBorrowType.Authorized,
+					result,
+					innerBorrowType.Type,
+				),
+				borrowType,
 			)
 		}
+
 	case *sema.ReferenceType:
 		return NewEphemeralReferenceValue(interpreter, typ.Authorized, result, typ.Type)
 	}
