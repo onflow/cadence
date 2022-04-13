@@ -21,8 +21,9 @@ package checker
 import (
 	"testing"
 
-	"github.com/onflow/cadence/runtime/sema"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 func TestCheckErrorShortCircuiting(t *testing.T) {
