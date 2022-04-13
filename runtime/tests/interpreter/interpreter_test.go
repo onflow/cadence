@@ -8718,8 +8718,6 @@ func newTestAuthAccountValue(
 			return 0
 		},
 		returnZeroUInt64,
-		panicFunction,
-		panicFunction,
 		func() interpreter.Value {
 			return interpreter.NewAuthAccountContractsValue(
 				addressValue,
