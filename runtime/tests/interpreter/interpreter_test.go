@@ -1789,8 +1789,8 @@ func TestInterpretHostFunction(t *testing.T) {
 		},
 		``,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			a := invocation.Arguments[0].(interpreter.IntValue).ToBigInt()
-			b := invocation.Arguments[1].(interpreter.IntValue).ToBigInt()
+			a := invocation.Arguments[0].(interpreter.IntValue).ToBigInt(nil)
+			b := invocation.Arguments[1].(interpreter.IntValue).ToBigInt(nil)
 			value := new(big.Int).Add(a, b)
 			return interpreter.NewUnmeteredIntValueFromBigInt(value)
 		},
@@ -9182,7 +9182,7 @@ func TestInterpretCountDigits256(t *testing.T) {
 
 			assert.Equal(t,
 				bigInt,
-				inter.Globals["number"].GetValue().(interpreter.BigNumberValue).ToBigInt(),
+				inter.Globals["number"].GetValue().(interpreter.BigNumberValue).ToBigInt(nil),
 			)
 
 			expected := interpreter.NewUnmeteredUInt8Value(uint8(test.Count))
