@@ -163,7 +163,6 @@ func NewDictionaryAdditionalSizeUsage(originalSize, additionalSize int) MemoryUs
 	}
 	return MemoryUsage{
 		Kind: MemoryKindDictionarySize,
-		// size of b+ tree grows logarithmically with the size of the tree
 		Amount: newAmount,
 	}
 }
