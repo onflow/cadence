@@ -1613,22 +1613,20 @@ func TestEphemeralReferenceTypeConformance(t *testing.T) {
 	require.NoError(t, err)
 	require.IsType(t, &EphemeralReferenceValue{}, value)
 
-	dynamicType := value.DynamicType(inter, SeenReferences{})
-
 	// Check the dynamic type conformance on a cyclic value.
-	conforms := value.ConformsToDynamicType(
+	conforms := value.ConformsToStaticType(
 		inter,
 		ReturnEmptyLocationRange,
-		dynamicType,
+		value.StaticType(inter),
 		TypeConformanceResults{},
 	)
 	assert.True(t, conforms)
 
 	// Check against a non-conforming type
-	conforms = value.ConformsToDynamicType(
+	conforms = value.ConformsToStaticType(
 		inter,
 		ReturnEmptyLocationRange,
-		EphemeralReferenceDynamicType{},
+		ReferenceStaticType{},
 		TypeConformanceResults{},
 	)
 	assert.False(t, conforms)

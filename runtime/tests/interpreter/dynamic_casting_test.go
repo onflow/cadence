@@ -1282,6 +1282,20 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 			})
 		})
 	}
+
+	t.Run("[AnyStruct] to [Int]", func(t *testing.T) {
+		inter := parseCheckAndInterpret(t, `
+		    fun test(): [Int] {
+		        let x: [AnyStruct] = [1, 2, 3]
+		        return x as! [Int]
+		    }
+		`)
+
+		_, err := inter.Invoke("test")
+
+		require.Error(t, err)
+		assert.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+	})
 }
 
 func TestInterpretDynamicCastingDictionary(t *testing.T) {

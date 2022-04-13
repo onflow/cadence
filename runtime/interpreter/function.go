@@ -89,7 +89,7 @@ func (f *InterpretedFunctionValue) DynamicType(_ *Interpreter, _ SeenReferences)
 	}
 }
 
-func (f *InterpretedFunctionValue) StaticType() StaticType {
+func (f *InterpretedFunctionValue) StaticType(_ *Interpreter) StaticType {
 	return ConvertSemaToStaticType(f.Type)
 }
 
@@ -103,18 +103,18 @@ func (f *InterpretedFunctionValue) invoke(invocation Invocation) Value {
 	return f.Interpreter.invokeInterpretedFunction(f, invocation)
 }
 
-func (f *InterpretedFunctionValue) ConformsToDynamicType(
+func (f *InterpretedFunctionValue) ConformsToStaticType(
 	_ *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	targetType, ok := dynamicType.(FunctionDynamicType)
+	targetType, ok := staticType.(FunctionStaticType)
 	if !ok {
 		return false
 	}
 
-	return f.Type.Equal(targetType.FuncType)
+	return f.Type.Equal(targetType.Type)
 }
 
 func (f *InterpretedFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -206,7 +206,7 @@ func (f *HostFunctionValue) DynamicType(_ *Interpreter, _ SeenReferences) Dynami
 	}
 }
 
-func (f *HostFunctionValue) StaticType() StaticType {
+func (f *HostFunctionValue) StaticType(_ *Interpreter) StaticType {
 	return ConvertSemaToStaticType(f.Type)
 }
 
@@ -239,18 +239,18 @@ func (*HostFunctionValue) SetMember(_ *Interpreter, _ func() LocationRange, _ st
 	panic(errors.NewUnreachableError())
 }
 
-func (f *HostFunctionValue) ConformsToDynamicType(
+func (f *HostFunctionValue) ConformsToStaticType(
 	_ *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	targetType, ok := dynamicType.(FunctionDynamicType)
+	targetType, ok := staticType.(FunctionStaticType)
 	if !ok {
 		return false
 	}
 
-	return f.Type.Equal(targetType.FuncType)
+	return f.Type.Equal(targetType.Type)
 }
 
 func (f *HostFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -314,8 +314,8 @@ func (f BoundFunctionValue) Walk(_ func(Value)) {
 	// NO-OP
 }
 
-func (f BoundFunctionValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	funcStaticType, ok := f.Function.StaticType().(FunctionStaticType)
+func (f BoundFunctionValue) DynamicType(inter *Interpreter, _ SeenReferences) DynamicType {
+	funcStaticType, ok := f.Function.StaticType(inter).(FunctionStaticType)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
@@ -325,8 +325,8 @@ func (f BoundFunctionValue) DynamicType(_ *Interpreter, _ SeenReferences) Dynami
 	}
 }
 
-func (f BoundFunctionValue) StaticType() StaticType {
-	return f.Function.StaticType()
+func (f BoundFunctionValue) StaticType(inter *Interpreter) StaticType {
+	return f.Function.StaticType(inter)
 }
 
 func (BoundFunctionValue) isFunctionValue() {}
@@ -336,16 +336,16 @@ func (f BoundFunctionValue) invoke(invocation Invocation) Value {
 	return f.Function.invoke(invocation)
 }
 
-func (f BoundFunctionValue) ConformsToDynamicType(
+func (f BoundFunctionValue) ConformsToStaticType(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	results TypeConformanceResults,
 ) bool {
-	return f.Function.ConformsToDynamicType(
+	return f.Function.ConformsToStaticType(
 		interpreter,
 		getLocationRange,
-		dynamicType,
+		staticType,
 		results,
 	)
 }
