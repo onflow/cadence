@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -481,7 +481,7 @@ func (r *interpreterRuntime) newAuthAccountValue(
 		accountBalanceGetFunction(addressValue, context.Interface),
 		accountAvailableBalanceGetFunction(addressValue, context.Interface),
 		storageUsedGetFunction(addressValue, context.Interface, storage),
-		storageCapacityGetFunction(addressValue, context.Interface),
+		storageCapacityGetFunction(addressValue, context.Interface, storage),
 		func() interpreter.Value {
 			return r.newAuthAccountContracts(
 				addressValue,
@@ -918,7 +918,7 @@ func validateArgumentParams(
 		}
 
 		// Check that decoded value is a subtype of static parameter type
-		if !inter.IsSubType(dynamicType, parameterType) {
+		if !inter.IsSubTypeOfSemaType(arg.StaticType(inter), parameterType) {
 			return nil, &InvalidEntryPointArgumentError{
 				Index: i,
 				Err: &InvalidValueTypeError{
@@ -929,10 +929,10 @@ func validateArgumentParams(
 
 		// Check whether the decoded value conforms to the type associated with the value
 		conformanceResults := interpreter.TypeConformanceResults{}
-		if !arg.ConformsToDynamicType(
+		if !arg.ConformsToStaticType(
 			inter,
 			interpreter.ReturnEmptyLocationRange,
-			dynamicType,
+			arg.StaticType(inter),
 			conformanceResults,
 		) {
 			return nil, &InvalidEntryPointArgumentError{
@@ -949,7 +949,7 @@ func validateArgumentParams(
 				return true
 			}
 
-			if !hasValidStaticType(value) {
+			if !hasValidStaticType(inter, value) {
 				panic(fmt.Errorf("invalid static type for argument: %d", i))
 			}
 
@@ -962,7 +962,7 @@ func validateArgumentParams(
 	return argumentValues, nil
 }
 
-func hasValidStaticType(value interpreter.Value) bool {
+func hasValidStaticType(inter *interpreter.Interpreter, value interpreter.Value) bool {
 	switch value := value.(type) {
 	case *interpreter.ArrayValue:
 		return value.Type != nil
@@ -972,7 +972,7 @@ func hasValidStaticType(value interpreter.Value) bool {
 	default:
 		// For other values, static type is NOT inferred.
 		// Hence no need to validate it here.
-		return value.StaticType() != nil
+		return value.StaticType(inter) != nil
 	}
 }
 
@@ -1830,14 +1830,26 @@ func storageUsedGetFunction(
 	}
 }
 
-func storageCapacityGetFunction(addressValue interpreter.AddressValue, runtimeInterface Interface) func() interpreter.UInt64Value {
+func storageCapacityGetFunction(
+	addressValue interpreter.AddressValue,
+	runtimeInterface Interface,
+	storage *Storage,
+) func(inter *interpreter.Interpreter) interpreter.UInt64Value {
 
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation
 	address := addressValue.ToAddress()
 
-	return func() interpreter.UInt64Value {
-		var capacity uint64
+	return func(inter *interpreter.Interpreter) interpreter.UInt64Value {
 		var err error
+
+		// NOTE: flush the cached values, so the host environment
+		// can properly calculate the amount of storage available for the account
+		const commitContractUpdates = false
+		err = storage.Commit(inter, commitContractUpdates)
+		if err != nil {
+			panic(err)
+		}
+		var capacity uint64
 		wrapPanic(func() {
 			capacity, err = runtimeInterface.GetStorageCapacity(address)
 		})
@@ -1894,8 +1906,11 @@ func (r *interpreterRuntime) loadContract(
 			storageMap := storage.GetStorageMap(
 				location.Address,
 				StorageDomainContract,
+				false,
 			)
-			storedValue = storageMap.ReadValue(location.Name)
+			if storageMap != nil {
+				storedValue = storageMap.ReadValue(location.Name)
+			}
 		}
 
 		if storedValue == nil {
@@ -2096,7 +2111,7 @@ func (r *interpreterRuntime) getPublicAccount(
 		accountBalanceGetFunction(accountAddress, runtimeInterface),
 		accountAvailableBalanceGetFunction(accountAddress, runtimeInterface),
 		storageUsedGetFunction(accountAddress, runtimeInterface, storage),
-		storageCapacityGetFunction(accountAddress, runtimeInterface),
+		storageCapacityGetFunction(accountAddress, runtimeInterface, storage),
 		func() interpreter.Value {
 			return r.newPublicAccountKeys(accountAddress, runtimeInterface)
 		},

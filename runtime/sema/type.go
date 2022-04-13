@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -6258,9 +6258,10 @@ the given tag and data, using this public key and the given hash algorithm
 `
 
 const publicKeyVerifyPoPFunctionDocString = `
-Verifies the proof of possession of the private key. This function is 
-only implemented if the signature algorithm of the public key is BLS, 
-it returns false if called with any other signature algorithm.
+Verifies the proof of possession of the private key.
+This function is only implemented if the signature algorithm
+of the public key is BLS (BLS_BLS12_381).
+If called with any other signature algorithm, the program aborts
 `
 
 // PublicKeyType represents the public key associated with an account key.

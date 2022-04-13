@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -187,8 +187,8 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 	error := func(right Value) {
 		panic(InvalidOperandsError{
 			Operation:     expression.Operation,
-			LeftType:      leftValue.StaticType(),
-			RightType:     right.StaticType(),
+			LeftType:      leftValue.StaticType(interpreter),
+			RightType:     right.StaticType(interpreter),
 			LocationRange: locationRangeGetter(interpreter.Location, expression)(),
 		})
 	}
@@ -801,8 +801,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 
 	switch expression.Operation {
 	case ast.OperationFailableCast, ast.OperationForceCast:
-		dynamicType := value.DynamicType(interpreter, SeenReferences{})
-		isSubType := interpreter.IsSubType(dynamicType, expectedType)
+		isSubType := interpreter.IsSubTypeOfSemaType(value.StaticType(interpreter), expectedType)
 
 		switch expression.Operation {
 		case ast.OperationFailableCast:
@@ -874,26 +873,43 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
+
 		switch result := result.(type) {
-		// references to optionals are transformed into optional references, so move
-		// the *SomeValue out to the reference itself
 		case *SomeValue:
+			// References to optionals are transformed into optional references,
+			// so move the *SomeValue out to the reference itself
+
 			getLocationRange := locationRangeGetter(interpreter.Location, referenceExpression.Expression)
 
-			return NewSomeValueNonCopying(&EphemeralReferenceValue{
-				Authorized:   innerBorrowType.Authorized,
-				Value:        result.InnerValue(interpreter, getLocationRange),
-				BorrowedType: innerBorrowType.Type,
-			})
+			return NewSomeValueNonCopying(
+				&EphemeralReferenceValue{
+					Authorized:   innerBorrowType.Authorized,
+					Value:        result.InnerValue(interpreter, getLocationRange),
+					BorrowedType: innerBorrowType.Type,
+				},
+			)
+
 		case NilValue:
 			return NilValue{}
+
 		default:
-			return &EphemeralReferenceValue{
-				Authorized:   innerBorrowType.Authorized,
-				Value:        result,
-				BorrowedType: innerBorrowType.Type,
-			}
+			// If the referenced value is non-optional,
+			// but the target type is optional,
+			// then box the reference properly
+
+			getLocationRange := locationRangeGetter(interpreter.Location, referenceExpression)
+
+			return interpreter.BoxOptional(
+				getLocationRange,
+				&EphemeralReferenceValue{
+					Authorized:   innerBorrowType.Authorized,
+					Value:        result,
+					BorrowedType: innerBorrowType.Type,
+				},
+				borrowType,
+			)
 		}
+
 	case *sema.ReferenceType:
 		return &EphemeralReferenceValue{
 			Authorized:   typ.Authorized,

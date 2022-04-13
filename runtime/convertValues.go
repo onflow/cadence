@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -669,7 +669,7 @@ func importArrayValue(
 		types := make([]sema.Type, len(v.Values))
 
 		for i, value := range values {
-			typ, err := inter.ConvertStaticToSemaType(value.StaticType())
+			typ, err := inter.ConvertStaticToSemaType(value.StaticType(inter))
 			if err != nil {
 				return nil, err
 			}
@@ -736,13 +736,13 @@ func importDictionaryValue(
 		valueTypes := make([]sema.Type, size)
 
 		for i := 0; i < size; i++ {
-			keyType, err := inter.ConvertStaticToSemaType(keysAndValues[i*2].StaticType())
+			keyType, err := inter.ConvertStaticToSemaType(keysAndValues[i*2].StaticType(inter))
 			if err != nil {
 				return nil, err
 			}
 			keyTypes[i] = keyType
 
-			valueType, err := inter.ConvertStaticToSemaType(keysAndValues[i*2+1].StaticType())
+			valueType, err := inter.ConvertStaticToSemaType(keysAndValues[i*2+1].StaticType(inter))
 			if err != nil {
 				return nil, err
 			}
