@@ -271,6 +271,7 @@ func NewChecker(program *ast.Program, location common.Location, memoryGauge comm
 		functionActivations: functionActivations,
 		containerTypes:      map[Type]bool{},
 		Elaboration:         NewElaboration(memoryGauge),
+		memoryGauge:         memoryGauge,
 	}
 
 	for _, option := range options {

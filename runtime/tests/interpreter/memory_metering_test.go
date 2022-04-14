@@ -1784,6 +1784,7 @@ func TestInterpretUInt8Metering(t *testing.T) {
 		// creation: 1 + 1
 		// result: 1
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindNumber))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindElaboration))
 	})
 
 	t.Run("bitwise left-shift", func(t *testing.T) {
@@ -2929,6 +2930,7 @@ func TestInterpretUInt128Metering(t *testing.T) {
 		// creation: 16 + 16
 		// result: 16
 		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindElaboration))
 	})
 
 	t.Run("multiplication", func(t *testing.T) {
@@ -5311,6 +5313,7 @@ func TestInterpretInt128Metering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindBool))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindElaboration))
 	})
 }
 
@@ -5705,6 +5708,7 @@ func TestInterpretWord8Metering(t *testing.T) {
 
 		// creation: 1
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindNumber))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindElaboration))
 	})
 
 	t.Run("addition", func(t *testing.T) {
