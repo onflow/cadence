@@ -329,7 +329,11 @@ type BoundFunctionValue struct {
 
 var _ Value = BoundFunctionValue{}
 
-func NewBoundFunctionValue(interpreter *Interpreter, function FunctionValue, self *CompositeValue) BoundFunctionValue {
+func NewBoundFunctionValue(
+	interpreter *Interpreter,
+	function FunctionValue,
+	self *CompositeValue,
+) BoundFunctionValue {
 
 	common.UseConstantMemory(interpreter, common.MemoryKindBoundFunction)
 
