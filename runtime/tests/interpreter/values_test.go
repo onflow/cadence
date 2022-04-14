@@ -62,7 +62,7 @@ func TestRandomMapOperations(t *testing.T) {
 	inter, err := interpreter.NewInterpreter(
 		&interpreter.Program{
 			Program:     ast.NewProgram(nil, []ast.Declaration{}),
-			Elaboration: sema.NewElaboration(),
+			Elaboration: sema.NewElaboration(nil),
 		},
 		utils.TestLocation,
 		interpreter.WithStorage(storage),
@@ -501,7 +501,7 @@ func TestRandomArrayOperations(t *testing.T) {
 	inter, err := interpreter.NewInterpreter(
 		&interpreter.Program{
 			Program:     ast.NewProgram(nil, []ast.Declaration{}),
-			Elaboration: sema.NewElaboration(),
+			Elaboration: sema.NewElaboration(nil),
 		},
 		utils.TestLocation,
 		interpreter.WithStorage(storage),
@@ -859,7 +859,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 	inter, err := interpreter.NewInterpreter(
 		&interpreter.Program{
 			Program:     ast.NewProgram(nil, []ast.Declaration{}),
-			Elaboration: sema.NewElaboration(),
+			Elaboration: sema.NewElaboration(nil),
 		},
 		utils.TestLocation,
 		interpreter.WithStorage(storage),

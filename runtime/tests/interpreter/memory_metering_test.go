@@ -76,6 +76,7 @@ func TestInterpretArrayMetering(t *testing.T) {
 		assert.Equal(t, uint64(29), meter.getMemory(common.MemoryKindArrayBase))
 		assert.Equal(t, uint64(10), meter.getMemory(common.MemoryKindArrayLength))
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindVariable))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindElaboration))
 	})
 
 	t.Run("iteration", func(t *testing.T) {

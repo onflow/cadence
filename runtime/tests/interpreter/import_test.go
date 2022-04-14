@@ -104,7 +104,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 							),
 						}
 
-						elaboration := sema.NewElaboration()
+						elaboration := sema.NewElaboration(nil)
 						elaboration.CompositeTypes[fooType.ID()] = fooType
 
 						return interpreter.VirtualImport{
