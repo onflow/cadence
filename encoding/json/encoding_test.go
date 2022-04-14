@@ -94,28 +94,28 @@ func TestBadCharacters(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
 
 		t.Parallel()
-		_, err := cadence.NewCharacter("")
+		_, err := cadence.NewUnmeteredCharacter("")
 		require.Error(t, err)
 	})
 
 	t.Run("long", func(t *testing.T) {
 
 		t.Parallel()
-		_, err := cadence.NewCharacter("ab")
+		_, err := cadence.NewUnmeteredCharacter("ab")
 		require.Error(t, err)
 	})
 
 	t.Run("ok simple", func(t *testing.T) {
 
 		t.Parallel()
-		_, err := cadence.NewCharacter(`\a`)
+		_, err := cadence.NewUnmeteredCharacter(`\a`)
 		require.Error(t, err)
 	})
 
 	t.Run("ok complex", func(t *testing.T) {
 
 		t.Parallel()
-		_, err := cadence.NewCharacter(`\u{75}\u{308}`)
+		_, err := cadence.NewUnmeteredCharacter(`\u{75}\u{308}`)
 		require.Error(t, err)
 	})
 }
@@ -124,8 +124,8 @@ func TestEncodeCharacter(t *testing.T) {
 
 	t.Parallel()
 
-	a, _ := cadence.NewCharacter("a")
-	b, _ := cadence.NewCharacter("b")
+	a, _ := cadence.NewUnmeteredCharacter("a")
+	b, _ := cadence.NewUnmeteredCharacter("b")
 
 	testAllEncodeAndDecode(t, []encodeTest{
 		{
