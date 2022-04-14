@@ -8287,6 +8287,7 @@ func TestInterpretASTMetering(t *testing.T) {
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindReferenceExpression))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindForceExpression))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindPathExpression))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindDictionaryEntry))
 	})
 
 	t.Run("types", func(t *testing.T) {

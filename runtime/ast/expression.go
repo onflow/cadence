@@ -561,6 +561,19 @@ type DictionaryEntry struct {
 	Value Expression
 }
 
+func NewDictionaryEntry(
+	gauge common.MemoryGauge,
+	key Expression,
+	value Expression,
+) DictionaryEntry {
+	common.UseMemory(gauge, common.DictionaryEntryMemoryUsage)
+
+	return DictionaryEntry{
+		Key:   key,
+		Value: value,
+	}
+}
+
 func (e DictionaryEntry) MarshalJSON() ([]byte, error) {
 	type Alias DictionaryEntry
 	return json.Marshal(&struct {

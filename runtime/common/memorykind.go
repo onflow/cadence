@@ -81,6 +81,7 @@ const (
 	MemoryKindTransfer
 	MemoryKindMembers
 	MemoryKindTypeAnnotation
+	MemoryKindDictionaryEntry
 
 	MemoryKindFunctionDeclaration
 	MemoryKindCompositeDeclaration
