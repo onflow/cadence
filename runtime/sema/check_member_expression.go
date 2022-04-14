@@ -232,10 +232,11 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 					Type:       accessedType,
 					Name:       identifier,
 					Expression: expression,
-					Range: ast.Range{
-						StartPos: identifierStartPosition,
-						EndPos:   identifierEndPosition,
-					},
+					Range: ast.NewRange(
+						checker.memoryGauge,
+						identifierStartPosition,
+						identifierEndPosition,
+					),
 				},
 			)
 		}

@@ -504,16 +504,16 @@ func (interpreter *Interpreter) NewIntegerValueFromBigInt(value *big.Int, intege
 
 	// UInt*
 	case sema.UInt8Type:
-		common.UseMemory(memoryGauge, Uint8MemoryUsage)
+		common.UseMemory(memoryGauge, UInt8MemoryUsage)
 		return NewUnmeteredUInt8Value(uint8(value.Uint64()))
 	case sema.UInt16Type:
-		common.UseMemory(memoryGauge, Uint16MemoryUsage)
+		common.UseMemory(memoryGauge, UInt16MemoryUsage)
 		return NewUnmeteredUInt16Value(uint16(value.Uint64()))
 	case sema.UInt32Type:
-		common.UseMemory(memoryGauge, Uint32MemoryUsage)
+		common.UseMemory(memoryGauge, UInt32MemoryUsage)
 		return NewUnmeteredUInt32Value(uint32(value.Uint64()))
 	case sema.UInt64Type:
-		common.UseMemory(memoryGauge, Uint64MemoryUsage)
+		common.UseMemory(memoryGauge, UInt64MemoryUsage)
 		return NewUnmeteredUInt64Value(value.Uint64())
 	case sema.UInt128Type:
 		common.UseMemory(memoryGauge, Uint128MemoryUsage)
@@ -970,10 +970,10 @@ func (interpreter *Interpreter) VisitForceExpression(expression *ast.ForceExpres
 			ForceNilError{
 				LocationRange: LocationRange{
 					Location: interpreter.Location,
-					Range: ast.Range{
-						StartPos: expression.EndPosition(nil),
-						EndPos:   expression.EndPosition(nil),
-					},
+					Range: ast.NewUnmeteredRange(
+						expression.EndPosition(nil),
+						expression.EndPosition(nil),
+					),
 				},
 			},
 		)

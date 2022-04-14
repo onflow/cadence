@@ -358,7 +358,7 @@ func (d StorableDecoder) decodeStringValue() (*StringValue, error) {
 }
 
 func decodeUint64(dec *cbor.StreamDecoder, memoryGauge common.MemoryGauge) (uint64, error) {
-	common.UseMemory(memoryGauge, Uint64MemoryUsage)
+	common.UseMemory(memoryGauge, UInt64MemoryUsage)
 	return dec.DecodeUint64()
 }
 

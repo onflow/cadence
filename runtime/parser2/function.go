@@ -99,10 +99,11 @@ func parseParameterList(p *parser) (parameterList *ast.ParameterList) {
 	return ast.NewParameterList(
 		p.memoryGauge,
 		parameters,
-		ast.Range{
-			StartPos: startPos,
-			EndPos:   endPos,
-		},
+		ast.NewRange(
+			p.memoryGauge,
+			startPos,
+			endPos,
+		),
 	)
 }
 
@@ -173,10 +174,11 @@ func parseParameter(p *parser) *ast.Parameter {
 			parameterPos,
 		),
 		typeAnnotation,
-		ast.Range{
-			StartPos: startPos,
-			EndPos:   endPos,
-		},
+		ast.NewRange(
+			p.memoryGauge,
+			startPos,
+			endPos,
+		),
 	)
 }
 

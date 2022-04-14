@@ -101,10 +101,10 @@ func (o *Occurrences) Put(startPos, endPos ast.Position, origin *Origin) {
 	if origin != nil {
 		origin.Occurrences = append(
 			origin.Occurrences,
-			ast.Range{
-				StartPos: startPos,
-				EndPos:   endPos,
-			},
+			ast.NewUnmeteredRange(
+				startPos,
+				endPos,
+			),
 		)
 	}
 }

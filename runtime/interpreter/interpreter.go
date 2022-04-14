@@ -4830,10 +4830,12 @@ func (interpreter *Interpreter) invalidateResource(value Value) {
 	delete(interpreter.resourceVariables, resourceKindedValue)
 }
 
-// UseMemory delegates the memory usage to the interpreter's memory gauge, if any.
+// MeterMemory delegates the memory usage to the interpreter's memory gauge, if any.
 //
 func (interpreter *Interpreter) MeterMemory(usage common.MemoryUsage) error {
-	common.UseMemory(interpreter.memoryGauge, usage)
+	if interpreter != nil {
+		common.UseMemory(interpreter.memoryGauge, usage)
+	}
 	return nil
 }
 

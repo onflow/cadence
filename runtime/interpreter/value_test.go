@@ -3520,7 +3520,7 @@ func TestNumberValueIntegerConversion(t *testing.T) {
 				if !ok {
 					return nil, false
 				}
-				return bigNumberValue.ToBigInt(), true
+				return bigNumberValue.ToBigInt(nil), true
 			},
 			check: func(t *testing.T, result interface{}) bool {
 				return assert.Equal(t, big.NewInt(42), result)
