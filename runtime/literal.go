@@ -336,7 +336,7 @@ func LiteralValue(memoryGauge common.MemoryGauge, expression ast.Expression, ty 
 			return nil, InvalidLiteralError
 		}
 
-		return cadence.BytesToAddress(expression.Value.Bytes()), nil
+		return cadence.BytesToUnmeteredAddress(expression.Value.Bytes()), nil
 	}
 
 	switch ty {

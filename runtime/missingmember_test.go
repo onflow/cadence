@@ -2766,7 +2766,7 @@ transaction(recipientAddr: Address, name: String, garmentWithdrawID: UInt64, mat
 			Source: []byte(getItemDetails),
 			Arguments: [][]byte{
 				json.MustEncode(
-					cadence.NewAddress(testAddress),
+					cadence.NewUnmeteredAddress(testAddress),
 				),
 				json.MustEncode(
 					cadence.NewUInt64(1),

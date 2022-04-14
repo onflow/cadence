@@ -165,7 +165,7 @@ func TestEncodeAddress(t *testing.T) {
 
 	testEncodeAndDecode(
 		t,
-		cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
+		cadence.BytesToUnmeteredAddress([]byte{1, 2, 3, 4, 5}),
 		`{"type":"Address","value":"0x0000000102030405"}`,
 	)
 }
@@ -1562,7 +1562,7 @@ func TestEncodeCapability(t *testing.T) {
 		t,
 		cadence.Capability{
 			Path:       cadence.Path{Domain: "storage", Identifier: "foo"},
-			Address:    cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
+			Address:    cadence.BytesToUnmeteredAddress([]byte{1, 2, 3, 4, 5}),
 			BorrowType: cadence.IntType{},
 		},
 		`{"type":"Capability","value":{"path":{"type":"Path","value":{"domain":"storage","identifier":"foo"}},"borrowType":{"kind":"Int"},"address":"0x0000000102030405"}}`,
