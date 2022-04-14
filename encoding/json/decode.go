@@ -281,7 +281,7 @@ func (d *Decoder) decodeAddress(valueJSON interface{}) cadence.Address {
 		panic(ErrInvalidJSONCadence)
 	}
 
-	return cadence.BytesToAddress(b)
+	return cadence.BytesToUnmeteredAddress(b)
 }
 
 func (d *Decoder) decodeBigInt(valueJSON interface{}) *big.Int {

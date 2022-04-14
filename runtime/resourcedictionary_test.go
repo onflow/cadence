@@ -91,7 +91,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 
 	runtime := newTestInterpreterRuntime()
 
-	addressValue := cadence.BytesToAddress([]byte{0xCA, 0xDE})
+	addressValue := cadence.BytesToUnmeteredAddress([]byte{0xCA, 0xDE})
 
 	contract := []byte(resourceDictionaryContract)
 
@@ -386,7 +386,7 @@ func TestRuntimeResourceDictionaryValues_Nested(t *testing.T) {
 
 	runtime := newTestInterpreterRuntime()
 
-	addressValue := cadence.BytesToAddress([]byte{0xCA, 0xDE})
+	addressValue := cadence.BytesToUnmeteredAddress([]byte{0xCA, 0xDE})
 
 	contract := []byte(`
      pub contract Test {
@@ -1301,7 +1301,7 @@ func BenchmarkRuntimeResourceDictionaryValues(b *testing.B) {
 
 	runtime := newTestInterpreterRuntime()
 
-	addressValue := cadence.BytesToAddress([]byte{0xCA, 0xDE})
+	addressValue := cadence.BytesToUnmeteredAddress([]byte{0xCA, 0xDE})
 
 	contract := []byte(`
 	  pub contract Test {

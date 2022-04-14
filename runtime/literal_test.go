@@ -431,7 +431,7 @@ func TestLiteralValue(t *testing.T) {
 		value, err := ParseLiteral(`0x1`, &sema.AddressType{}, nil)
 		require.NoError(t, err)
 		require.Equal(t,
-			cadence.NewAddress([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
+			cadence.NewUnmeteredAddress([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
 			value,
 		)
 	})

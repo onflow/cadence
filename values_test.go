@@ -169,7 +169,7 @@ func TestStringer(t *testing.T) {
 			expected: "[0x1, 0x2]",
 		},
 		"Address": {
-			value:    NewAddress([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
+			value:    NewUnmeteredAddress([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
 			expected: "0x0000000000000001",
 		},
 		"struct": {
@@ -257,7 +257,7 @@ func TestStringer(t *testing.T) {
 		"Capability": {
 			value: Capability{
 				Path:       Path{Domain: "storage", Identifier: "foo"},
-				Address:    BytesToAddress([]byte{1, 2, 3, 4, 5}),
+				Address:    BytesToUnmeteredAddress([]byte{1, 2, 3, 4, 5}),
 				BorrowType: IntType{},
 			},
 			expected: "Capability<Int>(address: 0x0000000102030405, path: /storage/foo)",

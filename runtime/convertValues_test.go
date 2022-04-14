@@ -227,7 +227,7 @@ func TestExportValue(t *testing.T) {
 		{
 			label:    "Address",
 			value:    interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
-			expected: cadence.NewAddress([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
+			expected: cadence.NewUnmeteredAddress([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
 		},
 		{
 			label:    "Int",
@@ -612,7 +612,7 @@ func TestImportValue(t *testing.T) {
 		{
 			label:    "Address",
 			expected: interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
-			value:    cadence.NewAddress([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
+			value:    cadence.NewUnmeteredAddress([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
 		},
 		{
 			label:    "Int",
@@ -1285,7 +1285,7 @@ func TestExportAddressValue(t *testing.T) {
     `
 
 	actual := exportValueFromScript(t, script)
-	expected := cadence.BytesToAddress(
+	expected := cadence.BytesToUnmeteredAddress(
 		[]byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x42},
 	)
 
@@ -2331,7 +2331,7 @@ func TestRuntimeArgumentPassing(t *testing.T) {
 		{
 			label:         "Address",
 			typeSignature: "Address",
-			exportedValue: cadence.NewAddress([8]byte{0, 0, 0, 0, 0, 1, 0, 2}),
+			exportedValue: cadence.NewUnmeteredAddress([8]byte{0, 0, 0, 0, 0, 1, 0, 2}),
 		},
 	}
 
@@ -2458,7 +2458,7 @@ func TestRuntimeComplexStructArgumentPassing(t *testing.T) {
 				cadence.String("foo"),
 				cadence.String("bar"),
 			}),
-			cadence.NewAddress([8]byte{0, 0, 0, 0, 0, 1, 0, 2}),
+			cadence.NewUnmeteredAddress([8]byte{0, 0, 0, 0, 0, 1, 0, 2}),
 			cadence.NewBool(true),
 			cadence.Path{
 				Domain:     "storage",

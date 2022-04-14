@@ -133,7 +133,7 @@ func exportValueWithInterpreter(
 	case *interpreter.DictionaryValue:
 		return exportDictionaryValue(v, inter, seenReferences)
 	case interpreter.AddressValue:
-		return cadence.NewAddress(v), nil
+		return cadence.NewAddress(inter, v), nil
 	case interpreter.LinkValue:
 		return exportLinkValue(v, inter), nil
 	case interpreter.PathValue:
@@ -448,7 +448,7 @@ func exportCapabilityValue(v *interpreter.CapabilityValue, inter *interpreter.In
 
 	return cadence.Capability{
 		Path:       exportPathValue(v.Path),
-		Address:    cadence.NewAddress(v.Address),
+		Address:    cadence.NewAddress(inter, v.Address),
 		BorrowType: ExportType(borrowType, map[sema.TypeID]cadence.Type{}),
 	}
 }

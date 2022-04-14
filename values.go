@@ -237,8 +237,24 @@ const AddressLength = 8
 
 type Address [AddressLength]byte
 
-func NewAddress(b [AddressLength]byte) Address {
+func NewUnmeteredAddress(b [AddressLength]byte) Address {
 	return b
+}
+
+func NewAddress(memoryGauge common.MemoryGauge, b [AddressLength]byte) Address {
+	common.UseConstantMemory(memoryGauge, common.MemoryKindCadenceAddress)
+	return NewUnmeteredAddress(b)
+}
+
+func BytesToUnmeteredAddress(b []byte) Address {
+	var a Address
+	copy(a[AddressLength-len(b):AddressLength], b)
+	return a
+}
+
+func BytesToAddress(memoryGauge common.MemoryGauge, b []byte) Address {
+	common.UseConstantMemory(memoryGauge, common.MemoryKindCadenceAddress)
+	return BytesToUnmeteredAddress(b)
 }
 
 func (Address) isValue() {}
@@ -261,12 +277,6 @@ func (v Address) String() string {
 
 func (v Address) Hex() string {
 	return fmt.Sprintf("%x", [AddressLength]byte(v))
-}
-
-func BytesToAddress(b []byte) Address {
-	var a Address
-	copy(a[AddressLength-len(b):AddressLength], b)
-	return a
 }
 
 // Int
