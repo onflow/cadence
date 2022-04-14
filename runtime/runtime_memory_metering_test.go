@@ -19,11 +19,13 @@
 package runtime
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -90,6 +92,94 @@ func TestInterpreterAddressLocationMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindAddressLocation))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindElaboration))
 		assert.Equal(t, uint64(92), meter.getMemory(common.MemoryKindRawString))
 	})
+}
+
+func TestInterpreterElaborationImportMetering(t *testing.T) {
+
+	contracts := [...][]byte{
+		[]byte(`pub contract C0 {}`),
+		[]byte(`pub contract C1 {}`),
+		[]byte(`pub contract C2 {}`),
+		[]byte(`pub contract C3 {}`),
+	}
+
+	importExpressions := [len(contracts)]string{}
+	for i := range contracts {
+		importExpressions[i] = fmt.Sprintf("import C%d from 0x0%d\n", i, i+1)
+	}
+
+	addressValue := cadence.BytesToAddress([]byte{byte(1)})
+
+	runtime := newTestInterpreterRuntime()
+
+	meter := newTestMemoryGauge()
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	var accountCode []byte
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(_ Location) (bytes []byte, err error) {
+			return accountCode, nil
+		},
+		storage: newTestLedger(nil, nil),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{Address(addressValue)}, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+			return accountCode, nil
+		},
+		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
+			accountCode = code
+			return nil
+		},
+		meterMemory: func(usage common.MemoryUsage) error {
+			return meter.MeterMemory(usage)
+		},
+		emitEvent: func(_ cadence.Event) error {
+			return nil
+		},
+	}
+
+	for i := range contracts {
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: utils.DeploymentTransaction(fmt.Sprintf("C%d", i), contracts[i]),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+	}
+	// one for each deployment transaction and one for each contract
+	assert.Equal(t, uint64(2*len(contracts)), meter.getMemory(common.MemoryKindElaboration))
+
+	for imports := range contracts {
+		t.Parallel()
+		t.Run(fmt.Sprintf("import %d", imports), func(t *testing.T) {
+			script := "pub fun main() {}"
+			for j := 0; j <= imports; j++ {
+				script = importExpressions[j] + script
+			}
+
+			_, err := runtime.ExecuteScript(
+				Script{
+					Source: []byte(script),
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  nextTransactionLocation(),
+				},
+			)
+			require.NoError(t, err)
+
+			// in addition to the elaborations metered above, we also meter
+			// one more for the script and one more for each contract imported
+			assert.Equal(t, uint64(2*len(contracts)+2+imports), meter.getMemory(common.MemoryKindElaboration))
+		})
+	}
 }

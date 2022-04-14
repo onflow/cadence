@@ -1147,6 +1147,7 @@ func (r *interpreterRuntime) check(
 	checker, err := sema.NewChecker(
 		program,
 		startContext.Location,
+		memoryGauge,
 		append(
 			[]sema.Option{
 				sema.WithPredeclaredValues(valueDeclarations),
@@ -1204,7 +1205,6 @@ func (r *interpreterRuntime) check(
 						},
 					)
 				}),
-				sema.WithMemoryGauge(memoryGauge),
 			},
 			checkerOptions...,
 		)...,

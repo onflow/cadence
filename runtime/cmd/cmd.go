@@ -93,6 +93,7 @@ func PrepareChecker(
 	checker, err := sema.NewChecker(
 		program,
 		location,
+		nil,
 		sema.WithPredeclaredValues(valueDeclarations.ToSemaValueDeclarations()),
 		sema.WithPredeclaredTypes(typeDeclarations),
 		sema.WithImportHandler(
