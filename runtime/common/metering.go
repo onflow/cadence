@@ -130,17 +130,20 @@ func NewArrayMemoryUsages(length int) (MemoryUsage, MemoryUsage) {
 		}
 }
 
-func NewArrayAdditionalLengthUsage(originalLength, additionalLength int) MemoryUsage {
-	var newAmount uint64
-	if originalLength <= 1 {
-		newAmount = uint64(originalLength + additionalLength)
+func atreeAdditionalMemoryUsage(originalSize int) uint64 {
+	if originalSize <= 1 {
+		return uint64(originalSize + 1)
 	} else {
-		// size of b+ tree grows logarithmically with the size of the tree
-		newAmount = uint64(math.Log2(float64(originalLength)) + float64(additionalLength))
+		// size of b+ tree grows logarithmically with the size of the tree, and we
+		// are adding one node
+		return uint64(math.Log2(float64(originalSize)) + 1)
 	}
+}
+
+func NewArrayAdditionalLengthUsage(originalLength int) MemoryUsage {
 	return MemoryUsage{
 		Kind:   MemoryKindArrayLength,
-		Amount: newAmount,
+		Amount: atreeAdditionalMemoryUsage(originalLength),
 	}
 }
 
@@ -154,17 +157,10 @@ func NewDictionaryMemoryUsages(length int) (MemoryUsage, MemoryUsage) {
 		}
 }
 
-func NewDictionaryAdditionalSizeUsage(originalSize, additionalSize int) MemoryUsage {
-	var newAmount uint64
-	if originalSize <= 1 {
-		newAmount = uint64(originalSize + additionalSize)
-	} else {
-		// size of b+ tree grows logarithmically with the size of the tree
-		newAmount = uint64(math.Log2(float64(originalSize)) + float64(additionalSize))
-	}
+func NewDictionaryAdditionalSizeUsage(originalSize int) MemoryUsage {
 	return MemoryUsage{
 		Kind:   MemoryKindDictionarySize,
-		Amount: newAmount,
+		Amount: atreeAdditionalMemoryUsage(originalSize),
 	}
 }
 
