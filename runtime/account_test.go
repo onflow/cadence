@@ -39,15 +39,15 @@ func TestRuntimeTransaction_AddPublicKey(t *testing.T) {
 	rt := newTestInterpreterRuntime()
 
 	keyA := cadence.NewArray([]cadence.Value{
-		cadence.NewUInt8(1),
-		cadence.NewUInt8(2),
-		cadence.NewUInt8(3),
+		cadence.NewUnmeteredUInt8(1),
+		cadence.NewUnmeteredUInt8(2),
+		cadence.NewUnmeteredUInt8(3),
 	})
 
 	keyB := cadence.NewArray([]cadence.Value{
-		cadence.NewUInt8(4),
-		cadence.NewUInt8(5),
-		cadence.NewUInt8(6),
+		cadence.NewUnmeteredUInt8(4),
+		cadence.NewUnmeteredUInt8(5),
+		cadence.NewUnmeteredUInt8(6),
 	})
 
 	keys := cadence.NewArray([]cadence.Value{
@@ -668,7 +668,7 @@ func TestRuntimeHashAlgorithm(t *testing.T) {
 
 	require.Len(t, builtinStruct.Fields, 1)
 	assert.Equal(t,
-		cadence.NewUInt8(HashAlgorithmSHA3_256.RawValue()),
+		cadence.NewUnmeteredUInt8(HashAlgorithmSHA3_256.RawValue()),
 		builtinStruct.Fields[0],
 	)
 
@@ -681,7 +681,7 @@ func TestRuntimeHashAlgorithm(t *testing.T) {
 
 	require.Len(t, builtinStruct.Fields, 1)
 	assert.Equal(t,
-		cadence.NewUInt8(HashAlgorithmSHA3_256.RawValue()),
+		cadence.NewUnmeteredUInt8(HashAlgorithmSHA3_256.RawValue()),
 		builtinStruct.Fields[0],
 	)
 
@@ -742,7 +742,7 @@ func TestRuntimeSignatureAlgorithm(t *testing.T) {
 
 	require.Len(t, builtinStruct.Fields, 1)
 	assert.Equal(t,
-		cadence.NewUInt8(SignatureAlgorithmECDSA_secp256k1.RawValue()),
+		cadence.NewUnmeteredUInt8(SignatureAlgorithmECDSA_secp256k1.RawValue()),
 		builtinStruct.Fields[0],
 	)
 
@@ -755,7 +755,7 @@ func TestRuntimeSignatureAlgorithm(t *testing.T) {
 
 	require.Len(t, builtinStruct.Fields, 1)
 	assert.Equal(t,
-		cadence.NewUInt8(SignatureAlgorithmECDSA_secp256k1.RawValue()),
+		cadence.NewUnmeteredUInt8(SignatureAlgorithmECDSA_secp256k1.RawValue()),
 		builtinStruct.Fields[0],
 	)
 
@@ -780,14 +780,14 @@ func ExportedBuiltinType(internalType sema.Type) cadence.Type {
 func newBytesValue(bytes []byte) cadence.Array {
 	result := make([]cadence.Value, len(bytes))
 	for index, value := range bytes {
-		result[index] = cadence.NewUInt8(value)
+		result[index] = cadence.NewUnmeteredUInt8(value)
 	}
 	return cadence.NewArray(result)
 }
 
 func newSignAlgoValue(signAlgo sema.SignatureAlgorithm) cadence.Enum {
 	return cadence.NewEnum([]cadence.Value{
-		cadence.NewUInt8(signAlgo.RawValue()),
+		cadence.NewUnmeteredUInt8(signAlgo.RawValue()),
 	}).WithType(SignAlgoType)
 }
 
@@ -809,7 +809,7 @@ func accountKeyExportedValue(
 		StructType: AccountKeyType,
 		Fields: []cadence.Value{
 			// Key index
-			cadence.NewInt(index),
+			cadence.NewUnmeteredInt(index),
 
 			// Public Key (struct)
 			cadence.Struct{
@@ -825,7 +825,7 @@ func accountKeyExportedValue(
 
 			// Hash algo
 			cadence.NewEnum([]cadence.Value{
-				cadence.NewUInt8(hashAlgo.RawValue()),
+				cadence.NewUnmeteredUInt8(hashAlgo.RawValue()),
 			}).WithType(HashAlgoType),
 
 			// Weight

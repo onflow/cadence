@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"math/big"
 	"unicode/utf8"
+	"unsafe"
 
 	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/common"
@@ -300,12 +301,22 @@ type Int struct {
 	Value *big.Int
 }
 
-func NewInt(i int) Int {
+func NewUnmeteredInt(i int) Int {
 	return Int{big.NewInt(int64(i))}
 }
 
-func NewIntFromBig(i *big.Int) Int {
+func NewUnmeteredIntFromBig(i *big.Int) Int {
 	return Int{i}
+}
+
+func NewIntFromBig(
+	memoryGauge common.MemoryGauge,
+	memoryUsage common.MemoryUsage,
+	bigIntConstructor func() *big.Int,
+) Int {
+	common.UseMemory(memoryGauge, memoryUsage)
+	value := bigIntConstructor()
+	return NewUnmeteredIntFromBig(value)
 }
 
 func (Int) isValue() {}
@@ -338,7 +349,14 @@ func (v Int) String() string {
 
 type Int8 int8
 
-func NewInt8(v int8) Int8 {
+var Int8MemoryUsage = common.NewCadenceNumberMemoryUsage(int(unsafe.Sizeof(Int8(0))))
+
+func NewUnmeteredInt8(v int8) Int8 {
+	return Int8(v)
+}
+
+func NewInt8(memoryGauge common.MemoryGauge, v int8) Int8 {
+	common.UseMemory(memoryGauge, Int8MemoryUsage)
 	return Int8(v)
 }
 
@@ -364,7 +382,14 @@ func (v Int8) String() string {
 
 type Int16 int16
 
-func NewInt16(v int16) Int16 {
+var Int16MemoryUsage = common.NewCadenceNumberMemoryUsage(int(unsafe.Sizeof(Int16(0))))
+
+func NewUnmeteredInt16(v int16) Int16 {
+	return Int16(v)
+}
+
+func NewInt16(memoryGauge common.MemoryGauge, v int16) Int16 {
+	common.UseMemory(memoryGauge, Int16MemoryUsage)
 	return Int16(v)
 }
 
@@ -392,7 +417,14 @@ func (v Int16) String() string {
 
 type Int32 int32
 
-func NewInt32(v int32) Int32 {
+var Int32MemoryUsage = common.NewCadenceNumberMemoryUsage(int(unsafe.Sizeof(Int32(0))))
+
+func NewUnmeteredInt32(v int32) Int32 {
+	return Int32(v)
+}
+
+func NewInt32(memoryGauge common.MemoryGauge, v int32) Int32 {
+	common.UseMemory(memoryGauge, Int32MemoryUsage)
 	return Int32(v)
 }
 
@@ -420,8 +452,15 @@ func (v Int32) String() string {
 
 type Int64 int64
 
-func NewInt64(i int64) Int64 {
+var Int64MemoryUsage = common.NewCadenceNumberMemoryUsage(int(unsafe.Sizeof(Int64(0))))
+
+func NewUnmeteredInt64(i int64) Int64 {
 	return Int64(i)
+}
+
+func NewInt64(memoryGauge common.MemoryGauge, v int64) Int64 {
+	common.UseMemory(memoryGauge, Int64MemoryUsage)
+	return Int64(v)
 }
 
 func (Int64) isValue() {}
@@ -450,11 +489,13 @@ type Int128 struct {
 	Value *big.Int
 }
 
-func NewInt128(i int) Int128 {
+var Int128MemoryUsage = common.NewBigIntMemoryUsage(16)
+
+func NewUnmeteredInt128(i int) Int128 {
 	return Int128{big.NewInt(int64(i))}
 }
 
-func NewInt128FromBig(i *big.Int) (Int128, error) {
+func NewUnmeteredInt128FromBig(i *big.Int) (Int128, error) {
 	if i.Cmp(sema.Int128TypeMinIntBig) < 0 {
 		return Int128{}, fmt.Errorf("value exceeds min of Int128: %s", i.String())
 	}
@@ -462,6 +503,15 @@ func NewInt128FromBig(i *big.Int) (Int128, error) {
 		return Int128{}, fmt.Errorf("value exceeds max of Int128: %s", i.String())
 	}
 	return Int128{i}, nil
+}
+
+func NewInt128FromBig(
+	memoryGauge common.MemoryGauge,
+	bigIntConstructor func() *big.Int,
+) (Int128, error) {
+	common.UseMemory(memoryGauge, Int128MemoryUsage)
+	value := bigIntConstructor()
+	return NewUnmeteredInt128FromBig(value)
 }
 
 func (Int128) isValue() {}
@@ -496,11 +546,13 @@ type Int256 struct {
 	Value *big.Int
 }
 
-func NewInt256(i int) Int256 {
+var Int256MemoryUsage = common.NewBigIntMemoryUsage(32)
+
+func NewUnmeteredInt256(i int) Int256 {
 	return Int256{big.NewInt(int64(i))}
 }
 
-func NewInt256FromBig(i *big.Int) (Int256, error) {
+func NewUnmeteredInt256FromBig(i *big.Int) (Int256, error) {
 	if i.Cmp(sema.Int256TypeMinIntBig) < 0 {
 		return Int256{}, fmt.Errorf("value exceeds min of Int256: %s", i.String())
 	}
@@ -508,6 +560,15 @@ func NewInt256FromBig(i *big.Int) (Int256, error) {
 		return Int256{}, fmt.Errorf("value exceeds max of Int256: %s", i.String())
 	}
 	return Int256{i}, nil
+}
+
+func NewInt256FromBig(
+	memoryGauge common.MemoryGauge,
+	bigIntConstructor func() *big.Int,
+) (Int256, error) {
+	common.UseMemory(memoryGauge, Int256MemoryUsage)
+	value := bigIntConstructor()
+	return NewUnmeteredInt256FromBig(value)
 }
 
 func (Int256) isValue() {}
@@ -542,15 +603,25 @@ type UInt struct {
 	Value *big.Int
 }
 
-func NewUInt(i uint) UInt {
+func NewUnmeteredUInt(i uint) UInt {
 	return UInt{big.NewInt(int64(i))}
 }
 
-func NewUIntFromBig(i *big.Int) (UInt, error) {
+func NewUnmeteredUIntFromBig(i *big.Int) (UInt, error) {
 	if i.Sign() < 0 {
 		return UInt{}, fmt.Errorf("invalid negative value for UInt: %s", i.String())
 	}
 	return UInt{i}, nil
+}
+
+func NewUIntFromBig(
+	memoryGauge common.MemoryGauge,
+	memoryUsage common.MemoryUsage,
+	bigIntConstructor func() *big.Int,
+) (UInt, error) {
+	common.UseMemory(memoryGauge, memoryUsage)
+	value := bigIntConstructor()
+	return NewUnmeteredUIntFromBig(value)
 }
 
 func (UInt) isValue() {}
@@ -583,7 +654,14 @@ func (v UInt) String() string {
 
 type UInt8 uint8
 
-func NewUInt8(v uint8) UInt8 {
+var UInt8MemoryUsage = common.NewCadenceNumberMemoryUsage(int(unsafe.Sizeof(UInt8(0))))
+
+func NewUnmeteredUInt8(v uint8) UInt8 {
+	return UInt8(v)
+}
+
+func NewUInt8(gauge common.MemoryGauge, v uint8) UInt8 {
+	common.UseMemory(gauge, UInt8MemoryUsage)
 	return UInt8(v)
 }
 
@@ -609,7 +687,14 @@ func (v UInt8) String() string {
 
 type UInt16 uint16
 
-func NewUInt16(v uint16) UInt16 {
+var UInt16MemoryUsage = common.NewCadenceNumberMemoryUsage(int(unsafe.Sizeof(UInt16(0))))
+
+func NewUnmeteredUInt16(v uint16) UInt16 {
+	return UInt16(v)
+}
+
+func NewUInt16(gauge common.MemoryGauge, v uint16) UInt16 {
+	common.UseMemory(gauge, UInt16MemoryUsage)
 	return UInt16(v)
 }
 
@@ -637,7 +722,14 @@ func (v UInt16) String() string {
 
 type UInt32 uint32
 
-func NewUInt32(v uint32) UInt32 {
+var UInt32MemoryUsage = common.NewCadenceNumberMemoryUsage(int(unsafe.Sizeof(UInt32(0))))
+
+func NewUnmeteredUInt32(v uint32) UInt32 {
+	return UInt32(v)
+}
+
+func NewUInt32(gauge common.MemoryGauge, v uint32) UInt32 {
+	common.UseMemory(gauge, UInt32MemoryUsage)
 	return UInt32(v)
 }
 
@@ -665,7 +757,14 @@ func (v UInt32) String() string {
 
 type UInt64 uint64
 
-func NewUInt64(v uint64) UInt64 {
+var UInt64MemoryUsage = common.NewCadenceNumberMemoryUsage(int(unsafe.Sizeof(UInt64(0))))
+
+func NewUnmeteredUInt64(v uint64) UInt64 {
+	return UInt64(v)
+}
+
+func NewUInt64(gauge common.MemoryGauge, v uint64) UInt64 {
+	common.UseMemory(gauge, UInt64MemoryUsage)
 	return UInt64(v)
 }
 
@@ -695,11 +794,13 @@ type UInt128 struct {
 	Value *big.Int
 }
 
-func NewUInt128(i uint) UInt128 {
+var UInt128MemoryUsage = common.NewBigIntMemoryUsage(16)
+
+func NewUnmeteredUInt128(i uint) UInt128 {
 	return UInt128{big.NewInt(int64(i))}
 }
 
-func NewUInt128FromBig(i *big.Int) (UInt128, error) {
+func NewUnmeteredUInt128FromBig(i *big.Int) (UInt128, error) {
 	if i.Sign() < 0 {
 		return UInt128{}, fmt.Errorf("invalid negative value for UInt: %s", i.String())
 	}
@@ -707,6 +808,15 @@ func NewUInt128FromBig(i *big.Int) (UInt128, error) {
 		return UInt128{}, fmt.Errorf("value exceeds max of UInt128: %s", i.String())
 	}
 	return UInt128{i}, nil
+}
+
+func NewUInt128FromBig(
+	memoryGauge common.MemoryGauge,
+	bigIntConstructor func() *big.Int,
+) (UInt128, error) {
+	common.UseMemory(memoryGauge, UInt128MemoryUsage)
+	value := bigIntConstructor()
+	return NewUnmeteredUInt128FromBig(value)
 }
 
 func (UInt128) isValue() {}
@@ -741,11 +851,13 @@ type UInt256 struct {
 	Value *big.Int
 }
 
-func NewUInt256(i uint) UInt256 {
+var UInt256MemoryUsage = common.NewBigIntMemoryUsage(32)
+
+func NewUnmeteredUInt256(i uint) UInt256 {
 	return UInt256{big.NewInt(int64(i))}
 }
 
-func NewUInt256FromBig(i *big.Int) (UInt256, error) {
+func NewUnmeteredUInt256FromBig(i *big.Int) (UInt256, error) {
 	if i.Sign() < 0 {
 		return UInt256{}, fmt.Errorf("invalid negative value for UInt256: %s", i.String())
 	}
@@ -753,6 +865,15 @@ func NewUInt256FromBig(i *big.Int) (UInt256, error) {
 		return UInt256{}, fmt.Errorf("value exceeds max of UInt256: %s", i.String())
 	}
 	return UInt256{i}, nil
+}
+
+func NewUInt256FromBig(
+	memoryGauge common.MemoryGauge,
+	bigIntConstructor func() *big.Int,
+) (UInt256, error) {
+	common.UseMemory(memoryGauge, UInt256MemoryUsage)
+	value := bigIntConstructor()
+	return NewUnmeteredUInt256FromBig(value)
 }
 
 func (UInt256) isValue() {}
@@ -785,7 +906,14 @@ func (v UInt256) String() string {
 
 type Word8 uint8
 
-func NewWord8(v uint8) Word8 {
+var word8MemoryUsage = common.NewNumberMemoryUsage(int(unsafe.Sizeof(Word8(0))))
+
+func NewUnmeteredWord8(v uint8) Word8 {
+	return Word8(v)
+}
+
+func NewWord8(gauge common.MemoryGauge, v uint8) Word8 {
+	common.UseMemory(gauge, word8MemoryUsage)
 	return Word8(v)
 }
 
@@ -811,7 +939,14 @@ func (v Word8) String() string {
 
 type Word16 uint16
 
-func NewWord16(v uint16) Word16 {
+var word16MemoryUsage = common.NewNumberMemoryUsage(int(unsafe.Sizeof(Word16(0))))
+
+func NewUnmeteredWord16(v uint16) Word16 {
+	return Word16(v)
+}
+
+func NewWord16(gauge common.MemoryGauge, v uint16) Word16 {
+	common.UseMemory(gauge, word16MemoryUsage)
 	return Word16(v)
 }
 
@@ -839,7 +974,14 @@ func (v Word16) String() string {
 
 type Word32 uint32
 
-func NewWord32(v uint32) Word32 {
+var word32MemoryUsage = common.NewNumberMemoryUsage(int(unsafe.Sizeof(Word32(0))))
+
+func NewUnmeteredWord32(v uint32) Word32 {
+	return Word32(v)
+}
+
+func NewWord32(gauge common.MemoryGauge, v uint32) Word32 {
+	common.UseMemory(gauge, word32MemoryUsage)
 	return Word32(v)
 }
 
@@ -867,7 +1009,14 @@ func (v Word32) String() string {
 
 type Word64 uint64
 
-func NewWord64(v uint64) Word64 {
+var word64MemoryUsage = common.NewNumberMemoryUsage(int(unsafe.Sizeof(Word64(0))))
+
+func NewUnmeteredWord64(v uint64) Word64 {
+	return Word64(v)
+}
+
+func NewWord64(gauge common.MemoryGauge, v uint64) Word64 {
+	common.UseMemory(gauge, word64MemoryUsage)
 	return Word64(v)
 }
 

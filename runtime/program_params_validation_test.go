@@ -351,14 +351,14 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 			case sema.HashAlgorithmType:
 				value = cadence.NewEnum(
 					[]cadence.Value{
-						cadence.NewUInt8(0),
+						cadence.NewUnmeteredUInt8(0),
 					},
 				).WithType(HashAlgoType)
 
 			case sema.SignatureAlgorithmType:
 				value = cadence.NewEnum(
 					[]cadence.Value{
-						cadence.NewUInt8(0),
+						cadence.NewUnmeteredUInt8(0),
 					},
 				).WithType(SignAlgoType)
 
@@ -371,7 +371,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 						// Sign algorithm
 						cadence.NewEnum(
 							[]cadence.Value{
-								cadence.NewUInt8(0),
+								cadence.NewUnmeteredUInt8(0),
 							},
 						).WithType(SignAlgoType),
 					},
@@ -831,14 +831,14 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 			case sema.HashAlgorithmType:
 				value = cadence.NewEnum(
 					[]cadence.Value{
-						cadence.NewUInt8(0),
+						cadence.NewUnmeteredUInt8(0),
 					},
 				).WithType(HashAlgoType)
 
 			case sema.SignatureAlgorithmType:
 				value = cadence.NewEnum(
 					[]cadence.Value{
-						cadence.NewUInt8(0),
+						cadence.NewUnmeteredUInt8(0),
 					},
 				).WithType(SignAlgoType)
 
@@ -851,7 +851,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 						// Sign algorithm
 						cadence.NewEnum(
 							[]cadence.Value{
-								cadence.NewUInt8(0),
+								cadence.NewUnmeteredUInt8(0),
 							},
 						).WithType(SignAlgoType),
 					},

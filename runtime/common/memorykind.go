@@ -72,6 +72,8 @@ const (
 	MemoryKindCadenceString
 	MemoryKindCadenceCharacter
 	MemoryKindCadenceAddress
+	MemoryKindCadenceInt
+	MemoryKindCadenceNumber
 
 	// Misc
 

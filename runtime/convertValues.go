@@ -86,41 +86,79 @@ func exportValueWithInterpreter(
 	case *interpreter.ArrayValue:
 		return exportArrayValue(v, inter, seenReferences)
 	case interpreter.IntValue:
-		return cadence.NewIntFromBig(v.ToBigInt()), nil
+		bigInt := v.ToBigInt()
+		return cadence.NewIntFromBig(
+			inter,
+			common.NewCadenceIntMemoryUsage(
+				common.BigIntByteLength(bigInt),
+			),
+			func() *big.Int {
+				return bigInt
+			},
+		), nil
 	case interpreter.Int8Value:
-		return cadence.NewInt8(int8(v)), nil
+		return cadence.NewInt8(inter, int8(v)), nil
 	case interpreter.Int16Value:
-		return cadence.NewInt16(int16(v)), nil
+		return cadence.NewInt16(inter, int16(v)), nil
 	case interpreter.Int32Value:
-		return cadence.NewInt32(int32(v)), nil
+		return cadence.NewInt32(inter, int32(v)), nil
 	case interpreter.Int64Value:
-		return cadence.NewInt64(int64(v)), nil
+		return cadence.NewInt64(inter, int64(v)), nil
 	case interpreter.Int128Value:
-		return cadence.NewInt128FromBig(v.ToBigInt())
+		return cadence.NewInt128FromBig(
+			inter,
+			func() *big.Int {
+				return v.ToBigInt()
+			},
+		)
 	case interpreter.Int256Value:
-		return cadence.NewInt256FromBig(v.ToBigInt())
+		return cadence.NewInt256FromBig(
+			inter,
+			func() *big.Int {
+				return v.ToBigInt()
+			},
+		)
 	case interpreter.UIntValue:
-		return cadence.NewUIntFromBig(v.ToBigInt())
+		bigInt := v.ToBigInt()
+		return cadence.NewUIntFromBig(
+			inter,
+			common.NewCadenceIntMemoryUsage(
+				common.BigIntByteLength(bigInt),
+			),
+			func() *big.Int {
+				return bigInt
+			},
+		)
 	case interpreter.UInt8Value:
-		return cadence.NewUInt8(uint8(v)), nil
+		return cadence.NewUInt8(inter, uint8(v)), nil
 	case interpreter.UInt16Value:
-		return cadence.NewUInt16(uint16(v)), nil
+		return cadence.NewUInt16(inter, uint16(v)), nil
 	case interpreter.UInt32Value:
-		return cadence.NewUInt32(uint32(v)), nil
+		return cadence.NewUInt32(inter, uint32(v)), nil
 	case interpreter.UInt64Value:
-		return cadence.NewUInt64(uint64(v)), nil
+		return cadence.NewUInt64(inter, uint64(v)), nil
 	case interpreter.UInt128Value:
-		return cadence.NewUInt128FromBig(v.ToBigInt())
+		return cadence.NewUInt128FromBig(
+			inter,
+			func() *big.Int {
+				return v.ToBigInt()
+			},
+		)
 	case interpreter.UInt256Value:
-		return cadence.NewUInt256FromBig(v.ToBigInt())
+		return cadence.NewUInt256FromBig(
+			inter,
+			func() *big.Int {
+				return v.ToBigInt()
+			},
+		)
 	case interpreter.Word8Value:
-		return cadence.NewWord8(uint8(v)), nil
+		return cadence.NewWord8(inter, uint8(v)), nil
 	case interpreter.Word16Value:
-		return cadence.NewWord16(uint16(v)), nil
+		return cadence.NewWord16(inter, uint16(v)), nil
 	case interpreter.Word32Value:
-		return cadence.NewWord32(uint32(v)), nil
+		return cadence.NewWord32(inter, uint32(v)), nil
 	case interpreter.Word64Value:
-		return cadence.NewWord64(uint64(v)), nil
+		return cadence.NewWord64(inter, uint64(v)), nil
 	case interpreter.Fix64Value:
 		return cadence.Fix64(v), nil
 	case interpreter.UFix64Value:

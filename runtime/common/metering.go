@@ -143,6 +143,13 @@ func NewCadenceCharacterMemoryUsage(length int) MemoryUsage {
 	}
 }
 
+func NewCadenceIntMemoryUsage(bytes int) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindCadenceInt,
+		Amount: uint64(bytes),
+	}
+}
+
 func NewBytesMemoryUsage(length int) MemoryUsage {
 	return MemoryUsage{
 		Kind:   MemoryKindBytes,
@@ -337,6 +344,20 @@ func NewMembersMemoryUsage(length int) MemoryUsage {
 		Kind: MemoryKindMembers,
 		// +1 to account for empty members
 		Amount: uint64(length) + 1,
+	}
+}
+
+func NewCadenceNumberMemoryUsage(bytes int) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindCadenceNumber,
+		Amount: uint64(bytes),
+	}
+}
+
+func NewCadenceBigIntMemoryUsage(bytes int) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindCadenceNumber,
+		Amount: uint64(bytes),
 	}
 }
 
