@@ -79,6 +79,7 @@ const (
 	MemoryKindCadenceOptional
 	MemoryKindCadenceBool
 	MemoryKindCadenceString
+	MemoryKindCadenceCharacter
 
 	// Misc
 

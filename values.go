@@ -173,6 +173,7 @@ func (v String) String() string {
 
 type Bytes []byte
 
+// Unmetered because this is only used by cadence in tests
 func NewBytes(b []byte) Bytes {
 	return b
 }
@@ -199,11 +200,21 @@ func (v Bytes) String() string {
 //
 type Character string
 
-func NewCharacter(b string) (Character, error) {
+func NewUnmeteredCharacter(b string) (Character, error) {
 	if !sema.IsValidCharacter(b) {
 		return "\uFFFD", fmt.Errorf("invalid character: %s", b)
 	}
 	return Character(b), nil
+}
+
+func NewCharacter(
+	memoryGauge common.MemoryGauge,
+	memoryUsage common.MemoryUsage,
+	stringConstructor func() string,
+) (Character, error) {
+	common.UseMemory(memoryGauge, memoryUsage)
+	str := stringConstructor()
+	return NewUnmeteredCharacter(str)
 }
 
 func (Character) isValue() {}

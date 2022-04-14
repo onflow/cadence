@@ -112,7 +112,7 @@ func TestExportValue(t *testing.T) {
 		},
 	}
 
-	a, _ := cadence.NewCharacter("a")
+	a, _ := cadence.NewUnmeteredCharacter("a")
 
 	for _, tt := range []exportTest{
 		{
@@ -493,7 +493,7 @@ func TestImportValue(t *testing.T) {
 		})
 	}
 
-	a, _ := cadence.NewCharacter("a")
+	a, _ := cadence.NewUnmeteredCharacter("a")
 
 	for _, tt := range []importTest{
 		{

@@ -261,6 +261,13 @@ func NewCadenceStringMemoryUsage(length int) MemoryUsage {
 	}
 }
 
+func NewCadenceCharacterMemoryUsage(length int) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindCadenceCharacter,
+		Amount: uint64(length),
+	}
+}
+
 func NewBytesMemoryUsage(length int) MemoryUsage {
 	return MemoryUsage{
 		Kind:   MemoryKindBytes,

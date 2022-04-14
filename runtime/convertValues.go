@@ -77,7 +77,13 @@ func exportValueWithInterpreter(
 			},
 		)
 	case interpreter.CharacterValue:
-		return cadence.NewCharacter(string(v))
+		return cadence.NewCharacter(
+			inter,
+			common.NewCadenceCharacterMemoryUsage(len(v)),
+			func() string {
+				return string(v)
+			},
+		)
 	case *interpreter.ArrayValue:
 		return exportArrayValue(v, inter, seenReferences)
 	case interpreter.IntValue:
