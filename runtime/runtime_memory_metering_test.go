@@ -90,6 +90,6 @@ func TestInterpreterAddressLocationMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindAddressLocation))
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, uint64(92), meter.getMemory(common.MemoryKindRawString))
 	})
 }
