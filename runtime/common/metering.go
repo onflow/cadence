@@ -34,6 +34,10 @@ type MemoryGauge interface {
 }
 
 var (
+	ValueTokenMemoryUsage  = NewConstantMemoryUsage(MemoryKindValueToken)
+	SyntaxTokenMemoryUsage = NewConstantMemoryUsage(MemoryKindSyntaxToken)
+	SpaceTokenMemoryUsage  = NewConstantMemoryUsage(MemoryKindSpaceToken)
+
 	ProgramMemoryUsage         = NewConstantMemoryUsage(MemoryKindProgram)
 	IdentifierMemoryUsage      = NewConstantMemoryUsage(MemoryKindIdentifier)
 	ArgumentMemoryUsage        = NewConstantMemoryUsage(MemoryKindArgument)
@@ -344,34 +348,6 @@ func NewNumberMemoryUsage(bytes int) MemoryUsage {
 	return MemoryUsage{
 		Kind:   MemoryKindNumber,
 		Amount: uint64(bytes),
-	}
-}
-
-func NewCommentTokenMemoryUsage(length int) MemoryUsage {
-	return MemoryUsage{
-		Kind:   MemoryKindTokenComment,
-		Amount: uint64(length),
-	}
-}
-
-func NewIdentifierTokenMemoryUsage(length int) MemoryUsage {
-	return MemoryUsage{
-		Kind:   MemoryKindTokenIdentifier,
-		Amount: uint64(length),
-	}
-}
-
-func NewNumericLiteralTokenMemoryUsage(length int) MemoryUsage {
-	return MemoryUsage{
-		Kind:   MemoryKindTokenNumericLiteral,
-		Amount: uint64(length),
-	}
-}
-
-func NewSyntaxTokenMemoryUsage(length int) MemoryUsage {
-	return MemoryUsage{
-		Kind:   MemoryKindTokenSyntax,
-		Amount: uint64(length),
 	}
 }
 
