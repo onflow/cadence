@@ -108,7 +108,7 @@ func TestInterpreterElaborationImportMetering(t *testing.T) {
 
 	importExpressions := [len(contracts)]string{}
 	for i := range contracts {
-		importExpressions[i] = fmt.Sprintf("import C%d from 0x0%d\n", i, i+1)
+		importExpressions[i] = fmt.Sprintf("import C%d from 0x1\n", i)
 	}
 
 	addressValue := cadence.BytesToAddress([]byte{byte(1)})
@@ -118,22 +118,32 @@ func TestInterpreterElaborationImportMetering(t *testing.T) {
 	meter := newTestMemoryGauge()
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	var accountCode []byte
+	accountCodes := map[common.LocationID][]byte{}
+
 	runtimeInterface := &testRuntimeInterface{
-		getCode: func(_ Location) (bytes []byte, err error) {
-			return accountCode, nil
+		getCode: func(location Location) (bytes []byte, err error) {
+			return accountCodes[location.ID()], nil
 		},
 		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{Address(addressValue)}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
-			return accountCode, nil
-		},
-		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
-			accountCode = code
+		updateAccountContractCode: func(address Address, name string, code []byte) error {
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			accountCodes[location.ID()] = code
 			return nil
+		},
+		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			code = accountCodes[location.ID()]
+			return code, nil
 		},
 		meterMemory: func(usage common.MemoryUsage) error {
 			return meter.MeterMemory(usage)
@@ -159,8 +169,9 @@ func TestInterpreterElaborationImportMetering(t *testing.T) {
 	assert.Equal(t, uint64(2*len(contracts)), meter.getMemory(common.MemoryKindElaboration))
 
 	for imports := range contracts {
-		t.Parallel()
+
 		t.Run(fmt.Sprintf("import %d", imports), func(t *testing.T) {
+
 			script := "pub fun main() {}"
 			for j := 0; j <= imports; j++ {
 				script = importExpressions[j] + script
