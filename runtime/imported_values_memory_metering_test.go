@@ -115,7 +115,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
-		executeScript(script, meter, cadence.NewUInt(2))
+		executeScript(script, meter, cadence.NewUnmeteredUInt(2))
 		assert.Equal(t, uint64(8), meter[common.MemoryKindBigInt])
 	})
 
@@ -127,7 +127,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
-		executeScript(script, meter, cadence.NewUInt8(2))
+		executeScript(script, meter, cadence.NewUnmeteredUInt8(2))
 		assert.Equal(t, uint64(1), meter[common.MemoryKindNumber])
 	})
 
@@ -139,7 +139,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
-		executeScript(script, meter, cadence.NewUInt16(2))
+		executeScript(script, meter, cadence.NewUnmeteredUInt16(2))
 		assert.Equal(t, uint64(2), meter[common.MemoryKindNumber])
 	})
 
@@ -151,7 +151,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
-		executeScript(script, meter, cadence.NewUInt32(2))
+		executeScript(script, meter, cadence.NewUnmeteredUInt32(2))
 		assert.Equal(t, uint64(4), meter[common.MemoryKindNumber])
 	})
 
@@ -163,7 +163,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
-		executeScript(script, meter, cadence.NewUInt64(2))
+		executeScript(script, meter, cadence.NewUnmeteredUInt64(2))
 		assert.Equal(t, uint64(8), meter[common.MemoryKindNumber])
 	})
 
@@ -175,7 +175,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
-		executeScript(script, meter, cadence.NewUInt128(2))
+		executeScript(script, meter, cadence.NewUnmeteredUInt128(2))
 		assert.Equal(t, uint64(16), meter[common.MemoryKindBigInt])
 	})
 
@@ -187,7 +187,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
-		executeScript(script, meter, cadence.NewUInt256(2))
+		executeScript(script, meter, cadence.NewUnmeteredUInt256(2))
 		assert.Equal(t, uint64(32), meter[common.MemoryKindBigInt])
 	})
 
@@ -199,7 +199,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
-		executeScript(script, meter, cadence.NewInt(2))
+		executeScript(script, meter, cadence.NewUnmeteredInt(2))
 		assert.Equal(t, uint64(8), meter[common.MemoryKindBigInt])
 	})
 
@@ -211,7 +211,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
-		executeScript(script, meter, cadence.NewInt8(2))
+		executeScript(script, meter, cadence.NewUnmeteredInt8(2))
 		assert.Equal(t, uint64(1), meter[common.MemoryKindNumber])
 	})
 
@@ -223,7 +223,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
-		executeScript(script, meter, cadence.NewInt16(2))
+		executeScript(script, meter, cadence.NewUnmeteredInt16(2))
 		assert.Equal(t, uint64(2), meter[common.MemoryKindNumber])
 	})
 
@@ -235,7 +235,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
-		executeScript(script, meter, cadence.NewInt32(2))
+		executeScript(script, meter, cadence.NewUnmeteredInt32(2))
 		assert.Equal(t, uint64(4), meter[common.MemoryKindNumber])
 	})
 
@@ -247,7 +247,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
-		executeScript(script, meter, cadence.NewInt64(2))
+		executeScript(script, meter, cadence.NewUnmeteredInt64(2))
 		assert.Equal(t, uint64(8), meter[common.MemoryKindNumber])
 	})
 
@@ -259,7 +259,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
-		executeScript(script, meter, cadence.NewInt128(2))
+		executeScript(script, meter, cadence.NewUnmeteredInt128(2))
 		assert.Equal(t, uint64(16), meter[common.MemoryKindBigInt])
 	})
 
@@ -271,7 +271,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
-		executeScript(script, meter, cadence.NewInt256(2))
+		executeScript(script, meter, cadence.NewUnmeteredInt256(2))
 		assert.Equal(t, uint64(32), meter[common.MemoryKindBigInt])
 	})
 
@@ -283,7 +283,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
-		executeScript(script, meter, cadence.NewWord8(2))
+		executeScript(script, meter, cadence.NewUnmeteredWord8(2))
 		assert.Equal(t, uint64(1), meter[common.MemoryKindNumber])
 	})
 
@@ -295,7 +295,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
-		executeScript(script, meter, cadence.NewWord16(2))
+		executeScript(script, meter, cadence.NewUnmeteredWord16(2))
 		assert.Equal(t, uint64(2), meter[common.MemoryKindNumber])
 	})
 
@@ -307,7 +307,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
-		executeScript(script, meter, cadence.NewWord32(2))
+		executeScript(script, meter, cadence.NewUnmeteredWord32(2))
 		assert.Equal(t, uint64(4), meter[common.MemoryKindNumber])
 	})
 
@@ -319,7 +319,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
-		executeScript(script, meter, cadence.NewWord64(2))
+		executeScript(script, meter, cadence.NewUnmeteredWord64(2))
 		assert.Equal(t, uint64(8), meter[common.MemoryKindNumber])
 	})
 

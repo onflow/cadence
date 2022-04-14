@@ -130,7 +130,7 @@ func TestExportValue(t *testing.T) {
 			value: interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.NewUnmeteredIntValueFromInt64(42),
 			),
-			expected: cadence.NewOptional(cadence.NewInt(42)),
+			expected: cadence.NewOptional(cadence.NewUnmeteredInt(42)),
 		},
 		{
 			label:    "Bool true",
@@ -181,7 +181,7 @@ func TestExportValue(t *testing.T) {
 				)
 			},
 			expected: cadence.NewArray([]cadence.Value{
-				cadence.NewInt(42),
+				cadence.NewUnmeteredInt(42),
 				cadence.String("foo"),
 			}),
 		},
@@ -216,11 +216,11 @@ func TestExportValue(t *testing.T) {
 			expected: cadence.NewDictionary([]cadence.KeyValuePair{
 				{
 					Key:   cadence.String("b"),
-					Value: cadence.NewInt(2),
+					Value: cadence.NewUnmeteredInt(2),
 				},
 				{
 					Key:   cadence.String("a"),
-					Value: cadence.NewInt(1),
+					Value: cadence.NewUnmeteredInt(1),
 				},
 			}),
 		},
@@ -232,7 +232,7 @@ func TestExportValue(t *testing.T) {
 		{
 			label:    "Int",
 			value:    interpreter.NewUnmeteredIntValueFromInt64(42),
-			expected: cadence.NewInt(42),
+			expected: cadence.NewUnmeteredInt(42),
 		},
 		{
 			label:    "Character",
@@ -242,87 +242,87 @@ func TestExportValue(t *testing.T) {
 		{
 			label:    "Int8",
 			value:    interpreter.NewUnmeteredInt8Value(42),
-			expected: cadence.NewInt8(42),
+			expected: cadence.NewUnmeteredInt8(42),
 		},
 		{
 			label:    "Int16",
 			value:    interpreter.NewUnmeteredInt16Value(42),
-			expected: cadence.NewInt16(42),
+			expected: cadence.NewUnmeteredInt16(42),
 		},
 		{
 			label:    "Int32",
 			value:    interpreter.NewUnmeteredInt32Value(42),
-			expected: cadence.NewInt32(42),
+			expected: cadence.NewUnmeteredInt32(42),
 		},
 		{
 			label:    "Int64",
 			value:    interpreter.NewUnmeteredInt64Value(42),
-			expected: cadence.NewInt64(42),
+			expected: cadence.NewUnmeteredInt64(42),
 		},
 		{
 			label:    "Int128",
 			value:    interpreter.NewUnmeteredInt128ValueFromInt64(42),
-			expected: cadence.NewInt128(42),
+			expected: cadence.NewUnmeteredInt128(42),
 		},
 		{
 			label:    "Int256",
 			value:    interpreter.NewUnmeteredInt256ValueFromInt64(42),
-			expected: cadence.NewInt256(42),
+			expected: cadence.NewUnmeteredInt256(42),
 		},
 		{
 			label:    "UInt",
 			value:    interpreter.NewUnmeteredUIntValueFromUint64(42),
-			expected: cadence.NewUInt(42),
+			expected: cadence.NewUnmeteredUInt(42),
 		},
 		{
 			label:    "UInt8",
 			value:    interpreter.NewUnmeteredUInt8Value(42),
-			expected: cadence.NewUInt8(42),
+			expected: cadence.NewUnmeteredUInt8(42),
 		},
 		{
 			label:    "UInt16",
 			value:    interpreter.NewUnmeteredUInt16Value(42),
-			expected: cadence.NewUInt16(42),
+			expected: cadence.NewUnmeteredUInt16(42),
 		},
 		{
 			label:    "UInt32",
 			value:    interpreter.NewUnmeteredUInt32Value(42),
-			expected: cadence.NewUInt32(42),
+			expected: cadence.NewUnmeteredUInt32(42),
 		},
 		{
 			label:    "UInt64",
 			value:    interpreter.NewUnmeteredUInt64Value(42),
-			expected: cadence.NewUInt64(42),
+			expected: cadence.NewUnmeteredUInt64(42),
 		},
 		{
 			label:    "UInt128",
 			value:    interpreter.NewUnmeteredUInt128ValueFromUint64(42),
-			expected: cadence.NewUInt128(42),
+			expected: cadence.NewUnmeteredUInt128(42),
 		},
 		{
 			label:    "UInt256",
 			value:    interpreter.NewUnmeteredUInt256ValueFromUint64(42),
-			expected: cadence.NewUInt256(42),
+			expected: cadence.NewUnmeteredUInt256(42),
 		},
 		{
 			label:    "Word8",
 			value:    interpreter.NewUnmeteredWord8Value(42),
-			expected: cadence.NewWord8(42),
+			expected: cadence.NewUnmeteredWord8(42),
 		},
 		{
 			label:    "Word16",
 			value:    interpreter.NewUnmeteredWord16Value(42),
-			expected: cadence.NewWord16(42),
+			expected: cadence.NewUnmeteredWord16(42),
 		},
 		{
 			label:    "Word32",
 			value:    interpreter.NewUnmeteredWord32Value(42),
-			expected: cadence.NewWord32(42),
+			expected: cadence.NewUnmeteredWord32(42),
 		},
 		{
 			label:    "Word64",
 			value:    interpreter.NewUnmeteredWord64Value(42),
-			expected: cadence.NewWord64(42),
+			expected: cadence.NewUnmeteredWord64(42),
 		},
 		{
 			label:    "Fix64",
@@ -413,14 +413,14 @@ func TestExportValue(t *testing.T) {
 					},
 				},
 				Fields: []cadence.Value{
-					cadence.NewInt(1),
+					cadence.NewUnmeteredInt(1),
 					cadence.Struct{
 						StructType: publicKeyType,
 						Fields: []cadence.Value{
 							cadence.NewArray([]cadence.Value{
-								cadence.NewUInt8(1),
-								cadence.NewUInt8(2),
-								cadence.NewUInt8(3),
+								cadence.NewUnmeteredUInt8(1),
+								cadence.NewUnmeteredUInt8(2),
+								cadence.NewUnmeteredUInt8(3),
 							}),
 							cadence.Enum{
 								EnumType: signatureAlgorithmType,
@@ -508,7 +508,7 @@ func TestImportValue(t *testing.T) {
 		},
 		{
 			label: "SomeValue",
-			value: cadence.NewOptional(cadence.NewInt(42)),
+			value: cadence.NewOptional(cadence.NewUnmeteredInt(42)),
 			expected: interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.NewUnmeteredIntValueFromInt64(42),
 			),
@@ -550,7 +550,7 @@ func TestImportValue(t *testing.T) {
 		{
 			label: "Array non-empty",
 			value: cadence.NewArray([]cadence.Value{
-				cadence.NewInt(42),
+				cadence.NewUnmeteredInt(42),
 				cadence.String("foo"),
 			}),
 			expected: interpreter.NewArrayValue(
@@ -597,11 +597,11 @@ func TestImportValue(t *testing.T) {
 			value: cadence.NewDictionary([]cadence.KeyValuePair{
 				{
 					Key:   cadence.String("a"),
-					Value: cadence.NewInt(1),
+					Value: cadence.NewUnmeteredInt(1),
 				},
 				{
 					Key:   cadence.String("b"),
-					Value: cadence.NewInt(2),
+					Value: cadence.NewUnmeteredInt(2),
 				},
 			}),
 			expectedType: &sema.DictionaryType{
@@ -616,7 +616,7 @@ func TestImportValue(t *testing.T) {
 		},
 		{
 			label:    "Int",
-			value:    cadence.NewInt(42),
+			value:    cadence.NewUnmeteredInt(42),
 			expected: interpreter.NewUnmeteredIntValueFromInt64(42),
 		},
 		{
@@ -626,87 +626,87 @@ func TestImportValue(t *testing.T) {
 		},
 		{
 			label:    "Int8",
-			value:    cadence.NewInt8(42),
+			value:    cadence.NewUnmeteredInt8(42),
 			expected: interpreter.NewUnmeteredInt8Value(42),
 		},
 		{
 			label:    "Int16",
-			value:    cadence.NewInt16(42),
+			value:    cadence.NewUnmeteredInt16(42),
 			expected: interpreter.NewUnmeteredInt16Value(42),
 		},
 		{
 			label:    "Int32",
-			value:    cadence.NewInt32(42),
+			value:    cadence.NewUnmeteredInt32(42),
 			expected: interpreter.NewUnmeteredInt32Value(42),
 		},
 		{
 			label:    "Int64",
-			value:    cadence.NewInt64(42),
+			value:    cadence.NewUnmeteredInt64(42),
 			expected: interpreter.NewUnmeteredInt64Value(42),
 		},
 		{
 			label:    "Int128",
-			value:    cadence.NewInt128(42),
+			value:    cadence.NewUnmeteredInt128(42),
 			expected: interpreter.NewUnmeteredInt128ValueFromInt64(42),
 		},
 		{
 			label:    "Int256",
-			value:    cadence.NewInt256(42),
+			value:    cadence.NewUnmeteredInt256(42),
 			expected: interpreter.NewUnmeteredInt256ValueFromInt64(42),
 		},
 		{
 			label:    "UInt",
-			value:    cadence.NewUInt(42),
+			value:    cadence.NewUnmeteredUInt(42),
 			expected: interpreter.NewUnmeteredUIntValueFromUint64(42),
 		},
 		{
 			label:    "UInt8",
-			value:    cadence.NewUInt8(42),
+			value:    cadence.NewUnmeteredUInt8(42),
 			expected: interpreter.NewUnmeteredUInt8Value(42),
 		},
 		{
 			label:    "UInt16",
-			value:    cadence.NewUInt16(42),
+			value:    cadence.NewUnmeteredUInt16(42),
 			expected: interpreter.NewUnmeteredUInt16Value(42),
 		},
 		{
 			label:    "UInt32",
-			value:    cadence.NewUInt32(42),
+			value:    cadence.NewUnmeteredUInt32(42),
 			expected: interpreter.NewUnmeteredUInt32Value(42),
 		},
 		{
 			label:    "UInt64",
-			value:    cadence.NewUInt64(42),
+			value:    cadence.NewUnmeteredUInt64(42),
 			expected: interpreter.NewUnmeteredUInt64Value(42),
 		},
 		{
 			label:    "UInt128",
-			value:    cadence.NewUInt128(42),
+			value:    cadence.NewUnmeteredUInt128(42),
 			expected: interpreter.NewUnmeteredUInt128ValueFromUint64(42),
 		},
 		{
 			label:    "UInt256",
-			value:    cadence.NewUInt256(42),
+			value:    cadence.NewUnmeteredUInt256(42),
 			expected: interpreter.NewUnmeteredUInt256ValueFromUint64(42),
 		},
 		{
 			label:    "Word8",
-			value:    cadence.NewWord8(42),
+			value:    cadence.NewUnmeteredWord8(42),
 			expected: interpreter.NewUnmeteredWord8Value(42),
 		},
 		{
 			label:    "Word16",
-			value:    cadence.NewWord16(42),
+			value:    cadence.NewUnmeteredWord16(42),
 			expected: interpreter.NewUnmeteredWord16Value(42),
 		},
 		{
 			label:    "Word32",
-			value:    cadence.NewWord32(42),
+			value:    cadence.NewUnmeteredWord32(42),
 			expected: interpreter.NewUnmeteredWord32Value(42),
 		},
 		{
 			label:    "Word64",
-			value:    cadence.NewWord64(42),
+			value:    cadence.NewUnmeteredWord64(42),
 			expected: interpreter.NewUnmeteredWord64Value(42),
 		},
 		{
@@ -1311,7 +1311,7 @@ func TestExportStructValue(t *testing.T) {
     `
 
 	actual := exportValueFromScript(t, script)
-	expected := cadence.NewStruct([]cadence.Value{cadence.NewInt(42)}).WithType(fooStructType)
+	expected := cadence.NewStruct([]cadence.Value{cadence.NewUnmeteredInt(42)}).WithType(fooStructType)
 
 	assert.Equal(t, expected, actual)
 }
@@ -1337,8 +1337,8 @@ func TestExportResourceValue(t *testing.T) {
 	actual := exportValueFromScript(t, script)
 	expected :=
 		cadence.NewResource([]cadence.Value{
-			cadence.NewUInt64(0),
-			cadence.NewInt(42),
+			cadence.NewUnmeteredUInt64(0),
+			cadence.NewUnmeteredInt(42),
 		}).WithType(fooResourceType)
 
 	assert.Equal(t, expected, actual)
@@ -1365,12 +1365,12 @@ func TestExportResourceArrayValue(t *testing.T) {
 	actual := exportValueFromScript(t, script)
 	expected := cadence.NewArray([]cadence.Value{
 		cadence.NewResource([]cadence.Value{
-			cadence.NewUInt64(0),
-			cadence.NewInt(1),
+			cadence.NewUnmeteredUInt64(0),
+			cadence.NewUnmeteredInt(1),
 		}).WithType(fooResourceType),
 		cadence.NewResource([]cadence.Value{
-			cadence.NewUInt64(0),
-			cadence.NewInt(2),
+			cadence.NewUnmeteredUInt64(0),
+			cadence.NewUnmeteredInt(2),
 		}).WithType(fooResourceType),
 	})
 
@@ -1403,15 +1403,15 @@ func TestExportResourceDictionaryValue(t *testing.T) {
 		{
 			Key: cadence.String("b"),
 			Value: cadence.NewResource([]cadence.Value{
-				cadence.NewUInt64(0),
-				cadence.NewInt(2),
+				cadence.NewUnmeteredUInt64(0),
+				cadence.NewUnmeteredInt(2),
 			}).WithType(fooResourceType),
 		},
 		{
 			Key: cadence.String("a"),
 			Value: cadence.NewResource([]cadence.Value{
-				cadence.NewUInt64(0),
-				cadence.NewInt(1),
+				cadence.NewUnmeteredUInt64(0),
+				cadence.NewUnmeteredInt(1),
 			}).WithType(fooResourceType),
 		},
 	})
@@ -1481,10 +1481,10 @@ func TestExportNestedResourceValueFromScript(t *testing.T) {
 
 	actual := exportValueFromScript(t, script)
 	expected := cadence.NewResource([]cadence.Value{
-		cadence.NewUInt64(0),
+		cadence.NewUnmeteredUInt64(0),
 		cadence.NewResource([]cadence.Value{
-			cadence.NewUInt64(0),
-			cadence.NewInt(42),
+			cadence.NewUnmeteredUInt64(0),
+			cadence.NewUnmeteredInt(42),
 		}).WithType(barResourceType),
 	}).WithType(fooResourceType)
 
@@ -1504,7 +1504,7 @@ func TestExportEventValue(t *testing.T) {
     `
 
 	actual := exportEventFromScript(t, script)
-	expected := cadence.NewEvent([]cadence.Value{cadence.NewInt(42)}).WithType(fooEventType)
+	expected := cadence.NewEvent([]cadence.Value{cadence.NewUnmeteredInt(42)}).WithType(fooEventType)
 
 	assert.Equal(t, expected, actual)
 }
@@ -1572,7 +1572,7 @@ func TestExportReferenceValue(t *testing.T) {
         `
 
 		actual := exportValueFromScript(t, script)
-		expected := cadence.NewInt(1)
+		expected := cadence.NewUnmeteredInt(1)
 
 		assert.Equal(t, expected, actual)
 	})
@@ -1661,7 +1661,7 @@ func TestExportReferenceValue(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		expected := cadence.NewInt(1)
+		expected := cadence.NewUnmeteredInt(1)
 
 		assert.Equal(t, expected, actual)
 	})
@@ -2063,7 +2063,7 @@ func TestRuntimeEnumValue(t *testing.T) {
 			RawType: cadence.IntType{},
 		},
 		Fields: []cadence.Value{
-			cadence.NewInt(3),
+			cadence.NewUnmeteredInt(3),
 		},
 	}
 
@@ -2204,92 +2204,92 @@ func TestRuntimeArgumentPassing(t *testing.T) {
 		{
 			label:         "Int",
 			typeSignature: "Int",
-			exportedValue: cadence.NewInt(42),
+			exportedValue: cadence.NewUnmeteredInt(42),
 		},
 		{
 			label:         "Int8",
 			typeSignature: "Int8",
-			exportedValue: cadence.NewInt8(42),
+			exportedValue: cadence.NewUnmeteredInt8(42),
 		},
 		{
 			label:         "Int16",
 			typeSignature: "Int16",
-			exportedValue: cadence.NewInt16(42),
+			exportedValue: cadence.NewUnmeteredInt16(42),
 		},
 		{
 			label:         "Int32",
 			typeSignature: "Int32",
-			exportedValue: cadence.NewInt32(42),
+			exportedValue: cadence.NewUnmeteredInt32(42),
 		},
 		{
 			label:         "Int64",
 			typeSignature: "Int64",
-			exportedValue: cadence.NewInt64(42),
+			exportedValue: cadence.NewUnmeteredInt64(42),
 		},
 		{
 			label:         "Int128",
 			typeSignature: "Int128",
-			exportedValue: cadence.NewInt128(42),
+			exportedValue: cadence.NewUnmeteredInt128(42),
 		},
 		{
 			label:         "Int256",
 			typeSignature: "Int256",
-			exportedValue: cadence.NewInt256(42),
+			exportedValue: cadence.NewUnmeteredInt256(42),
 		},
 		{
 			label:         "UInt",
 			typeSignature: "UInt",
-			exportedValue: cadence.NewUInt(42),
+			exportedValue: cadence.NewUnmeteredUInt(42),
 		},
 		{
 			label:         "UInt8",
 			typeSignature: "UInt8",
-			exportedValue: cadence.NewUInt8(42),
+			exportedValue: cadence.NewUnmeteredUInt8(42),
 		},
 		{
 			label:         "UInt16",
 			typeSignature: "UInt16",
-			exportedValue: cadence.NewUInt16(42),
+			exportedValue: cadence.NewUnmeteredUInt16(42),
 		},
 		{
 			label:         "UInt32",
 			typeSignature: "UInt32",
-			exportedValue: cadence.NewUInt32(42),
+			exportedValue: cadence.NewUnmeteredUInt32(42),
 		},
 		{
 			label:         "UInt64",
 			typeSignature: "UInt64",
-			exportedValue: cadence.NewUInt64(42),
+			exportedValue: cadence.NewUnmeteredUInt64(42),
 		},
 		{
 			label:         "UInt128",
 			typeSignature: "UInt128",
-			exportedValue: cadence.NewUInt128(42),
+			exportedValue: cadence.NewUnmeteredUInt128(42),
 		},
 		{
 			label:         "UInt256",
 			typeSignature: "UInt256",
-			exportedValue: cadence.NewUInt256(42),
+			exportedValue: cadence.NewUnmeteredUInt256(42),
 		},
 		{
 			label:         "Word8",
 			typeSignature: "Word8",
-			exportedValue: cadence.NewWord8(42),
+			exportedValue: cadence.NewUnmeteredWord8(42),
 		},
 		{
 			label:         "Word16",
 			typeSignature: "Word16",
-			exportedValue: cadence.NewWord16(42),
+			exportedValue: cadence.NewUnmeteredWord16(42),
 		},
 		{
 			label:         "Word32",
 			typeSignature: "Word32",
-			exportedValue: cadence.NewWord32(42),
+			exportedValue: cadence.NewUnmeteredWord32(42),
 		},
 		{
 			label:         "Word64",
 			typeSignature: "Word64",
-			exportedValue: cadence.NewWord64(42),
+			exportedValue: cadence.NewUnmeteredWord64(42),
 		},
 		{
 			label:         "Fix64",
@@ -2643,7 +2643,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 	malformedStruct1 := cadence.Struct{
 		StructType: malformedStructType1,
 		Fields: []cadence.Value{
-			cadence.NewInt(3),
+			cadence.NewUnmeteredInt(3),
 		},
 	}
 
@@ -2791,7 +2791,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 			label:         "Constant-size array with too few elements",
 			typeSignature: "[Int; 2]",
 			exportedValue: cadence.NewArray([]cadence.Value{
-				cadence.NewInt(1),
+				cadence.NewUnmeteredInt(1),
 			}),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
@@ -2799,9 +2799,9 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 			label:         "Constant-size array with too many elements",
 			typeSignature: "[Int; 2]",
 			exportedValue: cadence.NewArray([]cadence.Value{
-				cadence.NewInt(1),
-				cadence.NewInt(2),
-				cadence.NewInt(3),
+				cadence.NewUnmeteredInt(1),
+				cadence.NewUnmeteredInt(2),
+				cadence.NewUnmeteredInt(3),
 			}),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
@@ -2810,7 +2810,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 			typeSignature: "[[String]]",
 			exportedValue: cadence.NewArray([]cadence.Value{
 				cadence.NewArray([]cadence.Value{
-					cadence.NewInt(5),
+					cadence.NewUnmeteredInt(5),
 				}),
 			}),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
@@ -2987,7 +2987,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 
 		assert.Equal(t,
 			cadence.NewArray([]cadence.Value{
-				cadence.NewInt(42),
+				cadence.NewUnmeteredInt(42),
 				cadence.String("foo"),
 			}),
 			actual,
@@ -2999,7 +2999,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 		t.Parallel()
 
 		value := cadence.NewArray([]cadence.Value{
-			cadence.NewInt(42),
+			cadence.NewUnmeteredInt(42),
 			cadence.String("foo"),
 		})
 
@@ -3036,12 +3036,12 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 
 		value := cadence.NewArray([]cadence.Value{
 			cadence.NewArray([]cadence.Value{
-				cadence.NewInt8(4),
-				cadence.NewInt8(3),
+				cadence.NewUnmeteredInt8(4),
+				cadence.NewUnmeteredInt8(3),
 			}),
 			cadence.NewArray([]cadence.Value{
-				cadence.NewInt8(42),
-				cadence.NewInt8(54),
+				cadence.NewUnmeteredInt8(42),
+				cadence.NewUnmeteredInt8(54),
 			}),
 		})
 
@@ -3169,11 +3169,11 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 			cadence.NewDictionary([]cadence.KeyValuePair{
 				{
 					Key:   cadence.String("b"),
-					Value: cadence.NewInt(2),
+					Value: cadence.NewUnmeteredInt(2),
 				},
 				{
 					Key:   cadence.String("a"),
-					Value: cadence.NewInt(1),
+					Value: cadence.NewUnmeteredInt(1),
 				},
 			}),
 			actual,
@@ -3187,11 +3187,11 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 		value := cadence.NewDictionary([]cadence.KeyValuePair{
 			{
 				Key:   cadence.String("a"),
-				Value: cadence.NewInt(1),
+				Value: cadence.NewUnmeteredInt(1),
 			},
 			{
 				Key:   cadence.String("b"),
-				Value: cadence.NewInt(2),
+				Value: cadence.NewUnmeteredInt(2),
 			},
 		})
 
@@ -3232,11 +3232,11 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 				Key: cadence.String("a"),
 				Value: cadence.NewDictionary([]cadence.KeyValuePair{
 					{
-						Key:   cadence.NewInt8(1),
-						Value: cadence.NewInt(100),
+						Key:   cadence.NewUnmeteredInt8(1),
+						Value: cadence.NewUnmeteredInt(100),
 					},
 					{
-						Key:   cadence.NewInt8(2),
+						Key:   cadence.NewUnmeteredInt8(2),
 						Value: cadence.String("hello"),
 					},
 				}),
@@ -3245,12 +3245,12 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 				Key: cadence.String("b"),
 				Value: cadence.NewDictionary([]cadence.KeyValuePair{
 					{
-						Key:   cadence.NewInt8(1),
+						Key:   cadence.NewUnmeteredInt8(1),
 						Value: cadence.String("foo"),
 					},
 					{
-						Key:   cadence.NewInt(2),
-						Value: cadence.NewInt(50),
+						Key:   cadence.NewUnmeteredInt(2),
+						Value: cadence.NewUnmeteredInt(50),
 					},
 				}),
 			},
@@ -3338,7 +3338,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 						Value: cadence.String("value1"),
 					},
 					{
-						Key:   cadence.NewInt(5),
+						Key:   cadence.NewUnmeteredInt(5),
 						Value: cadence.String("value2"),
 					},
 				}),
@@ -3370,7 +3370,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 						[]cadence.KeyValuePair{
 							{
 								Key:   cadence.String("hello"),
-								Value: cadence.NewInt(6),
+								Value: cadence.NewUnmeteredInt(6),
 							},
 						},
 					),
@@ -3823,8 +3823,8 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 	}
 
 	publicKeyBytes := cadence.NewArray([]cadence.Value{
-		cadence.NewUInt8(1),
-		cadence.NewUInt8(2),
+		cadence.NewUnmeteredUInt8(1),
+		cadence.NewUnmeteredUInt8(2),
 	})
 
 	t.Run("Test importing validates PublicKey", func(t *testing.T) {
@@ -3850,7 +3850,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 							// Sign algorithm
 							cadence.NewEnum(
 								[]cadence.Value{
-									cadence.NewUInt8(0),
+									cadence.NewUnmeteredUInt8(0),
 								},
 							).WithType(SignAlgoType),
 						},
@@ -3919,7 +3919,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 				// Sign algorithm
 				cadence.NewEnum(
 					[]cadence.Value{
-						cadence.NewUInt8(0),
+						cadence.NewUnmeteredUInt8(0),
 					},
 				).WithType(SignAlgoType),
 			},
@@ -3971,7 +3971,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 				cadence.NewEnum(
 					[]cadence.Value{
-						cadence.NewUInt8(0),
+						cadence.NewUnmeteredUInt8(0),
 					},
 				).WithType(SignAlgoType),
 			},
@@ -4012,7 +4012,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 				cadence.NewEnum(
 					[]cadence.Value{
-						cadence.NewUInt8(0),
+						cadence.NewUnmeteredUInt8(0),
 					},
 				).WithType(SignAlgoType),
 			},
@@ -4450,7 +4450,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 	)
 
 	externalArrayValue := cadence.NewArray([]cadence.Value{
-		cadence.NewInt(42),
+		cadence.NewUnmeteredInt(42),
 		cadence.String("foo"),
 	})
 
@@ -4756,7 +4756,7 @@ func TestNestedStructArgPassing(t *testing.T) {
 		)
 
 		require.NoError(t, err)
-		assert.Equal(t, value, cadence.NewUInt8(32))
+		assert.Equal(t, value, cadence.NewUnmeteredUInt8(32))
 	})
 
 	t.Run("invalid interface", func(t *testing.T) {

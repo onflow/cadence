@@ -608,7 +608,7 @@ func TestRuntimeImport(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, cadence.NewInt(42), value)
+		assert.Equal(t, cadence.NewUnmeteredInt(42), value)
 	}
 	require.Equal(t, transactionCount+1, checkCount)
 }
@@ -694,7 +694,7 @@ func TestRuntimeConcurrentImport(t *testing.T) {
 			)
 			require.NoError(t, err)
 
-			assert.Equal(t, cadence.NewInt(42), value)
+			assert.Equal(t, cadence.NewUnmeteredInt(42), value)
 		}()
 	}
 	wg.Wait()
@@ -941,7 +941,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
               }
             `,
 			args: [][]byte{
-				jsoncdc.MustEncode(cadence.NewInt(42)),
+				jsoncdc.MustEncode(cadence.NewUnmeteredInt(42)),
 			},
 			expectedLogs: []string{"42"},
 		},
@@ -959,7 +959,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
               }
             `,
 			args: [][]byte{
-				jsoncdc.MustEncode(cadence.NewInt(42)),
+				jsoncdc.MustEncode(cadence.NewUnmeteredInt(42)),
 			},
 			authorizers:  []Address{common.MustBytesToAddress([]byte{42})},
 			expectedLogs: []string{"0x000000000000002a", "42"},
@@ -975,7 +975,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
               }
             `,
 			args: [][]byte{
-				jsoncdc.MustEncode(cadence.NewInt(42)),
+				jsoncdc.MustEncode(cadence.NewUnmeteredInt(42)),
 				jsoncdc.MustEncode(cadence.String("foo")),
 			},
 			expectedLogs: []string{"42", `"foo"`},
@@ -1046,9 +1046,9 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 				jsoncdc.MustEncode(
 					cadence.NewArray(
 						[]cadence.Value{
-							cadence.NewInt(1),
-							cadence.NewInt(2),
-							cadence.NewInt(3),
+							cadence.NewUnmeteredInt(1),
+							cadence.NewUnmeteredInt(2),
+							cadence.NewUnmeteredInt(3),
 						},
 					),
 				),
@@ -1070,7 +1070,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 						[]cadence.KeyValuePair{
 							{
 								Key:   cadence.String("y"),
-								Value: cadence.NewInt(42),
+								Value: cadence.NewUnmeteredInt(42),
 							},
 						},
 					),
@@ -1093,7 +1093,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 						[]cadence.KeyValuePair{
 							{
 								Key:   cadence.String("y"),
-								Value: cadence.NewInt(42),
+								Value: cadence.NewUnmeteredInt(42),
 							},
 						},
 					),
@@ -1262,7 +1262,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
                 }
             `,
 			args: [][]byte{
-				jsoncdc.MustEncode(cadence.NewInt(42)),
+				jsoncdc.MustEncode(cadence.NewUnmeteredInt(42)),
 			},
 			expectedLogs: []string{"42"},
 		},
@@ -1275,7 +1275,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
                 }
             `,
 			args: [][]byte{
-				jsoncdc.MustEncode(cadence.NewInt(42)),
+				jsoncdc.MustEncode(cadence.NewUnmeteredInt(42)),
 				jsoncdc.MustEncode(cadence.String("foo")),
 			},
 			expectedLogs: []string{"42", `"foo"`},
@@ -1339,9 +1339,9 @@ func TestRuntimeScriptArguments(t *testing.T) {
 				jsoncdc.MustEncode(
 					cadence.NewArray(
 						[]cadence.Value{
-							cadence.NewInt(1),
-							cadence.NewInt(2),
-							cadence.NewInt(3),
+							cadence.NewUnmeteredInt(1),
+							cadence.NewUnmeteredInt(2),
+							cadence.NewUnmeteredInt(3),
 						},
 					),
 				),
@@ -1359,9 +1359,9 @@ func TestRuntimeScriptArguments(t *testing.T) {
 				jsoncdc.MustEncode(
 					cadence.NewArray(
 						[]cadence.Value{
-							cadence.NewInt(1),
-							cadence.NewInt(2),
-							cadence.NewInt(3),
+							cadence.NewUnmeteredInt(1),
+							cadence.NewUnmeteredInt(2),
+							cadence.NewUnmeteredInt(3),
 						},
 					),
 				),
@@ -1383,7 +1383,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 				jsoncdc.MustEncode(
 					cadence.NewArray(
 						[]cadence.Value{
-							cadence.NewInt(1),
+							cadence.NewUnmeteredInt(1),
 						},
 					),
 				),
@@ -1407,7 +1407,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 						[]cadence.KeyValuePair{
 							{
 								Key:   cadence.String("y"),
-								Value: cadence.NewInt(42),
+								Value: cadence.NewUnmeteredInt(42),
 							},
 						},
 					),
@@ -1428,7 +1428,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 						[]cadence.KeyValuePair{
 							{
 								Key:   cadence.String("y"),
-								Value: cadence.NewInt(42),
+								Value: cadence.NewUnmeteredInt(42),
 							},
 						},
 					),
@@ -6602,15 +6602,15 @@ func TestRuntimeExecuteScriptArguments(t *testing.T) {
 		{
 			name: "correct number of arguments",
 			arguments: [][]byte{
-				jsoncdc.MustEncode(cadence.NewInt(1)),
+				jsoncdc.MustEncode(cadence.NewUnmeteredInt(1)),
 			},
 			valid: true,
 		},
 		{
 			name: "too many arguments",
 			arguments: [][]byte{
-				jsoncdc.MustEncode(cadence.NewInt(1)),
-				jsoncdc.MustEncode(cadence.NewInt(2)),
+				jsoncdc.MustEncode(cadence.NewUnmeteredInt(1)),
+				jsoncdc.MustEncode(cadence.NewUnmeteredInt(2)),
 			},
 			valid: false,
 		},

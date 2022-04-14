@@ -298,7 +298,16 @@ func (d *Decoder) decodeBigInt(valueJSON interface{}) *big.Int {
 }
 
 func (d *Decoder) decodeInt(valueJSON interface{}) cadence.Int {
-	return cadence.NewIntFromBig(d.decodeBigInt(valueJSON))
+	bigInt := d.decodeBigInt(valueJSON)
+	return cadence.NewIntFromBig(
+		d.gauge,
+		common.NewCadenceIntMemoryUsage(
+			common.BigIntByteLength(bigInt),
+		),
+		func() *big.Int {
+			return bigInt
+		},
+	)
 }
 
 func (d *Decoder) decodeInt8(valueJSON interface{}) cadence.Int8 {
@@ -310,7 +319,7 @@ func (d *Decoder) decodeInt8(valueJSON interface{}) cadence.Int8 {
 		panic(ErrInvalidJSONCadence)
 	}
 
-	return cadence.NewInt8(int8(i))
+	return cadence.NewInt8(d.gauge, int8(i))
 }
 
 func (d *Decoder) decodeInt16(valueJSON interface{}) cadence.Int16 {
@@ -322,7 +331,7 @@ func (d *Decoder) decodeInt16(valueJSON interface{}) cadence.Int16 {
 		panic(ErrInvalidJSONCadence)
 	}
 
-	return cadence.NewInt16(int16(i))
+	return cadence.NewInt16(d.gauge, int16(i))
 }
 
 func (d *Decoder) decodeInt32(valueJSON interface{}) cadence.Int32 {
@@ -334,7 +343,7 @@ func (d *Decoder) decodeInt32(valueJSON interface{}) cadence.Int32 {
 		panic(ErrInvalidJSONCadence)
 	}
 
-	return cadence.NewInt32(int32(i))
+	return cadence.NewInt32(d.gauge, int32(i))
 }
 
 func (d *Decoder) decodeInt64(valueJSON interface{}) cadence.Int64 {
@@ -346,12 +355,19 @@ func (d *Decoder) decodeInt64(valueJSON interface{}) cadence.Int64 {
 		panic(ErrInvalidJSONCadence)
 	}
 
-	return cadence.NewInt64(i)
+	return cadence.NewInt64(d.gauge, i)
 }
 
 func (d *Decoder) decodeInt128(valueJSON interface{}) cadence.Int128 {
 	bigInt := d.decodeBigInt(valueJSON)
-	value, err := cadence.NewInt128FromBig(bigInt)
+
+	value, err := cadence.NewInt128FromBig(
+		d.gauge,
+		func() *big.Int {
+			return bigInt
+		},
+	)
+
 	if err != nil {
 		// TODO: improve error message
 		panic(ErrInvalidJSONCadence)
@@ -361,7 +377,14 @@ func (d *Decoder) decodeInt128(valueJSON interface{}) cadence.Int128 {
 
 func (d *Decoder) decodeInt256(valueJSON interface{}) cadence.Int256 {
 	bigInt := d.decodeBigInt(valueJSON)
-	value, err := cadence.NewInt256FromBig(bigInt)
+
+	value, err := cadence.NewInt256FromBig(
+		d.gauge,
+		func() *big.Int {
+			return bigInt
+		},
+	)
+
 	if err != nil {
 		// TODO: improve error message
 		panic(ErrInvalidJSONCadence)
@@ -371,7 +394,16 @@ func (d *Decoder) decodeInt256(valueJSON interface{}) cadence.Int256 {
 
 func (d *Decoder) decodeUInt(valueJSON interface{}) cadence.UInt {
 	bigInt := d.decodeBigInt(valueJSON)
-	value, err := cadence.NewUIntFromBig(bigInt)
+	value, err := cadence.NewUIntFromBig(
+		d.gauge,
+		common.NewCadenceIntMemoryUsage(
+			common.BigIntByteLength(bigInt),
+		),
+		func() *big.Int {
+			return bigInt
+		},
+	)
+
 	if err != nil {
 		// TODO: improve error message
 		panic(ErrInvalidJSONCadence)
@@ -388,7 +420,7 @@ func (d *Decoder) decodeUInt8(valueJSON interface{}) cadence.UInt8 {
 		panic(ErrInvalidJSONCadence)
 	}
 
-	return cadence.NewUInt8(uint8(i))
+	return cadence.NewUInt8(d.gauge, uint8(i))
 }
 
 func (d *Decoder) decodeUInt16(valueJSON interface{}) cadence.UInt16 {
@@ -400,7 +432,7 @@ func (d *Decoder) decodeUInt16(valueJSON interface{}) cadence.UInt16 {
 		panic(ErrInvalidJSONCadence)
 	}
 
-	return cadence.NewUInt16(uint16(i))
+	return cadence.NewUInt16(d.gauge, uint16(i))
 }
 
 func (d *Decoder) decodeUInt32(valueJSON interface{}) cadence.UInt32 {
@@ -412,7 +444,7 @@ func (d *Decoder) decodeUInt32(valueJSON interface{}) cadence.UInt32 {
 		panic(ErrInvalidJSONCadence)
 	}
 
-	return cadence.NewUInt32(uint32(i))
+	return cadence.NewUInt32(d.gauge, uint32(i))
 }
 
 func (d *Decoder) decodeUInt64(valueJSON interface{}) cadence.UInt64 {
@@ -424,12 +456,17 @@ func (d *Decoder) decodeUInt64(valueJSON interface{}) cadence.UInt64 {
 		panic(ErrInvalidJSONCadence)
 	}
 
-	return cadence.NewUInt64(i)
+	return cadence.NewUInt64(d.gauge, i)
 }
 
 func (d *Decoder) decodeUInt128(valueJSON interface{}) cadence.UInt128 {
 	bigInt := d.decodeBigInt(valueJSON)
-	value, err := cadence.NewUInt128FromBig(bigInt)
+	value, err := cadence.NewUInt128FromBig(
+		d.gauge,
+		func() *big.Int {
+			return bigInt
+		},
+	)
 	if err != nil {
 		// TODO: improve error message
 		panic(ErrInvalidJSONCadence)
@@ -439,7 +476,12 @@ func (d *Decoder) decodeUInt128(valueJSON interface{}) cadence.UInt128 {
 
 func (d *Decoder) decodeUInt256(valueJSON interface{}) cadence.UInt256 {
 	bigInt := d.decodeBigInt(valueJSON)
-	value, err := cadence.NewUInt256FromBig(bigInt)
+	value, err := cadence.NewUInt256FromBig(
+		d.gauge,
+		func() *big.Int {
+			return bigInt
+		},
+	)
 	if err != nil {
 		// TODO: improve error message
 		panic(ErrInvalidJSONCadence)
@@ -456,7 +498,7 @@ func (d *Decoder) decodeWord8(valueJSON interface{}) cadence.Word8 {
 		panic(ErrInvalidJSONCadence)
 	}
 
-	return cadence.NewWord8(uint8(i))
+	return cadence.NewWord8(d.gauge, uint8(i))
 }
 
 func (d *Decoder) decodeWord16(valueJSON interface{}) cadence.Word16 {
@@ -468,7 +510,7 @@ func (d *Decoder) decodeWord16(valueJSON interface{}) cadence.Word16 {
 		panic(ErrInvalidJSONCadence)
 	}
 
-	return cadence.NewWord16(uint16(i))
+	return cadence.NewWord16(d.gauge, uint16(i))
 }
 
 func (d *Decoder) decodeWord32(valueJSON interface{}) cadence.Word32 {
@@ -480,7 +522,7 @@ func (d *Decoder) decodeWord32(valueJSON interface{}) cadence.Word32 {
 		panic(ErrInvalidJSONCadence)
 	}
 
-	return cadence.NewWord32(uint32(i))
+	return cadence.NewWord32(d.gauge, uint32(i))
 }
 
 func (d *Decoder) decodeWord64(valueJSON interface{}) cadence.Word64 {
@@ -492,7 +534,7 @@ func (d *Decoder) decodeWord64(valueJSON interface{}) cadence.Word64 {
 		panic(ErrInvalidJSONCadence)
 	}
 
-	return cadence.NewWord64(i)
+	return cadence.NewWord64(d.gauge, i)
 }
 
 func (d *Decoder) decodeFix64(valueJSON interface{}) cadence.Fix64 {

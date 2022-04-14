@@ -677,7 +677,7 @@ func TestRuntimeStorageReadAndBorrow(t *testing.T) {
 			},
 		)
 		require.NoError(t, err)
-		require.Equal(t, cadence.NewInt(42), value)
+		require.Equal(t, cadence.NewUnmeteredInt(42), value)
 	})
 
 	t.Run("read stored, non-existing", func(t *testing.T) {
@@ -711,7 +711,7 @@ func TestRuntimeStorageReadAndBorrow(t *testing.T) {
 			},
 		)
 		require.NoError(t, err)
-		require.Equal(t, cadence.NewInt(42), value)
+		require.Equal(t, cadence.NewUnmeteredInt(42), value)
 	})
 
 	t.Run("read linked, non-existing", func(t *testing.T) {
@@ -1000,7 +1000,7 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
 
 	encodedArg, err := json.Encode(
 		cadence.NewArray([]cadence.Value{
-			cadence.NewUInt64(1),
+			cadence.NewUnmeteredUInt64(1),
 		}),
 	)
 	require.NoError(t, err)
@@ -1279,7 +1279,7 @@ func TestRuntimeBatchMintAndTransfer(t *testing.T) {
 	const count = 20
 
 	for id := startID; id <= startID+count; id++ {
-		values = append(values, cadence.NewUInt64(id))
+		values = append(values, cadence.NewUnmeteredUInt64(id))
 	}
 
 	encodedArg, err := json.Encode(cadence.NewArray(values))

@@ -25,23 +25,23 @@ func NewValue(value interface{}) (Value, error) {
 	case string:
 		return NewUnmeteredString(v)
 	case int:
-		return NewInt(v), nil
+		return NewUnmeteredInt(v), nil
 	case int8:
-		return NewInt8(v), nil
+		return NewUnmeteredInt8(v), nil
 	case int16:
-		return NewInt16(v), nil
+		return NewUnmeteredInt16(v), nil
 	case int32:
-		return NewInt32(v), nil
+		return NewUnmeteredInt32(v), nil
 	case int64:
-		return NewInt64(v), nil
+		return NewUnmeteredInt64(v), nil
 	case uint8:
-		return NewUInt8(v), nil
+		return NewUnmeteredUInt8(v), nil
 	case uint16:
-		return NewUInt16(v), nil
+		return NewUnmeteredUInt16(v), nil
 	case uint32:
-		return NewUInt32(v), nil
+		return NewUnmeteredUInt32(v), nil
 	case uint64:
-		return NewUInt64(v), nil
+		return NewUnmeteredUInt64(v), nil
 	case []interface{}:
 		values := make([]Value, len(v))
 

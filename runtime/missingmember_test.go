@@ -2455,7 +2455,7 @@ transaction(recipientAddr: Address, garmentDataID: UInt32, royaltyVaultAddr: Add
 			Source: []byte(mintGarment),
 			Arguments: [][]byte{
 				json.MustEncode(cadence.Address(testAddress)),
-				json.MustEncode(cadence.NewUInt32(1)),
+				json.MustEncode(cadence.NewUnmeteredUInt32(1)),
 				json.MustEncode(cadence.Address(testAddress)),
 			},
 		},
@@ -2513,7 +2513,7 @@ transaction(recipientAddr: Address, materialDataID: UInt32, royaltyVaultAddr: Ad
 			Source: []byte(mintMaterial),
 			Arguments: [][]byte{
 				json.MustEncode(cadence.Address(testAddress)),
-				json.MustEncode(cadence.NewUInt32(1)),
+				json.MustEncode(cadence.NewUnmeteredUInt32(1)),
 				json.MustEncode(cadence.Address(testAddress)),
 			},
 		},
@@ -2590,8 +2590,8 @@ transaction(recipientAddr: Address, name: String, garmentWithdrawID: UInt64, mat
 			Arguments: [][]byte{
 				json.MustEncode(cadence.Address(testAddress)),
 				json.MustEncode(itemString),
-				json.MustEncode(cadence.NewUInt64(1)),
-				json.MustEncode(cadence.NewUInt64(1)),
+				json.MustEncode(cadence.NewUnmeteredUInt64(1)),
+				json.MustEncode(cadence.NewUnmeteredUInt64(1)),
 				json.MustEncode(cadence.Address(testAddress)),
 			},
 		},
@@ -2769,7 +2769,7 @@ transaction(recipientAddr: Address, name: String, garmentWithdrawID: UInt64, mat
 					cadence.NewUnmeteredAddress(testAddress),
 				),
 				json.MustEncode(
-					cadence.NewUInt64(1),
+					cadence.NewUnmeteredUInt64(1),
 				),
 			},
 		},

@@ -269,7 +269,7 @@ func TestRuntimeHashingAlgorithmExport(t *testing.T) {
 		enumValue := value.(cadence.Enum)
 
 		require.Len(t, enumValue.Fields, 1)
-		assert.Equal(t, cadence.NewUInt8(algo.RawValue()), enumValue.Fields[0])
+		assert.Equal(t, cadence.NewUnmeteredUInt8(algo.RawValue()), enumValue.Fields[0])
 	}
 
 	for _, algo := range sema.HashAlgorithms {
@@ -309,7 +309,7 @@ func TestRuntimeSignatureAlgorithmExport(t *testing.T) {
 		enumValue := value.(cadence.Enum)
 
 		require.Len(t, enumValue.Fields, 1)
-		assert.Equal(t, cadence.NewUInt8(algo.RawValue()), enumValue.Fields[0])
+		assert.Equal(t, cadence.NewUnmeteredUInt8(algo.RawValue()), enumValue.Fields[0])
 	}
 
 	for _, algo := range sema.SignatureAlgorithms {
@@ -366,7 +366,7 @@ func TestRuntimeSignatureAlgorithmImport(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t,
-			cadence.NewUInt8(algo.RawValue()),
+			cadence.NewUnmeteredUInt8(algo.RawValue()),
 			value,
 		)
 	}
@@ -448,7 +448,7 @@ func TestRuntimeHashAlgorithmImport(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t,
-			cadence.NewUInt8(algo.RawValue()),
+			cadence.NewUnmeteredUInt8(algo.RawValue()),
 			value,
 		)
 		assert.Equal(t,
@@ -664,7 +664,7 @@ func getCadenceValueArrayFromHexStr(t *testing.T, inp string) cadence.Value {
 
 	cadenceValue := make([]cadence.Value, len(bytes))
 	for i, b := range bytes {
-		cadenceValue[i] = cadence.NewUInt8(b)
+		cadenceValue[i] = cadence.NewUnmeteredUInt8(b)
 	}
 
 	return cadence.NewArray(cadenceValue)

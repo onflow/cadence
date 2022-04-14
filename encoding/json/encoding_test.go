@@ -63,7 +63,7 @@ func TestEncodeOptional(t *testing.T) {
 		},
 		{
 			"Non-nil",
-			cadence.NewOptional(cadence.NewInt(42)),
+			cadence.NewOptional(cadence.NewUnmeteredInt(42)),
 			`{"type":"Optional","value":{"type":"Int","value":"42"}}`,
 		},
 	}...)
@@ -177,27 +177,27 @@ func TestEncodeInt(t *testing.T) {
 	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Negative",
-			cadence.NewInt(-42),
+			cadence.NewUnmeteredInt(-42),
 			`{"type":"Int","value":"-42"}`,
 		},
 		{
 			"Zero",
-			cadence.NewInt(0),
+			cadence.NewUnmeteredInt(0),
 			`{"type":"Int","value":"0"}`,
 		},
 		{
 			"Positive",
-			cadence.NewInt(42),
+			cadence.NewUnmeteredInt(42),
 			`{"type":"Int","value":"42"}`,
 		},
 		{
 			"SmallerThanMinInt256",
-			cadence.NewIntFromBig(new(big.Int).Sub(sema.Int256TypeMinIntBig, big.NewInt(10))),
+			cadence.NewUnmeteredIntFromBig(new(big.Int).Sub(sema.Int256TypeMinIntBig, big.NewInt(10))),
 			`{"type":"Int","value":"-57896044618658097711785492504343953926634992332820282019728792003956564819978"}`,
 		},
 		{
 			"LargerThanMaxUInt256",
-			cadence.NewIntFromBig(new(big.Int).Add(sema.UInt256TypeMaxIntBig, big.NewInt(10))),
+			cadence.NewUnmeteredIntFromBig(new(big.Int).Add(sema.UInt256TypeMaxIntBig, big.NewInt(10))),
 			`{"type":"Int","value":"115792089237316195423570985008687907853269984665640564039457584007913129639945"}`,
 		},
 	}...)
@@ -210,17 +210,17 @@ func TestEncodeInt8(t *testing.T) {
 	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Min",
-			cadence.NewInt8(math.MinInt8),
+			cadence.NewUnmeteredInt8(math.MinInt8),
 			`{"type":"Int8","value":"-128"}`,
 		},
 		{
 			"Zero",
-			cadence.NewInt8(0),
+			cadence.NewUnmeteredInt8(0),
 			`{"type":"Int8","value":"0"}`,
 		},
 		{
 			"Max",
-			cadence.NewInt8(math.MaxInt8),
+			cadence.NewUnmeteredInt8(math.MaxInt8),
 			`{"type":"Int8","value":"127"}`,
 		},
 	}...)
@@ -233,17 +233,17 @@ func TestEncodeInt16(t *testing.T) {
 	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Min",
-			cadence.NewInt16(math.MinInt16),
+			cadence.NewUnmeteredInt16(math.MinInt16),
 			`{"type":"Int16","value":"-32768"}`,
 		},
 		{
 			"Zero",
-			cadence.NewInt16(0),
+			cadence.NewUnmeteredInt16(0),
 			`{"type":"Int16","value":"0"}`,
 		},
 		{
 			"Max",
-			cadence.NewInt16(math.MaxInt16),
+			cadence.NewUnmeteredInt16(math.MaxInt16),
 			`{"type":"Int16","value":"32767"}`,
 		},
 	}...)
@@ -256,17 +256,17 @@ func TestEncodeInt32(t *testing.T) {
 	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Min",
-			cadence.NewInt32(math.MinInt32),
+			cadence.NewUnmeteredInt32(math.MinInt32),
 			`{"type":"Int32","value":"-2147483648"}`,
 		},
 		{
 			"Zero",
-			cadence.NewInt32(0),
+			cadence.NewUnmeteredInt32(0),
 			`{"type":"Int32","value":"0"}`,
 		},
 		{
 			"Max",
-			cadence.NewInt32(math.MaxInt32),
+			cadence.NewUnmeteredInt32(math.MaxInt32),
 			`{"type":"Int32","value":"2147483647"}`,
 		},
 	}...)
@@ -279,17 +279,17 @@ func TestEncodeInt64(t *testing.T) {
 	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Min",
-			cadence.NewInt64(math.MinInt64),
+			cadence.NewUnmeteredInt64(math.MinInt64),
 			`{"type":"Int64","value":"-9223372036854775808"}`,
 		},
 		{
 			"Zero",
-			cadence.NewInt64(0),
+			cadence.NewUnmeteredInt64(0),
 			`{"type":"Int64","value":"0"}`,
 		},
 		{
 			"Max",
-			cadence.NewInt64(math.MaxInt64),
+			cadence.NewUnmeteredInt64(math.MaxInt64),
 			`{"type":"Int64","value":"9223372036854775807"}`,
 		},
 	}...)
@@ -307,7 +307,7 @@ func TestEncodeInt128(t *testing.T) {
 		},
 		{
 			"Zero",
-			cadence.NewInt128(0),
+			cadence.NewUnmeteredInt128(0),
 			`{"type":"Int128","value":"0"}`,
 		},
 		{
@@ -330,7 +330,7 @@ func TestEncodeInt256(t *testing.T) {
 		},
 		{
 			"Zero",
-			cadence.NewInt256(0),
+			cadence.NewUnmeteredInt256(0),
 			`{"type":"Int256","value":"0"}`,
 		},
 		{
@@ -348,12 +348,12 @@ func TestEncodeUInt(t *testing.T) {
 	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Zero",
-			cadence.NewUInt(0),
+			cadence.NewUnmeteredUInt(0),
 			`{"type":"UInt","value":"0"}`,
 		},
 		{
 			"Positive",
-			cadence.NewUInt(42),
+			cadence.NewUnmeteredUInt(42),
 			`{"type":"UInt","value":"42"}`,
 		},
 		{
@@ -371,12 +371,12 @@ func TestEncodeUInt8(t *testing.T) {
 	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Zero",
-			cadence.NewUInt8(0),
+			cadence.NewUnmeteredUInt8(0),
 			`{"type":"UInt8","value":"0"}`,
 		},
 		{
 			"Max",
-			cadence.NewUInt8(math.MaxUint8),
+			cadence.NewUnmeteredUInt8(math.MaxUint8),
 			`{"type":"UInt8","value":"255"}`,
 		},
 	}...)
@@ -389,12 +389,12 @@ func TestEncodeUInt16(t *testing.T) {
 	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Zero",
-			cadence.NewUInt16(0),
+			cadence.NewUnmeteredUInt16(0),
 			`{"type":"UInt16","value":"0"}`,
 		},
 		{
 			"Max",
-			cadence.NewUInt16(math.MaxUint16),
+			cadence.NewUnmeteredUInt16(math.MaxUint16),
 			`{"type":"UInt16","value":"65535"}`,
 		},
 	}...)
@@ -407,12 +407,12 @@ func TestEncodeUInt32(t *testing.T) {
 	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Zero",
-			cadence.NewUInt32(0),
+			cadence.NewUnmeteredUInt32(0),
 			`{"type":"UInt32","value":"0"}`,
 		},
 		{
 			"Max",
-			cadence.NewUInt32(math.MaxUint32),
+			cadence.NewUnmeteredUInt32(math.MaxUint32),
 			`{"type":"UInt32","value":"4294967295"}`,
 		},
 	}...)
@@ -425,12 +425,12 @@ func TestEncodeUInt64(t *testing.T) {
 	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Zero",
-			cadence.NewUInt64(0),
+			cadence.NewUnmeteredUInt64(0),
 			`{"type":"UInt64","value":"0"}`,
 		},
 		{
 			"Max",
-			cadence.NewUInt64(uint64(math.MaxUint64)),
+			cadence.NewUnmeteredUInt64(uint64(math.MaxUint64)),
 			`{"type":"UInt64","value":"18446744073709551615"}`,
 		},
 	}...)
@@ -443,7 +443,7 @@ func TestEncodeUInt128(t *testing.T) {
 	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Zero",
-			cadence.NewUInt128(0),
+			cadence.NewUnmeteredUInt128(0),
 			`{"type":"UInt128","value":"0"}`,
 		},
 		{
@@ -461,7 +461,7 @@ func TestEncodeUInt256(t *testing.T) {
 	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Zero",
-			cadence.NewUInt256(0),
+			cadence.NewUnmeteredUInt256(0),
 			`{"type":"UInt256","value":"0"}`,
 		},
 		{
@@ -479,12 +479,12 @@ func TestEncodeWord8(t *testing.T) {
 	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Zero",
-			cadence.NewWord8(0),
+			cadence.NewUnmeteredWord8(0),
 			`{"type":"Word8","value":"0"}`,
 		},
 		{
 			"Max",
-			cadence.NewWord8(math.MaxUint8),
+			cadence.NewUnmeteredWord8(math.MaxUint8),
 			`{"type":"Word8","value":"255"}`,
 		},
 	}...)
@@ -497,12 +497,12 @@ func TestEncodeWord16(t *testing.T) {
 	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Zero",
-			cadence.NewWord16(0),
+			cadence.NewUnmeteredWord16(0),
 			`{"type":"Word16","value":"0"}`,
 		},
 		{
 			"Max",
-			cadence.NewWord16(math.MaxUint16),
+			cadence.NewUnmeteredWord16(math.MaxUint16),
 			`{"type":"Word16","value":"65535"}`,
 		},
 	}...)
@@ -515,12 +515,12 @@ func TestEncodeWord32(t *testing.T) {
 	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Zero",
-			cadence.NewWord32(0),
+			cadence.NewUnmeteredWord32(0),
 			`{"type":"Word32","value":"0"}`,
 		},
 		{
 			"Max",
-			cadence.NewWord32(math.MaxUint32),
+			cadence.NewUnmeteredWord32(math.MaxUint32),
 			`{"type":"Word32","value":"4294967295"}`,
 		},
 	}...)
@@ -533,12 +533,12 @@ func TestEncodeWord64(t *testing.T) {
 	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Zero",
-			cadence.NewWord64(0),
+			cadence.NewUnmeteredWord64(0),
 			`{"type":"Word64","value":"0"}`,
 		},
 		{
 			"Max",
-			cadence.NewWord64(math.MaxUint64),
+			cadence.NewUnmeteredWord64(math.MaxUint64),
 			`{"type":"Word64","value":"18446744073709551615"}`,
 		},
 	}...)
@@ -608,9 +608,9 @@ func TestEncodeArray(t *testing.T) {
 	intArray := encodeTest{
 		"Integers",
 		cadence.NewArray([]cadence.Value{
-			cadence.NewInt(1),
-			cadence.NewInt(2),
-			cadence.NewInt(3),
+			cadence.NewUnmeteredInt(1),
+			cadence.NewUnmeteredInt(2),
+			cadence.NewUnmeteredInt(3),
 		}),
 		`{"type":"Array","value":[{"type":"Int","value":"1"},{"type":"Int","value":"2"},{"type":"Int","value":"3"}]}`,
 	}
@@ -619,13 +619,13 @@ func TestEncodeArray(t *testing.T) {
 		"Resources",
 		cadence.NewArray([]cadence.Value{
 			cadence.NewResource([]cadence.Value{
-				cadence.NewInt(1),
+				cadence.NewUnmeteredInt(1),
 			}).WithType(fooResourceType),
 			cadence.NewResource([]cadence.Value{
-				cadence.NewInt(2),
+				cadence.NewUnmeteredInt(2),
 			}).WithType(fooResourceType),
 			cadence.NewResource([]cadence.Value{
-				cadence.NewInt(3),
+				cadence.NewUnmeteredInt(3),
 			}).WithType(fooResourceType),
 		}),
 		`{"type":"Array","value":[{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"1"}}]}},{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"2"}}]}},{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"3"}}]}}]}`,
@@ -647,15 +647,15 @@ func TestEncodeDictionary(t *testing.T) {
 		cadence.NewDictionary([]cadence.KeyValuePair{
 			{
 				Key:   cadence.String("a"),
-				Value: cadence.NewInt(1),
+				Value: cadence.NewUnmeteredInt(1),
 			},
 			{
 				Key:   cadence.String("b"),
-				Value: cadence.NewInt(2),
+				Value: cadence.NewUnmeteredInt(2),
 			},
 			{
 				Key:   cadence.String("c"),
-				Value: cadence.NewInt(3),
+				Value: cadence.NewUnmeteredInt(3),
 			},
 		}),
 		`{"type":"Dictionary","value":[{"key":{"type":"String","value":"a"},"value":{"type":"Int","value":"1"}},{"key":{"type":"String","value":"b"},"value":{"type":"Int","value":"2"}},{"key":{"type":"String","value":"c"},"value":{"type":"Int","value":"3"}}]}`,
@@ -669,7 +669,7 @@ func TestEncodeDictionary(t *testing.T) {
 				Value: cadence.NewDictionary([]cadence.KeyValuePair{
 					{
 						Key:   cadence.String("1"),
-						Value: cadence.NewInt(1),
+						Value: cadence.NewUnmeteredInt(1),
 					},
 				}),
 			},
@@ -678,7 +678,7 @@ func TestEncodeDictionary(t *testing.T) {
 				Value: cadence.NewDictionary([]cadence.KeyValuePair{
 					{
 						Key:   cadence.String("2"),
-						Value: cadence.NewInt(2),
+						Value: cadence.NewUnmeteredInt(2),
 					},
 				}),
 			},
@@ -687,7 +687,7 @@ func TestEncodeDictionary(t *testing.T) {
 				Value: cadence.NewDictionary([]cadence.KeyValuePair{
 					{
 						Key:   cadence.String("3"),
-						Value: cadence.NewInt(3),
+						Value: cadence.NewUnmeteredInt(3),
 					},
 				}),
 			},
@@ -701,19 +701,19 @@ func TestEncodeDictionary(t *testing.T) {
 			{
 				Key: cadence.String("a"),
 				Value: cadence.NewResource([]cadence.Value{
-					cadence.NewInt(1),
+					cadence.NewUnmeteredInt(1),
 				}).WithType(fooResourceType),
 			},
 			{
 				Key: cadence.String("b"),
 				Value: cadence.NewResource([]cadence.Value{
-					cadence.NewInt(2),
+					cadence.NewUnmeteredInt(2),
 				}).WithType(fooResourceType),
 			},
 			{
 				Key: cadence.String("c"),
 				Value: cadence.NewResource([]cadence.Value{
-					cadence.NewInt(3),
+					cadence.NewUnmeteredInt(3),
 				}).WithType(fooResourceType),
 			},
 		}),
@@ -876,7 +876,7 @@ func TestEncodeStruct(t *testing.T) {
 		"Simple",
 		cadence.NewStruct(
 			[]cadence.Value{
-				cadence.NewInt(1),
+				cadence.NewUnmeteredInt(1),
 				cadence.String("foo"),
 			},
 		).WithType(simpleStructType),
@@ -905,7 +905,7 @@ func TestEncodeStruct(t *testing.T) {
 				cadence.String("foo"),
 				cadence.NewResource(
 					[]cadence.Value{
-						cadence.NewInt(42),
+						cadence.NewUnmeteredInt(42),
 					},
 				).WithType(fooResourceType),
 			},
@@ -939,7 +939,7 @@ func TestEncodeEvent(t *testing.T) {
 		"Simple",
 		cadence.NewEvent(
 			[]cadence.Value{
-				cadence.NewInt(1),
+				cadence.NewUnmeteredInt(1),
 				cadence.String("foo"),
 			},
 		).WithType(simpleEventType),
@@ -968,7 +968,7 @@ func TestEncodeEvent(t *testing.T) {
 				cadence.String("foo"),
 				cadence.NewResource(
 					[]cadence.Value{
-						cadence.NewInt(42),
+						cadence.NewUnmeteredInt(42),
 					},
 				).WithType(fooResourceType),
 			},
@@ -1002,7 +1002,7 @@ func TestEncodeContract(t *testing.T) {
 		"Simple",
 		cadence.NewContract(
 			[]cadence.Value{
-				cadence.NewInt(1),
+				cadence.NewUnmeteredInt(1),
 				cadence.String("foo"),
 			},
 		).WithType(simpleContractType),
@@ -1031,7 +1031,7 @@ func TestEncodeContract(t *testing.T) {
 				cadence.String("foo"),
 				cadence.NewResource(
 					[]cadence.Value{
-						cadence.NewInt(42),
+						cadence.NewUnmeteredInt(42),
 					},
 				).WithType(fooResourceType),
 			},

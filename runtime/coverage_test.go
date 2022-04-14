@@ -86,7 +86,7 @@ func TestRuntimeCoverage(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	assert.Equal(t, cadence.NewInt(42), value)
+	assert.Equal(t, cadence.NewUnmeteredInt(42), value)
 
 	actual, err := json.Marshal(coverageReport)
 	require.NoError(t, err)
