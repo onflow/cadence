@@ -646,6 +646,7 @@ func TestIdentifierCacheUpdate(t *testing.T) {
 	checker, err := NewChecker(
 		program,
 		common.StringLocation("test"),
+		nil,
 	)
 	require.NoError(t, err)
 
