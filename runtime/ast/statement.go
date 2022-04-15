@@ -313,6 +313,7 @@ type WhileStatement struct {
 	StartPos Position `json:"-"`
 }
 
+var _ Element = &WhileStatement{}
 var _ Statement = &WhileStatement{}
 
 func NewWhileStatement(
@@ -328,9 +329,6 @@ func NewWhileStatement(
 		StartPos: startPos,
 	}
 }
-
-var _ Element = &WhileStatement{}
-var _ Statement = &WhileStatement{}
 
 func (*WhileStatement) ElementType() ElementType {
 	return ElementTypeWhileStatement
