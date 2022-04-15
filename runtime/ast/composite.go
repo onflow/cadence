@@ -38,6 +38,10 @@ type CompositeDeclaration struct {
 	Range
 }
 
+var _ Element = &CompositeDeclaration{}
+var _ Declaration = &CompositeDeclaration{}
+var _ Statement = &CompositeDeclaration{}
+
 func NewCompositeDeclaration(
 	memoryGauge common.MemoryGauge,
 	access Access,
@@ -59,6 +63,10 @@ func NewCompositeDeclaration(
 		DocString:     docString,
 		Range:         declarationRange,
 	}
+}
+
+func (*CompositeDeclaration) ElementType() ElementType {
+	return ElementTypeCompositeDeclaration
 }
 
 func (d *CompositeDeclaration) Accept(visitor Visitor) Repr {
@@ -118,6 +126,9 @@ type FieldDeclaration struct {
 	Range
 }
 
+var _ Element = &FieldDeclaration{}
+var _ Declaration = &FieldDeclaration{}
+
 func NewFieldDeclaration(
 	memoryGauge common.MemoryGauge,
 	access Access,
@@ -137,6 +148,10 @@ func NewFieldDeclaration(
 		DocString:      docString,
 		Range:          declRange,
 	}
+}
+
+func (*FieldDeclaration) ElementType() ElementType {
+	return ElementTypeFieldDeclaration
 }
 
 func (d *FieldDeclaration) Accept(visitor Visitor) Repr {
@@ -190,6 +205,9 @@ type EnumCaseDeclaration struct {
 	StartPos   Position `json:"-"`
 }
 
+var _ Element = &EnumCaseDeclaration{}
+var _ Declaration = &EnumCaseDeclaration{}
+
 func NewEnumCaseDeclaration(
 	memoryGauge common.MemoryGauge,
 	access Access,
@@ -205,6 +223,10 @@ func NewEnumCaseDeclaration(
 		DocString:  docString,
 		StartPos:   startPos,
 	}
+}
+
+func (*EnumCaseDeclaration) ElementType() ElementType {
+	return ElementTypeEnumCaseDeclaration
 }
 
 func (d *EnumCaseDeclaration) Accept(visitor Visitor) Repr {

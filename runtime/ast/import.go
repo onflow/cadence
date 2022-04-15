@@ -33,6 +33,9 @@ type ImportDeclaration struct {
 	Range
 }
 
+var _ Element = &ImportDeclaration{}
+var _ Declaration = &ImportDeclaration{}
+
 func NewImportDeclaration(
 	gauge common.MemoryGauge,
 	identifiers []Identifier,
@@ -48,6 +51,10 @@ func NewImportDeclaration(
 		Range:       declRange,
 		LocationPos: locationPos,
 	}
+}
+
+func (*ImportDeclaration) ElementType() ElementType {
+	return ElementTypeImportDeclaration
 }
 
 func (*ImportDeclaration) isDeclaration() {}

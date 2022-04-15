@@ -40,6 +40,10 @@ type VariableDeclaration struct {
 	DocString         string
 }
 
+var _ Element = &VariableDeclaration{}
+var _ Statement = &VariableDeclaration{}
+var _ Declaration = &VariableDeclaration{}
+
 func NewVariableDeclaration(
 	gauge common.MemoryGauge,
 	access Access,
@@ -72,6 +76,10 @@ func NewVariableDeclaration(
 func NewEmptyVariableDeclaration(gauge common.MemoryGauge) *VariableDeclaration {
 	common.UseMemory(gauge, common.VariableDeclarationMemoryUsage)
 	return &VariableDeclaration{}
+}
+
+func (*VariableDeclaration) ElementType() ElementType {
+	return ElementTypeVariableDeclaration
 }
 
 func (d *VariableDeclaration) StartPosition() Position {
