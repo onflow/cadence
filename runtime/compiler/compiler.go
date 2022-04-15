@@ -270,6 +270,10 @@ func (compiler *Compiler) VisitProgram(_ *ast.Program) ast.Repr {
 	panic(errors.NewUnreachableError())
 }
 
+func (compiler *Compiler) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunctionDeclaration) ast.Repr {
+	return compiler.VisitFunctionDeclaration(declaration.FunctionDeclaration)
+}
+
 func (compiler *Compiler) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) ast.Repr {
 
 	// TODO: declare function in current scope, use current scope in function

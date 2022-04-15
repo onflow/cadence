@@ -30,10 +30,16 @@ type Program struct {
 	indices      programIndices
 }
 
+var _ Element = &Program{}
+
 func NewProgram(declarations []Declaration) *Program {
 	return &Program{
 		declarations: declarations,
 	}
+}
+
+func (*Program) ElementType() ElementType {
+	return ElementTypeProgram
 }
 
 func (p *Program) Declarations() []Declaration {
@@ -61,8 +67,8 @@ func (p *Program) Accept(visitor Visitor) Repr {
 	return visitor.VisitProgram(p)
 }
 
-func (d *Program) Walk(walkChild func(Element)) {
-	walkDeclarations(walkChild, d.declarations)
+func (p *Program) Walk(walkChild func(Element)) {
+	walkDeclarations(walkChild, p.declarations)
 }
 
 func (p *Program) PragmaDeclarations() []*PragmaDeclaration {

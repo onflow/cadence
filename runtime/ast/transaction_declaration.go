@@ -35,6 +35,14 @@ type TransactionDeclaration struct {
 	Range
 }
 
+var _ Element = &TransactionDeclaration{}
+var _ Declaration = &TransactionDeclaration{}
+var _ Statement = &TransactionDeclaration{}
+
+func (*TransactionDeclaration) ElementType() ElementType {
+	return ElementTypeTransactionDeclaration
+}
+
 func (d *TransactionDeclaration) Accept(visitor Visitor) Repr {
 	return visitor.VisitTransactionDeclaration(d)
 }

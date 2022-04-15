@@ -1153,6 +1153,10 @@ func (interpreter *Interpreter) VisitProgram(program *ast.Program) ast.Repr {
 	return nil
 }
 
+func (interpreter *Interpreter) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunctionDeclaration) ast.Repr {
+	return interpreter.VisitFunctionDeclaration(declaration.FunctionDeclaration)
+}
+
 func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) ast.Repr {
 
 	identifier := declaration.Identifier.Identifier

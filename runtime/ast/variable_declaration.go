@@ -38,6 +38,14 @@ type VariableDeclaration struct {
 	DocString         string
 }
 
+var _ Element = &VariableDeclaration{}
+var _ Statement = &VariableDeclaration{}
+var _ Declaration = &VariableDeclaration{}
+
+func (*VariableDeclaration) ElementType() ElementType {
+	return ElementTypeVariableDeclaration
+}
+
 func (d *VariableDeclaration) StartPosition() Position {
 	return d.StartPos
 }
