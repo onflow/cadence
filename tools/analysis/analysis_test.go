@@ -22,6 +22,7 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -60,12 +61,12 @@ func TestNeedSyntaxAndImport(t *testing.T) {
 			require.Equal(t, contractAddress, address)
 			return []string{contractLocation.Name}, nil
 		},
-		ResolveImport: func(
+		ResolveCode: func(
+			location common.Location,
 			importingLocation common.Location,
-			importedLocation common.Location,
 			importRange ast.Range,
 		) (string, error) {
-			switch importedLocation.ID() {
+			switch location.ID() {
 			case txLocation.ID():
 				return txCode, nil
 
@@ -76,7 +77,7 @@ func TestNeedSyntaxAndImport(t *testing.T) {
 				require.FailNow(t,
 					"import of unknown location: %s",
 					"location: %s",
-					importedLocation,
+					location,
 				)
 				return "", nil
 			}
@@ -161,4 +162,96 @@ func TestNeedSyntaxAndImport(t *testing.T) {
 		},
 		locationRanges,
 	)
+}
+
+func TestParseError(t *testing.T) {
+
+	t.Parallel()
+
+	contractAddress := common.MustBytesToAddress([]byte{0x1})
+	contractLocation := common.AddressLocation{
+		Address: contractAddress,
+		Name:    "ContractA",
+	}
+	const contractCode = `
+      pub contract ContractA {
+	    init() {
+	      ???
+	    }
+	  }
+	`
+
+	config := &analysis.Config{
+		Mode: analysis.NeedSyntax,
+		ResolveCode: func(
+			location common.Location,
+			importingLocation common.Location,
+			importRange ast.Range,
+		) (string, error) {
+			switch location.ID() {
+			case contractLocation.ID():
+				return contractCode, nil
+
+			default:
+				require.FailNow(t,
+					"import of unknown location: %s",
+					"location: %s",
+					location,
+				)
+				return "", nil
+			}
+		},
+	}
+
+	_, err := analysis.Load(config, contractLocation)
+	require.Error(t, err)
+
+	var parserError parser2.Error
+	require.ErrorAs(t, err, &parserError)
+}
+
+func TestCheckError(t *testing.T) {
+
+	t.Parallel()
+
+	contractAddress := common.MustBytesToAddress([]byte{0x1})
+	contractLocation := common.AddressLocation{
+		Address: contractAddress,
+		Name:    "ContractA",
+	}
+	const contractCode = `
+      pub contract ContractA {
+	    init() {
+	      X
+	    }
+	  }
+	`
+
+	config := &analysis.Config{
+		Mode: analysis.NeedTypes,
+		ResolveCode: func(
+			location common.Location,
+			importingLocation common.Location,
+			importRange ast.Range,
+		) (string, error) {
+			switch location.ID() {
+			case contractLocation.ID():
+				return contractCode, nil
+
+			default:
+				require.FailNow(t,
+					"import of unknown location: %s",
+					"location: %s",
+					location,
+				)
+				return "", nil
+			}
+		},
+	}
+
+	_, err := analysis.Load(config, contractLocation)
+	require.Error(t, err)
+
+	var checkerError *sema.CheckerError
+	require.ErrorAs(t, err, &checkerError)
 }

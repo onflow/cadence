@@ -67,10 +67,10 @@ type Config struct {
 	// ResolveAddressContractNames is called to resolve the contract names of an address location.
 	ResolveAddressContractNames func(address common.Address) ([]string, error)
 
-	// ResolveImport is called to resolve an import to its source code.
-	ResolveImport func(
+	// ResolveCode is called to resolve an import to its source code.
+	ResolveCode func(
+		location common.Location,
 		importingLocation common.Location,
-		importedLocation common.Location,
 		importRange ast.Range,
 	) (string, error)
 }
@@ -98,7 +98,7 @@ func (programs Programs) load(
 		return nil
 	}
 
-	code, err := config.ResolveImport(importingLocation, location, importRange)
+	code, err := config.ResolveCode(location, importingLocation, importRange)
 	if err != nil {
 		return err
 	}
