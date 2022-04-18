@@ -197,12 +197,12 @@ func max(a, b int) int {
 	return b
 }
 
-const bigIntWordSize = int(unsafe.Sizeof(big.Word(0)))
+const BigIntWordSize = int(unsafe.Sizeof(big.Word(0)))
 
 func BigIntByteLength(v *big.Int) int {
 	// NOTE: big.Int.Bits() actually returns bytes:
 	// []big.Word, where big.Word = uint
-	return len(v.Bits()) * bigIntWordSize
+	return len(v.Bits()) * BigIntWordSize
 }
 
 func NewPlusBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
@@ -211,7 +211,7 @@ func NewPlusBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 		max(
 			BigIntByteLength(a),
 			BigIntByteLength(b),
-		) + bigIntWordSize,
+		) + BigIntWordSize,
 	)
 }
 

@@ -19,6 +19,8 @@
 package interpreter_test
 
 import (
+	"math"
+	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -7463,7 +7465,7 @@ func TestInterpretFix64Metering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindBool))
-		assert.Equal(t, uint64(56), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(112), meter.getMemory(common.MemoryKindBigInt))
 	})
 }
 
@@ -7750,7 +7752,7 @@ func TestInterpretUFix64Metering(t *testing.T) {
 
 		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindBool))
 
-		assert.Equal(t, uint64(56), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(112), meter.getMemory(common.MemoryKindBigInt))
 	})
 }
 
@@ -8357,4 +8359,53 @@ func TestInterpretASTMetering(t *testing.T) {
 
 		assert.Equal(t, uint64(232), meter.getMemory(common.MemoryKindPosition))
 	})
+}
+
+func TestOverEstimateBigIntFromString(t *testing.T) {
+
+	for _, v := range []*big.Int{
+		big.NewInt(0),
+		big.NewInt(1),
+		big.NewInt(9),
+		big.NewInt(10),
+		big.NewInt(99),
+		big.NewInt(100),
+		big.NewInt(999),
+		big.NewInt(1000),
+		big.NewInt(math.MaxUint16),
+		big.NewInt(math.MaxUint32),
+		new(big.Int).SetUint64(math.MaxUint64),
+		func() *big.Int {
+			v := new(big.Int).SetUint64(math.MaxUint64)
+			return v.Mul(v, big.NewInt(2))
+		}(),
+		func() *big.Int {
+			v := new(big.Int).SetUint64(math.MaxUint64)
+			return v.Mul(v, new(big.Int).SetUint64(math.MaxUint64))
+		}(),
+	} {
+
+		// Always should be equal or overestimate
+		assert.LessOrEqual(t,
+			common.BigIntByteLength(v),
+			common.OverEstimateBigIntFromString(v.String()),
+		)
+
+		// However, should not overestimate by more than 1-word
+		assert.GreaterOrEqual(t,
+			common.BigIntByteLength(v)+8,
+			common.OverEstimateBigIntFromString(v.String()),
+		)
+
+		neg := new(big.Int).Neg(v)
+		assert.LessOrEqual(t,
+			common.BigIntByteLength(neg),
+			common.OverEstimateBigIntFromString(neg.String()),
+		)
+
+		assert.GreaterOrEqual(t,
+			common.BigIntByteLength(neg)+8,
+			common.OverEstimateBigIntFromString(neg.String()),
+		)
+	}
 }
