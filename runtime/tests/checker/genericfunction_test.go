@@ -922,3 +922,18 @@ func TestCheckBorrowOfCapabilityWithoutTypeArgument(t *testing.T) {
 
 	require.NoError(t, err)
 }
+
+func TestCheckUnparameterizedTypeInstantiationE(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheckWithPanic(t, `
+      struct S {}
+
+      let s: S<Int> = panic("")
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.UnparameterizedTypeInstantiationError{}, errs[0])
+}
