@@ -977,10 +977,7 @@ func TestInterpretIntMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// TODO:
-		// creation: 8 + 8
-		// result: 16 = max(8, 8) + 8
-		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(56), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("subtraction", func(t *testing.T) {
@@ -999,10 +996,7 @@ func TestInterpretIntMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// TODO:
-		// creation: 8 + 8
-		// result: 8 = max(8, 8)
-		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(64), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("multiplication", func(t *testing.T) {
@@ -1021,10 +1015,7 @@ func TestInterpretIntMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// TODO:
-		// creation: 8 + 8
-		// result: 16 = 8 + 8
-		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(64), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("division", func(t *testing.T) {
@@ -1043,10 +1034,7 @@ func TestInterpretIntMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// TODO:
-		// creation: 8 + 8
-		// result: 8 = max(8, 8)
-		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(56), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("modulo", func(t *testing.T) {
@@ -1065,10 +1053,7 @@ func TestInterpretIntMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// TODO:
-		// creation: 8 + 8
-		// result: 8 = max(8, 8)
-		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(56), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("bitwise or", func(t *testing.T) {
@@ -1087,10 +1072,7 @@ func TestInterpretIntMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// TODO:
-		// creation: 8 + 8
-		// result: 8 = max(8, 8)
-		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(56), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("bitwise xor", func(t *testing.T) {
@@ -1109,10 +1091,7 @@ func TestInterpretIntMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// TODO:
-		// creation: 8 + 8
-		// result: 8 = max(8, 8)
-		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(56), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("bitwise and", func(t *testing.T) {
@@ -1131,10 +1110,7 @@ func TestInterpretIntMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// TODO:
-		// creation: 8 + 8
-		// result: 8 = max(8, 8)
-		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(56), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("bitwise left-shift", func(t *testing.T) {
@@ -1153,10 +1129,7 @@ func TestInterpretIntMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// TODO:
-		// creation: 8 + 8
-		// result: 16 = 8 + 8
-		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(64), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("bitwise right-shift", func(t *testing.T) {
@@ -1175,10 +1148,7 @@ func TestInterpretIntMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// TODO:
-		// creation: 8 + 8
-		// result: 8 = max(8, 8)
-		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(56), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("negation", func(t *testing.T) {
@@ -1198,10 +1168,7 @@ func TestInterpretIntMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// TODO:
-		// creation: 8
-		// result: 8 = 8
-		assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("logical operations", func(t *testing.T) {
@@ -1270,10 +1237,7 @@ func TestInterpretUIntMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// TODO:
-		// creation: 8 + 8
-		// result: 16 = max(8, 8) + 8
-		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(56), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("subtraction", func(t *testing.T) {
@@ -1292,10 +1256,7 @@ func TestInterpretUIntMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// TODO:
-		// creation: 8 + 8
-		// result: 8 = max(8, 8)
-		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(64), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("saturating subtraction", func(t *testing.T) {
@@ -1314,10 +1275,7 @@ func TestInterpretUIntMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// TODO:
-		// creation: 8 + 8
-		// result: 8 = max(8, 8)
-		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(64), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("multiplication", func(t *testing.T) {
@@ -1336,10 +1294,7 @@ func TestInterpretUIntMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// TODO:
-		// creation: 8 + 8
-		// result: 16 = 8 + 8
-		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(64), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("division", func(t *testing.T) {
@@ -1358,10 +1313,7 @@ func TestInterpretUIntMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// TODO:
-		// creation: 8 + 8
-		// result: 8 = max(8, 8)
-		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(56), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("modulo", func(t *testing.T) {
@@ -1380,10 +1332,7 @@ func TestInterpretUIntMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// TODO:
-		// creation: 8 + 8
-		// result: 8 = max(8, 8)
-		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(56), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("bitwise or", func(t *testing.T) {
@@ -1402,10 +1351,7 @@ func TestInterpretUIntMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// TODO:
-		// creation: 8 + 8
-		// result: 8 = max(8, 8)
-		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(56), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("bitwise xor", func(t *testing.T) {
@@ -1424,10 +1370,7 @@ func TestInterpretUIntMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// TODO:
-		// creation: 8 + 8
-		// result: 8 = max(8, 8)
-		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(56), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("bitwise and", func(t *testing.T) {
@@ -1446,10 +1389,7 @@ func TestInterpretUIntMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// TODO:
-		// creation: 8 + 8
-		// result: 8 = max(8, 8)
-		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(56), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("bitwise left-shift", func(t *testing.T) {
@@ -1468,10 +1408,7 @@ func TestInterpretUIntMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// TODO:
-		// creation: 8 + 8
-		// result: 16 = 8 + 8
-		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(64), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("bitwise right-shift", func(t *testing.T) {
@@ -1490,10 +1427,7 @@ func TestInterpretUIntMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// TODO:
-		// creation: 8 + 8
-		// result: 8 = max(8, 8)
-		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(56), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("negation", func(t *testing.T) {
@@ -1513,10 +1447,7 @@ func TestInterpretUIntMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// TODO:
-		// creation: 8
-		// result: 8 = 8
-		assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindBigInt))
+		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindBigInt))
 	})
 
 	t.Run("logical operations", func(t *testing.T) {
