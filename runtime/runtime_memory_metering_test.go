@@ -113,8 +113,6 @@ func TestInterpreterElaborationImportMetering(t *testing.T) {
 		importExpressions[i] = fmt.Sprintf("import C%d from 0x1\n", i)
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
-
 	addressValue := cadence.BytesToAddress([]byte{byte(1)})
 
 	for imports := range contracts {
@@ -166,6 +164,8 @@ func TestInterpreterElaborationImportMetering(t *testing.T) {
 					return nil
 				},
 			}
+
+			nextTransactionLocation := newTransactionLocationGenerator()
 
 			for j := 0; j <= imports; j++ {
 				err := runtime.ExecuteTransaction(
