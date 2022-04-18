@@ -76,6 +76,10 @@ func TestInterpretArrayMetering(t *testing.T) {
 		assert.Equal(t, uint64(25), meter.getMemory(common.MemoryKindArrayBase))
 		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindArrayLength))
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindVariable))
+		// 1 Int8 for type
+		// 2 String: 1 for type, 1 for value
+		// 3 Bool: 1 for type, 2 for value
+		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 
 	t.Run("iteration", func(t *testing.T) {
@@ -99,6 +103,9 @@ func TestInterpretArrayMetering(t *testing.T) {
 		assert.Equal(t, uint64(30), meter.getMemory(common.MemoryKindArrayBase))
 		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindArrayLength))
 		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindVariable))
+
+		// 4 Int8: 1 for type, 3 for values
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 
 	t.Run("contains", func(t *testing.T) {
@@ -118,6 +125,7 @@ func TestInterpretArrayMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindBool))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 
 	t.Run("append", func(t *testing.T) {
@@ -236,6 +244,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindDictionaryBase))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindDictionarySize))
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindVariable))
+		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 
 	t.Run("iteration", func(t *testing.T) {
@@ -258,6 +267,10 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 
 		assert.Equal(t, uint64(27), meter.getMemory(common.MemoryKindDictionaryBase))
 		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindVariable))
+
+		// 4 Int8: 1 for type, 3 for values
+		// 4 String: 1 for type, 3 for values
+		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 
 	t.Run("contains", func(t *testing.T) {
@@ -277,6 +290,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindBool))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 
 	t.Run("insert", func(t *testing.T) {
@@ -920,6 +934,7 @@ func TestInterpretOptionalValueMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindOptional))
+		assert.Equal(t, uint64(12), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 }
 
@@ -7999,6 +8014,7 @@ func TestInterpretIdentifierMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 		assert.Equal(t, uint64(15), meter.getMemory(common.MemoryKindIdentifier))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 }
 
@@ -8257,6 +8273,7 @@ func TestInterpretASTMetering(t *testing.T) {
 
 		assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindTransfer))
 		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindMembers))
+		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 
 	t.Run("expressions", func(t *testing.T) {
@@ -8320,6 +8337,7 @@ func TestInterpretASTMetering(t *testing.T) {
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindForceExpression))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindPathExpression))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindDictionaryEntry))
+		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 
 	t.Run("types", func(t *testing.T) {

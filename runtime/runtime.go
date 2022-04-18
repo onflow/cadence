@@ -3050,14 +3050,9 @@ func (r *interpreterRuntime) newAccountContractsGetNamesFunction(
 			)
 		}
 
-		return interpreter.NewArrayValue(
-			inter,
-			interpreter.VariableSizedStaticType{
-				Type: interpreter.PrimitiveStaticTypeString,
-			},
-			common.Address{},
-			values...,
-		)
+		return interpreter.NewArrayValue(inter, interpreter.VariableSizedStaticType{
+			Type: interpreter.NewPrimitiveStaticType(inter, interpreter.PrimitiveStaticTypeString),
+		}, common.Address{}, values...)
 	}
 }
 
@@ -3183,7 +3178,7 @@ func (r *interpreterRuntime) ReadLinked(
 }
 
 var BlockIDStaticType = interpreter.ConstantSizedStaticType{
-	Type: interpreter.PrimitiveStaticTypeUInt8,
+	Type: interpreter.PrimitiveStaticTypeUInt8, // unmetered
 	Size: 32,
 }
 

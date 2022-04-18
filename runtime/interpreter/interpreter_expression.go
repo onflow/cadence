@@ -597,7 +597,7 @@ func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpres
 	}
 
 	// TODO: cache
-	arrayStaticType := ConvertSemaArrayTypeToStaticArrayType(arrayType)
+	arrayStaticType := ConvertSemaArrayTypeToStaticArrayType(interpreter, arrayType)
 
 	return NewArrayValue(
 		interpreter,
@@ -642,7 +642,7 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 		)
 	}
 
-	dictionaryStaticType := ConvertSemaDictionaryTypeToStaticDictionaryType(dictionaryType)
+	dictionaryStaticType := ConvertSemaDictionaryTypeToStaticDictionaryType(interpreter, dictionaryType)
 
 	return NewDictionaryValue(interpreter, dictionaryStaticType, keyValuePairs...)
 }
