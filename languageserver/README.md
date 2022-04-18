@@ -38,7 +38,7 @@ The Cadence language server can be compiled to WebAssembly.
 It currently assumes to be used in a JavaScript environment.
 
 ```sh
-GOARCH=wasm GOOS=js go build -o languageserver.wasm  ./cmd/languageserver
+make wasm
 ```
 
 ### Tests
