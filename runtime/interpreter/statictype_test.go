@@ -89,7 +89,7 @@ func TestCapabilityStaticType_Equal(t *testing.T) {
 				BorrowType: PrimitiveStaticTypeString,
 			}.Equal(
 				ReferenceStaticType{
-					Type: PrimitiveStaticTypeString,
+					BorrowedType: PrimitiveStaticTypeString,
 				},
 			),
 		)
@@ -106,12 +106,12 @@ func TestReferenceStaticType_Equal(t *testing.T) {
 
 		require.True(t,
 			ReferenceStaticType{
-				Authorized: false,
-				Type:       PrimitiveStaticTypeString,
+				Authorized:   false,
+				BorrowedType: PrimitiveStaticTypeString,
 			}.Equal(
 				ReferenceStaticType{
-					Authorized: false,
-					Type:       PrimitiveStaticTypeString,
+					Authorized:   false,
+					BorrowedType: PrimitiveStaticTypeString,
 				},
 			),
 		)
@@ -123,12 +123,12 @@ func TestReferenceStaticType_Equal(t *testing.T) {
 
 		require.False(t,
 			ReferenceStaticType{
-				Authorized: false,
-				Type:       PrimitiveStaticTypeInt,
+				Authorized:   false,
+				BorrowedType: PrimitiveStaticTypeInt,
 			}.Equal(
 				ReferenceStaticType{
-					Authorized: false,
-					Type:       PrimitiveStaticTypeString,
+					Authorized:   false,
+					BorrowedType: PrimitiveStaticTypeString,
 				},
 			),
 		)
@@ -140,12 +140,12 @@ func TestReferenceStaticType_Equal(t *testing.T) {
 
 		require.False(t,
 			ReferenceStaticType{
-				Authorized: false,
-				Type:       PrimitiveStaticTypeInt,
+				Authorized:   false,
+				BorrowedType: PrimitiveStaticTypeInt,
 			}.Equal(
 				ReferenceStaticType{
-					Authorized: true,
-					Type:       PrimitiveStaticTypeInt,
+					Authorized:   true,
+					BorrowedType: PrimitiveStaticTypeInt,
 				},
 			),
 		)
@@ -157,7 +157,7 @@ func TestReferenceStaticType_Equal(t *testing.T) {
 
 		require.False(t,
 			ReferenceStaticType{
-				Type: PrimitiveStaticTypeString,
+				BorrowedType: PrimitiveStaticTypeString,
 			}.Equal(
 				CapabilityStaticType{
 					BorrowType: PrimitiveStaticTypeString,
@@ -936,7 +936,7 @@ func TestRestrictedStaticType_Equal(t *testing.T) {
 				},
 			}).Equal(
 				ReferenceStaticType{
-					Type: PrimitiveStaticTypeInt,
+					BorrowedType: PrimitiveStaticTypeInt,
 				},
 			),
 		)

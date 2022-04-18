@@ -1073,8 +1073,8 @@ func TestImportRuntimeType(t *testing.T) {
 				Type:       cadence.IntType{},
 			},
 			expected: interpreter.ReferenceStaticType{
-				Authorized: false,
-				Type:       interpreter.PrimitiveStaticTypeInt,
+				Authorized:   false,
+				BorrowedType: interpreter.PrimitiveStaticTypeInt,
 			},
 		},
 		{
@@ -2793,7 +2793,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 			exportedValue: cadence.NewArray([]cadence.Value{
 				cadence.NewInt(1),
 			}),
-			expectedInvalidEntryPointArgumentErrType: &InvalidValueTypeError{},
+			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
 			label:         "Constant-size array with too many elements",
@@ -2803,7 +2803,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 				cadence.NewInt(2),
 				cadence.NewInt(3),
 			}),
-			expectedInvalidEntryPointArgumentErrType: &InvalidValueTypeError{},
+			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
 			label:         "Nested array with mismatching element",
@@ -2813,7 +2813,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 					cadence.NewInt(5),
 				}),
 			}),
-			expectedInvalidEntryPointArgumentErrType: &InvalidValueTypeError{},
+			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
 			label:                                    "Inner array with mismatching element",

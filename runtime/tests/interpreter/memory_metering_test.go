@@ -73,8 +73,8 @@ func TestInterpretArrayMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(29), meter.getMemory(common.MemoryKindArrayBase))
-		assert.Equal(t, uint64(10), meter.getMemory(common.MemoryKindArrayLength))
+		assert.Equal(t, uint64(25), meter.getMemory(common.MemoryKindArrayBase))
+		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindArrayLength))
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindVariable))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindElaboration))
 	})
@@ -97,7 +97,7 @@ func TestInterpretArrayMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(33), meter.getMemory(common.MemoryKindArrayBase))
+		assert.Equal(t, uint64(30), meter.getMemory(common.MemoryKindArrayBase))
 		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindArrayLength))
 		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindVariable))
 	})
@@ -234,7 +234,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindString))
-		assert.Equal(t, uint64(10), meter.getMemory(common.MemoryKindDictionaryBase))
+		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindDictionaryBase))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindDictionarySize))
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindVariable))
 	})
@@ -257,7 +257,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(30), meter.getMemory(common.MemoryKindDictionaryBase))
+		assert.Equal(t, uint64(27), meter.getMemory(common.MemoryKindDictionaryBase))
 		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindVariable))
 	})
 
@@ -361,7 +361,7 @@ func TestInterpretCompositeMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(30), meter.getMemory(common.MemoryKindCompositeBase))
+		assert.Equal(t, uint64(27), meter.getMemory(common.MemoryKindCompositeBase))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindCompositeSize))
 		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindVariable))
 	})
