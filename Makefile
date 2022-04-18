@@ -33,10 +33,15 @@ endif
 .PHONY: test
 test:
 	# test all packages
-	GO111MODULE=on go test -coverprofile=coverage.txt -covermode=atomic -parallel 8 -race -coverpkg $(COVERPKGS) ./...
+	GO111MODULE=on MallocNanoZone=0 go test -coverprofile=coverage.txt -covermode=atomic -parallel 8 -race -coverpkg $(COVERPKGS) ./...
 	# remove coverage of empty functions from report
 	sed -i -e 's/^.* 0 0$$//' coverage.txt
 	cd ./languageserver && make test
+
+.PHONY: fast-test
+fast-test:
+	# test all packages
+	GO111MODULE=on go test -parallel 8 ./...
 
 .PHONY: build
 build:
