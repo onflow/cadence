@@ -38,6 +38,11 @@ test:
 	sed -i -e 's/^.* 0 0$$//' coverage.txt
 	cd ./languageserver && make test
 
+.PHONY: fast-test
+fast-test:
+	# test all packages
+	GO111MODULE=on go test -parallel 8 ./...
+
 .PHONY: build
 build:
 	go build -o ./runtime/cmd/parse/parse ./runtime/cmd/parse
