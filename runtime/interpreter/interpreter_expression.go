@@ -187,8 +187,8 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 	error := func(right Value) {
 		panic(InvalidOperandsError{
 			Operation:     expression.Operation,
-			LeftType:      leftValue.StaticType(),
-			RightType:     right.StaticType(),
+			LeftType:      leftValue.StaticType(interpreter),
+			RightType:     right.StaticType(interpreter),
 			LocationRange: locationRangeGetter(interpreter, interpreter.Location, expression)(),
 		})
 	}
@@ -504,16 +504,16 @@ func (interpreter *Interpreter) NewIntegerValueFromBigInt(value *big.Int, intege
 
 	// UInt*
 	case sema.UInt8Type:
-		common.UseMemory(memoryGauge, Uint8MemoryUsage)
+		common.UseMemory(memoryGauge, UInt8MemoryUsage)
 		return NewUnmeteredUInt8Value(uint8(value.Uint64()))
 	case sema.UInt16Type:
-		common.UseMemory(memoryGauge, Uint16MemoryUsage)
+		common.UseMemory(memoryGauge, UInt16MemoryUsage)
 		return NewUnmeteredUInt16Value(uint16(value.Uint64()))
 	case sema.UInt32Type:
-		common.UseMemory(memoryGauge, Uint32MemoryUsage)
+		common.UseMemory(memoryGauge, UInt32MemoryUsage)
 		return NewUnmeteredUInt32Value(uint32(value.Uint64()))
 	case sema.UInt64Type:
-		common.UseMemory(memoryGauge, Uint64MemoryUsage)
+		common.UseMemory(memoryGauge, UInt64MemoryUsage)
 		return NewUnmeteredUInt64Value(value.Uint64())
 	case sema.UInt128Type:
 		common.UseMemory(memoryGauge, Uint128MemoryUsage)
@@ -838,8 +838,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 
 	switch expression.Operation {
 	case ast.OperationFailableCast, ast.OperationForceCast:
-		dynamicType := value.DynamicType(interpreter, SeenReferences{})
-		isSubType := interpreter.IsSubType(dynamicType, expectedType)
+		isSubType := interpreter.IsSubTypeOfSemaType(value.StaticType(interpreter), expectedType)
 
 		switch expression.Operation {
 		case ast.OperationFailableCast:
@@ -970,10 +969,10 @@ func (interpreter *Interpreter) VisitForceExpression(expression *ast.ForceExpres
 			ForceNilError{
 				LocationRange: LocationRange{
 					Location: interpreter.Location,
-					Range: ast.Range{
-						StartPos: expression.EndPosition(nil),
-						EndPos:   expression.EndPosition(nil),
-					},
+					Range: ast.NewUnmeteredRange(
+						expression.EndPosition(nil),
+						expression.EndPosition(nil),
+					),
 				},
 			},
 		)

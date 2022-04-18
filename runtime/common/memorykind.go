@@ -64,10 +64,9 @@ const (
 
 	// Tokens
 
-	MemoryKindTokenIdentifier
-	MemoryKindTokenComment
-	MemoryKindTokenNumericLiteral
-	MemoryKindTokenSyntax
+	MemoryKindValueToken
+	MemoryKindSyntaxToken
+	MemoryKindSpaceToken
 
 	// AST nodes
 
@@ -81,6 +80,7 @@ const (
 	MemoryKindTransfer
 	MemoryKindMembers
 	MemoryKindTypeAnnotation
+	MemoryKindDictionaryEntry
 
 	MemoryKindFunctionDeclaration
 	MemoryKindCompositeDeclaration

@@ -1789,8 +1789,8 @@ func TestInterpretHostFunction(t *testing.T) {
 		},
 		``,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			a := invocation.Arguments[0].(interpreter.IntValue).ToBigInt()
-			b := invocation.Arguments[1].(interpreter.IntValue).ToBigInt()
+			a := invocation.Arguments[0].(interpreter.IntValue).ToBigInt(nil)
+			b := invocation.Arguments[1].(interpreter.IntValue).ToBigInt(nil)
 			value := new(big.Int).Add(a, b)
 			return interpreter.NewUnmeteredIntValueFromBigInt(value)
 		},
@@ -9182,7 +9182,7 @@ func TestInterpretCountDigits256(t *testing.T) {
 
 			assert.Equal(t,
 				bigInt,
-				inter.Globals["number"].GetValue().(interpreter.BigNumberValue).ToBigInt(),
+				inter.Globals["number"].GetValue().(interpreter.BigNumberValue).ToBigInt(nil),
 			)
 
 			expected := interpreter.NewUnmeteredUInt8Value(uint8(test.Count))
@@ -9556,7 +9556,7 @@ func TestHostFunctionStaticType(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.ConvertSemaToStaticType(sema.ToStringFunctionType),
-			value.StaticType(),
+			value.StaticType(nil),
 		)
 	})
 
@@ -9576,14 +9576,14 @@ func TestHostFunctionStaticType(t *testing.T) {
 					ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.MetaType),
 				},
 			),
-			value.StaticType(),
+			value.StaticType(nil),
 		)
 
 		value = inter.Globals["y"].GetValue()
 		assert.Equal(
 			t,
 			interpreter.PrimitiveStaticTypeMetaType,
-			value.StaticType(),
+			value.StaticType(nil),
 		)
 
 		require.IsType(t, interpreter.TypeValue{}, value)
@@ -9609,17 +9609,17 @@ func TestHostFunctionStaticType(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.ConvertSemaToStaticType(sema.ToStringFunctionType),
-			xValue.StaticType(),
+			xValue.StaticType(nil),
 		)
 
 		yValue := inter.Globals["y"].GetValue()
 		assert.Equal(
 			t,
 			interpreter.ConvertSemaToStaticType(sema.ToStringFunctionType),
-			yValue.StaticType(),
+			yValue.StaticType(nil),
 		)
 
-		assert.Equal(t, xValue.StaticType(), yValue.StaticType())
+		assert.Equal(t, xValue.StaticType(nil), yValue.StaticType(nil))
 	})
 }
 

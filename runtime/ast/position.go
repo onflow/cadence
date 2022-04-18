@@ -95,6 +95,18 @@ type Range struct {
 
 var EmptyRange = Range{}
 
+func NewRange(memoryGauge common.MemoryGauge, startPos, endPos Position) Range {
+	common.UseMemory(memoryGauge, common.RangeMemoryUsage)
+	return NewUnmeteredRange(startPos, endPos)
+}
+
+func NewUnmeteredRange(startPos, endPos Position) Range {
+	return Range{
+		StartPos: startPos,
+		EndPos:   endPos,
+	}
+}
+
 func (e Range) StartPosition() Position {
 	return e.StartPos
 }
@@ -106,15 +118,16 @@ func (e Range) EndPosition(common.MemoryGauge) Position {
 // NewRangeFromPositioned
 
 func NewRangeFromPositioned(memoryGauge common.MemoryGauge, hasPosition HasPosition) Range {
-	return Range{
-		StartPos: hasPosition.StartPosition(),
-		EndPos:   hasPosition.EndPosition(memoryGauge),
-	}
+	return NewRange(
+		memoryGauge,
+		hasPosition.StartPosition(),
+		hasPosition.EndPosition(memoryGauge),
+	)
 }
 
 func NewUnmeteredRangeFromPositioned(hasPosition HasPosition) Range {
-	return Range{
-		StartPos: hasPosition.StartPosition(),
-		EndPos:   hasPosition.EndPosition(nil),
-	}
+	return NewUnmeteredRange(
+		hasPosition.StartPosition(),
+		hasPosition.EndPosition(nil),
+	)
 }

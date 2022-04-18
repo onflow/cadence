@@ -123,7 +123,7 @@ func TestByteValueToByte(t *testing.T) {
 		}
 
 		for _, value := range invalid {
-			_, err := ByteValueToByte(value)
+			_, err := ByteValueToByte(nil, value)
 			require.Error(t, err)
 		}
 	})
@@ -141,7 +141,7 @@ func TestByteValueToByte(t *testing.T) {
 		}
 
 		for value, expected := range invalid {
-			result, err := ByteValueToByte(value)
+			result, err := ByteValueToByte(nil, value)
 			require.NoError(t, err)
 			require.Equal(t, expected, result)
 		}

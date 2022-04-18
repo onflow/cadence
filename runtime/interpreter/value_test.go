@@ -1614,22 +1614,20 @@ func TestEphemeralReferenceTypeConformance(t *testing.T) {
 	require.NoError(t, err)
 	require.IsType(t, &EphemeralReferenceValue{}, value)
 
-	dynamicType := value.DynamicType(inter, SeenReferences{})
-
 	// Check the dynamic type conformance on a cyclic value.
-	conforms := value.ConformsToDynamicType(
+	conforms := value.ConformsToStaticType(
 		inter,
 		ReturnEmptyLocationRange,
-		dynamicType,
+		value.StaticType(inter),
 		TypeConformanceResults{},
 	)
 	assert.True(t, conforms)
 
 	// Check against a non-conforming type
-	conforms = value.ConformsToDynamicType(
+	conforms = value.ConformsToStaticType(
 		inter,
 		ReturnEmptyLocationRange,
-		EphemeralReferenceDynamicType{},
+		ReferenceStaticType{},
 		TypeConformanceResults{},
 	)
 	assert.False(t, conforms)
@@ -3279,7 +3277,7 @@ func TestPublicKeyValue(t *testing.T) {
 
 func TestHashable(t *testing.T) {
 
-	// Assert that all Value and DynamicType implementations are hashable
+	// Assert that all Value implementations are hashable
 
 	pkgs, err := packages.Load(
 		&packages.Config{
@@ -3326,7 +3324,6 @@ func TestHashable(t *testing.T) {
 	}
 
 	test("Value")
-	test("DynamicType")
 }
 
 func checkHashable(ty types.Type) error {
@@ -3520,7 +3517,7 @@ func TestNumberValueIntegerConversion(t *testing.T) {
 				if !ok {
 					return nil, false
 				}
-				return bigNumberValue.ToBigInt(), true
+				return bigNumberValue.ToBigInt(nil), true
 			},
 			check: func(t *testing.T, result interface{}) bool {
 				return assert.Equal(t, big.NewInt(42), result)
