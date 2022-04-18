@@ -28,9 +28,6 @@ import (
 
 var authAccountKeysTypeID = sema.AuthAccountKeysType.ID()
 var authAccountKeysStaticType StaticType = PrimitiveStaticTypeAuthAccountKeys
-var authAccountKeysDynamicType DynamicType = CompositeDynamicType{
-	StaticType: sema.AuthAccountKeysType,
-}
 
 // NewAuthAccountKeysValue constructs a AuthAccount.Keys value.
 func NewAuthAccountKeysValue(
@@ -59,7 +56,6 @@ func NewAuthAccountKeysValue(
 		inter,
 		authAccountKeysTypeID,
 		authAccountKeysStaticType,
-		authAccountKeysDynamicType,
 		nil,
 		fields,
 		nil,
@@ -72,9 +68,6 @@ func NewAuthAccountKeysValue(
 
 var publicAccountKeysTypeID = sema.PublicAccountKeysType.ID()
 var publicAccountKeysStaticType StaticType = PrimitiveStaticTypePublicAccountKeys
-var publicAccountKeysDynamicType DynamicType = CompositeDynamicType{
-	StaticType: sema.PublicAccountKeysType,
-}
 
 // NewPublicAccountKeysValue constructs a PublicAccount.Keys value.
 func NewPublicAccountKeysValue(
@@ -99,7 +92,6 @@ func NewPublicAccountKeysValue(
 		inter,
 		publicAccountKeysTypeID,
 		publicAccountKeysStaticType,
-		publicAccountKeysDynamicType,
 		nil,
 		fields,
 		nil,

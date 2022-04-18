@@ -28,9 +28,7 @@ import (
 
 var authAccountContractsTypeID = sema.AuthAccountContractsType.ID()
 var authAccountContractsStaticType StaticType = PrimitiveStaticTypeAuthAccountContracts
-var authAccountContractsDynamicType DynamicType = CompositeDynamicType{
-	StaticType: sema.AuthAccountContractsType,
-}
+
 var authAccountContractsFieldNames []string = nil
 
 func NewAuthAccountContractsValue(
@@ -68,7 +66,6 @@ func NewAuthAccountContractsValue(
 		inter,
 		authAccountContractsTypeID,
 		authAccountContractsStaticType,
-		authAccountContractsDynamicType,
 		authAccountContractsFieldNames,
 		fields,
 		computedFields,
@@ -81,9 +78,6 @@ func NewAuthAccountContractsValue(
 
 var publicAccountContractsTypeID = sema.PublicAccountContractsType.ID()
 var publicAccountContractsStaticType StaticType = PrimitiveStaticTypePublicAccountContracts
-var publicAccountContractsDynamicType DynamicType = CompositeDynamicType{
-	StaticType: sema.PublicAccountContractsType,
-}
 
 func NewPublicAccountContractsValue(
 	inter *Interpreter,
@@ -114,7 +108,6 @@ func NewPublicAccountContractsValue(
 		inter,
 		publicAccountContractsTypeID,
 		publicAccountContractsStaticType,
-		publicAccountContractsDynamicType,
 		nil,
 		fields,
 		computedFields,

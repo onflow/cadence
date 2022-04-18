@@ -58,7 +58,6 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 		staticType.TypeID,
 		staticType,
 		nil,
-		nil,
 		map[string]Value{},
 		nil,
 		nil,
