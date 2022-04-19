@@ -2705,9 +2705,7 @@ func (v IntValue) RecursiveString(_ SeenReferences) string {
 func (v IntValue) Negate(interpreter *Interpreter) NumberValue {
 	return NewIntValueFromBigInt(
 		interpreter,
-		common.NewBigIntMemoryUsage(
-			common.BigIntByteLength(v.BigInt),
-		),
+		common.NewNegateBigIntMemoryUsage(v.BigInt),
 		func() *big.Int {
 			return new(big.Int).Neg(v.BigInt)
 		},
