@@ -1282,6 +1282,20 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 			})
 		})
 	}
+
+	t.Run("[AnyStruct] to [Int]", func(t *testing.T) {
+		inter := parseCheckAndInterpret(t, `
+		    fun test(): [Int] {
+		        let x: [AnyStruct] = [1, 2, 3]
+		        return x as! [Int]
+		    }
+		`)
+
+		_, err := inter.Invoke("test")
+
+		require.Error(t, err)
+		assert.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+	})
 }
 
 func TestInterpretDynamicCastingDictionary(t *testing.T) {
@@ -3466,6 +3480,7 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 		Address: interpreter.AddressValue{},
 		Path:    interpreter.EmptyPathValue,
 		BorrowType: interpreter.ConvertSemaToStaticType(
+			nil,
 			&sema.ReferenceType{
 				Type: structType,
 			},
@@ -3732,5 +3747,52 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
 		result, err := inter.Invoke("test")
 		require.NoError(t, err)
 		require.Equal(t, interpreter.NewUnmeteredStringValue("hello from foo.bar"), result)
+	})
+}
+
+func TestInterpretReferenceCasting(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("array", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            fun test() {
+                let x = bar()
+                let y = [&x as &AnyStruct]
+                let z = y as! [&bar{foo}]
+            }
+
+            struct interface foo {}
+
+            struct bar: foo {}
+        `
+
+		inter := parseCheckAndInterpret(t, code)
+
+		_, err := inter.Invoke("test")
+		assert.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+	})
+
+	t.Run("dictionary", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            fun test() {
+                let x = bar()
+                let y = {"a": &x as &AnyStruct}
+                let z = y as! {String: &bar{foo}}
+            }
+
+            struct interface foo {}
+
+            struct bar: foo {}
+        `
+
+		inter := parseCheckAndInterpret(t, code)
+
+		_, err := inter.Invoke("test")
+		assert.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 	})
 }

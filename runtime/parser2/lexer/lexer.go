@@ -276,13 +276,9 @@ func (l *lexer) endPos() position {
 
 func (l *lexer) emitType(ty TokenType) {
 	if l.memoryGauge != nil {
-		usage := l.typeMemoryUsage(ty)
-
-		// Don't use `common.MemoryUsage()` to avoid redundant `nil` check.
-		err := l.memoryGauge.MeterMemory(usage)
-		if err != nil {
-			panic(err)
-		}
+		// Token value is always nil. Hence, only the wrapper is metered.
+		// No memory is used for the 'value' potion.
+		common.UseMemory(l.memoryGauge, common.SyntaxTokenMemoryUsage)
 	}
 
 	l.emit(ty, nil, l.startPosition(), true)
@@ -290,13 +286,12 @@ func (l *lexer) emitType(ty TokenType) {
 
 func (l *lexer) emitValue(ty TokenType) {
 	if l.memoryGauge != nil {
-		usage := l.valueMemoryUsage(ty)
+		// Token wrapper
+		common.UseMemory(l.memoryGauge, common.ValueTokenMemoryUsage)
 
-		// Don't use `common.MemoryUsage()` to avoid redundant `nil` check.
-		err := l.memoryGauge.MeterMemory(usage)
-		if err != nil {
-			panic(err)
-		}
+		// Token content
+		usage := l.tokenValueMemoryUsage(ty)
+		common.UseMemory(l.memoryGauge, usage)
 	}
 
 	l.emit(ty, l.word(), l.startPosition(), true)
@@ -424,6 +419,21 @@ func (l *lexer) scanFixedPointRemainder() {
 		return
 	}
 	l.acceptWhile(isDecimalDigitOrUnderscore)
+}
+
+// tokenValueMemoryUsage returns the memory usage, given the token type of the value.
+// All tokens are retained in AST in its string representation. Hence, memory usage
+// is always a string. However, string literals are special since they are
+// later represented as graphemes.
+//
+func (l *lexer) tokenValueMemoryUsage(tokenType TokenType) common.MemoryUsage {
+	tokenLength := l.wordLength()
+
+	if tokenType == TokenString {
+		return common.NewStringMemoryUsage(tokenLength)
+	}
+
+	return common.NewRawStringMemoryUsage(tokenLength)
 }
 
 func isDecimalDigitOrUnderscore(r rune) bool {

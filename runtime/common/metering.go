@@ -34,6 +34,10 @@ type MemoryGauge interface {
 }
 
 var (
+	ValueTokenMemoryUsage  = NewConstantMemoryUsage(MemoryKindValueToken)
+	SyntaxTokenMemoryUsage = NewConstantMemoryUsage(MemoryKindSyntaxToken)
+	SpaceTokenMemoryUsage  = NewConstantMemoryUsage(MemoryKindSpaceToken)
+
 	ProgramMemoryUsage         = NewConstantMemoryUsage(MemoryKindProgram)
 	IdentifierMemoryUsage      = NewConstantMemoryUsage(MemoryKindIdentifier)
 	ArgumentMemoryUsage        = NewConstantMemoryUsage(MemoryKindArgument)
@@ -259,15 +263,6 @@ func NewCharacterMemoryUsage(length int) MemoryUsage {
 	}
 }
 
-// UseConstantMemory uses a pre-determined amount of memory
-//
-func UseConstantMemory(memoryGauge MemoryGauge, kind MemoryKind) {
-	UseMemory(memoryGauge, MemoryUsage{
-		Kind:   kind,
-		Amount: 1,
-	})
-}
-
 func NewModBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 	return NewBigIntMemoryUsage(
 		// TODO: https://github.com/dapperlabs/cadence-private-issues/issues/32
@@ -343,34 +338,6 @@ func NewNumberMemoryUsage(bytes int) MemoryUsage {
 	}
 }
 
-func NewCommentTokenMemoryUsage(length int) MemoryUsage {
-	return MemoryUsage{
-		Kind:   MemoryKindTokenComment,
-		Amount: uint64(length),
-	}
-}
-
-func NewIdentifierTokenMemoryUsage(length int) MemoryUsage {
-	return MemoryUsage{
-		Kind:   MemoryKindTokenIdentifier,
-		Amount: uint64(length),
-	}
-}
-
-func NewNumericLiteralTokenMemoryUsage(length int) MemoryUsage {
-	return MemoryUsage{
-		Kind:   MemoryKindTokenNumericLiteral,
-		Amount: uint64(length),
-	}
-}
-
-func NewSyntaxTokenMemoryUsage(length int) MemoryUsage {
-	return MemoryUsage{
-		Kind:   MemoryKindTokenSyntax,
-		Amount: uint64(length),
-	}
-}
-
 func NewArrayExpressionMemoryUsage(length int) MemoryUsage {
 	return MemoryUsage{
 		Kind: MemoryKindArrayExpression,
@@ -392,4 +359,13 @@ func NewMembersMemoryUsage(length int) MemoryUsage {
 		// +1 to account for empty members
 		Amount: uint64(length) + 1,
 	}
+}
+
+// UseConstantMemory uses a pre-determined amount of memory
+//
+func UseConstantMemory(memoryGauge MemoryGauge, kind MemoryKind) {
+	UseMemory(memoryGauge, MemoryUsage{
+		Kind:   kind,
+		Amount: 1,
+	})
 }

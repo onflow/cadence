@@ -487,8 +487,6 @@ func (r *interpreterRuntime) newAuthAccountValue(
 		accountAvailableBalanceGetFunction(addressValue, context.Interface),
 		storageUsedGetFunction(addressValue, context.Interface, storage),
 		storageCapacityGetFunction(addressValue, context.Interface, storage),
-		r.newAddPublicKeyFunction(inter, addressValue, context.Interface),
-		r.newRemovePublicKeyFunction(inter, addressValue, context.Interface),
 		func() interpreter.Value {
 			return r.newAuthAccountContracts(
 				inter,
@@ -935,17 +933,15 @@ func validateArgumentParams(
 			}
 		}
 
-		dynamicType := arg.DynamicType(inter, interpreter.SeenReferences{})
-
 		// Ensure the argument is of an importable type
-		if !dynamicType.IsImportable() {
+		if !arg.IsImportable(inter) {
 			return nil, &ArgumentNotImportableError{
-				Type: dynamicType,
+				Type: arg.StaticType(inter),
 			}
 		}
 
 		// Check that decoded value is a subtype of static parameter type
-		if !inter.IsSubType(dynamicType, parameterType) {
+		if !inter.IsSubTypeOfSemaType(arg.StaticType(inter), parameterType) {
 			return nil, &InvalidEntryPointArgumentError{
 				Index: i,
 				Err: &InvalidValueTypeError{
@@ -956,10 +952,10 @@ func validateArgumentParams(
 
 		// Check whether the decoded value conforms to the type associated with the value
 		conformanceResults := interpreter.TypeConformanceResults{}
-		if !arg.ConformsToDynamicType(
+		if !arg.ConformsToStaticType(
 			inter,
 			interpreter.ReturnEmptyLocationRange,
-			dynamicType,
+			arg.StaticType(inter),
 			conformanceResults,
 		) {
 			return nil, &InvalidEntryPointArgumentError{
@@ -976,7 +972,7 @@ func validateArgumentParams(
 				return true
 			}
 
-			if !hasValidStaticType(value) {
+			if !hasValidStaticType(inter, value) {
 				panic(fmt.Errorf("invalid static type for argument: %d", i))
 			}
 
@@ -989,7 +985,7 @@ func validateArgumentParams(
 	return argumentValues, nil
 }
 
-func hasValidStaticType(value interpreter.Value) bool {
+func hasValidStaticType(inter *interpreter.Interpreter, value interpreter.Value) bool {
 	switch value := value.(type) {
 	case *interpreter.ArrayValue:
 		return value.Type != nil
@@ -999,7 +995,7 @@ func hasValidStaticType(value interpreter.Value) bool {
 	default:
 		// For other values, static type is NOT inferred.
 		// Hence no need to validate it here.
-		return value.StaticType() != nil
+		return value.StaticType(inter) != nil
 	}
 }
 
@@ -1933,100 +1929,6 @@ func storageCapacityGetFunction(
 		)
 
 	}
-}
-
-func (r *interpreterRuntime) newAddPublicKeyFunction(
-	inter *interpreter.Interpreter,
-	addressValue interpreter.AddressValue,
-	runtimeInterface Interface,
-) *interpreter.HostFunctionValue {
-
-	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-	address := addressValue.ToAddress()
-
-	return interpreter.NewHostFunctionValue(
-		inter,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			publicKeyValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
-			if !ok {
-				panic(runtimeErrors.NewUnreachableError())
-			}
-
-			publicKey, err := interpreter.ByteArrayValueToByteSlice(inter, publicKeyValue)
-			if err != nil {
-				panic("addPublicKey requires the first argument to be a byte array")
-			}
-
-			wrapPanic(func() {
-				err = runtimeInterface.AddEncodedAccountKey(address, publicKey)
-			})
-			if err != nil {
-				panic(err)
-			}
-
-			inter := invocation.Interpreter
-
-			r.emitAccountEvent(
-				stdlib.AccountKeyAddedEventType,
-				runtimeInterface,
-				[]exportableValue{
-					newExportableValue(addressValue, inter),
-					newExportableValue(publicKeyValue, inter),
-				},
-			)
-
-			return interpreter.NewVoidValue(invocation.Interpreter)
-		},
-		sema.AuthAccountTypeAddPublicKeyFunctionType,
-	)
-}
-
-func (r *interpreterRuntime) newRemovePublicKeyFunction(
-	inter *interpreter.Interpreter,
-	addressValue interpreter.AddressValue,
-	runtimeInterface Interface,
-) *interpreter.HostFunctionValue {
-
-	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-	address := addressValue.ToAddress()
-
-	return interpreter.NewHostFunctionValue(
-		inter,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			index, ok := invocation.Arguments[0].(interpreter.IntValue)
-			if !ok {
-				panic(runtimeErrors.NewUnreachableError())
-			}
-
-			var publicKey []byte
-			var err error
-			wrapPanic(func() {
-				publicKey, err = runtimeInterface.RevokeEncodedAccountKey(address, index.ToInt())
-			})
-			if err != nil {
-				panic(err)
-			}
-
-			inter := invocation.Interpreter
-
-			publicKeyValue := interpreter.ByteSliceToByteArrayValue(
-				inter,
-				publicKey,
-			)
-
-			r.emitAccountEvent(
-				stdlib.AccountKeyRemovedEventType,
-				runtimeInterface,
-				[]exportableValue{
-					newExportableValue(addressValue, inter),
-					newExportableValue(publicKeyValue, inter),
-				},
-			)
-
-			return interpreter.NewVoidValue(invocation.Interpreter)
-		},
-		sema.AuthAccountTypeRemovePublicKeyFunctionType,
-	)
 }
 
 // recordContractValue records the update of the given contract value.
@@ -3052,14 +2954,10 @@ func (r *interpreterRuntime) newAccountContractsGetNamesFunction(
 			)
 		}
 
-		return interpreter.NewArrayValue(
+		return interpreter.NewArrayValue(inter, interpreter.NewVariableSizedStaticType(
 			inter,
-			interpreter.VariableSizedStaticType{
-				Type: interpreter.PrimitiveStaticTypeString,
-			},
-			common.Address{},
-			values...,
-		)
+			interpreter.NewPrimitiveStaticType(inter, interpreter.PrimitiveStaticTypeString),
+		), common.Address{}, values...)
 	}
 }
 
@@ -3185,7 +3083,7 @@ func (r *interpreterRuntime) ReadLinked(
 }
 
 var BlockIDStaticType = interpreter.ConstantSizedStaticType{
-	Type: interpreter.PrimitiveStaticTypeUInt8,
+	Type: interpreter.PrimitiveStaticTypeUInt8, // unmetered
 	Size: 32,
 }
 

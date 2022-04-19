@@ -54,15 +54,30 @@ type CompositeStaticType struct {
 
 var _ StaticType = CompositeStaticType{}
 
-func NewCompositeStaticType(location common.Location, qualifiedIdentifier string) CompositeStaticType {
-
-	var typeID = common.NewTypeIDFromQualifiedName(location, qualifiedIdentifier)
+func NewCompositeStaticType(
+	memoryGauge common.MemoryGauge,
+	location common.Location,
+	qualifiedIdentifier string,
+	typeID common.TypeID,
+) CompositeStaticType {
+	common.UseConstantMemory(memoryGauge, common.MemoryKindCompositeStaticType)
 
 	return CompositeStaticType{
 		Location:            location,
 		QualifiedIdentifier: qualifiedIdentifier,
 		TypeID:              typeID,
 	}
+}
+
+func NewCompositeStaticTypeComputeTypeID(
+	memoryGauge common.MemoryGauge,
+	location common.Location,
+	qualifiedIdentifier string,
+) CompositeStaticType {
+	// TODO compute memory usage before building typeID string
+	typeID := common.NewTypeIDFromQualifiedName(location, qualifiedIdentifier)
+
+	return NewCompositeStaticType(memoryGauge, location, qualifiedIdentifier, typeID)
 }
 
 func (CompositeStaticType) isStaticType() {}
@@ -91,6 +106,20 @@ type InterfaceStaticType struct {
 }
 
 var _ StaticType = InterfaceStaticType{}
+
+// TODO when is this called?
+func NewInterfaceStaticType(
+	memoryGauge common.MemoryGauge,
+	location common.Location,
+	qualifiedIdentifier string,
+) InterfaceStaticType {
+	common.UseConstantMemory(memoryGauge, common.MemoryKindInterfaceStaticType)
+
+	return InterfaceStaticType{
+		Location:            location,
+		QualifiedIdentifier: qualifiedIdentifier,
+	}
+}
 
 func (InterfaceStaticType) isStaticType() {}
 
@@ -128,6 +157,17 @@ type VariableSizedStaticType struct {
 var _ ArrayStaticType = VariableSizedStaticType{}
 var _ atree.TypeInfo = VariableSizedStaticType{}
 
+func NewVariableSizedStaticType(
+	memoryGauge common.MemoryGauge,
+	elementType StaticType,
+) VariableSizedStaticType {
+	common.UseConstantMemory(memoryGauge, common.MemoryKindVariableSizedStaticType)
+
+	return VariableSizedStaticType{
+		Type: elementType,
+	}
+}
+
 func (VariableSizedStaticType) isStaticType() {}
 
 func (VariableSizedStaticType) isArrayStaticType() {}
@@ -158,6 +198,19 @@ type ConstantSizedStaticType struct {
 
 var _ ArrayStaticType = ConstantSizedStaticType{}
 var _ atree.TypeInfo = ConstantSizedStaticType{}
+
+func NewConstantSizedStaticType(
+	memoryGauge common.MemoryGauge,
+	elementType StaticType,
+	size int64,
+) ConstantSizedStaticType {
+	common.UseConstantMemory(memoryGauge, common.MemoryKindConstantSizedStaticType)
+
+	return ConstantSizedStaticType{
+		Type: elementType,
+		Size: size,
+	}
+}
 
 func (ConstantSizedStaticType) isStaticType() {}
 
@@ -191,6 +244,18 @@ type DictionaryStaticType struct {
 var _ StaticType = DictionaryStaticType{}
 var _ atree.TypeInfo = DictionaryStaticType{}
 
+func NewDictionaryStaticType(
+	memoryGauge common.MemoryGauge,
+	keyType, valueType StaticType,
+) DictionaryStaticType {
+	common.UseConstantMemory(memoryGauge, common.MemoryKindDictionaryStaticType)
+
+	return DictionaryStaticType{
+		KeyType:   keyType,
+		ValueType: valueType,
+	}
+}
+
 func (DictionaryStaticType) isStaticType() {}
 
 func (t DictionaryStaticType) String() string {
@@ -215,6 +280,15 @@ type OptionalStaticType struct {
 
 var _ StaticType = OptionalStaticType{}
 
+func NewOptionalStaticType(
+	memoryGauge common.MemoryGauge,
+	typ StaticType,
+) OptionalStaticType {
+	common.UseConstantMemory(memoryGauge, common.MemoryKindOptionalStaticType)
+
+	return OptionalStaticType{Type: typ}
+}
+
 func (OptionalStaticType) isStaticType() {}
 
 func (t OptionalStaticType) String() string {
@@ -238,6 +312,19 @@ type RestrictedStaticType struct {
 }
 
 var _ StaticType = &RestrictedStaticType{}
+
+func NewRestrictedStaticType(
+	memoryGauge common.MemoryGauge,
+	staticType StaticType,
+	restrictions []InterfaceStaticType,
+) *RestrictedStaticType {
+	common.UseConstantMemory(memoryGauge, common.MemoryKindRestrictedStaticType)
+
+	return &RestrictedStaticType{
+		Type:         staticType,
+		Restrictions: restrictions,
+	}
+}
 
 // NOTE: must be pointer receiver, as static types get used in type values,
 // which are used as keys in maps when exporting.
@@ -279,11 +366,27 @@ outer:
 // ReferenceStaticType
 
 type ReferenceStaticType struct {
-	Authorized bool
-	Type       StaticType
+	Authorized     bool
+	BorrowedType   StaticType
+	ReferencedType StaticType
 }
 
 var _ StaticType = ReferenceStaticType{}
+
+func NewReferenceStaticType(
+	memoryGauge common.MemoryGauge,
+	authorized bool,
+	staticType StaticType,
+	referenceType StaticType,
+) ReferenceStaticType {
+	common.UseConstantMemory(memoryGauge, common.MemoryKindReferenceStaticType)
+
+	return ReferenceStaticType{
+		Authorized:     authorized,
+		BorrowedType:   staticType,
+		ReferencedType: referenceType,
+	}
+}
 
 func (ReferenceStaticType) isStaticType() {}
 
@@ -293,7 +396,7 @@ func (t ReferenceStaticType) String() string {
 		auth = "auth "
 	}
 
-	return fmt.Sprintf("%s&%s", auth, t.Type)
+	return fmt.Sprintf("%s&%s", auth, t.BorrowedType)
 }
 
 func (t ReferenceStaticType) Equal(other StaticType) bool {
@@ -303,7 +406,7 @@ func (t ReferenceStaticType) Equal(other StaticType) bool {
 	}
 
 	return t.Authorized == otherReferenceType.Authorized &&
-		t.Type.Equal(otherReferenceType.Type)
+		t.BorrowedType.Equal(otherReferenceType.BorrowedType)
 }
 
 // CapabilityStaticType
@@ -313,6 +416,17 @@ type CapabilityStaticType struct {
 }
 
 var _ StaticType = CapabilityStaticType{}
+
+func NewCapabilityStaticType(
+	memoryGauge common.MemoryGauge,
+	borrowType StaticType,
+) CapabilityStaticType {
+	common.UseConstantMemory(memoryGauge, common.MemoryKindCapabilityStaticType)
+
+	return CapabilityStaticType{
+		BorrowType: borrowType,
+	}
+}
 
 func (CapabilityStaticType) isStaticType() {}
 
@@ -341,74 +455,73 @@ func (t CapabilityStaticType) Equal(other StaticType) bool {
 
 // Conversion
 
-func ConvertSemaToStaticType(t sema.Type) StaticType {
+func ConvertSemaToStaticType(memoryGauge common.MemoryGauge, t sema.Type) StaticType {
 	switch t := t.(type) {
 	case *sema.CompositeType:
-		return CompositeStaticType{
-			Location:            t.Location,
-			QualifiedIdentifier: t.QualifiedIdentifier(),
-			TypeID:              t.ID(),
-		}
+		return NewCompositeStaticType(memoryGauge, t.Location, t.QualifiedIdentifier(), t.ID())
 
 	case *sema.InterfaceType:
-		return ConvertSemaInterfaceTypeToStaticInterfaceType(t)
+		return ConvertSemaInterfaceTypeToStaticInterfaceType(memoryGauge, t)
 
 	case sema.ArrayType:
-		return ConvertSemaArrayTypeToStaticArrayType(t)
+		return ConvertSemaArrayTypeToStaticArrayType(memoryGauge, t)
 
 	case *sema.DictionaryType:
-		return ConvertSemaDictionaryTypeToStaticDictionaryType(t)
+		return ConvertSemaDictionaryTypeToStaticDictionaryType(memoryGauge, t)
 
 	case *sema.OptionalType:
-		return OptionalStaticType{
-			Type: ConvertSemaToStaticType(t.Type),
-		}
+		return NewOptionalStaticType(
+			memoryGauge,
+			ConvertSemaToStaticType(memoryGauge, t.Type),
+		)
 
 	case *sema.RestrictedType:
 		restrictions := make([]InterfaceStaticType, len(t.Restrictions))
 
 		for i, restriction := range t.Restrictions {
-			restrictions[i] = ConvertSemaInterfaceTypeToStaticInterfaceType(restriction)
+			restrictions[i] = ConvertSemaInterfaceTypeToStaticInterfaceType(memoryGauge, restriction)
 		}
 
-		return &RestrictedStaticType{
-			Type:         ConvertSemaToStaticType(t.Type),
-			Restrictions: restrictions,
-		}
+		return NewRestrictedStaticType(
+			memoryGauge,
+			ConvertSemaToStaticType(memoryGauge, t.Type),
+			restrictions,
+		)
 
 	case *sema.ReferenceType:
-		return ConvertSemaReferenceTyoeToStaticReferenceType(t)
+		return ConvertSemaReferenceTypeToStaticReferenceType(memoryGauge, t)
 
 	case *sema.CapabilityType:
-		result := CapabilityStaticType{}
+		var borrowType StaticType
 		if t.BorrowType != nil {
-			result.BorrowType = ConvertSemaToStaticType(t.BorrowType)
+			borrowType = ConvertSemaToStaticType(memoryGauge, t.BorrowType)
 		}
-		return result
+		return NewCapabilityStaticType(memoryGauge, borrowType)
 
 	case *sema.FunctionType:
-		return FunctionStaticType{
-			Type: t,
-		}
+		return NewFunctionStaticType(memoryGauge, t)
 	}
 
-	primitiveStaticType := ConvertSemaToPrimitiveStaticType(t)
+	primitiveStaticType := ConvertSemaToPrimitiveStaticType(memoryGauge, t)
 	if primitiveStaticType == PrimitiveStaticTypeUnknown {
 		return nil
 	}
 	return primitiveStaticType
 }
 
-func ConvertSemaArrayTypeToStaticArrayType(t sema.ArrayType) ArrayStaticType {
+func ConvertSemaArrayTypeToStaticArrayType(
+	memoryGauge common.MemoryGauge,
+	t sema.ArrayType,
+) ArrayStaticType {
 	switch t := t.(type) {
 	case *sema.VariableSizedType:
 		return VariableSizedStaticType{
-			Type: ConvertSemaToStaticType(t.Type),
+			Type: ConvertSemaToStaticType(memoryGauge, t.Type),
 		}
 
 	case *sema.ConstantSizedType:
 		return ConstantSizedStaticType{
-			Type: ConvertSemaToStaticType(t.Type),
+			Type: ConvertSemaToStaticType(memoryGauge, t.Type),
 			Size: t.Size,
 		}
 
@@ -417,25 +530,34 @@ func ConvertSemaArrayTypeToStaticArrayType(t sema.ArrayType) ArrayStaticType {
 	}
 }
 
-func ConvertSemaDictionaryTypeToStaticDictionaryType(t *sema.DictionaryType) DictionaryStaticType {
-	return DictionaryStaticType{
-		KeyType:   ConvertSemaToStaticType(t.KeyType),
-		ValueType: ConvertSemaToStaticType(t.ValueType),
-	}
+func ConvertSemaDictionaryTypeToStaticDictionaryType(
+	memoryGauge common.MemoryGauge,
+	t *sema.DictionaryType,
+) DictionaryStaticType {
+	return NewDictionaryStaticType(
+		memoryGauge,
+		ConvertSemaToStaticType(memoryGauge, t.KeyType),
+		ConvertSemaToStaticType(memoryGauge, t.ValueType),
+	)
 }
 
-func ConvertSemaReferenceTyoeToStaticReferenceType(t *sema.ReferenceType) ReferenceStaticType {
-	return ReferenceStaticType{
-		Authorized: t.Authorized,
-		Type:       ConvertSemaToStaticType(t.Type),
-	}
+func ConvertSemaReferenceTypeToStaticReferenceType(
+	memoryGauge common.MemoryGauge,
+	t *sema.ReferenceType,
+) ReferenceStaticType {
+	return NewReferenceStaticType(
+		memoryGauge,
+		t.Authorized,
+		ConvertSemaToStaticType(memoryGauge, t.Type),
+		nil,
+	)
 }
 
-func ConvertSemaInterfaceTypeToStaticInterfaceType(t *sema.InterfaceType) InterfaceStaticType {
-	return InterfaceStaticType{
-		Location:            t.Location,
-		QualifiedIdentifier: t.QualifiedIdentifier(),
-	}
+func ConvertSemaInterfaceTypeToStaticInterfaceType(
+	memoryGauge common.MemoryGauge,
+	t *sema.InterfaceType,
+) InterfaceStaticType {
+	return NewInterfaceStaticType(memoryGauge, t.Location, t.QualifiedIdentifier())
 }
 
 func ConvertStaticToSemaType(
@@ -497,7 +619,7 @@ func ConvertStaticToSemaType(
 		}, err
 
 	case ReferenceStaticType:
-		ty, err := ConvertStaticToSemaType(t.Type, getInterface, getComposite)
+		ty, err := ConvertStaticToSemaType(t.BorrowedType, getInterface, getComposite)
 		return &sema.ReferenceType{
 			Authorized: t.Authorized,
 			Type:       ty,
@@ -535,12 +657,23 @@ type FunctionStaticType struct {
 
 var _ StaticType = FunctionStaticType{}
 
-func (t FunctionStaticType) TypeParameters() []*TypeParameter {
+func NewFunctionStaticType(
+	memoryGauge common.MemoryGauge,
+	functionType *sema.FunctionType,
+) FunctionStaticType {
+	common.UseConstantMemory(memoryGauge, common.MemoryKindFunctionStaticType)
+
+	return FunctionStaticType{
+		Type: functionType,
+	}
+}
+
+func (t FunctionStaticType) TypeParameters(interpreter *Interpreter) []*TypeParameter {
 	typeParameters := make([]*TypeParameter, len(t.Type.TypeParameters))
 	for i, typeParameter := range t.Type.TypeParameters {
 		typeParameters[i] = &TypeParameter{
 			Name:      typeParameter.Name,
-			TypeBound: ConvertSemaToStaticType(typeParameter.TypeBound),
+			TypeBound: ConvertSemaToStaticType(interpreter, typeParameter.TypeBound),
 			Optional:  typeParameter.Optional,
 		}
 	}
@@ -548,19 +681,19 @@ func (t FunctionStaticType) TypeParameters() []*TypeParameter {
 	return typeParameters
 }
 
-func (t FunctionStaticType) ParameterTypes() []StaticType {
+func (t FunctionStaticType) ParameterTypes(interpreter *Interpreter) []StaticType {
 	parameterTypes := make([]StaticType, len(t.Type.Parameters))
 	for i, parameter := range t.Type.Parameters {
-		parameterTypes[i] = ConvertSemaToStaticType(parameter.TypeAnnotation.Type)
+		parameterTypes[i] = ConvertSemaToStaticType(interpreter, parameter.TypeAnnotation.Type)
 	}
 
 	return parameterTypes
 }
 
-func (t FunctionStaticType) ReturnType() StaticType {
+func (t FunctionStaticType) ReturnType(interpreter *Interpreter) StaticType {
 	var returnType StaticType
 	if t.Type.ReturnTypeAnnotation != nil {
-		returnType = ConvertSemaToStaticType(t.Type.ReturnTypeAnnotation.Type)
+		returnType = ConvertSemaToStaticType(interpreter, t.Type.ReturnTypeAnnotation.Type)
 	}
 
 	return returnType

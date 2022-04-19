@@ -56,9 +56,6 @@ var rlpContractStaticType interpreter.StaticType = interpreter.CompositeStaticTy
 	QualifiedIdentifier: rlpContractType.Identifier,
 	TypeID:              rlpContractTypeID,
 }
-var rlpContractDynamicType interpreter.DynamicType = interpreter.CompositeDynamicType{
-	StaticType: rlpContractType,
-}
 
 const rlpErrMsgInputContainsExtraBytes = "input data is expected to be RLP-encoded of a single string or a single list but it seems it contains extra trailing bytes."
 
@@ -207,9 +204,10 @@ var rlpDecodeListFunction = interpreter.NewUnmeteredHostFunctionValue(
 
 		return interpreter.NewArrayValue(
 			invocation.Interpreter,
-			interpreter.VariableSizedStaticType{
-				Type: interpreter.ByteArrayStaticType,
-			},
+			interpreter.NewVariableSizedStaticType(
+				invocation.Interpreter,
+				interpreter.ByteArrayStaticType,
+			),
 			common.Address{},
 			values...,
 		)
@@ -230,7 +228,6 @@ var rlpContract = StandardLibraryValue{
 			inter,
 			rlpContractType.ID(),
 			rlpContractStaticType,
-			rlpContractDynamicType,
 			nil,
 			rlpContractFields,
 			nil,

@@ -26,8 +26,7 @@ import (
 
 // Block
 
-var blockDynamicType DynamicType = BlockDynamicType{}
-var blockStaticType StaticType = PrimitiveStaticTypeBlock
+var blockStaticType StaticType = PrimitiveStaticTypeBlock // unmetered
 var blockFieldNames = []string{
 	sema.BlockTypeHeightFieldName,
 	sema.BlockTypeViewFieldName,
@@ -57,7 +56,6 @@ func NewBlockValue(
 		inter,
 		sema.BlockType.TypeID,
 		blockStaticType,
-		blockDynamicType,
 		blockFieldNames,
 		map[string]Value{
 			sema.BlockTypeHeightFieldName:    height,
