@@ -1155,7 +1155,7 @@ func (d TypeDecoder) decodeCompositeStaticType() (StaticType, error) {
 		return nil, err
 	}
 
-	return NewCompositeStaticType(location, qualifiedIdentifier), nil
+	return NewCompositeStaticTypeComputeTypeID(d.memoryGauge, location, qualifiedIdentifier), nil
 }
 
 func (d TypeDecoder) decodeInterfaceStaticType() (InterfaceStaticType, error) {
@@ -1206,10 +1206,7 @@ func (d TypeDecoder) decodeInterfaceStaticType() (InterfaceStaticType, error) {
 		return InterfaceStaticType{}, err
 	}
 
-	return InterfaceStaticType{
-		Location:            location,
-		QualifiedIdentifier: qualifiedIdentifier,
-	}, nil
+	return NewInterfaceStaticType(d.memoryGauge, location, qualifiedIdentifier), nil
 }
 
 func (d TypeDecoder) decodeVariableSizedStaticType() (StaticType, error) {
@@ -1220,9 +1217,7 @@ func (d TypeDecoder) decodeVariableSizedStaticType() (StaticType, error) {
 			err,
 		)
 	}
-	return VariableSizedStaticType{
-		Type: staticType,
-	}, nil
+	return NewVariableSizedStaticType(d.memoryGauge, staticType), nil
 }
 
 func (d TypeDecoder) decodeConstantSizedStaticType() (StaticType, error) {
@@ -1279,10 +1274,11 @@ func (d TypeDecoder) decodeConstantSizedStaticType() (StaticType, error) {
 		)
 	}
 
-	return ConstantSizedStaticType{
-		Type: staticType,
-		Size: int64(size),
-	}, nil
+	return NewConstantSizedStaticType(
+		d.memoryGauge,
+		staticType,
+		int64(size),
+	), nil
 }
 
 func (d TypeDecoder) decodeReferenceStaticType() (StaticType, error) {
@@ -1378,10 +1374,7 @@ func (d TypeDecoder) decodeDictionaryStaticType() (StaticType, error) {
 		)
 	}
 
-	return DictionaryStaticType{
-		KeyType:   keyType,
-		ValueType: valueType,
-	}, nil
+	return NewDictionaryStaticType(d.memoryGauge, keyType, valueType), nil
 }
 
 func (d TypeDecoder) decodeRestrictedStaticType() (StaticType, error) {

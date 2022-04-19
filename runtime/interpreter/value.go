@@ -463,6 +463,7 @@ func (VoidValue) Walk(_ *Interpreter, _ func(Value)) {
 }
 
 func (VoidValue) StaticType(interpreter *Interpreter) StaticType {
+	common.UseConstantMemory(interpreter, common.MemoryKindPrimitiveStaticType)
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeVoid)
 }
 
@@ -2401,9 +2402,7 @@ func (v *ArrayValue) Slice(
 
 	return NewArrayValueWithIterator(
 		interpreter,
-		VariableSizedStaticType{
-			Type: v.Type.ElementType(),
-		},
+		NewVariableSizedStaticType(interpreter, v.Type.ElementType()),
 		common.Address{},
 		func() Value {
 
@@ -13956,15 +13955,16 @@ func (v *CompositeValue) Walk(interpreter *Interpreter, walkChild func(Value)) {
 	})
 }
 
-func (v *CompositeValue) StaticType(_ *Interpreter) StaticType {
+func (v *CompositeValue) StaticType(interpreter *Interpreter) StaticType {
 	if v.staticType == nil {
 		// NOTE: Instead of using NewCompositeStaticType, which always generates the type ID,
 		// use the TypeID accessor, which may return an already computed type ID
-		v.staticType = CompositeStaticType{
-			Location:            v.Location,
-			QualifiedIdentifier: v.QualifiedIdentifier,
-			TypeID:              v.TypeID(),
-		}
+		v.staticType = NewCompositeStaticType(
+			interpreter,
+			v.Location,
+			v.QualifiedIdentifier,
+			v.TypeID(), // TODO TypeID metering
+		)
 	}
 	return v.staticType
 }
@@ -15293,9 +15293,7 @@ func (v *DictionaryValue) GetMember(
 
 		return NewArrayValueWithIterator(
 			interpreter,
-			VariableSizedStaticType{
-				Type: v.Type.KeyType,
-			},
+			NewVariableSizedStaticType(interpreter, v.Type.KeyType),
 			common.Address{},
 			func() Value {
 
@@ -15321,9 +15319,7 @@ func (v *DictionaryValue) GetMember(
 
 		return NewArrayValueWithIterator(
 			interpreter,
-			VariableSizedStaticType{
-				Type: v.Type.ValueType,
-			},
+			NewVariableSizedStaticType(interpreter, v.Type.ValueType),
 			common.Address{},
 			func() Value {
 

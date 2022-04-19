@@ -75,7 +75,15 @@ func parseCheckAndInterpretWithMemoryMetering(
 	inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(
 		t,
 		code,
-		ParseCheckAndInterpretOptions{},
+		ParseCheckAndInterpretOptions{
+			CheckerOptions: []sema.Option{
+				sema.WithPredeclaredValues(
+					stdlib.StandardLibraryFunctions{
+						stdlib.PanicFunction,
+					}.ToSemaValueDeclarations(),
+				),
+			},
+		},
 		memoryGauge,
 	)
 	require.NoError(t, err)

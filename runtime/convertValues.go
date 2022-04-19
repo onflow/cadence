@@ -921,9 +921,10 @@ func importArrayValue(
 			return nil, fmt.Errorf("cannot import array: elements do not belong to the same type")
 		}
 
-		staticArrayType = interpreter.VariableSizedStaticType{
-			Type: interpreter.ConvertSemaToStaticType(inter, elementSuperType),
-		}
+		staticArrayType = interpreter.NewVariableSizedStaticType(
+			inter,
+			interpreter.ConvertSemaToStaticType(inter, elementSuperType),
+		)
 	}
 
 	return interpreter.NewArrayValue(
@@ -1002,10 +1003,11 @@ func importDictionaryValue(
 			return nil, fmt.Errorf("cannot import dictionary: values does not belong to the same type")
 		}
 
-		dictionaryStaticType = interpreter.DictionaryStaticType{
-			KeyType:   interpreter.ConvertSemaToStaticType(inter, keySuperType),
-			ValueType: interpreter.ConvertSemaToStaticType(inter, valueSuperType),
-		}
+		dictionaryStaticType = interpreter.NewDictionaryStaticType(
+			inter,
+			interpreter.ConvertSemaToStaticType(inter, keySuperType),
+			interpreter.ConvertSemaToStaticType(inter, valueSuperType),
+		)
 	}
 
 	return interpreter.NewDictionaryValue(

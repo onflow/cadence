@@ -409,18 +409,21 @@ func exportCapabilityType(t *sema.CapabilityType, results map[sema.TypeID]cadenc
 	}
 }
 
-func importInterfaceType(t cadence.InterfaceType) interpreter.InterfaceStaticType {
-	return interpreter.InterfaceStaticType{
-		Location:            t.InterfaceTypeLocation(),
-		QualifiedIdentifier: t.InterfaceTypeQualifiedIdentifier(),
-	}
+func importInterfaceType(memoryGauge common.MemoryGauge, t cadence.InterfaceType) interpreter.InterfaceStaticType {
+	return interpreter.NewInterfaceStaticType(
+		memoryGauge,
+		t.InterfaceTypeLocation(),
+		t.InterfaceTypeQualifiedIdentifier(),
+	)
 }
 
-func importCompositeType(t cadence.CompositeType) interpreter.CompositeStaticType {
-	return interpreter.CompositeStaticType{
-		Location:            t.CompositeTypeLocation(),
-		QualifiedIdentifier: t.CompositeTypeQualifiedIdentifier(),
-	}
+func importCompositeType(memoryGauge common.MemoryGauge, t cadence.CompositeType) interpreter.CompositeStaticType {
+	return interpreter.NewCompositeStaticType(
+		memoryGauge,
+		t.CompositeTypeLocation(),
+		t.CompositeTypeQualifiedIdentifier(),
+		"", // intentionally empty
+	)
 }
 
 func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.StaticType {
@@ -502,29 +505,29 @@ func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.Stat
 	case cadence.UFix64Type:
 		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeUFix64)
 	case cadence.VariableSizedArrayType:
-		return interpreter.VariableSizedStaticType{
-			Type: ImportType(memoryGauge, t.ElementType),
-		}
+		return interpreter.NewVariableSizedStaticType(memoryGauge, ImportType(memoryGauge, t.ElementType))
 	case cadence.ConstantSizedArrayType:
-		return interpreter.ConstantSizedStaticType{
-			Type: ImportType(memoryGauge, t.ElementType),
-			Size: int64(t.Size),
-		}
+		return interpreter.NewConstantSizedStaticType(
+			memoryGauge,
+			ImportType(memoryGauge, t.ElementType),
+			int64(t.Size),
+		)
 	case cadence.DictionaryType:
-		return interpreter.DictionaryStaticType{
-			KeyType:   ImportType(memoryGauge, t.KeyType),
-			ValueType: ImportType(memoryGauge, t.ElementType),
-		}
+		return interpreter.NewDictionaryStaticType(
+			memoryGauge,
+			ImportType(memoryGauge, t.KeyType),
+			ImportType(memoryGauge, t.ElementType),
+		)
 	case *cadence.StructType,
 		*cadence.ResourceType,
 		*cadence.EventType,
 		*cadence.ContractType,
 		*cadence.EnumType:
-		return importCompositeType(t.(cadence.CompositeType))
+		return importCompositeType(memoryGauge, t.(cadence.CompositeType))
 	case *cadence.StructInterfaceType,
 		*cadence.ResourceInterfaceType,
 		*cadence.ContractInterfaceType:
-		return importInterfaceType(t.(cadence.InterfaceType))
+		return importInterfaceType(memoryGauge, t.(cadence.InterfaceType))
 	case cadence.ReferenceType:
 		return interpreter.ReferenceStaticType{
 			Authorized:   t.Authorized,
@@ -537,7 +540,7 @@ func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.Stat
 			if !ok {
 				panic(fmt.Sprintf("cannot export type of type %T", t))
 			}
-			restrictions = append(restrictions, importInterfaceType(intf))
+			restrictions = append(restrictions, importInterfaceType(memoryGauge, intf))
 		}
 		return &interpreter.RestrictedStaticType{
 			Type:         ImportType(memoryGauge, t.Type),

@@ -2995,10 +2995,11 @@ func init() {
 				return NewSomeValueNonCopying(
 					invocation.Interpreter,
 					TypeValue{
-						Type: DictionaryStaticType{
-							KeyType:   keyType,
-							ValueType: valueType,
-						},
+						Type: NewDictionaryStaticType(
+							invocation.Interpreter,
+							keyType,
+							valueType,
+						),
 					},
 				)
 			},
@@ -3289,9 +3290,10 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 
 				return TypeValue{
 					//nolint:gosimple
-					Type: VariableSizedStaticType{
-						Type: typeValue.Type,
-					},
+					Type: NewVariableSizedStaticType(
+						invocation.Interpreter,
+						typeValue.Type,
+					),
 				}
 			},
 			sema.VariableSizedArrayTypeFunctionType,
@@ -3312,10 +3314,11 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 				}
 
 				return TypeValue{
-					Type: ConstantSizedStaticType{
-						Type: typeValue.Type,
-						Size: int64(sizeValue.ToInt()),
-					},
+					Type: NewConstantSizedStaticType(
+						invocation.Interpreter,
+						typeValue.Type,
+						int64(sizeValue.ToInt()),
+					),
 				}
 			},
 			sema.ConstantSizedArrayTypeFunctionType,
