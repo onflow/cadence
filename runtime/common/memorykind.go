@@ -55,6 +55,19 @@ const (
 	MemoryKindBoundFunction
 	MemoryKindBigInt
 
+	// Static Types
+	MemoryKindPrimitiveStaticType
+	MemoryKindCompositeStaticType
+	MemoryKindInterfaceStaticType
+	MemoryKindVariableSizedStaticType
+	MemoryKindConstantSizedStaticType
+	MemoryKindDictionaryStaticType
+	MemoryKindOptionalStaticType
+	MemoryKindRestrictedStaticType
+	MemoryKindReferenceStaticType
+	MemoryKindCapabilityStaticType
+	MemoryKindFunctionStaticType
+
 	// Misc
 
 	MemoryKindRawString

@@ -26,7 +26,7 @@ import (
 
 // Block
 
-var blockStaticType StaticType = PrimitiveStaticTypeBlock
+var blockStaticType StaticType = PrimitiveStaticTypeBlock // unmetered
 var blockFieldNames = []string{
 	sema.BlockTypeHeightFieldName,
 	sema.BlockTypeViewFieldName,

@@ -409,127 +409,130 @@ func exportCapabilityType(t *sema.CapabilityType, results map[sema.TypeID]cadenc
 	}
 }
 
-func importInterfaceType(t cadence.InterfaceType) interpreter.InterfaceStaticType {
-	return interpreter.InterfaceStaticType{
-		Location:            t.InterfaceTypeLocation(),
-		QualifiedIdentifier: t.InterfaceTypeQualifiedIdentifier(),
-	}
+func importInterfaceType(memoryGauge common.MemoryGauge, t cadence.InterfaceType) interpreter.InterfaceStaticType {
+	return interpreter.NewInterfaceStaticType(
+		memoryGauge,
+		t.InterfaceTypeLocation(),
+		t.InterfaceTypeQualifiedIdentifier(),
+	)
 }
 
-func importCompositeType(t cadence.CompositeType) interpreter.CompositeStaticType {
-	return interpreter.CompositeStaticType{
-		Location:            t.CompositeTypeLocation(),
-		QualifiedIdentifier: t.CompositeTypeQualifiedIdentifier(),
-	}
+func importCompositeType(memoryGauge common.MemoryGauge, t cadence.CompositeType) interpreter.CompositeStaticType {
+	return interpreter.NewCompositeStaticType(
+		memoryGauge,
+		t.CompositeTypeLocation(),
+		t.CompositeTypeQualifiedIdentifier(),
+		"", // intentionally empty
+	)
 }
 
-func ImportType(t cadence.Type) interpreter.StaticType {
+func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.StaticType {
 	switch t := t.(type) {
 	case cadence.AnyType:
-		return interpreter.PrimitiveStaticTypeAny
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeAny)
 	case cadence.AnyStructType:
-		return interpreter.PrimitiveStaticTypeAnyStruct
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeAnyStruct)
 	case cadence.AnyResourceType:
-		return interpreter.PrimitiveStaticTypeAnyResource
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeAnyResource)
 	case cadence.OptionalType:
-		return interpreter.OptionalStaticType{
-			Type: ImportType(t.Type),
-		}
+		return interpreter.NewOptionalStaticType(memoryGauge, ImportType(memoryGauge, t.Type))
 	case cadence.MetaType:
-		return interpreter.PrimitiveStaticTypeMetaType
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeMetaType)
 	case cadence.VoidType:
-		return interpreter.PrimitiveStaticTypeVoid
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeVoid)
 	case cadence.NeverType:
-		return interpreter.PrimitiveStaticTypeNever
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeNever)
 	case cadence.BoolType:
-		return interpreter.PrimitiveStaticTypeBool
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeBool)
 	case cadence.StringType:
-		return interpreter.PrimitiveStaticTypeString
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeString)
 	case cadence.CharacterType:
-		return interpreter.PrimitiveStaticTypeCharacter
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeCharacter)
 	case cadence.AddressType:
-		return interpreter.PrimitiveStaticTypeAddress
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeAddress)
 	case cadence.NumberType:
-		return interpreter.PrimitiveStaticTypeNumber
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeNumber)
 	case cadence.SignedNumberType:
-		return interpreter.PrimitiveStaticTypeSignedNumber
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeSignedNumber)
 	case cadence.IntegerType:
-		return interpreter.PrimitiveStaticTypeInteger
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeInteger)
 	case cadence.SignedIntegerType:
-		return interpreter.PrimitiveStaticTypeSignedInteger
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeSignedInteger)
 	case cadence.FixedPointType:
-		return interpreter.PrimitiveStaticTypeFixedPoint
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeFixedPoint)
 	case cadence.SignedFixedPointType:
-		return interpreter.PrimitiveStaticTypeSignedFixedPoint
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeSignedFixedPoint)
 	case cadence.IntType:
-		return interpreter.PrimitiveStaticTypeInt
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeInt)
 	case cadence.Int8Type:
-		return interpreter.PrimitiveStaticTypeInt8
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeInt8)
 	case cadence.Int16Type:
-		return interpreter.PrimitiveStaticTypeInt16
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeInt16)
 	case cadence.Int32Type:
-		return interpreter.PrimitiveStaticTypeInt32
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeInt32)
 	case cadence.Int64Type:
-		return interpreter.PrimitiveStaticTypeInt64
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeInt64)
 	case cadence.Int128Type:
-		return interpreter.PrimitiveStaticTypeInt128
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeInt128)
 	case cadence.Int256Type:
-		return interpreter.PrimitiveStaticTypeInt256
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeInt256)
 	case cadence.UIntType:
-		return interpreter.PrimitiveStaticTypeUInt
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeUInt)
 	case cadence.UInt8Type:
-		return interpreter.PrimitiveStaticTypeUInt8
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeUInt8)
 	case cadence.UInt16Type:
-		return interpreter.PrimitiveStaticTypeUInt16
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeUInt16)
 	case cadence.UInt32Type:
-		return interpreter.PrimitiveStaticTypeUInt32
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeUInt32)
 	case cadence.UInt64Type:
-		return interpreter.PrimitiveStaticTypeUInt64
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeUInt64)
 	case cadence.UInt128Type:
-		return interpreter.PrimitiveStaticTypeUInt128
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeUInt128)
 	case cadence.UInt256Type:
-		return interpreter.PrimitiveStaticTypeUInt256
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeUInt256)
 	case cadence.Word8Type:
-		return interpreter.PrimitiveStaticTypeWord8
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeWord8)
 	case cadence.Word16Type:
-		return interpreter.PrimitiveStaticTypeWord16
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeWord16)
 	case cadence.Word32Type:
-		return interpreter.PrimitiveStaticTypeWord32
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeWord32)
 	case cadence.Word64Type:
-		return interpreter.PrimitiveStaticTypeWord64
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeWord64)
 	case cadence.Fix64Type:
-		return interpreter.PrimitiveStaticTypeFix64
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeFix64)
 	case cadence.UFix64Type:
-		return interpreter.PrimitiveStaticTypeUFix64
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeUFix64)
 	case cadence.VariableSizedArrayType:
-		return interpreter.VariableSizedStaticType{
-			Type: ImportType(t.ElementType),
-		}
+		return interpreter.NewVariableSizedStaticType(memoryGauge, ImportType(memoryGauge, t.ElementType))
 	case cadence.ConstantSizedArrayType:
-		return interpreter.ConstantSizedStaticType{
-			Type: ImportType(t.ElementType),
-			Size: int64(t.Size),
-		}
+		return interpreter.NewConstantSizedStaticType(
+			memoryGauge,
+			ImportType(memoryGauge, t.ElementType),
+			int64(t.Size),
+		)
 	case cadence.DictionaryType:
-		return interpreter.DictionaryStaticType{
-			KeyType:   ImportType(t.KeyType),
-			ValueType: ImportType(t.ElementType),
-		}
+		return interpreter.NewDictionaryStaticType(
+			memoryGauge,
+			ImportType(memoryGauge, t.KeyType),
+			ImportType(memoryGauge, t.ElementType),
+		)
 	case *cadence.StructType,
 		*cadence.ResourceType,
 		*cadence.EventType,
 		*cadence.ContractType,
 		*cadence.EnumType:
-		return importCompositeType(t.(cadence.CompositeType))
+		return importCompositeType(memoryGauge, t.(cadence.CompositeType))
 	case *cadence.StructInterfaceType,
 		*cadence.ResourceInterfaceType,
 		*cadence.ContractInterfaceType:
-		return importInterfaceType(t.(cadence.InterfaceType))
+		return importInterfaceType(memoryGauge, t.(cadence.InterfaceType))
 	case cadence.ReferenceType:
-		return interpreter.ReferenceStaticType{
-			Authorized:   t.Authorized,
-			BorrowedType: ImportType(t.Type),
-		}
+		return interpreter.NewReferenceStaticType(
+			memoryGauge,
+			t.Authorized,
+			ImportType(memoryGauge, t.Type),
+			nil,
+		)
 	case cadence.RestrictedType:
 		restrictions := make([]interpreter.InterfaceStaticType, 0, len(t.Restrictions))
 		for _, restriction := range t.Restrictions {
@@ -537,42 +540,41 @@ func ImportType(t cadence.Type) interpreter.StaticType {
 			if !ok {
 				panic(fmt.Sprintf("cannot export type of type %T", t))
 			}
-			restrictions = append(restrictions, importInterfaceType(intf))
+			restrictions = append(restrictions, importInterfaceType(memoryGauge, intf))
 		}
-		return &interpreter.RestrictedStaticType{
-			Type:         ImportType(t.Type),
-			Restrictions: restrictions,
-		}
+		return interpreter.NewRestrictedStaticType(
+			memoryGauge,
+			ImportType(memoryGauge, t.Type),
+			restrictions,
+		)
 	case cadence.BlockType:
-		return interpreter.PrimitiveStaticTypeBlock
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeBlock)
 	case cadence.CapabilityPathType:
-		return interpreter.PrimitiveStaticTypeCapabilityPath
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeCapabilityPath)
 	case cadence.StoragePathType:
-		return interpreter.PrimitiveStaticTypeStoragePath
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeStoragePath)
 	case cadence.PublicPathType:
-		return interpreter.PrimitiveStaticTypePublicPath
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypePublicPath)
 	case cadence.PrivatePathType:
-		return interpreter.PrimitiveStaticTypePrivatePath
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypePrivatePath)
 	case cadence.CapabilityType:
-		return interpreter.CapabilityStaticType{
-			BorrowType: ImportType(t.BorrowType),
-		}
+		return interpreter.NewCapabilityStaticType(memoryGauge, ImportType(memoryGauge, t.BorrowType))
 	case cadence.AccountKeyType:
-		return interpreter.PrimitiveStaticTypeAccountKey
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeAccountKey)
 	case cadence.AuthAccountContractsType:
-		return interpreter.PrimitiveStaticTypeAuthAccountContracts
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeAuthAccountContracts)
 	case cadence.AuthAccountKeysType:
-		return interpreter.PrimitiveStaticTypeAuthAccountKeys
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeAuthAccountKeys)
 	case cadence.AuthAccountType:
-		return interpreter.PrimitiveStaticTypeAuthAccount
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeAuthAccount)
 	case cadence.PublicAccountContractsType:
-		return interpreter.PrimitiveStaticTypePublicAccountContracts
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypePublicAccountContracts)
 	case cadence.PublicAccountKeysType:
-		return interpreter.PrimitiveStaticTypePublicAccountKeys
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypePublicAccountKeys)
 	case cadence.PublicAccountType:
-		return interpreter.PrimitiveStaticTypePublicAccount
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypePublicAccount)
 	case cadence.DeployedContractType:
-		return interpreter.PrimitiveStaticTypeDeployedContract
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeDeployedContract)
 	default:
 		panic(fmt.Sprintf("cannot export type of type %T", t))
 	}

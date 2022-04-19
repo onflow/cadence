@@ -109,8 +109,8 @@ func (f *InterpretedFunctionValue) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
-func (f *InterpretedFunctionValue) StaticType(_ *Interpreter) StaticType {
-	return ConvertSemaToStaticType(f.Type)
+func (f *InterpretedFunctionValue) StaticType(interpreter *Interpreter) StaticType {
+	return ConvertSemaToStaticType(interpreter, f.Type)
 }
 
 func (*InterpretedFunctionValue) IsImportable(_ *Interpreter) bool {
@@ -235,8 +235,8 @@ func (f *HostFunctionValue) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
-func (f *HostFunctionValue) StaticType(_ *Interpreter) StaticType {
-	return ConvertSemaToStaticType(f.Type)
+func (f *HostFunctionValue) StaticType(interpreter *Interpreter) StaticType {
+	return ConvertSemaToStaticType(interpreter, f.Type)
 }
 
 func (*HostFunctionValue) IsImportable(_ *Interpreter) bool {
@@ -329,7 +329,11 @@ type BoundFunctionValue struct {
 
 var _ Value = BoundFunctionValue{}
 
-func NewBoundFunctionValue(interpreter *Interpreter, function FunctionValue, self *CompositeValue) BoundFunctionValue {
+func NewBoundFunctionValue(
+	interpreter *Interpreter,
+	function FunctionValue,
+	self *CompositeValue,
+) BoundFunctionValue {
 
 	common.UseConstantMemory(interpreter, common.MemoryKindBoundFunction)
 
