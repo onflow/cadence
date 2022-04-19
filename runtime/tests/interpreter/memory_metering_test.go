@@ -522,7 +522,7 @@ func TestInterpretCompositeFieldMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(77), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, uint64(122), meter.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCompositeBase))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindCompositeSize))
 	})
@@ -548,7 +548,7 @@ func TestInterpretCompositeFieldMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(181), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, uint64(286), meter.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCompositeBase))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCompositeSize))
 	})
