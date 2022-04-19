@@ -470,11 +470,11 @@ func TestInterpretCompositeFieldMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-                    pub struct S {}
-                    pub fun main() {
-                        let s = S()
-                    }
-                `
+			pub struct S {}
+			pub fun main() {
+				let s = S()
+			}
+		`
 
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
@@ -491,16 +491,16 @@ func TestInterpretCompositeFieldMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-                pub struct S {
-                    pub let a: String
-                    init(_ a: String) {
-                        self.a = a
-                    }
-                }
-                pub fun main() {
-                    let s = S("a")
-                }
-            `
+			pub struct S {
+				pub let a: String
+				init(_ a: String) {
+					self.a = a
+				}
+			}
+			pub fun main() {
+				let s = S("a")
+			}
+		`
 
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
