@@ -3089,12 +3089,13 @@ func init() {
 					// Continue iteration
 					return true
 				})
-				functionStaticType := FunctionStaticType{
-					Type: &sema.FunctionType{
+				functionStaticType := NewFunctionStaticType(
+					invocation.Interpreter,
+					&sema.FunctionType{
 						ReturnTypeAnnotation: sema.NewTypeAnnotation(returnType),
 						Parameters:           parameterTypes,
 					},
-				}
+				)
 				return NewUnmeteredTypeValue(functionStaticType)
 			},
 			sema.FunctionTypeFunctionType,
@@ -3184,10 +3185,11 @@ func RestrictedTypeFunction(invocation Invocation) Value {
 	return NewSomeValueNonCopying(
 		invocation.Interpreter,
 		TypeValue{
-			Type: &RestrictedStaticType{
-				Type:         ConvertSemaToStaticType(invocation.Interpreter, ty),
-				Restrictions: staticRestrictions,
-			},
+			Type: NewRestrictedStaticType(
+				invocation.Interpreter,
+				ConvertSemaToStaticType(invocation.Interpreter, ty),
+				staticRestrictions,
+			),
 		},
 	)
 }
@@ -3270,10 +3272,10 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 				}
 
 				return TypeValue{
-					//nolint:gosimple
-					Type: OptionalStaticType{
-						Type: typeValue.Type,
-					},
+					Type: NewOptionalStaticType(
+						invocation.Interpreter,
+						typeValue.Type,
+					),
 				}
 			},
 			sema.OptionalTypeFunctionType,
@@ -3339,10 +3341,12 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 				}
 
 				return TypeValue{
-					Type: ReferenceStaticType{
-						Authorized:   bool(authorizedValue),
-						BorrowedType: typeValue.Type,
-					},
+					Type: NewReferenceStaticType(
+						invocation.Interpreter,
+						bool(authorizedValue),
+						typeValue.Type,
+						nil,
+					),
 				}
 			},
 			sema.ReferenceTypeFunctionType,
@@ -3367,9 +3371,10 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 				return NewSomeValueNonCopying(
 					invocation.Interpreter,
 					TypeValue{
-						Type: CapabilityStaticType{
-							BorrowType: ty,
-						},
+						Type: NewCapabilityStaticType(
+							invocation.Interpreter,
+							ty,
+						),
 					},
 				)
 			},

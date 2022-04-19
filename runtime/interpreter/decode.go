@@ -1109,9 +1109,10 @@ func (d TypeDecoder) decodeOptionalStaticType() (StaticType, error) {
 			err,
 		)
 	}
-	return OptionalStaticType{
-		Type: staticType,
-	}, nil
+	return NewOptionalStaticType(
+		d.memoryGauge,
+		staticType,
+	), nil
 }
 
 func (d TypeDecoder) decodeCompositeStaticType() (StaticType, error) {
@@ -1326,10 +1327,12 @@ func (d TypeDecoder) decodeReferenceStaticType() (StaticType, error) {
 		)
 	}
 
-	return ReferenceStaticType{
-		Authorized:   authorized,
-		BorrowedType: staticType,
-	}, nil
+	return NewReferenceStaticType(
+		d.memoryGauge,
+		authorized,
+		staticType,
+		nil,
+	), nil
 }
 
 func (d TypeDecoder) decodeDictionaryStaticType() (StaticType, error) {
@@ -1458,10 +1461,11 @@ func (d TypeDecoder) decodeRestrictedStaticType() (StaticType, error) {
 		restrictions[i] = restriction
 	}
 
-	return &RestrictedStaticType{
-		Type:         restrictedType,
-		Restrictions: restrictions,
-	}, nil
+	return NewRestrictedStaticType(
+		d.memoryGauge,
+		restrictedType,
+		restrictions,
+	), nil
 }
 
 func (d TypeDecoder) decodeCapabilityStaticType() (StaticType, error) {
@@ -1480,9 +1484,10 @@ func (d TypeDecoder) decodeCapabilityStaticType() (StaticType, error) {
 		)
 	}
 
-	return CapabilityStaticType{
-		BorrowType: borrowStaticType,
-	}, nil
+	return NewCapabilityStaticType(
+		d.memoryGauge,
+		borrowStaticType,
+	), nil
 }
 
 func (d TypeDecoder) decodeCompositeTypeInfo() (atree.TypeInfo, error) {

@@ -435,9 +435,7 @@ func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.Stat
 	case cadence.AnyResourceType:
 		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeAnyResource)
 	case cadence.OptionalType:
-		return interpreter.OptionalStaticType{
-			Type: ImportType(memoryGauge, t.Type),
-		}
+		return interpreter.NewOptionalStaticType(memoryGauge, ImportType(memoryGauge, t.Type))
 	case cadence.MetaType:
 		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeMetaType)
 	case cadence.VoidType:
@@ -529,10 +527,12 @@ func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.Stat
 		*cadence.ContractInterfaceType:
 		return importInterfaceType(memoryGauge, t.(cadence.InterfaceType))
 	case cadence.ReferenceType:
-		return interpreter.ReferenceStaticType{
-			Authorized:   t.Authorized,
-			BorrowedType: ImportType(memoryGauge, t.Type),
-		}
+		return interpreter.NewReferenceStaticType(
+			memoryGauge,
+			t.Authorized,
+			ImportType(memoryGauge, t.Type),
+			nil,
+		)
 	case cadence.RestrictedType:
 		restrictions := make([]interpreter.InterfaceStaticType, 0, len(t.Restrictions))
 		for _, restriction := range t.Restrictions {
@@ -542,10 +542,11 @@ func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.Stat
 			}
 			restrictions = append(restrictions, importInterfaceType(memoryGauge, intf))
 		}
-		return &interpreter.RestrictedStaticType{
-			Type:         ImportType(memoryGauge, t.Type),
-			Restrictions: restrictions,
-		}
+		return interpreter.NewRestrictedStaticType(
+			memoryGauge,
+			ImportType(memoryGauge, t.Type),
+			restrictions,
+		)
 	case cadence.BlockType:
 		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeBlock)
 	case cadence.CapabilityPathType:
@@ -557,9 +558,7 @@ func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.Stat
 	case cadence.PrivatePathType:
 		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypePrivatePath)
 	case cadence.CapabilityType:
-		return interpreter.CapabilityStaticType{
-			BorrowType: ImportType(memoryGauge, t.BorrowType),
-		}
+		return interpreter.NewCapabilityStaticType(memoryGauge, ImportType(memoryGauge, t.BorrowType))
 	case cadence.AccountKeyType:
 		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeAccountKey)
 	case cadence.AuthAccountContractsType:

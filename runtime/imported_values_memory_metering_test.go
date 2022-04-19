@@ -104,6 +104,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		)
 
 		assert.Equal(t, uint64(1), meter[common.MemoryKindOptional])
+		assert.Equal(t, uint64(3), meter[common.MemoryKindOptionalStaticType])
 	})
 
 	t.Run("UInt", func(t *testing.T) {
@@ -605,6 +606,12 @@ func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 		},
 		{
 			TypeName:     "String?",
+			MemoryKind:   common.MemoryKindOptionalStaticType,
+			Weight:       3,
+			TypeInstance: cadence.NewOptional(cadence.String("hello")),
+		},
+		{
+			TypeName:     "String?",
 			MemoryKind:   common.MemoryKindString,
 			Weight:       5 + 1,
 			TypeInstance: cadence.NewOptional(cadence.String("hello")),
@@ -615,7 +622,8 @@ func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 		// TODO: Bytes, U?Int\d*, Word\d+, U?Fix64, Array, Dictionary, Struct, Resource, Event, Contract, Enum
 	}
 	for _, test := range tests {
-		t.Run(test.TypeName, func(test importTest) func(t *testing.T) {
+		testName := fmt.Sprintf("%s_%s", test.TypeName, test.MemoryKind.String())
+		t.Run(testName, func(test importTest) func(t *testing.T) {
 			return func(t *testing.T) {
 				t.Parallel()
 

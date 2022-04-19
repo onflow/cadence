@@ -280,6 +280,15 @@ type OptionalStaticType struct {
 
 var _ StaticType = OptionalStaticType{}
 
+func NewOptionalStaticType(
+	memoryGauge common.MemoryGauge,
+	typ StaticType,
+) OptionalStaticType {
+	common.UseConstantMemory(memoryGauge, common.MemoryKindOptionalStaticType)
+
+	return OptionalStaticType{Type: typ}
+}
+
 func (OptionalStaticType) isStaticType() {}
 
 func (t OptionalStaticType) String() string {
@@ -303,6 +312,19 @@ type RestrictedStaticType struct {
 }
 
 var _ StaticType = &RestrictedStaticType{}
+
+func NewRestrictedStaticType(
+	memoryGauge common.MemoryGauge,
+	staticType StaticType,
+	restrictions []InterfaceStaticType,
+) *RestrictedStaticType {
+	common.UseConstantMemory(memoryGauge, common.MemoryKindRestrictedStaticType)
+
+	return &RestrictedStaticType{
+		Type:         staticType,
+		Restrictions: restrictions,
+	}
+}
 
 // NOTE: must be pointer receiver, as static types get used in type values,
 // which are used as keys in maps when exporting.
@@ -351,6 +373,21 @@ type ReferenceStaticType struct {
 
 var _ StaticType = ReferenceStaticType{}
 
+func NewReferenceStaticType(
+	memoryGauge common.MemoryGauge,
+	authorized bool,
+	staticType StaticType,
+	referenceType StaticType,
+) ReferenceStaticType {
+	common.UseConstantMemory(memoryGauge, common.MemoryKindReferenceStaticType)
+
+	return ReferenceStaticType{
+		Authorized:     authorized,
+		BorrowedType:   staticType,
+		ReferencedType: referenceType,
+	}
+}
+
 func (ReferenceStaticType) isStaticType() {}
 
 func (t ReferenceStaticType) String() string {
@@ -379,6 +416,17 @@ type CapabilityStaticType struct {
 }
 
 var _ StaticType = CapabilityStaticType{}
+
+func NewCapabilityStaticType(
+	memoryGauge common.MemoryGauge,
+	borrowType StaticType,
+) CapabilityStaticType {
+	common.UseConstantMemory(memoryGauge, common.MemoryKindCapabilityStaticType)
+
+	return CapabilityStaticType{
+		BorrowType: borrowType,
+	}
+}
 
 func (CapabilityStaticType) isStaticType() {}
 
@@ -422,9 +470,10 @@ func ConvertSemaToStaticType(memoryGauge common.MemoryGauge, t sema.Type) Static
 		return ConvertSemaDictionaryTypeToStaticDictionaryType(memoryGauge, t)
 
 	case *sema.OptionalType:
-		return OptionalStaticType{
-			Type: ConvertSemaToStaticType(memoryGauge, t.Type),
-		}
+		return NewOptionalStaticType(
+			memoryGauge,
+			ConvertSemaToStaticType(memoryGauge, t.Type),
+		)
 
 	case *sema.RestrictedType:
 		restrictions := make([]InterfaceStaticType, len(t.Restrictions))
@@ -433,25 +482,24 @@ func ConvertSemaToStaticType(memoryGauge common.MemoryGauge, t sema.Type) Static
 			restrictions[i] = ConvertSemaInterfaceTypeToStaticInterfaceType(memoryGauge, restriction)
 		}
 
-		return &RestrictedStaticType{
-			Type:         ConvertSemaToStaticType(memoryGauge, t.Type),
-			Restrictions: restrictions,
-		}
+		return NewRestrictedStaticType(
+			memoryGauge,
+			ConvertSemaToStaticType(memoryGauge, t.Type),
+			restrictions,
+		)
 
 	case *sema.ReferenceType:
 		return ConvertSemaReferenceTypeToStaticReferenceType(memoryGauge, t)
 
 	case *sema.CapabilityType:
-		result := CapabilityStaticType{}
+		var borrowType StaticType
 		if t.BorrowType != nil {
-			result.BorrowType = ConvertSemaToStaticType(memoryGauge, t.BorrowType)
+			borrowType = ConvertSemaToStaticType(memoryGauge, t.BorrowType)
 		}
-		return result
+		return NewCapabilityStaticType(memoryGauge, borrowType)
 
 	case *sema.FunctionType:
-		return FunctionStaticType{
-			Type: t,
-		}
+		return NewFunctionStaticType(memoryGauge, t)
 	}
 
 	primitiveStaticType := ConvertSemaToPrimitiveStaticType(memoryGauge, t)
@@ -497,10 +545,12 @@ func ConvertSemaReferenceTypeToStaticReferenceType(
 	memoryGauge common.MemoryGauge,
 	t *sema.ReferenceType,
 ) ReferenceStaticType {
-	return ReferenceStaticType{
-		Authorized:   t.Authorized,
-		BorrowedType: ConvertSemaToStaticType(memoryGauge, t.Type),
-	}
+	return NewReferenceStaticType(
+		memoryGauge,
+		t.Authorized,
+		ConvertSemaToStaticType(memoryGauge, t.Type),
+		nil,
+	)
 }
 
 func ConvertSemaInterfaceTypeToStaticInterfaceType(
@@ -606,6 +656,17 @@ type FunctionStaticType struct {
 }
 
 var _ StaticType = FunctionStaticType{}
+
+func NewFunctionStaticType(
+	memoryGauge common.MemoryGauge,
+	functionType *sema.FunctionType,
+) FunctionStaticType {
+	common.UseConstantMemory(memoryGauge, common.MemoryKindFunctionStaticType)
+
+	return FunctionStaticType{
+		Type: functionType,
+	}
+}
 
 func (t FunctionStaticType) TypeParameters(interpreter *Interpreter) []*TypeParameter {
 	typeParameters := make([]*TypeParameter, len(t.Type.TypeParameters))

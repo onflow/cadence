@@ -1198,6 +1198,7 @@ func (*StringValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
+// Memory is NOT metered for this value
 var ByteArrayStaticType = ConvertSemaArrayTypeToStaticArrayType(nil, sema.ByteArrayType)
 
 // DecodeHex hex-decodes this string and returns an array of UInt8 values
@@ -15202,7 +15203,7 @@ func (v *DictionaryValue) SetKey(
 
 	interpreter.checkContainerMutation(v.Type.KeyType, keyValue, getLocationRange)
 	interpreter.checkContainerMutation(
-		OptionalStaticType{
+		OptionalStaticType{ // intentionally unmetered
 			Type: v.Type.ValueType,
 		},
 		value,
@@ -15966,9 +15967,10 @@ func (NilValue) Walk(_ *Interpreter, _ func(Value)) {
 }
 
 func (NilValue) StaticType(interpreter *Interpreter) StaticType {
-	return OptionalStaticType{
-		Type: NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeNever),
-	}
+	return NewOptionalStaticType(
+		interpreter,
+		NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeNever),
+	)
 }
 
 func (NilValue) IsImportable(_ *Interpreter) bool {
@@ -16132,9 +16134,10 @@ func (v *SomeValue) StaticType(inter *Interpreter) StaticType {
 	if innerType == nil {
 		return nil
 	}
-	return OptionalStaticType{
-		Type: innerType,
-	}
+	return NewOptionalStaticType(
+		inter,
+		innerType,
+	)
 }
 
 func (v *SomeValue) IsImportable(inter *Interpreter) bool {
@@ -16489,11 +16492,12 @@ func (v *StorageReferenceValue) StaticType(inter *Interpreter) StaticType {
 		panic(err)
 	}
 
-	return ReferenceStaticType{
-		Authorized:     v.Authorized,
-		BorrowedType:   ConvertSemaToStaticType(inter, v.BorrowedType),
-		ReferencedType: (*referencedValue).StaticType(inter),
-	}
+	return NewReferenceStaticType(
+		inter,
+		v.Authorized,
+		ConvertSemaToStaticType(inter, v.BorrowedType),
+		(*referencedValue).StaticType(inter),
+	)
 }
 
 func (*StorageReferenceValue) IsImportable(_ *Interpreter) bool {
@@ -16831,11 +16835,12 @@ func (v *EphemeralReferenceValue) StaticType(inter *Interpreter) StaticType {
 		panic(DereferenceError{})
 	}
 
-	return ReferenceStaticType{
-		Authorized:     v.Authorized,
-		BorrowedType:   ConvertSemaToStaticType(inter, v.BorrowedType),
-		ReferencedType: (*referencedValue).StaticType(inter),
-	}
+	return NewReferenceStaticType(
+		inter,
+		v.Authorized,
+		ConvertSemaToStaticType(inter, v.BorrowedType),
+		(*referencedValue).StaticType(inter),
+	)
 }
 
 func (*EphemeralReferenceValue) IsImportable(_ *Interpreter) bool {
@@ -17367,7 +17372,7 @@ func accountGetCapabilityFunction(
 
 			var borrowStaticType StaticType
 			if borrowType != nil {
-				borrowStaticType = ConvertSemaToStaticType(inter, borrowType)
+				borrowStaticType = ConvertSemaToStaticType(invocation.Interpreter, borrowType)
 			}
 
 			return NewCapabilityValue(inter, addressValue, path, borrowStaticType)
@@ -17673,10 +17678,11 @@ func (v *CapabilityValue) Walk(_ *Interpreter, walkChild func(Value)) {
 	walkChild(v.Path)
 }
 
-func (v *CapabilityValue) StaticType(_ *Interpreter) StaticType {
-	return CapabilityStaticType{
-		BorrowType: v.BorrowType,
-	}
+func (v *CapabilityValue) StaticType(inter *Interpreter) StaticType {
+	return NewCapabilityStaticType(
+		inter,
+		v.BorrowType,
+	)
 }
 
 func (v *CapabilityValue) IsImportable(_ *Interpreter) bool {
