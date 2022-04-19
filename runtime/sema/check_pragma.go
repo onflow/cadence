@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ func (checker *Checker) VisitPragmaDeclaration(p *ast.PragmaDeclaration) ast.Rep
 	if !(isInvocPragma || isIdentPragma) {
 		checker.report(&InvalidPragmaError{
 			Message: "must be identifier or invocation expression",
-			Range:   ast.NewRangeFromPositioned(p.Expression),
+			Range:   ast.NewRangeFromPositioned(checker.memoryGauge, p.Expression),
 		})
 	}
 
@@ -41,7 +41,7 @@ func (checker *Checker) VisitPragmaDeclaration(p *ast.PragmaDeclaration) ast.Rep
 		if len(invocPragma.TypeArguments) > 0 {
 			checker.report(&InvalidPragmaError{
 				Message: "type arguments not supported",
-				Range:   ast.NewRangeFromPositioned(invocPragma),
+				Range:   ast.NewRangeFromPositioned(checker.memoryGauge, invocPragma),
 			})
 		}
 		// Ensure arguments are string expressions
@@ -50,7 +50,7 @@ func (checker *Checker) VisitPragmaDeclaration(p *ast.PragmaDeclaration) ast.Rep
 			if !ok {
 				checker.report(&InvalidPragmaError{
 					Message: "invalid argument",
-					Range:   ast.NewRangeFromPositioned(invocPragma),
+					Range:   ast.NewRangeFromPositioned(checker.memoryGauge, invocPragma),
 				})
 			}
 		}

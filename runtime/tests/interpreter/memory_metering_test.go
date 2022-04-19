@@ -20,7 +20,6 @@ package interpreter_test
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -56,18 +55,19 @@ func (g *testMemoryGauge) getMemory(kind common.MemoryKind) uint64 {
 
 func (g *testMemoryGauge) String() string {
 	s := ""
+	found := false
 	for kind, amount := range g.meter {
 		k := kind.String()
-		if strings.Contains(k, "StaticType") {
-			s += fmt.Sprintf("%s\t%d\n", k, amount)
-		}
+		//if strings.Contains(k, "StaticType") {
+		s += fmt.Sprintf("%s\t%d\n", k, amount)
+		found = true
+		//}
 	}
-
-	if len(s) == 0 {
-		s = "NO STATIC TYPES FOUND"
+	if found {
+		return s
+	} else {
+		return "NO STATIC TYPES FOUND"
 	}
-
-	return s
 }
 
 func TestInterpretArrayMetering(t *testing.T) {
@@ -78,12 +78,12 @@ func TestInterpretArrayMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
-                let x: [Int8] = []
-                let y: [[String]] = [[]]
-                let z: [[[Bool]]] = [[[]]]
-            }
-        `
+                      pub fun main() {
+                          let x: [Int8] = []
+                          let y: [[String]] = [[]]
+                          let z: [[[Bool]]] = [[[]]]
+                      }
+                  `
 
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
@@ -91,15 +91,8 @@ func TestInterpretArrayMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// 1 for creation of x
-		// 2 for creation of y
-		// 1 for transfer of y
-		// 1 dynamic type check of y
-		// 3 for creation of z
-		// 4 for transfer of z
-		// 3 for dynamic type check of z
-		// 14 from value transfer
-		assert.Equal(t, uint64(29), meter.getMemory(common.MemoryKindArray))
+		assert.Equal(t, uint64(25), meter.getMemory(common.MemoryKindArrayBase))
+		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindArrayLength))
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindVariable))
 		// 1 Int8 for type
 		// 2 String: 1 for type, 1 for value
@@ -115,13 +108,13 @@ func TestInterpretArrayMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-                pub fun main() {
-                    let values: [[Int8]] = [[], [], []]
-                    for value in values {
-                      let a = value
-                    }
-                }
-            `
+                          pub fun main() {
+                              let values: [[Int8]] = [[], [], []]
+                              for value in values {
+                                let a = value
+                              }
+                          }
+                      `
 
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
@@ -129,12 +122,12 @@ func TestInterpretArrayMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(33), meter.getMemory(common.MemoryKindArray))
+		assert.Equal(t, uint64(30), meter.getMemory(common.MemoryKindArrayBase))
+		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindArrayLength))
 		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindVariable))
 
 		// 4 Int8: 1 for type, 3 for values
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindPrimitiveStaticType))
-
 		// 3: 1 for each [] in `values`
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindVariableSizedStaticType))
 	})
@@ -143,9 +136,33 @@ func TestInterpretArrayMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
+                      pub fun main() {
+                          let x: [Int8] = []
+                          x.contains(5)
+                      }
+                  `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindArrayBase))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindArrayLength))
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindBool))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindPrimitiveStaticType))
+	})
+
+	t.Run("append", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
             pub fun main() {
                 let x: [Int8] = []
-                x.contains(5)
+                x.append(3)
+                        x.append(4)
             }
         `
 
@@ -155,13 +172,56 @@ func TestInterpretArrayMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindBool))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindArrayBase))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindArrayLength))
+	})
 
-		// 1 Int8 for type
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindPrimitiveStaticType))
+	t.Run("append many", func(t *testing.T) {
+		t.Parallel()
 
-		// 0: `x` is not an array-of-arrays
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindVariableSizedStaticType))
+		script := `
+            pub fun main() {
+                let x: [Int8] = []
+                x.append(0) // adds 1
+                        x.append(1) // adds 2
+                        x.append(2) // adds 2
+                        x.append(3) // adds 2
+                        x.append(4) // adds 3
+                        x.append(5) // adds 3
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindArrayBase))
+		assert.Equal(t, uint64(13), meter.getMemory(common.MemoryKindArrayLength))
+	})
+
+	t.Run("insert", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+                        pub fun main() {
+                            let x: [Int8] = []
+                            x.insert(at:0, 3)
+                            x.insert(at:1, 3)
+                        }
+                    `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindArrayBase))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindArrayLength))
+
+		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindPrimitiveStaticType))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindVariableSizedStaticType))
 	})
 
 	t.Run("constant", func(t *testing.T) {
@@ -177,7 +237,38 @@ func TestInterpretArrayMetering(t *testing.T) {
                 let q: [[Int8; 2]; 2] = [[2, 4], [8, 16]]
             }
         `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(37), meter.getMemory(common.MemoryKindArrayBase))
+		assert.Equal(t, uint64(66), meter.getMemory(common.MemoryKindArrayLength))
+
+		// 1 for `w`: 1 for the element
+		// 2 for `r`: 1 for each element
+		// 2 for `q`: 1 for each element
+		assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindConstantSizedStaticType))
+		// 2 for `q` type
+		// 1 for each other type
+		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindConstantSizedType))
+	})
+
+	t.Run("insert many", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+                        pub fun main() {
+                            let x: [Int8] = []
+                            x.insert(at:0, 3) // adds 1
+                            x.insert(at:1, 3) // adds 2
+                            x.insert(at:2, 3) // adds 2
+                            x.insert(at:3, 3) // adds 2
+                            x.insert(at:4, 3) // adds 3
+                            x.insert(at:5, 3) // adds 3
+                        }
+                    `
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
@@ -186,25 +277,15 @@ func TestInterpretArrayMetering(t *testing.T) {
 
 		fmt.Println(meter)
 
-		// 2 for creation of x
-		// 2 for creation of y
-		// 2 for creation of z
-		// 8 for creation of w: 2 for type, 6 for element
-		// 14 for creation of r: 2 for type, 6 for each element
-		// 14 for creation of q: 2 for type, 6 for each element
-		assert.Equal(t, uint64(42), meter.getMemory(common.MemoryKindArray))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindArrayBase))
+		assert.Equal(t, uint64(13), meter.getMemory(common.MemoryKindArrayLength))
+
 		// 6 Int8 for types
 		// 1 Int8 for `w` element
 		// 2 Int8 for `r` elements
 		// 2 Int8 for `q` elements
-		assert.Equal(t, uint64(11), meter.getMemory(common.MemoryKindPrimitiveStaticType))
-		// 1 for `w`: 1 for the element
-		// 2 for `r`: 1 for each element
-		// 2 for `q`: 1 for each element
-		assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindConstantSizedStaticType))
-		// 2 for `q` type
-		// 1 for each other type
-		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindConstantSizedType))
+		assert.Equal(t, uint64(19), meter.getMemory(common.MemoryKindPrimitiveStaticType))
+		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindVariableSizedStaticType))
 	})
 }
 
@@ -228,14 +309,10 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindString))
-		assert.Equal(t, uint64(10), meter.getMemory(common.MemoryKindDictionary))
+		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindDictionaryBase))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindDictionarySize))
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindVariable))
-
-		// 1 Int8 for `x` type
-		// 2 Int8: 1 for `y` type, 1 for `y` value
-		// 1 String for `x` type
-		// 3 String: 2 for `y` type, 1 for `y` value
-		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindPrimitiveStaticType))
+		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 		// 1 for `x`
 		// 7 for `y`: 2 for type, 5 for value
 		//   Note that the number of static types allocated raises 1 with each value.
@@ -262,7 +339,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(30), meter.getMemory(common.MemoryKindDictionary))
+		assert.Equal(t, uint64(27), meter.getMemory(common.MemoryKindDictionaryBase))
 		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindVariable))
 
 		// 4 Int8: 1 for type, 3 for values
@@ -290,11 +367,30 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindBool))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindPrimitiveStaticType))
+	})
 
-		// 1 for Int8 for keys
-		// 1 for String for values
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindPrimitiveStaticType))
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindDictionaryStaticType))
+	t.Run("insert", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let x: {Int8: String} = {}
+                x.insert(key: 5, "")
+                        x.insert(key: 4, "")
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindDictionaryBase))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindDictionarySize))
+		assert.Equal(t, uint64(10), meter.getMemory(common.MemoryKindPrimitiveStaticType))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindDictionaryStaticType))
 	})
 }
 
@@ -331,12 +427,12 @@ func TestInterpretCompositeMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(14), meter.getMemory(common.MemoryKindString))
-		assert.Equal(t, uint64(66), meter.getMemory(common.MemoryKindRawString))
-		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindComposite))
+		assert.Equal(t, uint64(540), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindCompositeBase))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindCompositeSize))
 		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindVariable))
 
-		// TODO is this expected?
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindCompositeStaticType))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCompositeStaticType))
 	})
 
 	t.Run("iteration", func(t *testing.T) {
@@ -359,11 +455,11 @@ func TestInterpretCompositeMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(30), meter.getMemory(common.MemoryKindComposite))
+		assert.Equal(t, uint64(27), meter.getMemory(common.MemoryKindCompositeBase))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindCompositeSize))
 		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindVariable))
 
-		// 1 for instantiating `S` in an array
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCompositeStaticType))
+		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindCompositeStaticType))
 	})
 }
 
@@ -386,8 +482,9 @@ func TestInterpretCompositeFieldMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindRawString))
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindComposite))
+		assert.Equal(t, uint64(162), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCompositeBase))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindCompositeSize))
 	})
 
 	t.Run("1 field", func(t *testing.T) {
@@ -411,8 +508,9 @@ func TestInterpretCompositeFieldMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindRawString))
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindComposite))
+		assert.Equal(t, uint64(326), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCompositeBase))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCompositeSize))
 	})
 
 	t.Run("2 field", func(t *testing.T) {
@@ -438,8 +536,9 @@ func TestInterpretCompositeFieldMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(34), meter.getMemory(common.MemoryKindRawString))
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindComposite))
+		assert.Equal(t, uint64(399), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCompositeSize))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCompositeBase))
 	})
 }
 
@@ -922,10 +1021,7 @@ func TestInterpretOptionalValueMetering(t *testing.T) {
 		// 2 for `z`
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindOptional))
 
-		// 1 for Int8 for keys
-		// 1 for String for values
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindPrimitiveStaticType))
-		// 3 for `x`: 1 for type, 2 for values
+		assert.Equal(t, uint64(12), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindDictionaryStaticType))
 	})
 
@@ -7864,8 +7960,10 @@ func TestTokenMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		// keywords + func/var names
-		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindTokenIdentifier))
+		assert.Equal(t, uint64(15), meter.getMemory(common.MemoryKindSyntaxToken))
+		assert.Equal(t, uint64(17), meter.getMemory(common.MemoryKindValueToken))
+		assert.Equal(t, uint64(25), meter.getMemory(common.MemoryKindSpaceToken))
+		assert.Equal(t, uint64(257), meter.getMemory(common.MemoryKindRawString))
 	})
 
 	t.Run("syntax tokens", func(t *testing.T) {
@@ -7884,7 +7982,10 @@ func TestTokenMetering(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
-		assert.Equal(t, uint64(21), meter.getMemory(common.MemoryKindTokenSyntax))
+		assert.Equal(t, uint64(17), meter.getMemory(common.MemoryKindSyntaxToken))
+		assert.Equal(t, uint64(19), meter.getMemory(common.MemoryKindValueToken))
+		assert.Equal(t, uint64(31), meter.getMemory(common.MemoryKindSpaceToken))
+		assert.Equal(t, uint64(235), meter.getMemory(common.MemoryKindRawString))
 	})
 
 	t.Run("comments", func(t *testing.T) {
@@ -7906,9 +8007,11 @@ func TestTokenMetering(t *testing.T) {
 
 		// block comment start, end, (, ), {, }
 		// Line comment start is not emitted
-		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindTokenSyntax))
+		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindSyntaxToken))
 
-		assert.Equal(t, uint64(75), meter.getMemory(common.MemoryKindTokenComment))
+		assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindValueToken))
+		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindSpaceToken))
+		assert.Equal(t, uint64(149), meter.getMemory(common.MemoryKindRawString))
 	})
 
 	t.Run("numeric literals", func(t *testing.T) {
@@ -7928,7 +8031,10 @@ func TestTokenMetering(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
-		assert.Equal(t, uint64(13), meter.getMemory(common.MemoryKindTokenNumericLiteral))
+		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindSyntaxToken))
+		assert.Equal(t, uint64(18), meter.getMemory(common.MemoryKindValueToken))
+		assert.Equal(t, uint64(26), meter.getMemory(common.MemoryKindSpaceToken))
+		assert.Equal(t, uint64(225), meter.getMemory(common.MemoryKindRawString))
 	})
 }
 
@@ -7938,21 +8044,45 @@ func TestInterpreterStringLocationMetering(t *testing.T) {
 	t.Run("creation", func(t *testing.T) {
 		t.Parallel()
 
-		script := `
-        struct S {}
+		// Raw string count with empty location
 
-        pub fun main(account: AuthAccount) {
-            let s = CompositeType("S.test.S")
-        }
-		`
+		script := `
+            struct S {}
+
+            pub fun main(account: AuthAccount) {
+                let s = CompositeType("")
+            }
+        `
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 		account := newTestAuthAccountValue(inter, interpreter.AddressValue{})
 		_, err := inter.Invoke("main", account)
 		require.NoError(t, err)
 
+		emptyLocationStringCount := meter.getMemory(common.MemoryKindRawString)
+
+		// Raw string count with non-empty location
+
+		script = `
+            struct S {}
+
+            pub fun main(account: AuthAccount) {
+                let s = CompositeType("S.test.S")
+            }
+        `
+
+		meter = newTestMemoryGauge()
+		inter = parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+		account = newTestAuthAccountValue(inter, interpreter.AddressValue{})
+		_, err = inter.Invoke("main", account)
+		require.NoError(t, err)
+
+		testLocationStringCount := meter.getMemory(common.MemoryKindRawString)
+
 		// raw string location is "test"
-		assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, uint64(5), testLocationStringCount-emptyLocationStringCount)
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCompositeStaticType))
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCompositeStaticType))
 	})
@@ -8047,9 +8177,7 @@ func TestInterpretIdentifierMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 		assert.Equal(t, uint64(15), meter.getMemory(common.MemoryKindIdentifier))
-
-		// 1 String for `foo` array type
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindPrimitiveStaticType))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 }
 
@@ -8426,9 +8554,7 @@ func TestInterpretASTMetering(t *testing.T) {
 
 		assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindTransfer))
 		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindMembers))
-
-		// 1 Int for for loop array
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindPrimitiveStaticType))
+		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 
 	t.Run("expressions", func(t *testing.T) {
@@ -8491,6 +8617,8 @@ func TestInterpretASTMetering(t *testing.T) {
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindReferenceExpression))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindForceExpression))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindPathExpression))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindDictionaryEntry))
+		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 
 		// 3 Int for `g`: 2 for the type, 1 for the element
 		// 4 AnyStruct for `f`: 1 for the type, 1 for each element
@@ -8540,5 +8668,38 @@ func TestInterpretASTMetering(t *testing.T) {
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindVariableSizedType))
 
 		assert.Equal(t, uint64(15), meter.getMemory(common.MemoryKindTypeAnnotation))
+	})
+
+	t.Run("position info", func(t *testing.T) {
+		script := `
+            pub let x = 1
+            pub var y = 2
+
+            pub fun main() {
+                var z = 3
+            }
+
+            pub fun foo(_ x: String, _ y: Int) {}
+
+            pub struct A {
+                pub var a: String
+
+                init() {
+                    self.a = "hello"
+                }
+            }
+
+            pub struct interface B {}
+        `
+
+		meter := newTestMemoryGauge()
+
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(232), meter.getMemory(common.MemoryKindPosition))
+		assert.Equal(t, uint64(126), meter.getMemory(common.MemoryKindRange))
 	})
 }

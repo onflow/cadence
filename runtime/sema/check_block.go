@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,10 +45,11 @@ func (checker *Checker) visitStatements(statements []ast.Statement) {
 
 			checker.report(
 				&UnreachableStatementError{
-					Range: ast.Range{
-						StartPos: statement.StartPosition(),
-						EndPos:   lastStatement.EndPosition(),
-					},
+					Range: ast.NewRange(
+						checker.memoryGauge,
+						statement.StartPosition(),
+						lastStatement.EndPosition(checker.memoryGauge),
+					),
 				},
 			)
 
@@ -92,7 +93,7 @@ func (checker *Checker) checkValidStatement(statement ast.Statement) bool {
 		&InvalidDeclarationError{
 			Identifier: name,
 			Kind:       declaration.DeclarationKind(),
-			Range:      ast.NewRangeFromPositioned(statement),
+			Range:      ast.NewRangeFromPositioned(checker.memoryGauge, statement),
 		},
 	)
 

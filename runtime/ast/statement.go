@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -210,11 +210,11 @@ func (s *IfStatement) StartPosition() Position {
 	return s.StartPos
 }
 
-func (s *IfStatement) EndPosition() Position {
+func (s *IfStatement) EndPosition(memoryGauge common.MemoryGauge) Position {
 	if s.Else != nil {
-		return s.Else.EndPosition()
+		return s.Else.EndPosition(memoryGauge)
 	}
-	return s.Then.EndPosition()
+	return s.Then.EndPosition(memoryGauge)
 }
 
 func (s *IfStatement) Accept(visitor Visitor) Repr {
@@ -280,7 +280,7 @@ func (s *IfStatement) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "IfStatement",
-		Range: NewRangeFromPositioned(s),
+		Range: NewUnmeteredRangeFromPositioned(s),
 		Alias: (*Alias)(s),
 	})
 }
@@ -324,8 +324,8 @@ func (s *WhileStatement) StartPosition() Position {
 	return s.StartPos
 }
 
-func (s *WhileStatement) EndPosition() Position {
-	return s.Block.EndPosition()
+func (s *WhileStatement) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return s.Block.EndPosition(memoryGauge)
 }
 
 const whileStatementKeywordSpaceDoc = prettier.Text("while ")
@@ -349,7 +349,7 @@ func (s *WhileStatement) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "WhileStatement",
-		Range: NewRangeFromPositioned(s),
+		Range: NewUnmeteredRangeFromPositioned(s),
 		Alias: (*Alias)(s),
 	})
 }
@@ -400,8 +400,8 @@ func (s *ForStatement) StartPosition() Position {
 	return s.StartPos
 }
 
-func (s *ForStatement) EndPosition() Position {
-	return s.Block.EndPosition()
+func (s *ForStatement) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return s.Block.EndPosition(memoryGauge)
 }
 
 const forStatementForKeywordSpaceDoc = prettier.Text("for ")
@@ -442,7 +442,7 @@ func (s *ForStatement) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "ForStatement",
-		Range: NewRangeFromPositioned(s),
+		Range: NewUnmeteredRangeFromPositioned(s),
 		Alias: (*Alias)(s),
 	})
 }
@@ -474,8 +474,8 @@ func (s *EmitStatement) StartPosition() Position {
 	return s.StartPos
 }
 
-func (s *EmitStatement) EndPosition() Position {
-	return s.InvocationExpression.EndPosition()
+func (s *EmitStatement) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return s.InvocationExpression.EndPosition(memoryGauge)
 }
 
 func (s *EmitStatement) Accept(visitor Visitor) Repr {
@@ -504,7 +504,7 @@ func (s *EmitStatement) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "EmitStatement",
-		Range: NewRangeFromPositioned(s),
+		Range: NewUnmeteredRangeFromPositioned(s),
 		Alias: (*Alias)(s),
 	})
 }
@@ -544,8 +544,8 @@ func (s *AssignmentStatement) StartPosition() Position {
 	return s.Target.StartPosition()
 }
 
-func (s *AssignmentStatement) EndPosition() Position {
-	return s.Value.EndPosition()
+func (s *AssignmentStatement) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return s.Value.EndPosition(memoryGauge)
 }
 
 func (s *AssignmentStatement) Walk(walkChild func(Element)) {
@@ -577,7 +577,7 @@ func (s *AssignmentStatement) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "AssignmentStatement",
-		Range: NewRangeFromPositioned(s),
+		Range: NewUnmeteredRangeFromPositioned(s),
 		Alias: (*Alias)(s),
 	})
 }
@@ -605,8 +605,8 @@ func (s *SwapStatement) StartPosition() Position {
 	return s.Left.StartPosition()
 }
 
-func (s *SwapStatement) EndPosition() Position {
-	return s.Right.EndPosition()
+func (s *SwapStatement) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return s.Right.EndPosition(memoryGauge)
 }
 
 func (s *SwapStatement) Accept(visitor Visitor) Repr {
@@ -638,7 +638,7 @@ func (s *SwapStatement) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "SwapStatement",
-		Range: NewRangeFromPositioned(s),
+		Range: NewUnmeteredRangeFromPositioned(s),
 		Alias: (*Alias)(s),
 	})
 }
@@ -664,8 +664,8 @@ func (s *ExpressionStatement) StartPosition() Position {
 	return s.Expression.StartPosition()
 }
 
-func (s *ExpressionStatement) EndPosition() Position {
-	return s.Expression.EndPosition()
+func (s *ExpressionStatement) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return s.Expression.EndPosition(memoryGauge)
 }
 
 func (s *ExpressionStatement) Accept(visitor Visitor) Repr {
@@ -688,7 +688,7 @@ func (s *ExpressionStatement) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "ExpressionStatement",
-		Range: NewRangeFromPositioned(s),
+		Range: NewUnmeteredRangeFromPositioned(s),
 		Alias: (*Alias)(s),
 	})
 }

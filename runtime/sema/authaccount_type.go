@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,8 +28,6 @@ const AuthAccountBalanceField = "balance"
 const AuthAccountAvailableBalanceField = "availableBalance"
 const AuthAccountStorageUsedField = "storageUsed"
 const AuthAccountStorageCapacityField = "storageCapacity"
-const AuthAccountAddPublicKeyField = "addPublicKey"
-const AuthAccountRemovePublicKeyField = "removePublicKey"
 const AuthAccountSaveField = "save"
 const AuthAccountLoadField = "load"
 const AuthAccountTypeField = "type"
@@ -92,18 +90,6 @@ var AuthAccountType = func() *CompositeType {
 			AuthAccountStorageCapacityField,
 			UInt64Type,
 			accountTypeStorageCapacityFieldDocString,
-		),
-		NewUnmeteredPublicFunctionMember(
-			authAccountType,
-			AuthAccountAddPublicKeyField,
-			AuthAccountTypeAddPublicKeyFunctionType,
-			authAccountTypeAddPublicKeyFunctionDocString,
-		),
-		NewUnmeteredPublicFunctionMember(
-			authAccountType,
-			AuthAccountRemovePublicKeyField,
-			AuthAccountTypeRemovePublicKeyFunctionType,
-			authAccountTypeRemovePublicKeyFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			authAccountType,
@@ -177,44 +163,6 @@ var AuthAccountType = func() *CompositeType {
 	authAccountType.Fields = getFieldNames(members)
 	return authAccountType
 }()
-
-var AuthAccountTypeAddPublicKeyFunctionType = &FunctionType{
-	Parameters: []*Parameter{
-		{
-			Label:      ArgumentLabelNotRequired,
-			Identifier: "key",
-			TypeAnnotation: NewTypeAnnotation(
-				ByteArrayType,
-			),
-		},
-	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		VoidType,
-	),
-}
-
-const authAccountTypeAddPublicKeyFunctionDocString = `
-Adds the given byte representation of a public key to the account's keys
-`
-
-var AuthAccountTypeRemovePublicKeyFunctionType = &FunctionType{
-	Parameters: []*Parameter{
-		{
-			Label:      ArgumentLabelNotRequired,
-			Identifier: "index",
-			TypeAnnotation: NewTypeAnnotation(
-				IntType,
-			),
-		},
-	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		VoidType,
-	),
-}
-
-const authAccountTypeRemovePublicKeyFunctionDocString = `
-Removes the public key at the given index from the account's keys
-`
 
 var AuthAccountTypeSaveFunctionType = func() *FunctionType {
 

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,11 +44,12 @@ func (checker *Checker) VisitImportDeclaration(_ *ast.ImportDeclaration) ast.Rep
 }
 
 func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclaration) ast.Repr {
-	locationRange := ast.Range{
-		StartPos: declaration.LocationPos,
+	locationRange := ast.NewRange(
+		checker.memoryGauge,
+		declaration.LocationPos,
 		// TODO: improve
-		EndPos: declaration.LocationPos,
-	}
+		declaration.LocationPos,
+	)
 
 	resolvedLocations, err := checker.resolveLocation(declaration.Identifiers, declaration.Location)
 	if err != nil {
@@ -181,7 +182,7 @@ func (checker *Checker) importResolvedLocation(resolvedLocation ResolvedLocation
 				Name:              identifier.Identifier,
 				RestrictingAccess: invalidAccessedElement.Access,
 				DeclarationKind:   invalidAccessedElement.DeclarationKind,
-				Range:             ast.NewRangeFromPositioned(identifier),
+				Range:             ast.NewRangeFromPositioned(checker.memoryGauge, identifier),
 			},
 		)
 	}
@@ -341,7 +342,7 @@ func (checker *Checker) importElements(
 				access: access,
 				kind:   element.DeclarationKind,
 				// TODO:
-				pos:                      ast.Position{},
+				pos:                      ast.EmptyPosition,
 				isConstant:               true,
 				argumentLabels:           element.ArgumentLabels,
 				allowOuterScopeShadowing: false,

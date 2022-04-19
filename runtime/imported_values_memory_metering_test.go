@@ -373,7 +373,7 @@ func TestMemoryMeteringErrors(t *testing.T) {
 		intf := &testRuntimeInterface{
 			meterMemory: func(usage common.MemoryUsage) error {
 				if usage.Kind == common.MemoryKindString ||
-					usage.Kind == common.MemoryKindArray {
+					usage.Kind == common.MemoryKindArrayBase {
 					return testMemoryError{}
 				}
 				return nil
@@ -524,7 +524,7 @@ func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 		{
 			TypeName:   "Path",
 			MemoryKind: common.MemoryKindRawString,
-			Weight:     3 + 1,
+			Weight:     3 + 1 + 68, // 68 is for tokens
 			TypeInstance: cadence.Path{
 				Domain:     "storage",
 				Identifier: "id3",
@@ -567,7 +567,7 @@ func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 		{
 			TypeName:   "Capability",
 			MemoryKind: common.MemoryKindRawString,
-			Weight:     13 + 1,
+			Weight:     13 + 1 + 74, // 74 is for tokens
 			TypeInstance: cadence.Capability{
 				Path: cadence.Path{
 					Domain:     "public",
@@ -681,7 +681,7 @@ func TestScriptDecodedLocationMetering(t *testing.T) {
 		},
 		{
 			MemoryKind: common.MemoryKindRawString,
-			Weight:     3 + 1,
+			Weight:     3 + 1 + 106, // 106 is for tokens
 			Name:       "string",
 			Location:   common.StringLocation("abc"),
 		},

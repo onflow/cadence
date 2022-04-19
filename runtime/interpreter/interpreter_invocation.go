@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -75,7 +75,7 @@ func (interpreter *Interpreter) invokeFunctionValue(
 			locationPos = invocationPosition
 		}
 
-		getLocationRange := locationRangeGetter(interpreter.Location, locationPos)
+		getLocationRange := locationRangeGetter(interpreter, interpreter.Location, locationPos)
 
 		if i < parameterTypeCount {
 			parameterType := parameterTypes[i]
@@ -96,7 +96,7 @@ func (interpreter *Interpreter) invokeFunctionValue(
 		}
 	}
 
-	getLocationRange := locationRangeGetter(interpreter.Location, invocationPosition)
+	getLocationRange := locationRangeGetter(interpreter, interpreter.Location, invocationPosition)
 
 	invocation := Invocation{
 		Arguments:          transferredArguments,

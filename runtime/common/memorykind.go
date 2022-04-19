@@ -35,9 +35,12 @@ const (
 	MemoryKindCharacter
 	MemoryKindMetaType
 	MemoryKindNumber
-	MemoryKindArray
-	MemoryKindDictionary
-	MemoryKindComposite
+	MemoryKindArrayBase
+	MemoryKindArrayLength
+	MemoryKindDictionaryBase
+	MemoryKindDictionarySize
+	MemoryKindCompositeBase
+	MemoryKindCompositeSize
 	MemoryKindOptional
 	MemoryKindNil
 	MemoryKindVoid
@@ -74,10 +77,9 @@ const (
 
 	// Tokens
 
-	MemoryKindTokenIdentifier
-	MemoryKindTokenComment
-	MemoryKindTokenNumericLiteral
-	MemoryKindTokenSyntax
+	MemoryKindValueToken
+	MemoryKindSyntaxToken
+	MemoryKindSpaceToken
 
 	// AST nodes
 
@@ -91,6 +93,7 @@ const (
 	MemoryKindTransfer
 	MemoryKindMembers
 	MemoryKindTypeAnnotation
+	MemoryKindDictionaryEntry
 
 	MemoryKindFunctionDeclaration
 	MemoryKindCompositeDeclaration
@@ -146,6 +149,9 @@ const (
 	MemoryKindReferenceType
 	MemoryKindRestrictedType
 	MemoryKindVariableSizedType
+
+	MemoryKindPosition
+	MemoryKindRange
 
 	// Placeholder kind to allow consistent indexing
 	// this should always be the last kind

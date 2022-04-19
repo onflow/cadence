@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,8 +62,8 @@ func (t *TypeAnnotation) StartPosition() Position {
 	return t.StartPos
 }
 
-func (t *TypeAnnotation) EndPosition() Position {
-	return t.Type.EndPosition()
+func (t *TypeAnnotation) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return t.Type.EndPosition(memoryGauge)
 }
 
 const typeAnnotationResourceSymbolDoc = prettier.Text("@")
@@ -85,7 +85,7 @@ func (t *TypeAnnotation) MarshalJSON() ([]byte, error) {
 		Range
 		*Alias
 	}{
-		Range: NewRangeFromPositioned(t),
+		Range: NewUnmeteredRangeFromPositioned(t),
 		Alias: (*Alias)(t),
 	})
 }
@@ -142,13 +142,13 @@ func (t *NominalType) StartPosition() Position {
 	return t.Identifier.StartPosition()
 }
 
-func (t *NominalType) EndPosition() Position {
+func (t *NominalType) EndPosition(memoryGauge common.MemoryGauge) Position {
 	nestedCount := len(t.NestedIdentifiers)
 	if nestedCount == 0 {
-		return t.Identifier.EndPosition()
+		return t.Identifier.EndPosition(memoryGauge)
 	}
 	lastIdentifier := t.NestedIdentifiers[nestedCount-1]
-	return lastIdentifier.EndPosition()
+	return lastIdentifier.EndPosition(memoryGauge)
 }
 
 func (t *NominalType) Doc() prettier.Doc {
@@ -163,7 +163,7 @@ func (t *NominalType) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "NominalType",
-		Range: NewRangeFromPositioned(t),
+		Range: NewUnmeteredRangeFromPositioned(t),
 		Alias: (*Alias)(t),
 	})
 }
@@ -207,7 +207,7 @@ func (t *OptionalType) StartPosition() Position {
 	return t.Type.StartPosition()
 }
 
-func (t *OptionalType) EndPosition() Position {
+func (t *OptionalType) EndPosition(memoryGauge common.MemoryGauge) Position {
 	return t.EndPos
 }
 
@@ -228,7 +228,7 @@ func (t *OptionalType) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "OptionalType",
-		Range: NewRangeFromPositioned(t),
+		Range: NewUnmeteredRangeFromPositioned(t),
 		Alias: (*Alias)(t),
 	})
 }
@@ -559,8 +559,8 @@ func (t *ReferenceType) StartPosition() Position {
 	return t.StartPos
 }
 
-func (t *ReferenceType) EndPosition() Position {
-	return t.Type.EndPosition()
+func (t *ReferenceType) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return t.Type.EndPosition(memoryGauge)
 }
 
 const referenceTypeAuthKeywordSpaceDoc = prettier.Text("auth ")
@@ -587,7 +587,7 @@ func (t *ReferenceType) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "ReferenceType",
-		Range: NewRangeFromPositioned(t),
+		Range: NewUnmeteredRangeFromPositioned(t),
 		Alias: (*Alias)(t),
 	})
 }
@@ -743,7 +743,7 @@ func (t *InstantiationType) StartPosition() Position {
 	return t.Type.StartPosition()
 }
 
-func (t *InstantiationType) EndPosition() Position {
+func (t *InstantiationType) EndPosition(common.MemoryGauge) Position {
 	return t.EndPos
 }
 
@@ -793,7 +793,7 @@ func (t *InstantiationType) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "InstantiationType",
-		Range: NewRangeFromPositioned(t),
+		Range: NewUnmeteredRangeFromPositioned(t),
 		Alias: (*Alias)(t),
 	})
 }

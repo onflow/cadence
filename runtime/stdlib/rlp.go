@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2022 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,9 +55,6 @@ var rlpContractTypeID = rlpContractType.ID()
 var rlpContractStaticType interpreter.StaticType = interpreter.CompositeStaticType{
 	QualifiedIdentifier: rlpContractType.Identifier,
 	TypeID:              rlpContractTypeID,
-}
-var rlpContractDynamicType interpreter.DynamicType = interpreter.CompositeDynamicType{
-	StaticType: rlpContractType,
 }
 
 const rlpErrMsgInputContainsExtraBytes = "input data is expected to be RLP-encoded of a single string or a single list but it seems it contains extra trailing bytes."
@@ -231,7 +228,6 @@ var rlpContract = StandardLibraryValue{
 			inter,
 			rlpContractType.ID(),
 			rlpContractStaticType,
-			rlpContractDynamicType,
 			nil,
 			rlpContractFields,
 			nil,

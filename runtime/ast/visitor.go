@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@
  */
 
 package ast
+
+import "github.com/onflow/cadence/runtime/common"
 
 type Repr interface{}
 
@@ -34,11 +36,11 @@ func (NotAnElement) Accept(Visitor) Repr {
 }
 
 func (NotAnElement) StartPosition() Position {
-	return Position{}
+	return EmptyPosition
 }
 
-func (NotAnElement) EndPosition() Position {
-	return Position{}
+func (NotAnElement) EndPosition(common.MemoryGauge) Position {
+	return EmptyPosition
 }
 
 func (NotAnElement) Walk(_ func(Element)) {

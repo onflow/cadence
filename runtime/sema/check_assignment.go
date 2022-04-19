@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -74,7 +74,7 @@ func (checker *Checker) checkAssignment(
 			if _, ok := targetType.(*OptionalType); !ok {
 				checker.report(
 					&InvalidResourceAssignmentError{
-						Range: ast.NewRangeFromPositioned(target),
+						Range: ast.NewRangeFromPositioned(checker.memoryGauge, target),
 					},
 				)
 			}
@@ -89,7 +89,7 @@ func (checker *Checker) checkAssignment(
 
 				checker.report(
 					&InvalidResourceAssignmentError{
-						Range: ast.NewRangeFromPositioned(target),
+						Range: ast.NewRangeFromPositioned(checker.memoryGauge, target),
 					},
 				)
 			}
@@ -160,7 +160,7 @@ func (checker *Checker) visitAssignmentValueType(
 	if !IsValidAssignmentTargetExpression(targetExpression) {
 		checker.report(
 			&InvalidAssignmentTargetError{
-				Range: ast.NewRangeFromPositioned(targetExpression),
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, targetExpression),
 			},
 		)
 
@@ -198,7 +198,7 @@ func (checker *Checker) visitIdentifierExpressionAssignment(
 		checker.report(
 			&AssignmentToConstantError{
 				Name:  identifier,
-				Range: ast.NewRangeFromPositioned(target),
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, target),
 			},
 		)
 	}
@@ -207,22 +207,22 @@ func (checker *Checker) visitIdentifierExpressionAssignment(
 }
 
 func (checker *Checker) visitIndexExpressionAssignment(
-	target *ast.IndexExpression,
+	indexExpression *ast.IndexExpression,
 ) (elementType Type) {
 
-	elementType = checker.visitIndexExpression(target, true)
+	elementType = checker.visitIndexExpression(indexExpression, true)
 
-	targetExpression := target.TargetExpression
-	switch targetExpression := targetExpression.(type) {
-	case *ast.MemberExpression:
-		// calls to this method are cached, so this performs no computation
+	if targetExpression, ok := indexExpression.TargetExpression.(*ast.MemberExpression); ok {
+		// visitMember caches its result, so visiting the target expression again,
+		// after it had been previously visited by visiting the outer index expression,
+		// performs no computation
 		_, member, _ := checker.visitMember(targetExpression)
-		if !checker.isMutatableMember(member) {
+		if member != nil && !checker.isMutatableMember(member) {
 			checker.report(
 				&ExternalMutationError{
 					Name:            member.Identifier.Identifier,
 					DeclarationKind: member.DeclarationKind,
-					Range:           ast.NewRangeFromPositioned(targetExpression),
+					Range:           ast.NewRangeFromPositioned(checker.memoryGauge, targetExpression),
 					ContainerType:   member.ContainerType,
 				},
 			)
@@ -249,7 +249,7 @@ func (checker *Checker) visitMemberExpressionAssignment(
 	if isOptional {
 		checker.report(
 			&UnsupportedOptionalChainingAssignmentError{
-				Range: ast.NewRangeFromPositioned(target),
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, target),
 			},
 		)
 	}
@@ -260,7 +260,7 @@ func (checker *Checker) visitMemberExpressionAssignment(
 				Name:              member.Identifier.Identifier,
 				RestrictingAccess: member.Access,
 				DeclarationKind:   member.DeclarationKind,
-				Range:             ast.NewRangeFromPositioned(target.Identifier),
+				Range:             ast.NewRangeFromPositioned(checker.memoryGauge, target.Identifier),
 			},
 		)
 	}
@@ -269,10 +269,12 @@ func (checker *Checker) visitMemberExpressionAssignment(
 		checker.report(
 			&AssignmentToConstantMemberError{
 				Name:  target.Identifier.Identifier,
-				Range: ast.NewRangeFromPositioned(target.Identifier),
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, target.Identifier),
 			},
 		)
 	}
+
+	targetIsConstant := member.VariableKind == ast.VariableKindConstant
 
 	// If this is an assignment to a `self` field, it needs special handling
 	// depending on if the assignment is in an initializer or not
@@ -294,17 +296,26 @@ func (checker *Checker) visitMemberExpressionAssignment(
 
 			if !functionActivation.ReturnInfo.MaybeReturned {
 
-				// If the field is constant and it has already previously been
-				// initialized, report an error for the repeated assignment
+				// If the field is constant,
+				// or it is variable and resource-kinded,
+				// and it has already previously been initialized,
+				// report an error for the repeated assignment / initialization
+				//
+				// Assigning to a variable, resource-kinded field is invalid,
+				// because the initial value would get lost.
 
 				initializedFieldMembers := functionActivation.InitializationInfo.InitializedFieldMembers
 
-				if accessedSelfMember.VariableKind == ast.VariableKindConstant &&
+				if (targetIsConstant || member.TypeAnnotation.Type.IsResourceType()) &&
 					initializedFieldMembers.Contains(accessedSelfMember) {
 
-					// TODO: dedicated error: assignment to constant after initialization
+					checker.report(
+						&FieldReinitializationError{
+							Name:  target.Identifier.Identifier,
+							Range: ast.NewRangeFromPositioned(checker.memoryGauge, target.Identifier),
+						},
+					)
 
-					reportAssignmentToConstant()
 				} else if _, ok := functionActivation.InitializationInfo.FieldMembers.Get(accessedSelfMember); !ok {
 					// This member is not supposed to be initialized
 
@@ -316,7 +327,7 @@ func (checker *Checker) visitMemberExpressionAssignment(
 				}
 			}
 
-		} else if accessedSelfMember.VariableKind == ast.VariableKindConstant {
+		} else if targetIsConstant {
 
 			// If this is an assignment outside the initializer,
 			// an assignment to a constant field is invalid
@@ -324,7 +335,7 @@ func (checker *Checker) visitMemberExpressionAssignment(
 			reportAssignmentToConstant()
 		}
 
-	} else if member.VariableKind == ast.VariableKindConstant {
+	} else if targetIsConstant {
 
 		// The assignment is not to a `self` field. Report if there is an attempt
 		// to assign to a constant field, which is always invalid,

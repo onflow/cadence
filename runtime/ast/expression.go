@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -147,8 +147,8 @@ func (e *NilExpression) StartPosition() Position {
 	return e.Pos
 }
 
-func (e *NilExpression) EndPosition() Position {
-	return e.Pos.Shifted(len(NilConstant) - 1)
+func (e *NilExpression) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return e.Pos.Shifted(memoryGauge, len(NilConstant)-1)
 }
 
 func (e *NilExpression) MarshalJSON() ([]byte, error) {
@@ -159,7 +159,7 @@ func (e *NilExpression) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "NilExpression",
-		Range: NewRangeFromPositioned(e),
+		Range: NewUnmeteredRangeFromPositioned(e),
 		Alias: (*Alias)(e),
 	})
 }
@@ -561,6 +561,19 @@ type DictionaryEntry struct {
 	Value Expression
 }
 
+func NewDictionaryEntry(
+	gauge common.MemoryGauge,
+	key Expression,
+	value Expression,
+) DictionaryEntry {
+	common.UseMemory(gauge, common.DictionaryEntryMemoryUsage)
+
+	return DictionaryEntry{
+		Key:   key,
+		Value: value,
+	}
+}
+
 func (e DictionaryEntry) MarshalJSON() ([]byte, error) {
 	type Alias DictionaryEntry
 	return json.Marshal(&struct {
@@ -641,7 +654,7 @@ func (e *IdentifierExpression) MarshalJSON() ([]byte, error) {
 		Range
 	}{
 		Type:  "IdentifierExpression",
-		Range: NewRangeFromPositioned(e),
+		Range: NewUnmeteredRangeFromPositioned(e),
 		Alias: (*Alias)(e),
 	})
 }
@@ -650,8 +663,8 @@ func (e *IdentifierExpression) StartPosition() Position {
 	return e.Identifier.StartPosition()
 }
 
-func (e *IdentifierExpression) EndPosition() Position {
-	return e.Identifier.EndPosition()
+func (e *IdentifierExpression) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return e.Identifier.EndPosition(memoryGauge)
 }
 
 // Arguments
@@ -791,7 +804,7 @@ func (e *InvocationExpression) StartPosition() Position {
 	return e.InvokedExpression.StartPosition()
 }
 
-func (e *InvocationExpression) EndPosition() Position {
+func (e *InvocationExpression) EndPosition(memoryGauge common.MemoryGauge) Position {
 	return e.EndPos
 }
 
@@ -803,7 +816,7 @@ func (e *InvocationExpression) MarshalJSON() ([]byte, error) {
 		Range
 	}{
 		Type:  "InvocationExpression",
-		Range: NewRangeFromPositioned(e),
+		Range: NewUnmeteredRangeFromPositioned(e),
 		Alias: (*Alias)(e),
 	})
 }
@@ -908,11 +921,11 @@ func (e *MemberExpression) StartPosition() Position {
 	return e.Expression.StartPosition()
 }
 
-func (e *MemberExpression) EndPosition() Position {
+func (e *MemberExpression) EndPosition(memoryGauge common.MemoryGauge) Position {
 	if e.Identifier.Identifier == "" {
 		return e.AccessPos
 	} else {
-		return e.Identifier.EndPosition()
+		return e.Identifier.EndPosition(memoryGauge)
 	}
 }
 
@@ -924,7 +937,7 @@ func (e *MemberExpression) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "MemberExpression",
-		Range: NewRangeFromPositioned(e),
+		Range: NewUnmeteredRangeFromPositioned(e),
 		Alias: (*Alias)(e),
 	})
 }
@@ -1099,8 +1112,8 @@ func (e *ConditionalExpression) StartPosition() Position {
 	return e.Test.StartPosition()
 }
 
-func (e *ConditionalExpression) EndPosition() Position {
-	return e.Else.EndPosition()
+func (e *ConditionalExpression) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return e.Else.EndPosition(memoryGauge)
 }
 
 func (e *ConditionalExpression) MarshalJSON() ([]byte, error) {
@@ -1111,7 +1124,7 @@ func (e *ConditionalExpression) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "ConditionalExpression",
-		Range: NewRangeFromPositioned(e),
+		Range: NewUnmeteredRangeFromPositioned(e),
 		Alias: (*Alias)(e),
 	})
 }
@@ -1177,8 +1190,8 @@ func (e *UnaryExpression) StartPosition() Position {
 	return e.StartPos
 }
 
-func (e *UnaryExpression) EndPosition() Position {
-	return e.Expression.EndPosition()
+func (e *UnaryExpression) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return e.Expression.EndPosition(memoryGauge)
 }
 
 func (e *UnaryExpression) MarshalJSON() ([]byte, error) {
@@ -1189,7 +1202,7 @@ func (e *UnaryExpression) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "UnaryExpression",
-		Range: NewRangeFromPositioned(e),
+		Range: NewUnmeteredRangeFromPositioned(e),
 		Alias: (*Alias)(e),
 	})
 }
@@ -1269,8 +1282,8 @@ func (e *BinaryExpression) StartPosition() Position {
 	return e.Left.StartPosition()
 }
 
-func (e *BinaryExpression) EndPosition() Position {
-	return e.Right.EndPosition()
+func (e *BinaryExpression) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return e.Right.EndPosition(memoryGauge)
 }
 
 func (e *BinaryExpression) MarshalJSON() ([]byte, error) {
@@ -1281,7 +1294,7 @@ func (e *BinaryExpression) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "BinaryExpression",
-		Range: NewRangeFromPositioned(e),
+		Range: NewUnmeteredRangeFromPositioned(e),
 		Alias: (*Alias)(e),
 	})
 }
@@ -1426,8 +1439,8 @@ func (e *FunctionExpression) StartPosition() Position {
 	return e.StartPos
 }
 
-func (e *FunctionExpression) EndPosition() Position {
-	return e.FunctionBlock.EndPosition()
+func (e *FunctionExpression) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return e.FunctionBlock.EndPosition(memoryGauge)
 }
 
 func (e *FunctionExpression) MarshalJSON() ([]byte, error) {
@@ -1438,7 +1451,7 @@ func (e *FunctionExpression) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "FunctionExpression",
-		Range: NewRangeFromPositioned(e),
+		Range: NewUnmeteredRangeFromPositioned(e),
 		Alias: (*Alias)(e),
 	})
 }
@@ -1515,8 +1528,8 @@ func (e *CastingExpression) StartPosition() Position {
 	return e.Expression.StartPosition()
 }
 
-func (e *CastingExpression) EndPosition() Position {
-	return e.TypeAnnotation.EndPosition()
+func (e *CastingExpression) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return e.TypeAnnotation.EndPosition(memoryGauge)
 }
 
 func (e *CastingExpression) MarshalJSON() ([]byte, error) {
@@ -1527,7 +1540,7 @@ func (e *CastingExpression) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "CastingExpression",
-		Range: NewRangeFromPositioned(e),
+		Range: NewUnmeteredRangeFromPositioned(e),
 		Alias: (*Alias)(e),
 	})
 }
@@ -1589,7 +1602,7 @@ func (e *CreateExpression) StartPosition() Position {
 	return e.StartPos
 }
 
-func (e *CreateExpression) EndPosition() Position {
+func (e *CreateExpression) EndPosition(common.MemoryGauge) Position {
 	return e.InvocationExpression.EndPos
 }
 
@@ -1601,7 +1614,7 @@ func (e *CreateExpression) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "CreateExpression",
-		Range: NewRangeFromPositioned(e),
+		Range: NewUnmeteredRangeFromPositioned(e),
 		Alias: (*Alias)(e),
 	})
 }
@@ -1665,8 +1678,8 @@ func (e *DestroyExpression) StartPosition() Position {
 	return e.StartPos
 }
 
-func (e *DestroyExpression) EndPosition() Position {
-	return e.Expression.EndPosition()
+func (e *DestroyExpression) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return e.Expression.EndPosition(memoryGauge)
 }
 
 func (e *DestroyExpression) MarshalJSON() ([]byte, error) {
@@ -1677,7 +1690,7 @@ func (e *DestroyExpression) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "DestroyExpression",
-		Range: NewRangeFromPositioned(e),
+		Range: NewUnmeteredRangeFromPositioned(e),
 		Alias: (*Alias)(e),
 	})
 }
@@ -1757,8 +1770,8 @@ func (e *ReferenceExpression) StartPosition() Position {
 	return e.StartPos
 }
 
-func (e *ReferenceExpression) EndPosition() Position {
-	return e.Type.EndPosition()
+func (e *ReferenceExpression) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return e.Type.EndPosition(memoryGauge)
 }
 
 func (e *ReferenceExpression) MarshalJSON() ([]byte, error) {
@@ -1769,7 +1782,7 @@ func (e *ReferenceExpression) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "ReferenceExpression",
-		Range: NewRangeFromPositioned(e),
+		Range: NewUnmeteredRangeFromPositioned(e),
 		Alias: (*Alias)(e),
 	})
 }
@@ -1830,7 +1843,7 @@ func (e *ForceExpression) StartPosition() Position {
 	return e.Expression.StartPosition()
 }
 
-func (e *ForceExpression) EndPosition() Position {
+func (e *ForceExpression) EndPosition(common.MemoryGauge) Position {
 	return e.EndPos
 }
 
@@ -1842,7 +1855,7 @@ func (e *ForceExpression) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "ForceExpression",
-		Range: NewRangeFromPositioned(e),
+		Range: NewUnmeteredRangeFromPositioned(e),
 		Alias: (*Alias)(e),
 	})
 }
@@ -1900,8 +1913,8 @@ func (e *PathExpression) StartPosition() Position {
 	return e.StartPos
 }
 
-func (e *PathExpression) EndPosition() Position {
-	return e.Identifier.EndPosition()
+func (e *PathExpression) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return e.Identifier.EndPosition(memoryGauge)
 }
 
 func (e *PathExpression) MarshalJSON() ([]byte, error) {
@@ -1912,7 +1925,7 @@ func (e *PathExpression) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "PathExpression",
-		Range: NewRangeFromPositioned(e),
+		Range: NewUnmeteredRangeFromPositioned(e),
 		Alias: (*Alias)(e),
 	})
 }

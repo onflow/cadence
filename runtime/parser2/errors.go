@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -71,7 +71,7 @@ func (e *SyntaxError) StartPosition() ast.Position {
 	return e.Pos
 }
 
-func (e *SyntaxError) EndPosition() ast.Position {
+func (e *SyntaxError) EndPosition(common.MemoryGauge) ast.Position {
 	return e.Pos
 }
 
@@ -91,7 +91,7 @@ func (e *JuxtaposedUnaryOperatorsError) StartPosition() ast.Position {
 	return e.Pos
 }
 
-func (e *JuxtaposedUnaryOperatorsError) EndPosition() ast.Position {
+func (e *JuxtaposedUnaryOperatorsError) EndPosition(common.MemoryGauge) ast.Position {
 	return e.Pos
 }
 

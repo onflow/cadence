@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -3412,8 +3412,8 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 		value := LinkValue{
 			TargetPath: publicPathValue,
 			Type: ReferenceStaticType{
-				Authorized: true,
-				Type:       PrimitiveStaticTypeBool,
+				Authorized:   true,
+				BorrowedType: PrimitiveStaticTypeBool,
 			},
 		}
 
@@ -3446,8 +3446,8 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 		value := LinkValue{
 			TargetPath: publicPathValue,
 			Type: ReferenceStaticType{
-				Authorized: false,
-				Type:       PrimitiveStaticTypeBool,
+				Authorized:   false,
+				BorrowedType: PrimitiveStaticTypeBool,
 			},
 		}
 
@@ -3836,5 +3836,13 @@ func TestEncodeDecodeStaticType(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Equal(t, ty, actualType)
+	})
+}
+
+func TestCBORTagValue(t *testing.T) {
+	t.Parallel()
+
+	t.Run("No new types added in between", func(t *testing.T) {
+		require.Equal(t, byte(222), byte(CBORTag_Count))
 	})
 }

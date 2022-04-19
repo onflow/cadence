@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,8 +34,10 @@ type VariableActivation struct {
 	entries        *StringVariableOrderedMap
 	Depth          int
 	Parent         *VariableActivation
-	LeaveCallbacks []func(getEndPosition func() ast.Position)
+	LeaveCallbacks []func(EndPositionGetter)
 }
+
+type EndPositionGetter func(common.MemoryGauge) ast.Position
 
 // NewVariableActivation returns as new activation with the given parent.
 // The parent may be nil.
@@ -189,13 +191,14 @@ func (a *VariableActivations) Enter() {
 // Leave pops the top-most (current) activation
 // from the top of the activation stack.
 //
-func (a *VariableActivations) Leave(getEndPosition func() ast.Position) {
+func (a *VariableActivations) Leave(getEndPosition func(common.MemoryGauge) ast.Position) {
 	count := len(a.activations)
 	if count < 1 {
 		return
 	}
 	lastIndex := count - 1
 	activation := a.activations[lastIndex]
+	a.activations[lastIndex] = nil
 	a.activations = a.activations[:lastIndex]
 	for _, callback := range activation.LeaveCallbacks {
 		callback(getEndPosition)

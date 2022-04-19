@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,9 +28,6 @@ import (
 
 var authAccountContractsTypeID = sema.AuthAccountContractsType.ID()
 var authAccountContractsStaticType StaticType = PrimitiveStaticTypeAuthAccountContracts // unmetered
-var authAccountContractsDynamicType DynamicType = CompositeDynamicType{
-	StaticType: sema.AuthAccountContractsType,
-}
 var authAccountContractsFieldNames []string = nil
 
 func NewAuthAccountContractsValue(
@@ -68,7 +65,6 @@ func NewAuthAccountContractsValue(
 		inter,
 		authAccountContractsTypeID,
 		authAccountContractsStaticType,
-		authAccountContractsDynamicType,
 		authAccountContractsFieldNames,
 		fields,
 		computedFields,
@@ -80,10 +76,7 @@ func NewAuthAccountContractsValue(
 // PublicAccountContractsValue
 
 var publicAccountContractsTypeID = sema.PublicAccountContractsType.ID()
-var publicAccountContractsStaticType StaticType = PrimitiveStaticTypePublicAccountContracts // unmetered
-var publicAccountContractsDynamicType DynamicType = CompositeDynamicType{
-	StaticType: sema.PublicAccountContractsType,
-}
+var publicAccountContractsStaticType StaticType = PrimitiveStaticTypePublicAccountContracts
 
 func NewPublicAccountContractsValue(
 	inter *Interpreter,
@@ -114,7 +107,6 @@ func NewPublicAccountContractsValue(
 		inter,
 		publicAccountContractsTypeID,
 		publicAccountContractsStaticType,
-		publicAccountContractsDynamicType,
 		nil,
 		fields,
 		computedFields,

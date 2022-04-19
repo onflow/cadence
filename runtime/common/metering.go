@@ -19,6 +19,7 @@
 package common
 
 import (
+	"math"
 	"math/big"
 	"unsafe"
 )
@@ -33,15 +34,20 @@ type MemoryGauge interface {
 }
 
 var (
-	ProgramMemoryUsage        = NewConstantMemoryUsage(MemoryKindProgram)
-	IdentifierMemoryUsage     = NewConstantMemoryUsage(MemoryKindIdentifier)
-	ArgumentMemoryUsage       = NewConstantMemoryUsage(MemoryKindArgument)
-	BlockMemoryUsage          = NewConstantMemoryUsage(MemoryKindBlock)
-	FunctionBlockMemoryUsage  = NewConstantMemoryUsage(MemoryKindFunctionBlock)
-	ParameterMemoryUsage      = NewConstantMemoryUsage(MemoryKindParameter)
-	ParameterListMemoryUsage  = NewConstantMemoryUsage(MemoryKindParameterList)
-	TransferMemoryUsage       = NewConstantMemoryUsage(MemoryKindTransfer)
-	TypeAnnotationMemoryUsage = NewConstantMemoryUsage(MemoryKindTypeAnnotation)
+	ValueTokenMemoryUsage  = NewConstantMemoryUsage(MemoryKindValueToken)
+	SyntaxTokenMemoryUsage = NewConstantMemoryUsage(MemoryKindSyntaxToken)
+	SpaceTokenMemoryUsage  = NewConstantMemoryUsage(MemoryKindSpaceToken)
+
+	ProgramMemoryUsage         = NewConstantMemoryUsage(MemoryKindProgram)
+	IdentifierMemoryUsage      = NewConstantMemoryUsage(MemoryKindIdentifier)
+	ArgumentMemoryUsage        = NewConstantMemoryUsage(MemoryKindArgument)
+	BlockMemoryUsage           = NewConstantMemoryUsage(MemoryKindBlock)
+	FunctionBlockMemoryUsage   = NewConstantMemoryUsage(MemoryKindFunctionBlock)
+	ParameterMemoryUsage       = NewConstantMemoryUsage(MemoryKindParameter)
+	ParameterListMemoryUsage   = NewConstantMemoryUsage(MemoryKindParameterList)
+	TransferMemoryUsage        = NewConstantMemoryUsage(MemoryKindTransfer)
+	TypeAnnotationMemoryUsage  = NewConstantMemoryUsage(MemoryKindTypeAnnotation)
+	DictionaryEntryMemoryUsage = NewConstantMemoryUsage(MemoryKindDictionaryEntry)
 
 	FunctionDeclarationMemoryUsage        = NewConstantMemoryUsage(MemoryKindFunctionDeclaration)
 	CompositeDeclarationMemoryUsage       = NewConstantMemoryUsage(MemoryKindCompositeDeclaration)
@@ -95,6 +101,9 @@ var (
 	ReferenceTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindReferenceType)
 	RestrictedTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindRestrictedType)
 	VariableSizedTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindVariableSizedType)
+
+	PositionMemoryUsage = NewConstantMemoryUsage(MemoryKindPosition)
+	RangeMemoryUsage    = NewConstantMemoryUsage(MemoryKindRange)
 )
 
 func UseMemory(gauge MemoryGauge, usage MemoryUsage) {
@@ -113,6 +122,64 @@ func NewConstantMemoryUsage(kind MemoryKind) MemoryUsage {
 		Kind:   kind,
 		Amount: 1,
 	}
+}
+
+func NewArrayMemoryUsages(length int) (MemoryUsage, MemoryUsage) {
+	return MemoryUsage{
+			Kind:   MemoryKindArrayBase,
+			Amount: 1,
+		}, MemoryUsage{
+			Kind:   MemoryKindArrayLength,
+			Amount: uint64(length),
+		}
+}
+
+func NewArrayAdditionalLengthUsage(originalLength, additionalLength int) MemoryUsage {
+	var newAmount uint64
+	if originalLength <= 1 {
+		newAmount = uint64(originalLength + additionalLength)
+	} else {
+		// size of b+ tree grows logarithmically with the size of the tree
+		newAmount = uint64(math.Log2(float64(originalLength)) + float64(additionalLength))
+	}
+	return MemoryUsage{
+		Kind:   MemoryKindArrayLength,
+		Amount: newAmount,
+	}
+}
+
+func NewDictionaryMemoryUsages(length int) (MemoryUsage, MemoryUsage) {
+	return MemoryUsage{
+			Kind:   MemoryKindDictionaryBase,
+			Amount: 1,
+		}, MemoryUsage{
+			Kind:   MemoryKindDictionarySize,
+			Amount: uint64(length),
+		}
+}
+
+func NewDictionaryAdditionalSizeUsage(originalSize, additionalSize int) MemoryUsage {
+	var newAmount uint64
+	if originalSize <= 1 {
+		newAmount = uint64(originalSize + additionalSize)
+	} else {
+		// size of b+ tree grows logarithmically with the size of the tree
+		newAmount = uint64(math.Log2(float64(originalSize)) + float64(additionalSize))
+	}
+	return MemoryUsage{
+		Kind:   MemoryKindDictionarySize,
+		Amount: newAmount,
+	}
+}
+
+func NewCompositeMemoryUsages(length int) (MemoryUsage, MemoryUsage) {
+	return MemoryUsage{
+			Kind:   MemoryKindCompositeBase,
+			Amount: 1,
+		}, MemoryUsage{
+			Kind:   MemoryKindCompositeSize,
+			Amount: uint64(length),
+		}
 }
 
 func NewStringMemoryUsage(length int) MemoryUsage {
@@ -272,34 +339,6 @@ func NewNumberMemoryUsage(bytes int) MemoryUsage {
 	return MemoryUsage{
 		Kind:   MemoryKindNumber,
 		Amount: uint64(bytes),
-	}
-}
-
-func NewCommentTokenMemoryUsage(length int) MemoryUsage {
-	return MemoryUsage{
-		Kind:   MemoryKindTokenComment,
-		Amount: uint64(length),
-	}
-}
-
-func NewIdentifierTokenMemoryUsage(length int) MemoryUsage {
-	return MemoryUsage{
-		Kind:   MemoryKindTokenIdentifier,
-		Amount: uint64(length),
-	}
-}
-
-func NewNumericLiteralTokenMemoryUsage(length int) MemoryUsage {
-	return MemoryUsage{
-		Kind:   MemoryKindTokenNumericLiteral,
-		Amount: uint64(length),
-	}
-}
-
-func NewSyntaxTokenMemoryUsage(length int) MemoryUsage {
-	return MemoryUsage{
-		Kind:   MemoryKindTokenSyntax,
-		Amount: uint64(length),
 	}
 }
 

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2022 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,9 +52,6 @@ var blsContractTypeID = blsContractType.ID()
 var blsContractStaticType interpreter.StaticType = interpreter.CompositeStaticType{
 	QualifiedIdentifier: blsContractType.Identifier,
 	TypeID:              blsContractTypeID,
-}
-var blsContractDynamicType interpreter.DynamicType = interpreter.CompositeDynamicType{
-	StaticType: blsContractType,
 }
 
 const blsAggregateSignaturesFunctionDocString = `
@@ -177,7 +174,6 @@ var blsContract = StandardLibraryValue{
 			inter,
 			blsContractType.ID(),
 			blsContractStaticType,
-			blsContractDynamicType,
 			nil,
 			blsContractFields,
 			nil,

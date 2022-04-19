@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -356,10 +356,11 @@ func parsePragmaDeclaration(p *parser) *ast.PragmaDeclaration {
 	return ast.NewPragmaDeclaration(
 		p.memoryGauge,
 		expr,
-		ast.Range{
-			StartPos: startPos,
-			EndPos:   expr.EndPosition(),
-		},
+		ast.NewRange(
+			p.memoryGauge,
+			startPos,
+			expr.EndPosition(p.memoryGauge),
+		),
 	)
 }
 
@@ -405,7 +406,7 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 	setIdentifierLocation := func(identifier ast.Identifier) {
 		location = common.IdentifierLocation(identifier.Identifier)
 		locationPos = identifier.Pos
-		endPos = identifier.EndPosition()
+		endPos = identifier.EndPosition(p.memoryGauge)
 	}
 
 	parseLocation := func() {
@@ -567,10 +568,11 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 		p.memoryGauge,
 		identifiers,
 		location,
-		ast.Range{
-			StartPos: startPosition,
-			EndPos:   endPos,
-		},
+		ast.NewRange(
+			p.memoryGauge,
+			startPosition,
+			endPos,
+		),
 		locationPos,
 	)
 }
@@ -683,10 +685,11 @@ func parseEventDeclaration(
 		nil,
 		members,
 		docString,
-		ast.Range{
-			StartPos: startPos,
-			EndPos:   parameterList.EndPos,
-		},
+		ast.NewRange(
+			p.memoryGauge,
+			startPos,
+			parameterList.EndPos,
+		),
 	)
 }
 
@@ -771,10 +774,11 @@ func parseFieldWithVariableKind(
 		identifier,
 		typeAnnotation,
 		docString,
-		ast.Range{
-			StartPos: startPos,
-			EndPos:   typeAnnotation.EndPosition(),
-		},
+		ast.NewRange(
+			p.memoryGauge,
+			startPos,
+			typeAnnotation.EndPosition(p.memoryGauge),
+		),
 	)
 }
 
@@ -867,10 +871,11 @@ func parseCompositeOrInterfaceDeclaration(
 
 	endToken := p.mustOne(lexer.TokenBraceClose)
 
-	declarationRange := ast.Range{
-		StartPos: startPos,
-		EndPos:   endToken.EndPos,
-	}
+	declarationRange := ast.NewRange(
+		p.memoryGauge,
+		startPos,
+		endToken.EndPos,
+	)
 
 	if isInterface {
 		// TODO: remove once interface conformances are supported
@@ -1046,10 +1051,11 @@ func parseFieldDeclarationWithoutVariableKind(
 		identifier,
 		typeAnnotation,
 		docString,
-		ast.Range{
-			StartPos: startPos,
-			EndPos:   typeAnnotation.EndPosition(),
-		},
+		ast.NewRange(
+			p.memoryGauge,
+			startPos,
+			typeAnnotation.EndPosition(p.memoryGauge),
+		),
 	)
 }
 

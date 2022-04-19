@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,7 +55,7 @@ func parseStatements(p *parser, isEndToken func(token lexer.Token) bool) (statem
 				statementCount := len(statements)
 				if statementCount > 1 {
 					previousStatement := statements[statementCount-2]
-					previousLine := previousStatement.EndPosition().Line
+					previousLine := previousStatement.EndPosition(p.memoryGauge).Line
 					currentStartPos := statement.StartPosition()
 					if previousLine == currentStartPos.Line {
 						p.report(&SyntaxError{
@@ -197,17 +197,18 @@ func parseReturnStatement(p *parser) *ast.ReturnStatement {
 	default:
 		if !sawNewLine {
 			expression = parseExpression(p, lowestBindingPower)
-			endPosition = expression.EndPosition()
+			endPosition = expression.EndPosition(p.memoryGauge)
 		}
 	}
 
 	return ast.NewReturnStatement(
 		p.memoryGauge,
 		expression,
-		ast.Range{
-			StartPos: tokenRange.StartPos,
-			EndPos:   endPosition,
-		},
+		ast.NewRange(
+			p.memoryGauge,
+			tokenRange.StartPos,
+			endPosition,
+		),
 	)
 }
 
@@ -307,7 +308,7 @@ func parseIfStatement(p *parser) *ast.IfStatement {
 		outer.Else = ast.NewBlock(
 			p.memoryGauge,
 			[]ast.Statement{result},
-			ast.NewRangeFromPositioned(result),
+			ast.NewRangeFromPositioned(p.memoryGauge, result),
 		)
 		result = outer
 	}
@@ -393,10 +394,11 @@ func parseBlock(p *parser) *ast.Block {
 	return ast.NewBlock(
 		p.memoryGauge,
 		statements,
-		ast.Range{
-			StartPos: startToken.StartPos,
-			EndPos:   endToken.EndPos,
-		},
+		ast.NewRange(
+			p.memoryGauge,
+			startToken.StartPos,
+			endToken.EndPos,
+		),
 	)
 }
 
@@ -434,10 +436,11 @@ func parseFunctionBlock(p *parser) *ast.FunctionBlock {
 		ast.NewBlock(
 			p.memoryGauge,
 			statements,
-			ast.Range{
-				StartPos: startToken.StartPos,
-				EndPos:   endToken.EndPos,
-			},
+			ast.NewRange(
+				p.memoryGauge,
+				startToken.StartPos,
+				endToken.EndPos,
+			),
 		),
 		preConditions,
 		postConditions,
@@ -528,10 +531,12 @@ func parseSwitchStatement(p *parser) *ast.SwitchStatement {
 		p.memoryGauge,
 		expression,
 		cases,
-		ast.Range{
-			StartPos: startPos,
-			EndPos:   endToken.EndPos,
-		})
+		ast.NewRange(
+			p.memoryGauge,
+			startPos,
+			endToken.EndPos,
+		),
+	)
 }
 
 // parseSwitchCases parses cases of a switch statement.
@@ -635,15 +640,16 @@ func parseSwitchCase(p *parser, hasExpression bool) *ast.SwitchCase {
 
 	if len(statements) > 0 {
 		lastStatementIndex := len(statements) - 1
-		endPos = statements[lastStatementIndex].EndPosition()
+		endPos = statements[lastStatementIndex].EndPosition(p.memoryGauge)
 	}
 
 	return &ast.SwitchCase{
 		Expression: expression,
 		Statements: statements,
-		Range: ast.Range{
-			StartPos: startPos,
-			EndPos:   endPos,
-		},
+		Range: ast.NewRange(
+			p.memoryGauge,
+			startPos,
+			endPos,
+		),
 	}
 }

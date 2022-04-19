@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -233,8 +233,8 @@ func (d *EnumCaseDeclaration) StartPosition() Position {
 	return d.StartPos
 }
 
-func (d *EnumCaseDeclaration) EndPosition() Position {
-	return d.Identifier.EndPosition()
+func (d *EnumCaseDeclaration) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return d.Identifier.EndPosition(memoryGauge)
 }
 
 func (d *EnumCaseDeclaration) DeclarationMembers() *Members {
@@ -253,7 +253,7 @@ func (d *EnumCaseDeclaration) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "EnumCaseDeclaration",
-		Range: NewRangeFromPositioned(d),
+		Range: NewUnmeteredRangeFromPositioned(d),
 		Alias: (*Alias)(d),
 	})
 }

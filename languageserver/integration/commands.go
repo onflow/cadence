@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -252,6 +252,7 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{
 		maxGasLimit,
 		txArgs,
 		"",
+		true,
 	)
 
 	if err != nil {
@@ -274,7 +275,7 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{
 	// transaction error: &errors.errorString{s:"failed to decode partial transaction...
 	// ...encoding/hex: invalid byte: U+00F9 'ù'"
 	txBytes := []byte(fmt.Sprintf("%x", tx.FlowTransaction().Encode()))
-	_, txResult, err := i.sharedServices.Transactions.SendSigned(txBytes)
+	_, txResult, err := i.sharedServices.Transactions.SendSigned(txBytes, true)
 
 	if err != nil {
 		return nil, errorWithMessage(conn, ErrorMessageTransactionError, err)
@@ -571,8 +572,8 @@ func (i *FlowIntegration) createAccountHelper(conn protocol.Conn) (address flow.
 		signer,
 		keys,
 		weights,
-		crypto.ECDSA_P256,
-		crypto.SHA3_256,
+		[]crypto.SignatureAlgorithm{crypto.ECDSA_P256},
+		[]crypto.HashAlgorithm{crypto.SHA3_256},
 		nil,
 	)
 	if err != nil {

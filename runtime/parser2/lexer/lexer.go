@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -67,18 +67,20 @@ func (l *lexer) Next() Token {
 		// emit a synthetic EOF token
 
 		endPos := l.endPos()
-		pos := ast.Position{
-			Offset: l.endOffset - 1,
-			Line:   endPos.line,
-			Column: endPos.column,
-		}
+		pos := ast.NewPosition(
+			l.memoryGauge,
+			l.endOffset-1,
+			endPos.line,
+			endPos.column,
+		)
 
 		return Token{
 			Type: TokenEOF,
-			Range: ast.Range{
-				StartPos: pos,
-				EndPos:   pos,
-			},
+			Range: ast.NewRange(
+				l.memoryGauge,
+				pos,
+				pos,
+			),
 		}
 
 	}
@@ -211,14 +213,16 @@ func (l *lexer) emit(ty TokenType, val interface{}, rangeStart ast.Position, con
 	token := Token{
 		Type:  ty,
 		Value: val,
-		Range: ast.Range{
-			StartPos: rangeStart,
-			EndPos: ast.Position{
-				Line:   endPos.line,
-				Column: endPos.column,
-				Offset: l.endOffset - 1,
-			},
-		},
+		Range: ast.NewRange(
+			l.memoryGauge,
+			rangeStart,
+			ast.NewPosition(
+				l.memoryGauge,
+				l.endOffset-1,
+				endPos.line,
+				endPos.column,
+			),
+		),
 	}
 
 	l.tokens = append(l.tokens, token)
@@ -240,11 +244,12 @@ func (l *lexer) emit(ty TokenType, val interface{}, rangeStart ast.Position, con
 }
 
 func (l *lexer) startPosition() ast.Position {
-	return ast.Position{
-		Line:   l.startPos.line,
-		Column: l.startPos.column,
-		Offset: l.startOffset,
-	}
+	return ast.NewPosition(
+		l.memoryGauge,
+		l.startOffset,
+		l.startPos.line,
+		l.startPos.column,
+	)
 }
 
 func (l *lexer) endPos() position {
@@ -271,13 +276,9 @@ func (l *lexer) endPos() position {
 
 func (l *lexer) emitType(ty TokenType) {
 	if l.memoryGauge != nil {
-		usage := l.typeMemoryUsage(ty)
-
-		// Don't use `common.MemoryUsage()` to avoid redundant `nil` check.
-		err := l.memoryGauge.MeterMemory(usage)
-		if err != nil {
-			panic(err)
-		}
+		// Token value is always nil. Hence, only the wrapper is metered.
+		// No memory is used for the 'value' potion.
+		common.UseMemory(l.memoryGauge, common.SyntaxTokenMemoryUsage)
 	}
 
 	l.emit(ty, nil, l.startPosition(), true)
@@ -285,13 +286,12 @@ func (l *lexer) emitType(ty TokenType) {
 
 func (l *lexer) emitValue(ty TokenType) {
 	if l.memoryGauge != nil {
-		usage := l.valueMemoryUsage(ty)
+		// Token wrapper
+		common.UseMemory(l.memoryGauge, common.ValueTokenMemoryUsage)
 
-		// Don't use `common.MemoryUsage()` to avoid redundant `nil` check.
-		err := l.memoryGauge.MeterMemory(usage)
-		if err != nil {
-			panic(err)
-		}
+		// Token content
+		usage := l.tokenValueMemoryUsage(ty)
+		common.UseMemory(l.memoryGauge, usage)
 	}
 
 	l.emit(ty, l.word(), l.startPosition(), true)
@@ -299,11 +299,12 @@ func (l *lexer) emitValue(ty TokenType) {
 
 func (l *lexer) emitError(err error) {
 	endPos := l.endPos()
-	rangeStart := ast.Position{
-		Line:   endPos.line,
-		Column: endPos.column,
-		Offset: l.endOffset - 1,
-	}
+	rangeStart := ast.NewPosition(
+		l.memoryGauge,
+		l.endOffset-1,
+		endPos.line,
+		endPos.column,
+	)
 	l.emit(TokenError, err, rangeStart, false)
 }
 
@@ -418,6 +419,21 @@ func (l *lexer) scanFixedPointRemainder() {
 		return
 	}
 	l.acceptWhile(isDecimalDigitOrUnderscore)
+}
+
+// tokenValueMemoryUsage returns the memory usage, given the token type of the value.
+// All tokens are retained in AST in its string representation. Hence, memory usage
+// is always a string. However, string literals are special since they are
+// later represented as graphemes.
+//
+func (l *lexer) tokenValueMemoryUsage(tokenType TokenType) common.MemoryUsage {
+	tokenLength := l.wordLength()
+
+	if tokenType == TokenString {
+		return common.NewStringMemoryUsage(tokenLength)
+	}
+
+	return common.NewRawStringMemoryUsage(tokenLength)
 }
 
 func isDecimalDigitOrUnderscore(r rune) bool {

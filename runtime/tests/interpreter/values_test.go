@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1252,8 +1252,8 @@ func randomStorableValue(inter *interpreter.Interpreter, currentDepth int) inter
 			Address: randomAddressValue(),
 			Path:    randomPathValue(),
 			BorrowType: interpreter.ReferenceStaticType{
-				Authorized: false,
-				Type:       interpreter.PrimitiveStaticTypeAnyStruct,
+				Authorized:   false,
+				BorrowedType: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
 		}
 	case Some:

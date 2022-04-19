@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -222,7 +222,7 @@ func (e *ScriptParameterTypeNotImportableError) Error() string {
 // script arguments that belongs to non-importable types.
 //
 type ArgumentNotImportableError struct {
-	Type interpreter.DynamicType
+	Type interpreter.StaticType
 }
 
 func (e *ArgumentNotImportableError) Error() string {
