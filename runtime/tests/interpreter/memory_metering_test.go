@@ -162,7 +162,7 @@ func TestInterpretArrayMetering(t *testing.T) {
             pub fun main() {
                 let x: [Int8] = []
                 x.append(3)
-                        x.append(4)
+                x.append(4)
             }
         `
 
@@ -222,6 +222,26 @@ func TestInterpretArrayMetering(t *testing.T) {
 
 		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindVariableSizedStaticType))
+	})
+
+	t.Run("update", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+                        pub fun main() {
+                            let x: [Int8] = [0, 1, 2, 3] // 8 (4 + 4 from copy)
+                            x[0] = 1 // adds 3
+							x[2] = 1 // adds 3
+                        }
+                    `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindArrayBase))
+		assert.Equal(t, uint64(14), meter.getMemory(common.MemoryKindArrayLength))
 	})
 
 	t.Run("constant", func(t *testing.T) {
@@ -375,7 +395,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
             pub fun main() {
                 let x: {Int8: String} = {}
                 x.insert(key: 5, "")
-                        x.insert(key: 4, "")
+                x.insert(key: 4, "")
             }
         `
 
@@ -389,6 +409,28 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindDictionarySize))
 		assert.Equal(t, uint64(10), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindDictionaryStaticType))
+	})
+
+	t.Run("update", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let x: {Int8: String} = {3: "a"} // 2 (1 + 1 from copy)
+                x[3] = "b" // adds 2
+                x[3] = "c" // adds 2
+				x[4] = "d" // adds 2
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindDictionaryBase))
+		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindDictionarySize))
 	})
 }
 

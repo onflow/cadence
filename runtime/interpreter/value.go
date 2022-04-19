@@ -1591,6 +1591,9 @@ func (v *ArrayValue) Set(interpreter *Interpreter, getLocationRange func() Locat
 		})
 	}
 
+	// length increases by 1
+	common.UseMemory(interpreter, common.NewArrayAdditionalLengthUsage(int(v.array.Count())))
+
 	interpreter.checkContainerMutation(v.Type.ElementType(), element, getLocationRange)
 
 	element = element.Transfer(
