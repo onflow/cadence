@@ -250,18 +250,13 @@ func BigIntByteLength(v *big.Int) int {
 	return len(v.Bits()) * bigIntWordSize
 }
 
-func NewPlusBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
-	maxWordLength := max(
-		len(a.Bits()),
-		len(b.Bits()),
-	)
-	return NewBigIntMemoryUsage(
-		(maxWordLength + 4) *
-			bigIntWordSize,
-	)
-}
+// big.Int memory metering:
+// - |x| is len(x.Bits()), which is the length in words
+//
 
-func NewMinusBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
+func NewPlusBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
+	// max(|a|, |b|) + 5
+
 	maxWordLength := max(
 		len(a.Bits()),
 		len(b.Bits()),
@@ -272,7 +267,26 @@ func NewMinusBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 	)
 }
 
+func NewMinusBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
+	// max(|a|, |b|) + 4
+
+	maxWordLength := max(
+		len(a.Bits()),
+		len(b.Bits()),
+	)
+	return NewBigIntMemoryUsage(
+		(maxWordLength + 4) *
+			bigIntWordSize,
+	)
+}
+
 func NewMulBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
+	// if min(|a|, |b|) <= 40:
+	//     |a| + |b| + 4
+	// else:
+	//     n = min(|a|, |b|)
+	//     3 * n + max(6 * n, |a| + |b|) + 8
+
 	aWordLength := len(a.Bits())
 	bWordLength := len(b.Bits())
 	minWordLength := min(
@@ -296,12 +310,21 @@ var bigOne = big.NewInt(1)
 var bigOneHundred = big.NewInt(100)
 
 func NewModBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
+	// if a < b or |b| == 1:
+	//     |a| + 4
+	// else if |b| < 100:
+	//     |a| - |b| + 5
+	// else:
+	//     recursion_cost = pointer_size + 9 * |b| + floor(|a| / |b|) + 12
+	//     recursion_depth = 2 * BitLen(b)
+	//     3 * |b| + 4 + recursion_cost * recursion_depth
+
 	aWordLength := len(a.Bits())
 	bWordLength := len(b.Bits())
 
 	var resultWordLength int
 	if a.Cmp(b) < 0 || b.Cmp(bigOne) == 0 {
-		resultWordLength = aWordLength
+		resultWordLength = aWordLength + 4
 	} else if b.Cmp(bigOneHundred) < 0 {
 		resultWordLength = aWordLength - bWordLength + 5
 	} else {
@@ -321,6 +344,13 @@ func NewDivBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 }
 
 func NewBitwiseOrBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
+	// if a >= 0 and b >= 0:
+	//     max(|a|, |b|) + 4
+	// else if a <= 0 and b <= 0:
+	//     |a| + |b| + min(|a|, |b|) + 13
+	// else:
+	//     2 * max(|a|, |b|) + 9
+
 	aWordLength := len(a.Bits())
 	bWordLength := len(b.Bits())
 
@@ -338,16 +368,61 @@ func NewBitwiseOrBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 }
 
 func NewBitwiseXorBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
-	return NewBitwiseOrBigIntMemoryUsage(a, b)
+	// if a >= 0 and b >= 0:
+	//     max(|a|, |b|) + 4
+	// else if a <= 0 and b <= 0:
+	//     |a| + |b| + min(|a|, |b|) + 12
+	// else:
+	//     2 * max(|a|, |b|) + 9
+
+	aWordLength := len(a.Bits())
+	bWordLength := len(b.Bits())
+
+	var resultWordLength int
+	if a.Sign() >= 0 && b.Sign() >= 0 {
+		resultWordLength = max(aWordLength, bWordLength) + 4
+	} else if a.Sign() <= 0 && b.Sign() <= 0 {
+		resultWordLength = aWordLength + bWordLength + min(aWordLength, bWordLength) + 12
+	} else {
+		resultWordLength = 2*max(aWordLength, bWordLength) + 9
+	}
+	return NewBigIntMemoryUsage(
+		resultWordLength * bigIntWordSize,
+	)
 }
 
 func NewBitwiseAndBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
-	return NewBitwiseOrBigIntMemoryUsage(a, b)
+	// if a >= 0 and b >= 0:
+	//     max(|a|, |b|) + 4
+	// else if a <= 0 and b <= 0:
+	//     |a| + |b| + max(|a|, |b|) + 13
+	// else:
+	//     2 * max(|a|, |b|) + 8
+
+	aWordLength := len(a.Bits())
+	bWordLength := len(b.Bits())
+
+	var resultWordLength int
+	if a.Sign() >= 0 && b.Sign() >= 0 {
+		resultWordLength = max(aWordLength, bWordLength) + 4
+	} else if a.Sign() <= 0 && b.Sign() <= 0 {
+		resultWordLength = aWordLength + bWordLength + max(aWordLength, bWordLength) + 13
+	} else {
+		resultWordLength = 2*max(aWordLength, bWordLength) + 8
+	}
+	return NewBigIntMemoryUsage(
+		resultWordLength * bigIntWordSize,
+	)
 }
 
 var invalidLeftShift = errors.New("invalid left shift of non-Int64")
 
 func NewBitwiseLeftShiftBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
+	// if b == 0:
+	//     |a| + 4
+	// else:
+	//     |a| + b/word_size + 5
+
 	aWordLength := len(a.Bits())
 
 	var resultWordLength int
@@ -369,6 +444,14 @@ func NewBitwiseLeftShiftBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 }
 
 func NewBitwiseRightShiftBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
+	// if a >= 0:
+	//     if b == 0:
+	//         |a| + 4
+	//     else:
+	//         |a| - b/word_size + 4
+	// else:
+	//     |a| + 4
+
 	aWordLength := len(a.Bits())
 
 	var resultWordLength int
@@ -394,6 +477,8 @@ func NewBitwiseRightShiftBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 }
 
 func NewNegateBigIntMemoryUsage(b *big.Int) MemoryUsage {
+	// |a| + 4
+
 	return NewBigIntMemoryUsage(
 		(len(b.Bits()) + 4) * bigIntWordSize,
 	)
