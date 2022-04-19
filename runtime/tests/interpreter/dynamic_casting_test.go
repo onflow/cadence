@@ -3749,3 +3749,50 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
 		require.Equal(t, interpreter.NewUnmeteredStringValue("hello from foo.bar"), result)
 	})
 }
+
+func TestInterpretReferenceCasting(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("array", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            fun test() {
+                let x = bar()
+                let y = [&x as &AnyStruct]
+                let z = y as! [&bar{foo}]
+            }
+
+            struct interface foo {}
+
+            struct bar: foo {}
+        `
+
+		inter := parseCheckAndInterpret(t, code)
+
+		_, err := inter.Invoke("test")
+		assert.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+	})
+
+	t.Run("dictionary", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            fun test() {
+                let x = bar()
+                let y = {"a": &x as &AnyStruct}
+                let z = y as! {String: &bar{foo}}
+            }
+
+            struct interface foo {}
+
+            struct bar: foo {}
+        `
+
+		inter := parseCheckAndInterpret(t, code)
+
+		_, err := inter.Invoke("test")
+		assert.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+	})
+}
