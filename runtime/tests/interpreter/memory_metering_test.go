@@ -275,8 +275,6 @@ func TestInterpretArrayMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		fmt.Println(meter)
-
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindArrayBase))
 		assert.Equal(t, uint64(13), meter.getMemory(common.MemoryKindArrayLength))
 
@@ -482,7 +480,7 @@ func TestInterpretCompositeFieldMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(162), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, uint64(77), meter.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCompositeBase))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindCompositeSize))
 	})
@@ -508,7 +506,7 @@ func TestInterpretCompositeFieldMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(326), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, uint64(181), meter.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCompositeBase))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCompositeSize))
 	})
@@ -7279,7 +7277,7 @@ func TestInterpretCapabilityValueMetering(t *testing.T) {
 		_, err := inter.Invoke("main", account)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCapabilityStaticType))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindCapabilityStaticType))
 	})
 }
 
@@ -8249,7 +8247,7 @@ func TestInterpretFunctionStaticType(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindFunctionStaticType))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindFunctionStaticType))
 	})
 
 	t.Run("set bound function to variable", func(t *testing.T) {
@@ -8619,11 +8617,6 @@ func TestInterpretASTMetering(t *testing.T) {
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindPathExpression))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindDictionaryEntry))
 		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindPrimitiveStaticType))
-
-		// 3 Int for `g`: 2 for the type, 1 for the element
-		// 4 AnyStruct for `f`: 1 for the type, 1 for each element
-		// 2 AnyStruct for `g`: 1 for the type, 1 for the element
-		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 
 	t.Run("types", func(t *testing.T) {
