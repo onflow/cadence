@@ -8256,13 +8256,13 @@ func TestInterpretFunctionStaticType(t *testing.T) {
 		t.Parallel()
 
 		script := `
-			pub struct S {
-				fun naught() {}
-			}
+            pub struct S {
+                fun naught() {}
+            }
 
             pub fun main() {
-				let x = S()
-				let y = x.naught
+                let x = S()
+                let y = x.naught
             }
         `
 
