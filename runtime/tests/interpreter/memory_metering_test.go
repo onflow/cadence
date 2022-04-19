@@ -231,7 +231,7 @@ func TestInterpretArrayMetering(t *testing.T) {
                         pub fun main() {
                             let x: [Int8] = [0, 1, 2, 3] // 8 (4 + 4 from copy)
                             x[0] = 1 // adds 3
-							x[2] = 1 // adds 3
+                            x[2] = 1 // adds 3
                         }
                     `
 		meter := newTestMemoryGauge()
@@ -419,7 +419,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
                 let x: {Int8: String} = {3: "a"} // 2 (1 + 1 from copy)
                 x[3] = "b" // adds 2
                 x[3] = "c" // adds 2
-				x[4] = "d" // adds 2
+                x[4] = "d" // adds 2
             }
         `
 
@@ -510,11 +510,11 @@ func TestInterpretCompositeFieldMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-			pub struct S {}
-			pub fun main() {
-				let s = S()
-			}
-		`
+            pub struct S {}
+            pub fun main() {
+                let s = S()
+            }
+        `
 
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
@@ -531,16 +531,16 @@ func TestInterpretCompositeFieldMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-			pub struct S {
-				pub let a: String
-				init(_ a: String) {
-					self.a = a
-				}
-			}
-			pub fun main() {
-				let s = S("a")
-			}
-		`
+            pub struct S {
+                pub let a: String
+                init(_ a: String) {
+                    self.a = a
+                }
+            }
+            pub fun main() {
+                let s = S("a")
+            }
+        `
 
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
@@ -1071,8 +1071,8 @@ func TestInterpretOptionalValueMetering(t *testing.T) {
 		script := `
             pub fun main() {
                 let x: {Int8: String} = {1: "foo", 2: "bar"}
-				x[0] = "a"
-				x[1] = "b"
+                x[0] = "a"
+                x[1] = "b"
             }
         `
 
@@ -7309,7 +7309,7 @@ func TestInterpretCapabilityValueMetering(t *testing.T) {
                 account.save(<-r, to: /storage/r)
                 let x = account.link<&R>(/public/capo, target: /storage/r)
 
-				let y = [x]
+                let y = [x]
             }
         `
 		meter := newTestMemoryGauge()
@@ -8228,16 +8228,16 @@ func TestInterpretInterfaceStaticType(t *testing.T) {
 		t.Parallel()
 
 		script := `
-			struct interface I {}
+            struct interface I {}
 
-			pub fun main() {
-				let type = Type<AnyStruct{I}>()
+            pub fun main() {
+                let type = Type<AnyStruct{I}>()
 
-				RestrictedType(
-					identifier: type.identifier,
-					restrictions: [type.identifier]
-				)
-			}
+                RestrictedType(
+                    identifier: type.identifier,
+                    restrictions: [type.identifier]
+                )
+            }
         `
 
 		meter := newTestMemoryGauge()
