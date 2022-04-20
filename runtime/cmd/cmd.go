@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -69,16 +70,6 @@ func PrepareProgram(code string, location common.Location, codes map[common.Loca
 	return program, must
 }
 
-var valueDeclarations = append(
-	stdlib.FlowBuiltInFunctions(stdlib.DefaultFlowBuiltinImpls()),
-	stdlib.BuiltinFunctions...,
-)
-
-var typeDeclarations = append(
-	stdlib.FlowBuiltInTypes,
-	stdlib.BuiltinTypes...,
-).ToTypeDeclarations()
-
 var checkers = map[common.LocationID]*sema.Checker{}
 
 // PrepareChecker prepares and initializes a checker with a given code as a string,
@@ -90,41 +81,17 @@ func PrepareChecker(
 	memberAccountAccess map[common.LocationID]map[common.LocationID]struct{},
 	must func(error),
 ) (*sema.Checker, func(error)) {
-	checker, err := sema.NewChecker(
-		program,
-		location,
-		nil,
-		sema.WithPredeclaredValues(valueDeclarations.ToSemaValueDeclarations()),
-		sema.WithPredeclaredTypes(typeDeclarations),
-		sema.WithImportHandler(
-			func(checker *sema.Checker, importedLocation common.Location, importRange ast.Range) (sema.Import, error) {
-				stringLocation, ok := importedLocation.(common.StringLocation)
 
-				if !ok {
-					return nil, &sema.CheckerError{
-						Location: location,
-						Codes:    codes,
-						Errors: []error{
-							fmt.Errorf("cannot import `%s`. only files are supported", importedLocation),
-						},
-					}
-				}
+	defaultCheckerOptions, _ :=
+		runtime.REPLDefaultCheckerInterpreterOptions(
+			checkers,
+			codes,
+			stdlib.FlowBuiltinImpls{},
+		)
 
-				importedChecker, ok := checkers[importedLocation.ID()]
-				if !ok {
-					importedProgram, _ := PrepareProgramFromFile(stringLocation, codes)
-					importedChecker, _ = PrepareChecker(importedProgram, importedLocation, codes, nil, must)
-					must(importedChecker.Check())
-					checkers[importedLocation.ID()] = importedChecker
-				}
-
-				return sema.ElaborationImport{
-					Elaboration: importedChecker.Elaboration,
-				}, nil
-			},
-		),
+	checkerOptions := append(
+		defaultCheckerOptions,
 		sema.WithMemberAccountAccessHandler(func(checker *sema.Checker, memberLocation common.Location) bool {
-
 			if memberAccountAccess == nil {
 				return false
 			}
@@ -137,6 +104,13 @@ func PrepareChecker(
 			_, ok = targets[memberLocation.ID()]
 			return ok
 		}),
+	)
+
+	checker, err := sema.NewChecker(
+		program,
+		location,
+		nil,
+		checkerOptions...,
 	)
 	must(err)
 
@@ -160,16 +134,27 @@ func PrepareInterpreter(filename string, debugger *interpreter.Debugger) (*inter
 
 	storage := interpreter.NewInMemoryStorage(nil)
 
-	inter, err := interpreter.NewInterpreter(
-		interpreter.ProgramFromChecker(checker),
-		checker.Location,
+	_, defaultInterpreterOptions :=
+		runtime.REPLDefaultCheckerInterpreterOptions(
+			checkers,
+			codes,
+			stdlib.DefaultFlowBuiltinImpls(),
+		)
+
+	interpreterOptions := append(
+		defaultInterpreterOptions,
 		interpreter.WithStorage(storage),
-		interpreter.WithPredeclaredValues(valueDeclarations.ToInterpreterValueDeclarations()),
 		interpreter.WithUUIDHandler(func() (uint64, error) {
 			defer func() { uuid++ }()
 			return uuid, nil
 		}),
 		interpreter.WithDebugger(debugger),
+	)
+
+	inter, err := interpreter.NewInterpreter(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+		interpreterOptions...,
 	)
 	must(err)
 

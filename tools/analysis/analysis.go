@@ -26,16 +26,6 @@ import (
 	"github.com/onflow/cadence/runtime/stdlib"
 )
 
-var valueDeclarations = append(
-	stdlib.FlowBuiltInFunctions(stdlib.FlowBuiltinImpls{}),
-	stdlib.BuiltinFunctions...,
-).ToSemaValueDeclarations()
-
-var typeDeclarations = append(
-	stdlib.FlowBuiltInTypes,
-	stdlib.BuiltinTypes...,
-).ToTypeDeclarations()
-
 type ParsingCheckingError struct {
 	error
 	location common.Location
@@ -164,11 +154,15 @@ func (programs Programs) check(
 	*sema.Elaboration,
 	error,
 ) {
+
+	semaPredeclaredValues, _ :=
+		stdlib.FlowDefaultPredeclaredValues(stdlib.FlowBuiltinImpls{})
+
 	checker, err := sema.NewChecker(
 		program,
 		location,
-		sema.WithPredeclaredValues(valueDeclarations),
-		sema.WithPredeclaredTypes(typeDeclarations),
+		sema.WithPredeclaredValues(semaPredeclaredValues),
+		sema.WithPredeclaredTypes(stdlib.FlowDefaultPredeclaredTypes),
 		sema.WithLocationHandler(
 			sema.AddressLocationHandlerFunc(
 				config.ResolveAddressContractNames,

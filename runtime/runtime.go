@@ -112,11 +112,6 @@ type Runtime interface {
 	SetDebugger(debugger *interpreter.Debugger)
 }
 
-var typeDeclarations = append(
-	stdlib.FlowBuiltInTypes,
-	stdlib.BuiltinTypes...,
-).ToTypeDeclarations()
-
 type ImportResolver = func(location common.Location) (program *ast.Program, e error)
 
 var validTopLevelDeclarationsInTransaction = []common.DeclarationKind{
@@ -1161,7 +1156,7 @@ func (r *interpreterRuntime) check(
 		append(
 			[]sema.Option{
 				sema.WithPredeclaredValues(valueDeclarations),
-				sema.WithPredeclaredTypes(typeDeclarations),
+				sema.WithPredeclaredTypes(stdlib.FlowDefaultPredeclaredTypes),
 				sema.WithValidTopLevelDeclarationsHandler(validTopLevelDeclarations),
 				sema.WithLocationHandler(
 					func(identifiers []Identifier, location Location) (res []ResolvedLocation, err error) {
