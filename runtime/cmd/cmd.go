@@ -19,10 +19,10 @@
 package cmd
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 
-	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -71,6 +71,59 @@ func PrepareProgram(code string, location common.Location, codes map[common.Loca
 
 var checkers = map[common.LocationID]*sema.Checker{}
 
+func DefaultCheckerInterpreterOptions(
+	checkers map[common.LocationID]*sema.Checker,
+	codes map[common.LocationID]string,
+	impls stdlib.FlowBuiltinImpls,
+) (
+	[]sema.Option,
+	[]interpreter.Option,
+) {
+
+	semaPredeclaredValues, interpreterPredeclaredValues :=
+		stdlib.FlowDefaultPredeclaredValues(impls)
+
+	return []sema.Option{
+			sema.WithPredeclaredValues(semaPredeclaredValues),
+			sema.WithPredeclaredTypes(stdlib.FlowDefaultPredeclaredTypes),
+			sema.WithImportHandler(
+				func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
+					if importedLocation == stdlib.CryptoChecker.Location {
+						return sema.ElaborationImport{
+							Elaboration: stdlib.CryptoChecker.Elaboration,
+						}, nil
+					}
+
+					stringLocation, ok := importedLocation.(common.StringLocation)
+
+					if !ok {
+						return nil, &sema.CheckerError{
+							Location: checker.Location,
+							Codes:    codes,
+							Errors: []error{
+								fmt.Errorf("cannot import `%s`. only files are supported", importedLocation),
+							},
+						}
+					}
+
+					importedChecker, ok := checkers[importedLocation.ID()]
+					if !ok {
+						importedProgram, _ := PrepareProgramFromFile(stringLocation, codes)
+						importedChecker, _ = checker.SubChecker(importedProgram, importedLocation)
+						checkers[importedLocation.ID()] = importedChecker
+					}
+
+					return sema.ElaborationImport{
+						Elaboration: importedChecker.Elaboration,
+					}, nil
+				},
+			),
+		},
+		[]interpreter.Option{
+			interpreter.WithPredeclaredValues(interpreterPredeclaredValues),
+		}
+}
+
 // PrepareChecker prepares and initializes a checker with a given code as a string,
 // and a filename which is used for pretty-printing errors, if any
 func PrepareChecker(
@@ -82,7 +135,7 @@ func PrepareChecker(
 ) (*sema.Checker, func(error)) {
 
 	defaultCheckerOptions, _ :=
-		runtime.REPLDefaultCheckerInterpreterOptions(
+		DefaultCheckerInterpreterOptions(
 			checkers,
 			codes,
 			stdlib.FlowBuiltinImpls{},
@@ -132,7 +185,7 @@ func PrepareInterpreter(filename string) (*interpreter.Interpreter, *sema.Checke
 	storage := interpreter.NewInMemoryStorage()
 
 	_, defaultInterpreterOptions :=
-		runtime.REPLDefaultCheckerInterpreterOptions(
+		DefaultCheckerInterpreterOptions(
 			checkers,
 			codes,
 			stdlib.DefaultFlowBuiltinImpls(),
