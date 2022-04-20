@@ -36,6 +36,23 @@ var typeDeclarations = append(
 	stdlib.BuiltinTypes...,
 ).ToTypeDeclarations()
 
+type ParsingCheckingError struct {
+	error
+	location common.Location
+}
+
+func (e ParsingCheckingError) Unwrap() error {
+	return e.error
+}
+
+func (e ParsingCheckingError) Location() common.Location {
+	return e.location
+}
+
+func (e ParsingCheckingError) ChildErrors() []error {
+	return []error{e.error}
+}
+
 // LoadMode controls the amount of detail to return when loading.
 // The bits below can be combined to specify what information is required.
 //
@@ -78,13 +95,17 @@ type Config struct {
 func Load(config *Config, locations ...common.Location) (Programs, error) {
 	programs := make(Programs, len(locations))
 	for _, location := range locations {
-		err := programs.load(config, location, nil, ast.Range{})
+		err := programs.Load(config, location)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	return programs, nil
+}
+
+func (programs Programs) Load(config *Config, location common.Location) error {
+	return programs.load(config, location, nil, ast.Range{})
 }
 
 func (programs Programs) load(
@@ -98,20 +119,28 @@ func (programs Programs) load(
 		return nil
 	}
 
+	wrapError := func(err error) ParsingCheckingError {
+		return ParsingCheckingError{
+			error:    err,
+			location: location,
+		}
+	}
+
 	code, err := config.ResolveCode(location, importingLocation, importRange)
 	if err != nil {
 		return err
 	}
+
 	program, err := parser2.ParseProgram(code)
 	if err != nil {
-		return err
+		return wrapError(err)
 	}
 
 	var elaboration *sema.Elaboration
 	if config.Mode&NeedTypes != 0 {
 		elaboration, err = programs.check(config, program, location)
 		if err != nil {
-			return err
+			return wrapError(err)
 		}
 	}
 

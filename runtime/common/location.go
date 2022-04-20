@@ -130,8 +130,8 @@ func DecodeTypeID(typeID string) (location Location, qualifiedIdentifier string,
 	return decoder(typeID)
 }
 
-// HasImportLocation
+// HasLocation
 
-type HasImportLocation interface {
+type HasLocation interface {
 	ImportLocation() Location
 }
