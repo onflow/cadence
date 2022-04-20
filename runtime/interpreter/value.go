@@ -14560,10 +14560,11 @@ func (v *CompositeValue) ToMeteredString(memoryGauge common.MemoryGauge, seenRef
 
 	typeId := string(v.TypeID())
 
-	// len = len(typeName) + len(fieldNames) + (n times colon+space) + ((n-1) times comma+space)
-	// i.e: len + 4n-2
+	// len = len(fieldNames) + len(typeId) + (n times colon+space) + ((n-1) times comma+space) + 2
+	//     = len(fieldNames) + len(typeId) + 2n + 2n - 2 + 2
+	//     = len(fieldNames) + len(typeId) + 4n
 	// Value of each field is metered separately.
-	strLen += len(typeId) + len(fields)*4 - 2
+	strLen = strLen + len(typeId) + len(fields)*4
 
 	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(strLen))
 

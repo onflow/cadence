@@ -1007,7 +1007,7 @@ func TestStringer(t *testing.T) {
 					common.Address{},
 				)
 
-				compositeValue.Stringer = func(_ *CompositeValue, _ SeenReferences) string {
+				compositeValue.Stringer = func(_ common.MemoryGauge, _ *CompositeValue, _ SeenReferences) string {
 					return "y --> bar"
 				}
 

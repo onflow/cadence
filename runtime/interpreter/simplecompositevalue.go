@@ -36,10 +36,10 @@ type SimpleCompositeValue struct {
 	FieldNames      []string
 	Fields          map[string]Value
 	ComputedFields  map[string]ComputedField
-	fieldFormatters map[string]func(Value, SeenReferences) string
+	fieldFormatters map[string]func(common.MemoryGauge, Value, SeenReferences) string
 	// stringer is an optional function that is used to produce the string representation of the value.
 	// If nil, the FieldNames are used.
-	stringer func(SeenReferences) string
+	stringer func(common.MemoryGauge, SeenReferences) string
 }
 
 var _ Value = &SimpleCompositeValue{}
@@ -52,8 +52,8 @@ func NewSimpleCompositeValue(
 	fieldNames []string,
 	fields map[string]Value,
 	computedFields map[string]ComputedField,
-	fieldFormatters map[string]func(Value, SeenReferences) string,
-	stringer func(SeenReferences) string,
+	fieldFormatters map[string]func(common.MemoryGauge, Value, SeenReferences) string,
+	stringer func(common.MemoryGauge, SeenReferences) string,
 ) *SimpleCompositeValue {
 
 	baseUsage, lengthUsage := common.NewCompositeMemoryUsages(len(fields))
@@ -144,9 +144,13 @@ func (v *SimpleCompositeValue) String() string {
 }
 
 func (v *SimpleCompositeValue) RecursiveString(seenReferences SeenReferences) string {
+	return v.ToMeteredString(nil, seenReferences)
+}
+
+func (v *SimpleCompositeValue) ToMeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
 
 	if v.stringer != nil {
-		return v.stringer(seenReferences)
+		return v.stringer(memoryGauge, seenReferences)
 	}
 
 	var fields []struct {
@@ -154,17 +158,19 @@ func (v *SimpleCompositeValue) RecursiveString(seenReferences SeenReferences) st
 		Value string
 	}
 
+	strLen := emptyCompositeStringLen
+
 	for _, fieldName := range v.FieldNames {
 		fieldValue := v.Fields[fieldName]
 
 		var value string
 		if v.fieldFormatters != nil {
 			if fieldFormatter, ok := v.fieldFormatters[fieldName]; ok {
-				value = fieldFormatter(fieldValue, seenReferences)
+				value = fieldFormatter(memoryGauge, fieldValue, seenReferences)
 			}
 		}
 		if value == "" {
-			value = fieldValue.RecursiveString(seenReferences)
+			value = fieldValue.ToMeteredString(memoryGauge, seenReferences)
 		}
 
 		fields = append(fields, struct {
@@ -174,9 +180,21 @@ func (v *SimpleCompositeValue) RecursiveString(seenReferences SeenReferences) st
 			Name:  fieldName,
 			Value: value,
 		})
+
+		strLen += len(fieldName)
 	}
 
-	return format.Composite(string(v.TypeID), fields)
+	typeId := string(v.TypeID)
+
+	// len = len(fieldNames) + len(typeId) + (n times colon+space) + ((n-1) times comma+space) + 2
+	//     = len(fieldNames) + len(typeId) + 2n + 2n - 2 + 2
+	//     = len(fieldNames) + len(typeId) + 4n
+	// Value of each field is metered separately.
+	strLen = strLen + len(typeId) + len(fields)*4
+
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(strLen))
+
+	return format.Composite(typeId, fields)
 }
 
 func (v *SimpleCompositeValue) ConformsToStaticType(

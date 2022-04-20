@@ -21,6 +21,7 @@ package interpreter
 import (
 	"fmt"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -111,9 +112,11 @@ func NewAuthAccountValue(
 	}
 
 	var str string
-	stringer := func(_ SeenReferences) string {
+	stringer := func(memoryGauge common.MemoryGauge, _ SeenReferences) string {
 		if str == "" {
-			str = fmt.Sprintf("AuthAccount(%s)", address)
+			common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(13))
+			addressStr := address.ToMeteredString(memoryGauge, SeenReferences{})
+			str = fmt.Sprintf("AuthAccount(%s)", addressStr)
 		}
 		return str
 	}
@@ -196,9 +199,11 @@ func NewPublicAccountValue(
 	}
 
 	var str string
-	stringer := func(_ SeenReferences) string {
+	stringer := func(memoryGauge common.MemoryGauge, _ SeenReferences) string {
 		if str == "" {
-			str = fmt.Sprintf("PublicAccount(%s)", address)
+			common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(15))
+			addressStr := address.ToMeteredString(memoryGauge, SeenReferences{})
+			str = fmt.Sprintf("PublicAccount(%s)", addressStr)
 		}
 		return str
 	}
