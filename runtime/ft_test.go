@@ -615,7 +615,9 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 	// Mint 1000 FLOW to sender
 
-	mintAmount, err := cadence.NewUFix64("100000000000.0")
+	parsed, err := cadence.ParseUFix64("100000000000.0")
+	require.NoError(b, err)
+	mintAmount, err := cadence.NewUnmeteredUFix64(parsed)
 	require.NoError(b, err)
 
 	mintAmountValue := interpreter.NewUnmeteredUFix64Value(uint64(mintAmount))
@@ -639,7 +641,9 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 	// Benchmark sending tokens from sender to receiver
 
-	sendAmount, err := cadence.NewUFix64("0.00000001")
+	parsed, err = cadence.ParseUFix64("0.00000001")
+	require.NoError(b, err)
+	sendAmount, err := cadence.NewUnmeteredUFix64(parsed)
 	require.NoError(b, err)
 
 	signerAccount = senderAddress

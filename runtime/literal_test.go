@@ -443,7 +443,7 @@ func TestLiteralValue(t *testing.T) {
 	})
 
 	t.Run("Fix64, valid literal, positive", func(t *testing.T) {
-		expected, err := cadence.NewFix64FromParts(false, 1, 0)
+		expected, err := cadence.NewUnmeteredFix64FromParts(false, 1, 0)
 		require.NoError(t, err)
 
 		value, err := ParseLiteral(`1.0`, sema.Fix64Type, newTestInterpreter(t))
@@ -452,7 +452,7 @@ func TestLiteralValue(t *testing.T) {
 	})
 
 	t.Run("Fix64, valid literal, negative", func(t *testing.T) {
-		expected, err := cadence.NewFix64FromParts(true, 1, 0)
+		expected, err := cadence.NewUnmeteredFix64FromParts(true, 1, 0)
 		require.NoError(t, err)
 
 		value, err := ParseLiteral(`-1.0`, sema.Fix64Type, newTestInterpreter(t))
@@ -488,7 +488,7 @@ func TestLiteralValue(t *testing.T) {
 	})
 
 	t.Run("FixedPoint, valid literal, positive", func(t *testing.T) {
-		expected, err := cadence.NewFix64FromParts(false, 1, 0)
+		expected, err := cadence.NewUnmeteredFix64FromParts(false, 1, 0)
 		require.NoError(t, err)
 
 		value, err := ParseLiteral(`1.0`, sema.FixedPointType, newTestInterpreter(t))
@@ -497,7 +497,7 @@ func TestLiteralValue(t *testing.T) {
 	})
 
 	t.Run("FixedPoint, valid literal, negative", func(t *testing.T) {
-		expected, err := cadence.NewFix64FromParts(true, 1, 0)
+		expected, err := cadence.NewUnmeteredFix64FromParts(true, 1, 0)
 		require.NoError(t, err)
 
 		value, err := ParseLiteral(`-1.0`, sema.FixedPointType, newTestInterpreter(t))
@@ -512,7 +512,7 @@ func TestLiteralValue(t *testing.T) {
 	})
 
 	t.Run("SignedFixedPoint, valid literal, positive", func(t *testing.T) {
-		expected, err := cadence.NewFix64FromParts(false, 1, 0)
+		expected, err := cadence.NewUnmeteredFix64FromParts(false, 1, 0)
 		require.NoError(t, err)
 
 		value, err := ParseLiteral(`1.0`, sema.SignedFixedPointType, newTestInterpreter(t))
@@ -521,7 +521,7 @@ func TestLiteralValue(t *testing.T) {
 	})
 
 	t.Run("SignedFixedPoint, valid literal, negative", func(t *testing.T) {
-		expected, err := cadence.NewFix64FromParts(true, 1, 0)
+		expected, err := cadence.NewUnmeteredFix64FromParts(true, 1, 0)
 		require.NoError(t, err)
 
 		value, err := ParseLiteral(`-1.0`, sema.SignedFixedPointType, newTestInterpreter(t))
