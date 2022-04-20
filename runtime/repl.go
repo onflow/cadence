@@ -43,7 +43,6 @@ func NewREPL(
 	onError func(err error, location common.Location, codes map[common.LocationID]string),
 	onResult func(interpreter.Value),
 	checkerOptions []sema.Option,
-	interpreterOptions []interpreter.Option,
 ) (*REPL, error) {
 
 	checkers := map[common.LocationID]*sema.Checker{}
@@ -80,7 +79,7 @@ func NewREPL(
 
 	storage := interpreter.NewInMemoryStorage(nil)
 
-	interpreterOptions = append(
+	defaultInterpreterOptions = append(
 		defaultInterpreterOptions,
 		interpreter.WithStorage(storage),
 		interpreter.WithUUIDHandler(func() (uint64, error) {
@@ -92,7 +91,7 @@ func NewREPL(
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
 		checker.Location,
-		interpreterOptions...,
+		defaultInterpreterOptions...,
 	)
 	if err != nil {
 		return nil, err
