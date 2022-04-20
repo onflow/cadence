@@ -7,8 +7,9 @@ github.com/cheekybits/genny v1.0.0/go.mod h1:+tQajlRqAUrPI7DOSpB0XAqZYtQakVtB7wX
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/fxamacker/cbor/v2 v2.3.1-0.20211029162100-5d5d7c3edd41 h1:adk2SdM72B9LVdNPVgLDO+UBdGW5JmDIJEdzlI2ZYC8=
 github.com/fxamacker/cbor/v2 v2.3.1-0.20211029162100-5d5d7c3edd41/go.mod h1:TA1xS00nchWmaBnEIxPSE5oHLuJBAVvqrtAnWBwBCVo=
+github.com/fxamacker/cbor/v2 v2.4.1-0.20220314011055-12f5cb4b5eb0 h1:4i+hJzGuDJs2qYo2rFjNrEYyzQdzjJOzNUR9p20VHyo=
+github.com/fxamacker/cbor/v2 v2.4.1-0.20220314011055-12f5cb4b5eb0/go.mod h1:TA1xS00nchWmaBnEIxPSE5oHLuJBAVvqrtAnWBwBCVo=
 github.com/fxamacker/circlehash v0.2.0 h1:IFBaLm/4NChHcIptw/A7Ha/DemC8M9jGbjWzsN6XDrc=
 github.com/fxamacker/circlehash v0.2.0/go.mod h1:3aq3OfVvsWtkWMb6A1owjOQFA+TLsD5FgJflnaQwtMM=
 github.com/go-test/deep v1.0.5 h1:AKODKU3pDH1RzZzm6YZu77YWtEAq6uh1rLIAQlay2qc=
