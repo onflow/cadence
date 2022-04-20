@@ -160,8 +160,8 @@ func DecodeTypeID(gauge MemoryGauge, typeID string) (location Location, qualifie
 	return decoder(gauge, typeID)
 }
 
-// HasImportLocation
+// HasLocation
 
-type HasImportLocation interface {
+type HasLocation interface {
 	ImportLocation() Location
 }
