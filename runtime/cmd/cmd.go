@@ -141,7 +141,7 @@ func PrepareChecker(
 			stdlib.FlowBuiltinImpls{},
 		)
 
-	checkerOptions := append(
+	defaultCheckerOptions = append(
 		defaultCheckerOptions,
 		sema.WithMemberAccountAccessHandler(func(checker *sema.Checker, memberLocation common.Location) bool {
 			if memberAccountAccess == nil {
@@ -161,7 +161,7 @@ func PrepareChecker(
 	checker, err := sema.NewChecker(
 		program,
 		location,
-		checkerOptions...,
+		defaultCheckerOptions...,
 	)
 	must(err)
 
@@ -191,7 +191,7 @@ func PrepareInterpreter(filename string) (*interpreter.Interpreter, *sema.Checke
 			stdlib.DefaultFlowBuiltinImpls(),
 		)
 
-	interpreterOptions := append(
+	defaultInterpreterOptions = append(
 		defaultInterpreterOptions,
 		interpreter.WithStorage(storage),
 		interpreter.WithUUIDHandler(func() (uint64, error) {
@@ -203,7 +203,7 @@ func PrepareInterpreter(filename string) (*interpreter.Interpreter, *sema.Checke
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
 		checker.Location,
-		interpreterOptions...,
+		defaultInterpreterOptions...,
 	)
 	must(err)
 

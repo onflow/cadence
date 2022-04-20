@@ -78,7 +78,7 @@ func NewREPL(
 
 	storage := interpreter.NewInMemoryStorage()
 
-	interpreterOptions := append(
+	defaultInterpreterOptions = append(
 		defaultInterpreterOptions,
 		interpreter.WithStorage(storage),
 		interpreter.WithUUIDHandler(func() (uint64, error) {
@@ -90,7 +90,7 @@ func NewREPL(
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
 		checker.Location,
-		interpreterOptions...,
+		defaultInterpreterOptions...,
 	)
 	if err != nil {
 		return nil, err
