@@ -332,7 +332,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 
 		meter := make(map[common.MemoryKind]uint64)
 
-		fix64Value, err := cadence.NewFix64FromParts(true, 1, 4)
+		fix64Value, err := cadence.NewUnmeteredFix64FromParts(true, 1, 4)
 		require.NoError(t, err)
 
 		executeScript(script, meter, fix64Value)

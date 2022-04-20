@@ -538,7 +538,9 @@ func (d *Decoder) decodeWord64(valueJSON interface{}) cadence.Word64 {
 }
 
 func (d *Decoder) decodeFix64(valueJSON interface{}) cadence.Fix64 {
-	v, err := cadence.NewFix64(toString(valueJSON))
+	v, err := cadence.NewFix64(d.gauge, func() (int64, error) {
+		return cadence.ParseFix64(toString(valueJSON))
+	})
 	if err != nil {
 		// TODO: improve error message
 		panic(ErrInvalidJSONCadence)
@@ -547,7 +549,9 @@ func (d *Decoder) decodeFix64(valueJSON interface{}) cadence.Fix64 {
 }
 
 func (d *Decoder) decodeUFix64(valueJSON interface{}) cadence.UFix64 {
-	v, err := cadence.NewUFix64(toString(valueJSON))
+	v, err := cadence.NewUFix64(d.gauge, func() (uint64, error) {
+		return cadence.ParseUFix64(toString(valueJSON))
+	})
 	if err != nil {
 		// TODO: improve error message
 		panic(ErrInvalidJSONCadence)

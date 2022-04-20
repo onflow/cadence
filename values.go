@@ -489,7 +489,7 @@ type Int128 struct {
 	Value *big.Int
 }
 
-var Int128MemoryUsage = common.NewBigIntMemoryUsage(16)
+var Int128MemoryUsage = common.NewCadenceBigIntMemoryUsage(16)
 
 func NewUnmeteredInt128(i int) Int128 {
 	return Int128{big.NewInt(int64(i))}
@@ -546,7 +546,7 @@ type Int256 struct {
 	Value *big.Int
 }
 
-var Int256MemoryUsage = common.NewBigIntMemoryUsage(32)
+var Int256MemoryUsage = common.NewCadenceBigIntMemoryUsage(32)
 
 func NewUnmeteredInt256(i int) Int256 {
 	return Int256{big.NewInt(int64(i))}
@@ -794,7 +794,7 @@ type UInt128 struct {
 	Value *big.Int
 }
 
-var UInt128MemoryUsage = common.NewBigIntMemoryUsage(16)
+var UInt128MemoryUsage = common.NewCadenceBigIntMemoryUsage(16)
 
 func NewUnmeteredUInt128(i uint) UInt128 {
 	return UInt128{big.NewInt(int64(i))}
@@ -851,7 +851,7 @@ type UInt256 struct {
 	Value *big.Int
 }
 
-var UInt256MemoryUsage = common.NewBigIntMemoryUsage(32)
+var UInt256MemoryUsage = common.NewCadenceBigIntMemoryUsage(32)
 
 func NewUnmeteredUInt256(i uint) UInt256 {
 	return UInt256{big.NewInt(int64(i))}
@@ -906,7 +906,7 @@ func (v UInt256) String() string {
 
 type Word8 uint8
 
-var word8MemoryUsage = common.NewNumberMemoryUsage(int(unsafe.Sizeof(Word8(0))))
+var word8MemoryUsage = common.NewCadenceNumberMemoryUsage(int(unsafe.Sizeof(Word8(0))))
 
 func NewUnmeteredWord8(v uint8) Word8 {
 	return Word8(v)
@@ -939,7 +939,7 @@ func (v Word8) String() string {
 
 type Word16 uint16
 
-var word16MemoryUsage = common.NewNumberMemoryUsage(int(unsafe.Sizeof(Word16(0))))
+var word16MemoryUsage = common.NewCadenceNumberMemoryUsage(int(unsafe.Sizeof(Word16(0))))
 
 func NewUnmeteredWord16(v uint16) Word16 {
 	return Word16(v)
@@ -974,7 +974,7 @@ func (v Word16) String() string {
 
 type Word32 uint32
 
-var word32MemoryUsage = common.NewNumberMemoryUsage(int(unsafe.Sizeof(Word32(0))))
+var word32MemoryUsage = common.NewCadenceNumberMemoryUsage(int(unsafe.Sizeof(Word32(0))))
 
 func NewUnmeteredWord32(v uint32) Word32 {
 	return Word32(v)
@@ -1009,7 +1009,7 @@ func (v Word32) String() string {
 
 type Word64 uint64
 
-var word64MemoryUsage = common.NewNumberMemoryUsage(int(unsafe.Sizeof(Word64(0))))
+var word64MemoryUsage = common.NewCadenceNumberMemoryUsage(int(unsafe.Sizeof(Word64(0))))
 
 func NewUnmeteredWord64(v uint64) Word64 {
 	return Word64(v)
@@ -1044,15 +1044,22 @@ func (v Word64) String() string {
 
 type Fix64 int64
 
-func NewFix64(s string) (Fix64, error) {
-	v, err := fixedpoint.ParseFix64(s)
+var fix64MemoryUsage = common.NewCadenceNumberMemoryUsage(int(unsafe.Sizeof(Fix64(0))))
+
+func NewUnmeteredFix64(value int64) (Fix64, error) {
+	return Fix64(value), nil
+}
+
+func NewFix64(gauge common.MemoryGauge, constructor func() (int64, error)) (Fix64, error) {
+	common.UseMemory(gauge, fix64MemoryUsage)
+	value, err := constructor()
 	if err != nil {
 		return 0, err
 	}
-	return Fix64(v.Int64()), nil
+	return NewUnmeteredFix64(value)
 }
 
-func NewFix64FromParts(negative bool, integer int, fraction uint) (Fix64, error) {
+func NewUnmeteredFix64FromParts(negative bool, integer int, fraction uint) (Fix64, error) {
 	v, err := fixedpoint.NewFix64(
 		negative,
 		new(big.Int).SetInt64(int64(integer)),
@@ -1063,6 +1070,14 @@ func NewFix64FromParts(negative bool, integer int, fraction uint) (Fix64, error)
 		return 0, err
 	}
 	return Fix64(v.Int64()), nil
+}
+
+func ParseFix64(s string) (int64, error) {
+	v, err := fixedpoint.ParseFix64(s)
+	if err != nil {
+		return 0, err
+	}
+	return v.Int64(), nil
 }
 
 func (Fix64) isValue() {}
@@ -1089,12 +1104,19 @@ func (v Fix64) String() string {
 
 type UFix64 uint64
 
-func NewUFix64(s string) (UFix64, error) {
-	v, err := fixedpoint.ParseUFix64(s)
+var ufix64MemoryUsage = common.NewCadenceNumberMemoryUsage(int(unsafe.Sizeof(UFix64(0))))
+
+func NewUnmeteredUFix64(value uint64) (UFix64, error) {
+	return UFix64(value), nil
+}
+
+func NewUFix64(gauge common.MemoryGauge, constructor func() (uint64, error)) (UFix64, error) {
+	common.UseMemory(gauge, ufix64MemoryUsage)
+	value, err := constructor()
 	if err != nil {
 		return 0, err
 	}
-	return UFix64(v.Uint64()), nil
+	return NewUnmeteredUFix64(value)
 }
 
 func NewUFix64FromParts(integer int, fraction uint) (UFix64, error) {
@@ -1107,6 +1129,14 @@ func NewUFix64FromParts(integer int, fraction uint) (UFix64, error) {
 		return 0, err
 	}
 	return UFix64(v.Uint64()), nil
+}
+
+func ParseUFix64(s string) (uint64, error) {
+	v, err := fixedpoint.ParseUFix64(s)
+	if err != nil {
+		return 0, err
+	}
+	return v.Uint64(), nil
 }
 
 func (UFix64) isValue() {}
