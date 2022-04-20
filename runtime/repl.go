@@ -19,7 +19,6 @@
 package runtime
 
 import (
-	"fmt"
 	"sort"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -40,59 +39,6 @@ type REPL struct {
 	codes    map[common.LocationID]string
 }
 
-func REPLDefaultCheckerInterpreterOptions(
-	checkers map[common.LocationID]*sema.Checker,
-	codes map[common.LocationID]string,
-	impls stdlib.FlowBuiltinImpls,
-) (
-	[]sema.Option,
-	[]interpreter.Option,
-) {
-
-	semaPredeclaredValues, interpreterPredeclaredValues :=
-		stdlib.FlowDefaultPredeclaredValues(impls)
-
-	return []sema.Option{
-			sema.WithPredeclaredValues(semaPredeclaredValues),
-			sema.WithPredeclaredTypes(stdlib.FlowDefaultPredeclaredTypes),
-			sema.WithImportHandler(
-				func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
-					if importedLocation == stdlib.CryptoChecker.Location {
-						return sema.ElaborationImport{
-							Elaboration: stdlib.CryptoChecker.Elaboration,
-						}, nil
-					}
-
-					stringLocation, ok := importedLocation.(common.StringLocation)
-
-					if !ok {
-						return nil, &sema.CheckerError{
-							Location: checker.Location,
-							Codes:    codes,
-							Errors: []error{
-								fmt.Errorf("cannot import `%s`. only files are supported", importedLocation),
-							},
-						}
-					}
-
-					importedChecker, ok := checkers[importedLocation.ID()]
-					if !ok {
-						importedProgram, _ := cmd.PrepareProgramFromFile(stringLocation, codes)
-						importedChecker, _ = checker.SubChecker(importedProgram, importedLocation)
-						checkers[importedLocation.ID()] = importedChecker
-					}
-
-					return sema.ElaborationImport{
-						Elaboration: importedChecker.Elaboration,
-					}, nil
-				},
-			),
-		},
-		[]interpreter.Option{
-			interpreter.WithPredeclaredValues(interpreterPredeclaredValues),
-		}
-}
-
 func NewREPL(
 	onError func(err error, location common.Location, codes map[common.LocationID]string),
 	onResult func(interpreter.Value),
@@ -104,7 +50,7 @@ func NewREPL(
 	codes := map[common.LocationID]string{}
 
 	defaultCheckerOptions, defaultInterpreterOptions :=
-		REPLDefaultCheckerInterpreterOptions(
+		cmd.DefaultCheckerInterpreterOptions(
 			checkers,
 			codes,
 			stdlib.DefaultFlowBuiltinImpls(),
