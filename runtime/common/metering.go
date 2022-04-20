@@ -105,6 +105,8 @@ var (
 
 	PositionMemoryUsage = NewConstantMemoryUsage(MemoryKindPosition)
 	RangeMemoryUsage    = NewConstantMemoryUsage(MemoryKindRange)
+
+	ElaborationMemoryUsage = NewConstantMemoryUsage(MemoryKindElaboration)
 )
 
 func UseMemory(gauge MemoryGauge, usage MemoryUsage) {

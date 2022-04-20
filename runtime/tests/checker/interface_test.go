@@ -1867,6 +1867,7 @@ func BenchmarkContractInterfaceFungibleToken(b *testing.B) {
 		checker, err := sema.NewChecker(
 			program,
 			TestLocation,
+			nil,
 			sema.WithAccessCheckMode(sema.AccessCheckModeNotSpecifiedUnrestricted),
 		)
 		if err != nil {
@@ -1901,6 +1902,7 @@ func BenchmarkCheckContractInterfaceFungibleTokenConformance(b *testing.B) {
 		checker, err := sema.NewChecker(
 			program,
 			TestLocation,
+			nil,
 			sema.WithAccessCheckMode(sema.AccessCheckModeNotSpecifiedUnrestricted),
 			panicDeclarationOption,
 		)

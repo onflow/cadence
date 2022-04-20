@@ -41,6 +41,7 @@ func Fuzz(data []byte) int {
 	checker, err := sema.NewChecker(
 		program,
 		utils.TestLocation,
+		nil,
 		sema.WithAccessCheckMode(sema.AccessCheckModeNotSpecifiedUnrestricted),
 	)
 	if err != nil {

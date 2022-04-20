@@ -248,16 +248,7 @@ func WithLintingEnabled(enabled bool) Option {
 	}
 }
 
-// WithMemoryGauge returns a checker option which sets the given memory gauge.
-//
-func WithMemoryGauge(memoryGauge common.MemoryGauge) Option {
-	return func(checker *Checker) error {
-		checker.SetMemoryGauge(memoryGauge)
-		return nil
-	}
-}
-
-func NewChecker(program *ast.Program, location common.Location, options ...Option) (*Checker, error) {
+func NewChecker(program *ast.Program, location common.Location, memoryGauge common.MemoryGauge, options ...Option) (*Checker, error) {
 
 	if location == nil {
 		return nil, &MissingLocationError{}
@@ -279,7 +270,8 @@ func NewChecker(program *ast.Program, location common.Location, options ...Optio
 		typeActivations:     typeActivations,
 		functionActivations: functionActivations,
 		containerTypes:      map[Type]bool{},
-		Elaboration:         NewElaboration(),
+		Elaboration:         NewElaboration(memoryGauge),
+		memoryGauge:         memoryGauge,
 	}
 
 	for _, option := range options {
@@ -304,6 +296,7 @@ func (checker *Checker) SubChecker(program *ast.Program, location common.Locatio
 	return NewChecker(
 		program,
 		location,
+		checker.memoryGauge,
 		WithPredeclaredValues(checker.PredeclaredValues),
 		WithPredeclaredTypes(checker.PredeclaredTypes),
 		WithAccessCheckMode(checker.accessCheckMode),
@@ -311,7 +304,6 @@ func (checker *Checker) SubChecker(program *ast.Program, location common.Locatio
 		WithCheckHandler(checker.checkHandler),
 		WithImportHandler(checker.importHandler),
 		WithLocationHandler(checker.locationHandler),
-		WithMemoryGauge(checker.memoryGauge),
 	)
 }
 
