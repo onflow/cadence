@@ -43,6 +43,10 @@ func (e ParsingCheckingError) ChildErrors() []error {
 	return []error{e.error}
 }
 
+type Analyzer interface {
+	Analyze(program *Program, report func(error, common.Location))
+}
+
 // LoadMode controls the amount of detail to return when loading.
 // The bits below can be combined to specify what information is required.
 //
