@@ -107,6 +107,19 @@ var (
 	RangeMemoryUsage    = NewConstantMemoryUsage(MemoryKindRange)
 
 	ElaborationMemoryUsage = NewConstantMemoryUsage(MemoryKindElaboration)
+
+	// Following are same as len(format.X).
+	// However, values are hard-coded to avoid the circular dependency
+
+	VoidStringMemoryUsage                  = NewRawStringMemoryUsage(len("()"))
+	TrueStringMemoryUsage                  = NewRawStringMemoryUsage(len("true"))
+	FalseStringMemoryUsage                 = NewRawStringMemoryUsage(len("false"))
+	TypeValueStringMemoryUsage             = NewRawStringMemoryUsage(len("Type<>()"))
+	NilValueStringMemoryUsage              = NewRawStringMemoryUsage(len("nil"))
+	StorageReferenceValueStringMemoryUsage = NewRawStringMemoryUsage(len("StorageReference()"))
+	SeenReferenceStringMemoryUsage         = NewRawStringMemoryUsage(3)                   // len(ellipsis)
+	AddressValueStringMemoryUsage          = NewRawStringMemoryUsage(AddressLength*2 + 2) // len(bytes-to-hex + prefix)
+	HostFunctionValueStringMemoryUsage     = NewRawStringMemoryUsage(len("Function(...)"))
 )
 
 func UseMemory(gauge MemoryGauge, usage MemoryUsage) {
