@@ -128,7 +128,7 @@ func (programs Programs) load(
 		return err
 	}
 
-	program, err := parser2.ParseProgram(code)
+	program, err := parser2.ParseProgram(code, nil)
 	if err != nil {
 		return wrapError(err)
 	}
@@ -165,6 +165,7 @@ func (programs Programs) check(
 	checker, err := sema.NewChecker(
 		program,
 		location,
+		nil,
 		sema.WithPredeclaredValues(semaPredeclaredValues),
 		sema.WithPredeclaredTypes(stdlib.FlowDefaultPredeclaredTypes),
 		sema.WithLocationHandler(

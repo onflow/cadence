@@ -124,7 +124,7 @@ func TestNeedSyntaxAndImport(t *testing.T) {
 				locationRanges,
 				locationRange{
 					location: program.Location,
-					Range:    ast.NewRangeFromPositioned(castingExpression),
+					Range:    ast.NewRangeFromPositioned(nil, castingExpression),
 				},
 			)
 

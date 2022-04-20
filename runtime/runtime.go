@@ -1261,6 +1261,8 @@ func (r *interpreterRuntime) newInterpreter(
 	}
 
 	defaultOptions := []interpreter.Option{
+		// NOTE: storage option must be provided *before* the predeclared values option,
+		// as predeclared values may rely on storage
 		interpreter.WithStorage(storage),
 		interpreter.WithPredeclaredValues(preDeclaredValues),
 		interpreter.WithOnEventEmittedHandler(

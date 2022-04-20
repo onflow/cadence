@@ -79,19 +79,26 @@ func NewREPL(
 
 	storage := interpreter.NewInMemoryStorage(nil)
 
-	defaultInterpreterOptions = append(
-		defaultInterpreterOptions,
+	// NOTE: storage option must be provided *before* the predeclared values option,
+	// as predeclared values may rely on storage
+
+	interpreterOptions := []interpreter.Option{
 		interpreter.WithStorage(storage),
 		interpreter.WithUUIDHandler(func() (uint64, error) {
 			defer func() { uuid++ }()
 			return uuid, nil
 		}),
+	}
+
+	interpreterOptions = append(
+		interpreterOptions,
+		defaultInterpreterOptions...,
 	)
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
 		checker.Location,
-		defaultInterpreterOptions...,
+		interpreterOptions...,
 	)
 	if err != nil {
 		return nil, err

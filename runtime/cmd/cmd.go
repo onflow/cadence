@@ -193,20 +193,27 @@ func PrepareInterpreter(filename string, debugger *interpreter.Debugger) (*inter
 			stdlib.DefaultFlowBuiltinImpls(),
 		)
 
-	defaultInterpreterOptions = append(
-		defaultInterpreterOptions,
+	// NOTE: storage option must be provided *before* the predeclared values option,
+	// as predeclared values may rely on storage
+
+	interpreterOptions := []interpreter.Option{
 		interpreter.WithStorage(storage),
 		interpreter.WithUUIDHandler(func() (uint64, error) {
 			defer func() { uuid++ }()
 			return uuid, nil
 		}),
 		interpreter.WithDebugger(debugger),
+	}
+
+	interpreterOptions = append(
+		interpreterOptions,
+		defaultInterpreterOptions...,
 	)
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
 		checker.Location,
-		defaultInterpreterOptions...,
+		interpreterOptions...,
 	)
 	must(err)
 
