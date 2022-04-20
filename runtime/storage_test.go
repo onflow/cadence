@@ -3043,3 +3043,177 @@ func TestStorageReadNoImplicitWrite(t *testing.T) {
 	)
 	require.NoError(t, err)
 }
+
+// TestRuntimeStorageEnumCase tests the writing an enum case to storage,
+// reading it back from storage, as well as using it to index into a dictionary.
+//
+func TestRuntimeStorageEnumCase(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := newTestInterpreterRuntime()
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	accountCodes := map[common.LocationID][]byte{}
+	var events []cadence.Event
+	var loggedMessages []string
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: newTestLedger(nil, nil),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{address}, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		updateAccountContractCode: func(address Address, name string, code []byte) error {
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			accountCodes[location.ID()] = code
+			return nil
+		},
+		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			code = accountCodes[location.ID()]
+			return code, nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		log: func(message string) {
+			loggedMessages = append(loggedMessages, message)
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	// Deploy contract
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: utils.DeploymentTransaction(
+				"C",
+				[]byte(`
+                  pub contract C {
+
+                    pub enum E: UInt8 {
+                        pub case A
+                        pub case B
+                    }
+
+                    pub resource R {
+                        pub let id: UInt64
+                        pub let e: E
+
+                        init(id: UInt64, e: E) {
+                            self.id = id
+                            self.e = e
+                        }
+                    }
+
+                    pub fun createR(id: UInt64, e: E): @R {
+                        return <- create R(id: id, e: e)
+                    }
+
+                    pub resource Collection {
+                        pub var rs: @{UInt64: R}
+
+                        init () {
+                            self.rs <- {}
+                        }
+
+                        pub fun withdraw(id: UInt64): @R {
+                            return <- self.rs.remove(key: id)!
+                        }
+
+                        pub fun deposit(_ r: @R) {
+
+                            let counts: {E: UInt64} = {}
+                            log(r.e)
+                            counts[r.e] = 42 // test indexing expression is transferred properly
+                            log(r.e)
+
+                            let oldR <- self.rs[r.id] <-! r
+                            destroy oldR
+                        }
+
+                        destroy() {
+                             destroy self.rs
+                        }
+                    }
+
+                    pub fun createEmptyCollection(): @Collection {
+                      return <- create Collection()
+                    }
+                  }
+                `),
+			),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Store enum case
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: []byte(`
+              import C from 0x1
+
+              transaction {
+                  prepare(signer: AuthAccount) {
+                      signer.save(<-C.createEmptyCollection(), to: /storage/collection)
+                      let collection = signer.borrow<&C.Collection>(from: /storage/collection)!
+                      collection.deposit(<-C.createR(id: 0, e: C.E.B))
+                  }
+               }
+            `),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Load enum case
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: []byte(`
+              import C from 0x1
+
+              transaction {
+                  prepare(signer: AuthAccount) {
+                      let collection = signer.borrow<&C.Collection>(from: /storage/collection)!
+                      let r <- collection.withdraw(id: 0)
+                      log(r.e)
+                      destroy r
+                  }
+               }
+            `),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	require.Equal(t,
+		[]string{
+			"A.0000000000000001.C.E(rawValue: 1)",
+			"A.0000000000000001.C.E(rawValue: 1)",
+			"A.0000000000000001.C.E(rawValue: 1)",
+		},
+		loggedMessages,
+	)
+}
