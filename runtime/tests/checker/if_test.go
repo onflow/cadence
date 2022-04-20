@@ -107,6 +107,21 @@ func TestCheckIfStatementTestWithDeclaration(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestCheckInvalidIfStatementTestWithDeclaration(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test() {
+          if let y = x {}
+      }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+}
+
 func TestCheckInvalidIfStatementTestWithDeclarationReferenceInElse(t *testing.T) {
 
 	t.Parallel()
