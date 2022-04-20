@@ -22,8 +22,9 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/cadence/runtime/parser2"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
