@@ -40,29 +40,29 @@ type REPL struct {
 	codes    map[common.LocationID]string
 }
 
-func NewREPL(
-	onError func(err error, location common.Location, codes map[common.LocationID]string),
-	onResult func(interpreter.Value),
-	checkerOptions []sema.Option,
-) (*REPL, error) {
+func REPLDefaultCheckerInterpreterOptions(
+	checkers map[common.LocationID]*sema.Checker,
+	codes map[common.LocationID]string,
+	impls stdlib.FlowBuiltinImpls,
+) (
+	[]sema.Option,
+	[]interpreter.Option,
+) {
 
-	valueDeclarations := append(
-		stdlib.FlowBuiltInFunctions(stdlib.DefaultFlowBuiltinImpls()),
-		stdlib.BuiltinFunctions...,
-	)
+	semaPredeclaredValues, interpreterPredeclaredValues :=
+		stdlib.FlowDefaultPredeclaredValues(impls)
 
-	checkers := map[common.LocationID]*sema.Checker{}
-	codes := map[common.LocationID]string{}
-
-	var newChecker func(program *ast.Program, location common.Location) (*sema.Checker, error)
-
-	checkerOptions = append(
-		[]sema.Option{
-			sema.WithPredeclaredValues(valueDeclarations.ToSemaValueDeclarations()),
-			sema.WithPredeclaredTypes(typeDeclarations),
-			sema.WithAccessCheckMode(sema.AccessCheckModeNotSpecifiedUnrestricted),
+	return []sema.Option{
+			sema.WithPredeclaredValues(semaPredeclaredValues),
+			sema.WithPredeclaredTypes(stdlib.FlowDefaultPredeclaredTypes),
 			sema.WithImportHandler(
 				func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
+					if importedLocation == stdlib.CryptoChecker.Location {
+						return sema.ElaborationImport{
+							Elaboration: stdlib.CryptoChecker.Elaboration,
+						}, nil
+					}
+
 					stringLocation, ok := importedLocation.(common.StringLocation)
 
 					if !ok {
@@ -78,7 +78,7 @@ func NewREPL(
 					importedChecker, ok := checkers[importedLocation.ID()]
 					if !ok {
 						importedProgram, _ := cmd.PrepareProgramFromFile(stringLocation, codes)
-						importedChecker, _ = newChecker(importedProgram, importedLocation)
+						importedChecker, _ = checker.SubChecker(importedProgram, importedLocation)
 						checkers[importedLocation.ID()] = importedChecker
 					}
 
@@ -88,37 +88,63 @@ func NewREPL(
 				},
 			),
 		},
+		[]interpreter.Option{
+			interpreter.WithPredeclaredValues(interpreterPredeclaredValues),
+		}
+}
+
+func NewREPL(
+	onError func(err error, location common.Location, codes map[common.LocationID]string),
+	onResult func(interpreter.Value),
+	checkerOptions []sema.Option,
+) (*REPL, error) {
+
+	checkers := map[common.LocationID]*sema.Checker{}
+	codes := map[common.LocationID]string{}
+
+	defaultCheckerOptions, defaultInterpreterOptions :=
+		REPLDefaultCheckerInterpreterOptions(
+			checkers,
+			codes,
+			stdlib.DefaultFlowBuiltinImpls(),
+		)
+
+	defaultCheckerOptions = append(
+		defaultCheckerOptions,
+		sema.WithAccessCheckMode(sema.AccessCheckModeNotSpecifiedUnrestricted),
+	)
+
+	checkerOptions = append(
+		defaultCheckerOptions,
 		checkerOptions...,
 	)
 
-	newChecker = func(program *ast.Program, location common.Location) (*sema.Checker, error) {
-		return sema.NewChecker(
-			program,
-			common.REPLLocation{},
-			checkerOptions...,
-		)
-	}
-
-	checker, err := newChecker(nil, common.REPLLocation{})
+	checker, err := sema.NewChecker(
+		nil,
+		common.REPLLocation{},
+		checkerOptions...,
+	)
 	if err != nil {
 		return nil, err
 	}
-
-	values := valueDeclarations.ToInterpreterValueDeclarations()
 
 	var uuid uint64
 
 	storage := interpreter.NewInMemoryStorage()
 
-	inter, err := interpreter.NewInterpreter(
-		interpreter.ProgramFromChecker(checker),
-		checker.Location,
+	interpreterOptions := append(
+		defaultInterpreterOptions,
 		interpreter.WithStorage(storage),
-		interpreter.WithPredeclaredValues(values),
 		interpreter.WithUUIDHandler(func() (uint64, error) {
 			defer func() { uuid++ }()
 			return uuid, nil
 		}),
+	)
+
+	inter, err := interpreter.NewInterpreter(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+		interpreterOptions...,
 	)
 	if err != nil {
 		return nil, err

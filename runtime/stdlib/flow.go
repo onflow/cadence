@@ -203,6 +203,30 @@ func DefaultFlowBuiltinImpls() FlowBuiltinImpls {
 	}
 }
 
+var FlowDefaultPredeclaredTypes = append(
+	FlowBuiltInTypes,
+	BuiltinTypes...,
+).ToTypeDeclarations()
+
+func FlowDefaultPredeclaredValues(impls FlowBuiltinImpls) (
+	[]sema.ValueDeclaration,
+	[]interpreter.ValueDeclaration,
+) {
+	functionDeclarations := append(
+		FlowBuiltInFunctions(impls),
+		BuiltinFunctions...,
+	)
+
+	return append(
+			functionDeclarations.ToSemaValueDeclarations(),
+			BuiltinValues.ToSemaValueDeclarations()...,
+		),
+		append(
+			functionDeclarations.ToInterpreterValueDeclarations(),
+			BuiltinValues.ToInterpreterValueDeclarations()...,
+		)
+}
+
 // Flow location
 
 type FlowLocation struct{}
