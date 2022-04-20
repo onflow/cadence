@@ -186,9 +186,10 @@ func (v *SimpleCompositeValue) ToMeteredString(memoryGauge common.MemoryGauge, s
 
 	typeId := string(v.TypeID)
 
-	// len = len(fieldNames) + len(typeId) + (n times colon+space) + ((n-1) times comma+space) + 2
-	//     = len(fieldNames) + len(typeId) + 2n + 2n - 2 + 2
-	//     = len(fieldNames) + len(typeId) + 4n
+	// len = len(fieldNames) + len(typeId) + (n times colon+space) + ((n-1) times comma+space)
+	//     = len(fieldNames) + len(typeId) + 2n + 2n - 2
+	//     = len(fieldNames) + len(typeId) + 4n - 2
+	// since (-2 only occurs if its non-empty, ignore the -2)
 	// Value of each field is metered separately.
 	strLen = strLen + len(typeId) + len(fields)*4
 

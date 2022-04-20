@@ -8632,3 +8632,132 @@ func TestInterpretASTMetering(t *testing.T) {
 		assert.Equal(t, uint64(126), meter.getMemory(common.MemoryKindRange))
 	})
 }
+
+func TestInterpretValueStringConversion(t *testing.T) {
+	t.Parallel()
+
+	type testCase struct {
+		name        string
+		constructor string
+	}
+
+	testCases := []testCase{
+		{
+			name:        "Int",
+			constructor: "3",
+		},
+		{
+			name:        "Int8",
+			constructor: "Int8(3)",
+		},
+		{
+			name:        "Int256",
+			constructor: "UInt8(3)",
+		},
+		{
+			name:        "UInt",
+			constructor: "3",
+		},
+		{
+			name:        "UInt8",
+			constructor: "UInt8(3)",
+		},
+		{
+			name:        "UInt256",
+			constructor: "UInt256(3)",
+		},
+		{
+			name:        "String",
+			constructor: "\"hello\"",
+		},
+		{
+			name:        "Bool",
+			constructor: "false",
+		},
+		{
+			name:        "Array",
+			constructor: "[1, 2, 3]",
+		},
+		{
+			name:        "Dictionary",
+			constructor: "{\"John\": \"Doe\", \"Country\": \"CA\"}",
+		},
+	}
+
+	testStringConversion := func(test testCase) {
+
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			meter := newTestMemoryGauge()
+
+			var loggedString string
+
+			logFunction := stdlib.NewStandardLibraryFunction(
+				"log",
+				&sema.FunctionType{
+					Parameters: []*sema.Parameter{
+						{
+							Label:          sema.ArgumentLabelNotRequired,
+							Identifier:     "value",
+							TypeAnnotation: sema.NewTypeAnnotation(sema.AnyStructType),
+						},
+					},
+					ReturnTypeAnnotation: sema.NewTypeAnnotation(
+						sema.VoidType,
+					),
+				},
+				``,
+				func(invocation interpreter.Invocation) interpreter.Value {
+					// Reset gauge, to only capture the values metered during string conversion
+					meter.meter = make(map[common.MemoryKind]uint64)
+
+					loggedString = invocation.Arguments[0].ToMeteredString(invocation.Interpreter, interpreter.SeenReferences{})
+					return interpreter.VoidValue{}
+				},
+			)
+
+			valueDeclarations :=
+				stdlib.StandardLibraryFunctions{
+					logFunction,
+				}.ToSemaValueDeclarations()
+
+			values := stdlib.StandardLibraryFunctions{
+				logFunction,
+			}.ToInterpreterValueDeclarations()
+
+			script := fmt.Sprintf(`
+                    pub fun main() {
+                        let x = %s
+                        log(x)
+                    }
+                `,
+				test.constructor,
+			)
+
+			inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(t, script,
+				ParseCheckAndInterpretOptions{
+					Options: []interpreter.Option{
+						interpreter.WithPredeclaredValues(values),
+					},
+					CheckerOptions: []sema.Option{
+						sema.WithPredeclaredValues(valueDeclarations),
+					},
+					HandleCheckerError: nil,
+				},
+				meter,
+			)
+			require.NoError(t, err)
+
+			_, err = inter.Invoke("main")
+			require.NoError(t, err)
+
+			meteredAmount := meter.getMemory(common.MemoryKindRawString)
+			assert.GreaterOrEqual(t, int(meteredAmount), len(loggedString))
+		})
+	}
+
+	for _, test := range testCases {
+		testStringConversion(test)
+	}
+}
