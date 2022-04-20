@@ -1019,7 +1019,7 @@ func TestInterpretOptionalValueMetering(t *testing.T) {
 		// 2 for `z`
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindOptional))
 
-		assert.Equal(t, uint64(12), meter.getMemory(common.MemoryKindPrimitiveStaticType))
+		assert.Equal(t, uint64(14), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindDictionaryStaticType))
 	})
 
@@ -8547,7 +8547,7 @@ func TestInterpretASTMetering(t *testing.T) {
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindForceExpression))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindPathExpression))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindDictionaryEntry))
-		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindPrimitiveStaticType))
+		assert.Equal(t, uint64(25), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 
 	t.Run("types", func(t *testing.T) {
