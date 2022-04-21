@@ -8865,7 +8865,7 @@ func TestInterpretValueStringConversion(t *testing.T) {
 	t.Run("Composite", func(t *testing.T) {
 		t.Parallel()
 
-		script := fmt.Sprintf(`
+		script := `
             pub fun main() {
                 let x = Foo()
                 log(x)
@@ -8877,7 +8877,7 @@ func TestInterpretValueStringConversion(t *testing.T) {
                     self.a = 4
                 }
             }
-        `)
+        `
 
 		testValueStringConversion(t, script)
 	})
@@ -8885,12 +8885,12 @@ func TestInterpretValueStringConversion(t *testing.T) {
 	t.Run("Ephemeral Reference", func(t *testing.T) {
 		t.Parallel()
 
-		script := fmt.Sprintf(`
+		script := `
             pub fun main() {
                 let x = 4
                 log(&x as &AnyStruct)
             }
-        `)
+        `
 
 		testValueStringConversion(t, script)
 	})
@@ -8898,12 +8898,12 @@ func TestInterpretValueStringConversion(t *testing.T) {
 	t.Run("Interpreted Function", func(t *testing.T) {
 		t.Parallel()
 
-		script := fmt.Sprintf(`
+		script := `
             pub fun main() {
                 let x = fun(a: String, b: Bool) {}
                 log(&x as &AnyStruct)
             }
-        `)
+        `
 
 		testValueStringConversion(t, script)
 	})
@@ -8911,7 +8911,7 @@ func TestInterpretValueStringConversion(t *testing.T) {
 	t.Run("Bound Function", func(t *testing.T) {
 		t.Parallel()
 
-		script := fmt.Sprintf(`
+		script := `
             pub fun main() {
                 let x = Foo()
                 log(x.bar)
@@ -8920,7 +8920,7 @@ func TestInterpretValueStringConversion(t *testing.T) {
             struct Foo {
                 pub fun bar(a: String, b: Bool) {}
             }
-        `)
+        `
 
 		testValueStringConversion(t, script)
 	})
@@ -8928,14 +8928,14 @@ func TestInterpretValueStringConversion(t *testing.T) {
 	t.Run("Void", func(t *testing.T) {
 		t.Parallel()
 
-		script := fmt.Sprintf(`
+		script := `
             pub fun main() {
                 let x: Void = foo()
                 log(x)
             }
 
             fun foo() {}
-        `)
+        `
 
 		testValueStringConversion(t, script)
 	})
@@ -8943,14 +8943,14 @@ func TestInterpretValueStringConversion(t *testing.T) {
 	t.Run("Capability", func(t *testing.T) {
 		t.Parallel()
 
-		script := fmt.Sprintf(`
+		script := `
             pub fun main(a: Capability<&{Foo}>) {
                 log(a)
             }
 
             struct interface Foo {}
             struct Bar: Foo {}
-        `)
+        `
 
 		testValueStringConversion(t, script,
 			interpreter.NewUnmeteredCapabilityValue(
