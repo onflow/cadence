@@ -105,7 +105,7 @@ func TestLiteralValue(t *testing.T) {
 		)
 		require.NoError(t, err)
 		require.Equal(t,
-			cadence.NewArray([]cadence.Value{}),
+			cadence.NewUnmeteredArray([]cadence.Value{}),
 			value,
 		)
 	})
@@ -118,7 +118,7 @@ func TestLiteralValue(t *testing.T) {
 		)
 		require.NoError(t, err)
 		require.Equal(t,
-			cadence.NewArray([]cadence.Value{
+			cadence.NewUnmeteredArray([]cadence.Value{
 				cadence.NewUnmeteredBool(true),
 			}),
 			value,
@@ -143,7 +143,7 @@ func TestLiteralValue(t *testing.T) {
 		)
 		require.NoError(t, err)
 		require.Equal(t,
-			cadence.NewArray([]cadence.Value{}),
+			cadence.NewUnmeteredArray([]cadence.Value{}),
 			value,
 		)
 	})
@@ -156,7 +156,7 @@ func TestLiteralValue(t *testing.T) {
 		)
 		require.NoError(t, err)
 		require.Equal(t,
-			cadence.NewArray([]cadence.Value{
+			cadence.NewUnmeteredArray([]cadence.Value{
 				cadence.NewUnmeteredBool(true),
 			}),
 			value,
@@ -184,7 +184,7 @@ func TestLiteralValue(t *testing.T) {
 		)
 		require.NoError(t, err)
 		require.Equal(t,
-			cadence.NewDictionary([]cadence.KeyValuePair{}),
+			cadence.NewUnmeteredDictionary([]cadence.KeyValuePair{}),
 			value,
 		)
 	})
@@ -200,7 +200,7 @@ func TestLiteralValue(t *testing.T) {
 		)
 		require.NoError(t, err)
 		require.Equal(t,
-			cadence.NewDictionary([]cadence.KeyValuePair{
+			cadence.NewUnmeteredDictionary([]cadence.KeyValuePair{
 				{
 					Key:   cadence.String("hello"),
 					Value: cadence.NewUnmeteredBool(true),

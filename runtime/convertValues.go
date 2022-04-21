@@ -231,26 +231,32 @@ func exportArrayValue(
 	cadence.Array,
 	error,
 ) {
-	values := make([]cadence.Value, 0, v.Count())
+	return cadence.NewArray(
+		inter,
+		v.Count(),
+		func() ([]cadence.Value, error) {
+			values := make([]cadence.Value, 0, v.Count())
 
-	var err error
-	v.Iterate(inter, func(value interpreter.Value) (resume bool) {
-		var exportedValue cadence.Value
-		exportedValue, err = exportValueWithInterpreter(value, inter, seenReferences)
-		if err != nil {
-			return false
-		}
-		values = append(
-			values,
-			exportedValue,
-		)
-		return true
-	})
-	if err != nil {
-		return cadence.Array{}, err
-	}
+			var err error
+			v.Iterate(inter, func(value interpreter.Value) (resume bool) {
+				var exportedValue cadence.Value
+				exportedValue, err = exportValueWithInterpreter(value, inter, seenReferences)
+				if err != nil {
+					return false
+				}
+				values = append(
+					values,
+					exportedValue,
+				)
+				return true
+			})
 
-	return cadence.NewArray(values), nil
+			if err != nil {
+				return nil, err
+			}
+			return values, nil
+		},
+	)
 }
 
 func exportCompositeValue(
@@ -420,39 +426,45 @@ func exportDictionaryValue(
 	cadence.Dictionary,
 	error,
 ) {
-	pairs := make([]cadence.KeyValuePair, 0, v.Count())
+	return cadence.NewDictionary(
+		inter,
+		v.Count(),
+		func() ([]cadence.KeyValuePair, error) {
+			var err error
+			pairs := make([]cadence.KeyValuePair, 0, v.Count())
 
-	var err error
-	v.Iterate(inter, func(key, value interpreter.Value) (resume bool) {
+			v.Iterate(inter, func(key, value interpreter.Value) (resume bool) {
 
-		var convertedKey cadence.Value
-		convertedKey, err = exportValueWithInterpreter(key, inter, seenReferences)
-		if err != nil {
-			return false
-		}
+				var convertedKey cadence.Value
+				convertedKey, err = exportValueWithInterpreter(key, inter, seenReferences)
+				if err != nil {
+					return false
+				}
 
-		var convertedValue cadence.Value
-		convertedValue, err = exportValueWithInterpreter(value, inter, seenReferences)
-		if err != nil {
-			return false
-		}
+				var convertedValue cadence.Value
+				convertedValue, err = exportValueWithInterpreter(value, inter, seenReferences)
+				if err != nil {
+					return false
+				}
 
-		pairs = append(
-			pairs,
-			cadence.KeyValuePair{
-				Key:   convertedKey,
-				Value: convertedValue,
-			},
-		)
+				pairs = append(
+					pairs,
+					cadence.KeyValuePair{
+						Key:   convertedKey,
+						Value: convertedValue,
+					},
+				)
 
-		return true
-	})
+				return true
+			})
 
-	if err != nil {
-		return cadence.Dictionary{}, err
-	}
+			if err != nil {
+				return nil, err
+			}
 
-	return cadence.NewDictionary(pairs), nil
+			return pairs, nil
+		},
+	)
 }
 
 func exportLinkValue(v interpreter.LinkValue, inter *interpreter.Interpreter) cadence.Link {

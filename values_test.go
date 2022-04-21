@@ -152,14 +152,14 @@ func TestStringer(t *testing.T) {
 			expected: "\"Flow ridah!\"",
 		},
 		"Array": {
-			value: NewArray([]Value{
+			value: NewUnmeteredArray([]Value{
 				NewUnmeteredInt(10),
 				String("TEST"),
 			}),
 			expected: "[10, \"TEST\"]",
 		},
 		"Dictionary": {
-			value: NewDictionary([]KeyValuePair{
+			value: NewUnmeteredDictionary([]KeyValuePair{
 				{
 					Key:   String("key"),
 					Value: String("value"),

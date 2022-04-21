@@ -105,7 +105,7 @@ func BatchScript(
 
 			for accountAddresses := range addressChan {
 				accountsCadenceValues := convertAddresses(accountAddresses)
-				arguments := []cadence.Value{cadence.NewArray(accountsCadenceValues)}
+				arguments := []cadence.Value{cadence.NewUnmeteredArray(accountsCadenceValues)}
 				result := retryScriptUntilSuccess(ctx, log, currentBlock.Height, code, arguments, client)
 				handler(result)
 			}

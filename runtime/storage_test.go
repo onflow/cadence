@@ -999,7 +999,7 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
     `
 
 	encodedArg, err := json.Encode(
-		cadence.NewArray([]cadence.Value{
+		cadence.NewUnmeteredArray([]cadence.Value{
 			cadence.NewUnmeteredUInt64(1),
 		}),
 	)
@@ -1282,7 +1282,7 @@ func TestRuntimeBatchMintAndTransfer(t *testing.T) {
 		values = append(values, cadence.NewUnmeteredUInt64(id))
 	}
 
-	encodedArg, err := json.Encode(cadence.NewArray(values))
+	encodedArg, err := json.Encode(cadence.NewUnmeteredArray(values))
 	require.NoError(t, err)
 
 	err = runtime.ExecuteTransaction(

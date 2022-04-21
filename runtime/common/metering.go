@@ -151,6 +151,16 @@ func NewArrayAdditionalLengthUsage(originalLength, additionalLength int) MemoryU
 	}
 }
 
+func NewCadenceArrayMemoryUsages(length int) (MemoryUsage, MemoryUsage) {
+	return MemoryUsage{
+			Kind:   MemoryKindCadenceArrayBase,
+			Amount: 1,
+		}, MemoryUsage{
+			Kind:   MemoryKindCadenceArrayLength,
+			Amount: uint64(length),
+		}
+}
+
 func NewDictionaryMemoryUsages(length int) (MemoryUsage, MemoryUsage) {
 	return MemoryUsage{
 			Kind:   MemoryKindDictionaryBase,
@@ -173,6 +183,16 @@ func NewDictionaryAdditionalSizeUsage(originalSize, additionalSize int) MemoryUs
 		Kind:   MemoryKindDictionarySize,
 		Amount: newAmount,
 	}
+}
+
+func NewCadenceDictionaryMemoryUsages(length int) (MemoryUsage, MemoryUsage) {
+	return MemoryUsage{
+			Kind:   MemoryKindCadenceDictionaryBase,
+			Amount: 1,
+		}, MemoryUsage{
+			Kind:   MemoryKindCadenceDictionarySize,
+			Amount: uint64(length),
+		}
 }
 
 func NewCompositeMemoryUsages(length int) (MemoryUsage, MemoryUsage) {

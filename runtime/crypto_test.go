@@ -575,7 +575,7 @@ func TestBLSAggregateSignatures(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t,
-		cadence.NewArray([]cadence.Value{
+		cadence.NewUnmeteredArray([]cadence.Value{
 			cadence.UInt8(1),
 			cadence.UInt8(2),
 			cadence.UInt8(3),
@@ -646,7 +646,7 @@ func TestBLSAggregatePublicKeys(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t,
-		cadence.NewArray([]cadence.Value{
+		cadence.NewUnmeteredArray([]cadence.Value{
 			cadence.UInt8(1),
 			cadence.UInt8(2),
 			cadence.UInt8(1),
@@ -667,7 +667,7 @@ func getCadenceValueArrayFromHexStr(t *testing.T, inp string) cadence.Value {
 		cadenceValue[i] = cadence.NewUnmeteredUInt8(b)
 	}
 
-	return cadence.NewArray(cadenceValue)
+	return cadence.NewUnmeteredArray(cadenceValue)
 }
 
 // TestTraversingMerkleProof tests combination of KECCAK_256 hashing
@@ -737,7 +737,7 @@ func TestTraversingMerkleProof(t *testing.T) {
 
 	address := getCadenceValueArrayFromHexStr(t, addressInHex)
 
-	accountProof := cadence.NewArray([]cadence.Value{
+	accountProof := cadence.NewUnmeteredArray([]cadence.Value{
 		// first node encoded
 		getCadenceValueArrayFromHexStr(t, accountProofInHex[0]),
 		// second node encoded

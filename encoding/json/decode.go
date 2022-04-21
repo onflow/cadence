@@ -559,32 +559,51 @@ func (d *Decoder) decodeUFix64(valueJSON interface{}) cadence.UFix64 {
 	return v
 }
 
-func (d *Decoder) decodeValues(valueJSON interface{}) []cadence.Value {
+func (d *Decoder) decodeArray(valueJSON interface{}) cadence.Array {
 	v := toSlice(valueJSON)
 
-	values := make([]cadence.Value, len(v))
+	value, err := cadence.NewArray(
+		d.gauge,
+		len(v),
+		func() ([]cadence.Value, error) {
+			values := make([]cadence.Value, len(v))
+			for i, val := range v {
+				values[i] = d.decodeJSON(val)
+			}
+			return values, nil
+		},
+	)
 
-	for i, val := range v {
-		values[i] = d.decodeJSON(val)
+	if err != nil {
+		// TODO: improve error message
+		panic(ErrInvalidJSONCadence)
 	}
-
-	return values
-}
-
-func (d *Decoder) decodeArray(valueJSON interface{}) cadence.Array {
-	return cadence.NewArray(d.decodeValues(valueJSON))
+	return value
 }
 
 func (d *Decoder) decodeDictionary(valueJSON interface{}) cadence.Dictionary {
 	v := toSlice(valueJSON)
 
-	pairs := make([]cadence.KeyValuePair, len(v))
+	value, err := cadence.NewDictionary(
+		d.gauge,
+		len(v),
+		func() ([]cadence.KeyValuePair, error) {
+			pairs := make([]cadence.KeyValuePair, len(v))
 
-	for i, val := range v {
-		pairs[i] = d.decodeKeyValuePair(val)
+			for i, val := range v {
+				pairs[i] = d.decodeKeyValuePair(val)
+			}
+
+			return pairs, nil
+		},
+	)
+
+	if err != nil {
+		// TODO: improve error message
+		panic(ErrInvalidJSONCadence)
 	}
 
-	return cadence.NewDictionary(pairs)
+	return value
 }
 
 func (d *Decoder) decodeKeyValuePair(valueJSON interface{}) cadence.KeyValuePair {

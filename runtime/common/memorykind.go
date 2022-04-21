@@ -77,6 +77,10 @@ const (
 	MemoryKindCadenceAddress
 	MemoryKindCadenceInt
 	MemoryKindCadenceNumber
+	MemoryKindCadenceArrayBase
+	MemoryKindCadenceArrayLength
+	MemoryKindCadenceDictionaryBase
+	MemoryKindCadenceDictionarySize
 
 	// Misc
 

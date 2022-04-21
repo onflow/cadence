@@ -1166,8 +1166,25 @@ type Array struct {
 	Values    []Value
 }
 
-func NewArray(values []Value) Array {
+func NewUnmeteredArray(values []Value) Array {
 	return Array{Values: values}
+}
+
+func NewArray(
+	gauge common.MemoryGauge,
+	length int,
+	constructor func() ([]Value, error),
+) (Array, error) {
+	baseUse, lengthUse := common.NewCadenceArrayMemoryUsages(length)
+	common.UseMemory(gauge, baseUse)
+	common.UseMemory(gauge, lengthUse)
+
+	values, err := constructor()
+	if err != nil {
+		return Array{}, err
+	}
+
+	return NewUnmeteredArray(values), nil
 }
 
 func (Array) isValue() {}
@@ -1206,8 +1223,24 @@ type Dictionary struct {
 	Pairs          []KeyValuePair
 }
 
-func NewDictionary(pairs []KeyValuePair) Dictionary {
+func NewUnmeteredDictionary(pairs []KeyValuePair) Dictionary {
 	return Dictionary{Pairs: pairs}
+}
+
+func NewDictionary(
+	gauge common.MemoryGauge,
+	size int,
+	constructor func() ([]KeyValuePair, error),
+) (Dictionary, error) {
+	baseUse, lengthUse := common.NewCadenceDictionaryMemoryUsages(size)
+	common.UseMemory(gauge, baseUse)
+	common.UseMemory(gauge, lengthUse)
+
+	pairs, err := constructor()
+	if err != nil {
+		return Dictionary{}, err
+	}
+	return NewUnmeteredDictionary(pairs), err
 }
 
 func (Dictionary) isValue() {}

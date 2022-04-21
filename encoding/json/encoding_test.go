@@ -601,13 +601,13 @@ func TestEncodeArray(t *testing.T) {
 
 	emptyArray := encodeTest{
 		"Empty",
-		cadence.NewArray([]cadence.Value{}),
+		cadence.NewUnmeteredArray([]cadence.Value{}),
 		`{"type":"Array","value":[]}`,
 	}
 
 	intArray := encodeTest{
 		"Integers",
-		cadence.NewArray([]cadence.Value{
+		cadence.NewUnmeteredArray([]cadence.Value{
 			cadence.NewUnmeteredInt(1),
 			cadence.NewUnmeteredInt(2),
 			cadence.NewUnmeteredInt(3),
@@ -617,7 +617,7 @@ func TestEncodeArray(t *testing.T) {
 
 	resourceArray := encodeTest{
 		"Resources",
-		cadence.NewArray([]cadence.Value{
+		cadence.NewUnmeteredArray([]cadence.Value{
 			cadence.NewResource([]cadence.Value{
 				cadence.NewUnmeteredInt(1),
 			}).WithType(fooResourceType),
@@ -644,7 +644,7 @@ func TestEncodeDictionary(t *testing.T) {
 
 	simpleDict := encodeTest{
 		"Simple",
-		cadence.NewDictionary([]cadence.KeyValuePair{
+		cadence.NewUnmeteredDictionary([]cadence.KeyValuePair{
 			{
 				Key:   cadence.String("a"),
 				Value: cadence.NewUnmeteredInt(1),
@@ -663,10 +663,10 @@ func TestEncodeDictionary(t *testing.T) {
 
 	nestedDict := encodeTest{
 		"Nested",
-		cadence.NewDictionary([]cadence.KeyValuePair{
+		cadence.NewUnmeteredDictionary([]cadence.KeyValuePair{
 			{
 				Key: cadence.String("a"),
-				Value: cadence.NewDictionary([]cadence.KeyValuePair{
+				Value: cadence.NewUnmeteredDictionary([]cadence.KeyValuePair{
 					{
 						Key:   cadence.String("1"),
 						Value: cadence.NewUnmeteredInt(1),
@@ -675,7 +675,7 @@ func TestEncodeDictionary(t *testing.T) {
 			},
 			{
 				Key: cadence.String("b"),
-				Value: cadence.NewDictionary([]cadence.KeyValuePair{
+				Value: cadence.NewUnmeteredDictionary([]cadence.KeyValuePair{
 					{
 						Key:   cadence.String("2"),
 						Value: cadence.NewUnmeteredInt(2),
@@ -684,7 +684,7 @@ func TestEncodeDictionary(t *testing.T) {
 			},
 			{
 				Key: cadence.String("c"),
-				Value: cadence.NewDictionary([]cadence.KeyValuePair{
+				Value: cadence.NewUnmeteredDictionary([]cadence.KeyValuePair{
 					{
 						Key:   cadence.String("3"),
 						Value: cadence.NewUnmeteredInt(3),
@@ -697,7 +697,7 @@ func TestEncodeDictionary(t *testing.T) {
 
 	resourceDict := encodeTest{
 		"Resources",
-		cadence.NewDictionary([]cadence.KeyValuePair{
+		cadence.NewUnmeteredDictionary([]cadence.KeyValuePair{
 			{
 				Key: cadence.String("a"),
 				Value: cadence.NewResource([]cadence.Value{

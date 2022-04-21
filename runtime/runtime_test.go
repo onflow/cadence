@@ -1044,7 +1044,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
             `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
-					cadence.NewArray(
+					cadence.NewUnmeteredArray(
 						[]cadence.Value{
 							cadence.NewUnmeteredInt(1),
 							cadence.NewUnmeteredInt(2),
@@ -1066,7 +1066,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
             `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
-					cadence.NewDictionary(
+					cadence.NewUnmeteredDictionary(
 						[]cadence.KeyValuePair{
 							{
 								Key:   cadence.String("y"),
@@ -1089,7 +1089,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
             `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
-					cadence.NewDictionary(
+					cadence.NewUnmeteredDictionary(
 						[]cadence.KeyValuePair{
 							{
 								Key:   cadence.String("y"),
@@ -1160,7 +1160,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
             `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
-					cadence.NewArray([]cadence.Value{
+					cadence.NewUnmeteredArray([]cadence.Value{
 						cadence.
 							NewStruct([]cadence.Value{cadence.String("bar")}).
 							WithType(&cadence.StructType{
@@ -1337,7 +1337,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
             `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
-					cadence.NewArray(
+					cadence.NewUnmeteredArray(
 						[]cadence.Value{
 							cadence.NewUnmeteredInt(1),
 							cadence.NewUnmeteredInt(2),
@@ -1357,7 +1357,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
             `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
-					cadence.NewArray(
+					cadence.NewUnmeteredArray(
 						[]cadence.Value{
 							cadence.NewUnmeteredInt(1),
 							cadence.NewUnmeteredInt(2),
@@ -1381,7 +1381,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
             `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
-					cadence.NewArray(
+					cadence.NewUnmeteredArray(
 						[]cadence.Value{
 							cadence.NewUnmeteredInt(1),
 						},
@@ -1403,7 +1403,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
             `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
-					cadence.NewDictionary(
+					cadence.NewUnmeteredDictionary(
 						[]cadence.KeyValuePair{
 							{
 								Key:   cadence.String("y"),
@@ -1424,7 +1424,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
             `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
-					cadence.NewDictionary(
+					cadence.NewUnmeteredDictionary(
 						[]cadence.KeyValuePair{
 							{
 								Key:   cadence.String("y"),
@@ -1491,7 +1491,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
             `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
-					cadence.NewArray([]cadence.Value{
+					cadence.NewUnmeteredArray([]cadence.Value{
 						cadence.
 							NewStruct([]cadence.Value{cadence.String("bar")}).
 							WithType(&cadence.StructType{
@@ -2563,8 +2563,8 @@ func TestRuntimeScriptReturnTypeNotReturnableError(t *testing.T) {
                   return refs
               }
             `,
-			cadence.NewArray([]cadence.Value{
-				cadence.NewArray([]cadence.Value{
+			cadence.NewUnmeteredArray([]cadence.Value{
+				cadence.NewUnmeteredArray([]cadence.Value{
 					nil,
 				}),
 			}),

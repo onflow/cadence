@@ -165,7 +165,7 @@ func TestExportValue(t *testing.T) {
 					common.Address{},
 				)
 			},
-			expected: cadence.NewArray([]cadence.Value{}),
+			expected: cadence.NewUnmeteredArray([]cadence.Value{}),
 		},
 		{
 			label: "Array (non-empty)",
@@ -180,7 +180,7 @@ func TestExportValue(t *testing.T) {
 					interpreter.NewUnmeteredStringValue("foo"),
 				)
 			},
-			expected: cadence.NewArray([]cadence.Value{
+			expected: cadence.NewUnmeteredArray([]cadence.Value{
 				cadence.NewUnmeteredInt(42),
 				cadence.String("foo"),
 			}),
@@ -196,7 +196,7 @@ func TestExportValue(t *testing.T) {
 					},
 				)
 			},
-			expected: cadence.NewDictionary([]cadence.KeyValuePair{}),
+			expected: cadence.NewUnmeteredDictionary([]cadence.KeyValuePair{}),
 		},
 		{
 			label: "Dictionary (non-empty)",
@@ -213,7 +213,7 @@ func TestExportValue(t *testing.T) {
 					interpreter.NewUnmeteredIntValueFromInt64(2),
 				)
 			},
-			expected: cadence.NewDictionary([]cadence.KeyValuePair{
+			expected: cadence.NewUnmeteredDictionary([]cadence.KeyValuePair{
 				{
 					Key:   cadence.String("b"),
 					Value: cadence.NewUnmeteredInt(2),
@@ -417,7 +417,7 @@ func TestExportValue(t *testing.T) {
 					cadence.Struct{
 						StructType: publicKeyType,
 						Fields: []cadence.Value{
-							cadence.NewArray([]cadence.Value{
+							cadence.NewUnmeteredArray([]cadence.Value{
 								cadence.NewUnmeteredUInt8(1),
 								cadence.NewUnmeteredUInt8(2),
 								cadence.NewUnmeteredUInt8(3),
@@ -535,7 +535,7 @@ func TestImportValue(t *testing.T) {
 		},
 		{
 			label: "Array empty",
-			value: cadence.NewArray([]cadence.Value{}),
+			value: cadence.NewUnmeteredArray([]cadence.Value{}),
 			expected: interpreter.NewArrayValue(
 				newTestInterpreter(t),
 				interpreter.VariableSizedStaticType{
@@ -549,7 +549,7 @@ func TestImportValue(t *testing.T) {
 		},
 		{
 			label: "Array non-empty",
-			value: cadence.NewArray([]cadence.Value{
+			value: cadence.NewUnmeteredArray([]cadence.Value{
 				cadence.NewUnmeteredInt(42),
 				cadence.String("foo"),
 			}),
@@ -575,7 +575,7 @@ func TestImportValue(t *testing.T) {
 					ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
 			),
-			value: cadence.NewDictionary([]cadence.KeyValuePair{}),
+			value: cadence.NewUnmeteredDictionary([]cadence.KeyValuePair{}),
 			expectedType: &sema.DictionaryType{
 				KeyType:   sema.StringType,
 				ValueType: sema.AnyStructType,
@@ -594,7 +594,7 @@ func TestImportValue(t *testing.T) {
 				interpreter.NewUnmeteredStringValue("b"),
 				interpreter.NewUnmeteredIntValueFromInt64(2),
 			),
-			value: cadence.NewDictionary([]cadence.KeyValuePair{
+			value: cadence.NewUnmeteredDictionary([]cadence.KeyValuePair{
 				{
 					Key:   cadence.String("a"),
 					Value: cadence.NewUnmeteredInt(1),
@@ -1363,7 +1363,7 @@ func TestExportResourceArrayValue(t *testing.T) {
     `
 
 	actual := exportValueFromScript(t, script)
-	expected := cadence.NewArray([]cadence.Value{
+	expected := cadence.NewUnmeteredArray([]cadence.Value{
 		cadence.NewResource([]cadence.Value{
 			cadence.NewUnmeteredUInt64(0),
 			cadence.NewUnmeteredInt(1),
@@ -1399,7 +1399,7 @@ func TestExportResourceDictionaryValue(t *testing.T) {
     `
 
 	actual := exportValueFromScript(t, script)
-	expected := cadence.NewDictionary([]cadence.KeyValuePair{
+	expected := cadence.NewUnmeteredDictionary([]cadence.KeyValuePair{
 		{
 			Key: cadence.String("b"),
 			Value: cadence.NewResource([]cadence.Value{
@@ -1590,8 +1590,8 @@ func TestExportReferenceValue(t *testing.T) {
         `
 
 		actual := exportValueFromScript(t, script)
-		expected := cadence.NewArray([]cadence.Value{
-			cadence.NewArray([]cadence.Value{
+		expected := cadence.NewUnmeteredArray([]cadence.Value{
+			cadence.NewUnmeteredArray([]cadence.Value{
 				nil,
 			}),
 		})
@@ -2181,12 +2181,12 @@ func TestRuntimeArgumentPassing(t *testing.T) {
 		{
 			label:         "Array empty",
 			typeSignature: "[String]",
-			exportedValue: cadence.NewArray([]cadence.Value{}),
+			exportedValue: cadence.NewUnmeteredArray([]cadence.Value{}),
 		},
 		{
 			label:         "Array non-empty",
 			typeSignature: "[String]",
-			exportedValue: cadence.NewArray([]cadence.Value{
+			exportedValue: cadence.NewUnmeteredArray([]cadence.Value{
 				cadence.String("foo"),
 				cadence.String("bar"),
 			}),
@@ -2194,7 +2194,7 @@ func TestRuntimeArgumentPassing(t *testing.T) {
 		{
 			label:         "Dictionary non-empty",
 			typeSignature: "{String: String}",
-			exportedValue: cadence.NewDictionary([]cadence.KeyValuePair{
+			exportedValue: cadence.NewUnmeteredDictionary([]cadence.KeyValuePair{
 				{
 					Key:   cadence.String("foo"),
 					Value: cadence.String("bar"),
@@ -2444,17 +2444,17 @@ func TestRuntimeComplexStructArgumentPassing(t *testing.T) {
 			cadence.NewUnmeteredOptional(
 				cadence.String("John"),
 			),
-			cadence.NewDictionary([]cadence.KeyValuePair{
+			cadence.NewUnmeteredDictionary([]cadence.KeyValuePair{
 				{
 					Key:   cadence.String("name"),
 					Value: cadence.String("Doe"),
 				},
 			}),
-			cadence.NewArray([]cadence.Value{
+			cadence.NewUnmeteredArray([]cadence.Value{
 				cadence.String("foo"),
 				cadence.String("bar"),
 			}),
-			cadence.NewArray([]cadence.Value{
+			cadence.NewUnmeteredArray([]cadence.Value{
 				cadence.String("foo"),
 				cadence.String("bar"),
 			}),
@@ -2567,17 +2567,17 @@ func TestRuntimeComplexStructWithAnyStructFields(t *testing.T) {
 
 		Fields: []cadence.Value{
 			cadence.NewUnmeteredOptional(cadence.String("John")),
-			cadence.NewDictionary([]cadence.KeyValuePair{
+			cadence.NewUnmeteredDictionary([]cadence.KeyValuePair{
 				{
 					Key:   cadence.String("name"),
 					Value: cadence.String("Doe"),
 				},
 			}),
-			cadence.NewArray([]cadence.Value{
+			cadence.NewUnmeteredArray([]cadence.Value{
 				cadence.String("foo"),
 				cadence.String("bar"),
 			}),
-			cadence.NewArray([]cadence.Value{
+			cadence.NewUnmeteredArray([]cadence.Value{
 				cadence.String("foo"),
 				cadence.String("bar"),
 			}),
@@ -2680,7 +2680,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 			},
 		},
 		Fields: []cadence.Value{
-			cadence.NewArray([]cadence.Value{
+			cadence.NewUnmeteredArray([]cadence.Value{
 				malformedStruct1,
 			}),
 		},
@@ -2702,7 +2702,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 			},
 		},
 		Fields: []cadence.Value{
-			cadence.NewDictionary([]cadence.KeyValuePair{
+			cadence.NewUnmeteredDictionary([]cadence.KeyValuePair{
 				{
 					Key:   cadence.String("foo"),
 					Value: malformedStruct1,
@@ -2726,7 +2726,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 			},
 		},
 		Fields: []cadence.Value{
-			cadence.NewArray([]cadence.Value{
+			cadence.NewUnmeteredArray([]cadence.Value{
 				cadence.String("mismatching value"),
 			}),
 		},
@@ -2774,7 +2774,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 		{
 			label:         "Variable-size array with malformed element",
 			typeSignature: "[Foo]",
-			exportedValue: cadence.NewArray([]cadence.Value{
+			exportedValue: cadence.NewUnmeteredArray([]cadence.Value{
 				malformedStruct1,
 			}),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
@@ -2782,7 +2782,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 		{
 			label:         "Constant-size array with malformed element",
 			typeSignature: "[Foo; 1]",
-			exportedValue: cadence.NewArray([]cadence.Value{
+			exportedValue: cadence.NewUnmeteredArray([]cadence.Value{
 				malformedStruct1,
 			}),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
@@ -2790,7 +2790,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 		{
 			label:         "Constant-size array with too few elements",
 			typeSignature: "[Int; 2]",
-			exportedValue: cadence.NewArray([]cadence.Value{
+			exportedValue: cadence.NewUnmeteredArray([]cadence.Value{
 				cadence.NewUnmeteredInt(1),
 			}),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
@@ -2798,7 +2798,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 		{
 			label:         "Constant-size array with too many elements",
 			typeSignature: "[Int; 2]",
-			exportedValue: cadence.NewArray([]cadence.Value{
+			exportedValue: cadence.NewUnmeteredArray([]cadence.Value{
 				cadence.NewUnmeteredInt(1),
 				cadence.NewUnmeteredInt(2),
 				cadence.NewUnmeteredInt(3),
@@ -2808,8 +2808,8 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 		{
 			label:         "Nested array with mismatching element",
 			typeSignature: "[[String]]",
-			exportedValue: cadence.NewArray([]cadence.Value{
-				cadence.NewArray([]cadence.Value{
+			exportedValue: cadence.NewUnmeteredArray([]cadence.Value{
+				cadence.NewUnmeteredArray([]cadence.Value{
 					cadence.NewUnmeteredInt(5),
 				}),
 			}),
@@ -2830,7 +2830,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 		{
 			label:         "Malformed dictionary",
 			typeSignature: "{String: Foo}",
-			exportedValue: cadence.NewDictionary([]cadence.KeyValuePair{
+			exportedValue: cadence.NewUnmeteredDictionary([]cadence.KeyValuePair{
 				{
 					Key:   cadence.String("foo"),
 					Value: malformedStruct1,
@@ -2932,7 +2932,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t,
-			cadence.NewArray([]cadence.Value{}),
+			cadence.NewUnmeteredArray([]cadence.Value{}),
 			actual,
 		)
 	})
@@ -2941,7 +2941,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := cadence.NewArray([]cadence.Value{})
+		value := cadence.NewUnmeteredArray([]cadence.Value{})
 
 		inter := newTestInterpreter(t)
 
@@ -2986,7 +2986,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t,
-			cadence.NewArray([]cadence.Value{
+			cadence.NewUnmeteredArray([]cadence.Value{
 				cadence.NewUnmeteredInt(42),
 				cadence.String("foo"),
 			}),
@@ -2998,7 +2998,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := cadence.NewArray([]cadence.Value{
+		value := cadence.NewUnmeteredArray([]cadence.Value{
 			cadence.NewUnmeteredInt(42),
 			cadence.String("foo"),
 		})
@@ -3034,12 +3034,12 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := cadence.NewArray([]cadence.Value{
-			cadence.NewArray([]cadence.Value{
+		value := cadence.NewUnmeteredArray([]cadence.Value{
+			cadence.NewUnmeteredArray([]cadence.Value{
 				cadence.NewUnmeteredInt8(4),
 				cadence.NewUnmeteredInt8(3),
 			}),
-			cadence.NewArray([]cadence.Value{
+			cadence.NewUnmeteredArray([]cadence.Value{
 				cadence.NewUnmeteredInt8(42),
 				cadence.NewUnmeteredInt8(54),
 			}),
@@ -3109,7 +3109,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t,
-			cadence.NewDictionary([]cadence.KeyValuePair{}),
+			cadence.NewUnmeteredDictionary([]cadence.KeyValuePair{}),
 			actual,
 		)
 	})
@@ -3118,7 +3118,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := cadence.NewDictionary([]cadence.KeyValuePair{})
+		value := cadence.NewUnmeteredDictionary([]cadence.KeyValuePair{})
 
 		inter := newTestInterpreter(t)
 
@@ -3166,7 +3166,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t,
-			cadence.NewDictionary([]cadence.KeyValuePair{
+			cadence.NewUnmeteredDictionary([]cadence.KeyValuePair{
 				{
 					Key:   cadence.String("b"),
 					Value: cadence.NewUnmeteredInt(2),
@@ -3184,7 +3184,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := cadence.NewDictionary([]cadence.KeyValuePair{
+		value := cadence.NewUnmeteredDictionary([]cadence.KeyValuePair{
 			{
 				Key:   cadence.String("a"),
 				Value: cadence.NewUnmeteredInt(1),
@@ -3227,10 +3227,10 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := cadence.NewDictionary([]cadence.KeyValuePair{
+		value := cadence.NewUnmeteredDictionary([]cadence.KeyValuePair{
 			{
 				Key: cadence.String("a"),
-				Value: cadence.NewDictionary([]cadence.KeyValuePair{
+				Value: cadence.NewUnmeteredDictionary([]cadence.KeyValuePair{
 					{
 						Key:   cadence.NewUnmeteredInt8(1),
 						Value: cadence.NewUnmeteredInt(100),
@@ -3243,7 +3243,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 			},
 			{
 				Key: cadence.String("b"),
-				Value: cadence.NewDictionary([]cadence.KeyValuePair{
+				Value: cadence.NewUnmeteredDictionary([]cadence.KeyValuePair{
 					{
 						Key:   cadence.NewUnmeteredInt8(1),
 						Value: cadence.String("foo"),
@@ -3332,7 +3332,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 				},
 			},
 			Fields: []cadence.Value{
-				cadence.NewDictionary([]cadence.KeyValuePair{
+				cadence.NewUnmeteredDictionary([]cadence.KeyValuePair{
 					{
 						Key:   cadence.String("foo"),
 						Value: cadence.String("value1"),
@@ -3362,11 +3362,11 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
             }
             `
 
-		dictionary := cadence.NewDictionary(
+		dictionary := cadence.NewUnmeteredDictionary(
 			[]cadence.KeyValuePair{
 				{
 					Key: cadence.String("hello"),
-					Value: cadence.NewDictionary(
+					Value: cadence.NewUnmeteredDictionary(
 						[]cadence.KeyValuePair{
 							{
 								Key:   cadence.String("hello"),
@@ -3822,7 +3822,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 		)
 	}
 
-	publicKeyBytes := cadence.NewArray([]cadence.Value{
+	publicKeyBytes := cadence.NewUnmeteredArray([]cadence.Value{
 		cadence.NewUnmeteredUInt8(1),
 		cadence.NewUnmeteredUInt8(2),
 	})
@@ -4005,7 +4005,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 		publicKey := cadence.NewStruct(
 			[]cadence.Value{
 				// Invalid content for 'publicKey' field
-				cadence.NewArray([]cadence.Value{
+				cadence.NewUnmeteredArray([]cadence.Value{
 					cadence.String("1"),
 					cadence.String("2"),
 				}),
@@ -4449,7 +4449,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 		interpreter.NewUnmeteredStringValue("foo"),
 	)
 
-	externalArrayValue := cadence.NewArray([]cadence.Value{
+	externalArrayValue := cadence.NewUnmeteredArray([]cadence.Value{
 		cadence.NewUnmeteredInt(42),
 		cadence.String("foo"),
 	})
@@ -4477,7 +4477,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 		interpreter.NewUnmeteredStringValue("a"), internalArrayValue,
 	)
 
-	externalDictionaryValue := cadence.NewDictionary([]cadence.KeyValuePair{
+	externalDictionaryValue := cadence.NewUnmeteredDictionary([]cadence.KeyValuePair{
 		{
 			Key:   cadence.String("a"),
 			Value: externalArrayValue,
@@ -4613,7 +4613,7 @@ func TestRuntimeStaticTypeAvailability(t *testing.T) {
 			},
 
 			Fields: []cadence.Value{
-				cadence.NewArray([]cadence.Value{
+				cadence.NewUnmeteredArray([]cadence.Value{
 					cadence.String("foo"),
 					cadence.String("bar"),
 				}),
@@ -4651,7 +4651,7 @@ func TestRuntimeStaticTypeAvailability(t *testing.T) {
 			},
 
 			Fields: []cadence.Value{
-				cadence.NewDictionary([]cadence.KeyValuePair{
+				cadence.NewUnmeteredDictionary([]cadence.KeyValuePair{
 					{
 						Key:   cadence.String("foo"),
 						Value: cadence.String("bar"),

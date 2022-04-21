@@ -104,17 +104,22 @@ func ParseLiteralArgumentList(
 }
 
 func arrayLiteralValue(inter *interpreter.Interpreter, elements []ast.Expression, elementType sema.Type) (cadence.Value, error) {
-	values := make([]cadence.Value, len(elements))
+	return cadence.NewArray(
+		inter,
+		len(elements),
+		func() ([]cadence.Value, error) {
+			values := make([]cadence.Value, len(elements))
 
-	for i, element := range elements {
-		convertedElement, err := LiteralValue(inter, element, elementType)
-		if err != nil {
-			return nil, err
-		}
-		values[i] = convertedElement
-	}
+			for i, element := range elements {
+				convertedElement, err := LiteralValue(inter, element, elementType)
+				if err != nil {
+					return nil, err
+				}
+				values[i] = convertedElement
+			}
 
-	return cadence.NewArray(values), nil
+			return values, nil
+		})
 }
 
 func pathLiteralValue(memoryGauge common.MemoryGauge, expression ast.Expression, ty sema.Type) (result cadence.Value, errResult error) {
@@ -307,24 +312,29 @@ func LiteralValue(inter *interpreter.Interpreter, expression ast.Expression, ty 
 			return nil, LiteralExpressionTypeError
 		}
 
-		var err error
+		return cadence.NewDictionary(
+			inter,
+			len(expression.Entries),
+			func() ([]cadence.KeyValuePair, error) {
+				pairs := make([]cadence.KeyValuePair, len(expression.Entries))
 
-		pairs := make([]cadence.KeyValuePair, len(expression.Entries))
+				for i, entry := range expression.Entries {
+					var err error
 
-		for i, entry := range expression.Entries {
+					pairs[i].Key, err = LiteralValue(inter, entry.Key, ty.KeyType)
+					if err != nil {
+						return nil, err
+					}
 
-			pairs[i].Key, err = LiteralValue(inter, entry.Key, ty.KeyType)
-			if err != nil {
-				return nil, err
-			}
+					pairs[i].Value, err = LiteralValue(inter, entry.Value, ty.ValueType)
+					if err != nil {
+						return nil, err
+					}
+				}
 
-			pairs[i].Value, err = LiteralValue(inter, entry.Value, ty.ValueType)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		return cadence.NewDictionary(pairs), nil
+				return pairs, nil
+			},
+		)
 
 	case *sema.AddressType:
 		expression, ok := expression.(*ast.IntegerExpression)

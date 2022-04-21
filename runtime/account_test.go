@@ -657,7 +657,7 @@ func newBytesValue(bytes []byte) cadence.Array {
 	for index, value := range bytes {
 		result[index] = cadence.NewUnmeteredUInt8(value)
 	}
-	return cadence.NewArray(result)
+	return cadence.NewUnmeteredArray(result)
 }
 
 func newSignAlgoValue(signAlgo sema.SignatureAlgorithm) cadence.Enum {
