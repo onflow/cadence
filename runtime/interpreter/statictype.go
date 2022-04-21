@@ -40,6 +40,7 @@ import (
 type StaticType interface {
 	fmt.Stringer
 	isStaticType()
+	elementSize()
 	Equal(other StaticType) bool
 	Encode(e *cbor.StreamEncoder) error
 }
