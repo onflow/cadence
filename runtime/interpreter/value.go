@@ -742,8 +742,8 @@ func (v CharacterValue) RecursiveString(_ SeenReferences) string {
 }
 
 func (v CharacterValue) ToMeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
-	// Over-estimate, considering escape characters
-	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(len(v)*2))
+	l := format.FormattedStringLength(string(v))
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(l))
 	return v.String()
 }
 
@@ -929,8 +929,8 @@ func (v *StringValue) RecursiveString(_ SeenReferences) string {
 }
 
 func (v StringValue) ToMeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
-	// Over-estimate, considering escape characters
-	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(v.Length()*2))
+	l := format.FormattedStringLength(v.Str)
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(l))
 	return v.String()
 }
 
@@ -14564,11 +14564,13 @@ func (v *CompositeValue) ToMeteredString(memoryGauge common.MemoryGauge, seenRef
 
 	typeId := string(v.TypeID())
 
-	// len = len(fieldNames) + len(typeId) + (n times colon+space) + ((n-1) times comma+space)
-	//     = len(fieldNames) + len(typeId) + 2n + 2n - 2
-	//     = len(fieldNames) + len(typeId) + 4n - 2
-	// since (-2 only occurs if its non-empty, ignore the -2)
-	// Value of each field is metered separately.
+	// bodyLen = len(fieldNames) + len(typeId) + (n times colon+space) + ((n-1) times comma+space)
+	//         = len(fieldNames) + len(typeId) + 2n + 2n - 2
+	//         = len(fieldNames) + len(typeId) + 4n - 2
+	//
+	// Since (-2) only occurs if its non-empty, ignore the (-2). i.e: overestimate
+	// 		bodyLen = len(fieldNames) + len(typeId) + 4n
+	//
 	strLen = strLen + len(typeId) + len(fields)*4
 
 	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(strLen))
@@ -15543,9 +15545,12 @@ func (v *DictionaryValue) ToMeteredString(memoryGauge common.MemoryGauge, seenRe
 	// len = len(open-brace) + len(close-brace) + (n times colon+space) + ((n-1) times comma+space)
 	//     = 2 + 2n + 2n - 2
 	//     = 4n + 2 - 2
-	// Since (-2 only occurs if its non-empty, ignore the -2)
-	// String of each kea and value are metered separately.
-	strLen := len(pairs) * 4 + 2
+	//
+	// Since (-2) only occurs if its non-empty (i.e: n>0), ignore the (-2). i.e: overestimate
+	//    len = 4n + 2
+	//
+	// String of each key and value are metered separately.
+	strLen := len(pairs)*4 + 2
 
 	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(strLen))
 
@@ -16477,7 +16482,7 @@ func (v *SomeValue) RecursiveString(seenReferences SeenReferences) string {
 }
 
 func (v SomeValue) ToMeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
-	return v.value.RecursiveString(seenReferences)
+	return v.value.ToMeteredString(memoryGauge, seenReferences)
 }
 
 func (v *SomeValue) GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {

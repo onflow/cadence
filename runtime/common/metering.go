@@ -108,8 +108,8 @@ var (
 
 	ElaborationMemoryUsage = NewConstantMemoryUsage(MemoryKindElaboration)
 
-	// Following are same as len(format.X).
-	// However, values are hard-coded to avoid the circular dependency
+	// Following are the known memory usage amounts for string representation of interpreter values.
+	// Same as `len(format.X)`. However, values are hard-coded to avoid the circular dependency.
 
 	VoidStringMemoryUsage                  = NewRawStringMemoryUsage(len("()"))
 	TrueStringMemoryUsage                  = NewRawStringMemoryUsage(len("true"))
