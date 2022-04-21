@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -241,10 +241,11 @@ func defineArrayType() {
 
 			endToken := p.mustOne(lexer.TokenBracketClose)
 
-			typeRange := ast.Range{
-				StartPos: startToken.StartPos,
-				EndPos:   endToken.EndPos,
-			}
+			typeRange := ast.NewRange(
+				p.memoryGauge,
+				startToken.StartPos,
+				endToken.EndPos,
+			)
 
 			if size != nil {
 				return ast.NewConstantSizedType(
@@ -354,9 +355,11 @@ func defineRestrictedOrDictionaryType() {
 							[]*ast.NominalType{
 								firstNominalType,
 							},
-							ast.Range{
-								StartPos: startToken.StartPos,
-							},
+							ast.NewRange(
+								p.memoryGauge,
+								startToken.StartPos,
+								ast.EmptyPosition,
+							),
 						)
 					}
 					// Skip the comma
@@ -378,9 +381,11 @@ func defineRestrictedOrDictionaryType() {
 							p.memoryGauge,
 							firstType,
 							nil,
-							ast.Range{
-								StartPos: startToken.StartPos,
-							},
+							ast.NewRange(
+								p.memoryGauge,
+								startToken.StartPos,
+								ast.EmptyPosition,
+							),
 						)
 					} else {
 						panic(fmt.Errorf("unexpected colon in dictionary type"))
@@ -448,10 +453,11 @@ func defineRestrictedOrDictionaryType() {
 					p.memoryGauge,
 					nil,
 					nil,
-					ast.Range{
-						StartPos: startToken.StartPos,
-						EndPos:   endPos,
-					},
+					ast.NewRange(
+						p.memoryGauge,
+						startToken.StartPos,
+						endPos,
+					),
 				)
 				if firstType != nil {
 					firstNominalType, ok := firstType.(*ast.NominalType)
@@ -512,10 +518,11 @@ func defineRestrictedOrDictionaryType() {
 				p.memoryGauge,
 				left,
 				nominalTypes,
-				ast.Range{
-					StartPos: left.StartPosition(),
-					EndPos:   endPos,
-				},
+				ast.NewRange(
+					p.memoryGauge,
+					left.StartPosition(),
+					endPos,
+				),
 			)
 
 			return result, false
@@ -605,10 +612,11 @@ func defineFunctionType() {
 				p.memoryGauge,
 				parameterTypeAnnotations,
 				returnTypeAnnotation,
-				ast.Range{
-					StartPos: startToken.StartPos,
-					EndPos:   endToken.EndPos,
-				},
+				ast.NewRange(
+					p.memoryGauge,
+					startToken.StartPos,
+					endToken.EndPos,
+				),
 			)
 		},
 	)

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -293,42 +293,45 @@ func newNativeEnumType(
 const SignatureAlgorithmTypeName = "SignatureAlgorithm"
 
 const SignatureAlgorithmDocStringECDSA_P256 = `
-ECDSA_P256 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the NIST P-256 curve
+ECDSA_P256 is ECDSA on the NIST P-256 curve
 `
 
 const SignatureAlgorithmDocStringECDSA_secp256k1 = `
-ECDSA_secp256k1 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the secp256k1 curve
+ECDSA_secp256k1 is ECDSA on the secp256k1 curve
 `
 
 const SignatureAlgorithmDocStringBLS_BLS12_381 = `
 BLS_BLS12_381 is BLS signature scheme on the BLS12-381 curve.
-The scheme is set-up so that signatures are in G_1 (curve over the prime field)
-while public keys are in G_2 (curve over the prime field extension).
+The scheme is set-up so that signatures are in G_1 (subgroup of the curve over the prime field)
+while public keys are in G_2 (subgroup of the curve over the prime field extension).
 `
 
 const HashAlgorithmTypeName = "HashAlgorithm"
 
 const HashAlgorithmDocStringSHA2_256 = `
-SHA2_256 is Secure Hashing Algorithm 2 (SHA-2) with a 256-bit digest
+SHA2_256 is SHA-2 with a 256-bit digest (also referred to as SHA256)
 `
 
 const HashAlgorithmDocStringSHA2_384 = `
-SHA2_384 is Secure Hashing Algorithm 2 (SHA-2) with a 384-bit digest
+SHA2_384 is SHA-2 with a 384-bit digest (also referred to as  SHA384)
 `
 
 const HashAlgorithmDocStringSHA3_256 = `
-SHA3_256 is Secure Hashing Algorithm 3 (SHA-3) with a 256-bit digest
+SHA3_256 is SHA-3 with a 256-bit digest
 `
 
 const HashAlgorithmDocStringSHA3_384 = `
-SHA3_384 is Secure Hashing Algorithm 3 (SHA-3) with a 384-bit digest
+SHA3_384 is SHA-3 with a 384-bit digest
 `
 
 const HashAlgorithmDocStringKMAC128_BLS_BLS12_381 = `
-KMAC128_BLS_BLS12_381 is an instance of KECCAK Message Authentication Code (KMAC128) mac algorithm,
-that can be used as the hashing algorithm for BLS signature scheme on the curve BLS12-381.
-This is a customized version of KMAC128 that is compatible with the hashing to curve 
-used in BLS signatures.
+KMAC128_BLS_BLS12_381 is an instance of KECCAK Message Authentication Code (KMAC128) mac algorithm.
+Although this is a MAC algorithm, KMAC is included in this list as it can be used as a hash 
+when the key is used as a non-private customizer.
+KMAC128_BLS_BLS12_381 is used in particular as the hashing algorithm for the BLS signature scheme on the curve BLS12-381.
+It is a customized version of KMAC128 that is compatible with the hashing to curve
+used in BLS signatures. 
+It is the same hasher used by signatures in the internal Flow protocol.
 `
 const HashAlgorithmDocStringKECCAK_256 = `
 KECCAK_256 is the legacy Keccak algorithm with a 256-bits digest, as per the original submission to the NIST SHA3 competition.

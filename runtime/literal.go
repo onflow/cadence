@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -117,7 +117,7 @@ func arrayLiteralValue(inter *interpreter.Interpreter, elements []ast.Expression
 	return cadence.NewArray(values), nil
 }
 
-func pathLiteralValue(expression ast.Expression, ty sema.Type) (result cadence.Value, errResult error) {
+func pathLiteralValue(memoryGauge common.MemoryGauge, expression ast.Expression, ty sema.Type) (result cadence.Value, errResult error) {
 	pathExpression, ok := expression.(*ast.PathExpression)
 	if !ok {
 		return nil, LiteralExpressionTypeError
@@ -127,10 +127,10 @@ func pathLiteralValue(expression ast.Expression, ty sema.Type) (result cadence.V
 		pathExpression.Domain.Identifier,
 		pathExpression.Identifier.Identifier,
 		func() ast.Range {
-			return ast.NewRangeFromPositioned(pathExpression.Domain)
+			return ast.NewRangeFromPositioned(memoryGauge, pathExpression.Domain)
 		},
 		func() ast.Range {
-			return ast.NewRangeFromPositioned(pathExpression.Identifier)
+			return ast.NewRangeFromPositioned(memoryGauge, pathExpression.Identifier)
 		},
 	)
 	if err != nil {
@@ -160,12 +160,12 @@ func integerLiteralValue(
 		return nil, LiteralExpressionTypeError
 	}
 
-	if !sema.CheckIntegerLiteral(integerExpression, ty, nil) {
+	if !sema.CheckIntegerLiteral(inter, integerExpression, ty, nil) {
 		return nil, InvalidLiteralError
 	}
 
 	memoryUsage := common.NewBigIntMemoryUsage(
-		len(integerExpression.Value.Bytes()),
+		common.BigIntByteLength(integerExpression.Value),
 	)
 	intValue := interpreter.NewIntValueFromBigInt(
 		inter,
@@ -241,13 +241,13 @@ func convertIntValue(
 	}
 }
 
-func fixedPointLiteralValue(expression ast.Expression, ty sema.Type) (cadence.Value, error) {
+func fixedPointLiteralValue(memoryGauge common.MemoryGauge, expression ast.Expression, ty sema.Type) (cadence.Value, error) {
 	fixedPointExpression, ok := expression.(*ast.FixedPointExpression)
 	if !ok {
 		return nil, LiteralExpressionTypeError
 	}
 
-	if !sema.CheckFixedPointLiteral(fixedPointExpression, ty, nil) {
+	if !sema.CheckFixedPointLiteral(memoryGauge, fixedPointExpression, ty, nil) {
 		return nil, InvalidLiteralError
 	}
 
@@ -332,7 +332,7 @@ func LiteralValue(inter *interpreter.Interpreter, expression ast.Expression, ty 
 			return nil, LiteralExpressionTypeError
 		}
 
-		if !sema.CheckAddressLiteral(expression, nil) {
+		if !sema.CheckAddressLiteral(inter, expression, nil) {
 			return nil, InvalidLiteralError
 		}
 
@@ -368,10 +368,10 @@ func LiteralValue(inter *interpreter.Interpreter, expression ast.Expression, ty 
 		return integerLiteralValue(inter, expression, ty)
 
 	case sema.IsSameTypeKind(ty, sema.FixedPointType):
-		return fixedPointLiteralValue(expression, ty)
+		return fixedPointLiteralValue(inter, expression, ty)
 
 	case sema.IsSameTypeKind(ty, sema.PathType):
-		return pathLiteralValue(expression, ty)
+		return pathLiteralValue(inter, expression, ty)
 	}
 
 	return nil, UnsupportedLiteralError

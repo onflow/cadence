@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -107,7 +107,6 @@ type InterfaceStaticType struct {
 
 var _ StaticType = InterfaceStaticType{}
 
-// TODO when is this called?
 func NewInterfaceStaticType(
 	memoryGauge common.MemoryGauge,
 	location common.Location,
@@ -366,8 +365,9 @@ outer:
 // ReferenceStaticType
 
 type ReferenceStaticType struct {
-	Authorized bool
-	Type       StaticType
+	Authorized     bool
+	BorrowedType   StaticType
+	ReferencedType StaticType
 }
 
 var _ StaticType = ReferenceStaticType{}
@@ -376,12 +376,14 @@ func NewReferenceStaticType(
 	memoryGauge common.MemoryGauge,
 	authorized bool,
 	staticType StaticType,
+	referenceType StaticType,
 ) ReferenceStaticType {
 	common.UseConstantMemory(memoryGauge, common.MemoryKindReferenceStaticType)
 
 	return ReferenceStaticType{
-		Authorized: authorized,
-		Type:       staticType,
+		Authorized:     authorized,
+		BorrowedType:   staticType,
+		ReferencedType: referenceType,
 	}
 }
 
@@ -393,7 +395,7 @@ func (t ReferenceStaticType) String() string {
 		auth = "auth "
 	}
 
-	return fmt.Sprintf("%s&%s", auth, t.Type)
+	return fmt.Sprintf("%s&%s", auth, t.BorrowedType)
 }
 
 func (t ReferenceStaticType) Equal(other StaticType) bool {
@@ -403,7 +405,7 @@ func (t ReferenceStaticType) Equal(other StaticType) bool {
 	}
 
 	return t.Authorized == otherReferenceType.Authorized &&
-		t.Type.Equal(otherReferenceType.Type)
+		t.BorrowedType.Equal(otherReferenceType.BorrowedType)
 }
 
 // CapabilityStaticType
@@ -486,7 +488,7 @@ func ConvertSemaToStaticType(memoryGauge common.MemoryGauge, t sema.Type) Static
 		)
 
 	case *sema.ReferenceType:
-		return ConvertSemaReferenceTyoeToStaticReferenceType(memoryGauge, t)
+		return ConvertSemaReferenceTypeToStaticReferenceType(memoryGauge, t)
 
 	case *sema.CapabilityType:
 		var borrowType StaticType
@@ -538,7 +540,7 @@ func ConvertSemaDictionaryTypeToStaticDictionaryType(
 	)
 }
 
-func ConvertSemaReferenceTyoeToStaticReferenceType(
+func ConvertSemaReferenceTypeToStaticReferenceType(
 	memoryGauge common.MemoryGauge,
 	t *sema.ReferenceType,
 ) ReferenceStaticType {
@@ -546,6 +548,7 @@ func ConvertSemaReferenceTyoeToStaticReferenceType(
 		memoryGauge,
 		t.Authorized,
 		ConvertSemaToStaticType(memoryGauge, t.Type),
+		nil,
 	)
 }
 
@@ -615,7 +618,7 @@ func ConvertStaticToSemaType(
 		}, err
 
 	case ReferenceStaticType:
-		ty, err := ConvertStaticToSemaType(t.Type, getInterface, getComposite)
+		ty, err := ConvertStaticToSemaType(t.BorrowedType, getInterface, getComposite)
 		return &sema.ReferenceType{
 			Authorized: t.Authorized,
 			Type:       ty,

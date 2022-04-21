@@ -125,7 +125,7 @@ func TestOverEstimateFixedPointStringLength(t *testing.T) {
 
 	properties.Property("estimate is greater or equal to actual length", prop.ForAll(
 		func(v NumberValue, scale int) bool {
-			return OverEstimateFixedPointStringLength(v, scale) >= len(v.String())+1+scale
+			return OverEstimateFixedPointStringLength(nil, v, scale) >= len(v.String())+1+scale
 		},
 		gen.Int64().Map(func(v int64) NumberValue {
 			return NewUnmeteredIntValueFromInt64(v)
@@ -159,6 +159,7 @@ func TestOverEstimateFixedPointStringLength(t *testing.T) {
 		assert.LessOrEqual(t,
 			len(strconv.Itoa(v))+1+testScale,
 			OverEstimateFixedPointStringLength(
+				nil,
 				NewUnmeteredIntValueFromInt64(int64(v)),
 				testScale,
 			),

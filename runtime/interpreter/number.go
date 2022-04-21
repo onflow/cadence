@@ -22,6 +22,7 @@ import (
 	"math"
 	"math/big"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -29,13 +30,17 @@ const goIntSize = 32 << (^uint(0) >> 63) // 32 or 64
 const goMaxInt = 1<<(goIntSize-1) - 1
 const goMinInt = -1 << (goIntSize - 1)
 
-func OverEstimateNumberStringLength(value NumberValue) int {
+func OverEstimateNumberStringLength(memoryGauge common.MemoryGauge, value NumberValue) int {
 	switch value := value.(type) {
 	case BigNumberValue:
-		return OverEstimateBigIntStringLength(value.ToBigInt())
+		return OverEstimateBigIntStringLength(value.ToBigInt(memoryGauge))
 
 	case FixedPointValue:
-		return OverEstimateFixedPointStringLength(value.IntegerPart(), value.Scale())
+		return OverEstimateFixedPointStringLength(
+			memoryGauge,
+			value.IntegerPart(),
+			value.Scale(),
+		)
 
 	case NumberValue:
 		return OverEstimateIntStringLength(value.ToInt())
@@ -45,8 +50,13 @@ func OverEstimateNumberStringLength(value NumberValue) int {
 	}
 }
 
-func OverEstimateFixedPointStringLength(integerPart NumberValue, scale int) int {
-	return OverEstimateNumberStringLength(integerPart) + 1 + scale
+func OverEstimateFixedPointStringLength(
+	memoryGauge common.MemoryGauge,
+	integerPart NumberValue,
+	scale int,
+) int {
+	integerPartLength := OverEstimateNumberStringLength(memoryGauge, integerPart)
+	return integerPartLength + 1 + scale
 }
 
 func OverEstimateIntStringLength(n int) int {

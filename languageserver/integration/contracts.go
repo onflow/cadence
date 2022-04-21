@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -92,7 +92,7 @@ func (i FlowIntegration) updateContractInfoIfNeeded(
 
 		if len(parameters) > 0 {
 			for _, pragmaArgumentString := range parser2.ParseDocstringPragmaArguments(docString) {
-				arguments, err := runtime.ParseLiteralArgumentList(pragmaArgumentString, parameterTypes)
+				arguments, err := runtime.ParseLiteralArgumentList(pragmaArgumentString, parameterTypes, nil)
 				// TODO: record error and show diagnostic
 				if err != nil {
 					continue

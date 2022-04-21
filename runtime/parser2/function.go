@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -99,10 +99,11 @@ func parseParameterList(p *parser) (parameterList *ast.ParameterList) {
 	return ast.NewParameterList(
 		p.memoryGauge,
 		parameters,
-		ast.Range{
-			StartPos: startPos,
-			EndPos:   endPos,
-		},
+		ast.NewRange(
+			p.memoryGauge,
+			startPos,
+			endPos,
+		),
 	)
 }
 
@@ -162,7 +163,7 @@ func parseParameter(p *parser) *ast.Parameter {
 
 	typeAnnotation := parseTypeAnnotation(p)
 
-	endPos := typeAnnotation.EndPosition()
+	endPos := typeAnnotation.EndPosition(p.memoryGauge)
 
 	return ast.NewParameter(
 		p.memoryGauge,
@@ -173,10 +174,11 @@ func parseParameter(p *parser) *ast.Parameter {
 			parameterPos,
 		),
 		typeAnnotation,
-		ast.Range{
-			StartPos: startPos,
-			EndPos:   endPos,
-		},
+		ast.NewRange(
+			p.memoryGauge,
+			startPos,
+			endPos,
+		),
 	)
 }
 

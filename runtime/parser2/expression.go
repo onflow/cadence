@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -982,7 +982,7 @@ func parseArgument(p *parser) *ast.Argument {
 		}
 		label = identifier.Identifier.Identifier
 		labelStartPos = expr.StartPosition()
-		labelEndPos = expr.EndPosition()
+		labelEndPos = expr.EndPosition(p.memoryGauge)
 
 		// Skip the identifier
 		p.next()
@@ -1031,10 +1031,11 @@ func defineArrayExpression() {
 			return ast.NewArrayExpression(
 				p.memoryGauge,
 				values,
-				ast.Range{
-					StartPos: startToken.StartPos,
-					EndPos:   endToken.EndPos,
-				},
+				ast.NewRange(
+					p.memoryGauge,
+					startToken.StartPos,
+					endToken.EndPos,
+				),
 			)
 		},
 	)
@@ -1049,10 +1050,11 @@ func defineDictionaryExpression() {
 				key := parseExpression(p, lowestBindingPower)
 				p.mustOne(lexer.TokenColon)
 				value := parseExpression(p, lowestBindingPower)
-				entries = append(entries, ast.DictionaryEntry{
-					Key:   key,
-					Value: value,
-				})
+				entries = append(entries, ast.NewDictionaryEntry(
+					p.memoryGauge,
+					key,
+					value,
+				))
 				if !p.current.Is(lexer.TokenComma) {
 					break
 				}
@@ -1062,10 +1064,11 @@ func defineDictionaryExpression() {
 			return ast.NewDictionaryExpression(
 				p.memoryGauge,
 				entries,
-				ast.Range{
-					StartPos: startToken.StartPos,
-					EndPos:   endToken.EndPos,
-				},
+				ast.NewRange(
+					p.memoryGauge,
+					startToken.StartPos,
+					endToken.EndPos,
+				),
 			)
 		},
 	)
@@ -1082,10 +1085,11 @@ func defineIndexExpression() {
 				p.memoryGauge,
 				left,
 				firstIndexExpr,
-				ast.Range{
-					StartPos: token.StartPos,
-					EndPos:   endToken.EndPos,
-				},
+				ast.NewRange(
+					p.memoryGauge,
+					token.StartPos,
+					endToken.EndPos,
+				),
 			)
 		},
 	)

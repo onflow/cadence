@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -358,7 +358,7 @@ func (d StorableDecoder) decodeStringValue() (*StringValue, error) {
 }
 
 func decodeUint64(dec *cbor.StreamDecoder, memoryGauge common.MemoryGauge) (uint64, error) {
-	common.UseMemory(memoryGauge, Uint64MemoryUsage)
+	common.UseMemory(memoryGauge, UInt64MemoryUsage)
 	return dec.DecodeUint64()
 }
 
@@ -1331,6 +1331,7 @@ func (d TypeDecoder) decodeReferenceStaticType() (StaticType, error) {
 		d.memoryGauge,
 		authorized,
 		staticType,
+		nil,
 	), nil
 }
 

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,7 +55,7 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) ast.Repr 
 		if valueType.IsResourceType() {
 			checker.report(
 				&UnsupportedResourceForLoopError{
-					Range: ast.NewRangeFromPositioned(valueExpression),
+					Range: ast.NewRangeFromPositioned(checker.memoryGauge, valueExpression),
 				},
 			)
 		} else if arrayType, ok := valueType.(ArrayType); ok {
@@ -65,7 +65,7 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) ast.Repr 
 				&TypeMismatchWithDescriptionError{
 					ExpectedTypeDescription: "array",
 					ActualType:              valueType,
-					Range:                   ast.NewRangeFromPositioned(valueExpression),
+					Range:                   ast.NewRangeFromPositioned(checker.memoryGauge, valueExpression),
 				},
 			)
 		}
@@ -117,7 +117,7 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) ast.Repr 
 		return nil
 	})
 
-	checker.reportResourceUsesInLoop(statement.StartPos, statement.EndPosition())
+	checker.reportResourceUsesInLoop(statement.StartPos, statement.EndPosition(checker.memoryGauge))
 
 	return nil
 }

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1073,8 +1073,8 @@ func TestImportRuntimeType(t *testing.T) {
 				Type:       cadence.IntType{},
 			},
 			expected: interpreter.ReferenceStaticType{
-				Authorized: false,
-				Type:       interpreter.PrimitiveStaticTypeInt,
+				Authorized:   false,
+				BorrowedType: interpreter.PrimitiveStaticTypeInt,
 			},
 		},
 		{
@@ -1743,7 +1743,7 @@ func TestExportTypeValue(t *testing.T) {
 		program, err := parser2.ParseProgram(code, nil)
 		require.NoError(t, err)
 
-		checker, err := sema.NewChecker(program, TestLocation)
+		checker, err := sema.NewChecker(program, TestLocation, nil)
 		require.NoError(t, err)
 
 		err = checker.Check()
@@ -1829,7 +1829,7 @@ func TestExportCapabilityValue(t *testing.T) {
 		program, err := parser2.ParseProgram(code, nil)
 		require.NoError(t, err)
 
-		checker, err := sema.NewChecker(program, TestLocation)
+		checker, err := sema.NewChecker(program, TestLocation, nil)
 		require.NoError(t, err)
 
 		err = checker.Check()
@@ -1927,7 +1927,7 @@ func TestExportLinkValue(t *testing.T) {
 		program, err := parser2.ParseProgram(code, nil)
 		require.NoError(t, err)
 
-		checker, err := sema.NewChecker(program, TestLocation)
+		checker, err := sema.NewChecker(program, TestLocation, nil)
 		require.NoError(t, err)
 
 		err = checker.Check()
@@ -2793,7 +2793,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 			exportedValue: cadence.NewArray([]cadence.Value{
 				cadence.NewUnmeteredInt(1),
 			}),
-			expectedInvalidEntryPointArgumentErrType: &InvalidValueTypeError{},
+			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
 			label:         "Constant-size array with too many elements",
@@ -2803,7 +2803,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 				cadence.NewUnmeteredInt(2),
 				cadence.NewUnmeteredInt(3),
 			}),
-			expectedInvalidEntryPointArgumentErrType: &InvalidValueTypeError{},
+			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
 			label:         "Nested array with mismatching element",
@@ -2813,7 +2813,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 					cadence.NewUnmeteredInt(5),
 				}),
 			}),
-			expectedInvalidEntryPointArgumentErrType: &InvalidValueTypeError{},
+			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
 			label:                                    "Inner array with mismatching element",
@@ -4421,7 +4421,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 	t.Parallel()
 
 	program := interpreter.Program{
-		Elaboration: sema.NewElaboration(),
+		Elaboration: sema.NewElaboration(nil),
 	}
 
 	inter := newTestInterpreter(t)
@@ -4558,7 +4558,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 		t.Parallel()
 
 		program := interpreter.Program{
-			Elaboration: sema.NewElaboration(),
+			Elaboration: sema.NewElaboration(nil),
 		}
 
 		inter := newTestInterpreter(t)

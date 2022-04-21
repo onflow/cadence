@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,14 +61,14 @@ func (d *FunctionDeclaration) StartPosition() Position {
 	return d.StartPos
 }
 
-func (d *FunctionDeclaration) EndPosition() Position {
+func (d *FunctionDeclaration) EndPosition(memoryGauge common.MemoryGauge) Position {
 	if d.FunctionBlock != nil {
-		return d.FunctionBlock.EndPosition()
+		return d.FunctionBlock.EndPosition(memoryGauge)
 	}
 	if d.ReturnTypeAnnotation != nil {
-		return d.ReturnTypeAnnotation.EndPosition()
+		return d.ReturnTypeAnnotation.EndPosition(memoryGauge)
 	}
-	return d.ParameterList.EndPosition()
+	return d.ParameterList.EndPosition(memoryGauge)
 }
 
 func (d *FunctionDeclaration) Accept(visitor Visitor) Repr {
@@ -124,7 +124,7 @@ func (d *FunctionDeclaration) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "FunctionDeclaration",
-		Range: NewRangeFromPositioned(d),
+		Range: NewUnmeteredRangeFromPositioned(d),
 		Alias: (*Alias)(d),
 	})
 }
@@ -153,8 +153,8 @@ func (d *SpecialFunctionDeclaration) StartPosition() Position {
 	return d.FunctionDeclaration.StartPosition()
 }
 
-func (d *SpecialFunctionDeclaration) EndPosition() Position {
-	return d.FunctionDeclaration.EndPosition()
+func (d *SpecialFunctionDeclaration) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return d.FunctionDeclaration.EndPosition(memoryGauge)
 }
 
 func (d *SpecialFunctionDeclaration) Accept(visitor Visitor) Repr {
@@ -196,7 +196,7 @@ func (d *SpecialFunctionDeclaration) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "SpecialFunctionDeclaration",
-		Range: NewRangeFromPositioned(d),
+		Range: NewUnmeteredRangeFromPositioned(d),
 		Alias: (*Alias)(d),
 	})
 }

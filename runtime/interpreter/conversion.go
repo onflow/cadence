@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ func ByteArrayValueToByteSlice(interpreter *Interpreter, value Value) ([]byte, e
 	var err error
 	array.Iterate(interpreter, func(element Value) (resume bool) {
 		var b byte
-		b, err = ByteValueToByte(element)
+		b, err = ByteValueToByte(interpreter, element)
 		if err != nil {
 			return false
 		}
@@ -51,12 +51,12 @@ func ByteArrayValueToByteSlice(interpreter *Interpreter, value Value) ([]byte, e
 	return result, nil
 }
 
-func ByteValueToByte(element Value) (byte, error) {
+func ByteValueToByte(memoryGauge common.MemoryGauge, element Value) (byte, error) {
 	var b byte
 
 	switch element := element.(type) {
 	case BigNumberValue:
-		bigInt := element.ToBigInt()
+		bigInt := element.ToBigInt(memoryGauge)
 		if !bigInt.IsUint64() {
 			return 0, errors.New("value is not in byte range (0-255)")
 		}

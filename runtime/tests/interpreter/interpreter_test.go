@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1797,8 +1797,8 @@ func TestInterpretHostFunction(t *testing.T) {
 		},
 		``,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			a := invocation.Arguments[0].(interpreter.IntValue).ToBigInt()
-			b := invocation.Arguments[1].(interpreter.IntValue).ToBigInt()
+			a := invocation.Arguments[0].(interpreter.IntValue).ToBigInt(nil)
+			b := invocation.Arguments[1].(interpreter.IntValue).ToBigInt(nil)
 			value := new(big.Int).Add(a, b)
 			return interpreter.NewUnmeteredIntValueFromBigInt(value)
 		},
@@ -1807,6 +1807,7 @@ func TestInterpretHostFunction(t *testing.T) {
 	checker, err := sema.NewChecker(
 		program,
 		TestLocation,
+		nil,
 		sema.WithPredeclaredValues(
 			[]sema.ValueDeclaration{
 				testFunction,
@@ -1912,6 +1913,7 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 	checker, err := sema.NewChecker(
 		program,
 		TestLocation,
+		nil,
 		sema.WithPredeclaredValues(
 			[]sema.ValueDeclaration{
 				testFunction,
@@ -4693,7 +4695,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 			nil,
 		)
 
-		storageMap := storage.GetStorageMap(storageAddress, storagePath.Domain.Identifier())
+		storageMap := storage.GetStorageMap(storageAddress, storagePath.Domain.Identifier(), true)
 		storageMap.WriteValue(inter, storagePath.Identifier, r)
 
 		result, err := inter.Invoke("testInvalidUnauthorized")
@@ -8766,8 +8768,6 @@ func newTestAuthAccountValue(
 		returnZeroUFix64,
 		returnZeroUInt64,
 		returnZeroUInt64,
-		panicFunction,
-		panicFunction,
 		func() interpreter.Value {
 			return interpreter.NewAuthAccountContractsValue(
 				inter,
@@ -9190,7 +9190,7 @@ func TestInterpretCountDigits256(t *testing.T) {
 
 			assert.Equal(t,
 				bigInt,
-				inter.Globals["number"].GetValue().(interpreter.BigNumberValue).ToBigInt(),
+				inter.Globals["number"].GetValue().(interpreter.BigNumberValue).ToBigInt(nil),
 			)
 
 			expected := interpreter.NewUnmeteredUInt8Value(uint8(test.Count))

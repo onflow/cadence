@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -134,10 +134,16 @@ func NewInMemoryStorage(memoryGauge common.MemoryGauge) InMemoryStorage {
 	}
 }
 
-func (i InMemoryStorage) GetStorageMap(address common.Address, domain string) (storageMap *StorageMap) {
+func (i InMemoryStorage) GetStorageMap(
+	address common.Address,
+	domain string,
+	createIfNotExists bool,
+) (
+	storageMap *StorageMap,
+) {
 	key := StorageKey{address, domain}
 	storageMap = i.StorageMaps[key]
-	if storageMap == nil {
+	if storageMap == nil && createIfNotExists {
 		storageMap = NewStorageMap(i, atree.Address(address))
 		i.StorageMaps[key] = storageMap
 	}

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -143,7 +143,7 @@ func (checker *Checker) VisitExpressionStatement(statement *ast.ExpressionStatem
 	if ty.IsResourceType() {
 		checker.report(
 			&ResourceLossError{
-				Range: ast.NewRangeFromPositioned(expression),
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, expression),
 			},
 		)
 	}
@@ -174,7 +174,7 @@ func (checker *Checker) VisitIntegerExpression(expression *ast.IntegerExpression
 		actualType = expectedType
 	} else if IsSameTypeKind(expectedType, &AddressType{}) {
 		isAddress = true
-		CheckAddressLiteral(expression, checker.report)
+		CheckAddressLiteral(checker.memoryGauge, expression, checker.report)
 		actualType = expectedType
 	} else {
 		// Otherwise infer the type as `Int` which can represent any integer.
@@ -182,7 +182,7 @@ func (checker *Checker) VisitIntegerExpression(expression *ast.IntegerExpression
 	}
 
 	if !isAddress {
-		CheckIntegerLiteral(expression, actualType, checker.report)
+		CheckIntegerLiteral(checker.memoryGauge, expression, actualType, checker.report)
 	}
 
 	checker.Elaboration.IntegerExpressionType[expression] = actualType
@@ -208,7 +208,7 @@ func (checker *Checker) VisitFixedPointExpression(expression *ast.FixedPointExpr
 		actualType = UFix64Type
 	}
 
-	CheckFixedPointLiteral(expression, actualType, checker.report)
+	CheckFixedPointLiteral(checker.memoryGauge, expression, actualType, checker.report)
 
 	checker.Elaboration.FixedPointExpression[expression] = actualType
 
@@ -265,39 +265,33 @@ func (checker *Checker) visitIndexExpression(
 		checker.report(
 			&NotIndexableTypeError{
 				Type:  targetType,
-				Range: ast.NewRangeFromPositioned(targetExpression),
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, targetExpression),
 			},
 		)
 
 		return InvalidType
 	}
 
-	elementType := checker.visitValueIndexingExpression(
-		indexedType,
+	indexingType := checker.VisitExpression(
 		indexExpression.IndexingExpression,
-		isAssignment,
+		indexedType.IndexingType(),
 	)
 
 	if isAssignment && !indexedType.AllowsValueIndexingAssignment() {
 		checker.report(
 			&NotIndexingAssignableTypeError{
 				Type:  indexedType,
-				Range: ast.NewRangeFromPositioned(targetExpression),
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, targetExpression),
 			},
 		)
 	}
 
+	elementType := indexedType.ElementType(isAssignment)
+
 	checker.checkUnusedExpressionResourceLoss(elementType, targetExpression)
 
+	checker.Elaboration.IndexExpressionIndexedTypes[indexExpression] = indexedType
+	checker.Elaboration.IndexExpressionIndexingTypes[indexExpression] = indexingType
+
 	return elementType
-}
-
-func (checker *Checker) visitValueIndexingExpression(
-	indexedType ValueIndexableType,
-	indexingExpression ast.Expression,
-	isAssignment bool,
-) Type {
-	checker.VisitExpression(indexingExpression, indexedType.IndexingType())
-
-	return indexedType.ElementType(isAssignment)
 }

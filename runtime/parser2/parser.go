@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -93,18 +93,20 @@ func ParseTokenStream(
 		}
 	}()
 
-	startPos := ast.Position{
-		Offset: 0,
-		Line:   1,
-		Column: 0,
-	}
+	startPos := ast.NewPosition(
+		p.memoryGauge,
+		0,
+		1,
+		0,
+	)
 
 	p.current = lexer.Token{
 		Type: lexer.TokenEOF,
-		Range: ast.Range{
-			StartPos: startPos,
-			EndPos:   startPos,
-		},
+		Range: ast.NewRange(
+			p.memoryGauge,
+			startPos,
+			startPos,
+		),
 	}
 
 	// Get the initial token

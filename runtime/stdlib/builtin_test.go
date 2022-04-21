@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,6 +43,7 @@ func TestAssert(t *testing.T) {
 	checker, err := sema.NewChecker(
 		program,
 		utils.TestLocation,
+		nil,
 		sema.WithPredeclaredValues(BuiltinFunctions.ToSemaValueDeclarations()),
 	)
 	require.Nil(t, err)
@@ -102,6 +103,7 @@ func TestPanic(t *testing.T) {
 	checker, err := sema.NewChecker(
 		&ast.Program{},
 		utils.TestLocation,
+		nil,
 		sema.WithPredeclaredValues(BuiltinFunctions.ToSemaValueDeclarations()),
 	)
 	require.Nil(t, err)

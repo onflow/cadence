@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"go/types"
 	"math"
+	"math/big"
 	"strings"
 	"testing"
 
@@ -83,7 +84,7 @@ func TestOwnerNewArray(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration()
+	elaboration := sema.NewElaboration(nil)
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
 
 	inter, err := NewInterpreter(
@@ -122,7 +123,7 @@ func TestOwnerArrayDeepCopy(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration()
+	elaboration := sema.NewElaboration(nil)
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
 
 	inter, err := NewInterpreter(
@@ -185,7 +186,7 @@ func TestOwnerArrayElement(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration()
+	elaboration := sema.NewElaboration(nil)
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
 
 	inter, err := NewInterpreter(
@@ -223,7 +224,7 @@ func TestOwnerArraySetIndex(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration()
+	elaboration := sema.NewElaboration(nil)
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
 
 	inter, err := NewInterpreter(
@@ -271,7 +272,7 @@ func TestOwnerArrayAppend(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration()
+	elaboration := sema.NewElaboration(nil)
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
 
 	inter, err := NewInterpreter(
@@ -313,7 +314,7 @@ func TestOwnerArrayInsert(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration()
+	elaboration := sema.NewElaboration(nil)
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
 
 	inter, err := NewInterpreter(
@@ -355,7 +356,7 @@ func TestOwnerArrayRemove(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration()
+	elaboration := sema.NewElaboration(nil)
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
 
 	inter, err := NewInterpreter(
@@ -395,7 +396,7 @@ func TestOwnerNewDictionary(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration()
+	elaboration := sema.NewElaboration(nil)
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
 
 	inter, err := NewInterpreter(
@@ -438,7 +439,7 @@ func TestOwnerDictionary(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration()
+	elaboration := sema.NewElaboration(nil)
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
 
 	inter, err := NewInterpreter(
@@ -481,7 +482,7 @@ func TestOwnerDictionaryCopy(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration()
+	elaboration := sema.NewElaboration(nil)
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
 
 	inter, err := NewInterpreter(
@@ -548,7 +549,7 @@ func TestOwnerDictionarySetSome(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration()
+	elaboration := sema.NewElaboration(nil)
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
 
 	inter, err := NewInterpreter(
@@ -598,7 +599,7 @@ func TestOwnerDictionaryInsertNonExisting(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration()
+	elaboration := sema.NewElaboration(nil)
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
 
 	inter, err := NewInterpreter(
@@ -649,7 +650,7 @@ func TestOwnerDictionaryRemove(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration()
+	elaboration := sema.NewElaboration(nil)
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
 
 	inter, err := NewInterpreter(
@@ -706,7 +707,7 @@ func TestOwnerDictionaryInsertExisting(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
-	elaboration := sema.NewElaboration()
+	elaboration := sema.NewElaboration(nil)
 	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
 
 	inter, err := NewInterpreter(
@@ -1613,22 +1614,20 @@ func TestEphemeralReferenceTypeConformance(t *testing.T) {
 	require.NoError(t, err)
 	require.IsType(t, &EphemeralReferenceValue{}, value)
 
-	dynamicType := value.DynamicType(inter, SeenReferences{})
-
 	// Check the dynamic type conformance on a cyclic value.
-	conforms := value.ConformsToDynamicType(
+	conforms := value.ConformsToStaticType(
 		inter,
 		ReturnEmptyLocationRange,
-		dynamicType,
+		value.StaticType(inter),
 		TypeConformanceResults{},
 	)
 	assert.True(t, conforms)
 
 	// Check against a non-conforming type
-	conforms = value.ConformsToDynamicType(
+	conforms = value.ConformsToStaticType(
 		inter,
 		ReturnEmptyLocationRange,
-		EphemeralReferenceDynamicType{},
+		ReferenceStaticType{},
 		TypeConformanceResults{},
 	)
 	assert.False(t, conforms)
@@ -3278,7 +3277,7 @@ func TestPublicKeyValue(t *testing.T) {
 
 func TestHashable(t *testing.T) {
 
-	// Assert that all Value and DynamicType implementations are hashable
+	// Assert that all Value implementations are hashable
 
 	pkgs, err := packages.Load(
 		&packages.Config{
@@ -3325,7 +3324,6 @@ func TestHashable(t *testing.T) {
 	}
 
 	test("Value")
-	test("DynamicType")
 }
 
 func checkHashable(ty types.Type) error {
@@ -3447,4 +3445,97 @@ type fakeError struct{}
 
 func (fakeError) Error() string {
 	return "fake error for testing"
+}
+
+func TestNumberValueIntegerConversion(t *testing.T) {
+
+	t.Parallel()
+
+	type converter struct {
+		convert func(NumberValue) (result interface{}, convertible bool)
+		check   func(t *testing.T, result interface{}) bool
+	}
+
+	test := func(
+		t *testing.T,
+		numericType sema.Type,
+		testValue NumberValue,
+		converter converter,
+	) {
+
+		result, convertible := converter.convert(testValue)
+		if !convertible {
+			return
+		}
+		converter.check(t, result)
+	}
+
+	testValues := map[*sema.NumericType]NumberValue{
+		sema.IntType:     NewUnmeteredIntValueFromInt64(42),
+		sema.UIntType:    NewUnmeteredUIntValueFromUint64(42),
+		sema.UInt8Type:   NewUnmeteredUInt8Value(42),
+		sema.UInt16Type:  NewUnmeteredUInt16Value(42),
+		sema.UInt32Type:  NewUnmeteredUInt32Value(42),
+		sema.UInt64Type:  NewUnmeteredUInt64Value(42),
+		sema.UInt128Type: NewUnmeteredUInt128ValueFromUint64(42),
+		sema.UInt256Type: NewUnmeteredUInt256ValueFromUint64(42),
+		sema.Word8Type:   NewUnmeteredWord8Value(42),
+		sema.Word16Type:  NewUnmeteredWord16Value(42),
+		sema.Word32Type:  NewUnmeteredWord32Value(42),
+		sema.Word64Type:  NewUnmeteredWord64Value(42),
+		sema.Int8Type:    NewUnmeteredInt8Value(42),
+		sema.Int16Type:   NewUnmeteredInt16Value(42),
+		sema.Int32Type:   NewUnmeteredInt32Value(42),
+		sema.Int64Type:   NewUnmeteredInt64Value(42),
+		sema.Int128Type:  NewUnmeteredInt128ValueFromInt64(42),
+		sema.Int256Type:  NewUnmeteredInt256ValueFromInt64(42),
+	}
+
+	for _, ty := range sema.AllIntegerTypes {
+		// Only test leaf types
+		switch ty {
+		case sema.IntegerType, sema.SignedIntegerType:
+			continue
+		}
+
+		_, ok := testValues[ty.(*sema.NumericType)]
+		require.True(t, ok, "missing expected value for type %s", ty.String())
+	}
+
+	converters := map[string]converter{
+		"ToInt": {
+			convert: func(value NumberValue) (interface{}, bool) {
+				return value.ToInt(), true
+			},
+			check: func(t *testing.T, result interface{}) bool {
+				return assert.Equal(t, 42, result)
+			},
+		},
+		"ToBigInt": {
+			convert: func(value NumberValue) (interface{}, bool) {
+				bigNumberValue, ok := value.(BigNumberValue)
+				if !ok {
+					return nil, false
+				}
+				return bigNumberValue.ToBigInt(nil), true
+			},
+			check: func(t *testing.T, result interface{}) bool {
+				return assert.Equal(t, big.NewInt(42), result)
+			},
+		},
+	}
+
+	for numericType, testValue := range testValues {
+
+		t.Run(numericType.String(), func(t *testing.T) {
+
+			for converterName, converter := range converters {
+
+				t.Run(converterName, func(t *testing.T) {
+					test(t, numericType, testValue, converter)
+				})
+
+			}
+		})
+	}
 }

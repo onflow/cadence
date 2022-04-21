@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -531,6 +531,7 @@ func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.Stat
 			memoryGauge,
 			t.Authorized,
 			ImportType(memoryGauge, t.Type),
+			nil,
 		)
 	case cadence.RestrictedType:
 		restrictions := make([]interpreter.InterfaceStaticType, 0, len(t.Restrictions))

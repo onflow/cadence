@@ -5,7 +5,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -187,7 +187,9 @@ func (a *VariableActivations) Pop() {
 	if count < 1 {
 		return
 	}
-	a.activations = a.activations[:count-1]
+	lastIndex := count - 1
+	a.activations[lastIndex] = nil
+	a.activations = a.activations[:lastIndex]
 }
 
 // CurrentOrNew returns the current activation,

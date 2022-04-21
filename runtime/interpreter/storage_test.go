@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -90,7 +90,7 @@ func TestArrayStorage(t *testing.T) {
 	t.Parallel()
 
 	importLocationHandlerFunc := func(inter *Interpreter, location common.Location) Import {
-		elaboration := sema.NewElaboration()
+		elaboration := sema.NewElaboration(nil)
 		elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
 		return VirtualImport{Elaboration: elaboration}
 	}
@@ -448,8 +448,7 @@ func TestStorageOverwriteAndRemove(t *testing.T) {
 
 	const identifier = "test"
 
-	storageMap := storage.GetStorageMap(address, "storage")
-
+	storageMap := storage.GetStorageMap(address, "storage", true)
 	storageMap.WriteValue(inter, identifier, array1)
 
 	// Overwriting delete any existing child slabs

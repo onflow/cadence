@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,9 +46,9 @@ func (f Transfer) StartPosition() Position {
 	return f.Pos
 }
 
-func (f Transfer) EndPosition() Position {
+func (f Transfer) EndPosition(memoryGauge common.MemoryGauge) Position {
 	length := len(f.Operation.Operator())
-	return f.Pos.Shifted(length - 1)
+	return f.Pos.Shifted(memoryGauge, length-1)
 }
 
 func (f Transfer) MarshalJSON() ([]byte, error) {
@@ -59,7 +59,7 @@ func (f Transfer) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "Transfer",
-		Range: NewRangeFromPositioned(f),
+		Range: NewUnmeteredRangeFromPositioned(f),
 		Alias: (*Alias)(&f),
 	})
 }

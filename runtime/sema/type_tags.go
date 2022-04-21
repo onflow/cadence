@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -419,19 +419,26 @@ func findCommonSuperType(joinedTypeTag TypeTag, types ...Type) Type {
 
 	// Optional types.
 	if joinedTypeTag.ContainsAny(NilTypeTag) {
-		// Get the type without the optional flag
-		innerTypeTag := joinedTypeTag.And(notNilType)
-		superType := findCommonSuperType(innerTypeTag, types...)
 
-		// If the common supertype of the rest of types contain nil,
+		// Get the typeTag without the optional flag
+		joinedTypeTag = joinedTypeTag.And(notNilType)
+
+		// Get the types without the optionals
+		unwrappedTypes, levels := unwrapOptionals(types)
+
+		superType := findCommonSuperType(joinedTypeTag, unwrappedTypes...)
+
+		// If the common supertype of the rest of types contain nil (e.g: AnyStruct),
 		// then do not wrap with optional again.
+		// NOTE: At this point, the `superType` cannot be an optional. Can only be AnyStruct, AnyResource, etc.
+		// Hence, no need of re-wrapping.
 		if superType.Tag().ContainsAny(NilTypeTag) {
 			return superType
 		}
 
-		return &OptionalType{
-			Type: superType,
-		}
+		// Re-wrap the optionals to the same amount of levels.
+		// Because supertype of `T`, `T?`, `T??` is `T??`.
+		return wrapOptionals(superType, levels)
 	}
 
 	// NOTE: Below order is important!
@@ -869,4 +876,48 @@ func commonSuperTypeOfComposites(types []Type) Type {
 	}
 
 	return superType
+}
+
+func unwrapOptionals(types []Type) ([]Type, int) {
+	unwrappedTypes := make([]Type, 0, len(types))
+
+	maxLevels := 0
+	for _, typ := range types {
+		levels := 0
+
+		// Unwrap optionals
+		for {
+			optionalType, ok := typ.(*OptionalType)
+			if !ok {
+				break
+			}
+
+			typ = optionalType.Type
+			levels++
+		}
+
+		maxLevels = max(maxLevels, levels)
+
+		unwrappedTypes = append(unwrappedTypes, typ)
+	}
+
+	return unwrappedTypes, maxLevels
+}
+
+func wrapOptionals(typ Type, levels int) Type {
+	for i := 0; i < levels; i++ {
+		typ = &OptionalType{
+			Type: typ,
+		}
+	}
+
+	return typ
+}
+
+func max(a, b int) int {
+	if a >= b {
+		return a
+	}
+
+	return b
 }

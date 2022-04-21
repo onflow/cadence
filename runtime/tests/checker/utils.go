@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -92,7 +92,6 @@ func ParseAndCheckWithOptionsAndMemoryMetering(
 		checkerOptions := append(
 			[]sema.Option{
 				sema.WithAccessCheckMode(sema.AccessCheckModeNotSpecifiedUnrestricted),
-				sema.WithMemoryGauge(memoryGauge),
 			},
 			options.Options...,
 		)
@@ -100,6 +99,7 @@ func ParseAndCheckWithOptionsAndMemoryMetering(
 		checker, err := sema.NewChecker(
 			program,
 			options.Location,
+			memoryGauge,
 			checkerOptions...,
 		)
 		if err != nil {

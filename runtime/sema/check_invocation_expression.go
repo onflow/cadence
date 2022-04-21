@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ func (checker *Checker) VisitInvocationExpression(invocationExpression *ast.Invo
 
 		checker.report(
 			&InvalidEventUsageError{
-				Range: ast.NewRangeFromPositioned(invocationExpression),
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, invocationExpression),
 			},
 		)
 		return InvalidType
@@ -90,7 +90,7 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 			checker.report(
 				&NotCallableError{
 					Type:  expressionType,
-					Range: ast.NewRangeFromPositioned(invokedExpression),
+					Range: ast.NewRangeFromPositioned(checker.memoryGauge, invokedExpression),
 				},
 			)
 		}
@@ -270,7 +270,7 @@ func (checker *Checker) checkConstructorInvocationWithResourceResult(
 
 	checker.report(
 		&MissingCreateError{
-			Range: ast.NewRangeFromPositioned(invocationExpression),
+			Range: ast.NewRangeFromPositioned(checker.memoryGauge, invocationExpression),
 		},
 	)
 }
@@ -329,10 +329,11 @@ func (checker *Checker) checkInvocationArgumentLabels(
 					&IncorrectArgumentLabelError{
 						ActualArgumentLabel:   providedLabel,
 						ExpectedArgumentLabel: "",
-						Range: ast.Range{
-							StartPos: *argument.LabelStartPos,
-							EndPos:   *argument.LabelEndPos,
-						},
+						Range: ast.NewRange(
+							checker.memoryGauge,
+							*argument.LabelStartPos,
+							*argument.LabelEndPos,
+						),
 					},
 				)
 			}
@@ -343,7 +344,7 @@ func (checker *Checker) checkInvocationArgumentLabels(
 				checker.report(
 					&MissingArgumentLabelError{
 						ExpectedArgumentLabel: argumentLabel,
-						Range:                 ast.NewRangeFromPositioned(argument.Expression),
+						Range:                 ast.NewRangeFromPositioned(checker.memoryGauge, argument.Expression),
 					},
 				)
 			} else if providedLabel != argumentLabel {
@@ -351,10 +352,11 @@ func (checker *Checker) checkInvocationArgumentLabels(
 					&IncorrectArgumentLabelError{
 						ActualArgumentLabel:   providedLabel,
 						ExpectedArgumentLabel: argumentLabel,
-						Range: ast.Range{
-							StartPos: *argument.LabelStartPos,
-							EndPos:   *argument.LabelEndPos,
-						},
+						Range: ast.NewRange(
+							checker.memoryGauge,
+							*argument.LabelStartPos,
+							*argument.LabelEndPos,
+						),
 					},
 				)
 			}
@@ -461,7 +463,7 @@ func (checker *Checker) checkInvocation(
 	functionType.CheckArgumentExpressions(
 		checker,
 		argumentExpressions,
-		ast.NewRangeFromPositioned(invocationExpression),
+		ast.NewRangeFromPositioned(checker.memoryGauge, invocationExpression),
 	)
 
 	returnType = functionType.ReturnTypeAnnotation.Type.Resolve(typeArguments)
@@ -510,7 +512,7 @@ func (checker *Checker) checkTypeParameterInference(
 		checker.report(
 			&TypeParameterTypeInferenceError{
 				Name:  typeParameter.Name,
-				Range: ast.NewRangeFromPositioned(invocationExpression),
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, invocationExpression),
 			},
 		)
 	}
@@ -543,7 +545,7 @@ func (checker *Checker) checkInvocationRequiredArgument(
 		// Try to unify the parameter type with the argument type.
 		// If unification fails, fall back to the parameter type for now.
 
-		argumentRange := ast.NewRangeFromPositioned(argument.Expression)
+		argumentRange := ast.NewRangeFromPositioned(checker.memoryGauge, argument.Expression)
 
 		if parameterType.Unify(argumentType, typeParameters, checker.report, argumentRange) {
 			parameterType = parameterType.Resolve(typeParameters)
@@ -588,7 +590,7 @@ func (checker *Checker) checkInvocationArgumentCount(
 			&ArgumentCountError{
 				ParameterCount: parameterCount,
 				ArgumentCount:  argumentCount,
-				Range:          ast.NewRangeFromPositioned(pos),
+				Range:          ast.NewRangeFromPositioned(checker.memoryGauge, pos),
 			},
 		)
 	}
@@ -611,10 +613,11 @@ func (checker *Checker) reportInvalidTypeArgumentCount(
 		&InvalidTypeArgumentCountError{
 			TypeParameterCount: typeParameterCount,
 			TypeArgumentCount:  typeArgumentCount,
-			Range: ast.Range{
-				StartPos: firstSuperfluousTypeArgument.StartPosition(),
-				EndPos:   lastSuperfluousTypeArgument.EndPosition(),
-			},
+			Range: ast.NewRange(
+				checker.memoryGauge,
+				firstSuperfluousTypeArgument.StartPosition(),
+				lastSuperfluousTypeArgument.EndPosition(checker.memoryGauge),
+			),
 		},
 	)
 }
@@ -643,7 +646,7 @@ func (checker *Checker) checkAndBindGenericTypeParameterTypeArguments(
 		// If the type parameter corresponding to the type argument has a type bound,
 		// then check that the argument is a subtype of the type bound.
 
-		err := typeParameter.checkTypeBound(ty, ast.NewRangeFromPositioned(rawTypeArgument))
+		err := typeParameter.checkTypeBound(ty, ast.NewRangeFromPositioned(checker.memoryGauge, rawTypeArgument))
 		checker.report(err)
 
 		// Bind the type argument to the type parameter
@@ -669,7 +672,7 @@ func (checker *Checker) checkInvocationArgumentParameterTypeCompatibility(
 			&TypeMismatchError{
 				ExpectedType: parameterType,
 				ActualType:   argumentType,
-				Range:        ast.NewRangeFromPositioned(argument),
+				Range:        ast.NewRangeFromPositioned(checker.memoryGauge, argument),
 			},
 		)
 	}

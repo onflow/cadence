@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1364,7 +1364,7 @@ func (s *Server) prepareFunctionMemberCompletionItem(
 	resolver sema.MemberResolver,
 	name string,
 ) {
-	member := resolver.Resolve(item.Label, ast.Range{}, func(err error) { /* NO-OP */ })
+	member := resolver.Resolve(nil, item.Label, ast.Range{}, func(err error) { /* NO-OP */ })
 	functionType, ok := member.TypeAnnotation.Type.(*sema.FunctionType)
 	if !ok {
 		return
@@ -1493,7 +1493,7 @@ func (s *Server) maybeResolveMember(uri protocol.DocumentUri, id string, result 
 		return false
 	}
 
-	member := resolver.Resolve(result.Label, ast.Range{}, func(err error) { /* NO-OP */ })
+	member := resolver.Resolve(nil, result.Label, ast.Range{}, func(err error) { /* NO-OP */ })
 
 	result.Documentation = protocol.MarkupContent{
 		Kind:  "markdown",
@@ -1788,27 +1788,24 @@ func (s *Server) getDiagnostics(
 
 					importedLocationID := importedLocation.ID()
 
-					importedChecker, ok := s.checkers[importedLocationID]
-					if !ok {
-						importedProgram, err := s.resolveImport(importedLocation)
-						if err != nil {
-							return nil, err
+					importedProgram, err := s.resolveImport(importedLocation)
+					if err != nil {
+						return nil, err
+					}
+					if importedProgram == nil {
+						return nil, &sema.CheckerError{
+							Errors: []error{fmt.Errorf("cannot import %s", importedLocation)},
 						}
-						if importedProgram == nil {
-							return nil, &sema.CheckerError{
-								Errors: []error{fmt.Errorf("cannot import %s", importedLocation)},
-							}
-						}
-
-						importedChecker, err = checker.SubChecker(importedProgram, importedLocation)
-						if err != nil {
-							return nil, err
-						}
-						s.checkers[importedLocationID] = importedChecker
-						err = importedChecker.Check()
-						if err != nil {
-							return nil, err
-						}
+					}
+					// we are rechecking the imported program since there might be changes
+					importedChecker, err := checker.SubChecker(importedProgram, importedLocation)
+					if err != nil {
+						return nil, err
+					}
+					s.checkers[importedLocationID] = importedChecker
+					err = importedChecker.Check()
+					if err != nil {
+						return nil, err
 					}
 
 					return sema.ElaborationImport{
@@ -1921,7 +1918,7 @@ func (s *Server) getDiagnosticsForParentError(
 // parse parses the given code and returns the resultant program.
 func parse(conn protocol.Conn, code, location string) (*ast.Program, error) {
 	start := time.Now()
-	program, err := parser2.ParseProgram(code)
+	program, err := parser2.ParseProgram(code, nil)
 	elapsed := time.Since(start)
 
 	conn.LogMessage(&protocol.LogMessageParams{

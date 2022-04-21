@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,7 +40,7 @@ func (checker *Checker) VisitWhileStatement(statement *ast.WhileStatement) ast.R
 		return nil
 	})
 
-	checker.reportResourceUsesInLoop(statement.StartPos, statement.EndPosition())
+	checker.reportResourceUsesInLoop(statement.StartPos, statement.EndPosition(checker.memoryGauge))
 
 	return nil
 }
@@ -107,7 +107,7 @@ func (checker *Checker) VisitBreakStatement(statement *ast.BreakStatement) ast.R
 		checker.report(
 			&ControlStatementError{
 				ControlStatement: common.ControlStatementBreak,
-				Range:            ast.NewRangeFromPositioned(statement),
+				Range:            ast.NewRangeFromPositioned(checker.memoryGauge, statement),
 			},
 		)
 		return nil
@@ -128,7 +128,7 @@ func (checker *Checker) VisitContinueStatement(statement *ast.ContinueStatement)
 		checker.report(
 			&ControlStatementError{
 				ControlStatement: common.ControlStatementContinue,
-				Range:            ast.NewRangeFromPositioned(statement),
+				Range:            ast.NewRangeFromPositioned(checker.memoryGauge, statement),
 			},
 		)
 		return nil
