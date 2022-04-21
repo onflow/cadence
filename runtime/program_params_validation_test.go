@@ -241,7 +241,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		err := executeScript(
 			t,
 			script,
-			cadence.NewArray([]cadence.Value{}),
+			cadence.NewUnmeteredArray([]cadence.Value{}),
 		)
 
 		assert.NoError(t, err)
@@ -258,7 +258,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		err := executeScript(
 			t,
 			script,
-			cadence.NewArray([]cadence.Value{}),
+			cadence.NewUnmeteredArray([]cadence.Value{}),
 		)
 
 		expectNonImportableError(t, err)
@@ -275,7 +275,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		err := executeScript(
 			t,
 			script,
-			cadence.NewDictionary([]cadence.KeyValuePair{}),
+			cadence.NewUnmeteredDictionary([]cadence.KeyValuePair{}),
 		)
 
 		assert.NoError(t, err)
@@ -304,7 +304,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		err := executeScript(
 			t,
 			script,
-			cadence.NewArray([]cadence.Value{}),
+			cadence.NewUnmeteredArray([]cadence.Value{}),
 		)
 
 		expectNonImportableError(t, err)
@@ -349,27 +349,27 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 
 			switch typ {
 			case sema.HashAlgorithmType:
-				value = cadence.NewEnum(
+				value = cadence.NewUnmeteredEnum(
 					[]cadence.Value{
 						cadence.NewUnmeteredUInt8(0),
 					},
 				).WithType(HashAlgoType)
 
 			case sema.SignatureAlgorithmType:
-				value = cadence.NewEnum(
+				value = cadence.NewUnmeteredEnum(
 					[]cadence.Value{
 						cadence.NewUnmeteredUInt8(0),
 					},
 				).WithType(SignAlgoType)
 
 			case sema.PublicKeyType:
-				value = cadence.NewStruct(
+				value = cadence.NewUnmeteredStruct(
 					[]cadence.Value{
 						// PublicKey bytes
-						cadence.NewArray([]cadence.Value{}),
+						cadence.NewUnmeteredArray([]cadence.Value{}),
 
 						// Sign algorithm
-						cadence.NewEnum(
+						cadence.NewUnmeteredEnum(
 							[]cadence.Value{
 								cadence.NewUnmeteredUInt8(0),
 							},
@@ -483,7 +483,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		err := executeScript(
 			t,
 			script,
-			cadence.NewArray([]cadence.Value{
+			cadence.NewUnmeteredArray([]cadence.Value{
 				publicAccountKeys,
 			}),
 		)
@@ -728,7 +728,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
             }
         `
 
-		err := executeTransaction(t, script, cadence.NewArray([]cadence.Value{}))
+		err := executeTransaction(t, script, cadence.NewUnmeteredArray([]cadence.Value{}))
 		assert.NoError(t, err)
 	})
 
@@ -740,7 +740,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
             }
         `
 
-		err := executeTransaction(t, script, cadence.NewArray([]cadence.Value{}))
+		err := executeTransaction(t, script, cadence.NewUnmeteredArray([]cadence.Value{}))
 
 		expectCheckerErrors(
 			t,
@@ -757,7 +757,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
             }
         `
 
-		err := executeTransaction(t, script, cadence.NewDictionary([]cadence.KeyValuePair{}))
+		err := executeTransaction(t, script, cadence.NewUnmeteredDictionary([]cadence.KeyValuePair{}))
 		assert.NoError(t, err)
 	})
 
@@ -781,7 +781,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
             }
         `
 
-		err := executeTransaction(t, script, cadence.NewArray([]cadence.Value{}))
+		err := executeTransaction(t, script, cadence.NewUnmeteredArray([]cadence.Value{}))
 
 		expectCheckerErrors(
 			t,
@@ -829,27 +829,27 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 
 			switch typ {
 			case sema.HashAlgorithmType:
-				value = cadence.NewEnum(
+				value = cadence.NewUnmeteredEnum(
 					[]cadence.Value{
 						cadence.NewUnmeteredUInt8(0),
 					},
 				).WithType(HashAlgoType)
 
 			case sema.SignatureAlgorithmType:
-				value = cadence.NewEnum(
+				value = cadence.NewUnmeteredEnum(
 					[]cadence.Value{
 						cadence.NewUnmeteredUInt8(0),
 					},
 				).WithType(SignAlgoType)
 
 			case sema.PublicKeyType:
-				value = cadence.NewStruct(
+				value = cadence.NewUnmeteredStruct(
 					[]cadence.Value{
 						// PublicKey bytes
-						cadence.NewArray([]cadence.Value{}),
+						cadence.NewUnmeteredArray([]cadence.Value{}),
 
 						// Sign algorithm
-						cadence.NewEnum(
+						cadence.NewUnmeteredEnum(
 							[]cadence.Value{
 								cadence.NewUnmeteredUInt8(0),
 							},
@@ -966,7 +966,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 
 		err := executeTransaction(t,
 			script,
-			cadence.NewArray([]cadence.Value{
+			cadence.NewUnmeteredArray([]cadence.Value{
 				publicAccountKeys,
 			}),
 		)

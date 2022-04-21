@@ -175,7 +175,7 @@ func exportValueWithInterpreter(
 	case interpreter.LinkValue:
 		return exportLinkValue(v, inter), nil
 	case interpreter.PathValue:
-		return exportPathValue(v), nil
+		return exportPathValue(inter, v), nil
 	case interpreter.TypeValue:
 		return exportTypeValue(v, inter), nil
 	case *interpreter.CapabilityValue:
@@ -231,26 +231,32 @@ func exportArrayValue(
 	cadence.Array,
 	error,
 ) {
-	values := make([]cadence.Value, 0, v.Count())
+	return cadence.NewArray(
+		inter,
+		v.Count(),
+		func() ([]cadence.Value, error) {
+			values := make([]cadence.Value, 0, v.Count())
 
-	var err error
-	v.Iterate(inter, func(value interpreter.Value) (resume bool) {
-		var exportedValue cadence.Value
-		exportedValue, err = exportValueWithInterpreter(value, inter, seenReferences)
-		if err != nil {
-			return false
-		}
-		values = append(
-			values,
-			exportedValue,
-		)
-		return true
-	})
-	if err != nil {
-		return cadence.Array{}, err
-	}
+			var err error
+			v.Iterate(inter, func(value interpreter.Value) (resume bool) {
+				var exportedValue cadence.Value
+				exportedValue, err = exportValueWithInterpreter(value, inter, seenReferences)
+				if err != nil {
+					return false
+				}
+				values = append(
+					values,
+					exportedValue,
+				)
+				return true
+			})
 
-	return cadence.NewArray(values), nil
+			if err != nil {
+				return nil, err
+			}
+			return values, nil
+		},
+	)
 }
 
 func exportCompositeValue(
@@ -279,25 +285,30 @@ func exportCompositeValue(
 	// and value are in sync
 
 	fieldNames := t.CompositeFields()
-	fields := make([]cadence.Value, len(fieldNames))
 
-	for i, field := range fieldNames {
-		fieldName := field.Identifier
+	makeFields := func() ([]cadence.Value, error) {
+		fields := make([]cadence.Value, len(fieldNames))
 
-		// TODO: provide proper location range
-		fieldValue := v.GetField(inter, interpreter.ReturnEmptyLocationRange, fieldName)
-		if fieldValue == nil && v.ComputedFields != nil {
-			if computedField, ok := v.ComputedFields[fieldName]; ok {
-				// TODO: provide proper location range
-				fieldValue = computedField(inter, interpreter.ReturnEmptyLocationRange)
+		for i, field := range fieldNames {
+			fieldName := field.Identifier
+
+			// TODO: provide proper location range
+			fieldValue := v.GetField(inter, interpreter.ReturnEmptyLocationRange, fieldName)
+			if fieldValue == nil && v.ComputedFields != nil {
+				if computedField, ok := v.ComputedFields[fieldName]; ok {
+					// TODO: provide proper location range
+					fieldValue = computedField(inter, interpreter.ReturnEmptyLocationRange)
+				}
 			}
+
+			exportedFieldValue, err := exportValueWithInterpreter(fieldValue, inter, seenReferences)
+			if err != nil {
+				return nil, err
+			}
+			fields[i] = exportedFieldValue
 		}
 
-		exportedFieldValue, err := exportValueWithInterpreter(fieldValue, inter, seenReferences)
-		if err != nil {
-			return nil, err
-		}
-		fields[i] = exportedFieldValue
+		return fields, nil
 	}
 
 	// NOTE: when modifying the cases below,
@@ -305,15 +316,65 @@ func exportCompositeValue(
 
 	switch compositeType.Kind {
 	case common.CompositeKindStructure:
-		return cadence.NewStruct(fields).WithType(t.(*cadence.StructType)), nil
+		structure, err := cadence.NewStruct(
+			inter,
+			len(fieldNames),
+			func() ([]cadence.Value, error) {
+				return makeFields()
+			},
+		)
+		if err != nil {
+			return nil, err
+		}
+		return structure.WithType(t.(*cadence.StructType)), nil
 	case common.CompositeKindResource:
-		return cadence.NewResource(fields).WithType(t.(*cadence.ResourceType)), nil
+		resource, err := cadence.NewResource(
+			inter,
+			len(fieldNames),
+			func() ([]cadence.Value, error) {
+				return makeFields()
+			},
+		)
+		if err != nil {
+			return nil, err
+		}
+		return resource.WithType(t.(*cadence.ResourceType)), nil
 	case common.CompositeKindEvent:
-		return cadence.NewEvent(fields).WithType(t.(*cadence.EventType)), nil
+		event, err := cadence.NewEvent(
+			inter,
+			len(fieldNames),
+			func() ([]cadence.Value, error) {
+				return makeFields()
+			},
+		)
+		if err != nil {
+			return nil, err
+		}
+		return event.WithType(t.(*cadence.EventType)), nil
 	case common.CompositeKindContract:
-		return cadence.NewContract(fields).WithType(t.(*cadence.ContractType)), nil
+		contract, err := cadence.NewContract(
+			inter,
+			len(fieldNames),
+			func() ([]cadence.Value, error) {
+				return makeFields()
+			},
+		)
+		if err != nil {
+			return nil, err
+		}
+		return contract.WithType(t.(*cadence.ContractType)), nil
 	case common.CompositeKindEnum:
-		return cadence.NewEnum(fields).WithType(t.(*cadence.EnumType)), nil
+		enum, err := cadence.NewEnum(
+			inter,
+			len(fieldNames),
+			func() ([]cadence.Value, error) {
+				return makeFields()
+			},
+		)
+		if err != nil {
+			return nil, err
+		}
+		return enum.WithType(t.(*cadence.EnumType)), nil
 	}
 
 	return nil, fmt.Errorf(
@@ -360,24 +421,29 @@ func exportSimpleCompositeValue(
 	// and value are in sync
 
 	fieldNames := t.CompositeFields()
-	fields := make([]cadence.Value, len(fieldNames))
 
-	for i, field := range fieldNames {
-		fieldName := field.Identifier
+	makeFields := func() ([]cadence.Value, error) {
+		fields := make([]cadence.Value, len(fieldNames))
 
-		fieldValue := v.Fields[fieldName]
-		if fieldValue == nil && v.ComputedFields != nil {
-			if computedField, ok := v.ComputedFields[fieldName]; ok {
-				// TODO: provide proper location range
-				fieldValue = computedField(inter, interpreter.ReturnEmptyLocationRange)
+		for i, field := range fieldNames {
+			fieldName := field.Identifier
+
+			fieldValue := v.Fields[fieldName]
+			if fieldValue == nil && v.ComputedFields != nil {
+				if computedField, ok := v.ComputedFields[fieldName]; ok {
+					// TODO: provide proper location range
+					fieldValue = computedField(inter, interpreter.ReturnEmptyLocationRange)
+				}
 			}
+
+			exportedFieldValue, err := exportValueWithInterpreter(fieldValue, inter, seenReferences)
+			if err != nil {
+				return nil, err
+			}
+			fields[i] = exportedFieldValue
 		}
 
-		exportedFieldValue, err := exportValueWithInterpreter(fieldValue, inter, seenReferences)
-		if err != nil {
-			return nil, err
-		}
-		fields[i] = exportedFieldValue
+		return fields, nil
 	}
 
 	// NOTE: when modifying the cases below,
@@ -385,15 +451,65 @@ func exportSimpleCompositeValue(
 
 	switch compositeType.Kind {
 	case common.CompositeKindStructure:
-		return cadence.NewStruct(fields).WithType(t.(*cadence.StructType)), nil
+		structure, err := cadence.NewStruct(
+			inter,
+			len(fieldNames),
+			func() ([]cadence.Value, error) {
+				return makeFields()
+			},
+		)
+		if err != nil {
+			return nil, err
+		}
+		return structure.WithType(t.(*cadence.StructType)), nil
 	case common.CompositeKindResource:
-		return cadence.NewResource(fields).WithType(t.(*cadence.ResourceType)), nil
+		resource, err := cadence.NewResource(
+			inter,
+			len(fieldNames),
+			func() ([]cadence.Value, error) {
+				return makeFields()
+			},
+		)
+		if err != nil {
+			return nil, err
+		}
+		return resource.WithType(t.(*cadence.ResourceType)), nil
 	case common.CompositeKindEvent:
-		return cadence.NewEvent(fields).WithType(t.(*cadence.EventType)), nil
+		event, err := cadence.NewEvent(
+			inter,
+			len(fieldNames),
+			func() ([]cadence.Value, error) {
+				return makeFields()
+			},
+		)
+		if err != nil {
+			return nil, err
+		}
+		return event.WithType(t.(*cadence.EventType)), nil
 	case common.CompositeKindContract:
-		return cadence.NewContract(fields).WithType(t.(*cadence.ContractType)), nil
+		contract, err := cadence.NewContract(
+			inter,
+			len(fieldNames),
+			func() ([]cadence.Value, error) {
+				return makeFields()
+			},
+		)
+		if err != nil {
+			return nil, err
+		}
+		return contract.WithType(t.(*cadence.ContractType)), nil
 	case common.CompositeKindEnum:
-		return cadence.NewEnum(fields).WithType(t.(*cadence.EnumType)), nil
+		enum, err := cadence.NewEnum(
+			inter,
+			len(fieldNames),
+			func() ([]cadence.Value, error) {
+				return makeFields()
+			},
+		)
+		if err != nil {
+			return nil, err
+		}
+		return enum.WithType(t.(*cadence.EnumType)), nil
 	}
 
 	return nil, fmt.Errorf(
@@ -420,52 +536,59 @@ func exportDictionaryValue(
 	cadence.Dictionary,
 	error,
 ) {
-	pairs := make([]cadence.KeyValuePair, 0, v.Count())
+	return cadence.NewDictionary(
+		inter,
+		v.Count(),
+		func() ([]cadence.KeyValuePair, error) {
+			var err error
+			pairs := make([]cadence.KeyValuePair, 0, v.Count())
 
-	var err error
-	v.Iterate(inter, func(key, value interpreter.Value) (resume bool) {
+			v.Iterate(inter, func(key, value interpreter.Value) (resume bool) {
 
-		var convertedKey cadence.Value
-		convertedKey, err = exportValueWithInterpreter(key, inter, seenReferences)
-		if err != nil {
-			return false
-		}
+				var convertedKey cadence.Value
+				convertedKey, err = exportValueWithInterpreter(key, inter, seenReferences)
+				if err != nil {
+					return false
+				}
 
-		var convertedValue cadence.Value
-		convertedValue, err = exportValueWithInterpreter(value, inter, seenReferences)
-		if err != nil {
-			return false
-		}
+				var convertedValue cadence.Value
+				convertedValue, err = exportValueWithInterpreter(value, inter, seenReferences)
+				if err != nil {
+					return false
+				}
 
-		pairs = append(
-			pairs,
-			cadence.KeyValuePair{
-				Key:   convertedKey,
-				Value: convertedValue,
-			},
-		)
+				pairs = append(
+					pairs,
+					cadence.KeyValuePair{
+						Key:   convertedKey,
+						Value: convertedValue,
+					},
+				)
 
-		return true
-	})
+				return true
+			})
 
-	if err != nil {
-		return cadence.Dictionary{}, err
-	}
+			if err != nil {
+				return nil, err
+			}
 
-	return cadence.NewDictionary(pairs), nil
+			return pairs, nil
+		},
+	)
 }
 
 func exportLinkValue(v interpreter.LinkValue, inter *interpreter.Interpreter) cadence.Link {
-	path := exportPathValue(v.TargetPath)
+	path := exportPathValue(inter, v.TargetPath)
 	ty := string(inter.MustConvertStaticToSemaType(v.Type).ID())
-	return cadence.NewLink(path, ty)
+	return cadence.NewLink(inter, path, ty)
 }
 
-func exportPathValue(v interpreter.PathValue) cadence.Path {
-	return cadence.Path{
-		Domain:     v.Domain.Identifier(),
-		Identifier: v.Identifier,
-	}
+func exportPathValue(gauge common.MemoryGauge, v interpreter.PathValue) cadence.Path {
+	return cadence.NewPath(
+		gauge,
+		v.Domain.Identifier(),
+		v.Identifier,
+	)
 }
 
 func exportTypeValue(v interpreter.TypeValue, inter *interpreter.Interpreter) cadence.TypeValue {
@@ -473,9 +596,10 @@ func exportTypeValue(v interpreter.TypeValue, inter *interpreter.Interpreter) ca
 	if v.Type != nil {
 		typ = inter.MustConvertStaticToSemaType(v.Type)
 	}
-	return cadence.TypeValue{
-		StaticType: ExportType(typ, map[sema.TypeID]cadence.Type{}),
-	}
+	return cadence.NewTypeValue(
+		inter,
+		ExportType(typ, map[sema.TypeID]cadence.Type{}),
+	)
 }
 
 func exportCapabilityValue(v *interpreter.CapabilityValue, inter *interpreter.Interpreter) cadence.Capability {
@@ -484,27 +608,45 @@ func exportCapabilityValue(v *interpreter.CapabilityValue, inter *interpreter.In
 		borrowType = inter.MustConvertStaticToSemaType(v.BorrowType)
 	}
 
-	return cadence.Capability{
-		Path:       exportPathValue(v.Path),
-		Address:    cadence.NewAddress(inter, v.Address),
-		BorrowType: ExportType(borrowType, map[sema.TypeID]cadence.Type{}),
-	}
+	return cadence.NewCapability(
+		inter,
+		exportPathValue(inter, v.Path),
+		cadence.NewAddress(inter, v.Address),
+		ExportType(borrowType, map[sema.TypeID]cadence.Type{}),
+	)
 }
 
 // exportEvent converts a runtime event to its native Go representation.
-func exportEvent(event exportableEvent, seenReferences seenReferences) (cadence.Event, error) {
-	fields := make([]cadence.Value, len(event.Fields))
+func exportEvent(
+	gauge common.MemoryGauge,
+	event exportableEvent,
+	seenReferences seenReferences,
+) (cadence.Event, error) {
+	exported, err := cadence.NewEvent(
+		gauge,
+		len(event.Fields),
+		func() ([]cadence.Value, error) {
+			fields := make([]cadence.Value, len(event.Fields))
 
-	for i, field := range event.Fields {
-		value, err := exportValueWithInterpreter(field.Value, field.Interpreter(), seenReferences)
-		if err != nil {
-			return cadence.Event{}, err
-		}
-		fields[i] = value
+			for i, field := range event.Fields {
+				value, err := exportValueWithInterpreter(field.Value, field.Interpreter(), seenReferences)
+				if err != nil {
+					return nil, err
+				}
+				fields[i] = value
+			}
+
+			return fields, nil
+		},
+	)
+
+	if err != nil {
+		return cadence.Event{}, err
 	}
 
 	eventType := ExportType(event.Type, map[sema.TypeID]cadence.Type{}).(*cadence.EventType)
-	return cadence.NewEvent(fields).WithType(eventType), nil
+
+	return exported.WithType(eventType), nil
 }
 
 // importValue converts a Cadence value to a runtime value.

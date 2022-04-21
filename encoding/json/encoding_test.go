@@ -601,13 +601,13 @@ func TestEncodeArray(t *testing.T) {
 
 	emptyArray := encodeTest{
 		"Empty",
-		cadence.NewArray([]cadence.Value{}),
+		cadence.NewUnmeteredArray([]cadence.Value{}),
 		`{"type":"Array","value":[]}`,
 	}
 
 	intArray := encodeTest{
 		"Integers",
-		cadence.NewArray([]cadence.Value{
+		cadence.NewUnmeteredArray([]cadence.Value{
 			cadence.NewUnmeteredInt(1),
 			cadence.NewUnmeteredInt(2),
 			cadence.NewUnmeteredInt(3),
@@ -617,14 +617,14 @@ func TestEncodeArray(t *testing.T) {
 
 	resourceArray := encodeTest{
 		"Resources",
-		cadence.NewArray([]cadence.Value{
-			cadence.NewResource([]cadence.Value{
+		cadence.NewUnmeteredArray([]cadence.Value{
+			cadence.NewUnmeteredResource([]cadence.Value{
 				cadence.NewUnmeteredInt(1),
 			}).WithType(fooResourceType),
-			cadence.NewResource([]cadence.Value{
+			cadence.NewUnmeteredResource([]cadence.Value{
 				cadence.NewUnmeteredInt(2),
 			}).WithType(fooResourceType),
-			cadence.NewResource([]cadence.Value{
+			cadence.NewUnmeteredResource([]cadence.Value{
 				cadence.NewUnmeteredInt(3),
 			}).WithType(fooResourceType),
 		}),
@@ -644,7 +644,7 @@ func TestEncodeDictionary(t *testing.T) {
 
 	simpleDict := encodeTest{
 		"Simple",
-		cadence.NewDictionary([]cadence.KeyValuePair{
+		cadence.NewUnmeteredDictionary([]cadence.KeyValuePair{
 			{
 				Key:   cadence.String("a"),
 				Value: cadence.NewUnmeteredInt(1),
@@ -663,10 +663,10 @@ func TestEncodeDictionary(t *testing.T) {
 
 	nestedDict := encodeTest{
 		"Nested",
-		cadence.NewDictionary([]cadence.KeyValuePair{
+		cadence.NewUnmeteredDictionary([]cadence.KeyValuePair{
 			{
 				Key: cadence.String("a"),
-				Value: cadence.NewDictionary([]cadence.KeyValuePair{
+				Value: cadence.NewUnmeteredDictionary([]cadence.KeyValuePair{
 					{
 						Key:   cadence.String("1"),
 						Value: cadence.NewUnmeteredInt(1),
@@ -675,7 +675,7 @@ func TestEncodeDictionary(t *testing.T) {
 			},
 			{
 				Key: cadence.String("b"),
-				Value: cadence.NewDictionary([]cadence.KeyValuePair{
+				Value: cadence.NewUnmeteredDictionary([]cadence.KeyValuePair{
 					{
 						Key:   cadence.String("2"),
 						Value: cadence.NewUnmeteredInt(2),
@@ -684,7 +684,7 @@ func TestEncodeDictionary(t *testing.T) {
 			},
 			{
 				Key: cadence.String("c"),
-				Value: cadence.NewDictionary([]cadence.KeyValuePair{
+				Value: cadence.NewUnmeteredDictionary([]cadence.KeyValuePair{
 					{
 						Key:   cadence.String("3"),
 						Value: cadence.NewUnmeteredInt(3),
@@ -697,22 +697,22 @@ func TestEncodeDictionary(t *testing.T) {
 
 	resourceDict := encodeTest{
 		"Resources",
-		cadence.NewDictionary([]cadence.KeyValuePair{
+		cadence.NewUnmeteredDictionary([]cadence.KeyValuePair{
 			{
 				Key: cadence.String("a"),
-				Value: cadence.NewResource([]cadence.Value{
+				Value: cadence.NewUnmeteredResource([]cadence.Value{
 					cadence.NewUnmeteredInt(1),
 				}).WithType(fooResourceType),
 			},
 			{
 				Key: cadence.String("b"),
-				Value: cadence.NewResource([]cadence.Value{
+				Value: cadence.NewUnmeteredResource([]cadence.Value{
 					cadence.NewUnmeteredInt(2),
 				}).WithType(fooResourceType),
 			},
 			{
 				Key: cadence.String("c"),
-				Value: cadence.NewResource([]cadence.Value{
+				Value: cadence.NewUnmeteredResource([]cadence.Value{
 					cadence.NewUnmeteredInt(3),
 				}).WithType(fooResourceType),
 			},
@@ -874,7 +874,7 @@ func TestEncodeStruct(t *testing.T) {
 
 	simpleStruct := encodeTest{
 		"Simple",
-		cadence.NewStruct(
+		cadence.NewUnmeteredStruct(
 			[]cadence.Value{
 				cadence.NewUnmeteredInt(1),
 				cadence.String("foo"),
@@ -900,10 +900,10 @@ func TestEncodeStruct(t *testing.T) {
 
 	resourceStruct := encodeTest{
 		"Resources",
-		cadence.NewStruct(
+		cadence.NewUnmeteredStruct(
 			[]cadence.Value{
 				cadence.String("foo"),
-				cadence.NewResource(
+				cadence.NewUnmeteredResource(
 					[]cadence.Value{
 						cadence.NewUnmeteredInt(42),
 					},
@@ -937,7 +937,7 @@ func TestEncodeEvent(t *testing.T) {
 
 	simpleEvent := encodeTest{
 		"Simple",
-		cadence.NewEvent(
+		cadence.NewUnmeteredEvent(
 			[]cadence.Value{
 				cadence.NewUnmeteredInt(1),
 				cadence.String("foo"),
@@ -963,10 +963,10 @@ func TestEncodeEvent(t *testing.T) {
 
 	resourceEvent := encodeTest{
 		"Resources",
-		cadence.NewEvent(
+		cadence.NewUnmeteredEvent(
 			[]cadence.Value{
 				cadence.String("foo"),
-				cadence.NewResource(
+				cadence.NewUnmeteredResource(
 					[]cadence.Value{
 						cadence.NewUnmeteredInt(42),
 					},
@@ -1000,7 +1000,7 @@ func TestEncodeContract(t *testing.T) {
 
 	simpleContract := encodeTest{
 		"Simple",
-		cadence.NewContract(
+		cadence.NewUnmeteredContract(
 			[]cadence.Value{
 				cadence.NewUnmeteredInt(1),
 				cadence.String("foo"),
@@ -1026,10 +1026,10 @@ func TestEncodeContract(t *testing.T) {
 
 	resourceContract := encodeTest{
 		"Resources",
-		cadence.NewContract(
+		cadence.NewUnmeteredContract(
 			[]cadence.Value{
 				cadence.String("foo"),
-				cadence.NewResource(
+				cadence.NewUnmeteredResource(
 					[]cadence.Value{
 						cadence.NewUnmeteredInt(42),
 					},
@@ -1048,8 +1048,8 @@ func TestEncodeLink(t *testing.T) {
 
 	testEncodeAndDecode(
 		t,
-		cadence.NewLink(
-			cadence.Path{Domain: "storage", Identifier: "foo"},
+		cadence.NewUnmeteredLink(
+			cadence.NewUnmeteredPath("storage", "foo"),
 			"Bar",
 		),
 		`{"type":"Link","value":{"targetPath":{"type":"Path","value":{"domain":"storage","identifier":"foo"}},"borrowType":"Bar"}}`,
@@ -1561,7 +1561,7 @@ func TestEncodeCapability(t *testing.T) {
 	testEncodeAndDecode(
 		t,
 		cadence.Capability{
-			Path:       cadence.Path{Domain: "storage", Identifier: "foo"},
+			Path:       cadence.NewUnmeteredPath("storage", "foo"),
 			Address:    cadence.BytesToUnmeteredAddress([]byte{1, 2, 3, 4, 5}),
 			BorrowType: cadence.IntType{},
 		},
@@ -1826,7 +1826,7 @@ func TestEncodePath(t *testing.T) {
 
 	testEncodeAndDecode(
 		t,
-		cadence.Path{Domain: "storage", Identifier: "foo"},
+		cadence.NewUnmeteredPath("storage", "foo"),
 		`{"type":"Path","value":{"domain":"storage","identifier":"foo"}}`,
 	)
 }

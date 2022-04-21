@@ -83,6 +83,24 @@ const (
 	MemoryKindCadenceAddress
 	MemoryKindCadenceInt
 	MemoryKindCadenceNumber
+	MemoryKindCadenceArrayBase
+	MemoryKindCadenceArrayLength
+	MemoryKindCadenceDictionaryBase
+	MemoryKindCadenceDictionarySize
+	MemoryKindCadenceStructBase
+	MemoryKindCadenceStructSize
+	MemoryKindCadenceResourceBase
+	MemoryKindCadenceResourceSize
+	MemoryKindCadenceEventBase
+	MemoryKindCadenceEventSize
+	MemoryKindCadenceContractBase
+	MemoryKindCadenceContractSize
+	MemoryKindCadenceEnumBase
+	MemoryKindCadenceEnumSize
+	MemoryKindCadenceLink
+	MemoryKindCadencePath
+	MemoryKindCadenceTypeValue
+	MemoryKindCadenceCapability
 
 	// Misc
 

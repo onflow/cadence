@@ -1166,8 +1166,25 @@ type Array struct {
 	Values    []Value
 }
 
-func NewArray(values []Value) Array {
+func NewUnmeteredArray(values []Value) Array {
 	return Array{Values: values}
+}
+
+func NewArray(
+	gauge common.MemoryGauge,
+	length int,
+	constructor func() ([]Value, error),
+) (Array, error) {
+	baseUse, lengthUse := common.NewCadenceArrayMemoryUsages(length)
+	common.UseMemory(gauge, baseUse)
+	common.UseMemory(gauge, lengthUse)
+
+	values, err := constructor()
+	if err != nil {
+		return Array{}, err
+	}
+
+	return NewUnmeteredArray(values), nil
 }
 
 func (Array) isValue() {}
@@ -1206,8 +1223,24 @@ type Dictionary struct {
 	Pairs          []KeyValuePair
 }
 
-func NewDictionary(pairs []KeyValuePair) Dictionary {
+func NewUnmeteredDictionary(pairs []KeyValuePair) Dictionary {
 	return Dictionary{Pairs: pairs}
+}
+
+func NewDictionary(
+	gauge common.MemoryGauge,
+	size int,
+	constructor func() ([]KeyValuePair, error),
+) (Dictionary, error) {
+	baseUse, lengthUse := common.NewCadenceDictionaryMemoryUsages(size)
+	common.UseMemory(gauge, baseUse)
+	common.UseMemory(gauge, lengthUse)
+
+	pairs, err := constructor()
+	if err != nil {
+		return Dictionary{}, err
+	}
+	return NewUnmeteredDictionary(pairs), err
 }
 
 func (Dictionary) isValue() {}
@@ -1264,8 +1297,24 @@ type Struct struct {
 	Fields     []Value
 }
 
-func NewStruct(fields []Value) Struct {
+func NewUnmeteredStruct(fields []Value) Struct {
 	return Struct{Fields: fields}
+}
+
+func NewStruct(
+	gauge common.MemoryGauge,
+	numberOfFields int,
+	constructor func() ([]Value, error),
+) (Struct, error) {
+	baseUsage, sizeUsage := common.NewCadenceStructMemoryUsages(numberOfFields)
+	common.UseMemory(gauge, baseUsage)
+	common.UseMemory(gauge, sizeUsage)
+
+	fields, err := constructor()
+	if err != nil {
+		return Struct{}, err
+	}
+	return NewUnmeteredStruct(fields), nil
 }
 
 func (Struct) isValue() {}
@@ -1321,8 +1370,23 @@ type Resource struct {
 	Fields       []Value
 }
 
-func NewResource(fields []Value) Resource {
+func NewUnmeteredResource(fields []Value) Resource {
 	return Resource{Fields: fields}
+}
+
+func NewResource(
+	gauge common.MemoryGauge,
+	numberOfFields int,
+	constructor func() ([]Value, error),
+) (Resource, error) {
+	baseUsage, sizeUsage := common.NewCadenceResourceMemoryUsages(numberOfFields)
+	common.UseMemory(gauge, baseUsage)
+	common.UseMemory(gauge, sizeUsage)
+	fields, err := constructor()
+	if err != nil {
+		return Resource{}, err
+	}
+	return NewUnmeteredResource(fields), nil
 }
 
 func (Resource) isValue() {}
@@ -1357,8 +1421,23 @@ type Event struct {
 	Fields    []Value
 }
 
-func NewEvent(fields []Value) Event {
+func NewUnmeteredEvent(fields []Value) Event {
 	return Event{Fields: fields}
+}
+
+func NewEvent(
+	gauge common.MemoryGauge,
+	numberOfFields int,
+	constructor func() ([]Value, error),
+) (Event, error) {
+	baseUsage, sizeUsage := common.NewCadenceEventMemoryUsages(numberOfFields)
+	common.UseMemory(gauge, baseUsage)
+	common.UseMemory(gauge, sizeUsage)
+	fields, err := constructor()
+	if err != nil {
+		return Event{}, err
+	}
+	return NewUnmeteredEvent(fields), nil
 }
 
 func (Event) isValue() {}
@@ -1392,8 +1471,23 @@ type Contract struct {
 	Fields       []Value
 }
 
-func NewContract(fields []Value) Contract {
+func NewUnmeteredContract(fields []Value) Contract {
 	return Contract{Fields: fields}
+}
+
+func NewContract(
+	gauge common.MemoryGauge,
+	numberOfFields int,
+	constructor func() ([]Value, error),
+) (Contract, error) {
+	baseUsage, sizeUsage := common.NewCadenceContractMemoryUsages(numberOfFields)
+	common.UseMemory(gauge, baseUsage)
+	common.UseMemory(gauge, sizeUsage)
+	fields, err := constructor()
+	if err != nil {
+		return Contract{}, err
+	}
+	return NewUnmeteredContract(fields), nil
 }
 
 func (Contract) isValue() {}
@@ -1429,11 +1523,16 @@ type Link struct {
 	BorrowType string
 }
 
-func NewLink(targetPath Path, borrowType string) Link {
+func NewUnmeteredLink(targetPath Path, borrowType string) Link {
 	return Link{
 		TargetPath: targetPath,
 		BorrowType: borrowType,
 	}
+}
+
+func NewLink(gauge common.MemoryGauge, targetPath Path, borrowType string) Link {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceLink)
+	return NewUnmeteredLink(targetPath, borrowType)
 }
 
 func (Link) isValue() {}
@@ -1460,6 +1559,18 @@ type Path struct {
 	Identifier string
 }
 
+func NewUnmeteredPath(domain, identifier string) Path {
+	return Path{
+		Domain:     domain,
+		Identifier: identifier,
+	}
+}
+
+func NewPath(gauge common.MemoryGauge, domain, identifier string) Path {
+	common.UseConstantMemory(gauge, common.MemoryKindCadencePath)
+	return NewUnmeteredPath(domain, identifier)
+}
+
 func (Path) isValue() {}
 
 func (Path) Type() Type {
@@ -1483,16 +1594,21 @@ type TypeValue struct {
 	StaticType Type
 }
 
+func NewUnmeteredTypeValue(staticType Type) TypeValue {
+	return TypeValue{
+		StaticType: staticType,
+	}
+}
+
+func NewTypeValue(gauge common.MemoryGauge, staticType Type) TypeValue {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceTypeValue)
+	return NewUnmeteredTypeValue(staticType)
+}
+
 func (TypeValue) isValue() {}
 
 func (TypeValue) Type() Type {
 	return MetaType{}
-}
-
-func NewTypeValue(t Type) TypeValue {
-	return TypeValue{
-		StaticType: t,
-	}
 }
 
 func (TypeValue) ToGoValue() interface{} {
@@ -1509,6 +1625,19 @@ type Capability struct {
 	Path       Path
 	Address    Address
 	BorrowType Type
+}
+
+func NewUnmeteredCapability(path Path, address Address, borrowType Type) Capability {
+	return Capability{
+		Path:       path,
+		Address:    address,
+		BorrowType: borrowType,
+	}
+}
+
+func NewCapability(gauge common.MemoryGauge, path Path, address Address, borrowType Type) Capability {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceCapability)
+	return NewUnmeteredCapability(path, address, borrowType)
 }
 
 func (Capability) isValue() {}
@@ -1535,8 +1664,23 @@ type Enum struct {
 	Fields   []Value
 }
 
-func NewEnum(fields []Value) Enum {
+func NewUnmeteredEnum(fields []Value) Enum {
 	return Enum{Fields: fields}
+}
+
+func NewEnum(
+	gauge common.MemoryGauge,
+	numberOfFields int,
+	constructor func() ([]Value, error),
+) (Enum, error) {
+	baseUsage, sizeUsage := common.NewCadenceEnumMemoryUsages(numberOfFields)
+	common.UseMemory(gauge, baseUsage)
+	common.UseMemory(gauge, sizeUsage)
+	fields, err := constructor()
+	if err != nil {
+		return Enum{}, err
+	}
+	return NewUnmeteredEnum(fields), nil
 }
 
 func (Enum) isValue() {}

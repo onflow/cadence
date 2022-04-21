@@ -55,7 +55,7 @@ func NewValue(value interface{}) (Value, error) {
 			values[i] = t
 		}
 
-		return NewArray(values), nil
+		return NewUnmeteredArray(values), nil
 	case nil:
 		return NewUnmeteredOptional(nil), nil
 	}

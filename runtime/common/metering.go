@@ -181,6 +181,16 @@ func newAtreeMemoryUsage(count uint64, elementSize uint, array bool) (MemoryUsag
 	}
 }
 
+func NewCadenceArrayMemoryUsages(length int) (MemoryUsage, MemoryUsage) {
+	return MemoryUsage{
+			Kind:   MemoryKindCadenceArrayBase,
+			Amount: 1,
+		}, MemoryUsage{
+			Kind:   MemoryKindCadenceArrayLength,
+			Amount: uint64(length),
+		}
+}
+
 func AdditionalAtreeMemoryUsage(originalCount uint64, elementSize uint, array bool) (MemoryUsage, MemoryUsage) {
 	originalLeafNodes, originalBranchNodes := atreeNodes(originalCount, elementSize)
 	newLeafNodes, newBranchNodes := atreeNodes(originalCount+1, elementSize)
@@ -220,6 +230,16 @@ func NewDictionaryMemoryUsages(count uint64, elementSize uint) (MemoryUsage, Mem
 			Kind:   MemoryKindAtreeMapElementOverhead,
 			Amount: count,
 		}, leaves, branches
+}
+
+func NewCadenceDictionaryMemoryUsages(length int) (MemoryUsage, MemoryUsage) {
+	return MemoryUsage{
+			Kind:   MemoryKindCadenceDictionaryBase,
+			Amount: 1,
+		}, MemoryUsage{
+			Kind:   MemoryKindCadenceDictionarySize,
+			Amount: uint64(length),
+		}
 }
 
 func NewCompositeMemoryUsages(count uint64, elementSize uint) (MemoryUsage, MemoryUsage, MemoryUsage, MemoryUsage) {
@@ -301,6 +321,56 @@ func NewBigIntMemoryUsage(bytes int) MemoryUsage {
 		Kind:   MemoryKindBigInt,
 		Amount: uint64(bytes),
 	}
+}
+
+func NewCadenceStructMemoryUsages(fields int) (MemoryUsage, MemoryUsage) {
+	return MemoryUsage{
+			Kind:   MemoryKindCadenceStructBase,
+			Amount: 1,
+		}, MemoryUsage{
+			Kind:   MemoryKindCadenceStructSize,
+			Amount: uint64(fields),
+		}
+}
+
+func NewCadenceResourceMemoryUsages(fields int) (MemoryUsage, MemoryUsage) {
+	return MemoryUsage{
+			Kind:   MemoryKindCadenceResourceBase,
+			Amount: 1,
+		}, MemoryUsage{
+			Kind:   MemoryKindCadenceResourceSize,
+			Amount: uint64(fields),
+		}
+}
+
+func NewCadenceEventMemoryUsages(fields int) (MemoryUsage, MemoryUsage) {
+	return MemoryUsage{
+			Kind:   MemoryKindCadenceEventBase,
+			Amount: 1,
+		}, MemoryUsage{
+			Kind:   MemoryKindCadenceEventSize,
+			Amount: uint64(fields),
+		}
+}
+
+func NewCadenceContractMemoryUsages(fields int) (MemoryUsage, MemoryUsage) {
+	return MemoryUsage{
+			Kind:   MemoryKindCadenceContractBase,
+			Amount: 1,
+		}, MemoryUsage{
+			Kind:   MemoryKindCadenceContractSize,
+			Amount: uint64(fields),
+		}
+}
+
+func NewCadenceEnumMemoryUsages(fields int) (MemoryUsage, MemoryUsage) {
+	return MemoryUsage{
+			Kind:   MemoryKindCadenceEnumBase,
+			Amount: 1,
+		}, MemoryUsage{
+			Kind:   MemoryKindCadenceEnumSize,
+			Amount: uint64(fields),
+		}
 }
 
 func max(a, b int) int {
