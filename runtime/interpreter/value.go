@@ -15492,31 +15492,7 @@ func (v *DictionaryValue) String() string {
 }
 
 func (v *DictionaryValue) RecursiveString(seenReferences SeenReferences) string {
-
-	pairs := make([]struct {
-		Key   string
-		Value string
-	}, v.Count())
-
-	index := 0
-	_ = v.dictionary.Iterate(func(key, value atree.Value) (resume bool, err error) {
-		// atree.OrderedMap iteration provides low-level atree.Value,
-		// convert to high-level interpreter.Value
-
-		pairs[index] = struct {
-			Key   string
-			Value string
-		}{
-			// ok to not meter anything created as part of this iteration, since we will discard the result
-			// upon creating the string
-			MustConvertUnmeteredStoredValue(key).RecursiveString(seenReferences),
-			MustConvertUnmeteredStoredValue(value).RecursiveString(seenReferences),
-		}
-		index++
-		return true, nil
-	})
-
-	return format.Dictionary(pairs)
+	return v.ToMeteredString(nil, seenReferences)
 }
 
 func (v *DictionaryValue) ToMeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
