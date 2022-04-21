@@ -199,3 +199,65 @@ func TestInterpreterElaborationImportMetering(t *testing.T) {
 		})
 	}
 }
+
+func TestLogFunctionStringConversionMetering(t *testing.T) {
+
+	t.Parallel()
+
+	testMetering := func(strLiteral string) (meteredAmount, actualLen uint64) {
+
+		script := fmt.Sprintf(`
+                pub fun main() {
+                    let s = "%s"
+                    log(s)
+                }
+            `,
+			strLiteral,
+		)
+
+		var loggedString string
+		var accountCode []byte
+
+		meter := newTestMemoryGauge()
+
+		runtimeInterface := &testRuntimeInterface{
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{{42}}, nil
+			},
+			storage: newTestLedger(nil, nil),
+			meterMemory: func(usage common.MemoryUsage) error {
+				return meter.MeterMemory(usage)
+			},
+			getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+				return accountCode, nil
+			},
+			log: func(s string) {
+				loggedString = s
+			},
+		}
+
+		runtime := newTestInterpreterRuntime()
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  utils.TestLocation,
+			},
+		)
+		require.NoError(t, err)
+
+		return meter.getMemory(common.MemoryKindRawString), uint64(len(loggedString))
+	}
+
+	emptyStrMeteredAmount, emptyStrActualLen := testMetering("")
+	nonEmptyStrMeteredAmount, nonEmptyStrActualLen := testMetering("Hello, World!")
+
+	// Compare the diffs, to eliminate the other raw-strings metered (a.g: as part of AST)
+	diffOfActualLen := nonEmptyStrActualLen - emptyStrActualLen
+	diffOfMeteredAmount := nonEmptyStrMeteredAmount - emptyStrMeteredAmount
+
+	assert.Equal(t, diffOfActualLen, diffOfMeteredAmount)
+}

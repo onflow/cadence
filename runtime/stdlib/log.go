@@ -33,7 +33,7 @@ var LogFunction = NewStandardLibraryFunction(
 	LogFunctionType,
 	logFunctionDocString,
 	func(invocation interpreter.Invocation) interpreter.Value {
-		fmt.Println(invocation.Arguments[0].String())
+		fmt.Println(invocation.Arguments[0].ToMeteredString(invocation.Interpreter, interpreter.SeenReferences{}))
 		return interpreter.VoidValue{}
 	},
 )
