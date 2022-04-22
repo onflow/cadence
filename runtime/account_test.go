@@ -35,6 +35,128 @@ import (
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
+func TestRuntimeTransaction_AddPublicKey(t *testing.T) {
+	rt := newTestInterpreterRuntime()
+
+	keyA := cadence.NewArray([]cadence.Value{
+		cadence.NewUInt8(1),
+		cadence.NewUInt8(2),
+		cadence.NewUInt8(3),
+	})
+
+	keyB := cadence.NewArray([]cadence.Value{
+		cadence.NewUInt8(4),
+		cadence.NewUInt8(5),
+		cadence.NewUInt8(6),
+	})
+
+	keys := cadence.NewArray([]cadence.Value{
+		keyA,
+		keyB,
+	})
+
+	var tests = []struct {
+		name     string
+		code     string
+		keyCount int
+		args     []cadence.Value
+		expected [][]byte
+	}{
+		{
+			name: "Single key",
+			code: `
+              transaction(keyA: [UInt8]) {
+                prepare(signer: AuthAccount) {
+                  let acct = AuthAccount(payer: signer)
+                  acct.addPublicKey(keyA)
+                }
+              }
+            `,
+			keyCount: 1,
+			args:     []cadence.Value{keyA},
+			expected: [][]byte{{1, 2, 3}},
+		},
+		{
+			name: "Multiple keys",
+			code: `
+              transaction(keys: [[UInt8]]) {
+                prepare(signer: AuthAccount) {
+                  let acct = AuthAccount(payer: signer)
+                  for key in keys {
+                    acct.addPublicKey(key)
+                  }
+                }
+              }
+            `,
+			keyCount: 2,
+			args:     []cadence.Value{keys},
+			expected: [][]byte{{1, 2, 3}, {4, 5, 6}},
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	for _, tt := range tests {
+
+		var events []cadence.Event
+		var keys [][]byte
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: newTestLedger(nil, nil),
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{{42}}, nil
+			},
+			createAccount: func(payer Address) (address Address, err error) {
+				return Address{42}, nil
+			},
+			addEncodedAccountKey: func(address Address, publicKey []byte) error {
+				keys = append(keys, publicKey)
+				return nil
+			},
+			emitEvent: func(event cadence.Event) error {
+				events = append(events, event)
+				return nil
+			},
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(b)
+			},
+		}
+
+		t.Run(tt.name, func(t *testing.T) {
+
+			args := make([][]byte, len(tt.args))
+			for i, arg := range tt.args {
+				var err error
+				args[i], err = json.Encode(arg)
+				if err != nil {
+					panic(fmt.Errorf("broken test: invalid argument: %w", err))
+				}
+			}
+
+			err := rt.ExecuteTransaction(
+				Script{
+					Source:    []byte(tt.code),
+					Arguments: args,
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  nextTransactionLocation(),
+				},
+			)
+			require.NoError(t, err)
+			assert.Len(t, events, tt.keyCount+1)
+			assert.Len(t, keys, tt.keyCount)
+			assert.Equal(t, tt.expected, keys)
+
+			assert.EqualValues(t, stdlib.AccountCreatedEventType.ID(), events[0].Type().ID())
+
+			for _, event := range events[1:] {
+				assert.EqualValues(t, stdlib.AccountKeyAddedEventType.ID(), event.Type().ID())
+			}
+		})
+	}
+}
+
 func TestRuntimeAccountKeyConstructor(t *testing.T) {
 
 	t.Parallel()
