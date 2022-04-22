@@ -149,10 +149,11 @@ func pathLiteralValue(memoryGauge common.MemoryGauge, expression ast.Expression,
 		)
 	}
 
-	return cadence.Path{
-		Domain:     pathExpression.Domain.Identifier,
-		Identifier: pathExpression.Identifier.Identifier,
-	}, nil
+	return cadence.NewPath(
+		memoryGauge,
+		pathExpression.Domain.Identifier,
+		pathExpression.Identifier.Identifier,
+	), nil
 }
 
 func integerLiteralValue(

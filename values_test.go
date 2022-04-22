@@ -237,7 +237,7 @@ func TestStringer(t *testing.T) {
 			expected: "S.test.FooContract(y: \"bar\")",
 		},
 		"Link": {
-			value: NewLink(
+			value: NewUnmeteredLink(
 				Path{
 					Domain:     "storage",
 					Identifier: "foo",

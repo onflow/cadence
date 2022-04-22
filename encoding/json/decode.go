@@ -791,6 +791,7 @@ func (d *Decoder) decodeLink(valueJSON interface{}) cadence.Link {
 		panic(ErrInvalidJSONCadence)
 	}
 	return cadence.NewLink(
+		d.gauge,
 		targetPath,
 		obj.GetString(borrowTypeKey),
 	)
@@ -799,10 +800,11 @@ func (d *Decoder) decodeLink(valueJSON interface{}) cadence.Link {
 func (d *Decoder) decodePath(valueJSON interface{}) cadence.Path {
 	obj := toObject(valueJSON)
 
-	return cadence.Path{
-		Domain:     obj.GetString(domainKey),
-		Identifier: obj.GetString(identifierKey),
-	}
+	return cadence.NewPath(
+		d.gauge,
+		obj.GetString(domainKey),
+		obj.GetString(identifierKey),
+	)
 }
 
 func (d *Decoder) decodeParamType(valueJSON interface{}) cadence.Parameter {
@@ -1103,9 +1105,10 @@ func (d *Decoder) decodeType(valueJSON interface{}) cadence.Type {
 func (d *Decoder) decodeTypeValue(valueJSON interface{}) cadence.TypeValue {
 	obj := toObject(valueJSON)
 
-	return cadence.TypeValue{
-		StaticType: d.decodeType(obj.Get(staticTypeKey)),
-	}
+	return cadence.NewTypeValue(
+		d.gauge,
+		d.decodeType(obj.Get(staticTypeKey)),
+	)
 }
 
 func (d *Decoder) decodeCapability(valueJSON interface{}) cadence.Capability {
@@ -1117,11 +1120,12 @@ func (d *Decoder) decodeCapability(valueJSON interface{}) cadence.Capability {
 		panic(ErrInvalidJSONCadence)
 	}
 
-	return cadence.Capability{
-		Path:       path,
-		Address:    d.decodeAddress(obj.Get(addressKey)),
-		BorrowType: d.decodeType(obj.Get(borrowTypeKey)),
-	}
+	return cadence.NewCapability(
+		d.gauge,
+		path,
+		d.decodeAddress(obj.Get(addressKey)),
+		d.decodeType(obj.Get(borrowTypeKey)),
+	)
 }
 
 // JSON types

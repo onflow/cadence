@@ -175,7 +175,7 @@ func exportValueWithInterpreter(
 	case interpreter.LinkValue:
 		return exportLinkValue(v, inter), nil
 	case interpreter.PathValue:
-		return exportPathValue(v), nil
+		return exportPathValue(inter, v), nil
 	case interpreter.TypeValue:
 		return exportTypeValue(v, inter), nil
 	case *interpreter.CapabilityValue:
@@ -578,16 +578,17 @@ func exportDictionaryValue(
 }
 
 func exportLinkValue(v interpreter.LinkValue, inter *interpreter.Interpreter) cadence.Link {
-	path := exportPathValue(v.TargetPath)
+	path := exportPathValue(inter, v.TargetPath)
 	ty := string(inter.MustConvertStaticToSemaType(v.Type).ID())
-	return cadence.NewLink(path, ty)
+	return cadence.NewLink(inter, path, ty)
 }
 
-func exportPathValue(v interpreter.PathValue) cadence.Path {
-	return cadence.Path{
-		Domain:     v.Domain.Identifier(),
-		Identifier: v.Identifier,
-	}
+func exportPathValue(gauge common.MemoryGauge, v interpreter.PathValue) cadence.Path {
+	return cadence.NewPath(
+		gauge,
+		v.Domain.Identifier(),
+		v.Identifier,
+	)
 }
 
 func exportTypeValue(v interpreter.TypeValue, inter *interpreter.Interpreter) cadence.TypeValue {
@@ -595,9 +596,10 @@ func exportTypeValue(v interpreter.TypeValue, inter *interpreter.Interpreter) ca
 	if v.Type != nil {
 		typ = inter.MustConvertStaticToSemaType(v.Type)
 	}
-	return cadence.TypeValue{
-		StaticType: ExportType(typ, map[sema.TypeID]cadence.Type{}),
-	}
+	return cadence.NewTypeValue(
+		inter,
+		ExportType(typ, map[sema.TypeID]cadence.Type{}),
+	)
 }
 
 func exportCapabilityValue(v *interpreter.CapabilityValue, inter *interpreter.Interpreter) cadence.Capability {
@@ -606,11 +608,12 @@ func exportCapabilityValue(v *interpreter.CapabilityValue, inter *interpreter.In
 		borrowType = inter.MustConvertStaticToSemaType(v.BorrowType)
 	}
 
-	return cadence.Capability{
-		Path:       exportPathValue(v.Path),
-		Address:    cadence.NewAddress(inter, v.Address),
-		BorrowType: ExportType(borrowType, map[sema.TypeID]cadence.Type{}),
-	}
+	return cadence.NewCapability(
+		inter,
+		exportPathValue(inter, v.Path),
+		cadence.NewAddress(inter, v.Address),
+		ExportType(borrowType, map[sema.TypeID]cadence.Type{}),
+	)
 }
 
 // exportEvent converts a runtime event to its native Go representation.

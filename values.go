@@ -1523,11 +1523,16 @@ type Link struct {
 	BorrowType string
 }
 
-func NewLink(targetPath Path, borrowType string) Link {
+func NewUnmeteredLink(targetPath Path, borrowType string) Link {
 	return Link{
 		TargetPath: targetPath,
 		BorrowType: borrowType,
 	}
+}
+
+func NewLink(gauge common.MemoryGauge, targetPath Path, borrowType string) Link {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceLink)
+	return NewUnmeteredLink(targetPath, borrowType)
 }
 
 func (Link) isValue() {}
@@ -1554,6 +1559,18 @@ type Path struct {
 	Identifier string
 }
 
+func NewUnmeteredPath(domain, identifier string) Path {
+	return Path{
+		Domain:     domain,
+		Identifier: identifier,
+	}
+}
+
+func NewPath(gauge common.MemoryGauge, domain, identifier string) Path {
+	common.UseConstantMemory(gauge, common.MemoryKindCadencePath)
+	return NewUnmeteredPath(domain, identifier)
+}
+
 func (Path) isValue() {}
 
 func (Path) Type() Type {
@@ -1577,16 +1594,21 @@ type TypeValue struct {
 	StaticType Type
 }
 
+func NewUnmeteredTypeValue(staticType Type) TypeValue {
+	return TypeValue{
+		StaticType: staticType,
+	}
+}
+
+func NewTypeValue(gauge common.MemoryGauge, staticType Type) TypeValue {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceTypeValue)
+	return NewUnmeteredTypeValue(staticType)
+}
+
 func (TypeValue) isValue() {}
 
 func (TypeValue) Type() Type {
 	return MetaType{}
-}
-
-func NewTypeValue(t Type) TypeValue {
-	return TypeValue{
-		StaticType: t,
-	}
 }
 
 func (TypeValue) ToGoValue() interface{} {
@@ -1603,6 +1625,19 @@ type Capability struct {
 	Path       Path
 	Address    Address
 	BorrowType Type
+}
+
+func NewUnmeteredCapability(path Path, address Address, borrowType Type) Capability {
+	return Capability{
+		Path:       path,
+		Address:    address,
+		BorrowType: borrowType,
+	}
+}
+
+func NewCapability(gauge common.MemoryGauge, path Path, address Address, borrowType Type) Capability {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceCapability)
+	return NewUnmeteredCapability(path, address, borrowType)
 }
 
 func (Capability) isValue() {}

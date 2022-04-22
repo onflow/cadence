@@ -754,7 +754,7 @@ func TestImportValue(t *testing.T) {
 		},
 		{
 			label:    "Type<Int>()",
-			value:    cadence.NewTypeValue(cadence.IntType{}),
+			value:    cadence.NewUnmeteredTypeValue(cadence.IntType{}),
 			expected: interpreter.TypeValue{Type: interpreter.PrimitiveStaticTypeInt},
 		},
 	} {
@@ -3451,7 +3451,7 @@ func TestTypeValueImport(t *testing.T) {
 
 		t.Parallel()
 
-		typeValue := cadence.NewTypeValue(cadence.IntType{})
+		typeValue := cadence.NewUnmeteredTypeValue(cadence.IntType{})
 
 		script := `
             pub fun main(s: Type) {
@@ -3498,7 +3498,7 @@ func TestTypeValueImport(t *testing.T) {
 
 		t.Parallel()
 
-		typeValue := cadence.NewTypeValue(&cadence.StructType{
+		typeValue := cadence.NewUnmeteredTypeValue(&cadence.StructType{
 			QualifiedIdentifier: "S",
 			Location:            TestLocation,
 			Fields:              []cadence.Field{},

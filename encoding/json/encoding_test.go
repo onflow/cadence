@@ -1048,8 +1048,8 @@ func TestEncodeLink(t *testing.T) {
 
 	testEncodeAndDecode(
 		t,
-		cadence.NewLink(
-			cadence.Path{Domain: "storage", Identifier: "foo"},
+		cadence.NewUnmeteredLink(
+			cadence.NewUnmeteredPath("storage", "foo"),
 			"Bar",
 		),
 		`{"type":"Link","value":{"targetPath":{"type":"Path","value":{"domain":"storage","identifier":"foo"}},"borrowType":"Bar"}}`,
@@ -1561,7 +1561,7 @@ func TestEncodeCapability(t *testing.T) {
 	testEncodeAndDecode(
 		t,
 		cadence.Capability{
-			Path:       cadence.Path{Domain: "storage", Identifier: "foo"},
+			Path:       cadence.NewUnmeteredPath("storage", "foo"),
 			Address:    cadence.BytesToUnmeteredAddress([]byte{1, 2, 3, 4, 5}),
 			BorrowType: cadence.IntType{},
 		},
@@ -1826,7 +1826,7 @@ func TestEncodePath(t *testing.T) {
 
 	testEncodeAndDecode(
 		t,
-		cadence.Path{Domain: "storage", Identifier: "foo"},
+		cadence.NewUnmeteredPath("storage", "foo"),
 		`{"type":"Path","value":{"domain":"storage","identifier":"foo"}}`,
 	)
 }

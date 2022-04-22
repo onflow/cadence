@@ -91,6 +91,10 @@ const (
 	MemoryKindCadenceContractSize
 	MemoryKindCadenceEnumBase
 	MemoryKindCadenceEnumSize
+	MemoryKindCadenceLink
+	MemoryKindCadencePath
+	MemoryKindCadenceTypeValue
+	MemoryKindCadenceCapability
 
 	// Misc
 
