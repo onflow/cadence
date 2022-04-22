@@ -102,7 +102,7 @@ func (f *InterpretedFunctionValue) RecursiveString(_ SeenReferences) string {
 	return f.String()
 }
 
-func (f *InterpretedFunctionValue) ToMeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+func (f *InterpretedFunctionValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
 	typeString := f.Type.String()
 	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(8+len(typeString)))
 	return f.String()
@@ -201,7 +201,7 @@ func (f *HostFunctionValue) RecursiveString(_ SeenReferences) string {
 	return f.String()
 }
 
-func (f *HostFunctionValue) ToMeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+func (f *HostFunctionValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
 	common.UseMemory(memoryGauge, common.HostFunctionValueStringMemoryUsage)
 	return f.String()
 }
@@ -365,8 +365,8 @@ func (f BoundFunctionValue) RecursiveString(seenReferences SeenReferences) strin
 	return f.Function.RecursiveString(seenReferences)
 }
 
-func (f BoundFunctionValue) ToMeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
-	return f.Function.ToMeteredString(memoryGauge, seenReferences)
+func (f BoundFunctionValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+	return f.Function.MeteredString(memoryGauge, seenReferences)
 }
 
 func (f BoundFunctionValue) Accept(interpreter *Interpreter, visitor Visitor) {

@@ -144,10 +144,10 @@ func (v *SimpleCompositeValue) String() string {
 }
 
 func (v *SimpleCompositeValue) RecursiveString(seenReferences SeenReferences) string {
-	return v.ToMeteredString(nil, seenReferences)
+	return v.MeteredString(nil, seenReferences)
 }
 
-func (v *SimpleCompositeValue) ToMeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+func (v *SimpleCompositeValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
 
 	if v.stringer != nil {
 		return v.stringer(memoryGauge, seenReferences)
@@ -170,7 +170,7 @@ func (v *SimpleCompositeValue) ToMeteredString(memoryGauge common.MemoryGauge, s
 			}
 		}
 		if value == "" {
-			value = fieldValue.ToMeteredString(memoryGauge, seenReferences)
+			value = fieldValue.MeteredString(memoryGauge, seenReferences)
 		}
 
 		fields = append(fields, struct {

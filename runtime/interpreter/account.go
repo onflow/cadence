@@ -115,7 +115,7 @@ func NewAuthAccountValue(
 	stringer := func(memoryGauge common.MemoryGauge, _ SeenReferences) string {
 		if str == "" {
 			common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(13))
-			addressStr := address.ToMeteredString(memoryGauge, SeenReferences{})
+			addressStr := address.MeteredString(memoryGauge, SeenReferences{})
 			str = fmt.Sprintf("AuthAccount(%s)", addressStr)
 		}
 		return str
@@ -202,7 +202,7 @@ func NewPublicAccountValue(
 	stringer := func(memoryGauge common.MemoryGauge, _ SeenReferences) string {
 		if str == "" {
 			common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(15))
-			addressStr := address.ToMeteredString(memoryGauge, SeenReferences{})
+			addressStr := address.MeteredString(memoryGauge, SeenReferences{})
 			str = fmt.Sprintf("PublicAccount(%s)", addressStr)
 		}
 		return str
