@@ -56,9 +56,10 @@ func NewSimpleCompositeValue(
 	stringer func(SeenReferences) string,
 ) *SimpleCompositeValue {
 
-	baseUsage, lengthUsage := common.NewCompositeMemoryUsages(len(fields))
+	baseUsage, dataUsage, metaDataUsage := common.NewCompositeMemoryUsages(uint64(len(fields)), 0)
 	common.UseMemory(inter, baseUsage)
-	common.UseMemory(inter, lengthUsage)
+	common.UseMemory(inter, dataUsage)
+	common.UseMemory(inter, metaDataUsage)
 
 	return &SimpleCompositeValue{
 		TypeID:          typeID,

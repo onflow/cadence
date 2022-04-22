@@ -136,7 +136,14 @@ func atreeNodes(size uint64, element_size uint) (leafNodes uint64, branchNodes u
 		// will always contain at least two elements.
 		leafNodes = size / 2
 	}
-	branchNodes = uint64(math.Log2(float64(leafNodes)))
+	if leafNodes < 1 {
+		leafNodes = 1 // there will always be at least one data slab
+	}
+	if leafNodes < 2 {
+		branchNodes = 0
+	} else {
+		branchNodes = uint64(math.Log2(float64(leafNodes)))
+	}
 	return
 }
 
