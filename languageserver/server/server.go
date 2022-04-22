@@ -376,13 +376,11 @@ func (s *Server) Initialize(
 
 // initCrashReporting set-ups sentry as crash reporting tool, it also sets listener for panics.
 func initCrashReporting(server *Server) {
-	currentVersion := ""
 	sentrySyncTransport := sentry.NewHTTPSyncTransport()
 	sentrySyncTransport.Timeout = time.Second * 3
 
 	_ = sentry.Init(sentry.ClientOptions{
 		Dsn:              "https://7725b80e4d5a4625845270176a6d8bd5@o114654.ingest.sentry.io/6330569",
-		Release:          currentVersion,
 		AttachStacktrace: true,
 		Transport:        sentrySyncTransport,
 		BeforeSend: func(event *sentry.Event, hint *sentry.EventHint) *sentry.Event {
