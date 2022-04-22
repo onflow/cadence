@@ -1807,6 +1807,7 @@ func TestInterpretHostFunction(t *testing.T) {
 	checker, err := sema.NewChecker(
 		program,
 		TestLocation,
+		nil,
 		sema.WithPredeclaredValues(
 			[]sema.ValueDeclaration{
 				testFunction,
@@ -1912,6 +1913,7 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 	checker, err := sema.NewChecker(
 		program,
 		TestLocation,
+		nil,
 		sema.WithPredeclaredValues(
 			[]sema.ValueDeclaration{
 				testFunction,

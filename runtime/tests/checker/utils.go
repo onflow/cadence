@@ -92,7 +92,6 @@ func ParseAndCheckWithOptionsAndMemoryMetering(
 		checkerOptions := append(
 			[]sema.Option{
 				sema.WithAccessCheckMode(sema.AccessCheckModeNotSpecifiedUnrestricted),
-				sema.WithMemoryGauge(memoryGauge),
 			},
 			options.Options...,
 		)
@@ -100,6 +99,7 @@ func ParseAndCheckWithOptionsAndMemoryMetering(
 		checker, err := sema.NewChecker(
 			program,
 			options.Location,
+			memoryGauge,
 			checkerOptions...,
 		)
 		if err != nil {

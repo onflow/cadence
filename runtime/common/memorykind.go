@@ -154,6 +154,8 @@ const (
 	MemoryKindPosition
 	MemoryKindRange
 
+	MemoryKindElaboration
+
 	// Placeholder kind to allow consistent indexing
 	// this should always be the last kind
 	MemoryKindLast
