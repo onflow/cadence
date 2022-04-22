@@ -99,13 +99,13 @@ var AuthAccountType = func() *CompositeType {
 			AuthAccountTypeAddPublicKeyFunctionType,
 			authAccountTypeAddPublicKeyFunctionDocString,
 		),
-		NewPublicFunctionMember(
+		NewUnmeteredPublicFunctionMember(
 			authAccountType,
 			AuthAccountRemovePublicKeyField,
 			AuthAccountTypeRemovePublicKeyFunctionType,
 			authAccountTypeRemovePublicKeyFunctionDocString,
 		),
-		NewPublicFunctionMember(
+		NewUnmeteredPublicFunctionMember(
 			authAccountType,
 			AuthAccountSaveField,
 			AuthAccountTypeSaveFunctionType,

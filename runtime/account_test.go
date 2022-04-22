@@ -118,7 +118,7 @@ func TestRuntimeTransaction_AddPublicKey(t *testing.T) {
 				return nil
 			},
 			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(b)
+				return json.Decode(nil, b)
 			},
 		}
 
