@@ -30,6 +30,8 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
+const UnknownElementSize = 0
+
 // StaticType is a shallow representation of a static type (`sema.Type`)
 // which doesn't contain the full information, but only refers
 // to composite and interface types by ID.
@@ -40,7 +42,7 @@ import (
 type StaticType interface {
 	fmt.Stringer
 	isStaticType()
-	elementSize()
+	elementSize() uint
 	Equal(other StaticType) bool
 	Encode(e *cbor.StreamEncoder) error
 }
@@ -83,6 +85,10 @@ func NewCompositeStaticTypeComputeTypeID(
 
 func (CompositeStaticType) isStaticType() {}
 
+func (CompositeStaticType) elementSize() uint {
+	return UnknownElementSize
+}
+
 func (t CompositeStaticType) String() string {
 	if t.Location == nil {
 		return t.QualifiedIdentifier
@@ -123,6 +129,10 @@ func NewInterfaceStaticType(
 }
 
 func (InterfaceStaticType) isStaticType() {}
+
+func (InterfaceStaticType) elementSize() uint {
+	return UnknownElementSize
+}
 
 func (t InterfaceStaticType) String() string {
 	if t.Location == nil {
@@ -171,6 +181,10 @@ func NewVariableSizedStaticType(
 
 func (VariableSizedStaticType) isStaticType() {}
 
+func (VariableSizedStaticType) elementSize() uint {
+	return UnknownElementSize
+}
+
 func (VariableSizedStaticType) isArrayStaticType() {}
 
 func (t VariableSizedStaticType) ElementType() StaticType {
@@ -214,6 +228,10 @@ func NewConstantSizedStaticType(
 }
 
 func (ConstantSizedStaticType) isStaticType() {}
+
+func (ConstantSizedStaticType) elementSize() uint {
+	return UnknownElementSize
+}
 
 func (ConstantSizedStaticType) isArrayStaticType() {}
 
@@ -259,6 +277,10 @@ func NewDictionaryStaticType(
 
 func (DictionaryStaticType) isStaticType() {}
 
+func (DictionaryStaticType) elementSize() uint {
+	return UnknownElementSize
+}
+
 func (t DictionaryStaticType) String() string {
 	return fmt.Sprintf("{%s: %s}", t.KeyType, t.ValueType)
 }
@@ -291,6 +313,10 @@ func NewOptionalStaticType(
 }
 
 func (OptionalStaticType) isStaticType() {}
+
+func (OptionalStaticType) elementSize() uint {
+	return UnknownElementSize
+}
 
 func (t OptionalStaticType) String() string {
 	return fmt.Sprintf("%s?", t.Type)
@@ -333,6 +359,10 @@ func NewRestrictedStaticType(
 // and slices are not, but `Restrictions` is one.
 //
 func (*RestrictedStaticType) isStaticType() {}
+
+func (RestrictedStaticType) elementSize() uint {
+	return UnknownElementSize
+}
 
 func (t *RestrictedStaticType) String() string {
 	restrictions := make([]string, len(t.Restrictions))
@@ -391,6 +421,10 @@ func NewReferenceStaticType(
 
 func (ReferenceStaticType) isStaticType() {}
 
+func (ReferenceStaticType) elementSize() uint {
+	return UnknownElementSize
+}
+
 func (t ReferenceStaticType) String() string {
 	auth := ""
 	if t.Authorized {
@@ -430,6 +464,10 @@ func NewCapabilityStaticType(
 }
 
 func (CapabilityStaticType) isStaticType() {}
+
+func (CapabilityStaticType) elementSize() uint {
+	return UnknownElementSize
+}
 
 func (t CapabilityStaticType) String() string {
 	if t.BorrowType != nil {
@@ -701,6 +739,10 @@ func (t FunctionStaticType) ReturnType(interpreter *Interpreter) StaticType {
 }
 
 func (FunctionStaticType) isStaticType() {}
+
+func (FunctionStaticType) elementSize() uint {
+	return UnknownElementSize
+}
 
 func (t FunctionStaticType) String() string {
 	return t.Type.String()

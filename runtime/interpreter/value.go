@@ -1343,7 +1343,7 @@ func newArrayValueFromAtreeValue(
 	staticType ArrayStaticType,
 ) *ArrayValue {
 
-	baseUse, dataSlabUse, metaDataSlabUse := common.NewArrayMemoryUsages(int(array.Count()), staticType.ElementType().elementSize())
+	baseUse, dataSlabUse, metaDataSlabUse := common.NewArrayMemoryUsages(array.Count(), staticType.ElementType().elementSize())
 	common.UseMemory(memoryGauge, baseUse)
 	common.UseMemory(memoryGauge, dataSlabUse)
 	common.UseMemory(memoryGauge, metaDataSlabUse)
@@ -1593,7 +1593,7 @@ func (v *ArrayValue) Set(interpreter *Interpreter, getLocationRange func() Locat
 	}
 
 	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(
-		int(v.array.Count()),
+		v.array.Count(),
 		v.Type.ElementType().elementSize(),
 	)
 	common.UseMemory(interpreter, dataSlabs)
@@ -1648,7 +1648,7 @@ func (v *ArrayValue) Append(interpreter *Interpreter, getLocationRange func() Lo
 
 	// length increases by 1
 	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(
-		int(v.array.Count()),
+		v.array.Count(),
 		v.Type.ElementType().elementSize(),
 	)
 	common.UseMemory(interpreter, dataSlabs)
@@ -1702,7 +1702,7 @@ func (v *ArrayValue) Insert(interpreter *Interpreter, getLocationRange func() Lo
 
 	// length increases by 1
 	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(
-		int(v.array.Count()),
+		v.array.Count(),
 		v.Type.ElementType().elementSize(),
 	)
 	common.UseMemory(interpreter, dataSlabs)
@@ -13934,7 +13934,7 @@ func newCompositeValueFromOrderedMap(
 	typeInfo compositeTypeInfo,
 ) *CompositeValue {
 
-	baseUse, dataUse, metaDataUse := common.NewCompositeMemoryUsages(int(dict.Count()), 0)
+	baseUse, dataUse, metaDataUse := common.NewCompositeMemoryUsages(dict.Count(), 0)
 	common.UseMemory(memoryGauge, baseUse)
 	common.UseMemory(memoryGauge, dataUse)
 	common.UseMemory(memoryGauge, metaDataUse)
@@ -15020,12 +15020,12 @@ func newDictionaryValueFromOrderedMap(
 
 	keySize := staticType.KeyType.elementSize()
 	valueSize := staticType.ValueType.elementSize()
-	var elementSize int
+	var elementSize uint
 	if keySize != 0 && valueSize != 0 {
 		elementSize = keySize + valueSize
 	}
 	baseUse, dataUse, metaDataUse := common.NewDictionaryMemoryUsages(
-		int(dict.Count()),
+		dict.Count(),
 		elementSize,
 	)
 	common.UseMemory(memoryGauge, baseUse)
@@ -15521,11 +15521,11 @@ func (v *DictionaryValue) Insert(
 	// length increases by 1
 	keySize := v.Type.KeyType.elementSize()
 	valueSize := v.Type.ValueType.elementSize()
-	var elementSize int
+	var elementSize uint
 	if keySize != 0 && valueSize != 0 {
 		elementSize = keySize + valueSize
 	}
-	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(int(v.dictionary.Count()), elementSize)
+	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(v.dictionary.Count(), elementSize)
 	common.UseMemory(interpreter, dataSlabs)
 	common.UseMemory(interpreter, metaDataSlabs)
 
