@@ -1342,7 +1342,11 @@ func newArrayValueFromAtreeValue(
 	staticType ArrayStaticType,
 ) *ArrayValue {
 
-	baseUse, dataSlabUse, metaDataSlabUse := common.NewArrayMemoryUsages(array.Count(), staticType.ElementType().elementSize())
+	var elementSize uint
+	if staticType != nil {
+		elementSize = staticType.ElementType().elementSize()
+	}
+	baseUse, dataSlabUse, metaDataSlabUse := common.NewArrayMemoryUsages(array.Count(), elementSize)
 	common.UseMemory(memoryGauge, baseUse)
 	common.UseMemory(memoryGauge, dataSlabUse)
 	common.UseMemory(memoryGauge, metaDataSlabUse)

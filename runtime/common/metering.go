@@ -132,12 +132,12 @@ func atreeNodes(size uint64, element_size uint) (leafNodes uint64, branchNodes u
 		// If we know how large each element is, we can compute the number of
 		// atree leaf nodes using this formula:
 		// size * element_size / default_slab_size
-		leafNodes = size * uint64(element_size) / 1024
+		leafNodes = uint64(math.Ceil(float64(size) * float64(element_size) / 1024))
 	} else {
 		// If we don't know how large each element is, we can overestimate
 		// the number of atree leaf nodes this way, since every leaf node
 		// will always contain at least two elements.
-		leafNodes = size / 2
+		leafNodes = uint64(math.Ceil(float64(size) / 2))
 	}
 	if leafNodes < 1 {
 		leafNodes = 1 // there will always be at least one data slab
@@ -145,7 +145,7 @@ func atreeNodes(size uint64, element_size uint) (leafNodes uint64, branchNodes u
 	if leafNodes < 2 {
 		branchNodes = 0
 	} else {
-		branchNodes = uint64(math.Log2(float64(leafNodes)))
+		branchNodes = uint64(math.Ceil(math.Log2(float64(leafNodes))))
 	}
 	return
 }
@@ -163,7 +163,7 @@ func newAtreeMemoryUsage(size uint64, element_size uint) (MemoryUsage, MemoryUsa
 
 func AdditionalAtreeMemoryUsage(originalSize uint64, elementSize uint) (MemoryUsage, MemoryUsage) {
 	originalLeafNodes, originalBranchNodes := atreeNodes(originalSize, elementSize)
-	newLeafNodes, newBranchNodes := atreeNodes(originalLeafNodes+1, elementSize)
+	newLeafNodes, newBranchNodes := atreeNodes(originalSize+1, elementSize)
 	return MemoryUsage{
 			Kind:   MemoryKindAtreeDataSlab,
 			Amount: newLeafNodes - originalLeafNodes,
