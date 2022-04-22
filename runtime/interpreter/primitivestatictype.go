@@ -19,6 +19,8 @@
 package interpreter
 
 import (
+	"strconv"
+
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
@@ -37,6 +39,18 @@ func (t PrimitiveStaticType) Equal(other StaticType) bool {
 	}
 
 	return t == otherPrimitiveType
+}
+
+func (t PrimitiveStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
+	if str, ok := _PrimitiveStaticType_map[t]; ok {
+		common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(len(str)))
+		return str
+	}
+
+	l := 21 + OverEstimateIntStringLength(int(t))
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(l))
+
+	return "PrimitiveStaticType(" + strconv.FormatInt(int64(t), 10) + ")"
 }
 
 func NewPrimitiveStaticType(

@@ -42,6 +42,7 @@ type StaticType interface {
 	isStaticType()
 	Equal(other StaticType) bool
 	Encode(e *cbor.StreamEncoder) error
+	MeteredString(memoryGauge common.MemoryGauge) string
 }
 
 // CompositeStaticType
@@ -89,6 +90,16 @@ func (t CompositeStaticType) String() string {
 	return string(t.TypeID)
 }
 
+func (t CompositeStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
+	if t.Location == nil {
+		common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(len(t.QualifiedIdentifier)))
+	} else {
+		common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(len(t.TypeID)))
+	}
+
+	return t.String()
+}
+
 func (t CompositeStaticType) Equal(other StaticType) bool {
 	otherCompositeType, ok := other.(CompositeStaticType)
 	if !ok {
@@ -127,6 +138,20 @@ func (t InterfaceStaticType) String() string {
 		return t.QualifiedIdentifier
 	}
 	return string(t.Location.TypeID(t.QualifiedIdentifier))
+}
+
+func (t InterfaceStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
+	str := t.String()
+
+	// TODO: Meter type ID generation
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			len(str),
+		),
+	)
+
+	return str
 }
 
 func (t InterfaceStaticType) Equal(other StaticType) bool {
@@ -179,6 +204,13 @@ func (t VariableSizedStaticType) String() string {
 	return fmt.Sprintf("[%s]", t.Type)
 }
 
+func (t VariableSizedStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
+	common.UseMemory(memoryGauge, common.VariableSizedStaticTypeMemoryUsage)
+
+	typeStr := t.Type.MeteredString(memoryGauge)
+	return fmt.Sprintf("[%s]", typeStr)
+}
+
 func (t VariableSizedStaticType) Equal(other StaticType) bool {
 	otherVariableSizedType, ok := other.(VariableSizedStaticType)
 	if !ok {
@@ -223,6 +255,20 @@ func (t ConstantSizedStaticType) String() string {
 	return fmt.Sprintf("[%s; %d]", t.Type, t.Size)
 }
 
+func (t ConstantSizedStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
+	// n - for size
+	// 2 - for open and close bracket.
+	// 1 - for space
+	// 1 - for semicolon
+	// Nested type is separately metered.
+	strLen := OverEstimateIntStringLength(int(t.Size)) + 4
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(strLen))
+
+	typeStr := t.Type.MeteredString(memoryGauge)
+
+	return fmt.Sprintf("[%s; %d]", typeStr, t.Size)
+}
+
 func (t ConstantSizedStaticType) Equal(other StaticType) bool {
 	otherConstantSizedType, ok := other.(ConstantSizedStaticType)
 	if !ok {
@@ -261,6 +307,15 @@ func (t DictionaryStaticType) String() string {
 	return fmt.Sprintf("{%s: %s}", t.KeyType, t.ValueType)
 }
 
+func (t DictionaryStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
+	common.UseMemory(memoryGauge, common.DictionaryStaticTypeMemoryUsage)
+
+	keyStr := t.KeyType.MeteredString(memoryGauge)
+	valueStr := t.ValueType.MeteredString(memoryGauge)
+
+	return fmt.Sprintf("{%s: %s}", keyStr, valueStr)
+}
+
 func (t DictionaryStaticType) Equal(other StaticType) bool {
 	otherDictionaryType, ok := other.(DictionaryStaticType)
 	if !ok {
@@ -292,6 +347,13 @@ func (OptionalStaticType) isStaticType() {}
 
 func (t OptionalStaticType) String() string {
 	return fmt.Sprintf("%s?", t.Type)
+}
+
+func (t OptionalStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
+	common.UseMemory(memoryGauge, common.OptionalStaticTypeMemoryUsage)
+
+	typeStr := t.Type.MeteredString(memoryGauge)
+	return fmt.Sprintf("%s?", typeStr)
 }
 
 func (t OptionalStaticType) Equal(other StaticType) bool {
@@ -338,6 +400,23 @@ func (t *RestrictedStaticType) String() string {
 	for i, restriction := range t.Restrictions {
 		restrictions[i] = restriction.String()
 	}
+
+	return fmt.Sprintf("%s{%s}", t.Type, strings.Join(restrictions, ", "))
+}
+
+func (t *RestrictedStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
+	restrictions := make([]string, len(t.Restrictions))
+
+	for i, restriction := range t.Restrictions {
+		restrictions[i] = restriction.MeteredString(memoryGauge)
+	}
+
+	// len = (comma + space) x (n - 1)
+	// To handle n == 0:
+	// 		len = (comma + space) x n
+	//
+	l := len(restrictions)*2 + 2
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(l))
 
 	return fmt.Sprintf("%s{%s}", t.Type, strings.Join(restrictions, ", "))
 }
@@ -398,6 +477,23 @@ func (t ReferenceStaticType) String() string {
 	return fmt.Sprintf("%s&%s", auth, t.BorrowedType)
 }
 
+func (t ReferenceStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
+	if t.Authorized {
+		common.UseMemory(memoryGauge, common.AuthReferenceStaticTypeMemoryUsage)
+	} else {
+		common.UseMemory(memoryGauge, common.ReferenceStaticTypeMemoryUsage)
+	}
+
+	typeStr := t.BorrowedType.MeteredString(memoryGauge)
+
+	auth := ""
+	if t.Authorized {
+		auth = "auth "
+	}
+
+	return fmt.Sprintf("%s&%s", auth, typeStr)
+}
+
 func (t ReferenceStaticType) Equal(other StaticType) bool {
 	otherReferenceType, ok := other.(ReferenceStaticType)
 	if !ok {
@@ -432,6 +528,16 @@ func (CapabilityStaticType) isStaticType() {}
 func (t CapabilityStaticType) String() string {
 	if t.BorrowType != nil {
 		return fmt.Sprintf("Capability<%s>", t.BorrowType)
+	}
+	return "Capability"
+}
+
+func (t CapabilityStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
+	common.UseMemory(memoryGauge, common.CapabilityStaticTypeMemoryUsage)
+	typeStr := t.BorrowType.MeteredString(memoryGauge)
+
+	if t.BorrowType != nil {
+		return fmt.Sprintf("Capability<%s>", typeStr)
 	}
 	return "Capability"
 }
@@ -702,6 +808,13 @@ func (FunctionStaticType) isStaticType() {}
 
 func (t FunctionStaticType) String() string {
 	return t.Type.String()
+}
+
+func (t FunctionStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
+	// TODO: Meter sema.Type string conversion
+	typeStr := t.String()
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(len(typeStr)))
+	return typeStr
 }
 
 func (t FunctionStaticType) Equal(other StaticType) bool {

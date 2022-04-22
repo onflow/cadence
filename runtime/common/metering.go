@@ -120,6 +120,15 @@ var (
 	SeenReferenceStringMemoryUsage         = NewRawStringMemoryUsage(3)                   // len(ellipsis)
 	AddressValueStringMemoryUsage          = NewRawStringMemoryUsage(AddressLength*2 + 2) // len(bytes-to-hex + prefix)
 	HostFunctionValueStringMemoryUsage     = NewRawStringMemoryUsage(len("Function(...)"))
+
+	// Static types string representations
+
+	VariableSizedStaticTypeMemoryUsage = NewRawStringMemoryUsage(2)  // []
+	DictionaryStaticTypeMemoryUsage    = NewRawStringMemoryUsage(4)  // {: }
+	OptionalStaticTypeMemoryUsage      = NewRawStringMemoryUsage(1)  // ?
+	AuthReferenceStaticTypeMemoryUsage = NewRawStringMemoryUsage(5)  // auth&
+	ReferenceStaticTypeMemoryUsage     = NewRawStringMemoryUsage(1)  // &
+	CapabilityStaticTypeMemoryUsage    = NewRawStringMemoryUsage(12) // Capability<>
 )
 
 func UseMemory(gauge MemoryGauge, usage MemoryUsage) {
