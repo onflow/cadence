@@ -343,7 +343,7 @@ func TestRuntimeSignatureAlgorithmImport(t *testing.T) {
 			Script{
 				Source: []byte(script),
 				Arguments: encodeArgs([]cadence.Value{
-					cadence.NewEnum([]cadence.Value{
+					cadence.NewUnmeteredEnum([]cadence.Value{
 						cadence.UInt8(algo.RawValue()),
 					}).WithType(&cadence.EnumType{
 						QualifiedIdentifier: "SignatureAlgorithm",
@@ -425,7 +425,7 @@ func TestRuntimeHashAlgorithmImport(t *testing.T) {
 			Script{
 				Source: []byte(script),
 				Arguments: encodeArgs([]cadence.Value{
-					cadence.NewEnum([]cadence.Value{
+					cadence.NewUnmeteredEnum([]cadence.Value{
 						cadence.UInt8(algo.RawValue()),
 					}).WithType(&cadence.EnumType{
 						QualifiedIdentifier: "HashAlgorithm",

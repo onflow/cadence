@@ -676,7 +676,19 @@ func (d *Decoder) decodeCompositeField(valueJSON interface{}) (cadence.Value, ca
 func (d *Decoder) decodeStruct(valueJSON interface{}) cadence.Struct {
 	comp := d.decodeComposite(valueJSON)
 
-	return cadence.NewStruct(comp.fieldValues).WithType(&cadence.StructType{
+	structure, err := cadence.NewStruct(
+		d.gauge,
+		len(comp.fieldValues),
+		func() ([]cadence.Value, error) {
+			return comp.fieldValues, nil
+		},
+	)
+
+	if err != nil {
+		panic(ErrInvalidJSONCadence)
+	}
+
+	return structure.WithType(&cadence.StructType{
 		Location:            comp.location,
 		QualifiedIdentifier: comp.qualifiedIdentifier,
 		Fields:              comp.fieldTypes,
@@ -686,7 +698,18 @@ func (d *Decoder) decodeStruct(valueJSON interface{}) cadence.Struct {
 func (d *Decoder) decodeResource(valueJSON interface{}) cadence.Resource {
 	comp := d.decodeComposite(valueJSON)
 
-	return cadence.NewResource(comp.fieldValues).WithType(&cadence.ResourceType{
+	resource, err := cadence.NewResource(
+		d.gauge,
+		len(comp.fieldValues),
+		func() ([]cadence.Value, error) {
+			return comp.fieldValues, nil
+		},
+	)
+
+	if err != nil {
+		panic(ErrInvalidJSONCadence)
+	}
+	return resource.WithType(&cadence.ResourceType{
 		Location:            comp.location,
 		QualifiedIdentifier: comp.qualifiedIdentifier,
 		Fields:              comp.fieldTypes,
@@ -696,7 +719,19 @@ func (d *Decoder) decodeResource(valueJSON interface{}) cadence.Resource {
 func (d *Decoder) decodeEvent(valueJSON interface{}) cadence.Event {
 	comp := d.decodeComposite(valueJSON)
 
-	return cadence.NewEvent(comp.fieldValues).WithType(&cadence.EventType{
+	event, err := cadence.NewEvent(
+		d.gauge,
+		len(comp.fieldValues),
+		func() ([]cadence.Value, error) {
+			return comp.fieldValues, nil
+		},
+	)
+
+	if err != nil {
+		panic(ErrInvalidJSONCadence)
+	}
+
+	return event.WithType(&cadence.EventType{
 		Location:            comp.location,
 		QualifiedIdentifier: comp.qualifiedIdentifier,
 		Fields:              comp.fieldTypes,
@@ -706,7 +741,19 @@ func (d *Decoder) decodeEvent(valueJSON interface{}) cadence.Event {
 func (d *Decoder) decodeContract(valueJSON interface{}) cadence.Contract {
 	comp := d.decodeComposite(valueJSON)
 
-	return cadence.NewContract(comp.fieldValues).WithType(&cadence.ContractType{
+	contract, err := cadence.NewContract(
+		d.gauge,
+		len(comp.fieldValues),
+		func() ([]cadence.Value, error) {
+			return comp.fieldValues, nil
+		},
+	)
+
+	if err != nil {
+		panic(ErrInvalidJSONCadence)
+	}
+
+	return contract.WithType(&cadence.ContractType{
 		Location:            comp.location,
 		QualifiedIdentifier: comp.qualifiedIdentifier,
 		Fields:              comp.fieldTypes,
@@ -716,7 +763,19 @@ func (d *Decoder) decodeContract(valueJSON interface{}) cadence.Contract {
 func (d *Decoder) decodeEnum(valueJSON interface{}) cadence.Enum {
 	comp := d.decodeComposite(valueJSON)
 
-	return cadence.NewEnum(comp.fieldValues).WithType(&cadence.EnumType{
+	enum, err := cadence.NewEnum(
+		d.gauge,
+		len(comp.fieldValues),
+		func() ([]cadence.Value, error) {
+			return comp.fieldValues, nil
+		},
+	)
+
+	if err != nil {
+		panic(ErrInvalidJSONCadence)
+	}
+
+	return enum.WithType(&cadence.EnumType{
 		Location:            comp.location,
 		QualifiedIdentifier: comp.qualifiedIdentifier,
 		Fields:              comp.fieldTypes,

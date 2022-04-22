@@ -176,7 +176,7 @@ func TestStringer(t *testing.T) {
 			expected: "0x0000000000000001",
 		},
 		"struct": {
-			value: NewStruct([]Value{String("bar")}).WithType(&StructType{
+			value: NewUnmeteredStruct([]Value{String("bar")}).WithType(&StructType{
 				Location:            utils.TestLocation,
 				QualifiedIdentifier: "FooStruct",
 				Fields: []Field{
@@ -189,7 +189,7 @@ func TestStringer(t *testing.T) {
 			expected: "S.test.FooStruct(y: \"bar\")",
 		},
 		"resource": {
-			value: NewResource([]Value{NewUnmeteredInt(1)}).WithType(&ResourceType{
+			value: NewUnmeteredResource([]Value{NewUnmeteredInt(1)}).WithType(&ResourceType{
 				Location:            utils.TestLocation,
 				QualifiedIdentifier: "FooResource",
 				Fields: []Field{
@@ -202,7 +202,7 @@ func TestStringer(t *testing.T) {
 			expected: "S.test.FooResource(bar: 1)",
 		},
 		"event": {
-			value: NewEvent(
+			value: NewUnmeteredEvent(
 				[]Value{
 					NewUnmeteredInt(1),
 					String("foo"),
@@ -224,7 +224,7 @@ func TestStringer(t *testing.T) {
 			expected: "S.test.FooEvent(a: 1, b: \"foo\")",
 		},
 		"contract": {
-			value: NewContract([]Value{String("bar")}).WithType(&ContractType{
+			value: NewUnmeteredContract([]Value{String("bar")}).WithType(&ContractType{
 				Location:            utils.TestLocation,
 				QualifiedIdentifier: "FooContract",
 				Fields: []Field{

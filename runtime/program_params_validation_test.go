@@ -349,27 +349,27 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 
 			switch typ {
 			case sema.HashAlgorithmType:
-				value = cadence.NewEnum(
+				value = cadence.NewUnmeteredEnum(
 					[]cadence.Value{
 						cadence.NewUnmeteredUInt8(0),
 					},
 				).WithType(HashAlgoType)
 
 			case sema.SignatureAlgorithmType:
-				value = cadence.NewEnum(
+				value = cadence.NewUnmeteredEnum(
 					[]cadence.Value{
 						cadence.NewUnmeteredUInt8(0),
 					},
 				).WithType(SignAlgoType)
 
 			case sema.PublicKeyType:
-				value = cadence.NewStruct(
+				value = cadence.NewUnmeteredStruct(
 					[]cadence.Value{
 						// PublicKey bytes
 						cadence.NewUnmeteredArray([]cadence.Value{}),
 
 						// Sign algorithm
-						cadence.NewEnum(
+						cadence.NewUnmeteredEnum(
 							[]cadence.Value{
 								cadence.NewUnmeteredUInt8(0),
 							},
@@ -829,27 +829,27 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 
 			switch typ {
 			case sema.HashAlgorithmType:
-				value = cadence.NewEnum(
+				value = cadence.NewUnmeteredEnum(
 					[]cadence.Value{
 						cadence.NewUnmeteredUInt8(0),
 					},
 				).WithType(HashAlgoType)
 
 			case sema.SignatureAlgorithmType:
-				value = cadence.NewEnum(
+				value = cadence.NewUnmeteredEnum(
 					[]cadence.Value{
 						cadence.NewUnmeteredUInt8(0),
 					},
 				).WithType(SignAlgoType)
 
 			case sema.PublicKeyType:
-				value = cadence.NewStruct(
+				value = cadence.NewUnmeteredStruct(
 					[]cadence.Value{
 						// PublicKey bytes
 						cadence.NewUnmeteredArray([]cadence.Value{}),
 
 						// Sign algorithm
-						cadence.NewEnum(
+						cadence.NewUnmeteredEnum(
 							[]cadence.Value{
 								cadence.NewUnmeteredUInt8(0),
 							},

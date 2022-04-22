@@ -661,7 +661,7 @@ func newBytesValue(bytes []byte) cadence.Array {
 }
 
 func newSignAlgoValue(signAlgo sema.SignatureAlgorithm) cadence.Enum {
-	return cadence.NewEnum([]cadence.Value{
+	return cadence.NewUnmeteredEnum([]cadence.Value{
 		cadence.NewUnmeteredUInt8(signAlgo.RawValue()),
 	}).WithType(SignAlgoType)
 }
@@ -703,7 +703,7 @@ func accountKeyExportedValue(
 			},
 
 			// Hash algo
-			cadence.NewEnum([]cadence.Value{
+			cadence.NewUnmeteredEnum([]cadence.Value{
 				cadence.NewUnmeteredUInt8(hashAlgo.RawValue()),
 			}).WithType(HashAlgoType),
 

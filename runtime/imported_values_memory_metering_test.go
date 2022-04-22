@@ -700,7 +700,7 @@ func TestScriptDecodedLocationMetering(t *testing.T) {
 					return jsoncdc.Decode(runtimeInterface, b)
 				}
 
-				value := cadence.NewStruct([]cadence.Value{}).WithType(
+				value := cadence.NewUnmeteredStruct([]cadence.Value{}).WithType(
 					&cadence.StructType{
 						Location:            test.Location,
 						QualifiedIdentifier: "S",

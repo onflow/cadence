@@ -618,13 +618,13 @@ func TestEncodeArray(t *testing.T) {
 	resourceArray := encodeTest{
 		"Resources",
 		cadence.NewUnmeteredArray([]cadence.Value{
-			cadence.NewResource([]cadence.Value{
+			cadence.NewUnmeteredResource([]cadence.Value{
 				cadence.NewUnmeteredInt(1),
 			}).WithType(fooResourceType),
-			cadence.NewResource([]cadence.Value{
+			cadence.NewUnmeteredResource([]cadence.Value{
 				cadence.NewUnmeteredInt(2),
 			}).WithType(fooResourceType),
-			cadence.NewResource([]cadence.Value{
+			cadence.NewUnmeteredResource([]cadence.Value{
 				cadence.NewUnmeteredInt(3),
 			}).WithType(fooResourceType),
 		}),
@@ -700,19 +700,19 @@ func TestEncodeDictionary(t *testing.T) {
 		cadence.NewUnmeteredDictionary([]cadence.KeyValuePair{
 			{
 				Key: cadence.String("a"),
-				Value: cadence.NewResource([]cadence.Value{
+				Value: cadence.NewUnmeteredResource([]cadence.Value{
 					cadence.NewUnmeteredInt(1),
 				}).WithType(fooResourceType),
 			},
 			{
 				Key: cadence.String("b"),
-				Value: cadence.NewResource([]cadence.Value{
+				Value: cadence.NewUnmeteredResource([]cadence.Value{
 					cadence.NewUnmeteredInt(2),
 				}).WithType(fooResourceType),
 			},
 			{
 				Key: cadence.String("c"),
-				Value: cadence.NewResource([]cadence.Value{
+				Value: cadence.NewUnmeteredResource([]cadence.Value{
 					cadence.NewUnmeteredInt(3),
 				}).WithType(fooResourceType),
 			},
@@ -874,7 +874,7 @@ func TestEncodeStruct(t *testing.T) {
 
 	simpleStruct := encodeTest{
 		"Simple",
-		cadence.NewStruct(
+		cadence.NewUnmeteredStruct(
 			[]cadence.Value{
 				cadence.NewUnmeteredInt(1),
 				cadence.String("foo"),
@@ -900,10 +900,10 @@ func TestEncodeStruct(t *testing.T) {
 
 	resourceStruct := encodeTest{
 		"Resources",
-		cadence.NewStruct(
+		cadence.NewUnmeteredStruct(
 			[]cadence.Value{
 				cadence.String("foo"),
-				cadence.NewResource(
+				cadence.NewUnmeteredResource(
 					[]cadence.Value{
 						cadence.NewUnmeteredInt(42),
 					},
@@ -937,7 +937,7 @@ func TestEncodeEvent(t *testing.T) {
 
 	simpleEvent := encodeTest{
 		"Simple",
-		cadence.NewEvent(
+		cadence.NewUnmeteredEvent(
 			[]cadence.Value{
 				cadence.NewUnmeteredInt(1),
 				cadence.String("foo"),
@@ -963,10 +963,10 @@ func TestEncodeEvent(t *testing.T) {
 
 	resourceEvent := encodeTest{
 		"Resources",
-		cadence.NewEvent(
+		cadence.NewUnmeteredEvent(
 			[]cadence.Value{
 				cadence.String("foo"),
-				cadence.NewResource(
+				cadence.NewUnmeteredResource(
 					[]cadence.Value{
 						cadence.NewUnmeteredInt(42),
 					},
@@ -1000,7 +1000,7 @@ func TestEncodeContract(t *testing.T) {
 
 	simpleContract := encodeTest{
 		"Simple",
-		cadence.NewContract(
+		cadence.NewUnmeteredContract(
 			[]cadence.Value{
 				cadence.NewUnmeteredInt(1),
 				cadence.String("foo"),
@@ -1026,10 +1026,10 @@ func TestEncodeContract(t *testing.T) {
 
 	resourceContract := encodeTest{
 		"Resources",
-		cadence.NewContract(
+		cadence.NewUnmeteredContract(
 			[]cadence.Value{
 				cadence.String("foo"),
-				cadence.NewResource(
+				cadence.NewUnmeteredResource(
 					[]cadence.Value{
 						cadence.NewUnmeteredInt(42),
 					},

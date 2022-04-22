@@ -1125,7 +1125,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 			args: [][]byte{
 				jsoncdc.MustEncode(
 					cadence.
-						NewStruct([]cadence.Value{cadence.String("bar")}).
+						NewUnmeteredStruct([]cadence.Value{cadence.String("bar")}).
 						WithType(&cadence.StructType{
 							Location:            utils.TestLocation,
 							QualifiedIdentifier: "Foo",
@@ -1162,7 +1162,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 				jsoncdc.MustEncode(
 					cadence.NewUnmeteredArray([]cadence.Value{
 						cadence.
-							NewStruct([]cadence.Value{cadence.String("bar")}).
+							NewUnmeteredStruct([]cadence.Value{cadence.String("bar")}).
 							WithType(&cadence.StructType{
 								Location:            utils.TestLocation,
 								QualifiedIdentifier: "Foo",
@@ -1458,7 +1458,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 			args: [][]byte{
 				jsoncdc.MustEncode(
 					cadence.
-						NewStruct([]cadence.Value{cadence.String("bar")}).
+						NewUnmeteredStruct([]cadence.Value{cadence.String("bar")}).
 						WithType(&cadence.StructType{
 							Location:            utils.TestLocation,
 							QualifiedIdentifier: "Foo",
@@ -1493,7 +1493,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 				jsoncdc.MustEncode(
 					cadence.NewUnmeteredArray([]cadence.Value{
 						cadence.
-							NewStruct([]cadence.Value{cadence.String("bar")}).
+							NewUnmeteredStruct([]cadence.Value{cadence.String("bar")}).
 							WithType(&cadence.StructType{
 								Location:            utils.TestLocation,
 								QualifiedIdentifier: "Foo",

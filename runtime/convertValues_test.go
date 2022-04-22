@@ -1311,7 +1311,7 @@ func TestExportStructValue(t *testing.T) {
     `
 
 	actual := exportValueFromScript(t, script)
-	expected := cadence.NewStruct([]cadence.Value{cadence.NewUnmeteredInt(42)}).WithType(fooStructType)
+	expected := cadence.NewUnmeteredStruct([]cadence.Value{cadence.NewUnmeteredInt(42)}).WithType(fooStructType)
 
 	assert.Equal(t, expected, actual)
 }
@@ -1336,7 +1336,7 @@ func TestExportResourceValue(t *testing.T) {
 
 	actual := exportValueFromScript(t, script)
 	expected :=
-		cadence.NewResource([]cadence.Value{
+		cadence.NewUnmeteredResource([]cadence.Value{
 			cadence.NewUnmeteredUInt64(0),
 			cadence.NewUnmeteredInt(42),
 		}).WithType(fooResourceType)
@@ -1364,11 +1364,11 @@ func TestExportResourceArrayValue(t *testing.T) {
 
 	actual := exportValueFromScript(t, script)
 	expected := cadence.NewUnmeteredArray([]cadence.Value{
-		cadence.NewResource([]cadence.Value{
+		cadence.NewUnmeteredResource([]cadence.Value{
 			cadence.NewUnmeteredUInt64(0),
 			cadence.NewUnmeteredInt(1),
 		}).WithType(fooResourceType),
-		cadence.NewResource([]cadence.Value{
+		cadence.NewUnmeteredResource([]cadence.Value{
 			cadence.NewUnmeteredUInt64(0),
 			cadence.NewUnmeteredInt(2),
 		}).WithType(fooResourceType),
@@ -1402,14 +1402,14 @@ func TestExportResourceDictionaryValue(t *testing.T) {
 	expected := cadence.NewUnmeteredDictionary([]cadence.KeyValuePair{
 		{
 			Key: cadence.String("b"),
-			Value: cadence.NewResource([]cadence.Value{
+			Value: cadence.NewUnmeteredResource([]cadence.Value{
 				cadence.NewUnmeteredUInt64(0),
 				cadence.NewUnmeteredInt(2),
 			}).WithType(fooResourceType),
 		},
 		{
 			Key: cadence.String("a"),
-			Value: cadence.NewResource([]cadence.Value{
+			Value: cadence.NewUnmeteredResource([]cadence.Value{
 				cadence.NewUnmeteredUInt64(0),
 				cadence.NewUnmeteredInt(1),
 			}).WithType(fooResourceType),
@@ -1480,9 +1480,9 @@ func TestExportNestedResourceValueFromScript(t *testing.T) {
     `
 
 	actual := exportValueFromScript(t, script)
-	expected := cadence.NewResource([]cadence.Value{
+	expected := cadence.NewUnmeteredResource([]cadence.Value{
 		cadence.NewUnmeteredUInt64(0),
-		cadence.NewResource([]cadence.Value{
+		cadence.NewUnmeteredResource([]cadence.Value{
 			cadence.NewUnmeteredUInt64(0),
 			cadence.NewUnmeteredInt(42),
 		}).WithType(barResourceType),
@@ -1504,7 +1504,7 @@ func TestExportEventValue(t *testing.T) {
     `
 
 	actual := exportEventFromScript(t, script)
-	expected := cadence.NewEvent([]cadence.Value{cadence.NewUnmeteredInt(42)}).WithType(fooEventType)
+	expected := cadence.NewUnmeteredEvent([]cadence.Value{cadence.NewUnmeteredInt(42)}).WithType(fooEventType)
 
 	assert.Equal(t, expected, actual)
 }
@@ -3842,13 +3842,13 @@ func TestRuntimePublicKeyImport(t *testing.T) {
                         }
                     `
 
-					publicKey := cadence.NewStruct(
+					publicKey := cadence.NewUnmeteredStruct(
 						[]cadence.Value{
 							// PublicKey bytes
 							publicKeyBytes,
 
 							// Sign algorithm
-							cadence.NewEnum(
+							cadence.NewUnmeteredEnum(
 								[]cadence.Value{
 									cadence.NewUnmeteredUInt8(0),
 								},
@@ -3911,13 +3911,13 @@ func TestRuntimePublicKeyImport(t *testing.T) {
             }
         `
 
-		publicKey := cadence.NewStruct(
+		publicKey := cadence.NewUnmeteredStruct(
 			[]cadence.Value{
 				// PublicKey bytes
 				publicKeyBytes,
 
 				// Sign algorithm
-				cadence.NewEnum(
+				cadence.NewUnmeteredEnum(
 					[]cadence.Value{
 						cadence.NewUnmeteredUInt8(0),
 					},
@@ -3964,12 +3964,12 @@ func TestRuntimePublicKeyImport(t *testing.T) {
             }
         `
 
-		publicKey := cadence.NewStruct(
+		publicKey := cadence.NewUnmeteredStruct(
 			[]cadence.Value{
 				// Invalid value for 'publicKey' field
 				cadence.NewUnmeteredBool(true),
 
-				cadence.NewEnum(
+				cadence.NewUnmeteredEnum(
 					[]cadence.Value{
 						cadence.NewUnmeteredUInt8(0),
 					},
@@ -4002,7 +4002,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
             }
         `
 
-		publicKey := cadence.NewStruct(
+		publicKey := cadence.NewUnmeteredStruct(
 			[]cadence.Value{
 				// Invalid content for 'publicKey' field
 				cadence.NewUnmeteredArray([]cadence.Value{
@@ -4010,7 +4010,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 					cadence.String("2"),
 				}),
 
-				cadence.NewEnum(
+				cadence.NewUnmeteredEnum(
 					[]cadence.Value{
 						cadence.NewUnmeteredUInt8(0),
 					},
@@ -4043,7 +4043,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
             }
         `
 
-		publicKey := cadence.NewStruct(
+		publicKey := cadence.NewUnmeteredStruct(
 			[]cadence.Value{
 				publicKeyBytes,
 
@@ -4077,12 +4077,12 @@ func TestRuntimePublicKeyImport(t *testing.T) {
             }
         `
 
-		publicKey := cadence.NewStruct(
+		publicKey := cadence.NewUnmeteredStruct(
 			[]cadence.Value{
 				publicKeyBytes,
 
 				// Invalid value for fields of 'signatureAlgorithm'
-				cadence.NewEnum(
+				cadence.NewUnmeteredEnum(
 					[]cadence.Value{
 						cadence.String("hello"),
 					},

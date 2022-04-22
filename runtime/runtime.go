@@ -1690,7 +1690,7 @@ func (r *interpreterRuntime) emitEvent(
 		Fields: fields,
 	}
 
-	exportedEvent, err := exportEvent(eventValue, seenReferences{})
+	exportedEvent, err := exportEvent(inter, eventValue, seenReferences{})
 	if err != nil {
 		return err
 	}
@@ -1701,6 +1701,7 @@ func (r *interpreterRuntime) emitEvent(
 }
 
 func (r *interpreterRuntime) emitAccountEvent(
+	gauge common.MemoryGauge,
 	eventType *sema.CompositeType,
 	runtimeInterface Interface,
 	eventFields []exportableValue,
@@ -1722,7 +1723,7 @@ func (r *interpreterRuntime) emitAccountEvent(
 		))
 	}
 
-	exportedEvent, err := exportEvent(eventValue, seenReferences{})
+	exportedEvent, err := exportEvent(gauge, eventValue, seenReferences{})
 	if err != nil {
 		panic(err)
 	}
@@ -1790,6 +1791,7 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 		)
 
 		r.emitAccountEvent(
+			inter,
 			stdlib.AccountCreatedEventType,
 			context.Interface,
 			[]exportableValue{
@@ -2658,12 +2660,14 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 
 			if isUpdate {
 				r.emitAccountEvent(
+					inter,
 					stdlib.AccountContractUpdatedEventType,
 					startContext.Interface,
 					eventArguments,
 				)
 			} else {
 				r.emitAccountEvent(
+					inter,
 					stdlib.AccountContractAddedEventType,
 					startContext.Interface,
 					eventArguments,
@@ -2895,6 +2899,7 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 				codeHashValue := CodeToHashValue(inter, code)
 
 				r.emitAccountEvent(
+					inter,
 					stdlib.AccountContractRemovedEventType,
 					runtimeInterface,
 					[]exportableValue{
@@ -2905,9 +2910,9 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 				)
 
 				return interpreter.NewSomeValueNonCopying(
-					invocation.Interpreter,
+					inter,
 					interpreter.NewDeployedContractValue(
-						invocation.Interpreter,
+						inter,
 						addressValue,
 						nameValue,
 						interpreter.ByteSliceToByteArrayValue(
@@ -3182,6 +3187,7 @@ func (r *interpreterRuntime) newAccountKeysAddFunction(
 			}
 
 			r.emitAccountEvent(
+				inter,
 				stdlib.AccountKeyAddedEventType,
 				runtimeInterface,
 				[]exportableValue{
@@ -3289,6 +3295,7 @@ func (r *interpreterRuntime) newAccountKeysRevokeFunction(
 			inter := invocation.Interpreter
 
 			r.emitAccountEvent(
+				inter,
 				stdlib.AccountKeyRemovedEventType,
 				runtimeInterface,
 				[]exportableValue{

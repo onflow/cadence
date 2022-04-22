@@ -81,6 +81,16 @@ const (
 	MemoryKindCadenceArrayLength
 	MemoryKindCadenceDictionaryBase
 	MemoryKindCadenceDictionarySize
+	MemoryKindCadenceStructBase
+	MemoryKindCadenceStructSize
+	MemoryKindCadenceResourceBase
+	MemoryKindCadenceResourceSize
+	MemoryKindCadenceEventBase
+	MemoryKindCadenceEventSize
+	MemoryKindCadenceContractBase
+	MemoryKindCadenceContractSize
+	MemoryKindCadenceEnumBase
+	MemoryKindCadenceEnumSize
 
 	// Misc
 
