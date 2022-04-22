@@ -120,6 +120,8 @@ var (
 	SeenReferenceStringMemoryUsage         = NewRawStringMemoryUsage(3)                   // len(ellipsis)
 	AddressValueStringMemoryUsage          = NewRawStringMemoryUsage(AddressLength*2 + 2) // len(bytes-to-hex + prefix)
 	HostFunctionValueStringMemoryUsage     = NewRawStringMemoryUsage(len("Function(...)"))
+	CapabilityValueStringMemoryUsage       = NewRawStringMemoryUsage(len("Capability<>(address: , path: )"))
+	LinkValueStringMemoryUsage             = NewRawStringMemoryUsage(len("Link<>()"))
 
 	// Static types string representations
 

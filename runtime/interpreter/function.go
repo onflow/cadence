@@ -103,6 +103,7 @@ func (f *InterpretedFunctionValue) RecursiveString(_ SeenReferences) string {
 }
 
 func (f *InterpretedFunctionValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	// TODO: Meter sema.Type String conversion
 	typeString := f.Type.String()
 	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(8+len(typeString)))
 	return f.String()

@@ -282,7 +282,13 @@ func (v TypeValue) RecursiveString(_ SeenReferences) string {
 
 func (v TypeValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
 	common.UseMemory(memoryGauge, common.TypeValueStringMemoryUsage)
-	return v.String()
+
+	var typeString string
+	if v.Type != nil {
+		typeString = v.Type.MeteredString(memoryGauge)
+	}
+
+	return format.TypeValue(typeString)
 }
 
 func (v TypeValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -18015,16 +18021,13 @@ func (v *CapabilityValue) RecursiveString(seenReferences SeenReferences) string 
 	)
 }
 
-var capabilityValueStringBaseLen = len(format.Capability("", "", ""))
-
 func (v *CapabilityValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+	common.UseMemory(memoryGauge, common.CapabilityValueStringMemoryUsage)
+
 	var borrowType string
 	if v.BorrowType != nil {
-		borrowType = v.BorrowType.String()
+		borrowType = v.BorrowType.MeteredString(memoryGauge)
 	}
-
-	strLen := capabilityValueStringBaseLen + len(borrowType) + 2
-	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(strLen))
 
 	return format.Capability(
 		borrowType,
@@ -18221,16 +18224,11 @@ func (v LinkValue) RecursiveString(seenReferences SeenReferences) string {
 	)
 }
 
-var linkValueStringBaseLen = len(format.Link("", ""))
-
 func (v LinkValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
-	typeString := v.Type.String()
-
-	strLen := linkValueStringBaseLen + len(typeString)
-	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(strLen))
+	common.UseMemory(memoryGauge, common.LinkValueStringMemoryUsage)
 
 	return format.Link(
-		typeString,
+		v.Type.MeteredString(memoryGauge),
 		v.TargetPath.MeteredString(memoryGauge, seenReferences),
 	)
 }
