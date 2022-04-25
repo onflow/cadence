@@ -1342,9 +1342,14 @@ func newArrayValueFromAtreeValue(
 	staticType ArrayStaticType,
 ) *ArrayValue {
 
-	baseUse, lengthUse := common.NewArrayMemoryUsages(int(array.Count()))
+	var elementSize uint
+	if staticType != nil {
+		elementSize = staticType.ElementType().elementSize()
+	}
+	baseUse, dataSlabUse, metaDataSlabUse := common.NewArrayMemoryUsages(array.Count(), elementSize)
 	common.UseMemory(memoryGauge, baseUse)
-	common.UseMemory(memoryGauge, lengthUse)
+	common.UseMemory(memoryGauge, dataSlabUse)
+	common.UseMemory(memoryGauge, metaDataSlabUse)
 
 	return &ArrayValue{
 		Type:  staticType,
@@ -1590,6 +1595,13 @@ func (v *ArrayValue) Set(interpreter *Interpreter, getLocationRange func() Locat
 		})
 	}
 
+	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(
+		v.array.Count(),
+		v.Type.ElementType().elementSize(),
+	)
+	common.UseMemory(interpreter, dataSlabs)
+	common.UseMemory(interpreter, metaDataSlabs)
+
 	interpreter.checkContainerMutation(v.Type.ElementType(), element, getLocationRange)
 
 	element = element.Transfer(
@@ -1638,7 +1650,12 @@ func (v *ArrayValue) RecursiveString(seenReferences SeenReferences) string {
 func (v *ArrayValue) Append(interpreter *Interpreter, getLocationRange func() LocationRange, element Value) {
 
 	// length increases by 1
-	common.UseMemory(interpreter, common.NewArrayAdditionalLengthUsage(int(v.array.Count()), 1))
+	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(
+		v.array.Count(),
+		v.Type.ElementType().elementSize(),
+	)
+	common.UseMemory(interpreter, dataSlabs)
+	common.UseMemory(interpreter, metaDataSlabs)
 
 	interpreter.checkContainerMutation(v.Type.ElementType(), element, getLocationRange)
 
@@ -1687,7 +1704,12 @@ func (v *ArrayValue) Insert(interpreter *Interpreter, getLocationRange func() Lo
 	}
 
 	// length increases by 1
-	common.UseMemory(interpreter, common.NewArrayAdditionalLengthUsage(int(v.array.Count()), 1))
+	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(
+		v.array.Count(),
+		v.Type.ElementType().elementSize(),
+	)
+	common.UseMemory(interpreter, dataSlabs)
+	common.UseMemory(interpreter, metaDataSlabs)
 
 	interpreter.checkContainerMutation(v.Type.ElementType(), element, getLocationRange)
 
@@ -13913,9 +13935,10 @@ func newCompositeValueFromOrderedMap(
 	typeInfo compositeTypeInfo,
 ) *CompositeValue {
 
-	baseUse, lengthUse := common.NewCompositeMemoryUsages(int(dict.Count()))
+	baseUse, dataUse, metaDataUse := common.NewCompositeMemoryUsages(dict.Count(), 0)
 	common.UseMemory(memoryGauge, baseUse)
-	common.UseMemory(memoryGauge, lengthUse)
+	common.UseMemory(memoryGauge, dataUse)
+	common.UseMemory(memoryGauge, metaDataUse)
 
 	return &CompositeValue{
 		dictionary:          dict,
@@ -14996,9 +15019,19 @@ func newDictionaryValueFromOrderedMap(
 	staticType DictionaryStaticType,
 ) *DictionaryValue {
 
-	baseUse, lengthUse := common.NewDictionaryMemoryUsages(int(dict.Count()))
+	keySize := staticType.KeyType.elementSize()
+	valueSize := staticType.ValueType.elementSize()
+	var elementSize uint
+	if keySize != 0 && valueSize != 0 {
+		elementSize = keySize + valueSize
+	}
+	baseUse, dataUse, metaDataUse := common.NewDictionaryMemoryUsages(
+		dict.Count(),
+		elementSize,
+	)
 	common.UseMemory(memoryGauge, baseUse)
-	common.UseMemory(memoryGauge, lengthUse)
+	common.UseMemory(memoryGauge, dataUse)
+	common.UseMemory(memoryGauge, metaDataUse)
 
 	return &DictionaryValue{
 		Type:       staticType,
@@ -15487,7 +15520,15 @@ func (v *DictionaryValue) Insert(
 ) OptionalValue {
 
 	// length increases by 1
-	common.UseMemory(interpreter, common.NewDictionaryAdditionalSizeUsage(int(v.dictionary.Count()), 1))
+	keySize := v.Type.KeyType.elementSize()
+	valueSize := v.Type.ValueType.elementSize()
+	var elementSize uint
+	if keySize != 0 && valueSize != 0 {
+		elementSize = keySize + valueSize
+	}
+	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(v.dictionary.Count(), elementSize)
+	common.UseMemory(interpreter, dataSlabs)
+	common.UseMemory(interpreter, metaDataSlabs)
 
 	interpreter.checkContainerMutation(v.Type.KeyType, keyValue, getLocationRange)
 	interpreter.checkContainerMutation(v.Type.ValueType, value, getLocationRange)

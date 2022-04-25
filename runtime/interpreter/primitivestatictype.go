@@ -186,6 +186,82 @@ const (
 
 func (PrimitiveStaticType) isStaticType() {}
 
+func (t PrimitiveStaticType) elementSize() uint {
+	switch t {
+	case
+		PrimitiveStaticTypeAnyStruct,
+		PrimitiveStaticTypeAnyResource,
+		PrimitiveStaticTypeAny:
+		return UnknownElementSize
+	case PrimitiveStaticTypeVoid:
+		return 3 // see VoidValue ByteLength
+	case PrimitiveStaticTypeNever:
+		return 1
+	case PrimitiveStaticTypeBool:
+		return 1
+	case PrimitiveStaticTypeAddress,
+		PrimitiveStaticTypeString,
+		PrimitiveStaticTypeCharacter,
+		PrimitiveStaticTypeMetaType,
+		PrimitiveStaticTypeBlock:
+		return UnknownElementSize
+
+	case PrimitiveStaticTypeFixedPoint,
+		PrimitiveStaticTypeSignedFixedPoint:
+		return 8
+
+	// values of these types may wrap big.Int
+	case PrimitiveStaticTypeInt,
+		PrimitiveStaticTypeUInt128,
+		PrimitiveStaticTypeUInt256,
+		PrimitiveStaticTypeInt128,
+		PrimitiveStaticTypeInt256,
+		PrimitiveStaticTypeInteger,
+		PrimitiveStaticTypeSignedInteger,
+		PrimitiveStaticTypeNumber,
+		PrimitiveStaticTypeSignedNumber:
+		return UnknownElementSize
+
+	case PrimitiveStaticTypeInt8,
+		PrimitiveStaticTypeInt16,
+		PrimitiveStaticTypeInt32,
+		PrimitiveStaticTypeInt64,
+
+		PrimitiveStaticTypeUInt,
+		PrimitiveStaticTypeUInt8,
+		PrimitiveStaticTypeUInt16,
+		PrimitiveStaticTypeUInt32,
+		PrimitiveStaticTypeUInt64,
+
+		PrimitiveStaticTypeWord8,
+		PrimitiveStaticTypeWord16,
+		PrimitiveStaticTypeWord32,
+		PrimitiveStaticTypeWord64,
+
+		PrimitiveStaticTypeFix64,
+
+		PrimitiveStaticTypeUFix64:
+		return 8
+
+	case PrimitiveStaticTypePath,
+		PrimitiveStaticTypeCapability,
+		PrimitiveStaticTypeStoragePath,
+		PrimitiveStaticTypeCapabilityPath,
+		PrimitiveStaticTypePublicPath,
+		PrimitiveStaticTypePrivatePath,
+		PrimitiveStaticTypeAuthAccount,
+		PrimitiveStaticTypePublicAccount,
+		PrimitiveStaticTypeDeployedContract,
+		PrimitiveStaticTypeAuthAccountContracts,
+		PrimitiveStaticTypePublicAccountContracts,
+		PrimitiveStaticTypeAuthAccountKeys,
+		PrimitiveStaticTypePublicAccountKeys,
+		PrimitiveStaticTypeAccountKey:
+		return UnknownElementSize
+	}
+	return UnknownElementSize
+}
+
 func (i PrimitiveStaticType) SemaType() sema.Type {
 	switch i {
 	case PrimitiveStaticTypeVoid:

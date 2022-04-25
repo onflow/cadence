@@ -127,62 +127,74 @@ func NewConstantMemoryUsage(kind MemoryKind) MemoryUsage {
 	}
 }
 
-func NewArrayMemoryUsages(length int) (MemoryUsage, MemoryUsage) {
-	return MemoryUsage{
-			Kind:   MemoryKindArrayBase,
-			Amount: 1,
-		}, MemoryUsage{
-			Kind:   MemoryKindArrayLength,
-			Amount: uint64(length),
-		}
-}
-
-func NewArrayAdditionalLengthUsage(originalLength, additionalLength int) MemoryUsage {
-	var newAmount uint64
-	if originalLength <= 1 {
-		newAmount = uint64(originalLength + additionalLength)
+func atreeNodes(size uint64, element_size uint) (leafNodes uint64, branchNodes uint64) {
+	if element_size != 0 {
+		// If we know how large each element is, we can compute the number of
+		// atree leaf nodes using this formula:
+		// size * element_size / default_slab_size
+		leafNodes = uint64(math.Ceil(float64(size) * float64(element_size) / 1024))
 	} else {
-		// size of b+ tree grows logarithmically with the size of the tree
-		newAmount = uint64(math.Log2(float64(originalLength)) + float64(additionalLength))
+		// If we don't know how large each element is, we can overestimate
+		// the number of atree leaf nodes this way, since every leaf node
+		// will always contain at least two elements.
+		leafNodes = uint64(math.Ceil(float64(size) / 2))
 	}
-	return MemoryUsage{
-		Kind:   MemoryKindArrayLength,
-		Amount: newAmount,
+	if leafNodes < 1 {
+		leafNodes = 1 // there will always be at least one data slab
 	}
-}
-
-func NewDictionaryMemoryUsages(length int) (MemoryUsage, MemoryUsage) {
-	return MemoryUsage{
-			Kind:   MemoryKindDictionaryBase,
-			Amount: 1,
-		}, MemoryUsage{
-			Kind:   MemoryKindDictionarySize,
-			Amount: uint64(length),
-		}
-}
-
-func NewDictionaryAdditionalSizeUsage(originalSize, additionalSize int) MemoryUsage {
-	var newAmount uint64
-	if originalSize <= 1 {
-		newAmount = uint64(originalSize + additionalSize)
+	if leafNodes < 2 {
+		branchNodes = 0
 	} else {
-		// size of b+ tree grows logarithmically with the size of the tree
-		newAmount = uint64(math.Log2(float64(originalSize)) + float64(additionalSize))
+		branchNodes = uint64(math.Ceil(math.Log2(float64(leafNodes))))
 	}
-	return MemoryUsage{
-		Kind:   MemoryKindDictionarySize,
-		Amount: newAmount,
-	}
+	return
 }
 
-func NewCompositeMemoryUsages(length int) (MemoryUsage, MemoryUsage) {
+func newAtreeMemoryUsage(size uint64, element_size uint) (MemoryUsage, MemoryUsage) {
+	newLeafNodes, newBranchNodes := atreeNodes(size, element_size)
 	return MemoryUsage{
-			Kind:   MemoryKindCompositeBase,
-			Amount: 1,
+			Kind:   MemoryKindAtreeDataSlab,
+			Amount: newLeafNodes,
 		}, MemoryUsage{
-			Kind:   MemoryKindCompositeSize,
-			Amount: uint64(length),
+			Kind:   MemoryKindAtreeMetaDataSlab,
+			Amount: newBranchNodes,
 		}
+}
+
+func AdditionalAtreeMemoryUsage(originalSize uint64, elementSize uint) (MemoryUsage, MemoryUsage) {
+	originalLeafNodes, originalBranchNodes := atreeNodes(originalSize, elementSize)
+	newLeafNodes, newBranchNodes := atreeNodes(originalSize+1, elementSize)
+	return MemoryUsage{
+			Kind:   MemoryKindAtreeDataSlab,
+			Amount: newLeafNodes - originalLeafNodes,
+		}, MemoryUsage{
+			Kind:   MemoryKindAtreeMetaDataSlab,
+			Amount: newBranchNodes - originalBranchNodes,
+		}
+}
+
+func NewArrayMemoryUsages(length uint64, element_size uint) (MemoryUsage, MemoryUsage, MemoryUsage) {
+	leaves, branches := newAtreeMemoryUsage(length, element_size)
+	return MemoryUsage{
+		Kind:   MemoryKindArrayBase,
+		Amount: 1,
+	}, leaves, branches
+}
+
+func NewDictionaryMemoryUsages(size uint64, element_size uint) (MemoryUsage, MemoryUsage, MemoryUsage) {
+	leaves, branches := newAtreeMemoryUsage(size, element_size)
+	return MemoryUsage{
+		Kind:   MemoryKindDictionaryBase,
+		Amount: 1,
+	}, leaves, branches
+}
+
+func NewCompositeMemoryUsages(size uint64, element_size uint) (MemoryUsage, MemoryUsage, MemoryUsage) {
+	leaves, branches := newAtreeMemoryUsage(size, element_size)
+	return MemoryUsage{
+		Kind:   MemoryKindCompositeBase,
+		Amount: 1,
+	}, leaves, branches
 }
 
 func NewSimpleCompositeMemoryUsage(length int) MemoryUsage {
