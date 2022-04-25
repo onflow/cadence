@@ -92,7 +92,7 @@ func (i FlowIntegration) updateContractInfoIfNeeded(
 
 		if len(parameters) > 0 {
 			for _, pragmaArgumentString := range parser2.ParseDocstringPragmaArguments(docString) {
-				arguments, err := runtime.ParseLiteralArgumentList(pragmaArgumentString, parameterTypes)
+				arguments, err := runtime.ParseLiteralArgumentList(pragmaArgumentString, parameterTypes, nil)
 				// TODO: record error and show diagnostic
 				if err != nil {
 					continue
