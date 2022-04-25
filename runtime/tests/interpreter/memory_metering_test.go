@@ -462,6 +462,50 @@ func TestInterpretCompositeMetering(t *testing.T) {
 	})
 }
 
+func TestInterpretSimpleCompositeMetering(t *testing.T) {
+	t.Parallel()
+
+	t.Run("auth account", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main(a: AuthAccount) {
+            
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main", newTestAuthAccountValue(inter, randomAddressValue()))
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCompositeBase))
+		// AuthAccount has 18 fields
+		assert.Equal(t, uint64(19), meter.getMemory(common.MemoryKindSimpleComposite))
+	})
+
+	t.Run("public account", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main(a: PublicAccount) {
+            
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main", newTestPublicAccountValue(inter, randomAddressValue()))
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCompositeBase))
+		// PublicAccount has 9 fields
+		assert.Equal(t, uint64(10), meter.getMemory(common.MemoryKindSimpleComposite))
+	})
+}
+
 func TestInterpretCompositeFieldMetering(t *testing.T) {
 	t.Parallel()
 

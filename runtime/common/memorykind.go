@@ -54,6 +54,7 @@ const (
 	MemoryKindHostFunction
 	MemoryKindBoundFunction
 	MemoryKindBigInt
+	MemoryKindSimpleComposite
 
 	// Static Types
 	MemoryKindPrimitiveStaticType

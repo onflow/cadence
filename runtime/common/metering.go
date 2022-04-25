@@ -185,6 +185,13 @@ func NewCompositeMemoryUsages(length int) (MemoryUsage, MemoryUsage) {
 		}
 }
 
+func NewSimpleCompositeMemoryUsage(length int) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindSimpleComposite,
+		Amount: uint64(length) + 1, // +1 to account for empty strings
+	}
+}
+
 func NewStringMemoryUsage(length int) MemoryUsage {
 	return MemoryUsage{
 		Kind:   MemoryKindString,
