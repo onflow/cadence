@@ -596,7 +596,7 @@ func (i *FlowIntegration) storeAccountHelper(conn protocol.Conn, address flow.Ad
 	// Store new account
 	code := makeManagerCode(transactionAddAccount, serviceAddress)
 	txArgs := []cadence.Value{
-		cadence.NewUnmeteredAddress(address),
+		cadence.NewAddress(address),
 	}
 
 	const gasLimit uint64 = 1000
