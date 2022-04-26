@@ -135,7 +135,7 @@ func atreeNodes(size uint64, element_size uint) (leafNodes uint64, branchNodes u
 		leafNodes = uint64(math.Ceil(float64(size) * float64(element_size) / 1024))
 	} else {
 		// If we don't know how large each element is, we can overestimate
-		// the number of atree leaf nodes this way, since every leaf node
+		// the number of atree leaf nodes this way, since every non-root leaf node
 		// will always contain at least two elements.
 		leafNodes = uint64(math.Ceil(float64(size) / 2))
 	}
