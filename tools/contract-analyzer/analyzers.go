@@ -19,6 +19,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/tools/analysis"
@@ -81,14 +83,79 @@ func init() {
 	)
 }
 
-					},
-				)
-
-				return nil
-			},
-		},
-	)
+var deprecatedKeyFunctionsElements = []ast.Element{
+	(*ast.InvocationExpression)(nil),
 }
 
+var deprecatedKeyFunctionsAnalyzer = &analysis.Analyzer{
+	Requires: []*analysis.Analyzer{
+		analysis.InspectorAnalyzer,
+	},
+	Run: func(pass *analysis.Pass) interface{} {
+		inspector := pass.ResultOf[analysis.InspectorAnalyzer].(*ast.Inspector)
 
+		location := pass.Program.Location
+		elaboration := pass.Program.Elaboration
+		report := pass.Report
 
+		inspector.Preorder(
+			deprecatedKeyFunctionsElements,
+			func(element ast.Element) {
+				invocationExpression, ok := element.(*ast.InvocationExpression)
+				if !ok {
+					return
+				}
+
+				memberExpression, ok := invocationExpression.InvokedExpression.(*ast.MemberExpression)
+				if !ok {
+					return
+				}
+
+				memberInfo := elaboration.MemberExpressionMemberInfos[memberExpression]
+				member := memberInfo.Member
+				if member == nil {
+					return
+				}
+
+				if member.ContainerType != sema.AuthAccountType {
+					return
+				}
+
+				var details string
+				switch member.Identifier.Identifier {
+				case sema.AuthAccountAddPublicKeyField:
+					details = fmt.Sprintf(
+						"replace '%s' with '%s'",
+						sema.AuthAccountAddPublicKeyField,
+						"keys.add",
+					)
+				case sema.AuthAccountRemovePublicKeyField:
+					details = fmt.Sprintf(
+						"replace '%s' with '%s'",
+						sema.AuthAccountRemovePublicKeyField,
+						"keys.revoke",
+					)
+				default:
+					return
+				}
+
+				report(
+					analysis.Diagnostic{
+						Location: location,
+						Range:    ast.NewRangeFromPositioned(element),
+						Message:  fmt.Sprintf("use of deprecated key management API: %s", details),
+					},
+				)
+			},
+		)
+
+		return nil
+	},
+}
+
+func init() {
+	registerAnalyzer(
+		"deprecated-key-functions",
+		deprecatedKeyFunctionsAnalyzer,
+	)
+}
