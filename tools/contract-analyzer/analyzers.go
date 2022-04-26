@@ -24,51 +24,63 @@ import (
 	"github.com/onflow/cadence/tools/analysis"
 )
 
+var referenceToOptionalElements = []ast.Element{
+	(*ast.ReferenceExpression)(nil),
+}
+
+var referenceToOptionalAnalyzer = &analysis.Analyzer{
+	Requires: []*analysis.Analyzer{
+		analysis.InspectorAnalyzer,
+	},
+	Run: func(pass *analysis.Pass) interface{} {
+		inspector := pass.ResultOf[analysis.InspectorAnalyzer].(*ast.Inspector)
+
+		location := pass.Program.Location
+		elaboration := pass.Program.Elaboration
+		report := pass.Report
+
+		inspector.Preorder(
+			referenceToOptionalElements,
+			func(element ast.Element) {
+				referenceExpression, ok := element.(*ast.ReferenceExpression)
+				if !ok {
+					return
+				}
+
+				indexExpression, ok := referenceExpression.Expression.(*ast.IndexExpression)
+				if !ok {
+					return
+				}
+
+				indexedType := elaboration.IndexExpressionIndexedTypes[indexExpression]
+				resultType := indexedType.ElementType(false)
+				_, ok = resultType.(*sema.OptionalType)
+				if !ok {
+					return
+				}
+
+				report(
+					analysis.Diagnostic{
+						Location: location,
+						Range:    ast.NewRangeFromPositioned(indexExpression),
+						Message:  "reference to optional",
+					},
+				)
+			},
+		)
+
+		return nil
+	},
+}
+
 func init() {
-	var referenceToOptionalElements = []ast.Element{
-		(*ast.ReferenceExpression)(nil),
-	}
 
 	registerAnalyzer(
 		"reference-to-optional",
-		&analysis.Analyzer{
-			Requires: []*analysis.Analyzer{
-				analysis.InspectorAnalyzer,
-			},
-			Run: func(pass *analysis.Pass) interface{} {
-				inspector := pass.ResultOf[analysis.InspectorAnalyzer].(*ast.Inspector)
+		referenceToOptionalAnalyzer,
+	)
+}
 
-				location := pass.Program.Location
-				elaboration := pass.Program.Elaboration
-				report := pass.Report
-
-				inspector.Preorder(
-					referenceToOptionalElements,
-					func(element ast.Element) {
-						referenceExpression, ok := element.(*ast.ReferenceExpression)
-						if !ok {
-							return
-						}
-
-						indexExpression, ok := referenceExpression.Expression.(*ast.IndexExpression)
-						if !ok {
-							return
-						}
-
-						indexedType := elaboration.IndexExpressionIndexedTypes[indexExpression]
-						resultType := indexedType.ElementType(false)
-						_, ok = resultType.(*sema.OptionalType)
-						if !ok {
-							return
-						}
-
-						report(
-							analysis.Diagnostic{
-								Location: location,
-								Range:    ast.NewRangeFromPositioned(indexExpression),
-								Message:  "reference to optional",
-							},
-						)
 					},
 				)
 
