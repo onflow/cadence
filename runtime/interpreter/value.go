@@ -1597,14 +1597,6 @@ func (v *ArrayValue) Set(interpreter *Interpreter, getLocationRange func() Locat
 		})
 	}
 
-	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(
-		v.array.Count(),
-		v.elementSize,
-		true,
-	)
-	common.UseMemory(interpreter, dataSlabs)
-	common.UseMemory(interpreter, metaDataSlabs)
-
 	interpreter.checkContainerMutation(v.Type.ElementType(), element, getLocationRange)
 
 	element = element.Transfer(
