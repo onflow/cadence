@@ -19,6 +19,8 @@
 package analysis
 
 import (
+	"fmt"
+
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 )
@@ -39,4 +41,48 @@ type Config struct {
 		importingLocation common.Location,
 		importRange ast.Range,
 	) (string, error)
+}
+
+func NewSimpleConfig(
+	mode LoadMode,
+	codes map[common.LocationID]string,
+	contractNames map[common.Address][]string,
+) *Config {
+	config := &Config{
+		Mode: mode,
+		ResolveAddressContractNames: func(
+			address common.Address,
+		) (
+			[]string,
+			error,
+		) {
+			names, ok := contractNames[address]
+			if !ok {
+				return nil, fmt.Errorf(
+					"missing contracts for address: %s",
+					address,
+				)
+			}
+			return names, nil
+		},
+		ResolveCode: func(
+			location common.Location,
+			importingLocation common.Location,
+			importRange ast.Range,
+		) (
+			string,
+			error,
+		) {
+			code, ok := codes[location.ID()]
+			if !ok {
+				return "", fmt.Errorf(
+					"import of unknown location: %s",
+					location,
+				)
+			}
+
+			return code, nil
+		},
+	}
+	return config
 }

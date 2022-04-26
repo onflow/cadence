@@ -54,6 +54,7 @@ type Elaboration struct {
 	ReturnStatementValueTypes           map[*ast.ReturnStatement]Type
 	ReturnStatementReturnTypes          map[*ast.ReturnStatement]Type
 	BinaryExpressionResultTypes         map[*ast.BinaryExpression]Type
+	BinaryExpressionLeftTypes           map[*ast.BinaryExpression]Type
 	BinaryExpressionRightTypes          map[*ast.BinaryExpression]Type
 	MemberExpressionMemberInfos         map[*ast.MemberExpression]MemberInfo
 	MemberExpressionExpectedTypes       map[*ast.MemberExpression]Type
@@ -117,6 +118,7 @@ func NewElaboration() *Elaboration {
 		ReturnStatementValueTypes:           map[*ast.ReturnStatement]Type{},
 		ReturnStatementReturnTypes:          map[*ast.ReturnStatement]Type{},
 		BinaryExpressionResultTypes:         map[*ast.BinaryExpression]Type{},
+		BinaryExpressionLeftTypes:           map[*ast.BinaryExpression]Type{},
 		BinaryExpressionRightTypes:          map[*ast.BinaryExpression]Type{},
 		MemberExpressionMemberInfos:         map[*ast.MemberExpression]MemberInfo{},
 		MemberExpressionExpectedTypes:       map[*ast.MemberExpression]Type{},
