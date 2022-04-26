@@ -25,6 +25,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"sync"
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/pretty"
@@ -107,7 +108,12 @@ func main() {
 		}
 	}
 
+	var reportLock sync.Mutex
+
 	report := func(diagnostic analysis.Diagnostic) {
+		reportLock.Lock()
+		defer reportLock.Unlock()
+
 		printErr(
 			diagnosticErr{diagnostic},
 			diagnostic.Location,
