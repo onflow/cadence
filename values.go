@@ -36,7 +36,7 @@ import (
 
 type Value interface {
 	isValue()
-	Type() Type
+	Type(gauge common.MemoryGauge) Type
 	ToGoValue() interface{}
 	fmt.Stringer
 }
@@ -63,8 +63,8 @@ func NewVoid(memoryGauge common.MemoryGauge) Void {
 
 func (Void) isValue() {}
 
-func (Void) Type() Type {
-	return VoidType{}
+func (Void) Type(gauge common.MemoryGauge) Type {
+	return NewVoidType(gauge)
 }
 
 func (Void) ToGoValue() interface{} {
@@ -92,17 +92,18 @@ func NewOptional(memoryGauge common.MemoryGauge, value Value) Optional {
 
 func (Optional) isValue() {}
 
-func (o Optional) Type() Type {
+func (o Optional) Type(gauge common.MemoryGauge) Type {
 	var innerType Type
 	if o.Value == nil {
-		innerType = NeverType{}
+		innerType = NewNeverType(gauge)
 	} else {
-		innerType = o.Value.Type()
+		innerType = o.Value.Type(gauge)
 	}
 
-	return OptionalType{
-		Type: innerType,
-	}
+	return NewOptionalType(
+		gauge,
+		innerType,
+	)
 }
 
 func (o Optional) ToGoValue() interface{} {
@@ -137,8 +138,8 @@ func NewBool(memoryGauge common.MemoryGauge, b bool) Bool {
 
 func (Bool) isValue() {}
 
-func (Bool) Type() Type {
-	return BoolType{}
+func (Bool) Type(gauge common.MemoryGauge) Type {
+	return NewBoolType(gauge)
 }
 
 func (v Bool) ToGoValue() interface{} {
@@ -173,8 +174,8 @@ func NewString(
 
 func (String) isValue() {}
 
-func (String) Type() Type {
-	return StringType{}
+func (String) Type(gauge common.MemoryGauge) Type {
+	return NewStringType(gauge)
 }
 
 func (v String) ToGoValue() interface{} {
@@ -196,8 +197,8 @@ func NewBytes(b []byte) Bytes {
 
 func (Bytes) isValue() {}
 
-func (Bytes) Type() Type {
-	return BytesType{}
+func (Bytes) Type(gauge common.MemoryGauge) Type {
+	return NewBytesType(gauge)
 }
 
 func (v Bytes) ToGoValue() interface{} {
@@ -235,8 +236,8 @@ func NewCharacter(
 
 func (Character) isValue() {}
 
-func (Character) Type() Type {
-	return CharacterType{}
+func (Character) Type(gauge common.MemoryGauge) Type {
+	return NewCharacterType(gauge)
 }
 
 func (v Character) ToGoValue() interface{} {
@@ -275,8 +276,8 @@ func BytesToAddress(memoryGauge common.MemoryGauge, b []byte) Address {
 
 func (Address) isValue() {}
 
-func (Address) Type() Type {
-	return AddressType{}
+func (Address) Type(gauge common.MemoryGauge) Type {
+	return NewAddressType(gauge)
 }
 
 func (v Address) ToGoValue() interface{} {
@@ -321,8 +322,8 @@ func NewIntFromBig(
 
 func (Int) isValue() {}
 
-func (Int) Type() Type {
-	return IntType{}
+func (Int) Type(gauge common.MemoryGauge) Type {
+	return NewIntType(gauge)
 }
 
 func (v Int) ToGoValue() interface{} {
@@ -366,8 +367,8 @@ func (v Int8) ToGoValue() interface{} {
 	return int8(v)
 }
 
-func (Int8) Type() Type {
-	return Int8Type{}
+func (Int8) Type(gauge common.MemoryGauge) Type {
+	return NewInt8Type(gauge)
 }
 
 func (v Int8) ToBigEndianBytes() []byte {
@@ -395,8 +396,8 @@ func NewInt16(memoryGauge common.MemoryGauge, v int16) Int16 {
 
 func (Int16) isValue() {}
 
-func (Int16) Type() Type {
-	return Int16Type{}
+func (Int16) Type(gauge common.MemoryGauge) Type {
+	return NewInt16Type(gauge)
 }
 
 func (v Int16) ToGoValue() interface{} {
@@ -430,8 +431,8 @@ func NewInt32(memoryGauge common.MemoryGauge, v int32) Int32 {
 
 func (Int32) isValue() {}
 
-func (Int32) Type() Type {
-	return Int32Type{}
+func (Int32) Type(gauge common.MemoryGauge) Type {
+	return NewInt32Type(gauge)
 }
 
 func (v Int32) ToGoValue() interface{} {
@@ -465,8 +466,8 @@ func NewInt64(memoryGauge common.MemoryGauge, v int64) Int64 {
 
 func (Int64) isValue() {}
 
-func (Int64) Type() Type {
-	return Int64Type{}
+func (Int64) Type(gauge common.MemoryGauge) Type {
+	return NewInt64Type(gauge)
 }
 
 func (v Int64) ToGoValue() interface{} {
@@ -516,8 +517,8 @@ func NewInt128FromBig(
 
 func (Int128) isValue() {}
 
-func (Int128) Type() Type {
-	return Int128Type{}
+func (Int128) Type(gauge common.MemoryGauge) Type {
+	return NewInt128Type(gauge)
 }
 
 func (v Int128) ToGoValue() interface{} {
@@ -573,8 +574,8 @@ func NewInt256FromBig(
 
 func (Int256) isValue() {}
 
-func (Int256) Type() Type {
-	return Int256Type{}
+func (Int256) Type(gauge common.MemoryGauge) Type {
+	return NewInt256Type(gauge)
 }
 
 func (v Int256) ToGoValue() interface{} {
@@ -626,8 +627,8 @@ func NewUIntFromBig(
 
 func (UInt) isValue() {}
 
-func (UInt) Type() Type {
-	return UIntType{}
+func (UInt) Type(gauge common.MemoryGauge) Type {
+	return NewUIntType(gauge)
 }
 
 func (v UInt) ToGoValue() interface{} {
@@ -667,8 +668,8 @@ func NewUInt8(gauge common.MemoryGauge, v uint8) UInt8 {
 
 func (UInt8) isValue() {}
 
-func (UInt8) Type() Type {
-	return UInt8Type{}
+func (UInt8) Type(gauge common.MemoryGauge) Type {
+	return NewUInt8Type(gauge)
 }
 
 func (v UInt8) ToGoValue() interface{} {
@@ -700,8 +701,8 @@ func NewUInt16(gauge common.MemoryGauge, v uint16) UInt16 {
 
 func (UInt16) isValue() {}
 
-func (UInt16) Type() Type {
-	return UInt16Type{}
+func (UInt16) Type(gauge common.MemoryGauge) Type {
+	return NewUInt16Type(gauge)
 }
 
 func (v UInt16) ToGoValue() interface{} {
@@ -735,8 +736,8 @@ func NewUInt32(gauge common.MemoryGauge, v uint32) UInt32 {
 
 func (UInt32) isValue() {}
 
-func (UInt32) Type() Type {
-	return UInt32Type{}
+func (UInt32) Type(gauge common.MemoryGauge) Type {
+	return NewUInt32Type(gauge)
 }
 
 func (v UInt32) ToGoValue() interface{} {
@@ -770,8 +771,8 @@ func NewUInt64(gauge common.MemoryGauge, v uint64) UInt64 {
 
 func (UInt64) isValue() {}
 
-func (UInt64) Type() Type {
-	return UInt64Type{}
+func (UInt64) Type(gauge common.MemoryGauge) Type {
+	return NewUInt64Type(gauge)
 }
 
 func (v UInt64) ToGoValue() interface{} {
@@ -821,8 +822,8 @@ func NewUInt128FromBig(
 
 func (UInt128) isValue() {}
 
-func (UInt128) Type() Type {
-	return UInt128Type{}
+func (UInt128) Type(gauge common.MemoryGauge) Type {
+	return NewUInt128Type(gauge)
 }
 
 func (v UInt128) ToGoValue() interface{} {
@@ -878,8 +879,8 @@ func NewUInt256FromBig(
 
 func (UInt256) isValue() {}
 
-func (UInt256) Type() Type {
-	return UInt256Type{}
+func (UInt256) Type(gauge common.MemoryGauge) Type {
+	return NewUInt256Type(gauge)
 }
 
 func (v UInt256) ToGoValue() interface{} {
@@ -919,8 +920,8 @@ func NewWord8(gauge common.MemoryGauge, v uint8) Word8 {
 
 func (Word8) isValue() {}
 
-func (Word8) Type() Type {
-	return Word8Type{}
+func (Word8) Type(gauge common.MemoryGauge) Type {
+	return NewWord8Type(gauge)
 }
 
 func (v Word8) ToGoValue() interface{} {
@@ -952,8 +953,8 @@ func NewWord16(gauge common.MemoryGauge, v uint16) Word16 {
 
 func (Word16) isValue() {}
 
-func (Word16) Type() Type {
-	return Word16Type{}
+func (Word16) Type(gauge common.MemoryGauge) Type {
+	return NewWord16Type(gauge)
 }
 
 func (v Word16) ToGoValue() interface{} {
@@ -987,8 +988,8 @@ func NewWord32(gauge common.MemoryGauge, v uint32) Word32 {
 
 func (Word32) isValue() {}
 
-func (Word32) Type() Type {
-	return Word32Type{}
+func (Word32) Type(gauge common.MemoryGauge) Type {
+	return NewWord32Type(gauge)
 }
 
 func (v Word32) ToGoValue() interface{} {
@@ -1022,8 +1023,8 @@ func NewWord64(gauge common.MemoryGauge, v uint64) Word64 {
 
 func (Word64) isValue() {}
 
-func (Word64) Type() Type {
-	return Word64Type{}
+func (Word64) Type(gauge common.MemoryGauge) Type {
+	return NewWord64Type(gauge)
 }
 
 func (v Word64) ToGoValue() interface{} {
@@ -1082,8 +1083,8 @@ func ParseFix64(s string) (int64, error) {
 
 func (Fix64) isValue() {}
 
-func (Fix64) Type() Type {
-	return Fix64Type{}
+func (Fix64) Type(gauge common.MemoryGauge) Type {
+	return NewFix64Type(gauge)
 }
 
 func (v Fix64) ToGoValue() interface{} {
@@ -1141,8 +1142,8 @@ func ParseUFix64(s string) (uint64, error) {
 
 func (UFix64) isValue() {}
 
-func (UFix64) Type() Type {
-	return UFix64Type{}
+func (UFix64) Type(gauge common.MemoryGauge) Type {
+	return NewUFix64Type(gauge)
 }
 
 func (v UFix64) ToGoValue() interface{} {
@@ -1189,7 +1190,7 @@ func NewArray(
 
 func (Array) isValue() {}
 
-func (v Array) Type() Type {
+func (v Array) Type(_ common.MemoryGauge) Type {
 	return v.ArrayType
 }
 
@@ -1245,7 +1246,7 @@ func NewDictionary(
 
 func (Dictionary) isValue() {}
 
-func (v Dictionary) Type() Type {
+func (v Dictionary) Type(_ common.MemoryGauge) Type {
 	return v.DictionaryType
 }
 
@@ -1290,6 +1291,14 @@ type KeyValuePair struct {
 	Value Value
 }
 
+func NewKeyValuePair(gauge common.MemoryGauge, key, value Value) KeyValuePair {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceKeyValuePair)
+	return KeyValuePair{
+		Key:   key,
+		Value: value,
+	}
+}
+
 // Struct
 
 type Struct struct {
@@ -1319,7 +1328,7 @@ func NewStruct(
 
 func (Struct) isValue() {}
 
-func (v Struct) Type() Type {
+func (v Struct) Type(_ common.MemoryGauge) Type {
 	return v.StructType
 }
 
@@ -1391,7 +1400,7 @@ func NewResource(
 
 func (Resource) isValue() {}
 
-func (v Resource) Type() Type {
+func (v Resource) Type(_ common.MemoryGauge) Type {
 	return v.ResourceType
 }
 
@@ -1442,7 +1451,7 @@ func NewEvent(
 
 func (Event) isValue() {}
 
-func (v Event) Type() Type {
+func (v Event) Type(_ common.MemoryGauge) Type {
 	return v.EventType
 }
 
@@ -1492,7 +1501,7 @@ func NewContract(
 
 func (Contract) isValue() {}
 
-func (v Contract) Type() Type {
+func (v Contract) Type(_ common.MemoryGauge) Type {
 	return v.ContractType
 }
 
@@ -1537,7 +1546,7 @@ func NewLink(gauge common.MemoryGauge, targetPath Path, borrowType string) Link 
 
 func (Link) isValue() {}
 
-func (v Link) Type() Type {
+func (v Link) Type(_ common.MemoryGauge) Type {
 	return nil
 }
 
@@ -1573,8 +1582,8 @@ func NewPath(gauge common.MemoryGauge, domain, identifier string) Path {
 
 func (Path) isValue() {}
 
-func (Path) Type() Type {
-	return PathType{}
+func (Path) Type(gauge common.MemoryGauge) Type {
+	return NewPathType(gauge)
 }
 
 func (Path) ToGoValue() interface{} {
@@ -1607,8 +1616,8 @@ func NewTypeValue(gauge common.MemoryGauge, staticType Type) TypeValue {
 
 func (TypeValue) isValue() {}
 
-func (TypeValue) Type() Type {
-	return MetaType{}
+func (TypeValue) Type(gauge common.MemoryGauge) Type {
+	return NewMetaType(gauge)
 }
 
 func (TypeValue) ToGoValue() interface{} {
@@ -1642,8 +1651,8 @@ func NewCapability(gauge common.MemoryGauge, path Path, address Address, borrowT
 
 func (Capability) isValue() {}
 
-func (Capability) Type() Type {
-	return CapabilityType{}
+func (v Capability) Type(gauge common.MemoryGauge) Type {
+	return NewCapabilityType(gauge, v.BorrowType) // TODO is this correct? original was nil for BorrowType
 }
 
 func (Capability) ToGoValue() interface{} {
@@ -1685,7 +1694,7 @@ func NewEnum(
 
 func (Enum) isValue() {}
 
-func (v Enum) Type() Type {
+func (v Enum) Type(_ common.MemoryGauge) Type {
 	return v.EnumType
 }
 

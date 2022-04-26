@@ -87,6 +87,7 @@ const (
 	MemoryKindCadenceArrayLength
 	MemoryKindCadenceDictionaryBase
 	MemoryKindCadenceDictionarySize
+	MemoryKindCadenceKeyValuePair
 	MemoryKindCadenceStructBase
 	MemoryKindCadenceStructSize
 	MemoryKindCadenceResourceBase
@@ -101,6 +102,27 @@ const (
 	MemoryKindCadencePath
 	MemoryKindCadenceTypeValue
 	MemoryKindCadenceCapability
+
+	// Cadence Types
+	MemoryKindCadenceSimpleType
+	MemoryKindCadenceOptionalType
+	MemoryKindCadenceVariableSizedArrayType
+	MemoryKindCadenceConstantSizedArrayType
+	MemoryKindCadenceDictionaryType
+	MemoryKindCadenceField
+	MemoryKindCadenceParameter
+	MemoryKindCadenceStructType
+	MemoryKindCadenceResourceType
+	MemoryKindCadenceEventType
+	MemoryKindCadenceContractType
+	MemoryKindCadenceStructInterfaceType
+	MemoryKindCadenceResourceInterfaceType
+	MemoryKindCadenceContractInterfaceType
+	MemoryKindCadenceFunctionType
+	MemoryKindCadenceReferenceType
+	MemoryKindCadenceRestrictedType
+	MemoryKindCadenceCapabilityType
+	MemoryKindCadenceEnumType
 
 	// Misc
 

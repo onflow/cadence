@@ -483,7 +483,7 @@ func TestOptional_Type(t *testing.T) {
 			OptionalType{
 				Type: NeverType{},
 			},
-			Optional{}.Type(),
+			Optional{}.Type(nil),
 		)
 	})
 
@@ -495,7 +495,7 @@ func TestOptional_Type(t *testing.T) {
 			},
 			Optional{
 				Value: Int8(2),
-			}.Type(),
+			}.Type(nil),
 		)
 	})
 }

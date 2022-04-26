@@ -279,7 +279,7 @@ func exportCompositeValue(
 	}
 
 	// TODO: consider making the results map "global", by moving it up to exportValueWithInterpreter
-	t := exportCompositeType(compositeType, map[sema.TypeID]cadence.Type{})
+	t := exportCompositeType(inter, compositeType, map[sema.TypeID]cadence.Type{})
 
 	// NOTE: use the exported type's fields to ensure fields in type
 	// and value are in sync
@@ -415,7 +415,7 @@ func exportSimpleCompositeValue(
 	}
 
 	// TODO: consider making the results map "global", by moving it up to exportValueWithInterpreter
-	t := exportCompositeType(compositeType, map[sema.TypeID]cadence.Type{})
+	t := exportCompositeType(inter, compositeType, map[sema.TypeID]cadence.Type{})
 
 	// NOTE: use the exported type's fields to ensure fields in type
 	// and value are in sync
@@ -598,7 +598,7 @@ func exportTypeValue(v interpreter.TypeValue, inter *interpreter.Interpreter) ca
 	}
 	return cadence.NewTypeValue(
 		inter,
-		ExportType(typ, map[sema.TypeID]cadence.Type{}),
+		ExportType(inter, typ, map[sema.TypeID]cadence.Type{}),
 	)
 }
 
@@ -612,7 +612,7 @@ func exportCapabilityValue(v *interpreter.CapabilityValue, inter *interpreter.In
 		inter,
 		exportPathValue(inter, v.Path),
 		cadence.NewAddress(inter, v.Address),
-		ExportType(borrowType, map[sema.TypeID]cadence.Type{}),
+		ExportType(inter, borrowType, map[sema.TypeID]cadence.Type{}),
 	)
 }
 
@@ -644,13 +644,17 @@ func exportEvent(
 		return cadence.Event{}, err
 	}
 
-	eventType := ExportType(event.Type, map[sema.TypeID]cadence.Type{}).(*cadence.EventType)
+	eventType := ExportType(gauge, event.Type, map[sema.TypeID]cadence.Type{}).(*cadence.EventType)
 
 	return exported.WithType(eventType), nil
 }
 
 // importValue converts a Cadence value to a runtime value.
-func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedType sema.Type) (interpreter.Value, error) {
+func importValue(
+	inter *interpreter.Interpreter,
+	value cadence.Value,
+	expectedType sema.Type,
+) (interpreter.Value, error) {
 	switch v := value.(type) {
 	case cadence.Void:
 		return interpreter.NewVoidValue(inter), nil
