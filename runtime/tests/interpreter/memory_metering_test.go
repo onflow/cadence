@@ -9044,6 +9044,8 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 	}
 
 	t.Run("Primitive static types", func(t *testing.T) {
+		t.Parallel()
+
 		for staticType, typeName := range interpreter.PrimitiveStaticTypes {
 			switch staticType {
 			case interpreter.PrimitiveStaticTypeUnknown,
