@@ -54,6 +54,16 @@ func (d diagnosticErr) Error() string {
 func main() {
 	var analyzersFlag stringSliceFlag
 	flag.Var(&analyzersFlag, "a", "enable analyzer")
+
+	defaultUsage := flag.Usage
+	flag.Usage = func() {
+		defaultUsage()
+		_, _ = fmt.Fprintf(os.Stderr, "\nAvailable analyzers:\n")
+		for name := range analyzers.Analyzers {
+			_, _ = fmt.Fprintf(os.Stderr, "  - %s\n", name)
+		}
+	}
+
 	flag.Parse()
 
 	var enabledAnalyzers []*analysis.Analyzer
