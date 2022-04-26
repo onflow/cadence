@@ -16,28 +16,20 @@
  * limitations under the License.
  */
 
-package main
+package analysis
 
-import (
-	"fmt"
-	"regexp"
+// LoadMode controls the amount of detail to return when loading.
+// The bits below can be combined to specify what information is required.
+//
+type LoadMode int
 
-	"github.com/onflow/cadence/tools/analysis"
+const (
+	// NeedSyntax provides the AST.
+	NeedSyntax LoadMode = 0
+
+	// NeedTypes provides the elaboration.
+	NeedTypes LoadMode = 1 << iota
+
+	// NeedPositionInfo provides position information (e.g. occurrences).
+	NeedPositionInfo
 )
-
-var analyzers = map[string]*analysis.Analyzer{}
-
-var analyzerNamePattern = regexp.MustCompile(`\w+`)
-
-func registerAnalyzer(name string, analyzer *analysis.Analyzer) {
-	if _, ok := analyzers[name]; ok {
-		panic(fmt.Errorf("analyzer already exists: %s", name))
-	}
-
-	if !analyzerNamePattern.MatchString(name) {
-		panic(fmt.Errorf("invalid analyzer name: %s", name))
-
-	}
-
-	analyzers[name] = analyzer
-}

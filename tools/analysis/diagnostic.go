@@ -16,28 +16,15 @@
  * limitations under the License.
  */
 
-package main
+package analysis
 
 import (
-	"fmt"
-	"regexp"
-
-	"github.com/onflow/cadence/tools/analysis"
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 )
 
-var analyzers = map[string]*analysis.Analyzer{}
-
-var analyzerNamePattern = regexp.MustCompile(`\w+`)
-
-func registerAnalyzer(name string, analyzer *analysis.Analyzer) {
-	if _, ok := analyzers[name]; ok {
-		panic(fmt.Errorf("analyzer already exists: %s", name))
-	}
-
-	if !analyzerNamePattern.MatchString(name) {
-		panic(fmt.Errorf("invalid analyzer name: %s", name))
-
-	}
-
-	analyzers[name] = analyzer
+type Diagnostic struct {
+	ast.Range
+	Location common.Location
+	Message  string
 }

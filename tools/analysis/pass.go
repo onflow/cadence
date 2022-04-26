@@ -16,28 +16,21 @@
  * limitations under the License.
  */
 
-package main
+package analysis
 
-import (
-	"fmt"
-	"regexp"
+// Pass provides information to the Analyzer.Run function,
+// which applies a specific analyzer to a single location.
+//
+type Pass struct {
+	Program *Program
 
-	"github.com/onflow/cadence/tools/analysis"
-)
+	// Report reports a Diagnostic, a finding about a specific location
+	// in the analyzed source code such as a potential mistake.
+	// It may be called by the Analyzer.Run function.
+	Report func(Diagnostic)
 
-var analyzers = map[string]*analysis.Analyzer{}
-
-var analyzerNamePattern = regexp.MustCompile(`\w+`)
-
-func registerAnalyzer(name string, analyzer *analysis.Analyzer) {
-	if _, ok := analyzers[name]; ok {
-		panic(fmt.Errorf("analyzer already exists: %s", name))
-	}
-
-	if !analyzerNamePattern.MatchString(name) {
-		panic(fmt.Errorf("invalid analyzer name: %s", name))
-
-	}
-
-	analyzers[name] = analyzer
+	// ResultOf provides the inputs to this analysis pass,
+	// which are the corresponding results of its prerequisite analyzers.
+	// The map keys are the elements of Analyzer.Requires.
+	ResultOf map[*Analyzer]interface{}
 }

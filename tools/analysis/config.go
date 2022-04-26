@@ -19,17 +19,24 @@
 package analysis
 
 import (
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 )
 
-func Load(config *Config, locations ...common.Location) (Programs, error) {
-	programs := make(Programs, len(locations))
-	for _, location := range locations {
-		err := programs.Load(config, location)
-		if err != nil {
-			return nil, err
-		}
-	}
+// A Config specifies details about how programs should be loaded.
+// The zero value is a valid configuration.
+// Calls to Load do not modify this struct.
+type Config struct {
+	// Mode controls the level of information returned for each program.
+	Mode LoadMode
 
-	return programs, nil
+	// ResolveAddressContractNames is called to resolve the contract names of an address location.
+	ResolveAddressContractNames func(address common.Address) ([]string, error)
+
+	// ResolveCode is called to resolve an import to its source code.
+	ResolveCode func(
+		location common.Location,
+		importingLocation common.Location,
+		importRange ast.Range,
+	) (string, error)
 }
