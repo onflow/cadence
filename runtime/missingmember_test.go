@@ -4427,8 +4427,8 @@ pub contract ExampleNFT {
             return <-token
         }
 
-        pub fun getReference(id: UInt64): &NFT? {
-            return &self.ownedNFTs[id] as &NFT?
+        pub fun getReference(id: UInt64): &NFT {
+            return (&self.ownedNFTs[id] as &NFT?)!
         }
 
         // deposit 
@@ -4643,7 +4643,7 @@ pub contract ExampleMarketplace {
             // We can force-cast the result here because it has already been checked in the pre-conditions
             let receiverReference = recipient.borrow()!
 
-            let nftRef = self.ownerCollection.borrow()!.getReference(id: tokenID)!
+            let nftRef = self.ownerCollection.borrow()!.getReference(id: tokenID)
             log("NFT Reference before transfer:")
             log(nftRef)
 
@@ -4967,8 +4967,8 @@ transaction {
 		{setupAccount1Tx, exampleTokenAddress},
 		{setupAccount2Tx, exampleNFTAddress},
 		{mintTokensTx, exampleTokenAddress},
-		//	{createSaleTx, exampleTokenAddress},
-		//	{purchaseTx, exampleTokenAddress},
+		{createSaleTx, exampleTokenAddress},
+		{purchaseTx, exampleTokenAddress},
 	} {
 		signerAddress = tx.signer
 
