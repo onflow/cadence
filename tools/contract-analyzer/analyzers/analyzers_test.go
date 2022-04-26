@@ -140,3 +140,42 @@ func TestNumberSupertypeBinaryOperationsAnalyzer(t *testing.T) {
 		diagnostics,
 	)
 }
+
+func TestParameterListMissingCommasAnalyzer(t *testing.T) {
+
+	t.Parallel()
+
+	diagnostics := testAnalyzers(t,
+		`
+          pub contract Test {
+              pub fun test(a: Int     b: Int) {
+                  fun (x: Int   y: Int) {}
+              }
+          }
+	    `,
+		analyzers.ParameterListMissingCommasAnalyzer,
+	)
+
+	require.Equal(
+		t,
+		[]analysis.Diagnostic{
+			{
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 64, Line: 3, Column: 33},
+					EndPos:   ast.Position{Offset: 64, Line: 3, Column: 33},
+				},
+				Location: testLocation,
+				Message:  "missing comma",
+			},
+			{
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 108, Line: 4, Column: 29},
+					EndPos:   ast.Position{Offset: 108, Line: 4, Column: 29},
+				},
+				Location: testLocation,
+				Message:  "missing comma",
+			},
+		},
+		diagnostics,
+	)
+}

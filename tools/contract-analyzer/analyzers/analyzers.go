@@ -20,6 +20,7 @@ package analyzers
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/sema"
@@ -231,5 +232,84 @@ func init() {
 	registerAnalyzer(
 		"number-supertype-binary-operations",
 		NumberSupertypeBinaryOperationsAnalyzer,
+	)
+}
+
+// Parameter list missing commas analyzer
+
+var ParameterListMissingCommasAnalyzer = (func() *analysis.Analyzer {
+
+	elementFilter := []ast.Element{
+		(*ast.FunctionDeclaration)(nil),
+		(*ast.FunctionExpression)(nil),
+	}
+
+	return &analysis.Analyzer{
+		Requires: []*analysis.Analyzer{
+			analysis.InspectorAnalyzer,
+		},
+		Run: func(pass *analysis.Pass) interface{} {
+			inspector := pass.ResultOf[analysis.InspectorAnalyzer].(*ast.Inspector)
+
+			location := pass.Program.Location
+			code := pass.Program.Code
+			report := pass.Report
+
+			inspector.Preorder(
+				elementFilter,
+				func(element ast.Element) {
+
+					var parameterList *ast.ParameterList
+					switch element := element.(type) {
+					case *ast.FunctionExpression:
+						parameterList = element.ParameterList
+					case *ast.FunctionDeclaration:
+						parameterList = element.ParameterList
+					default:
+						break
+					}
+
+					parameters := parameterList.Parameters
+					for i, parameter := range parameters {
+						if i == 0 {
+							continue
+						}
+
+						startOffset := parameter.StartPosition().Offset
+
+						previousParameter := parameters[i-1]
+						previousEndPos := previousParameter.EndPosition()
+						previousEndOffset := previousEndPos.Offset
+
+						if strings.ContainsRune(code[previousEndOffset:startOffset], ',') {
+							continue
+						}
+
+						diagnosticPos := previousEndPos.Shifted(1)
+
+						report(
+							analysis.Diagnostic{
+								Location: location,
+								Range: ast.Range{
+									StartPos: diagnosticPos,
+									EndPos:   diagnosticPos,
+								},
+								Message: "missing comma",
+							},
+						)
+					}
+
+				},
+			)
+
+			return nil
+		},
+	}
+})()
+
+func init() {
+	registerAnalyzer(
+		"parameter-list-missing-commas",
+		ParameterListMissingCommasAnalyzer,
 	)
 }
