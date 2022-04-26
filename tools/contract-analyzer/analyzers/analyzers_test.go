@@ -279,3 +279,81 @@ func TestSupertypeInferenceAnalyzer(t *testing.T) {
 		)
 	})
 }
+
+func TestExternalMutationAnalyzer(t *testing.T) {
+
+	t.Parallel()
+
+	diagnostics := testAnalyzers(t,
+		`
+          pub contract Test {
+
+              pub struct A {
+                 pub let internal: [Int]
+                 pub(set) var external: [Int]
+
+                 init() {
+                     self.internal = []
+                     self.external = []
+                 }
+
+                 pub fun internalAdd1(number: Int) {
+                     self.internal.append(number)
+                 }
+
+                 pub fun externalAdd1(number: Int) {
+                     self.external.append(number)
+                 }
+
+                 pub fun internalSet1(index: Int, number: Int) {
+                     self.internal[index] = number
+                 }
+
+                 pub fun externalSet1(index: Int, number: Int) {
+                     self.external[index] = number
+                 }
+              }
+
+              pub fun internalAdd2(a: A, number: Int) {
+                 a.internal.append(number)
+              }
+
+              pub fun externalAdd2(a: A, number: Int) {
+                 a.external.append(number)
+              }
+
+              pub fun internalSet2(a: A, index: Int, number: Int) {
+                 a.internal[index] = number
+              }
+
+              pub fun externalSet2(a: A, index: Int, number: Int) {
+                 a.external[index] = number
+              }
+          }
+        `,
+		analyzers.ExternalMutationAnalyzer,
+	)
+
+	require.Equal(
+		t,
+		[]analysis.Diagnostic{
+			{
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 937, Line: 31, Column: 17},
+					EndPos:   ast.Position{Offset: 953, Line: 31, Column: 33},
+				},
+				Location: testLocation,
+				Message:  "external mutation",
+			},
+			{
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 1206, Line: 39, Column: 27},
+					EndPos:   ast.Position{Offset: 1221, Line: 39, Column: 42},
+				},
+				Location: testLocation,
+				Message:  "external mutation",
+			},
+		},
+		diagnostics,
+	)
+}
