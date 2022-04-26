@@ -418,7 +418,9 @@ func (t *RestrictedStaticType) MeteredString(memoryGauge common.MemoryGauge) str
 	l := len(restrictions)*2 + 2
 	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(l))
 
-	return fmt.Sprintf("%s{%s}", t.Type, strings.Join(restrictions, ", "))
+	typeStr := t.Type.MeteredString(memoryGauge)
+
+	return fmt.Sprintf("%s{%s}", typeStr, strings.Join(restrictions, ", "))
 }
 
 func (t *RestrictedStaticType) Equal(other StaticType) bool {
@@ -534,11 +536,12 @@ func (t CapabilityStaticType) String() string {
 
 func (t CapabilityStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
 	common.UseMemory(memoryGauge, common.CapabilityStaticTypeMemoryUsage)
-	typeStr := t.BorrowType.MeteredString(memoryGauge)
 
 	if t.BorrowType != nil {
+		typeStr := t.BorrowType.MeteredString(memoryGauge)
 		return fmt.Sprintf("Capability<%s>", typeStr)
 	}
+
 	return "Capability"
 }
 

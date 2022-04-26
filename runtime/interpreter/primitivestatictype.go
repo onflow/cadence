@@ -30,6 +30,8 @@ import (
 
 // PrimitiveStaticType
 
+var PrimitiveStaticTypes = _PrimitiveStaticType_map
+
 type PrimitiveStaticType uint
 
 func (t PrimitiveStaticType) Equal(other StaticType) bool {
