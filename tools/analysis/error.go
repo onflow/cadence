@@ -16,28 +16,32 @@
  * limitations under the License.
  */
 
-package main
+package analysis
 
 import (
-	"fmt"
-	"regexp"
-
-	"github.com/onflow/cadence/tools/analysis"
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
+	"golang.org/x/xerrors"
 )
 
-var analyzers = map[string]*analysis.Analyzer{}
+type ParsingCheckingError struct {
+	error
+	location common.Location
+}
 
-var analyzerNamePattern = regexp.MustCompile(`\w+`)
+var _ error = ParsingCheckingError{}
+var _ xerrors.Wrapper = ParsingCheckingError{}
+var _ common.HasLocation = ParsingCheckingError{}
+var _ errors.ParentError = ParsingCheckingError{}
 
-func registerAnalyzer(name string, analyzer *analysis.Analyzer) {
-	if _, ok := analyzers[name]; ok {
-		panic(fmt.Errorf("analyzer already exists: %s", name))
-	}
+func (e ParsingCheckingError) Unwrap() error {
+	return e.error
+}
 
-	if !analyzerNamePattern.MatchString(name) {
-		panic(fmt.Errorf("invalid analyzer name: %s", name))
+func (e ParsingCheckingError) ImportLocation() common.Location {
+	return e.location
+}
 
-	}
-
-	analyzers[name] = analyzer
+func (e ParsingCheckingError) ChildErrors() []error {
+	return []error{e.error}
 }

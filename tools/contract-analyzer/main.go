@@ -41,12 +41,22 @@ func printErr(err error, location common.Location, codes map[common.LocationID]s
 	}
 }
 
+type diagnosticErr struct {
+	analysis.Diagnostic
+}
+
+var _ error = diagnosticErr{}
+
+func (d diagnosticErr) Error() string {
+	return d.Message
+}
+
 func main() {
 	var analyzersFlag stringSliceFlag
 	flag.Var(&analyzersFlag, "a", "enable analyzer")
 	flag.Parse()
 
-	var enabledAnalyzers []analyzer
+	var enabledAnalyzers []*analysis.Analyzer
 
 	for _, analyzerName := range analyzersFlag {
 		analyzer, ok := analyzers[analyzerName]
@@ -87,22 +97,23 @@ func main() {
 		}
 	}
 
-	report := func(err error, location common.Location) {
-		printErr(err, location, codes)
+	report := func(diagnostic analysis.Diagnostic) {
+		printErr(
+			diagnosticErr{diagnostic},
+			diagnostic.Location,
+			codes,
+		)
 	}
 
-	for _, analyzer := range enabledAnalyzers {
-
-		log.Printf("Runing analyzer %s ...", analyzer.Name())
-
-		for _, location := range locations {
-			log.Printf("Analyzing %s", location)
-
-			program := programs[location.ID()]
-			if program != nil {
-				analyzer.Analyze(program, report)
-			}
+	for _, location := range locations {
+		program := programs[location.ID()]
+		if program == nil {
+			continue
 		}
+
+		log.Printf("Analyzing %s", location)
+
+		program.Run(enabledAnalyzers, report)
 	}
 }
 

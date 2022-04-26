@@ -16,28 +16,15 @@
  * limitations under the License.
  */
 
-package main
+package analysis
 
-import (
-	"fmt"
-	"regexp"
+// Analyzer describes an analysis function and its options
+//
+type Analyzer struct {
+	Run func(*Pass) interface{}
 
-	"github.com/onflow/cadence/tools/analysis"
-)
-
-var analyzers = map[string]*analysis.Analyzer{}
-
-var analyzerNamePattern = regexp.MustCompile(`\w+`)
-
-func registerAnalyzer(name string, analyzer *analysis.Analyzer) {
-	if _, ok := analyzers[name]; ok {
-		panic(fmt.Errorf("analyzer already exists: %s", name))
-	}
-
-	if !analyzerNamePattern.MatchString(name) {
-		panic(fmt.Errorf("invalid analyzer name: %s", name))
-
-	}
-
-	analyzers[name] = analyzer
+	// Requires is a set of analyzers that must run before this one.
+	// This analyzer may inspect the outputs produced by each analyzer in Requires.
+	// The graph over analyzers implied by Requires edges must be acyclic
+	Requires []*Analyzer
 }
