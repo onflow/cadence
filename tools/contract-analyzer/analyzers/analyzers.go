@@ -266,7 +266,7 @@ var ParameterListMissingCommasAnalyzer = (func() *analysis.Analyzer {
 					case *ast.FunctionDeclaration:
 						parameterList = element.ParameterList
 					default:
-						break
+						return
 					}
 
 					parameters := parameterList.Parameters
@@ -311,5 +311,111 @@ func init() {
 	registerAnalyzer(
 		"parameter-list-missing-commas",
 		ParameterListMissingCommasAnalyzer,
+	)
+}
+
+// Supertype inference analyzer
+
+var SupertypeInferenceAnalyzer = (func() *analysis.Analyzer {
+
+	elementFilter := []ast.Element{
+		(*ast.ArrayExpression)(nil),
+		(*ast.DictionaryExpression)(nil),
+		(*ast.ConditionalExpression)(nil),
+	}
+
+	return &analysis.Analyzer{
+		Requires: []*analysis.Analyzer{
+			analysis.InspectorAnalyzer,
+		},
+		Run: func(pass *analysis.Pass) interface{} {
+			inspector := pass.ResultOf[analysis.InspectorAnalyzer].(*ast.Inspector)
+
+			location := pass.Program.Location
+			elaboration := pass.Program.Elaboration
+			report := pass.Report
+
+			inspector.Preorder(
+				elementFilter,
+				func(element ast.Element) {
+
+					type typeTuple struct {
+						first, second sema.Type
+					}
+					var typeTuples []typeTuple
+
+					switch element := element.(type) {
+					case *ast.ArrayExpression:
+						argumentTypes := elaboration.ArrayExpressionArgumentTypes[element]
+						if len(argumentTypes) < 2 {
+							return
+						}
+						typeTuples = append(
+							typeTuples,
+							typeTuple{
+								first:  argumentTypes[0],
+								second: argumentTypes[1],
+							},
+						)
+
+					case *ast.DictionaryExpression:
+						entryTypes := elaboration.DictionaryExpressionEntryTypes[element]
+						if len(entryTypes) < 2 {
+							return
+						}
+						typeTuples = append(
+							typeTuples,
+							typeTuple{
+								first:  entryTypes[0].KeyType,
+								second: entryTypes[1].KeyType,
+							},
+							typeTuple{
+								first:  entryTypes[0].ValueType,
+								second: entryTypes[1].ValueType,
+							},
+						)
+
+					case *ast.ConditionalExpression:
+						typeTuples = append(
+							typeTuples,
+							typeTuple{
+								first:  elaboration.ConditionalExpressionThenType[element],
+								second: elaboration.ConditionalExpressionElseType[element],
+							},
+						)
+
+					default:
+						return
+					}
+
+					for _, typeTuple := range typeTuples {
+						if typeTuple.first.Equal(typeTuple.second) {
+							continue
+						}
+
+						report(
+							analysis.Diagnostic{
+								Location: location,
+								Range:    ast.NewRangeFromPositioned(element),
+								Message:  "inferred type may differ",
+							},
+						)
+
+						// Only report one diagnostic for each expression
+						return
+					}
+
+				},
+			)
+
+			return nil
+		},
+	}
+})()
+
+func init() {
+	registerAnalyzer(
+		"supertype-inference",
+		SupertypeInferenceAnalyzer,
 	)
 }

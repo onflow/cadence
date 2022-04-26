@@ -50,7 +50,7 @@ func TestReferenceToOptionalAnalyzer(t *testing.T) {
                   let ref = &xs[0] as &String
               }
           }
-	    `,
+        `,
 		analyzers.ReferenceToOptionalAnalyzer,
 	)
 
@@ -82,7 +82,7 @@ func TestDeprecatedKeyFunctionsAnalyzer(t *testing.T) {
                   account.removePublicKey(0)
               }
           }
-	    `,
+        `,
 		analyzers.DeprecatedKeyFunctionsAnalyzer,
 	)
 
@@ -121,7 +121,7 @@ func TestNumberSupertypeBinaryOperationsAnalyzer(t *testing.T) {
                   let c = a - b
               }
           }
-	    `,
+        `,
 		analyzers.NumberSupertypeBinaryOperationsAnalyzer,
 	)
 
@@ -152,7 +152,7 @@ func TestParameterListMissingCommasAnalyzer(t *testing.T) {
                   fun (x: Int   y: Int) {}
               }
           }
-	    `,
+        `,
 		analyzers.ParameterListMissingCommasAnalyzer,
 	)
 
@@ -178,4 +178,104 @@ func TestParameterListMissingCommasAnalyzer(t *testing.T) {
 		},
 		diagnostics,
 	)
+}
+
+func TestSupertypeInferenceAnalyzer(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("array", func(t *testing.T) {
+
+		t.Parallel()
+
+		diagnostics := testAnalyzers(t,
+			`
+              // same types
+              pub let a = [1, 2]
+
+              // different types
+              pub let b = [true as AnyStruct, "true"]
+            `,
+			analyzers.SupertypeInferenceAnalyzer,
+		)
+
+		require.Equal(
+			t,
+			[]analysis.Diagnostic{
+				{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 118, Line: 6, Column: 26},
+						EndPos:   ast.Position{Offset: 144, Line: 6, Column: 52},
+					},
+					Location: testLocation,
+					Message:  "inferred type may differ",
+				},
+			},
+			diagnostics,
+		)
+	})
+
+	t.Run("dictionary", func(t *testing.T) {
+
+		t.Parallel()
+
+		diagnostics := testAnalyzers(t,
+			`
+
+              // same types
+              pub let a = {1: "1", 2: "2"}
+
+              // different value types
+              pub let b = {1: "1" as AnyStruct, 2: true}
+            `,
+			analyzers.SupertypeInferenceAnalyzer,
+		)
+
+		require.Equal(
+			t,
+			[]analysis.Diagnostic{
+				{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 154, Line: 7, Column: 26},
+						EndPos:   ast.Position{Offset: 183, Line: 7, Column: 55},
+					},
+					Location: testLocation,
+					Message:  "inferred type may differ",
+				},
+			},
+			diagnostics,
+		)
+	})
+
+	t.Run("conditional", func(t *testing.T) {
+
+		t.Parallel()
+
+		diagnostics := testAnalyzers(t,
+			`
+
+              // same types
+              pub let a = true ? 1 : 2
+
+              // different types
+              pub let b = true ? 1 as AnyStruct: "2"
+            `,
+			analyzers.SupertypeInferenceAnalyzer,
+		)
+
+		require.Equal(
+			t,
+			[]analysis.Diagnostic{
+				{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 144, Line: 7, Column: 26},
+						EndPos:   ast.Position{Offset: 169, Line: 7, Column: 51},
+					},
+					Location: testLocation,
+					Message:  "inferred type may differ",
+				},
+			},
+			diagnostics,
+		)
+	})
 }

@@ -88,6 +88,8 @@ type Elaboration struct {
 	ReferenceExpressionBorrowTypes      map[*ast.ReferenceExpression]Type
 	IndexExpressionIndexedTypes         map[*ast.IndexExpression]ValueIndexableType
 	IndexExpressionIndexingTypes        map[*ast.IndexExpression]Type
+	ConditionalExpressionThenType       map[*ast.ConditionalExpression]Type
+	ConditionalExpressionElseType       map[*ast.ConditionalExpression]Type
 }
 
 func NewElaboration(gauge common.MemoryGauge) *Elaboration {
@@ -145,6 +147,8 @@ func NewElaboration(gauge common.MemoryGauge) *Elaboration {
 		ReferenceExpressionBorrowTypes:      map[*ast.ReferenceExpression]Type{},
 		IndexExpressionIndexedTypes:         map[*ast.IndexExpression]ValueIndexableType{},
 		IndexExpressionIndexingTypes:        map[*ast.IndexExpression]Type{},
+		ConditionalExpressionThenType:       map[*ast.ConditionalExpression]Type{},
+		ConditionalExpressionElseType:       map[*ast.ConditionalExpression]Type{},
 	}
 }
 

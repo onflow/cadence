@@ -94,6 +94,9 @@ func (checker *Checker) VisitConditionalExpression(expression *ast.ConditionalEx
 		)
 	}
 
+	checker.Elaboration.ConditionalExpressionThenType[expression] = thenType
+	checker.Elaboration.ConditionalExpressionElseType[expression] = elseType
+
 	if expectedType != nil {
 		return expectedType
 	}
