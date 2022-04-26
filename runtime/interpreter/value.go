@@ -1250,6 +1250,7 @@ type ArrayValue struct {
 	array            *atree.Array
 	isDestroyed      bool
 	isResourceKinded *bool
+	elementSize      uint
 }
 
 func NewArrayValue(
@@ -1352,8 +1353,9 @@ func newArrayValueFromAtreeValue(
 	common.UseMemory(memoryGauge, metaDataSlabUse)
 
 	return &ArrayValue{
-		Type:  staticType,
-		array: array,
+		Type:        staticType,
+		array:       array,
+		elementSize: elementSize,
 	}
 }
 
@@ -1597,7 +1599,7 @@ func (v *ArrayValue) Set(interpreter *Interpreter, getLocationRange func() Locat
 
 	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(
 		v.array.Count(),
-		v.Type.ElementType().elementSize(),
+		v.elementSize,
 		true,
 	)
 	common.UseMemory(interpreter, dataSlabs)
@@ -1653,7 +1655,7 @@ func (v *ArrayValue) Append(interpreter *Interpreter, getLocationRange func() Lo
 	// length increases by 1
 	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(
 		v.array.Count(),
-		v.Type.ElementType().elementSize(),
+		v.elementSize,
 		true,
 	)
 	common.UseMemory(interpreter, dataSlabs)
@@ -1708,7 +1710,7 @@ func (v *ArrayValue) Insert(interpreter *Interpreter, getLocationRange func() Lo
 	// length increases by 1
 	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(
 		v.array.Count(),
-		v.Type.ElementType().elementSize(),
+		v.elementSize,
 		true,
 	)
 	common.UseMemory(interpreter, dataSlabs)
@@ -14941,6 +14943,7 @@ type DictionaryValue struct {
 	isResourceKinded *bool
 	dictionary       *atree.OrderedMap
 	isDestroyed      bool
+	elementSize      uint
 }
 
 func NewDictionaryValue(
@@ -15037,8 +15040,9 @@ func newDictionaryValueFromOrderedMap(
 	common.UseMemory(memoryGauge, metaDataUse)
 
 	return &DictionaryValue{
-		Type:       staticType,
-		dictionary: dict,
+		Type:        staticType,
+		dictionary:  dict,
+		elementSize: elementSize,
 	}
 }
 
@@ -15523,13 +15527,7 @@ func (v *DictionaryValue) Insert(
 ) OptionalValue {
 
 	// length increases by 1
-	keySize := v.Type.KeyType.elementSize()
-	valueSize := v.Type.ValueType.elementSize()
-	var elementSize uint
-	if keySize != 0 && valueSize != 0 {
-		elementSize = keySize + valueSize
-	}
-	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(v.dictionary.Count(), elementSize, false)
+	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(v.dictionary.Count(), v.elementSize, false)
 	common.UseMemory(interpreter, dataSlabs)
 	common.UseMemory(interpreter, metaDataSlabs)
 
