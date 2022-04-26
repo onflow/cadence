@@ -26,10 +26,10 @@ import (
 	"log"
 	"os"
 
-	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/pretty"
 	"github.com/onflow/cadence/tools/analysis"
+	"github.com/onflow/cadence/tools/contract-analyzer/analyzers"
 )
 
 var errorPrettyPrinter = pretty.NewErrorPrettyPrinter(os.Stdout, true)
@@ -59,7 +59,7 @@ func main() {
 	var enabledAnalyzers []*analysis.Analyzer
 
 	for _, analyzerName := range analyzersFlag {
-		analyzer, ok := analyzers[analyzerName]
+		analyzer, ok := analyzers.Analyzers[analyzerName]
 		if !ok {
 			log.Panic(fmt.Errorf("unknown analyzer: %s", analyzerName))
 		}
@@ -82,7 +82,7 @@ func main() {
 	}
 
 	locations, codes, contractNames := readContracts(file)
-	analysisConfig := newAnalysisConfig(codes, contractNames)
+	analysisConfig := analysis.NewSimpleConfig(analysis.NeedTypes, codes, contractNames)
 
 	programs := make(analysis.Programs, len(locations))
 
@@ -115,49 +115,6 @@ func main() {
 
 		program.Run(enabledAnalyzers, report)
 	}
-}
-
-func newAnalysisConfig(
-	codes map[common.LocationID]string,
-	contractNames map[common.Address][]string,
-) *analysis.Config {
-	config := &analysis.Config{
-		Mode: analysis.NeedTypes,
-		ResolveAddressContractNames: func(
-			address common.Address,
-		) (
-			[]string,
-			error,
-		) {
-			names, ok := contractNames[address]
-			if !ok {
-				return nil, fmt.Errorf(
-					"missing contracts for address: %s",
-					address,
-				)
-			}
-			return names, nil
-		},
-		ResolveCode: func(
-			location common.Location,
-			importingLocation common.Location,
-			importRange ast.Range,
-		) (
-			string,
-			error,
-		) {
-			code, ok := codes[location.ID()]
-			if !ok {
-				return "", fmt.Errorf(
-					"import of unknown location: %s",
-					location,
-				)
-			}
-
-			return code, nil
-		},
-	}
-	return config
 }
 
 func readContracts(

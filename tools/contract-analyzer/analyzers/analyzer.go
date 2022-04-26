@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package main
+package analyzers
 
 import (
 	"fmt"
@@ -25,12 +25,12 @@ import (
 	"github.com/onflow/cadence/tools/analysis"
 )
 
-var analyzers = map[string]*analysis.Analyzer{}
+var Analyzers = map[string]*analysis.Analyzer{}
 
 var analyzerNamePattern = regexp.MustCompile(`\w+`)
 
 func registerAnalyzer(name string, analyzer *analysis.Analyzer) {
-	if _, ok := analyzers[name]; ok {
+	if _, ok := Analyzers[name]; ok {
 		panic(fmt.Errorf("analyzer already exists: %s", name))
 	}
 
@@ -39,5 +39,5 @@ func registerAnalyzer(name string, analyzer *analysis.Analyzer) {
 
 	}
 
-	analyzers[name] = analyzer
+	Analyzers[name] = analyzer
 }
