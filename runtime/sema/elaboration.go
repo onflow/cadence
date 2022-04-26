@@ -91,6 +91,8 @@ type Elaboration struct {
 	IsResourceMoveIndexExpression map[*ast.IndexExpression]bool
 	IndexExpressionIndexedTypes   map[*ast.IndexExpression]ValueIndexableType
 	IndexExpressionIndexingTypes  map[*ast.IndexExpression]Type
+	ConditionalExpressionThenType map[*ast.ConditionalExpression]Type
+	ConditionalExpressionElseType map[*ast.ConditionalExpression]Type
 }
 
 func NewElaboration() *Elaboration {
@@ -147,6 +149,8 @@ func NewElaboration() *Elaboration {
 		ReferenceExpressionBorrowTypes:      map[*ast.ReferenceExpression]*ReferenceType{},
 		IndexExpressionIndexedTypes:         map[*ast.IndexExpression]ValueIndexableType{},
 		IndexExpressionIndexingTypes:        map[*ast.IndexExpression]Type{},
+		ConditionalExpressionThenType:       map[*ast.ConditionalExpression]Type{},
+		ConditionalExpressionElseType:       map[*ast.ConditionalExpression]Type{},
 	}
 }
 

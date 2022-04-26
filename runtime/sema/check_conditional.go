@@ -63,7 +63,6 @@ func (checker *Checker) VisitIfStatement(statement *ast.IfStatement) ast.Repr {
 func (checker *Checker) VisitConditionalExpression(expression *ast.ConditionalExpression) ast.Repr {
 
 	thenType, elseType := checker.visitConditional(expression.Test, expression.Then, expression.Else)
-
 	if thenType == nil || elseType == nil {
 		panic(errors.NewUnreachableError())
 	}
@@ -95,6 +94,9 @@ func (checker *Checker) VisitConditionalExpression(expression *ast.ConditionalEx
 			},
 		)
 	}
+
+	checker.Elaboration.ConditionalExpressionThenType[expression] = thenType
+	checker.Elaboration.ConditionalExpressionElseType[expression] = elseType
 
 	return resultType
 }
