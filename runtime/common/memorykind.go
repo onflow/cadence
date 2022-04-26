@@ -53,8 +53,10 @@ const (
 	MemoryKindBigInt
 
 	// Atree Nodes
-	MemoryKindAtreeDataSlab
-	MemoryKindAtreeMetaDataSlab
+	MemoryKindAtreeArrayDataSlab
+	MemoryKindAtreeArrayMetaDataSlab
+	MemoryKindAtreeMapDataSlab
+	MemoryKindAtreeMapMetaDataSlab
 
 	// Static Types
 	MemoryKindPrimitiveStaticType

@@ -1598,6 +1598,7 @@ func (v *ArrayValue) Set(interpreter *Interpreter, getLocationRange func() Locat
 	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(
 		v.array.Count(),
 		v.Type.ElementType().elementSize(),
+		true,
 	)
 	common.UseMemory(interpreter, dataSlabs)
 	common.UseMemory(interpreter, metaDataSlabs)
@@ -1653,6 +1654,7 @@ func (v *ArrayValue) Append(interpreter *Interpreter, getLocationRange func() Lo
 	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(
 		v.array.Count(),
 		v.Type.ElementType().elementSize(),
+		true,
 	)
 	common.UseMemory(interpreter, dataSlabs)
 	common.UseMemory(interpreter, metaDataSlabs)
@@ -1707,6 +1709,7 @@ func (v *ArrayValue) Insert(interpreter *Interpreter, getLocationRange func() Lo
 	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(
 		v.array.Count(),
 		v.Type.ElementType().elementSize(),
+		true,
 	)
 	common.UseMemory(interpreter, dataSlabs)
 	common.UseMemory(interpreter, metaDataSlabs)
@@ -15526,7 +15529,7 @@ func (v *DictionaryValue) Insert(
 	if keySize != 0 && valueSize != 0 {
 		elementSize = keySize + valueSize
 	}
-	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(v.dictionary.Count(), elementSize)
+	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(v.dictionary.Count(), elementSize, false)
 	common.UseMemory(interpreter, dataSlabs)
 	common.UseMemory(interpreter, metaDataSlabs)
 
