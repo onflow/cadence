@@ -419,3 +419,178 @@ func init() {
 		SupertypeInferenceAnalyzer,
 	)
 }
+
+// External mutation analyzer
+
+var ExternalMutationAnalyzer = (func() *analysis.Analyzer {
+
+	elementFilter := []ast.Element{
+		(*ast.AssignmentStatement)(nil),
+		(*ast.MemberExpression)(nil),
+	}
+
+	outerCompositeTypes := func(
+		elaboration *sema.Elaboration,
+		stack []ast.Element,
+	) []*sema.CompositeType {
+
+		compositeTypes := make([]*sema.CompositeType, 0, len(stack))
+
+		for _, element := range stack {
+			compositeDeclaration, ok := element.(*ast.CompositeDeclaration)
+			if !ok {
+				continue
+			}
+
+			compositeType := elaboration.CompositeDeclarationTypes[compositeDeclaration]
+			compositeTypes = append(compositeTypes, compositeType)
+		}
+
+		return compositeTypes
+	}
+
+	memberExpressionMutatedElement := func(
+		elaboration *sema.Elaboration,
+		memberExpression *ast.MemberExpression,
+	) ast.Element {
+
+		memberInfo := elaboration.MemberExpressionMemberInfos[memberExpression]
+		member := memberInfo.Member
+		if member == nil {
+			return nil
+		}
+
+		switch memberInfo.AccessedType.(type) {
+		case *sema.DictionaryType:
+			switch member.Identifier.Identifier {
+			case "insert", "remove":
+				break
+			default:
+				return nil
+			}
+
+		case sema.ArrayType:
+			switch member.Identifier.Identifier {
+			case "append",
+				"appendAll",
+				"insert",
+				"remove",
+				"removeFirst",
+				"removeLast":
+				break
+			default:
+				return nil
+			}
+
+		default:
+			return nil
+		}
+
+		return memberExpression.Expression
+	}
+
+	indexingAssignmentStatementMutatedElement := func(
+		elaboration *sema.Elaboration,
+		assignmentStatement *ast.AssignmentStatement,
+	) ast.Element {
+		indexExpression, ok := assignmentStatement.Target.(*ast.IndexExpression)
+		if !ok {
+			return nil
+		}
+
+		return indexExpression.TargetExpression
+	}
+
+	isExternallyMutated := func(
+		elaboration *sema.Elaboration,
+		element ast.Element,
+		stack []ast.Element,
+	) bool {
+		innerMemberExpression, ok := element.(*ast.MemberExpression)
+		if !ok {
+			return false
+		}
+
+		innerMemberInfo := elaboration.MemberExpressionMemberInfos[innerMemberExpression]
+		innerMember := innerMemberInfo.Member
+		if innerMember == nil {
+			return false
+		}
+
+		if innerMember.Access == ast.AccessPublicSettable {
+			return false
+		}
+
+		compositeTypes := outerCompositeTypes(elaboration, stack)
+
+		for _, compositeType := range compositeTypes {
+			if innerMemberInfo.AccessedType == compositeType {
+				return false
+			}
+		}
+
+		return true
+	}
+
+	analyze := func(pass *analysis.Pass, element ast.Element, stack []ast.Element) {
+
+		location := pass.Program.Location
+		elaboration := pass.Program.Elaboration
+		report := pass.Report
+
+		var mutatedElement ast.Element
+		switch element := element.(type) {
+		case *ast.AssignmentStatement:
+			mutatedElement = indexingAssignmentStatementMutatedElement(elaboration, element)
+
+		case *ast.MemberExpression:
+			mutatedElement = memberExpressionMutatedElement(elaboration, element)
+
+		default:
+			return
+		}
+
+		if !isExternallyMutated(elaboration, mutatedElement, stack) {
+			return
+		}
+
+		report(
+			analysis.Diagnostic{
+				Location: location,
+				Range:    ast.NewRangeFromPositioned(element),
+				Message:  "external mutation",
+			},
+		)
+	}
+
+	return &analysis.Analyzer{
+		Requires: []*analysis.Analyzer{
+			analysis.InspectorAnalyzer,
+		},
+		Run: func(pass *analysis.Pass) interface{} {
+			inspector := pass.ResultOf[analysis.InspectorAnalyzer].(*ast.Inspector)
+
+			inspector.WithStack(
+				elementFilter,
+				func(element ast.Element, push bool, stack []ast.Element) (proceed bool) {
+					if !push {
+						return true
+					}
+
+					analyze(pass, element, stack)
+
+					return true
+				},
+			)
+
+			return nil
+		},
+	}
+})()
+
+func init() {
+	registerAnalyzer(
+		"external-mutation",
+		ExternalMutationAnalyzer,
+	)
+}
