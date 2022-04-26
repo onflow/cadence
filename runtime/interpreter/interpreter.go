@@ -1905,10 +1905,11 @@ func (interpreter *Interpreter) defaultFunctions(
 	functionDeclarations := members.Functions()
 	functionCount := len(functionDeclarations)
 
-	var functions map[string]FunctionValue
-	if functionCount > 0 {
-		functions = make(map[string]FunctionValue, functionCount)
+	if functionCount == 0 {
+		return nil
 	}
+	
+	functions := make(map[string]FunctionValue, functionCount)
 
 	for _, functionDeclaration := range functionDeclarations {
 		name := functionDeclaration.Identifier.Identifier
