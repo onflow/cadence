@@ -38,6 +38,14 @@ type CompositeDeclaration struct {
 	Range
 }
 
+var _ Element = &CompositeDeclaration{}
+var _ Declaration = &CompositeDeclaration{}
+var _ Statement = &CompositeDeclaration{}
+
+func (*CompositeDeclaration) ElementType() ElementType {
+	return ElementTypeCompositeDeclaration
+}
+
 func (d *CompositeDeclaration) Accept(visitor Visitor) Repr {
 	return visitor.VisitCompositeDeclaration(d)
 }
@@ -95,6 +103,13 @@ type FieldDeclaration struct {
 	Range
 }
 
+var _ Element = &FieldDeclaration{}
+var _ Declaration = &FieldDeclaration{}
+
+func (*FieldDeclaration) ElementType() ElementType {
+	return ElementTypeFieldDeclaration
+}
+
 func (d *FieldDeclaration) Accept(visitor Visitor) Repr {
 	return visitor.VisitFieldDeclaration(d)
 }
@@ -144,6 +159,13 @@ type EnumCaseDeclaration struct {
 	Identifier Identifier
 	DocString  string
 	StartPos   Position `json:"-"`
+}
+
+var _ Element = &EnumCaseDeclaration{}
+var _ Declaration = &EnumCaseDeclaration{}
+
+func (*EnumCaseDeclaration) ElementType() ElementType {
+	return ElementTypeEnumCaseDeclaration
 }
 
 func (d *EnumCaseDeclaration) Accept(visitor Visitor) Repr {
