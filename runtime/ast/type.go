@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/turbolent/prettier"
 )
 
 // TypeAnnotation
@@ -47,6 +49,19 @@ func (t *TypeAnnotation) EndPosition() Position {
 	return t.Type.EndPosition()
 }
 
+const typeAnnotationResourceSymbolDoc = prettier.Text("@")
+
+func (t *TypeAnnotation) Doc() prettier.Doc {
+	if !t.IsResource {
+		return t.Type.Doc()
+	}
+
+	return prettier.Concat{
+		typeAnnotationResourceSymbolDoc,
+		t.Type.Doc(),
+	}
+}
+
 func (t *TypeAnnotation) MarshalJSON() ([]byte, error) {
 	type Alias TypeAnnotation
 	return json.Marshal(&struct {
@@ -64,7 +79,13 @@ type Type interface {
 	HasPosition
 	fmt.Stringer
 	isType()
+	Doc() prettier.Doc
 	CheckEqual(other Type, checker TypeEqualityChecker) error
+}
+
+func IsEmptyType(t Type) bool {
+	nominalType, ok := t.(*NominalType)
+	return ok && nominalType.Identifier.Identifier == ""
 }
 
 // NominalType represents a named type
@@ -73,6 +94,8 @@ type NominalType struct {
 	Identifier        Identifier
 	NestedIdentifiers []Identifier `json:",omitempty"`
 }
+
+var _ Type = &NominalType{}
 
 func (*NominalType) isType() {}
 
@@ -97,6 +120,10 @@ func (t *NominalType) EndPosition() Position {
 	}
 	lastIdentifier := t.NestedIdentifiers[nestedCount-1]
 	return lastIdentifier.EndPosition()
+}
+
+func (t *NominalType) Doc() prettier.Doc {
+	return prettier.Text(t.String())
 }
 
 func (t *NominalType) MarshalJSON() ([]byte, error) {
@@ -127,6 +154,8 @@ type OptionalType struct {
 	EndPos Position `json:"-"`
 }
 
+var _ Type = &OptionalType{}
+
 func (*OptionalType) isType() {}
 
 func (t *OptionalType) String() string {
@@ -139,6 +168,15 @@ func (t *OptionalType) StartPosition() Position {
 
 func (t *OptionalType) EndPosition() Position {
 	return t.EndPos
+}
+
+const optionalTypeSymbolDoc = prettier.Text("?")
+
+func (t *OptionalType) Doc() prettier.Doc {
+	return prettier.Concat{
+		t.Type.Doc(),
+		optionalTypeSymbolDoc,
+	}
 }
 
 func (t *OptionalType) MarshalJSON() ([]byte, error) {
@@ -165,10 +203,29 @@ type VariableSizedType struct {
 	Range
 }
 
+var _ Type = &VariableSizedType{}
+
 func (*VariableSizedType) isType() {}
 
 func (t *VariableSizedType) String() string {
 	return fmt.Sprintf("[%s]", t.Type)
+}
+
+const arrayTypeStartDoc = prettier.Text("[")
+const arrayTypeEndDoc = prettier.Text("]")
+
+func (t *VariableSizedType) Doc() prettier.Doc {
+	return prettier.Concat{
+		arrayTypeStartDoc,
+		prettier.Indent{
+			Doc: prettier.Concat{
+				prettier.SoftLine{},
+				t.Type.Doc(),
+			},
+		},
+		prettier.SoftLine{},
+		arrayTypeEndDoc,
+	}
 }
 
 func (t *VariableSizedType) MarshalJSON() ([]byte, error) {
@@ -186,7 +243,7 @@ func (t *VariableSizedType) CheckEqual(other Type, checker TypeEqualityChecker) 
 	return checker.CheckVariableSizedTypeEquality(t, other)
 }
 
-// ConstantSizedType is a constant sized array type
+// ConstantSizedType is a constant-sized array type
 
 type ConstantSizedType struct {
 	Type Type `json:"ElementType"`
@@ -194,10 +251,30 @@ type ConstantSizedType struct {
 	Range
 }
 
+var _ Type = &ConstantSizedType{}
+
 func (*ConstantSizedType) isType() {}
 
 func (t *ConstantSizedType) String() string {
 	return fmt.Sprintf("[%s; %s]", t.Type, t.Size)
+}
+
+const constantSizedTypeSeparatorSpaceDoc = prettier.Text("; ")
+
+func (t *ConstantSizedType) Doc() prettier.Doc {
+	return prettier.Concat{
+		arrayTypeStartDoc,
+		prettier.Indent{
+			Doc: prettier.Concat{
+				prettier.SoftLine{},
+				t.Type.Doc(),
+				constantSizedTypeSeparatorSpaceDoc,
+				t.Size.Doc(),
+			},
+		},
+		prettier.SoftLine{},
+		arrayTypeEndDoc,
+	}
 }
 
 func (t *ConstantSizedType) MarshalJSON() ([]byte, error) {
@@ -223,10 +300,32 @@ type DictionaryType struct {
 	Range
 }
 
+var _ Type = &DictionaryType{}
+
 func (*DictionaryType) isType() {}
 
 func (t *DictionaryType) String() string {
 	return fmt.Sprintf("{%s: %s}", t.KeyType, t.ValueType)
+}
+
+const dictionaryTypeStartDoc = prettier.Text("{")
+const dictionaryTypeEndDoc = prettier.Text("}")
+const dictionaryTypeSeparatorSpaceDoc = prettier.Text(": ")
+
+func (t *DictionaryType) Doc() prettier.Doc {
+	return prettier.Concat{
+		dictionaryTypeStartDoc,
+		prettier.Indent{
+			Doc: prettier.Concat{
+				prettier.SoftLine{},
+				t.KeyType.Doc(),
+				dictionaryTypeSeparatorSpaceDoc,
+				t.ValueType.Doc(),
+			},
+		},
+		prettier.SoftLine{},
+		dictionaryTypeEndDoc,
+	}
 }
 
 func (t *DictionaryType) MarshalJSON() ([]byte, error) {
@@ -252,6 +351,8 @@ type FunctionType struct {
 	Range
 }
 
+var _ Type = &FunctionType{}
+
 func (*FunctionType) isType() {}
 
 func (t *FunctionType) String() string {
@@ -264,6 +365,48 @@ func (t *FunctionType) String() string {
 	}
 
 	return fmt.Sprintf("((%s): %s)", parameters.String(), t.ReturnTypeAnnotation.String())
+}
+
+const functionTypeStartDoc = prettier.Text("(")
+const functionTypeEndDoc = prettier.Text(")")
+const functionTypeTypeSeparatorSpaceDoc = prettier.Text(": ")
+const functionTypeParameterSeparatorDoc = prettier.Text(",")
+
+func (t *FunctionType) Doc() prettier.Doc {
+	parametersDoc := prettier.Concat{
+		prettier.SoftLine{},
+	}
+
+	for i, parameterTypeAnnotation := range t.ParameterTypeAnnotations {
+		if i > 0 {
+			parametersDoc = append(
+				parametersDoc,
+				functionTypeParameterSeparatorDoc,
+				prettier.Line{},
+			)
+		}
+		parametersDoc = append(
+			parametersDoc,
+			parameterTypeAnnotation.Doc(),
+		)
+	}
+
+	return prettier.Concat{
+		functionTypeStartDoc,
+		prettier.Group{
+			Doc: prettier.Concat{
+				functionTypeStartDoc,
+				prettier.Indent{
+					Doc: parametersDoc,
+				},
+				prettier.SoftLine{},
+				functionTypeEndDoc,
+			},
+		},
+		functionTypeTypeSeparatorSpaceDoc,
+		t.ReturnTypeAnnotation.Doc(),
+		functionTypeEndDoc,
+	}
 }
 
 func (t *FunctionType) MarshalJSON() ([]byte, error) {
@@ -289,6 +432,8 @@ type ReferenceType struct {
 	StartPos   Position `json:"-"`
 }
 
+var _ Type = &ReferenceType{}
+
 func (*ReferenceType) isType() {}
 
 func (t *ReferenceType) String() string {
@@ -307,6 +452,22 @@ func (t *ReferenceType) StartPosition() Position {
 
 func (t *ReferenceType) EndPosition() Position {
 	return t.Type.EndPosition()
+}
+
+const referenceTypeAuthKeywordSpaceDoc = prettier.Text("auth ")
+const referenceTypeSymbolDoc = prettier.Text("&")
+
+func (t *ReferenceType) Doc() prettier.Doc {
+	var doc prettier.Concat
+	if t.Authorized {
+		doc = append(doc, referenceTypeAuthKeywordSpaceDoc)
+	}
+
+	return append(
+		doc,
+		referenceTypeSymbolDoc,
+		t.Type.Doc(),
+	)
 }
 
 func (t *ReferenceType) MarshalJSON() ([]byte, error) {
@@ -334,6 +495,8 @@ type RestrictedType struct {
 	Range
 }
 
+var _ Type = &RestrictedType{}
+
 func (*RestrictedType) isType() {}
 
 func (t *RestrictedType) String() string {
@@ -350,6 +513,49 @@ func (t *RestrictedType) String() string {
 	}
 	builder.WriteRune('}')
 	return builder.String()
+}
+
+const restrictedTypeStartDoc = prettier.Text("{")
+const restrictedTypeEndDoc = prettier.Text("}")
+const restrictedTypeSeparatorDoc = prettier.Text(",")
+
+func (t *RestrictedType) Doc() prettier.Doc {
+	restrictionsDoc := prettier.Concat{
+		prettier.SoftLine{},
+	}
+
+	for i, restriction := range t.Restrictions {
+		if i > 0 {
+			restrictionsDoc = append(
+				restrictionsDoc,
+				restrictedTypeSeparatorDoc,
+				prettier.Line{},
+			)
+		}
+		restrictionsDoc = append(
+			restrictionsDoc,
+			restriction.Doc(),
+		)
+	}
+
+	var doc prettier.Concat
+	if t.Type != nil {
+		doc = append(doc, t.Type.Doc())
+	}
+
+	return append(doc,
+		prettier.Group{
+			Doc: prettier.Concat{
+				restrictedTypeStartDoc,
+				prettier.Indent{
+					Doc: restrictionsDoc,
+				},
+				prettier.SoftLine{},
+				restrictedTypeEndDoc,
+			},
+		},
+	)
+
 }
 
 func (t *RestrictedType) MarshalJSON() ([]byte, error) {
@@ -376,6 +582,8 @@ type InstantiationType struct {
 	EndPos                Position `json:"-"`
 }
 
+var _ Type = &InstantiationType{}
+
 func (*InstantiationType) isType() {}
 
 func (t *InstantiationType) String() string {
@@ -398,6 +606,44 @@ func (t *InstantiationType) StartPosition() Position {
 
 func (t *InstantiationType) EndPosition() Position {
 	return t.EndPos
+}
+
+const instantiationTypeStartDoc = prettier.Text("<")
+const instantiationTypeEndDoc = prettier.Text(">")
+const instantiationTypeSeparatorDoc = prettier.Text(",")
+
+func (t *InstantiationType) Doc() prettier.Doc {
+	typeArgumentsDoc := prettier.Concat{
+		prettier.SoftLine{},
+	}
+
+	for i, typeArgument := range t.TypeArguments {
+		if i > 0 {
+			typeArgumentsDoc = append(
+				typeArgumentsDoc,
+				instantiationTypeSeparatorDoc,
+				prettier.Line{},
+			)
+		}
+		typeArgumentsDoc = append(
+			typeArgumentsDoc,
+			typeArgument.Doc(),
+		)
+	}
+
+	return prettier.Concat{
+		t.Type.Doc(),
+		prettier.Group{
+			Doc: prettier.Concat{
+				instantiationTypeStartDoc,
+				prettier.Indent{
+					Doc: typeArgumentsDoc,
+				},
+				prettier.SoftLine{},
+				instantiationTypeEndDoc,
+			},
+		},
+	}
 }
 
 func (t *InstantiationType) MarshalJSON() ([]byte, error) {

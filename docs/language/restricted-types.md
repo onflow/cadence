@@ -157,5 +157,5 @@ Only concrete types may be restricted, e.g., the restricted type may not be an a
 the type `[T]{U}` is invalid.
 
 Restricted types are also useful when giving access to resources and structures
-to potentially untrusted third-party programs through [references](../references),
+to potentially untrusted third-party programs through [references](references),
 which are discussed in the next section.

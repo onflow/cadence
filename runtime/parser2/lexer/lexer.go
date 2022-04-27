@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,33 +19,11 @@
 package lexer
 
 import (
-	"context"
 	"fmt"
 	"unicode/utf8"
 
 	"github.com/onflow/cadence/runtime/ast"
 )
-
-type Token struct {
-	Type  TokenType
-	Value interface{}
-	ast.Range
-}
-
-func (t Token) Is(ty TokenType) bool {
-	return t.Type == ty
-}
-
-func (t Token) IsString(ty TokenType, s string) bool {
-	if !t.Is(ty) {
-		return false
-	}
-	v, ok := t.Value.(string)
-	if !ok {
-		return false
-	}
-	return v == s
-}
 
 type position struct {
 	line   int
@@ -53,7 +31,6 @@ type position struct {
 }
 
 type lexer struct {
-	ctx context.Context
 	// the entire input string
 	input string
 	// the start offset of the current word in the current line
@@ -66,43 +43,81 @@ type lexer struct {
 	current rune
 	// the previous rune was scanned, used for stepping back
 	prev rune
-	// the channel of tokens that has been scanned.
-	tokens chan Token
 	// signal whether stepping back is allowed
 	canBackup bool
 	// the start position of the current word
 	startPos position
+	// the offset in the token stream
+	cursor int
+	// the tokens of the stream
+	tokens     []Token
+	tokenCount int
 }
 
-func Lex(ctx context.Context, input string) chan Token {
+var _ TokenStream = &lexer{}
+
+func (l *lexer) Next() Token {
+	if l.cursor >= l.tokenCount {
+
+		// At the end of the token stream,
+		// emit a synthetic EOF token
+
+		endPos := l.endPos()
+		pos := ast.Position{
+			Offset: l.endOffset - 1,
+			Line:   endPos.line,
+			Column: endPos.column,
+		}
+
+		return Token{
+			Type: TokenEOF,
+			Range: ast.Range{
+				StartPos: pos,
+				EndPos:   pos,
+			},
+		}
+
+	}
+	token := l.tokens[l.cursor]
+	l.cursor++
+	return token
+}
+
+func (l *lexer) Input() string {
+	return l.input
+}
+
+func (l *lexer) Cursor() int {
+	return l.cursor
+}
+
+func (l *lexer) Revert(cursor int) {
+	l.cursor = cursor
+}
+
+func Lex(input string) TokenStream {
 	l := &lexer{
-		ctx:           ctx,
 		input:         input,
 		startPos:      position{line: 1},
 		endOffset:     0,
 		prevEndOffset: 0,
 		current:       EOF,
 		prev:          EOF,
-		tokens:        make(chan Token),
 	}
-	go l.run(rootState)
-	return l.tokens
+	l.run(rootState)
+	return l
 }
 
-type done struct{}
-
 // run executes the stateFn, which will scan the runes in the input
-// and emit tokens to the tokens channel.
+// and emit tokens.
 //
 // stateFn might return another stateFn to indicate further scanning work,
 // or nil if there is no scanning work left to be done,
 // i.e. run will keep running the returned stateFn until no more
 // stateFn is returned, which for example happens when reaching the end of the file.
 //
-// When all stateFn have been executed, the tokens channel will be closed.
+// When all stateFn have been executed, an EOF token is emitted.
 func (l *lexer) run(state stateFn) {
-	// Close token channel, no token remaining
-	defer close(l.tokens)
 
 	// catch panic exceptions, emit it to the tokens channel before
 	// closing it
@@ -110,8 +125,6 @@ func (l *lexer) run(state stateFn) {
 		if r := recover(); r != nil {
 			var err error
 			switch r := r.(type) {
-			case done:
-				return
 			case error:
 				err = r
 			default:
@@ -199,13 +212,8 @@ func (l *lexer) emit(ty TokenType, val interface{}, rangeStart ast.Position, con
 		},
 	}
 
-	select {
-	case <-l.ctx.Done():
-		panic(done{})
-
-	case l.tokens <- token:
-
-	}
+	l.tokens = append(l.tokens, token)
+	l.tokenCount = len(l.tokens)
 
 	if consume {
 		l.startOffset = l.endOffset

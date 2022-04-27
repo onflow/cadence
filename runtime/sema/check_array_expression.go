@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,42 +22,44 @@ import "github.com/onflow/cadence/runtime/ast"
 
 func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) ast.Repr {
 
-	inferType := false
-
 	// visit all elements, ensure they are all the same type
 
 	expectedType := UnwrapOptionalType(checker.expectedType)
 
 	var elementType Type
-	if expectedType != nil {
+	var resultType ArrayType
 
-		switch typ := expectedType.(type) {
+	switch typ := expectedType.(type) {
 
-		case *ConstantSizedType:
-			elementType = typ.ElementType(false)
+	case *ConstantSizedType:
+		elementType = typ.ElementType(false)
+		resultType = typ
 
-			literalCount := int64(len(expression.Values))
-
-			if typ.Size != literalCount {
-				checker.report(
-					&ConstantSizedArrayLiteralSizeError{
-						ExpectedSize: typ.Size,
-						ActualSize:   literalCount,
-						Range:        expression.Range,
-					},
-				)
-			}
-
-		case *VariableSizedType:
-			elementType = typ.ElementType(false)
-
-		default:
-			// If the expected type is not an array type, then it could either be an invalid type, or a super type
-			// (like: AnyStruct, etc.). Either case, infer the type from the expression.
-			inferType = true
+		literalCount := int64(len(expression.Values))
+		if typ.Size != literalCount {
+			checker.report(
+				&ConstantSizedArrayLiteralSizeError{
+					ExpectedSize: typ.Size,
+					ActualSize:   literalCount,
+					Range:        expression.Range,
+				},
+			)
 		}
-	} else {
-		inferType = true
+
+	case *VariableSizedType:
+		elementType = typ.ElementType(false)
+		resultType = typ
+
+	default:
+		// If the expected type is AnyStruct or AnyResource, and the array is empty,
+		// then expect the elements to also be of the same type.
+		// Otherwise, infer the type from the expression.
+		if len(expression.Values) == 0 {
+			elementType = expectedType
+			resultType = &VariableSizedType{
+				Type: elementType,
+			}
+		}
 	}
 
 	argumentTypes := make([]Type, len(expression.Values))
@@ -69,28 +71,32 @@ func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) as
 
 		checker.checkVariableMove(value)
 		checker.checkResourceMoveOperation(value, valueType)
-
-		// infer element type from first element
-		// TODO: find common super type?
-		if elementType == nil {
-			elementType = valueType
-		}
 	}
 
 	checker.Elaboration.ArrayExpressionArgumentTypes[expression] = argumentTypes
 
 	if elementType == nil {
-		// i.e: contextually expected type is not available and array has zero elements.
-		elementType = NeverType
-	}
+		// Contextually expected type is not available.
+		// Therefore, find the least common supertype of the elements.
+		elementType = LeastCommonSuperType(argumentTypes...)
 
-	checker.Elaboration.ArrayExpressionElementType[expression] = elementType
+		if elementType == InvalidType {
+			checker.report(
+				&TypeAnnotationRequiredError{
+					Cause: "cannot infer type from array literal: ",
+					Pos:   expression.StartPos,
+				},
+			)
 
-	if inferType {
-		return &VariableSizedType{
+			return InvalidType
+		}
+
+		resultType = &VariableSizedType{
 			Type: elementType,
 		}
 	}
 
-	return expectedType
+	checker.Elaboration.ArrayExpressionArrayType[expression] = resultType
+
+	return resultType
 }

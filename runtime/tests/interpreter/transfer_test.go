@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,50 +34,139 @@ func TestInterpretTransferCheck(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &sema.CompositeType{
-		Location:   utils.TestLocation,
-		Identifier: "Fruit",
-		Kind:       common.CompositeKindStructure,
-	}
+	t.Run("String value as composite", func(t *testing.T) {
 
-	valueDeclarations := stdlib.StandardLibraryValues{
-		{
-			Name: "fruit",
-			Type: ty,
-			// NOTE: not an instance of the type
-			Value: interpreter.NewStringValue("fruit"),
-			Kind:  common.DeclarationKindConstant,
-		},
-	}
+		t.Parallel()
 
-	typeDeclarations := stdlib.StandardLibraryTypes{
-		{
-			Name: ty.Identifier,
-			Type: ty,
-			Kind: common.DeclarationKindStructure,
-		},
-	}
+		ty := &sema.CompositeType{
+			Location:   utils.TestLocation,
+			Identifier: "Fruit",
+			Kind:       common.CompositeKindStructure,
+		}
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
-		`
-          fun test() {
-            let alsoFruit: Fruit = fruit
-          }
-        `,
-		ParseCheckAndInterpretOptions{
-			CheckerOptions: []sema.Option{
-				sema.WithPredeclaredValues(valueDeclarations.ToSemaValueDeclarations()),
-				sema.WithPredeclaredTypes(typeDeclarations.ToTypeDeclarations()),
+		valueDeclarations := stdlib.StandardLibraryValues{
+			{
+				Name: "fruit",
+				Type: ty,
+				// NOTE: not an instance of the type
+				ValueFactory: func(_ *interpreter.Interpreter) interpreter.Value {
+					return interpreter.NewStringValue("fruit")
+				},
+				Kind: common.DeclarationKindConstant,
 			},
-			Options: []interpreter.Option{
-				interpreter.WithPredeclaredValues(valueDeclarations.ToInterpreterValueDeclarations()),
+		}
+
+		typeDeclarations := stdlib.StandardLibraryTypes{
+			{
+				Name: ty.Identifier,
+				Type: ty,
+				Kind: common.DeclarationKindStructure,
 			},
-		},
-	)
-	require.NoError(t, err)
+		}
 
-	_, err = inter.Invoke("test")
-	require.Error(t, err)
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+              fun test() {
+                  let alsoFruit: Fruit = fruit
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				CheckerOptions: []sema.Option{
+					sema.WithPredeclaredValues(valueDeclarations.ToSemaValueDeclarations()),
+					sema.WithPredeclaredTypes(typeDeclarations.ToTypeDeclarations()),
+				},
+				Options: []interpreter.Option{
+					interpreter.WithPredeclaredValues(valueDeclarations.ToInterpreterValueDeclarations()),
+				},
+			},
+		)
+		require.NoError(t, err)
 
-	require.ErrorAs(t, err, &interpreter.ValueTransferTypeError{})
+		_, err = inter.Invoke("test")
+		require.Error(t, err)
+
+		require.ErrorAs(t, err, &interpreter.ValueTransferTypeError{})
+	})
+
+	t.Run("contract and restricted type", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+		      contract interface CI {
+		          resource interface RI {}
+
+		          resource R: RI {}
+
+		          fun createR(): @R
+		      }
+
+              contract C: CI {
+		          resource R: CI.RI {}
+
+		          fun createR(): @R {
+		              return <- create R()
+		          }
+		      }
+
+              fun test() {
+                  let r <- C.createR()
+                  let r2: @CI.R <- r as @CI.R
+                  let r3: @CI.R{CI.RI} <- r2
+                  destroy r3
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				Options: []interpreter.Option{
+					makeContractValueHandler(nil, nil, nil),
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("contract and restricted type, reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+		      contract interface CI {
+		          resource interface RI {}
+
+		          resource R: RI {}
+
+		          fun createR(): @R
+		      }
+
+              contract C: CI {
+		          resource R: CI.RI {}
+
+		          fun createR(): @R {
+		              return <- create R()
+		          }
+		      }
+
+              fun test() {
+                  let r <- C.createR()
+                  let ref: &CI.R = &r as &CI.R
+                  let restrictedRef: &CI.R{CI.RI} = ref
+                  destroy r
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				Options: []interpreter.Option{
+					makeContractValueHandler(nil, nil, nil),
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+	})
 }

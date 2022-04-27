@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,45 +59,90 @@ func TestCheckInvalidConditionalExpressionElse(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
-      fun test() {
-          let x = true ? 2 : y
-      }
-	`)
+	t.Run("undeclared variable", func(t *testing.T) {
+		t.Parallel()
 
-	errs := ExpectCheckerErrors(t, err, 2)
+		checker, err := ParseAndCheck(t, `
+            let x = true ? 2 : y
+	    `)
 
-	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		errs := ExpectCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+
+		xType := RequireGlobalValue(t, checker.Elaboration, "x")
+		assert.Equal(t, sema.InvalidType, xType)
+	})
+
+	t.Run("mismatching type", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            let x: Int8 = true ? 2 : "hello"
+	    `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		typeMismatchError := errs[0].(*sema.TypeMismatchError)
+
+		assert.Equal(t, sema.Int8Type, typeMismatchError.ExpectedType)
+		assert.Equal(t, sema.StringType, typeMismatchError.ActualType)
+	})
 }
 
-func TestCheckInvalidConditionalExpressionTypes(t *testing.T) {
+func TestCheckConditionalExpressionTypeInferring(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
-      fun test() {
-          let x = true ? 2 : false
-      }
-	`)
+	t.Run("different simple types", func(t *testing.T) {
+		t.Parallel()
 
-	errs := ExpectCheckerErrors(t, err, 1)
+		checker, err := ParseAndCheck(t, `
+            let x = true ? 2 : false
+        `)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-}
+		require.NoError(t, err)
 
-// TODO: return common super type for conditional
-func TestCheckInvalidAnyConditional(t *testing.T) {
+		xType := RequireGlobalValue(t, checker.Elaboration, "x")
+		assert.Equal(t, sema.AnyStructType, xType)
+	})
 
-	t.Parallel()
+	t.Run("optional", func(t *testing.T) {
+		t.Parallel()
 
-	_, err := ParseAndCheck(t, `
-      let x: AnyStruct = true
-      let y = true ? 1 : x
-    `)
+		checker, err := ParseAndCheck(t, `
+            let x = true ? 1 : nil
+        `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+		require.NoError(t, err)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		xType := RequireGlobalValue(t, checker.Elaboration, "x")
+		assert.Equal(
+			t,
+			&sema.OptionalType{
+				Type: sema.IntType,
+			},
+			xType,
+		)
+	})
+
+	t.Run("chained optional", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+            let x = true ? Int8(1) : (false ? Int(5) : nil)
+        `)
+
+		require.NoError(t, err)
+
+		xType := RequireGlobalValue(t, checker.Elaboration, "x")
+		assert.Equal(
+			t,
+			&sema.OptionalType{
+				Type: sema.SignedIntegerType,
+			},
+			xType,
+		)
+	})
 }

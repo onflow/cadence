@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,11 +20,17 @@ package ast
 
 import (
 	"encoding/json"
+
+	"github.com/turbolent/prettier"
 )
 
 type Block struct {
 	Statements []Statement
 	Range
+}
+
+func (b *Block) IsEmpty() bool {
+	return len(b.Statements) == 0
 }
 
 func (b *Block) Accept(visitor Visitor) Repr {
@@ -33,6 +39,45 @@ func (b *Block) Accept(visitor Visitor) Repr {
 
 func (b *Block) Walk(walkChild func(Element)) {
 	walkStatements(walkChild, b.Statements)
+}
+
+var blockStartDoc prettier.Doc = prettier.Text("{")
+var blockEndDoc prettier.Doc = prettier.Text("}")
+var blockEmptyDoc prettier.Doc = prettier.Text("{}")
+
+func (b *Block) Doc() prettier.Doc {
+	if b.IsEmpty() {
+		return blockEmptyDoc
+	}
+
+	return prettier.Concat{
+		blockStartDoc,
+		prettier.Indent{
+			Doc: StatementsDoc(b.Statements),
+		},
+		prettier.HardLine{},
+		blockEndDoc,
+	}
+}
+
+func StatementsDoc(statements []Statement) prettier.Doc {
+	var statementsDoc prettier.Concat
+
+	for _, statement := range statements {
+		// TODO: replace once Statement implements Doc
+		hasDoc, ok := statement.(interface{ Doc() prettier.Doc })
+		if !ok {
+			continue
+		}
+
+		statementsDoc = append(
+			statementsDoc,
+			prettier.HardLine{},
+			hasDoc.Doc(),
+		)
+	}
+
+	return statementsDoc
 }
 
 func (b *Block) MarshalJSON() ([]byte, error) {
@@ -52,6 +97,13 @@ type FunctionBlock struct {
 	Block          *Block
 	PreConditions  *Conditions `json:",omitempty"`
 	PostConditions *Conditions `json:",omitempty"`
+}
+
+func (b *FunctionBlock) IsEmpty() bool {
+	return b == nil ||
+		(b.Block.IsEmpty() &&
+			b.PreConditions.IsEmpty() &&
+			b.PostConditions.IsEmpty())
 }
 
 func (b *FunctionBlock) Accept(visitor Visitor) Repr {

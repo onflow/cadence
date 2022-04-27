@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -65,6 +65,7 @@ const (
 	HashAlgorithmSHA3_256              = sema.HashAlgorithmSHA3_256
 	HashAlgorithmSHA3_384              = sema.HashAlgorithmSHA3_384
 	HashAlgorithmKMAC128_BLS_BLS12_381 = sema.HashAlgorithmKMAC128_BLS_BLS12_381
+	HashAlgorithmKECCAK_256            = sema.HashAlgorithmKECCAK_256
 )
 
 type AccountKey struct {
@@ -78,6 +79,4 @@ type AccountKey struct {
 type PublicKey struct {
 	PublicKey []byte
 	SignAlgo  SignatureAlgorithm
-	IsValid   bool
-	Validated bool
 }

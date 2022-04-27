@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -94,6 +94,14 @@ type TypeID string
 
 func NewTypeID(parts ...string) TypeID {
 	return TypeID(strings.Join(parts, "."))
+}
+
+func NewTypeIDFromQualifiedName(location Location, qualifiedIdentifier string) TypeID {
+	if location == nil {
+		return TypeID(qualifiedIdentifier)
+	}
+
+	return location.TypeID(qualifiedIdentifier)
 }
 
 type TypeIDDecoder func(typeID string) (location Location, qualifiedIdentifier string, err error)

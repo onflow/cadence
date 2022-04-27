@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,9 +19,12 @@
 package sema
 
 type ReturnInfo struct {
+	// MaybeReturned indicates that (the branch of) the function
+	// contains a potentially taken return statement
 	MaybeReturned      bool
 	DefinitelyReturned bool
 	DefinitelyHalted   bool
+	DefinitelyJumped   bool
 }
 
 func (ri *ReturnInfo) MergeBranches(thenReturnInfo *ReturnInfo, elseReturnInfo *ReturnInfo) {
@@ -33,6 +36,10 @@ func (ri *ReturnInfo) MergeBranches(thenReturnInfo *ReturnInfo, elseReturnInfo *
 		(thenReturnInfo.DefinitelyReturned &&
 			elseReturnInfo.DefinitelyReturned)
 
+	ri.DefinitelyJumped = ri.DefinitelyJumped ||
+		(thenReturnInfo.DefinitelyJumped &&
+			elseReturnInfo.DefinitelyJumped)
+
 	ri.DefinitelyHalted = ri.DefinitelyHalted ||
 		(thenReturnInfo.DefinitelyHalted &&
 			elseReturnInfo.DefinitelyHalted)
@@ -42,4 +49,10 @@ func (ri *ReturnInfo) Clone() *ReturnInfo {
 	result := &ReturnInfo{}
 	*result = *ri
 	return result
+}
+
+func (ri *ReturnInfo) IsUnreachable() bool {
+	return ri.DefinitelyReturned ||
+		ri.DefinitelyHalted ||
+		ri.DefinitelyJumped
 }

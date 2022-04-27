@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -265,7 +265,7 @@ func TestCheckReferenceExpressionWithInterfaceResultType(t *testing.T) {
 
 		errs := ExpectCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.InvalidInterfaceTypeError{}, errs[0])
 	})
 
 	t.Run("struct", func(t *testing.T) {
@@ -282,7 +282,7 @@ func TestCheckReferenceExpressionWithInterfaceResultType(t *testing.T) {
 
 		errs := ExpectCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.InvalidInterfaceTypeError{}, errs[0])
 	})
 }
 
@@ -965,10 +965,9 @@ func TestCheckReferenceExpressionOfOptional(t *testing.T) {
           let ref = &r as &R
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := ExpectCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		assert.IsType(t, &sema.OptionalTypeReferenceError{}, errs[1])
 	})
 
 	t.Run("struct", func(t *testing.T) {
@@ -982,10 +981,9 @@ func TestCheckReferenceExpressionOfOptional(t *testing.T) {
           let ref = &s as &S
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := ExpectCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		assert.IsType(t, &sema.OptionalTypeReferenceError{}, errs[1])
 	})
 
 	t.Run("non-composite", func(t *testing.T) {
@@ -997,25 +995,79 @@ func TestCheckReferenceExpressionOfOptional(t *testing.T) {
           let ref = &i as &Int
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := ExpectCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		assert.IsType(t, &sema.OptionalTypeReferenceError{}, errs[1])
 	})
 
 	t.Run("as optional", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheck(t, `
+		checker, err := ParseAndCheck(t, `
           let i: Int? = 1
           let ref = &i as &Int?
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		require.NoError(t, err)
+		refValueType := RequireGlobalValue(t, checker.Elaboration, "ref")
 
+		assert.Equal(t,
+			&sema.OptionalType{
+				Type: &sema.ReferenceType{
+					Type: sema.IntType,
+				},
+			},
+			refValueType,
+		)
+	})
+
+	t.Run("double optional", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          let i: Int? = 1
+          let ref = &i as &Int??
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.NonReferenceTypeReferenceError{}, errs[0])
-		assert.IsType(t, &sema.OptionalTypeReferenceError{}, errs[1])
+	})
+
+	t.Run("mismatched type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          let i: String? = ""
+          let ref = &i as &Int?
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("upcast to optional", func(t *testing.T) {
+
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+          let i: Int = 1
+          let ref = &i as &Int?
+        `)
+
+		require.NoError(t, err)
+		refValueType := RequireGlobalValue(t, checker.Elaboration, "ref")
+
+		assert.Equal(t,
+			&sema.OptionalType{
+				Type: &sema.ReferenceType{
+					Type: sema.IntType,
+				},
+			},
+			refValueType,
+		)
 	})
 }
 
@@ -1077,4 +1129,133 @@ func TestCheckInvalidDictionaryAccessReference(t *testing.T) {
 	typeMismatchError := errs[0].(*sema.TypeMismatchError)
 	assert.Equal(t, 17, typeMismatchError.StartPos.Column)
 	assert.Equal(t, 21, typeMismatchError.EndPos.Column)
+}
+
+func TestCheckDictionaryAccessReferenceIsOptional(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      let xs: {Int: Int} = {}
+      let ref: Int = &xs[1] as &Int?
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+
+	typeMismatchError := errs[0].(*sema.TypeMismatchError)
+	assert.Equal(t, 21, typeMismatchError.StartPos.Column)
+	assert.Equal(t, 35, typeMismatchError.EndPos.Column)
+}
+
+func TestCheckInvalidDictionaryAccessOptionalReference(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		pub struct S {
+			pub let foo: Number
+			init() {
+				self.foo = 0
+			}
+		}
+		let dict: {String: S} = {}
+		let s = &dict[""] as &S?
+		let n = s.foo
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	require.IsType(t, &sema.NotDeclaredMemberError{}, errs[0]) // nil has no member foo
+}
+
+func TestCheckInvalidDictionaryAccessNonOptionalReference(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		pub struct S {
+			pub let foo: Number
+			init() {
+				self.foo = 0
+			}
+		}
+		let dict: {String: S} = {}
+		let s = &dict[""] as &S
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+}
+
+func TestCheckArrayAccessReference(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		pub struct S {
+			pub let foo: Number
+			init() {
+				self.foo = 0
+			}
+		}
+		let dict: [S] = []
+		let s = &dict[0] as &S
+		let n = s.foo
+    `)
+
+	require.NoError(t, err)
+}
+
+func TestCheckReferenceTypeImplicitConformance(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("valid", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+
+          contract interface CI {
+              struct S {}
+          }
+
+          contract C: CI {
+              struct S {}
+          }
+
+          let s = C.S()
+
+          let refS: &CI.S = &s as &C.S
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("invalid", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+
+          contract interface CI {
+              struct S {}
+          }
+
+          contract C {
+              struct S {}
+          }
+
+          let s = C.S()
+
+          let refS: &CI.S = &s as &C.S
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
 }

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1295,6 +1295,8 @@ func TestCheckDynamicCastingCapability(t *testing.T) {
 
 func TestCheckAlwaysSucceedingDynamicCast(t *testing.T) {
 
+	t.Parallel()
+
 	const types = `
           struct interface I {}
 
@@ -1305,6 +1307,8 @@ func TestCheckAlwaysSucceedingDynamicCast(t *testing.T) {
 
 	test := func(t *testing.T, operation ast.Operation, hintType sema.Hint) {
 
+		t.Parallel()
+
 		usage := fmt.Sprintf(
 			`
               let s1 = S1()
@@ -1314,7 +1318,8 @@ func TestCheckAlwaysSucceedingDynamicCast(t *testing.T) {
             `,
 			operation.Symbol(),
 		)
-		checker, err := ParseAndCheck(t, types+usage)
+
+		checker, err := ParseAndCheckWithLinting(t, types+usage)
 
 		errs := ExpectCheckerErrors(t, err, 1)
 

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,8 +21,9 @@ package interpreter_test
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	. "github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/onflow/cadence/runtime/interpreter"
 )
@@ -45,7 +46,9 @@ func TestInterpretWhileStatement(t *testing.T) {
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	assert.Equal(t,
+	AssertValuesEqual(
+		t,
+		inter,
 		interpreter.NewIntValueFromInt64(6),
 		value,
 	)
@@ -71,7 +74,9 @@ func TestInterpretWhileStatementWithReturn(t *testing.T) {
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	assert.Equal(t,
+	AssertValuesEqual(
+		t,
+		inter,
 		interpreter.NewIntValueFromInt64(6),
 		value,
 	)
@@ -99,7 +104,9 @@ func TestInterpretWhileStatementWithContinue(t *testing.T) {
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	assert.Equal(t,
+	AssertValuesEqual(
+		t,
+		inter,
 		interpreter.NewIntValueFromInt64(6),
 		value,
 	)
@@ -125,7 +132,9 @@ func TestInterpretWhileStatementWithBreak(t *testing.T) {
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	assert.Equal(t,
+	AssertValuesEqual(
+		t,
+		inter,
 		interpreter.NewIntValueFromInt64(5),
 		value,
 	)

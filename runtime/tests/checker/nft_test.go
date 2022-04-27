@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,11 +21,12 @@ package checker
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
-	"github.com/stretchr/testify/require"
 )
 
 const realNonFungibleTokenContractInterface = `
@@ -585,7 +586,7 @@ pub contract TopShot: NonFungibleToken {
 
             // Get a reference to the Set and return it
             // use & to indicate the reference to the object and type
-            return &TopShot.sets[setID] as &Set
+            return (&TopShot.sets[setID] as &Set?)!
         }
 
         // startNewSeries ends the current series by incrementing
@@ -738,7 +739,7 @@ pub contract TopShot: NonFungibleToken {
         // read Moment data.
         //
         pub fun borrowNFT(id: UInt64): &NonFungibleToken.NFT {
-            return &self.ownedNFTs[id] as &NonFungibleToken.NFT
+            return (&self.ownedNFTs[id] as &NonFungibleToken.NFT?)!
         }
 
         // borrowMoment returns a borrowed reference to a Moment
@@ -753,7 +754,7 @@ pub contract TopShot: NonFungibleToken {
         // Returns: A reference to the NFT
         pub fun borrowMoment(id: UInt64): &TopShot.NFT? {
             if self.ownedNFTs[id] != nil {
-                let ref = &self.ownedNFTs[id] as auth &NonFungibleToken.NFT
+                let ref = (&self.ownedNFTs[id] as auth &NonFungibleToken.NFT?)!
                 return ref as! &TopShot.NFT
             } else {
                 return nil
@@ -979,7 +980,7 @@ func TestCheckTopShotContract(t *testing.T) {
 		realNonFungibleTokenContractInterface,
 		ParseAndCheckOptions{
 			Location: common.AddressLocation{
-				Address: common.BytesToAddress([]byte{0x1}),
+				Address: common.MustBytesToAddress([]byte{0x1}),
 				Name:    "NonFungibleToken",
 			},
 		},
@@ -990,7 +991,7 @@ func TestCheckTopShotContract(t *testing.T) {
 		topShotContract,
 		ParseAndCheckOptions{
 			Location: common.AddressLocation{
-				Address: common.BytesToAddress([]byte{0x2}),
+				Address: common.MustBytesToAddress([]byte{0x2}),
 				Name:    "TopShot",
 			},
 			Options: []sema.Option{

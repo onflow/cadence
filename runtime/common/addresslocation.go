@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -88,7 +88,7 @@ func (l AddressLocation) MarshalJSON() ([]byte, error) {
 		Name    string
 	}{
 		Type:    "AddressLocation",
-		Address: l.Address.ShortHexWithPrefix(),
+		Address: l.Address.HexWithPrefix(),
 		Name:    l.Name,
 	})
 }
@@ -160,7 +160,7 @@ func decodeAddressLocationTypeID(typeID string) (AddressLocation, string, error)
 
 	// `<location>`, the second part, must be a hex string.
 
-	address, err := hex.DecodeString(parts[1])
+	rawAddress, err := hex.DecodeString(parts[1])
 	if err != nil {
 		return AddressLocation{}, "", fmt.Errorf(
 			"%s: invalid address: %w",
@@ -193,8 +193,13 @@ func decodeAddressLocationTypeID(typeID string) (AddressLocation, string, error)
 		panic(errors.NewUnreachableError())
 	}
 
+	address, err := BytesToAddress(rawAddress)
+	if err != nil {
+		return AddressLocation{}, "", err
+	}
+
 	location := AddressLocation{
-		Address: BytesToAddress(address),
+		Address: address,
 		Name:    name,
 	}
 

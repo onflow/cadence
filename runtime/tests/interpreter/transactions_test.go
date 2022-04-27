@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,8 +24,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	. "github.com/onflow/cadence/runtime/tests/utils"
+
 	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 )
 
@@ -107,7 +108,10 @@ func TestInterpretTransactions(t *testing.T) {
 		var conditionErr interpreter.ConditionError
 		require.ErrorAs(t, err, &conditionErr)
 
-		assert.Equal(t, conditionErr.ConditionKind, ast.ConditionKindPre)
+		assert.Equal(t,
+			ast.ConditionKindPre,
+			conditionErr.ConditionKind,
+		)
 	})
 
 	t.Run("PostConditions", func(t *testing.T) {
@@ -159,7 +163,10 @@ func TestInterpretTransactions(t *testing.T) {
 		var conditionErr interpreter.ConditionError
 		require.ErrorAs(t, err, &conditionErr)
 
-		assert.Equal(t, conditionErr.ConditionKind, ast.ConditionKindPost)
+		assert.Equal(t,
+			ast.ConditionKindPost,
+			conditionErr.ConditionKind,
+		)
 	})
 
 	t.Run("MultipleTransactions", func(t *testing.T) {
@@ -201,10 +208,6 @@ func TestInterpretTransactions(t *testing.T) {
 		assert.IsType(t, interpreter.ArgumentCountError{}, err)
 	})
 
-	panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) interpreter.Value {
-		panic(errors.NewUnreachableError())
-	})
-
 	t.Run("TooManyArguments", func(t *testing.T) {
 		inter := parseCheckAndInterpret(t, `
           transaction {
@@ -218,31 +221,11 @@ func TestInterpretTransactions(t *testing.T) {
           }
         `)
 
-		signer1 := interpreter.NewAuthAccountValue(
+		signer1 := newTestAuthAccountValue(
 			interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 1},
-			returnZeroUFix64,
-			returnZeroUFix64,
-			func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
-				return 0
-			},
-			returnZeroUInt64,
-			panicFunction,
-			panicFunction,
-			&interpreter.CompositeValue{},
-			&interpreter.CompositeValue{},
 		)
-		signer2 := interpreter.NewAuthAccountValue(
+		signer2 := newTestAuthAccountValue(
 			interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 2},
-			returnZeroUFix64,
-			returnZeroUFix64,
-			func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
-				return 0
-			},
-			returnZeroUInt64,
-			panicFunction,
-			panicFunction,
-			&interpreter.CompositeValue{},
-			&interpreter.CompositeValue{},
 		)
 
 		// first transaction
@@ -275,18 +258,8 @@ func TestInterpretTransactions(t *testing.T) {
 		}
 
 		prepareArguments := []interpreter.Value{
-			interpreter.NewAuthAccountValue(
+			newTestAuthAccountValue(
 				interpreter.AddressValue{},
-				returnZeroUFix64,
-				returnZeroUFix64,
-				func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
-					return 0
-				},
-				returnZeroUInt64,
-				panicFunction,
-				panicFunction,
-				&interpreter.CompositeValue{},
-				&interpreter.CompositeValue{},
 			),
 		}
 
@@ -299,13 +272,15 @@ func TestInterpretTransactions(t *testing.T) {
 
 		require.IsType(t, &interpreter.ArrayValue{}, values)
 
-		assert.Equal(t,
+		AssertValueSlicesEqual(
+			t,
+			inter,
 			[]interpreter.Value{
 				interpreter.AddressValue{},
 				interpreter.BoolValue(true),
 				interpreter.NewIntValueFromInt64(1),
 			},
-			values.(*interpreter.ArrayValue).Elements(),
+			arrayElements(inter, values.(*interpreter.ArrayValue)),
 		)
 	})
 

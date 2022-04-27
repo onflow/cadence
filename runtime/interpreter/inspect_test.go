@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,34 +16,69 @@
  * limitations under the License.
  */
 
-package interpreter
+package interpreter_test
 
 import (
 	"testing"
 
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/stretchr/testify/assert"
+	. "github.com/onflow/cadence/runtime/interpreter"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestInspectValue(t *testing.T) {
 
 	t.Parallel()
 
-	dictValue := NewDictionaryValueUnownedNonCopying()
+	inter := newTestInterpreter(t)
+
+	// Prepare composite value
+
+	var compositeValue *CompositeValue
+	{
+		dictionaryStaticType := DictionaryStaticType{
+			KeyType:   PrimitiveStaticTypeString,
+			ValueType: PrimitiveStaticTypeInt256,
+		}
+		dictValueKey := NewStringValue("hello world")
+		dictValueValue := NewInt256ValueFromInt64(1)
+		dictValue := NewDictionaryValue(
+			inter,
+			dictionaryStaticType,
+			dictValueKey, dictValueValue,
+		)
+
+		arrayValue := NewArrayValue(
+			inter,
+			VariableSizedStaticType{
+				Type: dictionaryStaticType,
+			},
+			common.Address{},
+			dictValue,
+		)
+
+		optionalValue := NewSomeValueNonCopying(arrayValue)
+
+		compositeValue = newTestCompositeValue(inter, common.Address{})
+		compositeValue.SetMember(
+			inter,
+			ReturnEmptyLocationRange,
+			"value",
+			optionalValue,
+		)
+	}
+
+	// Get actually stored values.
+	// The values above were removed when they were inserted into the containers.
+
+	optionalValue := compositeValue.GetField(inter, ReturnEmptyLocationRange, "value").(*SomeValue)
+	arrayValue := optionalValue.InnerValue(inter, ReturnEmptyLocationRange).(*ArrayValue)
+	dictValue := arrayValue.Get(inter, ReturnEmptyLocationRange, 0).(*DictionaryValue)
 	dictValueKey := NewStringValue("hello world")
-	dictValueValue := NewInt256ValueFromInt64(1)
-	dictValue.Set(nil, ReturnEmptyLocationRange, dictValueKey, NewSomeValueOwningNonCopying(dictValueValue))
 
-	arrayValue := NewArrayValueUnownedNonCopying(dictValue)
-
-	optionalValue := NewSomeValueOwningNonCopying(arrayValue)
-
-	compositeValue := newTestCompositeValue(common.Address{})
-	compositeValue.Fields().Set("value", optionalValue)
+	dictValueValue, _ := dictValue.Get(inter, ReturnEmptyLocationRange, dictValueKey)
 
 	t.Run("dict", func(t *testing.T) {
-
-		t.Parallel()
 
 		var inspectedValues []Value
 
@@ -55,7 +90,9 @@ func TestInspectValue(t *testing.T) {
 			},
 		)
 
-		assert.Equal(t,
+		AssertValueSlicesEqual(
+			t,
+			inter,
 			[]Value{
 				dictValue,
 				dictValueKey,
@@ -70,8 +107,6 @@ func TestInspectValue(t *testing.T) {
 
 	t.Run("composite", func(t *testing.T) {
 
-		t.Parallel()
-
 		var inspectedValues []Value
 
 		InspectValue(
@@ -82,7 +117,9 @@ func TestInspectValue(t *testing.T) {
 			},
 		)
 
-		assert.Equal(t,
+		AssertValueSlicesEqual(
+			t,
+			inter,
 			[]Value{
 				compositeValue,
 				optionalValue,

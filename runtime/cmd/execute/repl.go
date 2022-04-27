@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,6 @@ import (
 	"strings"
 
 	"github.com/c-bata/go-prompt"
-	"github.com/logrusorgru/aurora"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime"
@@ -34,7 +33,7 @@ import (
 )
 
 func RunREPL() {
-	printWelcome()
+	printReplWelcome()
 
 	lineNumber := 1
 	lineIsContinuation := false
@@ -50,12 +49,9 @@ func RunREPL() {
 			}
 		},
 		func(value interpreter.Value) {
-			if _, isVoid := value.(*interpreter.VoidValue); isVoid || value == nil {
-				return
-			}
-
-			println(colorizeResult(value))
+			fmt.Println(formatValue(value))
 		},
+		nil,
 		nil,
 	)
 
@@ -125,7 +121,7 @@ func RunREPL() {
 	prompt.New(executor, suggest, options...).Run()
 }
 
-const helpMessage = `
+const replHelpMessage = `
 Enter declarations and statements to evaluate them.
 Commands are prefixed with a dot. Valid commands are:
 
@@ -135,28 +131,19 @@ Commands are prefixed with a dot. Valid commands are:
 Press ^C to abort current expression, ^D to exit
 `
 
-const assistanceMessage = `Type '.help' for assistance.`
+const replAssistanceMessage = `Type '.help' for assistance.`
 
 func handleCommand(command string) {
 	switch command {
 	case ".exit":
 		os.Exit(0)
 	case ".help":
-		println(helpMessage)
+		fmt.Println(replHelpMessage)
 	default:
-		println(colorizeError(fmt.Sprintf("Unknown command. %s", assistanceMessage)))
+		fmt.Println(colorizeError(fmt.Sprintf("Unknown command. %s", replAssistanceMessage)))
 	}
 }
 
-func printWelcome() {
-	fmt.Printf("Welcome to Cadence %s!\n%s\n\n", cadence.Version, assistanceMessage)
-}
-
-func colorizeResult(value interpreter.Value) string {
-	str := value.String()
-	return aurora.Colorize(str, aurora.YellowFg|aurora.BrightFg).String()
-}
-
-func colorizeError(message string) string {
-	return aurora.Colorize(message, aurora.RedFg|aurora.BrightFg|aurora.BoldFm).String()
+func printReplWelcome() {
+	fmt.Printf("Welcome to Cadence %s!\n%s\n\n", cadence.Version, replAssistanceMessage)
 }

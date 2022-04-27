@@ -5,7 +5,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,9 +28,10 @@ package compiler
 // or as an activation record during interpretation or compilation.
 //
 type LocalActivation struct {
-	entries map[string]*Local
-	Depth   int
-	Parent  *LocalActivation
+	entries    map[string]*Local
+	Depth      int
+	Parent     *LocalActivation
+	isFunction bool
 }
 
 func NewLocalActivation(parent *LocalActivation) *LocalActivation {
@@ -66,6 +67,34 @@ func (a *LocalActivation) Find(name string) *Local {
 	return nil
 }
 
+// FunctionValues returns all values in the current function activation.
+//
+func (a *LocalActivation) FunctionValues() map[string]*Local {
+
+	values := make(map[string]*Local)
+
+	current := a
+
+	for current != nil {
+
+		if current.entries != nil {
+			for name, value := range current.entries { //nolint:maprangecheck
+				if _, ok := values[name]; !ok {
+					values[name] = value
+				}
+			}
+		}
+
+		if current.isFunction {
+			break
+		}
+
+		current = current.Parent
+	}
+
+	return values
+}
+
 // Set sets the given name-value pair in the activation.
 //
 func (a *LocalActivation) Set(name string, value *Local) {
@@ -76,7 +105,7 @@ func (a *LocalActivation) Set(name string, value *Local) {
 	a.entries[name] = value
 }
 
-// Activations is a stack of activation records.
+// LocalActivations is a stack of activation records.
 // Each entry represents a new activation record.
 //
 // The current / most nested activation record can be found
@@ -158,11 +187,13 @@ func (a *LocalActivations) Pop() {
 	if count < 1 {
 		return
 	}
-	a.activations = a.activations[:count-1]
+	lastIndex := count - 1
+	a.activations[lastIndex] = nil
+	a.activations = a.activations[:lastIndex]
 }
 
 // CurrentOrNew returns the current activation,
-// or if it does not exists, a new activation
+// or if it does not exist, a new activation
 //
 func (a *LocalActivations) CurrentOrNew() *LocalActivation {
 	current := a.Current()

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -69,19 +69,6 @@ func (OptionalType) isType() {}
 
 func (t OptionalType) ID() string {
 	return fmt.Sprintf("%s?", t.Type.ID())
-}
-
-// Variable
-
-type Variable struct {
-	Type Type
-}
-
-func (Variable) isType() {}
-
-// TODO:
-func (Variable) ID() string {
-	panic("not implemented")
 }
 
 // MetaType
@@ -425,6 +412,7 @@ func (UFix64Type) ID() string {
 }
 
 type ArrayType interface {
+	Type
 	Element() Type
 }
 
@@ -440,8 +428,8 @@ func (t VariableSizedArrayType) ID() string {
 	return fmt.Sprintf("[%s]", t.ElementType.ID())
 }
 
-func (v VariableSizedArrayType) Element() Type {
-	return v.ElementType
+func (t VariableSizedArrayType) Element() Type {
+	return t.ElementType
 }
 
 // ConstantSizedArrayType
@@ -457,8 +445,8 @@ func (t ConstantSizedArrayType) ID() string {
 	return fmt.Sprintf("[%s;%d]", t.ElementType.ID(), t.Size)
 }
 
-func (v ConstantSizedArrayType) Element() Type {
-	return v.ElementType
+func (t ConstantSizedArrayType) Element() Type {
+	return t.ElementType
 }
 
 // DictionaryType
@@ -776,39 +764,26 @@ func (t *ContractInterfaceType) InterfaceInitializers() [][]Parameter {
 
 // Function
 
-type Function struct {
+type FunctionType struct {
 	typeID     string
 	Parameters []Parameter
 	ReturnType Type
 }
 
-func (t Function) isType() {}
+func (FunctionType) isType() {}
 
-func (t Function) ID() string {
+func (t FunctionType) ID() string {
 	return t.typeID
 }
 
-func (t Function) WithID(id string) Function {
+func (t FunctionType) WithID(id string) FunctionType {
 	t.typeID = id
 	return t
-}
-
-// ResourcePointer
-
-type ResourcePointer struct {
-	TypeName string
-}
-
-func (ResourcePointer) isType() {}
-
-func (t ResourcePointer) ID() string {
-	return t.TypeName
 }
 
 // ReferenceType
 
 type ReferenceType struct {
-	typeID     string
 	Authorized bool
 	Type       Type
 }
@@ -816,12 +791,11 @@ type ReferenceType struct {
 func (ReferenceType) isType() {}
 
 func (t ReferenceType) ID() string {
-	return t.typeID
-}
-
-func (t ReferenceType) WithID(id string) ReferenceType {
-	t.typeID = id
-	return t
+	id := fmt.Sprintf("&%s", t.Type.ID())
+	if t.Authorized {
+		id = "auth" + id
+	}
+	return id
 }
 
 // RestrictedType
@@ -906,19 +880,16 @@ func (PrivatePathType) ID() string {
 // CapabilityType
 
 type CapabilityType struct {
-	typeID     string
 	BorrowType Type
 }
 
 func (CapabilityType) isType() {}
 
 func (t CapabilityType) ID() string {
-	return t.typeID
-}
-
-func (t CapabilityType) WithID(id string) CapabilityType {
-	t.typeID = id
-	return t
+	if t.BorrowType != nil {
+		return fmt.Sprintf("Capability<%s>", t.BorrowType.ID())
+	}
+	return "Capability"
 }
 
 // EnumType
@@ -930,7 +901,7 @@ type EnumType struct {
 	Initializers        [][]Parameter
 }
 
-func (t *EnumType) isType() {}
+func (*EnumType) isType() {}
 
 func (t *EnumType) ID() string {
 	if t.Location == nil {
@@ -956,4 +927,76 @@ func (t *EnumType) CompositeFields() []Field {
 
 func (t *EnumType) CompositeInitializers() [][]Parameter {
 	return t.Initializers
+}
+
+// AuthAccountType
+type AuthAccountType struct{}
+
+func (AuthAccountType) isType() {}
+
+func (AuthAccountType) ID() string {
+	return "AuthAccount"
+}
+
+// PublicAccountType
+type PublicAccountType struct{}
+
+func (PublicAccountType) isType() {}
+
+func (PublicAccountType) ID() string {
+	return "PublicAccount"
+}
+
+// DeployedContractType
+type DeployedContractType struct{}
+
+func (DeployedContractType) isType() {}
+
+func (DeployedContractType) ID() string {
+	return "DeployedContract"
+}
+
+// AuthAccountContractsType
+type AuthAccountContractsType struct{}
+
+func (AuthAccountContractsType) isType() {}
+
+func (AuthAccountContractsType) ID() string {
+	return "AuthAccount.Contracts"
+}
+
+// PublicAccountContractsType
+type PublicAccountContractsType struct{}
+
+func (PublicAccountContractsType) isType() {}
+
+func (PublicAccountContractsType) ID() string {
+	return "PublicAccount.Contracts"
+}
+
+// AuthAccountKeysType
+type AuthAccountKeysType struct{}
+
+func (AuthAccountKeysType) isType() {}
+
+func (AuthAccountKeysType) ID() string {
+	return "AuthAccount.Keys"
+}
+
+// PublicAccountContractsType
+type PublicAccountKeysType struct{}
+
+func (PublicAccountKeysType) isType() {}
+
+func (PublicAccountKeysType) ID() string {
+	return "PublicAccount.Keys"
+}
+
+// AccountKeyType
+type AccountKeyType struct{}
+
+func (AccountKeyType) isType() {}
+
+func (AccountKeyType) ID() string {
+	return "AccountKey"
 }

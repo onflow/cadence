@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -2105,4 +2105,25 @@ func TestCheckMultipleInterfaceSingleInterfaceDefaultImplementationWhenOverridde
     `)
 	require.NoError(t, err)
 
+}
+
+func TestCheckBadStructInterface(t *testing.T) {
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, "struct interface var { contract h : var { contract h { } contract h { contract h { } } } }")
+
+	errs := ExpectCheckerErrors(t, err, 12)
+
+	assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
+	assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[1])
+	assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[2])
+	assert.IsType(t, &sema.RedeclarationError{}, errs[3])
+	assert.IsType(t, &sema.RedeclarationError{}, errs[4])
+	assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[5])
+	assert.IsType(t, &sema.RedeclarationError{}, errs[6])
+	assert.IsType(t, &sema.RedeclarationError{}, errs[7])
+	assert.IsType(t, &sema.RedeclarationError{}, errs[8])
+	assert.IsType(t, &sema.RedeclarationError{}, errs[9])
+	assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[10])
+	assert.IsType(t, &sema.RedeclarationError{}, errs[11])
 }

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,8 +50,9 @@ func TestParseVariableDeclaration(t *testing.T) {
 						Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
 					},
 					Value: &ast.IntegerExpression{
-						Value: big.NewInt(1),
-						Base:  10,
+						PositiveLiteral: "1",
+						Value:           big.NewInt(1),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
 							EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
@@ -85,8 +86,9 @@ func TestParseVariableDeclaration(t *testing.T) {
 						Pos:        ast.Position{Line: 1, Column: 9, Offset: 9},
 					},
 					Value: &ast.IntegerExpression{
-						Value: big.NewInt(1),
-						Base:  10,
+						PositiveLiteral: "1",
+						Value:           big.NewInt(1),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 13, Offset: 13},
 							EndPos:   ast.Position{Line: 1, Column: 13, Offset: 13},
@@ -119,8 +121,9 @@ func TestParseVariableDeclaration(t *testing.T) {
 						Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
 					},
 					Value: &ast.IntegerExpression{
-						Value: big.NewInt(1),
-						Base:  10,
+						PositiveLiteral: "1",
+						Value:           big.NewInt(1),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
 							EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
@@ -153,8 +156,9 @@ func TestParseVariableDeclaration(t *testing.T) {
 						Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
 					},
 					Value: &ast.IntegerExpression{
-						Value: big.NewInt(1),
-						Base:  10,
+						PositiveLiteral: "1",
+						Value:           big.NewInt(1),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
 							EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
@@ -449,6 +453,22 @@ func TestParseParameterList(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("two, with and without argument label, missing comma", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse("( a b : Int   c : Int )")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "parser: expected comma, got start of parameter",
+					Pos:     ast.Position{Offset: 14, Line: 1, Column: 14},
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParseFunctionDeclaration(t *testing.T) {
@@ -661,16 +681,18 @@ func TestParseFunctionDeclaration(t *testing.T) {
 								Test: &ast.BinaryExpression{
 									Operation: ast.OperationGreater,
 									Left: &ast.IntegerExpression{
-										Value: big.NewInt(2),
-										Base:  10,
+										PositiveLiteral: "2",
+										Value:           big.NewInt(2),
+										Base:            10,
 										Range: ast.Range{
 											StartPos: ast.Position{Line: 5, Column: 17, Offset: 92},
 											EndPos:   ast.Position{Line: 5, Column: 17, Offset: 92},
 										},
 									},
 									Right: &ast.IntegerExpression{
-										Value: big.NewInt(1),
-										Base:  10,
+										PositiveLiteral: "1",
+										Value:           big.NewInt(1),
+										Base:            10,
 										Range: ast.Range{
 											StartPos: ast.Position{Line: 5, Column: 21, Offset: 96},
 											EndPos:   ast.Position{Line: 5, Column: 21, Offset: 96},
@@ -908,8 +930,9 @@ func TestParseFunctionDeclaration(t *testing.T) {
 							Statements: []ast.Statement{
 								&ast.ReturnStatement{
 									Expression: &ast.IntegerExpression{
-										Value: big.NewInt(1),
-										Base:  10,
+										PositiveLiteral: "1",
+										Value:           big.NewInt(1),
+										Base:            10,
 										Range: ast.Range{
 											StartPos: ast.Position{Line: 1, Column: 24, Offset: 24},
 											EndPos:   ast.Position{Line: 1, Column: 24, Offset: 24},
@@ -1228,7 +1251,7 @@ func TestParseImportDeclaration(t *testing.T) {
 				&ast.ImportDeclaration{
 					Identifiers: nil,
 					Location: common.AddressLocation{
-						Address: common.BytesToAddress([]byte{0x42}),
+						Address: common.MustBytesToAddress([]byte{0x42}),
 					},
 					LocationPos: ast.Position{Line: 1, Column: 8, Offset: 8},
 					Range: ast.Range{
@@ -1237,6 +1260,29 @@ func TestParseImportDeclaration(t *testing.T) {
 					},
 				},
 			},
+			result,
+		)
+	})
+
+	t.Run("no identifiers, address location, address too long", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations(` import 0x10000000000000001`)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "address too large",
+					Pos:     ast.Position{Offset: 8, Line: 1, Column: 8},
+				},
+			},
+			errs,
+		)
+
+		var expected []ast.Declaration
+
+		utils.AssertEqualWithDiff(t,
+			expected,
 			result,
 		)
 	})
@@ -1343,7 +1389,7 @@ func TestParseImportDeclaration(t *testing.T) {
 						},
 					},
 					Location: common.AddressLocation{
-						Address: common.BytesToAddress([]byte{0x42}),
+						Address: common.MustBytesToAddress([]byte{0x42}),
 					},
 					LocationPos: ast.Position{Line: 1, Column: 29, Offset: 29},
 					Range: ast.Range{
@@ -1426,7 +1472,7 @@ func TestParseImportDeclaration(t *testing.T) {
 						},
 					},
 					Location: common.AddressLocation{
-						Address: common.BytesToAddress([]byte{0x42}),
+						Address: common.MustBytesToAddress([]byte{0x42}),
 					},
 					LocationPos: ast.Position{Line: 2, Column: 25, Offset: 26},
 					Range: ast.Range{
@@ -1450,7 +1496,7 @@ func TestParseImportDeclaration(t *testing.T) {
 						},
 					},
 					Location: common.AddressLocation{
-						Address: common.BytesToAddress([]byte{0x42}),
+						Address: common.MustBytesToAddress([]byte{0x42}),
 					},
 					LocationPos: ast.Position{Line: 3, Column: 30, Offset: 61},
 					Range: ast.Range{
@@ -2387,8 +2433,9 @@ func TestParseTransactionDeclaration(t *testing.T) {
 												Pos:       ast.Position{Offset: 88, Line: 7, Column: 13},
 											},
 											Value: &ast.IntegerExpression{
-												Value: new(big.Int),
-												Base:  10,
+												PositiveLiteral: "0",
+												Value:           new(big.Int),
+												Base:            10,
 												Range: ast.Range{
 													StartPos: ast.Position{Offset: 90, Line: 7, Column: 15},
 													EndPos:   ast.Position{Offset: 90, Line: 7, Column: 15},
@@ -2436,16 +2483,18 @@ func TestParseTransactionDeclaration(t *testing.T) {
 											Value: &ast.BinaryExpression{
 												Operation: ast.OperationPlus,
 												Left: &ast.IntegerExpression{
-													Value: big.NewInt(1),
-													Base:  10,
+													PositiveLiteral: "1",
+													Value:           big.NewInt(1),
+													Base:            10,
 													Range: ast.Range{
 														StartPos: ast.Position{Offset: 129, Line: 11, Column: 15},
 														EndPos:   ast.Position{Offset: 129, Line: 11, Column: 15},
 													},
 												},
 												Right: &ast.IntegerExpression{
-													Value: big.NewInt(1),
-													Base:  10,
+													PositiveLiteral: "1",
+													Value:           big.NewInt(1),
+													Base:            10,
 													Range: ast.Range{
 														StartPos: ast.Position{Offset: 133, Line: 11, Column: 19},
 														EndPos:   ast.Position{Offset: 133, Line: 11, Column: 19},
@@ -2580,8 +2629,9 @@ func TestParseTransactionDeclaration(t *testing.T) {
 												Pos:       ast.Position{Offset: 88, Line: 7, Column: 13},
 											},
 											Value: &ast.IntegerExpression{
-												Value: new(big.Int),
-												Base:  10,
+												PositiveLiteral: "0",
+												Value:           new(big.Int),
+												Base:            10,
 												Range: ast.Range{
 													StartPos: ast.Position{Offset: 90, Line: 7, Column: 15},
 													EndPos:   ast.Position{Offset: 90, Line: 7, Column: 15},
@@ -2612,8 +2662,9 @@ func TestParseTransactionDeclaration(t *testing.T) {
 									},
 								},
 								Right: &ast.IntegerExpression{
-									Value: new(big.Int),
-									Base:  10,
+									PositiveLiteral: "0",
+									Value:           new(big.Int),
+									Base:            10,
 									Range: ast.Range{
 										StartPos: ast.Position{Offset: 122, Line: 11, Column: 15},
 										EndPos:   ast.Position{Offset: 122, Line: 11, Column: 15},
@@ -2634,8 +2685,9 @@ func TestParseTransactionDeclaration(t *testing.T) {
 									},
 								},
 								Right: &ast.IntegerExpression{
-									Value: big.NewInt(2),
-									Base:  10,
+									PositiveLiteral: "2",
+									Value:           big.NewInt(2),
+									Base:            10,
 									Range: ast.Range{
 										StartPos: ast.Position{Offset: 202, Line: 19, Column: 16},
 										EndPos:   ast.Position{Offset: 202, Line: 19, Column: 16},
@@ -2671,16 +2723,18 @@ func TestParseTransactionDeclaration(t *testing.T) {
 											Value: &ast.BinaryExpression{
 												Operation: ast.OperationPlus,
 												Left: &ast.IntegerExpression{
-													Value: big.NewInt(1),
-													Base:  10,
+													PositiveLiteral: "1",
+													Value:           big.NewInt(1),
+													Base:            10,
 													Range: ast.Range{
 														StartPos: ast.Position{Offset: 161, Line: 15, Column: 15},
 														EndPos:   ast.Position{Offset: 161, Line: 15, Column: 15},
 													},
 												},
 												Right: &ast.IntegerExpression{
-													Value: big.NewInt(1),
-													Base:  10,
+													PositiveLiteral: "1",
+													Value:           big.NewInt(1),
+													Base:            10,
 													Range: ast.Range{
 														StartPos: ast.Position{Offset: 165, Line: 15, Column: 19},
 														EndPos:   ast.Position{Offset: 165, Line: 15, Column: 19},
@@ -2815,8 +2869,9 @@ func TestParseTransactionDeclaration(t *testing.T) {
 												Pos:       ast.Position{Offset: 88, Line: 7, Column: 13},
 											},
 											Value: &ast.IntegerExpression{
-												Value: new(big.Int),
-												Base:  10,
+												PositiveLiteral: "0",
+												Value:           new(big.Int),
+												Base:            10,
 												Range: ast.Range{
 													StartPos: ast.Position{Offset: 90, Line: 7, Column: 15},
 													EndPos:   ast.Position{Offset: 90, Line: 7, Column: 15},
@@ -2847,8 +2902,9 @@ func TestParseTransactionDeclaration(t *testing.T) {
 									},
 								},
 								Right: &ast.IntegerExpression{
-									Value: new(big.Int),
-									Base:  10,
+									PositiveLiteral: "0",
+									Value:           new(big.Int),
+									Base:            10,
 									Range: ast.Range{
 										StartPos: ast.Position{Offset: 122, Line: 11, Column: 15},
 										EndPos:   ast.Position{Offset: 122, Line: 11, Column: 15},
@@ -2869,8 +2925,9 @@ func TestParseTransactionDeclaration(t *testing.T) {
 									},
 								},
 								Right: &ast.IntegerExpression{
-									Value: big.NewInt(2),
-									Base:  10,
+									PositiveLiteral: "2",
+									Value:           big.NewInt(2),
+									Base:            10,
 									Range: ast.Range{
 										StartPos: ast.Position{Offset: 159, Line: 15, Column: 16},
 										EndPos:   ast.Position{Offset: 159, Line: 15, Column: 16},
@@ -2906,16 +2963,18 @@ func TestParseTransactionDeclaration(t *testing.T) {
 											Value: &ast.BinaryExpression{
 												Operation: ast.OperationPlus,
 												Left: &ast.IntegerExpression{
-													Value: big.NewInt(1),
-													Base:  10,
+													PositiveLiteral: "1",
+													Value:           big.NewInt(1),
+													Base:            10,
 													Range: ast.Range{
 														StartPos: ast.Position{Offset: 204, Line: 19, Column: 15},
 														EndPos:   ast.Position{Offset: 204, Line: 19, Column: 15},
 													},
 												},
 												Right: &ast.IntegerExpression{
-													Value: big.NewInt(1),
-													Base:  10,
+													PositiveLiteral: "1",
+													Value:           big.NewInt(1),
+													Base:            10,
 													Range: ast.Range{
 														StartPos: ast.Position{Offset: 208, Line: 19, Column: 19},
 														EndPos:   ast.Position{Offset: 208, Line: 19, Column: 19},
@@ -3443,8 +3502,9 @@ func TestParsePreAndPostConditions(t *testing.T) {
 						Statements: []ast.Statement{
 							&ast.ReturnStatement{
 								Expression: &ast.IntegerExpression{
-									Value: new(big.Int),
-									Base:  10,
+									PositiveLiteral: "0",
+									Value:           new(big.Int),
+									Base:            10,
 									Range: ast.Range{
 										StartPos: ast.Position{Offset: 185, Line: 10, Column: 19},
 										EndPos:   ast.Position{Offset: 185, Line: 10, Column: 19},
@@ -3473,8 +3533,9 @@ func TestParsePreAndPostConditions(t *testing.T) {
 									},
 								},
 								Right: &ast.IntegerExpression{
-									Value: new(big.Int),
-									Base:  10,
+									PositiveLiteral: "0",
+									Value:           new(big.Int),
+									Base:            10,
 									Range: ast.Range{
 										StartPos: ast.Position{Offset: 67, Line: 4, Column: 21},
 										EndPos:   ast.Position{Offset: 67, Line: 4, Column: 21},
@@ -3493,8 +3554,9 @@ func TestParsePreAndPostConditions(t *testing.T) {
 									},
 								},
 								Right: &ast.IntegerExpression{
-									Value: new(big.Int),
-									Base:  10,
+									PositiveLiteral: "0",
+									Value:           new(big.Int),
+									Base:            10,
 									Range: ast.Range{
 										StartPos: ast.Position{Offset: 89, Line: 5, Column: 20},
 										EndPos:   ast.Position{Offset: 89, Line: 5, Column: 20},
@@ -3515,8 +3577,9 @@ func TestParsePreAndPostConditions(t *testing.T) {
 									},
 								},
 								Right: &ast.IntegerExpression{
-									Value: new(big.Int),
-									Base:  10,
+									PositiveLiteral: "0",
+									Value:           new(big.Int),
+									Base:            10,
 									Range: ast.Range{
 										StartPos: ast.Position{Offset: 150, Line: 8, Column: 26},
 										EndPos:   ast.Position{Offset: 150, Line: 8, Column: 26},
@@ -3626,8 +3689,9 @@ func TestParseConditionMessage(t *testing.T) {
 									},
 								},
 								Right: &ast.IntegerExpression{
-									Value: new(big.Int),
-									Base:  10,
+									PositiveLiteral: "0",
+									Value:           new(big.Int),
+									Base:            10,
 									Range: ast.Range{
 										StartPos: ast.Position{Offset: 67, Line: 4, Column: 21},
 										EndPos:   ast.Position{Offset: 67, Line: 4, Column: 21},
@@ -3892,7 +3956,7 @@ func TestParseImportWithAddress(t *testing.T) {
 			&ast.ImportDeclaration{
 				Identifiers: nil,
 				Location: common.AddressLocation{
-					Address: common.BytesToAddress([]byte{0x12, 0x34}),
+					Address: common.MustBytesToAddress([]byte{0x12, 0x34}),
 				},
 				Range: ast.Range{
 					StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
@@ -3928,7 +3992,7 @@ func TestParseImportWithIdentifiers(t *testing.T) {
 					},
 				},
 				Location: common.AddressLocation{
-					Address: common.BytesToAddress([]byte{0x1}),
+					Address: common.MustBytesToAddress([]byte{0x1}),
 				},
 				Range: ast.Range{
 					StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
@@ -4025,7 +4089,7 @@ func TestParseImportWithFromIdentifier(t *testing.T) {
 					},
 				},
 				Location: common.AddressLocation{
-					Address: common.BytesToAddress([]byte{0x1}),
+					Address: common.MustBytesToAddress([]byte{0x1}),
 				},
 				Range: ast.Range{
 					StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
@@ -4216,8 +4280,9 @@ func TestParseEventEmitStatement(t *testing.T) {
 											LabelStartPos: &ast.Position{Offset: 42, Line: 3, Column: 22},
 											LabelEndPos:   &ast.Position{Offset: 43, Line: 3, Column: 23},
 											Expression: &ast.IntegerExpression{
-												Value: big.NewInt(1),
-												Base:  10,
+												PositiveLiteral: "1",
+												Value:           big.NewInt(1),
+												Base:            10,
 												Range: ast.Range{
 													StartPos: ast.Position{Offset: 46, Line: 3, Column: 26},
 													EndPos:   ast.Position{Offset: 46, Line: 3, Column: 26},
@@ -4230,8 +4295,9 @@ func TestParseEventEmitStatement(t *testing.T) {
 											LabelStartPos: &ast.Position{Offset: 49, Line: 3, Column: 29},
 											LabelEndPos:   &ast.Position{Offset: 52, Line: 3, Column: 32},
 											Expression: &ast.IntegerExpression{
-												Value: big.NewInt(2),
-												Base:  10,
+												PositiveLiteral: "2",
+												Value:           big.NewInt(2),
+												Base:            10,
 												Range: ast.Range{
 													StartPos: ast.Position{Offset: 55, Line: 3, Column: 35},
 													EndPos:   ast.Position{Offset: 55, Line: 3, Column: 35},
@@ -4854,4 +4920,57 @@ func TestParsePreconditionWithUnaryNegation(t *testing.T) {
 		},
 		result.Declarations(),
 	)
+}
+
+func TestParseInvalidAccessModifiers(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("pragma", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations("pub #test")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid access modifier for pragma",
+					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations("pub transaction {}")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid access modifier for transaction",
+					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := ParseDeclarations("pub priv let x = 1")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid second access modifier",
+					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+				},
+			},
+			errs,
+		)
+	})
 }

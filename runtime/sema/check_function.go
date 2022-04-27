@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -131,10 +131,13 @@ func (checker *Checker) checkFunction(
 
 	// Reset the returning state and restore it when leaving
 
-	returned := checker.resources.Returns
-	checker.resources.Returns = false
+	jumpedOrReturned := checker.resources.JumpsOrReturns
+	halted := checker.resources.Halts
+	checker.resources.JumpsOrReturns = false
+	checker.resources.Halts = false
 	defer func() {
-		checker.resources.Returns = returned
+		checker.resources.JumpsOrReturns = jumpedOrReturned
+		checker.resources.Halts = halted
 	}()
 
 	// NOTE: Always declare the function parameters, even if the function body is empty.

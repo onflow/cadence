@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -131,7 +131,7 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 	}
 
 	fieldPositionGetter := func(name string) ast.Position {
-		return declaration.Members.FieldPosition(name, declaration.CompositeKind)
+		return compositeType.FieldPosition(name, declaration)
 	}
 
 	checker.checkResourceFieldNesting(
@@ -255,7 +255,11 @@ func (checker *Checker) declareCompositeNestedTypes(
 			if nestedCompositeDeclaration, isCompositeDeclaration :=
 				nestedDeclaration.(*ast.CompositeDeclaration); isCompositeDeclaration {
 
-				nestedCompositeType := nestedType.(*CompositeType)
+				nestedCompositeType, ok := nestedType.(*CompositeType)
+				if !ok {
+					// we just checked that this was a composite declaration
+					panic(errors.NewUnreachableError())
+				}
 
 				// Always determine composite constructor type
 
@@ -682,7 +686,7 @@ func (checker *Checker) declareCompositeMembersAndValue(
 
 func (checker *Checker) declareCompositeConstructor(
 	declaration *ast.CompositeDeclaration,
-	constructorType *ConstructorFunctionType,
+	constructorType *FunctionType,
 	constructorArgumentLabels []string,
 ) {
 	// Resource and event constructors are effectively always private,
@@ -743,39 +747,23 @@ func (checker *Checker) declareEnumConstructor(
 
 	enumCases := declaration.Members.EnumCases()
 
-	constructorMembers := NewStringMemberOrderedMap()
-
 	var constructorOrigins map[string]*Origin
 	if checker.positionInfoEnabled {
 		constructorOrigins = make(map[string]*Origin, len(enumCases))
 	}
 
-	constructorType := &ConstructorFunctionType{
-		FunctionType: &FunctionType{
-			Parameters: []*Parameter{
-				{
-					Identifier:     EnumRawValueFieldName,
-					TypeAnnotation: NewTypeAnnotation(compositeType.EnumRawType),
-				},
-			},
-			ReturnTypeAnnotation: NewTypeAnnotation(
-				&OptionalType{
-					Type: compositeType,
-				},
-			),
-			Members: constructorMembers,
-		},
-	}
+	constructorType := EnumConstructorType(compositeType)
 
 	memberCaseTypeAnnotation := NewTypeAnnotation(compositeType)
 
 	for _, enumCase := range enumCases {
 		caseName := enumCase.Identifier.Identifier
 
-		if _, ok := constructorMembers.Get(caseName); ok {
+		if _, ok := constructorType.Members.Get(caseName); ok {
 			continue
 		}
-		constructorMembers.Set(
+
+		constructorType.Members.Set(
 			caseName,
 			&Member{
 				ContainerType: constructorType,
@@ -814,6 +802,24 @@ func (checker *Checker) declareEnumConstructor(
 		argumentLabels: []string{EnumRawValueFieldName},
 	})
 	checker.report(err)
+}
+
+func EnumConstructorType(compositeType *CompositeType) *FunctionType {
+	return &FunctionType{
+		IsConstructor: true,
+		Parameters: []*Parameter{
+			{
+				Identifier:     EnumRawValueFieldName,
+				TypeAnnotation: NewTypeAnnotation(compositeType.EnumRawType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{
+				Type: compositeType,
+			},
+		),
+		Members: NewStringMemberOrderedMap(),
+	}
 }
 
 // checkMemberStorability check that all fields have a type that is storable.
@@ -943,7 +949,7 @@ func (checker *Checker) enumRawType(declaration *ast.CompositeDeclaration) Type 
 	rawType := checker.ConvertType(conformance)
 
 	if !rawType.IsInvalidType() &&
-		!IsSubType(rawType, IntegerType) {
+		!IsSameTypeKind(rawType, IntegerType) {
 
 		checker.report(
 			&InvalidEnumRawTypeError{
@@ -1136,8 +1142,12 @@ func (checker *Checker) memberSatisfied(compositeMember, interfaceMember *Member
 			// where argument labels are not considered,
 			// and parameters are contravariant.
 
-			interfaceMemberFunctionType := interfaceMemberType.(*FunctionType)
-			compositeMemberFunctionType := compositeMemberType.(*FunctionType)
+			interfaceMemberFunctionType, isInterfaceMemberFunctionType := interfaceMemberType.(*FunctionType)
+			compositeMemberFunctionType, isCompositeMemberFunctionType := compositeMemberType.(*FunctionType)
+
+			if !isInterfaceMemberFunctionType || !isCompositeMemberFunctionType {
+				return false
+			}
 
 			if !interfaceMemberFunctionType.HasSameArgumentLabels(compositeMemberFunctionType) {
 				return false
@@ -1248,13 +1258,31 @@ func (checker *Checker) checkTypeRequirement(
 	// Find the composite declaration of the composite type
 
 	var compositeDeclaration *ast.CompositeDeclaration
+	var foundRedeclaration bool
 
 	for _, nestedCompositeDeclaration := range containerDeclaration.Members.Composites() {
 		nestedCompositeIdentifier := nestedCompositeDeclaration.Identifier.Identifier
 		if nestedCompositeIdentifier == declaredCompositeType.Identifier {
+			// If we detected a second nested composite declaration with the same identifier,
+			// report an error and stop further type requirement checking
+			if compositeDeclaration != nil {
+				foundRedeclaration = true
+				checker.report(&RedeclarationError{
+					Kind:        nestedCompositeDeclaration.DeclarationKind(),
+					Name:        nestedCompositeDeclaration.Identifier.Identifier,
+					Pos:         nestedCompositeDeclaration.Identifier.Pos,
+					PreviousPos: &compositeDeclaration.Identifier.Pos,
+				})
+			}
 			compositeDeclaration = nestedCompositeDeclaration
-			break
+			// NOTE: Do not break / stop iteration, but keep looking for
+			// another (invalid) nested composite declaration with the same identifier,
+			// as the first found declaration is not necessarily the correct one
 		}
+	}
+
+	if foundRedeclaration {
+		return
 	}
 
 	if compositeDeclaration == nil {
@@ -1306,14 +1334,13 @@ func (checker *Checker) compositeConstructorType(
 	compositeDeclaration *ast.CompositeDeclaration,
 	compositeType *CompositeType,
 ) (
-	constructorFunctionType *ConstructorFunctionType,
+	constructorFunctionType *FunctionType,
 	argumentLabels []string,
 ) {
 
-	constructorFunctionType = &ConstructorFunctionType{
-		FunctionType: &FunctionType{
-			ReturnTypeAnnotation: NewTypeAnnotation(compositeType),
-		},
+	constructorFunctionType = &FunctionType{
+		IsConstructor:        true,
+		ReturnTypeAnnotation: NewTypeAnnotation(compositeType),
 	}
 
 	// TODO: support multiple overloaded initializers
@@ -1333,11 +1360,10 @@ func (checker *Checker) compositeConstructorType(
 		//   The initializer itself has a `Void` return type.
 
 		checker.Elaboration.ConstructorFunctionTypes[firstInitializer] =
-			&ConstructorFunctionType{
-				FunctionType: &FunctionType{
-					Parameters:           constructorFunctionType.Parameters,
-					ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
-				},
+			&FunctionType{
+				IsConstructor:        true,
+				Parameters:           constructorFunctionType.Parameters,
+				ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
 			}
 	}
 
@@ -1768,7 +1794,11 @@ func (checker *Checker) checkSpecialFunction(
 	case ContainerKindComposite:
 		// Event declarations have an empty initializer as it is synthesized
 
-		compositeType := containerType.(*CompositeType)
+		compositeType, ok := containerType.(*CompositeType)
+		if !ok {
+			// we just checked that the container was a composite
+			panic(errors.NewUnreachableError())
+		}
 		if compositeType.Kind != common.CompositeKindEvent &&
 			specialFunction.FunctionDeclaration.FunctionBlock == nil {
 

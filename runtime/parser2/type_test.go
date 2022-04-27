@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -120,8 +120,9 @@ func TestParseArrayType(t *testing.T) {
 					},
 				},
 				Size: &ast.IntegerExpression{
-					Value: big.NewInt(2),
-					Base:  10,
+					PositiveLiteral: "2",
+					Value:           big.NewInt(2),
+					Base:            10,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
 						EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
@@ -1318,8 +1319,9 @@ func TestParseParametersAndArrayTypes(t *testing.T) {
 										},
 									},
 									Size: &ast.IntegerExpression{
-										Value: big.NewInt(2),
-										Base:  10,
+										PositiveLiteral: "2",
+										Value:           big.NewInt(2),
+										Base:            10,
 										Range: ast.Range{
 											StartPos: ast.Position{Offset: 37, Line: 2, Column: 36},
 											EndPos:   ast.Position{Offset: 37, Line: 2, Column: 36},
@@ -1353,8 +1355,9 @@ func TestParseParametersAndArrayTypes(t *testing.T) {
 											},
 										},
 										Size: &ast.IntegerExpression{
-											Value: big.NewInt(3),
-											Base:  10,
+											PositiveLiteral: "3",
+											Value:           big.NewInt(3),
+											Base:            10,
 											Range: ast.Range{
 												StartPos: ast.Position{Offset: 53, Line: 2, Column: 52},
 												EndPos:   ast.Position{Offset: 53, Line: 2, Column: 52},
@@ -1512,8 +1515,9 @@ func TestParseIntegerTypes(t *testing.T) {
 			Pos:       ast.Position{Offset: 15, Line: 2, Column: 14},
 		},
 		Value: &ast.IntegerExpression{
-			Value: big.NewInt(1),
-			Base:  10,
+			PositiveLiteral: "1",
+			Value:           big.NewInt(1),
+			Base:            10,
 			Range: ast.Range{
 				StartPos: ast.Position{Offset: 17, Line: 2, Column: 16},
 				EndPos:   ast.Position{Offset: 17, Line: 2, Column: 16},
@@ -1542,8 +1546,9 @@ func TestParseIntegerTypes(t *testing.T) {
 			Pos:       ast.Position{Offset: 34, Line: 3, Column: 15},
 		},
 		Value: &ast.IntegerExpression{
-			Value: big.NewInt(2),
-			Base:  10,
+			PositiveLiteral: "2",
+			Value:           big.NewInt(2),
+			Base:            10,
 			Range: ast.Range{
 				StartPos: ast.Position{Offset: 36, Line: 3, Column: 17},
 				EndPos:   ast.Position{Offset: 36, Line: 3, Column: 17},
@@ -1572,8 +1577,9 @@ func TestParseIntegerTypes(t *testing.T) {
 			Pos:       ast.Position{Offset: 53, Line: 4, Column: 15},
 		},
 		Value: &ast.IntegerExpression{
-			Value: big.NewInt(3),
-			Base:  10,
+			PositiveLiteral: "3",
+			Value:           big.NewInt(3),
+			Base:            10,
 			Range: ast.Range{
 				StartPos: ast.Position{Offset: 55, Line: 4, Column: 17},
 				EndPos:   ast.Position{Offset: 55, Line: 4, Column: 17},
@@ -1602,8 +1608,9 @@ func TestParseIntegerTypes(t *testing.T) {
 			Pos:       ast.Position{Offset: 72, Line: 5, Column: 15},
 		},
 		Value: &ast.IntegerExpression{
-			Value: big.NewInt(4),
-			Base:  10,
+			PositiveLiteral: "4",
+			Value:           big.NewInt(4),
+			Base:            10,
 			Range: ast.Range{
 				StartPos: ast.Position{Offset: 74, Line: 5, Column: 17},
 				EndPos:   ast.Position{Offset: 74, Line: 5, Column: 17},
@@ -1632,8 +1639,9 @@ func TestParseIntegerTypes(t *testing.T) {
 			Pos:       ast.Position{Offset: 91, Line: 6, Column: 15},
 		},
 		Value: &ast.IntegerExpression{
-			Value: big.NewInt(5),
-			Base:  10,
+			PositiveLiteral: "5",
+			Value:           big.NewInt(5),
+			Base:            10,
 			Range: ast.Range{
 				StartPos: ast.Position{Offset: 93, Line: 6, Column: 17},
 				EndPos:   ast.Position{Offset: 93, Line: 6, Column: 17},
@@ -1662,8 +1670,9 @@ func TestParseIntegerTypes(t *testing.T) {
 			Pos:       ast.Position{Offset: 111, Line: 7, Column: 16},
 		},
 		Value: &ast.IntegerExpression{
-			Value: big.NewInt(6),
-			Base:  10,
+			PositiveLiteral: "6",
+			Value:           big.NewInt(6),
+			Base:            10,
 			Range: ast.Range{
 				StartPos: ast.Position{Offset: 113, Line: 7, Column: 18},
 				EndPos:   ast.Position{Offset: 113, Line: 7, Column: 18},
@@ -1692,8 +1701,9 @@ func TestParseIntegerTypes(t *testing.T) {
 			Pos:       ast.Position{Offset: 131, Line: 8, Column: 16},
 		},
 		Value: &ast.IntegerExpression{
-			Value: big.NewInt(7),
-			Base:  10,
+			PositiveLiteral: "7",
+			Value:           big.NewInt(7),
+			Base:            10,
 			Range: ast.Range{
 				StartPos: ast.Position{Offset: 133, Line: 8, Column: 18},
 				EndPos:   ast.Position{Offset: 133, Line: 8, Column: 18},
@@ -1722,8 +1732,9 @@ func TestParseIntegerTypes(t *testing.T) {
 			Pos:       ast.Position{Offset: 151, Line: 9, Column: 16},
 		},
 		Value: &ast.IntegerExpression{
-			Value: big.NewInt(8),
-			Base:  10,
+			PositiveLiteral: "8",
+			Value:           big.NewInt(8),
+			Base:            10,
 			Range: ast.Range{
 				StartPos: ast.Position{Offset: 153, Line: 9, Column: 18},
 				EndPos:   ast.Position{Offset: 153, Line: 9, Column: 18},
@@ -1864,8 +1875,9 @@ func TestParseFunctionArrayType(t *testing.T) {
 							},
 						},
 						Size: &ast.IntegerExpression{
-							Value: big.NewInt(2),
-							Base:  10,
+							PositiveLiteral: "2",
+							Value:           big.NewInt(2),
+							Base:            10,
 							Range: ast.Range{
 								StartPos: ast.Position{Offset: 31, Line: 2, Column: 30},
 								EndPos:   ast.Position{Offset: 31, Line: 2, Column: 30},
@@ -1937,8 +1949,9 @@ func TestParseFunctionTypeWithArrayReturnType(t *testing.T) {
 									},
 								},
 								Size: &ast.IntegerExpression{
-									Value: big.NewInt(2),
-									Base:  10,
+									PositiveLiteral: "2",
+									Value:           big.NewInt(2),
+									Base:            10,
 									Range: ast.Range{
 										StartPos: ast.Position{Offset: 30, Line: 2, Column: 29},
 										EndPos:   ast.Position{Offset: 30, Line: 2, Column: 29},
@@ -2189,8 +2202,9 @@ func TestParseOptionalTypeDouble(t *testing.T) {
 					Pos:       ast.Position{Offset: 21, Line: 2, Column: 20},
 				},
 				Value: &ast.IntegerExpression{
-					Value: big.NewInt(1),
-					Base:  10,
+					PositiveLiteral: "1",
+					Value:           big.NewInt(1),
+					Base:            10,
 					Range: ast.Range{
 						StartPos: ast.Position{Offset: 23, Line: 2, Column: 22},
 						EndPos:   ast.Position{Offset: 23, Line: 2, Column: 22},
@@ -2302,8 +2316,9 @@ func TestParseReferenceTypeInVariableDeclaration(t *testing.T) {
 					Pos:       ast.Position{Offset: 21, Line: 2, Column: 20},
 				},
 				Value: &ast.IntegerExpression{
-					Value: big.NewInt(1),
-					Base:  10,
+					PositiveLiteral: "1",
+					Value:           big.NewInt(1),
+					Base:            10,
 					Range: ast.Range{
 						StartPos: ast.Position{Offset: 23, Line: 2, Column: 22},
 						EndPos:   ast.Position{Offset: 23, Line: 2, Column: 22},
@@ -2354,8 +2369,9 @@ func TestParseOptionalReference(t *testing.T) {
 					Pos:       ast.Position{Offset: 19, Line: 2, Column: 18},
 				},
 				Value: &ast.IntegerExpression{
-					Value: big.NewInt(1),
-					Base:  10,
+					PositiveLiteral: "1",
+					Value:           big.NewInt(1),
+					Base:            10,
 					Range: ast.Range{
 						StartPos: ast.Position{Offset: 21, Line: 2, Column: 20},
 						EndPos:   ast.Position{Offset: 21, Line: 2, Column: 20},
@@ -2413,8 +2429,9 @@ func TestParseRestrictedReferenceTypeWithBaseType(t *testing.T) {
 					StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
 				},
 				Value: &ast.IntegerExpression{
-					Value: big.NewInt(1),
-					Base:  10,
+					PositiveLiteral: "1",
+					Value:           big.NewInt(1),
+					Base:            10,
 					Range: ast.Range{
 						StartPos: ast.Position{Offset: 23, Line: 2, Column: 22},
 						EndPos:   ast.Position{Offset: 23, Line: 2, Column: 22},
@@ -2470,8 +2487,9 @@ func TestParseRestrictedReferenceTypeWithoutBaseType(t *testing.T) {
 					StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
 				},
 				Value: &ast.IntegerExpression{
-					Value: big.NewInt(1),
-					Base:  10,
+					PositiveLiteral: "1",
+					Value:           big.NewInt(1),
+					Base:            10,
 					Range: ast.Range{
 						StartPos: ast.Position{Offset: 22, Line: 2, Column: 21},
 						EndPos:   ast.Position{Offset: 22, Line: 2, Column: 21},
@@ -2533,8 +2551,9 @@ func TestParseOptionalRestrictedType(t *testing.T) {
 					StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
 				},
 				Value: &ast.IntegerExpression{
-					Value: big.NewInt(1),
-					Base:  10,
+					PositiveLiteral: "1",
+					Value:           big.NewInt(1),
+					Base:            10,
 					Range: ast.Range{
 						StartPos: ast.Position{Offset: 24, Line: 2, Column: 23},
 						EndPos:   ast.Position{Offset: 24, Line: 2, Column: 23},
@@ -2590,8 +2609,9 @@ func TestParseOptionalRestrictedTypeOnlyRestrictions(t *testing.T) {
 					StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
 				},
 				Value: &ast.IntegerExpression{
-					Value: big.NewInt(1),
-					Base:  10,
+					PositiveLiteral: "1",
+					Value:           big.NewInt(1),
+					Base:            10,
 					Range: ast.Range{
 						StartPos: ast.Position{Offset: 23, Line: 2, Column: 22},
 						EndPos:   ast.Position{Offset: 23, Line: 2, Column: 22},
@@ -2638,8 +2658,9 @@ func TestParseAuthorizedReferenceType(t *testing.T) {
 					StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
 				},
 				Value: &ast.IntegerExpression{
-					Value: big.NewInt(1),
-					Base:  10,
+					PositiveLiteral: "1",
+					Value:           big.NewInt(1),
+					Base:            10,
 					Range: ast.Range{
 						StartPos: ast.Position{Offset: 25, Line: 2, Column: 24},
 						EndPos:   ast.Position{Offset: 25, Line: 2, Column: 24},
@@ -2739,18 +2760,22 @@ func TestParseConstantSizedSizedArrayWithTrailingUnderscoreSize(t *testing.T) {
 
 	t.Parallel()
 
-	actual, err := ParseProgram(`
+	_, errs := ParseDeclarations(`
 	  let T:[d;0_]=0
 	`)
 
-	assert.Nil(t, actual)
-
-	require.Error(t, err)
-
-	require.IsType(t, Error{}, err)
-
-	errors := err.(Error).Errors
-	assert.Len(t, errors, 1)
-
-	require.IsType(t, &SyntaxError{}, errors[0])
+	utils.AssertEqualWithDiff(t,
+		[]error{
+			&InvalidIntegerLiteralError{
+				Literal:                   "0_",
+				IntegerLiteralKind:        IntegerLiteralKindDecimal,
+				InvalidIntegerLiteralKind: InvalidNumberLiteralKindTrailingUnderscore,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 2, Column: 12, Offset: 13},
+					EndPos:   ast.Position{Line: 2, Column: 13, Offset: 14},
+				},
+			},
+		},
+		errs,
+	)
 }

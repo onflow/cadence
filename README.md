@@ -25,22 +25,23 @@ Some of these features are:
 
 ## Getting Started
 
-To get started writing Cadence, try it out in the
-[Playground](https://play.onflow.org/).
+To get started writing Cadence, why not try out the
+[Playground](https://play.onflow.org/)?
 
-If you want to develop locally, install the [Flow Command Line Client](https://github.com/onflow/flow/blob/master/docs/cli.md#flow-cli),
-which provides the [Flow emulator](https://github.com/onflow/flow/blob/master/docs/emulator.md#flow-emulator)
-and the [Visual Studio Code extension](https://github.com/onflow/flow/blob/master/docs/vscode-extension.md#cadence-visual-studio-code-extension).
-The emulator is a lightweight tool that emulates the behaviour of the real Flow network.
-The Visual Studio Code extension enables the development, deployment of, and interaction with Cadence contracts.
+If you want to develop locally, use these tools: 
+* [Flow CLI](https://github.com/onflow/flow-cli),
+	which includes the [Flow emulator](https://github.com/onflow/flow-emulator). The emulator is a lightweight tool that emulates the behaviour of the real Flow network.
+* [Visual Studio Code extension](https://github.com/onflow/vscode-cadence). The Visual Studio Code extension enables the development, deployment of, and interaction with Cadence contracts.
+
+
 
 ## Documentation
 
-To read more about Cadence, have a look at the language reference on the [Flow documentation site](https://docs.onflow.org/cadence/language/).
+Check out the [Cadence Docs](https://docs.onflow.org/cadence/language/).
 
 ## Contributing
 
 If you would like to contribute to Cadence, have a look at the [contributing guide](https://github.com/onflow/cadence/blob/master/CONTRIBUTING.md).
 
-Development documentation can be found in the [`docs` directory](https://github.com/onflow/flow/blob/master/docs/cli.md).
+Development documentation can be found in the [/docs directory](https://github.com/onflow/flow/tree/master/docs).
 For example, it contains the source for the language reference.

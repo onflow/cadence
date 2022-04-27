@@ -16,8 +16,8 @@ case "$1" in
     ;;
 
   *)
-    echo "Usage: $0 {major|minor|patch}"
-    exit 1
+    v2=$1
+    ;;
 esac
 
 echo "$v => $v2"

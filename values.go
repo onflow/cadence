@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -179,6 +179,35 @@ func (v Bytes) ToGoValue() interface{} {
 
 func (v Bytes) String() string {
 	return format.Bytes(v)
+}
+
+// Character
+
+// Character represents a Cadence character, which is a Unicode extended grapheme cluster.
+// Hence, use a Go string to be able to hold multiple Unicode code points (Go runes).
+// It should consist of exactly one grapheme cluster
+//
+type Character string
+
+func NewCharacter(b string) (Character, error) {
+	if !sema.IsValidCharacter(b) {
+		return "\uFFFD", fmt.Errorf("invalid character: %s", b)
+	}
+	return Character(b), nil
+}
+
+func (Character) isValue() {}
+
+func (Character) Type() Type {
+	return CharacterType{}
+}
+
+func (v Character) ToGoValue() interface{} {
+	return string(v)
+}
+
+func (v Character) String() string {
+	return format.String(string(v))
 }
 
 // Address
@@ -908,8 +937,8 @@ func (v UFix64) String() string {
 // Array
 
 type Array struct {
-	typ    Type
-	Values []Value
+	ArrayType ArrayType
+	Values    []Value
 }
 
 func NewArray(values []Value) Array {
@@ -919,7 +948,12 @@ func NewArray(values []Value) Array {
 func (Array) isValue() {}
 
 func (v Array) Type() Type {
-	return v.typ
+	return v.ArrayType
+}
+
+func (v Array) WithType(arrayType ArrayType) Array {
+	v.ArrayType = arrayType
+	return v
 }
 
 func (v Array) ToGoValue() interface{} {
@@ -943,8 +977,8 @@ func (v Array) String() string {
 // Dictionary
 
 type Dictionary struct {
-	typ   Type
-	Pairs []KeyValuePair
+	DictionaryType Type
+	Pairs          []KeyValuePair
 }
 
 func NewDictionary(pairs []KeyValuePair) Dictionary {
@@ -954,7 +988,12 @@ func NewDictionary(pairs []KeyValuePair) Dictionary {
 func (Dictionary) isValue() {}
 
 func (v Dictionary) Type() Type {
-	return v.typ
+	return v.DictionaryType
+}
+
+func (v Dictionary) WithType(dictionaryType DictionaryType) Dictionary {
+	v.DictionaryType = dictionaryType
+	return v
 }
 
 func (v Dictionary) ToGoValue() interface{} {
@@ -1216,8 +1255,7 @@ func (v Path) String() string {
 // TypeValue
 
 type TypeValue struct {
-	// TODO: a future version might want to export the whole type
-	StaticType string
+	StaticType Type
 }
 
 func (TypeValue) isValue() {}
@@ -1226,21 +1264,26 @@ func (TypeValue) Type() Type {
 	return MetaType{}
 }
 
+func NewTypeValue(t Type) TypeValue {
+	return TypeValue{
+		StaticType: t,
+	}
+}
+
 func (TypeValue) ToGoValue() interface{} {
 	return nil
 }
 
 func (v TypeValue) String() string {
-	return format.TypeValue(v.StaticType)
+	return format.TypeValue(v.StaticType.ID())
 }
 
 // Capability
 
 type Capability struct {
-	Path    Path
-	Address Address
-	// TODO: a future version might want to export the whole type
-	BorrowType string
+	Path       Path
+	Address    Address
+	BorrowType Type
 }
 
 func (Capability) isValue() {}
@@ -1255,7 +1298,7 @@ func (Capability) ToGoValue() interface{} {
 
 func (v Capability) String() string {
 	return format.Capability(
-		v.BorrowType,
+		v.BorrowType.ID(),
 		v.Address.String(),
 		v.Path.String(),
 	)

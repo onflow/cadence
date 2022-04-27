@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,8 @@ import (
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestInterpretPath(t *testing.T) {
@@ -45,7 +47,9 @@ func TestInterpretPath(t *testing.T) {
 				),
 			)
 
-			assert.Equal(t,
+			AssertValuesEqual(
+				t,
+				inter,
 				interpreter.PathValue{
 					Domain:     domain,
 					Identifier: "random",
@@ -53,5 +57,88 @@ func TestInterpretPath(t *testing.T) {
 				inter.Globals["x"].GetValue(),
 			)
 		})
+	}
+}
+
+func TestInterpretConvertStringToPath(t *testing.T) {
+	t.Parallel()
+
+	domainTypes := map[common.PathDomain]sema.Type{
+		common.PathDomainStorage: sema.StoragePathType,
+		common.PathDomainPublic:  sema.PublicPathType,
+		common.PathDomainPrivate: sema.PrivatePathType,
+	}
+
+	test := func(domain common.PathDomain) {
+
+		t.Run(fmt.Sprintf("valid: %s", domain.Identifier()), func(t *testing.T) {
+
+			t.Parallel()
+
+			domainType := domainTypes[domain]
+
+			inter := parseCheckAndInterpret(t,
+				fmt.Sprintf(
+					`
+                      let x = %[1]s(identifier: "foo")!
+                    `,
+					domainType.String(),
+				),
+			)
+
+			assert.Equal(t,
+				interpreter.PathValue{
+					Domain:     domain,
+					Identifier: "foo",
+				},
+				inter.Globals["x"].GetValue(),
+			)
+		})
+
+		t.Run(fmt.Sprintf("invalid identifier 2: %s", domain.Identifier()), func(t *testing.T) {
+
+			t.Parallel()
+
+			domainType := domainTypes[domain]
+
+			inter := parseCheckAndInterpret(t,
+				fmt.Sprintf(
+					`
+                      let x = %[1]s(identifier: "2")
+                    `,
+					domainType.String(),
+				),
+			)
+
+			assert.Equal(t,
+				interpreter.NilValue{},
+				inter.Globals["x"].GetValue(),
+			)
+		})
+
+		t.Run(fmt.Sprintf("invalid identifier -: %s", domain.Identifier()), func(t *testing.T) {
+
+			t.Parallel()
+
+			domainType := domainTypes[domain]
+
+			inter := parseCheckAndInterpret(t,
+				fmt.Sprintf(
+					`
+                      let x = %[1]s(identifier: "fo-o")
+                    `,
+					domainType.String(),
+				),
+			)
+
+			assert.Equal(t,
+				interpreter.NilValue{},
+				inter.Globals["x"].GetValue(),
+			)
+		})
+	}
+
+	for _, domain := range common.AllPathDomainsByIdentifier {
+		test(domain)
 	}
 }

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ var PathType = &SimpleType{
 	Name:          "Path",
 	QualifiedName: "Path",
 	TypeID:        "Path",
+	tag:           PathTypeTag,
 	IsInvalid:     false,
 	IsResource:    false,
 	Storable:      true,
@@ -43,6 +44,7 @@ var StoragePathType = &SimpleType{
 	Name:          "StoragePath",
 	QualifiedName: "StoragePath",
 	TypeID:        "StoragePath",
+	tag:           StoragePathTypeTag,
 	IsResource:    false,
 	Storable:      true,
 	// TODO: implement support for equating paths in the future
@@ -57,6 +59,7 @@ var CapabilityPathType = &SimpleType{
 	Name:          "CapabilityPath",
 	QualifiedName: "CapabilityPath",
 	TypeID:        "CapabilityPath",
+	tag:           CapabilityPathTypeTag,
 	IsResource:    false,
 	Storable:      true,
 	// TODO: implement support for equating paths in the future
@@ -75,6 +78,7 @@ var PublicPathType = &SimpleType{
 	Name:          "PublicPath",
 	QualifiedName: "PublicPath",
 	TypeID:        "PublicPath",
+	tag:           PublicPathTypeTag,
 	IsResource:    false,
 	Storable:      true,
 	// TODO: implement support for equating paths in the future
@@ -89,6 +93,7 @@ var PrivatePathType = &SimpleType{
 	Name:          "PrivatePath",
 	QualifiedName: "PrivatePath",
 	TypeID:        "PrivatePath",
+	tag:           PrivatePathTypeTag,
 	IsResource:    false,
 	Storable:      true,
 	// TODO: implement support for equating paths in the future

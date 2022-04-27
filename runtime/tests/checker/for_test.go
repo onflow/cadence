@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -133,6 +133,53 @@ func TestCheckForBreakStatement(t *testing.T) {
     `)
 
 	assert.NoError(t, err)
+}
+
+func TestCheckForIndexBinding(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+       fun test() {
+           for index, x in ["", "", ""] {
+                let y: Int = index
+           }
+       }
+    `)
+
+	assert.NoError(t, err)
+}
+
+func TestCheckForIndexBindingTypeErr(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+       fun test() {
+           for index, x in ["", "", ""] {
+                let y: String = index
+           }
+       }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+}
+
+func TestCheckForIndexBindingReferenceErr(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+       fun test() {
+           for index, x in ["", "", ""] {
+                
+           }
+           let y = index
+       }
+    `)
+	errs := ExpectCheckerErrors(t, err, 1)
+	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 }
 
 func TestCheckInvalidForBreakStatement(t *testing.T) {

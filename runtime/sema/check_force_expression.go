@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,18 +42,19 @@ func (checker *Checker) VisitForceExpression(expression *ast.ForceExpression) as
 
 	optionalType, ok := valueType.(*OptionalType)
 	if !ok {
-
 		// A non-optional type is forced. Suggest removing it
 
-		checker.hint(
-			&RemovalHint{
-				Description: "unnecessary force operator",
-				Range: ast.Range{
-					StartPos: expression.EndPos,
-					EndPos:   expression.EndPos,
+		if checker.lintEnabled {
+			checker.hint(
+				&RemovalHint{
+					Description: "unnecessary force operator",
+					Range: ast.Range{
+						StartPos: expression.EndPos,
+						EndPos:   expression.EndPos,
+					},
 				},
-			},
-		)
+			)
+		}
 
 		return valueType
 	}

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -137,20 +137,7 @@ func TestCheckInvalidDictionaryKeys(t *testing.T) {
 
 	errs := ExpectCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-}
-
-func TestCheckInvalidDictionaryValues(t *testing.T) {
-
-	t.Parallel()
-
-	_, err := ParseAndCheck(t, `
-      let z = {"a": 1, "b": true}
-	`)
-
-	errs := ExpectCheckerErrors(t, err, 1)
-
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	assert.IsType(t, &sema.InvalidDictionaryKeyTypeError{}, errs[0])
 }
 
 func TestCheckDictionaryIndexingString(t *testing.T) {
@@ -538,6 +525,55 @@ func TestCheckArrayConcatBound(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestCheckArraySlice(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+	  fun test(): [Int] {
+	 	  let a = [1, 2, 3, 4]
+		  return a.slice(from: 1, upTo: 2)
+      }
+    `)
+
+	require.NoError(t, err)
+}
+
+func TestCheckArraySliceBound(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+	  fun test(): [Int] {
+	 	  let a = [1, 2, 3, 4]
+          let s = a.slice
+		  return s(from: 1, upTo: 2)
+      }
+    `)
+
+	require.NoError(t, err)
+}
+
+func TestCheckInvalidResourceArraySlice(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      resource X {}
+
+      fun test(): @[X] {
+          let xs <- [<-create X()]
+          return <-xs.slice(from: 0, upTo: 1)
+      }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 3)
+
+	assert.IsType(t, &sema.InvalidResourceArrayMemberError{}, errs[0])
+	assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+	assert.IsType(t, &sema.ResourceLossError{}, errs[2])
+}
+
 func TestCheckArrayInsert(t *testing.T) {
 
 	t.Parallel()
@@ -715,6 +751,71 @@ func TestCheckInvalidArrayRemoveLastFromConstantSized(t *testing.T) {
 	errs := ExpectCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+}
+
+func TestCheckArrayIndexOf(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test(): Int? {
+          let x = [1, 2, 3]
+          return x.firstIndex(of: 2)
+      }
+    `)
+
+	require.NoError(t, err)
+}
+
+func TestCheckArrayIndexOfNonEquatableValueArray(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test(): Int? {
+          let x = [[1, 2], [3]]
+          return x.firstIndex(of: [3])
+      }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+	assert.IsType(t, &sema.NotEquatableTypeError{}, errs[0])
+}
+
+func TestCheckArrayFirstIndexWrongType(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test(): Int? {
+          let x = [1, 2, 3]
+          return x.firstIndex(of: "foo")
+      }
+    `)
+	errs := ExpectCheckerErrors(t, err, 1)
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+}
+
+func TestCheckInvalidResourceFirstIndex(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      resource X {}
+
+      fun test(): Int? {
+          let xs <- [<-create X()]
+          return xs.firstIndex(of: <-create X())
+      }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 4)
+
+	assert.IsType(t, &sema.InvalidResourceArrayMemberError{}, errs[0])
+	assert.IsType(t, &sema.NotEquatableTypeError{}, errs[1])
+	assert.IsType(t, &sema.ResourceLossError{}, errs[2])
+	assert.IsType(t, &sema.ResourceLossError{}, errs[3])
+
 }
 
 func TestCheckArrayContains(t *testing.T) {
@@ -950,19 +1051,6 @@ func TestCheckInvalidDictionarySubtyping(t *testing.T) {
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
 
-func TestCheckInvalidArrayElements(t *testing.T) {
-
-	t.Parallel()
-
-	_, err := ParseAndCheck(t, `
-      let z = [0, true]
-	`)
-
-	errs := ExpectCheckerErrors(t, err, 1)
-
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-}
-
 func TestCheckConstantSizedArrayDeclaration(t *testing.T) {
 
 	t.Parallel()
@@ -1115,4 +1203,35 @@ func TestCheckDictionaryKeyTypesExpressions(t *testing.T) {
 			assert.IsType(t, &sema.InvalidDictionaryKeyTypeError{}, errs[0])
 		})
 	}
+}
+
+func TestNilAssignmentToDictionary(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("non-nillable value space", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            let x: {String: Int} = {"def": 42, "abc": 23}
+            fun test() {
+                x["def"] = nil
+            }
+	    `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("nillable value space", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            let x: {String: Int?} = {"def": 42, "abc": 23}
+            fun test() {
+                x["def"] = nil
+            }
+	    `)
+
+		require.NoError(t, err)
+	})
 }

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -164,10 +164,18 @@ const (
 	PrimitiveStaticTypePublicAccount
 	PrimitiveStaticTypeDeployedContract
 	PrimitiveStaticTypeAuthAccountContracts
-	_
+	PrimitiveStaticTypePublicAccountContracts
+	PrimitiveStaticTypeAuthAccountKeys
+	PrimitiveStaticTypePublicAccountKeys
+	PrimitiveStaticTypeAccountKey
+
+	// !!! *WARNING* !!!
+	// ADD NEW TYPES *BEFORE* THIS WARNING.
+	// DO *NOT* ADD NEW TYPES AFTER THIS LINE!
+	PrimitiveStaticType_Count
 )
 
-func (PrimitiveStaticType) IsStaticType() {}
+func (PrimitiveStaticType) isStaticType() {}
 
 func (i PrimitiveStaticType) SemaType() sema.Type {
 	switch i {
@@ -296,6 +304,14 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 		return sema.DeployedContractType
 	case PrimitiveStaticTypeAuthAccountContracts:
 		return sema.AuthAccountContractsType
+	case PrimitiveStaticTypePublicAccountContracts:
+		return sema.PublicAccountContractsType
+	case PrimitiveStaticTypeAuthAccountKeys:
+		return sema.AuthAccountKeysType
+	case PrimitiveStaticTypePublicAccountKeys:
+		return sema.PublicAccountKeysType
+	case PrimitiveStaticTypeAccountKey:
+		return sema.AccountKeyType
 	default:
 		panic(errors.NewUnreachableError())
 	}
@@ -413,6 +429,14 @@ func ConvertSemaToPrimitiveStaticType(t sema.Type) PrimitiveStaticType {
 		return PrimitiveStaticTypeDeployedContract
 	case sema.AuthAccountContractsType:
 		return PrimitiveStaticTypeAuthAccountContracts
+	case sema.PublicAccountContractsType:
+		return PrimitiveStaticTypePublicAccountContracts
+	case sema.AuthAccountKeysType:
+		return PrimitiveStaticTypeAuthAccountKeys
+	case sema.PublicAccountKeysType:
+		return PrimitiveStaticTypePublicAccountKeys
+	case sema.AccountKeyType:
+		return PrimitiveStaticTypeAccountKey
 	case sema.StringType:
 		return PrimitiveStaticTypeString
 	}

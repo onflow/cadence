@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ func TestRuntimeCyclicImport(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewInterpreterRuntime()
+	runtime := newTestInterpreterRuntime()
 
 	imported1 := []byte(`
       import p2
@@ -112,4 +112,37 @@ func TestRuntimeCyclicImport(t *testing.T) {
 	errs = checker.ExpectCheckerErrors(t, checkerErr3, 1)
 
 	require.IsType(t, &sema.CyclicImportsError{}, errs[0])
+}
+
+func TestRuntimeExport(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("interpreted function (invalid)", func(t *testing.T) {
+
+		t.Parallel()
+
+		runtime := newTestInterpreterRuntime()
+
+		script := []byte(`
+            pub fun f() {}
+
+            pub fun main(): AnyStruct {
+                return f
+            }
+        `)
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: &testRuntimeInterface{},
+				Location:  common.ScriptLocation{},
+			},
+		)
+
+		require.Error(t, err)
+		require.IsType(t, Error{}, err)
+	})
 }

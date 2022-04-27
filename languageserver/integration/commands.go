@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,6 +58,8 @@ const (
 	ErrorMessageScriptExecution   = "script error"
 	ErrorMessageArguments         = "arguments error"
 )
+
+const maxGasLimit uint64 = 9999
 
 func (i *FlowIntegration) commands() []server.Command {
 	return []server.Command{
@@ -192,9 +194,9 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{
 	}
 
 	signerList := args[2].([]interface{})
-	signers := make([]string, len(signerList))
+	signers := make([]flow.Address, len(signerList))
 	for i, v := range signerList {
-		signers[i] = v.(string)
+		signers[i] = flow.HexToAddress(v.(string))
 	}
 
 	// Send transaction via shared library
@@ -208,14 +210,73 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{
 		return nil, fmt.Errorf("failed to parse JSON arguments")
 	}
 
-	signer, err := i.state.EmulatorServiceAccount()
+	serviceAccount, err := i.state.EmulatorServiceAccount()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get service account, err: %w", err)
 	}
-	signer.SetAddress(flow.HexToAddress(signers[0]))
 
-	const gasLimit uint64 = 1000
-	_, txResult, err := i.sharedServices.Transactions.Send(signer, code, "", gasLimit, txArgs, "")
+	serviceAddress := serviceAccount.Address()
+	keyIndex := serviceAccount.Key().Index()
+
+	// We need to check if service account among authorizers
+	hasServiceAccount := false
+
+	signerAccounts := make([]flowkit.Account, len(signers))
+	authorizers := make([]flow.Address, len(signers))
+	for i, address := range signers {
+
+		signer := flowkit.Account{}
+		signer.SetAddress(address)
+		signer.SetKey(serviceAccount.Key())
+
+		signerAccounts[i] = signer
+		authorizers[i] = address
+
+		if address == serviceAddress {
+			hasServiceAccount = true
+		}
+	}
+
+	// If serviceAccount is not in signers list, we will add it to handle payer role properly
+	if !hasServiceAccount {
+		signerAccounts = append(signerAccounts, *serviceAccount)
+	}
+
+	tx, err := i.sharedServices.Transactions.Build(
+		serviceAddress,
+		authorizers,
+		serviceAddress,
+		keyIndex,
+		code,
+		"",
+		maxGasLimit,
+		txArgs,
+		"",
+		true,
+	)
+
+	if err != nil {
+		return nil, errorWithMessage(conn, ErrorMessageTransactionError, err)
+	}
+
+	for _, signer := range signerAccounts {
+		err = tx.SetSigner(&signer)
+		if err != nil {
+			return nil, err
+		}
+
+		tx, err = tx.Sign()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// even though .Encode returns []byte, without this conversion there is an error:
+	// transaction error: &errors.errorString{s:"failed to decode partial transaction...
+	// ...encoding/hex: invalid byte: U+00F9 'ù'"
+	txBytes := []byte(fmt.Sprintf("%x", tx.FlowTransaction().Encode()))
+	_, txResult, err := i.sharedServices.Transactions.SendSigned(txBytes, true)
+
 	if err != nil {
 		return nil, errorWithMessage(conn, ErrorMessageTransactionError, err)
 	}
@@ -511,8 +572,8 @@ func (i *FlowIntegration) createAccountHelper(conn protocol.Conn) (address flow.
 		signer,
 		keys,
 		weights,
-		crypto.ECDSA_P256,
-		crypto.SHA3_256,
+		[]crypto.SignatureAlgorithm{crypto.ECDSA_P256},
+		[]crypto.HashAlgorithm{crypto.SHA3_256},
 		nil,
 	)
 	if err != nil {

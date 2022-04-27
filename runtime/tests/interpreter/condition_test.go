@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,7 +58,7 @@ func TestInterpretFunctionPreCondition(t *testing.T) {
 	value, err := inter.Invoke("test", zero)
 	require.NoError(t, err)
 
-	assert.Equal(t, zero, value)
+	AssertValuesEqual(t, inter, zero, value)
 }
 
 func TestInterpretFunctionPostCondition(t *testing.T) {
@@ -86,7 +86,7 @@ func TestInterpretFunctionPostCondition(t *testing.T) {
 	value, err := inter.Invoke("test", zero)
 	require.NoError(t, err)
 
-	assert.Equal(t, zero, value)
+	AssertValuesEqual(t, inter, zero, value)
 }
 
 func TestInterpretFunctionWithResultAndPostConditionWithResult(t *testing.T) {
@@ -114,7 +114,7 @@ func TestInterpretFunctionWithResultAndPostConditionWithResult(t *testing.T) {
 	value, err := inter.Invoke("test", zero)
 	require.NoError(t, err)
 
-	assert.Equal(t, zero, value)
+	AssertValuesEqual(t, inter, zero, value)
 }
 
 func TestInterpretFunctionWithoutResultAndPostConditionWithResult(t *testing.T) {
@@ -133,7 +133,9 @@ func TestInterpretFunctionWithoutResultAndPostConditionWithResult(t *testing.T) 
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	assert.Equal(t,
+	AssertValuesEqual(
+		t,
+		inter,
 		interpreter.VoidValue{},
 		value,
 	)
@@ -160,7 +162,9 @@ func TestInterpretFunctionPostConditionWithBefore(t *testing.T) {
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	assert.Equal(t,
+	AssertValuesEqual(
+		t,
+		inter,
 		interpreter.VoidValue{},
 		value,
 	)
@@ -255,7 +259,12 @@ func TestInterpretFunctionPostConditionWithMessageUsingStringLiteral(t *testing.
 	value, err := inter.Invoke("test", zero)
 	require.NoError(t, err)
 
-	assert.Equal(t, zero, value)
+	AssertValuesEqual(
+		t,
+		inter,
+		zero,
+		value,
+	)
 }
 
 func TestInterpretFunctionPostConditionWithMessageUsingResult(t *testing.T) {
@@ -288,7 +297,9 @@ func TestInterpretFunctionPostConditionWithMessageUsingResult(t *testing.T) {
 	value, err := inter.Invoke("test", zero)
 	require.NoError(t, err)
 
-	assert.Equal(t,
+	AssertValuesEqual(
+		t,
+		inter,
 		interpreter.NewStringValue("return value"),
 		value,
 	)
@@ -424,7 +435,9 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
 			value, err := inter.Invoke("callTest", interpreter.NewIntValueFromInt64(1))
 			require.NoError(t, err)
 
-			assert.Equal(t,
+			AssertValuesEqual(
+				t,
+				inter,
 				interpreter.NewIntValueFromInt64(1),
 				value,
 			)
@@ -534,9 +547,12 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 
 					if compositeKind == common.CompositeKindContract {
 
+						storage := interpreter.NewInMemoryStorage()
+
 						inter, err := interpreter.NewInterpreter(
 							interpreter.ProgramFromChecker(checker),
 							checker.Location,
+							interpreter.WithStorage(storage),
 							makeContractValueHandler(
 								[]interpreter.Value{
 									interpreter.NewIntValueFromInt64(value),
@@ -558,9 +574,12 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 						_, err = inter.Invoke("test")
 						check(err)
 					} else {
+						storage := interpreter.NewInMemoryStorage()
+
 						inter, err := interpreter.NewInterpreter(
 							interpreter.ProgramFromChecker(checker),
 							checker.Location,
+							interpreter.WithStorage(storage),
 							uuidHandler,
 						)
 						require.NoError(t, err)
@@ -1048,33 +1067,37 @@ func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
 	// in the post condition is in fact a reference (ephemeral reference value),
 	// and not a resource (composite value)
 
+	checkFunctionType := &sema.FunctionType{
+		Parameters: []*sema.Parameter{
+			{
+				Label:      sema.ArgumentLabelNotRequired,
+				Identifier: "value",
+				TypeAnnotation: sema.NewTypeAnnotation(
+					sema.AnyStructType,
+				),
+			},
+		},
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(
+			sema.VoidType,
+		),
+	}
 	valueDeclarations := stdlib.StandardLibraryValues{
 		{
 			Name: "check",
-			Type: &sema.FunctionType{
-				Parameters: []*sema.Parameter{
-					{
-						Label:      sema.ArgumentLabelNotRequired,
-						Identifier: "value",
-						TypeAnnotation: sema.NewTypeAnnotation(
-							sema.AnyStructType,
-						),
+			Type: checkFunctionType,
+			ValueFactory: func(_ *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewHostFunctionValue(
+					func(invocation interpreter.Invocation) interpreter.Value {
+						checkCalled = true
+
+						argument := invocation.Arguments[0]
+						require.IsType(t, &interpreter.EphemeralReferenceValue{}, argument)
+
+						return interpreter.VoidValue{}
 					},
-				},
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(
-					sema.VoidType,
-				),
+					checkFunctionType,
+				)
 			},
-			Value: interpreter.NewHostFunctionValue(
-				func(invocation interpreter.Invocation) interpreter.Value {
-					checkCalled = true
-
-					argument := invocation.Arguments[0]
-					require.IsType(t, &interpreter.EphemeralReferenceValue{}, argument)
-
-					return interpreter.VoidValue{}
-				},
-			),
 			Kind: common.DeclarationKindConstant,
 		},
 	}

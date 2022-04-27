@@ -7,7 +7,7 @@ an optional *type annotation* can be provided,
 to make it explicit what type the declaration has.
 
 If no type annotation is provided, the type of the declaration is
-[inferred from the initial value](../type-inference).
+[inferred from the initial value](type-inference).
 
 For function parameters a type annotation must be provided.
 
@@ -36,7 +36,7 @@ let smallIntegerWithAnnotation: Int8 = 1
 
 If a type annotation is provided, the initial value must be of this type.
 All new values assigned to variables must match its type.
-This type safety is explained in more detail in a [separate section](../type-safety).
+This type safety is explained in more detail in a [separate section](type-safety).
 
 ```cadence
 // Invalid: declare a variable with an explicit type `Bool`,

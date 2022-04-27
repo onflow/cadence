@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,11 +39,7 @@ func (checker *Checker) visitStatements(statements []ast.Statement) {
 		// Is this statement unreachable? Report it once for this statement,
 		// but avoid noise and don't report it for all remaining unreachable statements
 
-		definitelyReturnedOrHalted :=
-			functionActivation.ReturnInfo.DefinitelyReturned ||
-				functionActivation.ReturnInfo.DefinitelyHalted
-
-		if definitelyReturnedOrHalted && !functionActivation.ReportedDeadCode {
+		if functionActivation.ReturnInfo.IsUnreachable() {
 
 			lastStatement := statements[len(statements)-1]
 
@@ -56,7 +52,7 @@ func (checker *Checker) visitStatements(statements []ast.Statement) {
 				},
 			)
 
-			functionActivation.ReportedDeadCode = true
+			break
 		}
 
 		if !checker.checkValidStatement(statement) {

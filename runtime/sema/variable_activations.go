@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 // An VariableActivation is a map of strings to variables.
@@ -132,7 +133,10 @@ var variableActivationPool = sync.Pool{
 }
 
 func getVariableActivation() *VariableActivation {
-	activation := variableActivationPool.Get().(*VariableActivation)
+	activation, ok := variableActivationPool.Get().(*VariableActivation)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
 	activation.Clear()
 	return activation
 }
@@ -192,6 +196,7 @@ func (a *VariableActivations) Leave(getEndPosition func() ast.Position) {
 	}
 	lastIndex := count - 1
 	activation := a.activations[lastIndex]
+	a.activations[lastIndex] = nil
 	a.activations = a.activations[:lastIndex]
 	for _, callback := range activation.LeaveCallbacks {
 		callback(getEndPosition)
@@ -248,12 +253,14 @@ func (a *VariableActivations) Declare(declaration variableDeclaration) (variable
 
 	// Check if a variable with this name is already declared.
 	// Report an error if shadowing variables of outer scopes is not allowed,
-	// or the existing variable is declared in the current scope.
+	// or the existing variable is declared in the current scope,
+	// or the existing variable is a built-in.
 
 	existingVariable := a.Find(declaration.identifier)
 	if existingVariable != nil &&
 		(!declaration.allowOuterScopeShadowing ||
-			existingVariable.ActivationDepth == depth) {
+			existingVariable.ActivationDepth == depth ||
+			existingVariable.ActivationDepth == 0) {
 
 		err = &RedeclarationError{
 			Kind:        declaration.kind,

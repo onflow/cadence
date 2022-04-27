@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -358,6 +358,50 @@ func TestCheckAccount_save(t *testing.T) {
 		testExplicitTypeArgumentCorrect(domain)
 		testExplicitTypeArgumentIncorrect(domain)
 		testInvalidNonStorable(domain)
+	}
+}
+
+func TestCheckAccount_typeAt(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(domain common.PathDomain) {
+		t.Run(fmt.Sprintf("type %s", domain.Identifier()), func(t *testing.T) {
+
+			t.Parallel()
+
+			checker, err := ParseAndCheckAccount(t,
+				fmt.Sprintf(
+					`
+						let t: Type? = authAccount.type(at: /%s/r)
+					`,
+					domain.Identifier(),
+				),
+			)
+
+			if domain == common.PathDomainStorage {
+
+				require.NoError(t, err)
+
+				typ := RequireGlobalValue(t, checker.Elaboration, "t")
+
+				require.Equal(t,
+					&sema.OptionalType{
+						Type: sema.MetaType,
+					},
+					typ,
+				)
+
+			} else {
+				errs := ExpectCheckerErrors(t, err, 1)
+
+				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			}
+		})
+	}
+
+	for _, domain := range common.AllPathDomainsByIdentifier {
+		test(domain)
 	}
 }
 
@@ -1349,13 +1393,118 @@ func TestCheckAccount_StorageFields(t *testing.T) {
 	}
 }
 
-func TestAuthAccountContractsType(t *testing.T) {
+func TestAuthAccountContracts(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheckAccount(t, `
-      let contracts: AuthAccount.Contracts = authAccount.contracts
-	`)
+	t.Run("contracts type", func(t *testing.T) {
+		_, err := ParseAndCheckAccount(t, `
+          let contracts: AuthAccount.Contracts = authAccount.contracts
+	    `)
 
-	require.NoError(t, err)
+		require.NoError(t, err)
+	})
+
+	t.Run("contracts names", func(t *testing.T) {
+		_, err := ParseAndCheckAccount(t, `
+          let names: [String] = authAccount.contracts.names
+	    `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("update contracts names", func(t *testing.T) {
+		_, err := ParseAndCheckAccount(t, `
+            fun test() {
+                authAccount.contracts.names = ["foo"]
+            }
+	    `)
+
+		require.Error(t, err)
+		errors := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.InvalidAssignmentAccessError{}, errors[0])
+		assert.IsType(t, &sema.AssignmentToConstantMemberError{}, errors[1])
+	})
+}
+
+func TestPublicAccountContracts(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("contracts type", func(t *testing.T) {
+		_, err := ParseAndCheckAccount(t, `
+            let contracts: PublicAccount.Contracts = publicAccount.contracts
+	    `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("contracts names", func(t *testing.T) {
+		_, err := ParseAndCheckAccount(t, `
+            let names: [String] = publicAccount.contracts.names
+	    `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("update contracts names", func(t *testing.T) {
+		_, err := ParseAndCheckAccount(t, `
+            fun test() {
+                publicAccount.contracts.names = ["foo"]
+            }
+	    `)
+
+		require.Error(t, err)
+		errors := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.InvalidAssignmentAccessError{}, errors[0])
+		assert.IsType(t, &sema.AssignmentToConstantMemberError{}, errors[1])
+	})
+
+	t.Run("add contract", func(t *testing.T) {
+		_, err := ParseAndCheckAccount(t, `
+            fun test() {
+                publicAccount.contracts.add(name: "foo", code: "012".decodeHex())
+            }
+	    `)
+
+		require.Error(t, err)
+		errors := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.NotDeclaredMemberError{}, errors[0])
+		notDeclaredError := errors[0].(*sema.NotDeclaredMemberError)
+		assert.Equal(t, "add", notDeclaredError.Name)
+	})
+
+	t.Run("update contract", func(t *testing.T) {
+		_, err := ParseAndCheckAccount(t, `
+            fun test() {
+                publicAccount.contracts.update__experimental(name: "foo", code: "012".decodeHex())
+            }
+	    `)
+
+		require.Error(t, err)
+		errors := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.NotDeclaredMemberError{}, errors[0])
+		notDeclaredError := errors[0].(*sema.NotDeclaredMemberError)
+		assert.Equal(t, "update__experimental", notDeclaredError.Name)
+	})
+
+	t.Run("remove contract", func(t *testing.T) {
+		_, err := ParseAndCheckAccount(t, `
+            fun test() {
+                publicAccount.contracts.remove(name: "foo")
+            }
+	    `)
+
+		require.Error(t, err)
+		errors := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.NotDeclaredMemberError{}, errors[0])
+		notDeclaredError := errors[0].(*sema.NotDeclaredMemberError)
+		assert.Equal(t, "remove", notDeclaredError.Name)
+	})
+
 }

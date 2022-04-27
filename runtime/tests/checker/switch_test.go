@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -193,6 +193,29 @@ func TestCheckSwitchStatementDefaultDefinitiveReturn(t *testing.T) {
 
 		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 	})
+
+	t.Run("break before return", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+
+          fun test(x: Int): String {
+              switch x {
+              case 1:
+                  return "one"
+              default:
+                  break
+                  return "two"
+              }
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+		assert.IsType(t, &sema.MissingReturnStatementError{}, errs[1])
+	})
 }
 
 func TestCheckInvalidSwitchStatementCaseStatement(t *testing.T) {
@@ -355,4 +378,26 @@ func TestCheckInvalidSwitchStatementMissingStatements(t *testing.T) {
 	errs := ExpectCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.MissingSwitchCaseStatementsError{}, errs[0])
+}
+
+func TestCheckSwitchStatementWithUnreachableReturn(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test(_ x: Int): Int {
+          switch x {
+          case 1:
+              break
+              return 1
+          default:
+              return 2
+          }
+      }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 2)
+
+	assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+	assert.IsType(t, &sema.MissingReturnStatementError{}, errs[1])
 }

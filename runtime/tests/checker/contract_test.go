@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -707,4 +707,44 @@ func TestCheckInvalidContractNestedTypeShadowing(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCheckBadContractNesting(t *testing.T) {
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, "contract signatureAlgorithm { resource interface payer { contract fun : payer { contract fun { contract fun { } contract fun { contract interface account { } } contract account { } } } } }")
+
+	errs := ExpectCheckerErrors(t, err, 14)
+
+	assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
+	assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[1])
+	assert.IsType(t, &sema.RedeclarationError{}, errs[2])
+	assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[3])
+	assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[4])
+	assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[5])
+	assert.IsType(t, &sema.RedeclarationError{}, errs[6])
+	assert.IsType(t, &sema.RedeclarationError{}, errs[7])
+	assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[8])
+	assert.IsType(t, &sema.RedeclarationError{}, errs[9])
+	assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[10])
+	assert.IsType(t, &sema.MissingConformanceError{}, errs[11])
+	assert.IsType(t, &sema.RedeclarationError{}, errs[12])
+	assert.IsType(t, &sema.RedeclarationError{}, errs[13])
+}
+
+func TestCheckContractEnumAccessRestricted(t *testing.T) {
+	t.Parallel()
+
+	_, err := ParseAndCheckWithOptions(t, "contract enum{}let x = enum!",
+		ParseAndCheckOptions{
+			Options: []sema.Option{
+				sema.WithAccessCheckMode(sema.AccessCheckModeStrict),
+			},
+		},
+	)
+
+	errs := ExpectCheckerErrors(t, err, 2)
+
+	assert.IsType(t, &sema.MissingAccessModifierError{}, errs[0])
+	assert.IsType(t, &sema.MissingAccessModifierError{}, errs[1])
 }

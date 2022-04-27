@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,26 +22,89 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestMustBytesToAddress(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("short", func(t *testing.T) {
+
+		t.Parallel()
+
+		assert.NotPanics(t, func() {
+			assert.Equal(t,
+				Address{0, 0, 0, 0, 0, 0, 0, 0x1},
+				MustBytesToAddress([]byte{0x1}),
+			)
+		})
+	})
+
+	t.Run("full", func(t *testing.T) {
+
+		t.Parallel()
+
+		assert.NotPanics(t, func() {
+			assert.Equal(t,
+				Address{0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8},
+				MustBytesToAddress([]byte{0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8}),
+			)
+		})
+	})
+
+	t.Run("too long", func(t *testing.T) {
+
+		t.Parallel()
+
+		assert.Panics(t, func() {
+			MustBytesToAddress([]byte{0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9})
+		})
+	})
+}
 
 func TestBytesToAddress(t *testing.T) {
 
 	t.Parallel()
 
-	assert.Equal(t,
-		Address{0, 0, 0, 0, 0, 0, 0, 0x1},
-		BytesToAddress([]byte{0x1}),
-	)
+	t.Run("short", func(t *testing.T) {
 
-	assert.Equal(t,
-		Address{0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8},
-		BytesToAddress([]byte{0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8}),
-	)
+		t.Parallel()
 
-	assert.Equal(t,
-		Address{0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9},
-		BytesToAddress([]byte{0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9}),
-	)
+		address, err := BytesToAddress([]byte{0x1})
+
+		require.NoError(t, err)
+		assert.Equal(t,
+			Address{0, 0, 0, 0, 0, 0, 0, 0x1},
+			address,
+		)
+	})
+
+	t.Run("full", func(t *testing.T) {
+
+		t.Parallel()
+
+		address, err := BytesToAddress([]byte{0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8})
+
+		require.NoError(t, err)
+		assert.Equal(t,
+			Address{0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8},
+			address,
+		)
+	})
+
+	t.Run("too long", func(t *testing.T) {
+
+		t.Parallel()
+
+		address, err := BytesToAddress([]byte{0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9})
+
+		require.Error(t, err)
+		assert.Equal(t,
+			Address{},
+			address,
+		)
+	})
 }
 
 func TestAddress_Hex(t *testing.T) {
@@ -144,6 +207,26 @@ func TestAddress_ShortHexWithPrefix(t *testing.T) {
 	)
 }
 
+func TestAddress_HexWithPrefix(t *testing.T) {
+
+	t.Parallel()
+
+	assert.Equal(t,
+		"0x1234567890abcdef",
+		Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef}.HexWithPrefix(),
+	)
+
+	assert.Equal(t,
+		"0x0100000000000000",
+		Address{0x1}.HexWithPrefix(),
+	)
+
+	assert.Equal(t,
+		"0x0000000000000001",
+		Address{0, 0, 0, 0, 0, 0, 0, 0x1}.HexWithPrefix(),
+	)
+}
+
 func TestAddress_HexToAddress(t *testing.T) {
 
 	t.Parallel()
@@ -160,7 +243,7 @@ func TestAddress_HexToAddress(t *testing.T) {
 		{"01", []byte{0x1}},
 	} {
 
-		expected := BytesToAddress(test.value)
+		expected := MustBytesToAddress(test.value)
 
 		address, err := HexToAddress(test.literal)
 		assert.NoError(t, err)

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package interpreter
+package interpreter_test
 
 import (
 	"testing"
@@ -84,9 +84,12 @@ func TestInterpretResourceUUID(t *testing.T) {
 
 	var uuid uint64
 
+	storage := interpreter.NewInMemoryStorage()
+
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),
 		importingChecker.Location,
+		interpreter.WithStorage(storage),
 		interpreter.WithUUIDHandler(
 			func() (uint64, error) {
 				defer func() { uuid++ }()
@@ -126,18 +129,23 @@ func TestInterpretResourceUUID(t *testing.T) {
 
 	const length = 2
 
-	elements := array.Elements()
-	require.Len(t, elements, length)
+	require.Equal(t, length, array.Count())
 
 	for i := 0; i < length; i++ {
-		element := elements[i]
+		element := array.Get(inter, interpreter.ReturnEmptyLocationRange, i)
 
 		require.IsType(t, &interpreter.CompositeValue{}, element)
 		res := element.(*interpreter.CompositeValue)
 
-		uuidValue, present := res.Fields().Get(sema.ResourceUUIDFieldName)
-		require.True(t, present)
-		require.Equal(t,
+		uuidValue := res.GetMember(
+			inter,
+			interpreter.ReturnEmptyLocationRange,
+			sema.ResourceUUIDFieldName,
+		)
+
+		RequireValuesEqual(
+			t,
+			inter,
 			interpreter.UInt64Value(i),
 			uuidValue,
 		)

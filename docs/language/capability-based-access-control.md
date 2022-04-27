@@ -115,8 +115,9 @@ This can be done using the `borrow` function of the capability:
   If the function is called on a typed capability, the capability's type is used when borrowing.
   If the capability is untyped, a type argument must be provided explicitly in the call to `borrow`.
 
-  The function returns `nil` when the targeted path is empty, i.e. nothing is stored under it,
-  and when the requested type exceeds what is allowed by the capability (or any interim capabilities).
+  The function returns `nil` when the targeted path is empty, i.e. nothing is stored under it.
+  When the requested type exceeds what is allowed by the capability (or any interim capabilities),
+  execution will abort with an error.
 
 ```cadence
 // Declare a resource interface named `HasCount`, that has a field `count`
@@ -132,6 +133,10 @@ resource Counter: HasCount {
 
     pub init(count: Int) {
         self.count = count
+    }
+
+    pub fun increment(by amount: Int) {
+        self.count = self.count + amount
     }
 }
 
@@ -191,9 +196,10 @@ let countRef = countCap.borrow()!
 countRef.count  // is `42`
 
 // Invalid: The `increment` function is not accessible for the reference,
-// because it has the type `&{HasCount}`
+// because it has the type `&{HasCount}`, which does not expose an `increment` function,
+// only a `count` field
 //
-countRef.increment()
+countRef.increment(by: 5)
 
 // Again, attempt to get a get a capability for the counter, but use the type `&Counter`.
 //
@@ -210,9 +216,10 @@ countRef.increment()
 // This shows how parts of the functionality of stored objects
 // can be safely exposed to other code
 //
-let counterRef = countCap.borrow()
+let countCapNew = publicAccount.getCapability<&Counter>(/public/hasCount)
+let counterRefNew = countCapNew.borrow()
 
-// `counterRef` is `nil`
+// `counterRefNew` is `nil`, the borrow failed
 
 // Invalid: Cannot access the counter object in storage directly,
 // the `borrow` function is not available for public accounts

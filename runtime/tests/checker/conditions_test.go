@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -492,7 +492,33 @@ func TestCheckFunctionWithPostConditionAndResourceResult(t *testing.T) {
         }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := ExpectCheckerErrors(t, err, 2)
 
 	require.IsType(t, &sema.InvalidMoveOperationError{}, errs[0])
+	require.IsType(t, &sema.TypeMismatchError{}, errs[1])
+}
+
+// TestCheckConditionCreateBefore tests if the AST expression extractor properly handles
+// that the rewritten expression of a create expression may not be an invocation expression.
+// For example, this is the case for the expression `create before(...)`,
+// where the sema.BeforeExtractor returns an IdentifierExpression.
+//
+func TestCheckConditionCreateBefore(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test(n: Int) {
+          post {
+              create before(n)
+          }
+      }
+    `)
+	require.Error(t, err)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	var notCallableErr *sema.NotCallableError
+	require.ErrorAs(t, errs[0], &notCallableErr)
+	require.Equal(t, sema.IntType, notCallableErr.Type)
 }

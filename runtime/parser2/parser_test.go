@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,11 +37,28 @@ func TestMain(m *testing.M) {
 }
 
 func TestParseInvalid(t *testing.T) {
-
 	t.Parallel()
 
-	_, err := ParseProgram("X")
-	require.EqualError(t, err, "Parsing failed:\nerror: unexpected token: identifier\n --> :1:0\n  |\n1 | X\n  | ^\n")
+	type test struct {
+		msg  string
+		code string
+	}
+
+	unexpectedToken := "Parsing failed:\nerror: unexpected token: identifier"
+	expectedExpression := "Parsing failed:\nerror: expected expression"
+	missingTypeAnnotation := "Parsing failed:\nerror: missing type annotation after comma"
+
+	for _, test := range []test{
+		{unexpectedToken, "X"},
+		{unexpectedToken, "paste your code in here"},
+		{expectedExpression, "# a ( b > c > d > e > f > g > h > i > j > k > l > m > n > o > p > q > r > s > t > u > v > w > x > y > z > A > B > C > D > E > F>"},
+		{missingTypeAnnotation, "#0x0<{},>()"},
+	} {
+		t.Run(test.code, func(t *testing.T) {
+			_, err := ParseProgram(test.code)
+			require.ErrorContains(t, err, test.msg)
+		})
+	}
 }
 
 func TestParseBuffering(t *testing.T) {
@@ -229,6 +246,100 @@ func TestParseBuffering(t *testing.T) {
 			errs,
 		)
 	})
+
+	t.Run("nested buffering, invalid", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseProgram(`
+          fun main() {
+              assert(isneg(x:-1.0))
+              assert(!isneg(x:-0.0/0.0))
+          }
+
+          fun isneg(x: SignedFixedPoint): Bool {   /* I kinda forget what this is all about */
+              return x                             /* but we probably need to figure it out */
+                     <                             /* ************/((TODO?{/*))************ *//
+                    -x                             /* maybe it says NaNs are not negative?  */
+          }
+        `)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected token identifier",
+					Pos:     ast.Position{Offset: 420, Line: 10, Column: 20},
+				},
+			},
+			err.(Error).Errors,
+		)
+	})
+
+	t.Run("nested buffering, invalid; apparent invocation elision", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseProgram(`
+          fun main() {
+              fun abs(_:Int):Int { return _ > 0 ? _ : -_ }
+              let sanity = 0 <          /*****/((TODO?{/*****//
+                               abs(-1)
+              assert(sanity)
+          }
+        `)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected token '/'",
+					Pos:     ast.Position{Offset: 181, Line: 5, Column: 34},
+				},
+			},
+			err.(Error).Errors,
+		)
+	})
+
+	t.Run("nested buffering, valid; accept,accept,replay", func(t *testing.T) {
+
+		t.Parallel()
+
+		src := `
+            pub struct interface Y {}
+            pub struct X : Y {}
+            pub fun main():String {
+                fun f(a:Bool, _:String):String { return _; }
+                let S = 1
+                if false {
+                    let Type_X_Y__qp_identifier =
+                                    Type<X{Y}>().identifier; // parses fine
+                    return f(a:S<S, Type_X_Y__qp_identifier)
+                } else {
+                    return f(a:S<S, Type<X{Y}>().identifier) // should also parse fine
+                }
+            }`
+
+		_, err := ParseProgram(src)
+		assert.NoError(t, err)
+	})
+
+	t.Run("nested buffering, valid; overlapped", func(t *testing.T) {
+
+		t.Parallel()
+
+		src := `
+            transaction { }
+            pub fun main():String {
+                let A = 1
+                let B = 2
+                let C = 3
+                let D = 4
+                fun g(a:Bool, _:Bool):String { return _ ? "y" : "n" }
+                return g(a:A<B, C<(D>>(5)))
+            }`
+
+		_, err := ParseProgram(src)
+		assert.NoError(t, err)
+	})
+
 }
 
 func TestParseEOF(t *testing.T) {
@@ -369,8 +480,9 @@ func TestParseArgumentList(t *testing.T) {
 					LabelStartPos: nil,
 					LabelEndPos:   nil,
 					Expression: &ast.IntegerExpression{
-						Value: big.NewInt(1),
-						Base:  10,
+						PositiveLiteral: "1",
+						Value:           big.NewInt(1),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{
 								Offset: 1,
@@ -428,4 +540,44 @@ func TestParseArgumentList(t *testing.T) {
 		)
 	})
 
+}
+
+func TestParseBufferedErrors(t *testing.T) {
+
+	t.Parallel()
+
+	// Test that both top-level and buffered errors are reported.
+	//
+	// Test this using type argument lists, which are parsed through buffering:
+	// Only a subsequent open parenthesis will determine if a less-than sign
+	// introduced a type argument list of a function call,
+	// or if the expression is a less-than comparison.
+	//
+	// Inside the potential type argument list there is an error (missing type after comma),
+	// and outside (at the top-level, after buffering of the type argument list),
+	// there is another error (missing closing parenthesis after).
+
+	_, errs := ParseExpression("a<b,>(")
+	utils.AssertEqualWithDiff(t,
+		[]error{
+			&SyntaxError{
+				Message: "missing type annotation after comma",
+				Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+			},
+			&SyntaxError{
+				Message: "missing ')' at end of invocation argument list",
+				Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
+			},
+		},
+		errs,
+	)
+}
+
+func TestParseInvalidSingleQuoteImport(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseProgram(`import 'X'`)
+
+	require.EqualError(t, err, "Parsing failed:\nerror: unrecognized character: U+0027 '''\n --> :1:7\n  |\n1 | import 'X'\n  |        ^\n\nerror: unexpected end in import declaration: expected string, address, or identifier\n --> :1:7\n  |\n1 | import 'X'\n  |        ^\n")
 }

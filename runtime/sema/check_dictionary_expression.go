@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,7 +37,10 @@ func (checker *Checker) VisitDictionaryExpression(expression *ast.DictionaryExpr
 		valueType = expectedMapType.ValueType
 	}
 
-	entryTypes := make([]DictionaryEntryType, len(expression.Entries))
+	dictionarySize := len(expression.Entries)
+	entryTypes := make([]DictionaryEntryType, dictionarySize)
+	keyTypes := make([]Type, dictionarySize)
+	valueTypes := make([]Type, dictionarySize)
 
 	for i, entry := range expression.Entries {
 		// NOTE: important to check move after each type check,
@@ -56,25 +59,27 @@ func (checker *Checker) VisitDictionaryExpression(expression *ast.DictionaryExpr
 			ValueType: entryValueType,
 		}
 
-		// infer key type from first entry's key
-		// TODO: find common super type?
-		if keyType == nil {
-			keyType = entryKeyType
-		}
-
-		// infer value type from first entry's value
-		// TODO: find common super type?
-		if valueType == nil {
-			valueType = entryValueType
-		}
+		keyTypes[i] = entryKeyType
+		valueTypes[i] = entryValueType
 	}
 
-	if keyType == nil {
-		keyType = NeverType
-	}
+	if keyType == nil && valueType == nil {
+		// Contextually expected type is not available.
+		// Therefore, find the least common supertype of the keys and values.
+		keyType = LeastCommonSuperType(keyTypes...)
+		valueType = LeastCommonSuperType(valueTypes...)
 
-	if valueType == nil {
-		valueType = NeverType
+		if keyType == InvalidType ||
+			valueType == InvalidType {
+			checker.report(
+				&TypeAnnotationRequiredError{
+					Cause: "cannot infer type from dictionary literal: ",
+					Pos:   expression.StartPos,
+				},
+			)
+
+			return InvalidType
+		}
 	}
 
 	if !IsValidDictionaryKeyType(keyType) {
@@ -106,11 +111,11 @@ func IsValidDictionaryKeyType(keyType Type) bool {
 		return keyType.Kind == common.CompositeKindEnum
 	default:
 		switch keyType {
-		case NeverType, BoolType, CharacterType, StringType:
+		case NeverType, BoolType, CharacterType, StringType, MetaType:
 			return true
 		default:
-			return IsSubType(keyType, NumberType) ||
-				IsSubType(keyType, PathType)
+			return IsSameTypeKind(keyType, NumberType) ||
+				IsSameTypeKind(keyType, PathType)
 		}
 	}
 }

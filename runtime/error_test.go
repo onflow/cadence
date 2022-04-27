@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ func TestRuntimeError(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewInterpreterRuntime()
+		runtime := newTestInterpreterRuntime()
 
 		script := []byte(`X`)
 
@@ -70,7 +70,7 @@ func TestRuntimeError(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewInterpreterRuntime()
+		runtime := newTestInterpreterRuntime()
 
 		script := []byte(`fun test() {}`)
 
@@ -103,7 +103,7 @@ func TestRuntimeError(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewInterpreterRuntime()
+		runtime := newTestInterpreterRuntime()
 
 		script := []byte(`
             pub fun main() {
@@ -141,7 +141,7 @@ func TestRuntimeError(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewInterpreterRuntime()
+		runtime := newTestInterpreterRuntime()
 
 		importedScript := []byte(`X`)
 
@@ -184,7 +184,7 @@ func TestRuntimeError(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewInterpreterRuntime()
+		runtime := newTestInterpreterRuntime()
 
 		importedScript := []byte(`fun test() {}`)
 
@@ -228,7 +228,7 @@ func TestRuntimeError(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewInterpreterRuntime()
+		runtime := newTestInterpreterRuntime()
 
 		importedScript := []byte(`
             pub fun add() {
@@ -297,7 +297,7 @@ func TestRuntimeError(t *testing.T) {
               import A from 0x1
             `,
 			common.AddressLocation{
-				Address: common.BytesToAddress([]byte{0x1}),
+				Address: common.MustBytesToAddress([]byte{0x1}),
 				Name:    "A",
 			}.ID(): `
               // import program that has errors
@@ -312,7 +312,7 @@ func TestRuntimeError(t *testing.T) {
               }
             `,
 			common.AddressLocation{
-				Address: common.BytesToAddress([]byte{0x2}),
+				Address: common.MustBytesToAddress([]byte{0x2}),
 				Name:    "B",
 			}.ID(): `
               // invalid top-level declaration
@@ -348,7 +348,7 @@ func TestRuntimeError(t *testing.T) {
 			},
 		}
 
-		rt := NewInterpreterRuntime()
+		rt := newTestInterpreterRuntime()
 		err = rt.ExecuteTransaction(
 			Script{
 				Source: []byte(codes[location.ID()]),

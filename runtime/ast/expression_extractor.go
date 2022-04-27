@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -670,7 +670,21 @@ func (extractor *ExpressionExtractor) ExtractCreate(expression *CreateExpression
 
 	result := extractor.Extract(newExpression.InvocationExpression)
 
-	newExpression.InvocationExpression = result.RewrittenExpression.(*InvocationExpression)
+	invocationExpression, ok := result.RewrittenExpression.(*InvocationExpression)
+	if !ok {
+		// Edge-case:
+		// The rewritten expression returned from the extractor may not be an InvocationExpression,
+		// but an expression of another type.
+		//
+		// Wrap the rewritten expression in an InvocationExpression.
+
+		invocationExpression = &InvocationExpression{
+			InvokedExpression: result.RewrittenExpression,
+			EndPos:            result.RewrittenExpression.EndPosition(),
+		}
+	}
+
+	newExpression.InvocationExpression = invocationExpression
 
 	return ExpressionExtraction{
 		RewrittenExpression:  &newExpression,

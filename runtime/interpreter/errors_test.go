@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,15 @@
  * limitations under the License.
  */
 
-package interpreter
+package interpreter_test
 
 import (
 	"testing"
 
-	"github.com/onflow/cadence/runtime/common"
 	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/cadence/runtime/common"
+	. "github.com/onflow/cadence/runtime/interpreter"
 )
 
 func TestOverwriteError_Error(t *testing.T) {
@@ -35,6 +37,6 @@ func TestOverwriteError_Error(t *testing.T) {
 				Identifier: "test",
 			},
 		},
-		"failed to save object: path /storage/test in account 0x1 already stores an object",
+		"failed to save object: path /storage/test in account 0x0000000000000001 already stores an object",
 	)
 }

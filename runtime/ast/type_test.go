@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,30 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/turbolent/prettier"
 )
+
+func TestTypeAnnotation_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	ty := &TypeAnnotation{
+		IsResource: true,
+		Type: &NominalType{
+			Identifier: Identifier{
+				Identifier: "R",
+			},
+		},
+	}
+
+	assert.Equal(t,
+		prettier.Concat{
+			prettier.Text("@"),
+			prettier.Text("R"),
+		},
+		ty.Doc(),
+	)
+}
 
 func TestTypeAnnotation_MarshalJSON(t *testing.T) {
 
@@ -64,6 +87,22 @@ func TestTypeAnnotation_MarshalJSON(t *testing.T) {
         }
         `,
 		string(actual),
+	)
+}
+
+func TestNominalType_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	ty := &NominalType{
+		Identifier: Identifier{
+			Identifier: "R",
+		},
+	}
+
+	assert.Equal(t,
+		prettier.Text("R"),
+		ty.Doc(),
 	)
 }
 
@@ -111,6 +150,27 @@ func TestNominalType_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestOptionalType_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	ty := &OptionalType{
+		Type: &NominalType{
+			Identifier: Identifier{
+				Identifier: "R",
+			},
+		},
+	}
+
+	assert.Equal(t,
+		prettier.Concat{
+			prettier.Text("R"),
+			prettier.Text("?"),
+		},
+		ty.Doc(),
+	)
+}
+
 func TestOptionalType_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
@@ -147,6 +207,34 @@ func TestOptionalType_MarshalJSON(t *testing.T) {
         }
         `,
 		string(actual),
+	)
+}
+
+func TestVariableSizedType_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	ty := &VariableSizedType{
+		Type: &NominalType{
+			Identifier: Identifier{
+				Identifier: "T",
+			},
+		},
+	}
+
+	assert.Equal(t,
+		prettier.Concat{
+			prettier.Text("["),
+			prettier.Indent{
+				Doc: prettier.Concat{
+					prettier.SoftLine{},
+					prettier.Text("T"),
+				},
+			},
+			prettier.SoftLine{},
+			prettier.Text("]"),
+		},
+		ty.Doc(),
 	)
 }
 
@@ -192,6 +280,41 @@ func TestVariableSizedType_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestConstantSizedType_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	ty := &ConstantSizedType{
+		Type: &NominalType{
+			Identifier: Identifier{
+				Identifier: "T",
+			},
+		},
+		Size: &IntegerExpression{
+			PositiveLiteral: "42",
+			Value:           big.NewInt(42),
+			Base:            10,
+		},
+	}
+
+	assert.Equal(t,
+		prettier.Concat{
+			prettier.Text("["),
+			prettier.Indent{
+				Doc: prettier.Concat{
+					prettier.SoftLine{},
+					prettier.Text("T"),
+					prettier.Text("; "),
+					prettier.Text("42"),
+				},
+			},
+			prettier.SoftLine{},
+			prettier.Text("]"),
+		},
+		ty.Doc(),
+	)
+}
+
 func TestConstantSizedType_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
@@ -204,8 +327,9 @@ func TestConstantSizedType_MarshalJSON(t *testing.T) {
 			},
 		},
 		Size: &IntegerExpression{
-			Value: big.NewInt(42),
-			Base:  10,
+			PositiveLiteral: "42",
+			Value:           big.NewInt(42),
+			Base:            10,
 			Range: Range{
 				StartPos: Position{Offset: 4, Line: 5, Column: 6},
 				EndPos:   Position{Offset: 7, Line: 8, Column: 9},
@@ -236,6 +360,7 @@ func TestConstantSizedType_MarshalJSON(t *testing.T) {
             },
             "Size": {
                 "Type": "IntegerExpression",
+                "PositiveLiteral": "42",
                 "Value": "42",
                 "Base": 10,
                 "StartPos": {"Offset": 4, "Line": 5, "Column": 6},
@@ -246,6 +371,41 @@ func TestConstantSizedType_MarshalJSON(t *testing.T) {
         }
         `,
 		string(actual),
+	)
+}
+
+func TestDictionaryType_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	ty := &DictionaryType{
+		KeyType: &NominalType{
+			Identifier: Identifier{
+				Identifier: "AB",
+			},
+		},
+		ValueType: &NominalType{
+			Identifier: Identifier{
+				Identifier: "CD",
+			},
+		},
+	}
+
+	assert.Equal(t,
+		prettier.Concat{
+			prettier.Text("{"),
+			prettier.Indent{
+				Doc: prettier.Concat{
+					prettier.SoftLine{},
+					prettier.Text("AB"),
+					prettier.Text(": "),
+					prettier.Text("CD"),
+				},
+			},
+			prettier.SoftLine{},
+			prettier.Text("}"),
+		},
+		ty.Doc(),
 	)
 }
 
@@ -304,6 +464,71 @@ func TestDictionaryType_MarshalJSON(t *testing.T) {
         }
         `,
 		string(actual),
+	)
+}
+
+func TestFunctionType_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	ty := &FunctionType{
+		ParameterTypeAnnotations: []*TypeAnnotation{
+			{
+				IsResource: true,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "AB",
+					},
+				},
+			},
+			{
+				IsResource: true,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "CD",
+					},
+				},
+			},
+		},
+		ReturnTypeAnnotation: &TypeAnnotation{
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "EF",
+				},
+			},
+		},
+	}
+
+	assert.Equal(t,
+		prettier.Concat{
+			prettier.Text("("),
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("("),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Concat{
+								prettier.Text("@"),
+								prettier.Text("AB"),
+							},
+							prettier.Text(","),
+							prettier.Line{},
+							prettier.Concat{
+								prettier.Text("@"),
+								prettier.Text("CD"),
+							},
+						},
+					},
+					prettier.SoftLine{},
+					prettier.Text(")"),
+				},
+			},
+			prettier.Text(": "),
+			prettier.Text("EF"),
+			prettier.Text(")"),
+		},
+		ty.Doc(),
 	)
 }
 
@@ -387,6 +612,56 @@ func TestFunctionType_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestReferenceType_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("auth", func(t *testing.T) {
+
+		t.Parallel()
+
+		ty := &ReferenceType{
+			Authorized: true,
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "T",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("auth "),
+				prettier.Text("&"),
+				prettier.Text("T"),
+			},
+			ty.Doc(),
+		)
+	})
+
+	t.Run("un-auth", func(t *testing.T) {
+
+		t.Parallel()
+
+		ty := &ReferenceType{
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "T",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("&"),
+				prettier.Text("T"),
+			},
+			ty.Doc(),
+		)
+	})
+
+}
+
 func TestReferenceType_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
@@ -425,6 +700,54 @@ func TestReferenceType_MarshalJSON(t *testing.T) {
         }
         `,
 		string(actual),
+	)
+}
+
+func TestRestrictedType_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	ty := &RestrictedType{
+		Type: &NominalType{
+			Identifier: Identifier{
+				Identifier: "AB",
+			},
+		},
+		Restrictions: []*NominalType{
+			{
+				Identifier: Identifier{
+					Identifier: "CD",
+				},
+			},
+			{
+				Identifier: Identifier{
+					Identifier: "EF",
+				},
+			},
+		},
+	}
+
+	assert.Equal(t,
+		prettier.Concat{
+			prettier.Text("AB"),
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("{"),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Text("CD"),
+							prettier.Text(","),
+							prettier.Line{},
+							prettier.Text("EF"),
+						},
+					},
+					prettier.SoftLine{},
+					prettier.Text("}"),
+				},
+			},
+		},
+		ty.Doc(),
 	)
 }
 
@@ -503,6 +826,63 @@ func TestRestrictedType_MarshalJSON(t *testing.T) {
         }
         `,
 		string(actual),
+	)
+}
+
+func TestInstantiationType_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	ty := &InstantiationType{
+		Type: &NominalType{
+			Identifier: Identifier{
+				Identifier: "AB",
+			},
+		},
+		TypeArguments: []*TypeAnnotation{
+			{
+				IsResource: true,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "CD",
+					},
+				},
+			},
+			{
+				IsResource: false,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "EF",
+					},
+				},
+			},
+		},
+	}
+
+	assert.Equal(t,
+		prettier.Concat{
+			prettier.Text("AB"),
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("<"),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Concat{
+								prettier.Text("@"),
+								prettier.Text("CD"),
+							},
+							prettier.Text(","),
+							prettier.Line{},
+							prettier.Text("EF"),
+						},
+					},
+					prettier.SoftLine{},
+					prettier.Text(">"),
+				},
+			},
+		},
+		ty.Doc(),
 	)
 }
 

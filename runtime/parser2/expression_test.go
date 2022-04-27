@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,8 +49,9 @@ func TestParseSimpleInfixExpression(t *testing.T) {
 			&ast.BinaryExpression{
 				Operation: ast.OperationPlus,
 				Left: &ast.IntegerExpression{
-					Value: big.NewInt(1),
-					Base:  10,
+					PositiveLiteral: "1",
+					Value:           big.NewInt(1),
+					Base:            10,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 						EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -59,16 +60,18 @@ func TestParseSimpleInfixExpression(t *testing.T) {
 				Right: &ast.BinaryExpression{
 					Operation: ast.OperationMul,
 					Left: &ast.IntegerExpression{
-						Value: big.NewInt(2),
-						Base:  10,
+						PositiveLiteral: "2",
+						Value:           big.NewInt(2),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
 							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
 						},
 					},
 					Right: &ast.IntegerExpression{
-						Value: big.NewInt(3),
-						Base:  10,
+						PositiveLiteral: "3",
+						Value:           big.NewInt(3),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
 							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
@@ -91,8 +94,9 @@ func TestParseSimpleInfixExpression(t *testing.T) {
 			&ast.BinaryExpression{
 				Operation: ast.OperationPlus,
 				Left: &ast.IntegerExpression{
-					Value: big.NewInt(1),
-					Base:  10,
+					PositiveLiteral: "1",
+					Value:           big.NewInt(1),
+					Base:            10,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
 						EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
@@ -101,16 +105,18 @@ func TestParseSimpleInfixExpression(t *testing.T) {
 				Right: &ast.BinaryExpression{
 					Operation: ast.OperationMul,
 					Left: &ast.IntegerExpression{
-						Value: big.NewInt(2),
-						Base:  10,
+						PositiveLiteral: "2",
+						Value:           big.NewInt(2),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 10, Offset: 10},
 							EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
 						},
 					},
 					Right: &ast.IntegerExpression{
-						Value: big.NewInt(3),
-						Base:  10,
+						PositiveLiteral: "3",
+						Value:           big.NewInt(3),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 17, Offset: 17},
 							EndPos:   ast.Position{Line: 1, Column: 17, Offset: 17},
@@ -135,16 +141,18 @@ func TestParseSimpleInfixExpression(t *testing.T) {
 				Left: &ast.BinaryExpression{
 					Operation: ast.OperationPlus,
 					Left: &ast.IntegerExpression{
-						Value: big.NewInt(1),
-						Base:  10,
+						PositiveLiteral: "1",
+						Value:           big.NewInt(1),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
 						},
 					},
 					Right: &ast.IntegerExpression{
-						Value: big.NewInt(2),
-						Base:  10,
+						PositiveLiteral: "2",
+						Value:           big.NewInt(2),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
 							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
@@ -152,8 +160,9 @@ func TestParseSimpleInfixExpression(t *testing.T) {
 					},
 				},
 				Right: &ast.IntegerExpression{
-					Value: big.NewInt(3),
-					Base:  10,
+					PositiveLiteral: "3",
+					Value:           big.NewInt(3),
+					Base:            10,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
 						EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
@@ -175,8 +184,9 @@ func TestParseSimpleInfixExpression(t *testing.T) {
 			&ast.BinaryExpression{
 				Operation: ast.OperationNilCoalesce,
 				Left: &ast.IntegerExpression{
-					Value: big.NewInt(1),
-					Base:  10,
+					PositiveLiteral: "1",
+					Value:           big.NewInt(1),
+					Base:            10,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 						EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -185,16 +195,18 @@ func TestParseSimpleInfixExpression(t *testing.T) {
 				Right: &ast.BinaryExpression{
 					Operation: ast.OperationNilCoalesce,
 					Left: &ast.IntegerExpression{
-						Value: big.NewInt(2),
-						Base:  10,
+						PositiveLiteral: "2",
+						Value:           big.NewInt(2),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
 							EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
 						},
 					},
 					Right: &ast.IntegerExpression{
-						Value: big.NewInt(3),
-						Base:  10,
+						PositiveLiteral: "3",
+						Value:           big.NewInt(3),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 10, Offset: 10},
 							EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
@@ -224,16 +236,18 @@ func TestParseAdvancedExpression(t *testing.T) {
 				Left: &ast.BinaryExpression{
 					Operation: ast.OperationPlus,
 					Left: &ast.IntegerExpression{
-						Value: big.NewInt(1),
-						Base:  10,
+						PositiveLiteral: "1",
+						Value:           big.NewInt(1),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
 						},
 					},
 					Right: &ast.IntegerExpression{
-						Value: big.NewInt(-2),
-						Base:  10,
+						PositiveLiteral: "2",
+						Value:           big.NewInt(-2),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
 							EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
@@ -241,8 +255,9 @@ func TestParseAdvancedExpression(t *testing.T) {
 					},
 				},
 				Right: &ast.IntegerExpression{
-					Value: big.NewInt(-3),
-					Base:  10,
+					PositiveLiteral: "3",
+					Value:           big.NewInt(-3),
+					Base:            10,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
 						EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
@@ -266,16 +281,18 @@ func TestParseAdvancedExpression(t *testing.T) {
 				Left: &ast.BinaryExpression{
 					Operation: ast.OperationPlus,
 					Left: &ast.IntegerExpression{
-						Value: big.NewInt(1),
-						Base:  10,
+						PositiveLiteral: "1",
+						Value:           big.NewInt(1),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
 							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
 						},
 					},
 					Right: &ast.IntegerExpression{
-						Value: big.NewInt(2),
-						Base:  10,
+						PositiveLiteral: "2",
+						Value:           big.NewInt(2),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
 							EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
@@ -283,8 +300,9 @@ func TestParseAdvancedExpression(t *testing.T) {
 					},
 				},
 				Right: &ast.IntegerExpression{
-					Value: big.NewInt(3),
-					Base:  10,
+					PositiveLiteral: "3",
+					Value:           big.NewInt(3),
+					Base:            10,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 10, Offset: 10},
 						EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
@@ -308,16 +326,18 @@ func TestParseAdvancedExpression(t *testing.T) {
 				Left: &ast.BinaryExpression{
 					Operation: ast.OperationLess,
 					Left: &ast.IntegerExpression{
-						Value: big.NewInt(1),
-						Base:  10,
+						PositiveLiteral: "1",
+						Value:           big.NewInt(1),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
 						},
 					},
 					Right: &ast.IntegerExpression{
-						Value: big.NewInt(2),
-						Base:  10,
+						PositiveLiteral: "2",
+						Value:           big.NewInt(2),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
 							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
@@ -325,8 +345,9 @@ func TestParseAdvancedExpression(t *testing.T) {
 					},
 				},
 				Right: &ast.IntegerExpression{
-					Value: big.NewInt(3),
-					Base:  10,
+					PositiveLiteral: "3",
+					Value:           big.NewInt(3),
+					Base:            10,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
 						EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
@@ -451,8 +472,9 @@ func TestParseArrayExpression(t *testing.T) {
 			&ast.ArrayExpression{
 				Values: []ast.Expression{
 					&ast.IntegerExpression{
-						Value: big.NewInt(1),
-						Base:  10,
+						PositiveLiteral: "1",
+						Value:           big.NewInt(1),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
 							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
@@ -461,16 +483,18 @@ func TestParseArrayExpression(t *testing.T) {
 					&ast.BinaryExpression{
 						Operation: ast.OperationPlus,
 						Left: &ast.IntegerExpression{
-							Value: big.NewInt(2),
-							Base:  10,
+							PositiveLiteral: "2",
+							Value:           big.NewInt(2),
+							Base:            10,
 							Range: ast.Range{
 								StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
 								EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
 							},
 						},
 						Right: &ast.IntegerExpression{
-							Value: big.NewInt(3),
-							Base:  10,
+							PositiveLiteral: "3",
+							Value:           big.NewInt(3),
+							Base:            10,
 							Range: ast.Range{
 								StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
 								EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
@@ -478,16 +502,18 @@ func TestParseArrayExpression(t *testing.T) {
 						},
 					},
 					&ast.IntegerExpression{
-						Value: big.NewInt(4),
-						Base:  10,
+						PositiveLiteral: "4",
+						Value:           big.NewInt(4),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 11, Offset: 11},
 							EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
 						},
 					},
 					&ast.IntegerExpression{
-						Value: big.NewInt(5),
-						Base:  10,
+						PositiveLiteral: "5",
+						Value:           big.NewInt(5),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 17, Offset: 17},
 							EndPos:   ast.Position{Line: 1, Column: 17, Offset: 17},
@@ -520,8 +546,9 @@ func TestParseDictionaryExpression(t *testing.T) {
 				Entries: []ast.DictionaryEntry{
 					{
 						Key: &ast.IntegerExpression{
-							Value: big.NewInt(1),
-							Base:  10,
+							PositiveLiteral: "1",
+							Value:           big.NewInt(1),
+							Base:            10,
 							Range: ast.Range{
 								StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
 								EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
@@ -530,16 +557,18 @@ func TestParseDictionaryExpression(t *testing.T) {
 						Value: &ast.BinaryExpression{
 							Operation: ast.OperationPlus,
 							Left: &ast.IntegerExpression{
-								Value: big.NewInt(2),
-								Base:  10,
+								PositiveLiteral: "2",
+								Value:           big.NewInt(2),
+								Base:            10,
 								Range: ast.Range{
 									StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
 									EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
 								},
 							},
 							Right: &ast.IntegerExpression{
-								Value: big.NewInt(3),
-								Base:  10,
+								PositiveLiteral: "3",
+								Value:           big.NewInt(3),
+								Base:            10,
 								Range: ast.Range{
 									StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
 									EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
@@ -549,16 +578,18 @@ func TestParseDictionaryExpression(t *testing.T) {
 					},
 					{
 						Key: &ast.IntegerExpression{
-							Value: big.NewInt(4),
-							Base:  10,
+							PositiveLiteral: "4",
+							Value:           big.NewInt(4),
+							Base:            10,
 							Range: ast.Range{
 								StartPos: ast.Position{Line: 1, Column: 11, Offset: 11},
 								EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
 							},
 						},
 						Value: &ast.IntegerExpression{
-							Value: big.NewInt(5),
-							Base:  10,
+							PositiveLiteral: "5",
+							Value:           big.NewInt(5),
+							Base:            10,
 							Range: ast.Range{
 								StartPos: ast.Position{Line: 1, Column: 17, Offset: 17},
 								EndPos:   ast.Position{Line: 1, Column: 17, Offset: 17},
@@ -590,8 +621,9 @@ func TestParseIndexExpression(t *testing.T) {
 					},
 				},
 				IndexingExpression: &ast.IntegerExpression{
-					Value: big.NewInt(0),
-					Base:  10,
+					PositiveLiteral: "0",
+					Value:           new(big.Int),
+					Base:            10,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
 						EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
@@ -618,8 +650,9 @@ func TestParseIndexExpression(t *testing.T) {
 					},
 				},
 				IndexingExpression: &ast.IntegerExpression{
-					Value: big.NewInt(0),
-					Base:  10,
+					PositiveLiteral: "0",
+					Value:           new(big.Int),
+					Base:            10,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
 						EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
@@ -682,8 +715,9 @@ func TestParseIdentifier(t *testing.T) {
 					},
 				},
 				Right: &ast.IntegerExpression{
-					Value: big.NewInt(3),
-					Base:  10,
+					PositiveLiteral: "3",
+					Value:           big.NewInt(3),
+					Base:            10,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
 						EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
@@ -777,7 +811,7 @@ func TestParseString(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message: "invalid end of string literal: missing '\"'",
-					Pos:     ast.Position{Offset: 2, Line: 2, Column: 0},
+					Pos:     ast.Position{Line: 2, Column: 0, Offset: 2},
 				},
 			},
 			errs,
@@ -830,7 +864,7 @@ func TestParseString(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message: "invalid end of string literal: missing '\"'",
-					Pos:     ast.Position{Offset: 3, Line: 2, Column: 0},
+					Pos:     ast.Position{Line: 2, Column: 0, Offset: 3},
 				},
 			},
 			errs,
@@ -1184,8 +1218,9 @@ func TestInvocation(t *testing.T) {
 					{
 						Label: "",
 						Expression: &ast.IntegerExpression{
-							Value: big.NewInt(1),
-							Base:  10,
+							PositiveLiteral: "1",
+							Value:           big.NewInt(1),
+							Base:            10,
 							Range: ast.Range{
 								StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
 								EndPos:   ast.Position{Offset: 2, Line: 1, Column: 2},
@@ -1222,8 +1257,9 @@ func TestInvocation(t *testing.T) {
 						LabelStartPos: &ast.Position{Offset: 2, Line: 1, Column: 2},
 						LabelEndPos:   &ast.Position{Offset: 6, Line: 1, Column: 6},
 						Expression: &ast.IntegerExpression{
-							Value: big.NewInt(1),
-							Base:  10,
+							PositiveLiteral: "1",
+							Value:           big.NewInt(1),
+							Base:            10,
 							Range: ast.Range{
 								StartPos: ast.Position{Offset: 8, Line: 1, Column: 8},
 								EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
@@ -1258,8 +1294,9 @@ func TestInvocation(t *testing.T) {
 					{
 						Label: "",
 						Expression: &ast.IntegerExpression{
-							Value: big.NewInt(1),
-							Base:  10,
+							PositiveLiteral: "1",
+							Value:           big.NewInt(1),
+							Base:            10,
 							Range: ast.Range{
 								StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
 								EndPos:   ast.Position{Offset: 2, Line: 1, Column: 2},
@@ -1270,8 +1307,9 @@ func TestInvocation(t *testing.T) {
 					{
 						Label: "",
 						Expression: &ast.IntegerExpression{
-							Value: big.NewInt(2),
-							Base:  10,
+							PositiveLiteral: "2",
+							Value:           big.NewInt(2),
+							Base:            10,
 							Range: ast.Range{
 								StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
 								EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
@@ -1308,8 +1346,9 @@ func TestInvocation(t *testing.T) {
 						LabelStartPos: &ast.Position{Offset: 2, Line: 1, Column: 2},
 						LabelEndPos:   &ast.Position{Offset: 2, Line: 1, Column: 2},
 						Expression: &ast.IntegerExpression{
-							Value: big.NewInt(1),
-							Base:  10,
+							PositiveLiteral: "1",
+							Value:           big.NewInt(1),
+							Base:            10,
 							Range: ast.Range{
 								StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
 								EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
@@ -1322,8 +1361,9 @@ func TestInvocation(t *testing.T) {
 						LabelStartPos: &ast.Position{Offset: 6, Line: 1, Column: 6},
 						LabelEndPos:   &ast.Position{Offset: 6, Line: 1, Column: 6},
 						Expression: &ast.IntegerExpression{
-							Value: big.NewInt(2),
-							Base:  10,
+							PositiveLiteral: "2",
+							Value:           big.NewInt(2),
+							Base:            10,
 							Range: ast.Range{
 								StartPos: ast.Position{Offset: 8, Line: 1, Column: 8},
 								EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
@@ -1407,8 +1447,9 @@ func TestInvocation(t *testing.T) {
 					{
 						Label: "",
 						Expression: &ast.IntegerExpression{
-							Value: big.NewInt(1),
-							Base:  10,
+							PositiveLiteral: "1",
+							Value:           big.NewInt(1),
+							Base:            10,
 							Range: ast.Range{
 								StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
 								EndPos:   ast.Position{Offset: 2, Line: 1, Column: 2},
@@ -1429,8 +1470,9 @@ func TestInvocation(t *testing.T) {
 								{
 									Label: "",
 									Expression: &ast.IntegerExpression{
-										Value: big.NewInt(2),
-										Base:  10,
+										PositiveLiteral: "2",
+										Value:           big.NewInt(2),
+										Base:            10,
 										Range: ast.Range{
 											StartPos: ast.Position{Offset: 6, Line: 1, Column: 6},
 											EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
@@ -1471,8 +1513,9 @@ func TestInvocation(t *testing.T) {
 					{
 						Label: "",
 						Expression: &ast.IntegerExpression{
-							Value: big.NewInt(1),
-							Base:  10,
+							PositiveLiteral: "1",
+							Value:           big.NewInt(1),
+							Base:            10,
 							Range: ast.Range{
 								StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
 								EndPos:   ast.Position{Offset: 2, Line: 1, Column: 2},
@@ -1623,8 +1666,9 @@ func TestMemberExpression(t *testing.T) {
 					},
 				},
 				Right: &ast.IntegerExpression{
-					Value: big.NewInt(3),
-					Base:  10,
+					PositiveLiteral: "3",
+					Value:           big.NewInt(3),
+					Base:            10,
 					Range: ast.Range{
 						StartPos: ast.Position{Offset: 6, Line: 1, Column: 6},
 						EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
@@ -1646,8 +1690,9 @@ func TestMemberExpression(t *testing.T) {
 			&ast.BinaryExpression{
 				Operation: ast.OperationMul,
 				Left: &ast.IntegerExpression{
-					Value: big.NewInt(3),
-					Base:  10,
+					PositiveLiteral: "3",
+					Value:           big.NewInt(3),
+					Base:            10,
 					Range: ast.Range{
 						StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
 						EndPos:   ast.Position{Offset: 0, Line: 1, Column: 0},
@@ -1751,16 +1796,18 @@ func TestParseBlockComment(t *testing.T) {
 			&ast.BinaryExpression{
 				Operation: ast.OperationPlus,
 				Left: &ast.IntegerExpression{
-					Value: big.NewInt(1),
-					Base:  10,
+					PositiveLiteral: "1",
+					Value:           big.NewInt(1),
+					Base:            10,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
 						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
 					},
 				},
 				Right: &ast.IntegerExpression{
-					Value: big.NewInt(2),
-					Base:  10,
+					PositiveLiteral: "2",
+					Value:           big.NewInt(2),
+					Base:            10,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 27, Offset: 27},
 						EndPos:   ast.Position{Line: 1, Column: 27, Offset: 27},
@@ -2010,8 +2057,9 @@ func TestParseForceExpression(t *testing.T) {
 			&ast.BinaryExpression{
 				Operation: ast.OperationMul,
 				Left: &ast.IntegerExpression{
-					Value: big.NewInt(10),
-					Base:  10,
+					PositiveLiteral: "10",
+					Value:           big.NewInt(10),
+					Base:            10,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
@@ -2216,16 +2264,18 @@ func TestParseLineComment(t *testing.T) {
 		&ast.BinaryExpression{
 			Operation: ast.OperationDiv,
 			Left: &ast.IntegerExpression{
-				Value: big.NewInt(1),
-				Base:  10,
+				PositiveLiteral: "1",
+				Value:           big.NewInt(1),
+				Base:            10,
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 2, Column: 1, Offset: 28},
 					EndPos:   ast.Position{Line: 2, Column: 1, Offset: 28},
 				},
 			},
 			Right: &ast.IntegerExpression{
-				Value: big.NewInt(2),
-				Base:  10,
+				PositiveLiteral: "2",
+				Value:           big.NewInt(2),
+				Base:            10,
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 2, Column: 5, Offset: 32},
 					EndPos:   ast.Position{Line: 2, Column: 5, Offset: 32},
@@ -2350,8 +2400,9 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				Value: new(big.Int),
-				Base:  2,
+				PositiveLiteral: "0b",
+				Value:           new(big.Int),
+				Base:            2,
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
@@ -2370,8 +2421,9 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				Value: big.NewInt(42),
-				Base:  2,
+				PositiveLiteral: "0b101010",
+				Value:           big.NewInt(42),
+				Base:            2,
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
@@ -2388,8 +2440,9 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				Value: big.NewInt(8),
-				Base:  2,
+				PositiveLiteral: "0b001000",
+				Value:           big.NewInt(8),
+				Base:            2,
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
@@ -2408,8 +2461,9 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				Value: big.NewInt(2730),
-				Base:  2,
+				PositiveLiteral: "0b101010_101010",
+				Value:           big.NewInt(2730),
+				Base:            2,
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 14, Offset: 14},
@@ -2441,8 +2495,9 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				Value: big.NewInt(2730),
-				Base:  2,
+				PositiveLiteral: "0b_101010_101010",
+				Value:           big.NewInt(2730),
+				Base:            2,
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 15, Offset: 15},
@@ -2474,8 +2529,9 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				Value: big.NewInt(2730),
-				Base:  2,
+				PositiveLiteral: "0b101010_101010_",
+				Value:           big.NewInt(2730),
+				Base:            2,
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 15, Offset: 15},
@@ -2511,8 +2567,9 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				Value: new(big.Int),
-				Base:  8,
+				PositiveLiteral: "0o",
+				Value:           new(big.Int),
+				Base:            8,
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
@@ -2531,8 +2588,9 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				Value: big.NewInt(26),
-				Base:  8,
+				PositiveLiteral: "0o32",
+				Value:           big.NewInt(26),
+				Base:            8,
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
@@ -2551,8 +2609,9 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				Value: big.NewInt(1701),
-				Base:  8,
+				PositiveLiteral: "0o32_45",
+				Value:           big.NewInt(1701),
+				Base:            8,
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
@@ -2584,8 +2643,9 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				Value: big.NewInt(1701),
-				Base:  8,
+				PositiveLiteral: "0o_32_45",
+				Value:           big.NewInt(1701),
+				Base:            8,
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
@@ -2617,8 +2677,9 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				Value: big.NewInt(1701),
-				Base:  8,
+				PositiveLiteral: "0o32_45_",
+				Value:           big.NewInt(1701),
+				Base:            8,
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
@@ -2637,8 +2698,9 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				Value: big.NewInt(1234567890),
-				Base:  10,
+				PositiveLiteral: "1234567890",
+				Value:           big.NewInt(1234567890),
+				Base:            10,
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
@@ -2657,8 +2719,9 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				Value: big.NewInt(1234567890),
-				Base:  10,
+				PositiveLiteral: "1_234_567_890",
+				Value:           big.NewInt(1234567890),
+				Base:            10,
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 12, Offset: 12},
@@ -2690,8 +2753,9 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				Value: big.NewInt(1234567890),
-				Base:  10,
+				PositiveLiteral: "1_234_567_890_",
+				Value:           big.NewInt(1234567890),
+				Base:            10,
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 13, Offset: 13},
@@ -2727,8 +2791,9 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				Value: new(big.Int),
-				Base:  16,
+				PositiveLiteral: "0x",
+				Value:           new(big.Int),
+				Base:            16,
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
@@ -2747,8 +2812,9 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				Value: big.NewInt(242),
-				Base:  16,
+				PositiveLiteral: "0xf2",
+				Value:           big.NewInt(242),
+				Base:            16,
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
@@ -2767,8 +2833,9 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				Value: big.NewInt(61961),
-				Base:  16,
+				PositiveLiteral: "0xf2_09",
+				Value:           big.NewInt(61961),
+				Base:            16,
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
@@ -2800,8 +2867,9 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				Value: big.NewInt(61961),
-				Base:  16,
+				PositiveLiteral: "0x_f2_09",
+				Value:           big.NewInt(61961),
+				Base:            16,
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
@@ -2833,8 +2901,9 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				Value: big.NewInt(61961),
-				Base:  16,
+				PositiveLiteral: "0xf2_09_",
+				Value:           big.NewInt(61961),
+				Base:            16,
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
@@ -2853,8 +2922,9 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				Value: big.NewInt(0),
-				Base:  10,
+				PositiveLiteral: "0",
+				Value:           big.NewInt(0),
+				Base:            10,
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -2873,8 +2943,9 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				Value: big.NewInt(1),
-				Base:  10,
+				PositiveLiteral: "01",
+				Value:           big.NewInt(1),
+				Base:            10,
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
@@ -2893,8 +2964,9 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				Value: big.NewInt(9),
-				Base:  10,
+				PositiveLiteral: "09",
+				Value:           big.NewInt(9),
+				Base:            10,
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
@@ -2913,8 +2985,9 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				Value: big.NewInt(123),
-				Base:  10,
+				PositiveLiteral: "00123",
+				Value:           big.NewInt(123),
+				Base:            10,
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
@@ -2950,11 +3023,74 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				Value: new(big.Int),
-				Base:  1,
+				PositiveLiteral: "0z123",
+				Value:           new(big.Int),
+				Base:            1,
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("leading zero and underscore", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseExpression(`0_100`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.IntegerExpression{
+				PositiveLiteral: "0_100",
+				Value:           big.NewInt(100),
+				Base:            10,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("leading one and underscore", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseExpression(`1_100`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.IntegerExpression{
+				PositiveLiteral: "1_100",
+				Value:           big.NewInt(1100),
+				Base:            10,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("leading underscore", func(t *testing.T) {
+
+		t.Parallel()
+
+		// NOTE: a leading underscore introduces an identifier
+
+		result, errs := ParseExpression(`_100`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.IdentifierExpression{
+				Identifier: ast.Identifier{
+					Identifier: "_100",
+					Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
 			},
 			result,
@@ -2975,6 +3111,7 @@ func TestParseFixedPoint(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.FixedPointExpression{
+				PositiveLiteral: "1234_5678_90.0009_8765_4321",
 				Negative:        false,
 				UnsignedInteger: big.NewInt(1234567890),
 				Fractional:      big.NewInt(987654321),
@@ -2997,6 +3134,7 @@ func TestParseFixedPoint(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.FixedPointExpression{
+				PositiveLiteral: "0.1",
 				Negative:        false,
 				UnsignedInteger: big.NewInt(0),
 				Fractional:      big.NewInt(1),
@@ -3027,6 +3165,7 @@ func TestParseFixedPoint(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.FixedPointExpression{
+				PositiveLiteral: "0.",
 				Negative:        false,
 				UnsignedInteger: big.NewInt(0),
 				Fractional:      big.NewInt(0),
@@ -3054,16 +3193,18 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 			&ast.BinaryExpression{
 				Operation: ast.OperationLess,
 				Left: &ast.IntegerExpression{
-					Value: big.NewInt(1),
-					Base:  10,
+					PositiveLiteral: "1",
+					Value:           big.NewInt(1),
+					Base:            10,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 						EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
 					},
 				},
 				Right: &ast.IntegerExpression{
-					Value: big.NewInt(2),
-					Base:  10,
+					PositiveLiteral: "2",
+					Value:           big.NewInt(2),
+					Base:            10,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
 						EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
@@ -3140,8 +3281,9 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 				Arguments: []*ast.Argument{
 					{
 						Expression: &ast.IntegerExpression{
-							Value: big.NewInt(1),
-							Base:  10,
+							PositiveLiteral: "1",
+							Value:           big.NewInt(1),
+							Base:            10,
 							Range: ast.Range{
 								StartPos: ast.Position{Line: 1, Column: 18, Offset: 18},
 								EndPos:   ast.Position{Line: 1, Column: 18, Offset: 18},
@@ -3225,8 +3367,9 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 				Arguments: []*ast.Argument{
 					{
 						Expression: &ast.IntegerExpression{
-							Value: big.NewInt(1),
-							Base:  10,
+							PositiveLiteral: "1",
+							Value:           big.NewInt(1),
+							Base:            10,
 							Range: ast.Range{
 								StartPos: ast.Position{Line: 1, Column: 31, Offset: 31},
 								EndPos:   ast.Position{Line: 1, Column: 31, Offset: 31},
@@ -3236,8 +3379,9 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 					},
 					{
 						Expression: &ast.IntegerExpression{
-							Value: big.NewInt(2),
-							Base:  10,
+							PositiveLiteral: "2",
+							Value:           big.NewInt(2),
+							Base:            10,
 							Range: ast.Range{
 								StartPos: ast.Position{Line: 1, Column: 35, Offset: 35},
 								EndPos:   ast.Position{Line: 1, Column: 35, Offset: 35},
@@ -3264,8 +3408,9 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 			&ast.BinaryExpression{
 				Operation: ast.OperationPlus,
 				Left: &ast.IntegerExpression{
-					Value: big.NewInt(1),
-					Base:  10,
+					PositiveLiteral: "1",
+					Value:           big.NewInt(1),
+					Base:            10,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 						EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -3401,16 +3546,18 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 				Left: &ast.BinaryExpression{
 					Operation: ast.OperationPlus,
 					Left: &ast.IntegerExpression{
-						Value: big.NewInt(0),
-						Base:  10,
+						PositiveLiteral: "0",
+						Value:           new(big.Int),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
 						},
 					},
 					Right: &ast.IntegerExpression{
-						Value: big.NewInt(1),
-						Base:  10,
+						PositiveLiteral: "1",
+						Value:           big.NewInt(1),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
 							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
@@ -3418,8 +3565,9 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 					},
 				},
 				Right: &ast.IntegerExpression{
-					Value: big.NewInt(2),
-					Base:  10,
+					PositiveLiteral: "2",
+					Value:           big.NewInt(2),
+					Base:            10,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
 						EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
@@ -3443,16 +3591,18 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 				Left: &ast.BinaryExpression{
 					Operation: ast.OperationPlus,
 					Left: &ast.IntegerExpression{
-						Value: big.NewInt(0),
-						Base:  10,
+						PositiveLiteral: "0",
+						Value:           new(big.Int),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
 						},
 					},
 					Right: &ast.IntegerExpression{
-						Value: big.NewInt(1),
-						Base:  10,
+						PositiveLiteral: "1",
+						Value:           big.NewInt(1),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
 							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
@@ -3460,8 +3610,9 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 					},
 				},
 				Right: &ast.IntegerExpression{
-					Value: big.NewInt(2),
-					Base:  10,
+					PositiveLiteral: "2",
+					Value:           big.NewInt(2),
+					Base:            10,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
 						EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
@@ -3485,16 +3636,18 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 				Left: &ast.BinaryExpression{
 					Operation: ast.OperationPlus,
 					Left: &ast.IntegerExpression{
-						Value: big.NewInt(0),
-						Base:  10,
+						PositiveLiteral: "0",
+						Value:           new(big.Int),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
 						},
 					},
 					Right: &ast.IntegerExpression{
-						Value: big.NewInt(1),
-						Base:  10,
+						PositiveLiteral: "1",
+						Value:           big.NewInt(1),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
 							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
@@ -3502,8 +3655,9 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 					},
 				},
 				Right: &ast.IntegerExpression{
-					Value: big.NewInt(2),
-					Base:  10,
+					PositiveLiteral: "2",
+					Value:           big.NewInt(2),
+					Base:            10,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
 						EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
@@ -3527,16 +3681,18 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 				Left: &ast.BinaryExpression{
 					Operation: ast.OperationPlus,
 					Left: &ast.IntegerExpression{
-						Value: big.NewInt(0),
-						Base:  10,
+						PositiveLiteral: "0",
+						Value:           new(big.Int),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
 						},
 					},
 					Right: &ast.IntegerExpression{
-						Value: big.NewInt(1),
-						Base:  10,
+						PositiveLiteral: "1",
+						Value:           big.NewInt(1),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
 							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
@@ -3544,8 +3700,9 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 					},
 				},
 				Right: &ast.IntegerExpression{
-					Value: big.NewInt(2),
-					Base:  10,
+					PositiveLiteral: "2",
+					Value:           big.NewInt(2),
+					Base:            10,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
 						EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
@@ -3649,16 +3806,18 @@ func TestParseArrayExpressionInVariableDeclaration(t *testing.T) {
 				Value: &ast.ArrayExpression{
 					Values: []ast.Expression{
 						&ast.IntegerExpression{
-							Value: big.NewInt(1),
-							Base:  10,
+							PositiveLiteral: "1",
+							Value:           big.NewInt(1),
+							Base:            10,
 							Range: ast.Range{
 								StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
 								EndPos:   ast.Position{Offset: 15, Line: 2, Column: 14},
 							},
 						},
 						&ast.IntegerExpression{
-							Value: big.NewInt(2),
-							Base:  10,
+							PositiveLiteral: "2",
+							Value:           big.NewInt(2),
+							Base:            10,
 							Range: ast.Range{
 								StartPos: ast.Position{Offset: 18, Line: 2, Column: 17},
 								EndPos:   ast.Position{Offset: 18, Line: 2, Column: 17},
@@ -3708,8 +3867,9 @@ func TestParseDictionaryExpressionInVariableDeclaration(t *testing.T) {
 								},
 							},
 							Value: &ast.IntegerExpression{
-								Value: big.NewInt(1),
-								Base:  10,
+								PositiveLiteral: "1",
+								Value:           big.NewInt(1),
+								Base:            10,
 								Range: ast.Range{
 									StartPos: ast.Position{Offset: 20, Line: 2, Column: 19},
 									EndPos:   ast.Position{Offset: 20, Line: 2, Column: 19},
@@ -3725,8 +3885,9 @@ func TestParseDictionaryExpressionInVariableDeclaration(t *testing.T) {
 								},
 							},
 							Value: &ast.IntegerExpression{
-								Value: big.NewInt(2),
-								Base:  10,
+								PositiveLiteral: "2",
+								Value:           big.NewInt(2),
+								Base:            10,
 								Range: ast.Range{
 									StartPos: ast.Position{Offset: 28, Line: 2, Column: 27},
 									EndPos:   ast.Position{Offset: 28, Line: 2, Column: 27},
@@ -3778,8 +3939,9 @@ func TestParseInvocationExpressionWithoutLabels(t *testing.T) {
 						{
 							Label: "",
 							Expression: &ast.IntegerExpression{
-								Value: big.NewInt(1),
-								Base:  10,
+								PositiveLiteral: "1",
+								Value:           big.NewInt(1),
+								Base:            10,
 								Range: ast.Range{
 									StartPos: ast.Position{Offset: 16, Line: 2, Column: 15},
 									EndPos:   ast.Position{Offset: 16, Line: 2, Column: 15},
@@ -3790,8 +3952,9 @@ func TestParseInvocationExpressionWithoutLabels(t *testing.T) {
 						{
 							Label: "",
 							Expression: &ast.IntegerExpression{
-								Value: big.NewInt(2),
-								Base:  10,
+								PositiveLiteral: "2",
+								Value:           big.NewInt(2),
+								Base:            10,
 								Range: ast.Range{
 									StartPos: ast.Position{Offset: 19, Line: 2, Column: 18},
 									EndPos:   ast.Position{Offset: 19, Line: 2, Column: 18},
@@ -3844,8 +4007,9 @@ func TestParseInvocationExpressionWithLabels(t *testing.T) {
 							LabelStartPos: &ast.Position{Offset: 16, Line: 2, Column: 15},
 							LabelEndPos:   &ast.Position{Offset: 16, Line: 2, Column: 15},
 							Expression: &ast.IntegerExpression{
-								Value: big.NewInt(1),
-								Base:  10,
+								PositiveLiteral: "1",
+								Value:           big.NewInt(1),
+								Base:            10,
 								Range: ast.Range{
 									StartPos: ast.Position{Offset: 19, Line: 2, Column: 18},
 									EndPos:   ast.Position{Offset: 19, Line: 2, Column: 18},
@@ -3858,8 +4022,9 @@ func TestParseInvocationExpressionWithLabels(t *testing.T) {
 							LabelStartPos: &ast.Position{Offset: 22, Line: 2, Column: 21},
 							LabelEndPos:   &ast.Position{Offset: 22, Line: 2, Column: 21},
 							Expression: &ast.IntegerExpression{
-								Value: big.NewInt(2),
-								Base:  10,
+								PositiveLiteral: "2",
+								Value:           big.NewInt(2),
+								Base:            10,
 								Range: ast.Range{
 									StartPos: ast.Position{Offset: 25, Line: 2, Column: 24},
 									EndPos:   ast.Position{Offset: 25, Line: 2, Column: 24},
@@ -3990,8 +4155,9 @@ func TestParseIndexExpressionInVariableDeclaration(t *testing.T) {
 						},
 					},
 					IndexingExpression: &ast.IntegerExpression{
-						Value: big.NewInt(1),
-						Base:  10,
+						PositiveLiteral: "1",
+						Value:           big.NewInt(1),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 16, Line: 2, Column: 15},
 							EndPos:   ast.Position{Offset: 16, Line: 2, Column: 15},
@@ -4206,16 +4372,18 @@ func TestParseRelationalExpression(t *testing.T) {
 				Value: &ast.BinaryExpression{
 					Operation: ast.OperationLess,
 					Left: &ast.IntegerExpression{
-						Value: big.NewInt(1),
-						Base:  10,
+						PositiveLiteral: "1",
+						Value:           big.NewInt(1),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 17, Line: 2, Column: 16},
 							EndPos:   ast.Position{Offset: 17, Line: 2, Column: 16},
 						},
 					},
 					Right: &ast.IntegerExpression{
-						Value: big.NewInt(2),
-						Base:  10,
+						PositiveLiteral: "2",
+						Value:           big.NewInt(2),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 21, Line: 2, Column: 20},
 							EndPos:   ast.Position{Offset: 21, Line: 2, Column: 20},
@@ -4253,16 +4421,18 @@ func TestParseAdditiveExpression(t *testing.T) {
 				Value: &ast.BinaryExpression{
 					Operation: ast.OperationPlus,
 					Left: &ast.IntegerExpression{
-						Value: big.NewInt(1),
-						Base:  10,
+						PositiveLiteral: "1",
+						Value:           big.NewInt(1),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 17, Line: 2, Column: 16},
 							EndPos:   ast.Position{Offset: 17, Line: 2, Column: 16},
 						},
 					},
 					Right: &ast.IntegerExpression{
-						Value: big.NewInt(2),
-						Base:  10,
+						PositiveLiteral: "2",
+						Value:           big.NewInt(2),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 21, Line: 2, Column: 20},
 							EndPos:   ast.Position{Offset: 21, Line: 2, Column: 20},
@@ -4300,16 +4470,18 @@ func TestParseMultiplicativeExpression(t *testing.T) {
 				Value: &ast.BinaryExpression{
 					Operation: ast.OperationMul,
 					Left: &ast.IntegerExpression{
-						Value: big.NewInt(1),
-						Base:  10,
+						PositiveLiteral: "1",
+						Value:           big.NewInt(1),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 17, Line: 2, Column: 16},
 							EndPos:   ast.Position{Offset: 17, Line: 2, Column: 16},
 						},
 					},
 					Right: &ast.IntegerExpression{
-						Value: big.NewInt(2),
-						Base:  10,
+						PositiveLiteral: "2",
+						Value:           big.NewInt(2),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 21, Line: 2, Column: 20},
 							EndPos:   ast.Position{Offset: 21, Line: 2, Column: 20},
@@ -4366,8 +4538,9 @@ func TestParseFunctionExpressionAndReturn(t *testing.T) {
 							Statements: []ast.Statement{
 								&ast.ReturnStatement{
 									Expression: &ast.IntegerExpression{
-										Value: big.NewInt(1),
-										Base:  10,
+										PositiveLiteral: "1",
+										Value:           big.NewInt(1),
+										Base:            10,
 										Range: ast.Range{
 											StartPos: ast.Position{Offset: 38, Line: 2, Column: 37},
 											EndPos:   ast.Position{Offset: 38, Line: 2, Column: 37},
@@ -4420,16 +4593,18 @@ func TestParseLeftAssociativity(t *testing.T) {
 					Left: &ast.BinaryExpression{
 						Operation: ast.OperationPlus,
 						Left: &ast.IntegerExpression{
-							Value: big.NewInt(1),
-							Base:  10,
+							PositiveLiteral: "1",
+							Value:           big.NewInt(1),
+							Base:            10,
 							Range: ast.Range{
 								StartPos: ast.Position{Offset: 17, Line: 2, Column: 16},
 								EndPos:   ast.Position{Offset: 17, Line: 2, Column: 16},
 							},
 						},
 						Right: &ast.IntegerExpression{
-							Value: big.NewInt(2),
-							Base:  10,
+							PositiveLiteral: "2",
+							Value:           big.NewInt(2),
+							Base:            10,
 							Range: ast.Range{
 								StartPos: ast.Position{Offset: 21, Line: 2, Column: 20},
 								EndPos:   ast.Position{Offset: 21, Line: 2, Column: 20},
@@ -4437,8 +4612,9 @@ func TestParseLeftAssociativity(t *testing.T) {
 						},
 					},
 					Right: &ast.IntegerExpression{
-						Value: big.NewInt(3),
-						Base:  10,
+						PositiveLiteral: "3",
+						Value:           big.NewInt(3),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 25, Line: 2, Column: 24},
 							EndPos:   ast.Position{Offset: 25, Line: 2, Column: 24},
@@ -4474,8 +4650,9 @@ func TestParseNegativeInteger(t *testing.T) {
 					Pos:       ast.Position{Offset: 13, Line: 2, Column: 12},
 				},
 				Value: &ast.IntegerExpression{
-					Value: big.NewInt(-42),
-					Base:  10,
+					PositiveLiteral: "42",
+					Value:           big.NewInt(-42),
+					Base:            10,
 					Range: ast.Range{
 						StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
 						EndPos:   ast.Position{Offset: 17, Line: 2, Column: 16},
@@ -4510,6 +4687,7 @@ func TestParseNegativeFixedPoint(t *testing.T) {
 					Pos:       ast.Position{Offset: 13, Line: 2, Column: 12},
 				},
 				Value: &ast.FixedPointExpression{
+					PositiveLiteral: "42.3",
 					Negative:        true,
 					UnsignedInteger: big.NewInt(42),
 					Fractional:      big.NewInt(3),
@@ -4553,16 +4731,18 @@ func TestParseTernaryRightAssociativity(t *testing.T) {
 					Test: &ast.BinaryExpression{
 						Operation: ast.OperationGreater,
 						Left: &ast.IntegerExpression{
-							Value: big.NewInt(2),
-							Base:  10,
+							PositiveLiteral: "2",
+							Value:           big.NewInt(2),
+							Base:            10,
 							Range: ast.Range{
 								StartPos: ast.Position{Offset: 17, Line: 2, Column: 16},
 								EndPos:   ast.Position{Offset: 17, Line: 2, Column: 16},
 							},
 						},
 						Right: &ast.IntegerExpression{
-							Value: big.NewInt(1),
-							Base:  10,
+							PositiveLiteral: "1",
+							Value:           big.NewInt(1),
+							Base:            10,
 							Range: ast.Range{
 								StartPos: ast.Position{Offset: 21, Line: 2, Column: 20},
 								EndPos:   ast.Position{Offset: 21, Line: 2, Column: 20},
@@ -4570,8 +4750,9 @@ func TestParseTernaryRightAssociativity(t *testing.T) {
 						},
 					},
 					Then: &ast.IntegerExpression{
-						Value: new(big.Int),
-						Base:  10,
+						PositiveLiteral: "0",
+						Value:           new(big.Int),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 35, Line: 3, Column: 12},
 							EndPos:   ast.Position{Offset: 35, Line: 3, Column: 12},
@@ -4581,16 +4762,18 @@ func TestParseTernaryRightAssociativity(t *testing.T) {
 						Test: &ast.BinaryExpression{
 							Operation: ast.OperationGreater,
 							Left: &ast.IntegerExpression{
-								Value: big.NewInt(3),
-								Base:  10,
+								PositiveLiteral: "3",
+								Value:           big.NewInt(3),
+								Base:            10,
 								Range: ast.Range{
 									StartPos: ast.Position{Offset: 49, Line: 4, Column: 12},
 									EndPos:   ast.Position{Offset: 49, Line: 4, Column: 12},
 								},
 							},
 							Right: &ast.IntegerExpression{
-								Value: big.NewInt(2),
-								Base:  10,
+								PositiveLiteral: "2",
+								Value:           big.NewInt(2),
+								Base:            10,
 								Range: ast.Range{
 									StartPos: ast.Position{Offset: 53, Line: 4, Column: 16},
 									EndPos:   ast.Position{Offset: 53, Line: 4, Column: 16},
@@ -4598,16 +4781,18 @@ func TestParseTernaryRightAssociativity(t *testing.T) {
 							},
 						},
 						Then: &ast.IntegerExpression{
-							Value: big.NewInt(1),
-							Base:  10,
+							PositiveLiteral: "1",
+							Value:           big.NewInt(1),
+							Base:            10,
 							Range: ast.Range{
 								StartPos: ast.Position{Offset: 57, Line: 4, Column: 20},
 								EndPos:   ast.Position{Offset: 57, Line: 4, Column: 20},
 							},
 						},
 						Else: &ast.IntegerExpression{
-							Value: big.NewInt(2),
-							Base:  10,
+							PositiveLiteral: "2",
+							Value:           big.NewInt(2),
+							Base:            10,
 							Range: ast.Range{
 								StartPos: ast.Position{Offset: 61, Line: 4, Column: 24},
 								EndPos:   ast.Position{Offset: 61, Line: 4, Column: 24},
@@ -4868,8 +5053,9 @@ func TestParseNilCoalescing(t *testing.T) {
 						Pos: ast.Position{Offset: 16, Line: 2, Column: 15},
 					},
 					Right: &ast.IntegerExpression{
-						Value: big.NewInt(1),
-						Base:  10,
+						PositiveLiteral: "1",
+						Value:           big.NewInt(1),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 23, Line: 2, Column: 22},
 							EndPos:   ast.Position{Offset: 23, Line: 2, Column: 22},
@@ -4908,8 +5094,9 @@ func TestParseNilCoalescingRightAssociativity(t *testing.T) {
 				Value: &ast.BinaryExpression{
 					Operation: ast.OperationNilCoalesce,
 					Left: &ast.IntegerExpression{
-						Value: big.NewInt(1),
-						Base:  10,
+						PositiveLiteral: "1",
+						Value:           big.NewInt(1),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 16, Line: 2, Column: 15},
 							EndPos:   ast.Position{Offset: 16, Line: 2, Column: 15},
@@ -4918,16 +5105,18 @@ func TestParseNilCoalescingRightAssociativity(t *testing.T) {
 					Right: &ast.BinaryExpression{
 						Operation: ast.OperationNilCoalesce,
 						Left: &ast.IntegerExpression{
-							Value: big.NewInt(2),
-							Base:  10,
+							PositiveLiteral: "2",
+							Value:           big.NewInt(2),
+							Base:            10,
 							Range: ast.Range{
 								StartPos: ast.Position{Offset: 21, Line: 2, Column: 20},
 								EndPos:   ast.Position{Offset: 21, Line: 2, Column: 20},
 							},
 						},
 						Right: &ast.IntegerExpression{
-							Value: big.NewInt(3),
-							Base:  10,
+							PositiveLiteral: "3",
+							Value:           big.NewInt(3),
+							Base:            10,
 							Range: ast.Range{
 								StartPos: ast.Position{Offset: 26, Line: 2, Column: 25},
 								EndPos:   ast.Position{Offset: 26, Line: 2, Column: 25},
@@ -4953,8 +5142,9 @@ func TestParseFailableCasting(t *testing.T) {
 
 	failableDowncast := &ast.CastingExpression{
 		Expression: &ast.IntegerExpression{
-			Value: new(big.Int),
-			Base:  10,
+			PositiveLiteral: "0",
+			Value:           new(big.Int),
+			Base:            10,
 			Range: ast.Range{
 				StartPos: ast.Position{Offset: 16, Line: 2, Column: 15},
 				EndPos:   ast.Position{Offset: 16, Line: 2, Column: 15},
@@ -5327,6 +5517,7 @@ func TestParseFixedPointExpression(t *testing.T) {
 					Pos:       ast.Position{Offset: 12, Line: 2, Column: 11},
 				},
 				Value: &ast.FixedPointExpression{
+					PositiveLiteral: "1234_5678_90.0009_8765_4321",
 					Negative:        true,
 					UnsignedInteger: big.NewInt(1234567890),
 					Fractional:      big.NewInt(987654321),
@@ -5364,6 +5555,7 @@ func TestParseFixedPointExpressionZeroInteger(t *testing.T) {
 					Pos:       ast.Position{Offset: 12, Line: 2, Column: 11},
 				},
 				Value: &ast.FixedPointExpression{
+					PositiveLiteral: "0.1",
 					Negative:        true,
 					UnsignedInteger: new(big.Int),
 					Fractional:      big.NewInt(1),
@@ -5442,8 +5634,9 @@ func TestParseBitwiseExpression(t *testing.T) {
 				Value: &ast.BinaryExpression{
 					Operation: ast.OperationBitwiseOr,
 					Left: &ast.IntegerExpression{
-						Value: big.NewInt(1),
-						Base:  10,
+						PositiveLiteral: "1",
+						Value:           big.NewInt(1),
+						Base:            10,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
 							EndPos:   ast.Position{Offset: 15, Line: 2, Column: 14},
@@ -5452,8 +5645,9 @@ func TestParseBitwiseExpression(t *testing.T) {
 					Right: &ast.BinaryExpression{
 						Operation: ast.OperationBitwiseXor,
 						Left: &ast.IntegerExpression{
-							Value: big.NewInt(2),
-							Base:  10,
+							PositiveLiteral: "2",
+							Value:           big.NewInt(2),
+							Base:            10,
 							Range: ast.Range{
 								StartPos: ast.Position{Offset: 19, Line: 2, Column: 18},
 								EndPos:   ast.Position{Offset: 19, Line: 2, Column: 18},
@@ -5462,8 +5656,9 @@ func TestParseBitwiseExpression(t *testing.T) {
 						Right: &ast.BinaryExpression{
 							Operation: ast.OperationBitwiseAnd,
 							Left: &ast.IntegerExpression{
-								Value: big.NewInt(3),
-								Base:  10,
+								PositiveLiteral: "3",
+								Value:           big.NewInt(3),
+								Base:            10,
 								Range: ast.Range{
 									StartPos: ast.Position{Offset: 23, Line: 2, Column: 22},
 									EndPos:   ast.Position{Offset: 23, Line: 2, Column: 22},
@@ -5474,16 +5669,18 @@ func TestParseBitwiseExpression(t *testing.T) {
 								Left: &ast.BinaryExpression{
 									Operation: ast.OperationBitwiseLeftShift,
 									Left: &ast.IntegerExpression{
-										Value: big.NewInt(4),
-										Base:  10,
+										PositiveLiteral: "4",
+										Value:           big.NewInt(4),
+										Base:            10,
 										Range: ast.Range{
 											StartPos: ast.Position{Offset: 27, Line: 2, Column: 26},
 											EndPos:   ast.Position{Offset: 27, Line: 2, Column: 26},
 										},
 									},
 									Right: &ast.IntegerExpression{
-										Value: big.NewInt(5),
-										Base:  10,
+										PositiveLiteral: "5",
+										Value:           big.NewInt(5),
+										Base:            10,
 										Range: ast.Range{
 											StartPos: ast.Position{Offset: 32, Line: 2, Column: 31},
 											EndPos:   ast.Position{Offset: 32, Line: 2, Column: 31},
@@ -5491,8 +5688,9 @@ func TestParseBitwiseExpression(t *testing.T) {
 									},
 								},
 								Right: &ast.IntegerExpression{
-									Value: big.NewInt(6),
-									Base:  10,
+									PositiveLiteral: "6",
+									Value:           big.NewInt(6),
+									Base:            10,
 									Range: ast.Range{
 										StartPos: ast.Position{Offset: 37, Line: 2, Column: 36},
 										EndPos:   ast.Position{Offset: 37, Line: 2, Column: 36},

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,8 +21,9 @@ package cadence
 import (
 	"testing"
 
-	"github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestType_ID(t *testing.T) {
@@ -79,14 +80,13 @@ func TestType_ID(t *testing.T) {
 		{BlockType{}, "Block"},
 		{MetaType{}, "Type"},
 		{
-			CapabilityType{}.
-				WithID("Capability"),
+			CapabilityType{},
 			"Capability",
 		},
 		{
 			CapabilityType{
 				BorrowType: IntType{},
-			}.WithID("Capability<Int>"),
+			},
 			"Capability<Int>",
 		},
 		{

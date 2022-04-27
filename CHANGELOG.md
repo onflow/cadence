@@ -1,3 +1,206 @@
+# v0.19.1 (2021-09-13)
+
+## 🛠 Improvements
+
+- Remove obsolete script/transaction parameter check (#1114) @SupunS 
+
+## 🐞 Bug Fixes
+
+- Fix export errors by properly wrapping in runtime errors (#1139) @SupunS
+
+# v0.19.0 (2021-09-13)
+
+## 💥 Breaking Changes
+
+- Fix export of values (#1067) @turbolent
+- Add encoding/decoding for array value static type (#1035) @SupunS
+
+## ⭐ Features
+
+- Add public account contracts (#1090) @SupunS
+- Add `names` field to auth account contracts (#1089) @SupunS
+- Report a hint when casting to a same type as the expected type (#1056) @SupunS
+- Add encoding/decoding for array value static type (#1035) @SupunS
+- Add walker for values (#1037) @turbolent
+- Add encoding/decoding dictionary static type info (#1036) @SupunS
+- Store static type in array/dictionary values (#1041) @SupunS
+- Infer static-type from imported array/dictionary values (#1052) @SupunS
+
+## 🛠 Improvements
+
+- Add type inferring for func-args when there are no generics (#1033) @SupunS
+- Add container static types (#1125) @SupunS
+- Add container mutation check for arrays and dictionaries (#1103) @SupunS
+- flow-go sync tweaks (#1104) @janezpodhostnik
+- Return a dedicated error when decoding fails due to an unsupported CBOR tag (#1064) @turbolent
+- Remove obsolete fields (#1053) @turbolent
+- Include and consider static types of arrays and dictionaries (#1043) @turbolent
+- Infer array and dictionary static types from expected type during import (#1038) @turbolent
+- Finish storage format changes (#1042) @turbolent
+- Add static types to array values and dictionary values (#1034) @turbolent
+- FlowKit API Update (#1028) @sideninja
+- Produce valid Cadence string literals when formatting strings (#1023) @turbolent
+- Directly declare base values in activation without interpreter (#1022) @turbolent
+- Reuse base activation across all interpreters (#1018) @SupunS
+- Extend the source compatibility suite (#980) @turbolent
+- Update the language server to the latest Cadence version (#1015) @turbolent
+- Convert the maps in the type file to simple arrays (#1086) @jwinkler2083233
+- Update Security to point to website (#1074) @jkan2
+- Gracefully handle the optional-chaining invocation on non-optional member (#1071) @turbolent
+- Add static type sanity check for imported values (#1048) @SupunS
+- Add tests for decoding from old format and encoding in new format (#1046) @SupunS
+- Add more tests for imported array/dictionary value type conformance (#1045) @SupunS
+- Add encoder/decoder v5 (#1039) @SupunS
+- Remove additional check for builtin values during import resolving (#1026) @SupunS
+- Update NPM packages (#1011) @turbolent
+
+## 🐞 Bug Fixes
+
+- Cointainer variances fixes (#1087) @turbolent
+- Check member reads and writes (#1085) @turbolent
+- Include receiver in function type and check it in invocations  (#1084) @turbolent
+- Fix race condition in hash and sign algorithm values (#1096) @SupunS
+- Check run-time type of the argument of getCapability calls (#1083) @turbolent
+- Fix interpretation of optional binding with second value (#1082) @turbolent
+- Check resource construction (#1081) @turbolent
+- Fix address conversion (#1080) @turbolent
+- Gracefully handle errors during transaction and script argument validation (#1070) @turbolent
+- Fix map keys (#1069) @turbolent
+- Fix import of values (#1068) @turbolent
+- Fix export of values (#1067) @turbolent
+- Fix get and revoke key functions (#1065) @turbolent
+- Finish storage format changes (#1042) @turbolent
+- Fix close-brace for struct definition docs in docgen tool (#1019) @SupunS
+- Don't check missing program (#1013) @turbolent
+
+## 📖 Documentation
+
+- Give Resources their own page. (#1130) @10thfloor
+- Fix and improve documentation (#1122) @turbolent
+- Add presentation "Programming Language Implementation / Cadence Implementation" (#990) @turbolent
+- Remove Crypto contract status callouts (#1012) @turbolent
+- Improve the documentation for dictionaries and arrays (#1020) @turbolent
+- Fix operator documentation (#1017) @turbolent
+- Updating broken links in ReadMe (#1097) @kimcodeashian
+
+# v0.18.0 (2021-06-15)
+
+## 💥 Breaking Changes
+
+- Add HashAlgorithm hash and hashWithTag functions (#1002) @turbolent
+- Update the Crypto contract (#999) @turbolent
+
+## ⭐ Features
+
+- Add HashAlgorithm hash and hashWithTag functions (#1002) @turbolent
+- Add npm package for the docgen-tool (#1008) @SupunS
+- Add wasm generation for docgen tool (#1005) @SupunS
+
+## 🛠 Improvements
+
+- Make `PublicKey` type importable (#995) @SupunS
+- Update the Crypto contract (#999) @turbolent
+- Add dynamic type importability check for arguments (#1007) @SupunS
+- Language Server NPM package: Add support for Node environment, add tests (#1006) @turbolent
+- Embed markdown templates to docgen tool at compile time (#1004) @SupunS
+- No need for checking resource loss when function definitely halted (#1000) @turbolent
+- Remove the result declaration kind (#1001) @turbolent
+- Update for changes in Flowkit API (#962) @sideninja
+- Add Supun as code owner (#997) @turbolent
+- Disable the wasmtime VM for now (#991) @turbolent
+
+## 🐞 Bug Fixes
+
+- Add dynamic type importability check for arguments (#1007) @SupunS
+- Fix dictionary deferred owner (#992) @turbolent
+- Fix AST walk for transaction declaration (#998) @turbolent
+
+## 📖 Documentation
+
+- Add documentation for the Cadence documentation generator (#1003) @SupunS
+
+
+# v0.17.0 (2021-06-08)
+
+## ⭐ Features
+
+- Add deferred decoding support for dictionary values (#925) @SupunS
+- Track origin's occurrences (#907) @turbolent
+- Declare more ranges (#882) @turbolent
+- Language Server: Suggest completion items for declaration ranges (#881) @turbolent
+- Provide code action to declare field and function (#961) @turbolent
+- Provide code action to declare variable/constant (#946) @turbolent
+- Add code action to implement missing members (#942) @turbolent
+- Provide code actions / quick fixes (#941) @turbolent
+- Provide documentation for range completion items (#923) @turbolent
+- Record docstrings in variables  (#922) @turbolent
+- Add a `String.utf8` field (#954) @turbolent
+- Provide signature help (#911) @turbolent
+- Add a String constructor function and a String.encodeHex function (#953) @turbolent
+- Record position information for function invocations (#910) @turbolent
+- Add function docs formatting support (#938) @SupunS
+- Add Cadence documentation generator (#927) @SupunS
+- Rename all occurrences of a symbol in the document (#909) @turbolent
+- Enable DocumentSymbol capability for Outline (#662) @MaxStalker
+- Add an AST walking function (#939) @turbolent
+- Add HexToAddress utility function, add tests for address functions (#932) @turbolent
+- Highlight all occurrences of a symbol in the document (#908) @turbolent
+
+## 🛠 Improvements
+
+- Add deferred decoding support for dictionary values (#925) @SupunS
+- Improve type inference for binary expressions (#957) @turbolent
+- Update language server to Cadence v0.16.0 (#926) @turbolent
+- [Doc-Gen Tool] Add documentation generation support for event declarations (#985) @SupunS
+- [Doc-Gen Tool] Group declarations based on their kind (#984) @SupunS
+- Check 'importability' instead of 'storability' for transaction arguments (#983) @SupunS
+- Allow native composite types to be passed as script arguments (#973) @SupunS
+- Validate UTF-8 compatibility in string value constructor (#972) @SupunS
+- Cache type ID for composite types (#950) @SupunS
+- [Optimization] Make dynamic types singleton for simple types (#963) @SupunS
+- Include docstrings in value and type variables, improve hover markup (#945) @turbolent
+- Always check arguments and record the argument types in the elaboration (#951) @turbolent
+- Optimize qualified identifier creation (#948) @SupunS
+- Optimize `Type` function declaration (#949) @turbolent
+- [Optimization] Re-use converter functions across interpreters (#947) @SupunS
+- Update and extend the source compatibility suite (#977) @turbolent
+- Update to Go 1.16.3's libexec/misc/wasm/wasm_exec.js (#929) @turbolent
+
+## 🐞 Bug Fixes
+
+- Track origin's occurrences (#907) @turbolent
+- Bring back fmt.Stringer implementation for interpreter.Value (#969) @turbolent
+- Fix the initialization order in the interpreter (#958) @turbolent
+- Fix parsing of negative fractional fixed-point strings (#935) @mikeylemmon
+- capture computation used for all transactions (#895) @ramtinms
+- Only wrap a type in an optional if it is not nil (#937) @turbolent
+
+## 🧪 Tests
+
+- Add test case for invalid utf8 string import (#968) @SupunS
+- Test contract member initialization (#931) @turbolent
+
+## 📖 Documentation
+
+- Update account docs to not to pass PublicKey as an argument (#967) @SupunS
+- Improve the crypto doc (#960) @tarakby
+
+## 🏗 Chore
+
+- Use actions/setup-go@v2 to speed up CI by ~10 secs and specify Go 1.15.x (#971) @fxamacker
+- Remove italics from auto flow-go PR (#988) @janezpodhostnik
+- Improve sync flow_go action (#987) @janezpodhostnik
+- Fix for auto-update flow-go: no fail on tidy (#986) @janezpodhostnik
+- Auto update flow-go github action (#981) @janezpodhostnik
+- Remove coverage of empty functions from report (#944) @turbolent
+- Improve coverage calculation (#933) @turbolent
+
+# v0.16.1 (2021-05-23)
+
+## 🐞 Bug Fixes
+
+- Only wrap a type in an optional if it is not nil (#936) @SupunS 
+
 # v0.16.0 (2021-04-21)
 
 ## 💥 Breaking Changes
@@ -896,7 +1099,7 @@ For `AuthAccount`:
   - `monaco-languageclient-cadence`: Language Server Protocol client for the the Monaco editor
   - `cadence-parser`: The Cadence parser
 
-  In addition, there are also examples for the [language server](https://github.com/onflow/cadence/tree/master/npm-packages/cadence-language-server-demo) and the [parser](https://github.com/onflow/cadence/tree/master/npm-packages/cadence-parser-demo) that demonstrate the use of the packages.
+  In addition, there is also [an example for the language server](https://github.com/onflow/cadence/tree/master/npm-packages/cadence-language-server-demo), and an [AST exploration tool](https://github.com/onflow/cadence/tree/master/tools/astexplorer) that demonstrate the use of the parser package.
 
 - Add a command to the language server that allows getting the entry point (transaction or script) parameters (#406)
 

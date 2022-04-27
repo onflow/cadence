@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -67,6 +67,9 @@ func parseDeclaration(p *parser, docString string) ast.Declaration {
 
 		switch p.current.Type {
 		case lexer.TokenPragma:
+			if access != ast.AccessNotSpecified {
+				panic(fmt.Errorf("invalid access modifier for pragma"))
+			}
 			return parsePragmaDeclaration(p)
 		case lexer.TokenIdentifier:
 			switch p.current.Value {
@@ -93,7 +96,7 @@ func parseDeclaration(p *parser, docString string) ast.Declaration {
 
 			case keywordPriv, keywordPub, keywordAccess:
 				if access != ast.AccessNotSpecified {
-					panic(fmt.Errorf("unexpected access modifier"))
+					panic(fmt.Errorf("invalid second access modifier"))
 				}
 				pos := p.current.StartPos
 				accessPos = &pos
@@ -596,15 +599,20 @@ func parseHexadecimalLocation(literal string) common.AddressLocation {
 		length++
 	}
 
-	address := make([]byte, hex.DecodedLen(length))
-	_, err := hex.Decode(address, bytes)
+	rawAddress := make([]byte, hex.DecodedLen(length))
+	_, err := hex.Decode(rawAddress, bytes)
 	if err != nil {
 		// unreachable, hex literal should always be valid
 		panic(err)
 	}
 
+	address, err := common.BytesToAddress(rawAddress)
+	if err != nil {
+		panic(err)
+	}
+
 	return common.AddressLocation{
-		Address: common.BytesToAddress(address),
+		Address: address,
 	}
 }
 

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,15 +22,16 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
-func TestScriptParameterTypeValidation(t *testing.T) {
+func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 
 	t.Parallel()
 
@@ -74,13 +75,17 @@ func TestScriptParameterTypeValidation(t *testing.T) {
 		encodedArg, err = json.Encode(arg)
 		require.NoError(t, err)
 
-		rt := NewInterpreterRuntime()
+		rt := newTestInterpreterRuntime()
+
+		storage := newTestLedger(nil, nil)
 
 		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
 			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return json.Decode(b)
 			},
 		}
+		addPublicKeyValidation(runtimeInterface, nil)
 
 		_, err = rt.ExecuteScript(
 			Script{
@@ -281,7 +286,7 @@ func TestScriptParameterTypeValidation(t *testing.T) {
         `
 
 		err := executeScript(t, script, cadence.NewOptional(nil))
-		expectNonImportableError(t, err)
+		assert.NoError(t, err)
 	})
 
 	t.Run("Non-Importable Dictionary", func(t *testing.T) {
@@ -365,9 +370,6 @@ func TestScriptParameterTypeValidation(t *testing.T) {
 								cadence.NewUInt8(0),
 							},
 						).WithType(SignAlgoType),
-
-						// isValid
-						cadence.NewBool(false),
 					},
 				).WithType(PublicKeyType)
 
@@ -486,7 +488,7 @@ func TestScriptParameterTypeValidation(t *testing.T) {
 	})
 }
 
-func TestTransactionParameterTypeValidation(t *testing.T) {
+func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 
 	t.Parallel()
 
@@ -538,13 +540,17 @@ func TestTransactionParameterTypeValidation(t *testing.T) {
 		encodedArg, err = json.Encode(arg)
 		require.NoError(t, err)
 
-		rt := NewInterpreterRuntime()
+		rt := newTestInterpreterRuntime()
+
+		storage := newTestLedger(nil, nil)
 
 		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
 			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return json.Decode(b)
 			},
 		}
+		addPublicKeyValidation(runtimeInterface, nil)
 
 		return rt.ExecuteTransaction(
 			Script{
@@ -757,12 +763,7 @@ func TestTransactionParameterTypeValidation(t *testing.T) {
         `
 
 		err := executeTransaction(t, script, cadence.NewOptional(nil))
-
-		expectCheckerErrors(
-			t,
-			err,
-			&sema.InvalidNonImportableTransactionParameterTypeError{},
-		)
+		assert.NoError(t, err)
 	})
 
 	t.Run("Non-Importable Dictionary", func(t *testing.T) {
@@ -846,9 +847,6 @@ func TestTransactionParameterTypeValidation(t *testing.T) {
 								cadence.NewUInt8(0),
 							},
 						).WithType(SignAlgoType),
-
-						// isValid
-						cadence.NewBool(false),
 					},
 				).WithType(PublicKeyType)
 

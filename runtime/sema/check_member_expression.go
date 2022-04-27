@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -92,6 +92,7 @@ func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) 
 			return &OptionalType{Type: memberType}
 		}
 	}
+
 	return memberType
 }
 
@@ -131,7 +132,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 		return accessedType, member, isOptional
 	}
 
-	// If the the access is to a member of `self` and a resource,
+	// If the access is to a member of `self` and a resource,
 	// its use must be recorded/checked, so that it isn't used after it was invalidated
 
 	accessedSelfMember := checker.accessedSelfMember(expression)
@@ -162,6 +163,24 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 		}
 		targetRange := ast.NewRangeFromPositioned(expression.Expression)
 		member = resolver.Resolve(identifier, targetRange, checker.report)
+		if resolver.Mutating {
+			if targetExpression, ok := accessedExpression.(*ast.MemberExpression); ok {
+				// visitMember caches its result, so visiting the target expression again,
+				// after it had been previously visited to get the resolver,
+				// performs no computation
+				_, subMember, _ := checker.visitMember(targetExpression)
+				if subMember != nil && !checker.isMutatableMember(subMember) {
+					checker.report(
+						&ExternalMutationError{
+							Name:            subMember.Identifier.Identifier,
+							DeclarationKind: subMember.DeclarationKind,
+							Range:           ast.NewRangeFromPositioned(targetRange),
+							ContainerType:   subMember.ContainerType,
+						},
+					)
+				}
+			}
+		}
 	}
 
 	// Get the member from the accessed value based
@@ -309,6 +328,13 @@ func (checker *Checker) isReadableMember(member *Member) bool {
 func (checker *Checker) isWriteableMember(member *Member) bool {
 	return checker.isWriteableAccess(member.Access) ||
 		checker.containerTypes[member.ContainerType]
+}
+
+// isMutatableMember returns true if the given member can be mutated
+// in the current location of the checker. Currently equivalent to
+// isWriteableMember above, but separate in case this changes
+func (checker *Checker) isMutatableMember(member *Member) bool {
+	return checker.isWriteableMember(member)
 }
 
 // containingContractKindedType returns the containing contract-kinded type

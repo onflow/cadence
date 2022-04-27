@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -86,11 +86,13 @@ func (i *FlowIntegration) getAccountAddress(name string) (flow.Address, error) {
 		return flow.Address{}, err
 	}
 
-	code := makeManagerCode(scriptGetAddress, serviceAccount.Address().String())
-	args := []cadence.Value{
-		cadence.NewString(name),
+	cadenceName, err := cadence.NewString(name)
+	if err != nil {
+		return flow.Address{}, err
 	}
+	args := []cadence.Value{cadenceName}
 
+	code := makeManagerCode(scriptGetAddress, serviceAccount.Address().String())
 	result, err := i.sharedServices.Scripts.Execute(code, args, "", "")
 	if err != nil {
 		return flow.Address{}, err
