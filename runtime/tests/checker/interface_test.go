@@ -2391,6 +2391,40 @@ func TestCheckInterfaceDefaultImplementationOverriden(t *testing.T) {
 	})
 }
 
+func TestSpecialFunctionDefaultImplementationUsage(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("special", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          struct interface IA {
+			  var x: Int
+              init(){
+				self.x = 1
+			  }
+          }
+
+          struct Test: IA {
+              var x: Int
+
+              init() {
+                  self.x = 0
+              }
+          }
+
+         
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.SpecialFunctionDefaultImplementationError{}, errs[0])
+	})
+
+}
+
 func TestCheckInvalidInterfaceDefaultImplementationConcreteTypeUsage(t *testing.T) {
 
 	t.Parallel()
@@ -2416,41 +2450,6 @@ func TestCheckInvalidInterfaceDefaultImplementationConcreteTypeUsage(t *testing.
 
           fun test(): Int {
               return Test().test()
-          }
-        `)
-
-		errs := ExpectCheckerErrors(t, err, 1)
-
-		require.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
-	})
-
-	t.Run("type requirement", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-          contract interface IA {
-
-              struct X {
-                  fun test(): Int {
-                      return self.x
-                  }
-              }
-          }
-
-          contract Test: IA {
-
-              struct X {
-                  let x: Int
-
-                  init() {
-                      self.x = 0
-                  }
-              }
-          }
-
-          fun test(): Int {
-              return Test.X().test()
           }
         `)
 
