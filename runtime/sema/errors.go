@@ -1059,6 +1059,29 @@ func (e *MultipleInterfaceDefaultImplementationsError) EndPosition() ast.Positio
 
 func (*MultipleInterfaceDefaultImplementationsError) isSemanticError() {}
 
+//SpecialFunctionDefaultImplementationError
+//
+type SpecialFunctionDefaultImplementationError struct {
+	Container  *ast.InterfaceDeclaration
+	Identifier *ast.Identifier
+}
+
+func (e *SpecialFunctionDefaultImplementationError) Error() string {
+	return fmt.Sprintf(
+		"%s may not be defined as a default function on interface %s",
+		e.Identifier.Identifier,
+		e.Container.Identifier.Identifier,
+	)
+}
+
+func (e *SpecialFunctionDefaultImplementationError) StartPosition() ast.Position {
+	return e.Identifier.StartPosition()
+}
+
+func (e *SpecialFunctionDefaultImplementationError) EndPosition() ast.Position {
+	return e.Identifier.EndPosition()
+}
+
 // DefaultFunctionConflictError
 //
 type DefaultFunctionConflictError struct {
