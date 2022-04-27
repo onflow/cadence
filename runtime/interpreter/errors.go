@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -207,15 +207,14 @@ func (e DivisionByZeroError) Error() string {
 	return "division by zero"
 }
 
-// DestroyedCompositeError
+// InvalidatedResourceError
 
-type DestroyedCompositeError struct {
-	CompositeKind common.CompositeKind
+type InvalidatedResourceError struct {
 	LocationRange
 }
 
-func (e DestroyedCompositeError) Error() string {
-	return fmt.Sprintf("%s is destroyed and cannot be accessed anymore", e.CompositeKind.Name())
+func (e InvalidatedResourceError) Error() string {
+	return "resource is invalidated and cannot be used anymore"
 }
 
 // ForceAssignmentToNonNilResourceError
@@ -238,6 +237,20 @@ func (e ForceNilError) Error() string {
 	return "unexpectedly found nil while forcing an Optional value"
 }
 
+// ForceCastTypeMismatchError
+//
+type ForceCastTypeMismatchError struct {
+	ExpectedType sema.Type
+	LocationRange
+}
+
+func (e ForceCastTypeMismatchError) Error() string {
+	return fmt.Sprintf(
+		"unexpectedly found non-`%s` while force-casting value",
+		e.ExpectedType.QualifiedString(),
+	)
+}
+
 // TypeMismatchError
 //
 type TypeMismatchError struct {
@@ -247,7 +260,7 @@ type TypeMismatchError struct {
 
 func (e TypeMismatchError) Error() string {
 	return fmt.Sprintf(
-		"unexpectedly found non-`%s` while force-casting value",
+		"type mismatch: expected %s",
 		e.ExpectedType.QualifiedString(),
 	)
 }
@@ -336,6 +349,34 @@ func (e ArrayIndexOutOfBoundsError) Error() string {
 	)
 }
 
+// ArraySliceIndicesError
+//
+type ArraySliceIndicesError struct {
+	FromIndex int
+	UpToIndex int
+	Size      int
+	LocationRange
+}
+
+func (e ArraySliceIndicesError) Error() string {
+	return fmt.Sprintf(
+		"slice indices [%d:%d] are out of bounds (size %d)",
+		e.FromIndex, e.UpToIndex, e.Size,
+	)
+}
+
+// InvalidSliceIndexError is returned when a slice index is invalid, such as fromIndex > upToIndex
+// This error can be returned even when fromIndex and upToIndex are both within bounds.
+type InvalidSliceIndexError struct {
+	FromIndex int
+	UpToIndex int
+	LocationRange
+}
+
+func (e InvalidSliceIndexError) Error() string {
+	return fmt.Sprintf("invalid slice index: %d > %d", e.FromIndex, e.UpToIndex)
+}
+
 // StringIndexOutOfBoundsError
 //
 type StringIndexOutOfBoundsError struct {
@@ -349,6 +390,22 @@ func (e StringIndexOutOfBoundsError) Error() string {
 		"string index out of bounds: %d, but length is %d",
 		e.Index,
 		e.Length,
+	)
+}
+
+// StringSliceIndicesError
+//
+type StringSliceIndicesError struct {
+	FromIndex int
+	UpToIndex int
+	Length    int
+	LocationRange
+}
+
+func (e StringSliceIndicesError) Error() string {
+	return fmt.Sprintf(
+		"slice indices [%d:%d] are out of bounds (length %d)",
+		e.FromIndex, e.UpToIndex, e.Length,
 	)
 }
 
@@ -382,21 +439,6 @@ func (e TypeLoadingError) Error() string {
 	return fmt.Sprintf("failed to load type: %s", e.TypeID)
 }
 
-// EncodingUnsupportedValueError
-//
-type EncodingUnsupportedValueError struct {
-	Value Value
-	Path  []string
-}
-
-func (e EncodingUnsupportedValueError) Error() string {
-	return fmt.Sprintf(
-		"encoding unsupported value to path [%s]: %[2]T, %[2]v",
-		strings.Join(e.Path, ","),
-		e.Value,
-	)
-}
-
 // MissingMemberValueError
 
 type MissingMemberValueError struct {
@@ -409,7 +451,7 @@ func (e MissingMemberValueError) Error() string {
 }
 
 // InvocationArgumentTypeError
-
+//
 type InvocationArgumentTypeError struct {
 	Index         int
 	ParameterType sema.Type
@@ -424,8 +466,24 @@ func (e InvocationArgumentTypeError) Error() string {
 	)
 }
 
-// ValueTransferTypeError
+// InvocationReceiverTypeError
+//
+type InvocationReceiverTypeError struct {
+	SelfType     sema.Type
+	ReceiverType sema.Type
+	LocationRange
+}
 
+func (e InvocationReceiverTypeError) Error() string {
+	return fmt.Sprintf(
+		"invalid invocation on %s: expected %s",
+		e.SelfType.QualifiedString(),
+		e.ReceiverType.QualifiedString(),
+	)
+}
+
+// ValueTransferTypeError
+//
 type ValueTransferTypeError struct {
 	TargetType sema.Type
 	LocationRange
@@ -436,4 +494,115 @@ func (e ValueTransferTypeError) Error() string {
 		"invalid transfer of value: expected %s",
 		e.TargetType.QualifiedString(),
 	)
+}
+
+// ResourceConstructionError
+//
+type ResourceConstructionError struct {
+	CompositeType *sema.CompositeType
+	LocationRange
+}
+
+func (e ResourceConstructionError) Error() string {
+	return fmt.Sprintf(
+		"cannot create resource %s: outside of declaring location %s",
+		e.CompositeType.QualifiedString(),
+		e.CompositeType.Location.String(),
+	)
+}
+
+// ContainerMutationError
+//
+type ContainerMutationError struct {
+	ExpectedType sema.Type
+	ActualType   sema.Type
+	LocationRange
+}
+
+func (e ContainerMutationError) Error() string {
+	return fmt.Sprintf(
+		"invalid container update: expected a subtype of '%s', found '%s'",
+		e.ExpectedType.QualifiedString(),
+		e.ActualType.QualifiedString(),
+	)
+}
+
+// NonStorableValueError
+//
+type NonStorableValueError struct {
+	Value Value
+}
+
+func (e NonStorableValueError) Error() string {
+	return fmt.Sprintf(
+		"cannot store non-storable value: %s",
+		e.Value,
+	)
+}
+
+// NonStorableStaticTypeError
+//
+type NonStorableStaticTypeError struct {
+	Type StaticType
+}
+
+func (e NonStorableStaticTypeError) Error() string {
+	return fmt.Sprintf(
+		"cannot store non-storable static type: %s",
+		e.Type,
+	)
+}
+
+// InterfaceMissingLocation is reported during interface lookup,
+// if an interface is looked up without a location
+type InterfaceMissingLocationError struct {
+	QualifiedIdentifier string
+}
+
+func (e InterfaceMissingLocationError) Error() string {
+	return fmt.Sprintf(
+		"tried to look up interface %s without a location",
+		e.QualifiedIdentifier,
+	)
+}
+
+// InvalidOperandsError
+//
+type InvalidOperandsError struct {
+	Operation    ast.Operation
+	FunctionName string
+	LeftType     StaticType
+	RightType    StaticType
+	LocationRange
+}
+
+func (e InvalidOperandsError) Error() string {
+	var op string
+	if e.Operation == ast.OperationUnknown {
+		op = e.FunctionName
+	} else {
+		op = e.Operation.Symbol()
+	}
+
+	return fmt.Sprintf(
+		"cannot apply operation %s to types: `%s`, `%s`",
+		op,
+		e.LeftType.String(),
+		e.RightType.String(),
+	)
+}
+
+// InvalidPublicKeyError is reported during PublicKey creation, if the PublicKey is invalid.
+type InvalidPublicKeyError struct {
+	PublicKey *ArrayValue
+	Err       error
+	LocationRange
+}
+
+func (e InvalidPublicKeyError) Error() string {
+	return fmt.Sprintf("invalid public key: %s", e.PublicKey)
+}
+
+func (e InvalidPublicKeyError) Unwrap() error {
+	return e.Err
 }

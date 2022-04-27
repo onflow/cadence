@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
-	"github.com/onflow/cadence/runtime/tests/utils"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestInterpretMetaTypeEquality(t *testing.T) {
@@ -43,7 +43,9 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
            let result = Type<Int>() == Type<Int>()
         `)
 
-		assert.Equal(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.BoolValue(true),
 			inter.Globals["result"].GetValue(),
 		)
@@ -57,7 +59,9 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
            let result = Type<Int>() == Type<String>()
         `)
 
-		assert.Equal(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.BoolValue(false),
 			inter.Globals["result"].GetValue(),
 		)
@@ -71,7 +75,9 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
            let result = Type<Int>() == Type<Int?>()
         `)
 
-		assert.Equal(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.BoolValue(false),
 			inter.Globals["result"].GetValue(),
 		)
@@ -85,7 +91,9 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
            let result = Type<&Int>() == Type<&Int>()
         `)
 
-		assert.Equal(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.BoolValue(true),
 			inter.Globals["result"].GetValue(),
 		)
@@ -99,7 +107,9 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
            let result = Type<&Int>() == Type<&String>()
         `)
 
-		assert.Equal(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.BoolValue(false),
 			inter.Globals["result"].GetValue(),
 		)
@@ -113,8 +123,10 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			{
 				Name: "unknownType",
 				Type: sema.MetaType,
-				Value: interpreter.TypeValue{
-					Type: nil,
+				ValueFactory: func(i *interpreter.Interpreter) interpreter.Value {
+					return interpreter.TypeValue{
+						Type: nil,
+					}
 				},
 				Kind: common.DeclarationKindConstant,
 			},
@@ -138,7 +150,9 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.BoolValue(false),
 			inter.Globals["result"].GetValue(),
 		)
@@ -152,16 +166,20 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			{
 				Name: "unknownType1",
 				Type: sema.MetaType,
-				Value: interpreter.TypeValue{
-					Type: nil,
+				ValueFactory: func(i *interpreter.Interpreter) interpreter.Value {
+					return interpreter.TypeValue{
+						Type: nil,
+					}
 				},
 				Kind: common.DeclarationKindConstant,
 			},
 			{
 				Name: "unknownType2",
 				Type: sema.MetaType,
-				Value: interpreter.TypeValue{
-					Type: nil,
+				ValueFactory: func(i *interpreter.Interpreter) interpreter.Value {
+					return interpreter.TypeValue{
+						Type: nil,
+					}
 				},
 				Kind: common.DeclarationKindConstant,
 			},
@@ -185,7 +203,9 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.BoolValue(false),
 			inter.Globals["result"].GetValue(),
 		)
@@ -205,7 +225,9 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
           let identifier = type.identifier
         `)
 
-		assert.Equal(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.NewStringValue("[Int]"),
 			inter.Globals["identifier"].GetValue(),
 		)
@@ -222,7 +244,9 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
           let identifier = type.identifier
         `)
 
-		assert.Equal(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.NewStringValue("S.test.S"),
 			inter.Globals["identifier"].GetValue(),
 		)
@@ -236,8 +260,10 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 			{
 				Name: "unknownType",
 				Type: sema.MetaType,
-				Value: interpreter.TypeValue{
-					Type: nil,
+				ValueFactory: func(i *interpreter.Interpreter) interpreter.Value {
+					return interpreter.TypeValue{
+						Type: nil,
+					}
 				},
 				Kind: common.DeclarationKindConstant,
 			},
@@ -261,7 +287,9 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.NewStringValue(""),
 			inter.Globals["identifier"].GetValue(),
 		)
@@ -361,8 +389,151 @@ func TestInterpretIsInstance(t *testing.T) {
 		{
 			Name: "unknownType",
 			Type: sema.MetaType,
-			Value: interpreter.TypeValue{
-				Type: nil,
+			ValueFactory: func(i *interpreter.Interpreter) interpreter.Value {
+				return interpreter.TypeValue{
+					Type: nil,
+				}
+			},
+			Kind: common.DeclarationKindConstant,
+		},
+	}
+
+	semaValueDeclarations := valueDeclarations.ToSemaValueDeclarations()
+	interpreterValueDeclarations := valueDeclarations.ToInterpreterValueDeclarations()
+
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			inter, err := parseCheckAndInterpretWithOptions(t, testCase.code, ParseCheckAndInterpretOptions{
+				CheckerOptions: []sema.Option{
+					sema.WithPredeclaredValues(semaValueDeclarations),
+				},
+				Options: []interpreter.Option{
+					interpreter.WithPredeclaredValues(interpreterValueDeclarations),
+				},
+			})
+			require.NoError(t, err)
+
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.BoolValue(testCase.result),
+				inter.Globals["result"].GetValue(),
+			)
+		})
+	}
+}
+
+func TestInterpretIsSubtype(t *testing.T) {
+
+	t.Parallel()
+
+	cases := []struct {
+		name   string
+		code   string
+		result bool
+	}{
+		{
+			name: "String is a subtype of String",
+			code: `
+              let result = Type<String>().isSubtype(of: Type<String>())
+            `,
+			result: true,
+		},
+		{
+			name: "Int is a subtype of Int",
+			code: `
+              let result = Type<Int>().isSubtype(of: Type<Int>())
+            `,
+			result: true,
+		},
+		{
+			name: "Int is a subtype of Int?",
+			code: `
+              let result = Type<Int>().isSubtype(of: Type<Int?>())
+            `,
+			result: true,
+		},
+		{
+			name: "Int? is a subtype of Int",
+			code: `
+              let result = Type<Int?>().isSubtype(of: Type<Int>())
+            `,
+			result: false,
+		},
+		{
+			name: "resource is a subtype of AnyResource",
+			code: `
+              resource R {}
+              let result = Type<@R>().isSubtype(of: Type<@AnyResource>())
+            `,
+			result: true,
+		},
+		{
+			name: "struct is a subtype of AnyStruct",
+			code: `
+              struct S {}
+              let result = Type<S>().isSubtype(of: Type<AnyStruct>())
+            `,
+			result: true,
+		},
+		{
+			name: "Int is not a subtype of resource",
+			code: `
+              resource R {}
+              let result = Type<Int>().isSubtype(of: Type<@R>())
+            `,
+			result: false,
+		},
+		{
+			name: "resource is not a subtype of String",
+			code: `
+			  resource R {}
+			  let result = Type<@R>().isSubtype(of: Type<String>())
+            `,
+			result: false,
+		},
+		{
+			name: "resource R is not a subtype of resource S",
+			code: `
+              resource R {}
+              resource S {}
+              let result = Type<@R>().isSubtype(of: Type<@S>())
+            `,
+			result: false,
+		},
+		{
+			name: "resource R is not a subtype of resource S",
+			code: `
+              resource R {}
+              resource S {}
+              let result = Type<@R>().isSubtype(of: Type<@S>())
+            `,
+			result: false,
+		},
+		{
+			name: "Int is not a subtype of an unknown type",
+			code: `
+              let result = Type<Int>().isSubtype(of: unknownType)
+            `,
+			result: false,
+		},
+		{
+			name: "unknown type is not a subtype of Int",
+			code: `
+              let result = unknownType.isSubtype(of: Type<Int>())
+            `,
+			result: false,
+		},
+	}
+
+	valueDeclarations := stdlib.StandardLibraryValues{
+		{
+			Name: "unknownType",
+			Type: sema.MetaType,
+			ValueFactory: func(_ *interpreter.Interpreter) interpreter.Value {
+				return interpreter.TypeValue{
+					Type: nil,
+				}
 			},
 			Kind: common.DeclarationKindConstant,
 		},
@@ -395,6 +566,12 @@ func TestInterpretGetType(t *testing.T) {
 
 	t.Parallel()
 
+	storageAddress := common.MustBytesToAddress([]byte{0x42})
+	storagePath := interpreter.PathValue{
+		Domain:     common.PathDomainStorage,
+		Identifier: "test",
+	}
+
 	cases := []struct {
 		name   string
 		code   string
@@ -403,7 +580,9 @@ func TestInterpretGetType(t *testing.T) {
 		{
 			name: "String",
 			code: `
-              let result = "abc".getType()
+              fun test(): Type {
+                  return "abc".getType()
+              }
             `,
 			result: interpreter.TypeValue{
 				Type: interpreter.PrimitiveStaticTypeString,
@@ -412,7 +591,9 @@ func TestInterpretGetType(t *testing.T) {
 		{
 			name: "Int",
 			code: `
-              let result = (1).getType()
+              fun test(): Type {
+                  return (1).getType()
+              }
             `,
 			result: interpreter.TypeValue{
 				Type: interpreter.PrimitiveStaticTypeInt,
@@ -423,14 +604,15 @@ func TestInterpretGetType(t *testing.T) {
 			code: `
               resource R {}
 
-              let r <- create R()
-              let result = r.getType()
+              fun test(): Type {
+                  let r <- create R()
+                  let res = r.getType()
+                  destroy r
+                  return res
+              }
             `,
 			result: interpreter.TypeValue{
-				Type: interpreter.CompositeStaticType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "R",
-				},
+				Type: interpreter.NewCompositeStaticType(TestLocation, "R"),
 			},
 		},
 		{
@@ -439,16 +621,18 @@ func TestInterpretGetType(t *testing.T) {
 			// i.e. EphemeralReferenceValue.StaticType is tested
 			name: "optional ephemeral reference",
 			code: `
-              let value = 1
-              let ref = &value as auth &Int
-              let optRef: &Int? = ref
-              let result = optRef.getType()
+              fun test(): Type {
+                  let value = 1
+                  let ref = &value as auth &Int
+                  let optRef: &Int? = ref
+                  return optRef.getType()
+              }
             `,
 			result: interpreter.TypeValue{
 				Type: interpreter.OptionalStaticType{
 					Type: interpreter.ReferenceStaticType{
-						Authorized: true,
-						Type:       interpreter.PrimitiveStaticTypeInt,
+						Authorized:   true,
+						BorrowedType: interpreter.PrimitiveStaticTypeInt,
 					},
 				},
 			},
@@ -459,15 +643,17 @@ func TestInterpretGetType(t *testing.T) {
 			// i.e. StorageReferenceValue.StaticType is tested
 			name: "optional storage reference",
 			code: `
-              let ref = getStorageReference()
-              let optRef: &Int? = ref
-              let result = optRef.getType()
+              fun test(): Type {
+                  let ref = getStorageReference()
+                  let optRef: &Int? = ref
+                  return optRef.getType()
+              }
             `,
 			result: interpreter.TypeValue{
 				Type: interpreter.OptionalStaticType{
 					Type: interpreter.ReferenceStaticType{
-						Authorized: true,
-						Type:       interpreter.PrimitiveStaticTypeInt,
+						Authorized:   true,
+						BorrowedType: interpreter.PrimitiveStaticTypeInt,
 					},
 				},
 			},
@@ -475,11 +661,14 @@ func TestInterpretGetType(t *testing.T) {
 		{
 			name: "array",
 			code: `
-              let result = [].getType()
+              fun test(): Type {
+                  return [1, 3].getType()
+              }
             `,
 			result: interpreter.TypeValue{
-				// TODO: not yet supported
-				Type: nil,
+				Type: interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeInt,
+				},
 			},
 		},
 	}
@@ -490,37 +679,39 @@ func TestInterpretGetType(t *testing.T) {
 			// Inject a function that returns a storage reference value,
 			// which is borrowed as: `auth &Int`
 
-			storageAddress := common.BytesToAddress([]byte{0x42})
-			const storageKey = "test storage key"
+			getStorageReferenceFunctionType := &sema.FunctionType{
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(
+					&sema.ReferenceType{
+						Authorized: true,
+						Type:       sema.IntType,
+					},
+				),
+			}
 
 			standardLibraryFunctions :=
 				stdlib.StandardLibraryFunctions{
 					{
 						Name: "getStorageReference",
-						Type: &sema.FunctionType{
-							ReturnTypeAnnotation: sema.NewTypeAnnotation(
-								&sema.ReferenceType{
-									Authorized: true,
-									Type:       sema.IntType,
-								},
-							),
-						},
+						Type: getStorageReferenceFunctionType,
 						Function: interpreter.NewHostFunctionValue(
 							func(invocation interpreter.Invocation) interpreter.Value {
 
 								return &interpreter.StorageReferenceValue{
 									Authorized:           true,
 									TargetStorageAddress: storageAddress,
-									TargetKey:            storageKey,
+									TargetPath:           storagePath,
 									BorrowedType:         sema.IntType,
 								}
 							},
+							getStorageReferenceFunctionType,
 						),
 					},
 				}
 
 			valueDeclarations := standardLibraryFunctions.ToSemaValueDeclarations()
 			values := standardLibraryFunctions.ToInterpreterValueDeclarations()
+
+			storage := interpreter.NewInMemoryStorage()
 
 			inter, err := parseCheckAndInterpretWithOptions(t,
 				testCase.code,
@@ -529,34 +720,28 @@ func TestInterpretGetType(t *testing.T) {
 						sema.WithPredeclaredValues(valueDeclarations),
 					},
 					Options: []interpreter.Option{
+						interpreter.WithStorage(storage),
 						interpreter.WithPredeclaredValues(values),
-						interpreter.WithStorageReadHandler(
-							func(
-								inter *interpreter.Interpreter,
-								address common.Address,
-								key string,
-								deferred bool,
-							) interpreter.OptionalValue {
-
-								if address != storageAddress || key != storageKey {
-									return interpreter.NilValue{}
-								}
-
-								// When the storage reference is dereferenced,
-
-								return interpreter.NewSomeValueOwningNonCopying(
-									interpreter.NewIntValueFromInt64(2),
-								)
-							},
-						),
 					},
 				},
 			)
 			require.NoError(t, err)
 
-			assert.Equal(t,
+			storageMap := storage.GetStorageMap(storageAddress, storagePath.Domain.Identifier(), true)
+			storageMap.WriteValue(
+				inter,
+				storagePath.Identifier,
+				interpreter.NewIntValueFromInt64(2),
+			)
+
+			result, err := inter.Invoke("test")
+			require.NoError(t, err)
+
+			AssertValuesEqual(
+				t,
+				inter,
 				testCase.result,
-				inter.Globals["result"].GetValue(),
+				result,
 			)
 		})
 	}

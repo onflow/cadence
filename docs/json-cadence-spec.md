@@ -243,7 +243,7 @@ Dictionaries are encoded as a list of key-value pairs to preserve the determinis
       "value": {
         "type": "String",
         "value": "test"
-      },
+      }
     }
   ],
   // ...

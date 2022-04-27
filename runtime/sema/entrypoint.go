@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,15 +26,13 @@ const FunctionEntryPointName = "main"
 
 // FunctionEntryPointDeclaration returns the entry point function declaration, if any.
 //
-// Returns nil if there are multiple function declarations with the same function entry point name, or any other top-level declarations.
+// Returns nil if there are multiple function declarations with the same function entry point name, or a transaction declaration.
 //
 func FunctionEntryPointDeclaration(program *ast.Program) *ast.FunctionDeclaration {
 
 	functionDeclarations := program.FunctionDeclarations()
 
-	if len(program.CompositeDeclarations()) > 0 ||
-		len(program.InterfaceDeclarations()) > 0 ||
-		len(program.TransactionDeclarations()) > 0 {
+	if len(program.TransactionDeclarations()) > 0 {
 
 		return nil
 	}

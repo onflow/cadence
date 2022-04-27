@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,6 +37,7 @@ type SimpleType struct {
 	Name                 string
 	QualifiedName        string
 	TypeID               TypeID
+	tag                  TypeTag
 	IsInvalid            bool
 	IsResource           bool
 	Storable             bool
@@ -52,6 +53,10 @@ type SimpleType struct {
 }
 
 func (*SimpleType) IsType() {}
+
+func (t *SimpleType) Tag() TypeTag {
+	return t.tag
+}
 
 func (t *SimpleType) String() string {
 	return t.Name
@@ -124,7 +129,7 @@ func (t *SimpleType) initializeMembers() {
 	})
 }
 
-func (t *SimpleType) isContainerType() bool {
+func (t *SimpleType) IsContainerType() bool {
 	return t.NestedTypes != nil
 }
 

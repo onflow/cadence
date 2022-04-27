@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -53,7 +53,11 @@ func (r *Ranges) All() []Range {
 	values := r.tree.Values()
 	ranges := make([]Range, len(values))
 	for i, value := range values {
-		ranges[i] = value.(Range)
+		r, ok := value.(Range)
+		if !ok {
+			return nil
+		}
+		ranges[i] = r
 	}
 	return ranges
 }
@@ -62,7 +66,11 @@ func (r *Ranges) FindAll(pos Position) []Range {
 	entries := r.tree.SearchAll(pos)
 	ranges := make([]Range, len(entries))
 	for i, entry := range entries {
-		ranges[i] = entry.Value.(Range)
+		r, ok := entry.Value.(Range)
+		if !ok {
+			return nil
+		}
+		ranges[i] = r
 	}
 	return ranges
 }

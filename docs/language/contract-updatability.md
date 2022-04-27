@@ -3,7 +3,7 @@ title: Contract Updatability
 ---
 
 ## Introduction
-A [contract](../contracts) in Cadence is a collection of data (its state) and
+A [contract](contracts) in Cadence is a collection of data (its state) and
 code (its functions) that lives in the contract storage area of an account.
 When a contract is updated, it is important to make sure that the changes introduced do not lead to runtime
 inconsistencies for already stored data.
@@ -174,20 +174,23 @@ A field may belong to a contract, struct, resource, or interface.
 
 #### Valid Changes:
 - Adding a new struct, resource, or interface is valid.
-- Adding, removing, or changing interface conformance of a struct/resource is valid, since the stored data only
+- Adding an interface conformance to a struct/resource is valid, since the stored data only
   stores concrete type/value, but doesn't store the conformance info.
   ```cadence
   // Existing struct
   
-  pub struct Foo: T {
+  pub struct Foo {
   }
 
 
   // Upated struct
 
-  pub struct Foo: R {
+  pub struct Foo: T {
   }
   ```
+  - However, if adding a conformance also requires changing the existing structure (e.g: adding a new field that is
+    enforced by the new conformance), then the other restrictions (such as [restrictions on fields](#fields)) may 
+    prevent performing such an update.
 
 #### Invalid Changes:
 - Removing an existing declaration is not valid.
@@ -206,6 +209,19 @@ A field may belong to a contract, struct, resource, or interface.
   // Changed to a struct interface
 
   pub struct interface Foo {    // Invalid type declaration change
+  }
+  ```
+- Removing an interface conformance of a struct/resource is not valid.
+  ```cadence
+  // Existing struct
+  
+  pub struct Foo: T {
+  }
+
+
+  // Upated struct
+
+  pub struct Foo {
   }
   ```
 

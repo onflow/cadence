@@ -1,0 +1,143 @@
+---
+title: msg․sender Considered Harmful
+---
+
+One question that every Solidity user asks when they start programming in Cadence is
+
+**"How do I get the account who authorized the transaction?"**
+
+In the Ethereum world, this account is referred to as `msg.sender`. 
+On Ethereum, checking `msg.sender` is used to modify a function's behaviour depending on who authorized it.
+Doing so is key to identity, permissions, ownership and security on Ethereum.
+
+Cadence does not have `msg.sender` and there is no transaction-level way
+for Cadence code to uniquely identify its caller,
+not least because each transaction can be signed by more than one account.
+
+This then translates to the transaction having access to all of the signers' accounts.
+A further difference from Ethereum is that while Ethereum and Flow both have accounts
+that can contain contract code and data, in Cadence the resources that individual users own (such as NFTs)
+are placed in the *user* account's storage area rather than the contract account's.
+
+All of this means that a task that would be implemented
+by a single central contract checking `msg.sender` in Solidity 
+will require a different approach in Cadence. The design of Cadence is intentionally different;
+it follows a [Capability-based security model](https://en.wikipedia.org/wiki/Capability-based_security)
+instead of an [Access-Control List-based model](https://en.wikipedia.org/wiki/Access-control_list).
+
+This design offers distinct advantages for code robustness and security.
+
+This article describes how to perform some common tasks in idiomatic ways
+that use those advantages and also describes some ways of approaching
+the same tasks that should be avoided.
+
+# Patterns
+
+## Admin Rights
+
+Admin facilities should be contained in Admin resources.
+This can be a single resource with capabilities to it provided through different interfaces
+to expose different functionality for different roles, or it can be different resources for each role.
+
+This is described in the Design Patterns document:
+
+[https://docs.onflow.org/cadence/design-patterns#init-singleton](https://docs.onflow.org/cadence/design-patterns#init-singleton)
+
+A good example of this is minting tokens:
+
+[https://github.com/onflow/kitty-items/KittyItems.cdc](https://github.com/onflow/kitty-items/blob/438988b6e7e100f46687cbe379bd7b0b88fd8ef4/cadence/contracts/KittyItems.cdc#L194)
+
+Where access to admin functionality must be given to several different accounts and/or be revocable,
+the Capability Receiver pattern supports this.
+
+This is described in the Patterns document:
+
+[https://docs.onflow.org/cadence/design-patterns#capability-receiver](https://docs.onflow.org/cadence/design-patterns#capability-receiver)
+
+[https://docs.onflow.org/cadence/design-patterns#capability-revocation](https://docs.onflow.org/cadence/design-patterns#capability-revocation)
+
+## Allow/Block Listing
+
+Limiting a user's control of resources that they own except in exceptional circumstances
+is considered un-Flow-like. If you must implement allow/block listing of accounts
+for regulatory compliance, route calls from functions in your resources
+through `access(contract)` code on their contract that checksan admin-controlled dictionary
+containing the information required to check for allowed or blocked accounts.
+
+This code could check the resource owner, but doing so is an antipattern (see below)
+and should not be used as it cannot be relied on. [It is better to use an object's `uuid`:](https://docs.onflow.org/cadence/language/resources/#resource-identifier)
+
+It is important to note that the uuid does not identify the owner,
+and that resources can be transferred to different owners,
+and moved to a different path within the same user's storage
+or replaced by a different resource at the same path.
+
+## Operator/Allowance
+
+Giving another user temporary partial control of resources should be implemented via private capabilities.
+
+### Direct Capabilities
+
+Limiting access to the correct resources can be achieved by (e.g.)
+creating a new Vault containing only the allowance amount,
+or creating a new Collection containing only the NFTs that the other user is the operator for.
+
+Limiting access to the correct functionality can be achieved
+by providing the other user with a capability constrained to the desired interface.
+
+The capability can be revoked to remove the ability when required.
+
+[Revokable Capabilities are described in the Patterns document](/cadence/design-patterns#capability-revocation)]:
+
+[And they are discussed in the Tutorial](/cadence/tutorial/02-hello-world#creating-capabilities-and-references-to-stored-resources):
+
+### Wrapped Capabilities
+
+Alternatively, a capability on the original resource (Vault, Collection, etc.)
+can be wrapped in a resource that enforces all of these limits,
+and then this (or, preferably, a capability to it) passed to the other user.
+
+For example, [see KittyItemsMarket's carefully constrained use](https://github.com/onflow/kitty-items/blob/438988b6e7e100f46687cbe379bd7b0b88fd8ef4/cadence/contracts/KittyItemsMarket.cdc#L84)
+of a NonFungibleToken.Provider:
+
+## Ownership
+
+If an account's storage contains a resource (such as an NFT, and NFT Collection, or an FT Vault),
+that account owns it. There is no need to record this anywhere else.
+It can be checked through public capabilities.
+If the user removes the public capabilities, that is their choice.
+
+For example the Collection resource in the NFT standard, its interfaces,
+and the Capabilities to it placed in a user's storage:
+
+[https://github.com/onflow/flow-nft/contracts/ExampleNFT.cdc](https://github.com/onflow/flow-nft/blob/cda8ccde7db52a0e125650b87bb552788ad15373/contracts/ExampleNFT.cdc#L26)
+
+Custodial NFT marketplaces have temporary ownership of a resource.
+They should provide the ability to identify the token's original owner
+and to return it to them if it is not sold.
+
+## User Profiles
+
+User profiles can be implemented as resources placed in the storage of the user's account,
+with read access via a public capability.
+
+Admin control of user profiles, where appropriate, can be implemented using private capabilities,
+`access(contract)` code, or using types within the contract that can only be created
+by the admin as function arguments.
+
+# Antipatterns
+
+## Checking Contract.account
+
+Contracts [have the member variable `let account: Account`]((/cadence/language/contracts/)),
+which is the account in which the contract is deployed:
+
+This is of limited use in replacing `msg.sender`, as it is essentially a tautology on Flow
+because contracts are deployed to the account to which you deploy them.
+
+## Checking Resource.owner
+
+Resources that are in storage (but not those that are located in-memory,
+e.g. when a resource has just been created) [have the implicit field `let owner: PublicAccount?`]((/cadence/language/resources/#resource-owner))
+
+This can be defeated by using a newly created resource, as the owner will then be nil.

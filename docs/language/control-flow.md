@@ -306,6 +306,26 @@ for element in array {
 // "Bar"
 ```
 
+Optionally, developers may include an additional variable preceding the element name, 
+separated by a comma. 
+When present, this variable contains the current
+index of the array being iterated through 
+during each repeated execution (starting from 0).
+
+```cadence
+let array = ["Hello", "World", "Foo", "Bar"]
+
+for index, element in array {
+    log(index)
+}
+
+// The loop would log:
+// 0
+// 1
+// 2
+// 3
+```
+
 To iterate over a dictionary's entries (keys and values), 
 use a for-in loop over the dictionary's keys and get the value for each key:
 

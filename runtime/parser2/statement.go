@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -344,9 +344,30 @@ func parseForStatement(p *parser) *ast.ForStatement {
 
 	p.skipSpaceAndComments(true)
 
-	identifier := mustIdentifier(p)
+	if p.current.IsString(lexer.TokenIdentifier, keywordIn) {
+		p.report(fmt.Errorf(
+			"expected identifier, got keyword %q",
+			keywordIn,
+		))
+		p.next()
+	}
+
+	firstValue := mustIdentifier(p)
 
 	p.skipSpaceAndComments(true)
+
+	var index *ast.Identifier
+	var identifier ast.Identifier
+
+	if p.current.Is(lexer.TokenComma) {
+		p.next()
+		p.skipSpaceAndComments(true)
+		index = &firstValue
+		identifier = mustIdentifier(p)
+		p.skipSpaceAndComments(true)
+	} else {
+		identifier = firstValue
+	}
 
 	if !p.current.IsString(lexer.TokenIdentifier, keywordIn) {
 		p.report(fmt.Errorf(
@@ -364,6 +385,7 @@ func parseForStatement(p *parser) *ast.ForStatement {
 
 	return &ast.ForStatement{
 		Identifier: identifier,
+		Index:      index,
 		Block:      block,
 		Value:      expression,
 		StartPos:   startPos,

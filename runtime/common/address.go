@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,21 +20,40 @@ package common
 
 import (
 	"encoding/hex"
+	goErrors "errors"
 	"fmt"
 	"strings"
 )
+
+var addressOverflowError = goErrors.New("address too large")
 
 const AddressLength = 8
 
 type Address [AddressLength]byte
 
+// MustBytesToAddress returns Address with value b.
+//
+// If the address is too large, then the function panics.
+//
+func MustBytesToAddress(b []byte) Address {
+	address, err := BytesToAddress(b)
+	if err != nil {
+		panic(err)
+	}
+	return address
+}
+
 // BytesToAddress returns Address with value b.
 //
-// If b is larger than len(h), b will be cropped from the left.
-func BytesToAddress(b []byte) Address {
+// If the address is too large, then the function returns an error.
+//
+func BytesToAddress(b []byte) (Address, error) {
+	if len(b) > AddressLength {
+		return Address{}, addressOverflowError
+	}
 	var a Address
 	a.SetBytes(b)
-	return a
+	return a, nil
 }
 
 // Hex returns the hex string representation of the address.
@@ -59,8 +78,8 @@ func (a *Address) SetBytes(b []byte) {
 
 // Bytes returns address without leading zeros.
 // The fast path is inlined and handles the most common
-// scenario of address having no leading zeros.  Otherwise,
-// bytes() is called to trim leading zeros.
+// scenario of address having no leading zeros.
+// Otherwise, bytes() is called to trim leading zeros.
 func (a Address) Bytes() []byte {
 	if a[0] != 0 {
 		return a[:]
@@ -87,6 +106,10 @@ func (a Address) ShortHexWithPrefix() string {
 	return fmt.Sprintf("0x%s", strings.TrimLeft(hexString, "0"))
 }
 
+func (a Address) HexWithPrefix() string {
+	return fmt.Sprintf("0x%x", [AddressLength]byte(a))
+}
+
 // HexToAddress converts a hex string to an Address.
 func HexToAddress(h string) (Address, error) {
 	trimmed := strings.TrimPrefix(h, "0x")
@@ -97,5 +120,5 @@ func HexToAddress(h string) (Address, error) {
 	if err != nil {
 		return Address{}, err
 	}
-	return BytesToAddress(b), nil
+	return BytesToAddress(b)
 }

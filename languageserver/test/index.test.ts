@@ -7,11 +7,14 @@ import {
   ProtocolConnection,
   StreamMessageReader,
   StreamMessageWriter,
-  TextDocumentItem
+  TextDocumentItem,
+  PublishDiagnosticsNotification,
+  PublishDiagnosticsParams
 } from "vscode-languageserver-protocol"
 
 import {execSync, spawn} from 'child_process'
 import * as path from "path"
+import * as fs from "fs";
 
 beforeAll(() => {
   execSync("go build ../cmd/languageserver", {cwd: __dirname})
@@ -187,4 +190,116 @@ describe("parseEntryPointArguments command", () => {
 
   test("transaction", async() =>
     testCode("transaction(a: Address) {}"))
+})
+
+describe("diagnostics", () => {
+
+  async function testCode(code: string) {
+    return withConnection(async (connection) => {
+
+      const notificationPromise = new Promise<PublishDiagnosticsParams>((resolve) => {
+        connection.onNotification(PublishDiagnosticsNotification.type, resolve)
+      })
+
+      const uri = await createTestDocument(connection, code)
+
+      const notification = await notificationPromise
+
+      expect(notification.uri).toEqual(uri)
+      expect(notification.diagnostics).toHaveLength(1)
+      expect(notification.diagnostics[0].message).toEqual("cannot find variable in this scope: `X`. not found in this scope")
+    })
+  }
+
+  test("script", async() =>
+    testCode(
+      `pub fun main() { X }`,
+    )
+  )
+
+  test("transaction", async() =>
+    testCode(
+      `transaction() { execute { X } }`,
+    )
+  )
+
+  type TestDoc = {
+    name: string
+    code: string
+  }
+
+  type DocNotification = {
+    name: string
+    notification: Promise<PublishDiagnosticsParams>
+  }
+
+  const fooContractCode = fs.readFileSync('./foo.cdc', 'utf8')
+
+  async function testImports(docs: TestDoc[]): Promise<DocNotification[]> {
+    return new Promise<DocNotification[]>(resolve => {
+
+      withConnection(async (connection) => {
+        let docsNotifications: DocNotification[] = []
+
+        for (let doc of docs) {
+          const notification = new Promise<PublishDiagnosticsParams>((resolve) => {
+            connection.onNotification(PublishDiagnosticsNotification.type, (notification) => {
+              if (notification.uri == `file://${doc.name}.cdc`) {
+                resolve(notification)
+              }
+            })
+          })
+          docsNotifications.push({
+            name: doc.name,
+            notification: notification
+          })
+
+          await connection.sendNotification(DidOpenTextDocumentNotification.type, {
+            textDocument: TextDocumentItem.create(`file://${doc.name}.cdc`, "cadence", 1, doc.code)
+          })
+        }
+
+        resolve(docsNotifications)
+      })
+
+    })
+  }
+
+  test("script with import", async() => {
+    const contractName = "foo"
+    const scriptName = "script"
+    const scriptCode = `
+      import Foo from "./foo.cdc"
+      pub fun main() { log(Foo.bar) }
+    `
+
+    let docNotifications = await testImports([
+      { name: contractName, code: fooContractCode },
+      { name: scriptName, code: scriptCode }
+    ])
+
+    let script = await docNotifications.find(n => n.name == scriptName).notification
+    expect(script.uri).toEqual(`file://${scriptName}.cdc`)
+    expect(script.diagnostics).toHaveLength(0)
+  })
+
+  test("script import failure", async() => {
+    const contractName = "foo"
+    const scriptName = "script"
+    const scriptCode = `
+      import Foo from "./foo.cdc"
+      pub fun main() { log(Foo.zoo) }
+    `
+
+    let docNotifications = await testImports([
+      { name: contractName, code: fooContractCode },
+      { name: scriptName, code: scriptCode }
+    ])
+
+    let script = await docNotifications.find(n => n.name == scriptName).notification
+    expect(script.uri).toEqual(`file://${scriptName}.cdc`)
+    expect(script.diagnostics).toHaveLength(1)
+    expect(script.diagnostics[0].message).toEqual("value of type `Foo` has no member `zoo`. unknown member")
+  })
+
 })

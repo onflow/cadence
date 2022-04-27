@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -155,12 +155,12 @@ func (checker *Checker) VisitBoolExpression(_ *ast.BoolExpression) ast.Repr {
 	return BoolType
 }
 
-var TypeOfNil = &OptionalType{
+var NilType = &OptionalType{
 	Type: NeverType,
 }
 
 func (checker *Checker) VisitNilExpression(_ *ast.NilExpression) ast.Repr {
-	return TypeOfNil
+	return NilType
 }
 
 func (checker *Checker) VisitIntegerExpression(expression *ast.IntegerExpression) ast.Repr {
@@ -170,11 +170,9 @@ func (checker *Checker) VisitIntegerExpression(expression *ast.IntegerExpression
 	isAddress := false
 
 	// If the contextually expected type is a subtype of Integer or Address, then take that.
-	if expectedType == nil || IsSubType(expectedType, NeverType) {
-		actualType = IntType
-	} else if IsSubType(expectedType, IntegerType) {
+	if IsSameTypeKind(expectedType, IntegerType) {
 		actualType = expectedType
-	} else if IsSubType(expectedType, &AddressType{}) {
+	} else if IsSameTypeKind(expectedType, &AddressType{}) {
 		isAddress = true
 		CheckAddressLiteral(expression, checker.report)
 		actualType = expectedType
@@ -202,9 +200,7 @@ func (checker *Checker) VisitFixedPointExpression(expression *ast.FixedPointExpr
 
 	var actualType Type
 
-	if expectedType != nil &&
-		!IsSubType(expectedType, NeverType) &&
-		IsSubType(expectedType, FixedPointType) {
+	if IsSameTypeKind(expectedType, FixedPointType) {
 		actualType = expectedType
 	} else if expression.Negative {
 		actualType = Fix64Type
@@ -222,12 +218,16 @@ func (checker *Checker) VisitFixedPointExpression(expression *ast.FixedPointExpr
 func (checker *Checker) VisitStringExpression(expression *ast.StringExpression) ast.Repr {
 	expectedType := UnwrapOptionalType(checker.expectedType)
 
-	if expectedType != nil && IsSubType(expectedType, CharacterType) {
+	var actualType Type = StringType
+
+	if IsSameTypeKind(expectedType, CharacterType) {
 		checker.checkCharacterLiteral(expression)
-		return expectedType
+		actualType = expectedType
 	}
 
-	return StringType
+	checker.Elaboration.StringExpressionType[expression] = actualType
+
+	return actualType
 }
 
 func (checker *Checker) VisitIndexExpression(expression *ast.IndexExpression) ast.Repr {
@@ -272,10 +272,9 @@ func (checker *Checker) visitIndexExpression(
 		return InvalidType
 	}
 
-	elementType := checker.visitValueIndexingExpression(
-		indexedType,
+	indexingType := checker.VisitExpression(
 		indexExpression.IndexingExpression,
-		isAssignment,
+		indexedType.IndexingType(),
 	)
 
 	if isAssignment && !indexedType.AllowsValueIndexingAssignment() {
@@ -287,17 +286,12 @@ func (checker *Checker) visitIndexExpression(
 		)
 	}
 
+	elementType := indexedType.ElementType(isAssignment)
+
 	checker.checkUnusedExpressionResourceLoss(elementType, targetExpression)
 
+	checker.Elaboration.IndexExpressionIndexedTypes[indexExpression] = indexedType
+	checker.Elaboration.IndexExpressionIndexingTypes[indexExpression] = indexingType
+
 	return elementType
-}
-
-func (checker *Checker) visitValueIndexingExpression(
-	indexedType ValueIndexableType,
-	indexingExpression ast.Expression,
-	isAssignment bool,
-) Type {
-	checker.VisitExpression(indexingExpression, indexedType.IndexingType())
-
-	return indexedType.ElementType(isAssignment)
 }

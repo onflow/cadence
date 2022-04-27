@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,11 +24,15 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	. "github.com/onflow/cadence/runtime/tests/utils"
+
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 )
 
 func TestInterpretEnum(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       enum E: Int64 {
@@ -44,6 +48,8 @@ func TestInterpretEnum(t *testing.T) {
 }
 
 func TestInterpretEnumCaseUse(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       enum E: Int64 {
@@ -63,7 +69,7 @@ func TestInterpretEnumCaseUse(t *testing.T) {
 
 	assert.Equal(t,
 		common.CompositeKindEnum,
-		a.(*interpreter.CompositeValue).Kind(),
+		a.(*interpreter.CompositeValue).Kind,
 	)
 
 	b := inter.Globals["b"].GetValue()
@@ -74,11 +80,13 @@ func TestInterpretEnumCaseUse(t *testing.T) {
 
 	assert.Equal(t,
 		common.CompositeKindEnum,
-		b.(*interpreter.CompositeValue).Kind(),
+		b.(*interpreter.CompositeValue).Kind,
 	)
 }
 
 func TestInterpretEnumCaseRawValue(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       enum E: Int64 {
@@ -90,18 +98,24 @@ func TestInterpretEnumCaseRawValue(t *testing.T) {
       let b = E.b.rawValue
     `)
 
-	require.Equal(t,
+	RequireValuesEqual(
+		t,
+		inter,
 		interpreter.Int64Value(0),
 		inter.Globals["a"].GetValue(),
 	)
 
-	require.Equal(t,
+	RequireValuesEqual(
+		t,
+		inter,
 		interpreter.Int64Value(1),
 		inter.Globals["b"].GetValue(),
 	)
 }
 
 func TestInterpretEnumCaseEquality(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       enum E: Int64 {
@@ -116,8 +130,15 @@ func TestInterpretEnumCaseEquality(t *testing.T) {
       ]
     `)
 
-	require.Equal(t,
-		interpreter.NewArrayValueUnownedNonCopying(
+	RequireValuesEqual(
+		t,
+		inter,
+		interpreter.NewArrayValue(
+			inter,
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeBool,
+			},
+			common.Address{},
 			interpreter.BoolValue(true),
 			interpreter.BoolValue(true),
 			interpreter.BoolValue(true),
@@ -127,6 +148,8 @@ func TestInterpretEnumCaseEquality(t *testing.T) {
 }
 
 func TestInterpretEnumConstructor(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       enum E: Int64 {
@@ -142,8 +165,15 @@ func TestInterpretEnumConstructor(t *testing.T) {
       ]
     `)
 
-	require.Equal(t,
-		interpreter.NewArrayValueUnownedNonCopying(
+	RequireValuesEqual(
+		t,
+		inter,
+		interpreter.NewArrayValue(
+			inter,
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeBool,
+			},
+			common.Address{},
 			interpreter.BoolValue(true),
 			interpreter.BoolValue(true),
 			interpreter.BoolValue(true),
@@ -154,6 +184,8 @@ func TestInterpretEnumConstructor(t *testing.T) {
 }
 
 func TestInterpretEnumInstance(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       enum E: Int64 {
@@ -167,8 +199,15 @@ func TestInterpretEnumInstance(t *testing.T) {
       ]
     `)
 
-	require.Equal(t,
-		interpreter.NewArrayValueUnownedNonCopying(
+	RequireValuesEqual(
+		t,
+		inter,
+		interpreter.NewArrayValue(
+			inter,
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeBool,
+			},
+			common.Address{},
 			interpreter.BoolValue(true),
 			interpreter.BoolValue(true),
 		),
@@ -207,16 +246,21 @@ func TestInterpretEnumInContract(t *testing.T) {
 	require.IsType(t, &interpreter.CompositeValue{}, c)
 	contract := c.(*interpreter.CompositeValue)
 
-	eValue, present := contract.Fields().Get("e")
-	require.True(t, present)
+	eValue := contract.GetField(inter, interpreter.ReturnEmptyLocationRange, "e")
+	require.NotNil(t, eValue)
 
 	require.IsType(t, &interpreter.CompositeValue{}, eValue)
 	enumCase := eValue.(*interpreter.CompositeValue)
 
-	rawValue, present := enumCase.Fields().Get("rawValue")
-	require.True(t, present)
+	rawValue := enumCase.GetMember(
+		inter,
+		interpreter.ReturnEmptyLocationRange,
+		"rawValue",
+	)
 
-	require.Equal(t,
+	RequireValuesEqual(
+		t,
+		inter,
 		interpreter.UInt8Value(0),
 		rawValue,
 	)

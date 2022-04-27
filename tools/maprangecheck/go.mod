@@ -1,5 +1,8 @@
 module github.com/onflow/cadence/tools/maprangecheck
 
-go 1.15
+go 1.16
 
-require golang.org/x/tools v0.1.1-0.20210430200834-7a6108e9b210
+require (
+	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c // indirect
+	golang.org/x/tools v0.1.5
+)

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,5 +39,5 @@ func TestInterpretFunctionInvocationCheckArgumentTypes(t *testing.T) {
 	_, err := inter.Invoke("test", interpreter.BoolValue(true))
 	require.Error(t, err)
 
-	require.ErrorAs(t, err, &interpreter.InvocationArgumentTypeError{})
+	require.ErrorAs(t, err, &interpreter.ValueTransferTypeError{})
 }

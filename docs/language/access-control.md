@@ -30,7 +30,8 @@ will be covered in a later section.
 Top-level declarations
 (variables, constants, functions, structures, resources, interfaces)
 and fields (in structures, and resources) are always only able to be written
-to in the scope where it is defined (self).
+to and mutated (modified, such as by indexed assignment or methods like `append`) 
+in the scope where it is defined (self).
 
 There are four levels of access control defined in the code that specify where
 a declaration can be accessed or called.
@@ -74,21 +75,21 @@ a declaration can be accessed or called.
 
 **Access level must be specified for each declaration**
 
-The `(set)` suffix can be used to make variables also publicly writable.
+The `(set)` suffix can be used to make variables also publicly writable and mutable.
 
 To summarize the behavior for variable declarations, constant declarations, and fields:
 
-| Declaration kind | Access modifier          | Read scope                                           | Write scope       |
-|:-----------------|:-------------------------|:-----------------------------------------------------|:------------------|
-| `let`            | `priv` / `access(self)`  | Current and inner                                    | *None*            |
-| `let`            | `access(contract)`       | Current, inner, and containing contract              | *None*            |
-| `let`            | `access(account)`        | Current, inner, and other contracts in same account  | *None*            |
-| `let`            | `pub`,`access(all)`      | **All**                                              | *None*            |
-| `var`            | `access(self)`           | Current and inner                                    | Current and inner |
-| `var`            | `access(contract)`       | Current, inner, and containing contract              | Current and inner |
-| `var`            | `access(account)`        | Current, inner, and other contracts in same account  | Current and inner |
-| `var`            | `pub` / `access(all)`    | **All**                                              | Current and inner |
-| `var`            | `pub(set)`               | **All**                                              | **All**           |
+| Declaration kind | Access modifier          | Read scope                                           | Write scope       | Mutate scope      |
+|:-----------------|:-------------------------|:-----------------------------------------------------|:------------------|:------------------|
+| `let`            | `priv` / `access(self)`  | Current and inner                                    | *None*            | Current and inner |
+| `let`            | `access(contract)`       | Current, inner, and containing contract              | *None*            | Current and inner |
+| `let`            | `access(account)`        | Current, inner, and other contracts in same account  | *None*            | Current and inner |
+| `let`            | `pub`,`access(all)`      | **All**                                              | *None*            | Current and inner |
+| `var`            | `access(self)`           | Current and inner                                    | Current and inner | Current and inner |
+| `var`            | `access(contract)`       | Current, inner, and containing contract              | Current and inner | Current and inner |
+| `var`            | `access(account)`        | Current, inner, and other contracts in same account  | Current and inner | Current and inner |
+| `var`            | `pub` / `access(all)`    | **All**                                              | Current and inner | Current and inner |
+| `var`            | `pub(set)`               | **All**                                              | **All**           | **All**           |
 
 To summarize the behavior for functions:
 
@@ -142,6 +143,10 @@ pub struct SomeStruct {
     // so it is readable and writable in all scopes.
     //
     pub(set) var e: Int
+
+    // Arrays and dictionaries declared without (set) cannot be 
+    // mutated in external scopes
+    pub let arr: [Int]
 
     // The initializer is omitted for brevity.
 
@@ -203,4 +208,15 @@ some.e
 // Valid: can set publicly settable variable field in outer scope.
 //
 some.e = 5
+
+// Invalid: cannot mutate a public field in outer scope.
+//
+some.f.append(0)
+
+// Invalid: cannot mutate a public field in outer scope.
+//
+some.f[3] = 1
+
+// Valid: can call non-mutating methods on a public field in outer scope
+some.f.contains(0)
 ```

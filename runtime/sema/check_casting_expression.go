@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,7 +44,11 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 		expectedType = rightHandType
 	}
 
-	leftHandType := checker.VisitExpression(leftHandExpression, expectedType)
+	beforeErrors := len(checker.errors)
+
+	leftHandType, exprActualType := checker.visitExpression(leftHandExpression, expectedType)
+
+	hasErrors := len(checker.errors) > beforeErrors
 
 	checker.Elaboration.CastingStaticValueTypes[expression] = leftHandType
 
@@ -120,7 +124,7 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 						Range:        ast.NewRangeFromPositioned(leftHandExpression),
 					},
 				)
-			} else if IsSubType(leftHandType, rightHandType) {
+			} else if checker.lintEnabled && IsSubType(leftHandType, rightHandType) {
 
 				switch expression.Operation {
 				case ast.OperationFailableCast:
@@ -154,7 +158,13 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 		return rightHandType
 
 	case ast.OperationCast:
-		if checker.expectedType != nil && checker.expectedType.Equal(rightHandType) {
+		// If there are errors in the lhs-expr, then the target type is considered as
+		// the inferred-type of the expression. i.e: exprActualType == rightHandType
+		// Then, it is not possible to determine whether the target type is redundant.
+		// Therefore, don't check for redundant casts, if there are errors.
+		if checker.lintEnabled &&
+			!hasErrors &&
+			isRedundantCast(leftHandExpression, exprActualType, rightHandType, checker.expectedType) {
 			checker.hint(
 				&UnnecessaryCastHint{
 					TargetType: rightHandType,
@@ -411,4 +421,20 @@ func FailableCastCanSucceed(subType, superType Type) bool {
 	}
 
 	return true
+}
+
+// isRedundantCast checks whether a simple cast is redundant.
+// Checks for two cases:
+//    - Case I: Contextually expected type is same as the casted type (target type).
+//    - Case II: Expression is self typed, and is same as the casted type (target type).
+func isRedundantCast(expr ast.Expression, exprInferredType, targetType, expectedType Type) bool {
+	if expectedType != nil &&
+		!expectedType.IsInvalidType() &&
+		expectedType.Equal(targetType) {
+		return true
+	}
+
+	checkCastVisitor := &CheckCastVisitor{}
+
+	return checkCastVisitor.IsRedundantCast(expr, exprInferredType, targetType)
 }

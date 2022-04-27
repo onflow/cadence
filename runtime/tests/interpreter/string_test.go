@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,8 +21,11 @@ package interpreter_test
 import (
 	"testing"
 
-	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/interpreter"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestInterpretRecursiveValueString(t *testing.T) {
@@ -42,15 +45,15 @@ func TestInterpretRecursiveValueString(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t,
-		`{"mapRef": {"mapRef": {"mapRef": ...}}}`,
+		`{"mapRef": {"mapRef": ...}}`,
 		mapValue.String(),
 	)
 
 	require.IsType(t, &interpreter.DictionaryValue{}, mapValue)
 	require.Equal(t,
-		`{"mapRef": {"mapRef": ...}}`,
+		`{"mapRef": ...}`,
 		mapValue.(*interpreter.DictionaryValue).
-			Get(inter, nil, interpreter.NewStringValue("mapRef")).
+			GetKey(inter, interpreter.ReturnEmptyLocationRange, interpreter.NewStringValue("mapRef")).
 			String(),
 	)
 }
@@ -63,12 +66,14 @@ func TestInterpretStringFunction(t *testing.T) {
       fun test(): String {
           return String()
       }
-	`)
+    `)
 
 	result, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	require.Equal(t,
+	RequireValuesEqual(
+		t,
+		inter,
 		interpreter.NewStringValue(""),
 		result,
 	)
@@ -82,13 +87,20 @@ func TestInterpretStringDecodeHex(t *testing.T) {
       fun test(): [UInt8] {
           return "01CADE".decodeHex()
       }
-	`)
+    `)
 
 	result, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	require.Equal(t,
-		interpreter.NewArrayValueUnownedNonCopying(
+	RequireValuesEqual(
+		t,
+		inter,
+		interpreter.NewArrayValue(
+			inter,
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeUInt8,
+			},
+			common.Address{},
 			interpreter.UInt8Value(1),
 			interpreter.UInt8Value(0xCA),
 			interpreter.UInt8Value(0xDE),
@@ -103,14 +115,16 @@ func TestInterpretStringEncodeHex(t *testing.T) {
 
 	inter := parseCheckAndInterpret(t, `
       fun test(): String {
-          return String.encodeHex([1 as UInt8, 2, 3, 0xCA, 0xDE])
+          return String.encodeHex([1, 2, 3, 0xCA, 0xDE])
       }
-	`)
+    `)
 
 	result, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	require.Equal(t,
+	RequireValuesEqual(
+		t,
+		inter,
 		interpreter.NewStringValue("010203cade"),
 		result,
 	)
@@ -124,13 +138,20 @@ func TestInterpretStringUtf8Field(t *testing.T) {
       fun test(): [UInt8] {
           return "Flowers \u{1F490} are beautiful".utf8
       }
-	`)
+    `)
 
 	result, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	require.Equal(t,
-		interpreter.NewArrayValueUnownedNonCopying(
+	RequireValuesEqual(
+		t,
+		inter,
+		interpreter.NewArrayValue(
+			inter,
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeUInt8,
+			},
+			common.Address{},
 			// Flowers
 			interpreter.UInt8Value(70),
 			interpreter.UInt8Value(108),
@@ -163,5 +184,160 @@ func TestInterpretStringUtf8Field(t *testing.T) {
 			interpreter.UInt8Value(108),
 		),
 		result,
+	)
+}
+
+func TestInterpretStringToLower(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      fun test(): String {
+          return "Flowers".toLower()
+      }
+    `)
+
+	result, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	require.Equal(t,
+		interpreter.NewStringValue("flowers"),
+		result,
+	)
+}
+
+func TestInterpretStringAccess(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+    fun test(): Type {
+        let c: Character = "x"[0]
+        return c.getType() 
+    }
+    `)
+
+	result, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	require.Equal(t,
+		interpreter.TypeValue{Type: interpreter.PrimitiveStaticTypeCharacter},
+		result,
+	)
+}
+
+func TestInterpretCharacterLiteralType(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+    fun test(): Type {
+        let c: Character = "x"
+        return c.getType() 
+    }
+    `)
+
+	result, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	require.Equal(t,
+		interpreter.TypeValue{Type: interpreter.PrimitiveStaticTypeCharacter},
+		result,
+	)
+}
+
+func TestInterpretOneCharacterStringLiteralType(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+    fun test(): Type {
+        let c: String = "x"
+        return c.getType() 
+    }
+    `)
+
+	result, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	require.Equal(t,
+		interpreter.TypeValue{Type: interpreter.PrimitiveStaticTypeString},
+		result,
+	)
+}
+
+func TestInterpretCharacterLiteralTypeNoAnnotation(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+    fun test(): Type {
+        let c = "x"
+        return c.getType() 
+    }
+    `)
+
+	result, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	require.Equal(t,
+		interpreter.TypeValue{Type: interpreter.PrimitiveStaticTypeString},
+		result,
+	)
+}
+
+func TestInterpretConvertCharacterToString(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+    fun test(): String {
+        let c: Character = "x"
+        return c.toString()
+    }
+    `)
+
+	result, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	require.Equal(t,
+		interpreter.NewStringValue("x"),
+		result,
+	)
+}
+
+func TestInterpretCompareCharacters(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        let a: Character = "ü"
+        let b: Character = "\u{FC}"
+        let c: Character = "\u{75}\u{308}"
+        let d: Character = "y"
+        let x = a == b
+        let y = a == c
+        let z = a == d
+    `)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.BoolValue(true),
+		inter.Globals["x"].GetValue(),
+	)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.BoolValue(true),
+		inter.Globals["y"].GetValue(),
+	)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.BoolValue(false),
+		inter.Globals["z"].GetValue(),
 	)
 }

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,43 +19,9 @@
 package format
 
 import (
-	"strconv"
-	"strings"
-	"unicode/utf8"
+	"github.com/onflow/cadence/runtime/ast"
 )
 
 func String(s string) string {
-	var b strings.Builder
-	b.WriteByte('"')
-	for _, r := range s {
-		switch r {
-		case 0:
-			b.WriteString(`\0`)
-		case '\n':
-			b.WriteString(`\n`)
-		case '\r':
-			b.WriteString(`\r`)
-		case '\t':
-			b.WriteString(`\t`)
-		case '\\':
-			b.WriteString(`\\`)
-		case '"':
-			b.WriteString(`\"`)
-		default:
-			switch {
-			case 0x20 <= r && r <= 0x7E:
-				// ASCII printable from space through DEL-1.
-				b.WriteRune(r)
-			case r > utf8.MaxRune:
-				r = 0xFFFD
-				fallthrough
-			default:
-				b.WriteString(`\u{`)
-				b.WriteString(strconv.FormatInt(int64(r), 16))
-				b.WriteByte('}')
-			}
-		}
-	}
-	b.WriteByte('"')
-	return b.String()
+	return ast.QuoteString(s)
 }

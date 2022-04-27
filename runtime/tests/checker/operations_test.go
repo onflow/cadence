@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,11 +48,30 @@ func TestCheckUnaryBooleanNegation(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
-      let a = !true
-	`)
+	t.Run("valid", func(t *testing.T) {
 
-	require.NoError(t, err)
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          let a = !true
+	    `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("invalid type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          let a = !x
+	    `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+	})
+
 }
 
 func TestCheckInvalidUnaryIntegerNegationOfBoolean(t *testing.T) {
@@ -72,11 +91,30 @@ func TestCheckUnaryIntegerNegation(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
-      let a = -1
-	`)
+	t.Run("valid", func(t *testing.T) {
 
-	require.NoError(t, err)
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          let a = -1
+	    `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("invalid type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          let a = -x
+	    `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+	})
+
 }
 
 type operationTest struct {
@@ -465,4 +503,88 @@ func TestCheckInvalidCompositeEquality(t *testing.T) {
 
 		test(compositeKind)
 	}
+}
+
+func TestCheckNumericSuperTypeBinaryOperations(t *testing.T) {
+
+	t.Parallel()
+
+	supertypes := []sema.Type{
+		sema.NumberType,
+		sema.SignedNumberType,
+		sema.IntegerType,
+		sema.SignedIntegerType,
+		sema.FixedPointType,
+		sema.SignedFixedPointType,
+	}
+
+	t.Run("non saturating operations", func(t *testing.T) {
+
+		t.Parallel()
+
+		operations := []ast.Operation{
+			ast.OperationPlus,
+			ast.OperationMinus,
+			ast.OperationMul,
+			ast.OperationDiv,
+			ast.OperationMod,
+			ast.OperationBitwiseAnd,
+			ast.OperationBitwiseOr,
+			ast.OperationBitwiseXor,
+			ast.OperationBitwiseRightShift,
+			ast.OperationBitwiseLeftShift,
+			ast.OperationLess,
+			ast.OperationLessEqual,
+			ast.OperationGreater,
+			ast.OperationGreaterEqual,
+		}
+
+		for _, supertype := range supertypes {
+			for _, op := range operations {
+				t.Run(fmt.Sprintf("%s,%s", supertype.String(), op.String()), func(t *testing.T) {
+					code := fmt.Sprintf(`
+                        fun test(a: %[1]s, b: %[1]s): AnyStruct {
+                            return a %[2]s b
+                        }`,
+						supertype.String(),
+						op.Symbol(),
+					)
+
+					_, err := ParseAndCheck(t, code)
+					errs := ExpectCheckerErrors(t, err, 1)
+					assert.IsType(t, &sema.InvalidBinaryOperandsError{}, errs[0])
+				})
+			}
+		}
+	})
+
+	t.Run("saturating operations", func(t *testing.T) {
+		t.Parallel()
+
+		saturatingFunctions := []string{
+			sema.NumericTypeSaturatingAddFunctionName,
+			sema.NumericTypeSaturatingSubtractFunctionName,
+			sema.NumericTypeSaturatingMultiplyFunctionName,
+			sema.NumericTypeSaturatingMultiplyFunctionName,
+			sema.NumericTypeSaturatingDivideFunctionName,
+		}
+
+		for _, supertype := range supertypes {
+			for _, saturatingFunc := range saturatingFunctions {
+				t.Run(fmt.Sprintf("%s,%s", supertype.String(), saturatingFunc), func(t *testing.T) {
+					code := fmt.Sprintf(`
+                        fun test(a: %[1]s, b: %[1]s): AnyStruct {
+                            return a.%[2]s(b)
+                        }`,
+						supertype.String(),
+						saturatingFunc,
+					)
+
+					_, err := ParseAndCheck(t, code)
+					errs := ExpectCheckerErrors(t, err, 1)
+					assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+				})
+			}
+		}
+	})
 }

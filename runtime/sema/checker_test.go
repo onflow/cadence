@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -173,6 +173,9 @@ func TestFunctionSubtyping(t *testing.T) {
 							TypeAnnotation: NewTypeAnnotation(IntType),
 						},
 					},
+					ReturnTypeAnnotation: NewTypeAnnotation(
+						VoidType,
+					),
 				},
 				&FunctionType{
 					Parameters: []*Parameter{
@@ -180,6 +183,9 @@ func TestFunctionSubtyping(t *testing.T) {
 							TypeAnnotation: NewTypeAnnotation(AnyStructType),
 						},
 					},
+					ReturnTypeAnnotation: NewTypeAnnotation(
+						VoidType,
+					),
 				},
 			),
 		)
@@ -194,6 +200,9 @@ func TestFunctionSubtyping(t *testing.T) {
 							TypeAnnotation: NewTypeAnnotation(AnyStructType),
 						},
 					},
+					ReturnTypeAnnotation: NewTypeAnnotation(
+						VoidType,
+					),
 				},
 				&FunctionType{
 					Parameters: []*Parameter{
@@ -201,6 +210,9 @@ func TestFunctionSubtyping(t *testing.T) {
 							TypeAnnotation: NewTypeAnnotation(IntType),
 						},
 					},
+					ReturnTypeAnnotation: NewTypeAnnotation(
+						VoidType,
+					),
 				},
 			),
 		)
@@ -227,6 +239,35 @@ func TestFunctionSubtyping(t *testing.T) {
 				},
 				&FunctionType{
 					ReturnTypeAnnotation: NewTypeAnnotation(IntType),
+				},
+			),
+		)
+	})
+
+	t.Run("constructor != non-constructor", func(t *testing.T) {
+		assert.False(t,
+			IsSubType(
+				&FunctionType{
+					IsConstructor:        false,
+					ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
+				},
+				&FunctionType{
+					IsConstructor:        true,
+					ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
+				},
+			),
+		)
+	})
+
+	t.Run("different receiver types", func(t *testing.T) {
+		// Receiver shouldn't matter
+		assert.True(t,
+			IsSubType(
+				&FunctionType{
+					ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
+				},
+				&FunctionType{
+					ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
 				},
 			),
 		)

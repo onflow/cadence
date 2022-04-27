@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,29 +19,48 @@
 package sema
 
 import (
+	"regexp"
+
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 )
 
 func (checker *Checker) VisitPathExpression(expression *ast.PathExpression) ast.Repr {
 
-	ty, err := CheckPathLiteral(expression)
+	ty, err := CheckPathLiteral(
+		expression.Domain.Identifier,
+		expression.Identifier.Identifier,
+		func() ast.Range {
+			return ast.NewRangeFromPositioned(expression.Domain)
+		},
+		func() ast.Range {
+			return ast.NewRangeFromPositioned(expression.Identifier)
+		},
+	)
+
 	checker.report(err)
 
 	return ty
 }
 
-func CheckPathLiteral(expression *ast.PathExpression) (Type, error) {
+var isValidIdentifier = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`).MatchString
+
+func CheckPathLiteral(domainString, identifier string, domainRangeThunk, idRangeThunk func() ast.Range) (Type, error) {
 
 	// Check that the domain is valid
-
-	domainIdentifier := expression.Domain
-
-	domain, ok := common.AllPathDomainsByIdentifier[domainIdentifier.Identifier]
+	domain, ok := common.AllPathDomainsByIdentifier[domainString]
 	if !ok {
 		return PathType, &InvalidPathDomainError{
-			ActualDomain: domainIdentifier.Identifier,
-			Range:        ast.NewRangeFromPositioned(domainIdentifier),
+			ActualDomain: domainString,
+			Range:        domainRangeThunk(),
+		}
+	}
+
+	// Check that the identifier is valid
+	if !isValidIdentifier(identifier) {
+		return PathType, &InvalidPathIdentifierError{
+			ActualIdentifier: identifier,
+			Range:            idRangeThunk(),
 		}
 	}
 

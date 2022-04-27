@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,10 @@ package runtime
 
 import (
 	"time"
+
+	opentracing "github.com/opentracing/opentracing-go"
+
+	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
@@ -50,6 +54,10 @@ type Interface interface {
 	GetValue(owner, key []byte) (value []byte, err error)
 	// SetValue sets a value for the given key in the storage, owned by the given account.
 	SetValue(owner, key, value []byte) (err error)
+	// ValueExists returns true if the given key exists in the storage, owned by the given account.
+	ValueExists(owner, key []byte) (exists bool, err error)
+	// AllocateStorageIndex allocates a new storage index under the given account.
+	AllocateStorageIndex(owner []byte) (atree.StorageIndex, error)
 	// CreateAccount creates a new account.
 	CreateAccount(payer Address) (address Address, err error)
 	// AddEncodedAccountKey appends an encoded key to an account.
@@ -60,7 +68,7 @@ type Interface interface {
 	AddAccountKey(address Address, publicKey *PublicKey, hashAlgo HashAlgorithm, weight int) (*AccountKey, error)
 	// GetAccountKey retrieves a key from an account by index.
 	GetAccountKey(address Address, index int) (*AccountKey, error)
-	// RemoveAccountKey removes a key from an account by index.
+	// RevokeAccountKey removes a key from an account by index.
 	RevokeAccountKey(address Address, index int) (*AccountKey, error)
 	// UpdateAccountContractCode updates the code associated with an account contract.
 	UpdateAccountContractCode(address Address, name string, code []byte) (err error)
@@ -74,14 +82,11 @@ type Interface interface {
 	ProgramLog(string) error
 	// EmitEvent is called when an event is emitted by the runtime.
 	EmitEvent(cadence.Event) error
-	// ValueExists returns true if the given key exists in the storage, owned by the given account.
-	ValueExists(owner, key []byte) (exists bool, err error)
 	// GenerateUUID is called to generate a UUID.
 	GenerateUUID() (uint64, error)
-	// GetComputationLimit returns the computation limit. A value <= 0 means there is no limit
-	GetComputationLimit() uint64
-	// SetComputationUsed reports the amount of computation used.
-	SetComputationUsed(used uint64) error
+	// MeterComputation is a callback method for metering computation, it returns error
+	// when computation passes the limit (set by the environment)
+	MeterComputation(operationType common.ComputationKind, intensity uint) error
 	// DecodeArgument decodes a transaction argument against the given type.
 	DecodeArgument(argument []byte, argumentType cadence.Type) (cadence.Value, error)
 	// GetCurrentBlockHeight returns the current block height.
@@ -114,180 +119,28 @@ type Interface interface {
 	// ImplementationDebugLog logs implementation log statements on a debug-level
 	ImplementationDebugLog(message string) error
 	// ValidatePublicKey verifies the validity of a public key.
-	ValidatePublicKey(key *PublicKey) (bool, error)
+	ValidatePublicKey(key *PublicKey) error
+	// GetAccountContractNames returns the names of all contracts deployed in an account.
+	GetAccountContractNames(address Address) ([]string, error)
+	// RecordTrace records a opentracing trace
+	RecordTrace(operation string, location common.Location, duration time.Duration, logs []opentracing.LogRecord)
+	// BLSVerifyPOP verifies a proof of possession (PoP) for the receiver public key.
+	BLSVerifyPOP(pk *PublicKey, s []byte) (bool, error)
+	// BLSAggregateSignatures aggregate multiple BLS signatures into one.
+	BLSAggregateSignatures(sigs [][]byte) ([]byte, error)
+	// BLSAggregatePublicKeys aggregate multiple BLS public keys into one.
+	BLSAggregatePublicKeys(keys []*PublicKey) (*PublicKey, error)
+	// ResourceOwnerChanged gets called when a resource's owner changed (if enabled)
+	ResourceOwnerChanged(
+		interpreter *interpreter.Interpreter,
+		resource *interpreter.CompositeValue,
+		oldOwner common.Address,
+		newOwner common.Address,
+	)
 }
 
 type Metrics interface {
 	ProgramParsed(location common.Location, duration time.Duration)
 	ProgramChecked(location common.Location, duration time.Duration)
 	ProgramInterpreted(location common.Location, duration time.Duration)
-	ValueEncoded(duration time.Duration)
-	ValueDecoded(duration time.Duration)
-}
-
-type emptyRuntimeInterface struct {
-	programs map[common.LocationID]*interpreter.Program
-}
-
-// emptyRuntimeInterface should implement Interface
-var _ Interface = &emptyRuntimeInterface{}
-
-func NewEmptyRuntimeInterface() Interface {
-	return &emptyRuntimeInterface{
-		programs: map[common.LocationID]*interpreter.Program{},
-	}
-}
-
-func (i *emptyRuntimeInterface) ResolveLocation(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
-	return []ResolvedLocation{
-		{
-			Location:    location,
-			Identifiers: identifiers,
-		},
-	}, nil
-}
-
-func (i *emptyRuntimeInterface) SetProgram(location Location, program *interpreter.Program) error {
-	i.programs[location.ID()] = program
-
-	return nil
-}
-
-func (i *emptyRuntimeInterface) GetProgram(location Location) (*interpreter.Program, error) {
-	return i.programs[location.ID()], nil
-}
-
-func (i *emptyRuntimeInterface) GetCode(_ Location) ([]byte, error) {
-	return nil, nil
-}
-
-func (i *emptyRuntimeInterface) ValueExists(_, _ []byte) (exists bool, err error) {
-	return false, nil
-}
-
-func (i *emptyRuntimeInterface) GetValue(_, _ []byte) (value []byte, err error) {
-	return nil, nil
-}
-
-func (i *emptyRuntimeInterface) SetValue(_, _, _ []byte) error {
-	return nil
-}
-
-func (i *emptyRuntimeInterface) CreateAccount(_ Address) (address Address, err error) {
-	return Address{}, nil
-}
-
-func (i *emptyRuntimeInterface) AddEncodedAccountKey(_ Address, _ []byte) error {
-	return nil
-}
-
-func (i *emptyRuntimeInterface) RevokeEncodedAccountKey(_ Address, _ int) ([]byte, error) {
-	return nil, nil
-}
-
-func (i *emptyRuntimeInterface) AddAccountKey(_ Address, _ *PublicKey, _ HashAlgorithm, _ int) (*AccountKey, error) {
-	return nil, nil
-}
-
-func (i *emptyRuntimeInterface) RevokeAccountKey(_ Address, _ int) (*AccountKey, error) {
-	return nil, nil
-}
-
-func (i *emptyRuntimeInterface) GetAccountKey(_ Address, _ int) (*AccountKey, error) {
-	return nil, nil
-}
-
-func (i *emptyRuntimeInterface) UpdateAccountContractCode(_ Address, _ string, _ []byte) (err error) {
-	return nil
-}
-
-func (i *emptyRuntimeInterface) GetAccountContractCode(_ Address, _ string) (code []byte, err error) {
-	return nil, nil
-}
-
-func (i *emptyRuntimeInterface) RemoveAccountContractCode(_ Address, _ string) (err error) {
-	return nil
-}
-
-func (i *emptyRuntimeInterface) GetSigningAccounts() ([]Address, error) {
-	return nil, nil
-}
-
-func (i *emptyRuntimeInterface) ProgramLog(_ string) error {
-	return nil
-}
-
-func (i *emptyRuntimeInterface) EmitEvent(_ cadence.Event) error {
-	return nil
-}
-
-func (i *emptyRuntimeInterface) GenerateUUID() (uint64, error) {
-	return 0, nil
-}
-
-func (i *emptyRuntimeInterface) GetComputationLimit() uint64 {
-	return 0
-}
-
-func (i *emptyRuntimeInterface) SetComputationUsed(uint64) error {
-	return nil
-}
-
-func (i *emptyRuntimeInterface) DecodeArgument(_ []byte, _ cadence.Type) (cadence.Value, error) {
-	return nil, nil
-}
-
-func (i *emptyRuntimeInterface) GetCurrentBlockHeight() (uint64, error) {
-	return 0, nil
-}
-
-func (i *emptyRuntimeInterface) GetBlockAtHeight(_ uint64) (block Block, exists bool, err error) {
-	return
-}
-
-func (i *emptyRuntimeInterface) UnsafeRandom() (uint64, error) {
-	return 0, nil
-}
-
-func (i *emptyRuntimeInterface) ImplementationDebugLog(_ string) error {
-	return nil
-}
-
-func (i *emptyRuntimeInterface) VerifySignature(
-	_ []byte,
-	_ string,
-	_ []byte,
-	_ []byte,
-	_ SignatureAlgorithm,
-	_ HashAlgorithm,
-) (bool, error) {
-	return false, nil
-}
-
-func (i *emptyRuntimeInterface) Hash(
-	_ []byte,
-	_ string,
-	_ HashAlgorithm,
-) ([]byte, error) {
-	return nil, nil
-}
-
-func (i emptyRuntimeInterface) GetAccountBalance(_ Address) (uint64, error) {
-	return 0, nil
-}
-
-func (i emptyRuntimeInterface) GetAccountAvailableBalance(_ Address) (uint64, error) {
-	return 0, nil
-}
-
-func (i emptyRuntimeInterface) GetStorageUsed(_ Address) (uint64, error) {
-	return 0, nil
-}
-
-func (i emptyRuntimeInterface) GetStorageCapacity(_ Address) (uint64, error) {
-	return 0, nil
-}
-
-func (i *emptyRuntimeInterface) ValidatePublicKey(_ *PublicKey) (bool, error) {
-	return false, nil
 }

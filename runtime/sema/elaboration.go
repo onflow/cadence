@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,11 +42,12 @@ type Elaboration struct {
 	CompositeTypeDeclarations           map[*CompositeType]*ast.CompositeDeclaration
 	InterfaceDeclarationTypes           map[*ast.InterfaceDeclaration]*InterfaceType
 	InterfaceTypeDeclarations           map[*InterfaceType]*ast.InterfaceDeclaration
-	ConstructorFunctionTypes            map[*ast.SpecialFunctionDeclaration]*ConstructorFunctionType
+	ConstructorFunctionTypes            map[*ast.SpecialFunctionDeclaration]*FunctionType
 	FunctionExpressionFunctionType      map[*ast.FunctionExpression]*FunctionType
 	InvocationExpressionArgumentTypes   map[*ast.InvocationExpression][]Type
 	InvocationExpressionParameterTypes  map[*ast.InvocationExpression][]Type
 	InvocationExpressionReturnTypes     map[*ast.InvocationExpression]Type
+	InvocationExpressionTypeArguments   map[*ast.InvocationExpression]*TypeParameterTypeOrderedMap
 	CastingStaticValueTypes             map[*ast.CastingExpression]Type
 	CastingTargetTypes                  map[*ast.CastingExpression]Type
 	ReturnStatementValueTypes           map[*ast.ReturnStatement]Type
@@ -56,23 +57,24 @@ type Elaboration struct {
 	MemberExpressionMemberInfos         map[*ast.MemberExpression]MemberInfo
 	MemberExpressionExpectedTypes       map[*ast.MemberExpression]Type
 	ArrayExpressionArgumentTypes        map[*ast.ArrayExpression][]Type
-	ArrayExpressionElementType          map[*ast.ArrayExpression]Type
+	ArrayExpressionArrayType            map[*ast.ArrayExpression]ArrayType
 	DictionaryExpressionType            map[*ast.DictionaryExpression]*DictionaryType
 	DictionaryExpressionEntryTypes      map[*ast.DictionaryExpression][]DictionaryEntryType
 	IntegerExpressionType               map[*ast.IntegerExpression]Type
+	StringExpressionType                map[*ast.StringExpression]Type
 	FixedPointExpression                map[*ast.FixedPointExpression]Type
 	TransactionDeclarationTypes         map[*ast.TransactionDeclaration]*TransactionType
 	SwapStatementLeftTypes              map[*ast.SwapStatement]Type
 	SwapStatementRightTypes             map[*ast.SwapStatement]Type
-	IsResourceMoveIndexExpression       map[*ast.IndexExpression]bool
+	// IsNestedResourceMoveExpression indicates if the access the index or member expression
+	// is implicitly moving a resource out of the container, e.g. in a shift or swap statement.
+	IsNestedResourceMoveExpression      map[ast.Expression]struct{}
 	CompositeNestedDeclarations         map[*ast.CompositeDeclaration]map[string]ast.Declaration
 	InterfaceNestedDeclarations         map[*ast.InterfaceDeclaration]map[string]ast.Declaration
 	PostConditionsRewrite               map[*ast.Conditions]PostConditionsRewrite
 	EmitStatementEventTypes             map[*ast.EmitStatement]*CompositeType
-	// Keyed by qualified identifier
 	CompositeTypes                      map[TypeID]*CompositeType
 	InterfaceTypes                      map[TypeID]*InterfaceType
-	InvocationExpressionTypeArguments   map[*ast.InvocationExpression]*TypeParameterTypeOrderedMap
 	IdentifierInInvocationTypes         map[*ast.IdentifierExpression]Type
 	ImportDeclarationsResolvedLocations map[*ast.ImportDeclaration][]ResolvedLocation
 	GlobalValues                        *StringVariableOrderedMap
@@ -81,7 +83,9 @@ type Elaboration struct {
 	EffectivePredeclaredValues          map[string]ValueDeclaration
 	EffectivePredeclaredTypes           map[string]TypeDeclaration
 	isChecking                          bool
-	ReferenceExpressionBorrowTypes      map[*ast.ReferenceExpression]*ReferenceType
+	ReferenceExpressionBorrowTypes      map[*ast.ReferenceExpression]Type
+	IndexExpressionIndexedTypes         map[*ast.IndexExpression]ValueIndexableType
+	IndexExpressionIndexingTypes        map[*ast.IndexExpression]Type
 }
 
 func NewElaboration() *Elaboration {
@@ -97,11 +101,12 @@ func NewElaboration() *Elaboration {
 		CompositeTypeDeclarations:           map[*CompositeType]*ast.CompositeDeclaration{},
 		InterfaceDeclarationTypes:           map[*ast.InterfaceDeclaration]*InterfaceType{},
 		InterfaceTypeDeclarations:           map[*InterfaceType]*ast.InterfaceDeclaration{},
-		ConstructorFunctionTypes:            map[*ast.SpecialFunctionDeclaration]*ConstructorFunctionType{},
+		ConstructorFunctionTypes:            map[*ast.SpecialFunctionDeclaration]*FunctionType{},
 		FunctionExpressionFunctionType:      map[*ast.FunctionExpression]*FunctionType{},
 		InvocationExpressionArgumentTypes:   map[*ast.InvocationExpression][]Type{},
 		InvocationExpressionParameterTypes:  map[*ast.InvocationExpression][]Type{},
 		InvocationExpressionReturnTypes:     map[*ast.InvocationExpression]Type{},
+		InvocationExpressionTypeArguments:   map[*ast.InvocationExpression]*TypeParameterTypeOrderedMap{},
 		CastingStaticValueTypes:             map[*ast.CastingExpression]Type{},
 		CastingTargetTypes:                  map[*ast.CastingExpression]Type{},
 		ReturnStatementValueTypes:           map[*ast.ReturnStatement]Type{},
@@ -111,29 +116,31 @@ func NewElaboration() *Elaboration {
 		MemberExpressionMemberInfos:         map[*ast.MemberExpression]MemberInfo{},
 		MemberExpressionExpectedTypes:       map[*ast.MemberExpression]Type{},
 		ArrayExpressionArgumentTypes:        map[*ast.ArrayExpression][]Type{},
-		ArrayExpressionElementType:          map[*ast.ArrayExpression]Type{},
+		ArrayExpressionArrayType:            map[*ast.ArrayExpression]ArrayType{},
 		DictionaryExpressionType:            map[*ast.DictionaryExpression]*DictionaryType{},
 		DictionaryExpressionEntryTypes:      map[*ast.DictionaryExpression][]DictionaryEntryType{},
 		IntegerExpressionType:               map[*ast.IntegerExpression]Type{},
+		StringExpressionType:                map[*ast.StringExpression]Type{},
 		FixedPointExpression:                map[*ast.FixedPointExpression]Type{},
 		TransactionDeclarationTypes:         map[*ast.TransactionDeclaration]*TransactionType{},
 		SwapStatementLeftTypes:              map[*ast.SwapStatement]Type{},
 		SwapStatementRightTypes:             map[*ast.SwapStatement]Type{},
-		IsResourceMoveIndexExpression:       map[*ast.IndexExpression]bool{},
+		IsNestedResourceMoveExpression:      map[ast.Expression]struct{}{},
 		CompositeNestedDeclarations:         map[*ast.CompositeDeclaration]map[string]ast.Declaration{},
 		InterfaceNestedDeclarations:         map[*ast.InterfaceDeclaration]map[string]ast.Declaration{},
 		PostConditionsRewrite:               map[*ast.Conditions]PostConditionsRewrite{},
 		EmitStatementEventTypes:             map[*ast.EmitStatement]*CompositeType{},
 		CompositeTypes:                      map[TypeID]*CompositeType{},
 		InterfaceTypes:                      map[TypeID]*InterfaceType{},
-		InvocationExpressionTypeArguments:   map[*ast.InvocationExpression]*TypeParameterTypeOrderedMap{},
 		IdentifierInInvocationTypes:         map[*ast.IdentifierExpression]Type{},
 		ImportDeclarationsResolvedLocations: map[*ast.ImportDeclaration][]ResolvedLocation{},
 		GlobalValues:                        NewStringVariableOrderedMap(),
 		GlobalTypes:                         NewStringVariableOrderedMap(),
 		EffectivePredeclaredValues:          map[string]ValueDeclaration{},
 		EffectivePredeclaredTypes:           map[string]TypeDeclaration{},
-		ReferenceExpressionBorrowTypes:      map[*ast.ReferenceExpression]*ReferenceType{},
+		ReferenceExpressionBorrowTypes:      map[*ast.ReferenceExpression]Type{},
+		IndexExpressionIndexedTypes:         map[*ast.IndexExpression]ValueIndexableType{},
+		IndexExpressionIndexingTypes:        map[*ast.IndexExpression]Type{},
 	}
 }
 
@@ -162,13 +169,12 @@ func (e *Elaboration) FunctionEntryPointType() (*FunctionType, error) {
 		}
 	}
 
-	invokableType, ok := entryPointValue.Type.(InvokableType)
+	functionType, ok := entryPointValue.Type.(*FunctionType)
 	if !ok {
 		return nil, &InvalidEntryPointTypeError{
 			Type: entryPointValue.Type,
 		}
 	}
 
-	functionType := invokableType.InvocationFunctionType()
 	return functionType, nil
 }

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -322,32 +323,91 @@ func TestCheckFunctionArgumentTypeInference(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
-      let x = foo(a: [1, 2, 3])
+	t.Run("required args", func(t *testing.T) {
+		t.Parallel()
 
-      fun foo(a: [Int8]) {}
-    `)
+		_, err := ParseAndCheck(t, `
+            let x = foo(a: [1, 2, 3])
 
-	// Type inferring for function arguments is not supported yet.
-	errs := ExpectCheckerErrors(t, err, 1)
+            fun foo(a: [Int8]) {}
+        `)
 
-	require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		require.NoError(t, err)
+	})
 
-	typeMismatchErr := errs[0].(*sema.TypeMismatchError)
+	t.Run("with generics", func(t *testing.T) {
 
-	assert.Equal(t,
-		&sema.VariableSizedType{
-			Type: sema.Int8Type,
-		},
-		typeMismatchErr.ExpectedType,
-	)
+		t.Parallel()
 
-	assert.Equal(t,
-		&sema.VariableSizedType{
-			Type: sema.IntType,
-		},
-		typeMismatchErr.ActualType,
-	)
+		typeParameter := &sema.TypeParameter{
+			Name:      "T",
+			TypeBound: nil,
+		}
+
+		_, err := parseAndCheckWithTestValue(t,
+			`
+              let res = test<[Int8]>([1, 2, 3])
+            `,
+			&sema.FunctionType{
+				TypeParameters: []*sema.TypeParameter{
+					typeParameter,
+				},
+				Parameters: []*sema.Parameter{
+					{
+						Label:      sema.ArgumentLabelNotRequired,
+						Identifier: "value",
+						TypeAnnotation: sema.NewTypeAnnotation(
+							&sema.GenericType{
+								TypeParameter: typeParameter,
+							},
+						),
+					},
+				},
+				ReturnTypeAnnotation:  sema.NewTypeAnnotation(sema.VoidType),
+				RequiredArgumentCount: nil,
+			},
+		)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		require.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
+		typeParamMismatchErr := errs[0].(*sema.TypeParameterTypeMismatchError)
+		assert.Equal(
+			t,
+			&sema.VariableSizedType{
+				Type: sema.Int8Type,
+			},
+			typeParamMismatchErr.ExpectedType,
+		)
+
+		assert.Equal(
+			t,
+			&sema.VariableSizedType{
+				Type: sema.IntType,
+			},
+			typeParamMismatchErr.ActualType,
+		)
+
+		require.IsType(t, &sema.TypeMismatchError{}, errs[1])
+		typeMismatchErr := errs[1].(*sema.TypeMismatchError)
+
+		assert.Equal(
+			t,
+			&sema.VariableSizedType{
+				Type: sema.Int8Type,
+			},
+			typeMismatchErr.ExpectedType,
+		)
+
+		assert.Equal(
+			t,
+			&sema.VariableSizedType{
+				Type: sema.IntType,
+			},
+			typeMismatchErr.ActualType,
+		)
+
+	})
 }
 
 func TestCheckBinaryExpressionTypeInference(t *testing.T) {
@@ -710,5 +770,416 @@ func TestCheckInferenceWithCheckerErrors(t *testing.T) {
 			notDeclaredError := err.(*sema.NotDeclaredError)
 			assert.Equal(t, "UnknownType", notDeclaredError.Name)
 		}
+	})
+}
+
+func TestCheckArraySupertypeInference(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("has supertype", func(t *testing.T) {
+		t.Parallel()
+
+		tests := []struct {
+			name                string
+			code                string
+			expectedElementType sema.Type
+		}{
+			{
+				name:                "mixed simple values",
+				code:                `let x = [0, true]`,
+				expectedElementType: sema.AnyStructType,
+			},
+			{
+				name:                "signed integer values",
+				code:                `let x = [0, 6, 275]`,
+				expectedElementType: sema.IntType,
+			},
+			{
+				name:                "signed and unsigned integer values",
+				code:                `let x = [UInt(65), 6, 275, 13423]`,
+				expectedElementType: sema.IntegerType,
+			},
+			{
+				name:                "unsigned integers values",
+				code:                `let x = [UInt(0), UInt(6), UInt(275), UInt(13423)]`,
+				expectedElementType: sema.UIntType,
+			},
+			{
+				name: "values with nil",
+				code: `let x = ["hello", nil, nil, nil]`,
+				expectedElementType: &sema.OptionalType{
+					Type: sema.StringType,
+				},
+			},
+			{
+				name: "common interfaced values",
+				code: `
+                    let x = [Foo(), Bar(), Baz()]
+
+                    pub struct interface I1 {}
+
+                    pub struct interface I2 {}
+
+                    pub struct interface I3 {}
+
+                    pub struct Foo: I1, I2 {}
+
+                    pub struct Bar: I2, I3 {}
+
+                    pub struct Baz: I1, I2, I3 {}
+                `,
+				expectedElementType: &sema.RestrictedType{
+					Type: sema.AnyStructType,
+					Restrictions: []*sema.InterfaceType{
+						{
+							Location:      common.StringLocation("test"),
+							Identifier:    "I2",
+							CompositeKind: common.CompositeKindStructure,
+						},
+					},
+				},
+			},
+			{
+				name: "implicit covariant to interface",
+				code: `
+                    let x = [[Bar()], [Baz()]]
+
+                    pub struct interface Foo {}
+
+                    pub struct Bar: Foo {}
+
+                    pub struct Baz: Foo {}
+                `,
+				expectedElementType: &sema.VariableSizedType{
+					Type: &sema.RestrictedType{
+						Type: sema.AnyStructType,
+						Restrictions: []*sema.InterfaceType{
+							{
+								Location:      common.StringLocation("test"),
+								Identifier:    "Foo",
+								CompositeKind: common.CompositeKindStructure,
+							},
+						},
+					},
+				},
+			},
+			{
+				name: "explicit covariant to interface",
+				code: `
+                    // Covariance is supported with explicit type annotation.
+                    let x = [[Bar()], [Baz()]] as [[{Foo}]]
+
+                    pub struct interface Foo {}
+
+                    pub struct Bar: Foo {}
+
+                    pub struct Baz: Foo {}
+                `,
+				expectedElementType: &sema.VariableSizedType{
+					Type: &sema.RestrictedType{
+						Type: sema.AnyStructType,
+						Restrictions: []*sema.InterfaceType{
+							{
+								Location:      common.StringLocation("test"),
+								Identifier:    "Foo",
+								CompositeKind: common.CompositeKindStructure,
+							},
+						},
+					},
+				},
+			},
+			{
+				name: "nested covariant var sized",
+				code: `let x = [[[1, 2]], [["foo", "bar"]], [[5.3, 6.4]]]`,
+				expectedElementType: &sema.VariableSizedType{
+					Type: &sema.VariableSizedType{
+						Type: sema.AnyStructType,
+					},
+				},
+			},
+			{
+				name: "nested covariant constant sized",
+				code: `let x = [[[1, 2] as [Int; 2]], [["foo", "bar"] as [String; 2]], [[5.3, 6.4] as [Fix64; 2]]]`,
+				expectedElementType: &sema.VariableSizedType{
+					Type: &sema.ConstantSizedType{
+						Type: sema.AnyStructType,
+						Size: 2,
+					},
+				},
+			},
+			{
+				name: "nested non-covariant constant sized",
+				code: `let x = [[[1, 2] as [Int; 2]], [["foo", "bar", "baz"] as [String; 3]], [[5.3, 6.4] as [Fix64; 2]]]`,
+				expectedElementType: &sema.VariableSizedType{
+					Type: sema.AnyStructType,
+				},
+			},
+		}
+
+		for _, test := range tests {
+			t.Run(test.name, func(t *testing.T) {
+				checker, err := ParseAndCheck(t, test.code)
+				require.NoError(t, err)
+
+				xType := RequireGlobalValue(t, checker.Elaboration, "x")
+
+				require.IsType(t, &sema.VariableSizedType{}, xType)
+				arrayType := xType.(*sema.VariableSizedType)
+
+				assert.Equal(t, test.expectedElementType.ID(), arrayType.Type.ID())
+			})
+		}
+	})
+
+	t.Run("no supertype", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            let x = [<- create Foo(), Bar()]
+
+            pub resource Foo {}
+
+            pub struct Bar {}
+        `
+		_, err := ParseAndCheck(t, code)
+		checkerErr := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.TypeAnnotationRequiredError{}, checkerErr[0])
+	})
+
+	t.Run("empty array", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            let x = [].getType()
+        `
+		_, err := ParseAndCheck(t, code)
+		checkerErr := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.TypeAnnotationRequiredError{}, checkerErr[0])
+	})
+}
+
+func TestCheckDictionarySupertypeInference(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("has supertype", func(t *testing.T) {
+		t.Parallel()
+
+		tests := []struct {
+			name              string
+			code              string
+			expectedKeyType   sema.Type
+			expectedValueType sema.Type
+		}{
+			{
+				name:              "mixed simple values",
+				code:              `let x = {0: 0, 1: true}`,
+				expectedKeyType:   sema.IntType,
+				expectedValueType: sema.AnyStructType,
+			},
+			{
+				name:              "signed integer values",
+				code:              `let x = {0: 0, 1: 6, 2: 275}`,
+				expectedKeyType:   sema.IntType,
+				expectedValueType: sema.IntType,
+			},
+			{
+				name:              "signed and unsigned integer values",
+				code:              `let x = {0: UInt(65), 1: 6, 2: 275, 3: 13423}`,
+				expectedKeyType:   sema.IntType,
+				expectedValueType: sema.IntegerType,
+			},
+			{
+				name:              "unsigned integers values",
+				code:              `let x = {0: UInt(0), 1: UInt(6), 2: UInt(275), 3: UInt(13423)}`,
+				expectedKeyType:   sema.IntType,
+				expectedValueType: sema.UIntType,
+			},
+			{
+				name:              "unsigned integers keys",
+				code:              `let x = {UInt(0): true, UInt(6): false, UInt(275): false, UInt(13423): true}`,
+				expectedKeyType:   sema.UIntType,
+				expectedValueType: sema.BoolType,
+			},
+			{
+				name:            "values with nil",
+				code:            `let x = {0: "hello", 1: nil, 2: nil, 2: nil}`,
+				expectedKeyType: sema.IntType,
+				expectedValueType: &sema.OptionalType{
+					Type: sema.StringType,
+				},
+			},
+			{
+				name: "common interfaced values",
+				code: `
+                    let x = {0: Foo(), 1: Bar(), 2: Baz()}
+
+                    pub struct interface I1 {}
+
+                    pub struct interface I2 {}
+
+                    pub struct interface I3 {}
+
+                    pub struct Foo: I1, I2 {}
+
+                    pub struct Bar: I2, I3 {}
+
+                    pub struct Baz: I1, I2, I3 {}
+                `,
+				expectedKeyType: sema.IntType,
+				expectedValueType: &sema.RestrictedType{
+					Type: sema.AnyStructType,
+					Restrictions: []*sema.InterfaceType{
+						{
+							Location:      common.StringLocation("test"),
+							Identifier:    "I2",
+							CompositeKind: common.CompositeKindStructure,
+						},
+					},
+				},
+			},
+			{
+				name: "implicit covariant values",
+				code: `
+                    let x = { 0: {100: Bar()}, 1: {200: Baz()} }
+
+                    pub struct interface Foo {}
+
+                    pub struct Bar: Foo {}
+
+                    pub struct Baz: Foo {}
+                `,
+				expectedKeyType: sema.IntType,
+				expectedValueType: &sema.DictionaryType{
+					KeyType: sema.IntType,
+					ValueType: &sema.RestrictedType{
+						Type: sema.AnyStructType,
+						Restrictions: []*sema.InterfaceType{
+							{
+								Location:      common.StringLocation("test"),
+								Identifier:    "Foo",
+								CompositeKind: common.CompositeKindStructure,
+							},
+						},
+					},
+				},
+			},
+			{
+				name: "explicit covariant values",
+				code: `
+                    // Covariance is supported with explicit type annotation.
+                    let x = { 0: {100: Bar()}, 1: {200: Baz()} } as {Int: {Int: {Foo}}}
+
+                    pub struct interface Foo {}
+
+                    pub struct Bar: Foo {}
+
+                    pub struct Baz: Foo {}
+                `,
+				expectedKeyType: sema.IntType,
+				expectedValueType: &sema.DictionaryType{
+					KeyType: sema.IntType,
+					ValueType: &sema.RestrictedType{
+						Type: sema.AnyStructType,
+						Restrictions: []*sema.InterfaceType{
+							{
+								Location:      common.StringLocation("test"),
+								Identifier:    "Foo",
+								CompositeKind: common.CompositeKindStructure,
+							},
+						},
+					},
+				},
+			},
+			{
+				name:              "no supertype for inner keys",
+				code:              `let x = {0: {10: 1, 20: 2}, 1: {"one": 1, "two": 2}}`,
+				expectedKeyType:   sema.IntType,
+				expectedValueType: sema.AnyStructType,
+			},
+			{
+				name: "no supertype for inner keys with resource values",
+				code: `
+                    let x <- {0: <- {10: <- create Foo()}, 1: <- {"one": <- create Foo()}}
+
+                    pub resource Foo {}
+                `,
+				expectedKeyType:   sema.IntType,
+				expectedValueType: sema.AnyResourceType,
+			},
+		}
+
+		for _, test := range tests {
+			t.Run(test.name, func(t *testing.T) {
+				checker, err := ParseAndCheck(t, test.code)
+				require.NoError(t, err)
+
+				xType := RequireGlobalValue(t, checker.Elaboration, "x")
+
+				require.IsType(t, &sema.DictionaryType{}, xType)
+				dictionaryType := xType.(*sema.DictionaryType)
+
+				assert.Equal(t, test.expectedKeyType.ID(), dictionaryType.KeyType.ID())
+				assert.Equal(t, test.expectedValueType.ID(), dictionaryType.ValueType.ID())
+			})
+		}
+	})
+
+	t.Run("no supertype for values", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            let x = {0: <- create Foo(), 1: Bar()}
+
+            pub resource Foo {}
+
+            pub struct Bar {}
+        `
+		_, err := ParseAndCheck(t, code)
+		checkerErr := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeAnnotationRequiredError{}, checkerErr[0])
+	})
+
+	t.Run("no supertype for keys", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            let x = {1: 1, "two": 2}
+        `
+		_, err := ParseAndCheck(t, code)
+		checkerErr := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidDictionaryKeyTypeError{}, checkerErr[0])
+	})
+
+	t.Run("unsupported supertype for keys", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            let x = {0: 1, "hello": 2}
+        `
+		_, err := ParseAndCheck(t, code)
+		checkerErr := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidDictionaryKeyTypeError{}, checkerErr[0])
+		invalidKeyError := checkerErr[0].(*sema.InvalidDictionaryKeyTypeError)
+
+		assert.Equal(t, sema.AnyStructType, invalidKeyError.Type)
+	})
+
+	t.Run("empty dictionary", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            let x = {}.getType()
+        `
+		_, err := ParseAndCheck(t, code)
+		checkerErr := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.TypeAnnotationRequiredError{}, checkerErr[0])
 	})
 }

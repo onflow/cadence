@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/google/uuid"
 	"github.com/mitchellh/mapstructure"
 	"github.com/onflow/cadence/encoding/json"
@@ -189,6 +190,8 @@ type Server struct {
 	// initializationOptionsHandlers are the functions that are used to handle initialization options sent by the client
 	initializationOptionsHandlers []InitializationOptionsHandler
 	accessCheckMode               sema.AccessCheckMode
+	// reportCrashes decides when the crash is detected should it be reported
+	reportCrashes bool
 }
 
 type Option func(*Server) error
@@ -288,8 +291,10 @@ func NewServer() (*Server, error) {
 	}
 	server.protocolServer = protocol.NewServer(server)
 
-	// Set default commands
+	// init crash reporting
+	initCrashReporting(server)
 
+	// Set default commands
 	for _, command := range server.defaultCommands() {
 		err := server.SetOptions(WithCommand(command))
 		if err != nil {
@@ -369,7 +374,29 @@ func (s *Server) Initialize(
 	return result, nil
 }
 
-const accessCheckModeOption = "accessCheckMode"
+// initCrashReporting set-ups sentry as crash reporting tool, it also sets listener for panics.
+func initCrashReporting(server *Server) {
+	sentrySyncTransport := sentry.NewHTTPSyncTransport()
+	sentrySyncTransport.Timeout = time.Second * 3
+
+	_ = sentry.Init(sentry.ClientOptions{
+		Dsn:              "https://7725b80e4d5a4625845270176a6d8bd5@o114654.ingest.sentry.io/6330569",
+		AttachStacktrace: true,
+		Transport:        sentrySyncTransport,
+		BeforeSend: func(event *sentry.Event, hint *sentry.EventHint) *sentry.Event {
+			if server.reportCrashes {
+				return event
+			}
+
+			return nil
+		},
+	})
+}
+
+const (
+	accessCheckModeOption = "accessCheckMode"
+	reportCrashesOption   = "reportCrashes"
+)
 
 func accessCheckModeFromName(name string) sema.AccessCheckMode {
 	switch name {
@@ -400,6 +427,12 @@ func (s *Server) configure(opts interface{}) {
 		s.accessCheckMode = accessCheckModeFromName(accessCheckModeName)
 	} else {
 		s.accessCheckMode = sema.AccessCheckModeStrict
+	}
+
+	if reportCrashesValue, ok := optsMap[reportCrashesOption].(bool); ok {
+		s.reportCrashes = reportCrashesValue
+	} else {
+		s.reportCrashes = true // report by default
 	}
 }
 
@@ -589,8 +622,8 @@ func (s *Server) Hover(
 }
 
 func documentType(ty sema.Type) string {
-	if invokableType, ok := ty.(sema.InvokableType); ok {
-		return documentFunctionType(invokableType.InvocationFunctionType())
+	if functionType, ok := ty.(*sema.FunctionType); ok {
+		return documentFunctionType(functionType)
 	}
 	return ty.QualifiedString()
 }
@@ -1333,13 +1366,13 @@ func (s *Server) rangeCompletions(
 			common.DeclarationKindResource,
 			common.DeclarationKindEvent:
 
-			if constructorFunctionType, ok := r.Type.(*sema.ConstructorFunctionType); ok {
+			if functionType, ok := r.Type.(*sema.FunctionType); ok && functionType.IsConstructor {
 				item.Kind = protocol.ConstructorCompletion
 
 				s.prepareParametersCompletionItem(
 					item,
 					r.Identifier,
-					constructorFunctionType.Parameters,
+					functionType.Parameters,
 				)
 
 				isFunctionCompletion = true
@@ -1559,8 +1592,8 @@ func (s *Server) maybeResolveRange(uri protocol.DocumentUri, id string, result *
 		return false
 	}
 
-	if constructorFunctionType, ok := r.Type.(*sema.ConstructorFunctionType); ok {
-		typeString := constructorFunctionType.QualifiedString()
+	if functionType, ok := r.Type.(*sema.FunctionType); ok && functionType.IsConstructor {
+		typeString := functionType.QualifiedString()
 
 		result.Detail = fmt.Sprintf(
 			"(constructor) %s",
@@ -1788,27 +1821,24 @@ func (s *Server) getDiagnostics(
 
 					importedLocationID := importedLocation.ID()
 
-					importedChecker, ok := s.checkers[importedLocationID]
-					if !ok {
-						importedProgram, err := s.resolveImport(importedLocation)
-						if err != nil {
-							return nil, err
+					importedProgram, err := s.resolveImport(importedLocation)
+					if err != nil {
+						return nil, err
+					}
+					if importedProgram == nil {
+						return nil, &sema.CheckerError{
+							Errors: []error{fmt.Errorf("cannot import %s", importedLocation)},
 						}
-						if importedProgram == nil {
-							return nil, &sema.CheckerError{
-								Errors: []error{fmt.Errorf("cannot import %s", importedLocation)},
-							}
-						}
-
-						importedChecker, err = checker.SubChecker(importedProgram, importedLocation)
-						if err != nil {
-							return nil, err
-						}
-						s.checkers[importedLocationID] = importedChecker
-						err = importedChecker.Check()
-						if err != nil {
-							return nil, err
-						}
+					}
+					// we are rechecking the imported program since there might be changes
+					importedChecker, err := checker.SubChecker(importedProgram, importedLocation)
+					if err != nil {
+						return nil, err
+					}
+					s.checkers[importedLocationID] = importedChecker
+					err = importedChecker.Check()
+					if err != nil {
+						return nil, err
 					}
 
 					return sema.ElaborationImport{
@@ -2452,12 +2482,10 @@ func formatNewMember(member *sema.Member, indentation string) string {
 		)
 
 	case common.DeclarationKindFunction:
-		invokableType, ok := member.TypeAnnotation.Type.(sema.InvokableType)
+		functionType, ok := member.TypeAnnotation.Type.(*sema.FunctionType)
 		if !ok {
 			return ""
 		}
-
-		functionType := invokableType.InvocationFunctionType()
 
 		var parametersBuilder strings.Builder
 

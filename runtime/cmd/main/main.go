@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,13 +20,31 @@ package main
 
 import (
 	"os"
+	"os/signal"
 
 	"github.com/onflow/cadence/runtime/cmd/execute"
+	"github.com/onflow/cadence/runtime/interpreter"
 )
 
 func main() {
 	if len(os.Args) > 1 {
-		execute.Execute(os.Args[1:])
+		// TODO: also make the REPL support the interactive debugger
+
+		signals := make(chan os.Signal, 1)
+
+		signal.Notify(signals, os.Interrupt)
+
+		debugger := interpreter.NewDebugger()
+
+		go func() {
+			for range signals {
+				stop := debugger.Pause()
+				execute.NewInteractiveDebugger(debugger, stop).Run()
+				debugger.Continue()
+			}
+		}()
+
+		execute.Execute(os.Args[1:], debugger)
 	} else {
 		execute.RunREPL()
 	}

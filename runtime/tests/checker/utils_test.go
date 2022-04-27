@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,6 +40,7 @@ func ParseAndCheckWithPanic(t *testing.T, code string) (*sema.Checker, error) {
 		},
 	)
 }
+
 func ParseAndCheckWithAny(t *testing.T, code string) (*sema.Checker, error) {
 	return ParseAndCheckWithOptions(t,
 		code,
@@ -52,6 +53,18 @@ func ParseAndCheckWithAny(t *testing.T, code string) (*sema.Checker, error) {
 						Kind: common.DeclarationKindType,
 					},
 				}),
+				sema.WithLintingEnabled(true),
+			},
+		},
+	)
+}
+
+func ParseAndCheckWithLinting(t *testing.T, code string) (*sema.Checker, error) {
+	return ParseAndCheckWithOptions(t,
+		code,
+		ParseAndCheckOptions{
+			Options: []sema.Option{
+				sema.WithLintingEnabled(true),
 			},
 		},
 	)

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,16 +18,48 @@
 
 package sema
 
+import (
+	"github.com/rivo/uniseg"
+
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
+)
+
 // CharacterType represents the character type
 //
 var CharacterType = &SimpleType{
 	Name:                 "Character",
 	QualifiedName:        "Character",
 	TypeID:               "Character",
+	tag:                  CharacterTypeTag,
 	IsInvalid:            false,
 	IsResource:           false,
 	Storable:             true,
 	Equatable:            true,
 	ExternallyReturnable: true,
 	Importable:           true,
+}
+
+func IsValidCharacter(s string) bool {
+	graphemes := uniseg.NewGraphemes(s)
+	// a valid character must have exactly one grapheme cluster
+	return graphemes.Next() && !graphemes.Next()
+}
+
+func init() {
+	CharacterType.Members = func(t *SimpleType) map[string]MemberResolver {
+		return map[string]MemberResolver{
+			ToStringFunctionName: {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicFunctionMember(
+						t,
+						identifier,
+						ToStringFunctionType,
+						toStringFunctionDocString,
+					)
+				},
+			},
+		}
+	}
 }

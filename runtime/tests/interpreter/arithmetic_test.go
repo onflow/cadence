@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,11 +24,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 var integerTestValues = map[string]interpreter.NumberValue{
@@ -88,7 +88,9 @@ func TestInterpretPlusOperator(t *testing.T) {
 				),
 			)
 
-			assert.Equal(t,
+			AssertValuesEqual(
+				t,
+				inter,
 				value,
 				inter.Globals["c"].GetValue(),
 			)
@@ -115,7 +117,9 @@ func TestInterpretMinusOperator(t *testing.T) {
 				),
 			)
 
-			assert.Equal(t,
+			AssertValuesEqual(
+				t,
+				inter,
 				value,
 				inter.Globals["c"].GetValue(),
 			)
@@ -142,7 +146,9 @@ func TestInterpretMulOperator(t *testing.T) {
 				),
 			)
 
-			assert.Equal(t,
+			AssertValuesEqual(
+				t,
+				inter,
 				value,
 				inter.Globals["c"].GetValue(),
 			)
@@ -169,7 +175,9 @@ func TestInterpretDivOperator(t *testing.T) {
 				),
 			)
 
-			assert.Equal(t,
+			AssertValuesEqual(
+				t,
+				inter,
 				value,
 				inter.Globals["c"].GetValue(),
 			)
@@ -196,7 +204,9 @@ func TestInterpretModOperator(t *testing.T) {
 				),
 			)
 
-			assert.Equal(t,
+			AssertValuesEqual(
+				t,
+				inter,
 				value,
 				inter.Globals["c"].GetValue(),
 			)
@@ -808,7 +818,7 @@ func TestInterpretSaturatedArithmeticFunctions(t *testing.T) {
 				require.NoError(t, err)
 
 				require.True(t,
-					call.expected.Equal(result, inter, false),
+					call.expected.Equal(inter, interpreter.ReturnEmptyLocationRange, result),
 					fmt.Sprintf(
 						"%s(%s, %s) = %s != %s",
 						method, call.left, call.right, result, call.expected,

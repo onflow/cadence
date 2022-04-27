@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,19 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) ast.Repr 
 	defer checker.leaveValueScope(statement.EndPosition, true)
 
 	valueExpression := statement.Value
-	valueType := checker.VisitExpression(valueExpression, nil)
+
+	// iterations are only supported for non-resource arrays.
+	// Hence, if the array is empty and no context type is available,
+	// then default it to [AnyStruct].
+	var expectedType Type
+	arrayExpression, ok := valueExpression.(*ast.ArrayExpression)
+	if ok && len(arrayExpression.Values) == 0 {
+		expectedType = &VariableSizedType{
+			Type: AnyStructType,
+		}
+	}
+
+	valueType := checker.VisitExpression(valueExpression, expectedType)
 
 	var elementType Type = InvalidType
 
@@ -73,6 +85,23 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) ast.Repr 
 	checker.report(err)
 	if checker.positionInfoEnabled {
 		checker.recordVariableDeclarationOccurrence(identifier, variable)
+	}
+
+	if statement.Index != nil {
+		index := statement.Index.Identifier
+		indexVariable, err := checker.valueActivations.Declare(variableDeclaration{
+			identifier:               index,
+			ty:                       IntType,
+			kind:                     common.DeclarationKindConstant,
+			pos:                      statement.Index.Pos,
+			isConstant:               true,
+			argumentLabels:           nil,
+			allowOuterScopeShadowing: false,
+		})
+		checker.report(err)
+		if checker.positionInfoEnabled {
+			checker.recordVariableDeclarationOccurrence(index, indexVariable)
+		}
 	}
 
 	// The body of the loop will maybe be evaluated.

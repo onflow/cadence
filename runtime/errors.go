@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,15 +61,15 @@ func (e Error) Error() string {
 	return sb.String()
 }
 
-// ComputationLimitExceededError
+// CallStackLimitExceededError
 
-type ComputationLimitExceededError struct {
+type CallStackLimitExceededError struct {
 	Limit uint64
 }
 
-func (e ComputationLimitExceededError) Error() string {
+func (e CallStackLimitExceededError) Error() string {
 	return fmt.Sprintf(
-		"computation limited exceeded: %d",
+		"call stack limit exceeded: %d",
 		e.Limit,
 	)
 }
@@ -222,7 +222,7 @@ func (e *ScriptParameterTypeNotImportableError) Error() string {
 // script arguments that belongs to non-importable types.
 //
 type ArgumentNotImportableError struct {
-	Type interpreter.DynamicType
+	Type interpreter.StaticType
 }
 
 func (e *ArgumentNotImportableError) Error() string {
@@ -400,28 +400,11 @@ func (e *InvalidDeclarationKindChangeError) Error() string {
 // does not match the existing one.
 type ConformanceMismatchError struct {
 	DeclName string
-	Err      error
 	ast.Range
 }
 
 func (e *ConformanceMismatchError) Error() string {
 	return fmt.Sprintf("conformances does not match in `%s`", e.DeclName)
-}
-
-func (e *ConformanceMismatchError) SecondaryError() string {
-	return e.Err.Error()
-}
-
-// ConformanceCountMismatchError is reported during a contract update, when the conformance count
-// does not match the existing conformance count.
-type ConformanceCountMismatchError struct {
-	Expected int
-	Found    int
-	ast.Range
-}
-
-func (e *ConformanceCountMismatchError) Error() string {
-	return fmt.Sprintf("conformances count does not match: expected %d, found %d", e.Expected, e.Found)
 }
 
 // EnumCaseMismatchError is reported during an enum update, when an updated enum case
@@ -457,29 +440,18 @@ func (e *MissingEnumCasesError) Error() string {
 	)
 }
 
-// MissingCompositeDeclarationError is reported during an contract update, if an existing
-// composite declaration (struct or struct interface) is removed.
-type MissingCompositeDeclarationError struct {
+// MissingDeclarationError is reported during a contract update,
+// if an existing declaration is removed.
+type MissingDeclarationError struct {
 	Name string
+	Kind common.DeclarationKind
 	ast.Range
 }
 
-func (e *MissingCompositeDeclarationError) Error() string {
+func (e *MissingDeclarationError) Error() string {
 	return fmt.Sprintf(
-		"missing composite declaration `%s`",
+		"missing %s declaration `%s`",
+		e.Kind,
 		e.Name,
-	)
-}
-
-// NonStorableValueWriteError
-//
-type NonStorableValueWriteError struct {
-	Value interpreter.Value
-}
-
-func (e NonStorableValueWriteError) Error() string {
-	return fmt.Sprintf(
-		"cannot write non-storable value: %s",
-		e.Value,
 	)
 }

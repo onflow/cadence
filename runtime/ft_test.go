@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -503,11 +503,11 @@ pub fun main(account: Address): UFix64 {
 
 func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
-	runtime := NewInterpreterRuntime()
+	runtime := newTestInterpreterRuntime()
 
-	contractsAddress := common.BytesToAddress([]byte{0x1})
-	senderAddress := common.BytesToAddress([]byte{0x2})
-	receiverAddress := common.BytesToAddress([]byte{0x3})
+	contractsAddress := common.MustBytesToAddress([]byte{0x1})
+	senderAddress := common.MustBytesToAddress([]byte{0x2})
+	receiverAddress := common.MustBytesToAddress([]byte{0x3})
 
 	accountCodes := map[common.LocationID][]byte{}
 
@@ -519,7 +519,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 		getCode: func(location Location) (bytes []byte, err error) {
 			return accountCodes[location.ID()], nil
 		},
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{signerAccount}, nil
 		},
@@ -636,7 +636,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 	// Benchmark sending tokens from sender to receiver
 
-	semdAmount, err := cadence.NewUFix64("0.00000001")
+	sendAmount, err := cadence.NewUFix64("0.00000001")
 	require.NoError(b, err)
 
 	signerAccount = senderAddress
@@ -650,7 +650,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 			Script{
 				Source: []byte(realFlowTokenTransferTransaction),
 				Arguments: encodeArgs([]cadence.Value{
-					semdAmount,
+					sendAmount,
 					cadence.Address(receiverAddress),
 				}),
 			},
@@ -694,5 +694,5 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 		sum = sum.Plus(value).(interpreter.UFix64Value)
 	}
 
-	require.True(b, mintAmountValue.Equal(sum, nil, true))
+	utils.RequireValuesEqual(b, nil, mintAmountValue, sum)
 }

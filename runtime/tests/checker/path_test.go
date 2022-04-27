@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,8 +64,34 @@ func TestCheckPath(t *testing.T) {
 		})
 	}
 
+	testPathToString := func(domain common.PathDomain) {
+
+		t.Run(fmt.Sprintf("toString: %s", domain.Identifier()), func(t *testing.T) {
+
+			t.Parallel()
+
+			checker, err := ParseAndCheck(t,
+				fmt.Sprintf(
+					`
+                      let x = /%[1]s/foo
+                      let y = x.toString()
+                    `,
+					domain.Identifier(),
+				),
+			)
+
+			require.NoError(t, err)
+
+			assert.IsType(t,
+				sema.StringType,
+				RequireGlobalValue(t, checker.Elaboration, "y"),
+			)
+		})
+	}
+
 	for _, domain := range common.AllPathDomainsByIdentifier {
 		test(domain)
+		testPathToString(domain)
 	}
 
 	t.Run("invalid: unsupported domain", func(t *testing.T) {
@@ -78,4 +104,62 @@ func TestCheckPath(t *testing.T) {
 
 		assert.IsType(t, &sema.InvalidPathDomainError{}, errs[0])
 	})
+}
+
+func TestCheckConvertStringToPath(t *testing.T) {
+	t.Parallel()
+
+	domainTypes := map[common.PathDomain]sema.Type{
+		common.PathDomainStorage: sema.StoragePathType,
+		common.PathDomainPublic:  sema.PublicPathType,
+		common.PathDomainPrivate: sema.PrivatePathType,
+	}
+
+	test := func(domain common.PathDomain) {
+
+		t.Run(fmt.Sprintf("valid: %s", domain.Identifier()), func(t *testing.T) {
+
+			t.Parallel()
+
+			domainType := domainTypes[domain]
+
+			checker, err := ParseAndCheck(t,
+				fmt.Sprintf(
+					`
+                      let x = %[1]s(identifier: "foo")
+                    `,
+					domainType.String(),
+				),
+			)
+
+			require.NoError(t, err)
+
+			assert.IsType(t,
+				&sema.OptionalType{Type: domainTypes[domain]},
+				RequireGlobalValue(t, checker.Elaboration, "x"),
+			)
+		})
+
+		t.Run(fmt.Sprintf("missing argument label: %s", domain.Identifier()), func(t *testing.T) {
+
+			t.Parallel()
+
+			domainType := domainTypes[domain]
+
+			_, err := ParseAndCheck(t,
+				fmt.Sprintf(
+					`
+                      let x = %[1]s("foo")
+                    `,
+					domainType.String(),
+				),
+			)
+
+			require.IsType(t, &sema.MissingArgumentLabelError{}, ExpectCheckerErrors(t, err, 1)[0])
+		})
+	}
+
+	for _, domain := range common.AllPathDomainsByIdentifier {
+		test(domain)
+	}
 }

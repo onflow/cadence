@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
-	"github.com/onflow/cadence/runtime/tests/utils"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestInterpretCompositeValue(t *testing.T) {
@@ -41,20 +41,24 @@ func TestInterpretCompositeValue(t *testing.T) {
 		inter := testCompositeValue(
 			t,
 			`
-			// Get a static field using member access
-			let name: String = fruit.name
+              // Get a static field using member access
+              let name: String = fruit.name
 
-			// Get a computed field using member access
-			let color: String = fruit.color
-			`,
+              // Get a computed field using member access
+              let color: String = fruit.color
+            `,
 		)
 
-		require.Equal(t,
+		RequireValuesEqual(
+			t,
+			inter,
 			interpreter.NewStringValue("Apple"),
 			inter.Globals["name"].GetValue(),
 		)
 
-		require.Equal(t,
+		RequireValuesEqual(
+			t,
+			inter,
 			interpreter.NewStringValue("Red"),
 			inter.Globals["color"].GetValue(),
 		)
@@ -64,12 +68,12 @@ func TestInterpretCompositeValue(t *testing.T) {
 // Utility methods
 func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 
-	var valueDeclarations stdlib.StandardLibraryValues
+	storage := interpreter.NewInMemoryStorage()
 
 	// 'fruit' composite type
 	fruitType := &sema.CompositeType{
-		Location:   utils.TestLocation,
-		Identifier: "fruit",
+		Location:   TestLocation,
+		Identifier: "Fruit",
 		Kind:       common.CompositeKindStructure,
 	}
 
@@ -89,38 +93,56 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 		"This is the color",
 	))
 
-	fields := interpreter.NewStringValueOrderedMap()
-	fields.Set("name", interpreter.NewStringValue("Apple"))
+	valueDeclarations := stdlib.StandardLibraryValues{
+		{
+			Name: "fruit",
+			Type: fruitType,
+			ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
+				fields := []interpreter.CompositeField{
+					{
+						Name:  "name",
+						Value: interpreter.NewStringValue("Apple"),
+					},
+				}
 
-	value := interpreter.NewCompositeValue(
-		utils.TestLocation,
-		fruitType.Identifier,
-		common.CompositeKindStructure,
-		fields,
-		nil,
-	)
+				value := interpreter.NewCompositeValue(
+					inter,
+					TestLocation,
+					fruitType.Identifier,
+					common.CompositeKindStructure,
+					fields,
+					common.Address{},
+				)
 
-	value.ComputedFields = interpreter.NewStringComputedFieldOrderedMap()
-	value.ComputedFields.Set("color", func(*interpreter.Interpreter) interpreter.Value {
-		return interpreter.NewStringValue("Red")
-	})
+				value.ComputedFields = map[string]interpreter.ComputedField{
+					"color": func(_ *interpreter.Interpreter, _ func() interpreter.LocationRange) interpreter.Value {
+						return interpreter.NewStringValue("Red")
+					},
+				}
 
-	customStructValue := stdlib.StandardLibraryValue{
-		Name:  value.QualifiedIdentifier(),
-		Type:  fruitType,
-		Value: value,
-		Kind:  common.DeclarationKindConstant,
+				return value
+			},
+			Kind: common.DeclarationKindConstant,
+		},
 	}
 
-	valueDeclarations = append(valueDeclarations, customStructValue)
+	typeDeclarations := []sema.TypeDeclaration{
+		stdlib.StandardLibraryType{
+			Name: fruitType.Identifier,
+			Type: fruitType,
+			Kind: common.DeclarationKindStructure,
+		},
+	}
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		code,
 		ParseCheckAndInterpretOptions{
 			CheckerOptions: []sema.Option{
 				sema.WithPredeclaredValues(valueDeclarations.ToSemaValueDeclarations()),
+				sema.WithPredeclaredTypes(typeDeclarations),
 			},
 			Options: []interpreter.Option{
+				interpreter.WithStorage(storage),
 				interpreter.WithPredeclaredValues(valueDeclarations.ToInterpreterValueDeclarations()),
 			},
 		},

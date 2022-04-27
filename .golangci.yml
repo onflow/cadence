@@ -25,6 +25,7 @@ issues:
     - path: _test\.go
       linters:
         - maprangecheck
+        - constructorcheck
   max-issues-per-linter: 0
   max-same-issues: 0
 
@@ -36,10 +37,16 @@ linters-settings:
       - unslice            # false positives
       - commentFormatting  # does not detect commented out code
       - exitAfterDefer
+  goimports:
+    local-prefixes: github.com/onflow/cadence
   custom:
     maprangecheck:
       path: tools/maprangecheck/maprangecheck.so
       description: reports range statements over maps
       original-url: github.com/onflow/cadence/tools/maprangecheck
+    constructorcheck:
+      path: tools/constructorcheck/constructorcheck.so
+      description: reports range statements over maps
+      original-url: github.com/onflow/cadence/tools/constructorcheck
 
 

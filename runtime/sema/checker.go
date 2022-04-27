@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -115,6 +115,7 @@ type Checker struct {
 	checkHandler                       CheckHandlerFunc
 	expectedType                       Type
 	memberAccountAccessHandler         MemberAccountAccessHandlerFunc
+	lintEnabled                        bool
 }
 
 type Option func(*Checker) error
@@ -235,6 +236,16 @@ func WithPositionInfoEnabled(enabled bool) Option {
 	}
 }
 
+// WithLintingEnabled returns a checker option which enables/disables
+// advanced linting.
+//
+func WithLintingEnabled(enabled bool) Option {
+	return func(checker *Checker) error {
+		checker.lintEnabled = enabled
+		return nil
+	}
+}
+
 func NewChecker(program *ast.Program, location common.Location, options ...Option) (*Checker, error) {
 
 	if location == nil {
@@ -337,6 +348,14 @@ func (checker *Checker) declareTypeDeclaration(declaration TypeDeclaration) {
 		},
 	)
 	checker.report(err)
+
+	switch ty := ty.(type) {
+	case *CompositeType:
+		checker.Elaboration.CompositeTypes[ty.ID()] = ty
+	case *InterfaceType:
+		checker.Elaboration.InterfaceTypes[ty.ID()] = ty
+	}
+
 	if checker.positionInfoEnabled {
 		checker.recordVariableDeclarationOccurrence(identifier.Identifier, variable)
 	}
@@ -579,19 +598,12 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 	case *ast.IntegerExpression:
 		unwrappedTargetType := UnwrapOptionalType(targetType)
 
-		// If the target type is `Never`, the checks below will be performed
-		// (as `Never` is the subtype of all types), but the checks are not valid
-
-		if IsSubType(unwrappedTargetType, NeverType) {
-			break
-		}
-
-		if IsSubType(unwrappedTargetType, IntegerType) {
+		if IsSameTypeKind(unwrappedTargetType, IntegerType) {
 			CheckIntegerLiteral(typedExpression, unwrappedTargetType, checker.report)
 
 			return true
 
-		} else if IsSubType(unwrappedTargetType, &AddressType{}) {
+		} else if IsSameTypeKind(unwrappedTargetType, &AddressType{}) {
 			CheckAddressLiteral(typedExpression, checker.report)
 
 			return true
@@ -600,16 +612,8 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 	case *ast.FixedPointExpression:
 		unwrappedTargetType := UnwrapOptionalType(targetType)
 
-		// If the target type is `Never`, the checks below will be performed
-		// (as `Never` is the subtype of all types), but the checks are not valid
-
-		if IsSubType(unwrappedTargetType, NeverType) {
-			break
-		}
-
-		valueTypeOK := CheckFixedPointLiteral(typedExpression, valueType, checker.report)
-
-		if IsSubType(unwrappedTargetType, FixedPointType) {
+		if IsSameTypeKind(unwrappedTargetType, FixedPointType) {
+			valueTypeOK := CheckFixedPointLiteral(typedExpression, valueType, checker.report)
 			if valueTypeOK {
 				CheckFixedPointLiteral(typedExpression, unwrappedTargetType, checker.report)
 			}
@@ -654,7 +658,7 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 	case *ast.StringExpression:
 		unwrappedTargetType := UnwrapOptionalType(targetType)
 
-		if IsSubType(unwrappedTargetType, CharacterType) {
+		if IsSameTypeKind(unwrappedTargetType, CharacterType) {
 			checker.checkCharacterLiteral(typedExpression)
 
 			return true
@@ -668,7 +672,16 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 // fits into range of the target integer type
 //
 func CheckIntegerLiteral(expression *ast.IntegerExpression, targetType Type, report func(error)) bool {
-	ranged := targetType.(IntegerRangedType)
+	ranged, ok := targetType.(IntegerRangedType)
+
+	// if this isn't an integer ranged type, report a mismatch
+	if !ok {
+		report(&TypeMismatchWithDescriptionError{
+			ActualType:              targetType,
+			ExpectedTypeDescription: "an integer type",
+			Range:                   ast.NewRangeFromPositioned(expression),
+		})
+	}
 	minInt := ranged.MinInt()
 	maxInt := ranged.MaxInt()
 
@@ -850,12 +863,6 @@ func (checker *Checker) checkResourceMoveOperation(valueExpression ast.Expressio
 		)
 		return
 	}
-
-	checker.recordResourceInvalidation(
-		unaryExpression.Expression,
-		valueType,
-		ResourceInvalidationKindMoveDefinite,
-	)
 }
 
 func (checker *Checker) inLoop() bool {
@@ -930,76 +937,42 @@ func (checker *Checker) ConvertType(t ast.Type) Type {
 	panic(&astTypeConversionError{invalidASTType: t})
 }
 
-func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
-	var restrictedType Type
-
-	// Convert the restricted type, if any
-
-	if t.Type != nil {
-		restrictedType = checker.ConvertType(t.Type)
-	}
-
-	// Convert the restrictions
-
-	var restrictions []*InterfaceType
-	restrictionRanges := make(map[*InterfaceType]ast.Range, len(t.Restrictions))
-
+func CheckRestrictedType(restrictedType Type, restrictions []*InterfaceType, report func(func(*ast.RestrictedType) error)) Type {
+	restrictionRanges := make(map[*InterfaceType]func(*ast.RestrictedType) ast.Range, len(restrictions))
+	restrictionsCompositeKind := common.CompositeKindUnknown
 	memberSet := map[string]*InterfaceType{}
 
-	restrictionsCompositeKind := common.CompositeKindUnknown
-
-	for _, restriction := range t.Restrictions {
-		restrictionResult := checker.ConvertType(restriction)
-
-		// The restriction must be a resource or structure interface type
-
-		restrictionInterfaceType, ok := restrictionResult.(*InterfaceType)
-		restrictionCompositeKind := common.CompositeKindUnknown
-		if ok {
-			restrictionCompositeKind = restrictionInterfaceType.CompositeKind
-		}
-		if !ok || (restrictionCompositeKind != common.CompositeKindResource &&
-			restrictionCompositeKind != common.CompositeKindStructure) {
-
-			if !restrictionResult.IsInvalidType() {
-				checker.report(
-					&InvalidRestrictionTypeError{
-						Type:  restrictionResult,
-						Range: ast.NewRangeFromPositioned(restriction),
-					},
-				)
-			}
-			continue
-		}
+	for i, restrictionInterfaceType := range restrictions {
+		restrictionCompositeKind := restrictionInterfaceType.CompositeKind
 
 		if restrictionsCompositeKind == common.CompositeKindUnknown {
 			restrictionsCompositeKind = restrictionCompositeKind
 
 		} else if restrictionCompositeKind != restrictionsCompositeKind {
-
-			checker.report(
-				&RestrictionCompositeKindMismatchError{
+			report(func(t *ast.RestrictedType) error {
+				return &RestrictionCompositeKindMismatchError{
 					CompositeKind:         restrictionCompositeKind,
 					PreviousCompositeKind: restrictionsCompositeKind,
-					Range:                 ast.NewRangeFromPositioned(restriction),
-				},
-			)
+					Range:                 ast.NewRangeFromPositioned(t.Restrictions[i]),
+				}
+			})
 		}
-
-		restrictions = append(restrictions, restrictionInterfaceType)
 
 		// The restriction must not be duplicated
 
 		if _, exists := restrictionRanges[restrictionInterfaceType]; exists {
-			checker.report(
-				&InvalidRestrictionTypeDuplicateError{
+			report(func(t *ast.RestrictedType) error {
+				return &InvalidRestrictionTypeDuplicateError{
 					Type:  restrictionInterfaceType,
-					Range: ast.NewRangeFromPositioned(restriction),
-				},
-			)
+					Range: ast.NewRangeFromPositioned(t.Restrictions[i]),
+				}
+			})
+
 		} else {
 			restrictionRanges[restrictionInterfaceType] =
-				ast.NewRangeFromPositioned(restriction)
+				func(t *ast.RestrictedType) ast.Range {
+					return ast.NewRangeFromPositioned(t.Restrictions[i])
+				}
 		}
 
 		// The restrictions may not have clashing members
@@ -1025,14 +998,14 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 					!previousMemberType.IsInvalidType() &&
 					!memberType.Equal(previousMemberType) {
 
-					checker.report(
-						&RestrictionMemberClashError{
+					report(func(t *ast.RestrictedType) error {
+						return &RestrictionMemberClashError{
 							Name:                  name,
 							RedeclaringType:       restrictionInterfaceType,
 							OriginalDeclaringType: previousDeclaringInterfaceType,
-							Range:                 ast.NewRangeFromPositioned(restriction),
-						},
-					)
+							Range:                 ast.NewRangeFromPositioned(t.Restrictions[i]),
+						}
+					})
 				}
 			} else {
 				memberSet[name] = restrictionInterfaceType
@@ -1040,7 +1013,9 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 		})
 	}
 
-	if restrictedType == nil {
+	var hadExplicitType = restrictedType != nil
+
+	if !hadExplicitType {
 		// If no restricted type is given, infer `AnyResource`/`AnyStruct`
 		// based on the composite kind of the restrictions.
 
@@ -1051,11 +1026,9 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 
 			restrictedType = InvalidType
 
-			checker.report(
-				&AmbiguousRestrictedTypeError{
-					Range: ast.NewRangeFromPositioned(t),
-				},
-			)
+			report(func(t *ast.RestrictedType) error {
+				return &AmbiguousRestrictedTypeError{Range: ast.NewRangeFromPositioned(t)}
+			})
 
 		case common.CompositeKindResource:
 			restrictedType = AnyResourceType
@@ -1072,12 +1045,12 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 	// or `AnyResource`/`AnyStruct`
 
 	reportInvalidRestrictedType := func() {
-		checker.report(
-			&InvalidRestrictedTypeError{
+		report(func(t *ast.RestrictedType) error {
+			return &InvalidRestrictedTypeError{
 				Type:  restrictedType,
 				Range: ast.NewRangeFromPositioned(t.Type),
-			},
-		)
+			}
+		})
 	}
 
 	var compositeType *CompositeType
@@ -1102,7 +1075,7 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 				break
 
 			default:
-				if t.Type != nil {
+				if hadExplicitType {
 					reportInvalidRestrictedType()
 				}
 			}
@@ -1123,15 +1096,66 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 			// of the composite (restricted type)
 
 			if !conformances.Includes(restriction) {
-				checker.report(
-					&InvalidNonConformanceRestrictionError{
+				report(func(t *ast.RestrictedType) error {
+					return &InvalidNonConformanceRestrictionError{
 						Type:  restriction,
-						Range: restrictionRanges[restriction],
-					},
-				)
+						Range: restrictionRanges[restriction](t),
+					}
+				})
 			}
 		}
 	}
+	return restrictedType
+}
+
+func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
+	var restrictedType Type
+
+	// Convert the restricted type, if any
+
+	if t.Type != nil {
+		restrictedType = checker.ConvertType(t.Type)
+	}
+
+	// Convert the restrictions
+
+	var restrictions []*InterfaceType
+
+	for _, restriction := range t.Restrictions {
+		restrictionResult := checker.ConvertType(restriction)
+
+		// The restriction must be a resource or structure interface type
+
+		restrictionInterfaceType, ok := restrictionResult.(*InterfaceType)
+		restrictionCompositeKind := common.CompositeKindUnknown
+		if ok {
+			restrictionCompositeKind = restrictionInterfaceType.CompositeKind
+		}
+		if !ok || (restrictionCompositeKind != common.CompositeKindResource &&
+			restrictionCompositeKind != common.CompositeKindStructure) {
+
+			if !restrictionResult.IsInvalidType() {
+				checker.report(&InvalidRestrictionTypeError{
+					Type:  restrictionResult,
+					Range: ast.NewRangeFromPositioned(restriction),
+				})
+			}
+
+			// NOTE: ignore this invalid type
+			// and do not add it to the restrictions result
+			continue
+		}
+
+		restrictions = append(restrictions, restrictionInterfaceType)
+	}
+
+	restrictedType = CheckRestrictedType(
+		restrictedType,
+		restrictions,
+		func(getError func(*ast.RestrictedType) error) {
+			checker.report(getError(t))
+		},
+	)
 
 	return &RestrictedType{
 		Type:         restrictedType,
@@ -1287,7 +1311,7 @@ func (checker *Checker) convertNominalType(t *ast.NominalType) Type {
 	var resolvedIdentifiers []ast.Identifier
 
 	for _, identifier := range t.NestedIdentifiers {
-		if containerType, ok := ty.(ContainerType); ok && containerType.isContainerType() {
+		if containerType, ok := ty.(ContainerType); ok && containerType.IsContainerType() {
 			ty, _ = containerType.GetNestedTypes().Get(identifier.Identifier)
 		} else {
 			if !ty.IsInvalidType() {
@@ -1554,7 +1578,7 @@ func (checker *Checker) recordResourceInvalidation(
 	}
 
 	if checker.allowSelfResourceFieldInvalidation && accessedSelfMember != nil {
-		checker.resources.AddInvalidation(accessedSelfMember, invalidation)
+		checker.maybeAddResourceInvalidation(accessedSelfMember, invalidation)
 
 		return &recordedResourceInvalidation{
 			resource:     accessedSelfMember,
@@ -1584,7 +1608,7 @@ func (checker *Checker) recordResourceInvalidation(
 		)
 	}
 
-	checker.resources.AddInvalidation(variable, invalidation)
+	checker.maybeAddResourceInvalidation(variable, invalidation)
 
 	return &recordedResourceInvalidation{
 		resource:     variable,
@@ -1703,14 +1727,24 @@ func (checker *Checker) checkResourceFieldNesting(
 		return
 	}
 
-	// The field is not a resource or contract, check if there are
-	// any fields that have a resource type  and report them
+	// The field is not a resource or contract.
+	// Check if there are any fields that have a resource type and report them
 
 	members.Foreach(func(name string, member *Member) {
 		// NOTE: check type, not resource annotation:
 		// the field could have a wrong annotation
 
 		if !member.TypeAnnotation.Type.IsResourceType() {
+			return
+		}
+
+		// Skip enums' implicit rawValue field.
+		// If a resource type is used as the enum raw type,
+		// it is already reported
+
+		if compositeKind == common.CompositeKindEnum &&
+			name == EnumRawValueFieldName {
+
 			return
 		}
 
@@ -1898,15 +1932,13 @@ func (checker *Checker) checkFieldsAccessModifier(fields []*ast.FieldDeclaration
 // i.e. it has exactly one grapheme cluster.
 //
 func (checker *Checker) checkCharacterLiteral(expression *ast.StringExpression) {
-	length := uniseg.GraphemeClusterCount(expression.Value)
-
-	if length == 1 {
+	if IsValidCharacter(expression.Value) {
 		return
 	}
 
 	checker.report(
 		&InvalidCharacterLiteralError{
-			Length: length,
+			Length: uniseg.GraphemeClusterCount(expression.Value),
 			Range:  ast.NewRangeFromPositioned(expression),
 		},
 	)
@@ -2007,7 +2039,7 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 
 	addPredeclaredMember(
 		IsInstanceFunctionName,
-		isInstanceFunctionType,
+		IsInstanceFunctionType,
 		common.DeclarationKindFunction,
 		ast.AccessPublic,
 		true,
@@ -2018,7 +2050,7 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 
 	addPredeclaredMember(
 		GetTypeFunctionName,
-		getTypeFunctionType,
+		GetTypeFunctionType,
 		common.DeclarationKindFunction,
 		ast.AccessPublic,
 		true,
@@ -2184,11 +2216,15 @@ func (checker *Checker) checkTypeAnnotation(typeAnnotation *TypeAnnotation, pos 
 		)
 	}
 
-	rewrittenType, rewritten := typeAnnotation.Type.RewriteWithRestrictedTypes()
+	checker.checkInvalidInterfaceAsType(typeAnnotation.Type, pos)
+}
+
+func (checker *Checker) checkInvalidInterfaceAsType(ty Type, pos ast.HasPosition) {
+	rewrittenType, rewritten := ty.RewriteWithRestrictedTypes()
 	if rewritten {
 		checker.report(
 			&InvalidInterfaceTypeError{
-				ActualType:   typeAnnotation.Type,
+				ActualType:   ty,
 				ExpectedType: rewrittenType,
 				Range: ast.Range{
 					StartPos: pos.StartPosition(),
@@ -2367,22 +2403,21 @@ func (checker *Checker) visitExpressionWithForceType(
 	// as the new contextually expected type.
 	prevExpectedType := checker.expectedType
 
-	// If the expected type is invalid, treat it in the same manner as
-	// expected type is unknown.
-	if expectedType != nil && expectedType.IsInvalidType() {
-		expectedType = nil
-	}
-
 	checker.expectedType = expectedType
 	defer func() {
 		// Restore the prev contextually expected type
 		checker.expectedType = prevExpectedType
 	}()
 
-	actualType = expr.Accept(checker).(Type)
+	actualType, ok := expr.Accept(checker).(Type)
+	if !ok {
+		// visiter must always return a Type
+		panic(errors.NewUnreachableError())
+	}
 
 	if forceType &&
 		expectedType != nil &&
+		!expectedType.IsInvalidType() &&
 		actualType != InvalidType &&
 		!IsSubType(actualType, expectedType) {
 
@@ -2445,6 +2480,16 @@ func (checker *Checker) declareGlobalRanges() {
 	checker.Elaboration.GlobalTypes.Foreach(addRange)
 
 	checker.Elaboration.GlobalValues.Foreach(addRange)
+}
+
+func (checker *Checker) maybeAddResourceInvalidation(resource interface{}, invalidation ResourceInvalidation) {
+	functionActivation := checker.functionActivations.Current()
+
+	if functionActivation.ReturnInfo.IsUnreachable() {
+		return
+	}
+
+	checker.resources.AddInvalidation(resource, invalidation)
 }
 
 func wrapWithOptionalIfNotNil(typ Type) Type {

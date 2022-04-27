@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -119,7 +119,11 @@ func (o *Occurrences) All() []Occurrence {
 	values := o.tree.Values()
 	occurrences := make([]Occurrence, len(values))
 	for i, value := range values {
-		occurrences[i] = value.(Occurrence)
+		occurrence, ok := value.(Occurrence)
+		if !ok {
+			return nil
+		}
+		occurrences[i] = occurrence
 	}
 	return occurrences
 }
@@ -129,7 +133,10 @@ func (o *Occurrences) Find(pos Position) *Occurrence {
 	if interval == nil {
 		return nil
 	}
-	occurrence := value.(Occurrence)
+	occurrence, ok := value.(Occurrence)
+	if !ok {
+		return nil
+	}
 	return &occurrence
 }
 
@@ -137,7 +144,11 @@ func (o *Occurrences) FindAll(pos Position) []Occurrence {
 	entries := o.tree.SearchAll(pos)
 	occurrences := make([]Occurrence, len(entries))
 	for i, entry := range entries {
-		occurrences[i] = entry.Value.(Occurrence)
+		occurrence, ok := entry.Value.(Occurrence)
+		if !ok {
+			return nil
+		}
+		occurrences[i] = occurrence
 	}
 	return occurrences
 }

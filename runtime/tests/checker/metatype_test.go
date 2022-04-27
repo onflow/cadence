@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -119,6 +119,93 @@ func TestCheckIsInstance(t *testing.T) {
 			name: "nil is not a type",
 			code: `
               let result = (1).isInstance(nil)
+            `,
+			valid: false,
+		},
+	}
+
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			checker, err := ParseAndCheck(t, testCase.code)
+			if testCase.valid {
+				require.NoError(t, err)
+				assert.Equal(t,
+					sema.BoolType,
+					RequireGlobalValue(t, checker.Elaboration, "result"),
+				)
+			} else {
+				require.Error(t, err)
+			}
+		})
+	}
+}
+
+func TestCheckIsSubtype(t *testing.T) {
+
+	t.Parallel()
+
+	cases := []struct {
+		name  string
+		code  string
+		valid bool
+	}{
+		{
+			name: "string is a subtype of string",
+			code: `
+              let stringType = Type<String>()
+              let result = stringType.isSubtype(of: stringType)
+            `,
+			valid: true,
+		},
+		{
+			name: "int is a subtype of int",
+			code: `
+              let intType = Type<Int>()
+              let result = intType.isSubtype(of: intType)
+            `,
+			valid: true,
+		},
+		{
+			name: "resource is a subtype of resource",
+			code: `
+              resource R {}
+              let rType = Type<@R>()
+              let result = rType.isSubtype(of: rType)
+            `,
+			valid: true,
+		},
+		{
+			name: "Int is an instance of Int?",
+			code: `
+              let result = Type<Int>().isSubtype(of: Type<Int?>())
+            `,
+			valid: true,
+		},
+		{
+			name: "isSubtype must take a type",
+			code: `
+              let result = Type<Int>().isSubtype(of: 3)
+            `,
+			valid: false,
+		},
+		{
+			name: "isSubtype must take an argument",
+			code: `
+              let result = Type<Int>().isSubtype()
+            `,
+			valid: false,
+		},
+		{
+			name: "isSubtype argument must be named",
+			code: `
+              let result = Type<Int>().isSubtype(Type<Int?>())
+            `,
+			valid: false,
+		},
+		{
+			name: "isSubtype must take fewer than two arguments",
+			code: `
+              let result = Type<Int>().isSubtype(of: Type<Int?>(), Type<Int?>())
             `,
 			valid: false,
 		},

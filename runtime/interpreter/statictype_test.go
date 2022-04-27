@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package interpreter
+package interpreter_test
 
 import (
 	"testing"
@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
+	. "github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -88,7 +89,7 @@ func TestCapabilityStaticType_Equal(t *testing.T) {
 				BorrowType: PrimitiveStaticTypeString,
 			}.Equal(
 				ReferenceStaticType{
-					Type: PrimitiveStaticTypeString,
+					BorrowedType: PrimitiveStaticTypeString,
 				},
 			),
 		)
@@ -105,12 +106,12 @@ func TestReferenceStaticType_Equal(t *testing.T) {
 
 		require.True(t,
 			ReferenceStaticType{
-				Authorized: false,
-				Type:       PrimitiveStaticTypeString,
+				Authorized:   false,
+				BorrowedType: PrimitiveStaticTypeString,
 			}.Equal(
 				ReferenceStaticType{
-					Authorized: false,
-					Type:       PrimitiveStaticTypeString,
+					Authorized:   false,
+					BorrowedType: PrimitiveStaticTypeString,
 				},
 			),
 		)
@@ -122,12 +123,12 @@ func TestReferenceStaticType_Equal(t *testing.T) {
 
 		require.False(t,
 			ReferenceStaticType{
-				Authorized: false,
-				Type:       PrimitiveStaticTypeInt,
+				Authorized:   false,
+				BorrowedType: PrimitiveStaticTypeInt,
 			}.Equal(
 				ReferenceStaticType{
-					Authorized: false,
-					Type:       PrimitiveStaticTypeString,
+					Authorized:   false,
+					BorrowedType: PrimitiveStaticTypeString,
 				},
 			),
 		)
@@ -139,12 +140,12 @@ func TestReferenceStaticType_Equal(t *testing.T) {
 
 		require.False(t,
 			ReferenceStaticType{
-				Authorized: false,
-				Type:       PrimitiveStaticTypeInt,
+				Authorized:   false,
+				BorrowedType: PrimitiveStaticTypeInt,
 			}.Equal(
 				ReferenceStaticType{
-					Authorized: true,
-					Type:       PrimitiveStaticTypeInt,
+					Authorized:   true,
+					BorrowedType: PrimitiveStaticTypeInt,
 				},
 			),
 		)
@@ -156,7 +157,7 @@ func TestReferenceStaticType_Equal(t *testing.T) {
 
 		require.False(t,
 			ReferenceStaticType{
-				Type: PrimitiveStaticTypeString,
+				BorrowedType: PrimitiveStaticTypeString,
 			}.Equal(
 				CapabilityStaticType{
 					BorrowType: PrimitiveStaticTypeString,
@@ -175,116 +176,116 @@ func TestCompositeStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.True(t,
-			CompositeStaticType{
-				Location:            utils.TestLocation,
-				QualifiedIdentifier: "X",
-			}.Equal(
-				CompositeStaticType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "X",
-				},
+			NewCompositeStaticType(
+				utils.TestLocation,
+				"X",
+			).Equal(
+				NewCompositeStaticType(
+					utils.TestLocation,
+					"X",
+				),
 			),
 		)
 	})
 
-	t.Run("different name", func(t *testing.T) {
+	t.Run("different qualified identifier", func(t *testing.T) {
 
 		t.Parallel()
 
 		require.False(t,
-			CompositeStaticType{
-				Location:            utils.TestLocation,
-				QualifiedIdentifier: "X",
-			}.Equal(
-				CompositeStaticType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "Y",
-				},
+			NewCompositeStaticType(
+				utils.TestLocation,
+				"X",
+			).Equal(
+				NewCompositeStaticType(
+					utils.TestLocation,
+					"Y",
+				),
 			),
 		)
 	})
 
-	t.Run("different locations, different identifier", func(t *testing.T) {
+	t.Run("different locations of same kind, same qualified identifier", func(t *testing.T) {
 
 		t.Parallel()
 
 		require.False(t,
-			CompositeStaticType{
-				Location:            common.IdentifierLocation("A"),
-				QualifiedIdentifier: "X",
-			}.Equal(
-				CompositeStaticType{
-					Location:            common.IdentifierLocation("B"),
-					QualifiedIdentifier: "X",
-				},
+			NewCompositeStaticType(
+				common.IdentifierLocation("A"),
+				"X",
+			).Equal(
+				NewCompositeStaticType(
+					common.IdentifierLocation("B"),
+					"X",
+				),
 			),
 		)
 	})
 
-	t.Run("different locations, different identifier", func(t *testing.T) {
+	t.Run("different locations of different kinds, same qualified identifier", func(t *testing.T) {
 
 		t.Parallel()
 
 		require.False(t,
-			CompositeStaticType{
-				Location:            common.IdentifierLocation("A"),
-				QualifiedIdentifier: "X",
-			}.Equal(
-				CompositeStaticType{
-					Location:            common.StringLocation("A"),
-					QualifiedIdentifier: "X",
-				},
+			NewCompositeStaticType(
+				common.IdentifierLocation("A"),
+				"X",
+			).Equal(
+				NewCompositeStaticType(
+					common.StringLocation("A"),
+					"X",
+				),
 			),
 		)
 	})
 
-	t.Run("no location", func(t *testing.T) {
+	t.Run("no locations, same qualified identifier", func(t *testing.T) {
 
 		t.Parallel()
 
 		require.True(t,
-			CompositeStaticType{
-				Location:            nil,
-				QualifiedIdentifier: "X",
-			}.Equal(
-				CompositeStaticType{
-					Location:            nil,
-					QualifiedIdentifier: "X",
-				},
+			NewCompositeStaticType(
+				nil,
+				"X",
+			).Equal(
+				NewCompositeStaticType(
+					nil,
+					"X",
+				),
 			),
 		)
 	})
 
-	t.Run("no location, different identifier", func(t *testing.T) {
+	t.Run("no locations, different qualified identifier", func(t *testing.T) {
 
 		t.Parallel()
 
 		require.False(t,
-			CompositeStaticType{
-				Location:            nil,
-				QualifiedIdentifier: "X",
-			}.Equal(
-				CompositeStaticType{
-					Location:            nil,
-					QualifiedIdentifier: "Y",
-				},
+			NewCompositeStaticType(
+				nil,
+				"X",
+			).Equal(
+				NewCompositeStaticType(
+					nil,
+					"Y",
+				),
 			),
 		)
 	})
 
-	t.Run("one location, same identifier", func(t *testing.T) {
+	t.Run("one location, same qualified identifier", func(t *testing.T) {
 
 		t.Parallel()
 
 		require.False(t,
-			CompositeStaticType{
-				Location:            nil,
-				QualifiedIdentifier: "X",
-			}.Equal(
-				CompositeStaticType{
-					Location:            common.StringLocation("B"),
-					QualifiedIdentifier: "X",
-				},
+			NewCompositeStaticType(
+				nil,
+				"X",
+			).Equal(
+				NewCompositeStaticType(
+					common.StringLocation("B"),
+					"X",
+				),
 			),
 		)
 	})
@@ -294,10 +295,10 @@ func TestCompositeStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			CompositeStaticType{
-				Location:            nil,
-				QualifiedIdentifier: "X",
-			}.Equal(
+			NewCompositeStaticType(
+				nil,
+				"X",
+			).Equal(
 				InterfaceStaticType{
 					Location:            nil,
 					QualifiedIdentifier: "X",
@@ -439,10 +440,10 @@ func TestInterfaceStaticType_Equal(t *testing.T) {
 				Location:            nil,
 				QualifiedIdentifier: "X",
 			}.Equal(
-				CompositeStaticType{
-					Location:            nil,
-					QualifiedIdentifier: "X",
-				},
+				NewCompositeStaticType(
+					nil,
+					"X",
+				),
 			),
 		)
 	})
@@ -935,9 +936,17 @@ func TestRestrictedStaticType_Equal(t *testing.T) {
 				},
 			}).Equal(
 				ReferenceStaticType{
-					Type: PrimitiveStaticTypeInt,
+					BorrowedType: PrimitiveStaticTypeInt,
 				},
 			),
 		)
+	})
+}
+
+func TestPrimitiveStaticTypeCount(t *testing.T) {
+	t.Parallel()
+
+	t.Run("No new types added in between", func(t *testing.T) {
+		require.Equal(t, byte(98), byte(PrimitiveStaticType_Count))
 	})
 }

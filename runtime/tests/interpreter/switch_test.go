@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	. "github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -67,7 +69,7 @@ func TestInterpretSwitchStatement(t *testing.T) {
 			actual, err := inter.Invoke("test", argument)
 			require.NoError(t, err)
 
-			assert.Equal(t, expected, actual)
+			AssertValuesEqual(t, inter, expected, actual)
 		}
 	})
 
@@ -107,7 +109,7 @@ func TestInterpretSwitchStatement(t *testing.T) {
 			actual, err := inter.Invoke("test", argument)
 			require.NoError(t, err)
 
-			assert.Equal(t, expected, actual)
+			AssertValuesEqual(t, inter, expected, actual)
 		}
 	})
 
@@ -148,7 +150,7 @@ func TestInterpretSwitchStatement(t *testing.T) {
 			actual, err := inter.Invoke("test", argument)
 			require.NoError(t, err)
 
-			assert.Equal(t, expected, actual)
+			AssertValuesEqual(t, inter, expected, actual)
 		}
 	})
 
@@ -169,25 +171,33 @@ func TestInterpretSwitchStatement(t *testing.T) {
           }
         `)
 
-		for argument, expected := range map[interpreter.Value]interpreter.Value{
-			interpreter.NewIntValueFromInt64(1): interpreter.NewArrayValueUnownedNonCopying(
+		for argument, expectedValues := range map[interpreter.Value][]interpreter.Value{
+			interpreter.NewIntValueFromInt64(1): {
 				interpreter.NewStringValue("1"),
-			),
-			interpreter.NewIntValueFromInt64(2): interpreter.NewArrayValueUnownedNonCopying(
+			},
+			interpreter.NewIntValueFromInt64(2): {
 				interpreter.NewStringValue("2"),
-			),
-			interpreter.NewIntValueFromInt64(3): interpreter.NewArrayValueUnownedNonCopying(
+			},
+			interpreter.NewIntValueFromInt64(3): {
 				interpreter.NewStringValue("3"),
-			),
-			interpreter.NewIntValueFromInt64(4): interpreter.NewArrayValueUnownedNonCopying(
+			},
+			interpreter.NewIntValueFromInt64(4): {
 				interpreter.NewStringValue("3"),
-			),
+			},
 		} {
 
 			actual, err := inter.Invoke("test", argument)
 			require.NoError(t, err)
 
-			assert.Equal(t, expected, actual)
+			require.IsType(t, actual, &interpreter.ArrayValue{})
+			arrayValue := actual.(*interpreter.ArrayValue)
+
+			AssertValueSlicesEqual(
+				t,
+				inter,
+				expectedValues,
+				arrayElements(inter, arrayValue),
+			)
 		}
 	})
 
@@ -225,10 +235,10 @@ func TestInterpretSwitchStatement(t *testing.T) {
 		for _, testCase := range []testCase{
 			{
 				[]interpreter.Value{
-					interpreter.NewSomeValueOwningNonCopying(
+					interpreter.NewSomeValueNonCopying(
 						interpreter.NewIntValueFromInt64(1),
 					),
-					interpreter.NewSomeValueOwningNonCopying(
+					interpreter.NewSomeValueNonCopying(
 						interpreter.NewIntValueFromInt64(1),
 					),
 				},
@@ -237,7 +247,7 @@ func TestInterpretSwitchStatement(t *testing.T) {
 			{
 				[]interpreter.Value{
 					interpreter.NilValue{},
-					interpreter.NewSomeValueOwningNonCopying(
+					interpreter.NewSomeValueNonCopying(
 						interpreter.NewIntValueFromInt64(1),
 					),
 				},
@@ -245,10 +255,10 @@ func TestInterpretSwitchStatement(t *testing.T) {
 			},
 			{
 				[]interpreter.Value{
-					interpreter.NewSomeValueOwningNonCopying(
+					interpreter.NewSomeValueNonCopying(
 						interpreter.NewIntValueFromInt64(1),
 					),
-					interpreter.NewSomeValueOwningNonCopying(
+					interpreter.NewSomeValueNonCopying(
 						interpreter.NewIntValueFromInt64(2),
 					),
 				},
@@ -258,7 +268,7 @@ func TestInterpretSwitchStatement(t *testing.T) {
 			actual, err := inter.Invoke("test", testCase.arguments...)
 			require.NoError(t, err)
 
-			assert.Equal(t, testCase.expected, actual)
+			AssertValuesEqual(t, inter, testCase.expected, actual)
 		}
 	})
 }

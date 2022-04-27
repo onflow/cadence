@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -135,20 +135,81 @@ type jsonPathValue struct {
 	Identifier string `json:"identifier"`
 }
 
+type jsonFieldType struct {
+	Id   string    `json:"id"`
+	Type jsonValue `json:"type"`
+}
+
+type jsonNominalType struct {
+	Kind         string                `json:"kind"`
+	TypeID       string                `json:"typeID"`
+	Fields       []jsonFieldType       `json:"fields"`
+	Initializers [][]jsonParameterType `json:"initializers"`
+	Type         jsonValue             `json:"type"`
+}
+
+type jsonSimpleType struct {
+	Kind string `json:"kind"`
+}
+
+type jsonUnaryType struct {
+	Kind string    `json:"kind"`
+	Type jsonValue `json:"type"`
+}
+
+type jsonConstantSizedArrayType struct {
+	Kind string    `json:"kind"`
+	Type jsonValue `json:"type"`
+	Size uint      `json:"size"`
+}
+
+type jsonDictionaryType struct {
+	Kind      string    `json:"kind"`
+	KeyType   jsonValue `json:"key"`
+	ValueType jsonValue `json:"value"`
+}
+
+type jsonReferenceType struct {
+	Kind       string    `json:"kind"`
+	Type       jsonValue `json:"type"`
+	Authorized bool      `json:"authorized"`
+}
+
+type jsonRestrictedType struct {
+	Kind         string      `json:"kind"`
+	TypeID       string      `json:"typeID"`
+	Type         jsonValue   `json:"type"`
+	Restrictions []jsonValue `json:"restrictions"`
+}
+
+type jsonParameterType struct {
+	Label string    `json:"label"`
+	Id    string    `json:"id"`
+	Type  jsonValue `json:"type"`
+}
+
+type jsonFunctionType struct {
+	Kind       string              `json:"kind"`
+	TypeID     string              `json:"typeID"`
+	Parameters []jsonParameterType `json:"parameters"`
+	Return     jsonValue           `json:"return"`
+}
+
 type jsonTypeValue struct {
-	StaticType string `json:"staticType"`
+	StaticType jsonValue `json:"staticType"`
 }
 
 type jsonCapabilityValue struct {
 	Path       jsonValue `json:"path"`
 	Address    string    `json:"address"`
-	BorrowType string    `json:"borrowType"`
+	BorrowType jsonValue `json:"borrowType"`
 }
 
 const (
 	voidTypeStr       = "Void"
 	optionalTypeStr   = "Optional"
 	boolTypeStr       = "Bool"
+	characterTypeStr  = "Character"
 	stringTypeStr     = "String"
 	addressTypeStr    = "Address"
 	intTypeStr        = "Int"
@@ -194,6 +255,8 @@ func Prepare(v cadence.Value) jsonValue {
 		return prepareOptional(x)
 	case cadence.Bool:
 		return prepareBool(x)
+	case cadence.Character:
+		return prepareCharacter(x)
 	case cadence.String:
 		return prepareString(x)
 	case cadence.Address:
@@ -285,6 +348,13 @@ func prepareOptional(v cadence.Optional) jsonValue {
 func prepareBool(v cadence.Bool) jsonValue {
 	return jsonValueObject{
 		Type:  boolTypeStr,
+		Value: v,
+	}
+}
+
+func prepareCharacter(v cadence.Character) jsonValue {
+	return jsonValueObject{
+		Type:  characterTypeStr,
 		Value: v,
 	}
 }
@@ -496,7 +566,7 @@ func prepareComposite(kind, id string, fieldTypes []cadence.Field, fields []cade
 	nonFunctionFieldTypes := make([]cadence.Field, 0)
 
 	for _, field := range fieldTypes {
-		if _, ok := field.Type.(cadence.Function); !ok {
+		if _, ok := field.Type.(cadence.FunctionType); !ok {
 			nonFunctionFieldTypes = append(nonFunctionFieldTypes, field)
 		}
 	}
@@ -550,22 +620,238 @@ func preparePath(x cadence.Path) jsonValue {
 	}
 }
 
-func prepareTypeValue(x cadence.TypeValue) jsonValue {
+func prepareParameterType(parameterType cadence.Parameter) jsonParameterType {
+	return jsonParameterType{
+		Label: parameterType.Label,
+		Id:    parameterType.Identifier,
+		Type:  prepareType(parameterType.Type),
+	}
+}
+
+func prepareFieldType(fieldType cadence.Field) jsonFieldType {
+	return jsonFieldType{
+		Id:   fieldType.Identifier,
+		Type: prepareType(fieldType.Type),
+	}
+}
+
+func prepareFields(fieldTypes []cadence.Field) []jsonFieldType {
+	fields := make([]jsonFieldType, 0)
+	for _, field := range fieldTypes {
+		fields = append(fields, prepareFieldType(field))
+	}
+	return fields
+}
+
+func prepareParameters(parameterTypes []cadence.Parameter) []jsonParameterType {
+	parameters := make([]jsonParameterType, 0)
+	for _, param := range parameterTypes {
+		parameters = append(parameters, prepareParameterType(param))
+	}
+	return parameters
+}
+
+func prepareInitializers(initializerTypes [][]cadence.Parameter) [][]jsonParameterType {
+	initializers := make([][]jsonParameterType, 0)
+	for _, params := range initializerTypes {
+		initializers = append(initializers, prepareParameters(params))
+	}
+	return initializers
+}
+
+func prepareType(typ cadence.Type) jsonValue {
+	switch typ := typ.(type) {
+	case cadence.AnyType,
+		cadence.AnyStructType,
+		cadence.AnyResourceType,
+		cadence.MetaType,
+		cadence.VoidType,
+		cadence.NeverType,
+		cadence.BoolType,
+		cadence.StringType,
+		cadence.CharacterType,
+		cadence.BytesType,
+		cadence.NumberType,
+		cadence.SignedNumberType,
+		cadence.IntegerType,
+		cadence.SignedIntegerType,
+		cadence.FixedPointType,
+		cadence.SignedFixedPointType,
+		cadence.IntType,
+		cadence.Int8Type,
+		cadence.Int16Type,
+		cadence.Int32Type,
+		cadence.Int64Type,
+		cadence.Int128Type,
+		cadence.Int256Type,
+		cadence.UIntType,
+		cadence.UInt8Type,
+		cadence.UInt16Type,
+		cadence.UInt32Type,
+		cadence.UInt64Type,
+		cadence.UInt128Type,
+		cadence.UInt256Type,
+		cadence.Word8Type,
+		cadence.Word16Type,
+		cadence.Word32Type,
+		cadence.Word64Type,
+		cadence.Fix64Type,
+		cadence.UFix64Type,
+		cadence.BlockType,
+		cadence.PathType,
+		cadence.CapabilityPathType,
+		cadence.StoragePathType,
+		cadence.PublicPathType,
+		cadence.PrivatePathType,
+		cadence.AccountKeyType,
+		cadence.AuthAccountContractsType,
+		cadence.AuthAccountKeysType,
+		cadence.AuthAccountType,
+		cadence.PublicAccountContractsType,
+		cadence.PublicAccountKeysType,
+		cadence.PublicAccountType,
+		cadence.DeployedContractType:
+		return jsonSimpleType{
+			Kind: typ.ID(),
+		}
+	case cadence.OptionalType:
+		return jsonUnaryType{
+			Kind: "Optional",
+			Type: prepareType(typ.Type),
+		}
+	case cadence.VariableSizedArrayType:
+		return jsonUnaryType{
+			Kind: "VariableSizedArray",
+			Type: prepareType(typ.ElementType),
+		}
+	case cadence.ConstantSizedArrayType:
+		return jsonConstantSizedArrayType{
+			Kind: "ConstantSizedArray",
+			Type: prepareType(typ.ElementType),
+			Size: typ.Size,
+		}
+	case cadence.DictionaryType:
+		return jsonDictionaryType{
+			Kind:      "Dictionary",
+			KeyType:   prepareType(typ.KeyType),
+			ValueType: prepareType(typ.ElementType),
+		}
+	case *cadence.StructType:
+		return jsonNominalType{
+			Kind:         "Struct",
+			Type:         "",
+			TypeID:       string(typ.Location.TypeID(typ.QualifiedIdentifier)),
+			Fields:       prepareFields(typ.Fields),
+			Initializers: prepareInitializers(typ.Initializers),
+		}
+	case *cadence.ResourceType:
+		return jsonNominalType{
+			Kind:         "Resource",
+			Type:         "",
+			TypeID:       string(typ.Location.TypeID(typ.QualifiedIdentifier)),
+			Fields:       prepareFields(typ.Fields),
+			Initializers: prepareInitializers(typ.Initializers),
+		}
+	case *cadence.EventType:
+		return jsonNominalType{
+			Kind:         "Event",
+			Type:         "",
+			TypeID:       string(typ.Location.TypeID(typ.QualifiedIdentifier)),
+			Fields:       prepareFields(typ.Fields),
+			Initializers: [][]jsonParameterType{prepareParameters(typ.Initializer)},
+		}
+	case *cadence.ContractType:
+		return jsonNominalType{
+			Kind:         "Contract",
+			Type:         "",
+			TypeID:       string(typ.Location.TypeID(typ.QualifiedIdentifier)),
+			Fields:       prepareFields(typ.Fields),
+			Initializers: prepareInitializers(typ.Initializers),
+		}
+	case *cadence.StructInterfaceType:
+		return jsonNominalType{
+			Kind:         "StructInterface",
+			Type:         "",
+			TypeID:       string(typ.Location.TypeID(typ.QualifiedIdentifier)),
+			Fields:       prepareFields(typ.Fields),
+			Initializers: prepareInitializers(typ.Initializers),
+		}
+	case *cadence.ResourceInterfaceType:
+		return jsonNominalType{
+			Kind:         "ResourceInterface",
+			Type:         "",
+			TypeID:       string(typ.Location.TypeID(typ.QualifiedIdentifier)),
+			Fields:       prepareFields(typ.Fields),
+			Initializers: prepareInitializers(typ.Initializers),
+		}
+	case *cadence.ContractInterfaceType:
+		return jsonNominalType{
+			Kind:         "ContractInterface",
+			Type:         "",
+			TypeID:       string(typ.Location.TypeID(typ.QualifiedIdentifier)),
+			Fields:       prepareFields(typ.Fields),
+			Initializers: prepareInitializers(typ.Initializers),
+		}
+	case cadence.FunctionType:
+		return jsonFunctionType{
+			Kind:       "Function",
+			TypeID:     typ.ID(),
+			Return:     prepareType(typ.ReturnType),
+			Parameters: prepareParameters(typ.Parameters),
+		}
+	case cadence.ReferenceType:
+		return jsonReferenceType{
+			Kind:       "Reference",
+			Authorized: typ.Authorized,
+			Type:       prepareType(typ.Type),
+		}
+	case cadence.RestrictedType:
+		restrictions := make([]jsonValue, 0)
+		for _, restriction := range typ.Restrictions {
+			restrictions = append(restrictions, prepareType(restriction))
+		}
+		return jsonRestrictedType{
+			Kind:         "Restriction",
+			TypeID:       typ.ID(),
+			Type:         prepareType(typ.Type),
+			Restrictions: restrictions,
+		}
+	case cadence.CapabilityType:
+		return jsonUnaryType{
+			Kind: "Capability",
+			Type: prepareType(typ.BorrowType),
+		}
+	case *cadence.EnumType:
+		return jsonNominalType{
+			Kind:         "Enum",
+			TypeID:       string(typ.Location.TypeID(typ.QualifiedIdentifier)),
+			Fields:       prepareFields(typ.Fields),
+			Initializers: prepareInitializers(typ.Initializers),
+			Type:         prepareType(typ.RawType),
+		}
+	case nil:
+		return ""
+	default:
+		panic(fmt.Errorf("unsupported type: %T, %v", typ, typ))
+	}
+}
+
+func prepareTypeValue(typeValue cadence.TypeValue) jsonValue {
 	return jsonValueObject{
 		Type: typeTypeStr,
 		Value: jsonTypeValue{
-			StaticType: x.StaticType,
+			StaticType: prepareType(typeValue.StaticType),
 		},
 	}
 }
 
-func prepareCapability(x cadence.Capability) jsonValue {
+func prepareCapability(capability cadence.Capability) jsonValue {
 	return jsonValueObject{
 		Type: capabilityTypeStr,
 		Value: jsonCapabilityValue{
-			Path:       preparePath(x.Path),
-			Address:    encodeBytes(x.Address.Bytes()),
-			BorrowType: x.BorrowType,
+			Path:       preparePath(capability.Path),
+			Address:    encodeBytes(capability.Address.Bytes()),
+			BorrowType: prepareType(capability.BorrowType),
 		},
 	}
 }

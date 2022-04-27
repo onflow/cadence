@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,7 +57,10 @@ func (m *MemberAccesses) Find(pos Position) *MemberAccess {
 	if interval == nil {
 		return nil
 	}
-	access := value.(MemberAccess)
+	access, ok := value.(MemberAccess)
+	if !ok {
+		return nil
+	}
 	return &access
 }
 
@@ -65,7 +68,11 @@ func (m *MemberAccesses) All() []MemberAccess {
 	values := m.tree.Values()
 	accesses := make([]MemberAccess, len(values))
 	for i, value := range values {
-		accesses[i] = value.(MemberAccess)
+		access, ok := value.(MemberAccess)
+		if !ok {
+			continue
+		}
+		accesses[i] = access
 	}
 	return accesses
 }

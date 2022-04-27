@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,6 +44,8 @@ func TestCheckRestrictedType(t *testing.T) {
 
 	t.Run("struct: no restrictions", func(t *testing.T) {
 
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
             struct S {}
 
@@ -54,6 +56,8 @@ func TestCheckRestrictedType(t *testing.T) {
 	})
 
 	t.Run("resource: one restriction", func(t *testing.T) {
+
+		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
             resource interface I1 {}
@@ -70,6 +74,8 @@ func TestCheckRestrictedType(t *testing.T) {
 
 	t.Run("struct: one restriction", func(t *testing.T) {
 
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
             struct interface I1 {}
 
@@ -85,6 +91,8 @@ func TestCheckRestrictedType(t *testing.T) {
 
 	t.Run("reference to resource restriction", func(t *testing.T) {
 
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
             resource R {}
 
@@ -97,6 +105,8 @@ func TestCheckRestrictedType(t *testing.T) {
 
 	t.Run("reference to struct restriction", func(t *testing.T) {
 
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
             struct S {}
 
@@ -108,6 +118,8 @@ func TestCheckRestrictedType(t *testing.T) {
 	})
 
 	t.Run("resource: non-conformance restriction", func(t *testing.T) {
+
+		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
             resource interface I {}
@@ -125,6 +137,8 @@ func TestCheckRestrictedType(t *testing.T) {
 
 	t.Run("struct: non-conformance restriction", func(t *testing.T) {
 
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
             struct interface I {}
 
@@ -140,6 +154,8 @@ func TestCheckRestrictedType(t *testing.T) {
 	})
 
 	t.Run("resource: duplicate restriction", func(t *testing.T) {
+
+		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
             resource interface I {}
@@ -157,6 +173,8 @@ func TestCheckRestrictedType(t *testing.T) {
 
 	t.Run("struct: duplicate restriction", func(t *testing.T) {
 
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
             struct interface I {}
 
@@ -173,6 +191,8 @@ func TestCheckRestrictedType(t *testing.T) {
 
 	t.Run("restricted resource, with structure interface restriction", func(t *testing.T) {
 
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
             struct interface I {}
 
@@ -188,6 +208,8 @@ func TestCheckRestrictedType(t *testing.T) {
 
 	t.Run("restricted struct, with resource interface restriction", func(t *testing.T) {
 
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
             resource interface I {}
 
@@ -202,6 +224,8 @@ func TestCheckRestrictedType(t *testing.T) {
 	})
 
 	t.Run("resource: non-concrete restricted type", func(t *testing.T) {
+
+		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
             resource interface I {}
@@ -219,6 +243,8 @@ func TestCheckRestrictedType(t *testing.T) {
 
 	t.Run("struct: non-concrete restricted type", func(t *testing.T) {
 
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
             struct interface I {}
 
@@ -235,6 +261,8 @@ func TestCheckRestrictedType(t *testing.T) {
 
 	t.Run("restricted resource interface ", func(t *testing.T) {
 
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
             resource interface I {}
 
@@ -243,13 +271,14 @@ func TestCheckRestrictedType(t *testing.T) {
             let r: @I{} <- create R()
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := ExpectCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidRestrictedTypeError{}, errs[0])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 	})
 
 	t.Run("restricted struct interface", func(t *testing.T) {
+
+		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
             struct interface I {}
@@ -259,10 +288,39 @@ func TestCheckRestrictedType(t *testing.T) {
             let s: I{} = S()
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := ExpectCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidRestrictedTypeError{}, errs[0])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+	})
+
+	t.Run("restricted type requirement", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+	      contract interface CI {
+	          resource interface RI {}
+
+	          resource R: RI {}
+
+	          fun createR(): @R
+	      }
+
+          contract C: CI {
+	          resource R: CI.RI {}
+
+	          fun createR(): @R {
+	              return <- create R()
+	          }
+	      }
+
+          fun test() {
+              let r <- C.createR()
+              let r2: @CI.R{CI.RI} <- r
+              destroy r2
+          }
+        `)
+		require.NoError(t, err)
 	})
 }
 
@@ -1123,4 +1181,18 @@ func TestCheckRestrictedConformance(t *testing.T) {
     `)
 
 	require.NoError(t, err)
+}
+
+func TestCheckInvalidRestriction(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      let x: {h} = nil
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 2)
+
+	require.IsType(t, &sema.NotDeclaredError{}, errs[0])
+	require.IsType(t, &sema.AmbiguousRestrictedTypeError{}, errs[1])
 }

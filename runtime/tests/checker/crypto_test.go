@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,9 +22,10 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
-	"github.com/stretchr/testify/require"
 )
 
 func TestCheckHashAlgorithmCases(t *testing.T) {
@@ -147,4 +148,137 @@ func TestCheckSignatureAlgorithmConstructor(t *testing.T) {
 	)
 
 	require.NoError(t, err)
+}
+
+func TestCheckVerifyPoP(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheckWithOptions(t,
+		`
+           let key = PublicKey(
+              publicKey: "".decodeHex(),
+              signatureAlgorithm: SignatureAlgorithm.BLS_BLS12_381)
+
+           let x: Bool = key.verifyPoP([1, 2, 3])
+        `,
+		ParseAndCheckOptions{
+			Options: []sema.Option{
+				sema.WithPredeclaredValues(stdlib.BuiltinFunctions.ToSemaValueDeclarations()),
+				sema.WithPredeclaredValues(stdlib.BuiltinValues.ToSemaValueDeclarations()),
+			},
+		},
+	)
+
+	require.NoError(t, err)
+}
+
+func TestCheckVerifyPoPInvalidArgument(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheckWithOptions(t,
+		`
+           let key = PublicKey(
+              publicKey: "".decodeHex(),
+              signatureAlgorithm: SignatureAlgorithm.BLS_BLS12_381)
+
+           let x: Int = key.verifyPoP([1 as Int32, 2, 3])
+        `,
+		ParseAndCheckOptions{
+			Options: []sema.Option{
+				sema.WithPredeclaredValues(stdlib.BuiltinFunctions.ToSemaValueDeclarations()),
+				sema.WithPredeclaredValues(stdlib.BuiltinValues.ToSemaValueDeclarations()),
+			},
+		},
+	)
+
+	errs := ExpectCheckerErrors(t, err, 2)
+	var mismatch *sema.TypeMismatchError
+	require.IsType(t, mismatch, errs[0])
+	require.IsType(t, mismatch, errs[1])
+}
+
+func TestCheckBLSAggregateSignatures(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheckWithOptions(t,
+		`
+           let r: [UInt8] = BLS.aggregateSignatures([[1 as UInt8, 2, 3], []])!
+        `,
+		ParseAndCheckOptions{
+			Options: []sema.Option{
+				sema.WithPredeclaredValues(stdlib.BuiltinValues.ToSemaValueDeclarations()),
+			},
+		},
+	)
+
+	require.NoError(t, err)
+}
+
+func TestCheckInvalidBLSAggregateSignatures(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheckWithOptions(t,
+		`
+           let r: [UInt16] = BLS.aggregateSignatures([[1 as UInt32, 2, 3], []])!
+        `,
+		ParseAndCheckOptions{
+			Options: []sema.Option{
+				sema.WithPredeclaredValues(stdlib.BuiltinValues.ToSemaValueDeclarations()),
+			},
+		},
+	)
+
+	errs := ExpectCheckerErrors(t, err, 2)
+	var mismatch *sema.TypeMismatchError
+	require.IsType(t, mismatch, errs[0])
+	require.IsType(t, mismatch, errs[1])
+}
+
+func TestCheckBLSAggregatePublicKeys(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheckWithOptions(t,
+		`
+           let r: PublicKey = BLS.aggregatePublicKeys([
+               PublicKey(
+                   publicKey: [],
+                   signatureAlgorithm: SignatureAlgorithm.BLS_BLS12_381
+               )
+           ])!
+        `,
+		ParseAndCheckOptions{
+			Options: []sema.Option{
+				sema.WithPredeclaredValues(stdlib.BuiltinFunctions.ToSemaValueDeclarations()),
+				sema.WithPredeclaredValues(stdlib.BuiltinValues.ToSemaValueDeclarations()),
+			},
+		},
+	)
+
+	require.NoError(t, err)
+}
+
+func TestCheckInvalidBLSAggregatePublicKeys(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheckWithOptions(t,
+		`
+           let r: [PublicKey] = BLS.aggregatePublicKeys([1])!
+        `,
+		ParseAndCheckOptions{
+			Options: []sema.Option{
+				sema.WithPredeclaredValues(stdlib.BuiltinValues.ToSemaValueDeclarations()),
+			},
+		},
+	)
+
+	errs := ExpectCheckerErrors(t, err, 2)
+	var mismatch *sema.TypeMismatchError
+	require.IsType(t, mismatch, errs[0])
+	require.IsType(t, mismatch, errs[1])
 }

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -413,4 +413,50 @@ func TestCheckConformanceWithFunctionSubtype(t *testing.T) {
 
 		require.IsType(t, &sema.ConformanceError{}, errs[0])
 	})
+}
+
+func TestCheckTypeRequirementDuplicateDeclaration(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+	  contract interface CI {
+          // Checking if CI_TR1 conforms to CI here,
+          // requires checking the type requirement CI_TR2 of CI.
+          //
+          // Note that CI_TR1 here declares 2 (!)
+          // nested composite declarations named CI_TR2.
+          //
+          // Checking should not just use the first declaration named CI_TR2,
+          // but detect the second / duplicate, error,
+          // and stop further conformance checking
+          //
+	      contract CI_TR1: CI {
+	          contract CI_TR2 {}
+	          contract CI_TR2: CI {
+	              contract CI_TR2_TR {}
+	          }
+	      }
+
+	      contract CI_TR2: CI {
+	          contract CI_TR2_TR {}
+	      }
+	  }
+	`)
+
+	errs := ExpectCheckerErrors(t, err, 13)
+
+	require.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
+	require.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[1])
+	require.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[2])
+	require.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[3])
+	require.IsType(t, &sema.RedeclarationError{}, errs[4])
+	require.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[5])
+	require.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[6])
+	require.IsType(t, &sema.RedeclarationError{}, errs[7])
+	require.IsType(t, &sema.RedeclarationError{}, errs[8])
+	require.IsType(t, &sema.RedeclarationError{}, errs[9])
+	require.IsType(t, &sema.ConformanceError{}, errs[10])
+	require.IsType(t, &sema.ConformanceError{}, errs[11])
+	require.IsType(t, &sema.ConformanceError{}, errs[12])
 }

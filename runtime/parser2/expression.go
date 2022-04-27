@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -97,14 +97,14 @@ type postfixExpr struct {
 	leftDenotation postfixExprFunc
 }
 
-var exprNullDenotations = map[lexer.TokenType]exprNullDenotationFunc{}
+var exprNullDenotations = [lexer.TokenMax]exprNullDenotationFunc{}
 
 type exprLeftDenotationFunc func(parser *parser, token lexer.Token, left ast.Expression) ast.Expression
 
-var exprLeftBindingPowers = map[lexer.TokenType]int{}
+var exprLeftBindingPowers = [lexer.TokenMax]int{}
 var exprIdentifierLeftBindingPowers = map[string]int{}
-var exprLeftDenotations = map[lexer.TokenType]exprLeftDenotationFunc{}
-var exprMetaLeftDenotations = map[lexer.TokenType]exprMetaLeftDenotationFunc{}
+var exprLeftDenotations = [lexer.TokenMax]exprLeftDenotationFunc{}
+var exprMetaLeftDenotations = [lexer.TokenMax]exprMetaLeftDenotationFunc{}
 
 func defineExpr(def interface{}) {
 	switch def := def.(type) {
@@ -341,7 +341,13 @@ func init() {
 	defineExpr(literalExpr{
 		tokenType: lexer.TokenBinaryIntegerLiteral,
 		nullDenotation: func(p *parser, token lexer.Token) ast.Expression {
-			literal := token.Value.(string)
+			literal, ok := token.Value.(string)
+			if !ok {
+				panic(fmt.Errorf(
+					"value for token %s was not a string",
+					lexer.TokenBinaryIntegerLiteral,
+				))
+			}
 			return parseIntegerLiteral(
 				p,
 				literal,
@@ -355,7 +361,13 @@ func init() {
 	defineExpr(literalExpr{
 		tokenType: lexer.TokenOctalIntegerLiteral,
 		nullDenotation: func(p *parser, token lexer.Token) ast.Expression {
-			literal := token.Value.(string)
+			literal, ok := token.Value.(string)
+			if !ok {
+				panic(fmt.Errorf(
+					"value for token %s was not a string",
+					lexer.TokenOctalIntegerLiteral,
+				))
+			}
 			return parseIntegerLiteral(
 				p,
 				literal,
@@ -369,7 +381,13 @@ func init() {
 	defineExpr(literalExpr{
 		tokenType: lexer.TokenDecimalIntegerLiteral,
 		nullDenotation: func(p *parser, token lexer.Token) ast.Expression {
-			literal := token.Value.(string)
+			literal, ok := token.Value.(string)
+			if !ok {
+				panic(fmt.Errorf(
+					"value for token %s was not a string",
+					lexer.TokenDecimalIntegerLiteral,
+				))
+			}
 			return parseIntegerLiteral(
 				p,
 				literal,
@@ -383,7 +401,13 @@ func init() {
 	defineExpr(literalExpr{
 		tokenType: lexer.TokenHexadecimalIntegerLiteral,
 		nullDenotation: func(p *parser, token lexer.Token) ast.Expression {
-			literal := token.Value.(string)
+			literal, ok := token.Value.(string)
+			if !ok {
+				panic(fmt.Errorf(
+					"value for token %s was not a string",
+					lexer.TokenHexadecimalIntegerLiteral,
+				))
+			}
 			return parseIntegerLiteral(
 				p,
 				literal,
@@ -397,7 +421,13 @@ func init() {
 	defineExpr(literalExpr{
 		tokenType: lexer.TokenUnknownBaseIntegerLiteral,
 		nullDenotation: func(p *parser, token lexer.Token) ast.Expression {
-			literal := token.Value.(string)
+			literal, ok := token.Value.(string)
+			if !ok {
+				panic(fmt.Errorf(
+					"value for token %s was not a string",
+					lexer.TokenUnknownBaseIntegerLiteral,
+				))
+			}
 			return parseIntegerLiteral(
 				p,
 				literal,
@@ -1242,8 +1272,8 @@ func applyExprMetaLeftDenotation(
 	// e.g. determining the left binding power based on parsing more tokens
 	// or performing look-ahead
 
-	metaLeftDenotation, ok := exprMetaLeftDenotations[p.current.Type]
-	if !ok {
+	metaLeftDenotation := exprMetaLeftDenotations[p.current.Type]
+	if metaLeftDenotation == nil {
 		metaLeftDenotation = defaultExprMetaLeftDenotation
 	}
 
@@ -1281,7 +1311,13 @@ func defaultExprMetaLeftDenotation(
 func exprLeftBindingPower(token lexer.Token) int {
 	tokenType := token.Type
 	if tokenType == lexer.TokenIdentifier {
-		identifier := token.Value.(string)
+		identifier, ok := token.Value.(string)
+		if !ok {
+			panic(fmt.Errorf(
+				"value for token %s was not a string",
+				tokenType,
+			))
+		}
 		return exprIdentifierLeftBindingPowers[identifier]
 	}
 	return exprLeftBindingPowers[tokenType]
@@ -1289,16 +1325,16 @@ func exprLeftBindingPower(token lexer.Token) int {
 
 func applyExprNullDenotation(p *parser, token lexer.Token) ast.Expression {
 	tokenType := token.Type
-	nullDenotation, ok := exprNullDenotations[tokenType]
-	if !ok {
-		panic(fmt.Errorf("unexpected token in expression: %s", token.Type))
+	nullDenotation := exprNullDenotations[tokenType]
+	if nullDenotation == nil {
+		panic(fmt.Errorf("unexpected token in expression: %s", tokenType))
 	}
 	return nullDenotation(p, token)
 }
 
 func applyExprLeftDenotation(p *parser, token lexer.Token, left ast.Expression) ast.Expression {
-	leftDenotation, ok := exprLeftDenotations[token.Type]
-	if !ok {
+	leftDenotation := exprLeftDenotations[token.Type]
+	if leftDenotation == nil {
 		panic(fmt.Errorf("unexpected token in expression: %s", token.Type))
 	}
 	return leftDenotation(p, token, left)
@@ -1539,9 +1575,10 @@ func parseIntegerLiteral(p *parser, literal, text string, kind IntegerLiteralKin
 	}
 
 	return &ast.IntegerExpression{
-		Value: value,
-		Base:  base,
-		Range: tokenRange,
+		PositiveLiteral: literal,
+		Value:           value,
+		Base:            base,
+		Range:           tokenRange,
 	}
 }
 
@@ -1558,12 +1595,13 @@ func parseFixedPointPart(part string) (integer *big.Int, scale uint) {
 	return integer, scale
 }
 
-func parseFixedPointLiteral(text string, tokenRange ast.Range) *ast.FixedPointExpression {
-	parts := strings.Split(text, ".")
+func parseFixedPointLiteral(literal string, tokenRange ast.Range) *ast.FixedPointExpression {
+	parts := strings.Split(literal, ".")
 	integer, _ := parseFixedPointPart(parts[0])
 	fractional, scale := parseFixedPointPart(parts[1])
 
 	return &ast.FixedPointExpression{
+		PositiveLiteral: literal,
 		Negative:        false,
 		UnsignedInteger: integer,
 		Fractional:      fractional,

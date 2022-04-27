@@ -9,23 +9,30 @@ are supported by the language natively.
 
 ```cadence
 pub enum HashAlgorithm: UInt8 {
-    /// SHA2_256 is Secure Hashing Algorithm 2 (SHA-2) with a 256-bit digest.
+    /// SHA2_256 is SHA-2 with a 256-bit digest (also referred to as SHA256).
     pub case SHA2_256 = 1
 
-    /// SHA2_384 is Secure Hashing Algorithm 2 (SHA-2) with a 384-bit digest.
+    /// SHA2_384 is SHA-2 with a 384-bit digest (also referred to as  SHA384).
     pub case SHA2_384 = 2
 
-    /// SHA3_256 is Secure Hashing Algorithm 3 (SHA-3) with a 256-bit digest.
+    /// SHA3_256 is SHA-3 with a 256-bit digest.
     pub case SHA3_256 = 3
 
-    /// SHA3_384 is Secure Hashing Algorithm 3 (SHA-3) with a 384-bit digest.
+    /// SHA3_384 is SHA-3 with a 384-bit digest.
     pub case SHA3_384 = 4
 
-    /// KMAC128_BLS_BLS12_381 is an instance of KECCAK Message Authentication Code (KMAC128) mac algorithm,
-    /// that can be used as the hashing algorithm for BLS signature scheme on the curve BLS12-381.
-    /// This is a customized version of KMAC128 that is compatible with the hashing to curve
-    /// used in BLS signatures.
+    /// KMAC128_BLS_BLS12_381 is an instance of KECCAK Message Authentication Code (KMAC128) mac algorithm.
+    /// Although this is a MAC algorithm, KMAC is included in this list as it can be used hash 
+    /// when the key is used a non-public customizer.
+    /// KMAC128_BLS_BLS12_381 is used in particular as the hashing algorithm for the BLS signature scheme on the curve BLS12-381.
+    /// It is a customized version of KMAC128 that is compatible with the hashing to curve
+    /// used in BLS signatures. 
+    /// It is the same hasher used by signatures in the internal Flow protocol. 
     pub case KMAC128_BLS_BLS12_381 = 5
+
+    /// KECCAK_256 is the legacy Keccak algorithm with a 256-bits digest, as per the original submission to the NIST SHA3 competition.
+    /// KECCAK_256 is different than SHA3 and is used by Ethereum.  
+    pub case KECCAK_256 = 6
 
     /// Returns the hash of the given data
     pub fun hash(_ data: [UInt8]): [UInt8]
@@ -35,34 +42,51 @@ pub enum HashAlgorithm: UInt8 {
 }
 ```
 
-- `hash` hashes the input data using the input hashing algorithm.
-  If `KMAC128_BLS_BLS12_381` is used, data is hashed using the standard MAC `KMAC128(customizer, key, data, length)` with the following inputs:
-    - `customizer` is the UTF-8 encoding of `"H2C"`
-    - `key` is the UTF-8 encoding of `"APP_BLS_SIG_BLS12381G1_XOF:KMAC128_SSWU_RO_POP_"`
-    - `data` is the input data to hash
-    - `length` is 1024 bytes
+The hash algorithms provide two ways to hash input data into digests, `hash` and `hashWithTag`. 
 
-- `hashWithTag` hashes data along with a tag.
-  This allows instanciating independent hashing functions customized with a domain separation tag.
-  This is implemented differently depending on the hashing algorithm:
-    - `SHA2_256`, `SHA2_384`, `SHA3_256`, `SHA3_384`:
-      The hashed message is `bytes(tag) || data` where `bytes()` is the UTF-8 encoding of the input string,
-      padded with zeros till 32 bytes.
-      The tags accepted must not exceed 32 bytes.
-      If the tag used is empty, no data prefix is applied, and the hashed message is simply `data`.
-    - `KMAC128_BLS_BLS12_381`: this is a call to standard `KMAC128(customizer, key, data, length)` with the following inputs:
-      - `customizer` is the UTF-8 encoding of `"H2C"`
-      - `key` is the UTF-8 encoding of `"APP_" || tag || "BLS_SIG_BLS12381G1_XOF:KMAC128_SSWU_RO_POP_"`
-      - `data` is the input data to hash
-      - `length` is 1024 bytes
+## Hashing
 
+`hash` hashes the input data using the chosen hashing algorithm. 
+`KMAC` is the only MAC algorithm on the list 
+and configured with specific parameters (detailed in [KMAC128 for BLS](#KMAC128-for-BLS))
 
-For example, to compute a SHA3-256 hash:
+For example, to compute a SHA3-256 digest:
 
 ```cadence
 let data: [UInt8] = [1, 2, 3]
 let digest = HashAlgorithm.SHA3_256.hash(data)
 ```
+
+## Hashing with a domain tag
+
+`hashWithTag` hashes the input data along with an input tag.
+It allows instanciating independent hashing functions customized with a domain separation tag (DST).
+For most of the hashing algorithms, mixing the data with the tag is done by pre-fixing the data with the tag and
+hashing the result.
+
+- `SHA2_256`, `SHA2_384`, `SHA3_256`, `SHA3_384`, `KECCAK_256`:
+  If the tag is non-empty, the hashed message is `bytes(tag) || data` where `bytes()` is the UTF-8 encoding of the input string,
+  padded with zeros till 32 bytes. 
+  Therefore tags must not exceed 32 bytes.
+  If the tag used is empty, no data prefix is applied, and the hashed message is simply `data` (same as `hash` output).
+- `KMAC128_BLS_BLS12_381`: refer to [KMAC128 for BLS](#KMAC128-for-BLS) for details.
+
+
+### KMAC128 for BLS
+
+`KMAC128_BLS_BLS12_381` is an instance of the cSHAKE-based KMAC128.
+Although this is a MAC algorithm, KMAC can be used as a hash when the key is used as a non-private customizer.
+`KMAC128_BLS_BLS12_381` is used in particular as the hashing algorithm for the BLS signature scheme on the curve BLS12-381.
+It is a customized instance of KMAC128 and is compatible with the hashing to curve used by BLS signatures. 
+It is the same hasher used by the internal Flow protocol, and can be used to verify Flow protocol signatures on-chain. 
+
+To define the MAC instance, `KMAC128(customizer, key, data, length)` is instanciated with the following parameters 
+(as referred to by the NIST [SHA-3 Derived Functions](https://nvlpubs.nist.gov/nistpubs/specialpublications/nist.sp.800-185.pdf)):
+  - `customizer` is the UTF-8 encoding of `"H2C"`.
+  - `key` is the UTF-8 encoding of `"APP_BLS_SIG_BLS12381G1_XOF:KMAC128_SSWU_RO_POP_"` when `hash` is used. It includes the input `tag`
+  when `hashWithTag` is used and key becomes the UTF-8 encoding of `"APP_" || tag || "BLS_SIG_BLS12381G1_XOF:KMAC128_SSWU_RO_POP_"`.
+  - `data` is the input data to hash.
+  - `length` is 1024 bytes.
 
 ## Signing Algorithms
 
@@ -71,15 +95,15 @@ are supported by the language natively.
 
 ```cadence
 pub enum SignatureAlgorithm: UInt8 {
-    /// ECDSA_P256 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the NIST P-256 curve.
+    /// ECDSA_P256 is ECDSA on the NIST P-256 curve.
     pub case ECDSA_P256 = 1
 
-    /// ECDSA_secp256k1 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the secp256k1 curve.
+    /// ECDSA_secp256k1 is ECDSA on the secp256k1 curve.
     pub case ECDSA_secp256k1 = 2
 
     /// BLS_BLS12_381 is BLS signature scheme on the BLS12-381 curve.
-    /// The scheme is set-up so that signatures are in G_1 (curve over the prime field)
-    /// while public keys are in G_2 (curve over the prime field extension).
+    /// The scheme is set-up so that signatures are in G_1 (subgroup of the curve over the prime field)
+    /// while public keys are in G_2 (subgroup of the curve over the prime field extension).
     pub case BLS_BLS12_381 = 3
 }
 ```
@@ -92,7 +116,6 @@ pub enum SignatureAlgorithm: UInt8 {
 struct PublicKey {
     let publicKey: [UInt8]
     let signatureAlgorithm: SignatureAlgorithm
-    let isValid: Bool
 
     /// Verifies a signature under the given tag, data and public key.
     /// It uses the given hash algorithm to hash the tag and data.
@@ -102,8 +125,19 @@ struct PublicKey {
         domainSeparationTag: String,
         hashAlgorithm: HashAlgorithm
     ): Bool
+
+    /// Verifies the proof of possession of the private key.
+    /// This function is only implemented if the signature algorithm
+    /// of the public key is BLS (BLS_BLS12_381).
+    /// If called with any other signature algorithm, the program aborts
+    pub fun verifyPoP(_ proof: [UInt8]): Bool
 }
 ```
+
+`PublicKey` supports two methods `verify` and `verifyPoP`. 
+`verifyPoP` will be covered under [BLS multi-signature](#proof-of-possession-pop).
+
+### Public Key construction
 
 A `PublicKey` can be constructed using the raw key and the signing algorithm.
 
@@ -117,9 +151,9 @@ let publicKey = PublicKey(
 The raw key value depends on the supported signature scheme:
 
 - `ECDSA_P256` and `ECDSA_secp256k1`:
-  The public key is a curve point `(X,Y)` where `X` and `Y` are two prime field elements.
+  The public key is an uncompressed curve point `(X,Y)` where `X` and `Y` are two prime field elements.
   The raw key is represented as `bytes(X) || bytes(Y)`, where `||` is the concatenation operation,
-  and `bytes()` is the bytes big-endian encoding of the input integer padded by zeros to the byte-length of the field prime.
+  and `bytes()` is the bytes big-endian encoding left padded by zeros to the byte-length of the field prime.
   The raw public key is 64-bytes long.
 
 - `BLS_BLS_12_381`:
@@ -128,8 +162,20 @@ The raw key value depends on the supported signature scheme:
   [IETF draft-irtf-cfrg-pairing-friendly-curves-08](https://www.ietf.org/archive/id/draft-irtf-cfrg-pairing-friendly-curves-08.html#name-point-serialization-procedu).
   A public key is 96-bytes long.
 
+### Public Key validation
 
-A public key is validated at the time of creation. Hence, public keys are immutable.
+A public key is validated at the time of creation. Only valid public keys can be created.
+The validation of the public key depends on the supported signature scheme:
+
+- `ECDSA_P256` and `ECDSA_secp256k1`:
+  The given `X` and `Y` coordinates are correctly serialized, represent valid prime field elements, and the resulting
+  point is on the correct curve (no subgroup check needed since the cofactor of both supported curves is 1).
+
+- `BLS_BLS_12_381`:
+  The given key is correctly serialized following the compressed serialization in [IETF draft-irtf-cfrg-pairing-friendly-curves-08](https://www.ietf.org/archive/id/draft-irtf-cfrg-pairing-friendly-curves-08.html#name-point-serialization-procedu).
+  The coordinates represent valid prime field extension elemnents. The resulting point is on the curve, and is on the correct subgroup G_2. 
+
+Since the validation happen only at the time of creation, public keys are immutable.
 
 ```cadence
 publicKey.signatureAlgorithm = SignatureAlgorithm.ECDSA_secp256k1   // Not allowed
@@ -138,8 +184,7 @@ publicKey.publicKey = []                                            // Not allow
 publicKey.publicKey[2] = 4      // No effect
 ```
 
-The validity of a public key can be checked using the `isValid` field.
-Verifications performed with an invalid public key (using `verify()` method) will always fail.
+Invalid public keys cannot be constructed so public keys are always valid.
 
 ### Signature verification
 
@@ -163,27 +208,86 @@ let isValid = pk.verify(
 // `isValid` is false
 ```
 
-The inputs to `verify()` depend on the signature scheme used:
+The inputs to `verify` depend on the signature scheme used:
 
 - ECDSA (`ECDSA_P256` and `ECDSA_secp256k1`):
-   - `signature` is the couple `(r,s)`. It is represented as `bytes(r) || bytes(s)`, where `||` is the concatenation operation,
-     and `bytes()` is the bytes big-endian encoding of the input integer padded by zeros to the byte-length of the curve order.
-     The signature is 64 bytes-long for both curves.
-   - `signedData` is the arbitrary message to verify the signature against.
-   - `domainSeparationTag` is the domain tag used for signing. The interface only accepts the the user tag `"FLOW-V0.0-user"`.
-   - `hashAlgorithm` is the algorithm used to hash the message along with the given tag (check the [`hashWithTag` function](#hashing) for more details).
-     Only `SHA2_256` or `SHA3_256` are accepted.
+  - `signature` expects the couple `(r,s)`. It is serialized as `bytes(r) || bytes(s)`, where `||` is the concatenation operation,
+  and `bytes()` is the bytes big-endian encoding left padded by zeros to the byte-length of the curve order.
+  The signature is 64 bytes-long for both curves. 
+  - `signedData` is the arbitrary message to verify the signature against.
+  - `domainSeparationTag` is the expected domain tag. Multiple valid tag values can be used (check [`hashWithTag`](#hashing) for more details).
+  - `hashAlgorithm` is either `SHA2_256`, `SHA3_256` or `KECCAK_256`. It is the algorithm used to hash the message along with the given tag (check the `hashWithTag`[function](#hashing) for more details).
+
+As noted in [`hashWithTag`](#hashing) for `SHA2_256`, `SHA3_256` and `KECCAK_256, using an empty `tag` results in hashing the input data only. If a signature verification
+needs to be done against data without any domain tag, this can be done by using an empty domain tag `""`.
+
+ECDSA verification is implemented as defined in ANS X9.62 (also referred by [FIPS 186-4](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-4.pdf) and [SEC 1, Version 2.0](https://www.secg.org/sec1-v2.pdf)).
+A valid signature would be generated using the expected `signedData`, `domainSeparationTag` and `hashAlgorithm` used to verify. 
 
 - BLS (`BLS_BLS_12_381`):
-   - `signature` is a G_1 (curve over the prime field) point.
-     The encoding follows the compressed serialization defined in the [IETF draft-irtf-cfrg-pairing-friendly-curves-08](https://www.ietf.org/archive/id/draft-irtf-cfrg-pairing-friendly-curves-08.html#name-point-serialization-procedu).
-     A signature is 48-bytes long.
-   - `signedData` is the arbitrary message to verify the signature against.
-   - `domainSeparationTag` is the domain tag used for signing. All tags are accepted.
-   - `hashAlgorithm` is the algorithm used to hash the message along with the given tag (check `hashWithTag` function for more details).
-     Only `KMAC128_BLS_BLS12_381` is accepted.
+  - `signature` expects a G_1 (subgroup of the curve over the prime field) point.
+  The encoding follows the compressed serialization defined in the [IETF draft-irtf-cfrg-pairing-friendly-curves-08](https://www.ietf.org/archive/id/draft-irtf-cfrg-pairing-friendly-curves-08.html#name-point-serialization-procedu).
+  A signature is 48-bytes long. 
+  - `signedData` is the arbitrary message to verify the signature against.
+  - `domainSeparationTag` is the expected domain tag. All tags are accepted (check [KMAC128 for BLS](#KMAC128-for-BLS)).
+  - `hashAlgorithm` only accepts `KMAC128_BLS_BLS12_381`. It is the algorithm used to hash the message along with the given tag (check [KMAC128 for BLS](#KMAC128-for-BLS)).
 
-BLS verification performs the necessary membership check of the signature while the membership check of the public key is performed at the creation of the `PublicKey` object.
+BLS verification performs the necessary membership check of the signature while the membership check of the public key is performed at the creation of the `PublicKey` object
+and not repeated during the signature verification. 
+
+The verificaction uses a hash-to-curve algorithm to hash the `signedData` into a `G_1` point, following the `hash_to_curve` method described in the [draft-irtf-cfrg-hash-to-curve-14](https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-14#section-3).
+While KMAC128 is used as a hash-to-field method resulting in two field elements, the mapping to curve is implemented using the [simplified SWU](https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-14#section-6.6.3).
+
+A valid signature would be generated using the expected `signedData` and `domainSeparationTag`, as well the same hashing to curve process. 
+
+## BLS multi-signature
+
+BLS signature scheme allows efficient multi-signature features. Multiple signatures can be aggregated
+into a single signature which can be verified against an aggregated public key. This allows authenticating
+multiple signers with a single signature verification. 
+While BLS provides multiple aggregation techniques,
+Cadence supports basic aggregation tools that cover a wide list of use-cases. 
+These tools are defined in the built-in `BLS` contract, which does not need to be imported.
+
+### Proof of Possession (PoP)
+
+Multi-signature verification in BLS requires a defense against rogue public-key attacks. Multiple ways are 
+available to protect BLS verification. The language provides the proof of possession of private key as a defense tool. 
+The proof of possession of private key is a BLS signature over the public key itself. 
+The PoP signature follows the same requirements of a BLS signature (detailed in [Signature verification](#Signature-verification)),
+except it uses a special domain separation tag. The key expected to be used in KMAC128 is the UTF-8 encoding of `"POP_BLS_SIG_BLS12381G1_XOF:KMAC128_SSWU_RO_POP_"`.
+The expected message to be signed by the PoP is the serialization of the BLS public key corresponding to the signing private key ([serialization details](#PublicKey)).
+The PoP can only be verified using the `PublicKey` method `verifyPoP`. 
+
+### BLS signature aggregation
+
+`cadence•fun aggregateSignatures(_ signatures: [[UInt8]]): [UInt8]?`
+
+Aggregates multiple BLS signatures into one. 
+Signatures could be generated from the same or distinct messages, they
+could also be the aggregation of other signatures.
+The order of the signatures in the slice does not matter since the aggregation is commutative.
+There is no subgroup membership check performed on the input signatures.
+If the array is empty or if decoding one of the signature fails, the program aborts
+
+The output signature can be verified against an aggregated public key to authenticate multiple 
+signers at once. Since the `verify` method accepts a single data to verify against, it is only possible to 
+verfiy multiple signatures of the same message. 
+
+### BLS public key aggregation
+
+`cadence•fun aggregatePublicKeys(_ publicKeys: [PublicKey]): PublicKey?`
+
+Aggregates multiple BLS public keys into one.
+
+The order of the public keys in the slice does not matter since the aggregation is commutative.
+The input keys are guaranteed to be in the correct subgroup since subgroup membership is checked
+at the key creatiom time. 
+If the array is empty or any of the input keys is not a BLS key, the program aborts
+
+The output public key can be used to verify aggregated signatures to authenticate multiple 
+signers at once. Since the `verify` method accepts a single data to verify against, it is only possible to 
+verfiy multiple signatures of the same message. 
 
 ## Crypto Contract
 

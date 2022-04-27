@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,8 +21,9 @@ package interpreter_test
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	. "github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/onflow/cadence/runtime/interpreter"
 )
@@ -44,8 +45,64 @@ func TestInterpretForStatement(t *testing.T) {
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	assert.Equal(t,
+	AssertValuesEqual(
+		t,
+		inter,
 		interpreter.NewIntValueFromInt64(10),
+		value,
+	)
+}
+
+func TestInterpretForStatementWithIndex(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+       fun test(): Int {
+           var sum = 0
+           for x, y in [1, 2, 3, 4] {
+               sum = sum + x
+           }
+           return sum
+       }
+    `)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewIntValueFromInt64(6),
+		value,
+	)
+}
+
+func TestInterpretForStatementWithStoredIndex(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+       fun test(): Int {
+           let arr: [Int] = []
+           for x, y in [1, 2, 3, 4] {
+               arr.append(x)
+           }
+           var sum = 0
+           for z in arr {
+              sum = sum + z
+           }
+           return sum
+       }
+    `)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewIntValueFromInt64(6),
 		value,
 	)
 }
@@ -68,7 +125,9 @@ func TestInterpretForStatementWithReturn(t *testing.T) {
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	assert.Equal(t,
+	AssertValuesEqual(
+		t,
+		inter,
 		interpreter.NewIntValueFromInt64(4),
 		value,
 	)
@@ -94,12 +153,17 @@ func TestInterpretForStatementWithContinue(t *testing.T) {
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	assert.Equal(t,
-		interpreter.NewArrayValueUnownedNonCopying(
+	require.IsType(t, value, &interpreter.ArrayValue{})
+	arrayValue := value.(*interpreter.ArrayValue)
+
+	AssertValueSlicesEqual(
+		t,
+		inter,
+		[]interpreter.Value{
 			interpreter.NewIntValueFromInt64(4),
 			interpreter.NewIntValueFromInt64(5),
-		),
-		value,
+		},
+		arrayElements(inter, arrayValue),
 	)
 }
 
@@ -123,7 +187,9 @@ func TestInterpretForStatementWithBreak(t *testing.T) {
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	assert.Equal(t,
+	AssertValuesEqual(
+		t,
+		inter,
 		interpreter.NewIntValueFromInt64(4),
 		value,
 	)
@@ -146,7 +212,9 @@ func TestInterpretForStatementEmpty(t *testing.T) {
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	assert.Equal(t,
+	AssertValuesEqual(
+		t,
+		inter,
 		interpreter.BoolValue(false),
 		value,
 	)

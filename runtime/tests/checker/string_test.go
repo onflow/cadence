@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -271,9 +271,7 @@ func TestCheckStringDecodeHex(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t,
-		&sema.VariableSizedType{
-			Type: sema.UInt8Type,
-		},
+		sema.ByteArrayType,
 		RequireGlobalValue(t, checker.Elaboration, "x"),
 	)
 }
@@ -283,7 +281,7 @@ func TestCheckStringEncodeHex(t *testing.T) {
 	t.Parallel()
 
 	checker, err := ParseAndCheck(t, `
-        let x = String.encodeHex([1 as UInt8, 2, 3, 0xCA, 0xDE])
+        let x = String.encodeHex([1, 2, 3, 0xCA, 0xDE])
 	`)
 
 	require.NoError(t, err)
@@ -306,9 +304,23 @@ func TestCheckStringUtf8Field(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t,
-		&sema.VariableSizedType{
-			Type: sema.UInt8Type,
-		},
+		sema.ByteArrayType,
+		RequireGlobalValue(t, checker.Elaboration, "x"),
+	)
+}
+
+func TestCheckStringToLower(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+        let x = "Abc".toLower()
+	`)
+
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		sema.StringType,
 		RequireGlobalValue(t, checker.Elaboration, "x"),
 	)
 }

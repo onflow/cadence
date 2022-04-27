@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,7 +48,7 @@ func (v ValueDeclaration) ValueDeclarationDocString() string {
 	return v.DocString
 }
 
-func (v ValueDeclaration) ValueDeclarationValue() interpreter.Value {
+func (v ValueDeclaration) ValueDeclarationValue(_ *interpreter.Interpreter) interpreter.Value {
 	return v.Value
 }
 

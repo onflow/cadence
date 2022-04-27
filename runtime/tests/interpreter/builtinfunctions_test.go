@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,13 +22,15 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestInterpretToString(t *testing.T) {
+
+	t.Parallel()
 
 	for _, ty := range sema.AllIntegerTypes {
 
@@ -44,7 +46,9 @@ func TestInterpretToString(t *testing.T) {
 				),
 			)
 
-			assert.Equal(t,
+			AssertValuesEqual(
+				t,
+				inter,
 				interpreter.NewStringValue("42"),
 				inter.Globals["y"].GetValue(),
 			)
@@ -53,13 +57,17 @@ func TestInterpretToString(t *testing.T) {
 
 	t.Run("Address", func(t *testing.T) {
 
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
           let x: Address = 0x42
           let y = x.toString()
         `)
 
-		assert.Equal(t,
-			interpreter.NewStringValue("0x42"),
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewStringValue("0x0000000000000042"),
 			inter.Globals["y"].GetValue(),
 		)
 	})
@@ -92,7 +100,9 @@ func TestInterpretToString(t *testing.T) {
 				),
 			)
 
-			assert.Equal(t,
+			AssertValuesEqual(
+				t,
+				inter,
 				expected,
 				inter.Globals["y"].GetValue(),
 			)
@@ -102,15 +112,26 @@ func TestInterpretToString(t *testing.T) {
 
 func TestInterpretToBytes(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("Address", func(t *testing.T) {
+
+		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
           let x: Address = 0x123456
           let y = x.toBytes()
         `)
 
-		assert.Equal(t,
-			interpreter.NewArrayValueUnownedNonCopying(
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeUInt8,
+				},
+				common.Address{},
 				interpreter.UInt8Value(0x0),
 				interpreter.UInt8Value(0x0),
 				interpreter.UInt8Value(0x0),
@@ -126,6 +147,8 @@ func TestInterpretToBytes(t *testing.T) {
 }
 
 func TestInterpretToBigEndianBytes(t *testing.T) {
+
+	t.Parallel()
 
 	typeTests := map[string]map[string][]byte{
 		// Int*
@@ -317,8 +340,10 @@ func TestInterpretToBigEndianBytes(t *testing.T) {
 					),
 				)
 
-				assert.Equal(t,
-					interpreter.ByteSliceToByteArrayValue(expected),
+				AssertValuesEqual(
+					t,
+					inter,
+					interpreter.ByteSliceToByteArrayValue(inter, expected),
 					inter.Globals["result"].GetValue(),
 				)
 			})

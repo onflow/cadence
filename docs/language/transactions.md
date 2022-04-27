@@ -2,7 +2,7 @@
 title: Transactions
 ---
 
-Transactions are objects that are signed by one or more [accounts](../accounts)
+Transactions are objects that are signed by one or more [accounts](accounts)
 and are sent to the chain to interact with it.
 
 Transactions are structured as such:

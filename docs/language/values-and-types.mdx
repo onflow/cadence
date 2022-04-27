@@ -101,7 +101,7 @@ and can represent values in the following ranges:
 
 The types are independent types, i.e. not subtypes of each other.
 
-See the section about [arithmetic operators](../operators#arithmetic) for further
+See the section about [arithmetic operators](operators#arithmetic) for further
 information about the behavior of the different integer types.
 
 ```cadence
@@ -121,7 +121,7 @@ In addition, the arbitrary precision integer type `Int` is provided.
 let veryLargeNumber: Int = 10000000000000000000000000000000
 ```
 
-Integer literals are [inferred](../type-inference) to have type `Int`,
+Integer literals are [inferred](type-inference) to have type `Int`,
 or if the literal occurs in a position that expects an explicit type,
 e.g. in a variable declaration with an explicit type annotation.
 
@@ -376,18 +376,18 @@ someStruct = testStruct
 
 // Declare a resource named `TestResource`
 
-resource Test {}
+resource TestResource {}
 
 // Declare a variable that has the type `AnyResource`.
 // Any resource-typed value can be assigned to it,
 // but not non-resource typed values.
 //
-var someResource: @AnyResource <- create Test()
+var someResource: @AnyResource <- create TestResource()
 
 // Invalid: Resource-typed values can not be assigned
 // to `AnyStruct`-typed variables
 //
-someStruct <- create Test()
+someStruct <- create TestResource()
 
 // Invalid: Non-resource typed values can not be assigned
 // to `AnyResource`-typed variables
@@ -440,7 +440,7 @@ let maybeInt: Int? = 1
 let anything: AnyStruct = maybeInt
 ```
 
-[Conditional downcasting](../operators#conditional-downcasting-operator) allows coercing
+[Conditional downcasting](#conditional-downcasting-operator) allows coercing
 a value which has the type `AnyStruct` or `AnyResource` back to its original type.
 
 ## Optionals
@@ -635,7 +635,7 @@ If the variable being assigned to is non-nil,
 the execution of the program aborts.
 
 The force-assignment operator is only used for
-[resource types](../composite-types#resources) and the move operator (`<-`),
+[resource types](resources) and the move operator (`<-`),
 which are covered in the resources section of this document.
 
 ### Conditional Downcasting Operator
@@ -670,7 +670,7 @@ let boolean = something as? Bool
 ```
 
 Downcasting works for nested types (e.g. arrays),
-interfaces (if a [resource](../composite-types#resources) interface not to a concrete resource),
+interfaces (if a [resource](resources) interface not to a concrete resource),
 and optionals.
 
 ```cadence
@@ -691,7 +691,7 @@ let second = values[1] as? Bool
 `Never` is the bottom type, i.e., it is a subtype of all types.
 There is no value that has type `Never`.
 `Never` can be used as the return type for functions that never return normally.
-For example, it is the return type of the function [`panic`](../built-in-functions#panic).
+For example, it is the return type of the function [`panic`](built-in-functions#panic).
 
 ```cadence
 // Declare a function named `crashAndBurn` which will never return,
@@ -836,8 +836,8 @@ Strings have multiple built-in functions you can use:
   but not including, the end index `upTo`.
   This function creates a new string whose length is `upTo - from`.
   It does not modify the original string.
-  If either of the parameters are out of
-  the bounds of the string, the function will fail.
+  If either of the parameters are out of the bounds of the string,
+  or the indices are invalid (`from > upTo`), then the function will fail.
 
   ```cadence
   let example = "helloworld"
@@ -848,6 +848,9 @@ Strings have multiple built-in functions you can use:
 
   // Run-time error: Out of bounds index, the program aborts.
   let outOfBounds = example.slice(from: 2, upTo: 10)
+
+  // Run-time error: Invalid indices, the program aborts.
+  let invalidIndices = example.slice(from: 2, upTo: 1)
   ```
 
 - `cadence•fun decodeHex(): [UInt8]`
@@ -862,6 +865,14 @@ Strings have multiple built-in functions you can use:
 
   example.decodeHex()  // is `[67, 97, 100, 101, 110, 99, 101, 33]`
   ```
+- `cadence•fun toLower(): String`
+  Returns a string where all upper case letters are replaced with lowercase characters
+
+  ```cadence
+  let example = "Flowers"
+
+  example.toLower()  // is `flowers`
+  ```
 
 The `String` type also provides the following functions:
 
@@ -873,6 +884,27 @@ The `String` type also provides the following functions:
   let data = [1 as UInt8, 2, 3, 0xCA, 0xDE]
 
   String.encodeHex(data)  // is `"010203cade"`
+  ```
+
+`String`s are also indexable, returning a `Character` value. 
+
+```cadence
+let str = "abc"
+let c = str[0] // is the Character "a"
+```
+
+### Character Fields and Functions
+
+`Character` values can be converted into `String` values using the `toString` function:
+
+- `cadence•fun toString(): String`
+
+  Returns the string representation of the character.
+
+  ```cadence
+  let c: Character = "x"
+
+  c.toString()  // is "x"
   ```
 
 ## Arrays
@@ -1068,6 +1100,47 @@ are available for both variable-sized and fixed-sized or variable-sized arrays.
   let containsKitty = numbers.contains("Kitty")
   ```
 
+- `cadence•fun firstIndex(of: T): Int?`
+  Returns the index of the first element matching the given object in the array, nil if no match.
+  Available if `T` is not resource-kinded and equatable.
+
+ ```cadence
+  // Declare an array of integers.
+  let numbers = [42, 23, 31, 12]
+
+  // Check if the array contains 31
+  let index = numbers.firstIndex(of: 31)
+  // `index` is 2
+
+  // Check if the array contains 22
+  let index = numbers.firstIndex(of: 22)
+  // `index` is nil
+  ```
+
+- `cadence•fun slice(from: Int, upTo: Int): [T]`
+
+  Returns an array slice of the elements
+  in the given array from start index `from` up to,
+  but not including, the end index `upTo`.
+  This function creates a new array whose length is `upTo - from`.
+  It does not modify the original array.
+  If either of the parameters are out of the bounds of the array,
+  or the indices are invalid (`from > upTo`), then the function will fail.
+
+  ```cadence
+  let example = [1, 2, 3, 4]
+
+  // Create a new slice of part of the original array.
+  let slice = example.slice(from: 1, upTo: 3)
+  // `slice` is now `[2, 3]`
+
+  // Run-time error: Out of bounds index, the program aborts.
+  let outOfBounds = example.slice(from: 2, upTo: 10)
+
+  // Run-time error: Invalid indices, the program aborts.
+  let invalidIndices = example.slice(from: 2, upTo: 1)
+  ```
+
 #### Variable-size Array Functions
 
 The following functions can only be used on variable-sized arrays.
@@ -1077,7 +1150,9 @@ It is invalid to use one of these functions on a fixed-sized array.
 
   Adds the new element `element` of type `T` to the end of the array.
 
-  The new element must be the same type as all the other elements in the array.
+  The new element must be the same type as all the other elements in the array. 
+
+  This function [mutates](../access-control) the array.
 
   ```cadence
   // Declare an array of integers.
@@ -1097,6 +1172,8 @@ It is invalid to use one of these functions on a fixed-sized array.
   the function is called on.
 
   Both arrays must be the same type `T`.
+
+  This function [mutates](../access-control) the array.
 
   ```cadence
   // Declare an array of integers.
@@ -1125,6 +1202,8 @@ It is invalid to use one of these functions on a fixed-sized array.
   All the elements after the new inserted element
   are shifted to the right by one.
 
+  This function [mutates](../access-control) the array.
+
   ```cadence
   // Declare an array of integers.
   let numbers = [42, 23, 31, 12]
@@ -1143,6 +1222,8 @@ It is invalid to use one of these functions on a fixed-sized array.
 
   The `index` must be within the bounds of the array.
   If the index is outside the bounds, the program aborts.
+
+  This function [mutates](../access-control) the array.
 
   ```cadence
   // Declare an array of integers.
@@ -1163,6 +1244,8 @@ It is invalid to use one of these functions on a fixed-sized array.
 
   The array must not be empty.
   If the array is empty, the program aborts.
+
+  This function [mutates](../access-control) the array.
 
   ```cadence
   // Declare an array of integers.
@@ -1188,6 +1271,8 @@ It is invalid to use one of these functions on a fixed-sized array.
 
   The array must not be empty.
   If the array is empty, the program aborts.
+
+  This function [mutates](../access-control) the array.
 
   ```cadence
   // Declare an array of integers.
@@ -1363,6 +1448,8 @@ booleans[0] = true
   if the dictionary contained the key,
   otherwise `nil`.
 
+  This function [mutates](../access-control) the dictionary.
+
   ```cadence
   // Declare a dictionary mapping strings to integers.
   let numbers = {"twentyThree": 23}
@@ -1384,6 +1471,8 @@ booleans[0] = true
   Returns the value of type `V` as an optional
   if the dictionary contained the key,
   otherwise `nil`.
+
+  This function [mutates](../access-control) the dictionary.
 
   ```cadence
   // Declare a dictionary mapping strings to integers.
@@ -1466,8 +1555,9 @@ booleans[0] = true
 ### Dictionary Keys
 
 Dictionary keys must be hashable and equatable,
-i.e., must implement the [`Hashable`](../interfaces#hashable-interface)
-and [`Equatable`](../interfaces#equatable-interface) [interfaces](../interfaces).
+i.e., must implement the [`Hashable`](interfaces#hashable-interface)
+and [`Equatable`](interfaces#equatable-interface) [interfaces](interfaces).
 
 Most of the built-in types, like booleans and integers,
 are hashable and equatable, so can be used as keys in dictionaries.
+

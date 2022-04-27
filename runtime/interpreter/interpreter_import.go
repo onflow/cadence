@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ package interpreter
 
 import (
 	"sort"
+	"time"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/sema"
@@ -37,6 +38,17 @@ func (interpreter *Interpreter) VisitImportDeclaration(declaration *ast.ImportDe
 }
 
 func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.ResolvedLocation) {
+
+	// tracing
+	if interpreter.tracingEnabled {
+		startTime := time.Now()
+		defer func() {
+			interpreter.reportImportTrace(
+				resolvedLocation.Location.String(),
+				time.Since(startTime),
+			)
+		}()
+	}
 
 	subInterpreter := interpreter.EnsureLoaded(resolvedLocation.Location)
 
@@ -81,4 +93,5 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 		interpreter.setVariable(name, variable)
 		interpreter.Globals.Set(name, variable)
 	}
+
 }

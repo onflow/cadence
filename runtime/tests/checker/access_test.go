@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -2290,19 +2290,19 @@ func TestCheckAccountAccess(t *testing.T) {
 	t.Parallel()
 
 	location1A := common.AddressLocation{
-		Address: common.BytesToAddress([]byte{0x1}),
+		Address: common.MustBytesToAddress([]byte{0x1}),
 		Name:    "A",
 	}
 
 	location1B := common.AddressLocation{
 		// NOTE: same address as A
-		Address: common.BytesToAddress([]byte{0x1}),
+		Address: common.MustBytesToAddress([]byte{0x1}),
 		Name:    "B",
 	}
 
 	location2B := common.AddressLocation{
 		// NOTE: different address from A
-		Address: common.BytesToAddress([]byte{0x2}),
+		Address: common.MustBytesToAddress([]byte{0x2}),
 		Name:    "B",
 	}
 

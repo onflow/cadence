@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,12 @@ import (
 
 func (checker *Checker) VisitUnaryExpression(expression *ast.UnaryExpression) ast.Repr {
 
-	valueType := checker.VisitExpression(expression.Expression, nil)
+	var expectedType Type
+	if expression.Operation == ast.OperationMove {
+		expectedType = checker.expectedType
+	}
+
+	valueType := checker.VisitExpressionWithForceType(expression.Expression, expectedType, false)
 
 	reportInvalidUnaryOperator := func(expectedType Type) {
 		checker.report(
@@ -38,23 +43,23 @@ func (checker *Checker) VisitUnaryExpression(expression *ast.UnaryExpression) as
 		)
 	}
 
+	checkExpectedType := func(valueType, expectedType Type) Type {
+		if !valueType.IsInvalidType() &&
+			!IsSameTypeKind(valueType, expectedType) {
+
+			reportInvalidUnaryOperator(expectedType)
+			return InvalidType
+		}
+
+		return valueType
+	}
+
 	switch expression.Operation {
 	case ast.OperationNegate:
-		expectedType := BoolType
-		if !IsSubType(valueType, expectedType) {
-			reportInvalidUnaryOperator(expectedType)
-			return InvalidType
-		}
-		return valueType
+		return checkExpectedType(valueType, BoolType)
 
 	case ast.OperationMinus:
-		expectedType := SignedNumberType
-		if !IsSubType(valueType, expectedType) {
-			reportInvalidUnaryOperator(expectedType)
-			return InvalidType
-		}
-
-		return valueType
+		return checkExpectedType(valueType, SignedNumberType)
 
 	case ast.OperationMove:
 		if !valueType.IsInvalidType() &&
@@ -68,8 +73,13 @@ func (checker *Checker) VisitUnaryExpression(expression *ast.UnaryExpression) as
 					},
 				},
 			)
-			return InvalidType
 		}
+
+		checker.recordResourceInvalidation(
+			expression.Expression,
+			valueType,
+			ResourceInvalidationKindMoveDefinite,
+		)
 
 		return valueType
 	}

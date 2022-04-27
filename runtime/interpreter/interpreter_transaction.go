@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,27 +38,40 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 	var prepareFunctionType *sema.FunctionType
 	if declaration.Prepare != nil {
 		prepareFunction = declaration.Prepare.FunctionDeclaration
-		prepareFunctionType = transactionType.PrepareFunctionType().InvocationFunctionType()
+		prepareFunctionType = transactionType.PrepareFunctionType()
 	}
 
 	var executeFunction *ast.FunctionDeclaration
 	var executeFunctionType *sema.FunctionType
 	if declaration.Execute != nil {
 		executeFunction = declaration.Execute.FunctionDeclaration
-		executeFunctionType = transactionType.ExecuteFunctionType().InvocationFunctionType()
+		executeFunctionType = transactionType.ExecuteFunctionType()
 	}
 
 	postConditionsRewrite :=
 		interpreter.Program.Elaboration.PostConditionsRewrite[declaration.PostConditions]
 
-	self := &CompositeValue{
-		location: interpreter.Location,
-		fields:   NewStringValueOrderedMap(),
-		modified: true,
-	}
+	staticType := NewCompositeStaticType(interpreter.Location, "")
 
-	transactionFunction := NewHostFunctionValue(
-		func(invocation Invocation) Value {
+	self := NewSimpleCompositeValue(
+		staticType.TypeID,
+		staticType,
+		nil,
+		map[string]Value{},
+		nil,
+		nil,
+		nil,
+	)
+
+	// Construct a raw HostFunctionValue without a type,
+	// instead of using NewHostFunctionValue, which requires a type.
+	//
+	// This host function value is an internally created and used function,
+	// and can never be passed around as a value.
+	// Hence, the type is not required.
+
+	transactionFunction := &HostFunctionValue{
+		Function: func(invocation Invocation) Value {
 			interpreter.activations.PushNewWithParent(lexicalScope)
 
 			invocation.Self = self
@@ -89,7 +102,7 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 					transactionScope,
 				)
 
-				prepare.Invoke(invocation)
+				prepare.invoke(invocation)
 			}
 
 			var body func() controlReturn
@@ -104,7 +117,7 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 				invocationWithoutArguments.Arguments = nil
 
 				body = func() controlReturn {
-					value := execute.Invoke(invocationWithoutArguments)
+					value := execute.invoke(invocationWithoutArguments)
 					return functionReturn{
 						Value: value,
 					}
@@ -123,7 +136,8 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 				postConditionsRewrite.RewrittenPostConditions,
 				sema.VoidType,
 			)
-		})
+		},
+	}
 
 	interpreter.Transactions = append(
 		interpreter.Transactions,

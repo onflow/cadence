@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -105,6 +105,21 @@ func TestCheckIfStatementTestWithDeclaration(t *testing.T) {
     `)
 
 	require.NoError(t, err)
+}
+
+func TestCheckInvalidIfStatementTestWithDeclaration(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test() {
+          if let y = x {}
+      }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 }
 
 func TestCheckInvalidIfStatementTestWithDeclarationReferenceInElse(t *testing.T) {

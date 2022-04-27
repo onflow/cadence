@@ -3,7 +3,7 @@ title: Constants and Variable Declarations
 ---
 
 Constants and variables are declarations that bind
-a value and [type](../type-safety) to an identifier.
+a value and [type](type-safety) to an identifier.
 Constants are initialized with a value and cannot be reassigned afterwards.
 Variables are initialized with a value and can be reassigned later.
 Declarations can be created in any scope, including the global scope.
@@ -15,7 +15,7 @@ the value may still be changed if is mutable.
 Constants are declared using the `let` keyword. Variables are declared
 using the `var` keyword.
 The keywords are followed by the identifier,
-an optional [type annotation](../type-annotations), an equals sign `=`,
+an optional [type annotation](type-annotations), an equals sign `=`,
 and the initial value.
 
 ```cadence

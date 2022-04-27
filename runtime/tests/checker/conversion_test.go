@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ func TestCheckNumberConversionReplacementHint(t *testing.T) {
 
 		t.Parallel()
 
-		checker, err := ParseAndCheck(t, `
+		checker, err := ParseAndCheckWithLinting(t, `
            let x = Fix64(1)
         `)
 
@@ -58,7 +58,7 @@ func TestCheckNumberConversionReplacementHint(t *testing.T) {
 
 		t.Parallel()
 
-		checker, err := ParseAndCheck(t, `
+		checker, err := ParseAndCheckWithLinting(t, `
            let x = UFix64(1)
         `)
 
@@ -78,7 +78,7 @@ func TestCheckNumberConversionReplacementHint(t *testing.T) {
 
 		t.Parallel()
 
-		checker, err := ParseAndCheck(t, `
+		checker, err := ParseAndCheckWithLinting(t, `
            let x = Fix64(-1)
         `)
 
@@ -100,7 +100,7 @@ func TestCheckNumberConversionReplacementHint(t *testing.T) {
 
 		t.Parallel()
 
-		checker, err := ParseAndCheck(t, `
+		checker, err := ParseAndCheckWithLinting(t, `
            let x = UFix64(1.2)
         `)
 
@@ -120,7 +120,7 @@ func TestCheckNumberConversionReplacementHint(t *testing.T) {
 
 		t.Parallel()
 
-		checker, err := ParseAndCheck(t, `
+		checker, err := ParseAndCheckWithLinting(t, `
            let x = Fix64(-1.2)
         `)
 
@@ -144,7 +144,7 @@ func TestCheckNumberConversionReplacementHint(t *testing.T) {
 
 		t.Parallel()
 
-		checker, err := ParseAndCheck(t, `
+		checker, err := ParseAndCheckWithLinting(t, `
            let x = UInt8(1)
         `)
 
@@ -164,7 +164,7 @@ func TestCheckNumberConversionReplacementHint(t *testing.T) {
 
 		t.Parallel()
 
-		checker, err := ParseAndCheck(t, `
+		checker, err := ParseAndCheckWithLinting(t, `
            let x = Int8(1)
         `)
 
@@ -184,7 +184,7 @@ func TestCheckNumberConversionReplacementHint(t *testing.T) {
 
 		t.Parallel()
 
-		checker, err := ParseAndCheck(t, `
+		checker, err := ParseAndCheckWithLinting(t, `
            let x = Int8(-1)
         `)
 
@@ -204,7 +204,7 @@ func TestCheckNumberConversionReplacementHint(t *testing.T) {
 
 		t.Parallel()
 
-		checker, err := ParseAndCheck(t, `
+		checker, err := ParseAndCheckWithLinting(t, `
            let x = Int(1)
         `)
 
@@ -224,7 +224,7 @@ func TestCheckNumberConversionReplacementHint(t *testing.T) {
 
 		t.Parallel()
 
-		checker, err := ParseAndCheck(t, `
+		checker, err := ParseAndCheckWithLinting(t, `
            let x = Int(-1)
         `)
 

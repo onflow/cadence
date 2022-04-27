@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -101,13 +101,22 @@ func arrayLiteralValue(elements []ast.Expression, elementType sema.Type) (cadenc
 	return cadence.NewArray(values), nil
 }
 
-func pathLiteralValue(expression ast.Expression, ty sema.Type) (cadence.Value, error) {
+func pathLiteralValue(expression ast.Expression, ty sema.Type) (result cadence.Value, errResult error) {
 	pathExpression, ok := expression.(*ast.PathExpression)
 	if !ok {
 		return nil, LiteralExpressionTypeError
 	}
 
-	pathType, err := sema.CheckPathLiteral(pathExpression)
+	pathType, err := sema.CheckPathLiteral(
+		pathExpression.Domain.Identifier,
+		pathExpression.Identifier.Identifier,
+		func() ast.Range {
+			return ast.NewRangeFromPositioned(pathExpression.Domain)
+		},
+		func() ast.Range {
+			return ast.NewRangeFromPositioned(pathExpression.Identifier)
+		},
+	)
 	if err != nil {
 		return nil, InvalidLiteralError
 	}
@@ -309,13 +318,13 @@ func LiteralValue(expression ast.Expression, ty sema.Type) (cadence.Value, error
 	}
 
 	switch {
-	case sema.IsSubType(ty, sema.IntegerType):
+	case sema.IsSameTypeKind(ty, sema.IntegerType):
 		return integerLiteralValue(expression, ty)
 
-	case sema.IsSubType(ty, sema.FixedPointType):
+	case sema.IsSameTypeKind(ty, sema.FixedPointType):
 		return fixedPointLiteralValue(expression, ty)
 
-	case sema.IsSubType(ty, sema.PathType):
+	case sema.IsSameTypeKind(ty, sema.PathType):
 		return pathLiteralValue(expression, ty)
 	}
 
