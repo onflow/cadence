@@ -66,11 +66,16 @@ var ReferenceToOptionalAnalyzer = (func() *analysis.Analyzer {
 						return
 					}
 
+					replacement := &ast.OptionalType{
+						Type: referenceExpression.Type,
+					}
+
 					report(
 						analysis.Diagnostic{
-							Location: location,
-							Range:    ast.NewRangeFromPositioned(indexExpression),
-							Message:  "reference to optional",
+							Location:         location,
+							Range:            ast.NewRangeFromPositioned(referenceExpression.Type),
+							Message:          "reference to optional will return optional reference",
+							SecondaryMessage: fmt.Sprintf("replace with '%s'", replacement.String()),
 						},
 					)
 				},
@@ -131,20 +136,13 @@ var DeprecatedKeyFunctionsAnalyzer = (func() *analysis.Analyzer {
 						return
 					}
 
-					var details string
-					switch member.Identifier.Identifier {
+					var replacement string
+					functionName := member.Identifier.Identifier
+					switch functionName {
 					case sema.AuthAccountAddPublicKeyField:
-						details = fmt.Sprintf(
-							"replace '%s' with '%s'",
-							sema.AuthAccountAddPublicKeyField,
-							"keys.add",
-						)
+						replacement = "keys.add"
 					case sema.AuthAccountRemovePublicKeyField:
-						details = fmt.Sprintf(
-							"replace '%s' with '%s'",
-							sema.AuthAccountRemovePublicKeyField,
-							"keys.revoke",
-						)
+						replacement = "keys.revoke"
 					default:
 						return
 					}
@@ -152,8 +150,15 @@ var DeprecatedKeyFunctionsAnalyzer = (func() *analysis.Analyzer {
 					report(
 						analysis.Diagnostic{
 							Location: location,
-							Range:    ast.NewRangeFromPositioned(element),
-							Message:  fmt.Sprintf("use of deprecated key management API: %s", details),
+							Range:    ast.NewRangeFromPositioned(memberExpression.Identifier),
+							Message: fmt.Sprintf(
+								"deprecated function '%s' will get removed",
+								functionName,
+							),
+							SecondaryMessage: fmt.Sprintf(
+								"replace with '%s'",
+								replacement,
+							),
 						},
 					)
 				},
@@ -217,7 +222,10 @@ var NumberSupertypeBinaryOperationsAnalyzer = (func() *analysis.Analyzer {
 						analysis.Diagnostic{
 							Location: location,
 							Range:    ast.NewRangeFromPositioned(element),
-							Message:  "arithmetic operation on number supertype",
+							Message: fmt.Sprintf(
+								"%s operations on number supertypes will get removed",
+								binaryExpression.Operation.Category(),
+							),
 						},
 					)
 				},
@@ -294,7 +302,7 @@ var ParameterListMissingCommasAnalyzer = (func() *analysis.Analyzer {
 									StartPos: diagnosticPos,
 									EndPos:   diagnosticPos,
 								},
-								Message: "missing comma",
+								Message: "missing comma between parameters",
 							},
 						)
 					}
@@ -344,8 +352,12 @@ var SupertypeInferenceAnalyzer = (func() *analysis.Analyzer {
 					}
 					var typeTuples []typeTuple
 
+					var kind string
+
 					switch element := element.(type) {
 					case *ast.ArrayExpression:
+						kind = "arrays"
+
 						argumentTypes := elaboration.ArrayExpressionArgumentTypes[element]
 						if len(argumentTypes) < 2 {
 							return
@@ -359,6 +371,8 @@ var SupertypeInferenceAnalyzer = (func() *analysis.Analyzer {
 						)
 
 					case *ast.DictionaryExpression:
+						kind = "dictionaries"
+
 						entryTypes := elaboration.DictionaryExpressionEntryTypes[element]
 						if len(entryTypes) < 2 {
 							return
@@ -376,6 +390,8 @@ var SupertypeInferenceAnalyzer = (func() *analysis.Analyzer {
 						)
 
 					case *ast.ConditionalExpression:
+						kind = "conditionals / ternary operations"
+
 						typeTuples = append(
 							typeTuples,
 							typeTuple{
@@ -395,9 +411,10 @@ var SupertypeInferenceAnalyzer = (func() *analysis.Analyzer {
 
 						report(
 							analysis.Diagnostic{
-								Location: location,
-								Range:    ast.NewRangeFromPositioned(element),
-								Message:  "inferred type may differ",
+								Location:         location,
+								Range:            ast.NewRangeFromPositioned(element),
+								Message:          fmt.Sprintf("type inference for %s will change", kind),
+								SecondaryMessage: "ensure the newly inferred type is correct",
 							},
 						)
 
@@ -557,8 +574,12 @@ var ExternalMutationAnalyzer = (func() *analysis.Analyzer {
 		report(
 			analysis.Diagnostic{
 				Location: location,
-				Range:    ast.NewRangeFromPositioned(element),
-				Message:  "external mutation",
+				Range:    ast.NewRangeFromPositioned(mutatedElement),
+				Message:  "external mutation of non-settable public container-typed field will get disallowed",
+				SecondaryMessage: fmt.Sprintf(
+					"add setter function for field, or change field access to %s",
+					ast.AccessPublicSettable.Keyword(),
+				),
 			},
 		)
 	}
