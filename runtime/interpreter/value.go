@@ -1251,6 +1251,7 @@ type ArrayValue struct {
 	isDestroyed      bool
 	isResourceKinded *bool
 	elementSize      uint
+	maxCount         uint64
 }
 
 func NewArrayValue(
@@ -1356,6 +1357,7 @@ func newArrayValueFromAtreeValue(
 		Type:        staticType,
 		array:       array,
 		elementSize: elementSize,
+		maxCount:    array.Count(),
 	}
 }
 
@@ -1644,14 +1646,16 @@ func (v *ArrayValue) RecursiveString(seenReferences SeenReferences) string {
 
 func (v *ArrayValue) Append(interpreter *Interpreter, getLocationRange func() LocationRange, element Value) {
 
-	// length increases by 1
-	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(
-		v.array.Count(),
-		v.elementSize,
-		true,
-	)
-	common.UseMemory(interpreter, dataSlabs)
-	common.UseMemory(interpreter, metaDataSlabs)
+	if v.maxCount <= v.array.Count() {
+		// length increases by 1
+		dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(
+			v.array.Count(),
+			v.elementSize,
+			true,
+		)
+		common.UseMemory(interpreter, dataSlabs)
+		common.UseMemory(interpreter, metaDataSlabs)
+	}
 
 	interpreter.checkContainerMutation(v.Type.ElementType(), element, getLocationRange)
 
@@ -1668,6 +1672,8 @@ func (v *ArrayValue) Append(interpreter *Interpreter, getLocationRange func() Lo
 		panic(ExternalError{err})
 	}
 	interpreter.maybeValidateAtreeValue(v.array)
+	// update the highest count of elements in this dictionary
+	v.maxCount = common.MaxUInt64(v.array.Count(), v.maxCount)
 }
 
 func (v *ArrayValue) AppendAll(interpreter *Interpreter, getLocationRange func() LocationRange, other *ArrayValue) {
@@ -1698,15 +1704,16 @@ func (v *ArrayValue) Insert(interpreter *Interpreter, getLocationRange func() Lo
 			LocationRange: getLocationRange(),
 		})
 	}
-
-	// length increases by 1
-	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(
-		v.array.Count(),
-		v.elementSize,
-		true,
-	)
-	common.UseMemory(interpreter, dataSlabs)
-	common.UseMemory(interpreter, metaDataSlabs)
+	if v.maxCount <= v.array.Count() {
+		// length increases by 1
+		dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(
+			v.array.Count(),
+			v.elementSize,
+			true,
+		)
+		common.UseMemory(interpreter, dataSlabs)
+		common.UseMemory(interpreter, metaDataSlabs)
+	}
 
 	interpreter.checkContainerMutation(v.Type.ElementType(), element, getLocationRange)
 
@@ -1725,6 +1732,8 @@ func (v *ArrayValue) Insert(interpreter *Interpreter, getLocationRange func() Lo
 		panic(ExternalError{err})
 	}
 	interpreter.maybeValidateAtreeValue(v.array)
+	// update the highest count of elements in this dictionary
+	v.maxCount = common.MaxUInt64(v.array.Count(), v.maxCount)
 }
 
 func (v *ArrayValue) RemoveKey(interpreter *Interpreter, getLocationRange func() LocationRange, key Value) Value {
@@ -14936,6 +14945,7 @@ type DictionaryValue struct {
 	dictionary       *atree.OrderedMap
 	isDestroyed      bool
 	elementSize      uint
+	maxCount         uint64
 }
 
 func NewDictionaryValue(
@@ -15035,6 +15045,7 @@ func newDictionaryValueFromOrderedMap(
 		Type:        staticType,
 		dictionary:  dict,
 		elementSize: elementSize,
+		maxCount:    dict.Count(),
 	}
 }
 
@@ -15518,10 +15529,12 @@ func (v *DictionaryValue) Insert(
 	keyValue, value Value,
 ) OptionalValue {
 
-	// length increases by 1
-	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(v.dictionary.Count(), v.elementSize, false)
-	common.UseMemory(interpreter, dataSlabs)
-	common.UseMemory(interpreter, metaDataSlabs)
+	if v.maxCount <= v.dictionary.Count() {
+		// length increases by 1
+		dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(v.dictionary.Count(), v.elementSize, false)
+		common.UseMemory(interpreter, dataSlabs)
+		common.UseMemory(interpreter, metaDataSlabs)
+	}
 
 	interpreter.checkContainerMutation(v.Type.KeyType, keyValue, getLocationRange)
 	interpreter.checkContainerMutation(v.Type.ValueType, value, getLocationRange)
@@ -15559,6 +15572,8 @@ func (v *DictionaryValue) Insert(
 		panic(ExternalError{err})
 	}
 	interpreter.maybeValidateAtreeValue(v.dictionary)
+	// update the highest count of elements in this dictionary
+	v.maxCount = common.MaxUInt64(v.dictionary.Count(), v.maxCount)
 
 	if existingValueStorable == nil {
 		return NewNilValue(interpreter)
