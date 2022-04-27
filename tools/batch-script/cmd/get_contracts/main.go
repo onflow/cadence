@@ -39,11 +39,17 @@ var csvHeader = []string{"address", "name", "code"}
 func main() {
 	flag.Parse()
 
-	config := batch_script.DefaultConfig
-	if *url != "" {
-		config.FlowAccessNodeURL = *url
+	file, err := os.Create("./results.csv")
+	if err != nil {
+		panic(err)
 	}
+	defer file.Close()
 
+	config := batch_script.DefaultConfig
+	//if *url != "" {
+	//	config.FlowAccessNodeURL = *url
+	//}
+	config.FlowAccessNodeURL = "access.mainnet.nodes.onflow.org:9000"
 	log.Logger = log.
 		Output(zerolog.ConsoleWriter{Out: os.Stderr}).
 		Level(zerolog.InfoLevel)
@@ -79,7 +85,7 @@ func main() {
 		}
 	}()
 
-	writer := csv.NewWriter(os.Stdout)
+	writer := csv.NewWriter(file)
 
 	if err := writer.Write(csvHeader); err != nil {
 		log.Err(err).Msg("failed to write CSV header")
