@@ -1034,9 +1034,7 @@ func (e *DuplicateConformanceError) Error() string {
 func (*DuplicateConformanceError) isSemanticError() {}
 
 // MultipleInterfaceDefaultImplementationsError
-
-// TODO: just make this a warning?
-
+//
 type MultipleInterfaceDefaultImplementationsError struct {
 	CompositeType *CompositeType
 	Member        *Member
@@ -1060,6 +1058,32 @@ func (e *MultipleInterfaceDefaultImplementationsError) EndPosition() ast.Positio
 }
 
 func (*MultipleInterfaceDefaultImplementationsError) isSemanticError() {}
+
+// DefaultFunctionConflictError
+//
+type DefaultFunctionConflictError struct {
+	CompositeType *CompositeType
+	Member        *Member
+}
+
+func (e *DefaultFunctionConflictError) Error() string {
+	return fmt.Sprintf(
+		"%s `%s` has conflicting requirements for function `%s`",
+		e.CompositeType.Kind.Name(),
+		e.CompositeType.QualifiedString(),
+		e.Member.Identifier.Identifier,
+	)
+}
+
+func (e *DefaultFunctionConflictError) StartPosition() ast.Position {
+	return e.Member.Identifier.StartPosition()
+}
+
+func (e *DefaultFunctionConflictError) EndPosition() ast.Position {
+	return e.Member.Identifier.EndPosition()
+}
+
+func (*DefaultFunctionConflictError) isSemanticError() {}
 
 // MissingConformanceError
 

@@ -148,7 +148,7 @@ func TestCheckInterfaceWithFunctionImplementation(t *testing.T) {
                              return 1
                           }
                       }
-                      
+
                       %[1]s TestUser: Test{
 
                       }
@@ -1993,118 +1993,539 @@ func TestCheckInvalidInterfaceUseAsTypeSuggestion(t *testing.T) {
 	)
 }
 
-//MultipleInterfaceDefaultImplementation
 func TestCheckInvalidMultipleInterfaceDefaultImplementation(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
-    struct interface InterfaceA {
-        fun test(): Int {
-            return 41
-        }
-    }
+	t.Run("interface", func(t *testing.T) {
 
-    struct interface InterfaceB {
-        fun test(): Int {
-            return 41
-        }
-    }
-    
-    struct Test:  InterfaceA, InterfaceB   {
+		t.Parallel()
 
-    }
+		_, err := ParseAndCheck(t, `
+          struct interface IA {
+              fun test(): Int {
+                  return 41
+              }
+          }
 
-    `)
+          struct interface IB {
+              fun test(): Int {
+                  return 41
+              }
+          }
 
-	errs := ExpectCheckerErrors(t, err, 1)
+          struct Test: IA, IB {
 
-	require.IsType(t, &sema.MultipleInterfaceDefaultImplementationsError{}, errs[0])
+          }
 
+          fun test(): Int {
+              return Test().test()
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.MultipleInterfaceDefaultImplementationsError{}, errs[0])
+	})
+
+	t.Run("type requirement", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          contract interface IA {
+
+              struct X {
+                  fun test(): Int {
+                      return 41
+                  }
+              }
+          }
+
+          contract interface IB {
+
+              struct X {
+                  fun test(): Int {
+                      return 41
+                  }
+              }
+          }
+
+          contract Test: IA, IB {
+
+              struct X {}
+          }
+
+          fun test(): Int {
+              return Test.X().test()
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.MultipleInterfaceDefaultImplementationsError{}, errs[0])
+	})
 }
 
 func TestCheckMultipleInterfaceDefaultImplementationWhenOverriden(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
-    struct interface InterfaceA {
-        fun test(): Int{
-            return 41
-        }
-    }
+	t.Run("interface", func(t *testing.T) {
 
-    struct interface InterfaceB {
-        fun test(): Int {
-            return 41
-        }
-    }
-    
-    struct Test:  InterfaceA, InterfaceB {
-        fun test(): Int {
-            return 42
-        }
-    }
+		t.Parallel()
 
+		_, err := ParseAndCheck(t, `
+          struct interface IA {
+              fun test(): Int {
+                  return 41
+              }
+          }
 
-    `)
+          struct interface IB {
+              fun test(): Int {
+                  return 41
+              }
+          }
 
-	require.NoError(t, err)
+          struct Test: IA, IB {
+              fun test(): Int {
+                  return 42
+              }
+          }
 
+          fun test(): Int {
+              return Test().test()
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("type requirement", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          contract interface IA {
+   
+              struct X {
+                  fun test(): Int {
+                      return 41
+                  }
+              }
+          }
+
+          contract interface IB {
+
+              struct X {
+                  fun test(): Int {
+                      return 41
+                  }
+              }
+          }
+
+          contract Test: IA, IB {
+
+              struct X {
+                  fun test(): Int {
+                      return 42
+                  }
+              }
+          }
+
+          fun test(): Int {
+              return Test.X().test()
+          }
+        `)
+
+		require.NoError(t, err)
+	})
 }
 
 func TestCheckMultipleInterfaceSingleInterfaceDefaultImplementation(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
-    struct interface InterfaceA {
-        fun test(): Int {
-            return 41
-        }
-    }
+	t.Run("interface", func(t *testing.T) {
 
-    struct interface InterfaceB {
-        fun test(): Int
-    }
-    
-    struct Test:  InterfaceA, InterfaceB {
+		t.Parallel()
 
-    }
+		_, err := ParseAndCheck(t, `
+          struct interface IA {
+              fun test(): Int {
+                  return 41
+              }
+          }
 
-    `)
+          struct interface IB {
+              fun test(): Int
+          }
 
-	errs := ExpectCheckerErrors(t, err, 1)
+          struct Test: IA, IB {
 
-	require.IsType(t, &sema.ConformanceError{}, errs[0])
+          }
 
+          fun test(): Int {
+              return Test().test()
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.DefaultFunctionConflictError{}, errs[0])
+	})
+
+	t.Run("type requirement", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          contract interface IA {
+
+              struct X {
+                  fun test(): Int {
+                      return 41
+                  }
+              }
+          }
+
+          contract interface IB {
+              struct X {
+                  fun test(): Int
+              }
+          }
+
+          contract Test: IA, IB {
+              struct X {}
+          }
+
+          fun test(): Int {
+              return Test.X().test()
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.DefaultFunctionConflictError{}, errs[0])
+	})
 }
 
 func TestCheckMultipleInterfaceSingleInterfaceDefaultImplementationWhenOverridden(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
-    struct interface InterfaceA {
-        fun test(): Int {
-            return 41
-        }
-    }
+	t.Run("interface", func(t *testing.T) {
 
-    struct interface InterfaceB {
-        fun test(): Int
-    }
-    
-    struct Test:  InterfaceA, InterfaceB {
-        fun test(): Int {
-            return 42
-        }
-    }
+		t.Parallel()
 
+		_, err := ParseAndCheck(t, `
+          struct interface IA {
+              fun test(): Int {
+                  return 41
+              }
+          }
 
-    `)
-	require.NoError(t, err)
+          struct interface IB {
+              fun test(): Int
+          }
 
+          struct Test: IA, IB {
+              fun test(): Int {
+                  return 42
+              }
+          }
+
+          fun test(): Int {
+              return Test().test()
+          }
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("type requirement", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          contract interface IA {
+
+              struct X {
+                  fun test(): Int {
+                      return 41
+                  }
+              }
+          }
+
+          contract interface IB {
+
+              struct X {
+                  fun test(): Int
+              }
+          }
+
+          contract Test: IA, IB {
+
+              struct X {
+                  fun test(): Int {
+                      return 42
+                  }
+              }
+          }
+
+          fun test(): Int {
+              return Test.X().test()
+          }
+        `)
+		require.NoError(t, err)
+	})
+}
+
+func TestCheckInterfaceDefaultImplementation(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          struct interface IA {
+              fun test(): Int {
+                  return 42
+              }
+          }
+
+          struct Test: IA {}
+
+          fun test(): Int {
+              return Test().test()
+          }
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("type requirement", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          contract interface IA {
+
+              struct X {
+                  fun test(): Int {
+                      return 42
+                  }
+              }
+          }
+
+          contract Test: IA {
+
+              struct X {}
+          }
+
+          fun test(): Int {
+              return Test.X().test()
+          }
+        `)
+		require.NoError(t, err)
+	})
+}
+
+func TestCheckInterfaceDefaultImplementationOverriden(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          struct interface IA {
+              fun test(): Int {
+                  return 41
+              }
+          }
+
+          struct Test: IA {
+              fun test(): Int {
+                  return 42
+              }
+          }
+
+          fun test(): Int {
+              return Test().test()
+          }
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("type requirement", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          contract interface IA {
+
+              struct X {
+                  fun test(): Int {
+                      return 41
+                  }
+              }
+          }
+
+          contract Test: IA {
+
+              struct X {
+                  fun test(): Int {
+                      return 42
+                  }
+              }
+          }
+
+          fun test(): Int {
+              return Test.X().test()
+          }
+        `)
+		require.NoError(t, err)
+	})
+}
+
+func TestCheckInvalidInterfaceDefaultImplementationConcreteTypeUsage(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          struct interface IA {
+              fun test(): Int {
+                  return self.x
+              }
+          }
+
+          struct Test: IA {
+              let x: Int
+
+              init() {
+                  self.x = 0
+              }
+          }
+
+          fun test(): Int {
+              return Test().test()
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+	})
+
+	t.Run("type requirement", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          contract interface IA {
+
+              struct X {
+                  fun test(): Int {
+                      return self.x
+                  }
+              }
+          }
+
+          contract Test: IA {
+
+              struct X {
+                  let x: Int
+
+                  init() {
+                      self.x = 0
+                  }
+              }
+          }
+
+          fun test(): Int {
+              return Test.X().test()
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+	})
+
+}
+
+func TestCheckInterfaceDefaultImplementationConcreteTypeUsage(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          struct interface IA {
+              let x: Int
+
+              fun test(): Int {
+                  return self.x
+              }
+          }
+
+          struct Test: IA {
+              let x: Int
+
+              init() {
+                  self.x = 0
+              }
+          }
+
+          fun test(): Int {
+              return Test().test()
+          }
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("type requirement", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          contract interface IA {
+
+              struct X {
+                  let x: Int
+
+                  fun test(): Int {
+                      return self.x
+                  }
+              }
+          }
+
+          contract Test: IA {
+
+              struct X {
+                  let x: Int
+
+                  init() {
+                      self.x = 0
+                  }
+              }
+          }
+
+          fun test(): Int {
+              return Test.X().test()
+          }
+        `)
+		require.NoError(t, err)
+	})
 }
 
 func TestCheckBadStructInterface(t *testing.T) {

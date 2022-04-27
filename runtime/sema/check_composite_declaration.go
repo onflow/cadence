@@ -158,7 +158,8 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 
 	checkMissingMembers := kind != ContainerKindInterface
 
-	overridden := map[string]struct{}{}
+	inheritedMembers := map[string]struct{}{}
+	typeRequirementsInheritedMembers := map[string]map[string]struct{}{}
 
 	for i, interfaceType := range compositeType.ExplicitInterfaceConformances {
 		interfaceNominalType := declaration.Conformances[i]
@@ -172,7 +173,8 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 				checkMissingMembers:            checkMissingMembers,
 				interfaceTypeIsTypeRequirement: false,
 			},
-			overridden,
+			inheritedMembers,
+			typeRequirementsInheritedMembers,
 		)
 	}
 
@@ -580,10 +582,13 @@ func (checker *Checker) declareCompositeMembersAndValue(
 		// and this nested composite type implicitly conforms to it.
 
 		compositeType.GetNestedTypes().Foreach(func(nestedTypeIdentifier string, nestedType Type) {
+
 			nestedCompositeType, ok := nestedType.(*CompositeType)
 			if !ok {
 				return
 			}
+
+			inheritedMembers := NewStringMemberOrderedMap()
 
 			for _, compositeTypeConformance := range compositeType.ExplicitInterfaceConformances {
 				conformanceNestedTypes := compositeTypeConformance.GetNestedTypes()
@@ -599,7 +604,53 @@ func (checker *Checker) declareCompositeMembersAndValue(
 				}
 
 				nestedCompositeType.addImplicitTypeRequirementConformance(typeRequirement)
+
+				// Add default functions
+
+				typeRequirement.Members.Foreach(func(memberName string, member *Member) {
+
+					if member.Predeclared ||
+						member.DeclarationKind != common.DeclarationKindFunction {
+
+						return
+					}
+
+					_, existing := nestedCompositeType.Members.Get(memberName)
+					if existing {
+						return
+					}
+
+					if _, ok := inheritedMembers.Get(memberName); ok {
+						if member.HasImplementation {
+							checker.report(
+								&MultipleInterfaceDefaultImplementationsError{
+									CompositeType: nestedCompositeType,
+									Member:        member,
+								},
+							)
+						} else {
+							checker.report(
+								&DefaultFunctionConflictError{
+									CompositeType: nestedCompositeType,
+									Member:        member,
+								},
+							)
+						}
+
+						return
+					}
+
+					if member.HasImplementation {
+						inheritedMembers.Set(memberName, member)
+					}
+				})
 			}
+
+			inheritedMembers.Foreach(func(memberName string, member *Member) {
+				inheritedMember := *member
+				inheritedMember.ContainerType = nestedCompositeType
+				nestedCompositeType.Members.Set(memberName, &inheritedMember)
+			})
 		})
 
 		// Declare members
@@ -967,13 +1018,26 @@ type compositeConformanceCheckOptions struct {
 	interfaceTypeIsTypeRequirement bool
 }
 
+// checkCompositeConformance checks if the given composite declaration with the given composite type
+// conforms to the specified interface type.
+//
+// inheritedMembers is an "input/output parameter":
+// It tracks which members were inherited from the interface.
+// It allows tracking this across conformance checks of multiple interfaces.
+//
+// typeRequirementsInheritedMembers is an "input/output parameter":
+// It tracks which members were inherited in each nested type, which may be a conformance to a type requirement.
+// It allows tracking this across conformance checks of multiple interfaces' type requirements.
+//
 func (checker *Checker) checkCompositeConformance(
 	compositeDeclaration *ast.CompositeDeclaration,
 	compositeType *CompositeType,
 	interfaceType *InterfaceType,
 	compositeKindMismatchIdentifier ast.Identifier,
 	options compositeConformanceCheckOptions,
-	overridden map[string]struct{},
+	inheritedMembers map[string]struct{},
+	// type requirement name -> inherited members
+	typeRequirementsInheritedMembers map[string]map[string]struct{},
 ) {
 
 	var missingMembers []*Member
@@ -1028,39 +1092,56 @@ func (checker *Checker) checkCompositeConformance(
 		if interfaceMember.Predeclared {
 			return
 		}
+
 		compositeMember, ok := compositeType.Members.Get(name)
-		if !ok {
-			if options.checkMissingMembers {
+		if ok {
 
-				if interfaceMember.DeclarationKind == common.DeclarationKindFunction {
+			// If the composite member exists, check if it satisfies the mem
 
-					if !interfaceMember.HasImplementation {
-						missingMembers = append(missingMembers, interfaceMember)
+			if !checker.memberSatisfied(compositeMember, interfaceMember) {
+				memberMismatches = append(
+					memberMismatches,
+					MemberMismatch{
+						CompositeMember: compositeMember,
+						InterfaceMember: interfaceMember,
+					},
+				)
+			}
+
+		} else if options.checkMissingMembers {
+
+			// If the composite member does not exist, the interface may provide a default function.
+			// However, only one of the composite's conformances (interfaces)
+			// may provide a default function.
+
+			if interfaceMember.DeclarationKind == common.DeclarationKindFunction {
+
+				if _, ok := inheritedMembers[name]; ok {
+					if interfaceMember.HasImplementation {
+						checker.report(
+							&MultipleInterfaceDefaultImplementationsError{
+								CompositeType: compositeType,
+								Member:        interfaceMember,
+							},
+						)
 					} else {
-						if _, isOverridden := overridden[name]; isOverridden {
-							checker.report(
-								&MultipleInterfaceDefaultImplementationsError{
-									CompositeType: compositeType,
-									Member:        interfaceMember,
-								},
-							)
-						}
-						overridden[name] = struct{}{}
+						checker.report(
+							&DefaultFunctionConflictError{
+								CompositeType: compositeType,
+								Member:        interfaceMember,
+							},
+						)
 					}
+					return
+				}
 
-				} else {
-					missingMembers = append(missingMembers, interfaceMember)
+				if interfaceMember.HasImplementation {
+					inheritedMembers[name] = struct{}{}
+					return
 				}
 			}
-		}
 
-		if compositeMember != nil && !checker.memberSatisfied(compositeMember, interfaceMember) {
-			memberMismatches = append(memberMismatches,
-				MemberMismatch{
-					CompositeMember: compositeMember,
-					InterfaceMember: interfaceMember,
-				},
-			)
+			missingMembers = append(missingMembers, interfaceMember)
 		}
 
 	})
@@ -1083,7 +1164,13 @@ func (checker *Checker) checkCompositeConformance(
 			return
 		}
 
-		checker.checkTypeRequirement(nestedCompositeType, compositeDeclaration, requiredCompositeType)
+		inherited := typeRequirementsInheritedMembers[name]
+		if inherited == nil {
+			inherited = map[string]struct{}{}
+			typeRequirementsInheritedMembers[name] = inherited
+		}
+
+		checker.checkTypeRequirement(nestedCompositeType, compositeDeclaration, requiredCompositeType, inherited)
 	})
 
 	if len(missingMembers) > 0 ||
@@ -1211,6 +1298,7 @@ func (checker *Checker) checkTypeRequirement(
 	declaredType Type,
 	containerDeclaration *ast.CompositeDeclaration,
 	requiredCompositeType *CompositeType,
+	inherited map[string]struct{},
 ) {
 
 	// A nested interface doesn't satisfy the type requirement,
@@ -1315,7 +1403,6 @@ func (checker *Checker) checkTypeRequirement(
 	// like a top-level composite declaration to an interface type
 
 	requiredInterfaceType := requiredCompositeType.InterfaceType()
-	overridden := map[string]struct{}{}
 
 	checker.checkCompositeConformance(
 		compositeDeclaration,
@@ -1326,7 +1413,8 @@ func (checker *Checker) checkTypeRequirement(
 			checkMissingMembers:            true,
 			interfaceTypeIsTypeRequirement: true,
 		},
-		overridden,
+		inherited,
+		nil,
 	)
 }
 
@@ -1528,11 +1616,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 			)
 		}
 
-		hasImplementation := false
-
-		if function.FunctionBlock.HasStatements() {
-			hasImplementation = true
-		}
+		hasImplementation := function.FunctionBlock.HasStatements()
 
 		members.Set(
 			identifier,
