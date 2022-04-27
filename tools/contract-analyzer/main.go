@@ -25,6 +25,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"sort"
 	"sync"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -41,6 +42,8 @@ func printErr(err error, location common.Location, codes map[common.LocationID]s
 		panic(printErr)
 	}
 }
+
+var csvPathFlag = flag.String("csv", "", "analyze all contracts in a CSV file")
 
 func main() {
 	var analyzersFlag stringSliceFlag
@@ -88,22 +91,32 @@ func main() {
 		}
 	}
 
-	var file *os.File
-	if flag.NArg() > 0 {
-		var err error
-		file, err = os.Open(flag.Arg(0))
-		if err != nil {
-			panic(err)
-		}
-		defer func(file *os.File) {
-			_ = file.Close()
-		}(file)
-	} else {
-		file = os.Stdin
-	}
+	csvFlag := *csvPathFlag
+	switch {
+	case csvFlag != "":
+		analyzeCSV(csvFlag, enabledAnalyzers)
 
-	locations, codes, contractNames := readContracts(file)
-	analysisConfig := analysis.NewSimpleConfig(analysis.NeedTypes, codes, contractNames)
+	default:
+		println("Nothing to do. Please provide a flag. See -help")
+	}
+}
+
+func analyzeCSV(path string, analyzers []*analysis.Analyzer) {
+
+	csvFile, err := os.Open(path)
+	if err != nil {
+		panic(err)
+	}
+	defer func(file *os.File) {
+		_ = file.Close()
+	}(csvFile)
+
+	locations, codes, contractNames := readContracts(csvFile)
+	analysisConfig := analysis.NewSimpleConfig(
+		analysis.NeedTypes,
+		codes,
+		contractNames,
+	)
 
 	programs := make(analysis.Programs, len(locations))
 
@@ -139,7 +152,7 @@ func main() {
 
 		log.Printf("Analyzing %s", location)
 
-		program.Run(enabledAnalyzers, report)
+		program.Run(analyzers, report)
 	}
 }
 
