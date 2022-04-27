@@ -774,3 +774,74 @@ func init() {
 		StorageReadOperationsAnalyzer,
 	)
 }
+
+// Address toString analyzer
+
+var AddressToStringAnalyzer = (func() *analysis.Analyzer {
+
+	elementFilter := []ast.Element{
+		(*ast.InvocationExpression)(nil),
+	}
+
+	return &analysis.Analyzer{
+		Requires: []*analysis.Analyzer{
+			analysis.InspectorAnalyzer,
+		},
+		Run: func(pass *analysis.Pass) interface{} {
+			inspector := pass.ResultOf[analysis.InspectorAnalyzer].(*ast.Inspector)
+
+			location := pass.Program.Location
+			elaboration := pass.Program.Elaboration
+			report := pass.Report
+
+			inspector.Preorder(
+				elementFilter,
+				func(element ast.Element) {
+
+					invocationExpression, ok := element.(*ast.InvocationExpression)
+					if !ok {
+						return
+					}
+
+					memberExpression, ok := invocationExpression.InvokedExpression.(*ast.MemberExpression)
+					if !ok {
+						return
+					}
+
+					memberInfo := elaboration.MemberExpressionMemberInfos[memberExpression]
+					member := memberInfo.Member
+					if member == nil {
+						return
+					}
+
+					if _, ok := member.ContainerType.(*sema.AddressType); !ok {
+						return
+					}
+
+					if member.Identifier.Identifier != sema.ToStringFunctionName {
+						return
+					}
+
+					report(
+						analysis.Diagnostic{
+							Location:         location,
+							Range:            ast.NewRangeFromPositioned(element),
+							Category:         "check required",
+							Message:          "Address.toString() will return a zero-padded address",
+							SecondaryMessage: "ensure the new behaviour is supported",
+						},
+					)
+				},
+			)
+
+			return nil
+		},
+	}
+})()
+
+func init() {
+	registerAnalyzer(
+		"address-tostring",
+		AddressToStringAnalyzer,
+	)
+}

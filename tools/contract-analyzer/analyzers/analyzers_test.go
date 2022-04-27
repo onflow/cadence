@@ -548,3 +548,37 @@ func TestStorageReadOperationsAnalyzer(t *testing.T) {
 		)
 	})
 }
+
+func TestAddressToStringAnalyzer(t *testing.T) {
+
+	t.Parallel()
+
+	diagnostics := testAnalyzers(t,
+		`
+          pub contract Test {
+              pub fun test() {
+                  let address: Address = 0x1
+	              let string = address.toString()
+              }
+          }
+        `,
+		analyzers.AddressToStringAnalyzer,
+	)
+
+	require.Equal(
+		t,
+		[]analysis.Diagnostic{
+			{
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 135, Line: 5, Column: 28},
+					EndPos:   ast.Position{Offset: 152, Line: 5, Column: 45},
+				},
+				Location:         testLocation,
+				Category:         "check required",
+				Message:          "Address.toString() will return a zero-padded address",
+				SecondaryMessage: "ensure the new behaviour is supported",
+			},
+		},
+		diagnostics,
+	)
+}
