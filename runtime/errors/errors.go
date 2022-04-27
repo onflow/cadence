@@ -21,6 +21,8 @@ package errors
 import (
 	"fmt"
 	"runtime/debug"
+
+	"github.com/logrusorgru/aurora"
 )
 
 // UnreachableError
@@ -65,4 +67,16 @@ type ErrorNote interface {
 type ParentError interface {
 	error
 	ChildErrors() []error
+}
+
+// HasPrefix is an interface for errors that provide a custom prefix
+//
+type HasPrefix interface {
+	Prefix() string
+}
+
+// HasColor is an interface for errors that provide custom color
+//
+type HasColor interface {
+	Color() aurora.Color
 }

@@ -27,6 +27,7 @@ import (
 	"os"
 	"sync"
 
+	"github.com/logrusorgru/aurora"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/pretty"
 	"github.com/onflow/cadence/tools/analysis"
@@ -52,6 +53,18 @@ func (d diagnosticErr) Error() string {
 	return d.Message
 }
 
+func (d diagnosticErr) SecondaryError() string {
+	return d.SecondaryMessage
+}
+
+func (d diagnosticErr) Prefix() string {
+	return "update required"
+}
+
+func (d diagnosticErr) Color() aurora.Color {
+	return aurora.YellowFg
+}
+
 func main() {
 	var analyzersFlag stringSliceFlag
 	flag.Var(&analyzersFlag, "a", "enable analyzer")
@@ -69,13 +82,19 @@ func main() {
 
 	var enabledAnalyzers []*analysis.Analyzer
 
-	for _, analyzerName := range analyzersFlag {
-		analyzer, ok := analyzers.Analyzers[analyzerName]
-		if !ok {
-			log.Panic(fmt.Errorf("unknown analyzer: %s", analyzerName))
-		}
+	if len(analyzersFlag) > 0 {
+		for _, analyzerName := range analyzersFlag {
+			analyzer, ok := analyzers.Analyzers[analyzerName]
+			if !ok {
+				log.Panic(fmt.Errorf("unknown analyzer: %s", analyzerName))
+			}
 
-		enabledAnalyzers = append(enabledAnalyzers, analyzer)
+			enabledAnalyzers = append(enabledAnalyzers, analyzer)
+		}
+	} else {
+		for _, analyzer := range analyzers.Analyzers {
+			enabledAnalyzers = append(enabledAnalyzers, analyzer)
+		}
 	}
 
 	var file *os.File
