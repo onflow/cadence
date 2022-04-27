@@ -74,6 +74,7 @@ var ReferenceToOptionalAnalyzer = (func() *analysis.Analyzer {
 						analysis.Diagnostic{
 							Location:         location,
 							Range:            ast.NewRangeFromPositioned(referenceExpression.Type),
+							Category:         "update required",
 							Message:          "reference to optional will return optional reference",
 							SecondaryMessage: fmt.Sprintf("replace with '%s'", replacement.String()),
 						},
@@ -151,6 +152,7 @@ var DeprecatedKeyFunctionsAnalyzer = (func() *analysis.Analyzer {
 						analysis.Diagnostic{
 							Location: location,
 							Range:    ast.NewRangeFromPositioned(memberExpression.Identifier),
+							Category: "update recommended",
 							Message: fmt.Sprintf(
 								"deprecated function '%s' will get removed",
 								functionName,
@@ -222,6 +224,7 @@ var NumberSupertypeBinaryOperationsAnalyzer = (func() *analysis.Analyzer {
 						analysis.Diagnostic{
 							Location: location,
 							Range:    ast.NewRangeFromPositioned(element),
+							Category: "update required",
 							Message: fmt.Sprintf(
 								"%s operations on number supertypes will get removed",
 								binaryExpression.Operation.Category(),
@@ -302,7 +305,9 @@ var ParameterListMissingCommasAnalyzer = (func() *analysis.Analyzer {
 									StartPos: diagnosticPos,
 									EndPos:   diagnosticPos,
 								},
-								Message: "missing comma between parameters",
+								Category:         "update required",
+								Message:          "missing comma between parameters",
+								SecondaryMessage: "insert missing comma here",
 							},
 						)
 					}
@@ -413,6 +418,7 @@ var SupertypeInferenceAnalyzer = (func() *analysis.Analyzer {
 							analysis.Diagnostic{
 								Location:         location,
 								Range:            ast.NewRangeFromPositioned(element),
+								Category:         "check required",
 								Message:          fmt.Sprintf("type inference for %s will change", kind),
 								SecondaryMessage: "ensure the newly inferred type is correct",
 							},
@@ -575,6 +581,7 @@ var ExternalMutationAnalyzer = (func() *analysis.Analyzer {
 			analysis.Diagnostic{
 				Location: location,
 				Range:    ast.NewRangeFromPositioned(mutatedElement),
+				Category: "update required",
 				Message:  "external mutation of non-settable public container-typed field will get disallowed",
 				SecondaryMessage: fmt.Sprintf(
 					"add setter function for field, or change field access to %s",

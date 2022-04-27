@@ -16,17 +16,31 @@
  * limitations under the License.
  */
 
-package analysis
+package main
 
 import (
-	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
+	"github.com/logrusorgru/aurora"
+	"github.com/onflow/cadence/tools/analysis"
 )
 
-type Diagnostic struct {
-	ast.Range
-	Location         common.Location
-	Category         string // optional
-	Message          string
-	SecondaryMessage string // optional
+type diagnosticErr struct {
+	analysis.Diagnostic
+}
+
+var _ error = diagnosticErr{}
+
+func (d diagnosticErr) Error() string {
+	return d.Message
+}
+
+func (d diagnosticErr) SecondaryError() string {
+	return d.SecondaryMessage
+}
+
+func (d diagnosticErr) Prefix() string {
+	return d.Category
+}
+
+func (d diagnosticErr) Color() aurora.Color {
+	return aurora.YellowFg
 }

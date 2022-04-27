@@ -27,7 +27,6 @@ import (
 	"os"
 	"sync"
 
-	"github.com/logrusorgru/aurora"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/pretty"
 	"github.com/onflow/cadence/tools/analysis"
@@ -41,28 +40,6 @@ func printErr(err error, location common.Location, codes map[common.LocationID]s
 	if printErr != nil {
 		panic(printErr)
 	}
-}
-
-type diagnosticErr struct {
-	analysis.Diagnostic
-}
-
-var _ error = diagnosticErr{}
-
-func (d diagnosticErr) Error() string {
-	return d.Message
-}
-
-func (d diagnosticErr) SecondaryError() string {
-	return d.SecondaryMessage
-}
-
-func (d diagnosticErr) Prefix() string {
-	return "update required"
-}
-
-func (d diagnosticErr) Color() aurora.Color {
-	return aurora.YellowFg
 }
 
 func main() {
