@@ -411,3 +411,140 @@ func TestReferenceOperatorAnalyzer(t *testing.T) {
 		diagnostics,
 	)
 }
+
+func TestStorageReadOperationsAnalyzer(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("AuthAccount.load", func(t *testing.T) {
+
+		t.Parallel()
+
+		diagnostics := testAnalyzers(t,
+			`
+              pub contract Test {
+                  pub fun test(account: AuthAccount) {
+                      account.load<Int>(from: /storage/answer)
+                  }
+              }
+            `,
+			analyzers.StorageReadOperationsAnalyzer,
+		)
+
+		require.Equal(
+			t,
+			[]analysis.Diagnostic{
+				{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 112, Line: 4, Column: 22},
+						EndPos:   ast.Position{Offset: 151, Line: 4, Column: 61},
+					},
+					Location:         testLocation,
+					Category:         "check required",
+					Message:          "storage read operations will perform a force-cast",
+					SecondaryMessage: "ensure the new behaviour is supported",
+				},
+			},
+			diagnostics,
+		)
+	})
+
+	t.Run("AuthAccount.copy", func(t *testing.T) {
+
+		t.Parallel()
+
+		diagnostics := testAnalyzers(t,
+			`
+              pub contract Test {
+                  pub fun test(account: AuthAccount) {
+                      account.copy<Int>(from: /storage/answer)
+                  }
+              }
+            `,
+			analyzers.StorageReadOperationsAnalyzer,
+		)
+
+		require.Equal(
+			t,
+			[]analysis.Diagnostic{
+				{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 112, Line: 4, Column: 22},
+						EndPos:   ast.Position{Offset: 151, Line: 4, Column: 61},
+					},
+					Location:         testLocation,
+					Category:         "check required",
+					Message:          "storage read operations will perform a force-cast",
+					SecondaryMessage: "ensure the new behaviour is supported",
+				},
+			},
+			diagnostics,
+		)
+	})
+
+	t.Run("AuthAccount.borrow", func(t *testing.T) {
+
+		t.Parallel()
+
+		diagnostics := testAnalyzers(t,
+			`
+              pub contract Test {
+                  pub fun test(account: AuthAccount) {
+                      account.borrow<&Int>(from: /storage/answer)
+                  }
+              }
+            `,
+			analyzers.StorageReadOperationsAnalyzer,
+		)
+
+		require.Equal(
+			t,
+			[]analysis.Diagnostic{
+				{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 112, Line: 4, Column: 22},
+						EndPos:   ast.Position{Offset: 154, Line: 4, Column: 64},
+					},
+					Location:         testLocation,
+					Category:         "check required",
+					Message:          "storage read operations will perform a force-cast",
+					SecondaryMessage: "ensure the new behaviour is supported",
+				},
+			},
+			diagnostics,
+		)
+	})
+
+	t.Run("Capability.borrow", func(t *testing.T) {
+
+		t.Parallel()
+
+		diagnostics := testAnalyzers(t,
+			`
+              pub contract Test {
+                  pub fun test(capability: Capability<&Int>) {
+                      capability.borrow()
+                  }
+              }
+            `,
+			analyzers.StorageReadOperationsAnalyzer,
+		)
+
+		require.Equal(
+			t,
+			[]analysis.Diagnostic{
+				{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 120, Line: 4, Column: 22},
+						EndPos:   ast.Position{Offset: 138, Line: 4, Column: 40},
+					},
+					Location:         testLocation,
+					Category:         "check required",
+					Message:          "storage read operations will perform a force-cast",
+					SecondaryMessage: "ensure the new behaviour is supported",
+				},
+			},
+			diagnostics,
+		)
+	})
+}

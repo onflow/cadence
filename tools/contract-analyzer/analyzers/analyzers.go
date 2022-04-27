@@ -690,3 +690,87 @@ func init() {
 		ReferenceOperatorAnalyzer,
 	)
 }
+
+// Storage operations analyzer
+
+var StorageReadOperationsAnalyzer = (func() *analysis.Analyzer {
+
+	elementFilter := []ast.Element{
+		(*ast.InvocationExpression)(nil),
+	}
+
+	return &analysis.Analyzer{
+		Requires: []*analysis.Analyzer{
+			analysis.InspectorAnalyzer,
+		},
+		Run: func(pass *analysis.Pass) interface{} {
+			inspector := pass.ResultOf[analysis.InspectorAnalyzer].(*ast.Inspector)
+
+			location := pass.Program.Location
+			elaboration := pass.Program.Elaboration
+			report := pass.Report
+
+			inspector.Preorder(
+				elementFilter,
+				func(element ast.Element) {
+
+					invocationExpression, ok := element.(*ast.InvocationExpression)
+					if !ok {
+						return
+					}
+
+					memberExpression, ok := invocationExpression.InvokedExpression.(*ast.MemberExpression)
+					if !ok {
+						return
+					}
+
+					memberInfo := elaboration.MemberExpressionMemberInfos[memberExpression]
+					member := memberInfo.Member
+					if member == nil {
+						return
+					}
+
+					containerType := member.ContainerType
+
+					identifier := member.Identifier.Identifier
+
+					if containerType == sema.AuthAccountType {
+						switch identifier {
+						case sema.AuthAccountBorrowField,
+							sema.AuthAccountLoadField,
+							sema.AuthAccountCopyField:
+							break
+						default:
+							return
+						}
+					} else if _, ok := containerType.(*sema.CapabilityType); ok {
+						if identifier != sema.CapabilityTypeBorrowField {
+							return
+						}
+					} else {
+						return
+					}
+
+					report(
+						analysis.Diagnostic{
+							Location:         location,
+							Range:            ast.NewRangeFromPositioned(element),
+							Category:         "check required",
+							Message:          "storage read operations will perform a force-cast",
+							SecondaryMessage: "ensure the new behaviour is supported",
+						},
+					)
+				},
+			)
+
+			return nil
+		},
+	}
+})()
+
+func init() {
+	registerAnalyzer(
+		"storage-read-operations",
+		StorageReadOperationsAnalyzer,
+	)
+}

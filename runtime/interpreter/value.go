@@ -14238,21 +14238,21 @@ func (v *CapabilityValue) RecursiveString(seenReferences SeenReferences) string 
 
 func (v *CapabilityValue) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
-	case "borrow":
+	case sema.CapabilityTypeBorrowField:
 		var borrowType *sema.ReferenceType
 		if v.BorrowType != nil {
 			borrowType = interpreter.ConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
 		}
 		return interpreter.capabilityBorrowFunction(v.Address, v.Path, borrowType)
 
-	case "check":
+	case sema.CapabilityTypeCheckField:
 		var borrowType *sema.ReferenceType
 		if v.BorrowType != nil {
 			borrowType = interpreter.ConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
 		}
 		return interpreter.capabilityCheckFunction(v.Address, v.Path, borrowType)
 
-	case "address":
+	case sema.CapabilityTypeAddressField:
 		return v.Address
 	}
 
