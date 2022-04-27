@@ -199,8 +199,9 @@ func (t PrimitiveStaticType) elementSize() uint {
 		return 1
 	case PrimitiveStaticTypeBool:
 		return 1
-	case PrimitiveStaticTypeAddress,
-		PrimitiveStaticTypeString,
+	case PrimitiveStaticTypeAddress:
+		return 8 // address length is 8 bytes
+	case PrimitiveStaticTypeString,
 		PrimitiveStaticTypeCharacter,
 		PrimitiveStaticTypeMetaType,
 		PrimitiveStaticTypeBlock:
@@ -212,6 +213,7 @@ func (t PrimitiveStaticType) elementSize() uint {
 
 	// values of these types may wrap big.Int
 	case PrimitiveStaticTypeInt,
+		PrimitiveStaticTypeUInt,
 		PrimitiveStaticTypeUInt128,
 		PrimitiveStaticTypeUInt256,
 		PrimitiveStaticTypeInt128,
@@ -227,7 +229,6 @@ func (t PrimitiveStaticType) elementSize() uint {
 		PrimitiveStaticTypeInt32,
 		PrimitiveStaticTypeInt64,
 
-		PrimitiveStaticTypeUInt,
 		PrimitiveStaticTypeUInt8,
 		PrimitiveStaticTypeUInt16,
 		PrimitiveStaticTypeUInt32,
