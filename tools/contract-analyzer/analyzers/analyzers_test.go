@@ -59,11 +59,12 @@ func TestReferenceToOptionalAnalyzer(t *testing.T) {
 		[]analysis.Diagnostic{
 			{
 				Range: ast.Range{
-					StartPos: ast.Position{Offset: 131, Line: 5, Column: 27},
-					EndPos:   ast.Position{Offset: 133, Line: 5, Column: 29},
+					StartPos: ast.Position{Offset: 154, Line: 5, Column: 38},
+					EndPos:   ast.Position{Offset: 160, Line: 5, Column: 44},
 				},
-				Location: testLocation,
-				Message:  "reference to optional",
+				Location:         testLocation,
+				Message:          "reference to optional will return optional reference",
+				SecondaryMessage: "replace with '&String?'",
 			},
 		},
 		diagnostics,
@@ -91,19 +92,21 @@ func TestDeprecatedKeyFunctionsAnalyzer(t *testing.T) {
 		[]analysis.Diagnostic{
 			{
 				Range: ast.Range{
-					StartPos: ast.Position{Offset: 88, Line: 4, Column: 14},
-					EndPos:   ast.Position{Offset: 111, Line: 4, Column: 37},
+					StartPos: ast.Position{Offset: 108, Line: 4, Column: 26},
+					EndPos:   ast.Position{Offset: 119, Line: 4, Column: 37},
 				},
-				Location: testLocation,
-				Message:  "use of deprecated key management API: replace 'addPublicKey' with 'keys.add'",
+				Location:         testLocation,
+				Message:          "deprecated function 'addPublicKey' will get removed",
+				SecondaryMessage: "replace with 'keys.add'",
 			},
 			{
 				Range: ast.Range{
-					StartPos: ast.Position{Offset: 127, Line: 5, Column: 14},
-					EndPos:   ast.Position{Offset: 152, Line: 5, Column: 39},
+					StartPos: ast.Position{Offset: 151, Line: 5, Column: 26},
+					EndPos:   ast.Position{Offset: 165, Line: 5, Column: 40},
 				},
-				Location: testLocation,
-				Message:  "use of deprecated key management API: replace 'removePublicKey' with 'keys.revoke'",
+				Location:         testLocation,
+				Message:          "deprecated function 'removePublicKey' will get removed",
+				SecondaryMessage: "replace with 'keys.revoke'",
 			},
 		},
 		diagnostics,
@@ -134,7 +137,7 @@ func TestNumberSupertypeBinaryOperationsAnalyzer(t *testing.T) {
 					EndPos:   ast.Position{Offset: 114, Line: 4, Column: 30},
 				},
 				Location: testLocation,
-				Message:  "binary operation on number supertype",
+				Message:  "arithmetic operations on number supertypes will get removed",
 			},
 		},
 		diagnostics,
@@ -165,7 +168,7 @@ func TestParameterListMissingCommasAnalyzer(t *testing.T) {
 					EndPos:   ast.Position{Offset: 64, Line: 3, Column: 33},
 				},
 				Location: testLocation,
-				Message:  "missing comma",
+				Message:  "missing comma between parameters",
 			},
 			{
 				Range: ast.Range{
@@ -173,7 +176,7 @@ func TestParameterListMissingCommasAnalyzer(t *testing.T) {
 					EndPos:   ast.Position{Offset: 108, Line: 4, Column: 29},
 				},
 				Location: testLocation,
-				Message:  "missing comma",
+				Message:  "missing comma between parameters",
 			},
 		},
 		diagnostics,
@@ -204,11 +207,12 @@ func TestSupertypeInferenceAnalyzer(t *testing.T) {
 			[]analysis.Diagnostic{
 				{
 					Range: ast.Range{
-						StartPos: ast.Position{Offset: 118, Line: 6, Column: 26},
-						EndPos:   ast.Position{Offset: 144, Line: 6, Column: 52},
+						StartPos: ast.Position{Offset: 122, Line: 6, Column: 26},
+						EndPos:   ast.Position{Offset: 148, Line: 6, Column: 52},
 					},
-					Location: testLocation,
-					Message:  "inferred type may differ",
+					Location:         testLocation,
+					Message:          "type inference for arrays will change",
+					SecondaryMessage: "ensure the newly inferred type is correct",
 				},
 			},
 			diagnostics,
@@ -236,11 +240,12 @@ func TestSupertypeInferenceAnalyzer(t *testing.T) {
 			[]analysis.Diagnostic{
 				{
 					Range: ast.Range{
-						StartPos: ast.Position{Offset: 154, Line: 7, Column: 26},
-						EndPos:   ast.Position{Offset: 183, Line: 7, Column: 55},
+						StartPos: ast.Position{Offset: 139, Line: 7, Column: 26},
+						EndPos:   ast.Position{Offset: 168, Line: 7, Column: 55},
 					},
-					Location: testLocation,
-					Message:  "inferred type may differ",
+					Location:         testLocation,
+					Message:          "type inference for dictionaries will change",
+					SecondaryMessage: "ensure the newly inferred type is correct",
 				},
 			},
 			diagnostics,
@@ -268,11 +273,12 @@ func TestSupertypeInferenceAnalyzer(t *testing.T) {
 			[]analysis.Diagnostic{
 				{
 					Range: ast.Range{
-						StartPos: ast.Position{Offset: 144, Line: 7, Column: 26},
-						EndPos:   ast.Position{Offset: 169, Line: 7, Column: 51},
+						StartPos: ast.Position{Offset: 129, Line: 7, Column: 26},
+						EndPos:   ast.Position{Offset: 154, Line: 7, Column: 51},
 					},
-					Location: testLocation,
-					Message:  "inferred type may differ",
+					Location:         testLocation,
+					Message:          "type inference for conditionals / ternary operations will change",
+					SecondaryMessage: "ensure the newly inferred type is correct",
 				},
 			},
 			diagnostics,
@@ -339,19 +345,21 @@ func TestExternalMutationAnalyzer(t *testing.T) {
 		[]analysis.Diagnostic{
 			{
 				Range: ast.Range{
-					StartPos: ast.Position{Offset: 937, Line: 31, Column: 17},
-					EndPos:   ast.Position{Offset: 953, Line: 31, Column: 33},
+					StartPos: ast.Position{Offset: 882, Line: 31, Column: 17},
+					EndPos:   ast.Position{Offset: 891, Line: 31, Column: 26},
 				},
-				Location: testLocation,
-				Message:  "external mutation",
+				Location:         testLocation,
+				Message:          "external mutation of non-settable public container-typed field will get disallowed",
+				SecondaryMessage: "add setter function for field, or change field access to pub(set)",
 			},
 			{
 				Range: ast.Range{
-					StartPos: ast.Position{Offset: 1206, Line: 39, Column: 27},
-					EndPos:   ast.Position{Offset: 1221, Line: 39, Column: 42},
+					StartPos: ast.Position{Offset: 1126, Line: 39, Column: 17},
+					EndPos:   ast.Position{Offset: 1135, Line: 39, Column: 26},
 				},
-				Location: testLocation,
-				Message:  "external mutation",
+				Location:         testLocation,
+				Message:          "external mutation of non-settable public container-typed field will get disallowed",
+				SecondaryMessage: "add setter function for field, or change field access to pub(set)",
 			},
 		},
 		diagnostics,
