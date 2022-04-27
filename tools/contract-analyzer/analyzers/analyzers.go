@@ -20,6 +20,7 @@ package analyzers
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -620,5 +621,72 @@ func init() {
 	registerAnalyzer(
 		"external-mutation",
 		ExternalMutationAnalyzer,
+	)
+}
+
+// Reference operator analyzer
+
+var ReferenceOperatorAnalyzer = (func() *analysis.Analyzer {
+
+	elementFilter := []ast.Element{
+		(*ast.ReferenceExpression)(nil),
+	}
+
+	invalidOperatorRegexp := regexp.MustCompile(`.*\bas[?!].*`)
+
+	return &analysis.Analyzer{
+		Requires: []*analysis.Analyzer{
+			analysis.InspectorAnalyzer,
+		},
+		Run: func(pass *analysis.Pass) interface{} {
+			inspector := pass.ResultOf[analysis.InspectorAnalyzer].(*ast.Inspector)
+
+			location := pass.Program.Location
+			code := pass.Program.Code
+			report := pass.Report
+
+			inspector.Preorder(
+				elementFilter,
+				func(element ast.Element) {
+
+					referenceExpression, ok := element.(*ast.ReferenceExpression)
+					if !ok {
+						return
+					}
+
+					// Operator is incorrectly parsed, but not stored in AST.
+					// Analyze code instead
+
+					startOffset := referenceExpression.Expression.EndPosition().Offset + 1
+					endOffset := referenceExpression.Type.StartPosition().Offset - 1
+
+					if !invalidOperatorRegexp.MatchString(code[startOffset:endOffset]) {
+						return
+					}
+
+					report(
+						analysis.Diagnostic{
+							Location: location,
+							Range:    ast.NewRangeFromPositioned(element),
+							Category: "update recommended",
+							Message:  "incorrect reference operator used",
+							SecondaryMessage: fmt.Sprintf(
+								"use the '%s' operator",
+								ast.OperationCast.Symbol(),
+							),
+						},
+					)
+				},
+			)
+
+			return nil
+		},
+	}
+})()
+
+func init() {
+	registerAnalyzer(
+		"reference-operator",
+		ReferenceOperatorAnalyzer,
 	)
 }

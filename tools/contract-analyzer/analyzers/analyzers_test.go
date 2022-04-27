@@ -378,3 +378,36 @@ func TestExternalMutationAnalyzer(t *testing.T) {
 		diagnostics,
 	)
 }
+
+func TestReferenceOperatorAnalyzer(t *testing.T) {
+
+	t.Parallel()
+
+	diagnostics := testAnalyzers(t,
+		`
+          pub contract Test {
+              pub fun test() {
+                  let ref = &1 as! &Int
+              }
+          }
+        `,
+		analyzers.ReferenceOperatorAnalyzer,
+	)
+
+	require.Equal(
+		t,
+		[]analysis.Diagnostic{
+			{
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 90, Line: 4, Column: 28},
+					EndPos:   ast.Position{Offset: 100, Line: 4, Column: 38},
+				},
+				Location:         testLocation,
+				Category:         "update recommended",
+				Message:          "incorrect reference operator used",
+				SecondaryMessage: "use the 'as' operator",
+			},
+		},
+		diagnostics,
+	)
+}
