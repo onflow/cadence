@@ -487,6 +487,8 @@ func (r *interpreterRuntime) newAuthAccountValue(
 		accountAvailableBalanceGetFunction(addressValue, context.Interface),
 		storageUsedGetFunction(addressValue, context.Interface, storage),
 		storageCapacityGetFunction(addressValue, context.Interface, storage),
+		r.newAddPublicKeyFunction(inter, addressValue, context.Interface),
+		r.newRemovePublicKeyFunction(inter, addressValue, context.Interface),
 		func() interpreter.Value {
 			return r.newAuthAccountContracts(
 				inter,
@@ -1929,6 +1931,100 @@ func storageCapacityGetFunction(
 		)
 
 	}
+}
+
+func (r *interpreterRuntime) newAddPublicKeyFunction(
+	gauge common.MemoryGauge,
+	addressValue interpreter.AddressValue,
+	runtimeInterface Interface,
+) *interpreter.HostFunctionValue {
+
+	// Converted addresses can be cached and don't have to be recomputed on each function invocation
+	address := addressValue.ToAddress()
+
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			publicKeyValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
+			if !ok {
+				panic(runtimeErrors.NewUnreachableError())
+			}
+
+			publicKey, err := interpreter.ByteArrayValueToByteSlice(gauge, publicKeyValue)
+			if err != nil {
+				panic("addPublicKey requires the first argument to be a byte array")
+			}
+
+			wrapPanic(func() {
+				err = runtimeInterface.AddEncodedAccountKey(address, publicKey)
+			})
+			if err != nil {
+				panic(err)
+			}
+
+			inter := invocation.Interpreter
+
+			r.emitAccountEvent(
+				stdlib.AccountKeyAddedEventType,
+				runtimeInterface,
+				[]exportableValue{
+					newExportableValue(addressValue, inter),
+					newExportableValue(publicKeyValue, inter),
+				},
+			)
+
+			return interpreter.VoidValue{}
+		},
+		sema.AuthAccountTypeAddPublicKeyFunctionType,
+	)
+}
+
+func (r *interpreterRuntime) newRemovePublicKeyFunction(
+	gauge common.MemoryGauge,
+	addressValue interpreter.AddressValue,
+	runtimeInterface Interface,
+) *interpreter.HostFunctionValue {
+
+	// Converted addresses can be cached and don't have to be recomputed on each function invocation
+	address := addressValue.ToAddress()
+
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			index, ok := invocation.Arguments[0].(interpreter.IntValue)
+			if !ok {
+				panic(runtimeErrors.NewUnreachableError())
+			}
+
+			var publicKey []byte
+			var err error
+			wrapPanic(func() {
+				publicKey, err = runtimeInterface.RevokeEncodedAccountKey(address, index.ToInt())
+			})
+			if err != nil {
+				panic(err)
+			}
+
+			inter := invocation.Interpreter
+
+			publicKeyValue := interpreter.ByteSliceToByteArrayValue(
+				inter,
+				publicKey,
+			)
+
+			r.emitAccountEvent(
+				stdlib.AccountKeyRemovedEventType,
+				runtimeInterface,
+				[]exportableValue{
+					newExportableValue(addressValue, inter),
+					newExportableValue(publicKeyValue, inter),
+				},
+			)
+
+			return interpreter.VoidValue{}
+		},
+		sema.AuthAccountTypeRemovePublicKeyFunctionType,
+	)
 }
 
 // recordContractValue records the update of the given contract value.
