@@ -37,6 +37,7 @@ var ReferenceToOptionalAnalyzer = (func() *analysis.Analyzer {
 	}
 
 	return &analysis.Analyzer{
+		Description: "Detects references to an optional value. This will result in optional references in the next release.",
 		Requires: []*analysis.Analyzer{
 			analysis.InspectorAnalyzer,
 		},
@@ -105,6 +106,7 @@ var DeprecatedKeyFunctionsAnalyzer = (func() *analysis.Analyzer {
 	}
 
 	return &analysis.Analyzer{
+		Description: "Detects usages of the deprecated key management API. It will be removed in a future release.",
 		Requires: []*analysis.Analyzer{
 			analysis.InspectorAnalyzer,
 		},
@@ -197,6 +199,7 @@ var NumberSupertypeBinaryOperationsAnalyzer = (func() *analysis.Analyzer {
 	}
 
 	return &analysis.Analyzer{
+		Description: "Detects arithmetic, comparison, and bitwise operations on number super-types. These will be invalid in the next release.",
 		Requires: []*analysis.Analyzer{
 			analysis.InspectorAnalyzer,
 		},
@@ -257,6 +260,7 @@ var ParameterListMissingCommasAnalyzer = (func() *analysis.Analyzer {
 	}
 
 	return &analysis.Analyzer{
+		Description: "Detects missing commas in parameter lists. Such code will get rejected in the next release.",
 		Requires: []*analysis.Analyzer{
 			analysis.InspectorAnalyzer,
 		},
@@ -339,6 +343,7 @@ var SupertypeInferenceAnalyzer = (func() *analysis.Analyzer {
 	}
 
 	return &analysis.Analyzer{
+		Description: "Detects expressions with different element types. The next release will infer types differently.",
 		Requires: []*analysis.Analyzer{
 			analysis.InspectorAnalyzer,
 		},
@@ -593,6 +598,7 @@ var ExternalMutationAnalyzer = (func() *analysis.Analyzer {
 	}
 
 	return &analysis.Analyzer{
+		Description: "Detects mutation of container-typed fields outside of the scope of the enclosing composite. This will be invalid in the next release.",
 		Requires: []*analysis.Analyzer{
 			analysis.InspectorAnalyzer,
 		},
@@ -635,6 +641,7 @@ var ReferenceOperatorAnalyzer = (func() *analysis.Analyzer {
 	invalidOperatorRegexp := regexp.MustCompile(`.*\bas[?!].*`)
 
 	return &analysis.Analyzer{
+		Description: "Detects invalid operators in reference expressions. These will get rejected in a future release.",
 		Requires: []*analysis.Analyzer{
 			analysis.InspectorAnalyzer,
 		},
@@ -700,6 +707,7 @@ var StorageReadOperationsAnalyzer = (func() *analysis.Analyzer {
 	}
 
 	return &analysis.Analyzer{
+		Description: "Detects calls to AuthAccount.load/copy/borrow and Capability.borrow. These functions will perform a force cast in the next release.",
 		Requires: []*analysis.Analyzer{
 			analysis.InspectorAnalyzer,
 		},
@@ -784,6 +792,7 @@ var AddressToStringAnalyzer = (func() *analysis.Analyzer {
 	}
 
 	return &analysis.Analyzer{
+		Description: "Detects calls to Address.toString(). The next release will zero-pad the result.",
 		Requires: []*analysis.Analyzer{
 			analysis.InspectorAnalyzer,
 		},
