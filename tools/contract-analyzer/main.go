@@ -50,8 +50,22 @@ func main() {
 	flag.Usage = func() {
 		defaultUsage()
 		_, _ = fmt.Fprintf(os.Stderr, "\nAvailable analyzers:\n")
+
+		names := make([]string, 0, len(analyzers.Analyzers))
 		for name := range analyzers.Analyzers {
-			_, _ = fmt.Fprintf(os.Stderr, "  - %s\n", name)
+			names = append(names, name)
+		}
+
+		sort.Strings(names)
+
+		for _, name := range names {
+			analyzer := analyzers.Analyzers[name]
+			_, _ = fmt.Fprintf(
+				os.Stderr,
+				"  - %s:\n      %s\n",
+				name,
+				analyzer.Description,
+			)
 		}
 	}
 
