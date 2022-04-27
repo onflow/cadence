@@ -107,6 +107,8 @@ var (
 	RangeMemoryUsage    = NewConstantMemoryUsage(MemoryKindRange)
 
 	ElaborationMemoryUsage = NewConstantMemoryUsage(MemoryKindElaboration)
+
+	SimpleCompositeBaseMemoryUsage = NewConstantMemoryUsage(MemoryKindSimpleCompositeBase)
 )
 
 func UseMemory(gauge MemoryGauge, usage MemoryUsage) {
@@ -200,7 +202,7 @@ func NewCompositeMemoryUsages(size uint64, element_size uint) (MemoryUsage, Memo
 func NewSimpleCompositeMemoryUsage(length int) MemoryUsage {
 	return MemoryUsage{
 		Kind:   MemoryKindSimpleComposite,
-		Amount: uint64(length) + 1, // +1 to account for empty strings
+		Amount: uint64(length),
 	}
 }
 

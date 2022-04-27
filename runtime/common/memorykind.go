@@ -38,6 +38,7 @@ const (
 	MemoryKindArrayBase
 	MemoryKindDictionaryBase
 	MemoryKindCompositeBase
+	MemoryKindSimpleCompositeBase
 	MemoryKindOptional
 	MemoryKindNil
 	MemoryKindVoid
