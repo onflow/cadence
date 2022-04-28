@@ -103,6 +103,7 @@ func Lex(input string) TokenStream {
 		prevEndOffset: 0,
 		current:       EOF,
 		prev:          EOF,
+		tokens:        make([]Token, 0, 2048),
 	}
 	l.run(rootState)
 	return l
