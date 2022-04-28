@@ -204,9 +204,10 @@ var rlpDecodeListFunction = interpreter.NewUnmeteredHostFunctionValue(
 
 		return interpreter.NewArrayValue(
 			invocation.Interpreter,
-			interpreter.VariableSizedStaticType{
-				Type: interpreter.ByteArrayStaticType,
-			},
+			interpreter.NewVariableSizedStaticType(
+				invocation.Interpreter,
+				interpreter.ByteArrayStaticType,
+			),
 			common.Address{},
 			values...,
 		)

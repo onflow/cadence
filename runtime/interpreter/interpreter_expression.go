@@ -83,23 +83,44 @@ func (interpreter *Interpreter) indexExpressionGetterSetter(indexExpression *ast
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
-	indexingValue := interpreter.evalExpression(indexExpression.IndexingExpression)
+
 	getLocationRange := locationRangeGetter(interpreter, interpreter.Location, indexExpression)
-	_, isNestedResourceMove := interpreter.Program.Elaboration.IsNestedResourceMoveExpression[indexExpression]
+
+	// Evaluate, transfer, and convert the indexing value,
+	// as it is essentially an "argument" of the get/set operation
+
+	elaboration := interpreter.Program.Elaboration
+
+	indexedType := elaboration.IndexExpressionIndexedTypes[indexExpression]
+	indexingType := elaboration.IndexExpressionIndexingTypes[indexExpression]
+
+	transferredIndexingValue := interpreter.transferAndConvert(
+		interpreter.evalExpression(indexExpression.IndexingExpression),
+		indexingType,
+		indexedType.IndexingType(),
+		locationRangeGetter(
+			interpreter,
+			interpreter.Location,
+			indexExpression.IndexingExpression,
+		),
+	)
+
+	_, isNestedResourceMove := elaboration.IsNestedResourceMoveExpression[indexExpression]
+
 	return getterSetter{
 		target: target,
 		get: func(_ bool) Value {
 			if isNestedResourceMove {
-				return target.RemoveKey(interpreter, getLocationRange, indexingValue)
+				return target.RemoveKey(interpreter, getLocationRange, transferredIndexingValue)
 			} else {
-				return target.GetKey(interpreter, getLocationRange, indexingValue)
+				return target.GetKey(interpreter, getLocationRange, transferredIndexingValue)
 			}
 		},
 		set: func(value Value) {
 			if isNestedResourceMove {
-				target.InsertKey(interpreter, getLocationRange, indexingValue, value)
+				target.InsertKey(interpreter, getLocationRange, transferredIndexingValue, value)
 			} else {
-				target.SetKey(interpreter, getLocationRange, indexingValue, value)
+				target.SetKey(interpreter, getLocationRange, transferredIndexingValue, value)
 			}
 		},
 	}
@@ -597,7 +618,7 @@ func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpres
 	}
 
 	// TODO: cache
-	arrayStaticType := ConvertSemaArrayTypeToStaticArrayType(arrayType)
+	arrayStaticType := ConvertSemaArrayTypeToStaticArrayType(interpreter, arrayType)
 
 	return NewArrayValue(
 		interpreter,
@@ -642,7 +663,7 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 		)
 	}
 
-	dictionaryStaticType := ConvertSemaDictionaryTypeToStaticDictionaryType(dictionaryType)
+	dictionaryStaticType := ConvertSemaDictionaryTypeToStaticDictionaryType(interpreter, dictionaryType)
 
 	return NewDictionaryValue(interpreter, dictionaryStaticType, keyValuePairs...)
 }

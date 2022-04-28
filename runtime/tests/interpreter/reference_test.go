@@ -466,7 +466,7 @@ func TestInterpretResourceReferenceAfterMove(t *testing.T) {
 		array := interpreter.NewArrayValue(
 			inter,
 			interpreter.VariableSizedStaticType{
-				Type: interpreter.ConvertSemaToStaticType(rType),
+				Type: interpreter.ConvertSemaToStaticType(nil, rType),
 			},
 			address,
 		)
@@ -517,7 +517,7 @@ func TestInterpretResourceReferenceAfterMove(t *testing.T) {
 			inter,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.VariableSizedStaticType{
-					Type: interpreter.ConvertSemaToStaticType(rType),
+					Type: interpreter.ConvertSemaToStaticType(nil, rType),
 				},
 			},
 			address,
@@ -570,7 +570,7 @@ func TestInterpretResourceReferenceAfterMove(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeInt,
-					ValueType: interpreter.ConvertSemaToStaticType(rType),
+					ValueType: interpreter.ConvertSemaToStaticType(nil, rType),
 				},
 			},
 			address,

@@ -774,7 +774,7 @@ func TestImportRuntimeType(t *testing.T) {
 	test := func(tt importTest) {
 		t.Run(tt.label, func(t *testing.T) {
 			t.Parallel()
-			actual := ImportType(tt.actual)
+			actual := ImportType(nil, tt.actual)
 			assert.Equal(t, tt.expected, actual)
 
 		})
@@ -1743,7 +1743,7 @@ func TestExportTypeValue(t *testing.T) {
 		program, err := parser2.ParseProgram(code, nil)
 		require.NoError(t, err)
 
-		checker, err := sema.NewChecker(program, TestLocation)
+		checker, err := sema.NewChecker(program, TestLocation, nil)
 		require.NoError(t, err)
 
 		err = checker.Check()
@@ -1754,7 +1754,7 @@ func TestExportTypeValue(t *testing.T) {
 
 		ty := interpreter.TypeValue{
 			Type: &interpreter.RestrictedStaticType{
-				Type: interpreter.NewCompositeStaticType(TestLocation, "S"),
+				Type: interpreter.NewCompositeStaticTypeComputeTypeID(inter, TestLocation, "S"),
 				Restrictions: []interpreter.InterfaceStaticType{
 					{
 						Location:            TestLocation,
@@ -1829,7 +1829,7 @@ func TestExportCapabilityValue(t *testing.T) {
 		program, err := parser2.ParseProgram(code, nil)
 		require.NoError(t, err)
 
-		checker, err := sema.NewChecker(program, TestLocation)
+		checker, err := sema.NewChecker(program, TestLocation, nil)
 		require.NoError(t, err)
 
 		err = checker.Check()
@@ -1844,7 +1844,7 @@ func TestExportCapabilityValue(t *testing.T) {
 				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
-			BorrowType: interpreter.NewCompositeStaticType(TestLocation, "S"),
+			BorrowType: interpreter.NewCompositeStaticTypeComputeTypeID(inter, TestLocation, "S"),
 		}
 
 		actual, err := exportValueWithInterpreter(capability, inter, seenReferences{})
@@ -1927,7 +1927,7 @@ func TestExportLinkValue(t *testing.T) {
 		program, err := parser2.ParseProgram(code, nil)
 		require.NoError(t, err)
 
-		checker, err := sema.NewChecker(program, TestLocation)
+		checker, err := sema.NewChecker(program, TestLocation, nil)
 		require.NoError(t, err)
 
 		err = checker.Check()
@@ -1941,7 +1941,7 @@ func TestExportLinkValue(t *testing.T) {
 				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
-			Type: interpreter.NewCompositeStaticType(TestLocation, "S"),
+			Type: interpreter.NewCompositeStaticTypeComputeTypeID(inter, TestLocation, "S"),
 		}
 
 		actual, err := exportValueWithInterpreter(capability, inter, seenReferences{})
@@ -4417,7 +4417,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 	t.Parallel()
 
 	program := interpreter.Program{
-		Elaboration: sema.NewElaboration(),
+		Elaboration: sema.NewElaboration(nil),
 	}
 
 	inter := newTestInterpreter(t)
@@ -4554,7 +4554,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 		t.Parallel()
 
 		program := interpreter.Program{
-			Elaboration: sema.NewElaboration(),
+			Elaboration: sema.NewElaboration(nil),
 		}
 
 		inter := newTestInterpreter(t)

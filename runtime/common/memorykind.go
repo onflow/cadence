@@ -55,6 +55,19 @@ const (
 	MemoryKindBoundFunction
 	MemoryKindBigInt
 
+	// Static Types
+	MemoryKindPrimitiveStaticType
+	MemoryKindCompositeStaticType
+	MemoryKindInterfaceStaticType
+	MemoryKindVariableSizedStaticType
+	MemoryKindConstantSizedStaticType
+	MemoryKindDictionaryStaticType
+	MemoryKindOptionalStaticType
+	MemoryKindRestrictedStaticType
+	MemoryKindReferenceStaticType
+	MemoryKindCapabilityStaticType
+	MemoryKindFunctionStaticType
+
 	// Misc
 
 	MemoryKindRawString
@@ -139,6 +152,8 @@ const (
 
 	MemoryKindPosition
 	MemoryKindRange
+
+	MemoryKindElaboration
 
 	// Placeholder kind to allow consistent indexing
 	// this should always be the last kind

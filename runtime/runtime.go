@@ -1145,6 +1145,7 @@ func (r *interpreterRuntime) check(
 	checker, err := sema.NewChecker(
 		program,
 		startContext.Location,
+		memoryGauge,
 		append(
 			[]sema.Option{
 				sema.WithPredeclaredValues(valueDeclarations),
@@ -1202,7 +1203,6 @@ func (r *interpreterRuntime) check(
 						},
 					)
 				}),
-				sema.WithMemoryGauge(memoryGauge),
 			},
 			checkerOptions...,
 		)...,
@@ -1934,7 +1934,7 @@ func storageCapacityGetFunction(
 }
 
 func (r *interpreterRuntime) newAddPublicKeyFunction(
-	inter *interpreter.Interpreter,
+	gauge common.MemoryGauge,
 	addressValue interpreter.AddressValue,
 	runtimeInterface Interface,
 ) *interpreter.HostFunctionValue {
@@ -1943,14 +1943,14 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 	address := addressValue.ToAddress()
 
 	return interpreter.NewHostFunctionValue(
-		inter,
+		gauge,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			publicKeyValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
 			if !ok {
 				panic(runtimeErrors.NewUnreachableError())
 			}
 
-			publicKey, err := interpreter.ByteArrayValueToByteSlice(inter, publicKeyValue)
+			publicKey, err := interpreter.ByteArrayValueToByteSlice(gauge, publicKeyValue)
 			if err != nil {
 				panic("addPublicKey requires the first argument to be a byte array")
 			}
@@ -1973,14 +1973,14 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 				},
 			)
 
-			return interpreter.NewVoidValue(invocation.Interpreter)
+			return interpreter.VoidValue{}
 		},
 		sema.AuthAccountTypeAddPublicKeyFunctionType,
 	)
 }
 
 func (r *interpreterRuntime) newRemovePublicKeyFunction(
-	inter *interpreter.Interpreter,
+	gauge common.MemoryGauge,
 	addressValue interpreter.AddressValue,
 	runtimeInterface Interface,
 ) *interpreter.HostFunctionValue {
@@ -1989,7 +1989,7 @@ func (r *interpreterRuntime) newRemovePublicKeyFunction(
 	address := addressValue.ToAddress()
 
 	return interpreter.NewHostFunctionValue(
-		inter,
+		gauge,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			index, ok := invocation.Arguments[0].(interpreter.IntValue)
 			if !ok {
@@ -2021,7 +2021,7 @@ func (r *interpreterRuntime) newRemovePublicKeyFunction(
 				},
 			)
 
-			return interpreter.NewVoidValue(invocation.Interpreter)
+			return interpreter.VoidValue{}
 		},
 		sema.AuthAccountTypeRemovePublicKeyFunctionType,
 	)
@@ -3050,14 +3050,10 @@ func (r *interpreterRuntime) newAccountContractsGetNamesFunction(
 			)
 		}
 
-		return interpreter.NewArrayValue(
+		return interpreter.NewArrayValue(inter, interpreter.NewVariableSizedStaticType(
 			inter,
-			interpreter.VariableSizedStaticType{
-				Type: interpreter.PrimitiveStaticTypeString,
-			},
-			common.Address{},
-			values...,
-		)
+			interpreter.NewPrimitiveStaticType(inter, interpreter.PrimitiveStaticTypeString),
+		), common.Address{}, values...)
 	}
 }
 
@@ -3183,7 +3179,7 @@ func (r *interpreterRuntime) ReadLinked(
 }
 
 var BlockIDStaticType = interpreter.ConstantSizedStaticType{
-	Type: interpreter.PrimitiveStaticTypeUInt8,
+	Type: interpreter.PrimitiveStaticTypeUInt8, // unmetered
 	Size: 32,
 }
 

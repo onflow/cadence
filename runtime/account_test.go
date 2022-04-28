@@ -117,12 +117,9 @@ func TestRuntimeTransaction_AddPublicKey(t *testing.T) {
 				events = append(events, event)
 				return nil
 			},
-			meterMemory: func(_ common.MemoryUsage) error {
-				return nil
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(nil, b)
 			},
-		}
-		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-			return json.Decode(runtimeInterface, b)
 		}
 
 		t.Run(tt.name, func(t *testing.T) {

@@ -1788,27 +1788,24 @@ func (s *Server) getDiagnostics(
 
 					importedLocationID := importedLocation.ID()
 
-					importedChecker, ok := s.checkers[importedLocationID]
-					if !ok {
-						importedProgram, err := s.resolveImport(importedLocation)
-						if err != nil {
-							return nil, err
+					importedProgram, err := s.resolveImport(importedLocation)
+					if err != nil {
+						return nil, err
+					}
+					if importedProgram == nil {
+						return nil, &sema.CheckerError{
+							Errors: []error{fmt.Errorf("cannot import %s", importedLocation)},
 						}
-						if importedProgram == nil {
-							return nil, &sema.CheckerError{
-								Errors: []error{fmt.Errorf("cannot import %s", importedLocation)},
-							}
-						}
-
-						importedChecker, err = checker.SubChecker(importedProgram, importedLocation)
-						if err != nil {
-							return nil, err
-						}
-						s.checkers[importedLocationID] = importedChecker
-						err = importedChecker.Check()
-						if err != nil {
-							return nil, err
-						}
+					}
+					// we are rechecking the imported program since there might be changes
+					importedChecker, err := checker.SubChecker(importedProgram, importedLocation)
+					if err != nil {
+						return nil, err
+					}
+					s.checkers[importedLocationID] = importedChecker
+					err = importedChecker.Check()
+					if err != nil {
+						return nil, err
 					}
 
 					return sema.ElaborationImport{

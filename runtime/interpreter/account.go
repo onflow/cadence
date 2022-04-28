@@ -27,8 +27,7 @@ import (
 // AuthAccount
 
 var authAccountTypeID = sema.AuthAccountType.ID()
-var authAccountStaticType StaticType = PrimitiveStaticTypeAuthAccount
-
+var authAccountStaticType StaticType = PrimitiveStaticTypeAuthAccount // unmetered
 var authAccountFieldNames = []string{
 	sema.AuthAccountAddressField,
 	sema.AuthAccountContractsField,
@@ -138,8 +137,7 @@ func NewAuthAccountValue(
 // PublicAccount
 
 var publicAccountTypeID = sema.PublicAccountType.ID()
-var publicAccountStaticType StaticType = PrimitiveStaticTypePublicAccount
-
+var publicAccountStaticType StaticType = PrimitiveStaticTypePublicAccount // unmetered
 var publicAccountFieldNames = []string{
 	sema.PublicAccountAddressField,
 	sema.PublicAccountContractsField,

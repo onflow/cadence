@@ -96,6 +96,7 @@ func NewREPL(
 		return sema.NewChecker(
 			program,
 			common.REPLLocation{},
+			nil,
 			checkerOptions...,
 		)
 	}
