@@ -21,6 +21,7 @@ func testAnalyzers(t *testing.T, code string, analyzers ...*analysis.Analyzer) [
 			testLocationID: code,
 		},
 		nil,
+		nil,
 	)
 
 	programs, err := analysis.Load(config, testLocation)
