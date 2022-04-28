@@ -19,6 +19,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/logrusorgru/aurora"
 	"github.com/onflow/cadence/tools/analysis"
 )
@@ -30,7 +32,7 @@ type diagnosticErr struct {
 var _ error = diagnosticErr{}
 
 func (d diagnosticErr) Error() string {
-	return d.Message
+	return fmt.Sprintf("%s: %s", d.Category, d.Message)
 }
 
 func (d diagnosticErr) SecondaryError() string {
