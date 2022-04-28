@@ -7,7 +7,7 @@ A tool to analyze Cadence contracts.
 Navigate to the directory `<cadence_dir>/tools/contract-anlyzer` and run:
 
 ```shell
-go build .
+go build -o cadence-analyzer .
 ```
 
 ### Analyzing contracts of an account
@@ -18,7 +18,7 @@ This requires you have the [Flow CLI](https://docs.onflow.org/flow-cli/) install
 For example:
 
 ```shell
-./contract-analyzer -network mainnet -address 0x1654653399040a61
+./cadence-analyzer -network mainnet -address 0x1654653399040a61
 ```
 
 ### Only running some analyzers
@@ -28,13 +28,13 @@ By default, all available analyzers are run.
 To list all available analyzers, run:
 
 ```shell
-./contract-analyzer -help
+./cadence-analyzer -help
 ```
 
 For example, to only run the `reference-to-optional` and the `external-mutation` analyzers, run:
 
 ```shell
-./contract-analyzer -network mainnet -address 0x1654653399040a61 \
+./cadence-analyzer -network mainnet -address 0x1654653399040a61 \
     -analyze reference-to-optional \
     -analyze external-mutation
 ```
@@ -46,7 +46,7 @@ To analyze all contracts in a CSV file, specify the path to the file.
 For example:
 
 ```shell
-./contract-analyzer -csv contracts.csv
+./cadence-analyzer -csv contracts.csv
 ```
 
 The CSV file must be in the following format:
