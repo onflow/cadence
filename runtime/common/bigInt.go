@@ -19,7 +19,6 @@
 package common
 
 import (
-	"math"
 	"math/big"
 )
 
@@ -48,11 +47,12 @@ func NewBigIntFromAbsoluteValue(gauge MemoryGauge, value *big.Int) *big.Int {
 func OverEstimateBigIntFromString(s string) int {
 	l := len(s)
 
-	// Use (l+1) for over estimation
-	bitLen := ((l + 1) << 12) / 1234
+	// Use 6804/2028 to over estimate log_2(10)
+	bitLen := (l*6804)>>11 + 1
 
 	// Calculate amount of bytes.
 	// First convert to word, and then find the size,
 	// to be consistent with `common.BigIntByteLength`
-	return int(math.Ceil(float64(bitLen)/64)) * BigIntWordSize
+	wordLen := (bitLen + 63) / 64
+	return (wordLen + 4) * BigIntWordSize
 }
