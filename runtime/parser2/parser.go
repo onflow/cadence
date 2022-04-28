@@ -55,6 +55,7 @@ type parser struct {
 func Parse(input string, parse func(*parser) interface{}) (result interface{}, errors []error) {
 	// create a lexer, which turns the input string into tokens
 	tokens := lexer.Lex(input)
+	defer tokens.Reclaim()
 	return ParseTokenStream(tokens, parse)
 }
 
@@ -399,7 +400,9 @@ func ParseArgumentList(input string) (arguments ast.Arguments, errors []error) {
 }
 
 func ParseProgram(input string) (program *ast.Program, err error) {
-	return ParseProgramFromTokenStream(lexer.Lex(input))
+	tokens := lexer.Lex(input)
+	defer tokens.Reclaim()
+	return ParseProgramFromTokenStream(tokens)
 }
 
 func ParseProgramFromTokenStream(input lexer.TokenStream) (program *ast.Program, err error) {

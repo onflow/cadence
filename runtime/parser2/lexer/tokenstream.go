@@ -25,4 +25,5 @@ type TokenStream interface {
 	Revert(cursor int)
 	// Input returns the whole input as source code
 	Input() string
+	Reclaim()
 }

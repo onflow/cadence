@@ -20,6 +20,7 @@ package lexer
 
 import (
 	"fmt"
+	"sync"
 	"unicode/utf8"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -95,16 +96,35 @@ func (l *lexer) Revert(cursor int) {
 	l.cursor = cursor
 }
 
+func (l *lexer) clear() {
+	l.startOffset = 0
+	l.endOffset = 0
+	l.prevEndOffset = 0
+	l.current = EOF
+	l.prev = EOF
+	l.canBackup = false
+	l.startPos = position{line: 1}
+	l.cursor = 0
+	l.tokens = l.tokens[:0]
+	l.tokenCount = 0
+}
+
+func (l *lexer) Reclaim() {
+	pool.Put(l)
+}
+
+var pool = sync.Pool{
+	New: func() interface{} {
+		return &lexer{
+			tokens: make([]Token, 0, 2048),
+		}
+	},
+}
+
 func Lex(input string) TokenStream {
-	l := &lexer{
-		input:         input,
-		startPos:      position{line: 1},
-		endOffset:     0,
-		prevEndOffset: 0,
-		current:       EOF,
-		prev:          EOF,
-		tokens:        make([]Token, 0, 2048),
-	}
+	l := pool.Get().(*lexer)
+	l.clear()
+	l.input = input
 	l.run(rootState)
 	return l
 }
