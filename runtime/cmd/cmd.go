@@ -223,6 +223,6 @@ func PrepareInterpreter(filename string, debugger *interpreter.Debugger) (*inter
 }
 
 func ExitWithError(message string) {
-	println(pretty.FormatErrorMessage(pretty.ErrorPrefix, message, true))
+	println(pretty.FormatErrorMessage(message, true))
 	os.Exit(1)
 }

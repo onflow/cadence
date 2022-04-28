@@ -33,8 +33,8 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
-func colorizeIndicator(text string, color aurora.Color) string {
-	return aurora.Colorize(text, color|aurora.BrightFg|aurora.BoldFm).String()
+func colorizeError(message string) string {
+	return aurora.Colorize(message, aurora.RedFg|aurora.BrightFg|aurora.BoldFm).String()
 }
 
 func colorizeNote(message string) string {
@@ -49,33 +49,25 @@ func colorizeMeta(meta string) string {
 	return aurora.Blue(meta).String()
 }
 
-const ErrorPrefix = "error"
-const ErrorPrefixColor = aurora.RedFg
-const messageSeparator = ": "
+const errorPrefix = "error"
 const excerptArrow = "--> "
 const excerptDots = "... "
 const maxLineLength = 500
 
-func FormatErrorMessage(prefix string, color aurora.Color, message string, useColor bool) string {
-	if prefix == "" && message == "" {
-		return ""
-	}
-
-	var builder strings.Builder
-
+func FormatErrorMessage(message string, useColor bool) string {
+	// prepare prefix
+	formattedErrorPrefix := errorPrefix
 	if useColor {
-		builder.WriteString(colorizeIndicator(prefix, color))
-		builder.WriteString(colorizeMessage(messageSeparator))
-		builder.WriteString(colorizeMessage(message))
-	} else {
-		builder.WriteString(prefix)
-		builder.WriteString(messageSeparator)
-		builder.WriteString(message)
+		formattedErrorPrefix = colorizeError(errorPrefix)
 	}
 
-	builder.WriteByte('\n')
+	// prepare message
+	message = ": " + message
+	if useColor {
+		message = colorizeMessage(message)
+	}
 
-	return builder.String()
+	return formattedErrorPrefix + message + "\n"
 }
 
 type excerpt struct {
@@ -210,17 +202,7 @@ func (p ErrorPrettyPrinter) PrettyPrintError(err error, location common.Location
 
 func (p ErrorPrettyPrinter) prettyPrintError(err error, location common.Location, code string) {
 
-	prefix := ErrorPrefix
-	if hasPrefix, ok := err.(errors.HasPrefix); ok {
-		prefix = hasPrefix.Prefix()
-	}
-
-	color := ErrorPrefixColor
-	if hasColor, ok := err.(errors.HasColor); ok {
-		color = hasColor.Color()
-	}
-
-	p.writeString(FormatErrorMessage(prefix, color, err.Error(), p.useColor))
+	p.writeString(FormatErrorMessage(err.Error(), p.useColor))
 
 	message := ""
 	if secondaryError, ok := err.(errors.SecondaryError); ok {
@@ -241,14 +223,13 @@ func (p ErrorPrettyPrinter) prettyPrintError(err error, location common.Location
 
 	sortExcerpts(excerpts)
 
-	p.writeCodeExcerpts(excerpts, location, code, color)
+	p.writeCodeExcerpts(excerpts, location, code)
 }
 
 func (p ErrorPrettyPrinter) writeCodeExcerpts(
 	excerpts []excerpt,
 	location common.Location,
 	code string,
-	color aurora.Color,
 ) {
 	var lastLineNumber int
 
@@ -334,7 +315,7 @@ func (p ErrorPrettyPrinter) writeCodeExcerpts(
 			indicators := strings.Repeat(indicator, columns)
 			if p.useColor {
 				if excerpt.isError {
-					indicators = colorizeIndicator(indicators, color)
+					indicators = colorizeError(indicators)
 				} else {
 					indicators = colorizeNote(indicators)
 				}
@@ -346,7 +327,7 @@ func (p ErrorPrettyPrinter) writeCodeExcerpts(
 				p.writeString(" ")
 				if p.useColor {
 					if excerpt.isError {
-						message = colorizeIndicator(message, color)
+						message = colorizeError(message)
 					} else {
 						message = colorizeNote(message)
 					}
