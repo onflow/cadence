@@ -63,7 +63,7 @@ jobs:
           export PATH=$PATH:$(go env GOPATH)/bin
           GO111MODULE=off go get golang.org/x/perf/cmd/benchstat
           echo "BENCHSTAT<<EOF" >> $GITHUB_ENV
-          echo "$(benchstat -html -sort delta old.txt new.txt | sed  '/<title/,/<\/style>/d' | sed 's/<!doctype html>//g')" >> $GITHUB_ENV
+          echo "$(benchstat -html -sort name old.txt new.txt | sed  '/<title/,/<\/style>/d' | sed 's/<!doctype html>//g')" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
       - name: Find existing comment on PR
         uses: peter-evans/find-comment@v1
