@@ -191,11 +191,11 @@ func TestInterpretArrayMetering(t *testing.T) {
                 x.append(1) // fits in existing slab
                 x.append(2) // adds 1 data and metadata slab
                 x.append(3) // fits in existing slab
-                x.append(4) // adds 1 data and metadata slab
+                x.append(4) // adds 1 data slab
                 x.append(5) // fits in existing slab
                 x.append(6) // adds 1 data slab
                 x.append(7) // fits in existing slab
-                x.append(8) // adds 1 data and metadata slab
+                x.append(8) // adds 1 data slab
         }
 `
 
@@ -207,7 +207,32 @@ func TestInterpretArrayMetering(t *testing.T) {
 
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindArrayBase))
 		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindAtreeArrayDataSlab))
-		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindAtreeArrayMetaDataSlab))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindAtreeArrayMetaDataSlab))
+	})
+
+	t.Run("append very many", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+        pub fun main() {
+				var i = 0;
+                let x: [Int128] = [] // 2 data slabs
+                while i < 120 { // should result in 4 meta data slabs and 60 slabs
+					x.append(0)
+					i = i + 1
+				}
+        }
+`
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindArrayBase))
+		assert.Equal(t, uint64(61), meter.getMemory(common.MemoryKindAtreeArrayDataSlab))
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindAtreeArrayMetaDataSlab))
 	})
 
 	t.Run("insert without packing", func(t *testing.T) {
@@ -339,7 +364,7 @@ func TestInterpretArrayMetering(t *testing.T) {
         x.insert(at:1, 3) // fits in existing slab
         x.insert(at:2, 3) // adds 1 metadata and data slab
         x.insert(at:3, 3) // fits in existing slab
-        x.insert(at:4, 3) // adds 1 metadata and data slab
+        x.insert(at:4, 3) // adds 1 data slab
         x.insert(at:5, 3) // fits in existing slab
     }
 `
@@ -351,7 +376,7 @@ func TestInterpretArrayMetering(t *testing.T) {
 
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindArrayBase))
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindAtreeArrayDataSlab))
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeArrayMetaDataSlab))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindAtreeArrayMetaDataSlab))
 
 		// 6 Int8 for types
 		// 1 Int8 for `w` element
@@ -478,11 +503,11 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 	                x.insert(key: 1, "") // fits in slab
 	                x.insert(key: 2, "") // adds 1 data and metadata slab
 	                x.insert(key: 3, "") // fits in slab
-	                x.insert(key: 4, "") // adds 1 data and metadata slab
+	                x.insert(key: 4, "") // adds 1 data slab
 	                x.insert(key: 5, "") // fits in slab
 	                x.insert(key: 6, "") // adds 1 data slab
 	                x.insert(key: 7, "") // fits in slab
-	                x.insert(key: 8, "") // adds 1 data and metadata slab
+	                x.insert(key: 8, "") // adds 1 data slab
 	            }
 	        `
 
@@ -494,7 +519,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindDictionaryBase))
 		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
-		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
 	})
 
 	t.Run("insert many with packing", func(t *testing.T) {

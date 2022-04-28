@@ -142,10 +142,17 @@ func atreeNodes(count uint64, element_size uint) (leafNodeCount uint64, branchNo
 	if leafNodeCount < 1 {
 		leafNodeCount = 1 // there will always be at least one data slab
 	}
-	if leafNodeCount < 2 {
-		branchNodeCount = 0
-	} else {
-		branchNodeCount = uint64(math.Ceil(math.Log2(float64(leafNodeCount))))
+
+	branchNodeCount = 0
+	if leafNodeCount >= 2 {
+		const n = 20 // n-ary tree
+		// Compute atree height from number of leaf nodes and n-ary
+		height := 1 + int(math.Ceil(math.Log(float64(leafNodeCount))/math.Log(float64(n))))
+
+		// Compute number of branch nodes from leaf node count and height
+		for i := 1; i < height; i++ {
+			branchNodeCount += uint64(math.Ceil(float64(leafNodeCount) / math.Pow(float64(n), float64(i))))
+		}
 	}
 	return
 }

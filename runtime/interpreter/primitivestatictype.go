@@ -225,22 +225,21 @@ func (t PrimitiveStaticType) elementSize() uint {
 		return UnknownElementSize
 
 	case PrimitiveStaticTypeInt8,
-		PrimitiveStaticTypeInt16,
-		PrimitiveStaticTypeInt32,
-		PrimitiveStaticTypeInt64,
-
 		PrimitiveStaticTypeUInt8,
+		PrimitiveStaticTypeWord8:
+		return 1
+	case PrimitiveStaticTypeInt16,
 		PrimitiveStaticTypeUInt16,
+		PrimitiveStaticTypeWord16:
+		return 2
+	case PrimitiveStaticTypeInt32,
 		PrimitiveStaticTypeUInt32,
+		PrimitiveStaticTypeWord32:
+		return 4
+	case PrimitiveStaticTypeInt64,
 		PrimitiveStaticTypeUInt64,
-
-		PrimitiveStaticTypeWord8,
-		PrimitiveStaticTypeWord16,
-		PrimitiveStaticTypeWord32,
 		PrimitiveStaticTypeWord64,
-
 		PrimitiveStaticTypeFix64,
-
 		PrimitiveStaticTypeUFix64:
 		return 8
 
