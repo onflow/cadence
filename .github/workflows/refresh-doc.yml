@@ -1,0 +1,75 @@
+name: refresh-doc
+on:
+  push:
+    branches:
+      - main
+
+env:
+  WEB_URL: 'https://nasty-penguin-86.loca.lt' # This needs to be updated to the live web server!
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v3
+      
+    - name: Changed Files
+      id: changed-files
+      uses: tj-actions/changed-files@v18.7
+      with: # Any file in the docs
+        files: |
+          docs/**
+    
+    # --- Log all diff info ---
+    - name: Log the files commit SHA if any md files have diffs
+      if: steps.changed-files.outputs.any_modified == 'true'
+      run: |
+        for file in ${{ steps.changed-files.outputs.all_modified_files }}; do
+          echo "$file was modified" with the commit ${{ github.sha }}
+        done
+
+    - name: Log any added (A) files
+      if: steps.changed-files.outputs.added_files != ''
+      run: |
+        for file in ${{ steps.changed-files.outputs.added_files }}; do
+          echo "$file was added"
+        done
+
+    - name: Log any deleted (D) files
+      if: steps.changed-files.outputs.any_deleted == 'true'
+      run: |
+        for file in ${{ steps.changed-files.outputs.deleted_files }}; do
+          echo "$file was deleted"
+        done
+
+    - name: Log any modified (M) files
+      if: steps.changed-files.outputs.modified_files != ''
+      run: |
+        for file in ${{ steps.changed-files.outputs.all_modified_files }}; do
+          echo "$file was modified"
+        done
+
+    # --- CALL REFRESH ENDPOINT USING PYTHON ---
+    - name: Setup Python
+      run: pip install requests
+    - name: Compile all files with diff into a request body using Python
+      if: steps.changed-files.outputs.any_modified == 'true'
+      run: |
+        import requests
+
+        list_diff_paths = "${{ steps.changed-files.outputs.all_modified_files }}".split(' ')
+        list_added_paths = "${{ steps.changed-files.outputs.added_files }}".split(' ')
+        list_deleted_paths = "${{ steps.changed-files.outputs.deleted_files }}".split(' ')
+        list_modified_paths = "${{ steps.changed-files.outputs.modified_files }}".split(' ')
+
+        print("All Diff", list_diff_paths)
+        print("A", list_added_paths, "D", list_deleted_paths, "M", list_modified_paths)
+
+        response = requests.post('${{ env.WEB_URL }}/action/refresh', data = '{ \
+          "repo": "${{ github.event.repository.name }}", \
+          "contentPaths": list_diff_paths, \
+          "commitSha": ${{ github.sha }} \
+        }')
+        
+        print("Request Response", response)
+      shell: python
