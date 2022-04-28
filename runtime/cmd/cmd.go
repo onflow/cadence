@@ -220,6 +220,6 @@ func PrepareInterpreter(filename string) (*interpreter.Interpreter, *sema.Checke
 }
 
 func ExitWithError(message string) {
-	println(pretty.FormatErrorMessage(pretty.ErrorPrefix, message, true))
+	println(pretty.FormatErrorMessage(message, true))
 	os.Exit(1)
 }
