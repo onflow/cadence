@@ -32,6 +32,13 @@ import (
 	"github.com/onflow/cadence/runtime/pretty"
 	"github.com/onflow/cadence/tools/analysis"
 	"github.com/onflow/cadence/tools/contract-analyzer/analyzers"
+	"github.com/onflow/flow-cli/pkg/flowkit"
+	"github.com/onflow/flow-cli/pkg/flowkit/config"
+	"github.com/onflow/flow-cli/pkg/flowkit/gateway"
+	"github.com/onflow/flow-cli/pkg/flowkit/output"
+	"github.com/onflow/flow-cli/pkg/flowkit/services"
+	"github.com/onflow/flow-go-sdk"
+	"github.com/spf13/afero"
 )
 
 var errorPrettyPrinter = pretty.NewErrorPrettyPrinter(os.Stdout, true)
@@ -42,12 +49,12 @@ func printErr(err error, location common.Location, codes map[common.LocationID]s
 		panic(printErr)
 	}
 }
-
-var csvPathFlag = flag.String("csv", "", "analyze all contracts in a CSV file")
-
 func main() {
+	var csvPathFlag = flag.String("csv", "", "analyze all contracts in the specified CSV file")
+	var networkFlag = flag.String("network", "", "name of network")
+	var addressFlag = flag.String("address", "", "analyze contracts in the given account")
 	var analyzersFlag stringSliceFlag
-	flag.Var(&analyzersFlag, "a", "enable analyzer")
+	flag.Var(&analyzersFlag, "analyze", "enable analyzer")
 
 	defaultUsage := flag.Usage
 	flag.Usage = func() {
@@ -91,14 +98,88 @@ func main() {
 		}
 	}
 
-	csvFlag := *csvPathFlag
+	cvsPath := *csvPathFlag
+	address := *addressFlag
 	switch {
-	case csvFlag != "":
-		analyzeCSV(csvFlag, enabledAnalyzers)
+	case cvsPath != "":
+		analyzeCSV(cvsPath, enabledAnalyzers)
+
+	case address != "":
+		network := *networkFlag
+		analyzeAccount(address, network, enabledAnalyzers)
 
 	default:
-		println("Nothing to do. Please provide a flag. See -help")
+		println("Nothing to do. Please provide -address or -csv. See -help")
 	}
+}
+
+func analyzeAccount(address string, networkName string, analyzers []*analysis.Analyzer) {
+	loader := &afero.Afero{Fs: afero.NewOsFs()}
+	state, err := flowkit.Load(config.DefaultPaths(), loader)
+	if err != nil {
+		panic(err)
+	}
+
+	network, err := state.Networks().ByName(networkName)
+	if err != nil {
+		panic(err)
+	}
+
+	grpcGateway, err := gateway.NewGrpcGateway(network.Host)
+	if err != nil {
+		panic(err)
+	}
+
+	logger := output.NewStdoutLogger(output.ErrorLog)
+
+	services := services.NewServices(grpcGateway, state, logger)
+
+	codes := map[common.LocationID]string{}
+	contractNames := map[common.Address][]string{}
+
+	getContracts := func(flowAddress flow.Address) (map[string][]byte, error) {
+		account, err := services.Accounts.Get(flowAddress)
+		if err != nil {
+			return nil, err
+		}
+
+		return account.Contracts, nil
+	}
+
+	flowAddress := flow.HexToAddress(address)
+	commonAddress := common.Address(flowAddress)
+
+	contracts, err := getContracts(flowAddress)
+	if err != nil {
+		panic(err)
+	}
+
+	locations := make([]common.Location, 0, len(contracts))
+	for contractName := range contracts {
+		location := common.AddressLocation{
+			Address: commonAddress,
+			Name:    contractName,
+		}
+		locations = append(locations, location)
+	}
+
+	analysisConfig := analysis.NewSimpleConfig(
+		analysis.NeedTypes,
+		codes,
+		contractNames,
+		func(address common.Address) (map[string]string, error) {
+			contracts, err := getContracts(flow.Address(address))
+			if err != nil {
+				return nil, err
+			}
+			codes := make(map[string]string, len(contracts))
+			for name, bytes := range contracts {
+				codes[name] = string(bytes)
+			}
+			return codes, nil
+		},
+	)
+	analyze(analysisConfig, locations, codes, analyzers)
 }
 
 func analyzeCSV(path string, analyzers []*analysis.Analyzer) {
@@ -111,13 +192,22 @@ func analyzeCSV(path string, analyzers []*analysis.Analyzer) {
 		_ = file.Close()
 	}(csvFile)
 
-	locations, codes, contractNames := readContracts(csvFile)
+	locations, codes, contractNames := readCSV(csvFile)
 	analysisConfig := analysis.NewSimpleConfig(
 		analysis.NeedTypes,
 		codes,
 		contractNames,
+		nil,
 	)
+	analyze(analysisConfig, locations, codes, analyzers)
+}
 
+func analyze(
+	config *analysis.Config,
+	locations []common.Location,
+	codes map[common.LocationID]string,
+	analyzers []*analysis.Analyzer,
+) {
 	programs := make(analysis.Programs, len(locations))
 
 	log.Println("Loading ...")
@@ -125,7 +215,7 @@ func analyzeCSV(path string, analyzers []*analysis.Analyzer) {
 	for _, location := range locations {
 		log.Printf("Loading %s", location)
 
-		err := programs.Load(analysisConfig, location)
+		err := programs.Load(config, location)
 		if err != nil {
 			printErr(err, location, codes)
 		}
@@ -156,7 +246,7 @@ func analyzeCSV(path string, analyzers []*analysis.Analyzer) {
 	}
 }
 
-func readContracts(
+func readCSV(
 	r io.Reader,
 ) (
 	locations []common.Location,
