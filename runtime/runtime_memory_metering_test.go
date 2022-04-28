@@ -20,6 +20,8 @@ package runtime
 
 import (
 	"fmt"
+	"github.com/onflow/cadence/encoding/json"
+	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -201,4 +203,569 @@ func TestInterpreterElaborationImportMetering(t *testing.T) {
 			assert.Equal(t, uint64(3*imports+4), meter.getMemory(common.MemoryKindElaboration))
 		})
 	}
+}
+
+func TestCadenceValueAndTypeMetering(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("import type Int small value", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main(a: Int) {
+            }
+        `
+		meter := newTestMemoryGauge()
+		runtimeInterface := &testRuntimeInterface{
+			meterMemory: func(usage common.MemoryUsage) error {
+				return meter.MeterMemory(usage)
+			},
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(nil, b)
+			},
+		}
+
+		runtime := newTestInterpreterRuntime()
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+				Arguments: encodeArgs([]cadence.Value{
+					cadence.NewUnmeteredInt(12),
+				}),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  utils.TestLocation,
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceSimpleType))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoid))
+	})
+
+	t.Run("import type Int large value", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main(a: Int) {
+            }
+        `
+		meter := newTestMemoryGauge()
+		runtimeInterface := &testRuntimeInterface{
+			meterMemory: func(usage common.MemoryUsage) error {
+				return meter.MeterMemory(usage)
+			},
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(nil, b)
+			},
+		}
+
+		runtime := newTestInterpreterRuntime()
+
+		largeBigInt := &big.Int{}
+		largeBigInt.Exp(big.NewInt(2<<33), big.NewInt(6), nil)
+		largeInt := cadence.NewUnmeteredInt(0)
+		largeInt.Value = largeBigInt
+
+		fmt.Println(largeInt.String())
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+				Arguments: encodeArgs([]cadence.Value{
+					largeInt,
+				}),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  utils.TestLocation,
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceSimpleType))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoid))
+	})
+
+	t.Run("import type Int8", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main(a: Int8) {
+            }
+        `
+		meter := newTestMemoryGauge()
+		runtimeInterface := &testRuntimeInterface{
+			meterMemory: func(usage common.MemoryUsage) error {
+				return meter.MeterMemory(usage)
+			},
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(nil, b)
+			},
+		}
+
+		runtime := newTestInterpreterRuntime()
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+				Arguments: encodeArgs([]cadence.Value{
+					cadence.NewUnmeteredInt8(12),
+				}),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  utils.TestLocation,
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceSimpleType))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoid))
+	})
+
+	t.Run("import type Int16", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main(a: Int16) {
+            }
+        `
+		meter := newTestMemoryGauge()
+		runtimeInterface := &testRuntimeInterface{
+			meterMemory: func(usage common.MemoryUsage) error {
+				return meter.MeterMemory(usage)
+			},
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(nil, b)
+			},
+		}
+
+		runtime := newTestInterpreterRuntime()
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+				Arguments: encodeArgs([]cadence.Value{
+					cadence.NewUnmeteredInt16(12),
+				}),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  utils.TestLocation,
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceSimpleType))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoid))
+	})
+
+	t.Run("import type Int32", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main(a: Int32) {
+            }
+        `
+		meter := newTestMemoryGauge()
+		runtimeInterface := &testRuntimeInterface{
+			meterMemory: func(usage common.MemoryUsage) error {
+				return meter.MeterMemory(usage)
+			},
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(nil, b)
+			},
+		}
+
+		runtime := newTestInterpreterRuntime()
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+				Arguments: encodeArgs([]cadence.Value{
+					cadence.NewUnmeteredInt32(12),
+				}),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  utils.TestLocation,
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceSimpleType))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoid))
+	})
+
+	t.Run("import type Int64", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main(a: Int64) {
+            }
+        `
+		meter := newTestMemoryGauge()
+		runtimeInterface := &testRuntimeInterface{
+			meterMemory: func(usage common.MemoryUsage) error {
+				return meter.MeterMemory(usage)
+			},
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(nil, b)
+			},
+		}
+
+		runtime := newTestInterpreterRuntime()
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+				Arguments: encodeArgs([]cadence.Value{
+					cadence.NewUnmeteredInt64(12),
+				}),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  utils.TestLocation,
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceSimpleType))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoid))
+	})
+
+	t.Run("import type Int128", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main(a: Int128) {
+            }
+        `
+		meter := newTestMemoryGauge()
+		runtimeInterface := &testRuntimeInterface{
+			meterMemory: func(usage common.MemoryUsage) error {
+				return meter.MeterMemory(usage)
+			},
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(nil, b)
+			},
+		}
+
+		runtime := newTestInterpreterRuntime()
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+				Arguments: encodeArgs([]cadence.Value{
+					cadence.NewUnmeteredInt128(12),
+				}),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  utils.TestLocation,
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceSimpleType))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoid))
+	})
+
+	t.Run("import type Int256", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main(a: Int256) {
+            }
+        `
+		meter := newTestMemoryGauge()
+		runtimeInterface := &testRuntimeInterface{
+			meterMemory: func(usage common.MemoryUsage) error {
+				return meter.MeterMemory(usage)
+			},
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(nil, b)
+			},
+		}
+
+		runtime := newTestInterpreterRuntime()
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+				Arguments: encodeArgs([]cadence.Value{
+					cadence.NewUnmeteredInt256(12),
+				}),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  utils.TestLocation,
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceSimpleType))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoid))
+	})
+
+	t.Run("return value Int small value", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main(): Int {
+				let a = Int(2)
+				return a
+            }
+        `
+		meter := newTestMemoryGauge()
+		runtimeInterface := &testRuntimeInterface{
+			meterMemory: func(usage common.MemoryUsage) error {
+				return meter.MeterMemory(usage)
+			},
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(nil, b)
+			},
+		}
+
+		runtime := newTestInterpreterRuntime()
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  utils.TestLocation,
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindCadenceInt))
+	})
+
+	t.Run("return value Int large value", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main(): Int {
+				let a = Int(1)
+				let b = a << 64
+				return b
+            }
+        `
+		meter := newTestMemoryGauge()
+		runtimeInterface := &testRuntimeInterface{
+			meterMemory: func(usage common.MemoryUsage) error {
+				return meter.MeterMemory(usage)
+			},
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(nil, b)
+			},
+		}
+
+		runtime := newTestInterpreterRuntime()
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  utils.TestLocation,
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindCadenceInt))
+	})
+
+	t.Run("return value Int8", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main(): Int8 {
+                return 12
+            }
+        `
+		meter := newTestMemoryGauge()
+		runtimeInterface := &testRuntimeInterface{
+			meterMemory: func(usage common.MemoryUsage) error {
+				return meter.MeterMemory(usage)
+			},
+		}
+
+		runtime := newTestInterpreterRuntime()
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  utils.TestLocation,
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceNumber))
+	})
+
+	t.Run("return value Int16", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main(): Int16 {
+                return 12
+            }
+        `
+		meter := newTestMemoryGauge()
+		runtimeInterface := &testRuntimeInterface{
+			meterMemory: func(usage common.MemoryUsage) error {
+				return meter.MeterMemory(usage)
+			},
+		}
+
+		runtime := newTestInterpreterRuntime()
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  utils.TestLocation,
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCadenceNumber))
+	})
+
+	t.Run("return value Int32", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main(): Int32 {
+                return 12
+            }
+        `
+		meter := newTestMemoryGauge()
+		runtimeInterface := &testRuntimeInterface{
+			meterMemory: func(usage common.MemoryUsage) error {
+				return meter.MeterMemory(usage)
+			},
+		}
+
+		runtime := newTestInterpreterRuntime()
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  utils.TestLocation,
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindCadenceNumber))
+	})
+
+	t.Run("return value Int64", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main(): Int64 {
+                return 12
+            }
+        `
+		meter := newTestMemoryGauge()
+		runtimeInterface := &testRuntimeInterface{
+			meterMemory: func(usage common.MemoryUsage) error {
+				return meter.MeterMemory(usage)
+			},
+		}
+
+		runtime := newTestInterpreterRuntime()
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  utils.TestLocation,
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindCadenceNumber))
+	})
+
+	t.Run("return value Int128", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main(): Int128 {
+                return 12
+            }
+        `
+		meter := newTestMemoryGauge()
+		runtimeInterface := &testRuntimeInterface{
+			meterMemory: func(usage common.MemoryUsage) error {
+				return meter.MeterMemory(usage)
+			},
+		}
+
+		runtime := newTestInterpreterRuntime()
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  utils.TestLocation,
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindCadenceNumber))
+	})
+
+	t.Run("return value Int256", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main(): Int256 {
+                return 12
+            }
+        `
+		meter := newTestMemoryGauge()
+		runtimeInterface := &testRuntimeInterface{
+			meterMemory: func(usage common.MemoryUsage) error {
+				return meter.MeterMemory(usage)
+			},
+		}
+
+		runtime := newTestInterpreterRuntime()
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  utils.TestLocation,
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindCadenceNumber))
+	})
 }
