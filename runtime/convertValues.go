@@ -584,9 +584,16 @@ func exportLinkValue(v interpreter.LinkValue, inter *interpreter.Interpreter) ca
 }
 
 func exportPathValue(gauge common.MemoryGauge, v interpreter.PathValue) cadence.Path {
+	domain := v.Domain.Identifier()
+	common.UseMemory(gauge, common.MemoryUsage{
+		Kind: common.MemoryKindRawString,
+		// no need to add 1 to account for empty string: string is metered in Path struct
+		Amount: uint64(len(domain)),
+	})
+
 	return cadence.NewPath(
 		gauge,
-		v.Domain.Identifier(),
+		domain,
 		v.Identifier,
 	)
 }

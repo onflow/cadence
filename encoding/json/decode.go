@@ -805,20 +805,44 @@ func (d *Decoder) decodeLink(valueJSON interface{}) cadence.Link {
 		// TODO: improve error message
 		panic(ErrInvalidJSONCadence)
 	}
+
+	borrowType := obj.GetString(borrowTypeKey)
+
+	common.UseMemory(d.gauge, common.MemoryUsage{
+		Kind: common.MemoryKindRawString,
+		// no need to add 1 to account for empty string: string is metered in Link struct
+		Amount: uint64(len(borrowType)),
+	})
+
 	return cadence.NewLink(
 		d.gauge,
 		targetPath,
-		obj.GetString(borrowTypeKey),
+		borrowType,
 	)
 }
 
 func (d *Decoder) decodePath(valueJSON interface{}) cadence.Path {
 	obj := toObject(valueJSON)
 
+	domain := obj.GetString(domainKey)
+
+	common.UseMemory(d.gauge, common.MemoryUsage{
+		Kind: common.MemoryKindRawString,
+		// no need to add 1 to account for empty string: string is metered in Path struct
+		Amount: uint64(len(domain)),
+	})
+
+	identifier := obj.GetString(identifierKey)
+	common.UseMemory(d.gauge, common.MemoryUsage{
+		Kind: common.MemoryKindRawString,
+		// no need to add 1 to account for empty string: string is metered in Path struct
+		Amount: uint64(len(identifier)),
+	})
+
 	return cadence.NewPath(
 		d.gauge,
-		obj.GetString(domainKey),
-		obj.GetString(identifierKey),
+		domain,
+		identifier,
 	)
 }
 
