@@ -38,6 +38,7 @@ const (
 	MemoryKindArrayBase
 	MemoryKindDictionaryBase
 	MemoryKindCompositeBase
+	MemoryKindSimpleCompositeBase
 	MemoryKindOptional
 	MemoryKindNil
 	MemoryKindVoid
@@ -51,6 +52,7 @@ const (
 	MemoryKindHostFunction
 	MemoryKindBoundFunction
 	MemoryKindBigInt
+	MemoryKindSimpleComposite
 
 	// Atree Nodes
 	MemoryKindAtreeArrayDataSlab
