@@ -137,6 +137,38 @@ func TestParseArrayType(t *testing.T) {
 		)
 	})
 
+	t.Run("constant, invalid size", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseType("[Int ; X ]")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: `expected positive integer size for constant sized type`,
+					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
+				},
+			},
+			errs,
+		)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.VariableSizedType{
+				Type: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "Int",
+						Pos:        ast.Position{Offset: 1, Line: 1, Column: 1},
+					},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+					EndPos:   ast.Position{Offset: 9, Line: 1, Column: 9},
+				},
+			},
+			result,
+		)
+	})
+
 }
 
 func TestParseOptionalType(t *testing.T) {
