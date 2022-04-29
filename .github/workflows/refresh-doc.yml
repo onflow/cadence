@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - hannah-github-actions
 
 env:
   WEB_URL: 'https://nasty-penguin-86.loca.lt' # This needs to be updated to the live web server!
