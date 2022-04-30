@@ -678,7 +678,7 @@ func WithDebugger(debugger *Debugger) Option {
 // Create a base-activation so that it can be reused across all interpreters.
 //
 var baseActivation = func() *VariableActivation {
-	activation := NewVariableActivation(nil)
+	activation := NewVariableActivation(nil, nil)
 	defineBaseFunctions(activation)
 	return activation
 }()
@@ -688,11 +688,12 @@ func NewInterpreter(program *Program, location common.Location, options ...Optio
 	interpreter := &Interpreter{
 		Program:                    program,
 		Location:                   location,
-		activations:                &VariableActivations{},
 		Globals:                    map[string]*Variable{},
 		effectivePredeclaredValues: map[string]ValueDeclaration{},
 		resourceVariables:          map[ResourceKindedValue]*Variable{},
 	}
+
+	interpreter.activations = NewVariableActivations(interpreter)
 
 	// Start a new activation/scope for the current program.
 	// Use the base activation as the parent.

@@ -22,26 +22,33 @@
 
 package interpreter
 
+import "github.com/onflow/cadence/runtime/common"
+
 // A VariableActivation is a map of strings to values.
 // It can be used to represent an active scope in a program,
 // i.e. it can be used as a symbol table during semantic analysis,
 // or as an activation record during interpretation or compilation.
 //
 type VariableActivation struct {
-	entries    map[string]*Variable
-	Depth      int
-	Parent     *VariableActivation
-	isFunction bool
+	entries     map[string]*Variable
+	Depth       int
+	Parent      *VariableActivation
+	isFunction  bool
+	memoryGauge common.MemoryGauge
 }
 
-func NewVariableActivation(parent *VariableActivation) *VariableActivation {
+func NewVariableActivation(memoryGauge common.MemoryGauge, parent *VariableActivation) *VariableActivation {
 	var depth int
 	if parent != nil {
 		depth = parent.Depth + 1
 	}
+
+	common.UseMemory(memoryGauge, common.ActivationMemoryUsage)
+
 	return &VariableActivation{
-		Depth:  depth,
-		Parent: parent,
+		Depth:       depth,
+		Parent:      parent,
+		memoryGauge: memoryGauge,
 	}
 }
 
@@ -99,6 +106,7 @@ func (a *VariableActivation) FunctionValues() map[string]*Variable {
 //
 func (a *VariableActivation) Set(name string, value *Variable) {
 	if a.entries == nil {
+		common.UseMemory(a.memoryGauge, common.ActivationEntriesMemoryUsage)
 		a.entries = make(map[string]*Variable)
 	}
 
@@ -113,6 +121,13 @@ func (a *VariableActivation) Set(name string, value *Variable) {
 //
 type VariableActivations struct {
 	activations []*VariableActivation
+	memoryGauge common.MemoryGauge
+}
+
+func NewVariableActivations(memoryGauge common.MemoryGauge) *VariableActivations {
+	return &VariableActivations{
+		memoryGauge: memoryGauge,
+	}
 }
 
 // Current returns the current / most nested activation,
@@ -156,7 +171,7 @@ func (a *VariableActivations) Set(name string, value *Variable) {
 // The new activation has the given parent as its parent.
 //
 func (a *VariableActivations) PushNewWithParent(parent *VariableActivation) *VariableActivation {
-	activation := NewVariableActivation(parent)
+	activation := NewVariableActivation(a.memoryGauge, parent)
 	a.Push(activation)
 	return activation
 }
@@ -198,7 +213,7 @@ func (a *VariableActivations) Pop() {
 func (a *VariableActivations) CurrentOrNew() *VariableActivation {
 	current := a.Current()
 	if current == nil {
-		return NewVariableActivation(nil)
+		return NewVariableActivation(a.memoryGauge, nil)
 	}
 
 	return current
