@@ -125,7 +125,7 @@ type VariableActivations struct {
 }
 
 func NewVariableActivations(memoryGauge common.MemoryGauge) *VariableActivations {
-	// No need to meter since this is created only once per interpreter.
+	// No need to meter.
 	return &VariableActivations{
 		memoryGauge: memoryGauge,
 	}
