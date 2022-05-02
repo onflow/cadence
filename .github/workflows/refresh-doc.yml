@@ -2,11 +2,10 @@ name: refresh-doc
 on:
   push:
     branches:
-      - main
       - hannah-github-actions
 
 env:
-  WEB_URL: 'https://tender-bird-86.loca.lt' # This needs to be updated to the live web server!
+  WEB_URL: 'https://cold-pigs-fail-174-94-59-90.loca.lt' # This needs to be updated to the live web server!
 
 jobs:
   build:
