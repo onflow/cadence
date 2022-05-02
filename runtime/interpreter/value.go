@@ -13932,8 +13932,9 @@ func newCompositeValueFromOrderedMap(
 	typeInfo compositeTypeInfo,
 ) *CompositeValue {
 
-	baseUse, dataUse, metaDataUse := common.NewCompositeMemoryUsages(dict.Count(), 0)
+	baseUse, elementOverhead, dataUse, metaDataUse := common.NewCompositeMemoryUsages(dict.Count(), 0)
 	common.UseMemory(memoryGauge, baseUse)
+	common.UseMemory(memoryGauge, elementOverhead)
 	common.UseMemory(memoryGauge, dataUse)
 	common.UseMemory(memoryGauge, metaDataUse)
 
@@ -15023,11 +15024,12 @@ func newDictionaryValueFromOrderedMap(
 	if keySize != 0 && valueSize != 0 {
 		elementSize = keySize + valueSize
 	}
-	baseUse, dataUse, metaDataUse := common.NewDictionaryMemoryUsages(
+	baseUse, elementOverhead, dataUse, metaDataUse := common.NewDictionaryMemoryUsages(
 		dict.Count(),
 		elementSize,
 	)
 	common.UseMemory(memoryGauge, baseUse)
+	common.UseMemory(memoryGauge, elementOverhead)
 	common.UseMemory(memoryGauge, dataUse)
 	common.UseMemory(memoryGauge, metaDataUse)
 
@@ -15520,6 +15522,7 @@ func (v *DictionaryValue) Insert(
 
 	// length increases by 1
 	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(v.dictionary.Count(), v.elementSize, false)
+	common.UseMemory(interpreter, common.AtreeMapElementOverhead)
 	common.UseMemory(interpreter, dataSlabs)
 	common.UseMemory(interpreter, metaDataSlabs)
 

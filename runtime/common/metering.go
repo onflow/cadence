@@ -109,6 +109,7 @@ var (
 	ElaborationMemoryUsage = NewConstantMemoryUsage(MemoryKindElaboration)
 
 	SimpleCompositeBaseMemoryUsage = NewConstantMemoryUsage(MemoryKindSimpleCompositeBase)
+	AtreeMapElementOverhead        = NewConstantMemoryUsage(MemoryKindAtreeMapElementOverhead)
 )
 
 func UseMemory(gauge MemoryGauge, usage MemoryUsage) {
@@ -210,20 +211,26 @@ func NewArrayMemoryUsages(count uint64, element_size uint) (MemoryUsage, MemoryU
 	}, leaves, branches
 }
 
-func NewDictionaryMemoryUsages(count uint64, element_size uint) (MemoryUsage, MemoryUsage, MemoryUsage) {
+func NewDictionaryMemoryUsages(count uint64, element_size uint) (MemoryUsage, MemoryUsage, MemoryUsage, MemoryUsage) {
 	leaves, branches := newAtreeMemoryUsage(count, element_size, false)
 	return MemoryUsage{
-		Kind:   MemoryKindDictionaryBase,
-		Amount: 1,
-	}, leaves, branches
+			Kind:   MemoryKindDictionaryBase,
+			Amount: 1,
+		}, MemoryUsage{
+			Kind:   MemoryKindAtreeMapElementOverhead,
+			Amount: count,
+		}, leaves, branches
 }
 
-func NewCompositeMemoryUsages(count uint64, element_size uint) (MemoryUsage, MemoryUsage, MemoryUsage) {
+func NewCompositeMemoryUsages(count uint64, element_size uint) (MemoryUsage, MemoryUsage, MemoryUsage, MemoryUsage) {
 	leaves, branches := newAtreeMemoryUsage(count, element_size, false)
 	return MemoryUsage{
-		Kind:   MemoryKindCompositeBase,
-		Amount: 1,
-	}, leaves, branches
+			Kind:   MemoryKindCompositeBase,
+			Amount: 1,
+		}, MemoryUsage{
+			Kind:   MemoryKindAtreeMapElementOverhead,
+			Amount: count,
+		}, leaves, branches
 }
 
 func NewSimpleCompositeMemoryUsage(length int) MemoryUsage {

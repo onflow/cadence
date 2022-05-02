@@ -408,6 +408,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 
 		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindString))
 		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindDictionaryBase))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapElementOverhead))
 		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindVariable))
@@ -487,6 +488,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindDictionaryBase))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapElementOverhead))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
 		assert.Equal(t, uint64(10), meter.getMemory(common.MemoryKindPrimitiveStaticType))
@@ -518,6 +520,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindDictionaryBase))
+		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindAtreeMapElementOverhead))
 		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
 	})
@@ -547,6 +550,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindDictionaryBase))
+		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindAtreeMapElementOverhead))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
 	})
@@ -570,6 +574,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindDictionaryBase))
+		assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindAtreeMapElementOverhead))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
 	})
@@ -760,6 +765,7 @@ func TestInterpretCompositeFieldMetering(t *testing.T) {
 
 		assert.Equal(t, uint64(286), meter.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCompositeBase))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindAtreeMapElementOverhead))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
 	})
@@ -789,6 +795,7 @@ func TestInterpretCompositeFieldMetering(t *testing.T) {
 
 		assert.Equal(t, uint64(399), meter.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapElementOverhead))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCompositeBase))
 	})
