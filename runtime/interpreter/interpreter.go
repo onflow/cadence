@@ -678,7 +678,9 @@ func WithDebugger(debugger *Debugger) Option {
 // Create a base-activation so that it can be reused across all interpreters.
 //
 var baseActivation = func() *VariableActivation {
+	// No need to meter since this is only created once
 	activation := NewVariableActivation(nil, nil)
+
 	defineBaseFunctions(activation)
 	return activation
 }()

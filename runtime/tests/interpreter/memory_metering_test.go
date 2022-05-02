@@ -8632,3 +8632,67 @@ func TestInterpretASTMetering(t *testing.T) {
 		assert.Equal(t, uint64(126), meter.getMemory(common.MemoryKindRange))
 	})
 }
+
+func TestInterpretVariableActivationMetering(t *testing.T) {
+	t.Parallel()
+
+	t.Run("single function", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {}
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindActivation))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindActivationEntries))
+	})
+
+	t.Run("nested function call", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                foo(a: "hello", b: 23)
+            }
+
+            pub fun foo(a: String, b: Int) {
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindActivation))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindActivationEntries))
+	})
+
+	t.Run("local scope", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                if true {
+                    let a = 1
+                }
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindActivation))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindActivationEntries))
+	})
+}
