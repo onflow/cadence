@@ -1,21 +1,31 @@
 name: refresh-doc
 on:
-  push:
-    branches:
-      - hannah-github-actions
+  workflow_call:
+    inputs:
+      username:
+        required: true
+        type: string
+    secrets:
+      token:
+        required: true
+  # push:
+  #   branches:
+  #     - hannah-github-actions
 
 env:
-  WEB_URL: 'https://cold-pigs-fail-174-94-59-90.loca.lt' # This needs to be updated to the live web server!
+  WEB_URL: 'https://good-kids-occur-174-94-59-90.loca.lt' # This needs to be updated to the live web server!
 
 jobs:
-  build:
+  refresh:
+    name: Refresh Documentation
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v3
       
     - name: Changed Files
       id: changed-files
-      uses: tj-actions/changed-files@v18.7
+      uses: 
+      
       with: # Any file in the docs
         files: |
           docs/**
@@ -52,7 +62,8 @@ jobs:
     # --- CALL REFRESH ENDPOINT USING PYTHON ---
     - name: Setup Python
       run: pip install requests
-    - name: Compile all files with diff into a request body using Python
+
+    - name: Format request bodya and call refresh using python
       if: steps.changed-files.outputs.any_modified == 'true'
       run: |
         import requests
@@ -65,11 +76,15 @@ jobs:
         print("All Diff", list_diff_paths)
         print("A", list_added_paths, "D", list_deleted_paths, "M", list_modified_paths)
 
-        response = requests.post('${{ env.WEB_URL }}/action/refresh', data = '{ \
-          "repo": "${{ github.event.repository.name }}", \
-          "contentPaths": list_diff_paths, \
-          "commitSha": ${{ github.sha }} \
-        }')
+        # Format path to string
+        list_diff_paths_formatted = ', '.join('"{0}"'.format(p) for p in hardcoded_diff_paths)
+        list_diff_paths_formatted = '[' + hardcoded_diff_paths_formatted + ']'
+        print('DEBUGGING LOG - Diff paths formatted to string for json body', hardcoded_diff_paths_formatted)
+
+        payload = '{"repo": "${{ github.event.repository.name }}", "contentPaths": ' + list_diff_paths_formatted + ', "commitSha": "${{ github.sha }}"}'
+
+        # Call refresh
+        response = requests.post('${{ env.WEB_URL }}/action/refresh', data=payload)
         
         print("Request Response", response)
       shell: python
