@@ -18,7 +18,7 @@ env:
 jobs:
   refresh:
     name: Refresh Documentation
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
       
@@ -61,9 +61,11 @@ jobs:
 
     # --- CALL REFRESH ENDPOINT USING PYTHON ---
     - name: Setup Python
+      continue-on-error: true
       run: pip install requests
 
-    - name: Format request bodya and call refresh using python
+    - name: Format request body and call refresh using python
+      continue-on-error: true
       if: steps.changed-files.outputs.any_modified == 'true'
       run: |
         import requests
