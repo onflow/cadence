@@ -15776,7 +15776,7 @@ func (v *DictionaryValue) Transfer(
 	storable atree.Storable,
 ) Value {
 	baseUse, elementOverhead, dataUse, metaDataUse := common.NewDictionaryMemoryUsages(
-		uint64(v.dictionary.Count()),
+		v.dictionary.Count(),
 		v.elementSize,
 	)
 	common.UseMemory(interpreter, baseUse)
