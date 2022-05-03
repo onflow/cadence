@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/pretty"
 	"github.com/onflow/cadence/runtime/sema"
@@ -171,6 +172,9 @@ func ExpectCheckerErrors(t *testing.T, err error, count int) []error {
 
 	for _, checkerErr := range errs {
 		_ = checkerErr.Error()
+		if hasSecondaryError, ok := checkerErr.(errors.SecondaryError); ok {
+			_ = hasSecondaryError.SecondaryError()
+		}
 	}
 
 	return errs
