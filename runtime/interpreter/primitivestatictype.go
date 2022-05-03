@@ -194,13 +194,13 @@ func (t PrimitiveStaticType) elementSize() uint {
 		PrimitiveStaticTypeAny:
 		return UnknownElementSize
 	case PrimitiveStaticTypeVoid:
-		return 3 // see VoidValue ByteLength
+		return uint(len(cborVoidValue))
 	case PrimitiveStaticTypeNever:
-		return 1
+		return cborTagSize + 1
 	case PrimitiveStaticTypeBool:
-		return 1
+		return cborTagSize + 1
 	case PrimitiveStaticTypeAddress:
-		return 8 // address length is 8 bytes
+		return cborTagSize + 8 // address length is 8 bytes
 	case PrimitiveStaticTypeString,
 		PrimitiveStaticTypeCharacter,
 		PrimitiveStaticTypeMetaType,
@@ -209,7 +209,7 @@ func (t PrimitiveStaticType) elementSize() uint {
 
 	case PrimitiveStaticTypeFixedPoint,
 		PrimitiveStaticTypeSignedFixedPoint:
-		return 8
+		return cborTagSize + 8
 
 	// values of these types may wrap big.Int
 	case PrimitiveStaticTypeInt,
@@ -227,21 +227,21 @@ func (t PrimitiveStaticType) elementSize() uint {
 	case PrimitiveStaticTypeInt8,
 		PrimitiveStaticTypeUInt8,
 		PrimitiveStaticTypeWord8:
-		return 1
+		return cborTagSize + 2
 	case PrimitiveStaticTypeInt16,
 		PrimitiveStaticTypeUInt16,
 		PrimitiveStaticTypeWord16:
-		return 2
+		return cborTagSize + 3
 	case PrimitiveStaticTypeInt32,
 		PrimitiveStaticTypeUInt32,
 		PrimitiveStaticTypeWord32:
-		return 4
+		return cborTagSize + 5
 	case PrimitiveStaticTypeInt64,
 		PrimitiveStaticTypeUInt64,
 		PrimitiveStaticTypeWord64,
 		PrimitiveStaticTypeFix64,
 		PrimitiveStaticTypeUFix64:
-		return 8
+		return cborTagSize + 9
 
 	case PrimitiveStaticTypePath,
 		PrimitiveStaticTypeCapability,
