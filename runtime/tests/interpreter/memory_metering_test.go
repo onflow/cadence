@@ -586,7 +586,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
             pub fun main() {
                 let x: {Int8: String} = {3: "a"} // 2 data slabs
                 x[3] = "b" // fits in existing slab
-				x[4] = "d" // fits in existing slab
+                x[4] = "d" // fits in existing slab
                 x[3] = "c" // adds 1 data slab and metadata slab
             }
         `
