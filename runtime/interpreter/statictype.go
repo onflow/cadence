@@ -42,6 +42,8 @@ const UnknownElementSize = 0
 type StaticType interface {
 	fmt.Stringer
 	isStaticType()
+	/* this returns the size (in bytes) of the largest inhabitant of this type,
+	or UnknownElementSize if the largest inhabitant has arbitrary size */
 	elementSize() uint
 	Equal(other StaticType) bool
 	Encode(e *cbor.StreamEncoder) error
