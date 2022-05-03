@@ -65,14 +65,14 @@ func ConvertStoredValue(gauge common.MemoryGauge, value atree.Value) (Value, err
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
-		return newArrayValueFromAtreeValue(gauge, value, staticType), nil
+		return newArrayValueFromConstructor(gauge, staticType, value.Count(), func() *atree.Array { return value }), nil
 	case *atree.OrderedMap:
 		typeInfo := value.Type()
 		switch typeInfo := typeInfo.(type) {
 		case DictionaryStaticType:
-			return newDictionaryValueFromOrderedMap(gauge, value, typeInfo), nil
+			return newDictionaryValueFromConstructor(gauge, typeInfo, value.Count(), func() *atree.OrderedMap { return value }), nil
 		case compositeTypeInfo:
-			return newCompositeValueFromOrderedMap(gauge, value, typeInfo), nil
+			return newCompositeValueFromConstructor(gauge, value.Count(), typeInfo, func() *atree.OrderedMap { return value }), nil
 		default:
 			return nil, fmt.Errorf("invalid ordered map type info: %T", typeInfo)
 		}

@@ -78,12 +78,12 @@ func TestInterpretArrayMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-                      pub fun main() {
-                          let x: [Int8] = []
-                          let y: [[String]] = [[]]
-                          let z: [[[Bool]]] = [[[]]]
-                      }
-                  `
+        pub fun main() {
+                let x: [Int8] = []
+                let y: [[String]] = [[]]
+                let z: [[[Bool]]] = [[[]]]
+        }
+`
 
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
@@ -92,7 +92,8 @@ func TestInterpretArrayMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(25), meter.getMemory(common.MemoryKindArrayBase))
-		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindArrayLength))
+		assert.Equal(t, uint64(25), meter.getMemory(common.MemoryKindAtreeArrayDataSlab))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeArrayMetaDataSlab))
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindVariable))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindElaboration))
 		// 1 Int8 for type
@@ -109,13 +110,13 @@ func TestInterpretArrayMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-                          pub fun main() {
-                              let values: [[Int8]] = [[], [], []]
-                              for value in values {
-                                let a = value
-                              }
-                          }
-                      `
+    pub fun main() {
+        let values: [[Int128]] = [[], [], []]
+        for value in values {
+        let a = value
+        }
+    }
+`
 
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
@@ -124,7 +125,8 @@ func TestInterpretArrayMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(30), meter.getMemory(common.MemoryKindArrayBase))
-		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindArrayLength))
+		assert.Equal(t, uint64(33), meter.getMemory(common.MemoryKindAtreeArrayDataSlab))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindAtreeArrayMetaDataSlab))
 		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindVariable))
 
 		// 4 Int8: 1 for type, 3 for values
@@ -137,11 +139,11 @@ func TestInterpretArrayMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-                      pub fun main() {
-                          let x: [Int8] = []
-                          x.contains(5)
-                      }
-                  `
+        pub fun main() {
+                let x: [Int128] = []
+                x.contains(5)
+        }
+`
 
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
@@ -150,22 +152,23 @@ func TestInterpretArrayMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindArrayBase))
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindArrayLength))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeArrayDataSlab))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeArrayMetaDataSlab))
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindBool))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 
-	t.Run("append", func(t *testing.T) {
+	t.Run("append with packing", func(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+        pub fun main() {
                 let x: [Int8] = []
                 x.append(3)
-                        x.append(4)
-            }
-        `
+                x.append(4)
+        }
+`
 
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
@@ -174,23 +177,27 @@ func TestInterpretArrayMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindArrayBase))
-		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindArrayLength))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeArrayDataSlab))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeArrayMetaDataSlab))
 	})
 
 	t.Run("append many", func(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
-                let x: [Int8] = []
-                x.append(0) // adds 1
-                        x.append(1) // adds 2
-                        x.append(2) // adds 2
-                        x.append(3) // adds 2
-                        x.append(4) // adds 3
-                        x.append(5) // adds 3
-            }
-        `
+        pub fun main() {
+                let x: [Int128] = [] // 2 data slabs
+                x.append(0) // fits in existing slab
+                x.append(1) // fits in existing slab
+                x.append(2) // adds 1 data and metadata slab
+                x.append(3) // fits in existing slab
+                x.append(4) // adds 1 data slab
+                x.append(5) // fits in existing slab
+                x.append(6) // adds 1 data slab
+                x.append(7) // fits in existing slab
+                x.append(8) // adds 1 data slab
+        }
+`
 
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
@@ -199,19 +206,24 @@ func TestInterpretArrayMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindArrayBase))
-		assert.Equal(t, uint64(13), meter.getMemory(common.MemoryKindArrayLength))
+		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindAtreeArrayDataSlab))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindAtreeArrayMetaDataSlab))
 	})
 
-	t.Run("insert", func(t *testing.T) {
+	t.Run("append very many", func(t *testing.T) {
 		t.Parallel()
 
 		script := `
-                        pub fun main() {
-                            let x: [Int8] = []
-                            x.insert(at:0, 3)
-                            x.insert(at:1, 3)
-                        }
-                    `
+        pub fun main() {
+				var i = 0;
+                let x: [Int128] = [] // 2 data slabs
+                while i < 120 { // should result in 4 meta data slabs and 60 slabs
+					x.append(0)
+					i = i + 1
+				}
+        }
+`
+
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
@@ -219,25 +231,110 @@ func TestInterpretArrayMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindArrayBase))
-		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindArrayLength))
+		assert.Equal(t, uint64(61), meter.getMemory(common.MemoryKindAtreeArrayDataSlab))
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindAtreeArrayMetaDataSlab))
+	})
+
+	t.Run("insert without packing", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+        pub fun main() {
+                let x: [Int128] = []
+                x.insert(at:0, 3)
+                x.insert(at:1, 3)
+        }
+`
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindArrayBase))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeArrayDataSlab))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeArrayMetaDataSlab))
+	})
+
+	t.Run("insert with packing", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+                pub fun main() {
+                let x: [Int8] = []
+                x.insert(at:0, 3)
+                x.insert(at:1, 3)
+                }
+`
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindArrayBase))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeArrayDataSlab))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeArrayMetaDataSlab))
 
 		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindVariableSizedStaticType))
+	})
+
+	t.Run("update", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+    pub fun main() {
+        let x: [Int128] = [0, 1, 2, 3] // uses 2 data slabs and 1 metadata slab
+        x[0] = 1 // adds 1 data and 1 metadata slab 
+        x[2] = 1  // adds 1 data and 1 metadata slab 
+    }
+`
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindArrayBase))
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindAtreeArrayDataSlab))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeArrayMetaDataSlab))
+	})
+
+	t.Run("update fits in slab", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+                pub fun main() {
+                        let x: [Int128] = [0, 1, 2] // uses 2 data slabs and 1 metadata slab
+                        x[0] = 1 // fits in existing slab
+                        x[2] = 1 // fits in existing slab
+                }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindArrayBase))
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindAtreeArrayDataSlab))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeArrayMetaDataSlab))
 	})
 
 	t.Run("constant", func(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
-                let x: [Int8; 0] = []
-                let y: [Int8; 1] = [2]
-                let z: [Int8; 2] = [2, 4]
-                let w: [[Int8; 2]] = [[2, 4]]
-                let r: [[Int8; 2]] = [[2, 4], [8, 16]]
-                let q: [[Int8; 2]; 2] = [[2, 4], [8, 16]]
-            }
-        `
+    pub fun main() {
+        let x: [Int8; 0] = []
+        let y: [Int8; 1] = [2]
+        let z: [Int8; 2] = [2, 4]
+        let w: [[Int8; 2]] = [[2, 4]]
+        let r: [[Int8; 2]] = [[2, 4], [8, 16]]
+        let q: [[Int8; 2]; 2] = [[2, 4], [8, 16]]
+    }
+`
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
@@ -245,7 +342,8 @@ func TestInterpretArrayMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(37), meter.getMemory(common.MemoryKindArrayBase))
-		assert.Equal(t, uint64(66), meter.getMemory(common.MemoryKindArrayLength))
+		assert.Equal(t, uint64(37), meter.getMemory(common.MemoryKindAtreeArrayDataSlab))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeArrayMetaDataSlab))
 
 		// 1 for `w`: 1 for the element
 		// 2 for `r`: 1 for each element
@@ -260,16 +358,16 @@ func TestInterpretArrayMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-                        pub fun main() {
-                            let x: [Int8] = []
-                            x.insert(at:0, 3) // adds 1
-                            x.insert(at:1, 3) // adds 2
-                            x.insert(at:2, 3) // adds 2
-                            x.insert(at:3, 3) // adds 2
-                            x.insert(at:4, 3) // adds 3
-                            x.insert(at:5, 3) // adds 3
-                        }
-                    `
+    pub fun main() {
+        let x: [Int128] = [] // 2 data slabs
+        x.insert(at:0, 3) // fits in existing slab
+        x.insert(at:1, 3) // fits in existing slab
+        x.insert(at:2, 3) // adds 1 metadata and data slab
+        x.insert(at:3, 3) // fits in existing slab
+        x.insert(at:4, 3) // adds 1 data slab
+        x.insert(at:5, 3) // fits in existing slab
+    }
+`
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
@@ -277,7 +375,8 @@ func TestInterpretArrayMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindArrayBase))
-		assert.Equal(t, uint64(13), meter.getMemory(common.MemoryKindArrayLength))
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindAtreeArrayDataSlab))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindAtreeArrayMetaDataSlab))
 
 		// 6 Int8 for types
 		// 1 Int8 for `w` element
@@ -295,11 +394,11 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
-                let x: {Int8: String} = {}
-                let y: {String: {Int8: String}} = {"a": {}}
-            }
-        `
+	            pub fun main() {
+	                let x: {Int8: String} = {}
+	                let y: {String: {Int8: String}} = {"a": {}}
+	            }
+	        `
 
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
@@ -309,7 +408,9 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 
 		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindString))
 		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindDictionaryBase))
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindDictionarySize))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapElementOverhead))
+		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindVariable))
 		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 		// 1 for `x`
@@ -324,13 +425,13 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
-                let values: [{Int8: String}] = [{}, {}, {}]
-                for value in values {
-                  let a = value
-                }
-            }
-        `
+	            pub fun main() {
+	                let values: [{Int8: String}] = [{}, {}, {}]
+	                for value in values {
+	                  let a = value
+	                }
+	            }
+	        `
 
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
@@ -353,11 +454,11 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
-                let x: {Int8: String} = {}
-                x.containsKey(5)
-            }
-        `
+	            pub fun main() {
+	                let x: {Int8: String} = {}
+	                x.containsKey(5)
+	            }
+	        `
 
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
@@ -373,10 +474,96 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
+	            pub fun main() {
+	                let x: {Int8: String} = {} 
+	                x.insert(key: 5, "")
+	                x.insert(key: 4, "")
+	            }
+	        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindDictionaryBase))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapElementOverhead))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
+		assert.Equal(t, uint64(10), meter.getMemory(common.MemoryKindPrimitiveStaticType))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindDictionaryStaticType))
+	})
+
+	t.Run("insert many no packing", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+	            pub fun main() {
+	                let x: {Int8: String} = {} // 2 data slabs
+	                x.insert(key: 0, "") // fits in slab
+	                x.insert(key: 1, "") // fits in slab
+	                x.insert(key: 2, "") // adds 1 data and metadata slab
+	                x.insert(key: 3, "") // fits in slab
+	                x.insert(key: 4, "") // adds 1 data slab
+	                x.insert(key: 5, "") // fits in slab
+	                x.insert(key: 6, "") // adds 1 data slab
+	                x.insert(key: 7, "") // fits in slab
+	                x.insert(key: 8, "") // adds 1 data slab
+	            }
+	        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindDictionaryBase))
+		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindAtreeMapElementOverhead))
+		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
+	})
+
+	t.Run("insert many with packing", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+	            pub fun main() {
+	                let x: {Int8: Int8} = {} // 2 data slabs
+	                x.insert(key: 0, 0) // all fit in slab
+	                x.insert(key: 1, 1) 
+	                x.insert(key: 2, 2) 
+	                x.insert(key: 3, 3) 
+	                x.insert(key: 4, 4) 
+	                x.insert(key: 5, 5) 
+	                x.insert(key: 6, 6)
+	                x.insert(key: 7, 7) 
+	                x.insert(key: 8, 8)
+	            }
+	        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindDictionaryBase))
+		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindAtreeMapElementOverhead))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
+	})
+
+	t.Run("update fits in slab", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
             pub fun main() {
-                let x: {Int8: String} = {}
-                x.insert(key: 5, "")
-                        x.insert(key: 4, "")
+                let x: {Int8: String} = {3: "a"} // 2 data slabs
+                x[3] = "b" // fits in existing slab
+                x[3] = "c" // fits in existing slab
+                x[4] = "d" // fits in existing slab
             }
         `
 
@@ -387,9 +574,32 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindDictionaryBase))
-		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindDictionarySize))
-		assert.Equal(t, uint64(10), meter.getMemory(common.MemoryKindPrimitiveStaticType))
-		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindDictionaryStaticType))
+		assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindAtreeMapElementOverhead))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
+	})
+
+	t.Run("update does not fit in slab", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let x: {Int8: String} = {3: "a"} // 2 data slabs
+                x[3] = "b" // fits in existing slab
+                x[4] = "d" // fits in existing slab
+                x[3] = "c" // adds 1 data slab and metadata slab
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindDictionaryBase))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
 	})
 }
 
@@ -428,7 +638,8 @@ func TestInterpretCompositeMetering(t *testing.T) {
 		assert.Equal(t, uint64(14), meter.getMemory(common.MemoryKindString))
 		assert.Equal(t, uint64(540), meter.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindCompositeBase))
-		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindCompositeSize))
+		assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
 		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindVariable))
 
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCompositeStaticType))
@@ -455,10 +666,54 @@ func TestInterpretCompositeMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(27), meter.getMemory(common.MemoryKindCompositeBase))
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindCompositeSize))
+		assert.Equal(t, uint64(27), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
 		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindVariable))
 
 		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindCompositeStaticType))
+	})
+}
+
+func TestInterpretSimpleCompositeMetering(t *testing.T) {
+	t.Parallel()
+
+	t.Run("auth account", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main(a: AuthAccount) {
+            
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main", newTestAuthAccountValue(inter, randomAddressValue()))
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindSimpleCompositeBase))
+		// AuthAccount has 18 fields
+		assert.Equal(t, uint64(18), meter.getMemory(common.MemoryKindSimpleComposite))
+	})
+
+	t.Run("public account", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main(a: PublicAccount) {
+            
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main", newTestPublicAccountValue(inter, randomAddressValue()))
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindSimpleCompositeBase))
+		// PublicAccount has 9 fields
+		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindSimpleComposite))
 	})
 }
 
@@ -469,11 +724,11 @@ func TestInterpretCompositeFieldMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-			pub struct S {}
-			pub fun main() {
-				let s = S()
-			}
-		`
+            pub struct S {}
+            pub fun main() {
+                let s = S()
+            }
+        `
 
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
@@ -481,25 +736,26 @@ func TestInterpretCompositeFieldMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(77), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, uint64(122), meter.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCompositeBase))
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindCompositeSize))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
 	})
 
 	t.Run("1 field", func(t *testing.T) {
 		t.Parallel()
 
 		script := `
-			pub struct S {
-				pub let a: String
-				init(_ a: String) {
-					self.a = a
-				}
-			}
-			pub fun main() {
-				let s = S("a")
-			}
-		`
+            pub struct S {
+                pub let a: String
+                init(_ a: String) {
+                    self.a = a
+                }
+            }
+            pub fun main() {
+                let s = S("a")
+            }
+        `
 
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
@@ -507,9 +763,11 @@ func TestInterpretCompositeFieldMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(181), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, uint64(286), meter.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCompositeBase))
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCompositeSize))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindAtreeMapElementOverhead))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
 	})
 
 	t.Run("2 field", func(t *testing.T) {
@@ -536,7 +794,9 @@ func TestInterpretCompositeFieldMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(399), meter.getMemory(common.MemoryKindRawString))
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCompositeSize))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapElementOverhead))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCompositeBase))
 	})
 }
@@ -1030,8 +1290,8 @@ func TestInterpretOptionalValueMetering(t *testing.T) {
 		script := `
             pub fun main() {
                 let x: {Int8: String} = {1: "foo", 2: "bar"}
-				x[0] = "a"
-				x[1] = "b"
+                x[0] = "a"
+                x[1] = "b"
             }
         `
 
@@ -7203,7 +7463,7 @@ func TestInterpretCapabilityValueMetering(t *testing.T) {
                 account.save(<-r, to: /storage/r)
                 let x = account.link<&R>(/public/capo, target: /storage/r)
 
-				let y = [x]
+                let y = [x]
             }
         `
 		meter := newTestMemoryGauge()
@@ -8122,16 +8382,16 @@ func TestInterpretInterfaceStaticType(t *testing.T) {
 		t.Parallel()
 
 		script := `
-			struct interface I {}
+            struct interface I {}
 
-			pub fun main() {
-				let type = Type<AnyStruct{I}>()
+            pub fun main() {
+                let type = Type<AnyStruct{I}>()
 
-				RestrictedType(
-					identifier: type.identifier,
-					restrictions: [type.identifier]
-				)
-			}
+                RestrictedType(
+                    identifier: type.identifier,
+                    restrictions: [type.identifier]
+                )
+            }
         `
 
 		meter := newTestMemoryGauge()

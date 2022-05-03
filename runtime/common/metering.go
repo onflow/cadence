@@ -107,6 +107,9 @@ var (
 	RangeMemoryUsage    = NewConstantMemoryUsage(MemoryKindRange)
 
 	ElaborationMemoryUsage = NewConstantMemoryUsage(MemoryKindElaboration)
+
+	SimpleCompositeBaseMemoryUsage = NewConstantMemoryUsage(MemoryKindSimpleCompositeBase)
+	AtreeMapElementOverhead        = NewConstantMemoryUsage(MemoryKindAtreeMapElementOverhead)
 )
 
 func UseMemory(gauge MemoryGauge, usage MemoryUsage) {
@@ -127,62 +130,114 @@ func NewConstantMemoryUsage(kind MemoryKind) MemoryUsage {
 	}
 }
 
-func NewArrayMemoryUsages(length int) (MemoryUsage, MemoryUsage) {
-	return MemoryUsage{
-			Kind:   MemoryKindArrayBase,
-			Amount: 1,
-		}, MemoryUsage{
-			Kind:   MemoryKindArrayLength,
-			Amount: uint64(length),
-		}
-}
-
-func NewArrayAdditionalLengthUsage(originalLength, additionalLength int) MemoryUsage {
-	var newAmount uint64
-	if originalLength <= 1 {
-		newAmount = uint64(originalLength + additionalLength)
+func atreeNodes(count uint64, elementSize uint) (leafNodeCount uint64, branchNodeCount uint64) {
+	if elementSize != 0 {
+		// If we know how large each element is, we can compute the number of
+		// atree leaf nodes using this formula:
+		// size * elementSize / default_slab_size
+		leafNodeCount = uint64(math.Ceil(float64(count) * float64(elementSize) / 1024))
 	} else {
-		// size of b+ tree grows logarithmically with the size of the tree
-		newAmount = uint64(math.Log2(float64(originalLength)) + float64(additionalLength))
+		// If we don't know how large each element is, we can overestimate
+		// the number of atree leaf nodes this way, since every non-root leaf node
+		// will always contain at least two elements.
+		leafNodeCount = uint64(math.Ceil(float64(count) / 2))
 	}
-	return MemoryUsage{
-		Kind:   MemoryKindArrayLength,
-		Amount: newAmount,
+	if leafNodeCount < 1 {
+		leafNodeCount = 1 // there will always be at least one data slab
+	}
+
+	branchNodeCount = 0
+	if leafNodeCount >= 2 {
+		const n = 20 // n-ary tree
+		// Compute atree height from number of leaf nodes and n-ary
+		height := 1 + int(math.Ceil(math.Log(float64(leafNodeCount))/math.Log(float64(n))))
+
+		// Compute number of branch nodes from leaf node count and height
+		for i := 1; i < height; i++ {
+			branchNodeCount += uint64(math.Ceil(float64(leafNodeCount) / math.Pow(float64(n), float64(i))))
+		}
+	}
+	return
+}
+
+func newAtreeMemoryUsage(count uint64, elementSize uint, array bool) (MemoryUsage, MemoryUsage) {
+	newLeafNodes, newBranchNodes := atreeNodes(count, elementSize)
+	if array {
+		return MemoryUsage{
+				Kind:   MemoryKindAtreeArrayDataSlab,
+				Amount: newLeafNodes,
+			}, MemoryUsage{
+				Kind:   MemoryKindAtreeArrayMetaDataSlab,
+				Amount: newBranchNodes,
+			}
+	} else {
+		return MemoryUsage{
+				Kind:   MemoryKindAtreeMapDataSlab,
+				Amount: newLeafNodes,
+			}, MemoryUsage{
+				Kind:   MemoryKindAtreeMapMetaDataSlab,
+				Amount: newBranchNodes,
+			}
 	}
 }
 
-func NewDictionaryMemoryUsages(length int) (MemoryUsage, MemoryUsage) {
+func AdditionalAtreeMemoryUsage(originalCount uint64, elementSize uint, array bool) (MemoryUsage, MemoryUsage) {
+	originalLeafNodes, originalBranchNodes := atreeNodes(originalCount, elementSize)
+	newLeafNodes, newBranchNodes := atreeNodes(originalCount+1, elementSize)
+	if array {
+		return MemoryUsage{
+				Kind:   MemoryKindAtreeArrayDataSlab,
+				Amount: newLeafNodes - originalLeafNodes,
+			}, MemoryUsage{
+				Kind:   MemoryKindAtreeArrayMetaDataSlab,
+				Amount: newBranchNodes - originalBranchNodes,
+			}
+	} else {
+		return MemoryUsage{
+				Kind:   MemoryKindAtreeMapDataSlab,
+				Amount: newLeafNodes - originalLeafNodes,
+			}, MemoryUsage{
+				Kind:   MemoryKindAtreeMapMetaDataSlab,
+				Amount: newBranchNodes - originalBranchNodes,
+			}
+	}
+}
+
+func NewArrayMemoryUsages(count uint64, elementSize uint) (MemoryUsage, MemoryUsage, MemoryUsage) {
+	leaves, branches := newAtreeMemoryUsage(count, elementSize, true)
+	return MemoryUsage{
+		Kind:   MemoryKindArrayBase,
+		Amount: 1,
+	}, leaves, branches
+}
+
+func NewDictionaryMemoryUsages(count uint64, elementSize uint) (MemoryUsage, MemoryUsage, MemoryUsage, MemoryUsage) {
+	leaves, branches := newAtreeMemoryUsage(count, elementSize, false)
 	return MemoryUsage{
 			Kind:   MemoryKindDictionaryBase,
 			Amount: 1,
 		}, MemoryUsage{
-			Kind:   MemoryKindDictionarySize,
-			Amount: uint64(length),
-		}
+			Kind:   MemoryKindAtreeMapElementOverhead,
+			Amount: count,
+		}, leaves, branches
 }
 
-func NewDictionaryAdditionalSizeUsage(originalSize, additionalSize int) MemoryUsage {
-	var newAmount uint64
-	if originalSize <= 1 {
-		newAmount = uint64(originalSize + additionalSize)
-	} else {
-		// size of b+ tree grows logarithmically with the size of the tree
-		newAmount = uint64(math.Log2(float64(originalSize)) + float64(additionalSize))
-	}
-	return MemoryUsage{
-		Kind:   MemoryKindDictionarySize,
-		Amount: newAmount,
-	}
-}
-
-func NewCompositeMemoryUsages(length int) (MemoryUsage, MemoryUsage) {
+func NewCompositeMemoryUsages(count uint64, elementSize uint) (MemoryUsage, MemoryUsage, MemoryUsage, MemoryUsage) {
+	leaves, branches := newAtreeMemoryUsage(count, elementSize, false)
 	return MemoryUsage{
 			Kind:   MemoryKindCompositeBase,
 			Amount: 1,
 		}, MemoryUsage{
-			Kind:   MemoryKindCompositeSize,
-			Amount: uint64(length),
-		}
+			Kind:   MemoryKindAtreeMapElementOverhead,
+			Amount: count,
+		}, leaves, branches
+}
+
+func NewSimpleCompositeMemoryUsage(length int) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindSimpleComposite,
+		Amount: uint64(length),
+	}
 }
 
 func NewStringMemoryUsage(length int) MemoryUsage {
