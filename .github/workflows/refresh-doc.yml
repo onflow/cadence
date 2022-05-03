@@ -8,12 +8,9 @@ on:
     secrets:
       token:
         required: true
-  # push:
-  #   branches:
-  #     - hannah-github-actions
 
 env:
-  WEB_URL: 'https://good-kids-occur-174-94-59-90.loca.lt' # This needs to be updated to the live web server!
+  WEB_URL: 'https://eodzjkvfnfbka0z.m.pipedream.net'
 
 jobs:
   refresh:
@@ -81,12 +78,13 @@ jobs:
         # Format path to string
         list_diff_paths_formatted = ', '.join('"{0}"'.format(p) for p in hardcoded_diff_paths)
         list_diff_paths_formatted = '[' + hardcoded_diff_paths_formatted + ']'
-        print('DEBUGGING LOG - Diff paths formatted to string for json body', hardcoded_diff_paths_formatted)
 
+        # Format payload
         payload = '{"repo": "${{ github.event.repository.name }}", "contentPaths": ' + list_diff_paths_formatted + ', "commitSha": "${{ github.sha }}"}'
 
         # Call refresh
-        response = requests.post('${{ env.WEB_URL }}/action/refresh', data=payload)
-        
+        # TODO: We should replace the URL ../action/refresh
+        response = requests.post('${{ env.WEB_URL }}', data=payload)
         print("Request Response", response)
+        
       shell: python
