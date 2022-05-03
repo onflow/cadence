@@ -1,0 +1,13 @@
+name: call-refresh-doc
+on:
+  push:
+    branches:
+      - hannah-github-actions
+
+jobs:
+  call-workflow-passing-data:
+    uses: onflow/cadence/.github/workflows/refresh-doc.yml@hannah-github-actions
+    with:
+      username: codingone21
+    secrets:
+      token: ${{ secrets.TOKEN }}
