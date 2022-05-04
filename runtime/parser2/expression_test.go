@@ -5717,3 +5717,34 @@ func TestParseInvalidNegativeIntegerLiteralWithIncorrectPrefix(t *testing.T) {
 
 	require.Error(t, err)
 }
+
+func TestParseReplayLimit(t *testing.T) {
+
+	t.Parallel()
+
+	var builder strings.Builder
+	builder.WriteString("let t = T")
+	for i := 0; i < 100; i++ {
+		builder.WriteString("<T")
+	}
+	builder.WriteString(">()")
+
+	code := builder.String()
+	_, errs := ParseProgram(code)
+	utils.AssertEqualWithDiff(t,
+		Error{
+			Code: code,
+			Errors: []error{
+				&SyntaxError{
+					Message: fmt.Sprintf("program too ambiguous, replay limit of %d tokens exceeded", replayLimit),
+					Pos: ast.Position{
+						Offset: 210,
+						Line:   1,
+						Column: 210,
+					},
+				},
+			},
+		},
+		errs,
+	)
+}
