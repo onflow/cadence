@@ -106,7 +106,9 @@ var (
 	PositionMemoryUsage = NewConstantMemoryUsage(MemoryKindPosition)
 	RangeMemoryUsage    = NewConstantMemoryUsage(MemoryKindRange)
 
-	ElaborationMemoryUsage = NewConstantMemoryUsage(MemoryKindElaboration)
+	ElaborationMemoryUsage       = NewConstantMemoryUsage(MemoryKindElaboration)
+	ActivationMemoryUsage        = NewConstantMemoryUsage(MemoryKindActivation)
+	ActivationEntriesMemoryUsage = NewConstantMemoryUsage(MemoryKindActivationEntries)
 
 	SimpleCompositeBaseMemoryUsage = NewConstantMemoryUsage(MemoryKindSimpleCompositeBase)
 	AtreeMapElementOverhead        = NewConstantMemoryUsage(MemoryKindAtreeMapElementOverhead)
