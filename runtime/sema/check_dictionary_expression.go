@@ -32,6 +32,10 @@ func (checker *Checker) VisitDictionaryExpression(expression *ast.DictionaryExpr
 
 	expectedType := UnwrapOptionalType(checker.expectedType)
 
+	if expectedType != nil {
+		checker.Elaboration.DictionaryExpressionHasExpectedType[expression] = struct{}{}
+	}
+
 	if expectedMapType, ok := expectedType.(*DictionaryType); ok {
 		keyType = expectedMapType.KeyType
 		valueType = expectedMapType.ValueType

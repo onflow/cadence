@@ -3,11 +3,12 @@ package analyzers_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/tools/analysis"
 	"github.com/onflow/cadence/tools/contract-analyzer/analyzers"
-	"github.com/stretchr/testify/require"
 )
 
 var testLocation = common.StringLocation("test")
@@ -202,11 +203,14 @@ func TestSupertypeInferenceAnalyzer(t *testing.T) {
 
 		diagnostics := testAnalyzers(t,
 			`
-              // same types
-              pub let a = [1, 2]
+              // same types, annotation
+              pub let a: [UInt64] = [1, 2]
+
+              // same types, no annotation
+              pub let b = [UInt64(1), 2]
 
               // different types
-              pub let b = [true as AnyStruct, "true"]
+              pub let c = [true as AnyStruct, "true"]
             `,
 			analyzers.SupertypeInferenceAnalyzer,
 		)
@@ -216,8 +220,18 @@ func TestSupertypeInferenceAnalyzer(t *testing.T) {
 			[]analysis.Diagnostic{
 				{
 					Range: ast.Range{
-						StartPos: ast.Position{Offset: 122, Line: 6, Column: 26},
-						EndPos:   ast.Position{Offset: 148, Line: 6, Column: 52},
+						StartPos: ast.Position{Offset: 154, Line: 6, Column: 26},
+						EndPos:   ast.Position{Offset: 167, Line: 6, Column: 39},
+					},
+					Location:         testLocation,
+					Category:         "check recommended",
+					Message:          "type inference for arrays will change",
+					SecondaryMessage: "ensure the newly inferred type is correct",
+				},
+				{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 229, Line: 9, Column: 26},
+						EndPos:   ast.Position{Offset: 255, Line: 9, Column: 52},
 					},
 					Location:         testLocation,
 					Category:         "check required",
@@ -236,11 +250,14 @@ func TestSupertypeInferenceAnalyzer(t *testing.T) {
 		diagnostics := testAnalyzers(t,
 			`
 
-              // same types
-              pub let a = {1: "1", 2: "2"}
+              // same types, annotation
+              pub let a: {UInt64: String} = {1: "1", 2: "2"}
+
+              // same types, no annotation
+              pub let b = {UInt64(1): "1", 2: "2"}
 
               // different value types
-              pub let b = {1: "1" as AnyStruct, 2: true}
+              pub let c = {1: "1" as AnyStruct, 2: true}
             `,
 			analyzers.SupertypeInferenceAnalyzer,
 		)
@@ -250,8 +267,18 @@ func TestSupertypeInferenceAnalyzer(t *testing.T) {
 			[]analysis.Diagnostic{
 				{
 					Range: ast.Range{
-						StartPos: ast.Position{Offset: 139, Line: 7, Column: 26},
-						EndPos:   ast.Position{Offset: 168, Line: 7, Column: 55},
+						StartPos: ast.Position{Offset: 169, Line: 7, Column: 26},
+						EndPos:   ast.Position{Offset: 192, Line: 7, Column: 49},
+					},
+					Location:         testLocation,
+					Category:         "check recommended",
+					Message:          "type inference for dictionaries will change",
+					SecondaryMessage: "ensure the newly inferred type is correct",
+				},
+				{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 260, Line: 10, Column: 26},
+						EndPos:   ast.Position{Offset: 289, Line: 10, Column: 55},
 					},
 					Location:         testLocation,
 					Category:         "check required",
@@ -559,7 +586,7 @@ func TestAddressToStringAnalyzer(t *testing.T) {
           pub contract Test {
               pub fun test() {
                   let address: Address = 0x1
-	              let string = address.toString()
+                  let string = address.toString()
               }
           }
         `,
