@@ -234,6 +234,8 @@ func FlowDefaultPredeclaredValues(impls FlowBuiltinImpls) (
 
 type FlowLocation struct{}
 
+var _ common.Location = FlowLocation{}
+
 const FlowLocationPrefix = "flow"
 
 func (l FlowLocation) ID() common.LocationID {
@@ -266,7 +268,11 @@ func (l FlowLocation) QualifiedIdentifier(typeID common.TypeID) string {
 }
 
 func (l FlowLocation) String() string {
-	return "flow"
+	return FlowLocationPrefix
+}
+
+func (l FlowLocation) Description() string {
+	return FlowLocationPrefix
 }
 
 func (l FlowLocation) MarshalJSON() ([]byte, error) {

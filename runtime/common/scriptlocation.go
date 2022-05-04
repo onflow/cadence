@@ -31,9 +31,11 @@ const ScriptLocationPrefix = "s"
 //
 type ScriptLocation []byte
 
+var _ Location = ScriptLocation{}
+
 func NewScriptLocation(gauge MemoryGauge, script []byte) ScriptLocation {
 	UseMemory(gauge, NewBytesMemoryUsage(len(script)))
-	return ScriptLocation(script)
+	return script
 }
 
 func (l ScriptLocation) ID() LocationID {
@@ -71,6 +73,10 @@ func (l ScriptLocation) String() string {
 	return hex.EncodeToString(l)
 }
 
+func (l ScriptLocation) Description() string {
+	return fmt.Sprintf("script with ID %s", hex.EncodeToString(l))
+}
+
 func (l ScriptLocation) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
 		Type   string
@@ -104,12 +110,9 @@ func decodeScriptLocationTypeID(gauge MemoryGauge, typeID string) (ScriptLocatio
 
 	parts := strings.SplitN(typeID, ".", 3)
 
-	pieceCount := len(parts)
-	switch pieceCount {
-	case 1:
+	partCount := len(parts)
+	if partCount == 1 {
 		return newError("missing location")
-	case 2:
-		return newError("missing qualified identifier")
 	}
 
 	prefix := parts[0]
@@ -134,7 +137,10 @@ func decodeScriptLocationTypeID(gauge MemoryGauge, typeID string) (ScriptLocatio
 		)
 	}
 
-	qualifiedIdentifier := parts[2]
+	var qualifiedIdentifier string
+	if partCount > 2 {
+		qualifiedIdentifier = parts[2]
+	}
 
 	return location, qualifiedIdentifier, nil
 }

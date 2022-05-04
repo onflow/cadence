@@ -36,6 +36,8 @@ type AddressLocation struct {
 	Name    string
 }
 
+var _ Location = AddressLocation{}
+
 func NewAddressLocation(gauge MemoryGauge, addr Address, name string) AddressLocation {
 	UseMemory(gauge, NewConstantMemoryUsage(MemoryKindAddressLocation))
 	return AddressLocation{
@@ -94,6 +96,14 @@ func (l AddressLocation) QualifiedIdentifier(typeID TypeID) string {
 	}
 
 	return pieces[2]
+}
+
+func (l AddressLocation) Description() string {
+	return fmt.Sprintf(
+		"contract %s in account %s",
+		l.Name,
+		l.Address.Hex(),
+	)
 }
 
 func (l AddressLocation) MarshalJSON() ([]byte, error) {
