@@ -17,7 +17,7 @@
  */
 
 // Get all contracts from a network and write them as a CSV file to standard output.
-// The CSV file has the header: address,name,code
+// The CSV file has the header: location,code
 package main
 
 import (
@@ -25,23 +25,37 @@ import (
 	"encoding/csv"
 	"flag"
 	"os"
+	"time"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/tools/batch-script"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+
+	"github.com/onflow/cadence/tools/batch-script"
 )
 
-var url = flag.String("u", "", "Flow Access Node URL")
+var urlFlag = flag.String("u", "", "Flow Access Node URL")
+var pauseFlag = flag.String("p", "", "pause duration")
 
-var csvHeader = []string{"address", "name", "code"}
+var csvHeader = []string{"location", "code"}
 
 func main() {
 	flag.Parse()
 
 	config := batch_script.DefaultConfig
-	if *url != "" {
-		config.FlowAccessNodeURL = *url
+
+	url := *urlFlag
+	if url != "" {
+		config.FlowAccessNodeURL = url
+	}
+
+	pause, err := time.ParseDuration(*pauseFlag)
+	if err == nil {
+		config.Pause = pause
+	} else {
+		log.Error().Msg("invalid pause duration")
+		return
 	}
 
 	log.Logger = log.
@@ -62,9 +76,12 @@ func main() {
 						log.Err(err).Msg("failed to get contract info")
 						return
 					}
+					location := common.AddressLocation{
+						Address: common.Address(address),
+						Name:    contractName,
+					}
 					contracts <- []string{
-						address.Hex(),
-						contractName,
+						string(location.ID()),
 						contractCode,
 					}
 				},
