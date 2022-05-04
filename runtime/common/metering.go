@@ -235,6 +235,22 @@ func NewCompositeMemoryUsages(count uint64, elementSize uint) (MemoryUsage, Memo
 		}, leaves, branches
 }
 
+func NewAtreeMapPreAllocatedElementsMemoryUsages(size uint64) MemoryUsage {
+	newLeafNodes, _ := atreeNodes(size, 0)
+
+	const preAllocatedElements uint64 = 32
+
+	var amount uint64 = 0
+	if size < preAllocatedElements {
+		amount = (preAllocatedElements - size) * newLeafNodes
+	}
+
+	return MemoryUsage{
+		Kind:   MemoryKindAtreeMapPreAllocatedElement,
+		Amount: amount,
+	}
+}
+
 func NewSimpleCompositeMemoryUsage(length int) MemoryUsage {
 	return MemoryUsage{
 		Kind:   MemoryKindSimpleComposite,
