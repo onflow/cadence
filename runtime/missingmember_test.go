@@ -4862,7 +4862,7 @@ transaction {
   execute {
     // Mint tokens for both accounts
     self.minterRef.mintTokens(amount: 20.0, recipient: self.acct2Capability)
-   //  self.minterRef.mintTokens(amount: 10.0, recipient: self.acct1Capability)
+    self.minterRef.mintTokens(amount: 10.0, recipient: self.acct1Capability)
 
     log("Minted new fungible tokens for account 1 and 2")
   }
@@ -4956,8 +4956,6 @@ transaction {
         log("Token 1 has been bought by account 2!")
     }
 }
-
-
 	`
 
 	for _, tx := range []struct {
