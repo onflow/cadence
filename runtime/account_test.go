@@ -38,19 +38,19 @@ import (
 func TestRuntimeTransaction_AddPublicKey(t *testing.T) {
 	rt := newTestInterpreterRuntime()
 
-	keyA := cadence.NewArray([]cadence.Value{
+	keyA := cadence.NewUnmeteredArray([]cadence.Value{
 		cadence.NewUnmeteredUInt8(1),
 		cadence.NewUnmeteredUInt8(2),
 		cadence.NewUnmeteredUInt8(3),
 	})
 
-	keyB := cadence.NewArray([]cadence.Value{
+	keyB := cadence.NewUnmeteredArray([]cadence.Value{
 		cadence.NewUnmeteredUInt8(4),
 		cadence.NewUnmeteredUInt8(5),
 		cadence.NewUnmeteredUInt8(6),
 	})
 
-	keys := cadence.NewArray([]cadence.Value{
+	keys := cadence.NewUnmeteredArray([]cadence.Value{
 		keyA,
 		keyB,
 	})
@@ -148,10 +148,10 @@ func TestRuntimeTransaction_AddPublicKey(t *testing.T) {
 			assert.Len(t, keys, tt.keyCount)
 			assert.Equal(t, tt.expected, keys)
 
-			assert.EqualValues(t, stdlib.AccountCreatedEventType.ID(), events[0].Type().ID())
+			assert.EqualValues(t, stdlib.AccountCreatedEventType.ID(), events[0].Type(nil).ID())
 
 			for _, event := range events[1:] {
-				assert.EqualValues(t, stdlib.AccountKeyAddedEventType.ID(), event.Type().ID())
+				assert.EqualValues(t, stdlib.AccountKeyAddedEventType.ID(), event.Type(nil).ID())
 			}
 		})
 	}

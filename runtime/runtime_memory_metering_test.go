@@ -20,9 +20,10 @@ package runtime
 
 import (
 	"fmt"
-	"github.com/onflow/cadence/encoding/json"
 	"math/big"
 	"testing"
+
+	"github.com/onflow/cadence/encoding/json"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -116,7 +117,7 @@ func TestInterpreterElaborationImportMetering(t *testing.T) {
 		importExpressions[i] = fmt.Sprintf("import C%d from 0x1\n", i)
 	}
 
-	addressValue := cadence.BytesToAddress([]byte{byte(1)})
+	addressValue := cadence.BytesToUnmeteredAddress([]byte{byte(1)})
 
 	for imports := range contracts {
 
@@ -184,7 +185,7 @@ func TestInterpreterElaborationImportMetering(t *testing.T) {
 				// one for each deployment transaction and one for each contract
 				assert.Equal(t, uint64(2*j+2), meter.getMemory(common.MemoryKindElaboration))
 
-				assert.Equal(t, uint64(2+j), meter.getMemory(common.MemoryKindCadenceAddress))
+				assert.Equal(t, uint64(1+j), meter.getMemory(common.MemoryKindCadenceAddress))
 			}
 
 			_, err := runtime.ExecuteScript(

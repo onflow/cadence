@@ -1967,6 +1967,7 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 			inter := invocation.Interpreter
 
 			r.emitAccountEvent(
+				gauge,
 				stdlib.AccountKeyAddedEventType,
 				runtimeInterface,
 				[]exportableValue{
@@ -2015,6 +2016,7 @@ func (r *interpreterRuntime) newRemovePublicKeyFunction(
 			)
 
 			r.emitAccountEvent(
+				gauge,
 				stdlib.AccountKeyRemovedEventType,
 				runtimeInterface,
 				[]exportableValue{
