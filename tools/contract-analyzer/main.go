@@ -28,10 +28,6 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/pretty"
-	"github.com/onflow/cadence/tools/analysis"
-	"github.com/onflow/cadence/tools/contract-analyzer/analyzers"
 	"github.com/onflow/flow-cli/pkg/flowkit"
 	"github.com/onflow/flow-cli/pkg/flowkit/config"
 	"github.com/onflow/flow-cli/pkg/flowkit/gateway"
@@ -39,6 +35,11 @@ import (
 	"github.com/onflow/flow-cli/pkg/flowkit/services"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/spf13/afero"
+
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/pretty"
+	"github.com/onflow/cadence/tools/analysis"
+	"github.com/onflow/cadence/tools/contract-analyzer/analyzers"
 )
 
 var errorPrettyPrinter = pretty.NewErrorPrettyPrinter(os.Stdout, true)
@@ -50,9 +51,10 @@ func printErr(err error, location common.Location, codes map[common.LocationID]s
 	}
 }
 func main() {
-	var csvPathFlag = flag.String("csv", "", "analyze all contracts in the specified CSV file")
+	var csvPathFlag = flag.String("csv", "", "analyze all programs in the given CSV file")
 	var networkFlag = flag.String("network", "", "name of network")
 	var addressFlag = flag.String("address", "", "analyze contracts in the given account")
+	var loadOnlyFlag = flag.Bool("load-only", false, "only load (parse and check) programs")
 	var analyzersFlag stringSliceFlag
 	flag.Var(&analyzersFlag, "analyze", "enable analyzer")
 
@@ -83,18 +85,21 @@ func main() {
 
 	var enabledAnalyzers []*analysis.Analyzer
 
-	if len(analyzersFlag) > 0 {
-		for _, analyzerName := range analyzersFlag {
-			analyzer, ok := analyzers.Analyzers[analyzerName]
-			if !ok {
-				log.Panic(fmt.Errorf("unknown analyzer: %s", analyzerName))
-			}
+	loadOnly := *loadOnlyFlag
+	if !loadOnly {
+		if len(analyzersFlag) > 0 {
+			for _, analyzerName := range analyzersFlag {
+				analyzer, ok := analyzers.Analyzers[analyzerName]
+				if !ok {
+					log.Panic(fmt.Errorf("unknown analyzer: %s", analyzerName))
+				}
 
-			enabledAnalyzers = append(enabledAnalyzers, analyzer)
-		}
-	} else {
-		for _, analyzer := range analyzers.Analyzers {
-			enabledAnalyzers = append(enabledAnalyzers, analyzer)
+				enabledAnalyzers = append(enabledAnalyzers, analyzer)
+			}
+		} else {
+			for _, analyzer := range analyzers.Analyzers {
+				enabledAnalyzers = append(enabledAnalyzers, analyzer)
+			}
 		}
 	}
 
@@ -234,15 +239,17 @@ func analyze(
 		)
 	}
 
-	for _, location := range locations {
-		program := programs[location.ID()]
-		if program == nil {
-			continue
+	if len(analyzers) > 0 {
+		for _, location := range locations {
+			program := programs[location.ID()]
+			if program == nil {
+				continue
+			}
+
+			log.Printf("Analyzing %s", location)
+
+			program.Run(analyzers, report)
 		}
-
-		log.Printf("Analyzing %s", location)
-
-		program.Run(analyzers, report)
 	}
 }
 
