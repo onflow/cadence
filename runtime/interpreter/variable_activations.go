@@ -125,7 +125,9 @@ type VariableActivations struct {
 }
 
 func NewVariableActivations(memoryGauge common.MemoryGauge) *VariableActivations {
-	// No need to meter.
+	// No need to meter since activations list is created only once per execution.
+	// However, memory gauge is needed here for caching, and using it
+	// later to meter each activation and activation entries initialization.
 	return &VariableActivations{
 		memoryGauge: memoryGauge,
 	}

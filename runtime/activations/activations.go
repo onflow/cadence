@@ -127,7 +127,9 @@ type ValueTypeActivations struct {
 }
 
 func NewValueTypeActivations(memoryGauge common.MemoryGauge) *ValueTypeActivations {
-	// No need to meter.
+	// No need to meter since activations list is created only once per execution.
+	// However, memory gauge is needed here for caching, and using it
+	// later to meter each activation and activation entries initialization.
 	return &ValueTypeActivations{
 		memoryGauge: memoryGauge,
 	}
