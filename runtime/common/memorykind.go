@@ -36,11 +36,9 @@ const (
 	MemoryKindMetaType
 	MemoryKindNumber
 	MemoryKindArrayBase
-	MemoryKindArrayLength
 	MemoryKindDictionaryBase
-	MemoryKindDictionarySize
 	MemoryKindCompositeBase
-	MemoryKindCompositeSize
+	MemoryKindSimpleCompositeBase
 	MemoryKindOptional
 	MemoryKindNil
 	MemoryKindVoid
@@ -54,6 +52,14 @@ const (
 	MemoryKindHostFunction
 	MemoryKindBoundFunction
 	MemoryKindBigInt
+	MemoryKindSimpleComposite
+
+	// Atree Nodes
+	MemoryKindAtreeArrayDataSlab
+	MemoryKindAtreeArrayMetaDataSlab
+	MemoryKindAtreeMapDataSlab
+	MemoryKindAtreeMapMetaDataSlab
+	MemoryKindAtreeMapElementOverhead
 
 	// Static Types
 	MemoryKindPrimitiveStaticType
