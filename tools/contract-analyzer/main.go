@@ -26,6 +26,7 @@ import (
 	"log"
 	"os"
 	"sort"
+	"strings"
 	"sync"
 
 	"github.com/onflow/flow-cli/pkg/flowkit"
@@ -218,7 +219,7 @@ func analyze(
 	log.Println("Loading ...")
 
 	for _, location := range locations {
-		log.Printf("Loading %s", location)
+		log.Printf("Loading %s", location.Description())
 
 		err := programs.Load(config, location)
 		if err != nil {
@@ -266,7 +267,7 @@ func readCSV(
 	contractNames = map[common.Address][]string{}
 
 	var record []string
-	for {
+	for rowNumber := 1; ; rowNumber++ {
 		var err error
 		skip := record == nil
 		record, err = reader.Read()
@@ -277,18 +278,30 @@ func readCSV(
 			continue
 		}
 
-		address, _ := common.HexToAddress(record[0])
-		name := record[1]
-		code := record[2]
-
-		location := common.AddressLocation{
-			Address: address,
-			Name:    name,
+		location, qualifiedIdentifier, err := common.DecodeTypeID(record[0])
+		if err != nil {
+			panic(fmt.Errorf("invalid location in row %d: %w", rowNumber, err))
 		}
+		identifierParts := strings.Split(qualifiedIdentifier, ".")
+		if len(identifierParts) > 1 {
+			panic(fmt.Errorf(
+				"invalid location in row %d: invalid qualified identifier: %s",
+				rowNumber,
+				qualifiedIdentifier,
+			))
+		}
+
+		code := record[1]
 
 		locations = append(locations, location)
 		codes[location.ID()] = code
-		contractNames[address] = append(contractNames[address], name)
+
+		if addressLocation, ok := location.(common.AddressLocation); ok {
+			contractNames[addressLocation.Address] = append(
+				contractNames[addressLocation.Address],
+				addressLocation.Name,
+			)
+		}
 	}
 
 	return

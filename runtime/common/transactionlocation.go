@@ -31,6 +31,8 @@ const TransactionLocationPrefix = "t"
 //
 type TransactionLocation []byte
 
+var _ Location = TransactionLocation{}
+
 func (l TransactionLocation) ID() LocationID {
 	return NewLocationID(
 		TransactionLocationPrefix,
@@ -58,6 +60,10 @@ func (l TransactionLocation) QualifiedIdentifier(typeID TypeID) string {
 
 func (l TransactionLocation) String() string {
 	return hex.EncodeToString(l)
+}
+
+func (l TransactionLocation) Description() string {
+	return fmt.Sprintf("transaction with ID %s", hex.EncodeToString(l))
 }
 
 func (l TransactionLocation) MarshalJSON() ([]byte, error) {
@@ -93,12 +99,9 @@ func decodeTransactionLocationTypeID(typeID string) (TransactionLocation, string
 
 	parts := strings.SplitN(typeID, ".", 3)
 
-	pieceCount := len(parts)
-	switch pieceCount {
-	case 1:
+	partCount := len(parts)
+	if partCount == 1 {
 		return newError("missing location")
-	case 2:
-		return newError("missing qualified identifier")
 	}
 
 	prefix := parts[0]
@@ -121,7 +124,10 @@ func decodeTransactionLocationTypeID(typeID string) (TransactionLocation, string
 		)
 	}
 
-	qualifiedIdentifier := parts[2]
+	var qualifiedIdentifier string
+	if partCount > 2 {
+		qualifiedIdentifier = parts[2]
+	}
 
 	return location, qualifiedIdentifier, nil
 }

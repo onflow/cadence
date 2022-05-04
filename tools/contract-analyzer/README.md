@@ -51,8 +51,38 @@ For example:
 
 The CSV file must be in the following format:
 
-- Header: `address,name,code`
+- Header: `location,code`
 - Columns:
-  - `address`: The address of the contract, e.g. `0x1`
-  - `name`: The name of the contract, e.g. `Test`
+  - `location`: The location ID of the program
+     - Contracts in accounts have the format `A.<address>.<name>`,
+        e.g. `A.e467b9dd11fa00df.FlowStorageFees`, where
+         - `address`: Address in hex format, e.g. `e467b9dd11fa00df`
+         - `name`: The name of the contract, e.g `FlowStorageFees`
+     - Transactions have the format `t.<ID>`, where
+       - `id`: The ID of the transaction (its hash)
+     - Scripts have the format `s.<ID>`, where
+       - `id`: The ID of the script (its hash)
   - `code`: The code of the contract, e.g. `pub contract Test {}`
+
+Full example:
+
+```csv
+location,code
+t.0000000000000000,"
+import 0x1
+
+transaction {
+    prepare(signer: AuthAccount) {
+        Test.hello()
+    }
+}
+"
+A.0000000000000001.Test,"
+pub contract Test {
+
+    pub fun hello() {
+      log(""Hello, world!"")
+    }
+}
+"
+```

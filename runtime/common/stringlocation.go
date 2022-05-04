@@ -37,6 +37,8 @@ func (l StringLocation) ID() LocationID {
 	)
 }
 
+var _ Location = StringLocation("")
+
 func (l StringLocation) TypeID(qualifiedIdentifier string) TypeID {
 	return NewTypeID(
 		StringLocationPrefix,
@@ -56,6 +58,10 @@ func (l StringLocation) QualifiedIdentifier(typeID TypeID) string {
 }
 
 func (l StringLocation) String() string {
+	return string(l)
+}
+
+func (l StringLocation) Description() string {
 	return string(l)
 }
 

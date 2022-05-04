@@ -36,6 +36,8 @@ type AddressLocation struct {
 	Name    string
 }
 
+var _ Location = AddressLocation{}
+
 func (l AddressLocation) String() string {
 	if l.Name == "" {
 		return l.Address.String()
@@ -79,6 +81,14 @@ func (l AddressLocation) QualifiedIdentifier(typeID TypeID) string {
 	}
 
 	return pieces[2]
+}
+
+func (l AddressLocation) Description() string {
+	return fmt.Sprintf(
+		"contract %s in account %s",
+		l.Name,
+		l.Address.Hex(),
+	)
 }
 
 func (l AddressLocation) MarshalJSON() ([]byte, error) {
