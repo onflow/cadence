@@ -26,6 +26,10 @@ func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) as
 
 	expectedType := UnwrapOptionalType(checker.expectedType)
 
+	if expectedType != nil {
+		checker.Elaboration.ArrayExpressionHasExpectedType[expression] = struct{}{}
+	}
+
 	var elementType Type
 	var resultType ArrayType
 

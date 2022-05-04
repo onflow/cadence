@@ -364,10 +364,14 @@ var SupertypeInferenceAnalyzer = (func() *analysis.Analyzer {
 					var typeTuples []typeTuple
 
 					var kind string
+					var reportMissingExpectedType bool
 
 					switch element := element.(type) {
 					case *ast.ArrayExpression:
 						kind = "arrays"
+
+						_, hasExpectedType := elaboration.ArrayExpressionHasExpectedType[element]
+						reportMissingExpectedType = !hasExpectedType
 
 						argumentTypes := elaboration.ArrayExpressionArgumentTypes[element]
 						if len(argumentTypes) < 2 {
@@ -383,6 +387,9 @@ var SupertypeInferenceAnalyzer = (func() *analysis.Analyzer {
 
 					case *ast.DictionaryExpression:
 						kind = "dictionaries"
+
+						_, hasExpectedType := elaboration.DictionaryExpressionHasExpectedType[element]
+						reportMissingExpectedType = !hasExpectedType
 
 						entryTypes := elaboration.DictionaryExpressionEntryTypes[element]
 						if len(entryTypes) < 2 {
@@ -432,6 +439,18 @@ var SupertypeInferenceAnalyzer = (func() *analysis.Analyzer {
 
 						// Only report one diagnostic for each expression
 						return
+					}
+
+					if reportMissingExpectedType {
+						report(
+							analysis.Diagnostic{
+								Location:         location,
+								Range:            ast.NewRangeFromPositioned(element),
+								Category:         "check recommended",
+								Message:          fmt.Sprintf("type inference for %s will change", kind),
+								SecondaryMessage: "ensure the newly inferred type is correct",
+							},
+						)
 					}
 
 				},
