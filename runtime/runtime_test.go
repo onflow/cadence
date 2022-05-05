@@ -7594,3 +7594,275 @@ transaction {
 	)
 	require.NoError(t, err)
 }
+
+func TestRuntimeResourceDoubleWrappedCondition(t *testing.T) {
+
+	runtime := newTestInterpreterRuntime()
+
+	exampleTokenAddress, err := common.HexToAddress("0x1")
+	require.NoError(t, err)
+
+	const exampleTokenContract = `
+pub contract ExampleToken {
+    pub resource S {}
+
+	pub struct interface A {
+        pub fun deposit(from: @S) {
+            pre {
+                from != nil: ""
+            }
+			post {
+                from != nil: ""
+            }
+        }
+    }
+	
+	pub struct interface B {
+        pub fun deposit(from: @S) {
+            pre {
+                from != nil: ""
+            }
+			post {
+                from != nil: ""
+            }
+        }
+    }
+
+    pub struct Vault: A, B {
+        pub fun deposit(from: @S) {
+			pre {
+                from != nil: ""
+            }
+			post {
+                1 > 0: ""
+            }
+            destroy from
+        }
+    }
+    
+    pub fun mintTokens() {
+        Vault().deposit(from: <-create S())
+    }
+}`
+	const mintTokensTx = `
+
+import ExampleToken from 0x01
+
+transaction {
+  prepare(acct: AuthAccount) {
+    ExampleToken.mintTokens()
+  }
+}`
+
+	accountCodes := map[common.LocationID][]byte{}
+	var events []cadence.Event
+	var logs []string
+	var signerAddress common.Address
+
+	storage := newTestLedger(nil, nil)
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(location Location) (bytes []byte, err error) {
+			return accountCodes[location.ID()], nil
+		},
+		storage: storage,
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{signerAddress}, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			return accountCodes[location.ID()], nil
+		},
+		updateAccountContractCode: func(address Address, name string, code []byte) error {
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			accountCodes[location.ID()] = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		log: func(message string) {
+			logs = append(logs, message)
+		},
+		decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(b)
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	// Deploy contracts
+
+	signerAddress = exampleTokenAddress
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: utils.DeploymentTransaction(
+				"ExampleToken",
+				[]byte(exampleTokenContract),
+			),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	signerAddress = exampleTokenAddress
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: []byte(mintTokensTx),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+}
+
+func TestRuntimeResourceDoubleWrappedCondition(t *testing.T) {
+
+	runtime := newTestInterpreterRuntime()
+
+	exampleTokenAddress, err := common.HexToAddress("0x1")
+	require.NoError(t, err)
+
+	const exampleTokenContract = `
+pub contract ExampleToken {
+    pub resource S {}
+
+	pub struct interface A {
+        pub fun deposit(from: @S) {
+            pre {
+                from != nil: ""
+            }
+			post {
+                from != nil: ""
+            }
+        }
+    }
+	
+	pub struct interface B {
+        pub fun deposit(from: @S) {
+            pre {
+                from != nil: ""
+            }
+			post {
+                from != nil: ""
+            }
+        }
+    }
+
+    pub struct Vault: A, B {
+        pub fun deposit(from: @S) {
+			pre {
+                from != nil: ""
+            }
+			post {
+                1 > 0: ""
+            }
+            destroy from
+        }
+    }
+    
+    pub fun mintTokens() {
+        Vault().deposit(from: <-create S())
+    }
+}`
+	const mintTokensTx = `
+
+import ExampleToken from 0x01
+
+transaction {
+  prepare(acct: AuthAccount) {
+    ExampleToken.mintTokens()
+  }
+}`
+
+	accountCodes := map[common.LocationID][]byte{}
+	var events []cadence.Event
+	var logs []string
+	var signerAddress common.Address
+
+	storage := newTestLedger(nil, nil)
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(location Location) (bytes []byte, err error) {
+			return accountCodes[location.ID()], nil
+		},
+		storage: storage,
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{signerAddress}, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			return accountCodes[location.ID()], nil
+		},
+		updateAccountContractCode: func(address Address, name string, code []byte) error {
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			accountCodes[location.ID()] = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		log: func(message string) {
+			logs = append(logs, message)
+		},
+		decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(b)
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	// Deploy contracts
+
+	signerAddress = exampleTokenAddress
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: utils.DeploymentTransaction(
+				"ExampleToken",
+				[]byte(exampleTokenContract),
+			),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	signerAddress = exampleTokenAddress
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: []byte(mintTokensTx),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+}
