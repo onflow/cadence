@@ -5802,6 +5802,13 @@ type RestrictedType struct {
 
 func NewRestrictedType(memoryGauge common.MemoryGauge, typ Type, restrictions []*InterfaceType) *RestrictedType {
 	common.UseMemory(memoryGauge, common.RestrictedSemaTypeMemoryUsage)
+
+	// Also meter the cost for the `restrictionSet` here, since ordered maps are not separately metered.
+	wrapperUsage, entryListUsage, entriesUsage := common.NewOrderedMapMemoryUsages(uint64(len(restrictions)))
+	common.UseMemory(memoryGauge, wrapperUsage)
+	common.UseMemory(memoryGauge, entryListUsage)
+	common.UseMemory(memoryGauge, entriesUsage)
+
 	return &RestrictedType{
 		Type:         typ,
 		Restrictions: restrictions,
