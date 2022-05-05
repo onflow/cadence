@@ -2514,7 +2514,7 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 						returnValue := inner.invoke(invocation)
 
 						/* Restore resources invalidated before execution of the body */
-						for val, variable := range vars {
+						for val, variable := range vars { //nolint:maprangecheck
 							interpreter.invalidateResource(val)
 							interpreter.resourceVariables[val] = variable
 						}
