@@ -29,7 +29,7 @@ This requires you have the [Flow CLI](https://docs.onflow.org/flow-cli/) install
 For example:
 
 ```shell
-./cadence-analyzer -network mainnet -address 0x1654653399040a61
+./cadence-analyzer -network mainnet -transaction 44fd8475eeded90d74e7594b10cf456b0866c78221e7f230fcfd4ba1155c542f
 ```
 
 ### Only running some analyzers
