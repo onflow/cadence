@@ -2485,10 +2485,40 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 
 					body = func() controlReturn {
 
+						/* pre and post condition wrappers "re-declare" the same
+						   parameters as are used in the actual body of the function.
+						   When these parameters are given resource-kinded arguments,
+						   this can trick the resource analysis into believing that these
+						   resources exist in two variables at once. This is not the case,
+						   however, as execution of the pre and post condition occurs strictly
+						   before and after execution of the body respectively.
+
+						   To prevent the analysis from reporting a false positive here, when
+						   we enter the body of the wrapped function, we invalidate any resources
+						   that were tranferred to parameters by the precondition block, and then
+						   restore them after execution of the body for use by the post-condition
+						   block.
+						*/
+
+						vars := make(map[ResourceKindedValue]*Variable)
+						for _, arg := range invocation.Arguments {
+							resourceKindedValue := interpreter.resourceForValidation(arg)
+							if resourceKindedValue != nil {
+								vars[resourceKindedValue] = interpreter.resourceVariables[resourceKindedValue]
+								interpreter.invalidateResource(resourceKindedValue)
+							}
+						}
 						// NOTE: It is important to actually return the value returned
 						//   from the inner function, otherwise it is lost
 
 						returnValue := inner.invoke(invocation)
+
+						/* Restore resources invalidated before execution of the body */
+						for val, variable := range vars {
+							interpreter.invalidateResource(val)
+							interpreter.resourceVariables[val] = variable
+						}
+
 						return functionReturn{returnValue}
 					}
 				}
