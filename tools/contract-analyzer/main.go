@@ -55,6 +55,7 @@ func main() {
 	var csvPathFlag = flag.String("csv", "", "analyze all programs in the given CSV file")
 	var networkFlag = flag.String("network", "", "name of network")
 	var addressFlag = flag.String("address", "", "analyze contracts in the given account")
+	var transactionFlag = flag.String("transaction", "", "analyze transaction with given ID")
 	var loadOnlyFlag = flag.Bool("load-only", false, "only load (parse and check) programs")
 	var analyzersFlag stringSliceFlag
 	flag.Var(&analyzersFlag, "analyze", "enable analyzer")
@@ -106,6 +107,8 @@ func main() {
 
 	cvsPath := *csvPathFlag
 	address := *addressFlag
+	transaction := *transactionFlag
+
 	switch {
 	case cvsPath != "":
 		analyzeCSV(cvsPath, enabledAnalyzers)
@@ -114,31 +117,20 @@ func main() {
 		network := *networkFlag
 		analyzeAccount(address, network, enabledAnalyzers)
 
+	case transaction != "":
+		network := *networkFlag
+		analyzeTransaction(transaction, network, enabledAnalyzers)
+
 	default:
 		println("Nothing to do. Please provide -address or -csv. See -help")
 	}
 }
 
 func analyzeAccount(address string, networkName string, analyzers []*analysis.Analyzer) {
-	loader := &afero.Afero{Fs: afero.NewOsFs()}
-	state, err := flowkit.Load(config.DefaultPaths(), loader)
+	err, services := flowKitServices(networkName)
 	if err != nil {
 		panic(err)
 	}
-
-	network, err := state.Networks().ByName(networkName)
-	if err != nil {
-		panic(err)
-	}
-
-	grpcGateway, err := gateway.NewGrpcGateway(network.Host)
-	if err != nil {
-		panic(err)
-	}
-
-	logger := output.NewStdoutLogger(output.ErrorLog)
-
-	services := services.NewServices(grpcGateway, state, logger)
 
 	codes := map[common.LocationID]string{}
 	contractNames := map[common.Address][]string{}
@@ -186,6 +178,80 @@ func analyzeAccount(address string, networkName string, analyzers []*analysis.An
 		},
 	)
 	analyze(analysisConfig, locations, codes, analyzers)
+}
+
+func analyzeTransaction(transactionID string, networkName string, analyzers []*analysis.Analyzer) {
+	err, services := flowKitServices(networkName)
+	if err != nil {
+		panic(err)
+	}
+
+	codes := map[common.LocationID]string{}
+	contractNames := map[common.Address][]string{}
+
+	getContracts := func(flowAddress flow.Address) (map[string][]byte, error) {
+		account, err := services.Accounts.Get(flowAddress)
+		if err != nil {
+			return nil, err
+		}
+
+		return account.Contracts, nil
+	}
+
+	flowTransactionID := flow.HexToID(transactionID)
+	transactionLocation := common.TransactionLocation(flowTransactionID[:])
+
+	locations := []common.Location{
+		transactionLocation,
+	}
+
+	transaction, _, err := services.Transactions.GetStatus(flowTransactionID, true)
+	if err != nil {
+		panic(err)
+	}
+
+	codes[transactionLocation.ID()] = string(transaction.Script)
+
+	analysisConfig := analysis.NewSimpleConfig(
+		analysis.NeedTypes,
+		codes,
+		contractNames,
+		func(address common.Address) (map[string]string, error) {
+			contracts, err := getContracts(flow.Address(address))
+			if err != nil {
+				return nil, err
+			}
+			codes := make(map[string]string, len(contracts))
+			for name, bytes := range contracts {
+				codes[name] = string(bytes)
+			}
+			return codes, nil
+		},
+	)
+	analyze(analysisConfig, locations, codes, analyzers)
+}
+
+func flowKitServices(networkName string) (error, *services.Services) {
+	loader := &afero.Afero{Fs: afero.NewOsFs()}
+	state, err := flowkit.Load(config.DefaultPaths(), loader)
+	if err != nil {
+		panic(err)
+	}
+
+	network, err := state.Networks().ByName(networkName)
+	if err != nil {
+		panic(err)
+	}
+
+	grpcGateway, err := gateway.NewGrpcGateway(network.Host)
+	if err != nil {
+		panic(err)
+	}
+
+	logger := output.NewStdoutLogger(output.ErrorLog)
+
+	services := services.NewServices(grpcGateway, state, logger)
+	return err, services
 }
 
 func analyzeCSV(path string, analyzers []*analysis.Analyzer) {

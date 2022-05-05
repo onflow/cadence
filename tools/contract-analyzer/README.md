@@ -21,6 +21,17 @@ For example:
 ./cadence-analyzer -network mainnet -address 0x1654653399040a61
 ```
 
+### Analyzing a transaction
+
+To analyze a transaction, specify the network and transaction ID.
+This requires you have the [Flow CLI](https://docs.onflow.org/flow-cli/) installed and configured.
+
+For example:
+
+```shell
+./cadence-analyzer -network mainnet -address 0x1654653399040a61
+```
+
 ### Only running some analyzers
 
 By default, all available analyzers are run.
