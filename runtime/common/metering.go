@@ -112,6 +112,14 @@ var (
 
 	SimpleCompositeBaseMemoryUsage = NewConstantMemoryUsage(MemoryKindSimpleCompositeBase)
 	AtreeMapElementOverhead        = NewConstantMemoryUsage(MemoryKindAtreeMapElementOverhead)
+
+	VariableSizedSemaTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindVariableSizedSemaType)
+	ConstantSizedSemaTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindConstantSizedSemaType)
+	DictionarySemaTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindDictionarySemaType)
+	OptionalSemaTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindDictionarySemaType)
+	RestrictedSemaTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindRestrictedSemaType)
+	ReferenceSemaTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindReferenceSemaType)
+	CapabilitySemaTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindCapabilitySemaType)
 )
 
 func UseMemory(gauge MemoryGauge, usage MemoryUsage) {

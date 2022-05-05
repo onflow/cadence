@@ -163,6 +163,15 @@ const (
 	MemoryKindActivation
 	MemoryKindActivationEntries
 
+	// sema types
+	MemoryKindVariableSizedSemaType
+	MemoryKindConstantSizedSemaType
+	MemoryKindDictionarySemaType
+	MemoryKindOptionalSemaType
+	MemoryKindRestrictedSemaType
+	MemoryKindReferenceSemaType
+	MemoryKindCapabilitySemaType
+
 	// Placeholder kind to allow consistent indexing
 	// this should always be the last kind
 	MemoryKindLast

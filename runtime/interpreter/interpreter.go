@@ -4103,6 +4103,7 @@ func (interpreter *Interpreter) GetCapabilityFinalTargetPath(
 
 func (interpreter *Interpreter) ConvertStaticToSemaType(staticType StaticType) (sema.Type, error) {
 	return ConvertStaticToSemaType(
+		interpreter.memoryGauge,
 		staticType,
 		func(location common.Location, qualifiedIdentifier string) (*sema.InterfaceType, error) {
 			return interpreter.getInterfaceType(location, qualifiedIdentifier)
