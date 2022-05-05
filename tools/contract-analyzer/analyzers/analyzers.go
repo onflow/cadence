@@ -410,6 +410,9 @@ var SupertypeInferenceAnalyzer = (func() *analysis.Analyzer {
 					case *ast.ConditionalExpression:
 						kind = "conditionals / ternary operations"
 
+						_, hasExpectedType := elaboration.ConditionalExpressionHasExpectedType[element]
+						reportMissingExpectedType = !hasExpectedType
+
 						typeTuples = append(
 							typeTuples,
 							typeTuple{

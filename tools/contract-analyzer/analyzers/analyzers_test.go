@@ -267,8 +267,8 @@ func TestSupertypeInferenceAnalyzer(t *testing.T) {
 			[]analysis.Diagnostic{
 				{
 					Range: ast.Range{
-						StartPos: ast.Position{Offset: 169, Line: 7, Column: 26},
-						EndPos:   ast.Position{Offset: 192, Line: 7, Column: 49},
+						StartPos: ast.Position{Offset: 173, Line: 7, Column: 26},
+						EndPos:   ast.Position{Offset: 196, Line: 7, Column: 49},
 					},
 					Location:         testLocation,
 					Category:         "check recommended",
@@ -277,8 +277,8 @@ func TestSupertypeInferenceAnalyzer(t *testing.T) {
 				},
 				{
 					Range: ast.Range{
-						StartPos: ast.Position{Offset: 260, Line: 10, Column: 26},
-						EndPos:   ast.Position{Offset: 289, Line: 10, Column: 55},
+						StartPos: ast.Position{Offset: 264, Line: 10, Column: 26},
+						EndPos:   ast.Position{Offset: 293, Line: 10, Column: 55},
 					},
 					Location:         testLocation,
 					Category:         "check required",
@@ -297,11 +297,14 @@ func TestSupertypeInferenceAnalyzer(t *testing.T) {
 		diagnostics := testAnalyzers(t,
 			`
 
-              // same types
-              pub let a = true ? 1 : 2
+              // same types, annotation
+              pub let a: Int = true ? 1 : 2
+
+		      // same types, no annotation
+              pub let b = true ? 1 : 2
 
               // different types
-              pub let b = true ? 1 as AnyStruct: "2"
+              pub let c = true ? 1 as AnyStruct: "2"
             `,
 			analyzers.SupertypeInferenceAnalyzer,
 		)
@@ -311,8 +314,18 @@ func TestSupertypeInferenceAnalyzer(t *testing.T) {
 			[]analysis.Diagnostic{
 				{
 					Range: ast.Range{
-						StartPos: ast.Position{Offset: 129, Line: 7, Column: 26},
-						EndPos:   ast.Position{Offset: 154, Line: 7, Column: 51},
+						StartPos: ast.Position{Offset: 150, Line: 7, Column: 26},
+						EndPos:   ast.Position{Offset: 161, Line: 7, Column: 37},
+					},
+					Location:         testLocation,
+					Category:         "check recommended",
+					Message:          "type inference for conditionals / ternary operations will change",
+					SecondaryMessage: "ensure the newly inferred type is correct",
+				},
+				{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 223, Line: 10, Column: 26},
+						EndPos:   ast.Position{Offset: 248, Line: 10, Column: 51},
 					},
 					Location:         testLocation,
 					Category:         "check required",
@@ -598,8 +611,8 @@ func TestAddressToStringAnalyzer(t *testing.T) {
 		[]analysis.Diagnostic{
 			{
 				Range: ast.Range{
-					StartPos: ast.Position{Offset: 135, Line: 5, Column: 28},
-					EndPos:   ast.Position{Offset: 152, Line: 5, Column: 45},
+					StartPos: ast.Position{Offset: 138, Line: 5, Column: 31},
+					EndPos:   ast.Position{Offset: 155, Line: 5, Column: 48},
 				},
 				Location:         testLocation,
 				Category:         "check required",
