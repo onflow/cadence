@@ -33,6 +33,11 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
+type Writer interface {
+	io.Writer
+	io.StringWriter
+}
+
 func colorizeError(message string) string {
 	return aurora.Colorize(message, aurora.RedFg|aurora.BrightFg|aurora.BoldFm).String()
 }
@@ -113,11 +118,11 @@ func sortExcerpts(excerpts []excerpt) {
 }
 
 type ErrorPrettyPrinter struct {
-	writer   io.Writer
+	writer   Writer
 	useColor bool
 }
 
-func NewErrorPrettyPrinter(writer io.Writer, useColor bool) ErrorPrettyPrinter {
+func NewErrorPrettyPrinter(writer Writer, useColor bool) ErrorPrettyPrinter {
 	return ErrorPrettyPrinter{
 		writer:   writer,
 		useColor: useColor,
@@ -125,7 +130,7 @@ func NewErrorPrettyPrinter(writer io.Writer, useColor bool) ErrorPrettyPrinter {
 }
 
 func (p ErrorPrettyPrinter) writeString(str string) {
-	_, err := p.writer.Write([]byte(str))
+	_, err := p.writer.WriteString(str)
 	if err != nil {
 		panic(err)
 	}
@@ -294,8 +299,18 @@ func (p ErrorPrettyPrinter) writeCodeExcerpts(
 			// indicator line
 			p.writeString(emptyLineNumbers)
 
-			for i := 0; i <= excerpt.startPos.Column; i++ {
-				p.writeString(" ")
+			indicatorLength := excerpt.startPos.Column
+			if indicatorLength >= maxLineLength {
+				indicatorLength = maxLineLength
+			}
+
+			p.writeString(" ")
+			for i := 0; i < indicatorLength; i++ {
+				c := line[i]
+				if c != '\t' {
+					c = ' '
+				}
+				p.writeString(string(c))
 			}
 
 			columns := 1
