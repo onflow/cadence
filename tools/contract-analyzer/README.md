@@ -13,7 +13,7 @@ go build -o cadence-analyzer .
 ### Analyzing contracts of an account
 
 To analyze all contracts of an account, specify the network and address.
-This requires you have the [Flow CLI](https://docs.onflow.org/flow-cli/) installed and configured.
+This requires you have the [Flow CLI](https://docs.onflow.org/flow-cli/) installed and configured (run `flow init`).
 
 For example:
 
@@ -24,7 +24,7 @@ For example:
 ### Analyzing a transaction
 
 To analyze a transaction, specify the network and transaction ID.
-This requires you have the [Flow CLI](https://docs.onflow.org/flow-cli/) installed and configured.
+This requires you have the [Flow CLI](https://docs.onflow.org/flow-cli/) installed and configured (run `flow init`).
 
 For example:
 
