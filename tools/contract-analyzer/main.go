@@ -122,7 +122,7 @@ func main() {
 		analyzeTransaction(transaction, network, enabledAnalyzers)
 
 	default:
-		println("Nothing to do. Please provide -address or -csv. See -help")
+		println("Nothing to do. Please provide -address, -transaction, or -csv. See -help")
 	}
 }
 
