@@ -17,9 +17,9 @@ require (
 	github.com/stretchr/testify v1.7.1
 	github.com/turbolent/prettier v0.0.0-20210613180524-3a3f5a5b49ba
 	go.uber.org/goleak v1.1.10
-	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
-	golang.org/x/text v0.3.6
-	golang.org/x/tools v0.0.0-20200828161849-5deb26317202
+	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
+	golang.org/x/text v0.3.7
+	golang.org/x/tools v0.1.10
 )
 
 require (
@@ -35,8 +35,8 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/zeebo/blake3 v0.2.2 // indirect
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
-	golang.org/x/mod v0.3.0 // indirect
-	golang.org/x/sys v0.0.0-20210910150752-751e447fb3d0 // indirect
+	golang.org/x/mod v0.6.0-dev.0.20220106191415-9b9b3d81d5e3 // indirect
+	golang.org/x/sys v0.0.0-20211019181941-9d821ace8654 // indirect
 	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
