@@ -235,14 +235,14 @@ func NewCompositeMemoryUsages(count uint64, elementSize uint) (MemoryUsage, Memo
 		}, leaves, branches
 }
 
-func NewAtreeMapPreAllocatedElementsMemoryUsages(size uint64) MemoryUsage {
-	newLeafNodes, _ := atreeNodes(size, 0)
+func NewAtreeMapPreAllocatedElementsMemoryUsage(size uint64) MemoryUsage {
+	leafNodesCount, _ := atreeNodes(size, 0)
 
 	const preAllocatedElements uint64 = 32
 
 	var amount uint64 = 0
 	if size < preAllocatedElements {
-		amount = (preAllocatedElements - size) * newLeafNodes
+		amount = (preAllocatedElements - size) * leafNodesCount
 	}
 
 	return MemoryUsage{
