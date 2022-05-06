@@ -2232,6 +2232,53 @@ func TestInterpreterResourcePreAndPostCondition(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestInterpreterResourceConditionAdditionalParam(t *testing.T) {
+
+	t.Parallel()
+
+	inter, err := parseCheckAndInterpretWithOptions(t,
+		`
+		resource S {}
+
+		struct interface Receiver {
+			pub fun deposit(from: @S, other: UInt64) {
+				pre {
+					from != nil: ""
+				}
+				post {
+					other > 0: ""
+				}
+			}
+		}
+		
+		struct Vault: Receiver {
+			pub fun deposit(from: @S, other: UInt64) {
+				pre {
+					from != nil: ""
+				}
+				post {
+					other > 0: ""
+				}
+				destroy from
+			}
+		}
+    
+	
+		fun test() {
+			Vault().deposit(from: <-create S(), other: 42)
+		}`,
+		ParseCheckAndInterpretOptions{
+			Options: []interpreter.Option{
+				interpreter.WithInvalidatedResourceValidationEnabled(true),
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("test")
+	require.NoError(t, err)
+}
+
 func TestInterpreterResourceDoubleWrappedCondition(t *testing.T) {
 
 	t.Parallel()
