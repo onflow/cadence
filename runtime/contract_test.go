@@ -265,7 +265,7 @@ func TestRuntimeContract(t *testing.T) {
 				)
 
 				require.Len(t, events, 1)
-				assert.EqualValues(t, stdlib.AccountContractAddedEventType.ID(), events[0].Type().ID())
+				assert.EqualValues(t, stdlib.AccountContractAddedEventType.ID(), events[0].Type(inter).ID())
 
 			} else {
 				require.Error(t, err)
@@ -355,7 +355,7 @@ func TestRuntimeContract(t *testing.T) {
 			)
 
 			require.Len(t, events, 1)
-			assert.EqualValues(t, stdlib.AccountContractUpdatedEventType.ID(), events[0].Type().ID())
+			assert.EqualValues(t, stdlib.AccountContractUpdatedEventType.ID(), events[0].Type(inter).ID())
 		})
 
 		t.Run("remove", func(t *testing.T) {
@@ -390,7 +390,7 @@ func TestRuntimeContract(t *testing.T) {
 			)
 
 			require.Len(t, events, 1)
-			assert.EqualValues(t, stdlib.AccountContractRemovedEventType.ID(), events[0].Type().ID())
+			assert.EqualValues(t, stdlib.AccountContractRemovedEventType.ID(), events[0].Type(inter).ID())
 
 			contractValueExists := getContractValueExists()
 			require.False(t, contractValueExists)
@@ -441,7 +441,7 @@ func TestRuntimeContract(t *testing.T) {
 				)
 
 				require.Len(t, events, 1)
-				assert.EqualValues(t, stdlib.AccountContractAddedEventType.ID(), events[0].Type().ID())
+				assert.EqualValues(t, stdlib.AccountContractAddedEventType.ID(), events[0].Type(inter).ID())
 
 			} else {
 				require.Error(t, err)
@@ -490,8 +490,8 @@ func TestRuntimeContract(t *testing.T) {
 			)
 
 			require.Len(t, events, 2)
-			assert.EqualValues(t, stdlib.AccountContractRemovedEventType.ID(), events[0].Type().ID())
-			assert.EqualValues(t, stdlib.AccountContractAddedEventType.ID(), events[1].Type().ID())
+			assert.EqualValues(t, stdlib.AccountContractRemovedEventType.ID(), events[0].Type(inter).ID())
+			assert.EqualValues(t, stdlib.AccountContractAddedEventType.ID(), events[1].Type(inter).ID())
 
 			contractValueExists := getContractValueExists()
 

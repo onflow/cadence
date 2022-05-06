@@ -165,7 +165,7 @@ func TestEncodeAddress(t *testing.T) {
 
 	testEncodeAndDecode(
 		t,
-		cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
+		cadence.BytesToUnmeteredAddress([]byte{1, 2, 3, 4, 5}),
 		`{"type":"Address","value":"0x0000000102030405"}`,
 	)
 }
@@ -1049,7 +1049,7 @@ func TestEncodeLink(t *testing.T) {
 	testEncodeAndDecode(
 		t,
 		cadence.NewLink(
-			cadence.Path{Domain: "storage", Identifier: "foo"},
+			cadence.NewPath("storage", "foo"),
 			"Bar",
 		),
 		`{"type":"Link","value":{"targetPath":{"type":"Path","value":{"domain":"storage","identifier":"foo"}},"borrowType":"Bar"}}`,
@@ -1561,8 +1561,8 @@ func TestEncodeCapability(t *testing.T) {
 	testEncodeAndDecode(
 		t,
 		cadence.Capability{
-			Path:       cadence.Path{Domain: "storage", Identifier: "foo"},
-			Address:    cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
+			Path:       cadence.NewPath("storage", "foo"),
+			Address:    cadence.BytesToUnmeteredAddress([]byte{1, 2, 3, 4, 5}),
 			BorrowType: cadence.IntType{},
 		},
 		`{"type":"Capability","value":{"path":{"type":"Path","value":{"domain":"storage","identifier":"foo"}},"borrowType":{"kind":"Int"},"address":"0x0000000102030405"}}`,
@@ -1826,7 +1826,7 @@ func TestEncodePath(t *testing.T) {
 
 	testEncodeAndDecode(
 		t,
-		cadence.Path{Domain: "storage", Identifier: "foo"},
+		cadence.NewPath("storage", "foo"),
 		`{"type":"Path","value":{"domain":"storage","identifier":"foo"}}`,
 	)
 }
@@ -1944,7 +1944,7 @@ func TestNonUTF8StringEncoding(t *testing.T) {
 	// Make sure it is an invalid utf8 string
 	assert.False(t, utf8.ValidString(nonUTF8String))
 
-	// Avoid using the `NewString()` constructor to skip the validation
+	// Avoid using the `NewMeteredString()` constructor to skip the validation
 	stringValue := cadence.String(nonUTF8String)
 
 	encodedValue, err := json.Encode(stringValue)

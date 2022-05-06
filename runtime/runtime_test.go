@@ -1023,7 +1023,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
             `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
-					cadence.BytesToAddress(
+					cadence.BytesToUnmeteredAddress(
 						[]byte{
 							0x0, 0x0, 0x0, 0x0,
 							0x0, 0x0, 0x0, 0x1,
@@ -1318,7 +1318,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
             `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
-					cadence.BytesToAddress(
+					cadence.BytesToUnmeteredAddress(
 						[]byte{
 							0x0, 0x0, 0x0, 0x0,
 							0x0, 0x0, 0x0, 0x1,
@@ -3043,7 +3043,7 @@ func TestRuntimeTransaction_CreateAccount(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Len(t, events, 1)
-	assert.EqualValues(t, stdlib.AccountCreatedEventType.ID(), events[0].Type().ID())
+	assert.EqualValues(t, stdlib.AccountCreatedEventType.ID(), events[0].Type(nil).ID())
 }
 
 func TestRuntimeContractAccount(t *testing.T) {
@@ -3052,7 +3052,7 @@ func TestRuntimeContractAccount(t *testing.T) {
 
 	runtime := newTestInterpreterRuntime()
 
-	addressValue := cadence.BytesToAddress([]byte{0xCA, 0xDE})
+	addressValue := cadence.BytesToUnmeteredAddress([]byte{0xCA, 0xDE})
 
 	contract := []byte(`
       pub contract Test {
@@ -5399,7 +5399,7 @@ func TestRuntimeContractWriteback(t *testing.T) {
 
 	runtime := newTestInterpreterRuntime()
 
-	addressValue := cadence.BytesToAddress([]byte{0xCA, 0xDE})
+	addressValue := cadence.BytesToUnmeteredAddress([]byte{0xCA, 0xDE})
 
 	contract := []byte(`
       pub contract Test {
@@ -5555,7 +5555,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 
 	runtime := newTestInterpreterRuntime()
 
-	addressValue := cadence.BytesToAddress([]byte{0xCA, 0xDE})
+	addressValue := cadence.BytesToUnmeteredAddress([]byte{0xCA, 0xDE})
 
 	contract := []byte(`
       pub contract Test {
@@ -6777,7 +6777,7 @@ func TestRuntimeGetCapability(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.Capability{
-				Address: cadence.BytesToAddress([]byte{0x1}),
+				Address: cadence.BytesToUnmeteredAddress([]byte{0x1}),
 				Path: cadence.Path{
 					Domain:     "public",
 					Identifier: "xxx",

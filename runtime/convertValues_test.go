@@ -1285,7 +1285,7 @@ func TestExportAddressValue(t *testing.T) {
     `
 
 	actual := exportValueFromScript(t, script)
-	expected := cadence.BytesToAddress(
+	expected := cadence.BytesToUnmeteredAddress(
 		[]byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x42},
 	)
 
@@ -1720,7 +1720,7 @@ func TestExportTypeValue(t *testing.T) {
 		value := interpreter.TypeValue{
 			Type: nil,
 		}
-		actual, err := exportValueWithInterpreter(value, nil, seenReferences{})
+		actual, err := exportValueWithInterpreter(value, newTestInterpreter(t), seenReferences{})
 		require.NoError(t, err)
 
 		expected := cadence.TypeValue{
@@ -1805,7 +1805,7 @@ func TestExportCapabilityValue(t *testing.T) {
 			BorrowType: interpreter.PrimitiveStaticTypeInt,
 		}
 
-		actual, err := exportValueWithInterpreter(capability, nil, seenReferences{})
+		actual, err := exportValueWithInterpreter(capability, newTestInterpreter(t), seenReferences{})
 		require.NoError(t, err)
 
 		expected := cadence.Capability{
@@ -1876,7 +1876,7 @@ func TestExportCapabilityValue(t *testing.T) {
 			},
 		}
 
-		actual, err := exportValueWithInterpreter(capability, nil, seenReferences{})
+		actual, err := exportValueWithInterpreter(capability, newTestInterpreter(t), seenReferences{})
 		require.NoError(t, err)
 
 		expected := cadence.Capability{
@@ -1905,7 +1905,7 @@ func TestExportLinkValue(t *testing.T) {
 			Type: interpreter.PrimitiveStaticTypeInt,
 		}
 
-		actual, err := exportValueWithInterpreter(link, nil, seenReferences{})
+		actual, err := exportValueWithInterpreter(link, newTestInterpreter(t), seenReferences{})
 		require.NoError(t, err)
 
 		expected := cadence.Link{
@@ -2970,8 +2970,10 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 
 		t.Parallel()
 
+		inter := newTestInterpreter(t)
+
 		value := interpreter.NewArrayValue(
-			newTestInterpreter(t),
+			inter,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -2980,7 +2982,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 			interpreter.NewUnmeteredStringValue("foo"),
 		)
 
-		actual, err := exportValueWithInterpreter(value, nil, seenReferences{})
+		actual, err := exportValueWithInterpreter(value, inter, seenReferences{})
 		require.NoError(t, err)
 
 		assert.Equal(t,
@@ -3103,7 +3105,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 			},
 		)
 
-		actual, err := exportValueWithInterpreter(value, nil, seenReferences{})
+		actual, err := exportValueWithInterpreter(value, newTestInterpreter(t), seenReferences{})
 		require.NoError(t, err)
 
 		assert.Equal(t,
@@ -3148,8 +3150,10 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 
 		t.Parallel()
 
+		inter := newTestInterpreter(t)
+
 		value := interpreter.NewDictionaryValue(
-			newTestInterpreter(t),
+			inter,
 			interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeString,
 				ValueType: interpreter.PrimitiveStaticTypeInt,
@@ -3158,7 +3162,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 			interpreter.NewUnmeteredStringValue("b"), interpreter.NewUnmeteredIntValueFromInt64(2),
 		)
 
-		actual, err := exportValueWithInterpreter(value, nil, seenReferences{})
+		actual, err := exportValueWithInterpreter(value, inter, seenReferences{})
 		require.NoError(t, err)
 
 		assert.Equal(t,
@@ -3393,7 +3397,7 @@ func TestRuntimeStringValueImport(t *testing.T) {
 		nonUTF8String := "\xbd\xb2\x3d\xbc\x20\xe2"
 		require.False(t, utf8.ValidString(nonUTF8String))
 
-		// Avoid using the `NewString()` constructor to skip the validation
+		// Avoid using the `NewMeteredString()` constructor to skip the validation
 		stringValue := cadence.String(nonUTF8String)
 
 		script := `

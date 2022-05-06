@@ -184,6 +184,16 @@ func newAtreeMemoryUsage(count uint64, elementSize uint, array bool) (MemoryUsag
 	}
 }
 
+func NewCadenceArrayMemoryUsages(length int) (MemoryUsage, MemoryUsage) {
+	return MemoryUsage{
+			Kind:   MemoryKindCadenceArrayBase,
+			Amount: 1,
+		}, MemoryUsage{
+			Kind:   MemoryKindCadenceArrayLength,
+			Amount: uint64(length),
+		}
+}
+
 func AdditionalAtreeMemoryUsage(originalCount uint64, elementSize uint, array bool) (MemoryUsage, MemoryUsage) {
 	originalLeafNodes, originalBranchNodes := atreeNodes(originalCount, elementSize)
 	newLeafNodes, newBranchNodes := atreeNodes(originalCount+1, elementSize)
@@ -228,6 +238,16 @@ func NewDictionaryMemoryUsages(count uint64, elementSize uint) (MemoryUsage, Mem
 		}, leaves, branches
 }
 
+func NewCadenceDictionaryMemoryUsages(length int) (MemoryUsage, MemoryUsage) {
+	return MemoryUsage{
+			Kind:   MemoryKindCadenceDictionaryBase,
+			Amount: 1,
+		}, MemoryUsage{
+			Kind:   MemoryKindCadenceDictionarySize,
+			Amount: uint64(length),
+		}
+}
+
 func NewCompositeMemoryUsages(count uint64, elementSize uint) (MemoryUsage, MemoryUsage, MemoryUsage, MemoryUsage) {
 	leaves, branches := newAtreeMemoryUsage(count, elementSize, false)
 	return MemoryUsage{
@@ -237,6 +257,22 @@ func NewCompositeMemoryUsages(count uint64, elementSize uint) (MemoryUsage, Memo
 			Kind:   MemoryKindAtreeMapElementOverhead,
 			Amount: count,
 		}, leaves, branches
+}
+
+func NewAtreeMapPreAllocatedElementsMemoryUsage(count uint64, elementSize uint) MemoryUsage {
+	leafNodesCount, _ := atreeNodes(count, elementSize)
+
+	const preAllocatedElementCountPerLeafNode uint64 = 32
+
+	var amount uint64 = 0
+	if count < preAllocatedElementCountPerLeafNode*leafNodesCount {
+		amount = preAllocatedElementCountPerLeafNode*leafNodesCount - count
+	}
+
+	return MemoryUsage{
+		Kind:   MemoryKindAtreeMapPreAllocatedElement,
+		Amount: amount,
+	}
 }
 
 func NewSimpleCompositeMemoryUsage(length int) MemoryUsage {
@@ -257,6 +293,27 @@ func NewRawStringMemoryUsage(length int) MemoryUsage {
 	return MemoryUsage{
 		Kind:   MemoryKindRawString,
 		Amount: uint64(length) + 1, // +1 to account for empty strings
+	}
+}
+
+func NewCadenceStringMemoryUsage(length int) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindCadenceString,
+		Amount: uint64(length) + 1, // +1 to account for empty strings
+	}
+}
+
+func NewCadenceCharacterMemoryUsage(length int) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindCadenceCharacter,
+		Amount: uint64(length),
+	}
+}
+
+func NewCadenceIntMemoryUsage(bytes int) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindCadenceInt,
+		Amount: uint64(bytes),
 	}
 }
 
@@ -286,6 +343,56 @@ func NewBigIntMemoryUsage(bytes int) MemoryUsage {
 		Kind:   MemoryKindBigInt,
 		Amount: uint64(bytes),
 	}
+}
+
+func NewCadenceStructMemoryUsages(fields int) (MemoryUsage, MemoryUsage) {
+	return MemoryUsage{
+			Kind:   MemoryKindCadenceStructBase,
+			Amount: 1,
+		}, MemoryUsage{
+			Kind:   MemoryKindCadenceStructSize,
+			Amount: uint64(fields),
+		}
+}
+
+func NewCadenceResourceMemoryUsages(fields int) (MemoryUsage, MemoryUsage) {
+	return MemoryUsage{
+			Kind:   MemoryKindCadenceResourceBase,
+			Amount: 1,
+		}, MemoryUsage{
+			Kind:   MemoryKindCadenceResourceSize,
+			Amount: uint64(fields),
+		}
+}
+
+func NewCadenceEventMemoryUsages(fields int) (MemoryUsage, MemoryUsage) {
+	return MemoryUsage{
+			Kind:   MemoryKindCadenceEventBase,
+			Amount: 1,
+		}, MemoryUsage{
+			Kind:   MemoryKindCadenceEventSize,
+			Amount: uint64(fields),
+		}
+}
+
+func NewCadenceContractMemoryUsages(fields int) (MemoryUsage, MemoryUsage) {
+	return MemoryUsage{
+			Kind:   MemoryKindCadenceContractBase,
+			Amount: 1,
+		}, MemoryUsage{
+			Kind:   MemoryKindCadenceContractSize,
+			Amount: uint64(fields),
+		}
+}
+
+func NewCadenceEnumMemoryUsages(fields int) (MemoryUsage, MemoryUsage) {
+	return MemoryUsage{
+			Kind:   MemoryKindCadenceEnumBase,
+			Amount: 1,
+		}, MemoryUsage{
+			Kind:   MemoryKindCadenceEnumSize,
+			Amount: uint64(fields),
+		}
 }
 
 func max(a, b int) int {
@@ -574,6 +681,20 @@ func NewMembersMemoryUsage(length int) MemoryUsage {
 		Kind: MemoryKindMembers,
 		// +1 to account for empty members
 		Amount: uint64(length) + 1,
+	}
+}
+
+func NewCadenceNumberMemoryUsage(bytes int) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindCadenceNumber,
+		Amount: uint64(bytes),
+	}
+}
+
+func NewCadenceBigIntMemoryUsage(bytes int) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindCadenceNumber,
+		Amount: uint64(bytes),
 	}
 }
 

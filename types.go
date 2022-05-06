@@ -33,6 +33,11 @@ type Type interface {
 
 type AnyType struct{}
 
+func NewAnyType(gauge common.MemoryGauge) AnyType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return AnyType{}
+}
+
 func (AnyType) isType() {}
 
 func (AnyType) ID() string {
@@ -43,6 +48,11 @@ func (AnyType) ID() string {
 
 type AnyStructType struct{}
 
+func NewAnyStructType(gauge common.MemoryGauge) AnyStructType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return AnyStructType{}
+}
+
 func (AnyStructType) isType() {}
 
 func (AnyStructType) ID() string {
@@ -52,6 +62,11 @@ func (AnyStructType) ID() string {
 // AnyResourceType
 
 type AnyResourceType struct{}
+
+func NewAnyResourceType(gauge common.MemoryGauge) AnyResourceType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return AnyResourceType{}
+}
 
 func (AnyResourceType) isType() {}
 
@@ -65,6 +80,11 @@ type OptionalType struct {
 	Type Type
 }
 
+func NewOptionalType(gauge common.MemoryGauge, typ Type) OptionalType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceOptionalType)
+	return OptionalType{Type: typ}
+}
+
 func (OptionalType) isType() {}
 
 func (t OptionalType) ID() string {
@@ -74,6 +94,11 @@ func (t OptionalType) ID() string {
 // MetaType
 
 type MetaType struct{}
+
+func NewMetaType(gauge common.MemoryGauge) MetaType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return MetaType{}
+}
 
 func (MetaType) isType() {}
 
@@ -85,6 +110,11 @@ func (MetaType) ID() string {
 
 type VoidType struct{}
 
+func NewVoidType(gauge common.MemoryGauge) VoidType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return VoidType{}
+}
+
 func (VoidType) isType() {}
 
 func (VoidType) ID() string {
@@ -94,6 +124,11 @@ func (VoidType) ID() string {
 // NeverType
 
 type NeverType struct{}
+
+func NewNeverType(gauge common.MemoryGauge) NeverType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return NeverType{}
+}
 
 func (NeverType) isType() {}
 
@@ -105,6 +140,11 @@ func (NeverType) ID() string {
 
 type BoolType struct{}
 
+func NewBoolType(gauge common.MemoryGauge) BoolType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return BoolType{}
+}
+
 func (BoolType) isType() {}
 
 func (BoolType) ID() string {
@@ -114,6 +154,11 @@ func (BoolType) ID() string {
 // StringType
 
 type StringType struct{}
+
+func NewStringType(gauge common.MemoryGauge) StringType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return StringType{}
+}
 
 func (StringType) isType() {}
 
@@ -125,6 +170,11 @@ func (StringType) ID() string {
 
 type CharacterType struct{}
 
+func NewCharacterType(gauge common.MemoryGauge) CharacterType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return CharacterType{}
+}
+
 func (CharacterType) isType() {}
 
 func (CharacterType) ID() string {
@@ -134,6 +184,11 @@ func (CharacterType) ID() string {
 // BytesType
 
 type BytesType struct{}
+
+func NewBytesType(gauge common.MemoryGauge) BytesType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return BytesType{}
+}
 
 func (BytesType) isType() {}
 
@@ -145,6 +200,11 @@ func (BytesType) ID() string {
 
 type AddressType struct{}
 
+func NewAddressType(gauge common.MemoryGauge) AddressType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return AddressType{}
+}
+
 func (AddressType) isType() {}
 
 func (AddressType) ID() string {
@@ -154,6 +214,11 @@ func (AddressType) ID() string {
 // NumberType
 
 type NumberType struct{}
+
+func NewNumberType(gauge common.MemoryGauge) NumberType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return NumberType{}
+}
 
 func (NumberType) isType() {}
 
@@ -165,6 +230,11 @@ func (NumberType) ID() string {
 
 type SignedNumberType struct{}
 
+func NewSignedNumberType(gauge common.MemoryGauge) SignedNumberType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return SignedNumberType{}
+}
+
 func (SignedNumberType) isType() {}
 
 func (SignedNumberType) ID() string {
@@ -174,6 +244,11 @@ func (SignedNumberType) ID() string {
 // IntegerType
 
 type IntegerType struct{}
+
+func NewIntegerType(gauge common.MemoryGauge) IntegerType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return IntegerType{}
+}
 
 func (IntegerType) isType() {}
 
@@ -185,6 +260,11 @@ func (IntegerType) ID() string {
 
 type SignedIntegerType struct{}
 
+func NewSignedIntegerType(gauge common.MemoryGauge) SignedIntegerType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return SignedIntegerType{}
+}
+
 func (SignedIntegerType) isType() {}
 
 func (SignedIntegerType) ID() string {
@@ -194,6 +274,11 @@ func (SignedIntegerType) ID() string {
 // FixedPointType
 
 type FixedPointType struct{}
+
+func NewFixedPointType(gauge common.MemoryGauge) FixedPointType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return FixedPointType{}
+}
 
 func (FixedPointType) isType() {}
 
@@ -205,6 +290,11 @@ func (FixedPointType) ID() string {
 
 type SignedFixedPointType struct{}
 
+func NewSignedFixedPointType(gauge common.MemoryGauge) SignedFixedPointType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return SignedFixedPointType{}
+}
+
 func (SignedFixedPointType) isType() {}
 
 func (SignedFixedPointType) ID() string {
@@ -214,6 +304,11 @@ func (SignedFixedPointType) ID() string {
 // IntType
 
 type IntType struct{}
+
+func NewIntType(gauge common.MemoryGauge) IntType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return IntType{}
+}
 
 func (IntType) isType() {}
 
@@ -225,6 +320,11 @@ func (IntType) ID() string {
 
 type Int8Type struct{}
 
+func NewInt8Type(gauge common.MemoryGauge) Int8Type {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return Int8Type{}
+}
+
 func (Int8Type) isType() {}
 
 func (Int8Type) ID() string {
@@ -234,6 +334,11 @@ func (Int8Type) ID() string {
 // Int16Type
 
 type Int16Type struct{}
+
+func NewInt16Type(gauge common.MemoryGauge) Int16Type {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return Int16Type{}
+}
 
 func (Int16Type) isType() {}
 
@@ -245,6 +350,11 @@ func (Int16Type) ID() string {
 
 type Int32Type struct{}
 
+func NewInt32Type(gauge common.MemoryGauge) Int32Type {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return Int32Type{}
+}
+
 func (Int32Type) isType() {}
 
 func (Int32Type) ID() string {
@@ -254,6 +364,11 @@ func (Int32Type) ID() string {
 // Int64Type
 
 type Int64Type struct{}
+
+func NewInt64Type(gauge common.MemoryGauge) Int64Type {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return Int64Type{}
+}
 
 func (Int64Type) isType() {}
 
@@ -265,6 +380,11 @@ func (Int64Type) ID() string {
 
 type Int128Type struct{}
 
+func NewInt128Type(gauge common.MemoryGauge) Int128Type {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return Int128Type{}
+}
+
 func (Int128Type) isType() {}
 
 func (Int128Type) ID() string {
@@ -274,6 +394,11 @@ func (Int128Type) ID() string {
 // Int256Type
 
 type Int256Type struct{}
+
+func NewInt256Type(gauge common.MemoryGauge) Int256Type {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return Int256Type{}
+}
 
 func (Int256Type) isType() {}
 
@@ -285,6 +410,11 @@ func (Int256Type) ID() string {
 
 type UIntType struct{}
 
+func NewUIntType(gauge common.MemoryGauge) UIntType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return UIntType{}
+}
+
 func (UIntType) isType() {}
 
 func (UIntType) ID() string {
@@ -294,6 +424,11 @@ func (UIntType) ID() string {
 // UInt8Type
 
 type UInt8Type struct{}
+
+func NewUInt8Type(gauge common.MemoryGauge) UInt8Type {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return UInt8Type{}
+}
 
 func (UInt8Type) isType() {}
 
@@ -305,6 +440,11 @@ func (UInt8Type) ID() string {
 
 type UInt16Type struct{}
 
+func NewUInt16Type(gauge common.MemoryGauge) UInt16Type {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return UInt16Type{}
+}
+
 func (UInt16Type) isType() {}
 
 func (UInt16Type) ID() string {
@@ -314,6 +454,11 @@ func (UInt16Type) ID() string {
 // UInt32Type
 
 type UInt32Type struct{}
+
+func NewUInt32Type(gauge common.MemoryGauge) UInt32Type {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return UInt32Type{}
+}
 
 func (UInt32Type) isType() {}
 
@@ -325,6 +470,11 @@ func (UInt32Type) ID() string {
 
 type UInt64Type struct{}
 
+func NewUInt64Type(gauge common.MemoryGauge) UInt64Type {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return UInt64Type{}
+}
+
 func (UInt64Type) isType() {}
 
 func (UInt64Type) ID() string {
@@ -334,6 +484,11 @@ func (UInt64Type) ID() string {
 // UInt128Type
 
 type UInt128Type struct{}
+
+func NewUInt128Type(gauge common.MemoryGauge) UInt128Type {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return UInt128Type{}
+}
 
 func (UInt128Type) isType() {}
 
@@ -345,6 +500,11 @@ func (UInt128Type) ID() string {
 
 type UInt256Type struct{}
 
+func NewUInt256Type(gauge common.MemoryGauge) UInt256Type {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return UInt256Type{}
+}
+
 func (UInt256Type) isType() {}
 
 func (UInt256Type) ID() string {
@@ -354,6 +514,11 @@ func (UInt256Type) ID() string {
 // Word8Type
 
 type Word8Type struct{}
+
+func NewWord8Type(gauge common.MemoryGauge) Word8Type {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return Word8Type{}
+}
 
 func (Word8Type) isType() {}
 
@@ -365,6 +530,11 @@ func (Word8Type) ID() string {
 
 type Word16Type struct{}
 
+func NewWord16Type(gauge common.MemoryGauge) Word16Type {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return Word16Type{}
+}
+
 func (Word16Type) isType() {}
 
 func (Word16Type) ID() string {
@@ -374,6 +544,11 @@ func (Word16Type) ID() string {
 // Word32Type
 
 type Word32Type struct{}
+
+func NewWord32Type(gauge common.MemoryGauge) Word32Type {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return Word32Type{}
+}
 
 func (Word32Type) isType() {}
 
@@ -385,6 +560,11 @@ func (Word32Type) ID() string {
 
 type Word64Type struct{}
 
+func NewWord64Type(gauge common.MemoryGauge) Word64Type {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return Word64Type{}
+}
+
 func (Word64Type) isType() {}
 
 func (Word64Type) ID() string {
@@ -395,6 +575,11 @@ func (Word64Type) ID() string {
 
 type Fix64Type struct{}
 
+func NewFix64Type(gauge common.MemoryGauge) Fix64Type {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return Fix64Type{}
+}
+
 func (Fix64Type) isType() {}
 
 func (Fix64Type) ID() string {
@@ -404,6 +589,11 @@ func (Fix64Type) ID() string {
 // UFix64Type
 
 type UFix64Type struct{}
+
+func NewUFix64Type(gauge common.MemoryGauge) UFix64Type {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return UFix64Type{}
+}
 
 func (UFix64Type) isType() {}
 
@@ -420,6 +610,14 @@ type ArrayType interface {
 
 type VariableSizedArrayType struct {
 	ElementType Type
+}
+
+func NewVariableSizedArrayType(
+	gauge common.MemoryGauge,
+	elementType Type,
+) VariableSizedArrayType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceVariableSizedArrayType)
+	return VariableSizedArrayType{ElementType: elementType}
 }
 
 func (VariableSizedArrayType) isType() {}
@@ -439,6 +637,18 @@ type ConstantSizedArrayType struct {
 	ElementType Type
 }
 
+func NewConstantSizedArrayType(
+	gauge common.MemoryGauge,
+	size uint,
+	elementType Type,
+) ConstantSizedArrayType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceConstantSizedArrayType)
+	return ConstantSizedArrayType{
+		Size:        size,
+		ElementType: elementType,
+	}
+}
+
 func (ConstantSizedArrayType) isType() {}
 
 func (t ConstantSizedArrayType) ID() string {
@@ -454,6 +664,18 @@ func (t ConstantSizedArrayType) Element() Type {
 type DictionaryType struct {
 	KeyType     Type
 	ElementType Type
+}
+
+func NewDictionaryType(
+	gauge common.MemoryGauge,
+	keyType Type,
+	elementType Type,
+) DictionaryType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceDictionaryType)
+	return DictionaryType{
+		KeyType:     keyType,
+		ElementType: elementType,
+	}
 }
 
 func (DictionaryType) isType() {}
@@ -473,12 +695,33 @@ type Field struct {
 	Type       Type
 }
 
+// Fields are always created in an array, which must be metered ahead of time.
+// So no metering here.
+func NewField(identifier string, typ Type) Field {
+	return Field{
+		Identifier: identifier,
+		Type:       typ,
+	}
+}
+
 // Parameter
 
 type Parameter struct {
 	Label      string
 	Identifier string
 	Type       Type
+}
+
+func NewParameter(
+	label string,
+	identifier string,
+	typ Type,
+) Parameter {
+	return Parameter{
+		Label:      label,
+		Identifier: identifier,
+		Type:       typ,
+	}
 }
 
 // CompositeType
@@ -499,6 +742,22 @@ type StructType struct {
 	QualifiedIdentifier string
 	Fields              []Field
 	Initializers        [][]Parameter
+}
+
+func NewStructType(
+	gauge common.MemoryGauge,
+	location common.Location,
+	qualifiedIdentifer string,
+	fields []Field,
+	initializers [][]Parameter,
+) *StructType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceStructType)
+	return &StructType{
+		Location:            location,
+		QualifiedIdentifier: qualifiedIdentifer,
+		Fields:              fields,
+		Initializers:        initializers,
+	}
 }
 
 func (*StructType) isType() {}
@@ -538,6 +797,22 @@ type ResourceType struct {
 	Initializers        [][]Parameter
 }
 
+func NewResourceType(
+	gauge common.MemoryGauge,
+	location common.Location,
+	qualifiedIdentifer string,
+	fields []Field,
+	initializers [][]Parameter,
+) *ResourceType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceResourceType)
+	return &ResourceType{
+		Location:            location,
+		QualifiedIdentifier: qualifiedIdentifer,
+		Fields:              fields,
+		Initializers:        initializers,
+	}
+}
+
 func (*ResourceType) isType() {}
 
 func (t *ResourceType) ID() string {
@@ -575,6 +850,22 @@ type EventType struct {
 	Initializer         []Parameter
 }
 
+func NewEventType(
+	gauge common.MemoryGauge,
+	location common.Location,
+	qualifiedIdentifer string,
+	fields []Field,
+	initializer []Parameter,
+) *EventType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceEventType)
+	return &EventType{
+		Location:            location,
+		QualifiedIdentifier: qualifiedIdentifer,
+		Fields:              fields,
+		Initializer:         initializer,
+	}
+}
+
 func (*EventType) isType() {}
 
 func (t *EventType) ID() string {
@@ -610,6 +901,22 @@ type ContractType struct {
 	QualifiedIdentifier string
 	Fields              []Field
 	Initializers        [][]Parameter
+}
+
+func NewContractType(
+	gauge common.MemoryGauge,
+	location common.Location,
+	qualifiedIdentifer string,
+	fields []Field,
+	initializers [][]Parameter,
+) *ContractType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceContractType)
+	return &ContractType{
+		Location:            location,
+		QualifiedIdentifier: qualifiedIdentifer,
+		Fields:              fields,
+		Initializers:        initializers,
+	}
 }
 
 func (*ContractType) isType() {}
@@ -660,6 +967,22 @@ type StructInterfaceType struct {
 	Initializers        [][]Parameter
 }
 
+func NewStructInterfaceType(
+	gauge common.MemoryGauge,
+	location common.Location,
+	qualifiedIdentifer string,
+	fields []Field,
+	initializers [][]Parameter,
+) *StructInterfaceType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceStructInterfaceType)
+	return &StructInterfaceType{
+		Location:            location,
+		QualifiedIdentifier: qualifiedIdentifer,
+		Fields:              fields,
+		Initializers:        initializers,
+	}
+}
+
 func (*StructInterfaceType) isType() {}
 
 func (t *StructInterfaceType) ID() string {
@@ -695,6 +1018,22 @@ type ResourceInterfaceType struct {
 	QualifiedIdentifier string
 	Fields              []Field
 	Initializers        [][]Parameter
+}
+
+func NewResourceInterfaceType(
+	gauge common.MemoryGauge,
+	location common.Location,
+	qualifiedIdentifer string,
+	fields []Field,
+	initializers [][]Parameter,
+) *ResourceInterfaceType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceResourceInterfaceType)
+	return &ResourceInterfaceType{
+		Location:            location,
+		QualifiedIdentifier: qualifiedIdentifer,
+		Fields:              fields,
+		Initializers:        initializers,
+	}
 }
 
 func (*ResourceInterfaceType) isType() {}
@@ -734,6 +1073,22 @@ type ContractInterfaceType struct {
 	Initializers        [][]Parameter
 }
 
+func NewContractInterfaceType(
+	gauge common.MemoryGauge,
+	location common.Location,
+	qualifiedIdentifer string,
+	fields []Field,
+	initializers [][]Parameter,
+) *ContractInterfaceType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceContractInterfaceType)
+	return &ContractInterfaceType{
+		Location:            location,
+		QualifiedIdentifier: qualifiedIdentifer,
+		Fields:              fields,
+		Initializers:        initializers,
+	}
+}
+
 func (*ContractInterfaceType) isType() {}
 
 func (t *ContractInterfaceType) ID() string {
@@ -770,6 +1125,20 @@ type FunctionType struct {
 	ReturnType Type
 }
 
+func NewFunctionType(
+	gauge common.MemoryGauge,
+	typeID string,
+	parameters []Parameter,
+	returnType Type,
+) FunctionType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceFunctionType)
+	return FunctionType{
+		typeID:     typeID,
+		Parameters: parameters,
+		ReturnType: returnType,
+	}
+}
+
 func (FunctionType) isType() {}
 
 func (t FunctionType) ID() string {
@@ -786,6 +1155,18 @@ func (t FunctionType) WithID(id string) FunctionType {
 type ReferenceType struct {
 	Authorized bool
 	Type       Type
+}
+
+func NewReferenceType(
+	gauge common.MemoryGauge,
+	authorized bool,
+	typ Type,
+) ReferenceType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceReferenceType)
+	return ReferenceType{
+		Authorized: authorized,
+		Type:       typ,
+	}
 }
 
 func (ReferenceType) isType() {}
@@ -806,6 +1187,20 @@ type RestrictedType struct {
 	Restrictions []Type
 }
 
+func NewRestrictedType(
+	gauge common.MemoryGauge,
+	typeID string,
+	typ Type,
+	restrictions []Type,
+) *RestrictedType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceRestrictedType)
+	return &RestrictedType{
+		typeID:       typeID,
+		Type:         typ,
+		Restrictions: restrictions,
+	}
+}
+
 func (RestrictedType) isType() {}
 
 func (t RestrictedType) ID() string {
@@ -821,6 +1216,13 @@ func (t RestrictedType) WithID(id string) RestrictedType {
 
 type BlockType struct{}
 
+func NewBlockType(
+	gauge common.MemoryGauge,
+) BlockType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return BlockType{}
+}
+
 func (BlockType) isType() {}
 
 func (BlockType) ID() string {
@@ -830,6 +1232,13 @@ func (BlockType) ID() string {
 // PathType
 
 type PathType struct{}
+
+func NewPathType(
+	gauge common.MemoryGauge,
+) PathType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return PathType{}
+}
 
 func (PathType) isType() {}
 
@@ -841,6 +1250,13 @@ func (PathType) ID() string {
 
 type CapabilityPathType struct{}
 
+func NewCapabilityPathType(
+	gauge common.MemoryGauge,
+) CapabilityPathType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return CapabilityPathType{}
+}
+
 func (CapabilityPathType) isType() {}
 
 func (CapabilityPathType) ID() string {
@@ -850,6 +1266,13 @@ func (CapabilityPathType) ID() string {
 // StoragePathType
 
 type StoragePathType struct{}
+
+func NewStoragePathType(
+	gauge common.MemoryGauge,
+) StoragePathType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return StoragePathType{}
+}
 
 func (StoragePathType) isType() {}
 
@@ -861,6 +1284,13 @@ func (StoragePathType) ID() string {
 
 type PublicPathType struct{}
 
+func NewPublicPathType(
+	gauge common.MemoryGauge,
+) PublicPathType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return PublicPathType{}
+}
+
 func (PublicPathType) isType() {}
 
 func (PublicPathType) ID() string {
@@ -870,6 +1300,13 @@ func (PublicPathType) ID() string {
 // PrivatePathType
 
 type PrivatePathType struct{}
+
+func NewPrivatePathType(
+	gauge common.MemoryGauge,
+) PrivatePathType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return PrivatePathType{}
+}
 
 func (PrivatePathType) isType() {}
 
@@ -881,6 +1318,14 @@ func (PrivatePathType) ID() string {
 
 type CapabilityType struct {
 	BorrowType Type
+}
+
+func NewCapabilityType(
+	gauge common.MemoryGauge,
+	borrowType Type,
+) CapabilityType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceCapabilityType)
+	return CapabilityType{BorrowType: borrowType}
 }
 
 func (CapabilityType) isType() {}
@@ -899,6 +1344,24 @@ type EnumType struct {
 	RawType             Type
 	Fields              []Field
 	Initializers        [][]Parameter
+}
+
+func NewEnumType(
+	gauge common.MemoryGauge,
+	location common.Location,
+	qualifiedIdentifier string,
+	rawType Type,
+	fields []Field,
+	initializers [][]Parameter,
+) *EnumType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceEnumType)
+	return &EnumType{
+		Location:            location,
+		QualifiedIdentifier: qualifiedIdentifier,
+		RawType:             rawType,
+		Fields:              fields,
+		Initializers:        initializers,
+	}
 }
 
 func (*EnumType) isType() {}
@@ -932,6 +1395,13 @@ func (t *EnumType) CompositeInitializers() [][]Parameter {
 // AuthAccountType
 type AuthAccountType struct{}
 
+func NewAuthAccountType(
+	gauge common.MemoryGauge,
+) AuthAccountType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return AuthAccountType{}
+}
+
 func (AuthAccountType) isType() {}
 
 func (AuthAccountType) ID() string {
@@ -940,6 +1410,13 @@ func (AuthAccountType) ID() string {
 
 // PublicAccountType
 type PublicAccountType struct{}
+
+func NewPublicAccountType(
+	gauge common.MemoryGauge,
+) PublicAccountType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return PublicAccountType{}
+}
 
 func (PublicAccountType) isType() {}
 
@@ -950,6 +1427,13 @@ func (PublicAccountType) ID() string {
 // DeployedContractType
 type DeployedContractType struct{}
 
+func NewDeployedContractType(
+	gauge common.MemoryGauge,
+) DeployedContractType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return DeployedContractType{}
+}
+
 func (DeployedContractType) isType() {}
 
 func (DeployedContractType) ID() string {
@@ -958,6 +1442,13 @@ func (DeployedContractType) ID() string {
 
 // AuthAccountContractsType
 type AuthAccountContractsType struct{}
+
+func NewAuthAccountContractsType(
+	gauge common.MemoryGauge,
+) AuthAccountContractsType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return AuthAccountContractsType{}
+}
 
 func (AuthAccountContractsType) isType() {}
 
@@ -968,6 +1459,13 @@ func (AuthAccountContractsType) ID() string {
 // PublicAccountContractsType
 type PublicAccountContractsType struct{}
 
+func NewPublicAccountContractsType(
+	gauge common.MemoryGauge,
+) PublicAccountContractsType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return PublicAccountContractsType{}
+}
+
 func (PublicAccountContractsType) isType() {}
 
 func (PublicAccountContractsType) ID() string {
@@ -976,6 +1474,13 @@ func (PublicAccountContractsType) ID() string {
 
 // AuthAccountKeysType
 type AuthAccountKeysType struct{}
+
+func NewAuthAccountKeysType(
+	gauge common.MemoryGauge,
+) AuthAccountKeysType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return AuthAccountKeysType{}
+}
 
 func (AuthAccountKeysType) isType() {}
 
@@ -986,6 +1491,13 @@ func (AuthAccountKeysType) ID() string {
 // PublicAccountContractsType
 type PublicAccountKeysType struct{}
 
+func NewPublicAccountKeysType(
+	gauge common.MemoryGauge,
+) PublicAccountKeysType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return PublicAccountKeysType{}
+}
+
 func (PublicAccountKeysType) isType() {}
 
 func (PublicAccountKeysType) ID() string {
@@ -994,6 +1506,13 @@ func (PublicAccountKeysType) ID() string {
 
 // AccountKeyType
 type AccountKeyType struct{}
+
+func NewAccountKeyType(
+	gauge common.MemoryGauge,
+) AccountKeyType {
+	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	return AccountKeyType{}
+}
 
 func (AccountKeyType) isType() {}
 
