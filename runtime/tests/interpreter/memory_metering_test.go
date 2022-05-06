@@ -19,7 +19,6 @@
 package interpreter_test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -51,23 +50,6 @@ func (g *testMemoryGauge) MeterMemory(usage common.MemoryUsage) error {
 
 func (g *testMemoryGauge) getMemory(kind common.MemoryKind) uint64 {
 	return g.meter[kind]
-}
-
-func (g *testMemoryGauge) String() string {
-	s := ""
-	found := false
-	for kind, amount := range g.meter {
-		k := kind.String()
-		//if strings.Contains(k, "StaticType") {
-		s += fmt.Sprintf("%s\t%d\n", k, amount)
-		found = true
-		//}
-	}
-	if found {
-		return s
-	} else {
-		return "NO STATIC TYPES FOUND"
-	}
 }
 
 func TestInterpretArrayMetering(t *testing.T) {
@@ -421,6 +403,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapElementOverhead))
 		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
+		assert.Equal(t, uint64(159), meter.getMemory(common.MemoryKindAtreeMapPreAllocatedElement))
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindVariable))
 		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 		// 1 for `x`
@@ -458,6 +441,8 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		// 1 for type
 		// 6: 2 for each element
 		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindDictionaryStaticType))
+
+		assert.Equal(t, uint64(480), meter.getMemory(common.MemoryKindAtreeMapPreAllocatedElement))
 	})
 
 	t.Run("contains", func(t *testing.T) {
@@ -503,6 +488,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
 		assert.Equal(t, uint64(10), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindDictionaryStaticType))
+		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindAtreeMapPreAllocatedElement))
 	})
 
 	t.Run("insert many no packing", func(t *testing.T) {
@@ -533,6 +519,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindAtreeMapElementOverhead))
 		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
+		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindAtreeMapPreAllocatedElement))
 	})
 
 	t.Run("insert many with packing", func(t *testing.T) {
@@ -563,6 +550,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindAtreeMapElementOverhead))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
+		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindAtreeMapPreAllocatedElement))
 	})
 
 	t.Run("update fits in slab", func(t *testing.T) {
@@ -587,6 +575,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindAtreeMapElementOverhead))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
+		assert.Equal(t, uint64(31), meter.getMemory(common.MemoryKindAtreeMapPreAllocatedElement))
 	})
 
 	t.Run("update does not fit in slab", func(t *testing.T) {
@@ -650,6 +639,8 @@ func TestInterpretCompositeMetering(t *testing.T) {
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindCompositeBase))
 		assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindAtreeMapElementOverhead))
+		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindAtreeMapPreAllocatedElement))
 		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindVariable))
 
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCompositeStaticType))
@@ -677,6 +668,8 @@ func TestInterpretCompositeMetering(t *testing.T) {
 
 		assert.Equal(t, uint64(27), meter.getMemory(common.MemoryKindCompositeBase))
 		assert.Equal(t, uint64(27), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapElementOverhead))
+		assert.Equal(t, uint64(480), meter.getMemory(common.MemoryKindAtreeMapPreAllocatedElement))
 		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindVariable))
 
 		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindCompositeStaticType))

@@ -20,6 +20,7 @@ package cadence
 
 import "fmt"
 
+// Unmetered because this function is only used by the client.
 func NewValue(value interface{}) (Value, error) {
 	switch v := value.(type) {
 	case string:

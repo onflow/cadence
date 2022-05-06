@@ -61,6 +61,7 @@ const (
 	MemoryKindAtreeMapDataSlab
 	MemoryKindAtreeMapMetaDataSlab
 	MemoryKindAtreeMapElementOverhead
+	MemoryKindAtreeMapPreAllocatedElement
 
 	// Static Types
 	MemoryKindPrimitiveStaticType
@@ -74,6 +75,56 @@ const (
 	MemoryKindReferenceStaticType
 	MemoryKindCapabilityStaticType
 	MemoryKindFunctionStaticType
+
+	// Cadence Values
+	MemoryKindCadenceVoid
+	MemoryKindCadenceOptional
+	MemoryKindCadenceBool
+	MemoryKindCadenceString
+	MemoryKindCadenceCharacter
+	MemoryKindCadenceAddress
+	MemoryKindCadenceInt
+	MemoryKindCadenceNumber
+	MemoryKindCadenceArrayBase
+	MemoryKindCadenceArrayLength
+	MemoryKindCadenceDictionaryBase
+	MemoryKindCadenceDictionarySize
+	MemoryKindCadenceKeyValuePair
+	MemoryKindCadenceStructBase
+	MemoryKindCadenceStructSize
+	MemoryKindCadenceResourceBase
+	MemoryKindCadenceResourceSize
+	MemoryKindCadenceEventBase
+	MemoryKindCadenceEventSize
+	MemoryKindCadenceContractBase
+	MemoryKindCadenceContractSize
+	MemoryKindCadenceEnumBase
+	MemoryKindCadenceEnumSize
+	MemoryKindCadenceLink
+	MemoryKindCadencePath
+	MemoryKindCadenceTypeValue
+	MemoryKindCadenceCapability
+
+	// Cadence Types
+	MemoryKindCadenceSimpleType
+	MemoryKindCadenceOptionalType
+	MemoryKindCadenceVariableSizedArrayType
+	MemoryKindCadenceConstantSizedArrayType
+	MemoryKindCadenceDictionaryType
+	MemoryKindCadenceField
+	MemoryKindCadenceParameter
+	MemoryKindCadenceStructType
+	MemoryKindCadenceResourceType
+	MemoryKindCadenceEventType
+	MemoryKindCadenceContractType
+	MemoryKindCadenceStructInterfaceType
+	MemoryKindCadenceResourceInterfaceType
+	MemoryKindCadenceContractInterfaceType
+	MemoryKindCadenceFunctionType
+	MemoryKindCadenceReferenceType
+	MemoryKindCadenceRestrictedType
+	MemoryKindCadenceCapabilityType
+	MemoryKindCadenceEnumType
 
 	// Misc
 
