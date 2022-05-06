@@ -1285,7 +1285,7 @@ func TestExportAddressValue(t *testing.T) {
     `
 
 	actual := exportValueFromScript(t, script)
-	expected := cadence.BytesToUnmeteredAddress(
+	expected := cadence.BytesToAddress(
 		[]byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x42},
 	)
 

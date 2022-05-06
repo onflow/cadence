@@ -117,7 +117,7 @@ func TestInterpreterElaborationImportMetering(t *testing.T) {
 		importExpressions[i] = fmt.Sprintf("import C%d from 0x1\n", i)
 	}
 
-	addressValue := cadence.BytesToUnmeteredAddress([]byte{byte(1)})
+	addressValue := cadence.BytesToAddress([]byte{byte(1)})
 
 	for imports := range contracts {
 

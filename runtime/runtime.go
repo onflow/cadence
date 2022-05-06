@@ -897,7 +897,7 @@ func validateArgumentParams(
 		parameterType := parameter.TypeAnnotation.Type
 		argument := arguments[i]
 
-		exportedParameterType := ExportType(inter, parameterType, map[sema.TypeID]cadence.Type{})
+		exportedParameterType := ExportMeteredType(inter, parameterType, map[sema.TypeID]cadence.Type{})
 		var value cadence.Value
 		var err error
 

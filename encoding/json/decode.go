@@ -281,7 +281,7 @@ func (d *Decoder) decodeAddress(valueJSON interface{}) cadence.Address {
 		panic(ErrInvalidJSONCadence)
 	}
 
-	return cadence.BytesToAddress(d.gauge, b)
+	return cadence.BytesToMeteredAddress(d.gauge, b)
 }
 
 func (d *Decoder) decodeBigInt(valueJSON interface{}) *big.Int {

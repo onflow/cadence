@@ -311,15 +311,15 @@ func NewMeteredAddress(memoryGauge common.MemoryGauge, b [AddressLength]byte) Ad
 	return NewAddress(b)
 }
 
-func BytesToUnmeteredAddress(b []byte) Address {
+func BytesToAddress(b []byte) Address {
 	var a Address
 	copy(a[AddressLength-len(b):AddressLength], b)
 	return a
 }
 
-func BytesToAddress(memoryGauge common.MemoryGauge, b []byte) Address {
+func BytesToMeteredAddress(memoryGauge common.MemoryGauge, b []byte) Address {
 	common.UseConstantMemory(memoryGauge, common.MemoryKindCadenceAddress)
-	return BytesToUnmeteredAddress(b)
+	return BytesToAddress(b)
 }
 
 func (Address) isValue() {}
