@@ -1,3 +1,4 @@
+# This workflow is contained in a centralized repository, and is called when there are changes pushed in any documentation repository
 name: refresh-doc
 on:
   workflow_call:
@@ -5,86 +6,50 @@ on:
       username:
         required: true
         type: string
+      anyModified:
+        required: true
+        type: string
+      contentPaths:
+        required: true
+        type: string
+      repository:
+        required: true
+        type: string
+      commitSha:
+        required: true
+        type: string
     secrets:
       token:
         required: true
 
 env:
-  WEB_URL: 'https://eodzjkvfnfbka0z.m.pipedream.net'
+  WEB_URL: 'https://eodzjkvfnfbka0z.m.pipedream.net' # To be updated once the web server is live
 
 jobs:
-  refresh:
-    name: Refresh Documentation
+  reusable_refresh_job:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-      
-    - name: Changed Files
-      id: changed-files
-      uses: 
-      
-      with: # Any file in the docs
-        files: |
-          docs/**
-    
-    # --- Log all diff info ---
-    - name: Log the files commit SHA if any md files have diffs
-      if: steps.changed-files.outputs.any_modified == 'true'
-      run: |
-        for file in ${{ steps.changed-files.outputs.all_modified_files }}; do
-          echo "$file was modified" with the commit ${{ github.sha }}
-        done
-
-    - name: Log any added (A) files
-      if: steps.changed-files.outputs.added_files != ''
-      run: |
-        for file in ${{ steps.changed-files.outputs.added_files }}; do
-          echo "$file was added"
-        done
-
-    - name: Log any deleted (D) files
-      if: steps.changed-files.outputs.any_deleted == 'true'
-      run: |
-        for file in ${{ steps.changed-files.outputs.deleted_files }}; do
-          echo "$file was deleted"
-        done
-
-    - name: Log any modified (M) files
-      if: steps.changed-files.outputs.modified_files != ''
-      run: |
-        for file in ${{ steps.changed-files.outputs.all_modified_files }}; do
-          echo "$file was modified"
-        done
-
-    # --- CALL REFRESH ENDPOINT USING PYTHON ---
-    - name: Setup Python
-      continue-on-error: true
+    - name: Install Python Packages
       run: pip install requests
-
-    - name: Format request body and call refresh using python
-      continue-on-error: true
-      if: steps.changed-files.outputs.any_modified == 'true'
+    - name: Compile all files with diff into a request body using Python
       run: |
-        import requests
+        import requests, time
 
-        list_diff_paths = "${{ steps.changed-files.outputs.all_modified_files }}".split(' ')
-        list_added_paths = "${{ steps.changed-files.outputs.added_files }}".split(' ')
-        list_deleted_paths = "${{ steps.changed-files.outputs.deleted_files }}".split(' ')
-        list_modified_paths = "${{ steps.changed-files.outputs.modified_files }}".split(' ')
+        repository = "${{ inputs.repository }}"
+        commitSha = "${{ inputs.commitSha }}"
+        contentPaths = "${{ inputs.contentPaths }}"
+        
+        contentPathsStr = '['
+        if (contentPaths == ""):
+          contentPathsStr += ']'
+        else:
+          contentPathFormatted = ', '.join('"{0}"'.format(p) for p in contentPaths.split(' '))
+          contentPathsStr += contentPathFormatted + ']'
 
-        print("All Diff", list_diff_paths)
-        print("A", list_added_paths, "D", list_deleted_paths, "M", list_modified_paths)
+        payload = '{"repo": "%s", "contentPaths": "%s", "commitSha": "%s"}' % (repository, contentPathsStr, commitSha)
+        print("Payload", payload)
 
-        # Format path to string
-        list_diff_paths_formatted = ', '.join('"{0}"'.format(p) for p in hardcoded_diff_paths)
-        list_diff_paths_formatted = '[' + hardcoded_diff_paths_formatted + ']'
-
-        # Format payload
-        payload = '{"repo": "${{ github.event.repository.name }}", "contentPaths": ' + list_diff_paths_formatted + ', "commitSha": "${{ github.sha }}"}'
-
-        # Call refresh
-        # TODO: We should replace the URL ../action/refresh
         response = requests.post('${{ env.WEB_URL }}', data=payload)
         print("Request Response", response)
-        
+
       shell: python
