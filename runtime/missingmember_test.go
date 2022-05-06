@@ -4166,6 +4166,8 @@ transaction(recipient: Address, amount: UFix64) {
 
 func TestRuntimeMissingMemberExampleMarketplace(t *testing.T) {
 
+	t.Parallel()
+
 	runtime := newTestInterpreterRuntime()
 
 	exampleTokenAddress, err := common.HexToAddress("0x1")
