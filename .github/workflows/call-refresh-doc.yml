@@ -43,7 +43,7 @@ jobs:
   call-refresh-workflow-passing-data:
     if: ${{ needs.compare.outputs.any_modified }} == 'true'
     needs: compare
-    uses: onflow/cadence/.github/workflows/refresh-doc.yml@hannah-github-actions
+    uses: onflow/cadence/.github/workflows/refresh-doc.yml@master
     with:
       username: codingone21
       anyModified: ${{ needs.compare.outputs.any_modified }}
