@@ -59,8 +59,9 @@ instead of the Flow CLI binary, and allowing this server to be debugged, e.g. us
 5. Search for `Cadence: Flow Command`, and enter the full path to the `run.sh` script
    found in this directory (for example: `/Users/dapper/Dev/cadence/languageserver/run.sh`).
 
-This will re-build the language server each time it is restarted
-(e.g. using the `Cadence: Restart Language Server` command).
+This allows the language server to be re-built each time it is restarted:
+- Kill Delve: `killall dlv` (Delve ignores SIGINT in headless mode)
+- In Visual Studio Code, run the `Cadence: Restart Language Server` command
 
 In addition, it will start the language server through the Delve debugger, by default on port 2345.
 This allows you to connect to the debugger and debug the server.
