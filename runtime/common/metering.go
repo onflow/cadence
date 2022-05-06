@@ -112,6 +112,7 @@ var (
 
 	SimpleCompositeBaseMemoryUsage = NewConstantMemoryUsage(MemoryKindSimpleCompositeBase)
 	AtreeMapElementOverhead        = NewConstantMemoryUsage(MemoryKindAtreeMapElementOverhead)
+	AtreeArrayElementOverhead      = NewConstantMemoryUsage(MemoryKindAtreeArrayElementOverhead)
 
 	VariableSizedSemaTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindVariableSizedSemaType)
 	ConstantSizedSemaTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindConstantSizedSemaType)
@@ -215,12 +216,15 @@ func AdditionalAtreeMemoryUsage(originalCount uint64, elementSize uint, array bo
 	}
 }
 
-func NewArrayMemoryUsages(count uint64, elementSize uint) (MemoryUsage, MemoryUsage, MemoryUsage) {
+func NewArrayMemoryUsages(count uint64, elementSize uint) (MemoryUsage, MemoryUsage, MemoryUsage, MemoryUsage) {
 	leaves, branches := newAtreeMemoryUsage(count, elementSize, true)
 	return MemoryUsage{
-		Kind:   MemoryKindArrayBase,
-		Amount: 1,
-	}, leaves, branches
+			Kind:   MemoryKindArrayBase,
+			Amount: 1,
+		}, MemoryUsage{
+			Kind:   MemoryKindAtreeArrayElementOverhead,
+			Amount: count,
+		}, leaves, branches
 }
 
 func NewDictionaryMemoryUsages(count uint64, elementSize uint) (MemoryUsage, MemoryUsage, MemoryUsage, MemoryUsage) {

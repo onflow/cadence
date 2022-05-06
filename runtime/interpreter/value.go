@@ -1363,8 +1363,9 @@ func newArrayValueFromConstructor(
 	if staticType != nil {
 		elementSize = staticType.ElementType().elementSize()
 	}
-	baseUsage, dataSlabs, metaDataSlabs := common.NewArrayMemoryUsages(count, elementSize)
+	baseUsage, elementUsage, dataSlabs, metaDataSlabs := common.NewArrayMemoryUsages(count, elementSize)
 	common.UseMemory(gauge, baseUsage)
+	common.UseMemory(gauge, elementUsage)
 	common.UseMemory(gauge, dataSlabs)
 	common.UseMemory(gauge, metaDataSlabs)
 
@@ -1614,6 +1615,8 @@ func (v *ArrayValue) Set(interpreter *Interpreter, getLocationRange func() Locat
 
 	interpreter.checkContainerMutation(v.Type.ElementType(), element, getLocationRange)
 
+	common.UseMemory(interpreter, common.AtreeArrayElementOverhead)
+
 	element = element.Transfer(
 		interpreter,
 		getLocationRange,
@@ -1667,6 +1670,7 @@ func (v *ArrayValue) Append(interpreter *Interpreter, getLocationRange func() Lo
 	)
 	common.UseMemory(interpreter, dataSlabs)
 	common.UseMemory(interpreter, metaDataSlabs)
+	common.UseMemory(interpreter, common.AtreeArrayElementOverhead)
 
 	interpreter.checkContainerMutation(v.Type.ElementType(), element, getLocationRange)
 
@@ -1722,6 +1726,7 @@ func (v *ArrayValue) Insert(interpreter *Interpreter, getLocationRange func() Lo
 	)
 	common.UseMemory(interpreter, dataSlabs)
 	common.UseMemory(interpreter, metaDataSlabs)
+	common.UseMemory(interpreter, common.AtreeArrayElementOverhead)
 
 	interpreter.checkContainerMutation(v.Type.ElementType(), element, getLocationRange)
 
@@ -2176,8 +2181,9 @@ func (v *ArrayValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 ) Value {
-	baseUsage, dataSlabs, metaDataSlabs := common.NewArrayMemoryUsages(v.array.Count(), v.elementSize)
+	baseUsage, elementUsage, dataSlabs, metaDataSlabs := common.NewArrayMemoryUsages(v.array.Count(), v.elementSize)
 	common.UseMemory(interpreter, baseUsage)
+	common.UseMemory(interpreter, elementUsage)
 	common.UseMemory(interpreter, dataSlabs)
 	common.UseMemory(interpreter, metaDataSlabs)
 
@@ -2305,8 +2311,9 @@ func (v *ArrayValue) Clone(interpreter *Interpreter) Value {
 		panic(ExternalError{err})
 	}
 
-	baseUsage, dataSlabs, metaDataSlabs := common.NewArrayMemoryUsages(v.array.Count(), v.elementSize)
+	baseUsage, elementUsage, dataSlabs, metaDataSlabs := common.NewArrayMemoryUsages(v.array.Count(), v.elementSize)
 	common.UseMemory(interpreter, baseUsage)
+	common.UseMemory(interpreter, elementUsage)
 	common.UseMemory(interpreter, dataSlabs)
 	common.UseMemory(interpreter, metaDataSlabs)
 
