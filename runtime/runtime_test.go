@@ -3043,7 +3043,7 @@ func TestRuntimeTransaction_CreateAccount(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Len(t, events, 1)
-	assert.EqualValues(t, stdlib.AccountCreatedEventType.ID(), events[0].Type(nil).ID())
+	assert.EqualValues(t, stdlib.AccountCreatedEventType.ID(), events[0].Type().ID())
 }
 
 func TestRuntimeContractAccount(t *testing.T) {

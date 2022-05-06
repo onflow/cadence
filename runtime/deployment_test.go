@@ -49,7 +49,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
 		event := events[0]
 
-		require.Equal(t, event.Type(nil), expectedEventType)
+		require.Equal(t, event.Type(), expectedEventType)
 
 		expectedEventCompositeType := expectedEventType.(*cadence.EventType)
 

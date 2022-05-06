@@ -148,10 +148,10 @@ func TestRuntimeTransaction_AddPublicKey(t *testing.T) {
 			assert.Len(t, keys, tt.keyCount)
 			assert.Equal(t, tt.expected, keys)
 
-			assert.EqualValues(t, stdlib.AccountCreatedEventType.ID(), events[0].Type(nil).ID())
+			assert.EqualValues(t, stdlib.AccountCreatedEventType.ID(), events[0].Type().ID())
 
 			for _, event := range events[1:] {
-				assert.EqualValues(t, stdlib.AccountKeyAddedEventType.ID(), event.Type(nil).ID())
+				assert.EqualValues(t, stdlib.AccountKeyAddedEventType.ID(), event.Type().ID())
 			}
 		})
 	}
@@ -449,12 +449,12 @@ func TestRuntimeAuthAccountKeysAdd(t *testing.T) {
 
 	assert.EqualValues(t,
 		stdlib.AccountCreatedEventType.ID(),
-		storage.events[0].Type(nil).ID(),
+		storage.events[0].Type().ID(),
 	)
 
 	assert.EqualValues(t,
 		stdlib.AccountKeyAddedEventType.ID(),
-		storage.events[1].Type(nil).ID(),
+		storage.events[1].Type().ID(),
 	)
 }
 
