@@ -209,8 +209,8 @@ func TestRuntimeBlockFieldTypes(t *testing.T) {
 		values := value.(cadence.Array).Values
 
 		require.Equal(t, 2, len(values))
-		assert.IsType(t, cadence.UFix64Type{}, values[0].Type(nil))
-		assert.IsType(t, cadence.UFix64Type{}, values[1].Type(nil))
+		assert.IsType(t, cadence.UFix64Type{}, values[0].Type())
+		assert.IsType(t, cadence.UFix64Type{}, values[1].Type())
 
 		assert.Equal(
 			t,

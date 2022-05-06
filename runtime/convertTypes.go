@@ -60,7 +60,7 @@ func ExportType(
 		case *sema.FunctionType:
 			return exportFunctionType(gauge, t, results)
 		case *sema.AddressType:
-			return cadence.NewAddressType(gauge)
+			return cadence.NewMeteredAddressType(gauge)
 		case *sema.ReferenceType:
 			return exportReferenceType(gauge, t, results)
 		case *sema.RestrictedType:
@@ -71,105 +71,105 @@ func ExportType(
 
 		switch t {
 		case sema.NumberType:
-			return cadence.NewNumberType(gauge)
+			return cadence.NewMeteredNumberType(gauge)
 		case sema.SignedNumberType:
-			return cadence.NewSignedNumberType(gauge)
+			return cadence.NewMeteredSignedNumberType(gauge)
 		case sema.IntegerType:
-			return cadence.NewIntegerType(gauge)
+			return cadence.NewMeteredIntegerType(gauge)
 		case sema.SignedIntegerType:
-			return cadence.NewSignedIntegerType(gauge)
+			return cadence.NewMeteredSignedIntegerType(gauge)
 		case sema.FixedPointType:
-			return cadence.NewFixedPointType(gauge)
+			return cadence.NewMeteredFixedPointType(gauge)
 		case sema.SignedFixedPointType:
-			return cadence.NewSignedFixedPointType(gauge)
+			return cadence.NewMeteredSignedFixedPointType(gauge)
 		case sema.IntType:
-			return cadence.NewIntType(gauge)
+			return cadence.NewMeteredIntType(gauge)
 		case sema.Int8Type:
-			return cadence.NewInt8Type(gauge)
+			return cadence.NewMeteredInt8Type(gauge)
 		case sema.Int16Type:
-			return cadence.NewInt16Type(gauge)
+			return cadence.NewMeteredInt16Type(gauge)
 		case sema.Int32Type:
-			return cadence.NewInt32Type(gauge)
+			return cadence.NewMeteredInt32Type(gauge)
 		case sema.Int64Type:
-			return cadence.NewInt64Type(gauge)
+			return cadence.NewMeteredInt64Type(gauge)
 		case sema.Int128Type:
-			return cadence.NewInt128Type(gauge)
+			return cadence.NewMeteredInt128Type(gauge)
 		case sema.Int256Type:
-			return cadence.NewInt256Type(gauge)
+			return cadence.NewMeteredInt256Type(gauge)
 		case sema.UIntType:
-			return cadence.NewUIntType(gauge)
+			return cadence.NewMeteredUIntType(gauge)
 		case sema.UInt8Type:
-			return cadence.NewUInt8Type(gauge)
+			return cadence.NewMeteredUInt8Type(gauge)
 		case sema.UInt16Type:
-			return cadence.NewUInt16Type(gauge)
+			return cadence.NewMeteredUInt16Type(gauge)
 		case sema.UInt32Type:
-			return cadence.NewUInt32Type(gauge)
+			return cadence.NewMeteredUInt32Type(gauge)
 		case sema.UInt64Type:
-			return cadence.NewUInt64Type(gauge)
+			return cadence.NewMeteredUInt64Type(gauge)
 		case sema.UInt128Type:
-			return cadence.NewUInt128Type(gauge)
+			return cadence.NewMeteredUInt128Type(gauge)
 		case sema.UInt256Type:
-			return cadence.NewUInt256Type(gauge)
+			return cadence.NewMeteredUInt256Type(gauge)
 		case sema.Word8Type:
-			return cadence.NewWord8Type(gauge)
+			return cadence.NewMeteredWord8Type(gauge)
 		case sema.Word16Type:
-			return cadence.NewWord16Type(gauge)
+			return cadence.NewMeteredWord16Type(gauge)
 		case sema.Word32Type:
-			return cadence.NewWord32Type(gauge)
+			return cadence.NewMeteredWord32Type(gauge)
 		case sema.Word64Type:
-			return cadence.NewWord64Type(gauge)
+			return cadence.NewMeteredWord64Type(gauge)
 		case sema.Fix64Type:
-			return cadence.NewFix64Type(gauge)
+			return cadence.NewMeteredFix64Type(gauge)
 		case sema.UFix64Type:
-			return cadence.NewUFix64Type(gauge)
+			return cadence.NewMeteredUFix64Type(gauge)
 		case sema.PathType:
-			return cadence.NewPathType(gauge)
+			return cadence.NewMeteredPathType(gauge)
 		case sema.StoragePathType:
-			return cadence.NewStoragePathType(gauge)
+			return cadence.NewMeteredStoragePathType(gauge)
 		case sema.PrivatePathType:
-			return cadence.NewPrivatePathType(gauge)
+			return cadence.NewMeteredPrivatePathType(gauge)
 		case sema.PublicPathType:
-			return cadence.NewPublicPathType(gauge)
+			return cadence.NewMeteredPublicPathType(gauge)
 		case sema.CapabilityPathType:
-			return cadence.NewCapabilityPathType(gauge)
+			return cadence.NewMeteredCapabilityPathType(gauge)
 		case sema.NeverType:
-			return cadence.NewNeverType(gauge)
+			return cadence.NewMeteredNeverType(gauge)
 		case sema.VoidType:
-			return cadence.NewVoidType(gauge)
+			return cadence.NewMeteredVoidType(gauge)
 		case sema.InvalidType:
 			return nil
 		case sema.MetaType:
-			return cadence.NewMetaType(gauge)
+			return cadence.NewMeteredMetaType(gauge)
 		case sema.BoolType:
-			return cadence.NewBoolType(gauge)
+			return cadence.NewMeteredBoolType(gauge)
 		case sema.CharacterType:
-			return cadence.NewCharacterType(gauge)
+			return cadence.NewMeteredCharacterType(gauge)
 		case sema.AnyType:
-			return cadence.NewAnyType(gauge)
+			return cadence.NewMeteredAnyType(gauge)
 		case sema.AnyStructType:
-			return cadence.NewAnyStructType(gauge)
+			return cadence.NewMeteredAnyStructType(gauge)
 		case sema.AnyResourceType:
-			return cadence.NewAnyResourceType(gauge)
+			return cadence.NewMeteredAnyResourceType(gauge)
 		case sema.BlockType:
-			return cadence.NewBlockType(gauge)
+			return cadence.NewMeteredBlockType(gauge)
 		case sema.StringType:
-			return cadence.NewStringType(gauge)
+			return cadence.NewMeteredStringType(gauge)
 		case sema.AccountKeyType:
-			return cadence.NewAccountKeyType(gauge)
+			return cadence.NewMeteredAccountKeyType(gauge)
 		case sema.PublicAccountContractsType:
-			return cadence.NewPublicAccountContractsType(gauge)
+			return cadence.NewMeteredPublicAccountContractsType(gauge)
 		case sema.AuthAccountContractsType:
-			return cadence.NewAuthAccountContractsType(gauge)
+			return cadence.NewMeteredAuthAccountContractsType(gauge)
 		case sema.PublicAccountKeysType:
-			return cadence.NewPublicAccountKeysType(gauge)
+			return cadence.NewMeteredPublicAccountKeysType(gauge)
 		case sema.AuthAccountKeysType:
-			return cadence.NewAuthAccountKeysType(gauge)
+			return cadence.NewMeteredAuthAccountKeysType(gauge)
 		case sema.PublicAccountType:
-			return cadence.NewPublicAccountType(gauge)
+			return cadence.NewMeteredPublicAccountType(gauge)
 		case sema.AuthAccountType:
-			return cadence.NewAuthAccountType(gauge)
+			return cadence.NewMeteredAuthAccountType(gauge)
 		case sema.DeployedContractType:
-			return cadence.NewDeployedContractType(gauge)
+			return cadence.NewMeteredDeployedContractType(gauge)
 		}
 
 		panic(fmt.Sprintf("cannot export type of type %T", t))
@@ -183,7 +183,7 @@ func ExportType(
 func exportOptionalType(gauge common.MemoryGauge, t *sema.OptionalType, results map[sema.TypeID]cadence.Type) cadence.Type {
 	convertedType := ExportType(gauge, t.Type, results)
 
-	return cadence.NewOptionalType(
+	return cadence.NewMeteredOptionalType(
 		gauge,
 		convertedType,
 	)
@@ -192,13 +192,13 @@ func exportOptionalType(gauge common.MemoryGauge, t *sema.OptionalType, results 
 func exportVariableSizedType(gauge common.MemoryGauge, t *sema.VariableSizedType, results map[sema.TypeID]cadence.Type) cadence.Type {
 	convertedElement := ExportType(gauge, t.Type, results)
 
-	return cadence.NewVariableSizedArrayType(gauge, convertedElement)
+	return cadence.NewMeteredVariableSizedArrayType(gauge, convertedElement)
 }
 
 func exportConstantSizedType(gauge common.MemoryGauge, t *sema.ConstantSizedType, results map[sema.TypeID]cadence.Type) cadence.Type {
 	convertedElement := ExportType(gauge, t.Type, results)
 
-	return cadence.NewConstantSizedArrayType(
+	return cadence.NewMeteredConstantSizedArrayType(
 		gauge,
 		uint(t.Size),
 		convertedElement,
@@ -231,7 +231,7 @@ func exportCompositeType(
 
 	switch t.Kind {
 	case common.CompositeKindStructure:
-		result = cadence.NewStructType(
+		result = cadence.NewMeteredStructType(
 			gauge,
 			t.Location,
 			t.QualifiedIdentifier(),
@@ -240,7 +240,7 @@ func exportCompositeType(
 		)
 
 	case common.CompositeKindResource:
-		result = cadence.NewResourceType(
+		result = cadence.NewMeteredResourceType(
 			gauge,
 			t.Location,
 			t.QualifiedIdentifier(),
@@ -249,7 +249,7 @@ func exportCompositeType(
 		)
 
 	case common.CompositeKindEvent:
-		result = cadence.NewEventType(
+		result = cadence.NewMeteredEventType(
 			gauge,
 			t.Location,
 			t.QualifiedIdentifier(),
@@ -258,7 +258,7 @@ func exportCompositeType(
 		)
 
 	case common.CompositeKindContract:
-		result = cadence.NewContractType(
+		result = cadence.NewMeteredContractType(
 			gauge,
 			t.Location,
 			t.QualifiedIdentifier(),
@@ -267,7 +267,7 @@ func exportCompositeType(
 		)
 
 	case common.CompositeKindEnum:
-		result = cadence.NewEnumType(
+		result = cadence.NewMeteredEnumType(
 			gauge,
 			t.Location,
 			t.QualifiedIdentifier(),
@@ -322,7 +322,7 @@ func exportInterfaceType(
 
 	switch t.CompositeKind {
 	case common.CompositeKindStructure:
-		result = cadence.NewStructInterfaceType(
+		result = cadence.NewMeteredStructInterfaceType(
 			gauge,
 			t.Location,
 			t.QualifiedIdentifier(),
@@ -331,7 +331,7 @@ func exportInterfaceType(
 		)
 
 	case common.CompositeKindResource:
-		result = cadence.NewResourceInterfaceType(
+		result = cadence.NewMeteredResourceInterfaceType(
 			gauge,
 			t.Location,
 			t.QualifiedIdentifier(),
@@ -340,7 +340,7 @@ func exportInterfaceType(
 		)
 
 	case common.CompositeKindContract:
-		result = cadence.NewContractInterfaceType(
+		result = cadence.NewMeteredContractInterfaceType(
 			gauge,
 			t.Location,
 			t.QualifiedIdentifier(),
@@ -376,7 +376,7 @@ func exportDictionaryType(
 	convertedKeyType := ExportType(gauge, t.KeyType, results)
 	convertedElementType := ExportType(gauge, t.ValueType, results)
 
-	return cadence.NewDictionaryType(
+	return cadence.NewMeteredDictionaryType(
 		gauge,
 		convertedKeyType,
 		convertedElementType,
@@ -407,7 +407,7 @@ func exportFunctionType(
 
 	convertedReturnType := ExportType(gauge, t.ReturnTypeAnnotation.Type, results)
 
-	return cadence.NewFunctionType(
+	return cadence.NewMeteredFunctionType(
 		gauge,
 		"",
 		convertedParameters,
@@ -422,7 +422,7 @@ func exportReferenceType(
 ) cadence.ReferenceType {
 	convertedType := ExportType(gauge, t.Type, results)
 
-	return cadence.NewReferenceType(
+	return cadence.NewMeteredReferenceType(
 		gauge,
 		t.Authorized,
 		convertedType,
@@ -443,7 +443,7 @@ func exportRestrictedType(
 		restrictions[i] = ExportType(gauge, restriction, results)
 	}
 
-	return cadence.NewRestrictedType(
+	return cadence.NewMeteredRestrictedType(
 		gauge,
 		"",
 		convertedType,
@@ -462,7 +462,7 @@ func exportCapabilityType(
 		borrowType = ExportType(gauge, t.BorrowType, results)
 	}
 
-	return cadence.NewCapabilityType(
+	return cadence.NewMeteredCapabilityType(
 		gauge,
 		borrowType,
 	)
