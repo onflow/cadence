@@ -61,6 +61,7 @@ const (
 	MemoryKindAtreeMapDataSlab
 	MemoryKindAtreeMapMetaDataSlab
 	MemoryKindAtreeMapElementOverhead
+	MemoryKindAtreeMapPreAllocatedElement
 
 	// Static Types
 	MemoryKindPrimitiveStaticType
