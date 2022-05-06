@@ -901,10 +901,15 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 
 			getLocationRange := locationRangeGetter(interpreter.Location, referenceExpression.Expression)
 
+			innerValue := result.InnerValue(interpreter, getLocationRange)
+			if result, ok := innerValue.(ReferenceTrackedResourceKindedValue); ok {
+				interpreter.trackReferencedResourceKindedValue(result.StorageID(), result)
+			}
+
 			return NewSomeValueNonCopying(
 				&EphemeralReferenceValue{
 					Authorized:   innerBorrowType.Authorized,
-					Value:        result.InnerValue(interpreter, getLocationRange),
+					Value:        innerValue,
 					BorrowedType: innerBorrowType.Type,
 				},
 			)

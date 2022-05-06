@@ -1831,8 +1831,8 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
             fun test() {
                 let r <- create R()
-	            destroy (<- r)
-	            destroy r
+                destroy (<- r)
+                destroy r
             }`,
 			ParseCheckAndInterpretOptions{
 				HandleCheckerError: func(err error) {
@@ -1862,7 +1862,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
             fun test() {
                 let r <- create R()
-	            f(<- (<- r))
+                f(<- (<- r))
                 destroy r
             }`,
 			ParseCheckAndInterpretOptions{
@@ -2115,26 +2115,26 @@ func TestInterpreterResourcePreCondition(t *testing.T) {
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
-		resource S {}
+        resource S {}
 
-		struct interface Receiver {
-			pub fun deposit(from: @S) {
-				post {
-					from != nil: ""
-				}
-			}
-		}
-		
-		struct Vault: Receiver {
-			pub fun deposit(from: @S) {
-				destroy from
-			}
-		}
+        struct interface Receiver {
+            pub fun deposit(from: @S) {
+                post {
+                    from != nil: ""
+                }
+            }
+        }
+        
+        struct Vault: Receiver {
+            pub fun deposit(from: @S) {
+                destroy from
+            }
+        }
     
-	
-		fun test() {
-			Vault().deposit(from: <-create S())
-		}`,
+    
+        fun test() {
+            Vault().deposit(from: <-create S())
+        }`,
 		ParseCheckAndInterpretOptions{
 			Options: []interpreter.Option{
 				interpreter.WithInvalidatedResourceValidationEnabled(true),
@@ -2153,26 +2153,26 @@ func TestInterpreterResourcePostCondition(t *testing.T) {
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
-		resource S {}
+        resource S {}
 
-		struct interface Receiver {
-			pub fun deposit(from: @S) {
-				post {
-					from != nil: ""
-				}
-			}
-		}
-		
-		struct Vault: Receiver {
-			pub fun deposit(from: @S) {
-				destroy from
-			}
-		}
+        struct interface Receiver {
+            pub fun deposit(from: @S) {
+                post {
+                    from != nil: ""
+                }
+            }
+        }
+        
+        struct Vault: Receiver {
+            pub fun deposit(from: @S) {
+                destroy from
+            }
+        }
     
-	
-		fun test() {
-			Vault().deposit(from: <-create S())
-		}`,
+    
+        fun test() {
+            Vault().deposit(from: <-create S())
+        }`,
 		ParseCheckAndInterpretOptions{
 			Options: []interpreter.Option{
 				interpreter.WithInvalidatedResourceValidationEnabled(true),
@@ -2191,35 +2191,35 @@ func TestInterpreterResourcePreAndPostCondition(t *testing.T) {
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
-		resource S {}
+        resource S {}
 
-		struct interface Receiver {
-			pub fun deposit(from: @S) {
-				pre {
-					from != nil: ""
-				}
-				post {
-					from != nil: ""
-				}
-			}
-		}
-		
-		struct Vault: Receiver {
-			pub fun deposit(from: @S) {
-				pre {
-					from != nil: ""
-				}
-				post {
-					1 > 0: ""
-				}
-				destroy from
-			}
-		}
+        struct interface Receiver {
+            pub fun deposit(from: @S) {
+                pre {
+                    from != nil: ""
+                }
+                post {
+                    from != nil: ""
+                }
+            }
+        }
+        
+        struct Vault: Receiver {
+            pub fun deposit(from: @S) {
+                pre {
+                    from != nil: ""
+                }
+                post {
+                    1 > 0: ""
+                }
+                destroy from
+            }
+        }
     
-	
-		fun test() {
-			Vault().deposit(from: <-create S())
-		}`,
+    
+        fun test() {
+            Vault().deposit(from: <-create S())
+        }`,
 		ParseCheckAndInterpretOptions{
 			Options: []interpreter.Option{
 				interpreter.WithInvalidatedResourceValidationEnabled(true),
@@ -2238,35 +2238,35 @@ func TestInterpreterResourceConditionAdditionalParam(t *testing.T) {
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
-		resource S {}
+        resource S {}
 
-		struct interface Receiver {
-			pub fun deposit(from: @S, other: UInt64) {
-				pre {
-					from != nil: ""
-				}
-				post {
-					other > 0: ""
-				}
-			}
-		}
-		
-		struct Vault: Receiver {
-			pub fun deposit(from: @S, other: UInt64) {
-				pre {
-					from != nil: ""
-				}
-				post {
-					other > 0: ""
-				}
-				destroy from
-			}
-		}
+        struct interface Receiver {
+            pub fun deposit(from: @S, other: UInt64) {
+                pre {
+                    from != nil: ""
+                }
+                post {
+                    other > 0: ""
+                }
+            }
+        }
+        
+        struct Vault: Receiver {
+            pub fun deposit(from: @S, other: UInt64) {
+                pre {
+                    from != nil: ""
+                }
+                post {
+                    other > 0: ""
+                }
+                destroy from
+            }
+        }
     
-	
-		fun test() {
-			Vault().deposit(from: <-create S(), other: 42)
-		}`,
+    
+        fun test() {
+            Vault().deposit(from: <-create S(), other: 42)
+        }`,
 		ParseCheckAndInterpretOptions{
 			Options: []interpreter.Option{
 				interpreter.WithInvalidatedResourceValidationEnabled(true),
@@ -2285,45 +2285,45 @@ func TestInterpreterResourceDoubleWrappedCondition(t *testing.T) {
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
-		resource S {}
+        resource S {}
 
-		struct interface A {
-			pub fun deposit(from: @S) {
-				pre {
-					from != nil: ""
-				}
-				post {
-					from != nil: ""
-				}
-			}
-		}
-		
-		struct interface B {
-			pub fun deposit(from: @S) {
-				pre {
-					from != nil: ""
-				}
-				post {
-					from != nil: ""
-				}
-			}
-		}
-	
-	    struct Vault: A, B {
-			pub fun deposit(from: @S) {
-				pre {
-					from != nil: ""
-				}
-				post {
-					1 > 0: ""
-				}
-				destroy from
-			}
-		}
-	
-		fun test() {
-			Vault().deposit(from: <-create S())
-		}`,
+        struct interface A {
+            pub fun deposit(from: @S) {
+                pre {
+                    from != nil: ""
+                }
+                post {
+                    from != nil: ""
+                }
+            }
+        }
+        
+        struct interface B {
+            pub fun deposit(from: @S) {
+                pre {
+                    from != nil: ""
+                }
+                post {
+                    from != nil: ""
+                }
+            }
+        }
+    
+        struct Vault: A, B {
+            pub fun deposit(from: @S) {
+                pre {
+                    from != nil: ""
+                }
+                post {
+                    1 > 0: ""
+                }
+                destroy from
+            }
+        }
+    
+        fun test() {
+            Vault().deposit(from: <-create S())
+        }`,
 		ParseCheckAndInterpretOptions{
 			Options: []interpreter.Option{
 				interpreter.WithInvalidatedResourceValidationEnabled(true),
@@ -2347,25 +2347,61 @@ func TestInterpretOptionalResourceReference(t *testing.T) {
 		address,
 		true,
 		`
-		resource R {
-			pub let id: Int
-	
-			init() {
-				self.id = 1
-			}
-		}
-	
-		fun test() {
-			account.save(<-{0 : <-create R()}, to: /storage/x)
-			let collection = account.borrow<&{Int: R}>(from: /storage/x)!
-	
-			let resourceRef = (&collection[0] as &R?)!
-			let token <- collection.remove(key: 0)!
-	
-			let x = resourceRef.id
-			destroy token
-		}				
-		`,
+        resource R {
+            pub let id: Int
+    
+            init() {
+                self.id = 1
+            }
+        }
+    
+        fun test() {
+            account.save(<-{0 : <-create R()}, to: /storage/x)
+            let collection = account.borrow<&{Int: R}>(from: /storage/x)!
+    
+            let resourceRef = (&collection[0] as &R?)!
+            let token <- collection.remove(key: 0)
+			
+            let x = resourceRef.id
+            destroy token
+        }                
+        `,
+	)
+
+	_, err := inter.Invoke("test")
+	require.NoError(t, err)
+}
+
+func TestInterpretArrayOptionalResourceReference(t *testing.T) {
+
+	t.Parallel()
+
+	address := interpreter.NewAddressValueFromBytes([]byte{42})
+
+	inter, _ := testAccount(
+		t,
+		address,
+		true,
+		`
+        resource R {
+            pub let id: Int
+    
+            init() {
+                self.id = 1
+            }
+        }
+    
+        fun test() {
+            account.save(<-[<-create R()], to: /storage/x)
+            let collection = account.borrow<&[R?]>(from: /storage/x)!
+    
+            let resourceRef = (&collection[0] as &R?)!
+            let token <- collection.remove(at: 0)
+			
+            let x = resourceRef.id
+            destroy token
+        }                
+        `,
 	)
 
 	_, err := inter.Invoke("test")
