@@ -43,8 +43,9 @@ func (l TransactionLocation) ID() LocationID {
 	)
 }
 
-func (l TransactionLocation) TypeID(qualifiedIdentifier string) TypeID {
-	return NewTypeID(
+func (l TransactionLocation) TypeID(memoryGauge MemoryGauge, qualifiedIdentifier string) TypeID {
+	return NewMeteredTypeID(
+		memoryGauge,
 		TransactionLocationPrefix,
 		l.String(),
 		qualifiedIdentifier,

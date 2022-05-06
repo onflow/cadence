@@ -71,8 +71,9 @@ func (l AddressLocation) ID() LocationID {
 	)
 }
 
-func (l AddressLocation) TypeID(qualifiedIdentifier string) TypeID {
-	return NewTypeID(
+func (l AddressLocation) TypeID(memoryGauge MemoryGauge, qualifiedIdentifier string) TypeID {
+	return NewMeteredTypeID(
+		memoryGauge,
 		AddressLocationPrefix,
 		l.Address.Hex(),
 		qualifiedIdentifier,

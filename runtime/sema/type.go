@@ -3676,7 +3676,7 @@ func (t *CompositeType) initializeIdentifiers() {
 	if t.Location == nil {
 		typeID = TypeID(identifier)
 	} else {
-		typeID = t.Location.TypeID(identifier)
+		typeID = t.Location.TypeID(nil, identifier)
 	}
 
 	t.cachedIdentifiers = &struct {
@@ -4166,7 +4166,7 @@ func (t *InterfaceType) initializeIdentifiers() {
 	if t.Location == nil {
 		typeID = TypeID(identifier)
 	} else {
-		typeID = t.Location.TypeID(identifier)
+		typeID = t.Location.TypeID(nil, identifier)
 	}
 
 	t.cachedIdentifiers = &struct {

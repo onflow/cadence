@@ -42,8 +42,9 @@ func (l StringLocation) ID() LocationID {
 	)
 }
 
-func (l StringLocation) TypeID(qualifiedIdentifier string) TypeID {
-	return NewTypeID(
+func (l StringLocation) TypeID(memoryGauge MemoryGauge, qualifiedIdentifier string) TypeID {
+	return NewMeteredTypeID(
+		memoryGauge,
 		StringLocationPrefix,
 		string(l),
 		qualifiedIdentifier,

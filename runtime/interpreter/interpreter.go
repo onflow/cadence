@@ -4206,7 +4206,7 @@ func (interpreter *Interpreter) getInterfaceType(location common.Location, quali
 		return nil, InterfaceMissingLocationError{QualifiedIdentifier: qualifiedIdentifier}
 	}
 
-	typeID := location.TypeID(qualifiedIdentifier)
+	typeID := location.TypeID(interpreter, qualifiedIdentifier)
 
 	elaboration := interpreter.getElaboration(location)
 	if elaboration == nil {

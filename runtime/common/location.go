@@ -32,7 +32,7 @@ type Location interface {
 	// ID returns the canonical ID for this import location.
 	ID() LocationID
 	// TypeID returns a type ID for the given qualified identifier
-	TypeID(qualifiedIdentifier string) TypeID
+	TypeID(memoryGauge MemoryGauge, qualifiedIdentifier string) TypeID
 	// QualifiedIdentifier returns the qualified identifier for the given type ID
 	QualifiedIdentifier(typeID TypeID) string
 }
@@ -96,12 +96,22 @@ func NewTypeID(parts ...string) TypeID {
 	return TypeID(strings.Join(parts, "."))
 }
 
+func NewMeteredTypeID(memoryGauge MemoryGauge, parts ...string) TypeID {
+	l := 0
+	for _, part := range parts {
+		l += len(part) + 1
+	}
+	UseMemory(memoryGauge, NewRawStringMemoryUsage(l))
+
+	return TypeID(strings.Join(parts, "."))
+}
+
 func NewTypeIDFromQualifiedName(location Location, qualifiedIdentifier string) TypeID {
 	if location == nil {
 		return TypeID(qualifiedIdentifier)
 	}
 
-	return location.TypeID(qualifiedIdentifier)
+	return location.TypeID(nil, qualifiedIdentifier)
 }
 
 type TypeIDDecoder func(gauge MemoryGauge, typeID string) (location Location, qualifiedIdentifier string, err error)
