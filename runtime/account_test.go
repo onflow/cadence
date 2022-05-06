@@ -797,11 +797,7 @@ func accountKeyExportedValue(
 	isRevoked bool,
 ) cadence.Struct {
 
-	parsed, err := cadence.ParseUFix64(weight)
-	if err != nil {
-		panic(err)
-	}
-	weightUFix64, err := cadence.NewUFix64(parsed)
+	weightUFix64, err := cadence.NewUFix64(weight)
 	if err != nil {
 		panic(err)
 	}

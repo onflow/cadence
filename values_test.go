@@ -40,11 +40,8 @@ func TestStringer(t *testing.T) {
 		expected string
 	}
 
-	parsedU, _ := ParseUFix64("64.01")
-	ufix64, _ := NewUFix64(parsedU)
-
-	parsed, _ := ParseFix64("-32.11")
-	fix64, _ := NewFix64(parsed)
+	ufix64, _ := NewUFix64("64.01")
+	fix64, _ := NewFix64("-32.11")
 
 	stringerTests := map[string]testCase{
 		"UInt": {
