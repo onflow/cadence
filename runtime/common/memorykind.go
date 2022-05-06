@@ -57,6 +57,7 @@ const (
 	// Atree Nodes
 	MemoryKindAtreeArrayDataSlab
 	MemoryKindAtreeArrayMetaDataSlab
+	MemoryKindAtreeArrayElementOverhead
 	MemoryKindAtreeMapDataSlab
 	MemoryKindAtreeMapMetaDataSlab
 	MemoryKindAtreeMapElementOverhead
