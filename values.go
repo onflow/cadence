@@ -634,6 +634,7 @@ func (v Int128) String() string {
 type Int256 struct {
 	Value *big.Int
 }
+
 var _ Value = Int256{}
 
 var Int256MemoryUsage = common.NewCadenceBigIntMemoryUsage(32)
@@ -1208,8 +1209,12 @@ var _ Value = Fix64(0)
 
 var fix64MemoryUsage = common.NewCadenceNumberMemoryUsage(int(unsafe.Sizeof(Fix64(0))))
 
-func NewFix64(value int64) (Fix64, error) {
-	return Fix64(value), nil
+func NewFix64(s string) (Fix64, error) {
+	v, err := fixedpoint.ParseFix64(s)
+	if err != nil {
+		return 0, err
+	}
+	return Fix64(v.Int64()), nil
 }
 
 func NewFix64FromParts(negative bool, integer int, fraction uint) (Fix64, error) {
@@ -1225,21 +1230,13 @@ func NewFix64FromParts(negative bool, integer int, fraction uint) (Fix64, error)
 	return Fix64(v.Int64()), nil
 }
 
-func NewMeteredFix64(gauge common.MemoryGauge, constructor func() (int64, error)) (Fix64, error) {
+func NewMeteredFix64(gauge common.MemoryGauge, constructor func() (string, error)) (Fix64, error) {
 	common.UseMemory(gauge, fix64MemoryUsage)
 	value, err := constructor()
 	if err != nil {
 		return 0, err
 	}
 	return NewFix64(value)
-}
-
-func ParseFix64(s string) (int64, error) {
-	v, err := fixedpoint.ParseFix64(s)
-	if err != nil {
-		return 0, err
-	}
-	return v.Int64(), nil
 }
 
 func (Fix64) isValue() {}
@@ -1274,8 +1271,12 @@ var _ Value = UFix64(0)
 
 var ufix64MemoryUsage = common.NewCadenceNumberMemoryUsage(int(unsafe.Sizeof(UFix64(0))))
 
-func NewUFix64(value uint64) (UFix64, error) {
-	return UFix64(value), nil
+func NewUFix64(s string) (UFix64, error) {
+	v, err := fixedpoint.ParseUFix64(s)
+	if err != nil {
+		return 0, err
+	}
+	return UFix64(v.Uint64()), nil
 }
 
 func NewUFix64FromParts(integer int, fraction uint) (UFix64, error) {
@@ -1290,7 +1291,7 @@ func NewUFix64FromParts(integer int, fraction uint) (UFix64, error) {
 	return UFix64(v.Uint64()), nil
 }
 
-func NewMeteredUFix64(gauge common.MemoryGauge, constructor func() (uint64, error)) (UFix64, error) {
+func NewMeteredUFix64(gauge common.MemoryGauge, constructor func() (string, error)) (UFix64, error) {
 	common.UseMemory(gauge, ufix64MemoryUsage)
 	value, err := constructor()
 	if err != nil {

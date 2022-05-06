@@ -3980,9 +3980,7 @@ transaction {
 }
 `
 
-	parsed, err := cadence.ParseUFix64("1000.0")
-	require.NoError(t, err)
-	mintAmount, err := cadence.NewUFix64(parsed)
+	mintAmount, err := cadence.NewUFix64("1000.0")
 	require.NoError(t, err)
 
 	const mintTransaction = `
