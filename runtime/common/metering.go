@@ -116,7 +116,7 @@ var (
 	VariableSizedSemaTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindVariableSizedSemaType)
 	ConstantSizedSemaTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindConstantSizedSemaType)
 	DictionarySemaTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindDictionarySemaType)
-	OptionalSemaTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindDictionarySemaType)
+	OptionalSemaTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindOptionalSemaType)
 	RestrictedSemaTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindRestrictedSemaType)
 	ReferenceSemaTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindReferenceSemaType)
 	CapabilitySemaTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindCapabilitySemaType)
