@@ -1073,7 +1073,6 @@ func NewMeteredFix64(gauge common.MemoryGauge, constructor func() (int64, error)
 	return NewFix64(value)
 }
 
-
 func ParseFix64(s string) (int64, error) {
 	v, err := fixedpoint.ParseFix64(s)
 	if err != nil {
