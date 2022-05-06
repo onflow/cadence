@@ -771,7 +771,7 @@ var SignAlgoType = ExportedBuiltinType(sema.SignatureAlgorithmType).(*cadence.En
 var HashAlgoType = ExportedBuiltinType(sema.HashAlgorithmType).(*cadence.EnumType)
 
 func ExportedBuiltinType(internalType sema.Type) cadence.Type {
-	return ExportType(nil, internalType, map[sema.TypeID]cadence.Type{})
+	return ExportType(internalType, map[sema.TypeID]cadence.Type{})
 }
 
 func newBytesValue(bytes []byte) cadence.Array {

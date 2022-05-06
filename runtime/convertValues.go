@@ -605,7 +605,7 @@ func exportTypeValue(v interpreter.TypeValue, inter *interpreter.Interpreter) ca
 	}
 	return cadence.NewMeteredTypeValue(
 		inter,
-		ExportType(inter, typ, map[sema.TypeID]cadence.Type{}),
+		ExportMeteredType(inter, typ, map[sema.TypeID]cadence.Type{}),
 	)
 }
 
@@ -619,7 +619,7 @@ func exportCapabilityValue(v *interpreter.CapabilityValue, inter *interpreter.In
 		inter,
 		exportPathValue(inter, v.Path),
 		cadence.NewMeteredAddress(inter, v.Address),
-		ExportType(inter, borrowType, map[sema.TypeID]cadence.Type{}),
+		ExportMeteredType(inter, borrowType, map[sema.TypeID]cadence.Type{}),
 	)
 }
 
@@ -651,7 +651,7 @@ func exportEvent(
 		return cadence.Event{}, err
 	}
 
-	eventType := ExportType(gauge, event.Type, map[sema.TypeID]cadence.Type{}).(*cadence.EventType)
+	eventType := ExportMeteredType(gauge, event.Type, map[sema.TypeID]cadence.Type{}).(*cadence.EventType)
 
 	return exported.WithType(eventType), nil
 }

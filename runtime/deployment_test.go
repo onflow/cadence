@@ -176,7 +176,6 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			},
 		)
 		exportedEventType := ExportType(
-			nil,
 			stdlib.AccountContractAddedEventType,
 			map[sema.TypeID]cadence.Type{},
 		)
