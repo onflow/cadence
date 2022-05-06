@@ -216,6 +216,13 @@ func (l FlowLocation) ID() common.LocationID {
 	return common.NewLocationID(FlowLocationPrefix)
 }
 
+func (l FlowLocation) MeteredID(memoryGauge common.MemoryGauge) common.LocationID {
+	return common.NewMeteredLocationID(
+		memoryGauge,
+		FlowLocationPrefix,
+	)
+}
+
 func (l FlowLocation) TypeID(memoryGauge common.MemoryGauge, qualifiedIdentifier string) common.TypeID {
 	return common.NewMeteredTypeID(
 		memoryGauge,

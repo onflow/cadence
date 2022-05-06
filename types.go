@@ -508,7 +508,7 @@ func (t *StructType) ID() string {
 		return t.QualifiedIdentifier
 	}
 
-	return string(t.Location.TypeID(t.QualifiedIdentifier))
+	return string(t.Location.TypeID(nil, t.QualifiedIdentifier))
 }
 
 func (*StructType) isCompositeType() {}
@@ -545,7 +545,7 @@ func (t *ResourceType) ID() string {
 		return t.QualifiedIdentifier
 	}
 
-	return string(t.Location.TypeID(t.QualifiedIdentifier))
+	return string(t.Location.TypeID(nil, t.QualifiedIdentifier))
 }
 
 func (*ResourceType) isCompositeType() {}
@@ -582,7 +582,7 @@ func (t *EventType) ID() string {
 		return t.QualifiedIdentifier
 	}
 
-	return string(t.Location.TypeID(t.QualifiedIdentifier))
+	return string(t.Location.TypeID(nil, t.QualifiedIdentifier))
 }
 
 func (*EventType) isCompositeType() {}
@@ -619,7 +619,7 @@ func (t *ContractType) ID() string {
 		return t.QualifiedIdentifier
 	}
 
-	return string(t.Location.TypeID(t.QualifiedIdentifier))
+	return string(t.Location.TypeID(nil, t.QualifiedIdentifier))
 }
 
 func (*ContractType) isCompositeType() {}
@@ -667,7 +667,7 @@ func (t *StructInterfaceType) ID() string {
 		return t.QualifiedIdentifier
 	}
 
-	return string(t.Location.TypeID(t.QualifiedIdentifier))
+	return string(t.Location.TypeID(nil, t.QualifiedIdentifier))
 }
 
 func (*StructInterfaceType) isInterfaceType() {}
@@ -704,7 +704,7 @@ func (t *ResourceInterfaceType) ID() string {
 		return t.QualifiedIdentifier
 	}
 
-	return string(t.Location.TypeID(t.QualifiedIdentifier))
+	return string(t.Location.TypeID(nil, t.QualifiedIdentifier))
 }
 
 func (*ResourceInterfaceType) isInterfaceType() {}
@@ -741,7 +741,7 @@ func (t *ContractInterfaceType) ID() string {
 		return t.QualifiedIdentifier
 	}
 
-	return string(t.Location.TypeID(t.QualifiedIdentifier))
+	return string(t.Location.TypeID(nil, t.QualifiedIdentifier))
 }
 
 func (*ContractInterfaceType) isInterfaceType() {}
@@ -908,7 +908,7 @@ func (t *EnumType) ID() string {
 		return t.QualifiedIdentifier
 	}
 
-	return string(t.Location.TypeID(t.QualifiedIdentifier))
+	return string(t.Location.TypeID(nil, t.QualifiedIdentifier))
 }
 
 func (*EnumType) isCompositeType() {}

@@ -36,7 +36,12 @@ func NewIdentifierLocation(gauge MemoryGauge, id string) IdentifierLocation {
 }
 
 func (l IdentifierLocation) ID() LocationID {
-	return NewLocationID(
+	return l.MeteredID(nil)
+}
+
+func (l IdentifierLocation) MeteredID(memoryGauge MemoryGauge) LocationID {
+	return NewMeteredLocationID(
+		memoryGauge,
 		IdentifierLocationPrefix,
 		string(l),
 	)

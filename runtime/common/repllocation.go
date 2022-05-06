@@ -34,6 +34,10 @@ func (l REPLLocation) ID() LocationID {
 	return REPLLocationPrefix
 }
 
+func (l REPLLocation) MeteredID(memoryGauge MemoryGauge) LocationID {
+	return NewMeteredLocationID(memoryGauge, REPLLocationPrefix)
+}
+
 func (l REPLLocation) TypeID(memoryGauge MemoryGauge, qualifiedIdentifier string) TypeID {
 	return NewMeteredTypeID(
 		memoryGauge,

@@ -57,14 +57,20 @@ func (l AddressLocation) String() string {
 }
 
 func (l AddressLocation) ID() LocationID {
+	return l.MeteredID(nil)
+}
+
+func (l AddressLocation) MeteredID(memoryGauge MemoryGauge) LocationID {
 	if l.Name == "" {
-		return NewLocationID(
+		return NewMeteredLocationID(
+			memoryGauge,
 			AddressLocationPrefix,
 			l.Address.Hex(),
 		)
 	}
 
-	return NewLocationID(
+	return NewMeteredLocationID(
+		memoryGauge,
 		AddressLocationPrefix,
 		l.Address.Hex(),
 		l.Name,

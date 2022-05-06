@@ -862,7 +862,7 @@ func (interpreter *Interpreter) SetAllInterpreters(allInterpreters map[common.Lo
 
 	// Register self
 	if interpreter.Location != nil {
-		locationID := interpreter.Location.ID()
+		locationID := interpreter.Location.MeteredID(interpreter.memoryGauge)
 		interpreter.allInterpreters[locationID] = interpreter
 	}
 }
@@ -2553,7 +2553,7 @@ func (interpreter *Interpreter) ensureLoadedWithLocationHandler(
 	loadLocation func() Import,
 ) *Interpreter {
 
-	locationID := location.ID()
+	locationID := location.MeteredID(interpreter.memoryGauge)
 
 	// If a sub-interpreter already exists, return it
 
@@ -4128,7 +4128,7 @@ func (interpreter *Interpreter) getElaboration(location common.Location) *sema.E
 
 	inter := interpreter.EnsureLoaded(location)
 
-	locationID := location.ID()
+	locationID := location.MeteredID(interpreter.memoryGauge)
 
 	subInterpreter := inter.allInterpreters[locationID]
 	if subInterpreter == nil || subInterpreter.Program == nil {
