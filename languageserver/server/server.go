@@ -1830,15 +1830,20 @@ func (s *Server) getDiagnostics(
 							Errors: []error{fmt.Errorf("cannot import %s", importedLocation)},
 						}
 					}
-					// we are rechecking the imported program since there might be changes
-					importedChecker, err := checker.SubChecker(importedProgram, importedLocation)
-					if err != nil {
-						return nil, err
-					}
-					s.checkers[importedLocationID] = importedChecker
-					err = importedChecker.Check()
-					if err != nil {
-						return nil, err
+
+					importedChecker, ok := s.checkers[importedLocationID]
+					if !ok { // || (ok && importedProgram != importedChecker.Program) {
+						// we are rechecking the imported program since there might be changes
+						importedChecker, err = checker.SubChecker(importedProgram, importedLocation)
+						if err != nil {
+							return nil, err
+						}
+
+						s.checkers[importedLocationID] = importedChecker
+						err = importedChecker.Check()
+						if err != nil {
+							return nil, err
+						}
 					}
 
 					return sema.ElaborationImport{

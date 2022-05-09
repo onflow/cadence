@@ -9,12 +9,14 @@ import {
   StreamMessageWriter,
   TextDocumentItem,
   PublishDiagnosticsNotification,
-  PublishDiagnosticsParams
+  PublishDiagnosticsParams, DidChangeTextDocumentNotification
 } from "vscode-languageserver-protocol"
 
 import {execSync, spawn} from 'child_process'
 import * as path from "path"
 import * as fs from "fs";
+import {VersionedTextDocumentIdentifier} from "vscode-languageserver-types";
+import {TextDocumentContentChangeEvent} from "vscode-languageserver-protocol/lib/protocol";
 
 beforeAll(() => {
   execSync("go build ../cmd/languageserver", {cwd: __dirname})
@@ -265,6 +267,22 @@ describe("diagnostics", () => {
     })
   }
 
+  async function getDiagnostics(connection: ProtocolConnection, numberOfDiagnostics: number): Promise<PublishDiagnosticsParams[]> {
+    let diagnostics: PublishDiagnosticsParams[] = []
+
+    return new Promise<PublishDiagnosticsParams[]>((resolve) => {
+      connection.onNotification(
+          PublishDiagnosticsNotification.type,
+          notification => {
+            diagnostics.push(notification)
+            if (diagnostics.length == numberOfDiagnostics) {
+              resolve(diagnostics)
+            }
+          }
+      )
+    })
+  }
+
   test("script with import", async() => {
     const contractName = "foo"
     const scriptName = "script"
@@ -300,6 +318,82 @@ describe("diagnostics", () => {
     expect(script.uri).toEqual(`file://${scriptName}.cdc`)
     expect(script.diagnostics).toHaveLength(1)
     expect(script.diagnostics[0].message).toEqual("value of type `Foo` has no member `zoo`. unknown member")
+  })
+
+  test("changes to imported contracts are visible", async() => {
+
+    const contractAPath = "./fixtures/contractA.cdc"
+    const contractA = `
+      pub contract contractA {
+         pub let alpha: String
+         init() {
+           self.alpha = "hello"
+         }
+      }
+    `
+    const contractA1 = `
+      pub contract contractA {
+         pub let alpha: String
+         pub let bravo: String
+         init() {
+           self.alpha = "hello"
+           self.bravo = "world"
+         }
+      }
+    `
+
+    const contractBPath = "./fixtures/contractB.cdc"
+    const contractB = `
+      import contractA from "./contractA.cdc"
+      pub contract contractB {
+         init() {
+            log(contractA.alpha)
+            log(contractA.bravo)
+         }
+      }
+    `
+
+    let diagnosticsPromise
+    await withConnection(async (connection) => {
+      diagnosticsPromise = getDiagnostics(connection, 3)
+
+      fs.writeFileSync(contractAPath, contractA)
+
+      connection.sendNotification(DidOpenTextDocumentNotification.type, {
+        textDocument: TextDocumentItem.create(`file://${contractAPath}`, "cadence", 1, contractA)
+      })
+
+      connection.sendNotification(DidOpenTextDocumentNotification.type, {
+        textDocument: TextDocumentItem.create(`file://${contractBPath}`, "cadence", 1, contractB)
+      })
+
+      await new Promise((r) => setTimeout(r, 200))
+      fs.writeFileSync(contractAPath, contractA1)
+
+      connection.sendNotification(DidChangeTextDocumentNotification.type, {
+        textDocument: VersionedTextDocumentIdentifier.create(`file://${contractAPath}`, 1),
+        contentChanges: [ {
+          text: contractA1
+        } ],
+      })
+
+      connection.sendNotification(DidOpenTextDocumentNotification.type, {
+        textDocument: TextDocumentItem.create(`file://${contractBPath}`, "cadence", 1, contractB)
+      })
+
+      return diagnosticsPromise
+    })
+
+    let diagnostics = await diagnosticsPromise
+    expect(diagnostics[0].uri).toEqual(`file://${contractAPath}`)
+    expect(diagnostics[1].uri).toEqual(`file://${contractBPath}`)
+    expect(diagnostics[1].diagnostics.length).toEqual(1)
+    expect(diagnostics[1].diagnostics[0].message).toEqual("value of type `contractA` has no member `bravo`. unknown member")
+    expect(diagnostics[2].uri).toEqual(`file://${contractAPath}`)
+  })
+
+  test("referencing same type in multiple places gets correctly resolved", async() => {
+
   })
 
 })
