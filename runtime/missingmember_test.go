@@ -4725,9 +4725,10 @@ pub contract ExampleMarketplace {
 		log: func(message string) {
 			logs = append(logs, message)
 		},
-		decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-			return json.Decode(b)
-		},
+	}
+
+	runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+		return json.Decode(runtimeInterface, b)
 	}
 
 	nextTransactionLocation := newTransactionLocationGenerator()
