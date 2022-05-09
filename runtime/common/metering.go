@@ -425,11 +425,18 @@ func BigIntByteLength(v *big.Int) int {
 //
 
 func NewPlusBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
-	// max(|a|, |b|) + 5
+	// if |a|==|b|==0, then 0
+	// else max(|a|, |b|) + 5
+	aWordLength := len(a.Bits())
+	bWordLength := len(b.Bits())
+
+	if aWordLength == 0 && bWordLength == 0 {
+		return NewBigIntMemoryUsage(0)
+	}
 
 	maxWordLength := max(
-		len(a.Bits()),
-		len(b.Bits()),
+		aWordLength,
+		bWordLength,
 	)
 	return NewBigIntMemoryUsage(
 		(maxWordLength + 5) *
@@ -476,9 +483,6 @@ func NewMulBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 	)
 }
 
-var bigOne = big.NewInt(1)
-var bigOneHundred = big.NewInt(100)
-
 func NewModBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 	// if a < b or |b| == 1:
 	//     |a| + 4
@@ -493,14 +497,14 @@ func NewModBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 	bWordLength := len(b.Bits())
 
 	var resultWordLength int
-	if a.Cmp(b) < 0 || b.Cmp(bigOne) == 0 {
+	if a.Cmp(b) < 0 || bWordLength == 1 {
 		resultWordLength = aWordLength + 4
-	} else if b.Cmp(bigOneHundred) < 0 {
+	} else if bWordLength < 100 {
 		resultWordLength = aWordLength - bWordLength + 5
 	} else {
 		recursionCost := int(unsafe.Sizeof(uintptr(0))) +
 			9*bWordLength +
-			int(math.Floor(float64(aWordLength)/float64(bWordLength))) + 12
+			aWordLength/bWordLength + 12
 		recursionDepth := 2 * b.BitLen()
 		resultWordLength = 3*bWordLength + 4 + recursionCost*recursionDepth
 	}
