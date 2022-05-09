@@ -45,3 +45,27 @@ make wasm
 
 The integration tests for the Cadence Language Server are written in TypeScript
 and can be found in the [`test` directory](https://github.com/onflow/cadence/tree/master/languageserver/test).
+
+
+### Debugging
+
+#### GoLang and VSCode
+You can setup debugging of Language Server in VSCode by first going in `VSCode Cadence > 
+Extension Settings` and under `Cadence: Flow Command` putting absolute location of `run.sh` script 
+found in this directory (example: `/Users/dapper/Dev/cadence/languageserver/run.sh`).
+
+After you set the run script you should follow ["Attach to a process on a local machine" tutorial to debug the language server in GoLand](https://www.jetbrains.com/help/go/attach-to-running-go-processes-with-debugger.html#step-2-build-the-application).
+
+**M1 Problems**
+Currently running `gops` on OSX ARM architecture won't work. A workaround for debugging is to use 
+functionality in `tests/util.go`. You can use utility functions to log to a file like so:
+```go
+test.Log("test log")
+```
+And at the same time run the command in your terminal:
+```bash
+tail -f ./debug.log
+```
+Doing so you should see the output of all Log calls you make. 
+
+*Note: this method works on all architectures*
