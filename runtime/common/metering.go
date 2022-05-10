@@ -113,6 +113,16 @@ var (
 	SimpleCompositeBaseMemoryUsage = NewConstantMemoryUsage(MemoryKindSimpleCompositeBase)
 	AtreeMapElementOverhead        = NewConstantMemoryUsage(MemoryKindAtreeMapElementOverhead)
 	AtreeArrayElementOverhead      = NewConstantMemoryUsage(MemoryKindAtreeArrayElementOverhead)
+
+	VariableSizedSemaTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindVariableSizedSemaType)
+	ConstantSizedSemaTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindConstantSizedSemaType)
+	DictionarySemaTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindDictionarySemaType)
+	OptionalSemaTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindOptionalSemaType)
+	RestrictedSemaTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindRestrictedSemaType)
+	ReferenceSemaTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindReferenceSemaType)
+	CapabilitySemaTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindCapabilitySemaType)
+
+	OrderedMapMemoryUsage = NewConstantMemoryUsage(MemoryKindOrderedMap)
 )
 
 func UseMemory(gauge MemoryGauge, usage MemoryUsage) {
@@ -680,6 +690,7 @@ func NewDictionaryExpressionMemoryUsage(length int) MemoryUsage {
 		Amount: uint64(length) + 1,
 	}
 }
+
 func NewMembersMemoryUsage(length int) MemoryUsage {
 	return MemoryUsage{
 		Kind: MemoryKindMembers,
@@ -700,6 +711,18 @@ func NewCadenceBigIntMemoryUsage(bytes int) MemoryUsage {
 		Kind:   MemoryKindCadenceNumber,
 		Amount: uint64(bytes),
 	}
+}
+
+func NewOrderedMapMemoryUsages(size uint64) (MemoryUsage, MemoryUsage, MemoryUsage) {
+	return OrderedMapMemoryUsage,
+		MemoryUsage{
+			Kind:   MemoryKindOrderedMapEntryList,
+			Amount: size,
+		},
+		MemoryUsage{
+			Kind:   MemoryKindOrderedMapEntry,
+			Amount: size,
+		}
 }
 
 // UseConstantMemory uses a pre-determined amount of memory

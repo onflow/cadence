@@ -454,6 +454,13 @@ type OptionalType struct {
 	Type Type
 }
 
+func NewOptionalType(memoryGauge common.MemoryGauge, typ Type) *OptionalType {
+	common.UseMemory(memoryGauge, common.OptionalSemaTypeMemoryUsage)
+	return &OptionalType{
+		Type: typ,
+	}
+}
+
 func (*OptionalType) IsType() {}
 
 func (t *OptionalType) Tag() TypeTag {
@@ -2025,6 +2032,13 @@ type VariableSizedType struct {
 	memberResolversOnce sync.Once
 }
 
+func NewVariableSizedType(memoryGauge common.MemoryGauge, typ Type) *VariableSizedType {
+	common.UseMemory(memoryGauge, common.VariableSizedSemaTypeMemoryUsage)
+	return &VariableSizedType{
+		Type: typ,
+	}
+}
+
 func (*VariableSizedType) IsType() {}
 
 func (*VariableSizedType) isArrayType() {}
@@ -2153,6 +2167,14 @@ type ConstantSizedType struct {
 	Size                int64
 	memberResolvers     map[string]MemberResolver
 	memberResolversOnce sync.Once
+}
+
+func NewConstantSizedType(memoryGauge common.MemoryGauge, typ Type, size int64) *ConstantSizedType {
+	common.UseMemory(memoryGauge, common.ConstantSizedSemaTypeMemoryUsage)
+	return &ConstantSizedType{
+		Type: typ,
+		Size: size,
+	}
 }
 
 func (*ConstantSizedType) IsType() {}
@@ -4329,6 +4351,14 @@ type DictionaryType struct {
 	memberResolversOnce sync.Once
 }
 
+func NewDictionaryType(memoryGauge common.MemoryGauge, keyType, valueType Type) *DictionaryType {
+	common.UseMemory(memoryGauge, common.DictionarySemaTypeMemoryUsage)
+	return &DictionaryType{
+		KeyType:   keyType,
+		ValueType: valueType,
+	}
+}
+
 func (*DictionaryType) IsType() {}
 
 func (t *DictionaryType) Tag() TypeTag {
@@ -4678,6 +4708,14 @@ func (t *DictionaryType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Typ
 type ReferenceType struct {
 	Authorized bool
 	Type       Type
+}
+
+func NewReferenceType(memoryGauge common.MemoryGauge, typ Type, authorized bool) *ReferenceType {
+	common.UseMemory(memoryGauge, common.ReferenceSemaTypeMemoryUsage)
+	return &ReferenceType{
+		Type:       typ,
+		Authorized: authorized,
+	}
 }
 
 func (*ReferenceType) IsType() {}
@@ -5762,6 +5800,21 @@ type RestrictedType struct {
 	restrictionSetOnce sync.Once
 }
 
+func NewRestrictedType(memoryGauge common.MemoryGauge, typ Type, restrictions []*InterfaceType) *RestrictedType {
+	common.UseMemory(memoryGauge, common.RestrictedSemaTypeMemoryUsage)
+
+	// Also meter the cost for the `restrictionSet` here, since ordered maps are not separately metered.
+	wrapperUsage, entryListUsage, entriesUsage := common.NewOrderedMapMemoryUsages(uint64(len(restrictions)))
+	common.UseMemory(memoryGauge, wrapperUsage)
+	common.UseMemory(memoryGauge, entryListUsage)
+	common.UseMemory(memoryGauge, entriesUsage)
+
+	return &RestrictedType{
+		Type:         typ,
+		Restrictions: restrictions,
+	}
+}
+
 func (t *RestrictedType) RestrictionSet() *InterfaceSet {
 	t.initializeRestrictionSet()
 	return t.restrictionSet
@@ -5984,6 +6037,13 @@ type CapabilityType struct {
 	BorrowType          Type
 	memberResolvers     map[string]MemberResolver
 	memberResolversOnce sync.Once
+}
+
+func NewCapabilityType(memoryGauge common.MemoryGauge, borrowType Type) *CapabilityType {
+	common.UseMemory(memoryGauge, common.CapabilitySemaTypeMemoryUsage)
+	return &CapabilityType{
+		BorrowType: borrowType,
+	}
 }
 
 func (*CapabilityType) IsType() {}

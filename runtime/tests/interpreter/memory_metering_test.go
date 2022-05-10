@@ -8959,3 +8959,38 @@ func TestInterpretVariableActivationMetering(t *testing.T) {
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindActivationEntries))
 	})
 }
+
+func TestInterpretStaticTypeConversionMetering(t *testing.T) {
+	t.Parallel()
+
+	t.Run("primitive static types", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let a: {Int: AnyStruct{Foo}} = {}           // dictionary + restricted
+                let b: [&Int] = []                          // variable-sized + reference
+                let c: [Int?; 2] = [1, 2]                   // constant-sized + optional
+                let d: [Capability<&Bar>] = []             //  capability + variable-sized + reference
+            }
+
+            pub struct interface Foo {}
+
+            pub struct Bar: Foo {}
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindDictionarySemaType))
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindVariableSizedSemaType))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindConstantSizedSemaType))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindOptionalSemaType))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindRestrictedSemaType))
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindReferenceSemaType))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCapabilitySemaType))
+	})
+}
