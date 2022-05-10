@@ -1718,7 +1718,6 @@ func (s *Server) getDiagnostics(
 			diagnostics = append(diagnostics, parserDiagnostics...)
 		}
 	}
-	panic("CRASH TEST 2")
 	// If there is a parse result succeeded proceed with resolving imports and checking the parsed program,
 	// even if there there might have been parsing errors.
 
