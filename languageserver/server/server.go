@@ -27,6 +27,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/onflow/cadence/languageserver/test"
+
 	"github.com/getsentry/sentry-go"
 	"github.com/google/uuid"
 	"github.com/mitchellh/mapstructure"
@@ -292,6 +294,8 @@ func NewServer() (*Server, error) {
 	server.protocolServer = protocol.NewServer(server)
 
 	// init crash reporting
+	defer sentry.Flush(2 * time.Second)
+	defer sentry.Recover()
 	initCrashReporting(server)
 
 	// Set default commands
@@ -385,6 +389,7 @@ func initCrashReporting(server *Server) {
 		Transport:        sentrySyncTransport,
 		BeforeSend: func(event *sentry.Event, hint *sentry.EventHint) *sentry.Event {
 			if server.reportCrashes {
+				test.Log("crash report", event)
 				return event
 			}
 
@@ -1713,7 +1718,7 @@ func (s *Server) getDiagnostics(
 			diagnostics = append(diagnostics, parserDiagnostics...)
 		}
 	}
-
+	panic("CRASH TEST 2")
 	// If there is a parse result succeeded proceed with resolving imports and checking the parsed program,
 	// even if there there might have been parsing errors.
 
