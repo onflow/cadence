@@ -2506,6 +2506,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 					stdlib.BuiltinValues,
 					checkerOptions,
 					importResolutionResults{})
+				handleContractUpdateError(err)
 
 				validator := NewContractUpdateValidator(
 					context.Location,
