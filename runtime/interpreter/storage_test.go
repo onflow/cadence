@@ -448,8 +448,7 @@ func TestStorageOverwriteAndRemove(t *testing.T) {
 
 	const identifier = "test"
 
-	storageMap := storage.GetStorageMap(address, "storage")
-
+	storageMap := storage.GetStorageMap(address, "storage", true)
 	storageMap.WriteValue(inter, identifier, array1)
 
 	// Overwriting delete any existing child slabs
