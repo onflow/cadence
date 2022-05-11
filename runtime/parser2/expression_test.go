@@ -5736,7 +5736,7 @@ func TestParseReplayLimit(t *testing.T) {
 			Code: code,
 			Errors: []error{
 				&SyntaxError{
-					Message: fmt.Sprintf("program too ambiguous, replay limit of %d tokens exceeded", replayLimit),
+					Message: fmt.Sprintf("program too ambiguous, replay limit of %d tokens exceeded", tokenReplayLimit),
 					Pos: ast.Position{
 						Offset: 210,
 						Line:   1,
