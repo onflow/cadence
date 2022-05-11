@@ -59,7 +59,7 @@ type Interface interface {
 	//   As SetProgram is called when GetProgram is nil, then SetProgram MUST also be called when
 	//   GetProgram returns a program. This prevents nondeterministic behaviour
 	//
-	// deprecated: This function should be refactored to ensure that SetProgram is always called
+	// Deprecated: This function should be refactored to ensure that SetProgram is always called
 	//
 	GetProgram(Location) (*interpreter.Program, error)
 	// SetProgram sets the program for the given location.
