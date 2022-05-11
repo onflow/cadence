@@ -2335,3 +2335,75 @@ func TestInterpreterResourceDoubleWrappedCondition(t *testing.T) {
 	_, err = inter.Invoke("test")
 	require.NoError(t, err)
 }
+
+func TestInterpretOptionalResourceReference(t *testing.T) {
+
+	t.Parallel()
+
+	address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+	inter, _ := testAccount(
+		t,
+		address,
+		true,
+		`
+        resource R {
+            pub let id: Int
+    
+            init() {
+                self.id = 1
+            }
+        }
+    
+        fun test() {
+            account.save(<-{0 : <-create R()}, to: /storage/x)
+            let collection = account.borrow<&{Int: R}>(from: /storage/x)!
+    
+            let resourceRef = (&collection[0] as &R?)!
+            let token <- collection.remove(key: 0)
+			
+            let x = resourceRef.id
+            destroy token
+        }                
+        `,
+	)
+
+	_, err := inter.Invoke("test")
+	require.NoError(t, err)
+}
+
+func TestInterpretArrayOptionalResourceReference(t *testing.T) {
+
+	t.Parallel()
+
+	address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+	inter, _ := testAccount(
+		t,
+		address,
+		true,
+		`
+        resource R {
+            pub let id: Int
+    
+            init() {
+                self.id = 1
+            }
+        }
+    
+        fun test() {
+            account.save(<-[<-create R()], to: /storage/x)
+            let collection = account.borrow<&[R?]>(from: /storage/x)!
+    
+            let resourceRef = (&collection[0] as &R?)!
+            let token <- collection.remove(at: 0)
+			
+            let x = resourceRef.id
+            destroy token
+        }                
+        `,
+	)
+
+	_, err := inter.Invoke("test")
+	require.NoError(t, err)
+}
