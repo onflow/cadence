@@ -9785,3 +9785,44 @@ func TestInterpretCastingBoxing(t *testing.T) {
 		)
 	})
 }
+
+func TestInterpretNilCoalesceReference(t *testing.T) {
+
+	t.Parallel()
+
+	standardLibraryFunctions :=
+		stdlib.StandardLibraryFunctions{
+			stdlib.PanicFunction,
+		}
+
+	valueDeclarations := standardLibraryFunctions.ToSemaValueDeclarations()
+	values := standardLibraryFunctions.ToInterpreterValueDeclarations()
+
+	inter, err := parseCheckAndInterpretWithOptions(t,
+		`
+          let xs = {"a": 2}
+          let ref = &xs["a"] as &Int? ?? panic("no a")
+        `,
+		ParseCheckAndInterpretOptions{
+			CheckerOptions: []sema.Option{
+				sema.WithPredeclaredValues(valueDeclarations),
+			},
+			Options: []interpreter.Option{
+				interpreter.WithPredeclaredValues(values),
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	variable, ok := inter.Globals.Get("ref")
+	require.True(t, ok)
+
+	require.Equal(
+		t,
+		&interpreter.EphemeralReferenceValue{
+			Value:        interpreter.NewIntValueFromInt64(2),
+			BorrowedType: sema.IntType,
+		},
+		variable.GetValue(),
+	)
+}
