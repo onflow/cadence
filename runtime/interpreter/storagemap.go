@@ -30,7 +30,9 @@ type StorageMap struct {
 	orderedMap *atree.OrderedMap
 }
 
-func NewStorageMap(storage atree.SlabStorage, address atree.Address) *StorageMap {
+func NewStorageMap(memoryGauge common.MemoryGauge, storage atree.SlabStorage, address atree.Address) *StorageMap {
+	common.UseMemory(memoryGauge, common.StorageMapMemoryUsage)
+
 	orderedMap, err := atree.NewMap(
 		storage,
 		address,

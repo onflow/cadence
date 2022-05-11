@@ -132,6 +132,11 @@ const (
 	MemoryKindAddressLocation
 	MemoryKindBytes
 	MemoryKindVariable
+	MemoryKindCompositeTypeInfo
+	MemoryKindCompositeField
+	MemoryKindInvocation
+	MemoryKindStorageMap
+	MemoryKindStorageKey
 
 	// Tokens
 

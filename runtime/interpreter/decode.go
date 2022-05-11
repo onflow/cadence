@@ -1526,11 +1526,12 @@ func (d TypeDecoder) decodeCompositeTypeInfo() (atree.TypeInfo, error) {
 		)
 	}
 
-	return compositeTypeInfo{
-		location:            location,
-		qualifiedIdentifier: qualifiedIdentifier,
-		kind:                common.CompositeKind(kind),
-	}, nil
+	return NewCompositeTypeInfo(
+		d.memoryGauge,
+		location,
+		qualifiedIdentifier,
+		common.CompositeKind(kind),
+	), nil
 }
 
 func DecodeTypeInfo(decoder *cbor.StreamDecoder, memoryGauge common.MemoryGauge) (atree.TypeInfo, error) {

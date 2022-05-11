@@ -130,7 +130,7 @@ func parseCheckAndInterpretWithOptionsAndMemoryMetering(
 				uuid++
 				return uuid, nil
 			}),
-			interpreter.WithStorage(interpreter.NewInMemoryStorage(nil)),
+			interpreter.WithStorage(interpreter.NewInMemoryStorage(memoryGauge)),
 			interpreter.WithAtreeValueValidationEnabled(true),
 			interpreter.WithAtreeStorageValidationEnabled(true),
 			interpreter.WithOnRecordTraceHandler(

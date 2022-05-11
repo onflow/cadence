@@ -13896,6 +13896,18 @@ type CompositeField struct {
 	Value Value
 }
 
+func NewCompositeField(memoryGauge common.MemoryGauge, name string, value Value) CompositeField {
+	common.UseMemory(memoryGauge, common.CompositeFieldMemoryUsage)
+	return NewUnmeteredCompositeField(name, value)
+}
+
+func NewUnmeteredCompositeField(name string, value Value) CompositeField {
+	return CompositeField{
+		Name:  name,
+		Value: value,
+	}
+}
+
 func NewCompositeValue(
 	interpreter *Interpreter,
 	location common.Location,
@@ -13936,11 +13948,12 @@ func NewCompositeValue(
 			interpreter.Storage,
 			atree.Address(address),
 			atree.NewDefaultDigesterBuilder(),
-			compositeTypeInfo{
-				location:            location,
-				qualifiedIdentifier: qualifiedIdentifier,
-				kind:                kind,
-			},
+			NewCompositeTypeInfo(
+				interpreter,
+				location,
+				qualifiedIdentifier,
+				kind,
+			),
 		)
 		if err != nil {
 			panic(ExternalError{err})
@@ -13948,9 +13961,12 @@ func NewCompositeValue(
 		return dictionary
 	}
 
-	typeInfo := compositeTypeInfo{
-		location, qualifiedIdentifier, kind,
-	}
+	typeInfo := NewCompositeTypeInfo(
+		interpreter,
+		location,
+		qualifiedIdentifier,
+		kind,
+	)
 
 	v = newCompositeValueFromConstructor(interpreter, uint64(len(fields)), typeInfo, constructor)
 
@@ -14084,13 +14100,14 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func
 	destructor := v.Destructor
 
 	if destructor != nil {
-		invocation := Invocation{
-			Self:             v,
-			Arguments:        nil,
-			ArgumentTypes:    nil,
-			GetLocationRange: getLocationRange,
-			Interpreter:      interpreter,
-		}
+		invocation := NewInvocation(
+			interpreter,
+			v,
+			nil,
+			nil,
+			nil,
+			getLocationRange,
+		)
 
 		destructor.invoke(invocation)
 	}
@@ -14366,12 +14383,12 @@ func (v *CompositeValue) RecursiveString(seenReferences SeenReferences) string {
 	_ = v.dictionary.Iterate(func(key atree.Value, value atree.Value) (resume bool, err error) {
 		fields = append(
 			fields,
-			CompositeField{
-				Name: string(key.(StringAtreeValue)),
+			NewUnmeteredCompositeField(
+				string(key.(StringAtreeValue)),
 				// ok to not meter anything created as part of this iteration, since we will discard the result
 				// upon creating the string
-				Value: MustConvertUnmeteredStoredValue(value),
-			},
+				MustConvertUnmeteredStoredValue(value),
+			),
 		)
 		return true, nil
 	})
@@ -14766,11 +14783,12 @@ func (v *CompositeValue) Transfer(
 	}
 
 	if res == nil {
-		info := compositeTypeInfo{
-			location:            v.Location,
-			qualifiedIdentifier: v.QualifiedIdentifier,
-			kind:                v.Kind,
-		}
+		info := NewCompositeTypeInfo(
+			interpreter,
+			v.Location,
+			v.QualifiedIdentifier,
+			v.Kind,
+		)
 		res = newCompositeValueFromOrderedMap(dictionary, info)
 		res.InjectedFields = v.InjectedFields
 		res.ComputedFields = v.ComputedFields
@@ -16317,12 +16335,14 @@ func (v *SomeValue) GetMember(interpreter *Interpreter, getLocationRange func() 
 
 				valueType := transformFunctionType.Parameters[0].TypeAnnotation.Type
 
-				transformInvocation := Invocation{
-					Arguments:        []Value{v.value},
-					ArgumentTypes:    []sema.Type{valueType},
-					GetLocationRange: invocation.GetLocationRange,
-					Interpreter:      invocation.Interpreter,
-				}
+				transformInvocation := NewInvocation(
+					invocation.Interpreter,
+					nil,
+					[]Value{v.value},
+					[]sema.Type{valueType},
+					nil,
+					invocation.GetLocationRange,
+				)
 
 				newValue := transformFunction.invoke(transformInvocation)
 

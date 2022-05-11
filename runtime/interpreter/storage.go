@@ -90,6 +90,14 @@ type StorageKey struct {
 	Key     string
 }
 
+func NewStorageKey(memoryGauge common.MemoryGauge, address common.Address, key string) StorageKey {
+	common.UseMemory(memoryGauge, common.StorageKeyMemoryUsage)
+	return StorageKey{
+		Address: address,
+		Key:     key,
+	}
+}
+
 func (k StorageKey) IsLess(o StorageKey) bool {
 	switch bytes.Compare(k.Address[:], o.Address[:]) {
 	case -1:
@@ -108,6 +116,7 @@ func (k StorageKey) IsLess(o StorageKey) bool {
 type InMemoryStorage struct {
 	*atree.BasicSlabStorage
 	StorageMaps map[StorageKey]*StorageMap
+	memoryGauge common.MemoryGauge
 }
 
 var _ Storage = InMemoryStorage{}
@@ -131,6 +140,7 @@ func NewInMemoryStorage(memoryGauge common.MemoryGauge) InMemoryStorage {
 	return InMemoryStorage{
 		BasicSlabStorage: slabStorage,
 		StorageMaps:      make(map[StorageKey]*StorageMap),
+		memoryGauge:      memoryGauge,
 	}
 }
 
@@ -141,10 +151,10 @@ func (i InMemoryStorage) GetStorageMap(
 ) (
 	storageMap *StorageMap,
 ) {
-	key := StorageKey{address, domain}
+	key := NewStorageKey(i.memoryGauge, address, domain)
 	storageMap = i.StorageMaps[key]
 	if storageMap == nil && createIfNotExists {
-		storageMap = NewStorageMap(i, atree.Address(address))
+		storageMap = NewStorageMap(i.memoryGauge, i, atree.Address(address))
 		i.StorageMaps[key] = storageMap
 	}
 	return storageMap
