@@ -134,6 +134,7 @@ const (
 	MemoryKindVariable
 	MemoryKindCompositeTypeInfo
 	MemoryKindCompositeField
+	MemoryKindInvocation
 
 	// Tokens
 

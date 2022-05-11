@@ -575,18 +575,18 @@ func (r *interpreterRuntime) InvokeContractFunction(
 	}
 
 	// prepare invocation
-	invocation := interpreter.Invocation{
-		Self:               contractValue,
-		Arguments:          arguments,
-		ArgumentTypes:      argumentTypes,
-		TypeParameterTypes: nil,
-		GetLocationRange: func() interpreter.LocationRange {
+	invocation := interpreter.NewInvocation(
+		inter,
+		contractValue,
+		arguments,
+		argumentTypes,
+		nil,
+		func() interpreter.LocationRange {
 			return interpreter.LocationRange{
 				Location: context.Location,
 			}
 		},
-		Interpreter: inter,
-	}
+	)
 
 	contractMember := contractValue.GetMember(inter, invocation.GetLocationRange, functionName)
 

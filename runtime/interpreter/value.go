@@ -14100,13 +14100,14 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func
 	destructor := v.Destructor
 
 	if destructor != nil {
-		invocation := Invocation{
-			Self:             v,
-			Arguments:        nil,
-			ArgumentTypes:    nil,
-			GetLocationRange: getLocationRange,
-			Interpreter:      interpreter,
-		}
+		invocation := NewInvocation(
+			interpreter,
+			v,
+			nil,
+			nil,
+			nil,
+			getLocationRange,
+		)
 
 		destructor.invoke(invocation)
 	}
@@ -16334,12 +16335,14 @@ func (v *SomeValue) GetMember(interpreter *Interpreter, getLocationRange func() 
 
 				valueType := transformFunctionType.Parameters[0].TypeAnnotation.Type
 
-				transformInvocation := Invocation{
-					Arguments:        []Value{v.value},
-					ArgumentTypes:    []sema.Type{valueType},
-					GetLocationRange: invocation.GetLocationRange,
-					Interpreter:      invocation.Interpreter,
-				}
+				transformInvocation := NewInvocation(
+					invocation.Interpreter,
+					nil,
+					[]Value{v.value},
+					[]sema.Type{valueType},
+					nil,
+					invocation.GetLocationRange,
+				)
 
 				newValue := transformFunction.invoke(transformInvocation)
 

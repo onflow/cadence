@@ -642,10 +642,10 @@ func TestInterpretCompositeMetering(t *testing.T) {
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindAtreeMapElementOverhead))
 		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindAtreeMapPreAllocatedElement))
 		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindVariable))
-
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCompositeStaticType))
 		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindCompositeTypeInfo))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCompositeField))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindInvocation))
 	})
 
 	t.Run("iteration", func(t *testing.T) {
@@ -677,6 +677,7 @@ func TestInterpretCompositeMetering(t *testing.T) {
 		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindCompositeStaticType))
 		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindCompositeTypeInfo))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindCompositeField))
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindInvocation))
 	})
 }
 
@@ -828,6 +829,7 @@ func TestInterpretInterpretedFunctionMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindInterpretedFunction))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindInvocation))
 	})
 
 	t.Run("function pointer creation", func(t *testing.T) {
@@ -876,6 +878,8 @@ func TestInterpretInterpretedFunctionMetering(t *testing.T) {
 		// 1 for the main, and 1 for the anon-func.
 		// Assignment shouldn't allocate new memory, as the value is immutable and shouldn't be copied.
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindInterpretedFunction))
+
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindInvocation))
 	})
 
 	t.Run("struct method", func(t *testing.T) {
@@ -918,6 +922,8 @@ func TestInterpretInterpretedFunctionMetering(t *testing.T) {
 
 		// 1 for the main, and 1 for the struct init.
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindInterpretedFunction))
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindInvocation))
 	})
 }
 
@@ -8921,6 +8927,7 @@ func TestInterpretVariableActivationMetering(t *testing.T) {
 
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindActivation))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindActivationEntries))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindInvocation))
 	})
 
 	t.Run("nested function call", func(t *testing.T) {
@@ -8943,6 +8950,7 @@ func TestInterpretVariableActivationMetering(t *testing.T) {
 
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindActivation))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindActivationEntries))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindInvocation))
 	})
 
 	t.Run("local scope", func(t *testing.T) {

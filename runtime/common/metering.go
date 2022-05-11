@@ -125,6 +125,7 @@ var (
 	CapabilitySemaTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindCapabilitySemaType)
 
 	OrderedMapMemoryUsage = NewConstantMemoryUsage(MemoryKindOrderedMap)
+	InvocationMemoryUsage = NewConstantMemoryUsage(MemoryKindInvocation)
 )
 
 func UseMemory(gauge MemoryGauge, usage MemoryUsage) {

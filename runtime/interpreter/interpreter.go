@@ -1076,11 +1076,14 @@ func (interpreter *Interpreter) prepareInvoke(
 	}
 
 	// NOTE: can't fill argument types, as they are unknown
-	invocation := Invocation{
-		Arguments:        preparedArguments,
-		GetLocationRange: getLocationRange,
-		Interpreter:      interpreter,
-	}
+	invocation := NewInvocation(
+		interpreter,
+		nil,
+		preparedArguments,
+		nil,
+		nil,
+		getLocationRange,
+	)
 
 	return functionValue.invoke(invocation), nil
 }
