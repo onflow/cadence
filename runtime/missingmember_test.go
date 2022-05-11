@@ -4975,7 +4975,7 @@ transaction {
 		{setupAccount2Tx, exampleNFTAddress},
 		{mintTokensTx, exampleTokenAddress},
 		{createSaleTx, exampleTokenAddress},
-		//	{purchaseTx, exampleTokenAddress},
+		{purchaseTx, exampleTokenAddress},
 	} {
 		signerAddress = tx.signer
 
@@ -4990,19 +4990,4 @@ transaction {
 		)
 		require.NoError(t, err)
 	}
-	signerAddress = exampleTokenAddress
-
-	err = runtime.ExecuteTransaction(
-		Script{
-			Source: []byte(purchaseTx),
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-		},
-	)
-	// TODO: this should not error
-	require.Error(t, err)
-	require.Equal(t, err.Error(),
-		"Execution failed:\nerror: missing value for member `id`\n   --> 0000000000000003.ExampleMarketplace:141:16\n")
 }
