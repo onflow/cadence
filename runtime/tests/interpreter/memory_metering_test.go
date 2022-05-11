@@ -9019,8 +9019,8 @@ func TestStorageMapMetering(t *testing.T) {
         pub fun main(account: AuthAccount) {
             let r <- create R()
             account.save(<-r, to: /storage/r)
-			account.link<&R>(/public/capo, target: /storage/r)
-			account.borrow<&R>(from: /storage/r)
+            account.link<&R>(/public/capo, target: /storage/r)
+            account.borrow<&R>(from: /storage/r)
         }
     `
 
