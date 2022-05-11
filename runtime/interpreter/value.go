@@ -13936,11 +13936,12 @@ func NewCompositeValue(
 			interpreter.Storage,
 			atree.Address(address),
 			atree.NewDefaultDigesterBuilder(),
-			compositeTypeInfo{
-				location:            location,
-				qualifiedIdentifier: qualifiedIdentifier,
-				kind:                kind,
-			},
+			NewCompositeTypeInfo(
+				interpreter,
+				location,
+				qualifiedIdentifier,
+				kind,
+			),
 		)
 		if err != nil {
 			panic(ExternalError{err})
@@ -13948,9 +13949,12 @@ func NewCompositeValue(
 		return dictionary
 	}
 
-	typeInfo := compositeTypeInfo{
-		location, qualifiedIdentifier, kind,
-	}
+	typeInfo := NewCompositeTypeInfo(
+		interpreter,
+		location,
+		qualifiedIdentifier,
+		kind,
+	)
 
 	v = newCompositeValueFromConstructor(interpreter, uint64(len(fields)), typeInfo, constructor)
 
@@ -14766,11 +14770,12 @@ func (v *CompositeValue) Transfer(
 	}
 
 	if res == nil {
-		info := compositeTypeInfo{
-			location:            v.Location,
-			qualifiedIdentifier: v.QualifiedIdentifier,
-			kind:                v.Kind,
-		}
+		info := NewCompositeTypeInfo(
+			interpreter,
+			v.Location,
+			v.QualifiedIdentifier,
+			v.Kind,
+		)
 		res = newCompositeValueFromOrderedMap(dictionary, info)
 		res.InjectedFields = v.InjectedFields
 		res.ComputedFields = v.ComputedFields

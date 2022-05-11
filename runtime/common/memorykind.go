@@ -132,6 +132,7 @@ const (
 	MemoryKindAddressLocation
 	MemoryKindBytes
 	MemoryKindVariable
+	MemoryKindCompositeTypeInfo
 
 	// Tokens
 

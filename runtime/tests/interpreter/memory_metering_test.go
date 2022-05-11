@@ -644,6 +644,7 @@ func TestInterpretCompositeMetering(t *testing.T) {
 		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindVariable))
 
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCompositeStaticType))
+		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindCompositeTypeInfo))
 	})
 
 	t.Run("iteration", func(t *testing.T) {
@@ -673,6 +674,7 @@ func TestInterpretCompositeMetering(t *testing.T) {
 		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindVariable))
 
 		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindCompositeStaticType))
+		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindCompositeTypeInfo))
 	})
 }
 

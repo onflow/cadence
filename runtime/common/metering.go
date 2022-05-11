@@ -113,6 +113,7 @@ var (
 	SimpleCompositeBaseMemoryUsage = NewConstantMemoryUsage(MemoryKindSimpleCompositeBase)
 	AtreeMapElementOverhead        = NewConstantMemoryUsage(MemoryKindAtreeMapElementOverhead)
 	AtreeArrayElementOverhead      = NewConstantMemoryUsage(MemoryKindAtreeArrayElementOverhead)
+	CompositeTypeInfoMemoryUsage   = NewConstantMemoryUsage(MemoryKindCompositeTypeInfo)
 
 	VariableSizedSemaTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindVariableSizedSemaType)
 	ConstantSizedSemaTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindConstantSizedSemaType)

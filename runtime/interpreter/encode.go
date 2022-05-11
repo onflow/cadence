@@ -1306,6 +1306,21 @@ type compositeTypeInfo struct {
 	kind                common.CompositeKind
 }
 
+func NewCompositeTypeInfo(
+	memoryGauge common.MemoryGauge,
+	location common.Location,
+	qualifiedIdentifier string,
+	kind common.CompositeKind,
+) compositeTypeInfo {
+	common.UseMemory(memoryGauge, common.CompositeTypeInfoMemoryUsage)
+
+	return compositeTypeInfo{
+		location:            location,
+		qualifiedIdentifier: qualifiedIdentifier,
+		kind:                kind,
+	}
+}
+
 var _ atree.TypeInfo = compositeTypeInfo{}
 
 const encodedCompositeTypeInfoLength = 3
