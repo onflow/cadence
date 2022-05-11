@@ -9009,3 +9009,25 @@ func TestInterpretStaticTypeConversionMetering(t *testing.T) {
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCapabilitySemaType))
 	})
 }
+
+func TestStorageMapMetering(t *testing.T) {
+	t.Parallel()
+
+	script := `
+        resource R {}
+
+        pub fun main(account: AuthAccount) {
+            let r <- create R()
+            account.save(<-r, to: /storage/r)
+        }
+    `
+
+	meter := newTestMemoryGauge()
+	inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+	account := newTestAuthAccountValue(inter, interpreter.AddressValue{})
+	_, err := inter.Invoke("main", account)
+	require.NoError(t, err)
+
+	assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindStorageMap))
+}

@@ -126,6 +126,7 @@ var (
 
 	OrderedMapMemoryUsage = NewConstantMemoryUsage(MemoryKindOrderedMap)
 	InvocationMemoryUsage = NewConstantMemoryUsage(MemoryKindInvocation)
+	StorageMapMemoryUsage = NewConstantMemoryUsage(MemoryKindStorageMap)
 )
 
 func UseMemory(gauge MemoryGauge, usage MemoryUsage) {

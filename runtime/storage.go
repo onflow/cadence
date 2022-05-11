@@ -38,6 +38,7 @@ type Storage struct {
 	storageMaps     map[interpreter.StorageKey]*interpreter.StorageMap
 	contractUpdates map[interpreter.StorageKey]*interpreter.CompositeValue
 	Ledger          atree.Ledger
+	memoryGauge     common.MemoryGauge
 }
 
 var _ atree.SlabStorage = &Storage{}
@@ -76,6 +77,7 @@ func NewStorage(ledger atree.Ledger, memoryGauge common.MemoryGauge) *Storage {
 		writes:                map[interpreter.StorageKey]atree.StorageIndex{},
 		storageMaps:           map[interpreter.StorageKey]*interpreter.StorageMap{},
 		contractUpdates:       map[interpreter.StorageKey]*interpreter.CompositeValue{},
+		memoryGauge:           memoryGauge,
 	}
 }
 
@@ -148,7 +150,7 @@ func (s *Storage) loadExistingStorageMap(address atree.Address, storageIndex atr
 }
 
 func (s *Storage) storeNewStorageMap(address atree.Address, domain string) *interpreter.StorageMap {
-	storageMap := interpreter.NewStorageMap(s, address)
+	storageMap := interpreter.NewStorageMap(s.memoryGauge, s, address)
 
 	storageIndex := storageMap.StorageID().Index
 
