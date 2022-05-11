@@ -9019,6 +9019,8 @@ func TestStorageMapMetering(t *testing.T) {
         pub fun main(account: AuthAccount) {
             let r <- create R()
             account.save(<-r, to: /storage/r)
+			account.link<&R>(/public/capo, target: /storage/r)
+			account.borrow<&R>(from: /storage/r)
         }
     `
 
@@ -9029,5 +9031,6 @@ func TestStorageMapMetering(t *testing.T) {
 	_, err := inter.Invoke("main", account)
 	require.NoError(t, err)
 
-	assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindStorageMap))
+	assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindStorageMap))
+	assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindStorageKey))
 }
