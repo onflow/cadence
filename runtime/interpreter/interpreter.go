@@ -1733,15 +1733,16 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 					fields = append(
 						fields,
-						CompositeField{
-							Name: sema.ResourceUUIDFieldName,
-							Value: NewUInt64Value(
+						NewCompositeField(
+							interpreter,
+							sema.ResourceUUIDFieldName,
+							NewUInt64Value(
 								interpreter,
 								func() uint64 {
 									return uuid
 								},
 							),
-						},
+						),
 					)
 				}
 

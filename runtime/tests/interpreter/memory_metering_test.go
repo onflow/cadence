@@ -645,6 +645,7 @@ func TestInterpretCompositeMetering(t *testing.T) {
 
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCompositeStaticType))
 		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindCompositeTypeInfo))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCompositeField))
 	})
 
 	t.Run("iteration", func(t *testing.T) {
@@ -675,6 +676,7 @@ func TestInterpretCompositeMetering(t *testing.T) {
 
 		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindCompositeStaticType))
 		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindCompositeTypeInfo))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindCompositeField))
 	})
 }
 
@@ -745,6 +747,7 @@ func TestInterpretCompositeFieldMetering(t *testing.T) {
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCompositeBase))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindCompositeField))
 	})
 
 	t.Run("1 field", func(t *testing.T) {
@@ -773,6 +776,7 @@ func TestInterpretCompositeFieldMetering(t *testing.T) {
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindAtreeMapElementOverhead))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindCompositeField))
 	})
 
 	t.Run("2 field", func(t *testing.T) {
@@ -803,6 +807,7 @@ func TestInterpretCompositeFieldMetering(t *testing.T) {
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapElementOverhead))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCompositeBase))
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindCompositeField))
 	})
 }
 

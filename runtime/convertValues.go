@@ -1256,10 +1256,11 @@ func importCompositeValue(
 		}
 
 		fields = append(fields,
-			interpreter.CompositeField{
-				Name:  fieldType.Identifier,
-				Value: importedFieldValue,
-			},
+			interpreter.NewCompositeField(
+				inter,
+				fieldType.Identifier,
+				importedFieldValue,
+			),
 		)
 	}
 

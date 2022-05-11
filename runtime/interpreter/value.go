@@ -13896,6 +13896,18 @@ type CompositeField struct {
 	Value Value
 }
 
+func NewCompositeField(memoryGauge common.MemoryGauge, name string, value Value) CompositeField {
+	common.UseMemory(memoryGauge, common.CompositeFieldMemoryUsage)
+	return NewUnmeteredCompositeField(name, value)
+}
+
+func NewUnmeteredCompositeField(name string, value Value) CompositeField {
+	return CompositeField{
+		Name:  name,
+		Value: value,
+	}
+}
+
 func NewCompositeValue(
 	interpreter *Interpreter,
 	location common.Location,
@@ -14370,12 +14382,12 @@ func (v *CompositeValue) RecursiveString(seenReferences SeenReferences) string {
 	_ = v.dictionary.Iterate(func(key atree.Value, value atree.Value) (resume bool, err error) {
 		fields = append(
 			fields,
-			CompositeField{
-				Name: string(key.(StringAtreeValue)),
+			NewUnmeteredCompositeField(
+				string(key.(StringAtreeValue)),
 				// ok to not meter anything created as part of this iteration, since we will discard the result
 				// upon creating the string
-				Value: MustConvertUnmeteredStoredValue(value),
-			},
+				MustConvertUnmeteredStoredValue(value),
+			),
 		)
 		return true, nil
 	})

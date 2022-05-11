@@ -133,6 +133,7 @@ const (
 	MemoryKindBytes
 	MemoryKindVariable
 	MemoryKindCompositeTypeInfo
+	MemoryKindCompositeField
 
 	// Tokens
 
