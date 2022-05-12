@@ -1504,6 +1504,8 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, getLocationRange func() L
 		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
 	}
 
+	storageID := v.StorageID()
+
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
 
@@ -1524,9 +1526,27 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, getLocationRange func() L
 	})
 
 	v.isDestroyed = true
+
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.array = nil
 	}
+
+	interpreter.updateReferencedResource(
+		storageID,
+		storageID,
+		func(value ReferenceTrackedResourceKindedValue) {
+			arrayValue, ok := value.(*ArrayValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			arrayValue.isDestroyed = true
+
+			if interpreter.invalidatedResourceValidationEnabled {
+				arrayValue.array = nil
+			}
+		},
+	)
 }
 
 func (v *ArrayValue) IsDestroyed() bool {
@@ -14313,6 +14333,8 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func
 
 	interpreter.ReportComputation(common.ComputationKindDestroyCompositeValue, 1)
 
+	storageID := v.StorageID()
+
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(getLocationRange)
 	}
@@ -14358,9 +14380,27 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func
 	}
 
 	v.isDestroyed = true
+
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.dictionary = nil
 	}
+
+	interpreter.updateReferencedResource(
+		storageID,
+		storageID,
+		func(value ReferenceTrackedResourceKindedValue) {
+			compositeValue, ok := value.(*CompositeValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			compositeValue.isDestroyed = true
+
+			if interpreter.invalidatedResourceValidationEnabled {
+				compositeValue.dictionary = nil
+			}
+		},
+	)
 }
 
 func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
@@ -15478,9 +15518,12 @@ func (v *DictionaryValue) checkInvalidatedResourceUse(interpreter *Interpreter, 
 func (v *DictionaryValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
 
 	interpreter.ReportComputation(common.ComputationKindDestroyDictionaryValue, 1)
+
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
 	}
+
+	storageID := v.StorageID()
 
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
@@ -15505,9 +15548,27 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, getLocationRange fun
 	})
 
 	v.isDestroyed = true
+
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.dictionary = nil
 	}
+
+	interpreter.updateReferencedResource(
+		storageID,
+		storageID,
+		func(value ReferenceTrackedResourceKindedValue) {
+			dictionaryValue, ok := value.(*DictionaryValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			dictionaryValue.isDestroyed = true
+
+			if interpreter.invalidatedResourceValidationEnabled {
+				dictionaryValue.dictionary = nil
+			}
+		},
+	)
 }
 
 func (v *DictionaryValue) ContainsKey(

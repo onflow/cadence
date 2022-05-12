@@ -2407,3 +2407,141 @@ func TestInterpretArrayOptionalResourceReference(t *testing.T) {
 	_, err := inter.Invoke("test")
 	require.NoError(t, err)
 }
+
+func TestInterpretReferenceUseAfterTransferAndDestruction(t *testing.T) {
+
+	t.Parallel()
+
+	const resourceCode = `
+	  resource R {
+          var value: Int
+
+          init() {
+              self.value = 0
+          }
+
+          fun increment() {
+              self.value = self.value + 1
+          }
+      }
+	`
+
+	t.Run("composite", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, resourceCode+`
+
+          fun test(): Int {
+
+              let resources <- {
+                  "r": <-create R()
+              }
+
+              let ref = &resources["r"] as &R?
+              let r <-resources.remove(key: "r")
+	          destroy r
+              destroy resources
+
+              ref!.increment()
+              return ref!.value
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+
+		var invalidatedResourceErr interpreter.InvalidatedResourceError
+		require.ErrorAs(t, err, &invalidatedResourceErr)
+
+		assert.Equal(t, 26, invalidatedResourceErr.StartPosition().Line)
+	})
+
+	t.Run("dictionary", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, resourceCode+`
+
+          fun test(): Int {
+
+              let resources <- {
+                  "nested": <-{"r": <-create R()}
+              }
+
+              let ref = &resources["nested"] as &{String: R}?
+              let nested <-resources.remove(key: "nested")
+	          destroy nested
+              destroy resources
+
+              return ref!.length
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		var invalidatedResourceErr interpreter.InvalidatedResourceError
+		require.ErrorAs(t, err, &invalidatedResourceErr)
+
+		assert.Equal(t, 26, invalidatedResourceErr.StartPosition().Line)
+	})
+
+	t.Run("array", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, resourceCode+`
+
+          fun test(): Int {
+
+              let resources <- {
+                  "nested": <-[<-create R()]
+              }
+
+              let ref = &resources["nested"] as &[R]?
+              let nested <-resources.remove(key: "nested")
+	          destroy nested
+              destroy resources
+
+              return ref!.length
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		var invalidatedResourceErr interpreter.InvalidatedResourceError
+		require.ErrorAs(t, err, &invalidatedResourceErr)
+
+		assert.Equal(t, 26, invalidatedResourceErr.StartPosition().Line)
+	})
+
+	t.Run("optional", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, resourceCode+`
+
+          fun test(): Int {
+
+              let resources: @[R?] <- [<-create R()]
+
+              let ref = &resources[0] as &R?
+              let r <-resources.remove(at: 0)
+		      destroy r
+              destroy resources
+
+              ref!.increment()
+              return ref!.value
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		var invalidatedResourceErr interpreter.InvalidatedResourceError
+		require.ErrorAs(t, err, &invalidatedResourceErr)
+
+		assert.Equal(t, 24, invalidatedResourceErr.StartPosition().Line)
+	})
+}
