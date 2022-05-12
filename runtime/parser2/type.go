@@ -222,16 +222,21 @@ func defineArrayType() {
 
 				p.skipSpaceAndComments(true)
 
-				numberExpression := parseExpression(p, lowestBindingPower)
+				if !p.current.Type.IsIntegerLiteral() {
+					p.report(fmt.Errorf("expected positive integer size for constant sized type"))
 
-				integerExpression, ok := numberExpression.(*ast.IntegerExpression)
-				if !ok {
-					p.report(fmt.Errorf(
-						"expected integer size for constant sized type, got %s",
-						numberExpression,
-					))
+					// Skip the invalid non-integer literal token
+					p.next()
+
 				} else {
-					size = integerExpression
+					numberExpression := parseExpression(p, lowestBindingPower)
+
+					integerExpression, ok := numberExpression.(*ast.IntegerExpression)
+					if !ok || integerExpression.Value.Sign() < 0 {
+						p.report(fmt.Errorf("expected positive integer size for constant sized type"))
+					} else {
+						size = integerExpression
+					}
 				}
 			}
 
