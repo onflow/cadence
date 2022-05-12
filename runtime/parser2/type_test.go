@@ -137,6 +137,29 @@ func TestParseArrayType(t *testing.T) {
 		)
 	})
 
+	t.Run("constant, negative size", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseType("[Int ; -2 ]")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: `expected positive integer size for constant sized type`,
+					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
+				},
+				// TODO: improve/avoid error by skipping full negative integer literal
+				&SyntaxError{
+					Message: `expected token ']'`,
+					Pos:     ast.Position{Offset: 8, Line: 1, Column: 8},
+				},
+			},
+			errs,
+		)
+
+		require.Nil(t, result)
+	})
+
 	t.Run("constant, invalid size", func(t *testing.T) {
 
 		t.Parallel()
