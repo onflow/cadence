@@ -45,6 +45,9 @@ type parser struct {
 	backtrackingCursorStack []int
 	// bufferedErrorsStack is the stack of parsing errors encountered during buffering
 	bufferedErrorsStack [][]error
+	// replayedTokensCount is the number of replayed tokens since starting the initial buffering.
+	// It is reset when the buffered tokens get accepted. This keeps errors local.
+	replayedTokensCount uint
 }
 
 // Parse creates a lexer to scan the given input string,
@@ -228,15 +231,33 @@ func (p *parser) acceptBuffered() {
 			bufferedErrors...,
 		)
 	}
+
+	// Reset the replayed tokens count
+	p.replayedTokensCount = 0
 }
 
+// tokenReplayLimit is a sensible limit for how many tokens may be replayed
+// until the replay buffer is accepted.
+const tokenReplayLimit = 2 << 12
+
 func (p *parser) replayBuffered() {
+
+	cursor := p.tokens.Cursor()
+
 	// Pop the last backtracking cursor from the stack
 	// and revert the lexer back to it
 
 	lastIndex := len(p.backtrackingCursorStack) - 1
-	cursor := p.backtrackingCursorStack[lastIndex]
-	p.tokens.Revert(cursor)
+	backtrackCursor := p.backtrackingCursorStack[lastIndex]
+
+	replayedCount := p.replayedTokensCount + uint(cursor-backtrackCursor)
+	// Check for overflow (uint) and for exceeding the limit
+	if replayedCount < p.replayedTokensCount || replayedCount > tokenReplayLimit {
+		panic(fmt.Errorf("program too ambiguous, replay limit of %d tokens exceeded", tokenReplayLimit))
+	}
+	p.replayedTokensCount = replayedCount
+
+	p.tokens.Revert(backtrackCursor)
 	p.next()
 	p.backtrackingCursorStack = p.backtrackingCursorStack[:lastIndex]
 
