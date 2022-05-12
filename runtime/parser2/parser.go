@@ -250,6 +250,7 @@ func (p *parser) replayBuffered() {
 	backtrackCursor := p.backtrackingCursorStack[lastIndex]
 
 	replayedCount := p.replayedTokensCount + uint(cursor-backtrackCursor)
+	// Check for overflow (uint) and for exceeding the limit
 	if replayedCount < p.replayedTokensCount || replayedCount > tokenReplayLimit {
 		panic(fmt.Errorf("program too ambiguous, replay limit of %d tokens exceeded", tokenReplayLimit))
 	}
