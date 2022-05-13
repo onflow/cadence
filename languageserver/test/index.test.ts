@@ -390,6 +390,7 @@ describe("diagnostics", () => {
     expect(diagnostics[1].diagnostics.length).toEqual(1)
     expect(diagnostics[1].diagnostics[0].message).toEqual("value of type `contractA` has no member `bravo`. unknown member")
     expect(diagnostics[2].uri).toEqual(`file://${contractAPath}`)
+    expect(diagnostics[2].diagnostics.length).toEqual(0) // no diagnostic problems after member has been actually added
   })
 
   test("referencing same type in multiple places gets correctly resolved", async() => {
