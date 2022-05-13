@@ -740,7 +740,7 @@ func prepareType(typ cadence.Type) jsonValue {
 		return jsonNominalType{
 			Kind:         "Struct",
 			Type:         "",
-			TypeID:       string(typ.Location.TypeID(typ.QualifiedIdentifier)),
+			TypeID:       string(typ.Location.TypeID(nil, typ.QualifiedIdentifier)),
 			Fields:       prepareFields(typ.Fields),
 			Initializers: prepareInitializers(typ.Initializers),
 		}
@@ -748,7 +748,7 @@ func prepareType(typ cadence.Type) jsonValue {
 		return jsonNominalType{
 			Kind:         "Resource",
 			Type:         "",
-			TypeID:       string(typ.Location.TypeID(typ.QualifiedIdentifier)),
+			TypeID:       string(typ.Location.TypeID(nil, typ.QualifiedIdentifier)),
 			Fields:       prepareFields(typ.Fields),
 			Initializers: prepareInitializers(typ.Initializers),
 		}
@@ -756,7 +756,7 @@ func prepareType(typ cadence.Type) jsonValue {
 		return jsonNominalType{
 			Kind:         "Event",
 			Type:         "",
-			TypeID:       string(typ.Location.TypeID(typ.QualifiedIdentifier)),
+			TypeID:       string(typ.Location.TypeID(nil, typ.QualifiedIdentifier)),
 			Fields:       prepareFields(typ.Fields),
 			Initializers: [][]jsonParameterType{prepareParameters(typ.Initializer)},
 		}
@@ -764,7 +764,7 @@ func prepareType(typ cadence.Type) jsonValue {
 		return jsonNominalType{
 			Kind:         "Contract",
 			Type:         "",
-			TypeID:       string(typ.Location.TypeID(typ.QualifiedIdentifier)),
+			TypeID:       string(typ.Location.TypeID(nil, typ.QualifiedIdentifier)),
 			Fields:       prepareFields(typ.Fields),
 			Initializers: prepareInitializers(typ.Initializers),
 		}
@@ -772,7 +772,7 @@ func prepareType(typ cadence.Type) jsonValue {
 		return jsonNominalType{
 			Kind:         "StructInterface",
 			Type:         "",
-			TypeID:       string(typ.Location.TypeID(typ.QualifiedIdentifier)),
+			TypeID:       string(typ.Location.TypeID(nil, typ.QualifiedIdentifier)),
 			Fields:       prepareFields(typ.Fields),
 			Initializers: prepareInitializers(typ.Initializers),
 		}
@@ -780,7 +780,7 @@ func prepareType(typ cadence.Type) jsonValue {
 		return jsonNominalType{
 			Kind:         "ResourceInterface",
 			Type:         "",
-			TypeID:       string(typ.Location.TypeID(typ.QualifiedIdentifier)),
+			TypeID:       string(typ.Location.TypeID(nil, typ.QualifiedIdentifier)),
 			Fields:       prepareFields(typ.Fields),
 			Initializers: prepareInitializers(typ.Initializers),
 		}
@@ -788,7 +788,7 @@ func prepareType(typ cadence.Type) jsonValue {
 		return jsonNominalType{
 			Kind:         "ContractInterface",
 			Type:         "",
-			TypeID:       string(typ.Location.TypeID(typ.QualifiedIdentifier)),
+			TypeID:       string(typ.Location.TypeID(nil, typ.QualifiedIdentifier)),
 			Fields:       prepareFields(typ.Fields),
 			Initializers: prepareInitializers(typ.Initializers),
 		}
@@ -824,7 +824,7 @@ func prepareType(typ cadence.Type) jsonValue {
 	case *cadence.EnumType:
 		return jsonNominalType{
 			Kind:         "Enum",
-			TypeID:       string(typ.Location.TypeID(typ.QualifiedIdentifier)),
+			TypeID:       string(typ.Location.TypeID(nil, typ.QualifiedIdentifier)),
 			Fields:       prepareFields(typ.Fields),
 			Initializers: prepareInitializers(typ.Initializers),
 			Type:         prepareType(typ.RawType),

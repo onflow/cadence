@@ -139,7 +139,7 @@ func (t InterfaceStaticType) String() string {
 	if t.Location == nil {
 		return t.QualifiedIdentifier
 	}
-	return string(t.Location.TypeID(t.QualifiedIdentifier))
+	return string(t.Location.TypeID(nil, t.QualifiedIdentifier))
 }
 
 func (t InterfaceStaticType) Equal(other StaticType) bool {
