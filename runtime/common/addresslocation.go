@@ -36,6 +36,8 @@ type AddressLocation struct {
 	Name    string
 }
 
+var _ Location = AddressLocation{}
+
 func (l AddressLocation) String() string {
 	if l.Name == "" {
 		return l.Address.String()

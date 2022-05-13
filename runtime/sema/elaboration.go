@@ -74,6 +74,7 @@ type Elaboration struct {
 	PostConditionsRewrite               map[*ast.Conditions]PostConditionsRewrite
 	EmitStatementEventTypes             map[*ast.EmitStatement]*CompositeType
 	CompositeTypes                      map[TypeID]*CompositeType
+	CompositeTypesEncoded               map[[32]byte]TypeID
 	InterfaceTypes                      map[TypeID]*InterfaceType
 	IdentifierInInvocationTypes         map[*ast.IdentifierExpression]Type
 	ImportDeclarationsResolvedLocations map[*ast.ImportDeclaration][]ResolvedLocation

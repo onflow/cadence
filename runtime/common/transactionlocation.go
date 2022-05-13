@@ -31,6 +31,8 @@ const TransactionLocationPrefix = "t"
 //
 type TransactionLocation []byte
 
+var _ Location = TransactionLocation{}
+
 func (l TransactionLocation) ID() LocationID {
 	return NewLocationID(
 		TransactionLocationPrefix,

@@ -31,6 +31,8 @@ const ScriptLocationPrefix = "s"
 //
 type ScriptLocation []byte
 
+var _ Location = ScriptLocation{}
+
 func (l ScriptLocation) ID() LocationID {
 	return NewLocationID(
 		ScriptLocationPrefix,

@@ -20,8 +20,12 @@ package json
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/flow-go-sdk/crypto"
 	"io"
 	"math/big"
 	goRuntime "runtime"
@@ -905,4 +909,189 @@ func encodeUFix64(v uint64) string {
 		integer,
 		fraction,
 	)
+}
+
+/// ----------
+
+const EncodedTypeKindLength = 1
+const HashedTypeIdLength = 32
+
+// NOTE: Because clients choose the hashed value, this must be cryptographically secure.
+func HashTypeID(typeID common.TypeID) [HashedTypeIdLength]byte {
+	hash := crypto.NewSHA2_256().ComputeHash([]byte(typeID))
+	if len(hash) != HashedTypeIdLength {
+		panic("hash algo returned unexpected size of hash")
+	}
+
+	rigid, _ := bytesToHashedTypeIdLength(hash)
+	return rigid
+}
+
+func bytesToHashedTypeIdLength(blob []byte) ([HashedTypeIdLength]byte, error) {
+	if len(blob) != 32 {
+		return [32]byte{}, errors.New("TODO")
+	}
+
+	var rigid [HashedTypeIdLength]byte
+	for i := 0; i < HashedTypeIdLength; i++ {
+		rigid[i] = blob[i]
+	}
+
+	return rigid, nil
+}
+
+func EncodeTypeID(typeID common.TypeID) ([]byte, error) {
+	// [0]  -> location prefix ("A", "t", etc)
+	// [1]  -> location (various forms)
+	// [2]  -> alternating identifiers and "." characters
+	pieces := strings.SplitN(string(typeID), ".", 3)
+	if len(pieces) != 3 {
+		return nil, errors.New("TODO")
+	}
+
+	prefix := pieces[0]
+
+	typeKind := mapLocationPrefixToEncodableTypeKind[prefix]
+	locationEncoder := mapLocationPrefixToLocationEncoder[prefix]
+
+	if typeKind == UnknownEncodableType || locationEncoder == nil {
+		return nil, errors.New("TODO")
+	}
+
+	location, err := locationEncoder(pieces[1])
+	if err != nil {
+		return nil, err
+	}
+
+	// The full typeID is encoded including prefix and location because
+	// the hashedTypeID is the key in the Elaboration's type mapping.
+	hashedTypeID := HashTypeID(typeID)
+
+	locationLength := len(location)
+
+	// Blob is structured a little differently:
+	// byte 1 -> type kind (address, script, etc)
+	// bytes 2-33 -> hash of TypeID
+	// byte 34-? -> location
+	blob := make([]byte, 1+locationLength+HashedTypeIdLength)
+	blob[0] = byte(typeKind)
+	for i := 0; i < HashedTypeIdLength; i++ {
+		blob[EncodedTypeKindLength+i] = hashedTypeID[i]
+	}
+	for i := 0; i < locationLength; i++ {
+		blob[EncodedTypeKindLength+HashedTypeIdLength+i] = location[i]
+	}
+
+	return blob, nil
+}
+
+// Blob is structured like so:
+// byte 1 -> type kind (address, script, etc)
+// bytes 2-33 -> hash of TypeID
+// byte 34-? -> location
+func DecodeTypeID(elaboration *sema.Elaboration, blob []byte) (common.TypeID, error) {
+	if len(blob) < 34 {
+		return "", errors.New("TODO")
+	}
+
+	typeKind := mapByteToEncodableTypeKind(blob[0])
+	if typeKind == UnknownEncodableType {
+		return "", errors.New("TODO")
+	}
+
+	hashedTypeID, _ := bytesToHashedTypeIdLength(blob[1:34])
+
+	typeID := elaboration.CompositeTypesEncoded[hashedTypeID]
+
+	// Location needs to be loaded for elaboration to be populated.
+	// The other possibility is this TypeID is invalid.
+	if typeID == "" {
+		locationDecoder := mapTypeKindToLocationDecoder[typeKind]
+		location, err := locationDecoder(blob[34:])
+		if err != nil {
+			return "", err
+		}
+		// TODO load location to populate elaboration
+	}
+
+	return typeID, nil
+}
+
+type LocationEncoder = func(string) ([]byte, error)
+type LocationDecoder = func([]byte) (common.Location, error)
+
+type EncodableTypeKind byte
+
+const (
+	UnknownEncodableType EncodableTypeKind = iota
+	AddressEncodableType
+	IdentifierEncodableType
+	ScriptEncodableType
+	StringEncodableType
+	TransactionEncodableType
+
+	EndOfEncodableTypes
+)
+
+// Returns UnknownEncodableType if no match exists
+func mapByteToEncodableTypeKind(b byte) EncodableTypeKind {
+	t := EncodableTypeKind(b)
+	if t >= EndOfEncodableTypes {
+		return UnknownEncodableType
+	}
+	return t
+}
+
+var mapLocationPrefixToEncodableTypeKind = map[string]EncodableTypeKind{}
+
+func init() {
+	mapLocationPrefixToEncodableTypeKind[common.AddressLocationPrefix] = AddressEncodableType
+	mapLocationPrefixToEncodableTypeKind[common.IdentifierLocationPrefix] = IdentifierEncodableType
+	mapLocationPrefixToEncodableTypeKind[common.ScriptLocationPrefix] = ScriptEncodableType
+	mapLocationPrefixToEncodableTypeKind[common.StringLocationPrefix] = StringEncodableType
+	mapLocationPrefixToEncodableTypeKind[common.TransactionLocationPrefix] = TransactionEncodableType
+}
+
+var mapLocationPrefixToLocationEncoder = map[string]LocationEncoder{}
+
+func init() {
+	mapLocationPrefixToLocationEncoder[common.AddressLocationPrefix] = func(s string) ([]byte, error) {
+		return decodeAddress(s).Bytes(), nil
+	}
+	mapLocationPrefixToLocationEncoder[common.IdentifierLocationPrefix] = func(s string) ([]byte, error) {
+		return []byte(s), nil
+	}
+	mapLocationPrefixToLocationEncoder[common.ScriptLocationPrefix] = func(s string) ([]byte, error) {
+		return hex.DecodeString(s)
+	}
+	mapLocationPrefixToLocationEncoder[common.StringLocationPrefix] = func(s string) ([]byte, error) {
+		return []byte(s), nil
+	}
+	mapLocationPrefixToLocationEncoder[common.TransactionLocationPrefix] = func(s string) ([]byte, error) {
+		return hex.DecodeString(s)
+	}
+}
+
+var mapTypeKindToLocationDecoder = map[EncodableTypeKind]LocationDecoder{}
+
+func init() {
+	mapTypeKindToLocationDecoder[AddressEncodableType] = func(blob []byte) (common.Location, error) {
+		address, err := common.BytesToAddress(blob)
+		if err != nil {
+			return nil, err
+		}
+		return common.AddressLocation{Address: address}, nil
+	}
+	mapTypeKindToLocationDecoder[IdentifierEncodableType] = func(blob []byte) (common.Location, error) {
+		return common.IdentifierLocation(blob), nil
+	}
+	mapTypeKindToLocationDecoder[ScriptEncodableType] = func(blob []byte) (common.Location, error) {
+		return common.ScriptLocation(blob), nil
+	}
+	mapTypeKindToLocationDecoder[StringEncodableType] = func(blob []byte) (common.Location, error) {
+		return common.StringLocation(blob), nil
+	}
+	mapTypeKindToLocationDecoder[TransactionEncodableType] = func(blob []byte) (common.Location, error) {
+		return common.TransactionLocation(blob), nil
+	}
 }

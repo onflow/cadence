@@ -30,6 +30,8 @@ const StringLocationPrefix = "S"
 //
 type StringLocation string
 
+var _ Location = StringLocation("")
+
 func (l StringLocation) ID() LocationID {
 	return NewLocationID(
 		StringLocationPrefix,
