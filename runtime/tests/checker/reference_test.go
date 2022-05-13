@@ -1071,6 +1071,26 @@ func TestCheckReferenceExpressionOfOptional(t *testing.T) {
 	})
 }
 
+func TestCheckNilCoalesceReference(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheckWithPanic(t, `
+      let xs = {"a": 1}
+      let ref = &xs["a"] as &Int? ?? panic("no a")
+    `)
+	require.NoError(t, err)
+
+	refValueType := RequireGlobalValue(t, checker.Elaboration, "ref")
+
+	assert.Equal(t,
+		&sema.ReferenceType{
+			Type: sema.IntType,
+		},
+		refValueType,
+	)
+}
+
 func TestCheckInvalidReferenceExpressionNonReferenceAmbiguous(t *testing.T) {
 
 	t.Parallel()
