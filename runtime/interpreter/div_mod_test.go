@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	. "github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -79,13 +80,16 @@ func TestDivModUInt8(t *testing.T) {
 		{0xff, 0xff, true},
 	}
 
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
+
 	for _, test := range tests {
 		for _, f := range []func(a, b UInt8Value){
 			func(a, b UInt8Value) {
-				a.Div(b)
+				a.Div(inter, b)
 			},
 			func(a, b UInt8Value) {
-				a.Mod(b)
+				a.Mod(inter, b)
 			},
 		} {
 			f := func() {
@@ -151,13 +155,16 @@ func TestDivModUInt16(t *testing.T) {
 		{0xfff, 0xffff, true},
 	}
 
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
+
 	for _, test := range tests {
 		for _, f := range []func(a, b UInt16Value){
 			func(a, b UInt16Value) {
-				a.Div(b)
+				a.Div(inter, b)
 			},
 			func(a, b UInt16Value) {
-				a.Mod(b)
+				a.Mod(inter, b)
 			},
 		} {
 			f := func() {
@@ -223,13 +230,16 @@ func TestDivModUInt32(t *testing.T) {
 		{0xffffffff, 0xffffffff, true},
 	}
 
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
+
 	for _, test := range tests {
 		for _, f := range []func(a, b UInt32Value){
 			func(a, b UInt32Value) {
-				a.Div(b)
+				a.Div(inter, b)
 			},
 			func(a, b UInt32Value) {
-				a.Mod(b)
+				a.Mod(inter, b)
 			},
 		} {
 			f := func() {
@@ -385,13 +395,16 @@ func TestDivModUInt64(t *testing.T) {
 		{0xffffffffffffffff, 0xffffffffffffffff, true},
 	}
 
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
+
 	for _, test := range tests {
 		for _, f := range []func(a, b UInt64Value){
 			func(a, b UInt64Value) {
-				a.Div(b)
+				a.Div(inter, b)
 			},
 			func(a, b UInt64Value) {
-				a.Mod(b)
+				a.Mod(inter, b)
 			},
 		} {
 			f := func() {
@@ -549,13 +562,16 @@ func TestDivModUInt128(t *testing.T) {
 		{uint128("0xffffffffffffffffffffffffffffffff"), uint128("0xffffffffffffffffffffffffffffffff"), true},
 	}
 
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
+
 	for _, test := range tests {
 		for _, f := range []func(a, b UInt128Value){
 			func(a, b UInt128Value) {
-				a.Div(b)
+				a.Div(inter, b)
 			},
 			func(a, b UInt128Value) {
-				a.Mod(b)
+				a.Mod(inter, b)
 			},
 		} {
 			f := func() {
@@ -1219,13 +1235,16 @@ func TestDivModUInt256(t *testing.T) {
 		},
 	}
 
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
+
 	for _, test := range tests {
 		for _, f := range []func(a, b UInt256Value){
 			func(a, b UInt256Value) {
-				a.Div(b)
+				a.Div(inter, b)
 			},
 			func(a, b UInt256Value) {
-				a.Mod(b)
+				a.Mod(inter, b)
 			},
 		} {
 			f := func() {
@@ -1292,9 +1311,12 @@ func TestDivInt8(t *testing.T) {
 		{-1, -1, true},
 	}
 
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
+
 	for _, test := range tests {
 		f := func() {
-			test.a.Div(test.b)
+			test.a.Div(inter, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1355,9 +1377,12 @@ func TestModInt8(t *testing.T) {
 		{-1, -1, true},
 	}
 
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
+
 	for _, test := range tests {
 		f := func() {
-			test.a.Mod(test.b)
+			test.a.Mod(inter, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1419,9 +1444,12 @@ func TestDivInt16(t *testing.T) {
 		{-1, -1, true},
 	}
 
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
+
 	for _, test := range tests {
 		f := func() {
-			test.a.Div(test.b)
+			test.a.Div(inter, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1482,9 +1510,12 @@ func TestModInt16(t *testing.T) {
 		{-1, -1, true},
 	}
 
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
+
 	for _, test := range tests {
 		f := func() {
-			test.a.Mod(test.b)
+			test.a.Mod(inter, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1546,9 +1577,12 @@ func TestDivInt32(t *testing.T) {
 		{-1, -1, true},
 	}
 
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
+
 	for _, test := range tests {
 		f := func() {
-			test.a.Div(test.b)
+			test.a.Div(inter, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1609,9 +1643,12 @@ func TestModInt32(t *testing.T) {
 		{-1, -1, true},
 	}
 
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
+
 	for _, test := range tests {
 		f := func() {
-			test.a.Mod(test.b)
+			test.a.Mod(inter, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1763,9 +1800,12 @@ func TestDivInt64(t *testing.T) {
 		{-1, -1, true},
 	}
 
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
+
 	for _, test := range tests {
 		f := func() {
-			test.a.Div(test.b)
+			test.a.Div(inter, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1916,9 +1956,12 @@ func TestModInt64(t *testing.T) {
 		{-1, -1, true},
 	}
 
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
+
 	for _, test := range tests {
 		f := func() {
-			test.a.Mod(test.b)
+			test.a.Mod(inter, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -1932,16 +1975,19 @@ func TestDivModInt(t *testing.T) {
 
 	t.Parallel()
 
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
+
 	for _, f := range []func(a, b IntValue){
 		func(a, b IntValue) {
-			a.Div(b)
+			a.Div(inter, b)
 		},
 		func(a, b IntValue) {
-			a.Mod(b)
+			a.Mod(inter, b)
 		},
 	} {
 		assert.Panics(t, func() {
-			f(NewIntValueFromInt64(1), NewIntValueFromInt64(0))
+			f(NewUnmeteredIntValueFromInt64(1), NewUnmeteredIntValueFromInt64(0))
 		})
 	}
 }
@@ -2046,9 +2092,12 @@ func TestDivInt128(t *testing.T) {
 		{int128("-0x00000000000000000000000000000001"), int128("-0x00000000000000000000000000000001"), true},
 	}
 
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
+
 	for _, test := range tests {
 		f := func() {
-			test.a.Div(test.b)
+			test.a.Div(inter, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -2157,9 +2206,12 @@ func TestModInt128(t *testing.T) {
 		{int128("-0x00000000000000000000000000000001"), int128("-0x00000000000000000000000000000001"), true},
 	}
 
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
+
 	for _, test := range tests {
 		f := func() {
-			test.a.Mod(test.b)
+			test.a.Mod(inter, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -2611,9 +2663,12 @@ func TestDivInt256(t *testing.T) {
 		},
 	}
 
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
+
 	for _, test := range tests {
 		f := func() {
-			test.a.Div(test.b)
+			test.a.Div(inter, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -3064,9 +3119,12 @@ func TestModInt256(t *testing.T) {
 		},
 	}
 
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
+
 	for _, test := range tests {
 		f := func() {
-			test.a.Mod(test.b)
+			test.a.Mod(inter, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -3115,12 +3173,15 @@ func TestDivFix64(t *testing.T) {
 		{-1, -1, true},
 	}
 
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
+
 	for _, test := range tests {
 
 		f := func() {
-			a := NewFix64ValueWithInteger(test.a)
-			b := NewFix64ValueWithInteger(test.b)
-			a.Div(b)
+			a := NewUnmeteredFix64ValueWithInteger(test.a)
+			b := NewUnmeteredFix64ValueWithInteger(test.b)
+			a.Div(inter, b)
 		}
 
 		if test.valid {
@@ -3131,26 +3192,27 @@ func TestDivFix64(t *testing.T) {
 	}
 
 	assert.Equal(t,
-		Fix64Value(1),
-		NewFix64ValueWithInteger(1).
-			Div(NewFix64ValueWithInteger(sema.Fix64Factor)),
+		NewUnmeteredFix64Value(1),
+		NewUnmeteredFix64ValueWithInteger(1).
+			Div(inter, NewUnmeteredFix64ValueWithInteger(sema.Fix64Factor)),
 	)
 
 	assert.Equal(t,
-		Fix64Value(0),
-		NewFix64ValueWithInteger(1).
-			Div(Fix64Value(Fix64MaxValue)),
+		NewUnmeteredFix64Value(0),
+		NewUnmeteredFix64ValueWithInteger(1).
+			Div(inter, NewUnmeteredFix64Value(Fix64MaxValue)),
 	)
 
 	assert.Equal(t,
-		Fix64Value(0),
-		Fix64Value(1).
-			Div(NewFix64ValueWithInteger(2)),
+		NewUnmeteredFix64Value(0),
+		NewUnmeteredFix64Value(1).
+			Div(inter, NewUnmeteredFix64ValueWithInteger(2)),
 	)
 
 	assert.Equal(t,
-		Fix64Value(1535399),
-		NewFix64ValueWithInteger(1543219).Div(NewFix64ValueWithInteger(100509284)),
+		NewUnmeteredFix64Value(1535399),
+		NewUnmeteredFix64ValueWithInteger(1543219).
+			Div(inter, NewUnmeteredFix64ValueWithInteger(100509284)),
 	)
 }
 
@@ -3183,9 +3245,12 @@ func TestModFix64(t *testing.T) {
 		{-1, -1, true},
 	}
 
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
+
 	for _, test := range tests {
 		f := func() {
-			test.a.Mod(test.b)
+			test.a.Mod(inter, test.b)
 		}
 		if test.valid {
 			assert.NotPanics(t, f)
@@ -3224,20 +3289,23 @@ func TestDivModUFix64(t *testing.T) {
 		{ufix64MaxIntDividend + 1, 2, false},
 	}
 
+	inter, err := NewInterpreter(nil, nil)
+	require.NoError(t, err)
+
 	for _, test := range tests {
 
 		for _, f := range []func(a, b UFix64Value){
 			func(a, b UFix64Value) {
-				a.Div(b)
+				a.Div(inter, b)
 			},
 			func(a, b UFix64Value) {
-				a.Mod(b)
+				a.Mod(inter, b)
 			},
 		} {
 
 			f := func() {
-				a := NewUFix64ValueWithInteger(test.a)
-				b := NewUFix64ValueWithInteger(test.b)
+				a := NewUnmeteredUFix64ValueWithInteger(test.a)
+				b := NewUnmeteredUFix64ValueWithInteger(test.b)
 				f(a, b)
 			}
 
@@ -3250,26 +3318,27 @@ func TestDivModUFix64(t *testing.T) {
 	}
 
 	assert.Equal(t,
-		UFix64Value(1),
-		NewUFix64ValueWithInteger(1).
-			Div(NewUFix64ValueWithInteger(sema.Fix64Factor)),
+		NewUnmeteredUFix64Value(1),
+		NewUnmeteredUFix64ValueWithInteger(1).
+			Div(inter, NewUnmeteredUFix64ValueWithInteger(sema.Fix64Factor)),
 	)
 
 	assert.Equal(t,
-		UFix64Value(0),
-		NewUFix64ValueWithInteger(1).
-			Div(UFix64Value(UFix64MaxValue)),
+		NewUnmeteredUFix64Value(0),
+		NewUnmeteredUFix64ValueWithInteger(1).
+			Div(inter, NewUnmeteredUFix64Value(UFix64MaxValue)),
 	)
 
 	assert.Equal(t,
-		UFix64Value(0),
-		UFix64Value(1).
-			Div(NewUFix64ValueWithInteger(2)),
+		NewUnmeteredUFix64Value(0),
+		NewUnmeteredUFix64Value(1).
+			Div(inter, NewUnmeteredUFix64ValueWithInteger(2)),
 	)
 
 	assert.Equal(t,
-		UFix64Value(1535399),
-		NewUFix64ValueWithInteger(1543219).Div(NewUFix64ValueWithInteger(100509284)),
+		NewUnmeteredUFix64Value(1535399),
+		NewUnmeteredUFix64ValueWithInteger(1543219).
+			Div(inter, NewUnmeteredUFix64ValueWithInteger(100509284)),
 	)
 }
 
@@ -3284,39 +3353,39 @@ func TestNegativeMod(t *testing.T) {
 
 		tests := map[string]struct{ a, b, expected NumberValue }{
 			"Int8": {
-				Int8Value(-1),
-				Int8Value(5),
-				Int8Value(-1),
+				NewUnmeteredInt8Value(-1),
+				NewUnmeteredInt8Value(5),
+				NewUnmeteredInt8Value(-1),
 			},
 			"Int16": {
-				Int16Value(-1),
-				Int16Value(5),
-				Int16Value(-1),
+				NewUnmeteredInt16Value(-1),
+				NewUnmeteredInt16Value(5),
+				NewUnmeteredInt16Value(-1),
 			},
 			"Int32": {
-				Int32Value(-1),
-				Int32Value(5),
-				Int32Value(-1),
+				NewUnmeteredInt32Value(-1),
+				NewUnmeteredInt32Value(5),
+				NewUnmeteredInt32Value(-1),
 			},
 			"Int64": {
-				Int64Value(-1),
-				Int64Value(5),
-				Int64Value(-1),
+				NewUnmeteredInt64Value(-1),
+				NewUnmeteredInt64Value(5),
+				NewUnmeteredInt64Value(-1),
 			},
 			"Int128": {
-				NewInt128ValueFromInt64(-1),
-				NewInt128ValueFromInt64(5),
-				NewInt128ValueFromInt64(-1),
+				NewUnmeteredInt128ValueFromInt64(-1),
+				NewUnmeteredInt128ValueFromInt64(5),
+				NewUnmeteredInt128ValueFromInt64(-1),
 			},
 			"Int256": {
-				NewInt256ValueFromInt64(-1),
-				NewInt256ValueFromInt64(5),
-				NewInt256ValueFromInt64(-1),
+				NewUnmeteredInt256ValueFromInt64(-1),
+				NewUnmeteredInt256ValueFromInt64(5),
+				NewUnmeteredInt256ValueFromInt64(-1),
 			},
 			"Int": {
-				NewIntValueFromInt64(-1),
-				NewIntValueFromInt64(5),
-				NewIntValueFromInt64(-1),
+				NewUnmeteredIntValueFromInt64(-1),
+				NewUnmeteredIntValueFromInt64(5),
+				NewUnmeteredIntValueFromInt64(-1),
 			},
 		}
 
@@ -3326,10 +3395,12 @@ func TestNegativeMod(t *testing.T) {
 			}
 		}
 
+		inter := newTestInterpreter(t)
+
 		for _, test := range tests {
 			assert.Equal(t,
 				test.expected,
-				test.a.Mod(test.b),
+				test.a.Mod(inter, test.b),
 			)
 		}
 	})
@@ -3338,9 +3409,9 @@ func TestNegativeMod(t *testing.T) {
 
 		tests := map[string]struct{ a, b, expected NumberValue }{
 			"Fix64": {
-				NewFix64ValueWithInteger(-1),
-				NewFix64ValueWithInteger(5),
-				NewFix64ValueWithInteger(-1),
+				NewUnmeteredFix64ValueWithInteger(-1),
+				NewUnmeteredFix64ValueWithInteger(5),
+				NewUnmeteredFix64ValueWithInteger(-1),
 			},
 		}
 
@@ -3350,10 +3421,13 @@ func TestNegativeMod(t *testing.T) {
 			}
 		}
 
+		inter, err := NewInterpreter(nil, nil)
+		require.NoError(t, err)
+
 		for _, test := range tests {
 			assert.Equal(t,
 				test.expected,
-				test.a.Mod(test.b),
+				test.a.Mod(inter, test.b),
 			)
 		}
 	})

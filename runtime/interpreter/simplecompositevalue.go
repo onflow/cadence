@@ -21,6 +21,7 @@ package interpreter
 import (
 	"github.com/onflow/atree"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/format"
 	"github.com/onflow/cadence/runtime/sema"
@@ -45,6 +46,7 @@ var _ Value = &SimpleCompositeValue{}
 var _ MemberAccessibleValue = &SimpleCompositeValue{}
 
 func NewSimpleCompositeValue(
+	inter *Interpreter,
 	typeID sema.TypeID,
 	staticType StaticType,
 	fieldNames []string,
@@ -53,6 +55,10 @@ func NewSimpleCompositeValue(
 	fieldFormatters map[string]func(Value, SeenReferences) string,
 	stringer func(SeenReferences) string,
 ) *SimpleCompositeValue {
+
+	common.UseMemory(inter, common.SimpleCompositeBaseMemoryUsage)
+	common.UseMemory(inter, common.NewSimpleCompositeMemoryUsage(len(fields)+len(computedFields)))
+
 	return &SimpleCompositeValue{
 		TypeID:          typeID,
 		staticType:      staticType,
@@ -73,7 +79,7 @@ func (v *SimpleCompositeValue) Accept(interpreter *Interpreter, visitor Visitor)
 // ForEachField iterates over all field-name field-value pairs of the composite value.
 // It does NOT iterate over computed fields and functions!
 //
-func (v *SimpleCompositeValue) ForEachField(f func(fieldName string, fieldValue Value)) {
+func (v *SimpleCompositeValue) ForEachField(_ *Interpreter, f func(fieldName string, fieldValue Value)) {
 	for _, fieldName := range v.FieldNames {
 		fieldValue := v.Fields[fieldName]
 		f(fieldName, fieldValue)
@@ -83,8 +89,8 @@ func (v *SimpleCompositeValue) ForEachField(f func(fieldName string, fieldValue 
 // Walk iterates over all field values of the composite value.
 // It does NOT walk the computed fields and functions!
 //
-func (v *SimpleCompositeValue) Walk(walkChild func(Value)) {
-	v.ForEachField(func(_ string, fieldValue Value) {
+func (v *SimpleCompositeValue) Walk(interpreter *Interpreter, walkChild func(Value)) {
+	v.ForEachField(interpreter, func(_ string, fieldValue Value) {
 		walkChild(fieldValue)
 	})
 }

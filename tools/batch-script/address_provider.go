@@ -81,7 +81,7 @@ func InitAddressProvider(
 			ctx,
 			referenceBlockID,
 			[]byte(accountStorageUsageScript),
-			[]cadence.Value{cadence.NewAddress(address)},
+			[]cadence.Value{cadence.NewMeteredAddress(address)},
 		)
 		if err == nil {
 			return true, nil

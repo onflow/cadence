@@ -113,7 +113,7 @@ func TestCompositeDeclaration_MarshalJSON(t *testing.T) {
 				},
 			},
 		},
-		Members:   NewMembers([]Declaration{}),
+		Members:   NewUnmeteredMembers([]Declaration{}),
 		DocString: "test",
 		Range: Range{
 			StartPos: Position{Offset: 7, Line: 8, Column: 9},

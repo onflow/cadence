@@ -24,7 +24,7 @@ import (
 
 // DeployedContractValue
 
-var deployedContractStaticType StaticType = PrimitiveStaticTypeDeployedContract
+var deployedContractStaticType StaticType = PrimitiveStaticTypeDeployedContract // unmetered
 var deployedContractFieldNames = []string{
 	sema.DeployedContractTypeAddressFieldName,
 	sema.DeployedContractTypeNameFieldName,
@@ -32,11 +32,13 @@ var deployedContractFieldNames = []string{
 }
 
 func NewDeployedContractValue(
+	inter *Interpreter,
 	address AddressValue,
 	name *StringValue,
 	code *ArrayValue,
 ) *SimpleCompositeValue {
 	return NewSimpleCompositeValue(
+		inter,
 		sema.DeployedContractType.TypeID,
 		deployedContractStaticType,
 		deployedContractFieldNames,

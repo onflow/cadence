@@ -25,7 +25,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
-func ByteArrayValueToByteSlice(value Value) ([]byte, error) {
+func ByteArrayValueToByteSlice(memoryGauge common.MemoryGauge, value Value) ([]byte, error) {
 	array, ok := value.(*ArrayValue)
 	if !ok {
 		return nil, errors.New("value is not an array")
@@ -34,9 +34,9 @@ func ByteArrayValueToByteSlice(value Value) ([]byte, error) {
 	result := make([]byte, 0, array.Count())
 
 	var err error
-	array.Iterate(func(element Value) (resume bool) {
+	array.Iterate(memoryGauge, func(element Value) (resume bool) {
 		var b byte
-		b, err = ByteValueToByte(element)
+		b, err = ByteValueToByte(memoryGauge, element)
 		if err != nil {
 			return false
 		}
@@ -51,12 +51,12 @@ func ByteArrayValueToByteSlice(value Value) ([]byte, error) {
 	return result, nil
 }
 
-func ByteValueToByte(element Value) (byte, error) {
+func ByteValueToByte(memoryGauge common.MemoryGauge, element Value) (byte, error) {
 	var b byte
 
 	switch element := element.(type) {
 	case BigNumberValue:
-		bigInt := element.ToBigInt()
+		bigInt := element.ToBigInt(memoryGauge)
 		if !bigInt.IsUint64() {
 			return 0, errors.New("value is not in byte range (0-255)")
 		}
@@ -85,6 +85,7 @@ func ByteValueToByte(element Value) (byte, error) {
 	return b, nil
 }
 
+// TODO: meter
 func ByteSliceToByteArrayValue(interpreter *Interpreter, buf []byte) *ArrayValue {
 	values := make([]Value, len(buf))
 	for i, b := range buf {

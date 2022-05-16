@@ -143,7 +143,7 @@ func (checker *Checker) VisitExpressionStatement(statement *ast.ExpressionStatem
 	if ty.IsResourceType() {
 		checker.report(
 			&ResourceLossError{
-				Range: ast.NewRangeFromPositioned(expression),
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, expression),
 			},
 		)
 	}
@@ -174,7 +174,7 @@ func (checker *Checker) VisitIntegerExpression(expression *ast.IntegerExpression
 		actualType = expectedType
 	} else if IsSameTypeKind(expectedType, &AddressType{}) {
 		isAddress = true
-		CheckAddressLiteral(expression, checker.report)
+		CheckAddressLiteral(checker.memoryGauge, expression, checker.report)
 		actualType = expectedType
 	} else {
 		// Otherwise infer the type as `Int` which can represent any integer.
@@ -182,7 +182,7 @@ func (checker *Checker) VisitIntegerExpression(expression *ast.IntegerExpression
 	}
 
 	if !isAddress {
-		CheckIntegerLiteral(expression, actualType, checker.report)
+		CheckIntegerLiteral(checker.memoryGauge, expression, actualType, checker.report)
 	}
 
 	checker.Elaboration.IntegerExpressionType[expression] = actualType
@@ -208,7 +208,7 @@ func (checker *Checker) VisitFixedPointExpression(expression *ast.FixedPointExpr
 		actualType = UFix64Type
 	}
 
-	CheckFixedPointLiteral(expression, actualType, checker.report)
+	CheckFixedPointLiteral(checker.memoryGauge, expression, actualType, checker.report)
 
 	checker.Elaboration.FixedPointExpression[expression] = actualType
 
@@ -265,7 +265,7 @@ func (checker *Checker) visitIndexExpression(
 		checker.report(
 			&NotIndexableTypeError{
 				Type:  targetType,
-				Range: ast.NewRangeFromPositioned(targetExpression),
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, targetExpression),
 			},
 		)
 
@@ -281,7 +281,7 @@ func (checker *Checker) visitIndexExpression(
 		checker.report(
 			&NotIndexingAssignableTypeError{
 				Type:  indexedType,
-				Range: ast.NewRangeFromPositioned(targetExpression),
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, targetExpression),
 			},
 		)
 	}

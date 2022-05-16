@@ -35,6 +35,31 @@ type TransactionDeclaration struct {
 	Range
 }
 
+func NewTransactionDeclaration(
+	gauge common.MemoryGauge,
+	parameterList *ParameterList,
+	fields []*FieldDeclaration,
+	prepare *SpecialFunctionDeclaration,
+	preConditions *Conditions,
+	postConditions *Conditions,
+	execute *SpecialFunctionDeclaration,
+	docString string,
+	declRange Range,
+) *TransactionDeclaration {
+	common.UseMemory(gauge, common.TransactionDeclarationMemoryUsage)
+
+	return &TransactionDeclaration{
+		ParameterList:  parameterList,
+		Fields:         fields,
+		Prepare:        prepare,
+		PreConditions:  preConditions,
+		PostConditions: postConditions,
+		Execute:        execute,
+		DocString:      docString,
+		Range:          declRange,
+	}
+}
+
 func (d *TransactionDeclaration) Accept(visitor Visitor) Repr {
 	return visitor.VisitTransactionDeclaration(d)
 }

@@ -75,7 +75,7 @@ func (interpreter *Interpreter) invokeFunctionValue(
 			locationPos = invocationPosition
 		}
 
-		getLocationRange := locationRangeGetter(interpreter.Location, locationPos)
+		getLocationRange := locationRangeGetter(interpreter, interpreter.Location, locationPos)
 
 		if i < parameterTypeCount {
 			parameterType := parameterTypes[i]
@@ -96,15 +96,16 @@ func (interpreter *Interpreter) invokeFunctionValue(
 		}
 	}
 
-	getLocationRange := locationRangeGetter(interpreter.Location, invocationPosition)
+	getLocationRange := locationRangeGetter(interpreter, interpreter.Location, invocationPosition)
 
-	invocation := Invocation{
-		Arguments:          transferredArguments,
-		ArgumentTypes:      argumentTypes,
-		TypeParameterTypes: typeParameterTypes,
-		GetLocationRange:   getLocationRange,
-		Interpreter:        interpreter,
-	}
+	invocation := NewInvocation(
+		interpreter,
+		nil,
+		transferredArguments,
+		argumentTypes,
+		typeParameterTypes,
+		getLocationRange,
+	)
 
 	return function.invoke(invocation)
 }

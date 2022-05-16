@@ -32,13 +32,13 @@ var blsContractType = func() *sema.CompositeType {
 	}
 
 	ty.Members = sema.GetMembersAsMap([]*sema.Member{
-		sema.NewPublicFunctionMember(
+		sema.NewUnmeteredPublicFunctionMember(
 			ty,
 			blsAggregatePublicKeysFunctionName,
 			blsAggregatePublicKeysFunctionType,
 			blsAggregatePublicKeysFunctionDocString,
 		),
-		sema.NewPublicFunctionMember(
+		sema.NewUnmeteredPublicFunctionMember(
 			ty,
 			blsAggregateSignaturesFunctionName,
 			blsAggregateSignaturesFunctionType,
@@ -111,7 +111,7 @@ var blsAggregatePublicKeysFunctionType = &sema.FunctionType{
 	),
 }
 
-var blsAggregatePublicKeysFunction = interpreter.NewHostFunctionValue(
+var blsAggregatePublicKeysFunction = interpreter.NewUnmeteredHostFunctionValue(
 	func(invocation interpreter.Invocation) interpreter.Value {
 		publicKeys, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
 		if !ok {
@@ -136,7 +136,7 @@ var blsAggregatePublicKeysFunction = interpreter.NewHostFunctionValue(
 	blsAggregatePublicKeysFunctionType,
 )
 
-var blsAggregateSignaturesFunction = interpreter.NewHostFunctionValue(
+var blsAggregateSignaturesFunction = interpreter.NewUnmeteredHostFunctionValue(
 	func(invocation interpreter.Invocation) interpreter.Value {
 		signatures, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
 		if !ok {
@@ -171,6 +171,7 @@ var blsContract = StandardLibraryValue{
 	Type: blsContractType,
 	ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
 		return interpreter.NewSimpleCompositeValue(
+			inter,
 			blsContractType.ID(),
 			blsContractStaticType,
 			nil,

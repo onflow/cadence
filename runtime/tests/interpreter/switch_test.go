@@ -62,8 +62,8 @@ func TestInterpretSwitchStatement(t *testing.T) {
 		require.NoError(t, err)
 
 		for argument, expected := range map[interpreter.Value]interpreter.Value{
-			interpreter.BoolValue(true):  interpreter.NewIntValueFromInt64(1),
-			interpreter.BoolValue(false): interpreter.NewIntValueFromInt64(2),
+			interpreter.BoolValue(true):  interpreter.NewUnmeteredIntValueFromInt64(1),
+			interpreter.BoolValue(false): interpreter.NewUnmeteredIntValueFromInt64(2),
 		} {
 
 			actual, err := inter.Invoke("test", argument)
@@ -100,10 +100,10 @@ func TestInterpretSwitchStatement(t *testing.T) {
 		require.NoError(t, err)
 
 		for argument, expected := range map[interpreter.Value]interpreter.Value{
-			interpreter.NewIntValueFromInt64(1): interpreter.NewStringValue("1"),
-			interpreter.NewIntValueFromInt64(2): interpreter.NewStringValue("2"),
-			interpreter.NewIntValueFromInt64(3): interpreter.NewStringValue("3"),
-			interpreter.NewIntValueFromInt64(4): interpreter.NewStringValue("3"),
+			interpreter.NewUnmeteredIntValueFromInt64(1): interpreter.NewUnmeteredStringValue("1"),
+			interpreter.NewUnmeteredIntValueFromInt64(2): interpreter.NewUnmeteredStringValue("2"),
+			interpreter.NewUnmeteredIntValueFromInt64(3): interpreter.NewUnmeteredStringValue("3"),
+			interpreter.NewUnmeteredIntValueFromInt64(4): interpreter.NewUnmeteredStringValue("3"),
 		} {
 
 			actual, err := inter.Invoke("test", argument)
@@ -141,10 +141,10 @@ func TestInterpretSwitchStatement(t *testing.T) {
 		require.NoError(t, err)
 
 		for argument, expected := range map[interpreter.Value]interpreter.Value{
-			interpreter.NewIntValueFromInt64(1): interpreter.NewStringValue("4"),
-			interpreter.NewIntValueFromInt64(2): interpreter.NewStringValue("2"),
-			interpreter.NewIntValueFromInt64(3): interpreter.NewStringValue("3"),
-			interpreter.NewIntValueFromInt64(4): interpreter.NewStringValue("3"),
+			interpreter.NewUnmeteredIntValueFromInt64(1): interpreter.NewUnmeteredStringValue("4"),
+			interpreter.NewUnmeteredIntValueFromInt64(2): interpreter.NewUnmeteredStringValue("2"),
+			interpreter.NewUnmeteredIntValueFromInt64(3): interpreter.NewUnmeteredStringValue("3"),
+			interpreter.NewUnmeteredIntValueFromInt64(4): interpreter.NewUnmeteredStringValue("3"),
 		} {
 
 			actual, err := inter.Invoke("test", argument)
@@ -172,17 +172,17 @@ func TestInterpretSwitchStatement(t *testing.T) {
         `)
 
 		for argument, expectedValues := range map[interpreter.Value][]interpreter.Value{
-			interpreter.NewIntValueFromInt64(1): {
-				interpreter.NewStringValue("1"),
+			interpreter.NewUnmeteredIntValueFromInt64(1): {
+				interpreter.NewUnmeteredStringValue("1"),
 			},
-			interpreter.NewIntValueFromInt64(2): {
-				interpreter.NewStringValue("2"),
+			interpreter.NewUnmeteredIntValueFromInt64(2): {
+				interpreter.NewUnmeteredStringValue("2"),
 			},
-			interpreter.NewIntValueFromInt64(3): {
-				interpreter.NewStringValue("3"),
+			interpreter.NewUnmeteredIntValueFromInt64(3): {
+				interpreter.NewUnmeteredStringValue("3"),
 			},
-			interpreter.NewIntValueFromInt64(4): {
-				interpreter.NewStringValue("3"),
+			interpreter.NewUnmeteredIntValueFromInt64(4): {
+				interpreter.NewUnmeteredStringValue("3"),
 			},
 		} {
 
@@ -235,34 +235,34 @@ func TestInterpretSwitchStatement(t *testing.T) {
 		for _, testCase := range []testCase{
 			{
 				[]interpreter.Value{
-					interpreter.NewSomeValueNonCopying(
-						interpreter.NewIntValueFromInt64(1),
+					interpreter.NewUnmeteredSomeValueNonCopying(
+						interpreter.NewUnmeteredIntValueFromInt64(1),
 					),
-					interpreter.NewSomeValueNonCopying(
-						interpreter.NewIntValueFromInt64(1),
+					interpreter.NewUnmeteredSomeValueNonCopying(
+						interpreter.NewUnmeteredIntValueFromInt64(1),
 					),
 				},
-				interpreter.NewStringValue("1"),
+				interpreter.NewUnmeteredStringValue("1"),
 			},
 			{
 				[]interpreter.Value{
 					interpreter.NilValue{},
-					interpreter.NewSomeValueNonCopying(
-						interpreter.NewIntValueFromInt64(1),
+					interpreter.NewUnmeteredSomeValueNonCopying(
+						interpreter.NewUnmeteredIntValueFromInt64(1),
 					),
 				},
-				interpreter.NewStringValue("2"),
+				interpreter.NewUnmeteredStringValue("2"),
 			},
 			{
 				[]interpreter.Value{
-					interpreter.NewSomeValueNonCopying(
-						interpreter.NewIntValueFromInt64(1),
+					interpreter.NewUnmeteredSomeValueNonCopying(
+						interpreter.NewUnmeteredIntValueFromInt64(1),
 					),
-					interpreter.NewSomeValueNonCopying(
-						interpreter.NewIntValueFromInt64(2),
+					interpreter.NewUnmeteredSomeValueNonCopying(
+						interpreter.NewUnmeteredIntValueFromInt64(2),
 					),
 				},
-				interpreter.NewStringValue("3"),
+				interpreter.NewUnmeteredStringValue("3"),
 			},
 		} {
 			actual, err := inter.Invoke("test", testCase.arguments...)

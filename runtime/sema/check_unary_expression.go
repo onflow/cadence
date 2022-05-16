@@ -38,7 +38,7 @@ func (checker *Checker) VisitUnaryExpression(expression *ast.UnaryExpression) as
 				Operation:    expression.Operation,
 				ExpectedType: expectedType,
 				ActualType:   valueType,
-				Range:        ast.NewRangeFromPositioned(expression.Expression),
+				Range:        ast.NewRangeFromPositioned(checker.memoryGauge, expression.Expression),
 			},
 		)
 	}
@@ -67,10 +67,11 @@ func (checker *Checker) VisitUnaryExpression(expression *ast.UnaryExpression) as
 
 			checker.report(
 				&InvalidMoveOperationError{
-					Range: ast.Range{
-						StartPos: expression.StartPos,
-						EndPos:   expression.Expression.StartPosition(),
-					},
+					Range: ast.NewRange(
+						checker.memoryGauge,
+						expression.StartPos,
+						expression.Expression.StartPosition(),
+					),
 				},
 			)
 		}
@@ -87,6 +88,6 @@ func (checker *Checker) VisitUnaryExpression(expression *ast.UnaryExpression) as
 	panic(&unsupportedOperation{
 		kind:      common.OperationKindUnary,
 		operation: expression.Operation,
-		Range:     ast.NewRangeFromPositioned(expression),
+		Range:     ast.NewRangeFromPositioned(checker.memoryGauge, expression),
 	})
 }

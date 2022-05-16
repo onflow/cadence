@@ -466,7 +466,7 @@ func TestInterpretResourceReferenceAfterMove(t *testing.T) {
 		array := interpreter.NewArrayValue(
 			inter,
 			interpreter.VariableSizedStaticType{
-				Type: interpreter.ConvertSemaToStaticType(rType),
+				Type: interpreter.ConvertSemaToStaticType(nil, rType),
 			},
 			address,
 		)
@@ -483,7 +483,7 @@ func TestInterpretResourceReferenceAfterMove(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewStringValue("testValue"),
+			interpreter.NewUnmeteredStringValue("testValue"),
 			value,
 		)
 	})
@@ -517,7 +517,7 @@ func TestInterpretResourceReferenceAfterMove(t *testing.T) {
 			inter,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.VariableSizedStaticType{
-					Type: interpreter.ConvertSemaToStaticType(rType),
+					Type: interpreter.ConvertSemaToStaticType(nil, rType),
 				},
 			},
 			address,
@@ -535,7 +535,7 @@ func TestInterpretResourceReferenceAfterMove(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewStringValue("testValue"),
+			interpreter.NewUnmeteredStringValue("testValue"),
 			value,
 		)
 	})
@@ -570,7 +570,7 @@ func TestInterpretResourceReferenceAfterMove(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeInt,
-					ValueType: interpreter.ConvertSemaToStaticType(rType),
+					ValueType: interpreter.ConvertSemaToStaticType(nil, rType),
 				},
 			},
 			address,
@@ -588,8 +588,8 @@ func TestInterpretResourceReferenceAfterMove(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewSomeValueNonCopying(
-				interpreter.NewStringValue("testValue"),
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredStringValue("testValue"),
 			),
 			value,
 		)
@@ -650,7 +650,7 @@ func TestInterpretReferenceUseAfterShiftStatementMove(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewStringValue("test"),
+			interpreter.NewUnmeteredStringValue("test"),
 			value,
 		)
 
@@ -713,9 +713,7 @@ func TestInterpretReferenceUseAfterShiftStatementMove(t *testing.T) {
 			ParseCheckAndInterpretOptions{
 				Options: []interpreter.Option{
 					interpreter.WithPublicAccountHandler(
-						func(_ *interpreter.Interpreter, address interpreter.AddressValue) interpreter.Value {
-							return newTestPublicAccountValue(address)
-						},
+						newTestPublicAccountValue,
 					),
 				},
 			},
@@ -742,7 +740,7 @@ func TestInterpretReferenceUseAfterShiftStatementMove(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewStringValue("test"),
+			interpreter.NewUnmeteredStringValue("test"),
 			value,
 		)
 
@@ -754,7 +752,7 @@ func TestInterpretReferenceUseAfterShiftStatementMove(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewSomeValueNonCopying(
+			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.AddressValue{1},
 			),
 			r1Address,
@@ -768,7 +766,7 @@ func TestInterpretReferenceUseAfterShiftStatementMove(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewSomeValueNonCopying(
+			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.AddressValue{1},
 			),
 			r2Address,

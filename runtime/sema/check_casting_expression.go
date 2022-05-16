@@ -70,7 +70,7 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 
 				checker.report(
 					&InvalidFailableResourceDowncastOutsideOptionalBindingError{
-						Range: ast.NewRangeFromPositioned(expression),
+						Range: ast.NewRangeFromPositioned(checker.memoryGauge, expression),
 					},
 				)
 			}
@@ -78,7 +78,7 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 			if _, ok := expression.Expression.(*ast.IdentifierExpression); !ok {
 				checker.report(
 					&InvalidNonIdentifierFailableResourceDowncast{
-						Range: ast.NewRangeFromPositioned(expression.Expression),
+						Range: ast.NewRangeFromPositioned(checker.memoryGauge, expression.Expression),
 					},
 				)
 			}
@@ -99,7 +99,7 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 						&AlwaysFailingNonResourceCastingTypeError{
 							ValueType:  leftHandType,
 							TargetType: rightHandType,
-							Range:      ast.NewRangeFromPositioned(expression.TypeAnnotation),
+							Range:      ast.NewRangeFromPositioned(checker.memoryGauge, expression.TypeAnnotation),
 						},
 					)
 				}
@@ -109,7 +109,7 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 						&AlwaysFailingResourceCastingTypeError{
 							ValueType:  leftHandType,
 							TargetType: rightHandType,
-							Range:      ast.NewRangeFromPositioned(expression.TypeAnnotation),
+							Range:      ast.NewRangeFromPositioned(checker.memoryGauge, expression.TypeAnnotation),
 						},
 					)
 				}
@@ -121,7 +121,7 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 					&TypeMismatchError{
 						ActualType:   leftHandType,
 						ExpectedType: rightHandType,
-						Range:        ast.NewRangeFromPositioned(leftHandExpression),
+						Range:        ast.NewRangeFromPositioned(checker.memoryGauge, leftHandExpression),
 					},
 				)
 			} else if checker.lintEnabled && IsSubType(leftHandType, rightHandType) {
@@ -132,7 +132,7 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 						&AlwaysSucceedingFailableCastHint{
 							ValueType:  leftHandType,
 							TargetType: rightHandType,
-							Range:      ast.NewRangeFromPositioned(expression),
+							Range:      ast.NewRangeFromPositioned(checker.memoryGauge, expression),
 						},
 					)
 
@@ -141,7 +141,7 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 						&AlwaysSucceedingForceCastHint{
 							ValueType:  leftHandType,
 							TargetType: rightHandType,
-							Range:      ast.NewRangeFromPositioned(expression),
+							Range:      ast.NewRangeFromPositioned(checker.memoryGauge, expression),
 						},
 					)
 
@@ -168,7 +168,7 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 			checker.hint(
 				&UnnecessaryCastHint{
 					TargetType: rightHandType,
-					Range:      ast.NewRangeFromPositioned(expression.TypeAnnotation),
+					Range:      ast.NewRangeFromPositioned(checker.memoryGauge, expression.TypeAnnotation),
 				},
 			)
 		}

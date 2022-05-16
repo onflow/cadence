@@ -48,10 +48,11 @@ func (checker *Checker) VisitForceExpression(expression *ast.ForceExpression) as
 			checker.hint(
 				&RemovalHint{
 					Description: "unnecessary force operator",
-					Range: ast.Range{
-						StartPos: expression.EndPos,
-						EndPos:   expression.EndPos,
-					},
+					Range: ast.NewRange(
+						checker.memoryGauge,
+						expression.EndPos,
+						expression.EndPos,
+					),
 				},
 			)
 		}

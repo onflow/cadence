@@ -86,7 +86,7 @@ func (checker *Checker) VisitDictionaryExpression(expression *ast.DictionaryExpr
 		checker.report(
 			&InvalidDictionaryKeyTypeError{
 				Type:  keyType,
-				Range: ast.NewRangeFromPositioned(expression),
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, expression),
 			},
 		)
 	}

@@ -40,7 +40,7 @@ func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) 
 		if checker.positionInfoEnabled {
 			checker.MemberAccesses.Put(
 				expression.AccessPos,
-				expression.EndPosition(),
+				expression.EndPosition(checker.memoryGauge),
 				memberAccessType,
 			)
 		}
@@ -149,7 +149,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 
 	identifier := expression.Identifier.Identifier
 	identifierStartPosition := expression.Identifier.StartPosition()
-	identifierEndPosition := expression.Identifier.EndPosition()
+	identifierEndPosition := expression.Identifier.EndPosition(checker.memoryGauge)
 
 	// Check if the type instance actually has members. For most types (e.g. composite types)
 	// this is known statically (in the sense of this host language (Go), not the implemented language),
@@ -161,8 +161,8 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 		if !ok {
 			return
 		}
-		targetRange := ast.NewRangeFromPositioned(expression.Expression)
-		member = resolver.Resolve(identifier, targetRange, checker.report)
+		targetRange := ast.NewRangeFromPositioned(checker.memoryGauge, expression.Expression)
+		member = resolver.Resolve(checker.memoryGauge, identifier, targetRange, checker.report)
 		if resolver.Mutating {
 			if targetExpression, ok := accessedExpression.(*ast.MemberExpression); ok {
 				// visitMember caches its result, so visiting the target expression again,
@@ -174,7 +174,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 						&ExternalMutationError{
 							Name:            subMember.Identifier.Identifier,
 							DeclarationKind: subMember.DeclarationKind,
-							Range:           ast.NewRangeFromPositioned(targetRange),
+							Range:           ast.NewRangeFromPositioned(checker.memoryGauge, targetRange),
 							ContainerType:   subMember.ContainerType,
 						},
 					)
@@ -203,7 +203,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 				checker.report(
 					&InvalidOptionalChainingError{
 						Type:  accessedType,
-						Range: ast.NewRangeFromPositioned(expression),
+						Range: ast.NewRangeFromPositioned(checker.memoryGauge, expression),
 					},
 				)
 			}
@@ -232,10 +232,11 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 					Type:       accessedType,
 					Name:       identifier,
 					Expression: expression,
-					Range: ast.Range{
-						StartPos: identifierStartPosition,
-						EndPos:   identifierEndPosition,
-					},
+					Range: ast.NewRange(
+						checker.memoryGauge,
+						identifierStartPosition,
+						identifierEndPosition,
+					),
 				},
 			)
 		}
@@ -259,7 +260,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 					Name:              member.Identifier.Identifier,
 					RestrictingAccess: member.Access,
 					DeclarationKind:   member.DeclarationKind,
-					Range:             ast.NewRangeFromPositioned(expression),
+					Range:             ast.NewRangeFromPositioned(checker.memoryGauge, expression),
 				},
 			)
 		}
@@ -277,7 +278,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 
 			checker.report(
 				&ResourceMethodBindingError{
-					Range: ast.NewRangeFromPositioned(expression),
+					Range: ast.NewRangeFromPositioned(checker.memoryGauge, expression),
 				},
 			)
 		}

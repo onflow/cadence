@@ -218,7 +218,7 @@ func TestRuntimeContract(t *testing.T) {
 		// so getting the storage map here once upfront would result in outdated data
 
 		getContractValueExists := func() bool {
-			storageMap := NewStorage(storage).
+			storageMap := NewStorage(storage, nil).
 				GetStorageMap(signerAddress, StorageDomainContract, false)
 			if storageMap == nil {
 				return false

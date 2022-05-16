@@ -745,7 +745,7 @@ func exportFromScript(t *testing.T, code string) cadence.Value {
 		interpreter.WithAtreeStorageValidationEnabled(true),
 		interpreter.WithAtreeValueValidationEnabled(true),
 		interpreter.WithStorage(
-			interpreter.NewInMemoryStorage(),
+			interpreter.NewInMemoryStorage(nil),
 		),
 	)
 	require.NoError(t, err)
@@ -1049,7 +1049,7 @@ func TestEncodeLink(t *testing.T) {
 	testEncodeAndDecode(
 		t,
 		cadence.NewLink(
-			cadence.Path{Domain: "storage", Identifier: "foo"},
+			cadence.NewPath("storage", "foo"),
 			"Bar",
 		),
 		`{"type":"Link","value":{"targetPath":{"type":"Path","value":{"domain":"storage","identifier":"foo"}},"borrowType":"Bar"}}`,
@@ -1561,7 +1561,7 @@ func TestEncodeCapability(t *testing.T) {
 	testEncodeAndDecode(
 		t,
 		cadence.Capability{
-			Path:       cadence.Path{Domain: "storage", Identifier: "foo"},
+			Path:       cadence.NewPath("storage", "foo"),
 			Address:    cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
 			BorrowType: cadence.IntType{},
 		},
@@ -1744,7 +1744,7 @@ func TestDecodeFixedPoints(t *testing.T) {
 
 					enc := fmt.Sprintf(`{ "type": "%s", "value": "%s"}`, ty.ID(), tt.input)
 
-					actual, err := json.Decode([]byte(enc))
+					actual, err := json.Decode(nil, []byte(enc))
 
 					if tt.check != nil {
 						tt.check(t, actual, err)
@@ -1761,7 +1761,7 @@ func TestDecodeFixedPoints(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := json.Decode([]byte(`{"type": "Fix64", "value": "1.-1"}`))
+		_, err := json.Decode(nil, []byte(`{"type": "Fix64", "value": "1.-1"}`))
 		assert.Error(t, err)
 	})
 
@@ -1769,7 +1769,7 @@ func TestDecodeFixedPoints(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := json.Decode([]byte(`{"type": "Fix64", "value": "1.+1"}`))
+		_, err := json.Decode(nil, []byte(`{"type": "Fix64", "value": "1.+1"}`))
 		assert.Error(t, err)
 	})
 
@@ -1777,7 +1777,7 @@ func TestDecodeFixedPoints(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := json.Decode([]byte(`{"type": "Fix64", "value": ".1"}`))
+		_, err := json.Decode(nil, []byte(`{"type": "Fix64", "value": ".1"}`))
 		assert.Error(t, err)
 	})
 
@@ -1785,7 +1785,7 @@ func TestDecodeFixedPoints(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := json.Decode([]byte(`{"type": "Fix64", "value": "1."}`))
+		_, err := json.Decode(nil, []byte(`{"type": "Fix64", "value": "1."}`))
 		assert.Error(t, err)
 	})
 }
@@ -1826,7 +1826,7 @@ func TestEncodePath(t *testing.T) {
 
 	testEncodeAndDecode(
 		t,
-		cadence.Path{Domain: "storage", Identifier: "foo"},
+		cadence.NewPath("storage", "foo"),
 		`{"type":"Path","value":{"domain":"storage","identifier":"foo"}}`,
 	)
 }
@@ -1864,7 +1864,7 @@ func TestDecodeInvalidType(t *testing.T) {
 			}
 		}
 	`
-		_, err := json.Decode([]byte(encodedValue))
+		_, err := json.Decode(nil, []byte(encodedValue))
 		require.Error(t, err)
 		assert.Equal(t, "failed to decode value: invalid JSON Cadence structure. invalid type ID: ``", err.Error())
 	})
@@ -1881,7 +1881,7 @@ func TestDecodeInvalidType(t *testing.T) {
 			}
 		}
 	`
-		_, err := json.Decode([]byte(encodedValue))
+		_, err := json.Decode(nil, []byte(encodedValue))
 		require.Error(t, err)
 		assert.Equal(t, "failed to decode value: invalid JSON Cadence structure. invalid type ID: `I.Foo`", err.Error())
 	})
@@ -1898,7 +1898,7 @@ func TestDecodeInvalidType(t *testing.T) {
 			}
 		}
 	`
-		_, err := json.Decode([]byte(encodedValue))
+		_, err := json.Decode(nil, []byte(encodedValue))
 		require.Error(t, err)
 		assert.Equal(t, "failed to decode value: invalid JSON Cadence structure. invalid type ID: `N.PublicKey`", err.Error())
 	})
@@ -1921,7 +1921,7 @@ func testEncode(t *testing.T, val cadence.Value, expectedJSON string) (actualJSO
 }
 
 func testDecode(t *testing.T, actualJSON string, expectedVal cadence.Value) {
-	decodedVal, err := json.Decode([]byte(actualJSON))
+	decodedVal, err := json.Decode(nil, []byte(actualJSON))
 	require.NoError(t, err)
 
 	assert.Equal(t, expectedVal, decodedVal)
@@ -1944,13 +1944,13 @@ func TestNonUTF8StringEncoding(t *testing.T) {
 	// Make sure it is an invalid utf8 string
 	assert.False(t, utf8.ValidString(nonUTF8String))
 
-	// Avoid using the `NewString()` constructor to skip the validation
+	// Avoid using the `NewMeteredString()` constructor to skip the validation
 	stringValue := cadence.String(nonUTF8String)
 
 	encodedValue, err := json.Encode(stringValue)
 	require.NoError(t, err)
 
-	decodedValue, err := json.Decode(encodedValue)
+	decodedValue, err := json.Decode(nil, encodedValue)
 	require.NoError(t, err)
 
 	// Decoded value must be a valid utf8 string

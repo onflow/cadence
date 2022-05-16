@@ -35,7 +35,7 @@ func setupInterpreterWithTracingCallBack(
 	t *testing.T,
 	tracingCallback func(opName string),
 ) *interpreter.Interpreter {
-	storage := interpreter.NewInMemoryStorage()
+	storage := newUnmeteredInMemoryStorage()
 	inter, err := interpreter.NewInterpreter(
 		&interpreter.Program{},
 		utils.TestLocation,
@@ -98,7 +98,7 @@ func TestInterpreterTracing(t *testing.T) {
 				KeyType:   interpreter.PrimitiveStaticTypeString,
 				ValueType: interpreter.PrimitiveStaticTypeInt,
 			},
-			interpreter.NewStringValue("test"), interpreter.NewIntValueFromInt64(42),
+			interpreter.NewUnmeteredStringValue("test"), interpreter.NewUnmeteredIntValueFromInt64(42),
 		)
 		require.NotNil(t, dict)
 		fmt.Println(traceOps)

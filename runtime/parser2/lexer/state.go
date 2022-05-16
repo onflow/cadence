@@ -20,6 +20,8 @@ package lexer
 
 import (
 	"fmt"
+
+	"github.com/onflow/cadence/runtime/common"
 )
 
 const keywordAs = "as"
@@ -256,6 +258,16 @@ func spaceState(startIsNewline bool) stateFn {
 	return func(l *lexer) stateFn {
 		containsNewline := l.scanSpace()
 		containsNewline = containsNewline || startIsNewline
+
+		if l.memoryGauge != nil {
+			// Meter token wrapper
+			common.UseMemory(l.memoryGauge, common.SpaceTokenMemoryUsage)
+
+			// Meter token content
+			tokenLength := l.wordLength()
+			common.UseMemory(l.memoryGauge, common.NewRawStringMemoryUsage(tokenLength))
+		}
+
 		l.emit(
 			TokenSpace,
 			Space{

@@ -40,15 +40,49 @@ type VariableDeclaration struct {
 	DocString         string
 }
 
+func NewVariableDeclaration(
+	gauge common.MemoryGauge,
+	access Access,
+	isLet bool,
+	identifier Identifier,
+	typeAnnotation *TypeAnnotation,
+	value Expression,
+	transfer *Transfer,
+	startPos Position,
+	secondTransfer *Transfer,
+	secondValue Expression,
+	docString string,
+) *VariableDeclaration {
+	common.UseMemory(gauge, common.VariableDeclarationMemoryUsage)
+
+	return &VariableDeclaration{
+		Access:         access,
+		IsConstant:     isLet,
+		Identifier:     identifier,
+		TypeAnnotation: typeAnnotation,
+		Value:          value,
+		Transfer:       transfer,
+		StartPos:       startPos,
+		SecondTransfer: secondTransfer,
+		SecondValue:    secondValue,
+		DocString:      docString,
+	}
+}
+
+func NewEmptyVariableDeclaration(gauge common.MemoryGauge) *VariableDeclaration {
+	common.UseMemory(gauge, common.VariableDeclarationMemoryUsage)
+	return &VariableDeclaration{}
+}
+
 func (d *VariableDeclaration) StartPosition() Position {
 	return d.StartPos
 }
 
-func (d *VariableDeclaration) EndPosition() Position {
+func (d *VariableDeclaration) EndPosition(memoryGauge common.MemoryGauge) Position {
 	if d.SecondValue != nil {
-		return d.SecondValue.EndPosition()
+		return d.SecondValue.EndPosition(memoryGauge)
 	}
-	return d.Value.EndPosition()
+	return d.Value.EndPosition(memoryGauge)
 }
 
 func (*VariableDeclaration) isIfStatementTest() {}
@@ -136,7 +170,7 @@ func (d *VariableDeclaration) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "VariableDeclaration",
-		Range: NewRangeFromPositioned(d),
+		Range: NewUnmeteredRangeFromPositioned(d),
 		Alias: (*Alias)(d),
 	})
 }

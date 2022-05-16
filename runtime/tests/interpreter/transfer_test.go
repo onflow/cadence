@@ -50,7 +50,7 @@ func TestInterpretTransferCheck(t *testing.T) {
 				Type: ty,
 				// NOTE: not an instance of the type
 				ValueFactory: func(_ *interpreter.Interpreter) interpreter.Value {
-					return interpreter.NewStringValue("fruit")
+					return interpreter.NewUnmeteredStringValue("fruit")
 				},
 				Kind: common.DeclarationKindConstant,
 			},

@@ -8,6 +8,7 @@ require (
 	github.com/cheekybits/genny v1.0.0
 	github.com/fxamacker/cbor/v2 v2.4.1-0.20220314011055-12f5cb4b5eb0
 	github.com/go-test/deep v1.0.5
+	github.com/leanovate/gopter v0.2.9
 	github.com/logrusorgru/aurora v0.0.0-20200102142835-e9ef32dff381
 	github.com/onflow/atree v0.3.0
 	github.com/opentracing/opentracing-go v1.2.0

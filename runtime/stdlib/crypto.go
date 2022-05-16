@@ -30,7 +30,7 @@ import (
 
 var CryptoChecker = func() *sema.Checker {
 
-	program, err := parser2.ParseProgram(contracts.Crypto)
+	program, err := parser2.ParseProgram(contracts.Crypto, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -41,6 +41,7 @@ var CryptoChecker = func() *sema.Checker {
 	checker, err = sema.NewChecker(
 		program,
 		location,
+		nil,
 		sema.WithPredeclaredValues(BuiltinFunctions.ToSemaValueDeclarations()),
 		sema.WithPredeclaredTypes(BuiltinTypes.ToTypeDeclarations()),
 	)
@@ -103,7 +104,7 @@ func cryptoAlgorithmEnumConstructorType(
 
 	members := make([]*sema.Member, len(enumCases))
 	for i, algo := range enumCases {
-		members[i] = sema.NewPublicConstantFieldMember(
+		members[i] = sema.NewUnmeteredPublicConstantFieldMember(
 			enumType,
 			algo.Name(),
 			enumType,
@@ -147,7 +148,7 @@ func cryptoAlgorithmEnumValue(
 		caseValue := caseConstructor(inter, rawValue)
 		caseValues[i] = caseValue
 		constructorNestedVariables[enumCase.Name()] =
-			interpreter.NewVariableWithValue(caseValue)
+			interpreter.NewVariableWithValue(inter, caseValue)
 	}
 
 	return interpreter.EnumConstructorFunction(

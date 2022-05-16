@@ -48,5 +48,5 @@ func ReturnEmptyLocationRange() LocationRange {
 }
 
 func ReturnEmptyRange() ast.Range {
-	return ast.Range{}
+	return ast.EmptyRange
 }

@@ -57,7 +57,7 @@ func (v ValueDeclaration) ValueDeclarationKind() common.DeclarationKind {
 }
 
 func (v ValueDeclaration) ValueDeclarationPosition() ast.Position {
-	return ast.Position{}
+	return ast.EmptyPosition
 }
 
 func (v ValueDeclaration) ValueDeclarationIsConstant() bool {

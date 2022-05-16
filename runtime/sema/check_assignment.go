@@ -74,7 +74,7 @@ func (checker *Checker) checkAssignment(
 			if _, ok := targetType.(*OptionalType); !ok {
 				checker.report(
 					&InvalidResourceAssignmentError{
-						Range: ast.NewRangeFromPositioned(target),
+						Range: ast.NewRangeFromPositioned(checker.memoryGauge, target),
 					},
 				)
 			}
@@ -89,7 +89,7 @@ func (checker *Checker) checkAssignment(
 
 				checker.report(
 					&InvalidResourceAssignmentError{
-						Range: ast.NewRangeFromPositioned(target),
+						Range: ast.NewRangeFromPositioned(checker.memoryGauge, target),
 					},
 				)
 			}
@@ -160,7 +160,7 @@ func (checker *Checker) visitAssignmentValueType(
 	if !IsValidAssignmentTargetExpression(targetExpression) {
 		checker.report(
 			&InvalidAssignmentTargetError{
-				Range: ast.NewRangeFromPositioned(targetExpression),
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, targetExpression),
 			},
 		)
 
@@ -198,7 +198,7 @@ func (checker *Checker) visitIdentifierExpressionAssignment(
 		checker.report(
 			&AssignmentToConstantError{
 				Name:  identifier,
-				Range: ast.NewRangeFromPositioned(target),
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, target),
 			},
 		)
 	}
@@ -222,7 +222,7 @@ func (checker *Checker) visitIndexExpressionAssignment(
 				&ExternalMutationError{
 					Name:            member.Identifier.Identifier,
 					DeclarationKind: member.DeclarationKind,
-					Range:           ast.NewRangeFromPositioned(targetExpression),
+					Range:           ast.NewRangeFromPositioned(checker.memoryGauge, targetExpression),
 					ContainerType:   member.ContainerType,
 				},
 			)
@@ -249,7 +249,7 @@ func (checker *Checker) visitMemberExpressionAssignment(
 	if isOptional {
 		checker.report(
 			&UnsupportedOptionalChainingAssignmentError{
-				Range: ast.NewRangeFromPositioned(target),
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, target),
 			},
 		)
 	}
@@ -260,7 +260,7 @@ func (checker *Checker) visitMemberExpressionAssignment(
 				Name:              member.Identifier.Identifier,
 				RestrictingAccess: member.Access,
 				DeclarationKind:   member.DeclarationKind,
-				Range:             ast.NewRangeFromPositioned(target.Identifier),
+				Range:             ast.NewRangeFromPositioned(checker.memoryGauge, target.Identifier),
 			},
 		)
 	}
@@ -269,7 +269,7 @@ func (checker *Checker) visitMemberExpressionAssignment(
 		checker.report(
 			&AssignmentToConstantMemberError{
 				Name:  target.Identifier.Identifier,
-				Range: ast.NewRangeFromPositioned(target.Identifier),
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, target.Identifier),
 			},
 		)
 	}
@@ -312,7 +312,7 @@ func (checker *Checker) visitMemberExpressionAssignment(
 					checker.report(
 						&FieldReinitializationError{
 							Name:  target.Identifier.Identifier,
-							Range: ast.NewRangeFromPositioned(target.Identifier),
+							Range: ast.NewRangeFromPositioned(checker.memoryGauge, target.Identifier),
 						},
 					)
 

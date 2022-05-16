@@ -213,7 +213,7 @@ func (checker *Checker) checkTransactionPrepareFunctionParameters(
 			checker.report(
 				&InvalidTransactionPrepareParameterTypeError{
 					Type:  parameterType,
-					Range: ast.NewRangeFromPositioned(parameter.TypeAnnotation),
+					Range: ast.NewRangeFromPositioned(checker.memoryGauge, parameter.TypeAnnotation),
 				},
 			)
 		}
@@ -255,7 +255,7 @@ func (checker *Checker) declareTransactionDeclaration(declaration *ast.Transacti
 		declarations[i] = field
 	}
 
-	allMembers := ast.NewMembers(declarations)
+	allMembers := ast.NewMembers(checker.memoryGauge, declarations)
 
 	members, fields, origins := checker.defaultMembersAndOrigins(
 		allMembers,

@@ -27,11 +27,11 @@ import (
 // AuthAccountContractsValue
 
 var authAccountContractsTypeID = sema.AuthAccountContractsType.ID()
-var authAccountContractsStaticType StaticType = PrimitiveStaticTypeAuthAccountContracts
-
+var authAccountContractsStaticType StaticType = PrimitiveStaticTypeAuthAccountContracts // unmetered
 var authAccountContractsFieldNames []string = nil
 
 func NewAuthAccountContractsValue(
+	inter *Interpreter,
 	address AddressValue,
 	addFunction FunctionValue,
 	updateFunction FunctionValue,
@@ -62,6 +62,7 @@ func NewAuthAccountContractsValue(
 	}
 
 	return NewSimpleCompositeValue(
+		inter,
 		authAccountContractsTypeID,
 		authAccountContractsStaticType,
 		authAccountContractsFieldNames,
@@ -78,6 +79,7 @@ var publicAccountContractsTypeID = sema.PublicAccountContractsType.ID()
 var publicAccountContractsStaticType StaticType = PrimitiveStaticTypePublicAccountContracts
 
 func NewPublicAccountContractsValue(
+	inter *Interpreter,
 	address AddressValue,
 	getFunction FunctionValue,
 	namesGetter func(interpreter *Interpreter) *ArrayValue,
@@ -102,6 +104,7 @@ func NewPublicAccountContractsValue(
 	}
 
 	return NewSimpleCompositeValue(
+		inter,
 		publicAccountContractsTypeID,
 		publicAccountContractsStaticType,
 		nil,
