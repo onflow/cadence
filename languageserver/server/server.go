@@ -27,8 +27,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/onflow/cadence/languageserver/test"
-
 	"github.com/getsentry/sentry-go"
 	"github.com/google/uuid"
 	"github.com/mitchellh/mapstructure"
@@ -389,7 +387,6 @@ func initCrashReporting(server *Server) {
 		Transport:        sentrySyncTransport,
 		BeforeSend: func(event *sentry.Event, hint *sentry.EventHint) *sentry.Event {
 			if server.reportCrashes {
-				test.Log("crash report", event)
 				return event
 			}
 
