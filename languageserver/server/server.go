@@ -292,6 +292,8 @@ func NewServer() (*Server, error) {
 	server.protocolServer = protocol.NewServer(server)
 
 	// init crash reporting
+	defer sentry.Flush(2 * time.Second)
+	defer sentry.Recover()
 	initCrashReporting(server)
 
 	// Set default commands
@@ -1713,7 +1715,6 @@ func (s *Server) getDiagnostics(
 			diagnostics = append(diagnostics, parserDiagnostics...)
 		}
 	}
-
 	// If there is a parse result succeeded proceed with resolving imports and checking the parsed program,
 	// even if there there might have been parsing errors.
 
