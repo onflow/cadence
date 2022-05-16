@@ -292,6 +292,8 @@ func NewServer() (*Server, error) {
 	server.protocolServer = protocol.NewServer(server)
 
 	// init crash reporting
+	defer sentry.Flush(2 * time.Second)
+	defer sentry.Recover()
 	initCrashReporting(server)
 
 	// Set default commands
@@ -1713,7 +1715,6 @@ func (s *Server) getDiagnostics(
 			diagnostics = append(diagnostics, parserDiagnostics...)
 		}
 	}
-
 	// If there is a parse result succeeded proceed with resolving imports and checking the parsed program,
 	// even if there there might have been parsing errors.
 
@@ -1820,25 +1821,27 @@ func (s *Server) getDiagnostics(
 					}
 
 					importedLocationID := importedLocation.ID()
-
-					importedProgram, err := s.resolveImport(importedLocation)
-					if err != nil {
-						return nil, err
-					}
-					if importedProgram == nil {
-						return nil, &sema.CheckerError{
-							Errors: []error{fmt.Errorf("cannot import %s", importedLocation)},
+					importedChecker, ok := s.checkers[importedLocationID]
+					if !ok {
+						importedProgram, err := s.resolveImport(importedLocation)
+						if err != nil {
+							return nil, err
 						}
-					}
-					// we are rechecking the imported program since there might be changes
-					importedChecker, err := checker.SubChecker(importedProgram, importedLocation)
-					if err != nil {
-						return nil, err
-					}
-					s.checkers[importedLocationID] = importedChecker
-					err = importedChecker.Check()
-					if err != nil {
-						return nil, err
+						if importedProgram == nil {
+							return nil, &sema.CheckerError{
+								Errors: []error{fmt.Errorf("cannot import %s", importedLocation)},
+							}
+						}
+
+						importedChecker, err = checker.SubChecker(importedProgram, importedLocation)
+						if err != nil {
+							return nil, err
+						}
+						s.checkers[importedLocationID] = importedChecker
+						err = importedChecker.Check()
+						if err != nil {
+							return nil, err
+						}
 					}
 
 					return sema.ElaborationImport{

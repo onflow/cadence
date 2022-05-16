@@ -69,3 +69,19 @@ This allows you to connect to the debugger and debug the server.
 If you are using GoLand, you can follow
 ["Create the Go Remote run/debug configuration on the client computer"](https://www.jetbrains.com/help/go/attach-to-running-go-processes-with-debugger.html#step-3-create-the-remote-run-debug-configuration-on-the-client-computer).
 Leave the hostname as `localhost`.
+
+#### Logging
+
+The utility functions in `tests/util.go` can be used to log to a file like so:
+
+```go
+test.Log("test log")
+```
+
+And at the same time run the command in your terminal:
+
+```bash
+tail -f ./debug.log
+```
+
+Doing so you should see the output of all Log calls you make. 

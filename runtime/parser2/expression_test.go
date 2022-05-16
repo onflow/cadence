@@ -1878,6 +1878,111 @@ func TestParseReference(t *testing.T) {
 	)
 }
 
+func TestParseNilCoelesceReference(t *testing.T) {
+
+	t.Parallel()
+
+	result, errs := ParseExpression(`
+          &xs["a"] as &Int? ?? 1
+        `)
+	require.Empty(t, errs)
+
+	utils.AssertEqualWithDiff(t,
+		&ast.BinaryExpression{
+			Operation: ast.OperationNilCoalesce,
+			Left: &ast.ReferenceExpression{
+				Expression: &ast.IndexExpression{
+					TargetExpression: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "xs",
+							Pos: ast.Position{
+								Offset: 12,
+								Line:   2,
+								Column: 11,
+							},
+						},
+					},
+					IndexingExpression: &ast.StringExpression{
+						Value: "a",
+						Range: ast.Range{
+							StartPos: ast.Position{
+								Offset: 15,
+								Line:   2,
+								Column: 14,
+							},
+							EndPos: ast.Position{
+								Offset: 17,
+								Line:   2,
+								Column: 16,
+							},
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 14,
+							Line:   2,
+							Column: 13,
+						},
+						EndPos: ast.Position{
+							Offset: 18,
+							Line:   2,
+							Column: 17,
+						},
+					},
+				},
+				Type: &ast.OptionalType{
+					Type: &ast.ReferenceType{
+						Authorized: false,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "Int",
+								Pos: ast.Position{
+									Offset: 24,
+									Line:   2,
+									Column: 23,
+								},
+							},
+						},
+						StartPos: ast.Position{
+							Offset: 23,
+							Line:   2,
+							Column: 22,
+						},
+					},
+					EndPos: ast.Position{
+						Offset: 27,
+						Line:   2,
+						Column: 26,
+					},
+				},
+				StartPos: ast.Position{
+					Offset: 11,
+					Line:   2,
+					Column: 10,
+				},
+			},
+			Right: &ast.IntegerExpression{
+				PositiveLiteral: "1",
+				Value:           big.NewInt(1),
+				Base:            10,
+				Range: ast.Range{
+					StartPos: ast.Position{
+						Offset: 32,
+						Line:   2,
+						Column: 31,
+					},
+					EndPos: ast.Position{
+						Offset: 32,
+						Line:   2,
+						Column: 31,
+					},
+				},
+			},
+		},
+		result,
+	)
+}
+
 func TestParseCasts(t *testing.T) {
 
 	t.Parallel()
@@ -5716,4 +5821,35 @@ func TestParseInvalidNegativeIntegerLiteralWithIncorrectPrefix(t *testing.T) {
 	`)
 
 	require.Error(t, err)
+}
+
+func TestParseReplayLimit(t *testing.T) {
+
+	t.Parallel()
+
+	var builder strings.Builder
+	builder.WriteString("let t = T")
+	for i := 0; i < 100; i++ {
+		builder.WriteString("<T")
+	}
+	builder.WriteString(">()")
+
+	code := builder.String()
+	_, errs := ParseProgram(code)
+	utils.AssertEqualWithDiff(t,
+		Error{
+			Code: code,
+			Errors: []error{
+				&SyntaxError{
+					Message: fmt.Sprintf("program too ambiguous, replay limit of %d tokens exceeded", tokenReplayLimit),
+					Pos: ast.Position{
+						Offset: 210,
+						Line:   1,
+						Column: 210,
+					},
+				},
+			},
+		},
+		errs,
+	)
 }
