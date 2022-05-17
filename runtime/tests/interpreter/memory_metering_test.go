@@ -7302,6 +7302,108 @@ func TestInterpretEphemeralReferenceValueMetering(t *testing.T) {
 	})
 }
 
+func TestInterpretStringMetering(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("creation", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let x = "a"
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindString))
+	})
+
+	t.Run("assignment", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let x = "a"
+                let y = x
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		// 1 + 2 * " + 1 (a)
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindString))
+	})
+
+	t.Run("Unicode", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let x = "İ"
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		// 1 + 2 * " + 2 (0xC4, 0xB1)
+		assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindString))
+	})
+
+	t.Run("toLower, ASCII", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let x = "ABC".toLower()
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		// creation: 1 + 2 * " + 3 (ABC)
+		// + result: 1 + 3 (abc)
+		assert.Equal(t, uint64(10), meter.getMemory(common.MemoryKindString))
+	})
+
+	t.Run("toLower, Unicode", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let x = "İ".toLower()
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		// creation: 1 + 2 * " + 2 (0xC4, 0xB1)
+		// + result: 1 + 4 (max UTF8 encoding)
+		assert.Equal(t, uint64(10), meter.getMemory(common.MemoryKindString))
+	})
+}
+
 func TestInterpretCharacterMetering(t *testing.T) {
 	t.Parallel()
 
