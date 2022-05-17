@@ -7520,6 +7520,63 @@ func TestInterpretLinkValueMetering(t *testing.T) {
 	})
 }
 
+func TestInterpretTypeValueMetering(t *testing.T) {
+	t.Parallel()
+
+	t.Run("static constructor", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let t: Type = Type<Int>()
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindTypeValue))
+	})
+
+	t.Run("dynamic constructor", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let t: Type = ConstantSizedArrayType(type: Type<Int>(), size: 2)
+            }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindTypeValue))
+	})
+
+	t.Run("getType", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let v = 5
+                let t: Type = v.getType()
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindTypeValue))
+	})
+}
+
 func TestVariableMetering(t *testing.T) {
 	t.Parallel()
 
