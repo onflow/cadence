@@ -1018,7 +1018,7 @@ func (d StorableDecoder) decodeType() (TypeValue, error) {
 		return EmptyTypeValue, fmt.Errorf("invalid type encoding: %w", err)
 	}
 
-	return NewUnmeteredTypeValue(staticType), nil
+	return NewTypeValue(d.memoryGauge, staticType), nil
 }
 
 type TypeDecoder struct {

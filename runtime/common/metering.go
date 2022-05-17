@@ -35,6 +35,8 @@ type MemoryGauge interface {
 }
 
 var (
+	// AST memory usages
+
 	ValueTokenMemoryUsage  = NewConstantMemoryUsage(MemoryKindValueToken)
 	SyntaxTokenMemoryUsage = NewConstantMemoryUsage(MemoryKindSyntaxToken)
 	SpaceTokenMemoryUsage  = NewConstantMemoryUsage(MemoryKindSpaceToken)
@@ -50,6 +52,8 @@ var (
 	TypeAnnotationMemoryUsage  = NewConstantMemoryUsage(MemoryKindTypeAnnotation)
 	DictionaryEntryMemoryUsage = NewConstantMemoryUsage(MemoryKindDictionaryEntry)
 
+	// AST declarations memory usages
+
 	FunctionDeclarationMemoryUsage        = NewConstantMemoryUsage(MemoryKindFunctionDeclaration)
 	CompositeDeclarationMemoryUsage       = NewConstantMemoryUsage(MemoryKindCompositeDeclaration)
 	InterfaceDeclarationMemoryUsage       = NewConstantMemoryUsage(MemoryKindInterfaceDeclaration)
@@ -60,6 +64,8 @@ var (
 	VariableDeclarationMemoryUsage        = NewConstantMemoryUsage(MemoryKindVariableDeclaration)
 	SpecialFunctionDeclarationMemoryUsage = NewConstantMemoryUsage(MemoryKindSpecialFunctionDeclaration)
 	PragmaDeclarationMemoryUsage          = NewConstantMemoryUsage(MemoryKindPragmaDeclaration)
+
+	// AST statements memory usages
 
 	AssignmentStatementMemoryUsage = NewConstantMemoryUsage(MemoryKindAssignmentStatement)
 	BreakStatementMemoryUsage      = NewConstantMemoryUsage(MemoryKindBreakStatement)
@@ -72,6 +78,8 @@ var (
 	SwapStatementMemoryUsage       = NewConstantMemoryUsage(MemoryKindSwapStatement)
 	SwitchStatementMemoryUsage     = NewConstantMemoryUsage(MemoryKindSwitchStatement)
 	WhileStatementMemoryUsage      = NewConstantMemoryUsage(MemoryKindWhileStatement)
+
+	// AST expressions memory usages
 
 	BooleanExpressionMemoryUsage     = NewConstantMemoryUsage(MemoryKindBooleanExpression)
 	NilExpressionMemoryUsage         = NewConstantMemoryUsage(MemoryKindNilExpression)
@@ -93,6 +101,8 @@ var (
 	ForceExpressionMemoryUsage       = NewConstantMemoryUsage(MemoryKindForceExpression)
 	PathExpressionMemoryUsage        = NewConstantMemoryUsage(MemoryKindPathExpression)
 
+	// AST type memory usages
+
 	ConstantSizedTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindConstantSizedType)
 	DictionaryTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindDictionaryType)
 	FunctionTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindFunctionType)
@@ -110,11 +120,15 @@ var (
 	ActivationMemoryUsage        = NewConstantMemoryUsage(MemoryKindActivation)
 	ActivationEntriesMemoryUsage = NewConstantMemoryUsage(MemoryKindActivationEntries)
 
+	// Runtime values memory usages
+	TypeValueMemoryUsage           = NewConstantMemoryUsage(MemoryKindTypeValue)
 	SimpleCompositeBaseMemoryUsage = NewConstantMemoryUsage(MemoryKindSimpleCompositeBase)
 	AtreeMapElementOverhead        = NewConstantMemoryUsage(MemoryKindAtreeMapElementOverhead)
 	AtreeArrayElementOverhead      = NewConstantMemoryUsage(MemoryKindAtreeArrayElementOverhead)
 	CompositeTypeInfoMemoryUsage   = NewConstantMemoryUsage(MemoryKindCompositeTypeInfo)
 	CompositeFieldMemoryUsage      = NewConstantMemoryUsage(MemoryKindCompositeField)
+
+	// Sema type memory usages
 
 	VariableSizedSemaTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindVariableSizedSemaType)
 	ConstantSizedSemaTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindConstantSizedSemaType)
@@ -123,6 +137,8 @@ var (
 	RestrictedSemaTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindRestrictedSemaType)
 	ReferenceSemaTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindReferenceSemaType)
 	CapabilitySemaTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindCapabilitySemaType)
+
+	// Storage related memory usages
 
 	OrderedMapMemoryUsage = NewConstantMemoryUsage(MemoryKindOrderedMap)
 	InvocationMemoryUsage = NewConstantMemoryUsage(MemoryKindInvocation)
@@ -355,13 +371,6 @@ func NewBytesMemoryUsage(length int) MemoryUsage {
 	return MemoryUsage{
 		Kind:   MemoryKindBytes,
 		Amount: uint64(length) + 1, // +1 to account for empty arrays
-	}
-}
-
-func NewTypeMemoryUsage(staticTypeAsString string) MemoryUsage {
-	return MemoryUsage{
-		Kind:   MemoryKindTypeValue,
-		Amount: uint64(len(staticTypeAsString)),
 	}
 }
 

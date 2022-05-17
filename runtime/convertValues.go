@@ -1022,7 +1022,7 @@ func importTypeValue(
 		return interpreter.EmptyTypeValue, err
 	}
 
-	return interpreter.NewUnmeteredTypeValue(typ), nil
+	return interpreter.NewTypeValue(inter, typ), nil
 }
 
 func importCapability(
