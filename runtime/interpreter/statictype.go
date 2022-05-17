@@ -222,7 +222,7 @@ func (t VariableSizedStaticType) String() string {
 }
 
 func (t VariableSizedStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
-	common.UseMemory(memoryGauge, common.VariableSizedStaticTypeMemoryUsage)
+	common.UseMemory(memoryGauge, common.VariableSizedStaticTypeStringMemoryUsage)
 
 	typeStr := t.Type.MeteredString(memoryGauge)
 	return fmt.Sprintf("[%s]", typeStr)
@@ -333,7 +333,7 @@ func (t DictionaryStaticType) String() string {
 }
 
 func (t DictionaryStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
-	common.UseMemory(memoryGauge, common.DictionaryStaticTypeMemoryUsage)
+	common.UseMemory(memoryGauge, common.DictionaryStaticTypeStringMemoryUsage)
 
 	keyStr := t.KeyType.MeteredString(memoryGauge)
 	valueStr := t.ValueType.MeteredString(memoryGauge)
@@ -379,7 +379,7 @@ func (t OptionalStaticType) String() string {
 }
 
 func (t OptionalStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
-	common.UseMemory(memoryGauge, common.OptionalStaticTypeMemoryUsage)
+	common.UseMemory(memoryGauge, common.OptionalStaticTypeStringMemoryUsage)
 
 	typeStr := t.Type.MeteredString(memoryGauge)
 	return fmt.Sprintf("%s?", typeStr)
@@ -518,9 +518,9 @@ func (t ReferenceStaticType) String() string {
 
 func (t ReferenceStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
 	if t.Authorized {
-		common.UseMemory(memoryGauge, common.AuthReferenceStaticTypeMemoryUsage)
+		common.UseMemory(memoryGauge, common.AuthReferenceStaticTypeStringMemoryUsage)
 	} else {
-		common.UseMemory(memoryGauge, common.ReferenceStaticTypeMemoryUsage)
+		common.UseMemory(memoryGauge, common.ReferenceStaticTypeStringMemoryUsage)
 	}
 
 	typeStr := t.BorrowedType.MeteredString(memoryGauge)
@@ -576,7 +576,7 @@ func (t CapabilityStaticType) String() string {
 }
 
 func (t CapabilityStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
-	common.UseMemory(memoryGauge, common.CapabilityStaticTypeMemoryUsage)
+	common.UseMemory(memoryGauge, common.CapabilityStaticTypeStringMemoryUsage)
 
 	if t.BorrowType != nil {
 		typeStr := t.BorrowType.MeteredString(memoryGauge)
