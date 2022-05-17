@@ -130,7 +130,7 @@ func parseCheckAndInterpretWithOptionsAndMemoryMetering(
 				uuid++
 				return uuid, nil
 			}),
-			interpreter.WithStorage(interpreter.NewInMemoryStorage(nil)),
+			interpreter.WithStorage(interpreter.NewInMemoryStorage(memoryGauge)),
 			interpreter.WithAtreeValueValidationEnabled(true),
 			interpreter.WithAtreeStorageValidationEnabled(true),
 			interpreter.WithOnRecordTraceHandler(
@@ -9842,4 +9842,45 @@ func TestInterpretCastingBoxing(t *testing.T) {
 			variable.GetValue(),
 		)
 	})
+}
+
+func TestInterpretNilCoalesceReference(t *testing.T) {
+
+	t.Parallel()
+
+	standardLibraryFunctions :=
+		stdlib.StandardLibraryFunctions{
+			stdlib.PanicFunction,
+		}
+
+	valueDeclarations := standardLibraryFunctions.ToSemaValueDeclarations()
+	values := standardLibraryFunctions.ToInterpreterValueDeclarations()
+
+	inter, err := parseCheckAndInterpretWithOptions(t,
+		`
+          let xs = {"a": 2}
+          let ref = &xs["a"] as &Int? ?? panic("no a")
+        `,
+		ParseCheckAndInterpretOptions{
+			CheckerOptions: []sema.Option{
+				sema.WithPredeclaredValues(valueDeclarations),
+			},
+			Options: []interpreter.Option{
+				interpreter.WithPredeclaredValues(values),
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	variable, ok := inter.Globals.Get("ref")
+	require.True(t, ok)
+
+	require.Equal(
+		t,
+		&interpreter.EphemeralReferenceValue{
+			Value:        interpreter.NewUnmeteredIntValueFromInt64(2),
+			BorrowedType: sema.IntType,
+		},
+		variable.GetValue(),
+	)
 }

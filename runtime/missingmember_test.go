@@ -4169,3 +4169,825 @@ transaction(recipient: Address, amount: UFix64) {
 	)
 	require.NoError(t, err)
 }
+
+func TestRuntimeMissingMemberExampleMarketplace(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := newTestInterpreterRuntime()
+
+	exampleTokenAddress, err := common.HexToAddress("0x1")
+	require.NoError(t, err)
+
+	exampleNFTAddress, err := common.HexToAddress("0x2")
+	require.NoError(t, err)
+
+	exampleMarketplaceAddress, err := common.HexToAddress("0x3")
+	require.NoError(t, err)
+
+	const exampleTokenContract = `
+	// ExampleToken.cdc
+//
+// The ExampleToken contract is a sample implementation of a fungible token on Flow.
+//
+// Fungible tokens behave like everyday currencies -- they can be minted, transferred or
+// traded for digital goods.
+//
+// Follow the fungible tokens tutorial to learn more: https://docs.onflow.org/docs/fungible-tokens
+//
+// This is a basic implementation of a Fungible Token and is NOT meant to be used in production
+// See the Flow Fungible Token standard for real examples: https://github.com/onflow/flow-ft
+
+pub contract ExampleToken {
+
+    // Total supply of all tokens in existence.
+    pub var totalSupply: UFix64
+
+    // Provider
+    //
+    // Interface that enforces the requirements for withdrawing
+    // tokens from the implementing type.
+    //
+    // We don't enforce requirements on self.balance here because
+    // it leaves open the possibility of creating custom providers
+    // that don't necessarily need their own balance.
+    //
+    pub resource interface Provider {
+
+        // withdraw
+        //
+        // Function that subtracts tokens from the owner's Vault
+        // and returns a Vault resource (@Vault) with the removed tokens.
+        //
+        // The function's access level is public, but this isn't a problem
+        // because even the public functions are not fully public at first.
+        // anyone in the network can call them, but only if the owner grants
+        // them access by publishing a resource that exposes the withdraw
+        // function.
+        //
+        pub fun withdraw(amount: UFix64): @Vault {
+            post {
+                // result refers to the return value of the function
+                result.balance == UFix64(amount):
+                    "Withdrawal amount must be the same as the balance of the withdrawn Vault"
+            }
+        }
+    }
+
+    // Receiver
+    //
+    // Interface that enforces the requirements for depositing
+    // tokens into the implementing type.
+    //
+    // We don't include a condition that checks the balance because
+    // we want to give users the ability to make custom Receivers that
+    // can do custom things with the tokens, like split them up and
+    // send them to different places.
+    //
+	pub resource interface Receiver {
+        // deposit
+        //
+        // Function that can be called to deposit tokens
+        // into the implementing resource type
+        //
+        pub fun deposit(from: @Vault) {
+            pre {
+                from.balance > 0.0:
+                    "Deposit balance must be positive"
+            }
+        }
+    }
+
+    // Balance
+    //
+    // Interface that specifies a public balance field for the vault
+    //
+    pub resource interface Balance {
+        pub var balance: UFix64
+    }
+
+    // Vault
+    //
+    // Each user stores an instance of only the Vault in their storage
+    // The functions in the Vault and governed by the pre and post conditions
+    // in the interfaces when they are called.
+    // The checks happen at runtime whenever a function is called.
+    //
+    // Resources can only be created in the context of the contract that they
+    // are defined in, so there is no way for a malicious user to create Vaults
+    // out of thin air. A special Minter resource needs to be defined to mint
+    // new tokens.
+    //
+    pub resource Vault: Provider, Receiver, Balance {
+
+		// keeps track of the total balance of the account's tokens
+        pub var balance: UFix64
+
+        // initialize the balance at resource creation time
+        init(balance: UFix64) {
+            self.balance = balance
+        }
+
+        // withdraw
+        //
+        // Function that takes an integer amount as an argument
+        // and withdraws that amount from the Vault.
+        //
+        // It creates a new temporary Vault that is used to hold
+        // the money that is being transferred. It returns the newly
+        // created Vault to the context that called so it can be deposited
+        // elsewhere.
+        //
+        pub fun withdraw(amount: UFix64): @Vault {
+            self.balance = self.balance - amount
+            return <-create Vault(balance: amount)
+        }
+
+        // deposit
+        //
+        // Function that takes a Vault object as an argument and adds
+        // its balance to the balance of the owners Vault.
+        //
+        // It is allowed to destroy the sent Vault because the Vault
+        // was a temporary holder of the tokens. The Vault's balance has
+        // been consumed and therefore can be destroyed.
+        pub fun deposit(from: @Vault) {
+            self.balance = self.balance + from.balance
+            destroy from
+        }
+    }
+
+    // createEmptyVault
+    //
+    // Function that creates a new Vault with a balance of zero
+    // and returns it to the calling context. A user must call this function
+    // and store the returned Vault in their storage in order to allow their
+    // account to be able to receive deposits of this token type.
+    //
+    pub fun createEmptyVault(): @Vault {
+        return <-create Vault(balance: 0.0)
+    }
+
+	// VaultMinter
+    //
+    // Resource object that an admin can control to mint new tokens
+    pub resource VaultMinter {
+
+		// Function that mints new tokens and deposits into an account's vault
+		// using their Receiver reference.
+        pub fun mintTokens(amount: UFix64, recipient: Capability<&AnyResource{Receiver}>) {
+            let recipientRef = recipient.borrow()
+                ?? panic("Could not borrow a receiver reference to the vault")
+
+            ExampleToken.totalSupply = ExampleToken.totalSupply + UFix64(amount)
+            recipientRef.deposit(from: <-create Vault(balance: amount))
+        }
+    }
+
+    // The init function for the contract. All fields in the contract must
+    // be initialized at deployment. This is just an example of what
+    // an implementation could do in the init function. The numbers are arbitrary.
+    init() {
+        self.totalSupply = 30.0
+
+        let vault <- create Vault(balance: self.totalSupply)
+        self.account.save(<-vault, to: /storage/CadenceFungibleTokenTutorialVault)
+
+        // Create a new MintAndBurn resource and store it in account storage
+        self.account.save(<-create VaultMinter(), to: /storage/CadenceFungibleTokenTutorialMinter)
+
+        // Create a private capability link for the Minter
+        // Capabilities can be used to create temporary references to an object
+        // so that callers can use the reference to access fields and functions
+        // of the objet.
+        //
+        // The capability is stored in the /private/ domain, which is only
+        // accesible by the owner of the account
+        self.account.link<&VaultMinter>(/private/Minter, target: /storage/CadenceFungibleTokenTutorialMinter)
+    }
+}
+	`
+
+	const exampleNFTContract = `
+	// ExampleNFT.cdc
+//
+// This is a complete version of the ExampleNFT contract
+// that includes withdraw and deposit functionality, as well as a
+// collection resource that can be used to bundle NFTs together.
+//
+// It also includes a definition for the Minter resource,
+// which can be used by admins to mint new NFTs.
+//
+// Learn more about non-fungible tokens in this tutorial: https://docs.onflow.org/docs/non-fungible-tokens
+
+pub contract ExampleNFT {
+
+    // Declare Path constants so paths do not have to be hardcoded
+    // in transactions and scripts
+
+    pub let CollectionStoragePath: StoragePath
+    pub let CollectionPublicPath: PublicPath
+    pub let MinterStoragePath: StoragePath
+
+    // Declare the NFT resource type
+    pub resource NFT {
+        // The unique ID that differentiates each NFT
+        pub let id: UInt64
+
+        // Initialize both fields in the init function
+        init(initID: UInt64) {
+            self.id = initID
+        }
+    }
+
+    // We define this interface purely as a way to allow users
+    // to create public, restricted references to their NFT Collection.
+    // They would use this to publicly expose only the deposit, getIDs,
+    // and idExists fields in their Collection
+    pub resource interface NFTReceiver {
+
+        pub fun deposit(token: @NFT)
+
+        pub fun getIDs(): [UInt64]
+
+        pub fun idExists(id: UInt64): Bool
+    }
+
+    // The definition of the Collection resource that
+    // holds the NFTs that a user owns
+    pub resource Collection: NFTReceiver {
+        // dictionary of NFT conforming tokens
+        pub var ownedNFTs: @{UInt64: NFT}
+
+        // Initialize the NFTs field to an empty collection
+        init () {
+            self.ownedNFTs <- {}
+        }
+
+        // withdraw 
+        //
+        // Function that removes an NFT from the collection 
+        // and moves it to the calling context
+        pub fun withdraw(withdrawID: UInt64): @NFT {
+            // If the NFT isn't found, the transaction panics and reverts
+            let token <- self.ownedNFTs.remove(key: withdrawID)!
+
+            return <-token
+        }
+
+        pub fun getReference(id: UInt64): &NFT {
+            return (&self.ownedNFTs[id] as &NFT?)!
+        }
+
+        // deposit 
+        //
+        // Function that takes a NFT as an argument and 
+        // adds it to the collections dictionary
+        pub fun deposit(token: @NFT) {
+            // add the new token to the dictionary with a force assignment
+            // if there is already a value at that key, it will fail and revert
+            self.ownedNFTs[token.id] <-! token
+        }
+
+        // idExists checks to see if a NFT 
+        // with the given ID exists in the collection
+        pub fun idExists(id: UInt64): Bool {
+            return self.ownedNFTs[id] != nil
+        }
+
+        // getIDs returns an array of the IDs that are in the collection
+        pub fun getIDs(): [UInt64] {
+            return self.ownedNFTs.keys
+        }
+
+        destroy() {
+            destroy self.ownedNFTs
+        }
+    }
+
+    // creates a new empty Collection resource and returns it 
+    pub fun createEmptyCollection(): @Collection {
+        return <- create Collection()
+    }
+
+    // NFTMinter
+    //
+    // Resource that would be owned by an admin or by a smart contract 
+    // that allows them to mint new NFTs when needed
+    pub resource NFTMinter {
+
+        // the ID that is used to mint NFTs
+        // it is only incremented so that NFT ids remain
+        // unique. It also keeps track of the total number of NFTs
+        // in existence
+        pub var idCount: UInt64
+
+        init() {
+            self.idCount = 1
+        }
+
+        // mintNFT 
+        //
+        // Function that mints a new NFT with a new ID
+        // and returns it to the caller
+        pub fun mintNFT(): @NFT {
+
+            // create a new NFT
+            var newNFT <- create NFT(initID: self.idCount)
+
+            // change the id so that each ID is unique
+            self.idCount = self.idCount + 1
+            
+            return <-newNFT
+        }
+    }
+
+	init() {
+        self.CollectionStoragePath = /storage/nftTutorialCollection
+        self.CollectionPublicPath = /public/nftTutorialCollection
+        self.MinterStoragePath = /storage/nftTutorialMinter
+
+		// store an empty NFT Collection in account storage
+        self.account.save(<-self.createEmptyCollection(), to: self.CollectionStoragePath)
+
+        // publish a reference to the Collection in storage
+        self.account.link<&{NFTReceiver}>(self.CollectionPublicPath, target: self.CollectionStoragePath)
+
+        // store a minter resource in account storage
+        self.account.save(<-create NFTMinter(), to: self.MinterStoragePath)
+	}
+}
+	
+	`
+
+	const exampleMarketplaceContract = `
+	import ExampleToken from 0x01
+import ExampleNFT from 0x02
+
+// ExampleMarketplace.cdc
+//
+// The ExampleMarketplace contract is a very basic sample implementation of an NFT ExampleMarketplace on Flow.
+//
+// This contract allows users to put their NFTs up for sale. Other users
+// can purchase these NFTs with fungible tokens.
+//
+// Learn more about marketplaces in this tutorial: https://docs.onflow.org/cadence/tutorial/06-marketplace-compose/
+//
+// This contract is a learning tool and is not meant to be used in production.
+// See the NFTStorefront contract for a generic marketplace smart contract that 
+// is used by many different projects on the Flow blockchain:
+//
+// https://github.com/onflow/nft-storefront
+
+pub contract ExampleMarketplace {
+
+    // Event that is emitted when a new NFT is put up for sale
+    pub event ForSale(id: UInt64, price: UFix64, owner: Address?)
+
+    // Event that is emitted when the price of an NFT changes
+    pub event PriceChanged(id: UInt64, newPrice: UFix64, owner: Address?)
+
+    // Event that is emitted when a token is purchased
+    pub event TokenPurchased(id: UInt64, price: UFix64, seller: Address?, buyer: Address?)
+
+    // Event that is emitted when a seller withdraws their NFT from the sale
+    pub event SaleCanceled(id: UInt64, seller: Address?)
+
+    // Interface that users will publish for their Sale collection
+    // that only exposes the methods that are supposed to be public
+    //
+    pub resource interface SalePublic {
+        pub fun purchase(tokenID: UInt64, recipient: Capability<&AnyResource{ExampleNFT.NFTReceiver}>, buyTokens: @ExampleToken.Vault)
+        pub fun idPrice(tokenID: UInt64): UFix64?
+        pub fun getIDs(): [UInt64]
+    }
+
+    // SaleCollection
+    //
+    // NFT Collection object that allows a user to put their NFT up for sale
+    // where others can send fungible tokens to purchase it
+    //
+    pub resource SaleCollection: SalePublic {
+
+        /// A capability for the owner's collection
+        access(self) var ownerCollection: Capability<&ExampleNFT.Collection>
+
+        // Dictionary of the prices for each NFT by ID
+        access(self) var prices: {UInt64: UFix64}
+
+        // The fungible token vault of the owner of this sale.
+        // When someone buys a token, this resource can deposit
+        // tokens into their account.
+        access(account) let ownerVault: Capability<&AnyResource{ExampleToken.Receiver}>
+
+        init (ownerCollection: Capability<&ExampleNFT.Collection>, 
+              ownerVault: Capability<&AnyResource{ExampleToken.Receiver}>) {
+
+            pre {
+                // Check that the owner's collection capability is correct
+                ownerCollection.check(): 
+                    "Owner's NFT Collection Capability is invalid!"
+
+                // Check that the fungible token vault capability is correct
+                ownerVault.check(): 
+                    "Owner's Receiver Capability is invalid!"
+            }
+            self.ownerCollection = ownerCollection
+            self.ownerVault = ownerVault
+            self.prices = {}
+        }
+
+        // cancelSale gives the owner the opportunity to cancel a sale in the collection
+        pub fun cancelSale(tokenID: UInt64) {
+            // remove the price
+            self.prices.remove(key: tokenID)
+            self.prices[tokenID] = nil
+
+            // Nothing needs to be done with the actual token because it is already in the owner's collection
+        }
+
+        // listForSale lists an NFT for sale in this collection
+        pub fun listForSale(tokenID: UInt64, price: UFix64) {
+            pre {
+                self.ownerCollection.borrow()!.idExists(id: tokenID):
+                    "NFT to be listed does not exist in the owner's collection"
+            }
+            // store the price in the price array
+            self.prices[tokenID] = price
+
+            emit ForSale(id: tokenID, price: price, owner: self.owner?.address)
+        }
+
+        // changePrice changes the price of a token that is currently for sale
+        pub fun changePrice(tokenID: UInt64, newPrice: UFix64) {
+            self.prices[tokenID] = newPrice
+
+            emit PriceChanged(id: tokenID, newPrice: newPrice, owner: self.owner?.address)
+        }
+
+        // purchase lets a user send tokens to purchase an NFT that is for sale
+        pub fun purchase(tokenID: UInt64, recipient: Capability<&AnyResource{ExampleNFT.NFTReceiver}>, buyTokens: @ExampleToken.Vault) {
+            pre {
+                self.prices[tokenID] != nil:
+                    "No token matching this ID for sale!"
+                buyTokens.balance >= (self.prices[tokenID] ?? 0.0):
+                    "Not enough tokens to by the NFT!"
+                recipient.borrow != nil:
+                    "Invalid NFT receiver capability!"
+            }
+
+            // get the value out of the optional
+            let price = self.prices[tokenID]!
+
+            self.prices[tokenID] = nil
+
+            let vaultRef = self.ownerVault.borrow()
+                ?? panic("Could not borrow reference to owner token vault")
+
+            // deposit the purchasing tokens into the owners vault
+            vaultRef.deposit(from: <-buyTokens)
+
+            // borrow a reference to the object that the receiver capability links to
+            // We can force-cast the result here because it has already been checked in the pre-conditions
+            let receiverReference = recipient.borrow()!
+
+            let nftRef = self.ownerCollection.borrow()!.getReference(id: tokenID)
+            log("NFT Reference before transfer:")
+            log(nftRef)
+
+            // deposit the NFT into the buyers collection
+            receiverReference.deposit(token: <- self.ownerCollection.borrow()!.withdraw(withdrawID: tokenID))
+
+            log("NFT Reference after transfer:")
+            log(nftRef)
+            log(nftRef.id)
+
+            emit TokenPurchased(id: tokenID, price: price, seller: self.owner?.address, buyer: receiverReference.owner?.address)
+        }
+
+        // idPrice returns the price of a specific token in the sale
+        pub fun idPrice(tokenID: UInt64): UFix64? {
+            return self.prices[tokenID]
+        }
+
+        // getIDs returns an array of token IDs that are for sale
+        pub fun getIDs(): [UInt64] {
+            return self.prices.keys
+        }
+    }
+
+    // createCollection returns a new collection resource to the caller
+    pub fun createSaleCollection(ownerCollection: Capability<&ExampleNFT.Collection>, 
+                                 ownerVault: Capability<&AnyResource{ExampleToken.Receiver}>): @SaleCollection {
+        return <- create SaleCollection(ownerCollection: ownerCollection, ownerVault: ownerVault)
+    }
+}
+
+	`
+
+	accountCodes := map[common.LocationID][]byte{}
+	var events []cadence.Event
+	var logs []string
+	var signerAddress common.Address
+
+	storage := newTestLedger(nil, nil)
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(location Location) (bytes []byte, err error) {
+			return accountCodes[location.ID()], nil
+		},
+		storage: storage,
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{signerAddress}, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			return accountCodes[location.ID()], nil
+		},
+		updateAccountContractCode: func(address Address, name string, code []byte) error {
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			accountCodes[location.ID()] = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		log: func(message string) {
+			logs = append(logs, message)
+		},
+	}
+
+	runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+		return json.Decode(runtimeInterface, b)
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	// Deploy contracts
+
+	for _, contract := range []struct {
+		name   string
+		code   string
+		signer Address
+	}{
+		{"ExampleToken", exampleTokenContract, exampleTokenAddress},
+		{"ExampleNFT", exampleNFTContract, exampleNFTAddress},
+		{"ExampleMarketplace", exampleMarketplaceContract, exampleMarketplaceAddress},
+	} {
+
+		signerAddress = contract.signer
+
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: utils.DeploymentTransaction(
+					contract.name,
+					[]byte(contract.code),
+				),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+	}
+
+	// Run transactions
+
+	const setupAccount1Tx = `
+	// SetupAccount1Transaction.cdc
+
+import ExampleToken from 0x01
+import ExampleNFT from 0x02
+
+// This transaction sets up account 0x01 for the marketplace tutorial
+// by publishing a Vault reference and creating an empty NFT Collection.
+transaction {
+  prepare(acct: AuthAccount) {
+    // Create a public Receiver capability to the Vault
+    acct.link<&ExampleToken.Vault{ExampleToken.Receiver, ExampleToken.Balance}>
+             (/public/CadenceFungibleTokenTutorialReceiver, target: /storage/CadenceFungibleTokenTutorialVault)
+
+    log("Created Vault references")
+
+    // store an empty NFT Collection in account storage
+    acct.save<@ExampleNFT.Collection>(<-ExampleNFT.createEmptyCollection(), to: /storage/nftTutorialCollection)
+
+    // publish a capability to the Collection in storage
+    acct.link<&{ExampleNFT.NFTReceiver}>(ExampleNFT.CollectionPublicPath, target: ExampleNFT.CollectionStoragePath)
+
+    log("Created a new empty collection and published a reference")
+  }
+}
+
+	`
+	const setupAccount2Tx = `
+	// SetupAccount2Transaction.cdc
+
+import ExampleToken from 0x01
+import ExampleNFT from 0x02
+
+// This transaction adds an empty Vault to account 0x02
+// and mints an NFT with id=1 that is deposited into
+// the NFT collection on account 0x01.
+transaction {
+
+  // Private reference to this account's minter resource
+  let minterRef: &ExampleNFT.NFTMinter
+
+  prepare(acct: AuthAccount) {
+    // create a new vault instance with an initial balance of 30
+    let vaultA <- ExampleToken.createEmptyVault()
+
+    // Store the vault in the account storage
+    acct.save<@ExampleToken.Vault>(<-vaultA, to: /storage/CadenceFungibleTokenTutorialVault)
+
+    // Create a public Receiver capability to the Vault
+    let ReceiverRef = acct.link<&ExampleToken.Vault{ExampleToken.Receiver, ExampleToken.Balance}>(/public/CadenceFungibleTokenTutorialReceiver, target: /storage/CadenceFungibleTokenTutorialVault)
+
+    log("Created a Vault and published a reference")
+
+    // Borrow a reference for the NFTMinter in storage
+    self.minterRef = acct.borrow<&ExampleNFT.NFTMinter>(from: ExampleNFT.MinterStoragePath)
+        ?? panic("Could not borrow owner's NFT minter reference")
+  }
+  execute {
+    // Get the recipient's public account object
+    let recipient = getAccount(0x01)
+
+    // Get the Collection reference for the receiver
+    // getting the public capability and borrowing a reference from it
+    let receiverRef = recipient.getCapability(ExampleNFT.CollectionPublicPath)
+                               .borrow<&{ExampleNFT.NFTReceiver}>()
+                               ?? panic("Could not borrow nft receiver reference")
+
+    // Mint an NFT and deposit it into account 0x01's collection
+    receiverRef.deposit(token: <-self.minterRef.mintNFT())
+
+    log("New NFT minted for account 1")
+  }
+}
+
+	`
+	const mintTokensTx = `
+	// SetupAccount1TransactionMinting.cdc
+
+import ExampleToken from 0x01
+import ExampleNFT from 0x02
+
+// This transaction mints tokens for both accounts using
+// the minter stored on account 0x01.
+transaction {
+
+  // Public Vault Receiver References for both accounts
+  let acct1Capability: Capability<&AnyResource{ExampleToken.Receiver}>
+  let acct2Capability: Capability<&AnyResource{ExampleToken.Receiver}>
+
+  // Private minter references for this account to mint tokens
+  let minterRef: &ExampleToken.VaultMinter
+
+  prepare(acct: AuthAccount) {
+    // Get the public object for account 0x02
+    let account2 = getAccount(0x02)
+
+    // Retrieve public Vault Receiver references for both accounts
+    self.acct1Capability = acct.getCapability<&AnyResource{ExampleToken.Receiver}>(/public/CadenceFungibleTokenTutorialReceiver)
+
+    self.acct2Capability = account2.getCapability<&AnyResource{ExampleToken.Receiver}>(/public/CadenceFungibleTokenTutorialReceiver)
+
+    // Get the stored Minter reference for account 0x01
+    self.minterRef = acct.borrow<&ExampleToken.VaultMinter>(from: /storage/CadenceFungibleTokenTutorialMinter)
+        ?? panic("Could not borrow owner's vault minter reference")
+  }
+
+  execute {
+    // Mint tokens for both accounts
+    self.minterRef.mintTokens(amount: 20.0, recipient: self.acct2Capability)
+    self.minterRef.mintTokens(amount: 10.0, recipient: self.acct1Capability)
+
+    log("Minted new fungible tokens for account 1 and 2")
+  }
+}
+
+	`
+	const createSaleTx = `
+	// CreateSale.cdc
+
+import ExampleToken from 0x01
+import ExampleNFT from 0x02
+import ExampleMarketplace from 0x03
+
+// This transaction creates a new Sale Collection object,
+// lists an NFT for sale, puts it in account storage,
+// and creates a public capability to the sale so that others can buy the token.
+transaction {
+
+    prepare(acct: AuthAccount) {
+
+        // Borrow a reference to the stored Vault
+        let receiver = acct.getCapability<&{ExampleToken.Receiver}>(/public/CadenceFungibleTokenTutorialReceiver)
+
+        // borrow a reference to the nftTutorialCollection in storage
+        let collectionCapability = acct.link<&ExampleNFT.Collection>(/private/nftTutorialCollection, target: ExampleNFT.CollectionStoragePath)
+          ?? panic("Unable to create private link to NFT Collection")
+
+        // Create a new Sale object,
+        // initializing it with the reference to the owner's vault
+        let sale <- ExampleMarketplace.createSaleCollection(ownerCollection: collectionCapability, ownerVault: receiver)
+
+        // List the token for sale by moving it into the sale object
+        sale.listForSale(tokenID: 1, price: 10.0)
+
+        // Store the sale object in the account storage
+        acct.save(<-sale, to: /storage/NFTSale)
+
+        // Create a public capability to the sale so that others can call its methods
+        acct.link<&ExampleMarketplace.SaleCollection{ExampleMarketplace.SalePublic}>(/public/NFTSale, target: /storage/NFTSale)
+
+        log("Sale Created for account 1. Selling NFT 1 for 10 tokens")
+    }
+}
+
+
+	`
+	const purchaseTx = `
+	// PurchaseSale.cdc
+
+import ExampleToken from 0x01
+import ExampleNFT from 0x02
+import ExampleMarketplace from 0x03
+
+// This transaction uses the signers Vault tokens to purchase an NFT
+// from the Sale collection of account 0x01.
+transaction {
+
+    // Capability to the buyer's NFT collection where they
+    // will store the bought NFT
+    let collectionCapability: Capability<&AnyResource{ExampleNFT.NFTReceiver}>
+
+    // Vault that will hold the tokens that will be used to
+    // but the NFT
+    let temporaryVault: @ExampleToken.Vault
+
+    prepare(acct: AuthAccount) {
+
+        // get the references to the buyer's fungible token Vault and NFT Collection Receiver
+        self.collectionCapability = acct.getCapability<&AnyResource{ExampleNFT.NFTReceiver}>(ExampleNFT.CollectionPublicPath)
+
+        let vaultRef = acct.borrow<&ExampleToken.Vault>(from: /storage/CadenceFungibleTokenTutorialVault)
+            ?? panic("Could not borrow owner's vault reference")
+
+        // withdraw tokens from the buyers Vault
+        self.temporaryVault <- vaultRef.withdraw(amount: 10.0)
+    }
+
+    execute {
+        // get the read-only account storage of the seller
+        let seller = getAccount(0x01)
+
+        // get the reference to the seller's sale
+        let saleRef = seller.getCapability(/public/NFTSale)
+                            .borrow<&AnyResource{ExampleMarketplace.SalePublic}>()
+                            ?? panic("Could not borrow seller's sale reference")
+
+        // purchase the NFT the the seller is selling, giving them the capability
+        // to your NFT collection and giving them the tokens to buy it
+        saleRef.purchase(tokenID: 1, recipient: self.collectionCapability, buyTokens: <-self.temporaryVault)
+
+        log("Token 1 has been bought by account 2!")
+    }
+}
+	`
+
+	for _, tx := range []struct {
+		code   string
+		signer Address
+	}{
+		{setupAccount1Tx, exampleTokenAddress},
+		{setupAccount2Tx, exampleNFTAddress},
+		{mintTokensTx, exampleTokenAddress},
+		{createSaleTx, exampleTokenAddress},
+		{purchaseTx, exampleTokenAddress},
+	} {
+		signerAddress = tx.signer
+
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: []byte(tx.code),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+	}
+}

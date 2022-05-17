@@ -30,8 +30,10 @@ import (
 	"github.com/onflow/cadence/runtime/parser2/lexer"
 )
 
+const exprBindingPowerGap = 10
+
 const (
-	exprLeftBindingPowerTernary = 10 * (iota + 2)
+	exprLeftBindingPowerTernary = exprBindingPowerGap * (iota + 2)
 	exprLeftBindingPowerLogicalOr
 	exprLeftBindingPowerLogicalAnd
 	exprLeftBindingPowerComparison
@@ -1137,8 +1139,7 @@ func defineReferenceExpression() {
 		lexer.TokenAmpersand,
 		func(p *parser, token lexer.Token) ast.Expression {
 			p.skipSpaceAndComments(true)
-			// TODO: maybe require above unary
-			expression := parseExpression(p, lowestBindingPower)
+			expression := parseExpression(p, exprLeftBindingPowerCasting-exprBindingPowerGap)
 
 			p.skipSpaceAndComments(true)
 

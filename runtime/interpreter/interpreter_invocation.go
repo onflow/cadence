@@ -98,13 +98,14 @@ func (interpreter *Interpreter) invokeFunctionValue(
 
 	getLocationRange := locationRangeGetter(interpreter, interpreter.Location, invocationPosition)
 
-	invocation := Invocation{
-		Arguments:          transferredArguments,
-		ArgumentTypes:      argumentTypes,
-		TypeParameterTypes: typeParameterTypes,
-		GetLocationRange:   getLocationRange,
-		Interpreter:        interpreter,
-	}
+	invocation := NewInvocation(
+		interpreter,
+		nil,
+		transferredArguments,
+		argumentTypes,
+		typeParameterTypes,
+		getLocationRange,
+	)
 
 	return function.invoke(invocation)
 }

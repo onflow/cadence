@@ -1,6 +1,14 @@
+# Temporarily disabled, due to it not being useful
+# The reason it wasn't being useful is that flow-go master and cadence master are not usually connected.
+# both repositories use feature branches for deploy versions
+# 
+# With modifications this could still be useful in the future
+
+
 # Open a PR in flow-go when a PR in cadence is merged
 # The PR in flow-go is based on the last opened `auto-cadence-upgrade/*` if it exists.
 # Otherwise, it's based on the feature/secure-cadence branch.
+
 name: Sync flow-go
 
 # Only run on pull requests merged to master

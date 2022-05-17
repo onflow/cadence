@@ -67,13 +67,15 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 		optionalType, isOptional := valueType.(*OptionalType)
 
 		if !isOptional || optionalType.Equal(declarationType) {
-			checker.report(
-				&TypeMismatchError{
-					ExpectedType: &OptionalType{},
-					ActualType:   valueType,
-					Range:        ast.NewRangeFromPositioned(checker.memoryGauge, declaration.Value),
-				},
-			)
+			if !valueType.IsInvalidType() {
+				checker.report(
+					&TypeMismatchError{
+						ExpectedType: &OptionalType{},
+						ActualType:   valueType,
+						Range:        ast.NewRangeFromPositioned(checker.memoryGauge, declaration.Value),
+					},
+				)
+			}
 		} else if declarationType == nil {
 			declarationType = optionalType.Type
 		}

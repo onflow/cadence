@@ -37,14 +37,20 @@ func NewTransactionLocation(gauge MemoryGauge, script []byte) TransactionLocatio
 }
 
 func (l TransactionLocation) ID() LocationID {
-	return NewLocationID(
+	return l.MeteredID(nil)
+}
+
+func (l TransactionLocation) MeteredID(memoryGauge MemoryGauge) LocationID {
+	return NewMeteredLocationID(
+		memoryGauge,
 		TransactionLocationPrefix,
 		l.String(),
 	)
 }
 
-func (l TransactionLocation) TypeID(qualifiedIdentifier string) TypeID {
-	return NewTypeID(
+func (l TransactionLocation) TypeID(memoryGauge MemoryGauge, qualifiedIdentifier string) TypeID {
+	return NewMeteredTypeID(
+		memoryGauge,
 		TransactionLocationPrefix,
 		l.String(),
 		qualifiedIdentifier,

@@ -490,14 +490,6 @@ func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 			Weight:       1,
 			TypeInstance: cadence.Character("a"),
 		},
-		//{
-		//	TypeName:   "Type",
-		//	MemoryKind: common.MemoryKindTypeValue,
-		//	Weight:     3,
-		//	TypeInstance: cadence.TypeValue{
-		//		StaticType: cadence.AnyType{},
-		//	},
-		//},
 		{
 			TypeName:     "Bool",
 			MemoryKind:   common.MemoryKindBool,
@@ -524,7 +516,7 @@ func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 		{
 			TypeName:   "Path",
 			MemoryKind: common.MemoryKindRawString,
-			Weight:     3 + 1 + 68, // 68 is for tokens
+			Weight:     3 + 1 + 68 + 10, // 68 is for tokens
 			TypeInstance: cadence.Path{
 				Domain:     "storage",
 				Identifier: "id3",
@@ -567,7 +559,7 @@ func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 		{
 			TypeName:   "Capability",
 			MemoryKind: common.MemoryKindRawString,
-			Weight:     13 + 1 + 74, // 74 is for tokens
+			Weight:     13 + 1 + 74 + 19, // 74 is for tokens
 			TypeInstance: cadence.Capability{
 				Path: cadence.Path{
 					Domain:     "public",
@@ -580,22 +572,6 @@ func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 				},
 			},
 		},
-		//{
-		//	TypeName:   "Capability",
-		//	MemoryKind: common.MemoryKindTypeValue,
-		//	Weight:     3,
-		//	TypeInstance: cadence.Capability{
-		//		Path: cadence.Path{
-		//			Domain:     "public",
-		//			Identifier: "foobarrington",
-		//		},
-		//		Address: cadence.Address{},
-		//		BorrowType: cadence.ReferenceType{
-		//			Authorized: true,
-		//			Type:       cadence.AnyType{},
-		//		},
-		//	},
-		//},
 
 		// Verify Optional and its composing type
 		{
@@ -682,7 +658,7 @@ func TestScriptDecodedLocationMetering(t *testing.T) {
 		},
 		{
 			MemoryKind: common.MemoryKindRawString,
-			Weight:     3 + 1 + 106, // 106 is for tokens
+			Weight:     3 + 1 + 106 + 56, // 106 is for tokens, 56 is for location ID gen
 			Name:       "string",
 			Location:   common.StringLocation("abc"),
 		},
