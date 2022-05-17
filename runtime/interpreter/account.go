@@ -43,12 +43,16 @@ func NewAuthAccountValue(
 	accountAvailableBalanceGet func() UFix64Value,
 	storageUsedGet func(interpreter *Interpreter) UInt64Value,
 	storageCapacityGet func(interpreter *Interpreter) UInt64Value,
+	addPublicKeyFunction FunctionValue,
+	removePublicKeyFunction FunctionValue,
 	contractsConstructor func() Value,
 	keysConstructor func() Value,
 ) Value {
 
 	fields := map[string]Value{
-		sema.AuthAccountAddressField: address,
+		sema.AuthAccountAddressField:         address,
+		sema.AuthAccountAddPublicKeyField:    addPublicKeyFunction,
+		sema.AuthAccountRemovePublicKeyField: removePublicKeyFunction,
 		sema.AuthAccountGetCapabilityField: accountGetCapabilityFunction(
 			inter,
 			address,
@@ -114,7 +118,7 @@ func NewAuthAccountValue(
 	var str string
 	stringer := func(memoryGauge common.MemoryGauge, _ SeenReferences) string {
 		if str == "" {
-			common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(13))
+			common.UseMemory(memoryGauge, common.AuthAccountValueStringMemoryUsage)
 			addressStr := address.MeteredString(memoryGauge, SeenReferences{})
 			str = fmt.Sprintf("AuthAccount(%s)", addressStr)
 		}
@@ -201,7 +205,7 @@ func NewPublicAccountValue(
 	var str string
 	stringer := func(memoryGauge common.MemoryGauge, _ SeenReferences) string {
 		if str == "" {
-			common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(15))
+			common.UseMemory(memoryGauge, common.PublicAccountValueStringMemoryUsage)
 			addressStr := address.MeteredString(memoryGauge, SeenReferences{})
 			str = fmt.Sprintf("PublicAccount(%s)", addressStr)
 		}

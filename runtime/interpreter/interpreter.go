@@ -678,7 +678,9 @@ func WithDebugger(debugger *Debugger) Option {
 // Create a base-activation so that it can be reused across all interpreters.
 //
 var baseActivation = func() *VariableActivation {
-	activation := NewVariableActivation(nil)
+	// No need to meter since this is only created once
+	activation := NewVariableActivation(nil, nil)
+
 	defineBaseFunctions(activation)
 	return activation
 }()
@@ -688,11 +690,12 @@ func NewInterpreter(program *Program, location common.Location, options ...Optio
 	interpreter := &Interpreter{
 		Program:                    program,
 		Location:                   location,
-		activations:                &VariableActivations{},
 		Globals:                    map[string]*Variable{},
 		effectivePredeclaredValues: map[string]ValueDeclaration{},
 		resourceVariables:          map[ResourceKindedValue]*Variable{},
 	}
+
+	interpreter.activations = NewVariableActivations(interpreter)
 
 	// Start a new activation/scope for the current program.
 	// Use the base activation as the parent.
@@ -859,7 +862,7 @@ func (interpreter *Interpreter) SetAllInterpreters(allInterpreters map[common.Lo
 
 	// Register self
 	if interpreter.Location != nil {
-		locationID := interpreter.Location.ID()
+		locationID := interpreter.Location.MeteredID(interpreter.memoryGauge)
 		interpreter.allInterpreters[locationID] = interpreter
 	}
 }
@@ -1073,11 +1076,14 @@ func (interpreter *Interpreter) prepareInvoke(
 	}
 
 	// NOTE: can't fill argument types, as they are unknown
-	invocation := Invocation{
-		Arguments:        preparedArguments,
-		GetLocationRange: getLocationRange,
-		Interpreter:      interpreter,
-	}
+	invocation := NewInvocation(
+		interpreter,
+		nil,
+		preparedArguments,
+		nil,
+		nil,
+		getLocationRange,
+	)
 
 	return functionValue.invoke(invocation), nil
 }
@@ -1730,15 +1736,16 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 					fields = append(
 						fields,
-						CompositeField{
-							Name: sema.ResourceUUIDFieldName,
-							Value: NewUInt64Value(
+						NewCompositeField(
+							interpreter,
+							sema.ResourceUUIDFieldName,
+							NewUInt64Value(
 								interpreter,
 								func() uint64 {
 									return uuid
 								},
 							),
-						},
+						),
 					)
 				}
 
@@ -2514,10 +2521,60 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 
 					body = func() controlReturn {
 
+						// Pre- and post-condition wrappers "re-declare" the same
+						// parameters as are used in the actual body of the function,
+						// see the use of bindParameterArguments at the start of this function wrapper.
+						//
+						// When these parameters are given resource-kinded arguments,
+						// this can trick the resource analysis into believing that these
+						// resources exist in multiple variables at once
+						// (one for each condition wrapper + the function itself).
+						//
+						// This is not the case, however, as execution of the pre- and post-conditions
+						// occurs strictly before and after execution of the body respectively.
+						//
+						// To prevent the analysis from reporting a false positive here,
+						// when we enter the body of the wrapped function,
+						// we invalidate any resources that were assigned to parameters by the precondition block,
+						// and then restore them after execution of the wrapped function,
+						// for use by the post-condition block.
+
+						type argumentVariable struct {
+							variable *Variable
+							value    ResourceKindedValue
+						}
+
+						var argumentVariables []argumentVariable
+						for _, argument := range invocation.Arguments {
+							resourceKindedValue := interpreter.resourceForValidation(argument)
+							if resourceKindedValue == nil {
+								continue
+							}
+
+							argumentVariables = append(
+								argumentVariables,
+								argumentVariable{
+									variable: interpreter.resourceVariables[resourceKindedValue],
+									value:    resourceKindedValue,
+								},
+							)
+
+							interpreter.invalidateResource(resourceKindedValue)
+						}
+
 						// NOTE: It is important to actually return the value returned
 						//   from the inner function, otherwise it is lost
 
 						returnValue := inner.invoke(invocation)
+
+						// Restore the resources which were temporarily invalidated
+						// before execution of the inner function
+
+						for _, argumentVariable := range argumentVariables {
+							value := argumentVariable.value
+							interpreter.invalidateResource(value)
+							interpreter.resourceVariables[value] = argumentVariable.variable
+						}
 						return functionReturn{returnValue}
 					}
 				}
@@ -2550,7 +2607,7 @@ func (interpreter *Interpreter) ensureLoadedWithLocationHandler(
 	loadLocation func() Import,
 ) *Interpreter {
 
-	locationID := location.ID()
+	locationID := location.MeteredID(interpreter.memoryGauge)
 
 	// If a sub-interpreter already exists, return it
 
@@ -4100,6 +4157,7 @@ func (interpreter *Interpreter) GetCapabilityFinalTargetPath(
 
 func (interpreter *Interpreter) ConvertStaticToSemaType(staticType StaticType) (sema.Type, error) {
 	return ConvertStaticToSemaType(
+		interpreter.memoryGauge,
 		staticType,
 		func(location common.Location, qualifiedIdentifier string) (*sema.InterfaceType, error) {
 			return interpreter.getInterfaceType(location, qualifiedIdentifier)
@@ -4125,7 +4183,7 @@ func (interpreter *Interpreter) getElaboration(location common.Location) *sema.E
 
 	inter := interpreter.EnsureLoaded(location)
 
-	locationID := location.ID()
+	locationID := location.MeteredID(interpreter.memoryGauge)
 
 	subInterpreter := inter.allInterpreters[locationID]
 	if subInterpreter == nil || subInterpreter.Program == nil {
@@ -4203,7 +4261,7 @@ func (interpreter *Interpreter) getInterfaceType(location common.Location, quali
 		return nil, InterfaceMissingLocationError{QualifiedIdentifier: qualifiedIdentifier}
 	}
 
-	typeID := location.TypeID(qualifiedIdentifier)
+	typeID := location.TypeID(interpreter, qualifiedIdentifier)
 
 	elaboration := interpreter.getElaboration(location)
 	if elaboration == nil {

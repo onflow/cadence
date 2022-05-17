@@ -47,6 +47,5 @@ func FormattedStringLength(s string) int {
 	}
 
 	// len = printableChars + (escapedChars x 2) + (nonPrintableChars x 8) + (quote x 2)
-	l := (len(s) - asciiNonPrintableChars - escapedChars) + escapedChars*2 + asciiNonPrintableChars*8 + 2
-	return l
+	return (len(s) - asciiNonPrintableChars - escapedChars) + escapedChars*2 + asciiNonPrintableChars*8 + 2
 }

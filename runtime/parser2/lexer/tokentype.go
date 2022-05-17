@@ -206,3 +206,17 @@ func (t TokenType) String() string {
 		panic(errors.NewUnreachableError())
 	}
 }
+
+func (t TokenType) IsIntegerLiteral() bool {
+	switch t {
+	case TokenBinaryIntegerLiteral,
+		TokenOctalIntegerLiteral,
+		TokenDecimalIntegerLiteral,
+		TokenHexadecimalIntegerLiteral,
+		TokenUnknownBaseIntegerLiteral:
+		return true
+
+	default:
+		return false
+	}
+}

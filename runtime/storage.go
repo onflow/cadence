@@ -38,6 +38,7 @@ type Storage struct {
 	storageMaps     map[interpreter.StorageKey]*interpreter.StorageMap
 	contractUpdates map[interpreter.StorageKey]*interpreter.CompositeValue
 	Ledger          atree.Ledger
+	memoryGauge     common.MemoryGauge
 }
 
 var _ atree.SlabStorage = &Storage{}
@@ -76,6 +77,7 @@ func NewStorage(ledger atree.Ledger, memoryGauge common.MemoryGauge) *Storage {
 		writes:                map[interpreter.StorageKey]atree.StorageIndex{},
 		storageMaps:           map[interpreter.StorageKey]*interpreter.StorageMap{},
 		contractUpdates:       map[interpreter.StorageKey]*interpreter.CompositeValue{},
+		memoryGauge:           memoryGauge,
 	}
 }
 
@@ -88,10 +90,7 @@ func (s *Storage) GetStorageMap(
 ) (
 	storageMap *interpreter.StorageMap,
 ) {
-	key := interpreter.StorageKey{
-		Address: address,
-		Key:     domain,
-	}
+	key := interpreter.NewStorageKey(s.memoryGauge, address, domain)
 
 	storageMap = s.storageMaps[key]
 	if storageMap == nil {
@@ -148,14 +147,11 @@ func (s *Storage) loadExistingStorageMap(address atree.Address, storageIndex atr
 }
 
 func (s *Storage) storeNewStorageMap(address atree.Address, domain string) *interpreter.StorageMap {
-	storageMap := interpreter.NewStorageMap(s, address)
+	storageMap := interpreter.NewStorageMap(s.memoryGauge, s, address)
 
 	storageIndex := storageMap.StorageID().Index
 
-	storageKey := interpreter.StorageKey{
-		Address: common.Address(address),
-		Key:     domain,
-	}
+	storageKey := interpreter.NewStorageKey(s.memoryGauge, common.Address(address), domain)
 
 	s.writes[storageKey] = storageIndex
 
@@ -167,10 +163,7 @@ func (s *Storage) recordContractUpdate(
 	name string,
 	contractValue *interpreter.CompositeValue,
 ) {
-	key := interpreter.StorageKey{
-		Address: address,
-		Key:     name,
-	}
+	key := interpreter.NewStorageKey(s.memoryGauge, address, name)
 
 	// NOTE: do NOT delete the map entry,
 	// otherwise the removal write is lost

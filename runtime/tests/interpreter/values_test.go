@@ -1024,10 +1024,10 @@ func newCompositeValue(
 		}
 		fieldNames[fieldName] = struct{}{}
 
-		field := interpreter.CompositeField{
-			Name:  fieldName,
-			Value: randomStorableValue(inter, 0),
-		}
+		field := interpreter.NewUnmeteredCompositeField(
+			fieldName,
+			randomStorableValue(inter, 0),
+		)
 
 		fields[i] = field
 		orgFields[field.Name] = deepCopyValue(inter, field.Value)
@@ -1195,10 +1195,10 @@ func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) inte
 	case *interpreter.CompositeValue:
 		fields := make([]interpreter.CompositeField, 0)
 		v.ForEachField(inter, func(name string, value interpreter.Value) {
-			fields = append(fields, interpreter.CompositeField{
-				Name:  name,
-				Value: deepCopyValue(inter, value),
-			})
+			fields = append(fields, interpreter.NewUnmeteredCompositeField(
+				name,
+				deepCopyValue(inter, value),
+			))
 		})
 
 		return interpreter.NewCompositeValue(
@@ -1490,10 +1490,10 @@ func randomCompositeValue(
 	for i := 0; i < fieldsCount; i++ {
 		fieldName := randomUTF8String()
 
-		fields[i] = interpreter.CompositeField{
-			Name:  fieldName,
-			Value: randomStorableValue(inter, currentDepth+1),
-		}
+		fields[i] = interpreter.NewUnmeteredCompositeField(
+			fieldName,
+			randomStorableValue(inter, currentDepth+1),
+		)
 	}
 
 	compositeType := &sema.CompositeType{

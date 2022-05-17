@@ -30,6 +30,8 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
+const UnknownElementSize = 0
+
 // StaticType is a shallow representation of a static type (`sema.Type`)
 // which doesn't contain the full information, but only refers
 // to composite and interface types by ID.
@@ -40,6 +42,9 @@ import (
 type StaticType interface {
 	fmt.Stringer
 	isStaticType()
+	/* this returns the size (in bytes) of the largest inhabitant of this type,
+	or UnknownElementSize if the largest inhabitant has arbitrary size */
+	elementSize() uint
 	Equal(other StaticType) bool
 	Encode(e *cbor.StreamEncoder) error
 	MeteredString(memoryGauge common.MemoryGauge) string
@@ -82,6 +87,10 @@ func NewCompositeStaticTypeComputeTypeID(
 }
 
 func (CompositeStaticType) isStaticType() {}
+
+func (CompositeStaticType) elementSize() uint {
+	return UnknownElementSize
+}
 
 func (t CompositeStaticType) String() string {
 	if t.Location == nil {
@@ -133,11 +142,15 @@ func NewInterfaceStaticType(
 
 func (InterfaceStaticType) isStaticType() {}
 
+func (InterfaceStaticType) elementSize() uint {
+	return UnknownElementSize
+}
+
 func (t InterfaceStaticType) String() string {
 	if t.Location == nil {
 		return t.QualifiedIdentifier
 	}
-	return string(t.Location.TypeID(t.QualifiedIdentifier))
+	return string(t.Location.TypeID(nil, t.QualifiedIdentifier))
 }
 
 func (t InterfaceStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
@@ -194,6 +207,10 @@ func NewVariableSizedStaticType(
 
 func (VariableSizedStaticType) isStaticType() {}
 
+func (VariableSizedStaticType) elementSize() uint {
+	return UnknownElementSize
+}
+
 func (VariableSizedStaticType) isArrayStaticType() {}
 
 func (t VariableSizedStaticType) ElementType() StaticType {
@@ -244,6 +261,10 @@ func NewConstantSizedStaticType(
 }
 
 func (ConstantSizedStaticType) isStaticType() {}
+
+func (ConstantSizedStaticType) elementSize() uint {
+	return UnknownElementSize
+}
 
 func (ConstantSizedStaticType) isArrayStaticType() {}
 
@@ -303,6 +324,10 @@ func NewDictionaryStaticType(
 
 func (DictionaryStaticType) isStaticType() {}
 
+func (DictionaryStaticType) elementSize() uint {
+	return UnknownElementSize
+}
+
 func (t DictionaryStaticType) String() string {
 	return fmt.Sprintf("{%s: %s}", t.KeyType, t.ValueType)
 }
@@ -344,6 +369,10 @@ func NewOptionalStaticType(
 }
 
 func (OptionalStaticType) isStaticType() {}
+
+func (OptionalStaticType) elementSize() uint {
+	return UnknownElementSize
+}
 
 func (t OptionalStaticType) String() string {
 	return fmt.Sprintf("%s?", t.Type)
@@ -393,6 +422,10 @@ func NewRestrictedStaticType(
 // and slices are not, but `Restrictions` is one.
 //
 func (*RestrictedStaticType) isStaticType() {}
+
+func (RestrictedStaticType) elementSize() uint {
+	return UnknownElementSize
+}
 
 func (t *RestrictedStaticType) String() string {
 	restrictions := make([]string, len(t.Restrictions))
@@ -470,6 +503,10 @@ func NewReferenceStaticType(
 
 func (ReferenceStaticType) isStaticType() {}
 
+func (ReferenceStaticType) elementSize() uint {
+	return UnknownElementSize
+}
+
 func (t ReferenceStaticType) String() string {
 	auth := ""
 	if t.Authorized {
@@ -526,6 +563,10 @@ func NewCapabilityStaticType(
 }
 
 func (CapabilityStaticType) isStaticType() {}
+
+func (CapabilityStaticType) elementSize() uint {
+	return UnknownElementSize
+}
 
 func (t CapabilityStaticType) String() string {
 	if t.BorrowType != nil {
@@ -669,6 +710,7 @@ func ConvertSemaInterfaceTypeToStaticInterfaceType(
 }
 
 func ConvertStaticToSemaType(
+	memoryGauge common.MemoryGauge,
 	typ StaticType,
 	getInterface func(location common.Location, qualifiedIdentifier string) (*sema.InterfaceType, error),
 	getComposite func(location common.Location, qualifiedIdentifier string, typeID common.TypeID) (*sema.CompositeType, error),
@@ -681,34 +723,32 @@ func ConvertStaticToSemaType(
 		return getInterface(t.Location, t.QualifiedIdentifier)
 
 	case VariableSizedStaticType:
-		ty, err := ConvertStaticToSemaType(t.Type, getInterface, getComposite)
-		return &sema.VariableSizedType{
-			Type: ty,
-		}, err
+		ty, err := ConvertStaticToSemaType(memoryGauge, t.Type, getInterface, getComposite)
+		return sema.NewVariableSizedType(memoryGauge, ty), err
 
 	case ConstantSizedStaticType:
-		ty, err := ConvertStaticToSemaType(t.Type, getInterface, getComposite)
-		return &sema.ConstantSizedType{
-			Type: ty,
-			Size: t.Size,
-		}, err
+		ty, err := ConvertStaticToSemaType(memoryGauge, t.Type, getInterface, getComposite)
+		return sema.NewConstantSizedType(
+			memoryGauge,
+			ty,
+			t.Size,
+		), err
 
 	case DictionaryStaticType:
-		keyType, err := ConvertStaticToSemaType(t.KeyType, getInterface, getComposite)
+		keyType, err := ConvertStaticToSemaType(memoryGauge, t.KeyType, getInterface, getComposite)
 		if err != nil {
 			return nil, err
 		}
-		valueType, err := ConvertStaticToSemaType(t.ValueType, getInterface, getComposite)
-		return &sema.DictionaryType{
-			KeyType:   keyType,
-			ValueType: valueType,
-		}, err
+		valueType, err := ConvertStaticToSemaType(memoryGauge, t.ValueType, getInterface, getComposite)
+		return sema.NewDictionaryType(
+			memoryGauge,
+			keyType,
+			valueType,
+		), err
 
 	case OptionalStaticType:
-		ty, err := ConvertStaticToSemaType(t.Type, getInterface, getComposite)
-		return &sema.OptionalType{
-			Type: ty,
-		}, err
+		ty, err := ConvertStaticToSemaType(memoryGauge, t.Type, getInterface, getComposite)
+		return sema.NewOptionalType(memoryGauge, ty), err
 
 	case *RestrictedStaticType:
 		restrictions := make([]*sema.InterfaceType, len(t.Restrictions))
@@ -720,31 +760,31 @@ func ConvertStaticToSemaType(
 			}
 		}
 
-		ty, err := ConvertStaticToSemaType(t.Type, getInterface, getComposite)
-		return &sema.RestrictedType{
-			Type:         ty,
-			Restrictions: restrictions,
-		}, err
+		ty, err := ConvertStaticToSemaType(memoryGauge, t.Type, getInterface, getComposite)
+		return sema.NewRestrictedType(
+			memoryGauge,
+			ty,
+			restrictions,
+		), err
 
 	case ReferenceStaticType:
-		ty, err := ConvertStaticToSemaType(t.BorrowedType, getInterface, getComposite)
-		return &sema.ReferenceType{
-			Authorized: t.Authorized,
-			Type:       ty,
-		}, err
+		ty, err := ConvertStaticToSemaType(memoryGauge, t.BorrowedType, getInterface, getComposite)
+		return sema.NewReferenceType(
+			memoryGauge,
+			ty,
+			t.Authorized,
+		), err
 
 	case CapabilityStaticType:
 		var borrowType sema.Type
 		if t.BorrowType != nil {
-			borrowType, err = ConvertStaticToSemaType(t.BorrowType, getInterface, getComposite)
+			borrowType, err = ConvertStaticToSemaType(memoryGauge, t.BorrowType, getInterface, getComposite)
 			if err != nil {
 				return nil, err
 			}
 		}
 
-		return &sema.CapabilityType{
-			BorrowType: borrowType,
-		}, nil
+		return sema.NewCapabilityType(memoryGauge, borrowType), nil
 
 	case FunctionStaticType:
 		return t.Type, nil
@@ -808,6 +848,10 @@ func (t FunctionStaticType) ReturnType(interpreter *Interpreter) StaticType {
 }
 
 func (FunctionStaticType) isStaticType() {}
+
+func (FunctionStaticType) elementSize() uint {
+	return UnknownElementSize
+}
 
 func (t FunctionStaticType) String() string {
 	return t.Type.String()
