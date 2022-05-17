@@ -16,24 +16,6 @@
  * limitations under the License.
  */
 
-package stdlib
+package format
 
-import (
-	"fmt"
-
-	"github.com/onflow/cadence/runtime/interpreter"
-)
-
-const logFunctionDocString = `
-Logs a string representation of the given value
-`
-
-var LogFunction = NewStandardLibraryFunction(
-	"log",
-	LogFunctionType,
-	logFunctionDocString,
-	func(invocation interpreter.Invocation) interpreter.Value {
-		fmt.Println(invocation.Arguments[0].MeteredString(invocation.Interpreter, interpreter.SeenReferences{}))
-		return interpreter.VoidValue{}
-	},
-)
+const HostFunction = "Function(...)"

@@ -19,6 +19,7 @@
 package interpreter_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -9033,4 +9034,339 @@ func TestStorageMapMetering(t *testing.T) {
 
 	assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindStorageMap))
 	assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindStorageKey))
+}
+
+func TestInterpretValueStringConversion(t *testing.T) {
+	t.Parallel()
+
+	testValueStringConversion := func(t *testing.T, script string, args ...interpreter.Value) {
+		meter := newTestMemoryGauge()
+
+		var loggedString string
+
+		logFunction := stdlib.NewStandardLibraryFunction(
+			"log",
+			&sema.FunctionType{
+				Parameters: []*sema.Parameter{
+					{
+						Label:          sema.ArgumentLabelNotRequired,
+						Identifier:     "value",
+						TypeAnnotation: sema.NewTypeAnnotation(sema.AnyStructType),
+					},
+				},
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(
+					sema.VoidType,
+				),
+			},
+			``,
+			func(invocation interpreter.Invocation) interpreter.Value {
+				// Reset gauge, to only capture the values metered during string conversion
+				meter.meter = make(map[common.MemoryKind]uint64)
+
+				loggedString = invocation.Arguments[0].MeteredString(invocation.Interpreter, interpreter.SeenReferences{})
+				return interpreter.VoidValue{}
+			},
+		)
+
+		valueDeclarations :=
+			stdlib.StandardLibraryFunctions{
+				logFunction,
+			}.ToSemaValueDeclarations()
+
+		values := stdlib.StandardLibraryFunctions{
+			logFunction,
+		}.ToInterpreterValueDeclarations()
+
+		inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(t, script,
+			ParseCheckAndInterpretOptions{
+				Options: []interpreter.Option{
+					interpreter.WithPredeclaredValues(values),
+				},
+				CheckerOptions: []sema.Option{
+					sema.WithPredeclaredValues(valueDeclarations),
+				},
+			},
+			meter,
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main", args...)
+		require.NoError(t, err)
+
+		meteredAmount := meter.getMemory(common.MemoryKindRawString)
+
+		// Metered amount must be an overestimation compared to the actual logged string.
+		assert.GreaterOrEqual(t, int(meteredAmount), len(loggedString))
+	}
+
+	t.Run("Simple values", func(t *testing.T) {
+		t.Parallel()
+
+		type testCase struct {
+			name        string
+			constructor string
+		}
+
+		testCases := []testCase{
+			{
+				name:        "Int",
+				constructor: "3",
+			},
+			{
+				name:        "Int8",
+				constructor: "Int8(3)",
+			},
+			{
+				name:        "Int16",
+				constructor: "Int16(3)",
+			},
+			{
+				name:        "Int32",
+				constructor: "Int32(3)",
+			},
+			{
+				name:        "Int64",
+				constructor: "Int64(3)",
+			},
+			{
+				name:        "Int128",
+				constructor: "Int128(3)",
+			},
+			{
+				name:        "Int256",
+				constructor: "Int256(3)",
+			},
+			{
+				name:        "UInt",
+				constructor: "3",
+			},
+			{
+				name:        "UInt8",
+				constructor: "UInt8(3)",
+			},
+			{
+				name:        "UInt16",
+				constructor: "UInt16(3)",
+			},
+			{
+				name:        "UInt32",
+				constructor: "UInt32(3)",
+			},
+			{
+				name:        "UInt64",
+				constructor: "UInt64(3)",
+			},
+			{
+				name:        "UInt128",
+				constructor: "UInt128(3)",
+			},
+			{
+				name:        "UInt256",
+				constructor: "UInt256(3)",
+			},
+			{
+				name:        "Word8",
+				constructor: "Word8(3)",
+			},
+			{
+				name:        "Word16",
+				constructor: "Word16(3)",
+			},
+			{
+				name:        "Word32",
+				constructor: "Word32(3)",
+			},
+			{
+				name:        "Word64",
+				constructor: "Word64(3)",
+			},
+			{
+				name:        "Fix64",
+				constructor: "Fix64(3.45)",
+			},
+			{
+				name:        "UFix64",
+				constructor: "UFix64(3.45)",
+			},
+			{
+				name:        "String",
+				constructor: "\"hello\"",
+			},
+			{
+				name:        "Escaped String",
+				constructor: "\"hello\tworld!\t\"",
+			},
+			{
+				name:        "Unicode String",
+				constructor: "\"\\u{75}\\u{308}\" as String",
+			},
+			{
+				name:        "Bool",
+				constructor: "false",
+			},
+			{
+				name:        "Nil",
+				constructor: "nil",
+			},
+			{
+				name:        "Address",
+				constructor: "Address(0x1234)",
+			},
+			{
+				name:        "Character",
+				constructor: "\"c\" as Character",
+			},
+			{
+				name:        "Escaped Character",
+				constructor: "\"\t\" as Character",
+			},
+			{
+				name:        "Unicode Character",
+				constructor: "\"\\u{75}\\u{308}\" as Character",
+			},
+			{
+				name:        "Array",
+				constructor: "[1, 2, 3]",
+			},
+			{
+				name:        "Dictionary",
+				constructor: "{\"John\": \"Doe\", \"Country\": \"CA\"}",
+			},
+			{
+				name:        "Path",
+				constructor: "/public/somepath",
+			},
+			{
+				name:        "Some",
+				constructor: "true as Bool?",
+			},
+		}
+
+		testSimpleValueStringConversion := func(test testCase) {
+
+			t.Run(test.name, func(t *testing.T) {
+				t.Parallel()
+
+				script := fmt.Sprintf(`
+                    pub fun main() {
+                        let x = %s
+                        log(x)
+                    }
+                `,
+					test.constructor,
+				)
+
+				testValueStringConversion(t, script)
+			})
+		}
+
+		for _, test := range testCases {
+			testSimpleValueStringConversion(test)
+		}
+	})
+
+	t.Run("Composite", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let x = Foo()
+                log(x)
+            }
+
+            struct Foo {
+                var a: Word8
+                init() {
+                    self.a = 4
+                }
+            }
+        `
+
+		testValueStringConversion(t, script)
+	})
+
+	t.Run("Ephemeral Reference", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let x = 4
+                log(&x as &AnyStruct)
+            }
+        `
+
+		testValueStringConversion(t, script)
+	})
+
+	t.Run("Interpreted Function", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let x = fun(a: String, b: Bool) {}
+                log(&x as &AnyStruct)
+            }
+        `
+
+		testValueStringConversion(t, script)
+	})
+
+	t.Run("Bound Function", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let x = Foo()
+                log(x.bar)
+            }
+
+            struct Foo {
+                pub fun bar(a: String, b: Bool) {}
+            }
+        `
+
+		testValueStringConversion(t, script)
+	})
+
+	t.Run("Void", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                let x: Void = foo()
+                log(x)
+            }
+
+            fun foo() {}
+        `
+
+		testValueStringConversion(t, script)
+	})
+
+	t.Run("Capability", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main(a: Capability<&{Foo}>) {
+                log(a)
+            }
+
+            struct interface Foo {}
+            struct Bar: Foo {}
+        `
+
+		testValueStringConversion(t, script,
+			interpreter.NewUnmeteredCapabilityValue(
+				interpreter.AddressValue{1},
+				interpreter.PathValue{
+					Domain:     common.PathDomainPublic,
+					Identifier: "somepath",
+				},
+				interpreter.CompositeStaticType{
+					Location:            utils.TestLocation,
+					QualifiedIdentifier: "Bar",
+					TypeID:              "S.test.Bar",
+				},
+			))
+	})
 }

@@ -21,6 +21,7 @@ package interpreter
 import (
 	"fmt"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -33,13 +34,15 @@ var blockFieldNames = []string{
 	sema.BlockTypeIDFieldName,
 	sema.BlockTypeTimestampFieldName,
 }
-var blockFieldFormatters = func(inter *Interpreter) map[string]func(Value, SeenReferences) string {
-	return map[string]func(Value, SeenReferences) string{
-		sema.BlockTypeIDFieldName: func(value Value, references SeenReferences) string {
+var blockFieldFormatters = func(inter *Interpreter) map[string]func(common.MemoryGauge, Value, SeenReferences) string {
+	return map[string]func(common.MemoryGauge, Value, SeenReferences) string{
+		sema.BlockTypeIDFieldName: func(memoryGauge common.MemoryGauge, value Value, references SeenReferences) string {
 			bytes, err := ByteArrayValueToByteSlice(inter, value)
 			if err != nil {
 				panic(err)
 			}
+
+			common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(len(bytes)*2+2))
 			return fmt.Sprintf("0x%x", bytes)
 		},
 	}

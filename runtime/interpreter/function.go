@@ -26,6 +26,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/format"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -121,6 +122,12 @@ func (f *InterpretedFunctionValue) RecursiveString(_ SeenReferences) string {
 	return f.String()
 }
 
+func (f *InterpretedFunctionValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	typeString := f.Type.String()
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(8+len(typeString)))
+	return f.String()
+}
+
 func (f *InterpretedFunctionValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInterpretedFunctionValue(interpreter, f)
 }
@@ -207,10 +214,15 @@ type HostFunctionValue struct {
 
 func (f *HostFunctionValue) String() string {
 	// TODO: include type
-	return "Function(...)"
+	return format.HostFunction
 }
 
 func (f *HostFunctionValue) RecursiveString(_ SeenReferences) string {
+	return f.String()
+}
+
+func (f *HostFunctionValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(memoryGauge, common.HostFunctionValueStringMemoryUsage)
 	return f.String()
 }
 
@@ -371,6 +383,10 @@ func (f BoundFunctionValue) String() string {
 
 func (f BoundFunctionValue) RecursiveString(seenReferences SeenReferences) string {
 	return f.Function.RecursiveString(seenReferences)
+}
+
+func (f BoundFunctionValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+	return f.Function.MeteredString(memoryGauge, seenReferences)
 }
 
 func (f BoundFunctionValue) Accept(interpreter *Interpreter, visitor Visitor) {
