@@ -111,15 +111,21 @@ var (
 	// Following are the known memory usage amounts for string representation of interpreter values.
 	// Same as `len(format.X)`. However, values are hard-coded to avoid the circular dependency.
 
-	VoidStringMemoryUsage                  = NewRawStringMemoryUsage(len("()"))
-	TrueStringMemoryUsage                  = NewRawStringMemoryUsage(len("true"))
-	FalseStringMemoryUsage                 = NewRawStringMemoryUsage(len("false"))
-	TypeValueStringMemoryUsage             = NewRawStringMemoryUsage(len("Type<>()"))
-	NilValueStringMemoryUsage              = NewRawStringMemoryUsage(len("nil"))
-	StorageReferenceValueStringMemoryUsage = NewRawStringMemoryUsage(len("StorageReference()"))
-	SeenReferenceStringMemoryUsage         = NewRawStringMemoryUsage(3)                   // len(ellipsis)
-	AddressValueStringMemoryUsage          = NewRawStringMemoryUsage(AddressLength*2 + 2) // len(bytes-to-hex + prefix)
-	HostFunctionValueStringMemoryUsage     = NewRawStringMemoryUsage(len("Function(...)"))
+	VoidStringMemoryUsage                   = NewRawStringMemoryUsage(len("()"))
+	TrueStringMemoryUsage                   = NewRawStringMemoryUsage(len("true"))
+	FalseStringMemoryUsage                  = NewRawStringMemoryUsage(len("false"))
+	TypeValueStringMemoryUsage              = NewRawStringMemoryUsage(len("Type<>()"))
+	NilValueStringMemoryUsage               = NewRawStringMemoryUsage(len("nil"))
+	StorageReferenceValueStringMemoryUsage  = NewRawStringMemoryUsage(len("StorageReference()"))
+	SeenReferenceStringMemoryUsage          = NewRawStringMemoryUsage(3)                   // len(ellipsis)
+	AddressValueStringMemoryUsage           = NewRawStringMemoryUsage(AddressLength*2 + 2) // len(bytes-to-hex + prefix)
+	HostFunctionValueStringMemoryUsage      = NewRawStringMemoryUsage(len("Function(...)"))
+	AuthAccountValueStringMemoryUsage       = NewRawStringMemoryUsage(len("AuthAccount()"))
+	PublicAccountValueStringMemoryUsage     = NewRawStringMemoryUsage(len("PublicAccount()"))
+	AuthAccountContractsStringMemoryUsage   = NewRawStringMemoryUsage(len("AuthAccount.Contracts()"))
+	PublicAccountContractsStringMemoryUsage = NewRawStringMemoryUsage(len("PublicAccount.Contracts()"))
+	AuthAccountKeysStringMemoryUsage        = NewRawStringMemoryUsage(len("AuthAccount.Keys()"))
+	PublicAccountKeysStringMemoryUsage      = NewRawStringMemoryUsage(len("PublicAccount.Keys()"))
 )
 
 func UseMemory(gauge MemoryGauge, usage MemoryUsage) {
