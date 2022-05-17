@@ -487,6 +487,8 @@ func (r *interpreterRuntime) newAuthAccountValue(
 		accountAvailableBalanceGetFunction(addressValue, context.Interface),
 		storageUsedGetFunction(addressValue, context.Interface, storage),
 		storageCapacityGetFunction(addressValue, context.Interface, storage),
+		r.newAddPublicKeyFunction(inter, addressValue, context.Interface),
+		r.newRemovePublicKeyFunction(inter, addressValue, context.Interface),
 		func() interpreter.Value {
 			return r.newAuthAccountContracts(
 				inter,
@@ -573,18 +575,18 @@ func (r *interpreterRuntime) InvokeContractFunction(
 	}
 
 	// prepare invocation
-	invocation := interpreter.Invocation{
-		Self:               contractValue,
-		Arguments:          arguments,
-		ArgumentTypes:      argumentTypes,
-		TypeParameterTypes: nil,
-		GetLocationRange: func() interpreter.LocationRange {
+	invocation := interpreter.NewInvocation(
+		inter,
+		contractValue,
+		arguments,
+		argumentTypes,
+		nil,
+		func() interpreter.LocationRange {
 			return interpreter.LocationRange{
 				Location: context.Location,
 			}
 		},
-		Interpreter: inter,
-	}
+	)
 
 	contractMember := contractValue.GetMember(inter, invocation.GetLocationRange, functionName)
 
@@ -895,7 +897,7 @@ func validateArgumentParams(
 		parameterType := parameter.TypeAnnotation.Type
 		argument := arguments[i]
 
-		exportedParameterType := ExportType(parameterType, map[sema.TypeID]cadence.Type{})
+		exportedParameterType := ExportMeteredType(inter, parameterType, map[sema.TypeID]cadence.Type{})
 		var value cadence.Value
 		var err error
 
@@ -1690,7 +1692,7 @@ func (r *interpreterRuntime) emitEvent(
 		Fields: fields,
 	}
 
-	exportedEvent, err := exportEvent(eventValue, seenReferences{})
+	exportedEvent, err := exportEvent(inter, eventValue, seenReferences{})
 	if err != nil {
 		return err
 	}
@@ -1701,6 +1703,7 @@ func (r *interpreterRuntime) emitEvent(
 }
 
 func (r *interpreterRuntime) emitAccountEvent(
+	gauge common.MemoryGauge,
 	eventType *sema.CompositeType,
 	runtimeInterface Interface,
 	eventFields []exportableValue,
@@ -1722,7 +1725,7 @@ func (r *interpreterRuntime) emitAccountEvent(
 		))
 	}
 
-	exportedEvent, err := exportEvent(eventValue, seenReferences{})
+	exportedEvent, err := exportEvent(gauge, eventValue, seenReferences{})
 	if err != nil {
 		panic(err)
 	}
@@ -1790,6 +1793,7 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 		)
 
 		r.emitAccountEvent(
+			inter,
 			stdlib.AccountCreatedEventType,
 			context.Interface,
 			[]exportableValue{
@@ -1929,6 +1933,102 @@ func storageCapacityGetFunction(
 		)
 
 	}
+}
+
+func (r *interpreterRuntime) newAddPublicKeyFunction(
+	gauge common.MemoryGauge,
+	addressValue interpreter.AddressValue,
+	runtimeInterface Interface,
+) *interpreter.HostFunctionValue {
+
+	// Converted addresses can be cached and don't have to be recomputed on each function invocation
+	address := addressValue.ToAddress()
+
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			publicKeyValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
+			if !ok {
+				panic(runtimeErrors.NewUnreachableError())
+			}
+
+			publicKey, err := interpreter.ByteArrayValueToByteSlice(gauge, publicKeyValue)
+			if err != nil {
+				panic("addPublicKey requires the first argument to be a byte array")
+			}
+
+			wrapPanic(func() {
+				err = runtimeInterface.AddEncodedAccountKey(address, publicKey)
+			})
+			if err != nil {
+				panic(err)
+			}
+
+			inter := invocation.Interpreter
+
+			r.emitAccountEvent(
+				gauge,
+				stdlib.AccountKeyAddedEventType,
+				runtimeInterface,
+				[]exportableValue{
+					newExportableValue(addressValue, inter),
+					newExportableValue(publicKeyValue, inter),
+				},
+			)
+
+			return interpreter.VoidValue{}
+		},
+		sema.AuthAccountTypeAddPublicKeyFunctionType,
+	)
+}
+
+func (r *interpreterRuntime) newRemovePublicKeyFunction(
+	gauge common.MemoryGauge,
+	addressValue interpreter.AddressValue,
+	runtimeInterface Interface,
+) *interpreter.HostFunctionValue {
+
+	// Converted addresses can be cached and don't have to be recomputed on each function invocation
+	address := addressValue.ToAddress()
+
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			index, ok := invocation.Arguments[0].(interpreter.IntValue)
+			if !ok {
+				panic(runtimeErrors.NewUnreachableError())
+			}
+
+			var publicKey []byte
+			var err error
+			wrapPanic(func() {
+				publicKey, err = runtimeInterface.RevokeEncodedAccountKey(address, index.ToInt())
+			})
+			if err != nil {
+				panic(err)
+			}
+
+			inter := invocation.Interpreter
+
+			publicKeyValue := interpreter.ByteSliceToByteArrayValue(
+				inter,
+				publicKey,
+			)
+
+			r.emitAccountEvent(
+				gauge,
+				stdlib.AccountKeyRemovedEventType,
+				runtimeInterface,
+				[]exportableValue{
+					newExportableValue(addressValue, inter),
+					newExportableValue(publicKeyValue, inter),
+				},
+			)
+
+			return interpreter.VoidValue{}
+		},
+		sema.AuthAccountTypeRemovePublicKeyFunctionType,
+	)
 }
 
 // recordContractValue records the update of the given contract value.
@@ -2492,16 +2592,6 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				})
 			}
 
-			var cachedProgram *interpreter.Program
-			if isUpdate {
-				// Get the old program from host environment, if available. This is an optimization
-				// so that old program doesn't need to be re-parsed for update validation.
-				wrapPanic(func() {
-					cachedProgram, err = context.Interface.GetProgram(context.Location)
-				})
-				handleContractUpdateError(err)
-			}
-
 			// NOTE: do NOT use the program obtained from the host environment, as the current program.
 			// Always re-parse and re-check the new program.
 
@@ -2601,19 +2691,21 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 			// Validate the contract update (if enabled)
 
 			if r.contractUpdateValidationEnabled && isUpdate {
-				var oldProgram *ast.Program
-				if cachedProgram != nil {
-					oldProgram = cachedProgram.Program
-				} else {
-					memoryGauge, _ := context.Interface.(common.MemoryGauge)
-					oldProgram, err = parser2.ParseProgram(string(existingCode), memoryGauge)
-					handleContractUpdateError(err)
-				}
+
+				var oldProgram *interpreter.Program
+				oldProgram, err = r.getProgram(
+					context,
+					functions,
+					stdlib.BuiltinValues,
+					checkerOptions,
+					importResolutionResults{},
+				)
+				handleContractUpdateError(err)
 
 				validator := NewContractUpdateValidator(
 					context.Location,
 					nameArgument,
-					oldProgram,
+					oldProgram.Program,
 					program.Program,
 				)
 				err = validator.Validate()
@@ -2658,12 +2750,14 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 
 			if isUpdate {
 				r.emitAccountEvent(
+					inter,
 					stdlib.AccountContractUpdatedEventType,
 					startContext.Interface,
 					eventArguments,
 				)
 			} else {
 				r.emitAccountEvent(
+					inter,
 					stdlib.AccountContractAddedEventType,
 					startContext.Interface,
 					eventArguments,
@@ -2895,6 +2989,7 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 				codeHashValue := CodeToHashValue(inter, code)
 
 				r.emitAccountEvent(
+					inter,
 					stdlib.AccountContractRemovedEventType,
 					runtimeInterface,
 					[]exportableValue{
@@ -2905,9 +3000,9 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 				)
 
 				return interpreter.NewSomeValueNonCopying(
-					invocation.Interpreter,
+					inter,
 					interpreter.NewDeployedContractValue(
-						invocation.Interpreter,
+						inter,
 						addressValue,
 						nameValue,
 						interpreter.ByteSliceToByteArrayValue(
@@ -3182,6 +3277,7 @@ func (r *interpreterRuntime) newAccountKeysAddFunction(
 			}
 
 			r.emitAccountEvent(
+				inter,
 				stdlib.AccountKeyAddedEventType,
 				runtimeInterface,
 				[]exportableValue{
@@ -3289,6 +3385,7 @@ func (r *interpreterRuntime) newAccountKeysRevokeFunction(
 			inter := invocation.Interpreter
 
 			r.emitAccountEvent(
+				inter,
 				stdlib.AccountKeyRemovedEventType,
 				runtimeInterface,
 				[]exportableValue{

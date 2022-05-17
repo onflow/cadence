@@ -3828,7 +3828,7 @@ func TestRuntimeStorageLoadedDestructionAfterRemoval(t *testing.T) {
 	require.ErrorAs(t, err, &typeLoadingErr)
 
 	require.Equal(t,
-		common.AddressLocation{Address: addressValue}.TypeID("Test.R"),
+		common.AddressLocation{Address: addressValue}.TypeID(nil, "Test.R"),
 		typeLoadingErr.TypeID,
 	)
 }

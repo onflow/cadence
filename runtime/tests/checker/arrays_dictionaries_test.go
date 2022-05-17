@@ -1079,17 +1079,6 @@ func TestCheckInvalidConstantSizedArrayDeclarationOutOfRangeSize(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("negative", func(t *testing.T) {
-
-		_, err := ParseAndCheck(t, `
-          let x: [Int; -1] = []
-		`)
-
-		errs := ExpectCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.InvalidConstantSizedTypeSizeError{}, errs[0])
-	})
-
 	t.Run("too large", func(t *testing.T) {
 
 		tooLarge := new(big.Int).SetUint64(math.MaxUint64)

@@ -65,14 +65,14 @@ func ConvertStoredValue(gauge common.MemoryGauge, value atree.Value) (Value, err
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
-		return newArrayValueFromAtreeValue(gauge, value, staticType), nil
+		return newArrayValueFromConstructor(gauge, staticType, value.Count(), func() *atree.Array { return value }), nil
 	case *atree.OrderedMap:
 		typeInfo := value.Type()
 		switch typeInfo := typeInfo.(type) {
 		case DictionaryStaticType:
-			return newDictionaryValueFromOrderedMap(gauge, value, typeInfo), nil
+			return newDictionaryValueFromConstructor(gauge, typeInfo, value.Count(), func() *atree.OrderedMap { return value }), nil
 		case compositeTypeInfo:
-			return newCompositeValueFromOrderedMap(gauge, value, typeInfo), nil
+			return newCompositeValueFromConstructor(gauge, value.Count(), typeInfo, func() *atree.OrderedMap { return value }), nil
 		default:
 			return nil, fmt.Errorf("invalid ordered map type info: %T", typeInfo)
 		}
@@ -88,6 +88,14 @@ func ConvertStoredValue(gauge common.MemoryGauge, value atree.Value) (Value, err
 type StorageKey struct {
 	Address common.Address
 	Key     string
+}
+
+func NewStorageKey(memoryGauge common.MemoryGauge, address common.Address, key string) StorageKey {
+	common.UseMemory(memoryGauge, common.StorageKeyMemoryUsage)
+	return StorageKey{
+		Address: address,
+		Key:     key,
+	}
 }
 
 func (k StorageKey) IsLess(o StorageKey) bool {
@@ -108,6 +116,7 @@ func (k StorageKey) IsLess(o StorageKey) bool {
 type InMemoryStorage struct {
 	*atree.BasicSlabStorage
 	StorageMaps map[StorageKey]*StorageMap
+	memoryGauge common.MemoryGauge
 }
 
 var _ Storage = InMemoryStorage{}
@@ -131,6 +140,7 @@ func NewInMemoryStorage(memoryGauge common.MemoryGauge) InMemoryStorage {
 	return InMemoryStorage{
 		BasicSlabStorage: slabStorage,
 		StorageMaps:      make(map[StorageKey]*StorageMap),
+		memoryGauge:      memoryGauge,
 	}
 }
 
@@ -141,10 +151,10 @@ func (i InMemoryStorage) GetStorageMap(
 ) (
 	storageMap *StorageMap,
 ) {
-	key := StorageKey{address, domain}
+	key := NewStorageKey(i.memoryGauge, address, domain)
 	storageMap = i.StorageMaps[key]
 	if storageMap == nil && createIfNotExists {
-		storageMap = NewStorageMap(i, atree.Address(address))
+		storageMap = NewStorageMap(i.memoryGauge, i, atree.Address(address))
 		i.StorageMaps[key] = storageMap
 	}
 	return storageMap

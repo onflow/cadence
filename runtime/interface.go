@@ -35,17 +35,32 @@ type Interface interface {
 	ResolveLocation(identifiers []Identifier, location Location) ([]ResolvedLocation, error)
 	// GetCode returns the code at a given location
 	GetCode(location Location) ([]byte, error)
-	// GetProgram attempts gets the program for the given location, if available.
+	// GetProgram returns the program for the given location, if available.
 	//
-	// NOTE: During execution, this function must always return the *same* program,
-	// i.e. it may NOT return a different program,
-	// an elaboration in the program that is not annotating the AST in the program;
-	// or a program/elaboration and then nothing in a subsequent call.
+	// NOTE:
 	//
-	// This function must also return what was set using SetProgram,
-	// it may NOT return something different or nothing (!) after SetProgram was called.
+	// For implementations:
+	// - During execution, this function MUST always return the *same* program,
+	//   i.e. it may NOT return a different program,
+	//   an elaboration in the program that is not annotating the AST in the program;
+	//   or a program/elaboration and then nothing in a subsequent call.
+	// - This function MUST also return what was set using SetProgram,
+	//   it may NOT return something different or nothing/nil (!) after SetProgram was called.
+	//   Do NOT implement this as a cache!
 	//
-	// This is not a caching function!
+	// For uses:
+	// - ONLY call this function when a program must be parsed and checked,
+	//   as an optimization to reuse the result of a potential previous parse and check.
+	// - If GetProgram returns nil, Cadence MUST call SetProgram:
+	//   There's an informal contract between Cadence and the implementer:
+	//   Cadence calls GetProgram to potentially avoid having to parse and check a program.
+	//   If the implementer returns nil from GetProgram,
+	//   it expects that Cadence sets the resulting parsed and checked program with SetProgram.
+	// - The behaviour after GetProgram returning nil or a program must be always deterministic:
+	//   As SetProgram is called when GetProgram is nil, then SetProgram MUST also be called when
+	//   GetProgram returns a program. This prevents nondeterministic behaviour
+	//
+	// Deprecated: This function should be refactored to ensure that SetProgram is always called
 	//
 	GetProgram(Location) (*interpreter.Program, error)
 	// SetProgram sets the program for the given location.

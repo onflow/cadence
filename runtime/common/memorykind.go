@@ -36,11 +36,9 @@ const (
 	MemoryKindMetaType
 	MemoryKindNumber
 	MemoryKindArrayBase
-	MemoryKindArrayLength
 	MemoryKindDictionaryBase
-	MemoryKindDictionarySize
 	MemoryKindCompositeBase
-	MemoryKindCompositeSize
+	MemoryKindSimpleCompositeBase
 	MemoryKindOptional
 	MemoryKindNil
 	MemoryKindVoid
@@ -54,6 +52,16 @@ const (
 	MemoryKindHostFunction
 	MemoryKindBoundFunction
 	MemoryKindBigInt
+	MemoryKindSimpleComposite
+
+	// Atree Nodes
+	MemoryKindAtreeArrayDataSlab
+	MemoryKindAtreeArrayMetaDataSlab
+	MemoryKindAtreeArrayElementOverhead
+	MemoryKindAtreeMapDataSlab
+	MemoryKindAtreeMapMetaDataSlab
+	MemoryKindAtreeMapElementOverhead
+	MemoryKindAtreeMapPreAllocatedElement
 
 	// Static Types
 	MemoryKindPrimitiveStaticType
@@ -68,12 +76,67 @@ const (
 	MemoryKindCapabilityStaticType
 	MemoryKindFunctionStaticType
 
+	// Cadence Values
+	MemoryKindCadenceVoid
+	MemoryKindCadenceOptional
+	MemoryKindCadenceBool
+	MemoryKindCadenceString
+	MemoryKindCadenceCharacter
+	MemoryKindCadenceAddress
+	MemoryKindCadenceInt
+	MemoryKindCadenceNumber
+	MemoryKindCadenceArrayBase
+	MemoryKindCadenceArrayLength
+	MemoryKindCadenceDictionaryBase
+	MemoryKindCadenceDictionarySize
+	MemoryKindCadenceKeyValuePair
+	MemoryKindCadenceStructBase
+	MemoryKindCadenceStructSize
+	MemoryKindCadenceResourceBase
+	MemoryKindCadenceResourceSize
+	MemoryKindCadenceEventBase
+	MemoryKindCadenceEventSize
+	MemoryKindCadenceContractBase
+	MemoryKindCadenceContractSize
+	MemoryKindCadenceEnumBase
+	MemoryKindCadenceEnumSize
+	MemoryKindCadenceLink
+	MemoryKindCadencePath
+	MemoryKindCadenceTypeValue
+	MemoryKindCadenceCapability
+
+	// Cadence Types
+	MemoryKindCadenceSimpleType
+	MemoryKindCadenceOptionalType
+	MemoryKindCadenceVariableSizedArrayType
+	MemoryKindCadenceConstantSizedArrayType
+	MemoryKindCadenceDictionaryType
+	MemoryKindCadenceField
+	MemoryKindCadenceParameter
+	MemoryKindCadenceStructType
+	MemoryKindCadenceResourceType
+	MemoryKindCadenceEventType
+	MemoryKindCadenceContractType
+	MemoryKindCadenceStructInterfaceType
+	MemoryKindCadenceResourceInterfaceType
+	MemoryKindCadenceContractInterfaceType
+	MemoryKindCadenceFunctionType
+	MemoryKindCadenceReferenceType
+	MemoryKindCadenceRestrictedType
+	MemoryKindCadenceCapabilityType
+	MemoryKindCadenceEnumType
+
 	// Misc
 
 	MemoryKindRawString
 	MemoryKindAddressLocation
 	MemoryKindBytes
 	MemoryKindVariable
+	MemoryKindCompositeTypeInfo
+	MemoryKindCompositeField
+	MemoryKindInvocation
+	MemoryKindStorageMap
+	MemoryKindStorageKey
 
 	// Tokens
 
@@ -154,6 +217,22 @@ const (
 	MemoryKindRange
 
 	MemoryKindElaboration
+	MemoryKindActivation
+	MemoryKindActivationEntries
+
+	// sema types
+	MemoryKindVariableSizedSemaType
+	MemoryKindConstantSizedSemaType
+	MemoryKindDictionarySemaType
+	MemoryKindOptionalSemaType
+	MemoryKindRestrictedSemaType
+	MemoryKindReferenceSemaType
+	MemoryKindCapabilitySemaType
+
+	// ordered-map
+	MemoryKindOrderedMap
+	MemoryKindOrderedMapEntryList
+	MemoryKindOrderedMapEntry
 
 	// Placeholder kind to allow consistent indexing
 	// this should always be the last kind

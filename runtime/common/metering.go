@@ -106,7 +106,28 @@ var (
 	PositionMemoryUsage = NewConstantMemoryUsage(MemoryKindPosition)
 	RangeMemoryUsage    = NewConstantMemoryUsage(MemoryKindRange)
 
-	ElaborationMemoryUsage = NewConstantMemoryUsage(MemoryKindElaboration)
+	ElaborationMemoryUsage       = NewConstantMemoryUsage(MemoryKindElaboration)
+	ActivationMemoryUsage        = NewConstantMemoryUsage(MemoryKindActivation)
+	ActivationEntriesMemoryUsage = NewConstantMemoryUsage(MemoryKindActivationEntries)
+
+	SimpleCompositeBaseMemoryUsage = NewConstantMemoryUsage(MemoryKindSimpleCompositeBase)
+	AtreeMapElementOverhead        = NewConstantMemoryUsage(MemoryKindAtreeMapElementOverhead)
+	AtreeArrayElementOverhead      = NewConstantMemoryUsage(MemoryKindAtreeArrayElementOverhead)
+	CompositeTypeInfoMemoryUsage   = NewConstantMemoryUsage(MemoryKindCompositeTypeInfo)
+	CompositeFieldMemoryUsage      = NewConstantMemoryUsage(MemoryKindCompositeField)
+
+	VariableSizedSemaTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindVariableSizedSemaType)
+	ConstantSizedSemaTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindConstantSizedSemaType)
+	DictionarySemaTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindDictionarySemaType)
+	OptionalSemaTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindOptionalSemaType)
+	RestrictedSemaTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindRestrictedSemaType)
+	ReferenceSemaTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindReferenceSemaType)
+	CapabilitySemaTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindCapabilitySemaType)
+
+	OrderedMapMemoryUsage = NewConstantMemoryUsage(MemoryKindOrderedMap)
+	InvocationMemoryUsage = NewConstantMemoryUsage(MemoryKindInvocation)
+	StorageMapMemoryUsage = NewConstantMemoryUsage(MemoryKindStorageMap)
+	StorageKeyMemoryUsage = NewConstantMemoryUsage(MemoryKindStorageKey)
 
 	// Following are the known memory usage amounts for string representation of interpreter values.
 	// Same as `len(format.X)`. However, values are hard-coded to avoid the circular dependency.
@@ -146,62 +167,153 @@ func NewConstantMemoryUsage(kind MemoryKind) MemoryUsage {
 	}
 }
 
-func NewArrayMemoryUsages(length int) (MemoryUsage, MemoryUsage) {
+func atreeNodes(count uint64, elementSize uint) (leafNodeCount uint64, branchNodeCount uint64) {
+	if elementSize != 0 {
+		// If we know how large each element is, we can compute the number of
+		// atree leaf nodes using this formula:
+		// size * elementSize / default_slab_size
+		leafNodeCount = uint64(math.Ceil(float64(count) * float64(elementSize) / 1024))
+	} else {
+		// If we don't know how large each element is, we can overestimate
+		// the number of atree leaf nodes this way, since every non-root leaf node
+		// will always contain at least two elements.
+		leafNodeCount = uint64(math.Ceil(float64(count) / 2))
+	}
+	if leafNodeCount < 1 {
+		leafNodeCount = 1 // there will always be at least one data slab
+	}
+
+	branchNodeCount = 0
+	if leafNodeCount >= 2 {
+		const n = 20 // n-ary tree
+		// Compute atree height from number of leaf nodes and n-ary
+		height := 1 + int(math.Ceil(math.Log(float64(leafNodeCount))/math.Log(float64(n))))
+
+		// Compute number of branch nodes from leaf node count and height
+		for i := 1; i < height; i++ {
+			branchNodeCount += uint64(math.Ceil(float64(leafNodeCount) / math.Pow(float64(n), float64(i))))
+		}
+	}
+	return
+}
+
+func newAtreeMemoryUsage(count uint64, elementSize uint, array bool) (MemoryUsage, MemoryUsage) {
+	newLeafNodes, newBranchNodes := atreeNodes(count, elementSize)
+	if array {
+		return MemoryUsage{
+				Kind:   MemoryKindAtreeArrayDataSlab,
+				Amount: newLeafNodes,
+			}, MemoryUsage{
+				Kind:   MemoryKindAtreeArrayMetaDataSlab,
+				Amount: newBranchNodes,
+			}
+	} else {
+		return MemoryUsage{
+				Kind:   MemoryKindAtreeMapDataSlab,
+				Amount: newLeafNodes,
+			}, MemoryUsage{
+				Kind:   MemoryKindAtreeMapMetaDataSlab,
+				Amount: newBranchNodes,
+			}
+	}
+}
+
+func NewCadenceArrayMemoryUsages(length int) (MemoryUsage, MemoryUsage) {
+	return MemoryUsage{
+			Kind:   MemoryKindCadenceArrayBase,
+			Amount: 1,
+		}, MemoryUsage{
+			Kind:   MemoryKindCadenceArrayLength,
+			Amount: uint64(length),
+		}
+}
+
+func AdditionalAtreeMemoryUsage(originalCount uint64, elementSize uint, array bool) (MemoryUsage, MemoryUsage) {
+	originalLeafNodes, originalBranchNodes := atreeNodes(originalCount, elementSize)
+	newLeafNodes, newBranchNodes := atreeNodes(originalCount+1, elementSize)
+	if array {
+		return MemoryUsage{
+				Kind:   MemoryKindAtreeArrayDataSlab,
+				Amount: newLeafNodes - originalLeafNodes,
+			}, MemoryUsage{
+				Kind:   MemoryKindAtreeArrayMetaDataSlab,
+				Amount: newBranchNodes - originalBranchNodes,
+			}
+	} else {
+		return MemoryUsage{
+				Kind:   MemoryKindAtreeMapDataSlab,
+				Amount: newLeafNodes - originalLeafNodes,
+			}, MemoryUsage{
+				Kind:   MemoryKindAtreeMapMetaDataSlab,
+				Amount: newBranchNodes - originalBranchNodes,
+			}
+	}
+}
+
+func NewArrayMemoryUsages(count uint64, elementSize uint) (MemoryUsage, MemoryUsage, MemoryUsage, MemoryUsage) {
+	leaves, branches := newAtreeMemoryUsage(count, elementSize, true)
 	return MemoryUsage{
 			Kind:   MemoryKindArrayBase,
 			Amount: 1,
 		}, MemoryUsage{
-			Kind:   MemoryKindArrayLength,
-			Amount: uint64(length),
-		}
+			Kind:   MemoryKindAtreeArrayElementOverhead,
+			Amount: count,
+		}, leaves, branches
 }
 
-func NewArrayAdditionalLengthUsage(originalLength, additionalLength int) MemoryUsage {
-	var newAmount uint64
-	if originalLength <= 1 {
-		newAmount = uint64(originalLength + additionalLength)
-	} else {
-		// size of b+ tree grows logarithmically with the size of the tree
-		newAmount = uint64(math.Log2(float64(originalLength)) + float64(additionalLength))
-	}
-	return MemoryUsage{
-		Kind:   MemoryKindArrayLength,
-		Amount: newAmount,
-	}
-}
-
-func NewDictionaryMemoryUsages(length int) (MemoryUsage, MemoryUsage) {
+func NewDictionaryMemoryUsages(count uint64, elementSize uint) (MemoryUsage, MemoryUsage, MemoryUsage, MemoryUsage) {
+	leaves, branches := newAtreeMemoryUsage(count, elementSize, false)
 	return MemoryUsage{
 			Kind:   MemoryKindDictionaryBase,
 			Amount: 1,
 		}, MemoryUsage{
-			Kind:   MemoryKindDictionarySize,
+			Kind:   MemoryKindAtreeMapElementOverhead,
+			Amount: count,
+		}, leaves, branches
+}
+
+func NewCadenceDictionaryMemoryUsages(length int) (MemoryUsage, MemoryUsage) {
+	return MemoryUsage{
+			Kind:   MemoryKindCadenceDictionaryBase,
+			Amount: 1,
+		}, MemoryUsage{
+			Kind:   MemoryKindCadenceDictionarySize,
 			Amount: uint64(length),
 		}
 }
 
-func NewDictionaryAdditionalSizeUsage(originalSize, additionalSize int) MemoryUsage {
-	var newAmount uint64
-	if originalSize <= 1 {
-		newAmount = uint64(originalSize + additionalSize)
-	} else {
-		// size of b+ tree grows logarithmically with the size of the tree
-		newAmount = uint64(math.Log2(float64(originalSize)) + float64(additionalSize))
-	}
-	return MemoryUsage{
-		Kind:   MemoryKindDictionarySize,
-		Amount: newAmount,
-	}
-}
-
-func NewCompositeMemoryUsages(length int) (MemoryUsage, MemoryUsage) {
+func NewCompositeMemoryUsages(count uint64, elementSize uint) (MemoryUsage, MemoryUsage, MemoryUsage, MemoryUsage) {
+	leaves, branches := newAtreeMemoryUsage(count, elementSize, false)
 	return MemoryUsage{
 			Kind:   MemoryKindCompositeBase,
 			Amount: 1,
 		}, MemoryUsage{
-			Kind:   MemoryKindCompositeSize,
-			Amount: uint64(length),
-		}
+			Kind:   MemoryKindAtreeMapElementOverhead,
+			Amount: count,
+		}, leaves, branches
+}
+
+func NewAtreeMapPreAllocatedElementsMemoryUsage(count uint64, elementSize uint) MemoryUsage {
+	leafNodesCount, _ := atreeNodes(count, elementSize)
+
+	const preAllocatedElementCountPerLeafNode uint64 = 32
+
+	var amount uint64 = 0
+	if count < preAllocatedElementCountPerLeafNode*leafNodesCount {
+		amount = preAllocatedElementCountPerLeafNode*leafNodesCount - count
+	}
+
+	return MemoryUsage{
+		Kind:   MemoryKindAtreeMapPreAllocatedElement,
+		Amount: amount,
+	}
+}
+
+func NewSimpleCompositeMemoryUsage(length int) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindSimpleComposite,
+		Amount: uint64(length),
+	}
 }
 
 func NewStringMemoryUsage(length int) MemoryUsage {
@@ -215,6 +327,27 @@ func NewRawStringMemoryUsage(length int) MemoryUsage {
 	return MemoryUsage{
 		Kind:   MemoryKindRawString,
 		Amount: uint64(length) + 1, // +1 to account for empty strings
+	}
+}
+
+func NewCadenceStringMemoryUsage(length int) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindCadenceString,
+		Amount: uint64(length) + 1, // +1 to account for empty strings
+	}
+}
+
+func NewCadenceCharacterMemoryUsage(length int) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindCadenceCharacter,
+		Amount: uint64(length),
+	}
+}
+
+func NewCadenceIntMemoryUsage(bytes int) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindCadenceInt,
+		Amount: uint64(bytes),
 	}
 }
 
@@ -244,6 +377,56 @@ func NewBigIntMemoryUsage(bytes int) MemoryUsage {
 		Kind:   MemoryKindBigInt,
 		Amount: uint64(bytes),
 	}
+}
+
+func NewCadenceStructMemoryUsages(fields int) (MemoryUsage, MemoryUsage) {
+	return MemoryUsage{
+			Kind:   MemoryKindCadenceStructBase,
+			Amount: 1,
+		}, MemoryUsage{
+			Kind:   MemoryKindCadenceStructSize,
+			Amount: uint64(fields),
+		}
+}
+
+func NewCadenceResourceMemoryUsages(fields int) (MemoryUsage, MemoryUsage) {
+	return MemoryUsage{
+			Kind:   MemoryKindCadenceResourceBase,
+			Amount: 1,
+		}, MemoryUsage{
+			Kind:   MemoryKindCadenceResourceSize,
+			Amount: uint64(fields),
+		}
+}
+
+func NewCadenceEventMemoryUsages(fields int) (MemoryUsage, MemoryUsage) {
+	return MemoryUsage{
+			Kind:   MemoryKindCadenceEventBase,
+			Amount: 1,
+		}, MemoryUsage{
+			Kind:   MemoryKindCadenceEventSize,
+			Amount: uint64(fields),
+		}
+}
+
+func NewCadenceContractMemoryUsages(fields int) (MemoryUsage, MemoryUsage) {
+	return MemoryUsage{
+			Kind:   MemoryKindCadenceContractBase,
+			Amount: 1,
+		}, MemoryUsage{
+			Kind:   MemoryKindCadenceContractSize,
+			Amount: uint64(fields),
+		}
+}
+
+func NewCadenceEnumMemoryUsages(fields int) (MemoryUsage, MemoryUsage) {
+	return MemoryUsage{
+			Kind:   MemoryKindCadenceEnumBase,
+			Amount: 1,
+		}, MemoryUsage{
+			Kind:   MemoryKindCadenceEnumSize,
+			Amount: uint64(fields),
+		}
 }
 
 func max(a, b int) int {
@@ -276,11 +459,18 @@ func BigIntByteLength(v *big.Int) int {
 //
 
 func NewPlusBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
-	// max(|a|, |b|) + 5
+	// if |a|==|b|==0, then 0
+	// else max(|a|, |b|) + 5
+	aWordLength := len(a.Bits())
+	bWordLength := len(b.Bits())
+
+	if aWordLength == 0 && bWordLength == 0 {
+		return NewBigIntMemoryUsage(0)
+	}
 
 	maxWordLength := max(
-		len(a.Bits()),
-		len(b.Bits()),
+		aWordLength,
+		bWordLength,
 	)
 	return NewBigIntMemoryUsage(
 		(maxWordLength + 5) *
@@ -327,9 +517,6 @@ func NewMulBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 	)
 }
 
-var bigOne = big.NewInt(1)
-var bigOneHundred = big.NewInt(100)
-
 func NewModBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 	// if a < b or |b| == 1:
 	//     |a| + 4
@@ -344,14 +531,14 @@ func NewModBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 	bWordLength := len(b.Bits())
 
 	var resultWordLength int
-	if a.Cmp(b) < 0 || b.Cmp(bigOne) == 0 {
+	if a.Cmp(b) < 0 || bWordLength == 1 {
 		resultWordLength = aWordLength + 4
-	} else if b.Cmp(bigOneHundred) < 0 {
+	} else if bWordLength < 100 {
 		resultWordLength = aWordLength - bWordLength + 5
 	} else {
 		recursionCost := int(unsafe.Sizeof(uintptr(0))) +
 			9*bWordLength +
-			int(math.Floor(float64(aWordLength)/float64(bWordLength))) + 12
+			aWordLength/bWordLength + 12
 		recursionDepth := 2 * b.BitLen()
 		resultWordLength = 3*bWordLength + 4 + recursionCost*recursionDepth
 	}
@@ -527,12 +714,39 @@ func NewDictionaryExpressionMemoryUsage(length int) MemoryUsage {
 		Amount: uint64(length) + 1,
 	}
 }
+
 func NewMembersMemoryUsage(length int) MemoryUsage {
 	return MemoryUsage{
 		Kind: MemoryKindMembers,
 		// +1 to account for empty members
 		Amount: uint64(length) + 1,
 	}
+}
+
+func NewCadenceNumberMemoryUsage(bytes int) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindCadenceNumber,
+		Amount: uint64(bytes),
+	}
+}
+
+func NewCadenceBigIntMemoryUsage(bytes int) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindCadenceNumber,
+		Amount: uint64(bytes),
+	}
+}
+
+func NewOrderedMapMemoryUsages(size uint64) (MemoryUsage, MemoryUsage, MemoryUsage) {
+	return OrderedMapMemoryUsage,
+		MemoryUsage{
+			Kind:   MemoryKindOrderedMapEntryList,
+			Amount: size,
+		},
+		MemoryUsage{
+			Kind:   MemoryKindOrderedMapEntry,
+			Amount: size,
+		}
 }
 
 // UseConstantMemory uses a pre-determined amount of memory
