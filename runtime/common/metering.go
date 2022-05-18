@@ -20,6 +20,7 @@ package common
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"math/big"
 	"unsafe"
@@ -130,6 +131,22 @@ var (
 	StorageKeyMemoryUsage = NewConstantMemoryUsage(MemoryKindStorageKey)
 )
 
+
+// FatalError indicates an error that should end
+// the Cadence parsing, checking, or interpretation.
+type FatalError struct {
+	Err error
+}
+
+func (e FatalError) Unwrap() error {
+	return e.Err
+}
+
+func (e FatalError) Error() string {
+	return fmt.Sprintf("Fatal error: %s", e.Err.Error())
+}
+
+
 func UseMemory(gauge MemoryGauge, usage MemoryUsage) {
 	if gauge == nil {
 		return
@@ -137,7 +154,7 @@ func UseMemory(gauge MemoryGauge, usage MemoryUsage) {
 
 	err := gauge.MeterMemory(usage)
 	if err != nil {
-		panic(err)
+		panic(FatalError{Err: err})
 	}
 }
 
