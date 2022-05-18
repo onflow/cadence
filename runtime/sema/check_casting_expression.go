@@ -434,7 +434,7 @@ func isRedundantCast(expr ast.Expression, exprInferredType, targetType, expected
 		return true
 	}
 
-	checkCastVisitor := &CheckCastVisitor{}
+	checkCastVisitor := CheckCastVisitor{}
 
 	return checkCastVisitor.IsRedundantCast(expr, exprInferredType, targetType)
 }

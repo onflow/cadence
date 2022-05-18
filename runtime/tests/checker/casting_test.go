@@ -6415,7 +6415,7 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 			require.Len(t, hints, 0)
 		})
 
-		t.Run("Reference, without type", func(t *testing.T) {
+		t.Run("Reference, with cast", func(t *testing.T) {
 			t.Parallel()
 
 			checker, err := ParseAndCheckWithAny(t, `
@@ -6440,7 +6440,17 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 			require.NoError(t, err)
 
 			hints := checker.Hints()
-			require.Len(t, hints, 0)
+			require.Len(t, hints, 1)
+
+			require.IsType(t, &sema.UnnecessaryCastHint{}, hints[0])
+			castHint := hints[0].(*sema.UnnecessaryCastHint)
+			assert.Equal(
+				t,
+				&sema.ReferenceType{
+					Type: sema.BoolType,
+				},
+				castHint.TargetType,
+			)
 		})
 
 		t.Run("Conditional expr valid", func(t *testing.T) {

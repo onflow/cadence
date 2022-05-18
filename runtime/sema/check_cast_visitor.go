@@ -184,7 +184,7 @@ func (d *CheckCastVisitor) VisitDestroyExpression(_ *ast.DestroyExpression) ast.
 }
 
 func (d *CheckCastVisitor) VisitReferenceExpression(_ *ast.ReferenceExpression) ast.Repr {
-	return d.isTypeRedundant(d.exprInferredType, d.targetType)
+	return false
 }
 
 func (d *CheckCastVisitor) VisitForceExpression(_ *ast.ForceExpression) ast.Repr {
