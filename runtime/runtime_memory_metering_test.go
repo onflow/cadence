@@ -832,3 +832,139 @@ func TestLogFunctionStringConversionMetering(t *testing.T) {
 
 	assert.Equal(t, diffOfActualLen, diffOfMeteredAmount)
 }
+
+func TestStorageCommitsMetering(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("storage used empty", func(t *testing.T) {
+		t.Parallel()
+
+		code := []byte(`
+            transaction {
+                prepare(signer: AuthAccount) {
+                    signer.storageUsed
+                }
+            }
+        `)
+
+		meter := newTestMemoryGauge()
+
+		storageUsedInvoked := false
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: newTestLedger(nil, nil),
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{{42}}, nil
+			},
+			meterMemory: meter.MeterMemory,
+			getStorageUsed: func(_ Address) (uint64, error) {
+				// Before the storageUsed function is invoked, the deltas must have been committed.
+				// So the encoded slabs must have been metered at this point.
+				assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeEncodedSlab))
+				storageUsedInvoked = true
+				return 1, nil
+			},
+		}
+
+		runtime := newTestInterpreterRuntime()
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: code,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  utils.TestLocation,
+			},
+		)
+
+		require.NoError(t, err)
+		assert.True(t, storageUsedInvoked)
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeEncodedSlab))
+	})
+
+	t.Run("account save", func(t *testing.T) {
+		t.Parallel()
+
+		code := []byte(`
+            transaction {
+                prepare(signer: AuthAccount) {
+                    signer.save([[1, 2, 3], [4, 5, 6]], to: /storage/test)
+                }
+            }
+        `)
+
+		meter := newTestMemoryGauge()
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: newTestLedger(nil, nil),
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{{42}}, nil
+			},
+			meterMemory: meter.MeterMemory,
+		}
+
+		runtime := newTestInterpreterRuntime()
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: code,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  utils.TestLocation,
+			},
+		)
+
+		require.NoError(t, err)
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindAtreeEncodedSlab))
+	})
+
+	t.Run("storage used non empty", func(t *testing.T) {
+		t.Parallel()
+
+		code := []byte(`
+            transaction {
+                prepare(signer: AuthAccount) {
+                    signer.save([[1, 2, 3], [4, 5, 6]], to: /storage/test)
+                    signer.storageUsed
+                }
+            }
+        `)
+
+		meter := newTestMemoryGauge()
+		storageUsedInvoked := false
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: newTestLedger(nil, nil),
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{{42}}, nil
+			},
+			meterMemory: meter.MeterMemory,
+			getStorageUsed: func(_ Address) (uint64, error) {
+				// Before the storageUsed function is invoked, the deltas must have been committed.
+				// So the encoded slabs must have been metered at this point.
+				assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindAtreeEncodedSlab))
+				storageUsedInvoked = true
+				return 1, nil
+			},
+		}
+
+		runtime := newTestInterpreterRuntime()
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: code,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  utils.TestLocation,
+			},
+		)
+
+		require.NoError(t, err)
+		assert.True(t, storageUsedInvoked)
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindAtreeEncodedSlab))
+	})
+}
