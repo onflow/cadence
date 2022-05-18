@@ -20,10 +20,11 @@ package parser2
 
 import (
 	"fmt"
-	"github.com/onflow/cadence/runtime/common"
 	"math/big"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/onflow/cadence/runtime/common"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/errors"
