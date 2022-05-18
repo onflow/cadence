@@ -131,22 +131,6 @@ var (
 	StorageKeyMemoryUsage = NewConstantMemoryUsage(MemoryKindStorageKey)
 )
 
-
-// FatalError indicates an error that should end
-// the Cadence parsing, checking, or interpretation.
-type FatalError struct {
-	Err error
-}
-
-func (e FatalError) Unwrap() error {
-	return e.Err
-}
-
-func (e FatalError) Error() string {
-	return fmt.Sprintf("Fatal error: %s", e.Err.Error())
-}
-
-
 func UseMemory(gauge MemoryGauge, usage MemoryUsage) {
 	if gauge == nil {
 		return
@@ -754,4 +738,18 @@ func UseConstantMemory(memoryGauge MemoryGauge, kind MemoryKind) {
 		Kind:   kind,
 		Amount: 1,
 	})
+}
+
+// FatalError indicates an error that should end
+// the Cadence parsing, checking, or interpretation.
+type FatalError struct {
+	Err error
+}
+
+func (e FatalError) Unwrap() error {
+	return e.Err
+}
+
+func (e FatalError) Error() string {
+	return fmt.Sprintf("Fatal error: %s", e.Err.Error())
 }
