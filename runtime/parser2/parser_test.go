@@ -20,6 +20,7 @@ package parser2
 
 import (
 	"fmt"
+	"github.com/onflow/cadence/runtime/common"
 	"math/big"
 	"testing"
 
@@ -491,6 +492,22 @@ func TestParseArgumentList(t *testing.T) {
 			expected,
 			result,
 		)
+	})
+
+	t.Run("fatal error from lack of memory", func(t *testing.T) {
+		gauge := makeLimitingMemoryGauge()
+		gauge.Limit(common.MemoryKindSyntaxToken, 0)
+
+		var panicMsg interface{}
+		(func() {
+			defer func() {
+				panicMsg = recover()
+			}()
+
+			ParseArgumentList(`(1, b: true)`, gauge)
+		})()
+
+		require.IsType(t, common.FatalError{}, panicMsg)
 	})
 
 	t.Run("valid", func(t *testing.T) {

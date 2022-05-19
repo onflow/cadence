@@ -153,6 +153,8 @@ func (l *lexer) run(state stateFn) {
 		if r := recover(); r != nil {
 			var err error
 			switch r := r.(type) {
+			case common.FatalError:
+				panic(r) // fatal error percolates up
 			case error:
 				err = r
 			default:

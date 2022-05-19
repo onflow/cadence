@@ -19,7 +19,9 @@
 package parser2
 
 import (
+	"errors"
 	"fmt"
+	"github.com/onflow/cadence/runtime/common"
 	"math"
 	"math/big"
 	"math/rand"
@@ -311,6 +313,25 @@ func TestParseAdvancedExpression(t *testing.T) {
 			},
 			result,
 		)
+	})
+
+	t.Run("test FatalError in setExprMetaLeftDenotation", func(t *testing.T) {
+
+		t.Parallel()
+
+		gauge := makeLimitingMemoryGauge()
+		gauge.Limit(common.MemoryKindIntegerExpression, 1)
+
+		var panicMsg interface{}
+		(func() {
+			defer func() {
+				panicMsg = recover()
+			}()
+
+			ParseExpression("1 < 2 > 3", gauge)
+		})()
+
+		require.IsType(t, common.FatalError{}, panicMsg)
 	})
 
 	t.Run("less and greater", func(t *testing.T) {
@@ -5888,4 +5909,45 @@ func TestParseReplayLimit(t *testing.T) {
 		},
 		errs,
 	)
+}
+
+type limitingMemoryGauge struct {
+	limited map[common.MemoryKind]bool   // which kinds to limit
+	limits  map[common.MemoryKind]uint64 // limits of limited kinds
+	totals  map[common.MemoryKind]uint64 // metered memory. for debugging
+	debug   bool                         // print totals after each allocation
+}
+
+func makeLimitingMemoryGauge() *limitingMemoryGauge {
+	g := limitingMemoryGauge{
+		limited: make(map[common.MemoryKind]bool),
+		limits:  make(map[common.MemoryKind]uint64),
+		totals:  make(map[common.MemoryKind]uint64),
+	}
+	return &g
+}
+
+func (g *limitingMemoryGauge) Limit(kind common.MemoryKind, limit uint64) {
+	g.limited[kind] = true
+	g.limits[kind] = limit
+}
+
+func (g *limitingMemoryGauge) MeterMemory(usage common.MemoryUsage) error {
+	g.totals[usage.Kind] += usage.Amount
+
+	if g.debug {
+		fmt.Println(g.totals)
+	}
+
+	if !g.limited[usage.Kind] {
+		return nil
+	}
+
+	if g.limits[usage.Kind] < usage.Amount {
+		return errors.New(fmt.Sprintf(`Reached limit for "%s"`, usage.Kind.String()))
+	}
+
+	g.limits[usage.Kind] -= usage.Amount
+
+	return nil
 }
