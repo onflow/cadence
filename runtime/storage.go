@@ -313,7 +313,7 @@ func (s *Storage) Commit(inter *interpreter.Interpreter, commitContractUpdates b
 
 	// Commit the underlying slab storage's writes
 
-	deltas := s.PersistentSlabStorage.Deltas(true)
+	deltas := s.PersistentSlabStorage.DeltasWithoutTempAddresses()
 	common.UseMemory(s.memoryGauge, common.NewAtreeEncodedSlabMemoryUsage(deltas))
 
 	// TODO: report encoding metric for all encoded slabs
