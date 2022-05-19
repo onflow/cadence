@@ -19,15 +19,15 @@
 package parser2
 
 import (
-	"errors"
 	"fmt"
-	"github.com/onflow/cadence/runtime/common"
 	"math"
 	"math/big"
 	"math/rand"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/onflow/cadence/runtime/common"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -5944,7 +5944,7 @@ func (g *limitingMemoryGauge) MeterMemory(usage common.MemoryUsage) error {
 	}
 
 	if g.limits[usage.Kind] < usage.Amount {
-		return errors.New(fmt.Sprintf(`Reached limit for "%s"`, usage.Kind.String()))
+		return fmt.Errorf(`reached limit for "%s"`, usage.Kind.String())
 	}
 
 	g.limits[usage.Kind] -= usage.Amount

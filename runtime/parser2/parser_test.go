@@ -20,9 +20,10 @@ package parser2
 
 import (
 	"fmt"
-	"github.com/onflow/cadence/runtime/common"
 	"math/big"
 	"testing"
+
+	"github.com/onflow/cadence/runtime/common"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
