@@ -332,6 +332,10 @@ func TestParseAdvancedExpression(t *testing.T) {
 		})()
 
 		require.IsType(t, common.FatalError{}, panicMsg)
+
+		fatalError, _ := panicMsg.(common.FatalError)
+		var expectedError limitingMemoryGaugeError
+		assert.ErrorAs(t, fatalError, &expectedError)
 	})
 
 	t.Run("less and greater", func(t *testing.T) {
@@ -5918,6 +5922,12 @@ type limitingMemoryGauge struct {
 	debug   bool                         // print totals after each allocation
 }
 
+type limitingMemoryGaugeError string
+
+func (e limitingMemoryGaugeError) Error() string {
+	return string(e)
+}
+
 func makeLimitingMemoryGauge() *limitingMemoryGauge {
 	g := limitingMemoryGauge{
 		limited: make(map[common.MemoryKind]bool),
@@ -5944,7 +5954,7 @@ func (g *limitingMemoryGauge) MeterMemory(usage common.MemoryUsage) error {
 	}
 
 	if g.limits[usage.Kind] < usage.Amount {
-		return fmt.Errorf(`reached limit for "%s"`, usage.Kind.String())
+		return limitingMemoryGaugeError(fmt.Sprintf(`reached limit for "%s"`, usage.Kind.String()))
 	}
 
 	g.limits[usage.Kind] -= usage.Amount

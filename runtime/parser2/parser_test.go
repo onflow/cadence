@@ -509,6 +509,10 @@ func TestParseArgumentList(t *testing.T) {
 		})()
 
 		require.IsType(t, common.FatalError{}, panicMsg)
+
+		fatalError, _ := panicMsg.(common.FatalError)
+		var expectedError limitingMemoryGaugeError
+		assert.ErrorAs(t, fatalError, &expectedError)
 	})
 
 	t.Run("valid", func(t *testing.T) {
