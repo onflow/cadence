@@ -33,7 +33,6 @@ const (
 	MemoryKindAddress
 	MemoryKindString
 	MemoryKindCharacter
-	MemoryKindMetaType
 	MemoryKindNumber
 	MemoryKindArrayBase
 	MemoryKindDictionaryBase

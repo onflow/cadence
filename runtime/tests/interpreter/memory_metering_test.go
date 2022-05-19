@@ -8909,7 +8909,6 @@ func TestInterpretASTMetering(t *testing.T) {
 		assert.Equal(t, uint64(126), meter.getMemory(common.MemoryKindRange))
 	})
 
-
 	t.Run("locations", func(t *testing.T) {
 		script := `
             import A from 0x42

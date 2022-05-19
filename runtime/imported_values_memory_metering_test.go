@@ -369,7 +369,6 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 				Location:            utils.TestLocation,
 				QualifiedIdentifier: "Foo",
 			},
-			Fields:     nil,
 		}
 
 		executeScript(script, meter, structValue)
