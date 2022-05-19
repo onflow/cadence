@@ -24,13 +24,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/onflow/cadence/runtime/common"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/parser2/lexer"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
