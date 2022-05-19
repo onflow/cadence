@@ -695,3 +695,71 @@ func TestParseTypeDepthLimit(t *testing.T) {
 		err.(Error).Errors,
 	)
 }
+
+func TestParseLocalReplayLimit(t *testing.T) {
+	t.Parallel()
+
+	var builder strings.Builder
+	builder.WriteString("let t = T")
+	for i := 0; i < 100; i++ {
+		builder.WriteString("<T")
+	}
+	builder.WriteString(">()")
+
+	code := builder.String()
+	_, errs := ParseProgram(code, nil)
+	utils.AssertEqualWithDiff(t,
+		Error{
+			Code: code,
+			Errors: []error{
+				&SyntaxError{
+					Message: fmt.Sprintf(
+						"program too ambiguous, local replay limit of %d tokens exceeded",
+						localTokenReplayCountLimit,
+					),
+					Pos: ast.Position{
+						Offset: 210,
+						Line:   1,
+						Column: 210,
+					},
+				},
+			},
+		},
+		errs,
+	)
+}
+
+func TestParseGlobalReplayLimit(t *testing.T) {
+
+	t.Parallel()
+
+	var builder strings.Builder
+	for j := 0; j < 2; j++ {
+		builder.WriteString(";let t = T")
+		for i := 0; i < 30; i++ {
+			builder.WriteString("<T")
+		}
+	}
+
+	code := builder.String()
+	_, errs := ParseProgram(code, nil)
+	utils.AssertEqualWithDiff(t,
+		Error{
+			Code: code,
+			Errors: []error{
+				&SyntaxError{
+					Message: fmt.Sprintf(
+						"program too ambiguous, global replay limit of %d tokens exceeded",
+						globalTokenReplayCountLimit,
+					),
+					Pos: ast.Position{
+						Offset: 70,
+						Line:   1,
+						Column: 70,
+					},
+				},
+			},
+		},
+		errs,
+	)
+}

@@ -5907,37 +5907,6 @@ func TestParseInvalidNegativeIntegerLiteralWithIncorrectPrefix(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestParseReplayLimit(t *testing.T) {
-
-	t.Parallel()
-
-	var builder strings.Builder
-	builder.WriteString("let t = T")
-	for i := 0; i < 1000; i++ {
-		builder.WriteString("<T")
-	}
-	builder.WriteString(">()")
-
-	code := builder.String()
-	_, err := ParseProgram(code, nil)
-	utils.AssertEqualWithDiff(t,
-		Error{
-			Code: code,
-			Errors: []error{
-				&SyntaxError{
-					Message: fmt.Sprintf("program too ambiguous, replay limit of %d tokens exceeded", tokenReplayLimit),
-					Pos: ast.Position{
-						Offset: 282,
-						Line:   1,
-						Column: 282,
-					},
-				},
-			},
-		},
-		err,
-	)
-}
-
 type limitingMemoryGauge struct {
 	limited map[common.MemoryKind]bool   // which kinds to limit
 	limits  map[common.MemoryKind]uint64 // limits of limited kinds

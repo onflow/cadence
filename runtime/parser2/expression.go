@@ -579,6 +579,8 @@ func defineLessThanOrTypeArgumentsExpression() {
 			// was higher than the determined left binding power.
 
 			p.startBuffering()
+			p.startAmbiguity()
+			defer p.endAmbiguity()
 
 			// Skip the `<` token.
 			p.next()
