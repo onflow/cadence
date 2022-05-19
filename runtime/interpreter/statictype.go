@@ -79,8 +79,7 @@ func NewCompositeStaticTypeComputeTypeID(
 	location common.Location,
 	qualifiedIdentifier string,
 ) CompositeStaticType {
-	// TODO compute memory usage before building typeID string
-	typeID := common.NewTypeIDFromQualifiedName(location, qualifiedIdentifier)
+	typeID := common.NewTypeIDFromQualifiedName(memoryGauge, location, qualifiedIdentifier)
 
 	return NewCompositeStaticType(memoryGauge, location, qualifiedIdentifier, typeID)
 }
