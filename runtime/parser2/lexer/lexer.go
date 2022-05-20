@@ -28,7 +28,7 @@ import (
 )
 
 // tokenLimit is a sensible limit for how many tokens may be emitted
-const tokenLimit = 2 << 18
+const tokenLimit = 1 << 19
 
 type TokenLimitReachedError struct {
 	ast.Position
