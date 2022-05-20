@@ -933,9 +933,7 @@ func bytesToHashedTypeIdLength(blob []byte) ([HashedTypeIdLength]byte, error) {
 	}
 
 	var rigid [HashedTypeIdLength]byte
-	for i := 0; i < HashedTypeIdLength; i++ {
-		rigid[i] = blob[i]
-	}
+	copy(rigid[:], blob)
 
 	return rigid, nil
 }
