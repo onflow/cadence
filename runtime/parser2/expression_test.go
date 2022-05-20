@@ -315,7 +315,30 @@ func TestParseAdvancedExpression(t *testing.T) {
 		)
 	})
 
-	t.Run("test FatalError in setExprMetaLeftDenotation", func(t *testing.T) {
+	t.Run("FatalError in setExprMetaLeftDenotation", func(t *testing.T) {
+
+		t.Parallel()
+
+		gauge := makeLimitingMemoryGauge()
+		gauge.debug = true
+		gauge.Limit(common.MemoryKindPosition, 11)
+
+		var panicMsg interface{}
+		(func() {
+			defer func() {
+				panicMsg = recover()
+			}()
+			ParseExpression("1 < 2", gauge)
+		})()
+
+		require.IsType(t, common.FatalError{}, panicMsg)
+
+		fatalError, _ := panicMsg.(common.FatalError)
+		var expectedError limitingMemoryGaugeError
+		assert.ErrorAs(t, fatalError, &expectedError)
+	})
+
+	t.Run("FatalError in parser.report", func(t *testing.T) {
 
 		t.Parallel()
 
