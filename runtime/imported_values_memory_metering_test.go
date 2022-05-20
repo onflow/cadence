@@ -84,7 +84,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 			cadence.String("hello"),
 		)
 
-		assert.Equal(t, uint64(6), meter[common.MemoryKindString])
+		assert.Equal(t, uint64(6), meter[common.MemoryKindStringValue])
 	})
 
 	t.Run("Optional", func(t *testing.T) {
@@ -102,7 +102,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 			cadence.NewOptional(cadence.String("hello")),
 		)
 
-		assert.Equal(t, uint64(1), meter[common.MemoryKindOptional])
+		assert.Equal(t, uint64(1), meter[common.MemoryKindOptionalValue])
 		assert.Equal(t, uint64(3), meter[common.MemoryKindOptionalStaticType])
 	})
 
@@ -127,7 +127,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 
 		meter := make(map[common.MemoryKind]uint64)
 		executeScript(script, meter, cadence.NewUInt8(2))
-		assert.Equal(t, uint64(1), meter[common.MemoryKindNumber])
+		assert.Equal(t, uint64(1), meter[common.MemoryKindNumberValue])
 	})
 
 	t.Run("UInt16", func(t *testing.T) {
@@ -139,7 +139,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 
 		meter := make(map[common.MemoryKind]uint64)
 		executeScript(script, meter, cadence.NewUInt16(2))
-		assert.Equal(t, uint64(2), meter[common.MemoryKindNumber])
+		assert.Equal(t, uint64(2), meter[common.MemoryKindNumberValue])
 	})
 
 	t.Run("UInt32", func(t *testing.T) {
@@ -151,7 +151,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 
 		meter := make(map[common.MemoryKind]uint64)
 		executeScript(script, meter, cadence.NewUInt32(2))
-		assert.Equal(t, uint64(4), meter[common.MemoryKindNumber])
+		assert.Equal(t, uint64(4), meter[common.MemoryKindNumberValue])
 	})
 
 	t.Run("UInt64", func(t *testing.T) {
@@ -163,7 +163,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 
 		meter := make(map[common.MemoryKind]uint64)
 		executeScript(script, meter, cadence.NewUInt64(2))
-		assert.Equal(t, uint64(8), meter[common.MemoryKindNumber])
+		assert.Equal(t, uint64(8), meter[common.MemoryKindNumberValue])
 	})
 
 	t.Run("UInt128", func(t *testing.T) {
@@ -211,7 +211,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 
 		meter := make(map[common.MemoryKind]uint64)
 		executeScript(script, meter, cadence.NewInt8(2))
-		assert.Equal(t, uint64(1), meter[common.MemoryKindNumber])
+		assert.Equal(t, uint64(1), meter[common.MemoryKindNumberValue])
 	})
 
 	t.Run("Int16", func(t *testing.T) {
@@ -223,7 +223,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 
 		meter := make(map[common.MemoryKind]uint64)
 		executeScript(script, meter, cadence.NewInt16(2))
-		assert.Equal(t, uint64(2), meter[common.MemoryKindNumber])
+		assert.Equal(t, uint64(2), meter[common.MemoryKindNumberValue])
 	})
 
 	t.Run("Int32", func(t *testing.T) {
@@ -235,7 +235,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 
 		meter := make(map[common.MemoryKind]uint64)
 		executeScript(script, meter, cadence.NewInt32(2))
-		assert.Equal(t, uint64(4), meter[common.MemoryKindNumber])
+		assert.Equal(t, uint64(4), meter[common.MemoryKindNumberValue])
 	})
 
 	t.Run("Int64", func(t *testing.T) {
@@ -247,7 +247,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 
 		meter := make(map[common.MemoryKind]uint64)
 		executeScript(script, meter, cadence.NewInt64(2))
-		assert.Equal(t, uint64(8), meter[common.MemoryKindNumber])
+		assert.Equal(t, uint64(8), meter[common.MemoryKindNumberValue])
 	})
 
 	t.Run("Int128", func(t *testing.T) {
@@ -283,7 +283,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 
 		meter := make(map[common.MemoryKind]uint64)
 		executeScript(script, meter, cadence.NewWord8(2))
-		assert.Equal(t, uint64(1), meter[common.MemoryKindNumber])
+		assert.Equal(t, uint64(1), meter[common.MemoryKindNumberValue])
 	})
 
 	t.Run("Word16", func(t *testing.T) {
@@ -295,7 +295,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 
 		meter := make(map[common.MemoryKind]uint64)
 		executeScript(script, meter, cadence.NewWord16(2))
-		assert.Equal(t, uint64(2), meter[common.MemoryKindNumber])
+		assert.Equal(t, uint64(2), meter[common.MemoryKindNumberValue])
 	})
 
 	t.Run("Word32", func(t *testing.T) {
@@ -307,7 +307,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 
 		meter := make(map[common.MemoryKind]uint64)
 		executeScript(script, meter, cadence.NewWord32(2))
-		assert.Equal(t, uint64(4), meter[common.MemoryKindNumber])
+		assert.Equal(t, uint64(4), meter[common.MemoryKindNumberValue])
 	})
 
 	t.Run("Word64", func(t *testing.T) {
@@ -319,7 +319,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 
 		meter := make(map[common.MemoryKind]uint64)
 		executeScript(script, meter, cadence.NewWord64(2))
-		assert.Equal(t, uint64(8), meter[common.MemoryKindNumber])
+		assert.Equal(t, uint64(8), meter[common.MemoryKindNumberValue])
 	})
 
 	t.Run("Fix64", func(t *testing.T) {
@@ -335,7 +335,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		executeScript(script, meter, fix64Value)
-		assert.Equal(t, uint64(8), meter[common.MemoryKindNumber])
+		assert.Equal(t, uint64(8), meter[common.MemoryKindNumberValue])
 	})
 
 	t.Run("UFix64", func(t *testing.T) {
@@ -350,7 +350,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		executeScript(script, meter, ufix64Value)
-		assert.Equal(t, uint64(8), meter[common.MemoryKindNumber])
+		assert.Equal(t, uint64(8), meter[common.MemoryKindNumberValue])
 	})
 
 	t.Run("Struct", func(t *testing.T) {
@@ -371,7 +371,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		}
 
 		executeScript(script, meter, structValue)
-		assert.Equal(t, uint64(1), meter[common.MemoryKindCompositeBase])
+		assert.Equal(t, uint64(1), meter[common.MemoryKindCompositeValueBase])
 		assert.Equal(t, uint64(168), meter[common.MemoryKindRawString])
 	})
 }
@@ -380,106 +380,6 @@ type testMemoryError struct{}
 
 func (testMemoryError) Error() string {
 	return "memory limit exceeded"
-}
-
-func TestMemoryMeteringErrors(t *testing.T) {
-
-	t.Parallel()
-
-	runtime := newTestInterpreterRuntime()
-
-	type memoryMeter map[common.MemoryKind]uint64
-
-	runtimeInterface := func(meter memoryMeter) *testRuntimeInterface {
-		intf := &testRuntimeInterface{
-			meterMemory: func(usage common.MemoryUsage) error {
-				if usage.Kind == common.MemoryKindString ||
-					usage.Kind == common.MemoryKindArrayBase {
-					return testMemoryError{}
-				}
-				return nil
-			},
-		}
-		intf.decodeArgument = func(b []byte, t cadence.Type) (cadence.Value, error) {
-			return jsoncdc.Decode(intf, b)
-		}
-		return intf
-	}
-
-	executeScript := func(script []byte, meter memoryMeter, args ...cadence.Value) error {
-		_, err := runtime.ExecuteScript(
-			Script{
-				Source:    script,
-				Arguments: encodeArgs(args),
-			},
-			Context{
-				Interface: runtimeInterface(meter),
-				Location:  utils.TestLocation,
-			},
-		)
-
-		return err
-	}
-
-	t.Run("no errors", func(t *testing.T) {
-		t.Parallel()
-
-		script := []byte(`
-            pub fun main() {}
-        `)
-
-		err := executeScript(script, memoryMeter{})
-		assert.NoError(t, err)
-	})
-
-	t.Run("importing", func(t *testing.T) {
-		t.Parallel()
-
-		script := []byte(`
-            pub fun main(x: String) {}
-        `)
-
-		err := executeScript(
-			script,
-			memoryMeter{},
-			cadence.String("hello"),
-		)
-
-		assert.ErrorIs(t, err, testMemoryError{})
-	})
-
-	t.Run("at lexer", func(t *testing.T) {
-		t.Parallel()
-
-		script := []byte(`
-            pub fun main() {
-                let x = "hello"
-            }
-        `)
-
-		err := executeScript(script, memoryMeter{})
-
-		require.IsType(t, Error{}, err)
-		runtimeError := err.(Error)
-
-		require.IsType(t, common.FatalError{}, runtimeError.Err)
-		fatalError := runtimeError.Err.(common.FatalError)
-
-		assert.Contains(t, fatalError.Error(), "memory limit exceeded")
-	})
-
-	t.Run("at interpreter", func(t *testing.T) {
-		t.Parallel()
-
-		script := []byte(`
-            pub fun main() {
-                let x: [AnyStruct] = []
-            }
-        `)
-
-		err := executeScript(script, memoryMeter{})
-		assert.ErrorIs(t, err, testMemoryError{})
-	})
 }
 
 func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
@@ -498,25 +398,25 @@ func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 	tests := []importTest{
 		{
 			TypeName:     "String",
-			MemoryKind:   common.MemoryKindString,
+			MemoryKind:   common.MemoryKindStringValue,
 			Weight:       7 + 1,
 			TypeInstance: cadence.String("forever"),
 		},
 		{
 			TypeName:     "Character",
-			MemoryKind:   common.MemoryKindCharacter,
+			MemoryKind:   common.MemoryKindCharacterValue,
 			Weight:       1,
 			TypeInstance: cadence.Character("a"),
 		},
 		{
 			TypeName:     "Bool",
-			MemoryKind:   common.MemoryKindBool,
+			MemoryKind:   common.MemoryKindBoolValue,
 			Weight:       1,
 			TypeInstance: cadence.Bool(true),
 		},
 		{
 			TypeName:     "Address",
-			MemoryKind:   common.MemoryKindAddress,
+			MemoryKind:   common.MemoryKindAddressValue,
 			Weight:       1,
 			TypeInstance: cadence.Address{},
 		},
@@ -594,7 +494,7 @@ func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 		// Verify Optional and its composing type
 		{
 			TypeName:     "String?",
-			MemoryKind:   common.MemoryKindOptional,
+			MemoryKind:   common.MemoryKindOptionalValue,
 			Weight:       1,
 			TypeInstance: cadence.NewOptional(cadence.String("hello")),
 		},
@@ -606,7 +506,7 @@ func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 		},
 		{
 			TypeName:     "String?",
-			MemoryKind:   common.MemoryKindString,
+			MemoryKind:   common.MemoryKindStringValue,
 			Weight:       5 + 1,
 			TypeInstance: cadence.NewOptional(cadence.String("hello")),
 		},

@@ -29,29 +29,29 @@ const (
 
 	// Values
 
-	MemoryKindBool
-	MemoryKindAddress
-	MemoryKindString
-	MemoryKindCharacter
-	MemoryKindNumber
-	MemoryKindArrayBase
-	MemoryKindDictionaryBase
-	MemoryKindCompositeBase
-	MemoryKindSimpleCompositeBase
-	MemoryKindOptional
-	MemoryKindNil
-	MemoryKindVoid
+	MemoryKindBoolValue
+	MemoryKindAddressValue
+	MemoryKindStringValue
+	MemoryKindCharacterValue
+	MemoryKindNumberValue
+	MemoryKindArrayValueBase
+	MemoryKindDictionaryValueBase
+	MemoryKindCompositeValueBase
+	MemoryKindSimpleCompositeValueBase
+	MemoryKindOptionalValue
+	MemoryKindNilValue
+	MemoryKindVoidValue
 	MemoryKindTypeValue
 	MemoryKindPathValue
 	MemoryKindCapabilityValue
 	MemoryKindLinkValue
 	MemoryKindStorageReferenceValue
 	MemoryKindEphemeralReferenceValue
-	MemoryKindInterpretedFunction
-	MemoryKindHostFunction
-	MemoryKindBoundFunction
+	MemoryKindInterpretedFunctionValue
+	MemoryKindHostFunctionValue
+	MemoryKindBoundFunctionValue
 	MemoryKindBigInt
-	MemoryKindSimpleComposite
+	MemoryKindSimpleCompositeValue
 
 	// Atree Nodes
 	MemoryKindAtreeArrayDataSlab
@@ -77,33 +77,32 @@ const (
 	MemoryKindFunctionStaticType
 
 	// Cadence Values
-	MemoryKindCadenceVoid
-	MemoryKindCadenceOptional
-	MemoryKindCadenceBool
-	MemoryKindCadenceString
-	MemoryKindCadenceCharacter
-	MemoryKindCadenceAddress
-	MemoryKindCadenceInt
-	MemoryKindCadenceNumber
-	MemoryKindCadenceArrayBase
-	MemoryKindCadenceArrayLength
-	MemoryKindCadenceDictionaryBase
-	MemoryKindCadenceDictionarySize
+	MemoryKindCadenceVoidValue
+	MemoryKindCadenceOptionalValue
+	MemoryKindCadenceBoolValue
+	MemoryKindCadenceStringValue
+	MemoryKindCadenceCharacterValue
+	MemoryKindCadenceAddressValue
+	MemoryKindCadenceIntValue
+	MemoryKindCadenceNumberValue
+	MemoryKindCadenceArrayValueBase
+	MemoryKindCadenceArrayValueLength
+	MemoryKindCadenceDictionaryValue
 	MemoryKindCadenceKeyValuePair
-	MemoryKindCadenceStructBase
-	MemoryKindCadenceStructSize
-	MemoryKindCadenceResourceBase
-	MemoryKindCadenceResourceSize
-	MemoryKindCadenceEventBase
-	MemoryKindCadenceEventSize
-	MemoryKindCadenceContractBase
-	MemoryKindCadenceContractSize
-	MemoryKindCadenceEnumBase
-	MemoryKindCadenceEnumSize
-	MemoryKindCadenceLink
-	MemoryKindCadencePath
+	MemoryKindCadenceStructValueBase
+	MemoryKindCadenceStructValueSize
+	MemoryKindCadenceResourceValueBase
+	MemoryKindCadenceResourceValueSize
+	MemoryKindCadenceEventValueBase
+	MemoryKindCadenceEventValueSize
+	MemoryKindCadenceContractValueBase
+	MemoryKindCadenceContractValueSize
+	MemoryKindCadenceEnumValueBase
+	MemoryKindCadenceEnumValueSize
+	MemoryKindCadenceLinkValue
+	MemoryKindCadencePathValue
 	MemoryKindCadenceTypeValue
-	MemoryKindCadenceCapability
+	MemoryKindCadenceCapabilityValue
 
 	// Cadence Types
 	MemoryKindCadenceSimpleType
