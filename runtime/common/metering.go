@@ -132,6 +132,7 @@ var (
 	CompositeFieldMemoryUsage           = NewConstantMemoryUsage(MemoryKindCompositeField)
 	DictionaryValueBaseMemoryUsage      = NewConstantMemoryUsage(MemoryKindDictionaryValueBase)
 	ArrayValueBaseMemoryUsage           = NewConstantMemoryUsage(MemoryKindArrayValueBase)
+	CompositeValueBaseMemoryUsage       = NewConstantMemoryUsage(MemoryKindCompositeValueBase)
 	AddressValueMemoryUsage             = NewConstantMemoryUsage(MemoryKindAddressValue)
 	BoolValueMemoryUsage                = NewConstantMemoryUsage(MemoryKindBoolValue)
 	NilValueMemoryUsage                 = NewConstantMemoryUsage(MemoryKindNilValue)
@@ -349,13 +350,10 @@ func NewDictionaryMemoryUsages(count uint64, elementSize uint) (MemoryUsage, Mem
 
 func NewCompositeMemoryUsages(count uint64, elementSize uint) (MemoryUsage, MemoryUsage, MemoryUsage, MemoryUsage) {
 	leaves, branches := newAtreeMemoryUsage(count, elementSize, false)
-	return MemoryUsage{
-			Kind:   MemoryKindCompositeValueBase,
-			Amount: 1,
-		}, MemoryUsage{
-			Kind:   MemoryKindAtreeMapElementOverhead,
-			Amount: count,
-		}, leaves, branches
+	return CompositeValueBaseMemoryUsage, MemoryUsage{
+		Kind:   MemoryKindAtreeMapElementOverhead,
+		Amount: count,
+	}, leaves, branches
 }
 
 func NewAtreeMapPreAllocatedElementsMemoryUsage(count uint64, elementSize uint) MemoryUsage {
