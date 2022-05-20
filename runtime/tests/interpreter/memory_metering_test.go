@@ -7520,7 +7520,7 @@ func TestInterpretLinkValueMetering(t *testing.T) {
 	})
 }
 
-func TestVariableMetering(t *testing.T) {
+func TestInterpretVariableMetering(t *testing.T) {
 	t.Parallel()
 
 	t.Run("globals", func(t *testing.T) {
@@ -8146,7 +8146,7 @@ func TestInterpretUFix64Metering(t *testing.T) {
 	})
 }
 
-func TestTokenMetering(t *testing.T) {
+func TestInterpretTokenMetering(t *testing.T) {
 	t.Parallel()
 
 	t.Run("identifier tokens", func(t *testing.T) {
@@ -9067,7 +9067,7 @@ func TestInterpretStaticTypeConversionMetering(t *testing.T) {
 	})
 }
 
-func TestStorageMapMetering(t *testing.T) {
+func TestInterpretStorageMapMetering(t *testing.T) {
 	t.Parallel()
 
 	script := `
@@ -9425,4 +9425,26 @@ func TestInterpretValueStringConversion(t *testing.T) {
 				},
 			))
 	})
+}
+
+func TestInterpretBytesMetering(t *testing.T) {
+
+	t.Parallel()
+
+	const code = `
+        fun test(string: String) {
+	        let utf8 = string.utf8
+	    }
+    `
+
+	meter := newTestMemoryGauge()
+	inter := parseCheckAndInterpretWithMemoryMetering(t, code, meter)
+
+	stringValue := interpreter.NewUnmeteredStringValue("abc")
+
+	_, err := inter.Invoke("test", stringValue)
+	require.NoError(t, err)
+
+	// 1 + 3
+	assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindBytes))
 }

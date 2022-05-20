@@ -85,8 +85,10 @@ func ByteValueToByte(memoryGauge common.MemoryGauge, element Value) (byte, error
 	return b, nil
 }
 
-// TODO: meter
 func ByteSliceToByteArrayValue(interpreter *Interpreter, buf []byte) *ArrayValue {
+
+	common.UseMemory(interpreter, common.NewBytesMemoryUsage(len(buf)))
+
 	values := make([]Value, len(buf))
 	for i, b := range buf {
 		values[i] = UInt8Value(b)
