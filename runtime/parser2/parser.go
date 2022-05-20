@@ -30,10 +30,10 @@ import (
 )
 
 // expressionDepthLimit is the limit of how deeply nested an expression can get
-const expressionDepthLimit = 16
+const expressionDepthLimit = 1 << 4
 
 // typeDepthLimit is the limit of how deeply nested a type can get
-const typeDepthLimit = 16
+const typeDepthLimit = 1 << 4
 
 // lowestBindingPower is the lowest binding power.
 // The binding power controls operator precedence:
