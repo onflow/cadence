@@ -1233,7 +1233,7 @@ func importCompositeValue(
 ) {
 	var fields []interpreter.CompositeField
 
-	typeID := common.NewTypeIDFromQualifiedName(location, qualifiedIdentifier)
+	typeID := common.NewTypeIDFromQualifiedName(inter, location, qualifiedIdentifier)
 	compositeType, typeErr := inter.GetCompositeType(location, qualifiedIdentifier, typeID)
 	if typeErr != nil {
 		return nil, typeErr

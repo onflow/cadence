@@ -38,7 +38,7 @@ func NewAnyType() AnyType {
 }
 
 func NewMeteredAnyType(gauge common.MemoryGauge) AnyType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewAnyType()
 }
 
@@ -57,7 +57,7 @@ func NewAnyStructType() AnyStructType {
 }
 
 func NewMeteredAnyStructType(gauge common.MemoryGauge) AnyStructType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewAnyStructType()
 }
 
@@ -76,7 +76,7 @@ func NewAnyResourceType() AnyResourceType {
 }
 
 func NewMeteredAnyResourceType(gauge common.MemoryGauge) AnyResourceType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewAnyResourceType()
 }
 
@@ -97,7 +97,7 @@ func NewOptionalType(typ Type) OptionalType {
 }
 
 func NewMeteredOptionalType(gauge common.MemoryGauge, typ Type) OptionalType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceOptionalType)
+	common.UseMemory(gauge, common.CadenceOptionalTypeMemoryUsage)
 	return NewOptionalType(typ)
 }
 
@@ -116,7 +116,7 @@ func NewMetaType() MetaType {
 }
 
 func NewMeteredMetaType(gauge common.MemoryGauge) MetaType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewMetaType()
 }
 
@@ -135,7 +135,7 @@ func NewVoidType() VoidType {
 }
 
 func NewMeteredVoidType(gauge common.MemoryGauge) VoidType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewVoidType()
 }
 
@@ -154,7 +154,7 @@ func NewNeverType() NeverType {
 }
 
 func NewMeteredNeverType(gauge common.MemoryGauge) NeverType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewNeverType()
 }
 
@@ -173,7 +173,7 @@ func NewBoolType() BoolType {
 }
 
 func NewMeteredBoolType(gauge common.MemoryGauge) BoolType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewBoolType()
 }
 
@@ -192,7 +192,7 @@ func NewStringType() StringType {
 }
 
 func NewMeteredStringType(gauge common.MemoryGauge) StringType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewStringType()
 }
 
@@ -211,7 +211,7 @@ func NewCharacterType() CharacterType {
 }
 
 func NewMeteredCharacterType(gauge common.MemoryGauge) CharacterType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewCharacterType()
 }
 
@@ -230,7 +230,7 @@ func NewBytesType() BytesType {
 }
 
 func NewMeteredBytesType(gauge common.MemoryGauge) BytesType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewBytesType()
 }
 
@@ -249,7 +249,7 @@ func NewAddressType() AddressType {
 }
 
 func NewMeteredAddressType(gauge common.MemoryGauge) AddressType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewAddressType()
 }
 
@@ -268,7 +268,7 @@ func NewNumberType() NumberType {
 }
 
 func NewMeteredNumberType(gauge common.MemoryGauge) NumberType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewNumberType()
 }
 
@@ -287,7 +287,7 @@ func NewSignedNumberType() SignedNumberType {
 }
 
 func NewMeteredSignedNumberType(gauge common.MemoryGauge) SignedNumberType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewSignedNumberType()
 }
 
@@ -306,7 +306,7 @@ func NewIntegerType() IntegerType {
 }
 
 func NewMeteredIntegerType(gauge common.MemoryGauge) IntegerType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewIntegerType()
 }
 
@@ -325,7 +325,7 @@ func NewSignedIntegerType() SignedIntegerType {
 }
 
 func NewMeteredSignedIntegerType(gauge common.MemoryGauge) SignedIntegerType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewSignedIntegerType()
 }
 
@@ -344,7 +344,7 @@ func NewFixedPointType() FixedPointType {
 }
 
 func NewMeteredFixedPointType(gauge common.MemoryGauge) FixedPointType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewFixedPointType()
 }
 
@@ -363,7 +363,7 @@ func NewSignedFixedPointType() SignedFixedPointType {
 }
 
 func NewMeteredSignedFixedPointType(gauge common.MemoryGauge) SignedFixedPointType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewSignedFixedPointType()
 }
 
@@ -382,7 +382,7 @@ func NewIntType() IntType {
 }
 
 func NewMeteredIntType(gauge common.MemoryGauge) IntType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewIntType()
 }
 
@@ -401,7 +401,7 @@ func NewInt8Type() Int8Type {
 }
 
 func NewMeteredInt8Type(gauge common.MemoryGauge) Int8Type {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewInt8Type()
 }
 
@@ -420,7 +420,7 @@ func NewInt16Type() Int16Type {
 }
 
 func NewMeteredInt16Type(gauge common.MemoryGauge) Int16Type {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewInt16Type()
 }
 
@@ -439,7 +439,7 @@ func NewInt32Type() Int32Type {
 }
 
 func NewMeteredInt32Type(gauge common.MemoryGauge) Int32Type {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewInt32Type()
 }
 
@@ -458,7 +458,7 @@ func NewInt64Type() Int64Type {
 }
 
 func NewMeteredInt64Type(gauge common.MemoryGauge) Int64Type {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewInt64Type()
 }
 
@@ -477,7 +477,7 @@ func NewInt128Type() Int128Type {
 }
 
 func NewMeteredInt128Type(gauge common.MemoryGauge) Int128Type {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewInt128Type()
 }
 
@@ -496,7 +496,7 @@ func NewInt256Type() Int256Type {
 }
 
 func NewMeteredInt256Type(gauge common.MemoryGauge) Int256Type {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewInt256Type()
 }
 
@@ -515,7 +515,7 @@ func NewUIntType() UIntType {
 }
 
 func NewMeteredUIntType(gauge common.MemoryGauge) UIntType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewUIntType()
 }
 
@@ -534,7 +534,7 @@ func NewUInt8Type() UInt8Type {
 }
 
 func NewMeteredUInt8Type(gauge common.MemoryGauge) UInt8Type {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewUInt8Type()
 }
 
@@ -553,7 +553,7 @@ func NewUInt16Type() UInt16Type {
 }
 
 func NewMeteredUInt16Type(gauge common.MemoryGauge) UInt16Type {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewUInt16Type()
 }
 
@@ -572,7 +572,7 @@ func NewUInt32Type() UInt32Type {
 }
 
 func NewMeteredUInt32Type(gauge common.MemoryGauge) UInt32Type {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewUInt32Type()
 }
 
@@ -591,7 +591,7 @@ func NewUInt64Type() UInt64Type {
 }
 
 func NewMeteredUInt64Type(gauge common.MemoryGauge) UInt64Type {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewUInt64Type()
 }
 
@@ -610,7 +610,7 @@ func NewUInt128Type() UInt128Type {
 }
 
 func NewMeteredUInt128Type(gauge common.MemoryGauge) UInt128Type {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewUInt128Type()
 }
 
@@ -629,7 +629,7 @@ func NewUInt256Type() UInt256Type {
 }
 
 func NewMeteredUInt256Type(gauge common.MemoryGauge) UInt256Type {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewUInt256Type()
 }
 
@@ -648,7 +648,7 @@ func NewWord8Type() Word8Type {
 }
 
 func NewMeteredWord8Type(gauge common.MemoryGauge) Word8Type {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewWord8Type()
 }
 
@@ -667,7 +667,7 @@ func NewWord16Type() Word16Type {
 }
 
 func NewMeteredWord16Type(gauge common.MemoryGauge) Word16Type {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewWord16Type()
 }
 
@@ -686,7 +686,7 @@ func NewWord32Type() Word32Type {
 }
 
 func NewMeteredWord32Type(gauge common.MemoryGauge) Word32Type {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewWord32Type()
 }
 
@@ -705,7 +705,7 @@ func NewWord64Type() Word64Type {
 }
 
 func NewMeteredWord64Type(gauge common.MemoryGauge) Word64Type {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewWord64Type()
 }
 
@@ -724,7 +724,7 @@ func NewFix64Type() Fix64Type {
 }
 
 func NewMeteredFix64Type(gauge common.MemoryGauge) Fix64Type {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewFix64Type()
 }
 
@@ -743,7 +743,7 @@ func NewUFix64Type() UFix64Type {
 }
 
 func NewMeteredUFix64Type(gauge common.MemoryGauge) UFix64Type {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewUFix64Type()
 }
 
@@ -774,7 +774,7 @@ func NewMeteredVariableSizedArrayType(
 	gauge common.MemoryGauge,
 	elementType Type,
 ) VariableSizedArrayType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceVariableSizedArrayType)
+	common.UseMemory(gauge, common.CadenceVariableSizedArrayTypeMemoryUsage)
 	return NewVariableSizedArrayType(elementType)
 }
 
@@ -810,7 +810,7 @@ func NewMeteredConstantSizedArrayType(
 	size uint,
 	elementType Type,
 ) ConstantSizedArrayType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceConstantSizedArrayType)
+	common.UseMemory(gauge, common.CadenceConstantSizedArrayTypeMemoryUsage)
 	return NewConstantSizedArrayType(size, elementType)
 }
 
@@ -846,7 +846,7 @@ func NewMeteredDictionaryType(
 	keyType Type,
 	elementType Type,
 ) DictionaryType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceDictionaryType)
+	common.UseMemory(gauge, common.CadenceDictionaryTypeMemoryUsage)
 	return NewDictionaryType(keyType, elementType)
 }
 
@@ -937,7 +937,7 @@ func NewMeteredStructType(
 	fields []Field,
 	initializers [][]Parameter,
 ) *StructType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceStructType)
+	common.UseMemory(gauge, common.CadenceStructTypeMemoryUsage)
 	return NewStructType(location, qualifiedIdentifer, fields, initializers)
 }
 
@@ -999,7 +999,7 @@ func NewMeteredResourceType(
 	fields []Field,
 	initializers [][]Parameter,
 ) *ResourceType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceResourceType)
+	common.UseMemory(gauge, common.CadenceResourceTypeMemoryUsage)
 	return NewResourceType(location, qualifiedIdentifer, fields, initializers)
 }
 
@@ -1061,7 +1061,7 @@ func NewMeteredEventType(
 	fields []Field,
 	initializer []Parameter,
 ) *EventType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceEventType)
+	common.UseMemory(gauge, common.CadenceEventTypeMemoryUsage)
 	return NewEventType(location, qualifiedIdentifer, fields, initializer)
 }
 
@@ -1123,7 +1123,7 @@ func NewMeteredContractType(
 	fields []Field,
 	initializers [][]Parameter,
 ) *ContractType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceContractType)
+	common.UseMemory(gauge, common.CadenceContractTypeMemoryUsage)
 	return NewContractType(location, qualifiedIdentifer, fields, initializers)
 }
 
@@ -1196,7 +1196,7 @@ func NewMeteredStructInterfaceType(
 	fields []Field,
 	initializers [][]Parameter,
 ) *StructInterfaceType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceStructInterfaceType)
+	common.UseMemory(gauge, common.CadenceStructInterfaceTypeMemoryUsage)
 	return NewStructInterfaceType(location, qualifiedIdentifer, fields, initializers)
 }
 
@@ -1258,7 +1258,7 @@ func NewMeteredResourceInterfaceType(
 	fields []Field,
 	initializers [][]Parameter,
 ) *ResourceInterfaceType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceResourceInterfaceType)
+	common.UseMemory(gauge, common.CadenceResourceInterfaceTypeMemoryUsage)
 	return NewResourceInterfaceType(location, qualifiedIdentifer, fields, initializers)
 }
 
@@ -1320,7 +1320,7 @@ func NewMeteredContractInterfaceType(
 	fields []Field,
 	initializers [][]Parameter,
 ) *ContractInterfaceType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceContractInterfaceType)
+	common.UseMemory(gauge, common.CadenceContractInterfaceTypeMemoryUsage)
 	return NewContractInterfaceType(location, qualifiedIdentifer, fields, initializers)
 }
 
@@ -1378,7 +1378,7 @@ func NewMeteredFunctionType(
 	parameters []Parameter,
 	returnType Type,
 ) FunctionType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceFunctionType)
+	common.UseMemory(gauge, common.CadenceFunctionTypeMemoryUsage)
 	return NewFunctionType(typeID, parameters, returnType)
 }
 
@@ -1415,7 +1415,7 @@ func NewMeteredReferenceType(
 	authorized bool,
 	typ Type,
 ) ReferenceType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceReferenceType)
+	common.UseMemory(gauge, common.CadenceReferenceTypeMemoryUsage)
 	return NewReferenceType(authorized, typ)
 }
 
@@ -1455,7 +1455,7 @@ func NewMeteredRestrictedType(
 	typ Type,
 	restrictions []Type,
 ) *RestrictedType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceRestrictedType)
+	common.UseMemory(gauge, common.CadenceRestrictedTypeMemoryUsage)
 	return NewRestrictedType(typeID, typ, restrictions)
 }
 
@@ -1481,7 +1481,7 @@ func NewBlockType() BlockType {
 func NewMeteredBlockType(
 	gauge common.MemoryGauge,
 ) BlockType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewBlockType()
 }
 
@@ -1502,7 +1502,7 @@ func NewPathType() PathType {
 func NewMeteredPathType(
 	gauge common.MemoryGauge,
 ) PathType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewPathType()
 }
 
@@ -1523,7 +1523,7 @@ func NewCapabilityPathType() CapabilityPathType {
 func NewMeteredCapabilityPathType(
 	gauge common.MemoryGauge,
 ) CapabilityPathType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewCapabilityPathType()
 }
 
@@ -1544,7 +1544,7 @@ func NewStoragePathType() StoragePathType {
 func NewMeteredStoragePathType(
 	gauge common.MemoryGauge,
 ) StoragePathType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewStoragePathType()
 }
 
@@ -1565,7 +1565,7 @@ func NewPublicPathType() PublicPathType {
 func NewMeteredPublicPathType(
 	gauge common.MemoryGauge,
 ) PublicPathType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewPublicPathType()
 }
 
@@ -1586,7 +1586,7 @@ func NewPrivatePathType() PrivatePathType {
 func NewMeteredPrivatePathType(
 	gauge common.MemoryGauge,
 ) PrivatePathType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewPrivatePathType()
 }
 
@@ -1610,7 +1610,7 @@ func NewMeteredCapabilityType(
 	gauge common.MemoryGauge,
 	borrowType Type,
 ) CapabilityType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceCapabilityType)
+	common.UseMemory(gauge, common.CadenceCapabilityTypeMemoryUsage)
 	return NewCapabilityType(borrowType)
 }
 
@@ -1656,7 +1656,7 @@ func NewMeteredEnumType(
 	fields []Field,
 	initializers [][]Parameter,
 ) *EnumType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceEnumType)
+	common.UseMemory(gauge, common.CadenceEnumTypeMemoryUsage)
 	return NewEnumType(location, qualifiedIdentifier, rawType, fields, initializers)
 }
 
@@ -1698,7 +1698,7 @@ func NewAuthAccountType() AuthAccountType {
 func NewMeteredAuthAccountType(
 	gauge common.MemoryGauge,
 ) AuthAccountType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewAuthAccountType()
 }
 
@@ -1718,7 +1718,7 @@ func NewPublicAccountType() PublicAccountType {
 func NewMeteredPublicAccountType(
 	gauge common.MemoryGauge,
 ) PublicAccountType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewPublicAccountType()
 }
 
@@ -1738,7 +1738,7 @@ func NewDeployedContractType() DeployedContractType {
 func NewMeteredDeployedContractType(
 	gauge common.MemoryGauge,
 ) DeployedContractType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewDeployedContractType()
 }
 
@@ -1758,7 +1758,7 @@ func NewAuthAccountContractsType() AuthAccountContractsType {
 func NewMeteredAuthAccountContractsType(
 	gauge common.MemoryGauge,
 ) AuthAccountContractsType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewAuthAccountContractsType()
 }
 
@@ -1778,7 +1778,7 @@ func NewPublicAccountContractsType() PublicAccountContractsType {
 func NewMeteredPublicAccountContractsType(
 	gauge common.MemoryGauge,
 ) PublicAccountContractsType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewPublicAccountContractsType()
 }
 
@@ -1798,7 +1798,7 @@ func NewAuthAccountKeysType() AuthAccountKeysType {
 func NewMeteredAuthAccountKeysType(
 	gauge common.MemoryGauge,
 ) AuthAccountKeysType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewAuthAccountKeysType()
 }
 
@@ -1818,7 +1818,7 @@ func NewPublicAccountKeysType() PublicAccountKeysType {
 func NewMeteredPublicAccountKeysType(
 	gauge common.MemoryGauge,
 ) PublicAccountKeysType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewPublicAccountKeysType()
 }
 
@@ -1838,7 +1838,7 @@ func NewAccountKeyType() AccountKeyType {
 func NewMeteredAccountKeyType(
 	gauge common.MemoryGauge,
 ) AccountKeyType {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceSimpleType)
+	common.UseMemory(gauge, common.CadenceSimpleTypeMemoryUsage)
 	return NewAccountKeyType()
 }
 

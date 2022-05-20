@@ -3527,7 +3527,6 @@ var stringFunction = func() Value {
 					inter,
 					memoryUsage,
 					func() string {
-						// TODO: meter
 						bytes, _ := ByteArrayValueToByteSlice(inter, argument)
 						return hex.EncodeToString(bytes)
 					},

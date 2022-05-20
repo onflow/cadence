@@ -154,7 +154,7 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 	// CBOR Types
 
 	case cbor.BoolType:
-		common.UseConstantMemory(d.memoryGauge, common.MemoryKindBool)
+		common.UseMemory(d.memoryGauge, common.BoolValueMemoryUsage)
 		v, err := d.decoder.DecodeBool()
 		if err != nil {
 			return nil, err
@@ -162,7 +162,7 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 		storable = NewUnmeteredBoolValue(v)
 
 	case cbor.NilType:
-		common.UseConstantMemory(d.memoryGauge, common.MemoryKindNil)
+		common.UseMemory(d.memoryGauge, common.NilValueMemoryUsage)
 		err := d.decoder.DecodeNil()
 		if err != nil {
 			return nil, err
@@ -190,7 +190,7 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 			return atree.DecodeStorageIDStorable(d.decoder)
 
 		case CBORTagVoidValue:
-			common.UseConstantMemory(d.memoryGauge, common.MemoryKindVoid)
+			common.UseMemory(d.memoryGauge, common.VoidValueMemoryUsage)
 			err := d.decoder.Skip()
 			if err != nil {
 				return nil, err
@@ -342,7 +342,7 @@ func (d StorableDecoder) decodeCharacter() (CharacterValue, error) {
 }
 
 func (d StorableDecoder) decodeStringValue() (*StringValue, error) {
-	str, err := decodeString(d.decoder, d.memoryGauge, common.MemoryKindString)
+	str, err := decodeString(d.decoder, d.memoryGauge, common.MemoryKindStringValue)
 	if err != nil {
 		if err, ok := err.(*cbor.WrongTypeError); ok {
 			return nil, fmt.Errorf(
@@ -787,7 +787,7 @@ func (d LocationDecoder) decodeAddressBytes() ([]byte, error) {
 		return nil, lengthErr
 	}
 
-	common.UseConstantMemory(d.memoryGauge, common.MemoryKindAddress)
+	common.UseMemory(d.memoryGauge, common.AddressValueMemoryUsage)
 
 	return d.decoder.DecodeBytes()
 }

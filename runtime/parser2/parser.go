@@ -131,8 +131,15 @@ func (p *parser) report(errs ...error) {
 		// If the reported error is not yet a parse error,
 		// create a `SyntaxError` at the current position
 
-		var parseError ParseError
 		var ok bool
+
+		// Fatal errors should abort parsing
+		_, ok = err.(common.FatalError)
+		if ok {
+			panic(err)
+		}
+
+		var parseError ParseError
 		parseError, ok = err.(ParseError)
 		if !ok {
 			parseError = &SyntaxError{
