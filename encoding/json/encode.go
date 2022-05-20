@@ -928,8 +928,8 @@ func HashTypeID(typeID common.TypeID) [HashedTypeIdLength]byte {
 }
 
 func bytesToHashedTypeIdLength(blob []byte) ([HashedTypeIdLength]byte, error) {
-	if len(blob) != 32 {
-		return [32]byte{}, errors.New("TODO")
+	if len(blob) != HashedTypeIdLength {
+		return [HashedTypeIdLength]byte{}, errors.New("TODO")
 	}
 
 	var rigid [HashedTypeIdLength]byte
