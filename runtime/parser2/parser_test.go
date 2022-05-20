@@ -21,6 +21,7 @@ package parser2
 import (
 	"fmt"
 	"math/big"
+	"strings"
 	"testing"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -628,4 +629,69 @@ func TestParseInvalidSingleQuoteImport(t *testing.T) {
 	_, err := ParseProgram(`import 'X'`, nil)
 
 	require.EqualError(t, err, "Parsing failed:\nerror: unrecognized character: U+0027 '''\n --> :1:7\n  |\n1 | import 'X'\n  |        ^\n\nerror: unexpected end in import declaration: expected string, address, or identifier\n --> :1:7\n  |\n1 | import 'X'\n  |        ^\n")
+}
+
+func TestParseExpressionDepthLimit(t *testing.T) {
+
+	t.Parallel()
+
+	var builder strings.Builder
+	builder.WriteString("let x = y")
+	for i := 0; i < 20; i++ {
+		builder.WriteString(" ?? z")
+	}
+
+	code := builder.String()
+
+	_, err := ParseProgram(code, nil)
+	require.Error(t, err)
+
+	utils.AssertEqualWithDiff(t,
+		[]error{
+			ExpressionDepthLimitReachedError{
+				Pos: ast.Position{
+					Offset: 88,
+					Line:   1,
+					Column: 88,
+				},
+			},
+		},
+		err.(Error).Errors,
+	)
+}
+
+func TestParseTypeDepthLimit(t *testing.T) {
+
+	t.Parallel()
+
+	const nesting = 20
+
+	var builder strings.Builder
+	builder.WriteString("let x: T<")
+	for i := 0; i < nesting; i++ {
+		builder.WriteString("T<")
+	}
+	builder.WriteString("U")
+	for i := 0; i < nesting; i++ {
+		builder.WriteString(">")
+	}
+	builder.WriteString(">? = nil")
+
+	code := builder.String()
+
+	_, err := ParseProgram(code, nil)
+	require.Error(t, err)
+
+	utils.AssertEqualWithDiff(t,
+		[]error{
+			TypeDepthLimitReachedError{
+				Pos: ast.Position{
+					Offset: 39,
+					Line:   1,
+					Column: 39,
+				},
+			},
+		},
+		err.(Error).Errors,
+	)
 }

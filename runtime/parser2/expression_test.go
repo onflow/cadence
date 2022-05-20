@@ -5913,13 +5913,13 @@ func TestParseReplayLimit(t *testing.T) {
 
 	var builder strings.Builder
 	builder.WriteString("let t = T")
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 1000; i++ {
 		builder.WriteString("<T")
 	}
 	builder.WriteString(">()")
 
 	code := builder.String()
-	_, errs := ParseProgram(code, nil)
+	_, err := ParseProgram(code, nil)
 	utils.AssertEqualWithDiff(t,
 		Error{
 			Code: code,
@@ -5927,14 +5927,14 @@ func TestParseReplayLimit(t *testing.T) {
 				&SyntaxError{
 					Message: fmt.Sprintf("program too ambiguous, replay limit of %d tokens exceeded", tokenReplayLimit),
 					Pos: ast.Position{
-						Offset: 210,
+						Offset: 282,
 						Line:   1,
-						Column: 210,
+						Column: 282,
 					},
 				},
 			},
 		},
-		errs,
+		err,
 	)
 }
 

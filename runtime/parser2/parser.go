@@ -29,6 +29,12 @@ import (
 	"github.com/onflow/cadence/runtime/parser2/lexer"
 )
 
+// expressionDepthLimit is the limit of how deeply nested an expression can get
+const expressionDepthLimit = 1 << 4
+
+// typeDepthLimit is the limit of how deeply nested a type can get
+const typeDepthLimit = 1 << 4
+
 // lowestBindingPower is the lowest binding power.
 // The binding power controls operator precedence:
 // the higher the value, the tighter a token binds to the tokens that follow.
@@ -51,6 +57,10 @@ type parser struct {
 	// replayedTokensCount is the number of replayed tokens since starting the initial buffering.
 	// It is reset when the buffered tokens get accepted. This keeps errors local.
 	replayedTokensCount uint
+	// expressionDepth is the depth of the currently parsed expression (if >0)
+	expressionDepth int
+	// typeDepth is the depth of the type (if >0)
+	typeDepth int
 }
 
 // Parse creates a lexer to scan the given input string,

@@ -1260,6 +1260,17 @@ func exprLeftDenotationAllowsWhitespaceAfterToken(tokenType lexer.TokenType) boo
 //
 func parseExpression(p *parser, rightBindingPower int) ast.Expression {
 
+	if p.expressionDepth == expressionDepthLimit {
+		panic(ExpressionDepthLimitReachedError{
+			Pos: p.current.StartPos,
+		})
+	}
+
+	p.expressionDepth++
+	defer func() {
+		p.expressionDepth--
+	}()
+
 	p.skipSpaceAndComments(true)
 	t := p.current
 	p.next()
