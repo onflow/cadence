@@ -97,7 +97,7 @@ func TestInterpreterAddressLocationMetering(t *testing.T) {
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindAddressLocation))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindElaboration))
 		assert.Equal(t, uint64(136), meter.getMemory(common.MemoryKindRawString))
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoid))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 }
 
@@ -185,7 +185,7 @@ func TestInterpreterElaborationImportMetering(t *testing.T) {
 				// one for each deployment transaction and one for each contract
 				assert.Equal(t, uint64(2*j+2), meter.getMemory(common.MemoryKindElaboration))
 
-				assert.Equal(t, uint64(1+j), meter.getMemory(common.MemoryKindCadenceAddress))
+				assert.Equal(t, uint64(1+j), meter.getMemory(common.MemoryKindCadenceAddressValue))
 			}
 
 			_, err := runtime.ExecuteScript(
@@ -244,7 +244,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceSimpleType))
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoid))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 
 	t.Run("import type Int large value", func(t *testing.T) {
@@ -288,7 +288,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceSimpleType))
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoid))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 
 	t.Run("import type Int8", func(t *testing.T) {
@@ -325,7 +325,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceSimpleType))
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoid))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 
 	t.Run("import type Int16", func(t *testing.T) {
@@ -362,7 +362,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceSimpleType))
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoid))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 
 	t.Run("import type Int32", func(t *testing.T) {
@@ -399,7 +399,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceSimpleType))
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoid))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 
 	t.Run("import type Int64", func(t *testing.T) {
@@ -436,7 +436,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceSimpleType))
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoid))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 
 	t.Run("import type Int128", func(t *testing.T) {
@@ -473,7 +473,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceSimpleType))
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoid))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 
 	t.Run("import type Int256", func(t *testing.T) {
@@ -510,7 +510,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceSimpleType))
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoid))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 
 	t.Run("return value Int small value", func(t *testing.T) {
@@ -545,7 +545,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindCadenceInt))
+		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindCadenceIntValue))
 	})
 
 	t.Run("return value Int large value", func(t *testing.T) {
@@ -581,7 +581,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindCadenceInt))
+		assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindCadenceIntValue))
 	})
 
 	t.Run("return value Int8", func(t *testing.T) {
@@ -612,7 +612,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceNumber))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceNumberValue))
 	})
 
 	t.Run("return value Int16", func(t *testing.T) {
@@ -643,7 +643,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCadenceNumber))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCadenceNumberValue))
 	})
 
 	t.Run("return value Int32", func(t *testing.T) {
@@ -674,7 +674,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindCadenceNumber))
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindCadenceNumberValue))
 	})
 
 	t.Run("return value Int64", func(t *testing.T) {
@@ -705,7 +705,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindCadenceNumber))
+		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindCadenceNumberValue))
 	})
 
 	t.Run("return value Int128", func(t *testing.T) {
@@ -736,7 +736,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindCadenceNumber))
+		assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindCadenceNumberValue))
 	})
 
 	t.Run("return value Int256", func(t *testing.T) {
@@ -767,7 +767,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindCadenceNumber))
+		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindCadenceNumberValue))
 	})
 }
 

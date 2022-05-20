@@ -312,7 +312,7 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ func() LocationRange, n
 			typeID = string(interpreter.MustConvertStaticToSemaType(staticType).ID())
 		}
 		memoryUsage := common.MemoryUsage{
-			Kind:   common.MemoryKindString,
+			Kind:   common.MemoryKindStringValue,
 			Amount: uint64(len(typeID)),
 		}
 		return NewStringValue(interpreter, memoryUsage, func() string {
@@ -454,7 +454,7 @@ func NewUnmeteredVoidValue() VoidValue {
 }
 
 func NewVoidValue(memoryGauge common.MemoryGauge) VoidValue {
-	common.UseMemory(memoryGauge, common.VoidMemoryUsage)
+	common.UseMemory(memoryGauge, common.VoidValueMemoryUsage)
 	return NewUnmeteredVoidValue()
 }
 
@@ -562,12 +562,12 @@ func NewUnmeteredBoolValue(value bool) BoolValue {
 }
 
 func NewBoolValueFromConstructor(memoryGauge common.MemoryGauge, constructor func() bool) BoolValue {
-	common.UseMemory(memoryGauge, common.BoolMemoryUsage)
+	common.UseMemory(memoryGauge, common.BoolValueMemoryUsage)
 	return NewUnmeteredBoolValue(constructor())
 }
 
 func NewBoolValue(memoryGauge common.MemoryGauge, value bool) BoolValue {
-	common.UseMemory(memoryGauge, common.BoolMemoryUsage)
+	common.UseMemory(memoryGauge, common.BoolValueMemoryUsage)
 	return NewUnmeteredBoolValue(value)
 }
 
@@ -16372,7 +16372,7 @@ func NewUnmeteredNilValue() NilValue {
 }
 
 func NewNilValue(memoryGauge common.MemoryGauge) NilValue {
-	common.UseMemory(memoryGauge, common.NilMemoryUsage)
+	common.UseMemory(memoryGauge, common.NilValueMemoryUsage)
 	return NewUnmeteredNilValue()
 }
 
@@ -16525,7 +16525,7 @@ type SomeValue struct {
 }
 
 func NewSomeValueNonCopying(interpreter *Interpreter, value Value) *SomeValue {
-	common.UseMemory(interpreter, common.OptionalMemoryUsage)
+	common.UseMemory(interpreter, common.OptionalValueMemoryUsage)
 
 	return NewUnmeteredSomeValueNonCopying(value)
 }
@@ -17561,7 +17561,7 @@ func (*EphemeralReferenceValue) DeepRemove(_ *Interpreter) {
 type AddressValue common.Address
 
 func NewAddressValueFromBytes(memoryGauge common.MemoryGauge, constructor func() []byte) AddressValue {
-	common.UseMemory(memoryGauge, common.AddressMemoryUsage)
+	common.UseMemory(memoryGauge, common.AddressValueMemoryUsage)
 	return NewUnmeteredAddressValueFromBytes(constructor())
 }
 
@@ -17582,7 +17582,7 @@ func NewAddressValue(
 	memoryGauge common.MemoryGauge,
 	address common.Address,
 ) AddressValue {
-	common.UseMemory(memoryGauge, common.AddressMemoryUsage)
+	common.UseMemory(memoryGauge, common.AddressValueMemoryUsage)
 	return NewUnmeteredAddressValueFromBytes(address[:])
 }
 
@@ -17590,7 +17590,7 @@ func NewAddressValueFromConstructor(
 	memoryGauge common.MemoryGauge,
 	addressConstructor func() common.Address,
 ) AddressValue {
-	common.UseMemory(memoryGauge, common.AddressMemoryUsage)
+	common.UseMemory(memoryGauge, common.AddressValueMemoryUsage)
 	address := addressConstructor()
 	return NewUnmeteredAddressValueFromBytes(address[:])
 }

@@ -96,7 +96,7 @@ func NewInterpretedFunctionValue(
 	postConditions ast.Conditions,
 ) *InterpretedFunctionValue {
 
-	common.UseMemory(interpreter, common.InterpretedFunctionMemoryUsage)
+	common.UseMemory(interpreter, common.InterpretedFunctionValueMemoryUsage)
 
 	return &InterpretedFunctionValue{
 		Interpreter:      interpreter,
@@ -249,7 +249,7 @@ func NewHostFunctionValue(
 	funcType *sema.FunctionType,
 ) *HostFunctionValue {
 
-	common.UseMemory(gauge, common.HostFunctionMemoryUsage)
+	common.UseMemory(gauge, common.HostFunctionValueMemoryUsage)
 
 	return NewUnmeteredHostFunctionValue(function, funcType)
 }
@@ -367,7 +367,7 @@ func NewBoundFunctionValue(
 	self *CompositeValue,
 ) BoundFunctionValue {
 
-	common.UseMemory(interpreter, common.BoundFunctionMemoryUsage)
+	common.UseMemory(interpreter, common.BoundFunctionValueMemoryUsage)
 
 	return BoundFunctionValue{
 		Function: function,
