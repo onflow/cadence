@@ -28,7 +28,6 @@ import (
 	"github.com/onflow/cadence"
 	jsoncdc "github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -463,13 +462,10 @@ func TestMemoryMeteringErrors(t *testing.T) {
 		require.IsType(t, Error{}, err)
 		runtimeError := err.(Error)
 
-		require.IsType(t, &ParsingCheckingError{}, runtimeError.Err)
-		parsingCheckingError := runtimeError.Err.(*ParsingCheckingError)
+		require.IsType(t, common.FatalError{}, runtimeError.Err)
+		fatalError := runtimeError.Err.(common.FatalError)
 
-		require.IsType(t, parser2.Error{}, parsingCheckingError.Err)
-		parserError := parsingCheckingError.Err.(parser2.Error)
-
-		assert.Contains(t, parserError.Error(), "memory limit exceeded")
+		assert.Contains(t, fatalError.Error(), "memory limit exceeded")
 	})
 
 	t.Run("at interpreter", func(t *testing.T) {
