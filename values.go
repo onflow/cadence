@@ -1413,9 +1413,7 @@ func NewMeteredDictionary(
 	size int,
 	constructor func() ([]KeyValuePair, error),
 ) (Dictionary, error) {
-	baseUse, lengthUse := common.NewCadenceDictionaryMemoryUsages(size)
-	common.UseMemory(gauge, baseUse)
-	common.UseMemory(gauge, lengthUse)
+	common.UseMemory(gauge, common.CadenceDictionaryMemoryUsage)
 
 	pairs, err := constructor()
 	if err != nil {

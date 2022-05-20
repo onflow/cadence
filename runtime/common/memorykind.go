@@ -87,8 +87,7 @@ const (
 	MemoryKindCadenceNumber
 	MemoryKindCadenceArrayBase
 	MemoryKindCadenceArrayLength
-	MemoryKindCadenceDictionaryBase
-	MemoryKindCadenceDictionarySize
+	MemoryKindCadenceDictionary
 	MemoryKindCadenceKeyValuePair
 	MemoryKindCadenceStructBase
 	MemoryKindCadenceStructSize
