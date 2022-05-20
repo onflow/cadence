@@ -65,7 +65,7 @@ func NewCompositeStaticType(
 	qualifiedIdentifier string,
 	typeID common.TypeID,
 ) CompositeStaticType {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindCompositeStaticType)
+	common.UseMemory(memoryGauge, common.CompositeStaticTypeMemoryUsage)
 
 	return CompositeStaticType{
 		Location:            location,
@@ -120,7 +120,7 @@ func NewInterfaceStaticType(
 	location common.Location,
 	qualifiedIdentifier string,
 ) InterfaceStaticType {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindInterfaceStaticType)
+	common.UseMemory(memoryGauge, common.InterfaceStaticTypeMemoryUsage)
 
 	return InterfaceStaticType{
 		Location:            location,
@@ -172,7 +172,7 @@ func NewVariableSizedStaticType(
 	memoryGauge common.MemoryGauge,
 	elementType StaticType,
 ) VariableSizedStaticType {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindVariableSizedStaticType)
+	common.UseMemory(memoryGauge, common.VariableSizedStaticTypeMemoryUsage)
 
 	return VariableSizedStaticType{
 		Type: elementType,
@@ -219,7 +219,7 @@ func NewConstantSizedStaticType(
 	elementType StaticType,
 	size int64,
 ) ConstantSizedStaticType {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindConstantSizedStaticType)
+	common.UseMemory(memoryGauge, common.ConstantSizedStaticTypeMemoryUsage)
 
 	return ConstantSizedStaticType{
 		Type: elementType,
@@ -267,7 +267,7 @@ func NewDictionaryStaticType(
 	memoryGauge common.MemoryGauge,
 	keyType, valueType StaticType,
 ) DictionaryStaticType {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindDictionaryStaticType)
+	common.UseMemory(memoryGauge, common.DictionaryStaticTypeMemoryUsage)
 
 	return DictionaryStaticType{
 		KeyType:   keyType,
@@ -307,7 +307,7 @@ func NewOptionalStaticType(
 	memoryGauge common.MemoryGauge,
 	typ StaticType,
 ) OptionalStaticType {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindOptionalStaticType)
+	common.UseMemory(memoryGauge, common.OptionalStaticTypeMemoryUsage)
 
 	return OptionalStaticType{Type: typ}
 }
@@ -345,7 +345,7 @@ func NewRestrictedStaticType(
 	staticType StaticType,
 	restrictions []InterfaceStaticType,
 ) *RestrictedStaticType {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindRestrictedStaticType)
+	common.UseMemory(memoryGauge, common.RestrictedStaticTypeMemoryUsage)
 
 	return &RestrictedStaticType{
 		Type:         staticType,
@@ -410,7 +410,7 @@ func NewReferenceStaticType(
 	staticType StaticType,
 	referenceType StaticType,
 ) ReferenceStaticType {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindReferenceStaticType)
+	common.UseMemory(memoryGauge, common.ReferenceStaticTypeMemoryUsage)
 
 	return ReferenceStaticType{
 		Authorized:     authorized,
@@ -456,7 +456,7 @@ func NewCapabilityStaticType(
 	memoryGauge common.MemoryGauge,
 	borrowType StaticType,
 ) CapabilityStaticType {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindCapabilityStaticType)
+	common.UseMemory(memoryGauge, common.CapabilityStaticTypeMemoryUsage)
 
 	return CapabilityStaticType{
 		BorrowType: borrowType,
@@ -699,7 +699,7 @@ func NewFunctionStaticType(
 	memoryGauge common.MemoryGauge,
 	functionType *sema.FunctionType,
 ) FunctionStaticType {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindFunctionStaticType)
+	common.UseMemory(memoryGauge, common.FunctionStaticTypeMemoryUsage)
 
 	return FunctionStaticType{
 		Type: functionType,
