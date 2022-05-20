@@ -33,7 +33,6 @@ const (
 	MemoryKindAddress
 	MemoryKindString
 	MemoryKindCharacter
-	MemoryKindMetaType
 	MemoryKindNumber
 	MemoryKindArrayBase
 	MemoryKindDictionaryBase
@@ -62,6 +61,7 @@ const (
 	MemoryKindAtreeMapMetaDataSlab
 	MemoryKindAtreeMapElementOverhead
 	MemoryKindAtreeMapPreAllocatedElement
+	MemoryKindAtreeEncodedSlab
 
 	// Static Types
 	MemoryKindPrimitiveStaticType

@@ -749,6 +749,13 @@ func NewOrderedMapMemoryUsages(size uint64) (MemoryUsage, MemoryUsage, MemoryUsa
 		}
 }
 
+func NewAtreeEncodedSlabMemoryUsage(slabsCount uint) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindAtreeEncodedSlab,
+		Amount: uint64(slabsCount),
+	}
+}
+
 // UseConstantMemory uses a pre-determined amount of memory
 //
 func UseConstantMemory(memoryGauge MemoryGauge, kind MemoryKind) {

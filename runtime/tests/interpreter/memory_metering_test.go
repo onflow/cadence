@@ -8908,6 +8908,62 @@ func TestInterpretASTMetering(t *testing.T) {
 		assert.Equal(t, uint64(232), meter.getMemory(common.MemoryKindPosition))
 		assert.Equal(t, uint64(126), meter.getMemory(common.MemoryKindRange))
 	})
+
+	t.Run("locations", func(t *testing.T) {
+		script := `
+            import A from 0x42
+            import B from "string-location"
+        `
+
+		importedChecker, err := checker.ParseAndCheckWithOptions(t,
+			`
+                pub let A = 1
+                pub let B = 1
+            `,
+			checker.ParseAndCheckOptions{
+				Location: utils.ImportedLocation,
+			},
+		)
+		require.NoError(t, err)
+
+		meter := newTestMemoryGauge()
+		_, err = parseCheckAndInterpretWithOptionsAndMemoryMetering(
+			t,
+			script,
+			ParseCheckAndInterpretOptions{
+				CheckerOptions: []sema.Option{
+					sema.WithImportHandler(
+						func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+							return sema.ElaborationImport{
+								Elaboration: importedChecker.Elaboration,
+							}, nil
+						},
+					),
+				},
+				Options: []interpreter.Option{
+					interpreter.WithImportLocationHandler(
+						func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+							program := interpreter.ProgramFromChecker(importedChecker)
+							subInterpreter, err := inter.NewSubInterpreter(program, location)
+							if err != nil {
+								panic(err)
+							}
+
+							return interpreter.InterpreterImport{
+								Interpreter: subInterpreter,
+							}
+						},
+					),
+				},
+			},
+			meter,
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(138), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindAddressLocation))
+	})
+
 }
 
 func TestInterpretVariableActivationMetering(t *testing.T) {

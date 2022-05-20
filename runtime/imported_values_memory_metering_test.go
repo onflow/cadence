@@ -353,6 +353,28 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		executeScript(script, meter, ufix64Value)
 		assert.Equal(t, uint64(8), meter[common.MemoryKindNumber])
 	})
+
+	t.Run("Struct", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            pub fun main(x: Foo) {}
+
+            pub struct Foo {}
+        `)
+
+		meter := make(map[common.MemoryKind]uint64)
+		structValue := cadence.Struct{
+			StructType: &cadence.StructType{
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "Foo",
+			},
+		}
+
+		executeScript(script, meter, structValue)
+		assert.Equal(t, uint64(1), meter[common.MemoryKindCompositeBase])
+		assert.Equal(t, uint64(168), meter[common.MemoryKindRawString])
+	})
 }
 
 type testMemoryError struct{}
@@ -658,7 +680,7 @@ func TestScriptDecodedLocationMetering(t *testing.T) {
 		},
 		{
 			MemoryKind: common.MemoryKindRawString,
-			Weight:     3 + 1 + 106 + 56, // 106 is for tokens, 56 is for location ID gen
+			Weight:     175,
 			Name:       "string",
 			Location:   common.StringLocation("abc"),
 		},
