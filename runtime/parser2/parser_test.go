@@ -673,4 +673,3 @@ func TestParseTypeDepthLimit(t *testing.T) {
 		err.(Error).Errors,
 	)
 }
-
