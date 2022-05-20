@@ -27,6 +27,19 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
+// tokenLimit is a sensible limit for how many tokens may be emitted
+const tokenLimit = 2 << 18
+
+type TokenLimitReachedError struct {
+	ast.Position
+}
+
+var _ error = TokenLimitReachedError{}
+
+func (t TokenLimitReachedError) Error() string {
+	return fmt.Sprintf("limit of %d tokens exceeded", tokenLimit)
+}
+
 type position struct {
 	line   int
 	column int
@@ -229,6 +242,11 @@ func (l *lexer) acceptOne(r rune) bool {
 
 // emit writes a token to the channel.
 func (l *lexer) emit(ty TokenType, val interface{}, rangeStart ast.Position, consume bool) {
+
+	if len(l.tokens) >= tokenLimit {
+		panic(TokenLimitReachedError{})
+	}
+
 	endPos := l.endPos()
 
 	token := Token{

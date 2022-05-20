@@ -20,6 +20,7 @@ package lexer
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -2142,4 +2143,23 @@ func TestEOFsAfterEmptyInput(t *testing.T) {
 			tokenStream.Next(),
 		)
 	}
+}
+
+func TestLimit(t *testing.T) {
+
+	t.Parallel()
+
+	var b strings.Builder
+	for i := 0; i < 300000; i++ {
+		b.WriteString("x ")
+	}
+
+	code := b.String()
+
+	assert.PanicsWithValue(t,
+		TokenLimitReachedError{},
+		func() {
+			_ = Lex(code, nil)
+		},
+	)
 }
