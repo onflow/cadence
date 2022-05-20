@@ -23,6 +23,8 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/onflow/cadence/runtime/common"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
@@ -491,6 +493,26 @@ func TestParseArgumentList(t *testing.T) {
 			expected,
 			result,
 		)
+	})
+
+	t.Run("fatal error from lack of memory", func(t *testing.T) {
+		gauge := makeLimitingMemoryGauge()
+		gauge.Limit(common.MemoryKindSyntaxToken, 0)
+
+		var panicMsg interface{}
+		(func() {
+			defer func() {
+				panicMsg = recover()
+			}()
+
+			ParseArgumentList(`(1, b: true)`, gauge)
+		})()
+
+		require.IsType(t, common.FatalError{}, panicMsg)
+
+		fatalError, _ := panicMsg.(common.FatalError)
+		var expectedError limitingMemoryGaugeError
+		assert.ErrorAs(t, fatalError, &expectedError)
 	})
 
 	t.Run("valid", func(t *testing.T) {
