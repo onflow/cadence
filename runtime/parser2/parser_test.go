@@ -53,7 +53,7 @@ func TestParseInvalid(t *testing.T) {
 	for _, test := range []test{
 		{unexpectedToken, "X"},
 		{unexpectedToken, "paste your code in here"},
-		{expectedExpression, "# a ( b > c > d > e > f > g > h > i > j > k > l > m > n > o > p > q > r > s > t > u > v > w > x > y > z > A > B > C > D > E > F>"},
+		{expectedExpression, "# a ( b > c > d > e > f > g > h > i > j > k > l > m > n > o > p > q > r >"},
 		{missingTypeAnnotation, "#0x0<{},>()"},
 	} {
 		t.Run(test.code, func(t *testing.T) {
@@ -700,7 +700,7 @@ func TestParseLocalReplayLimit(t *testing.T) {
 
 	var builder strings.Builder
 	builder.WriteString("let t = T")
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 30; i++ {
 		builder.WriteString("<T")
 	}
 	builder.WriteString(">()")
@@ -717,9 +717,9 @@ func TestParseLocalReplayLimit(t *testing.T) {
 						localTokenReplayCountLimit,
 					),
 					Pos: ast.Position{
-						Offset: 210,
+						Offset: 44,
 						Line:   1,
-						Column: 210,
+						Column: 44,
 					},
 				},
 			},
@@ -735,7 +735,7 @@ func TestParseGlobalReplayLimit(t *testing.T) {
 	var builder strings.Builder
 	for j := 0; j < 2; j++ {
 		builder.WriteString(";let t = T")
-		for i := 0; i < 30; i++ {
+		for i := 0; i < 16; i++ {
 			builder.WriteString("<T")
 		}
 	}
@@ -752,9 +752,9 @@ func TestParseGlobalReplayLimit(t *testing.T) {
 						globalTokenReplayCountLimit,
 					),
 					Pos: ast.Position{
-						Offset: 70,
+						Offset: 84,
 						Line:   1,
-						Column: 70,
+						Column: 84,
 					},
 				},
 			},

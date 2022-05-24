@@ -278,11 +278,11 @@ func (p *parser) acceptBuffered() {
 
 // localTokenReplayCountLimit is a sensible limit for how many tokens may be replayed
 // until the top-most ambiguity ends.
-const localTokenReplayCountLimit = 1 << 7
+const localTokenReplayCountLimit = 1 << 6
 
 // globalTokenReplayCountLimit is a sensible limit for how many tokens may be replayed
 // during a parse
-const globalTokenReplayCountLimit = 1 << 9
+const globalTokenReplayCountLimit = 1 << 10
 
 func checkReplayCount(total, additional, limit uint, kind string) uint {
 	newTotal := total + additional
