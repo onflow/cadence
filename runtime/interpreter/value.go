@@ -26,6 +26,8 @@ import (
 	"math/big"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 	"unsafe"
 
 	"github.com/onflow/atree"
@@ -1170,13 +1172,20 @@ func (v *StringValue) Length() int {
 
 func (v *StringValue) ToLower(interpreter *Interpreter) *StringValue {
 
-	// TODO:
-	// An uppercase character may be converted to several lower-case characters, e.g İ => [i, ̇]
+	// Over-estimate resulting string length,
+	// as an uppercase character may be converted to several lower-case characters, e.g İ => [i, ̇]
 	// see https://stackoverflow.com/questions/28683805/is-there-a-unicode-string-which-gets-longer-when-converted-to-lowercase
 
-	memoryUsage := common.NewStringMemoryUsage(
-		len(v.Str),
-	)
+	var lengthEstimate int
+	for _, r := range v.Str {
+		if r < unicode.MaxASCII {
+			lengthEstimate += 1
+		} else {
+			lengthEstimate += utf8.UTFMax
+		}
+	}
+
+	memoryUsage := common.NewStringMemoryUsage(lengthEstimate)
 
 	return NewStringValue(
 		interpreter,
