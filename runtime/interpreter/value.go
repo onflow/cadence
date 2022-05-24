@@ -240,11 +240,9 @@ func NewUnmeteredTypeValue(t StaticType) TypeValue {
 
 func NewTypeValue(
 	memoryGauge common.MemoryGauge,
-	memoryUsage common.MemoryUsage,
-	staticTypeConstructor func() StaticType,
+	staticType StaticType,
 ) TypeValue {
-	common.UseMemory(memoryGauge, memoryUsage)
-	staticType := staticTypeConstructor()
+	common.UseMemory(memoryGauge, common.TypeValueMemoryUsage)
 	return NewUnmeteredTypeValue(staticType)
 }
 

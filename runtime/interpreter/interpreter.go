@@ -3051,13 +3051,14 @@ func init() {
 
 				return NewSomeValueNonCopying(
 					invocation.Interpreter,
-					TypeValue{
-						Type: NewDictionaryStaticType(
+					NewTypeValue(
+						invocation.Interpreter,
+						NewDictionaryStaticType(
 							invocation.Interpreter,
 							keyType,
 							valueType,
 						),
-					},
+					),
 				)
 			},
 			sema.DictionaryTypeFunctionType,
@@ -3081,9 +3082,10 @@ func init() {
 
 				return NewSomeValueNonCopying(
 					invocation.Interpreter,
-					TypeValue{
-						Type: ConvertSemaToStaticType(invocation.Interpreter, composite),
-					},
+					NewTypeValue(
+						invocation.Interpreter,
+						ConvertSemaToStaticType(invocation.Interpreter, composite),
+					),
 				)
 			},
 			sema.CompositeTypeFunctionType,
@@ -3108,9 +3110,10 @@ func init() {
 
 				return NewSomeValueNonCopying(
 					invocation.Interpreter,
-					TypeValue{
-						Type: ConvertSemaToStaticType(invocation.Interpreter, interfaceType),
-					},
+					NewTypeValue(
+						invocation.Interpreter,
+						ConvertSemaToStaticType(invocation.Interpreter, interfaceType),
+					),
 				)
 			},
 			sema.InterfaceTypeFunctionType,
@@ -3241,13 +3244,14 @@ func RestrictedTypeFunction(invocation Invocation) Value {
 
 	return NewSomeValueNonCopying(
 		invocation.Interpreter,
-		TypeValue{
-			Type: NewRestrictedStaticType(
+		NewTypeValue(
+			invocation.Interpreter,
+			NewRestrictedStaticType(
 				invocation.Interpreter,
 				ConvertSemaToStaticType(invocation.Interpreter, ty),
 				staticRestrictions,
 			),
-		},
+		),
 	)
 }
 
@@ -3328,12 +3332,13 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 					panic(errors.NewUnreachableError())
 				}
 
-				return TypeValue{
-					Type: NewOptionalStaticType(
+				return NewTypeValue(
+					invocation.Interpreter,
+					NewOptionalStaticType(
 						invocation.Interpreter,
 						typeValue.Type,
 					),
-				}
+				)
 			},
 			sema.OptionalTypeFunctionType,
 		),
@@ -3347,13 +3352,14 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 					panic(errors.NewUnreachableError())
 				}
 
-				return TypeValue{
+				return NewTypeValue(
+					invocation.Interpreter,
 					//nolint:gosimple
-					Type: NewVariableSizedStaticType(
+					NewVariableSizedStaticType(
 						invocation.Interpreter,
 						typeValue.Type,
 					),
-				}
+				)
 			},
 			sema.VariableSizedArrayTypeFunctionType,
 		),
@@ -3372,13 +3378,14 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 					panic(errors.NewUnreachableError())
 				}
 
-				return TypeValue{
-					Type: NewConstantSizedStaticType(
+				return NewTypeValue(
+					invocation.Interpreter,
+					NewConstantSizedStaticType(
 						invocation.Interpreter,
 						typeValue.Type,
 						int64(sizeValue.ToInt()),
 					),
-				}
+				)
 			},
 			sema.ConstantSizedArrayTypeFunctionType,
 		),
@@ -3397,14 +3404,15 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 					panic(errors.NewUnreachableError())
 				}
 
-				return TypeValue{
-					Type: NewReferenceStaticType(
+				return NewTypeValue(
+					invocation.Interpreter,
+					NewReferenceStaticType(
 						invocation.Interpreter,
 						bool(authorizedValue),
 						typeValue.Type,
 						nil,
 					),
-				}
+				)
 			},
 			sema.ReferenceTypeFunctionType,
 		),
@@ -3427,12 +3435,13 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 
 				return NewSomeValueNonCopying(
 					invocation.Interpreter,
-					TypeValue{
-						Type: NewCapabilityStaticType(
+					NewTypeValue(
+						invocation.Interpreter,
+						NewCapabilityStaticType(
 							invocation.Interpreter,
 							ty,
 						),
-					},
+					),
 				)
 			},
 			sema.CapabilityTypeFunctionType,
@@ -3450,7 +3459,6 @@ func defineRuntimeTypeConstructorFunctions(activation *VariableActivation) {
 //
 var typeFunction = NewUnmeteredHostFunctionValue(
 	func(invocation Invocation) Value {
-
 		typeParameterPair := invocation.TypeParameterTypes.Oldest()
 		if typeParameterPair == nil {
 			panic(errors.NewUnreachableError())
@@ -3458,10 +3466,8 @@ var typeFunction = NewUnmeteredHostFunctionValue(
 
 		ty := typeParameterPair.Value
 
-		// TODO TypeValue metering is more complicated.
-		// 	    Here, staticType conversion should be delayed but can't be.
 		staticType := ConvertSemaToStaticType(invocation.Interpreter, ty)
-		return NewUnmeteredTypeValue(staticType)
+		return NewTypeValue(invocation.Interpreter, staticType)
 	},
 	&sema.FunctionType{
 		ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.MetaType),
@@ -3692,9 +3698,10 @@ func (interpreter *Interpreter) authAccountTypeFunction(addressValue AddressValu
 
 			return NewSomeValueNonCopying(
 				invocation.Interpreter,
-				TypeValue{
-					Type: value.StaticType(invocation.Interpreter),
-				},
+				NewTypeValue(
+					invocation.Interpreter,
+					value.StaticType(invocation.Interpreter),
+				),
 			)
 		},
 
@@ -4375,7 +4382,7 @@ func (interpreter *Interpreter) getTypeFunction(self Value) *HostFunctionValue {
 		interpreter,
 		func(invocation Invocation) Value {
 			staticType := self.StaticType(invocation.Interpreter)
-			return NewUnmeteredTypeValue(staticType)
+			return NewTypeValue(invocation.Interpreter, staticType)
 		},
 		sema.GetTypeFunctionType,
 	)

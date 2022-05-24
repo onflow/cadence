@@ -146,8 +146,10 @@ var (
 	LinkValueMemoryUsage                = NewConstantMemoryUsage(MemoryKindLinkValue)
 	PathValueMemoryUsage                = NewConstantMemoryUsage(MemoryKindPathValue)
 	OptionalValueMemoryUsage            = NewConstantMemoryUsage(MemoryKindOptionalValue)
+	TypeValueMemoryUsage                = NewConstantMemoryUsage(MemoryKindTypeValue)
 
 	// Static Types
+
 	PrimitiveStaticTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindPrimitiveStaticType)
 	CompositeStaticTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindCompositeStaticType)
 	InterfaceStaticTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindInterfaceStaticType)
@@ -169,6 +171,8 @@ var (
 	RestrictedSemaTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindRestrictedSemaType)
 	ReferenceSemaTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindReferenceSemaType)
 	CapabilitySemaTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindCapabilitySemaType)
+
+	// Storage related memory usages
 
 	OrderedMapMemoryUsage = NewConstantMemoryUsage(MemoryKindOrderedMap)
 	InvocationMemoryUsage = NewConstantMemoryUsage(MemoryKindInvocation)
@@ -418,13 +422,6 @@ func NewBytesMemoryUsage(length int) MemoryUsage {
 	return MemoryUsage{
 		Kind:   MemoryKindBytes,
 		Amount: uint64(length) + 1, // +1 to account for empty arrays
-	}
-}
-
-func NewTypeMemoryUsage(staticTypeAsString string) MemoryUsage {
-	return MemoryUsage{
-		Kind:   MemoryKindTypeValue,
-		Amount: uint64(len(staticTypeAsString)),
 	}
 }
 

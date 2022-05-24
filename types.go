@@ -1123,7 +1123,7 @@ func NewMeteredContractType(
 	fields []Field,
 	initializers [][]Parameter,
 ) *ContractType {
-	common.UseMemory(gauge, common.CadenceContractInterfaceTypeMemoryUsage)
+	common.UseMemory(gauge, common.CadenceContractTypeMemoryUsage)
 	return NewContractType(location, qualifiedIdentifer, fields, initializers)
 }
 
