@@ -24,13 +24,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/onflow/cadence/runtime/common"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/parser2/lexer"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -54,7 +53,7 @@ func TestParseInvalid(t *testing.T) {
 	for _, test := range []test{
 		{unexpectedToken, "X"},
 		{unexpectedToken, "paste your code in here"},
-		{expectedExpression, "# a ( b > c > d > e > f > g > h > i > j > k > l > m > n > o > p > q > r > s > t > u > v > w > x > y > z > A > B > C > D > E > F>"},
+		{expectedExpression, "# a ( b > c > d > e > f > g > h > i > j > k > l > m > n > o > p > q > r >"},
 		{missingTypeAnnotation, "#0x0<{},>()"},
 	} {
 		t.Run(test.code, func(t *testing.T) {
@@ -693,5 +692,73 @@ func TestParseTypeDepthLimit(t *testing.T) {
 			},
 		},
 		err.(Error).Errors,
+	)
+}
+
+func TestParseLocalReplayLimit(t *testing.T) {
+	t.Parallel()
+
+	var builder strings.Builder
+	builder.WriteString("let t = T")
+	for i := 0; i < 30; i++ {
+		builder.WriteString("<T")
+	}
+	builder.WriteString(">()")
+
+	code := builder.String()
+	_, errs := ParseProgram(code, nil)
+	utils.AssertEqualWithDiff(t,
+		Error{
+			Code: code,
+			Errors: []error{
+				&SyntaxError{
+					Message: fmt.Sprintf(
+						"program too ambiguous, local replay limit of %d tokens exceeded",
+						localTokenReplayCountLimit,
+					),
+					Pos: ast.Position{
+						Offset: 44,
+						Line:   1,
+						Column: 44,
+					},
+				},
+			},
+		},
+		errs,
+	)
+}
+
+func TestParseGlobalReplayLimit(t *testing.T) {
+
+	t.Parallel()
+
+	var builder strings.Builder
+	for j := 0; j < 2; j++ {
+		builder.WriteString(";let t = T")
+		for i := 0; i < 16; i++ {
+			builder.WriteString("<T")
+		}
+	}
+
+	code := builder.String()
+	_, errs := ParseProgram(code, nil)
+	utils.AssertEqualWithDiff(t,
+		Error{
+			Code: code,
+			Errors: []error{
+				&SyntaxError{
+					Message: fmt.Sprintf(
+						"program too ambiguous, global replay limit of %d tokens exceeded",
+						globalTokenReplayCountLimit,
+					),
+					Pos: ast.Position{
+						Offset: 84,
+						Line:   1,
+						Column: 84,
+					},
+				},
+			},
+		},
+		errs,
 	)
 }
