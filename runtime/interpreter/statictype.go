@@ -154,17 +154,10 @@ func (t InterfaceStaticType) String() string {
 }
 
 func (t InterfaceStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
-	// TODO: Meter before creation. Needs type ID generation metering.
-	str := t.String()
-
-	common.UseMemory(
-		memoryGauge,
-		common.NewRawStringMemoryUsage(
-			len(str),
-		),
-	)
-
-	return str
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
+	return string(t.Location.TypeID(memoryGauge, t.QualifiedIdentifier))
 }
 
 func (t InterfaceStaticType) Equal(other StaticType) bool {

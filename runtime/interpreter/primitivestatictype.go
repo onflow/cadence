@@ -44,7 +44,7 @@ func (t PrimitiveStaticType) Equal(other StaticType) bool {
 }
 
 func (t PrimitiveStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
-	if str, ok := _PrimitiveStaticType_map[t]; ok {
+	if str, ok := PrimitiveStaticTypes[t]; ok {
 		common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(len(str)))
 		return str
 	}
