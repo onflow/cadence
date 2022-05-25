@@ -488,15 +488,15 @@ func min(a, b int) int {
 	return b
 }
 
-const bigIntWordSize = int(unsafe.Sizeof(big.Word(0)))
+const BigIntWordSize = int(unsafe.Sizeof(big.Word(0)))
 
-var bigIntWordSizeAsBig = big.NewInt(int64(bigIntWordSize))
+var bigIntWordSizeAsBig = big.NewInt(int64(BigIntWordSize))
 
 func BigIntByteLength(v *big.Int) int {
 	// NOTE: big.Int.Bits() actually returns a slice of words,
 	// []big.Word, where big.Word = uint,
 	// NOT a slice of bytes!
-	return len(v.Bits()) * bigIntWordSize
+	return len(v.Bits()) * BigIntWordSize
 }
 
 // big.Int memory metering:
@@ -519,7 +519,7 @@ func NewPlusBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 	)
 	return NewBigIntMemoryUsage(
 		(maxWordLength + 5) *
-			bigIntWordSize,
+			BigIntWordSize,
 	)
 }
 
@@ -532,7 +532,7 @@ func NewMinusBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 	)
 	return NewBigIntMemoryUsage(
 		(maxWordLength + 4) *
-			bigIntWordSize,
+			BigIntWordSize,
 	)
 }
 
@@ -558,7 +558,7 @@ func NewMulBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 		resultWordLength = 3*minWordLength + max(6*minWordLength, wordLengthSum) + 8
 	}
 	return NewBigIntMemoryUsage(
-		resultWordLength * bigIntWordSize,
+		resultWordLength * BigIntWordSize,
 	)
 }
 
@@ -588,7 +588,7 @@ func NewModBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 		resultWordLength = 3*bWordLength + 4 + recursionCost*recursionDepth
 	}
 	return NewBigIntMemoryUsage(
-		resultWordLength * bigIntWordSize,
+		resultWordLength * BigIntWordSize,
 	)
 }
 
@@ -616,7 +616,7 @@ func NewBitwiseOrBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 		resultWordLength = 2*max(aWordLength, bWordLength) + 9
 	}
 	return NewBigIntMemoryUsage(
-		resultWordLength * bigIntWordSize,
+		resultWordLength * BigIntWordSize,
 	)
 }
 
@@ -640,7 +640,7 @@ func NewBitwiseXorBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 		resultWordLength = 2*max(aWordLength, bWordLength) + 9
 	}
 	return NewBigIntMemoryUsage(
-		resultWordLength * bigIntWordSize,
+		resultWordLength * BigIntWordSize,
 	)
 }
 
@@ -664,7 +664,7 @@ func NewBitwiseAndBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 		resultWordLength = 2*max(aWordLength, bWordLength) + 8
 	}
 	return NewBigIntMemoryUsage(
-		resultWordLength * bigIntWordSize,
+		resultWordLength * BigIntWordSize,
 	)
 }
 
@@ -692,7 +692,7 @@ func NewBitwiseLeftShiftBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 		resultWordLength = aWordLength + shiftByteLength + 5
 	}
 	return NewBigIntMemoryUsage(
-		resultWordLength * bigIntWordSize,
+		resultWordLength * BigIntWordSize,
 	)
 }
 
@@ -725,7 +725,7 @@ func NewBitwiseRightShiftBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 		resultWordLength = aWordLength + 4
 	}
 	return NewBigIntMemoryUsage(
-		resultWordLength * bigIntWordSize,
+		resultWordLength * BigIntWordSize,
 	)
 }
 
@@ -733,7 +733,7 @@ func NewNegateBigIntMemoryUsage(b *big.Int) MemoryUsage {
 	// |a| + 4
 
 	return NewBigIntMemoryUsage(
-		(len(b.Bits()) + 4) * bigIntWordSize,
+		(len(b.Bits()) + 4) * BigIntWordSize,
 	)
 }
 

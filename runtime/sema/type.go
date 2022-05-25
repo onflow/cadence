@@ -3370,14 +3370,14 @@ func suggestIntegerLiteralConversionReplacement(
 			checker.memoryGauge,
 			"",
 			negative,
-			new(big.Int).Abs(argument.Value),
-			new(big.Int),
+			common.NewBigIntFromAbsoluteValue(checker.memoryGauge, argument.Value),
+			common.NewBigInt(checker.memoryGauge),
 			1,
 			argument.Range,
 		)
 
 		// If the fixed-point literal is positive
-		// and the the target fixed-point type is signed,
+		// and the target fixed-point type is signed,
 		// then a static cast is required
 
 		if !negative && signed {

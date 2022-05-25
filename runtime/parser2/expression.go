@@ -24,9 +24,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/onflow/cadence/runtime/common"
-
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/parser2/lexer"
 )
@@ -1620,8 +1619,16 @@ func parseIntegerLiteral(p *parser, literal, text string, kind IntegerLiteralKin
 	return ast.NewIntegerExpression(p.memoryGauge, literal, value, base, tokenRange)
 }
 
-func parseFixedPointPart(part string) (integer *big.Int, scale uint) {
+func parseFixedPointPart(gauge common.MemoryGauge, part string) (integer *big.Int, scale uint) {
 	withoutUnderscores := strings.ReplaceAll(part, "_", "")
+
+	common.UseMemory(
+		gauge,
+		common.NewBigIntMemoryUsage(
+			common.OverEstimateBigIntFromString(withoutUnderscores),
+		),
+	)
+
 	integer, _ = new(big.Int).SetString(withoutUnderscores, 10)
 	if integer == nil {
 		integer = new(big.Int)
@@ -1635,8 +1642,8 @@ func parseFixedPointPart(part string) (integer *big.Int, scale uint) {
 
 func parseFixedPointLiteral(p *parser, literal string, tokenRange ast.Range) *ast.FixedPointExpression {
 	parts := strings.Split(literal, ".")
-	integer, _ := parseFixedPointPart(parts[0])
-	fractional, scale := parseFixedPointPart(parts[1])
+	integer, _ := parseFixedPointPart(p.memoryGauge, parts[0])
+	fractional, scale := parseFixedPointPart(p.memoryGauge, parts[1])
 
 	return ast.NewFixedPointExpression(
 		p.memoryGauge,
