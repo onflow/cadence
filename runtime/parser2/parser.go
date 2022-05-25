@@ -29,6 +29,12 @@ import (
 	"github.com/onflow/cadence/runtime/parser2/lexer"
 )
 
+// expressionDepthLimit is the limit of how deeply nested an expression can get
+const expressionDepthLimit = 1 << 4
+
+// typeDepthLimit is the limit of how deeply nested a type can get
+const typeDepthLimit = 1 << 4
+
 // lowestBindingPower is the lowest binding power.
 // The binding power controls operator precedence:
 // the higher the value, the tighter a token binds to the tokens that follow.
@@ -48,9 +54,18 @@ type parser struct {
 	bufferedErrorsStack [][]error
 	// memoryGauge is used for metering memory usage
 	memoryGauge common.MemoryGauge
-	// replayedTokensCount is the number of replayed tokens since starting the initial buffering.
-	// It is reset when the buffered tokens get accepted. This keeps errors local.
-	replayedTokensCount uint
+	// localReplayedTokensCount is the number of replayed tokens since starting the top-most ambiguity.
+	// Reset when the top-most ambiguity starts and ends. This keeps errors local.
+	localReplayedTokensCount uint
+	// globalReplayedTokensCount is the number of replayed tokens since starting the parse.
+	// It is never reset.
+	globalReplayedTokensCount uint
+	// ambiguityLevel is the current level of ambiguity (nesting)
+	ambiguityLevel int
+	// expressionDepth is the depth of the currently parsed expression (if >0)
+	expressionDepth int
+	// typeDepth is the depth of the type (if >0)
+	typeDepth int
 }
 
 // Parse creates a lexer to scan the given input string,
@@ -131,8 +146,15 @@ func (p *parser) report(errs ...error) {
 		// If the reported error is not yet a parse error,
 		// create a `SyntaxError` at the current position
 
-		var parseError ParseError
 		var ok bool
+
+		// Fatal errors should abort parsing
+		_, ok = err.(common.FatalError)
+		if ok {
+			panic(err)
+		}
+
+		var parseError ParseError
 		parseError, ok = err.(ParseError)
 		if !ok {
 			parseError = &SyntaxError{
@@ -252,14 +274,24 @@ func (p *parser) acceptBuffered() {
 			bufferedErrors...,
 		)
 	}
-
-	// Reset the replayed tokens count
-	p.replayedTokensCount = 0
 }
 
-// tokenReplayLimit is a sensible limit for how many tokens may be replayed
-// until the replay buffer is accepted.
-const tokenReplayLimit = 2 << 12
+// localTokenReplayCountLimit is a sensible limit for how many tokens may be replayed
+// until the top-most ambiguity ends.
+const localTokenReplayCountLimit = 1 << 6
+
+// globalTokenReplayCountLimit is a sensible limit for how many tokens may be replayed
+// during a parse
+const globalTokenReplayCountLimit = 1 << 10
+
+func checkReplayCount(total, additional, limit uint, kind string) uint {
+	newTotal := total + additional
+	// Check for overflow (uint) and for exceeding the limit
+	if newTotal < total || newTotal > limit {
+		panic(fmt.Errorf("program too ambiguous, %s replay limit of %d tokens exceeded", kind, limit))
+	}
+	return newTotal
+}
 
 func (p *parser) replayBuffered() {
 
@@ -271,12 +303,21 @@ func (p *parser) replayBuffered() {
 	lastIndex := len(p.backtrackingCursorStack) - 1
 	backtrackCursor := p.backtrackingCursorStack[lastIndex]
 
-	replayedCount := p.replayedTokensCount + uint(cursor-backtrackCursor)
-	// Check for overflow (uint) and for exceeding the limit
-	if replayedCount < p.replayedTokensCount || replayedCount > tokenReplayLimit {
-		panic(fmt.Errorf("program too ambiguous, replay limit of %d tokens exceeded", tokenReplayLimit))
-	}
-	p.replayedTokensCount = replayedCount
+	replayedCount := uint(cursor - backtrackCursor)
+
+	p.localReplayedTokensCount = checkReplayCount(
+		p.localReplayedTokensCount,
+		replayedCount,
+		localTokenReplayCountLimit,
+		"local",
+	)
+
+	p.globalReplayedTokensCount = checkReplayCount(
+		p.globalReplayedTokensCount,
+		replayedCount,
+		globalTokenReplayCountLimit,
+		"global",
+	)
 
 	p.tokens.Revert(backtrackCursor)
 	p.next()
@@ -385,6 +426,20 @@ func (p *parser) tokenToIdentifier(identifier lexer.Token) ast.Identifier {
 		identifier.Value.(string),
 		identifier.StartPos,
 	)
+}
+
+func (p *parser) startAmbiguity() {
+	if p.ambiguityLevel == 0 {
+		p.localReplayedTokensCount = 0
+	}
+	p.ambiguityLevel++
+}
+
+func (p *parser) endAmbiguity() {
+	p.ambiguityLevel--
+	if p.ambiguityLevel == 0 {
+		p.localReplayedTokensCount = 0
+	}
 }
 
 func ParseExpression(input string, memoryGauge common.MemoryGauge) (expression ast.Expression, errs []error) {

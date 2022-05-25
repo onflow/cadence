@@ -600,7 +600,7 @@ type InvalidPublicKeyError struct {
 }
 
 func (e InvalidPublicKeyError) Error() string {
-	return fmt.Sprintf("invalid public key: %s", e.PublicKey)
+	return fmt.Sprintf("invalid public key: %s, err: %s", e.PublicKey, e.Err)
 }
 
 func (e InvalidPublicKeyError) Unwrap() error {

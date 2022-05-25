@@ -26,6 +26,8 @@ import (
 	"math/big"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 	"unsafe"
 
 	"github.com/onflow/atree"
@@ -101,6 +103,7 @@ type Value interface {
 		results TypeConformanceResults,
 	) bool
 	RecursiveString(seenReferences SeenReferences) string
+	MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string
 	IsResourceKinded(interpreter *Interpreter) bool
 	NeedsStoreTo(address atree.Address) bool
 	Transfer(
@@ -239,11 +242,9 @@ func NewUnmeteredTypeValue(t StaticType) TypeValue {
 
 func NewTypeValue(
 	memoryGauge common.MemoryGauge,
-	memoryUsage common.MemoryUsage,
-	staticTypeConstructor func() StaticType,
+	staticType StaticType,
 ) TypeValue {
-	common.UseMemory(memoryGauge, memoryUsage)
-	staticType := staticTypeConstructor()
+	common.UseMemory(memoryGauge, common.TypeValueMemoryUsage)
 	return NewUnmeteredTypeValue(staticType)
 }
 
@@ -279,6 +280,11 @@ func (v TypeValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
+func (v TypeValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(memoryGauge, common.TypeValueStringMemoryUsage)
+	return v.String()
+}
+
 func (v TypeValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
 	otherTypeValue, ok := other.(TypeValue)
 	if !ok {
@@ -306,7 +312,7 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ func() LocationRange, n
 			typeID = string(interpreter.MustConvertStaticToSemaType(staticType).ID())
 		}
 		memoryUsage := common.MemoryUsage{
-			Kind:   common.MemoryKindString,
+			Kind:   common.MemoryKindStringValue,
 			Amount: uint64(len(typeID)),
 		}
 		return NewStringValue(interpreter, memoryUsage, func() string {
@@ -448,7 +454,7 @@ func NewUnmeteredVoidValue() VoidValue {
 }
 
 func NewVoidValue(memoryGauge common.MemoryGauge) VoidValue {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindVoid)
+	common.UseMemory(memoryGauge, common.VoidValueMemoryUsage)
 	return NewUnmeteredVoidValue()
 }
 
@@ -475,6 +481,11 @@ func (VoidValue) String() string {
 }
 
 func (v VoidValue) RecursiveString(_ SeenReferences) string {
+	return v.String()
+}
+
+func (v VoidValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(memoryGauge, common.VoidStringMemoryUsage)
 	return v.String()
 }
 
@@ -551,12 +562,12 @@ func NewUnmeteredBoolValue(value bool) BoolValue {
 }
 
 func NewBoolValueFromConstructor(memoryGauge common.MemoryGauge, constructor func() bool) BoolValue {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindBool)
+	common.UseMemory(memoryGauge, common.BoolValueMemoryUsage)
 	return NewUnmeteredBoolValue(constructor())
 }
 
 func NewBoolValue(memoryGauge common.MemoryGauge, value bool) BoolValue {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindBool)
+	common.UseMemory(memoryGauge, common.BoolValueMemoryUsage)
 	return NewUnmeteredBoolValue(value)
 }
 
@@ -608,6 +619,16 @@ func (v BoolValue) String() string {
 }
 
 func (v BoolValue) RecursiveString(_ SeenReferences) string {
+	return v.String()
+}
+
+func (v BoolValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	if v {
+		common.UseMemory(memoryGauge, common.TrueStringMemoryUsage)
+	} else {
+		common.UseMemory(memoryGauge, common.FalseStringMemoryUsage)
+	}
+
 	return v.String()
 }
 
@@ -717,6 +738,12 @@ func (v CharacterValue) String() string {
 }
 
 func (v CharacterValue) RecursiveString(_ SeenReferences) string {
+	return v.String()
+}
+
+func (v CharacterValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	l := format.FormattedStringLength(string(v))
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(l))
 	return v.String()
 }
 
@@ -902,6 +929,12 @@ func (v *StringValue) String() string {
 }
 
 func (v *StringValue) RecursiveString(_ SeenReferences) string {
+	return v.String()
+}
+
+func (v StringValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	l := format.FormattedStringLength(v.Str)
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(l))
 	return v.String()
 }
 
@@ -1139,13 +1172,20 @@ func (v *StringValue) Length() int {
 
 func (v *StringValue) ToLower(interpreter *Interpreter) *StringValue {
 
-	// TODO:
-	// An uppercase character may be converted to several lower-case characters, e.g İ => [i, ̇]
+	// Over-estimate resulting string length,
+	// as an uppercase character may be converted to several lower-case characters, e.g İ => [i, ̇]
 	// see https://stackoverflow.com/questions/28683805/is-there-a-unicode-string-which-gets-longer-when-converted-to-lowercase
 
-	memoryUsage := common.NewStringMemoryUsage(
-		len(v.Str),
-	)
+	var lengthEstimate int
+	for _, r := range v.Str {
+		if r < unicode.MaxASCII {
+			lengthEstimate += 1
+		} else {
+			lengthEstimate += utf8.UTFMax
+		}
+	}
+
+	memoryUsage := common.NewStringMemoryUsage(lengthEstimate)
 
 	return NewStringValue(
 		interpreter,
@@ -1649,6 +1689,18 @@ func (v *ArrayValue) String() string {
 }
 
 func (v *ArrayValue) RecursiveString(seenReferences SeenReferences) string {
+	return v.MeteredString(nil, seenReferences)
+}
+
+func (v *ArrayValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+	// if n > 0:
+	// len = open-bracket + close-bracket + ((n-1) comma+space)
+	//     = 2 + 2n - 2
+	//     = 2n
+	// Always +2 to include empty array case (over estimate).
+	// Each elements' string value is metered individually.
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(v.Count()*2+2))
+
 	values := make([]string, v.Count())
 
 	i := 0
@@ -1656,7 +1708,7 @@ func (v *ArrayValue) RecursiveString(seenReferences SeenReferences) string {
 	_ = v.array.Iterate(func(element atree.Value) (resume bool, err error) {
 		// ok to not meter anything created as part of this iteration, since we will discard the result
 		// upon creating the string
-		values[i] = MustConvertUnmeteredStoredValue(element).RecursiveString(seenReferences)
+		values[i] = MustConvertUnmeteredStoredValue(element).MeteredString(memoryGauge, seenReferences)
 		i++
 		return true, nil
 	})
@@ -2758,6 +2810,16 @@ func (v IntValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
+func (v IntValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
+	return v.String()
+}
+
 func (v IntValue) Negate(interpreter *Interpreter) NumberValue {
 	return NewIntValueFromBigInt(
 		interpreter,
@@ -3277,6 +3339,16 @@ func (v Int8Value) String() string {
 }
 
 func (v Int8Value) RecursiveString(_ SeenReferences) string {
+	return v.String()
+}
+
+func (v Int8Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
 	return v.String()
 }
 
@@ -3875,6 +3947,16 @@ func (v Int16Value) String() string {
 }
 
 func (v Int16Value) RecursiveString(_ SeenReferences) string {
+	return v.String()
+}
+
+func (v Int16Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
 	return v.String()
 }
 
@@ -4477,6 +4559,16 @@ func (v Int32Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
+func (v Int32Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
+	return v.String()
+}
+
 func (v Int32Value) ToInt() int {
 	return int(v)
 }
@@ -5071,6 +5163,16 @@ func (v Int64Value) String() string {
 }
 
 func (v Int64Value) RecursiveString(_ SeenReferences) string {
+	return v.String()
+}
+
+func (v Int64Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
 	return v.String()
 }
 
@@ -5698,6 +5800,16 @@ func (v Int128Value) String() string {
 }
 
 func (v Int128Value) RecursiveString(_ SeenReferences) string {
+	return v.String()
+}
+
+func (v Int128Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
 	return v.String()
 }
 
@@ -6397,6 +6509,16 @@ func (v Int256Value) String() string {
 }
 
 func (v Int256Value) RecursiveString(_ SeenReferences) string {
+	return v.String()
+}
+
+func (v Int256Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
 	return v.String()
 }
 
@@ -7133,6 +7255,16 @@ func (v UIntValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
+func (v UIntValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
+	return v.String()
+}
+
 func (v UIntValue) Negate(*Interpreter) NumberValue {
 	panic(errors.NewUnreachableError())
 }
@@ -7663,6 +7795,16 @@ func (v UInt8Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
+func (v UInt8Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
+	return v.String()
+}
+
 func (v UInt8Value) ToInt() int {
 	return int(v)
 }
@@ -8187,6 +8329,16 @@ func (v UInt16Value) String() string {
 }
 
 func (v UInt16Value) RecursiveString(_ SeenReferences) string {
+	return v.String()
+}
+
+func (v UInt16Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
 	return v.String()
 }
 
@@ -8724,6 +8876,16 @@ func (v UInt32Value) String() string {
 }
 
 func (v UInt32Value) RecursiveString(_ SeenReferences) string {
+	return v.String()
+}
+
+func (v UInt32Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
 	return v.String()
 }
 
@@ -9269,6 +9431,16 @@ func (v UInt64Value) String() string {
 }
 
 func (v UInt64Value) RecursiveString(_ SeenReferences) string {
+	return v.String()
+}
+
+func (v UInt64Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
 	return v.String()
 }
 
@@ -9860,6 +10032,16 @@ func (v UInt128Value) String() string {
 }
 
 func (v UInt128Value) RecursiveString(_ SeenReferences) string {
+	return v.String()
+}
+
+func (v UInt128Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
 	return v.String()
 }
 
@@ -10506,6 +10688,16 @@ func (v UInt256Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
+func (v UInt256Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
+	return v.String()
+}
+
 func (v UInt256Value) Negate(*Interpreter) NumberValue {
 	panic(errors.NewUnreachableError())
 }
@@ -11115,6 +11307,16 @@ func (v Word8Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
+func (v Word8Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
+	return v.String()
+}
+
 func (v Word8Value) ToInt() int {
 	return int(v)
 }
@@ -11538,6 +11740,16 @@ func (v Word16Value) String() string {
 }
 
 func (v Word16Value) RecursiveString(_ SeenReferences) string {
+	return v.String()
+}
+
+func (v Word16Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
 	return v.String()
 }
 
@@ -11965,6 +12177,16 @@ func (v Word32Value) String() string {
 }
 
 func (v Word32Value) RecursiveString(_ SeenReferences) string {
+	return v.String()
+}
+
+func (v Word32Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
 	return v.String()
 }
 
@@ -12400,6 +12622,16 @@ func (v Word64Value) String() string {
 }
 
 func (v Word64Value) RecursiveString(_ SeenReferences) string {
+	return v.String()
+}
+
+func (v Word64Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
 	return v.String()
 }
 
@@ -12874,6 +13106,16 @@ func (v Fix64Value) String() string {
 }
 
 func (v Fix64Value) RecursiveString(_ SeenReferences) string {
+	return v.String()
+}
+
+func (v Fix64Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
 	return v.String()
 }
 
@@ -13422,6 +13664,16 @@ func (v UFix64Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
+func (v UFix64Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
+	return v.String()
+}
+
 func (v UFix64Value) ToInt() int {
 	return int(v / sema.Fix64Factor)
 }
@@ -13883,7 +14135,7 @@ type CompositeValue struct {
 	NestedVariables     map[string]*Variable
 	Functions           map[string]FunctionValue
 	Destructor          FunctionValue
-	Stringer            func(value *CompositeValue, seenReferences SeenReferences) string
+	Stringer            func(gauge common.MemoryGauge, value *CompositeValue, seenReferences SeenReferences) string
 	isDestroyed         bool
 	typeID              common.TypeID
 	staticType          StaticType
@@ -14375,28 +14627,51 @@ func (v *CompositeValue) String() string {
 }
 
 func (v *CompositeValue) RecursiveString(seenReferences SeenReferences) string {
+	return v.MeteredString(nil, seenReferences)
+}
+
+var emptyCompositeStringLen = len(format.Composite("", nil))
+
+func (v *CompositeValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+
 	if v.Stringer != nil {
-		return v.Stringer(v, seenReferences)
+		return v.Stringer(memoryGauge, v, seenReferences)
 	}
+
+	strLen := emptyCompositeStringLen
 
 	var fields []CompositeField
 	_ = v.dictionary.Iterate(func(key atree.Value, value atree.Value) (resume bool, err error) {
-		fields = append(
-			fields,
-			NewUnmeteredCompositeField(
-				string(key.(StringAtreeValue)),
-				// ok to not meter anything created as part of this iteration, since we will discard the result
-				// upon creating the string
-				MustConvertUnmeteredStoredValue(value),
-			),
+		field := NewCompositeField(
+			memoryGauge,
+			string(key.(StringAtreeValue)),
+			MustConvertStoredValue(memoryGauge, value),
 		)
+
+		fields = append(fields, field)
+
+		strLen += len(field.Name)
+
 		return true, nil
 	})
 
-	return formatComposite(string(v.TypeID()), fields, seenReferences)
+	typeId := string(v.TypeID())
+
+	// bodyLen = len(fieldNames) + len(typeId) + (n times colon+space) + ((n-1) times comma+space)
+	//         = len(fieldNames) + len(typeId) + 2n + 2n - 2
+	//         = len(fieldNames) + len(typeId) + 4n - 2
+	//
+	// Since (-2) only occurs if its non-empty, ignore the (-2). i.e: overestimate
+	// 		bodyLen = len(fieldNames) + len(typeId) + 4n
+	//
+	strLen = strLen + len(typeId) + len(fields)*4
+
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(strLen))
+
+	return formatComposite(memoryGauge, typeId, fields, seenReferences)
 }
 
-func formatComposite(typeId string, fields []CompositeField, seenReferences SeenReferences) string {
+func formatComposite(memoryGauge common.MemoryGauge, typeId string, fields []CompositeField, seenReferences SeenReferences) string {
 	preparedFields := make(
 		[]struct {
 			Name  string
@@ -14414,7 +14689,7 @@ func formatComposite(typeId string, fields []CompositeField, seenReferences Seen
 				Value string
 			}{
 				Name:  field.Name,
-				Value: field.Value.RecursiveString(seenReferences),
+				Value: field.Value.MeteredString(memoryGauge, seenReferences),
 			},
 		)
 	}
@@ -15346,6 +15621,10 @@ func (v *DictionaryValue) String() string {
 }
 
 func (v *DictionaryValue) RecursiveString(seenReferences SeenReferences) string {
+	return v.MeteredString(nil, seenReferences)
+}
+
+func (v *DictionaryValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
 
 	pairs := make([]struct {
 		Key   string
@@ -15361,14 +15640,24 @@ func (v *DictionaryValue) RecursiveString(seenReferences SeenReferences) string 
 			Key   string
 			Value string
 		}{
-			// ok to not meter anything created as part of this iteration, since we will discard the result
-			// upon creating the string
-			MustConvertUnmeteredStoredValue(key).RecursiveString(seenReferences),
-			MustConvertUnmeteredStoredValue(value).RecursiveString(seenReferences),
+			MustConvertStoredValue(memoryGauge, key).MeteredString(memoryGauge, seenReferences),
+			MustConvertStoredValue(memoryGauge, value).MeteredString(memoryGauge, seenReferences),
 		}
 		index++
 		return true, nil
 	})
+
+	// len = len(open-brace) + len(close-brace) + (n times colon+space) + ((n-1) times comma+space)
+	//     = 2 + 2n + 2n - 2
+	//     = 4n + 2 - 2
+	//
+	// Since (-2) only occurs if its non-empty (i.e: n>0), ignore the (-2). i.e: overestimate
+	//    len = 4n + 2
+	//
+	// String of each key and value are metered separately.
+	strLen := len(pairs)*4 + 2
+
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(strLen))
 
 	return format.Dictionary(pairs)
 }
@@ -16090,7 +16379,7 @@ func NewUnmeteredNilValue() NilValue {
 }
 
 func NewNilValue(memoryGauge common.MemoryGauge) NilValue {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindNil)
+	common.UseMemory(memoryGauge, common.NilValueMemoryUsage)
 	return NewUnmeteredNilValue()
 }
 
@@ -16130,6 +16419,11 @@ func (NilValue) String() string {
 }
 
 func (v NilValue) RecursiveString(_ SeenReferences) string {
+	return v.String()
+}
+
+func (v NilValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(memoryGauge, common.NilValueStringMemoryUsage)
 	return v.String()
 }
 
@@ -16238,7 +16532,7 @@ type SomeValue struct {
 }
 
 func NewSomeValueNonCopying(interpreter *Interpreter, value Value) *SomeValue {
-	common.UseConstantMemory(interpreter, common.MemoryKindOptional)
+	common.UseMemory(interpreter, common.OptionalValueMemoryUsage)
 
 	return NewUnmeteredSomeValueNonCopying(value)
 }
@@ -16310,6 +16604,10 @@ func (v *SomeValue) String() string {
 
 func (v *SomeValue) RecursiveString(seenReferences SeenReferences) string {
 	return v.value.RecursiveString(seenReferences)
+}
+
+func (v SomeValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+	return v.value.MeteredString(memoryGauge, seenReferences)
 }
 
 func (v *SomeValue) GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
@@ -16598,7 +16896,7 @@ func NewStorageReferenceValue(
 	targetPath PathValue,
 	borrowedType sema.Type,
 ) *StorageReferenceValue {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindStorageReferenceValue)
+	common.UseMemory(memoryGauge, common.StorageReferenceValueMemoryUsage)
 	return NewUnmeteredStorageReferenceValue(
 		authorized,
 		targetStorageAddress,
@@ -16619,10 +16917,15 @@ func (*StorageReferenceValue) Walk(_ *Interpreter, _ func(Value)) {
 }
 
 func (*StorageReferenceValue) String() string {
-	return "StorageReference()"
+	return format.StorageReference
 }
 
 func (v *StorageReferenceValue) RecursiveString(_ SeenReferences) string {
+	return v.String()
+}
+
+func (v *StorageReferenceValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+	common.UseMemory(memoryGauge, common.StorageReferenceValueStringMemoryUsage)
 	return v.String()
 }
 
@@ -16940,7 +17243,7 @@ func NewEphemeralReferenceValue(
 	value Value,
 	borrowedType sema.Type,
 ) *EphemeralReferenceValue {
-	common.UseConstantMemory(interpreter, common.MemoryKindEphemeralReferenceValue)
+	common.UseMemory(interpreter, common.EphemeralReferenceValueMemoryUsage)
 	return NewUnmeteredEphemeralReferenceValue(authorized, value, borrowedType)
 }
 
@@ -16960,13 +17263,19 @@ func (v *EphemeralReferenceValue) String() string {
 }
 
 func (v *EphemeralReferenceValue) RecursiveString(seenReferences SeenReferences) string {
+	return v.MeteredString(nil, seenReferences)
+}
+
+func (v *EphemeralReferenceValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
 	if _, ok := seenReferences[v]; ok {
+		common.UseMemory(memoryGauge, common.SeenReferenceStringMemoryUsage)
 		return "..."
 	}
+
 	seenReferences[v] = struct{}{}
 	defer delete(seenReferences, v)
 
-	return v.Value.RecursiveString(seenReferences)
+	return v.Value.MeteredString(memoryGauge, seenReferences)
 }
 
 func (v *EphemeralReferenceValue) StaticType(inter *Interpreter) StaticType {
@@ -17259,7 +17568,7 @@ func (*EphemeralReferenceValue) DeepRemove(_ *Interpreter) {
 type AddressValue common.Address
 
 func NewAddressValueFromBytes(memoryGauge common.MemoryGauge, constructor func() []byte) AddressValue {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindAddress)
+	common.UseMemory(memoryGauge, common.AddressValueMemoryUsage)
 	return NewUnmeteredAddressValueFromBytes(constructor())
 }
 
@@ -17280,7 +17589,7 @@ func NewAddressValue(
 	memoryGauge common.MemoryGauge,
 	address common.Address,
 ) AddressValue {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindAddress)
+	common.UseMemory(memoryGauge, common.AddressValueMemoryUsage)
 	return NewUnmeteredAddressValueFromBytes(address[:])
 }
 
@@ -17288,7 +17597,7 @@ func NewAddressValueFromConstructor(
 	memoryGauge common.MemoryGauge,
 	addressConstructor func() common.Address,
 ) AddressValue {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindAddress)
+	common.UseMemory(memoryGauge, common.AddressValueMemoryUsage)
 	address := addressConstructor()
 	return NewUnmeteredAddressValueFromBytes(address[:])
 }
@@ -17337,6 +17646,11 @@ func (v AddressValue) String() string {
 }
 
 func (v AddressValue) RecursiveString(_ SeenReferences) string {
+	return v.String()
+}
+
+func (v AddressValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+	common.UseMemory(memoryGauge, common.AddressValueStringMemoryUsage)
 	return v.String()
 }
 
@@ -17537,7 +17851,7 @@ func NewPathValue(
 	domain common.PathDomain,
 	identifier string,
 ) PathValue {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindPathValue)
+	common.UseMemory(memoryGauge, common.PathValueMemoryUsage)
 	return NewUnmeteredPathValue(domain, identifier)
 }
 
@@ -17593,6 +17907,13 @@ func (v PathValue) String() string {
 }
 
 func (v PathValue) RecursiveString(_ SeenReferences) string {
+	return v.String()
+}
+
+func (v PathValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+	// len(domain) + len(identifier) + '/' x2
+	strLen := len(v.Domain.Identifier()) + len(v.Identifier) + 2
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(strLen))
 	return v.String()
 }
 
@@ -17798,7 +18119,7 @@ func NewCapabilityValue(
 	borrowType StaticType,
 ) *CapabilityValue {
 	// Constant because its constituents are already metered.
-	common.UseConstantMemory(memoryGauge, common.MemoryKindCapabilityValue)
+	common.UseMemory(memoryGauge, common.CapabilityValueMemoryUsage)
 	return NewUnmeteredCapabilityValue(address, path, borrowType)
 }
 
@@ -17842,6 +18163,24 @@ func (v *CapabilityValue) RecursiveString(seenReferences SeenReferences) string 
 		borrowType,
 		v.Address.RecursiveString(seenReferences),
 		v.Path.RecursiveString(seenReferences),
+	)
+}
+
+var capabilityValueStringBaseLen = len(format.Capability("", "", ""))
+
+func (v *CapabilityValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+	var borrowType string
+	if v.BorrowType != nil {
+		borrowType = v.BorrowType.String()
+	}
+
+	strLen := capabilityValueStringBaseLen + len(borrowType) + 2
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(strLen))
+
+	return format.Capability(
+		borrowType,
+		v.Address.MeteredString(memoryGauge, seenReferences),
+		v.Path.MeteredString(memoryGauge, seenReferences),
 	)
 }
 
@@ -17994,7 +18333,7 @@ func NewUnmeteredLinkValue(targetPath PathValue, staticType StaticType) LinkValu
 
 func NewLinkValue(memoryGauge common.MemoryGauge, targetPath PathValue, staticType StaticType) LinkValue {
 	// The only variable is TargetPath, which is already metered as a PathValue.
-	common.UseConstantMemory(memoryGauge, common.MemoryKindLinkValue)
+	common.UseMemory(memoryGauge, common.LinkValueMemoryUsage)
 	return NewUnmeteredLinkValue(targetPath, staticType)
 }
 
@@ -18030,6 +18369,20 @@ func (v LinkValue) RecursiveString(seenReferences SeenReferences) string {
 	return format.Link(
 		v.Type.String(),
 		v.TargetPath.RecursiveString(seenReferences),
+	)
+}
+
+var linkValueStringBaseLen = len(format.Link("", ""))
+
+func (v LinkValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+	typeString := v.Type.String()
+
+	strLen := linkValueStringBaseLen + len(typeString)
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(strLen))
+
+	return format.Link(
+		typeString,
+		v.TargetPath.MeteredString(memoryGauge, seenReferences),
 	)
 }
 
@@ -18154,7 +18507,12 @@ func NewPublicKeyValue(
 	}
 
 	// Public key value to string should include the key even though it is a computed field
-	publicKeyValue.Stringer = func(publicKeyValue *CompositeValue, seenReferences SeenReferences) string {
+	publicKeyValue.Stringer = func(
+		memoryGauge common.MemoryGauge,
+		publicKeyValue *CompositeValue,
+		seenReferences SeenReferences,
+	) string {
+
 		stringerFields := []CompositeField{
 			{
 				Name:  sema.PublicKeyPublicKeyField,
@@ -18168,6 +18526,7 @@ func NewPublicKeyValue(
 		}
 
 		return formatComposite(
+			memoryGauge,
 			string(publicKeyValue.TypeID()),
 			stringerFields,
 			seenReferences,

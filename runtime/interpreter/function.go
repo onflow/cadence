@@ -26,6 +26,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/format"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -95,7 +96,7 @@ func NewInterpretedFunctionValue(
 	postConditions ast.Conditions,
 ) *InterpretedFunctionValue {
 
-	common.UseConstantMemory(interpreter, common.MemoryKindInterpretedFunction)
+	common.UseMemory(interpreter, common.InterpretedFunctionValueMemoryUsage)
 
 	return &InterpretedFunctionValue{
 		Interpreter:      interpreter,
@@ -118,6 +119,12 @@ func (f *InterpretedFunctionValue) String() string {
 }
 
 func (f *InterpretedFunctionValue) RecursiveString(_ SeenReferences) string {
+	return f.String()
+}
+
+func (f *InterpretedFunctionValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	typeString := f.Type.String()
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(8+len(typeString)))
 	return f.String()
 }
 
@@ -207,10 +214,15 @@ type HostFunctionValue struct {
 
 func (f *HostFunctionValue) String() string {
 	// TODO: include type
-	return "Function(...)"
+	return format.HostFunction
 }
 
 func (f *HostFunctionValue) RecursiveString(_ SeenReferences) string {
+	return f.String()
+}
+
+func (f *HostFunctionValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(memoryGauge, common.HostFunctionValueStringMemoryUsage)
 	return f.String()
 }
 
@@ -237,7 +249,7 @@ func NewHostFunctionValue(
 	funcType *sema.FunctionType,
 ) *HostFunctionValue {
 
-	common.UseConstantMemory(gauge, common.MemoryKindHostFunction)
+	common.UseMemory(gauge, common.HostFunctionValueMemoryUsage)
 
 	return NewUnmeteredHostFunctionValue(function, funcType)
 }
@@ -355,7 +367,7 @@ func NewBoundFunctionValue(
 	self *CompositeValue,
 ) BoundFunctionValue {
 
-	common.UseConstantMemory(interpreter, common.MemoryKindBoundFunction)
+	common.UseMemory(interpreter, common.BoundFunctionValueMemoryUsage)
 
 	return BoundFunctionValue{
 		Function: function,
@@ -371,6 +383,10 @@ func (f BoundFunctionValue) String() string {
 
 func (f BoundFunctionValue) RecursiveString(seenReferences SeenReferences) string {
 	return f.Function.RecursiveString(seenReferences)
+}
+
+func (f BoundFunctionValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+	return f.Function.MeteredString(memoryGauge, seenReferences)
 }
 
 func (f BoundFunctionValue) Accept(interpreter *Interpreter, visitor Visitor) {

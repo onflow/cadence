@@ -578,22 +578,30 @@ func defineLessThanOrTypeArgumentsExpression() {
 			// was higher than the determined left binding power.
 
 			p.startBuffering()
+			p.startAmbiguity()
+			defer p.endAmbiguity()
 
 			// Skip the `<` token.
 			p.next()
 			p.skipSpaceAndComments(true)
 
-			// First, try to to parse zero or more comma-separated
-			// type arguments (type annotations), a closing greater token `>`,
-			// and start of an argument list, i.e. the open paren token `(`.
+			// First, try to parse zero or more comma-separated type
+			// arguments (type annotations), a closing greater token `>`,
+			// and the start of an argument list, i.e. the open paren token `(`.
 			//
-			// This parse may fail, in which case we just ignore the error.
+			// This parse may fail, in which case we just ignore the error,
+			// with the exception of fatal errors.
 
 			var argumentsStartPos ast.Position
 
 			(func() {
 				defer func() {
-					_ = recover()
+					err := recover()
+					// Fatal errors should abort parsing
+					_, ok := err.(common.FatalError)
+					if ok {
+						panic(err)
+					}
 				}()
 
 				typeArguments = parseCommaSeparatedTypeAnnotations(p, lexer.TokenGreater)
@@ -1252,6 +1260,17 @@ func exprLeftDenotationAllowsWhitespaceAfterToken(tokenType lexer.TokenType) boo
 // parse expressions.
 //
 func parseExpression(p *parser, rightBindingPower int) ast.Expression {
+
+	if p.expressionDepth == expressionDepthLimit {
+		panic(ExpressionDepthLimitReachedError{
+			Pos: p.current.StartPos,
+		})
+	}
+
+	p.expressionDepth++
+	defer func() {
+		p.expressionDepth--
+	}()
 
 	p.skipSpaceAndComments(true)
 	t := p.current
