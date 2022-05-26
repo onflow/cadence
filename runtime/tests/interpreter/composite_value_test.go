@@ -151,3 +151,22 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 
 	return inter
 }
+
+func TestInterpretContractTransfer(t *testing.T) {
+
+	address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+	inter, _ := testAccount(t, address, true, `
+	  contract C {}
+
+	  fun test() {
+	      authAccount.save(C as AnyStruct, to: /storage/c)
+	  }
+    `)
+
+	_, err := inter.Invoke("test")
+	require.Error(t, err)
+
+	var nonTransferableValueError interpreter.NonTransferableValueError
+	require.ErrorAs(t, err, &nonTransferableValueError)
+}
