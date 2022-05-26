@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 package runtime
 
 import (
@@ -32,7 +32,7 @@ import (
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
-func TestResourceDuplicate(t *testing.T) {
+func TestRuntimeResourceDuplicationWithContractTransfer(t *testing.T) {
 
 	t.Parallel()
 
@@ -81,7 +81,7 @@ func TestResourceDuplicate(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	// ---------------- Deploy Fungible Token contract ----------------
+	// Deploy Fungible Token contract
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -97,7 +97,7 @@ func TestResourceDuplicate(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	// ---------------- Deploy Flow Token contract ----------------
+	// Deploy Flow Token contract
 
 	err = runtime.ExecuteTransaction(
 		Script{
@@ -120,20 +120,22 @@ func TestResourceDuplicate(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	// --------------- Deploy Holder contract ----------------
+	// Deploy Holder contract
 
 	signerAccount = common.MustBytesToAddress([]byte{0x2})
 
 	const holderContract = `
-		import FlowToken from 0x1
+      import FlowToken from 0x1
 
-		access(all) contract Holder {
-			pub (set) var content: @FlowToken.Vault?
-			init() {
-				self.content <- nil
-			}
-		}
-	`
+      pub contract Holder {
+
+          pub (set) var content: @FlowToken.Vault?
+
+          init() {
+              self.content <- nil
+          }
+      }
+    `
 	err = runtime.ExecuteTransaction(
 		Script{
 			Source: utils.DeploymentTransaction(
@@ -148,44 +150,44 @@ func TestResourceDuplicate(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	// --------------------------------
+	// Run transaction
 
-	code := `
-		import FlowToken from 0x1
-		import Holder from 0x2
+	const code = `
+        import FungibleToken from 0x1
+        import FlowToken from 0x1
+        import Holder from 0x2
 
-		transaction {
+        transaction {
 
-		  prepare(acct: AuthAccount) {
+          prepare(acct: AuthAccount) {
 
-			  //get current vault
-			  var vault <- FlowToken.createEmptyVault() as! @FlowToken.Vault?
+              // Create vault
+              let vault <- FlowToken.createEmptyVault() as! @FlowToken.Vault?
 
-			  //put it to contract
-			  Holder.content <-! vault
+              // Move vault into the contract
+              Holder.content <-! vault
 
-			  //save to storage
-			  acct.save(Holder as AnyStruct, to:/storage/dnz)
+              // Save the contract into storage (invalid, even if same account)
+              acct.save(Holder as AnyStruct, to: /storage/holder)
 
-			  //remove vault
-			  var exvault <- Holder.content <- nil
-			  var unwrappedExVault <- exvault!
+              // Move vault back out of the contract
+              let vault2 <- Holder.content <- nil
+              let unwrappedVault2 <- vault2!
 
-			  //abracadabra
-			  var dupe = acct.load<AnyStruct>(from:/storage/dnz)!
-			  var dupeContract = dupe as! Holder
-			  var dupeVault <- dupeContract.content <- nil
+              // Load the contract back from storage
+              let dupeContract = acct.load<AnyStruct>(from: /storage/holder)! as! Holder
 
-			  unwrappedExVault.deposit(from: <- dupeVault!)
+              // Move the vault of of the duplicated contract
+              let dupeVault <- dupeContract.content <- nil
+              let unwrappedDupeVault <- dupeVault!
 
-			  //put out vault back
-			  acct.save(<-unwrappedExVault, to:/storage/flowTokenVault)
-		  }
+              // Deposit the duplicated vault into the original vault
+              unwrappedVault2.deposit(from: <- unwrappedDupeVault)
 
-		  execute {
-		  }
-		}
-		`
+              destroy unwrappedVault2
+          }
+        }
+    `
 
 	err = runtime.ExecuteTransaction(
 		Script{
