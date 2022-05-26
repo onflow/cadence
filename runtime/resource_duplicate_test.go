@@ -10,10 +10,13 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestResourceDuplicate(t *testing.T) {
+
+	t.Parallel()
 
 	runtime := NewInterpreterRuntime()
 
@@ -176,5 +179,8 @@ func TestResourceDuplicate(t *testing.T) {
 			Location:  nextTransactionLocation(),
 		},
 	)
-	require.NoError(t, err)
+	require.Error(t, err)
+
+	var nonTransferableValueError interpreter.NonTransferableValueError
+	require.ErrorAs(t, err, &nonTransferableValueError)
 }
