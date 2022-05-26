@@ -133,7 +133,6 @@ func TestResourceDuplicate(t *testing.T) {
 	// --------------------------------
 
 	code := `
-   	    import FungibleToken from 0x1
 		import FlowToken from 0x1
 		import Holder from 0x2
 
