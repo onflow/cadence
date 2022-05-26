@@ -58,7 +58,7 @@ func TestResourceDuplicate(t *testing.T) {
 		},
 	}
 	runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-		return json.Decode(runtimeInterface, b)
+		return json.Decode(b)
 	}
 
 	nextTransactionLocation := newTransactionLocationGenerator()
