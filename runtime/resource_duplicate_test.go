@@ -3,17 +3,19 @@ package runtime
 import (
 	"encoding/hex"
 	"fmt"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/tests/utils"
-	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestResourceDuplicate(t *testing.T) {
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewInterpreterRuntime()
 
 	accountCodes := map[common.LocationID][]byte{}
 
@@ -97,45 +99,17 @@ func TestResourceDuplicate(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	// ---------------- Deploy Hello interface ----------------
+	// --------------- Deploy Holder contract ----------------
 
-	//signerAccount = common.MustBytesToAddress([]byte{0x2})
+	signerAccount = common.MustBytesToAddress([]byte{0x2})
 
-	helloInterfaceCode := `
+	const holderContract = `
 		import FlowToken from 0x1
-		// import FlowToken from 0x0ae53cb6e3f42a79
 
-		access(all) contract interface HolderInterface {
-			pub (set) var content:  @FlowToken.Vault?
-		}
-`
-	err = runtime.ExecuteTransaction(
-		Script{
-			Source: utils.DeploymentTransaction(
-				"HolderInterface",
-				[]byte(helloInterfaceCode),
-			),
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-		},
-	)
-	require.NoError(t, err)
-
-	// --------------- Deploy Hello contract ----------------
-
-	helloCode := `
-		import FlowToken from 0x1
-		import HolderInterface from 0x1
-
-		// import FlowToken from 0x0ae53cb6e3f42a79
-		// import HolderInterface from 0x01cf0e2f2f715450
-
-		access(all) contract Holder: HolderInterface {
-			pub (set) var content:  @FlowToken.Vault?
-			init(){
-				self.content<-nil
+		access(all) contract Holder {
+			pub (set) var content: @FlowToken.Vault?
+			init() {
+				self.content <- nil
 			}
 		}
 	`
@@ -143,7 +117,7 @@ func TestResourceDuplicate(t *testing.T) {
 		Script{
 			Source: utils.DeploymentTransaction(
 				"Holder",
-				[]byte(helloCode),
+				[]byte(holderContract),
 			),
 		},
 		Context{
@@ -156,43 +130,38 @@ func TestResourceDuplicate(t *testing.T) {
 	// --------------------------------
 
 	code := `
+   	    import FungibleToken from 0x1
 		import FlowToken from 0x1
-		import HolderInterface from 0x1
-		import Holder from 0x1
+		import Holder from 0x2
 
-		// import Holder from 0x01cf0e2f2f715450
-		// import HolderInterface from 0x01cf0e2f2f715450
-		// import FlowToken from 0x0ae53cb6e3f42a79
-		
 		transaction {
-		
+
 		  prepare(acct: AuthAccount) {
-		
+
 			  //get current vault
-			  var vault <- acct.load<@FlowToken.Vault>(from:/storage/flowTokenVault)
-		
+			  var vault <- FlowToken.createEmptyVault() as! @FlowToken.Vault?
+
 			  //put it to contract
 			  Holder.content <-! vault
-		
+
 			  //save to storage
 			  acct.save(Holder as AnyStruct, to:/storage/dnz)
-		
+
 			  //remove vault
 			  var exvault <- Holder.content <- nil
 			  var unwrappedExVault <- exvault!
-		
+
 			  //abracadabra
 			  var dupe = acct.load<AnyStruct>(from:/storage/dnz)!
-			  var dupeContract = dupe as! HolderInterface
+			  var dupeContract = dupe as! Holder
 			  var dupeVault <- dupeContract.content <- nil
-		
-		
+
 			  unwrappedExVault.deposit(from: <- dupeVault!)
-		
+
 			  //put out vault back
 			  acct.save(<-unwrappedExVault, to:/storage/flowTokenVault)
 		  }
-		
+
 		  execute {
 		  }
 		}
