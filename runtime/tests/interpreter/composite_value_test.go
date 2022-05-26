@@ -19,6 +19,7 @@
 package interpreter_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -154,19 +155,38 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 
 func TestInterpretContractTransfer(t *testing.T) {
 
-	address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+	t.Parallel()
 
-	inter, _ := testAccount(t, address, true, `
-	  contract C {}
+	test := func(t *testing.T, value string) {
 
-	  fun test() {
-	      authAccount.save(C as AnyStruct, to: /storage/c)
-	  }
-    `)
+		t.Parallel()
 
-	_, err := inter.Invoke("test")
-	require.Error(t, err)
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-	var nonTransferableValueError interpreter.NonTransferableValueError
-	require.ErrorAs(t, err, &nonTransferableValueError)
+		code := fmt.Sprintf(
+			`
+              contract C {}
+
+              fun test() {
+                  authAccount.save(%s, to: /storage/c)
+              }
+		    `,
+			value,
+		)
+		inter, _ := testAccount(t, address, true, code)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		var nonTransferableValueError interpreter.NonTransferableValueError
+		require.ErrorAs(t, err, &nonTransferableValueError)
+	}
+
+	t.Run("simple", func(t *testing.T) {
+		test(t, "C as AnyStruct")
+	})
+
+	t.Run("nested", func(t *testing.T) {
+		test(t, "[C as AnyStruct]")
+	})
 }
