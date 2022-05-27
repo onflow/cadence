@@ -100,12 +100,14 @@ func (t CompositeStaticType) String() string {
 }
 
 func (t CompositeStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
+	var amount int
 	if t.Location == nil {
-		common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(len(t.QualifiedIdentifier)))
+		amount = len(t.QualifiedIdentifier)
 	} else {
-		common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(len(t.TypeID)))
+		amount = len(t.TypeID)
 	}
 
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(amount))
 	return t.String()
 }
 
