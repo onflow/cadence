@@ -9632,6 +9632,211 @@ func TestInterpretValueStringConversion(t *testing.T) {
 				},
 			))
 	})
+
+	t.Run("Type", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                log(Type<Int>())
+            }
+        `
+
+		testValueStringConversion(t, script)
+	})
+}
+
+func TestInterpretStaticTypeStringConversion(t *testing.T) {
+	t.Parallel()
+
+	testStaticTypeStringConversion := func(t *testing.T, script string) {
+		meter := newTestMemoryGauge()
+
+		var loggedString string
+
+		logFunction := stdlib.NewStandardLibraryFunction(
+			"log",
+			&sema.FunctionType{
+				Parameters: []*sema.Parameter{
+					{
+						Label:          sema.ArgumentLabelNotRequired,
+						Identifier:     "value",
+						TypeAnnotation: sema.NewTypeAnnotation(sema.AnyStructType),
+					},
+				},
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(
+					sema.VoidType,
+				),
+			},
+			``,
+			func(invocation interpreter.Invocation) interpreter.Value {
+				// Reset gauge, to only capture the values metered during string conversion
+				meter.meter = make(map[common.MemoryKind]uint64)
+
+				loggedString = invocation.Arguments[0].MeteredString(invocation.Interpreter, interpreter.SeenReferences{})
+				return interpreter.VoidValue{}
+			},
+		)
+
+		valueDeclarations :=
+			stdlib.StandardLibraryFunctions{
+				logFunction,
+			}.ToSemaValueDeclarations()
+
+		values := stdlib.StandardLibraryFunctions{
+			logFunction,
+		}.ToInterpreterValueDeclarations()
+
+		inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(t, script,
+			ParseCheckAndInterpretOptions{
+				Options: []interpreter.Option{
+					interpreter.WithPredeclaredValues(values),
+				},
+				CheckerOptions: []sema.Option{
+					sema.WithPredeclaredValues(valueDeclarations),
+				},
+			},
+			meter,
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
+		require.NoError(t, err)
+
+		meteredAmount := meter.getMemory(common.MemoryKindRawString)
+
+		// Metered amount must be an overestimation compared to the actual logged string.
+		assert.GreaterOrEqual(t, int(meteredAmount), len(loggedString))
+	}
+
+	t.Run("Primitive static types", func(t *testing.T) {
+		t.Parallel()
+
+		for staticType, typeName := range interpreter.PrimitiveStaticTypes {
+			switch staticType {
+			case interpreter.PrimitiveStaticTypeUnknown,
+				interpreter.PrimitiveStaticTypeAny,
+				interpreter.PrimitiveStaticTypeAuthAccountContracts,
+				interpreter.PrimitiveStaticTypePublicAccountContracts,
+				interpreter.PrimitiveStaticTypeAuthAccountKeys,
+				interpreter.PrimitiveStaticTypePublicAccountKeys,
+				interpreter.PrimitiveStaticTypeAccountKey,
+				interpreter.PrimitiveStaticType_Count:
+				continue
+			case interpreter.PrimitiveStaticTypeAnyResource:
+				typeName = "@" + typeName
+			case interpreter.PrimitiveStaticTypeMetaType:
+				typeName = "Type"
+			}
+
+			script := fmt.Sprintf(`
+                pub fun main() {
+                    log(Type<%s>())
+                }`,
+				typeName,
+			)
+
+			testStaticTypeStringConversion(t, script)
+		}
+	})
+
+	t.Run("Derived types", func(t *testing.T) {
+		t.Parallel()
+
+		type testCase struct {
+			name        string
+			constructor string
+		}
+
+		testCases := []testCase{
+			{
+				name:        "Variable-Sized",
+				constructor: "[Int]",
+			},
+			{
+				name:        "Fixed-Sized",
+				constructor: "[Int;3]",
+			},
+			{
+				name:        "Dictionary",
+				constructor: "{String: Int}",
+			},
+			{
+				name:        "Optional",
+				constructor: "Bool?",
+			},
+			{
+				name:        "Function",
+				constructor: "((String): AnyStruct)",
+			},
+			{
+				name:        "Reference",
+				constructor: "&Int",
+			},
+			{
+				name:        "Auth Reference",
+				constructor: "auth &AnyStruct",
+			},
+			{
+				name:        "Capability",
+				constructor: "Capability<&AnyStruct>",
+			},
+		}
+
+		testSimpleValueStringConversion := func(test testCase) {
+
+			t.Run(test.name, func(t *testing.T) {
+				t.Parallel()
+
+				script := fmt.Sprintf(`
+                    pub fun main() {
+                        log(Type<%s>())
+                    }
+                `,
+					test.constructor,
+				)
+
+				testStaticTypeStringConversion(t, script)
+			})
+		}
+
+		for _, test := range testCases {
+			testSimpleValueStringConversion(test)
+		}
+	})
+
+	t.Run("Composite type", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                log(Type<Foo>())
+            }
+
+            struct Foo {
+                var a: Word8
+                init() {
+                    self.a = 4
+                }
+            }
+        `
+
+		testStaticTypeStringConversion(t, script)
+	})
+
+	t.Run("Restricted type", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main() {
+                log(Type<AnyStruct{Foo}>())
+            }
+
+            struct interface Foo {}
+        `
+
+		testStaticTypeStringConversion(t, script)
+	})
 }
 
 func TestInterpretBytesMetering(t *testing.T) {
