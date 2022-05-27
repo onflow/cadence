@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	jsoncdc "github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -97,7 +98,7 @@ func TestInterpreterAddressLocationMetering(t *testing.T) {
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindAddressLocation))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindElaboration))
 		assert.Equal(t, uint64(136), meter.getMemory(common.MemoryKindRawString))
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoid))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 }
 
@@ -185,7 +186,7 @@ func TestInterpreterElaborationImportMetering(t *testing.T) {
 				// one for each deployment transaction and one for each contract
 				assert.Equal(t, uint64(2*j+2), meter.getMemory(common.MemoryKindElaboration))
 
-				assert.Equal(t, uint64(1+j), meter.getMemory(common.MemoryKindCadenceAddress))
+				assert.Equal(t, uint64(1+j), meter.getMemory(common.MemoryKindCadenceAddressValue))
 			}
 
 			_, err := runtime.ExecuteScript(
@@ -244,7 +245,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceSimpleType))
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoid))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 
 	t.Run("import type Int large value", func(t *testing.T) {
@@ -288,7 +289,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceSimpleType))
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoid))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 
 	t.Run("import type Int8", func(t *testing.T) {
@@ -325,7 +326,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceSimpleType))
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoid))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 
 	t.Run("import type Int16", func(t *testing.T) {
@@ -362,7 +363,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceSimpleType))
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoid))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 
 	t.Run("import type Int32", func(t *testing.T) {
@@ -399,7 +400,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceSimpleType))
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoid))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 
 	t.Run("import type Int64", func(t *testing.T) {
@@ -436,7 +437,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceSimpleType))
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoid))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 
 	t.Run("import type Int128", func(t *testing.T) {
@@ -473,7 +474,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceSimpleType))
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoid))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 
 	t.Run("import type Int256", func(t *testing.T) {
@@ -510,7 +511,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceSimpleType))
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoid))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 
 	t.Run("return value Int small value", func(t *testing.T) {
@@ -545,7 +546,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindCadenceInt))
+		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindCadenceIntValue))
 	})
 
 	t.Run("return value Int large value", func(t *testing.T) {
@@ -581,7 +582,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindCadenceInt))
+		assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindCadenceIntValue))
 	})
 
 	t.Run("return value Int8", func(t *testing.T) {
@@ -612,7 +613,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceNumber))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceNumberValue))
 	})
 
 	t.Run("return value Int16", func(t *testing.T) {
@@ -643,7 +644,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCadenceNumber))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCadenceNumberValue))
 	})
 
 	t.Run("return value Int32", func(t *testing.T) {
@@ -674,7 +675,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindCadenceNumber))
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindCadenceNumberValue))
 	})
 
 	t.Run("return value Int64", func(t *testing.T) {
@@ -705,7 +706,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindCadenceNumber))
+		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindCadenceNumberValue))
 	})
 
 	t.Run("return value Int128", func(t *testing.T) {
@@ -736,7 +737,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindCadenceNumber))
+		assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindCadenceNumberValue))
 	})
 
 	t.Run("return value Int256", func(t *testing.T) {
@@ -767,7 +768,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindCadenceNumber))
+		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindCadenceNumberValue))
 	})
 }
 
@@ -831,4 +832,240 @@ func TestLogFunctionStringConversionMetering(t *testing.T) {
 	diffOfMeteredAmount := nonEmptyStrMeteredAmount - emptyStrMeteredAmount
 
 	assert.Equal(t, diffOfActualLen, diffOfMeteredAmount)
+}
+
+func TestStorageCommitsMetering(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("storage used empty", func(t *testing.T) {
+		t.Parallel()
+
+		code := []byte(`
+            transaction {
+                prepare(signer: AuthAccount) {
+                    signer.storageUsed
+                }
+            }
+        `)
+
+		meter := newTestMemoryGauge()
+
+		storageUsedInvoked := false
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: newTestLedger(nil, nil),
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{{42}}, nil
+			},
+			meterMemory: meter.MeterMemory,
+			getStorageUsed: func(_ Address) (uint64, error) {
+				// Before the storageUsed function is invoked, the deltas must have been committed.
+				// So the encoded slabs must have been metered at this point.
+				assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeEncodedSlab))
+				storageUsedInvoked = true
+				return 1, nil
+			},
+		}
+
+		runtime := newTestInterpreterRuntime()
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: code,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  utils.TestLocation,
+			},
+		)
+
+		require.NoError(t, err)
+		assert.True(t, storageUsedInvoked)
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeEncodedSlab))
+	})
+
+	t.Run("account save", func(t *testing.T) {
+		t.Parallel()
+
+		code := []byte(`
+            transaction {
+                prepare(signer: AuthAccount) {
+                    signer.save([[1, 2, 3], [4, 5, 6]], to: /storage/test)
+                }
+            }
+        `)
+
+		meter := newTestMemoryGauge()
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: newTestLedger(nil, nil),
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{{42}}, nil
+			},
+			meterMemory: meter.MeterMemory,
+		}
+
+		runtime := newTestInterpreterRuntime()
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: code,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  utils.TestLocation,
+			},
+		)
+
+		require.NoError(t, err)
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindAtreeEncodedSlab))
+	})
+
+	t.Run("storage used non empty", func(t *testing.T) {
+		t.Parallel()
+
+		code := []byte(`
+            transaction {
+                prepare(signer: AuthAccount) {
+                    signer.save([[1, 2, 3], [4, 5, 6]], to: /storage/test)
+                    signer.storageUsed
+                }
+            }
+        `)
+
+		meter := newTestMemoryGauge()
+		storageUsedInvoked := false
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: newTestLedger(nil, nil),
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{{42}}, nil
+			},
+			meterMemory: meter.MeterMemory,
+			getStorageUsed: func(_ Address) (uint64, error) {
+				// Before the storageUsed function is invoked, the deltas must have been committed.
+				// So the encoded slabs must have been metered at this point.
+				assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindAtreeEncodedSlab))
+				storageUsedInvoked = true
+				return 1, nil
+			},
+		}
+
+		runtime := newTestInterpreterRuntime()
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: code,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  utils.TestLocation,
+			},
+		)
+
+		require.NoError(t, err)
+		assert.True(t, storageUsedInvoked)
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindAtreeEncodedSlab))
+	})
+}
+
+func TestMemoryMeteringErrors(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := newTestInterpreterRuntime()
+
+	type memoryMeter map[common.MemoryKind]uint64
+
+	runtimeInterface := func(meter memoryMeter) *testRuntimeInterface {
+		intf := &testRuntimeInterface{
+			meterMemory: func(usage common.MemoryUsage) error {
+				if usage.Kind == common.MemoryKindStringValue ||
+					usage.Kind == common.MemoryKindArrayValueBase {
+					return testMemoryError{}
+				}
+				return nil
+			},
+		}
+		intf.decodeArgument = func(b []byte, t cadence.Type) (cadence.Value, error) {
+			return jsoncdc.Decode(intf, b)
+		}
+		return intf
+	}
+
+	executeScript := func(script []byte, meter memoryMeter, args ...cadence.Value) error {
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source:    script,
+				Arguments: encodeArgs(args),
+			},
+			Context{
+				Interface: runtimeInterface(meter),
+				Location:  utils.TestLocation,
+			},
+		)
+
+		return err
+	}
+
+	t.Run("no errors", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            pub fun main() {}
+        `)
+
+		err := executeScript(script, memoryMeter{})
+		assert.NoError(t, err)
+	})
+
+	t.Run("importing", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            pub fun main(x: String) {}
+        `)
+
+		err := executeScript(
+			script,
+			memoryMeter{},
+			cadence.String("hello"),
+		)
+
+		assert.ErrorIs(t, err, testMemoryError{})
+	})
+
+	t.Run("at lexer", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            pub fun main() {
+                let x = "hello"
+            }
+        `)
+
+		err := executeScript(script, memoryMeter{})
+
+		require.IsType(t, Error{}, err)
+		runtimeError := err.(Error)
+
+		require.IsType(t, common.FatalError{}, runtimeError.Err)
+		fatalError := runtimeError.Err.(common.FatalError)
+
+		assert.Contains(t, fatalError.Error(), "memory limit exceeded")
+	})
+
+	t.Run("at interpreter", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            pub fun main() {
+                let x: [AnyStruct] = []
+            }
+        `)
+
+		err := executeScript(script, memoryMeter{})
+		assert.ErrorIs(t, err, testMemoryError{})
+	})
 }

@@ -44,7 +44,7 @@ func (checker *Checker) VisitForceExpression(expression *ast.ForceExpression) as
 	if !ok {
 		// A non-optional type is forced. Suggest removing it
 
-		if checker.lintEnabled {
+		if checker.lintingEnabled {
 			checker.hint(
 				&RemovalHint{
 					Description: "unnecessary force operator",

@@ -26,6 +26,8 @@ import (
 	"math/big"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 	"unsafe"
 
 	"github.com/onflow/atree"
@@ -240,11 +242,9 @@ func NewUnmeteredTypeValue(t StaticType) TypeValue {
 
 func NewTypeValue(
 	memoryGauge common.MemoryGauge,
-	memoryUsage common.MemoryUsage,
-	staticTypeConstructor func() StaticType,
+	staticType StaticType,
 ) TypeValue {
-	common.UseMemory(memoryGauge, memoryUsage)
-	staticType := staticTypeConstructor()
+	common.UseMemory(memoryGauge, common.TypeValueMemoryUsage)
 	return NewUnmeteredTypeValue(staticType)
 }
 
@@ -318,7 +318,7 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ func() LocationRange, n
 			typeID = string(interpreter.MustConvertStaticToSemaType(staticType).ID())
 		}
 		memoryUsage := common.MemoryUsage{
-			Kind:   common.MemoryKindString,
+			Kind:   common.MemoryKindStringValue,
 			Amount: uint64(len(typeID)),
 		}
 		return NewStringValue(interpreter, memoryUsage, func() string {
@@ -460,7 +460,7 @@ func NewUnmeteredVoidValue() VoidValue {
 }
 
 func NewVoidValue(memoryGauge common.MemoryGauge) VoidValue {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindVoid)
+	common.UseMemory(memoryGauge, common.VoidValueMemoryUsage)
 	return NewUnmeteredVoidValue()
 }
 
@@ -568,12 +568,12 @@ func NewUnmeteredBoolValue(value bool) BoolValue {
 }
 
 func NewBoolValueFromConstructor(memoryGauge common.MemoryGauge, constructor func() bool) BoolValue {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindBool)
+	common.UseMemory(memoryGauge, common.BoolValueMemoryUsage)
 	return NewUnmeteredBoolValue(constructor())
 }
 
 func NewBoolValue(memoryGauge common.MemoryGauge, value bool) BoolValue {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindBool)
+	common.UseMemory(memoryGauge, common.BoolValueMemoryUsage)
 	return NewUnmeteredBoolValue(value)
 }
 
@@ -1178,13 +1178,20 @@ func (v *StringValue) Length() int {
 
 func (v *StringValue) ToLower(interpreter *Interpreter) *StringValue {
 
-	// TODO:
-	// An uppercase character may be converted to several lower-case characters, e.g İ => [i, ̇]
+	// Over-estimate resulting string length,
+	// as an uppercase character may be converted to several lower-case characters, e.g İ => [i, ̇]
 	// see https://stackoverflow.com/questions/28683805/is-there-a-unicode-string-which-gets-longer-when-converted-to-lowercase
 
-	memoryUsage := common.NewStringMemoryUsage(
-		len(v.Str),
-	)
+	var lengthEstimate int
+	for _, r := range v.Str {
+		if r < unicode.MaxASCII {
+			lengthEstimate += 1
+		} else {
+			lengthEstimate += utf8.UTFMax
+		}
+	}
+
+	memoryUsage := common.NewStringMemoryUsage(lengthEstimate)
 
 	return NewStringValue(
 		interpreter,
@@ -16378,7 +16385,7 @@ func NewUnmeteredNilValue() NilValue {
 }
 
 func NewNilValue(memoryGauge common.MemoryGauge) NilValue {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindNil)
+	common.UseMemory(memoryGauge, common.NilValueMemoryUsage)
 	return NewUnmeteredNilValue()
 }
 
@@ -16531,7 +16538,7 @@ type SomeValue struct {
 }
 
 func NewSomeValueNonCopying(interpreter *Interpreter, value Value) *SomeValue {
-	common.UseConstantMemory(interpreter, common.MemoryKindOptional)
+	common.UseMemory(interpreter, common.OptionalValueMemoryUsage)
 
 	return NewUnmeteredSomeValueNonCopying(value)
 }
@@ -16895,7 +16902,7 @@ func NewStorageReferenceValue(
 	targetPath PathValue,
 	borrowedType sema.Type,
 ) *StorageReferenceValue {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindStorageReferenceValue)
+	common.UseMemory(memoryGauge, common.StorageReferenceValueMemoryUsage)
 	return NewUnmeteredStorageReferenceValue(
 		authorized,
 		targetStorageAddress,
@@ -17242,7 +17249,7 @@ func NewEphemeralReferenceValue(
 	value Value,
 	borrowedType sema.Type,
 ) *EphemeralReferenceValue {
-	common.UseConstantMemory(interpreter, common.MemoryKindEphemeralReferenceValue)
+	common.UseMemory(interpreter, common.EphemeralReferenceValueMemoryUsage)
 	return NewUnmeteredEphemeralReferenceValue(authorized, value, borrowedType)
 }
 
@@ -17567,7 +17574,7 @@ func (*EphemeralReferenceValue) DeepRemove(_ *Interpreter) {
 type AddressValue common.Address
 
 func NewAddressValueFromBytes(memoryGauge common.MemoryGauge, constructor func() []byte) AddressValue {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindAddress)
+	common.UseMemory(memoryGauge, common.AddressValueMemoryUsage)
 	return NewUnmeteredAddressValueFromBytes(constructor())
 }
 
@@ -17588,7 +17595,7 @@ func NewAddressValue(
 	memoryGauge common.MemoryGauge,
 	address common.Address,
 ) AddressValue {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindAddress)
+	common.UseMemory(memoryGauge, common.AddressValueMemoryUsage)
 	return NewUnmeteredAddressValueFromBytes(address[:])
 }
 
@@ -17596,7 +17603,7 @@ func NewAddressValueFromConstructor(
 	memoryGauge common.MemoryGauge,
 	addressConstructor func() common.Address,
 ) AddressValue {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindAddress)
+	common.UseMemory(memoryGauge, common.AddressValueMemoryUsage)
 	address := addressConstructor()
 	return NewUnmeteredAddressValueFromBytes(address[:])
 }
@@ -17850,7 +17857,7 @@ func NewPathValue(
 	domain common.PathDomain,
 	identifier string,
 ) PathValue {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindPathValue)
+	common.UseMemory(memoryGauge, common.PathValueMemoryUsage)
 	return NewUnmeteredPathValue(domain, identifier)
 }
 
@@ -18118,7 +18125,7 @@ func NewCapabilityValue(
 	borrowType StaticType,
 ) *CapabilityValue {
 	// Constant because its constituents are already metered.
-	common.UseConstantMemory(memoryGauge, common.MemoryKindCapabilityValue)
+	common.UseMemory(memoryGauge, common.CapabilityValueMemoryUsage)
 	return NewUnmeteredCapabilityValue(address, path, borrowType)
 }
 
@@ -18329,7 +18336,7 @@ func NewUnmeteredLinkValue(targetPath PathValue, staticType StaticType) LinkValu
 
 func NewLinkValue(memoryGauge common.MemoryGauge, targetPath PathValue, staticType StaticType) LinkValue {
 	// The only variable is TargetPath, which is already metered as a PathValue.
-	common.UseConstantMemory(memoryGauge, common.MemoryKindLinkValue)
+	common.UseMemory(memoryGauge, common.LinkValueMemoryUsage)
 	return NewUnmeteredLinkValue(targetPath, staticType)
 }
 

@@ -65,7 +65,7 @@ func NewPrimitiveStaticType(
 	memoryGauge common.MemoryGauge,
 	staticType PrimitiveStaticType,
 ) PrimitiveStaticType {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindPrimitiveStaticType)
+	common.UseMemory(memoryGauge, common.PrimitiveStaticTypeMemoryUsage)
 	return staticType
 }
 

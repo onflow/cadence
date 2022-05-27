@@ -25,6 +25,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/parser2/lexer"
 )
@@ -577,22 +578,30 @@ func defineLessThanOrTypeArgumentsExpression() {
 			// was higher than the determined left binding power.
 
 			p.startBuffering()
+			p.startAmbiguity()
+			defer p.endAmbiguity()
 
 			// Skip the `<` token.
 			p.next()
 			p.skipSpaceAndComments(true)
 
-			// First, try to to parse zero or more comma-separated
-			// type arguments (type annotations), a closing greater token `>`,
-			// and start of an argument list, i.e. the open paren token `(`.
+			// First, try to parse zero or more comma-separated type
+			// arguments (type annotations), a closing greater token `>`,
+			// and the start of an argument list, i.e. the open paren token `(`.
 			//
-			// This parse may fail, in which case we just ignore the error.
+			// This parse may fail, in which case we just ignore the error,
+			// with the exception of fatal errors.
 
 			var argumentsStartPos ast.Position
 
 			(func() {
 				defer func() {
-					_ = recover()
+					err := recover()
+					// Fatal errors should abort parsing
+					_, ok := err.(common.FatalError)
+					if ok {
+						panic(err)
+					}
 				}()
 
 				typeArguments = parseCommaSeparatedTypeAnnotations(p, lexer.TokenGreater)
@@ -1252,6 +1261,17 @@ func exprLeftDenotationAllowsWhitespaceAfterToken(tokenType lexer.TokenType) boo
 //
 func parseExpression(p *parser, rightBindingPower int) ast.Expression {
 
+	if p.expressionDepth == expressionDepthLimit {
+		panic(ExpressionDepthLimitReachedError{
+			Pos: p.current.StartPos,
+		})
+	}
+
+	p.expressionDepth++
+	defer func() {
+		p.expressionDepth--
+	}()
+
 	p.skipSpaceAndComments(true)
 	t := p.current
 	p.next()
@@ -1599,8 +1619,16 @@ func parseIntegerLiteral(p *parser, literal, text string, kind IntegerLiteralKin
 	return ast.NewIntegerExpression(p.memoryGauge, literal, value, base, tokenRange)
 }
 
-func parseFixedPointPart(part string) (integer *big.Int, scale uint) {
+func parseFixedPointPart(gauge common.MemoryGauge, part string) (integer *big.Int, scale uint) {
 	withoutUnderscores := strings.ReplaceAll(part, "_", "")
+
+	common.UseMemory(
+		gauge,
+		common.NewBigIntMemoryUsage(
+			common.OverEstimateBigIntFromString(withoutUnderscores),
+		),
+	)
+
 	integer, _ = new(big.Int).SetString(withoutUnderscores, 10)
 	if integer == nil {
 		integer = new(big.Int)
@@ -1614,8 +1642,8 @@ func parseFixedPointPart(part string) (integer *big.Int, scale uint) {
 
 func parseFixedPointLiteral(p *parser, literal string, tokenRange ast.Range) *ast.FixedPointExpression {
 	parts := strings.Split(literal, ".")
-	integer, _ := parseFixedPointPart(parts[0])
-	fractional, scale := parseFixedPointPart(parts[1])
+	integer, _ := parseFixedPointPart(p.memoryGauge, parts[0])
+	fractional, scale := parseFixedPointPart(p.memoryGauge, parts[1])
 
 	return ast.NewFixedPointExpression(
 		p.memoryGauge,

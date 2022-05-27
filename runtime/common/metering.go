@@ -20,6 +20,7 @@ package common
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"math/big"
 	"unsafe"
@@ -35,9 +36,13 @@ type MemoryGauge interface {
 }
 
 var (
+	// Tokens
+
 	ValueTokenMemoryUsage  = NewConstantMemoryUsage(MemoryKindValueToken)
 	SyntaxTokenMemoryUsage = NewConstantMemoryUsage(MemoryKindSyntaxToken)
 	SpaceTokenMemoryUsage  = NewConstantMemoryUsage(MemoryKindSpaceToken)
+
+	// AST
 
 	ProgramMemoryUsage         = NewConstantMemoryUsage(MemoryKindProgram)
 	IdentifierMemoryUsage      = NewConstantMemoryUsage(MemoryKindIdentifier)
@@ -50,6 +55,8 @@ var (
 	TypeAnnotationMemoryUsage  = NewConstantMemoryUsage(MemoryKindTypeAnnotation)
 	DictionaryEntryMemoryUsage = NewConstantMemoryUsage(MemoryKindDictionaryEntry)
 
+	// AST Declarations
+
 	FunctionDeclarationMemoryUsage        = NewConstantMemoryUsage(MemoryKindFunctionDeclaration)
 	CompositeDeclarationMemoryUsage       = NewConstantMemoryUsage(MemoryKindCompositeDeclaration)
 	InterfaceDeclarationMemoryUsage       = NewConstantMemoryUsage(MemoryKindInterfaceDeclaration)
@@ -60,6 +67,8 @@ var (
 	VariableDeclarationMemoryUsage        = NewConstantMemoryUsage(MemoryKindVariableDeclaration)
 	SpecialFunctionDeclarationMemoryUsage = NewConstantMemoryUsage(MemoryKindSpecialFunctionDeclaration)
 	PragmaDeclarationMemoryUsage          = NewConstantMemoryUsage(MemoryKindPragmaDeclaration)
+
+	// AST Statements
 
 	AssignmentStatementMemoryUsage = NewConstantMemoryUsage(MemoryKindAssignmentStatement)
 	BreakStatementMemoryUsage      = NewConstantMemoryUsage(MemoryKindBreakStatement)
@@ -72,6 +81,8 @@ var (
 	SwapStatementMemoryUsage       = NewConstantMemoryUsage(MemoryKindSwapStatement)
 	SwitchStatementMemoryUsage     = NewConstantMemoryUsage(MemoryKindSwitchStatement)
 	WhileStatementMemoryUsage      = NewConstantMemoryUsage(MemoryKindWhileStatement)
+
+	// AST Expressions
 
 	BooleanExpressionMemoryUsage     = NewConstantMemoryUsage(MemoryKindBooleanExpression)
 	NilExpressionMemoryUsage         = NewConstantMemoryUsage(MemoryKindNilExpression)
@@ -93,6 +104,8 @@ var (
 	ForceExpressionMemoryUsage       = NewConstantMemoryUsage(MemoryKindForceExpression)
 	PathExpressionMemoryUsage        = NewConstantMemoryUsage(MemoryKindPathExpression)
 
+	// AST Types
+
 	ConstantSizedTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindConstantSizedType)
 	DictionaryTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindDictionaryType)
 	FunctionTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindFunctionType)
@@ -110,11 +123,46 @@ var (
 	ActivationMemoryUsage        = NewConstantMemoryUsage(MemoryKindActivation)
 	ActivationEntriesMemoryUsage = NewConstantMemoryUsage(MemoryKindActivationEntries)
 
-	SimpleCompositeBaseMemoryUsage = NewConstantMemoryUsage(MemoryKindSimpleCompositeBase)
-	AtreeMapElementOverhead        = NewConstantMemoryUsage(MemoryKindAtreeMapElementOverhead)
-	AtreeArrayElementOverhead      = NewConstantMemoryUsage(MemoryKindAtreeArrayElementOverhead)
-	CompositeTypeInfoMemoryUsage   = NewConstantMemoryUsage(MemoryKindCompositeTypeInfo)
-	CompositeFieldMemoryUsage      = NewConstantMemoryUsage(MemoryKindCompositeField)
+	// Interpreter values
+
+	SimpleCompositeValueBaseMemoryUsage = NewConstantMemoryUsage(MemoryKindSimpleCompositeValueBase)
+	AtreeMapElementOverhead             = NewConstantMemoryUsage(MemoryKindAtreeMapElementOverhead)
+	AtreeArrayElementOverhead           = NewConstantMemoryUsage(MemoryKindAtreeArrayElementOverhead)
+	CompositeTypeInfoMemoryUsage        = NewConstantMemoryUsage(MemoryKindCompositeTypeInfo)
+	CompositeFieldMemoryUsage           = NewConstantMemoryUsage(MemoryKindCompositeField)
+	DictionaryValueBaseMemoryUsage      = NewConstantMemoryUsage(MemoryKindDictionaryValueBase)
+	ArrayValueBaseMemoryUsage           = NewConstantMemoryUsage(MemoryKindArrayValueBase)
+	CompositeValueBaseMemoryUsage       = NewConstantMemoryUsage(MemoryKindCompositeValueBase)
+	AddressValueMemoryUsage             = NewConstantMemoryUsage(MemoryKindAddressValue)
+	BoolValueMemoryUsage                = NewConstantMemoryUsage(MemoryKindBoolValue)
+	NilValueMemoryUsage                 = NewConstantMemoryUsage(MemoryKindNilValue)
+	VoidValueMemoryUsage                = NewConstantMemoryUsage(MemoryKindVoidValue)
+	BoundFunctionValueMemoryUsage       = NewConstantMemoryUsage(MemoryKindBoundFunctionValue)
+	HostFunctionValueMemoryUsage        = NewConstantMemoryUsage(MemoryKindHostFunctionValue)
+	InterpretedFunctionValueMemoryUsage = NewConstantMemoryUsage(MemoryKindInterpretedFunctionValue)
+	CapabilityValueMemoryUsage          = NewConstantMemoryUsage(MemoryKindCapabilityValue)
+	EphemeralReferenceValueMemoryUsage  = NewConstantMemoryUsage(MemoryKindEphemeralReferenceValue)
+	StorageReferenceValueMemoryUsage    = NewConstantMemoryUsage(MemoryKindStorageReferenceValue)
+	LinkValueMemoryUsage                = NewConstantMemoryUsage(MemoryKindLinkValue)
+	PathValueMemoryUsage                = NewConstantMemoryUsage(MemoryKindPathValue)
+	OptionalValueMemoryUsage            = NewConstantMemoryUsage(MemoryKindOptionalValue)
+	TypeValueMemoryUsage                = NewConstantMemoryUsage(MemoryKindTypeValue)
+
+	// Static Types
+
+	PrimitiveStaticTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindPrimitiveStaticType)
+	CompositeStaticTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindCompositeStaticType)
+	InterfaceStaticTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindInterfaceStaticType)
+	VariableSizedStaticTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindVariableSizedStaticType)
+	ConstantSizedStaticTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindConstantSizedStaticType)
+	DictionaryStaticTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindDictionaryStaticType)
+	OptionalStaticTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindOptionalStaticType)
+	RestrictedStaticTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindRestrictedStaticType)
+	ReferenceStaticTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindReferenceStaticType)
+	CapabilityStaticTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindCapabilityStaticType)
+	FunctionStaticTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindFunctionStaticType)
+
+	// Sema types
 
 	VariableSizedSemaTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindVariableSizedSemaType)
 	ConstantSizedSemaTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindConstantSizedSemaType)
@@ -124,10 +172,51 @@ var (
 	ReferenceSemaTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindReferenceSemaType)
 	CapabilitySemaTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindCapabilitySemaType)
 
+	// Storage related memory usages
+
 	OrderedMapMemoryUsage = NewConstantMemoryUsage(MemoryKindOrderedMap)
 	InvocationMemoryUsage = NewConstantMemoryUsage(MemoryKindInvocation)
 	StorageMapMemoryUsage = NewConstantMemoryUsage(MemoryKindStorageMap)
 	StorageKeyMemoryUsage = NewConstantMemoryUsage(MemoryKindStorageKey)
+
+	// Cadence external values
+
+	CadenceDictionaryValueMemoryUsage   = NewConstantMemoryUsage(MemoryKindCadenceDictionaryValue)
+	CadenceArrayValueBaseMemoryUsage    = NewConstantMemoryUsage(MemoryKindCadenceArrayValueBase)
+	CadenceStructValueBaseMemoryUsage   = NewConstantMemoryUsage(MemoryKindCadenceStructValueBase)
+	CadenceResourceValueBaseMemoryUsage = NewConstantMemoryUsage(MemoryKindCadenceResourceValueBase)
+	CadenceEventValueBaseMemoryUsage    = NewConstantMemoryUsage(MemoryKindCadenceEventValueBase)
+	CadenceContractValueBaseMemoryUsage = NewConstantMemoryUsage(MemoryKindCadenceContractValueBase)
+	CadenceEnumValueBaseMemoryUsage     = NewConstantMemoryUsage(MemoryKindCadenceEnumValueBase)
+	CadenceAddressValueMemoryUsage      = NewConstantMemoryUsage(MemoryKindCadenceAddressValue)
+	CadenceBoolValueMemoryUsage         = NewConstantMemoryUsage(MemoryKindCadenceBoolValue)
+	CadenceCapabilityValueMemoryUsage   = NewConstantMemoryUsage(MemoryKindCadenceCapabilityValue)
+	CadenceKeyValuePairMemoryUsage      = NewConstantMemoryUsage(MemoryKindCadenceKeyValuePair)
+	CadenceLinkValueMemoryUsage         = NewConstantMemoryUsage(MemoryKindCadenceLinkValue)
+	CadenceOptionalValueMemoryUsage     = NewConstantMemoryUsage(MemoryKindCadenceOptionalValue)
+	CadencePathValueMemoryUsage         = NewConstantMemoryUsage(MemoryKindCadencePathValue)
+	CadenceVoidValueMemoryUsage         = NewConstantMemoryUsage(MemoryKindCadenceVoidValue)
+	CadenceTypeValueMemoryUsage         = NewConstantMemoryUsage(MemoryKindCadenceTypeValue)
+
+	// Cadence external types
+
+	CadenceSimpleTypeMemoryUsage             = NewConstantMemoryUsage(MemoryKindCadenceSimpleType)
+	CadenceCapabilityTypeMemoryUsage         = NewConstantMemoryUsage(MemoryKindCadenceCapabilityType)
+	CadenceConstantSizedArrayTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindCadenceConstantSizedArrayType)
+	CadenceVariableSizedArrayTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindCadenceVariableSizedArrayType)
+	CadenceContractInterfaceTypeMemoryUsage  = NewConstantMemoryUsage(MemoryKindCadenceContractInterfaceType)
+	CadenceContractTypeMemoryUsage           = NewConstantMemoryUsage(MemoryKindCadenceContractType)
+	CadenceDictionaryTypeMemoryUsage         = NewConstantMemoryUsage(MemoryKindCadenceDictionaryType)
+	CadenceEnumTypeMemoryUsage               = NewConstantMemoryUsage(MemoryKindCadenceEnumType)
+	CadenceEventTypeMemoryUsage              = NewConstantMemoryUsage(MemoryKindCadenceEventType)
+	CadenceFunctionTypeMemoryUsage           = NewConstantMemoryUsage(MemoryKindCadenceFunctionType)
+	CadenceOptionalTypeMemoryUsage           = NewConstantMemoryUsage(MemoryKindCadenceOptionalType)
+	CadenceReferenceTypeMemoryUsage          = NewConstantMemoryUsage(MemoryKindCadenceReferenceType)
+	CadenceResourceInterfaceTypeMemoryUsage  = NewConstantMemoryUsage(MemoryKindCadenceResourceInterfaceType)
+	CadenceResourceTypeMemoryUsage           = NewConstantMemoryUsage(MemoryKindCadenceResourceType)
+	CadenceRestrictedTypeMemoryUsage         = NewConstantMemoryUsage(MemoryKindCadenceRestrictedType)
+	CadenceStructInterfaceTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindCadenceStructInterfaceType)
+	CadenceStructTypeMemoryUsage             = NewConstantMemoryUsage(MemoryKindCadenceStructType)
 
 	// Following are the known memory usage amounts for string representation of interpreter values.
 	// Same as `len(format.X)`. However, values are hard-coded to avoid the circular dependency.
@@ -167,7 +256,7 @@ func UseMemory(gauge MemoryGauge, usage MemoryUsage) {
 
 	err := gauge.MeterMemory(usage)
 	if err != nil {
-		panic(err)
+		panic(FatalError{Err: err})
 	}
 }
 
@@ -230,13 +319,10 @@ func newAtreeMemoryUsage(count uint64, elementSize uint, array bool) (MemoryUsag
 }
 
 func NewCadenceArrayMemoryUsages(length int) (MemoryUsage, MemoryUsage) {
-	return MemoryUsage{
-			Kind:   MemoryKindCadenceArrayBase,
-			Amount: 1,
-		}, MemoryUsage{
-			Kind:   MemoryKindCadenceArrayLength,
-			Amount: uint64(length),
-		}
+	return CadenceArrayValueBaseMemoryUsage, MemoryUsage{
+		Kind:   MemoryKindCadenceArrayValueLength,
+		Amount: uint64(length),
+	}
 }
 
 func AdditionalAtreeMemoryUsage(originalCount uint64, elementSize uint, array bool) (MemoryUsage, MemoryUsage) {
@@ -263,45 +349,26 @@ func AdditionalAtreeMemoryUsage(originalCount uint64, elementSize uint, array bo
 
 func NewArrayMemoryUsages(count uint64, elementSize uint) (MemoryUsage, MemoryUsage, MemoryUsage, MemoryUsage) {
 	leaves, branches := newAtreeMemoryUsage(count, elementSize, true)
-	return MemoryUsage{
-			Kind:   MemoryKindArrayBase,
-			Amount: 1,
-		}, MemoryUsage{
-			Kind:   MemoryKindAtreeArrayElementOverhead,
-			Amount: count,
-		}, leaves, branches
+	return ArrayValueBaseMemoryUsage, MemoryUsage{
+		Kind:   MemoryKindAtreeArrayElementOverhead,
+		Amount: count,
+	}, leaves, branches
 }
 
 func NewDictionaryMemoryUsages(count uint64, elementSize uint) (MemoryUsage, MemoryUsage, MemoryUsage, MemoryUsage) {
 	leaves, branches := newAtreeMemoryUsage(count, elementSize, false)
-	return MemoryUsage{
-			Kind:   MemoryKindDictionaryBase,
-			Amount: 1,
-		}, MemoryUsage{
-			Kind:   MemoryKindAtreeMapElementOverhead,
-			Amount: count,
-		}, leaves, branches
-}
-
-func NewCadenceDictionaryMemoryUsages(length int) (MemoryUsage, MemoryUsage) {
-	return MemoryUsage{
-			Kind:   MemoryKindCadenceDictionaryBase,
-			Amount: 1,
-		}, MemoryUsage{
-			Kind:   MemoryKindCadenceDictionarySize,
-			Amount: uint64(length),
-		}
+	return DictionaryValueBaseMemoryUsage, MemoryUsage{
+		Kind:   MemoryKindAtreeMapElementOverhead,
+		Amount: count,
+	}, leaves, branches
 }
 
 func NewCompositeMemoryUsages(count uint64, elementSize uint) (MemoryUsage, MemoryUsage, MemoryUsage, MemoryUsage) {
 	leaves, branches := newAtreeMemoryUsage(count, elementSize, false)
-	return MemoryUsage{
-			Kind:   MemoryKindCompositeBase,
-			Amount: 1,
-		}, MemoryUsage{
-			Kind:   MemoryKindAtreeMapElementOverhead,
-			Amount: count,
-		}, leaves, branches
+	return CompositeValueBaseMemoryUsage, MemoryUsage{
+		Kind:   MemoryKindAtreeMapElementOverhead,
+		Amount: count,
+	}, leaves, branches
 }
 
 func NewAtreeMapPreAllocatedElementsMemoryUsage(count uint64, elementSize uint) MemoryUsage {
@@ -322,14 +389,14 @@ func NewAtreeMapPreAllocatedElementsMemoryUsage(count uint64, elementSize uint) 
 
 func NewSimpleCompositeMemoryUsage(length int) MemoryUsage {
 	return MemoryUsage{
-		Kind:   MemoryKindSimpleComposite,
+		Kind:   MemoryKindSimpleCompositeValue,
 		Amount: uint64(length),
 	}
 }
 
 func NewStringMemoryUsage(length int) MemoryUsage {
 	return MemoryUsage{
-		Kind:   MemoryKindString,
+		Kind:   MemoryKindStringValue,
 		Amount: uint64(length) + 1, // +1 to account for empty strings
 	}
 }
@@ -343,21 +410,21 @@ func NewRawStringMemoryUsage(length int) MemoryUsage {
 
 func NewCadenceStringMemoryUsage(length int) MemoryUsage {
 	return MemoryUsage{
-		Kind:   MemoryKindCadenceString,
+		Kind:   MemoryKindCadenceStringValue,
 		Amount: uint64(length) + 1, // +1 to account for empty strings
 	}
 }
 
 func NewCadenceCharacterMemoryUsage(length int) MemoryUsage {
 	return MemoryUsage{
-		Kind:   MemoryKindCadenceCharacter,
+		Kind:   MemoryKindCadenceCharacterValue,
 		Amount: uint64(length),
 	}
 }
 
 func NewCadenceIntMemoryUsage(bytes int) MemoryUsage {
 	return MemoryUsage{
-		Kind:   MemoryKindCadenceInt,
+		Kind:   MemoryKindCadenceIntValue,
 		Amount: uint64(bytes),
 	}
 }
@@ -369,16 +436,9 @@ func NewBytesMemoryUsage(length int) MemoryUsage {
 	}
 }
 
-func NewTypeMemoryUsage(staticTypeAsString string) MemoryUsage {
-	return MemoryUsage{
-		Kind:   MemoryKindTypeValue,
-		Amount: uint64(len(staticTypeAsString)),
-	}
-}
-
 func NewCharacterMemoryUsage(length int) MemoryUsage {
 	return MemoryUsage{
-		Kind:   MemoryKindCharacter,
+		Kind:   MemoryKindCharacterValue,
 		Amount: uint64(length),
 	}
 }
@@ -391,53 +451,38 @@ func NewBigIntMemoryUsage(bytes int) MemoryUsage {
 }
 
 func NewCadenceStructMemoryUsages(fields int) (MemoryUsage, MemoryUsage) {
-	return MemoryUsage{
-			Kind:   MemoryKindCadenceStructBase,
-			Amount: 1,
-		}, MemoryUsage{
-			Kind:   MemoryKindCadenceStructSize,
-			Amount: uint64(fields),
-		}
+	return CadenceStructValueBaseMemoryUsage, MemoryUsage{
+		Kind:   MemoryKindCadenceStructValueSize,
+		Amount: uint64(fields),
+	}
 }
 
 func NewCadenceResourceMemoryUsages(fields int) (MemoryUsage, MemoryUsage) {
-	return MemoryUsage{
-			Kind:   MemoryKindCadenceResourceBase,
-			Amount: 1,
-		}, MemoryUsage{
-			Kind:   MemoryKindCadenceResourceSize,
-			Amount: uint64(fields),
-		}
+	return CadenceResourceValueBaseMemoryUsage, MemoryUsage{
+		Kind:   MemoryKindCadenceResourceValueSize,
+		Amount: uint64(fields),
+	}
 }
 
 func NewCadenceEventMemoryUsages(fields int) (MemoryUsage, MemoryUsage) {
-	return MemoryUsage{
-			Kind:   MemoryKindCadenceEventBase,
-			Amount: 1,
-		}, MemoryUsage{
-			Kind:   MemoryKindCadenceEventSize,
-			Amount: uint64(fields),
-		}
+	return CadenceEventValueBaseMemoryUsage, MemoryUsage{
+		Kind:   MemoryKindCadenceEventValueSize,
+		Amount: uint64(fields),
+	}
 }
 
 func NewCadenceContractMemoryUsages(fields int) (MemoryUsage, MemoryUsage) {
-	return MemoryUsage{
-			Kind:   MemoryKindCadenceContractBase,
-			Amount: 1,
-		}, MemoryUsage{
-			Kind:   MemoryKindCadenceContractSize,
-			Amount: uint64(fields),
-		}
+	return CadenceContractValueBaseMemoryUsage, MemoryUsage{
+		Kind:   MemoryKindCadenceContractValueSize,
+		Amount: uint64(fields),
+	}
 }
 
 func NewCadenceEnumMemoryUsages(fields int) (MemoryUsage, MemoryUsage) {
-	return MemoryUsage{
-			Kind:   MemoryKindCadenceEnumBase,
-			Amount: 1,
-		}, MemoryUsage{
-			Kind:   MemoryKindCadenceEnumSize,
-			Amount: uint64(fields),
-		}
+	return CadenceEnumValueBaseMemoryUsage, MemoryUsage{
+		Kind:   MemoryKindCadenceEnumValueSize,
+		Amount: uint64(fields),
+	}
 }
 
 func max(a, b int) int {
@@ -454,15 +499,15 @@ func min(a, b int) int {
 	return b
 }
 
-const bigIntWordSize = int(unsafe.Sizeof(big.Word(0)))
+const BigIntWordSize = int(unsafe.Sizeof(big.Word(0)))
 
-var bigIntWordSizeAsBig = big.NewInt(int64(bigIntWordSize))
+var bigIntWordSizeAsBig = big.NewInt(int64(BigIntWordSize))
 
 func BigIntByteLength(v *big.Int) int {
 	// NOTE: big.Int.Bits() actually returns a slice of words,
 	// []big.Word, where big.Word = uint,
 	// NOT a slice of bytes!
-	return len(v.Bits()) * bigIntWordSize
+	return len(v.Bits()) * BigIntWordSize
 }
 
 // big.Int memory metering:
@@ -485,7 +530,7 @@ func NewPlusBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 	)
 	return NewBigIntMemoryUsage(
 		(maxWordLength + 5) *
-			bigIntWordSize,
+			BigIntWordSize,
 	)
 }
 
@@ -498,7 +543,7 @@ func NewMinusBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 	)
 	return NewBigIntMemoryUsage(
 		(maxWordLength + 4) *
-			bigIntWordSize,
+			BigIntWordSize,
 	)
 }
 
@@ -524,7 +569,7 @@ func NewMulBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 		resultWordLength = 3*minWordLength + max(6*minWordLength, wordLengthSum) + 8
 	}
 	return NewBigIntMemoryUsage(
-		resultWordLength * bigIntWordSize,
+		resultWordLength * BigIntWordSize,
 	)
 }
 
@@ -554,7 +599,7 @@ func NewModBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 		resultWordLength = 3*bWordLength + 4 + recursionCost*recursionDepth
 	}
 	return NewBigIntMemoryUsage(
-		resultWordLength * bigIntWordSize,
+		resultWordLength * BigIntWordSize,
 	)
 }
 
@@ -582,7 +627,7 @@ func NewBitwiseOrBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 		resultWordLength = 2*max(aWordLength, bWordLength) + 9
 	}
 	return NewBigIntMemoryUsage(
-		resultWordLength * bigIntWordSize,
+		resultWordLength * BigIntWordSize,
 	)
 }
 
@@ -606,7 +651,7 @@ func NewBitwiseXorBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 		resultWordLength = 2*max(aWordLength, bWordLength) + 9
 	}
 	return NewBigIntMemoryUsage(
-		resultWordLength * bigIntWordSize,
+		resultWordLength * BigIntWordSize,
 	)
 }
 
@@ -630,7 +675,7 @@ func NewBitwiseAndBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 		resultWordLength = 2*max(aWordLength, bWordLength) + 8
 	}
 	return NewBigIntMemoryUsage(
-		resultWordLength * bigIntWordSize,
+		resultWordLength * BigIntWordSize,
 	)
 }
 
@@ -658,7 +703,7 @@ func NewBitwiseLeftShiftBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 		resultWordLength = aWordLength + shiftByteLength + 5
 	}
 	return NewBigIntMemoryUsage(
-		resultWordLength * bigIntWordSize,
+		resultWordLength * BigIntWordSize,
 	)
 }
 
@@ -691,7 +736,7 @@ func NewBitwiseRightShiftBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 		resultWordLength = aWordLength + 4
 	}
 	return NewBigIntMemoryUsage(
-		resultWordLength * bigIntWordSize,
+		resultWordLength * BigIntWordSize,
 	)
 }
 
@@ -699,13 +744,13 @@ func NewNegateBigIntMemoryUsage(b *big.Int) MemoryUsage {
 	// |a| + 4
 
 	return NewBigIntMemoryUsage(
-		(len(b.Bits()) + 4) * bigIntWordSize,
+		(len(b.Bits()) + 4) * BigIntWordSize,
 	)
 }
 
 func NewNumberMemoryUsage(bytes int) MemoryUsage {
 	return MemoryUsage{
-		Kind:   MemoryKindNumber,
+		Kind:   MemoryKindNumberValue,
 		Amount: uint64(bytes),
 	}
 }
@@ -736,14 +781,14 @@ func NewMembersMemoryUsage(length int) MemoryUsage {
 
 func NewCadenceNumberMemoryUsage(bytes int) MemoryUsage {
 	return MemoryUsage{
-		Kind:   MemoryKindCadenceNumber,
+		Kind:   MemoryKindCadenceNumberValue,
 		Amount: uint64(bytes),
 	}
 }
 
 func NewCadenceBigIntMemoryUsage(bytes int) MemoryUsage {
 	return MemoryUsage{
-		Kind:   MemoryKindCadenceNumber,
+		Kind:   MemoryKindCadenceNumberValue,
 		Amount: uint64(bytes),
 	}
 }
@@ -760,11 +805,23 @@ func NewOrderedMapMemoryUsages(size uint64) (MemoryUsage, MemoryUsage, MemoryUsa
 		}
 }
 
-// UseConstantMemory uses a pre-determined amount of memory
-//
-func UseConstantMemory(memoryGauge MemoryGauge, kind MemoryKind) {
-	UseMemory(memoryGauge, MemoryUsage{
-		Kind:   kind,
-		Amount: 1,
-	})
+func NewAtreeEncodedSlabMemoryUsage(slabsCount uint) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindAtreeEncodedSlab,
+		Amount: uint64(slabsCount),
+	}
+}
+
+// FatalError indicates an error that should end
+// the Cadence parsing, checking, or interpretation.
+type FatalError struct {
+	Err error
+}
+
+func (e FatalError) Unwrap() error {
+	return e.Err
+}
+
+func (e FatalError) Error() string {
+	return fmt.Sprintf("Fatal error: %s", e.Err.Error())
 }
