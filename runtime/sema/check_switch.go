@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ func (checker *Checker) VisitSwitchStatement(statement *ast.SwitchStatement) ast
 		checker.report(
 			&NotEquatableTypeError{
 				Type:  testType,
-				Range: ast.NewRangeFromPositioned(statement.Expression),
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, statement.Expression),
 			},
 		)
 	}
@@ -106,7 +106,7 @@ func (checker *Checker) checkSwitchCaseExpression(
 					Operation: ast.OperationEqual,
 					LeftType:  testType,
 					RightType: caseType,
-					Range:     ast.NewRangeFromPositioned(caseExpression),
+					Range:     ast.NewRangeFromPositioned(checker.memoryGauge, caseExpression),
 				},
 			)
 		}
@@ -118,7 +118,7 @@ func (checker *Checker) checkSwitchCaseExpression(
 			checker.report(
 				&NotEquatableTypeError{
 					Type:  caseType,
-					Range: ast.NewRangeFromPositioned(caseExpression),
+					Range: ast.NewRangeFromPositioned(checker.memoryGauge, caseExpression),
 				},
 			)
 		}
@@ -163,7 +163,7 @@ func (checker *Checker) checkSwitchCaseStatements(switchCase *ast.SwitchCase) {
 	if len(switchCase.Statements) == 0 {
 		checker.report(
 			&MissingSwitchCaseStatementsError{
-				Pos: switchCase.EndPosition().Shifted(1),
+				Pos: switchCase.EndPosition(checker.memoryGauge).Shifted(checker.memoryGauge, 1),
 			},
 		)
 		return
@@ -171,12 +171,14 @@ func (checker *Checker) checkSwitchCaseStatements(switchCase *ast.SwitchCase) {
 
 	// NOTE: the block ensures that the statements are checked in a new scope
 
-	block := &ast.Block{
-		Statements: switchCase.Statements,
-		Range: ast.Range{
-			StartPos: switchCase.Statements[0].StartPosition(),
-			EndPos:   switchCase.EndPos,
-		},
-	}
+	block := ast.NewBlock(
+		checker.memoryGauge,
+		switchCase.Statements,
+		ast.NewRange(
+			checker.memoryGauge,
+			switchCase.Statements[0].StartPosition(),
+			switchCase.EndPos,
+		),
+	)
 	block.Accept(checker)
 }

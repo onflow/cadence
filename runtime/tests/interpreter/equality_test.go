@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,7 +47,7 @@ func TestInterpretEquality(t *testing.T) {
 			Type: &sema.CapabilityType{},
 			ValueFactory: func(_ *interpreter.Interpreter) interpreter.Value {
 				return &interpreter.CapabilityValue{
-					Address: interpreter.NewAddressValue(common.MustBytesToAddress([]byte{0x1})),
+					Address: interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 					Path: interpreter.PathValue{
 						Domain:     common.PathDomainStorage,
 						Identifier: "something",

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,8 +24,7 @@ import (
 
 // DeployedContractValue
 
-var deployedContractDynamicType DynamicType = DeployedContractDynamicType{}
-var deployedContractStaticType StaticType = PrimitiveStaticTypeDeployedContract
+var deployedContractStaticType StaticType = PrimitiveStaticTypeDeployedContract // unmetered
 var deployedContractFieldNames = []string{
 	sema.DeployedContractTypeAddressFieldName,
 	sema.DeployedContractTypeNameFieldName,
@@ -33,14 +32,15 @@ var deployedContractFieldNames = []string{
 }
 
 func NewDeployedContractValue(
+	inter *Interpreter,
 	address AddressValue,
 	name *StringValue,
 	code *ArrayValue,
 ) *SimpleCompositeValue {
 	return NewSimpleCompositeValue(
+		inter,
 		sema.DeployedContractType.TypeID,
 		deployedContractStaticType,
-		deployedContractDynamicType,
 		deployedContractFieldNames,
 		map[string]Value{
 			sema.DeployedContractTypeAddressFieldName: address,

@@ -4,7 +4,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -106,7 +106,7 @@ func (s stdoutOutput) Append(r result) {
 	}
 
 	if r.Error != nil {
-		location := common.StringLocation(r.Path)
+		location := common.NewStringLocation(nil, r.Path)
 		printErr := pretty.NewErrorPrettyPrinter(os.Stdout, true).
 			PrettyPrintError(r.Error, location, map[common.LocationID]string{location.ID(): r.Code})
 		if printErr != nil {
@@ -175,7 +175,7 @@ func runPath(path string, bench bool) (res result, succeeded bool) {
 			}
 		}()
 
-		program, err = parser2.ParseProgram(code)
+		program, err = parser2.ParseProgram(code, nil)
 		if !bench {
 			res.Program = program
 		}
@@ -189,7 +189,7 @@ func runPath(path string, bench bool) (res result, succeeded bool) {
 
 	if bench {
 		benchRes := benchParse(func() (err error) {
-			_, err = parser2.ParseProgram(code)
+			_, err = parser2.ParseProgram(code, nil)
 			return
 		})
 		res.Bench = &benchResult{

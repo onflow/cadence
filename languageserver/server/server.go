@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/google/uuid"
 	"github.com/mitchellh/mapstructure"
 	"github.com/onflow/cadence/encoding/json"
@@ -189,6 +190,8 @@ type Server struct {
 	// initializationOptionsHandlers are the functions that are used to handle initialization options sent by the client
 	initializationOptionsHandlers []InitializationOptionsHandler
 	accessCheckMode               sema.AccessCheckMode
+	// reportCrashes decides when the crash is detected should it be reported
+	reportCrashes bool
 }
 
 type Option func(*Server) error
@@ -288,8 +291,12 @@ func NewServer() (*Server, error) {
 	}
 	server.protocolServer = protocol.NewServer(server)
 
-	// Set default commands
+	// init crash reporting
+	defer sentry.Flush(2 * time.Second)
+	defer sentry.Recover()
+	initCrashReporting(server)
 
+	// Set default commands
 	for _, command := range server.defaultCommands() {
 		err := server.SetOptions(WithCommand(command))
 		if err != nil {
@@ -369,7 +376,29 @@ func (s *Server) Initialize(
 	return result, nil
 }
 
-const accessCheckModeOption = "accessCheckMode"
+// initCrashReporting set-ups sentry as crash reporting tool, it also sets listener for panics.
+func initCrashReporting(server *Server) {
+	sentrySyncTransport := sentry.NewHTTPSyncTransport()
+	sentrySyncTransport.Timeout = time.Second * 3
+
+	_ = sentry.Init(sentry.ClientOptions{
+		Dsn:              "https://7725b80e4d5a4625845270176a6d8bd5@o114654.ingest.sentry.io/6330569",
+		AttachStacktrace: true,
+		Transport:        sentrySyncTransport,
+		BeforeSend: func(event *sentry.Event, hint *sentry.EventHint) *sentry.Event {
+			if server.reportCrashes {
+				return event
+			}
+
+			return nil
+		},
+	})
+}
+
+const (
+	accessCheckModeOption = "accessCheckMode"
+	reportCrashesOption   = "reportCrashes"
+)
 
 func accessCheckModeFromName(name string) sema.AccessCheckMode {
 	switch name {
@@ -400,6 +429,12 @@ func (s *Server) configure(opts interface{}) {
 		s.accessCheckMode = accessCheckModeFromName(accessCheckModeName)
 	} else {
 		s.accessCheckMode = sema.AccessCheckModeStrict
+	}
+
+	if reportCrashesValue, ok := optsMap[reportCrashesOption].(bool); ok {
+		s.reportCrashes = reportCrashesValue
+	} else {
+		s.reportCrashes = true // report by default
 	}
 }
 
@@ -1680,7 +1715,6 @@ func (s *Server) getDiagnostics(
 			diagnostics = append(diagnostics, parserDiagnostics...)
 		}
 	}
-
 	// If there is a parse result succeeded proceed with resolving imports and checking the parsed program,
 	// even if there there might have been parsing errors.
 
@@ -1787,7 +1821,6 @@ func (s *Server) getDiagnostics(
 					}
 
 					importedLocationID := importedLocation.ID()
-
 					importedChecker, ok := s.checkers[importedLocationID]
 					if !ok {
 						importedProgram, err := s.resolveImport(importedLocation)

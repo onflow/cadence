@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -76,7 +76,7 @@ func TestQuoteString(t *testing.T) {
 
 func TestStringQuick(t *testing.T) {
 	f := func(text string) bool {
-		res, errs := parser2.ParseExpression(ast.QuoteString(text))
+		res, errs := parser2.ParseExpression(ast.QuoteString(text), nil)
 		if len(errs) > 0 {
 			return false
 		}

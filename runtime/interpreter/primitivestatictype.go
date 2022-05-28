@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@
 package interpreter
 
 import (
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -36,6 +37,14 @@ func (t PrimitiveStaticType) Equal(other StaticType) bool {
 	}
 
 	return t == otherPrimitiveType
+}
+
+func NewPrimitiveStaticType(
+	memoryGauge common.MemoryGauge,
+	staticType PrimitiveStaticType,
+) PrimitiveStaticType {
+	common.UseMemory(memoryGauge, common.PrimitiveStaticTypeMemoryUsage)
+	return staticType
 }
 
 // !!! *WARNING* !!!
@@ -168,9 +177,90 @@ const (
 	PrimitiveStaticTypeAuthAccountKeys
 	PrimitiveStaticTypePublicAccountKeys
 	PrimitiveStaticTypeAccountKey
+
+	// !!! *WARNING* !!!
+	// ADD NEW TYPES *BEFORE* THIS WARNING.
+	// DO *NOT* ADD NEW TYPES AFTER THIS LINE!
+	PrimitiveStaticType_Count
 )
 
 func (PrimitiveStaticType) isStaticType() {}
+
+func (t PrimitiveStaticType) elementSize() uint {
+	switch t {
+	case
+		PrimitiveStaticTypeAnyStruct,
+		PrimitiveStaticTypeAnyResource,
+		PrimitiveStaticTypeAny:
+		return UnknownElementSize
+	case PrimitiveStaticTypeVoid:
+		return uint(len(cborVoidValue))
+	case PrimitiveStaticTypeNever:
+		return cborTagSize + 1
+	case PrimitiveStaticTypeBool:
+		return cborTagSize + 1
+	case PrimitiveStaticTypeAddress:
+		return cborTagSize + 8 // address length is 8 bytes
+	case PrimitiveStaticTypeString,
+		PrimitiveStaticTypeCharacter,
+		PrimitiveStaticTypeMetaType,
+		PrimitiveStaticTypeBlock:
+		return UnknownElementSize
+
+	case PrimitiveStaticTypeFixedPoint,
+		PrimitiveStaticTypeSignedFixedPoint:
+		return cborTagSize + 8
+
+	// values of these types may wrap big.Int
+	case PrimitiveStaticTypeInt,
+		PrimitiveStaticTypeUInt,
+		PrimitiveStaticTypeUInt128,
+		PrimitiveStaticTypeUInt256,
+		PrimitiveStaticTypeInt128,
+		PrimitiveStaticTypeInt256,
+		PrimitiveStaticTypeInteger,
+		PrimitiveStaticTypeSignedInteger,
+		PrimitiveStaticTypeNumber,
+		PrimitiveStaticTypeSignedNumber:
+		return UnknownElementSize
+
+	case PrimitiveStaticTypeInt8,
+		PrimitiveStaticTypeUInt8,
+		PrimitiveStaticTypeWord8:
+		return cborTagSize + 2
+	case PrimitiveStaticTypeInt16,
+		PrimitiveStaticTypeUInt16,
+		PrimitiveStaticTypeWord16:
+		return cborTagSize + 3
+	case PrimitiveStaticTypeInt32,
+		PrimitiveStaticTypeUInt32,
+		PrimitiveStaticTypeWord32:
+		return cborTagSize + 5
+	case PrimitiveStaticTypeInt64,
+		PrimitiveStaticTypeUInt64,
+		PrimitiveStaticTypeWord64,
+		PrimitiveStaticTypeFix64,
+		PrimitiveStaticTypeUFix64:
+		return cborTagSize + 9
+
+	case PrimitiveStaticTypePath,
+		PrimitiveStaticTypeCapability,
+		PrimitiveStaticTypeStoragePath,
+		PrimitiveStaticTypeCapabilityPath,
+		PrimitiveStaticTypePublicPath,
+		PrimitiveStaticTypePrivatePath,
+		PrimitiveStaticTypeAuthAccount,
+		PrimitiveStaticTypePublicAccount,
+		PrimitiveStaticTypeDeployedContract,
+		PrimitiveStaticTypeAuthAccountContracts,
+		PrimitiveStaticTypePublicAccountContracts,
+		PrimitiveStaticTypeAuthAccountKeys,
+		PrimitiveStaticTypePublicAccountKeys,
+		PrimitiveStaticTypeAccountKey:
+		return UnknownElementSize
+	}
+	return UnknownElementSize
+}
 
 func (i PrimitiveStaticType) SemaType() sema.Type {
 	switch i {
@@ -316,134 +406,137 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 //
 // Returns `PrimitiveStaticTypeUnknown` if the given type is not a primitive type.
 //
-func ConvertSemaToPrimitiveStaticType(t sema.Type) PrimitiveStaticType {
+func ConvertSemaToPrimitiveStaticType(
+	memoryGauge common.MemoryGauge,
+	t sema.Type,
+) (typ PrimitiveStaticType) {
 	switch t {
 
 	// Number
 
 	case sema.NumberType:
-		return PrimitiveStaticTypeNumber
+		typ = PrimitiveStaticTypeNumber
 	case sema.SignedNumberType:
-		return PrimitiveStaticTypeSignedNumber
+		typ = PrimitiveStaticTypeSignedNumber
 
 	// Integer
 	case sema.IntegerType:
-		return PrimitiveStaticTypeInteger
+		typ = PrimitiveStaticTypeInteger
 	case sema.SignedIntegerType:
-		return PrimitiveStaticTypeSignedInteger
+		typ = PrimitiveStaticTypeSignedInteger
 
 	// FixedPoint
 	case sema.FixedPointType:
-		return PrimitiveStaticTypeFixedPoint
+		typ = PrimitiveStaticTypeFixedPoint
 	case sema.SignedFixedPointType:
-		return PrimitiveStaticTypeSignedFixedPoint
+		typ = PrimitiveStaticTypeSignedFixedPoint
 
 	// Int*
 	case sema.IntType:
-		return PrimitiveStaticTypeInt
+		typ = PrimitiveStaticTypeInt
 	case sema.Int8Type:
-		return PrimitiveStaticTypeInt8
+		typ = PrimitiveStaticTypeInt8
 	case sema.Int16Type:
-		return PrimitiveStaticTypeInt16
+		typ = PrimitiveStaticTypeInt16
 	case sema.Int32Type:
-		return PrimitiveStaticTypeInt32
+		typ = PrimitiveStaticTypeInt32
 	case sema.Int64Type:
-		return PrimitiveStaticTypeInt64
+		typ = PrimitiveStaticTypeInt64
 	case sema.Int128Type:
-		return PrimitiveStaticTypeInt128
+		typ = PrimitiveStaticTypeInt128
 	case sema.Int256Type:
-		return PrimitiveStaticTypeInt256
+		typ = PrimitiveStaticTypeInt256
 
 	// UInt*
 	case sema.UIntType:
-		return PrimitiveStaticTypeUInt
+		typ = PrimitiveStaticTypeUInt
 	case sema.UInt8Type:
-		return PrimitiveStaticTypeUInt8
+		typ = PrimitiveStaticTypeUInt8
 	case sema.UInt16Type:
-		return PrimitiveStaticTypeUInt16
+		typ = PrimitiveStaticTypeUInt16
 	case sema.UInt32Type:
-		return PrimitiveStaticTypeUInt32
+		typ = PrimitiveStaticTypeUInt32
 	case sema.UInt64Type:
-		return PrimitiveStaticTypeUInt64
+		typ = PrimitiveStaticTypeUInt64
 	case sema.UInt128Type:
-		return PrimitiveStaticTypeUInt128
+		typ = PrimitiveStaticTypeUInt128
 	case sema.UInt256Type:
-		return PrimitiveStaticTypeUInt256
+		typ = PrimitiveStaticTypeUInt256
 
 	// Word*
 	case sema.Word8Type:
-		return PrimitiveStaticTypeWord8
+		typ = PrimitiveStaticTypeWord8
 	case sema.Word16Type:
-		return PrimitiveStaticTypeWord16
+		typ = PrimitiveStaticTypeWord16
 	case sema.Word32Type:
-		return PrimitiveStaticTypeWord32
+		typ = PrimitiveStaticTypeWord32
 	case sema.Word64Type:
-		return PrimitiveStaticTypeWord64
+		typ = PrimitiveStaticTypeWord64
 
 	// Fix*
 	case sema.Fix64Type:
-		return PrimitiveStaticTypeFix64
+		typ = PrimitiveStaticTypeFix64
 
 	// UFix*
 	case sema.UFix64Type:
-		return PrimitiveStaticTypeUFix64
+		typ = PrimitiveStaticTypeUFix64
 
 	case sema.PathType:
-		return PrimitiveStaticTypePath
+		typ = PrimitiveStaticTypePath
 	case sema.StoragePathType:
-		return PrimitiveStaticTypeStoragePath
+		typ = PrimitiveStaticTypeStoragePath
 	case sema.CapabilityPathType:
-		return PrimitiveStaticTypeCapabilityPath
+		typ = PrimitiveStaticTypeCapabilityPath
 	case sema.PublicPathType:
-		return PrimitiveStaticTypePublicPath
+		typ = PrimitiveStaticTypePublicPath
 	case sema.PrivatePathType:
-		return PrimitiveStaticTypePrivatePath
+		typ = PrimitiveStaticTypePrivatePath
 	case sema.NeverType:
-		return PrimitiveStaticTypeNever
+		typ = PrimitiveStaticTypeNever
 	case sema.VoidType:
-		return PrimitiveStaticTypeVoid
+		typ = PrimitiveStaticTypeVoid
 	case sema.MetaType:
-		return PrimitiveStaticTypeMetaType
+		typ = PrimitiveStaticTypeMetaType
 	case sema.BoolType:
-		return PrimitiveStaticTypeBool
+		typ = PrimitiveStaticTypeBool
 	case sema.CharacterType:
-		return PrimitiveStaticTypeCharacter
+		typ = PrimitiveStaticTypeCharacter
 	case sema.AnyType:
-		return PrimitiveStaticTypeAny
+		typ = PrimitiveStaticTypeAny
 	case sema.AnyStructType:
-		return PrimitiveStaticTypeAnyStruct
+		typ = PrimitiveStaticTypeAnyStruct
 	case sema.AnyResourceType:
-		return PrimitiveStaticTypeAnyResource
+		typ = PrimitiveStaticTypeAnyResource
 	case sema.AuthAccountType:
-		return PrimitiveStaticTypeAuthAccount
+		typ = PrimitiveStaticTypeAuthAccount
 	case sema.PublicAccountType:
-		return PrimitiveStaticTypePublicAccount
+		typ = PrimitiveStaticTypePublicAccount
 	case sema.BlockType:
-		return PrimitiveStaticTypeBlock
+		typ = PrimitiveStaticTypeBlock
 	case sema.DeployedContractType:
-		return PrimitiveStaticTypeDeployedContract
+		typ = PrimitiveStaticTypeDeployedContract
 	case sema.AuthAccountContractsType:
-		return PrimitiveStaticTypeAuthAccountContracts
+		typ = PrimitiveStaticTypeAuthAccountContracts
 	case sema.PublicAccountContractsType:
-		return PrimitiveStaticTypePublicAccountContracts
+		typ = PrimitiveStaticTypePublicAccountContracts
 	case sema.AuthAccountKeysType:
-		return PrimitiveStaticTypeAuthAccountKeys
+		typ = PrimitiveStaticTypeAuthAccountKeys
 	case sema.PublicAccountKeysType:
-		return PrimitiveStaticTypePublicAccountKeys
+		typ = PrimitiveStaticTypePublicAccountKeys
 	case sema.AccountKeyType:
-		return PrimitiveStaticTypeAccountKey
+		typ = PrimitiveStaticTypeAccountKey
 	case sema.StringType:
-		return PrimitiveStaticTypeString
+		typ = PrimitiveStaticTypeString
 	}
 
 	switch t.(type) {
 	case *sema.AddressType:
-		return PrimitiveStaticTypeAddress
+		typ = PrimitiveStaticTypeAddress
 
 	// Storage
 	case *sema.CapabilityType:
-		return PrimitiveStaticTypeCapability
+		typ = PrimitiveStaticTypeCapability
 	}
 
-	return PrimitiveStaticTypeUnknown
+	return NewPrimitiveStaticType(memoryGauge, typ) // default is 0 aka PrimitiveStaticTypeUnknown
 }

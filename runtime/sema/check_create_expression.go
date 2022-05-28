@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,7 +51,7 @@ func (checker *Checker) VisitCreateExpression(expression *ast.CreateExpression) 
 
 		checker.report(
 			&InvalidConstructionError{
-				Range: ast.NewRangeFromPositioned(invocation),
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, invocation),
 			},
 		)
 
@@ -84,7 +84,7 @@ func (checker *Checker) checkResourceCreationOrDestruction(compositeType *Compos
 	checker.report(
 		&InvalidResourceCreationError{
 			Type:  compositeType,
-			Range: ast.NewRangeFromPositioned(positioned),
+			Range: ast.NewRangeFromPositioned(checker.memoryGauge, positioned),
 		},
 	)
 }

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,11 +22,22 @@ import (
 	"encoding/json"
 
 	"github.com/turbolent/prettier"
+
+	"github.com/onflow/cadence/runtime/common"
 )
 
 type Block struct {
 	Statements []Statement
 	Range
+}
+
+func NewBlock(memoryGauge common.MemoryGauge, statements []Statement, astRange Range) *Block {
+	common.UseMemory(memoryGauge, common.BlockMemoryUsage)
+
+	return &Block{
+		Statements: statements,
+		Range:      astRange,
+	}
 }
 
 func (b *Block) IsEmpty() bool {
@@ -97,6 +108,20 @@ type FunctionBlock struct {
 	PostConditions *Conditions `json:",omitempty"`
 }
 
+func NewFunctionBlock(
+	memoryGauge common.MemoryGauge,
+	block *Block,
+	preConditions *Conditions,
+	postConditions *Conditions,
+) *FunctionBlock {
+	common.UseMemory(memoryGauge, common.FunctionBlockMemoryUsage)
+	return &FunctionBlock{
+		Block:          block,
+		PreConditions:  preConditions,
+		PostConditions: postConditions,
+	}
+}
+
 func (b *FunctionBlock) IsEmpty() bool {
 	return b == nil ||
 		(b.Block.IsEmpty() &&
@@ -131,7 +156,7 @@ func (b *FunctionBlock) StartPosition() Position {
 	return b.Block.StartPos
 }
 
-func (b *FunctionBlock) EndPosition() Position {
+func (b *FunctionBlock) EndPosition(common.MemoryGauge) Position {
 	return b.Block.EndPos
 }
 

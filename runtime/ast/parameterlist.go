@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,8 @@ import (
 	"sync"
 
 	"github.com/turbolent/prettier"
+
+	"github.com/onflow/cadence/runtime/common"
 )
 
 type ParameterList struct {
@@ -29,6 +31,18 @@ type ParameterList struct {
 	Parameters              []*Parameter
 	_parametersByIdentifier map[string]*Parameter
 	Range
+}
+
+func NewParameterList(
+	gauge common.MemoryGauge,
+	parameters []*Parameter,
+	astRange Range,
+) *ParameterList {
+	common.UseMemory(gauge, common.ParameterListMemoryUsage)
+	return &ParameterList{
+		Parameters: parameters,
+		Range:      astRange,
+	}
 }
 
 // EffectiveArgumentLabels returns the effective argument labels that

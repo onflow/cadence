@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
+
+	"github.com/getsentry/sentry-go"
 
 	"github.com/sourcegraph/jsonrpc2"
 )
@@ -31,6 +34,9 @@ type handler struct {
 }
 
 func (handler *handler) Handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrpc2.Request) {
+	defer sentry.Flush(2 * time.Second)
+	defer sentry.Recover()
+
 	method, ok := handler.server.Methods[req.Method]
 
 	if !ok {

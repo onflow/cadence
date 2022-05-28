@@ -4,15 +4,6 @@
 
 Yes, there is a [EBNF for Cadence](https://github.com/onflow/cadence/blob/master/docs/cadence.ebnf).
 
-## How can we get syntax highlighting on GitHub?
-
-Syntax highlighting for GitHub is implemented in the [`linguist`](https://github.com/github/linguist) library.
-Linguist supports TextMate grammars, and we already have a [TextMate grammar for Cadence in the Visual Studio Code extension](https://github.com/onflow/vscode-flow/blob/master/syntaxes/cadence.tmGrammar.json).
-
-However, GitHub ["[tries] to add new extensions once they have some usage on GitHub. In most cases [GitHub] prefer[s] that each new file extension be in use in at least 200 unique :user/:repo repositories before supporting them [...]"](https://github.com/github/linguist/blob/master/CONTRIBUTING.md#adding-an-extension-to-a-language).
-
-Once we have reached this threshold for Cadence, we should add support for Cadence to linguist.
-
 ## How can I inject additional values when executing a transaction or script?
 
 The runtime `Interface` functions `ExecuteTransaction` and `ExecuteScript` require a `Context` argument.

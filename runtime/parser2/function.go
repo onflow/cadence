@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -96,13 +96,15 @@ func parseParameterList(p *parser) (parameterList *ast.ParameterList) {
 		}
 	}
 
-	return &ast.ParameterList{
-		Parameters: parameters,
-		Range: ast.Range{
-			StartPos: startPos,
-			EndPos:   endPos,
-		},
-	}
+	return ast.NewParameterList(
+		p.memoryGauge,
+		parameters,
+		ast.NewRange(
+			p.memoryGauge,
+			startPos,
+			endPos,
+		),
+	)
 }
 
 func parseParameter(p *parser) *ast.Parameter {
@@ -161,20 +163,23 @@ func parseParameter(p *parser) *ast.Parameter {
 
 	typeAnnotation := parseTypeAnnotation(p)
 
-	endPos := typeAnnotation.EndPosition()
+	endPos := typeAnnotation.EndPosition(p.memoryGauge)
 
-	return &ast.Parameter{
-		Label: argumentLabel,
-		Identifier: ast.Identifier{
-			Identifier: parameterName,
-			Pos:        parameterPos,
-		},
-		TypeAnnotation: typeAnnotation,
-		Range: ast.Range{
-			StartPos: startPos,
-			EndPos:   endPos,
-		},
-	}
+	return ast.NewParameter(
+		p.memoryGauge,
+		argumentLabel,
+		ast.NewIdentifier(
+			p.memoryGauge,
+			parameterName,
+			parameterPos,
+		),
+		typeAnnotation,
+		ast.NewRange(
+			p.memoryGauge,
+			startPos,
+			endPos,
+		),
+	)
 }
 
 func parseFunctionDeclaration(
@@ -201,7 +206,7 @@ func parseFunctionDeclaration(
 		))
 	}
 
-	identifier := tokenToIdentifier(p.current)
+	identifier := p.tokenToIdentifier(p.current)
 
 	// Skip the identifier
 	p.next()
@@ -209,15 +214,16 @@ func parseFunctionDeclaration(
 	parameterList, returnTypeAnnotation, functionBlock :=
 		parseFunctionParameterListAndRest(p, functionBlockIsOptional)
 
-	return &ast.FunctionDeclaration{
-		Access:               access,
-		Identifier:           identifier,
-		ParameterList:        parameterList,
-		ReturnTypeAnnotation: returnTypeAnnotation,
-		FunctionBlock:        functionBlock,
-		StartPos:             startPos,
-		DocString:            docString,
-	}
+	return ast.NewFunctionDeclaration(
+		p.memoryGauge,
+		access,
+		identifier,
+		parameterList,
+		returnTypeAnnotation,
+		functionBlock,
+		startPos,
+		docString,
+	)
 }
 
 func parseFunctionParameterListAndRest(
@@ -239,16 +245,20 @@ func parseFunctionParameterListAndRest(
 		p.skipSpaceAndComments(true)
 	} else {
 		positionBeforeMissingReturnType := parameterList.EndPos
-		returnType := &ast.NominalType{
-			Identifier: ast.Identifier{
-				Pos: positionBeforeMissingReturnType,
-			},
-		}
-		returnTypeAnnotation = &ast.TypeAnnotation{
-			IsResource: false,
-			Type:       returnType,
-			StartPos:   positionBeforeMissingReturnType,
-		}
+		returnType := ast.NewNominalType(
+			p.memoryGauge,
+			ast.NewEmptyIdentifier(
+				p.memoryGauge,
+				positionBeforeMissingReturnType,
+			),
+			nil,
+		)
+		returnTypeAnnotation = ast.NewTypeAnnotation(
+			p.memoryGauge,
+			false,
+			returnType,
+			positionBeforeMissingReturnType,
+		)
 	}
 
 	p.skipSpaceAndComments(true)

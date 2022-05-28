@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,6 +34,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
 	"github.com/schollz/progressbar/v3"
 
@@ -89,13 +90,21 @@ func storageKeySlabStorageID(address atree.Address, key string) atree.StorageID 
 	return result
 }
 
+func decodeStorable(decoder *cbor.StreamDecoder, storableSlabStorageID atree.StorageID) (atree.Storable, error) {
+	return interpreter.DecodeStorable(decoder, storableSlabStorageID, nil)
+}
+
+func decodeTypeInfo(decoder *cbor.StreamDecoder) (atree.TypeInfo, error) {
+	return interpreter.DecodeTypeInfo(decoder, nil)
+}
+
 func decodeSlab(id atree.StorageID, data []byte) (atree.Slab, error) {
 	return atree.DecodeSlab(
 		id,
 		data,
 		interpreter.CBORDecMode,
-		interpreter.DecodeStorable,
-		interpreter.DecodeTypeInfo,
+		decodeStorable,
+		decodeTypeInfo,
 	)
 }
 
@@ -211,7 +220,7 @@ type interpreterStorage struct {
 
 var _ interpreter.Storage = &interpreterStorage{}
 
-func (i interpreterStorage) GetStorageMap(_ common.Address, _ string) *interpreter.StorageMap {
+func (i interpreterStorage) GetStorageMap(_ common.Address, _ string, _ bool) *interpreter.StorageMap {
 	panic("unexpected GetStorageMap call")
 }
 
@@ -328,7 +337,7 @@ func loadStorageKey(
 
 			reader := bytes.NewReader(data)
 			decoder := interpreter.CBORDecMode.NewStreamDecoder(reader)
-			storable, err := interpreter.DecodeStorable(decoder, atree.StorageIDUndefined)
+			storable, err := interpreter.DecodeStorable(decoder, atree.StorageIDUndefined, nil)
 			if err != nil {
 				log.Printf(
 					"Failed to decode storable @ 0x%x %s: %s (data: %x)\n",
@@ -346,7 +355,7 @@ func loadStorageKey(
 				return err
 			}
 
-			value, err := interpreter.ConvertStoredValue(atreeValue)
+			value, err := interpreter.ConvertStoredValue(inter, atreeValue)
 			if err != nil {
 				log.Printf(
 					"Failed to convert stored value @ 0x%x %s: %s",
@@ -356,6 +365,7 @@ func loadStorageKey(
 			}
 
 			interpreter.InspectValue(
+				inter,
 				value,
 				func(v interpreter.Value) bool {
 

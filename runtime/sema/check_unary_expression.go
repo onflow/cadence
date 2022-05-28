@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,28 +38,28 @@ func (checker *Checker) VisitUnaryExpression(expression *ast.UnaryExpression) as
 				Operation:    expression.Operation,
 				ExpectedType: expectedType,
 				ActualType:   valueType,
-				Range:        ast.NewRangeFromPositioned(expression.Expression),
+				Range:        ast.NewRangeFromPositioned(checker.memoryGauge, expression.Expression),
 			},
 		)
 	}
 
+	checkExpectedType := func(valueType, expectedType Type) Type {
+		if !valueType.IsInvalidType() &&
+			!IsSameTypeKind(valueType, expectedType) {
+
+			reportInvalidUnaryOperator(expectedType)
+			return InvalidType
+		}
+
+		return valueType
+	}
+
 	switch expression.Operation {
 	case ast.OperationNegate:
-		expectedType := BoolType
-		if !IsSameTypeKind(valueType, expectedType) {
-			reportInvalidUnaryOperator(expectedType)
-			return InvalidType
-		}
-		return valueType
+		return checkExpectedType(valueType, BoolType)
 
 	case ast.OperationMinus:
-		expectedType := SignedNumberType
-		if !IsSameTypeKind(valueType, expectedType) {
-			reportInvalidUnaryOperator(expectedType)
-			return InvalidType
-		}
-
-		return valueType
+		return checkExpectedType(valueType, SignedNumberType)
 
 	case ast.OperationMove:
 		if !valueType.IsInvalidType() &&
@@ -67,10 +67,11 @@ func (checker *Checker) VisitUnaryExpression(expression *ast.UnaryExpression) as
 
 			checker.report(
 				&InvalidMoveOperationError{
-					Range: ast.Range{
-						StartPos: expression.StartPos,
-						EndPos:   expression.Expression.StartPosition(),
-					},
+					Range: ast.NewRange(
+						checker.memoryGauge,
+						expression.StartPos,
+						expression.Expression.StartPosition(),
+					),
 				},
 			)
 		}
@@ -87,6 +88,6 @@ func (checker *Checker) VisitUnaryExpression(expression *ast.UnaryExpression) as
 	panic(&unsupportedOperation{
 		kind:      common.OperationKindUnary,
 		operation: expression.Operation,
-		Range:     ast.NewRangeFromPositioned(expression),
+		Range:     ast.NewRangeFromPositioned(checker.memoryGauge, expression),
 	})
 }

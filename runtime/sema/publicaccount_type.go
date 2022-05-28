@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,55 +52,55 @@ var PublicAccountType = func() *CompositeType {
 	}
 
 	var members = []*Member{
-		NewPublicConstantFieldMember(
+		NewUnmeteredPublicConstantFieldMember(
 			publicAccountType,
 			PublicAccountAddressField,
 			&AddressType{},
 			accountTypeAddressFieldDocString,
 		),
-		NewPublicConstantFieldMember(
+		NewUnmeteredPublicConstantFieldMember(
 			publicAccountType,
 			PublicAccountBalanceField,
 			UFix64Type,
 			accountTypeAccountBalanceFieldDocString,
 		),
-		NewPublicConstantFieldMember(
+		NewUnmeteredPublicConstantFieldMember(
 			publicAccountType,
 			PublicAccountAvailableBalanceField,
 			UFix64Type,
 			accountTypeAccountAvailableBalanceFieldDocString,
 		),
-		NewPublicConstantFieldMember(
+		NewUnmeteredPublicConstantFieldMember(
 			publicAccountType,
 			PublicAccountStorageUsedField,
 			UInt64Type,
 			accountTypeStorageUsedFieldDocString,
 		),
-		NewPublicConstantFieldMember(
+		NewUnmeteredPublicConstantFieldMember(
 			publicAccountType,
 			PublicAccountStorageCapacityField,
 			UInt64Type,
 			accountTypeStorageCapacityFieldDocString,
 		),
-		NewPublicFunctionMember(
+		NewUnmeteredPublicFunctionMember(
 			publicAccountType,
 			PublicAccountGetCapabilityField,
 			PublicAccountTypeGetCapabilityFunctionType,
 			publicAccountTypeGetLinkTargetFunctionDocString,
 		),
-		NewPublicFunctionMember(
+		NewUnmeteredPublicFunctionMember(
 			publicAccountType,
 			PublicAccountGetTargetLinkField,
 			AccountTypeGetLinkTargetFunctionType,
 			accountTypeGetLinkTargetFunctionDocString,
 		),
-		NewPublicConstantFieldMember(
+		NewUnmeteredPublicConstantFieldMember(
 			publicAccountType,
 			PublicAccountKeysField,
 			PublicAccountKeysType,
 			accountTypeKeysFieldDocString,
 		),
-		NewPublicConstantFieldMember(
+		NewUnmeteredPublicConstantFieldMember(
 			publicAccountType,
 			PublicAccountContractsField,
 			PublicAccountContractsType,
@@ -123,7 +123,7 @@ var PublicAccountKeysType = func() *CompositeType {
 	}
 
 	var members = []*Member{
-		NewPublicFunctionMember(
+		NewUnmeteredPublicFunctionMember(
 			accountKeys,
 			AccountKeysGetFunctionName,
 			AccountKeysTypeGetFunctionType,

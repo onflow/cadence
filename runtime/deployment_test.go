@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -75,7 +75,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 		codeHash, err := importValue(inter, codeHashValue, sema.ByteArrayType)
 		require.NoError(t, err)
 
-		actualCodeHash, err := interpreter.ByteArrayValueToByteSlice(codeHash)
+		actualCodeHash, err := interpreter.ByteArrayValueToByteSlice(inter, codeHash)
 		require.NoError(t, err)
 
 		require.Equal(t, expectedCodeHash[:], actualCodeHash)
@@ -200,7 +200,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
               }
             `,
 			arguments: []argument{
-				interpreter.NewIntValueFromInt64(1),
+				interpreter.NewUnmeteredIntValueFromInt64(1),
 			},
 			check: expectSuccess,
 		})
@@ -233,7 +233,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
               pub contract Test {}
             `,
 			arguments: []argument{
-				interpreter.NewIntValueFromInt64(1),
+				interpreter.NewUnmeteredIntValueFromInt64(1),
 			},
 			check: expectFailure(
 				"Execution failed:\n" +

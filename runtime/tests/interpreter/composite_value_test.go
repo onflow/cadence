@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,14 +52,14 @@ func TestInterpretCompositeValue(t *testing.T) {
 		RequireValuesEqual(
 			t,
 			inter,
-			interpreter.NewStringValue("Apple"),
+			interpreter.NewUnmeteredStringValue("Apple"),
 			inter.Globals["name"].GetValue(),
 		)
 
 		RequireValuesEqual(
 			t,
 			inter,
-			interpreter.NewStringValue("Red"),
+			interpreter.NewUnmeteredStringValue("Red"),
 			inter.Globals["color"].GetValue(),
 		)
 	})
@@ -68,7 +68,7 @@ func TestInterpretCompositeValue(t *testing.T) {
 // Utility methods
 func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 
-	storage := interpreter.NewInMemoryStorage()
+	storage := newUnmeteredInMemoryStorage()
 
 	// 'fruit' composite type
 	fruitType := &sema.CompositeType{
@@ -79,14 +79,14 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 
 	fruitType.Members = sema.NewStringMemberOrderedMap()
 
-	fruitType.Members.Set("name", sema.NewPublicConstantFieldMember(
+	fruitType.Members.Set("name", sema.NewUnmeteredPublicConstantFieldMember(
 		fruitType,
 		"name",
 		sema.StringType,
 		"This is the name",
 	))
 
-	fruitType.Members.Set("color", sema.NewPublicConstantFieldMember(
+	fruitType.Members.Set("color", sema.NewUnmeteredPublicConstantFieldMember(
 		fruitType,
 		"color",
 		sema.StringType,
@@ -101,7 +101,7 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 				fields := []interpreter.CompositeField{
 					{
 						Name:  "name",
-						Value: interpreter.NewStringValue("Apple"),
+						Value: interpreter.NewUnmeteredStringValue("Apple"),
 					},
 				}
 
@@ -116,7 +116,7 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 
 				value.ComputedFields = map[string]interpreter.ComputedField{
 					"color": func(_ *interpreter.Interpreter, _ func() interpreter.LocationRange) interpreter.Value {
-						return interpreter.NewStringValue("Red")
+						return interpreter.NewUnmeteredStringValue("Red")
 					},
 				}
 

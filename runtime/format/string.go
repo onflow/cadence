@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,4 +24,28 @@ import (
 
 func String(s string) string {
 	return ast.QuoteString(s)
+}
+
+func FormattedStringLength(s string) int {
+	asciiNonPrintableChars := 0
+	escapedChars := 0
+	for _, r := range s {
+		switch r {
+		case 0,
+			'\n',
+			'\r',
+			'\t',
+			'\\',
+			'"':
+			escapedChars++
+		default:
+			// ASCII non-printable characters (i.e: out of range from space through DEL-1)
+			if 0x20 > r || r > 0x7E {
+				asciiNonPrintableChars++
+			}
+		}
+	}
+
+	// len = printableChars + (escapedChars x 2) + (nonPrintableChars x 8) + (quote x 2)
+	return (len(s) - asciiNonPrintableChars - escapedChars) + escapedChars*2 + asciiNonPrintableChars*8 + 2
 }

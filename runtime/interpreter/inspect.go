@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ package interpreter
 
 type valueInspector func(Value) bool
 
-func (f valueInspector) WalkValue(value Value) ValueWalker {
+func (f valueInspector) WalkValue(_ *Interpreter, value Value) ValueWalker {
 	if f(value) {
 		return f
 	}
@@ -28,6 +28,6 @@ func (f valueInspector) WalkValue(value Value) ValueWalker {
 	return nil
 }
 
-func InspectValue(value Value, f func(Value) bool) {
-	WalkValue(valueInspector(f), value)
+func InspectValue(interpreter *Interpreter, value Value, f func(Value) bool) {
+	WalkValue(interpreter, valueInspector(f), value)
 }

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -509,7 +509,7 @@ func TestInterpretReferenceType(t *testing.T) {
 	assert.Equal(t,
 		interpreter.TypeValue{
 			Type: interpreter.ReferenceStaticType{
-				Type: interpreter.CompositeStaticType{
+				BorrowedType: interpreter.CompositeStaticType{
 					QualifiedIdentifier: "R",
 					Location:            utils.TestLocation,
 					TypeID:              "S.test.R",
@@ -523,8 +523,8 @@ func TestInterpretReferenceType(t *testing.T) {
 	assert.Equal(t,
 		interpreter.TypeValue{
 			Type: interpreter.ReferenceStaticType{
-				Type:       interpreter.PrimitiveStaticTypeString,
-				Authorized: false,
+				BorrowedType: interpreter.PrimitiveStaticTypeString,
+				Authorized:   false,
 			},
 		},
 		inter.Globals["b"].GetValue(),
@@ -533,7 +533,7 @@ func TestInterpretReferenceType(t *testing.T) {
 	assert.Equal(t,
 		interpreter.TypeValue{
 			Type: interpreter.ReferenceStaticType{
-				Type: interpreter.CompositeStaticType{
+				BorrowedType: interpreter.CompositeStaticType{
 					QualifiedIdentifier: "S",
 					Location:            utils.TestLocation,
 					TypeID:              "S.test.S",
@@ -704,8 +704,8 @@ func TestInterpretCapabilityType(t *testing.T) {
 		interpreter.TypeValue{
 			Type: interpreter.CapabilityStaticType{
 				BorrowType: interpreter.ReferenceStaticType{
-					Type:       interpreter.PrimitiveStaticTypeString,
-					Authorized: false,
+					BorrowedType: interpreter.PrimitiveStaticTypeString,
+					Authorized:   false,
 				},
 			},
 		},
@@ -716,8 +716,8 @@ func TestInterpretCapabilityType(t *testing.T) {
 		interpreter.TypeValue{
 			Type: interpreter.CapabilityStaticType{
 				BorrowType: interpreter.ReferenceStaticType{
-					Type:       interpreter.PrimitiveStaticTypeInt,
-					Authorized: false,
+					BorrowedType: interpreter.PrimitiveStaticTypeInt,
+					Authorized:   false,
 				},
 			},
 		},
@@ -728,7 +728,7 @@ func TestInterpretCapabilityType(t *testing.T) {
 		interpreter.TypeValue{
 			Type: interpreter.CapabilityStaticType{
 				BorrowType: interpreter.ReferenceStaticType{
-					Type: interpreter.CompositeStaticType{
+					BorrowedType: interpreter.CompositeStaticType{
 						QualifiedIdentifier: "R",
 						Location:            utils.TestLocation,
 						TypeID:              "S.test.R",

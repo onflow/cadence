@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,7 +33,12 @@ type Members struct {
 	indices      memberIndices
 }
 
-func NewMembers(declarations []Declaration) *Members {
+func NewMembers(memoryGauge common.MemoryGauge, declarations []Declaration) *Members {
+	common.UseMemory(memoryGauge, common.NewMembersMemoryUsage(len(declarations)))
+	return NewUnmeteredMembers(declarations)
+}
+
+func NewUnmeteredMembers(declarations []Declaration) *Members {
 	return &Members{
 		declarations: declarations,
 	}

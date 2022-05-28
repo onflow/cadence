@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,15 +31,26 @@ const TransactionLocationPrefix = "t"
 //
 type TransactionLocation []byte
 
+func NewTransactionLocation(gauge MemoryGauge, script []byte) TransactionLocation {
+	UseMemory(gauge, NewBytesMemoryUsage(len(script)))
+	return TransactionLocation(script)
+}
+
 func (l TransactionLocation) ID() LocationID {
-	return NewLocationID(
+	return l.MeteredID(nil)
+}
+
+func (l TransactionLocation) MeteredID(memoryGauge MemoryGauge) LocationID {
+	return NewMeteredLocationID(
+		memoryGauge,
 		TransactionLocationPrefix,
 		l.String(),
 	)
 }
 
-func (l TransactionLocation) TypeID(qualifiedIdentifier string) TypeID {
-	return NewTypeID(
+func (l TransactionLocation) TypeID(memoryGauge MemoryGauge, qualifiedIdentifier string) TypeID {
+	return NewMeteredTypeID(
+		memoryGauge,
 		TransactionLocationPrefix,
 		l.String(),
 		qualifiedIdentifier,
@@ -73,13 +84,13 @@ func (l TransactionLocation) MarshalJSON() ([]byte, error) {
 func init() {
 	RegisterTypeIDDecoder(
 		TransactionLocationPrefix,
-		func(typeID string) (location Location, qualifiedIdentifier string, err error) {
-			return decodeTransactionLocationTypeID(typeID)
+		func(gauge MemoryGauge, typeID string) (location Location, qualifiedIdentifier string, err error) {
+			return decodeTransactionLocationTypeID(gauge, typeID)
 		},
 	)
 }
 
-func decodeTransactionLocationTypeID(typeID string) (TransactionLocation, string, error) {
+func decodeTransactionLocationTypeID(gauge MemoryGauge, typeID string) (TransactionLocation, string, error) {
 
 	const errorMessagePrefix = "invalid transaction location type ID"
 
@@ -113,6 +124,8 @@ func decodeTransactionLocationTypeID(typeID string) (TransactionLocation, string
 	}
 
 	location, err := hex.DecodeString(parts[1])
+	UseMemory(gauge, NewBytesMemoryUsage(len(location)))
+
 	if err != nil {
 		return nil, "", fmt.Errorf(
 			"%s: invalid location: %w",

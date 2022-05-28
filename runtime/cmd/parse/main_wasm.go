@@ -2,7 +2,7 @@
 // +build wasm
 
 /*
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -68,7 +68,7 @@ func parse(code string) string {
 			}
 		}()
 
-		res.Program, res.Error = parser2.ParseProgram(code)
+		res.Program, res.Error = parser2.ParseProgram(code, nil)
 	}()
 
 	serialized, err := json.Marshal(res)

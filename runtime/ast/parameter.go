@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,11 +18,29 @@
 
 package ast
 
+import "github.com/onflow/cadence/runtime/common"
+
 type Parameter struct {
 	Label          string
 	Identifier     Identifier
 	TypeAnnotation *TypeAnnotation
 	Range
+}
+
+func NewParameter(
+	gauge common.MemoryGauge,
+	label string,
+	identifier Identifier,
+	typeAnnotation *TypeAnnotation,
+	astRange Range,
+) *Parameter {
+	common.UseMemory(gauge, common.ParameterMemoryUsage)
+	return &Parameter{
+		Label:          label,
+		Identifier:     identifier,
+		TypeAnnotation: typeAnnotation,
+		Range:          astRange,
+	}
 }
 
 // EffectiveArgumentLabel returns the effective argument label that

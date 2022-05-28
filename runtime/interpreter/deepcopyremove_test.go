@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ func TestValueDeepCopyAndDeepRemove(t *testing.T) {
 
 	address := common.Address{0x1}
 
-	storage := NewInMemoryStorage()
+	storage := newUnmeteredInMemoryStorage()
 
 	inter, err := NewInterpreter(
 		nil,
@@ -50,11 +50,11 @@ func TestValueDeepCopyAndDeepRemove(t *testing.T) {
 		ValueType: PrimitiveStaticTypeInt256,
 	}
 
-	dictValueKey := NewStringValue(
+	dictValueKey := NewUnmeteredStringValue(
 		strings.Repeat("x", int(atree.MaxInlineMapKeyOrValueSize+1)),
 	)
 
-	dictValueValue := NewInt256ValueFromInt64(1)
+	dictValueValue := NewUnmeteredInt256ValueFromInt64(1)
 	dictValue := NewDictionaryValue(
 		inter,
 		dictionaryStaticType,
@@ -70,7 +70,7 @@ func TestValueDeepCopyAndDeepRemove(t *testing.T) {
 		dictValue,
 	)
 
-	optionalValue := NewSomeValueNonCopying(arrayValue)
+	optionalValue := NewUnmeteredSomeValueNonCopying(arrayValue)
 
 	compositeValue := newTestCompositeValue(inter, address)
 
@@ -94,4 +94,8 @@ func TestValueDeepCopyAndDeepRemove(t *testing.T) {
 	}
 
 	require.Equal(t, 1, count)
+}
+
+func newUnmeteredInMemoryStorage() InMemoryStorage {
+	return NewInMemoryStorage(nil)
 }

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,8 @@ package interpreter
 
 import (
 	"github.com/onflow/atree"
+
+	"github.com/onflow/cadence/runtime/common"
 )
 
 type StringAtreeValue string
@@ -36,6 +38,11 @@ func (v StringAtreeValue) Storable(
 	error,
 ) {
 	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
+}
+
+func NewStringAtreeValue(gauge common.MemoryGauge, s string) StringAtreeValue {
+	common.UseMemory(gauge, common.NewRawStringMemoryUsage(len(s)))
+	return StringAtreeValue(s)
 }
 
 func (v StringAtreeValue) ByteSize() uint32 {

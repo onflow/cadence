@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ func TestMembers_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
 
-	members := NewMembers([]Declaration{})
+	members := NewUnmeteredMembers([]Declaration{})
 
 	actual, err := json.Marshal(members)
 	require.NoError(t, err)

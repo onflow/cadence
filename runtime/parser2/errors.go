@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -65,13 +65,15 @@ type SyntaxError struct {
 	Message string
 }
 
+var _ ParseError = &SyntaxError{}
+
 func (*SyntaxError) isParseError() {}
 
 func (e *SyntaxError) StartPosition() ast.Position {
 	return e.Pos
 }
 
-func (e *SyntaxError) EndPosition() ast.Position {
+func (e *SyntaxError) EndPosition(common.MemoryGauge) ast.Position {
 	return e.Pos
 }
 
@@ -85,13 +87,15 @@ type JuxtaposedUnaryOperatorsError struct {
 	Pos ast.Position
 }
 
+var _ ParseError = &JuxtaposedUnaryOperatorsError{}
+
 func (*JuxtaposedUnaryOperatorsError) isParseError() {}
 
 func (e *JuxtaposedUnaryOperatorsError) StartPosition() ast.Position {
 	return e.Pos
 }
 
-func (e *JuxtaposedUnaryOperatorsError) EndPosition() ast.Position {
+func (e *JuxtaposedUnaryOperatorsError) EndPosition(common.MemoryGauge) ast.Position {
 	return e.Pos
 }
 
@@ -107,6 +111,8 @@ type InvalidIntegerLiteralError struct {
 	InvalidIntegerLiteralKind InvalidNumberLiteralKind
 	ast.Range
 }
+
+var _ ParseError = &InvalidIntegerLiteralError{}
 
 func (*InvalidIntegerLiteralError) isParseError() {}
 
@@ -142,4 +148,55 @@ func (e *InvalidIntegerLiteralError) SecondaryError() string {
 	}
 
 	panic(errors.NewUnreachableError())
+}
+
+// ExpressionDepthLimitReachedError is reported when the expression depth limit was reached
+//
+type ExpressionDepthLimitReachedError struct {
+	Pos ast.Position
+}
+
+var _ ParseError = ExpressionDepthLimitReachedError{}
+
+func (ExpressionDepthLimitReachedError) isParseError() {}
+
+func (e ExpressionDepthLimitReachedError) Error() string {
+	return fmt.Sprintf(
+		"program too complex, reached max expression depth limit %d",
+		expressionDepthLimit,
+	)
+}
+
+func (e ExpressionDepthLimitReachedError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e ExpressionDepthLimitReachedError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+// TypeDepthLimitReachedError is reported when the type depth limit was reached
+//
+
+type TypeDepthLimitReachedError struct {
+	Pos ast.Position
+}
+
+var _ ParseError = TypeDepthLimitReachedError{}
+
+func (TypeDepthLimitReachedError) isParseError() {}
+
+func (e TypeDepthLimitReachedError) Error() string {
+	return fmt.Sprintf(
+		"program too complex, reached max type depth limit %d",
+		typeDepthLimit,
+	)
+}
+
+func (e TypeDepthLimitReachedError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e TypeDepthLimitReachedError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
 }

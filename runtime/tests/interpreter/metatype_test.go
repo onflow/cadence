@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -228,7 +228,7 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewStringValue("[Int]"),
+			interpreter.NewUnmeteredStringValue("[Int]"),
 			inter.Globals["identifier"].GetValue(),
 		)
 	})
@@ -247,7 +247,7 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewStringValue("S.test.S"),
+			interpreter.NewUnmeteredStringValue("S.test.S"),
 			inter.Globals["identifier"].GetValue(),
 		)
 	})
@@ -290,7 +290,7 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewStringValue(""),
+			interpreter.NewUnmeteredStringValue(""),
 			inter.Globals["identifier"].GetValue(),
 		)
 	})
@@ -612,7 +612,7 @@ func TestInterpretGetType(t *testing.T) {
               }
             `,
 			result: interpreter.TypeValue{
-				Type: interpreter.NewCompositeStaticType(TestLocation, "R"),
+				Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, TestLocation, "R"),
 			},
 		},
 		{
@@ -631,8 +631,8 @@ func TestInterpretGetType(t *testing.T) {
 			result: interpreter.TypeValue{
 				Type: interpreter.OptionalStaticType{
 					Type: interpreter.ReferenceStaticType{
-						Authorized: true,
-						Type:       interpreter.PrimitiveStaticTypeInt,
+						Authorized:   true,
+						BorrowedType: interpreter.PrimitiveStaticTypeInt,
 					},
 				},
 			},
@@ -652,8 +652,8 @@ func TestInterpretGetType(t *testing.T) {
 			result: interpreter.TypeValue{
 				Type: interpreter.OptionalStaticType{
 					Type: interpreter.ReferenceStaticType{
-						Authorized: true,
-						Type:       interpreter.PrimitiveStaticTypeInt,
+						Authorized:   true,
+						BorrowedType: interpreter.PrimitiveStaticTypeInt,
 					},
 				},
 			},
@@ -693,7 +693,7 @@ func TestInterpretGetType(t *testing.T) {
 					{
 						Name: "getStorageReference",
 						Type: getStorageReferenceFunctionType,
-						Function: interpreter.NewHostFunctionValue(
+						Function: interpreter.NewUnmeteredHostFunctionValue(
 							func(invocation interpreter.Invocation) interpreter.Value {
 
 								return &interpreter.StorageReferenceValue{
@@ -711,7 +711,7 @@ func TestInterpretGetType(t *testing.T) {
 			valueDeclarations := standardLibraryFunctions.ToSemaValueDeclarations()
 			values := standardLibraryFunctions.ToInterpreterValueDeclarations()
 
-			storage := interpreter.NewInMemoryStorage()
+			storage := newUnmeteredInMemoryStorage()
 
 			inter, err := parseCheckAndInterpretWithOptions(t,
 				testCase.code,
@@ -727,11 +727,11 @@ func TestInterpretGetType(t *testing.T) {
 			)
 			require.NoError(t, err)
 
-			storageMap := storage.GetStorageMap(storageAddress, storagePath.Domain.Identifier())
+			storageMap := storage.GetStorageMap(storageAddress, storagePath.Domain.Identifier(), true)
 			storageMap.WriteValue(
 				inter,
 				storagePath.Identifier,
-				interpreter.NewIntValueFromInt64(2),
+				interpreter.NewUnmeteredIntValueFromInt64(2),
 			)
 
 			result, err := inter.Invoke("test")

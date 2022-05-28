@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,15 +30,26 @@ const IdentifierLocationPrefix = "I"
 //
 type IdentifierLocation string
 
+func NewIdentifierLocation(gauge MemoryGauge, id string) IdentifierLocation {
+	UseMemory(gauge, NewRawStringMemoryUsage(len(id)))
+	return IdentifierLocation(id)
+}
+
 func (l IdentifierLocation) ID() LocationID {
-	return NewLocationID(
+	return l.MeteredID(nil)
+}
+
+func (l IdentifierLocation) MeteredID(memoryGauge MemoryGauge) LocationID {
+	return NewMeteredLocationID(
+		memoryGauge,
 		IdentifierLocationPrefix,
 		string(l),
 	)
 }
 
-func (l IdentifierLocation) TypeID(qualifiedIdentifier string) TypeID {
-	return NewTypeID(
+func (l IdentifierLocation) TypeID(memoryGauge MemoryGauge, qualifiedIdentifier string) TypeID {
+	return NewMeteredTypeID(
+		memoryGauge,
 		IdentifierLocationPrefix,
 		string(l),
 		qualifiedIdentifier,
@@ -72,13 +83,13 @@ func (l IdentifierLocation) MarshalJSON() ([]byte, error) {
 func init() {
 	RegisterTypeIDDecoder(
 		IdentifierLocationPrefix,
-		func(typeID string) (location Location, qualifiedIdentifier string, err error) {
-			return decodeIdentifierLocationTypeID(typeID)
+		func(gauge MemoryGauge, typeID string) (location Location, qualifiedIdentifier string, err error) {
+			return decodeIdentifierLocationTypeID(gauge, typeID)
 		},
 	)
 }
 
-func decodeIdentifierLocationTypeID(typeID string) (IdentifierLocation, string, error) {
+func decodeIdentifierLocationTypeID(gauge MemoryGauge, typeID string) (IdentifierLocation, string, error) {
 
 	const errorMessagePrefix = "invalid identifier location type ID"
 

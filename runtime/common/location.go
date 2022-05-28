@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,8 +31,10 @@ type Location interface {
 	fmt.Stringer
 	// ID returns the canonical ID for this import location.
 	ID() LocationID
+	// MeteredID returns the canonical ID for this import location, and the generated ID is memory metered.
+	MeteredID(memoryGauge MemoryGauge) LocationID
 	// TypeID returns a type ID for the given qualified identifier
-	TypeID(qualifiedIdentifier string) TypeID
+	TypeID(memoryGauge MemoryGauge, qualifiedIdentifier string) TypeID
 	// QualifiedIdentifier returns the qualified identifier for the given type ID
 	QualifiedIdentifier(typeID TypeID) string
 }
@@ -88,6 +90,21 @@ func NewLocationID(parts ...string) LocationID {
 	return LocationID(strings.Join(parts, "."))
 }
 
+func NewMeteredLocationID(memoryGauge MemoryGauge, parts ...string) LocationID {
+	jointString := joinStrings(memoryGauge, parts)
+	return LocationID(jointString)
+}
+
+func joinStrings(memoryGauge MemoryGauge, parts []string) string {
+	l := 0
+	for _, part := range parts {
+		l += len(part) + 1
+	}
+	UseMemory(memoryGauge, NewRawStringMemoryUsage(l))
+
+	return strings.Join(parts, ".")
+}
+
 // TypeID
 //
 type TypeID string
@@ -96,15 +113,20 @@ func NewTypeID(parts ...string) TypeID {
 	return TypeID(strings.Join(parts, "."))
 }
 
-func NewTypeIDFromQualifiedName(location Location, qualifiedIdentifier string) TypeID {
+func NewMeteredTypeID(memoryGauge MemoryGauge, parts ...string) TypeID {
+	jointString := joinStrings(memoryGauge, parts)
+	return TypeID(jointString)
+}
+
+func NewTypeIDFromQualifiedName(memoryGauge MemoryGauge, location Location, qualifiedIdentifier string) TypeID {
 	if location == nil {
 		return TypeID(qualifiedIdentifier)
 	}
 
-	return location.TypeID(qualifiedIdentifier)
+	return location.TypeID(memoryGauge, qualifiedIdentifier)
 }
 
-type TypeIDDecoder func(typeID string) (location Location, qualifiedIdentifier string, err error)
+type TypeIDDecoder func(gauge MemoryGauge, typeID string) (location Location, qualifiedIdentifier string, err error)
 
 var typeIDDecoders = map[string]TypeIDDecoder{}
 
@@ -115,7 +137,7 @@ func RegisterTypeIDDecoder(prefix string, decoder TypeIDDecoder) {
 	typeIDDecoders[prefix] = decoder
 }
 
-func DecodeTypeID(typeID string) (location Location, qualifiedIdentifier string, err error) {
+func DecodeTypeID(gauge MemoryGauge, typeID string) (location Location, qualifiedIdentifier string, err error) {
 	pieces := strings.Split(typeID, ".")
 
 	if len(pieces) < 1 {
@@ -135,7 +157,7 @@ func DecodeTypeID(typeID string) (location Location, qualifiedIdentifier string,
 		return nil, typeID, nil
 	}
 
-	return decoder(typeID)
+	return decoder(gauge, typeID)
 }
 
 // HasImportLocation

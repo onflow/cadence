@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -391,7 +391,7 @@ func TestCompositeDeclaration_MarshalJSON(t *testing.T) {
 				},
 			},
 		},
-		Members:   NewMembers([]Declaration{}),
+		Members:   NewUnmeteredMembers([]Declaration{}),
 		DocString: "test",
 		Range: Range{
 			StartPos: Position{Offset: 7, Line: 8, Column: 9},
@@ -463,7 +463,7 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 					},
 				},
 			},
-			Members: NewMembers([]Declaration{}),
+			Members: NewMembers(nil, []Declaration{}),
 		}
 
 		require.Equal(
@@ -521,7 +521,7 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 					},
 				},
 			},
-			Members: NewMembers([]Declaration{
+			Members: NewMembers(nil, []Declaration{
 				&FieldDeclaration{
 					Identifier: Identifier{
 						Identifier: "x",
@@ -596,7 +596,7 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 			Identifier: Identifier{
 				Identifier: "AB",
 			},
-			Members: NewMembers([]Declaration{
+			Members: NewMembers(nil, []Declaration{
 				&SpecialFunctionDeclaration{
 					Kind: common.DeclarationKindInitializer,
 					FunctionDeclaration: &FunctionDeclaration{
@@ -664,7 +664,7 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 					},
 				},
 			},
-			Members: NewMembers([]Declaration{
+			Members: NewMembers(nil, []Declaration{
 				&EnumCaseDeclaration{
 					Identifier: Identifier{
 						Identifier: "x",
@@ -741,7 +741,7 @@ func TestCompositeDeclaration_String(t *testing.T) {
 					},
 				},
 			},
-			Members: NewMembers([]Declaration{}),
+			Members: NewMembers(nil, []Declaration{}),
 		}
 
 		require.Equal(
@@ -773,7 +773,7 @@ func TestCompositeDeclaration_String(t *testing.T) {
 					},
 				},
 			},
-			Members: NewMembers([]Declaration{
+			Members: NewMembers(nil, []Declaration{
 				&FieldDeclaration{
 					Identifier: Identifier{
 						Identifier: "x",
@@ -808,7 +808,7 @@ func TestCompositeDeclaration_String(t *testing.T) {
 			Identifier: Identifier{
 				Identifier: "AB",
 			},
-			Members: NewMembers([]Declaration{
+			Members: NewMembers(nil, []Declaration{
 				&SpecialFunctionDeclaration{
 					Kind: common.DeclarationKindInitializer,
 					FunctionDeclaration: &FunctionDeclaration{
@@ -853,7 +853,7 @@ func TestCompositeDeclaration_String(t *testing.T) {
 					},
 				},
 			},
-			Members: NewMembers([]Declaration{
+			Members: NewMembers(nil, []Declaration{
 				&EnumCaseDeclaration{
 					Identifier: Identifier{
 						Identifier: "x",

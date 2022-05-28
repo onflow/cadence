@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,7 +46,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 	fooType.Members = sema.NewStringMemberOrderedMap()
 	fooType.Members.Set(
 		"bar",
-		sema.NewPublicFunctionMember(
+		sema.NewUnmeteredPublicFunctionMember(
 			fooType,
 			"bar",
 			&sema.FunctionType{
@@ -94,8 +94,9 @@ func TestInterpretVirtualImport(t *testing.T) {
 
 						value.Functions = map[string]interpreter.FunctionValue{
 							"bar": interpreter.NewHostFunctionValue(
+								inter,
 								func(invocation interpreter.Invocation) interpreter.Value {
-									return interpreter.UInt64Value(42)
+									return interpreter.NewUnmeteredUInt64Value(42)
 								},
 								&sema.FunctionType{
 									ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.UIntType),
@@ -103,7 +104,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 							),
 						}
 
-						elaboration := sema.NewElaboration()
+						elaboration := sema.NewElaboration(nil)
 						elaboration.CompositeTypes[fooType.ID()] = fooType
 
 						return interpreter.VirtualImport{
@@ -141,7 +142,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.UInt64Value(42),
+		interpreter.NewUnmeteredUInt64Value(42),
 		value,
 	)
 }
@@ -265,7 +266,7 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	storage := interpreter.NewInMemoryStorage()
+	storage := newUnmeteredInMemoryStorage()
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),
@@ -312,7 +313,7 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewIntValueFromInt64(3),
+		interpreter.NewUnmeteredIntValueFromInt64(3),
 		value,
 	)
 }

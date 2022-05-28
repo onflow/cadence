@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -222,9 +222,11 @@ func TestInterpretTransactions(t *testing.T) {
         `)
 
 		signer1 := newTestAuthAccountValue(
+			inter,
 			interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 1},
 		)
 		signer2 := newTestAuthAccountValue(
+			inter,
 			interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 2},
 		)
 
@@ -253,12 +255,13 @@ func TestInterpretTransactions(t *testing.T) {
         `)
 
 		arguments := []interpreter.Value{
-			interpreter.NewIntValueFromInt64(1),
+			interpreter.NewUnmeteredIntValueFromInt64(1),
 			interpreter.BoolValue(true),
 		}
 
 		prepareArguments := []interpreter.Value{
 			newTestAuthAccountValue(
+				inter,
 				interpreter.AddressValue{},
 			),
 		}
@@ -278,7 +281,7 @@ func TestInterpretTransactions(t *testing.T) {
 			[]interpreter.Value{
 				interpreter.AddressValue{},
 				interpreter.BoolValue(true),
-				interpreter.NewIntValueFromInt64(1),
+				interpreter.NewUnmeteredIntValueFromInt64(1),
 			},
 			arrayElements(inter, values.(*interpreter.ArrayValue)),
 		)

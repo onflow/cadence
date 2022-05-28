@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ import (
 func TestLiteralValue(t *testing.T) {
 
 	t.Run("String, valid literal", func(t *testing.T) {
-		value, err := ParseLiteral(`"hello"`, sema.StringType)
+		value, err := ParseLiteral(`"hello"`, sema.StringType, newTestInterpreter(t))
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.String("hello"),
@@ -41,13 +41,13 @@ func TestLiteralValue(t *testing.T) {
 	})
 
 	t.Run("String, invalid literal", func(t *testing.T) {
-		value, err := ParseLiteral(`true`, sema.StringType)
+		value, err := ParseLiteral(`true`, sema.StringType, newTestInterpreter(t))
 		require.Error(t, err)
 		require.Nil(t, value)
 	})
 
 	t.Run("Bool, valid literal", func(t *testing.T) {
-		value, err := ParseLiteral(`true`, sema.BoolType)
+		value, err := ParseLiteral(`true`, sema.BoolType, newTestInterpreter(t))
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.NewBool(true),
@@ -56,13 +56,17 @@ func TestLiteralValue(t *testing.T) {
 	})
 
 	t.Run("Bool, invalid literal", func(t *testing.T) {
-		value, err := ParseLiteral(`"hello"`, sema.BoolType)
+		value, err := ParseLiteral(`"hello"`, sema.BoolType, newTestInterpreter(t))
 		require.Error(t, err)
 		require.Nil(t, value)
 	})
 
 	t.Run("Optional, nil", func(t *testing.T) {
-		value, err := ParseLiteral(`nil`, &sema.OptionalType{Type: sema.BoolType})
+		value, err := ParseLiteral(
+			`nil`,
+			&sema.OptionalType{Type: sema.BoolType},
+			newTestInterpreter(t),
+		)
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.NewOptional(nil),
@@ -71,7 +75,11 @@ func TestLiteralValue(t *testing.T) {
 	})
 
 	t.Run("Optional, valid literal", func(t *testing.T) {
-		value, err := ParseLiteral(`true`, &sema.OptionalType{Type: sema.BoolType})
+		value, err := ParseLiteral(
+			`true`,
+			&sema.OptionalType{Type: sema.BoolType},
+			newTestInterpreter(t),
+		)
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.NewOptional(cadence.NewBool(true)),
@@ -80,13 +88,21 @@ func TestLiteralValue(t *testing.T) {
 	})
 
 	t.Run("Optional, invalid literal", func(t *testing.T) {
-		value, err := ParseLiteral(`"hello"`, &sema.OptionalType{Type: sema.BoolType})
+		value, err := ParseLiteral(
+			`"hello"`,
+			&sema.OptionalType{Type: sema.BoolType},
+			newTestInterpreter(t),
+		)
 		require.Error(t, err)
 		require.Nil(t, value)
 	})
 
 	t.Run("VariableSizedArray, empty", func(t *testing.T) {
-		value, err := ParseLiteral(`[]`, &sema.VariableSizedType{Type: sema.BoolType})
+		value, err := ParseLiteral(
+			`[]`,
+			&sema.VariableSizedType{Type: sema.BoolType},
+			newTestInterpreter(t),
+		)
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.NewArray([]cadence.Value{}),
@@ -95,7 +111,11 @@ func TestLiteralValue(t *testing.T) {
 	})
 
 	t.Run("VariableSizedArray, one element", func(t *testing.T) {
-		value, err := ParseLiteral(`[true]`, &sema.VariableSizedType{Type: sema.BoolType})
+		value, err := ParseLiteral(
+			`[true]`,
+			&sema.VariableSizedType{Type: sema.BoolType},
+			newTestInterpreter(t),
+		)
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.NewArray([]cadence.Value{
@@ -106,13 +126,21 @@ func TestLiteralValue(t *testing.T) {
 	})
 
 	t.Run("VariableSizedArray, invalid literal", func(t *testing.T) {
-		value, err := ParseLiteral(`"hello"`, &sema.VariableSizedType{Type: sema.BoolType})
+		value, err := ParseLiteral(
+			`"hello"`,
+			&sema.VariableSizedType{Type: sema.BoolType},
+			newTestInterpreter(t),
+		)
 		require.Error(t, err)
 		require.Nil(t, value)
 	})
 
 	t.Run("ConstantSizedArray, empty", func(t *testing.T) {
-		value, err := ParseLiteral(`[]`, &sema.ConstantSizedType{Type: sema.BoolType})
+		value, err := ParseLiteral(
+			`[]`,
+			&sema.ConstantSizedType{Type: sema.BoolType},
+			newTestInterpreter(t),
+		)
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.NewArray([]cadence.Value{}),
@@ -121,7 +149,11 @@ func TestLiteralValue(t *testing.T) {
 	})
 
 	t.Run("ConstantSizedArray, one element", func(t *testing.T) {
-		value, err := ParseLiteral(`[true]`, &sema.ConstantSizedType{Type: sema.BoolType})
+		value, err := ParseLiteral(
+			`[true]`,
+			&sema.ConstantSizedType{Type: sema.BoolType},
+			newTestInterpreter(t),
+		)
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.NewArray([]cadence.Value{
@@ -132,16 +164,24 @@ func TestLiteralValue(t *testing.T) {
 	})
 
 	t.Run("ConstantSizedArray, invalid literal", func(t *testing.T) {
-		value, err := ParseLiteral(`"hello"`, &sema.ConstantSizedType{Type: sema.BoolType})
+		value, err := ParseLiteral(
+			`"hello"`,
+			&sema.ConstantSizedType{Type: sema.BoolType},
+			newTestInterpreter(t),
+		)
 		require.Error(t, err)
 		require.Nil(t, value)
 	})
 
 	t.Run("Dictionary, empty", func(t *testing.T) {
-		value, err := ParseLiteral(`{}`, &sema.DictionaryType{
-			KeyType:   sema.StringType,
-			ValueType: sema.BoolType,
-		})
+		value, err := ParseLiteral(
+			`{}`,
+			&sema.DictionaryType{
+				KeyType:   sema.StringType,
+				ValueType: sema.BoolType,
+			},
+			newTestInterpreter(t),
+		)
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.NewDictionary([]cadence.KeyValuePair{}),
@@ -150,10 +190,14 @@ func TestLiteralValue(t *testing.T) {
 	})
 
 	t.Run("Dictionary, one entry", func(t *testing.T) {
-		value, err := ParseLiteral(`{"hello": true}`, &sema.DictionaryType{
-			KeyType:   sema.StringType,
-			ValueType: sema.BoolType,
-		})
+		value, err := ParseLiteral(
+			`{"hello": true}`,
+			&sema.DictionaryType{
+				KeyType:   sema.StringType,
+				ValueType: sema.BoolType,
+			},
+			newTestInterpreter(t),
+		)
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.NewDictionary([]cadence.KeyValuePair{
@@ -167,16 +211,24 @@ func TestLiteralValue(t *testing.T) {
 	})
 
 	t.Run("Dictionary, invalid literal", func(t *testing.T) {
-		value, err := ParseLiteral(`"hello"`, &sema.DictionaryType{
-			KeyType:   sema.StringType,
-			ValueType: sema.BoolType,
-		})
+		value, err := ParseLiteral(
+			`"hello"`,
+			&sema.DictionaryType{
+				KeyType:   sema.StringType,
+				ValueType: sema.BoolType,
+			},
+			newTestInterpreter(t),
+		)
 		require.Error(t, err)
 		require.Nil(t, value)
 	})
 
 	t.Run("Path, valid literal (storage)", func(t *testing.T) {
-		value, err := ParseLiteral(`/storage/foo`, sema.PathType)
+		value, err := ParseLiteral(
+			`/storage/foo`,
+			sema.PathType,
+			newTestInterpreter(t),
+		)
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.Path{
@@ -188,7 +240,11 @@ func TestLiteralValue(t *testing.T) {
 	})
 
 	t.Run("Path, valid literal (private)", func(t *testing.T) {
-		value, err := ParseLiteral(`/private/foo`, sema.PathType)
+		value, err := ParseLiteral(
+			`/private/foo`,
+			sema.PathType,
+			newTestInterpreter(t),
+		)
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.Path{
@@ -200,7 +256,11 @@ func TestLiteralValue(t *testing.T) {
 	})
 
 	t.Run("Path, valid literal (public)", func(t *testing.T) {
-		value, err := ParseLiteral(`/public/foo`, sema.PathType)
+		value, err := ParseLiteral(
+			`/public/foo`,
+			sema.PathType,
+			newTestInterpreter(t),
+		)
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.Path{
@@ -212,13 +272,21 @@ func TestLiteralValue(t *testing.T) {
 	})
 
 	t.Run("Path, invalid literal", func(t *testing.T) {
-		value, err := ParseLiteral(`true`, sema.PathType)
+		value, err := ParseLiteral(
+			`true`,
+			sema.PathType,
+			newTestInterpreter(t),
+		)
 		require.Error(t, err)
 		require.Nil(t, value)
 	})
 
 	t.Run("StoragePath, valid literal", func(t *testing.T) {
-		value, err := ParseLiteral(`/storage/foo`, sema.StoragePathType)
+		value, err := ParseLiteral(
+			`/storage/foo`,
+			sema.StoragePathType,
+			newTestInterpreter(t),
+		)
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.Path{
@@ -230,25 +298,41 @@ func TestLiteralValue(t *testing.T) {
 	})
 
 	t.Run("StoragePath, invalid literal (private)", func(t *testing.T) {
-		value, err := ParseLiteral(`/private/foo`, sema.StoragePathType)
+		value, err := ParseLiteral(
+			`/private/foo`,
+			sema.StoragePathType,
+			newTestInterpreter(t),
+		)
 		require.Error(t, err)
 		require.Nil(t, value)
 	})
 
 	t.Run("StoragePath, invalid literal (public)", func(t *testing.T) {
-		value, err := ParseLiteral(`/public/foo`, sema.StoragePathType)
+		value, err := ParseLiteral(
+			`/public/foo`,
+			sema.StoragePathType,
+			newTestInterpreter(t),
+		)
 		require.Error(t, err)
 		require.Nil(t, value)
 	})
 
 	t.Run("StoragePath, invalid literal", func(t *testing.T) {
-		value, err := ParseLiteral(`true`, sema.StoragePathType)
+		value, err := ParseLiteral(
+			`true`,
+			sema.StoragePathType,
+			newTestInterpreter(t),
+		)
 		require.Error(t, err)
 		require.Nil(t, value)
 	})
 
 	t.Run("CapabilityPath, valid literal (private)", func(t *testing.T) {
-		value, err := ParseLiteral(`/private/foo`, sema.CapabilityPathType)
+		value, err := ParseLiteral(
+			`/private/foo`,
+			sema.CapabilityPathType,
+			newTestInterpreter(t),
+		)
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.Path{
@@ -260,7 +344,7 @@ func TestLiteralValue(t *testing.T) {
 	})
 
 	t.Run("CapabilityPath, invalid literal (public)", func(t *testing.T) {
-		value, err := ParseLiteral(`/public/foo`, sema.CapabilityPathType)
+		value, err := ParseLiteral(`/public/foo`, sema.CapabilityPathType, newTestInterpreter(t))
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.Path{
@@ -272,19 +356,19 @@ func TestLiteralValue(t *testing.T) {
 	})
 
 	t.Run("CapabilityPath, invalid literal (storage)", func(t *testing.T) {
-		value, err := ParseLiteral(`/storage/foo`, sema.CapabilityPathType)
+		value, err := ParseLiteral(`/storage/foo`, sema.CapabilityPathType, newTestInterpreter(t))
 		require.Error(t, err)
 		require.Nil(t, value)
 	})
 
 	t.Run("CapabilityPath, invalid literal", func(t *testing.T) {
-		value, err := ParseLiteral(`true`, sema.CapabilityPathType)
+		value, err := ParseLiteral(`true`, sema.CapabilityPathType, newTestInterpreter(t))
 		require.Error(t, err)
 		require.Nil(t, value)
 	})
 
 	t.Run("PublicPath, valid literal", func(t *testing.T) {
-		value, err := ParseLiteral(`/public/foo`, sema.PublicPathType)
+		value, err := ParseLiteral(`/public/foo`, sema.PublicPathType, newTestInterpreter(t))
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.Path{
@@ -296,25 +380,25 @@ func TestLiteralValue(t *testing.T) {
 	})
 
 	t.Run("PublicPath, invalid literal (private)", func(t *testing.T) {
-		value, err := ParseLiteral(`/private/foo`, sema.PublicPathType)
+		value, err := ParseLiteral(`/private/foo`, sema.PublicPathType, newTestInterpreter(t))
 		require.Error(t, err)
 		require.Nil(t, value)
 	})
 
 	t.Run("PublicPath, invalid literal (storage)", func(t *testing.T) {
-		value, err := ParseLiteral(`/storage/foo`, sema.PublicPathType)
+		value, err := ParseLiteral(`/storage/foo`, sema.PublicPathType, newTestInterpreter(t))
 		require.Error(t, err)
 		require.Nil(t, value)
 	})
 
 	t.Run("PublicPath, invalid literal", func(t *testing.T) {
-		value, err := ParseLiteral(`true`, sema.PublicPathType)
+		value, err := ParseLiteral(`true`, sema.PublicPathType, newTestInterpreter(t))
 		require.Error(t, err)
 		require.Nil(t, value)
 	})
 
 	t.Run("PrivatePath, valid literal", func(t *testing.T) {
-		value, err := ParseLiteral(`/private/foo`, sema.PrivatePathType)
+		value, err := ParseLiteral(`/private/foo`, sema.PrivatePathType, newTestInterpreter(t))
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.Path{
@@ -326,25 +410,25 @@ func TestLiteralValue(t *testing.T) {
 	})
 
 	t.Run("PrivatePath, invalid literal (public)", func(t *testing.T) {
-		value, err := ParseLiteral(`/public/foo`, sema.PrivatePathType)
+		value, err := ParseLiteral(`/public/foo`, sema.PrivatePathType, newTestInterpreter(t))
 		require.Error(t, err)
 		require.Nil(t, value)
 	})
 
 	t.Run("PrivatePath, invalid literal (storage)", func(t *testing.T) {
-		value, err := ParseLiteral(`/storage/foo`, sema.PrivatePathType)
+		value, err := ParseLiteral(`/storage/foo`, sema.PrivatePathType, newTestInterpreter(t))
 		require.Error(t, err)
 		require.Nil(t, value)
 	})
 
 	t.Run("PrivatePath, invalid literal", func(t *testing.T) {
-		value, err := ParseLiteral(`true`, sema.PrivatePathType)
+		value, err := ParseLiteral(`true`, sema.PrivatePathType, newTestInterpreter(t))
 		require.Error(t, err)
 		require.Nil(t, value)
 	})
 
 	t.Run("Address, valid literal", func(t *testing.T) {
-		value, err := ParseLiteral(`0x1`, &sema.AddressType{})
+		value, err := ParseLiteral(`0x1`, &sema.AddressType{}, newTestInterpreter(t))
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.NewAddress([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
@@ -353,7 +437,7 @@ func TestLiteralValue(t *testing.T) {
 	})
 
 	t.Run("Address, invalid literal", func(t *testing.T) {
-		value, err := ParseLiteral(`1`, &sema.AddressType{})
+		value, err := ParseLiteral(`1`, &sema.AddressType{}, newTestInterpreter(t))
 		require.Error(t, err)
 		require.Nil(t, value)
 	})
@@ -362,7 +446,7 @@ func TestLiteralValue(t *testing.T) {
 		expected, err := cadence.NewFix64FromParts(false, 1, 0)
 		require.NoError(t, err)
 
-		value, err := ParseLiteral(`1.0`, sema.Fix64Type)
+		value, err := ParseLiteral(`1.0`, sema.Fix64Type, newTestInterpreter(t))
 		require.NoError(t, err)
 		require.Equal(t, expected, value)
 	})
@@ -371,13 +455,13 @@ func TestLiteralValue(t *testing.T) {
 		expected, err := cadence.NewFix64FromParts(true, 1, 0)
 		require.NoError(t, err)
 
-		value, err := ParseLiteral(`-1.0`, sema.Fix64Type)
+		value, err := ParseLiteral(`-1.0`, sema.Fix64Type, newTestInterpreter(t))
 		require.NoError(t, err)
 		require.Equal(t, expected, value)
 	})
 
 	t.Run("Fix64, invalid literal", func(t *testing.T) {
-		value, err := ParseLiteral(`1`, sema.Fix64Type)
+		value, err := ParseLiteral(`1`, sema.Fix64Type, newTestInterpreter(t))
 		require.Error(t, err)
 		require.Nil(t, value)
 	})
@@ -386,19 +470,19 @@ func TestLiteralValue(t *testing.T) {
 		expected, err := cadence.NewUFix64FromParts(1, 0)
 		require.NoError(t, err)
 
-		value, err := ParseLiteral(`1.0`, sema.UFix64Type)
+		value, err := ParseLiteral(`1.0`, sema.UFix64Type, newTestInterpreter(t))
 		require.NoError(t, err)
 		require.Equal(t, expected, value)
 	})
 
 	t.Run("UFix64, invalid literal, negative", func(t *testing.T) {
-		value, err := ParseLiteral(`-1.0`, sema.UFix64Type)
+		value, err := ParseLiteral(`-1.0`, sema.UFix64Type, newTestInterpreter(t))
 		require.Error(t, err)
 		require.Nil(t, value)
 	})
 
 	t.Run("UFix64, invalid literal, invalid expression", func(t *testing.T) {
-		value, err := ParseLiteral(`1`, sema.UFix64Type)
+		value, err := ParseLiteral(`1`, sema.UFix64Type, newTestInterpreter(t))
 		require.Error(t, err)
 		require.Nil(t, value)
 	})
@@ -407,7 +491,7 @@ func TestLiteralValue(t *testing.T) {
 		expected, err := cadence.NewFix64FromParts(false, 1, 0)
 		require.NoError(t, err)
 
-		value, err := ParseLiteral(`1.0`, sema.FixedPointType)
+		value, err := ParseLiteral(`1.0`, sema.FixedPointType, newTestInterpreter(t))
 		require.NoError(t, err)
 		require.Equal(t, expected, value)
 	})
@@ -416,13 +500,13 @@ func TestLiteralValue(t *testing.T) {
 		expected, err := cadence.NewFix64FromParts(true, 1, 0)
 		require.NoError(t, err)
 
-		value, err := ParseLiteral(`-1.0`, sema.FixedPointType)
+		value, err := ParseLiteral(`-1.0`, sema.FixedPointType, newTestInterpreter(t))
 		require.NoError(t, err)
 		require.Equal(t, expected, value)
 	})
 
 	t.Run("FixedPoint, invalid literal", func(t *testing.T) {
-		value, err := ParseLiteral(`1`, sema.FixedPointType)
+		value, err := ParseLiteral(`1`, sema.FixedPointType, newTestInterpreter(t))
 		require.Error(t, err)
 		require.Nil(t, value)
 	})
@@ -431,7 +515,7 @@ func TestLiteralValue(t *testing.T) {
 		expected, err := cadence.NewFix64FromParts(false, 1, 0)
 		require.NoError(t, err)
 
-		value, err := ParseLiteral(`1.0`, sema.SignedFixedPointType)
+		value, err := ParseLiteral(`1.0`, sema.SignedFixedPointType, newTestInterpreter(t))
 		require.NoError(t, err)
 		require.Equal(t, expected, value)
 	})
@@ -440,13 +524,13 @@ func TestLiteralValue(t *testing.T) {
 		expected, err := cadence.NewFix64FromParts(true, 1, 0)
 		require.NoError(t, err)
 
-		value, err := ParseLiteral(`-1.0`, sema.SignedFixedPointType)
+		value, err := ParseLiteral(`-1.0`, sema.SignedFixedPointType, newTestInterpreter(t))
 		require.NoError(t, err)
 		require.Equal(t, expected, value)
 	})
 
 	t.Run("SignedFixedPoint, invalid literal", func(t *testing.T) {
-		value, err := ParseLiteral(`1`, sema.SignedFixedPointType)
+		value, err := ParseLiteral(`1`, sema.SignedFixedPointType, newTestInterpreter(t))
 		require.Error(t, err)
 		require.Nil(t, value)
 	})
@@ -459,7 +543,7 @@ func TestLiteralValue(t *testing.T) {
 				unsignedIntegerType.String(),
 			),
 			func(t *testing.T) {
-				value, err := ParseLiteral(`1`, unsignedIntegerType)
+				value, err := ParseLiteral(`1`, unsignedIntegerType, newTestInterpreter(t))
 				require.NoError(t, err)
 				require.NotNil(t, value)
 			},
@@ -471,7 +555,7 @@ func TestLiteralValue(t *testing.T) {
 				unsignedIntegerType.String(),
 			),
 			func(t *testing.T) {
-				value, err := ParseLiteral(`-1`, unsignedIntegerType)
+				value, err := ParseLiteral(`-1`, unsignedIntegerType, nil)
 				require.Error(t, err)
 				require.Nil(t, value)
 			},
@@ -483,7 +567,7 @@ func TestLiteralValue(t *testing.T) {
 				unsignedIntegerType.String(),
 			),
 			func(t *testing.T) {
-				value, err := ParseLiteral(`true`, unsignedIntegerType)
+				value, err := ParseLiteral(`true`, unsignedIntegerType, nil)
 				require.Error(t, err)
 				require.Nil(t, value)
 			},
@@ -502,7 +586,7 @@ func TestLiteralValue(t *testing.T) {
 				signedIntegerType.String(),
 			),
 			func(t *testing.T) {
-				value, err := ParseLiteral(`1`, signedIntegerType)
+				value, err := ParseLiteral(`1`, signedIntegerType, newTestInterpreter(t))
 				require.NoError(t, err)
 				require.NotNil(t, value)
 			},
@@ -514,7 +598,7 @@ func TestLiteralValue(t *testing.T) {
 				signedIntegerType.String(),
 			),
 			func(t *testing.T) {
-				value, err := ParseLiteral(`-1`, signedIntegerType)
+				value, err := ParseLiteral(`-1`, signedIntegerType, newTestInterpreter(t))
 				require.NoError(t, err)
 				require.NotNil(t, value)
 			},
@@ -526,7 +610,7 @@ func TestLiteralValue(t *testing.T) {
 				signedIntegerType.String(),
 			),
 			func(t *testing.T) {
-				value, err := ParseLiteral(`true`, signedIntegerType)
+				value, err := ParseLiteral(`true`, signedIntegerType, newTestInterpreter(t))
 				require.Error(t, err)
 				require.Nil(t, value)
 			},
@@ -537,12 +621,12 @@ func TestLiteralValue(t *testing.T) {
 func TestParseLiteralArgumentList(t *testing.T) {
 
 	t.Run("invalid", func(t *testing.T) {
-		_, err := ParseLiteralArgumentList("", nil)
+		_, err := ParseLiteralArgumentList("", nil, nil)
 		require.Error(t, err)
 	})
 
 	t.Run("empty", func(t *testing.T) {
-		arguments, err := ParseLiteralArgumentList(`()`, nil)
+		arguments, err := ParseLiteralArgumentList(`()`, nil, nil)
 		require.NoError(t, err)
 		require.Equal(t, []cadence.Value{}, arguments)
 	})
@@ -553,6 +637,7 @@ func TestParseLiteralArgumentList(t *testing.T) {
 			[]sema.Type{
 				sema.IntType,
 			},
+			nil,
 		)
 		require.NoError(t, err)
 		require.Equal(t,
@@ -570,6 +655,7 @@ func TestParseLiteralArgumentList(t *testing.T) {
 				sema.IntType,
 				sema.IntType,
 			},
+			nil,
 		)
 		require.NoError(t, err)
 		require.Equal(t,
@@ -588,6 +674,7 @@ func TestParseLiteralArgumentList(t *testing.T) {
 				sema.IntType,
 				sema.BoolType,
 			},
+			nil,
 		)
 		require.Error(t, err)
 	})
@@ -598,6 +685,7 @@ func TestParseLiteralArgumentList(t *testing.T) {
 			[]sema.Type{
 				sema.IntType,
 			},
+			nil,
 		)
 		require.Error(t, err)
 	})
@@ -609,6 +697,7 @@ func TestParseLiteralArgumentList(t *testing.T) {
 				sema.IntType,
 				sema.IntType,
 			},
+			nil,
 		)
 		require.Error(t, err)
 	})
@@ -619,6 +708,7 @@ func TestParseLiteralArgumentList(t *testing.T) {
 			[]sema.Type{
 				sema.IntType,
 			},
+			nil,
 		)
 		require.Error(t, err)
 	})

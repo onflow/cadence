@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,6 +38,31 @@ type TransactionDeclaration struct {
 }
 
 var _ Declaration = &TransactionDeclaration{}
+
+func NewTransactionDeclaration(
+	gauge common.MemoryGauge,
+	parameterList *ParameterList,
+	fields []*FieldDeclaration,
+	prepare *SpecialFunctionDeclaration,
+	preConditions *Conditions,
+	postConditions *Conditions,
+	execute *SpecialFunctionDeclaration,
+	docString string,
+	declRange Range,
+) *TransactionDeclaration {
+	common.UseMemory(gauge, common.TransactionDeclarationMemoryUsage)
+
+	return &TransactionDeclaration{
+		ParameterList:  parameterList,
+		Fields:         fields,
+		Prepare:        prepare,
+		PreConditions:  preConditions,
+		PostConditions: postConditions,
+		Execute:        execute,
+		DocString:      docString,
+		Range:          declRange,
+	}
+}
 
 func (d *TransactionDeclaration) Accept(visitor Visitor) Repr {
 	return visitor.VisitTransactionDeclaration(d)

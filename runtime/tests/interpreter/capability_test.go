@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 
 		t.Parallel()
 
-		address := interpreter.NewAddressValueFromBytes([]byte{42})
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 		inter, _ := testAccount(
 			t,
@@ -150,7 +150,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			RequireValuesEqual(
 				t,
 				inter,
-				interpreter.NewIntValueFromInt64(42),
+				interpreter.NewUnmeteredIntValueFromInt64(42),
 				value,
 			)
 		})
@@ -202,7 +202,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			RequireValuesEqual(
 				t,
 				inter,
-				interpreter.NewIntValueFromInt64(42),
+				interpreter.NewUnmeteredIntValueFromInt64(42),
 				value,
 			)
 		})
@@ -237,7 +237,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			RequireValuesEqual(
 				t,
 				inter,
-				interpreter.NewIntValueFromInt64(42),
+				interpreter.NewUnmeteredIntValueFromInt64(42),
 				value,
 			)
 		})
@@ -261,7 +261,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 
 		t.Parallel()
 
-		address := interpreter.NewAddressValueFromBytes([]byte{42})
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 		inter, _ := testAccount(
 			t,
@@ -375,7 +375,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			RequireValuesEqual(
 				t,
 				inter,
-				interpreter.NewIntValueFromInt64(42),
+				interpreter.NewUnmeteredIntValueFromInt64(42),
 				value,
 			)
 		})
@@ -427,7 +427,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			RequireValuesEqual(
 				t,
 				inter,
-				interpreter.NewIntValueFromInt64(42),
+				interpreter.NewUnmeteredIntValueFromInt64(42),
 				value,
 			)
 		})
@@ -462,7 +462,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			RequireValuesEqual(
 				t,
 				inter,
-				interpreter.NewIntValueFromInt64(42),
+				interpreter.NewUnmeteredIntValueFromInt64(42),
 				value,
 			)
 		})
@@ -491,7 +491,7 @@ func TestInterpretCapability_check(t *testing.T) {
 
 		t.Parallel()
 
-		address := interpreter.NewAddressValueFromBytes([]byte{42})
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 		inter, _ := testAccount(
 			t,
@@ -708,7 +708,7 @@ func TestInterpretCapability_check(t *testing.T) {
 
 		t.Parallel()
 
-		address := interpreter.NewAddressValueFromBytes([]byte{42})
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 		inter, _ := testAccount(
 			t,
@@ -926,7 +926,7 @@ func TestInterpretCapability_address(t *testing.T) {
 
 	t.Parallel()
 
-	address := interpreter.NewAddressValueFromBytes([]byte{42})
+	address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 	inter, _ := testAccount(
 		t,

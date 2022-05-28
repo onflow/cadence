@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -92,8 +92,8 @@ func setTypeMetaLeftDenotation(tokenType lexer.TokenType, metaLeftDenotation typ
 	typeMetaLeftDenotations[tokenType] = metaLeftDenotation
 }
 
-type prefixTypeFunc func(right ast.Type, tokenRange ast.Range) ast.Type
-type postfixTypeFunc func(left ast.Type, tokenRange ast.Range) ast.Type
+type prefixTypeFunc func(parser *parser, right ast.Type, tokenRange ast.Range) ast.Type
+type postfixTypeFunc func(parser *parser, left ast.Type, tokenRange ast.Range) ast.Type
 
 type literalType struct {
 	tokenType      lexer.TokenType
@@ -120,7 +120,7 @@ func defineType(def interface{}) {
 			tokenType,
 			func(parser *parser, token lexer.Token) ast.Type {
 				right := parseType(parser, def.bindingPower)
-				return def.nullDenotation(right, token.Range)
+				return def.nullDenotation(parser, right, token.Range)
 			},
 		)
 	case postfixType:
@@ -129,7 +129,7 @@ func defineType(def interface{}) {
 		setTypeLeftDenotation(
 			tokenType,
 			func(p *parser, token lexer.Token, left ast.Type) ast.Type {
-				return def.leftDenotation(left, token.Range)
+				return def.leftDenotation(p, left, token.Range)
 			},
 		)
 	case literalType:
@@ -157,11 +157,12 @@ func init() {
 				p.skipSpaceAndComments(true)
 				p.mustOne(lexer.TokenAmpersand)
 				right := parseType(p, typeLeftBindingPowerReference)
-				return &ast.ReferenceType{
-					Authorized: true,
-					Type:       right,
-					StartPos:   token.StartPos,
-				}
+				return ast.NewReferenceType(
+					p.memoryGauge,
+					true,
+					right,
+					token.StartPos,
+				)
 
 			default:
 				return parseNominalTypeRemainder(p, token)
@@ -187,7 +188,7 @@ func parseNominalTypeRemainder(p *parser, token lexer.Token) *ast.NominalType {
 			))
 		}
 
-		nestedIdentifier := tokenToIdentifier(nestedToken)
+		nestedIdentifier := p.tokenToIdentifier(nestedToken)
 
 		// Skip the identifier
 		p.next()
@@ -199,10 +200,11 @@ func parseNominalTypeRemainder(p *parser, token lexer.Token) *ast.NominalType {
 
 	}
 
-	return &ast.NominalType{
-		Identifier:        tokenToIdentifier(token),
-		NestedIdentifiers: nestedIdentifiers,
-	}
+	return ast.NewNominalType(
+		p.memoryGauge,
+		p.tokenToIdentifier(token),
+		nestedIdentifiers,
+	)
 }
 
 func defineArrayType() {
@@ -222,16 +224,21 @@ func defineArrayType() {
 
 				p.skipSpaceAndComments(true)
 
-				numberExpression := parseExpression(p, lowestBindingPower)
+				if !p.current.Type.IsIntegerLiteral() {
+					p.report(fmt.Errorf("expected positive integer size for constant sized type"))
 
-				integerExpression, ok := numberExpression.(*ast.IntegerExpression)
-				if !ok {
-					p.report(fmt.Errorf(
-						"expected integer size for constant sized type, got %s",
-						numberExpression,
-					))
+					// Skip the invalid non-integer literal token
+					p.next()
+
 				} else {
-					size = integerExpression
+					numberExpression := parseExpression(p, lowestBindingPower)
+
+					integerExpression, ok := numberExpression.(*ast.IntegerExpression)
+					if !ok || integerExpression.Value.Sign() < 0 {
+						p.report(fmt.Errorf("expected positive integer size for constant sized type"))
+					} else {
+						size = integerExpression
+					}
 				}
 			}
 
@@ -239,22 +246,25 @@ func defineArrayType() {
 
 			endToken := p.mustOne(lexer.TokenBracketClose)
 
-			typeRange := ast.Range{
-				StartPos: startToken.StartPos,
-				EndPos:   endToken.EndPos,
-			}
+			typeRange := ast.NewRange(
+				p.memoryGauge,
+				startToken.StartPos,
+				endToken.EndPos,
+			)
 
 			if size != nil {
-				return &ast.ConstantSizedType{
-					Type:  elementType,
-					Size:  size,
-					Range: typeRange,
-				}
+				return ast.NewConstantSizedType(
+					p.memoryGauge,
+					elementType,
+					size,
+					typeRange,
+				)
 			} else {
-				return &ast.VariableSizedType{
-					Type:  elementType,
-					Range: typeRange,
-				}
+				return ast.NewVariableSizedType(
+					p.memoryGauge,
+					elementType,
+					typeRange,
+				)
 			}
 		},
 	)
@@ -264,25 +274,28 @@ func defineOptionalType() {
 	defineType(postfixType{
 		tokenType:    lexer.TokenQuestionMark,
 		bindingPower: typeLeftBindingPowerOptional,
-		leftDenotation: func(left ast.Type, tokenRange ast.Range) ast.Type {
-			return &ast.OptionalType{
-				Type:   left,
-				EndPos: tokenRange.EndPos,
-			}
+		leftDenotation: func(p *parser, left ast.Type, tokenRange ast.Range) ast.Type {
+			return ast.NewOptionalType(
+				p.memoryGauge,
+				left,
+				tokenRange.EndPos,
+			)
 		},
 	})
 
 	defineType(postfixType{
 		tokenType:    lexer.TokenDoubleQuestionMark,
 		bindingPower: typeLeftBindingPowerOptional,
-		leftDenotation: func(left ast.Type, tokenRange ast.Range) ast.Type {
-			return &ast.OptionalType{
-				Type: &ast.OptionalType{
-					Type:   left,
-					EndPos: tokenRange.StartPos,
-				},
-				EndPos: tokenRange.EndPos,
-			}
+		leftDenotation: func(p *parser, left ast.Type, tokenRange ast.Range) ast.Type {
+			return ast.NewOptionalType(
+				p.memoryGauge,
+				ast.NewOptionalType(
+					p.memoryGauge,
+					left,
+					tokenRange.StartPos,
+				),
+				tokenRange.EndPos,
+			)
 		},
 	})
 }
@@ -291,12 +304,13 @@ func defineReferenceType() {
 	defineType(prefixType{
 		tokenType:    lexer.TokenAmpersand,
 		bindingPower: typeLeftBindingPowerReference,
-		nullDenotation: func(right ast.Type, tokenRange ast.Range) ast.Type {
-			return &ast.ReferenceType{
-				Authorized: false,
-				Type:       right,
-				StartPos:   tokenRange.StartPos,
-			}
+		nullDenotation: func(p *parser, right ast.Type, tokenRange ast.Range) ast.Type {
+			return ast.NewReferenceType(
+				p.memoryGauge,
+				false,
+				right,
+				tokenRange.StartPos,
+			)
 		},
 	})
 }
@@ -340,14 +354,18 @@ func defineRestrictedOrDictionaryType() {
 						if !ok {
 							panic(fmt.Errorf("non-nominal type in restriction list: %s", firstType))
 						}
-						restrictedType = &ast.RestrictedType{
-							Restrictions: []*ast.NominalType{
+						restrictedType = ast.NewRestrictedType(
+							p.memoryGauge,
+							nil,
+							[]*ast.NominalType{
 								firstNominalType,
 							},
-							Range: ast.Range{
-								StartPos: startToken.StartPos,
-							},
-						}
+							ast.NewRange(
+								p.memoryGauge,
+								startToken.StartPos,
+								ast.EmptyPosition,
+							),
+						)
 					}
 					// Skip the comma
 					p.next()
@@ -364,12 +382,16 @@ func defineRestrictedOrDictionaryType() {
 						if firstType == nil {
 							panic(fmt.Errorf("unexpected colon after missing dictionary key type"))
 						}
-						dictionaryType = &ast.DictionaryType{
-							KeyType: firstType,
-							Range: ast.Range{
-								StartPos: startToken.StartPos,
-							},
-						}
+						dictionaryType = ast.NewDictionaryType(
+							p.memoryGauge,
+							firstType,
+							nil,
+							ast.NewRange(
+								p.memoryGauge,
+								startToken.StartPos,
+								ast.EmptyPosition,
+							),
+						)
 					} else {
 						panic(fmt.Errorf("unexpected colon in dictionary type"))
 					}
@@ -432,12 +454,16 @@ func defineRestrictedOrDictionaryType() {
 				dictionaryType.EndPos = endPos
 				return dictionaryType
 			default:
-				restrictedType = &ast.RestrictedType{
-					Range: ast.Range{
-						StartPos: startToken.StartPos,
-						EndPos:   endPos,
-					},
-				}
+				restrictedType = ast.NewRestrictedType(
+					p.memoryGauge,
+					nil,
+					nil,
+					ast.NewRange(
+						p.memoryGauge,
+						startToken.StartPos,
+						endPos,
+					),
+				)
 				if firstType != nil {
 					firstNominalType, ok := firstType.(*ast.NominalType)
 					if !ok {
@@ -493,14 +519,16 @@ func defineRestrictedOrDictionaryType() {
 			// Skip the closing brace
 			p.next()
 
-			result = &ast.RestrictedType{
-				Type:         left,
-				Restrictions: nominalTypes,
-				Range: ast.Range{
-					StartPos: left.StartPosition(),
-					EndPos:   endPos,
-				},
-			}
+			result = ast.NewRestrictedType(
+				p.memoryGauge,
+				left,
+				nominalTypes,
+				ast.NewRange(
+					p.memoryGauge,
+					left.StartPosition(),
+					endPos,
+				),
+			)
 
 			return result, false
 		},
@@ -585,14 +613,16 @@ func defineFunctionType() {
 			p.skipSpaceAndComments(true)
 			endToken := p.mustOne(lexer.TokenParenClose)
 
-			return &ast.FunctionType{
-				ParameterTypeAnnotations: parameterTypeAnnotations,
-				ReturnTypeAnnotation:     returnTypeAnnotation,
-				Range: ast.Range{
-					StartPos: startToken.StartPos,
-					EndPos:   endToken.EndPos,
-				},
-			}
+			return ast.NewFunctionType(
+				p.memoryGauge,
+				parameterTypeAnnotations,
+				returnTypeAnnotation,
+				ast.NewRange(
+					p.memoryGauge,
+					startToken.StartPos,
+					endToken.EndPos,
+				),
+			)
 		},
 	)
 }
@@ -649,6 +679,17 @@ func parseParameterTypeAnnotations(p *parser) (typeAnnotations []*ast.TypeAnnota
 }
 
 func parseType(p *parser, rightBindingPower int) ast.Type {
+
+	if p.typeDepth == typeDepthLimit {
+		panic(TypeDepthLimitReachedError{
+			Pos: p.current.StartPos,
+		})
+	}
+
+	p.typeDepth++
+	defer func() {
+		p.typeDepth--
+	}()
 
 	p.skipSpaceAndComments(true)
 	t := p.current
@@ -725,11 +766,12 @@ func parseTypeAnnotation(p *parser) *ast.TypeAnnotation {
 
 	ty := parseType(p, lowestBindingPower)
 
-	return &ast.TypeAnnotation{
-		IsResource: isResource,
-		Type:       ty,
-		StartPos:   startPos,
-	}
+	return ast.NewTypeAnnotation(
+		p.memoryGauge,
+		isResource,
+		ty,
+		startPos,
+	)
 }
 
 func applyTypeNullDenotation(p *parser, token lexer.Token) ast.Type {
@@ -759,23 +801,29 @@ func parseNominalTypeInvocationRemainder(p *parser) *ast.InvocationExpression {
 	argumentsStartPos := parenOpenToken.EndPos
 	arguments, endPos := parseArgumentListRemainder(p)
 
-	var invokedExpression ast.Expression = &ast.IdentifierExpression{
-		Identifier: ty.Identifier,
-	}
+	var invokedExpression ast.Expression = ast.NewIdentifierExpression(
+		p.memoryGauge,
+		ty.Identifier,
+	)
 
 	for _, nestedIdentifier := range ty.NestedIdentifiers {
-		invokedExpression = &ast.MemberExpression{
-			Expression: invokedExpression,
-			Identifier: nestedIdentifier,
-		}
+		invokedExpression = ast.NewMemberExpression(
+			p.memoryGauge,
+			invokedExpression,
+			false,
+			nestedIdentifier.Pos,
+			nestedIdentifier,
+		)
 	}
 
-	return &ast.InvocationExpression{
-		InvokedExpression: invokedExpression,
-		Arguments:         arguments,
-		ArgumentsStartPos: argumentsStartPos,
-		EndPos:            endPos,
-	}
+	return ast.NewInvocationExpression(
+		p.memoryGauge,
+		invokedExpression,
+		nil,
+		arguments,
+		argumentsStartPos,
+		endPos,
+	)
 }
 
 // parseCommaSeparatedTypeAnnotations parses zero or more type annotations separated by comma.
@@ -844,12 +892,13 @@ func defineInstantiationType() {
 
 			endToken := p.mustOne(lexer.TokenGreater)
 
-			return &ast.InstantiationType{
-				Type:                  left,
-				TypeArguments:         typeArguments,
-				TypeArgumentsStartPos: typeArgumentsStartPos,
-				EndPos:                endToken.EndPos,
-			}
+			return ast.NewInstantiationType(
+				p.memoryGauge,
+				left,
+				typeArguments,
+				typeArgumentsStartPos,
+				endToken.EndPos,
+			)
 		},
 	)
 }

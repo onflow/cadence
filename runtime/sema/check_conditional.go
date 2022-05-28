@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -82,14 +82,14 @@ func (checker *Checker) VisitConditionalExpression(expression *ast.ConditionalEx
 	if thenType.IsResourceType() {
 		checker.report(
 			&InvalidConditionalResourceOperandError{
-				Range: ast.NewRangeFromPositioned(expression.Then),
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, expression.Then),
 			},
 		)
 	}
 	if elseType.IsResourceType() {
 		checker.report(
 			&InvalidConditionalResourceOperandError{
-				Range: ast.NewRangeFromPositioned(expression.Else),
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, expression.Else),
 			},
 		)
 	}
@@ -191,8 +191,8 @@ func (checker *Checker) checkConditionalBranches(
 		} else if elseReturnInfo.DefinitelyHalted {
 			functionActivation.InitializationInfo.InitializedFieldMembers = thenInitializedMembers
 		} else {
-			functionActivation.InitializationInfo.InitializedFieldMembers =
-				thenInitializedMembers.Intersection(elseInitializedMembers)
+			functionActivation.InitializationInfo.InitializedFieldMembers.
+				AddIntersection(thenInitializedMembers, elseInitializedMembers)
 		}
 	}
 

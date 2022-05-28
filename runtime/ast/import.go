@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,6 +36,23 @@ type ImportDeclaration struct {
 }
 
 var _ Declaration = &ImportDeclaration{}
+
+func NewImportDeclaration(
+	gauge common.MemoryGauge,
+	identifiers []Identifier,
+	location common.Location,
+	declRange Range,
+	locationPos Position,
+) *ImportDeclaration {
+	common.UseMemory(gauge, common.ImportDeclarationMemoryUsage)
+
+	return &ImportDeclaration{
+		Identifiers: identifiers,
+		Location:    location,
+		Range:       declRange,
+		LocationPos: locationPos,
+	}
+}
 
 func (*ImportDeclaration) isDeclaration() {}
 

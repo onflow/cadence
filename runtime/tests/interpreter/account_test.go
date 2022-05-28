@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,7 +59,7 @@ func testAccount(
 		Name: "authAccount",
 		Type: sema.AuthAccountType,
 		ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
-			return newTestAuthAccountValue(address)
+			return newTestAuthAccountValue(inter, address)
 		},
 		Kind: common.DeclarationKindConstant,
 	}
@@ -70,8 +70,8 @@ func testAccount(
 	pubAccountValueDeclaration := stdlib.StandardLibraryValue{
 		Name: "pubAccount",
 		Type: sema.PublicAccountType,
-		ValueFactory: func(_ *interpreter.Interpreter) interpreter.Value {
-			return newTestPublicAccountValue(address)
+		ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
+			return newTestPublicAccountValue(inter, address)
 		},
 		Kind: common.DeclarationKindConstant,
 	}
@@ -106,7 +106,7 @@ func testAccount(
 		accountValues := make(map[storageKey]interpreter.Value)
 
 		for storageMapKey, accountStorage := range inter.Storage.(interpreter.InMemoryStorage).StorageMaps {
-			iterator := accountStorage.Iterator()
+			iterator := accountStorage.Iterator(inter)
 			for {
 				key, value := iterator.Next()
 				if key == "" {
@@ -126,12 +126,12 @@ func testAccount(
 	return inter, getAccountValues
 }
 
-func returnZeroUInt64() interpreter.UInt64Value {
-	return interpreter.UInt64Value(0)
+func returnZeroUInt64(_ *interpreter.Interpreter) interpreter.UInt64Value {
+	return interpreter.NewUnmeteredUInt64Value(0)
 }
 
 func returnZeroUFix64() interpreter.UFix64Value {
-	return interpreter.UFix64Value(0)
+	return interpreter.NewUnmeteredUFix64Value(0)
 }
 
 func TestInterpretAuthAccount_save(t *testing.T) {
@@ -142,7 +142,7 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 
 		t.Parallel()
 
-		address := interpreter.NewAddressValueFromBytes([]byte{42})
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 		inter, getAccountValues := testAccount(
 			t,
@@ -188,7 +188,7 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 
 		t.Parallel()
 
-		address := interpreter.NewAddressValueFromBytes([]byte{42})
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 		inter, getAccountValues := testAccount(
 			t,
@@ -240,7 +240,7 @@ func TestInterpretAuthAccount_type(t *testing.T) {
 
 		t.Parallel()
 
-		address := interpreter.NewAddressValueFromBytes([]byte{42})
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 		inter, getAccountStorables := testAccount(
 			t,
@@ -286,7 +286,7 @@ func TestInterpretAuthAccount_type(t *testing.T) {
 		value, err = inter.Invoke("typeAt")
 		require.NoError(t, err)
 		require.Equal(t,
-			interpreter.NewSomeValueNonCopying(
+			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.TypeValue{
 					Type: interpreter.CompositeStaticType{
 						Location:            utils.TestLocation,
@@ -309,7 +309,7 @@ func TestInterpretAuthAccount_type(t *testing.T) {
 		value, err = inter.Invoke("typeAt")
 		require.NoError(t, err)
 		require.Equal(t,
-			interpreter.NewSomeValueNonCopying(
+			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.TypeValue{
 					Type: interpreter.CompositeStaticType{
 						Location:            utils.TestLocation,
@@ -331,7 +331,7 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 
 		t.Parallel()
 
-		address := interpreter.NewAddressValueFromBytes([]byte{42})
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 		inter, getAccountValues := testAccount(
 			t,
@@ -412,7 +412,7 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 
 		t.Parallel()
 
-		address := interpreter.NewAddressValueFromBytes([]byte{42})
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 		inter, getAccountValues := testAccount(
 			t,
@@ -516,7 +516,7 @@ func TestInterpretAuthAccount_copy(t *testing.T) {
 
 		t.Parallel()
 
-		address := interpreter.NewAddressValueFromBytes([]byte{42})
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 		inter, getAccountValues := testAccount(
 			t,
@@ -556,7 +556,7 @@ func TestInterpretAuthAccount_copy(t *testing.T) {
 
 		t.Parallel()
 
-		address := interpreter.NewAddressValueFromBytes([]byte{42})
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 		inter, getAccountValues := testAccount(
 			t,
@@ -590,7 +590,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 
 		t.Parallel()
 
-		address := interpreter.NewAddressValueFromBytes([]byte{42})
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 		inter, getAccountValues := testAccount(
 			t,
@@ -675,7 +675,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 			RequireValuesEqual(
 				t,
 				inter,
-				interpreter.NewIntValueFromInt64(42),
+				interpreter.NewUnmeteredIntValueFromInt64(42),
 				value,
 			)
 
@@ -720,7 +720,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 
 		t.Parallel()
 
-		address := interpreter.NewAddressValueFromBytes([]byte{42})
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 		inter, getAccountValues := testAccount(
 			t,
@@ -812,7 +812,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 			RequireValuesEqual(
 				t,
 				inter,
-				interpreter.NewIntValueFromInt64(42),
+				interpreter.NewUnmeteredIntValueFromInt64(42),
 				value,
 			)
 
@@ -872,7 +872,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 
 				t.Parallel()
 
-				address := interpreter.NewAddressValueFromBytes([]byte{42})
+				address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 				inter, getAccountValues := testAccount(
 					t,
@@ -922,6 +922,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					rType := checker.RequireGlobalType(t, inter.Program.Elaboration, "R")
 
 					expectedBorrowType := interpreter.ConvertSemaToStaticType(
+						nil,
 						&sema.ReferenceType{
 							Authorized: false,
 							Type:       rType,
@@ -970,6 +971,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					r2Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R2")
 
 					expectedBorrowType := interpreter.ConvertSemaToStaticType(
+						nil,
 						&sema.ReferenceType{
 							Authorized: false,
 							Type:       r2Type,
@@ -1022,7 +1024,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 
 				t.Parallel()
 
-				address := interpreter.NewAddressValueFromBytes([]byte{42})
+				address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 				inter, getAccountValues := testAccount(
 					t,
@@ -1072,6 +1074,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					sType := checker.RequireGlobalType(t, inter.Program.Elaboration, "S")
 
 					expectedBorrowType := interpreter.ConvertSemaToStaticType(
+						nil,
 						&sema.ReferenceType{
 							Authorized: false,
 							Type:       sType,
@@ -1121,6 +1124,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					s2Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "S2")
 
 					expectedBorrowType := interpreter.ConvertSemaToStaticType(
+						nil,
 						&sema.ReferenceType{
 							Authorized: false,
 							Type:       s2Type,
@@ -1166,7 +1170,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 	})
 
 	t.Run("link to same path", func(t *testing.T) {
-		address := interpreter.NewAddressValueFromBytes([]byte{42})
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 		test := func(capabilityDomain common.PathDomain) {
 			inter, getAccountValues := testAccount(
@@ -1225,6 +1229,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 
 				sType := checker.RequireGlobalType(t, inter.Program.Elaboration, "S1")
 				expectedBorrowType := interpreter.ConvertSemaToStaticType(
+					nil,
 					&sema.ReferenceType{
 						Authorized: false,
 						Type:       sType,
@@ -1256,7 +1261,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 	})
 
 	t.Run("link same storage", func(t *testing.T) {
-		address := interpreter.NewAddressValueFromBytes([]byte{42})
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 		test := func(capabilityDomain common.PathDomain) {
 			inter, getAccountValues := testAccount(
@@ -1304,6 +1309,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 
 				sType := checker.RequireGlobalType(t, inter.Program.Elaboration, "S")
 				expectedBorrowType := interpreter.ConvertSemaToStaticType(
+					nil,
 					&sema.ReferenceType{
 						Authorized: false,
 						Type:       sType,
@@ -1332,6 +1338,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 
 				sType = checker.RequireGlobalType(t, inter.Program.Elaboration, "S")
 				expectedBorrowType = interpreter.ConvertSemaToStaticType(
+					nil,
 					&sema.ReferenceType{
 						Authorized: false,
 						Type:       sType,
@@ -1375,7 +1382,7 @@ func TestInterpretAuthAccount_unlink(t *testing.T) {
 
 				t.Parallel()
 
-				address := interpreter.NewAddressValueFromBytes([]byte{42})
+				address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 				inter, getAccountValues := testAccount(
 					t,
@@ -1446,7 +1453,7 @@ func TestInterpretAuthAccount_unlink(t *testing.T) {
 
 				t.Parallel()
 
-				address := interpreter.NewAddressValueFromBytes([]byte{42})
+				address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 				inter, getAccountValues := testAccount(
 					t,
@@ -1520,7 +1527,7 @@ func TestInterpretAccount_getLinkTarget(t *testing.T) {
 
 			t.Parallel()
 
-			address := interpreter.NewAddressValueFromBytes([]byte{42})
+			address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 			inter, getAccountValues := testAccount(
 				t,
@@ -1598,7 +1605,7 @@ func TestInterpretAccount_getLinkTarget(t *testing.T) {
 
 			t.Parallel()
 
-			address := interpreter.NewAddressValueFromBytes([]byte{42})
+			address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 			inter, getAccountValues := testAccount(
 				t,
@@ -1733,7 +1740,7 @@ func TestInterpretAccount_getCapability(t *testing.T) {
 
 				t.Run(testName, func(t *testing.T) {
 
-					address := interpreter.NewAddressValueFromBytes([]byte{42})
+					address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 					inter, _ := testAccount(
 						t,
@@ -1760,6 +1767,7 @@ func TestInterpretAccount_getCapability(t *testing.T) {
 
 					if typed {
 						expectedBorrowType := interpreter.ConvertSemaToStaticType(
+							nil,
 							&sema.ReferenceType{
 								Authorized: false,
 								Type:       sema.IntType,
@@ -1800,7 +1808,7 @@ func TestInterpretAccount_BalanceFields(t *testing.T) {
 
 			t.Run(testName, func(t *testing.T) {
 
-				address := interpreter.NewAddressValueFromBytes([]byte{42})
+				address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 				code := fmt.Sprintf(
 					`
@@ -1823,7 +1831,7 @@ func TestInterpretAccount_BalanceFields(t *testing.T) {
 				AssertValuesEqual(
 					t,
 					inter,
-					interpreter.UFix64Value(0),
+					interpreter.NewUnmeteredUFix64Value(0),
 					value,
 				)
 			})
@@ -1861,7 +1869,7 @@ func TestInterpretAccount_StorageFields(t *testing.T) {
 					fieldName,
 				)
 
-				address := interpreter.NewAddressValueFromBytes([]byte{42})
+				address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 				inter, _ := testAccount(
 					t,
@@ -1876,7 +1884,7 @@ func TestInterpretAccount_StorageFields(t *testing.T) {
 				AssertValuesEqual(
 					t,
 					inter,
-					interpreter.UInt64Value(0),
+					interpreter.NewUnmeteredUInt64Value(0),
 					value,
 				)
 			})

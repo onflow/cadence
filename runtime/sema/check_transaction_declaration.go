@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -213,7 +213,7 @@ func (checker *Checker) checkTransactionPrepareFunctionParameters(
 			checker.report(
 				&InvalidTransactionPrepareParameterTypeError{
 					Type:  parameterType,
-					Range: ast.NewRangeFromPositioned(parameter.TypeAnnotation),
+					Range: ast.NewRangeFromPositioned(checker.memoryGauge, parameter.TypeAnnotation),
 				},
 			)
 		}
@@ -255,7 +255,7 @@ func (checker *Checker) declareTransactionDeclaration(declaration *ast.Transacti
 		declarations[i] = field
 	}
 
-	allMembers := ast.NewMembers(declarations)
+	allMembers := ast.NewMembers(checker.memoryGauge, declarations)
 
 	members, fields, origins := checker.defaultMembersAndOrigins(
 		allMembers,

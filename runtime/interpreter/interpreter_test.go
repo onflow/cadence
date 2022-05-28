@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/onflow/cadence/runtime/common"
 	. "github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -41,7 +42,7 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 			&sema.OptionalType{Type: sema.BoolType},
 		)
 		assert.Equal(t,
-			NewSomeValueNonCopying(BoolValue(true)),
+			NewUnmeteredSomeValueNonCopying(BoolValue(true)),
 			value,
 		)
 	})
@@ -51,11 +52,11 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 
 		value := inter.BoxOptional(
 			ReturnEmptyLocationRange,
-			NewSomeValueNonCopying(BoolValue(true)),
+			NewUnmeteredSomeValueNonCopying(BoolValue(true)),
 			&sema.OptionalType{Type: sema.BoolType},
 		)
 		assert.Equal(t,
-			NewSomeValueNonCopying(BoolValue(true)),
+			NewUnmeteredSomeValueNonCopying(BoolValue(true)),
 			value,
 		)
 	})
@@ -65,12 +66,12 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 
 		value := inter.BoxOptional(
 			ReturnEmptyLocationRange,
-			NewSomeValueNonCopying(BoolValue(true)),
+			NewUnmeteredSomeValueNonCopying(BoolValue(true)),
 			&sema.OptionalType{Type: &sema.OptionalType{Type: sema.BoolType}},
 		)
 		assert.Equal(t,
-			NewSomeValueNonCopying(
-				NewSomeValueNonCopying(BoolValue(true)),
+			NewUnmeteredSomeValueNonCopying(
+				NewUnmeteredSomeValueNonCopying(BoolValue(true)),
 			),
 			value,
 		)
@@ -97,7 +98,7 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 		// NOTE:
 		value := inter.BoxOptional(
 			ReturnEmptyLocationRange,
-			NewSomeValueNonCopying(NilValue{}),
+			NewUnmeteredSomeValueNonCopying(NilValue{}),
 			&sema.OptionalType{Type: &sema.OptionalType{Type: sema.BoolType}},
 		)
 		assert.Equal(t,
@@ -122,7 +123,7 @@ func TestInterpreterBoxing(t *testing.T) {
 				inter := newTestInterpreter(t)
 
 				assert.Equal(t,
-					NewSomeValueNonCopying(
+					NewUnmeteredSomeValueNonCopying(
 						BoolValue(true),
 					),
 					inter.ConvertAndBox(
@@ -139,17 +140,51 @@ func TestInterpreterBoxing(t *testing.T) {
 				inter := newTestInterpreter(t)
 
 				assert.Equal(t,
-					NewSomeValueNonCopying(
+					NewUnmeteredSomeValueNonCopying(
 						BoolValue(true),
 					),
 					inter.ConvertAndBox(
 						ReturnEmptyLocationRange,
-						NewSomeValueNonCopying(BoolValue(true)),
+						NewUnmeteredSomeValueNonCopying(BoolValue(true)),
 						&sema.OptionalType{Type: sema.BoolType},
 						&sema.OptionalType{Type: anyType},
 					),
 				)
 			})
 		})
+	}
+}
+
+func BenchmarkTransfer(b *testing.B) {
+
+	b.ReportAllocs()
+
+	const size = 1000
+	values := make([]Value, 0, size)
+
+	for i := 0; i < size; i++ {
+		value := NewUnmeteredStringValue(fmt.Sprintf("value%d", i))
+		values = append(values, value)
+	}
+
+	inter := newTestInterpreter(b)
+	owner := common.Address{'A'}
+	typ := ConstantSizedStaticType{
+		Type: PrimitiveStaticTypeString,
+		Size: size,
+	}
+
+	semaType := &sema.ConstantSizedType{
+		Type: sema.StringType,
+		Size: size,
+	}
+
+	array := NewArrayValue(inter, typ, owner, values...)
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		ok := inter.CheckValueTransferTargetType(array, semaType)
+		assert.True(b, ok)
 	}
 }

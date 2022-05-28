@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -128,8 +128,7 @@ Commands are prefixed with a dot. Valid commands are:
 .exit     Exit the interpreter
 .help     Print this help message
 
-Press ^C to abort current expression, ^D to exit
-`
+Press ^C to abort current expression, ^D to exit`
 
 const replAssistanceMessage = `Type '.help' for assistance.`
 

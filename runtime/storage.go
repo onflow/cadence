@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import (
 	"runtime"
 	"sort"
 
+	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -37,19 +38,38 @@ type Storage struct {
 	storageMaps     map[interpreter.StorageKey]*interpreter.StorageMap
 	contractUpdates map[interpreter.StorageKey]*interpreter.CompositeValue
 	Ledger          atree.Ledger
+	memoryGauge     common.MemoryGauge
 }
 
 var _ atree.SlabStorage = &Storage{}
 var _ interpreter.Storage = &Storage{}
 
-func NewStorage(ledger atree.Ledger) *Storage {
+func NewStorage(ledger atree.Ledger, memoryGauge common.MemoryGauge) *Storage {
+	decodeStorable := func(
+		decoder *cbor.StreamDecoder,
+		slabStorageID atree.StorageID,
+	) (
+		atree.Storable,
+		error,
+	) {
+		return interpreter.DecodeStorable(
+			decoder,
+			slabStorageID,
+			memoryGauge,
+		)
+	}
+
+	decodeTypeInfo := func(decoder *cbor.StreamDecoder) (atree.TypeInfo, error) {
+		return interpreter.DecodeTypeInfo(decoder, memoryGauge)
+	}
+
 	ledgerStorage := atree.NewLedgerBaseStorage(ledger)
 	persistentSlabStorage := atree.NewPersistentSlabStorage(
 		ledgerStorage,
 		interpreter.CBOREncMode,
 		interpreter.CBORDecMode,
-		interpreter.DecodeStorable,
-		interpreter.DecodeTypeInfo,
+		decodeStorable,
+		decodeTypeInfo,
 	)
 	return &Storage{
 		Ledger:                ledger,
@@ -57,16 +77,20 @@ func NewStorage(ledger atree.Ledger) *Storage {
 		writes:                map[interpreter.StorageKey]atree.StorageIndex{},
 		storageMaps:           map[interpreter.StorageKey]*interpreter.StorageMap{},
 		contractUpdates:       map[interpreter.StorageKey]*interpreter.CompositeValue{},
+		memoryGauge:           memoryGauge,
 	}
 }
 
 const storageIndexLength = 8
 
-func (s *Storage) GetStorageMap(address common.Address, domain string) (storageMap *interpreter.StorageMap) {
-	key := interpreter.StorageKey{
-		Address: address,
-		Key:     domain,
-	}
+func (s *Storage) GetStorageMap(
+	address common.Address,
+	domain string,
+	createIfNotExists bool,
+) (
+	storageMap *interpreter.StorageMap,
+) {
+	key := interpreter.NewStorageKey(s.memoryGauge, address, domain)
 
 	storageMap = s.storageMaps[key]
 	if storageMap == nil {
@@ -100,11 +124,13 @@ func (s *Storage) GetStorageMap(address common.Address, domain string) (storageM
 			var storageIndex atree.StorageIndex
 			copy(storageIndex[:], data[:])
 			storageMap = s.loadExistingStorageMap(atreeAddress, storageIndex)
-		} else {
+		} else if createIfNotExists {
 			storageMap = s.storeNewStorageMap(atreeAddress, domain)
 		}
 
-		s.storageMaps[key] = storageMap
+		if storageMap != nil {
+			s.storageMaps[key] = storageMap
+		}
 	}
 
 	return storageMap
@@ -121,14 +147,11 @@ func (s *Storage) loadExistingStorageMap(address atree.Address, storageIndex atr
 }
 
 func (s *Storage) storeNewStorageMap(address atree.Address, domain string) *interpreter.StorageMap {
-	storageMap := interpreter.NewStorageMap(s, address)
+	storageMap := interpreter.NewStorageMap(s.memoryGauge, s, address)
 
 	storageIndex := storageMap.StorageID().Index
 
-	storageKey := interpreter.StorageKey{
-		Address: common.Address(address),
-		Key:     domain,
-	}
+	storageKey := interpreter.NewStorageKey(s.memoryGauge, common.Address(address), domain)
 
 	s.writes[storageKey] = storageIndex
 
@@ -140,10 +163,7 @@ func (s *Storage) recordContractUpdate(
 	name string,
 	contractValue *interpreter.CompositeValue,
 ) {
-	key := interpreter.StorageKey{
-		Address: address,
-		Key:     name,
-	}
+	key := interpreter.NewStorageKey(s.memoryGauge, address, name)
 
 	// NOTE: do NOT delete the map entry,
 	// otherwise the removal write is lost
@@ -213,7 +233,7 @@ func (s *Storage) writeContractUpdate(
 	key interpreter.StorageKey,
 	contractValue *interpreter.CompositeValue,
 ) {
-	storageMap := s.GetStorageMap(key.Address, StorageDomainContract)
+	storageMap := s.GetStorageMap(key.Address, StorageDomainContract, true)
 	// NOTE: pass nil instead of allocating a Value-typed  interface that points to nil
 	if contractValue == nil {
 		storageMap.WriteValue(inter, key.Key, nil)
@@ -292,6 +312,9 @@ func (s *Storage) Commit(inter *interpreter.Interpreter, commitContractUpdates b
 	}
 
 	// Commit the underlying slab storage's writes
+
+	deltas := s.PersistentSlabStorage.DeltasWithoutTempAddresses()
+	common.UseMemory(s.memoryGauge, common.NewAtreeEncodedSlabMemoryUsage(deltas))
 
 	// TODO: report encoding metric for all encoded slabs
 	return s.PersistentSlabStorage.FastCommit(runtime.NumCPU())

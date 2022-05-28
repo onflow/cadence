@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -101,14 +101,14 @@ func TestInterpretEnumCaseRawValue(t *testing.T) {
 	RequireValuesEqual(
 		t,
 		inter,
-		interpreter.Int64Value(0),
+		interpreter.NewUnmeteredInt64Value(0),
 		inter.Globals["a"].GetValue(),
 	)
 
 	RequireValuesEqual(
 		t,
 		inter,
-		interpreter.Int64Value(1),
+		interpreter.NewUnmeteredInt64Value(1),
 		inter.Globals["b"].GetValue(),
 	)
 }
@@ -261,7 +261,7 @@ func TestInterpretEnumInContract(t *testing.T) {
 	RequireValuesEqual(
 		t,
 		inter,
-		interpreter.UInt8Value(0),
+		interpreter.NewUnmeteredUInt8Value(0),
 		rawValue,
 	)
 }

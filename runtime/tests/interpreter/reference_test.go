@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -466,7 +466,7 @@ func TestInterpretResourceReferenceAfterMove(t *testing.T) {
 		array := interpreter.NewArrayValue(
 			inter,
 			interpreter.VariableSizedStaticType{
-				Type: interpreter.ConvertSemaToStaticType(rType),
+				Type: interpreter.ConvertSemaToStaticType(nil, rType),
 			},
 			address,
 		)
@@ -483,7 +483,7 @@ func TestInterpretResourceReferenceAfterMove(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewStringValue("testValue"),
+			interpreter.NewUnmeteredStringValue("testValue"),
 			value,
 		)
 	})
@@ -517,7 +517,7 @@ func TestInterpretResourceReferenceAfterMove(t *testing.T) {
 			inter,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.VariableSizedStaticType{
-					Type: interpreter.ConvertSemaToStaticType(rType),
+					Type: interpreter.ConvertSemaToStaticType(nil, rType),
 				},
 			},
 			address,
@@ -535,7 +535,7 @@ func TestInterpretResourceReferenceAfterMove(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewStringValue("testValue"),
+			interpreter.NewUnmeteredStringValue("testValue"),
 			value,
 		)
 	})
@@ -570,7 +570,7 @@ func TestInterpretResourceReferenceAfterMove(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeInt,
-					ValueType: interpreter.ConvertSemaToStaticType(rType),
+					ValueType: interpreter.ConvertSemaToStaticType(nil, rType),
 				},
 			},
 			address,
@@ -588,8 +588,8 @@ func TestInterpretResourceReferenceAfterMove(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewSomeValueNonCopying(
-				interpreter.NewStringValue("testValue"),
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredStringValue("testValue"),
 			),
 			value,
 		)
@@ -650,7 +650,7 @@ func TestInterpretReferenceUseAfterShiftStatementMove(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewStringValue("test"),
+			interpreter.NewUnmeteredStringValue("test"),
 			value,
 		)
 
@@ -713,9 +713,7 @@ func TestInterpretReferenceUseAfterShiftStatementMove(t *testing.T) {
 			ParseCheckAndInterpretOptions{
 				Options: []interpreter.Option{
 					interpreter.WithPublicAccountHandler(
-						func(_ *interpreter.Interpreter, address interpreter.AddressValue) interpreter.Value {
-							return newTestPublicAccountValue(address)
-						},
+						newTestPublicAccountValue,
 					),
 				},
 			},
@@ -742,7 +740,7 @@ func TestInterpretReferenceUseAfterShiftStatementMove(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewStringValue("test"),
+			interpreter.NewUnmeteredStringValue("test"),
 			value,
 		)
 
@@ -754,7 +752,7 @@ func TestInterpretReferenceUseAfterShiftStatementMove(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewSomeValueNonCopying(
+			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.AddressValue{1},
 			),
 			r1Address,
@@ -768,10 +766,117 @@ func TestInterpretReferenceUseAfterShiftStatementMove(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewSomeValueNonCopying(
+			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.AddressValue{1},
 			),
 			r2Address,
 		)
+	})
+}
+
+func TestInterpretReferenceExpressionOfOptional(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          resource R {}
+
+          let r: @R? <- create R()
+          let ref = &r as &R?
+        `)
+
+		value := inter.Globals["ref"].GetValue()
+		require.IsType(t, &interpreter.SomeValue{}, value)
+
+		innerValue := value.(*interpreter.SomeValue).
+			InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+		require.IsType(t, &interpreter.EphemeralReferenceValue{}, innerValue)
+	})
+
+	t.Run("struct", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          struct S {}
+
+          let s: S? = S()
+          let ref = &s as &S?
+        `)
+
+		value := inter.Globals["ref"].GetValue()
+		require.IsType(t, &interpreter.SomeValue{}, value)
+
+		innerValue := value.(*interpreter.SomeValue).
+			InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+		require.IsType(t, &interpreter.EphemeralReferenceValue{}, innerValue)
+	})
+
+	t.Run("non-composite", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          let i: Int? = 1
+          let ref = &i as &Int?
+        `)
+
+		value := inter.Globals["ref"].GetValue()
+		require.IsType(t, &interpreter.SomeValue{}, value)
+
+		innerValue := value.(*interpreter.SomeValue).
+			InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+		require.IsType(t, &interpreter.EphemeralReferenceValue{}, innerValue)
+	})
+
+	t.Run("as optional, some", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          let i: Int? = 1
+          let ref = &i as &Int?
+        `)
+
+		value := inter.Globals["ref"].GetValue()
+		require.IsType(t, &interpreter.SomeValue{}, value)
+
+		innerValue := value.(*interpreter.SomeValue).
+			InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+		require.IsType(t, &interpreter.EphemeralReferenceValue{}, innerValue)
+	})
+
+	t.Run("as optional, nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          let i: Int? = nil
+          let ref = &i as &Int?
+        `)
+
+		value := inter.Globals["ref"].GetValue()
+		require.IsType(t, interpreter.NilValue{}, value)
+	})
+
+	t.Run("upcast to optional", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          let i: Int = 1
+          let ref = &i as &Int?
+        `)
+
+		value := inter.Globals["ref"].GetValue()
+		require.IsType(t, &interpreter.SomeValue{}, value)
+
+		innerValue := value.(*interpreter.SomeValue).
+			InnerValue(inter, interpreter.ReturnEmptyLocationRange)
+		require.IsType(t, &interpreter.EphemeralReferenceValue{}, innerValue)
 	})
 }

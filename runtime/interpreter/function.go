@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,9 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/format"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -37,6 +39,26 @@ type Invocation struct {
 	TypeParameterTypes *sema.TypeParameterTypeOrderedMap
 	GetLocationRange   func() LocationRange
 	Interpreter        *Interpreter
+}
+
+func NewInvocation(
+	interpreter *Interpreter,
+	self MemberAccessibleValue,
+	arguments []Value,
+	argumentTypes []sema.Type,
+	typeParameterTypes *sema.TypeParameterTypeOrderedMap,
+	getLocationRange func() LocationRange,
+) Invocation {
+	common.UseMemory(interpreter, common.InvocationMemoryUsage)
+
+	return Invocation{
+		Self:               self,
+		Arguments:          arguments,
+		ArgumentTypes:      argumentTypes,
+		TypeParameterTypes: typeParameterTypes,
+		GetLocationRange:   getLocationRange,
+		Interpreter:        interpreter,
+	}
 }
 
 // FunctionValue
@@ -63,6 +85,31 @@ type InterpretedFunctionValue struct {
 	PostConditions   ast.Conditions
 }
 
+func NewInterpretedFunctionValue(
+	interpreter *Interpreter,
+	parameterList *ast.ParameterList,
+	functionType *sema.FunctionType,
+	lexicalScope *VariableActivation,
+	beforeStatements []ast.Statement,
+	preConditions ast.Conditions,
+	statements []ast.Statement,
+	postConditions ast.Conditions,
+) *InterpretedFunctionValue {
+
+	common.UseMemory(interpreter, common.InterpretedFunctionValueMemoryUsage)
+
+	return &InterpretedFunctionValue{
+		Interpreter:      interpreter,
+		ParameterList:    parameterList,
+		Type:             functionType,
+		Activation:       lexicalScope,
+		BeforeStatements: beforeStatements,
+		PreConditions:    preConditions,
+		Statements:       statements,
+		PostConditions:   postConditions,
+	}
+}
+
 var _ Value = &InterpretedFunctionValue{}
 
 func (*InterpretedFunctionValue) IsValue() {}
@@ -75,22 +122,26 @@ func (f *InterpretedFunctionValue) RecursiveString(_ SeenReferences) string {
 	return f.String()
 }
 
+func (f *InterpretedFunctionValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	typeString := f.Type.String()
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(8+len(typeString)))
+	return f.String()
+}
+
 func (f *InterpretedFunctionValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInterpretedFunctionValue(interpreter, f)
 }
 
-func (f *InterpretedFunctionValue) Walk(_ func(Value)) {
+func (f *InterpretedFunctionValue) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
-func (f *InterpretedFunctionValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return FunctionDynamicType{
-		FuncType: f.Type,
-	}
+func (f *InterpretedFunctionValue) StaticType(interpreter *Interpreter) StaticType {
+	return ConvertSemaToStaticType(interpreter, f.Type)
 }
 
-func (f *InterpretedFunctionValue) StaticType() StaticType {
-	return ConvertSemaToStaticType(f.Type)
+func (*InterpretedFunctionValue) IsImportable(_ *Interpreter) bool {
+	return false
 }
 
 func (*InterpretedFunctionValue) isFunctionValue() {}
@@ -103,18 +154,18 @@ func (f *InterpretedFunctionValue) invoke(invocation Invocation) Value {
 	return f.Interpreter.invokeInterpretedFunction(f, invocation)
 }
 
-func (f *InterpretedFunctionValue) ConformsToDynamicType(
+func (f *InterpretedFunctionValue) ConformsToStaticType(
 	_ *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	targetType, ok := dynamicType.(FunctionDynamicType)
+	targetType, ok := staticType.(FunctionStaticType)
 	if !ok {
 		return false
 	}
 
-	return f.Type.Equal(targetType.FuncType)
+	return f.Type.Equal(targetType.Type)
 }
 
 func (f *InterpretedFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -163,14 +214,19 @@ type HostFunctionValue struct {
 
 func (f *HostFunctionValue) String() string {
 	// TODO: include type
-	return "Function(...)"
+	return format.HostFunction
 }
 
 func (f *HostFunctionValue) RecursiveString(_ SeenReferences) string {
 	return f.String()
 }
 
-func NewHostFunctionValue(
+func (f *HostFunctionValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(memoryGauge, common.HostFunctionValueStringMemoryUsage)
+	return f.String()
+}
+
+func NewUnmeteredHostFunctionValue(
 	function HostFunction,
 	funcType *sema.FunctionType,
 ) *HostFunctionValue {
@@ -187,6 +243,17 @@ func NewHostFunctionValue(
 	}
 }
 
+func NewHostFunctionValue(
+	gauge common.MemoryGauge,
+	function HostFunction,
+	funcType *sema.FunctionType,
+) *HostFunctionValue {
+
+	common.UseMemory(gauge, common.HostFunctionValueMemoryUsage)
+
+	return NewUnmeteredHostFunctionValue(function, funcType)
+}
+
 var _ Value = &HostFunctionValue{}
 var _ MemberAccessibleValue = &HostFunctionValue{}
 
@@ -196,18 +263,16 @@ func (f *HostFunctionValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitHostFunctionValue(interpreter, f)
 }
 
-func (f *HostFunctionValue) Walk(_ func(Value)) {
+func (f *HostFunctionValue) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
-func (f *HostFunctionValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return FunctionDynamicType{
-		FuncType: f.Type,
-	}
+func (f *HostFunctionValue) StaticType(interpreter *Interpreter) StaticType {
+	return ConvertSemaToStaticType(interpreter, f.Type)
 }
 
-func (f *HostFunctionValue) StaticType() StaticType {
-	return ConvertSemaToStaticType(f.Type)
+func (*HostFunctionValue) IsImportable(_ *Interpreter) bool {
+	return false
 }
 
 func (*HostFunctionValue) isFunctionValue() {}
@@ -239,18 +304,18 @@ func (*HostFunctionValue) SetMember(_ *Interpreter, _ func() LocationRange, _ st
 	panic(errors.NewUnreachableError())
 }
 
-func (f *HostFunctionValue) ConformsToDynamicType(
+func (f *HostFunctionValue) ConformsToStaticType(
 	_ *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	targetType, ok := dynamicType.(FunctionDynamicType)
+	targetType, ok := staticType.(FunctionStaticType)
 	if !ok {
 		return false
 	}
 
-	return f.Type.Equal(targetType.FuncType)
+	return f.Type.Equal(targetType.Type)
 }
 
 func (f *HostFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -296,6 +361,20 @@ type BoundFunctionValue struct {
 
 var _ Value = BoundFunctionValue{}
 
+func NewBoundFunctionValue(
+	interpreter *Interpreter,
+	function FunctionValue,
+	self *CompositeValue,
+) BoundFunctionValue {
+
+	common.UseMemory(interpreter, common.BoundFunctionValueMemoryUsage)
+
+	return BoundFunctionValue{
+		Function: function,
+		Self:     self,
+	}
+}
+
 func (BoundFunctionValue) IsValue() {}
 
 func (f BoundFunctionValue) String() string {
@@ -306,27 +385,24 @@ func (f BoundFunctionValue) RecursiveString(seenReferences SeenReferences) strin
 	return f.Function.RecursiveString(seenReferences)
 }
 
+func (f BoundFunctionValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+	return f.Function.MeteredString(memoryGauge, seenReferences)
+}
+
 func (f BoundFunctionValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitBoundFunctionValue(interpreter, f)
 }
 
-func (f BoundFunctionValue) Walk(_ func(Value)) {
+func (f BoundFunctionValue) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
-func (f BoundFunctionValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	funcStaticType, ok := f.Function.StaticType().(FunctionStaticType)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	return FunctionDynamicType{
-		FuncType: funcStaticType.Type,
-	}
+func (f BoundFunctionValue) StaticType(inter *Interpreter) StaticType {
+	return f.Function.StaticType(inter)
 }
 
-func (f BoundFunctionValue) StaticType() StaticType {
-	return f.Function.StaticType()
+func (BoundFunctionValue) IsImportable(_ *Interpreter) bool {
+	return false
 }
 
 func (BoundFunctionValue) isFunctionValue() {}
@@ -336,16 +412,16 @@ func (f BoundFunctionValue) invoke(invocation Invocation) Value {
 	return f.Function.invoke(invocation)
 }
 
-func (f BoundFunctionValue) ConformsToDynamicType(
+func (f BoundFunctionValue) ConformsToStaticType(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	results TypeConformanceResults,
 ) bool {
-	return f.Function.ConformsToDynamicType(
+	return f.Function.ConformsToStaticType(
 		interpreter,
 		getLocationRange,
-		dynamicType,
+		staticType,
 		results,
 	)
 }

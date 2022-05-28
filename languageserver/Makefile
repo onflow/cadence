@@ -30,3 +30,7 @@ build:
 .PHONY: test
 test:
 	cd test && npm install && npm t
+
+.PHONY: wasm
+wasm:
+	GOARCH=wasm GOOS=js go build -o languageserver.wasm  ./cmd/languageserver

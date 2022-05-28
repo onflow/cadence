@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -96,6 +96,7 @@ func NewREPL(
 		return sema.NewChecker(
 			program,
 			common.REPLLocation{},
+			nil,
 			checkerOptions...,
 		)
 	}
@@ -109,7 +110,7 @@ func NewREPL(
 
 	var uuid uint64
 
-	storage := interpreter.NewInMemoryStorage()
+	storage := interpreter.NewInMemoryStorage(nil)
 
 	interpreterOptions = append(
 		[]interpreter.Option{
@@ -177,7 +178,7 @@ func (r *REPL) Accept(code string) (inputIsComplete bool) {
 	inputIsComplete = true
 
 	var err error
-	result, errs := parser2.ParseStatements(code)
+	result, errs := parser2.ParseStatements(code, nil)
 	if len(errs) > 0 {
 		err = parser2.Error{
 			Code:   code,
@@ -201,7 +202,7 @@ func (r *REPL) Accept(code string) (inputIsComplete bool) {
 
 		switch typedElement := element.(type) {
 		case ast.Declaration:
-			program := ast.NewProgram([]ast.Declaration{typedElement})
+			program := ast.NewProgram(nil, []ast.Declaration{typedElement})
 
 			if !r.check(program, code) {
 				return

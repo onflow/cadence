@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,11 +48,30 @@ func TestCheckUnaryBooleanNegation(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
-      let a = !true
-	`)
+	t.Run("valid", func(t *testing.T) {
 
-	require.NoError(t, err)
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          let a = !true
+	    `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("invalid type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          let a = !x
+	    `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+	})
+
 }
 
 func TestCheckInvalidUnaryIntegerNegationOfBoolean(t *testing.T) {
@@ -72,11 +91,30 @@ func TestCheckUnaryIntegerNegation(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
-      let a = -1
-	`)
+	t.Run("valid", func(t *testing.T) {
 
-	require.NoError(t, err)
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          let a = -1
+	    `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("invalid type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          let a = -x
+	    `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+	})
+
 }
 
 type operationTest struct {

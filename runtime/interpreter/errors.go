@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -600,7 +600,7 @@ type InvalidPublicKeyError struct {
 }
 
 func (e InvalidPublicKeyError) Error() string {
-	return fmt.Sprintf("invalid public key: %s", e.PublicKey)
+	return fmt.Sprintf("invalid public key: %s, err: %s", e.PublicKey, e.Err)
 }
 
 func (e InvalidPublicKeyError) Unwrap() error {

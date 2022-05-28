@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,37 +35,37 @@ func TestNegate(t *testing.T) {
 
 	t.Run("Int8", func(t *testing.T) {
 		assert.Panics(t, func() {
-			Int8Value(math.MinInt8).Negate()
+			NewUnmeteredInt8Value(math.MinInt8).Negate(nil)
 		})
 	})
 
 	t.Run("Int16", func(t *testing.T) {
 		assert.Panics(t, func() {
-			Int16Value(math.MinInt16).Negate()
+			NewUnmeteredInt16Value(math.MinInt16).Negate(nil)
 		})
 	})
 
 	t.Run("Int32", func(t *testing.T) {
 		assert.Panics(t, func() {
-			Int32Value(math.MinInt32).Negate()
+			NewUnmeteredInt32Value(math.MinInt32).Negate(nil)
 		})
 	})
 
 	t.Run("Int64", func(t *testing.T) {
 		assert.Panics(t, func() {
-			Int64Value(math.MinInt64).Negate()
+			NewUnmeteredInt64Value(math.MinInt64).Negate(nil)
 		})
 	})
 
 	t.Run("Int128", func(t *testing.T) {
 		assert.Panics(t, func() {
-			Int128Value{new(big.Int).Set(sema.Int128TypeMinIntBig)}.Negate()
+			Int128Value{new(big.Int).Set(sema.Int128TypeMinIntBig)}.Negate(nil)
 		})
 	})
 
 	t.Run("Int256", func(t *testing.T) {
 		assert.Panics(t, func() {
-			Int256Value{new(big.Int).Set(sema.Int256TypeMinIntBig)}.Negate()
+			Int256Value{new(big.Int).Set(sema.Int256TypeMinIntBig)}.Negate(nil)
 		})
 	})
 }

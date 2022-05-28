@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,7 +39,7 @@ func (checker *Checker) VisitEmitStatement(statement *ast.EmitStatement) ast.Rep
 		checker.report(
 			&EmitNonEventError{
 				Type:  ty,
-				Range: ast.NewRangeFromPositioned(statement.InvocationExpression),
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, statement.InvocationExpression),
 			},
 		)
 		return nil
@@ -54,7 +54,7 @@ func (checker *Checker) VisitEmitStatement(statement *ast.EmitStatement) ast.Rep
 		checker.report(
 			&EmitImportedEventError{
 				Type:  ty,
-				Range: ast.NewRangeFromPositioned(statement.InvocationExpression),
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, statement.InvocationExpression),
 			},
 		)
 	}

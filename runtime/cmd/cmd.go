@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,7 +62,7 @@ func PrepareProgramFromFile(location common.StringLocation, codes map[common.Loc
 func PrepareProgram(code string, location common.Location, codes map[common.LocationID]string) (*ast.Program, func(error)) {
 	must := mustClosure(location, codes)
 
-	program, err := parser2.ParseProgram(code)
+	program, err := parser2.ParseProgram(code, nil)
 	codes[location.ID()] = code
 	must(err)
 
@@ -93,6 +93,7 @@ func PrepareChecker(
 	checker, err := sema.NewChecker(
 		program,
 		location,
+		nil,
 		sema.WithPredeclaredValues(valueDeclarations.ToSemaValueDeclarations()),
 		sema.WithPredeclaredTypes(typeDeclarations),
 		sema.WithImportHandler(
@@ -146,7 +147,8 @@ func PrepareInterpreter(filename string, debugger *interpreter.Debugger) (*inter
 
 	codes := map[common.LocationID]string{}
 
-	location := common.StringLocation(filename)
+	// do not need to meter this as it's a one-off overhead
+	location := common.NewStringLocation(nil, filename)
 
 	program, must := PrepareProgramFromFile(location, codes)
 
@@ -156,7 +158,7 @@ func PrepareInterpreter(filename string, debugger *interpreter.Debugger) (*inter
 
 	var uuid uint64
 
-	storage := interpreter.NewInMemoryStorage()
+	storage := interpreter.NewInMemoryStorage(nil)
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),

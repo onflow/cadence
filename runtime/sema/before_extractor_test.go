@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,11 +34,11 @@ func TestBeforeExtractor(t *testing.T) {
 
 	expression, errs := parser2.ParseExpression(`
         before(x + before(y)) + z
-    `)
+    `, nil)
 
 	require.Empty(t, errs)
 
-	extractor := NewBeforeExtractor(nil)
+	extractor := NewBeforeExtractor(nil, nil)
 
 	identifier1 := ast.Identifier{
 		Identifier: extractor.ExpressionExtractor.FormatIdentifier(0),

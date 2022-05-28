@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -262,7 +262,7 @@ func parseVariableDeclaration(
 		))
 	}
 
-	identifier := tokenToIdentifier(p.current)
+	identifier := p.tokenToIdentifier(p.current)
 
 	// Skip the identifier
 	p.next()
@@ -294,18 +294,19 @@ func parseVariableDeclaration(
 		secondValue = parseExpression(p, lowestBindingPower)
 	}
 
-	variableDeclaration := &ast.VariableDeclaration{
-		Access:         access,
-		IsConstant:     isLet,
-		Identifier:     identifier,
-		TypeAnnotation: typeAnnotation,
-		Value:          value,
-		Transfer:       transfer,
-		StartPos:       startPos,
-		SecondTransfer: secondTransfer,
-		SecondValue:    secondValue,
-		DocString:      docString,
-	}
+	variableDeclaration := ast.NewVariableDeclaration(
+		p.memoryGauge,
+		access,
+		isLet,
+		identifier,
+		typeAnnotation,
+		value,
+		transfer,
+		startPos,
+		secondTransfer,
+		secondValue,
+		docString,
+	)
 
 	castingExpression, leftIsCasting := value.(*ast.CastingExpression)
 	if leftIsCasting {
@@ -341,23 +342,26 @@ func parseTransfer(p *parser) *ast.Transfer {
 
 	p.next()
 
-	return &ast.Transfer{
-		Operation: operation,
-		Pos:       pos,
-	}
+	return ast.NewTransfer(
+		p.memoryGauge,
+		operation,
+		pos,
+	)
 }
 
 func parsePragmaDeclaration(p *parser) *ast.PragmaDeclaration {
 	startPos := p.current.StartPosition()
 	p.next()
 	expr := parseExpression(p, lowestBindingPower)
-	return &ast.PragmaDeclaration{
-		Range: ast.Range{
-			StartPos: startPos,
-			EndPos:   expr.EndPosition(),
-		},
-		Expression: expr,
-	}
+	return ast.NewPragmaDeclaration(
+		p.memoryGauge,
+		expr,
+		ast.NewRange(
+			p.memoryGauge,
+			startPos,
+			expr.EndPosition(p.memoryGauge),
+		),
+	)
 }
 
 // parseImportDeclaration parses an import declaration
@@ -385,10 +389,10 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 		case lexer.TokenString:
 			parsedString, errs := parseStringLiteral(p.current.Value.(string))
 			p.report(errs...)
-			location = common.StringLocation(parsedString)
+			location = common.NewStringLocation(p.memoryGauge, parsedString)
 
 		case lexer.TokenHexadecimalIntegerLiteral:
-			location = parseHexadecimalLocation(p.current.Value.(string))
+			location = parseHexadecimalLocation(p.memoryGauge, p.current.Value.(string))
 
 		default:
 			panic(errors.NewUnreachableError())
@@ -401,7 +405,7 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 	setIdentifierLocation := func(identifier ast.Identifier) {
 		location = common.IdentifierLocation(identifier.Identifier)
 		locationPos = identifier.Pos
-		endPos = identifier.EndPosition()
+		endPos = identifier.EndPosition(p.memoryGauge)
 	}
 
 	parseLocation := func() {
@@ -410,7 +414,7 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 			parseStringOrAddressLocation()
 
 		case lexer.TokenIdentifier:
-			identifier := tokenToIdentifier(p.current)
+			identifier := p.tokenToIdentifier(p.current)
 			setIdentifierLocation(identifier)
 			p.next()
 
@@ -468,7 +472,7 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 					// and process the current 'from' token as an identifier.
 				}
 
-				identifier := tokenToIdentifier(p.current)
+				identifier := p.tokenToIdentifier(p.current)
 				identifiers = append(identifiers, identifier)
 
 				expectCommaOrFrom = true
@@ -521,7 +525,7 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 		parseStringOrAddressLocation()
 
 	case lexer.TokenIdentifier:
-		identifier := tokenToIdentifier(p.current)
+		identifier := p.tokenToIdentifier(p.current)
 		// Skip the identifier
 		p.next()
 		p.skipSpaceAndComments(true)
@@ -559,15 +563,17 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 		))
 	}
 
-	return &ast.ImportDeclaration{
-		Identifiers: identifiers,
-		Location:    location,
-		Range: ast.Range{
-			StartPos: startPosition,
-			EndPos:   endPos,
-		},
-		LocationPos: locationPos,
-	}
+	return ast.NewImportDeclaration(
+		p.memoryGauge,
+		identifiers,
+		location,
+		ast.NewRange(
+			p.memoryGauge,
+			startPosition,
+			endPos,
+		),
+		locationPos,
+	)
 }
 
 // isNextTokenCommaOrFrom check whether the token to follow is a comma or a from token.
@@ -590,7 +596,7 @@ func isNextTokenCommaOrFrom(p *parser) bool {
 	}
 }
 
-func parseHexadecimalLocation(literal string) common.AddressLocation {
+func parseHexadecimalLocation(memoryGauge common.MemoryGauge, literal string) common.AddressLocation {
 	bytes := []byte(strings.ReplaceAll(literal[2:], "_", ""))
 
 	length := len(bytes)
@@ -611,9 +617,7 @@ func parseHexadecimalLocation(literal string) common.AddressLocation {
 		panic(err)
 	}
 
-	return common.AddressLocation{
-		Address: address,
-	}
+	return common.NewAddressLocation(memoryGauge, address, "")
 }
 
 // parseEventDeclaration parses an event declaration.
@@ -643,36 +647,48 @@ func parseEventDeclaration(
 		))
 	}
 
-	identifier := tokenToIdentifier(p.current)
+	identifier := p.tokenToIdentifier(p.current)
 	// Skip the identifier
 	p.next()
 
 	parameterList := parseParameterList(p)
 
-	initializer :=
-		&ast.SpecialFunctionDeclaration{
-			Kind: common.DeclarationKindInitializer,
-			FunctionDeclaration: &ast.FunctionDeclaration{
-				ParameterList: parameterList,
-				StartPos:      parameterList.StartPos,
-			},
-		}
+	initializer := ast.NewSpecialFunctionDeclaration(
+		p.memoryGauge,
+		common.DeclarationKindInitializer,
+		ast.NewFunctionDeclaration(
+			p.memoryGauge,
+			ast.AccessNotSpecified,
+			ast.NewEmptyIdentifier(p.memoryGauge, ast.EmptyPosition),
+			parameterList,
+			nil,
+			nil,
+			parameterList.StartPos,
+			"",
+		),
+	)
 
-	members := ast.NewMembers([]ast.Declaration{
-		initializer,
-	})
-
-	return &ast.CompositeDeclaration{
-		Access:        access,
-		CompositeKind: common.CompositeKindEvent,
-		Identifier:    identifier,
-		Members:       members,
-		DocString:     docString,
-		Range: ast.Range{
-			StartPos: startPos,
-			EndPos:   parameterList.EndPos,
+	members := ast.NewMembers(
+		p.memoryGauge,
+		[]ast.Declaration{
+			initializer,
 		},
-	}
+	)
+
+	return ast.NewCompositeDeclaration(
+		p.memoryGauge,
+		access,
+		common.CompositeKindEvent,
+		identifier,
+		nil,
+		members,
+		docString,
+		ast.NewRange(
+			p.memoryGauge,
+			startPos,
+			parameterList.EndPos,
+		),
+	)
 }
 
 // parseCompositeKind parses a composite kind.
@@ -738,7 +754,7 @@ func parseFieldWithVariableKind(
 		))
 	}
 
-	identifier := tokenToIdentifier(p.current)
+	identifier := p.tokenToIdentifier(p.current)
 	// Skip the identifier
 	p.next()
 	p.skipSpaceAndComments(true)
@@ -749,17 +765,19 @@ func parseFieldWithVariableKind(
 
 	typeAnnotation := parseTypeAnnotation(p)
 
-	return &ast.FieldDeclaration{
-		Access:         access,
-		VariableKind:   variableKind,
-		Identifier:     identifier,
-		TypeAnnotation: typeAnnotation,
-		DocString:      docString,
-		Range: ast.Range{
-			StartPos: startPos,
-			EndPos:   typeAnnotation.EndPosition(),
-		},
-	}
+	return ast.NewFieldDeclaration(
+		p.memoryGauge,
+		access,
+		variableKind,
+		identifier,
+		typeAnnotation,
+		docString,
+		ast.NewRange(
+			p.memoryGauge,
+			startPos,
+			typeAnnotation.EndPosition(p.memoryGauge),
+		),
+	)
 }
 
 // parseCompositeOrInterfaceDeclaration parses an event declaration.
@@ -816,7 +834,7 @@ func parseCompositeOrInterfaceDeclaration(
 			p.next()
 			continue
 		} else {
-			identifier = tokenToIdentifier(p.current)
+			identifier = p.tokenToIdentifier(p.current)
 			// Skip the identifier
 			p.next()
 			break
@@ -851,10 +869,11 @@ func parseCompositeOrInterfaceDeclaration(
 
 	endToken := p.mustOne(lexer.TokenBraceClose)
 
-	declarationRange := ast.Range{
-		StartPos: startPos,
-		EndPos:   endToken.EndPos,
-	}
+	declarationRange := ast.NewRange(
+		p.memoryGauge,
+		startPos,
+		endToken.EndPos,
+	)
 
 	if isInterface {
 		// TODO: remove once interface conformances are supported
@@ -863,24 +882,26 @@ func parseCompositeOrInterfaceDeclaration(
 			panic(fmt.Errorf("unexpected conformances"))
 		}
 
-		return &ast.InterfaceDeclaration{
-			Access:        access,
-			CompositeKind: compositeKind,
-			Identifier:    identifier,
-			Members:       members,
-			DocString:     docString,
-			Range:         declarationRange,
-		}
+		return ast.NewInterfaceDeclaration(
+			p.memoryGauge,
+			access,
+			compositeKind,
+			identifier,
+			members,
+			docString,
+			declarationRange,
+		)
 	} else {
-		return &ast.CompositeDeclaration{
-			Access:        access,
-			CompositeKind: compositeKind,
-			Identifier:    identifier,
-			Conformances:  conformances,
-			Members:       members,
-			DocString:     docString,
-			Range:         declarationRange,
-		}
+		return ast.NewCompositeDeclaration(
+			p.memoryGauge,
+			access,
+			compositeKind,
+			identifier,
+			conformances,
+			members,
+			docString,
+			declarationRange,
+		)
 	}
 }
 
@@ -906,12 +927,12 @@ func parseMembersAndNestedDeclarations(p *parser, endTokenType lexer.TokenType) 
 			continue
 
 		case endTokenType, lexer.TokenEOF:
-			return ast.NewMembers(declarations)
+			return ast.NewMembers(p.memoryGauge, declarations)
 
 		default:
 			memberOrNestedDeclaration := parseMemberOrNestedDeclaration(p, docString)
 			if memberOrNestedDeclaration == nil {
-				return ast.NewMembers(declarations)
+				return ast.NewMembers(p.memoryGauge, declarations)
 			}
 
 			declarations = append(declarations, memberOrNestedDeclaration)
@@ -986,7 +1007,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) ast.Declaration
 				panic(fmt.Errorf("unexpected %s", p.current.Type))
 			}
 
-			identifier := tokenToIdentifier(*previousIdentifierToken)
+			identifier := p.tokenToIdentifier(*previousIdentifierToken)
 			return parseFieldDeclarationWithoutVariableKind(p, access, accessPos, identifier, docString)
 
 		case lexer.TokenParenOpen:
@@ -994,7 +1015,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) ast.Declaration
 				panic(fmt.Errorf("unexpected %s", p.current.Type))
 			}
 
-			identifier := tokenToIdentifier(*previousIdentifierToken)
+			identifier := p.tokenToIdentifier(*previousIdentifierToken)
 			return parseSpecialFunctionDeclaration(p, functionBlockIsOptional, access, accessPos, identifier)
 		}
 
@@ -1021,17 +1042,19 @@ func parseFieldDeclarationWithoutVariableKind(
 
 	typeAnnotation := parseTypeAnnotation(p)
 
-	return &ast.FieldDeclaration{
-		Access:         access,
-		VariableKind:   ast.VariableKindNotSpecified,
-		Identifier:     identifier,
-		TypeAnnotation: typeAnnotation,
-		DocString:      docString,
-		Range: ast.Range{
-			StartPos: startPos,
-			EndPos:   typeAnnotation.EndPosition(),
-		},
-	}
+	return ast.NewFieldDeclaration(
+		p.memoryGauge,
+		access,
+		ast.VariableKindNotSpecified,
+		identifier,
+		typeAnnotation,
+		docString,
+		ast.NewRange(
+			p.memoryGauge,
+			startPos,
+			typeAnnotation.EndPosition(p.memoryGauge),
+		),
+	)
 }
 
 func parseSpecialFunctionDeclaration(
@@ -1074,16 +1097,20 @@ func parseSpecialFunctionDeclaration(
 		declarationKind = common.DeclarationKindPrepare
 	}
 
-	return &ast.SpecialFunctionDeclaration{
-		Kind: declarationKind,
-		FunctionDeclaration: &ast.FunctionDeclaration{
-			Access:        access,
-			Identifier:    identifier,
-			ParameterList: parameterList,
-			FunctionBlock: functionBlock,
-			StartPos:      startPos,
-		},
-	}
+	return ast.NewSpecialFunctionDeclaration(
+		p.memoryGauge,
+		declarationKind,
+		ast.NewFunctionDeclaration(
+			p.memoryGauge,
+			access,
+			identifier,
+			parameterList,
+			nil,
+			functionBlock,
+			startPos,
+			"",
+		),
+	)
 }
 
 // parseEnumCase parses a field which has a variable kind.
@@ -1113,14 +1140,15 @@ func parseEnumCase(
 		))
 	}
 
-	identifier := tokenToIdentifier(p.current)
+	identifier := p.tokenToIdentifier(p.current)
 	// Skip the identifier
 	p.next()
 
-	return &ast.EnumCaseDeclaration{
-		Access:     access,
-		Identifier: identifier,
-		DocString:  docString,
-		StartPos:   startPos,
-	}
+	return ast.NewEnumCaseDeclaration(
+		p.memoryGauge,
+		access,
+		identifier,
+		docString,
+		startPos,
+	)
 }

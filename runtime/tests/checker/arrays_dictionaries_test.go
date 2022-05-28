@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1078,17 +1078,6 @@ func TestCheckInvalidConstantSizedArrayDeclarationCountMismatchTooMany(t *testin
 func TestCheckInvalidConstantSizedArrayDeclarationOutOfRangeSize(t *testing.T) {
 
 	t.Parallel()
-
-	t.Run("negative", func(t *testing.T) {
-
-		_, err := ParseAndCheck(t, `
-          let x: [Int; -1] = []
-		`)
-
-		errs := ExpectCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.InvalidConstantSizedTypeSizeError{}, errs[0])
-	})
 
 	t.Run("too large", func(t *testing.T) {
 

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2021 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -218,6 +218,11 @@ const (
 	CBORTagReferenceStaticType
 	CBORTagRestrictedStaticType
 	CBORTagCapabilityStaticType
+
+	// !!! *WARNING* !!!
+	// ADD NEW TYPES *BEFORE* THIS WARNING.
+	// DO *NOT* ADD NEW TYPES AFTER THIS LINE!
+	CBORTag_Count
 )
 
 // CBOREncMode
@@ -960,11 +965,6 @@ func StaticTypeToBytes(t StaticType) (cbor.RawMessage, error) {
 	return buf.Bytes(), nil
 }
 
-func StaticTypeFromBytes(data []byte) (StaticType, error) {
-	dec := CBORDecMode.NewByteStreamDecoder(data)
-	return decodeStaticType(dec)
-}
-
 func EncodeStaticType(e *cbor.StreamEncoder, t StaticType) error {
 	if t == nil {
 		return e.EncodeNil()
@@ -1182,7 +1182,7 @@ func (t ReferenceStaticType) Encode(e *cbor.StreamEncoder) error {
 		return err
 	}
 	// Encode type at array index encodedReferenceStaticTypeTypeFieldKey
-	return EncodeStaticType(e, t.Type)
+	return EncodeStaticType(e, t.BorrowedType)
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64
@@ -1304,6 +1304,21 @@ type compositeTypeInfo struct {
 	location            common.Location
 	qualifiedIdentifier string
 	kind                common.CompositeKind
+}
+
+func NewCompositeTypeInfo(
+	memoryGauge common.MemoryGauge,
+	location common.Location,
+	qualifiedIdentifier string,
+	kind common.CompositeKind,
+) compositeTypeInfo {
+	common.UseMemory(memoryGauge, common.CompositeTypeInfoMemoryUsage)
+
+	return compositeTypeInfo{
+		location:            location,
+		qualifiedIdentifier: qualifiedIdentifier,
+		kind:                kind,
+	}
 }
 
 var _ atree.TypeInfo = compositeTypeInfo{}

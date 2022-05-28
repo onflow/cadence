@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -444,7 +444,7 @@ func TestRestrictedType_GetMember(t *testing.T) {
 		}
 
 		fieldName := "s"
-		resourceType.Members.Set(fieldName, NewPublicConstantFieldMember(
+		resourceType.Members.Set(fieldName, NewUnmeteredPublicConstantFieldMember(
 			ty.Type,
 			fieldName,
 			IntType,
@@ -456,9 +456,14 @@ func TestRestrictedType_GetMember(t *testing.T) {
 		require.Contains(t, actualMembers, fieldName)
 
 		var reportedError error
-		actualMember := actualMembers[fieldName].Resolve(fieldName, ast.Range{}, func(err error) {
-			reportedError = err
-		})
+		actualMember := actualMembers[fieldName].Resolve(
+			nil,
+			fieldName,
+			ast.Range{},
+			func(err error) {
+				reportedError = err
+			},
+		)
 
 		assert.IsType(t, &InvalidRestrictedTypeMemberAccessError{}, reportedError)
 		assert.NotNil(t, actualMember)
@@ -490,14 +495,14 @@ func TestRestrictedType_GetMember(t *testing.T) {
 
 		fieldName := "s"
 
-		resourceType.Members.Set(fieldName, NewPublicConstantFieldMember(
+		resourceType.Members.Set(fieldName, NewUnmeteredPublicConstantFieldMember(
 			restrictedType.Type,
 			fieldName,
 			IntType,
 			"",
 		))
 
-		interfaceMember := NewPublicConstantFieldMember(
+		interfaceMember := NewUnmeteredPublicConstantFieldMember(
 			restrictedType.Type,
 			fieldName,
 			IntType,
@@ -509,7 +514,7 @@ func TestRestrictedType_GetMember(t *testing.T) {
 
 		require.Contains(t, actualMembers, fieldName)
 
-		actualMember := actualMembers[fieldName].Resolve(fieldName, ast.Range{}, nil)
+		actualMember := actualMembers[fieldName].Resolve(nil, fieldName, ast.Range{}, nil)
 
 		assert.Same(t, interfaceMember, actualMember)
 	})
@@ -635,12 +640,13 @@ func TestIdentifierCacheUpdate(t *testing.T) {
           }
 	`
 
-	program, err := parser2.ParseProgram(code)
+	program, err := parser2.ParseProgram(code, nil)
 	require.NoError(t, err)
 
 	checker, err := NewChecker(
 		program,
 		common.StringLocation("test"),
+		nil,
 	)
 	require.NoError(t, err)
 
@@ -870,25 +876,6 @@ func TestCommonSuperType(t *testing.T) {
 					nilType,
 				},
 				expectedSuperType: nilType,
-			},
-			{
-				name: "optional",
-				types: []Type{
-					nilType,
-					Int8Type,
-				},
-				expectedSuperType: &OptionalType{
-					Type: Int8Type,
-				},
-			},
-			{
-				name: "optional with heterogeneous types",
-				types: []Type{
-					nilType,
-					Int8Type,
-					StringType,
-				},
-				expectedSuperType: AnyStructType,
 			},
 			{
 				name: "never type",
@@ -1547,6 +1534,118 @@ func TestCommonSuperType(t *testing.T) {
 				assert.NotNil(t, typ, fmt.Sprintf("not implemented %v", typeTag))
 			})
 		}
+	})
+
+	t.Run("Optional types", func(t *testing.T) {
+		t.Parallel()
+
+		testLocation := common.StringLocation("test")
+
+		structType := &CompositeType{
+			Location:   testLocation,
+			Identifier: "T",
+			Kind:       common.CompositeKindStructure,
+			Members:    NewStringMemberOrderedMap(),
+		}
+
+		optionalStructType := &OptionalType{
+			Type: structType,
+		}
+
+		doubleOptionalStructType := &OptionalType{
+			Type: &OptionalType{
+				Type: structType,
+			},
+		}
+
+		tests := []testCase{
+			{
+				name: "simple types",
+				types: []Type{
+					&OptionalType{
+						Type: IntType,
+					},
+					Int8Type,
+					StringType,
+				},
+				expectedSuperType: AnyStructType,
+			},
+			{
+				name: "nil with simple type",
+				types: []Type{
+					nilType,
+					Int8Type,
+				},
+				expectedSuperType: &OptionalType{
+					Type: Int8Type,
+				},
+			},
+			{
+				name: "nil with heterogeneous types",
+				types: []Type{
+					nilType,
+					Int8Type,
+					StringType,
+				},
+				expectedSuperType: AnyStructType,
+			},
+			{
+				name: "multi-level simple optional types",
+				types: []Type{
+					Int8Type,
+					&OptionalType{
+						Type: Int8Type,
+					},
+					&OptionalType{
+						Type: &OptionalType{
+							Type: Int8Type,
+						},
+					},
+				},
+
+				// supertype of `T`, `T?`, `T??` is `T??`
+				expectedSuperType: &OptionalType{
+					Type: &OptionalType{
+						Type: Int8Type,
+					},
+				},
+			},
+			{
+				name: "multi-level optional structs",
+				types: []Type{
+					structType,
+					optionalStructType,
+					doubleOptionalStructType,
+				},
+
+				// supertype of `T`, `T?`, `T??` is `T??`
+				expectedSuperType: doubleOptionalStructType,
+			},
+			{
+				name: "multi-level heterogeneous optional types",
+				types: []Type{
+					&OptionalType{
+						Type: Int8Type,
+					},
+					optionalStructType,
+					doubleOptionalStructType,
+				},
+
+				expectedSuperType: AnyStructType,
+			},
+			{
+				name: "multi-level heterogeneous types",
+				types: []Type{
+					Int8Type,
+					optionalStructType,
+					doubleOptionalStructType,
+				},
+
+				expectedSuperType: AnyStructType,
+			},
+		}
+
+		testLeastCommonSuperType(t, tests)
 	})
 }
 

@@ -5,7 +5,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,26 +22,33 @@
 
 package compiler
 
+import "github.com/onflow/cadence/runtime/common"
+
 // A LocalActivation is a map of strings to values.
 // It can be used to represent an active scope in a program,
 // i.e. it can be used as a symbol table during semantic analysis,
 // or as an activation record during interpretation or compilation.
 //
 type LocalActivation struct {
-	entries    map[string]*Local
-	Depth      int
-	Parent     *LocalActivation
-	isFunction bool
+	entries     map[string]*Local
+	Depth       int
+	Parent      *LocalActivation
+	isFunction  bool
+	memoryGauge common.MemoryGauge
 }
 
-func NewLocalActivation(parent *LocalActivation) *LocalActivation {
+func NewLocalActivation(memoryGauge common.MemoryGauge, parent *LocalActivation) *LocalActivation {
 	var depth int
 	if parent != nil {
 		depth = parent.Depth + 1
 	}
+
+	common.UseMemory(memoryGauge, common.ActivationMemoryUsage)
+
 	return &LocalActivation{
-		Depth:  depth,
-		Parent: parent,
+		Depth:       depth,
+		Parent:      parent,
+		memoryGauge: memoryGauge,
 	}
 }
 
@@ -99,6 +106,7 @@ func (a *LocalActivation) FunctionValues() map[string]*Local {
 //
 func (a *LocalActivation) Set(name string, value *Local) {
 	if a.entries == nil {
+		common.UseMemory(a.memoryGauge, common.ActivationEntriesMemoryUsage)
 		a.entries = make(map[string]*Local)
 	}
 
@@ -113,6 +121,16 @@ func (a *LocalActivation) Set(name string, value *Local) {
 //
 type LocalActivations struct {
 	activations []*LocalActivation
+	memoryGauge common.MemoryGauge
+}
+
+func NewLocalActivations(memoryGauge common.MemoryGauge) *LocalActivations {
+	// No need to meter since activations list is created only once per execution.
+	// However, memory gauge is needed here for caching, and using it
+	// later to meter each activation and activation entries initialization.
+	return &LocalActivations{
+		memoryGauge: memoryGauge,
+	}
 }
 
 // Current returns the current / most nested activation,
@@ -156,7 +174,7 @@ func (a *LocalActivations) Set(name string, value *Local) {
 // The new activation has the given parent as its parent.
 //
 func (a *LocalActivations) PushNewWithParent(parent *LocalActivation) *LocalActivation {
-	activation := NewLocalActivation(parent)
+	activation := NewLocalActivation(a.memoryGauge, parent)
 	a.Push(activation)
 	return activation
 }
@@ -187,7 +205,9 @@ func (a *LocalActivations) Pop() {
 	if count < 1 {
 		return
 	}
-	a.activations = a.activations[:count-1]
+	lastIndex := count - 1
+	a.activations[lastIndex] = nil
+	a.activations = a.activations[:lastIndex]
 }
 
 // CurrentOrNew returns the current activation,
@@ -196,7 +216,7 @@ func (a *LocalActivations) Pop() {
 func (a *LocalActivations) CurrentOrNew() *LocalActivation {
 	current := a.Current()
 	if current == nil {
-		return NewLocalActivation(nil)
+		return NewLocalActivation(a.memoryGauge, nil)
 	}
 
 	return current

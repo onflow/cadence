@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1069,6 +1069,26 @@ func TestCheckReferenceExpressionOfOptional(t *testing.T) {
 			refValueType,
 		)
 	})
+}
+
+func TestCheckNilCoalesceReference(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheckWithPanic(t, `
+      let xs = {"a": 1}
+      let ref = &xs["a"] as &Int? ?? panic("no a")
+    `)
+	require.NoError(t, err)
+
+	refValueType := RequireGlobalValue(t, checker.Elaboration, "ref")
+
+	assert.Equal(t,
+		&sema.ReferenceType{
+			Type: sema.IntType,
+		},
+		refValueType,
+	)
 }
 
 func TestCheckInvalidReferenceExpressionNonReferenceAmbiguous(t *testing.T) {

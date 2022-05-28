@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -105,7 +105,7 @@ func TestInterpretIfStatement(t *testing.T) {
 			AssertValuesEqual(
 				t,
 				inter,
-				interpreter.NewIntValueFromInt64(expected),
+				interpreter.NewUnmeteredIntValueFromInt64(expected),
 				value,
 			)
 		})
@@ -133,19 +133,19 @@ func TestInterpretIfStatementTestWithDeclaration(t *testing.T) {
 	t.Run("2", func(t *testing.T) {
 		value, err := inter.Invoke(
 			"test",
-			interpreter.NewIntValueFromInt64(2),
+			interpreter.NewUnmeteredIntValueFromInt64(2),
 		)
 		require.NoError(t, err)
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewIntValueFromInt64(2),
+			interpreter.NewUnmeteredIntValueFromInt64(2),
 			value,
 		)
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewIntValueFromInt64(1),
+			interpreter.NewUnmeteredIntValueFromInt64(1),
 			inter.Globals["branch"].GetValue(),
 		)
 	})
@@ -156,13 +156,13 @@ func TestInterpretIfStatementTestWithDeclaration(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewIntValueFromInt64(0),
+			interpreter.NewUnmeteredIntValueFromInt64(0),
 			value,
 		)
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewIntValueFromInt64(2),
+			interpreter.NewUnmeteredIntValueFromInt64(2),
 			inter.Globals["branch"].GetValue(),
 		)
 	})
@@ -188,19 +188,19 @@ func TestInterpretIfStatementTestWithDeclarationAndElse(t *testing.T) {
 	t.Run("2", func(t *testing.T) {
 		value, err := inter.Invoke(
 			"test",
-			interpreter.NewIntValueFromInt64(2),
+			interpreter.NewUnmeteredIntValueFromInt64(2),
 		)
 		require.NoError(t, err)
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewIntValueFromInt64(2),
+			interpreter.NewUnmeteredIntValueFromInt64(2),
 			value,
 		)
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewIntValueFromInt64(1),
+			interpreter.NewUnmeteredIntValueFromInt64(1),
 			inter.Globals["branch"].GetValue(),
 		)
 	})
@@ -211,13 +211,13 @@ func TestInterpretIfStatementTestWithDeclarationAndElse(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewIntValueFromInt64(0),
+			interpreter.NewUnmeteredIntValueFromInt64(0),
 			value,
 		)
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewIntValueFromInt64(2),
+			interpreter.NewUnmeteredIntValueFromInt64(2),
 			inter.Globals["branch"].GetValue(),
 		)
 
@@ -245,21 +245,21 @@ func TestInterpretIfStatementTestWithDeclarationNestedOptionals(t *testing.T) {
 	t.Run("2", func(t *testing.T) {
 		value, err := inter.Invoke(
 			"test",
-			interpreter.NewIntValueFromInt64(2),
+			interpreter.NewUnmeteredIntValueFromInt64(2),
 		)
 		require.NoError(t, err)
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewSomeValueNonCopying(
-				interpreter.NewIntValueFromInt64(2),
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(2),
 			),
 			value,
 		)
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewIntValueFromInt64(1),
+			interpreter.NewUnmeteredIntValueFromInt64(1),
 			inter.Globals["branch"].GetValue(),
 		)
 	})
@@ -271,15 +271,15 @@ func TestInterpretIfStatementTestWithDeclarationNestedOptionals(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewSomeValueNonCopying(
-				interpreter.NewIntValueFromInt64(0),
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(0),
 			),
 			value,
 		)
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewIntValueFromInt64(2),
+			interpreter.NewUnmeteredIntValueFromInt64(2),
 			inter.Globals["branch"].GetValue(),
 		)
 	})
@@ -306,21 +306,21 @@ func TestInterpretIfStatementTestWithDeclarationNestedOptionalsExplicitAnnotatio
 	t.Run("2", func(t *testing.T) {
 		value, err := inter.Invoke(
 			"test",
-			interpreter.NewIntValueFromInt64(2),
+			interpreter.NewUnmeteredIntValueFromInt64(2),
 		)
 		require.NoError(t, err)
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewSomeValueNonCopying(
-				interpreter.NewIntValueFromInt64(2),
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(2),
 			),
 			value,
 		)
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewIntValueFromInt64(1),
+			interpreter.NewUnmeteredIntValueFromInt64(1),
 			inter.Globals["branch"].GetValue(),
 		)
 
@@ -332,15 +332,15 @@ func TestInterpretIfStatementTestWithDeclarationNestedOptionalsExplicitAnnotatio
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewSomeValueNonCopying(
-				interpreter.NewIntValueFromInt64(0),
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(0),
 			),
 			value,
 		)
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewIntValueFromInt64(2),
+			interpreter.NewUnmeteredIntValueFromInt64(2),
 			inter.Globals["branch"].GetValue(),
 		)
 	})

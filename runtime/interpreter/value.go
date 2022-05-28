@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,9 @@ import (
 	"math/big"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
+	"unsafe"
 
 	"github.com/onflow/atree"
 	"github.com/rivo/uniseg"
@@ -41,8 +44,8 @@ import (
 type TypeConformanceResults map[typeConformanceResultEntry]bool
 
 type typeConformanceResultEntry struct {
-	EphemeralReferenceValue       *EphemeralReferenceValue
-	EphemeralReferenceDynamicType EphemeralReferenceDynamicType
+	EphemeralReferenceValue *EphemeralReferenceValue
+	EphemeralReferenceType  ReferenceStaticType
 }
 
 // SeenReferences is a set of seen references.
@@ -91,16 +94,16 @@ type Value interface {
 	fmt.Stringer
 	IsValue()
 	Accept(interpreter *Interpreter, visitor Visitor)
-	Walk(walkChild func(Value))
-	DynamicType(interpreter *Interpreter, seenReferences SeenReferences) DynamicType
-	StaticType() StaticType
-	ConformsToDynamicType(
+	Walk(interpreter *Interpreter, walkChild func(Value))
+	StaticType(interpreter *Interpreter) StaticType
+	ConformsToStaticType(
 		interpreter *Interpreter,
 		getLocationRange func() LocationRange,
-		dynamicType DynamicType,
+		staticType StaticType,
 		results TypeConformanceResults,
 	) bool
 	RecursiveString(seenReferences SeenReferences) string
+	MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string
 	IsResourceKinded(interpreter *Interpreter) bool
 	NeedsStoreTo(address atree.Address) bool
 	Transfer(
@@ -113,7 +116,9 @@ type Value interface {
 	DeepRemove(interpreter *Interpreter)
 	// Clone returns a new value that is equal to this value.
 	// NOTE: not used by interpreter, but used externally (e.g. state migration)
+	// NOTE: memory metering is unnecessary for Clone methods
 	Clone(interpreter *Interpreter) Value
+	IsImportable(interpreter *Interpreter) bool
 }
 
 // ValueIndexableValue
@@ -146,8 +151,8 @@ type EquatableValue interface {
 
 func newValueComparator(interpreter *Interpreter, getLocationRange func() LocationRange) atree.ValueComparator {
 	return func(storage atree.SlabStorage, atreeValue atree.Value, otherStorable atree.Storable) (bool, error) {
-		value := MustConvertStoredValue(atreeValue)
-		otherValue := StoredValue(otherStorable, storage)
+		value := MustConvertStoredValue(interpreter, atreeValue)
+		otherValue := StoredValue(interpreter, otherStorable, storage)
 		return value.(EquatableValue).Equal(interpreter, getLocationRange, otherValue), nil
 	}
 }
@@ -178,16 +183,70 @@ type ReferenceTrackedResourceKindedValue interface {
 	StorageID() atree.StorageID
 }
 
+func safeAdd(a, b int) int {
+	// INT32-C
+	if (b > 0) && (a > (goMaxInt - b)) {
+		panic(OverflowError{})
+	} else if (b < 0) && (a < (goMinInt - b)) {
+		panic(UnderflowError{})
+	}
+	return a + b
+}
+
+func safeMul(a, b int) int {
+	// INT32-C
+	if a > 0 {
+		if b > 0 {
+			// positive * positive = positive. overflow?
+			if a > (goMaxInt / b) {
+				panic(OverflowError{})
+			}
+		} else {
+			// positive * negative = negative. underflow?
+			if b < (goMinInt / a) {
+				panic(UnderflowError{})
+			}
+		}
+	} else {
+		if b > 0 {
+			// negative * positive = negative. underflow?
+			if a < (goMinInt / b) {
+				panic(UnderflowError{})
+			}
+		} else {
+			// negative * negative = positive. overflow?
+			if (a != 0) && (b < (goMaxInt / a)) {
+				panic(OverflowError{})
+			}
+		}
+	}
+	return a * b
+}
+
 // TypeValue
 
 type TypeValue struct {
 	Type StaticType
 }
 
+var EmptyTypeValue = TypeValue{}
+
 var _ Value = TypeValue{}
 var _ atree.Storable = TypeValue{}
 var _ EquatableValue = TypeValue{}
 var _ MemberAccessibleValue = TypeValue{}
+
+func NewUnmeteredTypeValue(t StaticType) TypeValue {
+	return TypeValue{t}
+}
+
+func NewTypeValue(
+	memoryGauge common.MemoryGauge,
+	staticType StaticType,
+) TypeValue {
+	common.UseMemory(memoryGauge, common.TypeValueMemoryUsage)
+	return NewUnmeteredTypeValue(staticType)
+}
 
 func (TypeValue) IsValue() {}
 
@@ -195,18 +254,16 @@ func (v TypeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitTypeValue(interpreter, v)
 }
 
-func (TypeValue) Walk(_ func(Value)) {
+func (TypeValue) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
-var metaTypeDynamicType DynamicType = MetaTypeDynamicType{}
-
-func (TypeValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return metaTypeDynamicType
+func (TypeValue) StaticType(interpreter *Interpreter) StaticType {
+	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeMetaType)
 }
 
-func (TypeValue) StaticType() StaticType {
-	return PrimitiveStaticTypeMetaType
+func (TypeValue) IsImportable(_ *Interpreter) bool {
+	return sema.MetaType.Importable
 }
 
 func (v TypeValue) String() string {
@@ -220,6 +277,11 @@ func (v TypeValue) String() string {
 }
 
 func (v TypeValue) RecursiveString(_ SeenReferences) string {
+	return v.String()
+}
+
+func (v TypeValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(memoryGauge, common.TypeValueStringMemoryUsage)
 	return v.String()
 }
 
@@ -249,9 +311,16 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ func() LocationRange, n
 		if staticType != nil {
 			typeID = string(interpreter.MustConvertStaticToSemaType(staticType).ID())
 		}
-		return NewStringValue(typeID)
+		memoryUsage := common.MemoryUsage{
+			Kind:   common.MemoryKindStringValue,
+			Amount: uint64(len(typeID)),
+		}
+		return NewStringValue(interpreter, memoryUsage, func() string {
+			return typeID
+		})
 	case "isSubtype":
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				staticType := v.Type
 				otherTypeValue, ok := invocation.Arguments[0].(TypeValue)
@@ -262,7 +331,7 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ func() LocationRange, n
 
 				// if either type is unknown, the subtype relation is false, as it doesn't make sense to even ask this question
 				if staticType == nil || otherStaticType == nil {
-					return BoolValue(false)
+					return NewBoolValue(interpreter, false)
 				}
 
 				inter := invocation.Interpreter
@@ -271,7 +340,7 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ func() LocationRange, n
 					inter.MustConvertStaticToSemaType(staticType),
 					inter.MustConvertStaticToSemaType(otherStaticType),
 				)
-				return BoolValue(result)
+				return NewBoolValue(interpreter, result)
 			},
 			sema.MetaTypeIsSubtypeFunctionType,
 		)
@@ -290,14 +359,13 @@ func (TypeValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ V
 	panic(errors.NewUnreachableError())
 }
 
-func (v TypeValue) ConformsToDynamicType(
-	_ *Interpreter,
+func (v TypeValue) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	_, ok := dynamicType.(MetaTypeDynamicType)
-	return ok
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (v TypeValue) Storable(
@@ -369,7 +437,7 @@ func (v TypeValue) HashInput(interpreter *Interpreter, _ func() LocationRange, s
 	}
 
 	buf[0] = byte(HashInputTypeType)
-	copy(buf[1:], []byte(typeID))
+	copy(buf[1:], typeID)
 	return buf
 }
 
@@ -381,24 +449,31 @@ var _ Value = VoidValue{}
 var _ atree.Storable = VoidValue{}
 var _ EquatableValue = VoidValue{}
 
+func NewUnmeteredVoidValue() VoidValue {
+	return VoidValue{}
+}
+
+func NewVoidValue(memoryGauge common.MemoryGauge) VoidValue {
+	common.UseMemory(memoryGauge, common.VoidValueMemoryUsage)
+	return NewUnmeteredVoidValue()
+}
+
 func (VoidValue) IsValue() {}
 
 func (v VoidValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitVoidValue(interpreter, v)
 }
 
-func (VoidValue) Walk(_ func(Value)) {
+func (VoidValue) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
-var voidDynamicType DynamicType = VoidDynamicType{}
-
-func (VoidValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return voidDynamicType
+func (VoidValue) StaticType(interpreter *Interpreter) StaticType {
+	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeVoid)
 }
 
-func (VoidValue) StaticType() StaticType {
-	return PrimitiveStaticTypeVoid
+func (VoidValue) IsImportable(_ *Interpreter) bool {
+	return sema.VoidType.Importable
 }
 
 func (VoidValue) String() string {
@@ -409,14 +484,18 @@ func (v VoidValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v VoidValue) ConformsToDynamicType(
-	_ *Interpreter,
+func (v VoidValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(memoryGauge, common.VoidStringMemoryUsage)
+	return v.String()
+}
+
+func (v VoidValue) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	_, ok := dynamicType.(VoidDynamicType)
-	return ok
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (v VoidValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -478,28 +557,40 @@ var _ atree.Storable = BoolValue(false)
 var _ EquatableValue = BoolValue(false)
 var _ HashableValue = BoolValue(false)
 
+func NewUnmeteredBoolValue(value bool) BoolValue {
+	return BoolValue(value)
+}
+
+func NewBoolValueFromConstructor(memoryGauge common.MemoryGauge, constructor func() bool) BoolValue {
+	common.UseMemory(memoryGauge, common.BoolValueMemoryUsage)
+	return NewUnmeteredBoolValue(constructor())
+}
+
+func NewBoolValue(memoryGauge common.MemoryGauge, value bool) BoolValue {
+	common.UseMemory(memoryGauge, common.BoolValueMemoryUsage)
+	return NewUnmeteredBoolValue(value)
+}
+
 func (BoolValue) IsValue() {}
 
 func (v BoolValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitBoolValue(interpreter, v)
 }
 
-func (BoolValue) Walk(_ func(Value)) {
+func (BoolValue) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
-var boolDynamicType DynamicType = BoolDynamicType{}
-
-func (BoolValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return boolDynamicType
+func (BoolValue) StaticType(interpreter *Interpreter) StaticType {
+	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeBool)
 }
 
-func (BoolValue) StaticType() StaticType {
-	return PrimitiveStaticTypeBool
+func (BoolValue) IsImportable(_ *Interpreter) bool {
+	return sema.BoolType.Importable
 }
 
-func (v BoolValue) Negate() BoolValue {
-	return !v
+func (v BoolValue) Negate(interpreter *Interpreter) BoolValue {
+	return NewBoolValue(interpreter, !bool(v))
 }
 
 func (v BoolValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -531,14 +622,23 @@ func (v BoolValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v BoolValue) ConformsToDynamicType(
-	_ *Interpreter,
+func (v BoolValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	if v {
+		common.UseMemory(memoryGauge, common.TrueStringMemoryUsage)
+	} else {
+		common.UseMemory(memoryGauge, common.FalseStringMemoryUsage)
+	}
+
+	return v.String()
+}
+
+func (v BoolValue) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	_, ok := dynamicType.(BoolDynamicType)
-	return ok
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (v BoolValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -594,8 +694,19 @@ func (BoolValue) ChildStorables() []atree.Storable {
 //
 type CharacterValue string
 
-func NewCharacterValue(r string) CharacterValue {
+func NewUnmeteredCharacterValue(r string) CharacterValue {
 	return CharacterValue(r)
+}
+
+func NewCharacterValue(
+	memoryGauge common.MemoryGauge,
+	memoryUsage common.MemoryUsage,
+	characterConstructor func() string,
+) CharacterValue {
+	common.UseMemory(memoryGauge, memoryUsage)
+
+	character := characterConstructor()
+	return NewUnmeteredCharacterValue(character)
 }
 
 var _ Value = CharacterValue("a")
@@ -610,18 +721,16 @@ func (v CharacterValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitCharacterValue(interpreter, v)
 }
 
-func (CharacterValue) Walk(_ func(Value)) {
+func (CharacterValue) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
-var charDyanmicType DynamicType = CharacterDynamicType{}
-
-func (CharacterValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return charDyanmicType
+func (CharacterValue) StaticType(interpreter *Interpreter) StaticType {
+	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeCharacter)
 }
 
-func (CharacterValue) StaticType() StaticType {
-	return PrimitiveStaticTypeCharacter
+func (CharacterValue) IsImportable(_ *Interpreter) bool {
+	return sema.CharacterType.Importable
 }
 
 func (v CharacterValue) String() string {
@@ -629,6 +738,12 @@ func (v CharacterValue) String() string {
 }
 
 func (v CharacterValue) RecursiveString(_ SeenReferences) string {
+	return v.String()
+}
+
+func (v CharacterValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	l := format.FormattedStringLength(string(v))
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(l))
 	return v.String()
 }
 
@@ -659,14 +774,13 @@ func (v CharacterValue) HashInput(_ *Interpreter, _ func() LocationRange, scratc
 	return buffer
 }
 
-func (v CharacterValue) ConformsToDynamicType(
-	_ *Interpreter,
+func (v CharacterValue) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	_, ok := dynamicType.(CharacterDynamicType)
-	return ok
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (v CharacterValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -703,7 +817,7 @@ func (CharacterValue) DeepRemove(_ *Interpreter) {
 }
 
 func (v CharacterValue) ByteSize() uint32 {
-	return cborTagSize + getBytesCBORSize([]byte(string(v)))
+	return cborTagSize + getBytesCBORSize([]byte(v))
 }
 
 func (v CharacterValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -714,12 +828,21 @@ func (CharacterValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func (v CharacterValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+func (v CharacterValue) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
-				return NewStringValue(string(v))
+				memoryUsage := common.NewStringMemoryUsage(len(v))
+
+				return NewStringValue(
+					interpreter,
+					memoryUsage,
+					func() string {
+						return string(v)
+					},
+				)
 			},
 			sema.ToStringFunctionType,
 		)
@@ -750,12 +873,22 @@ type StringValue struct {
 	graphemes *uniseg.Graphemes
 }
 
-func NewStringValue(str string) *StringValue {
+func NewUnmeteredStringValue(str string) *StringValue {
 	return &StringValue{
 		Str: str,
 		// a negative value indicates the length has not been initialized, see Length()
 		length: -1,
 	}
+}
+
+func NewStringValue(
+	memoryGauge common.MemoryGauge,
+	memoryUsage common.MemoryUsage,
+	stringConstructor func() string,
+) *StringValue {
+	common.UseMemory(memoryGauge, memoryUsage)
+	str := stringConstructor()
+	return NewUnmeteredStringValue(str)
 }
 
 var _ Value = &StringValue{}
@@ -779,18 +912,16 @@ func (v *StringValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitStringValue(interpreter, v)
 }
 
-func (*StringValue) Walk(_ func(Value)) {
+func (*StringValue) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
-var stringDynamicType DynamicType = StringDynamicType{}
-
-func (*StringValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return stringDynamicType
+func (*StringValue) StaticType(interpreter *Interpreter) StaticType {
+	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeString)
 }
 
-func (*StringValue) StaticType() StaticType {
-	return PrimitiveStaticTypeString
+func (*StringValue) IsImportable(_ *Interpreter) bool {
+	return sema.StringType.Importable
 }
 
 func (v *StringValue) String() string {
@@ -798,6 +929,12 @@ func (v *StringValue) String() string {
 }
 
 func (v *StringValue) RecursiveString(_ SeenReferences) string {
+	return v.String()
+}
+
+func (v StringValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	l := format.FormattedStringLength(v.Str)
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(l))
 	return v.String()
 }
 
@@ -830,14 +967,30 @@ func (v *StringValue) NormalForm() string {
 	return norm.NFC.String(v.Str)
 }
 
-func (v *StringValue) Concat(other *StringValue) Value {
-	var sb strings.Builder
+func (v *StringValue) Concat(interpreter *Interpreter, other *StringValue) Value {
 
-	sb.WriteString(v.Str)
-	sb.WriteString(other.Str)
+	firstLength := len(v.Str)
+	secondLength := len(other.Str)
 
-	return NewStringValue(sb.String())
+	newLength := safeAdd(firstLength, secondLength)
+
+	memoryUsage := common.NewStringMemoryUsage(newLength)
+
+	return NewStringValue(
+		interpreter,
+		memoryUsage,
+		func() string {
+			var sb strings.Builder
+
+			sb.WriteString(v.Str)
+			sb.WriteString(other.Str)
+
+			return sb.String()
+		},
+	)
 }
+
+var emptyString = NewUnmeteredStringValue("")
 
 func (v *StringValue) Slice(from IntValue, to IntValue, getLocationRange func() LocationRange) Value {
 	fromIndex := from.ToInt()
@@ -864,7 +1017,7 @@ func (v *StringValue) Slice(from IntValue, to IntValue, getLocationRange func() 
 	}
 
 	if fromIndex == toIndex {
-		return NewStringValue("")
+		return emptyString
 	}
 
 	v.prepareGraphemes()
@@ -881,7 +1034,9 @@ func (v *StringValue) Slice(from IntValue, to IntValue, getLocationRange func() 
 	}
 	_, end := v.graphemes.Positions()
 
-	return NewStringValue(v.Str[start:end])
+	// NOTE: string slicing in Go does not copy,
+	// see https://stackoverflow.com/questions/52395730/does-slice-of-string-perform-copy-of-underlying-data
+	return NewUnmeteredStringValue(v.Str[start:end])
 }
 
 func (v *StringValue) checkBounds(index int, getLocationRange func() LocationRange) {
@@ -896,7 +1051,7 @@ func (v *StringValue) checkBounds(index int, getLocationRange func() LocationRan
 	}
 }
 
-func (v *StringValue) GetKey(_ *Interpreter, getLocationRange func() LocationRange, key Value) Value {
+func (v *StringValue) GetKey(interpreter *Interpreter, getLocationRange func() LocationRange, key Value) Value {
 	index := key.(NumberValue).ToInt()
 	v.checkBounds(index, getLocationRange)
 
@@ -907,7 +1062,13 @@ func (v *StringValue) GetKey(_ *Interpreter, getLocationRange func() LocationRan
 	}
 
 	char := v.graphemes.Str()
-	return NewCharacterValue(char)
+	return NewCharacterValue(
+		interpreter,
+		common.NewCharacterMemoryUsage(len(char)),
+		func() string {
+			return char
+		},
+	)
 }
 
 func (*StringValue) SetKey(_ *Interpreter, _ func() LocationRange, _ Value, _ Value) {
@@ -926,25 +1087,27 @@ func (v *StringValue) GetMember(interpreter *Interpreter, _ func() LocationRange
 	switch name {
 	case "length":
 		length := v.Length()
-		return NewIntValueFromInt64(int64(length))
+		return NewIntValueFromInt64(interpreter, int64(length))
 
 	case "utf8":
 		return ByteSliceToByteArrayValue(interpreter, []byte(v.Str))
 
 	case "concat":
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				otherArray, ok := invocation.Arguments[0].(*StringValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
-				return v.Concat(otherArray)
+				return v.Concat(interpreter, otherArray)
 			},
 			sema.StringTypeConcatFunctionType,
 		)
 
 	case "slice":
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				from, ok := invocation.Arguments[0].(IntValue)
 				if !ok {
@@ -963,6 +1126,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, _ func() LocationRange
 
 	case "decodeHex":
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				return v.DecodeHex(invocation.Interpreter)
 			},
@@ -971,8 +1135,9 @@ func (v *StringValue) GetMember(interpreter *Interpreter, _ func() LocationRange
 
 	case "toLower":
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
-				return v.ToLower()
+				return v.ToLower(invocation.Interpreter)
 			},
 			sema.StringTypeToLowerFunctionType,
 		)
@@ -1005,8 +1170,30 @@ func (v *StringValue) Length() int {
 	return v.length
 }
 
-func (v *StringValue) ToLower() *StringValue {
-	return NewStringValue(strings.ToLower(v.Str))
+func (v *StringValue) ToLower(interpreter *Interpreter) *StringValue {
+
+	// Over-estimate resulting string length,
+	// as an uppercase character may be converted to several lower-case characters, e.g İ => [i, ̇]
+	// see https://stackoverflow.com/questions/28683805/is-there-a-unicode-string-which-gets-longer-when-converted-to-lowercase
+
+	var lengthEstimate int
+	for _, r := range v.Str {
+		if r < unicode.MaxASCII {
+			lengthEstimate += 1
+		} else {
+			lengthEstimate += utf8.UTFMax
+		}
+	}
+
+	memoryUsage := common.NewStringMemoryUsage(lengthEstimate)
+
+	return NewStringValue(
+		interpreter,
+		memoryUsage,
+		func() string {
+			return strings.ToLower(v.Str)
+		},
+	)
 }
 
 func (v *StringValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
@@ -1035,7 +1222,7 @@ func (v *StringValue) Transfer(
 }
 
 func (v *StringValue) Clone(_ *Interpreter) Value {
-	return NewStringValue(v.Str)
+	return NewUnmeteredStringValue(v.Str)
 }
 
 func (*StringValue) DeepRemove(_ *Interpreter) {
@@ -1054,7 +1241,8 @@ func (*StringValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
-var ByteArrayStaticType = ConvertSemaArrayTypeToStaticArrayType(sema.ByteArrayType)
+// Memory is NOT metered for this value
+var ByteArrayStaticType = ConvertSemaArrayTypeToStaticArrayType(nil, sema.ByteArrayType)
 
 // DecodeHex hex-decodes this string and returns an array of UInt8 values
 //
@@ -1070,12 +1258,18 @@ func (v *StringValue) DecodeHex(interpreter *Interpreter) *ArrayValue {
 		interpreter,
 		ByteArrayStaticType,
 		common.Address{},
+		uint64(len(bs)),
 		func() Value {
 			if i >= len(bs) {
 				return nil
 			}
 
-			value := UInt8Value(bs[i])
+			value := NewUInt8Value(
+				interpreter,
+				func() uint8 {
+					return bs[i]
+				},
+			)
 
 			i++
 
@@ -1084,14 +1278,13 @@ func (v *StringValue) DecodeHex(interpreter *Interpreter) *ArrayValue {
 	)
 }
 
-func (*StringValue) ConformsToDynamicType(
-	_ *Interpreter,
+func (v *StringValue) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	_, ok := dynamicType.(StringDynamicType)
-	return ok
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 // ArrayValue
@@ -1102,6 +1295,7 @@ type ArrayValue struct {
 	array            *atree.Array
 	isDestroyed      bool
 	isResourceKinded *bool
+	elementSize      uint
 }
 
 func NewArrayValue(
@@ -1118,6 +1312,7 @@ func NewArrayValue(
 		interpreter,
 		arrayType,
 		address,
+		uint64(count),
 		func() Value {
 			if index >= count {
 				return nil
@@ -1145,9 +1340,9 @@ func NewArrayValueWithIterator(
 	interpreter *Interpreter,
 	arrayType ArrayStaticType,
 	address common.Address,
+	count uint64,
 	values func() Value,
 ) *ArrayValue {
-
 	interpreter.ReportComputation(common.ComputationKindCreateArrayValue, 1)
 
 	var v *ArrayValue
@@ -1173,24 +1368,54 @@ func NewArrayValueWithIterator(
 		}()
 	}
 
-	array, err := atree.NewArrayFromBatchData(
-		interpreter.Storage,
-		atree.Address(address),
-		arrayType,
-		func() (atree.Value, error) {
-			return values(), nil
-		},
-	)
-	if err != nil {
-		panic(ExternalError{err})
+	constructor := func() *atree.Array {
+		array, err := atree.NewArrayFromBatchData(
+			interpreter.Storage,
+			atree.Address(address),
+			arrayType,
+			func() (atree.Value, error) {
+				return values(), nil
+			},
+		)
+		if err != nil {
+			panic(ExternalError{err})
+		}
+		return array
 	}
+	// must assign to v here for tracing to work properly
+	v = newArrayValueFromConstructor(interpreter, arrayType, count, constructor)
+	return v
+}
 
-	v = &ArrayValue{
-		Type:  arrayType,
+func newArrayValueFromAtreeValue(
+	array *atree.Array,
+	staticType ArrayStaticType,
+) *ArrayValue {
+	return &ArrayValue{
+		Type:  staticType,
 		array: array,
 	}
+}
 
-	return v
+func newArrayValueFromConstructor(
+	gauge common.MemoryGauge,
+	staticType ArrayStaticType,
+	count uint64,
+	constructor func() *atree.Array,
+) (array *ArrayValue) {
+	var elementSize uint
+	if staticType != nil {
+		elementSize = staticType.ElementType().elementSize()
+	}
+	baseUsage, elementUsage, dataSlabs, metaDataSlabs := common.NewArrayMemoryUsages(count, elementSize)
+	common.UseMemory(gauge, baseUsage)
+	common.UseMemory(gauge, elementUsage)
+	common.UseMemory(gauge, dataSlabs)
+	common.UseMemory(gauge, metaDataSlabs)
+
+	array = newArrayValueFromAtreeValue(constructor(), staticType)
+	array.elementSize = elementSize
+	return
 }
 
 var _ Value = &ArrayValue{}
@@ -1208,17 +1433,17 @@ func (v *ArrayValue) Accept(interpreter *Interpreter, visitor Visitor) {
 		return
 	}
 
-	v.Walk(func(element Value) {
+	v.Walk(interpreter, func(element Value) {
 		element.Accept(interpreter, visitor)
 	})
 }
 
-func (v *ArrayValue) Iterate(f func(element Value) (resume bool)) {
+func (v *ArrayValue) Iterate(gauge common.MemoryGauge, f func(element Value) (resume bool)) {
 	err := v.array.Iterate(func(element atree.Value) (resume bool, err error) {
 		// atree.Array iteration provides low-level atree.Value,
 		// convert to high-level interpreter.Value
 
-		resume = f(MustConvertStoredValue(element))
+		resume = f(MustConvertStoredValue(gauge, element))
 
 		return resume, nil
 	})
@@ -1227,31 +1452,32 @@ func (v *ArrayValue) Iterate(f func(element Value) (resume bool)) {
 	}
 }
 
-func (v *ArrayValue) Walk(walkChild func(Value)) {
-	v.Iterate(func(element Value) (resume bool) {
+func (v *ArrayValue) Walk(interpreter *Interpreter, walkChild func(Value)) {
+	v.Iterate(interpreter, func(element Value) (resume bool) {
 		walkChild(element)
 		return true
 	})
 }
 
-func (v *ArrayValue) DynamicType(interpreter *Interpreter, seenReferences SeenReferences) DynamicType {
-	elementTypes := make([]DynamicType, v.Count())
-
-	i := 0
-
-	v.Walk(func(element Value) {
-		elementTypes[i] = element.DynamicType(interpreter, seenReferences)
-		i++
-	})
-
-	return &ArrayDynamicType{
-		ElementTypes: elementTypes,
-		StaticType:   v.Type,
-	}
+func (v *ArrayValue) StaticType(_ *Interpreter) StaticType {
+	// TODO meter
+	return v.Type
 }
 
-func (v *ArrayValue) StaticType() StaticType {
-	return v.Type
+func (v *ArrayValue) IsImportable(inter *Interpreter) bool {
+	importable := true
+	v.Iterate(inter, func(element Value) (resume bool) {
+		if !element.IsImportable(inter) {
+			importable = false
+			// stop iteration
+			return false
+		}
+
+		// continue iteration
+		return true
+	})
+
+	return importable
 }
 
 func (v *ArrayValue) checkInvalidatedResourceUse(interpreter *Interpreter, getLocationRange func() LocationRange) {
@@ -1285,7 +1511,7 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, getLocationRange func() L
 		}()
 	}
 
-	v.Walk(func(element Value) {
+	v.Walk(interpreter, func(element Value) {
 		maybeDestroy(interpreter, getLocationRange, element)
 	})
 
@@ -1319,6 +1545,7 @@ func (v *ArrayValue) Concat(interpreter *Interpreter, getLocationRange func() Lo
 		interpreter,
 		v.Type,
 		common.Address{},
+		v.array.Count()+other.array.Count(),
 		func() Value {
 
 			var value Value
@@ -1332,7 +1559,7 @@ func (v *ArrayValue) Concat(interpreter *Interpreter, getLocationRange func() Lo
 				if atreeValue == nil {
 					first = false
 				} else {
-					value = MustConvertStoredValue(atreeValue)
+					value = MustConvertStoredValue(interpreter, atreeValue)
 				}
 			}
 
@@ -1343,7 +1570,7 @@ func (v *ArrayValue) Concat(interpreter *Interpreter, getLocationRange func() Lo
 				}
 
 				if atreeValue != nil {
-					value = MustConvertStoredValue(atreeValue)
+					value = MustConvertStoredValue(interpreter, atreeValue)
 
 					interpreter.checkContainerMutation(elementType, value, getLocationRange)
 				}
@@ -1404,7 +1631,7 @@ func (v *ArrayValue) Get(interpreter *Interpreter, getLocationRange func() Locat
 		panic(ExternalError{err})
 	}
 
-	return StoredValue(storable, interpreter.Storage)
+	return StoredValue(interpreter, storable, interpreter.Storage)
 }
 
 func (v *ArrayValue) SetKey(interpreter *Interpreter, getLocationRange func() LocationRange, key Value, value Value) {
@@ -1432,6 +1659,8 @@ func (v *ArrayValue) Set(interpreter *Interpreter, getLocationRange func() Locat
 
 	interpreter.checkContainerMutation(v.Type.ElementType(), element, getLocationRange)
 
+	common.UseMemory(interpreter, common.AtreeArrayElementOverhead)
+
 	element = element.Transfer(
 		interpreter,
 		getLocationRange,
@@ -1448,7 +1677,7 @@ func (v *ArrayValue) Set(interpreter *Interpreter, getLocationRange func() Locat
 	}
 	interpreter.maybeValidateAtreeValue(v.array)
 
-	existingValue := StoredValue(existingStorable, interpreter.Storage)
+	existingValue := StoredValue(interpreter, existingStorable, interpreter.Storage)
 
 	existingValue.DeepRemove(interpreter)
 
@@ -1460,18 +1689,44 @@ func (v *ArrayValue) String() string {
 }
 
 func (v *ArrayValue) RecursiveString(seenReferences SeenReferences) string {
+	return v.MeteredString(nil, seenReferences)
+}
+
+func (v *ArrayValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+	// if n > 0:
+	// len = open-bracket + close-bracket + ((n-1) comma+space)
+	//     = 2 + 2n - 2
+	//     = 2n
+	// Always +2 to include empty array case (over estimate).
+	// Each elements' string value is metered individually.
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(v.Count()*2+2))
+
 	values := make([]string, v.Count())
 
 	i := 0
-	v.Walk(func(value Value) {
-		values[i] = value.RecursiveString(seenReferences)
+
+	_ = v.array.Iterate(func(element atree.Value) (resume bool, err error) {
+		// ok to not meter anything created as part of this iteration, since we will discard the result
+		// upon creating the string
+		values[i] = MustConvertUnmeteredStoredValue(element).MeteredString(memoryGauge, seenReferences)
 		i++
+		return true, nil
 	})
 
 	return format.Array(values)
 }
 
 func (v *ArrayValue) Append(interpreter *Interpreter, getLocationRange func() LocationRange, element Value) {
+
+	// length increases by 1
+	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(
+		v.array.Count(),
+		v.elementSize,
+		true,
+	)
+	common.UseMemory(interpreter, dataSlabs)
+	common.UseMemory(interpreter, metaDataSlabs)
+	common.UseMemory(interpreter, common.AtreeArrayElementOverhead)
 
 	interpreter.checkContainerMutation(v.Type.ElementType(), element, getLocationRange)
 
@@ -1491,7 +1746,7 @@ func (v *ArrayValue) Append(interpreter *Interpreter, getLocationRange func() Lo
 }
 
 func (v *ArrayValue) AppendAll(interpreter *Interpreter, getLocationRange func() LocationRange, other *ArrayValue) {
-	other.Walk(func(value Value) {
+	other.Walk(interpreter, func(value Value) {
 		v.Append(interpreter, getLocationRange, value)
 	})
 }
@@ -1518,6 +1773,16 @@ func (v *ArrayValue) Insert(interpreter *Interpreter, getLocationRange func() Lo
 			LocationRange: getLocationRange(),
 		})
 	}
+
+	// length increases by 1
+	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(
+		v.array.Count(),
+		v.elementSize,
+		true,
+	)
+	common.UseMemory(interpreter, dataSlabs)
+	common.UseMemory(interpreter, metaDataSlabs)
+	common.UseMemory(interpreter, common.AtreeArrayElementOverhead)
 
 	interpreter.checkContainerMutation(v.Type.ElementType(), element, getLocationRange)
 
@@ -1569,7 +1834,7 @@ func (v *ArrayValue) Remove(interpreter *Interpreter, getLocationRange func() Lo
 	}
 	interpreter.maybeValidateAtreeValue(v.array)
 
-	value := StoredValue(storable, interpreter.Storage)
+	value := StoredValue(interpreter, storable, interpreter.Storage)
 
 	return value.Transfer(
 		interpreter,
@@ -1597,7 +1862,7 @@ func (v *ArrayValue) FirstIndex(interpreter *Interpreter, getLocationRange func(
 
 	var counter int64
 	var result bool
-	v.Iterate(func(element Value) (resume bool) {
+	v.Iterate(interpreter, func(element Value) (resume bool) {
 		if needleEquatable.Equal(interpreter, getLocationRange, element) {
 			result = true
 			// stop iteration
@@ -1609,31 +1874,39 @@ func (v *ArrayValue) FirstIndex(interpreter *Interpreter, getLocationRange func(
 	})
 
 	if result {
-		value := NewIntValueFromInt64(counter)
-		return NewSomeValueNonCopying(value)
+		value := NewIntValueFromInt64(interpreter, counter)
+		return NewSomeValueNonCopying(interpreter, value)
 	}
 	return NilValue{}
 }
 
-func (v *ArrayValue) Contains(interpreter *Interpreter, getLocationRange func() LocationRange, needleValue Value) BoolValue {
+func (v *ArrayValue) Contains(
+	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
+	needleValue Value,
+) BoolValue {
 
 	needleEquatable, ok := needleValue.(EquatableValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
-	var result bool
-	v.Iterate(func(element Value) (resume bool) {
-		if needleEquatable.Equal(interpreter, getLocationRange, element) {
-			result = true
-			// stop iteration
-			return false
-		}
-		// continue iteration
-		return true
-	})
+	valueGetter := func() bool {
+		result := false
+		v.Iterate(interpreter, func(element Value) (resume bool) {
+			if needleEquatable.Equal(interpreter, getLocationRange, element) {
+				result = true
+				// stop iteration
+				return false
+			}
+			// continue iteration
+			return true
+		})
 
-	return BoolValue(result)
+		return result
+	}
+
+	return NewBoolValueFromConstructor(interpreter, valueGetter)
 }
 
 func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
@@ -1641,20 +1914,20 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func()
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
 	}
-
 	switch name {
 	case "length":
-		return NewIntValueFromInt64(int64(v.Count()))
+		return NewIntValueFromInt64(interpreter, int64(v.Count()))
 
 	case "append":
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				v.Append(
 					invocation.Interpreter,
 					invocation.GetLocationRange,
 					invocation.Arguments[0],
 				)
-				return VoidValue{}
+				return NewVoidValue(invocation.Interpreter)
 			},
 			sema.ArrayAppendFunctionType(
 				v.SemaType(interpreter).ElementType(false),
@@ -1663,6 +1936,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func()
 
 	case "appendAll":
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				otherArray, ok := invocation.Arguments[0].(*ArrayValue)
 				if !ok {
@@ -1673,7 +1947,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func()
 					invocation.GetLocationRange,
 					otherArray,
 				)
-				return VoidValue{}
+				return NewVoidValue(invocation.Interpreter)
 			},
 			sema.ArrayAppendAllFunctionType(
 				v.SemaType(interpreter),
@@ -1682,6 +1956,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func()
 
 	case "concat":
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				otherArray, ok := invocation.Arguments[0].(*ArrayValue)
 				if !ok {
@@ -1700,6 +1975,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func()
 
 	case "insert":
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				indexValue, ok := invocation.Arguments[0].(NumberValue)
 				if !ok {
@@ -1715,7 +1991,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func()
 					index,
 					element,
 				)
-				return VoidValue{}
+				return NewVoidValue(invocation.Interpreter)
 			},
 			sema.ArrayInsertFunctionType(
 				v.SemaType(interpreter).ElementType(false),
@@ -1724,6 +2000,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func()
 
 	case "remove":
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				indexValue, ok := invocation.Arguments[0].(NumberValue)
 				if !ok {
@@ -1744,6 +2021,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func()
 
 	case "removeFirst":
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				return v.RemoveFirst(
 					invocation.Interpreter,
@@ -1757,6 +2035,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func()
 
 	case "removeLast":
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				return v.RemoveLast(
 					invocation.Interpreter,
@@ -1770,6 +2049,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func()
 
 	case "firstIndex":
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				return v.FirstIndex(
 					invocation.Interpreter,
@@ -1784,6 +2064,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func()
 
 	case "contains":
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				return v.Contains(
 					invocation.Interpreter,
@@ -1798,6 +2079,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func()
 
 	case "slice":
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				from, ok := invocation.Arguments[0].(IntValue)
 				if !ok {
@@ -1849,10 +2131,10 @@ func (v *ArrayValue) Count() int {
 	return int(v.array.Count())
 }
 
-func (v *ArrayValue) ConformsToDynamicType(
+func (v *ArrayValue) ConformsToStaticType(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	results TypeConformanceResults,
 ) bool {
 
@@ -1864,7 +2146,7 @@ func (v *ArrayValue) ConformsToDynamicType(
 		typeInfo := v.Type.String()
 
 		defer func() {
-			interpreter.reportArrayValueConformsToDynamicTypeTrace(
+			interpreter.reportArrayValueConformsToStaticTypeTrace(
 				typeInfo,
 				count,
 				time.Since(startTime),
@@ -1872,20 +2154,27 @@ func (v *ArrayValue) ConformsToDynamicType(
 		}()
 	}
 
-	arrayType, ok := dynamicType.(*ArrayDynamicType)
-
-	if !ok || count != len(arrayType.ElementTypes) {
+	var elementType StaticType
+	switch typedStaticType := staticType.(type) {
+	case ConstantSizedStaticType:
+		elementType = typedStaticType.ElementType()
+		if v.Count() != int(typedStaticType.Size) {
+			return false
+		}
+	case VariableSizedStaticType:
+		elementType = typedStaticType.ElementType()
+	default:
 		return false
 	}
 
 	result := true
 	index := 0
 
-	v.Iterate(func(element Value) (resume bool) {
-		if !element.ConformsToDynamicType(
+	v.Iterate(interpreter, func(element Value) (resume bool) {
+		if !element.ConformsToStaticType(
 			interpreter,
 			getLocationRange,
-			arrayType.ElementTypes[index],
+			elementType,
 			results,
 		) {
 			result = false
@@ -1948,6 +2237,12 @@ func (v *ArrayValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 ) Value {
+	baseUsage, elementUsage, dataSlabs, metaDataSlabs := common.NewArrayMemoryUsages(v.array.Count(), v.elementSize)
+	common.UseMemory(interpreter, baseUsage)
+	common.UseMemory(interpreter, elementUsage)
+	common.UseMemory(interpreter, dataSlabs)
+	common.UseMemory(interpreter, metaDataSlabs)
+
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
 	}
@@ -1997,7 +2292,7 @@ func (v *ArrayValue) Transfer(
 					return nil, nil
 				}
 
-				element := MustConvertStoredValue(value).
+				element := MustConvertStoredValue(interpreter, value).
 					Transfer(interpreter, getLocationRange, address, remove, nil)
 
 				return element, nil
@@ -2055,13 +2350,11 @@ func (v *ArrayValue) Transfer(
 	}
 
 	if res == nil {
-		res = &ArrayValue{
-			Type:             v.Type,
-			semaType:         v.semaType,
-			isResourceKinded: v.isResourceKinded,
-			array:            array,
-			isDestroyed:      v.isDestroyed,
-		}
+		res = newArrayValueFromAtreeValue(array, v.Type)
+		res.elementSize = v.elementSize
+		res.semaType = v.semaType
+		res.isResourceKinded = v.isResourceKinded
+		res.isDestroyed = v.isDestroyed
 	}
 
 	return res
@@ -2073,6 +2366,12 @@ func (v *ArrayValue) Clone(interpreter *Interpreter) Value {
 	if err != nil {
 		panic(ExternalError{err})
 	}
+
+	baseUsage, elementUsage, dataSlabs, metaDataSlabs := common.NewArrayMemoryUsages(v.array.Count(), v.elementSize)
+	common.UseMemory(interpreter, baseUsage)
+	common.UseMemory(interpreter, elementUsage)
+	common.UseMemory(interpreter, dataSlabs)
+	common.UseMemory(interpreter, metaDataSlabs)
 
 	array, err := atree.NewArrayFromBatchData(
 		interpreter.Storage,
@@ -2087,7 +2386,7 @@ func (v *ArrayValue) Clone(interpreter *Interpreter) Value {
 				return nil, nil
 			}
 
-			element := MustConvertStoredValue(value).
+			element := MustConvertStoredValue(interpreter, value).
 				Clone(interpreter)
 
 			return element, nil
@@ -2127,7 +2426,7 @@ func (v *ArrayValue) DeepRemove(interpreter *Interpreter) {
 	storage := v.array.Storage
 
 	err := v.array.PopIterate(func(storable atree.Storable) {
-		value := StoredValue(storable, storage)
+		value := StoredValue(interpreter, storable, storage)
 		value.DeepRemove(interpreter)
 		interpreter.RemoveReferencedSlab(storable)
 	})
@@ -2211,10 +2510,9 @@ func (v *ArrayValue) Slice(
 
 	return NewArrayValueWithIterator(
 		interpreter,
-		VariableSizedStaticType{
-			Type: v.Type.ElementType(),
-		},
+		NewVariableSizedStaticType(interpreter, v.Type.ElementType()),
 		common.Address{},
+		uint64(toIndex-fromIndex),
 		func() Value {
 
 			var value Value
@@ -2225,7 +2523,7 @@ func (v *ArrayValue) Slice(
 			}
 
 			if atreeValue != nil {
-				value = MustConvertStoredValue(atreeValue)
+				value = MustConvertStoredValue(interpreter, atreeValue)
 			}
 
 			if value == nil {
@@ -2248,36 +2546,48 @@ func (v *ArrayValue) Slice(
 type NumberValue interface {
 	EquatableValue
 	ToInt() int
-	Negate() NumberValue
-	Plus(other NumberValue) NumberValue
-	SaturatingPlus(other NumberValue) NumberValue
-	Minus(other NumberValue) NumberValue
-	SaturatingMinus(other NumberValue) NumberValue
-	Mod(other NumberValue) NumberValue
-	Mul(other NumberValue) NumberValue
-	SaturatingMul(other NumberValue) NumberValue
-	Div(other NumberValue) NumberValue
-	SaturatingDiv(other NumberValue) NumberValue
-	Less(other NumberValue) BoolValue
-	LessEqual(other NumberValue) BoolValue
-	Greater(other NumberValue) BoolValue
-	GreaterEqual(other NumberValue) BoolValue
+	Negate(*Interpreter) NumberValue
+	Plus(interpreter *Interpreter, other NumberValue) NumberValue
+	SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue
+	Minus(interpreter *Interpreter, other NumberValue) NumberValue
+	SaturatingMinus(interpreter *Interpreter, other NumberValue) NumberValue
+	Mod(interpreter *Interpreter, other NumberValue) NumberValue
+	Mul(interpreter *Interpreter, other NumberValue) NumberValue
+	SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue
+	Div(interpreter *Interpreter, other NumberValue) NumberValue
+	SaturatingDiv(interpreter *Interpreter, other NumberValue) NumberValue
+	Less(interpreter *Interpreter, other NumberValue) BoolValue
+	LessEqual(interpreter *Interpreter, other NumberValue) BoolValue
+	Greater(interpreter *Interpreter, other NumberValue) BoolValue
+	GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue
 	ToBigEndianBytes() []byte
 }
 
-func getNumberValueMember(v NumberValue, name string, typ sema.Type) Value {
+func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, typ sema.Type) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
-				return NewStringValue(v.String())
+				interpreter := invocation.Interpreter
+				memoryUsage := common.NewStringMemoryUsage(
+					OverEstimateNumberStringLength(interpreter, v),
+				)
+				return NewStringValue(
+					interpreter,
+					memoryUsage,
+					func() string {
+						return v.String()
+					},
+				)
 			},
 			sema.ToStringFunctionType,
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				return ByteSliceToByteArrayValue(
 					invocation.Interpreter,
@@ -2293,12 +2603,16 @@ func getNumberValueMember(v NumberValue, name string, typ sema.Type) Value {
 
 	case sema.NumericTypeSaturatingAddFunctionName:
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				other, ok := invocation.Arguments[0].(NumberValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
-				return v.SaturatingPlus(other)
+				return v.SaturatingPlus(
+					invocation.Interpreter,
+					other,
+				)
 			},
 			&sema.FunctionType{
 				ReturnTypeAnnotation: sema.NewTypeAnnotation(
@@ -2309,12 +2623,16 @@ func getNumberValueMember(v NumberValue, name string, typ sema.Type) Value {
 
 	case sema.NumericTypeSaturatingSubtractFunctionName:
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				other, ok := invocation.Arguments[0].(NumberValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
-				return v.SaturatingMinus(other)
+				return v.SaturatingMinus(
+					invocation.Interpreter,
+					other,
+				)
 			},
 			&sema.FunctionType{
 				ReturnTypeAnnotation: sema.NewTypeAnnotation(
@@ -2325,12 +2643,16 @@ func getNumberValueMember(v NumberValue, name string, typ sema.Type) Value {
 
 	case sema.NumericTypeSaturatingMultiplyFunctionName:
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				other, ok := invocation.Arguments[0].(NumberValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
-				return v.SaturatingMul(other)
+				return v.SaturatingMul(
+					invocation.Interpreter,
+					other,
+				)
 			},
 			&sema.FunctionType{
 				ReturnTypeAnnotation: sema.NewTypeAnnotation(
@@ -2341,12 +2663,16 @@ func getNumberValueMember(v NumberValue, name string, typ sema.Type) Value {
 
 	case sema.NumericTypeSaturatingDivideFunctionName:
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				other, ok := invocation.Arguments[0].(NumberValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
-				return v.SaturatingDiv(other)
+				return v.SaturatingDiv(
+					invocation.Interpreter,
+					other,
+				)
 			},
 			&sema.FunctionType{
 				ReturnTypeAnnotation: sema.NewTypeAnnotation(
@@ -2361,19 +2687,19 @@ func getNumberValueMember(v NumberValue, name string, typ sema.Type) Value {
 
 type IntegerValue interface {
 	NumberValue
-	BitwiseOr(other IntegerValue) IntegerValue
-	BitwiseXor(other IntegerValue) IntegerValue
-	BitwiseAnd(other IntegerValue) IntegerValue
-	BitwiseLeftShift(other IntegerValue) IntegerValue
-	BitwiseRightShift(other IntegerValue) IntegerValue
+	BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue
+	BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue
+	BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue
+	BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue
+	BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue
 }
 
-// BigNumberValue.
-// Implemented by values with an integer value outside the range of int64
+// BigNumberValue is a number value with an integer value outside the range of int64
 //
 type BigNumberValue interface {
 	NumberValue
-	ToBigInt() *big.Int
+	ByteLength() int
+	ToBigInt(memoryGauge common.MemoryGauge) *big.Int
 }
 
 // Int
@@ -2382,21 +2708,52 @@ type IntValue struct {
 	BigInt *big.Int
 }
 
-func NewIntValueFromInt64(value int64) IntValue {
-	return NewIntValueFromBigInt(big.NewInt(value))
+const int64Size = int(unsafe.Sizeof(int64(0)))
+
+var int64BigIntMemoryUsage = common.NewBigIntMemoryUsage(int64Size)
+
+func NewIntValueFromInt64(memoryGauge common.MemoryGauge, value int64) IntValue {
+	return NewIntValueFromBigInt(
+		memoryGauge,
+		int64BigIntMemoryUsage,
+		func() *big.Int {
+			return big.NewInt(value)
+		},
+	)
 }
 
-func NewIntValueFromBigInt(value *big.Int) IntValue {
-	return IntValue{BigInt: value}
+func NewUnmeteredIntValueFromInt64(value int64) IntValue {
+	return NewUnmeteredIntValueFromBigInt(big.NewInt(value))
 }
 
-func ConvertInt(value Value) IntValue {
+func NewIntValueFromBigInt(
+	memoryGauge common.MemoryGauge,
+	memoryUsage common.MemoryUsage,
+	bigIntConstructor func() *big.Int,
+) IntValue {
+	common.UseMemory(memoryGauge, memoryUsage)
+	value := bigIntConstructor()
+	return NewUnmeteredIntValueFromBigInt(value)
+}
+
+func NewUnmeteredIntValueFromBigInt(value *big.Int) IntValue {
+	return IntValue{
+		BigInt: value,
+	}
+}
+
+func ConvertInt(memoryGauge common.MemoryGauge, value Value) IntValue {
 	switch value := value.(type) {
 	case BigNumberValue:
-		return NewIntValueFromBigInt(value.ToBigInt())
+		return NewUnmeteredIntValueFromBigInt(
+			value.ToBigInt(memoryGauge),
+		)
 
 	case NumberValue:
-		return NewIntValueFromInt64(int64(value.ToInt()))
+		return NewIntValueFromInt64(
+			memoryGauge,
+			int64(value.ToInt()),
+		)
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -2417,18 +2774,16 @@ func (v IntValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitIntValue(interpreter, v)
 }
 
-func (IntValue) Walk(_ func(Value)) {
+func (IntValue) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
-var intDynamicType DynamicType = NumberDynamicType{sema.IntType}
-
-func (IntValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return intDynamicType
+func (IntValue) StaticType(interpreter *Interpreter) StaticType {
+	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeInt)
 }
 
-func (IntValue) StaticType() StaticType {
-	return PrimitiveStaticTypeInt
+func (IntValue) IsImportable(_ *Interpreter) bool {
+	return true
 }
 
 func (v IntValue) ToInt() int {
@@ -2438,7 +2793,12 @@ func (v IntValue) ToInt() int {
 	return int(v.BigInt.Int64())
 }
 
-func (v IntValue) ToBigInt() *big.Int {
+func (v IntValue) ByteLength() int {
+	return common.BigIntByteLength(v.BigInt)
+}
+
+func (v IntValue) ToBigInt(memoryGauge common.MemoryGauge) *big.Int {
+	common.UseMemory(memoryGauge, common.NewBigIntMemoryUsage(v.ByteLength()))
 	return new(big.Int).Set(v.BigInt)
 }
 
@@ -2450,207 +2810,269 @@ func (v IntValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v IntValue) Negate() NumberValue {
-	return NewIntValueFromBigInt(new(big.Int).Neg(v.BigInt))
+func (v IntValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
+	return v.String()
 }
 
-func (v IntValue) Plus(other NumberValue) NumberValue {
+func (v IntValue) Negate(interpreter *Interpreter) NumberValue {
+	return NewIntValueFromBigInt(
+		interpreter,
+		common.NewNegateBigIntMemoryUsage(v.BigInt),
+		func() *big.Int {
+			return new(big.Int).Neg(v.BigInt)
+		},
+	)
+}
+
+func (v IntValue) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	res.Add(v.BigInt, o.BigInt)
-	return IntValue{res}
+	return NewIntValueFromBigInt(
+		interpreter,
+		common.NewPlusBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Add(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v IntValue) SaturatingPlus(other NumberValue) NumberValue {
+func (v IntValue) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	defer func() {
 		r := recover()
 		if _, ok := r.(InvalidOperandsError); ok {
 			panic(InvalidOperandsError{
 				FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-				LeftType:     v.StaticType(),
-				RightType:    other.StaticType(),
+				LeftType:     v.StaticType(nil),
+				RightType:    other.StaticType(nil),
 			})
 		}
 	}()
 
-	return v.Plus(other)
+	return v.Plus(interpreter, other)
 }
 
-func (v IntValue) Minus(other NumberValue) NumberValue {
+func (v IntValue) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	res.Sub(v.BigInt, o.BigInt)
-	return IntValue{res}
+	return NewIntValueFromBigInt(
+		interpreter,
+		common.NewMinusBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Sub(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v IntValue) SaturatingMinus(other NumberValue) NumberValue {
+func (v IntValue) SaturatingMinus(interpreter *Interpreter, other NumberValue) NumberValue {
 	defer func() {
 		r := recover()
 		if _, ok := r.(InvalidOperandsError); ok {
 			panic(InvalidOperandsError{
 				FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
-				LeftType:     v.StaticType(),
-				RightType:    other.StaticType(),
+				LeftType:     v.StaticType(nil),
+				RightType:    other.StaticType(nil),
 			})
 		}
 	}()
 
-	return v.Minus(other)
+	return v.Minus(interpreter, other)
 }
 
-func (v IntValue) Mod(other NumberValue) NumberValue {
+func (v IntValue) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	// INT33-C
-	if o.BigInt.Cmp(res) == 0 {
-		panic(DivisionByZeroError{})
-	}
-	res.Rem(v.BigInt, o.BigInt)
-	return IntValue{res}
+	return NewIntValueFromBigInt(
+		interpreter,
+		common.NewModBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			// INT33-C
+			if o.BigInt.Cmp(res) == 0 {
+				panic(DivisionByZeroError{})
+			}
+			return res.Rem(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v IntValue) Mul(other NumberValue) NumberValue {
+func (v IntValue) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMul,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	res.Mul(v.BigInt, o.BigInt)
-	return IntValue{res}
+	return NewIntValueFromBigInt(
+		interpreter,
+		common.NewMulBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Mul(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v IntValue) SaturatingMul(other NumberValue) NumberValue {
+func (v IntValue) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	defer func() {
 		r := recover()
 		if _, ok := r.(InvalidOperandsError); ok {
 			panic(InvalidOperandsError{
 				FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-				LeftType:     v.StaticType(),
-				RightType:    other.StaticType(),
+				LeftType:     v.StaticType(nil),
+				RightType:    other.StaticType(nil),
 			})
 		}
 	}()
 
-	return v.Mul(other)
+	return v.Mul(interpreter, other)
 }
 
-func (v IntValue) Div(other NumberValue) NumberValue {
+func (v IntValue) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	// INT33-C
-	if o.BigInt.Cmp(res) == 0 {
-		panic(DivisionByZeroError{})
-	}
-	res.Div(v.BigInt, o.BigInt)
-	return IntValue{res}
+	return NewIntValueFromBigInt(
+		interpreter,
+		common.NewDivBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			// INT33-C
+			if o.BigInt.Cmp(res) == 0 {
+				panic(DivisionByZeroError{})
+			}
+			return res.Div(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v IntValue) SaturatingDiv(other NumberValue) NumberValue {
+func (v IntValue) SaturatingDiv(interpreter *Interpreter, other NumberValue) NumberValue {
 	defer func() {
 		r := recover()
 		if _, ok := r.(InvalidOperandsError); ok {
 			panic(InvalidOperandsError{
 				FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-				LeftType:     v.StaticType(),
-				RightType:    other.StaticType(),
+				LeftType:     v.StaticType(nil),
+				RightType:    other.StaticType(nil),
 			})
 		}
 	}()
 
-	return v.Div(other)
+	return v.Div(interpreter, other)
 }
 
-func (v IntValue) Less(other NumberValue) BoolValue {
+func (v IntValue) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp == -1
+
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return cmp == -1
+		},
+	)
 }
 
-func (v IntValue) LessEqual(other NumberValue) BoolValue {
+func (v IntValue) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp <= 0
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
+			return cmp <= 0
+		},
+	)
 }
 
-func (v IntValue) Greater(other NumberValue) BoolValue {
+func (v IntValue) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp == 1
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
+			return cmp == 1
+		},
+	)
 }
 
-func (v IntValue) GreaterEqual(other NumberValue) BoolValue {
+func (v IntValue) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp >= 0
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
+			return cmp >= 0
+		},
+	)
 }
 
 func (v IntValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -2681,95 +3103,124 @@ func (v IntValue) HashInput(_ *Interpreter, _ func() LocationRange, scratch []by
 	return buffer
 }
 
-func (v IntValue) BitwiseOr(other IntegerValue) IntegerValue {
+func (v IntValue) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	res.Or(v.BigInt, o.BigInt)
-	return IntValue{res}
+	return NewIntValueFromBigInt(
+		interpreter,
+		common.NewBitwiseOrBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Or(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v IntValue) BitwiseXor(other IntegerValue) IntegerValue {
+func (v IntValue) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	res.Xor(v.BigInt, o.BigInt)
-	return IntValue{res}
+	return NewIntValueFromBigInt(
+		interpreter,
+		common.NewBitwiseXorBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Xor(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v IntValue) BitwiseAnd(other IntegerValue) IntegerValue {
+func (v IntValue) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	res.And(v.BigInt, o.BigInt)
-	return IntValue{res}
+	return NewIntValueFromBigInt(
+		interpreter,
+		common.NewBitwiseAndBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			return res.And(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v IntValue) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v IntValue) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
 	if o.BigInt.Sign() < 0 {
 		panic(UnderflowError{})
 	}
+
 	if !o.BigInt.IsUint64() {
 		panic(OverflowError{})
 	}
-	res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
-	return IntValue{res}
+
+	return NewIntValueFromBigInt(
+		interpreter,
+		common.NewBitwiseLeftShiftBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+		},
+	)
 }
 
-func (v IntValue) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v IntValue) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
 	if o.BigInt.Sign() < 0 {
 		panic(UnderflowError{})
 	}
+
 	if !o.BigInt.IsUint64() {
 		panic(OverflowError{})
 	}
-	res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
-	return IntValue{res}
+
+	return NewIntValueFromBigInt(
+		interpreter,
+		common.NewBitwiseRightShiftBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
+		},
+	)
 }
 
-func (v IntValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, sema.IntType)
+func (v IntValue) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.IntType)
 }
 
 func (IntValue) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
@@ -2786,14 +3237,13 @@ func (v IntValue) ToBigEndianBytes() []byte {
 	return SignedBigIntToBigEndianBytes(v.BigInt)
 }
 
-func (v IntValue) ConformsToDynamicType(
-	_ *Interpreter,
+func (v IntValue) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && sema.IntType.Equal(numberType.StaticType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (v IntValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
@@ -2822,7 +3272,7 @@ func (v IntValue) Transfer(
 }
 
 func (v IntValue) Clone(_ *Interpreter) Value {
-	return NewIntValueFromBigInt(v.BigInt)
+	return NewUnmeteredIntValueFromBigInt(v.BigInt)
 }
 
 func (IntValue) DeepRemove(_ *Interpreter) {
@@ -2845,6 +3295,20 @@ func (IntValue) ChildStorables() []atree.Storable {
 
 type Int8Value int8
 
+const int8Size = int(unsafe.Sizeof(Int8Value(0)))
+
+var Int8MemoryUsage = common.NewNumberMemoryUsage(int8Size)
+
+func NewInt8Value(gauge common.MemoryGauge, valueGetter func() int8) Int8Value {
+	common.UseMemory(gauge, Int8MemoryUsage)
+
+	return NewUnmeteredInt8Value(valueGetter())
+}
+
+func NewUnmeteredInt8Value(value int8) Int8Value {
+	return Int8Value(value)
+}
+
 var _ Value = Int8Value(0)
 var _ atree.Storable = Int8Value(0)
 var _ NumberValue = Int8Value(0)
@@ -2858,18 +3322,16 @@ func (v Int8Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInt8Value(interpreter, v)
 }
 
-func (Int8Value) Walk(_ func(Value)) {
+func (Int8Value) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
-var int8DynamicType DynamicType = NumberDynamicType{sema.Int8Type}
-
-func (Int8Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return int8DynamicType
+func (Int8Value) StaticType(interpreter *Interpreter) StaticType {
+	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeInt8)
 }
 
-func (Int8Value) StaticType() StaticType {
-	return PrimitiveStaticTypeInt8
+func (Int8Value) IsImportable(_ *Interpreter) bool {
+	return true
 }
 
 func (v Int8Value) String() string {
@@ -2880,25 +3342,40 @@ func (v Int8Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
+func (v Int8Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
+	return v.String()
+}
+
 func (v Int8Value) ToInt() int {
 	return int(v)
 }
 
-func (v Int8Value) Negate() NumberValue {
+func (v Int8Value) Negate(interpreter *Interpreter) NumberValue {
 	// INT32-C
 	if v == math.MinInt8 {
 		panic(OverflowError{})
 	}
-	return -v
+
+	valueGetter := func() int8 {
+		return int8(-v)
+	}
+
+	return NewInt8Value(interpreter, valueGetter)
 }
 
-func (v Int8Value) Plus(other NumberValue) NumberValue {
+func (v Int8Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
@@ -2908,35 +3385,44 @@ func (v Int8Value) Plus(other NumberValue) NumberValue {
 	} else if (o < 0) && (v < (math.MinInt8 - o)) {
 		panic(UnderflowError{})
 	}
-	return v + o
+
+	valueGetter := func() int8 {
+		return int8(v + o)
+	}
+
+	return NewInt8Value(interpreter, valueGetter)
 }
 
-func (v Int8Value) SaturatingPlus(other NumberValue) NumberValue {
+func (v Int8Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	// INT32-C
-	if (o > 0) && (v > (math.MaxInt8 - o)) {
-		return Int8Value(math.MaxInt8)
-	} else if (o < 0) && (v < (math.MinInt8 - o)) {
-		return Int8Value(math.MinInt8)
+	valueGetter := func() int8 {
+		// INT32-C
+		if (o > 0) && (v > (math.MaxInt8 - o)) {
+			return math.MaxInt8
+		} else if (o < 0) && (v < (math.MinInt8 - o)) {
+			return math.MinInt8
+		}
+		return int8(v + o)
 	}
-	return v + o
+
+	return NewInt8Value(interpreter, valueGetter)
 }
 
-func (v Int8Value) Minus(other NumberValue) NumberValue {
+func (v Int8Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
@@ -2946,35 +3432,44 @@ func (v Int8Value) Minus(other NumberValue) NumberValue {
 	} else if (o < 0) && (v > (math.MaxInt8 + o)) {
 		panic(UnderflowError{})
 	}
-	return v - o
+
+	valueGetter := func() int8 {
+		return int8(v - o)
+	}
+
+	return NewInt8Value(interpreter, valueGetter)
 }
 
-func (v Int8Value) SaturatingMinus(other NumberValue) NumberValue {
+func (v Int8Value) SaturatingMinus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	// INT32-C
-	if (o > 0) && (v < (math.MinInt8 + o)) {
-		return Int8Value(math.MinInt8)
-	} else if (o < 0) && (v > (math.MaxInt8 + o)) {
-		return Int8Value(math.MaxInt8)
+	valueGetter := func() int8 {
+		// INT32-C
+		if (o > 0) && (v < (math.MinInt8 + o)) {
+			return math.MinInt8
+		} else if (o < 0) && (v > (math.MaxInt8 + o)) {
+			return math.MaxInt8
+		}
+		return int8(v - o)
 	}
-	return v - o
+
+	return NewInt8Value(interpreter, valueGetter)
 }
 
-func (v Int8Value) Mod(other NumberValue) NumberValue {
+func (v Int8Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
@@ -2982,16 +3477,21 @@ func (v Int8Value) Mod(other NumberValue) NumberValue {
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
-	return v % o
+
+	valueGetter := func() int8 {
+		return int8(v % o)
+	}
+
+	return NewInt8Value(interpreter, valueGetter)
 }
 
-func (v Int8Value) Mul(other NumberValue) NumberValue {
+func (v Int8Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMul,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
@@ -3021,55 +3521,65 @@ func (v Int8Value) Mul(other NumberValue) NumberValue {
 			}
 		}
 	}
-	return v * o
+
+	valueGetter := func() int8 {
+		return int8(v * o)
+	}
+
+	return NewInt8Value(interpreter, valueGetter)
 }
 
-func (v Int8Value) SaturatingMul(other NumberValue) NumberValue {
+func (v Int8Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	// INT32-C
-	if v > 0 {
-		if o > 0 {
-			// positive * positive = positive. overflow?
-			if v > (math.MaxInt8 / o) {
-				return Int8Value(math.MaxInt8)
+	valueGetter := func() int8 {
+		// INT32-C
+		if v > 0 {
+			if o > 0 {
+				// positive * positive = positive. overflow?
+				if v > (math.MaxInt8 / o) {
+					return math.MaxInt8
+				}
+			} else {
+				// positive * negative = negative. underflow?
+				if o < (math.MinInt8 / v) {
+					return math.MinInt8
+				}
 			}
 		} else {
-			// positive * negative = negative. underflow?
-			if o < (math.MinInt8 / v) {
-				return Int8Value(math.MinInt8)
+			if o > 0 {
+				// negative * positive = negative. underflow?
+				if v < (math.MinInt8 / o) {
+					return math.MinInt8
+				}
+			} else {
+				// negative * negative = positive. overflow?
+				if (v != 0) && (o < (math.MaxInt8 / v)) {
+					return math.MaxInt8
+				}
 			}
 		}
-	} else {
-		if o > 0 {
-			// negative * positive = negative. underflow?
-			if v < (math.MinInt8 / o) {
-				return Int8Value(math.MinInt8)
-			}
-		} else {
-			// negative * negative = positive. overflow?
-			if (v != 0) && (o < (math.MaxInt8 / v)) {
-				return Int8Value(math.MaxInt8)
-			}
-		}
+
+		return int8(v * o)
 	}
-	return v * o
+
+	return NewInt8Value(interpreter, valueGetter)
 }
 
-func (v Int8Value) Div(other NumberValue) NumberValue {
+func (v Int8Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
@@ -3080,79 +3590,108 @@ func (v Int8Value) Div(other NumberValue) NumberValue {
 	} else if (v == math.MinInt8) && (o == -1) {
 		panic(OverflowError{})
 	}
-	return v / o
+
+	valueGetter := func() int8 {
+		return int8(v / o)
+	}
+
+	return NewInt8Value(interpreter, valueGetter)
 }
 
-func (v Int8Value) SaturatingDiv(other NumberValue) NumberValue {
+func (v Int8Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	// INT33-C
-	// https://golang.org/ref/spec#Integer_operators
-	if o == 0 {
-		panic(DivisionByZeroError{})
-	} else if (v == math.MinInt8) && (o == -1) {
-		return Int8Value(math.MaxInt8)
+	valueGetter := func() int8 {
+		// INT33-C
+		// https://golang.org/ref/spec#Integer_operators
+		if o == 0 {
+			panic(DivisionByZeroError{})
+		} else if (v == math.MinInt8) && (o == -1) {
+			return math.MaxInt8
+		}
+		return int8(v / o)
 	}
-	return v / o
+
+	return NewInt8Value(interpreter, valueGetter)
 }
 
-func (v Int8Value) Less(other NumberValue) BoolValue {
+func (v Int8Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v < o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v < o
+		},
+	)
 }
 
-func (v Int8Value) LessEqual(other NumberValue) BoolValue {
+func (v Int8Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v <= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v <= o
+		},
+	)
 }
 
-func (v Int8Value) Greater(other NumberValue) BoolValue {
+func (v Int8Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v > o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v > o
+		},
+	)
 }
 
-func (v Int8Value) GreaterEqual(other NumberValue) BoolValue {
+func (v Int8Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v >= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v >= o
+		},
+	)
 }
 
 func (v Int8Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -3172,102 +3711,123 @@ func (v Int8Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []b
 	return scratch[:2]
 }
 
-func ConvertInt8(value Value) Int8Value {
-	var res int8
+func ConvertInt8(memoryGauge common.MemoryGauge, value Value) Int8Value {
+	converter := func() int8 {
 
-	switch value := value.(type) {
-	case BigNumberValue:
-		v := value.ToBigInt()
-		if v.Cmp(sema.Int8TypeMaxInt) > 0 {
-			panic(OverflowError{})
-		} else if v.Cmp(sema.Int8TypeMinInt) < 0 {
-			panic(UnderflowError{})
+		switch value := value.(type) {
+		case BigNumberValue:
+			v := value.ToBigInt(memoryGauge)
+			if v.Cmp(sema.Int8TypeMaxInt) > 0 {
+				panic(OverflowError{})
+			} else if v.Cmp(sema.Int8TypeMinInt) < 0 {
+				panic(UnderflowError{})
+			}
+			return int8(v.Int64())
+
+		case NumberValue:
+			v := value.ToInt()
+			if v > math.MaxInt8 {
+				panic(OverflowError{})
+			} else if v < math.MinInt8 {
+				panic(UnderflowError{})
+			}
+			return int8(v)
+
+		default:
+			panic(errors.NewUnreachableError())
 		}
-		res = int8(v.Int64())
-
-	case NumberValue:
-		v := value.ToInt()
-		if v > math.MaxInt8 {
-			panic(OverflowError{})
-		} else if v < math.MinInt8 {
-			panic(UnderflowError{})
-		}
-		res = int8(v)
-
-	default:
-		panic(errors.NewUnreachableError())
 	}
 
-	return Int8Value(res)
+	return NewInt8Value(memoryGauge, converter)
 }
 
-func (v Int8Value) BitwiseOr(other IntegerValue) IntegerValue {
+func (v Int8Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v | o
+	valueGetter := func() int8 {
+		return int8(v | o)
+	}
+
+	return NewInt8Value(interpreter, valueGetter)
 }
 
-func (v Int8Value) BitwiseXor(other IntegerValue) IntegerValue {
+func (v Int8Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v ^ o
+	valueGetter := func() int8 {
+		return int8(v ^ o)
+	}
+
+	return NewInt8Value(interpreter, valueGetter)
 }
 
-func (v Int8Value) BitwiseAnd(other IntegerValue) IntegerValue {
+func (v Int8Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v & o
+	valueGetter := func() int8 {
+		return int8(v & o)
+	}
+
+	return NewInt8Value(interpreter, valueGetter)
 }
 
-func (v Int8Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v Int8Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v << o
+	valueGetter := func() int8 {
+		return int8(v << o)
+	}
+
+	return NewInt8Value(interpreter, valueGetter)
 }
 
-func (v Int8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v Int8Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v >> o
+	valueGetter := func() int8 {
+		return int8(v >> o)
+	}
+
+	return NewInt8Value(interpreter, valueGetter)
 }
 
-func (v Int8Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, sema.Int8Type)
+func (v Int8Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.Int8Type)
 }
 
 func (Int8Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
@@ -3284,14 +3844,13 @@ func (v Int8Value) ToBigEndianBytes() []byte {
 	return []byte{byte(v)}
 }
 
-func (v Int8Value) ConformsToDynamicType(
-	_ *Interpreter,
+func (v Int8Value) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && sema.Int8Type.Equal(numberType.StaticType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (v Int8Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -3343,6 +3902,20 @@ func (Int8Value) ChildStorables() []atree.Storable {
 
 type Int16Value int16
 
+const int16Size = int(unsafe.Sizeof(Int16Value(0)))
+
+var Int16MemoryUsage = common.NewNumberMemoryUsage(int16Size)
+
+func NewInt16Value(gauge common.MemoryGauge, valueGetter func() int16) Int16Value {
+	common.UseMemory(gauge, Int16MemoryUsage)
+
+	return NewUnmeteredInt16Value(valueGetter())
+}
+
+func NewUnmeteredInt16Value(value int16) Int16Value {
+	return Int16Value(value)
+}
+
 var _ Value = Int16Value(0)
 var _ atree.Storable = Int16Value(0)
 var _ NumberValue = Int16Value(0)
@@ -3357,18 +3930,16 @@ func (v Int16Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInt16Value(interpreter, v)
 }
 
-func (Int16Value) Walk(_ func(Value)) {
+func (Int16Value) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
-var int16DynamicType DynamicType = NumberDynamicType{sema.Int16Type}
-
-func (Int16Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return int16DynamicType
+func (Int16Value) StaticType(interpreter *Interpreter) StaticType {
+	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeInt16)
 }
 
-func (Int16Value) StaticType() StaticType {
-	return PrimitiveStaticTypeInt16
+func (Int16Value) IsImportable(_ *Interpreter) bool {
+	return true
 }
 
 func (v Int16Value) String() string {
@@ -3379,25 +3950,40 @@ func (v Int16Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
+func (v Int16Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
+	return v.String()
+}
+
 func (v Int16Value) ToInt() int {
 	return int(v)
 }
 
-func (v Int16Value) Negate() NumberValue {
+func (v Int16Value) Negate(interpreter *Interpreter) NumberValue {
 	// INT32-C
 	if v == math.MinInt16 {
 		panic(OverflowError{})
 	}
-	return -v
+
+	valueGetter := func() int16 {
+		return int16(-v)
+	}
+
+	return NewInt16Value(interpreter, valueGetter)
 }
 
-func (v Int16Value) Plus(other NumberValue) NumberValue {
+func (v Int16Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
@@ -3407,35 +3993,44 @@ func (v Int16Value) Plus(other NumberValue) NumberValue {
 	} else if (o < 0) && (v < (math.MinInt16 - o)) {
 		panic(UnderflowError{})
 	}
-	return v + o
+
+	valueGetter := func() int16 {
+		return int16(v + o)
+	}
+
+	return NewInt16Value(interpreter, valueGetter)
 }
 
-func (v Int16Value) SaturatingPlus(other NumberValue) NumberValue {
+func (v Int16Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	// INT32-C
-	if (o > 0) && (v > (math.MaxInt16 - o)) {
-		return Int16Value(math.MaxInt16)
-	} else if (o < 0) && (v < (math.MinInt16 - o)) {
-		return Int16Value(math.MinInt16)
+	valueGetter := func() int16 {
+		// INT32-C
+		if (o > 0) && (v > (math.MaxInt16 - o)) {
+			return math.MaxInt16
+		} else if (o < 0) && (v < (math.MinInt16 - o)) {
+			return math.MinInt16
+		}
+		return int16(v + o)
 	}
-	return v + o
+
+	return NewInt16Value(interpreter, valueGetter)
 }
 
-func (v Int16Value) Minus(other NumberValue) NumberValue {
+func (v Int16Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
@@ -3445,35 +4040,44 @@ func (v Int16Value) Minus(other NumberValue) NumberValue {
 	} else if (o < 0) && (v > (math.MaxInt16 + o)) {
 		panic(UnderflowError{})
 	}
-	return v - o
+
+	valueGetter := func() int16 {
+		return int16(v - o)
+	}
+
+	return NewInt16Value(interpreter, valueGetter)
 }
 
-func (v Int16Value) SaturatingMinus(other NumberValue) NumberValue {
+func (v Int16Value) SaturatingMinus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	// INT32-C
-	if (o > 0) && (v < (math.MinInt16 + o)) {
-		return Int16Value(math.MinInt16)
-	} else if (o < 0) && (v > (math.MaxInt16 + o)) {
-		return Int16Value(math.MaxInt16)
+	valueGetter := func() int16 {
+		// INT32-C
+		if (o > 0) && (v < (math.MinInt16 + o)) {
+			return math.MinInt16
+		} else if (o < 0) && (v > (math.MaxInt16 + o)) {
+			return math.MaxInt16
+		}
+		return int16(v - o)
 	}
-	return v - o
+
+	return NewInt16Value(interpreter, valueGetter)
 }
 
-func (v Int16Value) Mod(other NumberValue) NumberValue {
+func (v Int16Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
@@ -3481,16 +4085,21 @@ func (v Int16Value) Mod(other NumberValue) NumberValue {
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
-	return v % o
+
+	valueGetter := func() int16 {
+		return int16(v % o)
+	}
+
+	return NewInt16Value(interpreter, valueGetter)
 }
 
-func (v Int16Value) Mul(other NumberValue) NumberValue {
+func (v Int16Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMul,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
@@ -3520,55 +4129,64 @@ func (v Int16Value) Mul(other NumberValue) NumberValue {
 			}
 		}
 	}
-	return v * o
+
+	valueGetter := func() int16 {
+		return int16(v * o)
+	}
+
+	return NewInt16Value(interpreter, valueGetter)
 }
 
-func (v Int16Value) SaturatingMul(other NumberValue) NumberValue {
+func (v Int16Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	// INT32-C
-	if v > 0 {
-		if o > 0 {
-			// positive * positive = positive. overflow?
-			if v > (math.MaxInt16 / o) {
-				return Int16Value(math.MaxInt16)
+	valueGetter := func() int16 {
+		// INT32-C
+		if v > 0 {
+			if o > 0 {
+				// positive * positive = positive. overflow?
+				if v > (math.MaxInt16 / o) {
+					return math.MaxInt16
+				}
+			} else {
+				// positive * negative = negative. underflow?
+				if o < (math.MinInt16 / v) {
+					return math.MinInt16
+				}
 			}
 		} else {
-			// positive * negative = negative. underflow?
-			if o < (math.MinInt16 / v) {
-				return Int16Value(math.MinInt16)
+			if o > 0 {
+				// negative * positive = negative. underflow?
+				if v < (math.MinInt16 / o) {
+					return math.MinInt16
+				}
+			} else {
+				// negative * negative = positive. overflow?
+				if (v != 0) && (o < (math.MaxInt16 / v)) {
+					return math.MaxInt16
+				}
 			}
 		}
-	} else {
-		if o > 0 {
-			// negative * positive = negative. underflow?
-			if v < (math.MinInt16 / o) {
-				return Int16Value(math.MinInt16)
-			}
-		} else {
-			// negative * negative = positive. overflow?
-			if (v != 0) && (o < (math.MaxInt16 / v)) {
-				return Int16Value(math.MaxInt16)
-			}
-		}
+		return int16(v * o)
 	}
-	return v * o
+
+	return NewInt16Value(interpreter, valueGetter)
 }
 
-func (v Int16Value) Div(other NumberValue) NumberValue {
+func (v Int16Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
@@ -3579,79 +4197,108 @@ func (v Int16Value) Div(other NumberValue) NumberValue {
 	} else if (v == math.MinInt16) && (o == -1) {
 		panic(OverflowError{})
 	}
-	return v / o
+
+	valueGetter := func() int16 {
+		return int16(v / o)
+	}
+
+	return NewInt16Value(interpreter, valueGetter)
 }
 
-func (v Int16Value) SaturatingDiv(other NumberValue) NumberValue {
+func (v Int16Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	// INT33-C
-	// https://golang.org/ref/spec#Integer_operators
-	if o == 0 {
-		panic(DivisionByZeroError{})
-	} else if (v == math.MinInt16) && (o == -1) {
-		return Int16Value(math.MaxInt16)
+	valueGetter := func() int16 {
+		// INT33-C
+		// https://golang.org/ref/spec#Integer_operators
+		if o == 0 {
+			panic(DivisionByZeroError{})
+		} else if (v == math.MinInt16) && (o == -1) {
+			return math.MaxInt16
+		}
+		return int16(v / o)
 	}
-	return v / o
+
+	return NewInt16Value(interpreter, valueGetter)
 }
 
-func (v Int16Value) Less(other NumberValue) BoolValue {
+func (v Int16Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v < o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v < o
+		},
+	)
 }
 
-func (v Int16Value) LessEqual(other NumberValue) BoolValue {
+func (v Int16Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v <= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v <= o
+		},
+	)
 }
 
-func (v Int16Value) Greater(other NumberValue) BoolValue {
+func (v Int16Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v > o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v > o
+		},
+	)
 }
 
-func (v Int16Value) GreaterEqual(other NumberValue) BoolValue {
+func (v Int16Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v >= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v >= o
+		},
+	)
 }
 
 func (v Int16Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -3671,102 +4318,123 @@ func (v Int16Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []
 	return scratch[:3]
 }
 
-func ConvertInt16(value Value) Int16Value {
-	var res int16
+func ConvertInt16(memoryGauge common.MemoryGauge, value Value) Int16Value {
+	converter := func() int16 {
 
-	switch value := value.(type) {
-	case BigNumberValue:
-		v := value.ToBigInt()
-		if v.Cmp(sema.Int16TypeMaxInt) > 0 {
-			panic(OverflowError{})
-		} else if v.Cmp(sema.Int16TypeMinInt) < 0 {
-			panic(UnderflowError{})
+		switch value := value.(type) {
+		case BigNumberValue:
+			v := value.ToBigInt(memoryGauge)
+			if v.Cmp(sema.Int16TypeMaxInt) > 0 {
+				panic(OverflowError{})
+			} else if v.Cmp(sema.Int16TypeMinInt) < 0 {
+				panic(UnderflowError{})
+			}
+			return int16(v.Int64())
+
+		case NumberValue:
+			v := value.ToInt()
+			if v > math.MaxInt16 {
+				panic(OverflowError{})
+			} else if v < math.MinInt16 {
+				panic(UnderflowError{})
+			}
+			return int16(v)
+
+		default:
+			panic(errors.NewUnreachableError())
 		}
-		res = int16(v.Int64())
-
-	case NumberValue:
-		v := value.ToInt()
-		if v > math.MaxInt16 {
-			panic(OverflowError{})
-		} else if v < math.MinInt16 {
-			panic(UnderflowError{})
-		}
-		res = int16(v)
-
-	default:
-		panic(errors.NewUnreachableError())
 	}
 
-	return Int16Value(res)
+	return NewInt16Value(memoryGauge, converter)
 }
 
-func (v Int16Value) BitwiseOr(other IntegerValue) IntegerValue {
+func (v Int16Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v | o
+	valueGetter := func() int16 {
+		return int16(v | o)
+	}
+
+	return NewInt16Value(interpreter, valueGetter)
 }
 
-func (v Int16Value) BitwiseXor(other IntegerValue) IntegerValue {
+func (v Int16Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v ^ o
+	valueGetter := func() int16 {
+		return int16(v ^ o)
+	}
+
+	return NewInt16Value(interpreter, valueGetter)
 }
 
-func (v Int16Value) BitwiseAnd(other IntegerValue) IntegerValue {
+func (v Int16Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v & o
+	valueGetter := func() int16 {
+		return int16(v & o)
+	}
+
+	return NewInt16Value(interpreter, valueGetter)
 }
 
-func (v Int16Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v Int16Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v << o
+	valueGetter := func() int16 {
+		return int16(v << o)
+	}
+
+	return NewInt16Value(interpreter, valueGetter)
 }
 
-func (v Int16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v Int16Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v >> o
+	valueGetter := func() int16 {
+		return int16(v >> o)
+	}
+
+	return NewInt16Value(interpreter, valueGetter)
 }
 
-func (v Int16Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, sema.Int16Type)
+func (v Int16Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.Int16Type)
 }
 
 func (Int16Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
@@ -3785,14 +4453,13 @@ func (v Int16Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v Int16Value) ConformsToDynamicType(
-	_ *Interpreter,
+func (v Int16Value) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && sema.Int16Type.Equal(numberType.StaticType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (v Int16Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -3844,6 +4511,20 @@ func (Int16Value) ChildStorables() []atree.Storable {
 
 type Int32Value int32
 
+const int32Size = int(unsafe.Sizeof(Int32Value(0)))
+
+var Int32MemoryUsage = common.NewNumberMemoryUsage(int32Size)
+
+func NewInt32Value(gauge common.MemoryGauge, valueGetter func() int32) Int32Value {
+	common.UseMemory(gauge, Int32MemoryUsage)
+
+	return NewUnmeteredInt32Value(valueGetter())
+}
+
+func NewUnmeteredInt32Value(value int32) Int32Value {
+	return Int32Value(value)
+}
+
 var _ Value = Int32Value(0)
 var _ atree.Storable = Int32Value(0)
 var _ NumberValue = Int32Value(0)
@@ -3858,18 +4539,16 @@ func (v Int32Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInt32Value(interpreter, v)
 }
 
-func (Int32Value) Walk(_ func(Value)) {
+func (Int32Value) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
-var int32DynamicType DynamicType = NumberDynamicType{sema.Int32Type}
-
-func (Int32Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return int32DynamicType
+func (Int32Value) StaticType(interpreter *Interpreter) StaticType {
+	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeInt32)
 }
 
-func (Int32Value) StaticType() StaticType {
-	return PrimitiveStaticTypeInt32
+func (Int32Value) IsImportable(_ *Interpreter) bool {
+	return true
 }
 
 func (v Int32Value) String() string {
@@ -3880,25 +4559,40 @@ func (v Int32Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
+func (v Int32Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
+	return v.String()
+}
+
 func (v Int32Value) ToInt() int {
 	return int(v)
 }
 
-func (v Int32Value) Negate() NumberValue {
+func (v Int32Value) Negate(interpreter *Interpreter) NumberValue {
 	// INT32-C
 	if v == math.MinInt32 {
 		panic(OverflowError{})
 	}
-	return -v
+
+	valueGetter := func() int32 {
+		return int32(-v)
+	}
+
+	return NewInt32Value(interpreter, valueGetter)
 }
 
-func (v Int32Value) Plus(other NumberValue) NumberValue {
+func (v Int32Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
@@ -3908,35 +4602,44 @@ func (v Int32Value) Plus(other NumberValue) NumberValue {
 	} else if (o < 0) && (v < (math.MinInt32 - o)) {
 		panic(UnderflowError{})
 	}
-	return v + o
+
+	valueGetter := func() int32 {
+		return int32(v + o)
+	}
+
+	return NewInt32Value(interpreter, valueGetter)
 }
 
-func (v Int32Value) SaturatingPlus(other NumberValue) NumberValue {
+func (v Int32Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	// INT32-C
-	if (o > 0) && (v > (math.MaxInt32 - o)) {
-		return Int32Value(math.MaxInt32)
-	} else if (o < 0) && (v < (math.MinInt32 - o)) {
-		return Int32Value(math.MinInt32)
+	valueGetter := func() int32 {
+		// INT32-C
+		if (o > 0) && (v > (math.MaxInt32 - o)) {
+			return math.MaxInt32
+		} else if (o < 0) && (v < (math.MinInt32 - o)) {
+			return math.MinInt32
+		}
+		return int32(v + o)
 	}
-	return v + o
+
+	return NewInt32Value(interpreter, valueGetter)
 }
 
-func (v Int32Value) Minus(other NumberValue) NumberValue {
+func (v Int32Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
@@ -3946,35 +4649,44 @@ func (v Int32Value) Minus(other NumberValue) NumberValue {
 	} else if (o < 0) && (v > (math.MaxInt32 + o)) {
 		panic(UnderflowError{})
 	}
-	return v - o
+
+	valueGetter := func() int32 {
+		return int32(v - o)
+	}
+
+	return NewInt32Value(interpreter, valueGetter)
 }
 
-func (v Int32Value) SaturatingMinus(other NumberValue) NumberValue {
+func (v Int32Value) SaturatingMinus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	// INT32-C
-	if (o > 0) && (v < (math.MinInt32 + o)) {
-		return Int32Value(math.MinInt32)
-	} else if (o < 0) && (v > (math.MaxInt32 + o)) {
-		return Int32Value(math.MaxInt32)
+	valueGetter := func() int32 {
+		// INT32-C
+		if (o > 0) && (v < (math.MinInt32 + o)) {
+			return math.MinInt32
+		} else if (o < 0) && (v > (math.MaxInt32 + o)) {
+			return math.MaxInt32
+		}
+		return int32(v - o)
 	}
-	return v - o
+
+	return NewInt32Value(interpreter, valueGetter)
 }
 
-func (v Int32Value) Mod(other NumberValue) NumberValue {
+func (v Int32Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
@@ -3982,16 +4694,21 @@ func (v Int32Value) Mod(other NumberValue) NumberValue {
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
-	return v % o
+
+	valueGetter := func() int32 {
+		return int32(v % o)
+	}
+
+	return NewInt32Value(interpreter, valueGetter)
 }
 
-func (v Int32Value) Mul(other NumberValue) NumberValue {
+func (v Int32Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMul,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
@@ -4021,55 +4738,64 @@ func (v Int32Value) Mul(other NumberValue) NumberValue {
 			}
 		}
 	}
-	return v * o
+
+	valueGetter := func() int32 {
+		return int32(v * o)
+	}
+
+	return NewInt32Value(interpreter, valueGetter)
 }
 
-func (v Int32Value) SaturatingMul(other NumberValue) NumberValue {
+func (v Int32Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	// INT32-C
-	if v > 0 {
-		if o > 0 {
-			// positive * positive = positive. overflow?
-			if v > (math.MaxInt32 / o) {
-				return Int32Value(math.MaxInt32)
+	valueGetter := func() int32 {
+		// INT32-C
+		if v > 0 {
+			if o > 0 {
+				// positive * positive = positive. overflow?
+				if v > (math.MaxInt32 / o) {
+					return math.MaxInt32
+				}
+			} else {
+				// positive * negative = negative. underflow?
+				if o < (math.MinInt32 / v) {
+					return math.MinInt32
+				}
 			}
 		} else {
-			// positive * negative = negative. underflow?
-			if o < (math.MinInt32 / v) {
-				return Int32Value(math.MinInt32)
+			if o > 0 {
+				// negative * positive = negative. underflow?
+				if v < (math.MinInt32 / o) {
+					return math.MinInt32
+				}
+			} else {
+				// negative * negative = positive. overflow?
+				if (v != 0) && (o < (math.MaxInt32 / v)) {
+					return math.MaxInt32
+				}
 			}
 		}
-	} else {
-		if o > 0 {
-			// negative * positive = negative. underflow?
-			if v < (math.MinInt32 / o) {
-				return Int32Value(math.MinInt32)
-			}
-		} else {
-			// negative * negative = positive. overflow?
-			if (v != 0) && (o < (math.MaxInt32 / v)) {
-				return Int32Value(math.MaxInt32)
-			}
-		}
+		return int32(v * o)
 	}
-	return v * o
+
+	return NewInt32Value(interpreter, valueGetter)
 }
 
-func (v Int32Value) Div(other NumberValue) NumberValue {
+func (v Int32Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
@@ -4080,79 +4806,109 @@ func (v Int32Value) Div(other NumberValue) NumberValue {
 	} else if (v == math.MinInt32) && (o == -1) {
 		panic(OverflowError{})
 	}
-	return v / o
+
+	valueGetter := func() int32 {
+		return int32(v / o)
+	}
+
+	return NewInt32Value(interpreter, valueGetter)
 }
 
-func (v Int32Value) SaturatingDiv(other NumberValue) NumberValue {
+func (v Int32Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	// INT33-C
-	// https://golang.org/ref/spec#Integer_operators
-	if o == 0 {
-		panic(DivisionByZeroError{})
-	} else if (v == math.MinInt32) && (o == -1) {
-		return Int32Value(math.MaxInt32)
+	valueGetter := func() int32 {
+		// INT33-C
+		// https://golang.org/ref/spec#Integer_operators
+		if o == 0 {
+			panic(DivisionByZeroError{})
+		} else if (v == math.MinInt32) && (o == -1) {
+			return math.MaxInt32
+		}
+
+		return int32(v / o)
 	}
-	return v / o
+
+	return NewInt32Value(interpreter, valueGetter)
 }
 
-func (v Int32Value) Less(other NumberValue) BoolValue {
+func (v Int32Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v < o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v < o
+		},
+	)
 }
 
-func (v Int32Value) LessEqual(other NumberValue) BoolValue {
+func (v Int32Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v <= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v <= o
+		},
+	)
 }
 
-func (v Int32Value) Greater(other NumberValue) BoolValue {
+func (v Int32Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v > o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v > o
+		},
+	)
 }
 
-func (v Int32Value) GreaterEqual(other NumberValue) BoolValue {
+func (v Int32Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v >= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v >= o
+		},
+	)
 }
 
 func (v Int32Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -4172,102 +4928,122 @@ func (v Int32Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []
 	return scratch[:5]
 }
 
-func ConvertInt32(value Value) Int32Value {
-	var res int32
+func ConvertInt32(memoryGauge common.MemoryGauge, value Value) Int32Value {
+	converter := func() int32 {
+		switch value := value.(type) {
+		case BigNumberValue:
+			v := value.ToBigInt(memoryGauge)
+			if v.Cmp(sema.Int32TypeMaxInt) > 0 {
+				panic(OverflowError{})
+			} else if v.Cmp(sema.Int32TypeMinInt) < 0 {
+				panic(UnderflowError{})
+			}
+			return int32(v.Int64())
 
-	switch value := value.(type) {
-	case BigNumberValue:
-		v := value.ToBigInt()
-		if v.Cmp(sema.Int32TypeMaxInt) > 0 {
-			panic(OverflowError{})
-		} else if v.Cmp(sema.Int32TypeMinInt) < 0 {
-			panic(UnderflowError{})
+		case NumberValue:
+			v := value.ToInt()
+			if v > math.MaxInt32 {
+				panic(OverflowError{})
+			} else if v < math.MinInt32 {
+				panic(UnderflowError{})
+			}
+			return int32(v)
+
+		default:
+			panic(errors.NewUnreachableError())
 		}
-		res = int32(v.Int64())
-
-	case NumberValue:
-		v := value.ToInt()
-		if v > math.MaxInt32 {
-			panic(OverflowError{})
-		} else if v < math.MinInt32 {
-			panic(UnderflowError{})
-		}
-		res = int32(v)
-
-	default:
-		panic(errors.NewUnreachableError())
 	}
 
-	return Int32Value(res)
+	return NewInt32Value(memoryGauge, converter)
 }
 
-func (v Int32Value) BitwiseOr(other IntegerValue) IntegerValue {
+func (v Int32Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v | o
+	valueGetter := func() int32 {
+		return int32(v | o)
+	}
+
+	return NewInt32Value(interpreter, valueGetter)
 }
 
-func (v Int32Value) BitwiseXor(other IntegerValue) IntegerValue {
+func (v Int32Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v ^ o
+	valueGetter := func() int32 {
+		return int32(v ^ o)
+	}
+
+	return NewInt32Value(interpreter, valueGetter)
 }
 
-func (v Int32Value) BitwiseAnd(other IntegerValue) IntegerValue {
+func (v Int32Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v & o
+	valueGetter := func() int32 {
+		return int32(v & o)
+	}
+
+	return NewInt32Value(interpreter, valueGetter)
 }
 
-func (v Int32Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v Int32Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v << o
+	valueGetter := func() int32 {
+		return int32(v << o)
+	}
+
+	return NewInt32Value(interpreter, valueGetter)
 }
 
-func (v Int32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v Int32Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v >> o
+	valueGetter := func() int32 {
+		return int32(v >> o)
+	}
+
+	return NewInt32Value(interpreter, valueGetter)
 }
 
-func (v Int32Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, sema.Int32Type)
+func (v Int32Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.Int32Type)
 }
 
 func (Int32Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
@@ -4286,14 +5062,13 @@ func (v Int32Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v Int32Value) ConformsToDynamicType(
-	_ *Interpreter,
+func (v Int32Value) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && sema.Int32Type.Equal(numberType.StaticType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (v Int32Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -4345,6 +5120,18 @@ func (Int32Value) ChildStorables() []atree.Storable {
 
 type Int64Value int64
 
+var Int64MemoryUsage = common.NewNumberMemoryUsage(int64Size)
+
+func NewInt64Value(gauge common.MemoryGauge, valueGetter func() int64) Int64Value {
+	common.UseMemory(gauge, Int64MemoryUsage)
+
+	return NewUnmeteredInt64Value(valueGetter())
+}
+
+func NewUnmeteredInt64Value(value int64) Int64Value {
+	return Int64Value(value)
+}
+
 var _ Value = Int64Value(0)
 var _ atree.Storable = Int64Value(0)
 var _ NumberValue = Int64Value(0)
@@ -4359,18 +5146,16 @@ func (v Int64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInt64Value(interpreter, v)
 }
 
-func (Int64Value) Walk(_ func(Value)) {
+func (Int64Value) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
-var int64DynamicType DynamicType = NumberDynamicType{sema.Int64Type}
-
-func (Int64Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return int64DynamicType
+func (Int64Value) StaticType(interpreter *Interpreter) StaticType {
+	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeInt64)
 }
 
-func (Int64Value) StaticType() StaticType {
-	return PrimitiveStaticTypeInt64
+func (Int64Value) IsImportable(_ *Interpreter) bool {
+	return true
 }
 
 func (v Int64Value) String() string {
@@ -4381,16 +5166,31 @@ func (v Int64Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
+func (v Int64Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
+	return v.String()
+}
+
 func (v Int64Value) ToInt() int {
 	return int(v)
 }
 
-func (v Int64Value) Negate() NumberValue {
+func (v Int64Value) Negate(interpreter *Interpreter) NumberValue {
 	// INT32-C
 	if v == math.MinInt64 {
 		panic(OverflowError{})
 	}
-	return -v
+
+	valueGetter := func() int64 {
+		return int64(-v)
+	}
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
 func safeAddInt64(a, b int64) int64 {
@@ -4403,45 +5203,53 @@ func safeAddInt64(a, b int64) int64 {
 	return a + b
 }
 
-func (v Int64Value) Plus(other NumberValue) NumberValue {
+func (v Int64Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return Int64Value(safeAddInt64(int64(v), int64(o)))
+	valueGetter := func() int64 {
+		return safeAddInt64(int64(v), int64(o))
+	}
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
-func (v Int64Value) SaturatingPlus(other NumberValue) NumberValue {
+func (v Int64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	// INT32-C
-	if (o > 0) && (v > (math.MaxInt64 - o)) {
-		return Int64Value(math.MaxInt64)
-	} else if (o < 0) && (v < (math.MinInt64 - o)) {
-		return Int64Value(math.MinInt64)
+	valueGetter := func() int64 {
+		// INT32-C
+		if (o > 0) && (v > (math.MaxInt64 - o)) {
+			return math.MaxInt64
+		} else if (o < 0) && (v < (math.MinInt64 - o)) {
+			return math.MinInt64
+		}
+		return int64(v + o)
 	}
-	return v + o
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
-func (v Int64Value) Minus(other NumberValue) NumberValue {
+func (v Int64Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
@@ -4451,35 +5259,44 @@ func (v Int64Value) Minus(other NumberValue) NumberValue {
 	} else if (o < 0) && (v > (math.MaxInt64 + o)) {
 		panic(UnderflowError{})
 	}
-	return v - o
+
+	valueGetter := func() int64 {
+		return int64(v - o)
+	}
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
-func (v Int64Value) SaturatingMinus(other NumberValue) NumberValue {
+func (v Int64Value) SaturatingMinus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	// INT32-C
-	if (o > 0) && (v < (math.MinInt64 + o)) {
-		return Int64Value(math.MinInt64)
-	} else if (o < 0) && (v > (math.MaxInt64 + o)) {
-		return Int64Value(math.MaxInt64)
+	valueGetter := func() int64 {
+		// INT32-C
+		if (o > 0) && (v < (math.MinInt64 + o)) {
+			return math.MinInt64
+		} else if (o < 0) && (v > (math.MaxInt64 + o)) {
+			return math.MaxInt64
+		}
+		return int64(v - o)
 	}
-	return v - o
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
-func (v Int64Value) Mod(other NumberValue) NumberValue {
+func (v Int64Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
@@ -4487,16 +5304,21 @@ func (v Int64Value) Mod(other NumberValue) NumberValue {
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
-	return v % o
+
+	valueGetter := func() int64 {
+		return int64(v % o)
+	}
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
-func (v Int64Value) Mul(other NumberValue) NumberValue {
+func (v Int64Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMul,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
@@ -4526,55 +5348,64 @@ func (v Int64Value) Mul(other NumberValue) NumberValue {
 			}
 		}
 	}
-	return v * o
+
+	valueGetter := func() int64 {
+		return int64(v * o)
+	}
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
-func (v Int64Value) SaturatingMul(other NumberValue) NumberValue {
+func (v Int64Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	// INT32-C
-	if v > 0 {
-		if o > 0 {
-			// positive * positive = positive. overflow?
-			if v > (math.MaxInt64 / o) {
-				return Int64Value(math.MaxInt64)
+	valueGetter := func() int64 {
+		// INT32-C
+		if v > 0 {
+			if o > 0 {
+				// positive * positive = positive. overflow?
+				if v > (math.MaxInt64 / o) {
+					return math.MaxInt64
+				}
+			} else {
+				// positive * negative = negative. underflow?
+				if o < (math.MinInt64 / v) {
+					return math.MinInt64
+				}
 			}
 		} else {
-			// positive * negative = negative. underflow?
-			if o < (math.MinInt64 / v) {
-				return Int64Value(math.MinInt64)
+			if o > 0 {
+				// negative * positive = negative. underflow?
+				if v < (math.MinInt64 / o) {
+					return math.MinInt64
+				}
+			} else {
+				// negative * negative = positive. overflow?
+				if (v != 0) && (o < (math.MaxInt64 / v)) {
+					return math.MaxInt64
+				}
 			}
 		}
-	} else {
-		if o > 0 {
-			// negative * positive = negative. underflow?
-			if v < (math.MinInt64 / o) {
-				return Int64Value(math.MinInt64)
-			}
-		} else {
-			// negative * negative = positive. overflow?
-			if (v != 0) && (o < (math.MaxInt64 / v)) {
-				return Int64Value(math.MaxInt64)
-			}
-		}
+		return int64(v * o)
 	}
-	return v * o
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
-func (v Int64Value) Div(other NumberValue) NumberValue {
+func (v Int64Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
@@ -4585,79 +5416,108 @@ func (v Int64Value) Div(other NumberValue) NumberValue {
 	} else if (v == math.MinInt64) && (o == -1) {
 		panic(OverflowError{})
 	}
-	return v / o
+
+	valueGetter := func() int64 {
+		return int64(v / o)
+	}
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
-func (v Int64Value) SaturatingDiv(other NumberValue) NumberValue {
+func (v Int64Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	// INT33-C
-	// https://golang.org/ref/spec#Integer_operators
-	if o == 0 {
-		panic(DivisionByZeroError{})
-	} else if (v == math.MinInt64) && (o == -1) {
-		return Int64Value(math.MaxInt64)
+	valueGetter := func() int64 {
+		// INT33-C
+		// https://golang.org/ref/spec#Integer_operators
+		if o == 0 {
+			panic(DivisionByZeroError{})
+		} else if (v == math.MinInt64) && (o == -1) {
+			return math.MaxInt64
+		}
+		return int64(v / o)
 	}
-	return v / o
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
-func (v Int64Value) Less(other NumberValue) BoolValue {
+func (v Int64Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v < o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v < o
+		},
+	)
 }
 
-func (v Int64Value) LessEqual(other NumberValue) BoolValue {
+func (v Int64Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v <= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v <= o
+		},
+	)
 }
 
-func (v Int64Value) Greater(other NumberValue) BoolValue {
+func (v Int64Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v > o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v > o
+		},
+	)
 }
 
-func (v Int64Value) GreaterEqual(other NumberValue) BoolValue {
+func (v Int64Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v >= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v >= o
+		},
+	)
 }
 
 func (v Int64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -4677,97 +5537,117 @@ func (v Int64Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []
 	return scratch[:9]
 }
 
-func ConvertInt64(value Value) Int64Value {
-	var res int64
+func ConvertInt64(memoryGauge common.MemoryGauge, value Value) Int64Value {
+	converter := func() int64 {
+		switch value := value.(type) {
+		case BigNumberValue:
+			v := value.ToBigInt(memoryGauge)
+			if v.Cmp(sema.Int64TypeMaxInt) > 0 {
+				panic(OverflowError{})
+			} else if v.Cmp(sema.Int64TypeMinInt) < 0 {
+				panic(UnderflowError{})
+			}
+			return v.Int64()
 
-	switch value := value.(type) {
-	case BigNumberValue:
-		v := value.ToBigInt()
-		if v.Cmp(sema.Int64TypeMaxInt) > 0 {
-			panic(OverflowError{})
-		} else if v.Cmp(sema.Int64TypeMinInt) < 0 {
-			panic(UnderflowError{})
+		case NumberValue:
+			v := value.ToInt()
+			return int64(v)
+
+		default:
+			panic(errors.NewUnreachableError())
 		}
-		res = v.Int64()
-
-	case NumberValue:
-		v := value.ToInt()
-		res = int64(v)
-
-	default:
-		panic(errors.NewUnreachableError())
 	}
 
-	return Int64Value(res)
+	return NewInt64Value(memoryGauge, converter)
 }
 
-func (v Int64Value) BitwiseOr(other IntegerValue) IntegerValue {
+func (v Int64Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v | o
+	valueGetter := func() int64 {
+		return int64(v | o)
+	}
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
-func (v Int64Value) BitwiseXor(other IntegerValue) IntegerValue {
+func (v Int64Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v ^ o
+	valueGetter := func() int64 {
+		return int64(v ^ o)
+	}
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
-func (v Int64Value) BitwiseAnd(other IntegerValue) IntegerValue {
+func (v Int64Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v & o
+	valueGetter := func() int64 {
+		return int64(v & o)
+	}
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
-func (v Int64Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v Int64Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v << o
+	valueGetter := func() int64 {
+		return int64(v << o)
+	}
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
-func (v Int64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v Int64Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v >> o
+	valueGetter := func() int64 {
+		return int64(v >> o)
+	}
+
+	return NewInt64Value(interpreter, valueGetter)
 }
 
-func (v Int64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, sema.Int64Type)
+func (v Int64Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.Int64Type)
 }
 
 func (Int64Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
@@ -4786,14 +5666,13 @@ func (v Int64Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v Int64Value) ConformsToDynamicType(
-	_ *Interpreter,
+func (v Int64Value) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && sema.Int64Type.Equal(numberType.StaticType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (v Int64Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -4847,12 +5726,31 @@ type Int128Value struct {
 	BigInt *big.Int
 }
 
-func NewInt128ValueFromInt64(value int64) Int128Value {
-	return NewInt128ValueFromBigInt(big.NewInt(value))
+func NewInt128ValueFromUint64(memoryGauge common.MemoryGauge, value int64) Int128Value {
+	return NewInt128ValueFromBigInt(
+		memoryGauge,
+		func() *big.Int {
+			return new(big.Int).SetInt64(value)
+		},
+	)
 }
 
-func NewInt128ValueFromBigInt(value *big.Int) Int128Value {
-	return Int128Value{BigInt: value}
+var Int128MemoryUsage = common.NewBigIntMemoryUsage(16)
+
+func NewInt128ValueFromBigInt(memoryGauge common.MemoryGauge, bigIntConstructor func() *big.Int) Int128Value {
+	common.UseMemory(memoryGauge, Int128MemoryUsage)
+	value := bigIntConstructor()
+	return NewUnmeteredInt128ValueFromBigInt(value)
+}
+
+func NewUnmeteredInt128ValueFromInt64(value int64) Int128Value {
+	return NewUnmeteredInt128ValueFromBigInt(big.NewInt(value))
+}
+
+func NewUnmeteredInt128ValueFromBigInt(value *big.Int) Int128Value {
+	return Int128Value{
+		BigInt: value,
+	}
 }
 
 var _ Value = Int128Value{}
@@ -4869,18 +5767,16 @@ func (v Int128Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInt128Value(interpreter, v)
 }
 
-func (Int128Value) Walk(_ func(Value)) {
+func (Int128Value) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
-var int128DynamicType DynamicType = NumberDynamicType{sema.Int128Type}
-
-func (Int128Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return int128DynamicType
+func (Int128Value) StaticType(interpreter *Interpreter) StaticType {
+	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeInt128)
 }
 
-func (Int128Value) StaticType() StaticType {
-	return PrimitiveStaticTypeInt128
+func (Int128Value) IsImportable(_ *Interpreter) bool {
+	return true
 }
 
 func (v Int128Value) ToInt() int {
@@ -4890,7 +5786,12 @@ func (v Int128Value) ToInt() int {
 	return int(v.BigInt.Int64())
 }
 
-func (v Int128Value) ToBigInt() *big.Int {
+func (v Int128Value) ByteLength() int {
+	return common.BigIntByteLength(v.BigInt)
+}
+
+func (v Int128Value) ToBigInt(memoryGauge common.MemoryGauge) *big.Int {
+	common.UseMemory(memoryGauge, common.NewBigIntMemoryUsage(v.ByteLength()))
 	return new(big.Int).Set(v.BigInt)
 }
 
@@ -4902,7 +5803,17 @@ func (v Int128Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v Int128Value) Negate() NumberValue {
+func (v Int128Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
+	return v.String()
+}
+
+func (v Int128Value) Negate(interpreter *Interpreter) NumberValue {
 	// INT32-C
 	//   if v == Int128TypeMinIntBig {
 	//       ...
@@ -4910,306 +5821,376 @@ func (v Int128Value) Negate() NumberValue {
 	if v.BigInt.Cmp(sema.Int128TypeMinIntBig) == 0 {
 		panic(OverflowError{})
 	}
-	return Int128Value{new(big.Int).Neg(v.BigInt)}
+
+	valueGetter := func() *big.Int {
+		return new(big.Int).Neg(v.BigInt)
+	}
+
+	return NewInt128ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int128Value) Plus(other NumberValue) NumberValue {
+func (v Int128Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	// Given that this value is backed by an arbitrary size integer,
-	// we can just add and check the range of the result.
-	//
-	// If Go gains a native int128 type and we switch this value
-	// to be based on it, then we need to follow INT32-C:
-	//
-	//   if (o > 0) && (v > (Int128TypeMaxIntBig - o)) {
-	//       ...
-	//   } else if (o < 0) && (v < (Int128TypeMinIntBig - o)) {
-	//       ...
-	//   }
-	//
-	res := new(big.Int)
-	res.Add(v.BigInt, o.BigInt)
-	if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
-		panic(UnderflowError{})
-	} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
-		panic(OverflowError{})
+	valueGetter := func() *big.Int {
+		// Given that this value is backed by an arbitrary size integer,
+		// we can just add and check the range of the result.
+		//
+		// If Go gains a native int128 type and we switch this value
+		// to be based on it, then we need to follow INT32-C:
+		//
+		//   if (o > 0) && (v > (Int128TypeMaxIntBig - o)) {
+		//       ...
+		//   } else if (o < 0) && (v < (Int128TypeMinIntBig - o)) {
+		//       ...
+		//   }
+		//
+		res := new(big.Int)
+		res.Add(v.BigInt, o.BigInt)
+		if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
+			panic(UnderflowError{})
+		} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
+			panic(OverflowError{})
+		}
+
+		return res
 	}
-	return Int128Value{res}
+
+	return NewInt128ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int128Value) SaturatingPlus(other NumberValue) NumberValue {
+func (v Int128Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	// Given that this value is backed by an arbitrary size integer,
-	// we can just add and check the range of the result.
-	//
-	// If Go gains a native int128 type and we switch this value
-	// to be based on it, then we need to follow INT32-C:
-	//
-	//   if (o > 0) && (v > (Int128TypeMaxIntBig - o)) {
-	//       ...
-	//   } else if (o < 0) && (v < (Int128TypeMinIntBig - o)) {
-	//       ...
-	//   }
-	//
-	res := new(big.Int)
-	res.Add(v.BigInt, o.BigInt)
-	if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
-		return Int128Value{sema.Int128TypeMinIntBig}
-	} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
-		return Int128Value{sema.Int128TypeMaxIntBig}
+	valueGetter := func() *big.Int {
+		// Given that this value is backed by an arbitrary size integer,
+		// we can just add and check the range of the result.
+		//
+		// If Go gains a native int128 type and we switch this value
+		// to be based on it, then we need to follow INT32-C:
+		//
+		//   if (o > 0) && (v > (Int128TypeMaxIntBig - o)) {
+		//       ...
+		//   } else if (o < 0) && (v < (Int128TypeMinIntBig - o)) {
+		//       ...
+		//   }
+		//
+		res := new(big.Int)
+		res.Add(v.BigInt, o.BigInt)
+		if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
+			return sema.Int128TypeMinIntBig
+		} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
+			return sema.Int128TypeMaxIntBig
+		}
+
+		return res
 	}
-	return Int128Value{res}
+
+	return NewInt128ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int128Value) Minus(other NumberValue) NumberValue {
+func (v Int128Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	// Given that this value is backed by an arbitrary size integer,
-	// we can just subtract and check the range of the result.
-	//
-	// If Go gains a native int128 type and we switch this value
-	// to be based on it, then we need to follow INT32-C:
-	//
-	//   if (o > 0) && (v < (Int128TypeMinIntBig + o)) {
-	// 	     ...
-	//   } else if (o < 0) && (v > (Int128TypeMaxIntBig + o)) {
-	//       ...
-	//   }
-	//
-	res := new(big.Int)
-	res.Sub(v.BigInt, o.BigInt)
-	if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
-		panic(UnderflowError{})
-	} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
-		panic(OverflowError{})
+	valueGetter := func() *big.Int {
+		// Given that this value is backed by an arbitrary size integer,
+		// we can just subtract and check the range of the result.
+		//
+		// If Go gains a native int128 type and we switch this value
+		// to be based on it, then we need to follow INT32-C:
+		//
+		//   if (o > 0) && (v < (Int128TypeMinIntBig + o)) {
+		// 	     ...
+		//   } else if (o < 0) && (v > (Int128TypeMaxIntBig + o)) {
+		//       ...
+		//   }
+		//
+		res := new(big.Int)
+		res.Sub(v.BigInt, o.BigInt)
+		if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
+			panic(UnderflowError{})
+		} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
+			panic(OverflowError{})
+		}
+
+		return res
 	}
-	return Int128Value{res}
+
+	return NewInt128ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int128Value) SaturatingMinus(other NumberValue) NumberValue {
+func (v Int128Value) SaturatingMinus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	// Given that this value is backed by an arbitrary size integer,
-	// we can just subtract and check the range of the result.
-	//
-	// If Go gains a native int128 type and we switch this value
-	// to be based on it, then we need to follow INT32-C:
-	//
-	//   if (o > 0) && (v < (Int128TypeMinIntBig + o)) {
-	// 	     ...
-	//   } else if (o < 0) && (v > (Int128TypeMaxIntBig + o)) {
-	//       ...
-	//   }
-	//
-	res := new(big.Int)
-	res.Sub(v.BigInt, o.BigInt)
-	if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
-		return Int128Value{sema.Int128TypeMinIntBig}
-	} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
-		return Int128Value{sema.Int128TypeMaxIntBig}
+	valueGetter := func() *big.Int {
+		// Given that this value is backed by an arbitrary size integer,
+		// we can just subtract and check the range of the result.
+		//
+		// If Go gains a native int128 type and we switch this value
+		// to be based on it, then we need to follow INT32-C:
+		//
+		//   if (o > 0) && (v < (Int128TypeMinIntBig + o)) {
+		// 	     ...
+		//   } else if (o < 0) && (v > (Int128TypeMaxIntBig + o)) {
+		//       ...
+		//   }
+		//
+		res := new(big.Int)
+		res.Sub(v.BigInt, o.BigInt)
+		if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
+			return sema.Int128TypeMinIntBig
+		} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
+			return sema.Int128TypeMaxIntBig
+		}
+
+		return res
 	}
-	return Int128Value{res}
+
+	return NewInt128ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int128Value) Mod(other NumberValue) NumberValue {
+func (v Int128Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	// INT33-C
-	if o.BigInt.Cmp(res) == 0 {
-		panic(DivisionByZeroError{})
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		// INT33-C
+		if o.BigInt.Cmp(res) == 0 {
+			panic(DivisionByZeroError{})
+		}
+		res.Rem(v.BigInt, o.BigInt)
+
+		return res
 	}
-	res.Rem(v.BigInt, o.BigInt)
-	return Int128Value{res}
+
+	return NewInt128ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int128Value) Mul(other NumberValue) NumberValue {
+func (v Int128Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMul,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	res.Mul(v.BigInt, o.BigInt)
-	if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
-		panic(UnderflowError{})
-	} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
-		panic(OverflowError{})
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		res.Mul(v.BigInt, o.BigInt)
+		if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
+			panic(UnderflowError{})
+		} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
+			panic(OverflowError{})
+		}
+
+		return res
 	}
-	return Int128Value{res}
+
+	return NewInt128ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int128Value) SaturatingMul(other NumberValue) NumberValue {
+func (v Int128Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	res.Mul(v.BigInt, o.BigInt)
-	if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
-		return Int128Value{sema.Int128TypeMinIntBig}
-	} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
-		return Int128Value{sema.Int128TypeMaxIntBig}
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		res.Mul(v.BigInt, o.BigInt)
+		if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
+			return sema.Int128TypeMinIntBig
+		} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
+			return sema.Int128TypeMaxIntBig
+		}
+
+		return res
 	}
-	return Int128Value{res}
+
+	return NewInt128ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int128Value) Div(other NumberValue) NumberValue {
+func (v Int128Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	// INT33-C:
-	//   if o == 0 {
-	//       ...
-	//   } else if (v == Int128TypeMinIntBig) && (o == -1) {
-	//       ...
-	//   }
-	if o.BigInt.Cmp(res) == 0 {
-		panic(DivisionByZeroError{})
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		// INT33-C:
+		//   if o == 0 {
+		//       ...
+		//   } else if (v == Int128TypeMinIntBig) && (o == -1) {
+		//       ...
+		//   }
+		if o.BigInt.Cmp(res) == 0 {
+			panic(DivisionByZeroError{})
+		}
+		res.SetInt64(-1)
+		if (v.BigInt.Cmp(sema.Int128TypeMinIntBig) == 0) && (o.BigInt.Cmp(res) == 0) {
+			panic(OverflowError{})
+		}
+		res.Div(v.BigInt, o.BigInt)
+
+		return res
 	}
-	res.SetInt64(-1)
-	if (v.BigInt.Cmp(sema.Int128TypeMinIntBig) == 0) && (o.BigInt.Cmp(res) == 0) {
-		panic(OverflowError{})
-	}
-	res.Div(v.BigInt, o.BigInt)
-	return Int128Value{res}
+
+	return NewInt128ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int128Value) SaturatingDiv(other NumberValue) NumberValue {
+func (v Int128Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	// INT33-C:
-	//   if o == 0 {
-	//       ...
-	//   } else if (v == Int128TypeMinIntBig) && (o == -1) {
-	//       ...
-	//   }
-	if o.BigInt.Cmp(res) == 0 {
-		panic(DivisionByZeroError{})
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		// INT33-C:
+		//   if o == 0 {
+		//       ...
+		//   } else if (v == Int128TypeMinIntBig) && (o == -1) {
+		//       ...
+		//   }
+		if o.BigInt.Cmp(res) == 0 {
+			panic(DivisionByZeroError{})
+		}
+		res.SetInt64(-1)
+		if (v.BigInt.Cmp(sema.Int128TypeMinIntBig) == 0) && (o.BigInt.Cmp(res) == 0) {
+			return sema.Int128TypeMaxIntBig
+		}
+		res.Div(v.BigInt, o.BigInt)
+
+		return res
 	}
-	res.SetInt64(-1)
-	if (v.BigInt.Cmp(sema.Int128TypeMinIntBig) == 0) && (o.BigInt.Cmp(res) == 0) {
-		return Int128Value{sema.Int128TypeMaxIntBig}
-	}
-	res.Div(v.BigInt, o.BigInt)
-	return Int128Value{res}
+
+	return NewInt128ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int128Value) Less(other NumberValue) BoolValue {
+func (v Int128Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp == -1
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
+			return cmp == -1
+		},
+	)
 }
 
-func (v Int128Value) LessEqual(other NumberValue) BoolValue {
+func (v Int128Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp <= 0
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
+			return cmp <= 0
+		},
+	)
 }
 
-func (v Int128Value) Greater(other NumberValue) BoolValue {
+func (v Int128Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp == 1
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
+			return cmp == 1
+		},
+	)
 }
 
-func (v Int128Value) GreaterEqual(other NumberValue) BoolValue {
+func (v Int128Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp >= 0
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
+			return cmp >= 0
+		},
+	)
 }
 
 func (v Int128Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -5240,118 +6221,144 @@ func (v Int128Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch [
 	return buffer
 }
 
-func ConvertInt128(value Value) Int128Value {
-	var v *big.Int
+func ConvertInt128(memoryGauge common.MemoryGauge, value Value) Int128Value {
+	converter := func() *big.Int {
+		var v *big.Int
 
-	switch value := value.(type) {
-	case BigNumberValue:
-		v = value.ToBigInt()
+		switch value := value.(type) {
+		case BigNumberValue:
+			v = value.ToBigInt(memoryGauge)
 
-	case NumberValue:
-		v = big.NewInt(int64(value.ToInt()))
+		case NumberValue:
+			v = big.NewInt(int64(value.ToInt()))
 
-	default:
-		panic(errors.NewUnreachableError())
+		default:
+			panic(errors.NewUnreachableError())
+		}
+
+		if v.Cmp(sema.Int128TypeMaxIntBig) > 0 {
+			panic(OverflowError{})
+		} else if v.Cmp(sema.Int128TypeMinIntBig) < 0 {
+			panic(UnderflowError{})
+		}
+
+		return v
 	}
 
-	if v.Cmp(sema.Int128TypeMaxIntBig) > 0 {
-		panic(OverflowError{})
-	} else if v.Cmp(sema.Int128TypeMinIntBig) < 0 {
-		panic(UnderflowError{})
-	}
-
-	return NewInt128ValueFromBigInt(v)
+	return NewInt128ValueFromBigInt(memoryGauge, converter)
 }
 
-func (v Int128Value) BitwiseOr(other IntegerValue) IntegerValue {
+func (v Int128Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	res.Or(v.BigInt, o.BigInt)
-	return Int128Value{res}
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		res.Or(v.BigInt, o.BigInt)
+		return res
+	}
+
+	return NewInt128ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int128Value) BitwiseXor(other IntegerValue) IntegerValue {
+func (v Int128Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	res.Xor(v.BigInt, o.BigInt)
-	return Int128Value{res}
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		res.Xor(v.BigInt, o.BigInt)
+		return res
+	}
+
+	return NewInt128ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int128Value) BitwiseAnd(other IntegerValue) IntegerValue {
+func (v Int128Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	res.And(v.BigInt, o.BigInt)
-	return Int128Value{res}
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		res.And(v.BigInt, o.BigInt)
+		return res
+	}
+
+	return NewInt128ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int128Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v Int128Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
 	if o.BigInt.Sign() < 0 {
 		panic(UnderflowError{})
 	}
 	if !o.BigInt.IsUint64() {
 		panic(OverflowError{})
 	}
-	res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
-	return Int128Value{res}
+
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+		return res
+	}
+
+	return NewInt128ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int128Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v Int128Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
 	if o.BigInt.Sign() < 0 {
 		panic(UnderflowError{})
 	}
 	if !o.BigInt.IsUint64() {
 		panic(OverflowError{})
 	}
-	res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
-	return Int128Value{res}
+
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
+		return res
+	}
+
+	return NewInt128ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int128Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, sema.Int128Type)
+func (v Int128Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.Int128Type)
 }
 
 func (Int128Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
@@ -5368,14 +6375,13 @@ func (v Int128Value) ToBigEndianBytes() []byte {
 	return SignedBigIntToBigEndianBytes(v.BigInt)
 }
 
-func (v Int128Value) ConformsToDynamicType(
-	_ *Interpreter,
+func (v Int128Value) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && sema.Int128Type.Equal(numberType.StaticType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (v Int128Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -5404,7 +6410,7 @@ func (v Int128Value) Transfer(
 }
 
 func (v Int128Value) Clone(_ *Interpreter) Value {
-	return NewInt128ValueFromBigInt(v.BigInt)
+	return NewUnmeteredInt128ValueFromBigInt(v.BigInt)
 }
 
 func (Int128Value) DeepRemove(_ *Interpreter) {
@@ -5429,12 +6435,31 @@ type Int256Value struct {
 	BigInt *big.Int
 }
 
-func NewInt256ValueFromInt64(value int64) Int256Value {
-	return NewInt256ValueFromBigInt(big.NewInt(value))
+func NewInt256ValueFromUint64(memoryGauge common.MemoryGauge, value int64) Int256Value {
+	return NewInt256ValueFromBigInt(
+		memoryGauge,
+		func() *big.Int {
+			return new(big.Int).SetInt64(value)
+		},
+	)
 }
 
-func NewInt256ValueFromBigInt(value *big.Int) Int256Value {
-	return Int256Value{BigInt: value}
+var Int256MemoryUsage = common.NewBigIntMemoryUsage(32)
+
+func NewInt256ValueFromBigInt(memoryGauge common.MemoryGauge, bigIntConstructor func() *big.Int) Int256Value {
+	common.UseMemory(memoryGauge, Int256MemoryUsage)
+	value := bigIntConstructor()
+	return NewUnmeteredInt256ValueFromBigInt(value)
+}
+
+func NewUnmeteredInt256ValueFromInt64(value int64) Int256Value {
+	return NewUnmeteredInt256ValueFromBigInt(big.NewInt(value))
+}
+
+func NewUnmeteredInt256ValueFromBigInt(value *big.Int) Int256Value {
+	return Int256Value{
+		BigInt: value,
+	}
 }
 
 var _ Value = Int256Value{}
@@ -5451,18 +6476,16 @@ func (v Int256Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInt256Value(interpreter, v)
 }
 
-func (Int256Value) Walk(_ func(Value)) {
+func (Int256Value) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
-var int256DynamicType DynamicType = NumberDynamicType{sema.Int256Type}
-
-func (Int256Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return int256DynamicType
+func (Int256Value) StaticType(interpreter *Interpreter) StaticType {
+	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeInt256)
 }
 
-func (Int256Value) StaticType() StaticType {
-	return PrimitiveStaticTypeInt256
+func (Int256Value) IsImportable(_ *Interpreter) bool {
+	return true
 }
 
 func (v Int256Value) ToInt() int {
@@ -5472,7 +6495,12 @@ func (v Int256Value) ToInt() int {
 	return int(v.BigInt.Int64())
 }
 
-func (v Int256Value) ToBigInt() *big.Int {
+func (v Int256Value) ByteLength() int {
+	return common.BigIntByteLength(v.BigInt)
+}
+
+func (v Int256Value) ToBigInt(memoryGauge common.MemoryGauge) *big.Int {
+	common.UseMemory(memoryGauge, common.NewBigIntMemoryUsage(v.ByteLength()))
 	return new(big.Int).Set(v.BigInt)
 }
 
@@ -5484,7 +6512,17 @@ func (v Int256Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v Int256Value) Negate() NumberValue {
+func (v Int256Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
+	return v.String()
+}
+
+func (v Int256Value) Negate(interpreter *Interpreter) NumberValue {
 	// INT32-C
 	//   if v == Int256TypeMinIntBig {
 	//       ...
@@ -5492,306 +6530,374 @@ func (v Int256Value) Negate() NumberValue {
 	if v.BigInt.Cmp(sema.Int256TypeMinIntBig) == 0 {
 		panic(OverflowError{})
 	}
-	return Int256Value{BigInt: new(big.Int).Neg(v.BigInt)}
+
+	valueGetter := func() *big.Int {
+		return new(big.Int).Neg(v.BigInt)
+	}
+
+	return NewInt256ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int256Value) Plus(other NumberValue) NumberValue {
+func (v Int256Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	// Given that this value is backed by an arbitrary size integer,
-	// we can just add and check the range of the result.
-	//
-	// If Go gains a native int256 type and we switch this value
-	// to be based on it, then we need to follow INT32-C:
-	//
-	//   if (o > 0) && (v > (Int256TypeMaxIntBig - o)) {
-	//       ...
-	//   } else if (o < 0) && (v < (Int256TypeMinIntBig - o)) {
-	//       ...
-	//   }
-	//
-	res := new(big.Int)
-	res.Add(v.BigInt, o.BigInt)
-	if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
-		panic(UnderflowError{})
-	} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
-		panic(OverflowError{})
+	valueGetter := func() *big.Int {
+		// Given that this value is backed by an arbitrary size integer,
+		// we can just add and check the range of the result.
+		//
+		// If Go gains a native int256 type and we switch this value
+		// to be based on it, then we need to follow INT32-C:
+		//
+		//   if (o > 0) && (v > (Int256TypeMaxIntBig - o)) {
+		//       ...
+		//   } else if (o < 0) && (v < (Int256TypeMinIntBig - o)) {
+		//       ...
+		//   }
+		//
+		res := new(big.Int)
+		res.Add(v.BigInt, o.BigInt)
+		if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
+			panic(UnderflowError{})
+		} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
+			panic(OverflowError{})
+		}
+
+		return res
 	}
-	return Int256Value{res}
+
+	return NewInt256ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int256Value) SaturatingPlus(other NumberValue) NumberValue {
+func (v Int256Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	// Given that this value is backed by an arbitrary size integer,
-	// we can just add and check the range of the result.
-	//
-	// If Go gains a native int256 type and we switch this value
-	// to be based on it, then we need to follow INT32-C:
-	//
-	//   if (o > 0) && (v > (Int256TypeMaxIntBig - o)) {
-	//       ...
-	//   } else if (o < 0) && (v < (Int256TypeMinIntBig - o)) {
-	//       ...
-	//   }
-	//
-	res := new(big.Int)
-	res.Add(v.BigInt, o.BigInt)
-	if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
-		return Int256Value{sema.Int256TypeMinIntBig}
-	} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
-		return Int256Value{sema.Int256TypeMaxIntBig}
+	valueGetter := func() *big.Int {
+		// Given that this value is backed by an arbitrary size integer,
+		// we can just add and check the range of the result.
+		//
+		// If Go gains a native int256 type and we switch this value
+		// to be based on it, then we need to follow INT32-C:
+		//
+		//   if (o > 0) && (v > (Int256TypeMaxIntBig - o)) {
+		//       ...
+		//   } else if (o < 0) && (v < (Int256TypeMinIntBig - o)) {
+		//       ...
+		//   }
+		//
+		res := new(big.Int)
+		res.Add(v.BigInt, o.BigInt)
+		if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
+			return sema.Int256TypeMinIntBig
+		} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
+			return sema.Int256TypeMaxIntBig
+		}
+
+		return res
 	}
-	return Int256Value{res}
+
+	return NewInt256ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int256Value) Minus(other NumberValue) NumberValue {
+func (v Int256Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	// Given that this value is backed by an arbitrary size integer,
-	// we can just subtract and check the range of the result.
-	//
-	// If Go gains a native int256 type and we switch this value
-	// to be based on it, then we need to follow INT32-C:
-	//
-	//   if (o > 0) && (v < (Int256TypeMinIntBig + o)) {
-	// 	     ...
-	//   } else if (o < 0) && (v > (Int256TypeMaxIntBig + o)) {
-	//       ...
-	//   }
-	//
-	res := new(big.Int)
-	res.Sub(v.BigInt, o.BigInt)
-	if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
-		panic(UnderflowError{})
-	} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
-		panic(OverflowError{})
+	valueGetter := func() *big.Int {
+		// Given that this value is backed by an arbitrary size integer,
+		// we can just subtract and check the range of the result.
+		//
+		// If Go gains a native int256 type and we switch this value
+		// to be based on it, then we need to follow INT32-C:
+		//
+		//   if (o > 0) && (v < (Int256TypeMinIntBig + o)) {
+		// 	     ...
+		//   } else if (o < 0) && (v > (Int256TypeMaxIntBig + o)) {
+		//       ...
+		//   }
+		//
+		res := new(big.Int)
+		res.Sub(v.BigInt, o.BigInt)
+		if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
+			panic(UnderflowError{})
+		} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
+			panic(OverflowError{})
+		}
+
+		return res
 	}
-	return Int256Value{res}
+
+	return NewInt256ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int256Value) SaturatingMinus(other NumberValue) NumberValue {
+func (v Int256Value) SaturatingMinus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	// Given that this value is backed by an arbitrary size integer,
-	// we can just subtract and check the range of the result.
-	//
-	// If Go gains a native int256 type and we switch this value
-	// to be based on it, then we need to follow INT32-C:
-	//
-	//   if (o > 0) && (v < (Int256TypeMinIntBig + o)) {
-	// 	     ...
-	//   } else if (o < 0) && (v > (Int256TypeMaxIntBig + o)) {
-	//       ...
-	//   }
-	//
-	res := new(big.Int)
-	res.Sub(v.BigInt, o.BigInt)
-	if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
-		return Int256Value{sema.Int256TypeMinIntBig}
-	} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
-		return Int256Value{sema.Int256TypeMaxIntBig}
+	valueGetter := func() *big.Int {
+		// Given that this value is backed by an arbitrary size integer,
+		// we can just subtract and check the range of the result.
+		//
+		// If Go gains a native int256 type and we switch this value
+		// to be based on it, then we need to follow INT32-C:
+		//
+		//   if (o > 0) && (v < (Int256TypeMinIntBig + o)) {
+		// 	     ...
+		//   } else if (o < 0) && (v > (Int256TypeMaxIntBig + o)) {
+		//       ...
+		//   }
+		//
+		res := new(big.Int)
+		res.Sub(v.BigInt, o.BigInt)
+		if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
+			return sema.Int256TypeMinIntBig
+		} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
+			return sema.Int256TypeMaxIntBig
+		}
+
+		return res
 	}
-	return Int256Value{res}
+
+	return NewInt256ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int256Value) Mod(other NumberValue) NumberValue {
+func (v Int256Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	// INT33-C
-	if o.BigInt.Cmp(res) == 0 {
-		panic(DivisionByZeroError{})
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		// INT33-C
+		if o.BigInt.Cmp(res) == 0 {
+			panic(DivisionByZeroError{})
+		}
+		res.Rem(v.BigInt, o.BigInt)
+
+		return res
 	}
-	res.Rem(v.BigInt, o.BigInt)
-	return Int256Value{res}
+
+	return NewInt256ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int256Value) Mul(other NumberValue) NumberValue {
+func (v Int256Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMul,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	res.Mul(v.BigInt, o.BigInt)
-	if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
-		panic(UnderflowError{})
-	} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
-		panic(OverflowError{})
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		res.Mul(v.BigInt, o.BigInt)
+		if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
+			panic(UnderflowError{})
+		} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
+			panic(OverflowError{})
+		}
+
+		return res
 	}
-	return Int256Value{res}
+
+	return NewInt256ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int256Value) SaturatingMul(other NumberValue) NumberValue {
+func (v Int256Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	res.Mul(v.BigInt, o.BigInt)
-	if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
-		return Int256Value{sema.Int256TypeMinIntBig}
-	} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
-		return Int256Value{sema.Int256TypeMaxIntBig}
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		res.Mul(v.BigInt, o.BigInt)
+		if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
+			return sema.Int256TypeMinIntBig
+		} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
+			return sema.Int256TypeMaxIntBig
+		}
+
+		return res
 	}
-	return Int256Value{res}
+
+	return NewInt256ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int256Value) Div(other NumberValue) NumberValue {
+func (v Int256Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	// INT33-C:
-	//   if o == 0 {
-	//       ...
-	//   } else if (v == Int256TypeMinIntBig) && (o == -1) {
-	//       ...
-	//   }
-	if o.BigInt.Cmp(res) == 0 {
-		panic(DivisionByZeroError{})
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		// INT33-C:
+		//   if o == 0 {
+		//       ...
+		//   } else if (v == Int256TypeMinIntBig) && (o == -1) {
+		//       ...
+		//   }
+		if o.BigInt.Cmp(res) == 0 {
+			panic(DivisionByZeroError{})
+		}
+		res.SetInt64(-1)
+		if (v.BigInt.Cmp(sema.Int256TypeMinIntBig) == 0) && (o.BigInt.Cmp(res) == 0) {
+			panic(OverflowError{})
+		}
+		res.Div(v.BigInt, o.BigInt)
+		return res
 	}
-	res.SetInt64(-1)
-	if (v.BigInt.Cmp(sema.Int256TypeMinIntBig) == 0) && (o.BigInt.Cmp(res) == 0) {
-		panic(OverflowError{})
-	}
-	res.Div(v.BigInt, o.BigInt)
-	return Int256Value{res}
+
+	return NewInt256ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int256Value) SaturatingDiv(other NumberValue) NumberValue {
+func (v Int256Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	// INT33-C:
-	//   if o == 0 {
-	//       ...
-	//   } else if (v == Int256TypeMinIntBig) && (o == -1) {
-	//       ...
-	//   }
-	if o.BigInt.Cmp(res) == 0 {
-		panic(DivisionByZeroError{})
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		// INT33-C:
+		//   if o == 0 {
+		//       ...
+		//   } else if (v == Int256TypeMinIntBig) && (o == -1) {
+		//       ...
+		//   }
+		if o.BigInt.Cmp(res) == 0 {
+			panic(DivisionByZeroError{})
+		}
+		res.SetInt64(-1)
+		if (v.BigInt.Cmp(sema.Int256TypeMinIntBig) == 0) && (o.BigInt.Cmp(res) == 0) {
+			return sema.Int256TypeMaxIntBig
+		}
+		res.Div(v.BigInt, o.BigInt)
+		return res
 	}
-	res.SetInt64(-1)
-	if (v.BigInt.Cmp(sema.Int256TypeMinIntBig) == 0) && (o.BigInt.Cmp(res) == 0) {
-		return Int256Value{sema.Int256TypeMaxIntBig}
-	}
-	res.Div(v.BigInt, o.BigInt)
-	return Int256Value{res}
+
+	return NewInt256ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int256Value) Less(other NumberValue) BoolValue {
+func (v Int256Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp == -1
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
+			return cmp == -1
+		},
+	)
 }
 
-func (v Int256Value) LessEqual(other NumberValue) BoolValue {
+func (v Int256Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp <= 0
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
+			return cmp <= 0
+		},
+	)
 }
 
-func (v Int256Value) Greater(other NumberValue) BoolValue {
+func (v Int256Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp == 1
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
+			return cmp == 1
+		},
+	)
 }
 
-func (v Int256Value) GreaterEqual(other NumberValue) BoolValue {
+func (v Int256Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp >= 0
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
+			return cmp >= 0
+		},
+	)
 }
 
 func (v Int256Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -5822,118 +6928,143 @@ func (v Int256Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch [
 	return buffer
 }
 
-func ConvertInt256(value Value) Int256Value {
-	var v *big.Int
+func ConvertInt256(memoryGauge common.MemoryGauge, value Value) Int256Value {
+	converter := func() *big.Int {
+		var v *big.Int
 
-	switch value := value.(type) {
-	case BigNumberValue:
-		v = value.ToBigInt()
+		switch value := value.(type) {
+		case BigNumberValue:
+			v = value.ToBigInt(memoryGauge)
 
-	case NumberValue:
-		v = big.NewInt(int64(value.ToInt()))
+		case NumberValue:
+			v = big.NewInt(int64(value.ToInt()))
 
-	default:
-		panic(errors.NewUnreachableError())
+		default:
+			panic(errors.NewUnreachableError())
+		}
+
+		if v.Cmp(sema.Int256TypeMaxIntBig) > 0 {
+			panic(OverflowError{})
+		} else if v.Cmp(sema.Int256TypeMinIntBig) < 0 {
+			panic(UnderflowError{})
+		}
+
+		return v
 	}
 
-	if v.Cmp(sema.Int256TypeMaxIntBig) > 0 {
-		panic(OverflowError{})
-	} else if v.Cmp(sema.Int256TypeMinIntBig) < 0 {
-		panic(UnderflowError{})
-	}
-
-	return NewInt256ValueFromBigInt(v)
+	return NewInt256ValueFromBigInt(memoryGauge, converter)
 }
 
-func (v Int256Value) BitwiseOr(other IntegerValue) IntegerValue {
+func (v Int256Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	res.Or(v.BigInt, o.BigInt)
-	return Int256Value{res}
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		res.Or(v.BigInt, o.BigInt)
+		return res
+	}
+
+	return NewInt256ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int256Value) BitwiseXor(other IntegerValue) IntegerValue {
+func (v Int256Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	res.Xor(v.BigInt, o.BigInt)
-	return Int256Value{res}
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		res.Xor(v.BigInt, o.BigInt)
+		return res
+	}
+
+	return NewInt256ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int256Value) BitwiseAnd(other IntegerValue) IntegerValue {
+func (v Int256Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	res.And(v.BigInt, o.BigInt)
-	return Int256Value{res}
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		res.And(v.BigInt, o.BigInt)
+		return res
+	}
+
+	return NewInt256ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int256Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v Int256Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	if o.BigInt.Sign() < 0 {
-		panic(UnderflowError{})
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		if o.BigInt.Sign() < 0 {
+			panic(UnderflowError{})
+		}
+		if !o.BigInt.IsUint64() {
+			panic(OverflowError{})
+		}
+		res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+
+		return res
 	}
-	if !o.BigInt.IsUint64() {
-		panic(OverflowError{})
-	}
-	res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
-	return Int256Value{res}
+
+	return NewInt256ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int256Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v Int256Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	if o.BigInt.Sign() < 0 {
-		panic(UnderflowError{})
+	valueGetter := func() *big.Int {
+		res := new(big.Int)
+		if o.BigInt.Sign() < 0 {
+			panic(UnderflowError{})
+		}
+		if !o.BigInt.IsUint64() {
+			panic(OverflowError{})
+		}
+		res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
+		return res
 	}
-	if !o.BigInt.IsUint64() {
-		panic(OverflowError{})
-	}
-	res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
-	return Int256Value{res}
+
+	return NewInt256ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int256Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, sema.Int256Type)
+func (v Int256Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.Int256Type)
 }
 
 func (Int256Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
@@ -5950,14 +7081,13 @@ func (v Int256Value) ToBigEndianBytes() []byte {
 	return SignedBigIntToBigEndianBytes(v.BigInt)
 }
 
-func (v Int256Value) ConformsToDynamicType(
-	_ *Interpreter,
+func (v Int256Value) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && sema.Int256Type.Equal(numberType.StaticType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (v Int256Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -5986,7 +7116,7 @@ func (v Int256Value) Transfer(
 }
 
 func (v Int256Value) Clone(_ *Interpreter) Value {
-	return NewInt256ValueFromBigInt(v.BigInt)
+	return NewUnmeteredInt256ValueFromBigInt(v.BigInt)
 }
 
 func (Int256Value) DeepRemove(_ *Interpreter) {
@@ -6011,29 +7141,64 @@ type UIntValue struct {
 	BigInt *big.Int
 }
 
-func NewUIntValueFromUint64(value uint64) UIntValue {
-	return NewUIntValueFromBigInt(new(big.Int).SetUint64(value))
+const uint64Size = int(unsafe.Sizeof(uint64(0)))
+
+var uint64BigIntMemoryUsage = common.NewBigIntMemoryUsage(uint64Size)
+
+func NewUIntValueFromUint64(memoryGauge common.MemoryGauge, value uint64) UIntValue {
+	return NewUIntValueFromBigInt(
+		memoryGauge,
+		uint64BigIntMemoryUsage,
+		func() *big.Int {
+			return new(big.Int).SetUint64(value)
+		},
+	)
 }
 
-func NewUIntValueFromBigInt(value *big.Int) UIntValue {
-	return UIntValue{BigInt: value}
+func NewUnmeteredUIntValueFromUint64(value uint64) UIntValue {
+	return NewUnmeteredUIntValueFromBigInt(new(big.Int).SetUint64(value))
 }
 
-func ConvertUInt(value Value) UIntValue {
+func NewUIntValueFromBigInt(
+	memoryGauge common.MemoryGauge,
+	memoryUsage common.MemoryUsage,
+	bigIntConstructor func() *big.Int,
+) UIntValue {
+	common.UseMemory(memoryGauge, memoryUsage)
+	value := bigIntConstructor()
+	return NewUnmeteredUIntValueFromBigInt(value)
+}
+
+func NewUnmeteredUIntValueFromBigInt(value *big.Int) UIntValue {
+	return UIntValue{
+		BigInt: value,
+	}
+}
+
+func ConvertUInt(memoryGauge common.MemoryGauge, value Value) UIntValue {
 	switch value := value.(type) {
 	case BigNumberValue:
-		v := value.ToBigInt()
-		if v.Sign() < 0 {
-			panic(UnderflowError{})
-		}
-		return NewUIntValueFromBigInt(value.ToBigInt())
+		return NewUIntValueFromBigInt(
+			memoryGauge,
+			common.NewBigIntMemoryUsage(value.ByteLength()),
+			func() *big.Int {
+				v := value.ToBigInt(memoryGauge)
+				if v.Sign() < 0 {
+					panic(UnderflowError{})
+				}
+				return v
+			},
+		)
 
 	case NumberValue:
 		v := value.ToInt()
 		if v < 0 {
 			panic(UnderflowError{})
 		}
-		return NewUIntValueFromUint64(uint64(v))
+		return NewUIntValueFromUint64(
+			memoryGauge,
+			uint64(v),
+		)
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -6054,28 +7219,31 @@ func (v UIntValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUIntValue(interpreter, v)
 }
 
-func (UIntValue) Walk(_ func(Value)) {
+func (UIntValue) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
-var uintDynamicType DynamicType = NumberDynamicType{sema.UIntType}
-
-func (UIntValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return uintDynamicType
+func (UIntValue) StaticType(interpreter *Interpreter) StaticType {
+	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeUInt)
 }
 
-func (UIntValue) StaticType() StaticType {
-	return PrimitiveStaticTypeUInt
+func (v UIntValue) IsImportable(_ *Interpreter) bool {
+	return true
 }
 
 func (v UIntValue) ToInt() int {
-	if v.BigInt.IsInt64() {
+	if !v.BigInt.IsInt64() {
 		panic(OverflowError{})
 	}
 	return int(v.BigInt.Int64())
 }
 
-func (v UIntValue) ToBigInt() *big.Int {
+func (v UIntValue) ByteLength() int {
+	return common.BigIntByteLength(v.BigInt)
+}
+
+func (v UIntValue) ToBigInt(memoryGauge common.MemoryGauge) *big.Int {
+	common.UseMemory(memoryGauge, common.NewBigIntMemoryUsage(v.ByteLength()))
 	return new(big.Int).Set(v.BigInt)
 }
 
@@ -6087,215 +7255,278 @@ func (v UIntValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v UIntValue) Negate() NumberValue {
+func (v UIntValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
+	return v.String()
+}
+
+func (v UIntValue) Negate(*Interpreter) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v UIntValue) Plus(other NumberValue) NumberValue {
+func (v UIntValue) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	res.Add(v.BigInt, o.BigInt)
-	return UIntValue{res}
+	return NewUIntValueFromBigInt(
+		interpreter,
+		common.NewPlusBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Add(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v UIntValue) SaturatingPlus(other NumberValue) NumberValue {
+func (v UIntValue) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	defer func() {
 		r := recover()
 		if _, ok := r.(InvalidOperandsError); ok {
 			panic(InvalidOperandsError{
 				FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-				LeftType:     v.StaticType(),
-				RightType:    other.StaticType(),
+				LeftType:     v.StaticType(nil),
+				RightType:    other.StaticType(nil),
 			})
 		}
 	}()
 
-	return v.Plus(other)
+	return v.Plus(interpreter, other)
 }
 
-func (v UIntValue) Minus(other NumberValue) NumberValue {
+func (v UIntValue) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	res.Sub(v.BigInt, o.BigInt)
-	// INT30-C
-	if res.Sign() < 0 {
-		panic(UnderflowError{})
-	}
-	return UIntValue{res}
+	return NewUIntValueFromBigInt(
+		interpreter,
+		common.NewMinusBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			res.Sub(v.BigInt, o.BigInt)
+			// INT30-C
+			if res.Sign() < 0 {
+				panic(UnderflowError{})
+			}
+			return res
+		},
+	)
 }
 
-func (v UIntValue) SaturatingMinus(other NumberValue) NumberValue {
+func (v UIntValue) SaturatingMinus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	res.Sub(v.BigInt, o.BigInt)
-	// INT30-C
-	if res.Sign() < 0 {
-		return UIntValue{sema.UIntTypeMin}
-	}
-	return UIntValue{res}
+	return NewUIntValueFromBigInt(
+		interpreter,
+		common.NewMinusBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			res.Sub(v.BigInt, o.BigInt)
+			// INT30-C
+			if res.Sign() < 0 {
+				return sema.UIntTypeMin
+			}
+			return res
+		},
+	)
 }
 
-func (v UIntValue) Mod(other NumberValue) NumberValue {
+func (v UIntValue) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	// INT33-C
-	if o.BigInt.Cmp(res) == 0 {
-		panic(DivisionByZeroError{})
-	}
-	res.Rem(v.BigInt, o.BigInt)
-	return UIntValue{res}
+	return NewUIntValueFromBigInt(
+		interpreter,
+		common.NewModBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			// INT33-C
+			if o.BigInt.Cmp(res) == 0 {
+				panic(DivisionByZeroError{})
+			}
+			res.Rem(v.BigInt, o.BigInt)
+			return res
+		},
+	)
 }
 
-func (v UIntValue) Mul(other NumberValue) NumberValue {
+func (v UIntValue) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMul,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	res.Mul(v.BigInt, o.BigInt)
-	return UIntValue{res}
+	return NewUIntValueFromBigInt(
+		interpreter,
+		common.NewMulBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Mul(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v UIntValue) SaturatingMul(other NumberValue) NumberValue {
+func (v UIntValue) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	defer func() {
 		r := recover()
 		if _, ok := r.(InvalidOperandsError); ok {
 			panic(InvalidOperandsError{
 				FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-				LeftType:     v.StaticType(),
-				RightType:    other.StaticType(),
+				LeftType:     v.StaticType(nil),
+				RightType:    other.StaticType(nil),
 			})
 		}
 	}()
 
-	return v.Mul(other)
+	return v.Mul(interpreter, other)
 }
 
-func (v UIntValue) Div(other NumberValue) NumberValue {
+func (v UIntValue) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	// INT33-C
-	if o.BigInt.Cmp(res) == 0 {
-		panic(DivisionByZeroError{})
-	}
-	res.Div(v.BigInt, o.BigInt)
-	return UIntValue{res}
+	return NewUIntValueFromBigInt(
+		interpreter,
+		common.NewDivBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			// INT33-C
+			if o.BigInt.Cmp(res) == 0 {
+				panic(DivisionByZeroError{})
+			}
+			return res.Div(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v UIntValue) SaturatingDiv(other NumberValue) NumberValue {
+func (v UIntValue) SaturatingDiv(interpreter *Interpreter, other NumberValue) NumberValue {
 	defer func() {
 		r := recover()
 		if _, ok := r.(InvalidOperandsError); ok {
 			panic(InvalidOperandsError{
 				FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-				LeftType:     v.StaticType(),
-				RightType:    other.StaticType(),
+				LeftType:     v.StaticType(nil),
+				RightType:    other.StaticType(nil),
 			})
 		}
 	}()
 
-	return v.Div(other)
+	return v.Div(interpreter, other)
 }
 
-func (v UIntValue) Less(other NumberValue) BoolValue {
+func (v UIntValue) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp == -1
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
+			return cmp == -1
+		},
+	)
 }
 
-func (v UIntValue) LessEqual(other NumberValue) BoolValue {
+func (v UIntValue) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp <= 0
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
+			return cmp <= 0
+		},
+	)
 }
 
-func (v UIntValue) Greater(other NumberValue) BoolValue {
+func (v UIntValue) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp == 1
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
+			return cmp == 1
+		},
+	)
 }
 
-func (v UIntValue) GreaterEqual(other NumberValue) BoolValue {
+func (v UIntValue) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp >= 0
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
+			return cmp >= 0
+		},
+	)
 }
 
 func (v UIntValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -6326,95 +7557,124 @@ func (v UIntValue) HashInput(_ *Interpreter, _ func() LocationRange, scratch []b
 	return buffer
 }
 
-func (v UIntValue) BitwiseOr(other IntegerValue) IntegerValue {
+func (v UIntValue) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	res.Or(v.BigInt, o.BigInt)
-	return UIntValue{res}
+	return NewUIntValueFromBigInt(
+		interpreter,
+		common.NewBitwiseOrBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Or(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v UIntValue) BitwiseXor(other IntegerValue) IntegerValue {
+func (v UIntValue) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	res.Xor(v.BigInt, o.BigInt)
-	return UIntValue{res}
+	return NewUIntValueFromBigInt(
+		interpreter,
+		common.NewBitwiseXorBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Xor(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v UIntValue) BitwiseAnd(other IntegerValue) IntegerValue {
+func (v UIntValue) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	res.And(v.BigInt, o.BigInt)
-	return UIntValue{res}
+	return NewUIntValueFromBigInt(
+		interpreter,
+		common.NewBitwiseAndBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			return res.And(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v UIntValue) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v UIntValue) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
 	if o.BigInt.Sign() < 0 {
 		panic(UnderflowError{})
 	}
+
 	if !o.BigInt.IsUint64() {
 		panic(OverflowError{})
 	}
-	res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
-	return UIntValue{res}
+
+	return NewUIntValueFromBigInt(
+		interpreter,
+		common.NewBitwiseLeftShiftBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+
+		},
+	)
 }
 
-func (v UIntValue) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v UIntValue) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
 	if o.BigInt.Sign() < 0 {
 		panic(UnderflowError{})
 	}
 	if !o.BigInt.IsUint64() {
 		panic(OverflowError{})
 	}
-	res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
-	return UIntValue{res}
+
+	return NewUIntValueFromBigInt(
+		interpreter,
+		common.NewBitwiseRightShiftBigIntMemoryUsage(v.BigInt, o.BigInt),
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
+		},
+	)
 }
 
-func (v UIntValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, sema.UIntType)
+func (v UIntValue) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.UIntType)
 }
 
 func (UIntValue) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
@@ -6431,14 +7691,13 @@ func (v UIntValue) ToBigEndianBytes() []byte {
 	return UnsignedBigIntToBigEndianBytes(v.BigInt)
 }
 
-func (v UIntValue) ConformsToDynamicType(
-	_ *Interpreter,
+func (v UIntValue) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && sema.UIntType.Equal(numberType.StaticType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (v UIntValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
@@ -6467,7 +7726,7 @@ func (v UIntValue) Transfer(
 }
 
 func (v UIntValue) Clone(_ *Interpreter) Value {
-	return NewUIntValueFromBigInt(v.BigInt)
+	return NewUnmeteredUIntValueFromBigInt(v.BigInt)
 }
 
 func (UIntValue) DeepRemove(_ *Interpreter) {
@@ -6498,24 +7757,34 @@ var _ EquatableValue = UInt8Value(0)
 var _ HashableValue = UInt8Value(0)
 var _ MemberAccessibleValue = UInt8Value(0)
 
+var UInt8MemoryUsage = common.NewNumberMemoryUsage(int(unsafe.Sizeof(UInt8Value(0))))
+
+func NewUInt8Value(gauge common.MemoryGauge, uint8Constructor func() uint8) UInt8Value {
+	common.UseMemory(gauge, UInt8MemoryUsage)
+
+	return NewUnmeteredUInt8Value(uint8Constructor())
+}
+
+func NewUnmeteredUInt8Value(value uint8) UInt8Value {
+	return UInt8Value(value)
+}
+
 func (UInt8Value) IsValue() {}
 
 func (v UInt8Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUInt8Value(interpreter, v)
 }
 
-func (UInt8Value) Walk(_ func(Value)) {
+func (UInt8Value) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
-var uint8DynamicType DynamicType = NumberDynamicType{sema.UInt8Type}
-
-func (UInt8Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return uint8DynamicType
+func (UInt8Value) StaticType(interpreter *Interpreter) StaticType {
+	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeUInt8)
 }
 
-func (UInt8Value) StaticType() StaticType {
-	return PrimitiveStaticTypeUInt8
+func (UInt8Value) IsImportable(_ *Interpreter) bool {
+	return true
 }
 
 func (v UInt8Value) String() string {
@@ -6526,219 +7795,281 @@ func (v UInt8Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
+func (v UInt8Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
+	return v.String()
+}
+
 func (v UInt8Value) ToInt() int {
 	return int(v)
 }
 
-func (v UInt8Value) Negate() NumberValue {
+func (v UInt8Value) Negate(*Interpreter) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v UInt8Value) Plus(other NumberValue) NumberValue {
+func (v UInt8Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	sum := v + o
-	// INT30-C
-	if sum < v {
-		panic(OverflowError{})
-	}
-	return sum
+	return NewUInt8Value(interpreter, func() uint8 {
+		sum := v + o
+		// INT30-C
+		if sum < v {
+			panic(OverflowError{})
+		}
+		return uint8(sum)
+	})
 }
 
-func (v UInt8Value) SaturatingPlus(other NumberValue) NumberValue {
+func (v UInt8Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	sum := v + o
-	// INT30-C
-	if sum < v {
-		return UInt8Value(math.MaxUint8)
-	}
-	return sum
+	return NewUInt8Value(interpreter, func() uint8 {
+		sum := v + o
+		// INT30-C
+		if sum < v {
+			return math.MaxUint8
+		}
+		return uint8(sum)
+	})
 }
 
-func (v UInt8Value) Minus(other NumberValue) NumberValue {
+func (v UInt8Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	diff := v - o
-
-	// INT30-C
-	if diff > v {
-		panic(UnderflowError{})
-	}
-	return diff
+	return NewUInt8Value(
+		interpreter,
+		func() uint8 {
+			diff := v - o
+			// INT30-C
+			if diff > v {
+				panic(UnderflowError{})
+			}
+			return uint8(diff)
+		},
+	)
 }
 
-func (v UInt8Value) SaturatingMinus(other NumberValue) NumberValue {
+func (v UInt8Value) SaturatingMinus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	diff := v - o
-
-	// INT30-C
-	if diff > v {
-		return UInt8Value(0)
-	}
-	return diff
+	return NewUInt8Value(
+		interpreter,
+		func() uint8 {
+			diff := v - o
+			// INT30-C
+			if diff > v {
+				return 0
+			}
+			return uint8(diff)
+		},
+	)
 }
 
-func (v UInt8Value) Mod(other NumberValue) NumberValue {
+func (v UInt8Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	if o == 0 {
-		panic(DivisionByZeroError{})
-	}
-	return v % o
+	return NewUInt8Value(
+		interpreter,
+		func() uint8 {
+			if o == 0 {
+				panic(DivisionByZeroError{})
+			}
+			return uint8(v % o)
+		},
+	)
 }
 
-func (v UInt8Value) Mul(other NumberValue) NumberValue {
+func (v UInt8Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMul,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	// INT30-C
-	if (v > 0) && (o > 0) && (v > (math.MaxUint8 / o)) {
-		panic(OverflowError{})
-	}
-	return v * o
+	return NewUInt8Value(
+		interpreter,
+		func() uint8 {
+			// INT30-C
+			if (v > 0) && (o > 0) && (v > (math.MaxUint8 / o)) {
+				panic(OverflowError{})
+			}
+			return uint8(v * o)
+		},
+	)
 }
 
-func (v UInt8Value) SaturatingMul(other NumberValue) NumberValue {
+func (v UInt8Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	// INT30-C
-	if (v > 0) && (o > 0) && (v > (math.MaxUint8 / o)) {
-		return UInt8Value(math.MaxUint8)
-	}
-	return v * o
+	return NewUInt8Value(
+		interpreter,
+		func() uint8 {
+			// INT30-C
+			if (v > 0) && (o > 0) && (v > (math.MaxUint8 / o)) {
+				return math.MaxUint8
+			}
+			return uint8(v * o)
+		},
+	)
 }
 
-func (v UInt8Value) Div(other NumberValue) NumberValue {
+func (v UInt8Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	if o == 0 {
-		panic(DivisionByZeroError{})
-	}
-	return v / o
+	return NewUInt8Value(
+		interpreter,
+		func() uint8 {
+			if o == 0 {
+				panic(DivisionByZeroError{})
+			}
+			return uint8(v / o)
+		},
+	)
 }
 
-func (v UInt8Value) SaturatingDiv(other NumberValue) NumberValue {
+func (v UInt8Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) NumberValue {
 	defer func() {
 		r := recover()
 		if _, ok := r.(InvalidOperandsError); ok {
 			panic(InvalidOperandsError{
 				FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-				LeftType:     v.StaticType(),
-				RightType:    other.StaticType(),
+				LeftType:     v.StaticType(nil),
+				RightType:    other.StaticType(nil),
 			})
 		}
 	}()
 
-	return v.Div(other)
+	return v.Div(interpreter, other)
 }
 
-func (v UInt8Value) Less(other NumberValue) BoolValue {
+func (v UInt8Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v < o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v < o
+		},
+	)
 }
 
-func (v UInt8Value) LessEqual(other NumberValue) BoolValue {
+func (v UInt8Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v <= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v <= o
+		},
+	)
 }
 
-func (v UInt8Value) Greater(other NumberValue) BoolValue {
+func (v UInt8Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v > o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v > o
+		},
+	)
 }
 
-func (v UInt8Value) GreaterEqual(other NumberValue) BoolValue {
+func (v UInt8Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v >= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v >= o
+		},
+	)
 }
 
 func (v UInt8Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -6758,102 +8089,129 @@ func (v UInt8Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []
 	return scratch[:2]
 }
 
-func ConvertUInt8(value Value) UInt8Value {
-	var res uint8
+func ConvertUInt8(memoryGauge common.MemoryGauge, value Value) UInt8Value {
+	return NewUInt8Value(
+		memoryGauge,
+		func() uint8 {
 
-	switch value := value.(type) {
-	case BigNumberValue:
-		v := value.ToBigInt()
-		if v.Cmp(sema.UInt8TypeMaxInt) > 0 {
-			panic(OverflowError{})
-		} else if v.Sign() < 0 {
-			panic(UnderflowError{})
-		}
-		res = uint8(v.Int64())
+			switch value := value.(type) {
+			case BigNumberValue:
+				v := value.ToBigInt(memoryGauge)
+				if v.Cmp(sema.UInt8TypeMaxInt) > 0 {
+					panic(OverflowError{})
+				} else if v.Sign() < 0 {
+					panic(UnderflowError{})
+				}
+				return uint8(v.Int64())
 
-	case NumberValue:
-		v := value.ToInt()
-		if v > math.MaxUint8 {
-			panic(OverflowError{})
-		} else if v < 0 {
-			panic(UnderflowError{})
-		}
-		res = uint8(v)
+			case NumberValue:
+				v := value.ToInt()
+				if v > math.MaxUint8 {
+					panic(OverflowError{})
+				} else if v < 0 {
+					panic(UnderflowError{})
+				}
+				return uint8(v)
 
-	default:
-		panic(errors.NewUnreachableError())
-	}
-
-	return UInt8Value(res)
+			default:
+				panic(errors.NewUnreachableError())
+			}
+		},
+	)
 }
 
-func (v UInt8Value) BitwiseOr(other IntegerValue) IntegerValue {
+func (v UInt8Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v | o
+	return NewUInt8Value(
+		interpreter,
+		func() uint8 {
+			return uint8(v | o)
+		},
+	)
 }
 
-func (v UInt8Value) BitwiseXor(other IntegerValue) IntegerValue {
+func (v UInt8Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v ^ o
+	return NewUInt8Value(
+		interpreter,
+		func() uint8 {
+			return uint8(v ^ o)
+		},
+	)
 }
 
-func (v UInt8Value) BitwiseAnd(other IntegerValue) IntegerValue {
+func (v UInt8Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v & o
+	return NewUInt8Value(
+		interpreter,
+		func() uint8 {
+			return uint8(v & o)
+		},
+	)
 }
 
-func (v UInt8Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v UInt8Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v << o
+	return NewUInt8Value(
+		interpreter,
+		func() uint8 {
+			return uint8(v << o)
+		},
+	)
 }
 
-func (v UInt8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v UInt8Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v >> o
+	return NewUInt8Value(
+		interpreter,
+		func() uint8 {
+			return uint8(v >> o)
+		},
+	)
 }
 
-func (v UInt8Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, sema.UInt8Type)
+func (v UInt8Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.UInt8Type)
 }
 
 func (UInt8Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
@@ -6870,14 +8228,13 @@ func (v UInt8Value) ToBigEndianBytes() []byte {
 	return []byte{byte(v)}
 }
 
-func (v UInt8Value) ConformsToDynamicType(
-	_ *Interpreter,
+func (v UInt8Value) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && sema.UInt8Type.Equal(numberType.StaticType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (v UInt8Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -6937,24 +8294,34 @@ var _ EquatableValue = UInt16Value(0)
 var _ HashableValue = UInt16Value(0)
 var _ MemberAccessibleValue = UInt16Value(0)
 
+var UInt16MemoryUsage = common.NewNumberMemoryUsage(int(unsafe.Sizeof(UInt16Value(0))))
+
+func NewUInt16Value(gauge common.MemoryGauge, uint16Constructor func() uint16) UInt16Value {
+	common.UseMemory(gauge, UInt16MemoryUsage)
+
+	return NewUnmeteredUInt16Value(uint16Constructor())
+}
+
+func NewUnmeteredUInt16Value(value uint16) UInt16Value {
+	return UInt16Value(value)
+}
+
 func (UInt16Value) IsValue() {}
 
 func (v UInt16Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUInt16Value(interpreter, v)
 }
 
-func (UInt16Value) Walk(_ func(Value)) {
+func (UInt16Value) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
-var uint16DynamicType DynamicType = NumberDynamicType{sema.UInt16Type}
-
-func (UInt16Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return uint16DynamicType
+func (UInt16Value) StaticType(interpreter *Interpreter) StaticType {
+	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeUInt16)
 }
 
-func (UInt16Value) StaticType() StaticType {
-	return PrimitiveStaticTypeUInt16
+func (UInt16Value) IsImportable(_ *Interpreter) bool {
+	return true
 }
 
 func (v UInt16Value) String() string {
@@ -6965,218 +8332,286 @@ func (v UInt16Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
+func (v UInt16Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
+	return v.String()
+}
+
 func (v UInt16Value) ToInt() int {
 	return int(v)
 }
-func (v UInt16Value) Negate() NumberValue {
+func (v UInt16Value) Negate(*Interpreter) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v UInt16Value) Plus(other NumberValue) NumberValue {
+func (v UInt16Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	sum := v + o
-	// INT30-C
-	if sum < v {
-		panic(OverflowError{})
-	}
-	return sum
+	return NewUInt16Value(
+		interpreter,
+		func() uint16 {
+			sum := v + o
+			// INT30-C
+			if sum < v {
+				panic(OverflowError{})
+			}
+			return uint16(sum)
+		},
+	)
 }
 
-func (v UInt16Value) SaturatingPlus(other NumberValue) NumberValue {
+func (v UInt16Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	sum := v + o
-	// INT30-C
-	if sum < v {
-		return UInt16Value(math.MaxUint16)
-	}
-	return sum
+	return NewUInt16Value(
+		interpreter,
+		func() uint16 {
+			sum := v + o
+			// INT30-C
+			if sum < v {
+				return math.MaxUint16
+			}
+			return uint16(sum)
+		},
+	)
 }
 
-func (v UInt16Value) Minus(other NumberValue) NumberValue {
+func (v UInt16Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	diff := v - o
-
-	// INT30-C
-	if diff > v {
-		panic(UnderflowError{})
-	}
-	return diff
+	return NewUInt16Value(
+		interpreter,
+		func() uint16 {
+			diff := v - o
+			// INT30-C
+			if diff > v {
+				panic(UnderflowError{})
+			}
+			return uint16(diff)
+		},
+	)
 }
 
-func (v UInt16Value) SaturatingMinus(other NumberValue) NumberValue {
+func (v UInt16Value) SaturatingMinus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	diff := v - o
-
-	// INT30-C
-	if diff > v {
-		return UInt16Value(0)
-	}
-	return diff
+	return NewUInt16Value(
+		interpreter,
+		func() uint16 {
+			diff := v - o
+			// INT30-C
+			if diff > v {
+				return 0
+			}
+			return uint16(diff)
+		},
+	)
 }
 
-func (v UInt16Value) Mod(other NumberValue) NumberValue {
+func (v UInt16Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	if o == 0 {
-		panic(DivisionByZeroError{})
-	}
-	return v % o
+	return NewUInt16Value(
+		interpreter,
+		func() uint16 {
+			if o == 0 {
+				panic(DivisionByZeroError{})
+			}
+			return uint16(v % o)
+		},
+	)
 }
 
-func (v UInt16Value) Mul(other NumberValue) NumberValue {
+func (v UInt16Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMul,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	// INT30-C
-	if (v > 0) && (o > 0) && (v > (math.MaxUint16 / o)) {
-		panic(OverflowError{})
-	}
-	return v * o
+	return NewUInt16Value(
+		interpreter,
+		func() uint16 {
+			// INT30-C
+			if (v > 0) && (o > 0) && (v > (math.MaxUint16 / o)) {
+				panic(OverflowError{})
+			}
+			return uint16(v * o)
+		},
+	)
 }
 
-func (v UInt16Value) SaturatingMul(other NumberValue) NumberValue {
+func (v UInt16Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	// INT30-C
-	if (v > 0) && (o > 0) && (v > (math.MaxUint16 / o)) {
-		return UInt16Value(math.MaxUint16)
-	}
-	return v * o
+	return NewUInt16Value(
+		interpreter,
+		func() uint16 {
+			// INT30-C
+			if (v > 0) && (o > 0) && (v > (math.MaxUint16 / o)) {
+				return math.MaxUint16
+			}
+			return uint16(v * o)
+		},
+	)
 }
 
-func (v UInt16Value) Div(other NumberValue) NumberValue {
+func (v UInt16Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	if o == 0 {
-		panic(DivisionByZeroError{})
-	}
-	return v / o
+	return NewUInt16Value(
+		interpreter,
+		func() uint16 {
+			if o == 0 {
+				panic(DivisionByZeroError{})
+			}
+			return uint16(v / o)
+		},
+	)
 }
 
-func (v UInt16Value) SaturatingDiv(other NumberValue) NumberValue {
+func (v UInt16Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) NumberValue {
 	defer func() {
 		r := recover()
 		if _, ok := r.(InvalidOperandsError); ok {
 			panic(InvalidOperandsError{
 				FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-				LeftType:     v.StaticType(),
-				RightType:    other.StaticType(),
+				LeftType:     v.StaticType(nil),
+				RightType:    other.StaticType(nil),
 			})
 		}
 	}()
 
-	return v.Div(other)
+	return v.Div(interpreter, other)
 }
 
-func (v UInt16Value) Less(other NumberValue) BoolValue {
+func (v UInt16Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v < o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v < o
+		},
+	)
 }
 
-func (v UInt16Value) LessEqual(other NumberValue) BoolValue {
+func (v UInt16Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v <= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v <= o
+		},
+	)
 }
 
-func (v UInt16Value) Greater(other NumberValue) BoolValue {
+func (v UInt16Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v > o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v > o
+		},
+	)
 }
 
-func (v UInt16Value) GreaterEqual(other NumberValue) BoolValue {
+func (v UInt16Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v >= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v >= o
+		},
+	)
 }
 
 func (v UInt16Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -7196,101 +8631,128 @@ func (v UInt16Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch [
 	return scratch[:3]
 }
 
-func ConvertUInt16(value Value) UInt16Value {
-	var res uint16
+func ConvertUInt16(memoryGauge common.MemoryGauge, value Value) UInt16Value {
+	return NewUInt16Value(
+		memoryGauge,
+		func() uint16 {
+			switch value := value.(type) {
+			case BigNumberValue:
+				v := value.ToBigInt(memoryGauge)
+				if v.Cmp(sema.UInt16TypeMaxInt) > 0 {
+					panic(OverflowError{})
+				} else if v.Sign() < 0 {
+					panic(UnderflowError{})
+				}
+				return uint16(v.Int64())
 
-	switch value := value.(type) {
-	case BigNumberValue:
-		v := value.ToBigInt()
-		if v.Cmp(sema.UInt16TypeMaxInt) > 0 {
-			panic(OverflowError{})
-		} else if v.Sign() < 0 {
-			panic(UnderflowError{})
-		}
-		res = uint16(v.Int64())
+			case NumberValue:
+				v := value.ToInt()
+				if v > math.MaxUint16 {
+					panic(OverflowError{})
+				} else if v < 0 {
+					panic(UnderflowError{})
+				}
+				return uint16(v)
 
-	case NumberValue:
-		v := value.ToInt()
-		if v > math.MaxUint16 {
-			panic(OverflowError{})
-		} else if v < 0 {
-			panic(UnderflowError{})
-		}
-		res = uint16(v)
-
-	default:
-		panic(errors.NewUnreachableError())
-	}
-
-	return UInt16Value(res)
+			default:
+				panic(errors.NewUnreachableError())
+			}
+		},
+	)
 }
 
-func (v UInt16Value) BitwiseOr(other IntegerValue) IntegerValue {
+func (v UInt16Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v | o
+	return NewUInt16Value(
+		interpreter,
+		func() uint16 {
+			return uint16(v | o)
+		},
+	)
 }
 
-func (v UInt16Value) BitwiseXor(other IntegerValue) IntegerValue {
+func (v UInt16Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
-	return v ^ o
+
+	return NewUInt16Value(
+		interpreter,
+		func() uint16 {
+			return uint16(v ^ o)
+		},
+	)
 }
 
-func (v UInt16Value) BitwiseAnd(other IntegerValue) IntegerValue {
+func (v UInt16Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v & o
+	return NewUInt16Value(
+		interpreter,
+		func() uint16 {
+			return uint16(v & o)
+		},
+	)
 }
 
-func (v UInt16Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v UInt16Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v << o
+	return NewUInt16Value(
+		interpreter,
+		func() uint16 {
+			return uint16(v << o)
+		},
+	)
 }
 
-func (v UInt16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v UInt16Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v >> o
+	return NewUInt16Value(
+		interpreter,
+		func() uint16 {
+			return uint16(v >> o)
+		},
+	)
 }
 
-func (v UInt16Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, sema.UInt16Type)
+func (v UInt16Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.UInt16Type)
 }
 
 func (UInt16Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
@@ -7309,14 +8771,13 @@ func (v UInt16Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v UInt16Value) ConformsToDynamicType(
-	_ *Interpreter,
+func (v UInt16Value) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && sema.UInt16Type.Equal(numberType.StaticType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (UInt16Value) IsStorable() bool {
@@ -7372,6 +8833,18 @@ func (UInt16Value) ChildStorables() []atree.Storable {
 
 type UInt32Value uint32
 
+var UInt32MemoryUsage = common.NewNumberMemoryUsage(int(unsafe.Sizeof(UInt32Value(0))))
+
+func NewUInt32Value(gauge common.MemoryGauge, uint32Constructor func() uint32) UInt32Value {
+	common.UseMemory(gauge, UInt32MemoryUsage)
+
+	return NewUnmeteredUInt32Value(uint32Constructor())
+}
+
+func NewUnmeteredUInt32Value(value uint32) UInt32Value {
+	return UInt32Value(value)
+}
+
 var _ Value = UInt32Value(0)
 var _ atree.Storable = UInt32Value(0)
 var _ NumberValue = UInt32Value(0)
@@ -7386,18 +8859,16 @@ func (v UInt32Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUInt32Value(interpreter, v)
 }
 
-func (UInt32Value) Walk(_ func(Value)) {
+func (UInt32Value) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
-var uint32DynamicType DynamicType = NumberDynamicType{sema.UInt32Type}
-
-func (UInt32Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return uint32DynamicType
+func (UInt32Value) StaticType(interpreter *Interpreter) StaticType {
+	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeUInt32)
 }
 
-func (UInt32Value) StaticType() StaticType {
-	return PrimitiveStaticTypeUInt32
+func (UInt32Value) IsImportable(_ *Interpreter) bool {
+	return true
 }
 
 func (v UInt32Value) String() string {
@@ -7408,219 +8879,287 @@ func (v UInt32Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
+func (v UInt32Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
+	return v.String()
+}
+
 func (v UInt32Value) ToInt() int {
 	return int(v)
 }
 
-func (v UInt32Value) Negate() NumberValue {
+func (v UInt32Value) Negate(*Interpreter) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v UInt32Value) Plus(other NumberValue) NumberValue {
+func (v UInt32Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	sum := v + o
-
-	// INT30-C
-	if sum < v {
-		panic(OverflowError{})
-	}
-	return sum
+	return NewUInt32Value(
+		interpreter,
+		func() uint32 {
+			sum := v + o
+			// INT30-C
+			if sum < v {
+				panic(OverflowError{})
+			}
+			return uint32(sum)
+		},
+	)
 }
 
-func (v UInt32Value) SaturatingPlus(other NumberValue) NumberValue {
+func (v UInt32Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	sum := v + o
-	// INT30-C
-	if sum < v {
-		return UInt32Value(math.MaxUint32)
-	}
-	return sum
+	return NewUInt32Value(
+		interpreter,
+		func() uint32 {
+			sum := v + o
+			// INT30-C
+			if sum < v {
+				return math.MaxUint32
+			}
+			return uint32(sum)
+		},
+	)
 }
 
-func (v UInt32Value) Minus(other NumberValue) NumberValue {
+func (v UInt32Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	diff := v - o
-
-	// INT30-C
-	if diff > v {
-		panic(UnderflowError{})
-	}
-	return diff
+	return NewUInt32Value(
+		interpreter,
+		func() uint32 {
+			diff := v - o
+			// INT30-C
+			if diff > v {
+				panic(UnderflowError{})
+			}
+			return uint32(diff)
+		},
+	)
 }
 
-func (v UInt32Value) SaturatingMinus(other NumberValue) NumberValue {
+func (v UInt32Value) SaturatingMinus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	diff := v - o
-
-	// INT30-C
-	if diff > v {
-		return UInt32Value(0)
-	}
-	return diff
+	return NewUInt32Value(
+		interpreter,
+		func() uint32 {
+			diff := v - o
+			// INT30-C
+			if diff > v {
+				return 0
+			}
+			return uint32(diff)
+		},
+	)
 }
 
-func (v UInt32Value) Mod(other NumberValue) NumberValue {
+func (v UInt32Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	if o == 0 {
-		panic(DivisionByZeroError{})
-	}
-	return v % o
+	return NewUInt32Value(
+		interpreter,
+		func() uint32 {
+			if o == 0 {
+				panic(DivisionByZeroError{})
+			}
+			return uint32(v % o)
+		},
+	)
 }
 
-func (v UInt32Value) Mul(other NumberValue) NumberValue {
+func (v UInt32Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMul,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	if (v > 0) && (o > 0) && (v > (math.MaxUint32 / o)) {
-		panic(OverflowError{})
-	}
-	return v * o
+	return NewUInt32Value(
+		interpreter,
+		func() uint32 {
+			if (v > 0) && (o > 0) && (v > (math.MaxUint32 / o)) {
+				panic(OverflowError{})
+			}
+			return uint32(v * o)
+		},
+	)
 }
 
-func (v UInt32Value) SaturatingMul(other NumberValue) NumberValue {
+func (v UInt32Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	// INT30-C
-	if (v > 0) && (o > 0) && (v > (math.MaxUint32 / o)) {
-		return UInt32Value(math.MaxUint32)
-	}
-	return v * o
+	return NewUInt32Value(
+		interpreter,
+		func() uint32 {
+
+			// INT30-C
+			if (v > 0) && (o > 0) && (v > (math.MaxUint32 / o)) {
+				return math.MaxUint32
+			}
+			return uint32(v * o)
+		},
+	)
 }
 
-func (v UInt32Value) Div(other NumberValue) NumberValue {
+func (v UInt32Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	if o == 0 {
-		panic(DivisionByZeroError{})
-	}
-	return v / o
+	return NewUInt32Value(
+		interpreter,
+		func() uint32 {
+			if o == 0 {
+				panic(DivisionByZeroError{})
+			}
+			return uint32(v / o)
+		},
+	)
 }
 
-func (v UInt32Value) SaturatingDiv(other NumberValue) NumberValue {
+func (v UInt32Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) NumberValue {
 	defer func() {
 		r := recover()
 		if _, ok := r.(InvalidOperandsError); ok {
 			panic(InvalidOperandsError{
 				FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-				LeftType:     v.StaticType(),
-				RightType:    other.StaticType(),
+				LeftType:     v.StaticType(nil),
+				RightType:    other.StaticType(nil),
 			})
 		}
 	}()
 
-	return v.Div(other)
+	return v.Div(interpreter, other)
 }
 
-func (v UInt32Value) Less(other NumberValue) BoolValue {
+func (v UInt32Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v < o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v < o
+		},
+	)
 }
 
-func (v UInt32Value) LessEqual(other NumberValue) BoolValue {
+func (v UInt32Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v <= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v <= o
+		},
+	)
 }
 
-func (v UInt32Value) Greater(other NumberValue) BoolValue {
+func (v UInt32Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v > o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v > o
+		},
+	)
 }
 
-func (v UInt32Value) GreaterEqual(other NumberValue) BoolValue {
+func (v UInt32Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v >= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v >= o
+		},
+	)
 }
 
 func (v UInt32Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -7640,101 +9179,128 @@ func (v UInt32Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch [
 	return scratch[:5]
 }
 
-func ConvertUInt32(value Value) UInt32Value {
-	var res uint32
+func ConvertUInt32(memoryGauge common.MemoryGauge, value Value) UInt32Value {
+	return NewUInt32Value(
+		memoryGauge,
+		func() uint32 {
+			switch value := value.(type) {
+			case BigNumberValue:
+				v := value.ToBigInt(memoryGauge)
+				if v.Cmp(sema.UInt32TypeMaxInt) > 0 {
+					panic(OverflowError{})
+				} else if v.Sign() < 0 {
+					panic(UnderflowError{})
+				}
+				return uint32(v.Int64())
 
-	switch value := value.(type) {
-	case BigNumberValue:
-		v := value.ToBigInt()
-		if v.Cmp(sema.UInt32TypeMaxInt) > 0 {
-			panic(OverflowError{})
-		} else if v.Sign() < 0 {
-			panic(UnderflowError{})
-		}
-		res = uint32(v.Int64())
+			case NumberValue:
+				v := value.ToInt()
+				if v > math.MaxUint32 {
+					panic(OverflowError{})
+				} else if v < 0 {
+					panic(UnderflowError{})
+				}
+				return uint32(v)
 
-	case NumberValue:
-		v := value.ToInt()
-		if v > math.MaxUint32 {
-			panic(OverflowError{})
-		} else if v < 0 {
-			panic(UnderflowError{})
-		}
-		res = uint32(v)
-
-	default:
-		panic(errors.NewUnreachableError())
-	}
-
-	return UInt32Value(res)
+			default:
+				panic(errors.NewUnreachableError())
+			}
+		},
+	)
 }
 
-func (v UInt32Value) BitwiseOr(other IntegerValue) IntegerValue {
+func (v UInt32Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v | o
+	return NewUInt32Value(
+		interpreter,
+		func() uint32 {
+			return uint32(v | o)
+		},
+	)
 }
 
-func (v UInt32Value) BitwiseXor(other IntegerValue) IntegerValue {
+func (v UInt32Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
-	return v ^ o
+
+	return NewUInt32Value(
+		interpreter,
+		func() uint32 {
+			return uint32(v ^ o)
+		},
+	)
 }
 
-func (v UInt32Value) BitwiseAnd(other IntegerValue) IntegerValue {
+func (v UInt32Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v & o
+	return NewUInt32Value(
+		interpreter,
+		func() uint32 {
+			return uint32(v & o)
+		},
+	)
 }
 
-func (v UInt32Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v UInt32Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v << o
+	return NewUInt32Value(
+		interpreter,
+		func() uint32 {
+			return uint32(v << o)
+		},
+	)
 }
 
-func (v UInt32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v UInt32Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v >> o
+	return NewUInt32Value(
+		interpreter,
+		func() uint32 {
+			return uint32(v >> o)
+		},
+	)
 }
 
-func (v UInt32Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, sema.UInt32Type)
+func (v UInt32Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.UInt32Type)
 }
 
 func (UInt32Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
@@ -7753,14 +9319,13 @@ func (v UInt32Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v UInt32Value) ConformsToDynamicType(
-	_ *Interpreter,
+func (v UInt32Value) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && sema.UInt32Type.Equal(numberType.StaticType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (UInt32Value) IsStorable() bool {
@@ -7831,24 +9396,34 @@ var _ MemberAccessibleValue = UInt64Value(0)
 //
 var _ BigNumberValue = UInt64Value(0)
 
+var UInt64MemoryUsage = common.NewNumberMemoryUsage(int(unsafe.Sizeof(UInt64Value(0))))
+
+func NewUInt64Value(gauge common.MemoryGauge, uint64Constructor func() uint64) UInt64Value {
+	common.UseMemory(gauge, UInt64MemoryUsage)
+
+	return NewUnmeteredUInt64Value(uint64Constructor())
+}
+
+func NewUnmeteredUInt64Value(value uint64) UInt64Value {
+	return UInt64Value(value)
+}
+
 func (UInt64Value) IsValue() {}
 
 func (v UInt64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUInt64Value(interpreter, v)
 }
 
-func (UInt64Value) Walk(_ func(Value)) {
+func (UInt64Value) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
-var uint64DynamicType DynamicType = NumberDynamicType{sema.UInt64Type}
-
-func (UInt64Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return uint64DynamicType
+func (UInt64Value) StaticType(interpreter *Interpreter) StaticType {
+	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeUInt64)
 }
 
-func (UInt64Value) StaticType() StaticType {
-	return PrimitiveStaticTypeUInt64
+func (UInt64Value) IsImportable(_ *Interpreter) bool {
+	return true
 }
 
 func (v UInt64Value) String() string {
@@ -7859,11 +9434,25 @@ func (v UInt64Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
+func (v UInt64Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
+	return v.String()
+}
+
 func (v UInt64Value) ToInt() int {
 	if v > math.MaxInt64 {
 		panic(OverflowError{})
 	}
 	return int(v)
+}
+
+func (v UInt64Value) ByteLength() int {
+	return 8
 }
 
 // ToBigInt
@@ -7873,11 +9462,12 @@ func (v UInt64Value) ToInt() int {
 // Implementing BigNumberValue ensures conversion functions
 // call ToBigInt instead of ToInt.
 //
-func (v UInt64Value) ToBigInt() *big.Int {
+func (v UInt64Value) ToBigInt(memoryGauge common.MemoryGauge) *big.Int {
+	common.UseMemory(memoryGauge, common.NewBigIntMemoryUsage(v.ByteLength()))
 	return new(big.Int).SetUint64(uint64(v))
 }
 
-func (v UInt64Value) Negate() NumberValue {
+func (v UInt64Value) Negate(*Interpreter) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
@@ -7890,206 +9480,263 @@ func safeAddUint64(a, b uint64) uint64 {
 	return sum
 }
 
-func (v UInt64Value) Plus(other NumberValue) NumberValue {
+func (v UInt64Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return UInt64Value(safeAddUint64(uint64(v), uint64(o)))
+	return NewUInt64Value(
+		interpreter,
+		func() uint64 {
+			return safeAddUint64(uint64(v), uint64(o))
+		},
+	)
 }
 
-func (v UInt64Value) SaturatingPlus(other NumberValue) NumberValue {
+func (v UInt64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	sum := v + o
-
-	// INT30-C
-	if sum < v {
-		return UInt64Value(math.MaxUint64)
-	}
-	return sum
+	return NewUInt64Value(
+		interpreter,
+		func() uint64 {
+			sum := v + o
+			// INT30-C
+			if sum < v {
+				return math.MaxUint64
+			}
+			return uint64(sum)
+		},
+	)
 }
 
-func (v UInt64Value) Minus(other NumberValue) NumberValue {
+func (v UInt64Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	diff := v - o
-
-	// INT30-C
-	if diff > v {
-		panic(UnderflowError{})
-	}
-	return diff
+	return NewUInt64Value(
+		interpreter,
+		func() uint64 {
+			diff := v - o
+			// INT30-C
+			if diff > v {
+				panic(UnderflowError{})
+			}
+			return uint64(diff)
+		},
+	)
 }
 
-func (v UInt64Value) SaturatingMinus(other NumberValue) NumberValue {
+func (v UInt64Value) SaturatingMinus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	diff := v - o
-
-	// INT30-C
-	if diff > v {
-		return UInt64Value(0)
-	}
-	return diff
+	return NewUInt64Value(
+		interpreter,
+		func() uint64 {
+			diff := v - o
+			// INT30-C
+			if diff > v {
+				return 0
+			}
+			return uint64(diff)
+		},
+	)
 }
 
-func (v UInt64Value) Mod(other NumberValue) NumberValue {
+func (v UInt64Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	if o == 0 {
-		panic(DivisionByZeroError{})
-	}
-	return v % o
+	return NewUInt64Value(
+		interpreter,
+		func() uint64 {
+			if o == 0 {
+				panic(DivisionByZeroError{})
+			}
+			return uint64(v % o)
+		},
+	)
 }
 
-func (v UInt64Value) Mul(other NumberValue) NumberValue {
+func (v UInt64Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMul,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	if (v > 0) && (o > 0) && (v > (math.MaxUint64 / o)) {
-		panic(OverflowError{})
-	}
-	return v * o
+	return NewUInt64Value(
+		interpreter,
+		func() uint64 {
+			if (v > 0) && (o > 0) && (v > (math.MaxUint64 / o)) {
+				panic(OverflowError{})
+			}
+			return uint64(v * o)
+		},
+	)
 }
 
-func (v UInt64Value) SaturatingMul(other NumberValue) NumberValue {
+func (v UInt64Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	// INT30-C
-	if (v > 0) && (o > 0) && (v > (math.MaxUint64 / o)) {
-		return UInt64Value(math.MaxUint64)
-	}
-	return v * o
+	return NewUInt64Value(
+		interpreter,
+		func() uint64 {
+			// INT30-C
+			if (v > 0) && (o > 0) && (v > (math.MaxUint64 / o)) {
+				return math.MaxUint64
+			}
+			return uint64(v * o)
+		},
+	)
 }
 
-func (v UInt64Value) Div(other NumberValue) NumberValue {
+func (v UInt64Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	if o == 0 {
-		panic(DivisionByZeroError{})
-	}
-	return v / o
+	return NewUInt64Value(
+		interpreter,
+		func() uint64 {
+			if o == 0 {
+				panic(DivisionByZeroError{})
+			}
+			return uint64(v / o)
+		},
+	)
 }
 
-func (v UInt64Value) SaturatingDiv(other NumberValue) NumberValue {
+func (v UInt64Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) NumberValue {
 	defer func() {
 		r := recover()
 		if _, ok := r.(InvalidOperandsError); ok {
 			panic(InvalidOperandsError{
 				FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-				LeftType:     v.StaticType(),
-				RightType:    other.StaticType(),
+				LeftType:     v.StaticType(nil),
+				RightType:    other.StaticType(nil),
 			})
 		}
 	}()
 
-	return v.Div(other)
+	return v.Div(interpreter, other)
 }
 
-func (v UInt64Value) Less(other NumberValue) BoolValue {
+func (v UInt64Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v < o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v < o
+		},
+	)
 }
 
-func (v UInt64Value) LessEqual(other NumberValue) BoolValue {
+func (v UInt64Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v <= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v <= o
+		},
+	)
 }
 
-func (v UInt64Value) Greater(other NumberValue) BoolValue {
+func (v UInt64Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v > o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v > o
+		},
+	)
 }
 
-func (v UInt64Value) GreaterEqual(other NumberValue) BoolValue {
+func (v UInt64Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v >= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v >= o
+		},
+	)
 }
 
 func (v UInt64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -8109,99 +9756,127 @@ func (v UInt64Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch [
 	return scratch[:9]
 }
 
-func ConvertUInt64(value Value) UInt64Value {
-	var res uint64
+func ConvertUInt64(memoryGauge common.MemoryGauge, value Value) UInt64Value {
+	return NewUInt64Value(
+		memoryGauge,
+		func() uint64 {
+			switch value := value.(type) {
+			case BigNumberValue:
+				v := value.ToBigInt(memoryGauge)
+				if v.Cmp(sema.UInt64TypeMaxInt) > 0 {
+					panic(OverflowError{})
+				} else if v.Sign() < 0 {
+					panic(UnderflowError{})
+				}
+				return uint64(v.Int64())
 
-	switch value := value.(type) {
-	case BigNumberValue:
-		v := value.ToBigInt()
-		if v.Cmp(sema.UInt64TypeMaxInt) > 0 {
-			panic(OverflowError{})
-		} else if v.Sign() < 0 {
-			panic(UnderflowError{})
-		}
-		res = uint64(v.Int64())
+			case NumberValue:
+				v := value.ToInt()
+				if v < 0 {
+					panic(UnderflowError{})
+				}
+				return uint64(v)
 
-	case NumberValue:
-		v := value.ToInt()
-		if v < 0 {
-			panic(UnderflowError{})
-		}
-		res = uint64(v)
+			default:
+				panic(errors.NewUnreachableError())
+			}
 
-	default:
-		panic(errors.NewUnreachableError())
-	}
-
-	return UInt64Value(res)
+		},
+	)
 }
 
-func (v UInt64Value) BitwiseOr(other IntegerValue) IntegerValue {
+func (v UInt64Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v | o
+	return NewUInt64Value(
+		interpreter,
+		func() uint64 {
+			return uint64(v | o)
+		},
+	)
 }
 
-func (v UInt64Value) BitwiseXor(other IntegerValue) IntegerValue {
+func (v UInt64Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
-	return v ^ o
+
+	return NewUInt64Value(
+		interpreter,
+		func() uint64 {
+			return uint64(v ^ o)
+		},
+	)
 }
 
-func (v UInt64Value) BitwiseAnd(other IntegerValue) IntegerValue {
+func (v UInt64Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v & o
+	return NewUInt64Value(
+		interpreter,
+		func() uint64 {
+			return uint64(v & o)
+		},
+	)
 }
 
-func (v UInt64Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v UInt64Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v << o
+	return NewUInt64Value(
+		interpreter,
+		func() uint64 {
+			return uint64(v << o)
+		},
+	)
 }
 
-func (v UInt64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v UInt64Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v >> o
+	return NewUInt64Value(
+		interpreter,
+		func() uint64 {
+			return uint64(v >> o)
+		},
+	)
 }
 
-func (v UInt64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, sema.UInt64Type)
+func (v UInt64Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.UInt64Type)
 }
 
 func (UInt64Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
@@ -8220,16 +9895,14 @@ func (v UInt64Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v UInt64Value) ConformsToDynamicType(
-	_ *Interpreter,
+func (v UInt64Value) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && sema.UInt64Type.Equal(numberType.StaticType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
-
 func (UInt64Value) IsStorable() bool {
 	return true
 }
@@ -8285,12 +9958,31 @@ type UInt128Value struct {
 	BigInt *big.Int
 }
 
-func NewUInt128ValueFromUint64(value uint64) UInt128Value {
-	return NewUInt128ValueFromBigInt(new(big.Int).SetUint64(value))
+func NewUInt128ValueFromUint64(interpreter *Interpreter, value uint64) UInt128Value {
+	return NewUInt128ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			return new(big.Int).SetUint64(value)
+		},
+	)
 }
 
-func NewUInt128ValueFromBigInt(value *big.Int) UInt128Value {
-	return UInt128Value{BigInt: value}
+func NewUnmeteredUInt128ValueFromUint64(value uint64) UInt128Value {
+	return NewUnmeteredUInt128ValueFromBigInt(new(big.Int).SetUint64(value))
+}
+
+var Uint128MemoryUsage = common.NewBigIntMemoryUsage(16)
+
+func NewUInt128ValueFromBigInt(memoryGauge common.MemoryGauge, bigIntConstructor func() *big.Int) UInt128Value {
+	common.UseMemory(memoryGauge, Uint128MemoryUsage)
+	value := bigIntConstructor()
+	return NewUnmeteredUInt128ValueFromBigInt(value)
+}
+
+func NewUnmeteredUInt128ValueFromBigInt(value *big.Int) UInt128Value {
+	return UInt128Value{
+		BigInt: value,
+	}
 }
 
 var _ Value = UInt128Value{}
@@ -8307,18 +9999,16 @@ func (v UInt128Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUInt128Value(interpreter, v)
 }
 
-func (UInt128Value) Walk(_ func(Value)) {
+func (UInt128Value) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
-var uint128DynamicType DynamicType = NumberDynamicType{sema.UInt128Type}
-
-func (UInt128Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return uint128DynamicType
+func (UInt128Value) StaticType(interpreter *Interpreter) StaticType {
+	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeUInt128)
 }
 
-func (UInt128Value) StaticType() StaticType {
-	return PrimitiveStaticTypeUInt128
+func (UInt128Value) IsImportable(_ *Interpreter) bool {
+	return true
 }
 
 func (v UInt128Value) ToInt() int {
@@ -8328,7 +10018,12 @@ func (v UInt128Value) ToInt() int {
 	return int(v.BigInt.Int64())
 }
 
-func (v UInt128Value) ToBigInt() *big.Int {
+func (v UInt128Value) ByteLength() int {
+	return common.BigIntByteLength(v.BigInt)
+}
+
+func (v UInt128Value) ToBigInt(memoryGauge common.MemoryGauge) *big.Int {
+	common.UseMemory(memoryGauge, common.NewBigIntMemoryUsage(v.ByteLength()))
 	return new(big.Int).Set(v.BigInt)
 }
 
@@ -8340,263 +10035,332 @@ func (v UInt128Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v UInt128Value) Negate() NumberValue {
+func (v UInt128Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
+	return v.String()
+}
+
+func (v UInt128Value) Negate(*Interpreter) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v UInt128Value) Plus(other NumberValue) NumberValue {
+func (v UInt128Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	sum := new(big.Int)
-	sum.Add(v.BigInt, o.BigInt)
-	// Given that this value is backed by an arbitrary size integer,
-	// we can just add and check the range of the result.
-	//
-	// If Go gains a native uint128 type and we switch this value
-	// to be based on it, then we need to follow INT30-C:
-	//
-	//  if sum < v {
-	//      ...
-	//  }
-	//
-	if sum.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
-		panic(OverflowError{})
-	}
-	return UInt128Value{sum}
+	return NewUInt128ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			sum := new(big.Int)
+			sum.Add(v.BigInt, o.BigInt)
+			// Given that this value is backed by an arbitrary size integer,
+			// we can just add and check the range of the result.
+			//
+			// If Go gains a native uint128 type and we switch this value
+			// to be based on it, then we need to follow INT30-C:
+			//
+			//  if sum < v {
+			//      ...
+			//  }
+			//
+			if sum.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
+				panic(OverflowError{})
+			}
+			return sum
+		},
+	)
 }
 
-func (v UInt128Value) SaturatingPlus(other NumberValue) NumberValue {
+func (v UInt128Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	sum := new(big.Int)
-	sum.Add(v.BigInt, o.BigInt)
-	// Given that this value is backed by an arbitrary size integer,
-	// we can just add and check the range of the result.
-	//
-	// If Go gains a native uint128 type and we switch this value
-	// to be based on it, then we need to follow INT30-C:
-	//
-	//  if sum < v {
-	//      ...
-	//  }
-	//
-	if sum.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
-		return UInt128Value{sema.UInt128TypeMaxIntBig}
-	}
-	return UInt128Value{sum}
+	return NewUInt128ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			sum := new(big.Int)
+			sum.Add(v.BigInt, o.BigInt)
+			// Given that this value is backed by an arbitrary size integer,
+			// we can just add and check the range of the result.
+			//
+			// If Go gains a native uint128 type and we switch this value
+			// to be based on it, then we need to follow INT30-C:
+			//
+			//  if sum < v {
+			//      ...
+			//  }
+			//
+			if sum.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
+				return sema.UInt128TypeMaxIntBig
+			}
+			return sum
+		},
+	)
 }
 
-func (v UInt128Value) Minus(other NumberValue) NumberValue {
+func (v UInt128Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	diff := new(big.Int)
-	diff.Sub(v.BigInt, o.BigInt)
-	// Given that this value is backed by an arbitrary size integer,
-	// we can just subtract and check the range of the result.
-	//
-	// If Go gains a native uint128 type and we switch this value
-	// to be based on it, then we need to follow INT30-C:
-	//
-	//   if diff > v {
-	// 	     ...
-	//   }
-	//
-	if diff.Cmp(sema.UInt128TypeMinIntBig) < 0 {
-		panic(UnderflowError{})
-	}
-	return UInt128Value{diff}
+	return NewUInt128ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			diff := new(big.Int)
+			diff.Sub(v.BigInt, o.BigInt)
+			// Given that this value is backed by an arbitrary size integer,
+			// we can just subtract and check the range of the result.
+			//
+			// If Go gains a native uint128 type and we switch this value
+			// to be based on it, then we need to follow INT30-C:
+			//
+			//   if diff > v {
+			// 	     ...
+			//   }
+			//
+			if diff.Cmp(sema.UInt128TypeMinIntBig) < 0 {
+				panic(UnderflowError{})
+			}
+			return diff
+		},
+	)
 }
 
-func (v UInt128Value) SaturatingMinus(other NumberValue) NumberValue {
+func (v UInt128Value) SaturatingMinus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	diff := new(big.Int)
-	diff.Sub(v.BigInt, o.BigInt)
-	// Given that this value is backed by an arbitrary size integer,
-	// we can just subtract and check the range of the result.
-	//
-	// If Go gains a native uint128 type and we switch this value
-	// to be based on it, then we need to follow INT30-C:
-	//
-	//   if diff > v {
-	// 	     ...
-	//   }
-	//
-	if diff.Cmp(sema.UInt128TypeMinIntBig) < 0 {
-		return UInt128Value{sema.UInt128TypeMinIntBig}
-	}
-	return UInt128Value{diff}
+	return NewUInt128ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			diff := new(big.Int)
+			diff.Sub(v.BigInt, o.BigInt)
+			// Given that this value is backed by an arbitrary size integer,
+			// we can just subtract and check the range of the result.
+			//
+			// If Go gains a native uint128 type and we switch this value
+			// to be based on it, then we need to follow INT30-C:
+			//
+			//   if diff > v {
+			// 	     ...
+			//   }
+			//
+			if diff.Cmp(sema.UInt128TypeMinIntBig) < 0 {
+				return sema.UInt128TypeMinIntBig
+			}
+			return diff
+		},
+	)
 }
 
-func (v UInt128Value) Mod(other NumberValue) NumberValue {
+func (v UInt128Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	if o.BigInt.Cmp(res) == 0 {
-		panic(DivisionByZeroError{})
-	}
-	res.Rem(v.BigInt, o.BigInt)
-	return UInt128Value{res}
+	return NewUInt128ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			if o.BigInt.Cmp(res) == 0 {
+				panic(DivisionByZeroError{})
+			}
+			return res.Rem(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v UInt128Value) Mul(other NumberValue) NumberValue {
+func (v UInt128Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMul,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	res.Mul(v.BigInt, o.BigInt)
-	if res.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
-		panic(OverflowError{})
-	}
-	return UInt128Value{res}
+	return NewUInt128ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			res.Mul(v.BigInt, o.BigInt)
+			if res.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
+				panic(OverflowError{})
+			}
+			return res
+		},
+	)
 }
 
-func (v UInt128Value) SaturatingMul(other NumberValue) NumberValue {
+func (v UInt128Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	res.Mul(v.BigInt, o.BigInt)
-	if res.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
-		return UInt128Value{sema.UInt128TypeMaxIntBig}
-	}
-	return UInt128Value{res}
+	return NewUInt128ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			res.Mul(v.BigInt, o.BigInt)
+			if res.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
+				return sema.UInt128TypeMaxIntBig
+			}
+			return res
+		},
+	)
 }
 
-func (v UInt128Value) Div(other NumberValue) NumberValue {
+func (v UInt128Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	if o.BigInt.Cmp(res) == 0 {
-		panic(DivisionByZeroError{})
-	}
-	res.Div(v.BigInt, o.BigInt)
-	return UInt128Value{res}
+	return NewUInt128ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			if o.BigInt.Cmp(res) == 0 {
+				panic(DivisionByZeroError{})
+			}
+			return res.Div(v.BigInt, o.BigInt)
+		},
+	)
+
 }
 
-func (v UInt128Value) SaturatingDiv(other NumberValue) NumberValue {
+func (v UInt128Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) NumberValue {
 	defer func() {
 		r := recover()
 		if _, ok := r.(InvalidOperandsError); ok {
 			panic(InvalidOperandsError{
 				FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-				LeftType:     v.StaticType(),
-				RightType:    other.StaticType(),
+				LeftType:     v.StaticType(nil),
+				RightType:    other.StaticType(nil),
 			})
 		}
 	}()
 
-	return v.Div(other)
+	return v.Div(interpreter, other)
 }
 
-func (v UInt128Value) Less(other NumberValue) BoolValue {
+func (v UInt128Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp == -1
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
+			return cmp == -1
+		},
+	)
 }
 
-func (v UInt128Value) LessEqual(other NumberValue) BoolValue {
+func (v UInt128Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp <= 0
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
+			return cmp <= 0
+		},
+	)
 }
 
-func (v UInt128Value) Greater(other NumberValue) BoolValue {
+func (v UInt128Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp == 1
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
+			return cmp == 1
+		},
+	)
 }
 
-func (v UInt128Value) GreaterEqual(other NumberValue) BoolValue {
+func (v UInt128Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp >= 0
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
+			return cmp >= 0
+		},
+	)
 }
 
 func (v UInt128Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -8627,118 +10391,145 @@ func (v UInt128Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch 
 	return buffer
 }
 
-func ConvertUInt128(value Value) UInt128Value {
-	var v *big.Int
+func ConvertUInt128(memoryGauge common.MemoryGauge, value Value) Value {
+	return NewUInt128ValueFromBigInt(
+		memoryGauge,
+		func() *big.Int {
 
-	switch value := value.(type) {
-	case BigNumberValue:
-		v = value.ToBigInt()
+			var v *big.Int
 
-	case NumberValue:
-		v = big.NewInt(int64(value.ToInt()))
+			switch value := value.(type) {
+			case BigNumberValue:
+				v = value.ToBigInt(memoryGauge)
 
-	default:
-		panic(errors.NewUnreachableError())
-	}
+			case NumberValue:
+				v = big.NewInt(int64(value.ToInt()))
 
-	if v.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
-		panic(OverflowError{})
-	} else if v.Sign() < 0 {
-		panic(UnderflowError{})
-	}
+			default:
+				panic(errors.NewUnreachableError())
+			}
 
-	return NewUInt128ValueFromBigInt(v)
+			if v.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
+				panic(OverflowError{})
+			} else if v.Sign() < 0 {
+				panic(UnderflowError{})
+			}
+
+			return v
+		},
+	)
 }
 
-func (v UInt128Value) BitwiseOr(other IntegerValue) IntegerValue {
+func (v UInt128Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	res.Or(v.BigInt, o.BigInt)
-	return UInt128Value{res}
+	return NewUInt128ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Or(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v UInt128Value) BitwiseXor(other IntegerValue) IntegerValue {
+func (v UInt128Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	res.Xor(v.BigInt, o.BigInt)
-	return UInt128Value{res}
+	return NewUInt128ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Xor(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v UInt128Value) BitwiseAnd(other IntegerValue) IntegerValue {
+func (v UInt128Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	res.And(v.BigInt, o.BigInt)
-	return UInt128Value{res}
+	return NewUInt128ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			return res.And(v.BigInt, o.BigInt)
+		},
+	)
+
 }
 
-func (v UInt128Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v UInt128Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	if o.BigInt.Sign() < 0 {
-		panic(UnderflowError{})
-	}
-	if !o.BigInt.IsUint64() {
-		panic(OverflowError{})
-	}
-	res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
-	return UInt128Value{res}
+	return NewUInt128ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			if o.BigInt.Sign() < 0 {
+				panic(UnderflowError{})
+			}
+			if !o.BigInt.IsUint64() {
+				panic(OverflowError{})
+			}
+			return res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+		},
+	)
 }
 
-func (v UInt128Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v UInt128Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	if o.BigInt.Sign() < 0 {
-		panic(UnderflowError{})
-	}
-	if !o.BigInt.IsUint64() {
-		panic(OverflowError{})
-	}
-	res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
-	return UInt128Value{res}
+	return NewUInt128ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			if o.BigInt.Sign() < 0 {
+				panic(UnderflowError{})
+			}
+			if !o.BigInt.IsUint64() {
+				panic(OverflowError{})
+			}
+			return res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
+		},
+	)
 }
 
-func (v UInt128Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, sema.UInt128Type)
+func (v UInt128Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.UInt128Type)
 }
 
 func (UInt128Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
@@ -8755,14 +10546,13 @@ func (v UInt128Value) ToBigEndianBytes() []byte {
 	return UnsignedBigIntToBigEndianBytes(v.BigInt)
 }
 
-func (v UInt128Value) ConformsToDynamicType(
-	_ *Interpreter,
+func (v UInt128Value) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && sema.UInt128Type.Equal(numberType.StaticType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (UInt128Value) IsStorable() bool {
@@ -8795,7 +10585,7 @@ func (v UInt128Value) Transfer(
 }
 
 func (v UInt128Value) Clone(_ *Interpreter) Value {
-	return NewUInt128ValueFromBigInt(v.BigInt)
+	return NewUnmeteredUInt128ValueFromBigInt(v.BigInt)
 }
 
 func (UInt128Value) DeepRemove(_ *Interpreter) {
@@ -8820,12 +10610,31 @@ type UInt256Value struct {
 	BigInt *big.Int
 }
 
-func NewUInt256ValueFromUint64(value uint64) UInt256Value {
-	return NewUInt256ValueFromBigInt(new(big.Int).SetUint64(value))
+func NewUInt256ValueFromUint64(interpreter *Interpreter, value uint64) UInt256Value {
+	return NewUInt256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			return new(big.Int).SetUint64(value)
+		},
+	)
 }
 
-func NewUInt256ValueFromBigInt(value *big.Int) UInt256Value {
-	return UInt256Value{BigInt: value}
+func NewUnmeteredUInt256ValueFromUint64(value uint64) UInt256Value {
+	return NewUnmeteredUInt256ValueFromBigInt(new(big.Int).SetUint64(value))
+}
+
+var Uint256MemoryUsage = common.NewBigIntMemoryUsage(32)
+
+func NewUInt256ValueFromBigInt(memoryGauge common.MemoryGauge, bigIntConstructor func() *big.Int) UInt256Value {
+	common.UseMemory(memoryGauge, Uint256MemoryUsage)
+	value := bigIntConstructor()
+	return NewUnmeteredUInt256ValueFromBigInt(value)
+}
+
+func NewUnmeteredUInt256ValueFromBigInt(value *big.Int) UInt256Value {
+	return UInt256Value{
+		BigInt: value,
+	}
 }
 
 var _ Value = UInt256Value{}
@@ -8842,18 +10651,16 @@ func (v UInt256Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUInt256Value(interpreter, v)
 }
 
-func (UInt256Value) Walk(_ func(Value)) {
+func (UInt256Value) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
-var uint256DynamicType DynamicType = NumberDynamicType{sema.UInt256Type}
-
-func (UInt256Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return uint256DynamicType
+func (UInt256Value) StaticType(interpreter *Interpreter) StaticType {
+	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeUInt256)
 }
 
-func (UInt256Value) StaticType() StaticType {
-	return PrimitiveStaticTypeUInt256
+func (UInt256Value) IsImportable(_ *Interpreter) bool {
+	return true
 }
 
 func (v UInt256Value) ToInt() int {
@@ -8864,7 +10671,12 @@ func (v UInt256Value) ToInt() int {
 	return int(v.BigInt.Int64())
 }
 
-func (v UInt256Value) ToBigInt() *big.Int {
+func (v UInt256Value) ByteLength() int {
+	return common.BigIntByteLength(v.BigInt)
+}
+
+func (v UInt256Value) ToBigInt(memoryGauge common.MemoryGauge) *big.Int {
+	common.UseMemory(memoryGauge, common.NewBigIntMemoryUsage(v.ByteLength()))
 	return new(big.Int).Set(v.BigInt)
 }
 
@@ -8876,263 +10688,333 @@ func (v UInt256Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v UInt256Value) Negate() NumberValue {
+func (v UInt256Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
+	return v.String()
+}
+
+func (v UInt256Value) Negate(*Interpreter) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v UInt256Value) Plus(other NumberValue) NumberValue {
+func (v UInt256Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	sum := new(big.Int)
-	sum.Add(v.BigInt, o.BigInt)
-	// Given that this value is backed by an arbitrary size integer,
-	// we can just add and check the range of the result.
-	//
-	// If Go gains a native uint256 type and we switch this value
-	// to be based on it, then we need to follow INT30-C:
-	//
-	//  if sum < v {
-	//      ...
-	//  }
-	//
-	if sum.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
-		panic(OverflowError{})
-	}
-	return UInt256Value{sum}
+	return NewUInt256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			sum := new(big.Int)
+			sum.Add(v.BigInt, o.BigInt)
+			// Given that this value is backed by an arbitrary size integer,
+			// we can just add and check the range of the result.
+			//
+			// If Go gains a native uint256 type and we switch this value
+			// to be based on it, then we need to follow INT30-C:
+			//
+			//  if sum < v {
+			//      ...
+			//  }
+			//
+			if sum.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
+				panic(OverflowError{})
+			}
+			return sum
+		},
+	)
+
 }
 
-func (v UInt256Value) SaturatingPlus(other NumberValue) NumberValue {
+func (v UInt256Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	sum := new(big.Int)
-	sum.Add(v.BigInt, o.BigInt)
-	// Given that this value is backed by an arbitrary size integer,
-	// we can just add and check the range of the result.
-	//
-	// If Go gains a native uint256 type and we switch this value
-	// to be based on it, then we need to follow INT30-C:
-	//
-	//  if sum < v {
-	//      ...
-	//  }
-	//
-	if sum.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
-		return UInt256Value{sema.UInt256TypeMaxIntBig}
-	}
-	return UInt256Value{sum}
+	return NewUInt256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			sum := new(big.Int)
+			sum.Add(v.BigInt, o.BigInt)
+			// Given that this value is backed by an arbitrary size integer,
+			// we can just add and check the range of the result.
+			//
+			// If Go gains a native uint256 type and we switch this value
+			// to be based on it, then we need to follow INT30-C:
+			//
+			//  if sum < v {
+			//      ...
+			//  }
+			//
+			if sum.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
+				return sema.UInt256TypeMaxIntBig
+			}
+			return sum
+		},
+	)
 }
 
-func (v UInt256Value) Minus(other NumberValue) NumberValue {
+func (v UInt256Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	diff := new(big.Int)
-	diff.Sub(v.BigInt, o.BigInt)
-	// Given that this value is backed by an arbitrary size integer,
-	// we can just subtract and check the range of the result.
-	//
-	// If Go gains a native uint256 type and we switch this value
-	// to be based on it, then we need to follow INT30-C:
-	//
-	//   if diff > v {
-	// 	     ...
-	//   }
-	//
-	if diff.Cmp(sema.UInt256TypeMinIntBig) < 0 {
-		panic(UnderflowError{})
-	}
-	return UInt256Value{diff}
+	return NewUInt256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			diff := new(big.Int)
+			diff.Sub(v.BigInt, o.BigInt)
+			// Given that this value is backed by an arbitrary size integer,
+			// we can just subtract and check the range of the result.
+			//
+			// If Go gains a native uint256 type and we switch this value
+			// to be based on it, then we need to follow INT30-C:
+			//
+			//   if diff > v {
+			// 	     ...
+			//   }
+			//
+			if diff.Cmp(sema.UInt256TypeMinIntBig) < 0 {
+				panic(UnderflowError{})
+			}
+			return diff
+		},
+	)
 }
 
-func (v UInt256Value) SaturatingMinus(other NumberValue) NumberValue {
+func (v UInt256Value) SaturatingMinus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	diff := new(big.Int)
-	diff.Sub(v.BigInt, o.BigInt)
-	// Given that this value is backed by an arbitrary size integer,
-	// we can just subtract and check the range of the result.
-	//
-	// If Go gains a native uint256 type and we switch this value
-	// to be based on it, then we need to follow INT30-C:
-	//
-	//   if diff > v {
-	// 	     ...
-	//   }
-	//
-	if diff.Cmp(sema.UInt256TypeMinIntBig) < 0 {
-		return UInt256Value{sema.UInt256TypeMinIntBig}
-	}
-	return UInt256Value{diff}
+	return NewUInt256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			diff := new(big.Int)
+			diff.Sub(v.BigInt, o.BigInt)
+			// Given that this value is backed by an arbitrary size integer,
+			// we can just subtract and check the range of the result.
+			//
+			// If Go gains a native uint256 type and we switch this value
+			// to be based on it, then we need to follow INT30-C:
+			//
+			//   if diff > v {
+			// 	     ...
+			//   }
+			//
+			if diff.Cmp(sema.UInt256TypeMinIntBig) < 0 {
+				return sema.UInt256TypeMinIntBig
+			}
+			return diff
+		},
+	)
+
 }
 
-func (v UInt256Value) Mod(other NumberValue) NumberValue {
+func (v UInt256Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	if o.BigInt.Cmp(res) == 0 {
-		panic(DivisionByZeroError{})
-	}
-	res.Rem(v.BigInt, o.BigInt)
-	return UInt256Value{res}
+	return NewUInt256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			if o.BigInt.Cmp(res) == 0 {
+				panic(DivisionByZeroError{})
+			}
+			return res.Rem(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v UInt256Value) Mul(other NumberValue) NumberValue {
+func (v UInt256Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMul,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	res.Mul(v.BigInt, o.BigInt)
-	if res.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
-		panic(OverflowError{})
-	}
-	return UInt256Value{res}
+	return NewUInt256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			res.Mul(v.BigInt, o.BigInt)
+			if res.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
+				panic(OverflowError{})
+			}
+			return res
+		},
+	)
 }
 
-func (v UInt256Value) SaturatingMul(other NumberValue) NumberValue {
+func (v UInt256Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	res.Mul(v.BigInt, o.BigInt)
-	if res.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
-		return UInt256Value{sema.UInt256TypeMaxIntBig}
-	}
-	return UInt256Value{res}
+	return NewUInt256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			res.Mul(v.BigInt, o.BigInt)
+			if res.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
+				return sema.UInt256TypeMaxIntBig
+			}
+			return res
+		},
+	)
 }
 
-func (v UInt256Value) Div(other NumberValue) NumberValue {
+func (v UInt256Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	if o.BigInt.Cmp(res) == 0 {
-		panic(DivisionByZeroError{})
-	}
-	res.Div(v.BigInt, o.BigInt)
-	return UInt256Value{res}
+	return NewUInt256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			if o.BigInt.Cmp(res) == 0 {
+				panic(DivisionByZeroError{})
+			}
+			return res.Div(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v UInt256Value) SaturatingDiv(other NumberValue) NumberValue {
+func (v UInt256Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) NumberValue {
 	defer func() {
 		r := recover()
 		if _, ok := r.(InvalidOperandsError); ok {
 			panic(InvalidOperandsError{
 				FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-				LeftType:     v.StaticType(),
-				RightType:    other.StaticType(),
+				LeftType:     v.StaticType(nil),
+				RightType:    other.StaticType(nil),
 			})
 		}
 	}()
 
-	return v.Div(other)
+	return v.Div(interpreter, other)
 }
 
-func (v UInt256Value) Less(other NumberValue) BoolValue {
+func (v UInt256Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp == -1
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
+			return cmp == -1
+		},
+	)
 }
 
-func (v UInt256Value) LessEqual(other NumberValue) BoolValue {
+func (v UInt256Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp <= 0
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
+			return cmp <= 0
+		},
+	)
 }
 
-func (v UInt256Value) Greater(other NumberValue) BoolValue {
+func (v UInt256Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp == 1
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
+			return cmp == 1
+		},
+	)
 }
 
-func (v UInt256Value) GreaterEqual(other NumberValue) BoolValue {
+func (v UInt256Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp >= 0
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			cmp := v.BigInt.Cmp(o.BigInt)
+			return cmp >= 0
+		},
+	)
 }
 
 func (v UInt256Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -9163,118 +11045,143 @@ func (v UInt256Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch 
 	return buffer
 }
 
-func ConvertUInt256(value Value) UInt256Value {
-	var v *big.Int
+func ConvertUInt256(memoryGauge common.MemoryGauge, value Value) UInt256Value {
+	return NewUInt256ValueFromBigInt(
+		memoryGauge,
+		func() *big.Int {
+			var v *big.Int
 
-	switch value := value.(type) {
-	case BigNumberValue:
-		v = value.ToBigInt()
+			switch value := value.(type) {
+			case BigNumberValue:
+				v = value.ToBigInt(memoryGauge)
 
-	case NumberValue:
-		v = big.NewInt(int64(value.ToInt()))
+			case NumberValue:
+				v = big.NewInt(int64(value.ToInt()))
 
-	default:
-		panic(errors.NewUnreachableError())
-	}
+			default:
+				panic(errors.NewUnreachableError())
+			}
 
-	if v.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
-		panic(OverflowError{})
-	} else if v.Sign() < 0 {
-		panic(UnderflowError{})
-	}
+			if v.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
+				panic(OverflowError{})
+			} else if v.Sign() < 0 {
+				panic(UnderflowError{})
+			}
 
-	return NewUInt256ValueFromBigInt(v)
+			return v
+		},
+	)
 }
 
-func (v UInt256Value) BitwiseOr(other IntegerValue) IntegerValue {
+func (v UInt256Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	res.Or(v.BigInt, o.BigInt)
-	return UInt256Value{res}
+	return NewUInt256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Or(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v UInt256Value) BitwiseXor(other IntegerValue) IntegerValue {
+func (v UInt256Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	res.Xor(v.BigInt, o.BigInt)
-	return UInt256Value{res}
+	return NewUInt256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Xor(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v UInt256Value) BitwiseAnd(other IntegerValue) IntegerValue {
+func (v UInt256Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	res.And(v.BigInt, o.BigInt)
-	return UInt256Value{res}
+	return NewUInt256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			return res.And(v.BigInt, o.BigInt)
+		},
+	)
 }
 
-func (v UInt256Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v UInt256Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	if o.BigInt.Sign() < 0 {
-		panic(UnderflowError{})
-	}
-	if !o.BigInt.IsUint64() {
-		panic(OverflowError{})
-	}
-	res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
-	return UInt256Value{res}
+	return NewUInt256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			if o.BigInt.Sign() < 0 {
+				panic(UnderflowError{})
+			}
+			if !o.BigInt.IsUint64() {
+				panic(OverflowError{})
+			}
+			return res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+		},
+	)
 }
 
-func (v UInt256Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v UInt256Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	res := new(big.Int)
-	if o.BigInt.Sign() < 0 {
-		panic(UnderflowError{})
-	}
-	if !o.BigInt.IsUint64() {
-		panic(OverflowError{})
-	}
-	res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
-	return UInt256Value{res}
+	return NewUInt256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			if o.BigInt.Sign() < 0 {
+				panic(UnderflowError{})
+			}
+			if !o.BigInt.IsUint64() {
+				panic(OverflowError{})
+			}
+			return res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
+		},
+	)
 }
 
-func (v UInt256Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, sema.UInt256Type)
+func (v UInt256Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.UInt256Type)
 }
 
 func (UInt256Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
@@ -9291,14 +11198,13 @@ func (v UInt256Value) ToBigEndianBytes() []byte {
 	return UnsignedBigIntToBigEndianBytes(v.BigInt)
 }
 
-func (v UInt256Value) ConformsToDynamicType(
-	_ *Interpreter,
+func (v UInt256Value) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && sema.UInt256Type.Equal(numberType.StaticType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (UInt256Value) IsStorable() bool {
@@ -9330,7 +11236,7 @@ func (v UInt256Value) Transfer(
 }
 
 func (v UInt256Value) Clone(_ *Interpreter) Value {
-	return NewUInt256ValueFromBigInt(v.BigInt)
+	return NewUnmeteredUInt256ValueFromBigInt(v.BigInt)
 }
 
 func (UInt256Value) DeepRemove(_ *Interpreter) {
@@ -9361,24 +11267,36 @@ var _ EquatableValue = Word8Value(0)
 var _ HashableValue = Word8Value(0)
 var _ MemberAccessibleValue = Word8Value(0)
 
+const word8Size = int(unsafe.Sizeof(Word8Value(0)))
+
+var word8MemoryUsage = common.NewNumberMemoryUsage(word8Size)
+
+func NewWord8Value(gauge common.MemoryGauge, valueGetter func() uint8) Word8Value {
+	common.UseMemory(gauge, word8MemoryUsage)
+
+	return NewUnmeteredWord8Value(valueGetter())
+}
+
+func NewUnmeteredWord8Value(value uint8) Word8Value {
+	return Word8Value(value)
+}
+
 func (Word8Value) IsValue() {}
 
 func (v Word8Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitWord8Value(interpreter, v)
 }
 
-func (Word8Value) Walk(_ func(Value)) {
+func (Word8Value) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
-var word8DynamicType DynamicType = NumberDynamicType{sema.Word8Type}
-
-func (Word8Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return word8DynamicType
+func (Word8Value) StaticType(interpreter *Interpreter) StaticType {
+	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeWord8)
 }
 
-func (Word8Value) StaticType() StaticType {
-	return PrimitiveStaticTypeWord8
+func (Word8Value) IsImportable(_ *Interpreter) bool {
+	return true
 }
 
 func (v Word8Value) String() string {
@@ -9389,151 +11307,203 @@ func (v Word8Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
+func (v Word8Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
+	return v.String()
+}
+
 func (v Word8Value) ToInt() int {
 	return int(v)
 }
 
-func (v Word8Value) Negate() NumberValue {
+func (v Word8Value) Negate(*Interpreter) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word8Value) Plus(other NumberValue) NumberValue {
+func (v Word8Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v + o
+	valueGetter := func() uint8 {
+		return uint8(v + o)
+	}
+
+	return NewWord8Value(interpreter, valueGetter)
 }
 
-func (v Word8Value) SaturatingPlus(_ NumberValue) NumberValue {
+func (v Word8Value) SaturatingPlus(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
-func (v Word8Value) Minus(other NumberValue) NumberValue {
+func (v Word8Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v - o
+	valueGetter := func() uint8 {
+		return uint8(v - o)
+	}
+
+	return NewWord8Value(interpreter, valueGetter)
 }
 
-func (v Word8Value) SaturatingMinus(_ NumberValue) NumberValue {
+func (v Word8Value) SaturatingMinus(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
-func (v Word8Value) Mod(other NumberValue) NumberValue {
+func (v Word8Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
-	return v % o
+
+	valueGetter := func() uint8 {
+		return uint8(v % o)
+	}
+
+	return NewWord8Value(interpreter, valueGetter)
 }
 
-func (v Word8Value) Mul(other NumberValue) NumberValue {
+func (v Word8Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMul,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v * o
+	valueGetter := func() uint8 {
+		return uint8(v * o)
+	}
+
+	return NewWord8Value(interpreter, valueGetter)
 }
 
-func (v Word8Value) SaturatingMul(_ NumberValue) NumberValue {
+func (v Word8Value) SaturatingMul(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
-func (v Word8Value) Div(other NumberValue) NumberValue {
+func (v Word8Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
-	return v / o
+
+	valueGetter := func() uint8 {
+		return uint8(v / o)
+	}
+
+	return NewWord8Value(interpreter, valueGetter)
 }
 
-func (v Word8Value) SaturatingDiv(_ NumberValue) NumberValue {
+func (v Word8Value) SaturatingDiv(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
-func (v Word8Value) Less(other NumberValue) BoolValue {
+func (v Word8Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v < o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v < o
+		},
+	)
 }
 
-func (v Word8Value) LessEqual(other NumberValue) BoolValue {
+func (v Word8Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v <= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v <= o
+		},
+	)
 }
 
-func (v Word8Value) Greater(other NumberValue) BoolValue {
+func (v Word8Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v > o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v > o
+		},
+	)
 }
 
-func (v Word8Value) GreaterEqual(other NumberValue) BoolValue {
+func (v Word8Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v >= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v >= o
+		},
+	)
 }
 
 func (v Word8Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -9553,76 +11523,100 @@ func (v Word8Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []
 	return scratch[:2]
 }
 
-func ConvertWord8(value Value) Word8Value {
-	return Word8Value(ConvertUInt8(value))
+func ConvertWord8(memoryGauge common.MemoryGauge, value Value) Word8Value {
+	uint8Value := ConvertUInt8(memoryGauge, value)
+
+	// Already metered during conversion in `ConvertUInt8`
+	return NewUnmeteredWord8Value(uint8(uint8Value))
 }
 
-func (v Word8Value) BitwiseOr(other IntegerValue) IntegerValue {
+func (v Word8Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v | o
+	valueGetter := func() uint8 {
+		return uint8(v | o)
+	}
+
+	return NewWord8Value(interpreter, valueGetter)
 }
 
-func (v Word8Value) BitwiseXor(other IntegerValue) IntegerValue {
+func (v Word8Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
-	return v ^ o
+
+	valueGetter := func() uint8 {
+		return uint8(v ^ o)
+	}
+
+	return NewWord8Value(interpreter, valueGetter)
 }
 
-func (v Word8Value) BitwiseAnd(other IntegerValue) IntegerValue {
+func (v Word8Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v & o
+	valueGetter := func() uint8 {
+		return uint8(v & o)
+	}
+
+	return NewWord8Value(interpreter, valueGetter)
 }
 
-func (v Word8Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v Word8Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v << o
+	valueGetter := func() uint8 {
+		return uint8(v << o)
+	}
+
+	return NewWord8Value(interpreter, valueGetter)
 }
 
-func (v Word8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v Word8Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v >> o
+	valueGetter := func() uint8 {
+		return uint8(v >> o)
+	}
+
+	return NewWord8Value(interpreter, valueGetter)
 }
 
-func (v Word8Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, sema.Word8Type)
+func (v Word8Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.Word8Type)
 }
 
 func (Word8Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
@@ -9639,14 +11633,13 @@ func (v Word8Value) ToBigEndianBytes() []byte {
 	return []byte{byte(v)}
 }
 
-func (v Word8Value) ConformsToDynamicType(
-	_ *Interpreter,
+func (v Word8Value) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && sema.Word8Type.Equal(numberType.StaticType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (Word8Value) IsStorable() bool {
@@ -9710,24 +11703,36 @@ var _ EquatableValue = Word16Value(0)
 var _ HashableValue = Word16Value(0)
 var _ MemberAccessibleValue = Word16Value(0)
 
+const word16Size = int(unsafe.Sizeof(Word16Value(0)))
+
+var word16MemoryUsage = common.NewNumberMemoryUsage(word16Size)
+
+func NewWord16Value(gauge common.MemoryGauge, valueGetter func() uint16) Word16Value {
+	common.UseMemory(gauge, word16MemoryUsage)
+
+	return NewUnmeteredWord16Value(valueGetter())
+}
+
+func NewUnmeteredWord16Value(value uint16) Word16Value {
+	return Word16Value(value)
+}
+
 func (Word16Value) IsValue() {}
 
 func (v Word16Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitWord16Value(interpreter, v)
 }
 
-func (Word16Value) Walk(_ func(Value)) {
+func (Word16Value) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
-var word16DynamicType DynamicType = NumberDynamicType{sema.Word16Type}
-
-func (Word16Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return word16DynamicType
+func (Word16Value) StaticType(interpreter *Interpreter) StaticType {
+	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeWord16)
 }
 
-func (Word16Value) StaticType() StaticType {
-	return PrimitiveStaticTypeWord16
+func (Word16Value) IsImportable(_ *Interpreter) bool {
+	return true
 }
 
 func (v Word16Value) String() string {
@@ -9738,150 +11743,202 @@ func (v Word16Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
+func (v Word16Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
+	return v.String()
+}
+
 func (v Word16Value) ToInt() int {
 	return int(v)
 }
-func (v Word16Value) Negate() NumberValue {
+func (v Word16Value) Negate(*Interpreter) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word16Value) Plus(other NumberValue) NumberValue {
+func (v Word16Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v + o
+	valueGetter := func() uint16 {
+		return uint16(v + o)
+	}
+
+	return NewWord16Value(interpreter, valueGetter)
 }
 
-func (v Word16Value) SaturatingPlus(_ NumberValue) NumberValue {
+func (v Word16Value) SaturatingPlus(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
-func (v Word16Value) Minus(other NumberValue) NumberValue {
+func (v Word16Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v - o
+	valueGetter := func() uint16 {
+		return uint16(v - o)
+	}
+
+	return NewWord16Value(interpreter, valueGetter)
 }
 
-func (v Word16Value) SaturatingMinus(_ NumberValue) NumberValue {
+func (v Word16Value) SaturatingMinus(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
-func (v Word16Value) Mod(other NumberValue) NumberValue {
+func (v Word16Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
-	return v % o
+
+	valueGetter := func() uint16 {
+		return uint16(v % o)
+	}
+
+	return NewWord16Value(interpreter, valueGetter)
 }
 
-func (v Word16Value) Mul(other NumberValue) NumberValue {
+func (v Word16Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMul,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v * o
+	valueGetter := func() uint16 {
+		return uint16(v * o)
+	}
+
+	return NewWord16Value(interpreter, valueGetter)
 }
 
-func (v Word16Value) SaturatingMul(_ NumberValue) NumberValue {
+func (v Word16Value) SaturatingMul(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
-func (v Word16Value) Div(other NumberValue) NumberValue {
+func (v Word16Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
-	return v / o
+
+	valueGetter := func() uint16 {
+		return uint16(v / o)
+	}
+
+	return NewWord16Value(interpreter, valueGetter)
 }
 
-func (v Word16Value) SaturatingDiv(_ NumberValue) NumberValue {
+func (v Word16Value) SaturatingDiv(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
-func (v Word16Value) Less(other NumberValue) BoolValue {
+func (v Word16Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v < o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v < o
+		},
+	)
 }
 
-func (v Word16Value) LessEqual(other NumberValue) BoolValue {
+func (v Word16Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v <= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v <= o
+		},
+	)
 }
 
-func (v Word16Value) Greater(other NumberValue) BoolValue {
+func (v Word16Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v > o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v > o
+		},
+	)
 }
 
-func (v Word16Value) GreaterEqual(other NumberValue) BoolValue {
+func (v Word16Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v >= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v >= o
+		},
+	)
 }
 
 func (v Word16Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -9901,76 +11958,100 @@ func (v Word16Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch [
 	return scratch[:3]
 }
 
-func ConvertWord16(value Value) Word16Value {
-	return Word16Value(ConvertUInt16(value))
+func ConvertWord16(memoryGauge common.MemoryGauge, value Value) Word16Value {
+	uint16Value := ConvertUInt16(memoryGauge, value)
+
+	// Already metered during conversion in `ConvertUInt16`
+	return NewUnmeteredWord16Value(uint16(uint16Value))
 }
 
-func (v Word16Value) BitwiseOr(other IntegerValue) IntegerValue {
+func (v Word16Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v | o
+	valueGetter := func() uint16 {
+		return uint16(v | o)
+	}
+
+	return NewWord16Value(interpreter, valueGetter)
 }
 
-func (v Word16Value) BitwiseXor(other IntegerValue) IntegerValue {
+func (v Word16Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
-	return v ^ o
+
+	valueGetter := func() uint16 {
+		return uint16(v ^ o)
+	}
+
+	return NewWord16Value(interpreter, valueGetter)
 }
 
-func (v Word16Value) BitwiseAnd(other IntegerValue) IntegerValue {
+func (v Word16Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v & o
+	valueGetter := func() uint16 {
+		return uint16(v & o)
+	}
+
+	return NewWord16Value(interpreter, valueGetter)
 }
 
-func (v Word16Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v Word16Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v << o
+	valueGetter := func() uint16 {
+		return uint16(v << o)
+	}
+
+	return NewWord16Value(interpreter, valueGetter)
 }
 
-func (v Word16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v Word16Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v >> o
+	valueGetter := func() uint16 {
+		return uint16(v >> o)
+	}
+
+	return NewWord16Value(interpreter, valueGetter)
 }
 
-func (v Word16Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, sema.Word16Type)
+func (v Word16Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.Word16Type)
 }
 
 func (Word16Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
@@ -9989,14 +12070,13 @@ func (v Word16Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v Word16Value) ConformsToDynamicType(
-	_ *Interpreter,
+func (v Word16Value) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && sema.Word16Type.Equal(numberType.StaticType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (Word16Value) IsStorable() bool {
@@ -10060,24 +12140,36 @@ var _ EquatableValue = Word32Value(0)
 var _ HashableValue = Word32Value(0)
 var _ MemberAccessibleValue = Word32Value(0)
 
+const word32Size = int(unsafe.Sizeof(Word32Value(0)))
+
+var word32MemoryUsage = common.NewNumberMemoryUsage(word32Size)
+
+func NewWord32Value(gauge common.MemoryGauge, valueGetter func() uint32) Word32Value {
+	common.UseMemory(gauge, word32MemoryUsage)
+
+	return NewUnmeteredWord32Value(valueGetter())
+}
+
+func NewUnmeteredWord32Value(value uint32) Word32Value {
+	return Word32Value(value)
+}
+
 func (Word32Value) IsValue() {}
 
 func (v Word32Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitWord32Value(interpreter, v)
 }
 
-func (Word32Value) Walk(_ func(Value)) {
+func (Word32Value) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
-var word32DynamicType DynamicType = NumberDynamicType{sema.Word32Type}
-
-func (Word32Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return word32DynamicType
+func (Word32Value) StaticType(interpreter *Interpreter) StaticType {
+	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeWord32)
 }
 
-func (Word32Value) StaticType() StaticType {
-	return PrimitiveStaticTypeWord32
+func (Word32Value) IsImportable(_ *Interpreter) bool {
+	return true
 }
 
 func (v Word32Value) String() string {
@@ -10088,151 +12180,203 @@ func (v Word32Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
+func (v Word32Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
+	return v.String()
+}
+
 func (v Word32Value) ToInt() int {
 	return int(v)
 }
 
-func (v Word32Value) Negate() NumberValue {
+func (v Word32Value) Negate(*Interpreter) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word32Value) Plus(other NumberValue) NumberValue {
+func (v Word32Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v + o
+	valueGetter := func() uint32 {
+		return uint32(v + o)
+	}
+
+	return NewWord32Value(interpreter, valueGetter)
 }
 
-func (v Word32Value) SaturatingPlus(_ NumberValue) NumberValue {
+func (v Word32Value) SaturatingPlus(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
-func (v Word32Value) Minus(other NumberValue) NumberValue {
+func (v Word32Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v - o
+	valueGetter := func() uint32 {
+		return uint32(v - o)
+	}
+
+	return NewWord32Value(interpreter, valueGetter)
 }
 
-func (v Word32Value) SaturatingMinus(_ NumberValue) NumberValue {
+func (v Word32Value) SaturatingMinus(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
-func (v Word32Value) Mod(other NumberValue) NumberValue {
+func (v Word32Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
-	return v % o
+
+	valueGetter := func() uint32 {
+		return uint32(v % o)
+	}
+
+	return NewWord32Value(interpreter, valueGetter)
 }
 
-func (v Word32Value) Mul(other NumberValue) NumberValue {
+func (v Word32Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMul,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v * o
+	valueGetter := func() uint32 {
+		return uint32(v * o)
+	}
+
+	return NewWord32Value(interpreter, valueGetter)
 }
 
-func (v Word32Value) SaturatingMul(_ NumberValue) NumberValue {
+func (v Word32Value) SaturatingMul(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
-func (v Word32Value) Div(other NumberValue) NumberValue {
+func (v Word32Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
-	return v / o
+
+	valueGetter := func() uint32 {
+		return uint32(v / o)
+	}
+
+	return NewWord32Value(interpreter, valueGetter)
 }
 
-func (v Word32Value) SaturatingDiv(_ NumberValue) NumberValue {
+func (v Word32Value) SaturatingDiv(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
-func (v Word32Value) Less(other NumberValue) BoolValue {
+func (v Word32Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v < o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v < o
+		},
+	)
 }
 
-func (v Word32Value) LessEqual(other NumberValue) BoolValue {
+func (v Word32Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v <= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v <= o
+		},
+	)
 }
 
-func (v Word32Value) Greater(other NumberValue) BoolValue {
+func (v Word32Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v > o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v > o
+		},
+	)
 }
 
-func (v Word32Value) GreaterEqual(other NumberValue) BoolValue {
+func (v Word32Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v >= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v >= o
+		},
+	)
 }
 
 func (v Word32Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -10252,76 +12396,100 @@ func (v Word32Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch [
 	return scratch[:5]
 }
 
-func ConvertWord32(value Value) Word32Value {
-	return Word32Value(ConvertUInt32(value))
+func ConvertWord32(memoryGauge common.MemoryGauge, value Value) Word32Value {
+	uint32Value := ConvertUInt32(memoryGauge, value)
+
+	// Already metered during conversion in `ConvertUInt32`
+	return NewUnmeteredWord32Value(uint32(uint32Value))
 }
 
-func (v Word32Value) BitwiseOr(other IntegerValue) IntegerValue {
+func (v Word32Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v | o
+	valueGetter := func() uint32 {
+		return uint32(v | o)
+	}
+
+	return NewWord32Value(interpreter, valueGetter)
 }
 
-func (v Word32Value) BitwiseXor(other IntegerValue) IntegerValue {
+func (v Word32Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
-	return v ^ o
+
+	valueGetter := func() uint32 {
+		return uint32(v ^ o)
+	}
+
+	return NewWord32Value(interpreter, valueGetter)
 }
 
-func (v Word32Value) BitwiseAnd(other IntegerValue) IntegerValue {
+func (v Word32Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v & o
+	valueGetter := func() uint32 {
+		return uint32(v & o)
+	}
+
+	return NewWord32Value(interpreter, valueGetter)
 }
 
-func (v Word32Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v Word32Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v << o
+	valueGetter := func() uint32 {
+		return uint32(v << o)
+	}
+
+	return NewWord32Value(interpreter, valueGetter)
 }
 
-func (v Word32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v Word32Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v >> o
+	valueGetter := func() uint32 {
+		return uint32(v >> o)
+	}
+
+	return NewWord32Value(interpreter, valueGetter)
 }
 
-func (v Word32Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, sema.Word32Type)
+func (v Word32Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.Word32Type)
 }
 
 func (Word32Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
@@ -10340,14 +12508,13 @@ func (v Word32Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v Word32Value) ConformsToDynamicType(
-	_ *Interpreter,
+func (v Word32Value) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && sema.Word32Type.Equal(numberType.StaticType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (Word32Value) IsStorable() bool {
@@ -10411,6 +12578,20 @@ var _ EquatableValue = Word64Value(0)
 var _ HashableValue = Word64Value(0)
 var _ MemberAccessibleValue = Word64Value(0)
 
+const word64Size = int(unsafe.Sizeof(Word64Value(0)))
+
+var word64MemoryUsage = common.NewNumberMemoryUsage(word64Size)
+
+func NewWord64Value(gauge common.MemoryGauge, valueGetter func() uint64) Word64Value {
+	common.UseMemory(gauge, word64MemoryUsage)
+
+	return NewUnmeteredWord64Value(valueGetter())
+}
+
+func NewUnmeteredWord64Value(value uint64) Word64Value {
+	return Word64Value(value)
+}
+
 // NOTE: important, do *NOT* remove:
 // Word64 values > math.MaxInt64 overflow int.
 // Implementing BigNumberValue ensures conversion functions
@@ -10424,18 +12605,16 @@ func (v Word64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitWord64Value(interpreter, v)
 }
 
-func (Word64Value) Walk(_ func(Value)) {
+func (Word64Value) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
-var word64DynamicType DynamicType = NumberDynamicType{sema.Word64Type}
-
-func (Word64Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return word64DynamicType
+func (Word64Value) StaticType(interpreter *Interpreter) StaticType {
+	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeWord64)
 }
 
-func (Word64Value) StaticType() StaticType {
-	return PrimitiveStaticTypeWord64
+func (Word64Value) IsImportable(_ *Interpreter) bool {
+	return true
 }
 
 func (v Word64Value) String() string {
@@ -10446,11 +12625,25 @@ func (v Word64Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
+func (v Word64Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
+	return v.String()
+}
+
 func (v Word64Value) ToInt() int {
 	if v > math.MaxInt64 {
 		panic(OverflowError{})
 	}
 	return int(v)
+}
+
+func (v Word64Value) ByteLength() int {
+	return 8
 }
 
 // ToBigInt
@@ -10460,151 +12653,194 @@ func (v Word64Value) ToInt() int {
 // Implementing BigNumberValue ensures conversion functions
 // call ToBigInt instead of ToInt.
 //
-func (v Word64Value) ToBigInt() *big.Int {
+func (v Word64Value) ToBigInt(memoryGauge common.MemoryGauge) *big.Int {
+	common.UseMemory(memoryGauge, common.NewBigIntMemoryUsage(v.ByteLength()))
 	return new(big.Int).SetUint64(uint64(v))
 }
 
-func (v Word64Value) Negate() NumberValue {
+func (v Word64Value) Negate(*Interpreter) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word64Value) Plus(other NumberValue) NumberValue {
+func (v Word64Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v + o
+	valueGetter := func() uint64 {
+		return uint64(v + o)
+	}
+
+	return NewWord64Value(interpreter, valueGetter)
 }
 
-func (v Word64Value) SaturatingPlus(_ NumberValue) NumberValue {
+func (v Word64Value) SaturatingPlus(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
-func (v Word64Value) Minus(other NumberValue) NumberValue {
+func (v Word64Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v - o
+	valueGetter := func() uint64 {
+		return uint64(v - o)
+	}
+
+	return NewWord64Value(interpreter, valueGetter)
 }
 
-func (v Word64Value) SaturatingMinus(_ NumberValue) NumberValue {
+func (v Word64Value) SaturatingMinus(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
-func (v Word64Value) Mod(other NumberValue) NumberValue {
+func (v Word64Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
-	return v % o
+
+	valueGetter := func() uint64 {
+		return uint64(v % o)
+	}
+
+	return NewWord64Value(interpreter, valueGetter)
 }
 
-func (v Word64Value) Mul(other NumberValue) NumberValue {
+func (v Word64Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMul,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v * o
+	valueGetter := func() uint64 {
+		return uint64(v * o)
+	}
+
+	return NewWord64Value(interpreter, valueGetter)
 }
 
-func (v Word64Value) SaturatingMul(_ NumberValue) NumberValue {
+func (v Word64Value) SaturatingMul(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
-func (v Word64Value) Div(other NumberValue) NumberValue {
+func (v Word64Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
-	return v / o
+
+	valueGetter := func() uint64 {
+		return uint64(v / o)
+	}
+
+	return NewWord64Value(interpreter, valueGetter)
 }
 
-func (v Word64Value) SaturatingDiv(_ NumberValue) NumberValue {
+func (v Word64Value) SaturatingDiv(*Interpreter, NumberValue) NumberValue {
 	panic(errors.UnreachableError{})
 }
 
-func (v Word64Value) Less(other NumberValue) BoolValue {
+func (v Word64Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v < o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v < o
+		},
+	)
 }
 
-func (v Word64Value) LessEqual(other NumberValue) BoolValue {
+func (v Word64Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v <= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v <= o
+		},
+	)
 }
 
-func (v Word64Value) Greater(other NumberValue) BoolValue {
+func (v Word64Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v > o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v > o
+		},
+	)
 }
 
-func (v Word64Value) GreaterEqual(other NumberValue) BoolValue {
+func (v Word64Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v >= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v >= o
+		},
+	)
 }
 
 func (v Word64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -10624,76 +12860,100 @@ func (v Word64Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch [
 	return scratch[:9]
 }
 
-func ConvertWord64(value Value) Word64Value {
-	return Word64Value(ConvertUInt64(value))
+func ConvertWord64(memoryGauge common.MemoryGauge, value Value) Word64Value {
+	uint64Value := ConvertUInt64(memoryGauge, value)
+
+	// Already metered during conversion in `ConvertUInt64`
+	return NewUnmeteredWord64Value(uint64(uint64Value))
 }
 
-func (v Word64Value) BitwiseOr(other IntegerValue) IntegerValue {
+func (v Word64Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseOr,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v | o
+	valueGetter := func() uint64 {
+		return uint64(v | o)
+	}
+
+	return NewWord64Value(interpreter, valueGetter)
 }
 
-func (v Word64Value) BitwiseXor(other IntegerValue) IntegerValue {
+func (v Word64Value) BitwiseXor(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseXor,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
-	return v ^ o
+
+	valueGetter := func() uint64 {
+		return uint64(v ^ o)
+	}
+
+	return NewWord64Value(interpreter, valueGetter)
 }
 
-func (v Word64Value) BitwiseAnd(other IntegerValue) IntegerValue {
+func (v Word64Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseAnd,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v & o
+	valueGetter := func() uint64 {
+		return uint64(v & o)
+	}
+
+	return NewWord64Value(interpreter, valueGetter)
 }
 
-func (v Word64Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+func (v Word64Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseLeftShift,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v << o
+	valueGetter := func() uint64 {
+		return uint64(v << o)
+	}
+
+	return NewWord64Value(interpreter, valueGetter)
 }
 
-func (v Word64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+func (v Word64Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue) IntegerValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationBitwiseRightShift,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v >> o
+	valueGetter := func() uint64 {
+		return uint64(v >> o)
+	}
+
+	return NewWord64Value(interpreter, valueGetter)
 }
 
-func (v Word64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, sema.Word64Type)
+func (v Word64Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.Word64Type)
 }
 
 func (Word64Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
@@ -10712,14 +12972,13 @@ func (v Word64Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v Word64Value) ConformsToDynamicType(
-	_ *Interpreter,
+func (v Word64Value) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && sema.Word64Type.Equal(numberType.StaticType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (Word64Value) IsStorable() bool {
@@ -10771,13 +13030,30 @@ func (Word64Value) ChildStorables() []atree.Storable {
 	return nil
 }
 
+// FixedPointValue is a fixed-point number value
+//
+type FixedPointValue interface {
+	NumberValue
+	IntegerPart() NumberValue
+	Scale() int
+}
+
 // Fix64Value
 //
 type Fix64Value int64
 
 const Fix64MaxValue = math.MaxInt64
 
-func NewFix64ValueWithInteger(integer int64) Fix64Value {
+const fix64Size = int(unsafe.Sizeof(Fix64Value(0)))
+
+var fix64MemoryUsage = common.NewNumberMemoryUsage(fix64Size)
+
+func NewFix64ValueWithInteger(gauge common.MemoryGauge, constructor func() int64) Fix64Value {
+	common.UseMemory(gauge, fix64MemoryUsage)
+	return NewUnmeteredFix64ValueWithInteger(constructor())
+}
+
+func NewUnmeteredFix64ValueWithInteger(integer int64) Fix64Value {
 
 	if integer < sema.Fix64TypeMinInt {
 		panic(UnderflowError{})
@@ -10787,12 +13063,22 @@ func NewFix64ValueWithInteger(integer int64) Fix64Value {
 		panic(OverflowError{})
 	}
 
-	return Fix64Value(integer * sema.Fix64Factor)
+	return NewUnmeteredFix64Value(integer * sema.Fix64Factor)
+}
+
+func NewFix64Value(gauge common.MemoryGauge, valueGetter func() int64) Fix64Value {
+	common.UseMemory(gauge, fix64MemoryUsage)
+	return NewUnmeteredFix64Value(valueGetter())
+}
+
+func NewUnmeteredFix64Value(integer int64) Fix64Value {
+	return Fix64Value(integer)
 }
 
 var _ Value = Fix64Value(0)
 var _ atree.Storable = Fix64Value(0)
 var _ NumberValue = Fix64Value(0)
+var _ FixedPointValue = Fix64Value(0)
 var _ EquatableValue = Fix64Value(0)
 var _ HashableValue = Fix64Value(0)
 var _ MemberAccessibleValue = Fix64Value(0)
@@ -10803,18 +13089,16 @@ func (v Fix64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitFix64Value(interpreter, v)
 }
 
-func (Fix64Value) Walk(_ func(Value)) {
+func (Fix64Value) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
-var fix64DynamicType DynamicType = NumberDynamicType{sema.Fix64Type}
-
-func (Fix64Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return fix64DynamicType
+func (Fix64Value) StaticType(interpreter *Interpreter) StaticType {
+	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeFix64)
 }
 
-func (Fix64Value) StaticType() StaticType {
-	return PrimitiveStaticTypeFix64
+func (Fix64Value) IsImportable(_ *Interpreter) bool {
+	return true
 }
 
 func (v Fix64Value) String() string {
@@ -10825,264 +13109,342 @@ func (v Fix64Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
+func (v Fix64Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
+	return v.String()
+}
+
 func (v Fix64Value) ToInt() int {
 	return int(v / sema.Fix64Factor)
 }
 
-func (v Fix64Value) Negate() NumberValue {
+func (v Fix64Value) Negate(interpreter *Interpreter) NumberValue {
 	// INT32-C
 	if v == math.MinInt64 {
 		panic(OverflowError{})
 	}
-	return -v
+
+	valueGetter := func() int64 {
+		return int64(-v)
+	}
+
+	return NewFix64Value(interpreter, valueGetter)
 }
 
-func (v Fix64Value) Plus(other NumberValue) NumberValue {
+func (v Fix64Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return Fix64Value(safeAddInt64(int64(v), int64(o)))
+	valueGetter := func() int64 {
+		return safeAddInt64(int64(v), int64(o))
+	}
+
+	return NewFix64Value(interpreter, valueGetter)
 }
 
-func (v Fix64Value) SaturatingPlus(other NumberValue) NumberValue {
+func (v Fix64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	// INT32-C
-	if (o > 0) && (v > (math.MaxInt64 - o)) {
-		return Fix64Value(math.MaxInt64)
-	} else if (o < 0) && (v < (math.MinInt64 - o)) {
-		return Fix64Value(math.MinInt64)
+	valueGetter := func() int64 {
+		// INT32-C
+		if (o > 0) && (v > (math.MaxInt64 - o)) {
+			return math.MaxInt64
+		} else if (o < 0) && (v < (math.MinInt64 - o)) {
+			return math.MinInt64
+		}
+		return int64(v + o)
 	}
-	return v + o
+
+	return NewFix64Value(interpreter, valueGetter)
 }
 
-func (v Fix64Value) Minus(other NumberValue) NumberValue {
+func (v Fix64Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	// INT32-C
-	if (o > 0) && (v < (math.MinInt64 + o)) {
-		panic(OverflowError{})
-	} else if (o < 0) && (v > (math.MaxInt64 + o)) {
-		panic(UnderflowError{})
+	valueGetter := func() int64 {
+		// INT32-C
+		if (o > 0) && (v < (math.MinInt64 + o)) {
+			panic(OverflowError{})
+		} else if (o < 0) && (v > (math.MaxInt64 + o)) {
+			panic(UnderflowError{})
+		}
+
+		return int64(v - o)
 	}
-	return v - o
+
+	return NewFix64Value(interpreter, valueGetter)
 }
 
-func (v Fix64Value) SaturatingMinus(other NumberValue) NumberValue {
+func (v Fix64Value) SaturatingMinus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	// INT32-C
-	if (o > 0) && (v < (math.MinInt64 + o)) {
-		return Fix64Value(math.MinInt64)
-	} else if (o < 0) && (v > (math.MaxInt64 + o)) {
-		return Fix64Value(math.MaxInt64)
+	valueGetter := func() int64 {
+		// INT32-C
+		if (o > 0) && (v < (math.MinInt64 + o)) {
+			return math.MinInt64
+		} else if (o < 0) && (v > (math.MaxInt64 + o)) {
+			return math.MaxInt64
+		}
+		return int64(v - o)
 	}
-	return v - o
+
+	return NewFix64Value(interpreter, valueGetter)
 }
 
 var minInt64Big = big.NewInt(math.MinInt64)
 var maxInt64Big = big.NewInt(math.MaxInt64)
 
-func (v Fix64Value) Mul(other NumberValue) NumberValue {
+func (v Fix64Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMul,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
 	a := new(big.Int).SetInt64(int64(v))
 	b := new(big.Int).SetInt64(int64(o))
 
-	result := new(big.Int).Mul(a, b)
-	result.Div(result, sema.Fix64FactorBig)
+	valueGetter := func() int64 {
+		result := new(big.Int).Mul(a, b)
+		result.Div(result, sema.Fix64FactorBig)
 
-	if result.Cmp(minInt64Big) < 0 {
-		panic(UnderflowError{})
-	} else if result.Cmp(maxInt64Big) > 0 {
-		panic(OverflowError{})
+		if result.Cmp(minInt64Big) < 0 {
+			panic(UnderflowError{})
+		} else if result.Cmp(maxInt64Big) > 0 {
+			panic(OverflowError{})
+		}
+
+		return result.Int64()
 	}
 
-	return Fix64Value(result.Int64())
+	return NewFix64Value(interpreter, valueGetter)
 }
 
-func (v Fix64Value) SaturatingMul(other NumberValue) NumberValue {
+func (v Fix64Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
 	a := new(big.Int).SetInt64(int64(v))
 	b := new(big.Int).SetInt64(int64(o))
 
-	result := new(big.Int).Mul(a, b)
-	result.Div(result, sema.Fix64FactorBig)
+	valueGetter := func() int64 {
+		result := new(big.Int).Mul(a, b)
+		result.Div(result, sema.Fix64FactorBig)
 
-	if result.Cmp(minInt64Big) < 0 {
-		return Fix64Value(math.MinInt64)
-	} else if result.Cmp(maxInt64Big) > 0 {
-		return Fix64Value(math.MaxInt64)
+		if result.Cmp(minInt64Big) < 0 {
+			return math.MinInt64
+		} else if result.Cmp(maxInt64Big) > 0 {
+			return math.MaxInt64
+		}
+
+		return result.Int64()
 	}
 
-	return Fix64Value(result.Int64())
+	return NewFix64Value(interpreter, valueGetter)
 }
 
-func (v Fix64Value) Div(other NumberValue) NumberValue {
+func (v Fix64Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
 	a := new(big.Int).SetInt64(int64(v))
 	b := new(big.Int).SetInt64(int64(o))
 
-	result := new(big.Int).Mul(a, sema.Fix64FactorBig)
-	result.Div(result, b)
+	valueGetter := func() int64 {
+		result := new(big.Int).Mul(a, sema.Fix64FactorBig)
+		result.Div(result, b)
 
-	if result.Cmp(minInt64Big) < 0 {
-		panic(UnderflowError{})
-	} else if result.Cmp(maxInt64Big) > 0 {
-		panic(OverflowError{})
+		if result.Cmp(minInt64Big) < 0 {
+			panic(UnderflowError{})
+		} else if result.Cmp(maxInt64Big) > 0 {
+			panic(OverflowError{})
+		}
+
+		return result.Int64()
 	}
 
-	return Fix64Value(result.Int64())
+	return NewFix64Value(interpreter, valueGetter)
 }
 
-func (v Fix64Value) SaturatingDiv(other NumberValue) NumberValue {
+func (v Fix64Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
 	a := new(big.Int).SetInt64(int64(v))
 	b := new(big.Int).SetInt64(int64(o))
 
-	result := new(big.Int).Mul(a, sema.Fix64FactorBig)
-	result.Div(result, b)
+	valueGetter := func() int64 {
+		result := new(big.Int).Mul(a, sema.Fix64FactorBig)
+		result.Div(result, b)
 
-	if result.Cmp(minInt64Big) < 0 {
-		return Fix64Value(math.MinInt64)
-	} else if result.Cmp(maxInt64Big) > 0 {
-		return Fix64Value(math.MaxInt64)
+		if result.Cmp(minInt64Big) < 0 {
+			return math.MinInt64
+		} else if result.Cmp(maxInt64Big) > 0 {
+			return math.MaxInt64
+		}
+
+		return result.Int64()
 	}
 
-	return Fix64Value(result.Int64())
+	return NewFix64Value(interpreter, valueGetter)
 }
 
-func (v Fix64Value) Mod(other NumberValue) NumberValue {
+func (v Fix64Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
 	// v - int(v/o) * o
-	quotient, ok := v.Div(o).(Fix64Value)
+	quotient, ok := v.Div(interpreter, o).(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
-	truncatedQuotient := (int64(quotient) / sema.Fix64Factor) * sema.Fix64Factor
-	return v.Minus(Fix64Value(truncatedQuotient).Mul(o))
+
+	truncatedQuotient := NewFix64Value(
+		interpreter,
+		func() int64 {
+			return (int64(quotient) / sema.Fix64Factor) * sema.Fix64Factor
+		},
+	)
+
+	return v.Minus(
+		interpreter,
+		truncatedQuotient.Mul(interpreter, o),
+	)
 }
 
-func (v Fix64Value) Less(other NumberValue) BoolValue {
+func (v Fix64Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v < o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v < o
+		},
+	)
 }
 
-func (v Fix64Value) LessEqual(other NumberValue) BoolValue {
+func (v Fix64Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v <= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v <= o
+		},
+	)
 }
 
-func (v Fix64Value) Greater(other NumberValue) BoolValue {
+func (v Fix64Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v > o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v > o
+		},
+	)
 }
 
-func (v Fix64Value) GreaterEqual(other NumberValue) BoolValue {
+func (v Fix64Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v >= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v >= o
+		},
+	)
 }
 
 func (v Fix64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -11102,7 +13464,7 @@ func (v Fix64Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []
 	return scratch[:9]
 }
 
-func ConvertFix64(value Value) Fix64Value {
+func ConvertFix64(memoryGauge common.MemoryGauge, value Value) Fix64Value {
 	switch value := value.(type) {
 	case Fix64Value:
 		return value
@@ -11111,34 +13473,47 @@ func ConvertFix64(value Value) Fix64Value {
 		if value > Fix64MaxValue {
 			panic(OverflowError{})
 		}
-		return Fix64Value(value)
+		return NewFix64Value(
+			memoryGauge,
+			func() int64 {
+				return int64(value)
+			},
+		)
 
 	case BigNumberValue:
-		v := value.ToBigInt()
+		converter := func() int64 {
+			v := value.ToBigInt(memoryGauge)
 
-		// First, check if the value is at least in the int64 range.
-		// The integer range for Fix64 is smaller, but this test at least
-		// allows us to call `v.Int64()` safely.
+			// First, check if the value is at least in the int64 range.
+			// The integer range for Fix64 is smaller, but this test at least
+			// allows us to call `v.Int64()` safely.
 
-		if !v.IsInt64() {
-			panic(OverflowError{})
+			if !v.IsInt64() {
+				panic(OverflowError{})
+			}
+
+			return v.Int64()
 		}
 
 		// Now check that the integer value fits the range of Fix64
-		return NewFix64ValueWithInteger(v.Int64())
+		return NewFix64ValueWithInteger(memoryGauge, converter)
 
 	case NumberValue:
-		v := value.ToInt()
 		// Check that the integer value fits the range of Fix64
-		return NewFix64ValueWithInteger(int64(v))
+		return NewFix64ValueWithInteger(
+			memoryGauge,
+			func() int64 {
+				return int64(value.ToInt())
+			},
+		)
 
 	default:
 		panic(fmt.Sprintf("can't convert Fix64: %s", value))
 	}
 }
 
-func (v Fix64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, sema.Fix64Type)
+func (v Fix64Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.Fix64Type)
 }
 
 func (Fix64Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
@@ -11157,14 +13532,13 @@ func (v Fix64Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v Fix64Value) ConformsToDynamicType(
-	_ *Interpreter,
+func (v Fix64Value) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && sema.Fix64Type.Equal(numberType.StaticType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (Fix64Value) IsStorable() bool {
@@ -11216,23 +13590,50 @@ func (Fix64Value) ChildStorables() []atree.Storable {
 	return nil
 }
 
+func (v Fix64Value) IntegerPart() NumberValue {
+	return UInt64Value(v / sema.Fix64Factor)
+}
+
+func (Fix64Value) Scale() int {
+	return sema.Fix64Scale
+}
+
 // UFix64Value
 //
 type UFix64Value uint64
 
 const UFix64MaxValue = math.MaxUint64
 
-func NewUFix64ValueWithInteger(integer uint64) UFix64Value {
+const ufix64Size = int(unsafe.Sizeof(UFix64Value(0)))
+
+var ufix64MemoryUsage = common.NewNumberMemoryUsage(ufix64Size)
+
+func NewUFix64ValueWithInteger(gauge common.MemoryGauge, constructor func() uint64) UFix64Value {
+	common.UseMemory(gauge, ufix64MemoryUsage)
+	return NewUnmeteredUFix64ValueWithInteger(constructor())
+}
+
+func NewUnmeteredUFix64ValueWithInteger(integer uint64) UFix64Value {
 	if integer > sema.UFix64TypeMaxInt {
 		panic(OverflowError{})
 	}
 
-	return UFix64Value(integer * sema.Fix64Factor)
+	return NewUnmeteredUFix64Value(integer * sema.Fix64Factor)
+}
+
+func NewUFix64Value(gauge common.MemoryGauge, constructor func() uint64) UFix64Value {
+	common.UseMemory(gauge, ufix64MemoryUsage)
+	return NewUnmeteredUFix64Value(constructor())
+}
+
+func NewUnmeteredUFix64Value(integer uint64) UFix64Value {
+	return UFix64Value(integer)
 }
 
 var _ Value = UFix64Value(0)
 var _ atree.Storable = UFix64Value(0)
 var _ NumberValue = UFix64Value(0)
+var _ FixedPointValue = Fix64Value(0)
 var _ EquatableValue = UFix64Value(0)
 var _ HashableValue = UFix64Value(0)
 var _ MemberAccessibleValue = UFix64Value(0)
@@ -11243,18 +13644,16 @@ func (v UFix64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUFix64Value(interpreter, v)
 }
 
-func (UFix64Value) Walk(_ func(Value)) {
+func (UFix64Value) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
-var ufix64DynamicType DynamicType = NumberDynamicType{sema.UFix64Type}
-
-func (UFix64Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return ufix64DynamicType
+func (UFix64Value) StaticType(interpreter *Interpreter) StaticType {
+	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeUFix64)
 }
 
-func (UFix64Value) StaticType() StaticType {
-	return PrimitiveStaticTypeUFix64
+func (UFix64Value) IsImportable(_ *Interpreter) bool {
+	return true
 }
 
 func (v UFix64Value) String() string {
@@ -11265,236 +13664,304 @@ func (v UFix64Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
+func (v UFix64Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
+	return v.String()
+}
+
 func (v UFix64Value) ToInt() int {
 	return int(v / sema.Fix64Factor)
 }
 
-func (v UFix64Value) Negate() NumberValue {
+func (v UFix64Value) Negate(*Interpreter) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v UFix64Value) Plus(other NumberValue) NumberValue {
+func (v UFix64Value) Plus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationPlus,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return UFix64Value(safeAddUint64(uint64(v), uint64(o)))
+	valueGetter := func() uint64 {
+		return safeAddUint64(uint64(v), uint64(o))
+	}
+
+	return NewUFix64Value(interpreter, valueGetter)
 }
 
-func (v UFix64Value) SaturatingPlus(other NumberValue) NumberValue {
+func (v UFix64Value) SaturatingPlus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	sum := v + o
-	// INT30-C
-	if sum < v {
-		return UFix64Value(math.MaxUint64)
+	valueGetter := func() uint64 {
+		sum := v + o
+		// INT30-C
+		if sum < v {
+			return math.MaxUint64
+		}
+		return uint64(sum)
 	}
-	return sum
+
+	return NewUFix64Value(interpreter, valueGetter)
 }
 
-func (v UFix64Value) Minus(other NumberValue) NumberValue {
+func (v UFix64Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMinus,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	diff := v - o
+	valueGetter := func() uint64 {
+		diff := v - o
 
-	// INT30-C
-	if diff > v {
-		panic(UnderflowError{})
+		// INT30-C
+		if diff > v {
+			panic(UnderflowError{})
+		}
+		return uint64(diff)
 	}
-	return diff
+
+	return NewUFix64Value(interpreter, valueGetter)
 }
 
-func (v UFix64Value) SaturatingMinus(other NumberValue) NumberValue {
+func (v UFix64Value) SaturatingMinus(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
-	diff := v - o
+	valueGetter := func() uint64 {
+		diff := v - o
 
-	// INT30-C
-	if diff > v {
-		return UFix64Value(0)
+		// INT30-C
+		if diff > v {
+			return 0
+		}
+		return uint64(diff)
 	}
-	return diff
+
+	return NewUFix64Value(interpreter, valueGetter)
 }
 
-func (v UFix64Value) Mul(other NumberValue) NumberValue {
+func (v UFix64Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMul,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
 	a := new(big.Int).SetUint64(uint64(v))
 	b := new(big.Int).SetUint64(uint64(o))
 
-	result := new(big.Int).Mul(a, b)
-	result.Div(result, sema.Fix64FactorBig)
+	valueGetter := func() uint64 {
+		result := new(big.Int).Mul(a, b)
+		result.Div(result, sema.Fix64FactorBig)
 
-	if !result.IsUint64() {
-		panic(OverflowError{})
+		if !result.IsUint64() {
+			panic(OverflowError{})
+		}
+
+		return result.Uint64()
 	}
 
-	return UFix64Value(result.Uint64())
+	return NewUFix64Value(interpreter, valueGetter)
 }
 
-func (v UFix64Value) SaturatingMul(other NumberValue) NumberValue {
+func (v UFix64Value) SaturatingMul(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:     v.StaticType(),
-			RightType:    other.StaticType(),
+			LeftType:     v.StaticType(nil),
+			RightType:    other.StaticType(nil),
 		})
 	}
 
 	a := new(big.Int).SetUint64(uint64(v))
 	b := new(big.Int).SetUint64(uint64(o))
 
-	result := new(big.Int).Mul(a, b)
-	result.Div(result, sema.Fix64FactorBig)
+	valueGetter := func() uint64 {
+		result := new(big.Int).Mul(a, b)
+		result.Div(result, sema.Fix64FactorBig)
 
-	if !result.IsUint64() {
-		return UFix64Value(math.MaxUint64)
+		if !result.IsUint64() {
+			return math.MaxUint64
+		}
+
+		return result.Uint64()
 	}
 
-	return UFix64Value(result.Uint64())
+	return NewUFix64Value(interpreter, valueGetter)
 }
 
-func (v UFix64Value) Div(other NumberValue) NumberValue {
+func (v UFix64Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationDiv,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
 	a := new(big.Int).SetUint64(uint64(v))
 	b := new(big.Int).SetUint64(uint64(o))
 
-	result := new(big.Int).Mul(a, sema.Fix64FactorBig)
-	result.Div(result, b)
+	valueGetter := func() uint64 {
+		result := new(big.Int).Mul(a, sema.Fix64FactorBig)
+		result.Div(result, b)
 
-	return UFix64Value(result.Uint64())
+		return result.Uint64()
+	}
+
+	return NewUFix64Value(interpreter, valueGetter)
 }
 
-func (v UFix64Value) SaturatingDiv(other NumberValue) NumberValue {
+func (v UFix64Value) SaturatingDiv(interpreter *Interpreter, other NumberValue) NumberValue {
 	defer func() {
 		r := recover()
 		if _, ok := r.(InvalidOperandsError); ok {
 			panic(InvalidOperandsError{
 				FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
-				LeftType:     v.StaticType(),
-				RightType:    other.StaticType(),
+				LeftType:     v.StaticType(nil),
+				RightType:    other.StaticType(nil),
 			})
 		}
 	}()
 
-	return v.Div(other)
+	return v.Div(interpreter, other)
 }
 
-func (v UFix64Value) Mod(other NumberValue) NumberValue {
+func (v UFix64Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
 	// v - int(v/o) * o
-	quotient, ok := v.Div(o).(UFix64Value)
+	quotient, ok := v.Div(interpreter, o).(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
-	truncatedQuotient := (uint64(quotient) / sema.Fix64Factor) * sema.Fix64Factor
-	return v.Minus(UFix64Value(truncatedQuotient).Mul(o))
+
+	truncatedQuotient := NewUFix64Value(
+		interpreter,
+		func() uint64 {
+			return (uint64(quotient) / sema.Fix64Factor) * sema.Fix64Factor
+		},
+	)
+
+	return v.Minus(
+		interpreter,
+		truncatedQuotient.Mul(interpreter, o),
+	)
 }
 
-func (v UFix64Value) Less(other NumberValue) BoolValue {
+func (v UFix64Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLess,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v < o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v < o
+		},
+	)
 }
 
-func (v UFix64Value) LessEqual(other NumberValue) BoolValue {
+func (v UFix64Value) LessEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationLessEqual,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v <= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v <= o
+		},
+	)
 }
 
-func (v UFix64Value) Greater(other NumberValue) BoolValue {
+func (v UFix64Value) Greater(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreater,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v > o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v > o
+		},
+	)
 }
 
-func (v UFix64Value) GreaterEqual(other NumberValue) BoolValue {
+func (v UFix64Value) GreaterEqual(interpreter *Interpreter, other NumberValue) BoolValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
 			Operation: ast.OperationGreaterEqual,
-			LeftType:  v.StaticType(),
-			RightType: other.StaticType(),
+			LeftType:  v.StaticType(nil),
+			RightType: other.StaticType(nil),
 		})
 	}
 
-	return v >= o
+	return NewBoolValueFromConstructor(
+		interpreter,
+		func() bool {
+			return v >= o
+		},
+	)
 }
 
 func (v UFix64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -11514,7 +13981,7 @@ func (v UFix64Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch [
 	return scratch[:9]
 }
 
-func ConvertUFix64(value Value) UFix64Value {
+func ConvertUFix64(memoryGauge common.MemoryGauge, value Value) UFix64Value {
 	switch value := value.(type) {
 	case UFix64Value:
 		return value
@@ -11523,41 +13990,55 @@ func ConvertUFix64(value Value) UFix64Value {
 		if value < 0 {
 			panic(UnderflowError{})
 		}
-		return UFix64Value(value)
+		return NewUFix64Value(
+			memoryGauge,
+			func() uint64 {
+				return uint64(value)
+			},
+		)
 
 	case BigNumberValue:
-		v := value.ToBigInt()
+		converter := func() uint64 {
+			v := value.ToBigInt(memoryGauge)
 
-		if v.Sign() < 0 {
-			panic(UnderflowError{})
-		}
+			if v.Sign() < 0 {
+				panic(UnderflowError{})
+			}
 
-		// First, check if the value is at least in the uint64 range.
-		// The integer range for UFix64 is smaller, but this test at least
-		// allows us to call `v.UInt64()` safely.
+			// First, check if the value is at least in the uint64 range.
+			// The integer range for UFix64 is smaller, but this test at least
+			// allows us to call `v.UInt64()` safely.
 
-		if !v.IsUint64() {
-			panic(OverflowError{})
+			if !v.IsUint64() {
+				panic(OverflowError{})
+			}
+
+			return v.Uint64()
 		}
 
 		// Now check that the integer value fits the range of UFix64
-		return NewUFix64ValueWithInteger(v.Uint64())
+		return NewUFix64ValueWithInteger(memoryGauge, converter)
 
 	case NumberValue:
-		v := value.ToInt()
-		if v < 0 {
-			panic(UnderflowError{})
+		converter := func() uint64 {
+			v := value.ToInt()
+			if v < 0 {
+				panic(UnderflowError{})
+			}
+
+			return uint64(v)
 		}
+
 		// Check that the integer value fits the range of UFix64
-		return NewUFix64ValueWithInteger(uint64(v))
+		return NewUFix64ValueWithInteger(memoryGauge, converter)
 
 	default:
 		panic(fmt.Sprintf("can't convert to UFix64: %s", value))
 	}
 }
 
-func (v UFix64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, sema.UFix64Type)
+func (v UFix64Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.UFix64Type)
 }
 
 func (UFix64Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
@@ -11576,14 +14057,13 @@ func (v UFix64Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v UFix64Value) ConformsToDynamicType(
-	_ *Interpreter,
+func (v UFix64Value) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && sema.UFix64Type.Equal(numberType.StaticType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (UFix64Value) IsStorable() bool {
@@ -11635,6 +14115,14 @@ func (UFix64Value) ChildStorables() []atree.Storable {
 	return nil
 }
 
+func (v UFix64Value) IntegerPart() NumberValue {
+	return UInt64Value(v / sema.Fix64Factor)
+}
+
+func (UFix64Value) Scale() int {
+	return sema.Fix64Scale
+}
+
 // CompositeValue
 
 type CompositeValue struct {
@@ -11647,11 +14135,10 @@ type CompositeValue struct {
 	NestedVariables     map[string]*Variable
 	Functions           map[string]FunctionValue
 	Destructor          FunctionValue
-	Stringer            func(value *CompositeValue, seenReferences SeenReferences) string
+	Stringer            func(gauge common.MemoryGauge, value *CompositeValue, seenReferences SeenReferences) string
 	isDestroyed         bool
 	typeID              common.TypeID
 	staticType          StaticType
-	dynamicType         DynamicType
 }
 
 type ComputedField func(*Interpreter, func() LocationRange) Value
@@ -11659,6 +14146,18 @@ type ComputedField func(*Interpreter, func() LocationRange) Value
 type CompositeField struct {
 	Name  string
 	Value Value
+}
+
+func NewCompositeField(memoryGauge common.MemoryGauge, name string, value Value) CompositeField {
+	common.UseMemory(memoryGauge, common.CompositeFieldMemoryUsage)
+	return NewUnmeteredCompositeField(name, value)
+}
+
+func NewUnmeteredCompositeField(name string, value Value) CompositeField {
+	return CompositeField{
+		Name:  name,
+		Value: value,
+	}
 }
 
 func NewCompositeValue(
@@ -11696,26 +14195,32 @@ func NewCompositeValue(
 		}()
 	}
 
-	dictionary, err := atree.NewMap(
-		interpreter.Storage,
-		atree.Address(address),
-		atree.NewDefaultDigesterBuilder(),
-		compositeTypeInfo{
-			location:            location,
-			qualifiedIdentifier: qualifiedIdentifier,
-			kind:                kind,
-		},
-	)
-	if err != nil {
-		panic(ExternalError{err})
+	constructor := func() *atree.OrderedMap {
+		dictionary, err := atree.NewMap(
+			interpreter.Storage,
+			atree.Address(address),
+			atree.NewDefaultDigesterBuilder(),
+			NewCompositeTypeInfo(
+				interpreter,
+				location,
+				qualifiedIdentifier,
+				kind,
+			),
+		)
+		if err != nil {
+			panic(ExternalError{err})
+		}
+		return dictionary
 	}
 
-	v = &CompositeValue{
-		dictionary:          dictionary,
-		Location:            location,
-		QualifiedIdentifier: qualifiedIdentifier,
-		Kind:                kind,
-	}
+	typeInfo := NewCompositeTypeInfo(
+		interpreter,
+		location,
+		qualifiedIdentifier,
+		kind,
+	)
+
+	v = newCompositeValueFromConstructor(interpreter, uint64(len(fields)), typeInfo, constructor)
 
 	for _, field := range fields {
 		v.SetMember(
@@ -11728,6 +14233,32 @@ func NewCompositeValue(
 	}
 
 	return v
+}
+
+func newCompositeValueFromOrderedMap(
+	dict *atree.OrderedMap,
+	typeInfo compositeTypeInfo,
+) *CompositeValue {
+	return &CompositeValue{
+		dictionary:          dict,
+		Location:            typeInfo.location,
+		QualifiedIdentifier: typeInfo.qualifiedIdentifier,
+		Kind:                typeInfo.kind,
+	}
+}
+
+func newCompositeValueFromConstructor(
+	gauge common.MemoryGauge,
+	count uint64,
+	typeInfo compositeTypeInfo,
+	constructor func() *atree.OrderedMap,
+) *CompositeValue {
+	baseUse, elementOverhead, dataUse, metaDataUse := common.NewCompositeMemoryUsages(count, 0)
+	common.UseMemory(gauge, baseUse)
+	common.UseMemory(gauge, elementOverhead)
+	common.UseMemory(gauge, dataUse)
+	common.UseMemory(gauge, metaDataUse)
+	return newCompositeValueFromOrderedMap(constructor(), typeInfo)
 }
 
 var _ Value = &CompositeValue{}
@@ -11744,7 +14275,7 @@ func (v *CompositeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 		return
 	}
 
-	v.ForEachField(func(_ string, value Value) {
+	v.ForEachField(interpreter, func(_ string, value Value) {
 		value.Accept(interpreter, visitor)
 	})
 }
@@ -11752,42 +14283,33 @@ func (v *CompositeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 // Walk iterates over all field values of the composite value.
 // It does NOT walk the computed fields and functions!
 //
-func (v *CompositeValue) Walk(walkChild func(Value)) {
-	v.ForEachField(func(_ string, value Value) {
+func (v *CompositeValue) Walk(interpreter *Interpreter, walkChild func(Value)) {
+	v.ForEachField(interpreter, func(_ string, value Value) {
 		walkChild(value)
 	})
 }
 
-func (v *CompositeValue) DynamicType(interpreter *Interpreter, _ SeenReferences) DynamicType {
-	if v.dynamicType == nil {
-		var staticType sema.Type
-		var err error
-		if v.Location == nil {
-			staticType, err = interpreter.getNativeCompositeType(v.QualifiedIdentifier)
-		} else {
-			staticType, err = interpreter.getUserCompositeType(v.Location, v.TypeID())
-		}
-		if err != nil {
-			panic(err)
-		}
-		v.dynamicType = CompositeDynamicType{
-			StaticType: staticType,
-		}
-	}
-	return v.dynamicType
-}
-
-func (v *CompositeValue) StaticType() StaticType {
+func (v *CompositeValue) StaticType(interpreter *Interpreter) StaticType {
 	if v.staticType == nil {
 		// NOTE: Instead of using NewCompositeStaticType, which always generates the type ID,
 		// use the TypeID accessor, which may return an already computed type ID
-		v.staticType = CompositeStaticType{
-			Location:            v.Location,
-			QualifiedIdentifier: v.QualifiedIdentifier,
-			TypeID:              v.TypeID(),
-		}
+		v.staticType = NewCompositeStaticType(
+			interpreter,
+			v.Location,
+			v.QualifiedIdentifier,
+			v.TypeID(), // TODO TypeID metering
+		)
 	}
 	return v.staticType
+}
+
+func (v *CompositeValue) IsImportable(inter *Interpreter) bool {
+	staticType := v.StaticType(inter)
+	semaType, err := inter.ConvertStaticToSemaType(staticType)
+	if err != nil {
+		panic(err)
+	}
+	return semaType.IsImportable(map[*sema.Member]bool{})
 }
 
 func (v *CompositeValue) IsDestroyed() bool {
@@ -11830,13 +14352,14 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func
 	destructor := v.Destructor
 
 	if destructor != nil {
-		invocation := Invocation{
-			Self:             v,
-			Arguments:        nil,
-			ArgumentTypes:    nil,
-			GetLocationRange: getLocationRange,
-			Interpreter:      interpreter,
-		}
+		invocation := NewInvocation(
+			interpreter,
+			v,
+			nil,
+			nil,
+			nil,
+			getLocationRange,
+		)
 
 		destructor.invoke(invocation)
 	}
@@ -11888,7 +14411,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange fu
 		}
 	}
 	if storable != nil {
-		return StoredValue(storable, interpreter.Storage)
+		return StoredValue(interpreter, storable, interpreter.Storage)
 	}
 
 	if v.NestedVariables != nil {
@@ -11929,10 +14452,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange fu
 
 	function, ok := v.Functions[name]
 	if ok {
-		return BoundFunctionValue{
-			Self:     v,
-			Function: function,
-		}
+		return NewBoundFunctionValue(interpreter, function, v)
 	}
 
 	return nil
@@ -11972,7 +14492,7 @@ func (v *CompositeValue) OwnerValue(interpreter *Interpreter, getLocationRange f
 	address := v.StorageID().Address
 
 	if address == (atree.Address{}) {
-		return NilValue{}
+		return NewNilValue(interpreter)
 	}
 
 	ownerAccount := interpreter.publicAccountHandler(interpreter, AddressValue(address))
@@ -11980,7 +14500,7 @@ func (v *CompositeValue) OwnerValue(interpreter *Interpreter, getLocationRange f
 	// Owner must be of `PublicAccount` type.
 	interpreter.ExpectType(ownerAccount, sema.PublicAccountType, getLocationRange)
 
-	return NewSomeValueNonCopying(ownerAccount)
+	return NewSomeValueNonCopying(interpreter, ownerAccount)
 }
 
 func (v *CompositeValue) RemoveMember(
@@ -12033,7 +14553,7 @@ func (v *CompositeValue) RemoveMember(
 
 	// Value
 
-	storedValue := StoredValue(existingValueStorable, storage)
+	storedValue := StoredValue(interpreter, existingValueStorable, storage)
 	return storedValue.
 		Transfer(
 			interpreter,
@@ -12085,7 +14605,7 @@ func (v *CompositeValue) SetMember(
 	existingStorable, err := v.dictionary.Set(
 		StringAtreeComparator,
 		StringAtreeHashInput,
-		StringAtreeValue(name),
+		NewStringAtreeValue(interpreter, name),
 		value,
 	)
 	if err != nil {
@@ -12094,7 +14614,7 @@ func (v *CompositeValue) SetMember(
 	interpreter.maybeValidateAtreeValue(v.dictionary)
 
 	if existingStorable != nil {
-		existingValue := StoredValue(existingStorable, interpreter.Storage)
+		existingValue := StoredValue(interpreter, existingStorable, interpreter.Storage)
 
 		existingValue.DeepRemove(interpreter)
 
@@ -12107,26 +14627,51 @@ func (v *CompositeValue) String() string {
 }
 
 func (v *CompositeValue) RecursiveString(seenReferences SeenReferences) string {
-	if v.Stringer != nil {
-		return v.Stringer(v, seenReferences)
-	}
-
-	var fields []CompositeField
-
-	v.ForEachField(func(name string, value Value) {
-		fields = append(
-			fields,
-			CompositeField{
-				Name:  name,
-				Value: value,
-			},
-		)
-	})
-
-	return formatComposite(string(v.TypeID()), fields, seenReferences)
+	return v.MeteredString(nil, seenReferences)
 }
 
-func formatComposite(typeId string, fields []CompositeField, seenReferences SeenReferences) string {
+var emptyCompositeStringLen = len(format.Composite("", nil))
+
+func (v *CompositeValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+
+	if v.Stringer != nil {
+		return v.Stringer(memoryGauge, v, seenReferences)
+	}
+
+	strLen := emptyCompositeStringLen
+
+	var fields []CompositeField
+	_ = v.dictionary.Iterate(func(key atree.Value, value atree.Value) (resume bool, err error) {
+		field := NewCompositeField(
+			memoryGauge,
+			string(key.(StringAtreeValue)),
+			MustConvertStoredValue(memoryGauge, value),
+		)
+
+		fields = append(fields, field)
+
+		strLen += len(field.Name)
+
+		return true, nil
+	})
+
+	typeId := string(v.TypeID())
+
+	// bodyLen = len(fieldNames) + len(typeId) + (n times colon+space) + ((n-1) times comma+space)
+	//         = len(fieldNames) + len(typeId) + 2n + 2n - 2
+	//         = len(fieldNames) + len(typeId) + 4n - 2
+	//
+	// Since (-2) only occurs if its non-empty, ignore the (-2). i.e: overestimate
+	// 		bodyLen = len(fieldNames) + len(typeId) + 4n
+	//
+	strLen = strLen + len(typeId) + len(fields)*4
+
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(strLen))
+
+	return formatComposite(memoryGauge, typeId, fields, seenReferences)
+}
+
+func formatComposite(memoryGauge common.MemoryGauge, typeId string, fields []CompositeField, seenReferences SeenReferences) string {
 	preparedFields := make(
 		[]struct {
 			Name  string
@@ -12144,7 +14689,7 @@ func formatComposite(typeId string, fields []CompositeField, seenReferences Seen
 				Value string
 			}{
 				Name:  field.Name,
-				Value: field.Value.RecursiveString(seenReferences),
+				Value: field.Value.MeteredString(memoryGauge, seenReferences),
 			},
 		)
 	}
@@ -12170,7 +14715,7 @@ func (v *CompositeValue) GetField(interpreter *Interpreter, getLocationRange fun
 		panic(ExternalError{err})
 	}
 
-	return StoredValue(storable, v.dictionary.Storage)
+	return StoredValue(interpreter, storable, v.dictionary.Storage)
 }
 
 func (v *CompositeValue) Equal(interpreter *Interpreter, getLocationRange func() LocationRange, other Value) bool {
@@ -12179,7 +14724,7 @@ func (v *CompositeValue) Equal(interpreter *Interpreter, getLocationRange func()
 		return false
 	}
 
-	if !v.StaticType().Equal(otherComposite.StaticType()) ||
+	if !v.StaticType(interpreter).Equal(otherComposite.StaticType(interpreter)) ||
 		v.Kind != otherComposite.Kind ||
 		v.dictionary.Count() != otherComposite.dictionary.Count() {
 
@@ -12206,7 +14751,7 @@ func (v *CompositeValue) Equal(interpreter *Interpreter, getLocationRange func()
 		// (if stored in different account, as storage ID is used as hash seed)
 		otherValue := otherComposite.GetField(interpreter, getLocationRange, fieldName)
 
-		equatableValue, ok := MustConvertStoredValue(value).(EquatableValue)
+		equatableValue, ok := MustConvertStoredValue(interpreter, value).(EquatableValue)
 		if !ok || !equatableValue.Equal(interpreter, getLocationRange, otherValue) {
 			return false
 		}
@@ -12253,15 +14798,15 @@ func (v *CompositeValue) TypeID() common.TypeID {
 		if location == nil {
 			return common.TypeID(qualifiedIdentifier)
 		}
-		v.typeID = location.TypeID(qualifiedIdentifier)
+		v.typeID = location.TypeID(nil, qualifiedIdentifier)
 	}
 	return v.typeID
 }
 
-func (v *CompositeValue) ConformsToDynamicType(
+func (v *CompositeValue) ConformsToStaticType(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	results TypeConformanceResults,
 ) bool {
 
@@ -12273,7 +14818,7 @@ func (v *CompositeValue) ConformsToDynamicType(
 		kind := v.Kind.String()
 
 		defer func() {
-			interpreter.reportCompositeValueConformsToDynamicTypeTrace(
+			interpreter.reportCompositeValueConformsToStaticTypeTrace(
 				owner,
 				typeID,
 				kind,
@@ -12282,12 +14827,12 @@ func (v *CompositeValue) ConformsToDynamicType(
 		}()
 	}
 
-	compositeDynamicType, ok := dynamicType.(CompositeDynamicType)
-	if !ok {
+	semaType, err := interpreter.ConvertStaticToSemaType(staticType)
+	if err != nil {
 		return false
 	}
 
-	compositeType, ok := compositeDynamicType.StaticType.(*sema.CompositeType)
+	compositeType, ok := semaType.(*sema.CompositeType)
 	if !ok ||
 		v.Kind != compositeType.Kind ||
 		v.TypeID() != compositeType.ID() {
@@ -12324,16 +14869,14 @@ func (v *CompositeValue) ConformsToDynamicType(
 			return false
 		}
 
-		fieldDynamicType := value.DynamicType(interpreter, SeenReferences{})
-
-		if !interpreter.IsSubType(fieldDynamicType, member.TypeAnnotation.Type) {
+		if !interpreter.IsSubTypeOfSemaType(value.StaticType(interpreter), member.TypeAnnotation.Type) {
 			return false
 		}
 
-		if !value.ConformsToDynamicType(
+		if !value.ConformsToStaticType(
 			interpreter,
 			getLocationRange,
-			fieldDynamicType,
+			value.StaticType(interpreter),
 			results,
 		) {
 			return false
@@ -12389,6 +14932,12 @@ func (v *CompositeValue) Transfer(
 	storable atree.Storable,
 ) Value {
 
+	baseUse, elementOverhead, dataUse, metaDataUse := common.NewCompositeMemoryUsages(v.dictionary.Count(), 0)
+	common.UseMemory(interpreter, baseUse)
+	common.UseMemory(interpreter, elementOverhead)
+	common.UseMemory(interpreter, dataUse)
+	common.UseMemory(interpreter, metaDataUse)
+
 	interpreter.ReportComputation(common.ComputationKindTransferCompositeValue, 1)
 
 	if interpreter.invalidatedResourceValidationEnabled {
@@ -12426,6 +14975,9 @@ func (v *CompositeValue) Transfer(
 			panic(ExternalError{err})
 		}
 
+		elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(v.dictionary.Count(), 0)
+		common.UseMemory(interpreter.memoryGauge, elementMemoryUse)
+
 		dictionary, err = atree.NewMapFromBatchData(
 			interpreter.Storage,
 			address,
@@ -12447,7 +14999,7 @@ func (v *CompositeValue) Transfer(
 				// NOTE: key is stringAtreeValue
 				// and does not need to be converted or copied
 
-				value := MustConvertStoredValue(atreeValue).
+				value := MustConvertStoredValue(interpreter, atreeValue).
 					Transfer(interpreter, getLocationRange, address, remove, nil)
 
 				return atreeKey, value, nil
@@ -12506,22 +15058,22 @@ func (v *CompositeValue) Transfer(
 	}
 
 	if res == nil {
-		res = &CompositeValue{
-			dictionary:          dictionary,
-			Location:            v.Location,
-			QualifiedIdentifier: v.QualifiedIdentifier,
-			Kind:                v.Kind,
-			InjectedFields:      v.InjectedFields,
-			ComputedFields:      v.ComputedFields,
-			NestedVariables:     v.NestedVariables,
-			Functions:           v.Functions,
-			Destructor:          v.Destructor,
-			Stringer:            v.Stringer,
-			isDestroyed:         v.isDestroyed,
-			typeID:              v.typeID,
-			staticType:          v.staticType,
-			dynamicType:         v.dynamicType,
-		}
+		info := NewCompositeTypeInfo(
+			interpreter,
+			v.Location,
+			v.QualifiedIdentifier,
+			v.Kind,
+		)
+		res = newCompositeValueFromOrderedMap(dictionary, info)
+		res.InjectedFields = v.InjectedFields
+		res.ComputedFields = v.ComputedFields
+		res.NestedVariables = v.NestedVariables
+		res.Functions = v.Functions
+		res.Destructor = v.Destructor
+		res.Stringer = v.Stringer
+		res.isDestroyed = v.isDestroyed
+		res.typeID = v.typeID
+		res.staticType = v.staticType
 	}
 
 	if needsStoreTo &&
@@ -12555,6 +15107,9 @@ func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
 		panic(ExternalError{err})
 	}
 
+	elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(v.dictionary.Count(), 0)
+	common.UseMemory(interpreter.memoryGauge, elementMemoryUse)
+
 	dictionary, err := atree.NewMapFromBatchData(
 		interpreter.Storage,
 		v.StorageID().Address,
@@ -12573,8 +15128,8 @@ func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
 				return nil, nil, nil
 			}
 
-			key := MustConvertStoredValue(atreeKey).Clone(interpreter)
-			value := MustConvertStoredValue(atreeValue).Clone(interpreter)
+			key := MustConvertStoredValue(interpreter, atreeKey).Clone(interpreter)
+			value := MustConvertStoredValue(interpreter, atreeValue).Clone(interpreter)
 
 			return key, value, nil
 		},
@@ -12597,7 +15152,6 @@ func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
 		isDestroyed:         v.isDestroyed,
 		typeID:              v.typeID,
 		staticType:          v.staticType,
-		dynamicType:         v.dynamicType,
 	}
 }
 
@@ -12629,7 +15183,7 @@ func (v *CompositeValue) DeepRemove(interpreter *Interpreter) {
 		// and not a Value, so no need to deep remove
 		interpreter.RemoveReferencedSlab(nameStorable)
 
-		value := StoredValue(valueStorable, storage)
+		value := StoredValue(interpreter, valueStorable, storage)
 		value.DeepRemove(interpreter)
 		interpreter.RemoveReferencedSlab(valueStorable)
 	})
@@ -12646,12 +15200,12 @@ func (v *CompositeValue) GetOwner() common.Address {
 // ForEachField iterates over all field-name field-value pairs of the composite value.
 // It does NOT iterate over computed fields and functions!
 //
-func (v *CompositeValue) ForEachField(f func(fieldName string, fieldValue Value)) {
+func (v *CompositeValue) ForEachField(gauge common.MemoryGauge, f func(fieldName string, fieldValue Value)) {
 
 	err := v.dictionary.Iterate(func(key atree.Value, value atree.Value) (resume bool, err error) {
 		f(
 			string(key.(StringAtreeValue)),
-			MustConvertStoredValue(value),
+			MustConvertStoredValue(gauge, value),
 		)
 		return true, nil
 	})
@@ -12693,7 +15247,7 @@ func (v *CompositeValue) RemoveField(
 
 	// Value
 
-	existingValue := StoredValue(existingValueStorable, storage)
+	existingValue := StoredValue(interpreter, existingValueStorable, storage)
 	existingValue.DeepRemove(interpreter)
 	interpreter.RemoveReferencedSlab(existingValueStorable)
 }
@@ -12734,6 +15288,7 @@ type DictionaryValue struct {
 	isResourceKinded *bool
 	dictionary       *atree.OrderedMap
 	isDestroyed      bool
+	elementSize      uint
 }
 
 func NewDictionaryValue(
@@ -12786,20 +15341,21 @@ func NewDictionaryValueWithAddress(
 		panic("uneven number of keys and values")
 	}
 
-	dictionary, err := atree.NewMap(
-		interpreter.Storage,
-		atree.Address(address),
-		atree.NewDefaultDigesterBuilder(),
-		dictionaryType,
-	)
-	if err != nil {
-		panic(ExternalError{err})
+	constructor := func() *atree.OrderedMap {
+		dictionary, err := atree.NewMap(
+			interpreter.Storage,
+			atree.Address(address),
+			atree.NewDefaultDigesterBuilder(),
+			dictionaryType,
+		)
+		if err != nil {
+			panic(ExternalError{err})
+		}
+		return dictionary
 	}
 
-	v = &DictionaryValue{
-		Type:       dictionaryType,
-		dictionary: dictionary,
-	}
+	// values are added to the dictionary after creation, not here
+	v = newDictionaryValueFromConstructor(interpreter, dictionaryType, 0, constructor)
 
 	for i := 0; i < keysAndValuesCount; i += 2 {
 		key := keysAndValues[i]
@@ -12810,6 +15366,40 @@ func NewDictionaryValueWithAddress(
 	}
 
 	return v
+}
+
+func newDictionaryValueFromOrderedMap(
+	dict *atree.OrderedMap,
+	staticType DictionaryStaticType,
+) *DictionaryValue {
+	return &DictionaryValue{
+		Type:       staticType,
+		dictionary: dict,
+	}
+}
+
+func newDictionaryValueFromConstructor(
+	gauge common.MemoryGauge,
+	staticType DictionaryStaticType,
+	count uint64,
+	constructor func() *atree.OrderedMap,
+) (dict *DictionaryValue) {
+
+	keySize := staticType.KeyType.elementSize()
+	valueSize := staticType.ValueType.elementSize()
+	var elementSize uint
+	if keySize != 0 && valueSize != 0 {
+		elementSize = keySize + valueSize
+	}
+	baseUsage, overheadUsage, dataSlabs, metaDataSlabs := common.NewDictionaryMemoryUsages(count, elementSize)
+	common.UseMemory(gauge, baseUsage)
+	common.UseMemory(gauge, overheadUsage)
+	common.UseMemory(gauge, dataSlabs)
+	common.UseMemory(gauge, metaDataSlabs)
+
+	dict = newDictionaryValueFromOrderedMap(constructor(), staticType)
+	dict.elementSize = elementSize
+	return
 }
 
 var _ Value = &DictionaryValue{}
@@ -12827,19 +15417,19 @@ func (v *DictionaryValue) Accept(interpreter *Interpreter, visitor Visitor) {
 		return
 	}
 
-	v.Walk(func(value Value) {
+	v.Walk(interpreter, func(value Value) {
 		value.Accept(interpreter, visitor)
 	})
 }
 
-func (v *DictionaryValue) Iterate(f func(key, value Value) (resume bool)) {
+func (v *DictionaryValue) Iterate(gauge common.MemoryGauge, f func(key, value Value) (resume bool)) {
 	err := v.dictionary.Iterate(func(key, value atree.Value) (resume bool, err error) {
 		// atree.OrderedMap iteration provides low-level atree.Value,
 		// convert to high-level interpreter.Value
 
 		resume = f(
-			MustConvertStoredValue(key),
-			MustConvertStoredValue(value),
+			MustConvertStoredValue(gauge, key),
+			MustConvertStoredValue(gauge, value),
 		)
 
 		return resume, nil
@@ -12849,36 +15439,33 @@ func (v *DictionaryValue) Iterate(f func(key, value Value) (resume bool)) {
 	}
 }
 
-func (v *DictionaryValue) Walk(walkChild func(Value)) {
-	v.Iterate(func(key, value Value) (resume bool) {
+func (v *DictionaryValue) Walk(interpreter *Interpreter, walkChild func(Value)) {
+	v.Iterate(interpreter, func(key, value Value) (resume bool) {
 		walkChild(key)
 		walkChild(value)
 		return true
 	})
 }
 
-func (v *DictionaryValue) DynamicType(interpreter *Interpreter, seenReferences SeenReferences) DynamicType {
-	entryTypes := make([]DictionaryStaticTypeEntry, v.Count())
+func (v *DictionaryValue) StaticType(_ *Interpreter) StaticType {
+	// TODO meter
+	return v.Type
+}
 
-	index := 0
-	v.Iterate(func(key, value Value) (resume bool) {
-		entryTypes[index] =
-			DictionaryStaticTypeEntry{
-				KeyType:   key.DynamicType(interpreter, seenReferences),
-				ValueType: value.DynamicType(interpreter, seenReferences),
-			}
-		index++
+func (v *DictionaryValue) IsImportable(inter *Interpreter) bool {
+	importable := true
+	v.Iterate(inter, func(key, value Value) (resume bool) {
+		if !key.IsImportable(inter) || !value.IsImportable(inter) {
+			importable = false
+			// stop iteration
+			return false
+		}
+
+		// continue iteration
 		return true
 	})
 
-	return &DictionaryDynamicType{
-		EntryTypes: entryTypes,
-		StaticType: v.Type,
-	}
-}
-
-func (v *DictionaryValue) StaticType() StaticType {
-	return v.Type
+	return importable
 }
 
 func (v *DictionaryValue) IsDestroyed() bool {
@@ -12915,7 +15502,7 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, getLocationRange fun
 		}()
 	}
 
-	v.Iterate(func(key, value Value) (resume bool) {
+	v.Iterate(interpreter, func(key, value Value) (resume bool) {
 		// Resources cannot be keys at the moment, so should theoretically not be needed
 		maybeDestroy(interpreter, getLocationRange, key)
 		maybeDestroy(interpreter, getLocationRange, value)
@@ -12942,13 +15529,18 @@ func (v *DictionaryValue) ContainsKey(
 		hashInputProvider,
 		keyValue,
 	)
-	if err != nil {
-		if _, ok := err.(*atree.KeyNotFoundError); ok {
-			return false
+
+	valueGetter := func() bool {
+		if err != nil {
+			if _, ok := err.(*atree.KeyNotFoundError); ok {
+				return false
+			}
+			panic(ExternalError{err})
 		}
-		panic(ExternalError{err})
+		return true
 	}
-	return true
+
+	return NewBoolValueFromConstructor(interpreter, valueGetter)
 }
 
 func (v *DictionaryValue) Get(
@@ -12973,7 +15565,7 @@ func (v *DictionaryValue) Get(
 	}
 
 	storage := v.dictionary.Storage
-	value := StoredValue(storable, storage)
+	value := StoredValue(interpreter, storable, storage)
 	return value, true
 }
 
@@ -12985,10 +15577,10 @@ func (v *DictionaryValue) GetKey(interpreter *Interpreter, getLocationRange func
 
 	value, ok := v.Get(interpreter, getLocationRange, keyValue)
 	if ok {
-		return NewSomeValueNonCopying(value)
+		return NewSomeValueNonCopying(interpreter, value)
 	}
 
-	return NilValue{}
+	return NewNilValue(interpreter)
 }
 
 func (v *DictionaryValue) SetKey(
@@ -13004,7 +15596,7 @@ func (v *DictionaryValue) SetKey(
 
 	interpreter.checkContainerMutation(v.Type.KeyType, keyValue, getLocationRange)
 	interpreter.checkContainerMutation(
-		OptionalStaticType{
+		OptionalStaticType{ // intentionally unmetered
 			Type: v.Type.ValueType,
 		},
 		value,
@@ -13029,6 +15621,10 @@ func (v *DictionaryValue) String() string {
 }
 
 func (v *DictionaryValue) RecursiveString(seenReferences SeenReferences) string {
+	return v.MeteredString(nil, seenReferences)
+}
+
+func (v *DictionaryValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
 
 	pairs := make([]struct {
 		Key   string
@@ -13036,19 +15632,32 @@ func (v *DictionaryValue) RecursiveString(seenReferences SeenReferences) string 
 	}, v.Count())
 
 	index := 0
-	v.Iterate(func(key, value Value) (resume bool) {
+	_ = v.dictionary.Iterate(func(key, value atree.Value) (resume bool, err error) {
+		// atree.OrderedMap iteration provides low-level atree.Value,
+		// convert to high-level interpreter.Value
+
 		pairs[index] = struct {
 			Key   string
 			Value string
 		}{
-			Key:   key.RecursiveString(seenReferences),
-			Value: value.RecursiveString(seenReferences),
+			MustConvertStoredValue(memoryGauge, key).MeteredString(memoryGauge, seenReferences),
+			MustConvertStoredValue(memoryGauge, value).MeteredString(memoryGauge, seenReferences),
 		}
-
 		index++
-
-		return true
+		return true, nil
 	})
+
+	// len = len(open-brace) + len(close-brace) + (n times colon+space) + ((n-1) times comma+space)
+	//     = 2 + 2n + 2n - 2
+	//     = 4n + 2 - 2
+	//
+	// Since (-2) only occurs if its non-empty (i.e: n>0), ignore the (-2). i.e: overestimate
+	//    len = 4n + 2
+	//
+	// String of each key and value are metered separately.
+	strLen := len(pairs)*4 + 2
+
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(strLen))
 
 	return format.Dictionary(pairs)
 }
@@ -13081,7 +15690,7 @@ func (v *DictionaryValue) GetMember(
 
 	switch name {
 	case "length":
-		return NewIntValueFromInt64(int64(v.Count()))
+		return NewIntValueFromInt64(interpreter, int64(v.Count()))
 
 	case "keys":
 
@@ -13092,10 +15701,9 @@ func (v *DictionaryValue) GetMember(
 
 		return NewArrayValueWithIterator(
 			interpreter,
-			VariableSizedStaticType{
-				Type: v.Type.KeyType,
-			},
+			NewVariableSizedStaticType(interpreter, v.Type.KeyType),
 			common.Address{},
+			v.dictionary.Count(),
 			func() Value {
 
 				key, err := iterator.NextKey()
@@ -13106,7 +15714,7 @@ func (v *DictionaryValue) GetMember(
 					return nil
 				}
 
-				return MustConvertStoredValue(key).
+				return MustConvertStoredValue(interpreter, key).
 					Transfer(interpreter, getLocationRange, atree.Address{}, false, nil)
 			},
 		)
@@ -13120,10 +15728,9 @@ func (v *DictionaryValue) GetMember(
 
 		return NewArrayValueWithIterator(
 			interpreter,
-			VariableSizedStaticType{
-				Type: v.Type.ValueType,
-			},
+			NewVariableSizedStaticType(interpreter, v.Type.ValueType),
 			common.Address{},
+			v.dictionary.Count(),
 			func() Value {
 
 				value, err := iterator.NextValue()
@@ -13134,12 +15741,13 @@ func (v *DictionaryValue) GetMember(
 					return nil
 				}
 
-				return MustConvertStoredValue(value).
+				return MustConvertStoredValue(interpreter, value).
 					Transfer(interpreter, getLocationRange, atree.Address{}, false, nil)
 			})
 
 	case "remove":
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				keyValue := invocation.Arguments[0]
 
@@ -13156,6 +15764,7 @@ func (v *DictionaryValue) GetMember(
 
 	case "insert":
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				keyValue := invocation.Arguments[0]
 				newValue := invocation.Arguments[1]
@@ -13174,6 +15783,7 @@ func (v *DictionaryValue) GetMember(
 
 	case "containsKey":
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				return v.ContainsKey(
 					invocation.Interpreter,
@@ -13246,7 +15856,7 @@ func (v *DictionaryValue) Remove(
 	)
 	if err != nil {
 		if _, ok := err.(*atree.KeyNotFoundError); ok {
-			return NilValue{}
+			return NewNilValue(interpreter)
 		}
 		panic(ExternalError{err})
 	}
@@ -13256,13 +15866,13 @@ func (v *DictionaryValue) Remove(
 
 	// Key
 
-	existingKeyValue := StoredValue(existingKeyStorable, storage)
+	existingKeyValue := StoredValue(interpreter, existingKeyStorable, storage)
 	existingKeyValue.DeepRemove(interpreter)
 	interpreter.RemoveReferencedSlab(existingKeyStorable)
 
 	// Value
 
-	existingValue := StoredValue(existingValueStorable, storage).
+	existingValue := StoredValue(interpreter, existingValueStorable, storage).
 		Transfer(
 			interpreter,
 			getLocationRange,
@@ -13271,7 +15881,7 @@ func (v *DictionaryValue) Remove(
 			existingValueStorable,
 		)
 
-	return NewSomeValueNonCopying(existingValue)
+	return NewSomeValueNonCopying(interpreter, existingValue)
 }
 
 func (v *DictionaryValue) InsertKey(
@@ -13287,6 +15897,12 @@ func (v *DictionaryValue) Insert(
 	getLocationRange func() LocationRange,
 	keyValue, value Value,
 ) OptionalValue {
+
+	// length increases by 1
+	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(v.dictionary.Count(), v.elementSize, false)
+	common.UseMemory(interpreter, common.AtreeMapElementOverhead)
+	common.UseMemory(interpreter, dataSlabs)
+	common.UseMemory(interpreter, metaDataSlabs)
 
 	interpreter.checkContainerMutation(v.Type.KeyType, keyValue, getLocationRange)
 	interpreter.checkContainerMutation(v.Type.ValueType, value, getLocationRange)
@@ -13326,10 +15942,10 @@ func (v *DictionaryValue) Insert(
 	interpreter.maybeValidateAtreeValue(v.dictionary)
 
 	if existingValueStorable == nil {
-		return NilValue{}
+		return NewNilValue(interpreter)
 	}
 
-	existingValue := StoredValue(existingValueStorable, interpreter.Storage).
+	existingValue := StoredValue(interpreter, existingValueStorable, interpreter.Storage).
 		Transfer(
 			interpreter,
 			getLocationRange,
@@ -13338,7 +15954,7 @@ func (v *DictionaryValue) Insert(
 			existingValueStorable,
 		)
 
-	return NewSomeValueNonCopying(existingValue)
+	return NewSomeValueNonCopying(interpreter, existingValue)
 }
 
 type DictionaryEntryValues struct {
@@ -13346,10 +15962,10 @@ type DictionaryEntryValues struct {
 	Value Value
 }
 
-func (v *DictionaryValue) ConformsToDynamicType(
+func (v *DictionaryValue) ConformsToStaticType(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	results TypeConformanceResults,
 ) bool {
 
@@ -13361,7 +15977,7 @@ func (v *DictionaryValue) ConformsToDynamicType(
 		typeInfo := v.Type.String()
 
 		defer func() {
-			interpreter.reportDictionaryValueConformsToDynamicTypeTrace(
+			interpreter.reportDictionaryValueConformsToStaticTypeTrace(
 				typeInfo,
 				count,
 				time.Since(startTime),
@@ -13369,8 +15985,8 @@ func (v *DictionaryValue) ConformsToDynamicType(
 		}()
 	}
 
-	dictionaryType, ok := dynamicType.(*DictionaryDynamicType)
-	if !ok || count != len(dictionaryType.EntryTypes) {
+	dictionaryType, ok := staticType.(DictionaryStaticType)
+	if !ok {
 		return false
 	}
 
@@ -13389,17 +16005,15 @@ func (v *DictionaryValue) ConformsToDynamicType(
 			return true
 		}
 
-		entryType := dictionaryType.EntryTypes[index]
-
 		// Check the key
 
 		// atree.OrderedMap iteration provides low-level atree.Value,
 		// convert to high-level interpreter.Value
-		entryKey := MustConvertStoredValue(key)
-		if !entryKey.ConformsToDynamicType(
+		entryKey := MustConvertStoredValue(interpreter, key)
+		if !entryKey.ConformsToStaticType(
 			interpreter,
 			getLocationRange,
-			entryType.KeyType,
+			dictionaryType.KeyType,
 			results,
 		) {
 			return false
@@ -13409,11 +16023,11 @@ func (v *DictionaryValue) ConformsToDynamicType(
 
 		// atree.OrderedMap iteration provides low-level atree.Value,
 		// convert to high-level interpreter.Value
-		entryValue := MustConvertStoredValue(value)
-		if !entryValue.ConformsToDynamicType(
+		entryValue := MustConvertStoredValue(interpreter, value)
+		if !entryValue.ConformsToStaticType(
 			interpreter,
 			getLocationRange,
-			entryType.ValueType,
+			dictionaryType.ValueType,
 			results,
 		) {
 			return false
@@ -13458,14 +16072,14 @@ func (v *DictionaryValue) Equal(interpreter *Interpreter, getLocationRange func(
 			otherDictionary.Get(
 				interpreter,
 				getLocationRange,
-				MustConvertStoredValue(key),
+				MustConvertStoredValue(interpreter, key),
 			)
 
 		if !otherValueExists {
 			return false
 		}
 
-		equatableValue, ok := MustConvertStoredValue(value).(EquatableValue)
+		equatableValue, ok := MustConvertStoredValue(interpreter, value).(EquatableValue)
 		if !ok || !equatableValue.Equal(interpreter, getLocationRange, otherValue) {
 			return false
 		}
@@ -13485,6 +16099,14 @@ func (v *DictionaryValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 ) Value {
+	baseUse, elementOverhead, dataUse, metaDataUse := common.NewDictionaryMemoryUsages(
+		v.dictionary.Count(),
+		v.elementSize,
+	)
+	common.UseMemory(interpreter, baseUse)
+	common.UseMemory(interpreter, elementOverhead)
+	common.UseMemory(interpreter, dataUse)
+	common.UseMemory(interpreter, metaDataUse)
 
 	interpreter.ReportComputation(common.ComputationKindTransferDictionaryValue, uint(v.Count()))
 
@@ -13525,6 +16147,9 @@ func (v *DictionaryValue) Transfer(
 			panic(ExternalError{err})
 		}
 
+		elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(v.dictionary.Count(), v.elementSize)
+		common.UseMemory(interpreter.memoryGauge, elementMemoryUse)
+
 		dictionary, err = atree.NewMapFromBatchData(
 			interpreter.Storage,
 			address,
@@ -13543,10 +16168,10 @@ func (v *DictionaryValue) Transfer(
 					return nil, nil, nil
 				}
 
-				key := MustConvertStoredValue(atreeKey).
+				key := MustConvertStoredValue(interpreter, atreeKey).
 					Transfer(interpreter, getLocationRange, address, remove, nil)
 
-				value := MustConvertStoredValue(atreeValue).
+				value := MustConvertStoredValue(interpreter, atreeValue).
 					Transfer(interpreter, getLocationRange, address, remove, nil)
 
 				return key, value, nil
@@ -13605,13 +16230,11 @@ func (v *DictionaryValue) Transfer(
 	}
 
 	if res == nil {
-		res = &DictionaryValue{
-			Type:             v.Type,
-			semaType:         v.semaType,
-			isResourceKinded: v.isResourceKinded,
-			dictionary:       dictionary,
-			isDestroyed:      v.isDestroyed,
-		}
+		res = newDictionaryValueFromOrderedMap(dictionary, v.Type)
+		res.elementSize = v.elementSize
+		res.semaType = v.semaType
+		res.isResourceKinded = v.isResourceKinded
+		res.isDestroyed = v.isDestroyed
 	}
 
 	return res
@@ -13626,6 +16249,9 @@ func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
 	if err != nil {
 		panic(ExternalError{err})
 	}
+
+	elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(v.dictionary.Count(), v.elementSize)
+	common.UseMemory(interpreter.memoryGauge, elementMemoryUse)
 
 	dictionary, err := atree.NewMapFromBatchData(
 		interpreter.Storage,
@@ -13645,10 +16271,10 @@ func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
 				return nil, nil, nil
 			}
 
-			key := MustConvertStoredValue(atreeKey).
+			key := MustConvertStoredValue(interpreter, atreeKey).
 				Clone(interpreter)
 
-			value := MustConvertStoredValue(atreeValue).
+			value := MustConvertStoredValue(interpreter, atreeValue).
 				Clone(interpreter)
 
 			return key, value, nil
@@ -13690,11 +16316,11 @@ func (v *DictionaryValue) DeepRemove(interpreter *Interpreter) {
 
 	err := v.dictionary.PopIterate(func(keyStorable atree.Storable, valueStorable atree.Storable) {
 
-		key := StoredValue(keyStorable, storage)
+		key := StoredValue(interpreter, keyStorable, storage)
 		key.DeepRemove(interpreter)
 		interpreter.RemoveReferencedSlab(keyStorable)
 
-		value := StoredValue(valueStorable, storage)
+		value := StoredValue(interpreter, valueStorable, storage)
 		value.DeepRemove(interpreter)
 		interpreter.RemoveReferencedSlab(valueStorable)
 	})
@@ -13748,26 +16374,34 @@ var _ atree.Storable = NilValue{}
 var _ EquatableValue = NilValue{}
 var _ MemberAccessibleValue = NilValue{}
 
+func NewUnmeteredNilValue() NilValue {
+	return NilValue{}
+}
+
+func NewNilValue(memoryGauge common.MemoryGauge) NilValue {
+	common.UseMemory(memoryGauge, common.NilValueMemoryUsage)
+	return NewUnmeteredNilValue()
+}
+
 func (NilValue) IsValue() {}
 
 func (v NilValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitNilValue(interpreter, v)
 }
 
-func (NilValue) Walk(_ func(Value)) {
+func (NilValue) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
-var nilDynamicType DynamicType = NilDynamicType{}
-
-func (NilValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return nilDynamicType
+func (NilValue) StaticType(interpreter *Interpreter) StaticType {
+	return NewOptionalStaticType(
+		interpreter,
+		NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeNever),
+	)
 }
 
-func (NilValue) StaticType() StaticType {
-	return OptionalStaticType{
-		Type: PrimitiveStaticTypeNever,
-	}
+func (NilValue) IsImportable(_ *Interpreter) bool {
+	return true
 }
 
 func (NilValue) isOptionalValue() {}
@@ -13788,9 +16422,16 @@ func (v NilValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-var nilValueMapFunction = NewHostFunctionValue(
+func (v NilValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(memoryGauge, common.NilValueStringMemoryUsage)
+	return v.String()
+}
+
+// nilValueMapFunction is created only once per interpreter.
+// Hence, no need to meter, as it's a constant.
+var nilValueMapFunction = NewUnmeteredHostFunctionValue(
 	func(invocation Invocation) Value {
-		return NilValue{}
+		return NewNilValue(invocation.Interpreter)
 	},
 	&sema.FunctionType{
 		ReturnTypeAnnotation: sema.NewTypeAnnotation(
@@ -13818,14 +16459,13 @@ func (NilValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Va
 	panic(errors.NewUnreachableError())
 }
 
-func (v NilValue) ConformsToDynamicType(
-	_ *Interpreter,
+func (v NilValue) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	_, ok := dynamicType.(NilDynamicType)
-	return ok
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (v NilValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -13891,7 +16531,13 @@ type SomeValue struct {
 	isDestroyed bool
 }
 
-func NewSomeValueNonCopying(value Value) *SomeValue {
+func NewSomeValueNonCopying(interpreter *Interpreter, value Value) *SomeValue {
+	common.UseMemory(interpreter, common.OptionalValueMemoryUsage)
+
+	return NewUnmeteredSomeValueNonCopying(value)
+}
+
+func NewUnmeteredSomeValueNonCopying(value Value) *SomeValue {
 	return &SomeValue{
 		value: value,
 	}
@@ -13911,26 +16557,23 @@ func (v *SomeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	v.value.Accept(interpreter, visitor)
 }
 
-func (v *SomeValue) Walk(walkChild func(Value)) {
+func (v *SomeValue) Walk(_ *Interpreter, walkChild func(Value)) {
 	walkChild(v.value)
 }
 
-func (v *SomeValue) DynamicType(interpreter *Interpreter, seenReferences SeenReferences) DynamicType {
-	// TODO: provide proper location range
-	innerValue := v.InnerValue(interpreter, ReturnEmptyLocationRange)
-
-	innerType := innerValue.DynamicType(interpreter, seenReferences)
-	return SomeDynamicType{InnerType: innerType}
-}
-
-func (v *SomeValue) StaticType() StaticType {
-	innerType := v.value.StaticType()
+func (v *SomeValue) StaticType(inter *Interpreter) StaticType {
+	innerType := v.value.StaticType(inter)
 	if innerType == nil {
 		return nil
 	}
-	return OptionalStaticType{
-		Type: innerType,
-	}
+	return NewOptionalStaticType(
+		inter,
+		innerType,
+	)
+}
+
+func (v *SomeValue) IsImportable(inter *Interpreter) bool {
+	return v.value.IsImportable(inter)
 }
 
 func (*SomeValue) isOptionalValue() {}
@@ -13963,15 +16606,19 @@ func (v *SomeValue) RecursiveString(seenReferences SeenReferences) string {
 	return v.value.RecursiveString(seenReferences)
 }
 
+func (v SomeValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+	return v.value.MeteredString(memoryGauge, seenReferences)
+}
+
 func (v *SomeValue) GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
 
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(getLocationRange)
 	}
-
 	switch name {
 	case "map":
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 
 				transformFunction, ok := invocation.Arguments[0].(FunctionValue)
@@ -13986,18 +16633,24 @@ func (v *SomeValue) GetMember(interpreter *Interpreter, getLocationRange func() 
 
 				valueType := transformFunctionType.Parameters[0].TypeAnnotation.Type
 
-				transformInvocation := Invocation{
-					Arguments:        []Value{v.value},
-					ArgumentTypes:    []sema.Type{valueType},
-					GetLocationRange: invocation.GetLocationRange,
-					Interpreter:      invocation.Interpreter,
-				}
+				transformInvocation := NewInvocation(
+					invocation.Interpreter,
+					nil,
+					[]Value{v.value},
+					[]sema.Type{valueType},
+					nil,
+					invocation.GetLocationRange,
+				)
 
 				newValue := transformFunction.invoke(transformInvocation)
 
-				return NewSomeValueNonCopying(newValue)
+				return NewSomeValueNonCopying(invocation.Interpreter, newValue)
 			},
-			sema.OptionalTypeMapFunctionType(interpreter.MustConvertStaticToSemaType(v.value.StaticType())),
+			sema.OptionalTypeMapFunctionType(
+				interpreter.MustConvertStaticToSemaType(
+					v.value.StaticType(interpreter),
+				),
+			),
 		)
 	}
 
@@ -14022,22 +16675,23 @@ func (v *SomeValue) SetMember(interpreter *Interpreter, getLocationRange func() 
 	panic(errors.NewUnreachableError())
 }
 
-func (v SomeValue) ConformsToDynamicType(
+func (v SomeValue) ConformsToStaticType(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	results TypeConformanceResults,
 ) bool {
-	someType, ok := dynamicType.(SomeDynamicType)
+	optionalType, ok := staticType.(OptionalStaticType)
 	if !ok {
 		return false
 	}
+
 	innerValue := v.InnerValue(interpreter, getLocationRange)
 
-	return innerValue.ConformsToDynamicType(
+	return innerValue.ConformsToStaticType(
 		interpreter,
 		getLocationRange,
-		someType.InnerType,
+		optionalType.Type,
 		results,
 	)
 }
@@ -14152,7 +16806,7 @@ func (v *SomeValue) Transfer(
 	}
 
 	if res == nil {
-		res = NewSomeValueNonCopying(innerValue)
+		res = NewSomeValueNonCopying(interpreter, innerValue)
 		res.valueStorable = nil
 		res.isDestroyed = v.isDestroyed
 	}
@@ -14162,7 +16816,7 @@ func (v *SomeValue) Transfer(
 
 func (v *SomeValue) Clone(interpreter *Interpreter) Value {
 	innerValue := v.value.Clone(interpreter)
-	return NewSomeValueNonCopying(innerValue)
+	return NewUnmeteredSomeValueNonCopying(innerValue)
 }
 
 func (v *SomeValue) DeepRemove(interpreter *Interpreter) {
@@ -14182,6 +16836,7 @@ func (v *SomeValue) InnerValue(interpreter *Interpreter, getLocationRange func()
 }
 
 type SomeStorable struct {
+	gauge    common.MemoryGauge
 	Storable atree.Storable
 }
 
@@ -14192,7 +16847,7 @@ func (s SomeStorable) ByteSize() uint32 {
 }
 
 func (s SomeStorable) StoredValue(storage atree.SlabStorage) (atree.Value, error) {
-	value := StoredValue(s.Storable, storage)
+	value := StoredValue(s.gauge, s.Storable, storage)
 
 	return &SomeValue{
 		value:         value,
@@ -14220,49 +16875,76 @@ var _ EquatableValue = &StorageReferenceValue{}
 var _ ValueIndexableValue = &StorageReferenceValue{}
 var _ MemberAccessibleValue = &StorageReferenceValue{}
 
+func NewUnmeteredStorageReferenceValue(
+	authorized bool,
+	targetStorageAddress common.Address,
+	targetPath PathValue,
+	borrowedType sema.Type,
+) *StorageReferenceValue {
+	return &StorageReferenceValue{
+		Authorized:           authorized,
+		TargetStorageAddress: targetStorageAddress,
+		TargetPath:           targetPath,
+		BorrowedType:         borrowedType,
+	}
+}
+
+func NewStorageReferenceValue(
+	memoryGauge common.MemoryGauge,
+	authorized bool,
+	targetStorageAddress common.Address,
+	targetPath PathValue,
+	borrowedType sema.Type,
+) *StorageReferenceValue {
+	common.UseMemory(memoryGauge, common.StorageReferenceValueMemoryUsage)
+	return NewUnmeteredStorageReferenceValue(
+		authorized,
+		targetStorageAddress,
+		targetPath,
+		borrowedType,
+	)
+}
+
 func (*StorageReferenceValue) IsValue() {}
 
 func (v *StorageReferenceValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitStorageReferenceValue(interpreter, v)
 }
 
-func (*StorageReferenceValue) Walk(_ func(Value)) {
+func (*StorageReferenceValue) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 	// NOTE: *not* walking referenced value!
 }
 
 func (*StorageReferenceValue) String() string {
-	return "StorageReference()"
+	return format.StorageReference
 }
 
 func (v *StorageReferenceValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v *StorageReferenceValue) DynamicType(interpreter *Interpreter, seenReferences SeenReferences) DynamicType {
-	referencedValue := v.ReferencedValue(interpreter)
-	if referencedValue == nil {
-		panic(DereferenceError{})
-	}
-
-	innerType := (*referencedValue).DynamicType(interpreter, seenReferences)
-
-	return StorageReferenceDynamicType{
-		authorized:   v.Authorized,
-		innerType:    innerType,
-		borrowedType: v.BorrowedType,
-	}
+func (v *StorageReferenceValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+	common.UseMemory(memoryGauge, common.StorageReferenceValueStringMemoryUsage)
+	return v.String()
 }
 
-func (v *StorageReferenceValue) StaticType() StaticType {
-	var borrowedType StaticType
-	if v.BorrowedType != nil {
-		borrowedType = ConvertSemaToStaticType(v.BorrowedType)
+func (v *StorageReferenceValue) StaticType(inter *Interpreter) StaticType {
+	referencedValue, err := v.dereference(inter, ReturnEmptyLocationRange)
+	if err != nil {
+		panic(err)
 	}
-	return ReferenceStaticType{
-		Authorized: v.Authorized,
-		Type:       borrowedType,
-	}
+
+	return NewReferenceStaticType(
+		inter,
+		v.Authorized,
+		ConvertSemaToStaticType(inter, v.BorrowedType),
+		(*referencedValue).StaticType(inter),
+	)
+}
+
+func (*StorageReferenceValue) IsImportable(_ *Interpreter) bool {
+	return false
 }
 
 func (v *StorageReferenceValue) dereference(interpreter *Interpreter, getLocationRange func() LocationRange) (*Value, error) {
@@ -14276,8 +16958,8 @@ func (v *StorageReferenceValue) dereference(interpreter *Interpreter, getLocatio
 	}
 
 	if v.BorrowedType != nil {
-		dynamicType := referenced.DynamicType(interpreter, SeenReferences{})
-		if !interpreter.IsSubType(dynamicType, v.BorrowedType) {
+		staticType := referenced.StaticType(interpreter)
+		if !interpreter.IsSubTypeOfSemaType(staticType, v.BorrowedType) {
 			return nil, ForceCastTypeMismatchError{
 				ExpectedType:  v.BorrowedType,
 				LocationRange: getLocationRange(),
@@ -14453,25 +17135,25 @@ func (v *StorageReferenceValue) Equal(_ *Interpreter, _ func() LocationRange, ot
 	}
 }
 
-func (v *StorageReferenceValue) ConformsToDynamicType(
+func (v *StorageReferenceValue) ConformsToStaticType(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	results TypeConformanceResults,
 ) bool {
 
-	refType, ok := dynamicType.(StorageReferenceDynamicType)
+	refType, ok := staticType.(ReferenceStaticType)
 	if !ok ||
-		refType.authorized != v.Authorized {
+		refType.Authorized != v.Authorized {
 
 		return false
 	}
 
-	if refType.borrowedType == nil {
+	if refType.BorrowedType == nil {
 		if v.BorrowedType != nil {
 			return false
 		}
-	} else if !refType.borrowedType.Equal(v.BorrowedType) {
+	} else if !refType.BorrowedType.Equal(ConvertSemaToStaticType(interpreter, v.BorrowedType)) {
 		return false
 	}
 
@@ -14480,10 +17162,10 @@ func (v *StorageReferenceValue) ConformsToDynamicType(
 		return false
 	}
 
-	return (*referencedValue).ConformsToDynamicType(
+	return (*referencedValue).ConformsToStaticType(
 		interpreter,
 		getLocationRange,
-		refType.InnerType(),
+		refType.ReferencedType,
 		results,
 	)
 }
@@ -14518,12 +17200,12 @@ func (v *StorageReferenceValue) Transfer(
 }
 
 func (v *StorageReferenceValue) Clone(_ *Interpreter) Value {
-	return &StorageReferenceValue{
-		Authorized:           v.Authorized,
-		TargetStorageAddress: v.TargetStorageAddress,
-		TargetPath:           v.TargetPath,
-		BorrowedType:         v.BorrowedType,
-	}
+	return NewUnmeteredStorageReferenceValue(
+		v.Authorized,
+		v.TargetStorageAddress,
+		v.TargetPath,
+		v.BorrowedType,
+	)
 }
 
 func (*StorageReferenceValue) DeepRemove(_ *Interpreter) {
@@ -14543,13 +17225,35 @@ var _ EquatableValue = &EphemeralReferenceValue{}
 var _ ValueIndexableValue = &EphemeralReferenceValue{}
 var _ MemberAccessibleValue = &EphemeralReferenceValue{}
 
+func NewUnmeteredEphemeralReferenceValue(
+	authorized bool,
+	value Value,
+	borrowedType sema.Type,
+) *EphemeralReferenceValue {
+	return &EphemeralReferenceValue{
+		Authorized:   authorized,
+		Value:        value,
+		BorrowedType: borrowedType,
+	}
+}
+
+func NewEphemeralReferenceValue(
+	interpreter *Interpreter,
+	authorized bool,
+	value Value,
+	borrowedType sema.Type,
+) *EphemeralReferenceValue {
+	common.UseMemory(interpreter, common.EphemeralReferenceValueMemoryUsage)
+	return NewUnmeteredEphemeralReferenceValue(authorized, value, borrowedType)
+}
+
 func (*EphemeralReferenceValue) IsValue() {}
 
 func (v *EphemeralReferenceValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitEphemeralReferenceValue(interpreter, v)
 }
 
-func (*EphemeralReferenceValue) Walk(_ func(Value)) {
+func (*EphemeralReferenceValue) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 	// NOTE: *not* walking referenced value!
 }
@@ -14559,47 +17263,37 @@ func (v *EphemeralReferenceValue) String() string {
 }
 
 func (v *EphemeralReferenceValue) RecursiveString(seenReferences SeenReferences) string {
+	return v.MeteredString(nil, seenReferences)
+}
+
+func (v *EphemeralReferenceValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
 	if _, ok := seenReferences[v]; ok {
+		common.UseMemory(memoryGauge, common.SeenReferenceStringMemoryUsage)
 		return "..."
 	}
+
 	seenReferences[v] = struct{}{}
 	defer delete(seenReferences, v)
 
-	return v.Value.RecursiveString(seenReferences)
+	return v.Value.MeteredString(memoryGauge, seenReferences)
 }
 
-func (v *EphemeralReferenceValue) DynamicType(interpreter *Interpreter, seenReferences SeenReferences) DynamicType {
-	// TODO: provide proper location range
-	referencedValue := v.ReferencedValue(interpreter, ReturnEmptyLocationRange)
+func (v *EphemeralReferenceValue) StaticType(inter *Interpreter) StaticType {
+	referencedValue := v.ReferencedValue(inter, ReturnEmptyLocationRange)
 	if referencedValue == nil {
 		panic(DereferenceError{})
 	}
 
-	if _, ok := seenReferences[v]; ok {
-		return nil
-	}
-
-	seenReferences[v] = struct{}{}
-	defer delete(seenReferences, v)
-
-	innerType := (*referencedValue).DynamicType(interpreter, seenReferences)
-
-	return EphemeralReferenceDynamicType{
-		authorized:   v.Authorized,
-		innerType:    innerType,
-		borrowedType: v.BorrowedType,
-	}
+	return NewReferenceStaticType(
+		inter,
+		v.Authorized,
+		ConvertSemaToStaticType(inter, v.BorrowedType),
+		(*referencedValue).StaticType(inter),
+	)
 }
 
-func (v *EphemeralReferenceValue) StaticType() StaticType {
-	var borrowedType StaticType
-	if v.BorrowedType != nil {
-		borrowedType = ConvertSemaToStaticType(v.BorrowedType)
-	}
-	return ReferenceStaticType{
-		Authorized: v.Authorized,
-		Type:       borrowedType,
-	}
+func (*EphemeralReferenceValue) IsImportable(_ *Interpreter) bool {
+	return false
 }
 
 func (v *EphemeralReferenceValue) ReferencedValue(
@@ -14780,25 +17474,25 @@ func (v *EphemeralReferenceValue) Equal(_ *Interpreter, _ func() LocationRange, 
 	}
 }
 
-func (v *EphemeralReferenceValue) ConformsToDynamicType(
+func (v *EphemeralReferenceValue) ConformsToStaticType(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	results TypeConformanceResults,
 ) bool {
 
-	refType, ok := dynamicType.(EphemeralReferenceDynamicType)
+	refType, ok := staticType.(ReferenceStaticType)
 	if !ok ||
-		refType.authorized != v.Authorized {
+		refType.Authorized != v.Authorized {
 
 		return false
 	}
 
-	if refType.borrowedType == nil {
+	if refType.BorrowedType == nil {
 		if v.BorrowedType != nil {
 			return false
 		}
-	} else if !refType.borrowedType.Equal(v.BorrowedType) {
+	} else if !refType.BorrowedType.Equal(ConvertSemaToStaticType(interpreter, v.BorrowedType)) {
 		return false
 	}
 
@@ -14808,8 +17502,8 @@ func (v *EphemeralReferenceValue) ConformsToDynamicType(
 	}
 
 	entry := typeConformanceResultEntry{
-		EphemeralReferenceValue:       v,
-		EphemeralReferenceDynamicType: refType,
+		EphemeralReferenceValue: v,
+		EphemeralReferenceType:  refType,
 	}
 
 	if result, contains := results[entry]; contains {
@@ -14820,10 +17514,10 @@ func (v *EphemeralReferenceValue) ConformsToDynamicType(
 	// doesn't depend on this. It depends on the rest of values of the object tree.
 	results[entry] = true
 
-	result := (*referencedValue).ConformsToDynamicType(
+	result := (*referencedValue).ConformsToStaticType(
 		interpreter,
 		getLocationRange,
-		refType.InnerType(),
+		refType.ReferencedType,
 		results,
 	)
 
@@ -14862,11 +17556,7 @@ func (v *EphemeralReferenceValue) Transfer(
 }
 
 func (v *EphemeralReferenceValue) Clone(_ *Interpreter) Value {
-	return &EphemeralReferenceValue{
-		Authorized:   v.Authorized,
-		BorrowedType: v.BorrowedType,
-		Value:        v.Value,
-	}
+	return NewUnmeteredEphemeralReferenceValue(v.Authorized, v.Value, v.BorrowedType)
 }
 
 func (*EphemeralReferenceValue) DeepRemove(_ *Interpreter) {
@@ -14877,27 +17567,54 @@ func (*EphemeralReferenceValue) DeepRemove(_ *Interpreter) {
 //
 type AddressValue common.Address
 
-func NewAddressValue(a common.Address) AddressValue {
-	return NewAddressValueFromBytes(a[:])
+func NewAddressValueFromBytes(memoryGauge common.MemoryGauge, constructor func() []byte) AddressValue {
+	common.UseMemory(memoryGauge, common.AddressValueMemoryUsage)
+	return NewUnmeteredAddressValueFromBytes(constructor())
 }
 
-func NewAddressValueFromBytes(b []byte) AddressValue {
+func NewUnmeteredAddressValueFromBytes(b []byte) AddressValue {
 	result := AddressValue{}
 	copy(result[common.AddressLength-len(b):], b)
 	return result
 }
 
-func ConvertAddress(value Value) AddressValue {
-	var result AddressValue
+// NewAddressValue constructs an address-value from a `common.Address`.
+//
+// NOTE:
+// This method must only be used if the `address` value is already constructed,
+// and/or already loaded onto memory. This is a convenient method for better performance.
+// If the `address` needs to be constructed, the `NewAddressValueFromConstructor` must be used.
+//
+func NewAddressValue(
+	memoryGauge common.MemoryGauge,
+	address common.Address,
+) AddressValue {
+	common.UseMemory(memoryGauge, common.AddressValueMemoryUsage)
+	return NewUnmeteredAddressValueFromBytes(address[:])
+}
 
-	uint64Value := ConvertUInt64(value)
+func NewAddressValueFromConstructor(
+	memoryGauge common.MemoryGauge,
+	addressConstructor func() common.Address,
+) AddressValue {
+	common.UseMemory(memoryGauge, common.AddressValueMemoryUsage)
+	address := addressConstructor()
+	return NewUnmeteredAddressValueFromBytes(address[:])
+}
 
-	binary.BigEndian.PutUint64(
-		result[:common.AddressLength],
-		uint64(uint64Value),
-	)
+func ConvertAddress(memoryGauge common.MemoryGauge, value Value) AddressValue {
+	converter := func() (result common.Address) {
+		uint64Value := ConvertUInt64(memoryGauge, value)
 
-	return result
+		binary.BigEndian.PutUint64(
+			result[:common.AddressLength],
+			uint64(uint64Value),
+		)
+
+		return
+	}
+
+	return NewAddressValueFromConstructor(memoryGauge, converter)
 }
 
 var _ Value = AddressValue{}
@@ -14912,18 +17629,16 @@ func (v AddressValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitAddressValue(interpreter, v)
 }
 
-func (AddressValue) Walk(_ func(Value)) {
+func (AddressValue) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
-var addressDynamicType DynamicType = AddressDynamicType{}
-
-func (AddressValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return addressDynamicType
+func (AddressValue) StaticType(interpreter *Interpreter) StaticType {
+	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeAddress)
 }
 
-func (AddressValue) StaticType() StaticType {
-	return PrimitiveStaticTypeAddress
+func (AddressValue) IsImportable(_ *Interpreter) bool {
+	return true
 }
 
 func (v AddressValue) String() string {
@@ -14931,6 +17646,11 @@ func (v AddressValue) String() string {
 }
 
 func (v AddressValue) RecursiveString(_ SeenReferences) string {
+	return v.String()
+}
+
+func (v AddressValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+	common.UseMemory(memoryGauge, common.AddressValueStringMemoryUsage)
 	return v.String()
 }
 
@@ -14972,14 +17692,26 @@ func (v AddressValue) GetMember(interpreter *Interpreter, _ func() LocationRange
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
-				return NewStringValue(v.String())
+				interpreter := invocation.Interpreter
+				memoryUsage := common.NewStringMemoryUsage(
+					safeMul(common.AddressLength, 2),
+				)
+				return NewStringValue(
+					interpreter,
+					memoryUsage,
+					func() string {
+						return v.String()
+					},
+				)
 			},
 			sema.ToStringFunctionType,
 		)
 
 	case sema.AddressTypeToBytesFunctionName:
 		return NewHostFunctionValue(
+			interpreter,
 			func(invocation Invocation) Value {
 				address := common.Address(v)
 				return ByteSliceToByteArrayValue(interpreter, address[:])
@@ -15001,14 +17733,13 @@ func (AddressValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, 
 	panic(errors.NewUnreachableError())
 }
 
-func (v AddressValue) ConformsToDynamicType(
-	_ *Interpreter,
+func (v AddressValue) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	_, ok := dynamicType.(AddressDynamicType)
-	return ok
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (AddressValue) IsStorable() bool {
@@ -15061,12 +17792,14 @@ func (AddressValue) ChildStorables() []atree.Storable {
 }
 
 func accountGetCapabilityFunction(
+	inter *Interpreter,
 	addressValue AddressValue,
 	pathType sema.Type,
 	funcType *sema.FunctionType,
 ) *HostFunctionValue {
 
 	return NewHostFunctionValue(
+		inter,
 		func(invocation Invocation) Value {
 
 			path, ok := invocation.Arguments[0].(PathValue)
@@ -15074,8 +17807,7 @@ func accountGetCapabilityFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			pathDynamicType := path.DynamicType(invocation.Interpreter, SeenReferences{})
-			if !invocation.Interpreter.IsSubType(pathDynamicType, pathType) {
+			if !invocation.Interpreter.IsSubTypeOfSemaType(path.StaticType(invocation.Interpreter), pathType) {
 				panic(TypeMismatchError{
 					ExpectedType:  pathType,
 					LocationRange: invocation.GetLocationRange(),
@@ -15094,14 +17826,10 @@ func accountGetCapabilityFunction(
 
 			var borrowStaticType StaticType
 			if borrowType != nil {
-				borrowStaticType = ConvertSemaToStaticType(borrowType)
+				borrowStaticType = ConvertSemaToStaticType(invocation.Interpreter, borrowType)
 			}
 
-			return &CapabilityValue{
-				Address:    addressValue,
-				Path:       path,
-				BorrowType: borrowStaticType,
-			}
+			return NewCapabilityValue(inter, addressValue, path, borrowStaticType)
 		},
 		funcType,
 	)
@@ -15112,6 +17840,19 @@ func accountGetCapabilityFunction(
 type PathValue struct {
 	Domain     common.PathDomain
 	Identifier string
+}
+
+func NewUnmeteredPathValue(domain common.PathDomain, identifier string) PathValue {
+	return PathValue{domain, identifier}
+}
+
+func NewPathValue(
+	memoryGauge common.MemoryGauge,
+	domain common.PathDomain,
+	identifier string,
+) PathValue {
+	common.UseMemory(memoryGauge, common.PathValueMemoryUsage)
+	return NewUnmeteredPathValue(domain, identifier)
 }
 
 var EmptyPathValue = PathValue{}
@@ -15128,35 +17869,31 @@ func (v PathValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitPathValue(interpreter, v)
 }
 
-func (PathValue) Walk(_ func(Value)) {
+func (PathValue) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
-var storagePathDynamicType DynamicType = StoragePathDynamicType{}
-var publicPathDynamicType DynamicType = PublicPathDynamicType{}
-var privatePathDynamicType DynamicType = PrivatePathDynamicType{}
-
-func (v PathValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
+func (v PathValue) StaticType(interpreter *Interpreter) StaticType {
 	switch v.Domain {
 	case common.PathDomainStorage:
-		return storagePathDynamicType
+		return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeStoragePath)
 	case common.PathDomainPublic:
-		return publicPathDynamicType
+		return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypePublicPath)
 	case common.PathDomainPrivate:
-		return privatePathDynamicType
+		return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypePrivatePath)
 	default:
 		panic(errors.NewUnreachableError())
 	}
 }
 
-func (v PathValue) StaticType() StaticType {
+func (v PathValue) IsImportable(_ *Interpreter) bool {
 	switch v.Domain {
 	case common.PathDomainStorage:
-		return PrimitiveStaticTypeStoragePath
+		return sema.StoragePathType.Importable
 	case common.PathDomainPublic:
-		return PrimitiveStaticTypePublicPath
+		return sema.PublicPathType.Importable
 	case common.PathDomainPrivate:
-		return PrimitiveStaticTypePrivatePath
+		return sema.PrivatePathType.Importable
 	default:
 		panic(errors.NewUnreachableError())
 	}
@@ -15173,13 +17910,34 @@ func (v PathValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v PathValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+func (v PathValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+	// len(domain) + len(identifier) + '/' x2
+	strLen := len(v.Domain.Identifier()) + len(v.Identifier) + 2
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(strLen))
+	return v.String()
+}
+
+func (v PathValue) GetMember(inter *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
+			inter,
 			func(invocation Invocation) Value {
-				return NewStringValue(v.String())
+				interpreter := invocation.Interpreter
+
+				domainLength := len(v.Domain.Identifier())
+				identifierLength := len(v.Identifier)
+
+				memoryUsage := common.NewStringMemoryUsage(
+					safeAdd(domainLength, identifierLength),
+				)
+
+				return NewStringValue(
+					interpreter,
+					memoryUsage,
+					v.String,
+				)
 			},
 			sema.ToStringFunctionType,
 		)
@@ -15198,18 +17956,18 @@ func (PathValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ V
 	panic(errors.NewUnreachableError())
 }
 
-func (v PathValue) ConformsToDynamicType(
+func (v PathValue) ConformsToStaticType(
 	_ *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	switch dynamicType.(type) {
-	case PublicPathDynamicType:
+	switch staticType {
+	case PrimitiveStaticTypePublicPath:
 		return v.Domain == common.PathDomainPublic
-	case PrivatePathDynamicType:
+	case PrimitiveStaticTypePrivatePath:
 		return v.Domain == common.PathDomainPrivate
-	case StoragePathDynamicType:
+	case PrimitiveStaticTypeStoragePath:
 		return v.Domain == common.PathDomainStorage
 	default:
 		return false
@@ -15249,10 +18007,10 @@ func (PathValue) IsStorable() bool {
 	return true
 }
 
-func convertPath(domain common.PathDomain, value Value) Value {
+func convertPath(interpreter *Interpreter, domain common.PathDomain, value Value) Value {
 	stringValue, ok := value.(*StringValue)
 	if !ok {
-		return NilValue{}
+		return NewNilValue(interpreter)
 	}
 
 	_, err := sema.CheckPathLiteral(
@@ -15262,25 +18020,29 @@ func convertPath(domain common.PathDomain, value Value) Value {
 		ReturnEmptyRange,
 	)
 	if err != nil {
-		return NilValue{}
+		return NewNilValue(interpreter)
 	}
 
-	return NewSomeValueNonCopying(PathValue{
-		Domain:     domain,
-		Identifier: stringValue.Str,
-	})
+	return NewSomeValueNonCopying(
+		interpreter,
+		NewPathValue(
+			interpreter,
+			domain,
+			stringValue.Str,
+		),
+	)
 }
 
-func ConvertPublicPath(value Value) Value {
-	return convertPath(common.PathDomainPublic, value)
+func ConvertPublicPath(interpreter *Interpreter, value Value) Value {
+	return convertPath(interpreter, common.PathDomainPublic, value)
 }
 
-func ConvertPrivatePath(value Value) Value {
-	return convertPath(common.PathDomainPrivate, value)
+func ConvertPrivatePath(interpreter *Interpreter, value Value) Value {
+	return convertPath(interpreter, common.PathDomainPrivate, value)
 }
 
-func ConvertStoragePath(value Value) Value {
-	return convertPath(common.PathDomainStorage, value)
+func ConvertStoragePath(interpreter *Interpreter, value Value) Value {
+	return convertPath(interpreter, common.PathDomainStorage, value)
 }
 
 func (v PathValue) Storable(
@@ -15346,6 +18108,21 @@ type CapabilityValue struct {
 	BorrowType StaticType
 }
 
+func NewUnmeteredCapabilityValue(address AddressValue, path PathValue, borrowType StaticType) *CapabilityValue {
+	return &CapabilityValue{address, path, borrowType}
+}
+
+func NewCapabilityValue(
+	memoryGauge common.MemoryGauge,
+	address AddressValue,
+	path PathValue,
+	borrowType StaticType,
+) *CapabilityValue {
+	// Constant because its constituents are already metered.
+	common.UseMemory(memoryGauge, common.CapabilityValueMemoryUsage)
+	return NewUnmeteredCapabilityValue(address, path, borrowType)
+}
+
 var _ Value = &CapabilityValue{}
 var _ atree.Storable = &CapabilityValue{}
 var _ EquatableValue = &CapabilityValue{}
@@ -15357,28 +18134,20 @@ func (v *CapabilityValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitCapabilityValue(interpreter, v)
 }
 
-func (v *CapabilityValue) Walk(walkChild func(Value)) {
+func (v *CapabilityValue) Walk(_ *Interpreter, walkChild func(Value)) {
 	walkChild(v.Address)
 	walkChild(v.Path)
 }
 
-func (v *CapabilityValue) DynamicType(interpreter *Interpreter, _ SeenReferences) DynamicType {
-	var borrowType *sema.ReferenceType
-	if v.BorrowType != nil {
-		// this function will panic already if this conversion fails
-		borrowType, _ = interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
-	}
-
-	return CapabilityDynamicType{
-		BorrowType: borrowType,
-		Domain:     v.Path.Domain,
-	}
+func (v *CapabilityValue) StaticType(inter *Interpreter) StaticType {
+	return NewCapabilityStaticType(
+		inter,
+		v.BorrowType,
+	)
 }
 
-func (v *CapabilityValue) StaticType() StaticType {
-	return CapabilityStaticType{
-		BorrowType: v.BorrowType,
-	}
+func (v *CapabilityValue) IsImportable(_ *Interpreter) bool {
+	return v.Path.Domain == common.PathDomainPublic
 }
 
 func (v *CapabilityValue) String() string {
@@ -15394,6 +18163,24 @@ func (v *CapabilityValue) RecursiveString(seenReferences SeenReferences) string 
 		borrowType,
 		v.Address.RecursiveString(seenReferences),
 		v.Path.RecursiveString(seenReferences),
+	)
+}
+
+var capabilityValueStringBaseLen = len(format.Capability("", "", ""))
+
+func (v *CapabilityValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+	var borrowType string
+	if v.BorrowType != nil {
+		borrowType = v.BorrowType.String()
+	}
+
+	strLen := capabilityValueStringBaseLen + len(borrowType) + 2
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(strLen))
+
+	return format.Capability(
+		borrowType,
+		v.Address.MeteredString(memoryGauge, seenReferences),
+		v.Path.MeteredString(memoryGauge, seenReferences),
 	)
 }
 
@@ -15432,14 +18219,18 @@ func (*CapabilityValue) SetMember(_ *Interpreter, _ func() LocationRange, _ stri
 	panic(errors.NewUnreachableError())
 }
 
-func (v *CapabilityValue) ConformsToDynamicType(
-	_ *Interpreter,
+func (v *CapabilityValue) ConformsToStaticType(
+	inter *Interpreter,
 	_ func() LocationRange,
-	dynamicType DynamicType,
+	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	capabilityType, ok := dynamicType.(CapabilityDynamicType)
-	return ok && v.Path.Domain == capabilityType.Domain
+	semaType, err := inter.ConvertStaticToSemaType(staticType)
+	if err != nil {
+		return false
+	}
+
+	return inter.IsSubTypeOfSemaType(v.StaticType(inter), semaType)
 }
 
 func (v *CapabilityValue) Equal(interpreter *Interpreter, getLocationRange func() LocationRange, other Value) bool {
@@ -15536,6 +18327,18 @@ type LinkValue struct {
 	Type       StaticType
 }
 
+func NewUnmeteredLinkValue(targetPath PathValue, staticType StaticType) LinkValue {
+	return LinkValue{targetPath, staticType}
+}
+
+func NewLinkValue(memoryGauge common.MemoryGauge, targetPath PathValue, staticType StaticType) LinkValue {
+	// The only variable is TargetPath, which is already metered as a PathValue.
+	common.UseMemory(memoryGauge, common.LinkValueMemoryUsage)
+	return NewUnmeteredLinkValue(targetPath, staticType)
+}
+
+var EmptyLinkValue = LinkValue{}
+
 var _ Value = LinkValue{}
 var _ atree.Value = LinkValue{}
 var _ EquatableValue = LinkValue{}
@@ -15546,16 +18349,16 @@ func (v LinkValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitLinkValue(interpreter, v)
 }
 
-func (v LinkValue) Walk(walkChild func(Value)) {
+func (v LinkValue) Walk(_ *Interpreter, walkChild func(Value)) {
 	walkChild(v.TargetPath)
 }
 
-func (LinkValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
+func (LinkValue) StaticType(_ *Interpreter) StaticType {
 	return nil
 }
 
-func (LinkValue) StaticType() StaticType {
-	return nil
+func (LinkValue) IsImportable(_ *Interpreter) bool {
+	return false
 }
 
 func (v LinkValue) String() string {
@@ -15569,10 +18372,24 @@ func (v LinkValue) RecursiveString(seenReferences SeenReferences) string {
 	)
 }
 
-func (v LinkValue) ConformsToDynamicType(
+var linkValueStringBaseLen = len(format.Link("", ""))
+
+func (v LinkValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+	typeString := v.Type.String()
+
+	strLen := linkValueStringBaseLen + len(typeString)
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(strLen))
+
+	return format.Link(
+		typeString,
+		v.TargetPath.MeteredString(memoryGauge, seenReferences),
+	)
+}
+
+func (v LinkValue) ConformsToStaticType(
 	_ *Interpreter,
 	_ func() LocationRange,
-	_ DynamicType,
+	_ StaticType,
 	_ TypeConformanceResults,
 ) bool {
 	// There is no dynamic type for links,
@@ -15690,7 +18507,12 @@ func NewPublicKeyValue(
 	}
 
 	// Public key value to string should include the key even though it is a computed field
-	publicKeyValue.Stringer = func(publicKeyValue *CompositeValue, seenReferences SeenReferences) string {
+	publicKeyValue.Stringer = func(
+		memoryGauge common.MemoryGauge,
+		publicKeyValue *CompositeValue,
+		seenReferences SeenReferences,
+	) string {
+
 		stringerFields := []CompositeField{
 			{
 				Name:  sema.PublicKeyPublicKeyField,
@@ -15704,6 +18526,7 @@ func NewPublicKeyValue(
 		}
 
 		return formatComposite(
+			memoryGauge,
 			string(publicKeyValue.TypeID()),
 			stringerFields,
 			seenReferences,
@@ -15713,7 +18536,9 @@ func NewPublicKeyValue(
 	return publicKeyValue
 }
 
-var publicKeyVerifyFunction = NewHostFunctionValue(
+// publicKeyVerifyFunction is only created once for the interpreter.
+// Hence, no need to meter.
+var publicKeyVerifyFunction = NewUnmeteredHostFunctionValue(
 	func(invocation Invocation) Value {
 		signatureValue, ok := invocation.Arguments[0].(*ArrayValue)
 		if !ok {
@@ -15760,7 +18585,9 @@ var publicKeyVerifyFunction = NewHostFunctionValue(
 	sema.PublicKeyVerifyFunctionType,
 )
 
-var publicKeyVerifyPoPFunction = NewHostFunctionValue(
+// publicKeyVerifyPoPFunction is only created once for the interpreter.
+// Hence, no need to meter.
+var publicKeyVerifyPoPFunction = NewUnmeteredHostFunctionValue(
 	func(invocation Invocation) (v Value) {
 		signatureValue, ok := invocation.Arguments[0].(*ArrayValue)
 		if !ok {
@@ -15788,3 +18615,8 @@ var publicKeyVerifyPoPFunction = NewHostFunctionValue(
 	},
 	sema.PublicKeyVerifyPoPFunctionType,
 )
+
+func primitiveValueConformsToStaticType(inter *Interpreter, v Value, targetStaticType StaticType) bool {
+	staticType := v.StaticType(inter)
+	return inter.IsSubType(staticType, targetStaticType)
+}

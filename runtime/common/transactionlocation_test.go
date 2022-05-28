@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,7 +54,7 @@ func TestDecodeTransactionLocationTypeID(t *testing.T) {
 
 		t.Parallel()
 
-		_, _, err := decodeTransactionLocationTypeID("")
+		_, _, err := decodeTransactionLocationTypeID(nil, "")
 		require.EqualError(t, err, "invalid transaction location type ID: missing prefix")
 	})
 
@@ -62,7 +62,7 @@ func TestDecodeTransactionLocationTypeID(t *testing.T) {
 
 		t.Parallel()
 
-		_, _, err := decodeTransactionLocationTypeID("t")
+		_, _, err := decodeTransactionLocationTypeID(nil, "t")
 		require.EqualError(t, err, "invalid transaction location type ID: missing location")
 	})
 
@@ -70,7 +70,7 @@ func TestDecodeTransactionLocationTypeID(t *testing.T) {
 
 		t.Parallel()
 
-		_, _, err := decodeTransactionLocationTypeID("t.test")
+		_, _, err := decodeTransactionLocationTypeID(nil, "t.test")
 		require.EqualError(t, err, "invalid transaction location type ID: missing qualified identifier")
 	})
 
@@ -78,7 +78,7 @@ func TestDecodeTransactionLocationTypeID(t *testing.T) {
 
 		t.Parallel()
 
-		_, _, err := decodeTransactionLocationTypeID("X.test.T")
+		_, _, err := decodeTransactionLocationTypeID(nil, "X.test.T")
 		require.EqualError(t, err, "invalid transaction location type ID: invalid prefix: expected \"t\", got \"X\"")
 	})
 
@@ -86,7 +86,7 @@ func TestDecodeTransactionLocationTypeID(t *testing.T) {
 
 		t.Parallel()
 
-		location, qualifiedIdentifier, err := decodeTransactionLocationTypeID("t.0102.T")
+		location, qualifiedIdentifier, err := decodeTransactionLocationTypeID(nil, "t.0102.T")
 		require.NoError(t, err)
 
 		assert.Equal(t,
@@ -100,7 +100,7 @@ func TestDecodeTransactionLocationTypeID(t *testing.T) {
 
 		t.Parallel()
 
-		location, qualifiedIdentifier, err := decodeTransactionLocationTypeID("t.0102.T.U")
+		location, qualifiedIdentifier, err := decodeTransactionLocationTypeID(nil, "t.0102.T.U")
 		require.NoError(t, err)
 
 		assert.Equal(t,

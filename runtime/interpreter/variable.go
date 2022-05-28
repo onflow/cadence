@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@
  */
 
 package interpreter
+
+import "github.com/onflow/cadence/runtime/common"
 
 type Variable struct {
 	value  Value
@@ -36,13 +38,17 @@ func (v *Variable) SetValue(value Value) {
 	v.value = value
 }
 
-func NewVariableWithValue(value Value) *Variable {
+var variableMemoryUsage = common.NewConstantMemoryUsage(common.MemoryKindVariable)
+
+func NewVariableWithValue(gauge common.MemoryGauge, value Value) *Variable {
+	common.UseMemory(gauge, variableMemoryUsage)
 	return &Variable{
 		value: value,
 	}
 }
 
-func NewVariableWithGetter(getter func() Value) *Variable {
+func NewVariableWithGetter(gauge common.MemoryGauge, getter func() Value) *Variable {
+	common.UseMemory(gauge, variableMemoryUsage)
 	return &Variable{
 		getter: getter,
 	}

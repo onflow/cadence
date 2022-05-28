@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,7 +54,7 @@ func TestDecodeIdentifierLocationTypeID(t *testing.T) {
 
 		t.Parallel()
 
-		_, _, err := decodeIdentifierLocationTypeID("")
+		_, _, err := decodeIdentifierLocationTypeID(nil, "")
 		require.EqualError(t, err, "invalid identifier location type ID: missing prefix")
 	})
 
@@ -62,7 +62,7 @@ func TestDecodeIdentifierLocationTypeID(t *testing.T) {
 
 		t.Parallel()
 
-		_, _, err := decodeIdentifierLocationTypeID("I")
+		_, _, err := decodeIdentifierLocationTypeID(nil, "I")
 		require.EqualError(t, err, "invalid identifier location type ID: missing location")
 	})
 
@@ -70,7 +70,7 @@ func TestDecodeIdentifierLocationTypeID(t *testing.T) {
 
 		t.Parallel()
 
-		_, _, err := decodeIdentifierLocationTypeID("I.test")
+		_, _, err := decodeIdentifierLocationTypeID(nil, "I.test")
 		require.EqualError(t, err, "invalid identifier location type ID: missing qualified identifier")
 	})
 
@@ -78,7 +78,7 @@ func TestDecodeIdentifierLocationTypeID(t *testing.T) {
 
 		t.Parallel()
 
-		_, _, err := decodeIdentifierLocationTypeID("X.test.T")
+		_, _, err := decodeIdentifierLocationTypeID(nil, "X.test.T")
 		require.EqualError(t, err, "invalid identifier location type ID: invalid prefix: expected \"I\", got \"X\"")
 	})
 
@@ -86,7 +86,7 @@ func TestDecodeIdentifierLocationTypeID(t *testing.T) {
 
 		t.Parallel()
 
-		location, qualifiedIdentifier, err := decodeIdentifierLocationTypeID("I.test.T")
+		location, qualifiedIdentifier, err := decodeIdentifierLocationTypeID(nil, "I.test.T")
 		require.NoError(t, err)
 
 		assert.Equal(t,
@@ -100,7 +100,7 @@ func TestDecodeIdentifierLocationTypeID(t *testing.T) {
 
 		t.Parallel()
 
-		location, qualifiedIdentifier, err := decodeIdentifierLocationTypeID("I.test.T.U")
+		location, qualifiedIdentifier, err := decodeIdentifierLocationTypeID(nil, "I.test.T.U")
 		require.NoError(t, err)
 
 		assert.Equal(t,

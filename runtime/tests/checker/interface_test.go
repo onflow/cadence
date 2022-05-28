@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2022 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1855,7 +1855,7 @@ func BenchmarkContractInterfaceFungibleToken(b *testing.B) {
 
 	const code = examples.FungibleTokenContractInterface
 
-	program, err := parser2.ParseProgram(code)
+	program, err := parser2.ParseProgram(code, nil)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -1867,6 +1867,7 @@ func BenchmarkContractInterfaceFungibleToken(b *testing.B) {
 		checker, err := sema.NewChecker(
 			program,
 			TestLocation,
+			nil,
 			sema.WithAccessCheckMode(sema.AccessCheckModeNotSpecifiedUnrestricted),
 		)
 		if err != nil {
@@ -1883,7 +1884,7 @@ func BenchmarkCheckContractInterfaceFungibleTokenConformance(b *testing.B) {
 
 	code := examples.FungibleTokenContractInterface + "\n" + examples.ExampleFungibleTokenContract
 
-	program, err := parser2.ParseProgram(code)
+	program, err := parser2.ParseProgram(code, nil)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -1901,6 +1902,7 @@ func BenchmarkCheckContractInterfaceFungibleTokenConformance(b *testing.B) {
 		checker, err := sema.NewChecker(
 			program,
 			TestLocation,
+			nil,
 			sema.WithAccessCheckMode(sema.AccessCheckModeNotSpecifiedUnrestricted),
 			panicDeclarationOption,
 		)
