@@ -18,6 +18,8 @@
 
 package interpreter
 
+import "github.com/onflow/cadence/runtime/common"
+
 type Variable struct {
 	value  Value
 	getter func() Value
@@ -36,13 +38,17 @@ func (v *Variable) SetValue(value Value) {
 	v.value = value
 }
 
-func NewVariableWithValue(value Value) *Variable {
+var variableMemoryUsage = common.NewConstantMemoryUsage(common.MemoryKindVariable)
+
+func NewVariableWithValue(gauge common.MemoryGauge, value Value) *Variable {
+	common.UseMemory(gauge, variableMemoryUsage)
 	return &Variable{
 		value: value,
 	}
 }
 
-func NewVariableWithGetter(getter func() Value) *Variable {
+func NewVariableWithGetter(gauge common.MemoryGauge, getter func() Value) *Variable {
+	common.UseMemory(gauge, variableMemoryUsage)
 	return &Variable{
 		getter: getter,
 	}

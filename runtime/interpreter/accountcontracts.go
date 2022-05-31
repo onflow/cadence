@@ -21,17 +21,18 @@ package interpreter
 import (
 	"fmt"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
 // AuthAccountContractsValue
 
 var authAccountContractsTypeID = sema.AuthAccountContractsType.ID()
-var authAccountContractsStaticType StaticType = PrimitiveStaticTypeAuthAccountContracts
-
+var authAccountContractsStaticType StaticType = PrimitiveStaticTypeAuthAccountContracts // unmetered
 var authAccountContractsFieldNames []string = nil
 
 func NewAuthAccountContractsValue(
+	inter *Interpreter,
 	address AddressValue,
 	addFunction FunctionValue,
 	updateFunction FunctionValue,
@@ -54,14 +55,17 @@ func NewAuthAccountContractsValue(
 	}
 
 	var str string
-	stringer := func(_ SeenReferences) string {
+	stringer := func(memoryGauge common.MemoryGauge, _ SeenReferences) string {
 		if str == "" {
-			str = fmt.Sprintf("AuthAccount.Contracts(%s)", address)
+			common.UseMemory(memoryGauge, common.AuthAccountContractsStringMemoryUsage)
+			addressStr := address.MeteredString(memoryGauge, SeenReferences{})
+			str = fmt.Sprintf("AuthAccount.Contracts(%s)", addressStr)
 		}
 		return str
 	}
 
 	return NewSimpleCompositeValue(
+		inter,
 		authAccountContractsTypeID,
 		authAccountContractsStaticType,
 		authAccountContractsFieldNames,
@@ -78,6 +82,7 @@ var publicAccountContractsTypeID = sema.PublicAccountContractsType.ID()
 var publicAccountContractsStaticType StaticType = PrimitiveStaticTypePublicAccountContracts
 
 func NewPublicAccountContractsValue(
+	inter *Interpreter,
 	address AddressValue,
 	getFunction FunctionValue,
 	namesGetter func(interpreter *Interpreter) *ArrayValue,
@@ -94,14 +99,17 @@ func NewPublicAccountContractsValue(
 	}
 
 	var str string
-	stringer := func(_ SeenReferences) string {
+	stringer := func(memoryGauge common.MemoryGauge, _ SeenReferences) string {
 		if str == "" {
-			str = fmt.Sprintf("PublicAccount.Contracts(%s)", address)
+			common.UseMemory(memoryGauge, common.PublicAccountContractsStringMemoryUsage)
+			addressStr := address.MeteredString(memoryGauge, SeenReferences{})
+			str = fmt.Sprintf("PublicAccount.Contracts(%s)", addressStr)
 		}
 		return str
 	}
 
 	return NewSimpleCompositeValue(
+		inter,
 		publicAccountContractsTypeID,
 		publicAccountContractsStaticType,
 		nil,

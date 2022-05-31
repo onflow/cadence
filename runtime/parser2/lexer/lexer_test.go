@@ -20,6 +20,7 @@ package lexer
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -50,7 +51,7 @@ func testLex(t *testing.T, input string, expected []Token) {
 
 	t.Parallel()
 
-	withTokens(Lex(input), func(tokens []Token) {
+	withTokens(Lex(input, nil), func(tokens []Token) {
 		utils.AssertEqualWithDiff(t, expected, tokens)
 	})
 }
@@ -1898,7 +1899,7 @@ func TestRevert(t *testing.T) {
 
 	t.Parallel()
 
-	tokenStream := Lex("1 2 3")
+	tokenStream := Lex("1 2 3", nil)
 
 	// Assert all tokens
 
@@ -2062,7 +2063,7 @@ func TestEOFsAfterError(t *testing.T) {
 
 	t.Parallel()
 
-	tokenStream := Lex(`1 ''`)
+	tokenStream := Lex(`1 ''`, nil)
 
 	// Assert all tokens
 
@@ -2124,7 +2125,7 @@ func TestEOFsAfterEmptyInput(t *testing.T) {
 
 	t.Parallel()
 
-	tokenStream := Lex(``)
+	tokenStream := Lex(``, nil)
 
 	// Assert EOFs keep on being returned for Next()
 	// at the end of the stream
@@ -2142,4 +2143,23 @@ func TestEOFsAfterEmptyInput(t *testing.T) {
 			tokenStream.Next(),
 		)
 	}
+}
+
+func TestLimit(t *testing.T) {
+
+	t.Parallel()
+
+	var b strings.Builder
+	for i := 0; i < 300000; i++ {
+		b.WriteString("x ")
+	}
+
+	code := b.String()
+
+	assert.PanicsWithValue(t,
+		TokenLimitReachedError{},
+		func() {
+			_ = Lex(code, nil)
+		},
+	)
 }

@@ -34,8 +34,10 @@ type VariableActivation struct {
 	entries        *StringVariableOrderedMap
 	Depth          int
 	Parent         *VariableActivation
-	LeaveCallbacks []func(getEndPosition func() ast.Position)
+	LeaveCallbacks []func(EndPositionGetter)
 }
+
+type EndPositionGetter func(common.MemoryGauge) ast.Position
 
 // NewVariableActivation returns as new activation with the given parent.
 // The parent may be nil.
@@ -189,7 +191,7 @@ func (a *VariableActivations) Enter() {
 // Leave pops the top-most (current) activation
 // from the top of the activation stack.
 //
-func (a *VariableActivations) Leave(getEndPosition func() ast.Position) {
+func (a *VariableActivations) Leave(getEndPosition func(common.MemoryGauge) ast.Position) {
 	count := len(a.activations)
 	if count < 1 {
 		return

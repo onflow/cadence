@@ -125,7 +125,7 @@ func NewVM(wasm []byte) (VM, error) {
 			return nil, wasmtime.NewTrap(store, fmt.Sprintf("add: invalid right: %#+v", right))
 		}
 
-		return leftNumber.Plus(rightNumber), nil
+		return leftNumber.Plus(nil, rightNumber), nil
 	})
 
 	// NOTE: wasmtime currently does not support specifying imports by name,

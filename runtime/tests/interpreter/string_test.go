@@ -53,7 +53,7 @@ func TestInterpretRecursiveValueString(t *testing.T) {
 	require.Equal(t,
 		`{"mapRef": ...}`,
 		mapValue.(*interpreter.DictionaryValue).
-			GetKey(inter, interpreter.ReturnEmptyLocationRange, interpreter.NewStringValue("mapRef")).
+			GetKey(inter, interpreter.ReturnEmptyLocationRange, interpreter.NewUnmeteredStringValue("mapRef")).
 			String(),
 	)
 }
@@ -74,7 +74,7 @@ func TestInterpretStringFunction(t *testing.T) {
 	RequireValuesEqual(
 		t,
 		inter,
-		interpreter.NewStringValue(""),
+		interpreter.NewUnmeteredStringValue(""),
 		result,
 	)
 }
@@ -101,9 +101,9 @@ func TestInterpretStringDecodeHex(t *testing.T) {
 				Type: interpreter.PrimitiveStaticTypeUInt8,
 			},
 			common.Address{},
-			interpreter.UInt8Value(1),
-			interpreter.UInt8Value(0xCA),
-			interpreter.UInt8Value(0xDE),
+			interpreter.NewUnmeteredUInt8Value(1),
+			interpreter.NewUnmeteredUInt8Value(0xCA),
+			interpreter.NewUnmeteredUInt8Value(0xDE),
 		),
 		result,
 	)
@@ -125,7 +125,7 @@ func TestInterpretStringEncodeHex(t *testing.T) {
 	RequireValuesEqual(
 		t,
 		inter,
-		interpreter.NewStringValue("010203cade"),
+		interpreter.NewUnmeteredStringValue("010203cade"),
 		result,
 	)
 }
@@ -153,35 +153,35 @@ func TestInterpretStringUtf8Field(t *testing.T) {
 			},
 			common.Address{},
 			// Flowers
-			interpreter.UInt8Value(70),
-			interpreter.UInt8Value(108),
-			interpreter.UInt8Value(111),
-			interpreter.UInt8Value(119),
-			interpreter.UInt8Value(101),
-			interpreter.UInt8Value(114),
-			interpreter.UInt8Value(115),
-			interpreter.UInt8Value(32),
+			interpreter.NewUnmeteredUInt8Value(70),
+			interpreter.NewUnmeteredUInt8Value(108),
+			interpreter.NewUnmeteredUInt8Value(111),
+			interpreter.NewUnmeteredUInt8Value(119),
+			interpreter.NewUnmeteredUInt8Value(101),
+			interpreter.NewUnmeteredUInt8Value(114),
+			interpreter.NewUnmeteredUInt8Value(115),
+			interpreter.NewUnmeteredUInt8Value(32),
 			// Bouquet
-			interpreter.UInt8Value(240),
-			interpreter.UInt8Value(159),
-			interpreter.UInt8Value(146),
-			interpreter.UInt8Value(144),
-			interpreter.UInt8Value(32),
+			interpreter.NewUnmeteredUInt8Value(240),
+			interpreter.NewUnmeteredUInt8Value(159),
+			interpreter.NewUnmeteredUInt8Value(146),
+			interpreter.NewUnmeteredUInt8Value(144),
+			interpreter.NewUnmeteredUInt8Value(32),
 			// are
-			interpreter.UInt8Value(97),
-			interpreter.UInt8Value(114),
-			interpreter.UInt8Value(101),
-			interpreter.UInt8Value(32),
+			interpreter.NewUnmeteredUInt8Value(97),
+			interpreter.NewUnmeteredUInt8Value(114),
+			interpreter.NewUnmeteredUInt8Value(101),
+			interpreter.NewUnmeteredUInt8Value(32),
 			// beautiful
-			interpreter.UInt8Value(98),
-			interpreter.UInt8Value(101),
-			interpreter.UInt8Value(97),
-			interpreter.UInt8Value(117),
-			interpreter.UInt8Value(116),
-			interpreter.UInt8Value(105),
-			interpreter.UInt8Value(102),
-			interpreter.UInt8Value(117),
-			interpreter.UInt8Value(108),
+			interpreter.NewUnmeteredUInt8Value(98),
+			interpreter.NewUnmeteredUInt8Value(101),
+			interpreter.NewUnmeteredUInt8Value(97),
+			interpreter.NewUnmeteredUInt8Value(117),
+			interpreter.NewUnmeteredUInt8Value(116),
+			interpreter.NewUnmeteredUInt8Value(105),
+			interpreter.NewUnmeteredUInt8Value(102),
+			interpreter.NewUnmeteredUInt8Value(117),
+			interpreter.NewUnmeteredUInt8Value(108),
 		),
 		result,
 	)
@@ -201,7 +201,7 @@ func TestInterpretStringToLower(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t,
-		interpreter.NewStringValue("flowers"),
+		interpreter.NewUnmeteredStringValue("flowers"),
 		result,
 	)
 }
@@ -301,7 +301,7 @@ func TestInterpretConvertCharacterToString(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t,
-		interpreter.NewStringValue("x"),
+		interpreter.NewUnmeteredStringValue("x"),
 		result,
 	)
 }

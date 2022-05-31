@@ -34,6 +34,9 @@ type handler struct {
 }
 
 func (handler *handler) Handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrpc2.Request) {
+	defer sentry.Flush(2 * time.Second)
+	defer sentry.Recover()
+
 	method, ok := handler.server.Methods[req.Method]
 
 	if !ok {
@@ -53,8 +56,6 @@ func (handler *handler) Handle(ctx context.Context, conn *jsonrpc2.Conn, req *js
 		return
 	}
 
-	defer sentry.Flush(2 * time.Second)
-	defer sentry.Recover()
 	result, err := method(req.Params)
 
 	if req.Notif {

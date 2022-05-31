@@ -35,13 +35,13 @@ var rlpContractType = func() *sema.CompositeType {
 	}
 
 	ty.Members = sema.GetMembersAsMap([]*sema.Member{
-		sema.NewPublicFunctionMember(
+		sema.NewUnmeteredPublicFunctionMember(
 			ty,
 			rlpDecodeListFunctionName,
 			rlpDecodeListFunctionType,
 			rlpDecodeListFunctionDocString,
 		),
-		sema.NewPublicFunctionMember(
+		sema.NewUnmeteredPublicFunctionMember(
 			ty,
 			rlpDecodeStringFunctionName,
 			rlpDecodeStringFunctionType,
@@ -92,7 +92,7 @@ func (e RLPDecodeStringError) Error() string {
 	return fmt.Sprintf("failed to RLP-decode string: %s", e.Msg)
 }
 
-var rlpDecodeStringFunction = interpreter.NewHostFunctionValue(
+var rlpDecodeStringFunction = interpreter.NewUnmeteredHostFunctionValue(
 	func(invocation interpreter.Invocation) interpreter.Value {
 		input, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
 		if !ok {
@@ -103,7 +103,7 @@ var rlpDecodeStringFunction = interpreter.NewHostFunctionValue(
 
 		getLocationRange := invocation.GetLocationRange
 
-		convertedInput, err := interpreter.ByteArrayValueToByteSlice(input)
+		convertedInput, err := interpreter.ByteArrayValueToByteSlice(invocation.Interpreter, input)
 		if err != nil {
 			panic(RLPDecodeStringError{
 				Msg:           err.Error(),
@@ -162,7 +162,7 @@ func (e RLPDecodeListError) Error() string {
 	return fmt.Sprintf("failed to RLP-decode list: %s", e.Msg)
 }
 
-var rlpDecodeListFunction = interpreter.NewHostFunctionValue(
+var rlpDecodeListFunction = interpreter.NewUnmeteredHostFunctionValue(
 	func(invocation interpreter.Invocation) interpreter.Value {
 		input, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
 		if !ok {
@@ -173,7 +173,7 @@ var rlpDecodeListFunction = interpreter.NewHostFunctionValue(
 
 		getLocationRange := invocation.GetLocationRange
 
-		convertedInput, err := interpreter.ByteArrayValueToByteSlice(input)
+		convertedInput, err := interpreter.ByteArrayValueToByteSlice(invocation.Interpreter, input)
 		if err != nil {
 			panic(RLPDecodeListError{
 				Msg:           err.Error(),
@@ -204,9 +204,10 @@ var rlpDecodeListFunction = interpreter.NewHostFunctionValue(
 
 		return interpreter.NewArrayValue(
 			invocation.Interpreter,
-			interpreter.VariableSizedStaticType{
-				Type: interpreter.ByteArrayStaticType,
-			},
+			interpreter.NewVariableSizedStaticType(
+				invocation.Interpreter,
+				interpreter.ByteArrayStaticType,
+			),
 			common.Address{},
 			values...,
 		)
@@ -224,6 +225,7 @@ var rlpContract = StandardLibraryValue{
 	Type: rlpContractType,
 	ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
 		return interpreter.NewSimpleCompositeValue(
+			inter,
 			rlpContractType.ID(),
 			rlpContractStaticType,
 			nil,

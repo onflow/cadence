@@ -63,7 +63,7 @@ func (checker *Checker) VisitBinaryExpression(expression *ast.BinaryExpression) 
 		panic(&unsupportedOperation{
 			kind:      common.OperationKindBinary,
 			operation: operation,
-			Range:     ast.NewRangeFromPositioned(expression),
+			Range:     ast.NewRangeFromPositioned(checker.memoryGauge, expression),
 		})
 	}
 
@@ -224,7 +224,7 @@ func (checker *Checker) checkBinaryExpressionArithmeticOrNonEqualityComparisonOr
 					Operation: operation,
 					LeftType:  leftType,
 					RightType: rightType,
-					Range:     ast.NewRangeFromPositioned(expression),
+					Range:     ast.NewRangeFromPositioned(checker.memoryGauge, expression),
 				},
 			)
 			reportedInvalidOperands = true
@@ -237,7 +237,7 @@ func (checker *Checker) checkBinaryExpressionArithmeticOrNonEqualityComparisonOr
 					Side:         common.OperandSideLeft,
 					ExpectedType: expectedSuperType,
 					ActualType:   leftType,
-					Range:        ast.NewRangeFromPositioned(expression.Left),
+					Range:        ast.NewRangeFromPositioned(checker.memoryGauge, expression.Left),
 				},
 			)
 		}
@@ -249,7 +249,7 @@ func (checker *Checker) checkBinaryExpressionArithmeticOrNonEqualityComparisonOr
 					Side:         common.OperandSideRight,
 					ExpectedType: expectedSuperType,
 					ActualType:   rightType,
-					Range:        ast.NewRangeFromPositioned(expression.Right),
+					Range:        ast.NewRangeFromPositioned(checker.memoryGauge, expression.Right),
 				},
 			)
 		}
@@ -277,7 +277,7 @@ func (checker *Checker) checkBinaryExpressionArithmeticOrNonEqualityComparisonOr
 				Operation: operation,
 				LeftType:  leftType,
 				RightType: rightType,
-				Range:     ast.NewRangeFromPositioned(expression),
+				Range:     ast.NewRangeFromPositioned(checker.memoryGauge, expression),
 			},
 		)
 	}
@@ -315,7 +315,7 @@ func (checker *Checker) checkBinaryExpressionEquality(
 				Operation: operation,
 				LeftType:  leftType,
 				RightType: rightType,
-				Range:     ast.NewRangeFromPositioned(expression),
+				Range:     ast.NewRangeFromPositioned(checker.memoryGauge, expression),
 			},
 		)
 	}
@@ -344,7 +344,7 @@ func (checker *Checker) checkBinaryExpressionBooleanLogic(
 					Operation: operation,
 					LeftType:  leftType,
 					RightType: rightType,
-					Range:     ast.NewRangeFromPositioned(expression),
+					Range:     ast.NewRangeFromPositioned(checker.memoryGauge, expression),
 				},
 			)
 		}
@@ -356,7 +356,7 @@ func (checker *Checker) checkBinaryExpressionBooleanLogic(
 					Side:         common.OperandSideLeft,
 					ExpectedType: BoolType,
 					ActualType:   leftType,
-					Range:        ast.NewRangeFromPositioned(expression.Left),
+					Range:        ast.NewRangeFromPositioned(checker.memoryGauge, expression.Left),
 				},
 			)
 		}
@@ -368,7 +368,7 @@ func (checker *Checker) checkBinaryExpressionBooleanLogic(
 					Side:         common.OperandSideRight,
 					ExpectedType: BoolType,
 					ActualType:   rightType,
-					Range:        ast.NewRangeFromPositioned(expression.Right),
+					Range:        ast.NewRangeFromPositioned(checker.memoryGauge, expression.Right),
 				},
 			)
 		}
@@ -401,7 +401,7 @@ func (checker *Checker) checkBinaryExpressionNilCoalescing(
 					Side:         common.OperandSideLeft,
 					ExpectedType: &OptionalType{},
 					ActualType:   leftType,
-					Range:        ast.NewRangeFromPositioned(expression.Left),
+					Range:        ast.NewRangeFromPositioned(checker.memoryGauge, expression.Left),
 				},
 			)
 		}
@@ -424,7 +424,7 @@ func (checker *Checker) checkBinaryExpressionNilCoalescing(
 
 			checker.report(
 				&InvalidNilCoalescingRightResourceOperandError{
-					Range: ast.NewRangeFromPositioned(expression.Right),
+					Range: ast.NewRangeFromPositioned(checker.memoryGauge, expression.Right),
 				},
 			)
 		}
@@ -437,7 +437,7 @@ func (checker *Checker) checkBinaryExpressionNilCoalescing(
 					Side:         common.OperandSideRight,
 					ExpectedType: leftOptional,
 					ActualType:   rightType,
-					Range:        ast.NewRangeFromPositioned(expression.Right),
+					Range:        ast.NewRangeFromPositioned(checker.memoryGauge, expression.Right),
 				},
 			)
 		} else {

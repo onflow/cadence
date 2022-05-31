@@ -965,11 +965,6 @@ func StaticTypeToBytes(t StaticType) (cbor.RawMessage, error) {
 	return buf.Bytes(), nil
 }
 
-func StaticTypeFromBytes(data []byte) (StaticType, error) {
-	dec := CBORDecMode.NewByteStreamDecoder(data)
-	return decodeStaticType(dec)
-}
-
 func EncodeStaticType(e *cbor.StreamEncoder, t StaticType) error {
 	if t == nil {
 		return e.EncodeNil()
@@ -1309,6 +1304,21 @@ type compositeTypeInfo struct {
 	location            common.Location
 	qualifiedIdentifier string
 	kind                common.CompositeKind
+}
+
+func NewCompositeTypeInfo(
+	memoryGauge common.MemoryGauge,
+	location common.Location,
+	qualifiedIdentifier string,
+	kind common.CompositeKind,
+) compositeTypeInfo {
+	common.UseMemory(memoryGauge, common.CompositeTypeInfoMemoryUsage)
+
+	return compositeTypeInfo{
+		location:            location,
+		qualifiedIdentifier: qualifiedIdentifier,
+		kind:                kind,
+	}
 }
 
 var _ atree.TypeInfo = compositeTypeInfo{}

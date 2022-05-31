@@ -43,7 +43,7 @@ func TestInterpretNegativeZeroFixedPoint(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.Fix64Value(-42000000),
+		interpreter.NewUnmeteredFix64Value(-42000000),
 		inter.Globals["x"].GetValue(),
 	)
 }
@@ -54,9 +54,9 @@ func TestInterpretFixedPointConversionAndAddition(t *testing.T) {
 
 	tests := map[string]interpreter.Value{
 		// Fix*
-		"Fix64": interpreter.Fix64Value(123000000),
+		"Fix64": interpreter.NewUnmeteredFix64Value(123000000),
 		// UFix*
-		"UFix64": interpreter.UFix64Value(123000000),
+		"UFix64": interpreter.NewUnmeteredUFix64Value(123000000),
 	}
 
 	for _, fixedPointType := range sema.AllFixedPointTypes {
@@ -112,8 +112,8 @@ func TestInterpretFixedPointConversionAndAddition(t *testing.T) {
 }
 
 var testFixedPointValues = map[string]interpreter.Value{
-	"Fix64":  interpreter.Fix64Value(50 * sema.Fix64Factor),
-	"UFix64": interpreter.UFix64Value(50 * sema.Fix64Factor),
+	"Fix64":  interpreter.NewUnmeteredFix64Value(50 * sema.Fix64Factor),
+	"UFix64": interpreter.NewUnmeteredUFix64Value(50 * sema.Fix64Factor),
 }
 
 func init() {
@@ -192,7 +192,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 				inter := parseCheckAndInterpret(t, code)
 
-				expected := interpreter.UFix64Value(value * sema.Fix64Factor)
+				expected := interpreter.NewUnmeteredUFix64Value(value * sema.Fix64Factor)
 
 				AssertValuesEqual(
 					t,
@@ -232,7 +232,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 				inter := parseCheckAndInterpret(t, code)
 
-				expected := interpreter.Fix64Value(value * sema.Fix64Factor)
+				expected := interpreter.NewUnmeteredFix64Value(value * sema.Fix64Factor)
 
 				AssertValuesEqual(
 					t,
@@ -270,14 +270,14 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 				AssertValuesEqual(
 					t,
 					inter,
-					interpreter.Fix64Value(value*sema.Fix64Factor),
+					interpreter.NewUnmeteredFix64Value(value*sema.Fix64Factor),
 					inter.Globals["x"].GetValue(),
 				)
 
 				AssertValuesEqual(
 					t,
 					inter,
-					interpreter.UFix64Value(value*sema.Fix64Factor),
+					interpreter.NewUnmeteredUFix64Value(uint64(value*sema.Fix64Factor)),
 					inter.Globals["y"].GetValue(),
 				)
 			})
@@ -303,14 +303,14 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 				AssertValuesEqual(
 					t,
 					inter,
-					interpreter.UFix64Value(value*sema.Fix64Factor),
+					interpreter.NewUnmeteredUFix64Value(uint64(value*sema.Fix64Factor)),
 					inter.Globals["x"].GetValue(),
 				)
 
 				AssertValuesEqual(
 					t,
 					inter,
-					interpreter.Fix64Value(value*sema.Fix64Factor),
+					interpreter.NewUnmeteredFix64Value(value*sema.Fix64Factor),
 					inter.Globals["y"].GetValue(),
 				)
 			})
@@ -564,12 +564,12 @@ func TestInterpretFixedPointMinMax(t *testing.T) {
 
 	testCases := map[sema.Type]testCase{
 		sema.Fix64Type: {
-			min: interpreter.Fix64Value(math.MinInt64),
-			max: interpreter.Fix64Value(math.MaxInt64),
+			min: interpreter.NewUnmeteredFix64Value(math.MinInt64),
+			max: interpreter.NewUnmeteredFix64Value(math.MaxInt64),
 		},
 		sema.UFix64Type: {
-			min: interpreter.UFix64Value(0),
-			max: interpreter.UFix64Value(math.MaxUint64),
+			min: interpreter.NewUnmeteredUFix64Value(0),
+			max: interpreter.NewUnmeteredUFix64Value(math.MaxUint64),
 		},
 	}
 

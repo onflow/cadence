@@ -42,7 +42,7 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 			&sema.OptionalType{Type: sema.BoolType},
 		)
 		assert.Equal(t,
-			NewSomeValueNonCopying(BoolValue(true)),
+			NewUnmeteredSomeValueNonCopying(BoolValue(true)),
 			value,
 		)
 	})
@@ -52,11 +52,11 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 
 		value := inter.BoxOptional(
 			ReturnEmptyLocationRange,
-			NewSomeValueNonCopying(BoolValue(true)),
+			NewUnmeteredSomeValueNonCopying(BoolValue(true)),
 			&sema.OptionalType{Type: sema.BoolType},
 		)
 		assert.Equal(t,
-			NewSomeValueNonCopying(BoolValue(true)),
+			NewUnmeteredSomeValueNonCopying(BoolValue(true)),
 			value,
 		)
 	})
@@ -66,12 +66,12 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 
 		value := inter.BoxOptional(
 			ReturnEmptyLocationRange,
-			NewSomeValueNonCopying(BoolValue(true)),
+			NewUnmeteredSomeValueNonCopying(BoolValue(true)),
 			&sema.OptionalType{Type: &sema.OptionalType{Type: sema.BoolType}},
 		)
 		assert.Equal(t,
-			NewSomeValueNonCopying(
-				NewSomeValueNonCopying(BoolValue(true)),
+			NewUnmeteredSomeValueNonCopying(
+				NewUnmeteredSomeValueNonCopying(BoolValue(true)),
 			),
 			value,
 		)
@@ -98,7 +98,7 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 		// NOTE:
 		value := inter.BoxOptional(
 			ReturnEmptyLocationRange,
-			NewSomeValueNonCopying(NilValue{}),
+			NewUnmeteredSomeValueNonCopying(NilValue{}),
 			&sema.OptionalType{Type: &sema.OptionalType{Type: sema.BoolType}},
 		)
 		assert.Equal(t,
@@ -123,7 +123,7 @@ func TestInterpreterBoxing(t *testing.T) {
 				inter := newTestInterpreter(t)
 
 				assert.Equal(t,
-					NewSomeValueNonCopying(
+					NewUnmeteredSomeValueNonCopying(
 						BoolValue(true),
 					),
 					inter.ConvertAndBox(
@@ -140,12 +140,12 @@ func TestInterpreterBoxing(t *testing.T) {
 				inter := newTestInterpreter(t)
 
 				assert.Equal(t,
-					NewSomeValueNonCopying(
+					NewUnmeteredSomeValueNonCopying(
 						BoolValue(true),
 					),
 					inter.ConvertAndBox(
 						ReturnEmptyLocationRange,
-						NewSomeValueNonCopying(BoolValue(true)),
+						NewUnmeteredSomeValueNonCopying(BoolValue(true)),
 						&sema.OptionalType{Type: sema.BoolType},
 						&sema.OptionalType{Type: anyType},
 					),
@@ -163,7 +163,7 @@ func BenchmarkTransfer(b *testing.B) {
 	values := make([]Value, 0, size)
 
 	for i := 0; i < size; i++ {
-		value := NewStringValue(fmt.Sprintf("value%d", i))
+		value := NewUnmeteredStringValue(fmt.Sprintf("value%d", i))
 		values = append(values, value)
 	}
 

@@ -18,13 +18,29 @@
 
 package ast
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/onflow/cadence/runtime/common"
+)
 
 type ParameterList struct {
 	once                    sync.Once
 	Parameters              []*Parameter
 	_parametersByIdentifier map[string]*Parameter
 	Range
+}
+
+func NewParameterList(
+	gauge common.MemoryGauge,
+	parameters []*Parameter,
+	astRange Range,
+) *ParameterList {
+	common.UseMemory(gauge, common.ParameterListMemoryUsage)
+	return &ParameterList{
+		Parameters: parameters,
+		Range:      astRange,
+	}
 }
 
 // EffectiveArgumentLabels returns the effective argument labels that

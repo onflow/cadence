@@ -24,6 +24,8 @@ import (
 	"strings"
 
 	"github.com/turbolent/prettier"
+
+	"github.com/onflow/cadence/runtime/common"
 )
 
 // TypeAnnotation
@@ -32,6 +34,21 @@ type TypeAnnotation struct {
 	IsResource bool
 	Type       Type     `json:"AnnotatedType"`
 	StartPos   Position `json:"-"`
+}
+
+func NewTypeAnnotation(
+	memoryGauge common.MemoryGauge,
+	isResource bool,
+	typ Type,
+	startPos Position,
+) *TypeAnnotation {
+	common.UseMemory(memoryGauge, common.TypeAnnotationMemoryUsage)
+
+	return &TypeAnnotation{
+		IsResource: isResource,
+		Type:       typ,
+		StartPos:   startPos,
+	}
 }
 
 func (t *TypeAnnotation) String() string {
@@ -45,8 +62,8 @@ func (t *TypeAnnotation) StartPosition() Position {
 	return t.StartPos
 }
 
-func (t *TypeAnnotation) EndPosition() Position {
-	return t.Type.EndPosition()
+func (t *TypeAnnotation) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return t.Type.EndPosition(memoryGauge)
 }
 
 const typeAnnotationResourceSymbolDoc = prettier.Text("@")
@@ -68,7 +85,7 @@ func (t *TypeAnnotation) MarshalJSON() ([]byte, error) {
 		Range
 		*Alias
 	}{
-		Range: NewRangeFromPositioned(t),
+		Range: NewUnmeteredRangeFromPositioned(t),
 		Alias: (*Alias)(t),
 	})
 }
@@ -97,6 +114,18 @@ type NominalType struct {
 
 var _ Type = &NominalType{}
 
+func NewNominalType(
+	memoryGauge common.MemoryGauge,
+	identifier Identifier,
+	nestedIdentifiers []Identifier,
+) *NominalType {
+	common.UseMemory(memoryGauge, common.NominalTypeMemoryUsage)
+	return &NominalType{
+		Identifier:        identifier,
+		NestedIdentifiers: nestedIdentifiers,
+	}
+}
+
 func (*NominalType) isType() {}
 
 func (t *NominalType) String() string {
@@ -113,13 +142,13 @@ func (t *NominalType) StartPosition() Position {
 	return t.Identifier.StartPosition()
 }
 
-func (t *NominalType) EndPosition() Position {
+func (t *NominalType) EndPosition(memoryGauge common.MemoryGauge) Position {
 	nestedCount := len(t.NestedIdentifiers)
 	if nestedCount == 0 {
-		return t.Identifier.EndPosition()
+		return t.Identifier.EndPosition(memoryGauge)
 	}
 	lastIdentifier := t.NestedIdentifiers[nestedCount-1]
-	return lastIdentifier.EndPosition()
+	return lastIdentifier.EndPosition(memoryGauge)
 }
 
 func (t *NominalType) Doc() prettier.Doc {
@@ -134,7 +163,7 @@ func (t *NominalType) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "NominalType",
-		Range: NewRangeFromPositioned(t),
+		Range: NewUnmeteredRangeFromPositioned(t),
 		Alias: (*Alias)(t),
 	})
 }
@@ -156,6 +185,18 @@ type OptionalType struct {
 
 var _ Type = &OptionalType{}
 
+func NewOptionalType(
+	memoryGauge common.MemoryGauge,
+	typ Type,
+	endPos Position,
+) *OptionalType {
+	common.UseMemory(memoryGauge, common.OptionalTypeMemoryUsage)
+	return &OptionalType{
+		Type:   typ,
+		EndPos: endPos,
+	}
+}
+
 func (*OptionalType) isType() {}
 
 func (t *OptionalType) String() string {
@@ -166,7 +207,7 @@ func (t *OptionalType) StartPosition() Position {
 	return t.Type.StartPosition()
 }
 
-func (t *OptionalType) EndPosition() Position {
+func (t *OptionalType) EndPosition(memoryGauge common.MemoryGauge) Position {
 	return t.EndPos
 }
 
@@ -187,7 +228,7 @@ func (t *OptionalType) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "OptionalType",
-		Range: NewRangeFromPositioned(t),
+		Range: NewUnmeteredRangeFromPositioned(t),
 		Alias: (*Alias)(t),
 	})
 }
@@ -204,6 +245,18 @@ type VariableSizedType struct {
 }
 
 var _ Type = &VariableSizedType{}
+
+func NewVariableSizedType(
+	memoryGauge common.MemoryGauge,
+	typ Type,
+	astRange Range,
+) *VariableSizedType {
+	common.UseMemory(memoryGauge, common.VariableSizedTypeMemoryUsage)
+	return &VariableSizedType{
+		Type:  typ,
+		Range: astRange,
+	}
+}
 
 func (*VariableSizedType) isType() {}
 
@@ -253,6 +306,20 @@ type ConstantSizedType struct {
 
 var _ Type = &ConstantSizedType{}
 
+func NewConstantSizedType(
+	memoryGauge common.MemoryGauge,
+	typ Type,
+	size *IntegerExpression,
+	astRange Range,
+) *ConstantSizedType {
+	common.UseMemory(memoryGauge, common.ConstantSizedTypeMemoryUsage)
+	return &ConstantSizedType{
+		Type:  typ,
+		Size:  size,
+		Range: astRange,
+	}
+}
+
 func (*ConstantSizedType) isType() {}
 
 func (t *ConstantSizedType) String() string {
@@ -301,6 +368,20 @@ type DictionaryType struct {
 }
 
 var _ Type = &DictionaryType{}
+
+func NewDictionaryType(
+	memoryGauge common.MemoryGauge,
+	keyType Type,
+	valueType Type,
+	astRange Range,
+) *DictionaryType {
+	common.UseMemory(memoryGauge, common.DictionaryTypeMemoryUsage)
+	return &DictionaryType{
+		KeyType:   keyType,
+		ValueType: valueType,
+		Range:     astRange,
+	}
+}
 
 func (*DictionaryType) isType() {}
 
@@ -352,6 +433,20 @@ type FunctionType struct {
 }
 
 var _ Type = &FunctionType{}
+
+func NewFunctionType(
+	memoryGauge common.MemoryGauge,
+	parameterTypes []*TypeAnnotation,
+	returnType *TypeAnnotation,
+	astRange Range,
+) *FunctionType {
+	common.UseMemory(memoryGauge, common.FunctionTypeMemoryUsage)
+	return &FunctionType{
+		ParameterTypeAnnotations: parameterTypes,
+		ReturnTypeAnnotation:     returnType,
+		Range:                    astRange,
+	}
+}
 
 func (*FunctionType) isType() {}
 
@@ -434,6 +529,20 @@ type ReferenceType struct {
 
 var _ Type = &ReferenceType{}
 
+func NewReferenceType(
+	memoryGauge common.MemoryGauge,
+	authorized bool,
+	typ Type,
+	startPos Position,
+) *ReferenceType {
+	common.UseMemory(memoryGauge, common.ReferenceTypeMemoryUsage)
+	return &ReferenceType{
+		Authorized: authorized,
+		Type:       typ,
+		StartPos:   startPos,
+	}
+}
+
 func (*ReferenceType) isType() {}
 
 func (t *ReferenceType) String() string {
@@ -450,8 +559,8 @@ func (t *ReferenceType) StartPosition() Position {
 	return t.StartPos
 }
 
-func (t *ReferenceType) EndPosition() Position {
-	return t.Type.EndPosition()
+func (t *ReferenceType) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return t.Type.EndPosition(memoryGauge)
 }
 
 const referenceTypeAuthKeywordSpaceDoc = prettier.Text("auth ")
@@ -478,7 +587,7 @@ func (t *ReferenceType) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "ReferenceType",
-		Range: NewRangeFromPositioned(t),
+		Range: NewUnmeteredRangeFromPositioned(t),
 		Alias: (*Alias)(t),
 	})
 }
@@ -496,6 +605,20 @@ type RestrictedType struct {
 }
 
 var _ Type = &RestrictedType{}
+
+func NewRestrictedType(
+	memoryGauge common.MemoryGauge,
+	typ Type,
+	restrictions []*NominalType,
+	astRange Range,
+) *RestrictedType {
+	common.UseMemory(memoryGauge, common.RestrictedTypeMemoryUsage)
+	return &RestrictedType{
+		Type:         typ,
+		Restrictions: restrictions,
+		Range:        astRange,
+	}
+}
 
 func (*RestrictedType) isType() {}
 
@@ -584,6 +707,22 @@ type InstantiationType struct {
 
 var _ Type = &InstantiationType{}
 
+func NewInstantiationType(
+	memoryGauge common.MemoryGauge,
+	typ Type,
+	typeArguments []*TypeAnnotation,
+	typeArgumentsStartPos Position,
+	endPos Position,
+) *InstantiationType {
+	common.UseMemory(memoryGauge, common.InstantiationTypeMemoryUsage)
+	return &InstantiationType{
+		Type:                  typ,
+		TypeArguments:         typeArguments,
+		TypeArgumentsStartPos: typeArgumentsStartPos,
+		EndPos:                endPos,
+	}
+}
+
 func (*InstantiationType) isType() {}
 
 func (t *InstantiationType) String() string {
@@ -604,7 +743,7 @@ func (t *InstantiationType) StartPosition() Position {
 	return t.Type.StartPosition()
 }
 
-func (t *InstantiationType) EndPosition() Position {
+func (t *InstantiationType) EndPosition(common.MemoryGauge) Position {
 	return t.EndPos
 }
 
@@ -654,7 +793,7 @@ func (t *InstantiationType) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "InstantiationType",
-		Range: NewRangeFromPositioned(t),
+		Range: NewUnmeteredRangeFromPositioned(t),
 		Alias: (*Alias)(t),
 	})
 }

@@ -87,7 +87,7 @@ func TestMemberIndices(t *testing.T) {
 		Identifier: Identifier{Identifier: "C"},
 	}
 
-	members := NewMembers(
+	members := NewUnmeteredMembers(
 		[]Declaration{
 			specialFunctionB,
 			enumCaseA,

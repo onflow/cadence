@@ -20,20 +20,24 @@ package sema
 
 import (
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 )
 
 type BeforeExtractor struct {
 	ExpressionExtractor *ast.ExpressionExtractor
 	report              func(error)
+	memoryGauge         common.MemoryGauge
 }
 
-func NewBeforeExtractor(report func(error)) *BeforeExtractor {
+func NewBeforeExtractor(memoryGauge common.MemoryGauge, report func(error)) *BeforeExtractor {
 	beforeExtractor := &BeforeExtractor{
-		report: report,
+		report:      report,
+		memoryGauge: memoryGauge,
 	}
 	expressionExtractor := &ast.ExpressionExtractor{
 		InvocationExtractor: beforeExtractor,
 		FunctionExtractor:   beforeExtractor,
+		MemoryGauge:         memoryGauge,
 	}
 	beforeExtractor.ExpressionExtractor = expressionExtractor
 	return beforeExtractor
@@ -66,12 +70,13 @@ func (e *BeforeExtractor) ExtractInvocation(
 			// create a fresh identifier which has the rewritten argument
 			// as its initial value
 
-			newIdentifier := ast.Identifier{
-				Identifier: extractor.FreshIdentifier(),
-			}
-			newExpression := &ast.IdentifierExpression{
-				Identifier: newIdentifier,
-			}
+			newIdentifier := ast.NewIdentifier(
+				e.memoryGauge,
+				extractor.FreshIdentifier(),
+				ast.EmptyPosition,
+			)
+
+			newExpression := ast.NewIdentifierExpression(e.memoryGauge, newIdentifier)
 
 			extractedExpressions = append(extractedExpressions,
 				ast.ExtractedExpression{

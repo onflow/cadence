@@ -42,10 +42,11 @@ func (checker *Checker) checkEventParameters(
 			checker.report(
 				&InvalidEventParameterTypeError{
 					Type: parameterType,
-					Range: ast.Range{
-						StartPos: parameter.StartPos,
-						EndPos:   parameter.TypeAnnotation.EndPosition(),
-					},
+					Range: ast.NewRange(
+						checker.memoryGauge,
+						parameter.StartPos,
+						parameter.TypeAnnotation.EndPosition(checker.memoryGauge),
+					),
 				},
 			)
 		}

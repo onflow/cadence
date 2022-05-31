@@ -21,6 +21,7 @@ package interpreter
 import (
 	"fmt"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -31,6 +32,7 @@ var authAccountKeysStaticType StaticType = PrimitiveStaticTypeAuthAccountKeys
 
 // NewAuthAccountKeysValue constructs a AuthAccount.Keys value.
 func NewAuthAccountKeysValue(
+	inter *Interpreter,
 	address AddressValue,
 	addFunction FunctionValue,
 	getFunction FunctionValue,
@@ -44,14 +46,17 @@ func NewAuthAccountKeysValue(
 	}
 
 	var str string
-	stringer := func(_ SeenReferences) string {
+	stringer := func(memoryGauge common.MemoryGauge, _ SeenReferences) string {
 		if str == "" {
-			str = fmt.Sprintf("AuthAccount.Keys(%s)", address)
+			common.UseMemory(memoryGauge, common.AuthAccountKeysStringMemoryUsage)
+			addressStr := address.MeteredString(memoryGauge, SeenReferences{})
+			str = fmt.Sprintf("AuthAccount.Keys(%s)", addressStr)
 		}
 		return str
 	}
 
 	return NewSimpleCompositeValue(
+		inter,
 		authAccountKeysTypeID,
 		authAccountKeysStaticType,
 		nil,
@@ -69,6 +74,7 @@ var publicAccountKeysStaticType StaticType = PrimitiveStaticTypePublicAccountKey
 
 // NewPublicAccountKeysValue constructs a PublicAccount.Keys value.
 func NewPublicAccountKeysValue(
+	inter *Interpreter,
 	address AddressValue,
 	getFunction FunctionValue,
 ) Value {
@@ -78,14 +84,17 @@ func NewPublicAccountKeysValue(
 	}
 
 	var str string
-	stringer := func(_ SeenReferences) string {
+	stringer := func(memoryGauge common.MemoryGauge, _ SeenReferences) string {
 		if str == "" {
-			str = fmt.Sprintf("PublicAccount.Keys(%s)", address)
+			common.UseMemory(memoryGauge, common.PublicAccountKeysStringMemoryUsage)
+			addressStr := address.MeteredString(memoryGauge, SeenReferences{})
+			str = fmt.Sprintf("PublicAccount.Keys(%s)", addressStr)
 		}
 		return str
 	}
 
 	return NewSimpleCompositeValue(
+		inter,
 		publicAccountKeysTypeID,
 		publicAccountKeysStaticType,
 		nil,
