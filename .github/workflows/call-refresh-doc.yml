@@ -3,7 +3,7 @@ name: call-refresh-doc
 on:
   push:
     branches:
-      - main
+      - master
 
 jobs:
   compare:
