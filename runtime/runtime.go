@@ -108,6 +108,9 @@ type Runtime interface {
 	// SetDebugger configures interpreters with the given debugger.
 	//
 	SetDebugger(debugger *interpreter.Debugger)
+
+	// Storage returns the storage system.
+	Storage(context Context) *Storage
 }
 
 type ImportResolver = func(location common.Location) (program *ast.Program, e error)
@@ -3226,6 +3229,11 @@ func (r *interpreterRuntime) ReadStored(
 		},
 		context,
 	)
+}
+
+func (r *interpreterRuntime) Storage(context Context) *Storage {
+	memoryGauge, _ := context.Interface.(common.MemoryGauge)
+	return NewStorage(context.Interface, memoryGauge)
 }
 
 func (r *interpreterRuntime) ReadLinked(

@@ -3217,3 +3217,59 @@ func TestStorageReadNoImplicitWrite(t *testing.T) {
 	)
 	require.NoError(t, err)
 }
+
+func TestRuntimeStorageInternalAccess(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := newTestInterpreterRuntime()
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: newTestLedger(nil, nil),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{address}, nil
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	// Store value
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: []byte(`
+              transaction {
+                  prepare(signer: AuthAccount) {
+                      signer.save("Hello, World!", to: /storage/hello)
+                  }
+               }
+            `),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// internal access
+
+	storage := runtime.Storage(Context{
+		Interface: runtimeInterface,
+	})
+
+	storageMap := storage.GetStorageMap(address, common.PathDomainStorage.Identifier(), false)
+
+	require.NotNil(t, storageMap)
+
+	value := storageMap.ReadValue(nil, "hello")
+
+	utils.RequireValuesEqual(
+		t,
+		nil,
+		interpreter.NewUnmeteredStringValue("Hello, World!"),
+		value,
+	)
+}
