@@ -7146,6 +7146,36 @@ func TestRuntimeInternalErrors(t *testing.T) {
 		require.Error(t, err)
 		require.ErrorAs(t, err, &Error{})
 	})
+
+	t.Run("panic with non error", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := []byte(`pub fun main() {}`)
+
+		runtimeInterface := &testRuntimeInterface{
+			meterMemory: func(usage common.MemoryUsage) error {
+				// panic with a non-error type
+				panic("crasher")
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.Error(t, err)
+		require.ErrorAs(t, err, &Error{})
+	})
+
 }
 
 func TestRuntimeComputationMetring(t *testing.T) {

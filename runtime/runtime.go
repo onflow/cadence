@@ -236,6 +236,9 @@ func (r *interpreterRuntime) Recover(onError func(error), context Context) {
 		err = recovered
 	case error:
 		err = newError(recovered, context)
+	default:
+		err = fmt.Errorf("%s", recovered)
+		err = newError(err, context)
 	}
 
 	onError(err)
