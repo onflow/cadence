@@ -42,7 +42,6 @@ jobs:
 
   # --- If modified, call refresh --- 
   call-refresh-workflow-passing-data:
-    runs-on: ubuntu-latest
     needs: compare
     if: ${{ needs.compare.outputs.all_modified_files != 0 }}
     uses: onflow/flow/.github/workflows/refresh-doc.yml@master
