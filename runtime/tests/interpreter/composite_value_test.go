@@ -161,7 +161,7 @@ func TestInterpretContractTransfer(t *testing.T) {
 
 		t.Parallel()
 
-		address := interpreter.NewAddressValueFromBytes([]byte{42})
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 		code := fmt.Sprintf(
 			`
