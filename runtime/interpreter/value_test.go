@@ -3277,8 +3277,6 @@ func TestPublicKeyValue(t *testing.T) {
 
 func TestHashable(t *testing.T) {
 
-	t.Skip()
-
 	// Assert that all Value implementations are hashable
 
 	pkgs, err := packages.Load(
