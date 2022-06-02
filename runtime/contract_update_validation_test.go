@@ -2385,7 +2385,7 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 		require.NoError(t, err)
 
 		// NOTE: the program was not available in the cache (no successful get).
-		// So the old code is parsed and checked – and *MUST* be set!
+		// The old code is only parsed, and program does not need to be set.
 
 		assert.Equal(t,
 			locationAccessCounts{},
@@ -2394,8 +2394,7 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 		assert.Equal(
 			t,
 			locationAccessCounts{
-				contractLocationID: 1,
-				txLocationID1:      1,
+				txLocationID1: 1,
 			},
 			programSets1,
 		)
@@ -2406,12 +2405,10 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 		require.NoError(t, err)
 
 		// NOTE: the program was available in the cache (successful get).
-		// So the old code is parsed and checked, and does not need to be set.
+		// The old code is only parsed, and does not need to be set.
 
 		assert.Equal(t,
-			locationAccessCounts{
-				contractLocationID: 1,
-			},
+			locationAccessCounts{},
 			programGets2,
 		)
 		assert.Equal(
