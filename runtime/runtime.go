@@ -106,6 +106,10 @@ type Runtime interface {
 	// ReadLinked dereferences the path and returns the value stored at the target
 	//
 	ReadLinked(address common.Address, path cadence.Path, context Context) (cadence.Value, error)
+
+	// SetDebugger configures interpreters with the given debugger.
+	//
+	SetDebugger(debugger *interpreter.Debugger)
 }
 
 var typeDeclarations = append(
@@ -160,6 +164,7 @@ func reportMetric(
 // interpreterRuntime is a interpreter-based version of the Flow runtime.
 type interpreterRuntime struct {
 	coverageReport                       *CoverageReport
+	debugger                             *interpreter.Debugger
 	contractUpdateValidationEnabled      bool
 	atreeValidationEnabled               bool
 	tracingEnabled                       bool
@@ -266,6 +271,10 @@ func (r *interpreterRuntime) SetInvalidatedResourceValidationEnabled(enabled boo
 
 func (r *interpreterRuntime) SetResourceOwnerChangeHandlerEnabled(enabled bool) {
 	r.resourceOwnerChangeHandlerEnabled = enabled
+}
+
+func (r *interpreterRuntime) SetDebugger(debugger *interpreter.Debugger) {
+	r.debugger = debugger
 }
 
 func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val cadence.Value, err error) {
@@ -1417,6 +1426,7 @@ func (r *interpreterRuntime) newInterpreter(
 		interpreter.WithOnResourceOwnerChangeHandler(r.resourceOwnerChangedHandler(context.Interface)),
 		interpreter.WithInvalidatedResourceValidationEnabled(r.invalidatedResourceValidationEnabled),
 		interpreter.WithMemoryGauge(memoryGauge),
+		interpreter.WithDebugger(r.debugger),
 	}
 
 	defaultOptions = append(defaultOptions,
