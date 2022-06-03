@@ -37,6 +37,12 @@ func TestContractUpdateWithDependencies(t *testing.T) {
 	runtime := newTestInterpreterRuntime()
 	accountCodes := map[common.LocationID][]byte{}
 	signerAccount := common.MustBytesToAddress([]byte{0x1})
+	fooLocation := common.AddressLocation{
+		Address: signerAccount,
+		Name:    "Foo",
+	}
+
+	var checkGetSetProgram, getProgramCalled, setProgramCalled bool
 
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
@@ -68,10 +74,24 @@ func TestContractUpdateWithDependencies(t *testing.T) {
 		decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 			return json.Decode(nil, b)
 		},
-
-		// Always force to get the old program from the source during the update.
 		getProgram: func(location Location) (*interpreter.Program, error) {
+			_, isTransactionLocation := location.(common.TransactionLocation)
+			if checkGetSetProgram && !isTransactionLocation {
+				require.Equal(t, location, fooLocation)
+				require.False(t, getProgramCalled)
+				getProgramCalled = true
+			}
+			// Always force to get the old program from the source during the update.
 			return nil, nil
+		},
+		setProgram: func(location Location, program *interpreter.Program) error {
+			_, isTransactionLocation := location.(common.TransactionLocation)
+			if checkGetSetProgram && !isTransactionLocation {
+				require.Equal(t, location, fooLocation)
+				require.False(t, setProgramCalled)
+				setProgramCalled = true
+			}
+			return nil
 		},
 	}
 
@@ -175,6 +195,8 @@ func TestContractUpdateWithDependencies(t *testing.T) {
 	// function signature change in 'Foo'.
 
 	signerAccount = common.MustBytesToAddress([]byte{0x2})
+
+	checkGetSetProgram = true
 
 	err = runtime.ExecuteTransaction(
 		Script{
