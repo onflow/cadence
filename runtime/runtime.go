@@ -948,14 +948,16 @@ func validateArgumentParams(
 		}
 
 		// Ensure the argument is of an importable type
+		argType := arg.StaticType(inter)
+
 		if !arg.IsImportable(inter) {
 			return nil, &ArgumentNotImportableError{
-				Type: arg.StaticType(inter),
+				Type: argType,
 			}
 		}
 
 		// Check that decoded value is a subtype of static parameter type
-		if !inter.IsSubTypeOfSemaType(arg.StaticType(inter), parameterType) {
+		if !inter.IsSubTypeOfSemaType(argType, parameterType) {
 			return nil, &InvalidEntryPointArgumentError{
 				Index: i,
 				Err: &InvalidValueTypeError{
@@ -969,7 +971,7 @@ func validateArgumentParams(
 		if !arg.ConformsToStaticType(
 			inter,
 			interpreter.ReturnEmptyLocationRange,
-			arg.StaticType(inter),
+			argType,
 			conformanceResults,
 		) {
 			return nil, &InvalidEntryPointArgumentError{

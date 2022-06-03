@@ -2144,6 +2144,8 @@ func (v *ArrayValue) ConformsToStaticType(
 	results TypeConformanceResults,
 ) bool {
 
+	// TODO: handle AnyStruct/AnyResource
+
 	count := v.Count()
 
 	if interpreter.tracingEnabled {
@@ -14816,6 +14818,8 @@ func (v *CompositeValue) ConformsToStaticType(
 	results TypeConformanceResults,
 ) bool {
 
+	// TODO: handle AnyStruct/AnyResource
+
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
 
@@ -15975,6 +15979,8 @@ func (v *DictionaryValue) ConformsToStaticType(
 	results TypeConformanceResults,
 ) bool {
 
+	// TODO: handle AnyStruct/AnyResource
+
 	count := v.Count()
 
 	if interpreter.tracingEnabled {
@@ -16687,6 +16693,9 @@ func (v SomeValue) ConformsToStaticType(
 	staticType StaticType,
 	results TypeConformanceResults,
 ) bool {
+
+	// TODO: handle AnyStruct/AnyResource
+
 	optionalType, ok := staticType.(OptionalStaticType)
 	if !ok {
 		return false
@@ -17148,6 +17157,8 @@ func (v *StorageReferenceValue) ConformsToStaticType(
 	results TypeConformanceResults,
 ) bool {
 
+	// TODO: handle AnyStruct/AnyResource
+
 	refType, ok := staticType.(ReferenceStaticType)
 	if !ok ||
 		refType.Authorized != v.Authorized {
@@ -17486,6 +17497,8 @@ func (v *EphemeralReferenceValue) ConformsToStaticType(
 	staticType StaticType,
 	results TypeConformanceResults,
 ) bool {
+
+	// TODO: handle AnyStruct/AnyResource
 
 	refType, ok := staticType.(ReferenceStaticType)
 	if !ok ||
@@ -17963,7 +17976,7 @@ func (PathValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ V
 }
 
 func (v PathValue) ConformsToStaticType(
-	_ *Interpreter,
+	inter *Interpreter,
 	_ func() LocationRange,
 	staticType StaticType,
 	_ TypeConformanceResults,
@@ -17976,7 +17989,7 @@ func (v PathValue) ConformsToStaticType(
 	case PrimitiveStaticTypeStoragePath:
 		return v.Domain == common.PathDomainStorage
 	default:
-		return false
+		return primitiveValueConformsToStaticType(inter, v, staticType)
 	}
 }
 

@@ -206,6 +206,7 @@ func (v *SimpleCompositeValue) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
+	// TODO: handle e.g. AnyStruct. Use  primitiveValueConformsToStaticType?
 	return staticType.Equal(v.StaticType(inter))
 }
 
