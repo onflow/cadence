@@ -3242,7 +3242,8 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 			Source: []byte(`
               transaction {
                   prepare(signer: AuthAccount) {
-                      signer.save("Hello, World!", to: /storage/hello)
+                      signer.save("Hello, World!", to: /storage/first)
+                      signer.save(["one", "two", "three"], to: /storage/second)
                   }
                }
             `),
@@ -3256,20 +3257,33 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 
 	// internal access
 
-	storage := runtime.Storage(Context{
+	storage, inter, err := runtime.Storage(Context{
 		Interface: runtimeInterface,
 	})
+	require.NoError(t, err)
 
 	storageMap := storage.GetStorageMap(address, common.PathDomainStorage.Identifier(), false)
 
 	require.NotNil(t, storageMap)
 
-	value := storageMap.ReadValue(nil, "hello")
-
+	firstValue := storageMap.ReadValue(nil, "first")
 	utils.RequireValuesEqual(
 		t,
-		nil,
+		inter,
 		interpreter.NewUnmeteredStringValue("Hello, World!"),
-		value,
+		firstValue,
+	)
+
+	secondValue := storageMap.ReadValue(nil, "second")
+	require.IsType(t, &interpreter.ArrayValue{}, secondValue)
+
+	arrayValue := secondValue.(*interpreter.ArrayValue)
+
+	element := arrayValue.Get(inter, interpreter.ReturnEmptyLocationRange, 2)
+	utils.RequireValuesEqual(
+		t,
+		inter,
+		interpreter.NewUnmeteredStringValue("three"),
+		element,
 	)
 }

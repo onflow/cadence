@@ -105,12 +105,23 @@ type Runtime interface {
 	//
 	ReadLinked(address common.Address, path cadence.Path, context Context) (cadence.Value, error)
 
+<<<<<<< HEAD
 	// SetDebugger configures interpreters with the given debugger.
 	//
 	SetDebugger(debugger *interpreter.Debugger)
 
 	// Storage returns the storage system.
 	Storage(context Context) *Storage
+=======
+	// Storage returns the storage system and an interpreter which can be used for
+	// accessing values in storage.
+	//
+	// NOTE: only use the interpreter for storage operations,
+	// do *NOT* use the interpreter for any other purposes,
+	// such as executing a program.
+	//
+	Storage(context Context) (*Storage, *interpreter.Interpreter, error)
+>>>>>>> cb8684990 (provide interpreter with storage configured)
 }
 
 type ImportResolver = func(location common.Location) (program *ast.Program, e error)
@@ -3166,39 +3177,29 @@ func (r *interpreterRuntime) onStatementHandler() interpreter.OnStatementFunc {
 	}
 }
 
-func (r *interpreterRuntime) executeNonProgram(interpret interpretFunc, context Context) (cadence.Value, error) {
-	context.InitializeCodesAndPrograms()
-
-	var program *interpreter.Program
+func (r *interpreterRuntime) Storage(context Context) (*Storage, *interpreter.Interpreter, error) {
 
 	memoryGauge, _ := context.Interface.(common.MemoryGauge)
-
 	storage := NewStorage(context.Interface, memoryGauge)
 
-	var functions stdlib.StandardLibraryFunctions
-	var values stdlib.StandardLibraryValues
-	var interpreterOptions []interpreter.Option
-	var checkerOptions []sema.Option
-
-	value, _, err := r.interpret(
-		program,
-		context,
-		storage,
-		functions,
-		values,
-		interpreterOptions,
-		checkerOptions,
-		interpret,
+	inter, err := interpreter.NewInterpreter(
+		nil,
+		context.Location,
+		interpreter.WithStorage(storage),
 	)
 	if err != nil {
-		return nil, newError(err, context)
+		return nil, nil, newError(err, context)
 	}
 
+<<<<<<< HEAD
 	if value.Value == nil {
 		return nil, nil
 	}
 
 	return exportValue(value, interpreter.ReturnEmptyLocationRange)
+=======
+	return storage, inter, nil
+>>>>>>> cb8684990 (provide interpreter with storage configured)
 }
 
 func (r *interpreterRuntime) ReadStored(
@@ -3216,24 +3217,28 @@ func (r *interpreterRuntime) ReadStored(
 		context,
 	)
 
-	return r.executeNonProgram(
-		func(inter *interpreter.Interpreter) (interpreter.Value, error) {
-			pathValue := importPathValue(inter, path)
+	_, inter, err := r.Storage(context)
+	if err != nil {
+		// error is already wrapped as Error in Storage
+		return nil, err
+	}
 
-			domain := pathValue.Domain.Identifier()
-			identifier := pathValue.Identifier
+	pathValue := importPathValue(inter, path)
 
-			value := inter.ReadStored(address, domain, identifier)
+	domain := pathValue.Domain.Identifier()
+	identifier := pathValue.Identifier
 
-			return value, nil
-		},
-		context,
-	)
-}
+	value := inter.ReadStored(address, domain, identifier)
 
-func (r *interpreterRuntime) Storage(context Context) *Storage {
-	memoryGauge, _ := context.Interface.(common.MemoryGauge)
-	return NewStorage(context.Interface, memoryGauge)
+	var exportedValue cadence.Value
+	if value != nil {
+		exportedValue, err = ExportValue(value, inter)
+		if err != nil {
+			return nil, newError(err, context)
+		}
+	}
+
+	return exportedValue, nil
 }
 
 func (r *interpreterRuntime) ReadLinked(
@@ -3251,33 +3256,43 @@ func (r *interpreterRuntime) ReadLinked(
 		context,
 	)
 
-	return r.executeNonProgram(
-		func(inter *interpreter.Interpreter) (interpreter.Value, error) {
-			targetPath, _, err := inter.GetCapabilityFinalTargetPath(
-				address,
-				importPathValue(inter, path),
-				&sema.ReferenceType{
-					Type: sema.AnyType,
-				},
-				interpreter.ReturnEmptyLocationRange,
-			)
-			if err != nil {
-				return nil, err
-			}
+	_, inter, err := r.Storage(context)
+	if err != nil {
+		// error is already wrapped as Error in Storage
+		return nil, err
+	}
 
-			if targetPath == interpreter.EmptyPathValue {
-				return nil, nil
-			}
-
-			value := inter.ReadStored(
-				address,
-				targetPath.Domain.Identifier(),
-				targetPath.Identifier,
-			)
-			return value, nil
+	targetPath, _, err := inter.GetCapabilityFinalTargetPath(
+		address,
+		importPathValue(inter, path),
+		&sema.ReferenceType{
+			Type: sema.AnyType,
 		},
-		context,
+		interpreter.ReturnEmptyLocationRange,
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	if targetPath == interpreter.EmptyPathValue {
+		return nil, nil
+	}
+
+	value := inter.ReadStored(
+		address,
+		targetPath.Domain.Identifier(),
+		targetPath.Identifier,
+	)
+
+	var exportedValue cadence.Value
+	if value != nil {
+		exportedValue, err = ExportValue(value, inter)
+		if err != nil {
+			return nil, newError(err, context)
+		}
+	}
+
+	return exportedValue, nil
 }
 
 var BlockIDStaticType = interpreter.ConstantSizedStaticType{
