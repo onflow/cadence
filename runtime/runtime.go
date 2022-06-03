@@ -2471,20 +2471,16 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 			// Validate the contract update (if enabled)
 
 			if r.contractUpdateValidationEnabled && isUpdate {
-				var oldProgram *interpreter.Program
-				oldProgram, err = r.getProgram(
-					context,
-					functions,
-					stdlib.BuiltinValues,
-					checkerOptions,
-					importResolutionResults{},
-				)
+				oldCode, err := r.getCode(context)
+				handleContractUpdateError(err)
+
+				oldProgram, err := parser2.ParseProgram(string(oldCode))
 				handleContractUpdateError(err)
 
 				validator := NewContractUpdateValidator(
 					context.Location,
 					nameArgument,
-					oldProgram.Program,
+					oldProgram,
 					program.Program,
 				)
 				err = validator.Validate()
