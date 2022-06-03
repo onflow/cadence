@@ -683,6 +683,7 @@ func prepareType(typ cadence.Type, results typeResults) jsonValue {
 	case cadence.AnyType,
 		cadence.AnyStructType,
 		cadence.AnyResourceType,
+		cadence.AddressType,
 		cadence.MetaType,
 		cadence.VoidType,
 		cadence.NeverType,
