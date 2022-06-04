@@ -3541,3 +3541,171 @@ func TestNumberValueIntegerConversion(t *testing.T) {
 		})
 	}
 }
+
+func TestValue_ConformsToStaticType(t *testing.T) {
+
+	t.Parallel()
+
+	inter, err := NewInterpreter(nil, utils.TestLocation)
+	require.NoError(t, err)
+
+	test := func(value Value, expected bool, staticType StaticType) {
+		result := value.ConformsToStaticType(
+			inter,
+			ReturnEmptyLocationRange,
+			staticType,
+			TypeConformanceResults{},
+		)
+		if expected {
+			assert.True(t, result)
+		} else {
+			assert.False(t, result)
+		}
+	}
+
+	t.Run("function values", func(t *testing.T) {
+
+		t.Parallel()
+
+		functionType := &sema.FunctionType{
+			Parameters: []*sema.Parameter{
+				{
+					TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
+				},
+			},
+			ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.BoolType),
+		}
+
+		for name, f := range map[string]Value{
+			"InterpretedFunctionValue": &InterpretedFunctionValue{
+				Type: functionType,
+			},
+			"HostFunctionValue": &HostFunctionValue{
+				Type: functionType,
+			},
+			"BoundFunctionValue": &BoundFunctionValue{
+				Function: &InterpretedFunctionValue{
+					Type: functionType,
+				},
+			},
+		} {
+			t.Run(name, func(t *testing.T) {
+
+				test(f, true, PrimitiveStaticTypeAny)
+				test(f, true, PrimitiveStaticTypeAnyStruct)
+				test(f, true, FunctionStaticType{
+					Type: &sema.FunctionType{
+						Parameters: []*sema.Parameter{
+							{
+								TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
+							},
+						},
+						ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.BoolType),
+					},
+				})
+
+				test(f, false, PrimitiveStaticTypeAnyResource)
+				test(f, false, FunctionStaticType{
+					Type: &sema.FunctionType{
+						ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.BoolType),
+					},
+				})
+				test(f, false, FunctionStaticType{
+					Type: &sema.FunctionType{
+						Parameters: []*sema.Parameter{
+							{
+								TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
+							},
+						},
+						ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
+					},
+				})
+				test(f, false, FunctionStaticType{
+					Type: &sema.FunctionType{
+						Parameters: []*sema.Parameter{
+							{
+								TypeAnnotation: sema.NewTypeAnnotation(sema.StringType),
+							},
+						},
+						ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.BoolType),
+					},
+				})
+				test(f, false, FunctionStaticType{
+					Type: &sema.FunctionType{
+						Parameters: []*sema.Parameter{
+							{
+								TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
+							},
+						},
+						ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.StringType),
+					},
+				})
+			})
+		}
+
+	})
+
+	t.Run("BoolValue", func(t *testing.T) {
+
+		t.Parallel()
+
+		v := BoolValue(true)
+
+		test(v, true, PrimitiveStaticTypeAny)
+		test(v, true, PrimitiveStaticTypeAnyStruct)
+		test(v, true, PrimitiveStaticTypeBool)
+		test(v, true, OptionalStaticType{
+			Type: PrimitiveStaticTypeBool,
+		})
+
+		test(v, false, PrimitiveStaticTypeAnyResource)
+		test(v, false, PrimitiveStaticTypeString)
+		test(v, false, VariableSizedStaticType{
+			Type: PrimitiveStaticTypeBool,
+		})
+
+	})
+
+	t.Run("StringValue", func(t *testing.T) {
+
+		t.Parallel()
+
+		v := NewUnmeteredStringValue("test")
+
+		test(v, true, PrimitiveStaticTypeAny)
+		test(v, true, PrimitiveStaticTypeAnyStruct)
+		test(v, true, PrimitiveStaticTypeString)
+		test(v, true, OptionalStaticType{
+			Type: PrimitiveStaticTypeString,
+		})
+
+		test(v, false, PrimitiveStaticTypeAnyResource)
+		test(v, false, PrimitiveStaticTypeBool)
+		test(v, false, VariableSizedStaticType{
+			Type: PrimitiveStaticTypeString,
+		})
+
+	})
+
+	t.Run("AddressValue", func(t *testing.T) {
+
+		t.Parallel()
+
+		v := NewUnmeteredAddressValueFromBytes([]byte{0x1})
+
+		test(v, true, PrimitiveStaticTypeAny)
+		test(v, true, PrimitiveStaticTypeAnyStruct)
+		test(v, true, PrimitiveStaticTypeAddress)
+		test(v, true, OptionalStaticType{
+			Type: PrimitiveStaticTypeAddress,
+		})
+
+		test(v, false, PrimitiveStaticTypeAnyResource)
+		test(v, false, PrimitiveStaticTypeBool)
+		test(v, false, VariableSizedStaticType{
+			Type: PrimitiveStaticTypeAddress,
+		})
+
+	})
+
+}
