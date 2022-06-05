@@ -1399,7 +1399,7 @@ func (s *Server) prepareFunctionMemberCompletionItem(
 	resolver sema.MemberResolver,
 	name string,
 ) {
-	member := resolver.Resolve(item.Label, ast.Range{}, func(err error) { /* NO-OP */ })
+	member := resolver.Resolve(nil, item.Label, ast.Range{}, func(err error) { /* NO-OP */ })
 	functionType, ok := member.TypeAnnotation.Type.(*sema.FunctionType)
 	if !ok {
 		return
@@ -1528,7 +1528,7 @@ func (s *Server) maybeResolveMember(uri protocol.DocumentUri, id string, result 
 		return false
 	}
 
-	member := resolver.Resolve(result.Label, ast.Range{}, func(err error) { /* NO-OP */ })
+	member := resolver.Resolve(nil, result.Label, ast.Range{}, func(err error) { /* NO-OP */ })
 
 	result.Documentation = protocol.MarkupContent{
 		Kind:  "markdown",
@@ -1729,6 +1729,7 @@ func (s *Server) getDiagnostics(
 	checker, diagnosticsErr = sema.NewChecker(
 		program,
 		location,
+		nil,
 		sema.WithPredeclaredValues(valueDeclarations),
 		sema.WithPredeclaredTypes(typeDeclarations),
 		sema.WithLocationHandler(
@@ -1929,7 +1930,7 @@ func (s *Server) getDiagnosticsForParentError(
 			for _, errorNote := range errorNotes.ErrorNotes() {
 				if positioned, hasPosition := errorNote.(ast.HasPosition); hasPosition {
 					startPos := positioned.StartPosition()
-					endPos := positioned.EndPosition()
+					endPos := positioned.EndPosition(nil)
 					message := errorNote.Message()
 
 					diagnostic.RelatedInformation = append(diagnostic.RelatedInformation,
@@ -1954,7 +1955,7 @@ func (s *Server) getDiagnosticsForParentError(
 // parse parses the given code and returns the resultant program.
 func parse(conn protocol.Conn, code, location string) (*ast.Program, error) {
 	start := time.Now()
-	program, err := parser2.ParseProgram(code)
+	program, err := parser2.ParseProgram(code, nil)
 	elapsed := time.Since(start)
 
 	conn.LogMessage(&protocol.LogMessageParams{
@@ -1996,7 +1997,7 @@ func (s *Server) resolveImport(location common.Location) (program *ast.Program, 
 		return nil, err
 	}
 
-	return parser2.ParseProgram(code)
+	return parser2.ParseProgram(code, nil)
 }
 
 func (s *Server) GetDocument(uri protocol.DocumentUri) (doc Document, ok bool) {
@@ -2142,7 +2143,7 @@ func (s *Server) parseEntryPointArguments(_ protocol.Conn, args ...interface{}) 
 		if !ok {
 			return nil, fmt.Errorf("invalid argument at index %d: %#+v", i, argument)
 		}
-		value, err := runtime.ParseLiteral(argumentCode, parameterType)
+		value, err := runtime.ParseLiteral(argumentCode, parameterType, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -2175,7 +2176,7 @@ func (s *Server) convertError(
 	func() []*protocol.CodeAction,
 ) {
 	startPosition := err.StartPosition()
-	endPosition := err.EndPosition()
+	endPosition := err.EndPosition(nil)
 
 	protocolRange := conversion.ASTToProtocolRange(startPosition, endPosition)
 
@@ -2250,7 +2251,7 @@ func (s *Server) convertError(
 						lastFunction := functions[len(functions)-1]
 						return insertionPosition{
 							before:   false,
-							Position: lastFunction.EndPosition().Shifted(1),
+							Position: lastFunction.EndPosition(nil).Shifted(nil, 1),
 						}
 					case !isFunction && len(fields) > 0:
 						// If a field is inserted,
@@ -2258,7 +2259,7 @@ func (s *Server) convertError(
 						lastField := fields[len(fields)-1]
 						return insertionPosition{
 							before:   false,
-							Position: lastField.EndPosition().Shifted(1),
+							Position: lastField.EndPosition(nil).Shifted(nil, 1),
 						}
 					case !isFunction && len(functions) > 0:
 						// If a field is inserted,
@@ -2278,13 +2279,13 @@ func (s *Server) convertError(
 						lastDeclaration := declarations[len(declarations)-1]
 						return insertionPosition{
 							before:   false,
-							Position: lastDeclaration.EndPosition().Shifted(1),
+							Position: lastDeclaration.EndPosition(nil).Shifted(nil, 1),
 						}
 					}
 
 					return insertionPosition{
 						before:   true,
-						Position: declaration.EndPosition(),
+						Position: declaration.EndPosition(nil),
 					}
 				},
 			)
@@ -2373,7 +2374,7 @@ func (s *Server) maybeReturnTypeChangeCodeActionsResolver(
 		if isEmptyType(returnTypeAnnotation.Type) {
 
 			title = fmt.Sprintf("Add return type `%s`", err.ActualType)
-			insertionPos := parameterList.EndPosition().Shifted(1)
+			insertionPos := parameterList.EndPosition(nil).Shifted(nil, 1)
 			textEdit = protocol.TextEdit{
 				Range: protocol.Range{
 					Start: conversion.ASTToProtocolPosition(insertionPos),
@@ -2386,7 +2387,7 @@ func (s *Server) maybeReturnTypeChangeCodeActionsResolver(
 			textEdit = protocol.TextEdit{
 				Range: conversion.ASTToProtocolRange(
 					returnTypeAnnotation.StartPosition(),
-					returnTypeAnnotation.EndPosition(),
+					returnTypeAnnotation.EndPosition(nil),
 				),
 				NewText: err.ActualType.String(),
 			}
@@ -2585,12 +2586,12 @@ func (s *Server) maybeAddDeclarationActionsResolver(
 							element := stack[i]
 							switch element := element.(type) {
 							case *ast.FunctionDeclaration:
-								position := element.EndPosition()
+								position := element.EndPosition(nil)
 								parentFunctionEndPos = &position
 								break
 
 							case *ast.SpecialFunctionDeclaration:
-								position := element.FunctionDeclaration.EndPosition()
+								position := element.FunctionDeclaration.EndPosition(nil)
 								parentFunctionEndPos = &position
 								break
 							}
@@ -2629,7 +2630,7 @@ func (s *Server) maybeAddDeclarationActionsResolver(
 				if parentFunctionEndPos != nil {
 					insertionPos = insertionPosition{
 						before:   false,
-						Position: parentFunctionEndPos.Shifted(1),
+						Position: parentFunctionEndPos.Shifted(nil, 1),
 					}
 				} else {
 					insertionPos = insertionPosition{
@@ -2983,7 +2984,7 @@ func convertHint(
 	func() []*protocol.CodeAction,
 ) {
 	startPosition := hint.StartPosition()
-	endPosition := hint.EndPosition()
+	endPosition := hint.EndPosition(nil)
 
 	protocolRange := conversion.ASTToProtocolRange(startPosition, endPosition)
 

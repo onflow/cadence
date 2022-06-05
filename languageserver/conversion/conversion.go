@@ -39,7 +39,7 @@ func ASTToProtocolPosition(pos ast.Position) protocol.Position {
 func ASTToProtocolRange(startPos, endPos ast.Position) protocol.Range {
 	return protocol.Range{
 		Start: ASTToProtocolPosition(startPos),
-		End:   ASTToProtocolPosition(endPos.Shifted(1)),
+		End:   ASTToProtocolPosition(endPos.Shifted(nil, 1)),
 	}
 }
 
@@ -116,7 +116,7 @@ func DeclarationToDocumentSymbol(declaration ast.Declaration) protocol.DocumentS
 		name = identifier.Identifier
 		selectionRange = ASTToProtocolRange(
 			identifier.StartPosition(),
-			identifier.EndPosition(),
+			identifier.EndPosition(nil),
 		)
 	} else {
 		switch declarationKind {
@@ -140,7 +140,7 @@ func DeclarationToDocumentSymbol(declaration ast.Declaration) protocol.DocumentS
 		Kind: DeclarationKindToSymbolKind(declarationKind),
 		Range: ASTToProtocolRange(
 			declaration.StartPosition(),
-			declaration.EndPosition(),
+			declaration.EndPosition(nil),
 		),
 		SelectionRange: selectionRange,
 		Children:       children,
