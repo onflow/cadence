@@ -74,5 +74,5 @@ func SetupDebugStdout() {
 // You can view logs by using the command `tail -f ./debug.log` in the root langauge server folder.
 func Log(msg ...interface{}) {
 	SetupLogging()
-	log.Println(msg)
+	log.Println(msg...)
 }
