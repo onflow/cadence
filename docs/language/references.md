@@ -33,13 +33,13 @@ If the referenced value is nil, the reference itself will be nil. If the referen
 exists, then forcing the optional reference will yield a reference to that value:
 
 ```cadence
-let nil: String? = nil
-let nilRef = &n as &String? // r has type &String?
-let n = r! // error, forced nil value
+let nilValue: String? = nil
+let nilRef = &nilValue as &String? // r has type &String?
+let n = nilRef! // error, forced nil value
 
-let str: String? = ""
-let strRef = &n as &String? // r has type &String?
-let n = r! // n has type &String
+let strValue: String? = ""
+let strRef = &strValue as &String? // r has type &String?
+let n = strRef! // n has type &String
 ```
 
 References are covariant in their base types.
