@@ -3642,7 +3642,6 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 				})
 			})
 		}
-
 	})
 
 	t.Run("BoolValue", func(t *testing.T) {
@@ -3663,7 +3662,6 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		test(v, false, VariableSizedStaticType{
 			Type: PrimitiveStaticTypeBool,
 		})
-
 	})
 
 	t.Run("StringValue", func(t *testing.T) {
@@ -3684,7 +3682,6 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		test(v, false, VariableSizedStaticType{
 			Type: PrimitiveStaticTypeString,
 		})
-
 	})
 
 	t.Run("AddressValue", func(t *testing.T) {
@@ -3705,7 +3702,195 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		test(v, false, VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAddress,
 		})
+	})
 
+	t.Run("TypeValue", func(t *testing.T) {
+
+		t.Parallel()
+
+		v := NewUnmeteredTypeValue(PrimitiveStaticTypeInt)
+
+		test(v, true, PrimitiveStaticTypeAny)
+		test(v, true, PrimitiveStaticTypeAnyStruct)
+		test(v, true, PrimitiveStaticTypeMetaType)
+		test(v, true, OptionalStaticType{
+			Type: PrimitiveStaticTypeMetaType,
+		})
+
+		test(v, false, PrimitiveStaticTypeAnyResource)
+		test(v, false, PrimitiveStaticTypeBool)
+		test(v, false, VariableSizedStaticType{
+			Type: PrimitiveStaticTypeMetaType,
+		})
+	})
+
+	t.Run("VoidValue", func(t *testing.T) {
+
+		t.Parallel()
+
+		v := NewUnmeteredVoidValue()
+
+		test(v, true, PrimitiveStaticTypeAny)
+		test(v, true, PrimitiveStaticTypeAnyStruct)
+		test(v, true, PrimitiveStaticTypeVoid)
+		test(v, true, OptionalStaticType{
+			Type: PrimitiveStaticTypeVoid,
+		})
+
+		test(v, false, PrimitiveStaticTypeAnyResource)
+		test(v, false, PrimitiveStaticTypeBool)
+		test(v, false, VariableSizedStaticType{
+			Type: PrimitiveStaticTypeVoid,
+		})
+	})
+
+	t.Run("CharacterValue", func(t *testing.T) {
+
+		t.Parallel()
+
+		v := NewUnmeteredCharacterValue("t")
+
+		test(v, true, PrimitiveStaticTypeAny)
+		test(v, true, PrimitiveStaticTypeAnyStruct)
+		test(v, true, PrimitiveStaticTypeCharacter)
+		test(v, true, OptionalStaticType{
+			Type: PrimitiveStaticTypeCharacter,
+		})
+
+		test(v, false, PrimitiveStaticTypeAnyResource)
+		test(v, false, PrimitiveStaticTypeBool)
+		test(v, false, VariableSizedStaticType{
+			Type: PrimitiveStaticTypeCharacter,
+		})
+	})
+
+	// TODO: number types
+
+	t.Run("NilValue", func(t *testing.T) {
+
+		t.Parallel()
+
+		v := NewUnmeteredNilValue()
+
+		test(v, true, PrimitiveStaticTypeAny)
+		test(v, true, PrimitiveStaticTypeAnyStruct)
+		test(v, true, PrimitiveStaticTypeAnyResource)
+		test(v, true, OptionalStaticType{
+			Type: PrimitiveStaticTypeNever,
+		})
+
+	})
+
+	t.Run("SomeValue", func(t *testing.T) {
+
+		t.Parallel()
+
+		v := NewUnmeteredSomeValueNonCopying(
+			NewUnmeteredBoolValue(true),
+		)
+
+		test(v, true, PrimitiveStaticTypeAny)
+		test(v, true, PrimitiveStaticTypeAnyStruct)
+		test(v, true, OptionalStaticType{
+			Type: PrimitiveStaticTypeBool,
+		})
+		test(v, true, OptionalStaticType{
+			Type: OptionalStaticType{
+				Type: PrimitiveStaticTypeBool,
+			},
+		})
+
+		test(v, false, PrimitiveStaticTypeAnyResource)
+		test(v, false, PrimitiveStaticTypeBool)
+		test(v, false, PrimitiveStaticTypeString)
+
+	})
+
+	t.Run("PathValue, storage domain", func(t *testing.T) {
+
+		t.Parallel()
+
+		v := NewUnmeteredPathValue(common.PathDomainStorage, "test")
+
+		test(v, true, PrimitiveStaticTypeAny)
+		test(v, true, PrimitiveStaticTypeAnyStruct)
+		test(v, true, PrimitiveStaticTypePath)
+		test(v, true, PrimitiveStaticTypeStoragePath)
+		test(v, true, OptionalStaticType{
+			Type: PrimitiveStaticTypePath,
+		})
+		test(v, true, OptionalStaticType{
+			Type: PrimitiveStaticTypeStoragePath,
+		})
+
+		test(v, false, PrimitiveStaticTypeAnyResource)
+		test(v, false, PrimitiveStaticTypeCapabilityPath)
+		test(v, false, PrimitiveStaticTypePrivatePath)
+		test(v, false, PrimitiveStaticTypePublicPath)
+		test(v, false, PrimitiveStaticTypeBool)
+		test(v, false, VariableSizedStaticType{
+			Type: PrimitiveStaticTypePath,
+		})
+	})
+
+	t.Run("PathValue, public domain", func(t *testing.T) {
+
+		t.Parallel()
+
+		v := NewUnmeteredPathValue(common.PathDomainPublic, "test")
+
+		test(v, true, PrimitiveStaticTypeAny)
+		test(v, true, PrimitiveStaticTypeAnyStruct)
+		test(v, true, PrimitiveStaticTypePath)
+		test(v, true, PrimitiveStaticTypeCapabilityPath)
+		test(v, true, PrimitiveStaticTypePublicPath)
+		test(v, true, OptionalStaticType{
+			Type: PrimitiveStaticTypePath,
+		})
+		test(v, true, OptionalStaticType{
+			Type: PrimitiveStaticTypeCapabilityPath,
+		})
+		test(v, true, OptionalStaticType{
+			Type: PrimitiveStaticTypePublicPath,
+		})
+
+		test(v, false, PrimitiveStaticTypeAnyResource)
+		test(v, false, PrimitiveStaticTypeStoragePath)
+		test(v, false, PrimitiveStaticTypePrivatePath)
+		test(v, false, PrimitiveStaticTypeBool)
+		test(v, false, VariableSizedStaticType{
+			Type: PrimitiveStaticTypePath,
+		})
+	})
+
+	t.Run("PathValue, private domain", func(t *testing.T) {
+
+		t.Parallel()
+
+		v := NewUnmeteredPathValue(common.PathDomainPrivate, "test")
+
+		test(v, true, PrimitiveStaticTypeAny)
+		test(v, true, PrimitiveStaticTypeAnyStruct)
+		test(v, true, PrimitiveStaticTypePath)
+		test(v, true, PrimitiveStaticTypeCapabilityPath)
+		test(v, true, PrimitiveStaticTypePrivatePath)
+		test(v, true, OptionalStaticType{
+			Type: PrimitiveStaticTypePath,
+		})
+		test(v, true, OptionalStaticType{
+			Type: PrimitiveStaticTypeCapabilityPath,
+		})
+		test(v, true, OptionalStaticType{
+			Type: PrimitiveStaticTypePrivatePath,
+		})
+
+		test(v, false, PrimitiveStaticTypeAnyResource)
+		test(v, false, PrimitiveStaticTypeStoragePath)
+		test(v, false, PrimitiveStaticTypePublicPath)
+		test(v, false, PrimitiveStaticTypeBool)
+		test(v, false, VariableSizedStaticType{
+			Type: PrimitiveStaticTypePath,
+		})
 	})
 
 }
