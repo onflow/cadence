@@ -25,6 +25,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path"
 	"sort"
 	"strings"
 	"sync"
@@ -53,6 +54,7 @@ func printErr(err error, location common.Location, codes map[common.LocationID]s
 }
 func main() {
 	var csvPathFlag = flag.String("csv", "", "analyze all programs in the given CSV file")
+	var directoryPathFlag = flag.String("directory", "", "analyze all programs in the given directory")
 	var networkFlag = flag.String("network", "", "name of network")
 	var addressFlag = flag.String("address", "", "analyze contracts in the given account")
 	var transactionFlag = flag.String("transaction", "", "analyze transaction with given ID")
@@ -106,12 +108,16 @@ func main() {
 	}
 
 	cvsPath := *csvPathFlag
+	directoryPath := *directoryPathFlag
 	address := *addressFlag
 	transaction := *transactionFlag
 
 	switch {
 	case cvsPath != "":
 		analyzeCSV(cvsPath, enabledAnalyzers)
+
+	case directoryPath != "":
+		analyzeDirectory(directoryPath, enabledAnalyzers)
 
 	case address != "":
 		network := *networkFlag
@@ -272,6 +278,80 @@ func analyzeCSV(path string, analyzers []*analysis.Analyzer) {
 		nil,
 	)
 	analyze(analysisConfig, locations, codes, analyzers)
+}
+
+func analyzeDirectory(directory string, analyzers []*analysis.Analyzer) {
+
+	entries, err := os.ReadDir(directory)
+	if err != nil {
+		panic(err)
+	}
+
+	locations, codes, contractNames := readDirectoryEntries(directory, entries)
+	analysisConfig := analysis.NewSimpleConfig(
+		analysis.NeedTypes,
+		codes,
+		contractNames,
+		nil,
+	)
+	analyze(analysisConfig, locations, codes, analyzers)
+}
+
+func readDirectoryEntries(
+	directory string,
+	entries []os.DirEntry,
+) (
+	locations []common.Location,
+	codes map[common.LocationID]string,
+	contractNames map[common.Address][]string,
+) {
+
+	codes = map[common.LocationID]string{}
+	contractNames = map[common.Address][]string{}
+
+	for _, entry := range entries {
+		name := entry.Name()
+
+		if entry.IsDir() || path.Ext(name) != ".cdc" {
+			continue
+		}
+
+		// Strip extension
+		typeID := name[:len(name)-len(path.Ext(name))]
+
+		location, qualifiedIdentifier, err := common.DecodeTypeID(typeID)
+		if err != nil {
+			panic(fmt.Errorf("invalid location in file %q: %w", name, err))
+		}
+
+		identifierParts := strings.Split(qualifiedIdentifier, ".")
+		if len(identifierParts) > 1 {
+			panic(fmt.Errorf(
+				"invalid location in file %q: invalid qualified identifier: %s",
+				name,
+				qualifiedIdentifier,
+			))
+		}
+
+		rawCode, err := os.ReadFile(path.Join(directory, name))
+		if err != nil {
+			panic(fmt.Errorf("failed to read file %q: %w", name, err))
+		}
+
+		code := string(rawCode)
+
+		locations = append(locations, location)
+		codes[location.ID()] = code
+
+		if addressLocation, ok := location.(common.AddressLocation); ok {
+			contractNames[addressLocation.Address] = append(
+				contractNames[addressLocation.Address],
+				addressLocation.Name,
+			)
+		}
+	}
+
+	return
 }
 
 func analyze(
