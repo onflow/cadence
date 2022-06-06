@@ -3182,10 +3182,25 @@ func (r *interpreterRuntime) Storage(context Context) (*Storage, *interpreter.In
 	memoryGauge, _ := context.Interface.(common.MemoryGauge)
 	storage := NewStorage(context.Interface, memoryGauge)
 
-	inter, err := interpreter.NewInterpreter(
+	var interpreterOptions []interpreter.Option
+	var checkerOptions []sema.Option
+
+	functions := r.standardLibraryFunctions(
+		context,
+		storage,
+		interpreterOptions,
+		checkerOptions,
+	)
+
+	_, inter, err := r.interpret(
 		nil,
-		context.Location,
-		interpreter.WithStorage(storage),
+		context,
+		storage,
+		functions,
+		stdlib.BuiltinValues,
+		interpreterOptions,
+		checkerOptions,
+		nil,
 	)
 	if err != nil {
 		return nil, nil, newError(err, context)
