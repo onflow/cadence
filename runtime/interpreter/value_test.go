@@ -3764,8 +3764,6 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		})
 	})
 
-	// TODO: number types
-
 	t.Run("NilValue", func(t *testing.T) {
 
 		t.Parallel()
@@ -3778,7 +3776,6 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		test(v, true, OptionalStaticType{
 			Type: PrimitiveStaticTypeNever,
 		})
-
 	})
 
 	t.Run("SomeValue", func(t *testing.T) {
@@ -3803,7 +3800,6 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		test(v, false, PrimitiveStaticTypeAnyResource)
 		test(v, false, PrimitiveStaticTypeBool)
 		test(v, false, PrimitiveStaticTypeString)
-
 	})
 
 	t.Run("PathValue, storage domain", func(t *testing.T) {
@@ -3893,4 +3889,169 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		})
 	})
 
+	t.Run("integer values", func(t *testing.T) {
+
+		t.Parallel()
+
+		type testCase struct {
+			Value  NumberValue
+			Signed bool
+		}
+
+		testCases := map[*sema.NumericType]testCase{
+			sema.IntType: {
+				Value:  NewUnmeteredIntValueFromInt64(42),
+				Signed: true,
+			},
+			sema.UIntType: {
+				Value: NewUnmeteredUIntValueFromUint64(42),
+			},
+			sema.UInt8Type: {
+				Value: NewUnmeteredUInt8Value(42),
+			},
+			sema.UInt16Type: {
+				Value: NewUnmeteredUInt16Value(42),
+			},
+			sema.UInt32Type: {
+				Value: NewUnmeteredUInt32Value(42),
+			},
+			sema.UInt64Type: {
+				Value: NewUnmeteredUInt64Value(42),
+			},
+			sema.UInt128Type: {
+				Value: NewUnmeteredUInt128ValueFromUint64(42),
+			},
+			sema.UInt256Type: {
+				Value: NewUnmeteredUInt256ValueFromUint64(42),
+			},
+			sema.Word8Type: {
+				Value: NewUnmeteredWord8Value(42),
+			},
+			sema.Word16Type: {
+				Value: NewUnmeteredWord16Value(42),
+			},
+			sema.Word32Type: {
+				Value: NewUnmeteredWord32Value(42),
+			},
+			sema.Word64Type: {
+				Value: NewUnmeteredWord64Value(42),
+			},
+			sema.Int8Type: {
+				Value:  NewUnmeteredInt8Value(42),
+				Signed: true,
+			},
+			sema.Int16Type: {
+				Value:  NewUnmeteredInt16Value(42),
+				Signed: true,
+			},
+			sema.Int32Type: {
+				Value:  NewUnmeteredInt32Value(42),
+				Signed: true,
+			},
+			sema.Int64Type: {
+				Value:  NewUnmeteredInt64Value(42),
+				Signed: true,
+			},
+			sema.Int128Type: {
+				Value:  NewUnmeteredInt128ValueFromInt64(42),
+				Signed: true,
+			},
+			sema.Int256Type: {
+				Value:  NewUnmeteredInt256ValueFromInt64(42),
+				Signed: true,
+			},
+		}
+
+		for _, ty := range sema.AllIntegerTypes {
+			// Only test leaf types
+			switch ty {
+			case sema.IntegerType, sema.SignedIntegerType:
+				continue
+			}
+
+			_, ok := testCases[ty.(*sema.NumericType)]
+			require.True(t, ok, "missing case for type %s", ty.String())
+		}
+
+		for semaType, testCase := range testCases {
+
+			v := testCase.Value
+			staticType := ConvertSemaToStaticType(nil, semaType)
+
+			test(v, true, PrimitiveStaticTypeAny)
+			test(v, true, PrimitiveStaticTypeAnyStruct)
+			test(v, true, PrimitiveStaticTypeNumber)
+			test(v, true, PrimitiveStaticTypeInteger)
+			test(v, testCase.Signed, PrimitiveStaticTypeSignedInteger)
+			test(v, true, staticType)
+			test(v, true, OptionalStaticType{
+				Type: PrimitiveStaticTypeInteger,
+			})
+
+			test(v, false, PrimitiveStaticTypeAnyResource)
+			test(v, false, PrimitiveStaticTypeBool)
+			test(v, false, PrimitiveStaticTypeFixedPoint)
+			test(v, false, PrimitiveStaticTypeSignedFixedPoint)
+			test(v, false, VariableSizedStaticType{
+				Type: staticType,
+			})
+		}
+	})
+
+	t.Run("fixed-point values", func(t *testing.T) {
+
+		t.Parallel()
+
+		type testCase struct {
+			Value  FixedPointValue
+			Signed bool
+		}
+
+		testCases := map[*sema.FixedPointNumericType]testCase{
+			sema.UFix64Type: {
+				Value: NewUnmeteredUFix64ValueWithInteger(42),
+			},
+			sema.Fix64Type: {
+				Value:  NewUnmeteredFix64ValueWithInteger(42),
+				Signed: true,
+			},
+		}
+
+		for _, ty := range sema.AllFixedPointTypes {
+			// Only test leaf types
+			switch ty {
+			case sema.FixedPointType, sema.SignedFixedPointType:
+				continue
+			}
+
+			_, ok := testCases[ty.(*sema.FixedPointNumericType)]
+			require.True(t, ok, "missing case for type %s", ty.String())
+		}
+
+		for semaType, testCase := range testCases {
+
+			v := testCase.Value
+			staticType := ConvertSemaToStaticType(nil, semaType)
+
+			test(v, true, PrimitiveStaticTypeAny)
+			test(v, true, PrimitiveStaticTypeAnyStruct)
+			test(v, true, PrimitiveStaticTypeNumber)
+			test(v, true, PrimitiveStaticTypeFixedPoint)
+			test(v, testCase.Signed, PrimitiveStaticTypeSignedFixedPoint)
+			test(v, true, staticType)
+			test(v, true, OptionalStaticType{
+				Type: PrimitiveStaticTypeFixedPoint,
+			})
+
+			test(v, false, PrimitiveStaticTypeAnyResource)
+			test(v, false, PrimitiveStaticTypeBool)
+			test(v, false, PrimitiveStaticTypeInteger)
+			test(v, false, PrimitiveStaticTypeSignedInteger)
+			test(v, false, VariableSizedStaticType{
+				Type: staticType,
+			})
+		}
+	})
+
+	// TODO: array, dictionary, composite, simple composite, ephemeral reference, storage reference
 }
