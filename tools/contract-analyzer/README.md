@@ -50,6 +50,27 @@ For example, to only run the `reference-to-optional` and the `external-mutation`
     -analyze external-mutation
 ```
 
+### Analyzing contracts in a directory
+
+To analyze all contracts in a directory, specify the path.
+
+For example:
+
+```bash
+cadence-analyzer -directory contracts
+```
+
+The files must be named with the `.cdc` extension and by their location ID of the program:
+- Contracts in accounts have the format `A.<address>.<name>`,
+  e.g. `A.e467b9dd11fa00df.FlowStorageFees`, where
+    - `address`: Address in hex format, e.g. `e467b9dd11fa00df`
+    - `name`: The name of the contract, e.g `FlowStorageFees`
+- Transactions have the format `t.<ID>`, where
+    - `id`: The ID of the transaction (its hash)
+- Scripts have the format `s.<ID>`, where
+    - `id`: The ID of the script (its hash)
+
+
 ### Analyzing contracts in a CSV file
 
 To analyze all contracts in a CSV file, specify the path to the file.
