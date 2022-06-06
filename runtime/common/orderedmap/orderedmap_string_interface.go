@@ -27,23 +27,23 @@ package orderedmap
 
 import "container/list"
 
-// StringInterfaceOrderedMap
+// StringAnyOrderedMap
 //
-type StringInterfaceOrderedMap struct {
-	pairs map[string]*StringInterfacePair
+type StringAnyOrderedMap struct {
+	pairs map[string]*StringAnyPair
 	list  *list.List
 }
 
-// NewStringInterfaceOrderedMap creates a new StringInterfaceOrderedMap.
-func NewStringInterfaceOrderedMap() *StringInterfaceOrderedMap {
-	return &StringInterfaceOrderedMap{
-		pairs: make(map[string]*StringInterfacePair),
+// NewStringAnyOrderedMap creates a new StringAnyOrderedMap.
+func NewStringAnyOrderedMap() *StringAnyOrderedMap {
+	return &StringAnyOrderedMap{
+		pairs: make(map[string]*StringAnyPair),
 		list:  list.New(),
 	}
 }
 
 // Clear removes all entries from this ordered map.
-func (om *StringInterfaceOrderedMap) Clear() {
+func (om *StringAnyOrderedMap) Clear() {
 	om.list.Init()
 	// NOTE: Range over map is safe, as it is only used to delete entries
 	for key := range om.pairs { //nolint:maprangecheck
@@ -54,8 +54,8 @@ func (om *StringInterfaceOrderedMap) Clear() {
 // Get returns the value associated with the given key.
 // Returns nil if not found.
 // The second return value indicates if the key is present in the map.
-func (om *StringInterfaceOrderedMap) Get(key string) (result any, present bool) {
-	var pair *StringInterfacePair
+func (om *StringAnyOrderedMap) Get(key string) (result any, present bool) {
+	var pair *StringAnyPair
 	if pair, present = om.pairs[key]; present {
 		return pair.Value, present
 	}
@@ -64,21 +64,21 @@ func (om *StringInterfaceOrderedMap) Get(key string) (result any, present bool) 
 
 // GetPair returns the key-value pair associated with the given key.
 // Returns nil if not found.
-func (om *StringInterfaceOrderedMap) GetPair(key string) *StringInterfacePair {
+func (om *StringAnyOrderedMap) GetPair(key string) *StringAnyPair {
 	return om.pairs[key]
 }
 
 // Set sets the key-value pair, and returns what `Get` would have returned
 // on that key prior to the call to `Set`.
-func (om *StringInterfaceOrderedMap) Set(key string, value any) (oldValue any, present bool) {
-	var pair *StringInterfacePair
+func (om *StringAnyOrderedMap) Set(key string, value any) (oldValue any, present bool) {
+	var pair *StringAnyPair
 	if pair, present = om.pairs[key]; present {
 		oldValue = pair.Value
 		pair.Value = value
 		return
 	}
 
-	pair = &StringInterfacePair{
+	pair = &StringAnyPair{
 		Key:   key,
 		Value: value,
 	}
@@ -90,8 +90,8 @@ func (om *StringInterfaceOrderedMap) Set(key string, value any) (oldValue any, p
 
 // Delete removes the key-value pair, and returns what `Get` would have returned
 // on that key prior to the call to `Delete`.
-func (om *StringInterfaceOrderedMap) Delete(key string) (oldValue any, present bool) {
-	var pair *StringInterfacePair
+func (om *StringAnyOrderedMap) Delete(key string) (oldValue any, present bool) {
+	var pair *StringAnyPair
 	pair, present = om.pairs[key]
 	if !present {
 		return
@@ -105,23 +105,23 @@ func (om *StringInterfaceOrderedMap) Delete(key string) (oldValue any, present b
 }
 
 // Len returns the length of the ordered map.
-func (om *StringInterfaceOrderedMap) Len() int {
+func (om *StringAnyOrderedMap) Len() int {
 	return len(om.pairs)
 }
 
 // Oldest returns a pointer to the oldest pair.
-func (om *StringInterfaceOrderedMap) Oldest() *StringInterfacePair {
-	return listElementToStringInterfacePair(om.list.Front())
+func (om *StringAnyOrderedMap) Oldest() *StringAnyPair {
+	return listElementToStringAnyPair(om.list.Front())
 }
 
 // Newest returns a pointer to the newest pair.
-func (om *StringInterfaceOrderedMap) Newest() *StringInterfacePair {
-	return listElementToStringInterfacePair(om.list.Back())
+func (om *StringAnyOrderedMap) Newest() *StringAnyPair {
+	return listElementToStringAnyPair(om.list.Back())
 }
 
 // Foreach iterates over the entries of the map in the insertion order, and invokes
 // the provided function for each key-value pair.
-func (om *StringInterfaceOrderedMap) Foreach(f func(key string, value any)) {
+func (om *StringAnyOrderedMap) Foreach(f func(key string, value any)) {
 	for pair := om.Oldest(); pair != nil; pair = pair.Next() {
 		f(pair.Key, pair.Value)
 	}
@@ -130,7 +130,7 @@ func (om *StringInterfaceOrderedMap) Foreach(f func(key string, value any)) {
 // ForeachWithError iterates over the entries of the map in the insertion order,
 // and invokes the provided function for each key-value pair.
 // If the passed function returns an error, iteration breaks and the error is returned.
-func (om *StringInterfaceOrderedMap) ForeachWithError(f func(key string, value any) error) error {
+func (om *StringAnyOrderedMap) ForeachWithError(f func(key string, value any) error) error {
 	for pair := om.Oldest(); pair != nil; pair = pair.Next() {
 		err := f(pair.Key, pair.Value)
 		if err != nil {
@@ -140,9 +140,9 @@ func (om *StringInterfaceOrderedMap) ForeachWithError(f func(key string, value a
 	return nil
 }
 
-// StringInterfacePair
+// StringAnyPair
 //
-type StringInterfacePair struct {
+type StringAnyPair struct {
 	Key   string
 	Value any
 
@@ -150,18 +150,18 @@ type StringInterfacePair struct {
 }
 
 // Next returns a pointer to the next pair.
-func (p *StringInterfacePair) Next() *StringInterfacePair {
-	return listElementToStringInterfacePair(p.element.Next())
+func (p *StringAnyPair) Next() *StringAnyPair {
+	return listElementToStringAnyPair(p.element.Next())
 }
 
 // Prev returns a pointer to the previous pair.
-func (p *StringInterfacePair) Prev() *StringInterfacePair {
-	return listElementToStringInterfacePair(p.element.Prev())
+func (p *StringAnyPair) Prev() *StringAnyPair {
+	return listElementToStringAnyPair(p.element.Prev())
 }
 
-func listElementToStringInterfacePair(element *list.Element) *StringInterfacePair {
+func listElementToStringAnyPair(element *list.Element) *StringAnyPair {
 	if element == nil {
 		return nil
 	}
-	return element.Value.(*StringInterfacePair)
+	return element.Value.(*StringAnyPair)
 }

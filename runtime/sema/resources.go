@@ -87,7 +87,7 @@ func (ri ResourceInfo) Clone() ResourceInfo {
 // Resources is a map which contains invalidation info for resources.
 //
 type Resources struct {
-	resources *InterfaceResourceInfoOrderedMap
+	resources *AnyResourceInfoOrderedMap
 	// JumpsOrReturns indicates that the (branch of) the function
 	// contains a definite return, break, or continue statement
 	JumpsOrReturns bool
@@ -98,7 +98,7 @@ type Resources struct {
 
 func NewResources() *Resources {
 	return &Resources{
-		resources: NewInterfaceResourceInfoOrderedMap(),
+		resources: NewAnyResourceInfoOrderedMap(),
 	}
 }
 
