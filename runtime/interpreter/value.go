@@ -14879,14 +14879,16 @@ func (v *CompositeValue) ConformsToStaticType(
 			return false
 		}
 
-		if !interpreter.IsSubTypeOfSemaType(value.StaticType(interpreter), member.TypeAnnotation.Type) {
+		fieldStaticType := value.StaticType(interpreter)
+
+		if !interpreter.IsSubTypeOfSemaType(fieldStaticType, member.TypeAnnotation.Type) {
 			return false
 		}
 
 		if !value.ConformsToStaticType(
 			interpreter,
 			getLocationRange,
-			value.StaticType(interpreter),
+			fieldStaticType,
 			results,
 		) {
 			return false
@@ -16687,7 +16689,7 @@ func (v *SomeValue) SetMember(interpreter *Interpreter, getLocationRange func() 
 	panic(errors.NewUnreachableError())
 }
 
-func (v SomeValue) ConformsToStaticType(
+func (v *SomeValue) ConformsToStaticType(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
 	staticType StaticType,
@@ -16697,18 +16699,18 @@ func (v SomeValue) ConformsToStaticType(
 	// TODO: handle AnyStruct/AnyResource
 
 	optionalType, ok := staticType.(OptionalStaticType)
-	if !ok {
-		return false
+	if ok {
+		innerValue := v.InnerValue(interpreter, getLocationRange)
+
+		return innerValue.ConformsToStaticType(
+			interpreter,
+			getLocationRange,
+			optionalType.Type,
+			results,
+		)
 	}
 
-	innerValue := v.InnerValue(interpreter, getLocationRange)
-
-	return innerValue.ConformsToStaticType(
-		interpreter,
-		getLocationRange,
-		optionalType.Type,
-		results,
-	)
+	return primitiveValueConformsToStaticType(interpreter, v, staticType)
 }
 
 func (v *SomeValue) Equal(interpreter *Interpreter, getLocationRange func() LocationRange, other Value) bool {
@@ -18241,12 +18243,7 @@ func (v *CapabilityValue) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	semaType, err := inter.ConvertStaticToSemaType(staticType)
-	if err != nil {
-		return false
-	}
-
-	return inter.IsSubTypeOfSemaType(v.StaticType(inter), semaType)
+	return primitiveValueConformsToStaticType(inter, v, staticType)
 }
 
 func (v *CapabilityValue) Equal(interpreter *Interpreter, getLocationRange func() LocationRange, other Value) bool {
