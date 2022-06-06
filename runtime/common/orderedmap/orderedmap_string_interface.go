@@ -54,7 +54,7 @@ func (om *StringInterfaceOrderedMap) Clear() {
 // Get returns the value associated with the given key.
 // Returns nil if not found.
 // The second return value indicates if the key is present in the map.
-func (om *StringInterfaceOrderedMap) Get(key string) (result interface{}, present bool) {
+func (om *StringInterfaceOrderedMap) Get(key string) (result any, present bool) {
 	var pair *StringInterfacePair
 	if pair, present = om.pairs[key]; present {
 		return pair.Value, present
@@ -70,7 +70,7 @@ func (om *StringInterfaceOrderedMap) GetPair(key string) *StringInterfacePair {
 
 // Set sets the key-value pair, and returns what `Get` would have returned
 // on that key prior to the call to `Set`.
-func (om *StringInterfaceOrderedMap) Set(key string, value interface{}) (oldValue interface{}, present bool) {
+func (om *StringInterfaceOrderedMap) Set(key string, value any) (oldValue any, present bool) {
 	var pair *StringInterfacePair
 	if pair, present = om.pairs[key]; present {
 		oldValue = pair.Value
@@ -90,7 +90,7 @@ func (om *StringInterfaceOrderedMap) Set(key string, value interface{}) (oldValu
 
 // Delete removes the key-value pair, and returns what `Get` would have returned
 // on that key prior to the call to `Delete`.
-func (om *StringInterfaceOrderedMap) Delete(key string) (oldValue interface{}, present bool) {
+func (om *StringInterfaceOrderedMap) Delete(key string) (oldValue any, present bool) {
 	var pair *StringInterfacePair
 	pair, present = om.pairs[key]
 	if !present {
@@ -121,7 +121,7 @@ func (om *StringInterfaceOrderedMap) Newest() *StringInterfacePair {
 
 // Foreach iterates over the entries of the map in the insertion order, and invokes
 // the provided function for each key-value pair.
-func (om *StringInterfaceOrderedMap) Foreach(f func(key string, value interface{})) {
+func (om *StringInterfaceOrderedMap) Foreach(f func(key string, value any)) {
 	for pair := om.Oldest(); pair != nil; pair = pair.Next() {
 		f(pair.Key, pair.Value)
 	}
@@ -130,7 +130,7 @@ func (om *StringInterfaceOrderedMap) Foreach(f func(key string, value interface{
 // ForeachWithError iterates over the entries of the map in the insertion order,
 // and invokes the provided function for each key-value pair.
 // If the passed function returns an error, iteration breaks and the error is returned.
-func (om *StringInterfaceOrderedMap) ForeachWithError(f func(key string, value interface{}) error) error {
+func (om *StringInterfaceOrderedMap) ForeachWithError(f func(key string, value any) error) error {
 	for pair := om.Oldest(); pair != nil; pair = pair.Next() {
 		err := f(pair.Key, pair.Value)
 		if err != nil {
@@ -144,7 +144,7 @@ func (om *StringInterfaceOrderedMap) ForeachWithError(f func(key string, value i
 //
 type StringInterfacePair struct {
 	Key   string
-	Value interface{}
+	Value any
 
 	element *list.Element
 }

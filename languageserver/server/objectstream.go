@@ -19,14 +19,14 @@
 package server
 
 type ObjectStream struct {
-	writeObject func(obj interface{}) error
-	readObject  func(v interface{}) error
+	writeObject func(obj any) error
+	readObject  func(v any) error
 	close       func() error
 }
 
 func NewObjectStream(
-	writeObject func(obj interface{}) error,
-	readObject func(v interface{}) error,
+	writeObject func(obj any) error,
+	readObject func(v any) error,
 	close func() error,
 ) ObjectStream {
 	return ObjectStream{
@@ -36,11 +36,11 @@ func NewObjectStream(
 	}
 }
 
-func (o ObjectStream) WriteObject(obj interface{}) error {
+func (o ObjectStream) WriteObject(obj any) error {
 	return o.writeObject(obj)
 }
 
-func (o ObjectStream) ReadObject(v interface{}) (err error) {
+func (o ObjectStream) ReadObject(v any) (err error) {
 	return o.readObject(v)
 }
 

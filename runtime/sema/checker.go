@@ -1592,7 +1592,7 @@ func (checker *Checker) checkResourceLoss(depth int) {
 }
 
 type recordedResourceInvalidation struct {
-	resource     interface{}
+	resource     any
 	invalidation ResourceInvalidation
 }
 
@@ -2547,7 +2547,7 @@ func (checker *Checker) declareGlobalRanges() {
 	checker.Elaboration.GlobalValues.Foreach(addRange)
 }
 
-func (checker *Checker) maybeAddResourceInvalidation(resource interface{}, invalidation ResourceInvalidation) {
+func (checker *Checker) maybeAddResourceInvalidation(resource any, invalidation ResourceInvalidation) {
 	functionActivation := checker.functionActivations.Current()
 
 	if functionActivation.ReturnInfo.IsUnreachable() {

@@ -30,14 +30,14 @@ import "container/list"
 // InterfaceResourceInfoOrderedMap
 //
 type InterfaceResourceInfoOrderedMap struct {
-	pairs map[interface{}]*InterfaceResourceInfoPair
+	pairs map[any]*InterfaceResourceInfoPair
 	list  *list.List
 }
 
 // NewInterfaceResourceInfoOrderedMap creates a new InterfaceResourceInfoOrderedMap.
 func NewInterfaceResourceInfoOrderedMap() *InterfaceResourceInfoOrderedMap {
 	return &InterfaceResourceInfoOrderedMap{
-		pairs: make(map[interface{}]*InterfaceResourceInfoPair),
+		pairs: make(map[any]*InterfaceResourceInfoPair),
 		list:  list.New(),
 	}
 }
@@ -54,7 +54,7 @@ func (om *InterfaceResourceInfoOrderedMap) Clear() {
 // Get returns the value associated with the given key.
 // Returns nil if not found.
 // The second return value indicates if the key is present in the map.
-func (om *InterfaceResourceInfoOrderedMap) Get(key interface{}) (result ResourceInfo, present bool) {
+func (om *InterfaceResourceInfoOrderedMap) Get(key any) (result ResourceInfo, present bool) {
 	var pair *InterfaceResourceInfoPair
 	if pair, present = om.pairs[key]; present {
 		return pair.Value, present
@@ -64,13 +64,13 @@ func (om *InterfaceResourceInfoOrderedMap) Get(key interface{}) (result Resource
 
 // GetPair returns the key-value pair associated with the given key.
 // Returns nil if not found.
-func (om *InterfaceResourceInfoOrderedMap) GetPair(key interface{}) *InterfaceResourceInfoPair {
+func (om *InterfaceResourceInfoOrderedMap) GetPair(key any) *InterfaceResourceInfoPair {
 	return om.pairs[key]
 }
 
 // Set sets the key-value pair, and returns what `Get` would have returned
 // on that key prior to the call to `Set`.
-func (om *InterfaceResourceInfoOrderedMap) Set(key interface{}, value ResourceInfo) (oldValue ResourceInfo, present bool) {
+func (om *InterfaceResourceInfoOrderedMap) Set(key any, value ResourceInfo) (oldValue ResourceInfo, present bool) {
 	var pair *InterfaceResourceInfoPair
 	if pair, present = om.pairs[key]; present {
 		oldValue = pair.Value
@@ -90,7 +90,7 @@ func (om *InterfaceResourceInfoOrderedMap) Set(key interface{}, value ResourceIn
 
 // Delete removes the key-value pair, and returns what `Get` would have returned
 // on that key prior to the call to `Delete`.
-func (om *InterfaceResourceInfoOrderedMap) Delete(key interface{}) (oldValue ResourceInfo, present bool) {
+func (om *InterfaceResourceInfoOrderedMap) Delete(key any) (oldValue ResourceInfo, present bool) {
 	var pair *InterfaceResourceInfoPair
 	pair, present = om.pairs[key]
 	if !present {
@@ -121,7 +121,7 @@ func (om *InterfaceResourceInfoOrderedMap) Newest() *InterfaceResourceInfoPair {
 
 // Foreach iterates over the entries of the map in the insertion order, and invokes
 // the provided function for each key-value pair.
-func (om *InterfaceResourceInfoOrderedMap) Foreach(f func(key interface{}, value ResourceInfo)) {
+func (om *InterfaceResourceInfoOrderedMap) Foreach(f func(key any, value ResourceInfo)) {
 	for pair := om.Oldest(); pair != nil; pair = pair.Next() {
 		f(pair.Key, pair.Value)
 	}
@@ -130,7 +130,7 @@ func (om *InterfaceResourceInfoOrderedMap) Foreach(f func(key interface{}, value
 // ForeachWithError iterates over the entries of the map in the insertion order,
 // and invokes the provided function for each key-value pair.
 // If the passed function returns an error, iteration breaks and the error is returned.
-func (om *InterfaceResourceInfoOrderedMap) ForeachWithError(f func(key interface{}, value ResourceInfo) error) error {
+func (om *InterfaceResourceInfoOrderedMap) ForeachWithError(f func(key any, value ResourceInfo) error) error {
 	for pair := om.Oldest(); pair != nil; pair = pair.Next() {
 		err := f(pair.Key, pair.Value)
 		if err != nil {
@@ -143,7 +143,7 @@ func (om *InterfaceResourceInfoOrderedMap) ForeachWithError(f func(key interface
 // InterfaceResourceInfoPair
 //
 type InterfaceResourceInfoPair struct {
-	Key   interface{}
+	Key   any
 	Value ResourceInfo
 
 	element *list.Element

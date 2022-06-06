@@ -212,7 +212,7 @@ type Registration struct {
 	/*RegisterOptions defined:
 	 * Options necessary for the registration.
 	 */
-	RegisterOptions interface{} `json:"registerOptions,omitempty"`
+	RegisterOptions any `json:"registerOptions,omitempty"`
 }
 
 // RegistrationParams is
@@ -1292,7 +1292,7 @@ type ClientCapabilities struct {
 	/*Experimental defined:
 	 * Experimental client capabilities.
 	 */
-	Experimental interface{} `json:"experimental,omitempty"`
+	Experimental any `json:"experimental,omitempty"`
 }
 
 /*StaticRegistrationOptions defined:
@@ -1489,7 +1489,7 @@ type ServerCapabilities struct {
 	 * Defines how text documents are synced. Is either a detailed structure defining each notification or
 	 * for backwards compatibility the TextDocumentSyncKind number.
 	 */
-	TextDocumentSync interface{} `json:"textDocumentSync,omitempty"` // TextDocumentSyncOptions | TextDocumentSyncKind
+	TextDocumentSync any `json:"textDocumentSync,omitempty"` // TextDocumentSyncOptions | TextDocumentSyncKind
 
 	/*HoverProvider defined:
 	 * The server provides hover support.
@@ -1574,7 +1574,7 @@ type ServerCapabilities struct {
 	 * specified if the client states that it supports
 	 * `prepareSupport` in its initial `initialize` request.
 	 */
-	RenameProvider interface{} `json:"renameProvider,omitempty"` // boolean | RenameOptions
+	RenameProvider any `json:"renameProvider,omitempty"` // boolean | RenameOptions
 
 	/*DocumentLinkProvider defined:
 	 * The server provides document link support.
@@ -1589,7 +1589,7 @@ type ServerCapabilities struct {
 	/*Experimental defined:
 	 * Experimental server capabilities.
 	 */
-	Experimental interface{} `json:"experimental,omitempty"`
+	Experimental any `json:"experimental,omitempty"`
 
 	/*ImplementationProvider defined:
 	 * The server provides Goto Implementation support.
@@ -1682,7 +1682,7 @@ type InitializeParams struct {
 	/*InitializationOptions defined:
 	 * User provided initialization options.
 	 */
-	InitializationOptions interface{} `json:"initializationOptions,omitempty"`
+	InitializationOptions any `json:"initializationOptions,omitempty"`
 
 	/*Trace defined:
 	 * The initial trace setting. If omitted trace is disabled ('off').
@@ -1708,7 +1708,7 @@ type InitializeResult struct {
 	/*Custom defined:
 	 * Custom initialization results.
 	 */
-	Custom map[string]interface{} `json:"custom"` // [custom: string]: any;
+	Custom map[string]any `json:"custom"` // [custom: string]: any;
 }
 
 // InitializedParams is
@@ -1730,7 +1730,7 @@ type DidChangeConfigurationParams struct {
 	/*Settings defined:
 	 * The actual changed settings
 	 */
-	Settings interface{} `json:"settings"`
+	Settings any `json:"settings"`
 }
 
 /*ShowMessageParams defined:
@@ -2195,7 +2195,7 @@ type ExecuteCommandParams struct {
 	/*Arguments defined:
 	 * Arguments that the command should be invoked with.
 	 */
-	Arguments []interface{} `json:"arguments,omitempty"`
+	Arguments []any `json:"arguments,omitempty"`
 }
 
 /*ExecuteCommandRegistrationOptions defined:
@@ -2455,7 +2455,7 @@ type Diagnostic struct {
 	/*Code defined:
 	 * The diagnostic's code, which usually appear in the user interface.
 	 */
-	Code interface{} `json:"code,omitempty"` // number | string
+	Code any `json:"code,omitempty"` // number | string
 
 	/*Source defined:
 	 * A human-readable string describing the source of this
@@ -2480,7 +2480,7 @@ type Diagnostic struct {
 	 */
 	RelatedInformation []DiagnosticRelatedInformation `json:"relatedInformation,omitempty"`
 
-	Data interface{} `json:"data,omitempty"`
+	Data any `json:"data,omitempty"`
 }
 
 /*Command defined:
@@ -2505,7 +2505,7 @@ type Command struct {
 	 * Arguments that the command handler should be
 	 * invoked with.
 	 */
-	Arguments []interface{} `json:"arguments,omitempty"`
+	Arguments []any `json:"arguments,omitempty"`
 }
 
 /*TextEdit defined:
@@ -2818,7 +2818,7 @@ type CompletionItem struct {
 	/*Documentation defined:
 	 * A human-readable string that represents a doc-comment.
 	 */
-	Documentation interface{} `json:"documentation,omitempty"` // string | MarkupContent
+	Documentation any `json:"documentation,omitempty"` // string | MarkupContent
 
 	/*Deprecated defined:
 	 * Indicates if this item is deprecated.
@@ -2908,7 +2908,7 @@ type CompletionItem struct {
 	 * a [CompletionRequest](#CompletionRequest) and a [CompletionResolveRequest]
 	 * (#CompletionResolveRequest)
 	 */
-	Data interface{} `json:"data,omitempty"`
+	Data any `json:"data,omitempty"`
 }
 
 /*CompletionList defined:
@@ -3250,7 +3250,7 @@ type CodeLens struct {
 	 * a [CodeLensRequest](#CodeLensRequest) and a [CodeLensResolveRequest]
 	 * (#CodeLensResolveRequest)
 	 */
-	Data interface{} `json:"data,omitempty"`
+	Data any `json:"data,omitempty"`
 }
 
 /*FormattingOptions defined:
@@ -3309,7 +3309,7 @@ type DocumentLink struct {
 	 * A data entry field that is preserved on a document link between a
 	 * DocumentLinkRequest and a DocumentLinkResolveRequest.
 	 */
-	Data interface{} `json:"data,omitempty"`
+	Data any `json:"data,omitempty"`
 }
 
 /*SelectionRange defined:

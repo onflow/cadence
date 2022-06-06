@@ -31,7 +31,7 @@ type OccurrenceMatcher struct {
 	DeclarationKind common.DeclarationKind
 }
 
-func (matcher *OccurrenceMatcher) Match(actual interface{}) bool {
+func (matcher *OccurrenceMatcher) Match(actual any) bool {
 	occurrence, ok := actual.(sema.Occurrence)
 	if !ok {
 		return false

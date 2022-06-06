@@ -3454,8 +3454,8 @@ func TestNumberValueIntegerConversion(t *testing.T) {
 	t.Parallel()
 
 	type converter struct {
-		convert func(NumberValue) (result interface{}, convertible bool)
-		check   func(t *testing.T, result interface{}) bool
+		convert func(NumberValue) (result any, convertible bool)
+		check   func(t *testing.T, result any) bool
 	}
 
 	test := func(
@@ -3506,22 +3506,22 @@ func TestNumberValueIntegerConversion(t *testing.T) {
 
 	converters := map[string]converter{
 		"ToInt": {
-			convert: func(value NumberValue) (interface{}, bool) {
+			convert: func(value NumberValue) (any, bool) {
 				return value.ToInt(), true
 			},
-			check: func(t *testing.T, result interface{}) bool {
+			check: func(t *testing.T, result any) bool {
 				return assert.Equal(t, 42, result)
 			},
 		},
 		"ToBigInt": {
-			convert: func(value NumberValue) (interface{}, bool) {
+			convert: func(value NumberValue) (any, bool) {
 				bigNumberValue, ok := value.(BigNumberValue)
 				if !ok {
 					return nil, false
 				}
 				return bigNumberValue.ToBigInt(nil), true
 			},
-			check: func(t *testing.T, result interface{}) bool {
+			check: func(t *testing.T, result any) bool {
 				return assert.Equal(t, big.NewInt(42), result)
 			},
 		},

@@ -26,7 +26,7 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
-func (interpreter *Interpreter) evalStatement(statement ast.Statement) interface{} {
+func (interpreter *Interpreter) evalStatement(statement ast.Statement) any {
 
 	// Recover and re-throw a panic, so that this interpreter's location and statement are used,
 	// instead of a potentially calling interpreter's location and statement
@@ -113,7 +113,7 @@ func (interpreter *Interpreter) visitIfStatementWithTestExpression(
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
-	var result interface{}
+	var result any
 	if value {
 		result = thenBlock.Accept(interpreter)
 	} else if elseBlock != nil {
@@ -164,7 +164,7 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 		)
 	}
 
-	var result interface{}
+	var result any
 	if someValue, ok := value.(*SomeValue); ok {
 
 		targetType := interpreter.Program.Elaboration.VariableDeclarationTargetTypes[declaration]

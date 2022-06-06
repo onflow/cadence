@@ -74,7 +74,7 @@ type parser struct {
 // It can be composed with different parse functions to parse the input string into different results.
 // See "ParseExpression", "ParseStatements" as examples.
 //
-func Parse(input string, parse func(*parser) interface{}, memoryGauge common.MemoryGauge) (result interface{}, errors []error) {
+func Parse(input string, parse func(*parser) any, memoryGauge common.MemoryGauge) (result any, errors []error) {
 	// create a lexer, which turns the input string into tokens
 	tokens := lexer.Lex(input, memoryGauge)
 	defer tokens.Reclaim()
@@ -84,9 +84,9 @@ func Parse(input string, parse func(*parser) interface{}, memoryGauge common.Mem
 func ParseTokenStream(
 	memoryGauge common.MemoryGauge,
 	tokens lexer.TokenStream,
-	parse func(*parser) interface{},
+	parse func(*parser) any,
 ) (
-	result interface{},
+	result any,
 	errors []error,
 ) {
 	p := &parser{
@@ -443,10 +443,10 @@ func (p *parser) endAmbiguity() {
 }
 
 func ParseExpression(input string, memoryGauge common.MemoryGauge) (expression ast.Expression, errs []error) {
-	var res interface{}
+	var res any
 	res, errs = Parse(
 		input,
-		func(p *parser) interface{} {
+		func(p *parser) any {
 			return parseExpression(p, lowestBindingPower)
 		},
 		memoryGauge,
@@ -463,10 +463,10 @@ func ParseExpression(input string, memoryGauge common.MemoryGauge) (expression a
 }
 
 func ParseStatements(input string, memoryGauge common.MemoryGauge) (statements []ast.Statement, errs []error) {
-	var res interface{}
+	var res any
 	res, errs = Parse(
 		input,
-		func(p *parser) interface{} {
+		func(p *parser) any {
 			return parseStatements(p, nil)
 		},
 		memoryGauge,
@@ -484,10 +484,10 @@ func ParseStatements(input string, memoryGauge common.MemoryGauge) (statements [
 }
 
 func ParseType(input string, memoryGauge common.MemoryGauge) (ty ast.Type, errs []error) {
-	var res interface{}
+	var res any
 	res, errs = Parse(
 		input,
-		func(p *parser) interface{} {
+		func(p *parser) any {
 			return parseType(p, lowestBindingPower)
 		},
 		memoryGauge,
@@ -505,10 +505,10 @@ func ParseType(input string, memoryGauge common.MemoryGauge) (ty ast.Type, errs 
 }
 
 func ParseDeclarations(input string, memoryGauge common.MemoryGauge) (declarations []ast.Declaration, errs []error) {
-	var res interface{}
+	var res any
 	res, errs = Parse(
 		input,
-		func(p *parser) interface{} {
+		func(p *parser) any {
 			return parseDeclarations(p, lexer.TokenEOF)
 		},
 		memoryGauge,
@@ -526,10 +526,10 @@ func ParseDeclarations(input string, memoryGauge common.MemoryGauge) (declaratio
 }
 
 func ParseArgumentList(input string, memoryGauge common.MemoryGauge) (arguments ast.Arguments, errs []error) {
-	var res interface{}
+	var res any
 	res, errs = Parse(
 		input,
-		func(p *parser) interface{} {
+		func(p *parser) any {
 			p.skipSpaceAndComments(true)
 			p.mustOne(lexer.TokenParenOpen)
 			arguments, _ := parseArgumentListRemainder(p)
@@ -563,12 +563,12 @@ func ParseProgramFromTokenStream(
 	program *ast.Program,
 	err error,
 ) {
-	var res interface{}
+	var res any
 	var errs []error
 	res, errs = ParseTokenStream(
 		memoryGauge,
 		input,
-		func(p *parser) interface{} {
+		func(p *parser) any {
 			return parseDeclarations(p, lexer.TokenEOF)
 		},
 	)

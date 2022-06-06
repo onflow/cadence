@@ -70,7 +70,7 @@ func NewDecoder(gauge common.MemoryGauge, r io.Reader) *Decoder {
 // This function returns an error if the bytes represent JSON that is malformed
 // or does not conform to the JSON Cadence specification.
 func (d *Decoder) Decode() (value cadence.Value, err error) {
-	jsonMap := make(map[string]interface{})
+	jsonMap := make(map[string]any)
 
 	err = d.dec.Decode(&jsonMap)
 	if err != nil {
@@ -120,7 +120,7 @@ const (
 
 var ErrInvalidJSONCadence = errors.New("invalid JSON Cadence structure")
 
-func (d *Decoder) decodeJSON(v interface{}) cadence.Value {
+func (d *Decoder) decodeJSON(v any) cadence.Value {
 	obj := toObject(v)
 
 	typeStr := obj.GetString(typeKey)
@@ -215,7 +215,7 @@ func (d *Decoder) decodeJSON(v interface{}) cadence.Value {
 	panic(ErrInvalidJSONCadence)
 }
 
-func (d *Decoder) decodeVoid(m map[string]interface{}) cadence.Void {
+func (d *Decoder) decodeVoid(m map[string]any) cadence.Void {
 	// object should not contain fields other than "type"
 	if len(m) != 1 {
 		// TODO: improve error message
@@ -225,7 +225,7 @@ func (d *Decoder) decodeVoid(m map[string]interface{}) cadence.Void {
 	return cadence.NewMeteredVoid(d.gauge)
 }
 
-func (d *Decoder) decodeOptional(valueJSON interface{}) cadence.Optional {
+func (d *Decoder) decodeOptional(valueJSON any) cadence.Optional {
 	if valueJSON == nil {
 		return cadence.NewMeteredOptional(d.gauge, nil)
 	}
@@ -233,11 +233,11 @@ func (d *Decoder) decodeOptional(valueJSON interface{}) cadence.Optional {
 	return cadence.NewMeteredOptional(d.gauge, d.decodeJSON(valueJSON))
 }
 
-func (d *Decoder) decodeBool(valueJSON interface{}) cadence.Bool {
+func (d *Decoder) decodeBool(valueJSON any) cadence.Bool {
 	return cadence.NewMeteredBool(d.gauge, toBool(valueJSON))
 }
 
-func (d *Decoder) decodeCharacter(valueJSON interface{}) cadence.Character {
+func (d *Decoder) decodeCharacter(valueJSON any) cadence.Character {
 	asString := toString(valueJSON)
 	char, err := cadence.NewMeteredCharacter(
 		d.gauge,
@@ -251,7 +251,7 @@ func (d *Decoder) decodeCharacter(valueJSON interface{}) cadence.Character {
 	return char
 }
 
-func (d *Decoder) decodeString(valueJSON interface{}) cadence.String {
+func (d *Decoder) decodeString(valueJSON any) cadence.String {
 	asString := toString(valueJSON)
 	str, err := cadence.NewMeteredString(
 		d.gauge,
@@ -266,7 +266,7 @@ func (d *Decoder) decodeString(valueJSON interface{}) cadence.String {
 	return str
 }
 
-func (d *Decoder) decodeAddress(valueJSON interface{}) cadence.Address {
+func (d *Decoder) decodeAddress(valueJSON any) cadence.Address {
 	v := toString(valueJSON)
 
 	// must include 0x prefix
@@ -284,7 +284,7 @@ func (d *Decoder) decodeAddress(valueJSON interface{}) cadence.Address {
 	return cadence.BytesToMeteredAddress(d.gauge, b)
 }
 
-func (d *Decoder) decodeBigInt(valueJSON interface{}) *big.Int {
+func (d *Decoder) decodeBigInt(valueJSON any) *big.Int {
 	v := toString(valueJSON)
 
 	i := new(big.Int)
@@ -297,7 +297,7 @@ func (d *Decoder) decodeBigInt(valueJSON interface{}) *big.Int {
 	return i
 }
 
-func (d *Decoder) decodeInt(valueJSON interface{}) cadence.Int {
+func (d *Decoder) decodeInt(valueJSON any) cadence.Int {
 	bigInt := d.decodeBigInt(valueJSON)
 	return cadence.NewMeteredIntFromBig(
 		d.gauge,
@@ -310,7 +310,7 @@ func (d *Decoder) decodeInt(valueJSON interface{}) cadence.Int {
 	)
 }
 
-func (d *Decoder) decodeInt8(valueJSON interface{}) cadence.Int8 {
+func (d *Decoder) decodeInt8(valueJSON any) cadence.Int8 {
 	v := toString(valueJSON)
 
 	i, err := strconv.ParseInt(v, 10, 8)
@@ -322,7 +322,7 @@ func (d *Decoder) decodeInt8(valueJSON interface{}) cadence.Int8 {
 	return cadence.NewMeteredInt8(d.gauge, int8(i))
 }
 
-func (d *Decoder) decodeInt16(valueJSON interface{}) cadence.Int16 {
+func (d *Decoder) decodeInt16(valueJSON any) cadence.Int16 {
 	v := toString(valueJSON)
 
 	i, err := strconv.ParseInt(v, 10, 16)
@@ -334,7 +334,7 @@ func (d *Decoder) decodeInt16(valueJSON interface{}) cadence.Int16 {
 	return cadence.NewMeteredInt16(d.gauge, int16(i))
 }
 
-func (d *Decoder) decodeInt32(valueJSON interface{}) cadence.Int32 {
+func (d *Decoder) decodeInt32(valueJSON any) cadence.Int32 {
 	v := toString(valueJSON)
 
 	i, err := strconv.ParseInt(v, 10, 32)
@@ -346,7 +346,7 @@ func (d *Decoder) decodeInt32(valueJSON interface{}) cadence.Int32 {
 	return cadence.NewMeteredInt32(d.gauge, int32(i))
 }
 
-func (d *Decoder) decodeInt64(valueJSON interface{}) cadence.Int64 {
+func (d *Decoder) decodeInt64(valueJSON any) cadence.Int64 {
 	v := toString(valueJSON)
 
 	i, err := strconv.ParseInt(v, 10, 64)
@@ -358,7 +358,7 @@ func (d *Decoder) decodeInt64(valueJSON interface{}) cadence.Int64 {
 	return cadence.NewMeteredInt64(d.gauge, i)
 }
 
-func (d *Decoder) decodeInt128(valueJSON interface{}) cadence.Int128 {
+func (d *Decoder) decodeInt128(valueJSON any) cadence.Int128 {
 	value, err := cadence.NewMeteredInt128FromBig(
 		d.gauge,
 		func() *big.Int {
@@ -373,7 +373,7 @@ func (d *Decoder) decodeInt128(valueJSON interface{}) cadence.Int128 {
 	return value
 }
 
-func (d *Decoder) decodeInt256(valueJSON interface{}) cadence.Int256 {
+func (d *Decoder) decodeInt256(valueJSON any) cadence.Int256 {
 	value, err := cadence.NewMeteredInt256FromBig(
 		d.gauge,
 		func() *big.Int {
@@ -388,7 +388,7 @@ func (d *Decoder) decodeInt256(valueJSON interface{}) cadence.Int256 {
 	return value
 }
 
-func (d *Decoder) decodeUInt(valueJSON interface{}) cadence.UInt {
+func (d *Decoder) decodeUInt(valueJSON any) cadence.UInt {
 	bigInt := d.decodeBigInt(valueJSON)
 	value, err := cadence.NewMeteredUIntFromBig(
 		d.gauge,
@@ -407,7 +407,7 @@ func (d *Decoder) decodeUInt(valueJSON interface{}) cadence.UInt {
 	return value
 }
 
-func (d *Decoder) decodeUInt8(valueJSON interface{}) cadence.UInt8 {
+func (d *Decoder) decodeUInt8(valueJSON any) cadence.UInt8 {
 	v := toString(valueJSON)
 
 	i, err := strconv.ParseUint(v, 10, 8)
@@ -419,7 +419,7 @@ func (d *Decoder) decodeUInt8(valueJSON interface{}) cadence.UInt8 {
 	return cadence.NewMeteredUInt8(d.gauge, uint8(i))
 }
 
-func (d *Decoder) decodeUInt16(valueJSON interface{}) cadence.UInt16 {
+func (d *Decoder) decodeUInt16(valueJSON any) cadence.UInt16 {
 	v := toString(valueJSON)
 
 	i, err := strconv.ParseUint(v, 10, 16)
@@ -431,7 +431,7 @@ func (d *Decoder) decodeUInt16(valueJSON interface{}) cadence.UInt16 {
 	return cadence.NewMeteredUInt16(d.gauge, uint16(i))
 }
 
-func (d *Decoder) decodeUInt32(valueJSON interface{}) cadence.UInt32 {
+func (d *Decoder) decodeUInt32(valueJSON any) cadence.UInt32 {
 	v := toString(valueJSON)
 
 	i, err := strconv.ParseUint(v, 10, 32)
@@ -443,7 +443,7 @@ func (d *Decoder) decodeUInt32(valueJSON interface{}) cadence.UInt32 {
 	return cadence.NewMeteredUInt32(d.gauge, uint32(i))
 }
 
-func (d *Decoder) decodeUInt64(valueJSON interface{}) cadence.UInt64 {
+func (d *Decoder) decodeUInt64(valueJSON any) cadence.UInt64 {
 	v := toString(valueJSON)
 
 	i, err := strconv.ParseUint(v, 10, 64)
@@ -455,7 +455,7 @@ func (d *Decoder) decodeUInt64(valueJSON interface{}) cadence.UInt64 {
 	return cadence.NewMeteredUInt64(d.gauge, i)
 }
 
-func (d *Decoder) decodeUInt128(valueJSON interface{}) cadence.UInt128 {
+func (d *Decoder) decodeUInt128(valueJSON any) cadence.UInt128 {
 	value, err := cadence.NewMeteredUInt128FromBig(
 		d.gauge,
 		func() *big.Int {
@@ -469,7 +469,7 @@ func (d *Decoder) decodeUInt128(valueJSON interface{}) cadence.UInt128 {
 	return value
 }
 
-func (d *Decoder) decodeUInt256(valueJSON interface{}) cadence.UInt256 {
+func (d *Decoder) decodeUInt256(valueJSON any) cadence.UInt256 {
 	value, err := cadence.NewMeteredUInt256FromBig(
 		d.gauge,
 		func() *big.Int {
@@ -483,7 +483,7 @@ func (d *Decoder) decodeUInt256(valueJSON interface{}) cadence.UInt256 {
 	return value
 }
 
-func (d *Decoder) decodeWord8(valueJSON interface{}) cadence.Word8 {
+func (d *Decoder) decodeWord8(valueJSON any) cadence.Word8 {
 	v := toString(valueJSON)
 
 	i, err := strconv.ParseUint(v, 10, 8)
@@ -495,7 +495,7 @@ func (d *Decoder) decodeWord8(valueJSON interface{}) cadence.Word8 {
 	return cadence.NewMeteredWord8(d.gauge, uint8(i))
 }
 
-func (d *Decoder) decodeWord16(valueJSON interface{}) cadence.Word16 {
+func (d *Decoder) decodeWord16(valueJSON any) cadence.Word16 {
 	v := toString(valueJSON)
 
 	i, err := strconv.ParseUint(v, 10, 16)
@@ -507,7 +507,7 @@ func (d *Decoder) decodeWord16(valueJSON interface{}) cadence.Word16 {
 	return cadence.NewMeteredWord16(d.gauge, uint16(i))
 }
 
-func (d *Decoder) decodeWord32(valueJSON interface{}) cadence.Word32 {
+func (d *Decoder) decodeWord32(valueJSON any) cadence.Word32 {
 	v := toString(valueJSON)
 
 	i, err := strconv.ParseUint(v, 10, 32)
@@ -519,7 +519,7 @@ func (d *Decoder) decodeWord32(valueJSON interface{}) cadence.Word32 {
 	return cadence.NewMeteredWord32(d.gauge, uint32(i))
 }
 
-func (d *Decoder) decodeWord64(valueJSON interface{}) cadence.Word64 {
+func (d *Decoder) decodeWord64(valueJSON any) cadence.Word64 {
 	v := toString(valueJSON)
 
 	i, err := strconv.ParseUint(v, 10, 64)
@@ -531,7 +531,7 @@ func (d *Decoder) decodeWord64(valueJSON interface{}) cadence.Word64 {
 	return cadence.NewMeteredWord64(d.gauge, i)
 }
 
-func (d *Decoder) decodeFix64(valueJSON interface{}) cadence.Fix64 {
+func (d *Decoder) decodeFix64(valueJSON any) cadence.Fix64 {
 	v, err := cadence.NewMeteredFix64(d.gauge, func() (string, error) {
 		return toString(valueJSON), nil
 	})
@@ -542,7 +542,7 @@ func (d *Decoder) decodeFix64(valueJSON interface{}) cadence.Fix64 {
 	return v
 }
 
-func (d *Decoder) decodeUFix64(valueJSON interface{}) cadence.UFix64 {
+func (d *Decoder) decodeUFix64(valueJSON any) cadence.UFix64 {
 	v, err := cadence.NewMeteredUFix64(d.gauge, func() (string, error) {
 		return toString(valueJSON), nil
 	})
@@ -553,7 +553,7 @@ func (d *Decoder) decodeUFix64(valueJSON interface{}) cadence.UFix64 {
 	return v
 }
 
-func (d *Decoder) decodeArray(valueJSON interface{}) cadence.Array {
+func (d *Decoder) decodeArray(valueJSON any) cadence.Array {
 	v := toSlice(valueJSON)
 
 	value, err := cadence.NewMeteredArray(
@@ -575,7 +575,7 @@ func (d *Decoder) decodeArray(valueJSON interface{}) cadence.Array {
 	return value
 }
 
-func (d *Decoder) decodeDictionary(valueJSON interface{}) cadence.Dictionary {
+func (d *Decoder) decodeDictionary(valueJSON any) cadence.Dictionary {
 	v := toSlice(valueJSON)
 
 	value, err := cadence.NewMeteredDictionary(
@@ -600,7 +600,7 @@ func (d *Decoder) decodeDictionary(valueJSON interface{}) cadence.Dictionary {
 	return value
 }
 
-func (d *Decoder) decodeKeyValuePair(valueJSON interface{}) cadence.KeyValuePair {
+func (d *Decoder) decodeKeyValuePair(valueJSON any) cadence.KeyValuePair {
 	obj := toObject(valueJSON)
 
 	key := obj.GetValue(d, keyKey)
@@ -620,7 +620,7 @@ type composite struct {
 	fieldTypes          []cadence.Field
 }
 
-func (d *Decoder) decodeComposite(valueJSON interface{}) composite {
+func (d *Decoder) decodeComposite(valueJSON any) composite {
 	obj := toObject(valueJSON)
 
 	typeID := obj.GetString(idKey)
@@ -659,7 +659,7 @@ func (d *Decoder) decodeComposite(valueJSON interface{}) composite {
 	}
 }
 
-func (d *Decoder) decodeCompositeField(valueJSON interface{}) (cadence.Value, cadence.Field) {
+func (d *Decoder) decodeCompositeField(valueJSON any) (cadence.Value, cadence.Field) {
 	obj := toObject(valueJSON)
 
 	name := obj.GetString(nameKey)
@@ -672,7 +672,7 @@ func (d *Decoder) decodeCompositeField(valueJSON interface{}) (cadence.Value, ca
 	return value, field
 }
 
-func (d *Decoder) decodeStruct(valueJSON interface{}) cadence.Struct {
+func (d *Decoder) decodeStruct(valueJSON any) cadence.Struct {
 	comp := d.decodeComposite(valueJSON)
 
 	structure, err := cadence.NewMeteredStruct(
@@ -696,7 +696,7 @@ func (d *Decoder) decodeStruct(valueJSON interface{}) cadence.Struct {
 	))
 }
 
-func (d *Decoder) decodeResource(valueJSON interface{}) cadence.Resource {
+func (d *Decoder) decodeResource(valueJSON any) cadence.Resource {
 	comp := d.decodeComposite(valueJSON)
 
 	resource, err := cadence.NewMeteredResource(
@@ -719,7 +719,7 @@ func (d *Decoder) decodeResource(valueJSON interface{}) cadence.Resource {
 	))
 }
 
-func (d *Decoder) decodeEvent(valueJSON interface{}) cadence.Event {
+func (d *Decoder) decodeEvent(valueJSON any) cadence.Event {
 	comp := d.decodeComposite(valueJSON)
 
 	event, err := cadence.NewMeteredEvent(
@@ -743,7 +743,7 @@ func (d *Decoder) decodeEvent(valueJSON interface{}) cadence.Event {
 	))
 }
 
-func (d *Decoder) decodeContract(valueJSON interface{}) cadence.Contract {
+func (d *Decoder) decodeContract(valueJSON any) cadence.Contract {
 	comp := d.decodeComposite(valueJSON)
 
 	contract, err := cadence.NewMeteredContract(
@@ -767,7 +767,7 @@ func (d *Decoder) decodeContract(valueJSON interface{}) cadence.Contract {
 	))
 }
 
-func (d *Decoder) decodeEnum(valueJSON interface{}) cadence.Enum {
+func (d *Decoder) decodeEnum(valueJSON any) cadence.Enum {
 	comp := d.decodeComposite(valueJSON)
 
 	enum, err := cadence.NewMeteredEnum(
@@ -792,7 +792,7 @@ func (d *Decoder) decodeEnum(valueJSON interface{}) cadence.Enum {
 	))
 }
 
-func (d *Decoder) decodeLink(valueJSON interface{}) cadence.Link {
+func (d *Decoder) decodeLink(valueJSON any) cadence.Link {
 	obj := toObject(valueJSON)
 
 	targetPath, ok := d.decodeJSON(obj.Get(targetPathKey)).(cadence.Path)
@@ -816,7 +816,7 @@ func (d *Decoder) decodeLink(valueJSON interface{}) cadence.Link {
 	)
 }
 
-func (d *Decoder) decodePath(valueJSON interface{}) cadence.Path {
+func (d *Decoder) decodePath(valueJSON any) cadence.Path {
 	obj := toObject(valueJSON)
 
 	domain := obj.GetString(domainKey)
@@ -841,7 +841,7 @@ func (d *Decoder) decodePath(valueJSON interface{}) cadence.Path {
 	)
 }
 
-func (d *Decoder) decodeParamType(valueJSON interface{}) cadence.Parameter {
+func (d *Decoder) decodeParamType(valueJSON any) cadence.Parameter {
 	obj := toObject(valueJSON)
 	// Unmetered because decodeParamType is metered in decodeParamTypes and called nowhere else
 	return cadence.NewParameter(
@@ -851,7 +851,7 @@ func (d *Decoder) decodeParamType(valueJSON interface{}) cadence.Parameter {
 	)
 }
 
-func (d *Decoder) decodeParamTypes(params []interface{}) []cadence.Parameter {
+func (d *Decoder) decodeParamTypes(params []any) []cadence.Parameter {
 	common.UseMemory(d.gauge, common.MemoryUsage{
 		Kind:   common.MemoryKindCadenceParameter,
 		Amount: uint64(len(params)),
@@ -865,7 +865,7 @@ func (d *Decoder) decodeParamTypes(params []interface{}) []cadence.Parameter {
 	return parameters
 }
 
-func (d *Decoder) decodeFieldTypes(fs []interface{}) []cadence.Field {
+func (d *Decoder) decodeFieldTypes(fs []any) []cadence.Field {
 	common.UseMemory(d.gauge, common.MemoryUsage{
 		Kind:   common.MemoryKindCadenceField,
 		Amount: uint64(len(fs)),
@@ -880,7 +880,7 @@ func (d *Decoder) decodeFieldTypes(fs []interface{}) []cadence.Field {
 	return fields
 }
 
-func (d *Decoder) decodeFieldType(valueJSON interface{}) cadence.Field {
+func (d *Decoder) decodeFieldType(valueJSON any) cadence.Field {
 	obj := toObject(valueJSON)
 	// Unmetered because decodeFieldType is metered in decodeFieldTypes and called nowhere else
 	return cadence.NewField(
@@ -889,7 +889,7 @@ func (d *Decoder) decodeFieldType(valueJSON interface{}) cadence.Field {
 	)
 }
 
-func (d *Decoder) decodeFunctionType(returnValue, parametersValue, id interface{}) cadence.Type {
+func (d *Decoder) decodeFunctionType(returnValue, parametersValue, id any) cadence.Type {
 	parameters := d.decodeParamTypes(toSlice(parametersValue))
 	returnType := d.decodeType(returnValue)
 
@@ -901,7 +901,7 @@ func (d *Decoder) decodeFunctionType(returnValue, parametersValue, id interface{
 	).WithID(toString(id))
 }
 
-func (d *Decoder) decodeNominalType(obj jsonObject, kind, typeID string, fs, initializers []interface{}) cadence.Type {
+func (d *Decoder) decodeNominalType(obj jsonObject, kind, typeID string, fs, initializers []any) cadence.Type {
 	fields := d.decodeFieldTypes(fs)
 
 	// Unmetered because this is created as an array of nil arrays, not Parameter structs
@@ -987,8 +987,8 @@ func (d *Decoder) decodeNominalType(obj jsonObject, kind, typeID string, fs, ini
 }
 
 func (d *Decoder) decodeRestrictedType(
-	typeValue interface{},
-	restrictionsValue []interface{},
+	typeValue any,
+	restrictionsValue []any,
 	typeIDValue string,
 ) cadence.Type {
 	typ := d.decodeType(typeValue)
@@ -1005,7 +1005,7 @@ func (d *Decoder) decodeRestrictedType(
 	).WithID(typeIDValue)
 }
 
-func (d *Decoder) decodeType(valueJSON interface{}) cadence.Type {
+func (d *Decoder) decodeType(valueJSON any) cadence.Type {
 	if valueJSON == "" {
 		return nil
 	}
@@ -1166,7 +1166,7 @@ func (d *Decoder) decodeType(valueJSON interface{}) cadence.Type {
 	}
 }
 
-func (d *Decoder) decodeTypeValue(valueJSON interface{}) cadence.TypeValue {
+func (d *Decoder) decodeTypeValue(valueJSON any) cadence.TypeValue {
 	obj := toObject(valueJSON)
 
 	return cadence.NewMeteredTypeValue(
@@ -1175,7 +1175,7 @@ func (d *Decoder) decodeTypeValue(valueJSON interface{}) cadence.TypeValue {
 	)
 }
 
-func (d *Decoder) decodeCapability(valueJSON interface{}) cadence.Capability {
+func (d *Decoder) decodeCapability(valueJSON any) cadence.Capability {
 	obj := toObject(valueJSON)
 
 	path, ok := d.decodeJSON(obj.Get(pathKey)).(cadence.Path)
@@ -1194,9 +1194,9 @@ func (d *Decoder) decodeCapability(valueJSON interface{}) cadence.Capability {
 
 // JSON types
 
-type jsonObject map[string]interface{}
+type jsonObject map[string]any
 
-func (obj jsonObject) Get(key string) interface{} {
+func (obj jsonObject) Get(key string) any {
 	v, hasKey := obj[key]
 	if !hasKey {
 		// TODO: improve error message
@@ -1216,7 +1216,7 @@ func (obj jsonObject) GetString(key string) string {
 	return toString(v)
 }
 
-func (obj jsonObject) GetSlice(key string) []interface{} {
+func (obj jsonObject) GetSlice(key string) []any {
 	v := obj.Get(key)
 	return toSlice(v)
 }
@@ -1228,7 +1228,7 @@ func (obj jsonObject) GetValue(d *Decoder, key string) cadence.Value {
 
 // JSON conversion helpers
 
-func toBool(valueJSON interface{}) bool {
+func toBool(valueJSON any) bool {
 	v, isBool := valueJSON.(bool)
 	if !isBool {
 		// TODO: improve error message
@@ -1238,7 +1238,7 @@ func toBool(valueJSON interface{}) bool {
 	return v
 }
 
-func toUInt(valueJSON interface{}) uint {
+func toUInt(valueJSON any) uint {
 	v, isNum := valueJSON.(float64)
 	if !isNum {
 		// TODO: improve error message
@@ -1248,7 +1248,7 @@ func toUInt(valueJSON interface{}) uint {
 	return uint(v)
 }
 
-func toString(valueJSON interface{}) string {
+func toString(valueJSON any) string {
 	v, isString := valueJSON.(string)
 	if !isString {
 		// TODO: improve error message
@@ -1258,8 +1258,8 @@ func toString(valueJSON interface{}) string {
 	return v
 }
 
-func toSlice(valueJSON interface{}) []interface{} {
-	v, isSlice := valueJSON.([]interface{})
+func toSlice(valueJSON any) []any {
+	v, isSlice := valueJSON.([]any)
 	if !isSlice {
 		// TODO: improve error message
 		panic(ErrInvalidJSONCadence)
@@ -1268,8 +1268,8 @@ func toSlice(valueJSON interface{}) []interface{} {
 	return v
 }
 
-func toObject(valueJSON interface{}) jsonObject {
-	v, isMap := valueJSON.(map[string]interface{})
+func toObject(valueJSON any) jsonObject {
+	v, isMap := valueJSON.(map[string]any)
 	if !isMap {
 		// TODO: improve error message
 		panic(ErrInvalidJSONCadence)

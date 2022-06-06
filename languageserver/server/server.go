@@ -136,7 +136,7 @@ func (d Document) HasAnyPrecedingStringsAtPosition(options []string, line, colum
 
 // CommandHandler represents the form of functions that handle commands
 // submitted from the client using workspace/executeCommand.
-type CommandHandler func(conn protocol.Conn, args ...interface{}) (interface{}, error)
+type CommandHandler func(conn protocol.Conn, args ...any) (any, error)
 
 // AddressImportResolver is a function that is used to resolve address imports
 //
@@ -164,7 +164,7 @@ type DocumentSymbolProvider func(uri protocol.DocumentUri, version float64, chec
 
 // InitializationOptionsHandler is a function that is used to handle initialization options sent by the client
 //
-type InitializationOptionsHandler func(initializationOptions interface{}) error
+type InitializationOptionsHandler func(initializationOptions any) error
 
 type Server struct {
 	protocolServer       *protocol.Server
@@ -419,8 +419,8 @@ func accessCheckModeFromName(name string) sema.AccessCheckMode {
 	}
 }
 
-func (s *Server) configure(opts interface{}) {
-	optsMap, ok := opts.(map[string]interface{})
+func (s *Server) configure(opts any) {
+	optsMap, ok := opts.(map[string]any)
 	if !ok {
 		return
 	}
@@ -1619,7 +1619,7 @@ func (s *Server) maybeResolveRange(uri protocol.DocumentUri, id string, result *
 //
 // We register all the commands we support in registerCommands and populate
 // their corresponding handler at server initialization.
-func (s *Server) ExecuteCommand(conn protocol.Conn, params *protocol.ExecuteCommandParams) (interface{}, error) {
+func (s *Server) ExecuteCommand(conn protocol.Conn, params *protocol.ExecuteCommandParams) (any, error) {
 
 	conn.LogMessage(&protocol.LogMessageParams{
 		Type:    protocol.Log,
@@ -2025,7 +2025,7 @@ func (s *Server) defaultCommands() []Command {
 //
 // There should be exactly 1 argument:
 //   * the DocumentURI of the file to submit
-func (s *Server) getEntryPointParameters(_ protocol.Conn, args ...interface{}) (interface{}, error) {
+func (s *Server) getEntryPointParameters(_ protocol.Conn, args ...any) (any, error) {
 
 	err := CheckCommandArgumentCount(args, 1)
 	if err != nil {
@@ -2055,7 +2055,7 @@ func (s *Server) getEntryPointParameters(_ protocol.Conn, args ...interface{}) (
 //
 // There should be exactly 1 argument:
 //   * the DocumentURI of the file to submit
-func (s *Server) getContractInitializerParameters(_ protocol.Conn, args ...interface{}) (interface{}, error) {
+func (s *Server) getContractInitializerParameters(_ protocol.Conn, args ...any) (any, error) {
 
 	err := CheckCommandArgumentCount(args, 1)
 	if err != nil {
@@ -2097,7 +2097,7 @@ func (s *Server) getContractInitializerParameters(_ protocol.Conn, args ...inter
 // There should be exactly 2 arguments:
 //   * the DocumentURI of the file to submit
 //   * the array of arguments
-func (s *Server) parseEntryPointArguments(_ protocol.Conn, args ...interface{}) (interface{}, error) {
+func (s *Server) parseEntryPointArguments(_ protocol.Conn, args ...any) (any, error) {
 
 	err := CheckCommandArgumentCount(args, 2)
 	if err != nil {
@@ -2115,7 +2115,7 @@ func (s *Server) parseEntryPointArguments(_ protocol.Conn, args ...interface{}) 
 		return nil, fmt.Errorf("could not find document for URI %s", uri)
 	}
 
-	arguments, ok := args[1].([]interface{})
+	arguments, ok := args[1].([]any)
 	if !ok {
 		return nil, fmt.Errorf("invalid arguments argument: %#+v", args[1])
 	}
@@ -2132,7 +2132,7 @@ func (s *Server) parseEntryPointArguments(_ protocol.Conn, args ...interface{}) 
 		)
 	}
 
-	result := make([]interface{}, len(arguments))
+	result := make([]any, len(arguments))
 
 	for i, argument := range arguments {
 		parameter := parameters[i]

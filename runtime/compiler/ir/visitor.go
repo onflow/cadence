@@ -18,7 +18,7 @@
 
 package ir
 
-type Repr interface{}
+type Repr any
 
 type ConstVisitor interface {
 	VisitInt(Int) Repr

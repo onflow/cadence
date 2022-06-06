@@ -209,7 +209,7 @@ func makeActionlessCodelens(title string, lensRange protocol.Range) *protocol.Co
 	}
 }
 
-func makeCodeLens(command string, title string, lensRange protocol.Range, arguments []interface{}) *protocol.CodeLens {
+func makeCodeLens(command string, title string, lensRange protocol.Range, arguments []any) *protocol.CodeLens {
 	return &protocol.CodeLens{
 		Range: lensRange,
 		Command: &protocol.Command{
@@ -294,7 +294,7 @@ func (i *FlowIntegration) scriptCodeLenses(
 	}
 
 	argsJSON, _ := json.Marshal(argumentList)
-	return makeCodeLens(CommandExecuteScript, title, codelensRange, []interface{}{uri, string(argsJSON)})
+	return makeCodeLens(CommandExecuteScript, title, codelensRange, []any{uri, string(argsJSON)})
 }
 
 func (i *FlowIntegration) transactionCodeLenses(
@@ -328,7 +328,7 @@ func (i *FlowIntegration) transactionCodeLenses(
 		CommandSendTransaction,
 		title,
 		codelensRange,
-		[]interface{}{uri, string(argsJSON), accounts},
+		[]any{uri, string(argsJSON), accounts},
 	)
 }
 
@@ -362,5 +362,5 @@ func (i *FlowIntegration) contractCodeLenses(
 		signer,
 	)
 
-	return makeCodeLens(CommandDeployContract, title, codelensRange, []interface{}{uri, name, resolvedAddress})
+	return makeCodeLens(CommandDeployContract, title, codelensRange, []any{uri, name, resolvedAddress})
 }

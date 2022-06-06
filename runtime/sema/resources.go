@@ -33,7 +33,7 @@ import (
    │                        │
    │       Resources:       │      ┌─────────────────┐                ┏━━━━━━━━━━┓
    │                        │      │                 │                ▼          ┃
-   │  map[interface{}]Info ━╋━━━━━▶│      Info:      │       ┌────────────────┐  ┃
+   │      map[any]Info 	   ━╋━━━━━▶│      Info:      │       ┌────────────────┐  ┃
    │                        │      │                 │       │                │  ┃
    └────────────────────────┘      │  Invalidations ━╋━━━━━━▶│ Invalidations: │  ┃
                                    │                 │       │                │  ┃
@@ -50,7 +50,7 @@ import (
    │                        │               ▼                         │          ┃                   ┃
    │       Resources:       │      ┌─────────────────┐                           ┃          │        ┃
    │                        │      │                 │                ▼          ┃                   ┃
-   │  map[interface{}]Info ━╋━━━━━▶│      Info:      │       ┌────────────────┐  ┃       Clone       ┃
+   │      map[any]Info     ━╋━━━━━▶│      Info:      │       ┌────────────────┐  ┃       Clone       ┃
    │                        │      │                 │       │                │  ┃                   ┃
    └────────────────────────┘      │  Invalidations ━╋━━━━━━▶│ Invalidations: │  ┃          │        ┃
                                    │                 │       │                │  ┃                   ┃
@@ -105,7 +105,7 @@ func NewResources() *Resources {
 func (ris *Resources) String() string {
 	var builder strings.Builder
 	builder.WriteString("Resources:")
-	ris.ForEach(func(resource interface{}, info ResourceInfo) {
+	ris.ForEach(func(resource any, info ResourceInfo) {
 		builder.WriteString("- ")
 		builder.WriteString(fmt.Sprint(resource))
 		builder.WriteString(": ")
@@ -115,7 +115,7 @@ func (ris *Resources) String() string {
 	return builder.String()
 }
 
-func (ris *Resources) Get(resource interface{}) ResourceInfo {
+func (ris *Resources) Get(resource any) ResourceInfo {
 	info, _ := ris.resources.Get(resource)
 	return info
 }
@@ -123,7 +123,7 @@ func (ris *Resources) Get(resource interface{}) ResourceInfo {
 // AddInvalidation adds the given invalidation to the set of invalidations for the given resource.
 // If the invalidation is not temporary, marks the resource to be definitely invalidated.
 //
-func (ris *Resources) AddInvalidation(resource interface{}, invalidation ResourceInvalidation) {
+func (ris *Resources) AddInvalidation(resource any, invalidation ResourceInvalidation) {
 	info, _ := ris.resources.Get(resource)
 	info.Invalidations.Add(invalidation)
 	if invalidation.Kind.IsDefinite() {
@@ -135,7 +135,7 @@ func (ris *Resources) AddInvalidation(resource interface{}, invalidation Resourc
 // RemoveTemporaryMoveInvalidation removes the given invalidation
 // from the set of invalidations for the given resource.
 //
-func (ris *Resources) RemoveTemporaryMoveInvalidation(resource interface{}, invalidation ResourceInvalidation) {
+func (ris *Resources) RemoveTemporaryMoveInvalidation(resource any, invalidation ResourceInvalidation) {
 	if invalidation.Kind != ResourceInvalidationKindMoveTemporary {
 		panic(errors.NewUnreachableError())
 	}
@@ -147,19 +147,19 @@ func (ris *Resources) RemoveTemporaryMoveInvalidation(resource interface{}, inva
 
 // AddUse adds the given use position to the set of use positions for the given resource.
 //
-func (ris *Resources) AddUse(resource interface{}, use ast.Position) {
+func (ris *Resources) AddUse(resource any, use ast.Position) {
 	info, _ := ris.resources.Get(resource)
 	info.UsePositions.Add(use)
 	ris.resources.Set(resource, info)
 }
 
-func (ris *Resources) MarkUseAfterInvalidationReported(resource interface{}, pos ast.Position) {
+func (ris *Resources) MarkUseAfterInvalidationReported(resource any, pos ast.Position) {
 	info, _ := ris.resources.Get(resource)
 	info.UsePositions.MarkUseAfterInvalidationReported(pos)
 	ris.resources.Set(resource, info)
 }
 
-func (ris *Resources) IsUseAfterInvalidationReported(resource interface{}, pos ast.Position) bool {
+func (ris *Resources) IsUseAfterInvalidationReported(resource any, pos ast.Position) bool {
 	info, _ := ris.resources.Get(resource)
 	return info.UsePositions.IsUseAfterInvalidationReported(pos)
 }
@@ -181,7 +181,7 @@ func (ris *Resources) Size() int {
 	return ris.resources.Len()
 }
 
-func (ris *Resources) ForEach(f func(resource interface{}, info ResourceInfo)) {
+func (ris *Resources) ForEach(f func(resource any, info ResourceInfo)) {
 	ris.resources.Foreach(f)
 }
 
@@ -199,9 +199,9 @@ func (ris *Resources) MergeBranches(thenResources *Resources, elseResources *Res
 		elseHalts = elseResources.Halts
 	}
 
-	merged := make(map[interface{}]struct{})
+	merged := make(map[any]struct{})
 
-	merge := func(resource interface{}) {
+	merge := func(resource any) {
 
 		// Only merge each resource once.
 		// We iterate over the resources of the then-branch
@@ -264,7 +264,7 @@ func (ris *Resources) MergeBranches(thenResources *Resources, elseResources *Res
 
 	// Merge the resource info of all resources in the then-branch
 
-	thenResources.ForEach(func(resource interface{}, _ ResourceInfo) {
+	thenResources.ForEach(func(resource any, _ ResourceInfo) {
 		merge(resource)
 	})
 
@@ -272,7 +272,7 @@ func (ris *Resources) MergeBranches(thenResources *Resources, elseResources *Res
 	// then merge the resource info of all resources in it
 
 	if elseResources != nil {
-		elseResources.ForEach(func(resource interface{}, _ ResourceInfo) {
+		elseResources.ForEach(func(resource any, _ ResourceInfo) {
 			merge(resource)
 		})
 	}

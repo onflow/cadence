@@ -119,7 +119,7 @@ func makeManagerCode(script string, serviceAddress string) []byte {
 // initAccountManager initializes Account manager on service account
 //
 // No arguments are expected
-func (i *FlowIntegration) initAccountManager(conn protocol.Conn, args ...interface{}) (interface{}, error) {
+func (i *FlowIntegration) initAccountManager(conn protocol.Conn, args ...any) (any, error) {
 	serviceAccount, err := i.state.EmulatorServiceAccount()
 	if err != nil {
 		return nil, errorWithMessage(conn, ErrorMessageServiceAccount, err)
@@ -160,7 +160,7 @@ func (i *FlowIntegration) initAccountManager(conn protocol.Conn, args ...interfa
 // There should be exactly 2 arguments:
 //   * the DocumentURI of the file to submit
 //   * the arguments, encoded as JSON-CDC
-func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{}) (interface{}, error) {
+func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...any) (any, error) {
 	err := server.CheckCommandArgumentCount(args, 3)
 	if err != nil {
 		return nil, errorWithMessage(conn, ErrorMessageArguments, err)
@@ -193,7 +193,7 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{
 		)
 	}
 
-	signerList := args[2].([]interface{})
+	signerList := args[2].([]any)
 	signers := make([]flow.Address, len(signerList))
 	for i, v := range signerList {
 		signers[i] = flow.HexToAddress(v.(string))
@@ -290,7 +290,7 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{
 // There should be exactly 2 arguments:
 //   * the DocumentURI of the file to submit
 //   * the arguments, encoded as JSON-CDC
-func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...interface{}) (interface{}, error) {
+func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...any) (any, error) {
 	err := server.CheckCommandArgumentCount(args, 2)
 	if err != nil {
 		return nil, errorWithMessage(conn, ErrorMessageArguments, err)
@@ -356,7 +356,7 @@ func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...interface{})
 //
 // There should be exactly 1 argument:
 // * current state of the emulator represented as byte
-func (i *FlowIntegration) changeEmulatorState(conn protocol.Conn, args ...interface{}) (interface{}, error) {
+func (i *FlowIntegration) changeEmulatorState(conn protocol.Conn, args ...any) (any, error) {
 	err := server.CheckCommandArgumentCount(args, 1)
 	if err != nil {
 		return nil, errorWithMessage(conn, ErrorMessageArguments, err)
@@ -381,7 +381,7 @@ func (i *FlowIntegration) changeEmulatorState(conn protocol.Conn, args ...interf
 // There should be 2 arguments:
 //	 * name of the new active acount
 //   * address of the new active account
-func (i *FlowIntegration) switchActiveAccount(conn protocol.Conn, args ...interface{}) (interface{}, error) {
+func (i *FlowIntegration) switchActiveAccount(conn protocol.Conn, args ...any) (any, error) {
 	err := server.CheckCommandArgumentCount(args, 2)
 	if err != nil {
 		return nil, errorWithMessage(conn, ErrorMessageArguments, err)
@@ -406,7 +406,7 @@ func (i *FlowIntegration) switchActiveAccount(conn protocol.Conn, args ...interf
 }
 
 // createAccount creates a new account and returns its address.
-func (i *FlowIntegration) createAccount(conn protocol.Conn, args ...interface{}) (interface{}, error) {
+func (i *FlowIntegration) createAccount(conn protocol.Conn, args ...any) (any, error) {
 	address, err := i.createAccountHelper(conn)
 	if err != nil {
 		return nil, errorWithMessage(conn, ErrorMessageAccountCreate, err)
@@ -424,7 +424,7 @@ func (i *FlowIntegration) createAccount(conn protocol.Conn, args ...interface{})
 //
 // There should be exactly 1 argument:
 // * number of accounts to be created
-func (i *FlowIntegration) createDefaultAccounts(conn protocol.Conn, args ...interface{}) (interface{}, error) {
+func (i *FlowIntegration) createDefaultAccounts(conn protocol.Conn, args ...any) (any, error) {
 	err := server.CheckCommandArgumentCount(args, 1)
 	if err != nil {
 		return nil, errorWithMessage(conn, ErrorMessageArguments, err)
@@ -476,7 +476,7 @@ func (i *FlowIntegration) createDefaultAccounts(conn protocol.Conn, args ...inte
 // There should be exactly 2 arguments:
 //   * the DocumentURI of the file to submit
 //   * the name of the contract
-func (i *FlowIntegration) deployContract(conn protocol.Conn, args ...interface{}) (interface{}, error) {
+func (i *FlowIntegration) deployContract(conn protocol.Conn, args ...any) (any, error) {
 	err := server.CheckCommandArgumentCount(args, 3)
 	if err != nil {
 		return flow.Address{}, errorWithMessage(conn, ErrorMessageServiceAccount, err)
