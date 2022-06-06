@@ -17159,11 +17159,12 @@ func (v *StorageReferenceValue) ConformsToStaticType(
 	results TypeConformanceResults,
 ) bool {
 
-	// TODO: handle AnyStruct/AnyResource
-
 	refType, ok := staticType.(ReferenceStaticType)
-	if !ok ||
-		refType.Authorized != v.Authorized {
+	if !ok {
+		return primitiveValueConformsToStaticType(interpreter, v, staticType)
+	}
+
+	if refType.Authorized != v.Authorized {
 
 		return false
 	}
@@ -17499,13 +17500,12 @@ func (v *EphemeralReferenceValue) ConformsToStaticType(
 	staticType StaticType,
 	results TypeConformanceResults,
 ) bool {
-
-	// TODO: handle AnyStruct/AnyResource
-
 	refType, ok := staticType.(ReferenceStaticType)
-	if !ok ||
-		refType.Authorized != v.Authorized {
+	if !ok {
+		return primitiveValueConformsToStaticType(interpreter, v, staticType)
+	}
 
+	if refType.Authorized != v.Authorized {
 		return false
 	}
 

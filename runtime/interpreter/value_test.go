@@ -3546,8 +3546,19 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 
 	t.Parallel()
 
-	inter, err := NewInterpreter(nil, utils.TestLocation)
+	storage := newUnmeteredInMemoryStorage()
+
+	testAddress := common.MustBytesToAddress([]byte{0x1})
+
+	inter, err := NewInterpreter(
+		nil,
+		utils.TestLocation,
+		WithStorage(storage),
+	)
 	require.NoError(t, err)
+
+	storageMap := storage.GetStorageMap(testAddress, "storage", true)
+	storageMap.WriteValue(inter, "test", NewUnmeteredBoolValue(true))
 
 	test := func(value Value, expected bool, staticType StaticType) {
 		result := value.ConformsToStaticType(
@@ -4053,5 +4064,106 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		}
 	})
 
-	// TODO: array, dictionary, composite, simple composite, ephemeral reference, storage reference
+	t.Run("EphemeralReferenceValue", func(t *testing.T) {
+
+		t.Parallel()
+
+		v := NewUnmeteredEphemeralReferenceValue(
+			false,
+			NewUnmeteredBoolValue(true),
+			sema.BoolType,
+		)
+
+		test(v, true, PrimitiveStaticTypeAny)
+		test(v, true, PrimitiveStaticTypeAnyStruct)
+		test(v, true, ReferenceStaticType{
+			Authorized:     false,
+			BorrowedType:   PrimitiveStaticTypeBool,
+			ReferencedType: PrimitiveStaticTypeBool,
+		})
+
+		test(v, false, PrimitiveStaticTypeAnyResource)
+		test(v, false, PrimitiveStaticTypeBool)
+		test(v, false, VariableSizedStaticType{
+			Type: ReferenceStaticType{
+				Authorized:     false,
+				BorrowedType:   PrimitiveStaticTypeBool,
+				ReferencedType: PrimitiveStaticTypeBool,
+			},
+		})
+		test(v, false, VariableSizedStaticType{
+			Type: ReferenceStaticType{
+				Authorized:     true,
+				BorrowedType:   PrimitiveStaticTypeBool,
+				ReferencedType: PrimitiveStaticTypeBool,
+			},
+		})
+		test(v, false, VariableSizedStaticType{
+			Type: ReferenceStaticType{
+				Authorized:     false,
+				BorrowedType:   PrimitiveStaticTypeString,
+				ReferencedType: PrimitiveStaticTypeString,
+			},
+		})
+		test(v, false, VariableSizedStaticType{
+			Type: ReferenceStaticType{
+				Authorized:     false,
+				BorrowedType:   PrimitiveStaticTypeBool,
+				ReferencedType: PrimitiveStaticTypeString,
+			},
+		})
+	})
+
+	t.Run("StorageReferenceValue", func(t *testing.T) {
+
+		t.Parallel()
+
+		v := NewUnmeteredStorageReferenceValue(
+			false,
+			testAddress,
+			NewUnmeteredPathValue(common.PathDomainStorage, "test"),
+			sema.BoolType,
+		)
+
+		test(v, true, PrimitiveStaticTypeAny)
+		test(v, true, PrimitiveStaticTypeAnyStruct)
+		test(v, true, ReferenceStaticType{
+			Authorized:     false,
+			BorrowedType:   PrimitiveStaticTypeBool,
+			ReferencedType: PrimitiveStaticTypeBool,
+		})
+
+		test(v, false, PrimitiveStaticTypeAnyResource)
+		test(v, false, PrimitiveStaticTypeBool)
+		test(v, false, VariableSizedStaticType{
+			Type: ReferenceStaticType{
+				Authorized:     false,
+				BorrowedType:   PrimitiveStaticTypeBool,
+				ReferencedType: PrimitiveStaticTypeBool,
+			},
+		})
+		test(v, false, VariableSizedStaticType{
+			Type: ReferenceStaticType{
+				Authorized:     true,
+				BorrowedType:   PrimitiveStaticTypeBool,
+				ReferencedType: PrimitiveStaticTypeBool,
+			},
+		})
+		test(v, false, VariableSizedStaticType{
+			Type: ReferenceStaticType{
+				Authorized:     false,
+				BorrowedType:   PrimitiveStaticTypeString,
+				ReferencedType: PrimitiveStaticTypeString,
+			},
+		})
+		test(v, false, VariableSizedStaticType{
+			Type: ReferenceStaticType{
+				Authorized:     false,
+				BorrowedType:   PrimitiveStaticTypeBool,
+				ReferencedType: PrimitiveStaticTypeString,
+			},
+		})
+	})
+
+	// TODO: array, dictionary, composite, simple composite
 }
