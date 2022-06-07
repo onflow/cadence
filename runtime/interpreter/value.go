@@ -1486,13 +1486,15 @@ func (v *ArrayValue) IsImportable(inter *Interpreter) bool {
 	return importable
 }
 
-func (v *ArrayValue) checkInvalidatedResourceUse(interpreter *Interpreter, getLocationRange func() LocationRange) {
+func (v *ArrayValue) checkDestroyedResourceUse(getLocationRange func() LocationRange) {
 	if v.isDestroyed {
 		panic(DestroyedResourceError{
 			LocationRange: getLocationRange(),
 		})
 	}
+}
 
+func (v *ArrayValue) checkInvalidatedResourceUse(interpreter *Interpreter, getLocationRange func() LocationRange) {
 	if v.array == nil && v.IsResourceKinded(interpreter) {
 		panic(InvalidatedResourceError{
 			LocationRange: getLocationRange(),
@@ -1507,6 +1509,8 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, getLocationRange func() L
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
 	}
+
+	v.checkDestroyedResourceUse(getLocationRange)
 
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
@@ -1609,6 +1613,8 @@ func (v *ArrayValue) GetKey(interpreter *Interpreter, getLocationRange func() Lo
 		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
 	}
 
+	v.checkDestroyedResourceUse(getLocationRange)
+
 	index := key.(NumberValue).ToInt()
 	return v.Get(interpreter, getLocationRange, index)
 }
@@ -1651,6 +1657,8 @@ func (v *ArrayValue) SetKey(interpreter *Interpreter, getLocationRange func() Lo
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
 	}
+
+	v.checkDestroyedResourceUse(getLocationRange)
 
 	index := key.(NumberValue).ToInt()
 	v.Set(interpreter, getLocationRange, index, value)
@@ -1769,6 +1777,8 @@ func (v *ArrayValue) InsertKey(interpreter *Interpreter, getLocationRange func()
 		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
 	}
 
+	v.checkDestroyedResourceUse(getLocationRange)
+
 	index := key.(NumberValue).ToInt()
 	v.Insert(interpreter, getLocationRange, index, value)
 }
@@ -1820,6 +1830,8 @@ func (v *ArrayValue) RemoveKey(interpreter *Interpreter, getLocationRange func()
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
 	}
+
+	v.checkDestroyedResourceUse(getLocationRange)
 
 	index := key.(NumberValue).ToInt()
 	return v.Remove(interpreter, getLocationRange, index)
@@ -1926,6 +1938,9 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, getLocationRange func()
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
 	}
+
+	v.checkDestroyedResourceUse(getLocationRange)
+
 	switch name {
 	case "length":
 		return NewIntValueFromInt64(interpreter, int64(v.Count()))
@@ -2125,6 +2140,8 @@ func (v *ArrayValue) RemoveMember(interpreter *Interpreter, getLocationRange fun
 		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
 	}
 
+	v.checkDestroyedResourceUse(getLocationRange)
+
 	// Arrays have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -2134,6 +2151,8 @@ func (v *ArrayValue) SetMember(interpreter *Interpreter, getLocationRange func()
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
 	}
+
+	v.checkDestroyedResourceUse(getLocationRange)
 
 	// Arrays have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
@@ -2258,6 +2277,8 @@ func (v *ArrayValue) Transfer(
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
 	}
+
+	v.checkDestroyedResourceUse(getLocationRange)
 
 	interpreter.ReportComputation(common.ComputationKindTransferArrayValue, uint(v.Count()))
 
@@ -14336,6 +14357,8 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func
 		v.checkInvalidatedResourceUse(getLocationRange)
 	}
 
+	v.checkDestroyedResourceUse(getLocationRange)
+
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
 
@@ -14387,6 +14410,8 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange fu
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(getLocationRange)
 	}
+
+	v.checkDestroyedResourceUse(getLocationRange)
 
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
@@ -14470,13 +14495,15 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange fu
 	return nil
 }
 
-func (v *CompositeValue) checkInvalidatedResourceUse(getLocationRange func() LocationRange) {
+func (v *CompositeValue) checkDestroyedResourceUse(getLocationRange func() LocationRange) {
 	if v.isDestroyed {
 		panic(DestroyedResourceError{
 			LocationRange: getLocationRange(),
 		})
 	}
+}
 
+func (v *CompositeValue) checkInvalidatedResourceUse(getLocationRange func() LocationRange) {
 	if v.dictionary == nil && v.Kind == common.CompositeKindResource {
 		panic(InvalidatedResourceError{
 			LocationRange: getLocationRange(),
@@ -14530,6 +14557,8 @@ func (v *CompositeValue) RemoveMember(
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(getLocationRange)
 	}
+
+	v.checkDestroyedResourceUse(getLocationRange)
 
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
@@ -14591,6 +14620,8 @@ func (v *CompositeValue) SetMember(
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(getLocationRange)
 	}
+
+	v.checkDestroyedResourceUse(getLocationRange)
 
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
@@ -14720,6 +14751,8 @@ func (v *CompositeValue) GetField(interpreter *Interpreter, getLocationRange fun
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(getLocationRange)
 	}
+
+	v.checkDestroyedResourceUse(getLocationRange)
 
 	storable, err := v.dictionary.Get(
 		StringAtreeComparator,
@@ -14961,6 +14994,8 @@ func (v *CompositeValue) Transfer(
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(getLocationRange)
 	}
+
+	v.checkDestroyedResourceUse(getLocationRange)
 
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
@@ -15490,13 +15525,15 @@ func (v *DictionaryValue) IsDestroyed() bool {
 	return v.isDestroyed
 }
 
-func (v *DictionaryValue) checkInvalidatedResourceUse(interpreter *Interpreter, getLocationRange func() LocationRange) {
+func (v *DictionaryValue) checkDestroyedResourceUse(getLocationRange func() LocationRange) {
 	if v.isDestroyed {
 		panic(DestroyedResourceError{
 			LocationRange: getLocationRange(),
 		})
 	}
+}
 
+func (v *DictionaryValue) checkInvalidatedResourceUse(interpreter *Interpreter, getLocationRange func() LocationRange) {
 	if v.dictionary == nil && v.IsResourceKinded(interpreter) {
 		panic(InvalidatedResourceError{
 			LocationRange: getLocationRange(),
@@ -15510,6 +15547,8 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, getLocationRange fun
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
 	}
+
+	v.checkDestroyedResourceUse(getLocationRange)
 
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
@@ -15599,6 +15638,8 @@ func (v *DictionaryValue) GetKey(interpreter *Interpreter, getLocationRange func
 		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
 	}
 
+	v.checkDestroyedResourceUse(getLocationRange)
+
 	value, ok := v.Get(interpreter, getLocationRange, keyValue)
 	if ok {
 		return NewSomeValueNonCopying(interpreter, value)
@@ -15617,6 +15658,8 @@ func (v *DictionaryValue) SetKey(
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
 	}
+
+	v.checkDestroyedResourceUse(getLocationRange)
 
 	interpreter.checkContainerMutation(v.Type.KeyType, keyValue, getLocationRange)
 	interpreter.checkContainerMutation(
@@ -15695,6 +15738,8 @@ func (v *DictionaryValue) GetMember(
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
 	}
+
+	v.checkDestroyedResourceUse(getLocationRange)
 
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
@@ -15831,6 +15876,8 @@ func (v *DictionaryValue) RemoveMember(interpreter *Interpreter, getLocationRang
 		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
 	}
 
+	v.checkDestroyedResourceUse(getLocationRange)
+
 	// Dictionaries have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -15840,6 +15887,8 @@ func (v *DictionaryValue) SetMember(interpreter *Interpreter, getLocationRange f
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
 	}
+
+	v.checkDestroyedResourceUse(getLocationRange)
 
 	// Dictionaries have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
@@ -15858,6 +15907,8 @@ func (v *DictionaryValue) RemoveKey(
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
 	}
+
+	v.checkDestroyedResourceUse(getLocationRange)
 
 	return v.Remove(interpreter, getLocationRange, key)
 }
@@ -16137,6 +16188,8 @@ func (v *DictionaryValue) Transfer(
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, getLocationRange)
 	}
+
+	v.checkDestroyedResourceUse(getLocationRange)
 
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
@@ -16612,6 +16665,8 @@ func (v *SomeValue) Destroy(interpreter *Interpreter, getLocationRange func() Lo
 		v.checkInvalidatedResourceUse(getLocationRange)
 	}
 
+	v.checkDestroyedResourceUse(getLocationRange)
+
 	innerValue := v.InnerValue(interpreter, getLocationRange)
 
 	maybeDestroy(interpreter, getLocationRange, innerValue)
@@ -16639,6 +16694,9 @@ func (v *SomeValue) GetMember(interpreter *Interpreter, getLocationRange func() 
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(getLocationRange)
 	}
+
+	v.checkDestroyedResourceUse(getLocationRange)
+
 	switch name {
 	case "map":
 		return NewHostFunctionValue(
@@ -16687,6 +16745,8 @@ func (v *SomeValue) RemoveMember(interpreter *Interpreter, getLocationRange func
 		v.checkInvalidatedResourceUse(getLocationRange)
 	}
 
+	v.checkDestroyedResourceUse(getLocationRange)
+
 	panic(errors.NewUnreachableError())
 }
 
@@ -16695,6 +16755,8 @@ func (v *SomeValue) SetMember(interpreter *Interpreter, getLocationRange func() 
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(getLocationRange)
 	}
+
+	v.checkDestroyedResourceUse(getLocationRange)
 
 	panic(errors.NewUnreachableError())
 }
@@ -16772,13 +16834,15 @@ func (v *SomeValue) IsResourceKinded(interpreter *Interpreter) bool {
 	return v.value.IsResourceKinded(interpreter)
 }
 
-func (v *SomeValue) checkInvalidatedResourceUse(getLocationRange func() LocationRange) {
+func (v *SomeValue) checkDestroyedResourceUse(getLocationRange func() LocationRange) {
 	if v.isDestroyed {
 		panic(DestroyedResourceError{
 			LocationRange: getLocationRange(),
 		})
 	}
+}
 
+func (v *SomeValue) checkInvalidatedResourceUse(getLocationRange func() LocationRange) {
 	if v.value == nil {
 		panic(InvalidatedResourceError{
 			LocationRange: getLocationRange(),
@@ -16797,6 +16861,8 @@ func (v *SomeValue) Transfer(
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(getLocationRange)
 	}
+
+	v.checkDestroyedResourceUse(getLocationRange)
 
 	innerValue := v.value
 
@@ -16861,6 +16927,8 @@ func (v *SomeValue) InnerValue(interpreter *Interpreter, getLocationRange func()
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(getLocationRange)
 	}
+
+	v.checkDestroyedResourceUse(getLocationRange)
 
 	return v.value
 }
