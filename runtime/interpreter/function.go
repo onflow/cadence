@@ -158,15 +158,9 @@ func (f *InterpretedFunctionValue) invoke(invocation Invocation) Value {
 func (f *InterpretedFunctionValue) ConformsToStaticType(
 	_ *Interpreter,
 	_ func() LocationRange,
-	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	targetType, ok := staticType.(FunctionStaticType)
-	if !ok {
-		return false
-	}
-
-	return f.Type.Equal(targetType.Type)
+	return true
 }
 
 func (f *InterpretedFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -308,15 +302,9 @@ func (*HostFunctionValue) SetMember(_ *Interpreter, _ func() LocationRange, _ st
 func (f *HostFunctionValue) ConformsToStaticType(
 	_ *Interpreter,
 	_ func() LocationRange,
-	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	targetType, ok := staticType.(FunctionStaticType)
-	if !ok {
-		return false
-	}
-
-	return f.Type.Equal(targetType.Type)
+	return true
 }
 
 func (f *HostFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -416,13 +404,11 @@ func (f BoundFunctionValue) invoke(invocation Invocation) Value {
 func (f BoundFunctionValue) ConformsToStaticType(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
-	staticType StaticType,
 	results TypeConformanceResults,
 ) bool {
 	return f.Function.ConformsToStaticType(
 		interpreter,
 		getLocationRange,
-		staticType,
 		results,
 	)
 }
