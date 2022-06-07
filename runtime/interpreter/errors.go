@@ -217,7 +217,8 @@ func (e InvalidatedResourceError) Error() string {
 	return "internal error: resource is invalidated and cannot be used anymore"
 }
 
-// DestroyedResourceError
+// DestroyedResourceError is the error which is reported
+// when a user uses a destroyed resource through a reference
 //
 type DestroyedResourceError struct {
 	LocationRange
