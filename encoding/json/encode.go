@@ -245,7 +245,7 @@ const (
 	enumTypeStr       = "Enum"
 )
 
-// prepare traverses the object graph of the provided value and constructs
+// Prepare traverses the object graph of the provided value and constructs
 // a struct representation that can be marshalled to JSON.
 func Prepare(v cadence.Value) jsonValue {
 	switch x := v.(type) {
@@ -661,10 +661,13 @@ func prepareInitializers(initializerTypes [][]cadence.Parameter, results typeRes
 
 func prepareType(typ cadence.Type, results typeResults) jsonValue {
 
-	if _, ok := results[typ]; ok {
-		return typ.ID()
+	switch typ := typ.(type) {
+	case cadence.CompositeType, cadence.InterfaceType:
+		if _, ok := results[typ]; ok {
+			return typ.ID()
+		}
+		results[typ] = struct{}{}
 	}
-	results[typ] = struct{}{}
 
 	switch typ := typ.(type) {
 	case cadence.AnyType,
