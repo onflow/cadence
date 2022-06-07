@@ -105,14 +105,10 @@ type Runtime interface {
 	//
 	ReadLinked(address common.Address, path cadence.Path, context Context) (cadence.Value, error)
 
-<<<<<<< HEAD
 	// SetDebugger configures interpreters with the given debugger.
 	//
 	SetDebugger(debugger *interpreter.Debugger)
 
-	// Storage returns the storage system.
-	Storage(context Context) *Storage
-=======
 	// Storage returns the storage system and an interpreter which can be used for
 	// accessing values in storage.
 	//
@@ -121,7 +117,6 @@ type Runtime interface {
 	// such as executing a program.
 	//
 	Storage(context Context) (*Storage, *interpreter.Interpreter, error)
->>>>>>> cb8684990 (provide interpreter with storage configured)
 }
 
 type ImportResolver = func(location common.Location) (program *ast.Program, e error)
@@ -3178,6 +3173,8 @@ func (r *interpreterRuntime) onStatementHandler() interpreter.OnStatementFunc {
 }
 
 func (r *interpreterRuntime) Storage(context Context) (*Storage, *interpreter.Interpreter, error) {
+
+	context.InitializeCodesAndPrograms()
 
 	memoryGauge, _ := context.Interface.(common.MemoryGauge)
 	storage := NewStorage(context.Interface, memoryGauge)

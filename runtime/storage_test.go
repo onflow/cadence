@@ -3226,24 +3226,89 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
-	runtimeInterface := &testRuntimeInterface{
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
-			return []Address{address}, nil
-		},
+	deployTx := utils.DeploymentTransaction("Test", []byte(`
+      pub contract Test {
+
+          pub resource interface RI {}
+
+          pub resource R: RI {}
+
+          pub fun createR(): @R {
+              return <-create R()
+          }
+      }
+    `))
+
+	accountCodes := map[common.LocationID][]byte{}
+	var events []cadence.Event
+	var loggedMessages []string
+
+	ledger := newTestLedger(nil, nil)
+
+	newRuntimeInterface := func() Interface {
+		return &testRuntimeInterface{
+			storage: ledger,
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{address}, nil
+			},
+			resolveLocation: singleIdentifierLocationResolver(t),
+			updateAccountContractCode: func(address Address, name string, code []byte) error {
+				location := common.AddressLocation{
+					Address: address,
+					Name:    name,
+				}
+				accountCodes[location.ID()] = code
+				return nil
+			},
+			getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+				location := common.AddressLocation{
+					Address: address,
+					Name:    name,
+				}
+				code = accountCodes[location.ID()]
+				return code, nil
+			},
+			emitEvent: func(event cadence.Event) error {
+				events = append(events, event)
+				return nil
+			},
+			log: func(message string) {
+				loggedMessages = append(loggedMessages, message)
+			},
+		}
 	}
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	// Store value
+	// Deploy contract
+
+	runtimeInterface := newRuntimeInterface()
 
 	err := runtime.ExecuteTransaction(
 		Script{
+			Source: deployTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Store value
+
+	runtimeInterface = newRuntimeInterface()
+
+	err = runtime.ExecuteTransaction(
+		Script{
 			Source: []byte(`
+              import Test from 0x1
+
               transaction {
                   prepare(signer: AuthAccount) {
                       signer.save("Hello, World!", to: /storage/first)
                       signer.save(["one", "two", "three"], to: /storage/second)
+                      signer.save(<-Test.createR(), to: /storage/r)
                   }
                }
             `),
@@ -3255,7 +3320,9 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	// internal access
+	// Get storage map
+
+	runtimeInterface = newRuntimeInterface()
 
 	storage, inter, err := runtime.Storage(Context{
 		Interface: runtimeInterface,
@@ -3263,8 +3330,9 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 	require.NoError(t, err)
 
 	storageMap := storage.GetStorageMap(address, common.PathDomainStorage.Identifier(), false)
-
 	require.NotNil(t, storageMap)
+
+	// Read first
 
 	firstValue := storageMap.ReadValue(nil, "first")
 	utils.RequireValuesEqual(
@@ -3273,6 +3341,8 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 		interpreter.NewUnmeteredStringValue("Hello, World!"),
 		firstValue,
 	)
+
+	// Read second
 
 	secondValue := storageMap.ReadValue(nil, "second")
 	require.IsType(t, &interpreter.ArrayValue{}, secondValue)
@@ -3286,4 +3356,12 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 		interpreter.NewUnmeteredStringValue("three"),
 		element,
 	)
+
+	// Read r
+
+	rValue := storageMap.ReadValue(nil, "r")
+	require.IsType(t, &interpreter.CompositeValue{}, rValue)
+
+	_, err = ExportValue(rValue, inter)
+	require.NoError(t, err)
 }
