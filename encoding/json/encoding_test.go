@@ -1843,8 +1843,7 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 		cadence.TypeValue{
 			StaticType: ty,
 		},
-		// TODO:
-		`{"type":"Type","staticType":null}`,
+		`{"type":"Type","value":{"staticType":{"kind":"Resource","typeID":"S.test.Foo","fields":[{"id":"foo","type":{"kind":"Optional","type":"S.test.Foo"}}],"initializers":[],"type":""}}}`,
 	)
 }
 
@@ -1943,7 +1942,7 @@ func testEncode(t *testing.T, val cadence.Value, expectedJSON string) (actualJSO
 
 	actualJSON = string(actualJSONBytes)
 
-	assert.JSONEq(t, expectedJSON, actualJSON)
+	assert.JSONEq(t, expectedJSON, actualJSON, fmt.Sprintf("actual: %s", actualJSON))
 
 	return actualJSON
 }
