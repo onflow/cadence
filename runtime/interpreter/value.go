@@ -96,6 +96,14 @@ type Value interface {
 	Accept(interpreter *Interpreter, visitor Visitor)
 	Walk(interpreter *Interpreter, walkChild func(Value))
 	StaticType(interpreter *Interpreter) StaticType
+	// ConformsToStaticType returns true if the value (i.e. its dynamic type)
+	// conforms to its own static type.
+	// Non-container values trivially always conform to their own static type.
+	// Container values conform to their own static type,
+	// and this function recursively checks conformance for nested values.
+	// If the container contains static type information about nested values,
+	// e.g. the element type of an array, it also ensures the nested values'
+	// static types are subtypes.
 	ConformsToStaticType(
 		interpreter *Interpreter,
 		getLocationRange func() LocationRange,
