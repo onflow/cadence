@@ -3540,8 +3540,32 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 
 	testAddress := common.MustBytesToAddress([]byte{0x1})
 
-	inter, err := NewInterpreter(
+	members := sema.NewStringMemberOrderedMap()
+
+	compositeType := &sema.CompositeType{
+		Location:   utils.TestLocation,
+		Identifier: "Test",
+		Kind:       common.CompositeKindStructure,
+		Members:    members,
+		Fields:     []string{"foo"},
+	}
+
+	fooField := sema.NewPublicConstantFieldMember(
 		nil,
+		compositeType,
+		"foo",
+		sema.BoolType,
+		"",
+	)
+	members.Set("foo", fooField)
+
+	elaboration := sema.NewElaboration(nil)
+	elaboration.CompositeTypes[compositeType.ID()] = compositeType
+
+	inter, err := NewInterpreter(
+		&Program{
+			Elaboration: elaboration,
+		},
 		utils.TestLocation,
 		WithStorage(storage),
 	)
@@ -3930,5 +3954,46 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		// TODO: add case with composite mismatch
 	})
 
-	// TODO: composite, simple composite
+	t.Run("CompositeValue", func(t *testing.T) {
+
+		t.Parallel()
+
+		newTestCompositeValue := func(fields []CompositeField) *CompositeValue {
+			return NewCompositeValue(
+				inter,
+				utils.TestLocation,
+				"Test",
+				common.CompositeKindStructure,
+				fields,
+				testAddress,
+			)
+		}
+
+		test(
+			newTestCompositeValue([]CompositeField{
+				{
+					Name:  "foo",
+					Value: NewUnmeteredBoolValue(true),
+				},
+			}),
+			true,
+		)
+
+		test(
+			newTestCompositeValue([]CompositeField{
+				{
+					Name:  "foo",
+					Value: NewUnmeteredStringValue("test"),
+				},
+			}),
+			false,
+		)
+
+		test(
+			newTestCompositeValue([]CompositeField{}),
+			false,
+		)
+	})
+
+	// TODO: simple composite
 }
