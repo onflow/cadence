@@ -3574,6 +3574,17 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 	storageMap := storage.GetStorageMap(testAddress, "storage", true)
 	storageMap.WriteValue(inter, "test", NewUnmeteredBoolValue(true))
 
+	newCompositeValue := func(fields []CompositeField) *CompositeValue {
+		return NewCompositeValue(
+			inter,
+			utils.TestLocation,
+			"Test",
+			common.CompositeKindStructure,
+			fields,
+			testAddress,
+		)
+	}
+
 	test := func(value Value, expected bool) {
 		result := value.ConformsToStaticType(
 			inter,
@@ -3819,6 +3830,8 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		test(v, true)
 	})
 
+	invalidCompositeValue := newCompositeValue([]CompositeField{})
+
 	t.Run("ArrayValue", func(t *testing.T) {
 
 		t.Parallel()
@@ -3862,7 +3875,17 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 			false,
 		)
 
-		// TODO: add case with composite mismatch
+		test(
+			NewArrayValue(
+				inter,
+				VariableSizedStaticType{
+					Type: PrimitiveStaticTypeAnyStruct,
+				},
+				testAddress,
+				invalidCompositeValue,
+			),
+			false,
+		)
 	})
 
 	t.Run("DictionaryValue", func(t *testing.T) {
@@ -3951,26 +3974,27 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		//	false,
 		//)
 
-		// TODO: add case with composite mismatch
+		test(
+			NewDictionaryValueWithAddress(
+				inter,
+				DictionaryStaticType{
+					KeyType:   PrimitiveStaticTypeAnyStruct,
+					ValueType: PrimitiveStaticTypeAnyStruct,
+				},
+				testAddress,
+				NewUnmeteredStringValue("a"),
+				invalidCompositeValue,
+			),
+			false,
+		)
 	})
 
 	t.Run("CompositeValue", func(t *testing.T) {
 
 		t.Parallel()
 
-		newTestCompositeValue := func(fields []CompositeField) *CompositeValue {
-			return NewCompositeValue(
-				inter,
-				utils.TestLocation,
-				"Test",
-				common.CompositeKindStructure,
-				fields,
-				testAddress,
-			)
-		}
-
 		test(
-			newTestCompositeValue([]CompositeField{
+			newCompositeValue([]CompositeField{
 				{
 					Name:  "foo",
 					Value: NewUnmeteredBoolValue(true),
@@ -3980,7 +4004,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		)
 
 		test(
-			newTestCompositeValue([]CompositeField{
+			newCompositeValue([]CompositeField{
 				{
 					Name:  "foo",
 					Value: NewUnmeteredStringValue("test"),
@@ -3990,7 +4014,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		)
 
 		test(
-			newTestCompositeValue([]CompositeField{}),
+			invalidCompositeValue,
 			false,
 		)
 	})

@@ -201,13 +201,22 @@ func (v *SimpleCompositeValue) MeteredString(memoryGauge common.MemoryGauge, see
 }
 
 func (v *SimpleCompositeValue) ConformsToStaticType(
-	inter *Interpreter,
-	_ func() LocationRange,
-	staticType StaticType,
-	_ TypeConformanceResults,
+	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
+	results TypeConformanceResults,
 ) bool {
-	// TODO: handle e.g. AnyStruct. Use  primitiveValueConformsToStaticType?
-	return staticType.Equal(v.StaticType(inter))
+
+	for _, value := range v.Fields {
+		if !value.ConformsToStaticType(
+			interpreter,
+			getLocationRange,
+			results,
+		) {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (v *SimpleCompositeValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
