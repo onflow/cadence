@@ -208,13 +208,23 @@ func (e DivisionByZeroError) Error() string {
 }
 
 // InvalidatedResourceError
-
+//
 type InvalidatedResourceError struct {
 	LocationRange
 }
 
 func (e InvalidatedResourceError) Error() string {
-	return "resource is invalidated and cannot be used anymore"
+	return "internal error: resource is invalidated and cannot be used anymore"
+}
+
+// DestroyedResourceError
+//
+type DestroyedResourceError struct {
+	LocationRange
+}
+
+func (e DestroyedResourceError) Error() string {
+	return "resource was destroyed and cannot be used anymore"
 }
 
 // ForceAssignmentToNonNilResourceError

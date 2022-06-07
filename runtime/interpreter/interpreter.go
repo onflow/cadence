@@ -4429,7 +4429,7 @@ func (interpreter *Interpreter) checkResourceNotDestroyed(value Value, getLocati
 		return
 	}
 
-	panic(InvalidatedResourceError{
+	panic(DestroyedResourceError{
 		LocationRange: getLocationRange(),
 	})
 }

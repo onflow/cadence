@@ -1487,7 +1487,13 @@ func (v *ArrayValue) IsImportable(inter *Interpreter) bool {
 }
 
 func (v *ArrayValue) checkInvalidatedResourceUse(interpreter *Interpreter, getLocationRange func() LocationRange) {
-	if v.isDestroyed || (v.array == nil && v.IsResourceKinded(interpreter)) {
+	if v.isDestroyed {
+		panic(DestroyedResourceError{
+			LocationRange: getLocationRange(),
+		})
+	}
+
+	if v.array == nil && v.IsResourceKinded(interpreter) {
 		panic(InvalidatedResourceError{
 			LocationRange: getLocationRange(),
 		})
@@ -14465,7 +14471,13 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange fu
 }
 
 func (v *CompositeValue) checkInvalidatedResourceUse(getLocationRange func() LocationRange) {
-	if v.isDestroyed || (v.dictionary == nil && v.Kind == common.CompositeKindResource) {
+	if v.isDestroyed {
+		panic(DestroyedResourceError{
+			LocationRange: getLocationRange(),
+		})
+	}
+
+	if v.dictionary == nil && v.Kind == common.CompositeKindResource {
 		panic(InvalidatedResourceError{
 			LocationRange: getLocationRange(),
 		})
@@ -15479,7 +15491,13 @@ func (v *DictionaryValue) IsDestroyed() bool {
 }
 
 func (v *DictionaryValue) checkInvalidatedResourceUse(interpreter *Interpreter, getLocationRange func() LocationRange) {
-	if v.isDestroyed || (v.dictionary == nil && v.IsResourceKinded(interpreter)) {
+	if v.isDestroyed {
+		panic(DestroyedResourceError{
+			LocationRange: getLocationRange(),
+		})
+	}
+
+	if v.dictionary == nil && v.IsResourceKinded(interpreter) {
 		panic(InvalidatedResourceError{
 			LocationRange: getLocationRange(),
 		})
@@ -16755,7 +16773,13 @@ func (v *SomeValue) IsResourceKinded(interpreter *Interpreter) bool {
 }
 
 func (v *SomeValue) checkInvalidatedResourceUse(getLocationRange func() LocationRange) {
-	if v.isDestroyed || v.value == nil {
+	if v.isDestroyed {
+		panic(DestroyedResourceError{
+			LocationRange: getLocationRange(),
+		})
+	}
+
+	if v.value == nil {
 		panic(InvalidatedResourceError{
 			LocationRange: getLocationRange(),
 		})
