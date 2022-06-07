@@ -4165,5 +4165,42 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		})
 	})
 
+	t.Run("CapabilityValue", func(t *testing.T) {
+
+		t.Parallel()
+
+		v := NewUnmeteredCapabilityValue(
+			NewUnmeteredAddressValueFromBytes(testAddress.Bytes()),
+			NewUnmeteredPathValue(common.PathDomainStorage, "test"),
+			ReferenceStaticType{
+				Authorized:     false,
+				BorrowedType:   PrimitiveStaticTypeBool,
+				ReferencedType: PrimitiveStaticTypeBool,
+			},
+		)
+
+		test(v, true, PrimitiveStaticTypeAny)
+		test(v, true, PrimitiveStaticTypeAnyStruct)
+		test(v, true, CapabilityStaticType{
+			BorrowType: ReferenceStaticType{
+				Authorized:     false,
+				BorrowedType:   PrimitiveStaticTypeBool,
+				ReferencedType: PrimitiveStaticTypeBool,
+			},
+		})
+		test(v, true, OptionalStaticType{
+			Type: CapabilityStaticType{
+				BorrowType: ReferenceStaticType{
+					Authorized:     false,
+					BorrowedType:   PrimitiveStaticTypeBool,
+					ReferencedType: PrimitiveStaticTypeBool,
+				},
+			},
+		})
+
+		test(v, false, PrimitiveStaticTypeAnyResource)
+		test(v, false, PrimitiveStaticTypeBool)
+	})
+
 	// TODO: array, dictionary, composite, simple composite
 }
