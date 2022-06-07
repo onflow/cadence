@@ -1481,12 +1481,12 @@ func TestEncodeType(t *testing.T) {
 		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{
-				StaticType: cadence.FunctionType{
+				StaticType: (&cadence.FunctionType{
 					Parameters: []cadence.Parameter{
 						{Label: "qux", Identifier: "baz", Type: cadence.StringType{}},
 					},
 					ReturnType: cadence.IntType{},
-				}.WithID("Foo"),
+				}).WithID("Foo"),
 			},
 			`{"type":"Type","value":{"staticType":
 				{	
@@ -1521,12 +1521,12 @@ func TestEncodeType(t *testing.T) {
 		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{
-				StaticType: cadence.RestrictedType{
+				StaticType: (&cadence.RestrictedType{
 					Restrictions: []cadence.Type{
 						cadence.StringType{},
 					},
 					Type: cadence.IntType{},
-				}.WithID("Int{String}"),
+				}).WithID("Int{String}"),
 			},
 			`{"type":"Type","value":{"staticType":
 				{	
@@ -1820,6 +1820,33 @@ func TestExportRecursiveType(t *testing.T) {
 
 }
 
+func TestExportTypeValueRecursiveType(t *testing.T) {
+
+	t.Parallel()
+
+	ty := &cadence.ResourceType{
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "Foo",
+		Fields: []cadence.Field{
+			{
+				Identifier: "foo",
+			},
+		},
+	}
+
+	ty.Fields[0].Type = cadence.OptionalType{
+		Type: ty,
+	}
+
+	testEncode(
+		t,
+		cadence.TypeValue{
+			StaticType: ty,
+		},
+		`{"type":"Type","value":{"staticType":{"kind":"Resource","typeID":"S.test.Foo","fields":[{"id":"foo","type":{"kind":"Optional","type":"S.test.Foo"}}],"initializers":[],"type":""}}}`,
+	)
+}
+
 func TestEncodePath(t *testing.T) {
 
 	t.Parallel()
@@ -1915,7 +1942,7 @@ func testEncode(t *testing.T, val cadence.Value, expectedJSON string) (actualJSO
 
 	actualJSON = string(actualJSONBytes)
 
-	assert.JSONEq(t, expectedJSON, actualJSON)
+	assert.JSONEq(t, expectedJSON, actualJSON, fmt.Sprintf("actual: %s", actualJSON))
 
 	return actualJSON
 }
