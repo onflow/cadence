@@ -206,7 +206,11 @@ func (v *SimpleCompositeValue) ConformsToStaticType(
 	results TypeConformanceResults,
 ) bool {
 
-	for _, value := range v.Fields {
+	for _, fieldName := range v.FieldNames {
+		value, ok := v.Fields[fieldName]
+		if !ok {
+			continue
+		}
 		if !value.ConformsToStaticType(
 			interpreter,
 			getLocationRange,
