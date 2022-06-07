@@ -4019,5 +4019,41 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		)
 	})
 
-	// TODO: simple composite
+	t.Run("SimplCompositeValue", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(
+			NewSimpleCompositeValue(
+				inter,
+				PrimitiveStaticTypeBlock.SemaType().ID(),
+				PrimitiveStaticTypeBlock,
+				[]string{"height"},
+				map[string]Value{
+					"height": NewUnmeteredInt64Value(1),
+				},
+				nil,
+				nil,
+				nil,
+			),
+			true,
+		)
+
+		test(
+			NewSimpleCompositeValue(
+				inter,
+				PrimitiveStaticTypeBlock.SemaType().ID(),
+				PrimitiveStaticTypeBlock,
+				[]string{"foo"},
+				map[string]Value{
+					"foo": invalidCompositeValue,
+				},
+				nil,
+				nil,
+				nil,
+			),
+			false,
+		)
+	})
+
 }
