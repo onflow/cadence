@@ -1820,6 +1820,34 @@ func TestExportRecursiveType(t *testing.T) {
 
 }
 
+func TestExportTypeValueRecursiveType(t *testing.T) {
+
+	t.Parallel()
+
+	ty := &cadence.ResourceType{
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "Foo",
+		Fields: []cadence.Field{
+			{
+				Identifier: "foo",
+			},
+		},
+	}
+
+	ty.Fields[0].Type = cadence.OptionalType{
+		Type: ty,
+	}
+
+	testEncode(
+		t,
+		cadence.TypeValue{
+			StaticType: ty,
+		},
+		// TODO:
+		`{"type":"Type","staticType":null}`,
+	)
+}
+
 func TestEncodePath(t *testing.T) {
 
 	t.Parallel()
