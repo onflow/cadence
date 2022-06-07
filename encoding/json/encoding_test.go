@@ -1481,12 +1481,12 @@ func TestEncodeType(t *testing.T) {
 		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{
-				StaticType: cadence.FunctionType{
+				StaticType: (&cadence.FunctionType{
 					Parameters: []cadence.Parameter{
 						{Label: "qux", Identifier: "baz", Type: cadence.StringType{}},
 					},
 					ReturnType: cadence.IntType{},
-				}.WithID("Foo"),
+				}).WithID("Foo"),
 			},
 			`{"type":"Type","value":{"staticType":
 				{	
@@ -1521,12 +1521,12 @@ func TestEncodeType(t *testing.T) {
 		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{
-				StaticType: cadence.RestrictedType{
+				StaticType: (&cadence.RestrictedType{
 					Restrictions: []cadence.Type{
 						cadence.StringType{},
 					},
 					Type: cadence.IntType{},
-				}.WithID("Int{String}"),
+				}).WithID("Int{String}"),
 			},
 			`{"type":"Type","value":{"staticType":
 				{	

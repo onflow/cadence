@@ -566,7 +566,7 @@ func prepareComposite(kind, id string, fieldTypes []cadence.Field, fields []cade
 	nonFunctionFieldTypes := make([]cadence.Field, 0)
 
 	for _, field := range fieldTypes {
-		if _, ok := field.Type.(cadence.FunctionType); !ok {
+		if _, ok := field.Type.(*cadence.FunctionType); !ok {
 			nonFunctionFieldTypes = append(nonFunctionFieldTypes, field)
 		}
 	}
@@ -661,11 +661,21 @@ func prepareInitializers(initializerTypes [][]cadence.Parameter, results typeRes
 
 func prepareType(typ cadence.Type, results typeResults) jsonValue {
 
-	switch typ := typ.(type) {
+	var supportedRecursiveType bool
+	switch typ.(type) {
 	case cadence.CompositeType, cadence.InterfaceType:
-		if _, ok := results[typ]; ok {
-			return typ.ID()
+		supportedRecursiveType = true
+	}
+
+	if _, ok := results[typ]; ok {
+		if !supportedRecursiveType {
+			panic(fmt.Errorf("failed to prepare type: unsupported recursive type: %T", typ))
 		}
+
+		return typ.ID()
+	}
+
+	if supportedRecursiveType {
 		results[typ] = struct{}{}
 	}
 
@@ -801,7 +811,7 @@ func prepareType(typ cadence.Type, results typeResults) jsonValue {
 			Fields:       prepareFields(typ.Fields, results),
 			Initializers: prepareInitializers(typ.Initializers, results),
 		}
-	case cadence.FunctionType:
+	case *cadence.FunctionType:
 		return jsonFunctionType{
 			Kind:       "Function",
 			TypeID:     typ.ID(),
@@ -814,7 +824,7 @@ func prepareType(typ cadence.Type, results typeResults) jsonValue {
 			Authorized: typ.Authorized,
 			Type:       prepareType(typ.Type, results),
 		}
-	case cadence.RestrictedType:
+	case *cadence.RestrictedType:
 		restrictions := make([]jsonValue, 0)
 		for _, restriction := range typ.Restrictions {
 			restrictions = append(restrictions, prepareType(restriction, results))
