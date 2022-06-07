@@ -166,7 +166,7 @@ func (f *InterpretedFunctionValue) ConformsToStaticType(
 		return f.Type.Equal(targetType.Type)
 	}
 
-	return primitiveValueConformsToStaticType(inter, f, staticType)
+	return valueStaticTypeIsSubType(inter, f, staticType)
 }
 
 func (f *InterpretedFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -316,7 +316,7 @@ func (f *HostFunctionValue) ConformsToStaticType(
 		return f.Type.Equal(targetType.Type)
 	}
 
-	return primitiveValueConformsToStaticType(inter, f, staticType)
+	return valueStaticTypeIsSubType(inter, f, staticType)
 }
 
 func (f *HostFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {

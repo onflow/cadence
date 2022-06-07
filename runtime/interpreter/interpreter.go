@@ -3850,7 +3850,6 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 			}
 
 			borrowType, ok := typeParameterPair.Value.(*sema.ReferenceType)
-
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}

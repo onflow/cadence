@@ -371,7 +371,7 @@ func (v TypeValue) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return valueStaticTypeIsSubType(inter, v, staticType)
 }
 
 func (v TypeValue) Storable(
@@ -501,7 +501,7 @@ func (v VoidValue) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return valueStaticTypeIsSubType(inter, v, staticType)
 }
 
 func (v VoidValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -644,7 +644,7 @@ func (v BoolValue) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return valueStaticTypeIsSubType(inter, v, staticType)
 }
 
 func (v BoolValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -786,7 +786,7 @@ func (v CharacterValue) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return valueStaticTypeIsSubType(inter, v, staticType)
 }
 
 func (v CharacterValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -1290,7 +1290,7 @@ func (v *StringValue) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return valueStaticTypeIsSubType(inter, v, staticType)
 }
 
 // ArrayValue
@@ -2143,9 +2143,6 @@ func (v *ArrayValue) ConformsToStaticType(
 	staticType StaticType,
 	results TypeConformanceResults,
 ) bool {
-
-	// TODO: handle AnyStruct/AnyResource
-
 	count := v.Count()
 
 	if interpreter.tracingEnabled {
@@ -2172,7 +2169,7 @@ func (v *ArrayValue) ConformsToStaticType(
 	case VariableSizedStaticType:
 		elementType = typedStaticType.ElementType()
 	default:
-		return false
+		return valueStaticTypeIsSubType(interpreter, v, staticType)
 	}
 
 	result := true
@@ -3251,7 +3248,7 @@ func (v IntValue) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return valueStaticTypeIsSubType(inter, v, staticType)
 }
 
 func (v IntValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
@@ -3858,7 +3855,7 @@ func (v Int8Value) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return valueStaticTypeIsSubType(inter, v, staticType)
 }
 
 func (v Int8Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -4467,7 +4464,7 @@ func (v Int16Value) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return valueStaticTypeIsSubType(inter, v, staticType)
 }
 
 func (v Int16Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -5076,7 +5073,7 @@ func (v Int32Value) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return valueStaticTypeIsSubType(inter, v, staticType)
 }
 
 func (v Int32Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -5680,7 +5677,7 @@ func (v Int64Value) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return valueStaticTypeIsSubType(inter, v, staticType)
 }
 
 func (v Int64Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -6389,7 +6386,7 @@ func (v Int128Value) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return valueStaticTypeIsSubType(inter, v, staticType)
 }
 
 func (v Int128Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -7095,7 +7092,7 @@ func (v Int256Value) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return valueStaticTypeIsSubType(inter, v, staticType)
 }
 
 func (v Int256Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -7705,7 +7702,7 @@ func (v UIntValue) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return valueStaticTypeIsSubType(inter, v, staticType)
 }
 
 func (v UIntValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
@@ -8242,7 +8239,7 @@ func (v UInt8Value) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return valueStaticTypeIsSubType(inter, v, staticType)
 }
 
 func (v UInt8Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -8785,7 +8782,7 @@ func (v UInt16Value) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return valueStaticTypeIsSubType(inter, v, staticType)
 }
 
 func (UInt16Value) IsStorable() bool {
@@ -9333,7 +9330,7 @@ func (v UInt32Value) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return valueStaticTypeIsSubType(inter, v, staticType)
 }
 
 func (UInt32Value) IsStorable() bool {
@@ -9909,7 +9906,7 @@ func (v UInt64Value) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return valueStaticTypeIsSubType(inter, v, staticType)
 }
 func (UInt64Value) IsStorable() bool {
 	return true
@@ -10560,7 +10557,7 @@ func (v UInt128Value) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return valueStaticTypeIsSubType(inter, v, staticType)
 }
 
 func (UInt128Value) IsStorable() bool {
@@ -11212,7 +11209,7 @@ func (v UInt256Value) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return valueStaticTypeIsSubType(inter, v, staticType)
 }
 
 func (UInt256Value) IsStorable() bool {
@@ -11647,7 +11644,7 @@ func (v Word8Value) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return valueStaticTypeIsSubType(inter, v, staticType)
 }
 
 func (Word8Value) IsStorable() bool {
@@ -12084,7 +12081,7 @@ func (v Word16Value) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return valueStaticTypeIsSubType(inter, v, staticType)
 }
 
 func (Word16Value) IsStorable() bool {
@@ -12522,7 +12519,7 @@ func (v Word32Value) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return valueStaticTypeIsSubType(inter, v, staticType)
 }
 
 func (Word32Value) IsStorable() bool {
@@ -12986,7 +12983,7 @@ func (v Word64Value) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return valueStaticTypeIsSubType(inter, v, staticType)
 }
 
 func (Word64Value) IsStorable() bool {
@@ -13546,7 +13543,7 @@ func (v Fix64Value) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return valueStaticTypeIsSubType(inter, v, staticType)
 }
 
 func (Fix64Value) IsStorable() bool {
@@ -14071,7 +14068,7 @@ func (v UFix64Value) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return valueStaticTypeIsSubType(inter, v, staticType)
 }
 
 func (UFix64Value) IsStorable() bool {
@@ -15980,9 +15977,6 @@ func (v *DictionaryValue) ConformsToStaticType(
 	staticType StaticType,
 	results TypeConformanceResults,
 ) bool {
-
-	// TODO: handle AnyStruct/AnyResource
-
 	count := v.Count()
 
 	if interpreter.tracingEnabled {
@@ -16001,7 +15995,7 @@ func (v *DictionaryValue) ConformsToStaticType(
 
 	dictionaryType, ok := staticType.(DictionaryStaticType)
 	if !ok {
-		return false
+		return valueStaticTypeIsSubType(interpreter, v, staticType)
 	}
 
 	iterator, err := v.dictionary.Iterator()
@@ -16479,7 +16473,7 @@ func (v NilValue) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return valueStaticTypeIsSubType(inter, v, staticType)
 }
 
 func (v NilValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -16695,9 +16689,6 @@ func (v *SomeValue) ConformsToStaticType(
 	staticType StaticType,
 	results TypeConformanceResults,
 ) bool {
-
-	// TODO: handle AnyStruct/AnyResource
-
 	optionalType, ok := staticType.(OptionalStaticType)
 	if ok {
 		innerValue := v.InnerValue(interpreter, getLocationRange)
@@ -16710,7 +16701,7 @@ func (v *SomeValue) ConformsToStaticType(
 		)
 	}
 
-	return primitiveValueConformsToStaticType(interpreter, v, staticType)
+	return valueStaticTypeIsSubType(interpreter, v, staticType)
 }
 
 func (v *SomeValue) Equal(interpreter *Interpreter, getLocationRange func() LocationRange, other Value) bool {
@@ -17161,7 +17152,7 @@ func (v *StorageReferenceValue) ConformsToStaticType(
 
 	refType, ok := staticType.(ReferenceStaticType)
 	if !ok {
-		return primitiveValueConformsToStaticType(interpreter, v, staticType)
+		return valueStaticTypeIsSubType(interpreter, v, staticType)
 	}
 
 	if refType.Authorized != v.Authorized {
@@ -17502,7 +17493,7 @@ func (v *EphemeralReferenceValue) ConformsToStaticType(
 ) bool {
 	refType, ok := staticType.(ReferenceStaticType)
 	if !ok {
-		return primitiveValueConformsToStaticType(interpreter, v, staticType)
+		return valueStaticTypeIsSubType(interpreter, v, staticType)
 	}
 
 	if refType.Authorized != v.Authorized {
@@ -17760,7 +17751,7 @@ func (v AddressValue) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return valueStaticTypeIsSubType(inter, v, staticType)
 }
 
 func (AddressValue) IsStorable() bool {
@@ -17991,7 +17982,7 @@ func (v PathValue) ConformsToStaticType(
 	case PrimitiveStaticTypeStoragePath:
 		return v.Domain == common.PathDomainStorage
 	default:
-		return primitiveValueConformsToStaticType(inter, v, staticType)
+		return valueStaticTypeIsSubType(inter, v, staticType)
 	}
 }
 
@@ -18243,7 +18234,7 @@ func (v *CapabilityValue) ConformsToStaticType(
 	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return valueStaticTypeIsSubType(inter, v, staticType)
 }
 
 func (v *CapabilityValue) Equal(interpreter *Interpreter, getLocationRange func() LocationRange, other Value) bool {
@@ -18624,7 +18615,7 @@ var publicKeyVerifyPoPFunction = NewUnmeteredHostFunctionValue(
 	sema.PublicKeyVerifyPoPFunctionType,
 )
 
-func primitiveValueConformsToStaticType(inter *Interpreter, v Value, targetStaticType StaticType) bool {
+func valueStaticTypeIsSubType(inter *Interpreter, v Value, targetStaticType StaticType) bool {
 	staticType := v.StaticType(inter)
 	return inter.IsSubType(staticType, targetStaticType)
 }

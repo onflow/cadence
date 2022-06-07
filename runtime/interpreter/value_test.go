@@ -4202,5 +4202,90 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		test(v, false, PrimitiveStaticTypeBool)
 	})
 
-	// TODO: array, dictionary, composite, simple composite
+	t.Run("ArrayValue", func(t *testing.T) {
+
+		t.Parallel()
+
+		v := NewArrayValue(
+			inter,
+			VariableSizedStaticType{
+				Type: PrimitiveStaticTypeNumber,
+			},
+			testAddress,
+			NewUnmeteredInt8Value(2),
+			NewUnmeteredFix64Value(3),
+		)
+
+		test(v, true, PrimitiveStaticTypeAny)
+		test(v, true, PrimitiveStaticTypeAnyStruct)
+		test(v, true, VariableSizedStaticType{
+			Type: PrimitiveStaticTypeAnyStruct,
+		})
+		test(v, true, VariableSizedStaticType{
+			Type: PrimitiveStaticTypeNumber,
+		})
+		test(v, true, OptionalStaticType{
+			Type: VariableSizedStaticType{
+				Type: PrimitiveStaticTypeNumber,
+			},
+		})
+
+		test(v, false, PrimitiveStaticTypeAnyResource)
+		test(v, false, PrimitiveStaticTypeBool)
+		test(v, false, VariableSizedStaticType{
+			Type: PrimitiveStaticTypeInteger,
+		})
+	})
+
+	t.Run("DictionaryValue", func(t *testing.T) {
+
+		t.Parallel()
+
+		v := NewDictionaryValueWithAddress(
+			inter,
+			DictionaryStaticType{
+				KeyType:   PrimitiveStaticTypeString,
+				ValueType: PrimitiveStaticTypeNumber,
+			},
+			testAddress,
+			NewUnmeteredStringValue("a"),
+			NewUnmeteredInt8Value(2),
+			NewUnmeteredStringValue("b"),
+			NewUnmeteredFix64Value(3),
+		)
+
+		test(v, true, PrimitiveStaticTypeAny)
+		test(v, true, PrimitiveStaticTypeAnyStruct)
+		test(v, true, DictionaryStaticType{
+			KeyType:   PrimitiveStaticTypeAnyStruct,
+			ValueType: PrimitiveStaticTypeAnyStruct,
+		})
+		test(v, true, DictionaryStaticType{
+			KeyType:   PrimitiveStaticTypeAnyStruct,
+			ValueType: PrimitiveStaticTypeNumber,
+		})
+		test(v, true, DictionaryStaticType{
+			KeyType:   PrimitiveStaticTypeString,
+			ValueType: PrimitiveStaticTypeAnyStruct,
+		})
+		test(v, true, OptionalStaticType{
+			Type: DictionaryStaticType{
+				KeyType:   PrimitiveStaticTypeString,
+				ValueType: PrimitiveStaticTypeNumber,
+			},
+		})
+
+		test(v, false, PrimitiveStaticTypeAnyResource)
+		test(v, false, PrimitiveStaticTypeBool)
+		test(v, false, DictionaryStaticType{
+			KeyType:   PrimitiveStaticTypeString,
+			ValueType: PrimitiveStaticTypeInteger,
+		})
+		test(v, false, DictionaryStaticType{
+			KeyType:   PrimitiveStaticTypeInteger,
+			ValueType: PrimitiveStaticTypeNumber,
+		})
+	})
+
+	// TODO: composite, simple composite
 }
