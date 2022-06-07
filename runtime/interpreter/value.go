@@ -16998,7 +16998,7 @@ func (v *StorageReferenceValue) GetMember(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyed(self, getLocationRange)
+	interpreter.checkReferencedResourceNotDestroyed(self, getLocationRange)
 
 	return interpreter.getMember(self, getLocationRange, name)
 }
@@ -17017,7 +17017,7 @@ func (v *StorageReferenceValue) RemoveMember(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyed(self, getLocationRange)
+	interpreter.checkReferencedResourceNotDestroyed(self, getLocationRange)
 
 	return self.(MemberAccessibleValue).RemoveMember(interpreter, getLocationRange, name)
 }
@@ -17037,7 +17037,7 @@ func (v *StorageReferenceValue) SetMember(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyed(self, getLocationRange)
+	interpreter.checkReferencedResourceNotDestroyed(self, getLocationRange)
 
 	interpreter.setMember(self, getLocationRange, name, value)
 }
@@ -17056,7 +17056,7 @@ func (v *StorageReferenceValue) GetKey(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyed(self, getLocationRange)
+	interpreter.checkReferencedResourceNotDestroyed(self, getLocationRange)
 
 	return self.(ValueIndexableValue).
 		GetKey(interpreter, getLocationRange, key)
@@ -17077,7 +17077,7 @@ func (v *StorageReferenceValue) SetKey(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyed(self, getLocationRange)
+	interpreter.checkReferencedResourceNotDestroyed(self, getLocationRange)
 
 	self.(ValueIndexableValue).
 		SetKey(interpreter, getLocationRange, key, value)
@@ -17098,7 +17098,7 @@ func (v *StorageReferenceValue) InsertKey(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyed(self, getLocationRange)
+	interpreter.checkReferencedResourceNotDestroyed(self, getLocationRange)
 
 	self.(ValueIndexableValue).
 		InsertKey(interpreter, getLocationRange, key, value)
@@ -17118,7 +17118,7 @@ func (v *StorageReferenceValue) RemoveKey(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyed(self, getLocationRange)
+	interpreter.checkReferencedResourceNotDestroyed(self, getLocationRange)
 
 	return self.(ValueIndexableValue).
 		RemoveKey(interpreter, getLocationRange, key)
@@ -17334,7 +17334,7 @@ func (v *EphemeralReferenceValue) GetMember(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyed(self, getLocationRange)
+	interpreter.checkReferencedResourceNotDestroyed(self, getLocationRange)
 
 	return interpreter.getMember(self, getLocationRange, name)
 }
@@ -17353,7 +17353,7 @@ func (v *EphemeralReferenceValue) RemoveMember(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyed(self, getLocationRange)
+	interpreter.checkReferencedResourceNotDestroyed(self, getLocationRange)
 
 	if memberAccessibleValue, ok := self.(MemberAccessibleValue); ok {
 		return memberAccessibleValue.RemoveMember(interpreter, getLocationRange, identifier)
@@ -17377,7 +17377,7 @@ func (v *EphemeralReferenceValue) SetMember(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyed(self, getLocationRange)
+	interpreter.checkReferencedResourceNotDestroyed(self, getLocationRange)
 
 	interpreter.setMember(self, getLocationRange, name, value)
 }
@@ -17396,7 +17396,7 @@ func (v *EphemeralReferenceValue) GetKey(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyed(self, getLocationRange)
+	interpreter.checkReferencedResourceNotDestroyed(self, getLocationRange)
 
 	return self.(ValueIndexableValue).
 		GetKey(interpreter, getLocationRange, key)
@@ -17417,7 +17417,7 @@ func (v *EphemeralReferenceValue) SetKey(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyed(self, getLocationRange)
+	interpreter.checkReferencedResourceNotDestroyed(self, getLocationRange)
 
 	self.(ValueIndexableValue).
 		SetKey(interpreter, getLocationRange, key, value)
@@ -17438,7 +17438,7 @@ func (v *EphemeralReferenceValue) InsertKey(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyed(self, getLocationRange)
+	interpreter.checkReferencedResourceNotDestroyed(self, getLocationRange)
 
 	self.(ValueIndexableValue).
 		InsertKey(interpreter, getLocationRange, key, value)
@@ -17458,7 +17458,7 @@ func (v *EphemeralReferenceValue) RemoveKey(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyed(self, getLocationRange)
+	interpreter.checkReferencedResourceNotDestroyed(self, getLocationRange)
 
 	return self.(ValueIndexableValue).
 		RemoveKey(interpreter, getLocationRange, key)
