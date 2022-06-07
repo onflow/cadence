@@ -1618,19 +1618,9 @@ func TestEphemeralReferenceTypeConformance(t *testing.T) {
 	conforms := value.ConformsToStaticType(
 		inter,
 		ReturnEmptyLocationRange,
-		value.StaticType(inter),
 		TypeConformanceResults{},
 	)
 	assert.True(t, conforms)
-
-	// Check against a non-conforming type
-	conforms = value.ConformsToStaticType(
-		inter,
-		ReturnEmptyLocationRange,
-		ReferenceStaticType{},
-		TypeConformanceResults{},
-	)
-	assert.False(t, conforms)
 }
 
 func TestCapabilityValue_Equal(t *testing.T) {
@@ -3560,11 +3550,10 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 	storageMap := storage.GetStorageMap(testAddress, "storage", true)
 	storageMap.WriteValue(inter, "test", NewUnmeteredBoolValue(true))
 
-	test := func(value Value, expected bool, staticType StaticType) {
+	test := func(value Value, expected bool) {
 		result := value.ConformsToStaticType(
 			inter,
 			ReturnEmptyLocationRange,
-			staticType,
 			TypeConformanceResults{},
 		)
 		if expected {
@@ -3601,56 +3590,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 			},
 		} {
 			t.Run(name, func(t *testing.T) {
-
-				test(f, true, PrimitiveStaticTypeAny)
-				test(f, true, PrimitiveStaticTypeAnyStruct)
-				test(f, true, FunctionStaticType{
-					Type: &sema.FunctionType{
-						Parameters: []*sema.Parameter{
-							{
-								TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
-							},
-						},
-						ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.BoolType),
-					},
-				})
-
-				test(f, false, PrimitiveStaticTypeAnyResource)
-				test(f, false, FunctionStaticType{
-					Type: &sema.FunctionType{
-						ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.BoolType),
-					},
-				})
-				test(f, false, FunctionStaticType{
-					Type: &sema.FunctionType{
-						Parameters: []*sema.Parameter{
-							{
-								TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
-							},
-						},
-						ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
-					},
-				})
-				test(f, false, FunctionStaticType{
-					Type: &sema.FunctionType{
-						Parameters: []*sema.Parameter{
-							{
-								TypeAnnotation: sema.NewTypeAnnotation(sema.StringType),
-							},
-						},
-						ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.BoolType),
-					},
-				})
-				test(f, false, FunctionStaticType{
-					Type: &sema.FunctionType{
-						Parameters: []*sema.Parameter{
-							{
-								TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
-							},
-						},
-						ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.StringType),
-					},
-				})
+				test(f, true)
 			})
 		}
 	})
@@ -3659,134 +3599,49 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 
 		t.Parallel()
 
-		v := BoolValue(true)
-
-		test(v, true, PrimitiveStaticTypeAny)
-		test(v, true, PrimitiveStaticTypeAnyStruct)
-		test(v, true, PrimitiveStaticTypeBool)
-		test(v, true, OptionalStaticType{
-			Type: PrimitiveStaticTypeBool,
-		})
-
-		test(v, false, PrimitiveStaticTypeAnyResource)
-		test(v, false, PrimitiveStaticTypeString)
-		test(v, false, VariableSizedStaticType{
-			Type: PrimitiveStaticTypeBool,
-		})
+		test(NewUnmeteredBoolValue(true), true)
 	})
 
 	t.Run("StringValue", func(t *testing.T) {
 
 		t.Parallel()
 
-		v := NewUnmeteredStringValue("test")
-
-		test(v, true, PrimitiveStaticTypeAny)
-		test(v, true, PrimitiveStaticTypeAnyStruct)
-		test(v, true, PrimitiveStaticTypeString)
-		test(v, true, OptionalStaticType{
-			Type: PrimitiveStaticTypeString,
-		})
-
-		test(v, false, PrimitiveStaticTypeAnyResource)
-		test(v, false, PrimitiveStaticTypeBool)
-		test(v, false, VariableSizedStaticType{
-			Type: PrimitiveStaticTypeString,
-		})
+		test(NewUnmeteredStringValue("test"), true)
 	})
 
 	t.Run("AddressValue", func(t *testing.T) {
 
 		t.Parallel()
 
-		v := NewUnmeteredAddressValueFromBytes([]byte{0x1})
-
-		test(v, true, PrimitiveStaticTypeAny)
-		test(v, true, PrimitiveStaticTypeAnyStruct)
-		test(v, true, PrimitiveStaticTypeAddress)
-		test(v, true, OptionalStaticType{
-			Type: PrimitiveStaticTypeAddress,
-		})
-
-		test(v, false, PrimitiveStaticTypeAnyResource)
-		test(v, false, PrimitiveStaticTypeBool)
-		test(v, false, VariableSizedStaticType{
-			Type: PrimitiveStaticTypeAddress,
-		})
+		test(NewUnmeteredAddressValueFromBytes([]byte{0x1}), true)
 	})
 
 	t.Run("TypeValue", func(t *testing.T) {
 
 		t.Parallel()
 
-		v := NewUnmeteredTypeValue(PrimitiveStaticTypeInt)
-
-		test(v, true, PrimitiveStaticTypeAny)
-		test(v, true, PrimitiveStaticTypeAnyStruct)
-		test(v, true, PrimitiveStaticTypeMetaType)
-		test(v, true, OptionalStaticType{
-			Type: PrimitiveStaticTypeMetaType,
-		})
-
-		test(v, false, PrimitiveStaticTypeAnyResource)
-		test(v, false, PrimitiveStaticTypeBool)
-		test(v, false, VariableSizedStaticType{
-			Type: PrimitiveStaticTypeMetaType,
-		})
+		test(NewUnmeteredTypeValue(PrimitiveStaticTypeInt), true)
 	})
 
 	t.Run("VoidValue", func(t *testing.T) {
 
 		t.Parallel()
 
-		v := NewUnmeteredVoidValue()
-
-		test(v, true, PrimitiveStaticTypeAny)
-		test(v, true, PrimitiveStaticTypeAnyStruct)
-		test(v, true, PrimitiveStaticTypeVoid)
-		test(v, true, OptionalStaticType{
-			Type: PrimitiveStaticTypeVoid,
-		})
-
-		test(v, false, PrimitiveStaticTypeAnyResource)
-		test(v, false, PrimitiveStaticTypeBool)
-		test(v, false, VariableSizedStaticType{
-			Type: PrimitiveStaticTypeVoid,
-		})
+		test(NewUnmeteredVoidValue(), true)
 	})
 
 	t.Run("CharacterValue", func(t *testing.T) {
 
 		t.Parallel()
 
-		v := NewUnmeteredCharacterValue("t")
-
-		test(v, true, PrimitiveStaticTypeAny)
-		test(v, true, PrimitiveStaticTypeAnyStruct)
-		test(v, true, PrimitiveStaticTypeCharacter)
-		test(v, true, OptionalStaticType{
-			Type: PrimitiveStaticTypeCharacter,
-		})
-
-		test(v, false, PrimitiveStaticTypeAnyResource)
-		test(v, false, PrimitiveStaticTypeBool)
-		test(v, false, VariableSizedStaticType{
-			Type: PrimitiveStaticTypeCharacter,
-		})
+		test(NewUnmeteredCharacterValue("t"), true)
 	})
 
 	t.Run("NilValue", func(t *testing.T) {
 
 		t.Parallel()
 
-		v := NewUnmeteredNilValue()
-
-		test(v, true, PrimitiveStaticTypeAny)
-		test(v, true, PrimitiveStaticTypeAnyStruct)
-		test(v, true, PrimitiveStaticTypeAnyResource)
-		test(v, true, OptionalStaticType{
-			Type: PrimitiveStaticTypeNever,
-		})
+		test(NewUnmeteredNilValue(), true)
 	})
 
 	t.Run("SomeValue", func(t *testing.T) {
@@ -3797,180 +3652,41 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 			NewUnmeteredBoolValue(true),
 		)
 
-		test(v, true, PrimitiveStaticTypeAny)
-		test(v, true, PrimitiveStaticTypeAnyStruct)
-		test(v, true, OptionalStaticType{
-			Type: PrimitiveStaticTypeBool,
-		})
-		test(v, true, OptionalStaticType{
-			Type: OptionalStaticType{
-				Type: PrimitiveStaticTypeBool,
-			},
-		})
-
-		test(v, false, PrimitiveStaticTypeAnyResource)
-		test(v, false, PrimitiveStaticTypeBool)
-		test(v, false, PrimitiveStaticTypeString)
+		test(v, true)
 	})
 
-	t.Run("PathValue, storage domain", func(t *testing.T) {
+	t.Run("PathValue", func(t *testing.T) {
 
 		t.Parallel()
 
-		v := NewUnmeteredPathValue(common.PathDomainStorage, "test")
-
-		test(v, true, PrimitiveStaticTypeAny)
-		test(v, true, PrimitiveStaticTypeAnyStruct)
-		test(v, true, PrimitiveStaticTypePath)
-		test(v, true, PrimitiveStaticTypeStoragePath)
-		test(v, true, OptionalStaticType{
-			Type: PrimitiveStaticTypePath,
-		})
-		test(v, true, OptionalStaticType{
-			Type: PrimitiveStaticTypeStoragePath,
-		})
-
-		test(v, false, PrimitiveStaticTypeAnyResource)
-		test(v, false, PrimitiveStaticTypeCapabilityPath)
-		test(v, false, PrimitiveStaticTypePrivatePath)
-		test(v, false, PrimitiveStaticTypePublicPath)
-		test(v, false, PrimitiveStaticTypeBool)
-		test(v, false, VariableSizedStaticType{
-			Type: PrimitiveStaticTypePath,
-		})
-	})
-
-	t.Run("PathValue, public domain", func(t *testing.T) {
-
-		t.Parallel()
-
-		v := NewUnmeteredPathValue(common.PathDomainPublic, "test")
-
-		test(v, true, PrimitiveStaticTypeAny)
-		test(v, true, PrimitiveStaticTypeAnyStruct)
-		test(v, true, PrimitiveStaticTypePath)
-		test(v, true, PrimitiveStaticTypeCapabilityPath)
-		test(v, true, PrimitiveStaticTypePublicPath)
-		test(v, true, OptionalStaticType{
-			Type: PrimitiveStaticTypePath,
-		})
-		test(v, true, OptionalStaticType{
-			Type: PrimitiveStaticTypeCapabilityPath,
-		})
-		test(v, true, OptionalStaticType{
-			Type: PrimitiveStaticTypePublicPath,
-		})
-
-		test(v, false, PrimitiveStaticTypeAnyResource)
-		test(v, false, PrimitiveStaticTypeStoragePath)
-		test(v, false, PrimitiveStaticTypePrivatePath)
-		test(v, false, PrimitiveStaticTypeBool)
-		test(v, false, VariableSizedStaticType{
-			Type: PrimitiveStaticTypePath,
-		})
-	})
-
-	t.Run("PathValue, private domain", func(t *testing.T) {
-
-		t.Parallel()
-
-		v := NewUnmeteredPathValue(common.PathDomainPrivate, "test")
-
-		test(v, true, PrimitiveStaticTypeAny)
-		test(v, true, PrimitiveStaticTypeAnyStruct)
-		test(v, true, PrimitiveStaticTypePath)
-		test(v, true, PrimitiveStaticTypeCapabilityPath)
-		test(v, true, PrimitiveStaticTypePrivatePath)
-		test(v, true, OptionalStaticType{
-			Type: PrimitiveStaticTypePath,
-		})
-		test(v, true, OptionalStaticType{
-			Type: PrimitiveStaticTypeCapabilityPath,
-		})
-		test(v, true, OptionalStaticType{
-			Type: PrimitiveStaticTypePrivatePath,
-		})
-
-		test(v, false, PrimitiveStaticTypeAnyResource)
-		test(v, false, PrimitiveStaticTypeStoragePath)
-		test(v, false, PrimitiveStaticTypePublicPath)
-		test(v, false, PrimitiveStaticTypeBool)
-		test(v, false, VariableSizedStaticType{
-			Type: PrimitiveStaticTypePath,
-		})
+		for _, domain := range common.AllPathDomains {
+			test(NewUnmeteredPathValue(domain, "test"), true)
+		}
 	})
 
 	t.Run("integer values", func(t *testing.T) {
 
 		t.Parallel()
 
-		type testCase struct {
-			Value  NumberValue
-			Signed bool
-		}
-
-		testCases := map[*sema.NumericType]testCase{
-			sema.IntType: {
-				Value:  NewUnmeteredIntValueFromInt64(42),
-				Signed: true,
-			},
-			sema.UIntType: {
-				Value: NewUnmeteredUIntValueFromUint64(42),
-			},
-			sema.UInt8Type: {
-				Value: NewUnmeteredUInt8Value(42),
-			},
-			sema.UInt16Type: {
-				Value: NewUnmeteredUInt16Value(42),
-			},
-			sema.UInt32Type: {
-				Value: NewUnmeteredUInt32Value(42),
-			},
-			sema.UInt64Type: {
-				Value: NewUnmeteredUInt64Value(42),
-			},
-			sema.UInt128Type: {
-				Value: NewUnmeteredUInt128ValueFromUint64(42),
-			},
-			sema.UInt256Type: {
-				Value: NewUnmeteredUInt256ValueFromUint64(42),
-			},
-			sema.Word8Type: {
-				Value: NewUnmeteredWord8Value(42),
-			},
-			sema.Word16Type: {
-				Value: NewUnmeteredWord16Value(42),
-			},
-			sema.Word32Type: {
-				Value: NewUnmeteredWord32Value(42),
-			},
-			sema.Word64Type: {
-				Value: NewUnmeteredWord64Value(42),
-			},
-			sema.Int8Type: {
-				Value:  NewUnmeteredInt8Value(42),
-				Signed: true,
-			},
-			sema.Int16Type: {
-				Value:  NewUnmeteredInt16Value(42),
-				Signed: true,
-			},
-			sema.Int32Type: {
-				Value:  NewUnmeteredInt32Value(42),
-				Signed: true,
-			},
-			sema.Int64Type: {
-				Value:  NewUnmeteredInt64Value(42),
-				Signed: true,
-			},
-			sema.Int128Type: {
-				Value:  NewUnmeteredInt128ValueFromInt64(42),
-				Signed: true,
-			},
-			sema.Int256Type: {
-				Value:  NewUnmeteredInt256ValueFromInt64(42),
-				Signed: true,
-			},
+		testCases := map[*sema.NumericType]NumberValue{
+			sema.IntType:     NewUnmeteredIntValueFromInt64(42),
+			sema.UIntType:    NewUnmeteredUIntValueFromUint64(42),
+			sema.UInt8Type:   NewUnmeteredUInt8Value(42),
+			sema.UInt16Type:  NewUnmeteredUInt16Value(42),
+			sema.UInt32Type:  NewUnmeteredUInt32Value(42),
+			sema.UInt64Type:  NewUnmeteredUInt64Value(42),
+			sema.UInt128Type: NewUnmeteredUInt128ValueFromUint64(42),
+			sema.UInt256Type: NewUnmeteredUInt256ValueFromUint64(42),
+			sema.Word8Type:   NewUnmeteredWord8Value(42),
+			sema.Word16Type:  NewUnmeteredWord16Value(42),
+			sema.Word32Type:  NewUnmeteredWord32Value(42),
+			sema.Word64Type:  NewUnmeteredWord64Value(42),
+			sema.Int8Type:    NewUnmeteredInt8Value(42),
+			sema.Int16Type:   NewUnmeteredInt16Value(42),
+			sema.Int32Type:   NewUnmeteredInt32Value(42),
+			sema.Int64Type:   NewUnmeteredInt64Value(42),
+			sema.Int128Type:  NewUnmeteredInt128ValueFromInt64(42),
+			sema.Int256Type:  NewUnmeteredInt256ValueFromInt64(42),
 		}
 
 		for _, ty := range sema.AllIntegerTypes {
@@ -3984,28 +3700,8 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 			require.True(t, ok, "missing case for type %s", ty.String())
 		}
 
-		for semaType, testCase := range testCases {
-
-			v := testCase.Value
-			staticType := ConvertSemaToStaticType(nil, semaType)
-
-			test(v, true, PrimitiveStaticTypeAny)
-			test(v, true, PrimitiveStaticTypeAnyStruct)
-			test(v, true, PrimitiveStaticTypeNumber)
-			test(v, true, PrimitiveStaticTypeInteger)
-			test(v, testCase.Signed, PrimitiveStaticTypeSignedInteger)
-			test(v, true, staticType)
-			test(v, true, OptionalStaticType{
-				Type: PrimitiveStaticTypeInteger,
-			})
-
-			test(v, false, PrimitiveStaticTypeAnyResource)
-			test(v, false, PrimitiveStaticTypeBool)
-			test(v, false, PrimitiveStaticTypeFixedPoint)
-			test(v, false, PrimitiveStaticTypeSignedFixedPoint)
-			test(v, false, VariableSizedStaticType{
-				Type: staticType,
-			})
+		for _, v := range testCases {
+			test(v, true)
 		}
 	})
 
@@ -4013,19 +3709,9 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 
 		t.Parallel()
 
-		type testCase struct {
-			Value  FixedPointValue
-			Signed bool
-		}
-
-		testCases := map[*sema.FixedPointNumericType]testCase{
-			sema.UFix64Type: {
-				Value: NewUnmeteredUFix64ValueWithInteger(42),
-			},
-			sema.Fix64Type: {
-				Value:  NewUnmeteredFix64ValueWithInteger(42),
-				Signed: true,
-			},
+		testCases := map[*sema.FixedPointNumericType]NumberValue{
+			sema.UFix64Type: NewUnmeteredUFix64ValueWithInteger(42),
+			sema.Fix64Type:  NewUnmeteredFix64ValueWithInteger(42),
 		}
 
 		for _, ty := range sema.AllFixedPointTypes {
@@ -4039,28 +3725,8 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 			require.True(t, ok, "missing case for type %s", ty.String())
 		}
 
-		for semaType, testCase := range testCases {
-
-			v := testCase.Value
-			staticType := ConvertSemaToStaticType(nil, semaType)
-
-			test(v, true, PrimitiveStaticTypeAny)
-			test(v, true, PrimitiveStaticTypeAnyStruct)
-			test(v, true, PrimitiveStaticTypeNumber)
-			test(v, true, PrimitiveStaticTypeFixedPoint)
-			test(v, testCase.Signed, PrimitiveStaticTypeSignedFixedPoint)
-			test(v, true, staticType)
-			test(v, true, OptionalStaticType{
-				Type: PrimitiveStaticTypeFixedPoint,
-			})
-
-			test(v, false, PrimitiveStaticTypeAnyResource)
-			test(v, false, PrimitiveStaticTypeBool)
-			test(v, false, PrimitiveStaticTypeInteger)
-			test(v, false, PrimitiveStaticTypeSignedInteger)
-			test(v, false, VariableSizedStaticType{
-				Type: staticType,
-			})
+		for _, v := range testCases {
+			test(v, true)
 		}
 	})
 
@@ -4068,101 +3734,48 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 
 		t.Parallel()
 
-		v := NewUnmeteredEphemeralReferenceValue(
-			false,
-			NewUnmeteredBoolValue(true),
-			sema.BoolType,
+		test(
+			NewUnmeteredEphemeralReferenceValue(
+				false,
+				NewUnmeteredBoolValue(true),
+				sema.BoolType,
+			),
+			true,
 		)
 
-		test(v, true, PrimitiveStaticTypeAny)
-		test(v, true, PrimitiveStaticTypeAnyStruct)
-		test(v, true, ReferenceStaticType{
-			Authorized:     false,
-			BorrowedType:   PrimitiveStaticTypeBool,
-			ReferencedType: PrimitiveStaticTypeBool,
-		})
-
-		test(v, false, PrimitiveStaticTypeAnyResource)
-		test(v, false, PrimitiveStaticTypeBool)
-		test(v, false, VariableSizedStaticType{
-			Type: ReferenceStaticType{
-				Authorized:     false,
-				BorrowedType:   PrimitiveStaticTypeBool,
-				ReferencedType: PrimitiveStaticTypeBool,
-			},
-		})
-		test(v, false, VariableSizedStaticType{
-			Type: ReferenceStaticType{
-				Authorized:     true,
-				BorrowedType:   PrimitiveStaticTypeBool,
-				ReferencedType: PrimitiveStaticTypeBool,
-			},
-		})
-		test(v, false, VariableSizedStaticType{
-			Type: ReferenceStaticType{
-				Authorized:     false,
-				BorrowedType:   PrimitiveStaticTypeString,
-				ReferencedType: PrimitiveStaticTypeString,
-			},
-		})
-		test(v, false, VariableSizedStaticType{
-			Type: ReferenceStaticType{
-				Authorized:     false,
-				BorrowedType:   PrimitiveStaticTypeBool,
-				ReferencedType: PrimitiveStaticTypeString,
-			},
-		})
+		test(
+			NewUnmeteredEphemeralReferenceValue(
+				false,
+				NewUnmeteredBoolValue(true),
+				sema.StringType,
+			),
+			false,
+		)
 	})
 
 	t.Run("StorageReferenceValue", func(t *testing.T) {
 
 		t.Parallel()
 
-		v := NewUnmeteredStorageReferenceValue(
-			false,
-			testAddress,
-			NewUnmeteredPathValue(common.PathDomainStorage, "test"),
-			sema.BoolType,
+		test(
+			NewUnmeteredStorageReferenceValue(
+				false,
+				testAddress,
+				NewUnmeteredPathValue(common.PathDomainStorage, "test"),
+				sema.BoolType,
+			),
+			true,
 		)
 
-		test(v, true, PrimitiveStaticTypeAny)
-		test(v, true, PrimitiveStaticTypeAnyStruct)
-		test(v, true, ReferenceStaticType{
-			Authorized:     false,
-			BorrowedType:   PrimitiveStaticTypeBool,
-			ReferencedType: PrimitiveStaticTypeBool,
-		})
-
-		test(v, false, PrimitiveStaticTypeAnyResource)
-		test(v, false, PrimitiveStaticTypeBool)
-		test(v, false, VariableSizedStaticType{
-			Type: ReferenceStaticType{
-				Authorized:     false,
-				BorrowedType:   PrimitiveStaticTypeBool,
-				ReferencedType: PrimitiveStaticTypeBool,
-			},
-		})
-		test(v, false, VariableSizedStaticType{
-			Type: ReferenceStaticType{
-				Authorized:     true,
-				BorrowedType:   PrimitiveStaticTypeBool,
-				ReferencedType: PrimitiveStaticTypeBool,
-			},
-		})
-		test(v, false, VariableSizedStaticType{
-			Type: ReferenceStaticType{
-				Authorized:     false,
-				BorrowedType:   PrimitiveStaticTypeString,
-				ReferencedType: PrimitiveStaticTypeString,
-			},
-		})
-		test(v, false, VariableSizedStaticType{
-			Type: ReferenceStaticType{
-				Authorized:     false,
-				BorrowedType:   PrimitiveStaticTypeBool,
-				ReferencedType: PrimitiveStaticTypeString,
-			},
-		})
+		test(
+			NewUnmeteredStorageReferenceValue(
+				false,
+				testAddress,
+				NewUnmeteredPathValue(common.PathDomainStorage, "test"),
+				sema.StringType,
+			),
+			false,
+		)
 	})
 
 	t.Run("CapabilityValue", func(t *testing.T) {
@@ -4179,112 +3792,142 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 			},
 		)
 
-		test(v, true, PrimitiveStaticTypeAny)
-		test(v, true, PrimitiveStaticTypeAnyStruct)
-		test(v, true, CapabilityStaticType{
-			BorrowType: ReferenceStaticType{
-				Authorized:     false,
-				BorrowedType:   PrimitiveStaticTypeBool,
-				ReferencedType: PrimitiveStaticTypeBool,
-			},
-		})
-		test(v, true, OptionalStaticType{
-			Type: CapabilityStaticType{
-				BorrowType: ReferenceStaticType{
-					Authorized:     false,
-					BorrowedType:   PrimitiveStaticTypeBool,
-					ReferencedType: PrimitiveStaticTypeBool,
-				},
-			},
-		})
-
-		test(v, false, PrimitiveStaticTypeAnyResource)
-		test(v, false, PrimitiveStaticTypeBool)
+		test(v, true)
 	})
 
 	t.Run("ArrayValue", func(t *testing.T) {
 
 		t.Parallel()
 
-		v := NewArrayValue(
-			inter,
-			VariableSizedStaticType{
-				Type: PrimitiveStaticTypeNumber,
-			},
-			testAddress,
-			NewUnmeteredInt8Value(2),
-			NewUnmeteredFix64Value(3),
+		test(
+			NewArrayValue(
+				inter,
+				VariableSizedStaticType{
+					Type: PrimitiveStaticTypeNumber,
+				},
+				testAddress,
+				NewUnmeteredInt8Value(2),
+				NewUnmeteredFix64Value(3),
+			),
+			true,
 		)
 
-		test(v, true, PrimitiveStaticTypeAny)
-		test(v, true, PrimitiveStaticTypeAnyStruct)
-		test(v, true, VariableSizedStaticType{
-			Type: PrimitiveStaticTypeAnyStruct,
-		})
-		test(v, true, VariableSizedStaticType{
-			Type: PrimitiveStaticTypeNumber,
-		})
-		test(v, true, OptionalStaticType{
-			Type: VariableSizedStaticType{
-				Type: PrimitiveStaticTypeNumber,
-			},
-		})
+		test(
+			NewArrayValue(
+				inter,
+				VariableSizedStaticType{
+					Type: PrimitiveStaticTypeAnyStruct,
+				},
+				testAddress,
+				NewUnmeteredInt8Value(2),
+				NewUnmeteredFix64Value(3),
+			),
+			true,
+		)
 
-		test(v, false, PrimitiveStaticTypeAnyResource)
-		test(v, false, PrimitiveStaticTypeBool)
-		test(v, false, VariableSizedStaticType{
-			Type: PrimitiveStaticTypeInteger,
-		})
+		test(
+			NewArrayValue(
+				inter,
+				VariableSizedStaticType{
+					Type: PrimitiveStaticTypeInteger,
+				},
+				testAddress,
+				NewUnmeteredInt8Value(2),
+				NewUnmeteredFix64Value(3),
+			),
+			false,
+		)
+
+		// TODO: add case with composite mismatch
 	})
 
 	t.Run("DictionaryValue", func(t *testing.T) {
 
 		t.Parallel()
 
-		v := NewDictionaryValueWithAddress(
-			inter,
-			DictionaryStaticType{
-				KeyType:   PrimitiveStaticTypeString,
-				ValueType: PrimitiveStaticTypeNumber,
-			},
-			testAddress,
-			NewUnmeteredStringValue("a"),
-			NewUnmeteredInt8Value(2),
-			NewUnmeteredStringValue("b"),
-			NewUnmeteredFix64Value(3),
+		test(
+			NewDictionaryValueWithAddress(
+				inter,
+				DictionaryStaticType{
+					KeyType:   PrimitiveStaticTypeString,
+					ValueType: PrimitiveStaticTypeNumber,
+				},
+				testAddress,
+				NewUnmeteredStringValue("a"),
+				NewUnmeteredInt8Value(2),
+				NewUnmeteredStringValue("b"),
+				NewUnmeteredFix64Value(3),
+			),
+			true,
 		)
 
-		test(v, true, PrimitiveStaticTypeAny)
-		test(v, true, PrimitiveStaticTypeAnyStruct)
-		test(v, true, DictionaryStaticType{
-			KeyType:   PrimitiveStaticTypeAnyStruct,
-			ValueType: PrimitiveStaticTypeAnyStruct,
-		})
-		test(v, true, DictionaryStaticType{
-			KeyType:   PrimitiveStaticTypeAnyStruct,
-			ValueType: PrimitiveStaticTypeNumber,
-		})
-		test(v, true, DictionaryStaticType{
-			KeyType:   PrimitiveStaticTypeString,
-			ValueType: PrimitiveStaticTypeAnyStruct,
-		})
-		test(v, true, OptionalStaticType{
-			Type: DictionaryStaticType{
-				KeyType:   PrimitiveStaticTypeString,
-				ValueType: PrimitiveStaticTypeNumber,
-			},
-		})
+		test(
+			NewDictionaryValueWithAddress(
+				inter,
+				DictionaryStaticType{
+					KeyType:   PrimitiveStaticTypeString,
+					ValueType: PrimitiveStaticTypeAnyStruct,
+				},
+				testAddress,
+				NewUnmeteredStringValue("a"),
+				NewUnmeteredInt8Value(2),
+				NewUnmeteredStringValue("b"),
+				NewUnmeteredFix64Value(3),
+			),
+			true,
+		)
 
-		test(v, false, PrimitiveStaticTypeAnyResource)
-		test(v, false, PrimitiveStaticTypeBool)
-		test(v, false, DictionaryStaticType{
-			KeyType:   PrimitiveStaticTypeString,
-			ValueType: PrimitiveStaticTypeInteger,
-		})
-		test(v, false, DictionaryStaticType{
-			KeyType:   PrimitiveStaticTypeInteger,
-			ValueType: PrimitiveStaticTypeNumber,
-		})
+		test(
+			NewDictionaryValueWithAddress(
+				inter,
+				DictionaryStaticType{
+					KeyType:   PrimitiveStaticTypeAnyStruct,
+					ValueType: PrimitiveStaticTypeNumber,
+				},
+				testAddress,
+				NewUnmeteredStringValue("a"),
+				NewUnmeteredInt8Value(2),
+				NewUnmeteredStringValue("b"),
+				NewUnmeteredFix64Value(3),
+			),
+			true,
+		)
+
+		// TODO: cannot test due to container mutation check. import instead?
+
+		//test(
+		//	NewDictionaryValueWithAddress(
+		//		inter,
+		//		DictionaryStaticType{
+		//			KeyType:   PrimitiveStaticTypeInt,
+		//			ValueType: PrimitiveStaticTypeNumber,
+		//		},
+		//		testAddress,
+		//		NewUnmeteredStringValue("a"),
+		//		NewUnmeteredInt8Value(2),
+		//		NewUnmeteredStringValue("b"),
+		//		NewUnmeteredFix64Value(3),
+		//	),
+		//	false,
+		//)
+		//
+		//test(
+		//	NewDictionaryValueWithAddress(
+		//		inter,
+		//		DictionaryStaticType{
+		//			KeyType:   PrimitiveStaticTypeAnyStruct,
+		//			ValueType: PrimitiveStaticTypeInteger,
+		//		},
+		//		testAddress,
+		//		NewUnmeteredStringValue("a"),
+		//		NewUnmeteredInt8Value(2),
+		//		NewUnmeteredStringValue("b"),
+		//		NewUnmeteredFix64Value(3),
+		//	),
+		//	false,
+		//)
+
+		// TODO: add case with composite mismatch
 	})
 
 	// TODO: composite, simple composite

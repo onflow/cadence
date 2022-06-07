@@ -967,12 +967,10 @@ func validateArgumentParams(
 		}
 
 		// Check whether the decoded value conforms to the type associated with the value
-		conformanceResults := interpreter.TypeConformanceResults{}
 		if !arg.ConformsToStaticType(
 			inter,
 			interpreter.ReturnEmptyLocationRange,
-			argType,
-			conformanceResults,
+			interpreter.TypeConformanceResults{},
 		) {
 			return nil, &InvalidEntryPointArgumentError{
 				Index: i,
