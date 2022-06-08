@@ -44,10 +44,15 @@ import (
 	"github.com/onflow/cadence/languageserver/protocol"
 )
 
-var valueDeclarations = append(
+var functionDeclarations = append(
 	stdlib.FlowBuiltInFunctions(stdlib.FlowBuiltinImpls{}),
 	stdlib.BuiltinFunctions...,
 ).ToSemaValueDeclarations()
+
+var valueDeclarations = append(
+	functionDeclarations,
+	stdlib.BuiltinValues.ToSemaValueDeclarations()...,
+)
 
 var typeDeclarations = append(
 	stdlib.FlowBuiltInTypes,
