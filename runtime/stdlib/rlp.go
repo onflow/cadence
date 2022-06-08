@@ -92,6 +92,8 @@ func (e RLPDecodeStringError) Error() string {
 	return fmt.Sprintf("failed to RLP-decode string: %s", e.Msg)
 }
 
+func (e RLPDecodeStringError) IsUserError() {}
+
 var rlpDecodeStringFunction = interpreter.NewUnmeteredHostFunctionValue(
 	func(invocation interpreter.Invocation) interpreter.Value {
 		input, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
@@ -161,6 +163,8 @@ type RLPDecodeListError struct {
 func (e RLPDecodeListError) Error() string {
 	return fmt.Sprintf("failed to RLP-decode list: %s", e.Msg)
 }
+
+func (e RLPDecodeListError) IsUserError() {}
 
 var rlpDecodeListFunction = interpreter.NewUnmeteredHostFunctionValue(
 	func(invocation interpreter.Invocation) interpreter.Value {

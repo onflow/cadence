@@ -24,6 +24,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -35,6 +36,8 @@ type unsupportedOperation struct {
 	ast.Range
 }
 
+var _ errors.UserError = &unsupportedOperation{}
+
 func (e *unsupportedOperation) Error() string {
 	return fmt.Sprintf(
 		"cannot evaluate unsupported %s operation: %s",
@@ -42,6 +45,8 @@ func (e *unsupportedOperation) Error() string {
 		e.operation.Symbol(),
 	)
 }
+
+func (e *unsupportedOperation) IsUserError() {}
 
 // Error is the containing type for all errors produced by the interpreter.
 type Error struct {
@@ -98,6 +103,8 @@ type NotDeclaredError struct {
 	Name         string
 }
 
+var _ errors.UserError = NotDeclaredError{}
+
 func (e NotDeclaredError) Error() string {
 	return fmt.Sprintf(
 		"cannot find %s in this scope: `%s`",
@@ -110,15 +117,21 @@ func (e NotDeclaredError) SecondaryError() string {
 	return "not found in this scope"
 }
 
+func (e NotDeclaredError) IsUserError() {}
+
 // NotInvokableError
 
 type NotInvokableError struct {
 	Value Value
 }
 
+var _ errors.UserError = NotInvokableError{}
+
 func (e NotInvokableError) Error() string {
 	return fmt.Sprintf("cannot call value: %#+v", e.Value)
 }
+
+func (e NotInvokableError) IsUserError() {}
 
 // ArgumentCountError
 
@@ -127,6 +140,8 @@ type ArgumentCountError struct {
 	ArgumentCount  int
 }
 
+var _ errors.UserError = ArgumentCountError{}
+
 func (e ArgumentCountError) Error() string {
 	return fmt.Sprintf(
 		"incorrect number of arguments: expected %d, got %d",
@@ -134,6 +149,8 @@ func (e ArgumentCountError) Error() string {
 		e.ArgumentCount,
 	)
 }
+
+func (e ArgumentCountError) IsUserError() {}
 
 // TransactionNotDeclaredError
 
@@ -156,6 +173,8 @@ type ConditionError struct {
 	LocationRange
 }
 
+var _ errors.UserError = ConditionError{}
+
 func (e ConditionError) Error() string {
 	if e.Message == "" {
 		return fmt.Sprintf("%s failed", e.ConditionKind.Name())
@@ -163,15 +182,21 @@ func (e ConditionError) Error() string {
 	return fmt.Sprintf("%s failed: %s", e.ConditionKind.Name(), e.Message)
 }
 
+func (e ConditionError) IsUserError() {}
+
 // RedeclarationError
 
 type RedeclarationError struct {
 	Name string
 }
 
+var _ errors.UserError = RedeclarationError{}
+
 func (e RedeclarationError) Error() string {
 	return fmt.Sprintf("cannot redeclare: `%s` is already declared", e.Name)
 }
+
+func (e RedeclarationError) IsUserError() {}
 
 // DereferenceError
 
@@ -179,33 +204,49 @@ type DereferenceError struct {
 	LocationRange
 }
 
+var _ errors.UserError = DereferenceError{}
+
 func (e DereferenceError) Error() string {
 	return "dereference failed"
 }
+
+func (e DereferenceError) IsUserError() {}
 
 // OverflowError
 
 type OverflowError struct{}
 
+var _ errors.UserError = OverflowError{}
+
 func (e OverflowError) Error() string {
 	return "overflow"
 }
+
+func (e OverflowError) IsUserError() {}
 
 // UnderflowError
 
 type UnderflowError struct{}
 
+var _ errors.UserError = UnderflowError{}
+
 func (e UnderflowError) Error() string {
 	return "underflow"
 }
+
+func (e UnderflowError) IsUserError() {}
 
 // UnderflowError
 
 type DivisionByZeroError struct{}
 
+var _ errors.UserError = DivisionByZeroError{}
+
 func (e DivisionByZeroError) Error() string {
 	return "division by zero"
 }
+
+func (e DivisionByZeroError) IsUserError() {}
 
 // InvalidatedResourceError
 
@@ -213,9 +254,13 @@ type InvalidatedResourceError struct {
 	LocationRange
 }
 
+var _ errors.InternalError = InvalidatedResourceError{}
+
 func (e InvalidatedResourceError) Error() string {
 	return "resource is invalidated and cannot be used anymore"
 }
+
+func (e InvalidatedResourceError) IsInternalError() {}
 
 // ForceAssignmentToNonNilResourceError
 //
@@ -223,9 +268,13 @@ type ForceAssignmentToNonNilResourceError struct {
 	LocationRange
 }
 
+var _ errors.UserError = ForceAssignmentToNonNilResourceError{}
+
 func (e ForceAssignmentToNonNilResourceError) Error() string {
 	return "force assignment to non-nil resource-typed value"
 }
+
+func (e ForceAssignmentToNonNilResourceError) IsUserError() {}
 
 // ForceNilError
 //
@@ -233,9 +282,13 @@ type ForceNilError struct {
 	LocationRange
 }
 
+var _ errors.UserError = ForceNilError{}
+
 func (e ForceNilError) Error() string {
 	return "unexpectedly found nil while forcing an Optional value"
 }
+
+func (e ForceNilError) IsUserError() {}
 
 // ForceCastTypeMismatchError
 //
@@ -244,12 +297,16 @@ type ForceCastTypeMismatchError struct {
 	LocationRange
 }
 
+var _ errors.UserError = ForceCastTypeMismatchError{}
+
 func (e ForceCastTypeMismatchError) Error() string {
 	return fmt.Sprintf(
 		"unexpectedly found non-`%s` while force-casting value",
 		e.ExpectedType.QualifiedString(),
 	)
 }
+
+func (e ForceCastTypeMismatchError) IsUserError() {}
 
 // TypeMismatchError
 //
@@ -258,12 +315,16 @@ type TypeMismatchError struct {
 	LocationRange
 }
 
+var _ errors.UserError = TypeMismatchError{}
+
 func (e TypeMismatchError) Error() string {
 	return fmt.Sprintf(
 		"type mismatch: expected %s",
 		e.ExpectedType.QualifiedString(),
 	)
 }
+
+func (e TypeMismatchError) IsUserError() {}
 
 // InvalidPathDomainError
 //
@@ -272,6 +333,8 @@ type InvalidPathDomainError struct {
 	ExpectedDomains []common.PathDomain
 	LocationRange
 }
+
+var _ errors.UserError = InvalidPathDomainError{}
 
 func (e InvalidPathDomainError) Error() string {
 	return "invalid path domain"
@@ -292,6 +355,8 @@ func (e InvalidPathDomainError) SecondaryError() string {
 	)
 }
 
+func (e InvalidPathDomainError) IsUserError() {}
+
 // OverwriteError
 //
 type OverwriteError struct {
@@ -299,6 +364,8 @@ type OverwriteError struct {
 	Path    PathValue
 	LocationRange
 }
+
+var _ errors.UserError = OverwriteError{}
 
 func (e OverwriteError) Error() string {
 	return fmt.Sprintf(
@@ -308,6 +375,8 @@ func (e OverwriteError) Error() string {
 	)
 }
 
+func (e OverwriteError) IsUserError() {}
+
 // CyclicLinkError
 //
 type CyclicLinkError struct {
@@ -315,6 +384,8 @@ type CyclicLinkError struct {
 	Paths   []PathValue
 	LocationRange
 }
+
+var _ errors.UserError = CyclicLinkError{}
 
 func (e CyclicLinkError) Error() string {
 	var builder strings.Builder
@@ -333,6 +404,8 @@ func (e CyclicLinkError) Error() string {
 	)
 }
 
+func (e CyclicLinkError) IsUserError() {}
+
 // ArrayIndexOutOfBoundsError
 //
 type ArrayIndexOutOfBoundsError struct {
@@ -341,6 +414,8 @@ type ArrayIndexOutOfBoundsError struct {
 	LocationRange
 }
 
+var _ errors.UserError = ArrayIndexOutOfBoundsError{}
+
 func (e ArrayIndexOutOfBoundsError) Error() string {
 	return fmt.Sprintf(
 		"array index out of bounds: %d, but size is %d",
@@ -348,6 +423,8 @@ func (e ArrayIndexOutOfBoundsError) Error() string {
 		e.Size,
 	)
 }
+
+func (e ArrayIndexOutOfBoundsError) IsUserError() {}
 
 // ArraySliceIndicesError
 //
@@ -358,12 +435,16 @@ type ArraySliceIndicesError struct {
 	LocationRange
 }
 
+var _ errors.UserError = ArraySliceIndicesError{}
+
 func (e ArraySliceIndicesError) Error() string {
 	return fmt.Sprintf(
 		"slice indices [%d:%d] are out of bounds (size %d)",
 		e.FromIndex, e.UpToIndex, e.Size,
 	)
 }
+
+func (e ArraySliceIndicesError) IsUserError() {}
 
 // InvalidSliceIndexError is returned when a slice index is invalid, such as fromIndex > upToIndex
 // This error can be returned even when fromIndex and upToIndex are both within bounds.
@@ -373,9 +454,13 @@ type InvalidSliceIndexError struct {
 	LocationRange
 }
 
+var _ errors.UserError = InvalidSliceIndexError{}
+
 func (e InvalidSliceIndexError) Error() string {
 	return fmt.Sprintf("invalid slice index: %d > %d", e.FromIndex, e.UpToIndex)
 }
+
+func (e InvalidSliceIndexError) IsUserError() {}
 
 // StringIndexOutOfBoundsError
 //
@@ -385,6 +470,8 @@ type StringIndexOutOfBoundsError struct {
 	LocationRange
 }
 
+var _ errors.UserError = StringIndexOutOfBoundsError{}
+
 func (e StringIndexOutOfBoundsError) Error() string {
 	return fmt.Sprintf(
 		"string index out of bounds: %d, but length is %d",
@@ -392,6 +479,8 @@ func (e StringIndexOutOfBoundsError) Error() string {
 		e.Length,
 	)
 }
+
+func (e StringIndexOutOfBoundsError) IsUserError() {}
 
 // StringSliceIndicesError
 //
@@ -402,6 +491,8 @@ type StringSliceIndicesError struct {
 	LocationRange
 }
 
+var _ errors.UserError = StringSliceIndicesError{}
+
 func (e StringSliceIndicesError) Error() string {
 	return fmt.Sprintf(
 		"slice indices [%d:%d] are out of bounds (length %d)",
@@ -409,15 +500,21 @@ func (e StringSliceIndicesError) Error() string {
 	)
 }
 
+func (e StringSliceIndicesError) IsUserError() {}
+
 // EventEmissionUnavailableError
 //
 type EventEmissionUnavailableError struct {
 	LocationRange
 }
 
+var _ errors.UserError = EventEmissionUnavailableError{}
+
 func (e EventEmissionUnavailableError) Error() string {
 	return "cannot emit event: unavailable"
 }
+
+func (e EventEmissionUnavailableError) IsUserError() {}
 
 // UUIDUnavailableError
 //
@@ -425,9 +522,13 @@ type UUIDUnavailableError struct {
 	LocationRange
 }
 
+var _ errors.UserError = UUIDUnavailableError{}
+
 func (e UUIDUnavailableError) Error() string {
 	return "cannot get UUID: unavailable"
 }
+
+func (e UUIDUnavailableError) IsUserError() {}
 
 // TypeLoadingError
 //
@@ -435,9 +536,13 @@ type TypeLoadingError struct {
 	TypeID common.TypeID
 }
 
+var _ errors.UserError = TypeLoadingError{}
+
 func (e TypeLoadingError) Error() string {
 	return fmt.Sprintf("failed to load type: %s", e.TypeID)
 }
+
+func (e TypeLoadingError) IsUserError() {}
 
 // MissingMemberValueError
 
@@ -446,9 +551,13 @@ type MissingMemberValueError struct {
 	LocationRange
 }
 
+var _ errors.UserError = MissingMemberValueError{}
+
 func (e MissingMemberValueError) Error() string {
 	return fmt.Sprintf("missing value for member `%s`", e.Name)
 }
+
+func (e MissingMemberValueError) IsUserError() {}
 
 // InvocationArgumentTypeError
 //
@@ -458,6 +567,8 @@ type InvocationArgumentTypeError struct {
 	LocationRange
 }
 
+var _ errors.UserError = InvocationArgumentTypeError{}
+
 func (e InvocationArgumentTypeError) Error() string {
 	return fmt.Sprintf(
 		"invalid invocation with argument at index %d: expected %s",
@@ -465,6 +576,8 @@ func (e InvocationArgumentTypeError) Error() string {
 		e.ParameterType.QualifiedString(),
 	)
 }
+
+func (e InvocationArgumentTypeError) IsUserError() {}
 
 // InvocationReceiverTypeError
 //
@@ -474,6 +587,8 @@ type InvocationReceiverTypeError struct {
 	LocationRange
 }
 
+var _ errors.UserError = InvocationReceiverTypeError{}
+
 func (e InvocationReceiverTypeError) Error() string {
 	return fmt.Sprintf(
 		"invalid invocation on %s: expected %s",
@@ -482,12 +597,16 @@ func (e InvocationReceiverTypeError) Error() string {
 	)
 }
 
+func (e InvocationReceiverTypeError) IsUserError() {}
+
 // ValueTransferTypeError
 //
 type ValueTransferTypeError struct {
 	TargetType sema.Type
 	LocationRange
 }
+
+var _ errors.UserError = ValueTransferTypeError{}
 
 func (e ValueTransferTypeError) Error() string {
 	return fmt.Sprintf(
@@ -496,12 +615,16 @@ func (e ValueTransferTypeError) Error() string {
 	)
 }
 
+func (e ValueTransferTypeError) IsUserError() {}
+
 // ResourceConstructionError
 //
 type ResourceConstructionError struct {
 	CompositeType *sema.CompositeType
 	LocationRange
 }
+
+var _ errors.UserError = ResourceConstructionError{}
 
 func (e ResourceConstructionError) Error() string {
 	return fmt.Sprintf(
@@ -511,6 +634,8 @@ func (e ResourceConstructionError) Error() string {
 	)
 }
 
+func (e ResourceConstructionError) IsUserError() {}
+
 // ContainerMutationError
 //
 type ContainerMutationError struct {
@@ -518,6 +643,8 @@ type ContainerMutationError struct {
 	ActualType   sema.Type
 	LocationRange
 }
+
+var _ errors.UserError = ContainerMutationError{}
 
 func (e ContainerMutationError) Error() string {
 	return fmt.Sprintf(
@@ -527,11 +654,15 @@ func (e ContainerMutationError) Error() string {
 	)
 }
 
+func (e ContainerMutationError) IsUserError() {}
+
 // NonStorableValueError
 //
 type NonStorableValueError struct {
 	Value Value
 }
+
+var _ errors.UserError = NonStorableValueError{}
 
 func (e NonStorableValueError) Error() string {
 	return fmt.Sprintf(
@@ -540,11 +671,15 @@ func (e NonStorableValueError) Error() string {
 	)
 }
 
+func (e NonStorableValueError) IsUserError() {}
+
 // NonStorableStaticTypeError
 //
 type NonStorableStaticTypeError struct {
 	Type StaticType
 }
+
+var _ errors.UserError = NonStorableStaticTypeError{}
 
 func (e NonStorableStaticTypeError) Error() string {
 	return fmt.Sprintf(
@@ -553,11 +688,15 @@ func (e NonStorableStaticTypeError) Error() string {
 	)
 }
 
+func (e NonStorableStaticTypeError) IsUserError() {}
+
 // InterfaceMissingLocation is reported during interface lookup,
 // if an interface is looked up without a location
 type InterfaceMissingLocationError struct {
 	QualifiedIdentifier string
 }
+
+var _ errors.UserError = InterfaceMissingLocationError{}
 
 func (e InterfaceMissingLocationError) Error() string {
 	return fmt.Sprintf(
@@ -565,6 +704,8 @@ func (e InterfaceMissingLocationError) Error() string {
 		e.QualifiedIdentifier,
 	)
 }
+
+func (e InterfaceMissingLocationError) IsUserError() {}
 
 // InvalidOperandsError
 //
@@ -575,6 +716,8 @@ type InvalidOperandsError struct {
 	RightType    StaticType
 	LocationRange
 }
+
+var _ errors.UserError = InvalidOperandsError{}
 
 func (e InvalidOperandsError) Error() string {
 	var op string
@@ -592,12 +735,16 @@ func (e InvalidOperandsError) Error() string {
 	)
 }
 
+func (e InvalidOperandsError) IsUserError() {}
+
 // InvalidPublicKeyError is reported during PublicKey creation, if the PublicKey is invalid.
 type InvalidPublicKeyError struct {
 	PublicKey *ArrayValue
 	Err       error
 	LocationRange
 }
+
+var _ errors.UserError = InvalidPublicKeyError{}
 
 func (e InvalidPublicKeyError) Error() string {
 	return fmt.Sprintf("invalid public key: %s, err: %s", e.PublicKey, e.Err)
@@ -606,3 +753,5 @@ func (e InvalidPublicKeyError) Error() string {
 func (e InvalidPublicKeyError) Unwrap() error {
 	return e.Err
 }
+
+func (e InvalidPublicKeyError) IsUserError() {}

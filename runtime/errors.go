@@ -74,6 +74,8 @@ func (e CallStackLimitExceededError) Error() string {
 	)
 }
 
+func (*CallStackLimitExceededError) IsUserError() {}
+
 // InvalidTransactionCountError
 
 type InvalidTransactionCountError struct {
@@ -91,6 +93,8 @@ func (e InvalidTransactionCountError) Error() string {
 	)
 }
 
+func (*InvalidTransactionCountError) IsUserError() {}
+
 // InvalidTransactionParameterCountError
 
 type InvalidEntryPointParameterCountError struct {
@@ -106,6 +110,8 @@ func (e InvalidEntryPointParameterCountError) Error() string {
 	)
 }
 
+func (*InvalidEntryPointParameterCountError) IsUserError() {}
+
 // InvalidTransactionAuthorizerCountError
 
 type InvalidTransactionAuthorizerCountError struct {
@@ -120,6 +126,8 @@ func (e InvalidTransactionAuthorizerCountError) Error() string {
 		e.Actual,
 	)
 }
+
+func (*InvalidTransactionAuthorizerCountError) IsUserError() {}
 
 // InvalidEntryPointArgumentError
 //
@@ -140,6 +148,8 @@ func (e *InvalidEntryPointArgumentError) Error() string {
 	)
 }
 
+func (*InvalidEntryPointArgumentError) IsUserError() {}
+
 // MalformedValueError
 
 type MalformedValueError struct {
@@ -153,6 +163,8 @@ func (e *MalformedValueError) Error() string {
 	)
 }
 
+func (*MalformedValueError) IsUserError() {}
+
 // InvalidValueTypeError
 //
 type InvalidValueTypeError struct {
@@ -165,6 +177,8 @@ func (e *InvalidValueTypeError) Error() string {
 		e.ExpectedType.QualifiedString(),
 	)
 }
+
+func (*InvalidValueTypeError) IsUserError() {}
 
 // InvalidScriptReturnTypeError is an error that is reported for
 // invalid script return types.
@@ -184,6 +198,8 @@ func (e *InvalidScriptReturnTypeError) Error() string {
 	)
 }
 
+func (*InvalidScriptReturnTypeError) IsUserError() {}
+
 // ScriptParameterTypeNotStorableError is an error that is reported for
 // script parameter types that are not storable.
 //
@@ -200,6 +216,8 @@ func (e *ScriptParameterTypeNotStorableError) Error() string {
 		e.Type.QualifiedString(),
 	)
 }
+
+func (*ScriptParameterTypeNotStorableError) IsUserError() {}
 
 // ScriptParameterTypeNotImportableError is an error that is reported for
 // script parameter types that are not importable.
@@ -218,6 +236,8 @@ func (e *ScriptParameterTypeNotImportableError) Error() string {
 	)
 }
 
+func (*ScriptParameterTypeNotImportableError) IsUserError() {}
+
 // ArgumentNotImportableError is an error that is reported for
 // script arguments that belongs to non-importable types.
 //
@@ -231,6 +251,8 @@ func (e *ArgumentNotImportableError) Error() string {
 		e.Type,
 	)
 }
+
+func (*ArgumentNotImportableError) IsUserError() {}
 
 // ParsingCheckingError is an error wrapper
 // for a parsing or a checking error at a specific location
@@ -256,6 +278,8 @@ func (e *ParsingCheckingError) ImportLocation() common.Location {
 	return e.Location
 }
 
+func (*ParsingCheckingError) IsUserError() {}
+
 // InvalidContractDeploymentError
 //
 type InvalidContractDeploymentError struct {
@@ -280,6 +304,8 @@ func (e *InvalidContractDeploymentError) Unwrap() error {
 	return e.Err
 }
 
+func (*InvalidContractDeploymentError) IsUserError() {}
+
 // ContractRemovalError
 //
 type ContractRemovalError struct {
@@ -291,6 +317,8 @@ func (e *ContractRemovalError) Error() string {
 	return fmt.Sprintf("cannot remove contract `%s`", e.Name)
 }
 
+func (*ContractRemovalError) IsUserError() {}
+
 // InvalidContractDeploymentOriginError
 //
 type InvalidContractDeploymentOriginError struct {
@@ -300,6 +328,8 @@ type InvalidContractDeploymentOriginError struct {
 func (*InvalidContractDeploymentOriginError) Error() string {
 	return "cannot deploy invalid contract"
 }
+
+func (*InvalidContractDeploymentOriginError) IsUserError() {}
 
 // Contract update related errors
 
@@ -323,6 +353,8 @@ func (e *ContractUpdateError) ImportLocation() common.Location {
 	return e.Location
 }
 
+func (*ContractUpdateError) IsUserError() {}
+
 // FieldMismatchError is reported during a contract update, when a type of a field
 // does not match the existing type of the same field.
 type FieldMismatchError struct {
@@ -343,6 +375,8 @@ func (e *FieldMismatchError) SecondaryError() string {
 	return e.Err.Error()
 }
 
+func (*FieldMismatchError) IsUserError() {}
+
 // TypeMismatchError is reported during a contract update, when a type of the new program
 // does not match the existing type.
 type TypeMismatchError struct {
@@ -357,6 +391,8 @@ func (e *TypeMismatchError) Error() string {
 		e.FoundType,
 	)
 }
+
+func (*TypeMismatchError) IsUserError() {}
 
 // ExtraneousFieldError is reported during a contract update, when an updated composite
 // declaration has more fields than the existing declaration.
@@ -373,6 +409,8 @@ func (e *ExtraneousFieldError) Error() string {
 	)
 }
 
+func (*ExtraneousFieldError) IsUserError() {}
+
 // ContractNotFoundError is reported during a contract update, if no contract can be
 // found in the program.
 type ContractNotFoundError struct {
@@ -382,6 +420,8 @@ type ContractNotFoundError struct {
 func (e *ContractNotFoundError) Error() string {
 	return "cannot find any contract or contract interface"
 }
+
+func (*ContractNotFoundError) IsUserError() {}
 
 // InvalidDeclarationKindChangeError is reported during a contract update, when an attempt is made
 // to convert an existing contract to a contract interface, or vise versa.
@@ -396,6 +436,8 @@ func (e *InvalidDeclarationKindChangeError) Error() string {
 	return fmt.Sprintf("trying to convert %s `%s` to a %s", e.OldKind.Name(), e.Name, e.NewKind.Name())
 }
 
+func (*InvalidDeclarationKindChangeError) IsUserError() {}
+
 // ConformanceMismatchError is reported during a contract update, when the enum conformance of the new program
 // does not match the existing one.
 type ConformanceMismatchError struct {
@@ -406,6 +448,8 @@ type ConformanceMismatchError struct {
 func (e *ConformanceMismatchError) Error() string {
 	return fmt.Sprintf("conformances does not match in `%s`", e.DeclName)
 }
+
+func (*ConformanceMismatchError) IsUserError() {}
 
 // EnumCaseMismatchError is reported during an enum update, when an updated enum case
 // does not match the existing enum case.
@@ -421,6 +465,8 @@ func (e *EnumCaseMismatchError) Error() string {
 		e.FoundName,
 	)
 }
+
+func (*EnumCaseMismatchError) IsUserError() {}
 
 // MissingEnumCasesError is reported during an enum update, if any enum cases are removed
 // from an existing enum.
@@ -440,6 +486,8 @@ func (e *MissingEnumCasesError) Error() string {
 	)
 }
 
+func (*MissingEnumCasesError) IsUserError() {}
+
 // MissingDeclarationError is reported during a contract update,
 // if an existing declaration is removed.
 type MissingDeclarationError struct {
@@ -455,3 +503,5 @@ func (e *MissingDeclarationError) Error() string {
 		e.Name,
 	)
 }
+
+func (*MissingDeclarationError) IsUserError() {}

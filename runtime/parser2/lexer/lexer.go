@@ -20,6 +20,7 @@ package lexer
 
 import (
 	"fmt"
+	"github.com/onflow/cadence/runtime/errors"
 	"sync"
 	"unicode/utf8"
 
@@ -35,10 +36,13 @@ type TokenLimitReachedError struct {
 }
 
 var _ error = TokenLimitReachedError{}
+var _ errors.UserError = TokenLimitReachedError{}
 
 func (t TokenLimitReachedError) Error() string {
 	return fmt.Sprintf("limit of %d tokens exceeded", tokenLimit)
 }
+
+func (t TokenLimitReachedError) IsUserError() {}
 
 type position struct {
 	line   int

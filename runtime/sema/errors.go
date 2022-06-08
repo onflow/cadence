@@ -64,6 +64,8 @@ type InvalidPragmaError struct {
 
 func (e *InvalidPragmaError) isSemanticError() {}
 
+func (*InvalidPragmaError) IsUserError() {}
+
 func (e *InvalidPragmaError) Error() string {
 	return fmt.Sprintf("invalid pragma %s", e.Message)
 }
@@ -110,7 +112,7 @@ func (e CheckerError) ImportLocation() common.Location {
 // SemanticError
 
 type SemanticError interface {
-	error
+	errors.UserError
 	ast.HasPosition
 	isSemanticError()
 }
@@ -133,6 +135,8 @@ func (e *RedeclarationError) Error() string {
 }
 
 func (*RedeclarationError) isSemanticError() {}
+
+func (*RedeclarationError) IsUserError() {}
 
 func (e *RedeclarationError) StartPosition() ast.Position {
 	return e.Pos
@@ -191,6 +195,8 @@ func (e *NotDeclaredError) Error() string {
 
 func (*NotDeclaredError) isSemanticError() {}
 
+func (*NotDeclaredError) IsUserError() {}
+
 func (e *NotDeclaredError) SecondaryError() string {
 	return "not found in this scope"
 }
@@ -217,6 +223,8 @@ func (e *AssignmentToConstantError) Error() string {
 
 func (*AssignmentToConstantError) isSemanticError() {}
 
+func (*AssignmentToConstantError) IsUserError() {}
+
 // TypeMismatchError
 
 type TypeMismatchError struct {
@@ -231,6 +239,8 @@ func (e *TypeMismatchError) Error() string {
 }
 
 func (*TypeMismatchError) isSemanticError() {}
+
+func (*TypeMismatchError) IsUserError() {}
 
 func (e *TypeMismatchError) SecondaryError() string {
 	return fmt.Sprintf(
@@ -253,6 +263,8 @@ func (e *TypeMismatchWithDescriptionError) Error() string {
 }
 
 func (*TypeMismatchWithDescriptionError) isSemanticError() {}
+
+func (*TypeMismatchWithDescriptionError) IsUserError() {}
 
 func (e *TypeMismatchWithDescriptionError) SecondaryError() string {
 	return fmt.Sprintf(
@@ -278,6 +290,8 @@ func (e *NotIndexableTypeError) Error() string {
 
 func (*NotIndexableTypeError) isSemanticError() {}
 
+func (*NotIndexableTypeError) IsUserError() {}
+
 // NotIndexingAssignableTypeError
 
 type NotIndexingAssignableTypeError struct {
@@ -293,6 +307,8 @@ func (e *NotIndexingAssignableTypeError) Error() string {
 }
 
 func (*NotIndexingAssignableTypeError) isSemanticError() {}
+
+func (*NotIndexingAssignableTypeError) IsUserError() {}
 
 // NotEquatableTypeError
 
@@ -310,6 +326,8 @@ func (e *NotEquatableTypeError) Error() string {
 
 func (*NotEquatableTypeError) isSemanticError() {}
 
+func (*NotEquatableTypeError) IsUserError() {}
+
 // NotCallableError
 
 type NotCallableError struct {
@@ -324,6 +342,8 @@ func (e *NotCallableError) Error() string {
 }
 
 func (*NotCallableError) isSemanticError() {}
+
+func (*NotCallableError) IsUserError() {}
 
 // ArgumentCountError
 
@@ -347,6 +367,8 @@ func (e *ArgumentCountError) SecondaryError() string {
 
 func (*ArgumentCountError) isSemanticError() {}
 
+func (*ArgumentCountError) IsUserError() {}
+
 // MissingArgumentLabelError
 
 // TODO: suggest adding argument label
@@ -364,6 +386,8 @@ func (e *MissingArgumentLabelError) Error() string {
 }
 
 func (*MissingArgumentLabelError) isSemanticError() {}
+
+func (*MissingArgumentLabelError) IsUserError() {}
 
 // IncorrectArgumentLabelError
 
@@ -391,6 +415,8 @@ func (e *IncorrectArgumentLabelError) SecondaryError() string {
 
 func (*IncorrectArgumentLabelError) isSemanticError() {}
 
+func (*IncorrectArgumentLabelError) IsUserError() {}
+
 // InvalidUnaryOperandError
 
 type InvalidUnaryOperandError struct {
@@ -416,6 +442,8 @@ func (e *InvalidUnaryOperandError) SecondaryError() string {
 }
 
 func (*InvalidUnaryOperandError) isSemanticError() {}
+
+func (*InvalidUnaryOperandError) IsUserError() {}
 
 // InvalidBinaryOperandError
 
@@ -445,6 +473,8 @@ func (e *InvalidBinaryOperandError) SecondaryError() string {
 
 func (*InvalidBinaryOperandError) isSemanticError() {}
 
+func (*InvalidBinaryOperandError) IsUserError() {}
+
 // InvalidBinaryOperandsError
 
 type InvalidBinaryOperandsError struct {
@@ -464,6 +494,8 @@ func (e *InvalidBinaryOperandsError) Error() string {
 }
 
 func (*InvalidBinaryOperandsError) isSemanticError() {}
+
+func (*InvalidBinaryOperandsError) IsUserError() {}
 
 // InvalidNilCoalescingRightResourceOperandError
 
@@ -501,6 +533,8 @@ func (e *ControlStatementError) Error() string {
 
 func (*ControlStatementError) isSemanticError() {}
 
+func (*ControlStatementError) IsUserError() {}
+
 // InvalidAccessModifierError
 
 type InvalidAccessModifierError struct {
@@ -533,6 +567,8 @@ func (e *InvalidAccessModifierError) Error() string {
 }
 
 func (*InvalidAccessModifierError) isSemanticError() {}
+
+func (*InvalidAccessModifierError) IsUserError() {}
 
 func (e *InvalidAccessModifierError) StartPosition() ast.Position {
 	return e.Pos
@@ -570,6 +606,8 @@ func (e *MissingAccessModifierError) Error() string {
 
 func (*MissingAccessModifierError) isSemanticError() {}
 
+func (*MissingAccessModifierError) IsUserError() {}
+
 func (e *MissingAccessModifierError) StartPosition() ast.Position {
 	return e.Pos
 }
@@ -591,6 +629,8 @@ func (e *InvalidNameError) Error() string {
 
 func (*InvalidNameError) isSemanticError() {}
 
+func (*InvalidNameError) IsUserError() {}
+
 func (e *InvalidNameError) StartPosition() ast.Position {
 	return e.Pos
 }
@@ -611,6 +651,8 @@ func (e *UnknownSpecialFunctionError) Error() string {
 }
 
 func (*UnknownSpecialFunctionError) isSemanticError() {}
+
+func (*UnknownSpecialFunctionError) IsUserError() {}
 
 func (e *UnknownSpecialFunctionError) StartPosition() ast.Position {
 	return e.Pos
@@ -636,6 +678,8 @@ func (e *InvalidVariableKindError) Error() string {
 
 func (*InvalidVariableKindError) isSemanticError() {}
 
+func (*InvalidVariableKindError) IsUserError() {}
+
 // InvalidDeclarationError
 
 type InvalidDeclarationError struct {
@@ -658,6 +702,8 @@ func (e *InvalidDeclarationError) Error() string {
 
 func (*InvalidDeclarationError) isSemanticError() {}
 
+func (*InvalidDeclarationError) IsUserError() {}
+
 // MissingInitializerError
 
 type MissingInitializerError struct {
@@ -675,6 +721,8 @@ func (e *MissingInitializerError) Error() string {
 }
 
 func (*MissingInitializerError) isSemanticError() {}
+
+func (*MissingInitializerError) IsUserError() {}
 
 func (e *MissingInitializerError) StartPosition() ast.Position {
 	return e.FirstFieldPos
@@ -708,6 +756,8 @@ func (e *NotDeclaredMemberError) SecondaryError() string {
 
 func (*NotDeclaredMemberError) isSemanticError() {}
 
+func (*NotDeclaredMemberError) IsUserError() {}
+
 // AssignmentToConstantMemberError
 
 // TODO: maybe split up into two errors:
@@ -725,6 +775,8 @@ func (e *AssignmentToConstantMemberError) Error() string {
 
 func (*AssignmentToConstantMemberError) isSemanticError() {}
 
+func (*AssignmentToConstantMemberError) IsUserError() {}
+
 type FieldReinitializationError struct {
 	Name string
 	ast.Range
@@ -735,6 +787,8 @@ func (e *FieldReinitializationError) Error() string {
 }
 
 func (*FieldReinitializationError) isSemanticError() {}
+
+func (*FieldReinitializationError) IsUserError() {}
 
 // FieldUninitializedError
 
@@ -757,6 +811,8 @@ func (e *FieldUninitializedError) SecondaryError() string {
 }
 
 func (*FieldUninitializedError) isSemanticError() {}
+
+func (*FieldUninitializedError) IsUserError() {}
 
 func (e *FieldUninitializedError) StartPosition() ast.Position {
 	return e.Pos
@@ -796,6 +852,8 @@ func (e *FieldTypeNotStorableError) Error() string {
 
 func (*FieldTypeNotStorableError) isSemanticError() {}
 
+func (*FieldTypeNotStorableError) IsUserError() {}
+
 func (e *FieldTypeNotStorableError) StartPosition() ast.Position {
 	return e.Pos
 }
@@ -816,6 +874,8 @@ func (e *FunctionExpressionInConditionError) Error() string {
 }
 
 func (*FunctionExpressionInConditionError) isSemanticError() {}
+
+func (*FunctionExpressionInConditionError) IsUserError() {}
 
 // MissingReturnValueError
 
@@ -840,6 +900,8 @@ func (e *MissingReturnValueError) Error() string {
 
 func (*MissingReturnValueError) isSemanticError() {}
 
+func (*MissingReturnValueError) IsUserError() {}
+
 // InvalidImplementationError
 
 type InvalidImplementationError struct {
@@ -857,6 +919,8 @@ func (e *InvalidImplementationError) Error() string {
 }
 
 func (*InvalidImplementationError) isSemanticError() {}
+
+func (*InvalidImplementationError) IsUserError() {}
 
 func (e *InvalidImplementationError) StartPosition() ast.Position {
 	return e.Pos
@@ -882,6 +946,8 @@ func (e *InvalidConformanceError) Error() string {
 
 func (*InvalidConformanceError) isSemanticError() {}
 
+func (*InvalidConformanceError) IsUserError() {}
+
 // InvalidEnumRawTypeError
 
 type InvalidEnumRawTypeError struct {
@@ -898,6 +964,8 @@ func (e *InvalidEnumRawTypeError) Error() string {
 
 func (*InvalidEnumRawTypeError) isSemanticError() {}
 
+func (*InvalidEnumRawTypeError) IsUserError() {}
+
 // MissingEnumRawTypeError
 
 type MissingEnumRawTypeError struct {
@@ -909,6 +977,8 @@ func (e *MissingEnumRawTypeError) Error() string {
 }
 
 func (*MissingEnumRawTypeError) isSemanticError() {}
+
+func (*MissingEnumRawTypeError) IsUserError() {}
 
 func (e *MissingEnumRawTypeError) StartPosition() ast.Position {
 	return e.Pos
@@ -929,6 +999,8 @@ func (e *InvalidEnumConformancesError) Error() string {
 }
 
 func (*InvalidEnumConformancesError) isSemanticError() {}
+
+func (*InvalidEnumConformancesError) IsUserError() {}
 
 // ConformanceError
 
@@ -978,6 +1050,8 @@ func (e *ConformanceError) Error() string {
 }
 
 func (*ConformanceError) isSemanticError() {}
+
+func (*ConformanceError) IsUserError() {}
 
 func (e *ConformanceError) StartPosition() ast.Position {
 	return e.Pos
@@ -1033,6 +1107,8 @@ func (e *DuplicateConformanceError) Error() string {
 
 func (*DuplicateConformanceError) isSemanticError() {}
 
+func (*MemberMismatchNote) IsUserError() {}
+
 // MissingConformanceError
 
 type MissingConformanceError struct {
@@ -1053,6 +1129,8 @@ func (e *MissingConformanceError) Error() string {
 
 func (*MissingConformanceError) isSemanticError() {}
 
+func (*MissingConformanceError) IsUserError() {}
+
 // UnresolvedImportError
 
 type UnresolvedImportError struct {
@@ -1065,6 +1143,8 @@ func (e *UnresolvedImportError) Error() string {
 }
 
 func (*UnresolvedImportError) isSemanticError() {}
+
+func (*UnresolvedImportError) IsUserError() {}
 
 // NotExportedError
 
@@ -1095,6 +1175,8 @@ func (e *NotExportedError) SecondaryError() string {
 }
 
 func (*NotExportedError) isSemanticError() {}
+
+func (*NotExportedError) IsUserError() {}
 
 func (e *NotExportedError) StartPosition() ast.Position {
 	return e.Pos
@@ -1130,6 +1212,8 @@ func (e *ImportedProgramError) ChildErrors() []error {
 
 func (*ImportedProgramError) isSemanticError() {}
 
+func (*ImportedProgramError) IsUserError() {}
+
 // AlwaysFailingNonResourceCastingTypeError
 
 type AlwaysFailingNonResourceCastingTypeError struct {
@@ -1147,6 +1231,8 @@ func (e *AlwaysFailingNonResourceCastingTypeError) Error() string {
 }
 
 func (*AlwaysFailingNonResourceCastingTypeError) isSemanticError() {}
+
+func (*AlwaysFailingNonResourceCastingTypeError) IsUserError() {}
 
 // AlwaysFailingResourceCastingTypeError
 
@@ -1166,6 +1252,8 @@ func (e *AlwaysFailingResourceCastingTypeError) Error() string {
 
 func (*AlwaysFailingResourceCastingTypeError) isSemanticError() {}
 
+func (*AlwaysFailingResourceCastingTypeError) IsUserError() {}
+
 // UnsupportedOverloadingError
 
 type UnsupportedOverloadingError struct {
@@ -1182,6 +1270,8 @@ func (e *UnsupportedOverloadingError) Error() string {
 
 func (*UnsupportedOverloadingError) isSemanticError() {}
 
+func (*UnsupportedOverloadingError) IsUserError() {}
+
 // CompositeKindMismatchError
 
 type CompositeKindMismatchError struct {
@@ -1195,6 +1285,8 @@ func (e *CompositeKindMismatchError) Error() string {
 }
 
 func (*CompositeKindMismatchError) isSemanticError() {}
+
+func (*CompositeKindMismatchError) IsUserError() {}
 
 func (e *CompositeKindMismatchError) SecondaryError() string {
 	return fmt.Sprintf(
@@ -1228,6 +1320,8 @@ func (e *InvalidIntegerLiteralRangeError) SecondaryError() string {
 
 func (*InvalidIntegerLiteralRangeError) isSemanticError() {}
 
+func (*InvalidIntegerLiteralRangeError) IsUserError() {}
+
 // InvalidAddressLiteralError
 
 type InvalidAddressLiteralError struct {
@@ -1239,6 +1333,8 @@ func (e *InvalidAddressLiteralError) Error() string {
 }
 
 func (*InvalidAddressLiteralError) isSemanticError() {}
+
+func (*InvalidAddressLiteralError) IsUserError() {}
 
 // InvalidFixedPointLiteralRangeError
 
@@ -1268,6 +1364,8 @@ func (e *InvalidFixedPointLiteralRangeError) SecondaryError() string {
 
 func (*InvalidFixedPointLiteralRangeError) isSemanticError() {}
 
+func (*InvalidFixedPointLiteralRangeError) IsUserError() {}
+
 // InvalidFixedPointLiteralScaleError
 
 type InvalidFixedPointLiteralScaleError struct {
@@ -1290,6 +1388,8 @@ func (e *InvalidFixedPointLiteralScaleError) SecondaryError() string {
 
 func (*InvalidFixedPointLiteralScaleError) isSemanticError() {}
 
+func (*InvalidFixedPointLiteralScaleError) IsUserError() {}
+
 // MissingReturnStatementError
 
 type MissingReturnStatementError struct {
@@ -1302,6 +1402,8 @@ func (e *MissingReturnStatementError) Error() string {
 
 func (*MissingReturnStatementError) isSemanticError() {}
 
+func (*MissingReturnStatementError) IsUserError() {}
+
 // UnsupportedOptionalChainingAssignmentError
 
 type UnsupportedOptionalChainingAssignmentError struct {
@@ -1313,6 +1415,8 @@ func (e *UnsupportedOptionalChainingAssignmentError) Error() string {
 }
 
 func (*UnsupportedOptionalChainingAssignmentError) isSemanticError() {}
+
+func (*UnsupportedOptionalChainingAssignmentError) IsUserError() {}
 
 // MissingResourceAnnotationError
 
@@ -1329,6 +1433,8 @@ func (e *MissingResourceAnnotationError) Error() string {
 
 func (*MissingResourceAnnotationError) isSemanticError() {}
 
+func (*MissingResourceAnnotationError) IsUserError() {}
+
 // InvalidNestedResourceMoveError
 
 type InvalidNestedResourceMoveError struct {
@@ -1341,6 +1447,8 @@ func (e *InvalidNestedResourceMoveError) Error() string {
 }
 
 func (*InvalidNestedResourceMoveError) isSemanticError() {}
+
+func (*InvalidNestedResourceMoveError) IsUserError() {}
 
 func (e *InvalidNestedResourceMoveError) StartPosition() ast.Position {
 	return e.StartPos
@@ -1365,6 +1473,8 @@ func (e *InvalidResourceAnnotationError) Error() string {
 
 func (*InvalidResourceAnnotationError) isSemanticError() {}
 
+func (*InvalidResourceAnnotationError) IsUserError() {}
+
 // InvalidInterfaceTypeError
 
 type InvalidInterfaceTypeError struct {
@@ -1387,6 +1497,8 @@ func (e *InvalidInterfaceTypeError) SecondaryError() string {
 
 func (*InvalidInterfaceTypeError) isSemanticError() {}
 
+func (*InvalidInterfaceTypeError) IsUserError() {}
+
 // InvalidInterfaceDeclarationError
 
 type InvalidInterfaceDeclarationError struct {
@@ -1402,6 +1514,8 @@ func (e *InvalidInterfaceDeclarationError) Error() string {
 }
 
 func (*InvalidInterfaceDeclarationError) isSemanticError() {}
+
+func (*InvalidInterfaceDeclarationError) IsUserError() {}
 
 // IncorrectTransferOperationError
 
@@ -1424,6 +1538,8 @@ func (e *IncorrectTransferOperationError) SecondaryError() string {
 
 func (*IncorrectTransferOperationError) isSemanticError() {}
 
+func (*IncorrectTransferOperationError) IsUserError() {}
+
 // InvalidConstructionError
 
 type InvalidConstructionError struct {
@@ -1435,6 +1551,8 @@ func (e *InvalidConstructionError) Error() string {
 }
 
 func (*InvalidConstructionError) isSemanticError() {}
+
+func (*InvalidConstructionError) IsUserError() {}
 
 // InvalidDestructionError
 
@@ -1448,6 +1566,8 @@ func (e *InvalidDestructionError) Error() string {
 
 func (*InvalidDestructionError) isSemanticError() {}
 
+func (*InvalidDestructionError) IsUserError() {}
+
 // ResourceLossError
 
 type ResourceLossError struct {
@@ -1459,6 +1579,8 @@ func (e *ResourceLossError) Error() string {
 }
 
 func (*ResourceLossError) isSemanticError() {}
+
+func (*ResourceLossError) IsUserError() {}
 
 // ResourceUseAfterInvalidationError
 
@@ -1574,6 +1696,8 @@ func (e *ResourceUseAfterInvalidationError) ErrorNotes() (notes []errors.ErrorNo
 
 func (*ResourceUseAfterInvalidationError) isSemanticError() {}
 
+func (*ResourceUseAfterInvalidationError) IsUserError() {}
+
 func (e *ResourceUseAfterInvalidationError) StartPosition() ast.Position {
 	return e.StartPos
 }
@@ -1619,6 +1743,8 @@ func (e *MissingCreateError) SecondaryError() string {
 
 func (*MissingCreateError) isSemanticError() {}
 
+func (*MissingCreateError) IsUserError() {}
+
 // MissingMoveOperationError
 
 type MissingMoveOperationError struct {
@@ -1630,6 +1756,8 @@ func (e *MissingMoveOperationError) Error() string {
 }
 
 func (*MissingMoveOperationError) isSemanticError() {}
+
+func (*MissingMoveOperationError) IsUserError() {}
 
 func (e *MissingMoveOperationError) StartPosition() ast.Position {
 	return e.Pos
@@ -1655,6 +1783,8 @@ func (e *InvalidMoveOperationError) SecondaryError() string {
 
 func (*InvalidMoveOperationError) isSemanticError() {}
 
+func (*InvalidMoveOperationError) IsUserError() {}
+
 // ResourceCapturingError
 
 type ResourceCapturingError struct {
@@ -1667,6 +1797,8 @@ func (e *ResourceCapturingError) Error() string {
 }
 
 func (*ResourceCapturingError) isSemanticError() {}
+
+func (*ResourceCapturingError) IsUserError() {}
 
 func (e *ResourceCapturingError) StartPosition() ast.Position {
 	return e.Pos
@@ -1695,6 +1827,8 @@ func (e *InvalidResourceFieldError) Error() string {
 
 func (*InvalidResourceFieldError) isSemanticError() {}
 
+func (*InvalidResourceFieldError) IsUserError() {}
+
 func (e *InvalidResourceFieldError) StartPosition() ast.Position {
 	return e.Pos
 }
@@ -1720,6 +1854,8 @@ func (e *InvalidIndexingError) SecondaryError() string {
 
 func (*InvalidIndexingError) isSemanticError() {}
 
+func (*InvalidIndexingError) IsUserError() {}
+
 // InvalidSwapExpressionError
 
 type InvalidSwapExpressionError struct {
@@ -1740,6 +1876,8 @@ func (e *InvalidSwapExpressionError) SecondaryError() string {
 
 func (*InvalidSwapExpressionError) isSemanticError() {}
 
+func (*InvalidSwapExpressionError) IsUserError() {}
+
 // InvalidEventParameterTypeError
 
 type InvalidEventParameterTypeError struct {
@@ -1756,6 +1894,8 @@ func (e *InvalidEventParameterTypeError) Error() string {
 
 func (*InvalidEventParameterTypeError) isSemanticError() {}
 
+func (*InvalidEventParameterTypeError) IsUserError() {}
+
 // InvalidEventUsageError
 
 type InvalidEventUsageError struct {
@@ -1767,6 +1907,8 @@ func (e *InvalidEventUsageError) Error() string {
 }
 
 func (*InvalidEventUsageError) isSemanticError() {}
+
+func (*InvalidEventUsageError) IsUserError() {}
 
 // EmitNonEventError
 
@@ -1784,6 +1926,8 @@ func (e *EmitNonEventError) Error() string {
 
 func (*EmitNonEventError) isSemanticError() {}
 
+func (*EmitNonEventError) IsUserError() {}
+
 // EmitImportedEventError
 
 type EmitImportedEventError struct {
@@ -1800,6 +1944,8 @@ func (e *EmitImportedEventError) Error() string {
 
 func (*EmitImportedEventError) isSemanticError() {}
 
+func (*EmitImportedEventError) IsUserError() {}
+
 // InvalidResourceAssignmentError
 
 type InvalidResourceAssignmentError struct {
@@ -1812,6 +1958,8 @@ func (e *InvalidResourceAssignmentError) Error() string {
 
 func (*InvalidResourceAssignmentError) isSemanticError() {}
 
+func (*InvalidResourceAssignmentError) IsUserError() {}
+
 // InvalidDestructorError
 
 type InvalidDestructorError struct {
@@ -1823,6 +1971,8 @@ func (e *InvalidDestructorError) Error() string {
 }
 
 func (*InvalidDestructorError) isSemanticError() {}
+
+func (*InvalidDestructorError) IsUserError() {}
 
 // MissingDestructorError
 
@@ -1841,6 +1991,8 @@ func (e *MissingDestructorError) Error() string {
 }
 
 func (*MissingDestructorError) isSemanticError() {}
+
+func (*MissingDestructorError) IsUserError() {}
 
 func (e *MissingDestructorError) StartPosition() ast.Position {
 	return e.FirstFieldPos
@@ -1866,6 +2018,8 @@ func (e *InvalidDestructorParametersError) SecondaryError() string {
 
 func (*InvalidDestructorParametersError) isSemanticError() {}
 
+func (*InvalidDestructorParametersError) IsUserError() {}
+
 // ResourceFieldNotInvalidatedError
 
 type ResourceFieldNotInvalidatedError struct {
@@ -1887,6 +2041,8 @@ func (e *ResourceFieldNotInvalidatedError) SecondaryError() string {
 }
 
 func (*ResourceFieldNotInvalidatedError) isSemanticError() {}
+
+func (*ResourceFieldNotInvalidatedError) IsUserError() {}
 
 func (e *ResourceFieldNotInvalidatedError) StartPosition() ast.Position {
 	return e.Pos
@@ -1913,6 +2069,8 @@ func (e *UninitializedFieldAccessError) Error() string {
 
 func (*UninitializedFieldAccessError) isSemanticError() {}
 
+func (*UninitializedFieldAccessError) IsUserError() {}
+
 func (e *UninitializedFieldAccessError) StartPosition() ast.Position {
 	return e.Pos
 }
@@ -1934,6 +2092,8 @@ func (e *UnreachableStatementError) Error() string {
 
 func (*UnreachableStatementError) isSemanticError() {}
 
+func (*UnreachableStatementError) IsUserError() {}
+
 // UninitializedUseError
 
 type UninitializedUseError struct {
@@ -1949,6 +2109,8 @@ func (e *UninitializedUseError) Error() string {
 }
 
 func (*UninitializedUseError) isSemanticError() {}
+
+func (*UninitializedUseError) IsUserError() {}
 
 func (e *UninitializedUseError) StartPosition() ast.Position {
 	return e.Pos
@@ -1977,6 +2139,8 @@ func (e *InvalidResourceArrayMemberError) Error() string {
 
 func (*InvalidResourceArrayMemberError) isSemanticError() {}
 
+func (*InvalidResourceArrayMemberError) IsUserError() {}
+
 // InvalidResourceDictionaryMemberError
 
 type InvalidResourceDictionaryMemberError struct {
@@ -1992,6 +2156,10 @@ func (e *InvalidResourceDictionaryMemberError) Error() string {
 		e.Name,
 	)
 }
+
+func (*InvalidResourceDictionaryMemberError) isSemanticError() {}
+
+func (*InvalidResourceDictionaryMemberError) IsUserError() {}
 
 // InvalidResourceOptionalMemberError
 
@@ -2009,7 +2177,9 @@ func (e *InvalidResourceOptionalMemberError) Error() string {
 	)
 }
 
-func (*InvalidResourceDictionaryMemberError) isSemanticError() {}
+func (*InvalidResourceOptionalMemberError) isSemanticError() {}
+
+func (*InvalidResourceOptionalMemberError) IsUserError() {}
 
 // NonReferenceTypeReferenceError
 
@@ -2031,6 +2201,8 @@ func (e *NonReferenceTypeReferenceError) SecondaryError() string {
 
 func (*NonReferenceTypeReferenceError) isSemanticError() {}
 
+func (*NonReferenceTypeReferenceError) IsUserError() {}
+
 // InvalidResourceCreationError
 
 type InvalidResourceCreationError struct {
@@ -2046,6 +2218,8 @@ func (e *InvalidResourceCreationError) Error() string {
 }
 
 func (*InvalidResourceCreationError) isSemanticError() {}
+
+func (*InvalidResourceCreationError) IsUserError() {}
 
 // NonResourceTypeError
 
@@ -2067,6 +2241,8 @@ func (e *NonResourceTypeError) SecondaryError() string {
 
 func (*NonResourceTypeError) isSemanticError() {}
 
+func (*NonResourceTypeError) IsUserError() {}
+
 // InvalidAssignmentTargetError
 
 type InvalidAssignmentTargetError struct {
@@ -2079,6 +2255,8 @@ func (e *InvalidAssignmentTargetError) Error() string {
 
 func (*InvalidAssignmentTargetError) isSemanticError() {}
 
+func (*InvalidAssignmentTargetError) IsUserError() {}
+
 // ResourceMethodBindingError
 
 type ResourceMethodBindingError struct {
@@ -2090,6 +2268,8 @@ func (e *ResourceMethodBindingError) Error() string {
 }
 
 func (*ResourceMethodBindingError) isSemanticError() {}
+
+func (*ResourceMethodBindingError) IsUserError() {}
 
 // InvalidDictionaryKeyTypeError
 
@@ -2107,6 +2287,8 @@ func (e *InvalidDictionaryKeyTypeError) Error() string {
 
 func (*InvalidDictionaryKeyTypeError) isSemanticError() {}
 
+func (*InvalidDictionaryKeyTypeError) IsUserError() {}
+
 // MissingFunctionBodyError
 
 type MissingFunctionBodyError struct {
@@ -2118,6 +2300,8 @@ func (e *MissingFunctionBodyError) Error() string {
 }
 
 func (*MissingFunctionBodyError) isSemanticError() {}
+
+func (*MissingFunctionBodyError) IsUserError() {}
 
 func (e *MissingFunctionBodyError) StartPosition() ast.Position {
 	return e.Pos
@@ -2143,6 +2327,8 @@ func (e *InvalidOptionalChainingError) Error() string {
 
 func (*InvalidOptionalChainingError) isSemanticError() {}
 
+func (*InvalidOptionalChainingError) IsUserError() {}
+
 // InvalidAccessError
 
 type InvalidAccessError struct {
@@ -2162,6 +2348,8 @@ func (e *InvalidAccessError) Error() string {
 }
 
 func (*InvalidAccessError) isSemanticError() {}
+
+func (*InvalidAccessError) IsUserError() {}
 
 // InvalidAssignmentAccessError
 
@@ -2190,6 +2378,8 @@ func (e *InvalidAssignmentAccessError) SecondaryError() string {
 
 func (*InvalidAssignmentAccessError) isSemanticError() {}
 
+func (*InvalidAssignmentAccessError) IsUserError() {}
+
 // InvalidCharacterLiteralError
 
 type InvalidCharacterLiteralError struct {
@@ -2209,6 +2399,8 @@ func (e *InvalidCharacterLiteralError) SecondaryError() string {
 
 func (*InvalidCharacterLiteralError) isSemanticError() {}
 
+func (*InvalidCharacterLiteralError) IsUserError() {}
+
 // InvalidFailableResourceDowncastOutsideOptionalBindingError
 
 type InvalidFailableResourceDowncastOutsideOptionalBindingError struct {
@@ -2220,6 +2412,8 @@ func (e *InvalidFailableResourceDowncastOutsideOptionalBindingError) Error() str
 }
 
 func (*InvalidFailableResourceDowncastOutsideOptionalBindingError) isSemanticError() {}
+
+func (*InvalidFailableResourceDowncastOutsideOptionalBindingError) IsUserError() {}
 
 // InvalidNonIdentifierFailableResourceDowncast
 
@@ -2237,6 +2431,8 @@ func (e *InvalidNonIdentifierFailableResourceDowncast) SecondaryError() string {
 
 func (*InvalidNonIdentifierFailableResourceDowncast) isSemanticError() {}
 
+func (*InvalidNonIdentifierFailableResourceDowncast) IsUserError() {}
+
 // ReadOnlyTargetAssignmentError
 
 type ReadOnlyTargetAssignmentError struct {
@@ -2248,6 +2444,8 @@ func (e *ReadOnlyTargetAssignmentError) Error() string {
 }
 
 func (*ReadOnlyTargetAssignmentError) isSemanticError() {}
+
+func (*ReadOnlyTargetAssignmentError) IsUserError() {}
 
 // InvalidTransactionBlockError
 
@@ -2268,6 +2466,8 @@ func (e *InvalidTransactionBlockError) SecondaryError() string {
 }
 
 func (*InvalidTransactionBlockError) isSemanticError() {}
+
+func (*InvalidTransactionBlockError) IsUserError() {}
 
 func (e *InvalidTransactionBlockError) StartPosition() ast.Position {
 	return e.Pos
@@ -2294,6 +2494,8 @@ func (e *TransactionMissingPrepareError) Error() string {
 
 func (*TransactionMissingPrepareError) isSemanticError() {}
 
+func (*TransactionMissingPrepareError) IsUserError() {}
+
 func (e *TransactionMissingPrepareError) StartPosition() ast.Position {
 	return e.FirstFieldPos
 }
@@ -2319,6 +2521,8 @@ func (e *InvalidResourceTransactionParameterError) Error() string {
 
 func (*InvalidResourceTransactionParameterError) isSemanticError() {}
 
+func (*InvalidResourceTransactionParameterError) IsUserError() {}
+
 // InvalidNonImportableTransactionParameterTypeError
 
 type InvalidNonImportableTransactionParameterTypeError struct {
@@ -2334,6 +2538,8 @@ func (e *InvalidNonImportableTransactionParameterTypeError) Error() string {
 }
 
 func (*InvalidNonImportableTransactionParameterTypeError) isSemanticError() {}
+
+func (*InvalidNonImportableTransactionParameterTypeError) IsUserError() {}
 
 // InvalidTransactionFieldAccessModifierError
 
@@ -2352,6 +2558,8 @@ func (e *InvalidTransactionFieldAccessModifierError) Error() string {
 }
 
 func (*InvalidTransactionFieldAccessModifierError) isSemanticError() {}
+
+func (*InvalidTransactionFieldAccessModifierError) IsUserError() {}
 
 func (e *InvalidTransactionFieldAccessModifierError) StartPosition() ast.Position {
 	return e.Pos
@@ -2379,6 +2587,8 @@ func (e *InvalidTransactionPrepareParameterTypeError) Error() string {
 
 func (*InvalidTransactionPrepareParameterTypeError) isSemanticError() {}
 
+func (*InvalidTransactionPrepareParameterTypeError) IsUserError() {}
+
 // InvalidNestedDeclarationError
 
 type InvalidNestedDeclarationError struct {
@@ -2397,6 +2607,8 @@ func (e *InvalidNestedDeclarationError) Error() string {
 
 func (*InvalidNestedDeclarationError) isSemanticError() {}
 
+func (*InvalidNestedDeclarationError) IsUserError() {}
+
 // InvalidNestedTypeError
 
 type InvalidNestedTypeError struct {
@@ -2411,6 +2623,8 @@ func (e *InvalidNestedTypeError) Error() string {
 }
 
 func (*InvalidNestedTypeError) isSemanticError() {}
+
+func (*InvalidNestedTypeError) IsUserError() {}
 
 func (e *InvalidNestedTypeError) StartPosition() ast.Position {
 	return e.Type.StartPosition()
@@ -2436,6 +2650,8 @@ func (e *InvalidEnumCaseError) Error() string {
 
 func (*InvalidEnumCaseError) isSemanticError() {}
 
+func (*InvalidEnumCaseError) IsUserError() {}
+
 // InvalidNonEnumCaseError
 
 type InvalidNonEnumCaseError struct {
@@ -2452,6 +2668,8 @@ func (e *InvalidNonEnumCaseError) Error() string {
 
 func (*InvalidNonEnumCaseError) isSemanticError() {}
 
+func (*InvalidNonEnumCaseError) IsUserError() {}
+
 // DeclarationKindMismatchError
 
 type DeclarationKindMismatchError struct {
@@ -2465,6 +2683,8 @@ func (e *DeclarationKindMismatchError) Error() string {
 }
 
 func (*DeclarationKindMismatchError) isSemanticError() {}
+
+func (*DeclarationKindMismatchError) IsUserError() {}
 
 func (e *DeclarationKindMismatchError) SecondaryError() string {
 	return fmt.Sprintf(
@@ -2490,6 +2710,8 @@ func (e *InvalidTopLevelDeclarationError) Error() string {
 
 func (*InvalidTopLevelDeclarationError) isSemanticError() {}
 
+func (*InvalidTopLevelDeclarationError) IsUserError() {}
+
 // InvalidSelfInvalidationError
 
 type InvalidSelfInvalidationError struct {
@@ -2513,6 +2735,8 @@ func (e *InvalidSelfInvalidationError) Error() string {
 }
 
 func (*InvalidSelfInvalidationError) isSemanticError() {}
+
+func (*InvalidSelfInvalidationError) IsUserError() {}
 
 func (e *InvalidSelfInvalidationError) StartPosition() ast.Position {
 	return e.StartPos
@@ -2539,6 +2763,8 @@ func (e *InvalidMoveError) Error() string {
 }
 
 func (*InvalidMoveError) isSemanticError() {}
+
+func (*InvalidMoveError) IsUserError() {}
 
 func (e *InvalidMoveError) StartPosition() ast.Position {
 	return e.Pos
@@ -2571,6 +2797,8 @@ func (e *ConstantSizedArrayLiteralSizeError) SecondaryError() string {
 
 func (*ConstantSizedArrayLiteralSizeError) isSemanticError() {}
 
+func (*ConstantSizedArrayLiteralSizeError) IsUserError() {}
+
 // InvalidRestrictedTypeError
 
 type InvalidRestrictedTypeError struct {
@@ -2587,6 +2815,8 @@ func (e *InvalidRestrictedTypeError) Error() string {
 
 func (*InvalidRestrictedTypeError) isSemanticError() {}
 
+func (*InvalidRestrictedTypeError) IsUserError() {}
+
 // InvalidRestrictionTypeError
 
 type InvalidRestrictionTypeError struct {
@@ -2602,6 +2832,8 @@ func (e *InvalidRestrictionTypeError) Error() string {
 }
 
 func (*InvalidRestrictionTypeError) isSemanticError() {}
+
+func (*InvalidRestrictionTypeError) IsUserError() {}
 
 // RestrictionCompositeKindMismatchError
 
@@ -2621,6 +2853,8 @@ func (e *RestrictionCompositeKindMismatchError) Error() string {
 
 func (*RestrictionCompositeKindMismatchError) isSemanticError() {}
 
+func (*RestrictionCompositeKindMismatchError) IsUserError() {}
+
 // InvalidRestrictionTypeDuplicateError
 
 type InvalidRestrictionTypeDuplicateError struct {
@@ -2636,6 +2870,8 @@ func (e *InvalidRestrictionTypeDuplicateError) Error() string {
 }
 
 func (*InvalidRestrictionTypeDuplicateError) isSemanticError() {}
+
+func (*InvalidRestrictionTypeDuplicateError) IsUserError() {}
 
 // InvalidNonConformanceRestrictionError
 
@@ -2653,6 +2889,8 @@ func (e *InvalidNonConformanceRestrictionError) Error() string {
 
 func (*InvalidNonConformanceRestrictionError) isSemanticError() {}
 
+func (*InvalidNonConformanceRestrictionError) IsUserError() {}
+
 // InvalidRestrictedTypeMemberAccessError
 
 type InvalidRestrictedTypeMemberAccessError struct {
@@ -2665,6 +2903,8 @@ func (e *InvalidRestrictedTypeMemberAccessError) Error() string {
 }
 
 func (*InvalidRestrictedTypeMemberAccessError) isSemanticError() {}
+
+func (*InvalidRestrictedTypeMemberAccessError) IsUserError() {}
 
 // RestrictionMemberClashError
 
@@ -2685,6 +2925,8 @@ func (e *RestrictionMemberClashError) Error() string {
 
 func (*RestrictionMemberClashError) isSemanticError() {}
 
+func (*RestrictionMemberClashError) IsUserError() {}
+
 // AmbiguousRestrictedTypeError
 
 type AmbiguousRestrictedTypeError struct {
@@ -2696,6 +2938,8 @@ func (e *AmbiguousRestrictedTypeError) Error() string {
 }
 
 func (*AmbiguousRestrictedTypeError) isSemanticError() {}
+
+func (*AmbiguousRestrictedTypeError) IsUserError() {}
 
 // InvalidPathDomainError
 
@@ -2718,6 +2962,8 @@ func (e *InvalidPathIdentifierError) Error() string {
 }
 
 func (*InvalidPathDomainError) isSemanticError() {}
+
+func (*InvalidPathDomainError) IsUserError() {}
 
 var validPathDomainDescription = func() string {
 	words := make([]string, 0, len(common.AllPathDomains))
@@ -2759,6 +3005,8 @@ func (e *InvalidTypeArgumentCountError) SecondaryError() string {
 
 func (e *InvalidTypeArgumentCountError) isSemanticError() {}
 
+func (*InvalidTypeArgumentCountError) IsUserError() {}
+
 // TypeParameterTypeInferenceError
 
 type TypeParameterTypeInferenceError struct {
@@ -2774,6 +3022,8 @@ func (e *TypeParameterTypeInferenceError) Error() string {
 }
 
 func (e *TypeParameterTypeInferenceError) isSemanticError() {}
+
+func (*TypeParameterTypeInferenceError) IsUserError() {}
 
 // InvalidConstantSizedTypeBaseError
 
@@ -2796,6 +3046,8 @@ func (e *InvalidConstantSizedTypeBaseError) SecondaryError() string {
 }
 
 func (e *InvalidConstantSizedTypeBaseError) isSemanticError() {}
+
+func (*InvalidConstantSizedTypeBaseError) IsUserError() {}
 
 // InvalidConstantSizedTypeSizeError
 
@@ -2821,6 +3073,8 @@ func (e *InvalidConstantSizedTypeSizeError) SecondaryError() string {
 
 func (e *InvalidConstantSizedTypeSizeError) isSemanticError() {}
 
+func (*InvalidConstantSizedTypeSizeError) IsUserError() {}
+
 // UnsupportedResourceForLoopError
 
 type UnsupportedResourceForLoopError struct {
@@ -2832,6 +3086,8 @@ func (e *UnsupportedResourceForLoopError) Error() string {
 }
 
 func (e *UnsupportedResourceForLoopError) isSemanticError() {}
+
+func (*UnsupportedResourceForLoopError) IsUserError() {}
 
 // TypeParameterTypeMismatchError
 
@@ -2847,6 +3103,8 @@ func (e *TypeParameterTypeMismatchError) Error() string {
 }
 
 func (*TypeParameterTypeMismatchError) isSemanticError() {}
+
+func (*TypeParameterTypeMismatchError) IsUserError() {}
 
 func (e *TypeParameterTypeMismatchError) SecondaryError() string {
 	return fmt.Sprintf(
@@ -2869,6 +3127,8 @@ func (e *UnparameterizedTypeInstantiationError) Error() string {
 }
 
 func (*UnparameterizedTypeInstantiationError) isSemanticError() {}
+
+func (*UnparameterizedTypeInstantiationError) IsUserError() {}
 
 func (e *UnparameterizedTypeInstantiationError) SecondaryError() string {
 	return fmt.Sprintf(
@@ -2896,6 +3156,8 @@ func (e *TypeAnnotationRequiredError) Error() string {
 
 func (*TypeAnnotationRequiredError) isSemanticError() {}
 
+func (*TypeAnnotationRequiredError) IsUserError() {}
+
 func (e *TypeAnnotationRequiredError) StartPosition() ast.Position {
 	return e.Pos
 }
@@ -2917,6 +3179,8 @@ func (e *CyclicImportsError) Error() string {
 
 func (*CyclicImportsError) isSemanticError() {}
 
+func (*CyclicImportsError) IsUserError() {}
+
 // SwitchDefaultPositionError
 
 type SwitchDefaultPositionError struct {
@@ -2929,6 +3193,8 @@ func (e *SwitchDefaultPositionError) Error() string {
 
 func (*SwitchDefaultPositionError) isSemanticError() {}
 
+func (*SwitchDefaultPositionError) IsUserError() {}
+
 // MissingSwitchCaseStatementsError
 
 type MissingSwitchCaseStatementsError struct {
@@ -2940,6 +3206,8 @@ func (e *MissingSwitchCaseStatementsError) Error() string {
 }
 
 func (*MissingSwitchCaseStatementsError) isSemanticError() {}
+
+func (*MissingSwitchCaseStatementsError) IsUserError() {}
 
 func (e *MissingSwitchCaseStatementsError) StartPosition() ast.Position {
 	return e.Pos
@@ -2959,6 +3227,8 @@ func (e *MissingEntryPointError) Error() string {
 	return fmt.Sprintf("missing entry point: expected '%s'", e.Expected)
 }
 
+func (*MissingEntryPointError) IsUserError() {}
+
 // InvalidEntryPointError
 
 type InvalidEntryPointTypeError struct {
@@ -2971,6 +3241,8 @@ func (e *InvalidEntryPointTypeError) Error() string {
 		e.Type.QualifiedString(),
 	)
 }
+
+func (*InvalidEntryPointTypeError) IsUserError() {}
 
 // ImportedProgramError
 
@@ -2999,3 +3271,5 @@ func (e *ExternalMutationError) SecondaryError() string {
 }
 
 func (*ExternalMutationError) isSemanticError() {}
+
+func (*ExternalMutationError) IsUserError() {}

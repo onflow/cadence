@@ -23,6 +23,21 @@ import (
 	"runtime/debug"
 )
 
+// InternalError is thrown on an implementation error.
+// A program should never throw an InternalError in an ideal world.
+// e.g: UnreachableError
+//
+type InternalError interface {
+	error
+	IsInternalError()
+}
+
+// UserError is an error thrown for an error in the user-code.
+type UserError interface {
+	error
+	IsUserError()
+}
+
 // UnreachableError
 
 // UnreachableError is an internal error in the runtime which should have never occurred
@@ -35,9 +50,13 @@ type UnreachableError struct {
 	Stack []byte
 }
 
+var _ InternalError = UnreachableError{}
+
 func (e UnreachableError) Error() string {
 	return fmt.Sprintf("unreachable\n%s", e.Stack)
 }
+
+func (e UnreachableError) IsInternalError() {}
 
 func NewUnreachableError() *UnreachableError {
 	return &UnreachableError{Stack: debug.Stack()}

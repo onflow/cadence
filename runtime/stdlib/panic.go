@@ -35,6 +35,8 @@ func (e PanicError) Error() string {
 	return fmt.Sprintf("panic: %s", e.Message)
 }
 
+func (e PanicError) IsUserError() {}
+
 const panicFunctionDocString = `
 Terminates the program unconditionally and reports a message which explains why the unrecoverable error occurred.
 `
