@@ -331,11 +331,14 @@ Addresses have multiple built-in functions you can use.
 - `cadence•fun toString(): String`
 
   Returns the string representation of the address.
+  The result has a `0x` prefix and is zero-padded.
 
   ```cadence
   let someAddress: Address = 0x436164656E636521
+  someAddress.toString()   // is "0x436164656E636521"
 
-  someAddress.toString()  // is "0x436164656E636521"
+  let shortAddress: Address = 0x1
+  shortAddress.toString()  // is "0x0000000000000001"
   ```
 
 - `cadence•fun toBytes(): [UInt8]`

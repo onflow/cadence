@@ -680,6 +680,17 @@ func parseParameterTypeAnnotations(p *parser) (typeAnnotations []*ast.TypeAnnota
 
 func parseType(p *parser, rightBindingPower int) ast.Type {
 
+	if p.typeDepth == typeDepthLimit {
+		panic(TypeDepthLimitReachedError{
+			Pos: p.current.StartPos,
+		})
+	}
+
+	p.typeDepth++
+	defer func() {
+		p.typeDepth--
+	}()
+
 	p.skipSpaceAndComments(true)
 	t := p.current
 	p.next()

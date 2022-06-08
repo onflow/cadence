@@ -1022,7 +1022,7 @@ func importTypeValue(
 		return interpreter.EmptyTypeValue, err
 	}
 
-	return interpreter.NewUnmeteredTypeValue(typ), nil
+	return interpreter.NewTypeValue(inter, typ), nil
 }
 
 func importCapability(
@@ -1036,7 +1036,6 @@ func importCapability(
 ) {
 
 	_, ok := borrowType.(cadence.ReferenceType)
-
 	if !ok {
 		return nil, fmt.Errorf(
 			"cannot import capability: expected reference, got '%s'",
@@ -1233,7 +1232,7 @@ func importCompositeValue(
 ) {
 	var fields []interpreter.CompositeField
 
-	typeID := common.NewTypeIDFromQualifiedName(location, qualifiedIdentifier)
+	typeID := common.NewTypeIDFromQualifiedName(inter, location, qualifiedIdentifier)
 	compositeType, typeErr := inter.GetCompositeType(location, qualifiedIdentifier, typeID)
 	if typeErr != nil {
 		return nil, typeErr

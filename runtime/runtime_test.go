@@ -7146,6 +7146,36 @@ func TestRuntimeInternalErrors(t *testing.T) {
 		require.Error(t, err)
 		require.ErrorAs(t, err, &Error{})
 	})
+
+	t.Run("panic with non error", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := []byte(`pub fun main() {}`)
+
+		runtimeInterface := &testRuntimeInterface{
+			meterMemory: func(usage common.MemoryUsage) error {
+				// panic with a non-error type
+				panic("crasher")
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.Error(t, err)
+		require.ErrorAs(t, err, &Error{})
+	})
+
 }
 
 func TestRuntimeComputationMetring(t *testing.T) {
@@ -7257,4 +7287,51 @@ func TestRuntimeComputationMetring(t *testing.T) {
 			require.Equal(t, test.expCompUsed, compUsed)
 		})
 	}
+}
+
+func TestRuntimeImportAnyStruct(t *testing.T) {
+
+	t.Parallel()
+
+	rt := newTestInterpreterRuntime()
+
+	var loggedMessages []string
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	storage := newTestLedger(nil, nil)
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: storage,
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{address}, nil
+		},
+		log: func(message string) {
+			loggedMessages = append(loggedMessages, message)
+		},
+		meterMemory: func(_ common.MemoryUsage) error {
+			return nil
+		},
+	}
+	runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+		return json.Decode(runtimeInterface, b)
+	}
+
+	err := rt.ExecuteTransaction(
+		Script{
+			Source: []byte(`
+			  transaction(args: [AnyStruct]) {
+			    prepare(signer: AuthAccount) {}
+			  }
+			`),
+			Arguments: [][]byte{
+				[]byte(`{"value":[{"value":"0xf8d6e0586b0a20c7","type":"Address"},{"value":{"domain":"private","identifier":"USDCAdminCap-ca258982-c98e-4ef0-adef-7ff80ee96b10"},"type":"Path"}],"type":"Array"}`),
+			},
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  utils.TestLocation,
+		},
+	)
+	require.NoError(t, err)
 }

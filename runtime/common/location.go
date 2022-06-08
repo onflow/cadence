@@ -118,12 +118,12 @@ func NewMeteredTypeID(memoryGauge MemoryGauge, parts ...string) TypeID {
 	return TypeID(jointString)
 }
 
-func NewTypeIDFromQualifiedName(location Location, qualifiedIdentifier string) TypeID {
+func NewTypeIDFromQualifiedName(memoryGauge MemoryGauge, location Location, qualifiedIdentifier string) TypeID {
 	if location == nil {
 		return TypeID(qualifiedIdentifier)
 	}
 
-	return location.TypeID(nil, qualifiedIdentifier)
+	return location.TypeID(memoryGauge, qualifiedIdentifier)
 }
 
 type TypeIDDecoder func(gauge MemoryGauge, typeID string) (location Location, qualifiedIdentifier string, err error)

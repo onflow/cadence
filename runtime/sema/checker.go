@@ -115,7 +115,8 @@ type Checker struct {
 	checkHandler                       CheckHandlerFunc
 	expectedType                       Type
 	memberAccountAccessHandler         MemberAccountAccessHandlerFunc
-	lintEnabled                        bool
+	lintingEnabled                     bool
+	errorShortCircuitingEnabled        bool
 	// memoryGauge is used for metering memory usage
 	memoryGauge common.MemoryGauge
 }
@@ -243,7 +244,19 @@ func WithPositionInfoEnabled(enabled bool) Option {
 //
 func WithLintingEnabled(enabled bool) Option {
 	return func(checker *Checker) error {
-		checker.lintEnabled = enabled
+		checker.lintingEnabled = enabled
+		return nil
+	}
+}
+
+// WithErrorShortCircuitingEnabled returns a checker option which enables/disables
+// error short-circuiting in the checker.
+// When enabled, the checker will stop running once it encounters an error.
+// When disabled (the default), the checker reports the error then continues checking.
+//
+func WithErrorShortCircuitingEnabled(enabled bool) Option {
+	return func(checker *Checker) error {
+		checker.errorShortCircuitingEnabled = enabled
 		return nil
 	}
 }
@@ -302,8 +315,11 @@ func (checker *Checker) SubChecker(program *ast.Program, location common.Locatio
 		WithAccessCheckMode(checker.accessCheckMode),
 		WithValidTopLevelDeclarationsHandler(checker.validTopLevelDeclarationsHandler),
 		WithCheckHandler(checker.checkHandler),
-		WithImportHandler(checker.importHandler),
 		WithLocationHandler(checker.locationHandler),
+		WithImportHandler(checker.importHandler),
+		WithPositionInfoEnabled(checker.positionInfoEnabled),
+		WithLintingEnabled(checker.lintingEnabled),
+		WithErrorShortCircuitingEnabled(checker.errorShortCircuitingEnabled),
 	)
 }
 
@@ -375,11 +391,29 @@ func (checker *Checker) IsChecked() bool {
 	return checker.isChecked
 }
 
+type stopChecking struct{}
+
 func (checker *Checker) Check() error {
 	if !checker.IsChecked() {
 		checker.Elaboration.setIsChecking(true)
 		checker.errors = nil
 		check := func() {
+			if checker.errorShortCircuitingEnabled {
+				defer func() {
+					switch recovered := recover().(type) {
+					case stopChecking:
+						// checking should stop
+						break
+					case nil:
+						// nothing was recovered
+						break
+					default:
+						// re-panic what was recovered
+						panic(recovered)
+					}
+				}()
+			}
+
 			checker.Program.Accept(checker)
 		}
 		if checker.checkHandler != nil {
@@ -415,6 +449,9 @@ func (checker *Checker) report(err error) {
 		return
 	}
 	checker.errors = append(checker.errors, err)
+	if checker.errorShortCircuitingEnabled {
+		panic(stopChecking{})
+	}
 }
 
 func (checker *Checker) hint(hint Hint) {

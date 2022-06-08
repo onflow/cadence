@@ -60,7 +60,7 @@ func NewVoid() Void {
 }
 
 func NewMeteredVoid(memoryGauge common.MemoryGauge) Void {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindCadenceVoid)
+	common.UseMemory(memoryGauge, common.CadenceVoidValueMemoryUsage)
 	return NewVoid()
 }
 
@@ -95,7 +95,7 @@ func NewOptional(value Value) Optional {
 }
 
 func NewMeteredOptional(memoryGauge common.MemoryGauge, value Value) Optional {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindCadenceOptional)
+	common.UseMemory(memoryGauge, common.CadenceOptionalValueMemoryUsage)
 	return NewOptional(value)
 }
 
@@ -156,7 +156,7 @@ func NewBool(b bool) Bool {
 }
 
 func NewMeteredBool(memoryGauge common.MemoryGauge, b bool) Bool {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindCadenceBool)
+	common.UseMemory(memoryGauge, common.CadenceBoolValueMemoryUsage)
 	return NewBool(b)
 }
 
@@ -307,7 +307,7 @@ func NewAddress(b [AddressLength]byte) Address {
 }
 
 func NewMeteredAddress(memoryGauge common.MemoryGauge, b [AddressLength]byte) Address {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindCadenceAddress)
+	common.UseMemory(memoryGauge, common.CadenceAddressValueMemoryUsage)
 	return NewAddress(b)
 }
 
@@ -318,7 +318,7 @@ func BytesToAddress(b []byte) Address {
 }
 
 func BytesToMeteredAddress(memoryGauge common.MemoryGauge, b []byte) Address {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindCadenceAddress)
+	common.UseMemory(memoryGauge, common.CadenceAddressValueMemoryUsage)
 	return BytesToAddress(b)
 }
 
@@ -1413,9 +1413,7 @@ func NewMeteredDictionary(
 	size int,
 	constructor func() ([]KeyValuePair, error),
 ) (Dictionary, error) {
-	baseUse, lengthUse := common.NewCadenceDictionaryMemoryUsages(size)
-	common.UseMemory(gauge, baseUse)
-	common.UseMemory(gauge, lengthUse)
+	common.UseMemory(gauge, common.CadenceDictionaryValueMemoryUsage)
 
 	pairs, err := constructor()
 	if err != nil {
@@ -1476,7 +1474,7 @@ type KeyValuePair struct {
 }
 
 func NewMeteredKeyValuePair(gauge common.MemoryGauge, key, value Value) KeyValuePair {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceKeyValuePair)
+	common.UseMemory(gauge, common.CadenceKeyValuePairMemoryUsage)
 	return KeyValuePair{
 		Key:   key,
 		Value: value,
@@ -1750,7 +1748,7 @@ func NewLink(targetPath Path, borrowType string) Link {
 }
 
 func NewMeteredLink(gauge common.MemoryGauge, targetPath Path, borrowType string) Link {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceLink)
+	common.UseMemory(gauge, common.CadenceLinkValueMemoryUsage)
 	return NewLink(targetPath, borrowType)
 }
 
@@ -1792,7 +1790,7 @@ func NewPath(domain, identifier string) Path {
 }
 
 func NewMeteredPath(gauge common.MemoryGauge, domain, identifier string) Path {
-	common.UseConstantMemory(gauge, common.MemoryKindCadencePath)
+	common.UseMemory(gauge, common.CadencePathValueMemoryUsage)
 	return NewPath(domain, identifier)
 }
 
@@ -1832,7 +1830,7 @@ func NewTypeValue(staticType Type) TypeValue {
 }
 
 func NewMeteredTypeValue(gauge common.MemoryGauge, staticType Type) TypeValue {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceTypeValue)
+	common.UseMemory(gauge, common.CadenceTypeValueMemoryUsage)
 	return NewTypeValue(staticType)
 }
 
@@ -1873,7 +1871,7 @@ func NewCapability(path Path, address Address, borrowType Type) Capability {
 }
 
 func NewMeteredCapability(gauge common.MemoryGauge, path Path, address Address, borrowType Type) Capability {
-	common.UseConstantMemory(gauge, common.MemoryKindCadenceCapability)
+	common.UseMemory(gauge, common.CadenceCapabilityValueMemoryUsage)
 	return NewCapability(path, address, borrowType)
 }
 

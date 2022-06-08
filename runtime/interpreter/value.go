@@ -26,6 +26,8 @@ import (
 	"math/big"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 	"unsafe"
 
 	"github.com/onflow/atree"
@@ -43,7 +45,7 @@ type TypeConformanceResults map[typeConformanceResultEntry]bool
 
 type typeConformanceResultEntry struct {
 	EphemeralReferenceValue *EphemeralReferenceValue
-	EphemeralReferenceType  ReferenceStaticType
+	EphemeralReferenceType  StaticType
 }
 
 // SeenReferences is a set of seen references.
@@ -94,10 +96,17 @@ type Value interface {
 	Accept(interpreter *Interpreter, visitor Visitor)
 	Walk(interpreter *Interpreter, walkChild func(Value))
 	StaticType(interpreter *Interpreter) StaticType
+	// ConformsToStaticType returns true if the value (i.e. its dynamic type)
+	// conforms to its own static type.
+	// Non-container values trivially always conform to their own static type.
+	// Container values conform to their own static type,
+	// and this function recursively checks conformance for nested values.
+	// If the container contains static type information about nested values,
+	// e.g. the element type of an array, it also ensures the nested values'
+	// static types are subtypes.
 	ConformsToStaticType(
 		interpreter *Interpreter,
 		getLocationRange func() LocationRange,
-		staticType StaticType,
 		results TypeConformanceResults,
 	) bool
 	RecursiveString(seenReferences SeenReferences) string
@@ -240,11 +249,9 @@ func NewUnmeteredTypeValue(t StaticType) TypeValue {
 
 func NewTypeValue(
 	memoryGauge common.MemoryGauge,
-	memoryUsage common.MemoryUsage,
-	staticTypeConstructor func() StaticType,
+	staticType StaticType,
 ) TypeValue {
-	common.UseMemory(memoryGauge, memoryUsage)
-	staticType := staticTypeConstructor()
+	common.UseMemory(memoryGauge, common.TypeValueMemoryUsage)
 	return NewUnmeteredTypeValue(staticType)
 }
 
@@ -282,7 +289,13 @@ func (v TypeValue) RecursiveString(_ SeenReferences) string {
 
 func (v TypeValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
 	common.UseMemory(memoryGauge, common.TypeValueStringMemoryUsage)
-	return v.String()
+
+	var typeString string
+	if v.Type != nil {
+		typeString = v.Type.MeteredString(memoryGauge)
+	}
+
+	return format.TypeValue(typeString)
 }
 
 func (v TypeValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -312,7 +325,7 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ func() LocationRange, n
 			typeID = string(interpreter.MustConvertStaticToSemaType(staticType).ID())
 		}
 		memoryUsage := common.MemoryUsage{
-			Kind:   common.MemoryKindString,
+			Kind:   common.MemoryKindStringValue,
 			Amount: uint64(len(typeID)),
 		}
 		return NewStringValue(interpreter, memoryUsage, func() string {
@@ -360,12 +373,11 @@ func (TypeValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ V
 }
 
 func (v TypeValue) ConformsToStaticType(
-	inter *Interpreter,
+	_ *Interpreter,
 	_ func() LocationRange,
-	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return true
 }
 
 func (v TypeValue) Storable(
@@ -454,7 +466,7 @@ func NewUnmeteredVoidValue() VoidValue {
 }
 
 func NewVoidValue(memoryGauge common.MemoryGauge) VoidValue {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindVoid)
+	common.UseMemory(memoryGauge, common.VoidValueMemoryUsage)
 	return NewUnmeteredVoidValue()
 }
 
@@ -490,12 +502,11 @@ func (v VoidValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReference
 }
 
 func (v VoidValue) ConformsToStaticType(
-	inter *Interpreter,
+	_ *Interpreter,
 	_ func() LocationRange,
-	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return true
 }
 
 func (v VoidValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -562,12 +573,12 @@ func NewUnmeteredBoolValue(value bool) BoolValue {
 }
 
 func NewBoolValueFromConstructor(memoryGauge common.MemoryGauge, constructor func() bool) BoolValue {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindBool)
+	common.UseMemory(memoryGauge, common.BoolValueMemoryUsage)
 	return NewUnmeteredBoolValue(constructor())
 }
 
 func NewBoolValue(memoryGauge common.MemoryGauge, value bool) BoolValue {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindBool)
+	common.UseMemory(memoryGauge, common.BoolValueMemoryUsage)
 	return NewUnmeteredBoolValue(value)
 }
 
@@ -633,12 +644,11 @@ func (v BoolValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReference
 }
 
 func (v BoolValue) ConformsToStaticType(
-	inter *Interpreter,
+	_ *Interpreter,
 	_ func() LocationRange,
-	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return true
 }
 
 func (v BoolValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -775,12 +785,11 @@ func (v CharacterValue) HashInput(_ *Interpreter, _ func() LocationRange, scratc
 }
 
 func (v CharacterValue) ConformsToStaticType(
-	inter *Interpreter,
+	_ *Interpreter,
 	_ func() LocationRange,
-	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return true
 }
 
 func (v CharacterValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -1172,13 +1181,20 @@ func (v *StringValue) Length() int {
 
 func (v *StringValue) ToLower(interpreter *Interpreter) *StringValue {
 
-	// TODO:
-	// An uppercase character may be converted to several lower-case characters, e.g İ => [i, ̇]
+	// Over-estimate resulting string length,
+	// as an uppercase character may be converted to several lower-case characters, e.g İ => [i, ̇]
 	// see https://stackoverflow.com/questions/28683805/is-there-a-unicode-string-which-gets-longer-when-converted-to-lowercase
 
-	memoryUsage := common.NewStringMemoryUsage(
-		len(v.Str),
-	)
+	var lengthEstimate int
+	for _, r := range v.Str {
+		if r < unicode.MaxASCII {
+			lengthEstimate += 1
+		} else {
+			lengthEstimate += utf8.UTFMax
+		}
+	}
+
+	memoryUsage := common.NewStringMemoryUsage(lengthEstimate)
 
 	return NewStringValue(
 		interpreter,
@@ -1272,12 +1288,11 @@ func (v *StringValue) DecodeHex(interpreter *Interpreter) *ArrayValue {
 }
 
 func (v *StringValue) ConformsToStaticType(
-	inter *Interpreter,
+	_ *Interpreter,
 	_ func() LocationRange,
-	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return true
 }
 
 // ArrayValue
@@ -2127,7 +2142,6 @@ func (v *ArrayValue) Count() int {
 func (v *ArrayValue) ConformsToStaticType(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
-	staticType StaticType,
 	results TypeConformanceResults,
 ) bool {
 
@@ -2148,38 +2162,43 @@ func (v *ArrayValue) ConformsToStaticType(
 	}
 
 	var elementType StaticType
-	switch typedStaticType := staticType.(type) {
+	switch staticType := v.StaticType(interpreter).(type) {
 	case ConstantSizedStaticType:
-		elementType = typedStaticType.ElementType()
-		if v.Count() != int(typedStaticType.Size) {
+		elementType = staticType.ElementType()
+		if v.Count() != int(staticType.Size) {
 			return false
 		}
 	case VariableSizedStaticType:
-		elementType = typedStaticType.ElementType()
+		elementType = staticType.ElementType()
 	default:
 		return false
 	}
 
-	result := true
-	index := 0
+	var elementMismatch bool
 
 	v.Iterate(interpreter, func(element Value) (resume bool) {
-		if !element.ConformsToStaticType(
-			interpreter,
-			getLocationRange,
-			elementType,
-			results,
-		) {
-			result = false
+
+		if !interpreter.IsSubType(element.StaticType(interpreter), elementType) {
+			elementMismatch = true
+			// stop iteration
 			return false
 		}
 
-		index++
+		if !element.ConformsToStaticType(
+			interpreter,
+			getLocationRange,
+			results,
+		) {
+			elementMismatch = true
+			// stop iteration
+			return false
+		}
 
+		// continue iteration
 		return true
 	})
 
-	return result
+	return !elementMismatch
 }
 
 func (v *ArrayValue) Equal(interpreter *Interpreter, getLocationRange func() LocationRange, other Value) bool {
@@ -3231,12 +3250,11 @@ func (v IntValue) ToBigEndianBytes() []byte {
 }
 
 func (v IntValue) ConformsToStaticType(
-	inter *Interpreter,
+	_ *Interpreter,
 	_ func() LocationRange,
-	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return true
 }
 
 func (v IntValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
@@ -3838,12 +3856,11 @@ func (v Int8Value) ToBigEndianBytes() []byte {
 }
 
 func (v Int8Value) ConformsToStaticType(
-	inter *Interpreter,
+	_ *Interpreter,
 	_ func() LocationRange,
-	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return true
 }
 
 func (v Int8Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -4447,12 +4464,11 @@ func (v Int16Value) ToBigEndianBytes() []byte {
 }
 
 func (v Int16Value) ConformsToStaticType(
-	inter *Interpreter,
+	_ *Interpreter,
 	_ func() LocationRange,
-	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return true
 }
 
 func (v Int16Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -5056,12 +5072,11 @@ func (v Int32Value) ToBigEndianBytes() []byte {
 }
 
 func (v Int32Value) ConformsToStaticType(
-	inter *Interpreter,
+	_ *Interpreter,
 	_ func() LocationRange,
-	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return true
 }
 
 func (v Int32Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -5660,12 +5675,11 @@ func (v Int64Value) ToBigEndianBytes() []byte {
 }
 
 func (v Int64Value) ConformsToStaticType(
-	inter *Interpreter,
+	_ *Interpreter,
 	_ func() LocationRange,
-	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return true
 }
 
 func (v Int64Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -6369,12 +6383,11 @@ func (v Int128Value) ToBigEndianBytes() []byte {
 }
 
 func (v Int128Value) ConformsToStaticType(
-	inter *Interpreter,
+	_ *Interpreter,
 	_ func() LocationRange,
-	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return true
 }
 
 func (v Int128Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -7075,12 +7088,11 @@ func (v Int256Value) ToBigEndianBytes() []byte {
 }
 
 func (v Int256Value) ConformsToStaticType(
-	inter *Interpreter,
+	_ *Interpreter,
 	_ func() LocationRange,
-	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return true
 }
 
 func (v Int256Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -7685,12 +7697,11 @@ func (v UIntValue) ToBigEndianBytes() []byte {
 }
 
 func (v UIntValue) ConformsToStaticType(
-	inter *Interpreter,
+	_ *Interpreter,
 	_ func() LocationRange,
-	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return true
 }
 
 func (v UIntValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
@@ -8222,12 +8233,11 @@ func (v UInt8Value) ToBigEndianBytes() []byte {
 }
 
 func (v UInt8Value) ConformsToStaticType(
-	inter *Interpreter,
+	_ *Interpreter,
 	_ func() LocationRange,
-	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return true
 }
 
 func (v UInt8Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -8765,12 +8775,11 @@ func (v UInt16Value) ToBigEndianBytes() []byte {
 }
 
 func (v UInt16Value) ConformsToStaticType(
-	inter *Interpreter,
+	_ *Interpreter,
 	_ func() LocationRange,
-	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return true
 }
 
 func (UInt16Value) IsStorable() bool {
@@ -9313,12 +9322,11 @@ func (v UInt32Value) ToBigEndianBytes() []byte {
 }
 
 func (v UInt32Value) ConformsToStaticType(
-	inter *Interpreter,
+	_ *Interpreter,
 	_ func() LocationRange,
-	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return true
 }
 
 func (UInt32Value) IsStorable() bool {
@@ -9889,13 +9897,13 @@ func (v UInt64Value) ToBigEndianBytes() []byte {
 }
 
 func (v UInt64Value) ConformsToStaticType(
-	inter *Interpreter,
+	_ *Interpreter,
 	_ func() LocationRange,
-	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return true
 }
+
 func (UInt64Value) IsStorable() bool {
 	return true
 }
@@ -10540,12 +10548,11 @@ func (v UInt128Value) ToBigEndianBytes() []byte {
 }
 
 func (v UInt128Value) ConformsToStaticType(
-	inter *Interpreter,
+	_ *Interpreter,
 	_ func() LocationRange,
-	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return true
 }
 
 func (UInt128Value) IsStorable() bool {
@@ -11192,12 +11199,11 @@ func (v UInt256Value) ToBigEndianBytes() []byte {
 }
 
 func (v UInt256Value) ConformsToStaticType(
-	inter *Interpreter,
+	_ *Interpreter,
 	_ func() LocationRange,
-	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return true
 }
 
 func (UInt256Value) IsStorable() bool {
@@ -11627,12 +11633,11 @@ func (v Word8Value) ToBigEndianBytes() []byte {
 }
 
 func (v Word8Value) ConformsToStaticType(
-	inter *Interpreter,
+	_ *Interpreter,
 	_ func() LocationRange,
-	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return true
 }
 
 func (Word8Value) IsStorable() bool {
@@ -12064,12 +12069,11 @@ func (v Word16Value) ToBigEndianBytes() []byte {
 }
 
 func (v Word16Value) ConformsToStaticType(
-	inter *Interpreter,
+	_ *Interpreter,
 	_ func() LocationRange,
-	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return true
 }
 
 func (Word16Value) IsStorable() bool {
@@ -12502,12 +12506,11 @@ func (v Word32Value) ToBigEndianBytes() []byte {
 }
 
 func (v Word32Value) ConformsToStaticType(
-	inter *Interpreter,
+	_ *Interpreter,
 	_ func() LocationRange,
-	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return true
 }
 
 func (Word32Value) IsStorable() bool {
@@ -12966,12 +12969,11 @@ func (v Word64Value) ToBigEndianBytes() []byte {
 }
 
 func (v Word64Value) ConformsToStaticType(
-	inter *Interpreter,
+	_ *Interpreter,
 	_ func() LocationRange,
-	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return true
 }
 
 func (Word64Value) IsStorable() bool {
@@ -13526,12 +13528,11 @@ func (v Fix64Value) ToBigEndianBytes() []byte {
 }
 
 func (v Fix64Value) ConformsToStaticType(
-	inter *Interpreter,
+	_ *Interpreter,
 	_ func() LocationRange,
-	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return true
 }
 
 func (Fix64Value) IsStorable() bool {
@@ -14051,12 +14052,11 @@ func (v UFix64Value) ToBigEndianBytes() []byte {
 }
 
 func (v UFix64Value) ConformsToStaticType(
-	inter *Interpreter,
+	_ *Interpreter,
 	_ func() LocationRange,
-	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return true
 }
 
 func (UFix64Value) IsStorable() bool {
@@ -14799,7 +14799,6 @@ func (v *CompositeValue) TypeID() common.TypeID {
 func (v *CompositeValue) ConformsToStaticType(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
-	staticType StaticType,
 	results TypeConformanceResults,
 ) bool {
 
@@ -14819,6 +14818,8 @@ func (v *CompositeValue) ConformsToStaticType(
 			)
 		}()
 	}
+
+	staticType := v.StaticType(interpreter).(CompositeStaticType)
 
 	semaType, err := interpreter.ConvertStaticToSemaType(staticType)
 	if err != nil {
@@ -14862,14 +14863,15 @@ func (v *CompositeValue) ConformsToStaticType(
 			return false
 		}
 
-		if !interpreter.IsSubTypeOfSemaType(value.StaticType(interpreter), member.TypeAnnotation.Type) {
+		fieldStaticType := value.StaticType(interpreter)
+
+		if !interpreter.IsSubTypeOfSemaType(fieldStaticType, member.TypeAnnotation.Type) {
 			return false
 		}
 
 		if !value.ConformsToStaticType(
 			interpreter,
 			getLocationRange,
-			value.StaticType(interpreter),
 			results,
 		) {
 			return false
@@ -15958,7 +15960,6 @@ type DictionaryEntryValues struct {
 func (v *DictionaryValue) ConformsToStaticType(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
-	staticType StaticType,
 	results TypeConformanceResults,
 ) bool {
 
@@ -15978,17 +15979,19 @@ func (v *DictionaryValue) ConformsToStaticType(
 		}()
 	}
 
-	dictionaryType, ok := staticType.(DictionaryStaticType)
+	staticType, ok := v.StaticType(interpreter).(DictionaryStaticType)
 	if !ok {
 		return false
 	}
+
+	keyType := staticType.KeyType
+	valueType := staticType.ValueType
 
 	iterator, err := v.dictionary.Iterator()
 	if err != nil {
 		panic(ExternalError{err})
 	}
 
-	index := 0
 	for {
 		key, value, err := iterator.Next()
 		if err != nil {
@@ -16003,10 +16006,14 @@ func (v *DictionaryValue) ConformsToStaticType(
 		// atree.OrderedMap iteration provides low-level atree.Value,
 		// convert to high-level interpreter.Value
 		entryKey := MustConvertStoredValue(interpreter, key)
+
+		if !interpreter.IsSubType(entryKey.StaticType(interpreter), keyType) {
+			return false
+		}
+
 		if !entryKey.ConformsToStaticType(
 			interpreter,
 			getLocationRange,
-			dictionaryType.KeyType,
 			results,
 		) {
 			return false
@@ -16017,16 +16024,18 @@ func (v *DictionaryValue) ConformsToStaticType(
 		// atree.OrderedMap iteration provides low-level atree.Value,
 		// convert to high-level interpreter.Value
 		entryValue := MustConvertStoredValue(interpreter, value)
+
+		if !interpreter.IsSubType(entryValue.StaticType(interpreter), valueType) {
+			return false
+		}
+
 		if !entryValue.ConformsToStaticType(
 			interpreter,
 			getLocationRange,
-			dictionaryType.ValueType,
 			results,
 		) {
 			return false
 		}
-
-		index++
 	}
 }
 
@@ -16372,7 +16381,7 @@ func NewUnmeteredNilValue() NilValue {
 }
 
 func NewNilValue(memoryGauge common.MemoryGauge) NilValue {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindNil)
+	common.UseMemory(memoryGauge, common.NilValueMemoryUsage)
 	return NewUnmeteredNilValue()
 }
 
@@ -16453,12 +16462,11 @@ func (NilValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Va
 }
 
 func (v NilValue) ConformsToStaticType(
-	inter *Interpreter,
+	_ *Interpreter,
 	_ func() LocationRange,
-	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return true
 }
 
 func (v NilValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -16525,7 +16533,7 @@ type SomeValue struct {
 }
 
 func NewSomeValueNonCopying(interpreter *Interpreter, value Value) *SomeValue {
-	common.UseConstantMemory(interpreter, common.MemoryKindOptional)
+	common.UseMemory(interpreter, common.OptionalValueMemoryUsage)
 
 	return NewUnmeteredSomeValueNonCopying(value)
 }
@@ -16668,23 +16676,21 @@ func (v *SomeValue) SetMember(interpreter *Interpreter, getLocationRange func() 
 	panic(errors.NewUnreachableError())
 }
 
-func (v SomeValue) ConformsToStaticType(
+func (v *SomeValue) ConformsToStaticType(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
-	staticType StaticType,
 	results TypeConformanceResults,
 ) bool {
-	optionalType, ok := staticType.(OptionalStaticType)
-	if !ok {
-		return false
-	}
+
+	// NOTE: value does not have static type information on its own,
+	// SomeValue.StaticType builds type from inner value (if available),
+	// so no need to check it
 
 	innerValue := v.InnerValue(interpreter, getLocationRange)
 
 	return innerValue.ConformsToStaticType(
 		interpreter,
 		getLocationRange,
-		optionalType.Type,
 		results,
 	)
 }
@@ -16889,7 +16895,7 @@ func NewStorageReferenceValue(
 	targetPath PathValue,
 	borrowedType sema.Type,
 ) *StorageReferenceValue {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindStorageReferenceValue)
+	common.UseMemory(memoryGauge, common.StorageReferenceValueMemoryUsage)
 	return NewUnmeteredStorageReferenceValue(
 		authorized,
 		targetStorageAddress,
@@ -16985,7 +16991,7 @@ func (v *StorageReferenceValue) GetMember(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyed(self, getLocationRange)
+	interpreter.checkReferencedResourceNotDestroyed(self, getLocationRange)
 
 	return interpreter.getMember(self, getLocationRange, name)
 }
@@ -17004,7 +17010,7 @@ func (v *StorageReferenceValue) RemoveMember(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyed(self, getLocationRange)
+	interpreter.checkReferencedResourceNotDestroyed(self, getLocationRange)
 
 	return self.(MemberAccessibleValue).RemoveMember(interpreter, getLocationRange, name)
 }
@@ -17024,7 +17030,7 @@ func (v *StorageReferenceValue) SetMember(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyed(self, getLocationRange)
+	interpreter.checkReferencedResourceNotDestroyed(self, getLocationRange)
 
 	interpreter.setMember(self, getLocationRange, name, value)
 }
@@ -17043,7 +17049,7 @@ func (v *StorageReferenceValue) GetKey(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyed(self, getLocationRange)
+	interpreter.checkReferencedResourceNotDestroyed(self, getLocationRange)
 
 	return self.(ValueIndexableValue).
 		GetKey(interpreter, getLocationRange, key)
@@ -17064,7 +17070,7 @@ func (v *StorageReferenceValue) SetKey(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyed(self, getLocationRange)
+	interpreter.checkReferencedResourceNotDestroyed(self, getLocationRange)
 
 	self.(ValueIndexableValue).
 		SetKey(interpreter, getLocationRange, key, value)
@@ -17085,7 +17091,7 @@ func (v *StorageReferenceValue) InsertKey(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyed(self, getLocationRange)
+	interpreter.checkReferencedResourceNotDestroyed(self, getLocationRange)
 
 	self.(ValueIndexableValue).
 		InsertKey(interpreter, getLocationRange, key, value)
@@ -17105,7 +17111,7 @@ func (v *StorageReferenceValue) RemoveKey(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyed(self, getLocationRange)
+	interpreter.checkReferencedResourceNotDestroyed(self, getLocationRange)
 
 	return self.(ValueIndexableValue).
 		RemoveKey(interpreter, getLocationRange, key)
@@ -17131,34 +17137,22 @@ func (v *StorageReferenceValue) Equal(_ *Interpreter, _ func() LocationRange, ot
 func (v *StorageReferenceValue) ConformsToStaticType(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
-	staticType StaticType,
 	results TypeConformanceResults,
 ) bool {
-
-	refType, ok := staticType.(ReferenceStaticType)
-	if !ok ||
-		refType.Authorized != v.Authorized {
-
-		return false
-	}
-
-	if refType.BorrowedType == nil {
-		if v.BorrowedType != nil {
-			return false
-		}
-	} else if !refType.BorrowedType.Equal(ConvertSemaToStaticType(interpreter, v.BorrowedType)) {
-		return false
-	}
-
 	referencedValue := v.ReferencedValue(interpreter)
 	if referencedValue == nil {
+		return false
+	}
+
+	staticType := (*referencedValue).StaticType(interpreter)
+
+	if !interpreter.IsSubTypeOfSemaType(staticType, v.BorrowedType) {
 		return false
 	}
 
 	return (*referencedValue).ConformsToStaticType(
 		interpreter,
 		getLocationRange,
-		refType.ReferencedType,
 		results,
 	)
 }
@@ -17236,7 +17230,7 @@ func NewEphemeralReferenceValue(
 	value Value,
 	borrowedType sema.Type,
 ) *EphemeralReferenceValue {
-	common.UseConstantMemory(interpreter, common.MemoryKindEphemeralReferenceValue)
+	common.UseMemory(interpreter, common.EphemeralReferenceValueMemoryUsage)
 	return NewUnmeteredEphemeralReferenceValue(authorized, value, borrowedType)
 }
 
@@ -17321,7 +17315,7 @@ func (v *EphemeralReferenceValue) GetMember(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyed(self, getLocationRange)
+	interpreter.checkReferencedResourceNotDestroyed(self, getLocationRange)
 
 	return interpreter.getMember(self, getLocationRange, name)
 }
@@ -17340,7 +17334,7 @@ func (v *EphemeralReferenceValue) RemoveMember(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyed(self, getLocationRange)
+	interpreter.checkReferencedResourceNotDestroyed(self, getLocationRange)
 
 	if memberAccessibleValue, ok := self.(MemberAccessibleValue); ok {
 		return memberAccessibleValue.RemoveMember(interpreter, getLocationRange, identifier)
@@ -17364,7 +17358,7 @@ func (v *EphemeralReferenceValue) SetMember(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyed(self, getLocationRange)
+	interpreter.checkReferencedResourceNotDestroyed(self, getLocationRange)
 
 	interpreter.setMember(self, getLocationRange, name, value)
 }
@@ -17383,7 +17377,7 @@ func (v *EphemeralReferenceValue) GetKey(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyed(self, getLocationRange)
+	interpreter.checkReferencedResourceNotDestroyed(self, getLocationRange)
 
 	return self.(ValueIndexableValue).
 		GetKey(interpreter, getLocationRange, key)
@@ -17404,7 +17398,7 @@ func (v *EphemeralReferenceValue) SetKey(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyed(self, getLocationRange)
+	interpreter.checkReferencedResourceNotDestroyed(self, getLocationRange)
 
 	self.(ValueIndexableValue).
 		SetKey(interpreter, getLocationRange, key, value)
@@ -17425,7 +17419,7 @@ func (v *EphemeralReferenceValue) InsertKey(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyed(self, getLocationRange)
+	interpreter.checkReferencedResourceNotDestroyed(self, getLocationRange)
 
 	self.(ValueIndexableValue).
 		InsertKey(interpreter, getLocationRange, key, value)
@@ -17445,7 +17439,7 @@ func (v *EphemeralReferenceValue) RemoveKey(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyed(self, getLocationRange)
+	interpreter.checkReferencedResourceNotDestroyed(self, getLocationRange)
 
 	return self.(ValueIndexableValue).
 		RemoveKey(interpreter, getLocationRange, key)
@@ -17470,33 +17464,22 @@ func (v *EphemeralReferenceValue) Equal(_ *Interpreter, _ func() LocationRange, 
 func (v *EphemeralReferenceValue) ConformsToStaticType(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
-	staticType StaticType,
 	results TypeConformanceResults,
 ) bool {
-
-	refType, ok := staticType.(ReferenceStaticType)
-	if !ok ||
-		refType.Authorized != v.Authorized {
-
-		return false
-	}
-
-	if refType.BorrowedType == nil {
-		if v.BorrowedType != nil {
-			return false
-		}
-	} else if !refType.BorrowedType.Equal(ConvertSemaToStaticType(interpreter, v.BorrowedType)) {
-		return false
-	}
-
 	referencedValue := v.ReferencedValue(interpreter, getLocationRange)
 	if referencedValue == nil {
 		return false
 	}
 
+	staticType := (*referencedValue).StaticType(interpreter)
+
+	if !interpreter.IsSubTypeOfSemaType(staticType, v.BorrowedType) {
+		return false
+	}
+
 	entry := typeConformanceResultEntry{
 		EphemeralReferenceValue: v,
-		EphemeralReferenceType:  refType,
+		EphemeralReferenceType:  staticType,
 	}
 
 	if result, contains := results[entry]; contains {
@@ -17510,7 +17493,6 @@ func (v *EphemeralReferenceValue) ConformsToStaticType(
 	result := (*referencedValue).ConformsToStaticType(
 		interpreter,
 		getLocationRange,
-		refType.ReferencedType,
 		results,
 	)
 
@@ -17561,7 +17543,7 @@ func (*EphemeralReferenceValue) DeepRemove(_ *Interpreter) {
 type AddressValue common.Address
 
 func NewAddressValueFromBytes(memoryGauge common.MemoryGauge, constructor func() []byte) AddressValue {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindAddress)
+	common.UseMemory(memoryGauge, common.AddressValueMemoryUsage)
 	return NewUnmeteredAddressValueFromBytes(constructor())
 }
 
@@ -17582,7 +17564,7 @@ func NewAddressValue(
 	memoryGauge common.MemoryGauge,
 	address common.Address,
 ) AddressValue {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindAddress)
+	common.UseMemory(memoryGauge, common.AddressValueMemoryUsage)
 	return NewUnmeteredAddressValueFromBytes(address[:])
 }
 
@@ -17590,7 +17572,7 @@ func NewAddressValueFromConstructor(
 	memoryGauge common.MemoryGauge,
 	addressConstructor func() common.Address,
 ) AddressValue {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindAddress)
+	common.UseMemory(memoryGauge, common.AddressValueMemoryUsage)
 	address := addressConstructor()
 	return NewUnmeteredAddressValueFromBytes(address[:])
 }
@@ -17727,12 +17709,11 @@ func (AddressValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, 
 }
 
 func (v AddressValue) ConformsToStaticType(
-	inter *Interpreter,
+	_ *Interpreter,
 	_ func() LocationRange,
-	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	return primitiveValueConformsToStaticType(inter, v, staticType)
+	return true
 }
 
 func (AddressValue) IsStorable() bool {
@@ -17844,7 +17825,7 @@ func NewPathValue(
 	domain common.PathDomain,
 	identifier string,
 ) PathValue {
-	common.UseConstantMemory(memoryGauge, common.MemoryKindPathValue)
+	common.UseMemory(memoryGauge, common.PathValueMemoryUsage)
 	return NewUnmeteredPathValue(domain, identifier)
 }
 
@@ -17952,19 +17933,9 @@ func (PathValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ V
 func (v PathValue) ConformsToStaticType(
 	_ *Interpreter,
 	_ func() LocationRange,
-	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	switch staticType {
-	case PrimitiveStaticTypePublicPath:
-		return v.Domain == common.PathDomainPublic
-	case PrimitiveStaticTypePrivatePath:
-		return v.Domain == common.PathDomainPrivate
-	case PrimitiveStaticTypeStoragePath:
-		return v.Domain == common.PathDomainStorage
-	default:
-		return false
-	}
+	return true
 }
 
 func (v PathValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -18112,7 +18083,7 @@ func NewCapabilityValue(
 	borrowType StaticType,
 ) *CapabilityValue {
 	// Constant because its constituents are already metered.
-	common.UseConstantMemory(memoryGauge, common.MemoryKindCapabilityValue)
+	common.UseMemory(memoryGauge, common.CapabilityValueMemoryUsage)
 	return NewUnmeteredCapabilityValue(address, path, borrowType)
 }
 
@@ -18159,16 +18130,13 @@ func (v *CapabilityValue) RecursiveString(seenReferences SeenReferences) string 
 	)
 }
 
-var capabilityValueStringBaseLen = len(format.Capability("", "", ""))
-
 func (v *CapabilityValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+	common.UseMemory(memoryGauge, common.CapabilityValueStringMemoryUsage)
+
 	var borrowType string
 	if v.BorrowType != nil {
-		borrowType = v.BorrowType.String()
+		borrowType = v.BorrowType.MeteredString(memoryGauge)
 	}
-
-	strLen := capabilityValueStringBaseLen + len(borrowType) + 2
-	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(strLen))
 
 	return format.Capability(
 		borrowType,
@@ -18213,17 +18181,11 @@ func (*CapabilityValue) SetMember(_ *Interpreter, _ func() LocationRange, _ stri
 }
 
 func (v *CapabilityValue) ConformsToStaticType(
-	inter *Interpreter,
+	_ *Interpreter,
 	_ func() LocationRange,
-	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	semaType, err := inter.ConvertStaticToSemaType(staticType)
-	if err != nil {
-		return false
-	}
-
-	return inter.IsSubTypeOfSemaType(v.StaticType(inter), semaType)
+	return true
 }
 
 func (v *CapabilityValue) Equal(interpreter *Interpreter, getLocationRange func() LocationRange, other Value) bool {
@@ -18326,7 +18288,7 @@ func NewUnmeteredLinkValue(targetPath PathValue, staticType StaticType) LinkValu
 
 func NewLinkValue(memoryGauge common.MemoryGauge, targetPath PathValue, staticType StaticType) LinkValue {
 	// The only variable is TargetPath, which is already metered as a PathValue.
-	common.UseConstantMemory(memoryGauge, common.MemoryKindLinkValue)
+	common.UseMemory(memoryGauge, common.LinkValueMemoryUsage)
 	return NewUnmeteredLinkValue(targetPath, staticType)
 }
 
@@ -18365,16 +18327,11 @@ func (v LinkValue) RecursiveString(seenReferences SeenReferences) string {
 	)
 }
 
-var linkValueStringBaseLen = len(format.Link("", ""))
-
 func (v LinkValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
-	typeString := v.Type.String()
-
-	strLen := linkValueStringBaseLen + len(typeString)
-	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(strLen))
+	common.UseMemory(memoryGauge, common.LinkValueStringMemoryUsage)
 
 	return format.Link(
-		typeString,
+		v.Type.MeteredString(memoryGauge),
 		v.TargetPath.MeteredString(memoryGauge, seenReferences),
 	)
 }
@@ -18382,13 +18339,9 @@ func (v LinkValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences 
 func (v LinkValue) ConformsToStaticType(
 	_ *Interpreter,
 	_ func() LocationRange,
-	_ StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	// There is no dynamic type for links,
-	// as they are not first-class values in programs,
-	// but only stored
-	return false
+	return true
 }
 
 func (v LinkValue) Equal(interpreter *Interpreter, getLocationRange func() LocationRange, other Value) bool {
@@ -18608,8 +18561,3 @@ var publicKeyVerifyPoPFunction = NewUnmeteredHostFunctionValue(
 	},
 	sema.PublicKeyVerifyPoPFunctionType,
 )
-
-func primitiveValueConformsToStaticType(inter *Interpreter, v Value, targetStaticType StaticType) bool {
-	staticType := v.StaticType(inter)
-	return inter.IsSubType(staticType, targetStaticType)
-}
