@@ -1057,9 +1057,12 @@ func TestEncodeLink(t *testing.T) {
 }
 
 func TestEncodeSimpleTypes(t *testing.T) {
+
 	t.Parallel()
 
-	tests := []cadence.Type{
+	var tests []encodeTest
+
+	for _, ty := range []cadence.Type{
 		cadence.AnyType{},
 		cadence.AnyResourceType{},
 		cadence.AnyResourceType{},
@@ -1109,23 +1112,17 @@ func TestEncodeSimpleTypes(t *testing.T) {
 		cadence.PublicAccountKeysType{},
 		cadence.PublicAccountType{},
 		cadence.DeployedContractType{},
-	}
-
-	for _, test := range tests {
-		t.Run(fmt.Sprintf("with static %s", test.ID()), func(t *testing.T) {
-
-			t.Parallel()
-
-			testEncodeAndDecode(
-				t,
-				cadence.TypeValue{
-					StaticType: test,
-				},
-				fmt.Sprintf(`{"type":"Type","value":{"staticType":{"kind":"%s"}}}`, test.ID()),
-			)
-
+	} {
+		tests = append(tests, encodeTest{
+			name: fmt.Sprintf("with static %s", ty.ID()),
+			val: cadence.TypeValue{
+				StaticType: ty,
+			},
+			expected: fmt.Sprintf(`{"type":"Type","value":{"staticType":{"kind":"%s"}}}`, ty.ID()),
 		})
 	}
+
+	testAllEncodeAndDecode(t, tests...)
 }
 
 func TestEncodeType(t *testing.T) {
