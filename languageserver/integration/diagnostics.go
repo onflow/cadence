@@ -33,8 +33,8 @@ import (
 // syntactically and semantically valid, but unsupported by the extension.
 //
 func (i *FlowIntegration) diagnostics(
-	_ protocol.DocumentUri,
-	_ float64,
+	_ protocol.DocumentURI,
+	_ int32,
 	checker *sema.Checker,
 ) (
 	diagnostics []protocol.Diagnostic,

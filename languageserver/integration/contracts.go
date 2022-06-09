@@ -36,7 +36,7 @@ const (
 )
 
 type contractInfo struct {
-	documentVersion       float64
+	documentVersion       int32
 	startPos              *ast.Position
 	kind                  contractKind
 	name                  string
@@ -47,8 +47,8 @@ type contractInfo struct {
 }
 
 func (i FlowIntegration) updateContractInfoIfNeeded(
-	uri protocol.DocumentUri,
-	version float64,
+	uri protocol.DocumentURI,
+	version int32,
 	checker *sema.Checker,
 ) {
 	if i.contractInfo[uri].documentVersion == version {

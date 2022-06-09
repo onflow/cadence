@@ -29,8 +29,8 @@ import (
 //
 func ASTToProtocolPosition(pos ast.Position) protocol.Position {
 	return protocol.Position{
-		Line:      float64(pos.Line - 1),
-		Character: float64(pos.Column),
+		Line:      uint32(pos.Line - 1),
+		Character: uint32(pos.Column),
 	}
 }
 
