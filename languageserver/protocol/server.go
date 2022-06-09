@@ -92,6 +92,7 @@ type Handler interface {
 	ResolveCompletionItem(conn Conn, item *CompletionItem) (*CompletionItem, error)
 	ExecuteCommand(conn Conn, params *ExecuteCommandParams) (any, error)
 	DocumentSymbol(conn Conn, params *DocumentSymbolParams) ([]*DocumentSymbol, error)
+	DocumentLink(conn Conn, params *DocumentLinkParams) ([]*DocumentLink, error)
 	Shutdown(conn Conn) error
 	Exit(conn Conn) error
 }
@@ -150,6 +151,9 @@ func NewServer(handler Handler) *Server {
 
 	jsonrpc2Server.Methods["textDocument/documentSymbol"] =
 		server.handleDocumentSymbol
+
+	jsonrpc2Server.Methods["textDocument/documentLink"] =
+		server.handleDocumentLink
 
 	jsonrpc2Server.Methods["shutdown"] =
 		server.handleShutdown

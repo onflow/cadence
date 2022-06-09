@@ -147,6 +147,14 @@ func (s *Server) handleDocumentSymbol(req *json.RawMessage) (any, error) {
 	return s.Handler.DocumentSymbol(s.conn, &params)
 }
 
+func (s *Server) handleDocumentLink(req *json.RawMessage) (any, error) {
+	var params DocumentLinkParams
+	if err := json.Unmarshal(*req, &params); err != nil {
+		return nil, err
+	}
+	return s.Handler.DocumentLink(s.conn, &params)
+}
+
 func (s *Server) handleShutdown(_ *json.RawMessage) (any, error) {
 	err := s.Handler.Shutdown(s.conn)
 	return nil, err

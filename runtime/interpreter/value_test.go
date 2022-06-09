@@ -1618,19 +1618,9 @@ func TestEphemeralReferenceTypeConformance(t *testing.T) {
 	conforms := value.ConformsToStaticType(
 		inter,
 		ReturnEmptyLocationRange,
-		value.StaticType(inter),
 		TypeConformanceResults{},
 	)
 	assert.True(t, conforms)
-
-	// Check against a non-conforming type
-	conforms = value.ConformsToStaticType(
-		inter,
-		ReturnEmptyLocationRange,
-		ReferenceStaticType{},
-		TypeConformanceResults{},
-	)
-	assert.False(t, conforms)
 }
 
 func TestCapabilityValue_Equal(t *testing.T) {
@@ -3540,4 +3530,636 @@ func TestNumberValueIntegerConversion(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestValue_ConformsToStaticType(t *testing.T) {
+
+	t.Parallel()
+
+	testAddress := common.MustBytesToAddress([]byte{0x1})
+
+	newCompositeValue := func(inter *Interpreter, fields []CompositeField) *CompositeValue {
+		return NewCompositeValue(
+			inter,
+			utils.TestLocation,
+			"Test",
+			common.CompositeKindStructure,
+			fields,
+			testAddress,
+		)
+	}
+
+	newInvalidCompositeValue := func(inter *Interpreter) *CompositeValue {
+		return newCompositeValue(inter, []CompositeField{})
+	}
+
+	test := func(valueFactory func(*Interpreter) Value, expected bool) {
+
+		storage := newUnmeteredInMemoryStorage()
+
+		members := sema.NewStringMemberOrderedMap()
+
+		compositeType := &sema.CompositeType{
+			Location:   utils.TestLocation,
+			Identifier: "Test",
+			Kind:       common.CompositeKindStructure,
+			Members:    members,
+			Fields:     []string{"foo"},
+		}
+
+		fooField := sema.NewPublicConstantFieldMember(
+			nil,
+			compositeType,
+			"foo",
+			sema.BoolType,
+			"",
+		)
+		members.Set("foo", fooField)
+
+		elaboration := sema.NewElaboration(nil)
+		elaboration.CompositeTypes[compositeType.ID()] = compositeType
+
+		inter, err := NewInterpreter(
+			&Program{
+				Elaboration: elaboration,
+			},
+			utils.TestLocation,
+			WithStorage(storage),
+		)
+		require.NoError(t, err)
+
+		storageMap := storage.GetStorageMap(testAddress, "storage", true)
+		storageMap.WriteValue(inter, "test", NewUnmeteredBoolValue(true))
+
+		value := valueFactory(inter)
+
+		result := value.ConformsToStaticType(
+			inter,
+			ReturnEmptyLocationRange,
+			TypeConformanceResults{},
+		)
+		if expected {
+			assert.True(t, result)
+		} else {
+			assert.False(t, result)
+		}
+	}
+
+	t.Run("function values", func(t *testing.T) {
+
+		t.Parallel()
+
+		functionType := &sema.FunctionType{
+			Parameters: []*sema.Parameter{
+				{
+					TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
+				},
+			},
+			ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.BoolType),
+		}
+
+		for name, f := range map[string]Value{
+			"InterpretedFunctionValue": &InterpretedFunctionValue{
+				Type: functionType,
+			},
+			"HostFunctionValue": &HostFunctionValue{
+				Type: functionType,
+			},
+			"BoundFunctionValue": &BoundFunctionValue{
+				Function: &InterpretedFunctionValue{
+					Type: functionType,
+				},
+			},
+		} {
+			t.Run(name, func(t *testing.T) {
+				test(
+					func(_ *Interpreter) Value {
+						return f
+					},
+					true,
+				)
+			})
+		}
+	})
+
+	t.Run("BoolValue", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(
+			func(_ *Interpreter) Value {
+				return NewUnmeteredBoolValue(true)
+			},
+			true,
+		)
+	})
+
+	t.Run("StringValue", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(
+			func(_ *Interpreter) Value {
+				return NewUnmeteredStringValue("test")
+			},
+			true,
+		)
+	})
+
+	t.Run("AddressValue", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(
+			func(_ *Interpreter) Value {
+				return NewUnmeteredAddressValueFromBytes([]byte{0x1})
+			},
+			true,
+		)
+	})
+
+	t.Run("TypeValue", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(
+			func(_ *Interpreter) Value {
+				return NewUnmeteredTypeValue(PrimitiveStaticTypeInt)
+			},
+			true,
+		)
+	})
+
+	t.Run("VoidValue", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(
+			func(_ *Interpreter) Value {
+				return NewUnmeteredVoidValue()
+			},
+			true,
+		)
+	})
+
+	t.Run("CharacterValue", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(
+			func(_ *Interpreter) Value {
+				return NewUnmeteredCharacterValue("t")
+			},
+			true,
+		)
+	})
+
+	t.Run("NilValue", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(
+			func(_ *Interpreter) Value {
+				return NewUnmeteredNilValue()
+			},
+			true,
+		)
+	})
+
+	t.Run("SomeValue", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(
+			func(interpreter *Interpreter) Value {
+				return NewUnmeteredSomeValueNonCopying(
+					NewUnmeteredBoolValue(true),
+				)
+			},
+			true,
+		)
+	})
+
+	t.Run("PathValue", func(t *testing.T) {
+
+		t.Parallel()
+
+		for _, domain := range common.AllPathDomains {
+			t.Run(domain.Identifier(), func(t *testing.T) {
+				test(
+					func(interpreter *Interpreter) Value {
+						return NewUnmeteredPathValue(domain, "test")
+					},
+					true,
+				)
+			})
+		}
+	})
+
+	t.Run("integer values", func(t *testing.T) {
+
+		t.Parallel()
+
+		testCases := map[*sema.NumericType]NumberValue{
+			sema.IntType:     NewUnmeteredIntValueFromInt64(42),
+			sema.UIntType:    NewUnmeteredUIntValueFromUint64(42),
+			sema.UInt8Type:   NewUnmeteredUInt8Value(42),
+			sema.UInt16Type:  NewUnmeteredUInt16Value(42),
+			sema.UInt32Type:  NewUnmeteredUInt32Value(42),
+			sema.UInt64Type:  NewUnmeteredUInt64Value(42),
+			sema.UInt128Type: NewUnmeteredUInt128ValueFromUint64(42),
+			sema.UInt256Type: NewUnmeteredUInt256ValueFromUint64(42),
+			sema.Word8Type:   NewUnmeteredWord8Value(42),
+			sema.Word16Type:  NewUnmeteredWord16Value(42),
+			sema.Word32Type:  NewUnmeteredWord32Value(42),
+			sema.Word64Type:  NewUnmeteredWord64Value(42),
+			sema.Int8Type:    NewUnmeteredInt8Value(42),
+			sema.Int16Type:   NewUnmeteredInt16Value(42),
+			sema.Int32Type:   NewUnmeteredInt32Value(42),
+			sema.Int64Type:   NewUnmeteredInt64Value(42),
+			sema.Int128Type:  NewUnmeteredInt128ValueFromInt64(42),
+			sema.Int256Type:  NewUnmeteredInt256ValueFromInt64(42),
+		}
+
+		for _, ty := range sema.AllIntegerTypes {
+			// Only test leaf types
+			switch ty {
+			case sema.IntegerType, sema.SignedIntegerType:
+				continue
+			}
+
+			_, ok := testCases[ty.(*sema.NumericType)]
+			require.True(t, ok, "missing case for type %s", ty.String())
+		}
+
+		for ty, v := range testCases {
+			t.Run(ty.String(), func(t *testing.T) {
+				test(
+					func(_ *Interpreter) Value {
+						return v
+					},
+					true,
+				)
+			})
+		}
+	})
+
+	t.Run("fixed-point values", func(t *testing.T) {
+
+		t.Parallel()
+
+		testCases := map[*sema.FixedPointNumericType]NumberValue{
+			sema.UFix64Type: NewUnmeteredUFix64ValueWithInteger(42),
+			sema.Fix64Type:  NewUnmeteredFix64ValueWithInteger(42),
+		}
+
+		for _, ty := range sema.AllFixedPointTypes {
+			// Only test leaf types
+			switch ty {
+			case sema.FixedPointType, sema.SignedFixedPointType:
+				continue
+			}
+
+			_, ok := testCases[ty.(*sema.FixedPointNumericType)]
+			require.True(t, ok, "missing case for type %s", ty.String())
+		}
+
+		for ty, v := range testCases {
+			t.Run(ty.String(), func(t *testing.T) {
+				test(
+					func(_ *Interpreter) Value {
+						return v
+					},
+					true,
+				)
+			})
+		}
+	})
+
+	t.Run("EphemeralReferenceValue", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(
+			func(_ *Interpreter) Value {
+				return NewUnmeteredEphemeralReferenceValue(
+					false,
+					NewUnmeteredBoolValue(true),
+					sema.BoolType,
+				)
+			},
+			true,
+		)
+
+		test(
+			func(_ *Interpreter) Value {
+				return NewUnmeteredEphemeralReferenceValue(
+					false,
+					NewUnmeteredBoolValue(true),
+					sema.StringType,
+				)
+			},
+			false,
+		)
+	})
+
+	t.Run("StorageReferenceValue", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(
+			func(_ *Interpreter) Value {
+				return NewUnmeteredStorageReferenceValue(
+					false,
+					testAddress,
+					NewUnmeteredPathValue(common.PathDomainStorage, "test"),
+					sema.BoolType,
+				)
+			},
+			true,
+		)
+
+		test(
+			func(_ *Interpreter) Value {
+				return NewUnmeteredStorageReferenceValue(
+					false,
+					testAddress,
+					NewUnmeteredPathValue(common.PathDomainStorage, "test"),
+					sema.StringType,
+				)
+			},
+			false,
+		)
+	})
+
+	t.Run("CapabilityValue", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(
+			func(_ *Interpreter) Value {
+				return NewUnmeteredCapabilityValue(
+					NewUnmeteredAddressValueFromBytes(testAddress.Bytes()),
+					NewUnmeteredPathValue(common.PathDomainStorage, "test"),
+					ReferenceStaticType{
+						Authorized:     false,
+						BorrowedType:   PrimitiveStaticTypeBool,
+						ReferencedType: PrimitiveStaticTypeBool,
+					},
+				)
+			},
+			true,
+		)
+	})
+
+	t.Run("ArrayValue", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(
+			func(inter *Interpreter) Value {
+				return NewArrayValue(
+					inter,
+					VariableSizedStaticType{
+						Type: PrimitiveStaticTypeNumber,
+					},
+					testAddress,
+					NewUnmeteredInt8Value(2),
+					NewUnmeteredFix64Value(3),
+				)
+			},
+			true,
+		)
+
+		test(
+			func(inter *Interpreter) Value {
+				return NewArrayValue(
+					inter,
+					VariableSizedStaticType{
+						Type: PrimitiveStaticTypeAnyStruct,
+					},
+					testAddress,
+					NewUnmeteredInt8Value(2),
+					NewUnmeteredFix64Value(3),
+				)
+			},
+			true,
+		)
+
+		test(
+			func(inter *Interpreter) Value {
+				return NewArrayValue(
+					inter,
+					VariableSizedStaticType{
+						Type: PrimitiveStaticTypeInteger,
+					},
+					testAddress,
+					NewUnmeteredInt8Value(2),
+					NewUnmeteredFix64Value(3),
+				)
+			},
+			false,
+		)
+
+		test(
+			func(inter *Interpreter) Value {
+				return NewArrayValue(
+					inter,
+					VariableSizedStaticType{
+						Type: PrimitiveStaticTypeAnyStruct,
+					},
+					testAddress,
+					newInvalidCompositeValue(inter),
+				)
+			},
+			false,
+		)
+	})
+
+	t.Run("DictionaryValue", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(
+			func(inter *Interpreter) Value {
+				return NewDictionaryValueWithAddress(
+					inter,
+					DictionaryStaticType{
+						KeyType:   PrimitiveStaticTypeString,
+						ValueType: PrimitiveStaticTypeNumber,
+					},
+					testAddress,
+					NewUnmeteredStringValue("a"),
+					NewUnmeteredInt8Value(2),
+					NewUnmeteredStringValue("b"),
+					NewUnmeteredFix64Value(3),
+				)
+			},
+			true,
+		)
+
+		test(
+			func(inter *Interpreter) Value {
+				return NewDictionaryValueWithAddress(
+					inter,
+					DictionaryStaticType{
+						KeyType:   PrimitiveStaticTypeString,
+						ValueType: PrimitiveStaticTypeAnyStruct,
+					},
+					testAddress,
+					NewUnmeteredStringValue("a"),
+					NewUnmeteredInt8Value(2),
+					NewUnmeteredStringValue("b"),
+					NewUnmeteredFix64Value(3),
+				)
+			},
+			true,
+		)
+
+		test(
+			func(inter *Interpreter) Value {
+				return NewDictionaryValueWithAddress(
+					inter,
+					DictionaryStaticType{
+						KeyType:   PrimitiveStaticTypeAnyStruct,
+						ValueType: PrimitiveStaticTypeNumber,
+					},
+					testAddress,
+					NewUnmeteredStringValue("a"),
+					NewUnmeteredInt8Value(2),
+					NewUnmeteredStringValue("b"),
+					NewUnmeteredFix64Value(3),
+				)
+			},
+			true,
+		)
+
+		// TODO: cannot test due to container mutation check. import instead?
+
+		//test(
+		//	NewDictionaryValueWithAddress(
+		//		inter,
+		//		DictionaryStaticType{
+		//			KeyType:   PrimitiveStaticTypeInt,
+		//			ValueType: PrimitiveStaticTypeNumber,
+		//		},
+		//		testAddress,
+		//		NewUnmeteredStringValue("a"),
+		//		NewUnmeteredInt8Value(2),
+		//		NewUnmeteredStringValue("b"),
+		//		NewUnmeteredFix64Value(3),
+		//	),
+		//	false,
+		//)
+		//
+		//test(
+		//	NewDictionaryValueWithAddress(
+		//		inter,
+		//		DictionaryStaticType{
+		//			KeyType:   PrimitiveStaticTypeAnyStruct,
+		//			ValueType: PrimitiveStaticTypeInteger,
+		//		},
+		//		testAddress,
+		//		NewUnmeteredStringValue("a"),
+		//		NewUnmeteredInt8Value(2),
+		//		NewUnmeteredStringValue("b"),
+		//		NewUnmeteredFix64Value(3),
+		//	),
+		//	false,
+		//)
+
+		test(
+			func(inter *Interpreter) Value {
+				return NewDictionaryValueWithAddress(
+					inter,
+					DictionaryStaticType{
+						KeyType:   PrimitiveStaticTypeAnyStruct,
+						ValueType: PrimitiveStaticTypeAnyStruct,
+					},
+					testAddress,
+					NewUnmeteredStringValue("a"),
+					newInvalidCompositeValue(inter),
+				)
+			},
+			false,
+		)
+	})
+
+	t.Run("CompositeValue", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(
+			func(inter *Interpreter) Value {
+				return newCompositeValue(inter, []CompositeField{
+					{
+						Name:  "foo",
+						Value: NewUnmeteredBoolValue(true),
+					},
+				})
+			},
+			true,
+		)
+
+		test(
+			func(inter *Interpreter) Value {
+				return newCompositeValue(inter, []CompositeField{
+					{
+						Name:  "foo",
+						Value: NewUnmeteredStringValue("test"),
+					},
+				})
+			},
+			false,
+		)
+
+		test(
+			func(inter *Interpreter) Value {
+				return newInvalidCompositeValue(inter)
+			},
+			false,
+		)
+	})
+
+	t.Run("SimpleCompositeValue", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(
+			func(inter *Interpreter) Value {
+				return NewSimpleCompositeValue(
+					inter,
+					PrimitiveStaticTypeBlock.SemaType().ID(),
+					PrimitiveStaticTypeBlock,
+					[]string{"height"},
+					map[string]Value{
+						"height": NewUnmeteredInt64Value(1),
+					},
+					nil,
+					nil,
+					nil,
+				)
+			},
+			true,
+		)
+
+		test(
+			func(inter *Interpreter) Value {
+				return NewSimpleCompositeValue(
+					inter,
+					PrimitiveStaticTypeBlock.SemaType().ID(),
+					PrimitiveStaticTypeBlock,
+					[]string{"foo"},
+					map[string]Value{
+						"foo": newInvalidCompositeValue(inter),
+					},
+					nil,
+					nil,
+					nil,
+				)
+			},
+			false,
+		)
+	})
+
 }

@@ -1364,8 +1364,8 @@ func NewFunctionType(
 	typeID string,
 	parameters []Parameter,
 	returnType Type,
-) FunctionType {
-	return FunctionType{
+) *FunctionType {
+	return &FunctionType{
 		typeID:     typeID,
 		Parameters: parameters,
 		ReturnType: returnType,
@@ -1377,18 +1377,18 @@ func NewMeteredFunctionType(
 	typeID string,
 	parameters []Parameter,
 	returnType Type,
-) FunctionType {
+) *FunctionType {
 	common.UseMemory(gauge, common.CadenceFunctionTypeMemoryUsage)
 	return NewFunctionType(typeID, parameters, returnType)
 }
 
-func (FunctionType) isType() {}
+func (*FunctionType) isType() {}
 
-func (t FunctionType) ID() string {
+func (t *FunctionType) ID() string {
 	return t.typeID
 }
 
-func (t FunctionType) WithID(id string) FunctionType {
+func (t *FunctionType) WithID(id string) *FunctionType {
 	t.typeID = id
 	return t
 }
@@ -1459,13 +1459,13 @@ func NewMeteredRestrictedType(
 	return NewRestrictedType(typeID, typ, restrictions)
 }
 
-func (RestrictedType) isType() {}
+func (*RestrictedType) isType() {}
 
-func (t RestrictedType) ID() string {
+func (t *RestrictedType) ID() string {
 	return t.typeID
 }
 
-func (t RestrictedType) WithID(id string) RestrictedType {
+func (t *RestrictedType) WithID(id string) *RestrictedType {
 	t.typeID = id
 	return t
 }
