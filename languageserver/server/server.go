@@ -362,6 +362,7 @@ func (s *Server) Initialize(
 				TriggerCharacters: []string{"("},
 			},
 			CodeActionProvider: true,
+			InlayHintProvider:  true,
 		},
 	}
 
@@ -1676,6 +1677,59 @@ func (s *Server) DocumentLink(
 	return
 }
 
+func (s *Server) InlayHint(
+	_ protocol.Conn,
+	params *protocol.InlayHintParams,
+) (
+	inlayHints []*protocol.InlayHint,
+	err error,
+) {
+
+	// NOTE: Always initialize to an empty slice, i.e DON'T use nil:
+	// The later will be ignored instead of being treated as no items
+	inlayHints = []*protocol.InlayHint{}
+
+	// get uri from parameters caught by grpc server
+	uri := params.TextDocument.URI
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
+		return
+	}
+
+	var variableDeclarations []*ast.VariableDeclaration
+
+	ast.Inspect(checker.Program, func(element ast.Element) bool {
+
+		variableDeclaration, ok := element.(*ast.VariableDeclaration)
+		if !ok || variableDeclaration.TypeAnnotation != nil {
+			return true
+		}
+
+		variableDeclarations = append(variableDeclarations, variableDeclaration)
+
+		return true
+	})
+
+	for _, variableDeclaration := range variableDeclarations {
+		targetType := checker.Elaboration.VariableDeclarationTargetTypes[variableDeclaration]
+		identifierEndPosition := variableDeclaration.Identifier.EndPosition(nil)
+		inlayHintPosition := conversion.ASTToProtocolPosition(identifierEndPosition.Shifted(nil, 1))
+		inlayHint := protocol.InlayHint{
+			Position: &inlayHintPosition,
+			Label: []protocol.InlayHintLabelPart{
+				{
+					Value: fmt.Sprintf(": %s", targetType.QualifiedString()),
+				},
+			},
+			Kind: protocol.Type,
+		}
+
+		inlayHints = append(inlayHints, &inlayHint)
+	}
+
+	return
+}
+
 // Shutdown tells the server to stop accepting any new requests. This can only
 // be followed by a call to Exit, which exits the process.
 func (*Server) Shutdown(conn protocol.Conn) error {
@@ -1947,7 +2001,8 @@ func (s *Server) getDiagnosticsForParentError(
 					endPos := positioned.EndPosition(nil)
 					message := errorNote.Message()
 
-					diagnostic.RelatedInformation = append(diagnostic.RelatedInformation,
+					diagnostic.RelatedInformation = append(
+						diagnostic.RelatedInformation,
 						protocol.DiagnosticRelatedInformation{
 							Location: protocol.Location{
 								URI:   uri,
