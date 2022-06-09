@@ -107,14 +107,14 @@ type UnexpectedError struct {
 	Err error
 }
 
-func NewUnexpectedError(err error) UnexpectedError {
+func NewUnexpectedError(message string, arg ...any) UnexpectedError {
 	return UnexpectedError{
-		Err: err,
+		Err: fmt.Errorf(message, arg...),
 	}
 }
 
-func NewUnexpectedErrorFromString(message string) DefaultUserError {
-	return DefaultUserError{
+func NewUnexpectedErrorFromString(message string) UnexpectedError {
+	return UnexpectedError{
 		Err: errors.New(message),
 	}
 }
@@ -142,9 +142,9 @@ func NewDefaultUserErrorFromString(message string) DefaultUserError {
 	}
 }
 
-func NewDefaultUserError(err error) DefaultUserError {
+func NewDefaultUserError(message string, arg ...any) DefaultUserError {
 	return DefaultUserError{
-		Err: err,
+		Err: fmt.Errorf(message, arg...),
 	}
 }
 

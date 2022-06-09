@@ -986,7 +986,7 @@ func validateArgumentParams(
 			}
 
 			if !hasValidStaticType(inter, value) {
-				panic(fmt.Errorf("invalid static type for argument: %d", i))
+				panic(runtimeErrors.NewUnexpectedError("invalid static type for argument: %d", i))
 			}
 
 			return true
@@ -1729,7 +1729,7 @@ func (r *interpreterRuntime) emitAccountEvent(
 	expectedLen := len(eventType.ConstructorParameters)
 
 	if actualLen != expectedLen {
-		panic(fmt.Errorf(
+		panic(runtimeErrors.NewDefaultUserError(
 			"event emission value mismatch: event %s: expected %d, got %d",
 			eventType.QualifiedString(),
 			expectedLen,
@@ -2097,7 +2097,7 @@ func (r *interpreterRuntime) loadContract(
 		}
 
 		if storedValue == nil {
-			panic(fmt.Errorf("failed to load contract: %s", compositeType.Location))
+			panic(runtimeErrors.NewDefaultUserError("failed to load contract: %s", compositeType.Location))
 		}
 
 		return storedValue.(*interpreter.CompositeValue)
@@ -2132,13 +2132,13 @@ func (r *interpreterRuntime) instantiateContract(
 	parameterCount := len(parameterTypes)
 
 	if argumentCount < parameterCount {
-		return nil, fmt.Errorf(
+		return nil, runtimeErrors.NewDefaultUserError(
 			"invalid argument count, too few arguments: expected %d, got %d, next missing argument: `%s`",
 			parameterCount, argumentCount,
 			parameterTypes[argumentCount],
 		)
 	} else if argumentCount > parameterCount {
-		return nil, fmt.Errorf(
+		return nil, runtimeErrors.NewDefaultUserError(
 			"invalid argument count, too many arguments: expected %d, got %d",
 			parameterCount,
 			argumentCount,
@@ -2153,7 +2153,7 @@ func (r *interpreterRuntime) instantiateContract(
 		argumentType := argumentTypes[i]
 		parameterTye := parameterTypes[i]
 		if !sema.IsSubType(argumentType, parameterTye) {
-			return nil, fmt.Errorf(
+			return nil, runtimeErrors.NewDefaultUserError(
 				"invalid argument %d: expected type `%s`, got `%s`",
 				i,
 				parameterTye,
@@ -2235,7 +2235,7 @@ func (r *interpreterRuntime) instantiateContract(
 
 	variable, ok := inter.Globals.Get(contractType.Identifier)
 	if !ok {
-		return nil, fmt.Errorf(
+		return nil, runtimeErrors.NewDefaultUserError(
 			"cannot find contract: `%s`",
 			contractType.Identifier,
 		)
@@ -2555,7 +2555,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				// Ensure that there's a contract/contract-interface with the given name exists already
 
 				if len(existingCode) == 0 {
-					panic(fmt.Errorf(
+					panic(runtimeErrors.NewDefaultUserError(
 						"cannot update non-existing contract with name %q in account %s",
 						nameArgument,
 						address.ShortHexWithPrefix(),
@@ -2567,7 +2567,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				// Ensure that no contract/contract interface with the given name exists already
 
 				if len(existingCode) > 0 {
-					panic(fmt.Errorf(
+					panic(runtimeErrors.NewDefaultUserError(
 						"cannot overwrite existing contract with name %q in account %s",
 						nameArgument,
 						address.ShortHexWithPrefix(),
@@ -2677,7 +2677,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 
 				context.SetCode(context.Location, string(code))
 
-				panic(fmt.Errorf(
+				panic(runtimeErrors.NewDefaultUserError(
 					"invalid %s: the code must declare exactly one contract or contract interface",
 					declarationKind.Name(),
 				))
@@ -2692,7 +2692,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 
 				context.SetCode(context.Location, string(code))
 
-				panic(fmt.Errorf(
+				panic(runtimeErrors.NewDefaultUserError(
 					"invalid %s: the name argument must match the name of the declaration: got %q, expected %q",
 					declarationKind.Name(),
 					nameArgument,
@@ -3489,7 +3489,7 @@ func NewPublicKeyFromValue(
 
 	byteArray, err := interpreter.ByteArrayValueToByteSlice(inter, key)
 	if err != nil {
-		return nil, fmt.Errorf("public key needs to be a byte array. %w", err)
+		return nil, runtimeErrors.NewUnexpectedError("public key needs to be a byte array. %w", err)
 	}
 
 	// sign algo field
@@ -3500,7 +3500,7 @@ func NewPublicKeyFromValue(
 
 	signAlgoValue, ok := signAlgoField.(*interpreter.CompositeValue)
 	if !ok {
-		return nil, fmt.Errorf(
+		return nil, runtimeErrors.NewUnexpectedError(
 			"sign algorithm does not belong to type: %s",
 			sema.SignatureAlgorithmType.QualifiedString(),
 		)
@@ -3513,7 +3513,7 @@ func NewPublicKeyFromValue(
 
 	signAlgoRawValue, ok := rawValue.(interpreter.UInt8Value)
 	if !ok {
-		return nil, fmt.Errorf(
+		return nil, runtimeErrors.NewUnexpectedError(
 			"sign algorithm raw-value does not belong to type: %s",
 			sema.UInt8Type.QualifiedString(),
 		)
@@ -3747,12 +3747,12 @@ func verifySignature(
 
 	signature, err := interpreter.ByteArrayValueToByteSlice(inter, signatureValue)
 	if err != nil {
-		panic(fmt.Errorf("failed to get signature. %w", err))
+		panic(runtimeErrors.NewUnexpectedError("failed to get signature. %w", err))
 	}
 
 	signedData, err := interpreter.ByteArrayValueToByteSlice(inter, signedDataValue)
 	if err != nil {
-		panic(fmt.Errorf("failed to get signed data. %w", err))
+		panic(runtimeErrors.NewUnexpectedError("failed to get signed data. %w", err))
 	}
 
 	domainSeparationTag := domainSeparationTagValue.Str
@@ -3794,7 +3794,7 @@ func hash(
 
 	data, err := interpreter.ByteArrayValueToByteSlice(inter, dataValue)
 	if err != nil {
-		panic(fmt.Errorf("failed to get data. %w", err))
+		panic(runtimeErrors.NewUnexpectedError("failed to get data. %w", err))
 	}
 
 	var tag string

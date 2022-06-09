@@ -20,7 +20,7 @@ package interpreter
 
 import (
 	"bytes"
-	"fmt"
+	"github.com/onflow/cadence/runtime/errors"
 	"math"
 	"math/big"
 
@@ -870,7 +870,7 @@ func encodeLocation(e *cbor.StreamEncoder, l common.Location) error {
 		return e.EncodeBytes(l)
 
 	default:
-		return fmt.Errorf("unsupported location: %T", l)
+		return errors.NewUnexpectedError("unsupported location: %T", l)
 	}
 }
 

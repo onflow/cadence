@@ -133,7 +133,7 @@ var typeIDDecoders = map[string]TypeIDDecoder{}
 
 func RegisterTypeIDDecoder(prefix string, decoder TypeIDDecoder) {
 	if _, ok := typeIDDecoders[prefix]; ok {
-		panic(fmt.Errorf("cannot register type ID decoder for already registered prefix: %s", prefix))
+		panic(errors.NewUnexpectedError("cannot register type ID decoder for already registered prefix: %s", prefix))
 	}
 	typeIDDecoders[prefix] = decoder
 }

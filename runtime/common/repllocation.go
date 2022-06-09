@@ -20,8 +20,9 @@ package common
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
+
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 const REPLLocationPrefix = "REPL"
@@ -82,7 +83,7 @@ func decodeREPLLocationTypeID(typeID string) (REPLLocation, string, error) {
 	const errorMessagePrefix = "invalid REPL location type ID"
 
 	newError := func(message string) (REPLLocation, string, error) {
-		return REPLLocation{}, "", fmt.Errorf("%s: %s", errorMessagePrefix, message)
+		return REPLLocation{}, "", errors.NewDefaultUserError("%s: %s", errorMessagePrefix, message)
 	}
 
 	if typeID == "" {
@@ -99,7 +100,7 @@ func decodeREPLLocationTypeID(typeID string) (REPLLocation, string, error) {
 	prefix := parts[0]
 
 	if prefix != REPLLocationPrefix {
-		return REPLLocation{}, "", fmt.Errorf(
+		return REPLLocation{}, "", errors.NewDefaultUserError(
 			"%s: invalid prefix: expected %q, got %q",
 			errorMessagePrefix,
 			REPLLocationPrefix,

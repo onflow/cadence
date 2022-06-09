@@ -20,8 +20,9 @@ package common
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
+
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 const IdentifierLocationPrefix = "I"
@@ -89,12 +90,12 @@ func init() {
 	)
 }
 
-func decodeIdentifierLocationTypeID(gauge MemoryGauge, typeID string) (IdentifierLocation, string, error) {
+func decodeIdentifierLocationTypeID(_ MemoryGauge, typeID string) (IdentifierLocation, string, error) {
 
 	const errorMessagePrefix = "invalid identifier location type ID"
 
 	newError := func(message string) (IdentifierLocation, string, error) {
-		return "", "", fmt.Errorf("%s: %s", errorMessagePrefix, message)
+		return "", "", errors.NewDefaultUserError("%s: %s", errorMessagePrefix, message)
 	}
 
 	if typeID == "" {
@@ -114,7 +115,7 @@ func decodeIdentifierLocationTypeID(gauge MemoryGauge, typeID string) (Identifie
 	prefix := parts[0]
 
 	if prefix != IdentifierLocationPrefix {
-		return "", "", fmt.Errorf(
+		return "", "", errors.NewDefaultUserError(
 			"%s: invalid prefix: expected %q, got %q",
 			errorMessagePrefix,
 			IdentifierLocationPrefix,

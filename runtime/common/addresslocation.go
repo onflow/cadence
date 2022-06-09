@@ -122,7 +122,7 @@ func decodeAddressLocationTypeID(gauge MemoryGauge, typeID string) (AddressLocat
 	const errorMessagePrefix = "invalid address location type ID"
 
 	newError := func(message string) (AddressLocation, string, error) {
-		return AddressLocation{}, "", fmt.Errorf("%s: %s", errorMessagePrefix, message)
+		return AddressLocation{}, "", errors.NewDefaultUserError("%s: %s", errorMessagePrefix, message)
 	}
 
 	if typeID == "" {
@@ -165,7 +165,7 @@ func decodeAddressLocationTypeID(gauge MemoryGauge, typeID string) (AddressLocat
 	prefix := parts[0]
 
 	if prefix != AddressLocationPrefix {
-		return AddressLocation{}, "", fmt.Errorf(
+		return AddressLocation{}, "", errors.NewDefaultUserError(
 			"%s: invalid prefix: expected %q, got %q",
 			errorMessagePrefix,
 			AddressLocationPrefix,
@@ -177,7 +177,7 @@ func decodeAddressLocationTypeID(gauge MemoryGauge, typeID string) (AddressLocat
 
 	rawAddress, err := hex.DecodeString(parts[1])
 	if err != nil {
-		return AddressLocation{}, "", fmt.Errorf(
+		return AddressLocation{}, "", errors.NewDefaultUserError(
 			"%s: invalid address: %w",
 			errorMessagePrefix,
 			err,
