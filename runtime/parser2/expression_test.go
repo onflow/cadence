@@ -27,12 +27,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/onflow/cadence/runtime/common"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -331,9 +331,9 @@ func TestParseAdvancedExpression(t *testing.T) {
 			ParseExpression("1 < 2", gauge)
 		})()
 
-		require.IsType(t, common.FatalError{}, panicMsg)
+		require.IsType(t, errors.FatalError{}, panicMsg)
 
-		fatalError, _ := panicMsg.(common.FatalError)
+		fatalError, _ := panicMsg.(errors.FatalError)
 		var expectedError limitingMemoryGaugeError
 		assert.ErrorAs(t, fatalError, &expectedError)
 	})
@@ -354,9 +354,9 @@ func TestParseAdvancedExpression(t *testing.T) {
 			ParseExpression("1 < 2 > 3", gauge)
 		})()
 
-		require.IsType(t, common.FatalError{}, panicMsg)
+		require.IsType(t, errors.FatalError{}, panicMsg)
 
-		fatalError, _ := panicMsg.(common.FatalError)
+		fatalError, _ := panicMsg.(errors.FatalError)
 		var expectedError limitingMemoryGaugeError
 		assert.ErrorAs(t, fatalError, &expectedError)
 	})

@@ -26,10 +26,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"go.uber.org/goleak"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/parser2/lexer"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -508,9 +510,9 @@ func TestParseArgumentList(t *testing.T) {
 			ParseArgumentList(`(1, b: true)`, gauge)
 		})()
 
-		require.IsType(t, common.FatalError{}, panicMsg)
+		require.IsType(t, errors.FatalError{}, panicMsg)
 
-		fatalError, _ := panicMsg.(common.FatalError)
+		fatalError, _ := panicMsg.(errors.FatalError)
 		var expectedError limitingMemoryGaugeError
 		assert.ErrorAs(t, fatalError, &expectedError)
 	})

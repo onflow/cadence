@@ -170,8 +170,11 @@ func (l *lexer) run(state stateFn) {
 		if r := recover(); r != nil {
 			var err error
 			switch r := r.(type) {
-			case common.FatalError:
-				panic(r) // fatal error percolates up
+			case errors.FatalError, errors.InternalError:
+				// fatal errors and internal errors percolates up.
+				// Note: not all fatal errors are internal errors.
+				// e.g: memory limit exceeding is a fatal error, but also a user error.
+				panic(r)
 			case error:
 				err = r
 			default:
@@ -216,6 +219,7 @@ func (l *lexer) next() rune {
 // Can be called only once per call of next.
 func (l *lexer) backupOne() {
 	if !l.canBackup {
+		// TODO: should this be an internal error?
 		panic("second backup")
 	}
 	l.canBackup = false

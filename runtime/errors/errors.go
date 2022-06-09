@@ -19,6 +19,7 @@
 package errors
 
 import (
+	"errors"
 	"fmt"
 	"runtime/debug"
 )
@@ -85,3 +86,74 @@ type ParentError interface {
 	error
 	ChildErrors() []error
 }
+
+// FatalError indicates an error that should end
+// the Cadence parsing, checking, or interpretation.
+type FatalError struct {
+	Err error
+}
+
+func (e FatalError) Unwrap() error {
+	return e.Err
+}
+
+func (e FatalError) Error() string {
+	return fmt.Sprintf("Fatal error: %s", e.Err.Error())
+}
+
+// UnexpectedError is an error that wraps an implementation error.
+//
+type UnexpectedError struct {
+	Err error
+}
+
+func NewUnexpectedError(err error) UnexpectedError {
+	return UnexpectedError{
+		Err: err,
+	}
+}
+
+func NewUnexpectedErrorFromString(message string) DefaultUserError {
+	return DefaultUserError{
+		Err: errors.New(message),
+	}
+}
+
+func (e UnexpectedError) Unwrap() error {
+	return e.Err
+}
+
+func (e UnexpectedError) Error() string {
+	return e.Err.Error()
+}
+
+func (e UnexpectedError) IsInternalError() {}
+
+// DefaultUserError is the default implementation of UserError interface.
+// It's a generic error that wraps a user error.
+//
+type DefaultUserError struct {
+	Err error
+}
+
+func NewDefaultUserErrorFromString(message string) DefaultUserError {
+	return DefaultUserError{
+		Err: errors.New(message),
+	}
+}
+
+func NewDefaultUserError(err error) DefaultUserError {
+	return DefaultUserError{
+		Err: err,
+	}
+}
+
+func (e DefaultUserError) Unwrap() error {
+	return e.Err
+}
+
+func (e DefaultUserError) Error() string {
+	return e.Err.Error()
+}
+
+func (e DefaultUserError) IsUserError() {}

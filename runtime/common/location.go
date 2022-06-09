@@ -19,9 +19,10 @@
 package common
 
 import (
-	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 // Location describes the origin of a Cadence script.
@@ -141,7 +142,7 @@ func DecodeTypeID(gauge MemoryGauge, typeID string) (location Location, qualifie
 	pieces := strings.Split(typeID, ".")
 
 	if len(pieces) < 1 {
-		return nil, "", errors.New("invalid type ID: missing type name")
+		return nil, "", errors.NewDefaultUserErrorFromString("invalid type ID: missing type name")
 	}
 
 	prefix := pieces[0]

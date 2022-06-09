@@ -87,7 +87,7 @@ func ParseTokenStream(
 	parse func(*parser) interface{},
 ) (
 	result interface{},
-	errors []error,
+	errs []error,
 ) {
 	p := &parser{
 		tokens:      tokens,
@@ -96,19 +96,25 @@ func ParseTokenStream(
 
 	defer func() {
 		if r := recover(); r != nil {
-			err, ok := r.(error)
-			if !ok {
+			var err error
+			switch r := r.(type) {
+			case errors.InternalError:
+				// do not treat internal errors as syntax errors
+				panic(r)
+			case error:
+				err = r
+			default:
 				err = fmt.Errorf("parser: %v", r)
 			}
 
 			p.report(err)
 
 			result = nil
-			errors = p.errors
+			errs = p.errors
 		}
 
 		for _, bufferedErrors := range p.bufferedErrorsStack {
-			errors = append(errors, bufferedErrors...)
+			errs = append(errs, bufferedErrors...)
 		}
 	}()
 
@@ -149,7 +155,7 @@ func (p *parser) report(errs ...error) {
 		var ok bool
 
 		// Fatal errors should abort parsing
-		_, ok = err.(common.FatalError)
+		_, ok = err.(errors.FatalError)
 		if ok {
 			panic(err)
 		}

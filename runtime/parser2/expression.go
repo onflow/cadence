@@ -598,7 +598,7 @@ func defineLessThanOrTypeArgumentsExpression() {
 				defer func() {
 					err := recover()
 					// Fatal errors should abort parsing
-					_, ok := err.(common.FatalError)
+					_, ok := err.(errors.FatalError)
 					if ok {
 						panic(err)
 					}

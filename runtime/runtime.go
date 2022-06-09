@@ -19,7 +19,6 @@
 package runtime
 
 import (
-	"errors"
 	"fmt"
 	goRuntime "runtime"
 	"time"
@@ -2531,7 +2530,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 
 			code, err := interpreter.ByteArrayValueToByteSlice(inter, newCodeValue)
 			if err != nil {
-				panic("add requires the second argument to be an array")
+				panic(runtimeErrors.NewDefaultUserErrorFromString("add requires the second argument to be an array"))
 			}
 
 			// Get the existing code
@@ -2539,7 +2538,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 			nameArgument := nameValue.Str
 
 			if nameArgument == "" {
-				panic(errors.New(
+				panic(runtimeErrors.NewDefaultUserErrorFromString(
 					"contract name argument cannot be empty." +
 						"it must match the name of the deployed contract declaration or contract interface declaration",
 				))
@@ -3496,7 +3495,7 @@ func NewPublicKeyFromValue(
 	// sign algo field
 	signAlgoField := publicKey.GetMember(inter, getLocationRange, sema.PublicKeySignAlgoField)
 	if signAlgoField == nil {
-		return nil, errors.New("sign algorithm is not set")
+		return nil, runtimeErrors.NewUnexpectedErrorFromString("sign algorithm is not set")
 	}
 
 	signAlgoValue, ok := signAlgoField.(*interpreter.CompositeValue)
@@ -3509,7 +3508,7 @@ func NewPublicKeyFromValue(
 
 	rawValue := signAlgoValue.GetField(inter, getLocationRange, sema.EnumRawValueFieldName)
 	if rawValue == nil {
-		return nil, errors.New("sign algorithm raw value is not set")
+		return nil, runtimeErrors.NewDefaultUserErrorFromString("sign algorithm raw value is not set")
 	}
 
 	signAlgoRawValue, ok := rawValue.(interpreter.UInt8Value)
