@@ -155,6 +155,14 @@ func (s *Server) handleDocumentLink(req *json.RawMessage) (any, error) {
 	return s.Handler.DocumentLink(s.conn, &params)
 }
 
+func (s *Server) handleInlayHint(req *json.RawMessage) (any, error) {
+	var params InlayHintParams
+	if err := json.Unmarshal(*req, &params); err != nil {
+		return nil, err
+	}
+	return s.Handler.InlayHint(s.conn, &params)
+}
+
 func (s *Server) handleShutdown(_ *json.RawMessage) (any, error) {
 	err := s.Handler.Shutdown(s.conn)
 	return nil, err

@@ -93,6 +93,7 @@ type Handler interface {
 	ExecuteCommand(conn Conn, params *ExecuteCommandParams) (any, error)
 	DocumentSymbol(conn Conn, params *DocumentSymbolParams) ([]*DocumentSymbol, error)
 	DocumentLink(conn Conn, params *DocumentLinkParams) ([]*DocumentLink, error)
+	InlayHint(conn Conn, params *InlayHintParams) ([]*InlayHint, error)
 	Shutdown(conn Conn) error
 	Exit(conn Conn) error
 }
@@ -154,6 +155,9 @@ func NewServer(handler Handler) *Server {
 
 	jsonrpc2Server.Methods["textDocument/documentLink"] =
 		server.handleDocumentLink
+
+	jsonrpc2Server.Methods["textDocument/inlayHint"] =
+		server.handleInlayHint
 
 	jsonrpc2Server.Methods["shutdown"] =
 		server.handleShutdown
