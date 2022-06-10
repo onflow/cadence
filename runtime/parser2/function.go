@@ -52,7 +52,9 @@ func parseParameterList(p *parser) (parameterList *ast.ParameterList) {
 		switch p.current.Type {
 		case lexer.TokenIdentifier:
 			if !expectParameter {
-				panic("expected comma, got start of parameter")
+				p.report(&MissingCommaInParameterListError{
+					Pos: p.current.StartPos,
+				})
 			}
 			parameter := parseParameter(p)
 			parameters = append(parameters, parameter)

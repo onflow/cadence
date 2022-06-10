@@ -2157,6 +2157,90 @@ func TestRuntimeContractUpdateConformanceChanges(t *testing.T) {
 		err := testDeployAndUpdate(t, contractValidationEnabled, "Test", oldCode, newCode)
 		require.NoError(t, err)
 	})
+
+	t.Run("missing comma in parameter list of old contract", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := common.MustBytesToAddress([]byte{0x42})
+
+		const contractName = "Test"
+
+		const oldCode = `
+          pub contract Test {
+              pub fun test(a: Int b: Int) {}
+          }
+        `
+
+		const newCode = `
+          pub contract Test {
+              pub fun test(a: Int, b: Int) {}
+          }
+        `
+
+		rt := newTestInterpreterRuntime(
+			WithContractUpdateValidationEnabled(contractValidationEnabled),
+		)
+
+		accountCodes := map[common.LocationID][]byte{
+			common.AddressLocation{
+				Address: address,
+				Name:    contractName,
+			}.ID(): []byte(oldCode),
+		}
+
+		var events []cadence.Event
+		runtimeInterface := &testRuntimeInterface{
+			getCode: func(location Location) (bytes []byte, err error) {
+				return accountCodes[location.ID()], nil
+			},
+			storage: newTestLedger(nil, nil),
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{address}, nil
+			},
+			resolveLocation: singleIdentifierLocationResolver(t),
+			getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+				location := common.AddressLocation{
+					Address: address,
+					Name:    name,
+				}
+				return accountCodes[location.ID()], nil
+			},
+			updateAccountContractCode: func(address Address, name string, code []byte) error {
+				location := common.AddressLocation{
+					Address: address,
+					Name:    name,
+				}
+				accountCodes[location.ID()] = code
+				return nil
+			},
+			removeAccountContractCode: func(address Address, name string) error {
+				location := common.AddressLocation{
+					Address: address,
+					Name:    name,
+				}
+				delete(accountCodes, location.ID())
+				return nil
+			},
+			emitEvent: func(event cadence.Event) error {
+				events = append(events, event)
+				return nil
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		err := rt.ExecuteTransaction(
+			Script{
+				Source: []byte(newContractUpdateTransaction(contractName, newCode)),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+	})
 }
 
 func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
