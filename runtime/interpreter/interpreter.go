@@ -23,7 +23,6 @@ import (
 	goErrors "errors"
 	"fmt"
 	"math"
-	goRuntime "runtime"
 	"time"
 
 	"github.com/fxamacker/cbor/v2"
@@ -1126,13 +1125,21 @@ func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 	if r := recover(); r != nil {
 		var err error
 		switch r := r.(type) {
-		case goRuntime.Error, ExternalError:
-			// Don't recover Go's or external panics
+
+		// Recover user errors
+		case errors.UserError, Error:
+			err = r.(error)
+
+		// Don't recover non-user errors.
+		// i.e: Go panics, internal errors, external errors
+		case ExternalError, errors.InternalError:
 			panic(r)
 		case error:
-			err = r
+			panic(errors.UnexpectedError{
+				Err: r,
+			})
 		default:
-			err = fmt.Errorf("%s", r)
+			panic(errors.NewUnexpectedError("%s", r))
 		}
 
 		// if the error is not yet an interpreter error, wrap it

@@ -70,6 +70,8 @@ func (e Error) ImportLocation() common.Location {
 	return e.Location
 }
 
+func (e Error) IsUserError() {}
+
 // PositionedError wraps an unpositioned error with position info
 //
 type PositionedError struct {
@@ -84,6 +86,8 @@ func (e PositionedError) Unwrap() error {
 func (e PositionedError) Error() string {
 	return e.Err.Error()
 }
+
+func (e PositionedError) IsUserError() {}
 
 // ExternalError is an error that occurred externally.
 // It contains the recovered value.

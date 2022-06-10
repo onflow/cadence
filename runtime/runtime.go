@@ -19,7 +19,6 @@
 package runtime
 
 import (
-	"fmt"
 	goRuntime "runtime"
 	"time"
 	"unsafe"
@@ -229,19 +228,30 @@ func NewInterpreterRuntime(options ...Option) Runtime {
 
 func (r *interpreterRuntime) Recover(onError func(error), context Context) {
 	recovered := recover()
-	if recovered == nil {
-		return
-	}
 
 	var err error
 	switch recovered := recovered.(type) {
+	case nil:
+		return
 	case Error:
 		// avoid redundant wrapping
 		err = recovered
+
+	// Wrap with `runtime.Error` to include meta info.
+	case runtimeErrors.InternalError,
+		runtimeErrors.UserError,
+		interpreter.ExternalError:
+		err = newError(recovered.(error), context)
+
+	// Wrap any other unhandled error with a generic internal error first.
+	// And then wrap with `runtime.Error` to include meta info.
 	case error:
-		err = newError(recovered, context)
+		err = runtimeErrors.UnexpectedError{
+			Err: recovered,
+		}
+		err = newError(err, context)
 	default:
-		err = fmt.Errorf("%s", recovered)
+		err = runtimeErrors.NewUnexpectedError("%s", recovered)
 		err = newError(err, context)
 	}
 
@@ -819,35 +829,28 @@ func wrapPanic(f func()) {
 	f()
 }
 
-// Executes `f`. On panic, the panic is returned as an error.
-// Wraps any non-`error` panics so panic is never propagated.
-func panicToError(f func()) (returnedError error) {
+// userPanicToError Executes `f` and gracefully handle `UserError` panics.
+// All on-user panics (including `InternalError` and `ExternalError`) are propagated up.
+//
+func userPanicToError(f func()) (returnedError error) {
 	defer func() {
 		if r := recover(); r != nil {
-			var ok bool
-			err, ok := r.(error)
-			if ok {
+			switch err := r.(type) {
+			case runtimeErrors.UserError:
+				// Return user errors
 				returnedError = err
-			} else {
-				returnedError = fmt.Errorf("%s", r)
+			case runtimeErrors.InternalError, interpreter.ExternalError:
+				panic(err)
+			default:
+				// Otherwise, panic.
+				// Also wrap with a `UnexpectedError` to mark it as an `InternalError`.
+				panic(runtimeErrors.NewUnexpectedError("%s", r))
 			}
 		}
 	}()
+
 	f()
 	return nil
-}
-
-// Executes `f`. On panic, the panic is returned as an error.
-// Exception: panics when error is `goRuntime.Error` or `ExternalError`.
-func userPanicToError(f func()) error {
-	err := panicToError(f)
-
-	switch err := err.(type) {
-	case goRuntime.Error, interpreter.ExternalError:
-		panic(err)
-	default:
-		return err
-	}
 }
 
 func (r *interpreterRuntime) transactionExecutionFunction(
