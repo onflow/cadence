@@ -462,9 +462,8 @@ func TestParseParameterList(t *testing.T) {
 		_, errs := parse("( a b : Int   c : Int )")
 		utils.AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "parser: expected comma, got start of parameter",
-					Pos:     ast.Position{Offset: 14, Line: 1, Column: 14},
+				&MissingCommaInParameterListError{
+					Pos: ast.Position{Offset: 14, Line: 1, Column: 14},
 				},
 			},
 			errs,

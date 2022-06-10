@@ -2709,7 +2709,10 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				handleContractUpdateError(err)
 
 				oldProgram, err := parser2.ParseProgram(string(oldCode), inter)
-				handleContractUpdateError(err)
+
+				if !ignoreUpdatedProgramParserError(err) {
+					handleContractUpdateError(err)
+				}
 
 				validator := NewContractUpdateValidator(
 					context.Location,
@@ -2782,6 +2785,28 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 		},
 		sema.AuthAccountContractsTypeAddFunctionType,
 	)
+}
+
+// ignoreUpdatedProgramParserError determines if the parsing error
+// for a program that is being updated can be ignored.
+func ignoreUpdatedProgramParserError(err error) bool {
+	parserError, ok := err.(parser2.Error)
+	if !ok {
+		return false
+	}
+
+	// Are all parse errors ones that can be ignored?
+	for _, parseError := range parserError.Errors {
+		// Missing commas in parameter lists were reported starting
+		// with https://github.com/onflow/cadence/pull/1073.
+		// Allow existing contracts with such an error to be updated
+		_, ok := parseError.(*parser2.MissingCommaInParameterListError)
+		if !ok {
+			return false
+		}
+	}
+
+	return true
 }
 
 type updateAccountContractCodeOptions struct {
