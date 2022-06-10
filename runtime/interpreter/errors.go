@@ -264,6 +264,8 @@ func (e InvalidatedResourceError) Error() string {
 	return "internal error: resource is invalidated and cannot be used anymore"
 }
 
+func (e InvalidatedResourceError) IsInternalError() {}
+
 // DestroyedResourceError is the error which is reported
 // when a user uses a destroyed resource through a reference
 //
@@ -275,7 +277,7 @@ func (e DestroyedResourceError) Error() string {
 	return "resource was destroyed and cannot be used anymore"
 }
 
-func (e InvalidatedResourceError) IsInternalError() {}
+func (e DestroyedResourceError) IsUserError() {}
 
 // ForceAssignmentToNonNilResourceError
 //

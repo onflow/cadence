@@ -87,19 +87,21 @@ type ParentError interface {
 	ChildErrors() []error
 }
 
-// FatalError indicates an error that should end
+// MemoryError indicates a memory limit has reached and should end
 // the Cadence parsing, checking, or interpretation.
-type FatalError struct {
+type MemoryError struct {
 	Err error
 }
 
-func (e FatalError) Unwrap() error {
+func (e MemoryError) Unwrap() error {
 	return e.Err
 }
 
-func (e FatalError) Error() string {
-	return fmt.Sprintf("Fatal error: %s", e.Err.Error())
+func (e MemoryError) Error() string {
+	return fmt.Sprintf("memory error: %s", e.Err.Error())
 }
+
+func (e MemoryError) IsUserError() {}
 
 // UnexpectedError is an error that wraps an implementation error.
 //

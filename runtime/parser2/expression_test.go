@@ -315,7 +315,7 @@ func TestParseAdvancedExpression(t *testing.T) {
 		)
 	})
 
-	t.Run("FatalError in setExprMetaLeftDenotation", func(t *testing.T) {
+	t.Run("MemoryError in setExprMetaLeftDenotation", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -331,14 +331,14 @@ func TestParseAdvancedExpression(t *testing.T) {
 			ParseExpression("1 < 2", gauge)
 		})()
 
-		require.IsType(t, errors.FatalError{}, panicMsg)
+		require.IsType(t, errors.MemoryError{}, panicMsg)
 
-		fatalError, _ := panicMsg.(errors.FatalError)
+		fatalError, _ := panicMsg.(errors.MemoryError)
 		var expectedError limitingMemoryGaugeError
 		assert.ErrorAs(t, fatalError, &expectedError)
 	})
 
-	t.Run("FatalError in parser.report", func(t *testing.T) {
+	t.Run("MemoryError in parser.report", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -354,9 +354,9 @@ func TestParseAdvancedExpression(t *testing.T) {
 			ParseExpression("1 < 2 > 3", gauge)
 		})()
 
-		require.IsType(t, errors.FatalError{}, panicMsg)
+		require.IsType(t, errors.MemoryError{}, panicMsg)
 
-		fatalError, _ := panicMsg.(errors.FatalError)
+		fatalError, _ := panicMsg.(errors.MemoryError)
 		var expectedError limitingMemoryGaugeError
 		assert.ErrorAs(t, fatalError, &expectedError)
 	})

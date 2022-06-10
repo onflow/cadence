@@ -256,7 +256,7 @@ func UseMemory(gauge MemoryGauge, usage MemoryUsage) {
 
 	err := gauge.MeterMemory(usage)
 	if err != nil {
-		panic(errors.FatalError{Err: err})
+		panic(errors.MemoryError{Err: err})
 	}
 }
 

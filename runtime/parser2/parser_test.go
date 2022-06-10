@@ -510,9 +510,9 @@ func TestParseArgumentList(t *testing.T) {
 			ParseArgumentList(`(1, b: true)`, gauge)
 		})()
 
-		require.IsType(t, errors.FatalError{}, panicMsg)
+		require.IsType(t, errors.MemoryError{}, panicMsg)
 
-		fatalError, _ := panicMsg.(errors.FatalError)
+		fatalError, _ := panicMsg.(errors.MemoryError)
 		var expectedError limitingMemoryGaugeError
 		assert.ErrorAs(t, fatalError, &expectedError)
 	})

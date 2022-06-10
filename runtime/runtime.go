@@ -226,36 +226,52 @@ func NewInterpreterRuntime(options ...Option) Runtime {
 	return runtime
 }
 
-func (r *interpreterRuntime) Recover(onError func(error), context Context) {
+func (r *interpreterRuntime) Recover(onError func(Error), context Context) {
 	recovered := recover()
-
-	var err error
-	switch recovered := recovered.(type) {
-	case nil:
+	if recovered == nil {
 		return
+	}
+
+	err := getWrappedError(recovered, context)
+	onError(err)
+}
+
+func getWrappedError(recovered any, context Context) Error {
+	switch recovered := recovered.(type) {
+
+	// If the error is already a `runtime.Error`, then avoid redundant wrapping.
 	case Error:
-		// avoid redundant wrapping
-		err = recovered
+		return recovered
+
+	// `interpreter.Error` is already a wrapped error, because interpreter can be
+	// directly invoked by FVM and therefore, any error is wrapped before returned
+	// from the interpreter.
+	//
+	// However, `interpreter.Error` doesn't belong to any of the known error
+	// categories: `InternalError`, `UserError`, or `ExternalError`. i.e: It's
+	// similar to `runtime.Error`.
+	//
+	// Hence, unwrap it, and prepare the inner-error for returning.
+	case interpreter.Error:
+		return getWrappedError(recovered.Unwrap(), context)
 
 	// Wrap with `runtime.Error` to include meta info.
 	case runtimeErrors.InternalError,
 		runtimeErrors.UserError,
 		interpreter.ExternalError:
-		err = newError(recovered.(error), context)
+		return newError(recovered.(error), context)
 
 	// Wrap any other unhandled error with a generic internal error first.
 	// And then wrap with `runtime.Error` to include meta info.
 	case error:
-		err = runtimeErrors.UnexpectedError{
+		err := runtimeErrors.UnexpectedError{
 			Err: recovered,
 		}
-		err = newError(err, context)
+		return newError(err, context)
 	default:
-		err = runtimeErrors.NewUnexpectedError("%s", recovered)
-		err = newError(err, context)
+		err := runtimeErrors.NewUnexpectedError("%s", recovered)
+		return newError(err, context)
 	}
-
-	onError(err)
 }
 
 func (r *interpreterRuntime) SetCoverageReport(coverageReport *CoverageReport) {
@@ -288,7 +304,7 @@ func (r *interpreterRuntime) SetDebugger(debugger *interpreter.Debugger) {
 
 func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val cadence.Value, err error) {
 	defer r.Recover(
-		func(internalErr error) {
+		func(internalErr Error) {
 			err = internalErr
 		},
 		context,
@@ -538,7 +554,7 @@ func (r *interpreterRuntime) InvokeContractFunction(
 	context Context,
 ) (val cadence.Value, err error) {
 	defer r.Recover(
-		func(internalErr error) {
+		func(internalErr Error) {
 			err = internalErr
 		},
 		context,
@@ -684,7 +700,7 @@ func (r *interpreterRuntime) convertArgument(
 
 func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) (err error) {
 	defer r.Recover(
-		func(internalErr error) {
+		func(internalErr Error) {
 			err = internalErr
 		},
 		context,
@@ -841,9 +857,14 @@ func userPanicToError(f func()) (returnedError error) {
 				returnedError = err
 			case runtimeErrors.InternalError, interpreter.ExternalError:
 				panic(err)
+
+			// Otherwise, panic.
+			// Also wrap with a `UnexpectedError` to mark it as an `InternalError`.
+			case error:
+				panic(runtimeErrors.UnexpectedError{
+					Err: err,
+				})
 			default:
-				// Otherwise, panic.
-				// Also wrap with a `UnexpectedError` to mark it as an `InternalError`.
 				panic(runtimeErrors.NewUnexpectedError("%s", r))
 			}
 		}
@@ -1026,7 +1047,7 @@ func (r *interpreterRuntime) ParseAndCheckProgram(
 	err error,
 ) {
 	defer r.Recover(
-		func(internalErr error) {
+		func(internalErr Error) {
 			err = internalErr
 		},
 		context,
@@ -3123,7 +3144,7 @@ func (r *interpreterRuntime) ReadStored(
 	err error,
 ) {
 	defer r.Recover(
-		func(internalErr error) {
+		func(internalErr Error) {
 			err = internalErr
 		},
 		context,
@@ -3153,7 +3174,7 @@ func (r *interpreterRuntime) ReadLinked(
 	err error,
 ) {
 	defer r.Recover(
-		func(internalErr error) {
+		func(internalErr Error) {
 			err = internalErr
 		},
 		context,

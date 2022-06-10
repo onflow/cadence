@@ -1124,22 +1124,20 @@ func (interpreter *Interpreter) InvokeTransaction(index int, arguments ...Value)
 func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 	if r := recover(); r != nil {
 		var err error
+
+		// Recover all errors, because interpreter can be directly invoked by FVM.
 		switch r := r.(type) {
-
-		// Recover user errors
-		case errors.UserError, Error:
+		case Error,
+			ExternalError,
+			errors.InternalError,
+			errors.UserError:
 			err = r.(error)
-
-		// Don't recover non-user errors.
-		// i.e: Go panics, internal errors, external errors
-		case ExternalError, errors.InternalError:
-			panic(r)
 		case error:
-			panic(errors.UnexpectedError{
+			err = errors.UnexpectedError{
 				Err: r,
-			})
+			}
 		default:
-			panic(errors.NewUnexpectedError("%s", r))
+			err = errors.NewUnexpectedError("%s", r)
 		}
 
 		// if the error is not yet an interpreter error, wrap it

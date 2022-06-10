@@ -170,7 +170,7 @@ func (l *lexer) run(state stateFn) {
 		if r := recover(); r != nil {
 			var err error
 			switch r := r.(type) {
-			case errors.FatalError, errors.InternalError:
+			case errors.MemoryError, errors.InternalError:
 				// fatal errors and internal errors percolates up.
 				// Note: not all fatal errors are internal errors.
 				// e.g: memory limit exceeding is a fatal error, but also a user error.
