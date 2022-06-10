@@ -20,6 +20,7 @@ package server
 
 import (
 	"bufio"
+	json2 "encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -44,10 +45,15 @@ import (
 	"github.com/onflow/cadence/languageserver/protocol"
 )
 
-var valueDeclarations = append(
+var functionDeclarations = append(
 	stdlib.FlowBuiltInFunctions(stdlib.FlowBuiltinImpls{}),
 	stdlib.BuiltinFunctions...,
 ).ToSemaValueDeclarations()
+
+var valueDeclarations = append(
+	functionDeclarations,
+	stdlib.BuiltinValues.ToSemaValueDeclarations()...,
+)
 
 var typeDeclarations = append(
 	stdlib.FlowBuiltInTypes,
@@ -59,7 +65,7 @@ var typeDeclarations = append(
 // transaction submission, and script execution.
 type Document struct {
 	Text    string
-	Version float64
+	Version int32
 }
 
 func (d Document) Offset(line, column int) (offset int) {
@@ -136,7 +142,7 @@ func (d Document) HasAnyPrecedingStringsAtPosition(options []string, line, colum
 
 // CommandHandler represents the form of functions that handle commands
 // submitted from the client using workspace/executeCommand.
-type CommandHandler func(conn protocol.Conn, args ...interface{}) (interface{}, error)
+type CommandHandler func(conn protocol.Conn, args ...json2.RawMessage) (interface{}, error)
 
 // AddressImportResolver is a function that is used to resolve address imports
 //
@@ -152,15 +158,15 @@ type StringImportResolver func(location common.StringLocation) (string, error)
 
 // CodeLensProvider is a function that is used to provide code lenses for the given checker
 //
-type CodeLensProvider func(uri protocol.DocumentUri, version float64, checker *sema.Checker) ([]*protocol.CodeLens, error)
+type CodeLensProvider func(uri protocol.DocumentURI, version int32, checker *sema.Checker) ([]*protocol.CodeLens, error)
 
 // DiagnosticProvider is a function that is used to provide diagnostics for the given checker
 //
-type DiagnosticProvider func(uri protocol.DocumentUri, version float64, checker *sema.Checker) ([]protocol.Diagnostic, error)
+type DiagnosticProvider func(uri protocol.DocumentURI, version int32, checker *sema.Checker) ([]protocol.Diagnostic, error)
 
-// DocumentSymbolProvider
+// DocumentSymbolProvider is a function that is used to provide document symbols for the given checker
 //
-type DocumentSymbolProvider func(uri protocol.DocumentUri, version float64, checker *sema.Checker) ([]*protocol.DocumentSymbol, error)
+type DocumentSymbolProvider func(uri protocol.DocumentURI, version int32, checker *sema.Checker) ([]*protocol.DocumentSymbol, error)
 
 // InitializationOptionsHandler is a function that is used to handle initialization options sent by the client
 //
@@ -169,10 +175,10 @@ type InitializationOptionsHandler func(initializationOptions interface{}) error
 type Server struct {
 	protocolServer       *protocol.Server
 	checkers             map[common.LocationID]*sema.Checker
-	documents            map[protocol.DocumentUri]Document
-	memberResolvers      map[protocol.DocumentUri]map[string]sema.MemberResolver
-	ranges               map[protocol.DocumentUri]map[string]sema.Range
-	codeActionsResolvers map[protocol.DocumentUri]map[uuid.UUID]func() []*protocol.CodeAction
+	documents            map[protocol.DocumentURI]Document
+	memberResolvers      map[protocol.DocumentURI]map[string]sema.MemberResolver
+	ranges               map[protocol.DocumentURI]map[string]sema.Range
+	codeActionsResolvers map[protocol.DocumentURI]map[uuid.UUID]func() []*protocol.CodeAction
 	// commands is the registry of custom commands we support
 	commands map[string]CommandHandler
 	// resolveAddressImport is the optional function that is used to resolve address imports
@@ -283,10 +289,10 @@ const ParseEntryPointArgumentsCommand = "cadence.server.parseEntryPointArguments
 func NewServer() (*Server, error) {
 	server := &Server{
 		checkers:             make(map[common.LocationID]*sema.Checker),
-		documents:            make(map[protocol.DocumentUri]Document),
-		memberResolvers:      make(map[protocol.DocumentUri]map[string]sema.MemberResolver),
-		ranges:               make(map[protocol.DocumentUri]map[string]sema.Range),
-		codeActionsResolvers: make(map[protocol.DocumentUri]map[uuid.UUID]func() []*protocol.CodeAction),
+		documents:            make(map[protocol.DocumentURI]Document),
+		memberResolvers:      make(map[protocol.DocumentURI]map[string]sema.MemberResolver),
+		ranges:               make(map[protocol.DocumentURI]map[string]sema.Range),
+		codeActionsResolvers: make(map[protocol.DocumentURI]map[uuid.UUID]func() []*protocol.CodeAction),
 		commands:             make(map[string]CommandHandler),
 	}
 	server.protocolServer = protocol.NewServer(server)
@@ -325,7 +331,7 @@ func (s *Server) Stop() error {
 	return s.protocolServer.Stop()
 }
 
-func (s *Server) checkerForDocument(uri protocol.DocumentUri) *sema.Checker {
+func (s *Server) checkerForDocument(uri protocol.DocumentURI) *sema.Checker {
 	location := uriToLocation(uri)
 	return s.checkers[location.ID()]
 }
@@ -342,20 +348,21 @@ func (s *Server) Initialize(
 			TextDocumentSync:   protocol.Full,
 			HoverProvider:      true,
 			DefinitionProvider: true,
-			CodeLensProvider: &protocol.CodeLensOptions{
+			CodeLensProvider: protocol.CodeLensOptions{
 				ResolveProvider: false,
 			},
-			CompletionProvider: &protocol.CompletionOptions{
+			CompletionProvider: protocol.CompletionOptions{
 				TriggerCharacters: []string{"."},
 				ResolveProvider:   true,
 			},
 			DocumentHighlightProvider: true,
 			DocumentSymbolProvider:    true,
 			RenameProvider:            true,
-			SignatureHelpProvider: &protocol.SignatureHelpOptions{
+			SignatureHelpProvider: protocol.SignatureHelpOptions{
 				TriggerCharacters: []string{"("},
 			},
 			CodeActionProvider: true,
+			InlayHintProvider:  true,
 		},
 	}
 
@@ -462,10 +469,8 @@ func (s *Server) registerCommands(conn protocol.Conn) {
 			{
 				ID:     "registerCommand",
 				Method: "workspace/executeCommand",
-				RegisterOptions: protocol.ExecuteCommandRegistrationOptions{
-					ExecuteCommandOptions: protocol.ExecuteCommandOptions{
-						Commands: commands,
-					},
+				RegisterOptions: protocol.ExecuteCommandOptions{
+					Commands: commands,
 				},
 			},
 		},
@@ -541,7 +546,7 @@ type CadenceCheckCompletedParams struct {
 	/*URI defined:
 	 * The URI which was checked.
 	 */
-	URI protocol.DocumentUri `json:"uri"`
+	URI protocol.DocumentURI `json:"uri"`
 
 	Valid bool `json:"valid"`
 }
@@ -550,9 +555,9 @@ const cadenceCheckCompletedMethodName = "cadence/checkCompleted"
 
 func (s *Server) checkAndPublishDiagnostics(
 	conn protocol.Conn,
-	uri protocol.DocumentUri,
+	uri protocol.DocumentURI,
 	text string,
-	version float64,
+	version int32,
 ) {
 
 	diagnostics, _ := s.getDiagnostics(conn, uri, text, version)
@@ -754,7 +759,7 @@ func (s *Server) SignatureHelp(
 		})
 	}
 
-	var activeParameter int
+	var activeParameter uint32
 
 	for _, trailingSeparatorPosition := range invocation.TrailingSeparatorPositions {
 		if position.Compare(sema.ASTToSemaPosition(trailingSeparatorPosition)) > 0 {
@@ -769,7 +774,7 @@ func (s *Server) SignatureHelp(
 				Parameters: signatureParameters,
 			},
 		},
-		ActiveParameter: float64(activeParameter),
+		ActiveParameter: activeParameter,
 	}, nil
 }
 
@@ -866,8 +871,8 @@ func (s *Server) Rename(
 	}
 
 	return &protocol.WorkspaceEdit{
-		Changes: &map[string][]protocol.TextEdit{
-			string(uri): textEdits,
+		Changes: map[protocol.DocumentURI][]protocol.TextEdit{
+			uri: textEdits,
 		},
 	}, nil
 }
@@ -950,7 +955,7 @@ func (s *Server) CodeLens(
 }
 
 type CompletionItemData struct {
-	URI protocol.DocumentUri `json:"uri"`
+	URI protocol.DocumentURI `json:"uri"`
 	ID  string               `json:"id"`
 }
 
@@ -1265,7 +1270,7 @@ func withCompletionItemInsertText(item *protocol.CompletionItem, insertText stri
 func (s *Server) memberCompletions(
 	position sema.Position,
 	checker *sema.Checker,
-	uri protocol.DocumentUri,
+	uri protocol.DocumentURI,
 ) (items []*protocol.CompletionItem) {
 
 	// The client asks for the column after the identifier,
@@ -1320,7 +1325,7 @@ func (s *Server) memberCompletions(
 func (s *Server) rangeCompletions(
 	position sema.Position,
 	checker *sema.Checker,
-	uri protocol.DocumentUri,
+	uri protocol.DocumentURI,
 ) (items []*protocol.CompletionItem) {
 
 	ranges := checker.Ranges.FindAll(position)
@@ -1399,7 +1404,7 @@ func (s *Server) prepareFunctionMemberCompletionItem(
 	resolver sema.MemberResolver,
 	name string,
 ) {
-	member := resolver.Resolve(item.Label, ast.Range{}, func(err error) { /* NO-OP */ })
+	member := resolver.Resolve(nil, item.Label, ast.Range{}, func(err error) { /* NO-OP */ })
 	functionType, ok := member.TypeAnnotation.Type.(*sema.FunctionType)
 	if !ok {
 		return
@@ -1517,7 +1522,7 @@ func (s *Server) ResolveCompletionItem(
 	return
 }
 
-func (s *Server) maybeResolveMember(uri protocol.DocumentUri, id string, result *protocol.CompletionItem) bool {
+func (s *Server) maybeResolveMember(uri protocol.DocumentURI, id string, result *protocol.CompletionItem) bool {
 	memberResolvers, ok := s.memberResolvers[uri]
 	if !ok {
 		return false
@@ -1528,7 +1533,7 @@ func (s *Server) maybeResolveMember(uri protocol.DocumentUri, id string, result 
 		return false
 	}
 
-	member := resolver.Resolve(result.Label, ast.Range{}, func(err error) { /* NO-OP */ })
+	member := resolver.Resolve(nil, result.Label, ast.Range{}, func(err error) { /* NO-OP */ })
 
 	result.Documentation = protocol.MarkupContent{
 		Kind:  "markdown",
@@ -1583,7 +1588,7 @@ func (s *Server) maybeResolveMember(uri protocol.DocumentUri, id string, result 
 	return true
 }
 
-func (s *Server) maybeResolveRange(uri protocol.DocumentUri, id string, result *protocol.CompletionItem) bool {
+func (s *Server) maybeResolveRange(uri protocol.DocumentURI, id string, result *protocol.CompletionItem) bool {
 	ranges, ok := s.ranges[uri]
 	if !ok {
 		return false
@@ -1662,6 +1667,69 @@ func (s *Server) DocumentSymbol(
 	return
 }
 
+func (s *Server) DocumentLink(
+	_ protocol.Conn,
+	_ *protocol.DocumentLinkParams,
+) (
+	symbols []*protocol.DocumentLink,
+	err error,
+) {
+	return
+}
+
+func (s *Server) InlayHint(
+	_ protocol.Conn,
+	params *protocol.InlayHintParams,
+) (
+	inlayHints []*protocol.InlayHint,
+	err error,
+) {
+
+	// NOTE: Always initialize to an empty slice, i.e DON'T use nil:
+	// The later will be ignored instead of being treated as no items
+	inlayHints = []*protocol.InlayHint{}
+
+	// get uri from parameters caught by grpc server
+	uri := params.TextDocument.URI
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
+		return
+	}
+
+	var variableDeclarations []*ast.VariableDeclaration
+
+	ast.Inspect(checker.Program, func(element ast.Element) bool {
+
+		variableDeclaration, ok := element.(*ast.VariableDeclaration)
+		if !ok || variableDeclaration.TypeAnnotation != nil {
+			return true
+		}
+
+		variableDeclarations = append(variableDeclarations, variableDeclaration)
+
+		return true
+	})
+
+	for _, variableDeclaration := range variableDeclarations {
+		targetType := checker.Elaboration.VariableDeclarationTargetTypes[variableDeclaration]
+		identifierEndPosition := variableDeclaration.Identifier.EndPosition(nil)
+		inlayHintPosition := conversion.ASTToProtocolPosition(identifierEndPosition.Shifted(nil, 1))
+		inlayHint := protocol.InlayHint{
+			Position: &inlayHintPosition,
+			Label: []protocol.InlayHintLabelPart{
+				{
+					Value: fmt.Sprintf(": %s", targetType.QualifiedString()),
+				},
+			},
+			Kind: protocol.Type,
+		}
+
+		inlayHints = append(inlayHints, &inlayHint)
+	}
+
+	return
+}
+
 // Shutdown tells the server to stop accepting any new requests. This can only
 // be followed by a call to Exit, which exits the process.
 func (*Server) Shutdown(conn protocol.Conn) error {
@@ -1689,9 +1757,9 @@ const filePrefix = "file://"
 // Returns an error if an unexpected error occurred.
 func (s *Server) getDiagnostics(
 	conn protocol.Conn,
-	uri protocol.DocumentUri,
+	uri protocol.DocumentURI,
 	text string,
-	version float64,
+	version int32,
 ) (
 	diagnostics []protocol.Diagnostic,
 	diagnosticsErr error,
@@ -1729,6 +1797,7 @@ func (s *Server) getDiagnostics(
 	checker, diagnosticsErr = sema.NewChecker(
 		program,
 		location,
+		nil,
 		sema.WithPredeclaredValues(valueDeclarations),
 		sema.WithPredeclaredTypes(typeDeclarations),
 		sema.WithLocationHandler(
@@ -1903,7 +1972,7 @@ func (s *Server) getDiagnostics(
 // Logs any conversion failures to the client.
 func (s *Server) getDiagnosticsForParentError(
 	conn protocol.Conn,
-	uri protocol.DocumentUri,
+	uri protocol.DocumentURI,
 	err errors.ParentError,
 	codeActionsResolvers map[uuid.UUID]func() []*protocol.CodeAction,
 ) (
@@ -1929,10 +1998,11 @@ func (s *Server) getDiagnosticsForParentError(
 			for _, errorNote := range errorNotes.ErrorNotes() {
 				if positioned, hasPosition := errorNote.(ast.HasPosition); hasPosition {
 					startPos := positioned.StartPosition()
-					endPos := positioned.EndPosition()
+					endPos := positioned.EndPosition(nil)
 					message := errorNote.Message()
 
-					diagnostic.RelatedInformation = append(diagnostic.RelatedInformation,
+					diagnostic.RelatedInformation = append(
+						diagnostic.RelatedInformation,
 						protocol.DiagnosticRelatedInformation{
 							Location: protocol.Location{
 								URI:   uri,
@@ -1954,7 +2024,7 @@ func (s *Server) getDiagnosticsForParentError(
 // parse parses the given code and returns the resultant program.
 func parse(conn protocol.Conn, code, location string) (*ast.Program, error) {
 	start := time.Now()
-	program, err := parser2.ParseProgram(code)
+	program, err := parser2.ParseProgram(code, nil)
 	elapsed := time.Since(start)
 
 	conn.LogMessage(&protocol.LogMessageParams{
@@ -1996,10 +2066,10 @@ func (s *Server) resolveImport(location common.Location) (program *ast.Program, 
 		return nil, err
 	}
 
-	return parser2.ParseProgram(code)
+	return parser2.ParseProgram(code, nil)
 }
 
-func (s *Server) GetDocument(uri protocol.DocumentUri) (doc Document, ok bool) {
+func (s *Server) GetDocument(uri protocol.DocumentURI) (doc Document, ok bool) {
 	doc, ok = s.documents[uri]
 	return
 }
@@ -2025,19 +2095,20 @@ func (s *Server) defaultCommands() []Command {
 //
 // There should be exactly 1 argument:
 //   * the DocumentURI of the file to submit
-func (s *Server) getEntryPointParameters(_ protocol.Conn, args ...interface{}) (interface{}, error) {
+func (s *Server) getEntryPointParameters(_ protocol.Conn, args ...json2.RawMessage) (interface{}, error) {
 
 	err := CheckCommandArgumentCount(args, 1)
 	if err != nil {
 		return nil, err
 	}
 
-	uriArg, ok := args[0].(string)
-	if !ok {
-		return nil, fmt.Errorf("invalid URI argument: %#+v", args[0])
+	var uriArg string
+	err = json2.Unmarshal(args[0], &uriArg)
+	if err != nil {
+		return nil, fmt.Errorf("invalid URI argument: %#+v: %w", args[0], err)
 	}
 
-	uri := protocol.DocumentUri(uriArg)
+	uri := protocol.DocumentURI(uriArg)
 	checker := s.checkerForDocument(uri)
 	if checker == nil {
 		return nil, fmt.Errorf("could not find document for URI %s", uri)
@@ -2055,19 +2126,20 @@ func (s *Server) getEntryPointParameters(_ protocol.Conn, args ...interface{}) (
 //
 // There should be exactly 1 argument:
 //   * the DocumentURI of the file to submit
-func (s *Server) getContractInitializerParameters(_ protocol.Conn, args ...interface{}) (interface{}, error) {
+func (s *Server) getContractInitializerParameters(_ protocol.Conn, args ...json2.RawMessage) (interface{}, error) {
 
 	err := CheckCommandArgumentCount(args, 1)
 	if err != nil {
 		return nil, err
 	}
 
-	uriArg, ok := args[0].(string)
-	if !ok {
-		return nil, fmt.Errorf("invalid URI argument: %#+v", args[0])
+	var uriArg string
+	err = json2.Unmarshal(args[0], &uriArg)
+	if err != nil {
+		return nil, fmt.Errorf("invalid URI argument: %#+v: %w", args[0], err)
 	}
 
-	uri := protocol.DocumentUri(uriArg)
+	uri := protocol.DocumentURI(uriArg)
 	checker := s.checkerForDocument(uri)
 	if checker == nil {
 		return nil, fmt.Errorf("could not find document for URI %s", uri)
@@ -2097,27 +2169,29 @@ func (s *Server) getContractInitializerParameters(_ protocol.Conn, args ...inter
 // There should be exactly 2 arguments:
 //   * the DocumentURI of the file to submit
 //   * the array of arguments
-func (s *Server) parseEntryPointArguments(_ protocol.Conn, args ...interface{}) (interface{}, error) {
+func (s *Server) parseEntryPointArguments(_ protocol.Conn, args ...json2.RawMessage) (interface{}, error) {
 
 	err := CheckCommandArgumentCount(args, 2)
 	if err != nil {
 		return nil, err
 	}
 
-	uriArg, ok := args[0].(string)
-	if !ok {
-		return nil, fmt.Errorf("invalid URI argument: %#+v", args[0])
+	var uriArg string
+	err = json2.Unmarshal(args[0], &uriArg)
+	if err != nil {
+		return nil, fmt.Errorf("invalid URI argument: %#+v: %w", args[0], err)
 	}
 
-	uri := protocol.DocumentUri(uriArg)
+	uri := protocol.DocumentURI(uriArg)
 	checker := s.checkerForDocument(uri)
 	if checker == nil {
 		return nil, fmt.Errorf("could not find document for URI %s", uri)
 	}
 
-	arguments, ok := args[1].([]interface{})
-	if !ok {
-		return nil, fmt.Errorf("invalid arguments argument: %#+v", args[1])
+	var arguments []interface{}
+	err = json2.Unmarshal(args[1], &arguments)
+	if err != nil {
+		return nil, fmt.Errorf("invalid arguments argument: %#+v: %w", args[1], err)
 	}
 
 	parameters := checker.EntryPointParameters()
@@ -2142,7 +2216,7 @@ func (s *Server) parseEntryPointArguments(_ protocol.Conn, args ...interface{}) 
 		if !ok {
 			return nil, fmt.Errorf("invalid argument at index %d: %#+v", i, argument)
 		}
-		value, err := runtime.ParseLiteral(argumentCode, parameterType)
+		value, err := runtime.ParseLiteral(argumentCode, parameterType, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -2169,13 +2243,13 @@ type insertionPosition struct {
 //
 func (s *Server) convertError(
 	err convertibleError,
-	uri protocol.DocumentUri,
+	uri protocol.DocumentURI,
 ) (
 	protocol.Diagnostic,
 	func() []*protocol.CodeAction,
 ) {
 	startPosition := err.StartPosition()
-	endPosition := err.EndPosition()
+	endPosition := err.EndPosition(nil)
 
 	protocolRange := conversion.ASTToProtocolRange(startPosition, endPosition)
 
@@ -2250,7 +2324,7 @@ func (s *Server) convertError(
 						lastFunction := functions[len(functions)-1]
 						return insertionPosition{
 							before:   false,
-							Position: lastFunction.EndPosition().Shifted(1),
+							Position: lastFunction.EndPosition(nil).Shifted(nil, 1),
 						}
 					case !isFunction && len(fields) > 0:
 						// If a field is inserted,
@@ -2258,7 +2332,7 @@ func (s *Server) convertError(
 						lastField := fields[len(fields)-1]
 						return insertionPosition{
 							before:   false,
-							Position: lastField.EndPosition().Shifted(1),
+							Position: lastField.EndPosition(nil).Shifted(nil, 1),
 						}
 					case !isFunction && len(functions) > 0:
 						// If a field is inserted,
@@ -2278,13 +2352,13 @@ func (s *Server) convertError(
 						lastDeclaration := declarations[len(declarations)-1]
 						return insertionPosition{
 							before:   false,
-							Position: lastDeclaration.EndPosition().Shifted(1),
+							Position: lastDeclaration.EndPosition(nil).Shifted(nil, 1),
 						}
 					}
 
 					return insertionPosition{
 						before:   true,
-						Position: declaration.EndPosition(),
+						Position: declaration.EndPosition(nil),
 					}
 				},
 			)
@@ -2296,7 +2370,7 @@ func (s *Server) convertError(
 
 func (s *Server) maybeReturnTypeChangeCodeActionsResolver(
 	diagnostic protocol.Diagnostic,
-	uri protocol.DocumentUri,
+	uri protocol.DocumentURI,
 	err *sema.TypeMismatchError,
 ) func() []*protocol.CodeAction {
 
@@ -2373,7 +2447,7 @@ func (s *Server) maybeReturnTypeChangeCodeActionsResolver(
 		if isEmptyType(returnTypeAnnotation.Type) {
 
 			title = fmt.Sprintf("Add return type `%s`", err.ActualType)
-			insertionPos := parameterList.EndPosition().Shifted(1)
+			insertionPos := parameterList.EndPosition(nil).Shifted(nil, 1)
 			textEdit = protocol.TextEdit{
 				Range: protocol.Range{
 					Start: conversion.ASTToProtocolPosition(insertionPos),
@@ -2386,7 +2460,7 @@ func (s *Server) maybeReturnTypeChangeCodeActionsResolver(
 			textEdit = protocol.TextEdit{
 				Range: conversion.ASTToProtocolRange(
 					returnTypeAnnotation.StartPosition(),
-					returnTypeAnnotation.EndPosition(),
+					returnTypeAnnotation.EndPosition(nil),
 				),
 				NewText: err.ActualType.String(),
 			}
@@ -2397,9 +2471,9 @@ func (s *Server) maybeReturnTypeChangeCodeActionsResolver(
 				Title:       title,
 				Kind:        protocol.QuickFix,
 				Diagnostics: []protocol.Diagnostic{diagnostic},
-				Edit: &protocol.WorkspaceEdit{
-					Changes: &map[string][]protocol.TextEdit{
-						string(uri): {textEdit},
+				Edit: protocol.WorkspaceEdit{
+					Changes: map[protocol.DocumentURI][]protocol.TextEdit{
+						uri: {textEdit},
 					},
 				},
 				IsPreferred: true,
@@ -2418,7 +2492,7 @@ const indentationCount = 4
 func maybeAddMissingMembersCodeActionResolver(
 	diagnostic protocol.Diagnostic,
 	err *sema.ConformanceError,
-	uri protocol.DocumentUri,
+	uri protocol.DocumentURI,
 ) func() []*protocol.CodeAction {
 
 	missingMemberCount := len(err.MissingMembers)
@@ -2463,9 +2537,9 @@ func maybeAddMissingMembersCodeActionResolver(
 				Title:       "Add missing members",
 				Kind:        protocol.QuickFix,
 				Diagnostics: []protocol.Diagnostic{diagnostic},
-				Edit: &protocol.WorkspaceEdit{
-					Changes: &map[string][]protocol.TextEdit{
-						string(uri): {textEdit},
+				Edit: protocol.WorkspaceEdit{
+					Changes: map[protocol.DocumentURI][]protocol.TextEdit{
+						uri: {textEdit},
 					},
 				},
 				IsPreferred: true,
@@ -2523,7 +2597,7 @@ func formatNewMember(member *sema.Member, indentation string) string {
 
 func (s *Server) maybeAddDeclarationActionsResolver(
 	diagnostic protocol.Diagnostic,
-	uri protocol.DocumentUri,
+	uri protocol.DocumentURI,
 	errorExpression ast.Expression,
 	errorPos ast.Position,
 	name string,
@@ -2585,12 +2659,12 @@ func (s *Server) maybeAddDeclarationActionsResolver(
 							element := stack[i]
 							switch element := element.(type) {
 							case *ast.FunctionDeclaration:
-								position := element.EndPosition()
+								position := element.EndPosition(nil)
 								parentFunctionEndPos = &position
 								break
 
 							case *ast.SpecialFunctionDeclaration:
-								position := element.FunctionDeclaration.EndPosition()
+								position := element.FunctionDeclaration.EndPosition(nil)
 								parentFunctionEndPos = &position
 								break
 							}
@@ -2629,7 +2703,7 @@ func (s *Server) maybeAddDeclarationActionsResolver(
 				if parentFunctionEndPos != nil {
 					insertionPos = insertionPosition{
 						before:   false,
-						Position: parentFunctionEndPos.Shifted(1),
+						Position: parentFunctionEndPos.Shifted(nil, 1),
 					}
 				} else {
 					insertionPos = insertionPosition{
@@ -2729,7 +2803,7 @@ func extractIndentation(text string, pos ast.Position) string {
 }
 
 func functionDeclarationCodeActions(
-	uri protocol.DocumentUri,
+	uri protocol.DocumentURI,
 	document Document,
 	diagnostic protocol.Diagnostic,
 	insertionPos insertionPosition,
@@ -2803,9 +2877,9 @@ func functionDeclarationCodeActions(
 			Title:       "Declare function",
 			Kind:        protocol.QuickFix,
 			Diagnostics: []protocol.Diagnostic{diagnostic},
-			Edit: &protocol.WorkspaceEdit{
-				Changes: &map[string][]protocol.TextEdit{
-					string(uri): {textEdit},
+			Edit: protocol.WorkspaceEdit{
+				Changes: map[protocol.DocumentURI][]protocol.TextEdit{
+					uri: {textEdit},
 				},
 			},
 			IsPreferred: true,
@@ -2846,7 +2920,7 @@ func insertionPrefixSuffix(
 }
 
 func variableDeclarationCodeActions(
-	uri protocol.DocumentUri,
+	uri protocol.DocumentURI,
 	document Document,
 	diagnostic protocol.Diagnostic,
 	insertionPos ast.Position,
@@ -2893,9 +2967,9 @@ func variableDeclarationCodeActions(
 			Title:       fmt.Sprintf("Declare %s", variableKind.Name()),
 			Kind:        protocol.QuickFix,
 			Diagnostics: []protocol.Diagnostic{diagnostic},
-			Edit: &protocol.WorkspaceEdit{
-				Changes: &map[string][]protocol.TextEdit{
-					string(uri): {textEdit},
+			Edit: protocol.WorkspaceEdit{
+				Changes: map[protocol.DocumentURI][]protocol.TextEdit{
+					uri: {textEdit},
 				},
 			},
 			IsPreferred: isPreferred,
@@ -2906,7 +2980,7 @@ func variableDeclarationCodeActions(
 }
 
 func fieldDeclarationCodeActions(
-	uri protocol.DocumentUri,
+	uri protocol.DocumentURI,
 	document Document,
 	diagnostic protocol.Diagnostic,
 	insertionPos insertionPosition,
@@ -2960,9 +3034,9 @@ func fieldDeclarationCodeActions(
 			Title:       fmt.Sprintf("Declare %s field", variableKind.Name()),
 			Kind:        protocol.QuickFix,
 			Diagnostics: []protocol.Diagnostic{diagnostic},
-			Edit: &protocol.WorkspaceEdit{
-				Changes: &map[string][]protocol.TextEdit{
-					string(uri): {textEdit},
+			Edit: protocol.WorkspaceEdit{
+				Changes: map[protocol.DocumentURI][]protocol.TextEdit{
+					uri: {textEdit},
 				},
 			},
 			IsPreferred: isPreferred,
@@ -2977,13 +3051,13 @@ func fieldDeclarationCodeActions(
 //
 func convertHint(
 	hint sema.Hint,
-	uri protocol.DocumentUri,
+	uri protocol.DocumentURI,
 ) (
 	protocol.Diagnostic,
 	func() []*protocol.CodeAction,
 ) {
 	startPosition := hint.StartPosition()
-	endPosition := hint.EndPosition()
+	endPosition := hint.EndPosition(nil)
 
 	protocolRange := conversion.ASTToProtocolRange(startPosition, endPosition)
 
@@ -3006,9 +3080,9 @@ func convertHint(
 					Title:       fmt.Sprintf("Replace with suggestion `%s`", replacement),
 					Kind:        protocol.QuickFix,
 					Diagnostics: []protocol.Diagnostic{diagnostic},
-					Edit: &protocol.WorkspaceEdit{
-						Changes: &map[string][]protocol.TextEdit{
-							string(uri): {
+					Edit: protocol.WorkspaceEdit{
+						Changes: map[protocol.DocumentURI][]protocol.TextEdit{
+							uri: {
 								{
 									Range:   protocolRange,
 									NewText: replacement,
@@ -3028,9 +3102,9 @@ func convertHint(
 					Title:       "Remove unnecessary code",
 					Kind:        protocol.QuickFix,
 					Diagnostics: []protocol.Diagnostic{diagnostic},
-					Edit: &protocol.WorkspaceEdit{
-						Changes: &map[string][]protocol.TextEdit{
-							string(uri): {
+					Edit: protocol.WorkspaceEdit{
+						Changes: map[protocol.DocumentURI][]protocol.TextEdit{
+							uri: {
 								{
 									Range:   protocolRange,
 									NewText: "",

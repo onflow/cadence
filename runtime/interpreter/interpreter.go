@@ -3857,7 +3857,6 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 			}
 
 			borrowType, ok := typeParameterPair.Value.(*sema.ReferenceType)
-
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
@@ -4430,13 +4429,13 @@ func (interpreter *Interpreter) checkContainerMutation(
 	}
 }
 
-func (interpreter *Interpreter) checkResourceNotDestroyed(value Value, getLocationRange func() LocationRange) {
+func (interpreter *Interpreter) checkReferencedResourceNotDestroyed(value Value, getLocationRange func() LocationRange) {
 	resourceKindedValue, ok := value.(ResourceKindedValue)
 	if !ok || !resourceKindedValue.IsDestroyed() {
 		return
 	}
 
-	panic(InvalidatedResourceError{
+	panic(DestroyedResourceError{
 		LocationRange: getLocationRange(),
 	})
 }

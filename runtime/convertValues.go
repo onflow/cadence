@@ -1035,7 +1035,6 @@ func importCapability(
 ) {
 
 	_, ok := borrowType.(cadence.ReferenceType)
-
 	if !ok {
 		return nil, errors.NewDefaultUserError(
 			"cannot import capability: expected reference, got '%s'",

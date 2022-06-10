@@ -120,8 +120,7 @@ func TestInterpreterElaborationImportMetering(t *testing.T) {
 
 	addressValue := cadence.BytesToAddress([]byte{byte(1)})
 
-	for imports := range contracts {
-
+	test := func(imports int) {
 		t.Run(fmt.Sprintf("import %d", imports), func(t *testing.T) {
 
 			t.Parallel()
@@ -204,6 +203,10 @@ func TestInterpreterElaborationImportMetering(t *testing.T) {
 			// one more for the script and one more for each contract imported
 			assert.Equal(t, uint64(3*imports+4), meter.getMemory(common.MemoryKindElaboration))
 		})
+	}
+
+	for imports := range contracts {
+		test(imports)
 	}
 }
 

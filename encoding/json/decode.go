@@ -1158,6 +1158,8 @@ func (d *Decoder) decodeType(valueJSON interface{}) cadence.Type {
 		return cadence.NewMeteredDeployedContractType(d.gauge)
 	case "AccountKey":
 		return cadence.NewMeteredAccountKeyType(d.gauge)
+	case "Block":
+		return cadence.NewMeteredBlockType(d.gauge)
 	default:
 		fieldsValue := obj.Get(fieldsKey)
 		typeIDValue := toString(obj.Get(typeIDKey))
