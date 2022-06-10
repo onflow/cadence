@@ -22,6 +22,8 @@ import (
 	"errors"
 	"fmt"
 	"runtime/debug"
+
+	"golang.org/x/xerrors"
 )
 
 // InternalError is thrown on an implementation error.
@@ -159,3 +161,38 @@ func (e DefaultUserError) Error() string {
 }
 
 func (e DefaultUserError) IsUserError() {}
+
+// IsInternalError Checks whether a given error was caused by an InternalError.
+// An error in an internal error, if it has at-least one InternalError in the chain.
+//
+func IsInternalError(err error) bool {
+	switch err := err.(type) {
+	case InternalError:
+		return true
+	case xerrors.Wrapper:
+		return IsInternalError(err.Unwrap())
+	default:
+		return false
+	}
+}
+
+// IsUserError Checks whether a given error was caused by an UserError.
+// An error in an internal error, if it has at-least one UserError in the chain,
+// and no InternalError s.
+//
+func IsUserError(err error) bool {
+	switch err := err.(type) {
+	case UserError:
+		return true
+	case xerrors.Wrapper:
+		// Make sure there are no internal errors on the way.
+		_, ok := err.(InternalError)
+		if ok {
+			return false
+		}
+
+		return IsUserError(err.Unwrap())
+	default:
+		return false
+	}
+}

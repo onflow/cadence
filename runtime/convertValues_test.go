@@ -769,21 +769,15 @@ func TestImportValue(t *testing.T) {
 }
 
 func assertUserError(t *testing.T, err error) {
-	if runtimeError, ok := err.(Error); ok {
-		err = runtimeError.Unwrap()
-	}
-
-	_, ok := err.(errors.UserError)
-	require.True(t, ok, "Expected `UserError`, found `%T`", err)
+	require.True(t,
+		errors.IsUserError(err),
+		"Expected `UserError`, found `%T`", err)
 }
 
 func assertInternalError(t *testing.T, err error) {
-	if runtimeError, ok := err.(Error); ok {
-		err = runtimeError.Unwrap()
-	}
-
-	_, ok := err.(errors.InternalError)
-	require.True(t, ok, "Expected `InternalError`, found `%T`", err)
+	require.True(t,
+		errors.IsInternalError(err),
+		"Expected `InternalError`, found `%T`", err)
 }
 
 func TestImportRuntimeType(t *testing.T) {

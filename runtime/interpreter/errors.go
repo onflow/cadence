@@ -70,8 +70,6 @@ func (e Error) ImportLocation() common.Location {
 	return e.Location
 }
 
-func (e Error) IsUserError() {}
-
 // PositionedError wraps an unpositioned error with position info
 //
 type PositionedError struct {

@@ -243,22 +243,16 @@ func getWrappedError(recovered any, context Context) Error {
 	case Error:
 		return recovered
 
-	// `interpreter.Error` is already a wrapped error, because interpreter can be
-	// directly invoked by FVM and therefore, any error is wrapped before returned
-	// from the interpreter.
-	//
-	// However, `interpreter.Error` doesn't belong to any of the known error
-	// categories: `InternalError`, `UserError`, or `ExternalError`. i.e: It's
-	// similar to `runtime.Error`.
-	//
-	// Hence, unwrap it, and prepare the inner-error for returning.
-	case interpreter.Error:
-		return getWrappedError(recovered.Unwrap(), context)
-
 	// Wrap with `runtime.Error` to include meta info.
+	//
+	// The following set of errors are the only known types of errors that would reach this point.
+	// `interpreter.Error` is a generic wrapper for any error. Hence, it doesn't belong to any of the
+	// three types: `UserError`, `InternalError`, `ExternalError`.
+	// So it needs to be specially handled here
 	case runtimeErrors.InternalError,
 		runtimeErrors.UserError,
-		interpreter.ExternalError:
+		interpreter.ExternalError,
+		interpreter.Error:
 		return newError(recovered.(error), context)
 
 	// Wrap any other unhandled error with a generic internal error first.
@@ -830,16 +824,16 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 func wrapPanic(f func()) {
 	defer func() {
 		if r := recover(); r != nil {
-			var ok bool
-			// don't recover Go errors
-			goErr, ok := r.(goRuntime.Error)
-			if ok {
-				panic(goErr)
+			// don't wrap Go errors and internal errors
+			switch r := r.(type) {
+			case goRuntime.Error, runtimeErrors.InternalError:
+				panic(r)
+			default:
+				panic(interpreter.ExternalError{
+					Recovered: r,
+				})
 			}
 
-			panic(interpreter.ExternalError{
-				Recovered: r,
-			})
 		}
 	}()
 	f()

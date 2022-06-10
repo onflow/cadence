@@ -24,6 +24,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	runtimeErrors "github.com/onflow/cadence/runtime/errors"
 	"strconv"
 	"strings"
 	"sync"
@@ -1100,7 +1101,9 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 				),
 			},
 			check: func(t *testing.T, err error) {
-				assert.Error(t, err)
+				require.Error(t, err)
+				assertRuntimeErrorIsUserError(t, err)
+
 				var argErr interpreter.ContainerMutationError
 				require.ErrorAs(t, err, &argErr)
 			},
@@ -1290,6 +1293,8 @@ func TestRuntimeScriptArguments(t *testing.T) {
 			},
 			check: func(t *testing.T, err error) {
 				require.Error(t, err)
+				assertRuntimeErrorIsUserError(t, err)
+
 				assert.IsType(t, &InvalidEntryPointArgumentError{}, errors.Unwrap(err))
 			},
 		},
@@ -1305,6 +1310,8 @@ func TestRuntimeScriptArguments(t *testing.T) {
 			},
 			check: func(t *testing.T, err error) {
 				require.Error(t, err)
+				assertRuntimeErrorIsUserError(t, err)
+
 				assert.IsType(t, &InvalidEntryPointArgumentError{}, errors.Unwrap(err))
 				assert.IsType(t, &InvalidValueTypeError{}, errors.Unwrap(errors.Unwrap(err)))
 			},
@@ -1368,6 +1375,8 @@ func TestRuntimeScriptArguments(t *testing.T) {
 			},
 			check: func(t *testing.T, err error) {
 				require.Error(t, err)
+				assertRuntimeErrorIsUserError(t, err)
+
 				var invalidEntryPointArgumentErr *InvalidEntryPointArgumentError
 				assert.ErrorAs(t, err, &invalidEntryPointArgumentErr)
 			},
@@ -1390,6 +1399,8 @@ func TestRuntimeScriptArguments(t *testing.T) {
 			},
 			check: func(t *testing.T, err error) {
 				require.Error(t, err)
+				assertRuntimeErrorIsUserError(t, err)
+
 				var invalidEntryPointArgumentErr *InvalidEntryPointArgumentError
 				assert.ErrorAs(t, err, &invalidEntryPointArgumentErr)
 			},
@@ -1436,6 +1447,8 @@ func TestRuntimeScriptArguments(t *testing.T) {
 			},
 			check: func(t *testing.T, err error) {
 				require.Error(t, err)
+				assertRuntimeErrorIsUserError(t, err)
+
 				var argErr interpreter.ContainerMutationError
 				require.ErrorAs(t, err, &argErr)
 			},
@@ -4387,6 +4400,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 					assert.NoError(t, err)
 				} else {
 					require.Error(t, err)
+					assertRuntimeErrorIsUserError(t, err)
 
 					require.ErrorAs(t, err, &interpreter.ConditionError{})
 				}
@@ -4572,6 +4586,7 @@ func TestRuntimeTransactionTopLevelDeclarations(t *testing.T) {
 			},
 		)
 		require.Error(t, err)
+		assertRuntimeErrorIsUserError(t, err)
 
 		var checkerErr *sema.CheckerError
 		require.ErrorAs(t, err, &checkerErr)
@@ -5795,7 +5810,7 @@ func TestRuntimeExternalError(t *testing.T) {
 	)
 
 	require.Error(t, err)
-	assert.ErrorAs(t, err, &interpreter.ExternalError{})
+	assertRuntimeErrorIsExternalError(t, err)
 }
 
 func TestRuntimeDeployCodeCaching(t *testing.T) {
@@ -6587,6 +6602,7 @@ func TestRuntimeExecuteScriptArguments(t *testing.T) {
 				require.NoError(t, err)
 			} else {
 				require.Error(t, err)
+				assertRuntimeErrorIsUserError(t, err)
 
 				require.ErrorAs(t, err, &InvalidEntryPointParameterCountError{})
 			}
@@ -6705,6 +6721,7 @@ func TestRuntimeGetCapability(t *testing.T) {
 		)
 
 		require.Error(t, err)
+		assertRuntimeErrorIsUserError(t, err)
 
 		var typeErr interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &typeErr)
@@ -6740,6 +6757,7 @@ func TestRuntimeGetCapability(t *testing.T) {
 		)
 
 		require.Error(t, err)
+		assertRuntimeErrorIsUserError(t, err)
 
 		var typeErr interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &typeErr)
@@ -6870,6 +6888,7 @@ func TestRuntimeStackOverflow(t *testing.T) {
 		},
 	)
 	require.Error(t, err)
+	assertRuntimeErrorIsUserError(t, err)
 
 	var callStackLimitExceededErr CallStackLimitExceededError
 	require.ErrorAs(t, err, &callStackLimitExceededErr)
@@ -6912,7 +6931,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 		)
 
 		require.Error(t, err)
-		require.ErrorAs(t, err, &Error{})
+		assertRuntimeErrorIsInternalError(t, err)
 	})
 
 	t.Run("script with cadence error", func(t *testing.T) {
@@ -6945,7 +6964,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 		)
 
 		require.Error(t, err)
-		require.ErrorAs(t, err, &Error{})
+		assertRuntimeErrorIsExternalError(t, err)
 	})
 
 	t.Run("transaction", func(t *testing.T) {
@@ -6982,7 +7001,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 		)
 
 		require.Error(t, err)
-		require.ErrorAs(t, err, &Error{})
+		assertRuntimeErrorIsInternalError(t, err)
 	})
 
 	t.Run("contract function", func(t *testing.T) {
@@ -7059,7 +7078,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 		)
 
 		require.Error(t, err)
-		require.ErrorAs(t, err, &Error{})
+		assertRuntimeErrorIsInternalError(t, err)
 	})
 
 	t.Run("parse and check", func(t *testing.T) {
@@ -7084,7 +7103,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 		)
 
 		require.Error(t, err)
-		require.ErrorAs(t, err, &Error{})
+		assertRuntimeErrorIsExternalError(t, err)
 	})
 
 	t.Run("read stored", func(t *testing.T) {
@@ -7114,7 +7133,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 		)
 
 		require.Error(t, err)
-		require.ErrorAs(t, err, &Error{})
+		assertRuntimeErrorIsExternalError(t, err)
 	})
 
 	t.Run("read linked", func(t *testing.T) {
@@ -7144,7 +7163,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 		)
 
 		require.Error(t, err)
-		require.ErrorAs(t, err, &Error{})
+		assertRuntimeErrorIsExternalError(t, err)
 	})
 
 	t.Run("panic with non error", func(t *testing.T) {
@@ -7173,7 +7192,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 		)
 
 		require.Error(t, err)
-		require.ErrorAs(t, err, &Error{})
+		assertRuntimeErrorIsInternalError(t, err)
 	})
 
 }
@@ -7334,4 +7353,42 @@ func TestRuntimeImportAnyStruct(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
+}
+
+// Error needs to be `runtime.Error`, and the inner error should be `errors.UserError`.
+//
+func assertRuntimeErrorIsUserError(t *testing.T, err error) {
+	var runtimeError Error
+	require.ErrorAs(t, err, &runtimeError)
+
+	innerError := runtimeError.Unwrap()
+	require.True(
+		t,
+		runtimeErrors.IsUserError(innerError),
+		"Expected `UserError`, found `%T`", innerError,
+	)
+}
+
+// Error needs to be `runtime.Error`, and the inner error should be `errors.InternalError`.
+//
+func assertRuntimeErrorIsInternalError(t *testing.T, err error) {
+	var runtimeError Error
+	require.ErrorAs(t, err, &runtimeError)
+
+	innerError := runtimeError.Unwrap()
+	require.True(
+		t,
+		runtimeErrors.IsInternalError(innerError),
+		"Expected `UserError`, found `%T`", innerError,
+	)
+}
+
+// Error needs to be `runtime.Error`, and the inner error should be `interpreter.ExternalError`.
+//
+func assertRuntimeErrorIsExternalError(t *testing.T, err error) {
+	var runtimeError Error
+	require.ErrorAs(t, err, &runtimeError)
+
+	innerError := runtimeError.Unwrap()
+	require.ErrorAs(t, innerError, &interpreter.ExternalError{})
 }

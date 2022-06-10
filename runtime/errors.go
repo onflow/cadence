@@ -110,7 +110,7 @@ func (e InvalidEntryPointParameterCountError) Error() string {
 	)
 }
 
-func (*InvalidEntryPointParameterCountError) IsUserError() {}
+func (InvalidEntryPointParameterCountError) IsUserError() {}
 
 // InvalidTransactionAuthorizerCountError
 
