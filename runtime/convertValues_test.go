@@ -21,20 +21,21 @@ package runtime
 import (
 	_ "embed"
 	"fmt"
+	"strings"
 	"testing"
 	"unicode/utf8"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/encoding/json"
-	"github.com/onflow/cadence/runtime/stdlib"
-
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -66,9 +67,13 @@ func TestExportValue(t *testing.T) {
 			actual, err := exportValueWithInterpreter(value, inter, seenReferences{})
 			if tt.expected == nil {
 				require.Error(t, err)
+				if strings.HasSuffix(tt.label, "(invalid)") {
+					assertInternalError(t, err)
+				} else {
+					assertUserError(t, err)
+				}
 			} else {
 				require.NoError(t, err)
-
 				assert.Equal(t, tt.expected, actual)
 			}
 		})
@@ -486,6 +491,7 @@ func TestImportValue(t *testing.T) {
 
 			if tt.expected == nil {
 				require.Error(t, err)
+				assertUserError(t, err)
 			} else {
 				require.NoError(t, err)
 				AssertValuesEqual(t, inter, tt.expected, actual)
@@ -760,6 +766,24 @@ func TestImportValue(t *testing.T) {
 	} {
 		test(tt)
 	}
+}
+
+func assertUserError(t *testing.T, err error) {
+	if runtimeError, ok := err.(Error); ok {
+		err = runtimeError.Unwrap()
+	}
+
+	_, ok := err.(errors.UserError)
+	require.True(t, ok, "Expected `UserError`, found `%T`", err)
+}
+
+func assertInternalError(t *testing.T, err error) {
+	if runtimeError, ok := err.(Error); ok {
+		err = runtimeError.Unwrap()
+	}
+
+	_, ok := err.(errors.InternalError)
+	require.True(t, ok, "Expected `InternalError`, found `%T`", err)
 }
 
 func TestImportRuntimeType(t *testing.T) {
@@ -2886,6 +2910,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 
 			if test.expectedInvalidEntryPointArgumentErrType != nil {
 				require.Error(t, err)
+				assertUserError(t, err)
 
 				var invalidEntryPointArgumentError *InvalidEntryPointArgumentError
 				require.ErrorAs(t, err, &invalidEntryPointArgumentError)
@@ -2896,6 +2921,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 				)
 			} else if test.expectedContainerMutationError {
 				require.Error(t, err)
+				assertUserError(t, err)
 
 				var containerMutationError interpreter.ContainerMutationError
 				require.ErrorAs(t, err, &containerMutationError)
@@ -3347,6 +3373,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 
 		_, err := executeTestScript(t, script, malformedStruct)
 		require.Error(t, err)
+		assertUserError(t, err)
 
 		var argErr *InvalidEntryPointArgumentError
 		require.ErrorAs(t, err, &argErr)
@@ -3380,6 +3407,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 
 		_, err := executeTestScript(t, script, dictionary)
 		require.Error(t, err)
+		assertUserError(t, err)
 
 		var argErr interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &argErr)
@@ -3536,6 +3564,7 @@ func TestTypeValueImport(t *testing.T) {
 		)
 
 		require.Error(t, err)
+		assertUserError(t, err)
 		require.IsType(t, interpreter.TypeLoadingError{}, err.(Error).Err.(*InvalidEntryPointArgumentError).Err)
 	})
 }
@@ -3642,6 +3671,7 @@ func TestCapabilityValueImport(t *testing.T) {
 		)
 
 		require.Error(t, err)
+		assertUserError(t, err)
 	})
 
 	t.Run("private Capability<&Int>", func(t *testing.T) {
@@ -3688,6 +3718,7 @@ func TestCapabilityValueImport(t *testing.T) {
 		)
 
 		require.Error(t, err)
+		assertUserError(t, err)
 	})
 
 	t.Run("storage Capability<&Int>", func(t *testing.T) {
@@ -3736,6 +3767,7 @@ func TestCapabilityValueImport(t *testing.T) {
 		)
 
 		require.Error(t, err)
+		assertUserError(t, err)
 	})
 
 	t.Run("missing struct", func(t *testing.T) {
@@ -3791,6 +3823,7 @@ func TestCapabilityValueImport(t *testing.T) {
 		)
 
 		require.Error(t, err)
+		assertUserError(t, err)
 	})
 }
 
@@ -3883,7 +3916,9 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 					if publicKeyActualError == nil {
 						require.NoError(t, err)
 					} else {
-						assert.Error(t, err)
+						require.Error(t, err)
+						assertUserError(t, err)
+
 						var invalidEntryPointArgumentError *InvalidEntryPointArgumentError
 						assert.ErrorAs(t, err, &invalidEntryPointArgumentError)
 						assert.ErrorAs(t, err, &interpreter.InvalidPublicKeyError{})
@@ -3991,6 +4026,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 		_, err := executeScript(t, script, publicKey, runtimeInterface)
 		require.Error(t, err)
+		assertUserError(t, err)
 
 		var argErr *InvalidEntryPointArgumentError
 		require.ErrorAs(t, err, &argErr)
@@ -4032,6 +4068,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 		_, err := executeScript(t, script, publicKey, runtimeInterface)
 		require.Error(t, err)
+		assertUserError(t, err)
 
 		var argErr *InvalidEntryPointArgumentError
 		require.ErrorAs(t, err, &argErr)
@@ -4066,6 +4103,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 		_, err := executeScript(t, script, publicKey, runtimeInterface)
 		require.Error(t, err)
+		assertUserError(t, err)
 
 		var argErr *InvalidEntryPointArgumentError
 		require.ErrorAs(t, err, &argErr)
@@ -4104,6 +4142,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 		_, err := executeScript(t, script, publicKey, runtimeInterface)
 		require.Error(t, err)
+		assertUserError(t, err)
 
 		var argErr *InvalidEntryPointArgumentError
 		require.ErrorAs(t, err, &argErr)
@@ -4194,6 +4233,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			},
 		)
 		require.Error(t, err)
+		assertUserError(t, err)
 
 		var argErr *InvalidEntryPointArgumentError
 		require.ErrorAs(t, err, &argErr)
@@ -4821,6 +4861,8 @@ func TestNestedStructArgPassing(t *testing.T) {
 		)
 
 		require.Error(t, err)
+		assertUserError(t, err)
+
 		var argErr *InvalidEntryPointArgumentError
 		require.ErrorAs(t, err, &argErr)
 	})

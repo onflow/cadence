@@ -193,10 +193,9 @@ func exportValueWithInterpreter(
 			return nil, nil
 		}
 		return exportValueWithInterpreter(*referencedValue, inter, seenReferences)
+	default:
+		return nil, errors.NewUnexpectedError("cannot export value of type %T", value)
 	}
-
-	return nil, errors.NewUnexpectedError("cannot export value of type %T", value)
-
 }
 
 func exportSomeValue(
@@ -770,9 +769,13 @@ func importValue(
 			v.Address,
 			v.BorrowType,
 		)
+	case cadence.Link:
+		return nil, errors.NewDefaultUserError("cannot import value of type %T", value)
+	default:
+		// This means the implementation has unhandled types.
+		// Hence, return an internal error
+		return nil, errors.NewUnexpectedError("cannot import value of type %T", value)
 	}
-
-	return nil, errors.NewUnexpectedError("cannot import value of type %T", value)
 }
 func importUInt8(inter *interpreter.Interpreter, v cadence.UInt8) interpreter.UInt8Value {
 	return interpreter.NewUInt8Value(
