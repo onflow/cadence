@@ -172,7 +172,7 @@ func TestResourceResources_ForEach(t *testing.T) {
 
 	result := map[*Variable][]ResourceInvalidation{}
 
-	resources.ForEach(func(resource interface{}, info ResourceInfo) {
+	resources.ForEach(func(resource any, info ResourceInfo) {
 		variable := resource.(*Variable)
 		result[variable] = info.Invalidations.All()
 	})

@@ -265,10 +265,10 @@ func TestParseParameterList(t *testing.T) {
 
 	t.Parallel()
 
-	parse := func(input string) (interface{}, []error) {
+	parse := func(input string) (any, []error) {
 		return Parse(
 			input,
-			func(p *parser) interface{} {
+			func(p *parser) any {
 				return parseParameterList(p)
 			},
 			nil,
@@ -963,10 +963,10 @@ func TestParseAccess(t *testing.T) {
 
 	t.Parallel()
 
-	parse := func(input string) (interface{}, []error) {
+	parse := func(input string) (any, []error) {
 		return Parse(
 			input,
-			func(p *parser) interface{} {
+			func(p *parser) any {
 				return parseAccess(p)
 			},
 			nil,
@@ -1649,10 +1649,10 @@ func TestParseFieldWithVariableKind(t *testing.T) {
 
 	t.Parallel()
 
-	parse := func(input string) (interface{}, []error) {
+	parse := func(input string) (any, []error) {
 		return Parse(
 			input,
-			func(p *parser) interface{} {
+			func(p *parser) any {
 				return parseFieldWithVariableKind(p, ast.AccessNotSpecified, nil, "")
 			},
 			nil,

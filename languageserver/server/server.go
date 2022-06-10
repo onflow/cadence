@@ -170,7 +170,7 @@ type DocumentSymbolProvider func(uri protocol.DocumentURI, version int32, checke
 
 // InitializationOptionsHandler is a function that is used to handle initialization options sent by the client
 //
-type InitializationOptionsHandler func(initializationOptions interface{}) error
+type InitializationOptionsHandler func(initializationOptions any) error
 
 type Server struct {
 	protocolServer       *protocol.Server
@@ -426,8 +426,8 @@ func accessCheckModeFromName(name string) sema.AccessCheckMode {
 	}
 }
 
-func (s *Server) configure(opts interface{}) {
-	optsMap, ok := opts.(map[string]interface{})
+func (s *Server) configure(opts any) {
+	optsMap, ok := opts.(map[string]any)
 	if !ok {
 		return
 	}
@@ -1624,7 +1624,7 @@ func (s *Server) maybeResolveRange(uri protocol.DocumentURI, id string, result *
 //
 // We register all the commands we support in registerCommands and populate
 // their corresponding handler at server initialization.
-func (s *Server) ExecuteCommand(conn protocol.Conn, params *protocol.ExecuteCommandParams) (interface{}, error) {
+func (s *Server) ExecuteCommand(conn protocol.Conn, params *protocol.ExecuteCommandParams) (any, error) {
 
 	conn.LogMessage(&protocol.LogMessageParams{
 		Type:    protocol.Log,
@@ -2206,7 +2206,7 @@ func (s *Server) parseEntryPointArguments(_ protocol.Conn, args ...json2.RawMess
 		)
 	}
 
-	result := make([]interface{}, len(arguments))
+	result := make([]any, len(arguments))
 
 	for i, argument := range arguments {
 		parameter := parameters[i]

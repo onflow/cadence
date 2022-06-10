@@ -20,7 +20,7 @@ package intervalst
 
 type node struct {
 	interval    Interval
-	value       interface{}
+	value       any
 	left, right *node
 	// size of subtree rooted at this node
 	n int
@@ -28,7 +28,7 @@ type node struct {
 	max Position
 }
 
-func newNode(interval Interval, value interface{}) *node {
+func newNode(interval Interval, value any) *node {
 	return &node{
 		interval: interval,
 		value:    value,
@@ -101,7 +101,7 @@ func (n *node) rotL() *node {
 	return x
 }
 
-func (n *node) Values() []interface{} {
+func (n *node) Values() []any {
 	if n == nil {
 		return nil
 	}

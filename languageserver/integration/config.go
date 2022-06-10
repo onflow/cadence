@@ -55,8 +55,8 @@ type AccountPrivateKey struct {
 //
 // Returns an error if any fields are missing or malformed.
 //
-func configFromInitializationOptions(opts interface{}) (conf Config, err error) {
-	optsMap, ok := opts.(map[string]interface{})
+func configFromInitializationOptions(opts any) (conf Config, err error) {
+	optsMap, ok := opts.(map[string]any)
 	if !ok {
 		return Config{}, errors.New("invalid initialization options")
 	}

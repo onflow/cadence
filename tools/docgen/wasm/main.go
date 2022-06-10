@@ -44,7 +44,7 @@ func main() {
 	js.Global().Set(
 		globalFunctionName("generate"),
 		js.FuncOf(
-			func(this js.Value, args []js.Value) interface{} {
+			func(this js.Value, args []js.Value) any {
 				return generateDocs(args)
 			},
 		),

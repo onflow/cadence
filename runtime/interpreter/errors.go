@@ -84,7 +84,7 @@ func (e PositionedError) Error() string {
 // It contains the recovered value.
 //
 type ExternalError struct {
-	Recovered interface{}
+	Recovered any
 }
 
 func (e ExternalError) Error() string {

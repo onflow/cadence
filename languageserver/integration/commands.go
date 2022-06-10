@@ -196,7 +196,7 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...json.RawMe
 		)
 	}
 
-	var signerList []interface{}
+	var signerList []any
 	err = json.Unmarshal(args[2], &argsJSON)
 	if err != nil {
 		return nil, errorWithMessage(

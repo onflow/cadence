@@ -27,23 +27,23 @@ package sema
 
 import "container/list"
 
-// InterfaceResourceInfoOrderedMap
+// AnyResourceInfoOrderedMap
 //
-type InterfaceResourceInfoOrderedMap struct {
-	pairs map[interface{}]*InterfaceResourceInfoPair
+type AnyResourceInfoOrderedMap struct {
+	pairs map[any]*AnyResourceInfoPair
 	list  *list.List
 }
 
-// NewInterfaceResourceInfoOrderedMap creates a new InterfaceResourceInfoOrderedMap.
-func NewInterfaceResourceInfoOrderedMap() *InterfaceResourceInfoOrderedMap {
-	return &InterfaceResourceInfoOrderedMap{
-		pairs: make(map[interface{}]*InterfaceResourceInfoPair),
+// NewAnyResourceInfoOrderedMap creates a new AnyResourceInfoOrderedMap.
+func NewAnyResourceInfoOrderedMap() *AnyResourceInfoOrderedMap {
+	return &AnyResourceInfoOrderedMap{
+		pairs: make(map[any]*AnyResourceInfoPair),
 		list:  list.New(),
 	}
 }
 
 // Clear removes all entries from this ordered map.
-func (om *InterfaceResourceInfoOrderedMap) Clear() {
+func (om *AnyResourceInfoOrderedMap) Clear() {
 	om.list.Init()
 	// NOTE: Range over map is safe, as it is only used to delete entries
 	for key := range om.pairs { //nolint:maprangecheck
@@ -54,8 +54,8 @@ func (om *InterfaceResourceInfoOrderedMap) Clear() {
 // Get returns the value associated with the given key.
 // Returns nil if not found.
 // The second return value indicates if the key is present in the map.
-func (om *InterfaceResourceInfoOrderedMap) Get(key interface{}) (result ResourceInfo, present bool) {
-	var pair *InterfaceResourceInfoPair
+func (om *AnyResourceInfoOrderedMap) Get(key any) (result ResourceInfo, present bool) {
+	var pair *AnyResourceInfoPair
 	if pair, present = om.pairs[key]; present {
 		return pair.Value, present
 	}
@@ -64,21 +64,21 @@ func (om *InterfaceResourceInfoOrderedMap) Get(key interface{}) (result Resource
 
 // GetPair returns the key-value pair associated with the given key.
 // Returns nil if not found.
-func (om *InterfaceResourceInfoOrderedMap) GetPair(key interface{}) *InterfaceResourceInfoPair {
+func (om *AnyResourceInfoOrderedMap) GetPair(key any) *AnyResourceInfoPair {
 	return om.pairs[key]
 }
 
 // Set sets the key-value pair, and returns what `Get` would have returned
 // on that key prior to the call to `Set`.
-func (om *InterfaceResourceInfoOrderedMap) Set(key interface{}, value ResourceInfo) (oldValue ResourceInfo, present bool) {
-	var pair *InterfaceResourceInfoPair
+func (om *AnyResourceInfoOrderedMap) Set(key any, value ResourceInfo) (oldValue ResourceInfo, present bool) {
+	var pair *AnyResourceInfoPair
 	if pair, present = om.pairs[key]; present {
 		oldValue = pair.Value
 		pair.Value = value
 		return
 	}
 
-	pair = &InterfaceResourceInfoPair{
+	pair = &AnyResourceInfoPair{
 		Key:   key,
 		Value: value,
 	}
@@ -90,8 +90,8 @@ func (om *InterfaceResourceInfoOrderedMap) Set(key interface{}, value ResourceIn
 
 // Delete removes the key-value pair, and returns what `Get` would have returned
 // on that key prior to the call to `Delete`.
-func (om *InterfaceResourceInfoOrderedMap) Delete(key interface{}) (oldValue ResourceInfo, present bool) {
-	var pair *InterfaceResourceInfoPair
+func (om *AnyResourceInfoOrderedMap) Delete(key any) (oldValue ResourceInfo, present bool) {
+	var pair *AnyResourceInfoPair
 	pair, present = om.pairs[key]
 	if !present {
 		return
@@ -105,23 +105,23 @@ func (om *InterfaceResourceInfoOrderedMap) Delete(key interface{}) (oldValue Res
 }
 
 // Len returns the length of the ordered map.
-func (om *InterfaceResourceInfoOrderedMap) Len() int {
+func (om *AnyResourceInfoOrderedMap) Len() int {
 	return len(om.pairs)
 }
 
 // Oldest returns a pointer to the oldest pair.
-func (om *InterfaceResourceInfoOrderedMap) Oldest() *InterfaceResourceInfoPair {
-	return listElementToInterfaceResourceInfoPair(om.list.Front())
+func (om *AnyResourceInfoOrderedMap) Oldest() *AnyResourceInfoPair {
+	return listElementToAnyResourceInfoPair(om.list.Front())
 }
 
 // Newest returns a pointer to the newest pair.
-func (om *InterfaceResourceInfoOrderedMap) Newest() *InterfaceResourceInfoPair {
-	return listElementToInterfaceResourceInfoPair(om.list.Back())
+func (om *AnyResourceInfoOrderedMap) Newest() *AnyResourceInfoPair {
+	return listElementToAnyResourceInfoPair(om.list.Back())
 }
 
 // Foreach iterates over the entries of the map in the insertion order, and invokes
 // the provided function for each key-value pair.
-func (om *InterfaceResourceInfoOrderedMap) Foreach(f func(key interface{}, value ResourceInfo)) {
+func (om *AnyResourceInfoOrderedMap) Foreach(f func(key any, value ResourceInfo)) {
 	for pair := om.Oldest(); pair != nil; pair = pair.Next() {
 		f(pair.Key, pair.Value)
 	}
@@ -130,7 +130,7 @@ func (om *InterfaceResourceInfoOrderedMap) Foreach(f func(key interface{}, value
 // ForeachWithError iterates over the entries of the map in the insertion order,
 // and invokes the provided function for each key-value pair.
 // If the passed function returns an error, iteration breaks and the error is returned.
-func (om *InterfaceResourceInfoOrderedMap) ForeachWithError(f func(key interface{}, value ResourceInfo) error) error {
+func (om *AnyResourceInfoOrderedMap) ForeachWithError(f func(key any, value ResourceInfo) error) error {
 	for pair := om.Oldest(); pair != nil; pair = pair.Next() {
 		err := f(pair.Key, pair.Value)
 		if err != nil {
@@ -140,28 +140,28 @@ func (om *InterfaceResourceInfoOrderedMap) ForeachWithError(f func(key interface
 	return nil
 }
 
-// InterfaceResourceInfoPair
+// AnyResourceInfoPair
 //
-type InterfaceResourceInfoPair struct {
-	Key   interface{}
+type AnyResourceInfoPair struct {
+	Key   any
 	Value ResourceInfo
 
 	element *list.Element
 }
 
 // Next returns a pointer to the next pair.
-func (p *InterfaceResourceInfoPair) Next() *InterfaceResourceInfoPair {
-	return listElementToInterfaceResourceInfoPair(p.element.Next())
+func (p *AnyResourceInfoPair) Next() *AnyResourceInfoPair {
+	return listElementToAnyResourceInfoPair(p.element.Next())
 }
 
 // Prev returns a pointer to the previous pair.
-func (p *InterfaceResourceInfoPair) Prev() *InterfaceResourceInfoPair {
-	return listElementToInterfaceResourceInfoPair(p.element.Prev())
+func (p *AnyResourceInfoPair) Prev() *AnyResourceInfoPair {
+	return listElementToAnyResourceInfoPair(p.element.Prev())
 }
 
-func listElementToInterfaceResourceInfoPair(element *list.Element) *InterfaceResourceInfoPair {
+func listElementToAnyResourceInfoPair(element *list.Element) *AnyResourceInfoPair {
 	if element == nil {
 		return nil
 	}
-	return element.Value.(*InterfaceResourceInfoPair)
+	return element.Value.(*AnyResourceInfoPair)
 }

@@ -36,7 +36,7 @@ type Server struct {
 // the language server to push various types of messages to the client.
 // https://microsoft.github.io/language-server-protocol/specifications/specification-3-14
 type Conn interface {
-	Notify(method string, params interface{}) error
+	Notify(method string, params any) error
 	ShowMessage(params *ShowMessageParams)
 	LogMessage(params *LogMessageParams)
 	PublishDiagnostics(params *PublishDiagnosticsParams) error
@@ -66,7 +66,7 @@ func (conn *connection) PublishDiagnostics(params *PublishDiagnosticsParams) err
 }
 
 // Notify sends a notification to the client.
-func (conn *connection) Notify(method string, params interface{}) error {
+func (conn *connection) Notify(method string, params any) error {
 	return conn.jsonrpc2Server.Notify(method, params)
 }
 
@@ -90,7 +90,7 @@ type Handler interface {
 	CodeLens(conn Conn, params *CodeLensParams) ([]*CodeLens, error)
 	Completion(conn Conn, params *CompletionParams) ([]*CompletionItem, error)
 	ResolveCompletionItem(conn Conn, item *CompletionItem) (*CompletionItem, error)
-	ExecuteCommand(conn Conn, params *ExecuteCommandParams) (interface{}, error)
+	ExecuteCommand(conn Conn, params *ExecuteCommandParams) (any, error)
 	DocumentSymbol(conn Conn, params *DocumentSymbolParams) ([]*DocumentSymbol, error)
 	DocumentLink(conn Conn, params *DocumentLinkParams) ([]*DocumentLink, error)
 	InlayHint(conn Conn, params *InlayHintParams) ([]*InlayHint, error)

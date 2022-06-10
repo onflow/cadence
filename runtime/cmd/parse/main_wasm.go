@@ -44,7 +44,7 @@ func main() {
 
 	js.Global().Set(
 		globalFunctionName("parse"),
-		js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		js.FuncOf(func(this js.Value, args []js.Value) any {
 			code := args[0].String()
 			return parse(code)
 		}),

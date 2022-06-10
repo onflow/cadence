@@ -20,7 +20,7 @@ package protocol
 
 import "encoding/json"
 
-func (s *Server) handleInitialize(req *json.RawMessage) (interface{}, error) {
+func (s *Server) handleInitialize(req *json.RawMessage) (any, error) {
 	var params InitializeParams
 	if err := json.Unmarshal(*req, &params); err != nil {
 		return nil, err
@@ -29,7 +29,7 @@ func (s *Server) handleInitialize(req *json.RawMessage) (interface{}, error) {
 	return s.Handler.Initialize(s.conn, &params)
 }
 
-func (s *Server) handleDidOpenTextDocument(req *json.RawMessage) (interface{}, error) {
+func (s *Server) handleDidOpenTextDocument(req *json.RawMessage) (any, error) {
 	var params DidOpenTextDocumentParams
 	if err := json.Unmarshal(*req, &params); err != nil {
 		return nil, err
@@ -39,7 +39,7 @@ func (s *Server) handleDidOpenTextDocument(req *json.RawMessage) (interface{}, e
 	return nil, err
 }
 
-func (s *Server) handleDidChangeTextDocument(req *json.RawMessage) (interface{}, error) {
+func (s *Server) handleDidChangeTextDocument(req *json.RawMessage) (any, error) {
 	var params DidChangeTextDocumentParams
 	if err := json.Unmarshal(*req, &params); err != nil {
 		return nil, err
@@ -49,7 +49,7 @@ func (s *Server) handleDidChangeTextDocument(req *json.RawMessage) (interface{},
 	return nil, err
 }
 
-func (s *Server) handleHover(req *json.RawMessage) (interface{}, error) {
+func (s *Server) handleHover(req *json.RawMessage) (any, error) {
 	var params TextDocumentPositionParams
 	if err := json.Unmarshal(*req, &params); err != nil {
 		return nil, err
@@ -58,7 +58,7 @@ func (s *Server) handleHover(req *json.RawMessage) (interface{}, error) {
 	return s.Handler.Hover(s.conn, &params)
 }
 
-func (s *Server) handleDefinition(req *json.RawMessage) (interface{}, error) {
+func (s *Server) handleDefinition(req *json.RawMessage) (any, error) {
 	var params TextDocumentPositionParams
 	if err := json.Unmarshal(*req, &params); err != nil {
 		return nil, err
@@ -67,7 +67,7 @@ func (s *Server) handleDefinition(req *json.RawMessage) (interface{}, error) {
 	return s.Handler.Definition(s.conn, &params)
 }
 
-func (s *Server) handleSignatureHelp(req *json.RawMessage) (interface{}, error) {
+func (s *Server) handleSignatureHelp(req *json.RawMessage) (any, error) {
 	var params TextDocumentPositionParams
 	if err := json.Unmarshal(*req, &params); err != nil {
 		return nil, err
@@ -76,7 +76,7 @@ func (s *Server) handleSignatureHelp(req *json.RawMessage) (interface{}, error) 
 	return s.Handler.SignatureHelp(s.conn, &params)
 }
 
-func (s *Server) handleDocumentHighlight(req *json.RawMessage) (interface{}, error) {
+func (s *Server) handleDocumentHighlight(req *json.RawMessage) (any, error) {
 	var params TextDocumentPositionParams
 	if err := json.Unmarshal(*req, &params); err != nil {
 		return nil, err
@@ -85,7 +85,7 @@ func (s *Server) handleDocumentHighlight(req *json.RawMessage) (interface{}, err
 	return s.Handler.DocumentHighlight(s.conn, &params)
 }
 
-func (s *Server) handleRename(req *json.RawMessage) (interface{}, error) {
+func (s *Server) handleRename(req *json.RawMessage) (any, error) {
 	var params RenameParams
 	if err := json.Unmarshal(*req, &params); err != nil {
 		return nil, err
@@ -94,7 +94,7 @@ func (s *Server) handleRename(req *json.RawMessage) (interface{}, error) {
 	return s.Handler.Rename(s.conn, &params)
 }
 
-func (s *Server) handleCodeAction(req *json.RawMessage) (interface{}, error) {
+func (s *Server) handleCodeAction(req *json.RawMessage) (any, error) {
 	var params CodeActionParams
 	if err := json.Unmarshal(*req, &params); err != nil {
 		return nil, err
@@ -103,7 +103,7 @@ func (s *Server) handleCodeAction(req *json.RawMessage) (interface{}, error) {
 	return s.Handler.CodeAction(s.conn, &params)
 }
 
-func (s *Server) handleCodeLens(req *json.RawMessage) (interface{}, error) {
+func (s *Server) handleCodeLens(req *json.RawMessage) (any, error) {
 	var params CodeLensParams
 	if err := json.Unmarshal(*req, &params); err != nil {
 		return nil, err
@@ -112,7 +112,7 @@ func (s *Server) handleCodeLens(req *json.RawMessage) (interface{}, error) {
 	return s.Handler.CodeLens(s.conn, &params)
 }
 
-func (s *Server) handleCompletion(req *json.RawMessage) (interface{}, error) {
+func (s *Server) handleCompletion(req *json.RawMessage) (any, error) {
 	var params CompletionParams
 	if err := json.Unmarshal(*req, &params); err != nil {
 		return nil, err
@@ -121,7 +121,7 @@ func (s *Server) handleCompletion(req *json.RawMessage) (interface{}, error) {
 	return s.Handler.Completion(s.conn, &params)
 }
 
-func (s *Server) handleCompletionItemResolve(req *json.RawMessage) (interface{}, error) {
+func (s *Server) handleCompletionItemResolve(req *json.RawMessage) (any, error) {
 	var completionItem CompletionItem
 	if err := json.Unmarshal(*req, &completionItem); err != nil {
 		return nil, err
@@ -130,7 +130,7 @@ func (s *Server) handleCompletionItemResolve(req *json.RawMessage) (interface{},
 	return s.Handler.ResolveCompletionItem(s.conn, &completionItem)
 }
 
-func (s *Server) handleExecuteCommand(req *json.RawMessage) (interface{}, error) {
+func (s *Server) handleExecuteCommand(req *json.RawMessage) (any, error) {
 	var params ExecuteCommandParams
 	if err := json.Unmarshal(*req, &params); err != nil {
 		return nil, err
@@ -139,7 +139,7 @@ func (s *Server) handleExecuteCommand(req *json.RawMessage) (interface{}, error)
 	return s.Handler.ExecuteCommand(s.conn, &params)
 }
 
-func (s *Server) handleDocumentSymbol(req *json.RawMessage) (interface{}, error) {
+func (s *Server) handleDocumentSymbol(req *json.RawMessage) (any, error) {
 	var params DocumentSymbolParams
 	if err := json.Unmarshal(*req, &params); err != nil {
 		return nil, err
@@ -147,7 +147,7 @@ func (s *Server) handleDocumentSymbol(req *json.RawMessage) (interface{}, error)
 	return s.Handler.DocumentSymbol(s.conn, &params)
 }
 
-func (s *Server) handleDocumentLink(req *json.RawMessage) (interface{}, error) {
+func (s *Server) handleDocumentLink(req *json.RawMessage) (any, error) {
 	var params DocumentLinkParams
 	if err := json.Unmarshal(*req, &params); err != nil {
 		return nil, err
@@ -155,7 +155,7 @@ func (s *Server) handleDocumentLink(req *json.RawMessage) (interface{}, error) {
 	return s.Handler.DocumentLink(s.conn, &params)
 }
 
-func (s *Server) handleInlayHint(req *json.RawMessage) (interface{}, error) {
+func (s *Server) handleInlayHint(req *json.RawMessage) (any, error) {
 	var params InlayHintParams
 	if err := json.Unmarshal(*req, &params); err != nil {
 		return nil, err
@@ -163,12 +163,12 @@ func (s *Server) handleInlayHint(req *json.RawMessage) (interface{}, error) {
 	return s.Handler.InlayHint(s.conn, &params)
 }
 
-func (s *Server) handleShutdown(_ *json.RawMessage) (interface{}, error) {
+func (s *Server) handleShutdown(_ *json.RawMessage) (any, error) {
 	err := s.Handler.Shutdown(s.conn)
 	return nil, err
 }
 
-func (s *Server) handleExit(_ *json.RawMessage) (interface{}, error) {
+func (s *Server) handleExit(_ *json.RawMessage) (any, error) {
 	err := s.Handler.Exit(s.conn)
 	return nil, err
 }
