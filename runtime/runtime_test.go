@@ -6913,7 +6913,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 		runtimeInterface := &testRuntimeInterface{
 			log: func(message string) {
 				// panic due to go-error in cadence implementation
-				var val interface{} = message
+				var val any = message
 				_ = val.(int)
 			},
 		}
@@ -6983,7 +6983,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 		runtimeInterface := &testRuntimeInterface{
 			log: func(message string) {
 				// panic due to Cadence implementation error
-				var val interface{} = message
+				var val any = message
 				_ = val.(int)
 			},
 		}
@@ -7042,7 +7042,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 			},
 			log: func(message string) {
 				// panic due to Cadence implementation error
-				var val interface{} = message
+				var val any = message
 				_ = val.(int)
 			},
 		}

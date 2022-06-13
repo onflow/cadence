@@ -210,7 +210,7 @@ func TestCheckOccurrencesFunction(t *testing.T) {
 		},
 	}
 
-	ms := make([]interface{}, len(matchers))
+	ms := make([]any, len(matchers))
 	for i := range matchers {
 		ms[i] = matchers[i]
 	}
@@ -338,7 +338,7 @@ func TestCheckOccurrencesStructAndInterface(t *testing.T) {
 		},
 	}
 
-	ms := make([]interface{}, len(matchers))
+	ms := make([]any, len(matchers))
 	for i := range matchers {
 		ms[i] = matchers[i]
 	}

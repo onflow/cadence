@@ -21,7 +21,7 @@ package cadence
 import "fmt"
 
 // Unmetered because this function is only used by the client.
-func NewValue(value interface{}) (Value, error) {
+func NewValue(value any) (Value, error) {
 	switch v := value.(type) {
 	case string:
 		return NewString(v)
@@ -43,7 +43,7 @@ func NewValue(value interface{}) (Value, error) {
 		return NewUInt32(v), nil
 	case uint64:
 		return NewUInt64(v), nil
-	case []interface{}:
+	case []any:
 		values := make([]Value, len(v))
 
 		for i, v := range v {
@@ -65,7 +65,7 @@ func NewValue(value interface{}) (Value, error) {
 
 // MustConvertValue converts a Go value to an ABI value or panics if the value
 // cannot be converted.
-func MustConvertValue(value interface{}) Value {
+func MustConvertValue(value any) Value {
 	ret, err := NewValue(value)
 	if err != nil {
 		panic(err)
@@ -119,7 +119,7 @@ func CastToUInt16(value Value) (uint16, error) {
 	return u, nil
 }
 
-func CastToArray(value Value) ([]interface{}, error) {
+func CastToArray(value Value) ([]any, error) {
 	casted, ok := value.(Array)
 	if !ok {
 		return nil, fmt.Errorf("%T is not a values.Array", value)
@@ -127,9 +127,9 @@ func CastToArray(value Value) ([]interface{}, error) {
 
 	goValue := casted.ToGoValue()
 
-	u, ok := goValue.([]interface{})
+	u, ok := goValue.([]any)
 	if !ok {
-		return nil, fmt.Errorf("%T is not a []interface{}]", value)
+		return nil, fmt.Errorf("%T is not a []any]", value)
 	}
 	return u, nil
 }

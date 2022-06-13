@@ -137,7 +137,7 @@ func (l *lexer) Reclaim() {
 }
 
 var pool = sync.Pool{
-	New: func() interface{} {
+	New: func() any {
 		return &lexer{
 			tokens: make([]Token, 0, 2048),
 		}
@@ -251,7 +251,7 @@ func (l *lexer) acceptOne(r rune) bool {
 }
 
 // emit writes a token to the channel.
-func (l *lexer) emit(ty TokenType, val interface{}, rangeStart ast.Position, consume bool) {
+func (l *lexer) emit(ty TokenType, val any, rangeStart ast.Position, consume bool) {
 
 	if len(l.tokens) >= tokenLimit {
 		panic(TokenLimitReachedError{})

@@ -99,7 +99,7 @@ func (e *Encoder) Encode(value cadence.Value) (err error) {
 
 // JSON struct definitions
 
-type jsonValue interface{}
+type jsonValue any
 
 type jsonValueObject struct {
 	Type  string    `json:"type"`
@@ -333,7 +333,7 @@ func prepareVoid() jsonValue {
 }
 
 func prepareOptional(v cadence.Optional) jsonValue {
-	var value interface{}
+	var value any
 
 	if v.Value != nil {
 		value = Prepare(v.Value)

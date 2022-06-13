@@ -77,7 +77,7 @@ type excerpt struct {
 	isError  bool
 }
 
-func newExcerpt(obj interface{}, message string, isError bool) excerpt {
+func newExcerpt(obj any, message string, isError bool) excerpt {
 	excerpt := excerpt{
 		message: message,
 		isError: isError,

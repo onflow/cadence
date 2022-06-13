@@ -109,7 +109,7 @@ var exprIdentifierLeftBindingPowers = map[string]int{}
 var exprLeftDenotations = [lexer.TokenMax]exprLeftDenotationFunc{}
 var exprMetaLeftDenotations = [lexer.TokenMax]exprMetaLeftDenotationFunc{}
 
-func defineExpr(def interface{}) {
+func defineExpr(def any) {
 	switch def := def.(type) {
 	case infixExpr:
 		tokenType := def.tokenType

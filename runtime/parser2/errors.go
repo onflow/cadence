@@ -76,7 +76,7 @@ func (e *SyntaxError) StartPosition() ast.Position {
 	return e.Pos
 }
 
-func (e *SyntaxError) EndPosition(common.MemoryGauge) ast.Position {
+func (e *SyntaxError) EndPosition(_ common.MemoryGauge) ast.Position {
 	return e.Pos
 }
 
@@ -101,7 +101,7 @@ func (e *JuxtaposedUnaryOperatorsError) StartPosition() ast.Position {
 	return e.Pos
 }
 
-func (e *JuxtaposedUnaryOperatorsError) EndPosition(common.MemoryGauge) ast.Position {
+func (e *JuxtaposedUnaryOperatorsError) EndPosition(_ common.MemoryGauge) ast.Position {
 	return e.Pos
 }
 
@@ -214,4 +214,26 @@ func (e TypeDepthLimitReachedError) StartPosition() ast.Position {
 
 func (e TypeDepthLimitReachedError) EndPosition(_ common.MemoryGauge) ast.Position {
 	return e.Pos
+}
+
+// MissingCommaInParameterListError
+
+type MissingCommaInParameterListError struct {
+	Pos ast.Position
+}
+
+var _ ParseError = &MissingCommaInParameterListError{}
+
+func (*MissingCommaInParameterListError) isParseError() {}
+
+func (e *MissingCommaInParameterListError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *MissingCommaInParameterListError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (e *MissingCommaInParameterListError) Error() string {
+	return "missing comma after parameter"
 }

@@ -112,7 +112,7 @@ type postfixType struct {
 	leftDenotation postfixTypeFunc
 }
 
-func defineType(def interface{}) {
+func defineType(def any) {
 	switch def := def.(type) {
 	case prefixType:
 		tokenType := def.tokenType

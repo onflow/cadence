@@ -75,7 +75,7 @@ func TestParseBuffering(t *testing.T) {
 
 		_, errs := Parse(
 			"a b c d",
-			func(p *parser) interface{} {
+			func(p *parser) any {
 				p.mustOneString(lexer.TokenIdentifier, "a")
 				p.mustOne(lexer.TokenSpace)
 
@@ -104,7 +104,7 @@ func TestParseBuffering(t *testing.T) {
 
 		_, errs := Parse(
 			"a b x d",
-			func(p *parser) interface{} {
+			func(p *parser) any {
 				p.mustOneString(lexer.TokenIdentifier, "a")
 				p.mustOne(lexer.TokenSpace)
 
@@ -141,7 +141,7 @@ func TestParseBuffering(t *testing.T) {
 
 		_, errs := Parse(
 			"a b c d",
-			func(p *parser) interface{} {
+			func(p *parser) any {
 				p.mustOneString(lexer.TokenIdentifier, "a")
 				p.mustOne(lexer.TokenSpace)
 
@@ -173,7 +173,7 @@ func TestParseBuffering(t *testing.T) {
 
 		_, errs := Parse(
 			"a b c d",
-			func(p *parser) interface{} {
+			func(p *parser) any {
 				p.mustOneString(lexer.TokenIdentifier, "a")
 				p.mustOne(lexer.TokenSpace)
 
@@ -221,7 +221,7 @@ func TestParseBuffering(t *testing.T) {
 
 		_, errs := Parse(
 			"a b c x",
-			func(p *parser) interface{} {
+			func(p *parser) any {
 				p.mustOneString(lexer.TokenIdentifier, "a")
 				p.mustOne(lexer.TokenSpace)
 
@@ -374,7 +374,7 @@ func TestParseEOF(t *testing.T) {
 
 	_, errs := Parse(
 		"a b",
-		func(p *parser) interface{} {
+		func(p *parser) any {
 			p.mustOneString(lexer.TokenIdentifier, "a")
 			p.skipSpaceAndComments(true)
 			p.mustOneString(lexer.TokenIdentifier, "b")
@@ -501,7 +501,7 @@ func TestParseArgumentList(t *testing.T) {
 		gauge := makeLimitingMemoryGauge()
 		gauge.Limit(common.MemoryKindSyntaxToken, 0)
 
-		var panicMsg interface{}
+		var panicMsg any
 		(func() {
 			defer func() {
 				panicMsg = recover()
