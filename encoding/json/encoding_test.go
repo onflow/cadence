@@ -1833,6 +1833,7 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 					Identifier: "foo",
 				},
 			},
+			Initializers: [][]cadence.Parameter{},
 		}
 
 		ty.Fields[0].Type = cadence.OptionalType{
@@ -1856,6 +1857,8 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 		fooTy := &cadence.ResourceType{
 			Location:            utils.TestLocation,
 			QualifiedIdentifier: "Foo",
+			Fields:              []cadence.Field{},
+			Initializers:        [][]cadence.Parameter{},
 		}
 
 		barTy := &cadence.ResourceType{
@@ -1871,6 +1874,7 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 					Type:       fooTy,
 				},
 			},
+			Initializers: [][]cadence.Parameter{},
 		}
 
 		testEncodeAndDecode(
