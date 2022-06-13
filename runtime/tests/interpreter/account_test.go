@@ -1891,3 +1891,60 @@ func TestInterpretAccount_StorageFields(t *testing.T) {
 		}
 	}
 }
+
+func TestInterpretCapability(t *testing.T) {
+
+	t.Parallel()
+
+	address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+	inter, _ := testAccount(
+		t,
+		address,
+		true,
+		`
+          struct S1 {}
+		  struct S2 {}
+
+          fun test() {
+              let s1 = S1()
+              account.save(s1, to: /storage/s)
+              account.link<&S1>(
+                  /public/s,
+                  target: /storage/s
+              )
+          }
+
+		  fun s1(): Bool {
+              return account.getCapability<&S1>(/public/s).check()
+          }
+
+		  fun s2(): Bool {
+              let cap: Capability = account.getCapability<&S1>(/public/s)
+		      return cap.check<&S2>()
+          }
+        `,
+	)
+
+	t.Run("save", func(t *testing.T) {
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("check S1", func(t *testing.T) {
+
+		res, err := inter.Invoke("s1")
+		require.NoError(t, err)
+
+		require.Equal(t, interpreter.NewUnmeteredBoolValue(true), res)
+	})
+
+	t.Run("check S2", func(t *testing.T) {
+
+		res, err := inter.Invoke("s2")
+		require.NoError(t, err)
+
+		require.Equal(t, interpreter.NewUnmeteredBoolValue(false), res)
+	})
+}
