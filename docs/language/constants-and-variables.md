@@ -10,7 +10,7 @@ Declarations can be created in any scope, including the global scope.
 
 Constant means that the *identifier's* association is constant,
 not the *value* itself –
-the value may still be changed if is mutable.
+the value may still be changed if it is mutable.
 
 Constants are declared using the `let` keyword. Variables are declared
 using the `var` keyword.
