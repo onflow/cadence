@@ -8093,33 +8093,44 @@ func (v UInt8Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []
 	return scratch[:2]
 }
 
+func ConvertUnsigned8(
+	memoryGauge common.MemoryGauge,
+	value Value,
+	onOverflow func(),
+	onUnderflow func(),
+) uint8 {
+	switch value := value.(type) {
+	case BigNumberValue:
+		v := value.ToBigInt(memoryGauge)
+		if v.Cmp(sema.UInt8TypeMaxInt) > 0 {
+			onOverflow()
+		} else if v.Sign() < 0 {
+			onUnderflow()
+		}
+		return uint8(v.Int64())
+
+	case NumberValue:
+		v := value.ToInt()
+		if v > math.MaxUint8 {
+			onOverflow()
+		} else if v < 0 {
+			onUnderflow()
+		}
+		return uint8(v)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
 func ConvertUInt8(memoryGauge common.MemoryGauge, value Value) UInt8Value {
 	return NewUInt8Value(
 		memoryGauge,
 		func() uint8 {
-
-			switch value := value.(type) {
-			case BigNumberValue:
-				v := value.ToBigInt(memoryGauge)
-				if v.Cmp(sema.UInt8TypeMaxInt) > 0 {
-					panic(OverflowError{})
-				} else if v.Sign() < 0 {
-					panic(UnderflowError{})
-				}
-				return uint8(v.Int64())
-
-			case NumberValue:
-				v := value.ToInt()
-				if v > math.MaxUint8 {
-					panic(OverflowError{})
-				} else if v < 0 {
-					panic(UnderflowError{})
-				}
-				return uint8(v)
-
-			default:
-				panic(errors.NewUnreachableError())
-			}
+			return ConvertUnsigned8(memoryGauge, value,
+				func() { panic(OverflowError{}) },
+				func() { panic(UnderflowError{}) },
+			)
 		},
 	)
 }
@@ -8634,32 +8645,44 @@ func (v UInt16Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch [
 	return scratch[:3]
 }
 
+func ConvertUnsigned16(
+	memoryGauge common.MemoryGauge,
+	value Value,
+	onOverflow func(),
+	onUnderflow func(),
+) uint16 {
+	switch value := value.(type) {
+	case BigNumberValue:
+		v := value.ToBigInt(memoryGauge)
+		if v.Cmp(sema.UInt16TypeMaxInt) > 0 {
+			onOverflow()
+		} else if v.Sign() < 0 {
+			onUnderflow()
+		}
+		return uint16(v.Int64())
+
+	case NumberValue:
+		v := value.ToInt()
+		if v > math.MaxUint16 {
+			onOverflow()
+		} else if v < 0 {
+			onUnderflow()
+		}
+		return uint16(v)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
 func ConvertUInt16(memoryGauge common.MemoryGauge, value Value) UInt16Value {
 	return NewUInt16Value(
 		memoryGauge,
 		func() uint16 {
-			switch value := value.(type) {
-			case BigNumberValue:
-				v := value.ToBigInt(memoryGauge)
-				if v.Cmp(sema.UInt16TypeMaxInt) > 0 {
-					panic(OverflowError{})
-				} else if v.Sign() < 0 {
-					panic(UnderflowError{})
-				}
-				return uint16(v.Int64())
-
-			case NumberValue:
-				v := value.ToInt()
-				if v > math.MaxUint16 {
-					panic(OverflowError{})
-				} else if v < 0 {
-					panic(UnderflowError{})
-				}
-				return uint16(v)
-
-			default:
-				panic(errors.NewUnreachableError())
-			}
+			return ConvertUnsigned16(memoryGauge, value,
+				func() { panic(OverflowError{}) },
+				func() { panic(UnderflowError{}) },
+			)
 		},
 	)
 }
@@ -9181,32 +9204,44 @@ func (v UInt32Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch [
 	return scratch[:5]
 }
 
+func ConvertUnsigned32(
+	memoryGauge common.MemoryGauge,
+	value Value,
+	onOverflow func(),
+	onUnderflow func(),
+) uint32 {
+	switch value := value.(type) {
+	case BigNumberValue:
+		v := value.ToBigInt(memoryGauge)
+		if v.Cmp(sema.UInt32TypeMaxInt) > 0 {
+			onOverflow()
+		} else if v.Sign() < 0 {
+			onUnderflow()
+		}
+		return uint32(v.Int64())
+
+	case NumberValue:
+		v := value.ToInt()
+		if v > math.MaxUint32 {
+			onOverflow()
+		} else if v < 0 {
+			onUnderflow()
+		}
+		return uint32(v)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
 func ConvertUInt32(memoryGauge common.MemoryGauge, value Value) UInt32Value {
 	return NewUInt32Value(
 		memoryGauge,
 		func() uint32 {
-			switch value := value.(type) {
-			case BigNumberValue:
-				v := value.ToBigInt(memoryGauge)
-				if v.Cmp(sema.UInt32TypeMaxInt) > 0 {
-					panic(OverflowError{})
-				} else if v.Sign() < 0 {
-					panic(UnderflowError{})
-				}
-				return uint32(v.Int64())
-
-			case NumberValue:
-				v := value.ToInt()
-				if v > math.MaxUint32 {
-					panic(OverflowError{})
-				} else if v < 0 {
-					panic(UnderflowError{})
-				}
-				return uint32(v)
-
-			default:
-				panic(errors.NewUnreachableError())
-			}
+			return ConvertUnsigned32(memoryGauge, value,
+				func() { panic(OverflowError{}) },
+				func() { panic(UnderflowError{}) },
+			)
 		},
 	)
 }
@@ -9757,31 +9792,42 @@ func (v UInt64Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch [
 	return scratch[:9]
 }
 
+func ConvertUnsigned64(
+	memoryGauge common.MemoryGauge,
+	value Value,
+	onOverflow func(),
+	onUnderflow func(),
+) uint64 {
+	switch value := value.(type) {
+	case BigNumberValue:
+		v := value.ToBigInt(memoryGauge)
+		if v.Cmp(sema.UInt64TypeMaxInt) > 0 {
+			onOverflow()
+		} else if v.Sign() < 0 {
+			onUnderflow()
+		}
+		return uint64(v.Int64())
+
+	case NumberValue:
+		v := value.ToInt()
+		if v < 0 {
+			onUnderflow()
+		}
+		return uint64(v)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
 func ConvertUInt64(memoryGauge common.MemoryGauge, value Value) UInt64Value {
 	return NewUInt64Value(
 		memoryGauge,
 		func() uint64 {
-			switch value := value.(type) {
-			case BigNumberValue:
-				v := value.ToBigInt(memoryGauge)
-				if v.Cmp(sema.UInt64TypeMaxInt) > 0 {
-					panic(OverflowError{})
-				} else if v.Sign() < 0 {
-					panic(UnderflowError{})
-				}
-				return uint64(v.Int64())
-
-			case NumberValue:
-				v := value.ToInt()
-				if v < 0 {
-					panic(UnderflowError{})
-				}
-				return uint64(v)
-
-			default:
-				panic(errors.NewUnreachableError())
-			}
-
+			return ConvertUnsigned64(memoryGauge, value,
+				func() { panic(OverflowError{}) },
+				func() { panic(UnderflowError{}) },
+			)
 		},
 	)
 }
@@ -11523,10 +11569,12 @@ func (v Word8Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []
 }
 
 func ConvertWord8(memoryGauge common.MemoryGauge, value Value) Word8Value {
-	uint8Value := ConvertUInt8(memoryGauge, value)
-
-	// Already metered during conversion in `ConvertUInt8`
-	return NewUnmeteredWord8Value(uint8(uint8Value))
+	return NewWord8Value(
+		memoryGauge,
+		func() uint8 {
+			return ConvertUnsigned8(memoryGauge, value, func() {}, func() {})
+		},
+	)
 }
 
 func (v Word8Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -11957,10 +12005,12 @@ func (v Word16Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch [
 }
 
 func ConvertWord16(memoryGauge common.MemoryGauge, value Value) Word16Value {
-	uint16Value := ConvertUInt16(memoryGauge, value)
-
-	// Already metered during conversion in `ConvertUInt16`
-	return NewUnmeteredWord16Value(uint16(uint16Value))
+	return NewWord16Value(
+		memoryGauge,
+		func() uint16 {
+			return ConvertUnsigned16(memoryGauge, value, func() {}, func() {})
+		},
+	)
 }
 
 func (v Word16Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -12394,10 +12444,12 @@ func (v Word32Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch [
 }
 
 func ConvertWord32(memoryGauge common.MemoryGauge, value Value) Word32Value {
-	uint32Value := ConvertUInt32(memoryGauge, value)
-
-	// Already metered during conversion in `ConvertUInt32`
-	return NewUnmeteredWord32Value(uint32(uint32Value))
+	return NewWord32Value(
+		memoryGauge,
+		func() uint32 {
+			return ConvertUnsigned32(memoryGauge, value, func() {}, func() {})
+		},
+	)
 }
 
 func (v Word32Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -12857,10 +12909,12 @@ func (v Word64Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch [
 }
 
 func ConvertWord64(memoryGauge common.MemoryGauge, value Value) Word64Value {
-	uint64Value := ConvertUInt64(memoryGauge, value)
-
-	// Already metered during conversion in `ConvertUInt64`
-	return NewUnmeteredWord64Value(uint64(uint64Value))
+	return NewWord64Value(
+		memoryGauge,
+		func() uint64 {
+			return ConvertUnsigned64(memoryGauge, value, func() {}, func() {})
+		},
+	)
 }
 
 func (v Word64Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {

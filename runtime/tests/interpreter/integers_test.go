@@ -115,6 +115,75 @@ func TestInterpretIntegerConversions(t *testing.T) {
 	}
 }
 
+func TestInterpretWordOverflowConversions(t *testing.T) {
+
+	t.Parallel()
+
+	words := map[string]*big.Int{
+		"Word8":  sema.UInt8TypeMaxInt,
+		"Word16": sema.UInt16TypeMaxInt,
+		"Word32": sema.UInt32TypeMaxInt,
+		"Word64": sema.UInt64TypeMaxInt,
+	}
+
+	for typeName, value := range words {
+
+		t.Run(typeName, func(t *testing.T) {
+
+			inter := parseCheckAndInterpret(t,
+				fmt.Sprintf(
+					`
+                      let x = %s
+                      let y = %s(x + 1)
+                    `,
+					value.String(),
+					typeName,
+				),
+			)
+
+			require.Equal(
+				t,
+				"0",
+				inter.Globals["y"].GetValue().String(),
+			)
+		})
+	}
+}
+
+func TestInterpretWordUnderflowConversions(t *testing.T) {
+
+	t.Parallel()
+
+	words := map[string]*big.Int{
+		"Word8":  sema.UInt8TypeMaxInt,
+		"Word16": sema.UInt16TypeMaxInt,
+		"Word32": sema.UInt32TypeMaxInt,
+		"Word64": sema.UInt64TypeMaxInt,
+	}
+
+	for typeName, value := range words {
+
+		t.Run(typeName, func(t *testing.T) {
+
+			inter := parseCheckAndInterpret(t,
+				fmt.Sprintf(
+					`
+                      let x = 0
+                      let y = %s(x - 1)
+                    `,
+					typeName,
+				),
+			)
+
+			require.Equal(
+				t,
+				value.String(),
+				inter.Globals["y"].GetValue().String(),
+			)
+		})
+	}
+}
+
 func TestInterpretAddressConversion(t *testing.T) {
 
 	t.Parallel()
