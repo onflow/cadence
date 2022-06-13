@@ -1839,7 +1839,7 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 			Type: ty,
 		}
 
-		testEncode(
+		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{
 				StaticType: ty,
@@ -1873,7 +1873,7 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 			},
 		}
 
-		testEncode(
+		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{
 				StaticType: barTy,
