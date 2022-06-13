@@ -620,7 +620,7 @@ func preparePath(x cadence.Path) jsonValue {
 	}
 }
 
-func prepareParameterType(parameterType cadence.Parameter, results typeResults) jsonParameterType {
+func prepareParameterType(parameterType cadence.Parameter, results typePreparationResults) jsonParameterType {
 	return jsonParameterType{
 		Label: parameterType.Label,
 		Id:    parameterType.Identifier,
@@ -628,14 +628,14 @@ func prepareParameterType(parameterType cadence.Parameter, results typeResults) 
 	}
 }
 
-func prepareFieldType(fieldType cadence.Field, results typeResults) jsonFieldType {
+func prepareFieldType(fieldType cadence.Field, results typePreparationResults) jsonFieldType {
 	return jsonFieldType{
 		Id:   fieldType.Identifier,
 		Type: prepareType(fieldType.Type, results),
 	}
 }
 
-func prepareFields(fieldTypes []cadence.Field, results typeResults) []jsonFieldType {
+func prepareFields(fieldTypes []cadence.Field, results typePreparationResults) []jsonFieldType {
 	fields := make([]jsonFieldType, 0)
 	for _, field := range fieldTypes {
 		fields = append(fields, prepareFieldType(field, results))
@@ -643,7 +643,7 @@ func prepareFields(fieldTypes []cadence.Field, results typeResults) []jsonFieldT
 	return fields
 }
 
-func prepareParameters(parameterTypes []cadence.Parameter, results typeResults) []jsonParameterType {
+func prepareParameters(parameterTypes []cadence.Parameter, results typePreparationResults) []jsonParameterType {
 	parameters := make([]jsonParameterType, 0)
 	for _, param := range parameterTypes {
 		parameters = append(parameters, prepareParameterType(param, results))
@@ -651,7 +651,7 @@ func prepareParameters(parameterTypes []cadence.Parameter, results typeResults) 
 	return parameters
 }
 
-func prepareInitializers(initializerTypes [][]cadence.Parameter, results typeResults) [][]jsonParameterType {
+func prepareInitializers(initializerTypes [][]cadence.Parameter, results typePreparationResults) [][]jsonParameterType {
 	initializers := make([][]jsonParameterType, 0)
 	for _, params := range initializerTypes {
 		initializers = append(initializers, prepareParameters(params, results))
@@ -659,7 +659,7 @@ func prepareInitializers(initializerTypes [][]cadence.Parameter, results typeRes
 	return initializers
 }
 
-func prepareType(typ cadence.Type, results typeResults) jsonValue {
+func prepareType(typ cadence.Type, results typePreparationResults) jsonValue {
 
 	var supportedRecursiveType bool
 	switch typ.(type) {
@@ -856,13 +856,13 @@ func prepareType(typ cadence.Type, results typeResults) jsonValue {
 	}
 }
 
-type typeResults map[cadence.Type]struct{}
+type typePreparationResults map[cadence.Type]struct{}
 
 func prepareTypeValue(typeValue cadence.TypeValue) jsonValue {
 	return jsonValueObject{
 		Type: typeTypeStr,
 		Value: jsonTypeValue{
-			StaticType: prepareType(typeValue.StaticType, typeResults{}),
+			StaticType: prepareType(typeValue.StaticType, typePreparationResults{}),
 		},
 	}
 }
@@ -873,7 +873,7 @@ func prepareCapability(capability cadence.Capability) jsonValue {
 		Value: jsonCapabilityValue{
 			Path:       preparePath(capability.Path),
 			Address:    encodeBytes(capability.Address.Bytes()),
-			BorrowType: prepareType(capability.BorrowType, typeResults{}),
+			BorrowType: prepareType(capability.BorrowType, typePreparationResults{}),
 		},
 	}
 }
