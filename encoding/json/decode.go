@@ -871,12 +871,7 @@ func (d *Decoder) decodeFieldTypes(fs []interface{}, results typeDecodingResults
 		Amount: uint64(len(fs)),
 	})
 
-	count := len(fs)
-	if count == 0 {
-		return nil
-	}
-
-	fields := make([]cadence.Field, 0, count)
+	fields := make([]cadence.Field, 0, len(fs))
 
 	for _, field := range fields {
 		fields = append(fields, d.decodeFieldType(field, results))
@@ -915,16 +910,12 @@ func (d *Decoder) decodeNominalType(
 	fields := d.decodeFieldTypes(fs, results)
 
 	// Unmetered because this is created as an array of nil arrays, not Parameter structs
-	var inits [][]cadence.Parameter
-	count := len(initializers)
-	if count > 0 {
-		inits = make([][]cadence.Parameter, 0, count)
-		for _, params := range initializers {
-			inits = append(
-				inits,
-				d.decodeParamTypes(toSlice(params), results),
-			)
-		}
+	inits := make([][]cadence.Parameter, 0, len(initializers))
+	for _, params := range initializers {
+		inits = append(
+			inits,
+			d.decodeParamTypes(toSlice(params), results),
+		)
 	}
 
 	location, qualifiedIdentifier, err := common.DecodeTypeID(d.gauge, typeID)
