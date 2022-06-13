@@ -23,6 +23,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/common"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -966,6 +967,190 @@ func TestInterpretCapability_address(t *testing.T) {
 		require.NoError(t, err)
 
 		require.IsType(t, interpreter.AddressValue{}, value)
+	})
+
+}
+
+func TestInterpretCapabilityFunctionMultipleTypes(t *testing.T) {
+
+	t.Parallel()
+
+	address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+	t.Run("check", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, _ := testAccount(
+			t,
+			address,
+			true,
+			`
+              struct S1 {}
+              struct S2 {}
+
+              fun test() {
+                  let s1 = S1()
+                  account.save(s1, to: /storage/s1)
+                  account.link<&S1>(
+                      /public/s,
+                      target: /storage/s1
+                  )
+              }
+
+              fun s1TypedGetCapabilityUntypedCheck(): Bool {
+                  return account.getCapability<&S1>(/public/s).check()
+              }
+
+              fun s1UntypedGetCapabilityTypedCheck(): Bool {
+                  return account.getCapability(/public/s).check<&S1>()
+              }
+
+              fun s2UntypedGetCapabilityTypedCheck(): Bool {
+                  return account.getCapability(/public/s).check<&S2>()
+              }
+
+              fun s2TypedGetCapabilityTypedCheck(): Bool {
+                  let cap: Capability = account.getCapability<&S1>(/public/s)
+                  return cap.check<&S2>()
+              }
+            `,
+		)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		t.Run("s1TypedGetCapabilityUntypedCheck", func(t *testing.T) {
+
+			res, err := inter.Invoke("s1TypedGetCapabilityUntypedCheck")
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.NewUnmeteredBoolValue(true), res)
+		})
+
+		t.Run("s1UntypedGetCapabilityTypedCheck", func(t *testing.T) {
+
+			res, err := inter.Invoke("s1UntypedGetCapabilityTypedCheck")
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.NewUnmeteredBoolValue(true), res)
+		})
+
+		t.Run("s2UntypedGetCapabilityTypedCheck", func(t *testing.T) {
+
+			res, err := inter.Invoke("s2UntypedGetCapabilityTypedCheck")
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.NewUnmeteredBoolValue(false), res)
+		})
+
+		t.Run("s2TypedGetCapabilityTypedCheck", func(t *testing.T) {
+
+			res, err := inter.Invoke("s2TypedGetCapabilityTypedCheck")
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.NewUnmeteredBoolValue(false), res)
+		})
+	})
+
+	t.Run("borrow", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, _ := testAccount(
+			t,
+			address,
+			true,
+			`
+              struct S1 {}
+              struct S2 {}
+
+              fun test() {
+                  let s1 = S1()
+                  account.save(s1, to: /storage/s1)
+                  account.link<&S1>(
+                      /public/s,
+                      target: /storage/s1
+                  )
+              }
+
+              fun s1TypedGetCapabilityUntypedBorrow(): &S1? {
+                  return account.getCapability<&S1>(/public/s).borrow()
+              }
+
+              fun s1UntypedGetCapabilityTypedBorrow(): &S1? {
+                  return account.getCapability(/public/s).borrow<&S1>()
+              }
+
+              fun s2UntypedGetCapabilityTypedBorrow(): &S2? {
+                  return account.getCapability(/public/s).borrow<&S2>()
+              }
+
+              fun s2TypedGetCapabilityTypedBorrow(): &S2? {
+                  let cap: Capability = account.getCapability<&S1>(/public/s)
+                  return cap.borrow<&S2>()
+              }
+            `,
+		)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		s1Type, err := inter.GetCompositeType(
+			inter.Location,
+			"S1",
+			inter.Location.TypeID(nil, "S1"),
+		)
+		require.NoError(t, err)
+
+		expectedReference := interpreter.NewUnmeteredStorageReferenceValue(
+			false,
+			address.ToAddress(),
+			interpreter.NewUnmeteredPathValue(
+				common.PathDomainStorage,
+				"s1",
+			),
+			s1Type,
+		)
+
+		t.Run("s1TypedGetCapabilityUntypedBorrow", func(t *testing.T) {
+
+			res, err := inter.Invoke("s1TypedGetCapabilityUntypedBorrow")
+			require.NoError(t, err)
+
+			require.Equal(t,
+				interpreter.NewUnmeteredSomeValueNonCopying(expectedReference),
+				res,
+			)
+		})
+
+		t.Run("s1UntypedGetCapabilityTypedBorrow", func(t *testing.T) {
+
+			res, err := inter.Invoke("s1UntypedGetCapabilityTypedBorrow")
+			require.NoError(t, err)
+
+			require.Equal(
+				t,
+				interpreter.NewUnmeteredSomeValueNonCopying(expectedReference),
+				res,
+			)
+		})
+
+		t.Run("s2UntypedGetCapabilityTypedBorrow", func(t *testing.T) {
+
+			res, err := inter.Invoke("s2UntypedGetCapabilityTypedBorrow")
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.NewUnmeteredNilValue(), res)
+		})
+
+		t.Run("s2TypedGetCapabilityTypedBorrow", func(t *testing.T) {
+
+			res, err := inter.Invoke("s2TypedGetCapabilityTypedBorrow")
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.NewUnmeteredNilValue(), res)
+		})
 	})
 
 }
