@@ -873,7 +873,7 @@ func (d *Decoder) decodeFieldTypes(fs []interface{}, results typeDecodingResults
 
 	fields := make([]cadence.Field, 0, len(fs))
 
-	for _, field := range fields {
+	for _, field := range fs {
 		fields = append(fields, d.decodeFieldType(field, results))
 	}
 
@@ -906,8 +906,7 @@ func (d *Decoder) decodeNominalType(
 	kind, typeID string,
 	fs, initializers []interface{},
 	results typeDecodingResults,
-) (ty cadence.Type) {
-	fields := d.decodeFieldTypes(fs, results)
+) cadence.Type {
 
 	// Unmetered because this is created as an array of nil arrays, not Parameter structs
 	inits := make([][]cadence.Parameter, 0, len(initializers))
@@ -923,79 +922,100 @@ func (d *Decoder) decodeNominalType(
 		panic(ErrInvalidJSONCadence)
 	}
 
+	var result cadence.Type
+	var interfaceType cadence.InterfaceType
+	var compositeType cadence.CompositeType
+
 	switch kind {
 	case "Struct":
-		ty = cadence.NewMeteredStructType(
+		compositeType = cadence.NewMeteredStructType(
 			d.gauge,
 			location,
 			qualifiedIdentifier,
-			fields,
+			nil,
 			inits,
 		)
+		result = compositeType
 	case "Resource":
-		ty = cadence.NewMeteredResourceType(
+		compositeType = cadence.NewMeteredResourceType(
 			d.gauge,
 			location,
 			qualifiedIdentifier,
-			fields,
+			nil,
 			inits,
 		)
+		result = compositeType
 	case "Event":
-		ty = cadence.NewMeteredEventType(
+		compositeType = cadence.NewMeteredEventType(
 			d.gauge,
 			location,
 			qualifiedIdentifier,
-			fields,
+			nil,
 			inits[0],
 		)
+		result = compositeType
 	case "Contract":
-		ty = cadence.NewMeteredContractType(
+		compositeType = cadence.NewMeteredContractType(
 			d.gauge,
 			location,
 			qualifiedIdentifier,
-			fields,
+			nil,
 			inits,
 		)
+		result = compositeType
 	case "StructInterface":
-		ty = cadence.NewMeteredStructInterfaceType(
+		interfaceType = cadence.NewMeteredStructInterfaceType(
 			d.gauge,
 			location,
 			qualifiedIdentifier,
-			fields,
+			nil,
 			inits,
 		)
+		result = interfaceType
 	case "ResourceInterface":
-		ty = cadence.NewMeteredResourceInterfaceType(
+		interfaceType = cadence.NewMeteredResourceInterfaceType(
 			d.gauge,
 			location,
 			qualifiedIdentifier,
-			fields,
+			nil,
 			inits,
 		)
+		result = interfaceType
 	case "ContractInterface":
-		ty = cadence.NewMeteredContractInterfaceType(
+		interfaceType = cadence.NewMeteredContractInterfaceType(
 			d.gauge,
 			location,
 			qualifiedIdentifier,
-			fields,
+			nil,
 			inits,
 		)
+		result = interfaceType
 	case "Enum":
-		ty = cadence.NewMeteredEnumType(
+		compositeType = cadence.NewMeteredEnumType(
 			d.gauge,
 			location,
 			qualifiedIdentifier,
 			d.decodeType(obj.Get(typeKey), results),
-			fields,
+			nil,
 			inits,
 		)
+		result = compositeType
 	default:
 		panic(ErrInvalidJSONCadence)
 	}
 
-	results[typeID] = ty
+	results[typeID] = result
 
-	return ty
+	fields := d.decodeFieldTypes(fs, results)
+
+	switch {
+	case compositeType != nil:
+		compositeType.SetCompositeFields(fields)
+	case interfaceType != nil:
+		interfaceType.SetInterfaceFields(fields)
+	}
+
+	return result
 }
 
 func (d *Decoder) decodeRestrictedType(
