@@ -28,7 +28,7 @@ import (
 func ByteArrayValueToByteSlice(memoryGauge common.MemoryGauge, value Value) ([]byte, error) {
 	array, ok := value.(*ArrayValue)
 	if !ok {
-		return nil, errors.NewDefaultUserErrorFromString("value is not an array")
+		return nil, errors.NewDefaultUserError("value is not an array")
 	}
 
 	result := make([]byte, 0, array.Count())
@@ -58,13 +58,13 @@ func ByteValueToByte(memoryGauge common.MemoryGauge, element Value) (byte, error
 	case BigNumberValue:
 		bigInt := element.ToBigInt(memoryGauge)
 		if !bigInt.IsUint64() {
-			return 0, errors.NewDefaultUserErrorFromString("value is not in byte range (0-255)")
+			return 0, errors.NewDefaultUserError("value is not in byte range (0-255)")
 		}
 
 		integer := bigInt.Uint64()
 
 		if integer > math.MaxUint8 {
-			return 0, errors.NewDefaultUserErrorFromString("value is not in byte range (0-255)")
+			return 0, errors.NewDefaultUserError("value is not in byte range (0-255)")
 		}
 
 		b = byte(integer)
@@ -73,13 +73,13 @@ func ByteValueToByte(memoryGauge common.MemoryGauge, element Value) (byte, error
 		integer := element.ToInt()
 
 		if integer < 0 || integer > math.MaxUint8 {
-			return 0, errors.NewDefaultUserErrorFromString("value is not in byte range (0-255)")
+			return 0, errors.NewDefaultUserError("value is not in byte range (0-255)")
 		}
 
 		b = byte(integer)
 
 	default:
-		return 0, errors.NewDefaultUserErrorFromString("value is not an integer")
+		return 0, errors.NewDefaultUserError("value is not an integer")
 	}
 
 	return b, nil

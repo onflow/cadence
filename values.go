@@ -21,13 +21,13 @@ package cadence
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/onflow/cadence/runtime/errors"
 	"math/big"
 	"unicode/utf8"
 	"unsafe"
 
 	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/format"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"

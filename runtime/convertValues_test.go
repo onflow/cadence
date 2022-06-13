@@ -771,13 +771,17 @@ func TestImportValue(t *testing.T) {
 func assertUserError(t *testing.T, err error) {
 	require.True(t,
 		errors.IsUserError(err),
-		"Expected `UserError`, found `%T`", err)
+		"Expected `UserError`, found `%T`",
+		err,
+	)
 }
 
 func assertInternalError(t *testing.T, err error) {
 	require.True(t,
 		errors.IsInternalError(err),
-		"Expected `InternalError`, found `%T`", err)
+		"Expected `InternalError`, found `%T`",
+		err,
+	)
 }
 
 func TestImportRuntimeType(t *testing.T) {

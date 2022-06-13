@@ -20,12 +20,12 @@ package lexer
 
 import (
 	"fmt"
-	"github.com/onflow/cadence/runtime/errors"
 	"sync"
 	"unicode/utf8"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 // tokenLimit is a sensible limit for how many tokens may be emitted

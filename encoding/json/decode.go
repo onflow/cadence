@@ -118,7 +118,7 @@ const (
 	returnKey       = "return"
 )
 
-var ErrInvalidJSONCadence = errors.NewDefaultUserErrorFromString("invalid JSON Cadence structure")
+var ErrInvalidJSONCadence = errors.NewDefaultUserError("invalid JSON Cadence structure")
 
 func (d *Decoder) decodeJSON(v any) cadence.Value {
 	obj := toObject(v)

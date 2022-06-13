@@ -20,7 +20,6 @@ package interpreter
 
 import (
 	"bytes"
-	"github.com/onflow/cadence/runtime/errors"
 	"math"
 	"math/big"
 
@@ -28,6 +27,7 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 const cborTagSize = 2

@@ -679,9 +679,7 @@ func NewBitwiseAndBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 	)
 }
 
-// TODO: is this a user error or an internal error?
-//       Ideally this should be rejected by checker?
-var invalidLeftShift = errors.NewDefaultUserErrorFromString("invalid left shift of non-Int64")
+var invalidLeftShift = errors.NewDefaultUserError("invalid left shift of non-Int64")
 
 func NewBitwiseLeftShiftBigIntMemoryUsage(a, b *big.Int) MemoryUsage {
 	// if b == 0:

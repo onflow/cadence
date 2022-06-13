@@ -19,7 +19,6 @@
 package errors
 
 import (
-	"errors"
 	"fmt"
 	"runtime/debug"
 
@@ -105,21 +104,18 @@ func (e MemoryError) Error() string {
 
 func (e MemoryError) IsUserError() {}
 
-// UnexpectedError is an error that wraps an implementation error.
+// UnexpectedError is the default implementation of InternalError interface.
+// It's a generic error that wraps an implementation error.
 //
 type UnexpectedError struct {
 	Err error
 }
 
+var _ InternalError = UnexpectedError{}
+
 func NewUnexpectedError(message string, arg ...any) UnexpectedError {
 	return UnexpectedError{
 		Err: fmt.Errorf(message, arg...),
-	}
-}
-
-func NewUnexpectedErrorFromString(message string) UnexpectedError {
-	return UnexpectedError{
-		Err: errors.New(message),
 	}
 }
 
@@ -138,12 +134,6 @@ func (e UnexpectedError) IsInternalError() {}
 //
 type DefaultUserError struct {
 	Err error
-}
-
-func NewDefaultUserErrorFromString(message string) DefaultUserError {
-	return DefaultUserError{
-		Err: errors.New(message),
-	}
 }
 
 func NewDefaultUserError(message string, arg ...any) DefaultUserError {
