@@ -1821,27 +1821,66 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &cadence.ResourceType{
-		Location:            utils.TestLocation,
-		QualifiedIdentifier: "Foo",
-		Fields: []cadence.Field{
-			{
-				Identifier: "foo",
+	t.Run("recursive", func(t *testing.T) {
+
+		t.Parallel()
+
+		ty := &cadence.ResourceType{
+			Location:            utils.TestLocation,
+			QualifiedIdentifier: "Foo",
+			Fields: []cadence.Field{
+				{
+					Identifier: "foo",
+				},
 			},
-		},
-	}
+		}
 
-	ty.Fields[0].Type = cadence.OptionalType{
-		Type: ty,
-	}
+		ty.Fields[0].Type = cadence.OptionalType{
+			Type: ty,
+		}
 
-	testEncode(
-		t,
-		cadence.TypeValue{
-			StaticType: ty,
-		},
-		`{"type":"Type","value":{"staticType":{"kind":"Resource","typeID":"S.test.Foo","fields":[{"id":"foo","type":{"kind":"Optional","type":"S.test.Foo"}}],"initializers":[],"type":""}}}`,
-	)
+		testEncode(
+			t,
+			cadence.TypeValue{
+				StaticType: ty,
+			},
+			`{"type":"Type","value":{"staticType":{"kind":"Resource","typeID":"S.test.Foo","fields":[{"id":"foo","type":{"kind":"Optional","type":"S.test.Foo"}}],"initializers":[],"type":""}}}`,
+		)
+
+	})
+
+	t.Run("non-recursive, repeated", func(t *testing.T) {
+
+		t.Parallel()
+
+		fooTy := &cadence.ResourceType{
+			Location:            utils.TestLocation,
+			QualifiedIdentifier: "Foo",
+		}
+
+		barTy := &cadence.ResourceType{
+			Location:            utils.TestLocation,
+			QualifiedIdentifier: "Bar",
+			Fields: []cadence.Field{
+				{
+					Identifier: "foo1",
+					Type:       fooTy,
+				},
+				{
+					Identifier: "foo2",
+					Type:       fooTy,
+				},
+			},
+		}
+
+		testEncode(
+			t,
+			cadence.TypeValue{
+				StaticType: barTy,
+			},
+			`{"type":"Type","value":{"staticType":{"kind":"Resource","typeID":"S.test.Bar","fields":[{"id":"foo1","type":{"kind":"Resource","typeID":"S.test.Foo","fields":[],"initializers":[],"type":""}},{"id":"foo2","type":"S.test.Foo"}],"initializers":[],"type":""}}}`,
+		)
+	})
 }
 
 func TestEncodePath(t *testing.T) {
