@@ -29,6 +29,8 @@ import (
 // A program should never throw an InternalError in an ideal world.
 // e.g: UnreachableError
 //
+// InternalError s must always be thrown, and let it propagate up the call stack.
+//
 type InternalError interface {
 	error
 	IsInternalError()
@@ -38,6 +40,23 @@ type InternalError interface {
 type UserError interface {
 	error
 	IsUserError()
+}
+
+// ExternalError is an error that occurred externally.
+// It contains the recovered value.
+//
+type ExternalError struct {
+	Recovered any
+}
+
+func NewExternalError(recovered any) ExternalError {
+	return ExternalError{
+		Recovered: recovered,
+	}
+}
+
+func (e ExternalError) Error() string {
+	return fmt.Sprint(e.Recovered)
 }
 
 // UnreachableError
@@ -153,7 +172,7 @@ func (e DefaultUserError) Error() string {
 func (e DefaultUserError) IsUserError() {}
 
 // IsInternalError Checks whether a given error was caused by an InternalError.
-// An error in an internal error, if it has at-least one InternalError in the chain.
+// An error in an internal error, if it has at-least one InternalError in the error chain.
 //
 func IsInternalError(err error) bool {
 	switch err := err.(type) {
@@ -167,22 +186,27 @@ func IsInternalError(err error) bool {
 }
 
 // IsUserError Checks whether a given error was caused by an UserError.
-// An error in an internal error, if it has at-least one UserError in the chain,
-// and no InternalError s.
+// An error in a user error, if it has at-least one UserError in the error chain.
 //
 func IsUserError(err error) bool {
 	switch err := err.(type) {
 	case UserError:
 		return true
 	case xerrors.Wrapper:
-		// Make sure there are no internal errors on the way.
-		_, ok := err.(InternalError)
-		if ok {
-			return false
-		}
-
 		return IsUserError(err.Unwrap())
 	default:
 		return false
+	}
+}
+
+// GetExternalError returns the ExternalError in the error chain, if any
+func GetExternalError(err error) (ExternalError, bool) {
+	switch err := err.(type) {
+	case ExternalError:
+		return err, true
+	case xerrors.Wrapper:
+		return GetExternalError(err.Unwrap())
+	default:
+		return ExternalError{}, false
 	}
 }

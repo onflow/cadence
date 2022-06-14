@@ -7390,5 +7390,5 @@ func assertRuntimeErrorIsExternalError(t *testing.T, err error) {
 	require.ErrorAs(t, err, &runtimeError)
 
 	innerError := runtimeError.Unwrap()
-	require.ErrorAs(t, innerError, &interpreter.ExternalError{})
+	require.ErrorAs(t, innerError, &runtimeErrors.ExternalError{})
 }

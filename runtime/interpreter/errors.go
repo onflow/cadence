@@ -87,17 +87,6 @@ func (e PositionedError) Error() string {
 
 func (e PositionedError) IsUserError() {}
 
-// ExternalError is an error that occurred externally.
-// It contains the recovered value.
-//
-type ExternalError struct {
-	Recovered any
-}
-
-func (e ExternalError) Error() string {
-	return fmt.Sprint(e.Recovered)
-}
-
 // NotDeclaredError
 
 type NotDeclaredError struct {

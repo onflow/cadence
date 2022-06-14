@@ -251,7 +251,7 @@ func getWrappedError(recovered any, context Context) Error {
 	// So it needs to be specially handled here
 	case runtimeErrors.InternalError,
 		runtimeErrors.UserError,
-		interpreter.ExternalError,
+		runtimeErrors.ExternalError,
 		interpreter.Error:
 		return newError(recovered.(error), context)
 
@@ -829,7 +829,7 @@ func wrapPanic(f func()) {
 			case goRuntime.Error, runtimeErrors.InternalError:
 				panic(r)
 			default:
-				panic(interpreter.ExternalError{
+				panic(runtimeErrors.ExternalError{
 					Recovered: r,
 				})
 			}
@@ -849,7 +849,7 @@ func userPanicToError(f func()) (returnedError error) {
 			case runtimeErrors.UserError:
 				// Return user errors
 				returnedError = err
-			case runtimeErrors.InternalError, interpreter.ExternalError:
+			case runtimeErrors.InternalError, runtimeErrors.ExternalError:
 				panic(err)
 
 			// Otherwise, panic.

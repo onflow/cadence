@@ -1386,7 +1386,7 @@ func NewArrayValueWithIterator(
 			},
 		)
 		if err != nil {
-			panic(ExternalError{err})
+			panic(errors.NewExternalError(err))
 		}
 		return array
 	}
@@ -1456,7 +1456,7 @@ func (v *ArrayValue) Iterate(gauge common.MemoryGauge, f func(element Value) (re
 		return resume, nil
 	})
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 }
 
@@ -1539,12 +1539,12 @@ func (v *ArrayValue) Concat(interpreter *Interpreter, getLocationRange func() Lo
 
 	firstIterator, err := v.array.Iterator()
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 
 	secondIterator, err := other.array.Iterator()
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 
 	elementType := v.Type.ElementType()
@@ -1561,7 +1561,7 @@ func (v *ArrayValue) Concat(interpreter *Interpreter, getLocationRange func() Lo
 			if first {
 				atreeValue, err := firstIterator.Next()
 				if err != nil {
-					panic(ExternalError{err})
+					panic(errors.NewExternalError(err))
 				}
 
 				if atreeValue == nil {
@@ -1574,7 +1574,7 @@ func (v *ArrayValue) Concat(interpreter *Interpreter, getLocationRange func() Lo
 			if !first {
 				atreeValue, err := secondIterator.Next()
 				if err != nil {
-					panic(ExternalError{err})
+					panic(errors.NewExternalError(err))
 				}
 
 				if atreeValue != nil {
@@ -1636,7 +1636,7 @@ func (v *ArrayValue) Get(interpreter *Interpreter, getLocationRange func() Locat
 	if err != nil {
 		v.handleIndexOutOfBoundsError(err, index, getLocationRange)
 
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 
 	return StoredValue(interpreter, storable, interpreter.Storage)
@@ -1681,7 +1681,7 @@ func (v *ArrayValue) Set(interpreter *Interpreter, getLocationRange func() Locat
 	if err != nil {
 		v.handleIndexOutOfBoundsError(err, index, getLocationRange)
 
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 	interpreter.maybeValidateAtreeValue(v.array)
 
@@ -1748,7 +1748,7 @@ func (v *ArrayValue) Append(interpreter *Interpreter, getLocationRange func() Lo
 
 	err := v.array.Append(element)
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 	interpreter.maybeValidateAtreeValue(v.array)
 }
@@ -1806,7 +1806,7 @@ func (v *ArrayValue) Insert(interpreter *Interpreter, getLocationRange func() Lo
 	if err != nil {
 		v.handleIndexOutOfBoundsError(err, index, getLocationRange)
 
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 	interpreter.maybeValidateAtreeValue(v.array)
 }
@@ -1838,7 +1838,7 @@ func (v *ArrayValue) Remove(interpreter *Interpreter, getLocationRange func() Lo
 	if err != nil {
 		v.handleIndexOutOfBoundsError(err, index, getLocationRange)
 
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 	interpreter.maybeValidateAtreeValue(v.array)
 
@@ -2288,7 +2288,7 @@ func (v *ArrayValue) Transfer(
 
 		iterator, err := v.array.Iterator()
 		if err != nil {
-			panic(ExternalError{err})
+			panic(errors.NewExternalError(err))
 		}
 
 		array, err = atree.NewArrayFromBatchData(
@@ -2311,7 +2311,7 @@ func (v *ArrayValue) Transfer(
 			},
 		)
 		if err != nil {
-			panic(ExternalError{err})
+			panic(errors.NewExternalError(err))
 		}
 
 		if remove {
@@ -2319,7 +2319,7 @@ func (v *ArrayValue) Transfer(
 				interpreter.RemoveReferencedSlab(storable)
 			})
 			if err != nil {
-				panic(ExternalError{err})
+				panic(errors.NewExternalError(err))
 			}
 			interpreter.maybeValidateAtreeValue(v.array)
 
@@ -2376,7 +2376,7 @@ func (v *ArrayValue) Clone(interpreter *Interpreter) Value {
 
 	iterator, err := v.array.Iterator()
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 
 	baseUsage, elementUsage, dataSlabs, metaDataSlabs := common.NewArrayMemoryUsages(v.array.Count(), v.elementSize)
@@ -2405,7 +2405,7 @@ func (v *ArrayValue) Clone(interpreter *Interpreter) Value {
 		},
 	)
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 	return &ArrayValue{
 		Type:             v.Type,
@@ -2443,7 +2443,7 @@ func (v *ArrayValue) DeepRemove(interpreter *Interpreter) {
 		interpreter.RemoveReferencedSlab(storable)
 	})
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 	interpreter.maybeValidateAtreeValue(v.array)
 }
@@ -2517,7 +2517,7 @@ func (v *ArrayValue) Slice(
 			})
 		}
 
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 
 	return NewArrayValueWithIterator(
@@ -2531,7 +2531,7 @@ func (v *ArrayValue) Slice(
 
 			atreeValue, err := iterator.Next()
 			if err != nil {
-				panic(ExternalError{err})
+				panic(errors.NewExternalError(err))
 			}
 
 			if atreeValue != nil {
@@ -14201,7 +14201,7 @@ func NewCompositeValue(
 			),
 		)
 		if err != nil {
-			panic(ExternalError{err})
+			panic(errors.NewExternalError(err))
 		}
 		return dictionary
 	}
@@ -14400,7 +14400,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange fu
 	)
 	if err != nil {
 		if _, ok := err.(*atree.KeyNotFoundError); !ok {
-			panic(ExternalError{err})
+			panic(errors.NewExternalError(err))
 		}
 	}
 	if storable != nil {
@@ -14535,7 +14535,7 @@ func (v *CompositeValue) RemoveMember(
 		if _, ok := err.(*atree.KeyNotFoundError); ok {
 			return nil
 		}
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 	interpreter.maybeValidateAtreeValue(v.dictionary)
 
@@ -14602,7 +14602,7 @@ func (v *CompositeValue) SetMember(
 		value,
 	)
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 	interpreter.maybeValidateAtreeValue(v.dictionary)
 
@@ -14705,7 +14705,7 @@ func (v *CompositeValue) GetField(interpreter *Interpreter, getLocationRange fun
 		if _, ok := err.(*atree.KeyNotFoundError); ok {
 			return nil
 		}
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 
 	return StoredValue(interpreter, storable, v.dictionary.Storage)
@@ -14726,13 +14726,13 @@ func (v *CompositeValue) Equal(interpreter *Interpreter, getLocationRange func()
 
 	iterator, err := v.dictionary.Iterator()
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 
 	for {
 		key, value, err := iterator.Next()
 		if err != nil {
-			panic(ExternalError{err})
+			panic(errors.NewExternalError(err))
 		}
 		if key == nil {
 			return true
@@ -14967,7 +14967,7 @@ func (v *CompositeValue) Transfer(
 	if needsStoreTo || !isResourceKinded {
 		iterator, err := v.dictionary.Iterator()
 		if err != nil {
-			panic(ExternalError{err})
+			panic(errors.NewExternalError(err))
 		}
 
 		elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(v.dictionary.Count(), 0)
@@ -15001,7 +15001,7 @@ func (v *CompositeValue) Transfer(
 			},
 		)
 		if err != nil {
-			panic(ExternalError{err})
+			panic(errors.NewExternalError(err))
 		}
 
 		if remove {
@@ -15010,7 +15010,7 @@ func (v *CompositeValue) Transfer(
 				interpreter.RemoveReferencedSlab(valueStorable)
 			})
 			if err != nil {
-				panic(ExternalError{err})
+				panic(errors.NewExternalError(err))
 			}
 			interpreter.maybeValidateAtreeValue(v.dictionary)
 
@@ -15099,7 +15099,7 @@ func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
 
 	iterator, err := v.dictionary.Iterator()
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 
 	elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(v.dictionary.Count(), 0)
@@ -15130,7 +15130,7 @@ func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
 		},
 	)
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 
 	return &CompositeValue{
@@ -15183,7 +15183,7 @@ func (v *CompositeValue) DeepRemove(interpreter *Interpreter) {
 		interpreter.RemoveReferencedSlab(valueStorable)
 	})
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 	interpreter.maybeValidateAtreeValue(v.dictionary)
 }
@@ -15205,7 +15205,7 @@ func (v *CompositeValue) ForEachField(gauge common.MemoryGauge, f func(fieldName
 		return true, nil
 	})
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 }
 
@@ -15228,7 +15228,7 @@ func (v *CompositeValue) RemoveField(
 		if _, ok := err.(*atree.KeyNotFoundError); ok {
 			return
 		}
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 	interpreter.maybeValidateAtreeValue(v.dictionary)
 
@@ -15344,7 +15344,7 @@ func NewDictionaryValueWithAddress(
 			dictionaryType,
 		)
 		if err != nil {
-			panic(ExternalError{err})
+			panic(errors.NewExternalError(err))
 		}
 		return dictionary
 	}
@@ -15430,7 +15430,7 @@ func (v *DictionaryValue) Iterate(gauge common.MemoryGauge, f func(key, value Va
 		return resume, nil
 	})
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 }
 
@@ -15530,7 +15530,7 @@ func (v *DictionaryValue) ContainsKey(
 			if _, ok := err.(*atree.KeyNotFoundError); ok {
 				return false
 			}
-			panic(ExternalError{err})
+			panic(errors.NewExternalError(err))
 		}
 		return true
 	}
@@ -15556,7 +15556,7 @@ func (v *DictionaryValue) Get(
 		if _, ok := err.(*atree.KeyNotFoundError); ok {
 			return nil, false
 		}
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 
 	storage := v.dictionary.Storage
@@ -15691,7 +15691,7 @@ func (v *DictionaryValue) GetMember(
 
 		iterator, err := v.dictionary.Iterator()
 		if err != nil {
-			panic(ExternalError{err})
+			panic(errors.NewExternalError(err))
 		}
 
 		return NewArrayValueWithIterator(
@@ -15703,7 +15703,7 @@ func (v *DictionaryValue) GetMember(
 
 				key, err := iterator.NextKey()
 				if err != nil {
-					panic(ExternalError{err})
+					panic(errors.NewExternalError(err))
 				}
 				if key == nil {
 					return nil
@@ -15718,7 +15718,7 @@ func (v *DictionaryValue) GetMember(
 
 		iterator, err := v.dictionary.Iterator()
 		if err != nil {
-			panic(ExternalError{err})
+			panic(errors.NewExternalError(err))
 		}
 
 		return NewArrayValueWithIterator(
@@ -15730,7 +15730,7 @@ func (v *DictionaryValue) GetMember(
 
 				value, err := iterator.NextValue()
 				if err != nil {
-					panic(ExternalError{err})
+					panic(errors.NewExternalError(err))
 				}
 				if value == nil {
 					return nil
@@ -15853,7 +15853,7 @@ func (v *DictionaryValue) Remove(
 		if _, ok := err.(*atree.KeyNotFoundError); ok {
 			return NewNilValue(interpreter)
 		}
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 	interpreter.maybeValidateAtreeValue(v.dictionary)
 
@@ -15932,7 +15932,7 @@ func (v *DictionaryValue) Insert(
 		value,
 	)
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 	interpreter.maybeValidateAtreeValue(v.dictionary)
 
@@ -15989,13 +15989,13 @@ func (v *DictionaryValue) ConformsToStaticType(
 
 	iterator, err := v.dictionary.Iterator()
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 
 	for {
 		key, value, err := iterator.Next()
 		if err != nil {
-			panic(ExternalError{err})
+			panic(errors.NewExternalError(err))
 		}
 		if key == nil {
 			return true
@@ -16056,13 +16056,13 @@ func (v *DictionaryValue) Equal(interpreter *Interpreter, getLocationRange func(
 
 	iterator, err := v.dictionary.Iterator()
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 
 	for {
 		key, value, err := iterator.Next()
 		if err != nil {
-			panic(ExternalError{err})
+			panic(errors.NewExternalError(err))
 		}
 		if key == nil {
 			return true
@@ -16146,7 +16146,7 @@ func (v *DictionaryValue) Transfer(
 
 		iterator, err := v.dictionary.Iterator()
 		if err != nil {
-			panic(ExternalError{err})
+			panic(errors.NewExternalError(err))
 		}
 
 		elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(v.dictionary.Count(), v.elementSize)
@@ -16180,7 +16180,7 @@ func (v *DictionaryValue) Transfer(
 			},
 		)
 		if err != nil {
-			panic(ExternalError{err})
+			panic(errors.NewExternalError(err))
 		}
 
 		if remove {
@@ -16189,7 +16189,7 @@ func (v *DictionaryValue) Transfer(
 				interpreter.RemoveReferencedSlab(valueStorable)
 			})
 			if err != nil {
-				panic(ExternalError{err})
+				panic(errors.NewExternalError(err))
 			}
 			interpreter.maybeValidateAtreeValue(v.dictionary)
 
@@ -16249,7 +16249,7 @@ func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
 
 	iterator, err := v.dictionary.Iterator()
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 
 	elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(v.dictionary.Count(), v.elementSize)
@@ -16283,7 +16283,7 @@ func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
 		},
 	)
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 
 	return &DictionaryValue{
@@ -16327,7 +16327,7 @@ func (v *DictionaryValue) DeepRemove(interpreter *Interpreter) {
 		interpreter.RemoveReferencedSlab(valueStorable)
 	})
 	if err != nil {
-		panic(ExternalError{err})
+		panic(errors.NewExternalError(err))
 	}
 	interpreter.maybeValidateAtreeValue(v.dictionary)
 }
