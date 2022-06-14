@@ -756,16 +756,13 @@ Initializer types are encoded a list of parameters to the initializer.
   "kind": "Enum",
   "type": <type>,
   "typeID": "<fully qualified type ID>",
-  "initializers": [
-    <initializer at index 0>,
-    <initializer at index 1>
-    // ...
-  ],
+  "initializers":[],
   "fields": [
-    <field at index 0>,
-    <field at index 1>
-    // ...
-  ],
+    {
+      "id": "rawValue",
+      "type": <type>
+    }
+  ]
 }
 ```
 
