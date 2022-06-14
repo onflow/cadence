@@ -109,6 +109,8 @@ func (e CheckerError) ImportLocation() common.Location {
 	return e.Location
 }
 
+func (CheckerError) IsUserError() {}
+
 // SemanticError
 
 type SemanticError interface {

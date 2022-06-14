@@ -74,7 +74,7 @@ func (e CallStackLimitExceededError) Error() string {
 	)
 }
 
-func (*CallStackLimitExceededError) IsUserError() {}
+func (CallStackLimitExceededError) IsUserError() {}
 
 // InvalidTransactionCountError
 
@@ -93,7 +93,7 @@ func (e InvalidTransactionCountError) Error() string {
 	)
 }
 
-func (*InvalidTransactionCountError) IsUserError() {}
+func (InvalidTransactionCountError) IsUserError() {}
 
 // InvalidTransactionParameterCountError
 
@@ -127,7 +127,7 @@ func (e InvalidTransactionAuthorizerCountError) Error() string {
 	)
 }
 
-func (*InvalidTransactionAuthorizerCountError) IsUserError() {}
+func (InvalidTransactionAuthorizerCountError) IsUserError() {}
 
 // InvalidEntryPointArgumentError
 //

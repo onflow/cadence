@@ -156,6 +156,8 @@ func (e TransactionNotDeclaredError) Error() string {
 	)
 }
 
+func (TransactionNotDeclaredError) IsUserError() {}
+
 // ConditionError
 
 type ConditionError struct {
