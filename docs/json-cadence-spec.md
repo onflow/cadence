@@ -2,7 +2,7 @@
 title: JSON-Cadence Data Interchange Format
 ---
 
-> Version 0.2.0
+> Version 0.3.0
 
 JSON-Cadence is a data interchange format used to represent Cadence values as language-independent JSON objects.
 
@@ -366,7 +366,9 @@ Composite fields are encoded as a list of name-value pairs in the order in which
   "value": {
     "path": "/public/someInteger",
     "address": "0x1",
-    "borrowType": "Int",
+    "borrowType": {
+      "kind": "Int"
+    },
   }
 }
 ```
@@ -736,7 +738,11 @@ Initializer types are encoded a list of parameters to the initializer.
 {
   "kind": "Capability",
   "type": {
-    "kind": "String"
+    "kind": "Reference",
+    "authorized": true,
+    "type": {
+      "kind": "String"
+    }
   }
 }
 ```
@@ -772,20 +778,10 @@ Initializer types are encoded a list of parameters to the initializer.
     "kind": "String"
   },
   "typeID": "0x3.GreatContract.GreatEnum",
-  "initializers":[
-    [
-      {
-        "label": "foo",
-        "id": "bar",
-        "type": {
-          "kind": "String"
-        }
-      }
-    ]
-  ],
+  "initializers":[],
   "fields": [
     {
-      "id": "foo",
+      "id": "rawValue",
       "type": {
         "kind": "String"
       }
