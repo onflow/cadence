@@ -793,3 +793,33 @@ Initializer types are encoded a list of parameters to the initializer.
   ]
 }
 ```
+
+## Recursive Types
+
+When a composite type appears more than once within the same JSON encoding, either because it is
+recursive or because it is repeated (e.g. in a composite field), the composite is instead 
+represented by its type ID. 
+
+### Example
+
+```json
+{
+  "type":"Type",
+  "value": {
+    "staticType": {
+      "kind":"Resource",
+      "typeID":"0x3.GreatContract.NFT",
+      "fields":[
+        {"id":"foo",
+        "type": {
+          "kind":"Optional",
+          "type":"0x3.GreatContract.NFT" // recursive NFT resource type is instead encoded as an ID
+          }
+        }
+      ],
+      "initializers":[],
+      "type":""
+    }
+  }
+}
+```
