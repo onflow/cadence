@@ -445,7 +445,7 @@ These are basic types like `Int`, `String`, or `StoragePath`.
 {
   "kind": "ConstantSizedArray",
   "type": <type>,
-  "size": "<length of array>",
+  "size": <length of array>,
 }
 ```
 
@@ -457,7 +457,7 @@ These are basic types like `Int`, `String`, or `StoragePath`.
   "type": {
     "kind": "String"
   },
-  "size":"3"
+  "size":3
 }
 ```
 
@@ -794,9 +794,9 @@ Initializer types are encoded a list of parameters to the initializer.
 }
 ```
 
-## Recursive Types
+## Repeated Types
 
-When a composite type appears more than once within the same JSON encoding, either because it is
+When a composite type appears more than once within the same JSON type encoding, either because it is
 recursive or because it is repeated (e.g. in a composite field), the composite is instead 
 represented by its type ID. 
 
