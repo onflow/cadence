@@ -395,7 +395,7 @@ These are basic types like `Int`, `String`, or `StoragePath`.
     "PublicPath" | "PrivatePath" | "AuthAccount" | "PublicAccount" | 
     "AuthAccount.Keys" | "PublicAccount.Keys" | "AuthAccount.Contracts" | 
     "PublicAccount.Contracts" | "DeployedContract" | "AccountKey" | "Block" 
-}"
+}
 ```
 
 ### Example
