@@ -707,8 +707,12 @@ func TestInterpretIntegerConversion(t *testing.T) {
 
 				if targetMinInt != nil && (sourceMinInt == nil || sourceMinInt.Cmp(targetMinInt) < 0) {
 					// words wrap instead of underflow
-					if targetType != sema.Word8Type && targetType != sema.Word16Type &&
-						targetType != sema.Word32Type && targetType != sema.Word64Type {
+					switch targetType {
+					case sema.Word8Type,
+						sema.Word16Type,
+						sema.Word32Type,
+						sema.Word64Type:
+					default:
 						t.Run("underflow", func(t *testing.T) {
 							test(t, sourceType, targetType, sourceValues.min, nil, interpreter.UnderflowError{})
 						})
@@ -728,8 +732,12 @@ func TestInterpretIntegerConversion(t *testing.T) {
 
 				if targetMaxInt != nil && (sourceMaxInt == nil || sourceMaxInt.Cmp(targetMaxInt) > 0) {
 					// words wrap instead of overflow
-					if targetType != sema.Word8Type && targetType != sema.Word16Type &&
-						targetType != sema.Word32Type && targetType != sema.Word64Type {
+					switch targetType {
+					case sema.Word8Type,
+						sema.Word16Type,
+						sema.Word32Type,
+						sema.Word64Type:
+					default:
 						t.Run("overflow", func(t *testing.T) {
 							test(t, sourceType, targetType, sourceValues.max, nil, interpreter.OverflowError{})
 						})
