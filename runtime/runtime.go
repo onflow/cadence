@@ -106,6 +106,10 @@ type Runtime interface {
 	// ReadLinked dereferences the path and returns the value stored at the target
 	//
 	ReadLinked(address common.Address, path cadence.Path, context Context) (cadence.Value, error)
+
+	// SetDebugger configures interpreters with the given debugger.
+	//
+	SetDebugger(debugger *interpreter.Debugger)
 }
 
 var typeDeclarations = append(
@@ -160,6 +164,7 @@ func reportMetric(
 // interpreterRuntime is a interpreter-based version of the Flow runtime.
 type interpreterRuntime struct {
 	coverageReport                       *CoverageReport
+	debugger                             *interpreter.Debugger
 	contractUpdateValidationEnabled      bool
 	atreeValidationEnabled               bool
 	tracingEnabled                       bool
@@ -266,6 +271,10 @@ func (r *interpreterRuntime) SetInvalidatedResourceValidationEnabled(enabled boo
 
 func (r *interpreterRuntime) SetResourceOwnerChangeHandlerEnabled(enabled bool) {
 	r.resourceOwnerChangeHandlerEnabled = enabled
+}
+
+func (r *interpreterRuntime) SetDebugger(debugger *interpreter.Debugger) {
+	r.debugger = debugger
 }
 
 func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val cadence.Value, err error) {
@@ -939,14 +948,16 @@ func validateArgumentParams(
 		}
 
 		// Ensure the argument is of an importable type
+		argType := arg.StaticType(inter)
+
 		if !arg.IsImportable(inter) {
 			return nil, &ArgumentNotImportableError{
-				Type: arg.StaticType(inter),
+				Type: argType,
 			}
 		}
 
 		// Check that decoded value is a subtype of static parameter type
-		if !inter.IsSubTypeOfSemaType(arg.StaticType(inter), parameterType) {
+		if !inter.IsSubTypeOfSemaType(argType, parameterType) {
 			return nil, &InvalidEntryPointArgumentError{
 				Index: i,
 				Err: &InvalidValueTypeError{
@@ -956,12 +967,10 @@ func validateArgumentParams(
 		}
 
 		// Check whether the decoded value conforms to the type associated with the value
-		conformanceResults := interpreter.TypeConformanceResults{}
 		if !arg.ConformsToStaticType(
 			inter,
 			interpreter.ReturnEmptyLocationRange,
-			arg.StaticType(inter),
-			conformanceResults,
+			interpreter.TypeConformanceResults{},
 		) {
 			return nil, &InvalidEntryPointArgumentError{
 				Index: i,
@@ -1417,6 +1426,7 @@ func (r *interpreterRuntime) newInterpreter(
 		interpreter.WithOnResourceOwnerChangeHandler(r.resourceOwnerChangedHandler(context.Interface)),
 		interpreter.WithInvalidatedResourceValidationEnabled(r.invalidatedResourceValidationEnabled),
 		interpreter.WithMemoryGauge(memoryGauge),
+		interpreter.WithDebugger(r.debugger),
 	}
 
 	defaultOptions = append(defaultOptions,
@@ -2695,20 +2705,19 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 
 			if r.contractUpdateValidationEnabled && isUpdate {
 
-				var oldProgram *interpreter.Program
-				oldProgram, err = r.getProgram(
-					context,
-					functions,
-					stdlib.BuiltinValues,
-					checkerOptions,
-					importResolutionResults{},
-				)
+				oldCode, err := r.getCode(context)
 				handleContractUpdateError(err)
+
+				oldProgram, err := parser2.ParseProgram(string(oldCode), inter)
+
+				if !ignoreUpdatedProgramParserError(err) {
+					handleContractUpdateError(err)
+				}
 
 				validator := NewContractUpdateValidator(
 					context.Location,
 					nameArgument,
-					oldProgram.Program,
+					oldProgram,
 					program.Program,
 				)
 				err = validator.Validate()
@@ -2776,6 +2785,28 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 		},
 		sema.AuthAccountContractsTypeAddFunctionType,
 	)
+}
+
+// ignoreUpdatedProgramParserError determines if the parsing error
+// for a program that is being updated can be ignored.
+func ignoreUpdatedProgramParserError(err error) bool {
+	parserError, ok := err.(parser2.Error)
+	if !ok {
+		return false
+	}
+
+	// Are all parse errors ones that can be ignored?
+	for _, parseError := range parserError.Errors {
+		// Missing commas in parameter lists were reported starting
+		// with https://github.com/onflow/cadence/pull/1073.
+		// Allow existing contracts with such an error to be updated
+		_, ok := parseError.(*parser2.MissingCommaInParameterListError)
+		if !ok {
+			return false
+		}
+	}
+
+	return true
 }
 
 type updateAccountContractCodeOptions struct {

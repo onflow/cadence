@@ -33,8 +33,8 @@ import (
 // syntactically and semantically valid, but unsupported by the extension.
 //
 func (i *FlowIntegration) diagnostics(
-	_ protocol.DocumentUri,
-	_ float64,
+	_ protocol.DocumentURI,
+	_ int32,
 	checker *sema.Checker,
 ) (
 	diagnostics []protocol.Diagnostic,
@@ -63,7 +63,7 @@ func (i *FlowIntegration) transactionDeclarationCountDiagnostics(checker *sema.C
 			diagnostics = append(diagnostics, protocol.Diagnostic{
 				Range: conversion.ASTToProtocolRange(
 					position,
-					position.Shifted(len(parser2.KeywordTransaction)-1),
+					position.Shifted(nil, len(parser2.KeywordTransaction)-1),
 				),
 				Severity: protocol.SeverityWarning,
 				Message:  "Cannot declare more than one transaction per file",
@@ -99,7 +99,7 @@ func (i *FlowIntegration) compositeOrInterfaceDeclarationCountDiagnostics(checke
 			diagnostics = append(diagnostics, protocol.Diagnostic{
 				Range: conversion.ASTToProtocolRange(
 					identifier.StartPosition(),
-					identifier.EndPosition(),
+					identifier.EndPosition(nil),
 				),
 				Severity: protocol.SeverityWarning,
 				Message:  "Cannot declare more than one top-level type per file",

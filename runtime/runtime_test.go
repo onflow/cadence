@@ -6894,7 +6894,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 		runtimeInterface := &testRuntimeInterface{
 			log: func(message string) {
 				// panic due to go-error in cadence implementation
-				var val interface{} = message
+				var val any = message
 				_ = val.(int)
 			},
 		}
@@ -6964,7 +6964,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 		runtimeInterface := &testRuntimeInterface{
 			log: func(message string) {
 				// panic due to Cadence implementation error
-				var val interface{} = message
+				var val any = message
 				_ = val.(int)
 			},
 		}
@@ -7023,7 +7023,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 			},
 			log: func(message string) {
 				// panic due to Cadence implementation error
-				var val interface{} = message
+				var val any = message
 				_ = val.(int)
 			},
 		}
@@ -7287,4 +7287,51 @@ func TestRuntimeComputationMetring(t *testing.T) {
 			require.Equal(t, test.expCompUsed, compUsed)
 		})
 	}
+}
+
+func TestRuntimeImportAnyStruct(t *testing.T) {
+
+	t.Parallel()
+
+	rt := newTestInterpreterRuntime()
+
+	var loggedMessages []string
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	storage := newTestLedger(nil, nil)
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: storage,
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{address}, nil
+		},
+		log: func(message string) {
+			loggedMessages = append(loggedMessages, message)
+		},
+		meterMemory: func(_ common.MemoryUsage) error {
+			return nil
+		},
+	}
+	runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+		return json.Decode(runtimeInterface, b)
+	}
+
+	err := rt.ExecuteTransaction(
+		Script{
+			Source: []byte(`
+			  transaction(args: [AnyStruct]) {
+			    prepare(signer: AuthAccount) {}
+			  }
+			`),
+			Arguments: [][]byte{
+				[]byte(`{"value":[{"value":"0xf8d6e0586b0a20c7","type":"Address"},{"value":{"domain":"private","identifier":"USDCAdminCap-ca258982-c98e-4ef0-adef-7ff80ee96b10"},"type":"Path"}],"type":"Array"}`),
+			},
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  utils.TestLocation,
+		},
+	)
+	require.NoError(t, err)
 }

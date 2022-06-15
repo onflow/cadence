@@ -20,7 +20,7 @@ package ast
 
 import "github.com/onflow/cadence/runtime/common"
 
-type Repr interface{}
+type Repr any
 
 type Element interface {
 	HasPosition
