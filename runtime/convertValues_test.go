@@ -1811,6 +1811,22 @@ func TestExportTypeValue(t *testing.T) {
 		assert.Equal(t, expected, actual)
 	})
 
+	t.Run("builtin struct", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            pub fun main(): Type {
+                return CompositeType("PublicKey")!
+            }
+        `
+
+		actual := exportValueFromScript(t, script)
+
+		_, err := json.Encode(actual)
+		require.NoError(t, err)
+	})
+
 	t.Run("without static type", func(t *testing.T) {
 
 		t.Parallel()
