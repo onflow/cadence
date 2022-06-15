@@ -206,6 +206,7 @@ type ContainerType interface {
 	Type
 	IsContainerType() bool
 	GetNestedTypes() *StringTypeOrderedMap
+	SetNestedTypes(nestedTypes *StringTypeOrderedMap)
 }
 
 func VisitThisAndNested(t Type, visit func(ty Type)) {
@@ -454,6 +455,8 @@ type OptionalType struct {
 	Type Type
 }
 
+var _ Type = &OptionalType{}
+
 func NewOptionalType(memoryGauge common.MemoryGauge, typ Type) *OptionalType {
 	common.UseMemory(memoryGauge, common.OptionalSemaTypeMemoryUsage)
 	return &OptionalType{
@@ -653,6 +656,9 @@ func OptionalTypeMapFunctionType(typ Type) *FunctionType {
 type GenericType struct {
 	TypeParameter *TypeParameter
 }
+
+var _ Type = &GenericType{}
+
 
 func (*GenericType) IsType() {}
 
@@ -879,7 +885,9 @@ type NumericType struct {
 	isSuperType                bool
 }
 
+var _ Type = &NumericType{}
 var _ IntegerRangedType = &NumericType{}
+var _ SaturatingArithmeticType = &NumericType{}
 
 func NewNumericType(typeName string) *NumericType {
 	return &NumericType{name: typeName}
@@ -1053,6 +1061,7 @@ type FixedPointNumericType struct {
 }
 
 var _ FractionalRangedType = &FixedPointNumericType{}
+var _ SaturatingArithmeticType = &FixedPointNumericType{}
 
 func NewFixedPointNumericType(typeName string) *FixedPointNumericType {
 	return &FixedPointNumericType{
@@ -2492,6 +2501,8 @@ type FunctionType struct {
 	Members                  *StringMemberOrderedMap
 }
 
+var _ Type = &FunctionType{}
+
 func RequiredArgumentCount(count int) *int {
 	return &count
 }
@@ -3467,7 +3478,7 @@ type CompositeType struct {
 	hasComputedMembers    bool
 
 	// Only applicable for native composite types.
-	importable bool
+	ImportableWithoutLocation bool
 
 	cachedIdentifiers *struct {
 		TypeID              TypeID
@@ -3475,6 +3486,11 @@ type CompositeType struct {
 	}
 	cachedIdentifiersLock sync.RWMutex
 }
+
+var _ ContainedType = &CompositeType{}
+var _ ContainerType = &CompositeType{}
+var _ CompositeKindedType = &CompositeType{}
+var _ LocatedType = &CompositeType{}
 
 func (t *CompositeType) Tag() TypeTag {
 	return CompositeTypeTag
@@ -3557,7 +3573,13 @@ func (t *CompositeType) QualifiedIdentifier() string {
 }
 
 func (t *CompositeType) ID() TypeID {
+	if t == nil {
+		panic("*CompositeType is nil")
+	}
 	t.initializeIdentifiers()
+	if t.cachedIdentifiers == nil {
+		panic("*CompositeType.cachedIdentifiers is nil")
+	}
 	return t.cachedIdentifiers.TypeID
 }
 
@@ -3646,7 +3668,7 @@ func (t *CompositeType) IsStorable(results map[*Member]bool) bool {
 func (t *CompositeType) IsImportable(results map[*Member]bool) bool {
 	// Use the pre-determined flag for native types
 	if t.Location == nil {
-		return t.importable
+		return t.ImportableWithoutLocation
 	}
 
 	// Only structures and enums can be imported
@@ -3693,6 +3715,15 @@ func (t *CompositeType) IsExternallyReturnable(results map[*Member]bool) bool {
 	}
 
 	return true
+}
+
+func (t *CompositeType) HasComputedMembers() bool {
+	return t.hasComputedMembers
+}
+
+// SetHasComputedMembers is intended to only be called for deserialization.
+func (t *CompositeType) SetHasComputedMembers(val bool) {
+	t.hasComputedMembers = val
 }
 
 func (t *CompositeType) IsEquatable() bool {
@@ -3759,6 +3790,10 @@ func (t *CompositeType) IsContainerType() bool {
 
 func (t *CompositeType) GetNestedTypes() *StringTypeOrderedMap {
 	return t.nestedTypes
+}
+
+func (t *CompositeType) SetNestedTypes(nestedTypes *StringTypeOrderedMap) {
+	t.nestedTypes = nestedTypes
 }
 
 func (t *CompositeType) initializeMemberResolvers() {
@@ -3842,6 +3877,7 @@ func NewUnmeteredPublicFunctionMember(
 	)
 }
 
+// TODO is it a problem Member itself isn't metered?
 func NewPublicFunctionMember(
 	memoryGauge common.MemoryGauge,
 	containerType Type,
@@ -3996,6 +4032,10 @@ type InterfaceType struct {
 	}
 	cachedIdentifiersLock sync.RWMutex
 }
+
+var _ ContainedType = &InterfaceType{}
+var _ ContainerType = &InterfaceType{}
+var _ CompositeKindedType = &InterfaceType{}
 
 func (*InterfaceType) IsType() {}
 
@@ -4212,6 +4252,10 @@ func (t *InterfaceType) GetNestedTypes() *StringTypeOrderedMap {
 	return t.nestedTypes
 }
 
+func (t *InterfaceType) SetNestedTypes(nestedTypes *StringTypeOrderedMap) {
+	t.nestedTypes = nestedTypes
+}
+
 func (t *InterfaceType) FieldPosition(name string, declaration *ast.InterfaceDeclaration) ast.Position {
 	return declaration.Members.FieldPosition(name, declaration.CompositeKind)
 }
@@ -4227,6 +4271,8 @@ type DictionaryType struct {
 	memberResolvers     map[string]MemberResolver
 	memberResolversOnce sync.Once
 }
+
+var _ Type = &DictionaryType{}
 
 func NewDictionaryType(memoryGauge common.MemoryGauge, keyType, valueType Type) *DictionaryType {
 	common.UseMemory(memoryGauge, common.DictionarySemaTypeMemoryUsage)
@@ -4586,6 +4632,8 @@ type ReferenceType struct {
 	Authorized bool
 	Type       Type
 }
+
+var _ Type = &ReferenceType{}
 
 func NewReferenceType(memoryGauge common.MemoryGauge, typ Type, authorized bool) *ReferenceType {
 	common.UseMemory(memoryGauge, common.ReferenceSemaTypeMemoryUsage)
@@ -5559,6 +5607,8 @@ type TransactionType struct {
 	Parameters        []*Parameter
 }
 
+var _ Type = &TransactionType{}
+
 func (t *TransactionType) EntryPointFunctionType() *FunctionType {
 	return &FunctionType{
 		Parameters:           append(t.Parameters, t.PrepareParameters...),
@@ -5676,6 +5726,8 @@ type RestrictedType struct {
 	restrictionSet     *InterfaceSet
 	restrictionSetOnce sync.Once
 }
+
+var _ Type = &RestrictedType{}
 
 func NewRestrictedType(memoryGauge common.MemoryGauge, typ Type, restrictions []*InterfaceType) *RestrictedType {
 	common.UseMemory(memoryGauge, common.RestrictedSemaTypeMemoryUsage)
@@ -5915,6 +5967,9 @@ type CapabilityType struct {
 	memberResolvers     map[string]MemberResolver
 	memberResolversOnce sync.Once
 }
+
+var _ Type = &CapabilityType{}
+var _ ParameterizedType = &CapabilityType{}
 
 func NewCapabilityType(memoryGauge common.MemoryGauge, borrowType Type) *CapabilityType {
 	common.UseMemory(memoryGauge, common.CapabilitySemaTypeMemoryUsage)
@@ -6224,9 +6279,9 @@ const AccountKeyIsRevokedField = "isRevoked"
 var AccountKeyType = func() *CompositeType {
 
 	accountKeyType := &CompositeType{
-		Identifier: AccountKeyTypeName,
-		Kind:       common.CompositeKindStructure,
-		importable: false,
+		Identifier:                AccountKeyTypeName,
+		Kind:                      common.CompositeKindStructure,
+		ImportableWithoutLocation: false,
 	}
 
 	const accountKeyIndexFieldDocString = `The index of the account key`
@@ -6303,10 +6358,10 @@ If called with any other signature algorithm, the program aborts
 var PublicKeyType = func() *CompositeType {
 
 	publicKeyType := &CompositeType{
-		Identifier:         PublicKeyTypeName,
-		Kind:               common.CompositeKindStructure,
-		hasComputedMembers: true,
-		importable:         true,
+		Identifier:                PublicKeyTypeName,
+		Kind:                      common.CompositeKindStructure,
+		hasComputedMembers:        true,
+		ImportableWithoutLocation: true,
 	}
 
 	var members = []*Member{

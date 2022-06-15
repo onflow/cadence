@@ -52,6 +52,8 @@ type SimpleType struct {
 	ValueIndexingInfo    ValueIndexingInfo
 }
 
+var _ Type = &SimpleType{}
+
 func (*SimpleType) IsType() {}
 
 func (t *SimpleType) Tag() TypeTag {

@@ -49,10 +49,10 @@ const AuthAccountKeysField = "keys"
 var AuthAccountType = func() *CompositeType {
 
 	authAccountType := &CompositeType{
-		Identifier:         AuthAccountTypeName,
-		Kind:               common.CompositeKindStructure,
-		hasComputedMembers: true,
-		importable:         false,
+		Identifier:                AuthAccountTypeName,
+		Kind:                      common.CompositeKindStructure,
+		hasComputedMembers:        true,
+		ImportableWithoutLocation: false,
 		nestedTypes: func() *StringTypeOrderedMap {
 			nestedTypes := &StringTypeOrderedMap{}
 			nestedTypes.Set(AuthAccountContractsTypeName, AuthAccountContractsType)
@@ -524,9 +524,9 @@ var AccountTypeGetLinkTargetFunctionType = &FunctionType{
 var AuthAccountKeysType = func() *CompositeType {
 
 	accountKeys := &CompositeType{
-		Identifier: AccountKeysTypeName,
-		Kind:       common.CompositeKindStructure,
-		importable: false,
+		Identifier:                AccountKeysTypeName,
+		Kind:                      common.CompositeKindStructure,
+		ImportableWithoutLocation: false,
 	}
 
 	var members = []*Member{
