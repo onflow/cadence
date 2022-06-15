@@ -47,7 +47,7 @@ func (d *Debugger) Stops() <-chan Stop {
 }
 
 func (d *Debugger) onStatement(interpreter *Interpreter, statement ast.Statement) {
-	if !d.PauseRequested() {
+	if !atomic.CompareAndSwapUint32(&d.pauseRequested, 1, 0) {
 		return
 	}
 
@@ -56,30 +56,15 @@ func (d *Debugger) onStatement(interpreter *Interpreter, statement ast.Statement
 		Statement:   statement,
 	}
 
-	d.resetPauseRequest()
-
 	<-d.continues
-}
-
-func (d *Debugger) PauseRequested() bool {
-	return atomic.LoadUint32(&d.pauseRequested) == 1
-}
-
-func (d *Debugger) resetPauseRequest() {
-	atomic.StoreUint32(&d.pauseRequested, 0)
 }
 
 func (d *Debugger) RequestPause() {
 	atomic.StoreUint32(&d.pauseRequested, 1)
 }
 
-func (d *Debugger) Continue() bool {
-	select {
-	case d.continues <- struct{}{}:
-		return true
-	default:
-		return false
-	}
+func (d *Debugger) Continue() {
+	d.continues <- struct{}{}
 }
 
 func (d *Debugger) Pause() Stop {
