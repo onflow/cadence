@@ -29,6 +29,7 @@ import (
 	"strings"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -760,7 +761,7 @@ func prepareType(typ cadence.Type, results typePreparationResults) jsonValue {
 		return jsonNominalType{
 			Kind:         "Struct",
 			Type:         "",
-			TypeID:       string(typ.Location.TypeID(nil, typ.QualifiedIdentifier)),
+			TypeID:       typeId(typ.Location, typ.QualifiedIdentifier),
 			Fields:       prepareFields(typ.Fields, results),
 			Initializers: prepareInitializers(typ.Initializers, results),
 		}
@@ -768,7 +769,7 @@ func prepareType(typ cadence.Type, results typePreparationResults) jsonValue {
 		return jsonNominalType{
 			Kind:         "Resource",
 			Type:         "",
-			TypeID:       string(typ.Location.TypeID(nil, typ.QualifiedIdentifier)),
+			TypeID:       typeId(typ.Location, typ.QualifiedIdentifier),
 			Fields:       prepareFields(typ.Fields, results),
 			Initializers: prepareInitializers(typ.Initializers, results),
 		}
@@ -776,7 +777,7 @@ func prepareType(typ cadence.Type, results typePreparationResults) jsonValue {
 		return jsonNominalType{
 			Kind:         "Event",
 			Type:         "",
-			TypeID:       string(typ.Location.TypeID(nil, typ.QualifiedIdentifier)),
+			TypeID:       typeId(typ.Location, typ.QualifiedIdentifier),
 			Fields:       prepareFields(typ.Fields, results),
 			Initializers: [][]jsonParameterType{prepareParameters(typ.Initializer, results)},
 		}
@@ -784,7 +785,7 @@ func prepareType(typ cadence.Type, results typePreparationResults) jsonValue {
 		return jsonNominalType{
 			Kind:         "Contract",
 			Type:         "",
-			TypeID:       string(typ.Location.TypeID(nil, typ.QualifiedIdentifier)),
+			TypeID:       typeId(typ.Location, typ.QualifiedIdentifier),
 			Fields:       prepareFields(typ.Fields, results),
 			Initializers: prepareInitializers(typ.Initializers, results),
 		}
@@ -792,7 +793,7 @@ func prepareType(typ cadence.Type, results typePreparationResults) jsonValue {
 		return jsonNominalType{
 			Kind:         "StructInterface",
 			Type:         "",
-			TypeID:       string(typ.Location.TypeID(nil, typ.QualifiedIdentifier)),
+			TypeID:       typeId(typ.Location, typ.QualifiedIdentifier),
 			Fields:       prepareFields(typ.Fields, results),
 			Initializers: prepareInitializers(typ.Initializers, results),
 		}
@@ -800,7 +801,7 @@ func prepareType(typ cadence.Type, results typePreparationResults) jsonValue {
 		return jsonNominalType{
 			Kind:         "ResourceInterface",
 			Type:         "",
-			TypeID:       string(typ.Location.TypeID(nil, typ.QualifiedIdentifier)),
+			TypeID:       typeId(typ.Location, typ.QualifiedIdentifier),
 			Fields:       prepareFields(typ.Fields, results),
 			Initializers: prepareInitializers(typ.Initializers, results),
 		}
@@ -808,7 +809,7 @@ func prepareType(typ cadence.Type, results typePreparationResults) jsonValue {
 		return jsonNominalType{
 			Kind:         "ContractInterface",
 			Type:         "",
-			TypeID:       string(typ.Location.TypeID(nil, typ.QualifiedIdentifier)),
+			TypeID:       typeId(typ.Location, typ.QualifiedIdentifier),
 			Fields:       prepareFields(typ.Fields, results),
 			Initializers: prepareInitializers(typ.Initializers, results),
 		}
@@ -844,7 +845,7 @@ func prepareType(typ cadence.Type, results typePreparationResults) jsonValue {
 	case *cadence.EnumType:
 		return jsonNominalType{
 			Kind:         "Enum",
-			TypeID:       string(typ.Location.TypeID(nil, typ.QualifiedIdentifier)),
+			TypeID:       typeId(typ.Location, typ.QualifiedIdentifier),
 			Fields:       prepareFields(typ.Fields, results),
 			Initializers: prepareInitializers(typ.Initializers, results),
 			Type:         prepareType(typ.RawType, results),
@@ -927,4 +928,12 @@ func encodeUFix64(v uint64) string {
 		integer,
 		fraction,
 	)
+}
+
+func typeId(location common.Location, identifier string) string {
+	if location == nil {
+		return identifier
+	}
+
+	return string(location.TypeID(nil, identifier))
 }
