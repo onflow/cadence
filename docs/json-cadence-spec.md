@@ -383,8 +383,19 @@ These are basic types like `Int`, `String`, or `StoragePath`.
 
 ```json
 {
-  "kind": "<type>"
-}
+  "kind": "Any" | "AnyStruct" | "AnyResource" | "Type" | 
+    "Void" | "Never" | "Bool" | "String" | "Character" | 
+    "Bytes" | "Address" | "Number" | "SignedNumber" | 
+    "Integer" | "SignedInteger" | "FixedPoint" | 
+    "SignedFixedPoint" | "Int" | "Int8" | "Int16" | 
+    "Int32" | "Int64" | "Int128" | "Int256" | "UInt" | 
+    "UInt8" | "UInt16" | "UInt32" | "UInt64" | "UInt128" | 
+    "UInt256" | "Word8" | "Word16" | "Word32" | "Word64" | 
+    "Fix64" | "UFix64" | "Path" | "CapabilityPath" | "StoragePath" |
+    "PublicPath" | "PrivatePath" | "AuthAccount" | "PublicAccount" | 
+    "AuthAccount.Keys" | "PublicAccount.Keys" | "AuthAccount.Contracts" | 
+    "PublicAccount.Contracts" | "DeployedContract" | "AccountKey" | "Block" 
+}"
 ```
 
 ### Example
@@ -496,7 +507,7 @@ These are basic types like `Int`, `String`, or `StoragePath`.
 ```json
 {
   "kind": "Struct" | "Resource" | "Event" | "Constract" | "StructInterface" | "ResourceInterface" | "ContractInterface",
-  "type": "",
+  "type": "", // this field exists only to keep parity with the enum structure below; the value must be the empty string
   "typeID": "<fully qualified type ID>",
   "initializers": [
     <initializer at index 0>,
