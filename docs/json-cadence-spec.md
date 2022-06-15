@@ -506,7 +506,7 @@ These are basic types like `Int`, `String`, or `StoragePath`.
 
 ```json
 {
-  "kind": "Struct" | "Resource" | "Event" | "Constract" | "StructInterface" | "ResourceInterface" | "ContractInterface",
+  "kind": "Struct" | "Resource" | "Event" | "Contract" | "StructInterface" | "ResourceInterface" | "ContractInterface",
   "type": "", // this field exists only to keep parity with the enum structure below; the value must be the empty string
   "typeID": "<fully qualified type ID>",
   "initializers": [
