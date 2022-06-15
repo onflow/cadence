@@ -7,7 +7,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/mattn/go-isatty v0.0.14
 	github.com/mitchellh/mapstructure v1.4.3
-	github.com/onflow/cadence v0.24.0
+	github.com/onflow/cadence v0.24.3
 	github.com/onflow/flow-cli v0.35.1-0.20220608231110-c253ad512117
 	github.com/onflow/flow-go-sdk v0.26.0
 	github.com/sourcegraph/jsonrpc2 v0.1.0
