@@ -326,10 +326,11 @@ transaction {
     prepare(signer1: AuthAccount, signer2: AuthAccount) {
 
         // Load the NFT from signer1's account
-        let nft <- signer1.load<@BasicNFT>(from: /storage/BasicNFTPath)
+        let nft <- signer1.load<@BasicNFT.NFT>(from: /storage/BasicNFTPath)
+            ?? panic("Could not load NFT")
 
         // Save the NFT to signer2's account
-        signer2.save<@BasicNFT>(<-nft, to: /storage/BasicNFTPath)
+        signer2.save<@BasicNFT.NFT>(<-nft, to: /storage/BasicNFTPath)
 
     }
 }
