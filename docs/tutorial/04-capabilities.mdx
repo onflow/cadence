@@ -352,7 +352,11 @@ let helloAccount = getAccount(0x01)
 
 The `PublicAccount` object is available to anyone in the network for every account,
 but only has access to a small subset of functions that can be read from the `/public/` domain in an account.
-Most of the [account storage API](https://docs.onflow.org/cadence/language/accounts/#account-storage-api) is not available on the `PublicAccount` object, and only signed transactions can access the `AuthAccount` object.
+Most of the [account storage API](https://docs.onflow.org/cadence/language/accounts/#account-storage-api)
+is not available on the `PublicAccount` object,
+and only signed transactions can make persistent changes to the `AuthAccount` object.
+`AuthAccount` can now be accessed publicly in scripts with the `getAuthAccount` function,
+but any changes are discarded after the script execution.
 With capabilities we can make resources saved to an account explicitly available in the `/public/` domain.
 See more about accounts here: https://docs.onflow.org/cadence/language/accounts/
 

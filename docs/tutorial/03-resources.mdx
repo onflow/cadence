@@ -400,6 +400,8 @@ let helloResource <- acct.load<@HelloWorld.HelloAsset>(from: /storage/HelloAsset
 If no object of the specified type is stored under the given path, the function returns `nil`. (This is an [Optional](/cadence/language/values-and-types/#optionals),
 a special type of data that we will cover later)
 
+If the object at the given path is not of the specified type, Cadence will throw an error and the transaction will fail.
+
 If there is an object of the specified type at the path, the function returns that object and the account storage will no longer contain an object under the given path.
 
 The type parameter for the object type to load is contained in `<>`.
