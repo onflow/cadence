@@ -34,6 +34,10 @@ type FunctionDeclaration struct {
 	StartPos             Position `json:"-"`
 }
 
+var _ Element = &FunctionDeclaration{}
+var _ Declaration = &FunctionDeclaration{}
+var _ Statement = &FunctionDeclaration{}
+
 func NewFunctionDeclaration(
 	gauge common.MemoryGauge,
 	access Access,
@@ -55,6 +59,10 @@ func NewFunctionDeclaration(
 		StartPos:             startPos,
 		DocString:            docString,
 	}
+}
+
+func (*FunctionDeclaration) ElementType() ElementType {
+	return ElementTypeFunctionDeclaration
 }
 
 func (d *FunctionDeclaration) StartPosition() Position {
@@ -136,6 +144,10 @@ type SpecialFunctionDeclaration struct {
 	FunctionDeclaration *FunctionDeclaration
 }
 
+var _ Element = &SpecialFunctionDeclaration{}
+var _ Declaration = &SpecialFunctionDeclaration{}
+var _ Statement = &SpecialFunctionDeclaration{}
+
 func NewSpecialFunctionDeclaration(
 	gauge common.MemoryGauge,
 	kind common.DeclarationKind,
@@ -149,6 +161,10 @@ func NewSpecialFunctionDeclaration(
 	}
 }
 
+func (*SpecialFunctionDeclaration) ElementType() ElementType {
+	return ElementTypeSpecialFunctionDeclaration
+}
+
 func (d *SpecialFunctionDeclaration) StartPosition() Position {
 	return d.FunctionDeclaration.StartPosition()
 }
@@ -158,7 +174,7 @@ func (d *SpecialFunctionDeclaration) EndPosition(memoryGauge common.MemoryGauge)
 }
 
 func (d *SpecialFunctionDeclaration) Accept(visitor Visitor) Repr {
-	return d.FunctionDeclaration.Accept(visitor)
+	return visitor.VisitSpecialFunctionDeclaration(d)
 }
 
 func (d *SpecialFunctionDeclaration) Walk(walkChild func(Element)) {

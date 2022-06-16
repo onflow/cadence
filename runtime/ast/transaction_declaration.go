@@ -35,6 +35,10 @@ type TransactionDeclaration struct {
 	Range
 }
 
+var _ Element = &TransactionDeclaration{}
+var _ Declaration = &TransactionDeclaration{}
+var _ Statement = &TransactionDeclaration{}
+
 func NewTransactionDeclaration(
 	gauge common.MemoryGauge,
 	parameterList *ParameterList,
@@ -58,6 +62,10 @@ func NewTransactionDeclaration(
 		DocString:      docString,
 		Range:          declRange,
 	}
+}
+
+func (*TransactionDeclaration) ElementType() ElementType {
+	return ElementTypeTransactionDeclaration
 }
 
 func (d *TransactionDeclaration) Accept(visitor Visitor) Repr {
