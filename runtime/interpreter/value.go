@@ -41,6 +41,10 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
+type Unsigned interface {
+	~uint8 | ~uint16 | ~uint32 | ~uint64
+}
+
 type TypeConformanceResults map[typeConformanceResultEntry]bool
 
 type typeConformanceResultEntry struct {
@@ -8093,33 +8097,62 @@ func (v UInt8Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []
 	return scratch[:2]
 }
 
+func ConvertUnsigned[T Unsigned](
+	memoryGauge common.MemoryGauge,
+	value Value,
+	maxBigNumber *big.Int,
+	maxNumber int,
+) T {
+	switch value := value.(type) {
+	case BigNumberValue:
+		v := value.ToBigInt(memoryGauge)
+		if v.Cmp(maxBigNumber) > 0 {
+			panic(OverflowError{})
+		} else if v.Sign() < 0 {
+			panic(UnderflowError{})
+		}
+		return T(v.Int64())
+
+	case NumberValue:
+		v := value.ToInt()
+		if maxNumber > 0 && v > maxNumber {
+			panic(OverflowError{})
+		} else if v < 0 {
+			panic(UnderflowError{})
+		}
+		return T(v)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func ConvertWord[T Unsigned](
+	memoryGauge common.MemoryGauge,
+	value Value,
+) T {
+	switch value := value.(type) {
+	case BigNumberValue:
+		return T(value.ToBigInt(memoryGauge).Int64())
+
+	case NumberValue:
+		return T(value.ToInt())
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
 func ConvertUInt8(memoryGauge common.MemoryGauge, value Value) UInt8Value {
 	return NewUInt8Value(
 		memoryGauge,
 		func() uint8 {
-
-			switch value := value.(type) {
-			case BigNumberValue:
-				v := value.ToBigInt(memoryGauge)
-				if v.Cmp(sema.UInt8TypeMaxInt) > 0 {
-					panic(OverflowError{})
-				} else if v.Sign() < 0 {
-					panic(UnderflowError{})
-				}
-				return uint8(v.Int64())
-
-			case NumberValue:
-				v := value.ToInt()
-				if v > math.MaxUint8 {
-					panic(OverflowError{})
-				} else if v < 0 {
-					panic(UnderflowError{})
-				}
-				return uint8(v)
-
-			default:
-				panic(errors.NewUnreachableError())
-			}
+			return ConvertUnsigned[uint8](
+				memoryGauge,
+				value,
+				sema.UInt8TypeMaxInt,
+				math.MaxUint8,
+			)
 		},
 	)
 }
@@ -8638,28 +8671,12 @@ func ConvertUInt16(memoryGauge common.MemoryGauge, value Value) UInt16Value {
 	return NewUInt16Value(
 		memoryGauge,
 		func() uint16 {
-			switch value := value.(type) {
-			case BigNumberValue:
-				v := value.ToBigInt(memoryGauge)
-				if v.Cmp(sema.UInt16TypeMaxInt) > 0 {
-					panic(OverflowError{})
-				} else if v.Sign() < 0 {
-					panic(UnderflowError{})
-				}
-				return uint16(v.Int64())
-
-			case NumberValue:
-				v := value.ToInt()
-				if v > math.MaxUint16 {
-					panic(OverflowError{})
-				} else if v < 0 {
-					panic(UnderflowError{})
-				}
-				return uint16(v)
-
-			default:
-				panic(errors.NewUnreachableError())
-			}
+			return ConvertUnsigned[uint16](
+				memoryGauge,
+				value,
+				sema.UInt16TypeMaxInt,
+				math.MaxUint16,
+			)
 		},
 	)
 }
@@ -9185,28 +9202,12 @@ func ConvertUInt32(memoryGauge common.MemoryGauge, value Value) UInt32Value {
 	return NewUInt32Value(
 		memoryGauge,
 		func() uint32 {
-			switch value := value.(type) {
-			case BigNumberValue:
-				v := value.ToBigInt(memoryGauge)
-				if v.Cmp(sema.UInt32TypeMaxInt) > 0 {
-					panic(OverflowError{})
-				} else if v.Sign() < 0 {
-					panic(UnderflowError{})
-				}
-				return uint32(v.Int64())
-
-			case NumberValue:
-				v := value.ToInt()
-				if v > math.MaxUint32 {
-					panic(OverflowError{})
-				} else if v < 0 {
-					panic(UnderflowError{})
-				}
-				return uint32(v)
-
-			default:
-				panic(errors.NewUnreachableError())
-			}
+			return ConvertUnsigned[uint32](
+				memoryGauge,
+				value,
+				sema.UInt32TypeMaxInt,
+				math.MaxUint32,
+			)
 		},
 	)
 }
@@ -9761,27 +9762,12 @@ func ConvertUInt64(memoryGauge common.MemoryGauge, value Value) UInt64Value {
 	return NewUInt64Value(
 		memoryGauge,
 		func() uint64 {
-			switch value := value.(type) {
-			case BigNumberValue:
-				v := value.ToBigInt(memoryGauge)
-				if v.Cmp(sema.UInt64TypeMaxInt) > 0 {
-					panic(OverflowError{})
-				} else if v.Sign() < 0 {
-					panic(UnderflowError{})
-				}
-				return uint64(v.Int64())
-
-			case NumberValue:
-				v := value.ToInt()
-				if v < 0 {
-					panic(UnderflowError{})
-				}
-				return uint64(v)
-
-			default:
-				panic(errors.NewUnreachableError())
-			}
-
+			return ConvertUnsigned[uint64](
+				memoryGauge,
+				value,
+				sema.UInt64TypeMaxInt,
+				-1,
+			)
 		},
 	)
 }
@@ -11523,10 +11509,12 @@ func (v Word8Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []
 }
 
 func ConvertWord8(memoryGauge common.MemoryGauge, value Value) Word8Value {
-	uint8Value := ConvertUInt8(memoryGauge, value)
-
-	// Already metered during conversion in `ConvertUInt8`
-	return NewUnmeteredWord8Value(uint8(uint8Value))
+	return NewWord8Value(
+		memoryGauge,
+		func() uint8 {
+			return ConvertWord[uint8](memoryGauge, value)
+		},
+	)
 }
 
 func (v Word8Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -11957,10 +11945,12 @@ func (v Word16Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch [
 }
 
 func ConvertWord16(memoryGauge common.MemoryGauge, value Value) Word16Value {
-	uint16Value := ConvertUInt16(memoryGauge, value)
-
-	// Already metered during conversion in `ConvertUInt16`
-	return NewUnmeteredWord16Value(uint16(uint16Value))
+	return NewWord16Value(
+		memoryGauge,
+		func() uint16 {
+			return ConvertWord[uint16](memoryGauge, value)
+		},
+	)
 }
 
 func (v Word16Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -12394,10 +12384,12 @@ func (v Word32Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch [
 }
 
 func ConvertWord32(memoryGauge common.MemoryGauge, value Value) Word32Value {
-	uint32Value := ConvertUInt32(memoryGauge, value)
-
-	// Already metered during conversion in `ConvertUInt32`
-	return NewUnmeteredWord32Value(uint32(uint32Value))
+	return NewWord32Value(
+		memoryGauge,
+		func() uint32 {
+			return ConvertWord[uint32](memoryGauge, value)
+		},
+	)
 }
 
 func (v Word32Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
@@ -12857,10 +12849,12 @@ func (v Word64Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch [
 }
 
 func ConvertWord64(memoryGauge common.MemoryGauge, value Value) Word64Value {
-	uint64Value := ConvertUInt64(memoryGauge, value)
-
-	// Already metered during conversion in `ConvertUInt64`
-	return NewUnmeteredWord64Value(uint64(uint64Value))
+	return NewWord64Value(
+		memoryGauge,
+		func() uint64 {
+			return ConvertWord[uint64](memoryGauge, value)
+		},
+	)
 }
 
 func (v Word64Value) BitwiseOr(interpreter *Interpreter, other IntegerValue) IntegerValue {
