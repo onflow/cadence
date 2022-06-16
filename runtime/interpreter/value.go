@@ -8148,9 +8148,9 @@ func ConvertUInt8(memoryGauge common.MemoryGauge, value Value) UInt8Value {
 		memoryGauge,
 		func() uint8 {
 			return ConvertUnsigned[uint8](
-				memoryGauge, 
-				value, 
-				sema.UInt8TypeMaxInt, 
+				memoryGauge,
+				value,
+				sema.UInt8TypeMaxInt,
 				math.MaxUint8,
 			)
 		},
@@ -8672,7 +8672,7 @@ func ConvertUInt16(memoryGauge common.MemoryGauge, value Value) UInt16Value {
 		memoryGauge,
 		func() uint16 {
 			return ConvertUnsigned[uint16](
-				memoryGauge, 
+				memoryGauge,
 				value,
 				sema.UInt16TypeMaxInt,
 				math.MaxUint16,
@@ -9203,7 +9203,7 @@ func ConvertUInt32(memoryGauge common.MemoryGauge, value Value) UInt32Value {
 		memoryGauge,
 		func() uint32 {
 			return ConvertUnsigned[uint32](
-				memoryGauge, 
+				memoryGauge,
 				value,
 				sema.UInt32TypeMaxInt,
 				math.MaxUint32,
@@ -9763,7 +9763,7 @@ func ConvertUInt64(memoryGauge common.MemoryGauge, value Value) UInt64Value {
 		memoryGauge,
 		func() uint64 {
 			return ConvertUnsigned[uint64](
-				memoryGauge, 
+				memoryGauge,
 				value,
 				sema.UInt64TypeMaxInt,
 				-1,
