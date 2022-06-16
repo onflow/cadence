@@ -31,6 +31,8 @@ const ScriptLocationPrefix = "s"
 //
 type ScriptLocation []byte
 
+var _ Location = ScriptLocation{}
+
 func (l ScriptLocation) ID() LocationID {
 	return NewLocationID(
 		ScriptLocationPrefix,
@@ -58,6 +60,10 @@ func (l ScriptLocation) QualifiedIdentifier(typeID TypeID) string {
 
 func (l ScriptLocation) String() string {
 	return hex.EncodeToString(l)
+}
+
+func (l ScriptLocation) Description() string {
+	return fmt.Sprintf("script with ID %s", hex.EncodeToString(l))
 }
 
 func (l ScriptLocation) MarshalJSON() ([]byte, error) {
@@ -93,12 +99,9 @@ func decodeScriptLocationTypeID(typeID string) (ScriptLocation, string, error) {
 
 	parts := strings.SplitN(typeID, ".", 3)
 
-	pieceCount := len(parts)
-	switch pieceCount {
-	case 1:
+	partCount := len(parts)
+	if partCount == 1 {
 		return newError("missing location")
-	case 2:
-		return newError("missing qualified identifier")
 	}
 
 	prefix := parts[0]
@@ -121,7 +124,10 @@ func decodeScriptLocationTypeID(typeID string) (ScriptLocation, string, error) {
 		)
 	}
 
-	qualifiedIdentifier := parts[2]
+	var qualifiedIdentifier string
+	if partCount > 2 {
+		qualifiedIdentifier = parts[2]
+	}
 
 	return location, qualifiedIdentifier, nil
 }

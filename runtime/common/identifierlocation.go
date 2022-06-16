@@ -30,6 +30,8 @@ const IdentifierLocationPrefix = "I"
 //
 type IdentifierLocation string
 
+var _ Location = IdentifierLocation("")
+
 func (l IdentifierLocation) ID() LocationID {
 	return NewLocationID(
 		IdentifierLocationPrefix,
@@ -56,6 +58,10 @@ func (l IdentifierLocation) QualifiedIdentifier(typeID TypeID) string {
 }
 
 func (l IdentifierLocation) String() string {
+	return string(l)
+}
+
+func (l IdentifierLocation) Description() string {
 	return string(l)
 }
 

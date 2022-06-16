@@ -19,6 +19,8 @@
 package analysis
 
 import (
+	"fmt"
+
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 )
@@ -39,4 +41,101 @@ type Config struct {
 		importingLocation common.Location,
 		importRange ast.Range,
 	) (string, error)
+}
+
+func NewSimpleConfig(
+	mode LoadMode,
+	codes map[common.LocationID]string,
+	contractNames map[common.Address][]string,
+	resolveAddressContracts func(common.Address) (contracts map[string]string, err error),
+) *Config {
+
+	loadAddressContracts := func(address common.Address) error {
+		if resolveAddressContracts == nil {
+			return nil
+		}
+		contracts, err := resolveAddressContracts(address)
+		if err != nil {
+			return err
+		}
+
+		names := make([]string, 0, len(contracts))
+
+		for name, code := range contracts {
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			codes[location.ID()] = code
+			names = append(names, name)
+		}
+
+		contractNames[address] = names
+
+		return nil
+	}
+
+	config := &Config{
+		Mode: mode,
+		ResolveAddressContractNames: func(
+			address common.Address,
+		) (
+			[]string,
+			error,
+		) {
+			repeat := true
+			for {
+				names, ok := contractNames[address]
+				if !ok {
+					if repeat {
+						err := loadAddressContracts(address)
+						if err != nil {
+							return nil, err
+						}
+						repeat = false
+						continue
+					}
+
+					return nil, fmt.Errorf(
+						"missing contracts for address: %s",
+						address,
+					)
+				}
+				return names, nil
+			}
+		},
+		ResolveCode: func(
+			location common.Location,
+			importingLocation common.Location,
+			importRange ast.Range,
+		) (
+			string,
+			error,
+		) {
+			repeat := true
+			for {
+				code, ok := codes[location.ID()]
+				if !ok {
+					if repeat {
+						if addressLocation, ok := location.(common.AddressLocation); ok {
+							err := loadAddressContracts(addressLocation.Address)
+							if err != nil {
+								return "", err
+							}
+							repeat = false
+							continue
+						}
+					}
+
+					return "", fmt.Errorf(
+						"import of unknown location: %s",
+						location,
+					)
+				}
+
+				return code, nil
+			}
+		},
+	}
+	return config
 }

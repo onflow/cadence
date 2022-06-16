@@ -115,6 +115,50 @@ func (s Operation) Symbol() string {
 	panic(errors.NewUnreachableError())
 }
 
+func (s Operation) Category() string {
+	switch s {
+	case OperationOr,
+		OperationAnd,
+		OperationNegate:
+		return "logical"
+
+	case OperationEqual,
+		OperationNotEqual,
+		OperationLess,
+		OperationGreater,
+		OperationLessEqual,
+		OperationGreaterEqual:
+		return "comparison"
+
+	case OperationPlus,
+		OperationMinus,
+		OperationMul,
+		OperationDiv,
+		OperationMod:
+		return "arithmetic"
+
+	case OperationNilCoalesce:
+		return "nil-coalescing"
+
+	case OperationMove:
+		return "move"
+
+	case OperationCast,
+		OperationFailableCast,
+		OperationForceCast:
+		return "casting"
+
+	case OperationBitwiseOr,
+		OperationBitwiseXor,
+		OperationBitwiseAnd,
+		OperationBitwiseLeftShift,
+		OperationBitwiseRightShift:
+		return "bitwise"
+	}
+
+	panic(errors.NewUnreachableError())
+}
+
 func (s Operation) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.String())
 }

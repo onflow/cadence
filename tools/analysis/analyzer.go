@@ -21,6 +21,8 @@ package analysis
 // Analyzer describes an analysis function and its options
 //
 type Analyzer struct {
+	Description string
+
 	Run func(*Pass) interface{}
 
 	// Requires is a set of analyzers that must run before this one.

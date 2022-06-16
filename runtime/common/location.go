@@ -35,6 +35,8 @@ type Location interface {
 	TypeID(qualifiedIdentifier string) TypeID
 	// QualifiedIdentifier returns the qualified identifier for the given type ID
 	QualifiedIdentifier(typeID TypeID) string
+	// Description returns a human-readable description. For example, it can be used in error messages
+	Description() string
 }
 
 // LocationsMatch returns true if both locations are nil or their IDs are the same.

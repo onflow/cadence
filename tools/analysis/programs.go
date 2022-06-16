@@ -70,6 +70,7 @@ func (programs Programs) load(
 
 	programs[location.ID()] = &Program{
 		Location:    location,
+		Code:        code,
 		Program:     program,
 		Elaboration: elaboration,
 	}
