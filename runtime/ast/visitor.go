@@ -22,11 +22,18 @@ type Repr interface{}
 
 type Element interface {
 	HasPosition
+	ElementType() ElementType
 	Accept(Visitor) Repr
 	Walk(walkChild func(Element))
 }
 
 type NotAnElement struct{}
+
+var _ Element = NotAnElement{}
+
+func (NotAnElement) ElementType() ElementType {
+	return ElementTypeUnknown
+}
 
 func (NotAnElement) Accept(Visitor) Repr {
 	// NO-OP
@@ -45,7 +52,25 @@ func (NotAnElement) Walk(_ func(Element)) {
 	// NO-OP
 }
 
+type StatementDeclarationVisitor interface {
+	VisitVariableDeclaration(*VariableDeclaration) Repr
+	VisitFunctionDeclaration(*FunctionDeclaration) Repr
+	VisitSpecialFunctionDeclaration(*SpecialFunctionDeclaration) Repr
+	VisitCompositeDeclaration(*CompositeDeclaration) Repr
+	VisitInterfaceDeclaration(*InterfaceDeclaration) Repr
+	VisitTransactionDeclaration(*TransactionDeclaration) Repr
+}
+
+type DeclarationVisitor interface {
+	StatementDeclarationVisitor
+	VisitFieldDeclaration(*FieldDeclaration) Repr
+	VisitEnumCaseDeclaration(*EnumCaseDeclaration) Repr
+	VisitPragmaDeclaration(*PragmaDeclaration) Repr
+	VisitImportDeclaration(*ImportDeclaration) Repr
+}
+
 type StatementVisitor interface {
+	StatementDeclarationVisitor
 	VisitReturnStatement(*ReturnStatement) Repr
 	VisitBreakStatement(*BreakStatement) Repr
 	VisitContinueStatement(*ContinueStatement) Repr
@@ -54,7 +79,6 @@ type StatementVisitor interface {
 	VisitWhileStatement(*WhileStatement) Repr
 	VisitForStatement(*ForStatement) Repr
 	VisitEmitStatement(*EmitStatement) Repr
-	VisitVariableDeclaration(*VariableDeclaration) Repr
 	VisitAssignmentStatement(*AssignmentStatement) Repr
 	VisitSwapStatement(*SwapStatement) Repr
 	VisitExpressionStatement(*ExpressionStatement) Repr
@@ -87,15 +111,8 @@ type ExpressionVisitor interface {
 type Visitor interface {
 	StatementVisitor
 	ExpressionVisitor
+	DeclarationVisitor
 	VisitProgram(*Program) Repr
-	VisitFunctionDeclaration(*FunctionDeclaration) Repr
 	VisitBlock(*Block) Repr
 	VisitFunctionBlock(*FunctionBlock) Repr
-	VisitCompositeDeclaration(*CompositeDeclaration) Repr
-	VisitInterfaceDeclaration(*InterfaceDeclaration) Repr
-	VisitFieldDeclaration(*FieldDeclaration) Repr
-	VisitEnumCaseDeclaration(*EnumCaseDeclaration) Repr
-	VisitPragmaDeclaration(*PragmaDeclaration) Repr
-	VisitImportDeclaration(*ImportDeclaration) Repr
-	VisitTransactionDeclaration(*TransactionDeclaration) Repr
 }

@@ -35,6 +35,10 @@ func (checker *Checker) VisitFunctionDeclaration(declaration *ast.FunctionDeclar
 	)
 }
 
+func (checker *Checker) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunctionDeclaration) ast.Repr {
+	return checker.VisitFunctionDeclaration(declaration.FunctionDeclaration)
+}
+
 type functionDeclarationOptions struct {
 	// mustExit specifies if the function declaration's function block
 	// should be checked for containing proper return statements.

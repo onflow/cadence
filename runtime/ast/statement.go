@@ -34,6 +34,13 @@ type ReturnStatement struct {
 	Range
 }
 
+var _ Element = &ReturnStatement{}
+var _ Statement = &ReturnStatement{}
+
+func (*ReturnStatement) ElementType() ElementType {
+	return ElementTypeReturnStatement
+}
+
 func (*ReturnStatement) isStatement() {}
 
 func (s *ReturnStatement) Accept(visitor Visitor) Repr {
@@ -63,6 +70,13 @@ type BreakStatement struct {
 	Range
 }
 
+var _ Element = &BreakStatement{}
+var _ Statement = &BreakStatement{}
+
+func (*BreakStatement) ElementType() ElementType {
+	return ElementTypeBreakStatement
+}
+
 func (*BreakStatement) isStatement() {}
 
 func (s *BreakStatement) Accept(visitor Visitor) Repr {
@@ -88,6 +102,13 @@ func (s *BreakStatement) MarshalJSON() ([]byte, error) {
 
 type ContinueStatement struct {
 	Range
+}
+
+var _ Element = &ContinueStatement{}
+var _ Statement = &ContinueStatement{}
+
+func (*ContinueStatement) ElementType() ElementType {
+	return ElementTypeContinueStatement
 }
 
 func (*ContinueStatement) isStatement() {}
@@ -127,6 +148,15 @@ type IfStatement struct {
 	StartPos Position `json:"-"`
 }
 
+var _ Element = &IfStatement{}
+var _ Statement = &IfStatement{}
+
+func (*IfStatement) ElementType() ElementType {
+	return ElementTypeIfStatement
+}
+
+func (*IfStatement) isStatement() {}
+
 func (s *IfStatement) StartPosition() Position {
 	return s.StartPos
 }
@@ -137,8 +167,6 @@ func (s *IfStatement) EndPosition() Position {
 	}
 	return s.Then.EndPosition()
 }
-
-func (*IfStatement) isStatement() {}
 
 func (s *IfStatement) Accept(visitor Visitor) Repr {
 	return visitor.VisitIfStatement(s)
@@ -171,6 +199,13 @@ type WhileStatement struct {
 	Test     Expression
 	Block    *Block
 	StartPos Position `json:"-"`
+}
+
+var _ Element = &WhileStatement{}
+var _ Statement = &WhileStatement{}
+
+func (*WhileStatement) ElementType() ElementType {
+	return ElementTypeWhileStatement
 }
 
 func (*WhileStatement) isStatement() {}
@@ -215,6 +250,13 @@ type ForStatement struct {
 	StartPos   Position `json:"-"`
 }
 
+var _ Element = &ForStatement{}
+var _ Statement = &ForStatement{}
+
+func (*ForStatement) ElementType() ElementType {
+	return ElementTypeForStatement
+}
+
 func (*ForStatement) isStatement() {}
 
 func (s *ForStatement) Accept(visitor Visitor) Repr {
@@ -254,6 +296,15 @@ type EmitStatement struct {
 	StartPos             Position `json:"-"`
 }
 
+var _ Element = &EmitStatement{}
+var _ Statement = &EmitStatement{}
+
+func (*EmitStatement) ElementType() ElementType {
+	return ElementTypeEmitStatement
+}
+
+func (*EmitStatement) isStatement() {}
+
 func (s *EmitStatement) StartPosition() Position {
 	return s.StartPos
 }
@@ -261,8 +312,6 @@ func (s *EmitStatement) StartPosition() Position {
 func (s *EmitStatement) EndPosition() Position {
 	return s.InvocationExpression.EndPosition()
 }
-
-func (*EmitStatement) isStatement() {}
 
 func (s *EmitStatement) Accept(visitor Visitor) Repr {
 	return visitor.VisitEmitStatement(s)
@@ -293,18 +342,25 @@ type AssignmentStatement struct {
 	Value    Expression
 }
 
-func (s *AssignmentStatement) StartPosition() Position {
-	return s.Target.StartPosition()
-}
+var _ Element = &AssignmentStatement{}
+var _ Statement = &AssignmentStatement{}
 
-func (s *AssignmentStatement) EndPosition() Position {
-	return s.Value.EndPosition()
+func (*AssignmentStatement) ElementType() ElementType {
+	return ElementTypeAssignmentStatement
 }
 
 func (*AssignmentStatement) isStatement() {}
 
 func (s *AssignmentStatement) Accept(visitor Visitor) Repr {
 	return visitor.VisitAssignmentStatement(s)
+}
+
+func (s *AssignmentStatement) StartPosition() Position {
+	return s.Target.StartPosition()
+}
+
+func (s *AssignmentStatement) EndPosition() Position {
+	return s.Value.EndPosition()
 }
 
 func (s *AssignmentStatement) Walk(walkChild func(Element)) {
@@ -332,6 +388,15 @@ type SwapStatement struct {
 	Right Expression
 }
 
+var _ Element = &SwapStatement{}
+var _ Statement = &SwapStatement{}
+
+func (*SwapStatement) ElementType() ElementType {
+	return ElementTypeSwapStatement
+}
+
+func (*SwapStatement) isStatement() {}
+
 func (s *SwapStatement) StartPosition() Position {
 	return s.Left.StartPosition()
 }
@@ -339,8 +404,6 @@ func (s *SwapStatement) StartPosition() Position {
 func (s *SwapStatement) EndPosition() Position {
 	return s.Right.EndPosition()
 }
-
-func (*SwapStatement) isStatement() {}
 
 func (s *SwapStatement) Accept(visitor Visitor) Repr {
 	return visitor.VisitSwapStatement(s)
@@ -370,6 +433,15 @@ type ExpressionStatement struct {
 	Expression Expression
 }
 
+var _ Element = &ExpressionStatement{}
+var _ Statement = &ExpressionStatement{}
+
+func (*ExpressionStatement) ElementType() ElementType {
+	return ElementTypeExpressionStatement
+}
+
+func (*ExpressionStatement) isStatement() {}
+
 func (s *ExpressionStatement) StartPosition() Position {
 	return s.Expression.StartPosition()
 }
@@ -377,8 +449,6 @@ func (s *ExpressionStatement) StartPosition() Position {
 func (s *ExpressionStatement) EndPosition() Position {
 	return s.Expression.EndPosition()
 }
-
-func (*ExpressionStatement) isStatement() {}
 
 func (s *ExpressionStatement) Accept(visitor Visitor) Repr {
 	return visitor.VisitExpressionStatement(s)
@@ -407,6 +477,13 @@ type SwitchStatement struct {
 	Expression Expression
 	Cases      []*SwitchCase
 	Range
+}
+
+var _ Element = &SwitchStatement{}
+var _ Statement = &SwitchStatement{}
+
+func (*SwitchStatement) ElementType() ElementType {
+	return ElementTypeSwitchStatement
 }
 
 func (*SwitchStatement) isStatement() {}

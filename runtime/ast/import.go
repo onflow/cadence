@@ -33,6 +33,13 @@ type ImportDeclaration struct {
 	Range
 }
 
+var _ Element = &ImportDeclaration{}
+var _ Declaration = &ImportDeclaration{}
+
+func (*ImportDeclaration) ElementType() ElementType {
+	return ElementTypeImportDeclaration
+}
+
 func (*ImportDeclaration) isDeclaration() {}
 
 func (*ImportDeclaration) isStatement() {}
