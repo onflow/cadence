@@ -1913,8 +1913,11 @@ func (r *interpreterRuntime) loadContract(
 			storageMap := storage.GetStorageMap(
 				location.Address,
 				StorageDomainContract,
+				false,
 			)
-			storedValue = storageMap.ReadValue(location.Name)
+			if storageMap != nil {
+				storedValue = storageMap.ReadValue(location.Name)
+			}
 		}
 
 		if storedValue == nil {
@@ -2369,16 +2372,6 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				})
 			}
 
-			var cachedProgram *interpreter.Program
-			if isUpdate {
-				// Get the old program from host environment, if available. This is an optimization
-				// so that old program doesn't need to be re-parsed for update validation.
-				wrapPanic(func() {
-					cachedProgram, err = context.Interface.GetProgram(context.Location)
-				})
-				handleContractUpdateError(err)
-			}
-
 			// NOTE: do NOT use the program obtained from the host environment, as the current program.
 			// Always re-parse and re-check the new program.
 
@@ -2478,18 +2471,20 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 			// Validate the contract update (if enabled)
 
 			if r.contractUpdateValidationEnabled && isUpdate {
-				var oldProgram *ast.Program
-				if cachedProgram != nil {
-					oldProgram = cachedProgram.Program
-				} else {
-					oldProgram, err = parser2.ParseProgram(string(existingCode))
-					handleContractUpdateError(err)
-				}
+				var oldProgram *interpreter.Program
+				oldProgram, err = r.getProgram(
+					context,
+					functions,
+					stdlib.BuiltinValues,
+					checkerOptions,
+					importResolutionResults{},
+				)
+				handleContractUpdateError(err)
 
 				validator := NewContractUpdateValidator(
 					context.Location,
 					nameArgument,
-					oldProgram,
+					oldProgram.Program,
 					program.Program,
 				)
 				err = validator.Validate()
