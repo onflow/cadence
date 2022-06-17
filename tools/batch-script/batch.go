@@ -57,7 +57,7 @@ var DefaultConfig = Config{
 	AtBlockHeight:     0,
 	FlowAccessNodeURL: "access.mainnet.nodes.onflow.org:9000",
 	ConcurrentClients: 10, // should be a good number to not produce too much traffic
-	Pause:             0,
+	Pause:             500 * time.Millisecond,
 }
 
 func BatchScript(
@@ -106,7 +106,7 @@ func BatchScript(
 			for accountAddresses := range addressChan {
 				accountsCadenceValues := convertAddresses(accountAddresses)
 				arguments := []cadence.Value{cadence.NewArray(accountsCadenceValues)}
-				result := retryScriptUntilSuccess(ctx, log, currentBlock.Height, code, arguments, client)
+				result := retryScriptUntilSuccess(ctx, log, currentBlock.Height, code, arguments, client, conf.Pause)
 				handler(result)
 			}
 
@@ -149,11 +149,14 @@ func retryScriptUntilSuccess(
 	script []byte,
 	arguments []cadence.Value,
 	flowClient *flowclient.Client,
+	pause time.Duration,
 ) (result cadence.Value) {
 	var err error
 
 	for {
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(pause)
+
+		log.Info().Msgf("executing script")
 
 		result, err = flowClient.ExecuteScriptAtBlockHeight(
 			ctx,
