@@ -21,6 +21,8 @@ package ast
 import (
 	"encoding/json"
 
+	"github.com/turbolent/prettier"
+
 	"github.com/onflow/cadence/runtime/common"
 )
 
@@ -61,6 +63,10 @@ func NewFunctionDeclaration(
 	}
 }
 
+func (*FunctionDeclaration) isDeclaration() {}
+
+func (*FunctionDeclaration) isStatement() {}
+
 func (*FunctionDeclaration) ElementType() ElementType {
 	return ElementTypeFunctionDeclaration
 }
@@ -90,9 +96,6 @@ func (d *FunctionDeclaration) Walk(walkChild func(Element)) {
 		walkChild(d.FunctionBlock)
 	}
 }
-
-func (*FunctionDeclaration) isDeclaration() {}
-func (*FunctionDeclaration) isStatement()   {}
 
 func (d *FunctionDeclaration) DeclarationIdentifier() *Identifier {
 	return &d.Identifier
@@ -124,6 +127,17 @@ func (d *FunctionDeclaration) DeclarationDocString() string {
 	return d.DocString
 }
 
+func (d *FunctionDeclaration) Doc() prettier.Doc {
+	return FunctionDocument(
+		d.Access,
+		true,
+		d.Identifier.Identifier,
+		d.ParameterList,
+		d.ReturnTypeAnnotation,
+		d.FunctionBlock,
+	)
+}
+
 func (d *FunctionDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias FunctionDeclaration
 	return json.Marshal(&struct {
@@ -135,6 +149,10 @@ func (d *FunctionDeclaration) MarshalJSON() ([]byte, error) {
 		Range: NewUnmeteredRangeFromPositioned(d),
 		Alias: (*Alias)(d),
 	})
+}
+
+func (d *FunctionDeclaration) String() string {
+	return Prettier(d)
 }
 
 // SpecialFunctionDeclaration
@@ -159,7 +177,11 @@ func NewSpecialFunctionDeclaration(
 		Kind:                kind,
 		FunctionDeclaration: funcDecl,
 	}
+
 }
+func (*SpecialFunctionDeclaration) isDeclaration() {}
+
+func (*SpecialFunctionDeclaration) isStatement() {}
 
 func (*SpecialFunctionDeclaration) ElementType() ElementType {
 	return ElementTypeSpecialFunctionDeclaration
@@ -181,9 +203,6 @@ func (d *SpecialFunctionDeclaration) Walk(walkChild func(Element)) {
 	d.FunctionDeclaration.Walk(walkChild)
 }
 
-func (*SpecialFunctionDeclaration) isDeclaration() {}
-func (*SpecialFunctionDeclaration) isStatement()   {}
-
 func (d *SpecialFunctionDeclaration) DeclarationIdentifier() *Identifier {
 	return d.FunctionDeclaration.DeclarationIdentifier()
 }
@@ -204,6 +223,17 @@ func (d *SpecialFunctionDeclaration) DeclarationDocString() string {
 	return d.FunctionDeclaration.DeclarationDocString()
 }
 
+func (d *SpecialFunctionDeclaration) Doc() prettier.Doc {
+	return FunctionDocument(
+		d.FunctionDeclaration.Access,
+		false,
+		d.Kind.Keywords(),
+		d.FunctionDeclaration.ParameterList,
+		d.FunctionDeclaration.ReturnTypeAnnotation,
+		d.FunctionDeclaration.FunctionBlock,
+	)
+}
+
 func (d *SpecialFunctionDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias SpecialFunctionDeclaration
 	return json.Marshal(&struct {
@@ -215,4 +245,8 @@ func (d *SpecialFunctionDeclaration) MarshalJSON() ([]byte, error) {
 		Range: NewUnmeteredRangeFromPositioned(d),
 		Alias: (*Alias)(d),
 	})
+}
+
+func (d *SpecialFunctionDeclaration) String() string {
+	return Prettier(d)
 }

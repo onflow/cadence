@@ -19,21 +19,14 @@
 package ast
 
 import (
-	"fmt"
+	"strings"
 
 	"github.com/turbolent/prettier"
-
-	"github.com/onflow/cadence/runtime/common"
 )
 
-type Declaration interface {
-	Element
-	fmt.Stringer
-	isDeclaration()
-	DeclarationIdentifier() *Identifier
-	DeclarationKind() common.DeclarationKind
-	DeclarationAccess() Access
-	DeclarationMembers() *Members
-	DeclarationDocString() string
-	Doc() prettier.Doc
+func Prettier(element interface{ Doc() prettier.Doc }) string {
+	var builder strings.Builder
+	doc := element.Doc().Flatten()
+	prettier.Prettier(&builder, doc, 80, "    ")
+	return builder.String()
 }

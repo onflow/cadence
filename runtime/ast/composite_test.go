@@ -24,6 +24,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/turbolent/prettier"
 
 	"github.com/onflow/cadence/runtime/common"
 )
@@ -32,7 +33,7 @@ func TestFieldDeclaration_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
 
-	expr := &FieldDeclaration{
+	decl := &FieldDeclaration{
 		Access:       AccessPublic,
 		VariableKind: VariableKindConstant,
 		Identifier: Identifier{
@@ -56,7 +57,7 @@ func TestFieldDeclaration_MarshalJSON(t *testing.T) {
 		},
 	}
 
-	actual, err := json.Marshal(expr)
+	actual, err := json.Marshal(decl)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -94,11 +95,288 @@ func TestFieldDeclaration_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestFieldDeclaration_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("with access, with kind", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &FieldDeclaration{
+			Access:       AccessPublic,
+			VariableKind: VariableKindConstant,
+			Identifier: Identifier{
+				Identifier: "xyz",
+			},
+			TypeAnnotation: &TypeAnnotation{
+				IsResource: true,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "CD",
+					},
+				},
+			},
+		}
+
+		require.Equal(
+			t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("pub"),
+					prettier.Text(" "),
+					prettier.Text("let"),
+					prettier.Text(" "),
+					prettier.Group{
+						Doc: prettier.Concat{
+							prettier.Text("xyz"),
+							prettier.Text(": "),
+							prettier.Concat{
+								prettier.Text("@"),
+								prettier.Text("CD"),
+							},
+						},
+					},
+				},
+			},
+			decl.Doc(),
+		)
+	})
+
+	t.Run("without access, with kind", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &FieldDeclaration{
+			VariableKind: VariableKindConstant,
+			Identifier: Identifier{
+				Identifier: "xyz",
+			},
+			TypeAnnotation: &TypeAnnotation{
+				IsResource: true,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "CD",
+					},
+				},
+			},
+		}
+
+		require.Equal(
+			t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("let"),
+					prettier.Text(" "),
+					prettier.Group{
+						Doc: prettier.Concat{
+							prettier.Text("xyz"),
+							prettier.Text(": "),
+							prettier.Concat{
+								prettier.Text("@"),
+								prettier.Text("CD"),
+							},
+						},
+					},
+				},
+			},
+			decl.Doc(),
+		)
+	})
+
+	t.Run("with access, without kind", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &FieldDeclaration{
+			Access: AccessPublic,
+			Identifier: Identifier{
+				Identifier: "xyz",
+			},
+			TypeAnnotation: &TypeAnnotation{
+				IsResource: true,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "CD",
+					},
+				},
+			},
+		}
+
+		require.Equal(
+			t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("pub"),
+					prettier.Text(" "),
+					prettier.Group{
+						Doc: prettier.Concat{
+							prettier.Text("xyz"),
+							prettier.Text(": "),
+							prettier.Concat{
+								prettier.Text("@"),
+								prettier.Text("CD"),
+							},
+						},
+					},
+				},
+			},
+			decl.Doc(),
+		)
+	})
+
+	t.Run("without access, without kind", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &FieldDeclaration{
+			Identifier: Identifier{
+				Identifier: "xyz",
+			},
+			TypeAnnotation: &TypeAnnotation{
+				IsResource: true,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "CD",
+					},
+				},
+			},
+		}
+
+		require.Equal(
+			t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("xyz"),
+					prettier.Text(": "),
+					prettier.Concat{
+						prettier.Text("@"),
+						prettier.Text("CD"),
+					},
+				},
+			},
+			decl.Doc(),
+		)
+	})
+
+}
+
+func TestFieldDeclaration_String(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("with access, with kind", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &FieldDeclaration{
+			Access:       AccessPublic,
+			VariableKind: VariableKindConstant,
+			Identifier: Identifier{
+				Identifier: "xyz",
+			},
+			TypeAnnotation: &TypeAnnotation{
+				IsResource: true,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "CD",
+					},
+				},
+			},
+		}
+
+		require.Equal(
+			t,
+			"pub let xyz: @CD",
+			decl.String(),
+		)
+	})
+
+	t.Run("without access, with kind", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &FieldDeclaration{
+			VariableKind: VariableKindConstant,
+			Identifier: Identifier{
+				Identifier: "xyz",
+			},
+			TypeAnnotation: &TypeAnnotation{
+				IsResource: true,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "CD",
+					},
+				},
+			},
+		}
+
+		require.Equal(
+			t,
+			"let xyz: @CD",
+			decl.String(),
+		)
+	})
+
+	t.Run("with access, without kind", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &FieldDeclaration{
+			Access: AccessPublic,
+			Identifier: Identifier{
+				Identifier: "xyz",
+			},
+			TypeAnnotation: &TypeAnnotation{
+				IsResource: true,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "CD",
+					},
+				},
+			},
+		}
+
+		require.Equal(
+			t,
+			"pub xyz: @CD",
+			decl.String(),
+		)
+
+	})
+
+	t.Run("without access, without kind", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &FieldDeclaration{
+			Identifier: Identifier{
+				Identifier: "xyz",
+			},
+			TypeAnnotation: &TypeAnnotation{
+				IsResource: true,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "CD",
+					},
+				},
+			},
+		}
+
+		require.Equal(
+			t,
+			"xyz: @CD",
+			decl.String(),
+		)
+	})
+
+}
+
 func TestCompositeDeclaration_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
 
-	expr := &CompositeDeclaration{
+	decl := &CompositeDeclaration{
 		Access:        AccessPublic,
 		CompositeKind: common.CompositeKindResource,
 		Identifier: Identifier{
@@ -121,7 +399,7 @@ func TestCompositeDeclaration_MarshalJSON(t *testing.T) {
 		},
 	}
 
-	actual, err := json.Marshal(expr)
+	actual, err := json.Marshal(decl)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -156,5 +434,475 @@ func TestCompositeDeclaration_MarshalJSON(t *testing.T) {
         }
         `,
 		string(actual),
+	)
+}
+
+func TestCompositeDeclaration_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("no members, conformances", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &CompositeDeclaration{
+			Access:        AccessPublic,
+			CompositeKind: common.CompositeKindResource,
+			Identifier: Identifier{
+				Identifier: "AB",
+			},
+			Conformances: []*NominalType{
+				{
+					Identifier: Identifier{
+						Identifier: "CD",
+					},
+				},
+				{
+					Identifier: Identifier{
+						Identifier: "EF",
+					},
+				},
+			},
+			Members: NewMembers(nil, []Declaration{}),
+		}
+
+		require.Equal(
+			t,
+			prettier.Concat{
+				prettier.Text("pub"),
+				prettier.Text(" "),
+				prettier.Text("resource"),
+				prettier.Text(" "),
+				prettier.Text("AB"),
+				prettier.Text(":"),
+				prettier.Group{
+					Doc: prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.Line{},
+							prettier.Text("CD"),
+							prettier.Concat{
+								prettier.Text(","),
+								prettier.Line{},
+							},
+							prettier.Text("EF"),
+							prettier.Dedent{
+								Doc: prettier.Concat{
+									prettier.Line{},
+									prettier.Text("{}"),
+								},
+							},
+						},
+					},
+				},
+			},
+			decl.Doc(),
+		)
+	})
+
+	t.Run("members, conformances", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &CompositeDeclaration{
+			Access:        AccessPublic,
+			CompositeKind: common.CompositeKindResource,
+			Identifier: Identifier{
+				Identifier: "AB",
+			},
+			Conformances: []*NominalType{
+				{
+					Identifier: Identifier{
+						Identifier: "CD",
+					},
+				},
+				{
+					Identifier: Identifier{
+						Identifier: "EF",
+					},
+				},
+			},
+			Members: NewMembers(nil, []Declaration{
+				&FieldDeclaration{
+					Identifier: Identifier{
+						Identifier: "x",
+					},
+					TypeAnnotation: &TypeAnnotation{
+						Type: &NominalType{
+							Identifier: Identifier{
+								Identifier: "X",
+							},
+						},
+					},
+				},
+			}),
+		}
+
+		require.Equal(
+			t,
+			prettier.Concat{
+				prettier.Text("pub"),
+				prettier.Text(" "),
+				prettier.Text("resource"),
+				prettier.Text(" "),
+				prettier.Text("AB"),
+				prettier.Text(":"),
+				prettier.Group{
+					Doc: prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.Line{},
+							prettier.Text("CD"),
+							prettier.Concat{
+								prettier.Text(","),
+								prettier.Line{},
+							},
+							prettier.Text("EF"),
+							prettier.Dedent{
+								Doc: prettier.Concat{
+									prettier.Line{},
+									prettier.Concat{
+										prettier.Text("{"),
+										prettier.Indent{
+											Doc: prettier.Concat{
+												prettier.HardLine{},
+												prettier.Group{
+													Doc: prettier.Concat{
+														prettier.Text("x"),
+														prettier.Text(": "),
+														prettier.Text("X"),
+													},
+												},
+											},
+										},
+										prettier.HardLine{},
+										prettier.Text("}"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			decl.Doc(),
+		)
+	})
+
+	t.Run("event", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &CompositeDeclaration{
+			Access:        AccessPublic,
+			CompositeKind: common.CompositeKindEvent,
+			Identifier: Identifier{
+				Identifier: "AB",
+			},
+			Members: NewMembers(nil, []Declaration{
+				&SpecialFunctionDeclaration{
+					Kind: common.DeclarationKindInitializer,
+					FunctionDeclaration: &FunctionDeclaration{
+						ParameterList: &ParameterList{
+							Parameters: []*Parameter{
+								{
+									Identifier: Identifier{Identifier: "e"},
+									TypeAnnotation: &TypeAnnotation{
+										Type: &NominalType{
+											Identifier: Identifier{Identifier: "E"},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}),
+		}
+
+		require.Equal(
+			t,
+			prettier.Concat{
+				prettier.Text("pub"),
+				prettier.Text(" "),
+				prettier.Text("event"),
+				prettier.Text(" "),
+				prettier.Text("AB"),
+				prettier.Group{
+					Doc: prettier.Concat{
+						prettier.Text("("),
+						prettier.Indent{
+							Doc: prettier.Concat{
+								prettier.SoftLine{},
+								prettier.Concat{
+									prettier.Text("e"),
+									prettier.Text(": "),
+									prettier.Text("E"),
+								},
+							},
+						},
+						prettier.SoftLine{},
+						prettier.Text(")"),
+					},
+				},
+			},
+			decl.Doc(),
+		)
+	})
+
+	t.Run("enum", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &CompositeDeclaration{
+			Access:        AccessPublic,
+			CompositeKind: common.CompositeKindEnum,
+			Identifier: Identifier{
+				Identifier: "AB",
+			},
+			Conformances: []*NominalType{
+				{
+					Identifier: Identifier{
+						Identifier: "CD",
+					},
+				},
+			},
+			Members: NewMembers(nil, []Declaration{
+				&EnumCaseDeclaration{
+					Identifier: Identifier{
+						Identifier: "x",
+					},
+				},
+			}),
+		}
+
+		require.Equal(
+			t,
+			prettier.Concat{
+				prettier.Text("pub"),
+				prettier.Text(" "),
+				prettier.Text("enum"),
+				prettier.Text(" "),
+				prettier.Text("AB"),
+				prettier.Text(":"),
+				prettier.Group{
+					Doc: prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.Line{},
+							prettier.Text("CD"),
+							prettier.Dedent{
+								Doc: prettier.Concat{
+									prettier.Line{},
+									prettier.Concat{
+										prettier.Text("{"),
+										prettier.Indent{
+											Doc: prettier.Concat{
+												prettier.HardLine{},
+												prettier.Concat{
+													prettier.Text("case "),
+													prettier.Text("x"),
+												},
+											},
+										},
+										prettier.HardLine{},
+										prettier.Text("}"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			decl.Doc(),
+		)
+	})
+}
+
+func TestCompositeDeclaration_String(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("no members, conformances", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &CompositeDeclaration{
+			Access:        AccessPublic,
+			CompositeKind: common.CompositeKindResource,
+			Identifier: Identifier{
+				Identifier: "AB",
+			},
+			Conformances: []*NominalType{
+				{
+					Identifier: Identifier{
+						Identifier: "CD",
+					},
+				},
+				{
+					Identifier: Identifier{
+						Identifier: "EF",
+					},
+				},
+			},
+			Members: NewMembers(nil, []Declaration{}),
+		}
+
+		require.Equal(
+			t,
+			"pub resource AB: CD, EF {}",
+			decl.String(),
+		)
+	})
+
+	t.Run("members, conformances", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &CompositeDeclaration{
+			Access:        AccessPublic,
+			CompositeKind: common.CompositeKindResource,
+			Identifier: Identifier{
+				Identifier: "AB",
+			},
+			Conformances: []*NominalType{
+				{
+					Identifier: Identifier{
+						Identifier: "CD",
+					},
+				},
+				{
+					Identifier: Identifier{
+						Identifier: "EF",
+					},
+				},
+			},
+			Members: NewMembers(nil, []Declaration{
+				&FieldDeclaration{
+					Identifier: Identifier{
+						Identifier: "x",
+					},
+					TypeAnnotation: &TypeAnnotation{
+						Type: &NominalType{
+							Identifier: Identifier{
+								Identifier: "X",
+							},
+						},
+					},
+				},
+			}),
+		}
+
+		require.Equal(
+			t,
+			"pub resource AB: CD, EF {\n"+
+				"    x: X\n"+
+				"}",
+			decl.String(),
+		)
+	})
+
+	t.Run("event", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &CompositeDeclaration{
+			Access:        AccessPublic,
+			CompositeKind: common.CompositeKindEvent,
+			Identifier: Identifier{
+				Identifier: "AB",
+			},
+			Members: NewMembers(nil, []Declaration{
+				&SpecialFunctionDeclaration{
+					Kind: common.DeclarationKindInitializer,
+					FunctionDeclaration: &FunctionDeclaration{
+						ParameterList: &ParameterList{
+							Parameters: []*Parameter{
+								{
+									Identifier: Identifier{Identifier: "e"},
+									TypeAnnotation: &TypeAnnotation{
+										Type: &NominalType{
+											Identifier: Identifier{Identifier: "E"},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}),
+		}
+
+		require.Equal(
+			t,
+			"pub event AB(e: E)",
+			decl.String(),
+		)
+	})
+
+	t.Run("enum", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &CompositeDeclaration{
+			Access:        AccessPublic,
+			CompositeKind: common.CompositeKindEnum,
+			Identifier: Identifier{
+				Identifier: "AB",
+			},
+			Conformances: []*NominalType{
+				{
+					Identifier: Identifier{
+						Identifier: "CD",
+					},
+				},
+			},
+			Members: NewMembers(nil, []Declaration{
+				&EnumCaseDeclaration{
+					Identifier: Identifier{
+						Identifier: "x",
+					},
+				},
+			}),
+		}
+
+		require.Equal(
+			t,
+			"pub enum AB: CD {\n"+
+				"    case x\n"+
+				"}",
+			decl.String(),
+		)
+	})
+}
+
+func TestEnumCaseDeclaration_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	decl := &EnumCaseDeclaration{
+		Identifier: Identifier{
+			Identifier: "x",
+		},
+	}
+
+	require.Equal(t,
+		prettier.Concat{
+			prettier.Text("case "),
+			prettier.Text("x"),
+		},
+		decl.Doc(),
+	)
+}
+
+func TestEnumCaseDeclaration_String(t *testing.T) {
+
+	t.Parallel()
+
+	decl := &EnumCaseDeclaration{
+		Identifier: Identifier{
+			Identifier: "x",
+		},
+	}
+
+	require.Equal(t,
+		"case x",
+		decl.String(),
 	)
 }

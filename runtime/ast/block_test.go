@@ -24,6 +24,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/turbolent/prettier"
 )
 
 func TestBlock_MarshalJSON(t *testing.T) {
@@ -73,6 +74,73 @@ func TestBlock_MarshalJSON(t *testing.T) {
         }
         `,
 		string(actual),
+	)
+}
+
+func TestBlock_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	block := &Block{
+		Statements: []Statement{
+			&ExpressionStatement{
+				Expression: &BoolExpression{
+					Value: false,
+				},
+			},
+			&ExpressionStatement{
+				Expression: &StringExpression{
+					Value: "test",
+				},
+			},
+		},
+	}
+
+	require.Equal(
+		t,
+		prettier.Concat{
+			prettier.Text("{"),
+			prettier.Indent{
+				Doc: prettier.Concat{
+					prettier.HardLine{},
+					prettier.Text("false"),
+					prettier.HardLine{},
+					prettier.Text("\"test\""),
+				},
+			},
+			prettier.HardLine{},
+			prettier.Text("}"),
+		},
+		block.Doc(),
+	)
+}
+
+func TestBlock_String(t *testing.T) {
+
+	t.Parallel()
+
+	block := &Block{
+		Statements: []Statement{
+			&ExpressionStatement{
+				Expression: &BoolExpression{
+					Value: false,
+				},
+			},
+			&ExpressionStatement{
+				Expression: &StringExpression{
+					Value: "test",
+				},
+			},
+		},
+	}
+
+	require.Equal(
+		t,
+		"{\n"+
+			"    false\n"+
+			`    "test"`+"\n"+
+			"}",
+		block.String(),
 	)
 }
 
@@ -241,6 +309,262 @@ func TestFunctionBlock_MarshalJSON(t *testing.T) {
             }
             `,
 			string(actual),
+		)
+	})
+}
+
+func TestFunctionBlock_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("with statements", func(t *testing.T) {
+
+		t.Parallel()
+
+		block := &FunctionBlock{
+			Block: &Block{
+				Statements: []Statement{
+					&ExpressionStatement{
+						Expression: &BoolExpression{
+							Value: false,
+						},
+					},
+					&ExpressionStatement{
+						Expression: &StringExpression{
+							Value: "test",
+						},
+					},
+				},
+			},
+		}
+
+		require.Equal(
+			t,
+			prettier.Concat{
+				prettier.Text("{"),
+				prettier.Indent{
+					Doc: prettier.Concat{
+						prettier.HardLine{},
+						prettier.Text("false"),
+						prettier.HardLine{},
+						prettier.Text("\"test\""),
+					}},
+				prettier.HardLine{},
+				prettier.Text("}"),
+			},
+			block.Doc(),
+		)
+	})
+
+	t.Run("with preconditions and postconditions", func(t *testing.T) {
+
+		t.Parallel()
+
+		block := &FunctionBlock{
+			Block: &Block{
+				Statements: []Statement{
+					&ExpressionStatement{
+						Expression: &BoolExpression{
+							Value: false,
+						},
+					},
+					&ExpressionStatement{
+						Expression: &StringExpression{
+							Value: "test",
+						},
+					},
+				},
+			},
+			PreConditions: &Conditions{
+				{
+					Kind: ConditionKindPre,
+					Test: &BoolExpression{
+						Value: false,
+					},
+					Message: &StringExpression{
+						Value: "Pre failed",
+					},
+				},
+			},
+			PostConditions: &Conditions{
+				{
+					Kind: ConditionKindPost,
+					Test: &BoolExpression{
+						Value: true,
+					},
+					Message: &StringExpression{
+						Value: "Post failed",
+					},
+				},
+			},
+		}
+
+		require.Equal(
+			t,
+			prettier.Concat{
+				prettier.Text("{"),
+				prettier.Indent{
+					Doc: prettier.Concat{
+						prettier.HardLine{},
+						prettier.Group{
+							Doc: prettier.Concat{
+								prettier.Text("pre"),
+								prettier.Text(" "),
+								prettier.Text("{"),
+								prettier.Indent{
+									Doc: prettier.Concat{
+										prettier.HardLine{},
+										prettier.Group{
+											Doc: prettier.Concat{
+												prettier.Text("false"),
+												prettier.Text(":"),
+												prettier.Indent{
+													Doc: prettier.Concat{
+														prettier.HardLine{},
+														prettier.Text("\"Pre failed\""),
+													},
+												},
+											},
+										},
+									},
+								},
+								prettier.HardLine{},
+								prettier.Text("}"),
+							}},
+						prettier.HardLine{},
+						prettier.Group{
+							Doc: prettier.Concat{
+								prettier.Text("post"),
+								prettier.Text(" "),
+								prettier.Text("{"),
+								prettier.Indent{
+									Doc: prettier.Concat{
+										prettier.HardLine{},
+										prettier.Group{
+											Doc: prettier.Concat{
+												prettier.Text("true"),
+												prettier.Text(":"),
+												prettier.Indent{
+													Doc: prettier.Concat{
+														prettier.HardLine{},
+														prettier.Text("\"Post failed\""),
+													},
+												},
+											},
+										},
+									},
+								},
+								prettier.HardLine{},
+								prettier.Text("}"),
+							}},
+						prettier.Concat{
+							prettier.HardLine{},
+							prettier.Text("false"),
+							prettier.HardLine{},
+							prettier.Text("\"test\""),
+						},
+					}},
+				prettier.HardLine{},
+				prettier.Text("}"),
+			},
+			block.Doc(),
+		)
+	})
+}
+
+func TestFunctionBlock_String(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("with statements", func(t *testing.T) {
+
+		t.Parallel()
+
+		block := &FunctionBlock{
+			Block: &Block{
+				Statements: []Statement{
+					&ExpressionStatement{
+						Expression: &BoolExpression{
+							Value: false,
+						},
+					},
+					&ExpressionStatement{
+						Expression: &StringExpression{
+							Value: "test",
+						},
+					},
+				},
+			},
+		}
+
+		require.Equal(
+			t,
+			"{\n"+
+				"    false\n"+
+				"    \"test\"\n"+
+				"}",
+			block.String(),
+		)
+	})
+
+	t.Run("with preconditions and postconditions", func(t *testing.T) {
+
+		t.Parallel()
+
+		block := &FunctionBlock{
+			Block: &Block{
+				Statements: []Statement{
+					&ExpressionStatement{
+						Expression: &BoolExpression{
+							Value: false,
+						},
+					},
+					&ExpressionStatement{
+						Expression: &StringExpression{
+							Value: "test",
+						},
+					},
+				},
+			},
+			PreConditions: &Conditions{
+				{
+					Kind: ConditionKindPre,
+					Test: &BoolExpression{
+						Value: false,
+					},
+					Message: &StringExpression{
+						Value: "Pre failed",
+					},
+				},
+			},
+			PostConditions: &Conditions{
+				{
+					Kind: ConditionKindPost,
+					Test: &BoolExpression{
+						Value: true,
+					},
+					Message: &StringExpression{
+						Value: "Post failed",
+					},
+				},
+			},
+		}
+
+		require.Equal(
+			t,
+			"{\n"+
+				"    pre {\n"+
+				"        false:\n"+
+				"            \"Pre failed\"\n"+
+				"    }\n"+
+				"    post {\n"+
+				"        true:\n"+
+				"            \"Post failed\"\n"+
+				"    }\n"+
+				"    false\n"+
+				"    \"test\"\n"+
+				"}",
+			block.String(),
 		)
 	})
 }

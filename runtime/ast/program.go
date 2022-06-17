@@ -21,6 +21,8 @@ package ast
 import (
 	"encoding/json"
 
+	"github.com/turbolent/prettier"
+
 	"github.com/onflow/cadence/runtime/common"
 )
 
@@ -177,4 +179,21 @@ func (p *Program) MarshalJSON() ([]byte, error) {
 		Declarations: p.declarations,
 		Alias:        (*Alias)(p),
 	})
+}
+
+var programSeparatorDoc = prettier.Concat{
+	prettier.HardLine{},
+	prettier.HardLine{},
+}
+
+func (p *Program) Doc() prettier.Doc {
+	declarations := p.Declarations()
+
+	docs := make([]prettier.Doc, 0, len(declarations))
+
+	for _, declaration := range declarations {
+		docs = append(docs, declaration.Doc())
+	}
+
+	return prettier.Join(programSeparatorDoc, docs...)
 }
