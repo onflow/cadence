@@ -1045,11 +1045,13 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 		return nil
 	}
 
-	typeID, ok := valueJSON.(string)
-	if ok {
+	if typeID, ok := valueJSON.(string); ok {
 		if result, ok := results[typeID]; ok {
 			return result
 		}
+
+		// Backwards-compatibility for format <0.3.0
+		return cadence.TypeID(typeID)
 	}
 
 	obj := toObject(valueJSON)
