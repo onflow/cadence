@@ -1987,8 +1987,8 @@ func testEncode(t *testing.T, val cadence.Value, expectedJSON string) (actualJSO
 	return actualJSON
 }
 
-func testDecode(t *testing.T, actualJSON string, expectedVal cadence.Value) {
-	decodedVal, err := json.Decode(nil, []byte(actualJSON))
+func testDecode(t *testing.T, actualJSON string, expectedVal cadence.Value, options ...json.Option) {
+	decodedVal, err := json.Decode(nil, []byte(actualJSON), options...)
 	require.NoError(t, err)
 
 	assert.Equal(t, expectedVal, decodedVal)
@@ -2036,5 +2036,6 @@ func TestDecodeBackwardsCompatibilityTypeID(t *testing.T) {
 		cadence.TypeValue{
 			StaticType: cadence.TypeID("&Int"),
 		},
+		json.WithAllowUnstructuredStaticTypes(true),
 	)
 }
