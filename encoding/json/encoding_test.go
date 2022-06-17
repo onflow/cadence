@@ -2029,13 +2029,28 @@ func TestDecodeBackwardsCompatibilityTypeID(t *testing.T) {
 
 	t.Parallel()
 
-	testDecode(
-		t,
-		`{"type":"Type","value":{"staticType":"&Int"}}}`,
+	const encoded = `{"type":"Type","value":{"staticType":"&Int"}}}`
 
-		cadence.TypeValue{
-			StaticType: cadence.TypeID("&Int"),
-		},
-		json.WithAllowUnstructuredStaticTypes(true),
-	)
+	t.Run("unstructured static types allowed", func(t *testing.T) {
+
+		t.Parallel()
+
+		testDecode(
+			t,
+			encoded,
+
+			cadence.TypeValue{
+				StaticType: cadence.TypeID("&Int"),
+			},
+			json.WithAllowUnstructuredStaticTypes(true),
+		)
+	})
+
+	t.Run("unstructured static types disallowed", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := json.Decode(nil, []byte(encoded))
+		require.Error(t, err)
+	})
 }
