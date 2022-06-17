@@ -1,0 +1,51 @@
+# This workflow is stored and called from each repository that contains documentation files
+name: call-refresh-doc
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      
+    - name: Get changed files
+      id: changed-files
+      uses: tj-actions/changed-files@v19
+      with:
+        files: |
+          docs/**/*.md
+          docs/**/*.mdx
+
+    # --- Log all diff info --- 
+    - name: Log the files commit SHA if any md/mdx files have diffs
+      continue-on-error: true
+      if: steps.changed-files.outputs.any_modified == 'true'
+      run: |
+        for file in ${{ steps.changed-files.outputs.all_modified_files }}; do
+          echo "$file was modified" with the commit ${{ github.sha }}
+        done
+        for file in ${{ steps.changed-files.outputs.added_files }}; do
+          echo "$file was added"
+        done
+        for file in ${{ steps.changed-files.outputs.deleted_files }}; do
+          echo "$file was deleted"
+        done
+        for file in ${{ steps.changed-files.outputs.all_modified_files }}; do
+          echo "$file was modified"
+        done
+    outputs: 
+      all_modified_files: ${{ steps.changed-files.outputs.all_modified_files }}
+      any_modified: ${{ steps.changed-files.outputs.any_modified }}
+
+  # --- If modified, call refresh --- 
+  call-refresh-workflow-passing-data:
+    needs: compare
+    if: ${{ needs.compare.outputs.all_modified_files != 0 }}
+    uses: onflow/flow/.github/workflows/refresh-doc.yml@master
+    with:
+      contentPaths: ${{ needs.compare.outputs.all_modified_files }}
+      repository: ${{ github.event.repository.name }}
+      commitSha: ${{ github.sha }}

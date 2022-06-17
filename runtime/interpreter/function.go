@@ -30,37 +30,6 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-// Invocation
-//
-type Invocation struct {
-	Self               MemberAccessibleValue
-	Arguments          []Value
-	ArgumentTypes      []sema.Type
-	TypeParameterTypes *sema.TypeParameterTypeOrderedMap
-	GetLocationRange   func() LocationRange
-	Interpreter        *Interpreter
-}
-
-func NewInvocation(
-	interpreter *Interpreter,
-	self MemberAccessibleValue,
-	arguments []Value,
-	argumentTypes []sema.Type,
-	typeParameterTypes *sema.TypeParameterTypeOrderedMap,
-	getLocationRange func() LocationRange,
-) Invocation {
-	common.UseMemory(interpreter, common.InvocationMemoryUsage)
-
-	return Invocation{
-		Self:               self,
-		Arguments:          arguments,
-		ArgumentTypes:      argumentTypes,
-		TypeParameterTypes: typeParameterTypes,
-		GetLocationRange:   getLocationRange,
-		Interpreter:        interpreter,
-	}
-}
-
 // FunctionValue
 //
 type FunctionValue interface {
@@ -123,6 +92,7 @@ func (f *InterpretedFunctionValue) RecursiveString(_ SeenReferences) string {
 }
 
 func (f *InterpretedFunctionValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	// TODO: Meter sema.Type String conversion
 	typeString := f.Type.String()
 	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(8+len(typeString)))
 	return f.String()
@@ -157,15 +127,9 @@ func (f *InterpretedFunctionValue) invoke(invocation Invocation) Value {
 func (f *InterpretedFunctionValue) ConformsToStaticType(
 	_ *Interpreter,
 	_ func() LocationRange,
-	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	targetType, ok := staticType.(FunctionStaticType)
-	if !ok {
-		return false
-	}
-
-	return f.Type.Equal(targetType.Type)
+	return true
 }
 
 func (f *InterpretedFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -307,15 +271,9 @@ func (*HostFunctionValue) SetMember(_ *Interpreter, _ func() LocationRange, _ st
 func (f *HostFunctionValue) ConformsToStaticType(
 	_ *Interpreter,
 	_ func() LocationRange,
-	staticType StaticType,
 	_ TypeConformanceResults,
 ) bool {
-	targetType, ok := staticType.(FunctionStaticType)
-	if !ok {
-		return false
-	}
-
-	return f.Type.Equal(targetType.Type)
+	return true
 }
 
 func (f *HostFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -415,13 +373,11 @@ func (f BoundFunctionValue) invoke(invocation Invocation) Value {
 func (f BoundFunctionValue) ConformsToStaticType(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
-	staticType StaticType,
 	results TypeConformanceResults,
 ) bool {
 	return f.Function.ConformsToStaticType(
 		interpreter,
 		getLocationRange,
-		staticType,
 		results,
 	)
 }

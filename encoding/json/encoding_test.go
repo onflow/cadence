@@ -1057,9 +1057,12 @@ func TestEncodeLink(t *testing.T) {
 }
 
 func TestEncodeSimpleTypes(t *testing.T) {
+
 	t.Parallel()
 
-	tests := []cadence.Type{
+	var tests []encodeTest
+
+	for _, ty := range []cadence.Type{
 		cadence.AnyType{},
 		cadence.AnyResourceType{},
 		cadence.AnyResourceType{},
@@ -1109,23 +1112,17 @@ func TestEncodeSimpleTypes(t *testing.T) {
 		cadence.PublicAccountKeysType{},
 		cadence.PublicAccountType{},
 		cadence.DeployedContractType{},
-	}
-
-	for _, test := range tests {
-		t.Run(fmt.Sprintf("with static %s", test.ID()), func(t *testing.T) {
-
-			t.Parallel()
-
-			testEncodeAndDecode(
-				t,
-				cadence.TypeValue{
-					StaticType: test,
-				},
-				fmt.Sprintf(`{"type":"Type","value":{"staticType":{"kind":"%s"}}}`, test.ID()),
-			)
-
+	} {
+		tests = append(tests, encodeTest{
+			name: fmt.Sprintf("with static %s", ty.ID()),
+			val: cadence.TypeValue{
+				StaticType: ty,
+			},
+			expected: fmt.Sprintf(`{"type":"Type","value":{"staticType":{"kind":"%s"}}}`, ty.ID()),
 		})
 	}
+
+	testAllEncodeAndDecode(t, tests...)
 }
 
 func TestEncodeType(t *testing.T) {
@@ -1481,12 +1478,12 @@ func TestEncodeType(t *testing.T) {
 		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{
-				StaticType: cadence.FunctionType{
+				StaticType: (&cadence.FunctionType{
 					Parameters: []cadence.Parameter{
 						{Label: "qux", Identifier: "baz", Type: cadence.StringType{}},
 					},
 					ReturnType: cadence.IntType{},
-				}.WithID("Foo"),
+				}).WithID("Foo"),
 			},
 			`{"type":"Type","value":{"staticType":
 				{	
@@ -1521,12 +1518,12 @@ func TestEncodeType(t *testing.T) {
 		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{
-				StaticType: cadence.RestrictedType{
+				StaticType: (&cadence.RestrictedType{
 					Restrictions: []cadence.Type{
 						cadence.StringType{},
 					},
 					Type: cadence.IntType{},
-				}.WithID("Int{String}"),
+				}).WithID("Int{String}"),
 			},
 			`{"type":"Type","value":{"staticType":
 				{	
@@ -1820,6 +1817,76 @@ func TestExportRecursiveType(t *testing.T) {
 
 }
 
+func TestExportTypeValueRecursiveType(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("recursive", func(t *testing.T) {
+
+		t.Parallel()
+
+		ty := &cadence.ResourceType{
+			Location:            utils.TestLocation,
+			QualifiedIdentifier: "Foo",
+			Fields: []cadence.Field{
+				{
+					Identifier: "foo",
+				},
+			},
+			Initializers: [][]cadence.Parameter{},
+		}
+
+		ty.Fields[0].Type = cadence.OptionalType{
+			Type: ty,
+		}
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{
+				StaticType: ty,
+			},
+			`{"type":"Type","value":{"staticType":{"kind":"Resource","typeID":"S.test.Foo","fields":[{"id":"foo","type":{"kind":"Optional","type":"S.test.Foo"}}],"initializers":[],"type":""}}}`,
+		)
+
+	})
+
+	t.Run("non-recursive, repeated", func(t *testing.T) {
+
+		t.Parallel()
+
+		fooTy := &cadence.ResourceType{
+			Location:            utils.TestLocation,
+			QualifiedIdentifier: "Foo",
+			Fields:              []cadence.Field{},
+			Initializers:        [][]cadence.Parameter{},
+		}
+
+		barTy := &cadence.ResourceType{
+			Location:            utils.TestLocation,
+			QualifiedIdentifier: "Bar",
+			Fields: []cadence.Field{
+				{
+					Identifier: "foo1",
+					Type:       fooTy,
+				},
+				{
+					Identifier: "foo2",
+					Type:       fooTy,
+				},
+			},
+			Initializers: [][]cadence.Parameter{},
+		}
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{
+				StaticType: barTy,
+			},
+			`{"type":"Type","value":{"staticType":{"kind":"Resource","typeID":"S.test.Bar","fields":[{"id":"foo1","type":{"kind":"Resource","typeID":"S.test.Foo","fields":[],"initializers":[],"type":""}},{"id":"foo2","type":"S.test.Foo"}],"initializers":[],"type":""}}}`,
+		)
+	})
+}
+
 func TestEncodePath(t *testing.T) {
 
 	t.Parallel()
@@ -1915,13 +1982,13 @@ func testEncode(t *testing.T, val cadence.Value, expectedJSON string) (actualJSO
 
 	actualJSON = string(actualJSONBytes)
 
-	assert.JSONEq(t, expectedJSON, actualJSON)
+	assert.JSONEq(t, expectedJSON, actualJSON, fmt.Sprintf("actual: %s", actualJSON))
 
 	return actualJSON
 }
 
-func testDecode(t *testing.T, actualJSON string, expectedVal cadence.Value) {
-	decodedVal, err := json.Decode(nil, []byte(actualJSON))
+func testDecode(t *testing.T, actualJSON string, expectedVal cadence.Value, options ...json.Option) {
+	decodedVal, err := json.Decode(nil, []byte(actualJSON), options...)
 	require.NoError(t, err)
 
 	assert.Equal(t, expectedVal, decodedVal)
@@ -1956,4 +2023,34 @@ func TestNonUTF8StringEncoding(t *testing.T) {
 	// Decoded value must be a valid utf8 string
 	assert.IsType(t, cadence.String(""), decodedValue)
 	assert.True(t, utf8.ValidString(decodedValue.String()))
+}
+
+func TestDecodeBackwardsCompatibilityTypeID(t *testing.T) {
+
+	t.Parallel()
+
+	const encoded = `{"type":"Type","value":{"staticType":"&Int"}}}`
+
+	t.Run("unstructured static types allowed", func(t *testing.T) {
+
+		t.Parallel()
+
+		testDecode(
+			t,
+			encoded,
+
+			cadence.TypeValue{
+				StaticType: cadence.TypeID("&Int"),
+			},
+			json.WithAllowUnstructuredStaticTypes(true),
+		)
+	})
+
+	t.Run("unstructured static types disallowed", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := json.Decode(nil, []byte(encoded))
+		require.Error(t, err)
+	})
 }

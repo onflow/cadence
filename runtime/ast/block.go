@@ -31,6 +31,8 @@ type Block struct {
 	Range
 }
 
+var _ Element = &Block{}
+
 func NewBlock(memoryGauge common.MemoryGauge, statements []Statement, astRange Range) *Block {
 	common.UseMemory(memoryGauge, common.BlockMemoryUsage)
 
@@ -38,6 +40,10 @@ func NewBlock(memoryGauge common.MemoryGauge, statements []Statement, astRange R
 		Statements: statements,
 		Range:      astRange,
 	}
+}
+
+func (*Block) ElementType() ElementType {
+	return ElementTypeBlock
 }
 
 func (b *Block) IsEmpty() bool {
@@ -108,6 +114,8 @@ type FunctionBlock struct {
 	PostConditions *Conditions `json:",omitempty"`
 }
 
+var _ Element = &FunctionBlock{}
+
 func NewFunctionBlock(
 	memoryGauge common.MemoryGauge,
 	block *Block,
@@ -127,6 +135,10 @@ func (b *FunctionBlock) IsEmpty() bool {
 		(b.Block.IsEmpty() &&
 			b.PreConditions.IsEmpty() &&
 			b.PostConditions.IsEmpty())
+}
+
+func (*FunctionBlock) ElementType() ElementType {
+	return ElementTypeFunctionBlock
 }
 
 func (b *FunctionBlock) Accept(visitor Visitor) Repr {

@@ -50,6 +50,7 @@ type BoolExpression struct {
 	Range
 }
 
+var _ Element = &BoolExpression{}
 var _ Expression = &BoolExpression{}
 
 func NewBoolExpression(gauge common.MemoryGauge, value bool, exprRange Range) *BoolExpression {
@@ -58,6 +59,10 @@ func NewBoolExpression(gauge common.MemoryGauge, value bool, exprRange Range) *B
 		Value: value,
 		Range: exprRange,
 	}
+}
+
+func (*BoolExpression) ElementType() ElementType {
+	return ElementTypeBoolExpression
 }
 
 func (*BoolExpression) isExpression() {}
@@ -112,6 +117,7 @@ type NilExpression struct {
 	Pos Position `json:"-"`
 }
 
+var _ Element = &NilExpression{}
 var _ Expression = &NilExpression{}
 
 func NewNilExpression(gauge common.MemoryGauge, pos Position) *NilExpression {
@@ -119,6 +125,10 @@ func NewNilExpression(gauge common.MemoryGauge, pos Position) *NilExpression {
 	return &NilExpression{
 		Pos: pos,
 	}
+}
+
+func (*NilExpression) ElementType() ElementType {
+	return ElementTypeNilExpression
 }
 
 func (*NilExpression) isExpression() {}
@@ -189,6 +199,13 @@ func NewStringExpression(gauge common.MemoryGauge, value string, exprRange Range
 	}
 }
 
+var _ Element = &StringExpression{}
+var _ Expression = &StringExpression{}
+
+func (*StringExpression) ElementType() ElementType {
+	return ElementTypeStringExpression
+}
+
 func (*StringExpression) isExpression() {}
 
 func (*StringExpression) isIfStatementTest() {}
@@ -237,6 +254,7 @@ type IntegerExpression struct {
 	Range
 }
 
+var _ Element = &IntegerExpression{}
 var _ Expression = &IntegerExpression{}
 
 func NewIntegerExpression(
@@ -254,6 +272,10 @@ func NewIntegerExpression(
 		Base:            base,
 		Range:           tokenRange,
 	}
+}
+
+func (*IntegerExpression) ElementType() ElementType {
+	return ElementTypeIntegerExpression
 }
 
 func (*IntegerExpression) isExpression() {}
@@ -312,6 +334,7 @@ type FixedPointExpression struct {
 	Range
 }
 
+var _ Element = &FixedPointExpression{}
 var _ Expression = &FixedPointExpression{}
 
 func NewFixedPointExpression(
@@ -333,6 +356,10 @@ func NewFixedPointExpression(
 		Scale:           scale,
 		Range:           tokenRange,
 	}
+}
+
+func (*FixedPointExpression) ElementType() ElementType {
+	return ElementTypeFixedPointExpression
 }
 
 func (*FixedPointExpression) isExpression() {}
@@ -404,6 +431,7 @@ type ArrayExpression struct {
 	Range
 }
 
+var _ Element = &ArrayExpression{}
 var _ Expression = &ArrayExpression{}
 
 func NewArrayExpression(
@@ -418,6 +446,10 @@ func NewArrayExpression(
 		Values: values,
 		Range:  tokenRange,
 	}
+}
+
+func (*ArrayExpression) ElementType() ElementType {
+	return ElementTypeArrayExpression
 }
 
 func (*ArrayExpression) isExpression() {}
@@ -482,6 +514,7 @@ type DictionaryExpression struct {
 	Range
 }
 
+var _ Element = &DictionaryExpression{}
 var _ Expression = &DictionaryExpression{}
 
 func NewDictionaryExpression(
@@ -495,6 +528,10 @@ func NewDictionaryExpression(
 		Entries: entries,
 		Range:   tokenRange,
 	}
+}
+
+func (*DictionaryExpression) ElementType() ElementType {
+	return ElementTypeDictionaryExpression
 }
 
 func (*DictionaryExpression) isExpression() {}
@@ -609,6 +646,7 @@ type IdentifierExpression struct {
 	Identifier Identifier
 }
 
+var _ Element = &IdentifierExpression{}
 var _ Expression = &IdentifierExpression{}
 
 func NewIdentifierExpression(
@@ -620,6 +658,10 @@ func NewIdentifierExpression(
 	return &IdentifierExpression{
 		Identifier: identifier,
 	}
+}
+
+func (*IdentifierExpression) ElementType() ElementType {
+	return ElementTypeIdentifierExpression
 }
 
 func (*IdentifierExpression) isExpression() {}
@@ -712,6 +754,7 @@ type InvocationExpression struct {
 	EndPos            Position `json:"-"`
 }
 
+var _ Element = &InvocationExpression{}
 var _ Expression = &InvocationExpression{}
 
 func NewInvocationExpression(
@@ -731,6 +774,10 @@ func NewInvocationExpression(
 		ArgumentsStartPos: argsStartPos,
 		EndPos:            endPos,
 	}
+}
+
+func (*InvocationExpression) ElementType() ElementType {
+	return ElementTypeInvocationExpression
 }
 
 func (*InvocationExpression) isExpression() {}
@@ -790,7 +837,7 @@ func (e *InvocationExpression) StartPosition() Position {
 	return e.InvokedExpression.StartPosition()
 }
 
-func (e *InvocationExpression) EndPosition(memoryGauge common.MemoryGauge) Position {
+func (e *InvocationExpression) EndPosition(_ common.MemoryGauge) Position {
 	return e.EndPos
 }
 
@@ -830,6 +877,7 @@ type MemberExpression struct {
 	Identifier Identifier
 }
 
+var _ Element = &MemberExpression{}
 var _ Expression = &MemberExpression{}
 
 func NewMemberExpression(
@@ -847,6 +895,10 @@ func NewMemberExpression(
 		AccessPos:  accessPos,
 		Identifier: identifier,
 	}
+}
+
+func (*MemberExpression) ElementType() ElementType {
+	return ElementTypeMemberExpression
 }
 
 func (*MemberExpression) isExpression() {}
@@ -940,6 +992,7 @@ type IndexExpression struct {
 	Range
 }
 
+var _ Element = &IndexExpression{}
 var _ Expression = &IndexExpression{}
 
 func NewIndexExpression(
@@ -955,6 +1008,10 @@ func NewIndexExpression(
 		IndexingExpression: index,
 		Range:              tokenRange,
 	}
+}
+
+func (*IndexExpression) ElementType() ElementType {
+	return ElementTypeIndexExpression
 }
 
 func (*IndexExpression) isExpression() {}
@@ -1019,6 +1076,7 @@ type ConditionalExpression struct {
 	Else Expression
 }
 
+var _ Element = &ConditionalExpression{}
 var _ Expression = &ConditionalExpression{}
 
 func NewConditionalExpression(
@@ -1034,6 +1092,10 @@ func NewConditionalExpression(
 		Then: thenExpr,
 		Else: elseExpr,
 	}
+}
+
+func (*ConditionalExpression) ElementType() ElementType {
+	return ElementTypeConditionalExpression
 }
 
 func (*ConditionalExpression) isExpression() {}
@@ -1146,6 +1208,7 @@ type UnaryExpression struct {
 	StartPos   Position `json:"-"`
 }
 
+var _ Element = &UnaryExpression{}
 var _ Expression = &UnaryExpression{}
 
 func NewUnaryExpression(
@@ -1161,6 +1224,10 @@ func NewUnaryExpression(
 		Expression: expression,
 		StartPos:   startPos,
 	}
+}
+
+func (*UnaryExpression) ElementType() ElementType {
+	return ElementTypeUnaryExpression
 }
 
 func (*UnaryExpression) isExpression() {}
@@ -1238,6 +1305,7 @@ type BinaryExpression struct {
 	Right     Expression
 }
 
+var _ Element = &BinaryExpression{}
 var _ Expression = &BinaryExpression{}
 
 func NewBinaryExpression(
@@ -1253,6 +1321,10 @@ func NewBinaryExpression(
 		Left:      left,
 		Right:     right,
 	}
+}
+
+func (*BinaryExpression) ElementType() ElementType {
+	return ElementTypeBinaryExpression
 }
 
 func (*BinaryExpression) isExpression() {}
@@ -1381,6 +1453,7 @@ type FunctionExpression struct {
 	StartPos             Position `json:"-"`
 }
 
+var _ Element = &FunctionExpression{}
 var _ Expression = &FunctionExpression{}
 
 func NewFunctionExpression(
@@ -1398,6 +1471,10 @@ func NewFunctionExpression(
 		FunctionBlock:        functionBlock,
 		StartPos:             startPos,
 	}
+}
+
+func (*FunctionExpression) ElementType() ElementType {
+	return ElementTypeFunctionExpression
 }
 
 func (*FunctionExpression) isExpression() {}
@@ -1544,6 +1621,7 @@ type CastingExpression struct {
 	ParentVariableDeclaration *VariableDeclaration `json:"-"`
 }
 
+var _ Element = &CastingExpression{}
 var _ Expression = &CastingExpression{}
 
 func NewCastingExpression(
@@ -1561,6 +1639,10 @@ func NewCastingExpression(
 		TypeAnnotation:            typeAnnotation,
 		ParentVariableDeclaration: parentVariableDecl,
 	}
+}
+
+func (*CastingExpression) ElementType() ElementType {
+	return ElementTypeCastingExpression
 }
 
 func (*CastingExpression) isExpression() {}
@@ -1634,6 +1716,7 @@ type CreateExpression struct {
 	StartPos             Position `json:"-"`
 }
 
+var _ Element = &CreateExpression{}
 var _ Expression = &CreateExpression{}
 
 func NewCreateExpression(
@@ -1647,6 +1730,10 @@ func NewCreateExpression(
 		InvocationExpression: invocationExpression,
 		StartPos:             startPos,
 	}
+}
+
+func (*CreateExpression) ElementType() ElementType {
+	return ElementTypeCreateExpression
 }
 
 func (*CreateExpression) isExpression() {}
@@ -1710,6 +1797,7 @@ type DestroyExpression struct {
 	StartPos   Position `json:"-"`
 }
 
+var _ Element = &DestroyExpression{}
 var _ Expression = &DestroyExpression{}
 
 func NewDestroyExpression(
@@ -1723,6 +1811,10 @@ func NewDestroyExpression(
 		Expression: expression,
 		StartPos:   startPos,
 	}
+}
+
+func (*DestroyExpression) ElementType() ElementType {
+	return ElementTypeDestroyExpression
 }
 
 func (*DestroyExpression) isExpression() {}
@@ -1790,6 +1882,7 @@ type ReferenceExpression struct {
 	StartPos   Position `json:"-"`
 }
 
+var _ Element = &ReferenceExpression{}
 var _ Expression = &ReferenceExpression{}
 
 func NewReferenceExpression(
@@ -1805,6 +1898,10 @@ func NewReferenceExpression(
 		Type:       targetType,
 		StartPos:   startPos,
 	}
+}
+
+func (*ReferenceExpression) ElementType() ElementType {
+	return ElementTypeReferenceExpression
 }
 
 func (*ReferenceExpression) isExpression() {}
@@ -1883,6 +1980,7 @@ type ForceExpression struct {
 	EndPos     Position `json:"-"`
 }
 
+var _ Element = &ForceExpression{}
 var _ Expression = &ForceExpression{}
 
 func NewForceExpression(
@@ -1896,6 +1994,10 @@ func NewForceExpression(
 		Expression: expression,
 		EndPos:     endPos,
 	}
+}
+
+func (*ForceExpression) ElementType() ElementType {
+	return ElementTypeForceExpression
 }
 
 func (*ForceExpression) isExpression() {}
@@ -1963,6 +2065,7 @@ type PathExpression struct {
 	Identifier Identifier
 }
 
+var _ Element = &PathExpression{}
 var _ Expression = &PathExpression{}
 
 func NewPathExpression(
@@ -1978,6 +2081,10 @@ func NewPathExpression(
 		Identifier: identifier,
 		StartPos:   startPos,
 	}
+}
+
+func (*PathExpression) ElementType() ElementType {
+	return ElementTypePathExpression
 }
 
 func (*PathExpression) isExpression() {}

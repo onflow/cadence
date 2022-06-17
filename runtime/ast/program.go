@@ -32,11 +32,17 @@ type Program struct {
 	indices      programIndices
 }
 
+var _ Element = &Program{}
+
 func NewProgram(memoryGauge common.MemoryGauge, declarations []Declaration) *Program {
 	common.UseMemory(memoryGauge, common.ProgramMemoryUsage)
 	return &Program{
 		declarations: declarations,
 	}
+}
+
+func (*Program) ElementType() ElementType {
+	return ElementTypeProgram
 }
 
 func (p *Program) Declarations() []Declaration {

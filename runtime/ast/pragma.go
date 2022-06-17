@@ -33,6 +33,7 @@ type PragmaDeclaration struct {
 	Range
 }
 
+var _ Element = &PragmaDeclaration{}
 var _ Declaration = &PragmaDeclaration{}
 
 func NewPragmaDeclaration(gauge common.MemoryGauge, expression Expression, declRange Range) *PragmaDeclaration {
@@ -42,6 +43,10 @@ func NewPragmaDeclaration(gauge common.MemoryGauge, expression Expression, declR
 		Expression: expression,
 		Range:      declRange,
 	}
+}
+
+func (*PragmaDeclaration) ElementType() ElementType {
+	return ElementTypePragmaDeclaration
 }
 
 func (*PragmaDeclaration) isDeclaration() {}

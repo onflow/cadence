@@ -801,7 +801,7 @@ func (d StorableDecoder) decodePath() (PathValue, error) {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			// No need to meter EmptyPathValue here or below because it's ignored for the error
 			return EmptyPathValue, fmt.Errorf(
-				"invalid path encoding: expected [%d]interface{}, got %s",
+				"invalid path encoding: expected [%d]any, got %s",
 				expectedLength,
 				e.ActualType.String(),
 			)
@@ -811,7 +811,7 @@ func (d StorableDecoder) decodePath() (PathValue, error) {
 
 	if size != expectedLength {
 		return EmptyPathValue, fmt.Errorf(
-			"invalid path encoding: expected [%d]interface{}, got [%d]interface{}",
+			"invalid path encoding: expected [%d]any, got [%d]any",
 			expectedLength,
 			size,
 		)
@@ -856,7 +856,7 @@ func (d StorableDecoder) decodeCapability() (*CapabilityValue, error) {
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return nil, fmt.Errorf(
-				"invalid capability encoding: expected [%d]interface{}, got %s",
+				"invalid capability encoding: expected [%d]any, got %s",
 				expectedLength,
 				e.ActualType.String(),
 			)
@@ -866,7 +866,7 @@ func (d StorableDecoder) decodeCapability() (*CapabilityValue, error) {
 
 	if size != expectedLength {
 		return nil, fmt.Errorf(
-			"invalid capability encoding: expected [%d]interface{}, got [%d]interface{}",
+			"invalid capability encoding: expected [%d]any, got [%d]any",
 			expectedLength,
 			size,
 		)
@@ -942,7 +942,7 @@ func (d StorableDecoder) decodeLink() (LinkValue, error) {
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return EmptyLinkValue, fmt.Errorf(
-				"invalid link encoding: expected [%d]interface{}, got %s",
+				"invalid link encoding: expected [%d]any, got %s",
 				expectedLength,
 				e.ActualType.String(),
 			)
@@ -952,7 +952,7 @@ func (d StorableDecoder) decodeLink() (LinkValue, error) {
 
 	if size != expectedLength {
 		return EmptyLinkValue, fmt.Errorf(
-			"invalid link encoding: expected [%d]interface{}, got [%d]interface{}",
+			"invalid link encoding: expected [%d]any, got [%d]any",
 			expectedLength,
 			size,
 		)
@@ -988,7 +988,7 @@ func (d StorableDecoder) decodeType() (TypeValue, error) {
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return EmptyTypeValue, fmt.Errorf(
-				"invalid type encoding: expected [%d]interface{}, got %s",
+				"invalid type encoding: expected [%d]any, got %s",
 				expectedLength,
 				e.ActualType.String(),
 			)
@@ -999,7 +999,7 @@ func (d StorableDecoder) decodeType() (TypeValue, error) {
 
 	if arraySize != expectedLength {
 		return EmptyTypeValue, fmt.Errorf(
-			"invalid type encoding: expected [%d]interface{}, got [%d]interface{}",
+			"invalid type encoding: expected [%d]any, got [%d]any",
 			expectedLength,
 			arraySize,
 		)
@@ -1122,7 +1122,7 @@ func (d TypeDecoder) decodeCompositeStaticType() (StaticType, error) {
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return nil, fmt.Errorf(
-				"invalid composite static type encoding: expected [%d]interface{}, got %s",
+				"invalid composite static type encoding: expected [%d]any, got %s",
 				expectedLength,
 				e.ActualType.String(),
 			)
@@ -1132,7 +1132,7 @@ func (d TypeDecoder) decodeCompositeStaticType() (StaticType, error) {
 
 	if size != expectedLength {
 		return nil, fmt.Errorf(
-			"invalid composite static type encoding: expected [%d]interface{}, got [%d]interface{}",
+			"invalid composite static type encoding: expected [%d]any, got [%d]any",
 			expectedLength,
 			size,
 		)
@@ -1168,7 +1168,7 @@ func (d TypeDecoder) decodeInterfaceStaticType() (InterfaceStaticType, error) {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return InterfaceStaticType{},
 				fmt.Errorf(
-					"invalid interface static type encoding: expected [%d]interface{}, got %s",
+					"invalid interface static type encoding: expected [%d]any, got %s",
 					expectedLength,
 					e.ActualType.String(),
 				)
@@ -1179,7 +1179,7 @@ func (d TypeDecoder) decodeInterfaceStaticType() (InterfaceStaticType, error) {
 	if size != expectedLength {
 		return InterfaceStaticType{},
 			fmt.Errorf(
-				"invalid interface static type encoding: expected [%d]interface{}, got [%d]interface{}",
+				"invalid interface static type encoding: expected [%d]any, got [%d]any",
 				expectedLength,
 				size,
 			)
@@ -1229,7 +1229,7 @@ func (d TypeDecoder) decodeConstantSizedStaticType() (StaticType, error) {
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return nil, fmt.Errorf(
-				"invalid constant-sized static type encoding: expected [%d]interface{}, got %s",
+				"invalid constant-sized static type encoding: expected [%d]any, got %s",
 				expectedLength,
 				e.ActualType.String(),
 			)
@@ -1239,7 +1239,7 @@ func (d TypeDecoder) decodeConstantSizedStaticType() (StaticType, error) {
 
 	if arraySize != expectedLength {
 		return nil, fmt.Errorf(
-			"invalid constant-sized static type encoding: expected [%d]interface{}, got [%d]interface{}",
+			"invalid constant-sized static type encoding: expected [%d]any, got [%d]any",
 			expectedLength,
 			arraySize,
 		)
@@ -1290,7 +1290,7 @@ func (d TypeDecoder) decodeReferenceStaticType() (StaticType, error) {
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return nil, fmt.Errorf(
-				"invalid reference static type encoding: expected [%d]interface{}, got %s",
+				"invalid reference static type encoding: expected [%d]any, got %s",
 				expectedLength,
 				e.ActualType.String(),
 			)
@@ -1300,7 +1300,7 @@ func (d TypeDecoder) decodeReferenceStaticType() (StaticType, error) {
 
 	if arraySize != expectedLength {
 		return nil, fmt.Errorf(
-			"invalid reference static type encoding: expected [%d]interface{}, got [%d]interface{}",
+			"invalid reference static type encoding: expected [%d]any, got [%d]any",
 			expectedLength,
 			arraySize,
 		)
@@ -1343,7 +1343,7 @@ func (d TypeDecoder) decodeDictionaryStaticType() (StaticType, error) {
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return nil, fmt.Errorf(
-				"invalid dictionary static type encoding: expected [%d]interface{}, got %s",
+				"invalid dictionary static type encoding: expected [%d]any, got %s",
 				expectedLength,
 				e.ActualType.String(),
 			)
@@ -1353,7 +1353,7 @@ func (d TypeDecoder) decodeDictionaryStaticType() (StaticType, error) {
 
 	if arraySize != expectedLength {
 		return nil, fmt.Errorf(
-			"invalid dictionary static type encoding: expected [%d]interface{}, got [%d]interface{}",
+			"invalid dictionary static type encoding: expected [%d]any, got [%d]any",
 			expectedLength,
 			arraySize,
 		)
@@ -1388,7 +1388,7 @@ func (d TypeDecoder) decodeRestrictedStaticType() (StaticType, error) {
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return nil, fmt.Errorf(
-				"invalid restricted static type encoding: expected [%d]interface{}, got %s",
+				"invalid restricted static type encoding: expected [%d]any, got %s",
 				expectedLength,
 				e.ActualType.String(),
 			)
@@ -1398,7 +1398,7 @@ func (d TypeDecoder) decodeRestrictedStaticType() (StaticType, error) {
 
 	if arraySize != expectedLength {
 		return nil, fmt.Errorf(
-			"invalid restricted static type encoding: expected [%d]interface{}, got [%d]interface{}",
+			"invalid restricted static type encoding: expected [%d]any, got [%d]any",
 			expectedLength,
 			arraySize,
 		)
@@ -1672,7 +1672,7 @@ func (d LocationDecoder) decodeAddressLocation() (common.Location, error) {
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return nil, fmt.Errorf(
-				"invalid address location encoding: expected [%d]interface{}, got %s",
+				"invalid address location encoding: expected [%d]any, got %s",
 				expectedLength,
 				e.ActualType.String(),
 			)
@@ -1681,7 +1681,7 @@ func (d LocationDecoder) decodeAddressLocation() (common.Location, error) {
 	}
 
 	if size != expectedLength {
-		return nil, fmt.Errorf("invalid address location encoding: expected [%d]interface{}, got [%d]interface{}",
+		return nil, fmt.Errorf("invalid address location encoding: expected [%d]any, got [%d]any",
 			expectedLength,
 			size,
 		)

@@ -170,6 +170,11 @@ func PrepareInterpreter(filename string, debugger *interpreter.Debugger) (*inter
 			return uuid, nil
 		}),
 		interpreter.WithDebugger(debugger),
+		interpreter.WithImportLocationHandler(
+			func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+				panic("Importing programs is not supported yet")
+			},
+		),
 	)
 	must(err)
 
@@ -179,6 +184,6 @@ func PrepareInterpreter(filename string, debugger *interpreter.Debugger) (*inter
 }
 
 func ExitWithError(message string) {
-	fmt.Println(pretty.FormatErrorMessage(message, true))
+	fmt.Println(pretty.FormatErrorMessage(pretty.ErrorPrefix, message, true))
 	os.Exit(1)
 }

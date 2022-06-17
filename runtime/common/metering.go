@@ -236,6 +236,17 @@ var (
 	PublicAccountContractsStringMemoryUsage = NewRawStringMemoryUsage(len("PublicAccount.Contracts()"))
 	AuthAccountKeysStringMemoryUsage        = NewRawStringMemoryUsage(len("AuthAccount.Keys()"))
 	PublicAccountKeysStringMemoryUsage      = NewRawStringMemoryUsage(len("PublicAccount.Keys()"))
+	CapabilityValueStringMemoryUsage        = NewRawStringMemoryUsage(len("Capability<>(address: , path: )"))
+	LinkValueStringMemoryUsage              = NewRawStringMemoryUsage(len("Link<>()"))
+
+	// Static types string representations
+
+	VariableSizedStaticTypeStringMemoryUsage = NewRawStringMemoryUsage(2)  // []
+	DictionaryStaticTypeStringMemoryUsage    = NewRawStringMemoryUsage(4)  // {: }
+	OptionalStaticTypeStringMemoryUsage      = NewRawStringMemoryUsage(1)  // ?
+	AuthReferenceStaticTypeStringMemoryUsage = NewRawStringMemoryUsage(5)  // auth&
+	ReferenceStaticTypeStringMemoryUsage     = NewRawStringMemoryUsage(1)  // &
+	CapabilityStaticTypeStringMemoryUsage    = NewRawStringMemoryUsage(12) // Capability<>
 )
 
 func UseMemory(gauge MemoryGauge, usage MemoryUsage) {

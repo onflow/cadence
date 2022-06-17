@@ -3898,52 +3898,74 @@ func TestInterpretImportError(t *testing.T) {
 
 	t.Parallel()
 
+	const importedLocation1 = common.StringLocation("imported1")
+	const importedLocation2 = common.StringLocation("imported2")
+
+	var importedChecker1, importedChecker2 *sema.Checker
+
 	valueDeclarations :=
 		stdlib.StandardLibraryFunctions{
 			stdlib.PanicFunction,
 		}.ToSemaValueDeclarations()
 
-	importedChecker, err := checker.ParseAndCheckWithOptions(t,
-		`
-          pub fun answer(): Int {
-              return panic("?!")
-          }
-        `,
-		checker.ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithPredeclaredValues(valueDeclarations),
+	parseAndCheck := func(code string, location common.Location) *sema.Checker {
+		checker, err := checker.ParseAndCheckWithOptions(t,
+			code,
+			checker.ParseAndCheckOptions{
+				Location: location,
+				Options: []sema.Option{
+					sema.WithPredeclaredValues(valueDeclarations),
+					sema.WithImportHandler(
+						func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
+							switch importedLocation {
+							case importedLocation1:
+								return sema.ElaborationImport{
+									Elaboration: importedChecker1.Elaboration,
+								}, nil
+							case importedLocation2:
+								return sema.ElaborationImport{
+									Elaboration: importedChecker2.Elaboration,
+								}, nil
+							default:
+								assert.FailNow(t, "invalid location")
+								return nil, nil
+							}
+						},
+					),
+				},
 			},
-		},
-	)
-	require.NoError(t, err)
+		)
+		require.NoError(t, err)
+		return checker
+	}
 
-	importingChecker, err := checker.ParseAndCheckWithOptions(t,
-		`
-          import answer from "imported"
+	const importedCode1 = `
+      pub fun realAnswer(): Int {
+          return panic("?!")
+      }
+    `
 
-          pub fun test(): Int {
-              return answer()
-          }
-        `,
-		checker.ParseAndCheckOptions{
-			Options: []sema.Option{
-				sema.WithPredeclaredValues(valueDeclarations),
-				sema.WithImportHandler(
-					func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
-						assert.Equal(t,
-							ImportedLocation,
-							importedLocation,
-						)
+	importedChecker1 = parseAndCheck(importedCode1, importedLocation1)
 
-						return sema.ElaborationImport{
-							Elaboration: importedChecker.Elaboration,
-						}, nil
-					},
-				),
-			},
-		},
-	)
-	require.NoError(t, err)
+	const importedCode2 = `
+	  import realAnswer from "imported1"
+
+      pub fun answer(): Int {
+          return realAnswer()
+      }
+    `
+
+	importedChecker2 = parseAndCheck(importedCode2, importedLocation2)
+
+	const code = `
+      import answer from "imported2"
+
+      pub fun test(): Int {
+          return answer()
+      }
+    `
+
+	mainChecker := parseAndCheck(code, TestLocation)
 
 	values := stdlib.StandardLibraryFunctions{
 		stdlib.PanicFunction,
@@ -3952,16 +3974,21 @@ func TestInterpretImportError(t *testing.T) {
 	storage := newUnmeteredInMemoryStorage()
 
 	inter, err := interpreter.NewInterpreter(
-		interpreter.ProgramFromChecker(importingChecker),
-		importingChecker.Location,
+		interpreter.ProgramFromChecker(mainChecker),
+		mainChecker.Location,
 		interpreter.WithStorage(storage),
 		interpreter.WithPredeclaredValues(values),
 		interpreter.WithImportLocationHandler(
 			func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
-				assert.Equal(t,
-					ImportedLocation,
-					location,
-				)
+				var importedChecker *sema.Checker
+				switch location {
+				case importedLocation1:
+					importedChecker = importedChecker1
+				case importedLocation2:
+					importedChecker = importedChecker2
+				default:
+					assert.FailNow(t, "invalid location")
+				}
 
 				program := interpreter.ProgramFromChecker(importedChecker)
 				subInterpreter, err := inter.NewSubInterpreter(program, location)
@@ -3981,6 +4008,37 @@ func TestInterpretImportError(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = inter.Invoke("test")
+
+	var sb strings.Builder
+	printErr := pretty.NewErrorPrettyPrinter(&sb, false).
+		PrettyPrintError(
+			err,
+			mainChecker.Location,
+			map[common.LocationID]string{
+				TestLocation.ID():      code,
+				importedLocation1.ID(): importedCode1,
+				importedLocation2.ID(): importedCode2,
+			},
+		)
+	require.NoError(t, printErr)
+	assert.Equal(t,
+		" --> test:5:17\n"+
+			"  |\n"+
+			"5 |           return answer()\n"+
+			"  |                  ^^^^^^^^\n"+
+			"\n"+
+			" --> imported2:5:17\n"+
+			"  |\n"+
+			"5 |           return realAnswer()\n"+
+			"  |                  ^^^^^^^^^^^^\n"+
+			"\n"+
+			"error: panic: ?!\n"+
+			" --> imported1:3:17\n"+
+			"  |\n"+
+			"3 |           return panic(\"?!\")\n"+
+			"  |                  ^^^^^^^^^^^\n",
+		sb.String(),
+	)
 
 	var panicErr stdlib.PanicError
 	require.ErrorAs(t, err, &panicErr)
@@ -7214,7 +7272,7 @@ func TestInterpretReferenceDereferenceFailure(t *testing.T) {
 	_, err := inter.Invoke("test")
 	require.Error(t, err)
 
-	require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
 }
 
 func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
@@ -8192,7 +8250,7 @@ func TestInterpretNonStorageReferenceAfterDestruction(t *testing.T) {
 	_, err := inter.Invoke("test")
 	require.Error(t, err)
 
-	require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
 }
 
 func TestInterpretNonStorageReferenceToOptional(t *testing.T) {

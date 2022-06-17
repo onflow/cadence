@@ -586,7 +586,7 @@ func exportRestrictedType(
 	gauge common.MemoryGauge,
 	t *sema.RestrictedType,
 	results map[sema.TypeID]cadence.Type,
-) cadence.RestrictedType {
+) *cadence.RestrictedType {
 
 	convertedType := ExportMeteredType(gauge, t.Type, results)
 
@@ -745,7 +745,7 @@ func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.Stat
 			ImportType(memoryGauge, t.Type),
 			nil,
 		)
-	case cadence.RestrictedType:
+	case *cadence.RestrictedType:
 		restrictions := make([]interpreter.InterfaceStaticType, 0, len(t.Restrictions))
 		for _, restriction := range t.Restrictions {
 			intf, ok := restriction.(cadence.InterfaceType)

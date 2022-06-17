@@ -45,8 +45,9 @@ func (e *unsupportedOperation) Error() string {
 
 // Error is the containing type for all errors produced by the interpreter.
 type Error struct {
-	Err      error
-	Location common.Location
+	Err        error
+	Location   common.Location
+	StackTrace []Invocation
 }
 
 func (e Error) Unwrap() error {
@@ -58,10 +59,42 @@ func (e Error) Error() string {
 }
 
 func (e Error) ChildErrors() []error {
-	return []error{e.Err}
+	errs := make([]error, 0, 1+len(e.StackTrace))
+
+	for _, invocation := range e.StackTrace {
+		locationRange := invocation.GetLocationRange()
+		if locationRange.Location == nil {
+			continue
+		}
+
+		errs = append(
+			errs,
+			StackTraceError{
+				LocationRange: locationRange,
+			},
+		)
+	}
+
+	return append(errs, e.Err)
 }
 
 func (e Error) ImportLocation() common.Location {
+	return e.Location
+}
+
+type StackTraceError struct {
+	LocationRange
+}
+
+func (e StackTraceError) Error() string {
+	return ""
+}
+
+func (e StackTraceError) Prefix() string {
+	return ""
+}
+
+func (e StackTraceError) ImportLocation() common.Location {
 	return e.Location
 }
 
@@ -84,7 +117,7 @@ func (e PositionedError) Error() string {
 // It contains the recovered value.
 //
 type ExternalError struct {
-	Recovered interface{}
+	Recovered any
 }
 
 func (e ExternalError) Error() string {
@@ -208,13 +241,24 @@ func (e DivisionByZeroError) Error() string {
 }
 
 // InvalidatedResourceError
-
+//
 type InvalidatedResourceError struct {
 	LocationRange
 }
 
 func (e InvalidatedResourceError) Error() string {
-	return "resource is invalidated and cannot be used anymore"
+	return "internal error: resource is invalidated and cannot be used anymore"
+}
+
+// DestroyedResourceError is the error which is reported
+// when a user uses a destroyed resource through a reference
+//
+type DestroyedResourceError struct {
+	LocationRange
+}
+
+func (e DestroyedResourceError) Error() string {
+	return "resource was destroyed and cannot be used anymore"
 }
 
 // ForceAssignmentToNonNilResourceError

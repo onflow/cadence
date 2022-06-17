@@ -35,6 +35,7 @@ type ImportDeclaration struct {
 	Range
 }
 
+var _ Element = &ImportDeclaration{}
 var _ Declaration = &ImportDeclaration{}
 
 func NewImportDeclaration(
@@ -52,6 +53,10 @@ func NewImportDeclaration(
 		Range:       declRange,
 		LocationPos: locationPos,
 	}
+}
+
+func (*ImportDeclaration) ElementType() ElementType {
+	return ElementTypeImportDeclaration
 }
 
 func (*ImportDeclaration) isDeclaration() {}

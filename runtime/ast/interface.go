@@ -37,7 +37,9 @@ type InterfaceDeclaration struct {
 	Range
 }
 
+var _ Element = &InterfaceDeclaration{}
 var _ Declaration = &InterfaceDeclaration{}
+var _ Statement = &InterfaceDeclaration{}
 
 func NewInterfaceDeclaration(
 	gauge common.MemoryGauge,
@@ -58,6 +60,10 @@ func NewInterfaceDeclaration(
 		DocString:     docString,
 		Range:         declRange,
 	}
+}
+
+func (*InterfaceDeclaration) ElementType() ElementType {
+	return ElementTypeInterfaceDeclaration
 }
 
 func (d *InterfaceDeclaration) Accept(visitor Visitor) Repr {

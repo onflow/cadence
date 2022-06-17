@@ -36,12 +36,9 @@ type FunctionDeclaration struct {
 	StartPos             Position `json:"-"`
 }
 
+var _ Element = &FunctionDeclaration{}
 var _ Declaration = &FunctionDeclaration{}
 var _ Statement = &FunctionDeclaration{}
-
-func (*FunctionDeclaration) isDeclaration() {}
-
-func (*FunctionDeclaration) isStatement() {}
 
 func NewFunctionDeclaration(
 	gauge common.MemoryGauge,
@@ -64,6 +61,14 @@ func NewFunctionDeclaration(
 		StartPos:             startPos,
 		DocString:            docString,
 	}
+}
+
+func (*FunctionDeclaration) isDeclaration() {}
+
+func (*FunctionDeclaration) isStatement() {}
+
+func (*FunctionDeclaration) ElementType() ElementType {
+	return ElementTypeFunctionDeclaration
 }
 
 func (d *FunctionDeclaration) StartPosition() Position {
@@ -157,13 +162,9 @@ type SpecialFunctionDeclaration struct {
 	FunctionDeclaration *FunctionDeclaration
 }
 
+var _ Element = &SpecialFunctionDeclaration{}
 var _ Declaration = &SpecialFunctionDeclaration{}
-
 var _ Statement = &SpecialFunctionDeclaration{}
-
-func (*SpecialFunctionDeclaration) isDeclaration() {}
-
-func (*SpecialFunctionDeclaration) isStatement() {}
 
 func NewSpecialFunctionDeclaration(
 	gauge common.MemoryGauge,
@@ -176,6 +177,14 @@ func NewSpecialFunctionDeclaration(
 		Kind:                kind,
 		FunctionDeclaration: funcDecl,
 	}
+
+}
+func (*SpecialFunctionDeclaration) isDeclaration() {}
+
+func (*SpecialFunctionDeclaration) isStatement() {}
+
+func (*SpecialFunctionDeclaration) ElementType() ElementType {
+	return ElementTypeSpecialFunctionDeclaration
 }
 
 func (d *SpecialFunctionDeclaration) StartPosition() Position {
@@ -187,7 +196,7 @@ func (d *SpecialFunctionDeclaration) EndPosition(memoryGauge common.MemoryGauge)
 }
 
 func (d *SpecialFunctionDeclaration) Accept(visitor Visitor) Repr {
-	return d.FunctionDeclaration.Accept(visitor)
+	return visitor.VisitSpecialFunctionDeclaration(d)
 }
 
 func (d *SpecialFunctionDeclaration) Walk(walkChild func(Element)) {

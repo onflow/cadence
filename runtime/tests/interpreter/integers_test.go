@@ -115,6 +115,75 @@ func TestInterpretIntegerConversions(t *testing.T) {
 	}
 }
 
+func TestInterpretWordOverflowConversions(t *testing.T) {
+
+	t.Parallel()
+
+	words := map[string]*big.Int{
+		"Word8":  sema.UInt8TypeMaxInt,
+		"Word16": sema.UInt16TypeMaxInt,
+		"Word32": sema.UInt32TypeMaxInt,
+		"Word64": sema.UInt64TypeMaxInt,
+	}
+
+	for typeName, value := range words {
+
+		t.Run(typeName, func(t *testing.T) {
+
+			inter := parseCheckAndInterpret(t,
+				fmt.Sprintf(
+					`
+                      let x = %s
+                      let y = %s(x + 1)
+                    `,
+					value.String(),
+					typeName,
+				),
+			)
+
+			require.Equal(
+				t,
+				"0",
+				inter.Globals["y"].GetValue().String(),
+			)
+		})
+	}
+}
+
+func TestInterpretWordUnderflowConversions(t *testing.T) {
+
+	t.Parallel()
+
+	words := map[string]*big.Int{
+		"Word8":  sema.UInt8TypeMaxInt,
+		"Word16": sema.UInt16TypeMaxInt,
+		"Word32": sema.UInt32TypeMaxInt,
+		"Word64": sema.UInt64TypeMaxInt,
+	}
+
+	for typeName, value := range words {
+
+		t.Run(typeName, func(t *testing.T) {
+
+			inter := parseCheckAndInterpret(t,
+				fmt.Sprintf(
+					`
+                      let x = 0
+                      let y = %s(x - 1)
+                    `,
+					typeName,
+				),
+			)
+
+			require.Equal(
+				t,
+				value.String(),
+				inter.Globals["y"].GetValue().String(),
+			)
+		})
+	}
+}
+
 func TestInterpretAddressConversion(t *testing.T) {
 
 	t.Parallel()
@@ -637,9 +706,17 @@ func TestInterpretIntegerConversion(t *testing.T) {
 				sourceMinInt := sourceType.MinInt()
 
 				if targetMinInt != nil && (sourceMinInt == nil || sourceMinInt.Cmp(targetMinInt) < 0) {
-					t.Run("underflow", func(t *testing.T) {
-						test(t, sourceType, targetType, sourceValues.min, nil, interpreter.UnderflowError{})
-					})
+					// words wrap instead of underflow
+					switch targetType {
+					case sema.Word8Type,
+						sema.Word16Type,
+						sema.Word32Type,
+						sema.Word64Type:
+					default:
+						t.Run("underflow", func(t *testing.T) {
+							test(t, sourceType, targetType, sourceValues.min, nil, interpreter.UnderflowError{})
+						})
+					}
 				}
 
 				// Check a "typical" value can be converted
@@ -654,9 +731,17 @@ func TestInterpretIntegerConversion(t *testing.T) {
 				sourceMaxInt := sourceType.MaxInt()
 
 				if targetMaxInt != nil && (sourceMaxInt == nil || sourceMaxInt.Cmp(targetMaxInt) > 0) {
-					t.Run("overflow", func(t *testing.T) {
-						test(t, sourceType, targetType, sourceValues.max, nil, interpreter.OverflowError{})
-					})
+					// words wrap instead of overflow
+					switch targetType {
+					case sema.Word8Type,
+						sema.Word16Type,
+						sema.Word32Type,
+						sema.Word64Type:
+					default:
+						t.Run("overflow", func(t *testing.T) {
+							test(t, sourceType, targetType, sourceValues.max, nil, interpreter.OverflowError{})
+						})
+					}
 				}
 
 				// Check the maximum value can be converted.

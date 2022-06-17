@@ -265,10 +265,10 @@ func TestParseParameterList(t *testing.T) {
 
 	t.Parallel()
 
-	parse := func(input string) (interface{}, []error) {
+	parse := func(input string) (any, []error) {
 		return Parse(
 			input,
-			func(p *parser) interface{} {
+			func(p *parser) any {
 				return parseParameterList(p)
 			},
 			nil,
@@ -462,9 +462,8 @@ func TestParseParameterList(t *testing.T) {
 		_, errs := parse("( a b : Int   c : Int )")
 		utils.AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "parser: expected comma, got start of parameter",
-					Pos:     ast.Position{Offset: 14, Line: 1, Column: 14},
+				&MissingCommaInParameterListError{
+					Pos: ast.Position{Offset: 14, Line: 1, Column: 14},
 				},
 			},
 			errs,
@@ -963,10 +962,10 @@ func TestParseAccess(t *testing.T) {
 
 	t.Parallel()
 
-	parse := func(input string) (interface{}, []error) {
+	parse := func(input string) (any, []error) {
 		return Parse(
 			input,
-			func(p *parser) interface{} {
+			func(p *parser) any {
 				return parseAccess(p)
 			},
 			nil,
@@ -1649,10 +1648,10 @@ func TestParseFieldWithVariableKind(t *testing.T) {
 
 	t.Parallel()
 
-	parse := func(input string) (interface{}, []error) {
+	parse := func(input string) (any, []error) {
 		return Parse(
 			input,
-			func(p *parser) interface{} {
+			func(p *parser) any {
 				return parseFieldWithVariableKind(p, ast.AccessNotSpecified, nil, "")
 			},
 			nil,

@@ -140,7 +140,7 @@ A field may belong to a contract, struct, resource, or interface.
   }
   ```
     - Initializer of a contract only run once, when the contract is deployed for the first time. It does not rerun
-      when the contract is updated.
+      when the contract is updated. However it is still required to be present in the updated contract to satisfy type checks. 
     - Thus, the stored data won't have the new field, as the initializations for the newly added fields do not get
       executed.
     - Decoding stored data will result in garbage or missing values for such fields.

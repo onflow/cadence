@@ -678,7 +678,7 @@ const (
 // Encode encodes PathValue as
 // cbor.Tag{
 //			Number: CBORTagPathValue,
-//			Content: []interface{}{
+//			Content: []any{
 //				encodedPathValueDomainFieldKey:     uint(v.Domain),
 //				encodedPathValueIdentifierFieldKey: string(v.Identifier),
 //			},
@@ -721,7 +721,7 @@ const (
 // Encode encodes CapabilityStorable as
 // cbor.Tag{
 //			Number: CBORTagCapabilityValue,
-//			Content: []interface{}{
+//			Content: []any{
 //					encodedCapabilityValueAddressFieldKey:    AddressValue(v.Address),
 // 					encodedCapabilityValuePathFieldKey:       PathValue(v.Path),
 // 					encodedCapabilityValueBorrowTypeFieldKey: StaticType(v.BorrowType),
@@ -810,7 +810,7 @@ func encodeLocation(e *cbor.StreamEncoder, l common.Location) error {
 		// common.AddressLocation is encoded as
 		// cbor.Tag{
 		//		Number: CBORTagAddressLocation,
-		//		Content: []interface{}{
+		//		Content: []any{
 		//			encodedAddressLocationAddressFieldKey: []byte{l.Address.Bytes()},
 		//			encodedAddressLocationNameFieldKey:    string(l.Name),
 		//		},
@@ -889,7 +889,7 @@ const (
 // Encode encodes LinkValue as
 // cbor.Tag{
 //			Number: CBORTagLinkValue,
-//			Content: []interface{}{
+//			Content: []any{
 //				encodedLinkValueTargetPathFieldKey: PathValue(v.TargetPath),
 //				encodedLinkValueTypeFieldKey:       StaticType(v.Type),
 //			},
@@ -1200,7 +1200,7 @@ const (
 // Encode encodes DictionaryStaticType as
 // cbor.Tag{
 //		Number: CBORTagDictionaryStaticType,
-// 		Content: []interface{}{
+// 		Content: []any{
 //				encodedDictionaryStaticTypeKeyTypeFieldKey:   StaticType(v.KeyType),
 //				encodedDictionaryStaticTypeValueTypeFieldKey: StaticType(v.ValueType),
 //		},
@@ -1242,7 +1242,7 @@ const (
 //		Number: CBORTagRestrictedStaticType,
 //		Content: cborArray{
 //				encodedRestrictedStaticTypeTypeFieldKey:         StaticType(v.Type),
-//				encodedRestrictedStaticTypeRestrictionsFieldKey: []interface{}(v.Restrictions),
+//				encodedRestrictedStaticTypeRestrictionsFieldKey: []any(v.Restrictions),
 //		},
 // }
 func (t *RestrictedStaticType) Encode(e *cbor.StreamEncoder) error {

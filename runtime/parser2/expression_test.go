@@ -323,7 +323,7 @@ func TestParseAdvancedExpression(t *testing.T) {
 		gauge.debug = true
 		gauge.Limit(common.MemoryKindPosition, 11)
 
-		var panicMsg interface{}
+		var panicMsg any
 		(func() {
 			defer func() {
 				panicMsg = recover()
@@ -345,7 +345,7 @@ func TestParseAdvancedExpression(t *testing.T) {
 		gauge := makeLimitingMemoryGauge()
 		gauge.Limit(common.MemoryKindIntegerExpression, 1)
 
-		var panicMsg interface{}
+		var panicMsg any
 		(func() {
 			defer func() {
 				panicMsg = recover()
