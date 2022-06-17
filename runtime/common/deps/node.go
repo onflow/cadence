@@ -65,7 +65,7 @@ func (n *Node) SetDependencies(dependencies ...*Node) {
 }
 
 func (n *Node) AllDependents() ([]*Node, error) {
-	return n.solve(nil, map[*Node]struct{}{}, map[*Node]struct{}{})
+	return n.solve(nil, NewMapNodeSet(), NewMapNodeSet())
 }
 
 func (n *Node) solve(solution []*Node, resolved, unresolved MapNodeSet) ([]*Node, error) {
@@ -86,11 +86,7 @@ func (n *Node) solve(solution []*Node, resolved, unresolved MapNodeSet) ([]*Node
 
 		var err error
 		solution, err = dependent.solve(solution, resolved, unresolved)
-		if err != nil {
-			return err
-		}
-
-		return nil
+		return err
 	})
 	if err != nil {
 		return nil, err
