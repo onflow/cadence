@@ -35,17 +35,30 @@ import (
 
 // A Decoder decodes JSON-encoded representations of Cadence values.
 type Decoder struct {
-	dec   *json.Decoder
-	gauge common.MemoryGauge
+	dec                          *json.Decoder
+	gauge                        common.MemoryGauge
+	allowUnstructuredStaticTypes bool
+}
+
+type Option func(*Decoder)
+
+func WithAllowUnstructuredStaticTypes(allow bool) Option {
+	return func(decoder *Decoder) {
+		decoder.allowUnstructuredStaticTypes = allow
+	}
 }
 
 // Decode returns a Cadence value decoded from its JSON-encoded representation.
 //
 // This function returns an error if the bytes represent JSON that is malformed
 // or does not conform to the JSON Cadence specification.
-func Decode(gauge common.MemoryGauge, b []byte) (cadence.Value, error) {
+func Decode(gauge common.MemoryGauge, b []byte, options ...Option) (cadence.Value, error) {
 	r := bytes.NewReader(b)
 	dec := NewDecoder(gauge, r)
+
+	for _, option := range options {
+		option(dec)
+	}
 
 	v, err := dec.Decode()
 	if err != nil {
@@ -1050,8 +1063,11 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 			return result
 		}
 
-		// Backwards-compatibility for format <0.3.0
-		return cadence.TypeID(typeID)
+		// Backwards-compatibility for format <0.3.0:
+		// static types were encoded as
+		if d.allowUnstructuredStaticTypes {
+			return cadence.TypeID(typeID)
+		}
 	}
 
 	obj := toObject(valueJSON)
