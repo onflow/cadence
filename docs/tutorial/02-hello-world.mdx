@@ -40,7 +40,13 @@ In this tutorial, we'll write and deploy our first smart contract!
 
 ## What is a smart contract?
 
-A smart contract is a program that verifies and executes the performance of a contract without the need for a trusted third party.
+In regular terms, a contract is an agreement between two parties for some exchange of information or assets.
+Normally, the terms of a contract are supervised and enforced by a trusted third party, such as a bank or a lawyer.
+
+A smart contract is a computer program stored in a decentralized network like a blockchain
+that verifies and executes the performance of a contract (like a lawyer does)
+without the need for any trusted third party anywhere in the process, because the code itself is trusted.
+
 Programs that run on blockchains are commonly referred to as smart contracts
 because they mediate important functionality (such as currency) without having to rely on a central authority (like a bank).
 
@@ -83,7 +89,7 @@ You will start by writing a smart contract that contains a public function that 
 
 Like most other blockchains, the programming model in Flow is centered around accounts and transactions.
 All state that persists permanently is stored in [accounts](/cadence/language/accounts)
-and there is only one type of account (all accounts can be for any number of users, smart contracts, and data).
+and all accounts have the same core functionality. (users, smart contracts, data storage)
 
 The interfaces to this state (the ways to interact with it, otherwise known as methods or functions) are also stored in accounts.
 All code execution takes place within [transactions](/cadence/language/transactions),
@@ -93,7 +99,7 @@ to interact with the persistent state, which includes directly modifying account
 A smart contract is a collection of code (its functions) and data (its state) that lives in the contract area of an account in Flow.
 Each account can have zero or more contracts and/or contract interfaces.
 A contract can be freely added, removed, or updated (with some restrictions) by the owner of the account.
-Now let's look at the HelloWorld contract that you'll be working through in this tutorial.
+Now let's look at the `HelloWorld` contract that you'll be working through in this tutorial.
 
 <Callout type="info">
 
@@ -213,7 +219,7 @@ In the Flow Playground environment there can only be one contract for each accou
 ---
 
 A [Transaction](/cadence/language/transactions) in Flow is defined as an arbitrary-sized block of Cadence code that is authorized by one or more accounts.
-When an account authorizes a transaction, the code in that transaction has access to the authorizers' privite storage.
+When an account authorizes a transaction, the code in that transaction has access to the authorizers' private storage.
 An account authorizes a transaction by performing a cryptographic signature on the transaction with the account's private key,
 which should only be accessible to the account owner. Therefore, authorizers are also known as signers.
 In addition to being able to access the authorizer's private assets, 

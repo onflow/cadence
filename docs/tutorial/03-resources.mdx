@@ -99,16 +99,16 @@ pub contract HelloWorld {
         pub fun hello(): String {
             return "Hello, World!"
         }
+    }
 
-        // We're going to use the built-in create function to create a new instance
-        // of the HelloAsset resource
-        pub fun createHelloAsset(): @HelloAsset {
-            return <-create HelloAsset()
-        }
+    // We're going to use the built-in create function to create a new instance
+    // of the HelloAsset resource
+    pub fun createHelloAsset(): @HelloAsset {
+        return <-create HelloAsset()
+    }
 
-        init() {
-            log("Hello Asset")
-        }
+    init() {
+        log("Hello Asset")
     }
 }
 ```
@@ -199,11 +199,11 @@ To make the assignment of resources explicit, the move operator `<-` must be use
 
 When a resource is moved, the old location is invalidated, and the object moves into the context of the new location.
 
-So if I have a resource in `first_resource`, like so:
+So if I have a resource in the variable `first_resource`, like so:
 
 ```cadence
 // Note the `@` symbol to specify that it is a resource
-let first_resource: @AnyResource = create AnyResource()
+var first_resource: @AnyResource <- create AnyResource()
 ```
 
 and I want to assign it to a new variable, `second_resource`,
@@ -479,7 +479,7 @@ and return it to the account storage.
 Now that you have completed the tutorial, you have the basic knowledge to write a simple Cadence program that can:
 
 - Implement a resource in a smart contract
-- Save,move, and load resources using the account storage API and the move operator `<-`
+- Save, move, and load resources using the account storage API and the move operator `<-`
 - Use the `prepare` phase of a transaction to load resources from account storage
 
 Feel free to modify the smart contract to create different resources, experiment with the available [account storage API](https://docs.onflow.org/cadence/language/accounts/#account-storage-api), and write new transactions and scripts that execute different functions from your smart contract.

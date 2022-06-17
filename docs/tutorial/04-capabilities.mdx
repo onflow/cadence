@@ -83,16 +83,16 @@ pub contract HelloWorld {
         pub fun hello(): String {
             return "Hello, World!"
         }
+    }
 
-        // We're going to use the built-in create function to create a new instance
-        // of the HelloAsset resource
-        pub fun createHelloAsset(): @HelloAsset {
-            return <-create HelloAsset()
-        }
+    // We're going to use the built-in create function to create a new instance
+    // of the HelloAsset resource
+    pub fun createHelloAsset(): @HelloAsset {
+        return <-create HelloAsset()
+    }
 
-        init() {
-            log("Hello Asset")
-        }
+    init() {
+        log("Hello Asset")
     }
 }
 ```
