@@ -50,12 +50,14 @@ func main() {
 		config.FlowAccessNodeURL = url
 	}
 
-	pause, err := time.ParseDuration(*pauseFlag)
-	if err == nil {
-		config.Pause = pause
-	} else {
-		log.Error().Msg("invalid pause duration")
-		return
+	if *pauseFlag != "" {
+		pause, err := time.ParseDuration(*pauseFlag)
+		if err == nil {
+			config.Pause = pause
+		} else {
+			log.Error().Msg("invalid pause duration")
+			return
+		}
 	}
 
 	log.Logger = log.
