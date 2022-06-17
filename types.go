@@ -29,6 +29,19 @@ type Type interface {
 	ID() string
 }
 
+// TypeID is a type which is only known by its type ID.
+// This type should not be used when encoding values,
+// and should only be used for decoding values that were encoded
+// using an older format of the JSON encoding (<v0.3.0)
+//
+type TypeID string
+
+func (TypeID) isType() {}
+
+func (t TypeID) ID() string {
+	return string(t)
+}
+
 // AnyType
 
 type AnyType struct{}

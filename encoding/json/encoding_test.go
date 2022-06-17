@@ -2024,3 +2024,17 @@ func TestNonUTF8StringEncoding(t *testing.T) {
 	assert.IsType(t, cadence.String(""), decodedValue)
 	assert.True(t, utf8.ValidString(decodedValue.String()))
 }
+
+func TestDecodeBackwardsCompatibilityTypeID(t *testing.T) {
+
+	t.Parallel()
+
+	testDecode(
+		t,
+		`{"type":"Type","value":{"staticType":"&Int"}}}`,
+
+		cadence.TypeValue{
+			StaticType: cadence.TypeID("&Int"),
+		},
+	)
+}
