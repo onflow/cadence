@@ -91,7 +91,7 @@ func StatementsDoc(statements []Statement) prettier.Doc {
 	return doc
 }
 
-func (b *Block) String() interface{} {
+func (b *Block) String() string {
 	return Prettier(b)
 }
 
@@ -223,7 +223,7 @@ func (b *FunctionBlock) Doc() prettier.Doc {
 	}
 }
 
-func (b *FunctionBlock) String() interface{} {
+func (b *FunctionBlock) String() string {
 	return Prettier(b)
 }
 
