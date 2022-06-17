@@ -37,15 +37,34 @@ import (
 type Decoder struct {
 	dec   *json.Decoder
 	gauge common.MemoryGauge
+	// allowUnstructuredStaticTypes controls if the decoding
+	// of a static type as a type ID (cadence.TypeID) is allowed
+	allowUnstructuredStaticTypes bool
+}
+
+type Option func(*Decoder)
+
+// WithAllowUnstructuredStaticTypes returns a new Decoder Option
+// which enables or disables if the decoding of a static type
+// as a type ID (cadence.TypeID) is allowed
+//
+func WithAllowUnstructuredStaticTypes(allow bool) Option {
+	return func(decoder *Decoder) {
+		decoder.allowUnstructuredStaticTypes = allow
+	}
 }
 
 // Decode returns a Cadence value decoded from its JSON-encoded representation.
 //
 // This function returns an error if the bytes represent JSON that is malformed
 // or does not conform to the JSON Cadence specification.
-func Decode(gauge common.MemoryGauge, b []byte) (cadence.Value, error) {
+func Decode(gauge common.MemoryGauge, b []byte, options ...Option) (cadence.Value, error) {
 	r := bytes.NewReader(b)
 	dec := NewDecoder(gauge, r)
+
+	for _, option := range options {
+		option(dec)
+	}
 
 	v, err := dec.Decode()
 	if err != nil {
@@ -1045,10 +1064,15 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 		return nil
 	}
 
-	typeID, ok := valueJSON.(string)
-	if ok {
+	if typeID, ok := valueJSON.(string); ok {
 		if result, ok := results[typeID]; ok {
 			return result
+		}
+
+		// Backwards-compatibility for format <0.3.0:
+		// static types were encoded as
+		if d.allowUnstructuredStaticTypes {
+			return cadence.TypeID(typeID)
 		}
 	}
 
