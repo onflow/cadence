@@ -2266,3 +2266,95 @@ func TestCheckCompositeFieldOrder(t *testing.T) {
 		test(t, kind)
 	}
 }
+
+func TestCheckInvalidMissingMember(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("non-optional", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          struct S {
+              fun a() {}
+          }
+
+		  fun test() {
+		     let s = S()
+		     s.b
+		  }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t,
+			&sema.NotDeclaredMemberError{},
+			errs[0],
+		)
+
+		notDeclaredMemberErr := errs[0].(*sema.NotDeclaredMemberError)
+		assert.Equal(t,
+			"unknown member",
+			notDeclaredMemberErr.SecondaryError(),
+		)
+	})
+
+	t.Run("optional: non-optional exists", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          struct S {
+              fun a() {}
+          }
+
+		  fun test() {
+		     let s: S? = S()
+		     s.a
+		  }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t,
+			&sema.NotDeclaredMemberError{},
+			errs[0],
+		)
+
+		notDeclaredMemberErr := errs[0].(*sema.NotDeclaredMemberError)
+		assert.Equal(t,
+			"type is optional, consider optional-chaining: ?.a",
+			notDeclaredMemberErr.SecondaryError(),
+		)
+	})
+
+	t.Run("optional: non-optional non-existent", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          struct S {
+              fun a() {}
+          }
+
+		  fun test() {
+		     let s: S? = S()
+		     s.b
+		  }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t,
+			&sema.NotDeclaredMemberError{},
+			errs[0],
+		)
+
+		notDeclaredMemberErr := errs[0].(*sema.NotDeclaredMemberError)
+		assert.Equal(t,
+			"unknown member",
+			notDeclaredMemberErr.SecondaryError(),
+		)
+	})
+}
