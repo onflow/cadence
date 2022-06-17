@@ -319,7 +319,7 @@ func readDirectoryEntries(
 		// Strip extension
 		typeID := name[:len(name)-len(path.Ext(name))]
 
-		location, qualifiedIdentifier, err := common.DecodeTypeID(typeID)
+		location, qualifiedIdentifier, err := common.DecodeTypeID(nil, typeID)
 		if err != nil {
 			panic(fmt.Errorf("invalid location in file %q: %w", name, err))
 		}
@@ -424,7 +424,7 @@ func readCSV(
 			continue
 		}
 
-		location, qualifiedIdentifier, err := common.DecodeTypeID(record[0])
+		location, qualifiedIdentifier, err := common.DecodeTypeID(nil, record[0])
 		if err != nil {
 			panic(fmt.Errorf("invalid location in row %d: %w", rowNumber, err))
 		}

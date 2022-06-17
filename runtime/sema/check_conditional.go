@@ -64,10 +64,6 @@ func (checker *Checker) VisitConditionalExpression(expression *ast.ConditionalEx
 
 	expectedType := checker.expectedType
 
-	if expectedType != nil {
-		checker.Elaboration.ConditionalExpressionHasExpectedType[expression] = struct{}{}
-	}
-
 	checker.VisitExpression(expression.Test, BoolType)
 
 	thenType, elseType := checker.checkConditionalBranches(
@@ -97,9 +93,6 @@ func (checker *Checker) VisitConditionalExpression(expression *ast.ConditionalEx
 			},
 		)
 	}
-
-	checker.Elaboration.ConditionalExpressionThenType[expression] = thenType
-	checker.Elaboration.ConditionalExpressionElseType[expression] = elseType
 
 	if expectedType != nil {
 		return expectedType
