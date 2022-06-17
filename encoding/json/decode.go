@@ -35,13 +35,19 @@ import (
 
 // A Decoder decodes JSON-encoded representations of Cadence values.
 type Decoder struct {
-	dec                          *json.Decoder
-	gauge                        common.MemoryGauge
+	dec   *json.Decoder
+	gauge common.MemoryGauge
+	// allowUnstructuredStaticTypes controls if the decoding
+	// of a static type as a type ID (cadence.TypeID) is allowed
 	allowUnstructuredStaticTypes bool
 }
 
 type Option func(*Decoder)
 
+// WithAllowUnstructuredStaticTypes returns a new Decoder Option
+// which enables or disables if the decoding of a static type
+// as a type ID (cadence.TypeID) is allowed
+//
 func WithAllowUnstructuredStaticTypes(allow bool) Option {
 	return func(decoder *Decoder) {
 		decoder.allowUnstructuredStaticTypes = allow
