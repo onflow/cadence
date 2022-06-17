@@ -143,6 +143,8 @@ func (t *NominalType) EndPosition(memoryGauge common.MemoryGauge) Position {
 	return lastIdentifier.EndPosition(memoryGauge)
 }
 
+var nominalTypeSeparatorDoc = prettier.Text(".")
+
 func (t *NominalType) Doc() prettier.Doc {
 	var doc prettier.Doc = prettier.Text(t.Identifier.String())
 	if len(t.NestedIdentifiers) > 0 {
@@ -150,7 +152,7 @@ func (t *NominalType) Doc() prettier.Doc {
 		for _, identifier := range t.NestedIdentifiers {
 			concat = append(
 				concat,
-				prettier.Text("."),
+				nominalTypeSeparatorDoc,
 				prettier.Text(identifier.String()),
 			)
 		}
