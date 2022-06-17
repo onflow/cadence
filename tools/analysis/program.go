@@ -45,11 +45,11 @@ func (program *Program) Run(analyzers []*Analyzer, report func(Diagnostic)) {
 
 	var registerAnalyzer func(a *Analyzer)
 	registerAnalyzer = func(a *Analyzer) {
-		act, ok := actions[a]
+		_, ok := actions[a]
 		if ok {
 			return
 		}
-		act = new(action)
+		act := new(action)
 		for _, req := range a.Requires {
 			registerAnalyzer(req)
 		}
