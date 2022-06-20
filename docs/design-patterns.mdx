@@ -121,16 +121,16 @@ pub contract AContract {
     // Resource definition
     pub resource BResource {
         pub var c: UInt64
-        pub var d: string
+        pub var d: String
 
         // Generate a struct with the same fields
         // to return when a script wants to see the fields of the resource
         // without having to return the actual resource
-        pub fun generateReport() BReportStruct {
-            return BReportStruct(c: c, d: d)
+        pub fun generateReport(): BReportStruct {
+            return BReportStruct(c: self.c, d: self.d)
         }
 
-        init(c: UInt64, d: string) {
+        init(c: UInt64, d: String) {
             self.c = c
             self.d = d
         }
@@ -139,9 +139,9 @@ pub contract AContract {
     // Define a struct with the same fields as the resource
     pub struct BReportStruct {
         pub var c: UInt64
-        pub var d: string
+        pub var d: String
 
-        init(c: UInt64, d: string) {
+        init(c: UInt64, d: String) {
             self.c = c
             self.d = d
         }
@@ -149,13 +149,13 @@ pub contract AContract {
     }
 }
 ...
-import A from 0xA
+import AContract from 0xAContract
 
 // Return the struct with a script
-pub fun main(): A.BReport {
+pub fun main(): AContract.BReportStruct {
     let b: AContract.BResource // Borrow the resource
     let report = b.generateReport()
-    return b
+    return report
 }
 ```
 
