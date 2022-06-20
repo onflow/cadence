@@ -128,8 +128,7 @@ Commands are prefixed with a dot. Valid commands are:
 .exit     Exit the interpreter
 .help     Print this help message
 
-Press ^C to abort current expression, ^D to exit
-`
+Press ^C to abort current expression, ^D to exit`
 
 const replAssistanceMessage = `Type '.help' for assistance.`
 

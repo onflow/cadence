@@ -22,6 +22,7 @@ import (
 	"sync"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 )
 
 type MemberInfo struct {
@@ -88,7 +89,8 @@ type Elaboration struct {
 	IndexExpressionIndexingTypes        map[*ast.IndexExpression]Type
 }
 
-func NewElaboration() *Elaboration {
+func NewElaboration(gauge common.MemoryGauge) *Elaboration {
+	common.UseMemory(gauge, common.ElaborationMemoryUsage)
 	return &Elaboration{
 		lock:                                new(sync.RWMutex),
 		FunctionDeclarationFunctionTypes:    map[*ast.FunctionDeclaration]*FunctionType{},

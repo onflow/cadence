@@ -75,13 +75,15 @@ func InitAddressProvider(
 		searchStep += 1
 		address := ap.indexToAddress(index)
 
+		log.Info().Msgf("testing account %d = %s", index, address)
+
 		// This script will fail with endOfAccountsError
 		// if the account (address at given index) doesn't exist yet
 		_, err := client.ExecuteScriptAtBlockID(
 			ctx,
 			referenceBlockID,
 			[]byte(accountStorageUsageScript),
-			[]cadence.Value{cadence.NewAddress(address)},
+			[]cadence.Value{cadence.NewMeteredAddress(address)},
 		)
 		if err == nil {
 			return true, nil

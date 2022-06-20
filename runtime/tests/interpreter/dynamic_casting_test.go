@@ -51,26 +51,26 @@ func TestInterpretDynamicCastingNumber(t *testing.T) {
 	}
 
 	tests := []test{
-		{sema.IntType, "42", interpreter.NewIntValueFromInt64(42)},
-		{sema.UIntType, "42", interpreter.NewUIntValueFromUint64(42)},
-		{sema.Int8Type, "42", interpreter.Int8Value(42)},
-		{sema.Int16Type, "42", interpreter.Int16Value(42)},
-		{sema.Int32Type, "42", interpreter.Int32Value(42)},
-		{sema.Int64Type, "42", interpreter.Int64Value(42)},
-		{sema.Int128Type, "42", interpreter.NewInt128ValueFromInt64(42)},
-		{sema.Int256Type, "42", interpreter.NewInt256ValueFromInt64(42)},
-		{sema.UInt8Type, "42", interpreter.UInt8Value(42)},
-		{sema.UInt16Type, "42", interpreter.UInt16Value(42)},
-		{sema.UInt32Type, "42", interpreter.UInt32Value(42)},
-		{sema.UInt64Type, "42", interpreter.UInt64Value(42)},
-		{sema.UInt128Type, "42", interpreter.NewUInt128ValueFromUint64(42)},
-		{sema.UInt256Type, "42", interpreter.NewUInt256ValueFromUint64(42)},
-		{sema.Word8Type, "42", interpreter.Word8Value(42)},
-		{sema.Word16Type, "42", interpreter.Word16Value(42)},
-		{sema.Word32Type, "42", interpreter.Word32Value(42)},
-		{sema.Word64Type, "42", interpreter.Word64Value(42)},
-		{sema.Fix64Type, "1.23", interpreter.Fix64Value(123000000)},
-		{sema.UFix64Type, "1.23", interpreter.UFix64Value(123000000)},
+		{sema.IntType, "42", interpreter.NewUnmeteredIntValueFromInt64(42)},
+		{sema.UIntType, "42", interpreter.NewUnmeteredUIntValueFromUint64(42)},
+		{sema.Int8Type, "42", interpreter.NewUnmeteredInt8Value(42)},
+		{sema.Int16Type, "42", interpreter.NewUnmeteredInt16Value(42)},
+		{sema.Int32Type, "42", interpreter.NewUnmeteredInt32Value(42)},
+		{sema.Int64Type, "42", interpreter.NewUnmeteredInt64Value(42)},
+		{sema.Int128Type, "42", interpreter.NewUnmeteredInt128ValueFromInt64(42)},
+		{sema.Int256Type, "42", interpreter.NewUnmeteredInt256ValueFromInt64(42)},
+		{sema.UInt8Type, "42", interpreter.NewUnmeteredUInt8Value(42)},
+		{sema.UInt16Type, "42", interpreter.NewUnmeteredUInt16Value(42)},
+		{sema.UInt32Type, "42", interpreter.NewUnmeteredUInt32Value(42)},
+		{sema.UInt64Type, "42", interpreter.NewUnmeteredUInt64Value(42)},
+		{sema.UInt128Type, "42", interpreter.NewUnmeteredUInt128ValueFromUint64(42)},
+		{sema.UInt256Type, "42", interpreter.NewUnmeteredUInt256ValueFromUint64(42)},
+		{sema.Word8Type, "42", interpreter.NewUnmeteredWord8Value(42)},
+		{sema.Word16Type, "42", interpreter.NewUnmeteredWord16Value(42)},
+		{sema.Word32Type, "42", interpreter.NewUnmeteredWord32Value(42)},
+		{sema.Word64Type, "42", interpreter.NewUnmeteredWord64Value(42)},
+		{sema.Fix64Type, "1.23", interpreter.NewUnmeteredFix64Value(123000000)},
+		{sema.UFix64Type, "1.23", interpreter.NewUnmeteredUFix64Value(123000000)},
 	}
 
 	for operation, returnsOptional := range dynamicCastingOperations {
@@ -122,7 +122,7 @@ func TestInterpretDynamicCastingNumber(t *testing.T) {
 								AssertValuesEqual(
 									t,
 									inter,
-									interpreter.NewSomeValueNonCopying(
+									interpreter.NewUnmeteredSomeValueNonCopying(
 										test.expected,
 									),
 									inter.Globals["z"].GetValue(),
@@ -219,7 +219,7 @@ func TestInterpretDynamicCastingVoid(t *testing.T) {
 						AssertValuesEqual(
 							t,
 							inter,
-							interpreter.NewSomeValueNonCopying(
+							interpreter.NewUnmeteredSomeValueNonCopying(
 								interpreter.VoidValue{},
 							),
 							inter.Globals["y"].GetValue(),
@@ -304,15 +304,15 @@ func TestInterpretDynamicCastingString(t *testing.T) {
 						AssertValuesEqual(
 							t,
 							inter,
-							interpreter.NewStringValue("test"),
+							interpreter.NewUnmeteredStringValue("test"),
 							inter.Globals["x"].GetValue(),
 						)
 
 						AssertValuesEqual(
 							t,
 							inter,
-							interpreter.NewSomeValueNonCopying(
-								interpreter.NewStringValue("test"),
+							interpreter.NewUnmeteredSomeValueNonCopying(
+								interpreter.NewUnmeteredStringValue("test"),
 							),
 							inter.Globals["y"].GetValue(),
 						)
@@ -402,7 +402,7 @@ func TestInterpretDynamicCastingBool(t *testing.T) {
 						AssertValuesEqual(
 							t,
 							inter,
-							interpreter.NewSomeValueNonCopying(
+							interpreter.NewUnmeteredSomeValueNonCopying(
 								interpreter.BoolValue(true),
 							),
 							inter.Globals["y"].GetValue(),
@@ -497,7 +497,7 @@ func TestInterpretDynamicCastingAddress(t *testing.T) {
 						AssertValuesEqual(
 							t,
 							inter,
-							interpreter.NewSomeValueNonCopying(
+							interpreter.NewUnmeteredSomeValueNonCopying(
 								addressValue,
 							),
 							inter.Globals["z"].GetValue(),
@@ -1070,8 +1070,8 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 							),
 						)
 
-						expectedValue := interpreter.NewSomeValueNonCopying(
-							interpreter.NewIntValueFromInt64(42),
+						expectedValue := interpreter.NewUnmeteredSomeValueNonCopying(
+							interpreter.NewUnmeteredIntValueFromInt64(42),
 						)
 
 						AssertValuesEqual(
@@ -1094,7 +1094,7 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 							AssertValuesEqual(
 								t,
 								inter,
-								interpreter.NewSomeValueNonCopying(
+								interpreter.NewUnmeteredSomeValueNonCopying(
 									expectedValue,
 								),
 								inter.Globals["z"].GetValue(),
@@ -1179,7 +1179,7 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 						)
 
 						expectedElements := []interpreter.Value{
-							interpreter.NewIntValueFromInt64(42),
+							interpreter.NewUnmeteredIntValueFromInt64(42),
 						}
 
 						yValue := inter.Globals["y"].GetValue()
@@ -1341,7 +1341,7 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 								KeyType:   interpreter.PrimitiveStaticTypeString,
 								ValueType: interpreter.PrimitiveStaticTypeInt,
 							},
-							interpreter.NewStringValue("test"), interpreter.NewIntValueFromInt64(42),
+							interpreter.NewUnmeteredStringValue("test"), interpreter.NewUnmeteredIntValueFromInt64(42),
 						)
 
 						AssertValuesEqual(
@@ -1354,7 +1354,7 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 						AssertValuesEqual(
 							t,
 							inter,
-							interpreter.NewSomeValueNonCopying(
+							interpreter.NewUnmeteredSomeValueNonCopying(
 								expectedDictionary,
 							),
 							inter.Globals["z"].GetValue(),
@@ -3480,6 +3480,7 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 		Address: interpreter.AddressValue{},
 		Path:    interpreter.EmptyPathValue,
 		BorrowType: interpreter.ConvertSemaToStaticType(
+			nil,
 			&sema.ReferenceType{
 				Type: structType,
 			},
@@ -3545,7 +3546,7 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 						AssertValuesEqual(
 							t,
 							inter,
-							interpreter.NewSomeValueNonCopying(
+							interpreter.NewUnmeteredSomeValueNonCopying(
 								capabilityValue,
 							),
 							inter.Globals["y"].GetValue(),
@@ -3648,7 +3649,7 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
 
 		result, err := inter.Invoke("test")
 		require.NoError(t, err)
-		require.Equal(t, interpreter.NewStringValue("hello from foo"), result)
+		require.Equal(t, interpreter.NewUnmeteredStringValue("hello from foo"), result)
 	})
 
 	t.Run("param contravariance", func(t *testing.T) {
@@ -3667,7 +3668,7 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
 
 		result, err := inter.Invoke("test")
 		require.NoError(t, err)
-		require.Equal(t, interpreter.NewStringValue("hello from foo"), result)
+		require.Equal(t, interpreter.NewUnmeteredStringValue("hello from foo"), result)
 	})
 
 	t.Run("param contravariance negative", func(t *testing.T) {
@@ -3704,7 +3705,7 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
 
 		result, err := inter.Invoke("test")
 		require.NoError(t, err)
-		require.Equal(t, interpreter.NewStringValue("hello from foo"), result)
+		require.Equal(t, interpreter.NewUnmeteredStringValue("hello from foo"), result)
 	})
 
 	t.Run("return type covariance negative", func(t *testing.T) {
@@ -3745,7 +3746,7 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
 
 		result, err := inter.Invoke("test")
 		require.NoError(t, err)
-		require.Equal(t, interpreter.NewStringValue("hello from foo.bar"), result)
+		require.Equal(t, interpreter.NewUnmeteredStringValue("hello from foo.bar"), result)
 	})
 }
 

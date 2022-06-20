@@ -26,11 +26,11 @@ type IntervalST struct {
 	root *node
 }
 
-func (t *IntervalST) Get(interval Interval) interface{} {
+func (t *IntervalST) Get(interval Interval) any {
 	return t.get(t.root, interval)
 }
 
-func (t *IntervalST) get(x *node, interval Interval) interface{} {
+func (t *IntervalST) get(x *node, interval Interval) any {
 	if x == nil {
 		return nil
 	}
@@ -52,11 +52,11 @@ func (t *IntervalST) Contains(interval Interval) bool {
 //
 // NOTE: does *not* check if the interval already exists
 //
-func (t *IntervalST) Put(interval Interval, value interface{}) {
+func (t *IntervalST) Put(interval Interval, value any) {
 	t.root = t.randomizedInsert(t.root, interval, value)
 }
 
-func (t *IntervalST) randomizedInsert(x *node, interval Interval, value interface{}) *node {
+func (t *IntervalST) randomizedInsert(x *node, interval Interval, value any) *node {
 	if x == nil {
 		return newNode(interval, value)
 	}
@@ -77,7 +77,7 @@ func (t *IntervalST) randomizedInsert(x *node, interval Interval, value interfac
 	return x
 }
 
-func (t *IntervalST) rootInsert(x *node, interval Interval, value interface{}) *node {
+func (t *IntervalST) rootInsert(x *node, interval Interval, value any) *node {
 	if x == nil {
 		return newNode(interval, value)
 	}
@@ -94,11 +94,11 @@ func (t *IntervalST) rootInsert(x *node, interval Interval, value interface{}) *
 	return x
 }
 
-func (t *IntervalST) SearchInterval(interval Interval) (*Interval, interface{}) {
+func (t *IntervalST) SearchInterval(interval Interval) (*Interval, any) {
 	return t.searchInterval(t.root, interval)
 }
 
-func (t *IntervalST) searchInterval(x *node, interval Interval) (*Interval, interface{}) {
+func (t *IntervalST) searchInterval(x *node, interval Interval) (*Interval, any) {
 	for x != nil {
 		if x.interval.Intersects(interval) {
 			return &x.interval, x.value
@@ -111,11 +111,11 @@ func (t *IntervalST) searchInterval(x *node, interval Interval) (*Interval, inte
 	return nil, nil
 }
 
-func (t *IntervalST) Search(p Position) (*Interval, interface{}) {
+func (t *IntervalST) Search(p Position) (*Interval, any) {
 	return t.search(t.root, p)
 }
 
-func (t *IntervalST) search(x *node, p Position) (*Interval, interface{}) {
+func (t *IntervalST) search(x *node, p Position) (*Interval, any) {
 	for x != nil {
 		if x.interval.Contains(p) {
 			return &x.interval, x.value
@@ -130,7 +130,7 @@ func (t *IntervalST) search(x *node, p Position) (*Interval, interface{}) {
 
 type Entry struct {
 	Interval Interval
-	Value    interface{}
+	Value    any
 }
 
 func (t *IntervalST) SearchAll(p Position) []Entry {
@@ -170,7 +170,7 @@ func (t *IntervalST) searchAll(n *node, p Position, entries []Entry) (bool, []En
 	return found, entries
 }
 
-func (t *IntervalST) Values() []interface{} {
+func (t *IntervalST) Values() []any {
 	return t.root.Values()
 }
 

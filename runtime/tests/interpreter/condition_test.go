@@ -49,12 +49,12 @@ func TestInterpretFunctionPreCondition(t *testing.T) {
 
 	_, err := inter.Invoke(
 		"test",
-		interpreter.NewIntValueFromInt64(42),
+		interpreter.NewUnmeteredIntValueFromInt64(42),
 	)
 	var conditionErr interpreter.ConditionError
 	require.ErrorAs(t, err, &conditionErr)
 
-	zero := interpreter.NewIntValueFromInt64(0)
+	zero := interpreter.NewUnmeteredIntValueFromInt64(0)
 	value, err := inter.Invoke("test", zero)
 	require.NoError(t, err)
 
@@ -77,12 +77,12 @@ func TestInterpretFunctionPostCondition(t *testing.T) {
 
 	_, err := inter.Invoke(
 		"test",
-		interpreter.NewIntValueFromInt64(42),
+		interpreter.NewUnmeteredIntValueFromInt64(42),
 	)
 	var conditionErr interpreter.ConditionError
 	require.ErrorAs(t, err, &conditionErr)
 
-	zero := interpreter.NewIntValueFromInt64(0)
+	zero := interpreter.NewUnmeteredIntValueFromInt64(0)
 	value, err := inter.Invoke("test", zero)
 	require.NoError(t, err)
 
@@ -104,13 +104,13 @@ func TestInterpretFunctionWithResultAndPostConditionWithResult(t *testing.T) {
 
 	_, err := inter.Invoke(
 		"test",
-		interpreter.NewIntValueFromInt64(42),
+		interpreter.NewUnmeteredIntValueFromInt64(42),
 	)
 
 	var conditionErr interpreter.ConditionError
 	require.ErrorAs(t, err, &conditionErr)
 
-	zero := interpreter.NewIntValueFromInt64(0)
+	zero := interpreter.NewUnmeteredIntValueFromInt64(0)
 	value, err := inter.Invoke("test", zero)
 	require.NoError(t, err)
 
@@ -244,7 +244,7 @@ func TestInterpretFunctionPostConditionWithMessageUsingStringLiteral(t *testing.
 
 	_, err := inter.Invoke(
 		"test",
-		interpreter.NewIntValueFromInt64(42),
+		interpreter.NewUnmeteredIntValueFromInt64(42),
 	)
 
 	var conditionErr interpreter.ConditionError
@@ -255,7 +255,7 @@ func TestInterpretFunctionPostConditionWithMessageUsingStringLiteral(t *testing.
 		conditionErr.Message,
 	)
 
-	zero := interpreter.NewIntValueFromInt64(0)
+	zero := interpreter.NewUnmeteredIntValueFromInt64(0)
 	value, err := inter.Invoke("test", zero)
 	require.NoError(t, err)
 
@@ -283,7 +283,7 @@ func TestInterpretFunctionPostConditionWithMessageUsingResult(t *testing.T) {
 
 	_, err := inter.Invoke(
 		"test",
-		interpreter.NewIntValueFromInt64(42),
+		interpreter.NewUnmeteredIntValueFromInt64(42),
 	)
 	var conditionErr interpreter.ConditionError
 	require.ErrorAs(t, err, &conditionErr)
@@ -293,14 +293,14 @@ func TestInterpretFunctionPostConditionWithMessageUsingResult(t *testing.T) {
 		conditionErr.Message,
 	)
 
-	zero := interpreter.NewIntValueFromInt64(0)
+	zero := interpreter.NewUnmeteredIntValueFromInt64(0)
 	value, err := inter.Invoke("test", zero)
 	require.NoError(t, err)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.NewStringValue("return value"),
+		interpreter.NewUnmeteredStringValue("return value"),
 		value,
 	)
 }
@@ -318,7 +318,7 @@ func TestInterpretFunctionPostConditionWithMessageUsingBefore(t *testing.T) {
       }
     `)
 
-	_, err := inter.Invoke("test", interpreter.NewStringValue("parameter value"))
+	_, err := inter.Invoke("test", interpreter.NewUnmeteredStringValue("parameter value"))
 
 	var conditionErr interpreter.ConditionError
 	require.ErrorAs(t, err, &conditionErr)
@@ -342,7 +342,7 @@ func TestInterpretFunctionPostConditionWithMessageUsingParameter(t *testing.T) {
       }
     `)
 
-	_, err := inter.Invoke("test", interpreter.NewStringValue("parameter value"))
+	_, err := inter.Invoke("test", interpreter.NewUnmeteredStringValue("parameter value"))
 
 	var conditionErr interpreter.ConditionError
 	require.ErrorAs(t, err, &conditionErr)
@@ -427,22 +427,22 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
 			)
 			require.NoError(t, err)
 
-			_, err = inter.Invoke("callTest", interpreter.NewIntValueFromInt64(0))
+			_, err = inter.Invoke("callTest", interpreter.NewUnmeteredIntValueFromInt64(0))
 
 			var conditionErr interpreter.ConditionError
 			require.ErrorAs(t, err, &conditionErr)
 
-			value, err := inter.Invoke("callTest", interpreter.NewIntValueFromInt64(1))
+			value, err := inter.Invoke("callTest", interpreter.NewUnmeteredIntValueFromInt64(1))
 			require.NoError(t, err)
 
 			AssertValuesEqual(
 				t,
 				inter,
-				interpreter.NewIntValueFromInt64(1),
+				interpreter.NewUnmeteredIntValueFromInt64(1),
 				value,
 			)
 
-			_, err = inter.Invoke("callTest", interpreter.NewIntValueFromInt64(2))
+			_, err = inter.Invoke("callTest", interpreter.NewUnmeteredIntValueFromInt64(2))
 
 			require.ErrorAs(t, err, &conditionErr)
 		})
@@ -547,7 +547,7 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 
 					if compositeKind == common.CompositeKindContract {
 
-						storage := interpreter.NewInMemoryStorage()
+						storage := newUnmeteredInMemoryStorage()
 
 						inter, err := interpreter.NewInterpreter(
 							interpreter.ProgramFromChecker(checker),
@@ -555,7 +555,7 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 							interpreter.WithStorage(storage),
 							makeContractValueHandler(
 								[]interpreter.Value{
-									interpreter.NewIntValueFromInt64(value),
+									interpreter.NewUnmeteredIntValueFromInt64(value),
 								},
 								[]sema.Type{
 									sema.IntType,
@@ -574,7 +574,7 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 						_, err = inter.Invoke("test")
 						check(err)
 					} else {
-						storage := interpreter.NewInMemoryStorage()
+						storage := newUnmeteredInMemoryStorage()
 
 						inter, err := interpreter.NewInterpreter(
 							interpreter.ProgramFromChecker(checker),
@@ -587,7 +587,7 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 						err = inter.Interpret()
 						require.NoError(t, err)
 
-						_, err = inter.Invoke("test", interpreter.NewIntValueFromInt64(value))
+						_, err = inter.Invoke("test", interpreter.NewUnmeteredIntValueFromInt64(value))
 						check(err)
 					}
 				})
@@ -646,7 +646,7 @@ func TestInterpretTypeRequirementWithPreCondition(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("-1", func(t *testing.T) {
-		_, err := inter.Invoke("test", interpreter.NewIntValueFromInt64(-1))
+		_, err := inter.Invoke("test", interpreter.NewUnmeteredIntValueFromInt64(-1))
 
 		var conditionErr interpreter.ConditionError
 		require.ErrorAs(t, err, &conditionErr)
@@ -658,7 +658,7 @@ func TestInterpretTypeRequirementWithPreCondition(t *testing.T) {
 	})
 
 	t.Run("0", func(t *testing.T) {
-		_, err := inter.Invoke("test", interpreter.NewIntValueFromInt64(0))
+		_, err := inter.Invoke("test", interpreter.NewUnmeteredIntValueFromInt64(0))
 
 		var conditionErr interpreter.ConditionError
 		require.ErrorAs(t, err, &conditionErr)
@@ -667,7 +667,7 @@ func TestInterpretTypeRequirementWithPreCondition(t *testing.T) {
 	})
 
 	t.Run("1", func(t *testing.T) {
-		value, err := inter.Invoke("test", interpreter.NewIntValueFromInt64(1))
+		value, err := inter.Invoke("test", interpreter.NewUnmeteredIntValueFromInt64(1))
 		require.NoError(t, err)
 
 		assert.IsType(t,
@@ -677,7 +677,7 @@ func TestInterpretTypeRequirementWithPreCondition(t *testing.T) {
 	})
 
 	t.Run("2", func(t *testing.T) {
-		_, err := inter.Invoke("test", interpreter.NewIntValueFromInt64(2))
+		_, err := inter.Invoke("test", interpreter.NewUnmeteredIntValueFromInt64(2))
 		require.IsType(t,
 			interpreter.Error{},
 			err,
@@ -726,7 +726,7 @@ func TestInterpretResourceInterfaceInitializerAndDestructorPreConditions(t *test
     `)
 
 	t.Run("1", func(t *testing.T) {
-		_, err := inter.Invoke("test", interpreter.NewIntValueFromInt64(1))
+		_, err := inter.Invoke("test", interpreter.NewUnmeteredIntValueFromInt64(1))
 		require.Error(t, err)
 
 		require.IsType(t,
@@ -745,12 +745,12 @@ func TestInterpretResourceInterfaceInitializerAndDestructorPreConditions(t *test
 	})
 
 	t.Run("2", func(t *testing.T) {
-		_, err := inter.Invoke("test", interpreter.NewIntValueFromInt64(2))
+		_, err := inter.Invoke("test", interpreter.NewUnmeteredIntValueFromInt64(2))
 		require.NoError(t, err)
 	})
 
 	t.Run("3", func(t *testing.T) {
-		_, err := inter.Invoke("test", interpreter.NewIntValueFromInt64(3))
+		_, err := inter.Invoke("test", interpreter.NewUnmeteredIntValueFromInt64(3))
 		require.Error(t, err)
 
 		require.IsType(t,
@@ -821,7 +821,7 @@ func TestInterpretResourceTypeRequirementInitializerAndDestructorPreConditions(t
 	require.NoError(t, err)
 
 	t.Run("1", func(t *testing.T) {
-		_, err := inter.Invoke("test", interpreter.NewIntValueFromInt64(1))
+		_, err := inter.Invoke("test", interpreter.NewUnmeteredIntValueFromInt64(1))
 		require.Error(t, err)
 
 		require.IsType(t,
@@ -840,12 +840,12 @@ func TestInterpretResourceTypeRequirementInitializerAndDestructorPreConditions(t
 	})
 
 	t.Run("2", func(t *testing.T) {
-		_, err := inter.Invoke("test", interpreter.NewIntValueFromInt64(2))
+		_, err := inter.Invoke("test", interpreter.NewUnmeteredIntValueFromInt64(2))
 		require.NoError(t, err)
 	})
 
 	t.Run("3", func(t *testing.T) {
-		_, err := inter.Invoke("test", interpreter.NewIntValueFromInt64(3))
+		_, err := inter.Invoke("test", interpreter.NewUnmeteredIntValueFromInt64(3))
 		require.Error(t, err)
 
 		require.IsType(t,
@@ -1085,8 +1085,9 @@ func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
 		{
 			Name: "check",
 			Type: checkFunctionType,
-			ValueFactory: func(_ *interpreter.Interpreter) interpreter.Value {
+			ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
 				return interpreter.NewHostFunctionValue(
+					inter,
 					func(invocation interpreter.Invocation) interpreter.Value {
 						checkCalled = true
 

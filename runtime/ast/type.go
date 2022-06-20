@@ -21,10 +21,13 @@ package ast
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/turbolent/prettier"
+
+	"github.com/onflow/cadence/runtime/common"
 )
+
+const typeSeparatorSpaceDoc = prettier.Text(": ")
 
 // TypeAnnotation
 
@@ -34,19 +37,31 @@ type TypeAnnotation struct {
 	StartPos   Position `json:"-"`
 }
 
-func (t *TypeAnnotation) String() string {
-	if t.IsResource {
-		return fmt.Sprintf("@%s", t.Type)
+func NewTypeAnnotation(
+	memoryGauge common.MemoryGauge,
+	isResource bool,
+	typ Type,
+	startPos Position,
+) *TypeAnnotation {
+	common.UseMemory(memoryGauge, common.TypeAnnotationMemoryUsage)
+
+	return &TypeAnnotation{
+		IsResource: isResource,
+		Type:       typ,
+		StartPos:   startPos,
 	}
-	return fmt.Sprint(t.Type)
+}
+
+func (t *TypeAnnotation) String() string {
+	return Prettier(t)
 }
 
 func (t *TypeAnnotation) StartPosition() Position {
 	return t.StartPos
 }
 
-func (t *TypeAnnotation) EndPosition() Position {
-	return t.Type.EndPosition()
+func (t *TypeAnnotation) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return t.Type.EndPosition(memoryGauge)
 }
 
 const typeAnnotationResourceSymbolDoc = prettier.Text("@")
@@ -68,7 +83,7 @@ func (t *TypeAnnotation) MarshalJSON() ([]byte, error) {
 		Range
 		*Alias
 	}{
-		Range: NewRangeFromPositioned(t),
+		Range: NewUnmeteredRangeFromPositioned(t),
 		Alias: (*Alias)(t),
 	})
 }
@@ -97,33 +112,53 @@ type NominalType struct {
 
 var _ Type = &NominalType{}
 
+func NewNominalType(
+	memoryGauge common.MemoryGauge,
+	identifier Identifier,
+	nestedIdentifiers []Identifier,
+) *NominalType {
+	common.UseMemory(memoryGauge, common.NominalTypeMemoryUsage)
+	return &NominalType{
+		Identifier:        identifier,
+		NestedIdentifiers: nestedIdentifiers,
+	}
+}
+
 func (*NominalType) isType() {}
 
 func (t *NominalType) String() string {
-	var sb strings.Builder
-	sb.WriteString(t.Identifier.String())
-	for _, identifier := range t.NestedIdentifiers {
-		sb.WriteRune('.')
-		sb.WriteString(identifier.String())
-	}
-	return sb.String()
+	return Prettier(t)
 }
 
 func (t *NominalType) StartPosition() Position {
 	return t.Identifier.StartPosition()
 }
 
-func (t *NominalType) EndPosition() Position {
+func (t *NominalType) EndPosition(memoryGauge common.MemoryGauge) Position {
 	nestedCount := len(t.NestedIdentifiers)
 	if nestedCount == 0 {
-		return t.Identifier.EndPosition()
+		return t.Identifier.EndPosition(memoryGauge)
 	}
 	lastIdentifier := t.NestedIdentifiers[nestedCount-1]
-	return lastIdentifier.EndPosition()
+	return lastIdentifier.EndPosition(memoryGauge)
 }
 
+var nominalTypeSeparatorDoc = prettier.Text(".")
+
 func (t *NominalType) Doc() prettier.Doc {
-	return prettier.Text(t.String())
+	var doc prettier.Doc = prettier.Text(t.Identifier.String())
+	if len(t.NestedIdentifiers) > 0 {
+		concat := prettier.Concat{doc}
+		for _, identifier := range t.NestedIdentifiers {
+			concat = append(
+				concat,
+				nominalTypeSeparatorDoc,
+				prettier.Text(identifier.String()),
+			)
+		}
+		doc = concat
+	}
+	return doc
 }
 
 func (t *NominalType) MarshalJSON() ([]byte, error) {
@@ -134,7 +169,7 @@ func (t *NominalType) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "NominalType",
-		Range: NewRangeFromPositioned(t),
+		Range: NewUnmeteredRangeFromPositioned(t),
 		Alias: (*Alias)(t),
 	})
 }
@@ -156,17 +191,29 @@ type OptionalType struct {
 
 var _ Type = &OptionalType{}
 
+func NewOptionalType(
+	memoryGauge common.MemoryGauge,
+	typ Type,
+	endPos Position,
+) *OptionalType {
+	common.UseMemory(memoryGauge, common.OptionalTypeMemoryUsage)
+	return &OptionalType{
+		Type:   typ,
+		EndPos: endPos,
+	}
+}
+
 func (*OptionalType) isType() {}
 
 func (t *OptionalType) String() string {
-	return fmt.Sprintf("%s?", t.Type)
+	return Prettier(t)
 }
 
 func (t *OptionalType) StartPosition() Position {
 	return t.Type.StartPosition()
 }
 
-func (t *OptionalType) EndPosition() Position {
+func (t *OptionalType) EndPosition(memoryGauge common.MemoryGauge) Position {
 	return t.EndPos
 }
 
@@ -187,7 +234,7 @@ func (t *OptionalType) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "OptionalType",
-		Range: NewRangeFromPositioned(t),
+		Range: NewUnmeteredRangeFromPositioned(t),
 		Alias: (*Alias)(t),
 	})
 }
@@ -205,10 +252,22 @@ type VariableSizedType struct {
 
 var _ Type = &VariableSizedType{}
 
+func NewVariableSizedType(
+	memoryGauge common.MemoryGauge,
+	typ Type,
+	astRange Range,
+) *VariableSizedType {
+	common.UseMemory(memoryGauge, common.VariableSizedTypeMemoryUsage)
+	return &VariableSizedType{
+		Type:  typ,
+		Range: astRange,
+	}
+}
+
 func (*VariableSizedType) isType() {}
 
 func (t *VariableSizedType) String() string {
-	return fmt.Sprintf("[%s]", t.Type)
+	return Prettier(t)
 }
 
 const arrayTypeStartDoc = prettier.Text("[")
@@ -253,10 +312,24 @@ type ConstantSizedType struct {
 
 var _ Type = &ConstantSizedType{}
 
+func NewConstantSizedType(
+	memoryGauge common.MemoryGauge,
+	typ Type,
+	size *IntegerExpression,
+	astRange Range,
+) *ConstantSizedType {
+	common.UseMemory(memoryGauge, common.ConstantSizedTypeMemoryUsage)
+	return &ConstantSizedType{
+		Type:  typ,
+		Size:  size,
+		Range: astRange,
+	}
+}
+
 func (*ConstantSizedType) isType() {}
 
 func (t *ConstantSizedType) String() string {
-	return fmt.Sprintf("[%s; %s]", t.Type, t.Size)
+	return Prettier(t)
 }
 
 const constantSizedTypeSeparatorSpaceDoc = prettier.Text("; ")
@@ -302,15 +375,28 @@ type DictionaryType struct {
 
 var _ Type = &DictionaryType{}
 
+func NewDictionaryType(
+	memoryGauge common.MemoryGauge,
+	keyType Type,
+	valueType Type,
+	astRange Range,
+) *DictionaryType {
+	common.UseMemory(memoryGauge, common.DictionaryTypeMemoryUsage)
+	return &DictionaryType{
+		KeyType:   keyType,
+		ValueType: valueType,
+		Range:     astRange,
+	}
+}
+
 func (*DictionaryType) isType() {}
 
 func (t *DictionaryType) String() string {
-	return fmt.Sprintf("{%s: %s}", t.KeyType, t.ValueType)
+	return Prettier(t)
 }
 
 const dictionaryTypeStartDoc = prettier.Text("{")
 const dictionaryTypeEndDoc = prettier.Text("}")
-const dictionaryTypeSeparatorSpaceDoc = prettier.Text(": ")
 
 func (t *DictionaryType) Doc() prettier.Doc {
 	return prettier.Concat{
@@ -319,7 +405,7 @@ func (t *DictionaryType) Doc() prettier.Doc {
 			Doc: prettier.Concat{
 				prettier.SoftLine{},
 				t.KeyType.Doc(),
-				dictionaryTypeSeparatorSpaceDoc,
+				typeSeparatorSpaceDoc,
 				t.ValueType.Doc(),
 			},
 		},
@@ -353,23 +439,28 @@ type FunctionType struct {
 
 var _ Type = &FunctionType{}
 
+func NewFunctionType(
+	memoryGauge common.MemoryGauge,
+	parameterTypes []*TypeAnnotation,
+	returnType *TypeAnnotation,
+	astRange Range,
+) *FunctionType {
+	common.UseMemory(memoryGauge, common.FunctionTypeMemoryUsage)
+	return &FunctionType{
+		ParameterTypeAnnotations: parameterTypes,
+		ReturnTypeAnnotation:     returnType,
+		Range:                    astRange,
+	}
+}
+
 func (*FunctionType) isType() {}
 
 func (t *FunctionType) String() string {
-	var parameters strings.Builder
-	for i, parameterTypeAnnotation := range t.ParameterTypeAnnotations {
-		if i > 0 {
-			parameters.WriteString(", ")
-		}
-		parameters.WriteString(parameterTypeAnnotation.String())
-	}
-
-	return fmt.Sprintf("((%s): %s)", parameters.String(), t.ReturnTypeAnnotation.String())
+	return Prettier(t)
 }
 
 const functionTypeStartDoc = prettier.Text("(")
 const functionTypeEndDoc = prettier.Text(")")
-const functionTypeTypeSeparatorSpaceDoc = prettier.Text(": ")
 const functionTypeParameterSeparatorDoc = prettier.Text(",")
 
 func (t *FunctionType) Doc() prettier.Doc {
@@ -403,7 +494,7 @@ func (t *FunctionType) Doc() prettier.Doc {
 				functionTypeEndDoc,
 			},
 		},
-		functionTypeTypeSeparatorSpaceDoc,
+		typeSeparatorSpaceDoc,
 		t.ReturnTypeAnnotation.Doc(),
 		functionTypeEndDoc,
 	}
@@ -434,24 +525,32 @@ type ReferenceType struct {
 
 var _ Type = &ReferenceType{}
 
+func NewReferenceType(
+	memoryGauge common.MemoryGauge,
+	authorized bool,
+	typ Type,
+	startPos Position,
+) *ReferenceType {
+	common.UseMemory(memoryGauge, common.ReferenceTypeMemoryUsage)
+	return &ReferenceType{
+		Authorized: authorized,
+		Type:       typ,
+		StartPos:   startPos,
+	}
+}
+
 func (*ReferenceType) isType() {}
 
 func (t *ReferenceType) String() string {
-	var builder strings.Builder
-	if t.Authorized {
-		builder.WriteString("auth ")
-	}
-	builder.WriteRune('&')
-	builder.WriteString(t.Type.String())
-	return builder.String()
+	return Prettier(t)
 }
 
 func (t *ReferenceType) StartPosition() Position {
 	return t.StartPos
 }
 
-func (t *ReferenceType) EndPosition() Position {
-	return t.Type.EndPosition()
+func (t *ReferenceType) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return t.Type.EndPosition(memoryGauge)
 }
 
 const referenceTypeAuthKeywordSpaceDoc = prettier.Text("auth ")
@@ -478,7 +577,7 @@ func (t *ReferenceType) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "ReferenceType",
-		Range: NewRangeFromPositioned(t),
+		Range: NewUnmeteredRangeFromPositioned(t),
 		Alias: (*Alias)(t),
 	})
 }
@@ -497,22 +596,24 @@ type RestrictedType struct {
 
 var _ Type = &RestrictedType{}
 
+func NewRestrictedType(
+	memoryGauge common.MemoryGauge,
+	typ Type,
+	restrictions []*NominalType,
+	astRange Range,
+) *RestrictedType {
+	common.UseMemory(memoryGauge, common.RestrictedTypeMemoryUsage)
+	return &RestrictedType{
+		Type:         typ,
+		Restrictions: restrictions,
+		Range:        astRange,
+	}
+}
+
 func (*RestrictedType) isType() {}
 
 func (t *RestrictedType) String() string {
-	var builder strings.Builder
-	if t.Type != nil {
-		builder.WriteString(t.Type.String())
-	}
-	builder.WriteRune('{')
-	for i, restriction := range t.Restrictions {
-		if i > 0 {
-			builder.WriteString(", ")
-		}
-		builder.WriteString(restriction.String())
-	}
-	builder.WriteRune('}')
-	return builder.String()
+	return Prettier(t)
 }
 
 const restrictedTypeStartDoc = prettier.Text("{")
@@ -584,27 +685,33 @@ type InstantiationType struct {
 
 var _ Type = &InstantiationType{}
 
+func NewInstantiationType(
+	memoryGauge common.MemoryGauge,
+	typ Type,
+	typeArguments []*TypeAnnotation,
+	typeArgumentsStartPos Position,
+	endPos Position,
+) *InstantiationType {
+	common.UseMemory(memoryGauge, common.InstantiationTypeMemoryUsage)
+	return &InstantiationType{
+		Type:                  typ,
+		TypeArguments:         typeArguments,
+		TypeArgumentsStartPos: typeArgumentsStartPos,
+		EndPos:                endPos,
+	}
+}
+
 func (*InstantiationType) isType() {}
 
 func (t *InstantiationType) String() string {
-	var sb strings.Builder
-	sb.WriteString(t.Type.String())
-	sb.WriteRune('<')
-	for i, typeArgument := range t.TypeArguments {
-		if i > 0 {
-			sb.WriteString(", ")
-		}
-		sb.WriteString(typeArgument.String())
-	}
-	sb.WriteRune('>')
-	return sb.String()
+	return Prettier(t)
 }
 
 func (t *InstantiationType) StartPosition() Position {
 	return t.Type.StartPosition()
 }
 
-func (t *InstantiationType) EndPosition() Position {
+func (t *InstantiationType) EndPosition(common.MemoryGauge) Position {
 	return t.EndPos
 }
 
@@ -654,7 +761,7 @@ func (t *InstantiationType) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "InstantiationType",
-		Range: NewRangeFromPositioned(t),
+		Range: NewUnmeteredRangeFromPositioned(t),
 		Alias: (*Alias)(t),
 	})
 }

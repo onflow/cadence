@@ -59,7 +59,7 @@ func (StandardLibraryFunction) ValueDeclarationKind() common.DeclarationKind {
 }
 
 func (StandardLibraryFunction) ValueDeclarationPosition() ast.Position {
-	return ast.Position{}
+	return ast.EmptyPosition
 }
 
 func (StandardLibraryFunction) ValueDeclarationIsConstant() bool {
@@ -92,7 +92,7 @@ func NewStandardLibraryFunction(
 		argumentLabels[i] = parameter.EffectiveArgumentLabel()
 	}
 
-	functionValue := interpreter.NewHostFunctionValue(function, functionType)
+	functionValue := interpreter.NewUnmeteredHostFunctionValue(function, functionType)
 
 	return StandardLibraryFunction{
 		Name:           name,

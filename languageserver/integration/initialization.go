@@ -26,7 +26,7 @@ import (
 	"github.com/spf13/afero"
 )
 
-func (i *FlowIntegration) initialize(initializationOptions interface{}) error {
+func (i *FlowIntegration) initialize(initializationOptions any) error {
 	// Parse the configuration options sent from the client
 	conf, err := configFromInitializationOptions(initializationOptions)
 	if err != nil {

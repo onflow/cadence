@@ -33,48 +33,46 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
-func StoredValue(storable atree.Storable, storage atree.SlabStorage) Value {
+func StoredValue(gauge common.MemoryGauge, storable atree.Storable, storage atree.SlabStorage) Value {
 	storedValue, err := storable.StoredValue(storage)
 	if err != nil {
 		panic(err)
 	}
 
-	return MustConvertStoredValue(storedValue)
+	return MustConvertStoredValue(gauge, storedValue)
 }
 
-func MustConvertStoredValue(value atree.Value) Value {
-	converted, err := ConvertStoredValue(value)
+func MustConvertStoredValue(gauge common.MemoryGauge, value atree.Value) Value {
+	converted, err := ConvertStoredValue(gauge, value)
 	if err != nil {
 		panic(err)
 	}
 	return converted
 }
 
-func ConvertStoredValue(value atree.Value) (Value, error) {
+func MustConvertUnmeteredStoredValue(value atree.Value) Value {
+	converted, err := ConvertStoredValue(nil, value)
+	if err != nil {
+		panic(err)
+	}
+	return converted
+}
+
+func ConvertStoredValue(gauge common.MemoryGauge, value atree.Value) (Value, error) {
 	switch value := value.(type) {
 	case *atree.Array:
-		return &ArrayValue{
-			Type:  value.Type().(ArrayStaticType),
-			array: value,
-		}, nil
-
+		staticType, ok := value.Type().(ArrayStaticType)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+		return newArrayValueFromConstructor(gauge, staticType, value.Count(), func() *atree.Array { return value }), nil
 	case *atree.OrderedMap:
 		typeInfo := value.Type()
 		switch typeInfo := typeInfo.(type) {
 		case DictionaryStaticType:
-			return &DictionaryValue{
-				Type:       typeInfo,
-				dictionary: value,
-			}, nil
-
+			return newDictionaryValueFromConstructor(gauge, typeInfo, value.Count(), func() *atree.OrderedMap { return value }), nil
 		case compositeTypeInfo:
-			return &CompositeValue{
-				dictionary:          value,
-				Location:            typeInfo.location,
-				QualifiedIdentifier: typeInfo.qualifiedIdentifier,
-				Kind:                typeInfo.kind,
-			}, nil
-
+			return newCompositeValueFromConstructor(gauge, value.Count(), typeInfo, func() *atree.OrderedMap { return value }), nil
 		default:
 			return nil, fmt.Errorf("invalid ordered map type info: %T", typeInfo)
 		}
@@ -87,48 +85,17 @@ func ConvertStoredValue(value atree.Value) (Value, error) {
 	}
 }
 
-func DecodeTypeInfo(dec *cbor.StreamDecoder) (atree.TypeInfo, error) {
-	ty, err := dec.NextType()
-	if err != nil {
-		return nil, err
-	}
-
-	switch ty {
-	case cbor.TagType:
-
-		tag, err := dec.DecodeTagNumber()
-		if err != nil {
-			return nil, err
-		}
-
-		switch tag {
-		case CBORTagConstantSizedStaticType:
-			return decodeConstantSizedStaticType(dec)
-		case CBORTagVariableSizedStaticType:
-			return decodeVariableSizedStaticType(dec)
-		case CBORTagDictionaryStaticType:
-			return decodeDictionaryStaticType(dec)
-		case CBORTagCompositeValue:
-			return decodeCompositeTypeInfo(dec)
-		default:
-			return nil, fmt.Errorf("invalid type info CBOR tag: %d", tag)
-		}
-
-	case cbor.NilType:
-		err = dec.DecodeNil()
-		if err != nil {
-			return nil, err
-		}
-		return emptyTypeInfo, nil
-
-	default:
-		return nil, fmt.Errorf("invalid type info CBOR type: %d", ty)
-	}
-}
-
 type StorageKey struct {
 	Address common.Address
 	Key     string
+}
+
+func NewStorageKey(memoryGauge common.MemoryGauge, address common.Address, key string) StorageKey {
+	common.UseMemory(memoryGauge, common.StorageKeyMemoryUsage)
+	return StorageKey{
+		Address: address,
+		Key:     key,
+	}
 }
 
 func (k StorageKey) IsLess(o StorageKey) bool {
@@ -149,21 +116,31 @@ func (k StorageKey) IsLess(o StorageKey) bool {
 type InMemoryStorage struct {
 	*atree.BasicSlabStorage
 	StorageMaps map[StorageKey]*StorageMap
+	memoryGauge common.MemoryGauge
 }
 
 var _ Storage = InMemoryStorage{}
 
-func NewInMemoryStorage() InMemoryStorage {
+func NewInMemoryStorage(memoryGauge common.MemoryGauge) InMemoryStorage {
+	decodeStorable := func(decoder *cbor.StreamDecoder, storableSlabStorageID atree.StorageID) (atree.Storable, error) {
+		return DecodeStorable(decoder, storableSlabStorageID, memoryGauge)
+	}
+
+	decodeTypeInfo := func(decoder *cbor.StreamDecoder) (atree.TypeInfo, error) {
+		return DecodeTypeInfo(decoder, memoryGauge)
+	}
+
 	slabStorage := atree.NewBasicSlabStorage(
 		CBOREncMode,
 		CBORDecMode,
-		DecodeStorable,
-		DecodeTypeInfo,
+		decodeStorable,
+		decodeTypeInfo,
 	)
 
 	return InMemoryStorage{
 		BasicSlabStorage: slabStorage,
 		StorageMaps:      make(map[StorageKey]*StorageMap),
+		memoryGauge:      memoryGauge,
 	}
 }
 
@@ -174,10 +151,10 @@ func (i InMemoryStorage) GetStorageMap(
 ) (
 	storageMap *StorageMap,
 ) {
-	key := StorageKey{address, domain}
+	key := NewStorageKey(i.memoryGauge, address, domain)
 	storageMap = i.StorageMaps[key]
 	if storageMap == nil && createIfNotExists {
-		storageMap = NewStorageMap(i, atree.Address(address))
+		storageMap = NewStorageMap(i.memoryGauge, i, atree.Address(address))
 		i.StorageMaps[key] = storageMap
 	}
 	return storageMap

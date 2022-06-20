@@ -40,14 +40,14 @@ func (checker *Checker) VisitWhileStatement(statement *ast.WhileStatement) ast.R
 		return nil
 	})
 
-	checker.reportResourceUsesInLoop(statement.StartPos, statement.EndPosition())
+	checker.reportResourceUsesInLoop(statement.StartPos, statement.EndPosition(checker.memoryGauge))
 
 	return nil
 }
 
 func (checker *Checker) reportResourceUsesInLoop(startPos, endPos ast.Position) {
 
-	checker.resources.ForEach(func(resource interface{}, info ResourceInfo) {
+	checker.resources.ForEach(func(resource any, info ResourceInfo) {
 
 		// If the resource is a variable,
 		// only report an error if the variable was declared outside the loop
@@ -107,7 +107,7 @@ func (checker *Checker) VisitBreakStatement(statement *ast.BreakStatement) ast.R
 		checker.report(
 			&ControlStatementError{
 				ControlStatement: common.ControlStatementBreak,
-				Range:            ast.NewRangeFromPositioned(statement),
+				Range:            ast.NewRangeFromPositioned(checker.memoryGauge, statement),
 			},
 		)
 		return nil
@@ -128,7 +128,7 @@ func (checker *Checker) VisitContinueStatement(statement *ast.ContinueStatement)
 		checker.report(
 			&ControlStatementError{
 				ControlStatement: common.ControlStatementContinue,
-				Range:            ast.NewRangeFromPositioned(statement),
+				Range:            ast.NewRangeFromPositioned(checker.memoryGauge, statement),
 			},
 		)
 		return nil

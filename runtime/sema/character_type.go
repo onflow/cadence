@@ -51,8 +51,9 @@ func init() {
 		return map[string]MemberResolver{
 			ToStringFunctionName: {
 				Kind: common.DeclarationKindFunction,
-				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicFunctionMember(
+						memoryGauge,
 						t,
 						identifier,
 						ToStringFunctionType,

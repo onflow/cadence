@@ -21,6 +21,8 @@ package ast
 import (
 	"encoding/json"
 
+	"github.com/turbolent/prettier"
+
 	"github.com/onflow/cadence/runtime/common"
 )
 
@@ -31,7 +33,12 @@ type Members struct {
 	indices      memberIndices
 }
 
-func NewMembers(declarations []Declaration) *Members {
+func NewMembers(memoryGauge common.MemoryGauge, declarations []Declaration) *Members {
+	common.UseMemory(memoryGauge, common.NewMembersMemoryUsage(len(declarations)))
+	return NewUnmeteredMembers(declarations)
+}
+
+func NewUnmeteredMembers(declarations []Declaration) *Members {
 	return &Members{
 		declarations: declarations,
 	}
@@ -119,4 +126,38 @@ func (m *Members) MarshalJSON() ([]byte, error) {
 		Declarations: m.declarations,
 		Alias:        (*Alias)(m),
 	})
+}
+
+var membersStartDoc prettier.Doc = prettier.Text("{")
+var membersEndDoc prettier.Doc = prettier.Text("}")
+var membersEmptyDoc prettier.Doc = prettier.Text("{}")
+
+func (m *Members) Doc() prettier.Doc {
+	if len(m.declarations) == 0 {
+		return membersEmptyDoc
+	}
+
+	var docs []prettier.Doc
+
+	for _, decl := range m.declarations {
+		docs = append(
+			docs,
+			prettier.Concat{
+				prettier.HardLine{},
+				decl.Doc(),
+			},
+		)
+	}
+
+	return prettier.Concat{
+		membersStartDoc,
+		prettier.Indent{
+			Doc: prettier.Join(
+				prettier.HardLine{},
+				docs...,
+			),
+		},
+		prettier.HardLine{},
+		membersEndDoc,
+	}
 }

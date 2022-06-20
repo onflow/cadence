@@ -40,8 +40,8 @@ const (
 )
 
 func (i *FlowIntegration) codeLenses(
-	uri protocol.DocumentUri,
-	version float64,
+	uri protocol.DocumentURI,
+	version int32,
 	checker *sema.Checker,
 ) (
 	[]*protocol.CodeLens,
@@ -72,9 +72,9 @@ func (i *FlowIntegration) codeLenses(
 // and no other actionable declarations
 //
 func (i *FlowIntegration) showDeployContractAction(
-	uri protocol.DocumentUri,
+	uri protocol.DocumentURI,
 	program *ast.Program,
-	version float64,
+	version int32,
 	checker *sema.Checker,
 ) ([]*protocol.CodeLens, error) {
 	i.updateContractInfoIfNeeded(uri, version, checker)
@@ -115,8 +115,8 @@ func (i *FlowIntegration) showDeployContractAction(
 //
 //
 func (i *FlowIntegration) entryPointActions(
-	uri protocol.DocumentUri,
-	version float64,
+	uri protocol.DocumentURI,
+	version int32,
 	checker *sema.Checker,
 ) (
 	[]*protocol.CodeLens,
@@ -203,16 +203,16 @@ func (i *FlowIntegration) entryPointActions(
 func makeActionlessCodelens(title string, lensRange protocol.Range) *protocol.CodeLens {
 	return &protocol.CodeLens{
 		Range: lensRange,
-		Command: &protocol.Command{
+		Command: protocol.Command{
 			Title: title,
 		},
 	}
 }
 
-func makeCodeLens(command string, title string, lensRange protocol.Range, arguments []interface{}) *protocol.CodeLens {
+func makeCodeLens(command string, title string, lensRange protocol.Range, arguments []json.RawMessage) *protocol.CodeLens {
 	return &protocol.CodeLens{
 		Range: lensRange,
-		Command: &protocol.Command{
+		Command: protocol.Command{
 			Title:     title,
 			Command:   command,
 			Arguments: arguments,
@@ -274,7 +274,7 @@ func (i *FlowIntegration) checkEmulatorState(codelensRange protocol.Range) *prot
 }
 
 func (i *FlowIntegration) scriptCodeLenses(
-	uri protocol.DocumentUri,
+	uri protocol.DocumentURI,
 	codelensRange protocol.Range,
 	pragmaArguments string,
 	argumentList []Argument,
@@ -294,11 +294,29 @@ func (i *FlowIntegration) scriptCodeLenses(
 	}
 
 	argsJSON, _ := json.Marshal(argumentList)
-	return makeCodeLens(CommandExecuteScript, title, codelensRange, []interface{}{uri, string(argsJSON)})
+	arguments, _ := encodeJSONArguments(uri, string(argsJSON))
+	return makeCodeLens(
+		CommandExecuteScript,
+		title,
+		codelensRange,
+		arguments,
+	)
+}
+
+func encodeJSONArguments(args ...interface{}) ([]json.RawMessage, error) {
+	result := make([]json.RawMessage, 0, len(args))
+	for _, arg := range args {
+		argJSON, err := json.Marshal(arg)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, argJSON)
+	}
+	return result, nil
 }
 
 func (i *FlowIntegration) transactionCodeLenses(
-	uri protocol.DocumentUri,
+	uri protocol.DocumentURI,
 	codelensRange protocol.Range,
 	pragmaArguments string,
 	argumentList []Argument,
@@ -323,17 +341,18 @@ func (i *FlowIntegration) transactionCodeLenses(
 	}
 
 	argsJSON, _ := json.Marshal(argumentList)
+	arguments, _ := encodeJSONArguments(uri, string(argsJSON), accounts)
 
 	return makeCodeLens(
 		CommandSendTransaction,
 		title,
 		codelensRange,
-		[]interface{}{uri, string(argsJSON), accounts},
+		arguments,
 	)
 }
 
 func (i *FlowIntegration) contractCodeLenses(
-	uri protocol.DocumentUri,
+	uri protocol.DocumentURI,
 	codelensRange protocol.Range,
 	name string,
 	kind contractKind,
@@ -362,5 +381,12 @@ func (i *FlowIntegration) contractCodeLenses(
 		signer,
 	)
 
-	return makeCodeLens(CommandDeployContract, title, codelensRange, []interface{}{uri, name, resolvedAddress})
+	arguments, _ := encodeJSONArguments(uri, name, resolvedAddress)
+
+	return makeCodeLens(
+		CommandDeployContract,
+		title,
+		codelensRange,
+		arguments,
+	)
 }

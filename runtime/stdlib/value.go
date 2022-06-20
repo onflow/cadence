@@ -55,7 +55,7 @@ func (v StandardLibraryValue) ValueDeclarationKind() common.DeclarationKind {
 }
 
 func (StandardLibraryValue) ValueDeclarationPosition() ast.Position {
-	return ast.Position{}
+	return ast.EmptyPosition
 }
 
 func (v StandardLibraryValue) ValueDeclarationIsConstant() bool {

@@ -530,7 +530,7 @@ func TestCheckInvalidImportCycleSelf(t *testing.T) {
 	// will be checked by checker checking importing program
 
 	const code = `import "test"`
-	importedProgram, err := parser2.ParseProgram(code)
+	importedProgram, err := parser2.ParseProgram(code, nil)
 
 	require.NoError(t, err)
 
@@ -600,7 +600,7 @@ func TestCheckInvalidImportCycleTwoLocations(t *testing.T) {
           return odd(n - 1)
       }
     `
-	programEven, err := parser2.ParseProgram(codeEven)
+	programEven, err := parser2.ParseProgram(codeEven, nil)
 	require.NoError(t, err)
 
 	const codeOdd = `
@@ -613,7 +613,7 @@ func TestCheckInvalidImportCycleTwoLocations(t *testing.T) {
           return even(n - 1)
       }
     `
-	programOdd, err := parser2.ParseProgram(codeOdd)
+	programOdd, err := parser2.ParseProgram(codeOdd, nil)
 	require.NoError(t, err)
 
 	getProgram := func(location common.Location) *ast.Program {
@@ -702,7 +702,7 @@ func TestCheckImportVirtual(t *testing.T) {
 	fooType.Members = sema.NewStringMemberOrderedMap()
 	fooType.Members.Set(
 		"bar",
-		sema.NewPublicFunctionMember(
+		sema.NewUnmeteredPublicFunctionMember(
 			fooType,
 			"bar",
 			&sema.FunctionType{

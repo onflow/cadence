@@ -21,6 +21,8 @@ package ast
 import (
 	"encoding/json"
 
+	"github.com/turbolent/prettier"
+
 	"github.com/onflow/cadence/runtime/common"
 )
 
@@ -34,18 +36,53 @@ type FunctionDeclaration struct {
 	StartPos             Position `json:"-"`
 }
 
+var _ Element = &FunctionDeclaration{}
+var _ Declaration = &FunctionDeclaration{}
+var _ Statement = &FunctionDeclaration{}
+
+func NewFunctionDeclaration(
+	gauge common.MemoryGauge,
+	access Access,
+	identifier Identifier,
+	parameterList *ParameterList,
+	returnTypeAnnotation *TypeAnnotation,
+	functionBlock *FunctionBlock,
+	startPos Position,
+	docString string,
+) *FunctionDeclaration {
+	common.UseMemory(gauge, common.FunctionDeclarationMemoryUsage)
+
+	return &FunctionDeclaration{
+		Access:               access,
+		Identifier:           identifier,
+		ParameterList:        parameterList,
+		ReturnTypeAnnotation: returnTypeAnnotation,
+		FunctionBlock:        functionBlock,
+		StartPos:             startPos,
+		DocString:            docString,
+	}
+}
+
+func (*FunctionDeclaration) isDeclaration() {}
+
+func (*FunctionDeclaration) isStatement() {}
+
+func (*FunctionDeclaration) ElementType() ElementType {
+	return ElementTypeFunctionDeclaration
+}
+
 func (d *FunctionDeclaration) StartPosition() Position {
 	return d.StartPos
 }
 
-func (d *FunctionDeclaration) EndPosition() Position {
+func (d *FunctionDeclaration) EndPosition(memoryGauge common.MemoryGauge) Position {
 	if d.FunctionBlock != nil {
-		return d.FunctionBlock.EndPosition()
+		return d.FunctionBlock.EndPosition(memoryGauge)
 	}
 	if d.ReturnTypeAnnotation != nil {
-		return d.ReturnTypeAnnotation.EndPosition()
+		return d.ReturnTypeAnnotation.EndPosition(memoryGauge)
 	}
-	return d.ParameterList.EndPosition()
+	return d.ParameterList.EndPosition(memoryGauge)
 }
 
 func (d *FunctionDeclaration) Accept(visitor Visitor) Repr {
@@ -60,9 +97,6 @@ func (d *FunctionDeclaration) Walk(walkChild func(Element)) {
 	}
 }
 
-func (*FunctionDeclaration) isDeclaration() {}
-func (*FunctionDeclaration) isStatement()   {}
-
 func (d *FunctionDeclaration) DeclarationIdentifier() *Identifier {
 	return &d.Identifier
 }
@@ -75,13 +109,14 @@ func (d *FunctionDeclaration) DeclarationAccess() Access {
 	return d.Access
 }
 
-func (d *FunctionDeclaration) ToExpression() *FunctionExpression {
-	return &FunctionExpression{
-		ParameterList:        d.ParameterList,
-		ReturnTypeAnnotation: d.ReturnTypeAnnotation,
-		FunctionBlock:        d.FunctionBlock,
-		StartPos:             d.StartPos,
-	}
+func (d *FunctionDeclaration) ToExpression(memoryGauge common.MemoryGauge) *FunctionExpression {
+	return NewFunctionExpression(
+		memoryGauge,
+		d.ParameterList,
+		d.ReturnTypeAnnotation,
+		d.FunctionBlock,
+		d.StartPos,
+	)
 }
 
 func (d *FunctionDeclaration) DeclarationMembers() *Members {
@@ -92,6 +127,17 @@ func (d *FunctionDeclaration) DeclarationDocString() string {
 	return d.DocString
 }
 
+func (d *FunctionDeclaration) Doc() prettier.Doc {
+	return FunctionDocument(
+		d.Access,
+		true,
+		d.Identifier.Identifier,
+		d.ParameterList,
+		d.ReturnTypeAnnotation,
+		d.FunctionBlock,
+	)
+}
+
 func (d *FunctionDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias FunctionDeclaration
 	return json.Marshal(&struct {
@@ -100,9 +146,13 @@ func (d *FunctionDeclaration) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "FunctionDeclaration",
-		Range: NewRangeFromPositioned(d),
+		Range: NewUnmeteredRangeFromPositioned(d),
 		Alias: (*Alias)(d),
 	})
+}
+
+func (d *FunctionDeclaration) String() string {
+	return Prettier(d)
 }
 
 // SpecialFunctionDeclaration
@@ -112,24 +162,46 @@ type SpecialFunctionDeclaration struct {
 	FunctionDeclaration *FunctionDeclaration
 }
 
+var _ Element = &SpecialFunctionDeclaration{}
+var _ Declaration = &SpecialFunctionDeclaration{}
+var _ Statement = &SpecialFunctionDeclaration{}
+
+func NewSpecialFunctionDeclaration(
+	gauge common.MemoryGauge,
+	kind common.DeclarationKind,
+	funcDecl *FunctionDeclaration,
+) *SpecialFunctionDeclaration {
+	common.UseMemory(gauge, common.SpecialFunctionDeclarationMemoryUsage)
+
+	return &SpecialFunctionDeclaration{
+		Kind:                kind,
+		FunctionDeclaration: funcDecl,
+	}
+
+}
+func (*SpecialFunctionDeclaration) isDeclaration() {}
+
+func (*SpecialFunctionDeclaration) isStatement() {}
+
+func (*SpecialFunctionDeclaration) ElementType() ElementType {
+	return ElementTypeSpecialFunctionDeclaration
+}
+
 func (d *SpecialFunctionDeclaration) StartPosition() Position {
 	return d.FunctionDeclaration.StartPosition()
 }
 
-func (d *SpecialFunctionDeclaration) EndPosition() Position {
-	return d.FunctionDeclaration.EndPosition()
+func (d *SpecialFunctionDeclaration) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return d.FunctionDeclaration.EndPosition(memoryGauge)
 }
 
 func (d *SpecialFunctionDeclaration) Accept(visitor Visitor) Repr {
-	return d.FunctionDeclaration.Accept(visitor)
+	return visitor.VisitSpecialFunctionDeclaration(d)
 }
 
 func (d *SpecialFunctionDeclaration) Walk(walkChild func(Element)) {
 	d.FunctionDeclaration.Walk(walkChild)
 }
-
-func (*SpecialFunctionDeclaration) isDeclaration() {}
-func (*SpecialFunctionDeclaration) isStatement()   {}
 
 func (d *SpecialFunctionDeclaration) DeclarationIdentifier() *Identifier {
 	return d.FunctionDeclaration.DeclarationIdentifier()
@@ -151,6 +223,17 @@ func (d *SpecialFunctionDeclaration) DeclarationDocString() string {
 	return d.FunctionDeclaration.DeclarationDocString()
 }
 
+func (d *SpecialFunctionDeclaration) Doc() prettier.Doc {
+	return FunctionDocument(
+		d.FunctionDeclaration.Access,
+		false,
+		d.Kind.Keywords(),
+		d.FunctionDeclaration.ParameterList,
+		d.FunctionDeclaration.ReturnTypeAnnotation,
+		d.FunctionDeclaration.FunctionBlock,
+	)
+}
+
 func (d *SpecialFunctionDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias SpecialFunctionDeclaration
 	return json.Marshal(&struct {
@@ -159,7 +242,11 @@ func (d *SpecialFunctionDeclaration) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "SpecialFunctionDeclaration",
-		Range: NewRangeFromPositioned(d),
+		Range: NewUnmeteredRangeFromPositioned(d),
 		Alias: (*Alias)(d),
 	})
+}
+
+func (d *SpecialFunctionDeclaration) String() string {
+	return Prettier(d)
 }

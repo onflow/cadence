@@ -30,15 +30,26 @@ const StringLocationPrefix = "S"
 //
 type StringLocation string
 
+func NewStringLocation(gauge MemoryGauge, id string) StringLocation {
+	UseMemory(gauge, NewRawStringMemoryUsage(len(id)))
+	return StringLocation(id)
+}
+
 func (l StringLocation) ID() LocationID {
-	return NewLocationID(
+	return l.MeteredID(nil)
+}
+
+func (l StringLocation) MeteredID(memoryGauge MemoryGauge) LocationID {
+	return NewMeteredLocationID(
+		memoryGauge,
 		StringLocationPrefix,
 		string(l),
 	)
 }
 
-func (l StringLocation) TypeID(qualifiedIdentifier string) TypeID {
-	return NewTypeID(
+func (l StringLocation) TypeID(memoryGauge MemoryGauge, qualifiedIdentifier string) TypeID {
+	return NewMeteredTypeID(
+		memoryGauge,
 		StringLocationPrefix,
 		string(l),
 		qualifiedIdentifier,
@@ -72,13 +83,13 @@ func (l StringLocation) MarshalJSON() ([]byte, error) {
 func init() {
 	RegisterTypeIDDecoder(
 		StringLocationPrefix,
-		func(typeID string) (location Location, qualifiedIdentifier string, err error) {
-			return decodeStringLocationTypeID(typeID)
+		func(gauge MemoryGauge, typeID string) (location Location, qualifiedIdentifier string, err error) {
+			return decodeStringLocationTypeID(gauge, typeID)
 		},
 	)
 }
 
-func decodeStringLocationTypeID(typeID string) (StringLocation, string, error) {
+func decodeStringLocationTypeID(gauge MemoryGauge, typeID string) (StringLocation, string, error) {
 
 	const errorMessagePrefix = "invalid string location type ID"
 
@@ -111,7 +122,7 @@ func decodeStringLocationTypeID(typeID string) (StringLocation, string, error) {
 		)
 	}
 
-	location := StringLocation(parts[1])
+	location := NewStringLocation(gauge, parts[1])
 	qualifiedIdentifier := parts[2]
 
 	return location, qualifiedIdentifier, nil

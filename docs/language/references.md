@@ -28,6 +28,20 @@ helloRef.length // is `5`
 let intRef: &Int = &hello as &Int
 ```
 
+If you attempt to reference an optional value, you will receive an optional reference.
+If the referenced value is nil, the reference itself will be nil. If the referenced value
+exists, then forcing the optional reference will yield a reference to that value:
+
+```cadence
+let nilValue: String? = nil
+let nilRef = &nilValue as &String? // r has type &String?
+let n = nilRef! // error, forced nil value
+
+let strValue: String? = ""
+let strRef = &strValue as &String? // r has type &String?
+let n = strRef! // n has type &String
+```
+
 References are covariant in their base types.
 For example, `&T` is a subtype of `&U`, if `T` is a subtype of `U`.
 

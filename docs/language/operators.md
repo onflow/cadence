@@ -226,6 +226,24 @@ let b: Word8 = 0
 b - 1  // is `255`
 ```
 
+#### Arithmetics on number super-types
+Arithmetic operators are not supported for number supertypes (`Number`, `SignedNumber`
+`FixedPoint`, `SignedFixedPoint`, `Integer`, `SignedInteger`), as they may or may not
+succeed at run-time.
+
+```cadence
+let x: Integer = 3 as Int8
+let y: Integer = 4 as Int8
+
+let z: Integer = x + y    // Static error
+```
+
+Values of these types need to be cast to the desired type before performing the arithmetic operation.
+
+```cadence
+let z: Integer = (x as! Int8) + (y as! Int8)
+```
+
 ## Logical Operators
 
 Logical operators work with the boolean values `true` and `false`.
@@ -383,6 +401,24 @@ Comparison operators work with boolean and integer values.
 
   2 >= 1  // is `true`
   ```
+
+#### Comparing number super-types
+Similar to arithmetic operators, comparison operators are also not supported for number supertypes
+(`Number`, `SignedNumber` `FixedPoint`, `SignedFixedPoint`, `Integer`, `SignedInteger`), as they
+may or may not succeed at run-time.
+
+```cadence
+let x: Integer = 3 as Int8
+let y: Integer = 4 as Int8
+
+let z: Bool = x > y    // Static error
+```
+
+Values of these types need to be cast to the desired type before performing the arithmetic operation.
+
+```cadence
+let z: Bool = (x as! Int8) > (y as! Int8)
+```
 
 ## Ternary Conditional Operator
 

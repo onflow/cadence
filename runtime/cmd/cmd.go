@@ -62,7 +62,7 @@ func PrepareProgramFromFile(location common.StringLocation, codes map[common.Loc
 func PrepareProgram(code string, location common.Location, codes map[common.LocationID]string) (*ast.Program, func(error)) {
 	must := mustClosure(location, codes)
 
-	program, err := parser2.ParseProgram(code)
+	program, err := parser2.ParseProgram(code, nil)
 	codes[location.ID()] = code
 	must(err)
 
@@ -93,6 +93,7 @@ func PrepareChecker(
 	checker, err := sema.NewChecker(
 		program,
 		location,
+		nil,
 		sema.WithPredeclaredValues(valueDeclarations.ToSemaValueDeclarations()),
 		sema.WithPredeclaredTypes(typeDeclarations),
 		sema.WithImportHandler(
@@ -146,7 +147,8 @@ func PrepareInterpreter(filename string, debugger *interpreter.Debugger) (*inter
 
 	codes := map[common.LocationID]string{}
 
-	location := common.StringLocation(filename)
+	// do not need to meter this as it's a one-off overhead
+	location := common.NewStringLocation(nil, filename)
 
 	program, must := PrepareProgramFromFile(location, codes)
 
@@ -156,7 +158,7 @@ func PrepareInterpreter(filename string, debugger *interpreter.Debugger) (*inter
 
 	var uuid uint64
 
-	storage := interpreter.NewInMemoryStorage()
+	storage := interpreter.NewInMemoryStorage(nil)
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
@@ -168,6 +170,11 @@ func PrepareInterpreter(filename string, debugger *interpreter.Debugger) (*inter
 			return uuid, nil
 		}),
 		interpreter.WithDebugger(debugger),
+		interpreter.WithImportLocationHandler(
+			func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+				panic("Importing programs is not supported yet")
+			},
+		),
 	)
 	must(err)
 
@@ -177,6 +184,6 @@ func PrepareInterpreter(filename string, debugger *interpreter.Debugger) (*inter
 }
 
 func ExitWithError(message string) {
-	fmt.Println(pretty.FormatErrorMessage(message, true))
+	fmt.Println(pretty.FormatErrorMessage(pretty.ErrorPrefix, message, true))
 	os.Exit(1)
 }

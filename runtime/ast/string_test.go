@@ -76,7 +76,7 @@ func TestQuoteString(t *testing.T) {
 
 func TestStringQuick(t *testing.T) {
 	f := func(text string) bool {
-		res, errs := parser2.ParseExpression(ast.QuoteString(text))
+		res, errs := parser2.ParseExpression(ast.QuoteString(text), nil)
 		if len(errs) > 0 {
 			return false
 		}

@@ -23,7 +23,7 @@ import (
 	"math/big"
 )
 
-const Fix64Scale uint = 8
+const Fix64Scale = 8
 const Fix64Factor = 100_000_000
 
 // Fix64

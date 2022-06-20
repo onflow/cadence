@@ -30,12 +30,12 @@ func TestTransfer_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
 
-	expr := Transfer{
+	transfer := Transfer{
 		Operation: TransferOperationMove,
 		Pos:       Position{Offset: 1, Line: 2, Column: 3},
 	}
 
-	actual, err := json.Marshal(expr)
+	actual, err := json.Marshal(transfer)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,

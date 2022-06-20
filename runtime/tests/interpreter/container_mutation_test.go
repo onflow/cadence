@@ -62,8 +62,8 @@ func TestArrayMutation(t *testing.T) {
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
 				common.Address{},
-				interpreter.NewStringValue("baz"),
-				interpreter.NewStringValue("bar"),
+				interpreter.NewUnmeteredStringValue("baz"),
+				interpreter.NewUnmeteredStringValue("bar"),
 			),
 			array,
 		)
@@ -135,9 +135,9 @@ func TestArrayMutation(t *testing.T) {
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
 				common.Address{},
-				interpreter.NewStringValue("foo"),
-				interpreter.NewStringValue("bar"),
-				interpreter.NewStringValue("baz"),
+				interpreter.NewUnmeteredStringValue("foo"),
+				interpreter.NewUnmeteredStringValue("bar"),
+				interpreter.NewUnmeteredStringValue("baz"),
 			),
 			array,
 		)
@@ -209,9 +209,9 @@ func TestArrayMutation(t *testing.T) {
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
 				common.Address{},
-				interpreter.NewStringValue("foo"),
-				interpreter.NewStringValue("baz"),
-				interpreter.NewStringValue("bar"),
+				interpreter.NewUnmeteredStringValue("foo"),
+				interpreter.NewUnmeteredStringValue("baz"),
+				interpreter.NewUnmeteredStringValue("bar"),
 			),
 			array,
 		)
@@ -269,8 +269,8 @@ func TestArrayMutation(t *testing.T) {
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
 				common.Address{},
-				interpreter.NewStringValue("foo"),
-				interpreter.NewStringValue("bar"),
+				interpreter.NewUnmeteredStringValue("foo"),
+				interpreter.NewUnmeteredStringValue("bar"),
 			),
 			namesValArray,
 		)
@@ -379,12 +379,12 @@ func TestArrayMutation(t *testing.T) {
 		require.Equal(t, 2, array.Count())
 		assert.Equal(
 			t,
-			interpreter.NewStringValue("hello from foo"),
+			interpreter.NewUnmeteredStringValue("hello from foo"),
 			array.Get(inter, interpreter.ReturnEmptyLocationRange, 0),
 		)
 		assert.Equal(
 			t,
-			interpreter.NewStringValue("hello from bar"),
+			interpreter.NewUnmeteredStringValue("hello from bar"),
 			array.Get(inter, interpreter.ReturnEmptyLocationRange, 1),
 		)
 	})
@@ -430,12 +430,12 @@ func TestArrayMutation(t *testing.T) {
 		require.Equal(t, 2, array.Count())
 		assert.Equal(
 			t,
-			interpreter.NewStringValue("hello from foo"),
+			interpreter.NewUnmeteredStringValue("hello from foo"),
 			array.Get(inter, interpreter.ReturnEmptyLocationRange, 0),
 		)
 		assert.Equal(
 			t,
-			interpreter.NewStringValue("hello from bar"),
+			interpreter.NewUnmeteredStringValue("hello from bar"),
 			array.Get(inter, interpreter.ReturnEmptyLocationRange, 1),
 		)
 	})
@@ -521,10 +521,10 @@ func TestDictionaryMutation(t *testing.T) {
 		val, present := dictionary.Get(
 			inter,
 			interpreter.ReturnEmptyLocationRange,
-			interpreter.NewStringValue("foo"),
+			interpreter.NewUnmeteredStringValue("foo"),
 		)
 		assert.True(t, present)
-		assert.Equal(t, interpreter.NewStringValue("baz"), val)
+		assert.Equal(t, interpreter.NewUnmeteredStringValue("baz"), val)
 	})
 
 	t.Run("simple dictionary invalid", func(t *testing.T) {
@@ -600,10 +600,10 @@ func TestDictionaryMutation(t *testing.T) {
 		val, present := dictionary.Get(
 			inter,
 			interpreter.ReturnEmptyLocationRange,
-			interpreter.NewStringValue("foo"),
+			interpreter.NewUnmeteredStringValue("foo"),
 		)
 		assert.True(t, present)
-		assert.Equal(t, interpreter.NewStringValue("baz"), val)
+		assert.Equal(t, interpreter.NewUnmeteredStringValue("baz"), val)
 	})
 
 	t.Run("dictionary insert invalid", func(t *testing.T) {
@@ -760,12 +760,12 @@ func TestDictionaryMutation(t *testing.T) {
 		require.Equal(t, 2, array.Count())
 		assert.Equal(
 			t,
-			interpreter.NewStringValue("hello from foo"),
+			interpreter.NewUnmeteredStringValue("hello from foo"),
 			array.Get(inter, interpreter.ReturnEmptyLocationRange, 0),
 		)
 		assert.Equal(
 			t,
-			interpreter.NewStringValue("hello from bar"),
+			interpreter.NewUnmeteredStringValue("hello from bar"),
 			array.Get(inter, interpreter.ReturnEmptyLocationRange, 1),
 		)
 	})
@@ -811,12 +811,12 @@ func TestDictionaryMutation(t *testing.T) {
 		require.Equal(t, 2, array.Count())
 		assert.Equal(
 			t,
-			interpreter.NewStringValue("hello from foo"),
+			interpreter.NewUnmeteredStringValue("hello from foo"),
 			array.Get(inter, interpreter.ReturnEmptyLocationRange, 0),
 		)
 		assert.Equal(
 			t,
-			interpreter.NewStringValue("hello from bar"),
+			interpreter.NewUnmeteredStringValue("hello from bar"),
 			array.Get(inter, interpreter.ReturnEmptyLocationRange, 1),
 		)
 	})
@@ -894,7 +894,8 @@ func TestDictionaryMutation(t *testing.T) {
         `)
 
 		owner := newTestPublicAccountValue(
-			interpreter.NewAddressValue(common.Address{0x1}),
+			inter,
+			interpreter.NewUnmeteredAddressValueFromBytes(common.Address{0x1}.Bytes()),
 		)
 
 		_, err := inter.Invoke("test", owner)
@@ -922,8 +923,8 @@ func TestInterpretContainerMutationAfterNilCoalescing(t *testing.T) {
 	utils.RequireValuesEqual(
 		t,
 		inter,
-		interpreter.NewSomeValueNonCopying(
-			interpreter.NewStringValue("test"),
+		interpreter.NewUnmeteredSomeValueNonCopying(
+			interpreter.NewUnmeteredStringValue("test"),
 		),
 		result,
 	)

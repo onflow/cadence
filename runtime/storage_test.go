@@ -46,7 +46,7 @@ func withWritesToStorage(
 	handler func(*Storage, *interpreter.Interpreter),
 ) {
 	ledger := newTestLedger(nil, onWrite)
-	storage := NewStorage(ledger)
+	storage := NewStorage(ledger, nil)
 
 	inter := newTestInterpreter(tb)
 
@@ -771,13 +771,16 @@ func TestRuntimeTopShotContractDeployment(t *testing.T) {
 			code = []byte(accountCodes[location.ID()])
 			return code, nil
 		},
-		decodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
-			return json.Decode(b)
-		},
 		emitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
+		meterMemory: func(_ common.MemoryUsage) error {
+			return nil
+		},
+	}
+	runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+		return json.Decode(runtimeInterface, b)
 	}
 
 	err = runtime.ExecuteTransaction(
@@ -869,12 +872,15 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
 			events = append(events, event)
 			return nil
 		},
-		decodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
-			return json.Decode(b)
-		},
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},
+		meterMemory: func(_ common.MemoryUsage) error {
+			return nil
+		},
+	}
+	runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+		return json.Decode(runtimeInterface, b)
 	}
 
 	nextTransactionLocation := newTransactionLocationGenerator()
@@ -1154,12 +1160,15 @@ func TestRuntimeBatchMintAndTransfer(t *testing.T) {
 			events = append(events, event)
 			return nil
 		},
-		decodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
-			return json.Decode(b)
-		},
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},
+		meterMemory: func(_ common.MemoryUsage) error {
+			return nil
+		},
+	}
+	runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+		return json.Decode(runtimeInterface, b)
 	}
 
 	nextTransactionLocation := newTransactionLocationGenerator()
@@ -1941,7 +1950,7 @@ func TestRuntimeResourceOwnerChange(t *testing.T) {
 		nonEmptyKeys,
 	)
 
-	expectedUUID := interpreter.UInt64Value(0)
+	expectedUUID := interpreter.NewUnmeteredUInt64Value(0)
 	assert.Equal(t,
 		[]resourceOwnerChange{
 			{
@@ -2234,9 +2243,12 @@ transaction {
 			events = append(events, event)
 			return nil
 		},
-		decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-			return json.Decode(b)
+		meterMemory: func(_ common.MemoryUsage) error {
+			return nil
 		},
+	}
+	runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+		return json.Decode(runtimeInterface, b)
 	}
 
 	nextTransactionLocation := newTransactionLocationGenerator()
@@ -2364,12 +2376,15 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 				events = append(events, event)
 				return nil
 			},
-			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(b)
-			},
 			log: func(message string) {
 				loggedMessages = append(loggedMessages, message)
 			},
+			meterMemory: func(_ common.MemoryUsage) error {
+				return nil
+			},
+		}
+		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(runtimeInterface, b)
 		}
 
 		nextTransactionLocation := newTransactionLocationGenerator()
@@ -2496,12 +2511,15 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 				events = append(events, event)
 				return nil
 			},
-			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(b)
-			},
 			log: func(message string) {
 				loggedMessages = append(loggedMessages, message)
 			},
+			meterMemory: func(_ common.MemoryUsage) error {
+				return nil
+			},
+		}
+		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(runtimeInterface, b)
 		}
 
 		nextTransactionLocation := newTransactionLocationGenerator()
@@ -2634,12 +2652,15 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 				events = append(events, event)
 				return nil
 			},
-			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(b)
-			},
 			log: func(message string) {
 				loggedMessages = append(loggedMessages, message)
 			},
+			meterMemory: func(_ common.MemoryUsage) error {
+				return nil
+			},
+		}
+		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(runtimeInterface, b)
 		}
 
 		nextTransactionLocation := newTransactionLocationGenerator()
@@ -2759,12 +2780,15 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 				events = append(events, event)
 				return nil
 			},
-			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(b)
-			},
 			log: func(message string) {
 				loggedMessages = append(loggedMessages, message)
 			},
+			meterMemory: func(_ common.MemoryUsage) error {
+				return nil
+			},
+		}
+		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(runtimeInterface, b)
 		}
 
 		nextTransactionLocation := newTransactionLocationGenerator()
@@ -2882,12 +2906,15 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 				events = append(events, event)
 				return nil
 			},
-			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(b)
-			},
 			log: func(message string) {
 				loggedMessages = append(loggedMessages, message)
 			},
+			meterMemory: func(_ common.MemoryUsage) error {
+				return nil
+			},
+		}
+		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(runtimeInterface, b)
 		}
 
 		nextTransactionLocation := newTransactionLocationGenerator()
