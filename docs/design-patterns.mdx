@@ -152,10 +152,9 @@ pub contract AContract {
 import A from 0xA
 
 // Return the struct with a script
-pub fun main(): A.BReport {
+pub fun main(): A.BReportStruct {
     let b: AContract.BResource // Borrow the resource
-    let report = b.generateReport()
-    return b
+    return b.generateReport()
 }
 ```
 
