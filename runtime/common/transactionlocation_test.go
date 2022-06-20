@@ -30,7 +30,7 @@ func TestTransactionLocation_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
 
-	loc := TransactionLocation([]byte{0x1, 0x2})
+	loc := TransactionLocation{0x1, 0x2}
 
 	actual, err := json.Marshal(loc)
 	require.NoError(t, err)
@@ -39,7 +39,7 @@ func TestTransactionLocation_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "TransactionLocation",
-            "Transaction": "0102"
+            "Transaction": "0102000000000000000000000000000000000000000000000000000000000000"
         }
         `,
 		string(actual),

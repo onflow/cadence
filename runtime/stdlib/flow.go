@@ -210,6 +210,8 @@ func DefaultFlowBuiltinImpls() FlowBuiltinImpls {
 
 type FlowLocation struct{}
 
+var _ common.Location = FlowLocation{}
+
 const FlowLocationPrefix = "flow"
 
 func (l FlowLocation) ID() common.LocationID {
