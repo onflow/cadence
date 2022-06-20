@@ -138,4 +138,4 @@ func (e AssertionError) Error() string {
 	return fmt.Sprintf("%s: %s", message, e.Message)
 }
 
-func (e AssertionError) IsUserError() {}
+func (AssertionError) IsUserError() {}

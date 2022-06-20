@@ -36,7 +36,7 @@ type unsupportedOperation struct {
 	ast.Range
 }
 
-var _ errors.UserError = &unsupportedOperation{}
+var _ errors.InternalError = &unsupportedOperation{}
 
 func (e *unsupportedOperation) Error() string {
 	return fmt.Sprintf(
@@ -46,7 +46,7 @@ func (e *unsupportedOperation) Error() string {
 	)
 }
 
-func (e *unsupportedOperation) IsUserError() {}
+func (*unsupportedOperation) IsInternalError() {}
 
 // Error is the containing type for all errors produced by the interpreter.
 type Error struct {
@@ -85,7 +85,7 @@ func (e PositionedError) Error() string {
 	return e.Err.Error()
 }
 
-func (e PositionedError) IsUserError() {}
+func (PositionedError) IsUserError() {}
 
 // NotDeclaredError
 
@@ -108,7 +108,7 @@ func (e NotDeclaredError) SecondaryError() string {
 	return "not found in this scope"
 }
 
-func (e NotDeclaredError) IsUserError() {}
+func (NotDeclaredError) IsUserError() {}
 
 // NotInvokableError
 
@@ -122,7 +122,7 @@ func (e NotInvokableError) Error() string {
 	return fmt.Sprintf("cannot call value: %#+v", e.Value)
 }
 
-func (e NotInvokableError) IsUserError() {}
+func (NotInvokableError) IsUserError() {}
 
 // ArgumentCountError
 
@@ -141,7 +141,7 @@ func (e ArgumentCountError) Error() string {
 	)
 }
 
-func (e ArgumentCountError) IsUserError() {}
+func (ArgumentCountError) IsUserError() {}
 
 // TransactionNotDeclaredError
 
@@ -175,7 +175,7 @@ func (e ConditionError) Error() string {
 	return fmt.Sprintf("%s failed: %s", e.ConditionKind.Name(), e.Message)
 }
 
-func (e ConditionError) IsUserError() {}
+func (ConditionError) IsUserError() {}
 
 // RedeclarationError
 
@@ -189,7 +189,7 @@ func (e RedeclarationError) Error() string {
 	return fmt.Sprintf("cannot redeclare: `%s` is already declared", e.Name)
 }
 
-func (e RedeclarationError) IsUserError() {}
+func (RedeclarationError) IsUserError() {}
 
 // DereferenceError
 
@@ -203,7 +203,7 @@ func (e DereferenceError) Error() string {
 	return "dereference failed"
 }
 
-func (e DereferenceError) IsUserError() {}
+func (DereferenceError) IsUserError() {}
 
 // OverflowError
 
@@ -215,7 +215,7 @@ func (e OverflowError) Error() string {
 	return "overflow"
 }
 
-func (e OverflowError) IsUserError() {}
+func (OverflowError) IsUserError() {}
 
 // UnderflowError
 
@@ -227,7 +227,7 @@ func (e UnderflowError) Error() string {
 	return "underflow"
 }
 
-func (e UnderflowError) IsUserError() {}
+func (UnderflowError) IsUserError() {}
 
 // UnderflowError
 
@@ -239,7 +239,7 @@ func (e DivisionByZeroError) Error() string {
 	return "division by zero"
 }
 
-func (e DivisionByZeroError) IsUserError() {}
+func (DivisionByZeroError) IsUserError() {}
 
 // InvalidatedResourceError
 //
@@ -253,7 +253,7 @@ func (e InvalidatedResourceError) Error() string {
 	return "internal error: resource is invalidated and cannot be used anymore"
 }
 
-func (e InvalidatedResourceError) IsInternalError() {}
+func (InvalidatedResourceError) IsInternalError() {}
 
 // DestroyedResourceError is the error which is reported
 // when a user uses a destroyed resource through a reference
@@ -266,7 +266,7 @@ func (e DestroyedResourceError) Error() string {
 	return "resource was destroyed and cannot be used anymore"
 }
 
-func (e DestroyedResourceError) IsUserError() {}
+func (DestroyedResourceError) IsUserError() {}
 
 // ForceAssignmentToNonNilResourceError
 //
@@ -280,7 +280,7 @@ func (e ForceAssignmentToNonNilResourceError) Error() string {
 	return "force assignment to non-nil resource-typed value"
 }
 
-func (e ForceAssignmentToNonNilResourceError) IsUserError() {}
+func (ForceAssignmentToNonNilResourceError) IsUserError() {}
 
 // ForceNilError
 //
@@ -294,7 +294,7 @@ func (e ForceNilError) Error() string {
 	return "unexpectedly found nil while forcing an Optional value"
 }
 
-func (e ForceNilError) IsUserError() {}
+func (ForceNilError) IsUserError() {}
 
 // ForceCastTypeMismatchError
 //
@@ -312,7 +312,7 @@ func (e ForceCastTypeMismatchError) Error() string {
 	)
 }
 
-func (e ForceCastTypeMismatchError) IsUserError() {}
+func (ForceCastTypeMismatchError) IsUserError() {}
 
 // TypeMismatchError
 //
@@ -330,7 +330,7 @@ func (e TypeMismatchError) Error() string {
 	)
 }
 
-func (e TypeMismatchError) IsUserError() {}
+func (TypeMismatchError) IsUserError() {}
 
 // InvalidPathDomainError
 //
@@ -361,7 +361,7 @@ func (e InvalidPathDomainError) SecondaryError() string {
 	)
 }
 
-func (e InvalidPathDomainError) IsUserError() {}
+func (InvalidPathDomainError) IsUserError() {}
 
 // OverwriteError
 //
@@ -381,7 +381,7 @@ func (e OverwriteError) Error() string {
 	)
 }
 
-func (e OverwriteError) IsUserError() {}
+func (OverwriteError) IsUserError() {}
 
 // CyclicLinkError
 //
@@ -410,7 +410,7 @@ func (e CyclicLinkError) Error() string {
 	)
 }
 
-func (e CyclicLinkError) IsUserError() {}
+func (CyclicLinkError) IsUserError() {}
 
 // ArrayIndexOutOfBoundsError
 //
@@ -430,7 +430,7 @@ func (e ArrayIndexOutOfBoundsError) Error() string {
 	)
 }
 
-func (e ArrayIndexOutOfBoundsError) IsUserError() {}
+func (ArrayIndexOutOfBoundsError) IsUserError() {}
 
 // ArraySliceIndicesError
 //
@@ -450,7 +450,7 @@ func (e ArraySliceIndicesError) Error() string {
 	)
 }
 
-func (e ArraySliceIndicesError) IsUserError() {}
+func (ArraySliceIndicesError) IsUserError() {}
 
 // InvalidSliceIndexError is returned when a slice index is invalid, such as fromIndex > upToIndex
 // This error can be returned even when fromIndex and upToIndex are both within bounds.
@@ -466,7 +466,7 @@ func (e InvalidSliceIndexError) Error() string {
 	return fmt.Sprintf("invalid slice index: %d > %d", e.FromIndex, e.UpToIndex)
 }
 
-func (e InvalidSliceIndexError) IsUserError() {}
+func (InvalidSliceIndexError) IsUserError() {}
 
 // StringIndexOutOfBoundsError
 //
@@ -486,7 +486,7 @@ func (e StringIndexOutOfBoundsError) Error() string {
 	)
 }
 
-func (e StringIndexOutOfBoundsError) IsUserError() {}
+func (StringIndexOutOfBoundsError) IsUserError() {}
 
 // StringSliceIndicesError
 //
@@ -506,7 +506,7 @@ func (e StringSliceIndicesError) Error() string {
 	)
 }
 
-func (e StringSliceIndicesError) IsUserError() {}
+func (StringSliceIndicesError) IsUserError() {}
 
 // EventEmissionUnavailableError
 //
@@ -520,7 +520,7 @@ func (e EventEmissionUnavailableError) Error() string {
 	return "cannot emit event: unavailable"
 }
 
-func (e EventEmissionUnavailableError) IsUserError() {}
+func (EventEmissionUnavailableError) IsUserError() {}
 
 // UUIDUnavailableError
 //
@@ -534,7 +534,7 @@ func (e UUIDUnavailableError) Error() string {
 	return "cannot get UUID: unavailable"
 }
 
-func (e UUIDUnavailableError) IsUserError() {}
+func (UUIDUnavailableError) IsUserError() {}
 
 // TypeLoadingError
 //
@@ -548,7 +548,7 @@ func (e TypeLoadingError) Error() string {
 	return fmt.Sprintf("failed to load type: %s", e.TypeID)
 }
 
-func (e TypeLoadingError) IsUserError() {}
+func (TypeLoadingError) IsUserError() {}
 
 // MissingMemberValueError
 
@@ -563,7 +563,7 @@ func (e MissingMemberValueError) Error() string {
 	return fmt.Sprintf("missing value for member `%s`", e.Name)
 }
 
-func (e MissingMemberValueError) IsUserError() {}
+func (MissingMemberValueError) IsUserError() {}
 
 // InvocationArgumentTypeError
 //
@@ -583,7 +583,7 @@ func (e InvocationArgumentTypeError) Error() string {
 	)
 }
 
-func (e InvocationArgumentTypeError) IsUserError() {}
+func (InvocationArgumentTypeError) IsUserError() {}
 
 // InvocationReceiverTypeError
 //
@@ -603,7 +603,7 @@ func (e InvocationReceiverTypeError) Error() string {
 	)
 }
 
-func (e InvocationReceiverTypeError) IsUserError() {}
+func (InvocationReceiverTypeError) IsUserError() {}
 
 // ValueTransferTypeError
 //
@@ -621,7 +621,7 @@ func (e ValueTransferTypeError) Error() string {
 	)
 }
 
-func (e ValueTransferTypeError) IsUserError() {}
+func (ValueTransferTypeError) IsUserError() {}
 
 // ResourceConstructionError
 //
@@ -640,7 +640,7 @@ func (e ResourceConstructionError) Error() string {
 	)
 }
 
-func (e ResourceConstructionError) IsUserError() {}
+func (ResourceConstructionError) IsUserError() {}
 
 // ContainerMutationError
 //
@@ -660,7 +660,7 @@ func (e ContainerMutationError) Error() string {
 	)
 }
 
-func (e ContainerMutationError) IsUserError() {}
+func (ContainerMutationError) IsUserError() {}
 
 // NonStorableValueError
 //
@@ -677,7 +677,7 @@ func (e NonStorableValueError) Error() string {
 	)
 }
 
-func (e NonStorableValueError) IsUserError() {}
+func (NonStorableValueError) IsUserError() {}
 
 // NonStorableStaticTypeError
 //
@@ -694,7 +694,7 @@ func (e NonStorableStaticTypeError) Error() string {
 	)
 }
 
-func (e NonStorableStaticTypeError) IsUserError() {}
+func (NonStorableStaticTypeError) IsUserError() {}
 
 // InterfaceMissingLocation is reported during interface lookup,
 // if an interface is looked up without a location
@@ -711,7 +711,7 @@ func (e InterfaceMissingLocationError) Error() string {
 	)
 }
 
-func (e InterfaceMissingLocationError) IsUserError() {}
+func (InterfaceMissingLocationError) IsUserError() {}
 
 // InvalidOperandsError
 //
@@ -741,7 +741,7 @@ func (e InvalidOperandsError) Error() string {
 	)
 }
 
-func (e InvalidOperandsError) IsUserError() {}
+func (InvalidOperandsError) IsUserError() {}
 
 // InvalidPublicKeyError is reported during PublicKey creation, if the PublicKey is invalid.
 type InvalidPublicKeyError struct {
@@ -760,4 +760,4 @@ func (e InvalidPublicKeyError) Unwrap() error {
 	return e.Err
 }
 
-func (e InvalidPublicKeyError) IsUserError() {}
+func (InvalidPublicKeyError) IsUserError() {}

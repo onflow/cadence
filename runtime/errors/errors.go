@@ -77,7 +77,7 @@ func (e UnreachableError) Error() string {
 	return fmt.Sprintf("unreachable\n%s", e.Stack)
 }
 
-func (e UnreachableError) IsInternalError() {}
+func (UnreachableError) IsInternalError() {}
 
 func NewUnreachableError() *UnreachableError {
 	return &UnreachableError{Stack: debug.Stack()}
@@ -121,7 +121,7 @@ func (e MemoryError) Error() string {
 	return fmt.Sprintf("memory error: %s", e.Err.Error())
 }
 
-func (e MemoryError) IsUserError() {}
+func (MemoryError) IsUserError() {}
 
 // UnexpectedError is the default implementation of InternalError interface.
 // It's a generic error that wraps an implementation error.
@@ -146,7 +146,7 @@ func (e UnexpectedError) Error() string {
 	return e.Err.Error()
 }
 
-func (e UnexpectedError) IsInternalError() {}
+func (UnexpectedError) IsInternalError() {}
 
 // DefaultUserError is the default implementation of UserError interface.
 // It's a generic error that wraps a user error.
@@ -169,7 +169,7 @@ func (e DefaultUserError) Error() string {
 	return e.Err.Error()
 }
 
-func (e DefaultUserError) IsUserError() {}
+func (DefaultUserError) IsUserError() {}
 
 // IsInternalError Checks whether a given error was caused by an InternalError.
 // An error in an internal error, if it has at-least one InternalError in the error chain.

@@ -226,7 +226,7 @@ var _ ParseError = &MissingCommaInParameterListError{}
 
 func (*MissingCommaInParameterListError) isParseError() {}
 
-func (e *MissingCommaInParameterListError) IsUserError() {}
+func (*MissingCommaInParameterListError) IsUserError() {}
 
 func (e *MissingCommaInParameterListError) StartPosition() ast.Position {
 	return e.Pos

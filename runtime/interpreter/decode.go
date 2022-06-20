@@ -55,7 +55,7 @@ func (e UnsupportedTagDecodingError) Error() string {
 	)
 }
 
-func (e UnsupportedTagDecodingError) IsInternalError() {}
+func (UnsupportedTagDecodingError) IsInternalError() {}
 
 type InvalidStringLengthError struct {
 	Length uint64
@@ -69,7 +69,7 @@ func (e InvalidStringLengthError) Error() string {
 	)
 }
 
-func (e InvalidStringLengthError) IsInternalError() {}
+func (InvalidStringLengthError) IsInternalError() {}
 
 func decodeCharacter(dec *cbor.StreamDecoder, memoryGauge common.MemoryGauge) (string, error) {
 	length, err := dec.NextSize()

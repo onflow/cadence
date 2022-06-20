@@ -42,7 +42,7 @@ func (t TokenLimitReachedError) Error() string {
 	return fmt.Sprintf("limit of %d tokens exceeded", tokenLimit)
 }
 
-func (t TokenLimitReachedError) IsUserError() {}
+func (TokenLimitReachedError) IsUserError() {}
 
 type position struct {
 	line   int
