@@ -138,9 +138,9 @@ func (e *RedeclarationError) StartPosition() ast.Position {
 	return e.Pos
 }
 
-func (e *RedeclarationError) EndPosition() ast.Position {
+func (e *RedeclarationError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
 	length := len(e.Name)
-	return e.Pos.Shifted(length - 1)
+	return e.Pos.Shifted(memoryGauge, length-1)
 }
 
 func (e *RedeclarationError) ErrorNotes() []errors.ErrorNote {
@@ -150,14 +150,14 @@ func (e *RedeclarationError) ErrorNotes() []errors.ErrorNote {
 
 	previousStartPos := *e.PreviousPos
 	length := len(e.Name)
-	previousEndPos := previousStartPos.Shifted(length - 1)
+	previousEndPos := previousStartPos.Shifted(nil, length-1)
 
 	return []errors.ErrorNote{
 		&RedeclarationNote{
-			Range: ast.Range{
-				StartPos: previousStartPos,
-				EndPos:   previousEndPos,
-			},
+			Range: ast.NewUnmeteredRange(
+				previousStartPos,
+				previousEndPos,
+			),
 		},
 	}
 }
@@ -199,9 +199,9 @@ func (e *NotDeclaredError) StartPosition() ast.Position {
 	return e.Pos
 }
 
-func (e *NotDeclaredError) EndPosition() ast.Position {
+func (e *NotDeclaredError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
 	length := len(e.Name)
-	return e.Pos.Shifted(length - 1)
+	return e.Pos.Shifted(memoryGauge, length-1)
 }
 
 // AssignmentToConstantError
@@ -538,13 +538,13 @@ func (e *InvalidAccessModifierError) StartPosition() ast.Position {
 	return e.Pos
 }
 
-func (e *InvalidAccessModifierError) EndPosition() ast.Position {
+func (e *InvalidAccessModifierError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
 	if e.Access == ast.AccessNotSpecified {
 		return e.Pos
 	}
 
 	length := len(e.Access.Keyword())
-	return e.Pos.Shifted(length - 1)
+	return e.Pos.Shifted(memoryGauge, length-1)
 }
 
 // MissingAccessModifierError
@@ -574,7 +574,7 @@ func (e *MissingAccessModifierError) StartPosition() ast.Position {
 	return e.Pos
 }
 
-func (e *MissingAccessModifierError) EndPosition() ast.Position {
+func (e *MissingAccessModifierError) EndPosition(common.MemoryGauge) ast.Position {
 	return e.Pos
 }
 
@@ -595,9 +595,9 @@ func (e *InvalidNameError) StartPosition() ast.Position {
 	return e.Pos
 }
 
-func (e *InvalidNameError) EndPosition() ast.Position {
+func (e *InvalidNameError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
 	length := len(e.Name)
-	return e.Pos.Shifted(length - 1)
+	return e.Pos.Shifted(memoryGauge, length-1)
 }
 
 // UnknownSpecialFunctionError
@@ -616,7 +616,7 @@ func (e *UnknownSpecialFunctionError) StartPosition() ast.Position {
 	return e.Pos
 }
 
-func (e *UnknownSpecialFunctionError) EndPosition() ast.Position {
+func (e *UnknownSpecialFunctionError) EndPosition(common.MemoryGauge) ast.Position {
 	return e.Pos
 }
 
@@ -680,9 +680,9 @@ func (e *MissingInitializerError) StartPosition() ast.Position {
 	return e.FirstFieldPos
 }
 
-func (e *MissingInitializerError) EndPosition() ast.Position {
+func (e *MissingInitializerError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
 	length := len(e.FirstFieldName)
-	return e.FirstFieldPos.Shifted(length - 1)
+	return e.FirstFieldPos.Shifted(memoryGauge, length-1)
 }
 
 // NotDeclaredMemberError
@@ -703,6 +703,13 @@ func (e *NotDeclaredMemberError) Error() string {
 }
 
 func (e *NotDeclaredMemberError) SecondaryError() string {
+	if optionalType, ok := e.Type.(*OptionalType); ok {
+		members := optionalType.Type.GetMembers()
+		name := e.Name
+		if _, ok := members[name]; ok {
+			return fmt.Sprintf("type is optional, consider optional-chaining: ?.%s", name)
+		}
+	}
 	return "unknown member"
 }
 
@@ -762,9 +769,9 @@ func (e *FieldUninitializedError) StartPosition() ast.Position {
 	return e.Pos
 }
 
-func (e *FieldUninitializedError) EndPosition() ast.Position {
+func (e *FieldUninitializedError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
 	length := len(e.Name)
-	return e.Pos.Shifted(length - 1)
+	return e.Pos.Shifted(memoryGauge, length-1)
 }
 
 // FieldTypeNotStorableError is an error that is reported for
@@ -800,9 +807,9 @@ func (e *FieldTypeNotStorableError) StartPosition() ast.Position {
 	return e.Pos
 }
 
-func (e *FieldTypeNotStorableError) EndPosition() ast.Position {
+func (e *FieldTypeNotStorableError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
 	length := len(e.Name)
-	return e.Pos.Shifted(length - 1)
+	return e.Pos.Shifted(memoryGauge, length-1)
 }
 
 // FunctionExpressionInConditionError
@@ -862,7 +869,7 @@ func (e *InvalidImplementationError) StartPosition() ast.Position {
 	return e.Pos
 }
 
-func (e *InvalidImplementationError) EndPosition() ast.Position {
+func (e *InvalidImplementationError) EndPosition(common.MemoryGauge) ast.Position {
 	return e.Pos
 }
 
@@ -914,7 +921,7 @@ func (e *MissingEnumRawTypeError) StartPosition() ast.Position {
 	return e.Pos
 }
 
-func (e *MissingEnumRawTypeError) EndPosition() ast.Position {
+func (e *MissingEnumRawTypeError) EndPosition(common.MemoryGauge) ast.Position {
 	return e.Pos
 }
 
@@ -983,7 +990,7 @@ func (e *ConformanceError) StartPosition() ast.Position {
 	return e.Pos
 }
 
-func (e *ConformanceError) EndPosition() ast.Position {
+func (e *ConformanceError) EndPosition(common.MemoryGauge) ast.Position {
 	return e.Pos
 }
 
@@ -991,7 +998,7 @@ func (e *ConformanceError) ErrorNotes() (notes []errors.ErrorNote) {
 
 	for _, memberMismatch := range e.MemberMismatches {
 		compositeMemberIdentifierRange :=
-			ast.NewRangeFromPositioned(memberMismatch.CompositeMember.Identifier)
+			ast.NewUnmeteredRangeFromPositioned(memberMismatch.CompositeMember.Identifier)
 
 		notes = append(notes, &MemberMismatchNote{
 			Range: compositeMemberIdentifierRange,
@@ -1175,9 +1182,9 @@ func (e *NotExportedError) StartPosition() ast.Position {
 	return e.Pos
 }
 
-func (e *NotExportedError) EndPosition() ast.Position {
+func (e *NotExportedError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
 	length := len(e.Name)
-	return e.Pos.Shifted(length - 1)
+	return e.Pos.Shifted(memoryGauge, length-1)
 }
 
 // ImportedProgramError
@@ -1421,7 +1428,7 @@ func (e *InvalidNestedResourceMoveError) StartPosition() ast.Position {
 	return e.StartPos
 }
 
-func (e *InvalidNestedResourceMoveError) EndPosition() ast.Position {
+func (e *InvalidNestedResourceMoveError) EndPosition(common.MemoryGauge) ast.Position {
 	return e.EndPos
 }
 
@@ -1638,10 +1645,10 @@ func (e *ResourceUseAfterInvalidationError) ErrorNotes() (notes []errors.ErrorNo
 	for _, invalidation := range e.Invalidations {
 		notes = append(notes, &ResourceInvalidationNote{
 			ResourceInvalidation: invalidation,
-			Range: ast.Range{
-				StartPos: invalidation.StartPos,
-				EndPos:   invalidation.EndPos,
-			},
+			Range: ast.NewUnmeteredRange(
+				invalidation.StartPos,
+				invalidation.EndPos,
+			),
 		})
 	}
 	return
@@ -1653,7 +1660,7 @@ func (e *ResourceUseAfterInvalidationError) StartPosition() ast.Position {
 	return e.StartPos
 }
 
-func (e *ResourceUseAfterInvalidationError) EndPosition() ast.Position {
+func (e *ResourceUseAfterInvalidationError) EndPosition(common.MemoryGauge) ast.Position {
 	return e.EndPos
 }
 
@@ -1710,7 +1717,7 @@ func (e *MissingMoveOperationError) StartPosition() ast.Position {
 	return e.Pos
 }
 
-func (e *MissingMoveOperationError) EndPosition() ast.Position {
+func (e *MissingMoveOperationError) EndPosition(common.MemoryGauge) ast.Position {
 	return e.Pos
 }
 
@@ -1747,9 +1754,9 @@ func (e *ResourceCapturingError) StartPosition() ast.Position {
 	return e.Pos
 }
 
-func (e *ResourceCapturingError) EndPosition() ast.Position {
+func (e *ResourceCapturingError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
 	length := len(e.Name)
-	return e.Pos.Shifted(length - 1)
+	return e.Pos.Shifted(memoryGauge, length-1)
 }
 
 // InvalidResourceFieldError
@@ -1774,9 +1781,9 @@ func (e *InvalidResourceFieldError) StartPosition() ast.Position {
 	return e.Pos
 }
 
-func (e *InvalidResourceFieldError) EndPosition() ast.Position {
+func (e *InvalidResourceFieldError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
 	length := len(e.Name)
-	return e.Pos.Shifted(length - 1)
+	return e.Pos.Shifted(memoryGauge, length-1)
 }
 
 // InvalidIndexingError
@@ -1882,7 +1889,11 @@ type InvalidResourceAssignmentError struct {
 }
 
 func (e *InvalidResourceAssignmentError) Error() string {
-	return "cannot assign to resource-typed target. consider force assigning (<-!) or swapping (<->)"
+	return "cannot assign to resource-typed target"
+}
+
+func (e *InvalidResourceAssignmentError) SecondaryError() string {
+	return "consider force assigning (<-!) or swapping (<->)"
 }
 
 func (*InvalidResourceAssignmentError) isSemanticError() {}
@@ -1921,8 +1932,8 @@ func (e *MissingDestructorError) StartPosition() ast.Position {
 	return e.FirstFieldPos
 }
 
-func (e *MissingDestructorError) EndPosition() ast.Position {
-	return e.FirstFieldPos.Shifted(len(e.FirstFieldName) - 1)
+func (e *MissingDestructorError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
+	return e.FirstFieldPos.Shifted(memoryGauge, len(e.FirstFieldName)-1)
 }
 
 // InvalidDestructorParametersError
@@ -1967,9 +1978,9 @@ func (e *ResourceFieldNotInvalidatedError) StartPosition() ast.Position {
 	return e.Pos
 }
 
-func (e *ResourceFieldNotInvalidatedError) EndPosition() ast.Position {
+func (e *ResourceFieldNotInvalidatedError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
 	length := len(e.FieldName)
-	return e.Pos.Shifted(length - 1)
+	return e.Pos.Shifted(memoryGauge, length-1)
 }
 
 // UninitializedFieldAccessError
@@ -1992,9 +2003,9 @@ func (e *UninitializedFieldAccessError) StartPosition() ast.Position {
 	return e.Pos
 }
 
-func (e *UninitializedFieldAccessError) EndPosition() ast.Position {
+func (e *UninitializedFieldAccessError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
 	length := len(e.Name)
-	return e.Pos.Shifted(length - 1)
+	return e.Pos.Shifted(memoryGauge, length-1)
 }
 
 // UnreachableStatementError
@@ -2029,9 +2040,9 @@ func (e *UninitializedUseError) StartPosition() ast.Position {
 	return e.Pos
 }
 
-func (e *UninitializedUseError) EndPosition() ast.Position {
+func (e *UninitializedUseError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
 	length := len(e.Name)
-	return e.Pos.Shifted(length - 1)
+	return e.Pos.Shifted(memoryGauge, length-1)
 }
 
 // InvalidResourceArrayMemberError
@@ -2198,7 +2209,7 @@ func (e *MissingFunctionBodyError) StartPosition() ast.Position {
 	return e.Pos
 }
 
-func (e *MissingFunctionBodyError) EndPosition() ast.Position {
+func (e *MissingFunctionBodyError) EndPosition(common.MemoryGauge) ast.Position {
 	return e.Pos
 }
 
@@ -2348,9 +2359,9 @@ func (e *InvalidTransactionBlockError) StartPosition() ast.Position {
 	return e.Pos
 }
 
-func (e *InvalidTransactionBlockError) EndPosition() ast.Position {
+func (e *InvalidTransactionBlockError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
 	length := len(e.Name)
-	return e.Pos.Shifted(length - 1)
+	return e.Pos.Shifted(memoryGauge, length-1)
 }
 
 // TransactionMissingPrepareError
@@ -2373,9 +2384,9 @@ func (e *TransactionMissingPrepareError) StartPosition() ast.Position {
 	return e.FirstFieldPos
 }
 
-func (e *TransactionMissingPrepareError) EndPosition() ast.Position {
+func (e *TransactionMissingPrepareError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
 	length := len(e.FirstFieldName)
-	return e.FirstFieldPos.Shifted(length - 1)
+	return e.FirstFieldPos.Shifted(memoryGauge, length-1)
 }
 
 // InvalidResourceTransactionParameterError
@@ -2432,9 +2443,9 @@ func (e *InvalidTransactionFieldAccessModifierError) StartPosition() ast.Positio
 	return e.Pos
 }
 
-func (e *InvalidTransactionFieldAccessModifierError) EndPosition() ast.Position {
+func (e *InvalidTransactionFieldAccessModifierError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
 	length := len(e.Access.Keyword())
-	return e.Pos.Shifted(length - 1)
+	return e.Pos.Shifted(memoryGauge, length-1)
 }
 
 // InvalidTransactionPrepareParameterTypeError
@@ -2491,8 +2502,8 @@ func (e *InvalidNestedTypeError) StartPosition() ast.Position {
 	return e.Type.StartPosition()
 }
 
-func (e *InvalidNestedTypeError) EndPosition() ast.Position {
-	return e.Type.EndPosition()
+func (e *InvalidNestedTypeError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
+	return e.Type.EndPosition(memoryGauge)
 }
 
 // InvalidEnumCaseError
@@ -2593,7 +2604,7 @@ func (e *InvalidSelfInvalidationError) StartPosition() ast.Position {
 	return e.StartPos
 }
 
-func (e *InvalidSelfInvalidationError) EndPosition() ast.Position {
+func (e *InvalidSelfInvalidationError) EndPosition(common.MemoryGauge) ast.Position {
 	return e.EndPos
 }
 
@@ -2619,9 +2630,9 @@ func (e *InvalidMoveError) StartPosition() ast.Position {
 	return e.Pos
 }
 
-func (e *InvalidMoveError) EndPosition() ast.Position {
+func (e *InvalidMoveError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
 	length := len(e.Name)
-	return e.Pos.Shifted(length - 1)
+	return e.Pos.Shifted(memoryGauge, length-1)
 }
 
 // ConstantSizedArrayLiteralSizeError
@@ -2975,7 +2986,7 @@ func (e *TypeAnnotationRequiredError) StartPosition() ast.Position {
 	return e.Pos
 }
 
-func (e *TypeAnnotationRequiredError) EndPosition() ast.Position {
+func (e *TypeAnnotationRequiredError) EndPosition(common.MemoryGauge) ast.Position {
 	return e.Pos
 }
 
@@ -3020,7 +3031,7 @@ func (e *MissingSwitchCaseStatementsError) StartPosition() ast.Position {
 	return e.Pos
 }
 
-func (e *MissingSwitchCaseStatementsError) EndPosition() ast.Position {
+func (e *MissingSwitchCaseStatementsError) EndPosition(common.MemoryGauge) ast.Position {
 	return e.Pos
 }
 

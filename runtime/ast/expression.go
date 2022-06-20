@@ -25,6 +25,10 @@ import (
 	"strings"
 
 	"github.com/turbolent/prettier"
+
+	"github.com/onflow/cadence/runtime/errors"
+
+	"github.com/onflow/cadence/runtime/common"
 )
 
 const NilConstant = "nil"
@@ -36,6 +40,7 @@ type Expression interface {
 	isExpression()
 	AcceptExp(ExpressionVisitor) Repr
 	Doc() prettier.Doc
+	precedence() precedence
 }
 
 // BoolExpression
@@ -45,7 +50,20 @@ type BoolExpression struct {
 	Range
 }
 
+var _ Element = &BoolExpression{}
 var _ Expression = &BoolExpression{}
+
+func NewBoolExpression(gauge common.MemoryGauge, value bool, exprRange Range) *BoolExpression {
+	common.UseMemory(gauge, common.BooleanExpressionMemoryUsage)
+	return &BoolExpression{
+		Value: value,
+		Range: exprRange,
+	}
+}
+
+func (*BoolExpression) ElementType() ElementType {
+	return ElementTypeBoolExpression
+}
 
 func (*BoolExpression) isExpression() {}
 
@@ -64,10 +82,7 @@ func (e *BoolExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 }
 
 func (e *BoolExpression) String() string {
-	if e.Value {
-		return "true"
-	}
-	return "false"
+	return Prettier(e)
 }
 
 var boolExpressionTrueDoc prettier.Doc = prettier.Text("true")
@@ -92,13 +107,29 @@ func (e *BoolExpression) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (*BoolExpression) precedence() precedence {
+	return precedenceLiteral
+}
+
 // NilExpression
 
 type NilExpression struct {
 	Pos Position `json:"-"`
 }
 
+var _ Element = &NilExpression{}
 var _ Expression = &NilExpression{}
+
+func NewNilExpression(gauge common.MemoryGauge, pos Position) *NilExpression {
+	common.UseMemory(gauge, common.NilExpressionMemoryUsage)
+	return &NilExpression{
+		Pos: pos,
+	}
+}
+
+func (*NilExpression) ElementType() ElementType {
+	return ElementTypeNilExpression
+}
 
 func (*NilExpression) isExpression() {}
 
@@ -117,7 +148,7 @@ func (e *NilExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 }
 
 func (e *NilExpression) String() string {
-	return NilConstant
+	return Prettier(e)
 }
 
 var nilExpressionDoc prettier.Doc = prettier.Text("nil")
@@ -130,8 +161,8 @@ func (e *NilExpression) StartPosition() Position {
 	return e.Pos
 }
 
-func (e *NilExpression) EndPosition() Position {
-	return e.Pos.Shifted(len(NilConstant) - 1)
+func (e *NilExpression) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return e.Pos.Shifted(memoryGauge, len(NilConstant)-1)
 }
 
 func (e *NilExpression) MarshalJSON() ([]byte, error) {
@@ -142,9 +173,13 @@ func (e *NilExpression) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "NilExpression",
-		Range: NewRangeFromPositioned(e),
+		Range: NewUnmeteredRangeFromPositioned(e),
 		Alias: (*Alias)(e),
 	})
+}
+
+func (*NilExpression) precedence() precedence {
+	return precedenceLiteral
 }
 
 // StringExpression
@@ -155,6 +190,21 @@ type StringExpression struct {
 }
 
 var _ Expression = &StringExpression{}
+
+func NewStringExpression(gauge common.MemoryGauge, value string, exprRange Range) *StringExpression {
+	common.UseMemory(gauge, common.StringExpressionMemoryUsage)
+	return &StringExpression{
+		Value: value,
+		Range: exprRange,
+	}
+}
+
+var _ Element = &StringExpression{}
+var _ Expression = &StringExpression{}
+
+func (*StringExpression) ElementType() ElementType {
+	return ElementTypeStringExpression
+}
 
 func (*StringExpression) isExpression() {}
 
@@ -173,7 +223,7 @@ func (e *StringExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 }
 
 func (e *StringExpression) String() string {
-	return QuoteString(e.Value)
+	return Prettier(e)
 }
 
 func (e *StringExpression) Doc() prettier.Doc {
@@ -191,6 +241,10 @@ func (e *StringExpression) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (*StringExpression) precedence() precedence {
+	return precedenceLiteral
+}
+
 // IntegerExpression
 
 type IntegerExpression struct {
@@ -200,7 +254,29 @@ type IntegerExpression struct {
 	Range
 }
 
+var _ Element = &IntegerExpression{}
 var _ Expression = &IntegerExpression{}
+
+func NewIntegerExpression(
+	gauge common.MemoryGauge,
+	literal string,
+	value *big.Int,
+	base int,
+	tokenRange Range,
+) *IntegerExpression {
+	common.UseMemory(gauge, common.IntegerExpressionMemoryUsage)
+
+	return &IntegerExpression{
+		PositiveLiteral: literal,
+		Value:           value,
+		Base:            base,
+		Range:           tokenRange,
+	}
+}
+
+func (*IntegerExpression) ElementType() ElementType {
+	return ElementTypeIntegerExpression
+}
 
 func (*IntegerExpression) isExpression() {}
 
@@ -219,11 +295,7 @@ func (e *IntegerExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 }
 
 func (e *IntegerExpression) String() string {
-	literal := e.PositiveLiteral
-	if e.Value.Sign() < 0 {
-		literal = "-" + literal
-	}
-	return literal
+	return Prettier(e)
 }
 
 func (e *IntegerExpression) Doc() prettier.Doc {
@@ -247,6 +319,10 @@ func (e *IntegerExpression) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (*IntegerExpression) precedence() precedence {
+	return precedenceLiteral
+}
+
 // FixedPointExpression
 
 type FixedPointExpression struct {
@@ -258,7 +334,33 @@ type FixedPointExpression struct {
 	Range
 }
 
+var _ Element = &FixedPointExpression{}
 var _ Expression = &FixedPointExpression{}
+
+func NewFixedPointExpression(
+	gauge common.MemoryGauge,
+	literal string,
+	isNegative bool,
+	integer *big.Int,
+	fractional *big.Int,
+	scale uint,
+	tokenRange Range,
+) *FixedPointExpression {
+	common.UseMemory(gauge, common.FixedPointExpressionMemoryUsage)
+
+	return &FixedPointExpression{
+		PositiveLiteral: literal,
+		Negative:        isNegative,
+		UnsignedInteger: integer,
+		Fractional:      fractional,
+		Scale:           scale,
+		Range:           tokenRange,
+	}
+}
+
+func (*FixedPointExpression) ElementType() ElementType {
+	return ElementTypeFixedPointExpression
+}
 
 func (*FixedPointExpression) isExpression() {}
 
@@ -277,12 +379,16 @@ func (e *FixedPointExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 }
 
 func (e *FixedPointExpression) String() string {
+	return Prettier(e)
+}
+
+func (e *FixedPointExpression) Doc() prettier.Doc {
 	literal := e.PositiveLiteral
 	if literal != "" {
 		if e.Negative {
 			literal = "-" + literal
 		}
-		return literal
+		return prettier.Text(literal)
 	}
 
 	var builder strings.Builder
@@ -296,15 +402,7 @@ func (e *FixedPointExpression) String() string {
 		builder.WriteRune('0')
 	}
 	builder.WriteString(fractional)
-	return builder.String()
-}
-
-func (e *FixedPointExpression) Doc() prettier.Doc {
-	literal := e.PositiveLiteral
-	if e.Negative {
-		literal = "-" + literal
-	}
-	return prettier.Text(literal)
+	return prettier.Text(builder.String())
 }
 
 func (e *FixedPointExpression) MarshalJSON() ([]byte, error) {
@@ -322,6 +420,10 @@ func (e *FixedPointExpression) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (*FixedPointExpression) precedence() precedence {
+	return precedenceLiteral
+}
+
 // ArrayExpression
 
 type ArrayExpression struct {
@@ -329,7 +431,26 @@ type ArrayExpression struct {
 	Range
 }
 
+var _ Element = &ArrayExpression{}
 var _ Expression = &ArrayExpression{}
+
+func NewArrayExpression(
+	gauge common.MemoryGauge,
+	values []Expression,
+	tokenRange Range,
+) *ArrayExpression {
+
+	common.UseMemory(gauge, common.NewArrayExpressionMemoryUsage(len(values)))
+
+	return &ArrayExpression{
+		Values: values,
+		Range:  tokenRange,
+	}
+}
+
+func (*ArrayExpression) ElementType() ElementType {
+	return ElementTypeArrayExpression
+}
 
 func (*ArrayExpression) isExpression() {}
 
@@ -348,16 +469,7 @@ func (e *ArrayExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 }
 
 func (e *ArrayExpression) String() string {
-	var builder strings.Builder
-	builder.WriteString("[")
-	for i, value := range e.Values {
-		if i > 0 {
-			builder.WriteString(", ")
-		}
-		builder.WriteString(value.String())
-	}
-	builder.WriteString("]")
-	return builder.String()
+	return Prettier(e)
 }
 
 var arrayExpressionSeparatorDoc prettier.Doc = prettier.Concat{
@@ -391,6 +503,10 @@ func (e *ArrayExpression) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (*ArrayExpression) precedence() precedence {
+	return precedenceLiteral
+}
+
 // DictionaryExpression
 
 type DictionaryExpression struct {
@@ -398,7 +514,25 @@ type DictionaryExpression struct {
 	Range
 }
 
+var _ Element = &DictionaryExpression{}
 var _ Expression = &DictionaryExpression{}
+
+func NewDictionaryExpression(
+	gauge common.MemoryGauge,
+	entries []DictionaryEntry,
+	tokenRange Range,
+) *DictionaryExpression {
+	common.UseMemory(gauge, common.NewDictionaryExpressionMemoryUsage(len(entries)))
+
+	return &DictionaryExpression{
+		Entries: entries,
+		Range:   tokenRange,
+	}
+}
+
+func (*DictionaryExpression) ElementType() ElementType {
+	return ElementTypeDictionaryExpression
+}
 
 func (*DictionaryExpression) isExpression() {}
 
@@ -420,18 +554,7 @@ func (e *DictionaryExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 }
 
 func (e *DictionaryExpression) String() string {
-	var builder strings.Builder
-	builder.WriteString("{")
-	for i, entry := range e.Entries {
-		if i > 0 {
-			builder.WriteString(", ")
-		}
-		builder.WriteString(entry.Key.String())
-		builder.WriteString(": ")
-		builder.WriteString(entry.Value.String())
-	}
-	builder.WriteString("}")
-	return builder.String()
+	return Prettier(e)
 }
 
 var dictionaryExpressionSeparatorDoc prettier.Doc = prettier.Concat{
@@ -466,9 +589,26 @@ func (e *DictionaryExpression) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (*DictionaryExpression) precedence() precedence {
+	return precedenceLiteral
+}
+
 type DictionaryEntry struct {
 	Key   Expression
 	Value Expression
+}
+
+func NewDictionaryEntry(
+	gauge common.MemoryGauge,
+	key Expression,
+	value Expression,
+) DictionaryEntry {
+	common.UseMemory(gauge, common.DictionaryEntryMemoryUsage)
+
+	return DictionaryEntry{
+		Key:   key,
+		Value: value,
+	}
 }
 
 func (e DictionaryEntry) MarshalJSON() ([]byte, error) {
@@ -506,7 +646,23 @@ type IdentifierExpression struct {
 	Identifier Identifier
 }
 
+var _ Element = &IdentifierExpression{}
 var _ Expression = &IdentifierExpression{}
+
+func NewIdentifierExpression(
+	gauge common.MemoryGauge,
+	identifier Identifier,
+) *IdentifierExpression {
+	common.UseMemory(gauge, common.IdentifierExpressionMemoryUsage)
+
+	return &IdentifierExpression{
+		Identifier: identifier,
+	}
+}
+
+func (*IdentifierExpression) ElementType() ElementType {
+	return ElementTypeIdentifierExpression
+}
 
 func (*IdentifierExpression) isExpression() {}
 
@@ -525,7 +681,7 @@ func (e *IdentifierExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 }
 
 func (e *IdentifierExpression) String() string {
-	return e.Identifier.Identifier
+	return Prettier(e)
 }
 
 func (e *IdentifierExpression) Doc() prettier.Doc {
@@ -540,7 +696,7 @@ func (e *IdentifierExpression) MarshalJSON() ([]byte, error) {
 		Range
 	}{
 		Type:  "IdentifierExpression",
-		Range: NewRangeFromPositioned(e),
+		Range: NewUnmeteredRangeFromPositioned(e),
 		Alias: (*Alias)(e),
 	})
 }
@@ -549,8 +705,12 @@ func (e *IdentifierExpression) StartPosition() Position {
 	return e.Identifier.StartPosition()
 }
 
-func (e *IdentifierExpression) EndPosition() Position {
-	return e.Identifier.EndPosition()
+func (e *IdentifierExpression) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return e.Identifier.EndPosition(memoryGauge)
+}
+
+func (*IdentifierExpression) precedence() precedence {
+	return precedenceLiteral
 }
 
 // Arguments
@@ -558,16 +718,30 @@ func (e *IdentifierExpression) EndPosition() Position {
 type Arguments []*Argument
 
 func (args Arguments) String() string {
-	var builder strings.Builder
-	builder.WriteRune('(')
-	for i, argument := range args {
-		if i > 0 {
-			builder.WriteString(", ")
-		}
-		builder.WriteString(argument.String())
+	return Prettier(args)
+}
+
+var argumentsSeparatorDoc prettier.Doc = prettier.Concat{
+	prettier.Text(","),
+	prettier.Line{},
+}
+
+func (args Arguments) Doc() prettier.Doc {
+	if len(args) == 0 {
+		return prettier.Text("()")
 	}
-	builder.WriteRune(')')
-	return builder.String()
+
+	argumentDocs := make([]prettier.Doc, len(args))
+	for i, argument := range args {
+		argumentDocs[i] = argument.Doc()
+	}
+	return prettier.WrapParentheses(
+		prettier.Join(
+			argumentsSeparatorDoc,
+			argumentDocs...,
+		),
+		prettier.SoftLine{},
+	)
 }
 
 // InvocationExpression
@@ -580,7 +754,31 @@ type InvocationExpression struct {
 	EndPos            Position `json:"-"`
 }
 
+var _ Element = &InvocationExpression{}
 var _ Expression = &InvocationExpression{}
+
+func NewInvocationExpression(
+	gauge common.MemoryGauge,
+	invokedExpression Expression,
+	typeArguments []*TypeAnnotation,
+	arguments Arguments,
+	argsStartPos Position,
+	endPos Position,
+) *InvocationExpression {
+	common.UseMemory(gauge, common.InvocationExpressionMemoryUsage)
+
+	return &InvocationExpression{
+		InvokedExpression: invokedExpression,
+		TypeArguments:     typeArguments,
+		Arguments:         arguments,
+		ArgumentsStartPos: argsStartPos,
+		EndPos:            endPos,
+	}
+}
+
+func (*InvocationExpression) ElementType() ElementType {
+	return ElementTypeInvocationExpression
+}
 
 func (*InvocationExpression) isExpression() {}
 
@@ -602,27 +800,16 @@ func (e *InvocationExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 }
 
 func (e *InvocationExpression) String() string {
-	var builder strings.Builder
-	builder.WriteString(e.InvokedExpression.String())
-	if len(e.TypeArguments) > 0 {
-		builder.WriteRune('<')
-		for i, ty := range e.TypeArguments {
-			if i > 0 {
-				builder.WriteString(", ")
-			}
-			builder.WriteString(ty.String())
-		}
-		builder.WriteRune('>')
-	}
-	builder.WriteString(e.Arguments.String())
-	return builder.String()
+	return Prettier(e)
 }
 
 func (e *InvocationExpression) Doc() prettier.Doc {
 
 	result := prettier.Concat{
-		// TODO: potentially parenthesize
-		e.InvokedExpression.Doc(),
+		parenthesizedExpressionDoc(
+			e.InvokedExpression,
+			e.precedence(),
+		),
 	}
 
 	if len(e.TypeArguments) > 0 {
@@ -641,28 +828,7 @@ func (e *InvocationExpression) Doc() prettier.Doc {
 		)
 	}
 
-	var argumentsDoc prettier.Doc
-	if len(e.Arguments) == 0 {
-		argumentsDoc = prettier.Text("()")
-	} else {
-		argumentDocs := make([]prettier.Doc, len(e.Arguments))
-		for i, argument := range e.Arguments {
-			argumentDoc := argument.Expression.Doc()
-			if argument.Label != "" {
-				argumentDoc = prettier.Concat{
-					prettier.Text(argument.Label + ": "),
-					argumentDoc,
-				}
-			}
-			argumentDocs[i] = argumentDoc
-		}
-		argumentsDoc = prettier.WrapParentheses(
-			prettier.Join(arrayExpressionSeparatorDoc, argumentDocs...),
-			prettier.SoftLine{},
-		)
-	}
-
-	result = append(result, argumentsDoc)
+	result = append(result, e.Arguments.Doc())
 
 	return result
 }
@@ -671,7 +837,7 @@ func (e *InvocationExpression) StartPosition() Position {
 	return e.InvokedExpression.StartPosition()
 }
 
-func (e *InvocationExpression) EndPosition() Position {
+func (e *InvocationExpression) EndPosition(_ common.MemoryGauge) Position {
 	return e.EndPos
 }
 
@@ -683,9 +849,13 @@ func (e *InvocationExpression) MarshalJSON() ([]byte, error) {
 		Range
 	}{
 		Type:  "InvocationExpression",
-		Range: NewRangeFromPositioned(e),
+		Range: NewUnmeteredRangeFromPositioned(e),
 		Alias: (*Alias)(e),
 	})
+}
+
+func (*InvocationExpression) precedence() precedence {
+	return precedenceAccess
 }
 
 // AccessExpression
@@ -707,7 +877,29 @@ type MemberExpression struct {
 	Identifier Identifier
 }
 
+var _ Element = &MemberExpression{}
 var _ Expression = &MemberExpression{}
+
+func NewMemberExpression(
+	gauge common.MemoryGauge,
+	expression Expression,
+	optional bool,
+	accessPos Position,
+	identifier Identifier,
+) *MemberExpression {
+	common.UseMemory(gauge, common.MemberExpressionMemoryUsage)
+
+	return &MemberExpression{
+		Expression: expression,
+		Optional:   optional,
+		AccessPos:  accessPos,
+		Identifier: identifier,
+	}
+}
+
+func (*MemberExpression) ElementType() ElementType {
+	return ElementTypeMemberExpression
+}
 
 func (*MemberExpression) isExpression() {}
 
@@ -732,14 +924,7 @@ func (e *MemberExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 }
 
 func (e *MemberExpression) String() string {
-	optional := ""
-	if e.Optional {
-		optional = "?"
-	}
-	return fmt.Sprintf(
-		"%s%s.%s",
-		e.Expression, optional, e.Identifier,
-	)
+	return Prettier(e)
 }
 
 var memberExpressionSeparatorDoc prettier.Doc = prettier.Text(".")
@@ -752,9 +937,12 @@ func (e *MemberExpression) Doc() prettier.Doc {
 	} else {
 		separatorDoc = memberExpressionSeparatorDoc
 	}
+
 	return prettier.Concat{
-		// TODO: potentially parenthesize
-		e.Expression.Doc(),
+		parenthesizedExpressionDoc(
+			e.Expression,
+			e.precedence(),
+		),
 		prettier.Group{
 			Doc: prettier.Indent{
 				Doc: prettier.Concat{
@@ -771,11 +959,11 @@ func (e *MemberExpression) StartPosition() Position {
 	return e.Expression.StartPosition()
 }
 
-func (e *MemberExpression) EndPosition() Position {
+func (e *MemberExpression) EndPosition(memoryGauge common.MemoryGauge) Position {
 	if e.Identifier.Identifier == "" {
 		return e.AccessPos
 	} else {
-		return e.Identifier.EndPosition()
+		return e.Identifier.EndPosition(memoryGauge)
 	}
 }
 
@@ -787,9 +975,13 @@ func (e *MemberExpression) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "MemberExpression",
-		Range: NewRangeFromPositioned(e),
+		Range: NewUnmeteredRangeFromPositioned(e),
 		Alias: (*Alias)(e),
 	})
+}
+
+func (*MemberExpression) precedence() precedence {
+	return precedenceAccess
 }
 
 // IndexExpression
@@ -800,7 +992,27 @@ type IndexExpression struct {
 	Range
 }
 
+var _ Element = &IndexExpression{}
 var _ Expression = &IndexExpression{}
+
+func NewIndexExpression(
+	gauge common.MemoryGauge,
+	target Expression,
+	index Expression,
+	tokenRange Range,
+) *IndexExpression {
+	common.UseMemory(gauge, common.IndexExpressionMemoryUsage)
+
+	return &IndexExpression{
+		TargetExpression:   target,
+		IndexingExpression: index,
+		Range:              tokenRange,
+	}
+}
+
+func (*IndexExpression) ElementType() ElementType {
+	return ElementTypeIndexExpression
+}
 
 func (*IndexExpression) isExpression() {}
 
@@ -825,17 +1037,15 @@ func (e *IndexExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 	return visitor.VisitIndexExpression(e)
 }
 func (e *IndexExpression) String() string {
-	return fmt.Sprintf(
-		"%s[%s]",
-		e.TargetExpression,
-		e.IndexingExpression,
-	)
+	return Prettier(e)
 }
 
 func (e *IndexExpression) Doc() prettier.Doc {
 	return prettier.Concat{
-		// TODO: potentially parenthesize
-		e.TargetExpression.Doc(),
+		parenthesizedExpressionDoc(
+			e.TargetExpression,
+			e.precedence(),
+		),
 		prettier.WrapBrackets(
 			e.IndexingExpression.Doc(),
 			prettier.SoftLine{},
@@ -854,6 +1064,10 @@ func (e *IndexExpression) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (*IndexExpression) precedence() precedence {
+	return precedenceAccess
+}
+
 // ConditionalExpression
 
 type ConditionalExpression struct {
@@ -862,7 +1076,27 @@ type ConditionalExpression struct {
 	Else Expression
 }
 
+var _ Element = &ConditionalExpression{}
 var _ Expression = &ConditionalExpression{}
+
+func NewConditionalExpression(
+	gauge common.MemoryGauge,
+	testExpr Expression,
+	thenExpr Expression,
+	elseExpr Expression,
+) *ConditionalExpression {
+	common.UseMemory(gauge, common.ConditionalExpressionMemoryUsage)
+
+	return &ConditionalExpression{
+		Test: testExpr,
+		Then: thenExpr,
+		Else: elseExpr,
+	}
+}
+
+func (*ConditionalExpression) ElementType() ElementType {
+	return ElementTypeConditionalExpression
+}
 
 func (*ConditionalExpression) isExpression() {}
 
@@ -884,10 +1118,7 @@ func (e *ConditionalExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 	return visitor.VisitConditionalExpression(e)
 }
 func (e *ConditionalExpression) String() string {
-	return fmt.Sprintf(
-		"(%s ? %s : %s)",
-		e.Test, e.Then, e.Else,
-	)
+	return Prettier(e)
 }
 
 var conditionalExpressionTestSeparatorDoc prettier.Doc = prettier.Concat{
@@ -900,14 +1131,30 @@ var conditionalExpressionBranchSeparatorDoc prettier.Doc = prettier.Concat{
 }
 
 func (e *ConditionalExpression) Doc() prettier.Doc {
-	// TODO: potentially parenthesize
+	ownPrecedence := e.precedence()
+
+	// NOTE: right associative
+
 	testDoc := e.Test.Doc()
+	testPrecedence := e.Test.precedence()
 
-	// TODO: potentially parenthesize
+	if ownPrecedence >= testPrecedence {
+		testDoc = prettier.WrapParentheses(testDoc, prettier.SoftLine{})
+	}
+
 	thenDoc := e.Then.Doc()
+	thenPrecedence := e.Then.precedence()
 
-	// TODO: potentially parenthesize
+	if ownPrecedence >= thenPrecedence {
+		thenDoc = prettier.WrapParentheses(thenDoc, prettier.SoftLine{})
+	}
+
 	elseDoc := e.Else.Doc()
+	elsePrecedence := e.Else.precedence()
+
+	if ownPrecedence > elsePrecedence {
+		elseDoc = prettier.WrapParentheses(elseDoc, prettier.SoftLine{})
+	}
 
 	return prettier.Group{
 		Doc: prettier.Concat{
@@ -932,8 +1179,8 @@ func (e *ConditionalExpression) StartPosition() Position {
 	return e.Test.StartPosition()
 }
 
-func (e *ConditionalExpression) EndPosition() Position {
-	return e.Else.EndPosition()
+func (e *ConditionalExpression) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return e.Else.EndPosition(memoryGauge)
 }
 
 func (e *ConditionalExpression) MarshalJSON() ([]byte, error) {
@@ -944,9 +1191,13 @@ func (e *ConditionalExpression) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "ConditionalExpression",
-		Range: NewRangeFromPositioned(e),
+		Range: NewUnmeteredRangeFromPositioned(e),
 		Alias: (*Alias)(e),
 	})
+}
+
+func (*ConditionalExpression) precedence() precedence {
+	return precedenceTernary
 }
 
 // UnaryExpression
@@ -957,7 +1208,27 @@ type UnaryExpression struct {
 	StartPos   Position `json:"-"`
 }
 
+var _ Element = &UnaryExpression{}
 var _ Expression = &UnaryExpression{}
+
+func NewUnaryExpression(
+	gauge common.MemoryGauge,
+	operation Operation,
+	expression Expression,
+	startPos Position,
+) *UnaryExpression {
+	common.UseMemory(gauge, common.UnaryExpressionMemoryUsage)
+
+	return &UnaryExpression{
+		Operation:  operation,
+		Expression: expression,
+		StartPos:   startPos,
+	}
+}
+
+func (*UnaryExpression) ElementType() ElementType {
+	return ElementTypeUnaryExpression
+}
 
 func (*UnaryExpression) isExpression() {}
 
@@ -976,18 +1247,28 @@ func (e *UnaryExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 }
 
 func (e *UnaryExpression) String() string {
-	return fmt.Sprintf(
-		"%s%s",
-		e.Operation.Symbol(),
-		e.Expression,
+	return Prettier(e)
+}
+
+func parenthesizedExpressionDoc(e Expression, parentPrecedence precedence) prettier.Doc {
+	doc := e.Doc()
+	subPrecedence := e.precedence()
+	if parentPrecedence <= subPrecedence {
+		return doc
+	}
+	return prettier.WrapParentheses(
+		doc,
+		prettier.SoftLine{},
 	)
 }
 
 func (e *UnaryExpression) Doc() prettier.Doc {
 	return prettier.Concat{
 		prettier.Text(e.Operation.Symbol()),
-		// TODO: potentially parenthesize
-		e.Expression.Doc(),
+		parenthesizedExpressionDoc(
+			e.Expression,
+			e.precedence(),
+		),
 	}
 }
 
@@ -995,8 +1276,8 @@ func (e *UnaryExpression) StartPosition() Position {
 	return e.StartPos
 }
 
-func (e *UnaryExpression) EndPosition() Position {
-	return e.Expression.EndPosition()
+func (e *UnaryExpression) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return e.Expression.EndPosition(memoryGauge)
 }
 
 func (e *UnaryExpression) MarshalJSON() ([]byte, error) {
@@ -1007,9 +1288,13 @@ func (e *UnaryExpression) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "UnaryExpression",
-		Range: NewRangeFromPositioned(e),
+		Range: NewUnmeteredRangeFromPositioned(e),
 		Alias: (*Alias)(e),
 	})
+}
+
+func (*UnaryExpression) precedence() precedence {
+	return precedenceUnaryPrefix
 }
 
 // BinaryExpression
@@ -1020,7 +1305,27 @@ type BinaryExpression struct {
 	Right     Expression
 }
 
+var _ Element = &BinaryExpression{}
 var _ Expression = &BinaryExpression{}
+
+func NewBinaryExpression(
+	gauge common.MemoryGauge,
+	operation Operation,
+	left Expression,
+	right Expression,
+) *BinaryExpression {
+	common.UseMemory(gauge, common.BinaryExpressionMemoryUsage)
+
+	return &BinaryExpression{
+		Operation: operation,
+		Left:      left,
+		Right:     right,
+	}
+}
+
+func (*BinaryExpression) ElementType() ElementType {
+	return ElementTypeBinaryExpression
+}
 
 func (*BinaryExpression) isExpression() {}
 
@@ -1040,18 +1345,32 @@ func (e *BinaryExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 }
 
 func (e *BinaryExpression) String() string {
-	return fmt.Sprintf(
-		"(%s %s %s)",
-		e.Left, e.Operation.Symbol(), e.Right,
-	)
+	return Prettier(e)
 }
 
 func (e *BinaryExpression) Doc() prettier.Doc {
-	// TODO: potentially parenthesize
-	leftDoc := e.Left.Doc()
 
-	// TODO: potentially parenthesize
+	ownPrecedence := e.precedence()
+	isLeftAssociative := e.IsLeftAssociative()
+	isRightAssociative := !isLeftAssociative
+
+	leftDoc := e.Left.Doc()
+	leftPrecedence := e.Left.precedence()
+
+	if (isLeftAssociative && ownPrecedence > leftPrecedence) ||
+		(isRightAssociative && ownPrecedence >= leftPrecedence) {
+
+		leftDoc = prettier.WrapParentheses(leftDoc, prettier.SoftLine{})
+	}
+
 	rightDoc := e.Right.Doc()
+	rightPrecedence := e.Right.precedence()
+
+	if (isLeftAssociative && ownPrecedence >= rightPrecedence) ||
+		(isRightAssociative && ownPrecedence > rightPrecedence) {
+
+		rightDoc = prettier.WrapParentheses(rightDoc, prettier.SoftLine{})
+	}
 
 	return prettier.Group{
 		Doc: prettier.Concat{
@@ -1072,8 +1391,8 @@ func (e *BinaryExpression) StartPosition() Position {
 	return e.Left.StartPosition()
 }
 
-func (e *BinaryExpression) EndPosition() Position {
-	return e.Right.EndPosition()
+func (e *BinaryExpression) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return e.Right.EndPosition(memoryGauge)
 }
 
 func (e *BinaryExpression) MarshalJSON() ([]byte, error) {
@@ -1084,9 +1403,45 @@ func (e *BinaryExpression) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "BinaryExpression",
-		Range: NewRangeFromPositioned(e),
+		Range: NewUnmeteredRangeFromPositioned(e),
 		Alias: (*Alias)(e),
 	})
+}
+
+func (e *BinaryExpression) precedence() precedence {
+	switch e.Operation {
+	case OperationOr:
+		return precedenceLogicalOr
+	case OperationAnd:
+		return precedenceLogicalAnd
+	case OperationEqual,
+		OperationNotEqual,
+		OperationLess,
+		OperationLessEqual,
+		OperationGreater,
+		OperationGreaterEqual:
+		return precedenceComparison
+	case OperationNilCoalesce:
+		return precedenceNilCoalescing
+	case OperationBitwiseOr:
+		return precedenceBitwiseOr
+	case OperationBitwiseXor:
+		return precedenceBitwiseXor
+	case OperationBitwiseAnd:
+		return precedenceBitwiseAnd
+	case OperationBitwiseLeftShift, OperationBitwiseRightShift:
+		return precedenceBitwiseShift
+	case OperationPlus, OperationMinus:
+		return precedenceAddition
+	case OperationMul, OperationDiv, OperationMod:
+		return precedenceMultiplication
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (e *BinaryExpression) IsLeftAssociative() bool {
+	return e.Operation != OperationNilCoalesce
 }
 
 // FunctionExpression
@@ -1098,7 +1453,29 @@ type FunctionExpression struct {
 	StartPos             Position `json:"-"`
 }
 
+var _ Element = &FunctionExpression{}
 var _ Expression = &FunctionExpression{}
+
+func NewFunctionExpression(
+	gauge common.MemoryGauge,
+	parameters *ParameterList,
+	returnType *TypeAnnotation,
+	functionBlock *FunctionBlock,
+	startPos Position,
+) *FunctionExpression {
+	common.UseMemory(gauge, common.FunctionExpressionMemoryUsage)
+
+	return &FunctionExpression{
+		ParameterList:        parameters,
+		ReturnTypeAnnotation: returnType,
+		FunctionBlock:        functionBlock,
+		StartPos:             startPos,
+	}
+}
+
+func (*FunctionExpression) ElementType() ElementType {
+	return ElementTypeFunctionExpression
+}
 
 func (*FunctionExpression) isExpression() {}
 
@@ -1119,47 +1496,77 @@ func (e *FunctionExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 }
 
 func (e *FunctionExpression) String() string {
-	// TODO:
-	return "func ..."
+	return Prettier(e)
 }
 
-var functionExpressionFunKeywordDoc prettier.Doc = prettier.Text("fun ")
-var functionExpressionParameterSeparatorDoc prettier.Doc = prettier.Concat{
-	prettier.Text(","),
-	prettier.Line{},
-}
+var functionFunKeywordSpaceDoc prettier.Doc = prettier.Text("fun ")
 
-var typeSeparatorDoc prettier.Doc = prettier.Text(": ")
 var functionExpressionEmptyBlockDoc prettier.Doc = prettier.Text(" {}")
 
-func (e *FunctionExpression) Doc() prettier.Doc {
+func FunctionDocument(
+	access Access,
+	includeKeyword bool,
+	identifier string,
+	parameterList *ParameterList,
+	returnTypeAnnotation *TypeAnnotation,
+	block *FunctionBlock,
+) prettier.Doc {
 
-	signatureDoc := e.parametersDoc()
-
-	if e.ReturnTypeAnnotation != nil &&
-		!IsEmptyType(e.ReturnTypeAnnotation.Type) {
-
-		signatureDoc = prettier.Concat{
+	var signatureDoc prettier.Concat
+	if parameterList != nil {
+		signatureDoc = append(
 			signatureDoc,
-			typeSeparatorDoc,
-			e.ReturnTypeAnnotation.Doc(),
+			parameterList.Doc(),
+		)
+
+		if returnTypeAnnotation != nil &&
+			!IsEmptyType(returnTypeAnnotation.Type) {
+
+			signatureDoc = append(
+				signatureDoc,
+				typeSeparatorSpaceDoc,
+				returnTypeAnnotation.Doc(),
+			)
 		}
 	}
 
-	doc := prettier.Concat{
-		functionExpressionFunKeywordDoc,
-		prettier.Group{
-			Doc: signatureDoc,
-		},
+	var doc prettier.Concat
+
+	if access != AccessNotSpecified {
+		doc = append(
+			doc,
+			prettier.Text(access.Keyword()),
+			prettier.Space,
+		)
 	}
 
-	if e.FunctionBlock.IsEmpty() {
+	if includeKeyword {
+		doc = append(
+			doc,
+			functionFunKeywordSpaceDoc,
+		)
+	}
+
+	if identifier != "" {
+		doc = append(
+			doc,
+			prettier.Text(identifier),
+		)
+	}
+
+	if signatureDoc != nil {
+		doc = append(
+			doc,
+			prettier.Group{
+				Doc: signatureDoc,
+			},
+		)
+	}
+
+	if block.IsEmpty() {
 		return append(doc, functionExpressionEmptyBlockDoc)
 	} else {
-		// TODO: pre-conditions
-		// TODO: post-conditions
-
-		blockDoc := e.FunctionBlock.Block.Doc()
+		blockDoc := block.Doc()
 
 		return append(
 			doc,
@@ -1169,42 +1576,14 @@ func (e *FunctionExpression) Doc() prettier.Doc {
 	}
 }
 
-func (e *FunctionExpression) parametersDoc() prettier.Doc {
-
-	if e.ParameterList == nil ||
-		len(e.ParameterList.Parameters) == 0 {
-
-		return prettier.Text("()")
-	}
-
-	parameterDocs := make([]prettier.Doc, 0, len(e.ParameterList.Parameters))
-
-	for _, parameter := range e.ParameterList.Parameters {
-		var parameterDoc prettier.Concat
-
-		if parameter.Label != "" {
-			parameterDoc = append(parameterDoc,
-				prettier.Text(parameter.Label),
-				prettier.Space,
-			)
-		}
-
-		parameterDoc = append(
-			parameterDoc,
-			prettier.Text(parameter.Identifier.Identifier),
-			typeSeparatorDoc,
-			parameter.TypeAnnotation.Doc(),
-		)
-
-		parameterDocs = append(parameterDocs, parameterDoc)
-	}
-
-	return prettier.WrapParentheses(
-		prettier.Join(
-			functionExpressionParameterSeparatorDoc,
-			parameterDocs...,
-		),
-		prettier.SoftLine{},
+func (e *FunctionExpression) Doc() prettier.Doc {
+	return FunctionDocument(
+		AccessNotSpecified,
+		true,
+		"",
+		e.ParameterList,
+		e.ReturnTypeAnnotation,
+		e.FunctionBlock,
 	)
 }
 
@@ -1212,8 +1591,8 @@ func (e *FunctionExpression) StartPosition() Position {
 	return e.StartPos
 }
 
-func (e *FunctionExpression) EndPosition() Position {
-	return e.FunctionBlock.EndPosition()
+func (e *FunctionExpression) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return e.FunctionBlock.EndPosition(memoryGauge)
 }
 
 func (e *FunctionExpression) MarshalJSON() ([]byte, error) {
@@ -1224,9 +1603,13 @@ func (e *FunctionExpression) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "FunctionExpression",
-		Range: NewRangeFromPositioned(e),
+		Range: NewUnmeteredRangeFromPositioned(e),
 		Alias: (*Alias)(e),
 	})
+}
+
+func (*FunctionExpression) precedence() precedence {
+	return precedenceLiteral
 }
 
 // CastingExpression
@@ -1238,7 +1621,29 @@ type CastingExpression struct {
 	ParentVariableDeclaration *VariableDeclaration `json:"-"`
 }
 
+var _ Element = &CastingExpression{}
 var _ Expression = &CastingExpression{}
+
+func NewCastingExpression(
+	gauge common.MemoryGauge,
+	expression Expression,
+	operation Operation,
+	typeAnnotation *TypeAnnotation,
+	parentVariableDecl *VariableDeclaration,
+) *CastingExpression {
+	common.UseMemory(gauge, common.CastingExpressionMemoryUsage)
+
+	return &CastingExpression{
+		Expression:                expression,
+		Operation:                 operation,
+		TypeAnnotation:            typeAnnotation,
+		ParentVariableDeclaration: parentVariableDecl,
+	}
+}
+
+func (*CastingExpression) ElementType() ElementType {
+	return ElementTypeCastingExpression
+}
 
 func (*CastingExpression) isExpression() {}
 
@@ -1257,15 +1662,14 @@ func (e *CastingExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 }
 
 func (e *CastingExpression) String() string {
-	return fmt.Sprintf(
-		"(%s %s %s)",
-		e.Expression, e.Operation.Symbol(), e.TypeAnnotation,
-	)
+	return Prettier(e)
 }
 
 func (e *CastingExpression) Doc() prettier.Doc {
-	// TODO: potentially parenthesize
-	doc := e.Expression.Doc()
+	doc := parenthesizedExpressionDoc(
+		e.Expression,
+		e.precedence(),
+	)
 
 	return prettier.Group{
 		Doc: prettier.Concat{
@@ -1284,8 +1688,8 @@ func (e *CastingExpression) StartPosition() Position {
 	return e.Expression.StartPosition()
 }
 
-func (e *CastingExpression) EndPosition() Position {
-	return e.TypeAnnotation.EndPosition()
+func (e *CastingExpression) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return e.TypeAnnotation.EndPosition(memoryGauge)
 }
 
 func (e *CastingExpression) MarshalJSON() ([]byte, error) {
@@ -1296,9 +1700,13 @@ func (e *CastingExpression) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "CastingExpression",
-		Range: NewRangeFromPositioned(e),
+		Range: NewUnmeteredRangeFromPositioned(e),
 		Alias: (*Alias)(e),
 	})
+}
+
+func (*CastingExpression) precedence() precedence {
+	return precedenceCasting
 }
 
 // CreateExpression
@@ -1308,7 +1716,25 @@ type CreateExpression struct {
 	StartPos             Position `json:"-"`
 }
 
+var _ Element = &CreateExpression{}
 var _ Expression = &CreateExpression{}
+
+func NewCreateExpression(
+	gauge common.MemoryGauge,
+	invocationExpression *InvocationExpression,
+	startPos Position,
+) *CreateExpression {
+	common.UseMemory(gauge, common.CreateExpressionMemoryUsage)
+
+	return &CreateExpression{
+		InvocationExpression: invocationExpression,
+		StartPos:             startPos,
+	}
+}
+
+func (*CreateExpression) ElementType() ElementType {
+	return ElementTypeCreateExpression
+}
 
 func (*CreateExpression) isExpression() {}
 
@@ -1327,16 +1753,14 @@ func (e *CreateExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 }
 
 func (e *CreateExpression) String() string {
-	return fmt.Sprintf(
-		"(create %s)",
-		e.InvocationExpression,
-	)
+	return Prettier(e)
 }
+
+var createKeywordSpaceDoc = prettier.Text("create ")
 
 func (e *CreateExpression) Doc() prettier.Doc {
 	return prettier.Concat{
-		prettier.Text("create "),
-		// TODO: potentially parenthesize
+		createKeywordSpaceDoc,
 		e.InvocationExpression.Doc(),
 	}
 }
@@ -1345,7 +1769,7 @@ func (e *CreateExpression) StartPosition() Position {
 	return e.StartPos
 }
 
-func (e *CreateExpression) EndPosition() Position {
+func (e *CreateExpression) EndPosition(common.MemoryGauge) Position {
 	return e.InvocationExpression.EndPos
 }
 
@@ -1357,9 +1781,13 @@ func (e *CreateExpression) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "CreateExpression",
-		Range: NewRangeFromPositioned(e),
+		Range: NewUnmeteredRangeFromPositioned(e),
 		Alias: (*Alias)(e),
 	})
+}
+
+func (*CreateExpression) precedence() precedence {
+	return precedenceUnaryPrefix
 }
 
 // DestroyExpression
@@ -1369,7 +1797,25 @@ type DestroyExpression struct {
 	StartPos   Position `json:"-"`
 }
 
+var _ Element = &DestroyExpression{}
 var _ Expression = &DestroyExpression{}
+
+func NewDestroyExpression(
+	gauge common.MemoryGauge,
+	expression Expression,
+	startPos Position,
+) *DestroyExpression {
+	common.UseMemory(gauge, common.DestroyExpressionMemoryUsage)
+
+	return &DestroyExpression{
+		Expression: expression,
+		StartPos:   startPos,
+	}
+}
+
+func (*DestroyExpression) ElementType() ElementType {
+	return ElementTypeDestroyExpression
+}
 
 func (*DestroyExpression) isExpression() {}
 
@@ -1388,10 +1834,7 @@ func (e *DestroyExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 }
 
 func (e *DestroyExpression) String() string {
-	return fmt.Sprintf(
-		"(destroy %s)",
-		e.Expression,
-	)
+	return Prettier(e)
 }
 
 const destroyExpressionKeywordDoc = prettier.Text("destroy ")
@@ -1399,8 +1842,10 @@ const destroyExpressionKeywordDoc = prettier.Text("destroy ")
 func (e *DestroyExpression) Doc() prettier.Doc {
 	return prettier.Concat{
 		destroyExpressionKeywordDoc,
-		// TODO: potentially parenthesize
-		e.Expression.Doc(),
+		parenthesizedExpressionDoc(
+			e.Expression,
+			e.precedence(),
+		),
 	}
 }
 
@@ -1408,8 +1853,8 @@ func (e *DestroyExpression) StartPosition() Position {
 	return e.StartPos
 }
 
-func (e *DestroyExpression) EndPosition() Position {
-	return e.Expression.EndPosition()
+func (e *DestroyExpression) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return e.Expression.EndPosition(memoryGauge)
 }
 
 func (e *DestroyExpression) MarshalJSON() ([]byte, error) {
@@ -1420,9 +1865,13 @@ func (e *DestroyExpression) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "DestroyExpression",
-		Range: NewRangeFromPositioned(e),
+		Range: NewUnmeteredRangeFromPositioned(e),
 		Alias: (*Alias)(e),
 	})
+}
+
+func (*DestroyExpression) precedence() precedence {
+	return precedenceUnaryPrefix
 }
 
 // ReferenceExpression
@@ -1433,7 +1882,27 @@ type ReferenceExpression struct {
 	StartPos   Position `json:"-"`
 }
 
+var _ Element = &ReferenceExpression{}
 var _ Expression = &ReferenceExpression{}
+
+func NewReferenceExpression(
+	gauge common.MemoryGauge,
+	expression Expression,
+	targetType Type,
+	startPos Position,
+) *ReferenceExpression {
+	common.UseMemory(gauge, common.ReferenceExpressionMemoryUsage)
+
+	return &ReferenceExpression{
+		Expression: expression,
+		Type:       targetType,
+		StartPos:   startPos,
+	}
+}
+
+func (*ReferenceExpression) ElementType() ElementType {
+	return ElementTypeReferenceExpression
+}
 
 func (*ReferenceExpression) isExpression() {}
 
@@ -1453,19 +1922,17 @@ func (e *ReferenceExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 }
 
 func (e *ReferenceExpression) String() string {
-	return fmt.Sprintf(
-		"(&%s as %s)",
-		e.Expression,
-		e.Type,
-	)
+	return Prettier(e)
 }
 
 var referenceExpressionRefOperatorDoc prettier.Doc = prettier.Text("&")
 var referenceExpressionAsOperatorDoc prettier.Doc = prettier.Text("as")
 
 func (e *ReferenceExpression) Doc() prettier.Doc {
-	// TODO: potentially parenthesize
-	doc := e.Expression.Doc()
+	doc := parenthesizedExpressionDoc(
+		e.Expression,
+		e.precedence(),
+	)
 
 	return prettier.Group{
 		Doc: prettier.Concat{
@@ -1485,8 +1952,8 @@ func (e *ReferenceExpression) StartPosition() Position {
 	return e.StartPos
 }
 
-func (e *ReferenceExpression) EndPosition() Position {
-	return e.Type.EndPosition()
+func (e *ReferenceExpression) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return e.Type.EndPosition(memoryGauge)
 }
 
 func (e *ReferenceExpression) MarshalJSON() ([]byte, error) {
@@ -1497,9 +1964,13 @@ func (e *ReferenceExpression) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "ReferenceExpression",
-		Range: NewRangeFromPositioned(e),
+		Range: NewUnmeteredRangeFromPositioned(e),
 		Alias: (*Alias)(e),
 	})
+}
+
+func (*ReferenceExpression) precedence() precedence {
+	return precedenceUnaryPrefix
 }
 
 // ForceExpression
@@ -1509,7 +1980,25 @@ type ForceExpression struct {
 	EndPos     Position `json:"-"`
 }
 
+var _ Element = &ForceExpression{}
 var _ Expression = &ForceExpression{}
+
+func NewForceExpression(
+	gauge common.MemoryGauge,
+	expression Expression,
+	endPos Position,
+) *ForceExpression {
+	common.UseMemory(gauge, common.ForceExpressionMemoryUsage)
+
+	return &ForceExpression{
+		Expression: expression,
+		EndPos:     endPos,
+	}
+}
+
+func (*ForceExpression) ElementType() ElementType {
+	return ElementTypeForceExpression
+}
 
 func (*ForceExpression) isExpression() {}
 
@@ -1528,15 +2017,17 @@ func (e *ForceExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 }
 
 func (e *ForceExpression) String() string {
-	return fmt.Sprintf("%s!", e.Expression)
+	return Prettier(e)
 }
 
 const forceExpressionOperatorDoc = prettier.Text("!")
 
 func (e *ForceExpression) Doc() prettier.Doc {
 	return prettier.Concat{
-		// TODO: potentially parenthesize
-		e.Expression.Doc(),
+		parenthesizedExpressionDoc(
+			e.Expression,
+			e.precedence(),
+		),
 		forceExpressionOperatorDoc,
 	}
 }
@@ -1545,7 +2036,7 @@ func (e *ForceExpression) StartPosition() Position {
 	return e.Expression.StartPosition()
 }
 
-func (e *ForceExpression) EndPosition() Position {
+func (e *ForceExpression) EndPosition(common.MemoryGauge) Position {
 	return e.EndPos
 }
 
@@ -1557,9 +2048,13 @@ func (e *ForceExpression) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "ForceExpression",
-		Range: NewRangeFromPositioned(e),
+		Range: NewUnmeteredRangeFromPositioned(e),
 		Alias: (*Alias)(e),
 	})
+}
+
+func (*ForceExpression) precedence() precedence {
+	return precedenceUnaryPostfix
 }
 
 // PathExpression
@@ -1570,7 +2065,27 @@ type PathExpression struct {
 	Identifier Identifier
 }
 
+var _ Element = &PathExpression{}
 var _ Expression = &PathExpression{}
+
+func NewPathExpression(
+	gauge common.MemoryGauge,
+	domain Identifier,
+	identifier Identifier,
+	startPos Position,
+) *PathExpression {
+	common.UseMemory(gauge, common.PathExpressionMemoryUsage)
+
+	return &PathExpression{
+		Domain:     domain,
+		Identifier: identifier,
+		StartPos:   startPos,
+	}
+}
+
+func (*PathExpression) ElementType() ElementType {
+	return ElementTypePathExpression
+}
 
 func (*PathExpression) isExpression() {}
 
@@ -1589,19 +2104,26 @@ func (e *PathExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 }
 
 func (e *PathExpression) String() string {
-	return fmt.Sprintf("/%s/%s", e.Domain, e.Identifier)
+	return Prettier(e)
 }
 
+var pathSeparatorDoc = prettier.Text("/")
+
 func (e *PathExpression) Doc() prettier.Doc {
-	return prettier.Text(e.String())
+	return prettier.Concat{
+		pathSeparatorDoc,
+		prettier.Text(e.Domain.String()),
+		pathSeparatorDoc,
+		prettier.Text(e.Identifier.String()),
+	}
 }
 
 func (e *PathExpression) StartPosition() Position {
 	return e.StartPos
 }
 
-func (e *PathExpression) EndPosition() Position {
-	return e.Identifier.EndPosition()
+func (e *PathExpression) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return e.Identifier.EndPosition(memoryGauge)
 }
 
 func (e *PathExpression) MarshalJSON() ([]byte, error) {
@@ -1612,7 +2134,11 @@ func (e *PathExpression) MarshalJSON() ([]byte, error) {
 		*Alias
 	}{
 		Type:  "PathExpression",
-		Range: NewRangeFromPositioned(e),
+		Range: NewUnmeteredRangeFromPositioned(e),
 		Alias: (*Alias)(e),
 	})
+}
+
+func (*PathExpression) precedence() precedence {
+	return precedenceLiteral
 }

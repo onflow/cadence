@@ -43,7 +43,7 @@ type vm struct {
 func (m *vm) Invoke(name string, arguments ...interpreter.Value) (interpreter.Value, error) {
 	f := m.instance.GetExport(name).Func()
 
-	rawArguments := make([]interface{}, len(arguments))
+	rawArguments := make([]any, len(arguments))
 	for i, argument := range arguments {
 		rawArguments[i] = argument
 	}
@@ -76,7 +76,7 @@ func NewVM(wasm []byte) (VM, error) {
 
 	intFunc := wasmtime.WrapFunc(
 		store,
-		func(caller *wasmtime.Caller, offset int32, length int32) (interface{}, *wasmtime.Trap) {
+		func(caller *wasmtime.Caller, offset int32, length int32) (any, *wasmtime.Trap) {
 			if offset < 0 {
 				return nil, wasmtime.NewTrap(store, fmt.Sprintf("Int: invalid offset: %d", offset))
 			}
@@ -98,7 +98,7 @@ func NewVM(wasm []byte) (VM, error) {
 		},
 	)
 
-	stringFunc := wasmtime.WrapFunc(store, func(caller *wasmtime.Caller, offset int32, length int32) (interface{}, *wasmtime.Trap) {
+	stringFunc := wasmtime.WrapFunc(store, func(caller *wasmtime.Caller, offset int32, length int32) (any, *wasmtime.Trap) {
 		if offset < 0 {
 			return nil, wasmtime.NewTrap(store, fmt.Sprintf("String: invalid offset: %d", offset))
 		}
@@ -114,7 +114,7 @@ func NewVM(wasm []byte) (VM, error) {
 		return interpreter.NewStringValue(string(bytes)), nil
 	})
 
-	addFunc := wasmtime.WrapFunc(store, func(left, right interface{}) (interface{}, *wasmtime.Trap) {
+	addFunc := wasmtime.WrapFunc(store, func(left, right any) (any, *wasmtime.Trap) {
 		leftNumber, ok := left.(interpreter.NumberValue)
 		if !ok {
 			return nil, wasmtime.NewTrap(store, fmt.Sprintf("add: invalid left: %#+v", left))
@@ -125,7 +125,7 @@ func NewVM(wasm []byte) (VM, error) {
 			return nil, wasmtime.NewTrap(store, fmt.Sprintf("add: invalid right: %#+v", right))
 		}
 
-		return leftNumber.Plus(rightNumber), nil
+		return leftNumber.Plus(nil, rightNumber), nil
 	})
 
 	// NOTE: wasmtime currently does not support specifying imports by name,

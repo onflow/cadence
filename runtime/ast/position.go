@@ -20,7 +20,11 @@ package ast
 
 import (
 	"fmt"
+
+	"github.com/onflow/cadence/runtime/common"
 )
+
+var EmptyPosition = Position{}
 
 // Position defines a row/column within a Cadence script.
 type Position struct {
@@ -32,12 +36,22 @@ type Position struct {
 	Column int
 }
 
-func (position Position) Shifted(length int) Position {
+func NewPosition(memoryGauge common.MemoryGauge, offset, line, column int) Position {
+	common.UseMemory(memoryGauge, common.PositionMemoryUsage)
 	return Position{
-		Line:   position.Line,
-		Column: position.Column + length,
-		Offset: position.Offset + length,
+		Offset: offset,
+		Line:   line,
+		Column: column,
 	}
+}
+
+func (position Position) Shifted(memoryGauge common.MemoryGauge, length int) Position {
+	return NewPosition(
+		memoryGauge,
+		position.Offset+length,
+		position.Line,
+		position.Column+length,
+	)
 }
 
 func (position Position) String() string {
@@ -60,16 +74,16 @@ func (position Position) Compare(other Position) int {
 	}
 }
 
-func EndPosition(startPosition Position, end int) Position {
+func EndPosition(memoryGauge common.MemoryGauge, startPosition Position, end int) Position {
 	length := end - startPosition.Offset
-	return startPosition.Shifted(length)
+	return startPosition.Shifted(memoryGauge, length)
 }
 
 // HasPosition
 
 type HasPosition interface {
 	StartPosition() Position
-	EndPosition() Position
+	EndPosition(memoryGauge common.MemoryGauge) Position
 }
 
 // Range
@@ -79,19 +93,41 @@ type Range struct {
 	EndPos   Position
 }
 
+var EmptyRange = Range{}
+
+func NewRange(memoryGauge common.MemoryGauge, startPos, endPos Position) Range {
+	common.UseMemory(memoryGauge, common.RangeMemoryUsage)
+	return NewUnmeteredRange(startPos, endPos)
+}
+
+func NewUnmeteredRange(startPos, endPos Position) Range {
+	return Range{
+		StartPos: startPos,
+		EndPos:   endPos,
+	}
+}
+
 func (e Range) StartPosition() Position {
 	return e.StartPos
 }
 
-func (e Range) EndPosition() Position {
+func (e Range) EndPosition(common.MemoryGauge) Position {
 	return e.EndPos
 }
 
 // NewRangeFromPositioned
 
-func NewRangeFromPositioned(hasPosition HasPosition) Range {
-	return Range{
-		StartPos: hasPosition.StartPosition(),
-		EndPos:   hasPosition.EndPosition(),
-	}
+func NewRangeFromPositioned(memoryGauge common.MemoryGauge, hasPosition HasPosition) Range {
+	return NewRange(
+		memoryGauge,
+		hasPosition.StartPosition(),
+		hasPosition.EndPosition(memoryGauge),
+	)
+}
+
+func NewUnmeteredRangeFromPositioned(hasPosition HasPosition) Range {
+	return NewUnmeteredRange(
+		hasPosition.StartPosition(),
+		hasPosition.EndPosition(nil),
+	)
 }

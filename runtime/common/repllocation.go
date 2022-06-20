@@ -34,8 +34,13 @@ func (l REPLLocation) ID() LocationID {
 	return REPLLocationPrefix
 }
 
-func (l REPLLocation) TypeID(qualifiedIdentifier string) TypeID {
-	return NewTypeID(
+func (l REPLLocation) MeteredID(memoryGauge MemoryGauge) LocationID {
+	return NewMeteredLocationID(memoryGauge, REPLLocationPrefix)
+}
+
+func (l REPLLocation) TypeID(memoryGauge MemoryGauge, qualifiedIdentifier string) TypeID {
+	return NewMeteredTypeID(
+		memoryGauge,
 		REPLLocationPrefix,
 		qualifiedIdentifier,
 	)
@@ -66,7 +71,7 @@ func (l REPLLocation) MarshalJSON() ([]byte, error) {
 func init() {
 	RegisterTypeIDDecoder(
 		REPLLocationPrefix,
-		func(typeID string) (location Location, qualifiedIdentifier string, err error) {
+		func(_ MemoryGauge, typeID string) (location Location, qualifiedIdentifier string, err error) {
 			return decodeREPLLocationTypeID(typeID)
 		},
 	)

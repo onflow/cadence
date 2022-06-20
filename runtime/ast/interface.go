@@ -21,6 +21,8 @@ package ast
 import (
 	"encoding/json"
 
+	"github.com/turbolent/prettier"
+
 	"github.com/onflow/cadence/runtime/common"
 )
 
@@ -33,6 +35,35 @@ type InterfaceDeclaration struct {
 	Members       *Members
 	DocString     string
 	Range
+}
+
+var _ Element = &InterfaceDeclaration{}
+var _ Declaration = &InterfaceDeclaration{}
+var _ Statement = &InterfaceDeclaration{}
+
+func NewInterfaceDeclaration(
+	gauge common.MemoryGauge,
+	access Access,
+	compositeKind common.CompositeKind,
+	identifier Identifier,
+	members *Members,
+	docString string,
+	declRange Range,
+) *InterfaceDeclaration {
+	common.UseMemory(gauge, common.InterfaceDeclarationMemoryUsage)
+
+	return &InterfaceDeclaration{
+		Access:        access,
+		CompositeKind: compositeKind,
+		Identifier:    identifier,
+		Members:       members,
+		DocString:     docString,
+		Range:         declRange,
+	}
+}
+
+func (*InterfaceDeclaration) ElementType() ElementType {
+	return ElementTypeInterfaceDeclaration
 }
 
 func (d *InterfaceDeclaration) Accept(visitor Visitor) Repr {
@@ -79,4 +110,19 @@ func (d *InterfaceDeclaration) MarshalJSON() ([]byte, error) {
 		Type:  "InterfaceDeclaration",
 		Alias: (*Alias)(d),
 	})
+}
+
+func (d *InterfaceDeclaration) Doc() prettier.Doc {
+	return CompositeDocument(
+		d.Access,
+		d.CompositeKind,
+		true,
+		d.Identifier.Identifier,
+		nil,
+		d.Members,
+	)
+}
+
+func (d *InterfaceDeclaration) String() string {
+	return Prettier(d)
 }

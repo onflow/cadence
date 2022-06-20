@@ -44,7 +44,7 @@ func main() {
 
 	js.Global().Set(
 		globalFunctionName("parse"),
-		js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		js.FuncOf(func(this js.Value, args []js.Value) any {
 			code := args[0].String()
 			return parse(code)
 		}),
@@ -68,7 +68,7 @@ func parse(code string) string {
 			}
 		}()
 
-		res.Program, res.Error = parser2.ParseProgram(code)
+		res.Program, res.Error = parser2.ParseProgram(code, nil)
 	}()
 
 	serialized, err := json.Marshal(res)

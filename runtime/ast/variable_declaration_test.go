@@ -24,13 +24,14 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/turbolent/prettier"
 )
 
 func TestVariableDeclaration_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &VariableDeclaration{
+	decl := &VariableDeclaration{
 		Access:     AccessPublic,
 		IsConstant: true,
 		Identifier: Identifier{
@@ -73,7 +74,7 @@ func TestVariableDeclaration_MarshalJSON(t *testing.T) {
 		DocString: "test",
 	}
 
-	actual, err := json.Marshal(ty)
+	actual, err := json.Marshal(decl)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -133,4 +134,220 @@ func TestVariableDeclaration_MarshalJSON(t *testing.T) {
         `,
 		string(actual),
 	)
+}
+
+func TestVariableDeclaration_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("with one value", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &VariableDeclaration{
+			Access:     AccessPublic,
+			IsConstant: true,
+			Identifier: Identifier{
+				Identifier: "foo",
+			},
+			TypeAnnotation: &TypeAnnotation{
+				IsResource: true,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "AB",
+					},
+				},
+			},
+			Value: &BoolExpression{
+				Value: true,
+			},
+			Transfer: &Transfer{
+				Operation: TransferOperationMove,
+			},
+		}
+
+		require.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("pub"),
+					prettier.Text(" "),
+					prettier.Text("let"),
+					prettier.Text(" "),
+					prettier.Group{
+						Doc: prettier.Concat{
+							prettier.Group{
+								Doc: prettier.Concat{
+									prettier.Text("foo"),
+									prettier.Text(": "),
+									prettier.Concat{
+										prettier.Text("@"),
+										prettier.Text("AB"),
+									},
+								},
+							},
+							prettier.Text(" "),
+							prettier.Text("<-"),
+							prettier.Group{
+								Doc: prettier.Indent{
+									Doc: prettier.Concat{
+										prettier.Line{},
+										prettier.Text("true"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			decl.Doc(),
+		)
+	})
+
+	t.Run("with second value", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &VariableDeclaration{
+			Access:     AccessPublic,
+			IsConstant: true,
+			Identifier: Identifier{
+				Identifier: "foo",
+			},
+			TypeAnnotation: &TypeAnnotation{
+				IsResource: true,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "AB",
+					},
+				},
+			},
+			Value: &BoolExpression{
+				Value: true,
+			},
+			Transfer: &Transfer{
+				Operation: TransferOperationMove,
+			},
+			SecondTransfer: &Transfer{
+				Operation: TransferOperationMove,
+			},
+			SecondValue: &BoolExpression{
+				Value: false,
+			},
+		}
+
+		require.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("pub"),
+					prettier.Text(" "),
+					prettier.Text("let"),
+					prettier.Text(" "),
+					prettier.Group{
+						Doc: prettier.Concat{
+							prettier.Group{
+								Doc: prettier.Concat{
+									prettier.Text("foo"),
+									prettier.Text(": "),
+									prettier.Concat{
+										prettier.Text("@"),
+										prettier.Text("AB"),
+									},
+								},
+							},
+							prettier.Group{
+								Doc: prettier.Indent{
+									Doc: prettier.Concat{
+										prettier.Line{},
+										prettier.Text("<-"),
+										prettier.Text(" "),
+										prettier.Text("true"),
+										prettier.Line{},
+										prettier.Text("<-"),
+										prettier.Text(" "),
+										prettier.Text("false"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			decl.Doc(),
+		)
+	})
+}
+
+func TestVariableDeclaration_String(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("with one value", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &VariableDeclaration{
+			Access:     AccessPublic,
+			IsConstant: true,
+			Identifier: Identifier{
+				Identifier: "foo",
+			},
+			TypeAnnotation: &TypeAnnotation{
+				IsResource: true,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "AB",
+					},
+				},
+			},
+			Value: &BoolExpression{
+				Value: true,
+			},
+			Transfer: &Transfer{
+				Operation: TransferOperationMove,
+			},
+		}
+
+		require.Equal(t,
+			"pub let foo: @AB <- true",
+			decl.String(),
+		)
+	})
+
+	t.Run("with second value", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &VariableDeclaration{
+			Access:     AccessPublic,
+			IsConstant: true,
+			Identifier: Identifier{
+				Identifier: "foo",
+			},
+			TypeAnnotation: &TypeAnnotation{
+				IsResource: true,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "AB",
+					},
+				},
+			},
+			Value: &BoolExpression{
+				Value: true,
+			},
+			Transfer: &Transfer{
+				Operation: TransferOperationMove,
+			},
+			SecondTransfer: &Transfer{
+				Operation: TransferOperationMove,
+			},
+			SecondValue: &BoolExpression{
+				Value: false,
+			},
+		}
+
+		require.Equal(t,
+			"pub let foo: @AB <- true <- false",
+			decl.String(),
+		)
+	})
 }

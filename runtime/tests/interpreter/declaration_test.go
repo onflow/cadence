@@ -100,7 +100,7 @@ func TestInterpretShadowingInFunction(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t,
-		interpreter.NewIntValueFromInt64(1),
+		interpreter.NewUnmeteredIntValueFromInt64(1),
 		result,
 	)
 }

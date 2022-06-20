@@ -28,7 +28,9 @@ func NewSignatureAlgorithmCase(inter *interpreter.Interpreter, rawValue uint8) *
 	return interpreter.NewEnumCaseValue(
 		inter,
 		sema.SignatureAlgorithmType,
-		interpreter.UInt8Value(rawValue),
+		interpreter.NewUInt8Value(inter, func() uint8 {
+			return rawValue
+		}),
 		nil,
 	)
 }

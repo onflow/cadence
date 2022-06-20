@@ -88,9 +88,23 @@ to the `prepare` phase of the transaction.
 
       let keys: AuthAccount.Keys
 
+      // Key management
+
+      // Adds a public key to the account.
+      // The public key must be encoded together with their signature algorithm, hashing algorithm and weight.
+      // This method is currently deprecated and is available only for the backward compatibility.
+      // `keys.add` method can be use instead.
+      fun addPublicKey(_ publicKey: [UInt8])
+
+      // Revokes the key at the given index.
+      // This method is currently deprecated and is available only for the backward compatibility.
+      // `keys.revoke` method can be use instead.
+      fun removePublicKey(_ index: Int)
+
       // Account storage API (see the section below for documentation)
 
       fun save<T>(_ value: T, to: StoragePath)
+      fun type(at path: StoragePath): Type?
       fun load<T>(from: StoragePath): T?
       fun copy<T: AnyStruct>(from: StoragePath): T?
 
@@ -233,6 +247,23 @@ transaction(publicKey: [UInt8]) {
 }
 ```
 
+<Callout type="info">
+⚠️  Note: Keys can also be added using the `addPublicKey` function.
+However, this method is currently deprecated and is available only for the backward compatibility.
+The `addPublicKey` method accepts the public key encoded together with their signature algorithm,
+hashing algorithm and weight.
+
+```cadence
+transaction(key: [UInt8]) {
+    prepare(signer: AuthAccount) {
+        let account = AuthAccount(payer: signer)
+        account.addPublicKey(key)
+    }
+}
+```
+</Callout>
+
+
 #### Get Account Keys
 
 Keys that are added to an account can be retrieved using `get()` function, using the index of the key.
@@ -244,11 +275,11 @@ Keys can be retrieved from both `PublicAccout` and `AuthAccount`.
 transaction() {
     prepare(signer: AuthAccount) {
         // Get a key from an auth account.
-        let keyA = signer.keys.get(2)
+        let keyA = signer.keys.get(keyIndex: 2)
 
         // Get a key from the public aacount.
         let publicAccount = getAccount(0x42)
-        let keyB = publicAccount.keys.get(2)
+        let keyB = publicAccount.keys.get(keyIndex: 2)
     }
 }
 ```
@@ -263,10 +294,15 @@ Keys can only be revoked from an `AuthAccount`.
 transaction() {
     prepare(signer: AuthAccount) {
         // Get a key from an auth account.
-        let keyA = signer.keys.revoke(2)
+        let keyA = signer.keys.revoke(keyIndex: 2)
     }
 }
 ```
+
+<Callout type="info">
+⚠️  Note: Keys can also be removed using the `removePublicKey` function.
+However, this method is deprecated and is available only for the backward compatibility.
+</Callout>
 
 ## Account Storage
 

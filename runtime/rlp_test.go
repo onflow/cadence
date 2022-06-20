@@ -19,7 +19,6 @@
 package runtime
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -27,6 +26,7 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -125,9 +125,12 @@ func TestRLPDecodeString(t *testing.T) {
 
 			runtimeInterface := &testRuntimeInterface{
 				storage: newTestLedger(nil, nil),
-				decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-					return json.Decode(b)
+				meterMemory: func(_ common.MemoryUsage) error {
+					return nil
 				},
+			}
+			runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(runtimeInterface, b)
 			}
 
 			result, err := runtime.ExecuteScript(
@@ -149,10 +152,7 @@ func TestRLPDecodeString(t *testing.T) {
 			)
 			if len(test.expectedErrMsg) > 0 {
 				require.Error(t, err)
-				assert.True(t, strings.HasPrefix(
-					err.Error(),
-					"Execution failed:\nerror: "+test.expectedErrMsg,
-				))
+				assert.ErrorContains(t, err, test.expectedErrMsg)
 			} else {
 				require.NoError(t, err)
 				assert.Equal(t,
@@ -281,9 +281,12 @@ func TestRLPDecodeList(t *testing.T) {
 
 			runtimeInterface := &testRuntimeInterface{
 				storage: newTestLedger(nil, nil),
-				decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-					return json.Decode(b)
+				meterMemory: func(_ common.MemoryUsage) error {
+					return nil
 				},
+			}
+			runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(runtimeInterface, b)
 			}
 
 			result, err := runtime.ExecuteScript(
@@ -305,10 +308,7 @@ func TestRLPDecodeList(t *testing.T) {
 			)
 			if len(test.expectedErrMsg) > 0 {
 				require.Error(t, err)
-				assert.True(t, strings.HasPrefix(
-					err.Error(),
-					"Execution failed:\nerror: "+test.expectedErrMsg,
-				))
+				assert.ErrorContains(t, err, test.expectedErrMsg)
 			} else {
 				require.NoError(t, err)
 

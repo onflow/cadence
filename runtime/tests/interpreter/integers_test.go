@@ -35,26 +35,26 @@ import (
 
 var testIntegerTypesAndValues = map[string]interpreter.Value{
 	// Int*
-	"Int":    interpreter.NewIntValueFromInt64(50),
-	"Int8":   interpreter.Int8Value(50),
-	"Int16":  interpreter.Int16Value(50),
-	"Int32":  interpreter.Int32Value(50),
-	"Int64":  interpreter.Int64Value(50),
-	"Int128": interpreter.NewInt128ValueFromInt64(50),
-	"Int256": interpreter.NewInt256ValueFromInt64(50),
+	"Int":    interpreter.NewUnmeteredIntValueFromInt64(50),
+	"Int8":   interpreter.NewUnmeteredInt8Value(50),
+	"Int16":  interpreter.NewUnmeteredInt16Value(50),
+	"Int32":  interpreter.NewUnmeteredInt32Value(50),
+	"Int64":  interpreter.NewUnmeteredInt64Value(50),
+	"Int128": interpreter.NewUnmeteredInt128ValueFromInt64(50),
+	"Int256": interpreter.NewUnmeteredInt256ValueFromInt64(50),
 	// UInt*
-	"UInt":    interpreter.NewUIntValueFromUint64(50),
-	"UInt8":   interpreter.UInt8Value(50),
-	"UInt16":  interpreter.UInt16Value(50),
-	"UInt32":  interpreter.UInt32Value(50),
-	"UInt64":  interpreter.UInt64Value(50),
-	"UInt128": interpreter.NewUInt128ValueFromUint64(50),
-	"UInt256": interpreter.NewUInt256ValueFromUint64(50),
+	"UInt":    interpreter.NewUnmeteredUIntValueFromUint64(50),
+	"UInt8":   interpreter.NewUnmeteredUInt8Value(50),
+	"UInt16":  interpreter.NewUnmeteredUInt16Value(50),
+	"UInt32":  interpreter.NewUnmeteredUInt32Value(50),
+	"UInt64":  interpreter.NewUnmeteredUInt64Value(50),
+	"UInt128": interpreter.NewUnmeteredUInt128ValueFromUint64(50),
+	"UInt256": interpreter.NewUnmeteredUInt256ValueFromUint64(50),
 	// Word*
-	"Word8":  interpreter.Word8Value(50),
-	"Word16": interpreter.Word16Value(50),
-	"Word32": interpreter.Word32Value(50),
-	"Word64": interpreter.Word64Value(50),
+	"Word8":  interpreter.NewUnmeteredWord8Value(50),
+	"Word16": interpreter.NewUnmeteredWord16Value(50),
+	"Word32": interpreter.NewUnmeteredWord32Value(50),
+	"Word64": interpreter.NewUnmeteredWord64Value(50),
 }
 
 func init() {
@@ -111,6 +111,75 @@ func TestInterpretIntegerConversions(t *testing.T) {
 				inter.Globals["z"].GetValue(),
 			)
 
+		})
+	}
+}
+
+func TestInterpretWordOverflowConversions(t *testing.T) {
+
+	t.Parallel()
+
+	words := map[string]*big.Int{
+		"Word8":  sema.UInt8TypeMaxInt,
+		"Word16": sema.UInt16TypeMaxInt,
+		"Word32": sema.UInt32TypeMaxInt,
+		"Word64": sema.UInt64TypeMaxInt,
+	}
+
+	for typeName, value := range words {
+
+		t.Run(typeName, func(t *testing.T) {
+
+			inter := parseCheckAndInterpret(t,
+				fmt.Sprintf(
+					`
+                      let x = %s
+                      let y = %s(x + 1)
+                    `,
+					value.String(),
+					typeName,
+				),
+			)
+
+			require.Equal(
+				t,
+				"0",
+				inter.Globals["y"].GetValue().String(),
+			)
+		})
+	}
+}
+
+func TestInterpretWordUnderflowConversions(t *testing.T) {
+
+	t.Parallel()
+
+	words := map[string]*big.Int{
+		"Word8":  sema.UInt8TypeMaxInt,
+		"Word16": sema.UInt16TypeMaxInt,
+		"Word32": sema.UInt32TypeMaxInt,
+		"Word64": sema.UInt64TypeMaxInt,
+	}
+
+	for typeName, value := range words {
+
+		t.Run(typeName, func(t *testing.T) {
+
+			inter := parseCheckAndInterpret(t,
+				fmt.Sprintf(
+					`
+                      let x = 0
+                      let y = %s(x - 1)
+                    `,
+					typeName,
+				),
+			)
+
+			require.Equal(
+				t,
+				value.String(),
+				inter.Globals["y"].GetValue().String(),
+			)
 		})
 	}
 }
@@ -239,7 +308,7 @@ func TestInterpretIntegerLiteralTypeConversionInVariableDeclarationOptional(t *t
 			AssertValuesEqual(
 				t,
 				inter,
-				interpreter.NewSomeValueNonCopying(value),
+				interpreter.NewUnmeteredSomeValueNonCopying(value),
 				inter.Globals["x"].GetValue(),
 			)
 		})
@@ -280,7 +349,7 @@ func TestInterpretIntegerLiteralTypeConversionInAssignment(t *testing.T) {
 			AssertValuesEqual(
 				t,
 				inter,
-				numberValue.Plus(numberValue),
+				numberValue.Plus(inter, numberValue),
 				inter.Globals["x"].GetValue(),
 			)
 		})
@@ -310,7 +379,7 @@ func TestInterpretIntegerLiteralTypeConversionInAssignmentOptional(t *testing.T)
 			AssertValuesEqual(
 				t,
 				inter,
-				interpreter.NewSomeValueNonCopying(value),
+				interpreter.NewUnmeteredSomeValueNonCopying(value),
 				inter.Globals["x"].GetValue(),
 			)
 
@@ -322,8 +391,8 @@ func TestInterpretIntegerLiteralTypeConversionInAssignmentOptional(t *testing.T)
 			AssertValuesEqual(
 				t,
 				inter,
-				interpreter.NewSomeValueNonCopying(
-					numberValue.Plus(numberValue),
+				interpreter.NewUnmeteredSomeValueNonCopying(
+					numberValue.Plus(inter, numberValue),
 				),
 				inter.Globals["x"].GetValue(),
 			)
@@ -384,7 +453,7 @@ func TestInterpretIntegerLiteralTypeConversionInFunctionCallArgumentOptional(t *
 			AssertValuesEqual(
 				t,
 				inter,
-				interpreter.NewSomeValueNonCopying(value),
+				interpreter.NewUnmeteredSomeValueNonCopying(value),
 				inter.Globals["x"].GetValue(),
 			)
 		})
@@ -448,7 +517,7 @@ func TestInterpretIntegerLiteralTypeConversionInReturnOptional(t *testing.T) {
 			AssertValuesEqual(
 				t,
 				inter,
-				interpreter.NewSomeValueNonCopying(value),
+				interpreter.NewUnmeteredSomeValueNonCopying(value),
 				result,
 			)
 		})
@@ -506,112 +575,112 @@ func TestInterpretIntegerConversion(t *testing.T) {
 
 	testValues := map[*sema.NumericType]values{
 		sema.IntType: {
-			fortyTwo: interpreter.NewIntValueFromInt64(42),
+			fortyTwo: interpreter.NewUnmeteredIntValueFromInt64(42),
 			// Int does not actually have a minimum, but create a "large" value,
 			// which can be used for testing against other types
 			min: func() interpreter.Value {
 				i := big.NewInt(-1)
 				i.Lsh(i, 1000)
-				return interpreter.NewIntValueFromBigInt(i)
+				return interpreter.NewUnmeteredIntValueFromBigInt(i)
 			}(),
 			// Int does not actually have a maximum, but create a "large" value,
 			// which can be used for testing against other types
 			max: func() interpreter.Value {
 				i := big.NewInt(1)
 				i.Lsh(i, 1000)
-				return interpreter.NewIntValueFromBigInt(i)
+				return interpreter.NewUnmeteredIntValueFromBigInt(i)
 			}(),
 		},
 		sema.UIntType: {
-			fortyTwo: interpreter.NewUIntValueFromUint64(42),
-			min:      interpreter.NewUIntValueFromUint64(0),
+			fortyTwo: interpreter.NewUnmeteredUIntValueFromUint64(42),
+			min:      interpreter.NewUnmeteredUIntValueFromUint64(0),
 			// UInt does not actually have a maximum, but create a "large" value,
 			// which can be used for testing against other types
 			max: func() interpreter.Value {
 				i := big.NewInt(1)
 				i.Lsh(i, 1000)
-				return interpreter.NewUIntValueFromBigInt(i)
+				return interpreter.NewUnmeteredUIntValueFromBigInt(i)
 			}(),
 		},
 		sema.UInt8Type: {
-			fortyTwo: interpreter.UInt8Value(42),
-			min:      interpreter.UInt8Value(0),
-			max:      interpreter.UInt8Value(math.MaxUint8),
+			fortyTwo: interpreter.NewUnmeteredUInt8Value(42),
+			min:      interpreter.NewUnmeteredUInt8Value(0),
+			max:      interpreter.NewUnmeteredUInt8Value(math.MaxUint8),
 		},
 		sema.UInt16Type: {
-			fortyTwo: interpreter.UInt16Value(42),
-			min:      interpreter.UInt16Value(0),
-			max:      interpreter.UInt16Value(math.MaxUint16),
+			fortyTwo: interpreter.NewUnmeteredUInt16Value(42),
+			min:      interpreter.NewUnmeteredUInt16Value(0),
+			max:      interpreter.NewUnmeteredUInt16Value(math.MaxUint16),
 		},
 		sema.UInt32Type: {
-			fortyTwo: interpreter.UInt32Value(42),
-			min:      interpreter.UInt32Value(0),
-			max:      interpreter.UInt32Value(math.MaxUint32),
+			fortyTwo: interpreter.NewUnmeteredUInt32Value(42),
+			min:      interpreter.NewUnmeteredUInt32Value(0),
+			max:      interpreter.NewUnmeteredUInt32Value(math.MaxUint32),
 		},
 		sema.UInt64Type: {
-			fortyTwo: interpreter.UInt64Value(42),
-			min:      interpreter.UInt64Value(0),
-			max:      interpreter.UInt64Value(math.MaxUint64),
+			fortyTwo: interpreter.NewUnmeteredUInt64Value(42),
+			min:      interpreter.NewUnmeteredUInt64Value(0),
+			max:      interpreter.NewUnmeteredUInt64Value(math.MaxUint64),
 		},
 		sema.UInt128Type: {
-			fortyTwo: interpreter.NewUInt128ValueFromUint64(42),
-			min:      interpreter.NewUInt128ValueFromUint64(0),
-			max:      interpreter.NewUInt128ValueFromBigInt(sema.UInt128TypeMaxIntBig),
+			fortyTwo: interpreter.NewUnmeteredUInt128ValueFromUint64(42),
+			min:      interpreter.NewUnmeteredUInt128ValueFromUint64(0),
+			max:      interpreter.NewUnmeteredUInt128ValueFromBigInt(sema.UInt128TypeMaxIntBig),
 		},
 		sema.UInt256Type: {
-			fortyTwo: interpreter.NewUInt256ValueFromUint64(42),
-			min:      interpreter.NewUInt256ValueFromUint64(0),
-			max:      interpreter.NewUInt256ValueFromBigInt(sema.UInt256TypeMaxIntBig),
+			fortyTwo: interpreter.NewUnmeteredUInt256ValueFromUint64(42),
+			min:      interpreter.NewUnmeteredUInt256ValueFromUint64(0),
+			max:      interpreter.NewUnmeteredUInt256ValueFromBigInt(sema.UInt256TypeMaxIntBig),
 		},
 		sema.Word8Type: {
-			fortyTwo: interpreter.Word8Value(42),
-			min:      interpreter.Word8Value(0),
-			max:      interpreter.Word8Value(math.MaxUint8),
+			fortyTwo: interpreter.NewUnmeteredWord8Value(42),
+			min:      interpreter.NewUnmeteredWord8Value(0),
+			max:      interpreter.NewUnmeteredWord8Value(math.MaxUint8),
 		},
 		sema.Word16Type: {
-			fortyTwo: interpreter.Word16Value(42),
-			min:      interpreter.Word16Value(0),
-			max:      interpreter.Word16Value(math.MaxUint16),
+			fortyTwo: interpreter.NewUnmeteredWord16Value(42),
+			min:      interpreter.NewUnmeteredWord16Value(0),
+			max:      interpreter.NewUnmeteredWord16Value(math.MaxUint16),
 		},
 		sema.Word32Type: {
-			fortyTwo: interpreter.Word32Value(42),
-			min:      interpreter.Word32Value(0),
-			max:      interpreter.Word32Value(math.MaxUint32),
+			fortyTwo: interpreter.NewUnmeteredWord32Value(42),
+			min:      interpreter.NewUnmeteredWord32Value(0),
+			max:      interpreter.NewUnmeteredWord32Value(math.MaxUint32),
 		},
 		sema.Word64Type: {
-			fortyTwo: interpreter.Word64Value(42),
-			min:      interpreter.Word64Value(0),
-			max:      interpreter.Word64Value(math.MaxUint64),
+			fortyTwo: interpreter.NewUnmeteredWord64Value(42),
+			min:      interpreter.NewUnmeteredWord64Value(0),
+			max:      interpreter.NewUnmeteredWord64Value(math.MaxUint64),
 		},
 		sema.Int8Type: {
-			fortyTwo: interpreter.Int8Value(42),
-			min:      interpreter.Int8Value(math.MinInt8),
-			max:      interpreter.Int8Value(math.MaxInt8),
+			fortyTwo: interpreter.NewUnmeteredInt8Value(42),
+			min:      interpreter.NewUnmeteredInt8Value(math.MinInt8),
+			max:      interpreter.NewUnmeteredInt8Value(math.MaxInt8),
 		},
 		sema.Int16Type: {
-			fortyTwo: interpreter.Int16Value(42),
-			min:      interpreter.Int16Value(math.MinInt16),
-			max:      interpreter.Int16Value(math.MaxInt16),
+			fortyTwo: interpreter.NewUnmeteredInt16Value(42),
+			min:      interpreter.NewUnmeteredInt16Value(math.MinInt16),
+			max:      interpreter.NewUnmeteredInt16Value(math.MaxInt16),
 		},
 		sema.Int32Type: {
-			fortyTwo: interpreter.Int32Value(42),
-			min:      interpreter.Int32Value(math.MinInt32),
-			max:      interpreter.Int32Value(math.MaxInt32),
+			fortyTwo: interpreter.NewUnmeteredInt32Value(42),
+			min:      interpreter.NewUnmeteredInt32Value(math.MinInt32),
+			max:      interpreter.NewUnmeteredInt32Value(math.MaxInt32),
 		},
 		sema.Int64Type: {
-			fortyTwo: interpreter.Int64Value(42),
-			min:      interpreter.Int64Value(math.MinInt64),
-			max:      interpreter.Int64Value(math.MaxInt64),
+			fortyTwo: interpreter.NewUnmeteredInt64Value(42),
+			min:      interpreter.NewUnmeteredInt64Value(math.MinInt64),
+			max:      interpreter.NewUnmeteredInt64Value(math.MaxInt64),
 		},
 		sema.Int128Type: {
-			fortyTwo: interpreter.NewInt128ValueFromInt64(42),
-			min:      interpreter.NewInt128ValueFromBigInt(sema.Int128TypeMinIntBig),
-			max:      interpreter.NewInt128ValueFromBigInt(sema.Int128TypeMaxIntBig),
+			fortyTwo: interpreter.NewUnmeteredInt128ValueFromInt64(42),
+			min:      interpreter.NewUnmeteredInt128ValueFromBigInt(sema.Int128TypeMinIntBig),
+			max:      interpreter.NewUnmeteredInt128ValueFromBigInt(sema.Int128TypeMaxIntBig),
 		},
 		sema.Int256Type: {
-			fortyTwo: interpreter.NewInt256ValueFromInt64(42),
-			min:      interpreter.NewInt256ValueFromBigInt(sema.Int256TypeMinIntBig),
-			max:      interpreter.NewInt256ValueFromBigInt(sema.Int256TypeMaxIntBig),
+			fortyTwo: interpreter.NewUnmeteredInt256ValueFromInt64(42),
+			min:      interpreter.NewUnmeteredInt256ValueFromBigInt(sema.Int256TypeMinIntBig),
+			max:      interpreter.NewUnmeteredInt256ValueFromBigInt(sema.Int256TypeMaxIntBig),
 		},
 	}
 
@@ -637,9 +706,17 @@ func TestInterpretIntegerConversion(t *testing.T) {
 				sourceMinInt := sourceType.MinInt()
 
 				if targetMinInt != nil && (sourceMinInt == nil || sourceMinInt.Cmp(targetMinInt) < 0) {
-					t.Run("underflow", func(t *testing.T) {
-						test(t, sourceType, targetType, sourceValues.min, nil, interpreter.UnderflowError{})
-					})
+					// words wrap instead of underflow
+					switch targetType {
+					case sema.Word8Type,
+						sema.Word16Type,
+						sema.Word32Type,
+						sema.Word64Type:
+					default:
+						t.Run("underflow", func(t *testing.T) {
+							test(t, sourceType, targetType, sourceValues.min, nil, interpreter.UnderflowError{})
+						})
+					}
 				}
 
 				// Check a "typical" value can be converted
@@ -654,9 +731,17 @@ func TestInterpretIntegerConversion(t *testing.T) {
 				sourceMaxInt := sourceType.MaxInt()
 
 				if targetMaxInt != nil && (sourceMaxInt == nil || sourceMaxInt.Cmp(targetMaxInt) > 0) {
-					t.Run("overflow", func(t *testing.T) {
-						test(t, sourceType, targetType, sourceValues.max, nil, interpreter.OverflowError{})
-					})
+					// words wrap instead of overflow
+					switch targetType {
+					case sema.Word8Type,
+						sema.Word16Type,
+						sema.Word32Type,
+						sema.Word64Type:
+					default:
+						t.Run("overflow", func(t *testing.T) {
+							test(t, sourceType, targetType, sourceValues.max, nil, interpreter.OverflowError{})
+						})
+					}
 				}
 
 				// Check the maximum value can be converted.
@@ -705,71 +790,71 @@ func TestInterpretIntegerMinMax(t *testing.T) {
 	testCases := map[sema.Type]testCase{
 		sema.IntType: {},
 		sema.UIntType: {
-			min: interpreter.NewUIntValueFromUint64(0),
+			min: interpreter.NewUnmeteredUIntValueFromUint64(0),
 		},
 		sema.UInt8Type: {
-			min: interpreter.UInt8Value(0),
-			max: interpreter.UInt8Value(math.MaxUint8),
+			min: interpreter.NewUnmeteredUInt8Value(0),
+			max: interpreter.NewUnmeteredUInt8Value(math.MaxUint8),
 		},
 		sema.UInt16Type: {
-			min: interpreter.UInt16Value(0),
-			max: interpreter.UInt16Value(math.MaxUint16),
+			min: interpreter.NewUnmeteredUInt16Value(0),
+			max: interpreter.NewUnmeteredUInt16Value(math.MaxUint16),
 		},
 		sema.UInt32Type: {
-			min: interpreter.UInt32Value(0),
-			max: interpreter.UInt32Value(math.MaxUint32),
+			min: interpreter.NewUnmeteredUInt32Value(0),
+			max: interpreter.NewUnmeteredUInt32Value(math.MaxUint32),
 		},
 		sema.UInt64Type: {
-			min: interpreter.UInt64Value(0),
-			max: interpreter.UInt64Value(math.MaxUint64),
+			min: interpreter.NewUnmeteredUInt64Value(0),
+			max: interpreter.NewUnmeteredUInt64Value(math.MaxUint64),
 		},
 		sema.UInt128Type: {
-			min: interpreter.NewUInt128ValueFromUint64(0),
-			max: interpreter.NewUInt128ValueFromBigInt(sema.UInt128TypeMaxIntBig),
+			min: interpreter.NewUnmeteredUInt128ValueFromUint64(0),
+			max: interpreter.NewUnmeteredUInt128ValueFromBigInt(sema.UInt128TypeMaxIntBig),
 		},
 		sema.UInt256Type: {
-			min: interpreter.NewUInt256ValueFromUint64(0),
-			max: interpreter.NewUInt256ValueFromBigInt(sema.UInt256TypeMaxIntBig),
+			min: interpreter.NewUnmeteredUInt256ValueFromUint64(0),
+			max: interpreter.NewUnmeteredUInt256ValueFromBigInt(sema.UInt256TypeMaxIntBig),
 		},
 		sema.Word8Type: {
-			min: interpreter.Word8Value(0),
-			max: interpreter.Word8Value(math.MaxUint8),
+			min: interpreter.NewUnmeteredWord8Value(0),
+			max: interpreter.NewUnmeteredWord8Value(math.MaxUint8),
 		},
 		sema.Word16Type: {
-			min: interpreter.Word16Value(0),
-			max: interpreter.Word16Value(math.MaxUint16),
+			min: interpreter.NewUnmeteredWord16Value(0),
+			max: interpreter.NewUnmeteredWord16Value(math.MaxUint16),
 		},
 		sema.Word32Type: {
-			min: interpreter.Word32Value(0),
-			max: interpreter.Word32Value(math.MaxUint32),
+			min: interpreter.NewUnmeteredWord32Value(0),
+			max: interpreter.NewUnmeteredWord32Value(math.MaxUint32),
 		},
 		sema.Word64Type: {
-			min: interpreter.Word64Value(0),
-			max: interpreter.Word64Value(math.MaxUint64),
+			min: interpreter.NewUnmeteredWord64Value(0),
+			max: interpreter.NewUnmeteredWord64Value(math.MaxUint64),
 		},
 		sema.Int8Type: {
-			min: interpreter.Int8Value(math.MinInt8),
-			max: interpreter.Int8Value(math.MaxInt8),
+			min: interpreter.NewUnmeteredInt8Value(math.MinInt8),
+			max: interpreter.NewUnmeteredInt8Value(math.MaxInt8),
 		},
 		sema.Int16Type: {
-			min: interpreter.Int16Value(math.MinInt16),
-			max: interpreter.Int16Value(math.MaxInt16),
+			min: interpreter.NewUnmeteredInt16Value(math.MinInt16),
+			max: interpreter.NewUnmeteredInt16Value(math.MaxInt16),
 		},
 		sema.Int32Type: {
-			min: interpreter.Int32Value(math.MinInt32),
-			max: interpreter.Int32Value(math.MaxInt32),
+			min: interpreter.NewUnmeteredInt32Value(math.MinInt32),
+			max: interpreter.NewUnmeteredInt32Value(math.MaxInt32),
 		},
 		sema.Int64Type: {
-			min: interpreter.Int64Value(math.MinInt64),
-			max: interpreter.Int64Value(math.MaxInt64),
+			min: interpreter.NewUnmeteredInt64Value(math.MinInt64),
+			max: interpreter.NewUnmeteredInt64Value(math.MaxInt64),
 		},
 		sema.Int128Type: {
-			min: interpreter.NewInt128ValueFromBigInt(sema.Int128TypeMinIntBig),
-			max: interpreter.NewInt128ValueFromBigInt(sema.Int128TypeMaxIntBig),
+			min: interpreter.NewUnmeteredInt128ValueFromBigInt(sema.Int128TypeMinIntBig),
+			max: interpreter.NewUnmeteredInt128ValueFromBigInt(sema.Int128TypeMaxIntBig),
 		},
 		sema.Int256Type: {
-			min: interpreter.NewInt256ValueFromBigInt(sema.Int256TypeMinIntBig),
-			max: interpreter.NewInt256ValueFromBigInt(sema.Int256TypeMaxIntBig),
+			min: interpreter.NewUnmeteredInt256ValueFromBigInt(sema.Int256TypeMinIntBig),
+			max: interpreter.NewUnmeteredInt256ValueFromBigInt(sema.Int256TypeMaxIntBig),
 		},
 	}
 

@@ -74,7 +74,7 @@ func parseTransactionDeclaration(p *parser, docString string) *ast.TransactionDe
 
 		switch p.current.Value {
 		case keywordPrepare:
-			identifier := tokenToIdentifier(p.current)
+			identifier := p.tokenToIdentifier(p.current)
 			// Skip the `prepare` keyword
 			p.next()
 			prepare = parseSpecialFunctionDeclaration(p, false, ast.AccessNotSpecified, nil, identifier)
@@ -157,19 +157,21 @@ func parseTransactionDeclaration(p *parser, docString string) *ast.TransactionDe
 		}
 	}
 
-	return &ast.TransactionDeclaration{
-		ParameterList:  parameterList,
-		Fields:         fields,
-		Prepare:        prepare,
-		PreConditions:  preConditions,
-		PostConditions: postConditions,
-		Execute:        execute,
-		DocString:      docString,
-		Range: ast.Range{
-			StartPos: startPos,
-			EndPos:   endPos,
-		},
-	}
+	return ast.NewTransactionDeclaration(
+		p.memoryGauge,
+		parameterList,
+		fields,
+		prepare,
+		preConditions,
+		postConditions,
+		execute,
+		docString,
+		ast.NewRange(
+			p.memoryGauge,
+			startPos,
+			endPos,
+		),
+	)
 }
 
 func parseTransactionFields(p *parser) (fields []*ast.FieldDeclaration) {
@@ -207,7 +209,7 @@ func parseTransactionFields(p *parser) (fields []*ast.FieldDeclaration) {
 }
 
 func parseTransactionExecute(p *parser) *ast.SpecialFunctionDeclaration {
-	identifier := tokenToIdentifier(p.current)
+	identifier := p.tokenToIdentifier(p.current)
 
 	// Skip the `execute` keyword
 	p.next()
@@ -215,16 +217,23 @@ func parseTransactionExecute(p *parser) *ast.SpecialFunctionDeclaration {
 
 	block := parseBlock(p)
 
-	return &ast.SpecialFunctionDeclaration{
-		Kind: common.DeclarationKindExecute,
-		FunctionDeclaration: &ast.FunctionDeclaration{
-			Access:        ast.AccessNotSpecified,
-			Identifier:    identifier,
-			ParameterList: &ast.ParameterList{},
-			FunctionBlock: &ast.FunctionBlock{
-				Block: block,
-			},
-			StartPos: identifier.Pos,
-		},
-	}
+	return ast.NewSpecialFunctionDeclaration(
+		p.memoryGauge,
+		common.DeclarationKindExecute,
+		ast.NewFunctionDeclaration(
+			p.memoryGauge,
+			ast.AccessNotSpecified,
+			identifier,
+			nil,
+			nil,
+			ast.NewFunctionBlock(
+				p.memoryGauge,
+				block,
+				nil,
+				nil,
+			),
+			identifier.Pos,
+			"",
+		),
+	)
 }

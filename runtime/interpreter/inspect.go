@@ -20,7 +20,7 @@ package interpreter
 
 type valueInspector func(Value) bool
 
-func (f valueInspector) WalkValue(value Value) ValueWalker {
+func (f valueInspector) WalkValue(_ *Interpreter, value Value) ValueWalker {
 	if f(value) {
 		return f
 	}
@@ -28,6 +28,6 @@ func (f valueInspector) WalkValue(value Value) ValueWalker {
 	return nil
 }
 
-func InspectValue(value Value, f func(Value) bool) {
-	WalkValue(valueInspector(f), value)
+func InspectValue(interpreter *Interpreter, value Value, f func(Value) bool) {
+	WalkValue(interpreter, valueInspector(f), value)
 }

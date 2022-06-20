@@ -228,7 +228,7 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewStringValue("[Int]"),
+			interpreter.NewUnmeteredStringValue("[Int]"),
 			inter.Globals["identifier"].GetValue(),
 		)
 	})
@@ -247,7 +247,7 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewStringValue("S.test.S"),
+			interpreter.NewUnmeteredStringValue("S.test.S"),
 			inter.Globals["identifier"].GetValue(),
 		)
 	})
@@ -290,7 +290,7 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewStringValue(""),
+			interpreter.NewUnmeteredStringValue(""),
 			inter.Globals["identifier"].GetValue(),
 		)
 	})
@@ -612,7 +612,7 @@ func TestInterpretGetType(t *testing.T) {
               }
             `,
 			result: interpreter.TypeValue{
-				Type: interpreter.NewCompositeStaticType(TestLocation, "R"),
+				Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, TestLocation, "R"),
 			},
 		},
 		{
@@ -693,7 +693,7 @@ func TestInterpretGetType(t *testing.T) {
 					{
 						Name: "getStorageReference",
 						Type: getStorageReferenceFunctionType,
-						Function: interpreter.NewHostFunctionValue(
+						Function: interpreter.NewUnmeteredHostFunctionValue(
 							func(invocation interpreter.Invocation) interpreter.Value {
 
 								return &interpreter.StorageReferenceValue{
@@ -711,7 +711,7 @@ func TestInterpretGetType(t *testing.T) {
 			valueDeclarations := standardLibraryFunctions.ToSemaValueDeclarations()
 			values := standardLibraryFunctions.ToInterpreterValueDeclarations()
 
-			storage := interpreter.NewInMemoryStorage()
+			storage := newUnmeteredInMemoryStorage()
 
 			inter, err := parseCheckAndInterpretWithOptions(t,
 				testCase.code,
@@ -731,7 +731,7 @@ func TestInterpretGetType(t *testing.T) {
 			storageMap.WriteValue(
 				inter,
 				storagePath.Identifier,
-				interpreter.NewIntValueFromInt64(2),
+				interpreter.NewUnmeteredIntValueFromInt64(2),
 			)
 
 			result, err := inter.Invoke("test")

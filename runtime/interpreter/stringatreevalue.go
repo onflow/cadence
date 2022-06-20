@@ -20,6 +20,8 @@ package interpreter
 
 import (
 	"github.com/onflow/atree"
+
+	"github.com/onflow/cadence/runtime/common"
 )
 
 type StringAtreeValue string
@@ -36,6 +38,11 @@ func (v StringAtreeValue) Storable(
 	error,
 ) {
 	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
+}
+
+func NewStringAtreeValue(gauge common.MemoryGauge, s string) StringAtreeValue {
+	common.UseMemory(gauge, common.NewRawStringMemoryUsage(len(s)))
+	return StringAtreeValue(s)
 }
 
 func (v StringAtreeValue) ByteSize() uint32 {

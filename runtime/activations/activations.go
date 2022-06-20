@@ -20,6 +20,8 @@ package activations
 
 import (
 	"github.com/cheekybits/genny/generic"
+
+	"github.com/onflow/cadence/runtime/common"
 )
 
 type ValueType generic.Type
@@ -30,20 +32,25 @@ type ValueType generic.Type
 // or as an activation record during interpretation or compilation.
 //
 type ValueTypeActivation struct {
-	entries    map[string]ValueType
-	Depth      int
-	Parent     *ValueTypeActivation
-	isFunction bool
+	entries     map[string]ValueType
+	Depth       int
+	Parent      *ValueTypeActivation
+	isFunction  bool
+	memoryGauge common.MemoryGauge
 }
 
-func NewValueTypeActivation(parent *ValueTypeActivation) *ValueTypeActivation {
+func NewValueTypeActivation(memoryGauge common.MemoryGauge, parent *ValueTypeActivation) *ValueTypeActivation {
 	var depth int
 	if parent != nil {
 		depth = parent.Depth + 1
 	}
+
+	common.UseMemory(memoryGauge, common.ActivationMemoryUsage)
+
 	return &ValueTypeActivation{
-		Depth:  depth,
-		Parent: parent,
+		Depth:       depth,
+		Parent:      parent,
+		memoryGauge: memoryGauge,
 	}
 }
 
@@ -101,6 +108,7 @@ func (a *ValueTypeActivation) FunctionValues() map[string]ValueType {
 //
 func (a *ValueTypeActivation) Set(name string, value ValueType) {
 	if a.entries == nil {
+		common.UseMemory(a.memoryGauge, common.ActivationEntriesMemoryUsage)
 		a.entries = make(map[string]ValueType)
 	}
 
@@ -115,6 +123,16 @@ func (a *ValueTypeActivation) Set(name string, value ValueType) {
 //
 type ValueTypeActivations struct {
 	activations []*ValueTypeActivation
+	memoryGauge common.MemoryGauge
+}
+
+func NewValueTypeActivations(memoryGauge common.MemoryGauge) *ValueTypeActivations {
+	// No need to meter since activations list is created only once per execution.
+	// However, memory gauge is needed here for caching, and using it
+	// later to meter each activation and activation entries initialization.
+	return &ValueTypeActivations{
+		memoryGauge: memoryGauge,
+	}
 }
 
 // Current returns the current / most nested activation,
@@ -158,7 +176,7 @@ func (a *ValueTypeActivations) Set(name string, value ValueType) {
 // The new activation has the given parent as its parent.
 //
 func (a *ValueTypeActivations) PushNewWithParent(parent *ValueTypeActivation) *ValueTypeActivation {
-	activation := NewValueTypeActivation(parent)
+	activation := NewValueTypeActivation(a.memoryGauge, parent)
 	a.Push(activation)
 	return activation
 }
@@ -200,7 +218,7 @@ func (a *ValueTypeActivations) Pop() {
 func (a *ValueTypeActivations) CurrentOrNew() *ValueTypeActivation {
 	current := a.Current()
 	if current == nil {
-		return NewValueTypeActivation(nil)
+		return NewValueTypeActivation(a.memoryGauge, nil)
 	}
 
 	return current

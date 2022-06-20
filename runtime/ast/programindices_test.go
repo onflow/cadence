@@ -114,6 +114,7 @@ func TestProgramIndices(t *testing.T) {
 	}
 
 	program := NewProgram(
+		nil,
 		[]Declaration{
 			importB,
 			pragmaA,

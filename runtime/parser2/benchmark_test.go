@@ -25,6 +25,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/onflow/cadence/runtime/common"
 )
 
 func BenchmarkParseDeploy(b *testing.B) {
@@ -52,7 +54,7 @@ func BenchmarkParseDeploy(b *testing.B) {
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
-			_, err := ParseProgram(transaction)
+			_, err := ParseProgram(transaction, nil)
 			if err != nil {
 				b.FailNow()
 			}
@@ -79,7 +81,7 @@ func BenchmarkParseDeploy(b *testing.B) {
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
-			_, err := ParseProgram(transaction)
+			_, err := ParseProgram(transaction, nil)
 			if err != nil {
 				b.FailNow()
 			}
@@ -185,12 +187,42 @@ pub contract FungibleToken {
 }
 `
 
+type testMemoryGauge struct {
+	meter map[common.MemoryKind]uint64
+}
+
+func (g *testMemoryGauge) MeterMemory(usage common.MemoryUsage) error {
+	g.meter[usage.Kind] += usage.Amount
+	return nil
+}
+
 func BenchmarkParseFungibleToken(b *testing.B) {
 
-	for i := 0; i < b.N; i++ {
-		_, err := ParseProgram(fungibleTokenContract)
-		if err != nil {
-			b.Fatal(err)
+	b.Run("Without memory metering", func(b *testing.B) {
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			_, err := ParseProgram(fungibleTokenContract, nil)
+			if err != nil {
+				b.Fatal(err)
+			}
 		}
-	}
+	})
+
+	b.Run("With memory metering", func(b *testing.B) {
+		meter := &testMemoryGauge{
+			meter: make(map[common.MemoryKind]uint64),
+		}
+
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			_, err := ParseProgram(fungibleTokenContract, meter)
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
 }

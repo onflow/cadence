@@ -35,6 +35,10 @@ func (checker *Checker) VisitFunctionDeclaration(declaration *ast.FunctionDeclar
 	)
 }
 
+func (checker *Checker) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunctionDeclaration) ast.Repr {
+	return checker.VisitFunctionDeclaration(declaration.FunctionDeclaration)
+}
+
 type functionDeclarationOptions struct {
 	// mustExit specifies if the function declaration's function block
 	// should be checked for containing proper return statements.
@@ -152,7 +156,7 @@ func (checker *Checker) checkFunction(
 			//   variable declarations will have proper function activation
 			//   associated to it, and declare parameters in this new scope
 
-			var endPosGetter func() ast.Position
+			var endPosGetter EndPositionGetter
 			if functionBlock != nil {
 				endPosGetter = functionBlock.EndPosition
 			}
@@ -189,7 +193,7 @@ func (checker *Checker) checkFunction(
 
 	if checker.positionInfoEnabled && functionBlock != nil {
 		startPos := functionBlock.StartPosition()
-		endPos := functionBlock.EndPosition()
+		endPos := functionBlock.EndPosition(checker.memoryGauge)
 
 		for _, parameter := range functionType.Parameters {
 			checker.Ranges.Put(
@@ -227,7 +231,7 @@ func (checker *Checker) checkFunctionExits(functionBlock *ast.FunctionBlock, ret
 
 	checker.report(
 		&MissingReturnStatementError{
-			Range: ast.NewRangeFromPositioned(functionBlock),
+			Range: ast.NewRangeFromPositioned(checker.memoryGauge, functionBlock),
 		},
 	)
 }
@@ -438,7 +442,7 @@ func (checker *Checker) VisitFunctionExpression(expression *ast.FunctionExpressi
 	if checker.inCondition {
 		checker.report(
 			&FunctionExpressionInConditionError{
-				Range: ast.NewRangeFromPositioned(expression),
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, expression),
 			},
 		)
 	}

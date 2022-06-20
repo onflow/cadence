@@ -310,7 +310,7 @@ func (checker *Checker) declareNestedDeclarations(
 				&InvalidNestedDeclarationError{
 					NestedDeclarationKind:    nestedDeclarationKind,
 					ContainerDeclarationKind: containerDeclarationKind,
-					Range:                    ast.NewRangeFromPositioned(identifier),
+					Range:                    ast.NewRangeFromPositioned(checker.memoryGauge, identifier),
 				},
 			)
 		}
@@ -358,7 +358,7 @@ func (checker *Checker) declareNestedDeclarations(
 					&InvalidNestedDeclarationError{
 						NestedDeclarationKind:    nestedDeclarationKind,
 						ContainerDeclarationKind: containerDeclarationKind,
-						Range:                    ast.NewRangeFromPositioned(identifier),
+						Range:                    ast.NewRangeFromPositioned(checker.memoryGauge, identifier),
 					},
 				)
 			}
@@ -567,6 +567,7 @@ func (checker *Checker) declareCompositeMembersAndValue(
 					TypeAnnotation:        NewTypeAnnotation(nestedCompositeDeclarationVariable.Type),
 					DeclarationKind:       nestedCompositeDeclarationVariable.DeclarationKind,
 					VariableKind:          ast.VariableKindConstant,
+					ArgumentLabels:        nestedCompositeDeclarationVariable.ArgumentLabels,
 					IgnoreInSerialization: true,
 					DocString:             nestedCompositeDeclaration.DocString,
 				})
@@ -910,7 +911,7 @@ func (checker *Checker) initializerParameters(initializers []*ast.SpecialFunctio
 			checker.report(
 				&UnsupportedOverloadingError{
 					DeclarationKind: common.DeclarationKindInitializer,
-					Range:           ast.NewRangeFromPositioned(secondInitializer),
+					Range:           ast.NewRangeFromPositioned(checker.memoryGauge, secondInitializer),
 				},
 			)
 		}
@@ -937,7 +938,7 @@ func (checker *Checker) explicitInterfaceConformances(
 					&DuplicateConformanceError{
 						CompositeType: compositeType,
 						InterfaceType: interfaceType,
-						Range:         ast.NewRangeFromPositioned(conformance.Identifier),
+						Range:         ast.NewRangeFromPositioned(checker.memoryGauge, conformance.Identifier),
 					},
 				)
 			}
@@ -948,7 +949,7 @@ func (checker *Checker) explicitInterfaceConformances(
 			checker.report(
 				&InvalidConformanceError{
 					Type:  convertedType,
-					Range: ast.NewRangeFromPositioned(conformance),
+					Range: ast.NewRangeFromPositioned(checker.memoryGauge, conformance),
 				},
 			)
 		}
@@ -966,7 +967,7 @@ func (checker *Checker) enumRawType(declaration *ast.CompositeDeclaration) Type 
 	if conformanceCount == 0 {
 		checker.report(
 			&MissingEnumRawTypeError{
-				Pos: declaration.Identifier.EndPosition().Shifted(1),
+				Pos: declaration.Identifier.EndPosition(checker.memoryGauge).Shifted(checker.memoryGauge, 1),
 			},
 		)
 
@@ -982,10 +983,11 @@ func (checker *Checker) enumRawType(declaration *ast.CompositeDeclaration) Type 
 
 		checker.report(
 			&InvalidEnumConformancesError{
-				Range: ast.Range{
-					StartPos: secondConformance.StartPosition(),
-					EndPos:   lastConformance.EndPosition(),
-				},
+				Range: ast.NewRange(
+					checker.memoryGauge,
+					secondConformance.StartPosition(),
+					lastConformance.EndPosition(checker.memoryGauge),
+				),
 			},
 		)
 
@@ -1005,7 +1007,7 @@ func (checker *Checker) enumRawType(declaration *ast.CompositeDeclaration) Type 
 		checker.report(
 			&InvalidEnumRawTypeError{
 				Type:  rawType,
-				Range: ast.NewRangeFromPositioned(conformance),
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, conformance),
 			},
 		)
 	}
@@ -1053,7 +1055,7 @@ func (checker *Checker) checkCompositeConformance(
 			&CompositeKindMismatchError{
 				ExpectedKind: compositeType.Kind,
 				ActualKind:   interfaceType.CompositeKind,
-				Range:        ast.NewRangeFromPositioned(compositeKindMismatchIdentifier),
+				Range:        ast.NewRangeFromPositioned(checker.memoryGauge, compositeKindMismatchIdentifier),
 			},
 		)
 	}
@@ -1315,7 +1317,7 @@ func (checker *Checker) checkTypeRequirement(
 			nestedInterfaceIdentifier := nestedInterfaceDeclaration.Identifier.Identifier
 			if nestedInterfaceIdentifier == declaredInterfaceType.Identifier {
 				foundInterfaceDeclaration = true
-				errorRange = ast.NewRangeFromPositioned(nestedInterfaceDeclaration.Identifier)
+				errorRange = ast.NewRangeFromPositioned(checker.memoryGauge, nestedInterfaceDeclaration.Identifier)
 				break
 			}
 		}
@@ -1393,7 +1395,7 @@ func (checker *Checker) checkTypeRequirement(
 				&MissingConformanceError{
 					CompositeType: declaredCompositeType,
 					InterfaceType: requiredConformance,
-					Range:         ast.NewRangeFromPositioned(compositeDeclaration.Identifier),
+					Range:         ast.NewRangeFromPositioned(checker.memoryGauge, compositeDeclaration.Identifier),
 				},
 			)
 		}
@@ -1477,7 +1479,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 		checker.report(
 			&InvalidEnumCaseError{
 				ContainerDeclarationKind: containerDeclarationKind,
-				Range:                    ast.NewRangeFromPositioned(enumCases[0]),
+				Range:                    ast.NewRangeFromPositioned(checker.memoryGauge, enumCases[0]),
 			},
 		)
 	}
@@ -1514,7 +1516,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 			&InvalidDeclarationError{
 				Identifier: identifier.Identifier,
 				Kind:       declaration.DeclarationKind(),
-				Range:      ast.NewRangeFromPositioned(identifier),
+				Range:      ast.NewRangeFromPositioned(checker.memoryGauge, identifier),
 			},
 		)
 
@@ -1579,7 +1581,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 			checker.report(
 				&InvalidVariableKindError{
 					Kind:  field.VariableKind,
-					Range: ast.NewRangeFromPositioned(field.Identifier),
+					Range: ast.NewRangeFromPositioned(checker.memoryGauge, field.Identifier),
 				},
 			)
 		}
@@ -1710,7 +1712,7 @@ func (checker *Checker) enumMembersAndOrigins(
 			checker.report(
 				&InvalidNonEnumCaseError{
 					ContainerDeclarationKind: containerDeclarationKind,
-					Range:                    ast.NewRangeFromPositioned(declaration),
+					Range:                    ast.NewRangeFromPositioned(checker.memoryGauge, declaration),
 				},
 			)
 			continue
@@ -1740,9 +1742,11 @@ func (checker *Checker) enumMembersAndOrigins(
 		&Member{
 			ContainerType: containerType,
 			Access:        ast.AccessPublic,
-			Identifier: ast.Identifier{
-				Identifier: EnumRawValueFieldName,
-			},
+			Identifier: ast.NewIdentifier(
+				checker.memoryGauge,
+				EnumRawValueFieldName,
+				ast.EmptyPosition,
+			),
 			DeclarationKind: common.DeclarationKindField,
 			TypeAnnotation:  NewTypeAnnotation(containerType.EnumRawType),
 			VariableKind:    ast.VariableKindConstant,
@@ -1888,7 +1892,7 @@ func (checker *Checker) checkSpecialFunction(
 
 			checker.report(
 				&MissingFunctionBodyError{
-					Pos: specialFunction.EndPosition(),
+					Pos: specialFunction.EndPosition(checker.memoryGauge),
 				},
 			)
 		}
@@ -1924,7 +1928,7 @@ func (checker *Checker) checkCompositeFunctions(
 		if function.FunctionBlock == nil {
 			checker.report(
 				&MissingFunctionBodyError{
-					Pos: function.EndPosition(),
+					Pos: function.EndPosition(checker.memoryGauge),
 				},
 			)
 		}
@@ -2069,7 +2073,7 @@ func (checker *Checker) checkDestructors(
 
 			checker.report(
 				&InvalidDestructorError{
-					Range: ast.NewRangeFromPositioned(firstDestructor.FunctionDeclaration.Identifier),
+					Range: ast.NewRangeFromPositioned(checker.memoryGauge, firstDestructor.FunctionDeclaration.Identifier),
 				},
 			)
 		}
@@ -2099,7 +2103,7 @@ func (checker *Checker) checkDestructors(
 		checker.report(
 			&UnsupportedOverloadingError{
 				DeclarationKind: common.DeclarationKindDestructor,
-				Range:           ast.NewRangeFromPositioned(secondDestructor),
+				Range:           ast.NewRangeFromPositioned(checker.memoryGauge, secondDestructor),
 			},
 		)
 	}
@@ -2153,7 +2157,7 @@ func (checker *Checker) checkDestructor(
 	if len(destructor.FunctionDeclaration.ParameterList.Parameters) != 0 {
 		checker.report(
 			&InvalidDestructorParametersError{
-				Range: ast.NewRangeFromPositioned(destructor.FunctionDeclaration.ParameterList),
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, destructor.FunctionDeclaration.ParameterList),
 			},
 		)
 	}
@@ -2215,7 +2219,7 @@ func (checker *Checker) checkResourceFieldsInvalidated(containerType Type, membe
 // checkResourceUseAfterInvalidation checks if a resource (variable or composite member)
 // is used after it was previously invalidated (moved or destroyed)
 //
-func (checker *Checker) checkResourceUseAfterInvalidation(resource interface{}, usePosition ast.HasPosition) {
+func (checker *Checker) checkResourceUseAfterInvalidation(resource any, usePosition ast.HasPosition) {
 	resourceInfo := checker.resources.Get(resource)
 	if resourceInfo.Invalidations.Size() == 0 {
 		return
@@ -2224,7 +2228,7 @@ func (checker *Checker) checkResourceUseAfterInvalidation(resource interface{}, 
 	checker.report(
 		&ResourceUseAfterInvalidationError{
 			StartPos:      usePosition.StartPosition(),
-			EndPos:        usePosition.EndPosition(),
+			EndPos:        usePosition.EndPosition(checker.memoryGauge),
 			Invalidations: resourceInfo.Invalidations.All(),
 		},
 	)

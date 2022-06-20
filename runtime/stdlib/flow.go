@@ -198,7 +198,10 @@ func DefaultFlowBuiltinImpls() FlowBuiltinImpls {
 			panic(fmt.Errorf("cannot get blocks"))
 		},
 		UnsafeRandom: func(invocation interpreter.Invocation) interpreter.Value {
-			return interpreter.UInt64Value(rand.Uint64())
+			return interpreter.NewUInt64Value(
+				invocation.Interpreter,
+				rand.Uint64,
+			)
 		},
 	}
 }
@@ -213,8 +216,16 @@ func (l FlowLocation) ID() common.LocationID {
 	return common.NewLocationID(FlowLocationPrefix)
 }
 
-func (l FlowLocation) TypeID(qualifiedIdentifier string) common.TypeID {
-	return common.NewTypeID(
+func (l FlowLocation) MeteredID(memoryGauge common.MemoryGauge) common.LocationID {
+	return common.NewMeteredLocationID(
+		memoryGauge,
+		FlowLocationPrefix,
+	)
+}
+
+func (l FlowLocation) TypeID(memoryGauge common.MemoryGauge, qualifiedIdentifier string) common.TypeID {
+	return common.NewMeteredTypeID(
+		memoryGauge,
 		FlowLocationPrefix,
 		qualifiedIdentifier,
 	)
@@ -245,7 +256,7 @@ func (l FlowLocation) MarshalJSON() ([]byte, error) {
 func init() {
 	common.RegisterTypeIDDecoder(
 		FlowLocationPrefix,
-		func(typeID string) (location common.Location, qualifiedIdentifier string, err error) {
+		func(_ common.MemoryGauge, typeID string) (location common.Location, qualifiedIdentifier string, err error) {
 			return decodeFlowLocationTypeID(typeID)
 		},
 	)
@@ -306,7 +317,7 @@ func newFlowEventType(identifier string, parameters ...*sema.Parameter) *sema.Co
 
 		eventType.Members.Set(
 			parameter.Identifier,
-			sema.NewPublicConstantFieldMember(
+			sema.NewUnmeteredPublicConstantFieldMember(
 				eventType,
 				parameter.Identifier,
 				parameter.TypeAnnotation.Type,

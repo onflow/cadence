@@ -56,7 +56,7 @@ func TestInterpretInterfaceDefaultImplementation(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t,
-			interpreter.NewIntValueFromInt64(42),
+			interpreter.NewUnmeteredIntValueFromInt64(42),
 			value,
 		)
 	})
@@ -97,7 +97,7 @@ func TestInterpretInterfaceDefaultImplementation(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t,
-			interpreter.NewIntValueFromInt64(42),
+			interpreter.NewUnmeteredIntValueFromInt64(42),
 			value,
 		)
 	})
@@ -134,7 +134,7 @@ func TestInterpretInterfaceDefaultImplementationWhenOverriden(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t,
-			interpreter.NewIntValueFromInt64(42),
+			interpreter.NewUnmeteredIntValueFromInt64(42),
 			value,
 		)
 	})
@@ -180,7 +180,7 @@ func TestInterpretInterfaceDefaultImplementationWhenOverriden(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t,
-			interpreter.NewIntValueFromInt64(42),
+			interpreter.NewUnmeteredIntValueFromInt64(42),
 			value,
 		)
 	})

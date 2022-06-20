@@ -21,6 +21,8 @@ package ast
 import (
 	"encoding/json"
 
+	"github.com/turbolent/prettier"
+
 	"github.com/onflow/cadence/runtime/common"
 )
 
@@ -33,6 +35,39 @@ type TransactionDeclaration struct {
 	PostConditions *Conditions
 	DocString      string
 	Range
+}
+
+var _ Element = &TransactionDeclaration{}
+var _ Declaration = &TransactionDeclaration{}
+var _ Statement = &TransactionDeclaration{}
+
+func NewTransactionDeclaration(
+	gauge common.MemoryGauge,
+	parameterList *ParameterList,
+	fields []*FieldDeclaration,
+	prepare *SpecialFunctionDeclaration,
+	preConditions *Conditions,
+	postConditions *Conditions,
+	execute *SpecialFunctionDeclaration,
+	docString string,
+	declRange Range,
+) *TransactionDeclaration {
+	common.UseMemory(gauge, common.TransactionDeclarationMemoryUsage)
+
+	return &TransactionDeclaration{
+		ParameterList:  parameterList,
+		Fields:         fields,
+		Prepare:        prepare,
+		PreConditions:  preConditions,
+		PostConditions: postConditions,
+		Execute:        execute,
+		DocString:      docString,
+		Range:          declRange,
+	}
+}
+
+func (*TransactionDeclaration) ElementType() ElementType {
+	return ElementTypeTransactionDeclaration
 }
 
 func (d *TransactionDeclaration) Accept(visitor Visitor) Repr {
@@ -85,4 +120,70 @@ func (d *TransactionDeclaration) MarshalJSON() ([]byte, error) {
 		Type:  "TransactionDeclaration",
 		Alias: (*Alias)(d),
 	})
+}
+
+var transactionKeywordDoc = prettier.Text("transaction")
+
+func (d *TransactionDeclaration) Doc() prettier.Doc {
+
+	var contents []prettier.Doc
+
+	addContent := func(doc prettier.Doc) {
+		contents = append(
+			contents,
+			prettier.Concat{
+				prettier.HardLine{},
+				doc,
+			},
+		)
+	}
+
+	for _, field := range d.Fields {
+		addContent(field.Doc())
+	}
+
+	if d.Prepare != nil {
+		addContent(d.Prepare.Doc())
+	}
+
+	if conditionsDoc := d.PreConditions.Doc(preConditionsKeywordDoc); conditionsDoc != nil {
+		addContent(conditionsDoc)
+	}
+
+	if d.Execute != nil {
+		addContent(d.Execute.Doc())
+	}
+
+	if conditionsDoc := d.PostConditions.Doc(postConditionsKeywordDoc); conditionsDoc != nil {
+		addContent(conditionsDoc)
+	}
+
+	doc := prettier.Concat{
+		transactionKeywordDoc,
+	}
+
+	if !d.ParameterList.IsEmpty() {
+		doc = append(
+			doc,
+			d.ParameterList.Doc(),
+		)
+	}
+
+	return append(
+		doc,
+		prettier.Space,
+		blockStartDoc,
+		prettier.Indent{
+			Doc: prettier.Join(
+				prettier.HardLine{},
+				contents...,
+			),
+		},
+		prettier.HardLine{},
+		blockEndDoc,
+	)
+}
+
+func (d *TransactionDeclaration) String() string {
+	return Prettier(d)
 }

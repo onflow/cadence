@@ -430,7 +430,7 @@ func main() {
 
 	var generateSwitch func(group instructionGroup) (string, error)
 
-	templateFuncs := map[string]interface{}{
+	templateFuncs := map[string]any{
 		"goGenerateComment": func() string {
 			// NOTE: must be templated/injected, as otherwise
 			// it will be detected itself as a go generate invocation itself

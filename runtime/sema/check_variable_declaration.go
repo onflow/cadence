@@ -72,7 +72,7 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 					&TypeMismatchError{
 						ExpectedType: &OptionalType{},
 						ActualType:   valueType,
-						Range:        ast.NewRangeFromPositioned(declaration.Value),
+						Range:        ast.NewRangeFromPositioned(checker.memoryGauge, declaration.Value),
 					},
 				)
 			}
@@ -120,7 +120,7 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 		if !IsValidAssignmentTargetExpression(declaration.Value) {
 			checker.report(
 				&InvalidAssignmentTargetError{
-					Range: ast.NewRangeFromPositioned(declaration.Value),
+					Range: ast.NewRangeFromPositioned(checker.memoryGauge, declaration.Value),
 				},
 			)
 		} else {
@@ -143,7 +143,7 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 				checker.report(
 					&NonResourceTypeError{
 						ActualType: valueType,
-						Range:      ast.NewRangeFromPositioned(declaration.Value),
+						Range:      ast.NewRangeFromPositioned(checker.memoryGauge, declaration.Value),
 					},
 				)
 			}
@@ -204,7 +204,7 @@ func (checker *Checker) recordVariableDeclarationRange(
 	activation := checker.valueActivations.Current()
 	activation.LeaveCallbacks = append(
 		activation.LeaveCallbacks,
-		func(getEndPosition func() ast.Position) {
+		func(getEndPosition EndPositionGetter) {
 			if getEndPosition == nil {
 				return
 			}
@@ -214,14 +214,14 @@ func (checker *Checker) recordVariableDeclarationRange(
 
 			var startPosition ast.Position
 			if declaration.SecondValue != nil {
-				startPosition = declaration.SecondValue.EndPosition()
+				startPosition = declaration.SecondValue.EndPosition(checker.memoryGauge)
 			} else {
-				startPosition = declaration.Value.EndPosition()
+				startPosition = declaration.Value.EndPosition(checker.memoryGauge)
 			}
 
 			checker.Ranges.Put(
 				startPosition,
-				getEndPosition(),
+				getEndPosition(checker.memoryGauge),
 				Range{
 					Identifier:      identifier,
 					DeclarationKind: declaration.DeclarationKind(),

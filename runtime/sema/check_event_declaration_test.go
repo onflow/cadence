@@ -43,7 +43,7 @@ func TestIsValidEventParameterType(t *testing.T) {
 			// field `nested` refers to the container type,
 			// leading to a recursive type declaration
 			const fieldName = "nested"
-			members.Set(fieldName, NewPublicConstantFieldMember(ty, fieldName, ty, ""))
+			members.Set(fieldName, NewUnmeteredPublicConstantFieldMember(ty, fieldName, ty, ""))
 			return members
 		}()
 

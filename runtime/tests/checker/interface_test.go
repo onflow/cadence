@@ -1856,7 +1856,7 @@ func BenchmarkContractInterfaceFungibleToken(b *testing.B) {
 
 	const code = examples.FungibleTokenContractInterface
 
-	program, err := parser2.ParseProgram(code)
+	program, err := parser2.ParseProgram(code, nil)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -1868,6 +1868,7 @@ func BenchmarkContractInterfaceFungibleToken(b *testing.B) {
 		checker, err := sema.NewChecker(
 			program,
 			TestLocation,
+			nil,
 			sema.WithAccessCheckMode(sema.AccessCheckModeNotSpecifiedUnrestricted),
 		)
 		if err != nil {
@@ -1884,7 +1885,7 @@ func BenchmarkCheckContractInterfaceFungibleTokenConformance(b *testing.B) {
 
 	code := examples.FungibleTokenContractInterface + "\n" + examples.ExampleFungibleTokenContract
 
-	program, err := parser2.ParseProgram(code)
+	program, err := parser2.ParseProgram(code, nil)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -1902,6 +1903,7 @@ func BenchmarkCheckContractInterfaceFungibleTokenConformance(b *testing.B) {
 		checker, err := sema.NewChecker(
 			program,
 			TestLocation,
+			nil,
 			sema.WithAccessCheckMode(sema.AccessCheckModeNotSpecifiedUnrestricted),
 			panicDeclarationOption,
 		)
