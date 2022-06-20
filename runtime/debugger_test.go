@@ -31,6 +31,8 @@ import (
 
 func TestRuntimeDebugger(t *testing.T) {
 
+	t.Parallel()
+
 	// Prepare the debugger
 
 	debugger := interpreter.NewDebugger()
@@ -94,6 +96,92 @@ func TestRuntimeDebugger(t *testing.T) {
 
 	// Step to next statement
 	stop = debugger.Next()
+
+	require.IsType(t, &ast.ExpressionStatement{}, stop.Statement)
+
+	activation := debugger.CurrentActivation(stop.Interpreter)
+	variable := activation.Find("answer")
+	require.NotNil(t, variable)
+
+	value := variable.GetValue()
+	require.Equal(
+		t,
+		interpreter.NewUnmeteredIntValueFromInt64(42),
+		value,
+	)
+
+	debugger.Continue()
+
+	// Wait for the transaction to finish execution
+	wg.Wait()
+
+	require.True(t, logged)
+}
+
+func TestRuntimeDebuggerBreakpoints(t *testing.T) {
+
+	t.Parallel()
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+	location := nextTransactionLocation()
+
+	// Prepare the debugger
+
+	debugger := interpreter.NewDebugger()
+
+	// Add a breakpoint
+	debugger.AddBreakpoint(location, 5)
+
+	// Run the transaction.
+	// It will pause/block at the breakpoint,
+	// so run it in a goroutine
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	var logged bool
+
+	go func() {
+		defer wg.Done()
+
+		runtime := newTestInterpreterRuntime()
+
+		address := common.MustBytesToAddress([]byte{0x1})
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: newTestLedger(nil, nil),
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{address}, nil
+			},
+			log: func(message string) {
+				logged = true
+				require.Equal(t, `"Hello, World!"`, message)
+			},
+		}
+
+		runtime.SetDebugger(debugger)
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: []byte(`
+                  transaction {
+                      prepare(signer: AuthAccount) {
+			    	      let answer = 42
+                          log("Hello, World!")
+                      }
+                  }
+                `),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  location,
+			},
+		)
+		require.NoError(t, err)
+	}()
+
+	// Wait for the transaction to run into the breakpoint
+	stop := <-debugger.Stops()
 
 	require.IsType(t, &ast.ExpressionStatement{}, stop.Statement)
 
