@@ -2056,18 +2056,19 @@ func (interpreter *Interpreter) defaultFunctions(
 	if functionCount == 0 {
 		return nil
 	}
-	
+
 	functions := make(map[string]FunctionValue, functionCount)
 
 	for _, functionDeclaration := range functionDeclarations {
 		name := functionDeclaration.Identifier.Identifier
-		if functionDeclaration.FunctionBlock.HasStatements() {
-			functions[name] =
-				interpreter.compositeFunction(
-					functionDeclaration,
-					lexicalScope,
-				)
+		if !functionDeclaration.FunctionBlock.HasStatements() {
+			continue
 		}
+
+		functions[name] = interpreter.compositeFunction(
+			functionDeclaration,
+			lexicalScope,
+		)
 	}
 
 	return functions

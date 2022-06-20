@@ -101,6 +101,61 @@ func TestInterpretInterfaceDefaultImplementation(t *testing.T) {
 			value,
 		)
 	})
+
+	t.Run("interface variable", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct interface IA {
+                let x: Int
+                fun getX(): Int {
+                    return self.x
+                }
+            }
+
+            struct Foo: IA {
+                let x: Int
+                init() {
+                    self.x = 123
+                }
+           }
+
+            struct Bar: IA {
+                let x: Int
+                init() {
+                    self.x = 456
+                }
+            }
+
+            fun test(): [Int;2] {
+                let foo = Foo()
+                let bar = Bar()
+
+                return [foo.getX(), bar.getX()]
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.IsType(t, &interpreter.ArrayValue{}, value)
+		array := value.(*interpreter.ArrayValue)
+
+		// Check here whether:
+		//  - The value set for `x` by the implementation is correctly set/returned.
+		//  - Correct variable scope is used / Scopes are not shared.
+		//    i.e: Value set by `Foo` doesn't affect `Bar`, and vice-versa
+
+		assert.Equal(t,
+			interpreter.NewUnmeteredIntValueFromInt64(123),
+			array.Get(inter, nil, 0),
+		)
+		assert.Equal(t,
+			interpreter.NewUnmeteredIntValueFromInt64(456),
+			array.Get(inter, nil, 1),
+		)
+	})
 }
 
 func TestInterpretInterfaceDefaultImplementationWhenOverriden(t *testing.T) {
