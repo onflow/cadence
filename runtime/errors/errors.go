@@ -66,3 +66,9 @@ type ParentError interface {
 	error
 	ChildErrors() []error
 }
+
+// HasPrefix is an interface for errors that provide a custom prefix
+//
+type HasPrefix interface {
+	Prefix() string
+}

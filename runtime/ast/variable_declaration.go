@@ -78,6 +78,10 @@ func NewEmptyVariableDeclaration(gauge common.MemoryGauge) *VariableDeclaration 
 	return &VariableDeclaration{}
 }
 
+func (*VariableDeclaration) isDeclaration() {}
+
+func (*VariableDeclaration) isStatement() {}
+
 func (*VariableDeclaration) ElementType() ElementType {
 	return ElementTypeVariableDeclaration
 }
@@ -94,10 +98,6 @@ func (d *VariableDeclaration) EndPosition(memoryGauge common.MemoryGauge) Positi
 }
 
 func (*VariableDeclaration) isIfStatementTest() {}
-
-func (*VariableDeclaration) isDeclaration() {}
-
-func (*VariableDeclaration) isStatement() {}
 
 func (d *VariableDeclaration) Accept(visitor Visitor) Repr {
 	return visitor.VisitVariableDeclaration(d)
@@ -143,30 +143,88 @@ func (d *VariableDeclaration) Doc() prettier.Doc {
 		keywordDoc = letKeywordDoc
 	}
 
-	// TODO: second transfer and value (if any)
+	identifierTypeDoc := prettier.Concat{
+		prettier.Text(d.Identifier.Identifier),
+	}
 
-	// TODO: potentially parenthesize
+	if d.TypeAnnotation != nil {
+		identifierTypeDoc = append(
+			identifierTypeDoc,
+			typeSeparatorSpaceDoc,
+			d.TypeAnnotation.Doc(),
+		)
+	}
+
 	valueDoc := d.Value.Doc()
 
-	return prettier.Group{
-		Doc: prettier.Concat{
-			keywordDoc,
-			prettier.Space,
+	var valuesDoc prettier.Doc
+
+	if d.SecondValue == nil {
+		// Put transfer before the break
+
+		valuesDoc = prettier.Concat{
 			prettier.Group{
-				Doc: prettier.Concat{
-					prettier.Text(d.Identifier.Identifier),
-					prettier.Space,
-					// TODO: type annotation, if any
-					d.Transfer.Doc(),
-					prettier.Space,
-					prettier.Group{
-						Doc: prettier.Indent{
-							Doc: valueDoc,
-						},
+				Doc: identifierTypeDoc,
+			},
+			prettier.Space,
+			d.Transfer.Doc(),
+			prettier.Group{
+				Doc: prettier.Indent{
+					Doc: prettier.Concat{
+						prettier.Line{},
+						valueDoc,
 					},
 				},
 			},
+		}
+	} else {
+		secondValueDoc := d.SecondValue.Doc()
+
+		// Put transfers at start of value lines,
+		// and break both values at once
+
+		valuesDoc = prettier.Concat{
+			prettier.Group{
+				Doc: identifierTypeDoc,
+			},
+			prettier.Group{
+				Doc: prettier.Indent{
+					Doc: prettier.Concat{
+						prettier.Line{},
+						d.Transfer.Doc(),
+						prettier.Space,
+						valueDoc,
+						prettier.Line{},
+						d.SecondTransfer.Doc(),
+						prettier.Space,
+						secondValueDoc,
+					},
+				},
+			},
+		}
+	}
+
+	var doc prettier.Concat
+
+	if d.Access != AccessNotSpecified {
+		doc = append(
+			doc,
+			prettier.Text(d.Access.Keyword()),
+			prettier.Space,
+		)
+	}
+
+	doc = append(
+		doc,
+		keywordDoc,
+		prettier.Space,
+		prettier.Group{
+			Doc: valuesDoc,
 		},
+	)
+
+	return prettier.Group{
+		Doc: doc,
 	}
 }
 
@@ -181,4 +239,8 @@ func (d *VariableDeclaration) MarshalJSON() ([]byte, error) {
 		Range: NewUnmeteredRangeFromPositioned(d),
 		Alias: (*Alias)(d),
 	})
+}
+
+func (d *VariableDeclaration) String() string {
+	return Prettier(d)
 }

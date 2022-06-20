@@ -49,25 +49,32 @@ func colorizeMeta(meta string) string {
 	return aurora.Blue(meta).String()
 }
 
-const errorPrefix = "error"
+const ErrorPrefix = "error"
+const messageSeparator = ": "
 const excerptArrow = "--> "
 const excerptDots = "... "
 const maxLineLength = 500
 
-func FormatErrorMessage(message string, useColor bool) string {
-	// prepare prefix
-	formattedErrorPrefix := errorPrefix
-	if useColor {
-		formattedErrorPrefix = colorizeError(errorPrefix)
+func FormatErrorMessage(prefix string, message string, useColor bool) string {
+	if prefix == "" && message == "" {
+		return ""
 	}
 
-	// prepare message
-	message = ": " + message
+	var builder strings.Builder
+
 	if useColor {
-		message = colorizeMessage(message)
+		builder.WriteString(colorizeError(prefix))
+		builder.WriteString(colorizeMessage(messageSeparator))
+		builder.WriteString(colorizeMessage(message))
+	} else {
+		builder.WriteString(prefix)
+		builder.WriteString(messageSeparator)
+		builder.WriteString(message)
 	}
 
-	return formattedErrorPrefix + message + "\n"
+	builder.WriteByte('\n')
+
+	return builder.String()
 }
 
 type excerpt struct {
@@ -202,7 +209,12 @@ func (p ErrorPrettyPrinter) PrettyPrintError(err error, location common.Location
 
 func (p ErrorPrettyPrinter) prettyPrintError(err error, location common.Location, code string) {
 
-	p.writeString(FormatErrorMessage(err.Error(), p.useColor))
+	prefix := ErrorPrefix
+	if secondaryError, ok := err.(errors.HasPrefix); ok {
+		prefix = secondaryError.Prefix()
+	}
+
+	p.writeString(FormatErrorMessage(prefix, err.Error(), p.useColor))
 
 	message := ""
 	if secondaryError, ok := err.(errors.SecondaryError); ok {

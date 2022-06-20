@@ -24,6 +24,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/turbolent/prettier"
 )
 
 func TestArgument_MarshalJSON(t *testing.T) {
@@ -105,6 +106,89 @@ func TestArgument_MarshalJSON(t *testing.T) {
             }
             `,
 			string(actual),
+		)
+	})
+}
+
+func TestArgument_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("without label", func(t *testing.T) {
+
+		t.Parallel()
+
+		argument := &Argument{
+			Expression: &BoolExpression{
+				Value: false,
+			},
+		}
+
+		require.Equal(
+			t,
+			prettier.Text("false"),
+			argument.Doc(),
+		)
+	})
+
+	t.Run("with label", func(t *testing.T) {
+
+		t.Parallel()
+
+		argument := &Argument{
+			Label: "ok",
+			Expression: &BoolExpression{
+				Value: false,
+			},
+		}
+
+		require.Equal(
+			t,
+			prettier.Concat{
+				prettier.Text("ok: "),
+				prettier.Text("false"),
+			},
+			argument.Doc(),
+		)
+	})
+}
+
+func TestArgument_String(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("without label", func(t *testing.T) {
+
+		t.Parallel()
+
+		argument := &Argument{
+			Expression: &BoolExpression{
+				Value: false,
+			},
+		}
+
+		require.Equal(
+			t,
+			"false",
+			argument.String(),
+		)
+	})
+
+	t.Run("with label", func(t *testing.T) {
+
+		t.Parallel()
+
+		argument := &Argument{
+			Label: "ok",
+			Expression: &BoolExpression{
+				Value: false,
+			},
+		}
+
+		require.Equal(
+			t,
+			"ok: false",
+			argument.String(),
 		)
 	})
 }

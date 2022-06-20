@@ -78,23 +78,21 @@ func (b *Block) Doc() prettier.Doc {
 }
 
 func StatementsDoc(statements []Statement) prettier.Doc {
-	var statementsDoc prettier.Concat
+	var doc prettier.Concat
 
 	for _, statement := range statements {
-		// TODO: replace once Statement implements Doc
-		hasDoc, ok := statement.(interface{ Doc() prettier.Doc })
-		if !ok {
-			continue
-		}
-
-		statementsDoc = append(
-			statementsDoc,
+		doc = append(
+			doc,
 			prettier.HardLine{},
-			hasDoc.Doc(),
+			statement.Doc(),
 		)
 	}
 
-	return statementsDoc
+	return doc
+}
+
+func (b *Block) String() string {
+	return Prettier(b)
 }
 
 func (b *Block) MarshalJSON() ([]byte, error) {
@@ -174,6 +172,61 @@ func (b *FunctionBlock) EndPosition(common.MemoryGauge) Position {
 	return b.Block.EndPos
 }
 
+var preConditionsKeywordDoc = prettier.Text("pre")
+var postConditionsKeywordDoc = prettier.Text("post")
+
+func (b *FunctionBlock) Doc() prettier.Doc {
+	if b.IsEmpty() {
+		return blockEmptyDoc
+	}
+
+	var conditionDocs []prettier.Doc
+
+	if conditionsDoc := b.PreConditions.Doc(preConditionsKeywordDoc); conditionsDoc != nil {
+		conditionDocs = append(
+			conditionDocs,
+			prettier.HardLine{},
+			conditionsDoc,
+		)
+	}
+
+	if conditionsDoc := b.PostConditions.Doc(postConditionsKeywordDoc); conditionsDoc != nil {
+		conditionDocs = append(
+			conditionDocs,
+			prettier.HardLine{},
+			conditionsDoc,
+		)
+	}
+
+	var bodyDoc prettier.Doc
+
+	statementsDoc := StatementsDoc(b.Block.Statements)
+
+	if len(conditionDocs) > 0 {
+		bodyConcatDoc := prettier.Concat(conditionDocs)
+		bodyConcatDoc = append(
+			bodyConcatDoc,
+			statementsDoc,
+		)
+		bodyDoc = bodyConcatDoc
+	} else {
+		bodyDoc = statementsDoc
+	}
+
+	return prettier.Concat{
+		blockStartDoc,
+		prettier.Indent{
+			Doc: bodyDoc,
+		},
+		prettier.HardLine{},
+		blockEndDoc,
+	}
+}
+
+func (b *FunctionBlock) String() string {
+	return Prettier(b)
+}
+
 // Condition
 
 type Condition struct {
@@ -182,10 +235,59 @@ type Condition struct {
 	Message Expression
 }
 
+func (c Condition) Doc() prettier.Doc {
+	doc := c.Test.Doc()
+	if c.Message != nil {
+		doc = prettier.Concat{
+			doc,
+			prettier.Text(":"),
+			prettier.Indent{
+				Doc: prettier.Concat{
+					prettier.HardLine{},
+					c.Message.Doc(),
+				},
+			},
+		}
+	}
+
+	return prettier.Group{
+		Doc: doc,
+	}
+}
+
 // Conditions
 
 type Conditions []*Condition
 
 func (c *Conditions) IsEmpty() bool {
 	return c == nil || len(*c) == 0
+}
+
+func (c *Conditions) Doc(keywordDoc prettier.Doc) prettier.Doc {
+	if c.IsEmpty() {
+		return nil
+	}
+
+	var doc prettier.Concat
+
+	for _, condition := range *c {
+		doc = append(
+			doc,
+			prettier.HardLine{},
+			condition.Doc(),
+		)
+	}
+
+	return prettier.Group{
+		Doc: prettier.Concat{
+			keywordDoc,
+			prettier.Space,
+			blockStartDoc,
+			prettier.Indent{
+				Doc: doc,
+			},
+			prettier.HardLine{},
+			blockEndDoc,
+		},
+	}
 }

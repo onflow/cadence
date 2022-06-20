@@ -242,14 +242,12 @@ func init() {
 	defineExpr(binaryExpr{
 		tokenType:        lexer.TokenVerticalBarVerticalBar,
 		leftBindingPower: exprLeftBindingPowerLogicalOr,
-		rightAssociative: true,
 		operation:        ast.OperationOr,
 	})
 
 	defineExpr(binaryExpr{
 		tokenType:        lexer.TokenAmpersandAmpersand,
 		leftBindingPower: exprLeftBindingPowerLogicalAnd,
-		rightAssociative: true,
 		operation:        ast.OperationAnd,
 	})
 

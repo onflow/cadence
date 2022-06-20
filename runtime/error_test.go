@@ -58,7 +58,8 @@ func TestRuntimeError(t *testing.T) {
 		require.EqualError(
 			t,
 			err,
-			"Execution failed:\nerror: unexpected token: identifier\n"+
+			"Execution failed:\n"+
+				"error: unexpected token: identifier\n"+
 				" --> 01:1:0\n"+
 				"  |\n"+
 				"1 | X\n"+
@@ -109,6 +110,7 @@ func TestRuntimeError(t *testing.T) {
             pub fun main() {
                 let a: UInt8 = 255
                 let b: UInt8 = 1
+                // overflow
                 a + b
             }
         `)
@@ -129,10 +131,11 @@ func TestRuntimeError(t *testing.T) {
 		require.EqualError(
 			t,
 			err,
-			"Execution failed:\nerror: overflow\n"+
-				" --> 01:5:16\n"+
+			"Execution failed:\n"+
+				"error: overflow\n"+
+				" --> 01:6:16\n"+
 				"  |\n"+
-				"5 |                 a + b\n"+
+				"6 |                 a + b\n"+
 				"  |                 ^^^^^\n",
 		)
 	})
@@ -234,6 +237,7 @@ func TestRuntimeError(t *testing.T) {
             pub fun add() {
                 let a: UInt8 = 255
                 let b: UInt8 = 1
+                // overflow
                 a + b
             }
         `)
@@ -271,11 +275,18 @@ func TestRuntimeError(t *testing.T) {
 		require.EqualError(
 			t,
 			err,
-			"Execution failed:\nerror: overflow\n"+
-				" --> imported:5:16\n"+
+			"Execution failed:\n"+
+				" --> 01:5:16\n"+
 				"  |\n"+
-				"5 |                 a + b\n"+
-				"  |                 ^^^^^\n",
+				"5 |                 add()\n"+
+				"  |                 ^^^^^\n"+
+				"\n"+
+				"error: overflow\n"+
+				" --> imported:6:16\n"+
+				"  |\n"+
+				"6 |                 a + b\n"+
+				"  |                 ^^^^^\n"+
+				"",
 		)
 	})
 

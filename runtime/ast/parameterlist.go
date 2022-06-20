@@ -21,6 +21,8 @@ package ast
 import (
 	"sync"
 
+	"github.com/turbolent/prettier"
+
 	"github.com/onflow/cadence/runtime/common"
 )
 
@@ -69,4 +71,57 @@ func (l *ParameterList) initialize() {
 		parametersByIdentifier[parameter.Identifier.Identifier] = parameter
 	}
 	l._parametersByIdentifier = parametersByIdentifier
+}
+
+func (l *ParameterList) IsEmpty() bool {
+	return l == nil || len(l.Parameters) == 0
+}
+
+const parameterListEmptyDoc = prettier.Text("()")
+
+var parameterSeparatorDoc prettier.Doc = prettier.Concat{
+	prettier.Text(","),
+	prettier.Line{},
+}
+
+func (l *ParameterList) Doc() prettier.Doc {
+
+	if len(l.Parameters) == 0 {
+		return parameterListEmptyDoc
+	}
+
+	parameterDocs := make([]prettier.Doc, 0, len(l.Parameters))
+
+	for _, parameter := range l.Parameters {
+		var parameterDoc prettier.Concat
+
+		if parameter.Label != "" {
+			parameterDoc = append(
+				parameterDoc,
+				prettier.Text(parameter.Label),
+				prettier.Space,
+			)
+		}
+
+		parameterDoc = append(
+			parameterDoc,
+			prettier.Text(parameter.Identifier.Identifier),
+			typeSeparatorSpaceDoc,
+			parameter.TypeAnnotation.Doc(),
+		)
+
+		parameterDocs = append(parameterDocs, parameterDoc)
+	}
+
+	return prettier.WrapParentheses(
+		prettier.Join(
+			parameterSeparatorDoc,
+			parameterDocs...,
+		),
+		prettier.SoftLine{},
+	)
+}
+
+func (l *ParameterList) String() string {
+	return Prettier(l)
 }
