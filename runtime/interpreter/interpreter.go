@@ -362,6 +362,7 @@ type Interpreter struct {
 	invalidatedResourceValidationEnabled bool
 	resourceVariables                    map[ResourceKindedValue]*Variable
 	memoryGauge                          common.MemoryGauge
+	CallStack                            *CallStack
 }
 
 var _ common.MemoryGauge = &Interpreter{}
@@ -607,6 +608,16 @@ func WithAllInterpreters(allInterpreters map[common.LocationID]*Interpreter) Opt
 	}
 }
 
+// WithCallStack returns an interpreter option which sets
+// the given slice of invocations as the slice of all invocations.
+//
+func WithCallStack(callStack *CallStack) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.CallStack = callStack
+		return nil
+	}
+}
+
 // WithAtreeValueValidationEnabled returns an interpreter option which sets
 // the atree validation option.
 //
@@ -702,6 +713,7 @@ func NewInterpreter(program *Program, location common.Location, options ...Optio
 
 	defaultOptions := []Option{
 		WithAllInterpreters(map[common.LocationID]*Interpreter{}),
+		WithCallStack(&CallStack{}),
 		withTypeCodes(TypeCodes{
 			CompositeCodes:       map[sema.TypeID]CompositeTypeCode{},
 			InterfaceCodes:       map[sema.TypeID]WrapperCode{},
@@ -1015,26 +1027,10 @@ func (interpreter *Interpreter) invokeVariable(
 		}
 	}
 
-	return interpreter.prepareInvoke(functionValue, functionType, arguments)
+	return interpreter.invokeExternally(functionValue, functionType, arguments)
 }
 
-func (interpreter *Interpreter) prepareInvokeTransaction(
-	index int,
-	arguments []Value,
-) (value Value, err error) {
-	if index >= len(interpreter.Transactions) {
-		return nil, TransactionNotDeclaredError{Index: index}
-	}
-
-	functionValue := interpreter.Transactions[index]
-
-	transactionType := interpreter.Program.Elaboration.TransactionTypes[index]
-	functionType := transactionType.EntryPointFunctionType()
-
-	return interpreter.prepareInvoke(functionValue, functionType, arguments)
-}
-
-func (interpreter *Interpreter) prepareInvoke(
+func (interpreter *Interpreter) invokeExternally(
 	functionValue FunctionValue,
 	functionType *sema.FunctionType,
 	arguments []Value,
@@ -1117,7 +1113,16 @@ func (interpreter *Interpreter) InvokeTransaction(index int, arguments ...Value)
 		err = internalErr
 	})
 
-	_, err = interpreter.prepareInvokeTransaction(index, arguments)
+	if index >= len(interpreter.Transactions) {
+		return TransactionNotDeclaredError{Index: index}
+	}
+
+	functionValue := interpreter.Transactions[index]
+
+	transactionType := interpreter.Program.Elaboration.TransactionTypes[index]
+	functionType := transactionType.EntryPointFunctionType()
+
+	_, err = interpreter.invokeExternally(functionValue, functionType, arguments)
 	return err
 }
 
@@ -1161,7 +1166,10 @@ func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 			}
 		}
 
-		onError(err)
+		interpreterErr := err.(Error)
+		interpreterErr.StackTrace = interpreter.CallStack.Invocations[:]
+
+		onError(interpreterErr)
 	}
 }
 
@@ -1263,6 +1271,10 @@ func (interpreter *Interpreter) VisitProgram(program *ast.Program) ast.Repr {
 	}
 
 	return nil
+}
+
+func (interpreter *Interpreter) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunctionDeclaration) ast.Repr {
+	return interpreter.VisitFunctionDeclaration(declaration.FunctionDeclaration)
 }
 
 func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) ast.Repr {
@@ -2696,6 +2708,7 @@ func (interpreter *Interpreter) NewSubInterpreter(
 		WithImportLocationHandler(interpreter.importLocationHandler),
 		WithUUIDHandler(interpreter.uuidHandler),
 		WithAllInterpreters(interpreter.allInterpreters),
+		WithCallStack(interpreter.CallStack),
 		WithAtreeValueValidationEnabled(interpreter.atreeValueValidationEnabled),
 		WithAtreeStorageValidationEnabled(interpreter.atreeStorageValidationEnabled),
 		withTypeCodes(interpreter.typeCodes),

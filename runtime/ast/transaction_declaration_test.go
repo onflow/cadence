@@ -24,13 +24,16 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/turbolent/prettier"
+
+	"github.com/onflow/cadence/runtime/common"
 )
 
 func TestTransactionDeclaration_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
 
-	expr := &TransactionDeclaration{
+	decl := &TransactionDeclaration{
 		ParameterList: &ParameterList{
 			Parameters: []*Parameter{},
 			Range: Range{
@@ -50,7 +53,7 @@ func TestTransactionDeclaration_MarshalJSON(t *testing.T) {
 		},
 	}
 
-	actual, err := json.Marshal(expr)
+	actual, err := json.Marshal(decl)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -73,5 +76,391 @@ func TestTransactionDeclaration_MarshalJSON(t *testing.T) {
         }
         `,
 		string(actual),
+	)
+}
+
+func TestTransactionDeclaration_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	decl := &TransactionDeclaration{
+		ParameterList: &ParameterList{
+			Parameters: []*Parameter{
+				{
+					Identifier: Identifier{
+						Identifier: "x",
+					},
+					TypeAnnotation: &TypeAnnotation{
+						Type: &NominalType{
+							Identifier: Identifier{
+								Identifier: "X",
+							},
+						},
+					},
+				},
+			},
+		},
+		Fields: []*FieldDeclaration{
+			{
+				Access:       AccessPublic,
+				VariableKind: VariableKindConstant,
+				Identifier: Identifier{
+					Identifier: "f",
+				},
+				TypeAnnotation: &TypeAnnotation{
+					IsResource: true,
+					Type: &NominalType{
+						Identifier: Identifier{
+							Identifier: "F",
+						},
+					},
+				},
+			},
+		},
+		Prepare: &SpecialFunctionDeclaration{
+			Kind: common.DeclarationKindPrepare,
+			FunctionDeclaration: &FunctionDeclaration{
+				ParameterList: &ParameterList{
+					Parameters: []*Parameter{
+						{
+							Identifier: Identifier{
+								Identifier: "signer",
+							},
+							TypeAnnotation: &TypeAnnotation{
+								Type: &NominalType{
+									Identifier: Identifier{
+										Identifier: "AuthAccount",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		PreConditions: &Conditions{
+			{
+				Kind: ConditionKindPre,
+				Test: &BoolExpression{
+					Value: true,
+				},
+				Message: &StringExpression{
+					Value: "pre",
+				},
+			},
+		},
+		Execute: &SpecialFunctionDeclaration{
+			Kind: common.DeclarationKindExecute,
+			FunctionDeclaration: &FunctionDeclaration{
+				FunctionBlock: &FunctionBlock{
+					Block: &Block{
+						Statements: []Statement{
+							&ExpressionStatement{
+								&StringExpression{
+									Value: "xyz",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		PostConditions: &Conditions{
+			{
+				Kind: ConditionKindPre,
+				Test: &BoolExpression{
+					Value: false,
+				},
+				Message: &StringExpression{
+					Value: "post",
+				},
+			},
+		},
+	}
+
+	require.Equal(
+		t,
+		prettier.Concat{
+			prettier.Text("transaction"),
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("("),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Concat{
+								prettier.Text("x"),
+								prettier.Text(": "),
+								prettier.Text("X"),
+							},
+						},
+					},
+					prettier.SoftLine{},
+					prettier.Text(")"),
+				},
+			},
+			prettier.Text(" "),
+			prettier.Text("{"),
+			prettier.Indent{
+				Doc: prettier.Concat{
+					prettier.Concat{
+						prettier.HardLine{},
+						prettier.Group{
+							Doc: prettier.Concat{
+								prettier.Text("pub"),
+								prettier.Text(" "),
+								prettier.Text("let"),
+								prettier.Text(" "),
+								prettier.Group{
+									Doc: prettier.Concat{
+										prettier.Text("f"),
+										prettier.Text(": "),
+										prettier.Concat{
+											prettier.Text("@"),
+											prettier.Text("F"),
+										},
+									},
+								},
+							},
+						},
+					},
+					prettier.HardLine{},
+					prettier.Concat{
+						prettier.HardLine{},
+						prettier.Concat{
+							prettier.Text("prepare"),
+							prettier.Group{
+								Doc: prettier.Concat{
+									prettier.Group{
+										Doc: prettier.Concat{
+											prettier.Text("("),
+											prettier.Indent{
+												Doc: prettier.Concat{
+													prettier.SoftLine{},
+													prettier.Concat{
+														prettier.Text("signer"),
+														prettier.Text(": "),
+														prettier.Text("AuthAccount"),
+													},
+												},
+											},
+											prettier.SoftLine{},
+											prettier.Text(")"),
+										},
+									},
+								},
+							},
+							prettier.Text(" {}"),
+						},
+					},
+					prettier.HardLine{},
+					prettier.Concat{
+						prettier.HardLine{},
+						prettier.Group{
+							Doc: prettier.Concat{
+								prettier.Text("pre"),
+								prettier.Text(" "),
+								prettier.Text("{"),
+								prettier.Indent{
+									Doc: prettier.Concat{
+										prettier.HardLine{},
+										prettier.Group{
+											Doc: prettier.Concat{
+												prettier.Text("true"),
+												prettier.Text(":"),
+												prettier.Indent{
+													Doc: prettier.Concat{
+														prettier.HardLine{},
+														prettier.Text("\"pre\""),
+													},
+												},
+											},
+										},
+									},
+								},
+								prettier.HardLine{},
+								prettier.Text("}"),
+							},
+						},
+					},
+					prettier.HardLine{},
+					prettier.Concat{
+						prettier.HardLine{},
+						prettier.Concat{
+							prettier.Text("execute"),
+							prettier.Text(" "),
+							prettier.Concat{
+								prettier.Text("{"),
+								prettier.Indent{
+									Doc: prettier.Concat{
+										prettier.HardLine{},
+										prettier.Text("\"xyz\""),
+									},
+								},
+								prettier.HardLine{},
+								prettier.Text("}"),
+							},
+						},
+					},
+					prettier.HardLine{},
+					prettier.Concat{
+						prettier.HardLine{},
+						prettier.Group{
+							Doc: prettier.Concat{
+								prettier.Text("post"),
+								prettier.Text(" "),
+								prettier.Text("{"),
+								prettier.Indent{
+									Doc: prettier.Concat{
+										prettier.HardLine{},
+										prettier.Group{
+											Doc: prettier.Concat{
+												prettier.Text("false"),
+												prettier.Text(":"),
+												prettier.Indent{
+													Doc: prettier.Concat{
+														prettier.HardLine{},
+														prettier.Text("\"post\""),
+													},
+												},
+											},
+										},
+									},
+								},
+								prettier.HardLine{},
+								prettier.Text("}"),
+							},
+						},
+					},
+				},
+			},
+			prettier.HardLine{},
+			prettier.Text("}"),
+		},
+		decl.Doc(),
+	)
+}
+
+func TestTransactionDeclaration_String(t *testing.T) {
+
+	t.Parallel()
+
+	decl := &TransactionDeclaration{
+		ParameterList: &ParameterList{
+			Parameters: []*Parameter{
+				{
+					Identifier: Identifier{
+						Identifier: "x",
+					},
+					TypeAnnotation: &TypeAnnotation{
+						Type: &NominalType{
+							Identifier: Identifier{
+								Identifier: "X",
+							},
+						},
+					},
+				},
+			},
+		},
+		Fields: []*FieldDeclaration{
+			{
+				Access:       AccessPublic,
+				VariableKind: VariableKindConstant,
+				Identifier: Identifier{
+					Identifier: "f",
+				},
+				TypeAnnotation: &TypeAnnotation{
+					IsResource: true,
+					Type: &NominalType{
+						Identifier: Identifier{
+							Identifier: "F",
+						},
+					},
+				},
+			},
+		},
+		Prepare: &SpecialFunctionDeclaration{
+			Kind: common.DeclarationKindPrepare,
+			FunctionDeclaration: &FunctionDeclaration{
+				ParameterList: &ParameterList{
+					Parameters: []*Parameter{
+						{
+							Identifier: Identifier{
+								Identifier: "signer",
+							},
+							TypeAnnotation: &TypeAnnotation{
+								Type: &NominalType{
+									Identifier: Identifier{
+										Identifier: "AuthAccount",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		PreConditions: &Conditions{
+			{
+				Kind: ConditionKindPre,
+				Test: &BoolExpression{
+					Value: true,
+				},
+				Message: &StringExpression{
+					Value: "pre",
+				},
+			},
+		},
+		Execute: &SpecialFunctionDeclaration{
+			Kind: common.DeclarationKindExecute,
+			FunctionDeclaration: &FunctionDeclaration{
+				FunctionBlock: &FunctionBlock{
+					Block: &Block{
+						Statements: []Statement{
+							&ExpressionStatement{
+								&StringExpression{
+									Value: "xyz",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		PostConditions: &Conditions{
+			{
+				Kind: ConditionKindPre,
+				Test: &BoolExpression{
+					Value: false,
+				},
+				Message: &StringExpression{
+					Value: "post",
+				},
+			},
+		},
+	}
+
+	require.Equal(
+		t,
+		"transaction(x: X) {\n"+
+			"    pub let f: @F\n"+
+			"    \n"+
+			"    prepare(signer: AuthAccount) {}\n"+
+			"    \n"+
+			"    pre {\n"+
+			"        true:\n"+
+			"            \"pre\"\n"+
+			"    }\n"+
+			"    \n"+
+			"    execute {\n"+
+			"        \"xyz\"\n"+
+			"    }\n"+
+			"    \n"+
+			"    post {\n"+
+			"        false:\n"+
+			"            \"post\"\n"+
+			"    }\n"+
+			"}",
+		decl.String(),
 	)
 }

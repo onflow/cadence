@@ -30,37 +30,6 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-// Invocation
-//
-type Invocation struct {
-	Self               MemberAccessibleValue
-	Arguments          []Value
-	ArgumentTypes      []sema.Type
-	TypeParameterTypes *sema.TypeParameterTypeOrderedMap
-	GetLocationRange   func() LocationRange
-	Interpreter        *Interpreter
-}
-
-func NewInvocation(
-	interpreter *Interpreter,
-	self MemberAccessibleValue,
-	arguments []Value,
-	argumentTypes []sema.Type,
-	typeParameterTypes *sema.TypeParameterTypeOrderedMap,
-	getLocationRange func() LocationRange,
-) Invocation {
-	common.UseMemory(interpreter, common.InvocationMemoryUsage)
-
-	return Invocation{
-		Self:               self,
-		Arguments:          arguments,
-		ArgumentTypes:      argumentTypes,
-		TypeParameterTypes: typeParameterTypes,
-		GetLocationRange:   getLocationRange,
-		Interpreter:        interpreter,
-	}
-}
-
 // FunctionValue
 //
 type FunctionValue interface {

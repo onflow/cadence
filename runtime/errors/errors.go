@@ -27,7 +27,7 @@ import (
 
 // InternalError is an implementation error, e.g an unreachable code path (UnreachableError).
 // A program should never throw an InternalError in an ideal world.
-// 
+//
 // InternalError s must always be thrown and not be caught (recovered), i.e. be propagated up the call stack.
 //
 type InternalError interface {
@@ -104,6 +104,12 @@ type ErrorNote interface {
 type ParentError interface {
 	error
 	ChildErrors() []error
+}
+
+// HasPrefix is an interface for errors that provide a custom prefix
+//
+type HasPrefix interface {
+	Prefix() string
 }
 
 // MemoryError indicates a memory limit has reached and should end

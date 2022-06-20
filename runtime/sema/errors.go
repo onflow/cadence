@@ -753,6 +753,13 @@ func (e *NotDeclaredMemberError) Error() string {
 }
 
 func (e *NotDeclaredMemberError) SecondaryError() string {
+	if optionalType, ok := e.Type.(*OptionalType); ok {
+		members := optionalType.Type.GetMembers()
+		name := e.Name
+		if _, ok := members[name]; ok {
+			return fmt.Sprintf("type is optional, consider optional-chaining: ?.%s", name)
+		}
+	}
 	return "unknown member"
 }
 
@@ -1955,7 +1962,11 @@ type InvalidResourceAssignmentError struct {
 }
 
 func (e *InvalidResourceAssignmentError) Error() string {
-	return "cannot assign to resource-typed target. consider force assigning (<-!) or swapping (<->)"
+	return "cannot assign to resource-typed target"
+}
+
+func (e *InvalidResourceAssignmentError) SecondaryError() string {
+	return "consider force assigning (<-!) or swapping (<->)"
 }
 
 func (*InvalidResourceAssignmentError) isSemanticError() {}

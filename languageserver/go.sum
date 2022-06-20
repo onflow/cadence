@@ -1356,8 +1356,9 @@ github.com/onflow/cadence v0.21.3-0.20220419065337-d5202c162010/go.mod h1:vNIxF1
 github.com/onflow/cadence v0.21.3-0.20220511225809-808fe14141df/go.mod h1:vNIxF13e1Ty50KnkQSm6LVwvxGGLTQ4kpldvTL+2S6s=
 github.com/onflow/cadence v0.21.3-0.20220513161637-08b93d4bb7b9/go.mod h1:vNIxF13e1Ty50KnkQSm6LVwvxGGLTQ4kpldvTL+2S6s=
 github.com/onflow/cadence v0.21.3-0.20220601002855-8b113c539a2c/go.mod h1:FliGP1FZLEuSemnSf8pKItDzW7E2cvPukx/SsE1+oCo=
-github.com/onflow/cadence v0.24.0 h1:n83/KphAHHmPlHqHJdgVCgMeYh1M76nlmalzCxvr2CM=
 github.com/onflow/cadence v0.24.0/go.mod h1:tIJiQ4RIq1WUTXdBewv8p+gNUETN93Eb7jSFedjqs5w=
+github.com/onflow/cadence v0.24.3 h1:UhggdTeTbxZraB9vkR7TlRv3i05nHDisFzo8SNzDZ0c=
+github.com/onflow/cadence v0.24.3/go.mod h1:tIJiQ4RIq1WUTXdBewv8p+gNUETN93Eb7jSFedjqs5w=
 github.com/onflow/cadence/languageserver v0.15.2/go.mod h1:hQGE8dYH5CfQ1Oe0nXglchgURzZwR3JQhmuXtv4ROHs=
 github.com/onflow/cadence/languageserver v0.16.0/go.mod h1:UPV1so9LcMrhj27IegrTucoyS4TLRVjNr4DJqjqBhFA=
 github.com/onflow/cadence/languageserver v0.18.2/go.mod h1:ehuDCUevEEavUzgJqLevcZPjfmTzMBX7Sglbi5ur9uU=

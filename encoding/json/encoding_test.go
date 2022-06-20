@@ -1821,27 +1821,70 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &cadence.ResourceType{
-		Location:            utils.TestLocation,
-		QualifiedIdentifier: "Foo",
-		Fields: []cadence.Field{
-			{
-				Identifier: "foo",
+	t.Run("recursive", func(t *testing.T) {
+
+		t.Parallel()
+
+		ty := &cadence.ResourceType{
+			Location:            utils.TestLocation,
+			QualifiedIdentifier: "Foo",
+			Fields: []cadence.Field{
+				{
+					Identifier: "foo",
+				},
 			},
-		},
-	}
+			Initializers: [][]cadence.Parameter{},
+		}
 
-	ty.Fields[0].Type = cadence.OptionalType{
-		Type: ty,
-	}
+		ty.Fields[0].Type = cadence.OptionalType{
+			Type: ty,
+		}
 
-	testEncode(
-		t,
-		cadence.TypeValue{
-			StaticType: ty,
-		},
-		`{"type":"Type","value":{"staticType":{"kind":"Resource","typeID":"S.test.Foo","fields":[{"id":"foo","type":{"kind":"Optional","type":"S.test.Foo"}}],"initializers":[],"type":""}}}`,
-	)
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{
+				StaticType: ty,
+			},
+			`{"type":"Type","value":{"staticType":{"kind":"Resource","typeID":"S.test.Foo","fields":[{"id":"foo","type":{"kind":"Optional","type":"S.test.Foo"}}],"initializers":[],"type":""}}}`,
+		)
+
+	})
+
+	t.Run("non-recursive, repeated", func(t *testing.T) {
+
+		t.Parallel()
+
+		fooTy := &cadence.ResourceType{
+			Location:            utils.TestLocation,
+			QualifiedIdentifier: "Foo",
+			Fields:              []cadence.Field{},
+			Initializers:        [][]cadence.Parameter{},
+		}
+
+		barTy := &cadence.ResourceType{
+			Location:            utils.TestLocation,
+			QualifiedIdentifier: "Bar",
+			Fields: []cadence.Field{
+				{
+					Identifier: "foo1",
+					Type:       fooTy,
+				},
+				{
+					Identifier: "foo2",
+					Type:       fooTy,
+				},
+			},
+			Initializers: [][]cadence.Parameter{},
+		}
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{
+				StaticType: barTy,
+			},
+			`{"type":"Type","value":{"staticType":{"kind":"Resource","typeID":"S.test.Bar","fields":[{"id":"foo1","type":{"kind":"Resource","typeID":"S.test.Foo","fields":[],"initializers":[],"type":""}},{"id":"foo2","type":"S.test.Foo"}],"initializers":[],"type":""}}}`,
+		)
+	})
 }
 
 func TestEncodePath(t *testing.T) {
@@ -1944,8 +1987,8 @@ func testEncode(t *testing.T, val cadence.Value, expectedJSON string) (actualJSO
 	return actualJSON
 }
 
-func testDecode(t *testing.T, actualJSON string, expectedVal cadence.Value) {
-	decodedVal, err := json.Decode(nil, []byte(actualJSON))
+func testDecode(t *testing.T, actualJSON string, expectedVal cadence.Value, options ...json.Option) {
+	decodedVal, err := json.Decode(nil, []byte(actualJSON), options...)
 	require.NoError(t, err)
 
 	assert.Equal(t, expectedVal, decodedVal)
@@ -1980,4 +2023,34 @@ func TestNonUTF8StringEncoding(t *testing.T) {
 	// Decoded value must be a valid utf8 string
 	assert.IsType(t, cadence.String(""), decodedValue)
 	assert.True(t, utf8.ValidString(decodedValue.String()))
+}
+
+func TestDecodeBackwardsCompatibilityTypeID(t *testing.T) {
+
+	t.Parallel()
+
+	const encoded = `{"type":"Type","value":{"staticType":"&Int"}}}`
+
+	t.Run("unstructured static types allowed", func(t *testing.T) {
+
+		t.Parallel()
+
+		testDecode(
+			t,
+			encoded,
+
+			cadence.TypeValue{
+				StaticType: cadence.TypeID("&Int"),
+			},
+			json.WithAllowUnstructuredStaticTypes(true),
+		)
+	})
+
+	t.Run("unstructured static types disallowed", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := json.Decode(nil, []byte(encoded))
+		require.Error(t, err)
+	})
 }

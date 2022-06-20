@@ -75,6 +75,7 @@ func TestErrorInterfaceConformance(t *testing.T) {
 		parser2.Error{},
 		interpreter.Error{},
 		runtime.Error{},
+		interpreter.StackTraceError{},
 	}
 
 	errorsToSkip := make(map[string]any)

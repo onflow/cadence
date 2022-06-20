@@ -29,6 +29,19 @@ type Type interface {
 	ID() string
 }
 
+// TypeID is a type which is only known by its type ID.
+// This type should not be used when encoding values,
+// and should only be used for decoding values that were encoded
+// using an older format of the JSON encoding (<v0.3.0)
+//
+type TypeID string
+
+func (TypeID) isType() {}
+
+func (t TypeID) ID() string {
+	return string(t)
+}
+
 // AnyType
 
 type AnyType struct{}
@@ -904,6 +917,7 @@ type CompositeType interface {
 	CompositeTypeLocation() common.Location
 	CompositeTypeQualifiedIdentifier() string
 	CompositeFields() []Field
+	SetCompositeFields([]Field)
 	CompositeInitializers() [][]Parameter
 }
 
@@ -918,13 +932,13 @@ type StructType struct {
 
 func NewStructType(
 	location common.Location,
-	qualifiedIdentifer string,
+	qualifiedIdentifier string,
 	fields []Field,
 	initializers [][]Parameter,
 ) *StructType {
 	return &StructType{
 		Location:            location,
-		QualifiedIdentifier: qualifiedIdentifer,
+		QualifiedIdentifier: qualifiedIdentifier,
 		Fields:              fields,
 		Initializers:        initializers,
 	}
@@ -963,6 +977,10 @@ func (t *StructType) CompositeTypeQualifiedIdentifier() string {
 
 func (t *StructType) CompositeFields() []Field {
 	return t.Fields
+}
+
+func (t *StructType) SetCompositeFields(fields []Field) {
+	t.Fields = fields
 }
 
 func (t *StructType) CompositeInitializers() [][]Parameter {
@@ -1027,6 +1045,10 @@ func (t *ResourceType) CompositeFields() []Field {
 	return t.Fields
 }
 
+func (t *ResourceType) SetCompositeFields(fields []Field) {
+	t.Fields = fields
+}
+
 func (t *ResourceType) CompositeInitializers() [][]Parameter {
 	return t.Initializers
 }
@@ -1089,6 +1111,10 @@ func (t *EventType) CompositeFields() []Field {
 	return t.Fields
 }
 
+func (t *EventType) SetCompositeFields(fields []Field) {
+	t.Fields = fields
+}
+
 func (t *EventType) CompositeInitializers() [][]Parameter {
 	return [][]Parameter{t.Initializer}
 }
@@ -1104,13 +1130,13 @@ type ContractType struct {
 
 func NewContractType(
 	location common.Location,
-	qualifiedIdentifer string,
+	qualifiedIdentifier string,
 	fields []Field,
 	initializers [][]Parameter,
 ) *ContractType {
 	return &ContractType{
 		Location:            location,
-		QualifiedIdentifier: qualifiedIdentifer,
+		QualifiedIdentifier: qualifiedIdentifier,
 		Fields:              fields,
 		Initializers:        initializers,
 	}
@@ -1119,12 +1145,12 @@ func NewContractType(
 func NewMeteredContractType(
 	gauge common.MemoryGauge,
 	location common.Location,
-	qualifiedIdentifer string,
+	qualifiedIdentifier string,
 	fields []Field,
 	initializers [][]Parameter,
 ) *ContractType {
 	common.UseMemory(gauge, common.CadenceContractTypeMemoryUsage)
-	return NewContractType(location, qualifiedIdentifer, fields, initializers)
+	return NewContractType(location, qualifiedIdentifier, fields, initializers)
 }
 
 func (*ContractType) isType() {}
@@ -1151,6 +1177,10 @@ func (t *ContractType) CompositeFields() []Field {
 	return t.Fields
 }
 
+func (t *ContractType) SetCompositeFields(fields []Field) {
+	t.Fields = fields
+}
+
 func (t *ContractType) CompositeInitializers() [][]Parameter {
 	return t.Initializers
 }
@@ -1163,6 +1193,7 @@ type InterfaceType interface {
 	InterfaceTypeLocation() common.Location
 	InterfaceTypeQualifiedIdentifier() string
 	InterfaceFields() []Field
+	SetInterfaceFields(fields []Field)
 	InterfaceInitializers() [][]Parameter
 }
 
@@ -1177,13 +1208,13 @@ type StructInterfaceType struct {
 
 func NewStructInterfaceType(
 	location common.Location,
-	qualifiedIdentifer string,
+	qualifiedIdentifier string,
 	fields []Field,
 	initializers [][]Parameter,
 ) *StructInterfaceType {
 	return &StructInterfaceType{
 		Location:            location,
-		QualifiedIdentifier: qualifiedIdentifer,
+		QualifiedIdentifier: qualifiedIdentifier,
 		Fields:              fields,
 		Initializers:        initializers,
 	}
@@ -1192,12 +1223,12 @@ func NewStructInterfaceType(
 func NewMeteredStructInterfaceType(
 	gauge common.MemoryGauge,
 	location common.Location,
-	qualifiedIdentifer string,
+	qualifiedIdentifier string,
 	fields []Field,
 	initializers [][]Parameter,
 ) *StructInterfaceType {
 	common.UseMemory(gauge, common.CadenceStructInterfaceTypeMemoryUsage)
-	return NewStructInterfaceType(location, qualifiedIdentifer, fields, initializers)
+	return NewStructInterfaceType(location, qualifiedIdentifier, fields, initializers)
 }
 
 func (*StructInterfaceType) isType() {}
@@ -1224,6 +1255,10 @@ func (t *StructInterfaceType) InterfaceFields() []Field {
 	return t.Fields
 }
 
+func (t *StructInterfaceType) SetInterfaceFields(fields []Field) {
+	t.Fields = fields
+}
+
 func (t *StructInterfaceType) InterfaceInitializers() [][]Parameter {
 	return t.Initializers
 }
@@ -1239,13 +1274,13 @@ type ResourceInterfaceType struct {
 
 func NewResourceInterfaceType(
 	location common.Location,
-	qualifiedIdentifer string,
+	qualifiedIdentifier string,
 	fields []Field,
 	initializers [][]Parameter,
 ) *ResourceInterfaceType {
 	return &ResourceInterfaceType{
 		Location:            location,
-		QualifiedIdentifier: qualifiedIdentifer,
+		QualifiedIdentifier: qualifiedIdentifier,
 		Fields:              fields,
 		Initializers:        initializers,
 	}
@@ -1254,12 +1289,12 @@ func NewResourceInterfaceType(
 func NewMeteredResourceInterfaceType(
 	gauge common.MemoryGauge,
 	location common.Location,
-	qualifiedIdentifer string,
+	qualifiedIdentifier string,
 	fields []Field,
 	initializers [][]Parameter,
 ) *ResourceInterfaceType {
 	common.UseMemory(gauge, common.CadenceResourceInterfaceTypeMemoryUsage)
-	return NewResourceInterfaceType(location, qualifiedIdentifer, fields, initializers)
+	return NewResourceInterfaceType(location, qualifiedIdentifier, fields, initializers)
 }
 
 func (*ResourceInterfaceType) isType() {}
@@ -1286,6 +1321,10 @@ func (t *ResourceInterfaceType) InterfaceFields() []Field {
 	return t.Fields
 }
 
+func (t *ResourceInterfaceType) SetInterfaceFields(fields []Field) {
+	t.Fields = fields
+}
+
 func (t *ResourceInterfaceType) InterfaceInitializers() [][]Parameter {
 	return t.Initializers
 }
@@ -1301,13 +1340,13 @@ type ContractInterfaceType struct {
 
 func NewContractInterfaceType(
 	location common.Location,
-	qualifiedIdentifer string,
+	qualifiedIdentifier string,
 	fields []Field,
 	initializers [][]Parameter,
 ) *ContractInterfaceType {
 	return &ContractInterfaceType{
 		Location:            location,
-		QualifiedIdentifier: qualifiedIdentifer,
+		QualifiedIdentifier: qualifiedIdentifier,
 		Fields:              fields,
 		Initializers:        initializers,
 	}
@@ -1316,12 +1355,12 @@ func NewContractInterfaceType(
 func NewMeteredContractInterfaceType(
 	gauge common.MemoryGauge,
 	location common.Location,
-	qualifiedIdentifer string,
+	qualifiedIdentifier string,
 	fields []Field,
 	initializers [][]Parameter,
 ) *ContractInterfaceType {
 	common.UseMemory(gauge, common.CadenceContractInterfaceTypeMemoryUsage)
-	return NewContractInterfaceType(location, qualifiedIdentifer, fields, initializers)
+	return NewContractInterfaceType(location, qualifiedIdentifier, fields, initializers)
 }
 
 func (*ContractInterfaceType) isType() {}
@@ -1346,6 +1385,10 @@ func (t *ContractInterfaceType) InterfaceTypeQualifiedIdentifier() string {
 
 func (t *ContractInterfaceType) InterfaceFields() []Field {
 	return t.Fields
+}
+
+func (t *ContractInterfaceType) SetInterfaceFields(fields []Field) {
+	t.Fields = fields
 }
 
 func (t *ContractInterfaceType) InterfaceInitializers() [][]Parameter {
@@ -1682,6 +1725,10 @@ func (t *EnumType) CompositeTypeQualifiedIdentifier() string {
 
 func (t *EnumType) CompositeFields() []Field {
 	return t.Fields
+}
+
+func (t *EnumType) SetCompositeFields(fields []Field) {
+	t.Fields = fields
 }
 
 func (t *EnumType) CompositeInitializers() [][]Parameter {

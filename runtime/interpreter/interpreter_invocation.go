@@ -121,6 +121,8 @@ func (interpreter *Interpreter) invokeInterpretedFunction(
 	interpreter.activations.PushNewWithParent(function.Activation)
 	interpreter.activations.Current().isFunction = true
 
+	interpreter.CallStack.Push(invocation)
+
 	// Make `self` available, if any
 	if invocation.Self != nil {
 		interpreter.declareVariable(sema.SelfIdentifier, invocation.Self)
@@ -135,6 +137,13 @@ func (interpreter *Interpreter) invokeInterpretedFunctionActivated(
 	function *InterpretedFunctionValue,
 	arguments []Value,
 ) Value {
+	defer func() {
+		// Only unwind the call stack if there was no error
+		if r := recover(); r != nil {
+			panic(r)
+		}
+		interpreter.CallStack.Pop()
+	}()
 	defer interpreter.activations.Pop()
 
 	if function.ParameterList != nil {
