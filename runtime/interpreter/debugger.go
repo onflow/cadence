@@ -93,13 +93,8 @@ func (d *Debugger) RequestPause() {
 	atomic.StoreUint32(&d.pauseRequested, 1)
 }
 
-func (d *Debugger) Continue() bool {
-	select {
-	case d.continues <- struct{}{}:
-		return true
-	default:
-		return false
-	}
+func (d *Debugger) Continue() {
+	d.continues <- struct{}{}
 }
 
 func (d *Debugger) Pause() Stop {
