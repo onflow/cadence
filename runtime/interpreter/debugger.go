@@ -74,6 +74,10 @@ func (d *Debugger) ClearBreakpoints() {
 	}
 }
 
+func (d *Debugger) ClearBreakpointsForLocation(location common.Location) {
+	delete(d.breakpoints, location)
+}
+
 func (d *Debugger) onStatement(interpreter *Interpreter, statement ast.Statement) {
 	if !atomic.CompareAndSwapUint32(&d.pauseRequested, 1, 0) {
 		breakpoints, ok := d.breakpoints[interpreter.Location]
