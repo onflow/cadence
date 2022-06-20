@@ -1416,7 +1416,7 @@ func (checker *Checker) checkTypeRequirement(
 			interfaceTypeIsTypeRequirement: true,
 		},
 		inherited,
-		nil,
+		map[string]map[string]struct{}{},
 	)
 }
 

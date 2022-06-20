@@ -1060,8 +1060,8 @@ func (e *MultipleInterfaceDefaultImplementationsError) StartPosition() ast.Posit
 	return e.Member.Identifier.StartPosition()
 }
 
-func (e *MultipleInterfaceDefaultImplementationsError) EndPosition() ast.Position {
-	return e.Member.Identifier.EndPosition()
+func (e *MultipleInterfaceDefaultImplementationsError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
+	return e.Member.Identifier.EndPosition(memoryGauge)
 }
 
 func (*MultipleInterfaceDefaultImplementationsError) isSemanticError() {}
@@ -1085,8 +1085,8 @@ func (e *SpecialFunctionDefaultImplementationError) StartPosition() ast.Position
 	return e.Identifier.StartPosition()
 }
 
-func (e *SpecialFunctionDefaultImplementationError) EndPosition() ast.Position {
-	return e.Identifier.EndPosition()
+func (e *SpecialFunctionDefaultImplementationError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
+	return e.Identifier.EndPosition(memoryGauge)
 }
 
 // DefaultFunctionConflictError
@@ -1109,8 +1109,8 @@ func (e *DefaultFunctionConflictError) StartPosition() ast.Position {
 	return e.Member.Identifier.StartPosition()
 }
 
-func (e *DefaultFunctionConflictError) EndPosition() ast.Position {
-	return e.Member.Identifier.EndPosition()
+func (e *DefaultFunctionConflictError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
+	return e.Member.Identifier.EndPosition(memoryGauge)
 }
 
 func (*DefaultFunctionConflictError) isSemanticError() {}
