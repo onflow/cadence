@@ -27,7 +27,8 @@ type NodeSet interface {
 	ForEach(func(*Node) error) error
 }
 
-// MapNodeSet is a Node set backed by a Go map (unordered)
+// MapNodeSet is a Node set backed by a Go map (unordered).
+// NOTE: DO *NOT* USE this for on-chain operations, but OrderedNodeSet
 //
 type MapNodeSet map[*Node]struct{}
 
@@ -51,7 +52,7 @@ func (m MapNodeSet) Contains(node *Node) bool {
 }
 
 func (m MapNodeSet) ForEach(f func(*Node) error) error {
-	for node := range m {
+	for node := range m { // nolint:maprangecheck
 		err := f(node)
 		if err != nil {
 			return err
