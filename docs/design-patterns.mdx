@@ -154,8 +154,7 @@ import AContract from 0xAContract
 // Return the struct with a script
 pub fun main(): AContract.BReportStruct {
     let b: AContract.BResource // Borrow the resource
-    let report = b.generateReport()
-    return report
+    return b.generateReport()
 }
 ```
 
