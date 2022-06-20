@@ -25,18 +25,17 @@ import (
 	"golang.org/x/xerrors"
 )
 
-// InternalError is thrown on an implementation error.
+// InternalError is an implementation error, e.g an unreachable code path (UnreachableError).
 // A program should never throw an InternalError in an ideal world.
-// e.g: UnreachableError
-//
-// InternalError s must always be thrown, and let it propagate up the call stack.
+// 
+// InternalError s must always be thrown and not be caught (recovered), i.e. be propagated up the call stack.
 //
 type InternalError interface {
 	error
 	IsInternalError()
 }
 
-// UserError is an error thrown for an error in the user-code.
+// UserError is an error thrown for an error in the user-code, e.g. exceeding a metering limit.
 type UserError interface {
 	error
 	IsUserError()
