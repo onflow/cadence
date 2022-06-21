@@ -24,6 +24,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/turbolent/prettier"
 
 	"github.com/onflow/cadence/runtime/common"
 )
@@ -32,7 +33,7 @@ func TestInterfaceDeclaration_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
 
-	expr := &InterfaceDeclaration{
+	decl := &InterfaceDeclaration{
 		Access:        AccessPublic,
 		CompositeKind: common.CompositeKindResource,
 		Identifier: Identifier{
@@ -47,7 +48,7 @@ func TestInterfaceDeclaration_MarshalJSON(t *testing.T) {
 		},
 	}
 
-	actual, err := json.Marshal(expr)
+	actual, err := json.Marshal(decl)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -71,4 +72,160 @@ func TestInterfaceDeclaration_MarshalJSON(t *testing.T) {
         `,
 		string(actual),
 	)
+}
+
+func TestInterfaceDeclaration_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("no members", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &InterfaceDeclaration{
+			Access:        AccessPublic,
+			CompositeKind: common.CompositeKindResource,
+			Identifier: Identifier{
+				Identifier: "AB",
+			},
+			Members: NewMembers(nil, []Declaration{}),
+		}
+
+		require.Equal(
+			t,
+			prettier.Concat{
+				prettier.Text("pub"),
+				prettier.Text(" "),
+				prettier.Text("resource"),
+				prettier.Text(" "),
+				prettier.Text("interface "),
+				prettier.Text("AB"),
+				prettier.Text(" "),
+				prettier.Text("{}"),
+			},
+			decl.Doc(),
+		)
+
+	})
+
+	t.Run("members", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &InterfaceDeclaration{
+			Access:        AccessPublic,
+			CompositeKind: common.CompositeKindResource,
+			Identifier: Identifier{
+				Identifier: "AB",
+			},
+			Members: NewMembers(nil, []Declaration{
+				&FieldDeclaration{
+					Identifier: Identifier{
+						Identifier: "x",
+					},
+					TypeAnnotation: &TypeAnnotation{
+						Type: &NominalType{
+							Identifier: Identifier{
+								Identifier: "X",
+							},
+						},
+					},
+				},
+			}),
+		}
+
+		require.Equal(
+			t,
+			prettier.Concat{
+				prettier.Text("pub"),
+				prettier.Text(" "),
+				prettier.Text("resource"),
+				prettier.Text(" "),
+				prettier.Text("interface "),
+				prettier.Text("AB"),
+				prettier.Text(" "),
+				prettier.Concat{
+					prettier.Text("{"),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.HardLine{},
+							prettier.Group{
+								Doc: prettier.Concat{
+									prettier.Text("x"),
+									prettier.Text(": "),
+									prettier.Text("X"),
+								},
+							},
+						},
+					},
+					prettier.HardLine{},
+					prettier.Text("}"),
+				},
+			},
+			decl.Doc(),
+		)
+
+	})
+}
+
+func TestInterfaceDeclaration_String(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("no members", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &InterfaceDeclaration{
+			Access:        AccessPublic,
+			CompositeKind: common.CompositeKindResource,
+			Identifier: Identifier{
+				Identifier: "AB",
+			},
+			Members: NewMembers(nil, []Declaration{}),
+		}
+
+		require.Equal(
+			t,
+			"pub resource interface AB {}",
+			decl.String(),
+		)
+
+	})
+
+	t.Run("members", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &InterfaceDeclaration{
+			Access:        AccessPublic,
+			CompositeKind: common.CompositeKindResource,
+			Identifier: Identifier{
+				Identifier: "AB",
+			},
+			Members: NewMembers(nil, []Declaration{
+				&FieldDeclaration{
+					Identifier: Identifier{
+						Identifier: "x",
+					},
+					TypeAnnotation: &TypeAnnotation{
+						Type: &NominalType{
+							Identifier: Identifier{
+								Identifier: "X",
+							},
+						},
+					},
+				},
+			}),
+		}
+
+		require.Equal(
+			t,
+			"pub resource interface AB {\n"+
+				"    x: X\n"+
+				"}",
+			decl.String(),
+		)
+
+	})
 }

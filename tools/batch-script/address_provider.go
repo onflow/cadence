@@ -75,6 +75,8 @@ func InitAddressProvider(
 		searchStep += 1
 		address := ap.indexToAddress(index)
 
+		log.Info().Msgf("testing account %d = %s", index, address)
+
 		// This script will fail with endOfAccountsError
 		// if the account (address at given index) doesn't exist yet
 		_, err := client.ExecuteScriptAtBlockID(

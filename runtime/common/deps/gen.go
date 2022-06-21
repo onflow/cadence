@@ -14,26 +14,11 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Based on https://github.com/wk8/go-ordered-map, Copyright Jean Rougé
+ *
  */
 
-package ast
+package deps
 
-import (
-	"fmt"
-
-	"github.com/turbolent/prettier"
-
-	"github.com/onflow/cadence/runtime/common"
-)
-
-type Declaration interface {
-	Element
-	fmt.Stringer
-	isDeclaration()
-	DeclarationIdentifier() *Identifier
-	DeclarationKind() common.DeclarationKind
-	DeclarationAccess() Access
-	DeclarationMembers() *Members
-	DeclarationDocString() string
-	Doc() prettier.Doc
-}
+//go:generate go run github.com/cheekybits/genny -pkg=deps -in=../orderedmap/orderedmap.go -out=orderedmap.go gen "KeyType=*Node ValueType=struct{}"
