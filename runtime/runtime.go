@@ -258,9 +258,7 @@ func getWrappedError(recovered any, context Context) Error {
 	// Wrap any other unhandled error with a generic internal error first.
 	// And then wrap with `runtime.Error` to include meta info.
 	case error:
-		err := runtimeErrors.UnexpectedError{
-			Err: recovered,
-		}
+		err := runtimeErrors.NewUnexpectedErrorFromCause(recovered)
 		return newError(err, context)
 	default:
 		err := runtimeErrors.NewUnexpectedError("%s", recovered)
@@ -855,9 +853,7 @@ func userPanicToError(f func()) (returnedError error) {
 			// Otherwise, panic.
 			// Also wrap with a `UnexpectedError` to mark it as an `InternalError`.
 			case error:
-				panic(runtimeErrors.UnexpectedError{
-					Err: err,
-				})
+				panic(runtimeErrors.NewUnexpectedErrorFromCause(err))
 			default:
 				panic(runtimeErrors.NewUnexpectedError("%s", r))
 			}

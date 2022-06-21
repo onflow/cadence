@@ -11328,7 +11328,7 @@ func (v Word8Value) Plus(interpreter *Interpreter, other NumberValue) NumberValu
 }
 
 func (v Word8Value) SaturatingPlus(*Interpreter, NumberValue) NumberValue {
-	panic(errors.UnreachableError{})
+	panic(errors.NewUnreachableError())
 }
 
 func (v Word8Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -11349,7 +11349,7 @@ func (v Word8Value) Minus(interpreter *Interpreter, other NumberValue) NumberVal
 }
 
 func (v Word8Value) SaturatingMinus(*Interpreter, NumberValue) NumberValue {
-	panic(errors.UnreachableError{})
+	panic(errors.NewUnreachableError())
 }
 
 func (v Word8Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -11391,7 +11391,7 @@ func (v Word8Value) Mul(interpreter *Interpreter, other NumberValue) NumberValue
 }
 
 func (v Word8Value) SaturatingMul(*Interpreter, NumberValue) NumberValue {
-	panic(errors.UnreachableError{})
+	panic(errors.NewUnreachableError())
 }
 
 func (v Word8Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -11416,7 +11416,7 @@ func (v Word8Value) Div(interpreter *Interpreter, other NumberValue) NumberValue
 }
 
 func (v Word8Value) SaturatingDiv(*Interpreter, NumberValue) NumberValue {
-	panic(errors.UnreachableError{})
+	panic(errors.NewUnreachableError())
 }
 
 func (v Word8Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -11764,7 +11764,7 @@ func (v Word16Value) Plus(interpreter *Interpreter, other NumberValue) NumberVal
 }
 
 func (v Word16Value) SaturatingPlus(*Interpreter, NumberValue) NumberValue {
-	panic(errors.UnreachableError{})
+	panic(errors.NewUnreachableError())
 }
 
 func (v Word16Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -11785,7 +11785,7 @@ func (v Word16Value) Minus(interpreter *Interpreter, other NumberValue) NumberVa
 }
 
 func (v Word16Value) SaturatingMinus(*Interpreter, NumberValue) NumberValue {
-	panic(errors.UnreachableError{})
+	panic(errors.NewUnreachableError())
 }
 
 func (v Word16Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -11827,7 +11827,7 @@ func (v Word16Value) Mul(interpreter *Interpreter, other NumberValue) NumberValu
 }
 
 func (v Word16Value) SaturatingMul(*Interpreter, NumberValue) NumberValue {
-	panic(errors.UnreachableError{})
+	panic(errors.NewUnreachableError())
 }
 
 func (v Word16Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -11852,7 +11852,7 @@ func (v Word16Value) Div(interpreter *Interpreter, other NumberValue) NumberValu
 }
 
 func (v Word16Value) SaturatingDiv(*Interpreter, NumberValue) NumberValue {
-	panic(errors.UnreachableError{})
+	panic(errors.NewUnreachableError())
 }
 
 func (v Word16Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -12203,7 +12203,7 @@ func (v Word32Value) Plus(interpreter *Interpreter, other NumberValue) NumberVal
 }
 
 func (v Word32Value) SaturatingPlus(*Interpreter, NumberValue) NumberValue {
-	panic(errors.UnreachableError{})
+	panic(errors.NewUnreachableError())
 }
 
 func (v Word32Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -12224,7 +12224,7 @@ func (v Word32Value) Minus(interpreter *Interpreter, other NumberValue) NumberVa
 }
 
 func (v Word32Value) SaturatingMinus(*Interpreter, NumberValue) NumberValue {
-	panic(errors.UnreachableError{})
+	panic(errors.NewUnreachableError())
 }
 
 func (v Word32Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -12266,7 +12266,7 @@ func (v Word32Value) Mul(interpreter *Interpreter, other NumberValue) NumberValu
 }
 
 func (v Word32Value) SaturatingMul(*Interpreter, NumberValue) NumberValue {
-	panic(errors.UnreachableError{})
+	panic(errors.NewUnreachableError())
 }
 
 func (v Word32Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -12291,7 +12291,7 @@ func (v Word32Value) Div(interpreter *Interpreter, other NumberValue) NumberValu
 }
 
 func (v Word32Value) SaturatingDiv(*Interpreter, NumberValue) NumberValue {
-	panic(errors.UnreachableError{})
+	panic(errors.NewUnreachableError())
 }
 
 func (v Word32Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {
@@ -12668,7 +12668,7 @@ func (v Word64Value) Plus(interpreter *Interpreter, other NumberValue) NumberVal
 }
 
 func (v Word64Value) SaturatingPlus(*Interpreter, NumberValue) NumberValue {
-	panic(errors.UnreachableError{})
+	panic(errors.NewUnreachableError())
 }
 
 func (v Word64Value) Minus(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -12689,7 +12689,7 @@ func (v Word64Value) Minus(interpreter *Interpreter, other NumberValue) NumberVa
 }
 
 func (v Word64Value) SaturatingMinus(*Interpreter, NumberValue) NumberValue {
-	panic(errors.UnreachableError{})
+	panic(errors.NewUnreachableError())
 }
 
 func (v Word64Value) Mod(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -12731,7 +12731,7 @@ func (v Word64Value) Mul(interpreter *Interpreter, other NumberValue) NumberValu
 }
 
 func (v Word64Value) SaturatingMul(*Interpreter, NumberValue) NumberValue {
-	panic(errors.UnreachableError{})
+	panic(errors.NewUnreachableError())
 }
 
 func (v Word64Value) Div(interpreter *Interpreter, other NumberValue) NumberValue {
@@ -12756,7 +12756,7 @@ func (v Word64Value) Div(interpreter *Interpreter, other NumberValue) NumberValu
 }
 
 func (v Word64Value) SaturatingDiv(*Interpreter, NumberValue) NumberValue {
-	panic(errors.UnreachableError{})
+	panic(errors.NewUnreachableError())
 }
 
 func (v Word64Value) Less(interpreter *Interpreter, other NumberValue) BoolValue {

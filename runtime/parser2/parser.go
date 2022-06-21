@@ -154,7 +154,7 @@ func (p *parser) report(errs ...error) {
 
 		var ok bool
 
-		// Fatal errors should abort parsing
+		// MemoryError should abort parsing
 		_, ok = err.(errors.MemoryError)
 		if ok {
 			panic(err)

@@ -19,13 +19,20 @@
 package errors
 
 import (
+	goErrors "errors"
 	"fmt"
 	"runtime/debug"
 
 	"golang.org/x/xerrors"
 )
 
-// InternalError is an implementation error, e.g an unreachable code path (UnreachableError).
+// NewUnreachableError creates an internal error that indicates executing an unimplemented path.
+//
+func NewUnreachableError() InternalError {
+	return NewUnexpectedErrorFromCause(goErrors.New("unreachable"))
+}
+
+// InternalError is an implementation error, e.g: an unreachable code path (UnreachableError).
 // A program should never throw an InternalError in an ideal world.
 //
 // InternalError s must always be thrown and not be caught (recovered), i.e. be propagated up the call stack.
@@ -56,30 +63,6 @@ func NewExternalError(recovered any) ExternalError {
 
 func (e ExternalError) Error() string {
 	return fmt.Sprint(e.Recovered)
-}
-
-// UnreachableError
-
-// UnreachableError is an internal error in the runtime which should have never occurred
-// due to a programming error in the runtime.
-//
-// NOTE: this error is not used for errors because of bugs in a user-provided program.
-// For program errors, see interpreter/errors.go
-//
-type UnreachableError struct {
-	Stack []byte
-}
-
-var _ InternalError = UnreachableError{}
-
-func (UnreachableError) IsInternalError() {}
-
-func (e UnreachableError) Error() string {
-	return fmt.Sprintf("unreachable\n%s", e.Stack)
-}
-
-func NewUnreachableError() *UnreachableError {
-	return &UnreachableError{Stack: debug.Stack()}
 }
 
 // SecondaryError
@@ -131,10 +114,13 @@ func (e MemoryError) Error() string {
 }
 
 // UnexpectedError is the default implementation of InternalError interface.
-// It's a generic error that wraps an implementation error.
+// It's a generic error that wraps an implementation error, which should have never occurred.
+//
+// NOTE: This error is not used for errors occur due to bugs in a user-provided program.
 //
 type UnexpectedError struct {
-	Err error
+	Err   error
+	Stack []byte
 }
 
 var _ InternalError = UnexpectedError{}
@@ -143,7 +129,15 @@ func (UnexpectedError) IsInternalError() {}
 
 func NewUnexpectedError(message string, arg ...any) UnexpectedError {
 	return UnexpectedError{
-		Err: fmt.Errorf(message, arg...),
+		Err:   fmt.Errorf(message, arg...),
+		Stack: debug.Stack(),
+	}
+}
+
+func NewUnexpectedErrorFromCause(err error) UnexpectedError {
+	return UnexpectedError{
+		Err:   err,
+		Stack: debug.Stack(),
 	}
 }
 
@@ -152,7 +146,7 @@ func (e UnexpectedError) Unwrap() error {
 }
 
 func (e UnexpectedError) Error() string {
-	return e.Err.Error()
+	return fmt.Sprintf("%s\n%s", e.Err.Error(), e.Stack)
 }
 
 // DefaultUserError is the default implementation of UserError interface.

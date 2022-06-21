@@ -277,7 +277,7 @@ func parseIfStatement(p *parser) *ast.IfStatement {
 		case expression != nil:
 			test = expression
 		default:
-			panic(errors.UnreachableError{})
+			panic(errors.NewUnreachableError())
 		}
 
 		ifStatement := ast.NewIfStatement(

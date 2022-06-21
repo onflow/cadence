@@ -1138,9 +1138,7 @@ func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 			errors.UserError:
 			err = r.(error)
 		case error:
-			err = errors.UnexpectedError{
-				Err: r,
-			}
+			err = errors.NewUnexpectedErrorFromCause(r)
 		default:
 			err = errors.NewUnexpectedError("%s", r)
 		}
