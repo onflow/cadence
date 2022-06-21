@@ -28,53 +28,63 @@ func TestLocationEquality(t *testing.T) {
 
 	t.Run("AddressLocation", func(t *testing.T) {
 
-		require.Equal(t,
-			AddressLocation{
+		require.True(t,
+			Location(AddressLocation{
 				Address: Address{0x1},
 				Name:    "A",
-			},
-			AddressLocation{
-				Address: Address{0x1},
-				Name:    "A",
-			},
+			}) ==
+				Location(AddressLocation{
+					Address: Address{0x1},
+					Name:    "A",
+				}),
 		)
 
-		require.NotEqual(t,
-			AddressLocation{
+		require.False(t,
+			Location(AddressLocation{
 				Address: Address{0x1},
 				Name:    "A",
-			},
-			AddressLocation{
-				Address: Address{0x2},
-				Name:    "A",
-			},
+			}) ==
+				Location(AddressLocation{
+					Address: Address{0x2},
+					Name:    "A",
+				}),
 		)
 
-		require.NotEqual(t,
-			AddressLocation{
+		require.False(t,
+			Location(AddressLocation{
 				Address: Address{0x1},
 				Name:    "A",
-			},
-			AddressLocation{
-				Address: Address{0x1},
-				Name:    "B",
-			},
+			}) ==
+				Location(AddressLocation{
+					Address: Address{0x1},
+					Name:    "B",
+				}),
 		)
 
-		require.NotEqual(t,
-			AddressLocation{
+		require.False(t,
+			Location(AddressLocation{
 				Address: Address{0x1},
 				Name:    "A",
-			},
-			StringLocation("A.0000000000000001"),
+			}) ==
+				Location(StringLocation("A.0000000000000001")),
 		)
 
-		require.NotEqual(t,
-			StringLocation("A.0000000000000001"),
-			AddressLocation{
-				Address: Address{0x1},
-				Name:    "A",
-			},
+		require.False(t,
+			Location(StringLocation("A.0000000000000001")) ==
+				Location(AddressLocation{
+					Address: Address{0x1},
+					Name:    "A",
+				}),
+		)
+
+		require.True(t,
+			Location(TransactionLocation{1}) ==
+				Location(TransactionLocation{1}),
+		)
+
+		require.False(t,
+			Location(TransactionLocation{1}) ==
+				Location(ScriptLocation{1}),
 		)
 	})
 }
