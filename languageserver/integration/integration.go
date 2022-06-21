@@ -47,7 +47,7 @@ func NewFlowIntegration(s *server.Server, enableFlowClient bool) (*FlowIntegrati
 	}
 
 	options := []server.Option{
-		server.WithDiagnosticProvider(integration.diagnostics),
+		server.WithDiagnosticProvider(diagnostics),
 		server.WithStringImportResolver(resolveFileImport),
 	}
 
