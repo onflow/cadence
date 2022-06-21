@@ -241,8 +241,8 @@ import HelloWorld from 0x01
 transaction {
 
 	prepare(acct: AuthAccount) {
-        //Here we create a resource and move it to the variable newHello, 
-        //then we save it in the account storage
+        // Here we create a resource and move it to the variable newHello, 
+        // then we save it in the account storage
         let newHello <- HelloWorld.createHelloAsset()
         
         acct.save(<-newHello, to: /storage/HelloAssetTutorial)
