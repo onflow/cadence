@@ -26,14 +26,6 @@ import (
 	"github.com/onflow/cadence/languageserver/server"
 )
 
-type EmulatorState int
-
-const (
-	EmulatorOffline EmulatorState = iota
-	EmulatorStarting
-	EmulatorStarted
-)
-
 type FlowIntegration struct {
 	server *server.Server
 	config Config

@@ -53,7 +53,6 @@ async function withConnection(f: (connection: ProtocolConnection) => Promise<voi
   if (enableFlowClient) {
     initOpts = {
       configPath: "./flow.json",
-      emulatorState: 1,
       activeAccountName: "service-account",
       activeAccountAddress: "0xf8d6e0586b0a20c7"
     }
