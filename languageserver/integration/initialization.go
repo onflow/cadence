@@ -33,7 +33,6 @@ func (i *FlowIntegration) initialize(initializationOptions any) error {
 		return err
 	}
 	i.config = conf
-	i.emulatorState = conf.emulatorState
 	i.activeAccount = conf.activeAccount
 
 	configurationPaths := []string{conf.configPath}

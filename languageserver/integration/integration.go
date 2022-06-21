@@ -42,7 +42,6 @@ type FlowIntegration struct {
 	contractInfo   map[protocol.DocumentURI]contractInfo
 
 	activeAccount ClientAccount
-	emulatorState EmulatorState
 
 	sharedServices *services.Services
 	state          *flowkit.State

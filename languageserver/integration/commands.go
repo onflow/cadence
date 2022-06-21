@@ -22,11 +22,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/onflow/cadence"
 	"io/ioutil"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/onflow/cadence"
 
 	"github.com/onflow/flow-cli/pkg/flowkit"
 	"github.com/onflow/flow-go-sdk"
@@ -386,7 +387,6 @@ func (i *FlowIntegration) changeEmulatorState(conn protocol.Conn, args ...json.R
 		)
 	}
 
-	i.emulatorState = EmulatorState(emulatorState)
 	return nil, nil
 }
 
