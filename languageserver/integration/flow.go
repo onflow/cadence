@@ -24,7 +24,9 @@ type flowClient interface {
 	) (*flow.Account, error)
 
 	SendTransaction(
-		signer *flowkit.Account,
+		proposer *flowkit.Account,
+		authorizers []*flowkit.Account,
+		payer *flowkit.Account,
 		code []byte,
 		codeFilename string,
 		gasLimit uint64,
@@ -69,13 +71,46 @@ func (f flowkitClient) DeployContract(
 }
 
 func (f flowkitClient) SendTransaction(
-	signer *flowkit.Account,
+	proposer *flowkit.Account,
+	authorizers []*flowkit.Account,
+	payer *flowkit.Account,
 	code []byte,
 	codeFilename string,
 	gasLimit uint64,
 	args []cadence.Value,
 	network string,
 ) (*flow.Transaction, *flow.TransactionResult, error) {
+	if authorizers == nil {
+		authorizers = []*flowkit.Account{proposer}
+	}
+	if payer == nil {
+		payer = proposer
+	}
+
+	authorizerAddresses := make([]flow.Address, len(authorizers))
+	for i, a := range authorizers {
+		authorizerAddresses[i] = a.Address()
+	}
+
+	tx, err := f.services.Transactions.Build(
+		proposer.Address(),
+		authorizerAddresses,
+		payer.Address(),
+		proposer.Key().Index(),
+		code,
+		codeFilename,
+		gasLimit,
+		args,
+		network,
+		true,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	tx.SetSigner(proposer)
+	tx.Sign()
+
 	return f.services.Transactions.Send(signer, code, codeFilename, gasLimit, args, network)
 }
 
