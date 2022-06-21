@@ -30,6 +30,8 @@ const IdentifierLocationPrefix = "I"
 //
 type IdentifierLocation string
 
+var _ Location = IdentifierLocation("")
+
 func NewIdentifierLocation(gauge MemoryGauge, id string) IdentifierLocation {
 	UseMemory(gauge, NewRawStringMemoryUsage(len(id)))
 	return IdentifierLocation(id)

@@ -30,6 +30,8 @@ const REPLLocationPrefix = "REPL"
 //
 type REPLLocation struct{}
 
+var _ Location = REPLLocation{}
+
 func (l REPLLocation) ID() LocationID {
 	return REPLLocationPrefix
 }
