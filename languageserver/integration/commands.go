@@ -44,10 +44,7 @@ const (
 	CommandCreateAccount         = "cadence.server.flow.createAccount"
 	CommandCreateDefaultAccounts = "cadence.server.flow.createDefaultAccounts"
 	CommandSwitchActiveAccount   = "cadence.server.flow.switchActiveAccount"
-	CommandChangeEmulatorState   = "cadence.server.flow.changeEmulatorState"
 	CommandInitAccountManager    = "cadence.server.flow.initAccountManager"
-
-	ClientStartEmulator = "cadence.runEmulator"
 
 	ErrorMessageEmulator          = "emulator error"
 	ErrorMessageServiceAccount    = "service account error"
@@ -76,10 +73,6 @@ func (i *FlowIntegration) commands() []server.Command {
 		{
 			Name:    CommandDeployContract,
 			Handler: i.deployContract,
-		},
-		{
-			Name:    CommandChangeEmulatorState,
-			Handler: i.changeEmulatorState,
 		},
 		{
 			Name:    CommandSwitchActiveAccount,
@@ -363,30 +356,6 @@ func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...json.RawMess
 	}
 
 	showMessage(conn, fmt.Sprintf("Result: %s", scriptResult.String()))
-	return nil, nil
-}
-
-// changeEmulatorState sets current state of the emulator as reported by LSP
-// used to update Code Lenses with proper title
-//
-// There should be exactly 1 argument:
-// * current state of the emulator represented as byte
-func (i *FlowIntegration) changeEmulatorState(conn protocol.Conn, args ...json.RawMessage) (interface{}, error) {
-	err := server.CheckCommandArgumentCount(args, 1)
-	if err != nil {
-		return nil, errorWithMessage(conn, ErrorMessageArguments, err)
-	}
-
-	var emulatorState float64
-	err = json.Unmarshal(args[0], &emulatorState)
-	if err != nil {
-		return nil, errorWithMessage(
-			conn,
-			ErrorMessageArguments,
-			fmt.Errorf("invalid emulator state argument: %#+v: %w", args[0], err),
-		)
-	}
-
 	return nil, nil
 }
 
