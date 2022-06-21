@@ -19,11 +19,9 @@
 package integration
 
 import (
-	"github.com/onflow/flow-cli/pkg/flowkit"
-	"github.com/onflow/flow-cli/pkg/flowkit/services"
-
 	"github.com/onflow/cadence/languageserver/protocol"
 	"github.com/onflow/cadence/languageserver/server"
+	"github.com/onflow/flow-cli/pkg/flowkit"
 )
 
 type FlowIntegration struct {
@@ -35,7 +33,7 @@ type FlowIntegration struct {
 
 	activeAccount ClientAccount
 
-	sharedServices *services.Services
+	sharedServices flowClient
 	state          *flowkit.State
 }
 

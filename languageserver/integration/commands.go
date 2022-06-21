@@ -135,7 +135,7 @@ func (i *FlowIntegration) initAccountManager(conn protocol.Conn, args ...json.Ra
 		return nil, errorWithMessage(conn, fmt.Sprintf("can't read contract from account %s", serviceAddress), err)
 	}
 
-	_, deployError := i.sharedServices.Accounts.AddContract(
+	_, deployError := i.sharedServices.DeployContract(
 		serviceAccount,
 		name,
 		code,
@@ -350,7 +350,7 @@ func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...json.RawMess
 	}
 
 	// Execute script via shared library
-	scriptResult, err := i.sharedServices.Scripts.Execute(code, scriptArgs, "", "")
+	scriptResult, err := i.sharedServices.ExecuteScript(code, scriptArgs, "", "")
 	if err != nil {
 		return nil, errorWithMessage(conn, ErrorMessageScriptExecution, err)
 	}
@@ -536,7 +536,7 @@ func (i *FlowIntegration) deployContract(conn protocol.Conn, args ...json.RawMes
 		return nil, errorWithMessage(conn, fmt.Sprintf("failed to load contract code: %s", path.Path), err)
 	}
 
-	_, deployError := i.sharedServices.Accounts.AddContract(signer, name, code, update)
+	_, deployError := i.sharedServices.DeployContract(signer, name, code, update)
 	if deployError != nil {
 		return nil, errorWithMessage(conn, ErrorMessageDeploy, deployError)
 	}
@@ -570,7 +570,7 @@ func (i *FlowIntegration) createAccountHelper(conn protocol.Conn) (address flow.
 	keys := []crypto.PublicKey{(*pkey).PublicKey()}
 	weights := []int{flow.AccountKeyWeightThreshold}
 
-	newAccount, err := i.sharedServices.Accounts.Create(
+	newAccount, err := i.sharedServices.CreateAccount(
 		signer,
 		keys,
 		weights,
@@ -603,7 +603,9 @@ func (i *FlowIntegration) storeAccountHelper(conn protocol.Conn, address flow.Ad
 
 	const gasLimit uint64 = 1000
 
-	_, txResult, err := i.sharedServices.Transactions.Send(
+	_, txResult, err := i.sharedServices.SendTransaction(
+		serviceAccount,
+		nil,
 		serviceAccount,
 		code,
 		"",
@@ -627,7 +629,7 @@ func (i *FlowIntegration) storeAccountHelper(conn protocol.Conn, address flow.Ad
 }
 
 func (i *FlowIntegration) isContractDeployed(address flow.Address, name string) (bool, error) {
-	account, err := i.sharedServices.Accounts.Get(address)
+	account, err := i.sharedServices.GetAccount(address)
 
 	if err != nil {
 		return false, err

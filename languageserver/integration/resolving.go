@@ -20,8 +20,9 @@ package integration
 
 import (
 	"fmt"
-	"github.com/onflow/cadence"
 	"io/ioutil"
+
+	"github.com/onflow/cadence"
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/flow-go-sdk"
@@ -65,7 +66,7 @@ func (i *FlowIntegration) resolveAddressImport(location common.AddressLocation) 
 }
 
 func (i *FlowIntegration) getAccount(address common.Address) (*flow.Account, error) {
-	account, err := i.sharedServices.Accounts.Get(
+	account, err := i.sharedServices.GetAccount(
 		flow.HexToAddress(address.String()),
 	)
 
@@ -93,7 +94,7 @@ func (i *FlowIntegration) getAccountAddress(name string) (flow.Address, error) {
 	args := []cadence.Value{cadenceName}
 
 	code := makeManagerCode(scriptGetAddress, serviceAccount.Address().String())
-	result, err := i.sharedServices.Scripts.Execute(code, args, "", "")
+	result, err := i.sharedServices.ExecuteScript(code, args, "", "")
 	if err != nil {
 		return flow.Address{}, err
 	}
