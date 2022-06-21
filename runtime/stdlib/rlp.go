@@ -88,11 +88,13 @@ type RLPDecodeStringError struct {
 	interpreter.LocationRange
 }
 
+var _ errors.UserError = RLPDecodeStringError{}
+
+func (RLPDecodeStringError) IsUserError() {}
+
 func (e RLPDecodeStringError) Error() string {
 	return fmt.Sprintf("failed to RLP-decode string: %s", e.Msg)
 }
-
-func (RLPDecodeStringError) IsUserError() {}
 
 var rlpDecodeStringFunction = interpreter.NewUnmeteredHostFunctionValue(
 	func(invocation interpreter.Invocation) interpreter.Value {
@@ -160,11 +162,13 @@ type RLPDecodeListError struct {
 	interpreter.LocationRange
 }
 
+var _ errors.UserError = RLPDecodeListError{}
+
+func (RLPDecodeListError) IsUserError() {}
+
 func (e RLPDecodeListError) Error() string {
 	return fmt.Sprintf("failed to RLP-decode list: %s", e.Msg)
 }
-
-func (RLPDecodeListError) IsUserError() {}
 
 var rlpDecodeListFunction = interpreter.NewUnmeteredHostFunctionValue(
 	func(invocation interpreter.Invocation) interpreter.Value {

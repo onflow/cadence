@@ -38,11 +38,11 @@ type TokenLimitReachedError struct {
 var _ error = TokenLimitReachedError{}
 var _ errors.UserError = TokenLimitReachedError{}
 
-func (t TokenLimitReachedError) Error() string {
+func (TokenLimitReachedError) IsUserError() {}
+
+func (TokenLimitReachedError) Error() string {
 	return fmt.Sprintf("limit of %d tokens exceeded", tokenLimit)
 }
-
-func (TokenLimitReachedError) IsUserError() {}
 
 type position struct {
 	line   int

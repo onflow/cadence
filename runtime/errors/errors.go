@@ -72,11 +72,11 @@ type UnreachableError struct {
 
 var _ InternalError = UnreachableError{}
 
+func (UnreachableError) IsInternalError() {}
+
 func (e UnreachableError) Error() string {
 	return fmt.Sprintf("unreachable\n%s", e.Stack)
 }
-
-func (UnreachableError) IsInternalError() {}
 
 func NewUnreachableError() *UnreachableError {
 	return &UnreachableError{Stack: debug.Stack()}
@@ -118,6 +118,10 @@ type MemoryError struct {
 	Err error
 }
 
+var _ UserError = MemoryError{}
+
+func (MemoryError) IsUserError() {}
+
 func (e MemoryError) Unwrap() error {
 	return e.Err
 }
@@ -125,8 +129,6 @@ func (e MemoryError) Unwrap() error {
 func (e MemoryError) Error() string {
 	return fmt.Sprintf("memory error: %s", e.Err.Error())
 }
-
-func (MemoryError) IsUserError() {}
 
 // UnexpectedError is the default implementation of InternalError interface.
 // It's a generic error that wraps an implementation error.
@@ -136,6 +138,8 @@ type UnexpectedError struct {
 }
 
 var _ InternalError = UnexpectedError{}
+
+func (UnexpectedError) IsInternalError() {}
 
 func NewUnexpectedError(message string, arg ...any) UnexpectedError {
 	return UnexpectedError{
@@ -151,14 +155,16 @@ func (e UnexpectedError) Error() string {
 	return e.Err.Error()
 }
 
-func (UnexpectedError) IsInternalError() {}
-
 // DefaultUserError is the default implementation of UserError interface.
 // It's a generic error that wraps a user error.
 //
 type DefaultUserError struct {
 	Err error
 }
+
+var _ UserError = DefaultUserError{}
+
+func (DefaultUserError) IsUserError() {}
 
 func NewDefaultUserError(message string, arg ...any) DefaultUserError {
 	return DefaultUserError{
@@ -173,8 +179,6 @@ func (e DefaultUserError) Unwrap() error {
 func (e DefaultUserError) Error() string {
 	return e.Err.Error()
 }
-
-func (DefaultUserError) IsUserError() {}
 
 // IsInternalError Checks whether a given error was caused by an InternalError.
 // An error in an internal error, if it has at-least one InternalError in the error chain.

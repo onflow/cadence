@@ -223,6 +223,7 @@ type MissingCommaInParameterListError struct {
 }
 
 var _ ParseError = &MissingCommaInParameterListError{}
+var _ errors.UserError = &MissingCommaInParameterListError{}
 
 func (*MissingCommaInParameterListError) isParseError() {}
 

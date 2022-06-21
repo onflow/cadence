@@ -48,6 +48,10 @@ type UnsupportedTagDecodingError struct {
 	Tag uint64
 }
 
+var _ errors.InternalError = UnsupportedTagDecodingError{}
+
+func (UnsupportedTagDecodingError) IsInternalError() {}
+
 func (e UnsupportedTagDecodingError) Error() string {
 	return fmt.Sprintf(
 		"unsupported decoded tag: %d",
@@ -55,11 +59,13 @@ func (e UnsupportedTagDecodingError) Error() string {
 	)
 }
 
-func (UnsupportedTagDecodingError) IsInternalError() {}
-
 type InvalidStringLengthError struct {
 	Length uint64
 }
+
+var _ errors.InternalError = InvalidStringLengthError{}
+
+func (InvalidStringLengthError) IsInternalError() {}
 
 func (e InvalidStringLengthError) Error() string {
 	return fmt.Sprintf(
@@ -68,8 +74,6 @@ func (e InvalidStringLengthError) Error() string {
 		goMaxInt,
 	)
 }
-
-func (InvalidStringLengthError) IsInternalError() {}
 
 func decodeCharacter(dec *cbor.StreamDecoder, memoryGauge common.MemoryGauge) (string, error) {
 	length, err := dec.NextSize()

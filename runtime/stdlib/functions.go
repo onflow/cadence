@@ -23,6 +23,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -130,6 +131,10 @@ type AssertionError struct {
 	interpreter.LocationRange
 }
 
+var _ errors.UserError = AssertionError{}
+
+func (AssertionError) IsUserError() {}
+
 func (e AssertionError) Error() string {
 	const message = "assertion failed"
 	if e.Message == "" {
@@ -137,5 +142,3 @@ func (e AssertionError) Error() string {
 	}
 	return fmt.Sprintf("%s: %s", message, e.Message)
 }
-
-func (AssertionError) IsUserError() {}
