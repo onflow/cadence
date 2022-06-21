@@ -24,67 +24,57 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestLocationsMatch(t *testing.T) {
+func TestLocationEquality(t *testing.T) {
 
 	t.Run("AddressLocation", func(t *testing.T) {
 
-		require.True(t,
-			LocationsMatch(
-				AddressLocation{
-					Address: Address{0x1},
-					Name:    "A",
-				},
-				AddressLocation{
-					Address: Address{0x1},
-					Name:    "A",
-				},
-			),
+		require.Equal(t,
+			AddressLocation{
+				Address: Address{0x1},
+				Name:    "A",
+			},
+			AddressLocation{
+				Address: Address{0x1},
+				Name:    "A",
+			},
 		)
 
-		require.False(t,
-			LocationsMatch(
-				AddressLocation{
-					Address: Address{0x1},
-					Name:    "A",
-				},
-				AddressLocation{
-					Address: Address{0x2},
-					Name:    "A",
-				},
-			),
+		require.NotEqual(t,
+			AddressLocation{
+				Address: Address{0x1},
+				Name:    "A",
+			},
+			AddressLocation{
+				Address: Address{0x2},
+				Name:    "A",
+			},
 		)
 
-		require.False(t,
-			LocationsMatch(
-				AddressLocation{
-					Address: Address{0x1},
-					Name:    "A",
-				},
-				AddressLocation{
-					Address: Address{0x1},
-					Name:    "B",
-				},
-			),
+		require.NotEqual(t,
+			AddressLocation{
+				Address: Address{0x1},
+				Name:    "A",
+			},
+			AddressLocation{
+				Address: Address{0x1},
+				Name:    "B",
+			},
 		)
 
-		require.False(t,
-			LocationsMatch(
-				AddressLocation{
-					Address: Address{0x1},
-					Name:    "A",
-				},
-				StringLocation("A.0000000000000001"),
-			),
+		require.NotEqual(t,
+			AddressLocation{
+				Address: Address{0x1},
+				Name:    "A",
+			},
+			StringLocation("A.0000000000000001"),
 		)
 
-		require.False(t,
-			LocationsMatch(
-				StringLocation("A.0000000000000001"),
-				AddressLocation{
-					Address: Address{0x1},
-					Name:    "A",
-				},
-			),
+		require.NotEqual(t,
+			StringLocation("A.0000000000000001"),
+			AddressLocation{
+				Address: Address{0x1},
+				Name:    "A",
+			},
 		)
 	})
 }

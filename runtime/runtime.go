@@ -2190,7 +2190,7 @@ func (r *interpreterRuntime) instantiateContract(
 				// If the contract is the deployed contract, instantiate it using
 				// the provided constructor and given arguments
 
-				if common.LocationsMatch(compositeType.Location, contractType.Location) &&
+				if compositeType.Location == contractType.Location &&
 					compositeType.Identifier == contractType.Identifier {
 
 					value, err := inter.InvokeFunctionValue(
