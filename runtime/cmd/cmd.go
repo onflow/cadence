@@ -32,7 +32,7 @@ import (
 	"github.com/onflow/cadence/runtime/stdlib"
 )
 
-func must(err error, location common.Location, codes map[common.LocationID]string) {
+func must(err error, location common.Location, codes map[common.Location]string) {
 	if err == nil {
 		return
 	}
@@ -44,13 +44,13 @@ func must(err error, location common.Location, codes map[common.LocationID]strin
 	os.Exit(1)
 }
 
-func mustClosure(location common.Location, codes map[common.LocationID]string) func(error) {
+func mustClosure(location common.Location, codes map[common.Location]string) func(error) {
 	return func(e error) {
 		must(e, location, codes)
 	}
 }
 
-func PrepareProgramFromFile(location common.StringLocation, codes map[common.LocationID]string) (*ast.Program, func(error)) {
+func PrepareProgramFromFile(location common.StringLocation, codes map[common.Location]string) (*ast.Program, func(error)) {
 	codeBytes, err := ioutil.ReadFile(string(location))
 
 	program, must := PrepareProgram(string(codeBytes), location, codes)
@@ -59,11 +59,11 @@ func PrepareProgramFromFile(location common.StringLocation, codes map[common.Loc
 	return program, must
 }
 
-func PrepareProgram(code string, location common.Location, codes map[common.LocationID]string) (*ast.Program, func(error)) {
+func PrepareProgram(code string, location common.Location, codes map[common.Location]string) (*ast.Program, func(error)) {
 	must := mustClosure(location, codes)
 
 	program, err := parser2.ParseProgram(code, nil)
-	codes[location.ID()] = code
+	codes[location] = code
 	must(err)
 
 	return program, must
@@ -79,14 +79,14 @@ var typeDeclarations = append(
 	stdlib.BuiltinTypes...,
 ).ToTypeDeclarations()
 
-var checkers = map[common.LocationID]*sema.Checker{}
+var checkers = map[common.Location]*sema.Checker{}
 
 // PrepareChecker prepares and initializes a checker with a given code as a string,
 // and a filename which is used for pretty-printing errors, if any
 func PrepareChecker(
 	program *ast.Program,
 	location common.Location,
-	codes map[common.LocationID]string,
+	codes map[common.Location]string,
 	memberAccountAccess map[common.LocationID]map[common.LocationID]struct{},
 	must func(error),
 ) (*sema.Checker, func(error)) {
@@ -110,12 +110,12 @@ func PrepareChecker(
 					}
 				}
 
-				importedChecker, ok := checkers[importedLocation.ID()]
+				importedChecker, ok := checkers[importedLocation]
 				if !ok {
 					importedProgram, _ := PrepareProgramFromFile(stringLocation, codes)
 					importedChecker, _ = PrepareChecker(importedProgram, importedLocation, codes, nil, must)
 					must(importedChecker.Check())
-					checkers[importedLocation.ID()] = importedChecker
+					checkers[importedLocation] = importedChecker
 				}
 
 				return sema.ElaborationImport{
@@ -145,7 +145,7 @@ func PrepareChecker(
 
 func PrepareInterpreter(filename string, debugger *interpreter.Debugger) (*interpreter.Interpreter, *sema.Checker, func(error)) {
 
-	codes := map[common.LocationID]string{}
+	codes := map[common.Location]string{}
 
 	// do not need to meter this as it's a one-off overhead
 	location := common.NewStringLocation(nil, filename)

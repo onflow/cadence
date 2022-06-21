@@ -35,13 +35,13 @@ import (
 type REPL struct {
 	checker  *sema.Checker
 	inter    *interpreter.Interpreter
-	onError  func(err error, location common.Location, codes map[common.LocationID]string)
+	onError  func(err error, location common.Location, codes map[common.Location]string)
 	onResult func(interpreter.Value)
-	codes    map[common.LocationID]string
+	codes    map[common.Location]string
 }
 
 func NewREPL(
-	onError func(err error, location common.Location, codes map[common.LocationID]string),
+	onError func(err error, location common.Location, codes map[common.Location]string),
 	onResult func(interpreter.Value),
 	checkerOptions []sema.Option,
 	interpreterOptions []interpreter.Option,
@@ -52,8 +52,8 @@ func NewREPL(
 		stdlib.BuiltinFunctions...,
 	)
 
-	checkers := map[common.LocationID]*sema.Checker{}
-	codes := map[common.LocationID]string{}
+	checkers := map[common.Location]*sema.Checker{}
+	codes := map[common.Location]string{}
 
 	var newChecker func(program *ast.Program, location common.Location) (*sema.Checker, error)
 
@@ -76,11 +76,11 @@ func NewREPL(
 						}
 					}
 
-					importedChecker, ok := checkers[importedLocation.ID()]
+					importedChecker, ok := checkers[importedLocation]
 					if !ok {
 						importedProgram, _ := cmd.PrepareProgramFromFile(stringLocation, codes)
 						importedChecker, _ = newChecker(importedProgram, importedLocation)
-						checkers[importedLocation.ID()] = importedChecker
+						checkers[importedLocation] = importedChecker
 					}
 
 					return sema.ElaborationImport{
@@ -168,7 +168,7 @@ func (r *REPL) execute(element ast.Element) {
 
 func (r *REPL) check(element ast.Element, code string) bool {
 	element.Accept(r.checker)
-	r.codes[r.checker.Location.ID()] = code
+	r.codes[r.checker.Location] = code
 	return r.handleCheckerError()
 }
 

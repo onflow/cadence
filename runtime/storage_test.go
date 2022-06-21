@@ -512,7 +512,7 @@ func TestRuntimePublicCapabilityBorrowTypeConfusion(t *testing.T) {
 
 	deployTestContractTx := utils.DeploymentTransaction("TestContract", []byte(testContract))
 
-	accountCodes := map[common.LocationID][]byte{}
+	accountCodes := map[common.Location][]byte{}
 	var events []cadence.Event
 	var loggedMessages []string
 
@@ -527,7 +527,7 @@ func TestRuntimePublicCapabilityBorrowTypeConfusion(t *testing.T) {
 				Address: address,
 				Name:    name,
 			}
-			accountCodes[location.ID()] = code
+			accountCodes[location] = code
 			return nil
 		},
 		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
@@ -535,7 +535,7 @@ func TestRuntimePublicCapabilityBorrowTypeConfusion(t *testing.T) {
 				Address: address,
 				Name:    name,
 			}
-			code = accountCodes[location.ID()]
+			code = accountCodes[location]
 			return code, nil
 		},
 		emitEvent: func(event cadence.Event) error {
@@ -1126,7 +1126,7 @@ func TestRuntimeBatchMintAndTransfer(t *testing.T) {
 
 	var signerAddress common.Address
 
-	accountCodes := map[common.LocationID]string{}
+	accountCodes := map[common.Location]string{}
 
 	var uuid uint64
 
@@ -1145,7 +1145,7 @@ func TestRuntimeBatchMintAndTransfer(t *testing.T) {
 				Address: address,
 				Name:    name,
 			}
-			accountCodes[location.ID()] = string(code)
+			accountCodes[location] = string(code)
 			return nil
 		},
 		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
@@ -1153,7 +1153,7 @@ func TestRuntimeBatchMintAndTransfer(t *testing.T) {
 				Address: address,
 				Name:    name,
 			}
-			code = []byte(accountCodes[location.ID()])
+			code = []byte(accountCodes[location])
 			return code, nil
 		},
 		emitEvent: func(event cadence.Event) error {
@@ -1496,7 +1496,7 @@ func TestRuntimeStorageReferenceCast(t *testing.T) {
       }
     `))
 
-	accountCodes := map[common.LocationID][]byte{}
+	accountCodes := map[common.Location][]byte{}
 	var events []cadence.Event
 	var loggedMessages []string
 
@@ -1511,7 +1511,7 @@ func TestRuntimeStorageReferenceCast(t *testing.T) {
 				Address: address,
 				Name:    name,
 			}
-			accountCodes[location.ID()] = code
+			accountCodes[location] = code
 			return nil
 		},
 		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
@@ -1519,7 +1519,7 @@ func TestRuntimeStorageReferenceCast(t *testing.T) {
 				Address: address,
 				Name:    name,
 			}
-			code = accountCodes[location.ID()]
+			code = accountCodes[location]
 			return code, nil
 		},
 		emitEvent: func(event cadence.Event) error {
@@ -1799,7 +1799,7 @@ func TestRuntimeResourceOwnerChange(t *testing.T) {
 		newAddress common.Address
 	}
 
-	accountCodes := map[common.LocationID][]byte{}
+	accountCodes := map[common.Location][]byte{}
 	var events []cadence.Event
 	var loggedMessages []string
 	var resourceOwnerChanges []resourceOwnerChange
@@ -1815,7 +1815,7 @@ func TestRuntimeResourceOwnerChange(t *testing.T) {
 				Address: address,
 				Name:    name,
 			}
-			accountCodes[location.ID()] = code
+			accountCodes[location] = code
 			return nil
 		},
 		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
@@ -1823,7 +1823,7 @@ func TestRuntimeResourceOwnerChange(t *testing.T) {
 				Address: address,
 				Name:    name,
 			}
-			code = accountCodes[location.ID()]
+			code = accountCodes[location]
 			return code, nil
 		},
 		emitEvent: func(event cadence.Event) error {
@@ -2209,7 +2209,7 @@ transaction {
 
 	testAddress := common.MustBytesToAddress([]byte{0x1})
 
-	accountCodes := map[common.LocationID][]byte{}
+	accountCodes := map[common.Location][]byte{}
 
 	var events []cadence.Event
 
@@ -2217,7 +2217,7 @@ transaction {
 
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
-			return accountCodes[location.ID()], nil
+			return accountCodes[location], nil
 		},
 		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
@@ -2229,14 +2229,14 @@ transaction {
 				Address: address,
 				Name:    name,
 			}
-			return accountCodes[location.ID()], nil
+			return accountCodes[location], nil
 		},
 		updateAccountContractCode: func(address Address, name string, code []byte) error {
 			location := common.AddressLocation{
 				Address: address,
 				Name:    name,
 			}
-			accountCodes[location.ID()] = code
+			accountCodes[location] = code
 			return nil
 		},
 		emitEvent: func(event cadence.Event) error {
@@ -2338,7 +2338,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		runtime := newTestInterpreterRuntime()
 
-		accountCodes := map[common.LocationID][]byte{}
+		accountCodes := map[common.Location][]byte{}
 
 		var events []cadence.Event
 
@@ -2350,7 +2350,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		runtimeInterface := &testRuntimeInterface{
 			getCode: func(location Location) (bytes []byte, err error) {
-				return accountCodes[location.ID()], nil
+				return accountCodes[location], nil
 			},
 			storage: newTestLedger(nil, nil),
 			getSigningAccounts: func() ([]Address, error) {
@@ -2362,14 +2362,14 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 					Address: address,
 					Name:    name,
 				}
-				return accountCodes[location.ID()], nil
+				return accountCodes[location], nil
 			},
 			updateAccountContractCode: func(address Address, name string, code []byte) error {
 				location := common.AddressLocation{
 					Address: address,
 					Name:    name,
 				}
-				accountCodes[location.ID()] = code
+				accountCodes[location] = code
 				return nil
 			},
 			emitEvent: func(event cadence.Event) error {
@@ -2475,7 +2475,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		testAddress := common.MustBytesToAddress([]byte{0x1})
 
-		accountCodes := map[common.LocationID][]byte{}
+		accountCodes := map[common.Location][]byte{}
 
 		var events []cadence.Event
 
@@ -2485,7 +2485,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		runtimeInterface := &testRuntimeInterface{
 			getCode: func(location Location) (bytes []byte, err error) {
-				return accountCodes[location.ID()], nil
+				return accountCodes[location], nil
 			},
 			storage: newTestLedger(nil, nil),
 			getSigningAccounts: func() ([]Address, error) {
@@ -2497,14 +2497,14 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 					Address: address,
 					Name:    name,
 				}
-				return accountCodes[location.ID()], nil
+				return accountCodes[location], nil
 			},
 			updateAccountContractCode: func(address Address, name string, code []byte) error {
 				location := common.AddressLocation{
 					Address: address,
 					Name:    name,
 				}
-				accountCodes[location.ID()] = code
+				accountCodes[location] = code
 				return nil
 			},
 			emitEvent: func(event cadence.Event) error {
@@ -2616,7 +2616,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		testAddress := common.MustBytesToAddress([]byte{0x1})
 
-		accountCodes := map[common.LocationID][]byte{}
+		accountCodes := map[common.Location][]byte{}
 
 		var events []cadence.Event
 
@@ -2626,7 +2626,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		runtimeInterface := &testRuntimeInterface{
 			getCode: func(location Location) (bytes []byte, err error) {
-				return accountCodes[location.ID()], nil
+				return accountCodes[location], nil
 			},
 			storage: newTestLedger(nil, nil),
 			getSigningAccounts: func() ([]Address, error) {
@@ -2638,14 +2638,14 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 					Address: address,
 					Name:    name,
 				}
-				return accountCodes[location.ID()], nil
+				return accountCodes[location], nil
 			},
 			updateAccountContractCode: func(address Address, name string, code []byte) error {
 				location := common.AddressLocation{
 					Address: address,
 					Name:    name,
 				}
-				accountCodes[location.ID()] = code
+				accountCodes[location] = code
 				return nil
 			},
 			emitEvent: func(event cadence.Event) error {
@@ -2744,7 +2744,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		testAddress := common.MustBytesToAddress([]byte{0x1})
 
-		accountCodes := map[common.LocationID][]byte{}
+		accountCodes := map[common.Location][]byte{}
 
 		var events []cadence.Event
 
@@ -2754,7 +2754,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		runtimeInterface := &testRuntimeInterface{
 			getCode: func(location Location) (bytes []byte, err error) {
-				return accountCodes[location.ID()], nil
+				return accountCodes[location], nil
 			},
 			storage: newTestLedger(nil, nil),
 			getSigningAccounts: func() ([]Address, error) {
@@ -2766,14 +2766,14 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 					Address: address,
 					Name:    name,
 				}
-				return accountCodes[location.ID()], nil
+				return accountCodes[location], nil
 			},
 			updateAccountContractCode: func(address Address, name string, code []byte) error {
 				location := common.AddressLocation{
 					Address: address,
 					Name:    name,
 				}
-				accountCodes[location.ID()] = code
+				accountCodes[location] = code
 				return nil
 			},
 			emitEvent: func(event cadence.Event) error {
@@ -2870,7 +2870,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		testAddress := common.MustBytesToAddress([]byte{0x1})
 
-		accountCodes := map[common.LocationID][]byte{}
+		accountCodes := map[common.Location][]byte{}
 
 		var events []cadence.Event
 
@@ -2880,7 +2880,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		runtimeInterface := &testRuntimeInterface{
 			getCode: func(location Location) (bytes []byte, err error) {
-				return accountCodes[location.ID()], nil
+				return accountCodes[location], nil
 			},
 			storage: newTestLedger(nil, nil),
 			getSigningAccounts: func() ([]Address, error) {
@@ -2892,14 +2892,14 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 					Address: address,
 					Name:    name,
 				}
-				return accountCodes[location.ID()], nil
+				return accountCodes[location], nil
 			},
 			updateAccountContractCode: func(address Address, name string, code []byte) error {
 				location := common.AddressLocation{
 					Address: address,
 					Name:    name,
 				}
-				accountCodes[location.ID()] = code
+				accountCodes[location] = code
 				return nil
 			},
 			emitEvent: func(event cadence.Event) error {
@@ -3055,7 +3055,7 @@ func TestRuntimeStorageEnumCase(t *testing.T) {
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
-	accountCodes := map[common.LocationID][]byte{}
+	accountCodes := map[common.Location][]byte{}
 	var events []cadence.Event
 	var loggedMessages []string
 
@@ -3070,7 +3070,7 @@ func TestRuntimeStorageEnumCase(t *testing.T) {
 				Address: address,
 				Name:    name,
 			}
-			accountCodes[location.ID()] = code
+			accountCodes[location] = code
 			return nil
 		},
 		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
@@ -3078,7 +3078,7 @@ func TestRuntimeStorageEnumCase(t *testing.T) {
 				Address: address,
 				Name:    name,
 			}
-			code = accountCodes[location.ID()]
+			code = accountCodes[location]
 			return code, nil
 		},
 		emitEvent: func(event cadence.Event) error {

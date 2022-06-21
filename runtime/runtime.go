@@ -43,7 +43,7 @@ type Script struct {
 	Arguments [][]byte
 }
 
-type importResolutionResults map[common.LocationID]bool
+type importResolutionResults map[common.Location]bool
 
 // Runtime is a runtime capable of executing Cadence.
 type Runtime interface {
@@ -1183,14 +1183,14 @@ func (r *interpreterRuntime) check(
 							context := startContext.WithLocation(importedLocation)
 
 							// Check for cyclic imports
-							if checkedImports[importedLocation.ID()] {
+							if checkedImports[importedLocation] {
 								return nil, &sema.CyclicImportsError{
 									Location: importedLocation,
 									Range:    importRange,
 								}
 							} else {
-								checkedImports[importedLocation.ID()] = true
-								defer delete(checkedImports, importedLocation.ID())
+								checkedImports[importedLocation] = true
+								defer delete(checkedImports, importedLocation)
 							}
 
 							program, err := r.getProgram(context, functions, values, checkerOptions, checkedImports)
