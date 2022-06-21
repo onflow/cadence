@@ -31,6 +31,8 @@ const StringLocationPrefix = "S"
 //
 type StringLocation string
 
+var _ Location = StringLocation("")
+
 func NewStringLocation(gauge MemoryGauge, id string) StringLocation {
 	UseMemory(gauge, NewRawStringMemoryUsage(len(id)))
 	return StringLocation(id)

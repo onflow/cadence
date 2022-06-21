@@ -30,11 +30,14 @@ const ScriptLocationPrefix = "s"
 
 // ScriptLocation
 //
-type ScriptLocation []byte
+type ScriptLocation [32]byte
 
-func NewScriptLocation(gauge MemoryGauge, script []byte) ScriptLocation {
-	UseMemory(gauge, NewBytesMemoryUsage(len(script)))
-	return ScriptLocation(script)
+var _ Location = ScriptLocation{}
+
+func NewScriptLocation(gauge MemoryGauge, identifier []byte) (location ScriptLocation) {
+	UseMemory(gauge, NewBytesMemoryUsage(len(identifier)))
+	copy(location[:], identifier)
+	return
 }
 
 func (l ScriptLocation) ID() LocationID {
@@ -69,7 +72,7 @@ func (l ScriptLocation) QualifiedIdentifier(typeID TypeID) string {
 }
 
 func (l ScriptLocation) String() string {
-	return hex.EncodeToString(l)
+	return hex.EncodeToString(l[:])
 }
 
 func (l ScriptLocation) MarshalJSON() ([]byte, error) {
@@ -96,7 +99,7 @@ func decodeScriptLocationTypeID(gauge MemoryGauge, typeID string) (ScriptLocatio
 	const errorMessagePrefix = "invalid script location type ID"
 
 	newError := func(message string) (ScriptLocation, string, error) {
-		return nil, "", errors.NewDefaultUserError("%s: %s", errorMessagePrefix, message)
+		return ScriptLocation{}, "", errors.NewDefaultUserError("%s: %s", errorMessagePrefix, message)
 	}
 
 	if typeID == "" {
@@ -116,7 +119,7 @@ func decodeScriptLocationTypeID(gauge MemoryGauge, typeID string) (ScriptLocatio
 	prefix := parts[0]
 
 	if prefix != ScriptLocationPrefix {
-		return nil, "", errors.NewDefaultUserError(
+		return ScriptLocation{}, "", errors.NewDefaultUserError(
 			"%s: invalid prefix: expected %q, got %q",
 			errorMessagePrefix,
 			ScriptLocationPrefix,
@@ -128,7 +131,7 @@ func decodeScriptLocationTypeID(gauge MemoryGauge, typeID string) (ScriptLocatio
 	UseMemory(gauge, NewBytesMemoryUsage(len(location)))
 
 	if err != nil {
-		return nil, "", errors.NewDefaultUserError(
+		return ScriptLocation{}, "", errors.NewDefaultUserError(
 			"%s: invalid location: %w",
 			errorMessagePrefix,
 			err,
@@ -137,5 +140,8 @@ func decodeScriptLocationTypeID(gauge MemoryGauge, typeID string) (ScriptLocatio
 
 	qualifiedIdentifier := parts[2]
 
-	return location, qualifiedIdentifier, nil
+	var result ScriptLocation
+	copy(result[:], location)
+
+	return result, qualifiedIdentifier, nil
 }

@@ -850,7 +850,7 @@ func encodeLocation(e *cbor.StreamEncoder, l common.Location) error {
 			return err
 		}
 
-		return e.EncodeBytes(l)
+		return e.EncodeBytes(l[:])
 
 	case common.ScriptLocation:
 		// common.ScriptLocation is encoded as
@@ -867,7 +867,7 @@ func encodeLocation(e *cbor.StreamEncoder, l common.Location) error {
 			return err
 		}
 
-		return e.EncodeBytes(l)
+		return e.EncodeBytes(l[:])
 
 	default:
 		return errors.NewUnexpectedError("unsupported location: %T", l)

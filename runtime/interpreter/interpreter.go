@@ -327,7 +327,7 @@ type Interpreter struct {
 	effectivePredeclaredValues     map[string]ValueDeclaration
 	activations                    *VariableActivations
 	Globals                        GlobalVariables
-	allInterpreters                map[common.LocationID]*Interpreter
+	allInterpreters                map[common.Location]*Interpreter
 	typeCodes                      TypeCodes
 	Transactions                   []*HostFunctionValue
 	Storage                        Storage
@@ -601,7 +601,7 @@ func WithExitHandler(handler ExitHandlerFunc) Option {
 // WithAllInterpreters returns an interpreter option which sets
 // the given map of interpreters as the map of all interpreters.
 //
-func WithAllInterpreters(allInterpreters map[common.LocationID]*Interpreter) Option {
+func WithAllInterpreters(allInterpreters map[common.Location]*Interpreter) Option {
 	return func(interpreter *Interpreter) error {
 		interpreter.SetAllInterpreters(allInterpreters)
 		return nil
@@ -712,7 +712,7 @@ func NewInterpreter(program *Program, location common.Location, options ...Optio
 	interpreter.activations.PushNewWithParent(baseActivation)
 
 	defaultOptions := []Option{
-		WithAllInterpreters(map[common.LocationID]*Interpreter{}),
+		WithAllInterpreters(map[common.Location]*Interpreter{}),
 		WithCallStack(&CallStack{}),
 		withTypeCodes(TypeCodes{
 			CompositeCodes:       map[sema.TypeID]CompositeTypeCode{},
@@ -868,13 +868,12 @@ func (interpreter *Interpreter) SetExitHandler(function ExitHandlerFunc) {
 
 // SetAllInterpreters sets the given map of interpreters as the map of all interpreters.
 //
-func (interpreter *Interpreter) SetAllInterpreters(allInterpreters map[common.LocationID]*Interpreter) {
+func (interpreter *Interpreter) SetAllInterpreters(allInterpreters map[common.Location]*Interpreter) {
 	interpreter.allInterpreters = allInterpreters
 
 	// Register self
 	if interpreter.Location != nil {
-		locationID := interpreter.Location.MeteredID(interpreter.memoryGauge)
-		interpreter.allInterpreters[locationID] = interpreter
+		interpreter.allInterpreters[interpreter.Location] = interpreter
 	}
 }
 
@@ -2622,11 +2621,9 @@ func (interpreter *Interpreter) ensureLoadedWithLocationHandler(
 	loadLocation func() Import,
 ) *Interpreter {
 
-	locationID := location.MeteredID(interpreter.memoryGauge)
-
 	// If a sub-interpreter already exists, return it
 
-	subInterpreter := interpreter.allInterpreters[locationID]
+	subInterpreter := interpreter.allInterpreters[location]
 	if subInterpreter != nil {
 		return subInterpreter
 	}
@@ -2671,7 +2668,7 @@ func (interpreter *Interpreter) ensureLoadedWithLocationHandler(
 
 		// Virtual import does not register interpreter itself,
 		// unlike InterpreterImport
-		interpreter.allInterpreters[locationID] = subInterpreter
+		interpreter.allInterpreters[location] = subInterpreter
 
 		subInterpreter.Program = &Program{
 			Elaboration: virtualImport.Elaboration,
@@ -4204,9 +4201,7 @@ func (interpreter *Interpreter) getElaboration(location common.Location) *sema.E
 
 	inter := interpreter.EnsureLoaded(location)
 
-	locationID := location.MeteredID(interpreter.memoryGauge)
-
-	subInterpreter := inter.allInterpreters[locationID]
+	subInterpreter := inter.allInterpreters[location]
 	if subInterpreter == nil || subInterpreter.Program == nil {
 		return nil
 	}
