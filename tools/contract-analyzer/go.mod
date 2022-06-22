@@ -4,9 +4,9 @@ go 1.18
 
 require (
 	github.com/logrusorgru/aurora v2.0.3+incompatible
-	github.com/onflow/cadence v0.24.3
-	github.com/onflow/flow-cli v0.36.2
-	github.com/onflow/flow-go-sdk v0.26.2
+	github.com/onflow/cadence v0.24.2-0.20220622173207-782f96ee0272
+	github.com/onflow/flow-cli v0.36.1
+	github.com/onflow/flow-go-sdk v0.26.1
 	github.com/spf13/afero v1.8.2
 	github.com/stretchr/testify v1.7.1
 )
@@ -96,7 +96,7 @@ require (
 	github.com/spf13/viper v1.10.1 // indirect
 	github.com/subosito/gotenv v1.2.0 // indirect
 	github.com/thoas/go-funk v0.9.2 // indirect
-	github.com/turbolent/prettier v0.0.0-20210613180524-3a3f5a5b49ba // indirect
+	github.com/turbolent/prettier v0.0.0-20220320183459-661cc755135d // indirect
 	github.com/uber/jaeger-client-go v2.29.1+incompatible // indirect
 	github.com/uber/jaeger-lib v2.4.0+incompatible // indirect
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
@@ -123,5 +123,3 @@ require (
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 	lukechampine.com/blake3 v1.1.7 // indirect
 )
-
-replace github.com/onflow/cadence => ../..
