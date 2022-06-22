@@ -83,8 +83,7 @@ func AddressLocationHandlerFunc(resolveAddressContractNames AddressContractNames
 		// each resolved location is an address contract location
 
 		resolvedLocations := make([]ResolvedLocation, len(identifiers))
-		for i := range resolvedLocations {
-			identifier := identifiers[i]
+		for i, identifier := range identifiers {
 			resolvedLocations[i] = ResolvedLocation{
 				Location: common.AddressLocation{
 					Address: addressLocation.Address,
