@@ -112,9 +112,9 @@ func parseCheckAndInterpretWithOptionsAndMemoryMetering(
 		options.HandleCheckerError(err)
 	} else if !assert.NoError(t, err) {
 		var sb strings.Builder
-		locationID := checker.Location.ID()
+		location := checker.Location
 		printErr := pretty.NewErrorPrettyPrinter(&sb, true).
-			PrettyPrintError(err, checker.Location, map[common.LocationID]string{locationID: code})
+			PrettyPrintError(err, location, map[common.Location]string{location: code})
 		if printErr != nil {
 			panic(printErr)
 		}
@@ -4014,10 +4014,10 @@ func TestInterpretImportError(t *testing.T) {
 		PrettyPrintError(
 			err,
 			mainChecker.Location,
-			map[common.LocationID]string{
-				TestLocation.ID():      code,
-				importedLocation1.ID(): importedCode1,
-				importedLocation2.ID(): importedCode2,
+			map[common.Location]string{
+				TestLocation:      code,
+				importedLocation1: importedCode1,
+				importedLocation2: importedCode2,
 			},
 		)
 	require.NoError(t, printErr)

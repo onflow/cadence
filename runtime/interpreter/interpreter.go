@@ -1711,7 +1711,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				// in the same location as it was declared
 
 				if compositeType.Kind == common.CompositeKindResource &&
-					!common.LocationsMatch(invocation.Interpreter.Location, compositeType.Location) {
+					invocation.Interpreter.Location != compositeType.Location {
 
 					panic(ResourceConstructionError{
 						CompositeType: compositeType,
