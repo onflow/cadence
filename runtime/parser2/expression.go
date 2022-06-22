@@ -19,7 +19,6 @@
 package parser2
 
 import (
-	"fmt"
 	"math/big"
 	"strings"
 	"unicode/utf8"
@@ -190,7 +189,7 @@ func defineExpr(def any) {
 func setExprNullDenotation(tokenType lexer.TokenType, nullDenotation exprNullDenotationFunc) {
 	current := exprNullDenotations[tokenType]
 	if current != nil {
-		panic(fmt.Errorf(
+		panic(NewUnpositionedSyntaxError(
 			"expression null denotation for token %s already exists",
 			tokenType,
 		))
@@ -217,7 +216,7 @@ func setExprIdentifierLeftBindingPower(keyword string, power int) {
 func setExprLeftDenotation(tokenType lexer.TokenType, leftDenotation exprLeftDenotationFunc) {
 	current := exprLeftDenotations[tokenType]
 	if current != nil {
-		panic(fmt.Errorf(
+		panic(NewUnpositionedSyntaxError(
 			"expression left denotation for token %s already exists",
 			tokenType,
 		))
@@ -228,7 +227,7 @@ func setExprLeftDenotation(tokenType lexer.TokenType, leftDenotation exprLeftDen
 func setExprMetaLeftDenotation(tokenType lexer.TokenType, metaLeftDenotation exprMetaLeftDenotationFunc) {
 	current := exprMetaLeftDenotations[tokenType]
 	if current != nil {
-		panic(fmt.Errorf(
+		panic(NewUnpositionedSyntaxError(
 			"expression meta left denotation for token %s already exists",
 			tokenType,
 		))
@@ -346,10 +345,10 @@ func init() {
 		nullDenotation: func(p *parser, token lexer.Token) ast.Expression {
 			literal, ok := token.Value.(string)
 			if !ok {
-				panic(fmt.Errorf(
+				p.panicSyntaxError(
 					"value for token %s was not a string",
 					lexer.TokenBinaryIntegerLiteral,
-				))
+				)
 			}
 			return parseIntegerLiteral(
 				p,
@@ -366,10 +365,10 @@ func init() {
 		nullDenotation: func(p *parser, token lexer.Token) ast.Expression {
 			literal, ok := token.Value.(string)
 			if !ok {
-				panic(fmt.Errorf(
+				p.panicSyntaxError(
 					"value for token %s was not a string",
 					lexer.TokenOctalIntegerLiteral,
-				))
+				)
 			}
 			return parseIntegerLiteral(
 				p,
@@ -386,10 +385,10 @@ func init() {
 		nullDenotation: func(p *parser, token lexer.Token) ast.Expression {
 			literal, ok := token.Value.(string)
 			if !ok {
-				panic(fmt.Errorf(
+				p.panicSyntaxError(
 					"value for token %s was not a string",
 					lexer.TokenDecimalIntegerLiteral,
-				))
+				)
 			}
 			return parseIntegerLiteral(
 				p,
@@ -406,10 +405,10 @@ func init() {
 		nullDenotation: func(p *parser, token lexer.Token) ast.Expression {
 			literal, ok := token.Value.(string)
 			if !ok {
-				panic(fmt.Errorf(
+				p.panicSyntaxError(
 					"value for token %s was not a string",
 					lexer.TokenHexadecimalIntegerLiteral,
-				))
+				)
 			}
 			return parseIntegerLiteral(
 				p,
@@ -426,10 +425,10 @@ func init() {
 		nullDenotation: func(p *parser, token lexer.Token) ast.Expression {
 			literal, ok := token.Value.(string)
 			if !ok {
-				panic(fmt.Errorf(
+				p.panicSyntaxError(
 					"value for token %s was not a string",
 					lexer.TokenUnknownBaseIntegerLiteral,
-				))
+				)
 			}
 			return parseIntegerLiteral(
 				p,
@@ -455,8 +454,7 @@ func init() {
 	defineExpr(literalExpr{
 		tokenType: lexer.TokenString,
 		nullDenotation: func(p *parser, token lexer.Token) ast.Expression {
-			parsedString, errs := parseStringLiteral(token.Value.(string))
-			p.report(errs...)
+			parsedString := parseStringLiteral(p, token.Value.(string))
 			return ast.NewStringExpression(
 				p.memoryGauge,
 				parsedString,
@@ -532,7 +530,7 @@ func init() {
 	defineIdentifierExpression()
 
 	setExprNullDenotation(lexer.TokenEOF, func(parser *parser, token lexer.Token) ast.Expression {
-		panic(fmt.Errorf("expected expression"))
+		panic(NewUnpositionedSyntaxError("expected expression"))
 	})
 }
 
@@ -930,10 +928,10 @@ func parseArgumentListRemainder(p *parser) (arguments []*ast.Argument, endPos as
 		switch p.current.Type {
 		case lexer.TokenComma:
 			if expectArgument {
-				panic(fmt.Errorf(
+				p.panicSyntaxError(
 					"expected argument or end of argument list, got %s",
 					p.current.Type,
-				))
+				)
 			}
 			// Skip the comma
 			p.next()
@@ -946,14 +944,14 @@ func parseArgumentListRemainder(p *parser) (arguments []*ast.Argument, endPos as
 			atEnd = true
 
 		case lexer.TokenEOF:
-			panic(fmt.Errorf("missing ')' at end of invocation argument list"))
+			p.panicSyntaxError("missing ')' at end of invocation argument list")
 
 		default:
 			if !expectArgument {
-				panic(fmt.Errorf(
+				p.panicSyntaxError(
 					"unexpected argument in argument list (expecting delimiter or end of argument list), got %s",
 					p.current.Type,
-				))
+				)
 			}
 			argument := parseArgument(p)
 
@@ -984,10 +982,10 @@ func parseArgument(p *parser) *ast.Argument {
 	if p.current.Is(lexer.TokenColon) {
 		identifier, ok := expr.(*ast.IdentifierExpression)
 		if !ok {
-			panic(fmt.Errorf(
+			p.panicSyntaxError(
 				"expected identifier for label, got %s",
 				expr,
-			))
+			)
 		}
 		label = identifier.Identifier.Identifier
 		labelStartPos = expr.StartPosition()
@@ -1151,7 +1149,7 @@ func defineReferenceExpression() {
 
 			castingExpression, ok := expression.(*ast.CastingExpression)
 			if !ok {
-				panic(fmt.Errorf("expected casting expression"))
+				p.panicSyntaxError("expected casting expression")
 			}
 
 			return ast.NewReferenceExpression(
@@ -1329,7 +1327,7 @@ func defaultExprMetaLeftDenotation(
 	result ast.Expression,
 	done bool,
 ) {
-	if rightBindingPower >= exprLeftBindingPower(p.current) {
+	if rightBindingPower >= exprLeftBindingPower(p, p.current) {
 		return left, true
 	}
 
@@ -1346,15 +1344,15 @@ func defaultExprMetaLeftDenotation(
 	return result, false
 }
 
-func exprLeftBindingPower(token lexer.Token) int {
+func exprLeftBindingPower(p *parser, token lexer.Token) int {
 	tokenType := token.Type
 	if tokenType == lexer.TokenIdentifier {
 		identifier, ok := token.Value.(string)
 		if !ok {
-			panic(fmt.Errorf(
+			p.panicSyntaxError(
 				"value for token %s was not a string",
 				tokenType,
-			))
+			)
 		}
 		return exprIdentifierLeftBindingPowers[identifier]
 	}
@@ -1365,7 +1363,7 @@ func applyExprNullDenotation(p *parser, token lexer.Token) ast.Expression {
 	tokenType := token.Type
 	nullDenotation := exprNullDenotations[tokenType]
 	if nullDenotation == nil {
-		panic(fmt.Errorf("unexpected token in expression: %s", tokenType))
+		p.panicSyntaxError("unexpected token in expression: %s", tokenType)
 	}
 	return nullDenotation(p, token)
 }
@@ -1373,28 +1371,24 @@ func applyExprNullDenotation(p *parser, token lexer.Token) ast.Expression {
 func applyExprLeftDenotation(p *parser, token lexer.Token, left ast.Expression) ast.Expression {
 	leftDenotation := exprLeftDenotations[token.Type]
 	if leftDenotation == nil {
-		panic(fmt.Errorf("unexpected token in expression: %s", token.Type))
+		p.panicSyntaxError("unexpected token in expression: %s", token.Type)
 	}
 	return leftDenotation(p, token, left)
 }
 
 // parseStringLiteral parses a whole string literal, including start and end quotes
 //
-func parseStringLiteral(literal string) (result string, errs []error) {
-	report := func(err error) {
-		errs = append(errs, err)
-	}
-
+func parseStringLiteral(p *parser, literal string) (result string) {
 	length := len(literal)
 	if length == 0 {
-		report(fmt.Errorf("missing start of string literal: expected '\"'"))
+		p.reportSyntaxError("missing start of string literal: expected '\"'")
 		return
 	}
 
 	if length >= 1 {
 		first := literal[0]
 		if first != '"' {
-			report(fmt.Errorf("invalid start of string literal: expected '\"', got %q", first))
+			p.reportSyntaxError("invalid start of string literal: expected '\"', got %q", first)
 		}
 	}
 
@@ -1412,12 +1406,10 @@ func parseStringLiteral(literal string) (result string, errs []error) {
 		missingEnd = true
 	}
 
-	var innerErrs []error
-	result, innerErrs = parseStringLiteralContent(literal[1:endOffset])
-	errs = append(errs, innerErrs...)
+	result = parseStringLiteralContent(p, literal[1:endOffset])
 
 	if missingEnd {
-		report(fmt.Errorf("invalid end of string literal: missing '\"'"))
+		p.reportSyntaxError("invalid end of string literal: missing '\"'")
 	}
 
 	return
@@ -1425,16 +1417,12 @@ func parseStringLiteral(literal string) (result string, errs []error) {
 
 // parseStringLiteralContent parses the string literalExpr contents, excluding start and end quotes
 //
-func parseStringLiteralContent(s string) (result string, errs []error) {
+func parseStringLiteralContent(p *parser, s string) (result string) {
 
 	var builder strings.Builder
 	defer func() {
 		result = builder.String()
 	}()
-
-	report := func(err error) {
-		errs = append(errs, err)
-	}
 
 	length := len(s)
 
@@ -1465,7 +1453,7 @@ func parseStringLiteralContent(s string) (result string, errs []error) {
 		}
 
 		if atEnd {
-			report(fmt.Errorf("incomplete escape sequence: missing character after escape character"))
+			p.reportSyntaxError("incomplete escape sequence: missing character after escape character")
 			return
 		}
 
@@ -1488,14 +1476,14 @@ func parseStringLiteralContent(s string) (result string, errs []error) {
 			builder.WriteByte('\\')
 		case 'u':
 			if atEnd {
-				report(fmt.Errorf(
+				p.reportSyntaxError(
 					"incomplete Unicode escape sequence: missing character '{' after escape character",
-				))
+				)
 				return
 			}
 			advance()
 			if r != '{' {
-				report(fmt.Errorf("invalid Unicode escape sequence: expected '{', got %q", r))
+				p.reportSyntaxError("invalid Unicode escape sequence: expected '{', got %q", r)
 				continue
 			}
 
@@ -1511,7 +1499,7 @@ func parseStringLiteralContent(s string) (result string, errs []error) {
 				parsed := parseHex(r)
 
 				if parsed < 0 {
-					report(fmt.Errorf("invalid Unicode escape sequence: expected hex digit, got %q", r))
+					p.reportSyntaxError("invalid Unicode escape sequence: expected hex digit, got %q", r)
 					valid = false
 				} else {
 					r2 = r2<<4 | parsed
@@ -1530,16 +1518,16 @@ func parseStringLiteralContent(s string) (result string, errs []error) {
 			case '}':
 				break
 			case lexer.EOF:
-				report(fmt.Errorf(
+				p.reportSyntaxError(
 					"incomplete Unicode escape sequence: missing character '}' after escape character",
-				))
+				)
 			default:
-				report(fmt.Errorf("incomplete Unicode escape sequence: expected '}', got %q", r))
+				p.reportSyntaxError("incomplete Unicode escape sequence: expected '}', got %q", r)
 			}
 
 		default:
 			// TODO: include index/column in error
-			report(fmt.Errorf("invalid escape character: %q", r))
+			p.reportSyntaxError("invalid escape character: %q", r)
 			// skip invalid escape character, don't write to result
 		}
 	}

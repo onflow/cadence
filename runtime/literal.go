@@ -95,7 +95,7 @@ func ParseLiteralArgumentList(
 		value, err := LiteralValue(inter, argument.Expression, parameterType)
 		if err != nil {
 			return nil, parser2.NewUnpositionedSyntaxError(
-				"invalid argument at index %d: %w", i, err,
+				"invalid argument at index %d: %v", i, err,
 			)
 		}
 		result[i] = value

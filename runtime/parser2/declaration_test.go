@@ -1280,7 +1280,19 @@ func TestParseImportDeclaration(t *testing.T) {
 			errs,
 		)
 
-		var expected []ast.Declaration
+		expected := []ast.Declaration{
+			&ast.ImportDeclaration{
+				Identifiers: nil,
+				Location: common.AddressLocation{
+					Address: common.MustBytesToAddress([]byte{0x0}),
+				},
+				LocationPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+					EndPos:   ast.Position{Line: 1, Column: 26, Offset: 26},
+				},
+			},
+		}
 
 		utils.AssertEqualWithDiff(t,
 			expected,
