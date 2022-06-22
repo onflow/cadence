@@ -1062,8 +1062,16 @@ func TestInterpretCapabilityFunctionMultipleTypes(t *testing.T) {
 			address,
 			true,
 			`
-              struct S1 {}
-              struct S2 {}
+              struct S1 {
+                  fun what(): String {
+                      return "S1"
+                  }
+              }
+              struct S2 {
+                  fun what(): String {
+                      return "S2"
+                  }
+              }
 
               fun test() {
                   let s1 = S1()
@@ -1089,6 +1097,11 @@ func TestInterpretCapabilityFunctionMultipleTypes(t *testing.T) {
               fun s2TypedGetCapabilityTypedBorrow(): &S2? {
                   let cap: Capability = account.getCapability<&S1>(/public/s)
                   return cap.borrow<&S2>()
+              }
+
+              fun what(): String {
+                  let cap: Capability = account.getCapability<&S1>(/public/s)
+                  return cap.borrow<&S2>()!.what()
               }
             `,
 		)
@@ -1151,6 +1164,13 @@ func TestInterpretCapabilityFunctionMultipleTypes(t *testing.T) {
 
 			require.Equal(t, interpreter.NewUnmeteredNilValue(), res)
 		})
-	})
 
+		t.Run("what", func(t *testing.T) {
+
+			_, err := inter.Invoke("what")
+			require.Error(t, err)
+
+			require.ErrorAs(t, err, &interpreter.ForceNilError{})
+		})
+	})
 }
