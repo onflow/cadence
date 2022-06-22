@@ -19,7 +19,6 @@
 package runtime
 
 import (
-	"fmt"
 	"sort"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -44,84 +43,56 @@ func NewREPL(
 	onError func(err error, location common.Location, codes map[common.Location]string),
 	onResult func(interpreter.Value),
 	checkerOptions []sema.Option,
-	interpreterOptions []interpreter.Option,
 ) (*REPL, error) {
-
-	valueDeclarations := append(
-		stdlib.FlowBuiltInFunctions(stdlib.DefaultFlowBuiltinImpls()),
-		stdlib.BuiltinFunctions...,
-	)
 
 	checkers := map[common.Location]*sema.Checker{}
 	codes := map[common.Location]string{}
 
-	var newChecker func(program *ast.Program, location common.Location) (*sema.Checker, error)
+	defaultCheckerOptions, defaultInterpreterOptions :=
+		cmd.DefaultCheckerInterpreterOptions(
+			checkers,
+			codes,
+			stdlib.DefaultFlowBuiltinImpls(),
+		)
+
+	defaultCheckerOptions = append(
+		defaultCheckerOptions,
+		sema.WithAccessCheckMode(sema.AccessCheckModeNotSpecifiedUnrestricted),
+	)
 
 	checkerOptions = append(
-		[]sema.Option{
-			sema.WithPredeclaredValues(valueDeclarations.ToSemaValueDeclarations()),
-			sema.WithPredeclaredTypes(typeDeclarations),
-			sema.WithAccessCheckMode(sema.AccessCheckModeNotSpecifiedUnrestricted),
-			sema.WithImportHandler(
-				func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
-					stringLocation, ok := importedLocation.(common.StringLocation)
-
-					if !ok {
-						return nil, &sema.CheckerError{
-							Location: checker.Location,
-							Codes:    codes,
-							Errors: []error{
-								fmt.Errorf("cannot import `%s`. only files are supported", importedLocation),
-							},
-						}
-					}
-
-					importedChecker, ok := checkers[importedLocation]
-					if !ok {
-						importedProgram, _ := cmd.PrepareProgramFromFile(stringLocation, codes)
-						importedChecker, _ = newChecker(importedProgram, importedLocation)
-						checkers[importedLocation] = importedChecker
-					}
-
-					return sema.ElaborationImport{
-						Elaboration: importedChecker.Elaboration,
-					}, nil
-				},
-			),
-		},
+		defaultCheckerOptions,
 		checkerOptions...,
 	)
 
-	newChecker = func(program *ast.Program, location common.Location) (*sema.Checker, error) {
-		return sema.NewChecker(
-			program,
-			common.REPLLocation{},
-			nil,
-			checkerOptions...,
-		)
-	}
-
-	checker, err := newChecker(nil, common.REPLLocation{})
+	checker, err := sema.NewChecker(
+		nil,
+		common.REPLLocation{},
+		nil,
+		checkerOptions...,
+	)
 	if err != nil {
 		return nil, err
 	}
-
-	values := valueDeclarations.ToInterpreterValueDeclarations()
 
 	var uuid uint64
 
 	storage := interpreter.NewInMemoryStorage(nil)
 
+	// NOTE: storage option must be provided *before* the predeclared values option,
+	// as predeclared values may rely on storage
+
+	interpreterOptions := []interpreter.Option{
+		interpreter.WithStorage(storage),
+		interpreter.WithUUIDHandler(func() (uint64, error) {
+			defer func() { uuid++ }()
+			return uuid, nil
+		}),
+	}
+
 	interpreterOptions = append(
-		[]interpreter.Option{
-			interpreter.WithStorage(storage),
-			interpreter.WithPredeclaredValues(values),
-			interpreter.WithUUIDHandler(func() (uint64, error) {
-				defer func() { uuid++ }()
-				return uuid, nil
-			}),
-		},
-		interpreterOptions...,
+		interpreterOptions,
+		defaultInterpreterOptions...,
 	)
 
 	inter, err := interpreter.NewInterpreter(
