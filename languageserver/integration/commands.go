@@ -58,8 +58,6 @@ const (
 	ErrorMessageArguments         = "arguments error"
 )
 
-const maxGasLimit uint64 = 9999
-
 func (i *FlowIntegration) commands() []server.Command {
 	return []server.Command{
 		{
@@ -216,73 +214,7 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...json.RawMe
 		return nil, fmt.Errorf("failed to parse JSON arguments")
 	}
 
-	serviceAccount, err := i.state.EmulatorServiceAccount()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get service account, err: %w", err)
-	}
-
-	serviceAddress := serviceAccount.Address()
-	keyIndex := serviceAccount.Key().Index()
-
-	// We need to check if service account among authorizers
-	hasServiceAccount := false
-
-	signerAccounts := make([]flowkit.Account, len(signers))
-	authorizers := make([]flow.Address, len(signers))
-	for i, address := range signers {
-
-		signer := flowkit.Account{}
-		signer.SetAddress(address)
-		signer.SetKey(serviceAccount.Key())
-
-		signerAccounts[i] = signer
-		authorizers[i] = address
-
-		if address == serviceAddress {
-			hasServiceAccount = true
-		}
-	}
-
-	// If serviceAccount is not in signers list, we will add it to handle payer role properly
-	if !hasServiceAccount {
-		signerAccounts = append(signerAccounts, *serviceAccount)
-	}
-
-	tx, err := i.sharedServices.Transactions.Build(
-		serviceAddress,
-		authorizers,
-		serviceAddress,
-		keyIndex,
-		code,
-		"",
-		maxGasLimit,
-		txArgs,
-		"",
-		true,
-	)
-
-	if err != nil {
-		return nil, errorWithMessage(conn, ErrorMessageTransactionError, err)
-	}
-
-	for _, signer := range signerAccounts {
-		err = tx.SetSigner(&signer)
-		if err != nil {
-			return nil, err
-		}
-
-		tx, err = tx.Sign()
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// even though .Encode returns []byte, without this conversion there is an error:
-	// transaction error: &errors.errorString{s:"failed to decode partial transaction...
-	// ...encoding/hex: invalid byte: U+00F9 'ù'"
-	txBytes := []byte(fmt.Sprintf("%x", tx.FlowTransaction().Encode()))
-	_, txResult, err := i.sharedServices.Transactions.SendSigned(txBytes, true)
-
+	_, txResult, err := i.sharedServices.SendTransaction(signers, code, txArgs)
 	if err != nil {
 		return nil, errorWithMessage(conn, ErrorMessageTransactionError, err)
 	}
@@ -401,12 +333,12 @@ func (i *FlowIntegration) switchActiveAccount(conn protocol.Conn, args ...json.R
 
 // createAccount creates a new account and returns its address.
 func (i *FlowIntegration) createAccount(conn protocol.Conn, args ...json.RawMessage) (interface{}, error) {
-	address, err := i.createAccountHelper(conn)
+	account, err := i.sharedServices.CreateAccount()
 	if err != nil {
 		return nil, errorWithMessage(conn, ErrorMessageAccountCreate, err)
 	}
 
-	clientAccount, err := i.storeAccountHelper(conn, address)
+	clientAccount, err := i.storeAccountHelper(conn, account.Address)
 	if err != nil {
 		return nil, errorWithMessage(conn, ErrorMessageAccountCreate, err)
 	}
@@ -553,36 +485,6 @@ func (i *FlowIntegration) getServicePrivateKey() (*crypto.PrivateKey, error) {
 	}
 
 	return serviceAccount.Key().PrivateKey()
-}
-
-// createAccountHelper creates a new account and returns its address.
-func (i *FlowIntegration) createAccountHelper(conn protocol.Conn) (address flow.Address, err error) {
-	signer, err := i.state.EmulatorServiceAccount()
-	if err != nil {
-		return flow.Address{}, errorWithMessage(conn, ErrorMessageServiceAccount, err)
-	}
-
-	pkey, err := signer.Key().PrivateKey()
-	if err != nil {
-		return flow.Address{}, errorWithMessage(conn, ErrorMessageServiceAccount, err)
-	}
-
-	keys := []crypto.PublicKey{(*pkey).PublicKey()}
-	weights := []int{flow.AccountKeyWeightThreshold}
-
-	newAccount, err := i.sharedServices.CreateAccount(
-		signer,
-		keys,
-		weights,
-		[]crypto.SignatureAlgorithm{crypto.ECDSA_P256},
-		[]crypto.HashAlgorithm{crypto.SHA3_256},
-		nil,
-	)
-	if err != nil {
-		return flow.Address{}, errorWithMessage(conn, ErrorMessageAccountCreate, err)
-	}
-
-	return newAccount.Address, nil
 }
 
 // storeAccountHelper sends transaction to store account on chain

@@ -24,32 +24,21 @@ type flowClient interface {
 	) (*flow.Account, error)
 
 	SendTransaction(
-		proposer *flowkit.Account,
-		authorizers []*flowkit.Account,
-		payer *flowkit.Account,
+		authorizers []flow.Address,
 		code []byte,
-		codeFilename string,
-		gasLimit uint64,
 		args []cadence.Value,
-		network string,
 	) (*flow.Transaction, *flow.TransactionResult, error)
 
 	GetAccount(address flow.Address) (*flow.Account, error)
 
-	CreateAccount(
-		signer *flowkit.Account,
-		pubKeys []crypto.PublicKey,
-		keyWeights []int,
-		sigAlgo []crypto.SignatureAlgorithm,
-		hashAlgo []crypto.HashAlgorithm,
-		contractArgs []string,
-	) (*flow.Account, error)
+	CreateAccount() (*flow.Account, error)
 }
 
 var _ flowClient = flowkitClient{}
 
 type flowkitClient struct {
 	services *services.Services
+	state    *flowkit.State
 }
 
 func (f flowkitClient) ExecuteScript(
@@ -71,56 +60,53 @@ func (f flowkitClient) DeployContract(
 }
 
 func (f flowkitClient) SendTransaction(
-	proposer *flowkit.Account,
-	authorizers []*flowkit.Account,
-	payer *flowkit.Account,
+	authorizers []flow.Address,
 	code []byte,
-	codeFilename string,
-	gasLimit uint64,
 	args []cadence.Value,
-	network string,
 ) (*flow.Transaction, *flow.TransactionResult, error) {
+	service, err := f.state.EmulatorServiceAccount()
+	if err != nil {
+		return nil, nil, err
+	}
+	// if no authorizers defined use the service as default
 	if authorizers == nil {
-		authorizers = []*flowkit.Account{proposer}
-	}
-	if payer == nil {
-		payer = proposer
-	}
-
-	authorizerAddresses := make([]flow.Address, len(authorizers))
-	for i, a := range authorizers {
-		authorizerAddresses[i] = a.Address()
+		authorizers = []flow.Address{service.Address()}
 	}
 
 	tx, err := f.services.Transactions.Build(
-		proposer.Address(),
-		authorizerAddresses,
-		payer.Address(),
-		proposer.Key().Index(),
+		service.Address(),
+		authorizers,
+		service.Address(),
+		service.Key().Index(),
 		code,
-		codeFilename,
-		gasLimit,
+		"",
+		flow.DefaultTransactionGasLimit,
 		args,
-		network,
+		"",
 		true,
 	)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	tx, err = sign(proposer, tx)
+	// sign with service as proposer
+	tx, err = sign(service, tx)
 	if err != nil {
 		return nil, nil, err
 	}
-
+	// sign with all authorizers
 	for _, auth := range authorizers {
-		tx, err = sign(auth, tx)
+		signer := &flowkit.Account{}
+		signer.SetAddress(auth)
+		signer.SetKey(service.Key())
+
+		tx, err = sign(signer, tx)
 		if err != nil {
 			return nil, nil, err
 		}
 	}
-
-	tx, err = sign(payer, tx)
+	// sign with service as payer
+	tx, err = sign(service, tx)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -146,13 +132,22 @@ func (f flowkitClient) GetAccount(address flow.Address) (*flow.Account, error) {
 	return f.services.Accounts.Get(address)
 }
 
-func (f flowkitClient) CreateAccount(
-	signer *flowkit.Account,
-	pubKeys []crypto.PublicKey,
-	keyWeights []int,
-	sigAlgo []crypto.SignatureAlgorithm,
-	hashAlgo []crypto.HashAlgorithm,
-	contractArgs []string,
-) (*flow.Account, error) {
-	return f.services.Accounts.Create(signer, pubKeys, keyWeights, sigAlgo, hashAlgo, contractArgs)
+func (f flowkitClient) CreateAccount() (*flow.Account, error) {
+	service, err := f.state.EmulatorServiceAccount()
+	if err != nil {
+		return nil, err
+	}
+	serviceKey, err := service.Key().PrivateKey()
+	if err != nil {
+		return nil, err
+	}
+
+	return f.services.Accounts.Create(
+		service,
+		[]crypto.PublicKey{(*serviceKey).PublicKey()},
+		[]int{flow.AccountKeyWeightThreshold},
+		[]crypto.SignatureAlgorithm{crypto.ECDSA_P256},
+		[]crypto.HashAlgorithm{crypto.SHA3_256},
+		nil,
+	)
 }
