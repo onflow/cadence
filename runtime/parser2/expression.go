@@ -1191,13 +1191,11 @@ func parseMemberAccess(p *parser, token lexer.Token, left ast.Expression, option
 	if p.current.Is(lexer.TokenSpace) {
 		errorPos := p.current.StartPos
 		p.skipSpaceAndComments(true)
-		p.report(&SyntaxError{
-			Message: fmt.Sprintf(
-				"invalid whitespace after %s",
-				lexer.TokenDot,
-			),
-			Pos: errorPos,
-		})
+		p.report(NewSyntaxError(
+			errorPos,
+			"invalid whitespace after %s",
+			lexer.TokenDot,
+		))
 	}
 
 	// If there is an identifier, use it.
@@ -1208,10 +1206,10 @@ func parseMemberAccess(p *parser, token lexer.Token, left ast.Expression, option
 		identifier = p.tokenToIdentifier(p.current)
 		p.next()
 	} else {
-		p.report(fmt.Errorf(
+		p.reportSyntaxError(
 			"expected member name, got %s",
 			p.current.Type,
-		))
+		)
 	}
 
 	return ast.NewMemberExpression(

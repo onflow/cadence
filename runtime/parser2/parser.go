@@ -140,10 +140,14 @@ func ParseTokenStream(
 	result = parse(p)
 
 	if !p.current.Is(lexer.TokenEOF) {
-		p.report(fmt.Errorf("unexpected token: %s", p.current.Type))
+		p.reportSyntaxError("unexpected token: %s", p.current.Type)
 	}
 
 	return result, p.errors
+}
+
+func (p *parser) reportSyntaxError(message string, params ...any) {
+	p.report(NewSyntaxError(p.current.StartPos, message, params...))
 }
 
 func (p *parser) report(errs ...error) {
@@ -163,10 +167,10 @@ func (p *parser) report(errs ...error) {
 		var parseError ParseError
 		parseError, ok = err.(ParseError)
 		if !ok {
-			parseError = &SyntaxError{
-				Pos:     p.current.StartPos,
-				Message: err.Error(),
-			}
+			parseError = NewSyntaxError(
+				p.current.StartPos,
+				err.Error(),
+			)
 		}
 
 		// Add the errors to the buffered errors if buffering,
@@ -203,10 +207,10 @@ func (p *parser) next() {
 			}
 			parseError, ok := err.(ParseError)
 			if !ok {
-				parseError = &SyntaxError{
-					Pos:     token.StartPos,
-					Message: err.Error(),
-				}
+				parseError = NewSyntaxError(
+					token.StartPos,
+					err.Error(),
+				)
 			}
 			p.report(parseError)
 			continue

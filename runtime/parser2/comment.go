@@ -19,7 +19,6 @@
 package parser2
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/onflow/cadence/runtime/parser2/lexer"
@@ -45,10 +44,10 @@ func (p *parser) parseCommentContent() (comment string) {
 
 				switch p.current.Type {
 				case lexer.TokenEOF:
-					p.report(fmt.Errorf(
+					p.reportSyntaxError(
 						"missing comment end %q",
 						lexer.TokenBlockCommentEnd,
-					))
+					)
 					return nil
 
 				case lexer.TokenBlockCommentContent:
@@ -66,10 +65,10 @@ func (p *parser) parseCommentContent() (comment string) {
 					return []trampoline{t, t}
 
 				default:
-					p.report(fmt.Errorf(
+					p.reportSyntaxError(
 						"unexpected token in comment: %q",
 						p.current.Type,
-					))
+					)
 					return nil
 				}
 			}

@@ -225,7 +225,7 @@ func defineArrayType() {
 				p.skipSpaceAndComments(true)
 
 				if !p.current.Type.IsIntegerLiteral() {
-					p.report(fmt.Errorf("expected positive integer size for constant sized type"))
+					p.reportSyntaxError("expected positive integer size for constant sized type")
 
 					// Skip the invalid non-integer literal token
 					p.next()
@@ -235,7 +235,7 @@ func defineArrayType() {
 
 					integerExpression, ok := numberExpression.(*ast.IntegerExpression)
 					if !ok || integerExpression.Value.Sign() < 0 {
-						p.report(fmt.Errorf("expected positive integer size for constant sized type"))
+						p.reportSyntaxError("expected positive integer size for constant sized type")
 					} else {
 						size = integerExpression
 					}
@@ -403,9 +403,9 @@ func defineRestrictedOrDictionaryType() {
 					if expectType {
 						switch {
 						case dictionaryType != nil:
-							p.report(fmt.Errorf("missing dictionary value type"))
+							p.reportSyntaxError("missing dictionary value type")
 						case restrictedType != nil:
-							p.report(fmt.Errorf("missing type after comma"))
+							p.reportSyntaxError("missing type after comma")
 						}
 					}
 					endPos = p.current.EndPos
@@ -560,7 +560,7 @@ func parseNominalTypes(
 
 		case endTokenType:
 			if expectType && len(nominalTypes) > 0 {
-				p.report(fmt.Errorf("missing type after comma"))
+				p.reportSyntaxError("missing type after comma")
 			}
 			endPos = p.current.EndPos
 			atEnd = true
@@ -850,7 +850,7 @@ func parseCommaSeparatedTypeAnnotations(
 
 		case endTokenType:
 			if expectTypeAnnotation && len(typeAnnotations) > 0 {
-				p.report(fmt.Errorf("missing type annotation after comma"))
+				p.reportSyntaxError("missing type annotation after comma")
 			}
 			atEnd = true
 
