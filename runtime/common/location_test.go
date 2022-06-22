@@ -78,7 +78,7 @@ func TestLocationEquality(t *testing.T) {
 		)
 
 		require.True(t,
-			Location(TransactionLocation{1}) ==
+			Location(TransactionLocation{1}) == //nolint:gocritic
 				Location(TransactionLocation{1}),
 		)
 
