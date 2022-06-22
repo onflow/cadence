@@ -29,13 +29,14 @@ const TransactionLocationPrefix = "t"
 
 // TransactionLocation
 //
-type TransactionLocation []byte
+type TransactionLocation [32]byte
 
 var _ Location = TransactionLocation{}
 
-func NewTransactionLocation(gauge MemoryGauge, script []byte) TransactionLocation {
-	UseMemory(gauge, NewBytesMemoryUsage(len(script)))
-	return TransactionLocation(script)
+func NewTransactionLocation(gauge MemoryGauge, identifier []byte) (location TransactionLocation) {
+	UseMemory(gauge, NewBytesMemoryUsage(len(identifier)))
+	copy(location[:], identifier)
+	return
 }
 
 func (l TransactionLocation) ID() LocationID {
@@ -70,11 +71,11 @@ func (l TransactionLocation) QualifiedIdentifier(typeID TypeID) string {
 }
 
 func (l TransactionLocation) String() string {
-	return hex.EncodeToString(l)
+	return hex.EncodeToString(l[:])
 }
 
 func (l TransactionLocation) Description() string {
-	return fmt.Sprintf("transaction with ID %s", hex.EncodeToString(l))
+	return fmt.Sprintf("transaction with ID %s", hex.EncodeToString(l[:]))
 }
 
 func (l TransactionLocation) MarshalJSON() ([]byte, error) {
@@ -101,7 +102,7 @@ func decodeTransactionLocationTypeID(gauge MemoryGauge, typeID string) (Transact
 	const errorMessagePrefix = "invalid transaction location type ID"
 
 	newError := func(message string) (TransactionLocation, string, error) {
-		return nil, "", fmt.Errorf("%s: %s", errorMessagePrefix, message)
+		return TransactionLocation{}, "", fmt.Errorf("%s: %s", errorMessagePrefix, message)
 	}
 
 	if typeID == "" {
@@ -118,7 +119,7 @@ func decodeTransactionLocationTypeID(gauge MemoryGauge, typeID string) (Transact
 	prefix := parts[0]
 
 	if prefix != TransactionLocationPrefix {
-		return nil, "", fmt.Errorf(
+		return TransactionLocation{}, "", fmt.Errorf(
 			"%s: invalid prefix: expected %q, got %q",
 			errorMessagePrefix,
 			TransactionLocationPrefix,
@@ -130,7 +131,7 @@ func decodeTransactionLocationTypeID(gauge MemoryGauge, typeID string) (Transact
 	UseMemory(gauge, NewBytesMemoryUsage(len(location)))
 
 	if err != nil {
-		return nil, "", fmt.Errorf(
+		return TransactionLocation{}, "", fmt.Errorf(
 			"%s: invalid location: %w",
 			errorMessagePrefix,
 			err,
@@ -142,5 +143,8 @@ func decodeTransactionLocationTypeID(gauge MemoryGauge, typeID string) (Transact
 		qualifiedIdentifier = parts[2]
 	}
 
-	return location, qualifiedIdentifier, nil
+	var result TransactionLocation
+	copy(result[:], location)
+
+	return result, qualifiedIdentifier, nil
 }

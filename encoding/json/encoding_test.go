@@ -1987,8 +1987,8 @@ func testEncode(t *testing.T, val cadence.Value, expectedJSON string) (actualJSO
 	return actualJSON
 }
 
-func testDecode(t *testing.T, actualJSON string, expectedVal cadence.Value) {
-	decodedVal, err := json.Decode(nil, []byte(actualJSON))
+func testDecode(t *testing.T, actualJSON string, expectedVal cadence.Value, options ...json.Option) {
+	decodedVal, err := json.Decode(nil, []byte(actualJSON), options...)
 	require.NoError(t, err)
 
 	assert.Equal(t, expectedVal, decodedVal)
@@ -2023,4 +2023,34 @@ func TestNonUTF8StringEncoding(t *testing.T) {
 	// Decoded value must be a valid utf8 string
 	assert.IsType(t, cadence.String(""), decodedValue)
 	assert.True(t, utf8.ValidString(decodedValue.String()))
+}
+
+func TestDecodeBackwardsCompatibilityTypeID(t *testing.T) {
+
+	t.Parallel()
+
+	const encoded = `{"type":"Type","value":{"staticType":"&Int"}}}`
+
+	t.Run("unstructured static types allowed", func(t *testing.T) {
+
+		t.Parallel()
+
+		testDecode(
+			t,
+			encoded,
+
+			cadence.TypeValue{
+				StaticType: cadence.TypeID("&Int"),
+			},
+			json.WithAllowUnstructuredStaticTypes(true),
+		)
+	})
+
+	t.Run("unstructured static types disallowed", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := json.Decode(nil, []byte(encoded))
+		require.Error(t, err)
+	})
 }

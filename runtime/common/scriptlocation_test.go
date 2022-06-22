@@ -30,7 +30,7 @@ func TestScriptLocation_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
 
-	loc := ScriptLocation([]byte{0x1, 0x2})
+	loc := ScriptLocation{0x1, 0x2}
 
 	actual, err := json.Marshal(loc)
 	require.NoError(t, err)
@@ -39,7 +39,7 @@ func TestScriptLocation_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "ScriptLocation",
-            "Script": "0102"
+            "Script": "0102000000000000000000000000000000000000000000000000000000000000"
         }
         `,
 		string(actual),

@@ -21,6 +21,8 @@ package ast
 import (
 	"encoding/json"
 
+	"github.com/turbolent/prettier"
+
 	"github.com/onflow/cadence/runtime/common"
 )
 
@@ -108,4 +110,19 @@ func (d *InterfaceDeclaration) MarshalJSON() ([]byte, error) {
 		Type:  "InterfaceDeclaration",
 		Alias: (*Alias)(d),
 	})
+}
+
+func (d *InterfaceDeclaration) Doc() prettier.Doc {
+	return CompositeDocument(
+		d.Access,
+		d.CompositeKind,
+		true,
+		d.Identifier.Identifier,
+		nil,
+		d.Members,
+	)
+}
+
+func (d *InterfaceDeclaration) String() string {
+	return Prettier(d)
 }

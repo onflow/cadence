@@ -100,7 +100,7 @@ pub let totalSupply: UFix64
 Your contract has a resource that you wish to access fields of.
 Resources are often stored in private places and are hard to access.
 Additionally, scripts cannot return resources to the external context,
-so a construct must be used to hold the data.
+so a struct must be used to hold the data.
 
 ### Solution
 
@@ -121,16 +121,16 @@ pub contract AContract {
     // Resource definition
     pub resource BResource {
         pub var c: UInt64
-        pub var d: string
+        pub var d: String
 
         // Generate a struct with the same fields
         // to return when a script wants to see the fields of the resource
         // without having to return the actual resource
-        pub fun generateReport() BReportStruct {
-            return BReportStruct(c: c, d: d)
+        pub fun generateReport(): BReportStruct {
+            return BReportStruct(c: self.c, d: self.d)
         }
 
-        init(c: UInt64, d: string) {
+        init(c: UInt64, d: String) {
             self.c = c
             self.d = d
         }
@@ -139,9 +139,9 @@ pub contract AContract {
     // Define a struct with the same fields as the resource
     pub struct BReportStruct {
         pub var c: UInt64
-        pub var d: string
+        pub var d: String
 
-        init(c: UInt64, d: string) {
+        init(c: UInt64, d: String) {
             self.c = c
             self.d = d
         }
@@ -149,13 +149,12 @@ pub contract AContract {
     }
 }
 ...
-import A from 0xA
+import AContract from 0xAContract
 
 // Return the struct with a script
-pub fun main(): A.BReport {
+pub fun main(): AContract.BReportStruct {
     let b: AContract.BResource // Borrow the resource
-    let report = b.generateReport()
-    return b
+    return b.generateReport()
 }
 ```
 
@@ -180,7 +179,7 @@ and in the transaction that is used to deploy it:
 [admin_deploy_contract.cdc](https://github.com/onflow/flow-core-contracts/blob/master/transactions/lockedTokens/admin/admin_deploy_contract.cdc)
 
 
-## Use desciptive names for fields, paths, functions, and variables
+## Use descriptive names for fields, paths, functions and variables
 
 ### Problem
 
@@ -190,7 +189,7 @@ Therefore, they need to be clearly writted and easy to understand.
 
 ### Solution
 
-All fields, functions, types, variables, etc need to have names that clearly describe what they are used for.
+All fields, functions, types, variables, etc., need to have names that clearly describe what they are used for.
 
 `account` / `accounts` is better than `array` / `element`.
 

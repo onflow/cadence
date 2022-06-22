@@ -58,8 +58,9 @@ func TestRuntimeError(t *testing.T) {
 		require.EqualError(
 			t,
 			err,
-			"Execution failed:\nerror: unexpected token: identifier\n"+
-				" --> 01:1:0\n"+
+			"Execution failed:\n"+
+				"error: unexpected token: identifier\n"+
+				" --> 0100000000000000000000000000000000000000000000000000000000000000:1:0\n"+
 				"  |\n"+
 				"1 | X\n"+
 				"  | ^\n",
@@ -92,7 +93,7 @@ func TestRuntimeError(t *testing.T) {
 			err,
 			"Execution failed:\n"+
 				"error: missing access modifier for function\n"+
-				" --> 01:1:0\n"+
+				" --> 0100000000000000000000000000000000000000000000000000000000000000:1:0\n"+
 				"  |\n"+
 				"1 | fun test() {}\n"+
 				"  | ^\n",
@@ -109,6 +110,7 @@ func TestRuntimeError(t *testing.T) {
             pub fun main() {
                 let a: UInt8 = 255
                 let b: UInt8 = 1
+                // overflow
                 a + b
             }
         `)
@@ -129,10 +131,11 @@ func TestRuntimeError(t *testing.T) {
 		require.EqualError(
 			t,
 			err,
-			"Execution failed:\nerror: overflow\n"+
-				" --> 01:5:16\n"+
+			"Execution failed:\n"+
+				"error: overflow\n"+
+				" --> 0100000000000000000000000000000000000000000000000000000000000000:6:16\n"+
 				"  |\n"+
-				"5 |                 a + b\n"+
+				"6 |                 a + b\n"+
 				"  |                 ^^^^^\n",
 		)
 	})
@@ -234,6 +237,7 @@ func TestRuntimeError(t *testing.T) {
             pub fun add() {
                 let a: UInt8 = 255
                 let b: UInt8 = 1
+                // overflow
                 a + b
             }
         `)
@@ -271,11 +275,18 @@ func TestRuntimeError(t *testing.T) {
 		require.EqualError(
 			t,
 			err,
-			"Execution failed:\nerror: overflow\n"+
-				" --> imported:5:16\n"+
+			"Execution failed:\n"+
+				" --> 0100000000000000000000000000000000000000000000000000000000000000:5:16\n"+
 				"  |\n"+
-				"5 |                 a + b\n"+
-				"  |                 ^^^^^\n",
+				"5 |                 add()\n"+
+				"  |                 ^^^^^\n"+
+				"\n"+
+				"error: overflow\n"+
+				" --> imported:6:16\n"+
+				"  |\n"+
+				"6 |                 a + b\n"+
+				"  |                 ^^^^^\n"+
+				"",
 		)
 	})
 
@@ -289,7 +300,8 @@ func TestRuntimeError(t *testing.T) {
 		id, err := hex.DecodeString("57717cc72f97494ac90441790352a07b999a39526819e638b5d367e62e43c37a")
 		require.NoError(t, err)
 
-		location := common.TransactionLocation(id)
+		var location common.TransactionLocation
+		copy(location[:], id)
 
 		codes := map[common.LocationID]string{
 			location.ID(): `

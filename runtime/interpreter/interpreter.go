@@ -328,7 +328,7 @@ type Interpreter struct {
 	effectivePredeclaredValues     map[string]ValueDeclaration
 	activations                    *VariableActivations
 	Globals                        GlobalVariables
-	allInterpreters                map[common.LocationID]*Interpreter
+	allInterpreters                map[common.Location]*Interpreter
 	typeCodes                      TypeCodes
 	Transactions                   []*HostFunctionValue
 	Storage                        Storage
@@ -363,6 +363,7 @@ type Interpreter struct {
 	invalidatedResourceValidationEnabled bool
 	resourceVariables                    map[ResourceKindedValue]*Variable
 	memoryGauge                          common.MemoryGauge
+	CallStack                            *CallStack
 }
 
 var _ common.MemoryGauge = &Interpreter{}
@@ -601,9 +602,19 @@ func WithExitHandler(handler ExitHandlerFunc) Option {
 // WithAllInterpreters returns an interpreter option which sets
 // the given map of interpreters as the map of all interpreters.
 //
-func WithAllInterpreters(allInterpreters map[common.LocationID]*Interpreter) Option {
+func WithAllInterpreters(allInterpreters map[common.Location]*Interpreter) Option {
 	return func(interpreter *Interpreter) error {
 		interpreter.SetAllInterpreters(allInterpreters)
+		return nil
+	}
+}
+
+// WithCallStack returns an interpreter option which sets
+// the given slice of invocations as the slice of all invocations.
+//
+func WithCallStack(callStack *CallStack) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.CallStack = callStack
 		return nil
 	}
 }
@@ -702,7 +713,8 @@ func NewInterpreter(program *Program, location common.Location, options ...Optio
 	interpreter.activations.PushNewWithParent(baseActivation)
 
 	defaultOptions := []Option{
-		WithAllInterpreters(map[common.LocationID]*Interpreter{}),
+		WithAllInterpreters(map[common.Location]*Interpreter{}),
+		WithCallStack(&CallStack{}),
 		withTypeCodes(TypeCodes{
 			CompositeCodes:       map[sema.TypeID]CompositeTypeCode{},
 			InterfaceCodes:       map[sema.TypeID]WrapperCode{},
@@ -857,13 +869,12 @@ func (interpreter *Interpreter) SetExitHandler(function ExitHandlerFunc) {
 
 // SetAllInterpreters sets the given map of interpreters as the map of all interpreters.
 //
-func (interpreter *Interpreter) SetAllInterpreters(allInterpreters map[common.LocationID]*Interpreter) {
+func (interpreter *Interpreter) SetAllInterpreters(allInterpreters map[common.Location]*Interpreter) {
 	interpreter.allInterpreters = allInterpreters
 
 	// Register self
 	if interpreter.Location != nil {
-		locationID := interpreter.Location.MeteredID(interpreter.memoryGauge)
-		interpreter.allInterpreters[locationID] = interpreter
+		interpreter.allInterpreters[interpreter.Location] = interpreter
 	}
 }
 
@@ -1016,26 +1027,10 @@ func (interpreter *Interpreter) invokeVariable(
 		}
 	}
 
-	return interpreter.prepareInvoke(functionValue, functionType, arguments)
+	return interpreter.invokeExternally(functionValue, functionType, arguments)
 }
 
-func (interpreter *Interpreter) prepareInvokeTransaction(
-	index int,
-	arguments []Value,
-) (value Value, err error) {
-	if index >= len(interpreter.Transactions) {
-		return nil, TransactionNotDeclaredError{Index: index}
-	}
-
-	functionValue := interpreter.Transactions[index]
-
-	transactionType := interpreter.Program.Elaboration.TransactionTypes[index]
-	functionType := transactionType.EntryPointFunctionType()
-
-	return interpreter.prepareInvoke(functionValue, functionType, arguments)
-}
-
-func (interpreter *Interpreter) prepareInvoke(
+func (interpreter *Interpreter) invokeExternally(
 	functionValue FunctionValue,
 	functionType *sema.FunctionType,
 	arguments []Value,
@@ -1118,7 +1113,16 @@ func (interpreter *Interpreter) InvokeTransaction(index int, arguments ...Value)
 		err = internalErr
 	})
 
-	_, err = interpreter.prepareInvokeTransaction(index, arguments)
+	if index >= len(interpreter.Transactions) {
+		return TransactionNotDeclaredError{Index: index}
+	}
+
+	functionValue := interpreter.Transactions[index]
+
+	transactionType := interpreter.Program.Elaboration.TransactionTypes[index]
+	functionType := transactionType.EntryPointFunctionType()
+
+	_, err = interpreter.invokeExternally(functionValue, functionType, arguments)
 	return err
 }
 
@@ -1156,7 +1160,10 @@ func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 			}
 		}
 
-		onError(err)
+		interpreterErr := err.(Error)
+		interpreterErr.StackTrace = interpreter.CallStack.Invocations[:]
+
+		onError(interpreterErr)
 	}
 }
 
@@ -2611,11 +2618,9 @@ func (interpreter *Interpreter) ensureLoadedWithLocationHandler(
 	loadLocation func() Import,
 ) *Interpreter {
 
-	locationID := location.MeteredID(interpreter.memoryGauge)
-
 	// If a sub-interpreter already exists, return it
 
-	subInterpreter := interpreter.allInterpreters[locationID]
+	subInterpreter := interpreter.allInterpreters[location]
 	if subInterpreter != nil {
 		return subInterpreter
 	}
@@ -2660,7 +2665,7 @@ func (interpreter *Interpreter) ensureLoadedWithLocationHandler(
 
 		// Virtual import does not register interpreter itself,
 		// unlike InterpreterImport
-		interpreter.allInterpreters[locationID] = subInterpreter
+		interpreter.allInterpreters[location] = subInterpreter
 
 		subInterpreter.Program = &Program{
 			Elaboration: virtualImport.Elaboration,
@@ -2695,6 +2700,7 @@ func (interpreter *Interpreter) NewSubInterpreter(
 		WithImportLocationHandler(interpreter.importLocationHandler),
 		WithUUIDHandler(interpreter.uuidHandler),
 		WithAllInterpreters(interpreter.allInterpreters),
+		WithCallStack(interpreter.CallStack),
 		WithAtreeValueValidationEnabled(interpreter.atreeValueValidationEnabled),
 		WithAtreeStorageValidationEnabled(interpreter.atreeStorageValidationEnabled),
 		withTypeCodes(interpreter.typeCodes),
@@ -4192,9 +4198,7 @@ func (interpreter *Interpreter) getElaboration(location common.Location) *sema.E
 
 	inter := interpreter.EnsureLoaded(location)
 
-	locationID := location.MeteredID(interpreter.memoryGauge)
-
-	subInterpreter := inter.allInterpreters[locationID]
+	subInterpreter := inter.allInterpreters[location]
 	if subInterpreter == nil || subInterpreter.Program == nil {
 		return nil
 	}

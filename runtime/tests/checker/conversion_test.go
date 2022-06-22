@@ -49,7 +49,7 @@ func TestCheckNumberConversionReplacementHint(t *testing.T) {
 		require.IsType(t, &sema.ReplacementHint{}, hints[0])
 
 		require.Equal(t,
-			"consider replacing with: `(1.0 as Fix64)`",
+			"consider replacing with: `1.0 as Fix64`",
 			hints[0].(*sema.ReplacementHint).Hint(),
 		)
 	})
@@ -155,7 +155,7 @@ func TestCheckNumberConversionReplacementHint(t *testing.T) {
 		require.IsType(t, &sema.ReplacementHint{}, hints[0])
 
 		require.Equal(t,
-			"consider replacing with: `(1 as UInt8)`",
+			"consider replacing with: `1 as UInt8`",
 			hints[0].(*sema.ReplacementHint).Hint(),
 		)
 	})
@@ -175,7 +175,7 @@ func TestCheckNumberConversionReplacementHint(t *testing.T) {
 		require.IsType(t, &sema.ReplacementHint{}, hints[0])
 
 		require.Equal(t,
-			"consider replacing with: `(1 as Int8)`",
+			"consider replacing with: `1 as Int8`",
 			hints[0].(*sema.ReplacementHint).Hint(),
 		)
 	})
@@ -195,7 +195,7 @@ func TestCheckNumberConversionReplacementHint(t *testing.T) {
 		require.IsType(t, &sema.ReplacementHint{}, hints[0])
 
 		require.Equal(t,
-			"consider replacing with: `(-1 as Int8)`",
+			"consider replacing with: `-1 as Int8`",
 			hints[0].(*sema.ReplacementHint).Hint(),
 		)
 	})
