@@ -21,7 +21,6 @@ package integration
 import (
 	"github.com/onflow/cadence/languageserver/protocol"
 	"github.com/onflow/cadence/languageserver/server"
-	"github.com/onflow/flow-cli/pkg/flowkit"
 )
 
 type FlowIntegration struct {
@@ -34,7 +33,6 @@ type FlowIntegration struct {
 	activeAccount ClientAccount
 
 	flowClient flowClient
-	state      *flowkit.State
 }
 
 func NewFlowIntegration(s *server.Server, enableFlowClient bool) (*FlowIntegration, error) {

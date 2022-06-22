@@ -1,6 +1,8 @@
 package integration
 
 import (
+	"net/url"
+
 	"github.com/onflow/cadence"
 	"github.com/onflow/flow-cli/pkg/flowkit"
 	"github.com/onflow/flow-cli/pkg/flowkit/services"
@@ -9,27 +11,10 @@ import (
 )
 
 type flowClient interface {
-	ExecuteScript(
-		code []byte,
-		args []cadence.Value,
-		scriptPath string,
-		network string,
-	) (cadence.Value, error)
-
-	DeployContract(
-		address flow.Address,
-		contractName string,
-		contractSource []byte,
-	) (*flow.Account, error)
-
-	SendTransaction(
-		authorizers []flow.Address,
-		code []byte,
-		args []cadence.Value,
-	) (*flow.Transaction, *flow.TransactionResult, error)
-
+	ExecuteScript(location *url.URL, args []cadence.Value) (cadence.Value, error)
+	DeployContract(address flow.Address, name string, location *url.URL) (*flow.Account, error)
+	SendTransaction(authorizers []flow.Address, location *url.URL, args []cadence.Value) (*flow.TransactionResult, error)
 	GetAccount(address flow.Address) (*flow.Account, error)
-
 	CreateAccount() (*flow.Account, error)
 }
 
@@ -41,36 +26,49 @@ type flowkitClient struct {
 }
 
 func (f flowkitClient) ExecuteScript(
-	code []byte,
+	location *url.URL,
 	args []cadence.Value,
-	scriptPath string,
-	network string,
 ) (cadence.Value, error) {
-	return f.services.Scripts.Execute(code, args, scriptPath, network)
+	code, err := f.state.ReadFile(location.Path)
+	if err != nil {
+		return nil, err
+	}
+
+	return f.services.Scripts.Execute(code, args, "", "") // todo check if it's ok that path is empty for resolving imports
 }
 
 func (f flowkitClient) DeployContract(
 	address flow.Address,
-	contractName string,
-	contractSource []byte,
+	name string,
+	location *url.URL,
 ) (*flow.Account, error) {
+	code, err := f.state.ReadFile(location.Path)
+	if err != nil {
+		return nil, err
+	}
+
 	service, err := f.state.EmulatorServiceAccount()
 	if err != nil {
 		return nil, err
 	}
 
 	account := createSigner(address, service)
-	return f.services.Accounts.AddContract(account, contractName, contractSource, true)
+	return f.services.Accounts.AddContract(account, name, code, true)
 }
 
 func (f flowkitClient) SendTransaction(
 	authorizers []flow.Address,
-	code []byte,
+	location *url.URL,
 	args []cadence.Value,
-) (*flow.Transaction, *flow.TransactionResult, error) {
+) (*flow.TransactionResult, error) {
+	code, err := f.state.ReadFile(location.Path)
+	if err != nil {
+		return nil, err
+	}
+
 	service, err := f.state.EmulatorServiceAccount()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	// if no authorizers defined use the service as default
 	if authorizers == nil {
@@ -90,28 +88,29 @@ func (f flowkitClient) SendTransaction(
 		true,
 	)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	// sign with service as proposer
 	tx, err = sign(service, tx)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	// sign with all authorizers
 	for _, auth := range authorizers {
 		tx, err = sign(createSigner(auth, service), tx)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 	}
 	// sign with service as payer
 	tx, err = sign(service, tx)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	return f.services.Transactions.SendSigned(tx.FlowTransaction().Encode(), true)
+	_, res, err := f.services.Transactions.SendSigned(tx.FlowTransaction().Encode(), true)
+	return res, err
 }
 
 func (f flowkitClient) GetAccount(address flow.Address) (*flow.Account, error) {

@@ -21,7 +21,6 @@ package integration
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/url"
 
 	"github.com/onflow/cadence/languageserver/protocol"
@@ -110,8 +109,8 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...json.RawMe
 		)
 	}
 
-	path, pathError := url.Parse(uri)
-	if pathError != nil {
+	location, err := url.Parse(uri)
+	if err != nil {
 		return nil, errorWithMessage(
 			conn,
 			ErrorMessageArguments,
@@ -144,18 +143,12 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...json.RawMe
 		signers[i] = flow.HexToAddress(v.(string))
 	}
 
-	// Send transaction via shared library
-	code, err := ioutil.ReadFile(path.Path)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load transaction file: %s", path.Path)
-	}
-
 	txArgs, err := flowkit.ParseArgumentsJSON(argsJSON)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse JSON arguments")
 	}
 
-	_, txResult, err := i.flowClient.SendTransaction(signers, code, txArgs)
+	txResult, err := i.flowClient.SendTransaction(signers, location, txArgs)
 	if err != nil {
 		return nil, errorWithMessage(conn, ErrorMessageTransactionError, err)
 	}
@@ -204,15 +197,6 @@ func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...json.RawMess
 		)
 	}
 
-	code, err := i.state.ReadFile(path.Path)
-	if err != nil {
-		return nil, errorWithMessage(
-			conn,
-			ErrorMessageScriptExecution,
-			fmt.Errorf("file load error: %w", err),
-		)
-	}
-
 	scriptArgs, err := flowkit.ParseArgumentsJSON(argsJSON)
 	if err != nil {
 		return nil, errorWithMessage(
@@ -222,8 +206,7 @@ func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...json.RawMess
 		)
 	}
 
-	// Execute script via shared library
-	scriptResult, err := i.flowClient.ExecuteScript(code, scriptArgs, "", "")
+	scriptResult, err := i.flowClient.ExecuteScript(path, scriptArgs)
 	if err != nil {
 		return nil, errorWithMessage(conn, ErrorMessageScriptExecution, err)
 	}
@@ -340,7 +323,7 @@ func (i *FlowIntegration) deployContract(conn protocol.Conn, args ...json.RawMes
 		)
 	}
 
-	path, pathError := url.Parse(uri)
+	location, pathError := url.Parse(uri)
 	if pathError != nil {
 		return nil, errorWithMessage(
 			conn,
@@ -370,17 +353,12 @@ func (i *FlowIntegration) deployContract(conn protocol.Conn, args ...json.RawMes
 
 	showMessage(conn, fmt.Sprintf("Deploying contract %s to account %s", name, rawAddress))
 
-	code, err := i.state.ReadFile(path.Path)
-	if err != nil {
-		return nil, errorWithMessage(conn, fmt.Sprintf("failed to load contract code: %s", path.Path), err)
-	}
-
-	_, deployError := i.flowClient.DeployContract(address, name, code)
+	_, deployError := i.flowClient.DeployContract(address, name, location)
 	if deployError != nil {
 		return nil, errorWithMessage(conn, ErrorMessageDeploy, deployError)
 	}
 
-	showMessage(conn, fmt.Sprintf("Status: contract %s has been deployed to %s", name, to))
+	showMessage(conn, fmt.Sprintf("Status: contract %s has been deployed to %s", name, rawAddress))
 	return nil, err
 }
 
