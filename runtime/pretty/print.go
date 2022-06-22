@@ -161,7 +161,7 @@ func (p ErrorPrettyPrinter) PrettyPrintError(err error, location common.Location
 	var printError func(err error, location common.Location) error
 	printError = func(err error, location common.Location) error {
 
-		if err, ok := err.(common.HasImportLocation); ok {
+		if err, ok := err.(common.HasLocation); ok {
 			importLocation := err.ImportLocation()
 			if importLocation != nil {
 				location = importLocation
@@ -174,7 +174,7 @@ func (p ErrorPrettyPrinter) PrettyPrintError(err error, location common.Location
 
 				childLocation := location
 
-				if childErr, ok := childErr.(common.HasImportLocation); ok {
+				if childErr, ok := childErr.(common.HasLocation); ok {
 					importLocation := childErr.ImportLocation()
 					if importLocation != nil {
 						childLocation = importLocation
