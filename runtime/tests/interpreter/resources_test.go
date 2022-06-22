@@ -2450,7 +2450,7 @@ func TestInterpretReferenceUseAfterTransferAndDestruction(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 
-		var invalidatedResourceErr interpreter.InvalidatedResourceError
+		var invalidatedResourceErr interpreter.DestroyedResourceError
 		require.ErrorAs(t, err, &invalidatedResourceErr)
 
 		assert.Equal(t, 26, invalidatedResourceErr.StartPosition().Line)
@@ -2480,7 +2480,7 @@ func TestInterpretReferenceUseAfterTransferAndDestruction(t *testing.T) {
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
 
-		var invalidatedResourceErr interpreter.InvalidatedResourceError
+		var invalidatedResourceErr interpreter.DestroyedResourceError
 		require.ErrorAs(t, err, &invalidatedResourceErr)
 
 		assert.Equal(t, 26, invalidatedResourceErr.StartPosition().Line)
@@ -2510,7 +2510,7 @@ func TestInterpretReferenceUseAfterTransferAndDestruction(t *testing.T) {
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
 
-		var invalidatedResourceErr interpreter.InvalidatedResourceError
+		var invalidatedResourceErr interpreter.DestroyedResourceError
 		require.ErrorAs(t, err, &invalidatedResourceErr)
 
 		assert.Equal(t, 26, invalidatedResourceErr.StartPosition().Line)
@@ -2539,7 +2539,7 @@ func TestInterpretReferenceUseAfterTransferAndDestruction(t *testing.T) {
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
 
-		var invalidatedResourceErr interpreter.InvalidatedResourceError
+		var invalidatedResourceErr interpreter.DestroyedResourceError
 		require.ErrorAs(t, err, &invalidatedResourceErr)
 
 		assert.Equal(t, 24, invalidatedResourceErr.StartPosition().Line)
