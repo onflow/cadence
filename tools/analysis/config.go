@@ -20,6 +20,7 @@ package analysis
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -61,13 +62,19 @@ func NewSimpleConfig(
 
 		names := make([]string, 0, len(contracts))
 
-		for name, code := range contracts {
+		for name := range contracts { //nolint:maprangecheck
+			names = append(names, name)
+		}
+
+		sort.Strings(names)
+
+		for _, name := range names {
+			code := contracts[name]
 			location := common.AddressLocation{
 				Address: address,
 				Name:    name,
 			}
 			codes[location.ID()] = code
-			names = append(names, name)
 		}
 
 		contractNames[address] = names
