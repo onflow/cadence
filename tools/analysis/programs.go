@@ -101,6 +101,7 @@ func (programs Programs) check(
 				config.ResolveAddressContractNames,
 			),
 		),
+		sema.WithLintingEnabled(true),
 		sema.WithPositionInfoEnabled(config.Mode&NeedPositionInfo != 0),
 		sema.WithImportHandler(
 			func(checker *sema.Checker, importedLocation common.Location, importRange ast.Range) (sema.Import, error) {

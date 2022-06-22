@@ -40,23 +40,12 @@ func (checker *Checker) VisitForceExpression(expression *ast.ForceExpression) as
 		ResourceInvalidationKindMoveDefinite,
 	)
 
+	if checker.lintingEnabled {
+		checker.Elaboration.ForceExpressionTypes[expression] = valueType
+	}
+
 	optionalType, ok := valueType.(*OptionalType)
 	if !ok {
-		// A non-optional type is forced. Suggest removing it
-
-		if checker.lintingEnabled {
-			checker.hint(
-				&RemovalHint{
-					Description: "unnecessary force operator",
-					Range: ast.NewRange(
-						checker.memoryGauge,
-						expression.EndPos,
-						expression.EndPos,
-					),
-				},
-			)
-		}
-
 		return valueType
 	}
 
