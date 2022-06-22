@@ -1355,11 +1355,8 @@ github.com/onflow/cadence v0.21.3-0.20220513161637-08b93d4bb7b9/go.mod h1:vNIxF1
 github.com/onflow/cadence v0.21.3-0.20220601002855-8b113c539a2c/go.mod h1:FliGP1FZLEuSemnSf8pKItDzW7E2cvPukx/SsE1+oCo=
 github.com/onflow/cadence v0.24.0/go.mod h1:tIJiQ4RIq1WUTXdBewv8p+gNUETN93Eb7jSFedjqs5w=
 github.com/onflow/cadence v0.24.1/go.mod h1:tIJiQ4RIq1WUTXdBewv8p+gNUETN93Eb7jSFedjqs5w=
-github.com/onflow/cadence v0.24.2-0.20220622173207-782f96ee0272 h1:T68JcQXwwwCPaecFoNBY9dfR1/H2ohvbVcl2MnAEEFE=
-github.com/onflow/cadence v0.24.2-0.20220622173207-782f96ee0272/go.mod h1:5txkV9U0IyzFzpL+tJLbqfgYIrSdWStWGAAmslrXSKY=
-github.com/onflow/cadence v0.24.3/go.mod h1:tIJiQ4RIq1WUTXdBewv8p+gNUETN93Eb7jSFedjqs5w=
-github.com/onflow/cadence v0.24.4 h1:3f7wk1WFKvBlwjh3d1//5frJKFgECK2GxljoG4wzQqs=
-github.com/onflow/cadence v0.24.4/go.mod h1:tIJiQ4RIq1WUTXdBewv8p+gNUETN93Eb7jSFedjqs5w=
+github.com/onflow/cadence v0.24.2-0.20220617011849-61f83ae09293 h1:vLmfsO7bb8EdmqtM1YQjxiXkgusZP+iPHWuBFRk43zM=
+github.com/onflow/cadence v0.24.2-0.20220617011849-61f83ae09293/go.mod h1:tIJiQ4RIq1WUTXdBewv8p+gNUETN93Eb7jSFedjqs5w=
 github.com/onflow/cadence/languageserver v0.15.2/go.mod h1:hQGE8dYH5CfQ1Oe0nXglchgURzZwR3JQhmuXtv4ROHs=
 github.com/onflow/cadence/languageserver v0.16.0/go.mod h1:UPV1so9LcMrhj27IegrTucoyS4TLRVjNr4DJqjqBhFA=
 github.com/onflow/cadence/languageserver v0.18.2/go.mod h1:ehuDCUevEEavUzgJqLevcZPjfmTzMBX7Sglbi5ur9uU=
@@ -1378,8 +1375,6 @@ github.com/onflow/flow-cli v0.35.1-0.20220608222158-caf50623fa2a/go.mod h1:S7HNL
 github.com/onflow/flow-cli v0.35.1-0.20220608231110-c253ad512117/go.mod h1:0WJHxtoBaLl2/wfiwnCocTy2WADrbzeTwPO8etJZH4Q=
 github.com/onflow/flow-cli v0.36.1 h1:prMmTNsWgYnWB9W7BIDNCf3yrQIMUMlKo0IZ+d4jBds=
 github.com/onflow/flow-cli v0.36.1/go.mod h1:H6nhWqNxdwRqmwAsT8rfom6qX4nfzW0Yf/ubRq6uZN0=
-github.com/onflow/flow-cli v0.36.2 h1:piPBO37S9ngncicq146dyOwR5Z8VnAa0vTLz1O9gcCs=
-github.com/onflow/flow-cli v0.36.2/go.mod h1:q9qxlR21L6/AVRz2ATDnxcNguUSymb94rBaNbx4JwTg=
 github.com/onflow/flow-core-contracts/lib/go/contracts v0.7.2/go.mod h1:IZ2e7UyLCYmpQ8Kd7k0A32uXqdqfiV1r2sKs5/riblo=
 github.com/onflow/flow-core-contracts/lib/go/contracts v0.7.3-0.20210527134022-58c25247091a/go.mod h1:IZ2e7UyLCYmpQ8Kd7k0A32uXqdqfiV1r2sKs5/riblo=
 github.com/onflow/flow-core-contracts/lib/go/contracts v0.7.3/go.mod h1:MSNt2rodpRXm1n0iGQWL6ltDoJCtXEzlPw9nhE/zQmk=
@@ -1430,9 +1425,8 @@ github.com/onflow/flow-go-sdk v0.24.1-0.20220421152843-9ce4d554036e/go.mod h1:d0
 github.com/onflow/flow-go-sdk v0.24.1-0.20220512181452-dec47e8451bb/go.mod h1:KQXwCCKgKE5JO9AlgQwFE3u4kFlQO/zSmlVSwcA8I+4=
 github.com/onflow/flow-go-sdk v0.24.1-0.20220513205729-d1f58d47c4e3/go.mod h1:cDUwD383pSyvlKueB7lxNI10/mfS+2EWeZOmeJaxZiE=
 github.com/onflow/flow-go-sdk v0.26.0/go.mod h1:PzRE6FkdcIEl10M3H/cRnsj8SRJzKgaXqQCvLO1cOL0=
+github.com/onflow/flow-go-sdk v0.26.1 h1:v0rzbBQPy+LEuAmX6d7E9TUBUW6lLyBIStUxchXwh9k=
 github.com/onflow/flow-go-sdk v0.26.1/go.mod h1:Z0SxMQgapt5aBgIdI3trG+IvAAux8WAvCKhgZ7tP6dQ=
-github.com/onflow/flow-go-sdk v0.26.2 h1:60wimtE4NX1poBtUiEYa2+FrtYGkwVd7Sl4L/GVgaiw=
-github.com/onflow/flow-go-sdk v0.26.2/go.mod h1:wjeLjPVcZ2z3xNwvtRDj3ojqnJEoqGoxQOa3eHHXo18=
 github.com/onflow/flow-go/crypto v0.12.0/go.mod h1:oXuvU0Dr4lHKgye6nHEFbBXIWNv+dBQUzoVW5Go38+o=
 github.com/onflow/flow-go/crypto v0.18.0/go.mod h1:3Ah843iPyjIL+7nH9EillV3OWNptrL+DrQUbVKgg2E4=
 github.com/onflow/flow-go/crypto v0.21.3/go.mod h1:vI6V4CY3R6c4JKBxdcRiR/AnjBfL8OSD97bJc60cLuQ=
@@ -1745,7 +1739,6 @@ github.com/tklauser/go-sysconf v0.3.9/go.mod h1:11DU/5sG7UexIrp/O6g35hrWzu0JxlwQ
 github.com/tklauser/numcpus v0.3.0/go.mod h1:yFGUr7TUHQRAhyqBcEg0Ge34zDBAsIvJJcyE6boqnA8=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
-github.com/turbolent/prettier v0.0.0-20210613180524-3a3f5a5b49ba h1:GPg+SVJURgCt6b4IwuRQupixdBM+KzjXPGvawnaQ15E=
 github.com/turbolent/prettier v0.0.0-20210613180524-3a3f5a5b49ba/go.mod h1:Nlx5Y115XQvNcIdIy7dZXaNSUpzwBSge4/Ivk93/Yog=
 github.com/turbolent/prettier v0.0.0-20220320183459-661cc755135d h1:5JInRQbk5UBX8JfUvKh2oYTLMVwj3p6n+wapDDm7hko=
 github.com/turbolent/prettier v0.0.0-20220320183459-661cc755135d/go.mod h1:Nlx5Y115XQvNcIdIy7dZXaNSUpzwBSge4/Ivk93/Yog=

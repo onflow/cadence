@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/logrusorgru/aurora v2.0.3+incompatible
-	github.com/onflow/cadence v0.24.2-0.20220622173207-782f96ee0272
+	github.com/onflow/cadence v0.24.2-0.20220617011849-61f83ae09293
 	github.com/onflow/flow-cli v0.36.1
 	github.com/onflow/flow-go-sdk v0.26.1
 	github.com/spf13/afero v1.8.2
