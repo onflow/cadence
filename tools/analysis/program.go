@@ -49,11 +49,10 @@ func (program *Program) Run(analyzers []*Analyzer, report func(Diagnostic)) {
 		if ok {
 			return
 		}
-		act := new(action)
 		for _, req := range a.Requires {
 			registerAnalyzer(req)
 		}
-		actions[a] = act
+		actions[a] = new(action)
 	}
 
 	for _, a := range analyzers {
