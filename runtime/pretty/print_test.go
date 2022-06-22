@@ -62,8 +62,8 @@ func TestPrintBrokenCode(t *testing.T) {
 			},
 		},
 		location,
-		map[common.LocationID]string{
-			location.ID(): code,
+		map[common.Location]string{
+			location: code,
 		},
 	)
 	require.NoError(t, err)

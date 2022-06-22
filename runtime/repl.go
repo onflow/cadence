@@ -34,19 +34,19 @@ import (
 type REPL struct {
 	checker  *sema.Checker
 	inter    *interpreter.Interpreter
-	onError  func(err error, location common.Location, codes map[common.LocationID]string)
+	onError  func(err error, location common.Location, codes map[common.Location]string)
 	onResult func(interpreter.Value)
-	codes    map[common.LocationID]string
+	codes    map[common.Location]string
 }
 
 func NewREPL(
-	onError func(err error, location common.Location, codes map[common.LocationID]string),
+	onError func(err error, location common.Location, codes map[common.Location]string),
 	onResult func(interpreter.Value),
 	checkerOptions []sema.Option,
 ) (*REPL, error) {
 
-	checkers := map[common.LocationID]*sema.Checker{}
-	codes := map[common.LocationID]string{}
+	checkers := map[common.Location]*sema.Checker{}
+	codes := map[common.Location]string{}
 
 	defaultCheckerOptions, defaultInterpreterOptions :=
 		cmd.DefaultCheckerInterpreterOptions(
@@ -139,7 +139,7 @@ func (r *REPL) execute(element ast.Element) {
 
 func (r *REPL) check(element ast.Element, code string) bool {
 	element.Accept(r.checker)
-	r.codes[r.checker.Location.ID()] = code
+	r.codes[r.checker.Location] = code
 	return r.handleCheckerError()
 }
 

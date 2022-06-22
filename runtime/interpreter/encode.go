@@ -1357,7 +1357,7 @@ func (c compositeTypeInfo) Encode(e *cbor.StreamEncoder) error {
 func (c compositeTypeInfo) Equal(o atree.TypeInfo) bool {
 	other, ok := o.(compositeTypeInfo)
 	return ok &&
-		common.LocationsMatch(c.location, other.location) &&
+		c.location == other.location &&
 		c.qualifiedIdentifier == other.qualifiedIdentifier &&
 		c.kind == other.kind
 }

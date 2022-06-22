@@ -33,8 +33,8 @@ import (
 type Error struct {
 	Err      error
 	Location common.Location
-	Codes    map[common.LocationID]string
-	Programs map[common.LocationID]*ast.Program
+	Codes    map[common.Location]string
+	Programs map[common.Location]*ast.Program
 }
 
 func newError(err error, context Context) Error {

@@ -14460,7 +14460,7 @@ func (v *CompositeValue) getInterpreter(interpreter *Interpreter) *Interpreter {
 
 	location := v.Location
 
-	if location == nil || common.LocationsMatch(interpreter.Location, location) {
+	if location == nil || interpreter.Location == location {
 		return interpreter
 	}
 

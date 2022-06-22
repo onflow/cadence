@@ -78,9 +78,9 @@ func ParseAndCheckWithOptionsAndMemoryMetering(
 	program, err := parser2.ParseProgram(code, memoryGauge)
 	if !options.IgnoreParseError && !assert.NoError(t, err) {
 		var sb strings.Builder
-		locationID := options.Location.ID()
+		location := options.Location
 		printErr := pretty.NewErrorPrettyPrinter(&sb, true).
-			PrettyPrintError(err, options.Location, map[common.LocationID]string{locationID: code})
+			PrettyPrintError(err, location, map[common.Location]string{location: code})
 		if printErr != nil {
 			panic(printErr)
 		}
