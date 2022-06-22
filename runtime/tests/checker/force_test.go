@@ -70,11 +70,6 @@ func TestCheckForce(t *testing.T) {
 			sema.IntType,
 			RequireGlobalValue(t, checker.Elaboration, "y"),
 		)
-
-		hints := checker.Hints()
-
-		require.Len(t, hints, 1)
-		require.IsType(t, &sema.RemovalHint{}, hints[0])
 	})
 
 	t.Run("invalid: force resource multiple times", func(t *testing.T) {
